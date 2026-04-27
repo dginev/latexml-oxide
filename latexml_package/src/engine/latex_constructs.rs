@@ -2358,6 +2358,22 @@ LoadDefinitions!({
   InnerPool!(math_common);
   latexml_core::state::expire_state_unlocked();
 
+  // Perl latex_constructs.pool.ltxml:36 — `Let('\par', '\lx@normal@par')`.
+  // After the dump load (which installs `\par` as the heavy expl3 chain
+  // `\para_end:` body via Lt-aliases), Perl re-Lets `\par` to the engine's
+  // plain `\lx@normal@par` Constructor here. So at document-body time,
+  // `\par` is a Constructor (no body residue), not the chain.
+  //
+  // Without this re-Let in Rust, dump-path `\par` stays the expl3 chain.
+  // `leave_horizontal()`'s implicit `\par` invocation then leaves chain
+  // residue (`\tex_unskip:D \mode_if_horizontal:TF{...}\tex_par:D ...`)
+  // in the gullet pushback, which then corrupts subsequent numeric reads
+  // — e.g. `\vskip0.01em` emits "Missing number, treated as zero" and the
+  // `0.01em` text drifts into the next paragraph. Verified via Perl probe
+  // that Perl's runtime `\meaning\par` is `Constructor`, not Expandable.
+  // Recovered: 20_digestion::box_test (and likely more dump-path tests).
+  Let!("\\par", "\\lx@normal@par");
+
   // ======================================================================
   // C.1 Commands and Environments
   // ======================================================================
