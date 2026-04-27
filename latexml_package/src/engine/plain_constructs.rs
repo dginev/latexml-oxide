@@ -341,6 +341,16 @@ LoadDefinitions!({
     Tbox::new(arena::pin_static("_"), None, None, Tokens!(T_CS!("\\_")), SymHashMap::default())
   });
 
+  // Perl: plain_constructs.pool.ltxml L220 — active `~` → `\lx@NBSP`.
+  // Required HERE (not just in plain_base.rs) so the override survives
+  // the `LoadFormat('plain')` dump path: when `plain_dump` is loaded
+  // instead of `plain_base`, the dump captures raw plain.tex's
+  // `~` definition (`\penalty\@M\ ` or LaTeX kernel's
+  // `\ifincsname...\nobreakspace`) — but plain_constructs runs AFTER
+  // and re-establishes the LaTeXML semantic mapping to nbsp.
+  // Mirrors Perl's identical L220 def.
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
+
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L222-277 — matrix/cases
   //======================================================================

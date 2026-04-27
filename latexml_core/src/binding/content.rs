@@ -1710,8 +1710,9 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
   let cached = lookup_string(&s!("{}_contents", file));
   if !cached.is_empty() {
-    Some(file.to_string())
-  } else if pathname::is_absolute(file) {
+    return Some(file.to_string());
+  }
+  if pathname::is_absolute(file) {
     // And if we've got an absolute path,
     if Path::new(file).exists() {
       // No need to search, just check if it exists.
@@ -1750,7 +1751,20 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //     silently skipped, breaking the eager natbib transitive load
     //     (1709.05096 / AIAA → 60s wall-clock SIGABRT in the autoload-
     //     trapped-by-abstract loop).
-    if !options.forbid_ltxml {
+    // Binding-marker fast paths. ONLY fire when caller has requested
+    // `notex=true` (i.e. caller wants binding-only search, not a real
+    // disk path). Without this gate, raw `\openin` /`\IfFileExists`
+    // calls (notex=false) get a literal binding name back as if it were
+    // a path — `Mouth::open_file` then fails / produces an empty mouth
+    // and `\ifeof` returns true, masking the file as missing. Mirrors
+    // Perl `pathname_find`: only `noltxml=>0,notex=>1` returns binding
+    // names; the disk-search variant only resolves real files.
+    // Triggered by 2026-04-26 t1enc.def-cascade investigation: raw
+    // fonttext.ltx's `\input  {t1enc.def}` opens via raw `\openin` /
+    // `\IfFileExists`; without this gate find_file returned literal
+    // "t1enc.def" → empty mouth → kernel's `\@missingfileerror` → 1M
+    // TooManyErrors during latex.ltx dump-build.
+    if !options.forbid_ltxml && options.notex {
       if lookup_bool(&s!("{file}_binding_available")) {
         return Some(file.to_string());
       }
