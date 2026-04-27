@@ -8403,9 +8403,8 @@ LoadDefinitions!({
   });
   DefMacro!("\\ignorespacesafterend", None);
 
-  // Perl: latex_constructs.pool.ltxml line 5027
-  // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
-  DefMacro!("\\Gin@driver", "");
+  // `\Gin@driver` (graphics-driver pre-stub) moved to
+  // latex_constructs_rust_only.rs (no Perl source-level definition).
 
 
   //**********************************************************************

@@ -117,6 +117,11 @@ LoadDefinitions!({
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
   DefMacro!("\\wlog{}", "");
 
+  // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
+  // when loaded from disk (LaTeXML doesn't run a Backend driver).
+  // Not in Perl source; pure Rust hotfix.
+  DefMacro!("\\Gin@driver", "");
+
   //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //
