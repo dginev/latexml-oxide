@@ -340,7 +340,47 @@ LoadDefinitions!({
   // C.11.4 Splitting the input / C.13 Boxes
   // Perl: latex_base.pool.ltxml lines 454-486
   //======================================================================
-  // \DeclareRobustCommand — in latex_constructs.rs (C.13)
+  // \DeclareRobustCommand (Perl L454-456) — closure body uses
+  // convert_latex_args from prelude
+  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
+  sub[(_star,cs,nargs,opt,body)] {
+    let nargs = nargs.value_of() as usize;
+    let cs_args = convert_latex_args(nargs, opt)?;
+    DefMacro!(cs, cs_args, body, robust => true);
+  });
+
+  // savebox RawTeX block (Perl L457-486)
+  TeX!(
+    r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
+  \DeclareRobustCommand\savebox[1]{%
+    \@ifnextchar(%)
+      {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
+  \DeclareRobustCommand\sbox[2]{\setbox#1\hbox{%
+    \color@setgroup#2\color@endgroup}}
+  \def\@savebox#1[#2]{%
+    \@ifnextchar [{\@isavebox#1[#2]}{\@isavebox#1[#2][c]}}
+  \long\def\@isavebox#1[#2][#3]#4{%
+    \sbox#1{\@imakebox[#2][#3]{#4}}}
+  \def\@savepicbox#1(#2,#3){%
+    \@ifnextchar[%]
+      {\@isavepicbox#1(#2,#3)}{\@isavepicbox#1(#2,#3)[]}}
+  \long\def\@isavepicbox#1(#2,#3)[#4]#5{%
+    \sbox#1{\@imakepicbox(#2,#3)[#4]{#5}}}
+  \def\lrbox#1{%
+    \edef\reserved@a{%
+      \endgroup
+      \setbox#1\hbox{%
+        \begingroup\aftergroup}%
+          \def\noexpand\@currenvir{\@currenvir}%
+          \def\noexpand\@currenvline{\on@line}}%
+    \reserved@a
+      \@endpefalse
+      \color@setgroup
+        \ignorespaces}
+  \def\endlrbox{\unskip\color@endgroup}
+  \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
+  """#
+  );
 
   //======================================================================
   // Error/Warning/Info infrastructure

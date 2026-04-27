@@ -5292,13 +5292,7 @@ LoadDefinitions!({
     }
   });
 
-  // Crazy; define \cs in terms of \cs[space] !!!
-  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
-  sub[(_star,cs,nargs,opt,body)] {
-    let nargs = nargs.value_of() as usize;
-    let cs_args = convert_latex_args(nargs, opt)?;
-    DefMacro!(cs, cs_args, body, robust => true);
-  });
+  // \DeclareRobustCommand (Perl latex_base L454-456) moved to latex_base.rs.
 
   DefPrimitive!("\\MakeRobust DefToken", sub[(cs)] {
     let mungedcs = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
@@ -7517,37 +7511,7 @@ LoadDefinitions!({
   );
 
   AssignValue!("SAVEBOX", 100);
-  TeX!(
-    r#"""\def\newsavebox#1{\@ifdefinable{#1}{\newbox#1}}
-  \DeclareRobustCommand\savebox[1]{%
-    \@ifnextchar(%)
-      {\@savepicbox#1}{\@ifnextchar[{\@savebox#1}{\sbox#1}}}%
-  \DeclareRobustCommand\sbox[2]{\setbox#1\hbox{%
-    \color@setgroup#2\color@endgroup}}
-  \def\@savebox#1[#2]{%
-    \@ifnextchar [{\@isavebox#1[#2]}{\@isavebox#1[#2][c]}}
-  \long\def\@isavebox#1[#2][#3]#4{%
-    \sbox#1{\@imakebox[#2][#3]{#4}}}
-  \def\@savepicbox#1(#2,#3){%
-    \@ifnextchar[%]
-      {\@isavepicbox#1(#2,#3)}{\@isavepicbox#1(#2,#3)[]}}
-  \long\def\@isavepicbox#1(#2,#3)[#4]#5{%
-    \sbox#1{\@imakepicbox(#2,#3)[#4]{#5}}}
-  \def\lrbox#1{%
-    \edef\reserved@a{%
-      \endgroup
-      \setbox#1\hbox{%
-        \begingroup\aftergroup}%
-          \def\noexpand\@currenvir{\@currenvir}%
-          \def\noexpand\@currenvline{\on@line}}%
-    \reserved@a
-      \@endpefalse
-      \color@setgroup
-        \ignorespaces}
-  \def\endlrbox{\unskip\color@endgroup}
-  \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
-  """#
-  );
+  // savebox RawTeX block (Perl latex_base L457-486) moved to latex_base.rs.
 
   // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
   // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));
