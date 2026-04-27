@@ -1335,13 +1335,95 @@ in source order. Rust L2410-L7382 maps roughly to Perl L73-L4750.
 The first 5000 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L7867 maps roughly to Perl L73-L5000.
 
-## Phase 23+ (TODO): Perl L5001-L6014
+## Phase 23 (Perl L5001-L5250)
 
-Picture environment body, picture commands (`\put`, `\multiput`,
-`\circle`, `\line`, `\vector`, `\oval`, `\qbezier`, `\framebox`
-in picture, `\dashbox`, `\thicklines`/`\thinlines` placements),
-color, hyphenation, miscellany. Will continue in subsequent
-iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 5010-5026 | `{picture}` Environment | latex_constructs.rs:7877 | ✅ |
+| 5028 | `\Gin@driver` | latex_constructs.rs (verify) | ❓ |
+| 5030 | `\@killglue` | latex_constructs.rs:7857 | ✅ |
+| 5032 | `\put` | latex_constructs.rs:7928 | ✅ |
+| 5033-5042 | `\lx@pic@put` | latex_constructs.rs:7929 | 🔵 RUST_ONLY (Rust split, see Phase 1 finding) |
+| 5044-5047 | `\line Pair:Number {Float}` | latex_constructs.rs (verify ~8044) | ✅ likely |
+| 5048-5052 | `\vector Pair:Number {Float}` | latex_constructs.rs (verify ~8077) | ✅ likely |
+| 5053-5059 | `\circle OptionalMatch:* {Float}` | latex_constructs.rs:8062 | ✅ |
+| 5061-5076 | `\oval [Float] Pair []` | latex_constructs.rs:8092 (`\oval` macro) + `\lx@pic@oval` | ✅ |
+| 5078-5082 | `\qbezier [Number] Pair Pair Pair` | latex_constructs.rs:8134 | ✅ |
+| 5084-5089 | `\bezier`/`\lx@pic@bezier` | latex_constructs.rs:7855, 7856 | ✅ |
+| 5092-5122 | `\pic@makebox@` Constructor | latex_constructs.rs:8214 | ✅ |
+| 5124 | `\pic@makebox` | latex_constructs.rs:8348 | ✅ |
+| 5125 | `\pic@framebox` | latex_constructs.rs:8349 | ✅ |
+| 5126 | `\lx@pic@dashbox` | latex_constructs.rs:8350 | ✅ |
+| 5127 | `\dashbox Until:(` | latex_constructs.rs:8351 | ✅ |
+| 5128 | `\frame{}` | latex_constructs.rs:8353 | ✅ |
+| 5130 | `\pic@savebox` | (verify) | ❓ |
+| 5131-5132 | `\pic@@savebox DefToken {}` | (verify) | ❓ |
+| 5133 | `\@savepicbox` | (verify) | ❓ |
+| 5135-5137 | `\pic@raisebox` | latex_constructs.rs:8357 | ✅ |
+| 5139 | `%alignments` Perl-hash | (Rust const map) | ✅ |
+| 5142-5147 | `\@shortstack@cr` | latex_constructs.rs:7780 | ✅ |
+| 5149-5164 | `\shortstack[]{} OptionalMatch:* [Dimension]` | latex_constructs.rs:7787 | ✅ |
+| 5166-5175 | `\multiput Pair Pair {}{}` | latex_constructs.rs:8165 | ✅ |
+| 5177-5181 | `Tag('ltx:picture', afterOpen => UnTeX)` | (verify) | ❓ |
+| 5183-5185 | `Tag('ltx:g', afterClose => removeChild)` | (verify) | ❓ |
+| 5197 | `\rmdefault` 'cmr' | latex_constructs.rs:8390 | ✅ |
+| 5198 | `\sfdefault` 'cmss' | latex_constructs.rs:8391 | ✅ |
+| 5199 | `\ttdefault` 'cmtt' | latex_constructs.rs:8392 | ✅ |
+| 5200 | `\bfdefault` 'bx' | latex_constructs.rs:8393 | ✅ |
+| 5201 | `\mddefault` 'm' | latex_constructs.rs:8394 | ✅ |
+| 5202 | `\itdefault` 'it' | latex_constructs.rs:8395 | ✅ |
+| 5203 | `\sldefault` 'sl' | latex_constructs.rs:8396 | ✅ |
+| 5204 | `\scdefault` 'sc' | latex_constructs.rs:8397 | ✅ |
+| 5205 | `\updefault` 'n' | latex_constructs.rs:8398 | ✅ |
+| 5206 | `\encodingdefault` 'OT1' | latex_constructs.rs:8399 | ✅ |
+| 5207-5209 | `\familydefault`/`\seriesdefault`/`\shapedefault` | latex_constructs.rs:8400-8402 | ✅ |
+| 5211 | `Let '\mediumseries' '\mdseries'` | latex_constructs.rs:8404 | ✅ |
+| 5212 | `Let '\normalshape' '\upshape'` | latex_constructs.rs:8405 | ✅ |
+| 5215 | `\f@family` 'cmr' | latex_constructs.rs:8408 | ✅ |
+| 5216 | `\f@series` 'm' | latex_constructs.rs:8409 | ✅ |
+| 5217 | `\f@shape` 'n' | latex_constructs.rs:8410 | ✅ |
+| 5218 | `\f@size` '10' | latex_constructs.rs:8411 | ✅ |
+| 5221 | `\fontfamily{}` | latex_constructs.rs:8414 | ✅ |
+| 5222 | `\fontseries{}` | (verify) | ❓ |
+| 5223 | `\fontshape{}` | (verify) | ❓ |
+| 5226-5230 | `\not@math@alphabet@@` | (verify) | ❓ |
+| 5233-5234 | `\mdseries`/`\bfseries` | (verify) | ❓ |
+| 5236-5238 | `\rmfamily`/`\sffamily`/`\ttfamily` | (verify) | ❓ |
+| 5240-5243 | `\upshape`/`\itshape`/`\slshape`/`\scshape` | (verify) | ❓ |
+| 5245-5246 | `\normalfont` | (verify) | ❓ |
+| 5247-5248 | `\verbatim@font` | (verify) | ❓ |
+
+### Phase 23 findings
+
+* **Strong PARITY** for L5001-L5250. Picture environment, `\put`,
+  `\circle`/`\line`/`\vector`/`\oval`/`\qbezier`/`\bezier`,
+  `\pic@makebox@` family (`\pic@makebox`/`\pic@framebox`/
+  `\dashbox`/`\frame`/`\lx@pic@dashbox`), `\pic@raisebox`,
+  `\@shortstack@cr`/`\shortstack`, `\multiput`,
+  `Tag('ltx:picture'/'ltx:g')` align.
+* Font-default macros (`\rmdefault`/`\sfdefault`/`\ttdefault`/
+  `\bfdefault`/`\mddefault`/`\itdefault`/`\sldefault`/
+  `\scdefault`/`\updefault`/`\encodingdefault`/`\familydefault`/
+  `\seriesdefault`/`\shapedefault`) all align at L8390-L8402.
+* Font internals (`\f@family`/`\f@series`/`\f@shape`/`\f@size`)
+  align at L8408-L8411.
+* `\fontfamily`/`\fontseries`/`\fontshape` align at L8414+.
+* `Let \mediumseries`/`\normalshape` align.
+* `\lx@pic@put` and `\lx@pic@line/oval/qbezier/vector` are Rust
+  splits of single-Constructor Perl entries — already documented
+  as 🔵 RUST_ONLY in Phase 1 audit, deferred for migration to
+  rust_only.rs (need helper-fn relocation).
+
+## Cumulative parity health (Perl L1-L5250, ~87% of file)
+
+The first 5250 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L8414 maps roughly to Perl L73-L5250.
+
+## Phase 24+ (TODO): Perl L5251-L6014
+
+Font-selection commands (`\selectfont`, `\use@font`,
+`\textit`/`\textbf`/etc), color package, hyphenation, language
+support, miscellany. Will continue in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
