@@ -48,10 +48,10 @@ order, with the same options as its Perl counterpart.
 | `TeX_Fonts.pool.ltxml` | `engine/tex_fonts.rs` | ✅ walked & reordered — `\defaultskewchar` and `\defaulthyphenchar` (Perl L77-78) hoisted to right before `\font` (Perl L82) where they belong; were previously after `\fontdimen`. ParameterType has divergent name in Rust (`FontToken` vs Perl `FontDef`) but is in the right relative position. Rest of file (\font, \fontname, \fontdimen, \nullfont, \/, \lx@fontencoding, ligatures) matches. |
 | `TeX_Glue.pool.ltxml` | `engine/tex_glue.rs` | ✅ walked — `\lx@default@jot`, `\hskip`, `\vskip`, `\unskip`, `\hss`/`\hfilneg`, `\hfil`/`\hfill`, `\vfil`/`\vfill`/`\vss`/`\vfilneg`, `\lastskip` all in Perl order. |
 | `TeX_Hyphenation.pool.ltxml` | `engine/tex_hyphenation.rs` | ✅ walked & cleaned — `\-`, `\discretionary`, `\hyphenation`, `\patterns`, `\language`, `\setlanguage`, `\hyphenchar`, `\lefthyphenmin`/`\righthyphenmin`/`\uchyph` all in Perl order. **Removed duplicate** `\defaulthyphenchar` register (Perl defines it only in TeX_Fonts L78 — Rust had it in both `tex_fonts.rs` and `tex_hyphenation.rs`). Rust extra: `\languagename` macro (Perl doesn't have it in this pool — added for babel use). |
-| `TeX_Inserts.pool.ltxml` | `engine/tex_inserts.rs` | walk pending |
-| `TeX_Job.pool.ltxml` | `engine/tex_job.rs` | walk pending |
-| `TeX_Kern.pool.ltxml` | `engine/tex_kern.rs` | walk pending |
-| `TeX_Logic.pool.ltxml` | `engine/tex_logic.rs` | walk pending |
+| `TeX_Inserts.pool.ltxml` | `engine/tex_inserts.rs` | ✅ walked — `\insert`, `\vsplit`, `\splitfirstmark`/`\splitbotmark`, `\insertpenalties`/`\splitmaxdepth`/`\splittopskip`/`\holdinginserts` all in Perl order. |
+| `TeX_Job.pool.ltxml` | `engine/tex_job.rs` | ✅ walked — `\jobname`, `\time`/`\day`/`\month`/`\year`/`\mag` registers, time AssignValues, `\lx@end@document`, `\let \end`, `\everyjob`/`\deadcycles`/`\maxdeadcycles`, `\dump`, `\documentstyle` all in Perl order. Rust extra `\let \@@end` (probably for amsTeX compat). |
+| `TeX_Kern.pool.ltxml` | `engine/tex_kern.rs` | ✅ walked — `\kern`, `\unkern`, `\lastkern`, `\lower`, `\raise`, `\moveleft`, `\moveright` in Perl order. |
+| `TeX_Logic.pool.ltxml` | `engine/tex_logic.rs` | ✅ walked & reordered — `\ifvoid`/`\ifhbox`/`\ifvbox` reordered to Perl L111-113 sequence (Rust had hbox/vbox before void). Rest matches. |
 | `TeX_Macro.pool.ltxml` | `engine/tex_macro.rs` | walk pending |
 | `TeX_Marks.pool.ltxml` | `engine/tex_marks.rs` | walk pending |
 | `TeX_Math.pool.ltxml` | `engine/tex_math.rs` | walk pending |

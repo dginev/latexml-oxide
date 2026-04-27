@@ -76,9 +76,10 @@ LoadDefinitions!({
   // \ifvbox           c  is true if a box register contains a \vbox.
   // \ifvoid           c  is true if a box register is void.
   //
+  // Perl TeX_Logic.pool.ltxml L111-113: \ifvoid / \ifhbox / \ifvbox.
+  DefConditional!("\\ifvoid Number", sub[(arg)] { classify_box(arg)?.is_empty() });
   DefConditional!("\\ifhbox Number", sub[(arg)] { classify_box(arg)? == "hbox" });
   DefConditional!("\\ifvbox Number", sub[(arg)] { classify_box(arg)? == "vbox" });
-  DefConditional!("\\ifvoid Number", sub[(arg)] { classify_box(arg)?.is_empty() });
 
   //======================================================================
   // Mode testing
