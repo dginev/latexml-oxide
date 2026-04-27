@@ -87,7 +87,7 @@ LoadDefinitions!({
 
   // \hskip handled similarly to \kern
   // \hskip can be ignored in certain situations...
-  DefConstructor!("\\hskip Glue", sub[document, args, _props] {
+  DefConstructor!("\\hskip Glue", sub[document, args, props] {
     unref!(args => length_digested);
     let length = match  length_digested.data() {
       DigestedData::RegisterValue(v) => v.into(),
@@ -110,6 +110,12 @@ LoadDefinitions!({
       }
     } else if in_svg(document) {
       Warn!("unexpected", "kern", s!("Lost hskip in SVG {length}"));
+    } else if props.get("isMath") == Some(&Stored::Bool(true)) {
+      // Perl: TeX_Glue.pool.ltxml L80 — in math, emit XMHint so the math
+      // parser can absorb the spacing into the adjacent token's
+      // lpadding/rpadding (or promote it to a virtual PUNCT for big skips).
+      // Without this branch, `\qquad` after `,` lost its `rpadding="20.0pt"`.
+      document.insert_element("ltx:XMHint", Vec::new(), Some(map!("width" => length.to_attribute())))?;
     } else {
       let spaces = dimension_to_spaces(length);
       document.absorb_string(&spaces, &SymHashMap::default())?;
