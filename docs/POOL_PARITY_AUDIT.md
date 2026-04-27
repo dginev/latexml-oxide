@@ -57,11 +57,11 @@ order, with the same options as its Perl counterpart.
 | `TeX_Math.pool.ltxml` | `engine/tex_math.rs` | walk pending |
 | `TeX_Page.pool.ltxml` | `engine/tex_page.rs` | ✅ walked — `\hoffset`/`\voffset`/`\topskip`/`\pagedepth`/`\pagetotal`/`\maxdepth`/`\vsize`/`\pagegoal` all in Perl order. |
 | `TeX_Paragraph.pool.ltxml` | `engine/tex_paragraph.rs` | ✅ walked — `\ignorespaces`/`\noboundary`, `\vadjust`, `\everypar`, `\indent`/`\noindent`, `\lx@normal@par`, `\let \par \lx@normal@par` all in Perl order. |
-| `TeX_Penalties.pool.ltxml` | `engine/tex_penalties.rs` | walk pending |
-| `TeX_Registers.pool.ltxml` | `engine/tex_registers.rs` | walk pending |
-| `TeX_Tables.pool.ltxml` | `engine/tex_tables.rs` | walk pending |
-| `eTeX.pool.ltxml` | `engine/etex.rs` | walk pending |
-| `pdfTeX.pool.ltxml` | `engine/pdftex.rs` | walk pending |
+| `TeX_Penalties.pool.ltxml` | `engine/tex_penalties.rs` | ✅ walked — `\penalty`, `\unpenalty`, `\lastpenalty`, `\brokenpenalty`/`\clubpenalty`/`\exhyphenpenalty`/`\floatingpenalty`/`\hyphenpenalty`/`\interlinepenalty`/`\linepenalty`/`\outputpenalty`/`\widowpenalty` all in Perl order. |
+| `TeX_Registers.pool.ltxml` | `engine/tex_registers.rs` | ✅ walked — `\count`/`\dimen`/`\skip`/`\muskip`/`\toks` registers, `\countdef`/`\dimendef`/`\skipdef`/`\muskipdef`/`\toksdef`, `\lx@alloc@`, `\lx@counter@arabic`, `\advance`/`\multiply`/`\divide` all in Perl order. |
+| `TeX_Tables.pool.ltxml` | `engine/tex_tables.rs` | walk pending (760+1340 lines — large file, deferred) |
+| `eTeX.pool.ltxml` | `engine/etex.rs` | ⚠️ **needs substantial reorder** — Rust front-loads `\protected`, `\detokenize`, `\unexpanded`, `\readline`, `\scantokens` (Perl L233-393 — late in the file) before `\eTeXrevision` etc. Perl order: tracing registers, showgroups/showtokens, eTeXrevision/version, currentif*, currentgroup*, lastnodetype, fontchar*, parshape*, NumExpr/DimExpr/GlueExpr/MuExpr, numexpr/dimexpr/glueexpr/muexpr, gluestretchorder/stretch/shrink, marks/topmarks/firstmarks/botmarks/splitfirstmarks/splitbotmarks, readline, scantokens, everyeof/lastlinefit, *penalties, middle, savinghyphcodes/savingvdiscards/pagediscards/splitdiscards, ifdefined/ifcsname/unless, unexpanded/detokenize, TeXXeTstate/beginL/beginR/endL/endR, predisplaydirection, protected, pdftexcmds@directlua, synctex, reserveinserts. Deferred to dedicated commit. |
+| `pdfTeX.pool.ltxml` | `engine/pdftex.rs` | ✅ walked — `\pdfoutput`/`\pdfminorversion`/.../`\pdfprotrudechars`, `\efcode`/`\lpcode`/`\rpcode`/.../`\tagcode`, `\pdfforcepagebox`/etc. all in Perl order line-by-line. |
 | `plain_bootstrap.pool.ltxml` | `engine/plain_bootstrap.rs` | walk pending |
 | `plain_base.pool.ltxml` | `engine/plain_base.rs` | walk pending |
 | `math_common.pool.ltxml` | `engine/math_common.rs` | walk pending |
