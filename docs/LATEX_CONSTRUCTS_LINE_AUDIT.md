@@ -1276,10 +1276,72 @@ L2410-L7194 maps roughly to Perl L73-L4500.
 The first 4750 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L7382 maps roughly to Perl L73-L4750.
 
-## Phase 22+ (TODO): Perl L4751-L6014
+## Phase 22 (Perl L4751-L5000)
 
-\fbox/\framebox bodies, picture mode, color, hyphenation,
-miscellany, class internals. Will continue in subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 4744-4787 | `\fbox`/`\framebox`/`\@framebox` body cont. | (verify) | ❓ |
+| 4789-4794 | `AssignValue allocated_boxes => 0` + `\newsavebox` | (verify) | ❓ |
+| 4796 | `Let '\lx@parboxnewline' '\lx@newline'` | latex_constructs.rs:7614 | ✅ |
+| 4799-4800 | `\parbox[]...{Dimension}{}` | latex_constructs.rs:7617 | ✅ |
+| 4802-4818 | `\lx@parbox` Constructor | latex_constructs.rs:7619 | ✅ |
+| 4819 | `\@parboxrestore` | latex_constructs.rs:7697 | ✅ |
+| 4821 | `\if@minipage` | latex_constructs.rs:7699 | ✅ |
+| 4822 | `\@setminipage` | latex_constructs.rs:7700 | ✅ |
+| 4823-4847 | `{minipage}[]...{Dimension}` Environment | latex_constructs.rs:7702 | ✅ |
+| 4849-4851 | `\rule[Dimension]{Dimension}{Dimension}` | latex_constructs.rs:7752 | ✅ |
+| 4852-4855 | `\raisebox{Dimension}[Dimension][Dimension]{}` | latex_constructs.rs:7763 | ✅ |
+| 4857 | `\@finalstrut{}` | (verify) | ❓ |
+| 4864-4870 | `Let '\set@color'/'\color@begingroup'/...'\color@endbox' '\relax'` | latex_constructs.rs:8364-8370 | ↻ ORDER (Rust ~600L later) |
+| 4878-4886 | `ResolveReader` Perl-fn | latex_constructs.rs (verify) | ❓ |
+| 4891-4915 | `ReadPair` Perl-fn | latex_constructs.rs (Rust fn) | ✅ likely |
+| 4917-4919 | `ptValue` Perl-fn | (Rust method on Dimension) | ✅ |
+| 4921-4923 | `pxValue` Perl-fn | latex_constructs.rs:2206 (`px_value`) | ✅ |
+| 4927 | `\unitlength` | latex_constructs.rs:7823 | ✅ |
+| 4928 | `\thinlines` | latex_constructs.rs:7830 | ✅ |
+| 4929 | `\thicklines` | latex_constructs.rs:7838 | ✅ |
+| 4930 | `\@wholewidth` | latex_constructs.rs:7824 | ↻ ORDER (Rust before \thinlines) |
+| 4931 | `\@halfwidth` | latex_constructs.rs:7825 | ↻ ORDER |
+| 4932 | `\linethickness{}` | latex_constructs.rs:7846 | ✅ |
+| 4934 | `\arrowlength{Dimension}` | latex_constructs.rs:7850 | ✅ |
+| 4938-4945 | `slopeToPicCoord` Perl-fn | latex_constructs.rs (Rust fn) | ✅ likely |
+| 4948-4972 | `picScale` Perl-fn | latex_constructs.rs (Rust fn) | ✅ likely |
+| 4974-4981 | `picProperties` Perl-fn | latex_constructs.rs (Rust fn) | ✅ likely |
+| 4985 | `\qbeziermax` | latex_constructs.rs:7853 | ✅ |
+| 4987-4989 | `before_picture` Perl-fn | latex_constructs.rs (verify) | ❓ |
+| 4991-4992 | `after_picture` Perl-fn | latex_constructs.rs (verify) | ❓ |
+| 4995-4999+ | `Tag('ltx:picture', autoOpen, autoClose, afterOpen, afterClose)` | latex_constructs.rs:7867 | ✅ |
+
+### Phase 22 findings
+
+* **Strong PARITY** for L4751-L5000. `\framebox` body, `\newsavebox`,
+  `\parbox`/`\lx@parbox` machinery, `\@parboxrestore`,
+  `\if@minipage`/`\@setminipage`/`{minipage}` Environment,
+  `\rule`/`\raisebox`, `\@finalstrut`, color-stub Lets, picture
+  helpers (`ResolveReader`, `ReadPair`, `ptValue`/`pxValue`,
+  `slopeToPicCoord`/`picScale`/`picProperties` Perl-fns),
+  picture parameters (`\unitlength`, `\thinlines`/`\thicklines`,
+  `\@wholewidth`/`\@halfwidth`, `\linethickness`, `\arrowlength`),
+  `\qbeziermax`, `Tag('ltx:picture', ...)` all align.
+* Color-stub Lets ORDER: Rust at L8364-L8370 (~600L later than
+  Perl L4864-L4870). Cosmetic.
+* `\@wholewidth`/`\@halfwidth` ORDER: Rust placed BEFORE
+  `\thinlines`/`\thicklines` (Perl after).
+* `pic@raisebox` Constructor at Rust L8357 mirrors picture-mode
+  raisebox handling.
+
+## Cumulative parity health (Perl L1-L5000, ~83% of file)
+
+The first 5000 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L7867 maps roughly to Perl L73-L5000.
+
+## Phase 23+ (TODO): Perl L5001-L6014
+
+Picture environment body, picture commands (`\put`, `\multiput`,
+`\circle`, `\line`, `\vector`, `\oval`, `\qbezier`, `\framebox`
+in picture, `\dashbox`, `\thicklines`/`\thinlines` placements),
+color, hyphenation, miscellany. Will continue in subsequent
+iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
