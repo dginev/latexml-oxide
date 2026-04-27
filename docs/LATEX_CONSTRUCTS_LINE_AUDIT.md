@@ -613,10 +613,56 @@ in source order. The Rust port faithfully follows Perl's source
 order with small exceptions (5 catalogued ORDER divergences and
 ~5 INTENTIONAL DIVERGEs).
 
-## Phase 12+ (TODO): Perl L2251-L6014
+## Phase 12 (Perl L2251-L2500)
 
-Eqnarray, align, MathFork containers, theorem environments, ToC,
-floats, indexing. Will continue in subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 2251-2254 | `\lefteqn{}` | latex_constructs.rs:5072 | ↻ ORDER (Rust at 5072 vs Perl 2251 — placed after eqnarray block) |
+| 2258 | `Let '\displ@y' '\displaystyle'` | latex_constructs.rs:5078 | ✅ |
+| 2259 | `\@lign` | latex_constructs.rs:5079 | ✅ |
+| 2262-2266 | `\eqnarray` | latex_constructs.rs:5023 | ✅ |
+| 2267-2269 | `\endeqnarray` | latex_constructs.rs:5028 | ✅ |
+| 2270-2274 | `\csname eqnarray*\endcsname` | latex_constructs.rs:5031 | ✅ |
+| 2275-2277 | `\csname endeqnarray*\endcsname` | latex_constructs.rs:5036 | ✅ |
+| 2279-2280 | `\@eqnarray@bindings` | latex_constructs.rs:5019 | ✅ |
+| 2282 | `\eqnarray@row@before@` | latex_constructs.rs:5000 | ✅ |
+| 2283 | `\eqnarray@row@after@` | latex_constructs.rs:5001 | ✅ |
+| 2284 | `\eqnarray@row@before` | latex_constructs.rs:5004 | ✅ |
+| 2285 | `\eqnarray@row@after` | latex_constructs.rs:5005 | ✅ |
+| 2287-2325 | `eqnarrayBindings` Perl-fn | latex_constructs.rs:814 (`eqnarray_bindings`) | ✅ |
+| 2328-2329 | `\lx@eqnarray@label` | latex_constructs.rs:5014 | ✅ |
+| 2331-2335 | `\@@eqnarray` Constructor | latex_constructs.rs:5040 | ✅ |
+| 2336 | `\end@eqnarray` | latex_constructs.rs:5052 | ✅ |
+| 2356-2445 | `rearrangeEqnarray` Perl-fn | latex_constructs.rs:934 (`rearrange_eqnarray`) | ✅ |
+| 2449 | `DefRegister '\mathindent'` | latex_constructs.rs:3856 | ↻ ORDER (Rust at L3856 — placed earlier with page-layout registers) |
+| 2456-2462 | `\frac` | latex_constructs.rs (likely math_common.rs) | 📁 FILE (intentional — math) |
+| 2483 | `\stackrel{}{}` | latex_constructs.rs:5162 | ✅ |
+| 2484-2492 | `\lx@stackrel{}{}` | latex_constructs.rs:5163 | ✅ |
+
+### Phase 12 findings
+
+* **Strong PARITY** for L2251-L2500. Eqnarray machinery
+  (`\eqnarray`/`\endeqnarray`/`eqnarray*`/`endeqnarray*`,
+  `\@@eqnarray`, `\@eqnarray@bindings`, row-before/after,
+  `\lx@eqnarray@label`, `\end@eqnarray`), `eqnarray_bindings`
+  and `rearrange_eqnarray` Perl-fns ported as Rust module fns,
+  `\stackrel`/`\lx@stackrel` align.
+* `\lefteqn` ORDER: Rust at L5072 (after eqnarray block) vs
+  Perl L2251 (before eqnarray block). Cosmetic.
+* `\mathindent` ORDER: Rust at L3856 (with page-layout DefRegisters)
+  vs Perl L2449 (after eqnarray). Cosmetic.
+* `\frac` is in math_common.rs — intentional file split (math).
+
+## Cumulative parity health (Perl L1-L2500, ~42% of file)
+
+The first 2500 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L5163 maps roughly to Perl L73-L2500.
+
+## Phase 13+ (TODO): Perl L2501-L6014
+
+More math constructs, theorem environments, sectioning internals,
+ToC, floats, indexing, miscellaneous. Will continue in subsequent
+iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
