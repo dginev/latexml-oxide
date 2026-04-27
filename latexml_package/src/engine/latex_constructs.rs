@@ -2345,8 +2345,19 @@ LoadDefinitions!({
     latexml_core::common::store::Stored::None,
     Some(latexml_core::state::Scope::Global),
   );
+  // The reloads MUST run with state unlocked. By the time we get here,
+  // the first plain-format pass has already locked common math CSes
+  // (e.g. `\prime`, `\active@math@prime`) via their `locked => true`
+  // DefMath/DefMacro entries. Without an unlocked frame, the second
+  // pass sees `\prime:locked` and silently drops the redefinition,
+  // leaving the dump-loaded `\mathchardef\prime="0230` mathchar in
+  // place — which renders as digit `0` (char 0x30 in fam 2) instead
+  // of U+2032 ′. Mirror Perl's LoadPool flow which reloads via the
+  // top-level binding scope where re-locks are allowed.
+  latexml_core::state::local_state_unlocked(true);
   InnerPool!(plain_constructs);
   InnerPool!(math_common);
+  latexml_core::state::expire_state_unlocked();
 
   // ======================================================================
   // C.1 Commands and Environments
