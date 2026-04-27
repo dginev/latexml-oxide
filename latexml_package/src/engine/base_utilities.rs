@@ -27,6 +27,7 @@ LoadDefinitions!({
   //
   // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
   // \relax
+  // Perl Base_Utility.pool.ltxml L23-31
   DefMacro!("\\lx@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
     if IsDefined!(&cs) {
@@ -37,6 +38,49 @@ LoadDefinitions!({
     }
   }, locked=>true);
 
+  // Dash and space primitives used by ligatures and other mechanisms.
+  // Perl Base_Utility.pool.ltxml L44-45
+  DefPrimitive!("\\lx@endash", {
+    Tbox::new(
+      arena::pin_static("\u{2013}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\lx@endash")),
+      SymHashMap::default(),
+    )
+  });
+  // Perl Base_Utility.pool.ltxml L46-47
+  DefPrimitive!("\\lx@emdash", {
+    Tbox::new(
+      arena::pin_static("\u{2014}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\lx@emdash")),
+      SymHashMap::default(),
+    )
+  });
+  // Perl Base_Utility.pool.ltxml L50-52: stand-in for T_ACTIVE('~').
+  DefPrimitive!("\\lx@NBSP", {
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_ACTIVE!('~')),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+    )
+  }, locked => true);
+  // Perl Base_Utility.pool.ltxml L53-55
+  DefPrimitive!("\\lx@nobreakspace", {
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\lx@nobreakspace")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
+    )
+  });
+
+  // Perl Base_Utility.pool.ltxml L57-65
   DefPrimitive!("\\lx@ignorehardspaces", {
     let mut boxes = Vec::new();
     while let Some(token) = gullet::read_x_token(None, false, None)? {
@@ -62,9 +106,10 @@ LoadDefinitions!({
     Ok(boxes)
   });
 
+  // Perl Base_Utility.pool.ltxml L85-87
   DefConstructor!("\\@ADDCLASS Semiverbatim", sub[document,args] {
-      document.add_class(&mut document.get_element().unwrap(), 
-        &args[0].as_ref().unwrap().to_string())?; 
+      document.add_class(&mut document.get_element().unwrap(),
+        &args[0].as_ref().unwrap().to_string())?;
     }, sizer => 0);
 
   //======================================================================
@@ -78,52 +123,14 @@ LoadDefinitions!({
   // See LaTeX.ltxml for usage.
   // Note: could be circumstances where you'd want modular frontmatter?
   // (ie. frontmatter for each sectional unit)
+  // Perl Base_Utility.pool.ltxml L161
   AssignValue!(
     "frontmatter",
     Stored::HashTagData(HashMap::default()),
     Some(Scope::Global)
   );
 
-  // Dash and space primitives used by ligatures and other mechanisms
-  DefPrimitive!("\\lx@endash", {
-    Tbox::new(
-      arena::pin_static("\u{2013}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\lx@endash")),
-      SymHashMap::default(),
-    )
-  });
-  DefPrimitive!("\\lx@emdash", {
-    Tbox::new(
-      arena::pin_static("\u{2014}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\lx@emdash")),
-      SymHashMap::default(),
-    )
-  });
-  // Perl: Box(UTF(0xA0), undef, undef, T_ACTIVE("~"), ...);
-  // Perl Base_Utility.pool.ltxml L52: DefPrimitiveI('\lx@NBSP', undef, sub{...}, locked => 1)
-  DefPrimitive!("\\lx@NBSP", {
-    Tbox::new(
-      arena::pin_static("\u{00A0}"),
-      None,
-      None,
-      Tokens!(T_ACTIVE!('~')),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
-    )
-  }, locked => true);
-  DefPrimitive!("\\lx@nobreakspace", {
-    Tbox::new(
-      arena::pin_static("\u{00A0}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\lx@nobreakspace")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("0.333em")?),
-    )
-  });
-
+  // Perl Base_Utility.pool.ltxml L163
   DefConditional!("\\if@in@preamble", {
     state::lookup_bool_sym(pin!("inPreamble"))
   });
