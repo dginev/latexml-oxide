@@ -157,6 +157,28 @@ LoadDefinitions!({
   });
 
   //======================================================================
+  // 7b. `\@ensuremath` — Rust-only inner helper for `\ensuremath`
+  //
+  // Perl's `\ensuremath` is a single DefMacro doing the math-mode dance
+  // directly. Rust splits into `\ensuremath → \protect\@ensuremath` (in
+  // latex_constructs.rs, parity with Perl L2133) plus this `\@ensuremath`
+  // body so the `\protect` mechanism preserves the call until digestion.
+  //======================================================================
+  // protected => true prevents read_x_token(fully_expand=false) from
+  // expanding this (needed for lx_change_case_tokens to preserve
+  // \ensuremath{} content unchanged).
+  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
+    if state::lookup_bool_sym(pin!("IN_MATH")) {
+      stuff.unlist()
+    } else {
+      let mut result = vec![T_MATH!()];
+      result.extend(stuff.unlist());
+      result.push(T_MATH!());
+      result
+    }
+  }, protected => true);
+
+  //======================================================================
   // 8. {filecontents}/{filecontents*} environments — Rust impl
   //
   // Perl uses Semiverbatim DefConstructor for begin{filecontents}; Rust

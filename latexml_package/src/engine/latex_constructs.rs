@@ -4957,18 +4957,11 @@ LoadDefinitions!({
     None,
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
-  // protected => true prevents read_x_token(fully_expand=false) from expanding this
-  // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      let mut result = vec![T_MATH!()];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  // `\@ensuremath` (Rust-only inner helper for `\ensuremath`) moved to
+  // `latex_constructs_rust_only.rs`. Perl's `\ensuremath` is a single
+  // DefMacro that does the math-mode dance directly; Rust splits into
+  // `\ensuremath → \protect\@ensuremath` + `\@ensuremath` body so the
+  // `\protect` mechanism preserves the call until digestion.
 
   // Perl: latex_constructs.pool.ltxml lines 2237-2239
   // \@equationgroup@numbering{numbered=1,postset=1,...}
@@ -7064,10 +7057,12 @@ LoadDefinitions!({
   // tests/tokenize/verb.tex.
   // LaTeX's \input is a bit different...
 
-  // Input, now
-  DefPrimitive!("\\ltx@input {}", sub[(arg)] { Input!(&Expand!(arg).to_string()); });
+  // Input, now — Perl latex_constructs.pool.ltxml L4283-4285 verbatim.
+  // `\lx@latex@input` is the Perl-faithful name; the Rust-only
+  // `\ltx@input` alias lives in base_deprecated.rs for backward-compat.
+  DefPrimitive!("\\lx@latex@input {}", sub[(arg)] { Input!(&Expand!(arg).to_string()); });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
-  Let!("\\@iinput", "\\ltx@input");
+  Let!("\\@iinput", "\\lx@latex@input");
   DefMacro!(
     "\\@input{}",
     "\\IfFileExists{#1}{\\@@input\\@filef@und}{\\typeout{No file #1.}}"
@@ -8949,7 +8944,7 @@ LoadDefinitions!({
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
       Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
-        T_CS!("\\ltx@input"), T_BEGIN!(), file_tks, T_END!())
+        T_CS!("\\lx@latex@input"), T_BEGIN!(), file_tks, T_END!())
     } else {
       else_tks
     }
