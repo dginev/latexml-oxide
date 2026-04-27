@@ -6993,7 +6993,16 @@ LoadDefinitions!({
   // #======================================================================
   // # C.11.4 Splitting the input
   // #======================================================================
-  Let!("\\@@input", "\\input"); // Save TeX's version.
+  // NOTE: do NOT `Let!(\@@input, \input)` here. The Let in
+  // `latex_bootstrap.rs:48` already aliased `\@@input` to the raw
+  // TeX `\input` (the engine-init version from `tex_file_io.rs`)
+  // BEFORE the dump load installed latex.ltx's redefined `\input`
+  // (`\@ifnextchar\bgroup\@iinput\@@input`). Doing the Let again
+  // here would re-alias `\@@input` to THAT redefined `\input` —
+  // a self-recursive macro that loops at the false branch:
+  // `\@@input snippet` → `\@@input` (itself) → infinite recursion
+  // → TokenLimit. Triggered by `\verbatimlisting{snippet}` in
+  // tests/tokenize/verb.tex.
   // LaTeX's \input is a bit different...
 
   // Input, now
