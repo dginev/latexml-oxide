@@ -6165,37 +6165,12 @@ LoadDefinitions!({
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
-  DefPrimitive!("\\flushbottom",      None);
-  DefPrimitive!("\\suppressfloats[]", None);
-
-  NewCounter!("topnumber");
-  DefMacro!("\\topfraction", "0.25");
-  NewCounter!("bottomnumber");
-  DefMacro!("\\bottomfraction", "0.25");
-  NewCounter!("totalnumber");
-  DefMacro!("\\textfraction", "0.25");
-  DefMacro!("\\floatpagefraction", "0.25");
-  NewCounter!("dbltopnumber");
-  DefMacro!("\\dbltopfraction",       "0.7");
-  DefMacro!("\\dblfloatpagefraction", "0.25");
-  DefRegister!("\\floatsep"         => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
-  DefRegister!("\\textfloatsep"     => Glue!("20.0pt plus 2.0pt minus 4.0pt"));
-  DefRegister!("\\intextsep"        => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
-  DefRegister!("\\dblfloatsep"      => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
-  DefRegister!("\\dbltextfloatsep"  => Glue!("20.0pt plus 2.0pt minus 4.0pt"));
-  DefRegister!("\\@maxsep"          => Dimension::new(0));
-  DefRegister!("\\@dblmaxsep"       => Dimension::new(0));
-  DefRegister!("\\@fptop"           => Glue::new(0));
-  DefRegister!("\\@fpsep"           => Glue::new(0));
-  DefRegister!("\\@fpbot"           => Glue::new(0));
-  DefRegister!("\\@dblfptop"        => Glue::new(0));
-  DefRegister!("\\@dblfpsep"        => Glue::new(0));
-  DefRegister!("\\@dblfpbot"        => Glue::new(0));
+  // Float infrastructure (Perl latex_base L391-417, C.9.1) moved to latex_base.rs.
   // \abovecaptionskip, \belowcaptionskip — not in Perl engine
   // (Perl: article.cls.ltxml; Rust: article_cls.rs already defines them)
-  Let!("\\topfigrule", "\\relax");
-  Let!("\\botfigrule", "\\relax");
-  Let!("\\dblfigrule", "\\relax");
+  // \@maxsep / \@dblmaxsep — Rust-only auxiliary registers (not in Perl).
+  DefRegister!("\\@maxsep"          => Dimension::new(0));
+  DefRegister!("\\@dblmaxsep"       => Dimension::new(0));
 
   DefMacro!("\\figurename",  "Figure");
   DefMacro!("\\figuresname", "Figures");    // Never used?

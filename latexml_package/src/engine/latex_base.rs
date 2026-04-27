@@ -265,8 +265,39 @@ LoadDefinitions!({
   // C.9.1 Figures and Tables — float parameters
   // Perl: latex_base.pool.ltxml lines 384-417
   //======================================================================
-  // Float counters, fractions, registers — in latex_constructs.rs (C.9)
-  // \flushbottom, \suppressfloats — in latex_constructs.rs (C.9)
+  // Perl L391-392
+  DefPrimitive!("\\flushbottom",      None);
+  DefPrimitive!("\\suppressfloats[]", None);
+
+  // Perl L394-403: float counters and fractions
+  NewCounter!("topnumber");
+  DefMacro!("\\topfraction", "0.25");
+  NewCounter!("bottomnumber");
+  DefMacro!("\\bottomfraction", "0.25");
+  NewCounter!("totalnumber");
+  DefMacro!("\\textfraction", "0.25");
+  DefMacro!("\\floatpagefraction", "0.25");
+  NewCounter!("dbltopnumber");
+  DefMacro!("\\dbltopfraction", "0.7");
+  DefMacro!("\\dblfloatpagefraction", "0.25");
+
+  // Perl L404-414: float separators and extents
+  DefRegister!("\\floatsep"        => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
+  DefRegister!("\\textfloatsep"    => Glue!("20.0pt plus 2.0pt minus 4.0pt"));
+  DefRegister!("\\intextsep"       => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
+  DefRegister!("\\dblfloatsep"     => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
+  DefRegister!("\\dbltextfloatsep" => Glue!("20.0pt plus 2.0pt minus 4.0pt"));
+  DefRegister!("\\@fptop"          => Glue::new(0));
+  DefRegister!("\\@fpsep"          => Glue::new(0));
+  DefRegister!("\\@fpbot"          => Glue::new(0));
+  DefRegister!("\\@dblfptop"       => Glue::new(0));
+  DefRegister!("\\@dblfpsep"       => Glue::new(0));
+  DefRegister!("\\@dblfpbot"       => Glue::new(0));
+
+  // Perl L415-417: figure rules (Lets to \relax)
+  Let!("\\topfigrule", "\\relax");
+  Let!("\\botfigrule", "\\relax");
+  Let!("\\dblfigrule", "\\relax");
 
   //======================================================================
   // C.11.4 Splitting the input / C.13 Boxes
