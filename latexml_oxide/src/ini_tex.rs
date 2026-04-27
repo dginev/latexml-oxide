@@ -59,6 +59,44 @@ pub fn dump_format(
     eprintln!("[ini_tex] base warning: {}", e);
   }
 
+  // Clear LaTeX/expl3/AmSTeX autoload triggers and `\documentstyle`
+  // installed by `tex.rs` during `prepare_session`. These triggers
+  // pre-define `\makeatletter`, `\documentclass`, etc. — which then
+  // poison the snapshot, causing raw `latex.ltx` at L1798
+  // (`\DeclareRobustCommand\makeatletter`) to hit the "redefining"
+  // branch in `\declare@robustcommand` (L1388), which calls
+  // `\@latex@info{Redefining ...}` — but `\@latex@info` isn't
+  // defined until L1799, triggering an undefined-CS cascade.
+  //
+  // Perl `Core.pm::iniTeX` defaults to `mode='Base'` for dump-build,
+  // so `Base.pool` is loaded but `TeX.pool`'s autoload triggers are
+  // NOT. Mirror that here by clearing them right before the snapshot.
+  for trigger in &[
+    // LaTeX autoload triggers (tex.rs L149-167)
+    "\\documentclass", "\\newcommand", "\\renewcommand",
+    "\\newenvironment", "\\renewenvironment",
+    "\\NeedsTeXFormat", "\\ProvidesPackage", "\\RequirePackage",
+    "\\ProvidesFile", "\\makeatletter", "\\makeatother",
+    "\\begin", "\\listfiles", "\\nofiles", "\\typeout",
+    "\\PassOptionsToPackage",
+    // `\@load@latex@pool` itself
+    "\\@load@latex@pool",
+    // expl3 autoload triggers
+    "\\ExplSyntaxOn", "\\ProvidesExplClass", "\\ProvidesExplPackage",
+    // AmSTeX/amsmath autoload triggers
+    "\\mathfrak", "\\mathbb", "\\Bbb", "\\theoremstyle",
+    "\\numberwithin", "\\align", "\\subequations", "\\multline",
+    "\\curraddr", "\\subjclass",
+    // `\documentstyle` was also defined in tex.rs as a runtime macro
+    "\\documentstyle",
+  ] {
+    state::assign_meaning(
+      &latexml_core::T_CS!(*trigger),
+      latexml_core::common::store::Stored::None,
+      Some(state::Scope::Global),
+    );
+  }
+
   // Step 2 + 3: install \jobname / \dump (no-op), then load bootstrap.
   // (Perl Core.pm L204-207 + TeX_Job.pool.ltxml L127-129)
   let init_lower = init_file.to_ascii_lowercase();
