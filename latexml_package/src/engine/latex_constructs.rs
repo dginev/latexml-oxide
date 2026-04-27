@@ -3784,8 +3784,15 @@ LoadDefinitions!({
     Vec::new()
   });
 
-  // latex.ltx initializes \@filelist to \@gobble, which eats the leading comma
-  // from the first \@addtofilelist call. We replicate this by using \@gobble.
+  // Perl latex_constructs.pool.ltxml L983: DefMacroI('\@filelist', undef, Tokens());
+  // INTENTIONAL DIVERGE: Rust uses `\@gobble` to match the test reference
+  // (`tests/structure/filelist.xml`), which expects NO leading comma in the
+  // output. With Perl's strict `Tokens()` init + `\@addtofilelist`'s
+  // ',#1' append pattern, the result has a leading comma — verified by
+  // running Rust with `Tokens()` init: produces `,textcomp.sty,...`.
+  // The `\@gobble` workaround eats the leading comma at first append.
+  // Either Perl LaTeXML's expected XML is stale, or a downstream consumer
+  // strips the leading comma. Test reference is authoritative.
   DefMacro!("\\@filelist", "\\@gobble");
   DefMacro!("\\@addtofilelist{}", sub[(arg)] {
     let expansion = Expand!(Tokens!(T_CS!("\\@filelist"), T_OTHER!(","), arg.unlist()));
