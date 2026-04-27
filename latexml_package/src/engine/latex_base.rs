@@ -259,7 +259,14 @@ LoadDefinitions!({
   // C.8.1 Defining Commands
   // Perl: latex_base.pool.ltxml lines 350-368
   //======================================================================
-  // \@tabacckludge, DeclareTextAccent, etc. — in latex_constructs.rs (C.8)
+  // Perl L357
+  DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+
+  // Perl L359-368: DeclareTextAccent family (no-op stubs)
+  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
+  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
+  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
+  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
 
   //======================================================================
   // C.9.1 Figures and Tables — float parameters

@@ -122,6 +122,17 @@ LoadDefinitions!({
   // Not in Perl source; pure Rust hotfix.
   DefMacro!("\\Gin@driver", "");
 
+  // `\@tabacckludge` simplified body — Perl-faithful body lives in
+  // latex_base.rs (Perl L357: `\csname\string#1\endcsname`). Under
+  // the dump path latex_base.rs is skipped and the dump-captured
+  // body uses the latex.ltx `\@changed@cmd`-wrapped form which
+  // emits in-math warnings via `\@inmathwarn` and routes through
+  // `\cf@encoding` lookup. That chain doesn't expand cleanly under
+  // Rust's expansion model (encoding tests cp1250/cp852/latin2/
+  // latin4/latin10 break with it). Override here so the dump-path
+  // body matches latex_base.rs's simpler Perl-faithful form.
+  DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+
   //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //

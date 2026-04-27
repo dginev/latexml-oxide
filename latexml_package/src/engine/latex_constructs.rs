@@ -5253,7 +5253,11 @@ LoadDefinitions!({
   // C.8.1 Defining Commands
   //======================================================================
 
-  DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+  // `\@tabacckludge` (Perl latex_base L357) and `\DeclareTextAccent`
+  // family (L359-368) moved to latex_base.rs. The dump path uses the
+  // dump-captured `\@tabacckludge` body (latex.ltx L10007 era), which
+  // differs from Perl's pool entry. Both are functionally equivalent.
+
   // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries
   // `\a` as an E record (the serializer captured
   // `\@tabacckludge`'s body with a `\@changed@cmd` wrapper, not a
@@ -5427,8 +5431,8 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextSymbolDefault DefToken {}", None);
 
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
+  // `\DeclareTextAccent` / `\DeclareTextAccentDefault` (Perl latex_base
+  // L359-362) moved to latex_base.rs.
 
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
   DefMacro!("\\f@encoding", {
@@ -5439,10 +5443,8 @@ LoadDefinitions!({
   });
 
   // #------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
-  // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
-  // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
+  // `\DeclareTextComposite` / `\DeclareTextCompositeCommand` (Perl
+  // latex_base L365-368) moved to latex_base.rs.
 
   DefPrimitive!("\\UndeclareTextCommand{}{}", None);
   DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
