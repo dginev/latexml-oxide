@@ -3672,6 +3672,16 @@ LoadDefinitions!({
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
+  // Latex.ltx L15252-15256: LaTeX3-style aliases for the file-load
+  // tracking commands. The dump captures these as `Lt(...)` self-let
+  // entries that don't actually replay because we filter same-target
+  // aliases in `dump_writer`. Re-establish here post-dump.
+  Let!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
+  Let!("\\IfClassLoadedTF", r"\@ifclassloaded");
+  Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
+  Let!("\\IfClassAtLeastTF", r"\@ifclasslater");
+  Let!("\\IfFormatAtLeastTF", r"\@ifl@t@r@released");
+  Let!("\\IfFileAtLeastTF", r"\@ifl@t@r");
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
