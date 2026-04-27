@@ -662,13 +662,35 @@ LoadDefinitions!({
               // trigger preload_font_map → assign_value, and with_font_info
               // holds a State borrow while its closure runs (see
               // mathchar.rs fix for 0711.4787 RefCell panic pattern).
-              let encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
+              let mut encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
                 if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
                   info.encoding.as_ref().map(|s| s.to_string())
                 } else {
                   None
                 }
               });
+              // Fallback (mirror mathchar.rs L862-887): when `fontinfo_<cs>`
+              // didn't round-trip through the dump as a `Stored::Font`, but
+              // its `font_shared_key_<cs>` pointer DID, derive encoding from
+              // the font name via `decode_fontname`. Without this, dump-mode
+              // \lxDeclare doesn't add the alternate codepoint pattern (e.g.
+              // `*` → `∗`) and overrides on \ast etc. silently fail.
+              if encoding_opt.is_none() {
+                let shared_key = state::with_value(
+                  &format!("font_shared_key_{}", ftok.with_str(ToString::to_string)),
+                  |v| match v {
+                    Some(Stored::String(s)) => arena::with(*s, |str| Some(str.to_string())),
+                    _ => None,
+                  },
+                );
+                if let Some(sk) = shared_key {
+                  if let Some(name) = sk.strip_prefix("fontinfo_") {
+                    if let Some(props) = latexml_core::common::font::decode_fontname(name, None, None) {
+                      encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
+                    }
+                  }
+                }
+              }
               if let Some(encoding) = encoding_opt {
                 if let Some(dc) = latexml_core::common::font::decode(decoded_pos, Some(encoding), false) {
                   let ds = dc.to_string();
