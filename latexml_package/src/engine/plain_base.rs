@@ -654,6 +654,20 @@ LoadDefinitions!({
     "\\mathhexbox{}{}{}",
     r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##
   );
+
+  //----------------------------------------------------------------------
+  // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
+  // Perl plain_base.pool.ltxml L525-533 — these shouldn't appear in math.
+  DefPrimitive!("\\OE", "\u{0152}"); // LATIN CAPITAL LIGATURE OE
+  DefPrimitive!("\\oe", "\u{0153}"); // LATIN SMALL LIGATURE OE
+  DefPrimitive!("\\AE", "\u{00C6}"); // LATIN CAPITAL LETTER AE
+  DefPrimitive!("\\ae", "\u{00E6}"); // LATIN SMALL LETTER AE
+  DefPrimitive!("\\AA", "\u{00C5}"); // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\aa", "\u{00E5}"); // LATIN SMALL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\O", "\u{00D8}"); // LATIN CAPITAL LETTER O WITH STROKE
+  DefPrimitive!("\\o", "\u{00F8}"); // LATIN SMALL LETTER O WITH STROKE
+  DefPrimitive!("\\ss", "\u{00DF}"); // LATIN SMALL LETTER SHARP S
+
   // math_common + plain_constructs loaded after plain_base by tex.rs
   // (Perl: LoadFormat('plain') → plain_constructs → math_common)
 

@@ -198,18 +198,9 @@ LoadDefinitions!({
   DefMath!("\\Omega", None, "\u{03A9}");
 
   //----------------------------------------------------------------------
-  // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
-
-  // The following shouldn't appear in math.
-  DefPrimitive!("\\OE", "\u{0152}"); // LATIN CAPITAL LIGATURE OE
-  DefPrimitive!("\\oe", "\u{0153}"); // LATIN SMALL LIGATURE OE
-  DefPrimitive!("\\AE", "\u{00C6}"); // LATIN CAPITAL LETTER AE
-  DefPrimitive!("\\ae", "\u{00E6}"); // LATIN SMALL LETTER AE
-  DefPrimitive!("\\AA", "\u{00C5}"); // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\aa", "\u{00E5}"); // LATIN SMALL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\O", "\u{00D8}"); // LATIN CAPITAL LETTER O WITH STROKE
-  DefPrimitive!("\\o", "\u{00F8}"); // LATIN SMALL LETTER O WITH STROKE
-  DefPrimitive!("\\ss", "\u{00DF}"); // LATIN SMALL LETTER SHARP S
+  // Non-English Symbols ligatures (\OE/\oe/\AE/\ae/\AA/\aa/\O/\o/\ss)
+  // moved to plain_base.rs (Perl plain_base.pool.ltxml L525-533).
+  // Extended set (\dh/\DH/\dj/\DJ/\ng/\NG/\th/\TH) is in latex_constructs.rs.
 
 
   // Perl TeX_Character.pool.ltxml: DefPrimitive('\accent Number', sub { ... })
