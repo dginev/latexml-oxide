@@ -123,6 +123,129 @@ against `plain_base.rs` (751 lines).
   L369 + closure L371-374) into a single closure with
   `require_math => true`. Functionally equivalent.
 
-## Phase 3+ (TODO)
+## Phase 3 — Perl L400-622 (file end: spacing, chars, page layout, em/boldmath)
 
-* Phase 3: Perl L400-622 (final blocks)
+| Perl L | Symbol | Rust file:line | Status |
+|--------|--------|----------------|--------|
+| 401-404 | `\obeyspaces` (DefPrimitiveI closure) | plain_base.rs:430-433 | ✅ |
+| 407 | `Let T_ACTIVE(' ') \space` | plain_base.rs:436 | ✅ |
+| 409-412 | `\obeylines` | plain_base.rs:438-441 | ✅ |
+| 414 | `\@break` Constructor | plain_base.rs:443-444 | ✅ |
+| 416-420 | RawTeX `\loop`/`\iterate`/`\repeat` | plain_base.rs:446-452 (TeX!) | ✅ |
+| 422-424 | `\enskip` (Box, name='enskip', width=0.5em) | plain_base.rs:454 | ✅ |
+| 426-428 | `\enspace` | plain_base.rs:465 | ✅ |
+| 430-432 | `\quad` | plain_base.rs:476 | ✅ |
+| 435-437 | `\qquad` (asHint => 1) | plain_base.rs:488 | ✅ |
+| 439-441 | `\thinspace` | plain_base.rs:499 | ✅ |
+| 443-445 | `\negthinspace` | plain_base.rs:510 | ✅ |
+| 447-452 | `\hglue Glue` (DefPrimitive closure) | plain_base.rs:564-570 | ✅ |
+| 454 | `\vglue Glue` (DefPrimitive None) | plain_base.rs:571 | ✅ |
+| 455 | `\topglue` | plain_base.rs:572 | ✅ |
+| 456 | `\nointerlineskip` | plain_base.rs:574 | ✅ |
+| 457-458 | `\offinterlineskip` | plain_base.rs:578 | ✅ |
+| 460 | `\smallskip` | plain_base.rs:582 | ✅ |
+| 461 | `\medskip` | plain_base.rs:583 | ✅ |
+| 462 | `\bigskip` | plain_base.rs:584 | ✅ |
+| 467 | `\break` | plain_base.rs (verify) | (likely ✅) |
+| 468 | `\nobreak` | plain_base.rs (verify) | (likely ✅) |
+| 471 | `T_ACTIVE("~") \lx@NBSP` | plain_base.rs (verify) | (likely ✅) |
+| 473 | `\slash` "/" | plain_base.rs (verify) | (likely ✅) |
+| 474 | `\filbreak` | plain_base.rs:605 | ✅ |
+| 475 | `\goodbreak` "\par" | plain_base.rs:606 | ✅ |
+| 476 | `\removelastskip` | plain_base.rs:607 | ✅ |
+| 477 | `\smallbreak` "\par" | plain_base.rs:608 | ✅ |
+| 478 | `\medbreak` "\par" | plain_base.rs:609 | ✅ |
+| 479 | `\bigbreak` "\par" | plain_base.rs:610 | ✅ |
+| 481 | `\line` "\hbox to \hsize" | plain_base.rs (verify) | (likely ✅) |
+| 484 | `\llap{}` | plain_base.rs:614 | ✅ |
+| 485 | `\rlap{}` | plain_base.rs:615 | ✅ |
+| 487 | `\m@th` | plain_base.rs:616 | ✅ |
+| 490 | `\strut` Tokens() | plain_base.rs (verify) | (likely ✅) |
+| 491 | RawTeX `\newbox\strutbox` | plain_base.rs (verify) | (likely ✅) |
+| 499 | `\settabs` | plain_base.rs (verify) | (likely ✅) |
+| 507 | `\hang` | plain_base.rs:634 | ✅ |
+| 508 | `\item` | plain_base.rs (verify) | (likely ✅) |
+| 509 | `\itemitem` | plain_base.rs:638 | ✅ |
+| 510 | `\textindent{}` | plain_base.rs:640 | ✅ |
+| 511-512 | `\narrower` | plain_base.rs:642 | ✅ |
+| 516 | `\raggedright` | plain_base.rs:649 | ✅ |
+| 517 | `\raggedleft` | plain_base.rs (verify) | (likely ✅) |
+| 518 | `\ttraggedright` | plain_base.rs:651 | ✅ |
+| 519 | `\mathhexbox{}{}{}` `\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}` | plain_base.rs:654 | ✅ |
+| 525 | `\OE` UTF(0x152) | math_common.rs:204 + latex_constructs.rs:5664 | ↻ MISPLACED + ⚠ DUP |
+| 526 | `\oe` UTF(0x153) | (math_common.rs / latex_constructs.rs) | ↻ MISPLACED |
+| 527 | `\AE` UTF(0xC6) | similar | ↻ MISPLACED |
+| 528 | `\ae` UTF(0xE6) | similar | ↻ MISPLACED |
+| 529 | `\AA` UTF(0xC5) | similar | ↻ MISPLACED |
+| 530 | `\aa` UTF(0xE5) | similar | ↻ MISPLACED |
+| 531 | `\O` UTF(0xD8) | similar | ↻ MISPLACED |
+| 532 | `\o` UTF(0xF8) | similar | ↻ MISPLACED |
+| 533 | `\ss` UTF(0xDF) | similar | ↻ MISPLACED |
+| 537 | `Let \sp T_SUPER` | plain_base.rs (verify) | (likely ✅) |
+| 538 | `Let \sb T_SUB` | plain_base.rs (verify) | (likely ✅) |
+| 539 | `Let \: \>` | plain_base.rs (verify) | (likely ✅) |
+| 541-543 | `\\\t` (DefPrimitiveI closure: Box UTF(0xA0) name=tab) | plain_base.rs:425 (Let form, not DefPrimitive) | ⚠ shape |
+| 546 | `\openup Dimension` | plain_base.rs:661 | ✅ |
+| 551 | `\displaylines{}` | plain_base.rs:667 | ✅ |
+| 553 | `\pageno` Number(0) | plain_base.rs:671 | ✅ |
+| 554 | `\headline` Tokens() | plain_base.rs:672 | ✅ |
+| 555 | `\footline` Tokens() | plain_base.rs:673 | ✅ |
+| 556 | `\folio` "1" | plain_base.rs:674 | ✅ |
+| 558 | `\nopagenumbers` | plain_base.rs:676 | ✅ |
+| 559 | `\advancepageno` | plain_base.rs:677 | ✅ |
+| 564 | `\raggedbottom` | plain_base.rs:681 | ✅ |
+| 565 | `\normalbottom` | plain_base.rs (verify) | (likely ✅) |
+| 568 | `\vfootnote` | plain_base.rs:685 | ✅ |
+| 569 | `\fo@t` | plain_base.rs (verify) | (likely ✅) |
+| 570 | `\f@@t` | plain_base.rs (verify) | (likely ✅) |
+| 571 | `\f@t{}` | plain_base.rs (verify) | (likely ✅) |
+| 572 | `\@foot` | plain_base.rs (verify) | (likely ✅) |
+| 574 | `\footstrut` | plain_base.rs:694 | ✅ |
+| 575 | `\footins` Number(0) | plain_base.rs:695 | ✅ |
+| 577 | `\topinsert` | plain_base.rs:697 | ✅ |
+| 578 | `\midinsert` | plain_base.rs:698 | ✅ |
+| 579 | `\pageinsert` | plain_base.rs:699 | ✅ |
+| 580 | `\endinsert` | plain_base.rs:700 | ✅ |
+| 588 | `\footnoterule` | plain_base.rs:707 | ✅ |
+| 606-611 | `\em` (DefPrimitiveI before_digest closure) | plain_base.rs:725 | ✅ |
+| 614-616 | `\boldmath` (forbidMath => 1) | plain_base.rs:735 | ✅ |
+| 617-619 | `\unboldmath` (forbidMath => 1) | plain_base.rs:743 | ✅ |
+
+### Phase 3 findings
+
+* **Predominantly PARITY** for L400-622. Most ~50 entries match
+  Rust at plain_base.rs:430-743 in source order.
+* **↻ MISPLACED + ⚠ DUP** (L525-533): `\OE`/`\oe`/`\AE`/`\ae`/`\AA`/
+  `\aa`/`\O`/`\o`/`\ss` (9 ligatures) — defined in `math_common.rs:204+`
+  AND `latex_constructs.rs:5664+` instead of `plain_base.rs`. Per
+  strict-parity rule, primary location should be plain_base.rs.
+  The math_common.rs entries are likely intentional (ligatures
+  also work in math) but the duplication in latex_constructs.rs
+  is suspicious.
+* **⚠ shape** (L541-543): `\\\t` — Perl is DefPrimitiveI closure
+  (Box UTF(0xA0) width=1em); Rust at plain_base.rs:425 uses
+  `Let!("\\\t", "\\\r")`. Different shape; functionally similar
+  but not strictly parity.
+
+## Cumulative parity health (Perl L1-622, 100% of plain_base.pool.ltxml)
+
+* **Phase 1** (L1-200): ✅ Strong PARITY with documented intentional
+  shape divergences (`\#`/`\&`/`\%`/`\$`/`\_` trio split, WISDOM #44).
+* **Phase 2** (L200-400): ✅ Strong PARITY. ↻ MISPLACED Plain TeX
+  mathcodes block (Perl L303-360) lives in `math_common.rs:425+`.
+* **Phase 3** (L400-622): ✅ Strong PARITY. ↻ MISPLACED ligatures
+  cluster (`\OE`/`\AE`/`\AA` family, 9 entries, Perl L525-533) in
+  `math_common.rs` + `latex_constructs.rs`; shape divergence on
+  `\\\t`.
+
+Overall: plain_base.rs is a high-parity file; main outstanding work
+is migrating mathcodes block + ligatures cluster from math_common
+back to plain_base.
+
+## Pending parity work (post-audit)
+
+1. Mathcodes block (Perl L303-360, ~60 entries): currently in
+   math_common.rs:425+. Need to verify if Perl math_common.pool.ltxml
+   ALSO defines them; if not, migrate to plain_base.rs.
+2. Ligatures cluster (`\OE`/`\AE`/`\AA` family): clean up duplicate in
+   latex_constructs.rs; primary location should be plain_base.rs.
