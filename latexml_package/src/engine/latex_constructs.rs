@@ -14,7 +14,37 @@ use crate::engine::base_utilities::insert_frontmatter;
 use crate::engine::tex_tables::alignment_bindings;
 use crate::prelude::*;
 use latexml_core::alignment::template::TemplateConfig;
+use latexml_core::digested::DigestedData;
 use std::collections::VecDeque;
+
+/// Walk a `Digested` and concatenate its text content (for attribute use,
+/// matching Perl's `setAttribute(..., DigestText(...))` semantics). Tbox
+/// children contribute their text; nested Lists recurse; `\hskip`-style
+/// Whatsits (which are side-effect-only constructors with no text content)
+/// fall back to `dimension_to_spaces(width)` instead of reverting to the
+/// macro name. All other Whatsits use their normal `get_string` path.
+fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
+  use std::ops::Deref;
+  let mut out = String::new();
+  match d.data() {
+    DigestedData::TBox(b) => out.push_str(&b.borrow().get_string()?),
+    DigestedData::List(l) => {
+      for child in l.borrow().boxes.iter() {
+        out.push_str(&digested_to_text(child)?);
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      if let Some(Stored::Dimension(width)) = w.get_property("width").as_ref().map(Deref::deref) {
+        out.push_str(&super::tex_glue::dimension_to_spaces(*width));
+      } else {
+        out.push_str(&w.get_string()?);
+      }
+    },
+    _ => out.push_str(&d.to_string()),
+  }
+  Ok(out)
+}
 
 // Mirrors Perl `Package.pm` (`split(/\s*,\s*/, $options)`) — strips
 // whitespace on BOTH sides of each comma so option names are normalized
@@ -3892,12 +3922,22 @@ LoadDefinitions!({
     let i          = document.findnodes("//ltx:creator[@role='author']", None).len() as i64;
     if i <= 1 { }
     else if i == nauthors {
-      let author_conj = Digest!(T_CS!("\\lx@author@conj"))?;
-      document.set_attribute(&mut node, "before", &author_conj.to_string())?;
-
+      // Perl: setAttribute(before => DigestText(T_CS('\lx@author@conj'))).
+      // `\lx@author@conj` is overridable: latex_constructs sets it to
+      // `\qquad` (em-spaces); ams_support overrides to `\ and\ `. Use
+      // `get_string()` rather than `to_string()` so Tbox text content
+      // (chars from `\ and\ `) is concatenated, but we also need
+      // `\hskip` Whatsits (from `\qquad → \hskip 2em\relax`) to fall
+      // back to `dimension_to_spaces(width)` since `\hskip`'s Display
+      // would revert to the macro name. Digest the macro and walk the
+      // tree extracting text-or-spaces.
+      let conj = DigestText!(Tokens!(T_CS!("\\lx@author@conj")))?;
+      let s = digested_to_text(&conj)?;
+      document.set_attribute(&mut node, "before", &s)?;
     } else {
-      let author_sep = Digest!(T_CS!("\\lx@author@sep"))?;
-      document.set_attribute(&mut node, "before", &author_sep.to_string())?;
+      let sep = DigestText!(Tokens!(T_CS!("\\lx@author@sep")))?;
+      let s = digested_to_text(&sep)?;
+      document.set_attribute(&mut node, "before", &s)?;
     }
   });
 
