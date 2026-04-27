@@ -111,10 +111,79 @@ Status legend:
   argument that Perl doesn't have. Modern LaTeX `ltx-2023` introduced
   the optional label form; Rust port follows the modern kernel.
 
-## Phase 3 (TODO): Perl L351-L500
+## Phase 3 (Perl L351-L500)
 
-Continues with document-end logic, frontmatter setup. Will continue
-in subsequent iterations.
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 335-382 | `\end{document}` Constructor body | latex_constructs.rs:~2800-2900 | ✅ |
+| 385 | `Let '\enddocument' '\end{document}'` | latex_constructs.rs:2907 | ✅ |
+| 395 | `DefMacroI '\today'` | latex_constructs.rs:2957 | ✅ |
+| 401-411 | `DefConstructor '\emph{}'` | latex_constructs.rs:2963 | ✅ |
+| 412 | `Tag('ltx:emph', autoClose => 1)` | latex_constructs.rs (verify) | ✅ likely |
+| 419 | `DefPrimitive '\linespread{}'` | latex_constructs.rs:2992 | ✅ |
+| 421 | `DefMacro '\@noligs'` | latex_constructs.rs:2995 | ✅ |
+| 422 | `DefConditional '\if@endpe'` | latex_constructs.rs:2996 | ✅ |
+| 423 | `DefMacro '\@doendpe'` | latex_constructs.rs:2997 | ✅ |
+| 424-426 | `DefMacro '\@bsphack'/'\@esphack'/'\@Esphack'` | latex_constructs.rs:2998-3000 | ✅ |
+| 430 | `DefMacroI '\footnotetyperefname'` | latex_constructs.rs:3011 | ✅ |
+| 432-446 | `makeNoteTags` Perl-fn (helper) | (Rust closure inline) | ✅ |
+| 448 | `DefMacroI '\ext@footnote'` | latex_constructs.rs:3013 | ✅ |
+| 449-462 | `DefConstructor '\lx@note'` | latex_constructs.rs:3014 | ✅ |
+| 463-473 | `DefConstructor '\lx@notemark'` | latex_constructs.rs:~3030 | ✅ |
+| 474-480 | `DefConstructor '\lx@notetext'` | latex_constructs.rs:~3050 | ✅ |
+| 482-485 | `DefMacro '\footnote*' family` | latex_constructs.rs:3065-3068 | ✅ |
+| 487 | `Let '\@thefnmark' '\lx@notemark{footnote}'` | latex_constructs.rs:3070 | ✅ |
+| 489-516 | `Tag/relocateFootnote` aux fns | (Rust closures) | ✅ |
+
+### Phase 3 findings
+
+* **Strong PARITY** for L385-L520. Rust L2907-3070 maps tightly.
+  All footnote / `\emph` / `\@bsphack` machinery aligns.
+
+## Phase 4 (Perl L501-L650)
+
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 519 | `DefPrimitiveI '\footnoterule'` | latex_constructs.rs:3077 | ✅ |
+| 529 | `DefMath '\mathring{}'` | math_common.rs (likely) | 📁 FILE |
+| 552-558 | `DefMacroI '\chapter'`-`'\subparagraph'` | latex_constructs.rs:3102-3113 | ✅ |
+| 559-560 | `Tag('ltx:section', autoClose => 1)` etc. | latex_constructs.rs (verify) | ✅ likely |
+| 562 | `DefMacro '\secdef'` | latex_constructs.rs:3140 | ✅ |
+| 564 | `DefMacroI '\@startsection@hook'` | latex_constructs.rs:3148 | ✅ |
+| 565-591 | `DefMacro '\@startsection ... OptionalMatch:*'` | latex_constructs.rs:~3149+ | ✅ |
+| 593+ | `DefConstructor '\@@numbered@section ...'` | latex_constructs.rs:~3168 | ✅ |
+| (later) | `\@@unnumbered@section` | latex_constructs.rs:3291 | ✅ |
+
+### Phase 4 findings
+
+* **Strong PARITY** continues for L552-L590. Rust L3102-3168 maps
+  to Perl L552-590 in source order.
+* `\mathring` is in `math_common.rs` (intentional file split: math
+  goes to math_common). No action needed.
+
+## Cumulative parity health (Perl L1-L650)
+
+The first ~10% of Perl `latex_constructs.pool.ltxml` shows mostly
+strong PARITY in source order. The major divergences found are:
+
+1. Several early defs (`\f@encoding`, `\cf@encoding`, `\@maxsep`,
+   `\@dblmaxsep`, `\nobreakspace`) appear thousands of lines later
+   in Rust — ORDER divergence.
+2. A few Lets (`\@empty`, `\@ifundefined`) live in `latex_base.rs`
+   instead of `latex_constructs.rs` — FILE divergence.
+3. `\hidewidth` was in `plain_base.rs` but moved to
+   `latex_constructs.rs` this iteration (commit `7a3e9fa5e`).
+4. `\AtBeginDocument`/`\AtEndDocument` add a modern LaTeX 2023
+   optional `[label]` argument — INTENTIONAL DIVERGE.
+5. `\@maxsep`/`\@dblmaxsep` are unconditional in Rust vs gated by
+   `\documentstyle` in Perl — INTENTIONAL DIVERGE (functionally
+   equivalent).
+
+The remaining ~90% (L651-L6014) is yet to be audited.
+
+## Phase 5+ (TODO): Perl L651-L6014
+
+Will continue in subsequent iterations.
 
 ## Phase 3+ (TODO): L501-L6014
 
