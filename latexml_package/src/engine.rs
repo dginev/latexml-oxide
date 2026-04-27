@@ -58,3 +58,8 @@ pub mod tex; // Perl: TeX.pool.ltxml (loads Base + LoadFormat('plain')) // Perl:
 
 // AmSTeX format — LoadPool('AmSTeX'), routed via `\input amstex`.
 pub mod amstex; // Perl: AmSTeX.pool.ltxml
+
+// BibTeX format — LoadPool('BibTeX'), preloaded for `--type=BibTeX`
+// or via `LoadPool('BibTeX')` from amsrefs.sty.ltxml.
+// Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
+pub mod bibtex; // Perl: BibTeX.pool.ltxml

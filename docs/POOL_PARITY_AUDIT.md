@@ -25,7 +25,7 @@ walk-through completes.
 | `latex_bootstrap.pool.ltxml` | LoadPool(plain_bootstrap) + bootstrap defs | `engine/latex_bootstrap.rs` | walk pending |
 | `latex_constructs.pool.ltxml` | **Force-reload(plain_constructs); Force-reload(math_common)** + LaTeX construct defs | `engine/latex_constructs.rs` | ❌ **Gap 1**: missing the two reloads |
 | `plain_constructs.pool.ltxml` | LoadPool(math_common) + plain construct defs | `engine/plain_constructs.rs` | walk pending |
-| `BibTeX.pool.ltxml` | LoadPool(LaTeX) + bib defs | **MISSING** | ❌ **Gap 2**: no `bibtex.rs` |
+| `BibTeX.pool.ltxml` | LoadPool(LaTeX) + bib defs | `engine/bibtex.rs` (skeleton) | ⚠️ Skeleton-only — `LoadPool!("LaTeX")` mirrors Perl L19. The 936+ lines of bib entry-type constructors / field handlers / key normalization are NOT yet ported. `amsrefs_sty.rs` still flags `\bib` as TODO. |
 | `AmSTeX.pool.ltxml` | (no `LoadPool` at file load — only inside macros) | `engine/amstex.rs` | walk pending |
 
 ## Leaf pool files (no LoadPool/Format at file-load time)
