@@ -3086,7 +3086,11 @@ LoadDefinitions!({
 
   DefMacro!("\\@startsection@hook", "");
 
-  NewCounter!("secnumdepth");
+  // NewCounter('secnumdepth') (Perl latex_base L312) moved to
+  // latex_base.rs. SetCounter to 3 stays here (Rust addition; Perl
+  // sets via raw class file). The NewCounter is also in
+  // latex_constructs_rust_only.rs for dump-path coverage so SetCounter
+  // here always finds an existing counter.
   SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
@@ -3412,7 +3416,8 @@ LoadDefinitions!({
   //======================================================================
   // C.4.4 Style registers
   //======================================================================
-  NewCounter!("tocdepth");
+  // NewCounter('tocdepth') (Perl latex_base L300) moved to latex_base.rs
+  // (with dump-path coverage in latex_constructs_rust_only.rs).
 
 
   // ======================================================================

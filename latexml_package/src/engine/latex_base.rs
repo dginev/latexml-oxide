@@ -304,14 +304,14 @@ LoadDefinitions!({
   DefMacro!("\\listtablename", "List of Tables");
 
   // C.4.4 Style registers (Perl L300)
-  // tocdepth — still in latex_constructs.rs (couples with TOC machinery
-  // there; Perl `NewCounter` only NewCounter call, value-set elsewhere).
+  NewCounter!("tocdepth");
 
   // C.5.1 Document Class — page registers (Perl L309-311)
   DefRegister!("\\columnsep"     => Dimension::new(0));
   DefRegister!("\\columnseprule" => Dimension::new(0));
   DefRegister!("\\mathindent"    => Dimension::new(0));
-  // secnumdepth — still in latex_constructs.rs (couples with \@startsection).
+  // C.5.1 secnumdepth (Perl L312)
+  NewCounter!("secnumdepth");
 
   // C.5.2 Packages — version parsing helpers (Perl L317-331)
   TeX!(

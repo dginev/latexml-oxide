@@ -166,6 +166,12 @@ LoadDefinitions!({
   DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
+  // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path
+  // coverage. \@startsection's SetCounter to 3 (in latex_constructs.rs)
+  // requires the counter to exist beforehand.
+  NewCounter!("tocdepth");
+  NewCounter!("secnumdepth");
+
   // C.5.2 version parsing (Perl latex_base L317-331) — dump-path coverage.
   TeX!(
     r"\def\@ifl@t@r#1#2{%
