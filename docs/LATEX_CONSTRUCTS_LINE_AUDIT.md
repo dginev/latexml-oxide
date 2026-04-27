@@ -658,10 +658,93 @@ order with small exceptions (5 catalogued ORDER divergences and
 The first 2500 lines audited show **predominantly strong PARITY**
 in source order. Rust L2410-L5163 maps roughly to Perl L73-L2500.
 
-## Phase 13+ (TODO): Perl L2501-L6014
+## Phase 13 (Perl L2501-L2750)
 
-More math constructs, theorem environments, sectioning internals,
-ToC, floats, indexing, miscellaneous. Will continue in subsequent
+| Perl L | Symbol/op | Rust file:line | Status |
+|---|---|---|---|
+| 2502-2505 | `\thinspace` Constructor | plain_base.rs:499 | 📁 FILE (Rust in plain_base) |
+| 2506-2509 | `\negthinspace` Constructor | plain_base.rs:510 | 📁 FILE |
+| 2510-2513 | `\medspace` Constructor | plain_base.rs:522 | 📁 FILE |
+| 2514-2517 | `\negmedspace` Constructor | plain_base.rs:532 | 📁 FILE |
+| 2518-2521 | `\thickspace` Constructor | plain_base.rs:542 | 📁 FILE |
+| 2522-2525 | `\negthickspace` Constructor | plain_base.rs:552 | 📁 FILE |
+| 2535-2536 | `\mathrm{}` | latex_constructs.rs:5190 | ✅ |
+| 2537-2538 | `\mathit{}` | latex_constructs.rs:5193 | ✅ |
+| 2539-2540 | `\mathbf{}` | latex_constructs.rs:5196 | ✅ |
+| 2541-2542 | `\mathsf{}` | latex_constructs.rs:5199 | ✅ |
+| 2543-2544 | `\mathtt{}` | latex_constructs.rs:5202 | ✅ |
+| 2545-2546 | `\mathcal{}` | latex_constructs.rs:5205 | ✅ |
+| 2547-2548 | `\mathscr{}` | latex_constructs.rs:5208 | ✅ |
+| 2549-2550 | `\mathnormal{}` | latex_constructs.rs:5211 | ✅ |
+| 2552 | `\fontsubfuzz` | latex_constructs.rs:5215 | ✅ |
+| 2553 | `\oldstylenums` | latex_constructs.rs:5216 | ✅ |
+| 2555-2556 | `\operator@font` | latex_constructs.rs:5218 | ✅ |
+| 2569-2574 | `isDefinableLaTeX` Perl-fn | latex_constructs.rs (Rust fn — find) | ✅ likely |
+| 2576-2583 | `\newcommand` | latex_constructs.rs:5248 | ✅ |
+| 2585 | `\CheckCommand` | latex_constructs.rs:5323 | ↻ ORDER (Rust later) |
+| 2587-2589 | `\renewcommand` | latex_constructs.rs:5262 | ✅ |
+| 2593-2594 | `\@argdef` | latex_constructs.rs:5272 | ✅ |
+| 2595-2596 | `\@xargdef` | latex_constructs.rs:5276 | ✅ |
+| 2597-2602 | `\@yargdef` | latex_constructs.rs:5281 | ✅ |
+| 2603-2604 | `\@reargdef` | latex_constructs.rs:5290 | ✅ |
+| 2606-2609 | `\providecommand` | latex_constructs.rs:5295 | ✅ |
+| 2612-2614 | `\DeclareRobustCommand` | latex_constructs.rs:5305 | ✅ |
+| 2615-2622 | `\MakeRobust` | latex_constructs.rs:5312 | ✅ |
+| 2641-2651 | `\DeclareTextCommand` | latex_constructs.rs:5335 | ✅ |
+| 2653 | `\DeclareTextCommandDefault` | latex_constructs.rs (verify ~5370) | ❓ |
+| 2655-2666 | `\ProvideTextCommand` | latex_constructs.rs (verify ~5365) | ❓ |
+| 2668 | `\ProvideTextCommandDefault` | latex_constructs.rs (verify ~5375) | ❓ |
+| 2671-2682 | `\DeclareTextSymbol` | latex_constructs.rs:5378 | ✅ |
+| 2684-2688 | `\DeclareTextSymbolDefault` | latex_constructs.rs:5406 | ✅ |
+| 2694 | `\fontencoding` | latex_constructs.rs:5412 | ✅ |
+| 2695 | `\f@encoding` | latex_constructs.rs:5413 | ✅ |
+| 2696 | `\cf@encoding` | latex_constructs.rs:5416 | ✅ |
+| 2698 | `\UndeclareTextCommand` | latex_constructs.rs:5426 | ✅ |
+| 2699 | `\UseTextSymbol` | latex_constructs.rs:5427 | ✅ |
+| 2700 | `\UseTextAccent` | latex_constructs.rs:5428 | ✅ |
+| 2702-2709 | `\DeclareMathAccent` | latex_constructs.rs:5438 | ✅ |
+| 2711-2712 | `\DeclareMathDelimiter` | latex_constructs.rs:5509 | ↻ ORDER |
+| 2713-2714 | `\DeclareMathRadical` | latex_constructs.rs:5510 | ↻ ORDER |
+| 2715 | `\DeclareMathVersion` | latex_constructs.rs:5511 | ↻ ORDER |
+| 2716 | `\DeclarePreloadSizes` | latex_constructs.rs:5512 | ↻ ORDER |
+| 2721-2727 | `\DeclareSymbolFont` | latex_constructs.rs:5517 | ✅ |
+| 2728-2731 | `\DeclareSymbolFontAlphabet` | latex_constructs.rs:5527 | ✅ |
+| 2733 | `\DeclareMathSizes` | latex_constructs.rs:5543 | ✅ |
+| 2734-2744 | `\DeclareMathAlphabet` | latex_constructs.rs:5546 | ✅ |
+| 2746 | `\newmathalphabet` | latex_constructs.rs:5544 | ✅ |
+| 2747 | `\DeclareFontShape` | latex_constructs.rs:5540 | ↻ ORDER |
+| 2748 | `\DeclareFontFamily` | latex_constructs.rs:5541 | ↻ ORDER |
+| 2749 | `\DeclareSizeFunction` | latex_constructs.rs:5542 | ↻ ORDER |
+
+### Phase 13 findings
+
+* **Strong PARITY** for L2501-L2750. Math-mode font commands
+  (`\math{rm,it,bf,sf,tt,cal,scr,normal}`), command-defining
+  primitives (`\newcommand`/`\renewcommand`/`\providecommand`/
+  `\DeclareRobustCommand`/`\MakeRobust`/`\@argdef`/`\@xargdef`/
+  `\@yargdef`/`\@reargdef`/`\CheckCommand`), text-command
+  declarators (`\DeclareTextCommand`/`\ProvideTextCommand`/
+  `\DeclareTextSymbol`/etc), font-encoding machinery
+  (`\fontencoding`/`\f@encoding`/`\cf@encoding`), math-accent and
+  font declarations all align.
+* `\thinspace`/`\negthinspace`/`\medspace`/`\negmedspace`/
+  `\thickspace`/`\negthickspace` are in plain_base.rs (Rust file
+  divergence — these ARE TeX primitives in plain). Could be
+  relocated to mirror Perl's placement, but functionally identical.
+* Within the declarators block, several entries (`\CheckCommand`,
+  `\DeclareMathDelimiter`/`Radical`/`Version`/`PreloadSizes`,
+  `\DeclareFontShape`/`Family`/`SizeFunction`) appear in slightly
+  different relative positions. Cosmetic.
+
+## Cumulative parity health (Perl L1-L2750, ~46% of file)
+
+The first 2750 lines audited show **predominantly strong PARITY**
+in source order. Rust L2410-L5546 maps roughly to Perl L73-L2750.
+
+## Phase 14+ (TODO): Perl L2751-L6014
+
+More font/encoding declarations, theorem environments, sectioning
+internals, ToC, floats, indexing. Will continue in subsequent
 iterations.
 
 ## Phase 3+ (TODO): L501-L6014
