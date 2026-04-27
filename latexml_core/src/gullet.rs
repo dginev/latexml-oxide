@@ -380,7 +380,12 @@ fn read_internal_token() -> Option<Token> {
     ref mut pending_comments,
     ..
   } = *gullet_mut!();
-  let pushback = &mut runtime.as_mut().unwrap().pushback;
+  // Runtime can be None after a force-close (Perl `\stop` →
+  // `closeMouth(1)`) when the mouthstack is empty. Treat as EOF
+  // gracefully rather than panic — matches Perl's loop behavior
+  // when reading hits end-of-input.
+  let runtime = runtime.as_mut()?;
+  let pushback = &mut runtime.pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop() {
     match pushback_token.get_catcode() {
@@ -394,7 +399,7 @@ fn read_internal_token() -> Option<Token> {
   }
   // Not in pushback, read from the current Mouth
   if next_token.is_none() {
-    while let Some(token) = runtime.as_mut().unwrap().mouth.read_token() {
+    while let Some(token) = runtime.mouth.read_token() {
       match token.get_catcode() {
         Catcode::COMMENT => pending_comments.push_back(token),
         Catcode::MARKER => handle_marker(token),

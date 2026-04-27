@@ -8393,15 +8393,14 @@ LoadDefinitions!({
   Let!("\\color@vbox", "\\relax");
   Let!("\\color@endbox", "\\relax");
 
-  // Perl: latex_constructs.pool.ltxml line 5802
-  // \stop — force-closes the current input mouth (Plain TeX). Perl
+  // Perl latex_constructs.pool.ltxml L5802:
   //   DefMacroI('\stop', undef, sub { $_[0]->closeMouth(1); return; });
-  // calls `closeMouth(1)`. Direct `gullet::close_mouth(true)` here
-  // tears down the active runtime stack mid-digestion (rust unwrap
-  // panic in pushback). Use `Let \stop \endinput` instead, which
-  // flushes the current mouth lazily — functionally equivalent for
-  // user-level `\stop` calls, and safer in our gullet model.
-  Let!("\\stop", "\\endinput");
+  // \stop force-closes the current input mouth (Plain TeX). Faithful
+  // closure form requires `read_internal_token` to handle a None
+  // runtime gracefully — see latexml_core/gullet.rs read_internal_token.
+  DefMacro!(T_CS!("\\stop"), None, {
+    gullet::close_mouth(true)?;
+  });
   DefMacro!("\\ignorespacesafterend", None);
 
   // Perl: latex_constructs.pool.ltxml line 5027
