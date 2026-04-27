@@ -105,6 +105,26 @@ from failing to passing across multiple suites:
   latex_constructs's force-reload, so the Rust DefPrimitive wins
   post-dump. Test impact: 22_fonts 20/3 → 21/2 (+fonts).
 
+Then commits `6c9cc0d3a` and `9e88d45aa` landed the muskip mu→pt
+conversion suite:
+
+* `6c9cc0d3a` `muskip`: switch `\thinmuskip`/`\medmuskip`/
+  `\thickmuskip` to `MuGlue` (Perl TeX_Math.pool.ltxml:1168-1170
+  parity). Add Perl-faithful mu→pt conversion in `Stored→Option<
+  Dimension>` / `Stored→Option<Glue>` (used by `lookup_dimension`
+  / `lookup_glue`) and `BoxOps::get_width` (used by `\the\wd`).
+  Conversion uses Perl's two-step truncation `int(size *
+  emwidth / 18)` then `(mu * MUWidth / UNITY).trunc()` —
+  single-step `(mu * size / 18)` rounds 1.66666pt vs Perl's
+  canonical 1.66663pt for 3mu at 10pt.
+
+* `9e88d45aa` `muskip`: convert mu→pt at attribute output.
+  `MuGlue::to_attribute` and `MuDimension::to_attribute` emit
+  pt-typed attribute values; `Stored::to_attribute` routes
+  MuDimension through `v.to_attribute()` (was commented out).
+  `\lx@padded` walker for lpadding/rpadding handles the digested
+  whatsit case.
+
 **Cumulative test-count delta this wave (across major suites):**
 
 | Suite | Before | After | Δ |
@@ -114,10 +134,14 @@ from failing to passing across multiple suites:
 | 56_ams | 4/3 | 6/1 | +2 |
 | 20_digestion | 8/2 | 9/1 | +1 |
 | 10_expansion | 29/4 | 33/3 | +4 |
+| 70_parse | 20/9 | 28/1 | +8 |
+| 55_theorem | 3/2 | 4/1 | +1 |
+| 80_complex | 15/1 | 16/0 | +1 |
 
-**Workspace total** (suites that complete in 90s): **239 passed
-/ 36 failed** across 21 test suites. Excluded: `40_math` and
-`53_alignment` (>90s timeout, otherwise complete).
+**Workspace total** (suites that complete in 90s): **247 passed
+/ 28 failed** across 21 test suites (was 239/36 at the start of
+this wave). Excluded: `40_math` and `53_alignment` (>90s
+timeout, otherwise complete).
 
 **Known issue: latex.dump.txt regen OOMs at preload.ltx.**
 Re-running `--init=latex.ltx` to regenerate the dump aborts with
