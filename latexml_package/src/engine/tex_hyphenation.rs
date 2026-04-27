@@ -84,7 +84,8 @@ LoadDefinitions!({
       );
     }
   );
-  DefRegister!("\\defaulthyphenchar", Number!(45));
+  // \defaulthyphenchar lives in tex_fonts.rs (Perl: TeX_Fonts.pool.ltxml L78);
+  // referenced as a comment here in the Perl source (L53) but not defined.
   DefRegister!("\\lefthyphenmin", Number!(0));
   DefRegister!("\\righthyphenmin", Number!(0));
   DefRegister!("\\uchyph", Number!(1));
