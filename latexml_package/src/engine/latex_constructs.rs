@@ -3397,7 +3397,8 @@ LoadDefinitions!({
   DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\appendixesname", "Appendixes");
   // TODO: add the rest...
-  DefMacro!("\\@@appendix", "\\@startsection{appendix}{0}{}{}{}{}");
+  // `\@@appendix` moved to `latex_constructs_rust_only.rs` (Rust defensive
+  // override; Perl gets it from raw latex.ltx dump).
 
   //======================================================================
   // C.4.3 Table of Contents
@@ -8691,7 +8692,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textdaggerdbl", "\u{2021}"); // DOUBLE DAGGER
   DefPrimitive!("\\textdagger", "\u{2020}"); // DAGGER
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
-  DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
+  // `\textperiodcentered` moved to `latex_constructs_rust_only.rs`
+  // (Perl doesn't define it — gets it from raw latex.ltx dump).
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   // Perl: DefPrimitive('\textcircled {}', sub { ... })
   // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD

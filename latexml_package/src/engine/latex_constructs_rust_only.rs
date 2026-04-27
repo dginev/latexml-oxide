@@ -121,6 +121,24 @@ LoadDefinitions!({
   DefMacro!("\\wlog{}", "");
 
   //======================================================================
+  // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
+  //
+  // Perl gets these from raw `latex.ltx` load (dump captures them).
+  // Rust adds explicit overrides so the NODUMP path keeps working.
+  //======================================================================
+  // `\@@appendix` — body of `\appendix` after `\@startsection` chain.
+  // Perl uses it as a Let target (latex_constructs.pool.ltxml:694) but
+  // doesn't define it; the value comes from raw latex.ltx.
+  DefMacro!("\\@@appendix", "\\@startsection{appendix}{0}{}{}{}{}");
+
+  // `\textperiodcentered` — middle dot. Perl uses it as `\labelitemiv`'s
+  // body (latex_constructs.pool.ltxml:1584) but doesn't define it (sister
+  // entries `\textbullet`, `\textdaggerdbl`, `\textparagraph`,
+  // `\textsection` ARE in latex_constructs:5404-5408 — Perl is missing
+  // this one specifically).
+  DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
+
+  //======================================================================
   // 7. Rust helper used by `\newlength` (latex_constructs.rs)
   //======================================================================
   // `\@check@length` — verify a CS is a length register; if not, define
