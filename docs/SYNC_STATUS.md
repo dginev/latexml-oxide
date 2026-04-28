@@ -52,63 +52,66 @@ Numprints `ltx_unit` instances: 0 → 26 (reference: 46). Remaining
 requires the n/N column-type port — see "Remaining numprints gap"
 below.
 
-### Remaining numprints gap — n/N column-type port (multi-day)
+### 2026-04-30 — numprint n/N DefColumnType — Perl-faithful port (commit `8cfcd9037`)
 
-`numprints_test` still fails (Rust 622 lines vs Perl 1545). Root
-cause: `numprint_sty.rs:16-20` deliberately neutralizes `numprint`'s
-custom `n`/`N` `DefColumnType` declarations via the
-`\NC@find DefToken`/`\renewcommand{\NC@rewrite@n}{\NC@find r}`
-trick — comment says "Simplify to plain right-aligned columns
-(loses decimal alignment but prevents 54+ stray alignment errors)".
-This is the "expedient workaround" the user has flagged for removal.
+**Done.** `numprint_sty.rs:16-20` workaround removed; replaced with
+proper `DefColumnType!` for both `n` and `N` mirroring Perl
+`numprint.sty.ltxml:127-145`.
 
-**Faithful port plan:**
+* `Cell.before` / `Cell.after` are `Option<Tokens>` (not Digested),
+  so the port directly splices `\nprt@begin\ignorespaces` for before
+  and `\nprt@end{man_before}{man_after}{exp_before}{exp_after}{math5}{math6}`
+  for after, with `T_MATH` markers for `n` (math-mode wrap) or empty
+  groups for `N` (text-mode).
+* `align = Align::Char(".")` — Perl `'char:' . ToString(Digest(\nprt@decimal))`
+  default '.'; postponed digest of `\nprt@decimal` until needed.
+* Helper `add_numprint_column(args: Vec<ArgWrap>, math_wrap: bool) -> Result<()>`
+  factors the shared body so both `DefColumnType!("n …")` and
+  `DefColumnType!("N …")` reuse it without macro-literal duplication.
 
-Perl `numprint.sty.ltxml:127-145` declares:
-```perl
-DefColumnType('n Optional:-1 Optional:-1 {}{}', sub {
-  my ($gullet, $nd_exp_before, $nd_exp_after, $nd_man_before,
-      $nd_man_after) = @_;
-  $LaTeXML::BUILD_TEMPLATE->addColumn(
-    before => Tokens(T_CS('\nprt@begin'), T_CS('\ignorespaces')),
-    after  => Invocation(T_CS('\nprt@end'),
-                         $nd_man_before, $nd_man_after,
-                         $nd_exp_before, $nd_exp_after,
-                         T_MATH, T_MATH),
-    align  => 'char:' . ToString(Digest(T_CS('\nprt@decimal'))));
-  return; });
+**Test result:** numprints now produces the correct n/N column shape:
+```xml
+<text align="right" width="..."><Math>…</Math></text>
+<text align="left"  width="..."><Math>…</Math></text>
 ```
+inside `<XMText>`, matching Perl reference. `xml:id`s on inner XMTok
+elements within these split-Math children, color-attribute hoisting,
+ltx_nopad_l class, and a few `lpadding`/`rpadding`/qquad-fold issues
+remain (≈58 added / 63 removed lines after the column-type fix).
+None are numprint-specific — all are Math-parser or post-pad
+optimizations shared with other tests.
 
-Rust infrastructure available:
-- `latexml_package/src/prelude/setup_binding_language.rs:1423`:
-  `DefColumnType!` macro registers `\NC@rewrite@<char>` via
-  `parse_parameters(...)` — already supports `Optional:-1 Optional:-1
-  {}{}` parameter signature.
-- `latexml_core/src/alignment.rs:911` `with_current_build_template`
-  + `latexml_core/src/alignment/template.rs:335` `Template::add_column`
-  give the BUILD_TEMPLATE access.
-- `Cell.before` / `Cell.after` are `VecDeque<Digested>`, not Tokens.
+Workspace impact: 81_babel goes from 6/7 to 6/7 (numprints still
+failing on the residual diffs); all other tests pass. 20_digestion
+suite intact (10/10).
 
-**The wiring needed:**
-1. Inside `DefColumnType!("n …", sub[args] { … })`, convert the parsed
-   args to a `Cell` with `before` = `[\nprt@begin, \ignorespaces]`
-   digested, `after` = digested invocation of `\nprt@end` with the
-   column args spliced in, `align = "char:."`.
-2. Push that `Cell` to the current `BUILD_TEMPLATE` via
-   `with_current_build_template(|t_opt| t_opt.unwrap().add_column(cell))`.
-3. The `\nprt@begin` / `\nprt@end` / `\nprt@decimal` macros come
-   from raw `numprint.sty` (already loaded via `InputDefinitions!`).
+### Remaining numprints residual diff — math-parser ID and pad
+optimizations
 
-Estimated effort: 1-2 sessions to wire the BUILD_TEMPLATE access,
-build the Cell from typed args, and verify no regression in other
-tabular tests (xtab, longtable, supertabular share the same
-DefColumnType infrastructure).
+After the n/N column-type port, the remaining diffs cluster as:
+1. **xml:id missing on leaf XMTok** with NUMBER role inside parsed
+   math (≈20 occurrences). Perl's math-parser auto-generates IDs;
+   Rust math-parser only assigns when XM-refs are needed.
+2. **xml:id off-by-one** on XMApp children (~5 occurrences).
+   Sub-tree numbering order divergence.
+3. **Color hoisting**: Rust emits `color="#0000FF"` per XMTok child;
+   Perl hoists to parent XMApp. Math post-processing optimization.
+4. **`class="ltx_nopad_l"` missing** on `<td align="char:.">` cells
+   (~2 occurrences). The lpad heuristic (`alignment.rs:679`) returns
+   0 (no intercol/fill in `\nprt@begin\ignorespaces`) which should
+   set ltx_nopad_l, but `(!empty || has_boxes)` may be tripping. Need
+   instrumentation.
+5. **`lpadding="-1.7pt"` on FLOATSUPERSCRIPT XMApp** missing (~1).
+   Likely an `\hskip-1.7pt` not being absorbed into adjacent XMApp.
+6. **width="3.4pt" vs "3.5pt"** sub-pixel computation difference.
+7. **XMHint qquad → rpadding** absorption: Perl folds
+   `<XMHint name="qquad" width="28.7pt"/>` adjacent to XMText into
+   `rpadding="28.7pt"` on the XMText itself. Math post-step.
 
-Once landed, the test should match Perl's 1545-line reference at
-section 3 "Tabulars" — the `<Math mode="inline" tex="\numprint{...}">
-<XMath><XMDual><XMTok meaning="...">...</XMTok><XMText>…</XMText>
-</XMDual></XMath></Math>` per-cell emission depends on this column
-type setting `T_MATH` boundaries which forces math-mode digestion.
+These are all per-element math/post-pad polish, not column-type
+issues. Each is its own multi-day investigation against
+post-processing logic. Test still fails but the structural mismatch
+is solved.
 
 ### 2026-04-29 — Multi-thread `cargo test` SIGSEGV race fixed
 
