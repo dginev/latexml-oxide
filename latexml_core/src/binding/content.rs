@@ -856,23 +856,34 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
     // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
     // `\input{name.<ext>}` resolves to a known binding extension AND a
-    // binding for `(name, ext)` exists, route to the binding instead of
-    // the on-disk raw file. Without this, papers using literal
-    // `\input{psfig.sty}` (common 1996-2005 idiom) fail because TL2025
-    // dropped the on-disk file even though Rust has the binding.
+    // binding for `(name, ext)` is reachable, route to the binding
+    // instead of the on-disk raw file. Without this, papers using
+    // literal `\input{psfig.sty}` (common 1996-2005 idiom) fail because
+    // TL2025 dropped the on-disk file even though Rust has the binding.
     //
     // Extensions handled dynamically via `is_binding_extension`: any
     // extension registered by `latexml_package` or `latexml_contrib`
     // (cls / sty / def / fontmap / ldf / ltx / lua / pool / tex /
-    // code.tex / ...) is admitted. The dispatcher's exact `(name, ext)`
-    // lookup happens inside `load_binding`; this gate only filters out
-    // `\input{foo.eps}`-style content paths from the binding probe.
+    // code.tex / ...) is admitted, gating out `\input{foo.eps}`-style
+    // content paths.
+    //
+    // For .tex / no-extension paths we still use `load_binding` (exact
+    // dispatch lookup on `<name>.tex`) — a `<name>.tex` request is
+    // semantically "include this content", so suffix-stripping fallback
+    // (e.g. `mysetup.tex` → `setup.tex.ltxml`) would surprise more than
+    // it helps.
+    //
+    // For .sty / .cls / .def / etc — the binding-extension cases — we
+    // route through `input_definitions`, which gives us the full Step
+    // 1 → Step 3 → Step 4 ladder including `find_file_fallback`'s
+    // version-suffix strip. This is what makes `\input{psfig.sty}`
+    // pick up `psfig_sty.rs` AND `\input{caption2.sty}` fall back to
+    // `caption_sty.rs` exactly as Perl Package.pm:2266 does via
+    // `RequirePackage($name)`.
     if !has_dir {
       let ext = clean_req.rsplit('.').next().unwrap_or("");
       let no_ext = ext == clean_req.as_ref();
       if no_ext || ext == "tex" {
-        // No extension or `.tex`: probe `<name>.tex` binding (mirrors
-        // Perl's tex-default for \input).
         let tex_name = if ext == "tex" {
           clean_req.to_string()
         } else {
@@ -880,7 +891,21 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         };
         load_binding(&tex_name)? || load_external_binding(&tex_name)?
       } else if crate::state::is_binding_extension(ext) {
-        load_binding(&clean_req)? || load_external_binding(&clean_req)?
+        // Route through input_definitions for fallback-aware dispatch.
+        // The `name` arg expects no extension, so split it off.
+        let name = clean_req
+          .strip_suffix(&format!(".{}", ext))
+          .unwrap_or(&clean_req)
+          .to_string();
+        let result = input_definitions(&name, InputDefinitionOptions {
+          extension: Some(Cow::Owned(ext.to_string())),
+          noerror: true,
+          reloadable: true,
+          ..InputDefinitionOptions::default()
+        });
+        // input_definitions returns Err on not-found with noerror=true;
+        // treat that as "binding not loaded, fall through to raw".
+        result.is_ok()
       } else {
         false
       }
