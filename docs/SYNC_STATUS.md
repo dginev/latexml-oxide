@@ -1,5 +1,40 @@
 # Engine Sync Status: Perl vs Rust
 
+## Build profiles & sandbox workflow (canvas / triage split)
+
+Three named profiles in `Cargo.toml`, each tuned for one purpose
+— and the 10k sandbox is run as a **two-phase pipeline** that
+uses two of them:
+
+| Profile | When | Goal |
+|---------|------|------|
+| `release` | sandbox **canvas** (`tools/benchmark_10k.sh`), perf measurement, distribution | `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`, `opt = 3` — slow build, fastest runtime |
+| `test` (default) | sandbox **triage** (`tools/triage_failure.sh`), local `cargo test`, debugger | `debug = "full"`, `debug-assertions`, `overflow-checks`, `incremental`, `panic = "unwind"` |
+| `ci` | GitHub Actions only (16 GB / 4 vCPU) | `opt = 0`, `codegen-units = 256`, `lto = false` — minimum compile work, lowest peak RSS |
+
+**Phase 1 (canvas — release):** `tools/benchmark_10k.sh` runs
+all ~10k sandbox papers under `cortex_worker --standalone`,
+classifies each into `ok`/`timeout`/`conversion_error`/etc.,
+and writes `results.tsv`. Measurement task — debug info is
+dead weight.
+
+**Phase 2 (triage — test):** `tools/triage_failure.sh <arxiv_id>`
+takes one failure, unzips it, finds the main `.tex`, and runs
+`cargo run --bin latexml_oxide` under the test profile. Goal:
+full backtraces, debug-assertions, ~5-second incremental
+rebuilds for the edit-rebuild-rerun loop.
+
+The two profiles are *adversarial* — what helps one hurts the
+other (`debug=full` doubles binary size; `lto=fat` defeats
+incremental; `opt=0` torpedoes any real benchmark). One
+"compromise" profile would be bad at both jobs; the split is
+load-bearing.
+
+Full first-principles writeup, including a per-setting
+adversarial-tradeoff table, is in
+[`SANDBOX_TRIAGE.md`](SANDBOX_TRIAGE.md) under "Two-phase
+workflow."
+
 ## Pending refactor — split `latexml_engine` out of `latexml_package`
 
 **Motivation:** CI cold-cache OOM on 16 GB GitHub runner during

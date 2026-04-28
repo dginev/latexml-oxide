@@ -3,8 +3,9 @@
 Tracks the Rust→Perl translation gap exposed by the strict
 `LoadFormat` split (commit `0c4d609ad`). Each entry maps a Perl
 `Engine/<file>.pool.ltxml` definition to its Rust counterpart in
-`latexml_package/src/engine/<file>.rs`, flagging divergences that
-break the strict-Perl pipeline.
+`latexml_engine/src/<file>.rs` (extracted from `latexml_package`
+in commit `9909ba51d`), flagging divergences that break the
+strict-Perl pipeline.
 
 **Refresh status (2026-04-28):**
 
