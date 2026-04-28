@@ -97,10 +97,25 @@ After the n/N column-type port, the remaining diffs cluster as:
 3. **Color hoisting**: Rust emits `color="#0000FF"` per XMTok child;
    Perl hoists to parent XMApp. Math post-processing optimization.
 4. **`class="ltx_nopad_l"` missing** on `<td align="char:.">` cells
-   (~2 occurrences). The lpad heuristic (`alignment.rs:679`) returns
-   0 (no intercol/fill in `\nprt@begin\ignorespaces`) which should
-   set ltx_nopad_l, but `(!empty || has_boxes)` may be tripping. Need
-   instrumentation.
+   for **N (text-mode) columns only** — n cells correctly get both
+   classes. **Root cause confirmed via instrumentation 2026-04-30**:
+   alignment normalize prepends `\lx@intercol` to the column's
+   `before`, so the post-normalize `before` is
+   `\lx@intercol\nprt@begin\ignorespaces`. For N cells,
+   `cell.lspaces.is_some=false`, so `alignment.rs:679` heuristic
+   triggers: `intercol_reachable_in_before == true` →
+   `lpad = threshold_02em (131072)` → `lpad < threshold_02em` is
+   FALSE → no nopad_l. **Perl's behavior**: when `$$cell{lspaces}` is
+   undef, lpad = 0 (Alignment.pm L338). The Rust heuristic was added
+   defensively to substitute lspaces when not populated, but for
+   `\nprt@begin`-style `before` patterns where the actual extracted
+   lspaces width would be 0 anyway, the heuristic over-reports
+   threshold instead of 0. Correct fix: drop the heuristic
+   `intercol_reachable_in_before` branch and match Perl's
+   "undef → 0" fallback. **Risk:** other tabular tests (regular
+   `|l|c|r` columns) likely depend on the heuristic for the
+   `intercol → padding` substitution; touching this could regress.
+   Needs case-by-case audit of affected cell paths.
 5. **`lpadding="-1.7pt"` on FLOATSUPERSCRIPT XMApp** missing (~1).
    Likely an `\hskip-1.7pt` not being absorbed into adjacent XMApp.
 6. **width="3.4pt" vs "3.5pt"** sub-pixel computation difference.
