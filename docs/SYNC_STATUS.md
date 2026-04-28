@@ -3,11 +3,12 @@
 ## Active goal — full 7898-paper canvas, error-free (2026-04-28)
 
 **Most ambitious branch goal:** drive `~/data/10k_sandbox` to a
-zero-error canvas. Phase 1 launched 2026-04-28 14:42 UTC at:
-
-```
-tools/benchmark_10k.sh --workers 16 --timeout 120
-```
+zero-error canvas. Phase 1 first ran 2026-04-28 14:42 UTC at
+`--workers 16 --timeout 120`; interrupted at 2714/7898 (33%) due
+to user-reported resource starvation, restarted at 15:02 UTC at
+`--workers 10 --timeout 120`. The script's resumability skipped
+the 2702 already-completed papers; remaining 5196 papers run
+under the lower load.
 
 Output: `~/data/10k_sandbox_html/results.tsv`. CI green at parent
 commit (`b8d793e3f`); fix-forward commits land on `claude-round-17`
@@ -30,11 +31,22 @@ recovery.
 | babel `frenchb` undefined language | 0909.3444 | **KNOWN DEFERRED** — TL2025 babel-french gap (memory entry `project_babel_francais_gap.md`, partially resolved 9df708fa9) |
 | babel `activeacute` undefined language | 1211.4952 | OPEN, same family as babel-frenchb |
 | undefined paper-local CSes (`\invcmsq`, `\invcmsqpersecond`) | 1212.4860 | Per-paper, not architectural — likely Perl also unhappy |
+| `\@nil` + math `_` mode-leak (pgf interaction) | 1304.0737 | OPEN — combination, watch for additional pgf papers |
+| `\NC@list` undefined — `array.sty` internal helper | 1305.6480 | OPEN — array.sty binding gap |
+| IEEEtran.cls internals (`\ifCLASSINFOpdf`, `\IEEEauthorblockN`, `\IEEEauthorrefmark`) | 1308.6663 | OPEN — IEEEtran.cls.ltxml binding gap |
+| `subfigure.sty` brace mismatch | 1311.7348 | OPEN — investigate package |
 
-**Snapshot 2026-04-28 14:56 UTC (~14 min in, 27% canvas):**
-2137/7898 = 2120 ok / 9 conversion_error / 6 error / 1
-conversion_fatal. Net error rate so far: ~0.8% (one-third
-of which are the already-fixed `\f@encoding` panic).
+**Snapshot 2026-04-28 15:00 UTC (~18 min in, 33% canvas):**
+2588/7898 = 2567 ok / 13 conversion_error / 6 error / 1
+conversion_fatal. Net error rate so far: ~0.8%; six of those
+are the already-fixed `\f@encoding` panic awaiting rerun.
+
+**Long-tail observation:** errors are spread across many small
+per-package clusters (caption-internals, array, IEEEtran,
+subfigure, babel-language) rather than concentrating in one
+big architectural gap. This is the "right" shape for a near-
+complete port — the next round of fixes will be many small
+package-binding flesh-outs, each touching 1-3 papers.
 
 ## Build profiles & sandbox workflow (canvas / triage split)
 
