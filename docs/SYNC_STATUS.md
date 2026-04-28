@@ -1,5 +1,41 @@
 # Engine Sync Status: Perl vs Rust
 
+## Active goal — full 7898-paper canvas, error-free (2026-04-28)
+
+**Most ambitious branch goal:** drive `~/data/10k_sandbox` to a
+zero-error canvas. Phase 1 launched 2026-04-28 14:42 UTC at:
+
+```
+tools/benchmark_10k.sh --workers 16 --timeout 120
+```
+
+Output: `~/data/10k_sandbox_html/results.tsv`. CI green at parent
+commit (`b8d793e3f`); fix-forward commits land on `claude-round-17`
+during the canvas, will be picked up by `--rerun-failures` after
+the first pass completes.
+
+### Cluster ledger (live during canvas)
+
+Updated as new failures surface. Mark each cluster `FIXED` when
+the patch lands; the rerun pass after canvas completes confirms
+recovery.
+
+| Cluster | Papers (sample) | Status |
+|---|---|---|
+| `\f@encoding` / `\cf@encoding` panic — `Option::unwrap()` on `LookupFont`/`get_encoding` when text-only CS leaks into math mode | 0802.1100, 0811.2815, 0901.4716, 0904.1706, 0905.1491, 1203.2756 | **FIXED** `9420e6ff5` (chain `Option::and_then`, fall back to "" mirroring Perl `ExplodeText(undef)`) |
+| caption package internals — undefined `\caption@iflabelseparatorwithnewline`, `\caption@labelsep@name`, `\caption@@par` | 0711.0730, 1105.0041, 1202.1501 | **OPEN — architectural** Perl `caption.sty.ltxml` (134 lines) does NOT define these either; they come from upstream `caption.sty` raw-load. Gap is in our raw-load path, not the binding. Deferred until canvas done so we have full cluster size. |
+| `caption2` package — older, mutually-exclusive with `caption` | 1101.5566 | OPEN, small impact |
+| `\section` undefined post-AMS-class-load | 1012.3836 | OPEN, investigate class-file flow |
+| math-mode `_`/`^` text-mode leak (math parser) | 0902.2645, 1204.6266 | OPEN, math-parser issue |
+| babel `frenchb` undefined language | 0909.3444 | **KNOWN DEFERRED** — TL2025 babel-french gap (memory entry `project_babel_francais_gap.md`, partially resolved 9df708fa9) |
+| babel `activeacute` undefined language | 1211.4952 | OPEN, same family as babel-frenchb |
+| undefined paper-local CSes (`\invcmsq`, `\invcmsqpersecond`) | 1212.4860 | Per-paper, not architectural — likely Perl also unhappy |
+
+**Snapshot 2026-04-28 14:56 UTC (~14 min in, 27% canvas):**
+2137/7898 = 2120 ok / 9 conversion_error / 6 error / 1
+conversion_fatal. Net error rate so far: ~0.8% (one-third
+of which are the already-fixed `\f@encoding` panic).
+
 ## Build profiles & sandbox workflow (canvas / triage split)
 
 Three named profiles in `Cargo.toml`, each tuned for one purpose
