@@ -106,6 +106,7 @@ LoadDefinitions!({
   // Reads [options]{class}, loads LaTeX (or AmSTeX) pool, then re-emits
   // \documentclass [options]{class} for the now-loaded LaTeX pool to handle.
   DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
+    use latexml_core::binding::content::find_file;
     let class = class_tks.to_string();
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
@@ -135,14 +136,13 @@ LoadDefinitions!({
     // 4 papers (astro-ph9711070, hep-ex9805012, physics0011011,
     // quant-ph0006101) all hit "Missing keyval arguments" on `\author`
     // before this fix.
-    //
-    // Lookup goes through the compile-time binding registry directly via
-    // `state::binding_exists` rather than `find_file(notex=true)` — the
-    // intent of "is there a Rust .sty binding for this class" is exactly
-    // what `binding_exists` answers, and skipping `find_file` avoids
-    // running the version-suffix fallback regex (which would falsely
-    // match `caption2 → caption` and similar).
-    let class_sty_found = latexml_core::state::binding_exists(class.as_str(), "sty");
+    let class_sty_found = find_file(
+      &format!("{}.sty", class),
+      Some(latexml_core::binding::content::FindFileOptions {
+        notex: true,
+        ..Default::default()
+      }),
+    ).is_some();
 
     // In LaTeX 2.09, options are both class options AND packages to load.
     // First load the class, then try to load each option as a package.
