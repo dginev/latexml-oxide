@@ -53,9 +53,10 @@ Similarly, the test `.tex`, `.xml` and `.pdf` files often need to be copied from
 
 ## Workspace Structure
 
-Cargo workspace with 6 crates:
+Cargo workspace with 8 crates:
 
 - **latexml_core** — Core engine: tokenizer (mouth), macro expander (gullet), digester (stomach), document builder, state management, definitions, bindings
+- **latexml_engine** — TeX/LaTeX engine modules and kernel state
 - **latexml_oxide** — Top-level crate with binary targets (`latexml_oxide`, `latexmlmath_oxide`) and integration tests
 - **latexml_package** — TeX/LaTeX package system: compile-time macro engine, package loader, prelude
 - **latexml_math_parser** — Math expression parser with Marpa-style grammar

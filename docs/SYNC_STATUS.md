@@ -172,52 +172,6 @@ adversarial-tradeoff table, is in
 [`SANDBOX_TRIAGE.md`](SANDBOX_TRIAGE.md) under "Two-phase
 workflow."
 
-## Pending refactor — split `latexml_engine` out of `latexml_package`
-
-**Motivation:** CI cold-cache OOM on 16 GB GitHub runner during
-`make formats` step (run 25051073184, exit 143 mid-compile of
-`latexml_contrib`). Workaround in `4efdfc57c`: `CARGO_BUILD_JOBS=1`
-on the cold step. Long-term goal: split the TeX-engine modules
-(`latexml_package/src/engine/*.rs`, ~28.7k lines, 29 files —
-`base.rs`, `tex_*.rs`, `etex.rs`, `pdftex.rs`, `plain_*.rs`,
-`latex_*.rs`, `math_common.rs`) out of `latexml_package` (currently
-~83k lines, ~83k of which ~54k is `package/*.rs` style packages).
-
-**Why this helps CI:**
-* Smaller crate per compilation unit → lower per-job RSS peak →
-  CI can run jobs=2 again on the cold step (cuts wall-clock).
-* Better Swatinem/rust-cache hit rate: changing one style package
-  doesn't invalidate the whole `latexml_package` artifact.
-* Parallel compile of `latexml_engine` and `latexml_post` is
-  possible (they share no symbols).
-
-**Boundary is clean:** `engine/*.rs` files have **zero** references
-to `package/*.rs` (verified: `grep -l "use crate::package" engine/`
-returns 0). Conversely, 31 of ~200 `package/*.rs` files reference
-`crate::engine::*`. Extraction direction: engine moves out, package
-gains a `latexml_engine = { path = "../latexml_engine" }` dep and
-re-exports `pub use latexml_engine as engine` to preserve the
-`crate::engine::*` paths used by the 31 package files.
-
-**Plan (multi-day):**
-1. Create `latexml_engine` crate with same dep set as `latexml_package`
-   (latexml_core, latexml_codegen, libxml, mimalloc, etc.).
-2. Move `latexml_package/src/engine/*.rs` → `latexml_engine/src/*.rs`
-   and `latexml_package/src/engine.rs` mod-list → `latexml_engine/src/lib.rs`.
-3. Engine files all import `crate::prelude::*` — need to either:
-   (a) duplicate a minimal prelude in `latexml_engine`, or
-   (b) move the prelude to a shared location (likely `latexml_core::prelude`).
-   Option (b) is cleaner; option (a) is faster.
-4. Add `latexml_engine` to workspace `members`.
-5. In `latexml_package/Cargo.toml`, add `latexml_engine = { path = "../latexml_engine" }`.
-6. In `latexml_package/src/lib.rs`, replace `mod engine;` with
-   `pub use latexml_engine as engine;` so existing `crate::engine::*`
-   paths in package and oxide bin work unchanged.
-7. Verify workspace build, all 1108 tests still pass, CI green.
-8. Once green, restore `CARGO_BUILD_JOBS=2` on the cold step in CI.yml.
-
-
-
 > **This is a Perl-to-Rust translation project.** Every ported function,
 > macro, and definition must faithfully reproduce the original Perl
 > semantics, control flow, and edge-case behavior. The Perl source
@@ -1180,8 +1134,7 @@ state.
 * **Compile-time bottleneck (CB.1–CB.10).** `latexml_package`
   consumes ~95% of cold-cache build wall-clock. Layered fixes:
   parallel rustc frontend (`-Z threads=8`), bumped LLVM
-  codegen-units, splitting `latexml_engine` out as a sibling
-  crate. Acceptance: ≥40% CI wall-clock reduction; tests
+  codegen-units. Acceptance: ≥40% CI wall-clock reduction; tests
   unchanged. Work proceeds opportunistically.
 * **Dump Let-alias preservation.** Perl serialises
   `Lt('\cs','\target')` separately from full Expandable

@@ -1,6 +1,6 @@
 # Engine Organization: Perl → Rust Mapping
 
-This document describes how the Rust files in `latexml_package/src/engine/`
+This document describes how the Rust files in `latexml_engine/src/`
 relate to the Perl files in `LaTeXML/lib/LaTeXML/Engine/`.
 
 **All 36 ported Perl engine files have 1:1 matching Rust files.**
