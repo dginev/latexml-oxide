@@ -37,12 +37,17 @@ resolver = "2"
 #       Slowest compile, fastest output. Combined with `lto = "fat"`,
 #       gives the LLVM optimizer the largest possible scope.
 #
-#   panic = "abort"
-#       Drops unwind-table metadata and landing-pad code;
-#       smaller binary + faster panic path. Safe for our crate
-#       graph (no `catch_unwind` callers). The `[profile.ci]`
-#       below explicitly overrides this back to "unwind" because
-#       libtest's harness needs it.
+#   panic = "unwind" (default)
+#       We do NOT set `panic = "abort"` — `pericortex`, a third-
+#       party git dependency pulled in by `cortex_worker`, is
+#       built against `panic_unwind` and won't link otherwise:
+#         error: the linked panic runtime `panic_unwind` is not
+#         compiled with this crate's panic strategy `abort`
+#       Until pericortex (and the rest of our dep graph) is
+#       audited for unwind dependencies, keeping the default is
+#       the only thing that lets `cargo build --release --bin
+#       cortex_worker` succeed. The unwind-table cost is small
+#       compared to lto+codegen-units=1.
 #
 #   strip = "symbols"
 #       Strip ALL non-essential ELF symbol and debug data from the
@@ -64,7 +69,6 @@ resolver = "2"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-panic = "abort"
 strip = "symbols"
 debug = false
 incremental = false
