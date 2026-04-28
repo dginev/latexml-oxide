@@ -1,0 +1,37 @@
+{
+  // ─── rust-analyzer mitigations ──────────────────────────────────────────────
+  // Background: rust-analyzer (RA) on nightly + heavy proc-macro workspaces
+  // (latexml_codegen) has a known tendency to spin in long re-analysis loops,
+  // sometimes 10+ minutes. The settings below decouple RA from our terminal
+  // build flow so neither blocks the other.
+
+  // Don't run `cargo check` on every save — the workspace check takes 60-90 s
+  // cold and competes with our terminal `cargo test` / `cargo build` for the
+  // cargo lock and target/. We catch the same diagnostics via RA's in-memory
+  // analysis already.
+  "rust-analyzer.checkOnSave": false,
+
+  // Give rust-analyzer its OWN target directory so it never races with the
+  // terminal build (which uses `target/` for test/release/ci profiles).
+  // Without this, an open editor + `cargo run` / `cortex_worker` background
+  // canvas can trigger lock contention and surprise rebuilds of the *terminal*
+  // artifacts.
+  "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+
+  // Proc macros are required (latexml_codegen). Build scripts are required
+  // (build.rs writes generated dump stubs). Keep both on.
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.cargo.buildScripts.enable": true,
+
+  // Trim RA's recompute scope: skip attribute-style proc-macros (we use
+  // function-like + derive forms in latexml_codegen, not attribute proc-macros).
+  // Keeps the legitimate macros expanded while shrinking the workload.
+  "rust-analyzer.procMacro.attributes.enable": false,
+
+  // Don't expand the deprecated/long-running diagnostics that occasionally
+  // get stuck on our larger generated files.
+  "rust-analyzer.diagnostics.experimental.enable": false,
+
+  // Never treat the working dir as multi-workspace; we have one Cargo workspace.
+  "rust-analyzer.linkedProjects": ["./Cargo.toml"]
+}
