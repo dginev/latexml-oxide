@@ -79,36 +79,23 @@ LoadDefinitions!({
   Let!("\\endabstract", "\\relax");
 
   // Section structure — Perl L112-147. AmSTeX uses terminator-delimited
-  // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`. Previous
-  // Rust just did `\heading → \section*` which reads the next `{...}` — a
-  // real bug on `\heading Foo \endheading` (the Foo ends up inlined with
-  // no section wrapper, and `\endheading` leaks). Port the full family
-  // with `Until:\end<x>` delimiters. Perl uses DefConstructors with
-  // bounded+inlist=toc+RefStepID; we simplify to `\section*{#1}` etc.
-  // (same as existing simplification for other head CSes), but at least
-  // the argument capture is now syntactically correct.
-  //
-  // Intentional DefConstructor → DefMacro kind divergence for the
-  // entire head family (\head, \heading, \subheading*, \specialhead,
-  // \subhead, \subsubhead, and their \end<x> pairs): Rust delegates
-  // to `\section*` / `\subsection*` / `\subsubsection*` instead of
-  // re-implementing per-kind RefStepID + inlist=toc + bounded glue.
-  // Section/TOC numbering uses LaTeX's native machinery rather than
-  // amsppt's, which is a known cross-package divergence but acceptable
-  // because amsppt is only used by legacy pre-LaTeX2e submissions.
-  // WISDOM #44 — observable XML structure matches; TOC numbering
-  // scheme differs deliberately.
-  DefMacro!("\\head Until:\\endhead", "\\section*{#1}");
+  // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`.
+  // We use DefConstructors matching Perl to avoid relying on LaTeX's
+  // `\section*` which is undefined in pure AmSTeX contexts.
+  NewCounter!("chapter", "document", idprefix => "C", nested => vec!["section"]);
+  NewCounter!("section", "chapter", idprefix => "S", nested => vec!["subsection"]);
+  NewCounter!("subsection", "section", idprefix => "SS", nested => vec!["subsubsection"]);
+  NewCounter!("subsubsection", "subsection", idprefix => "SSS", nested => vec!["paragraph"]);
+
+  DefConstructor!("\\head Until:\\endhead",
+    "<ltx:section inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:section>",
+    properties => sub[_args] { RefStepID!("section") });
   Let!("\\endhead", "\\relax");
+
   DefMacro!("\\heading Until:\\endheading", "\\head#1\\endhead");
   Let!("\\endheading", "\\relax");
+
   // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
-  // `\subheading{title}` → \subheading@onearg{title}
-  // `\subheading title \endsubheading` → \subheading@env (Until:\endsubheading)
-  // Both helpers expand to `\subhead{title}\endsubhead` in Perl; Rust lacks
-  // a separate \subhead binding, so route both through `\subsection*{title}`
-  // (the existing Rust target). `locked=>true` matches Perl L138 — guards
-  // against downstream \renewcommand resetting the dispatch.
   DefMacro!("\\subheading", sub[_args] {
     let next = gullet::read_token()?;
     if let Some(t) = next {
@@ -119,20 +106,24 @@ LoadDefinitions!({
     }
     Ok(Tokens!(T_CS!("\\subheading@env")))
   }, locked => true);
-  DefMacro!("\\subheading@onearg{}", "\\subsection*{#1}");
-  DefMacro!("\\subheading@env Until:\\endsubheading", "\\subsection*{#1}");
-  // Kept defined as a no-op for stray-use safety; \subheading@env consumes
-  // the trailing \endsubheading inline so this binding usually doesn't fire.
+
+  DefMacro!("\\subheading@onearg{}", "\\subhead#1\\endsubhead");
+  DefMacro!("\\subheading@env Until:\\endsubheading", "\\subhead#1\\endsubhead");
   DefMacro!("\\endsubheading", "");
-  // Perl L112-117 `\specialhead Until:\endspecialhead → <ltx:chapter>`;
-  // L143-148 `\subsubhead Until:\endsubsubhead → <ltx:subsubsection>`.
-  // Also `\subhead` (no current Rust) needed by the \subheading@env path.
-  // All forwarded to their LaTeX starred siblings.
-  DefMacro!("\\specialhead Until:\\endspecialhead", "\\section*{#1}");
+
+  DefConstructor!("\\specialhead Until:\\endspecialhead",
+    "<ltx:chapter inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:chapter>",
+    properties => sub[_args] { RefStepID!("chapter") });
   Let!("\\endspecialhead", "\\relax");
-  DefMacro!("\\subhead Until:\\endsubhead", "\\subsection*{#1}");
+
+  DefConstructor!("\\subhead Until:\\endsubhead",
+    "<ltx:subsection inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:subsection>",
+    properties => sub[_args] { RefStepID!("subsection") });
   Let!("\\endsubhead", "\\relax");
-  DefMacro!("\\subsubhead Until:\\endsubsubhead", "\\subsubsection*{#1}");
+
+  DefConstructor!("\\subsubhead Until:\\endsubsubhead",
+    "<ltx:subsubsection inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:subsubsection>",
+    properties => sub[_args] { RefStepID!("subsubsection") });
   Let!("\\endsubsubhead", "\\relax");
 
   // Theorem environments — Perl L170-243 use
