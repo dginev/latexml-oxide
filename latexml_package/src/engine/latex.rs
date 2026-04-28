@@ -9,6 +9,13 @@
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 use crate::prelude::*;
+use once_cell::sync::Lazy;
+
+// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
+static DUMP_PATH: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
+static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
+static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 /// Perl `FindFile($format._dump, ...)` parity for the latex dump.
 /// Mirrors `latex_dump::resolve_dump_path` (defined in
@@ -16,13 +23,13 @@ use crate::prelude::*;
 /// is reachable — used by `LoadFormat('latex')` to decide between the
 /// dump branch and the base branch.
 fn latex_dump_available() -> bool {
-  if let Ok(p) = std::env::var("LATEXML_DUMP_PATH") {
-    if std::path::Path::new(&p).is_file() {
+  if let Some(p) = DUMP_PATH.as_deref() {
+    if std::path::Path::new(p).is_file() {
       return true;
     }
   }
-  if let Ok(dir) = std::env::var("LATEXML_DUMP_DIR") {
-    if std::path::Path::new(&dir).join("latex.dump.txt").is_file() {
+  if let Some(dir) = DUMP_DIR.as_deref() {
+    if std::path::Path::new(dir).join("latex.dump.txt").is_file() {
       return true;
     }
   }
@@ -66,14 +73,14 @@ LoadDefinitions!({
   // and silences the diff for everything raw latex.ltx defines.
   // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
   // `prepare_session`, so this branch fires before latex.rs runs.
-  if std::env::var_os("LATEXML_INI_MODE").is_some() {
+  if *INI_MODE {
     return Ok(());
   }
 
   // Perl `LoadFormat('latex')` strict split:
   //   if dump available: bootstrap → dump → constructs (NO base)
   //   else:              bootstrap → base → constructs (NO dump)
-  if std::env::var_os("LATEXML_NODUMP").is_none() && latex_dump_available() {
+  if !*NODUMP && latex_dump_available() {
     if let Err(e) = crate::engine::latex_dump::load_definitions() {
       log::warn!("latex_dump: {}", e);
     }

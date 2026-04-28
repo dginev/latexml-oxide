@@ -56,9 +56,9 @@ pub mod ed_sty;
 pub mod emlines_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
-pub mod forest_sty;
-pub mod fontawesome_sty;
 pub mod fontawesome5_sty;
+pub mod fontawesome_sty;
+pub mod forest_sty;
 pub mod fp_sty;
 pub mod fullname_sty;
 pub mod glyphtounicode_tex;
@@ -95,8 +95,8 @@ pub mod program_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scrbook_cls;
-pub mod scrpage_sty;
 pub mod scrpage2_sty;
+pub mod scrpage_sty;
 pub mod siamltex_cls;
 pub mod stix2_sty;
 pub mod stix_sty;
@@ -258,7 +258,12 @@ pub fn binding_names() -> &'static [(&'static str, &'static str)] {
   use std::sync::OnceLock;
   static NAMES: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
   NAMES
-    .get_or_init(|| BINDINGS.iter().map(|(name, ext, _)| (*name, *ext)).collect())
+    .get_or_init(|| {
+      BINDINGS
+        .iter()
+        .map(|(name, ext, _)| (*name, *ext))
+        .collect()
+    })
     .as_slice()
 }
 

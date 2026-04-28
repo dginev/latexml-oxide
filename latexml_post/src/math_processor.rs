@@ -9,9 +9,13 @@
 
 use libxml::tree::Node;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use crate::document::{NodeData, PostDocument};
 use crate::processor::{PostError, Processor};
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// Result of converting a math node.
 #[derive(Debug, Clone)]
@@ -151,7 +155,7 @@ pub fn process_math(
   let n = maths.len();
   // LATEXML_POST_AUDIT=1 records per-node wall-clock for the math
   // post-processing loop — diagnosis aid for MathML::Presentation perf.
-  let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
+  let audit = *POST_AUDIT;
   let mut total_ns: u128 = 0;
   let mut max_ns: u128 = 0;
   let mut max_idx: usize = 0;

@@ -225,22 +225,18 @@ impl Model {
   /// emitted by Perl `LaTeXML::Common::Model::compileSchema`
   /// (Model.pm L121-136). Three kinds of lines, all newline-separated:
   ///
-  /// * `prefix=namespace` for every entry in `document_namespaces`
-  ///   (sorted by prefix).
-  /// * `classname:=(elt1,elt2,...)` for every entry in `schema_class`
-  ///   (sorted by classname; each element list sorted).
-  /// * `tag{attr1,attr2}(child1,child2)` for every entry in `tagprop`
-  ///   (sorted by tag; attrs and children sorted; tags whose name
-  ///   starts with `!` are skipped — they are content-model-only
+  /// * `prefix=namespace` for every entry in `document_namespaces` (sorted by prefix).
+  /// * `classname:=(elt1,elt2,...)` for every entry in `schema_class` (sorted by classname; each
+  ///   element list sorted).
+  /// * `tag{attr1,attr2}(child1,child2)` for every entry in `tagprop` (sorted by tag; attrs and
+  ///   children sorted; tags whose name starts with `!` are skipped — they are content-model-only
   ///   negations).
   ///
   /// Output is identical to the Perl tool so a downstream
   /// `tools/compileschema.sh` can diff Rust vs. Perl-generated
   /// `LaTeXML.model` files byte-for-byte (modulo schema content).
   pub fn dump_compiled_schema(&self) -> String {
-    fn sym_to_string(sym: SymStr) -> String {
-      arena::with(sym, |s| s.to_string())
-    }
+    fn sym_to_string(sym: SymStr) -> String { arena::with(sym, |s| s.to_string()) }
     fn syms_sorted(set: impl IntoIterator<Item = SymStr>) -> Vec<String> {
       let mut v: Vec<String> = set.into_iter().map(sym_to_string).collect();
       v.sort();
@@ -249,7 +245,9 @@ impl Model {
     let mut out = String::new();
     let prefixes = syms_sorted(self.document_namespaces.keys().copied());
     for prefix in &prefixes {
-      let ns_opt = self.document_namespaces.get_sym(arena::pin(prefix.as_str()));
+      let ns_opt = self
+        .document_namespaces
+        .get_sym(arena::pin(prefix.as_str()));
       let ns = match ns_opt {
         Some(v) => sym_to_string(*v),
         None => continue,

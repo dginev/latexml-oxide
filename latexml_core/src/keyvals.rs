@@ -259,9 +259,10 @@ impl KeyVals {
         // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
         // and unbounded in count, so the first occurrence is always
         // visible but repeats are silently dropped.
+        type SeenSet = std::collections::HashSet<(String, String, String)>;
         thread_local! {
-          static SEEN_MISSING: std::cell::RefCell<std::collections::HashSet<(String, String, String)>> =
-            std::cell::RefCell::new(std::collections::HashSet::new());
+          static SEEN_MISSING: std::cell::RefCell<SeenSet> =
+            std::cell::RefCell::new(SeenSet::new());
         }
         let all_joined = allkeysets.join(",");
         let is_new = SEEN_MISSING.with(|cell| {

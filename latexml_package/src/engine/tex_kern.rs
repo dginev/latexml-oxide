@@ -50,7 +50,8 @@ LoadDefinitions!({
       // Add space to document
       // Use the precise Unicode space mapping from tex_glue (matching Perl's TeX_Glue algorithm),
       // not the simple threshold version from base_functions.
-      document.absorb_string(&super::tex_glue::dimension_to_spaces(length), &SymHashMap::default())?;
+      let spaces = super::tex_glue::dimension_to_spaces(length);
+      document.absorb_string(&spaces, &SymHashMap::default())?;
     }
   },
   enter_horizontal => true,

@@ -215,10 +215,15 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
         Ok(false)
       }
     },
-    // MC/DC: mathcodes and delcodes from the dump are corrupted by expl3
-    // format initialization (e.g., mathcode('v')=618 maps to '|').
-    // The engine sets correct math/delcodes. Skip.
-    "MC" | "DC" => Ok(false),
+    // Perl `Core/Dumper.pm:dump_mathcode/dump_delcode` write MC/DC for
+    // every state-set entry; the matching reader is unconditional apply
+    // (CLAUDE.md "Unconditional dump apply"). plain.tex / latex.ltx need
+    // letter mathcodes and `\delcode\(="0028300` etc. replayed from dump
+    // so `\cal abc` (cmsy fam 2) and delimited symbols decode correctly
+    // — without this, `decode_math_char` never fires for letters in the
+    // dump path and they get default-decoded to ASCII (no meaning/role).
+    "MC" => load_mathcode(key, data),
+    "DC" => load_delcode(key, data),
     _ => Ok(false),
   }
 }
@@ -267,8 +272,8 @@ const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 /// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
 /// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded", // Package loading flags — see doc comment above.
-             // Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23).
+  "_loaded", /* Package loading flags — see doc comment above.
+             * Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23). */
 ];
 
 /// Load a value entry: V\tKEY\tTYPE\tDATA
@@ -326,6 +331,38 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       Stored::Number(crate::common::number::Number(n))
     },
     "S" => Stored::from(url_decode(parts.get(1).unwrap_or(&""))),
+    "F" => {
+      // Stored::Font — written by dump_writer's Stored::Font arm.
+      // Format: F\tname=...\x1fsize=...\x1ffamily=...\x1f...
+      // Each unit-separator-delimited segment is `key=urlencoded_value`.
+      // Mirrors Perl `dump_font` (Core/Dumper.pm L281-284).
+      use crate::common::font::Font;
+      use std::borrow::Cow;
+      let mut font = Font::default();
+      for kv in parts.get(1).unwrap_or(&"").split('\x1f') {
+        if let Some((k, v)) = kv.split_once('=') {
+          let v_dec = url_decode(v);
+          match k {
+            "name" => font.name = Some(Cow::Owned(v_dec)),
+            "family" => font.family = Some(Cow::Owned(v_dec)),
+            "series" => font.series = Some(Cow::Owned(v_dec)),
+            "shape" => font.shape = Some(Cow::Owned(v_dec)),
+            "encoding" => font.encoding = Some(Cow::Owned(v_dec)),
+            "language" => font.language = Some(Cow::Owned(v_dec)),
+            "mathstyle" => font.mathstyle = Some(Cow::Owned(v_dec)),
+            "opacity" => font.opacity = Some(Cow::Owned(v_dec)),
+            "size" => font.size = v_dec.parse().ok(),
+            "scale" => font.scale = v_dec.parse().ok(),
+            "emph" => font.emph = Some(v_dec == "1"),
+            "scripted" => font.scripted = Some(v_dec == "1"),
+            "mathstylestep" => font.mathstylestep = v_dec.parse().ok(),
+            "flags" => font.flags = v_dec.parse().ok(),
+            _ => {},
+          }
+        }
+      }
+      Stored::Font(std::rc::Rc::new(font))
+    },
     "CH" => {
       let n: u16 = parts
         .get(1)
@@ -451,9 +488,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(eparts[0]);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
-      let alias_for_traits = if is_alias_diff
-        && DEFERRED_NAMES.contains(&alias_decoded.as_str())
-      {
+      let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
         Some(alias_decoded)
       } else {
         None
@@ -565,6 +600,44 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         TableName::Meaning,
         cs_tok.get_cs_name(),
         Stored::Token(tok),
+        Some(Scope::Global),
+      );
+      Ok(true)
+    },
+    "FD" => {
+      // FontDef: `FD\t<font_id>` — Perl `dump_primitive` (Core/Dumper.pm L383-389)
+      // emits this for `\font`-defined primitives. Install a Primitive whose
+      // `before_digest` mirrors `LaTeXML::Core::Definition::FontDef::invoke`
+      // (FontDef.pm L38-45):
+      //   1. lookup the fontinfo hash at <font_id>
+      //   2. assignValue(current_FontDef => $cs)
+      //   3. merge the font into $STATE->lookupValue('font')
+      // The fontinfo Stored::Font rides through the dump as a `V` entry with
+      // `F\t...` payload (see Stored::Font arm in dump_writer + the `F` arm
+      // in parse_value above).
+      use crate::definition::BeforeDigestClosure;
+      use crate::definition::primitive::Primitive;
+      let font_id_raw = url_decode(parts.get(1).unwrap_or(&""));
+      let font_id_pin = arena::pin(&font_id_raw);
+      let font_id_str = font_id_raw.clone();
+      let cs_for_fontdef = cs_tok;
+      let merge_closure: BeforeDigestClosure = std::rc::Rc::new(move || {
+        crate::state::assign_value("current_FontDef", Stored::Token(cs_for_fontdef), None);
+        if let Some(Stored::Font(f)) = crate::state::lookup_value(&font_id_str) {
+          crate::binding::content::merge_font((*f).clone());
+        }
+        Ok(Vec::new())
+      });
+      let prim = Primitive {
+        cs: cs_tok,
+        before_digest: vec![merge_closure],
+        font_id: Some(font_id_pin),
+        ..Primitive::default()
+      };
+      state::assign_internal(
+        TableName::Meaning,
+        cs_tok.get_cs_name(),
+        Stored::Primitive(std::rc::Rc::new(prim)),
         Some(Scope::Global),
       );
       Ok(true)
@@ -740,8 +813,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           // `\count22` to 0, breaking `\settabs 20\columns` (loops
           // because `\m@ne` reads as 0 instead of -1, so
           // `\advance\count@\m@ne` doesn't decrement).
-          let should_assign = !has_explicit_address
-            || !state::has_value(&reg.address);
+          let should_assign = !has_explicit_address || !state::has_value(&reg.address);
           if should_assign {
             state::assign_internal(
               TableName::Value,
@@ -862,11 +934,35 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
-// load_delcode and load_mathcode were implemented but never wired — the
-// "MC"/"DC" arm in parse_entry returns Ok(false) because the dumped values
-// are corrupted by expl3 format init (see comment on that arm). If we
-// eventually harvest clean delcode/mathcode data, restore them from git
-// history and point the "MC"/"DC" arm at them.
+/// Load a delcode entry: DC\tCHAR\tCH\tVALUE
+/// Mirrors Perl `Core/Dumper.pm:dump_delcode` round-trip.
+fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
+  let ch = decode_char_key(key).ok_or_else(|| format!("Bad delcode char: {}", key))?;
+  let parts: Vec<&str> = data.splitn(2, '\t').collect();
+  if parts.len() < 2 || parts[0] != "CH" {
+    return Err(format!("Bad delcode data: {}", data));
+  }
+  let val: u16 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad delcode value: {}", e))?;
+  crate::state::assign_delcode(ch, val, Some(crate::state::Scope::Global));
+  Ok(true)
+}
+
+/// Load a mathcode entry: MC\tCHAR\tCH\tVALUE
+/// Mirrors Perl `Core/Dumper.pm:dump_mathcode` round-trip.
+fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
+  let ch = decode_char_key(key).ok_or_else(|| format!("Bad mathcode char: {}", key))?;
+  let parts: Vec<&str> = data.splitn(2, '\t').collect();
+  if parts.len() < 2 || parts[0] != "CH" {
+    return Err(format!("Bad mathcode data: {}", data));
+  }
+  let val: u16 = parts[1]
+    .parse()
+    .map_err(|e| format!("Bad mathcode value: {}", e))?;
+  crate::state::assign_mathcode(ch, val, Some(crate::state::Scope::Global));
+  Ok(true)
+}
 
 /// Parse a single token from "CC:TEXT" format
 fn parse_token(s: &str) -> Result<Token, String> {

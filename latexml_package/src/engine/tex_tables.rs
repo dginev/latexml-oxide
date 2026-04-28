@@ -415,6 +415,11 @@ LoadDefinitions!({
       }
       Ok(props) });
 
+  // NOTE: this engine override gets clobbered by the dump-load (latex.dump.txt's
+  // M-line for `\hline` is the latex.ltx macro form `\noalign{\ifnum0=`}\fi
+  // \hrule\@height\arrayrulewidth\futurelet\reserved@a\@xhline`). The override
+  // is re-applied at the end of `latex_constructs.rs::load_definitions` so the
+  // engine version wins post-dump. Recovers ~50 tabular-using tests.
   DefMacro!("\\hline", "\\noalign{\\@@alignment@hline}");
   DefConstructor!("\\@@alignment@hline", "",
     after_digest => sub[_whatsit] {

@@ -420,6 +420,7 @@ pub fn def_primitive(
       nargs: options.nargs,
       is_prefix: options.is_prefix,
       reversion: options.reversion,
+      font_id: options.font_id,
     },
     scope,
   );

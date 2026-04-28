@@ -90,6 +90,14 @@ static IS_INFIX: Lazy<HashMap<String, usize>> = Lazy::new(|| {
 });
 static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
 
+// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
+// The math parser's `parse_string` is called per-formula, often hundreds
+// of times per document; the previous per-call `std::env::var(...)`
+// triggered SIGSEGVs in glibc's `__GI_getenv` under concurrent test-
+// thread loads.
+static PARSE_LEXEMES_DBG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_LEXEMES").is_ok());
+static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT").is_ok());
+
 pub struct MathParser {
   grammar:                   ThinGrammar,
   actions:                   Actions,
@@ -1000,9 +1008,20 @@ impl MathParser {
     nodes: &[Node],
     document: &mut Document,
   ) -> Result<XM> {
+    // Diagnostic: dump lexeme stream when LATEXML_PARSE_LEXEMES is set.
+    // Useful for debugging math-parser hangs (e.g. project_1407_5769_math_hang.md):
+    // run with `LATEXML_PARSE_LEXEMES=1 latexml_oxide --dest=out.xml input.tex`
+    // to see the input fed to Marpa for each formula. Combine with --noparse
+    // disabled (default) to capture lexemes for parses that hang or explode.
+    if *PARSE_LEXEMES_DBG {
+      eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
+    }
     let parse_result = self
       .engine
       .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+    if *PARSE_LEXEMES_DBG {
+      eprintln!("PARSE_LEXEMES_RECOGNIZED");
+    }
     let mut parses: Vec<XM> = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
@@ -1103,9 +1122,7 @@ impl MathParser {
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
     // Useful for identifying grammar ambiguity hotspots across the test suite.
     // Usage: LATEXML_PARSE_AUDIT=1 cargo test --test 56_ams -- mathtools_test --nocapture
-    if std::env::var("LATEXML_PARSE_AUDIT").is_ok()
-      && (ok_trees + pruned_trees > 1 || start.elapsed().as_millis() > 50)
-    {
+    if *PARSE_AUDIT && (ok_trees + pruned_trees > 1 || start.elapsed().as_millis() > 50) {
       eprintln!(
         "PARSE_AUDIT: {} trees ({} ok, {} pruned, {} dedup→{} unique) in {:?} | {}",
         ok_trees + pruned_trees + deduped,

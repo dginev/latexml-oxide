@@ -1,4 +1,12 @@
 use crate::prelude::*;
+use once_cell::sync::Lazy;
+
+// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
+static PLAIN_DUMP_PATH: Lazy<Option<String>> =
+  Lazy::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
+static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
+static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 /// Perl: DefAutoload — define a macro that auto-loads a package on first use.
 /// When the command is first invoked, it loads the specified package (via
@@ -73,13 +81,13 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
 /// dev-tree). Mirrors `plain_dump::resolve_dump_path` exactly so the
 /// branch decision in `LoadFormat('plain')` doesn't drift.
 fn plain_dump_available() -> bool {
-  if let Ok(p) = std::env::var("LATEXML_PLAIN_DUMP_PATH") {
-    if std::path::Path::new(&p).is_file() {
+  if let Some(p) = PLAIN_DUMP_PATH.as_deref() {
+    if std::path::Path::new(p).is_file() {
       return true;
     }
   }
-  if let Ok(dir) = std::env::var("LATEXML_DUMP_DIR") {
-    if std::path::Path::new(&dir).join("plain.dump.txt").is_file() {
+  if let Some(dir) = DUMP_DIR.as_deref() {
+    if std::path::Path::new(dir).join("plain.dump.txt").is_file() {
       return true;
     }
   }
@@ -226,8 +234,8 @@ LoadDefinitions!({
   // `prepare_session`, so this branch fires before tex.rs runs in init mode.
   // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
   // `Base.pool` (no LoadFormat) before `DumpFile`.
-  if std::env::var_os("LATEXML_INI_MODE").is_none() {
-    if std::env::var_os("LATEXML_NODUMP").is_none() && plain_dump_available() {
+  if !*INI_MODE {
+    if !*NODUMP && plain_dump_available() {
       InnerPool!(plain_dump); // Perl: plain_dump.pool.ltxml
     } else {
       InnerPool!(plain_base); // Perl: plain_base.pool.ltxml

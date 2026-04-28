@@ -7,6 +7,10 @@
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::object_db::ObjectDB;
 use latexml_post::processor::Processor;
+use once_cell::sync::Lazy;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// Options for the post-processing pipeline.
 pub struct PostOptions<'a> {
@@ -66,7 +70,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     sp.push(src_dir.to_string());
     doc_opts.searchpaths = Some(sp);
   }
-  let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
+  let audit = *POST_AUDIT;
   let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {
     if audit {
       Some((name.to_string(), std::time::Instant::now()))

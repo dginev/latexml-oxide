@@ -89,8 +89,51 @@ LoadDefinitions!({
       Ok(stored_map!("value" => value))
     });
 
-  // Unit marking (Perl L99-111): simplified — just absorb content
-  DefConstructor!("\\ltx@mark@units{}", "#1", reversion => "#1");
+  // Unit marking — Perl numprint.sty.ltxml L99-111:
+  //   DefConstructor('\ltx@mark@units{}', sub {
+  //     my ($document, $units) = @_;
+  //     my @nodes = $document->filterChildren(
+  //       $document->filterDeletions($document->absorb($units)));
+  //     foreach my $node (@nodes) {
+  //       my $role;
+  //       if (($node->nodeType == XML_ELEMENT_NODE)
+  //         && (!($role = $node->getAttribute('role'))
+  //           || ($role eq 'ID') || ($role eq 'UNKNOWN')
+  //           || ($role eq 'FLOATSUPERSCRIPT'))) {
+  //         $document->addClass($node, 'ltx_unit'); } } },
+  //     reversion => '#1');
+  //
+  // Track which children belong to the absorbed unit by snapshotting the
+  // last child BEFORE absorb; everything inserted after that point came
+  // from the unit's tokens.
+  DefConstructor!("\\ltx@mark@units{}", sub[document, args, _props] {
+    let parent = document.get_node().clone();
+    let pre_last = parent.get_last_child();
+    if let Some(unit) = args.first().and_then(|a| a.as_ref()) {
+      document.absorb(unit, None)?;
+    }
+    // Iterate newly-added children: start at pre_last.next_sibling()
+    // (or the parent's first_child if pre_last was None).
+    let mut cursor = match pre_last {
+      Some(n) => n.get_next_sibling(),
+      None => parent.get_first_child(),
+    };
+    while let Some(mut node) = cursor {
+      cursor = node.get_next_sibling();
+      // XML_ELEMENT_NODE only — text/comment nodes skip.
+      if node.get_type() != Some(libxml::tree::NodeType::ElementNode) {
+        continue;
+      }
+      // Tag XMTok-like elements with role missing/None or in the
+      // {ID, UNKNOWN, FLOATSUPERSCRIPT} set.
+      let role = node.get_attribute("role").unwrap_or_default();
+      let tag = role.is_empty() || role == "ID" || role == "UNKNOWN" || role == "FLOATSUPERSCRIPT";
+      if tag {
+        document.add_class(&mut node, "ltx_unit")?;
+      }
+    }
+  },
+  reversion => "#1");
 
   // Sign symbols (Perl L79-84)
   DefPrimitive!("\\ltx@text@plus", "+");

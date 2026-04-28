@@ -16,5 +16,7 @@ pub mod util;
 pub fn dump_compiled_latexml_model() -> String {
   use latexml_codegen::LoadModel;
   load_model!("LaTeXML");
-  latexml_core::common::model::MODEL.borrow().dump_compiled_schema()
+  latexml_core::common::model::MODEL
+    .borrow()
+    .dump_compiled_schema()
 }

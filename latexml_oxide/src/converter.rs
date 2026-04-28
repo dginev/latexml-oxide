@@ -5,9 +5,7 @@ use latexml_core::common::{Config, DataSize, OutputFormat};
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
-use latexml_core::state::{
-  add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch,
-};
+use latexml_core::state::{add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch};
 use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
 use std::rc::Rc;
 

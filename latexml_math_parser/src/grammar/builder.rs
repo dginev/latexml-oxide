@@ -3,6 +3,12 @@ use marpa::grammar::Grammar as MarpaGrammar;
 use marpa::result::Result;
 use marpa::tree_builder::TreeBuilder;
 
+// Marpa SLIF-style grammar DSL inside `grammar!()` / `production!()`
+// macros. A handful of long alternation lists (`qm_bracket`,
+// `floatsuperscript`) push past 100 chars; `rustfmt::skip` is applied
+// to the entire builder so the BNF reads as a flat table rather than
+// being re-flowed mid-rule.
+#[rustfmt::skip]
 pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // We create a declarative macro language of our own, in the spirit of the Marpa SLIF
   default_registry!();

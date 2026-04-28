@@ -8,9 +8,22 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use crate::document::PostDocument;
 use crate::processor::{ProcessResult, Processor};
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+// Parsed-and-validated at init: only positive integer values are
+// honored; everything else (unset, empty, "0", malformed) leaves
+// `INKSCAPE_TIMEOUT_SECS` at None and the caller falls back to the
+// 15-second default in `inkscape_timeout_secs`.
+static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
+  std::env::var("LATEXML_INKSCAPE_TIMEOUT_SECS")
+    .ok()
+    .and_then(|s| s.parse::<u64>().ok())
+    .filter(|&n| n > 0)
+});
 
 /// Properties for a graphics file type.
 #[derive(Debug, Clone)]
@@ -505,13 +518,7 @@ impl Graphics {
   /// debugging; defaults to 15 s — enough for all benign vector-authored
   /// plots we've measured (< 1 s typical), strict enough to cut off the
   /// Fade.pdf-class 40 s+ runaway cases.
-  fn inkscape_timeout_secs() -> u64 {
-    std::env::var("LATEXML_INKSCAPE_TIMEOUT_SECS")
-      .ok()
-      .and_then(|s| s.parse::<u64>().ok())
-      .filter(|&n| n > 0)
-      .unwrap_or(15)
-  }
+  fn inkscape_timeout_secs() -> u64 { INKSCAPE_TIMEOUT_SECS.unwrap_or(15) }
 
   /// Run `cmd` and enforce a wall-clock timeout. Returns `Some(status)` on
   /// clean exit, `None` if the child was killed on timeout or spawn
@@ -806,8 +813,7 @@ impl Processor for Graphics {
     let worker_cap = std::thread::available_parallelism()
       .map(|n| n.get())
       .unwrap_or(4)
-      .min(8)
-      .max(1);
+      .clamp(1, 8);
     let n_workers = convert_count.min(worker_cap).max(1);
     let source_dir_ref = source_dir.as_str();
     let dest_dir_ref = dest_dir.as_str();

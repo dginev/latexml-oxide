@@ -25,6 +25,9 @@ use latexml_core::util::pathname::PathnameFindOptions;
 use latexml_codegen::LoadModel;
 use latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
 use latexml_math_parser::MathParser;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static LATEXML_DUMP: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP").ok());
 use latexml_package::prelude::{
   InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
@@ -100,7 +103,7 @@ impl DigestionAPI for Core {
     // should we reset the model also?
     model::initialize_model();
     // let paths = state::search_paths;
-    let dump_path = std::env::var("LATEXML_DUMP").ok();
+    let dump_path = LATEXML_DUMP.clone();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       // Perl: initializeState extracts extension and options from "name.ext[opt1,opt2]"

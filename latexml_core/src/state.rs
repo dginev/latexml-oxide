@@ -263,10 +263,9 @@ pub struct State {
   /// startup by each binding crate via `add_binding_names`, so both
   /// `latexml_package` and `latexml_contrib` contribute their classes/
   /// styles/defs/pools to the fallback pool. Consumed by:
-  /// - `find_file(notex=true)` to resolve compile-time bindings without
-  ///   touching the filesystem.
-  /// - `load_class`'s Perl-parity prefix-match fallback (Package.pm
-  ///   L2702-2706) via the `get_class_binding_names()` filtered view.
+  /// - `find_file(notex=true)` to resolve compile-time bindings without touching the filesystem.
+  /// - `load_class`'s Perl-parity prefix-match fallback (Package.pm L2702-2706) via the
+  ///   `get_class_binding_names()` filtered view.
   pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
@@ -483,6 +482,56 @@ impl State {
       nomathparse,
       ..State::default()
     };
+    // INITEX-equivalent defaults — mirror Perl `State.pm:128-137`.
+    // Sets letter/digit mathcodes (class 7, family 1 for letters / 0 for digits),
+    // upper/lowercase mappings, and sfcode=999 for uppercase letters. Without
+    // these, dump-load path leaves letter mathcodes unset (plain.dump.txt only
+    // captures the 57 plain.tex OVERRIDES), so `\cal abc` math falls through
+    // the text path and loses meaning/role attributes. NODUMP path used to set
+    // these via plain_base.rs L17-41 only — not Perl-faithful since INITEX
+    // owns these (TeXbook ch.17 p309). Setting them here makes both paths
+    // consistent and matches Perl's State::new behaviour.
+    for c in b'0'..=b'9' {
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(c as char),
+        Stored::Charcode(0x7000 + c as u16),
+        None,
+      );
+    }
+    for c in b'a'..=b'z' {
+      let big = c - 32;
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(c as char),
+        Stored::Charcode(0x7100 + c as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(big as char),
+        Stored::Charcode(0x7100 + big as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Uccode,
+        arena::pin_char(c as char),
+        Stored::Charcode(big as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Lccode,
+        arena::pin_char(big as char),
+        Stored::Charcode(c as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Sfcode,
+        arena::pin_char(big as char),
+        Stored::Charcode(999),
+        None,
+      );
+    }
     // TODO: should these be *fields* in state or really as in Perl - globally assigned values?
     state.assign_value(
       "DOCUMENTID",
@@ -978,7 +1027,6 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
   }
 }
-
 
 /// Generate a stub definition for an undefined control-sequence,
 /// along with appropriate error messge.
@@ -2106,7 +2154,10 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
   for key in new_keys {
     let current = {
       let state = state!();
-      state.meaning.get(&key).and_then(|stack| stack.front().cloned())
+      state
+        .meaning
+        .get(&key)
+        .and_then(|stack| stack.front().cloned())
     };
     if let Some(value) = current {
       // Direct re-bind via assign_internal so we don't need to round-trip a

@@ -36,6 +36,9 @@ pub struct PrimitiveOptions {
   pub before_digest:    Vec<BeforeDigestClosure>,
   pub after_digest:     Vec<DigestionClosure>,
   pub reversion:        Option<Reversion>,
+  /// The fontinfo lookup key for `\font`-defined primitives. See
+  /// `Primitive::font_id`.
+  pub font_id:          Option<crate::common::arena::data::SymStr>,
 }
 
 #[derive(Clone)]
@@ -51,6 +54,14 @@ pub struct Primitive {
   pub nargs:         Option<usize>,
   pub reversion:     Option<Reversion>,
   pub is_prefix:     bool,
+  /// Set on `\font`-defined primitives (Perl `LaTeXML::Core::Definition::FontDef::fontID`).
+  /// Holds the value-table key under which this CS's fontinfo hash lives
+  /// (e.g. `\tenrm` → `Some("fontinfo_\\tenrm")`). Lets the dumper round-trip
+  /// font-defined primitives via Perl's `FD(<cs>)` record (see
+  /// `Core/Dumper.pm` L356-389) — closures aren't serializable but the
+  /// font_id + the dumped `Stored::Font` value at that key let the reader
+  /// rebuild an equivalent merge-font Primitive.
+  pub font_id:       Option<crate::common::arena::data::SymStr>,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -64,6 +75,7 @@ impl Default for Primitive {
       nargs:         None,
       reversion:     None,
       is_prefix:     false,
+      font_id:       None,
     }
   }
 }

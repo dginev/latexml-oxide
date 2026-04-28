@@ -281,15 +281,20 @@ pub trait BoxOps: Object {
             .and_then(|f| f.get_size())
             .unwrap_or(10.0);
           let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
-          let pt_scaled = (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
-          Some(RegisterValue::Dimension(crate::common::dimension::Dimension::new(pt_scaled as i64)))
+          let pt_scaled =
+            (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
+          Some(RegisterValue::Dimension(
+            crate::common::dimension::Dimension::new(pt_scaled as i64),
+          ))
         },
         Stored::MuDimension(d) => {
           let fs = crate::state::lookup_font()
             .and_then(|f| f.get_size())
             .unwrap_or(10.0);
           let pt_scaled = (d.value_of() / 18) as f64 * fs;
-          Some(RegisterValue::Dimension(crate::common::dimension::Dimension::new(pt_scaled as i64)))
+          Some(RegisterValue::Dimension(
+            crate::common::dimension::Dimension::new(pt_scaled as i64),
+          ))
         },
         _ => val.into(),
       }
@@ -393,7 +398,9 @@ pub trait BoxOps: Object {
               .and_then(|f| f.get_size())
               .unwrap_or(10.0);
             let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
-          let pt_scaled = (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
+            let pt_scaled = (g.value_of() as f64 * muwidth as f64
+              / crate::common::numeric_ops::UNITY_F64)
+              .trunc();
             Some(Dimension::new(pt_scaled as i64))
           },
           Some(Stored::MuDimension(d)) => {

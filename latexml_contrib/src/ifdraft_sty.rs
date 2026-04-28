@@ -22,19 +22,25 @@ LoadDefinitions!({
   DefConditional!("\\if@option@final");
 
   DeclareOption!("draft", {
-    Let!("\\if@draft",        "\\iftrue");
+    Let!("\\if@draft", "\\iftrue");
     Let!("\\if@option@draft", "\\iftrue");
   });
   DeclareOption!("final", {
-    Let!("\\if@draft",        "\\iffalse");
+    Let!("\\if@draft", "\\iffalse");
     Let!("\\if@option@final", "\\iftrue");
   });
   ProcessOptions!();
 
-  DefMacro!("\\ifdraft",
-    "\\if@draft\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
-  DefMacro!("\\ifoptiondraft",
-    "\\if@option@draft\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
-  DefMacro!("\\ifoptionfinal",
-    "\\if@option@final\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
+  DefMacro!(
+    "\\ifdraft",
+    "\\if@draft\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi"
+  );
+  DefMacro!(
+    "\\ifoptiondraft",
+    "\\if@option@draft\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi"
+  );
+  DefMacro!(
+    "\\ifoptionfinal",
+    "\\if@option@final\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi"
+  );
 });

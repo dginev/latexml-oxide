@@ -133,11 +133,24 @@ LoadDefinitions!({
     // primitive to a strict Perl-faithful translation — see Work Plan.
     let is_global = state::get_prefix("global");
     let cs_for_fontdef = cs;
+    let font_id_key = arena::pin(s!("fontinfo_{cs_str}").as_str());
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
         AssignValue!("current_FontDef", cs_for_fontdef, None);
       }
     );
+    // Tag the just-installed primitive with its fontinfo lookup key — this
+    // is the Rust `font_id` (Perl `LaTeXML::Core::Definition::FontDef::fontID`)
+    // that lets dump_writer emit `FD\t<font_id>` (Perl `dump_primitive` path
+    // L383-389) instead of the generic Primitive serialization. Without the
+    // tag, the writer falls into the `PA\t<self_cs>` self-alias path which
+    // dump_reader skips, leaving the CS undefined post-dump.
+    if let Some(Stored::Primitive(p)) = state::lookup_meaning(&cs) {
+      let mut p_owned: latexml_core::definition::primitive::Primitive = (*p).clone();
+      p_owned.font_id = Some(font_id_key);
+      state::assign_meaning(&cs, Stored::Primitive(std::rc::Rc::new(p_owned)),
+        if is_global { Some(Scope::Global) } else { None });
+    }
     if is_global {
       if let Some(meaning) = state::lookup_meaning(&cs) {
         state::assign_meaning(&cs, meaning, Some(Scope::Global));

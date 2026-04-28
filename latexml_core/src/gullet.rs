@@ -33,6 +33,17 @@ static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 
+/// Cached snapshot of `LXML_TRACE_GROUP_END` env var, sampled exactly
+/// once per process. Inlining `std::env::var(...)` on the hot
+/// `read_x_token` path was triggering SIGSEGVs in `__GI_getenv` under
+/// concurrent test-thread execution: glibc's `getenv` walks the
+/// process-global `environ` array unprotected, and the volume of
+/// concurrent calls (millions/sec across N threads) made the unsafe
+/// concurrent walks visible. The fix is to read the env var ONCE at
+/// static-init time; subsequent checks are a free atomic load.
+pub static TRACE_GROUP_END: Lazy<bool> =
+  Lazy::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
+
 // Perl smuggles the unexpanded token inside \special_relax's slot [2].
 // Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
 use crate::pin;
@@ -612,7 +623,7 @@ pub fn read_x_token(
         Outcome::Invoke(defn) => {
           local_current_token(token);
           let invoked = defn.invoke(false)?;
-          if std::env::var("LXML_TRACE_GROUP_END").is_ok() {
+          if *TRACE_GROUP_END {
             // Print per-event {macro, delta} so post-processing can sum
             // by-macro to find which expandable CS contributes net +/- 1
             // imbalance across the run. Format: TRACE_GE delta CS
@@ -1127,24 +1138,20 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // legitimate CS name, just a runaway. Emit one clear error and break.
   const MAX_CS_NAME_BYTES: usize = 4096;
   let mut cs = String::from("\\");
-  let mut runaway_reported = false;
   // keep newlines from having \n inside!
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
       break;
     }
     if cs.len() > MAX_CS_NAME_BYTES {
-      if !runaway_reported {
-        runaway_reported = true;
-        Error!(
-          "runaway",
-          "csname",
-          format!(
-            "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
-            &cs[..cs.len().min(200)]
-          )
-        );
-      }
+      Error!(
+        "runaway",
+        "csname",
+        format!(
+          "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
+          &cs[..cs.len().min(200)]
+        )
+      );
       break;
     }
     match token.get_catcode() {

@@ -5,6 +5,14 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::Instant;
 
+/// Cached snapshot of `LXML_TRACE_BOUND_MODE` env var. Like the
+/// `TRACE_GROUP_END` cache in gullet.rs, this avoids per-digest
+/// `getenv` calls — glibc's `getenv` is unsafe under high-volume
+/// concurrent reads from many test threads, manifesting as SIGSEGV
+/// in `__GI_getenv` when running `cargo test --release --tests`.
+/// Sample once at static-init; subsequent reads are an atomic load.
+static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOUND_MODE").is_ok());
+
 // Conversion timeout: thread-local deadline. When set, digest loops check it.
 thread_local! {
   static CONVERSION_DEADLINE: Cell<Option<Instant>> = const { Cell::new(None) };
@@ -249,7 +257,7 @@ pub fn bgroup() {
 pub fn egroup() -> Result<()> {
   if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic for cluster investigation (project_explsyntax_midload.md).
-    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    if *TRACE_BOUND_MODE {
       let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
       let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
       let cur_tok = get_current_token()
@@ -287,7 +295,7 @@ pub fn egroup() -> Result<()> {
 }
 /// Begin a new level of binding by pushing a new stack frame.
 pub fn begingroup() {
-  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+  if *TRACE_BOUND_MODE {
     let depth = crate::state::get_frame_depth();
     let loc = gullet::get_locator();
     eprintln!("[trace] begingroup pre-depth={depth} at {}", loc);
@@ -297,7 +305,7 @@ pub fn begingroup() {
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
-  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+  if *TRACE_BOUND_MODE {
     let depth = crate::state::get_frame_depth();
     let bound = is_value_bound("BOUND_MODE", Some(0));
     let loc = gullet::get_locator();
@@ -324,16 +332,14 @@ pub fn endgroup() -> Result<()> {
   // Latent bugs found 2026-04-25 when removing this guard:
   //   - `#` (catcode PARAM) escapes to stomach
   //   - `\q_stop` recursion
-  //   - residual `\group_end:` mode-switch error (not caught by strict
-  //     end_mode_opt either — separate divergence point)
+  //   - residual `\group_end:` mode-switch error (not caught by strict end_mode_opt either —
+  //     separate divergence point)
   //   - `\xparse-2018-04-12.sty-h@@k` undefined
   // Each of those needs its own root-cause investigation.
   let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
   if interpreting {
     // Diagnostic: capture band-aid suppression occurrences for analysis.
-    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok()
-      && is_value_bound("BOUND_MODE", Some(0))
-    {
+    if *TRACE_BOUND_MODE && is_value_bound("BOUND_MODE", Some(0)) {
       let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
       let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
       let frame_keys = crate::state::dump_top_frame_keys();
@@ -344,7 +350,7 @@ pub fn endgroup() -> Result<()> {
     pop_stack_frame(true)?;
   } else if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
-    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    if *TRACE_BOUND_MODE {
       let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
       let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
       eprintln!(
@@ -398,7 +404,7 @@ pub fn set_mode(mode: &str) -> Result<()> {
   // We also set BOUND_MODE so end_mode can find it
   let bound_mode = bindable_mode(mode).unwrap_or(mode);
   // Diagnostic
-  if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+  if *TRACE_BOUND_MODE {
     eprintln!(
       "[trace] set_mode mode={mode} bound_mode={bound_mode}\n{}",
       std::backtrace::Backtrace::force_capture()
@@ -434,6 +440,10 @@ pub fn set_mode(mode: &str) -> Result<()> {
       Some(Scope::Local),
     );
     assign_font(new_font, Some(Scope::Local));
+    // Perl Stomach.pm:505 — `$STATE->assignValue(fontfamily => -1, 'local');`
+    // Resets `\fam` (whose getter reads `fontfamily`) on math entry so that
+    // text-mode `\rm` (which sets `fontfamily=0`) doesn't leak into math.
+    assign_value("fontfamily", -1_i64, Some(Scope::Local));
   } else {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math
@@ -482,7 +492,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // Diagnostic: tracking who binds BOUND_MODE during raw .sty load
     // (gated by LXML_TRACE_BOUND_MODE env var to avoid noise in normal runs).
     // See project_explsyntax_midload.md memory for the active investigation.
-    if std::env::var("LXML_TRACE_BOUND_MODE").is_ok() {
+    if *TRACE_BOUND_MODE {
       eprintln!(
         "[trace] begin_mode_opt mode={mode} noframe={noframe} bound_mode={bound_mode}\n{}",
         std::backtrace::Backtrace::force_capture()

@@ -226,13 +226,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // → raw babel.sty; cite_sty → raw cite.sty.
   let opt_noltxml = options.noltxml;
   let opt_notex = options.notex;
+  // Rust-only `_load_attempted` flag: set in the miss-handler below to
+  // prevent retry loops while keeping `_loaded` reserved for genuine
+  // binding success. Without this split the `_loaded`-on-miss hack
+  // shadowed `require_package`'s `!_loaded && !_raw_loaded`
+  // post-call check, disabling `maybe_require_dependencies` for any
+  // package that had no binding (e.g. paper-local `jinstpub.sty`).
   let already_handled = |fkey: &str| -> bool {
     if opt_noltxml {
       lookup_bool(&s!("{fkey}_raw_loaded"))
     } else if opt_notex {
-      lookup_bool(&s!("{fkey}_loaded"))
+      lookup_bool(&s!("{fkey}_loaded")) || lookup_bool(&s!("{fkey}_load_attempted"))
     } else {
-      lookup_bool(&s!("{fkey}_loaded")) || lookup_bool(&s!("{fkey}_raw_loaded"))
+      lookup_bool(&s!("{fkey}_loaded"))
+        || lookup_bool(&s!("{fkey}_raw_loaded"))
+        || lookup_bool(&s!("{fkey}_load_attempted"))
     }
   };
   if !options.reloadable && already_handled(&filename) {
@@ -465,9 +473,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
       // check `_loaded || _raw_loaded` to detect "any load happened".
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
-    } else if !lookup_bool(&s!("{filename}_loaded"))
-      && !lookup_bool(&s!("{filename}_raw_loaded"))
-    {
+    } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
@@ -482,9 +488,27 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         }
         return Err(s!("File not found: {}", filename).into());
       }
-      // Mark as loaded even on failure — prevents retrying a missing file
-      // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
-      assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+      // Perl Package.pm L2679 / L2715: maybeRequireDependencies($name, $type)
+      // is invoked when InputDefinitions returned undef ($success false).
+      // We mirror that here in the miss-handler, which is the only point
+      // where we know neither binding nor raw load occurred. Doing the
+      // dependency-scan BEFORE marking `_load_attempted` keeps the call
+      // exactly once-per-package and lets paper-local `.sty` files
+      // (e.g. jinstpub.sty bundling natbib + amsmath dependencies) wire
+      // up their transitively-bound prerequisites even when raw .sty
+      // loading is disabled (`INCLUDE_STYLES=false`, the default).
+      let scan_type =
+        options
+          .extension
+          .as_deref()
+          .unwrap_or(if options.as_class { "cls" } else { "sty" });
+      maybe_require_dependencies(name, scan_type);
+      // Rust-only retry guard: prevents re-attempting a missing file in
+      // a loop (raw TeX repeatedly calling \RequirePackage). Use a
+      // dedicated `_load_attempted` flag — NOT `_loaded` — so the
+      // post-input_definitions success check in `require_package`
+      // remains honest about whether anything actually loaded.
+      assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
       Warn!(
         "missing_file",
         name,
@@ -523,9 +547,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
     // `\@popfilename` definedness independently (state may have changed
     // mid-load); here we re-check too rather than threading a flag.
-    let pop_use_expl =
-      lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
-        && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+    let pop_use_expl = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
+      && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
     if pop_use_expl {
       digest(T_CS!("\\@popfilename"))?;
     } else {
@@ -903,7 +926,8 @@ fn load_tex_definitions(
     // `<request>_raw_loaded`, separate from the binding `<request>_loaded`.
     // This lets a binding .rs load the raw file of the same name without
     // the flags clobbering each other.
-    if lookup_bool(&s!("{request}_raw_loaded")) && !reloadable && !pathname::is_reloadable(pathname) {
+    if lookup_bool(&s!("{request}_raw_loaded")) && !reloadable && !pathname::is_reloadable(pathname)
+    {
       return Ok(());
     }
     assign_value(&s!("{request}_raw_loaded"), true, Some(Scope::Global));
@@ -1253,7 +1277,6 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  let ext_type = options.extension.as_deref().unwrap_or("sty").to_string();
   let result = input_definitions(name, InputDefinitionOptions {
     extension: options.extension,
     handleoptions: true,
@@ -1271,14 +1294,8 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
-  // Perl Package.pm L2679: maybeRequireDependencies unless $success
-  // input_definitions returns Ok even when no binding/raw file was found
-  // (it just sets _loaded and warns). Per OXIDIZED_DESIGN #23, "did
-  // a binding OR raw load happen" is `_loaded || _raw_loaded`.
-  let key = s!("{name}.{ext_type}");
-  if !lookup_bool(&s!("{key}_loaded")) && !lookup_bool(&s!("{key}_raw_loaded")) {
-    maybe_require_dependencies(name, &ext_type);
-  }
+  // Perl Package.pm L2679 maybeRequireDependencies is invoked from
+  // input_definitions's miss-handler; nothing more to do here.
   result
 }
 
@@ -1397,9 +1414,11 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     for pkg in cap[2].split(',') {
       let pkg = pkg.trim().to_string();
       // Perl L2773: skip if binding already loaded
-      if !pkg.is_empty() && !seen.contains(&pkg)
+      if !pkg.is_empty()
+        && !seen.contains(&pkg)
         && !lookup_bool(&s!("{pkg}.sty_loaded"))
-        && !lookup_bool(&s!("{pkg}.sty_raw_loaded")) {
+        && !lookup_bool(&s!("{pkg}.sty_raw_loaded"))
+      {
         seen.insert(pkg.clone());
         packages.push((pkg, opts.clone()));
       }
@@ -1542,8 +1561,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
   // undefined and the `_` characters then reach the stomach as subscript
   // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
-  if !lookup_bool(&s!("{name}.cls_loaded"))
-    && !lookup_bool(&s!("{name}.cls_raw_loaded")) {
+  if !lookup_bool(&s!("{name}.cls_loaded")) && !lookup_bool(&s!("{name}.cls_raw_loaded")) {
     maybe_require_dependencies(name, "cls");
   }
   // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
@@ -1741,16 +1759,13 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // FindFile discovers pgfsys-latexml.def.ltxml etc.
     //
     // Two registry kinds are consulted (in order of cost):
-    //  1. The per-call `{file}_binding_available` runtime flag, which
-    //     packages can set to pre-announce their availability (used by
-    //     pgf_sty for `pgfsys-latexml.def`).
-    //  2. The compile-time class registry (latexml_package's `BINDINGS`)
-    //     surfaced via `state::get_class_binding_names()`. Without this,
-    //     `find_file("revtex4-1.cls", notex=true)` returned None for
-    //     compiled-in bindings — so AIAA.cls's `\LoadClass{revtex4-1}` was
-    //     silently skipped, breaking the eager natbib transitive load
-    //     (1709.05096 / AIAA → 60s wall-clock SIGABRT in the autoload-
-    //     trapped-by-abstract loop).
+    //  1. The per-call `{file}_binding_available` runtime flag, which packages can set to
+    //     pre-announce their availability (used by pgf_sty for `pgfsys-latexml.def`).
+    //  2. The compile-time class registry (latexml_package's `BINDINGS`) surfaced via
+    //     `state::get_class_binding_names()`. Without this, `find_file("revtex4-1.cls",
+    //     notex=true)` returned None for compiled-in bindings — so AIAA.cls's
+    //     `\LoadClass{revtex4-1}` was silently skipped, breaking the eager natbib transitive load
+    //     (1709.05096 / AIAA → 60s wall-clock SIGABRT in the autoload- trapped-by-abstract loop).
     // Binding-marker fast paths. ONLY fire when caller has requested
     // `notex=true` (i.e. caller wants binding-only search, not a real
     // disk path). Without this gate, raw `\openin` /`\IfFileExists`
@@ -1779,6 +1794,23 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
         {
           return Some(file.to_string());
         }
+      }
+    } else if !options.forbid_ltxml {
+      // Narrow notex=false (disk-search) fallback: ONLY honor explicit
+      // `<file>_binding_available` runtime flags, NOT the broad compile-time
+      // registry. Mirrors Perl `\openin` calling default-args FindFile —
+      // see `TeX_FileIO.pool.ltxml:50-64` "we SHOULD find an .ltxml version!"
+      //
+      // Use case: pgf.sty's pgfsys.code.tex `\pgfutil@InputIfFileExists{\pgfsysdriver}`
+      // → `\pgfutil@IfFileExists{pgfsys-latexml.def}` → `\openin` with notex=false.
+      // The openin impl in tex_file_io.rs creates an empty Mouth on
+      // Mouth::create failure, so \ifeof=false → pgf inputs the driver.
+      // pgf_sty.rs sets `pgfsys-latexml.def_binding_available=true` to
+      // enable this; without the flag we don't fake-find arbitrary binding
+      // names (which would re-introduce the t1enc.def `\@missingfileerror`
+      // cascade documented above the notex=true branch).
+      if lookup_bool(&s!("{file}_binding_available")) {
+        return Some(file.to_string());
       }
     }
     // If we're looking for TeX, look within our paths & installation first (faster than kpse)

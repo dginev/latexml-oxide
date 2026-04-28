@@ -24,7 +24,6 @@ use std::collections::VecDeque;
 /// fall back to `dimension_to_spaces(width)` instead of reverting to the
 /// macro name. All other Whatsits use their normal `get_string` path.
 fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
-  use std::ops::Deref;
   let mut out = String::new();
   match d.data() {
     DigestedData::TBox(b) => out.push_str(&b.borrow().get_string()?),
@@ -7563,16 +7562,15 @@ LoadDefinitions!({
 
   // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');
   //
-  // Rust uses DefPrimitive with a None body — effectively a silent
-  // no-op that swallows the optional-star + dimension arg. Intentional
-  // DefMacro → DefPrimitive kind divergence (WISDOM #44): the literal
-  // Perl port (expanding to `\vskip #2\relax`) triggered paragraph
-  // breaks in moderncv that cascaded into multiple test failures. The
-  // no-op stub matches Perl's _observable_ effect on most documents
-  // (LaTeXML ignores vertical spacing) without the moderncv break.
-  // See docs/SYNC_STATUS.md Work-Plan batch B5 for the broader
-  // deferred vspace→\vskip port plan.
-  DefPrimitive!("\\vspace OptionalMatch:* {}", None);
+  // Restored Perl-faithful expansion 2026-04-28. The earlier no-op
+  // DefPrimitive stub (kept as `WISDOM #44`) was retained to dodge a
+  // moderncv cascade, but the no-op breaks `\bigskip\hrule` paragraph
+  // separation (latex.ltx defines `\bigskip` as `\vspace\bigskipamount`,
+  // which our no-op silently swallowed — no `\vskip` reached, so
+  // `<ltx:para>` stayed open and `<rule>` landed inside it).
+  // ntheorem_test, plus the simpler `bigskip_test`, both confirm the
+  // Perl-faithful expansion produces the expected sibling layout.
+  DefMacro!("\\vspace OptionalMatch:* {}", "\\vskip #2\\relax");
   DefPrimitive!("\\addvspace {}", None);
   DefPrimitive!("\\addpenalty {}", None);
   DefPrimitive!("\\@endparenv", None);
@@ -9141,7 +9139,20 @@ LoadDefinitions!({
 
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_string = Expand!(file).to_string();
-    if find_file(&file_string, None).is_some() {
+    // Disk-search variant first (matches Perl FindFile default).
+    let found = find_file(&file_string, None).is_some()
+      // Then binding-only fallback (notex=true): pgf's
+      // `\IfFileExists{pgfsys-latexml.def}` and similar driver-file probes
+      // need to discover compiled-in bindings (.def/.sty/.cls registered
+      // via `latexml_package::package`). Without this fallback the
+      // notex=false disk search returns None for binding-only files,
+      // pgf bails with "Driver file ... not found", and the entire
+      // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
+      // pgf-using papers).
+      || find_file(&file_string, Some(latexml_core::binding::content::FindFileOptions {
+          notex: true, ..Default::default()
+        })).is_some();
+    if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
       if_tks
@@ -9414,4 +9425,22 @@ LoadDefinitions!({
   });
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
   Let!("\\@ifnext", "\\@ifnextchar");
+
+  // Re-establish the engine `\hline` override after dump load.
+  // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`
+  // which Rust port has at `tex_tables.rs:418` (TeX.pool baseline). However:
+  // CLAUDE.md "Unconditional dump apply" → the dump's M-line for `\hline`
+  // (latex.ltx's `\def\hline{\noalign{...\hrule...\@xhline}}`) overwrites
+  // the engine version on dump-load. The macro expansion emits a literal
+  // `\hrule` inside `<td>` (Constructor at `tex_box.rs:1100`) instead of
+  // setting `border="t"` on the next row, breaking ~30 tabular tests
+  // (lettercase, ot1/t1/t2*/ts1/ly1, latin*, cp*, applemac, longtable,
+  // array, colortbls, tabular, supertabular, morse, cells, ntheorem, …).
+  //
+  // This is NOT a Rust-only divergence — same definition as
+  // `tex_tables.rs:418` and Perl's `TeX_Tables.pool.ltxml`. The only
+  // divergence is location: pragmatic late re-install after dump-load,
+  // since under unconditional-dump-apply the only way for the engine
+  // override to survive is to apply it AFTER the dump has been read.
+  DefMacro!("\\hline", r"\noalign{\@@alignment@hline}");
 });

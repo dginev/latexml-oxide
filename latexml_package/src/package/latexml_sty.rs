@@ -685,14 +685,17 @@ LoadDefinitions!({
                 );
                 if let Some(sk) = shared_key {
                   if let Some(name) = sk.strip_prefix("fontinfo_") {
-                    if let Some(props) = latexml_core::common::font::decode_fontname(name, None, None) {
+                    let props = latexml_core::common::font::decode_fontname(name, None, None);
+                    if let Some(props) = props {
                       encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
                     }
                   }
                 }
               }
               if let Some(encoding) = encoding_opt {
-                if let Some(dc) = latexml_core::common::font::decode(decoded_pos, Some(encoding), false) {
+                let decoded =
+                  latexml_core::common::font::decode(decoded_pos, Some(encoding), false);
+                if let Some(dc) = decoded {
                   let ds = dc.to_string();
                   if ds != body_text {
                     decls.push(format!("{}\t{}\t{}\t{}", ds, role, name_val, meaning));
@@ -926,7 +929,11 @@ LoadDefinitions!({
     "<ltx:ref href='#href'>?#1(#1)(#href)</ltx:ref>",
     enter_horizontal => true,
     properties => sub[_args] {
-      let mut href_str = _args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let mut href_str = _args
+        .get(1)
+        .and_then(|a| a.as_ref())
+        .map(|a| a.to_string())
+        .unwrap_or_default();
       // Perl: CleanURL — strip whitespace/newlines from URLs
       href_str = href_str.replace(['\n', '\r'], "").trim().to_string();
       Ok(stored_map!("href" => href_str))

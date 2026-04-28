@@ -1,5 +1,6 @@
 use glob::glob;
 use libxml::tree::Node;
+use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Once;
@@ -10,6 +11,12 @@ use latexml_core::common::BindingDispatcher;
 use latexml_core::document::Document;
 use latexml_core::{Core, CoreOptions, s, state};
 use latexml_math_parser::node_to_grammar_lexemes;
+
+// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
+// Sampled at static init; subsequent reads are atomic loads.
+static TEST_LOG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
+static SIGSEGV_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SIGSEGV_TRACE").is_ok());
+static SAVE_ACTUAL: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SAVE_ACTUAL").is_ok());
 
 pub fn latexml_tests(
   dirpath: &str,
@@ -45,13 +52,93 @@ pub fn init_logger() {
   INIT_LOGGER.call_once(|| {
     // Use Off level for clean test output. Error/Warn counting still works
     // via note_status(); set LATEXML_TEST_LOG=1 to see warnings during debugging.
-    let level = if std::env::var("LATEXML_TEST_LOG").is_ok() {
+    let level = if *TEST_LOG {
       log::LevelFilter::Warn
     } else {
       log::LevelFilter::Off
     };
     latexml_core::util::logger::init(level).unwrap();
   });
+}
+
+// Linker-section trick: register a SIGSEGV handler via `.init_array` so
+// it runs BEFORE `main()` (and therefore before any thread the test
+// harness spawns can crash). `init_logger` was too late — by the time
+// the first test thread called it, sibling threads had already crashed.
+//
+// Gated by `LATEXML_SIGSEGV_TRACE` so the handler is opt-in; signal()
+// + std::backtrace inside a SIGSEGV handler is technically not async-
+// signal-safe (uses heap), but for diagnostic purposes a best-effort
+// stack dump is far more useful than the bare `signal: 11` line cargo
+// reports today.
+#[used]
+#[cfg_attr(target_os = "linux", link_section = ".init_array")]
+static SIGSEGV_INSTALLER: extern "C" fn() = sigsegv_installer;
+
+extern "C" fn sigsegv_installer() {
+  // Read env at process start. SAFETY: nothing has run yet, env is
+  // populated by the kernel/loader.
+  if *SIGSEGV_TRACE {
+    eprintln!("[sigsegv_installer] installing SIGSEGV handler");
+    install_sigsegv_handler();
+  }
+}
+
+/// Install a SIGSEGV handler that prints the crashing thread's name and a
+/// best-effort backtrace before the kernel terminates the process. This
+/// is a diagnostic-only hook — the handler is not async-signal-safe (it
+/// uses `std::backtrace` and `eprintln!`, which malloc), but for
+/// post-mortem of the libxml2-suspected multi-thread crash that's
+/// observed under `cargo test --release --tests`, even an unsafe
+/// stack print is more useful than the bare `signal: 11` line cargo
+/// reports today.
+fn install_sigsegv_handler() {
+  extern "C" {
+    fn signal(sig: i32, handler: extern "C" fn(i32)) -> usize;
+    fn raise(sig: i32) -> i32;
+  }
+  // Linux SIGSEGV = 11, SIGBUS = 7, SIGABRT = 6.
+  const SIGSEGV: i32 = 11;
+  const SIGBUS: i32 = 7;
+  const SIGABRT: i32 = 6;
+  const SIG_DFL: usize = 0;
+
+  extern "C" fn handler(sig: i32) {
+    // Capture context synchronously and persist to a per-pid file —
+    // cargo test buffers/discards stderr from binaries that exit by
+    // signal, so eprintln!() never reaches the user. Writing to
+    // `/tmp/latexml_sigsegv_<pid>.txt` survives the kill.
+    let tid = std::thread::current().id();
+    let name = std::thread::current()
+      .name()
+      .unwrap_or("<unnamed>")
+      .to_string();
+    let pid = std::process::id();
+    let path = format!("/tmp/latexml_sigsegv_{pid}.txt");
+    let bt = std::backtrace::Backtrace::force_capture();
+    let exe = std::env::current_exe()
+      .map(|p| p.display().to_string())
+      .unwrap_or_else(|_| "<unknown>".into());
+    let body = format!(
+      "=== SIGSEGV-handler ===\nsignal={sig}\nthread={name:?}\nid={tid:?}\nexe={exe}\npid={pid}\n\n{bt}\n"
+    );
+    let _ = std::fs::write(&path, &body);
+    // Also try eprintln (best effort; usually lost by cargo on signal).
+    eprintln!("{body}");
+    eprintln!("[SIGSEGV-handler] full trace written to {path}");
+    // Reset to default and re-raise so cargo still sees the original signal.
+    unsafe {
+      let raw_dfl: extern "C" fn(i32) = std::mem::transmute(SIG_DFL);
+      signal(sig, raw_dfl);
+      raise(sig);
+    }
+  }
+
+  unsafe {
+    signal(SIGSEGV, handler);
+    signal(SIGBUS, handler);
+    signal(SIGABRT, handler);
+  }
 }
 
 /// Tests whose TeX input is *known* to produce Error/Warn messages in both
@@ -196,7 +283,7 @@ fn process_xmlfile<'a>(xml_path: &'a str, _name: &'a str) -> Vec<String> {
 }
 fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
   let doc_str = doc.serialize_to_string();
-  if std::env::var("LATEXML_SAVE_ACTUAL").is_ok() {
+  if *SAVE_ACTUAL {
     let path = format!("/tmp/latexml_actual_{name}.xml");
     std::fs::write(&path, &doc_str).ok();
     eprintln!("Saved actual XML to {path}");

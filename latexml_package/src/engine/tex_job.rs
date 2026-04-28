@@ -4,6 +4,11 @@
 
 use crate::prelude::*;
 use chrono::prelude::*;
+use once_cell::sync::Lazy;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
+  Lazy::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -28,7 +33,7 @@ LoadDefinitions!({
 
   // TODO: This may mess up Daemon state? Reinit when setting jobname?
   // Respect SOURCE_DATE_EPOCH env var for reproducible builds (like Perl)
-  let dt: DateTime<Local> = if let Ok(epoch_str) = std::env::var("SOURCE_DATE_EPOCH") {
+  let dt: DateTime<Local> = if let Some(epoch_str) = SOURCE_DATE_EPOCH.as_deref() {
     if let Ok(epoch) = epoch_str.trim().parse::<i64>() {
       DateTime::from_timestamp(epoch, 0)
         .map(|utc| utc.with_timezone(&Local))

@@ -92,12 +92,10 @@ impl Drop for PostDocument {
   /// calls `unlink_node()` on nodes as it replaces XMath subtrees
   /// with MathML, flipping that flag for nodes still held by
   /// `idcache`. The resulting drop sequence is:
-  ///   1. `document: Document` (declared first) → `xmlFreeDoc` walks
-  ///      the full tree including still-reachable nodes that share
-  ///      memory with idcache entries; freed.
-  ///   2. `idcache: HashMap<String, Node>` → each Node with
-  ///      `unlinked=true` fires `xmlFreeNode` on already-freed
-  ///      memory → SIGSEGV inside `xmlFreeNodeList`.
+  ///   1. `document: Document` (declared first) → `xmlFreeDoc` walks the full tree including
+  ///      still-reachable nodes that share memory with idcache entries; freed.
+  ///   2. `idcache: HashMap<String, Node>` → each Node with `unlinked=true` fires `xmlFreeNode` on
+  ///      already-freed memory → SIGSEGV inside `xmlFreeNodeList`.
   ///
   /// Fix: hand each idcache entry to `DocOwnedNode` (see
   /// `crate::doc_owned_node`), which suppresses the inner Rc's Drop

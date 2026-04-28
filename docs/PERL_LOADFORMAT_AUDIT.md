@@ -6,6 +6,22 @@ Tracks the Rust→Perl translation gap exposed by the strict
 `latexml_package/src/engine/<file>.rs`, flagging divergences that
 break the strict-Perl pipeline.
 
+**Refresh status (2026-04-28):**
+
+| File | Perl calls | Rust calls | Status |
+|------|-----------:|-----------:|--------|
+| `plain_bootstrap` | 9 | 9 | ✅ PARITY |
+| `plain_base` | n/a | n/a | ✅ NEAR-PARITY (audit doc) |
+| `plain_constructs` | 77 | 81 | ✅ PARITY (cosmetic gap) |
+| `plain_dump` | n/a | 641 M-keys | ✅ NEAR-PARITY (17 cosmetic) |
+| `latex_bootstrap` | 9 | 9 | ✅ PARITY |
+| `latex_base` | 160 | 152 | ✅ PARITY |
+| `latex_constructs` | 1055 | 1199 | ⚠ 13.5% extra in Rust |
+| `latex_dump` | n/a | 25770 entries | ✅ NEAR-PARITY |
+
+Active: spot-check `latex_constructs` extras for accidental
+drift vs intentional WISDOM #44 divergences.
+
 ## The strict split
 
 Perl `Package.pm:LoadFormat` (L2734-2752) is mutually exclusive:
@@ -77,9 +93,23 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
 
 ### `plain_constructs.pool.ltxml` ↔ `plain_constructs.rs`
 
-* Perl 323 lines.
-* Rust 567 lines.
-* **TODO:** Audit the 244-line gap.
+* Perl 323 lines (77 unique CS defs).
+* Rust 612 lines (81 unique CS defs).
+* **Audit refresh 2026-04-28**: function-count is at parity
+  (Perl 77, Rust 81 — close enough). The line-count gap is
+  almost entirely:
+  * Verbose Rust comments with Perl-line citations.
+  * Char-dispatch family (`\#`, `\&`, `\%`, `\$`, `\_`) + their
+    `\lx@math@*` / `\lx@text@*` dispatch targets — WISDOM #44
+    documented divergence (Rust splits Perl's Box-dispatching
+    DefPrimitives into explicit `\ifmmode … \else … \fi` macros
+    plus separate math/text targets).
+  * `\boldmath` / `\unboldmath` re-established post-dump
+    (`plain_constructs.rs:585-608`) so that `mathfont` slot
+    semantics survive when raw latex.ltx body is read from
+    dump (vs from `plain_base.rs` closures). Documented
+    intentional re-binding.
+* Status: **PARITY** (cosmetic line-count gap acceptable).
 
 ### `plain_dump.pool.ltxml` ↔ `plain_dump.rs`
 
@@ -88,37 +118,65 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
   `latexml_oxide --init=plain.tex` (with `LATEXML_NODUMP=1`).
 * `plain_dump.rs` is a runtime loader for `plain.dump.txt` —
   delegates to `dump_reader::load_from_str_plain`.
-* **Status: NEAR-PARITY.** Rust 1196 entries (689 M-keys);
-  Perl 1238 entries (628 M-keys). Pollution from autoload
+* **Status: NEAR-PARITY.** Rust 961-line dump (641 M-keys);
+  Perl ~872 unique CS names. Pollution from autoload
   triggers (`\AtBeginDocument`, `\documentclass`, `\Bbb`,
   `\align`, `\@pushfilename`, etc.) removed in commit `1e04a96c8`
   by moving those blocks BEFORE `stage_snapshot("plain_bootstrap")`.
-  Remaining 36 non-`\lx@` extras (`\Box`, `\Diamond`, `\Join`,
-  `\boldmath`, `\to`, `\sc`, etc.) are math symbols / font
-  commands defined in `math_common.rs` / `plain_base.rs`
-  pre-snapshot — Perl puts them in `latex_dump.pool.ltxml`,
-  not `plain_dump.pool.ltxml`. Path forward: relocate to
-  post-snapshot or to LaTeX-only definition.
+  **Audit refresh 2026-04-28**: only 17 Rust-only M-keys remain
+  versus Perl plain_dump.pool.ltxml. Of those, 15 are encoding
+  artifacts (`'`, `_`, `~`, `\%04`-`\%2C` URL-encoded ctrl chars)
+  and 2 were file-IO bookkeeping leaks now RESOLVED:
+  * `\@currname`, `\@currext` — RESOLVED 2026-04-28 by adding
+    explicit skip in `dump_writer::write_dump`. These are
+    file-IO bookkeeping CSes set per-document by
+    `read_input_file_recursive` (`content.rs:262-263, 701-702`)
+    that survive into the snapshot with literal `plain.tex`
+    token bodies. Perl's plain_dump.pool.ltxml omits them
+    because Perl's `TeX_FileIO.pool.ltxml:28-29` initializes
+    them via `Let('\@currname','\lx@empty')` before any file
+    load (state matches baseline). The skip mirrors the
+    existing `\ver@*` runtime-state filter pattern. See
+    `wisdom_dump_filter_runtime_state.md`.
+  * No expl3 leakage in plain dump confirmed (`\par` not present
+    as M-key; was the suspected case from earlier session).
 
 ## File-by-file divergence (latex side)
 
 ### `latex_bootstrap.pool.ltxml` ↔ `latex_bootstrap.rs`
 
-* TODO: line-count and audit.
+* Perl 66 lines (8 Def + 1 Let).
+* Rust 72 lines (7 Def + 2 Let).
+* Status: **PARITY** — close enough at 9 vs 9 calls.
 
 ### `latex_base.pool.ltxml` ↔ `latex_base.rs`
 
-* Has many closure-backed defs that the dump can't serialize.
-* **Critical.** When dump is loaded (strict split), latex_base is
-  skipped. Anything that relied on its closures fails at runtime.
-* **TODO:** Audit which closures are essential and either:
-  * Convert to raw TeX bodies (most arithmetic / counter macros),
-  * Move to `latex_constructs.rs` (which always runs after dump),
-  * Re-implement via primitives the dump CAN capture.
+* **Audit refresh 2026-04-28**: only 2 closure-backed defs remain
+  in `latex_base.rs` (`\@expandtwoargs`, `\@makeother`). Per the
+  15-batch reverse-migration committed via `e259b3d68`, latex_base
+  is now essentially RawTeX-backed and dump-friendly. The 2
+  closures match Perl 1:1 — both are closure-backed in
+  `latex_base.pool.ltxml` too:
+  * `\@expandtwoargs{}{}{}` — Perl `DefMacro('\@expandtwoargs{}{}{}', sub {...});`
+  * `\@makeother{}` — Perl `DefMacro('\@makeother{}', sub {...});`
+* Status: **PARITY** — no further reverse-migration needed.
 
 ### `latex_constructs.pool.ltxml` ↔ `latex_constructs.rs`
 
-* TODO: line-count and audit.
+* Perl 6,014 lines (979 Def + 76 Let = 1055 calls).
+* Rust 9,447 lines (1088 Def + 111 Let = 1199 calls).
+* **Audit refresh 2026-04-28**: Rust ahead by ~144 calls (13.5%).
+  Most of the gap is verbose Rust comments + intentional
+  re-establishments documented in WISDOM #44. Recent
+  reverse-migration commits (Apr 26-27) consolidated 15+ batches
+  back from latex_base.rs to latex_constructs.rs (since the
+  latter always runs after the dump). 110 closure-backed Defs
+  remain in latex_constructs.rs, which is acceptable since
+  latex_constructs.rs always runs in BOTH the dump-skip and
+  dump-load paths.
+* Status: **NEAR-PARITY** — no immediate action required.
+* TODO: spot-check whether any of the 144 extras are
+  documented intentional divergences vs accidental drift.
 
 ## Dump-completeness gaps
 
@@ -138,20 +196,42 @@ zero undefined-CS errors during expl3 load.
 
 ### Remaining dump gaps (post-209083ff4)
 
-* **`\hook`**, **`\__int_eval:w`**, **`\tex_par:D`** still absent
-  from latex.dump.txt as M-keys despite being referenced as bodies
-  of other entries.
+**Audit refresh 2026-04-28** (post commit `01a8ee8b1`
+register-alias address fix + `ab76be20f` Conditional/closure-Expandable
+PA serialization): Most expl3 alias gaps are RESOLVED.
 
-* `is_serializable` (state.rs L2789-2836) DOES allow Stored::Primitive
-  → return Some("PA\\t<target>"), so the `Stored::Primitive` arm
-  ISN'T the gap. Confirmed via probe (`\meaning\tex_par:D` returns
-  literal CS name, not "undefined" — but RUST treats it as
-  undefined-CS at lookup time).
+* `\tex_par:D` → `PA \lx@normal@par` ✅ captured.
+* `\__int_eval:w` → `PA \numexpr` ✅ captured.
+* `\hook_*` family — 31 M-keys ✅ captured (full expl3 hook system).
+* 537 `\tex_*:D` PA aliases captured (was previously ~302 missing).
 
-* **Real gap**: `\__kernel_primitive:NN \par \tex_par:D` (expl3-code.tex
-  L499) doesn't successfully install `\tex_par:D` during raw
-  `--init=latex.ltx`. Yet `\__kernel_primitive:NN \space \tex_space:D`
-  (L280, same loop) DOES produce `\tex_space:D = \ `.
+Trigger was `01a8ee8b1` defaulting register-alias `address` field
+to `rparts[0]` (the register's internal cs name) when omitted — Perl
+`Dumper.pm:337-342` `R()` constructor default. Without this fix the
+145+ `\tex_*:D` register-alias entries wrote to a separate slot
+instead of the underlying register.
+
+**Open**: see "Closure round-trip" (line 197+) — Stored::Primitive
+self-aliases (where the dump entry's CS equals the primitive's
+.cs) are no-op at load time and need a `dump_writer` marker that
+`dump_reader` recognizes as "engine has primary; nothing to install".
+
+**New (audit 2026-04-28): fontdimen/intarray storage divergence.**
+Rust dumps 3094 V-records of form `V \fontdimen<N>\<font-cs>`
+(one per slot per font), where Perl dumps 0 such records and
+encodes the same data inside `fontinfo_<name>_at_<size>pt`
+V-records (one record per font with embedded `data` array).
+Affected fonts: `\c__fp_exp_intarray` (216 slots),
+`\c__fp_trig_intarray` (1264), `\c_initex_cctab`/`_other`/`_str`/
+`_document` (257 each), `\g_tmpa_cctab`/`_tmpb` (257 each),
+`\g__regex_*_intarray` (9 each). Total 3094 records bloating the
+dump (~80KB). Same runtime semantics but different storage layout.
+Project doc:
+[`memory/project_fontdimen_intarray_storage.md`]
+— deferred until tests fail or dump becomes a bottleneck.
+
+**Suspected stale narrative below** (kept for archaeological
+context — predates `01a8ee8b1`/`ab76be20f`):
   
   **Narrowed (this iteration):** manual `\global\let\tex_par:D\par`
   AT RUNTIME (in a `.tex` document with explicit `\catcode`\_=11`) works

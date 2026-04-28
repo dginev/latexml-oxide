@@ -52,9 +52,7 @@ pub(crate) fn dimension_to_spaces(dimen: Dimension) -> String {
 /// corresponding `\quad`/`\qquad`/`\enskip`/etc CS token. Otherwise
 /// returns `<command> <dimen>` (e.g. `\hskip 10.0pt`).
 pub(crate) fn revert_skip(command: Token, dimen: Dimension) -> Tokens {
-  let fs = lookup_font()
-    .and_then(|f| f.get_size())
-    .unwrap_or(10.0);
+  let fs = lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
   let ems = dimen.pt_value(None) / fs;
   for (w, cs) in REVERT_SKIPS.iter() {
     if ems > w + 0.01 {

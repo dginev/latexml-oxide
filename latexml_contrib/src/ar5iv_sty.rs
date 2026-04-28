@@ -48,13 +48,13 @@ LoadDefinitions!({
   //     return if $src !~ /^http/;      # non-remote → silently drop
   //     $self->getNode->appendChild($node); });   # remote → re-attach
   DefRewrite!(xpath => "descendant-or-self::ltx:resource",
-    replace => sub[document, nodes] {
-      let node = nodes.pop().unwrap();
-      let src = node.get_attribute("src").unwrap_or_default();
-      if src.starts_with("http") {
-        document.get_node_mut().add_child(node)?;
-      }
-    });
+  replace => sub[document, nodes] {
+    let node = nodes.pop().unwrap();
+    let src = node.get_attribute("src").unwrap_or_default();
+    if src.starts_with("http") {
+      document.get_node_mut().add_child(node)?;
+    }
+  });
 
   // NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
   // to set intent=':literal' on the top-level math element. That is a

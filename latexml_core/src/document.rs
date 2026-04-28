@@ -132,7 +132,15 @@ impl Document {
     // documents (e.g. arxiv 0805.2376 with deep dcpic commutative-diagram
     // sharing), natural ref counts exceed the crate's default of 2 by
     // several orders of magnitude. Raise to 8192 to accommodate.
-    set_node_rc_guard(8192);
+    //
+    // libxml-rs implements this as a `pub static mut NODE_RC_MAX_GUARD:
+    // usize` with `unsafe { NODE_RC_MAX_GUARD = value; }` — concurrent
+    // writes from N test threads each constructing their own Document
+    // are a classic data race on a `static mut`. Gate the write through
+    // a `std::sync::Once` so it happens exactly once per process; reads
+    // from `Node::mut_node` then see a stable value.
+    static GUARD_INIT: std::sync::Once = std::sync::Once::new();
+    GUARD_INIT.call_once(|| set_node_rc_guard(8192));
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -547,7 +555,10 @@ impl Document {
             }
           }
         },
-        Work::PostWork { mut node, bookkeeping_attrs: _captured_at_enter } => {
+        Work::PostWork {
+          mut node,
+          bookkeeping_attrs: _captured_at_enter,
+        } => {
           // Mirrors Perl `Document.pm:452`: at finalize time, ANY attribute
           // whose name starts with `_` is internal bookkeeping and gets
           // stripped. Re-derive the set at PostWork time rather than relying
@@ -562,8 +573,10 @@ impl Document {
           // populated post-Enter).
           let attrs_now = node.get_attributes();
           let total_attrs = attrs_now.len();
-          let bookkeeping_attrs: Vec<&String> =
-            attrs_now.keys().filter(|name| name.starts_with('_')).collect();
+          let bookkeeping_attrs: Vec<&String> = attrs_now
+            .keys()
+            .filter(|name| name.starts_with('_'))
+            .collect();
           let bookkeeping_count = bookkeeping_attrs.len();
           for name in bookkeeping_attrs {
             let _ = node.remove_attribute(name);

@@ -12,7 +12,11 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
+use once_cell::sync::Lazy;
 use std::path::Path;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static INIT_DEBUG: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INIT_DEBUG").is_some());
 
 use latexml_core::binding::content::InputDefinitionOptions;
 use latexml_core::binding::content::input_definitions;
@@ -79,20 +83,39 @@ pub fn dump_format(
   // NOT. Mirror that here by clearing them right before the snapshot.
   for trigger in &[
     // LaTeX autoload triggers (tex.rs L149-167)
-    "\\documentclass", "\\newcommand", "\\renewcommand",
-    "\\newenvironment", "\\renewenvironment",
-    "\\NeedsTeXFormat", "\\ProvidesPackage", "\\RequirePackage",
-    "\\ProvidesFile", "\\makeatletter", "\\makeatother",
-    "\\begin", "\\listfiles", "\\nofiles", "\\typeout",
+    "\\documentclass",
+    "\\newcommand",
+    "\\renewcommand",
+    "\\newenvironment",
+    "\\renewenvironment",
+    "\\NeedsTeXFormat",
+    "\\ProvidesPackage",
+    "\\RequirePackage",
+    "\\ProvidesFile",
+    "\\makeatletter",
+    "\\makeatother",
+    "\\begin",
+    "\\listfiles",
+    "\\nofiles",
+    "\\typeout",
     "\\PassOptionsToPackage",
     // `\@load@latex@pool` itself
     "\\@load@latex@pool",
     // expl3 autoload triggers
-    "\\ExplSyntaxOn", "\\ProvidesExplClass", "\\ProvidesExplPackage",
+    "\\ExplSyntaxOn",
+    "\\ProvidesExplClass",
+    "\\ProvidesExplPackage",
     // AmSTeX/amsmath autoload triggers
-    "\\mathfrak", "\\mathbb", "\\Bbb", "\\theoremstyle",
-    "\\numberwithin", "\\align", "\\subequations", "\\multline",
-    "\\curraddr", "\\subjclass",
+    "\\mathfrak",
+    "\\mathbb",
+    "\\Bbb",
+    "\\theoremstyle",
+    "\\numberwithin",
+    "\\align",
+    "\\subequations",
+    "\\multline",
+    "\\curraddr",
+    "\\subjclass",
     // `\documentstyle` was also defined in tex.rs as a runtime macro
     "\\documentstyle",
   ] {
@@ -149,7 +172,7 @@ pub fn dump_format(
   // All these errors are benign — the dump captures the final correct state.
   // Set LATEXML_INIT_DEBUG=1 to keep errors visible (for debugging the
   // expl3 cascade — Perl parity target is zero errors during expl3 load).
-  let init_debug = std::env::var_os("LATEXML_INIT_DEBUG").is_some();
+  let init_debug = *INIT_DEBUG;
   let prev_suppress = latexml_core::common::error::set_suppress_log_output(!init_debug);
 
   // Suppress known expl3 loading errors at the state level too

@@ -132,6 +132,21 @@ pub fn write_dump(
       continue;
     }
 
+    // Skip \@currname / \@currext file-IO bookkeeping. These are
+    // assigned per-document during `\input` by `read_input_file_recursive`
+    // (see `binding/content.rs:262-263`) to the literal filename's
+    // tokens, so the snapshot captures the LAST opened file's name
+    // ("plain.tex" / "latex.ltx"). Perl's `TeX_FileIO.pool.ltxml:28-29`
+    // initializes them via `Let('\@currname','\lx@empty')` before any
+    // file load, and Perl's plain_dump.pool.ltxml omits them — so
+    // post-dump they remain at the `\lx@empty` baseline. Matching that
+    // behavior here keeps us file-IO-state-agnostic in the dump.
+    if matches!(*table, TableName::Meaning) && (key_str == "\\@currname" || key_str == "\\@currext")
+    {
+      skipped += 1;
+      continue;
+    }
+
     // Skip token-list register VALUES whose body contains a self-`\the`
     // reference. latex.ltx L10564-10580 sets `\frozen@everymath` =
     // `{... \the\everymath}` then allocates a NEW `\everymath` via
@@ -146,8 +161,14 @@ pub fn write_dump(
     if matches!(*table, TableName::Value)
       && matches!(
         key_str.as_str(),
-        "\\everymath" | "\\everydisplay" | "\\everyhbox" | "\\everyvbox"
-        | "\\everycr"  | "\\everyjob"     | "\\everypar"  | "\\everyeof"
+        "\\everymath"
+          | "\\everydisplay"
+          | "\\everyhbox"
+          | "\\everyvbox"
+          | "\\everycr"
+          | "\\everyjob"
+          | "\\everypar"
+          | "\\everyeof"
       )
     {
       // Confirm the loop pattern before dropping (don't suppress
@@ -155,9 +176,8 @@ pub fn write_dump(
       if let Stored::Tokens(ref tks) = value {
         let body = tks.unlist_ref();
         let needle_cs = key_str.to_string();
-        let has_self_the = body.iter().any(|t| {
-          t.with_str(|s| s == "\\the")
-        }) && body.iter().any(|t| t.with_str(|s| s == needle_cs));
+        let has_self_the = body.iter().any(|t| t.with_str(|s| s == "\\the"))
+          && body.iter().any(|t| t.with_str(|s| s == needle_cs));
         if has_self_the {
           skipped += 1;
           continue;
@@ -191,9 +211,7 @@ pub fn write_dump(
     // pre-2017 TeXlive let-aliased \lnot → \neg and \to → \rightarrow,
     // which would gratuitously diverge tests across TL versions.
     // Mirror Perl `TeX_Job.pool.ltxml` IGNORED_SYMBOLS L104-107.
-    if matches!(*table, TableName::Meaning)
-      && matches!(key_str.as_str(), "\\lnot" | "\\to")
-    {
+    if matches!(*table, TableName::Meaning) && matches!(key_str.as_str(), "\\lnot" | "\\to") {
       skipped += 1;
       continue;
     }
@@ -387,8 +405,70 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
     // if equal, it's the "primary" primitive (already in bindings) and skipped;
     // if different, it's an alias — replay `\let` at load time.
     Stored::Primitive(p) => {
+      // Perl `Core/Dumper.pm::dump_primitive` (L383-389): if a primitive has
+      // a `font` directive AND no replacement closure (i.e. defined by `\font`),
+      // emit `FD(<cs>, <fontID>)` instead of generic Primitive serialization.
+      // `font_id` is set on `\font`-defined primitives by `engine/tex_fonts.rs`'s
+      // post-define hook (the Rust path) — it carries the value-table key under
+      // which the Stored::Font lives. The reader installs a synthesized
+      // Primitive whose before_digest looks up that font and merges, mirroring
+      // `LaTeXML::Core::Definition::FontDef::invoke` (FontDef.pm L38-45).
+      if let Some(fid) = p.font_id {
+        let fid_str = arena::with(fid, |s| s.to_string());
+        return Some(format!("FD\t{}", url_encode(&fid_str)));
+      }
       let target_cs = p.cs.with_str(url_encode);
       Some(format!("PA\t{}", target_cs))
+    },
+    Stored::Font(f) => {
+      // Perl `dump_font` (Core/Dumper.pm L281-284) emits `F(... components ...)`.
+      // Rust's `Font` is a flat options struct, so we serialize the non-None
+      // fields as `key=value` pairs separated by `\x1f` (unit-separator), with
+      // values url-encoded for tab/newline-safety. Reader inverts in dump_reader.rs.
+      let mut parts = Vec::with_capacity(8);
+      if let Some(ref name) = f.name {
+        parts.push(format!("name={}", url_encode(name)));
+      }
+      if let Some(size) = f.size {
+        parts.push(format!("size={}", size));
+      }
+      if let Some(ref family) = f.family {
+        parts.push(format!("family={}", url_encode(family)));
+      }
+      if let Some(ref series) = f.series {
+        parts.push(format!("series={}", url_encode(series)));
+      }
+      if let Some(ref shape) = f.shape {
+        parts.push(format!("shape={}", url_encode(shape)));
+      }
+      if let Some(ref encoding) = f.encoding {
+        parts.push(format!("encoding={}", url_encode(encoding)));
+      }
+      if let Some(ref language) = f.language {
+        parts.push(format!("language={}", url_encode(language)));
+      }
+      if let Some(ref mathstyle) = f.mathstyle {
+        parts.push(format!("mathstyle={}", url_encode(mathstyle)));
+      }
+      if let Some(ref opacity) = f.opacity {
+        parts.push(format!("opacity={}", url_encode(opacity)));
+      }
+      if let Some(scale) = f.scale {
+        parts.push(format!("scale={}", scale));
+      }
+      if let Some(b) = f.emph {
+        parts.push(format!("emph={}", if b { 1 } else { 0 }));
+      }
+      if let Some(b) = f.scripted {
+        parts.push(format!("scripted={}", if b { 1 } else { 0 }));
+      }
+      if let Some(step) = f.mathstylestep {
+        parts.push(format!("mathstylestep={}", step));
+      }
+      if let Some(flags) = f.flags {
+        parts.push(format!("flags={}", flags));
+      }
+      Some(format!("F\t{}", parts.join("\x1f")))
     },
     Stored::MathPrimitive(p) => {
       let target_cs = p.cs.with_str(url_encode);

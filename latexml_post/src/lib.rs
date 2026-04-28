@@ -58,6 +58,10 @@ pub mod xslt;
 
 use document::PostDocument;
 use processor::{PostError, Processor};
+use std::sync::LazyLock;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// The post-processing pipeline driver.
 ///
@@ -96,7 +100,7 @@ impl Post {
     let mut docs = vec![doc];
 
     log::info!("post-processing");
-    let audit = std::env::var("LATEXML_POST_AUDIT").is_ok();
+    let audit = *POST_AUDIT;
 
     for processor in processors.iter_mut() {
       let mut new_docs = Vec::new();

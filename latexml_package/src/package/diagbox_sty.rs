@@ -29,8 +29,12 @@ fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
     out.extend(font_tokens.unlist());
   }
   out.push(T_OTHER!("]"));
-  out.push(T_BEGIN!()); out.extend(a_tokens.unlist()); out.push(T_END!());
-  out.push(T_BEGIN!()); out.extend(b_tokens.unlist()); out.push(T_END!());
+  out.push(T_BEGIN!());
+  out.extend(a_tokens.unlist());
+  out.push(T_END!());
+  out.push(T_BEGIN!());
+  out.extend(b_tokens.unlist());
+  out.push(T_END!());
   Tokens::new(out)
 }
 

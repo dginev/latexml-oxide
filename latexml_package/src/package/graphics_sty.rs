@@ -108,7 +108,10 @@ LoadDefinitions!({
     let xs = args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
     let xscale_f: f64 = xs.parse().unwrap_or(1.0);
     let xscale_str = format!("{:.1}", xscale_f);
-    let yscale_f: f64 = args[1].as_ref().map(|a| a.to_attribute().parse().unwrap_or(xscale_f)).unwrap_or(xscale_f);
+    let yscale_f: f64 = args[1]
+      .as_ref()
+      .map(|a| a.to_attribute().parse().unwrap_or(xscale_f))
+      .unwrap_or(xscale_f);
     let yscale_str = format!("{:.1}", yscale_f);
     Ok(stored_map!("xscale" => xscale_str, "yscale" => yscale_str))
   },
@@ -118,7 +121,8 @@ LoadDefinitions!({
     let yscale = whatsit.get_arg(2)
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(xscale)).unwrap_or(xscale);
     if let Some(body) = whatsit.get_arg(3) {
-      if let Ok(props) = crate::package::graphics_sty::scaled_properties(body.clone(), xscale, yscale) {
+      let scaled = crate::package::graphics_sty::scaled_properties(body.clone(), xscale, yscale);
+      if let Ok(props) = scaled {
         for (k, v) in props {
           whatsit.set_property(k, v);
         }
@@ -221,12 +225,10 @@ LoadDefinitions!({
         latexml_core::definition::register::RegisterType::Dimension,
         true,
       )?;
-      if let Some(register_value) = register_dim {
-        if let latexml_core::definition::register::RegisterValue::Dimension(d) = register_value {
-          let v = d.value_of();
-          dims.push(if is_negative { -v } else { v });
-          continue;
-        }
+      if let Some(latexml_core::definition::register::RegisterValue::Dimension(d)) = register_dim {
+        let v = d.value_of();
+        dims.push(if is_negative { -v } else { v });
+        continue;
       }
       // Otherwise try factor + unit. If the unit is missing, fall back
       // to `bp` (big points) per Perl L52-54.
@@ -336,7 +338,9 @@ LoadDefinitions!({
   DefEnvironment!("{rotatebox}{Float}",
   "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#body</ltx:inline-block>",
   after_digest_body => sub[whatsit] {
-    let angle = whatsit.get_arg(1).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+    let angle = whatsit.get_arg(1)
+      .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
+      .unwrap_or(0.0);
     if let Ok(Some(body)) = whatsit.get_body() {
       if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
         for (k, v) in props {
@@ -354,9 +358,12 @@ LoadDefinitions!({
   "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
-    let angle = whatsit.get_arg(2).map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0)).unwrap_or(0.0);
+    let angle = whatsit.get_arg(2)
+      .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
+      .unwrap_or(0.0);
     if let Some(body) = whatsit.get_arg(3) {
-      if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false) {
+      let rotated = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false);
+      if let Ok(props) = rotated {
         for (k, v) in props {
           whatsit.set_property(k, v);
         }

@@ -140,7 +140,11 @@ impl MuGlue {
         } else {
           "pt"
         };
-        let minus_pt = if mfill_u == "pt" { mu_to_pt(minus) } else { minus };
+        let minus_pt = if mfill_u == "pt" {
+          mu_to_pt(minus)
+        } else {
+          minus
+        };
         string.push_str(&attribute_format(minus_pt, Some(mfill_u)));
       }
     }

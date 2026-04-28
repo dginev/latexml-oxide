@@ -1823,7 +1823,9 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? None)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
+    defi_opts!(@munch ()
+      -> {$kind, $( [ $key @ $val ] )*
+        [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2243,7 +2245,9 @@ macro_rules! defi_opts {
   };
   (@munch ( $(,)? mathstyle $(:)?$(=>)? $literal:literal)
   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ mathstyle @ Some($literal.to_string()) ] })
+  defi_opts!(@munch ()
+    -> {$kind, $( [ $key @ $val ] )*
+      [ mathstyle @ Some($literal.to_string()) ] })
   };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)

@@ -462,3 +462,32 @@ L41 was meant to apply to a different CS.
 definition — matches Perl's effective observable behavior. Preserving
 both would be bit-identical but would also preserve the dead code; the
 Rust port intentionally elides the shadowed L39.
+
+---
+
+## 18. `numprint` `\lenprint` — test reference is stale relative to current Perl
+
+**Perl source:** `LaTeXML/lib/LaTeXML/Package/numprint.sty.ltxml`
+
+**Symptom (revised 2026-04-28):** `tests/babel/numprints.xml` is
+heavily out-of-date relative to current Perl output. Verified via
+side-by-side run:
+* Test reference: 91 lines (truncated, presumably from a much older
+  Perl that errored at `\lenprint{\textwidth}`)
+* Current Perl output: **1689 lines** (`\lenprint` renders fully with
+  `<Math mode="inline" tex="\numprint[pt]{433.62}">…</Math>`)
+* Rust output: 622 lines (also renders `\lenprint` fully, structurally
+  similar to current Perl with some flat-vs-nested XMTok differences
+  inherited from the math-parser divergence)
+
+**Status:** The earlier rationale ("Perl baseline errors out, don't
+refresh test XML") no longer applies — Perl no longer errors. Both
+Rust and current Perl render the full content. The remaining gap is
+math-parser structural differences (XMApp-nested vs flat XMTok), which
+is the documented `KNOWN_PERL_ERRORS #8` (f_1 flat XMApp[role=ID])
+class of divergence — not specific to numprint.
+
+**How to apply:** When the math-parser nested-XMTok divergence is
+addressed, regenerate the test reference from current Perl. Until
+then, `numprints_test` remains documented as failing for
+math-parser-deep reasons.

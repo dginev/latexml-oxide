@@ -82,9 +82,7 @@ mod tests {
   #[test]
   fn detached_node_drop_is_noop() {
     let parser = Parser::default();
-    let doc = parser
-      .parse_string("<root><child/></root>")
-      .expect("parse");
+    let doc = parser.parse_string("<root><child/></root>").expect("parse");
     let root = doc.get_root_element().expect("root");
     let child = root.get_first_child().expect("child");
     let mut child_mut = child.clone();
