@@ -863,6 +863,17 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         s!("{}.tex", clean_req)
       };
       load_binding(&tex_name)? || load_external_binding(&tex_name)?
+    } else if !has_dir && (ext == "sty" || ext == "cls") {
+      // Perl Package.pm:2255-2270 heuristic: when `\input{psfig.sty}` or
+      // `\input{foo.cls}` requests a .sty/.cls file directly via \input
+      // (rather than \usepackage / \RequirePackage / \documentclass),
+      // probe for a binding under that name and route to it. Without this,
+      // old papers like astro-ph0103250's `\input{psfig.sty}` (literal
+      // first line of ms.tex, common 1996-2005 idiom) error with
+      // "missing_file: psfig.sty" because the on-disk psfig.sty was
+      // dropped from TeX Live, even though Rust has psfig_sty.rs registered.
+      // Sandbox impact: 7 papers in the cluster.
+      load_binding(&clean_req)? || load_external_binding(&clean_req)?
     } else {
       false
     }

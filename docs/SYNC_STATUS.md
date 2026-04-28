@@ -42,7 +42,7 @@ recovery.
 | math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | OPEN — math-parser / mode-tracker; growing cluster (6 papers) |
 | 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | OPEN — runaway allocation; possible math-parser parse-forest blowup |
 | `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | OPEN — keyval-vs-positional option mismatch; investigate aipproc.cls.ltxml + `\documentstyle` legacy dispatch (post `4e2b3777b`) |
-| `psfig.sty` not found | 8 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028, +1) | **NOT a code issue** — psfig.sty was dropped from TeX Live; papers 1996-2005 |
+| `psfig.sty` not found | 7 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028) | **REVISED: code-fixable.** psfig.sty IS dropped from TL but Rust HAS `psfig_sty.rs` binding registered. Papers use `\input{psfig.sty}` (raw \input of .sty), which Rust's `find_file` (notex=false default) doesn't probe for compiled bindings. Perl Package.pm:2260-2270 has explicit heuristic: if `\input` request looks like a .sty file AND the binding exists (notex=true probe), redirect to `RequirePackage(name)`. Rust's `Input!` doesn't mirror this. Fix: extend `\input` to consult binding registry for .sty/.cls extensions. |
 
 **Post-double-load-fix 2026-04-28 17:08 UTC (per-paper truth, latest entry per ID):**
 
