@@ -35,18 +35,40 @@ recovery.
 | `\NC@list` undefined — `array.sty` internal helper | 1305.6480 | OPEN — array.sty binding gap |
 | IEEEtran.cls internals (`\ifCLASSINFOpdf`, `\IEEEauthorblockN`, `\IEEEauthorrefmark`) | 1308.6663 | OPEN — IEEEtran.cls.ltxml binding gap |
 | `subfigure.sty` brace mismatch | 1311.7348 | OPEN — investigate package |
+| paper-local `\bullets` | 1312.7418 | Per-paper, not architectural |
+| `1407.5769` math-parser infinite loop at page ~71 | 1407.5769 | **KNOWN DEFERRED** — documented in memory; Perl converts cleanly, Rust state-dependent hang in math parser |
+| **xy-pic** package — `\xymatrix`, `\ar` undefined (commutative diagrams) | 1409.7007 | OPEN — `xy.sty` binding gap; non-trivial package |
+| `\@nil` + `\iffalse`/readBalanced unbalanced | 1410.5293, similar 1304.0737 | OPEN — kernel/etex helper gap |
+| math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | OPEN — math-parser / mode-tracker; growing cluster (6 papers) |
+| 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | OPEN — runaway allocation; possible math-parser parse-forest blowup |
 
-**Snapshot 2026-04-28 15:00 UTC (~18 min in, 33% canvas):**
-2588/7898 = 2567 ok / 13 conversion_error / 6 error / 1
-conversion_fatal. Net error rate so far: ~0.8%; six of those
-are the already-fixed `\f@encoding` panic awaiting rerun.
+**Final tally 2026-04-28 15:46 UTC (canvas complete, ~64 min total):**
+
+| Category | Count | % | Recoverable on rerun |
+|---|---:|---:|---|
+| ok | 7694 | 97.0% | — |
+| conversion_error | 178 | 2.24% | Document-level errors (see clusters) |
+| error (panic) | 24 | 0.30% | **All fixed** by `9420e6ff5`; rebuild+rerun recovers |
+| oom_or_kill | 29 | 0.37% | False positives from worker-count switch SIGKILL |
+| conversion_fatal | 4 | 0.05% | Math-mode-leak heavy errors |
+| abort | 3 | 0.04% | 2 GiB allocation blowups |
+| timeout | 2 | 0.03% | 1407.5769 (known) + math0605199 |
+
+Realistic ceiling after rebuild+rerun deployed:
+**7694 + 24 + ~28 = 7747 / 7898 = 98.1%**.
 
 **Long-tail observation:** errors are spread across many small
-per-package clusters (caption-internals, array, IEEEtran,
-subfigure, babel-language) rather than concentrating in one
-big architectural gap. This is the "right" shape for a near-
-complete port — the next round of fixes will be many small
-package-binding flesh-outs, each touching 1-3 papers.
+per-package clusters (caption-internals `#`-PARAM, math-mode
+`^/_` text leak, array.sty, IEEEtran, subfigure, babel-language)
+rather than concentrating in one big architectural gap. This is
+the "right" shape for a near-complete port — the next round of
+fixes will be many small package-binding flesh-outs, each
+touching 1-3 papers.
+
+**Slow tasks (>60s, 9 papers):** 1803.08082, 1707.01155,
+1703.08569, 1612.08964, 1511.07586, 1506.09203, 1407.5769 (timed
+out), math0605199 (timed out), math0601451. Most cluster around
+large tikz/math documents; not architectural concerns.
 
 ## Build profiles & sandbox workflow (canvas / triage split)
 
