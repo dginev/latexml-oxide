@@ -670,6 +670,16 @@ impl BoxOps for Alignment {
           // None for empty lspaces). We use intercol_reachable_in_before to distinguish:
           // - Regular columns (|l|): \vrule then \lx@intercol → reachable → threshold
           // - @{text} columns: text then \lx@intercol → NOT reachable → 0
+          //
+          // KNOWN LIMITATION: this fallback over-reports padding for some
+          // numprint cells (`\lx@intercol\nprt@begin\ignorespaces`-style
+          // before): Perl's extracted lspaces would be undef there → lpad=0 →
+          // ltx_nopad_l added; our heuristic returns threshold_02em → no nopad_l.
+          // Naively removing the heuristic regresses 21 other tabular tests
+          // because Rust's extraction doesn't always populate lspaces for
+          // cases where Perl's would (`|l|`, `|c|`, `|r|`, p/m/X, etc.). The
+          // proper fix is to make lspaces extraction reliable to match Perl's
+          // left-scan; until then, this heuristic is load-bearing.
           let lpad = cell
             .lspaces
             .as_ref()
