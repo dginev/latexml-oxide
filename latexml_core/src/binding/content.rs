@@ -448,8 +448,22 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Per OXIDIZED_DESIGN #23: gate by `_raw_loaded` only — when a binding
     // explicitly loads its raw counterpart via `noltxml=>1`, the binding's
     // own `_loaded` flag is already set, but we MUST still proceed.
+    //
+    // EXCEPTION: if Step 3 (fallback ltxml binding) just succeeded, Perl's
+    // `if/elsif` flow (Package.pm:2118-2125) RETURNS on success and skips
+    // the raw-tex branch entirely. Rust's port uses sequential `let`
+    // bindings, so we must explicitly check `_loaded` here. Without this
+    // gate, `\RequirePackage{caption2}` loads `caption.sty.ltxml` via
+    // `find_file_fallback` (caption2 → caption strips trailing digit) AND
+    // then ALSO loads raw `caption2.sty`, which fires its
+    // `\@ifpackageloaded{caption}` mutual-exclusivity error. Same pattern
+    // applies to any package whose name ends in `[vV]?[-_.\d]+` and whose
+    // unsuffixed form has its own .ltxml binding.
     let found_raw = if found_raw.is_some() {
       found_raw
+    } else if lookup_bool(&s!("{filename}_loaded")) {
+      // Fallback ltxml binding already loaded — don't double-load the raw.
+      None
     } else if !options.notex
       && !interpreting
       && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded")))
