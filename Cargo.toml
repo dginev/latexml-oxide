@@ -191,3 +191,35 @@ debug = false
 strip = "symbols"
 panic = "unwind"
 
+# release-light — local-iteration release profile. Same opt-level=3
+# code, but uses thin LTO + parallel codegen so wall-clock build time
+# is typically 2-3× faster than `release`. Use this for day-to-day
+# perf work, sandbox runs, and local benchmarking. Reserve `release`
+# for distribution / final perf-of-record measurements where the last
+# few percent of fat-LTO matter.
+#
+# Knobs vs `release`:
+#
+#   lto = "thin"
+#       Cross-crate LTO using LLVM's ThinLTO. Each crate's IR is
+#       summarized and a parallel "import" phase pulls in the hot
+#       cross-crate inlining opportunities. ~95-100% of fat-LTO's
+#       runtime perf in our hot paths (tokenizer/digester/math
+#       parser) at a fraction of the link cost.
+#
+#   codegen-units = 16
+#       Per-crate codegen runs in 16 parallel chunks. With thin LTO
+#       still enabled, the cross-unit boundaries don't hurt final
+#       performance — ThinLTO re-imports across them. With fat LTO
+#       (in `release`) this knob doesn't change runtime perf either,
+#       but here we use it so the full pre-LTO compile parallelizes
+#       across cores. Ryzen/Intel desktop CPUs see near-linear
+#       speedup on the per-crate codegen step.
+#
+#   strip / debug / incremental / overflow-checks / panic / opt-level:
+#       inherited from `release` unchanged.
+[profile.release-light]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+

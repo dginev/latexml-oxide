@@ -16,7 +16,7 @@ set -euo pipefail
 
 INPUT_DIR="${INPUT_DIR:-$HOME/data/10k_sandbox}"
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
-WORKER_BIN="${WORKER_BIN:-$(dirname "$0")/../target/release/cortex_worker}"
+WORKER_BIN="${WORKER_BIN:-$(dirname "$0")/../target/release-light/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
 WORKERS="${WORKERS:-16}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
@@ -64,10 +64,18 @@ if [[ ! -d "$INPUT_DIR" ]]; then
 fi
 
 if [[ ! -x "$WORKER_BIN" ]]; then
-  # Try resolving relative to script dir
-  WORKER_BIN="$(cd "$(dirname "$0")/.." && pwd)/target/release/cortex_worker"
+  # Try resolving relative to script dir, preferring release-light then release.
+  REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  for candidate in "release-light" "release"; do
+    if [[ -x "$REPO_ROOT/target/$candidate/cortex_worker" ]]; then
+      WORKER_BIN="$REPO_ROOT/target/$candidate/cortex_worker"
+      break
+    fi
+  done
   if [[ ! -x "$WORKER_BIN" ]]; then
-    echo "ERROR: cortex_worker binary not found. Run: cargo build --release --bin cortex_worker"
+    echo "ERROR: cortex_worker binary not found."
+    echo "  Build with: cargo build --profile release-light --bin cortex_worker"
+    echo "  (or:        cargo build --release --bin cortex_worker)"
     exit 1
   fi
 fi

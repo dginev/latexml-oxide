@@ -90,27 +90,33 @@ Three key documents track porting progress and known issues:
 
 Requires **Rust nightly**.
 
-We follow Rust best practice with three named profiles in `Cargo.toml`:
+We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
 | `test`  | `cargo test` (default profile for the test command) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. Local development. |
 | `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
-| `release` | `cargo build --release` / `cargo run --release` | Distribution: `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slowest build, fastest runtime. |
+| `release-light` | `cargo build --profile release-light` (also `tools/benchmark_10k.sh`, `tools/test_with_tl2023.sh`) | Local-iteration release. Same `opt-level = 3` as `release`, but `lto = "thin"` + `codegen-units = 16` for parallel builds (~2-3× faster wall-clock). Output is in `target/release-light/`. |
+| `release` | `cargo build --release` / `cargo run --release` | Distribution / final perf-of-record. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slowest build, fastest runtime — last few percent over `release-light`. |
 
 **Day-to-day development**: use the `test` profile via `cargo test` (no flag). It has full debug info, line-table backtraces, debug-assertions, and overflow-checks — best diagnosability when a regression breaks. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
 
-**Final performance check** (matching against Perl LaTeXML, perf benchmarking, deployment): use `--release`. The ci profile is for the GitHub runner only.
+**Local sandbox / perf iteration** (10k sandbox runs, perf experiments, regression-triage on a release-grade binary): use `--profile release-light`. ThinLTO + parallel codegen finish much faster than fat LTO, with negligible runtime cost on our hot paths.
+
+**Distribution / perf-of-record measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
 
 ```bash
 # Run all tests (uses the `test` profile automatically)
 RUST_BACKTRACE=1 cargo test --tests -- --nocapture
 
-# Convert a formula (release-grade for performance work)
-cargo run --release --bin latexmlmath_oxide '1+1=2'
+# Convert a formula (release-light for fast local iteration)
+cargo run --profile release-light --bin latexmlmath_oxide '1+1=2'
 
-# Convert a document (release-grade)
-cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
+# Convert a document (release-light for fast local iteration)
+cargo run --profile release-light --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
+
+# Distribution-grade build (slow, but max-optimised)
+cargo build --release --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open

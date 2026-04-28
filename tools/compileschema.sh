@@ -68,10 +68,17 @@ echo "==============================="
 # compileSchema print loop (Model.pm L121-136). Output is byte-for-byte
 # identical to Perl's `bin/compileschema --schema=LaTeXML > LaTeXML.model`.
 # =====================================================================
-LATEXML_BIN="$LATEXMLDIR/target/release/latexml_oxide"
-if [ ! -x "$LATEXML_BIN" ]; then
-  echo "warning: $LATEXML_BIN not built — skipping stage 2." >&2
-  echo "  Build with: cargo build --release --bin latexml_oxide" >&2
+LATEXML_BIN=""
+for candidate in "release-light" "release"; do
+  if [ -x "$LATEXMLDIR/target/$candidate/latexml_oxide" ]; then
+    LATEXML_BIN="$LATEXMLDIR/target/$candidate/latexml_oxide"
+    break
+  fi
+done
+if [ -z "$LATEXML_BIN" ]; then
+  echo "warning: latexml_oxide not built — skipping stage 2." >&2
+  echo "  Build with: cargo build --profile release-light --bin latexml_oxide" >&2
+  echo "  (or:        cargo build --release --bin latexml_oxide)" >&2
   exit 0
 fi
 MODEL_OUT="$RELAXNGDIR/$SCHEMA.model"
