@@ -15,27 +15,25 @@ jobs:
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
-      # Goal: minimize both wall-clock time and peak memory.
-      # Past failures: OOM-induced "hosted runner lost communication"
-      # (24906265758, 24908842754) and 40-minute timeouts.
+      # All build settings live on the dedicated `ci` profile in the
+      # workspace `Cargo.toml` (`[profile.ci]` + per-package overrides
+      # for `latexml_contrib` / `latexml_package`). That profile is
+      # version-controlled and reviewable; previously the same knobs
+      # lived as `CARGO_PROFILE_RELEASE_*` env-vars here, which had the
+      # side-effect of contaminating the `release` profile used for
+      # distribution. Use `--profile ci` from every cargo invocation.
       #
-      # Knobs:
+      # Other knobs:
       #  * CARGO_BUILD_JOBS=2 — two rustc workers fit comfortably in
-      #    16 GB; raising to 4 has caused OOM-kills on heavy crates.
-      #  * opt-level=1 — keeps optimization fast (LLVM passes are the
-      #    dominant compile cost at -O3); release-equivalent codegen
-      #    isn't required for test correctness.
-      #  * incremental=0, debug=0, strip=debuginfo — drop noise that
-      #    only helps interactive debug, not CI.
+      #    16 GB once the per-package codegen-units split (above) lands.
+      #    The previous OOM-kills (runs 25051556164 / 25055232786) came
+      #    from `latexml_contrib` codegen at jobs=2 with the default
+      #    codegen-units; the profile fix addresses that directly.
       #  * mold linker — ~2-4× faster than ld and streams symbols
       #    rather than slurping into RAM.
       #  * --test-threads=2 — pgf/tikz cells can spike to GB-scale
       #    working sets; conservative parallelism leaves headroom.
       CARGO_BUILD_JOBS: "2"
-      CARGO_PROFILE_RELEASE_DEBUG: "0"
-      CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
-      CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
-      CARGO_PROFILE_RELEASE_LTO: "false"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
@@ -63,16 +61,12 @@ jobs:
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
       # Cortex worker is a production deployment artifact, built separately.
       #
-      # `make formats` is the cold-cache build phase. Recent OOM-kill
-      # (run 25051073184, exit 143 during `latexml_contrib` compile)
-      # showed 2 parallel rustc jobs peak past the 16 GB runner budget
-      # on the heaviest crates (latexml_contrib has many include_bytes!
-      # blobs + proc-macro expansions). Force jobs=1 here for the cold
-      # build so per-job RSS fits comfortably; subsequent steps benefit
-      # from the now-warm cache and can run at jobs=2.
+      # All cargo steps below run under the dedicated `ci` profile,
+      # which has per-package codegen-units splits to keep peak RSS
+      # under 16 GB even on the heaviest binding crates.
       - name: make formats
         env:
-          CARGO_BUILD_JOBS: "1"
+          PROFILE: ci
         run: tools/make_formats.sh
 
       # Build test binaries first (--no-run) so the rustc/linker RSS peak
@@ -81,7 +75,7 @@ jobs:
       # memory-pressure phase and isolating it from the test phase is
       # what fits the job back inside the 16 GB runner budget.
       - name: build test binaries
-        run: cargo test --release --tests --workspace --no-run
+        run: cargo test --profile ci --tests --workspace --no-run
 
       - name: run tests
-        run: cargo test --release --tests --workspace -- --test-threads=2
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2

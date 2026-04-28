@@ -90,14 +90,26 @@ Three key documents track porting progress and known issues:
 
 Requires **Rust nightly**.
 
-```bash
-# Run all tests
-RUST_BACKTRACE=1 cargo test --tests --release -- --nocapture
+We follow Rust best practice with three named profiles in `Cargo.toml`:
 
-# Convert a formula
+| Profile | Use | Tuned for |
+|---------|-----|-----------|
+| `test`  | `cargo test` (default profile for the test command) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. Local development. |
+| `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
+| `release` | `cargo build --release` / `cargo run --release` | Distribution: `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slowest build, fastest runtime. |
+
+**Day-to-day development**: use the `test` profile via `cargo test` (no flag). It has full debug info, line-table backtraces, debug-assertions, and overflow-checks — best diagnosability when a regression breaks. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
+
+**Final performance check** (matching against Perl LaTeXML, perf benchmarking, deployment): use `--release`. The ci profile is for the GitHub runner only.
+
+```bash
+# Run all tests (uses the `test` profile automatically)
+RUST_BACKTRACE=1 cargo test --tests -- --nocapture
+
+# Convert a formula (release-grade for performance work)
 cargo run --release --bin latexmlmath_oxide '1+1=2'
 
-# Convert a document
+# Convert a document (release-grade)
 cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
 
 # Generate docs

@@ -58,22 +58,36 @@ instead of rasterising them via ImageMagick `convert`. The path is
 disabled by default; if the flag is enabled but inkscape is missing at
 runtime, the pipeline silently falls back to `convert`.
 
+### Build profiles (Rust best practice)
+
+Three named profiles in `Cargo.toml`, each tuned for one purpose:
+
+| Profile | When | Goal |
+|---------|------|------|
+| **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
+| **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
+| **`release`** | distribution / final perf measurement | Best practice release: `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`. Slowest build, fastest runtime, smallest binary. |
+
 ### Sample use
 
-1. Make sure the tests pass first, via
+1. Make sure the tests pass first (uses the `test` profile automatically — no flag):
     ```bash
-    $ cargo test --release --tests
+    $ cargo test --tests
     ```
 
-2. convert an example formula:
+2. Convert an example formula (release-grade binary for performance work):
     ```bash
     $ cargo run --release --bin latexmlmath_oxide '1+1=2'
     ```
 
-3. convert an example document:
+3. Convert an example document:
     ```bash
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
+
+CI runs `cargo test --profile ci --tests` automatically; you should never
+need to invoke that profile by hand. For local performance benchmarking
+or when comparing against Perl LaTeXML, always use `--release`.
 
 ### Development Tips
 

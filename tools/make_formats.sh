@@ -30,8 +30,9 @@ PROFILE="${PROFILE:-release}"
 
 case "$PROFILE" in
   release) CARGO_PROFILE_FLAG="--release" ;;
-  debug)   CARGO_PROFILE_FLAG=""         ;;
-  *) echo "PROFILE must be 'release' or 'debug' (got: $PROFILE)" >&2; exit 2 ;;
+  debug)   CARGO_PROFILE_FLAG=""          ;;
+  ci)      CARGO_PROFILE_FLAG="--profile ci" ;;
+  *) echo "PROFILE must be 'release', 'debug', or 'ci' (got: $PROFILE)" >&2; exit 2 ;;
 esac
 
 # Build the binary if it doesn't exist. We build only the latexml_oxide bin

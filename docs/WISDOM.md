@@ -1441,7 +1441,7 @@ old claim and the corresponding paralists ignore entry in
 ```bash
 # Pre-fix: either the bin or the test binary would produce the picture
 # wrap depending on the process hash seed.
-LATEXML_SAVE_ACTUAL=1 cargo test --release --tests -p latexml paralists_test --include-ignored
+LATEXML_SAVE_ACTUAL=1 cargo test --tests -p latexml paralists_test --include-ignored
 diff /tmp/latexml_actual_paralists.xml latexml_oxide/tests/structure/paralists.xml
 ```
 
