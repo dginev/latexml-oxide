@@ -41,6 +41,8 @@ recovery.
 | `\@nil` + `\iffalse`/readBalanced unbalanced | 1410.5293, similar 1304.0737 | OPEN — kernel/etex helper gap |
 | math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | OPEN — math-parser / mode-tracker; growing cluster (6 papers) |
 | 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | OPEN — runaway allocation; possible math-parser parse-forest blowup |
+| `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | OPEN — keyval-vs-positional option mismatch; investigate aipproc.cls.ltxml + `\documentstyle` legacy dispatch (post `4e2b3777b`) |
+| `psfig.sty` not found | 8 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028, +1) | **NOT a code issue** — psfig.sty was dropped from TeX Live; papers 1996-2005 |
 
 **Post-rerun final 2026-04-28 16:01 UTC (per-paper truth, latest entry per ID):**
 
