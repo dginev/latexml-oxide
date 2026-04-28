@@ -1475,14 +1475,10 @@ LoadDefinitions!({
   // doesn't multiply by UNITY. The fixpoint encoding for "Nmu" is
   // `N × UNITY`, so 3mu = 3*65536 = 196608.
   DefRegister!("\\thinmuskip", MuGlue::new(3 * 65536));
-  DefRegister!(
-    "\\medmuskip",
-    MuGlue::new_full(4 * 65536, Some(2 * 65536), None, Some(4 * 65536), None)
-  );
-  DefRegister!(
-    "\\thickmuskip",
-    MuGlue::new_full(5 * 65536, Some(5 * 65536), None, None, None)
-  );
+  DefRegister!("\\medmuskip",
+    MuGlue::new_full(4 * 65536, Some(2 * 65536), None, Some(4 * 65536), None));
+  DefRegister!("\\thickmuskip",
+    MuGlue::new_full(5 * 65536, Some(5 * 65536), None, None, None));
 
   DefRegister!("\\abovedisplayskip", Glue!("12pt plus 3pt minus 9pt"));
   DefRegister!("\\abovedisplayshortskip", Glue!("0pt plus 3pt"));

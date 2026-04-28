@@ -267,8 +267,8 @@ const SKIP_VALUE_PREFIXES: &[&str] = &["input_file:", "output_file:", "texsys"];
 /// active at a time, mirroring Perl's `LoadFormat` branching. Until that lands,
 /// keep the skip list conservative so mixed paths don't trigger recovery loops.
 const SKIP_VALUE_CONTAINS: &[&str] = &[
-  "_loaded", /* Package loading flags — see doc comment above.
-             * Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23). */
+  "_loaded", // Package loading flags — see doc comment above.
+             // Substring also matches `_raw_loaded` (OXIDIZED_DESIGN #23).
 ];
 
 /// Load a value entry: V\tKEY\tTYPE\tDATA
@@ -451,7 +451,9 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(eparts[0]);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
-      let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
+      let alias_for_traits = if is_alias_diff
+        && DEFERRED_NAMES.contains(&alias_decoded.as_str())
+      {
         Some(alias_decoded)
       } else {
         None
@@ -534,6 +536,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           //   sub I { State::assign_internal($STATE,'meaning',
           //           $_[0]->getCSName, $_[0], 'global'); }
           // Direct table mutation — no `:locked` gate, no add-only.
+          // CONFIRMED via probe (2026-04-27): Perl dump load bypasses
+          // the :locked gate. `installDefinition` (State.pm L502-517)
+          // checks :locked and refuses; `assign_internal` (State.pm
+          // L140) does not. Dumper's `I` shorthand calls `assign_internal`
+          // directly, so locked defs ARE silently overwritten by dump.
+          // Rust matches: this code calls `state::assign_internal`, not
+          // `install_definition`. Verified `\hidewidth` and `\leavevmode`
+          // get overwritten by dump entries despite earlier bootstrap defs.
           state::assign_internal(
             TableName::Meaning,
             cs_tok.get_cs_name(),
@@ -630,6 +640,24 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         .get(4)
         .filter(|s| !s.is_empty())
         .map(|s| url_decode(s));
+      // For register-aliases (M-line key != register's internal cs), the
+      // storage slot lives at the cs name, not the alias key. e.g.
+      //   M  \tex_endlinechar:D  R  \endlinechar  N  0
+      // means "\tex_endlinechar:D" is meaning-installed but the underlying
+      // register storage is at "\endlinechar". Without this, assignments
+      // through the alias (\tex_endlinechar:D = 32) write to a separate
+      // slot and the real \endlinechar stays unchanged — breaking
+      // \ExplSyntaxOn's `\tex_endlinechar:D = 32 \scan_stop:` line, which
+      // in turn breaks the entire dump-path expl3 whitespace handling
+      // (8 expl3 tests). Mirror Perl's address-via-internal-cs semantics.
+      let internal_cs_decoded = url_decode(rparts[0]);
+      let dump_address: Option<String> = dump_address.or_else(|| {
+        if internal_cs_decoded != *key && !internal_cs_decoded.is_empty() {
+          Some(internal_cs_decoded)
+        } else {
+          None
+        }
+      });
 
       use crate::common::number::Number;
       use crate::definition::register::{Register, RegisterType, RegisterValue};
@@ -712,7 +740,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           // `\count22` to 0, breaking `\settabs 20\columns` (loops
           // because `\m@ne` reads as 0 instead of -1, so
           // `\advance\count@\m@ne` doesn't decrement).
-          let should_assign = !has_explicit_address || !state::has_value(&reg.address);
+          let should_assign = !has_explicit_address
+            || !state::has_value(&reg.address);
           if should_assign {
             state::assign_internal(
               TableName::Value,

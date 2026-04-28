@@ -108,10 +108,11 @@ LoadDefinitions!({
   // guard. First-principles analysis of where the divergence lives:
   //
   //   Perl has TWO constructors that can write <tr>@backgroundcolor:
-  //     1. \@setrowcolor — fired by the user's explicit \rowcolor{…} (colortbl.sty.ltxml L64-74).
+  //     1. \@setrowcolor — fired by the user's explicit \rowcolor{…}
+  //        (colortbl.sty.ltxml L64-74). hasAttribute-guarded.
+  //     2. \@tabular@row@before@xcolor — fired by \rowcolors cycling via
+  //        \@tabular@row@before (xcolor.sty.ltxml L757-778). Also
   //        hasAttribute-guarded.
-  //     2. \@tabular@row@before@xcolor — fired by \rowcolors cycling via \@tabular@row@before
-  //        (xcolor.sty.ltxml L757-778). Also hasAttribute-guarded.
   //   In Perl's digested token stream, \@setrowcolor for an explicit
   //   \rowcolor appears BEFORE the cycling constructor in the same row's
   //   tokens; at absorb time it writes first into an unset attribute, the

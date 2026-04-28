@@ -83,12 +83,6 @@ LoadDefinitions!({
 
   InnerPool!(latex_constructs);
 
-  // Rust-only hotfix overrides — entries needed by the Rust port that
-  // are NOT in any Perl `latex_{base,bootstrap,constructs}.pool.ltxml`.
-  // Loaded LAST so it can `Let!` against `\@ifpackageloaded` etc. that
-  // `latex_constructs` just installed.
-  InnerPool!(latex_constructs_rust_only);
-
   // Retry any PA/MPA let-aliases whose target wasn't defined at
   // dump-load time (they were queued rather than silently dropped).
   // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`

@@ -35,6 +35,69 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 **Working doc:** [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
 
+### 2026-04-28 — engine-pool parity tightening (loop session)
+
+Three targeted iterations of `/loop 5m` engine-pool parity work
+ahead of the next dump-path test push. Build clean throughout;
+no test regressions; same 4 known dump-only failures persist
+(`plainfonts_test`, `ntheorem_test`, `xytest_test`, `numprints_test`).
+
+* **dump_reader register-alias address default** (largest impact;
+  +10 expl3 tests recovered earlier in this rotation): when an
+  `R`-line lacks an explicit `address` field, default to
+  `rparts[0]` (the register's internal `cs` name) — NOT the
+  M-line key. Mirrors Perl `Dumper.pm:337-342` `R()` constructor
+  default `$traits{address} = ToString($cs) unless defined`.
+  For register-aliases (e.g. `M \tex_endlinechar:D R \endlinechar
+  N 0`) the key ≠ cs; assignments through the alias must reach
+  the underlying register's slot, not a separate slot at the
+  alias name. See [register-alias address wisdom][r1].
+
+  [r1]: ../.claude/projects/-home-deyan-git-latexml-oxide/memory/wisdom_dump_register_alias_address.md
+
+* **plain_base.rs: Non-English Symbols** (Perl
+  `plain_base.pool.ltxml:525-533`): `\OE`, `\oe`, `\AE`, `\ae`,
+  `\AA`, `\aa`, `\O`, `\o`, `\ss` as bare DefPrimitives. On the
+  LaTeX path these get re-installed with `robust=>1` by
+  `latex_constructs.rs:5752+` (mirroring Perl
+  `latex_constructs.pool.ltxml:2814-2832`); on a pure plain-TeX
+  path they're now correctly available from plain_base.
+
+* **latex_constructs.rs: float-list bookkeeping stubs** (Perl
+  `latex_constructs.pool.ltxml:1015-1028`): `\@topnewpage`,
+  `\@next`, `\@xnext` (RawTeX), `\@elt`, `\@freelist`,
+  `\@currbox`, `\@toplist`, `\@botlist`, `\@midlist`,
+  `\@currlist`, `\@deferlist`, `\@dbltoplist`, `\@dbldeferlist`,
+  `\@startcolumn`. The comment at `latex_base.rs:39-55` claimed
+  these had been relocated, but the new home was empty. Now
+  genuinely placed at `latex_constructs.rs:3849+` mirroring
+  Perl's L1015-1028 ordering.
+
+* **latex_constructs.rs: hooks + q-tokens + finalstrut**:
+  `\@begindocumenthook` (Perl L5510), `\@preamblecmds` (Perl
+  L5511), `\@qend`/`\@qrelax`/`\@spaces`/`\@sptoken` (Perl
+  L5536-5539), `\@finalstrut{}` (Perl L4857). The `\@sptoken`
+  binding required Token-level (`Let!("\\@sptoken", T_SPACE!())`)
+  rather than macro-level (`Let!("\\@sptoken", "\\space")`)
+  semantics — mirrors Perl's `Let('\@sptoken', T_SPACE)` and is
+  required by makecell.sty's `\ifx \@sptoken\TeXr@temp`
+  next-token-detection idiom. Initial macro-form attempt regressed
+  cells_test; same-iteration fix to Token-form recovered it.
+  See [Let token vs macro wisdom][r2].
+
+  [r2]: ../.claude/projects/-home-deyan-git-latexml-oxide/memory/wisdom_let_token_vs_macro.md
+
+* **Audit-by-regex limits**: structural audit comparing
+  Perl pool files against Rust engine modules
+  (`etex.rs`, `plain_constructs.rs`, `plain_bootstrap.rs`,
+  `latex_bootstrap.rs`, `latex_base.rs`, `tex_box.rs`,
+  `tex_math.rs`, `tex_inserts.rs`, `math_common.rs`) found that
+  most apparent gaps are false positives — the regex misses
+  multiline `DefMacro!(\n  "\\foo",\n  …)` forms and
+  `Def[Macro|Constructor]!(T_CS!("\\foo"), …)` forms. Spot-checked
+  ~30 supposedly-missing CSes; all were already present. Pool
+  files are now structurally near-complete vs Perl.
+
 ### 2026-04-28 — dump-path test-suite continued recovery wave
 
 Continued from 2026-04-27 wave. Seven commits brought 25+ tests

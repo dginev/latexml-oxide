@@ -44,15 +44,52 @@ LoadDefinitions!({
   // \bye moved to plain_constructs.rs (Perl: plain_constructs.pool.ltxml L285)
 
   // Most of these are ignored, but...
-  DefMacro!(
-    "\\tracingall",
-    "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2 \
-     \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1 \\tracingmacros=2 \
-     \\tracingparagraphs=1 \\tracingrestores=1 \\showboxbreadth=\\maxdimen \
-     \\showboxdepth=\\maxdimen \\errorstopmode"
-  );
-  DefMacro!("\\tracingnone", None);
+  // Actually, latex.ltx's definition (Perl plain_base.pool.ltxml L29-65).
+  // \showoverfull and \loggingoutput are defined as no-ops in Knuth's
+  // plain.tex; \tracingall references them so they must exist.
   DefMacro!("\\hideoutput", None);
+  DefMacro!("\\showoverfull", None);
+  DefMacro!("\\loggingoutput", None);
+  DefMacro!(
+    "\\loggingall",
+    r"\tracingstats\tw@
+      \tracingpages\@ne
+      \tracinglostchars\thr@@
+      \tracingparagraphs\@ne
+      \tracinggroups\@ne
+      \tracingifs\@ne
+      \tracingscantokens\@ne
+      \tracingnesting\@ne
+      \errorcontextlines\maxdimen
+      \ifdefined\tracingstacklevels \tracingstacklevels\maxdimen \fi
+      \noexpand \loggingoutput
+      \tracingmacros\tw@
+      \tracingcommands\thr@@
+      \tracingrestores\@ne
+      \tracingassigns\@ne"
+  );
+  DefMacro!("\\tracingall", r"\showoverfull\loggingall");
+  DefMacro!(
+    "\\tracingnone",
+    r"\tracingassigns\z@
+      \tracingrestores\z@
+      \tracingonline\z@
+      \tracingcommands\z@
+      \showboxdepth\m@ne
+      \showboxbreadth\m@ne
+      \tracingoutput\z@
+      \errorcontextlines\m@ne
+      \ifdefined\tracingstacklevels \tracingstacklevels\z@ \fi
+      \tracingnesting\z@
+      \tracingscantokens\z@
+      \tracingifs\z@
+      \tracinggroups\z@
+      \tracingparagraphs\z@
+      \tracingmacros\z@
+      \tracinglostchars\@ne
+      \tracingpages\z@
+      \tracingstats\z@"
+  );
 
   // \choose, \brace, \brack moved to math_common.rs (Perl math_common.pool.ltxml L634-642)
 
@@ -60,47 +97,16 @@ LoadDefinitions!({
   // Special Characters.
   // Try to give them some sense in math...
   //
-  // Perl plain_base.pool.ltxml L70-77 defines `\#`, `\&`, `\%`, `\$`
-  // (and `\_`) as single DefPrimitives whose sub body calls `Box(char,
-  // font, undef, T_CS('\#'), role => 'ADDOP|POSTFIX|OPERATOR|…')` —
-  // Perl's `Box` internally dispatches on mmode: emitting a Box in text
-  // mode and an XMTok (with the attached role) in math mode.
-  //
-  // Rust splits each character into a trio: a DefMacro that `\ifmmode`-
-  // dispatches to either `\lx@math@<name>` (DefMath with role) or
-  // `\lx@text@<name>` (DefPrimitive emitting literal char). Kind-wise
-  // the audit counts 4 DefPrimitive → DefMacro mismatches (# & % $);
-  // the trio structure is more explicit than Perl's Box-dispatch but
-  // observationally identical in both modes — same XMTok role + meaning
-  // in math, same character in text.
-  //
-  // Intentional DefPrimitive → DefMacro kind divergence (WISDOM #44).
-  // The explicit math/text split is idiomatic Rust — Perl's Box-
-  // auto-XMTok-promotion has no direct equivalent in the Rust
-  // Primitive API surface.
-  DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi");
-  DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi");
-  DefMacro!(
-    "\\%",
-    "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi"
-  );
-  DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi");
-  DefMacro!(
-    "\\_",
-    "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi"
-  );
-  DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
-  DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
-  DefPrimitive!(T_CS!("\\lx@text@percent"), None, "%",  alias => "\\%");
-  DefPrimitive!(T_CS!("\\lx@text@dollar"), None,  "$", alias => "\\$");
-  DefPrimitive!(T_CS!("\\lx@text@underscore"), None, "_",  alias => "\\_");
-
-  DefMath!("\\lx@math@hash",  None, "#", alias => "\\#");
-  DefMath!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");
-  DefMath!("\\lx@math@percent", None, "%", role  => "POSTFIX", meaning => "percent", alias => "\\%");
-  DefMath!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
-    alias => "\\$");
-  DefMath!("\\lx@math@underscore", None, "_", alias => "\\_");
+  // \#, \&, \%, \$, \_ math/text dispatch family moved to
+  // plain_constructs.rs (which runs in BOTH NODUMP and DUMP paths).
+  // The DefPrimitive closures here would have been dump-skipped, leaving
+  // them undefined on the dump path; the dispatch macros call into them.
+  // Putting them in plain_constructs ensures dump-path math-mode `\&`
+  // routes through `\lx@math@amp` (ADDOP XMTok) instead of decaying to
+  // the dump's CharDef-38 register which the math parser mishandles.
+  // Mirror Perl `plain_base.pool.ltxml:L70-77` semantically (Perl uses
+  // single Box-dispatch DefPrimitives — Rust's explicit math/text split
+  // is the WISDOM #44 documented divergence).
 
   // Discretionary times; just treat as invisible ?
   // INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)
@@ -196,9 +202,7 @@ LoadDefinitions!({
     // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
     properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
   );
-  // `\hidewidth` moved to latex_constructs.rs (Perl L51 — Perl-LaTeXML
-  // declares it in latex_constructs.pool.ltxml not in plain pool, even
-  // though it's a TeX-Book Appendix B primitive).
+  DefMacro!("\\hidewidth", None);
 
   //======================================================================
   // TeX Book, Appendix B, p. 344
@@ -518,47 +522,10 @@ LoadDefinitions!({
     )
   });
 
-  // Math spacing: medspace, thickspace, and negatives — Perl latex_constructs L2510-2525
-  DefPrimitive!("\\medspace", {
-    Tbox::new(
-      pin!(""),
-      None,
-      None,
-      Tokens!(T_CS!("\\medspace")),
-      stored_map!("name" => "medspace", "width" => Dimension::from_str("0.22222em")?,
-        "isSpace"=>true),
-    )
-  });
-  DefPrimitive!("\\negmedspace", {
-    Tbox::new(
-      pin!(""),
-      None,
-      None,
-      Tokens!(T_CS!("\\negmedspace")),
-      stored_map!("name" => "negmedspace", "width" => Dimension::from_str("-0.22222em")?,
-        "isSpace"=>true),
-    )
-  });
-  DefPrimitive!("\\thickspace", {
-    Tbox::new(
-      arena::pin_static("\u{2004}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\thickspace")),
-      stored_map!("name" => "thickspace", "width" => Dimension::from_str("0.27778em")?,
-        "isSpace"=>true),
-    )
-  });
-  DefPrimitive!("\\negthickspace", {
-    Tbox::new(
-      arena::pin_static("\u{2004}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\negthickspace")),
-      stored_map!("name" => "negthickspace", "width" => Dimension::from_str("-0.27778em")?,
-        "isSpace"=>true),
-    )
-  });
+  // \medspace / \negmedspace / \thickspace / \negthickspace moved to
+  // latex_constructs.rs (Perl latex_constructs.pool.ltxml L2510-2525).
+  // Plain TeX has no medspace/thickspace family — they appear once LaTeX
+  // C.7.7 Spacing is loaded.
 
   // Perl: plain_base.pool.ltxml L447
   DefPrimitive!("\\hglue Glue", sub[(length)] {
@@ -588,16 +555,10 @@ LoadDefinitions!({
 
   DefPrimitive!("\\break", None);
   DefPrimitive!("\\nobreak", None);
-  DefPrimitive!("\\nobreakspace", {
-    Tbox::new(
-      arena::pin_static("\u{00A0}"),
-      None,
-      None,
-      Tokens!(T_ACTIVE!('~')),
-      stored_map!("isSpace" => true,
-      "width" => Dimension::from_str("0.333em")?),
-    )
-  });
+  // \nobreakspace not in Perl plain_base — defined as `\lx@nobreakspace`
+  // in base_utilities.rs (Perl Base_Utility.pool.ltxml:53), then Let'd
+  // in latex_constructs.rs (Perl latex_constructs.pool.ltxml:48). Plain
+  // format leaves it undefined, matching Perl.
   // Perl: DefMacro(T_ACTIVE("~"), T_CS('\lx@NBSP'));
   DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
 
@@ -643,6 +604,21 @@ LoadDefinitions!({
     r"\advance\leftskip by\parindent\advance\rightskip by\parindent"
   );
 
+  //----------------------------------------------------------------------
+  // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
+  // Perl: plain_base.pool.ltxml L521-533. The following shouldn't appear
+  // in math. latex_constructs.pool.ltxml L2814-2824 re-emits these with
+  // `robust => 1` once LaTeX kernel is loaded.
+  DefPrimitive!("\\OE", "\u{0152}"); // LATIN CAPITAL LIGATURE OE
+  DefPrimitive!("\\oe", "\u{0153}"); // LATIN SMALL LIGATURE OE
+  DefPrimitive!("\\AE", "\u{00C6}"); // LATIN CAPITAL LETTER AE
+  DefPrimitive!("\\ae", "\u{00E6}"); // LATIN SMALL LETTER AE
+  DefPrimitive!("\\AA", "\u{00C5}"); // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\aa", "\u{00E5}"); // LATIN SMALL LETTER A WITH RING ABOVE
+  DefPrimitive!("\\O", "\u{00D8}"); // LATIN CAPITAL LETTER O WITH STROKE
+  DefPrimitive!("\\o", "\u{00F8}"); // LATIN SMALL LETTER O WITH STROKE
+  DefPrimitive!("\\ss", "\u{00DF}"); // LATIN SMALL LETTER SHARP S
+
   //======================================================================
   // TeX Book, Appendix B. p. 356
 
@@ -654,22 +630,26 @@ LoadDefinitions!({
     "\\mathhexbox{}{}{}",
     r##"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"##
   );
-
-  //----------------------------------------------------------------------
-  // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
-  // Perl plain_base.pool.ltxml L525-533 — these shouldn't appear in math.
-  DefPrimitive!("\\OE", "\u{0152}"); // LATIN CAPITAL LIGATURE OE
-  DefPrimitive!("\\oe", "\u{0153}"); // LATIN SMALL LIGATURE OE
-  DefPrimitive!("\\AE", "\u{00C6}"); // LATIN CAPITAL LETTER AE
-  DefPrimitive!("\\ae", "\u{00E6}"); // LATIN SMALL LETTER AE
-  DefPrimitive!("\\AA", "\u{00C5}"); // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\aa", "\u{00E5}"); // LATIN SMALL LETTER A WITH RING ABOVE
-  DefPrimitive!("\\O", "\u{00D8}"); // LATIN CAPITAL LETTER O WITH STROKE
-  DefPrimitive!("\\o", "\u{00F8}"); // LATIN SMALL LETTER O WITH STROKE
-  DefPrimitive!("\\ss", "\u{00DF}"); // LATIN SMALL LETTER SHARP S
-
   // math_common + plain_constructs loaded after plain_base by tex.rs
   // (Perl: LoadFormat('plain') → plain_constructs → math_common)
+
+  //======================================================================
+  // TeX Book, Appendix B. p. 357
+  // Perl: plain_base.pool.ltxml L537-543
+  Let!("\\sp", T_SUPER!());
+  Let!("\\sb", T_SUB!());
+  Let!("\\:", "\\>");
+  // Earlier (L423) `\<TAB>` was Let to `\<CR>`; this overrides it with a
+  // 1em-wide NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
+  DefPrimitive!("\\\t", {
+    Tbox::new(
+      arena::pin_static("\u{00A0}"),
+      None,
+      None,
+      Tokens!(T_CS!("\\\t")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?),
+    )
+  });
 
   //----------------------------------------------------------------------
   DefPrimitive!("\\openup Dimension", None);

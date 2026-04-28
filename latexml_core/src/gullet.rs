@@ -380,12 +380,7 @@ fn read_internal_token() -> Option<Token> {
     ref mut pending_comments,
     ..
   } = *gullet_mut!();
-  // Runtime can be None after a force-close (Perl `\stop` →
-  // `closeMouth(1)`) when the mouthstack is empty. Treat as EOF
-  // gracefully rather than panic — matches Perl's loop behavior
-  // when reading hits end-of-input.
-  let runtime = runtime.as_mut()?;
-  let pushback = &mut runtime.pushback;
+  let pushback = &mut runtime.as_mut().unwrap().pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop() {
     match pushback_token.get_catcode() {
@@ -399,7 +394,7 @@ fn read_internal_token() -> Option<Token> {
   }
   // Not in pushback, read from the current Mouth
   if next_token.is_none() {
-    while let Some(token) = runtime.mouth.read_token() {
+    while let Some(token) = runtime.as_mut().unwrap().mouth.read_token() {
       match token.get_catcode() {
         Catcode::COMMENT => pending_comments.push_back(token),
         Catcode::MARKER => handle_marker(token),
@@ -1132,20 +1127,24 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // legitimate CS name, just a runaway. Emit one clear error and break.
   const MAX_CS_NAME_BYTES: usize = 4096;
   let mut cs = String::from("\\");
+  let mut runaway_reported = false;
   // keep newlines from having \n inside!
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
       break;
     }
     if cs.len() > MAX_CS_NAME_BYTES {
-      Error!(
-        "runaway",
-        "csname",
-        format!(
-          "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
-          &cs[..cs.len().min(200)]
-        )
-      );
+      if !runaway_reported {
+        runaway_reported = true;
+        Error!(
+          "runaway",
+          "csname",
+          format!(
+            "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
+            &cs[..cs.len().min(200)]
+          )
+        );
+      }
       break;
     }
     match token.get_catcode() {

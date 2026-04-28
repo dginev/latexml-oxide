@@ -4,36 +4,41 @@
 // In Perl, this file provides LaTeXML-specific semantic overrides for plain TeX.
 // It loads AFTER the plain dump and BEFORE LaTeX constructs.
 // It ends by loading math_common (common math definitions).
+use crate::engine::tex_paragraph::align_line;
 use crate::prelude::*;
-
-fn align_line(document: &mut Document, line: &[Option<Digested>], alignment: &str) -> Result<()> {
-  if document.is_openable("ltx:p") {
-    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element(
-      "ltx:p",
-      line_content,
-      Some(string_map!(
-      "class" => s!("ltx_align_{alignment}"))),
-    )?;
-  } else if document.is_openable("ltx:text") {
-    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-    document.insert_element(
-      "ltx:text",
-      line_content,
-      Some(string_map!(
-      "class" => s!("ltx_align_{alignment}"))),
-    )?;
-    document.insert_element("ltx:break", Vec::new(), None)?;
-  } else if let Some(Some(line_content)) = line.first() {
-    document.absorb(line_content, None)?;
-  }
-  Ok(())
-}
 
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L18
   Tag!("ltx:text", auto_open => true, auto_close => true);
+
+  //======================================================================
+  // \#, \&, \%, \$, \_ math/text dispatch family — relocated from
+  // plain_base.rs to here so the dump path (where plain_base is skipped)
+  // also gets the dispatch macros and their `\lx@(text|math)@*` targets.
+  // Without this, dump's CharDef-38 for `\&` survives and breaks math-
+  // mode `$\&\&$` (it injects ALIGN-catcode `&` into the math parser).
+  // Mirrors plain_base.pool.ltxml:L70-77 (Perl uses Box-dispatching
+  // DefPrimitives — Rust's explicit math/text split is the WISDOM #44
+  // documented divergence). Rusts the dispatch via `\ifmmode` and routes
+  // math-mode through DefMath entries with proper role/meaning, text-
+  // mode through DefPrimitive emitting the literal char.
+  DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi");
+  DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi");
+  DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi");
+  DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi");
+  DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi");
+  DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
+  DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
+  DefPrimitive!(T_CS!("\\lx@text@percent"), None, "%",  alias => "\\%");
+  DefPrimitive!(T_CS!("\\lx@text@dollar"), None,  "$", alias => "\\$");
+  DefPrimitive!(T_CS!("\\lx@text@underscore"), None, "_",  alias => "\\_");
+  DefMath!("\\lx@math@hash",  None, "#", alias => "\\#");
+  DefMath!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");
+  DefMath!("\\lx@math@percent", None, "%", role  => "POSTFIX", meaning => "percent", alias => "\\%");
+  DefMath!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
+    alias => "\\$");
+  DefMath!("\\lx@math@underscore", None, "_", alias => "\\_");
 
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L20-21
@@ -59,7 +64,10 @@ LoadDefinitions!({
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
   // NOTE: The next two get define for math, as well; See below
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
-  DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
+  // Perl plain_constructs.pool.ltxml L49: standalone is `_` (underscore),
+  // not U+00AF (macron above). The combining char (U+0331) IS macron-below;
+  // its standalone approximation is the underscore, not the above-form.
+  DefAccent!("\\@text@baccent", '\u{0331}', "_", below => true); // COMBINING MACRON BELOW & UNDERSCORE
   // COMBINING DOUBLE INVERTED BREVE & NBSP + combining char as standalone
   DefAccent!("\\t", '\u{0361}', "\u{00A0}\u{0361}");
   // this one"s actually defined in mathscinet.sty, but just stick it here!
@@ -522,22 +530,24 @@ LoadDefinitions!({
   //     return; },
   //   reversion => '#1');
 
+  // Perl plain_constructs.pool.ltxml L271-273
   DefMacro!(
     "\\pmatrix{}",
-    r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\@left(,right=\@right)}{#1}"
+    r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}{#1}"
   );
 
   // Note that 2nd column in \cases is in text mode!
+  // Perl plain_constructs.pool.ltxml L276-277
   DefMacro!(
     "\\cases{}",
-    r"\lx@gen@plain@cases{meaning=cases,left=\@left\{,conditionmode=text,style=\textstyle}{#1}"
+    r"\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}{#1}"
   );
 
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L280-285 — pagination
   DefMacro!("\\eject", "\\par\\lx@newpage");
-  Let!("\\newpage", "\\eject");
   DefMacro!("\\supereject", "\\par\\lx@newpage");
+  Let!("\\newpage", "\\eject");
   Let!("\\end", "\\lx@end@document");
   Let!("\\bye", "\\lx@end@document");
 

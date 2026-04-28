@@ -18,8 +18,9 @@
 //! `BibTeX.pool.ltxml`. Approximate scope:
 //! - `\bib` / `\bibitem` family (Perl ~L80-200)
 //! - Bib entry-type constructors (`@article`, `@book`, ... ~L220-500)
-//! - Field handlers and helper functions (`CleanBibKey`, `NormalizeBibKey`, `ProcessBibTeXEntry` —
-//!   currently stubbed in `latexml_package::package::amsrefs_sty`).
+//! - Field handlers and helper functions (`CleanBibKey`,
+//!   `NormalizeBibKey`, `ProcessBibTeXEntry` — currently stubbed
+//!   in `latexml_package::package::amsrefs_sty`).
 //! - BibTeX special-character handling (~L800-956).
 
 use crate::prelude::*;

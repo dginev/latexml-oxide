@@ -12,8 +12,6 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl: latex_bootstrap.pool.ltxml L22-44 — CSS-based LaTeX/LaTeXe logos
-  DefMacro!("\\LaTeX", "LaTeX");
-  DefMacro!("\\LaTeXe", "LaTeX2e");
   DefConstructor!("\\LaTeX","<ltx:text class='ltx_LaTeX_logo' cssstyle='letter-spacing:-0.2em; margin-right:0.1em'
   >L<ltx:text cssstyle='font-variant:small-caps;' yoffset='0.4ex'
   >a</ltx:text
@@ -39,7 +37,32 @@ LoadDefinitions!({
   DefMacro!("\\e@ch@ck{}{}{}{}", "", locked => true);
 
   // Perl: latex_bootstrap.pool.ltxml L51-54 — counter/font stubs
-  DefMacro!("\\@definecounter", "\\newcounter", locked => true);
+  DefPrimitive!("\\newcounter{}[]", sub[(cs, default_opt)] {
+    let default = if let Some(tks) = default_opt {
+      if !tks.is_empty() { Expand!(tks) } else { Tokens!() }
+    } else {
+      Tokens!()
+    };
+    let cs_expanded = &Expand!(cs).to_string();
+    NewCounter!(cs_expanded, &default.to_string());
+  }, locked => true);
+  // Perl uses `DefMacro` here, but the dump overwrites `\newcounter` with
+  // the raw latex.ltx Expandable body that expands to `\@definecounter`.
+  // If `\@definecounter` is a macro that re-expands to `\newcounter`, we
+  // get an infinite loop after dump load. Perl's `DefMacro` is fine
+  // because Perl's Token-list expansion of `\newcounter` is a Token, and
+  // Perl's `installDefinition` would skip the dump-overwrite if our
+  // `\newcounter` were locked (it's not — Perl bypasses lock too). The
+  // working semantics in Perl actually rely on `\@definecounter`
+  // resolving to the bootstrap Primitive at substitution time: by the
+  // time `\@definecounter` is invoked (inside the dump-loaded
+  // `\newcounter` body), the active `\newcounter` is the dump
+  // Expandable — same loop. The Perl loop test shows it doesn't
+  // actually loop in user code because... TODO investigate. For now,
+  // use `Let!` to snapshot the Primitive at bootstrap time, breaking
+  // the cycle. Token-stream-equivalent for downstream callers that
+  // simply invoke `\@definecounter{...}`.
+  Let!("\\@definecounter", "\\newcounter");
   DefMacro!("\\try@load@fontshape", "", locked => true);
   DefMacro!("\\define@newfont", "", locked => true);
 

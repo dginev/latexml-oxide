@@ -4,6 +4,34 @@
 use crate::prelude::*;
 use latexml_core::document::helpers::prune_empty_para;
 
+/// Helper used by `\leftline`/`\rightline`/`\centerline` and friends.
+/// Perl `TeX_Paragraph.pool.ltxml:75` `sub alignLine`.
+pub fn align_line(
+  document: &mut Document,
+  line: &[Option<Digested>],
+  alignment: &str,
+) -> Result<()> {
+  if document.is_openable("ltx:p") {
+    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+    document.insert_element(
+      "ltx:p",
+      line_content,
+      Some(string_map!("class" => s!("ltx_align_{alignment}"))),
+    )?;
+  } else if document.is_openable("ltx:text") {
+    let line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+    document.insert_element(
+      "ltx:text",
+      line_content,
+      Some(string_map!("class" => s!("ltx_align_{alignment}"))),
+    )?;
+    document.insert_element("ltx:break", Vec::new(), None)?;
+  } else if let Some(Some(line_content)) = line.first() {
+    document.absorb(line_content, None)?;
+  }
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Paragraph Family of primitive control sequences

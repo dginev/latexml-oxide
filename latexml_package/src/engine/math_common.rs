@@ -327,22 +327,8 @@ LoadDefinitions!({
   // RIGHTWARDS ARROW??? a bit more explicitly
   DefMath!("\\to", None, "\u{2192}", role => "ARROW");
 
-  // Perl: plain_constructs.pool.ltxml L86-91
-
-  Let!("\\sp", T_SUPER!());
-  Let!("\\sb", T_SUB!());
-
-  // Perl: \, in math mode => \mskip\thinmuskip => Box(' ', ..., width => thinmuskip)
-
-  DefPrimitive!("\\\t", {
-    Tbox::new(
-      arena::pin_static("\u{00A0}"),
-      None,
-      None,
-      Tokens!(T_CS!("\\\t")),
-      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em")?),
-    )
-  });
+  // \sp, \sb, and the literal-tab Box moved to plain_base.rs (Perl
+  // plain_base.pool.ltxml L537-543 — Perl-faithful location).
 
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.7. Miscellaneous Symbols, p.43

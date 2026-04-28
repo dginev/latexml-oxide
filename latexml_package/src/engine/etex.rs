@@ -107,13 +107,7 @@ LoadDefinitions!({
         let idx = n - 1;
         let item = if idx < p.len() { p.get(idx) } else { p.back() };
         item
-          .and_then(|s| {
-            if let Stored::Number(num) = s {
-              Some(*num)
-            } else {
-              None
-            }
-          })
+          .and_then(|s| if let Stored::Number(num) = s { Some(*num) } else { None })
           .map(RegisterValue::Number)
           .or(Some(RegisterValue::Number(Number::new(0))))
       } else {
@@ -132,11 +126,7 @@ LoadDefinitions!({
     }
     assign_value(
       name,
-      if n > 0 {
-        Stored::VecDequeStored(penalties)
-      } else {
-        Stored::None
-      },
+      if n > 0 { Stored::VecDequeStored(penalties) } else { Stored::None },
       None,
     );
   }
@@ -460,7 +450,7 @@ LoadDefinitions!({
   //======================================================================
   // 3.11 Discarded Items — Perl L322-324
   DefRegister!("\\savingvdiscards" => Number::new(0));
-  DefPrimitive!("\\pagediscards", None);
+  DefPrimitive!("\\pagediscards",  None);
   DefPrimitive!("\\splitdiscards", None);
 
   //======================================================================

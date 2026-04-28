@@ -335,35 +335,11 @@ LoadDefinitions!({
 
   //======================================================================
   // Section 4.2 Math spacing commands
-  // \, == \thinspace
-  // \: == \medspace
-  // \; == \thickspace
-  // \quad
-  // \qquad
-  // \! == \negthinspace
-  // \negmedspace
-  // \negthickspace
-  // I think only these are new
-
-  // DefConstructorI('\thinspace', undef,
-  //   "?#isMath(<ltx:XMHint name='thinspace' width='#width'/>)(\x{2009})",
-  //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip'); } });
-  // DefConstructorI('\negthinspace', undef,
-  //   "?#isMath(<ltx:XMHint name='negthinspace' width='#width'/>)()",
-  //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip')->negate; } });
-  DefConstructor!("\\medspace", "?#isMath(<ltx:XMHint name='medspace'/>)()");
-  DefConstructor!(
-    "\\negmedspace",
-    "?#isMath(<ltx:XMHint name='negmedspace'/>)()"
-  );
-  DefConstructor!(
-    "\\thickspace",
-    "?#isMath(<ltx:XMHint name='thickspace'/>)(\u{2004})"
-  );
-  DefConstructor!(
-    "\\negthickspace",
-    "?#isMath(<ltx:XMHint name='negthickspace'/>)()"
-  );
+  // \, == \thinspace, \: == \medspace, \; == \thickspace
+  // \! == \negthinspace, plus \quad, \qquad, \negmedspace, \negthickspace
+  // these are now native to LaTeX (see latex_constructs.rs C.7.7 Spacing,
+  // mirroring Perl latex_constructs.pool.ltxml L2498-2525). The amsmath
+  // pool no longer redefines them.
 
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");

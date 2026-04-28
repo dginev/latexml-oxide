@@ -826,12 +826,7 @@ pub fn binding_names() -> &'static [(&'static str, &'static str)] {
   use std::sync::OnceLock;
   static NAMES: OnceLock<Vec<(&'static str, &'static str)>> = OnceLock::new();
   NAMES
-    .get_or_init(|| {
-      BINDINGS
-        .iter()
-        .map(|(name, ext, _)| (*name, *ext))
-        .collect()
-    })
+    .get_or_init(|| BINDINGS.iter().map(|(name, ext, _)| (*name, *ext)).collect())
     .as_slice()
 }
 
@@ -851,7 +846,9 @@ mod tests {
     let names = binding_names();
     assert_eq!(names.len(), BINDINGS.len());
     for (name, ext) in names {
-      let matched = BINDINGS.iter().any(|(n, e, _)| n == name && e == ext);
+      let matched = BINDINGS
+        .iter()
+        .any(|(n, e, _)| n == name && e == ext);
       assert!(matched, "{}.{} must round-trip via BINDINGS", name, ext);
     }
   }
