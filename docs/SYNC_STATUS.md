@@ -44,11 +44,29 @@ recovery.
 | `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | OPEN — keyval-vs-positional option mismatch; investigate aipproc.cls.ltxml + `\documentstyle` legacy dispatch (post `4e2b3777b`) |
 | `psfig.sty` not found | 8 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028, +1) | **NOT a code issue** — psfig.sty was dropped from TeX Live; papers 1996-2005 |
 
-**Post-aipproc-fix 2026-04-28 16:43 UTC (per-paper truth, latest entry per ID):**
+**Post-double-load-fix 2026-04-28 17:08 UTC (per-paper truth, latest entry per ID):**
 
 | Category | Count | % |
 |---|---:|---:|
-| **ok** | **7719** | **97.74%** |
+| **ok** | **7731** | **97.89%** |
+| conversion_error | 159 | 2.01% |
+| conversion_fatal | 4 | 0.05% |
+| abort | 3 | 0.04% |
+| timeout | 1 | 0.01% |
+
+`af53cd9de` (skip raw .sty when find_file_fallback already loaded
+the ltxml binding) recovered **+12 papers** beyond the aipproc-fix.
+The bug: Perl Package.pm `if/elsif/elsif` returns on first
+success; Rust's sequential `let` chain fell through to load both
+fallback ltxml AND raw .sty for any `[vV]?[-_.\d]+`-suffixed
+package whose unsuffixed form has a Rust binding (caption2,
+likely also revtex4 → revtex, etc.).
+
+**Post-aipproc-fix 2026-04-28 16:43 UTC:**
+
+| Category | Count | % |
+|---|---:|---:|
+| ok | 7719 | 97.74% |
 | conversion_error | 171 | 2.16% |
 | conversion_fatal | 4 | 0.05% |
 | abort | 3 | 0.04% |
