@@ -11,22 +11,26 @@ jobs:
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 40
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
-      # Repeated "hosted runner lost communication" failures (24906265758,
-      # 24908842754) were OOMs: 4 parallel rustc workers can each peak past
-      # 3 GB on the larger crates in this workspace; add the test-runner's
-      # 4 concurrent conversions (each several hundred MB, tikz/pgf spikes
-      # into the low GB range) and peak RSS exceeds the 16 GB budget. The
-      # runner stops responding, GH marks the job failed.
+      # Goal: minimize both wall-clock time and peak memory.
+      # Past failures: OOM-induced "hosted runner lost communication"
+      # (24906265758, 24908842754) and 40-minute timeouts.
       #
-      # Design: split build from test so peak-rustc RSS is released before
-      # the test workers spin up, and cap concurrency on each phase at 2.
-      # With default codegen-units=16 and opt-level=1, 2 rustc workers peak
-      # comfortably under 8 GB, and 2 test threads leaves ~8 GB headroom
-      # for tikz/pgf spikes.
+      # Knobs:
+      #  * CARGO_BUILD_JOBS=2 — two rustc workers fit comfortably in
+      #    16 GB; raising to 4 has caused OOM-kills on heavy crates.
+      #  * opt-level=1 — keeps optimization fast (LLVM passes are the
+      #    dominant compile cost at -O3); release-equivalent codegen
+      #    isn't required for test correctness.
+      #  * incremental=0, debug=0, strip=debuginfo — drop noise that
+      #    only helps interactive debug, not CI.
+      #  * mold linker — ~2-4× faster than ld and streams symbols
+      #    rather than slurping into RAM.
+      #  * --test-threads=2 — pgf/tikz cells can spike to GB-scale
+      #    working sets; conservative parallelism leaves headroom.
       CARGO_BUILD_JOBS: "2"
       CARGO_PROFILE_RELEASE_DEBUG: "0"
       CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
@@ -34,21 +38,23 @@ jobs:
       CARGO_PROFILE_RELEASE_LTO: "false"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-      # mold is ~2-4× faster than GNU ld on this workspace and streams
-      # symbols rather than slurping them, keeping parallel link RSS down.
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
+      # Minimal apt set: only what `make formats` + tests actually need.
+      # Removed: imagemagick, inkscape (graphics post-processing —
+      # not exercised by the test suite); texlive-lang-* (only en/de/fr/
+      # ru/el needed by tests, and texlive-lang-european is the heaviest
+      # superset). Net: ~1.5 GB less apt download + install time.
       - name: install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
-            imagemagick inkscape \
             mold \
             texlive texlive-latex-extra texlive-science \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
-            texlive-lang-cyrillic texlive-lang-european
+            texlive-lang-cyrillic
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -62,15 +68,10 @@ jobs:
       # Build test binaries first (--no-run) so the rustc/linker RSS peak
       # completes and is reclaimed before we spin up test workers. On a
       # warm rust-cache hit this is a no-op; on a cold cache it's the main
-      # memory-pressure phase and isolating it from the test phase is what
-      # fits the job back inside the 16 GB runner budget.
+      # memory-pressure phase and isolating it from the test phase is
+      # what fits the job back inside the 16 GB runner budget.
       - name: build test binaries
         run: cargo test --release --tests --workspace --no-run
 
       - name: run tests
-        # --test-threads=2 keeps per-thread working-set × N under the
-        # remaining 12-14 GB budget (after kernel/texlive). Each
-        # conversion's working set is typically a few hundred MB but
-        # pgf/tikz-heavy tests spike into the low GB range, so 2 threads
-        # is the conservative setting that actually completes.
         run: cargo test --release --tests --workspace -- --test-threads=2
