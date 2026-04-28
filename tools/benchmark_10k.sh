@@ -104,9 +104,13 @@ TASK_LIST=$(mktemp)
 # trap set below after RUN_RESULTS is created
 
 if [[ "$RERUN_FAILURES" == true ]] && [[ -f "$RESULTS_TSV" ]]; then
-  # Re-run only previous failures (exit_code != 0), sorted by name
+  # Re-run any non-OK paper, sorted by name. Includes both:
+  #   - exit_code != 0 (panics, OOM, timeouts, aborts) AND
+  #   - exit_code == 0 with category != "ok" (conversion_error, _fatal, etc.)
+  # The earlier `$3 != "0"` filter only captured the first kind, leaving
+  # in-process status:2 / status:3 papers untouched on rerun.
   echo "Mode: re-running previous failures only"
-  awk -F'\t' 'NR>1 && $3 != "0" {print $1}' "$RESULTS_TSV" | sort | while read -r arxiv_id; do
+  awk -F'\t' 'NR>1 && $7 != "ok" {print $1}' "$RESULTS_TSV" | sort | while read -r arxiv_id; do
     input_zip="$INPUT_DIR/${arxiv_id}.zip"
     if [[ -f "$input_zip" ]]; then
       echo "$input_zip"

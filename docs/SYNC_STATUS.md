@@ -42,7 +42,23 @@ recovery.
 | math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | OPEN — math-parser / mode-tracker; growing cluster (6 papers) |
 | 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | OPEN — runaway allocation; possible math-parser parse-forest blowup |
 
-**Final tally 2026-04-28 15:46 UTC (canvas complete, ~64 min total):**
+**Post-rerun final 2026-04-28 16:01 UTC (per-paper truth, latest entry per ID):**
+
+| Category | Count | % |
+|---|---:|---:|
+| **ok** | **7712** | **97.65%** |
+| conversion_error | 178 | 2.25% |
+| conversion_fatal | 4 | 0.05% |
+| abort | 3 | 0.04% |
+| timeout | 1 | 0.01% |
+
+Rerun on the 58 exit-code-nonzero failures: **53/58 recovered** (24
+panics + 29 oom_or_kill artifacts). The 178 conversion_error papers
+weren't retried because `--rerun-failures` filters by exit_code != 0,
+but conversion_error has exit_code = 0 (status:2 emitted in-process).
+Filter to be widened to `category != "ok"` for the next pass.
+
+**Phase 1 canvas — first-look tally 2026-04-28 15:46 UTC (~64 min):**
 
 | Category | Count | % | Recoverable on rerun |
 |---|---:|---:|---|
