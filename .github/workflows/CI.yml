@@ -11,7 +11,7 @@ jobs:
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
