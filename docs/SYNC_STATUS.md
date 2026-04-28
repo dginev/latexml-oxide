@@ -15,6 +15,14 @@ commit (`b8d793e3f`); fix-forward commits land on `claude-round-17`
 during the canvas, will be picked up by `--rerun-failures` after
 the first pass completes.
 
+### Small side goal
+
+1. Do a full audit for `AtBeginDocument` and ensure we have a function that matches the Perl AtBeginDocument() function.
+   We should always use the native form instead of a RawTeX or similar call to \AtBeginDocument . 
+   The Rust code has some mistakes related to this.
+
+2.
+
 ### Cluster ledger (live during canvas)
 
 Updated as new failures surface. Mark each cluster `FIXED` when

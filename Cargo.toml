@@ -37,18 +37,6 @@ resolver = "2"
 #       Slowest compile, fastest output. Combined with `lto = "fat"`,
 #       gives the LLVM optimizer the largest possible scope.
 #
-#   panic = "unwind" (default)
-#       We do NOT set `panic = "abort"` — `pericortex`, a third-
-#       party git dependency pulled in by `cortex_worker`, is
-#       built against `panic_unwind` and won't link otherwise:
-#         error: the linked panic runtime `panic_unwind` is not
-#         compiled with this crate's panic strategy `abort`
-#       Until pericortex (and the rest of our dep graph) is
-#       audited for unwind dependencies, keeping the default is
-#       the only thing that lets `cargo build --release --bin
-#       cortex_worker` succeed. The unwind-table cost is small
-#       compared to lto+codegen-units=1.
-#
 #   strip = "symbols"
 #       Strip ALL non-essential ELF symbol and debug data from the
 #       output for smallest binary. Coupled with `debug = false`,
@@ -110,11 +98,6 @@ overflow-checks = false
 #       sibling .o.dwo files. Faster relinking on tiny edits, and
 #       gdb still finds them via `add-auto-load-safe-path`.
 #
-#   panic = "unwind"
-#       libtest's harness uses `catch_unwind` to attribute panics
-#       to specific tests rather than aborting the whole process.
-#       Required.
-#
 # codegen-units, lto: inherit cargo's `dev` defaults (256 / off) —
 # both already aligned with "fastest local rebuild" and require no
 # explicit override.
@@ -125,7 +108,6 @@ debug-assertions = true
 overflow-checks = true
 incremental = true
 split-debuginfo = "unpacked"
-panic = "unwind"
 
 # CI profile — GitHub Actions ubuntu-latest (4 vCPU / 16 GB RAM /
 # 50 min). Single goal: prove the test suite passes, using the
@@ -170,12 +152,6 @@ panic = "unwind"
 #       No reuse benefit on CI's cold-cache path; incremental files
 #       just consume disk + complicate the per-CGU split.
 #
-#   panic = "unwind"
-#       libtest's `catch_unwind` reports each panicking test
-#       individually instead of aborting the whole process. Without
-#       this, the first panic loses the rest of the test output —
-#       and CI surfaces nothing useful when the runner SIGABRTs.
-#
 # Past CI failures (runs 25051556164, 25055232786) OOM-killed exit
 # 143 inside `latexml_contrib`'s LLVM optimization phase. With
 # opt-level=0 globally there IS no LLVM optimization phase to OOM in
@@ -189,7 +165,6 @@ lto = false
 incremental = false
 debug = false
 strip = "symbols"
-panic = "unwind"
 
 # release-light — local-iteration release profile. Same opt-level=3
 # code, but uses thin LTO + parallel codegen so wall-clock build time

@@ -418,12 +418,11 @@ as special tokens or parameter spec patterns and gets stuck in an infinite
 matching loop. Both `*` and `{}` are valid in TeX control sequences (e.g.
 `\eqnarray*`, `\begin{foo}`).
 
-**Workaround:** For `Let!`, use the `T_CS!()` wrapper. For `DefMacro!`, use
-`\csname...\endcsname` form or runtime `def_macro()` calls:
+**Workaround:** Always use the `T_CS!()` wrapper.
 
 ```rust
-DefMacro!("\\csname IEEEeqnarray*\\endcsname{}", "\\csname eqnarray*\\endcsname");
-Let!("\\csname endIEEEeqnarray*\\endcsname", "\\csname endeqnarray*\\endcsname");
+DefMacro!(T_CS!("\\IEEEeqnarray*"), "{}", T_CS!("\\eqnarray*"));
+Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
 ```
 
 **Refactoring needed:** `DefMacro!` and `Let!` should accept `T_CS!("\\foo*")`
