@@ -854,26 +854,36 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // (explicit local path).
   let binding_loaded = {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
-    let ext = clean_req.rsplit('.').next().unwrap_or("");
-    let is_tex_like = ext == clean_req.as_ref() || ext == "tex";
-    if !has_dir && is_tex_like {
-      let tex_name = if ext == "tex" {
-        clean_req.to_string()
+    // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
+    // `\input{name.<ext>}` resolves to a known binding extension AND a
+    // binding for `(name, ext)` exists, route to the binding instead of
+    // the on-disk raw file. Without this, papers using literal
+    // `\input{psfig.sty}` (common 1996-2005 idiom) fail because TL2025
+    // dropped the on-disk file even though Rust has the binding.
+    //
+    // Extensions handled dynamically via `is_binding_extension`: any
+    // extension registered by `latexml_package` or `latexml_contrib`
+    // (cls / sty / def / fontmap / ldf / ltx / lua / pool / tex /
+    // code.tex / ...) is admitted. The dispatcher's exact `(name, ext)`
+    // lookup happens inside `load_binding`; this gate only filters out
+    // `\input{foo.eps}`-style content paths from the binding probe.
+    if !has_dir {
+      let ext = clean_req.rsplit('.').next().unwrap_or("");
+      let no_ext = ext == clean_req.as_ref();
+      if no_ext || ext == "tex" {
+        // No extension or `.tex`: probe `<name>.tex` binding (mirrors
+        // Perl's tex-default for \input).
+        let tex_name = if ext == "tex" {
+          clean_req.to_string()
+        } else {
+          s!("{}.tex", clean_req)
+        };
+        load_binding(&tex_name)? || load_external_binding(&tex_name)?
+      } else if crate::state::is_binding_extension(ext) {
+        load_binding(&clean_req)? || load_external_binding(&clean_req)?
       } else {
-        s!("{}.tex", clean_req)
-      };
-      load_binding(&tex_name)? || load_external_binding(&tex_name)?
-    } else if !has_dir && (ext == "sty" || ext == "cls") {
-      // Perl Package.pm:2255-2270 heuristic: when `\input{psfig.sty}` or
-      // `\input{foo.cls}` requests a .sty/.cls file directly via \input
-      // (rather than \usepackage / \RequirePackage / \documentclass),
-      // probe for a binding under that name and route to it. Without this,
-      // old papers like astro-ph0103250's `\input{psfig.sty}` (literal
-      // first line of ms.tex, common 1996-2005 idiom) error with
-      // "missing_file: psfig.sty" because the on-disk psfig.sty was
-      // dropped from TeX Live, even though Rust has psfig_sty.rs registered.
-      // Sandbox impact: 7 papers in the cluster.
-      load_binding(&clean_req)? || load_external_binding(&clean_req)?
+        false
+      }
     } else {
       false
     }

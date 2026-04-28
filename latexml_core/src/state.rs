@@ -2686,6 +2686,29 @@ pub fn get_class_binding_names() -> Vec<&'static str> {
     .collect()
 }
 
+/// `true` when at least one registered binding declares `ext` as its
+/// extension. Used by `\input`'s heuristic to decide whether
+/// `\input{name.<ext>}` should consult the binding registry — e.g.
+/// `.sty`, `.cls`, `.def`, `.pool`, `code.tex` are all valid binding
+/// extensions, while `.eps`, `.png`, `.bib` are not. Matches by extension
+/// only (the `name` is checked separately by `dispatch()`'s exact lookup).
+pub fn is_binding_extension(ext: &str) -> bool {
+  state!()
+    .binding_names
+    .iter()
+    .any(|slice| slice.iter().any(|(_, e)| *e == ext))
+}
+
+/// `true` when a binding is registered for the exact `(name, ext)` pair.
+/// Convenience wrapper over the per-crate slices in `binding_names`.
+/// Mirrors `dispatch()`'s lookup but without the side effect of loading.
+pub fn binding_exists(name: &str, ext: &str) -> bool {
+  state!()
+    .binding_names
+    .iter()
+    .any(|slice| slice.iter().any(|(n, e)| *n == name && *e == ext))
+}
+
 pub fn get_label_mapping_hook() -> Option<LabelMappingHook> { state!().label_mapping_hook.clone() }
 pub fn set_label_mapping_hook(hook: LabelMappingHook) {
   let mut state = state_mut!();
