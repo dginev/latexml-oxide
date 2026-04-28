@@ -5554,11 +5554,27 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
 
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
+  // Perl `latex_constructs.pool.ltxml:27-28`:
+  //   DefMacroI('\f@encoding',  undef, sub { ExplodeText(LookupValue('font')->getEncoding); });
+  //   DefMacroI('\cf@encoding', undef, sub { ExplodeText(LookupValue('font')->getEncoding); });
+  // Perl's `undef->getEncoding` and `ExplodeText(undef)` both quietly degrade
+  // to empty output instead of crashing; Rust must mirror that. Earlier code
+  // chained `.unwrap().get_encoding().unwrap()`, which panicked on text-only
+  // CSes used in math mode (e.g. `\i`, sandbox papers 0802.1100, 0811.2815,
+  // 0901.4716, 0904.1706, 0905.1491). Chain the Options and fall back to "".
   DefMacro!("\\f@encoding", {
-    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+    ExplodeText!(
+      LookupFont!()
+        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .unwrap_or_default()
+    )
   });
   DefMacro!("\\cf@encoding", {
-    ExplodeText!(LookupFont!().unwrap().get_encoding().unwrap())
+    ExplodeText!(
+      LookupFont!()
+        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .unwrap_or_default()
+    )
   });
 
   // #------------------------------------------------------------
