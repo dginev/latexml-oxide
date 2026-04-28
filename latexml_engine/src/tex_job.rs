@@ -125,7 +125,24 @@ LoadDefinitions!({
     // local zip files), `\documentstyle{aipproc}` (older arXiv pre-2002
     // form). Class-form bindings (revtex_cls.rs etc.) are unaffected
     // because their `.sty` is not registered.
-    let class_sty_found = find_file(&format!("{}.sty", class), None).is_some();
+    //
+    // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')` which defaults
+    // to `notex = true` — the FindFile call consults the @ltxml_paths
+    // binding registry as well as the filesystem. Rust must do the same:
+    // for `\documentstyle{aipproc}` on a TL install where aipproc.sty is
+    // missing from disk but `aipproc_sty.rs` is registered, our pipeline
+    // must take the .sty path so the cls binding's `\author RequiredKeyVals`
+    // doesn't shadow article.cls's plain `\author[]{}`. Sandbox cluster of
+    // 4 papers (astro-ph9711070, hep-ex9805012, physics0011011,
+    // quant-ph0006101) all hit "Missing keyval arguments" on `\author`
+    // before this fix.
+    let class_sty_found = find_file(
+      &format!("{}.sty", class),
+      Some(latexml_core::binding::content::FindFileOptions {
+        notex: true,
+        ..Default::default()
+      }),
+    ).is_some();
 
     // In LaTeX 2.09, options are both class options AND packages to load.
     // First load the class, then try to load each option as a package.
