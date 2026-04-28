@@ -62,7 +62,17 @@ jobs:
           cache-on-failure: true
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
       # Cortex worker is a production deployment artifact, built separately.
+      #
+      # `make formats` is the cold-cache build phase. Recent OOM-kill
+      # (run 25051073184, exit 143 during `latexml_contrib` compile)
+      # showed 2 parallel rustc jobs peak past the 16 GB runner budget
+      # on the heaviest crates (latexml_contrib has many include_bytes!
+      # blobs + proc-macro expansions). Force jobs=1 here for the cold
+      # build so per-job RSS fits comfortably; subsequent steps benefit
+      # from the now-warm cache and can run at jobs=2.
       - name: make formats
+        env:
+          CARGO_BUILD_JOBS: "1"
         run: tools/make_formats.sh
 
       # Build test binaries first (--no-run) so the rustc/linker RSS peak
