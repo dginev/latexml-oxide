@@ -44,11 +44,42 @@ recovery.
 | `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | OPEN — keyval-vs-positional option mismatch; investigate aipproc.cls.ltxml + `\documentstyle` legacy dispatch (post `4e2b3777b`) |
 | `psfig.sty` not found | 8 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028, +1) | **NOT a code issue** — psfig.sty was dropped from TeX Live; papers 1996-2005 |
 
-**Post-rerun final 2026-04-28 16:01 UTC (per-paper truth, latest entry per ID):**
+**Post-aipproc-fix 2026-04-28 16:43 UTC (per-paper truth, latest entry per ID):**
 
 | Category | Count | % |
 |---|---:|---:|
-| **ok** | **7712** | **97.65%** |
+| **ok** | **7719** | **97.74%** |
+| conversion_error | 171 | 2.16% |
+| conversion_fatal | 4 | 0.05% |
+| abort | 3 | 0.04% |
+| timeout | 1 | 0.01% |
+
+`5ce5615fb` (\\documentstyle notex=true binding-registry probe)
+recovered **7 papers** (4 aipproc-keyval + 3 `{opening}`-letter
+class). 179 non-OK papers remaining.
+
+**Top cluster shape (post-fix):**
+
+| Pattern | Count | Cluster |
+|---|---:|---|
+| `malformed:ltx:XMApp` outside `<ltx:Math>` | 28 | math-parser content leak (deep) |
+| `malformed:ltx:XMTok` | 15 | same family |
+| `malformed:ltx:XMArray` | 4 | same family |
+| `misdefined:#` PARAM | 9 | caption-internals raw-load gap |
+| `unexpected:\end{equation}` | 7 | env-mode mismatch |
+| `missing_file:psfig.sty` | 7 | TL2025 dropped — NOT actionable |
+| `expected:}` / `unexpected:}` | 13 | macro-arg parser gap |
+| `Unexpected:^/_` (math leak) | 8 | math-mode tracker (related to XM*) |
+| undefined CSes (long tail) | 16 | per-paper class/package stubs |
+
+**Math cluster (XMApp/XMTok/XMArray leakage + ^/_ leak) totals
+~55 papers** — single biggest architectural target.
+
+**Pre-aipproc-fix tally 2026-04-28 16:01 UTC:**
+
+| Category | Count | % |
+|---|---:|---:|
+| ok | 7712 | 97.65% |
 | conversion_error | 178 | 2.25% |
 | conversion_fatal | 4 | 0.05% |
 | abort | 3 | 0.04% |
