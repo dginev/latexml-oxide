@@ -1,23 +1,115 @@
 use crate::prelude::*;
 
+/// Perl numprint.sty.ltxml L127-145 — body of the `n`/`N` `DefColumnType`
+/// closures. Reconstructs the alignment-template `before`/`after` token
+/// streams plus `align => char:.` and pushes the column to the active
+/// BUILD_TEMPLATE.
+///
+/// `math_wrap = true`  for `n` (raw TeX `\nprt@rewrite@@{$}{$}...` — `#5`/`#6` of
+///   `\nprt@end` are math shifts, so the rebuilt `\numprint{…}` digests in
+///   math mode).
+/// `math_wrap = false` for `N` (raw TeX `\nprt@rewrite@@{}{}...` — empty `#5`/`#6`,
+///   text-mode digestion).
+///
+/// `\nprt@end` (numprint.sty L433) takes 6 mandatory args:
+///   #1 = man_before digits, #2 = man_after digits,
+///   #3 = exp_before digits, #4 = exp_after digits,
+///   #5, #6 = math-shift wrappers (or empty).
+fn add_numprint_column(args: Vec<ArgWrap>, math_wrap: bool) -> Result<()> {
+  let nd_exp_before = args
+    .first()
+    .cloned()
+    .and_then(ArgWrap::owned_tokens)
+    .unwrap_or_default();
+  let nd_exp_after = args
+    .get(1)
+    .cloned()
+    .and_then(ArgWrap::owned_tokens)
+    .unwrap_or_default();
+  let nd_man_before = args
+    .get(2)
+    .cloned()
+    .and_then(ArgWrap::owned_tokens)
+    .unwrap_or_default();
+  let nd_man_after = args
+    .get(3)
+    .cloned()
+    .and_then(ArgWrap::owned_tokens)
+    .unwrap_or_default();
+
+  let before = Tokens!(T_CS!("\\nprt@begin"), T_CS!("\\ignorespaces"));
+
+  // Perl: after => Invocation(T_CS('\nprt@end'),
+  //   $nd_man_before, $nd_man_after,
+  //   $nd_exp_before, $nd_exp_after,
+  //   T_MATH/Tokens(), T_MATH/Tokens())
+  let mut after_toks: Vec<Token> = Vec::with_capacity(32);
+  after_toks.push(T_CS!("\\nprt@end"));
+  for arg_tokens in [&nd_man_before, &nd_man_after, &nd_exp_before, &nd_exp_after] {
+    after_toks.push(T_BEGIN!());
+    after_toks.extend_from_slice(arg_tokens.unlist_ref());
+    after_toks.push(T_END!());
+  }
+  after_toks.push(T_BEGIN!());
+  if math_wrap {
+    after_toks.push(T_MATH!());
+  }
+  after_toks.push(T_END!());
+  after_toks.push(T_BEGIN!());
+  if math_wrap {
+    after_toks.push(T_MATH!());
+  }
+  after_toks.push(T_END!());
+
+  with_current_build_template(|template_opt| {
+    if let Some(t) = template_opt {
+      t.add_column(Cell {
+        before: Some(before),
+        after: Some(Tokens::new(after_toks)),
+        // Perl: align => 'char:' . ToString(Digest(T_CS('\nprt@decimal')))
+        // \nprt@decimal default expansion is `{.}` (set by \npdecimalsign).
+        align: Some(Align::Char(".".to_string())),
+        ..Cell::default()
+      });
+    }
+  });
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("numprint", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Override numprint's `n` and `N` column type rewrites. The raw package
-  // defines these using \nprt@rewrite@ with \@ifnextchar and \nprt@digittoks
-  // which produce unrecognized tokens in our alignment template parser.
-  // Simplify to plain right-aligned columns (loses decimal alignment but
-  // prevents 54+ stray alignment errors). `\NC@find` is array.sty's internal
-  // dispatcher for "resume template scanning with the next char"; Perl's
-  // LaTeXML doesn't need it because Perl numprint.sty.ltxml overrides the
-  // column types via DefColumnType directly. This is a Rust-local stub —
-  // not part of the array.sty.ltxml port.
-  DefMacro!("\\NC@find DefToken", "");
-  RawTeX!(r#"\makeatletter
-\renewcommand{\NC@rewrite@n}[1]{\NC@find r}%
-\renewcommand{\NC@rewrite@N}[1]{\NC@find r}%
-\makeatother"#);
+  // Perl: numprint.sty.ltxml L127-145 — override `n` and `N` column types
+  // via DefColumnType, bypassing the raw-TeX `\NC@rewrite@n`/`\NC@rewrite@N`
+  // (which use `\@ifnextchar` + `\nprt@digittoks` token machinery that
+  // doesn't fit LaTeXML's early-arg alignment template scanner).
+  //
+  //   DefColumnType('n Optional:-1 Optional:-1 {}{}', sub {
+  //     my ($gullet, $nd_exp_before, $nd_exp_after, $nd_man_before, $nd_man_after) = @_;
+  //     $LaTeXML::BUILD_TEMPLATE->addColumn(
+  //       before => Tokens(T_CS('\nprt@begin'), T_CS('\ignorespaces')),
+  //       after => Invocation(T_CS('\nprt@end'),
+  //         $nd_man_before, $nd_man_after,
+  //         $nd_exp_before, $nd_exp_after,
+  //         T_MATH, T_MATH),     # 'n' — math-mode wrapping
+  //       align => 'char:' . ToString(Digest(T_CS('\nprt@decimal')))); });
+  //
+  //   DefColumnType('N ...', sub { ... after => Invocation(... Tokens(), Tokens()),
+  //                                      ...);  # 'N' — empty inner #5,#6
+  //
+  // \nprt@end takes 6 mandatory args (#1..#6); see numprint.sty L433.
+  // Order in the Invocation: man_before, man_after, exp_before, exp_after,
+  // math_pre, math_post — `\nprt@end{#5}{#6}{#3}{#4}{#1}{#2}` in raw-TeX
+  // L506 wires args this way, and the LaTeXML override mirrors it.
+  // 'n' — math-mode wrapping (raw-TeX rewrite: `\nprt@rewrite@@{$}{$}...`)
+  DefColumnType!("n Optional:-1 Optional:-1 {} {}", sub[args] {
+    add_numprint_column(args, true)?;
+  });
+  // 'N' — text-mode (raw-TeX rewrite: `\nprt@rewrite@@{}{}...` with empty #1,#2)
+  DefColumnType!("N Optional:-1 Optional:-1 {} {}", sub[args] {
+    add_numprint_column(args, false)?;
+  });
 
   Let!("\\ltx@orig@numprint", "\\numprint");
   DefMacro!("\\numprint[]{}",
