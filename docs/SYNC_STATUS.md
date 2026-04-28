@@ -35,6 +35,81 @@ are LOWERED until the dumps are complete and Perl-faithful.
 
 **Working doc:** [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md).
 
+### 2026-04-29 evening — numprint `\ltx@mark@units` Perl-faithful port
+
+`numprint_sty.rs:93` was a 1-line stub (`"#1", reversion => "#1"`) with
+explicit comment "simplified — just absorb content". Now ports
+`numprint.sty.ltxml:99-111` faithfully via closure-template:
+- Snapshot `parent.get_last_child()` BEFORE absorb (the boundary
+  marker for the absorbed-#1 children)
+- Manually `document.absorb(args[0], None)?`
+- Walk newly-added siblings; for each `ELEMENT_NODE` with `role`
+  empty/missing or in `{ID, UNKNOWN, FLOATSUPERSCRIPT}` (Perl L107-109),
+  call `document.add_class(&mut node, "ltx_unit")?`
+
+Numprints `ltx_unit` instances: 0 → 26 (reference: 46). Remaining
+20 are deeper-nested in math `<XMDual>` structures whose emission
+requires the n/N column-type port — see "Remaining numprints gap"
+below.
+
+### Remaining numprints gap — n/N column-type port (multi-day)
+
+`numprints_test` still fails (Rust 622 lines vs Perl 1545). Root
+cause: `numprint_sty.rs:16-20` deliberately neutralizes `numprint`'s
+custom `n`/`N` `DefColumnType` declarations via the
+`\NC@find DefToken`/`\renewcommand{\NC@rewrite@n}{\NC@find r}`
+trick — comment says "Simplify to plain right-aligned columns
+(loses decimal alignment but prevents 54+ stray alignment errors)".
+This is the "expedient workaround" the user has flagged for removal.
+
+**Faithful port plan:**
+
+Perl `numprint.sty.ltxml:127-145` declares:
+```perl
+DefColumnType('n Optional:-1 Optional:-1 {}{}', sub {
+  my ($gullet, $nd_exp_before, $nd_exp_after, $nd_man_before,
+      $nd_man_after) = @_;
+  $LaTeXML::BUILD_TEMPLATE->addColumn(
+    before => Tokens(T_CS('\nprt@begin'), T_CS('\ignorespaces')),
+    after  => Invocation(T_CS('\nprt@end'),
+                         $nd_man_before, $nd_man_after,
+                         $nd_exp_before, $nd_exp_after,
+                         T_MATH, T_MATH),
+    align  => 'char:' . ToString(Digest(T_CS('\nprt@decimal'))));
+  return; });
+```
+
+Rust infrastructure available:
+- `latexml_package/src/prelude/setup_binding_language.rs:1423`:
+  `DefColumnType!` macro registers `\NC@rewrite@<char>` via
+  `parse_parameters(...)` — already supports `Optional:-1 Optional:-1
+  {}{}` parameter signature.
+- `latexml_core/src/alignment.rs:911` `with_current_build_template`
+  + `latexml_core/src/alignment/template.rs:335` `Template::add_column`
+  give the BUILD_TEMPLATE access.
+- `Cell.before` / `Cell.after` are `VecDeque<Digested>`, not Tokens.
+
+**The wiring needed:**
+1. Inside `DefColumnType!("n …", sub[args] { … })`, convert the parsed
+   args to a `Cell` with `before` = `[\nprt@begin, \ignorespaces]`
+   digested, `after` = digested invocation of `\nprt@end` with the
+   column args spliced in, `align = "char:."`.
+2. Push that `Cell` to the current `BUILD_TEMPLATE` via
+   `with_current_build_template(|t_opt| t_opt.unwrap().add_column(cell))`.
+3. The `\nprt@begin` / `\nprt@end` / `\nprt@decimal` macros come
+   from raw `numprint.sty` (already loaded via `InputDefinitions!`).
+
+Estimated effort: 1-2 sessions to wire the BUILD_TEMPLATE access,
+build the Cell from typed args, and verify no regression in other
+tabular tests (xtab, longtable, supertabular share the same
+DefColumnType infrastructure).
+
+Once landed, the test should match Perl's 1545-line reference at
+section 3 "Tabulars" — the `<Math mode="inline" tex="\numprint{...}">
+<XMath><XMDual><XMTok meaning="...">...</XMTok><XMText>…</XMText>
+</XMDual></XMath></Math>` per-cell emission depends on this column
+type setting `T_MATH` boundaries which forces math-mode digestion.
+
 ### 2026-04-29 — Multi-thread `cargo test` SIGSEGV race fixed
 
 **Root cause: `std::env::var` calls on TeX hot paths.** `cargo test
