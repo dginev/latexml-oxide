@@ -40,7 +40,10 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
 fn main() {
   let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
   let out_dir = env::var("OUT_DIR").unwrap();
-  let engine_dir = Path::new(&manifest_dir).join("src/engine");
+  // Engine modules are now at the crate root (latexml_engine/src/) since
+  // the latexml_engine extraction. Previously this was src/engine/ when
+  // the engine lived under latexml_package.
+  let engine_dir = Path::new(&manifest_dir).join("src");
   let dumps_dir = Path::new(&manifest_dir).join("../resources/dumps");
 
   // Ensure both dump module files exist (Perl: plain_dump + latex_dump).
@@ -51,7 +54,7 @@ fn main() {
       std::fs::write(&dump_path, STUB)
         .unwrap_or_else(|_| panic!("Failed to write {dump_name} stub"));
     }
-    println!("cargo:rerun-if-changed=src/engine/{dump_name}");
+    println!("cargo:rerun-if-changed=src/{dump_name}");
   }
 
   // Emit the runtime-load loader. No dump content is embedded.

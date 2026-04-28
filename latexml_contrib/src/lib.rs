@@ -1,4 +1,11 @@
+// `latexml_engine` carries the macro layer (`DefMacro!`, `LoadDefinitions!`,
+// `compile_*!`) since the engine extraction; latexml_package keeps the
+// prelude that adds `package::*` etc. (no #[macro_use] needed on
+// latexml_package — it forwards macros transparently via the
+// `pub extern crate latexml_engine` re-export, but contrib gets them
+// directly here.)
 #[macro_use]
+extern crate latexml_engine;
 extern crate latexml_package;
 #[macro_use]
 extern crate latexml_codegen;

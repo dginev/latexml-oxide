@@ -4,8 +4,8 @@
 // In Perl, this file provides LaTeXML-specific semantic overrides for plain TeX.
 // It loads AFTER the plain dump and BEFORE LaTeX constructs.
 // It ends by loading math_common (common math definitions).
-use crate::engine::tex_paragraph::align_line;
 use crate::prelude::*;
+use crate::tex_paragraph::align_line;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -125,7 +125,7 @@ LoadDefinitions!({
   DefConstructor!("\\@@eqalign{}", "#1",
     reversion => "\\eqalign{#1}", bounded => true,
     before_digest => {
-      use crate::engine::tex_tables::alignment_bindings;
+      use crate::tex_tables::alignment_bindings;
       use latexml_core::alignment::template::{Align, TemplateConfig};
       use latexml_core::alignment::cell::Cell;
       let template = Template::new(TemplateConfig {
@@ -146,7 +146,7 @@ LoadDefinitions!({
   DefConstructor!("\\@@eqalignno{}", "#1",
     reversion => "\\eqalignno{#1}", bounded => true,
     before_digest => {
-      use crate::engine::tex_tables::alignment_bindings;
+      use crate::tex_tables::alignment_bindings;
       use latexml_core::alignment::template::{Align, TemplateConfig};
       use latexml_core::alignment::cell::Cell;
       let template = Template::new(TemplateConfig {
@@ -168,7 +168,7 @@ LoadDefinitions!({
   DefConstructor!("\\@@leqalignno{}", "#1",
     reversion => "\\leqalignno{#1}", bounded => true,
     before_digest => {
-      use crate::engine::tex_tables::alignment_bindings;
+      use crate::tex_tables::alignment_bindings;
       use latexml_core::alignment::template::{Align, TemplateConfig};
       use latexml_core::alignment::cell::Cell;
       let template = Template::new(TemplateConfig {

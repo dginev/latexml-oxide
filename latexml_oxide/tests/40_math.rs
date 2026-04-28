@@ -8,8 +8,9 @@
 // doesn't recognise, so applying the same dispatcher directory-wide
 // is safe.
 #[macro_use]
-extern crate latexml_codegen;
+extern crate latexml_engine;
 #[macro_use]
+extern crate latexml_codegen;
 extern crate latexml_package;
 
 mod helpers;

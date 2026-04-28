@@ -1,4 +1,8 @@
+// Macros (DefMacro!, load_model!, …) live in latexml_engine since the
+// extraction; latexml_package is a regular dep (its prelude is `use`d
+// from binding files, not macros).
 #[macro_use]
+extern crate latexml_engine;
 extern crate latexml_package;
 
 pub mod converter;

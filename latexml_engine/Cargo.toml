@@ -1,10 +1,10 @@
 [package]
-name = "latexml_package"
+name = "latexml_engine"
 version = "0.4.0"
 edition = "2021"
 license = "CC0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
-description = "Bindings and related infrastructure for core processing"
+description = "Core TeX/LaTeX engine bindings (Base, TeX_*, eTeX, pdfTeX, plain, latex pools). Split out of latexml_package to reduce CI compile-time RAM peaks."
 
 [lib]
 crate-type = ["lib"]
@@ -21,4 +21,3 @@ rustc-hash="2.0.0"
 base64 = "0.22"
 latexml_codegen = {path = "../latexml_codegen"}
 latexml_core = { path = "../latexml_core" }
-latexml_engine = { path = "../latexml_engine" }

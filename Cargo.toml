@@ -2,6 +2,7 @@
 members = [
   "latexml_core",
   "latexml_codegen",
+  "latexml_engine",
   "latexml_package",
   "latexml_math_parser",
   "latexml_contrib",

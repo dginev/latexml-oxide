@@ -3,15 +3,19 @@
 
 #[macro_use]
 extern crate latexml_codegen;
-// re-export small auxiliary macros
+// Re-export the engine crate so existing `crate::engine::tex_tables` etc.
+// paths in `package/*` keep resolving without per-file rewrites. The
+// engine crate was extracted from `latexml_package::engine` to reduce
+// CI cold-cache RAM peaks (see docs/SYNC_STATUS.md). Engine-side macros
+// (`DefMacro!`, `LoadDefinitions!`, `compile_*!`, …) are #[macro_export]ed
+// from latexml_engine and `#[macro_use]` here pulls them into our scope
+// so existing `package/*.rs` keep using bare macro names.
 #[macro_use]
-pub mod macros;
-// Prelude for writing bindings
+pub extern crate latexml_engine as engine;
+// Prelude for writing bindings — re-exports `latexml_engine::prelude`
+// plus package-specific symbols.
 #[macro_use]
 pub mod prelude;
-// The TeX/LaTeX/eTeX/PdfTeX kernels
-#[macro_use]
-pub mod engine;
 // XMath helper functions for building XMDual token streams
 pub mod xmath_helpers;
 // Supported LaTeX packages

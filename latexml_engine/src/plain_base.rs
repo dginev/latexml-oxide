@@ -170,7 +170,7 @@ LoadDefinitions!({
   DefConstructor!("\\@@oalign{}", "#1",
   reversion => "\\oalign{#1}", bounded => true, mode => "text",
   before_digest => sub {
-    use crate::engine::tex_tables::alignment_bindings;
+    use crate::tex_tables::alignment_bindings;
     use latexml_core::alignment::parse_alignment_template;
     if let Ok(template) = parse_alignment_template("l") {
       alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());
@@ -185,7 +185,7 @@ LoadDefinitions!({
   DefConstructor!("\\@@ooalign{}", "#1",
   reversion => "\\ooalign{#1}", bounded => true, mode => "text",
   before_digest => sub {
-    use crate::engine::tex_tables::alignment_bindings;
+    use crate::tex_tables::alignment_bindings;
     use latexml_core::alignment::parse_alignment_template;
     if let Ok(template) = parse_alignment_template("l") {
       alignment_bindings(template, String::new(), SymHashMap::default(), HashMap::default());

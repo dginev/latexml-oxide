@@ -359,7 +359,7 @@ LoadDefinitions!({
     if let Some(width) = props.get("width") {
       let dim: Option<Dimension> = width.into();
       if let Some(d) = dim {
-        let s = crate::engine::tex_glue::dimension_to_spaces(d);
+        let s = crate::tex_glue::dimension_to_spaces(d);
         if !s.is_empty() {
           document.absorb_string(&s, &SymHashMap::default())?;
         }
@@ -915,7 +915,7 @@ pub fn extract_alignment_column(
   if let Some(skip) = &tabskip_clone {
     if skip.value_of() != 0 {
       let dim = Dimension::new(skip.value_of());
-      let spaces = crate::engine::tex_glue::dimension_to_spaces(dim);
+      let spaces = crate::tex_glue::dimension_to_spaces(dim);
       if !spaces.is_empty() {
         let tbox = Tbox {
           text: arena::pin(&spaces),

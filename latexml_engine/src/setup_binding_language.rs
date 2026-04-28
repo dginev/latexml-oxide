@@ -66,7 +66,7 @@ macro_rules! InnerPool {
         true,
         Some($crate::prelude::state::Scope::Global),
       );
-      $crate::engine::$name::load_definitions()?;
+      $crate::$name::load_definitions()?;
     }
   }};
 }

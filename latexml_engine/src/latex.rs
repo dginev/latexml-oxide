@@ -81,7 +81,7 @@ LoadDefinitions!({
   //   if dump available: bootstrap → dump → constructs (NO base)
   //   else:              bootstrap → base → constructs (NO dump)
   if !*NODUMP && latex_dump_available() {
-    if let Err(e) = crate::engine::latex_dump::load_definitions() {
+    if let Err(e) = crate::latex_dump::load_definitions() {
       log::warn!("latex_dump: {}", e);
     }
   } else {

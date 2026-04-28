@@ -2,8 +2,9 @@
 /// Test cases for latexml_oxide
 ///**********************************************************************
 #[macro_use]
-extern crate latexml_codegen;
+extern crate latexml_engine;
 #[macro_use]
+extern crate latexml_codegen;
 extern crate latexml_package;
 
 mod helpers;

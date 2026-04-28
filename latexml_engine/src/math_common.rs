@@ -208,7 +208,7 @@ LoadDefinitions!({
   // Reads a number (font position), then optional assignments, then a character.
   // Decodes the font position to a glyph, looks up accent data, applies accent.
   DefPrimitive!("\\accent Number", sub[(num)] {
-    use crate::engine::tex_character;
+    use crate::tex_character;
     // 1. Decode the accent glyph from font position (BEFORE processing assignments)
     let n = num.value_of() as i32;
     let (glyph_opt, _font) = font_decode(n, None, None);

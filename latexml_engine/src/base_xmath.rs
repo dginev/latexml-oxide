@@ -824,7 +824,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::engine::tex_tables::alignment_bindings;
+    use crate::tex_tables::alignment_bindings;
 
     bgroup();
     // style defaults to \textstyle
@@ -1127,7 +1127,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::engine::tex_tables::alignment_bindings;
+    use crate::tex_tables::alignment_bindings;
 
     bgroup();
     let style_tok = kv.get_value("style")

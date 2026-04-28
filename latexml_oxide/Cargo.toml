@@ -49,6 +49,7 @@ phf = { version = "0.13.1", features = ["macros"] }
 rustc-hash = "2.0.0"
 latexml_codegen = {path = "../latexml_codegen"}
 latexml_core = {path = "../latexml_core"}
+latexml_engine = {path = "../latexml_engine"}
 latexml_package = {path = "../latexml_package"}
 latexml_contrib = {path = "../latexml_contrib"}
 latexml_math_parser = {path = "../latexml_math_parser"}

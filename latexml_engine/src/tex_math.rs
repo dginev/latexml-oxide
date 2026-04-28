@@ -2,8 +2,8 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::engine::tex_character;
 use crate::prelude::*;
+use crate::tex_character;
 use latexml_core::common::font::standard_metrics::STDMETRICS;
 use latexml_core::common::mathchar::decode_math_char;
 

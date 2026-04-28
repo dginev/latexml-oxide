@@ -10,9 +10,9 @@
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-use crate::engine::base_utilities::insert_frontmatter;
-use crate::engine::tex_tables::alignment_bindings;
+use crate::base_utilities::insert_frontmatter;
 use crate::prelude::*;
+use crate::tex_tables::alignment_bindings;
 use latexml_core::alignment::template::TemplateConfig;
 use latexml_core::digested::DigestedData;
 use std::collections::VecDeque;
@@ -501,7 +501,7 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
         continue;
       }
       if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-        crate::engine::base_utilities::set_align_or_class(document, &mut child, align, class)?;
+        crate::base_utilities::set_align_or_class(document, &mut child, align, class)?;
       }
     }
   }
@@ -932,7 +932,7 @@ pub fn eqnarray_bindings() -> Result<()> {
 /// Perl: rearrangeEqnarray (latex_constructs.pool.ltxml L2356-2445)
 /// Analyzes column patterns in eqnarray and rearranges into MathFork structures.
 fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
-  use crate::engine::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
+  use crate::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
 
   struct EqRow {
     node:      Node,
@@ -1853,13 +1853,13 @@ fn tabbing_bindings() -> Result<()> {
   Ok(())
 }
 
-pub(crate) fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
+pub fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
   if let Some(val) = state::lookup_mapping("BACKMATTER_ELEMENT", backelement) {
     whatsit.set_property("backmatterelement", val);
   }
 }
 
-pub(crate) fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
+pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
   let asif_opt =
     if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
       Some(arena::to_string(*asif_sym))
@@ -1878,7 +1878,7 @@ pub(crate) fn adjust_backmatter_element(document: &mut Document, whatsit: &Whats
 
 // Do this before digesting the body of a bibliography
 // Perl: beforeDigestBibliography in latex_constructs.pool.ltxml L3900
-pub(crate) fn before_digest_bibliography() -> Result<()> {
+pub fn before_digest_bibliography() -> Result<()> {
   AssignValue!("inPreamble" => false);
   Digest!("\\@lx@inbibliographytrue")?;
   DefMacro!("\\bibliographystyle{}", "");
@@ -1917,13 +1917,13 @@ fn setup_pseudo_bibitem() -> Result<()> {
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-pub(crate) fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
+pub fn begin_bibliography(whatsit: &mut Whatsit) -> Result<()> {
   begin_bibliography_clean(whatsit)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem()
 }
 
-pub(crate) fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
+pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Check if \bibsection is defined and try to decipher it.
   // Expecting something like \section*{sometext}
   // Perl: beginBibliography_clean in latex_constructs.pool.ltxml
