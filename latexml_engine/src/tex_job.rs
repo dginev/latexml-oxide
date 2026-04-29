@@ -122,7 +122,7 @@ LoadDefinitions!({
   //     {article}` transitively load `aas_macros.sty.ltxml` to define
   //     `\affil` / `\altaffilmark` / `\acknowledgments` etc.
   DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
-    use latexml_core::binding::content::{find_file, FindFileOptions, load_class};
+    use latexml_core::binding::content::{find_file, find_file_fallback, FindFileOptions, load_class};
     let class = class_tks.to_string();
     let class = class.trim().to_string();
 
@@ -155,14 +155,23 @@ LoadDefinitions!({
     // `notex = true` — FindFile consults the @ltxml_paths binding registry
     // as well as the filesystem.
     let notex = !state::lookup_bool("INCLUDE_CLASSES");
+    // Probe `.sty` then `.cls`, AND fall back to version-stripping
+    // (`find_file_fallback`) so e.g. `\documentstyle{aipproc2}` resolves
+    // to aipproc.sty.ltxml — matching Perl's `FindFile` which consults
+    // the binding-name registry plus the `\d+`-suffix fallback. Without
+    // this, versioned class names go to OmniBus → aipproc.sty.ltxml is
+    // never loaded → `\epsfsize` etc. that aipproc.sty's
+    // `RequirePackage('psfig'→'epsfig')` chain provides stay undefined.
     let class_sty_found = find_file(
       &format!("{}.sty", class),
       Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some();
-    let class_cls_found = !class_sty_found && find_file(
+    ).is_some()
+    || find_file_fallback(&class, "sty").is_some();
+    let class_cls_found = !class_sty_found && (find_file(
       &format!("{}.cls", class),
       Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some();
+    ).is_some()
+    || find_file_fallback(&class, "cls").is_some());
 
     let after = Tokens!(T_CS!("\\compat@loadpackages"));
 
