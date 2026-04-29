@@ -510,22 +510,20 @@ LoadDefinitions!({
     before_digest => sub { stomach::end_mode("restricted_horizontal")?; });
   //======================================================================
   // Effectively these are the math hooks, redefine these to do what you want with math?
+  // Perl TeX_Math.pool.ltxml L124-137 — DefConstructorI baseline. NOTE: this is the
+  // TeX-pool version without xml:id; latex_constructs.rs:4953 redefines it with
+  // xml:id='#id' and RefStepID('equation') for LaTeX numbering.
   DefConstructor!("\\lx@begin@display@math",
-  "<ltx:equation>\
-    <ltx:Math mode=\"display\">\
-    <ltx:XMath>\
-    #body\
-    </ltx:XMath>\
-    </ltx:Math>\
-  </ltx:equation>",
-    reversion         => Tokens!(T_MATH!(),T_MATH!()),
+    "<ltx:equation><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    reversion    => Tokens!(T_MATH!(), T_MATH!()),
     before_digest => {
-      // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 135)
+      // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 134)
       enter_horizontal();
       // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
     },
-    capture_body  => true );
+    properties   => { stored_map!("mode" => "display_math") },
+    capture_body => true);
 
   DefConstructor!(T_CS!("\\lx@end@display@math"), None, None,
     reversion => Tokens!(T_MATH!(),T_MATH!()),

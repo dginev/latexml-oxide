@@ -66,9 +66,9 @@ LoadDefinitions!({
     properties => { ref_step_id("equation") },
     locked => true);
 
-  // Perl: DefConstructorI('\[', undef, ..., captureBody => 1, ...)
-  // In the Rust port, \[ is already defined in the LaTeX kernel with display_math mode.
-  // The revtex3 variant additionally rebinds $ inside. We override via DefConstructor.
+  // Perl revtex3_support.sty.ltxml L90-101: DefConstructorI('\[', undef, ...,
+  //   beforeDigest => sub { beginMode('display_math'); Let(T_MATH, '\lx@dollar@in@oldrevtex'); },
+  //   captureBody => 1, properties => sub { RefStepID('equation') });
   DefConstructor!("\\[",
     "<ltx:equation xml:id='#id'>\
      <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
@@ -77,5 +77,6 @@ LoadDefinitions!({
       stomach::begin_mode("display_math")?;
       Let!(T_MATH!(), "\\lx@dollar@in@oldrevtex");
     },
-    properties => { ref_step_id("equation") });
+    properties => { ref_step_id("equation") },
+    capture_body => true);
 });

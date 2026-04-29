@@ -4946,19 +4946,19 @@ LoadDefinitions!({
   DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
   DefMacro!("\\fnum@equation", "\\@eqnnum");
 
-  // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system
-  DefConstructor!("\\lx@begin@display@math", "<ltx:equation xml:id='#id'>\
-  <ltx:Math mode='display'>\
-  <ltx:XMath>#body</ltx:XMath>\
-  </ltx:Math>\
-  </ltx:equation>",
-  alias        => "$$",
-  before_digest => {
-    // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
-    begin_mode("display_math")?;
-  },
-  properties  => { ref_step_id("equation") },
-  capture_body => true);
+  // Redefined from TeX.pool, since with LaTeX we presumably have a more complete numbering system.
+  // Perl latex_constructs.pool.ltxml L1933-1944 — DefConstructorI with no params,
+  // reversion = T_MATH T_MATH ($$), beforeDigest = beginMode('display_math'),
+  // properties = RefStepID('equation'), captureBody = 1.
+  DefConstructor!("\\lx@begin@display@math",
+    "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
+    reversion    => Tokens!(T_MATH!(), T_MATH!()),
+    before_digest => {
+      // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
+      begin_mode("display_math")?;
+    },
+    properties   => { ref_step_id("equation") },
+    capture_body => true);
 
   // Perl: latex_constructs.pool.ltxml lines 2011-2023
   // Save display math delimiters for use within equation environments
