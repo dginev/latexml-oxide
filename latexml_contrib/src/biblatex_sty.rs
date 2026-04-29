@@ -441,8 +441,14 @@ LoadDefinitions!({
   DefRegister!("\\blx@notetype" => Number(0));
   DefRegister!("\\blx@parenlevel@text" => Number(0));
   DefRegister!("\\blx@parenlevel@foot" => Number(0));
-  DefRegister!("\\blx@maxsegment@0" => Number(0));
-  DefRegister!("\\blx@sectionciteorder@0" => Number(0));
+  // Note: `\blx@maxsegment@0` and `\blx@sectionciteorder@0` are CS names
+  // with a trailing digit, which the prototype parser's CS regex
+  // (`\\[a-zA-Z@]+`) cannot match — leftover `0` would then be parsed as
+  // an unknown parameter type. Use the `(cs, None, value)` form so the
+  // parser is skipped: a Token is built directly via `T_CS!` and no
+  // parameter parsing occurs. Mirrors Perl's L731-732 register names exactly.
+  DefRegister!(T_CS!("\\blx@maxsegment@0"), None, Number(0));
+  DefRegister!(T_CS!("\\blx@sectionciteorder@0"), None, Number(0));
   DefRegister!("\\blx@entrysetcounter" => Number(0));
   DefRegister!("\\blx@biblioinstance" => Number(0));
 
