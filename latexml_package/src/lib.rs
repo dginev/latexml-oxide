@@ -52,6 +52,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aastex", "sty", package::aastex_sty::load_definitions),
   ("aasms", "sty", package::aasms_sty::load_definitions),
   ("aaspp", "sty", package::aaspp_sty::load_definitions),
+  ("aas2pp4", "sty", package::aas2pp4_sty::load_definitions),
+  ("paspconf", "sty", package::paspconf_sty::load_definitions),
   (
     "aas_macros",
     "sty",
