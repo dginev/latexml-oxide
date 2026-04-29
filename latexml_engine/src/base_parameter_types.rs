@@ -575,46 +575,65 @@ LoadDefinitions!({
     LoadPool!(&name.to_string());
   });
 
-  // A LaTeX-style directory list: `{{dir1}{dir2}{dir3}}`.
-  // Perl Base_ParameterTypes.pool.ltxml L280-L300. Inner args read with
-  // Semiverbatim catcodes so `_`, `/`, `#` in path names don't tokenize
-  // as SUB/ACTIVE — otherwise `\graphicspath{{figuras_paper/}}` would
-  // hit `Script _ can only appear in math mode` when the `_` leaks into
-  // the stream.
+  // Strict translation of Perl Base_ParameterTypes.pool.ltxml L309-322:
+  //   sub {
+  //     my ($gullet)   = @_;
+  //     my $arg_string = ToString($gullet->readArg);
+  //     my @dirs       = ();
+  //     for my $dir (split(/,|\\par|\n+/, $arg_string)) {
+  //       $dir =~ s/^\s+//; $dir =~ s/\s+$//;
+  //       next unless $dir;
+  //       while ($dir =~ s/^\s*\{([^\}]*)\}//) {
+  //         push @dirs, $1 if $1; }
+  //       push @dirs, $dir if $dir; }
+  //     LaTeXML::Core::Array->new(...);  };
+  //
+  // Accepts both `\graphicspath{dir}` and `\graphicspath{{dir1}{dir2}}`.
+  // Rust output: emit `{dir1}{dir2}...` so the `\graphicspath`
+  // constructor can split on `}` to recover individual entries.
+  // Semiverbatim catcodes prevent `_`, `/`, `#` in path names from
+  // tokenizing as SUB/ACTIVE.
   DefParameterType!(DirectoryList, sub[_inner, _extra] {
-    gullet::skip_spaces()?;
-    // Outer `{`
-    if !gullet::if_next(T_BEGIN!())? {
-      Error!("expected", "DirectoryList",
-        "A DirectoryList was supposed to be here");
-      return Ok(Tokens!().into());
-    }
-    gullet::read_token()?; // consume `{`
-    // Collect directory names joined as `{dir1}{dir2}` so the
-    // `\graphicspath` properties callback can split on `}` to recover
-    // individual entries.
-    let mut collected: Vec<Token> = Vec::new();
-    gullet::skip_spaces()?;
-    while gullet::if_next(T_BEGIN!())? {
-      // Read one Semiverbatim arg — `{` is consumed by read_arg_semiv.
-      let arg = gullet::read_arg(ExpansionLevel::Off)?;
-      collected.push(T_BEGIN!());
-      collected.extend(arg.unlist());
-      collected.push(T_END!());
-      // Optional `,` separator between entries (per-Perl readMatch).
-      gullet::skip_spaces()?;
-      if gullet::if_next(T_OTHER!(","))? {
-        gullet::read_token()?;
-        gullet::skip_spaces()?;
+    use once_cell::sync::Lazy;
+    use regex::Regex;
+    static SPLIT_RE: Lazy<Regex> =
+      Lazy::new(|| Regex::new(r",|\\par|\n+").unwrap());
+    static TRIM_LEAD: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+").unwrap());
+    static TRIM_TAIL: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+$").unwrap());
+    static STRIP_BRACE: Lazy<Regex> =
+      Lazy::new(|| Regex::new(r"^\s*\{([^\}]*)\}").unwrap());
+
+    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg_string = arg.untex();
+    let mut dirs: Vec<String> = Vec::new();
+    for entry in SPLIT_RE.split(&arg_string) {
+      let mut dir = TRIM_LEAD.replace(entry, "").into_owned();
+      dir = TRIM_TAIL.replace(&dir, "").into_owned();
+      if dir.is_empty() {
+        continue;
+      }
+      // Iteratively strip `^\s*\{([^\}]*)\}` sub-groups, pushing the
+      // captured content (Perl `push @dirs, $1 if $1`).
+      while let Some(caps) = STRIP_BRACE.captures(&dir) {
+        let whole = caps.get(0).unwrap().as_str().to_string();
+        let inner = caps.get(1).unwrap().as_str().to_string();
+        if !inner.is_empty() {
+          dirs.push(inner);
+        }
+        dir = dir[whole.len()..].to_string();
+      }
+      if !dir.is_empty() {
+        dirs.push(dir);
       }
     }
-    // Consume closing `}`.
-    gullet::skip_spaces()?;
-    if gullet::if_next(T_END!())? {
-      gullet::read_token()?;
-    } else {
-      Error!("expected", "}",
-        "A closing } was supposed to be here");
+    // Emit `{dir1}{dir2}...` as Tokens (consumed by \graphicspath).
+    let mut collected: Vec<Token> = Vec::new();
+    for d in dirs {
+      collected.push(T_BEGIN!());
+      for c in d.chars() {
+        collected.push(T_OTHER!(&c.to_string()));
+      }
+      collected.push(T_END!());
     }
     Tokens::new(collected)
   },
