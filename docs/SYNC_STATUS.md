@@ -1,6 +1,113 @@
 # Engine Sync Status: Perl vs Rust
 
-## TOP PRIORITY (2026-04-29): strict, complete biblatex.sty.ltxml → biblatex_sty.rs port
+## TOP PRIORITY (2026-04-29): strict-Perl `\documentstyle` DefConstructor
+
+`\documentstyle` (LaTeX 2.09 compat shim) is currently a `DefMacro` in
+`latexml_engine/src/tex_job.rs:108` that:
+1. resolves `<class>.sty` vs `<class>.cls`,
+2. emits `\documentclass[opts]{class}`,
+3. emits `\RequirePackage{opt}` per option (after a hardcoded skip-list).
+
+This bypasses Perl's option-handler flow entirely. As a result:
+- Class option processing never sees the options — they all get
+  emitted as `\RequirePackage` calls instead of being filtered by
+  the cls's `\DeclareOption` / `\ProcessOptions`.
+- Unknown options that aren't packages (e.g. `paspconf`, `aas2pp4`)
+  fail with `Warn:missing_file:<opt>` and are dropped silently —
+  they never reach `@unusedoptionlist`.
+- The `\compat@loadpackages` → OmniBus fallback (which Perl uses to
+  load `aas_macros.sty.ltxml` and provide `\affil` / `\altaffilmark`
+  / `\acknowledgments` / `\aap` / `\apj` / `\apjs` / `\mnras` /
+  etc.) never fires.
+
+### Translation target — Perl `latex_constructs.pool.ltxml:97-129`
+
+```perl
+DefConstructor('\documentstyle OptionalKeyVals:DocType {}', ...,
+  afterDigest => sub {
+    my $options = [TrimmedCommaList($whatsit->getArg(1))];
+    my $class   = ToString($whatsit->getArg(2));
+    compatDefinitions();
+    if (FindFile($class, type => 'sty', notex => !LookupValue('INCLUDE_CLASSES'))) {
+      InputDefinitions('article', type => 'cls', noerror => 1,
+        handleoptions => 1, options => $options);
+      RequirePackage($class, options => $options, as_class => 1,
+        after => Tokens(T_CS('\compat@loadpackages'))); }
+    elsif (FindFile($class, type => 'cls', notex => !LookupValue('INCLUDE_CLASSES'))) {
+      LoadClass($class, options => $options,
+        after => Tokens(T_CS('\compat@loadpackages'))); }
+    else {
+      InputDefinitions('OmniBus', type => 'cls', noerror => 1,
+        handleoptions => 1, options => $options,
+        after         => Tokens(T_CS('\compat@loadpackages')));
+      RequirePackage($class, options => $options, as_class => 1); }
+    return; });
+```
+
+Three branches, all routing options through the cls's
+`\DeclareOption`/`\ProcessOptions` flow (`handleoptions => 1`),
+all scheduling `\compat@loadpackages` to run after the cls finishes
+its option processing. The third branch (no-cls-and-no-sty) is the
+key safety net that triggers OmniBus directly.
+
+### Concrete checklist
+
+- [ ] **Replace `\documentstyle` DefMacro with DefConstructor**.
+  `OptionalKeyVals:DocType {}` signature; afterDigest captures
+  options + class strings.
+- [ ] **`compatDefinitions()` helper** — Perl L132-135: `DefRegister
+  '\@maxsep', '\@dblmaxsep'` to `Dimension(0)`. Already present
+  somewhere — verify or duplicate inline at afterDigest entry.
+- [ ] **Branch 1 (`<class>.sty` exists)**: `input_definitions("article",
+  cls, handleoptions=true, options=opts, noerror=true)` then
+  `require_package(class, as_class=true, after=Tokens(\compat@loadpackages))`.
+  Drop the existing inline RequirePackage emission.
+- [ ] **Branch 2 (`<class>.cls` exists)**: `load_class(class,
+  options=opts, after=Tokens(\compat@loadpackages))`.
+- [ ] **Branch 3 (neither found)**: `input_definitions("OmniBus", cls,
+  handleoptions=true, options=opts, noerror=true,
+  after=Tokens(\compat@loadpackages))` then
+  `require_package(class, as_class=true)`.
+- [ ] **`input_definitions(handleoptions=true, options=...)` semantics**.
+  Verify Rust's `input_definitions` accepts an `options` field that
+  primes the cls's option list. Audit `InputDefinitionOptions`.
+- [ ] **`require_package(after=...)` semantics**. Verify Rust's
+  `require_package` accepts an `after` field that schedules tokens
+  after the package's own end-of-load processing. Audit
+  `RequireOptions`.
+- [ ] **`\compat@loadpackages` already exists** (latex_constructs.rs:2502)
+  with the right Perl-faithful semantics. Verify nothing else needs
+  to change there.
+
+### Driver papers (from sandbox_failures_181_html)
+
+- `astro-ph9610252` — `\documentstyle[aas2pp4]{article}` — 6 errors
+  (\affil, \keywords, \reference{s}, \acknowledgments, {references})
+- `astro-ph9811043` — `\documentstyle[paspconf]{article}` — 8 errors
+- `astro-ph9902095` — `\documentstyle[paspconf,psfig]{article}` — 5
+  errors
+- `astro-ph9909093` — `\documentstyle[11pt,paspconf,psfig]{article}` —
+  13 errors
+
+Perl converts all four with **0 errors** by triggering OmniBus →
+aas_macros via the `\compat@loadpackages` fallback. The Rust port
+needs to match this strict semantics rather than the current
+DefMacro shortcut.
+
+### Validation
+
+After landing the DefConstructor:
+1. `cargo build --bin latexml_oxide` clean, `cargo test --tests`
+   1109/0/0 (no kernel-level regressions).
+2. The four driver papers above must convert with 0 errors.
+3. Wider `sandbox_failures_181` retest: count of `Error:undefined`
+   for AAS-style CSes (\affil etc.) must drop to 0.
+4. No regression on `\documentstyle{aipproc}` keyval cluster
+   (4 papers; previously fixed by `4e2b3777b`).
+5. No regression on `\documentstyle{spackap}` Kluwer cluster
+   (5 papers; class-as-sty branch).
+
+## Earlier priority (2026-04-29): strict, complete biblatex.sty.ltxml → biblatex_sty.rs port
 
 `latexml_contrib/src/biblatex_sty.rs` was an outdated partial port
 of `~/git/ar5iv-bindings/bindings/biblatex.sty.ltxml` (803 lines).
