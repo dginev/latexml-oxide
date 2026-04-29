@@ -254,7 +254,29 @@ LoadDefinitions!({
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
 
-  // Theorems — Perl L168-175
+  // Per-section equation numbering — Perl L161-163.
+  // Emit `\@addtoreset{equation}{section}` + per-section
+  // `\theequation` when the `seceqn` class option is active.
+  if state::lookup_bool("@seceqn") {
+    RawTeX!(r"\@addtoreset{equation}{section}");
+    DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
+  }
+
+  // Theorems — Perl elsart_support_core.sty.ltxml L168-175.
+  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
+  // class option):
+  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
+  //   else      :  `\newtheorem{thm}{Theorem}`
+  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
+  // (elsdoc §7).
+  // The base `\newtheorem{thm}` declaration was missing in the prior
+  // Rust port — every `\begin{thm}` in elsart papers reported
+  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
+  if state::lookup_bool("@seceqn") {
+    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
+  } else {
+    RawTeX!(r"\newtheorem{thm}{Theorem}");
+  }
   Let!("\\newdefinition", "\\newtheorem");
   Let!("\\newproof", "\\newtheorem");
 
