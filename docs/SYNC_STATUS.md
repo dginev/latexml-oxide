@@ -1,5 +1,105 @@
 # Engine Sync Status: Perl vs Rust
 
+## TOP PRIORITY (2026-04-29): strict, complete biblatex.sty.ltxml → biblatex_sty.rs port
+
+`latexml_contrib/src/biblatex_sty.rs` was an outdated partial port
+of `~/git/ar5iv-bindings/bindings/biblatex.sty.ltxml` (803 lines).
+Audit cycle 2 caught Rust-only bugs (duplicate
+`\newtoggle{blx@citation}`, missing 38 of 60 toggles, missing
+`\addbibresource`/`\printbibliography`, 60+ shallow declarations)
+and reset the port to strict-Perl shallow parity. Driver paper:
+1811.05702 (3 errors → 0 once the shallow port lands).
+
+### Goal
+Achieve **strict and complete translation** of all 803 lines of
+biblatex.sty.ltxml into biblatex_sty.rs. Every Perl line must have
+either (a) a corresponding Rust line OR (b) a comment explicitly
+marking it as DEFERRED with a reason and the Perl line range it
+covers. No silent omissions.
+
+### Concrete checklist
+
+- [x] **Cycle 1 (shallow declarators)** — 2026-04-29 (commit
+  `cc26dfaa1`). Strict-Perl mirror of L19-22 options, L37-99
+  cite/passthrough/spacing, L101-125 list-stubs, L265-268
+  BiblatexAuthor, L348-354 hooks, L429-491 Declare-API, L493-500
+  glue registers, L553-604 conditionals (50), L632-638 ppspace/sort,
+  L641-645 booltrue/false guard, L646-721 the* / blx@* macros,
+  L724-734 register block, L736-801 RawTeX with all 9 newbool +
+  60 newtoggle declarations in **exact** Perl order. Also fixed
+  the `\blx@maxsection@0` typo (Perl is `\blx@maxsegment@0`).
+- [x] **Cycle 2: `\addbibresource` DefPrimitive** (Perl L400-408)
+  — 2026-04-29 (commit `baab2d1d7`). DefPrimitive splits the
+  comma-separated arg via `\s*,\s*` and PushValue's each file onto
+  `biblatex_resources`. Lets `\biblatex@saved@bibliography ←
+  \bibliography` (preserves classic LaTeX bibliography meaning) and
+  `\bibliography ← \addbibresource` (routes any classic
+  `\bibliography{file}` invocation in a biblatex doc into the
+  resource list — see arXiv:1502.02314).
+- [x] **Cycle 5: `\datalist` / `\sortlist` AssignValue side-effect**
+  (Perl L101-106) — 2026-04-29 (commit `d1d976bbb`). Closure form
+  sets `biblatex_with_keyvals=1` globally; consumers (the deferred
+  `\name` dispatch in Cycle 9) read this to choose 3-arg vs 4-arg.
+- [x] **Cycle 6: `\preamble` closure** (Perl L367-369) — 2026-04-29
+  (commit `d1d976bbb`). Closure stashes the arg as
+  `biblatex_preamble` (Stored::Tokens) globally for the rebuilder
+  (Cycle 7) AND re-emits the arg (Perl returns `$_[1]`).
+- [x] **Bypass `@0` register parser fatal** — 2026-04-29 (commit
+  `69cfa1e5e`). `\blx@maxsegment@0` and `\blx@sectionciteorder@0`
+  CS names trip the prototype parser (regex `\\[a-zA-Z@]+` doesn't
+  match digit suffixes). Use the `DefRegister!(T_CS!(...), None,
+  value)` form to skip parse_prototype. Driver paper 1811.05702
+  now converts with **0 errors** (was 3 → 1 → 0).
+- [ ] **Cycle 3: `\printbibliography` rebuilder** (Perl L410-418).
+  Implement `\biblatex@printbibliography[]` to emit
+  `\biblatex@saved@bibliography{<resources>}`. Pop
+  `biblatex_resources` and emit via the saved-let preserved by
+  Perl L407.
+- [ ] **Cycle 4: `\verb` / `\biblatex@verb` / `\biblatex@endverb`**
+  (Perl L371-397). Port the `init_verb` closure that escapes
+  `\#`, `\%`, `\&` in URL fields and stashes via
+  `biblatex_verb_content`.
+- [ ] **Cycle 5: `\datalist` / `\sortlist` AssignValue side-effect**
+  (Perl L101-106). Set `biblatex_with_keyvals` global. Currently
+  stubbed empty.
+- [ ] **Cycle 6: `\preamble` closure** (Perl L367-369). Stash
+  `biblatex_preamble` for use in the rebuilder; pass arg through.
+- [ ] **Cycle 7: `\enddatalist` / `\endsortlist` / `\endlossort` /
+  `\endrefsection` → `biblatex_as_thebibliography`** (Perl
+  L110-125). Walk the rebuilt entry list at end-of-list time and
+  emit the `\thebibliography` block. Outer entry point of the
+  rebuilder.
+- [ ] **Cycle 8: `\entry` / `\endentry` deep closures** (Perl
+  L127-263). Parse author/title/journal/doi/url/eprint fields;
+  assign unique labels with a-z suffix dedup (regression test
+  arXiv:1212.4446); push `\bibitem` tokens onto
+  `rebuilt_bibtex_variant`.
+- [ ] **Cycle 9: `\name` 3-arg vs 4-arg dispatch** (Perl L270-340).
+  Detect arg-variant by lookahead, parse author hash, dispatch
+  to keyvals or pre-laid-out paths, drop control-sequence noise
+  via `s/\\\w+|[}{]//g`.
+- [ ] **Cycle 10: `\list` / `\field` / `\strng` real DefPrimitive**
+  (Perl L342-363). Currently stubbed empty; once `biblatex_entry`
+  is consumed by the rebuilder, populate the field map.
+- [ ] **Cycle 11: bibmacro hook bodies** (Perl L483-491). Currently
+  stubbed empty; if any caller actually invokes a hook, the body
+  must run at the right time.
+
+### Validation per cycle
+
+After each cycle:
+1. `cargo build --bin latexml_oxide` clean.
+2. `cargo test --tests` 1109/0/0.
+3. Re-run min repro `1811.05702` against ar5iv-on Perl — error
+   count must monotonically drop, never regress on other
+   biblatex-using papers in the sandbox.
+
+### Out-of-scope for this priority
+- Bibliography sorting algorithm (sortcase/sortupper) — currently
+  the toggles return `false`, which is fine for shallow parity.
+- Per-style customization (`\DeclareCiteCommand` actually running
+  its body) — currently swallows arg.
+
 ## Active goal — full 7898-paper canvas, error-free (2026-04-28)
 
 **Most ambitious branch goal:** drive `~/data/10k_sandbox` to a
