@@ -2502,9 +2502,19 @@ LoadDefinitions!({
   DefPrimitive!("\\compat@loadpackages", {
     use latexml_core::binding::content::{find_file, find_file_fallback};
     let unused_list: Vec<String> = match state::lookup_value("@unusedoptionlist") {
+      // `\OptionNotUsed` uses `state::push_value` which converts `Strings`
+      // → `VecDequeStored` on first push. Either form may be live here.
       Some(Stored::Strings(rc)) => {
         rc.iter()
           .map(|s| latexml_core::common::arena::with(*s, |s| s.to_string()))
+          .collect()
+      },
+      Some(Stored::VecDequeStored(vdq)) => {
+        vdq.iter()
+          .filter_map(|item| match item {
+            Stored::String(s) => Some(latexml_core::common::arena::with(*s, |s| s.to_string())),
+            _ => None,
+          })
           .collect()
       },
       _ => Vec::new(),
