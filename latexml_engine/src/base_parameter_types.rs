@@ -622,8 +622,31 @@ LoadDefinitions!({
   semiverbatim => Some(Vec::new()));
 
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
-  // Hopefully there are no issues with the box being digested
-  // as part of the reader???
+  //
+  // Strict translation of Perl Base_ParameterTypes.pool.ltxml L327-337:
+  //   DefParameterType('MoveableBox', sub {
+  //       my ($gullet) = @_;
+  //       $gullet->skipSpaces;
+  //       my ($box, @stuff) = $STATE->getStomach->invokeToken($gullet->readXToken);
+  //       if (!$box) {
+  //         Error('expected', '<box>', $gullet,
+  //               "A <box> was supposed to be here", "Got " . Stringify($box));
+  //         $box = Box(); }                # ← empty-box fallback
+  //   ###  && $box->isa('LaTeXML::Core::Whatsit')
+  //   ###  && ($box->getDefinition->getCSName =~ /^(\\hbox|\\vbox||\\vtop)$/);
+  //       $box; });
+  //
+  // The CS-name check (hbox/vbox/vtop) is COMMENTED OUT in Perl —
+  // any digested first-element is accepted. On the empty-result branch
+  // Perl substitutes `Box()` (an empty box) so the caller of
+  // `\raise <Dim> <MoveableBox>` always receives a defined box value.
+  //
+  // Previously Rust (a) ran the commented-out CS-name check as live
+  // code (mis-rejecting `\begin{minipage}`, picture overlays, etc.)
+  // and (b) returned None on the empty branch (caller sees no value
+  // where Perl sees an empty Box). Caught on 1812.04267 (xy-pic
+  // content wrapped in \begin{minipage}: 3× spurious "expected:<box>"
+  // where Perl is clean).
   DefParameterType!(MoveableBox, sub[_inner, _extra] {
     gullet::skip_spaces()?;
     if let Some(xtoken) = gullet::read_x_token(None, false, None)? {
@@ -635,23 +658,14 @@ LoadDefinitions!({
     let token = arg.unlist().remove(0);
     let mut stuff = stomach::invoke_token(&token)?;
     if !stuff.is_empty() {
-      let tbox = stuff.remove(0);
-      let csname = match tbox.data() {
-        DigestedData::Whatsit(ref w) =>
-          w.borrow().definition.get_cs_name().to_string(),
-        _ => tbox.to_string()
-      };
-      if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
-        let message = s!("A <box> was supposed to be here.\nGot {}", csname);
-        Error!("expected","<box>", message);
-        None
-      } else {
-        Some(tbox)
-      }
+      // Perl: `($box, @stuff) = invokeToken(...)` — first element is the box.
+      Some(stuff.remove(0))
     } else {
+      // Perl L332-334: report and substitute an empty Box() so callers
+      // (\raise/\lower etc.) always receive a defined value.
       let message = s!("A <box> was supposed to be here.\nGot none.");
       Error!("expected","<box>", message);
-      None
+      Some(latexml_core::digested::Digested::from(latexml_core::tbox::Tbox::default()))
     }
   });
 
