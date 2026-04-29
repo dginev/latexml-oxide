@@ -93,6 +93,15 @@ LoadDefinitions!({
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 
+  // \frenchsetup — babel-french 3.x configuration command. Takes a
+  // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
+  // `ItemLabelsspaceitem=true`). Per babel-french/french.ldf L712-713,
+  // `\frenchbsetup` is `\let`'d to `\frenchsetup` (legacy alias).
+  // Configurations affect formatting subtleties that don't translate
+  // meaningfully to HTML — read-and-discard the keyval arg.
+  DefMacro!("\\frenchsetup RequiredKeyVals", "");
+  Let!("\\frenchbsetup", "\\frenchsetup");
+
   // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml
   // L29-30 is:
   //   Let('\ltx@orig@nombre', '\nombre');
