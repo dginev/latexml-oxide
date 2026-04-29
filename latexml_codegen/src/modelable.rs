@@ -39,6 +39,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     paths:               Some(vec![s!(".")]),
     extensions:          Some(vec![s!("model")]),
     installation_subdir: Some(s!("resources/RelaxNG")),
+    ..Default::default()
   });
 
   let path = match pathname_opt {

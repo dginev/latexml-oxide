@@ -1204,13 +1204,17 @@ pub fn process_options(inorder: bool) -> Result<()> {
 fn execute_option_internal(option: SymStr) -> Result<bool> {
   let cs = T_CS!(arena::with(option, |opt| s!("\\ds@{opt}")));
   if lookup_definition(&cs)?.is_some() {
+    // Perl Package.pm L2482: `DefMacroI('\CurrentOption', undef, $option)` —
+    // tokenizes `$option` via Tokens(Explode($option)) so letters get
+    // catcode LETTER and others OTHER. Babel's `\ifx\CurrentOption\bbl@tempa`
+    // (where `\bbl@tempa{frenchb}` produces LETTER tokens) only matches when
+    // our `\CurrentOption` body has the same catcodes — packing the whole
+    // option string into one OTHER-catcode "string" token would make the
+    // \ifx silently false. Use SymExplodeText! to split per-character.
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
-      Tokens!(Token {
-        text: option,
-        code: Catcode::OTHER,
-      }),
+      Tokens!(SymExplodeText!(option)),
       None,
     )?;
 
@@ -1236,13 +1240,12 @@ fn execute_option_internal(option: SymStr) -> Result<bool> {
 }
 
 fn execute_default_option_internal(option: SymStr) -> Result<bool> {
+  // Perl Package.pm L2494: `DefMacroI('\CurrentOption', undef, $option)`.
+  // Same catcode-faithful tokenization as execute_option_internal.
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
-    Tokens!(Token {
-      text: option,
-      code: Catcode::OTHER,
-    }),
+    Tokens!(SymExplodeText!(option)),
     None,
   )?;
   digest(T_CS!("\\default@ds"))?;
@@ -1399,12 +1402,18 @@ pub fn require_package_with_options(name: &str) -> Result<()> {
 /// scan the raw file for \RequirePackage/\usepackage/\LoadClass declarations
 /// and load any dependencies that DO have bindings. This is a "best effort"
 /// fallback that gives us the dependency chain without interpreting raw TeX.
+// Strict translation of Perl `Package.pm:maybeRequireDependencies`
+// (L2759-L2796). Scan a raw .sty/.cls file for transitive
+// `\RequirePackage`, `\usepackage`, and (for classes) `\LoadClass`
+// declarations and route them through `require_package` / `load_class`
+// so the corresponding bindings get pulled in even when the original
+// file has no .ltxml binding.
 fn maybe_require_dependencies(file: &str, ext_type: &str) {
   use once_cell::sync::Lazy;
   use regex::Regex;
 
-  // Re-entrancy guard: require_package → input_definitions → maybe_require_dependencies
-  // can recurse if a scanned dependency itself has no binding.
+  // Rust-only re-entrancy guard. Perl avoids this case by other means
+  // (the call-site of `maybeRequireDependencies` is the only entry).
   thread_local! { static SCANNING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
   if SCANNING.with(|s| s.get()) {
     return;
@@ -1416,132 +1425,144 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   }
   let _guard = ResetGuard;
 
+  // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
+  // replacement is the empty string.
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
-  static PKG_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}").unwrap()
+  // Perl L2777-2779 runs two separate substitutions, in this order:
+  // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
+  // collected order matches Perl's call order to `$collect`.
+  static REQ_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
   });
-  static CLS_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}").unwrap());
+  static USE_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
+  });
+  static CLS_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
+  });
 
-  // Find the raw file on disk by searching in search paths
-  let filename = s!("{}.{}", file, ext_type);
-  let paths = get_search_paths();
-  let raw_path = paths
-    .iter()
-    .find_map(|dir| {
-      let candidate = if dir.is_empty() {
-        filename.clone()
-      } else {
-        format!("{}/{}", dir, filename)
-      };
-      if std::path::Path::new(&candidate).exists() {
-        Some(candidate)
-      } else {
-        None
-      }
-    })
-    .or_else(|| {
-      // Also try kpsewhich
-      crate::util::pathname::find(
-        &filename,
-        crate::util::pathname::PathnameFindOptions::default(),
-      )
-    });
+  // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
+  // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
+  let raw_path = find_file(
+    file,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Owned(ext_type.to_string())),
+      forbid_ltxml: true, // Perl `noltxml => 1`
+      ..FindFileOptions::default()
+    }),
+  );
   let Some(path) = raw_path else { return };
+
+  // Perl L2762-2766: slurp file. On failure, Warn and return (L2794-2795).
   let Ok(code) = std::fs::read_to_string(&path) else {
     Warn!(
       "I/O",
       "read",
-      s!("Couldn't open {} to scan dependencies", path)
+      s!("Couldn't open {} to scan dependencies, $!", path)
     );
     return;
   };
-  // Strip comments (Perl L2776)
-  let code = COMMENT_RE.replace_all(&code, "\n");
-  // Scan for \RequirePackage[options]{packages} and \usepackage[options]{packages}
-  let mut packages: Vec<(String, Vec<String>)> = Vec::new();
-  let mut seen = std::collections::HashSet::new();
-  for cap in PKG_RE.captures_iter(&code) {
-    let opts: Vec<String> = cap
-      .get(1)
-      .map(|m| {
-        m.as_str()
-          .split(',')
-          .map(|s| s.trim().to_string())
-          .collect()
-      })
-      .unwrap_or_default();
-    for pkg in cap[2].split(',') {
-      let pkg = pkg.trim().to_string();
-      // Perl L2773: skip if binding already loaded
-      if !pkg.is_empty()
-        && !seen.contains(&pkg)
-        && !lookup_bool(&s!("{pkg}.sty_loaded"))
-        && !lookup_bool(&s!("{pkg}.sty_raw_loaded"))
-      {
-        seen.insert(pkg.clone());
-        packages.push((pkg, opts.clone()));
+
+  // Perl L2776: strip comments (replacement empty).
+  let code = COMMENT_RE.replace_all(&code, "");
+
+  // Perl L2767-2774: shared `%dups` map, $collect closure splits on
+  // `\s*,\s*` and only enrolls a package once, AND only if its
+  // `.sty.ltxml_loaded` flag is unset.
+  let mut packages: Vec<(String, Option<String>)> = Vec::new();
+  let mut dups: std::collections::HashSet<String> = std::collections::HashSet::new();
+  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+  let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
+    for p in OPT_SPLIT.split(pkg_csv) {
+      if p.is_empty() {
+        continue;
+      }
+      // Perl L2773: `!$dups{$p} && !LookupValue($p . '.sty.ltxml_loaded')`
+      if !dups.contains(p) && !lookup_bool(&s!("{p}.sty.ltxml_loaded")) {
+        packages.push((p.to_string(), raw_options.map(|s| s.to_string())));
+        dups.insert(p.to_string());
       }
     }
+  };
+
+  // Perl L2777: `\RequirePackage` first.
+  for cap in REQ_RE.captures_iter(&code) {
+    collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
-  // For class files, also scan for \LoadClass (Perl L2781-2782)
+  // Perl L2778-2779: `\usepackage` second.
+  for cap in USE_RE.captures_iter(&code) {
+    collect(&cap[2], cap.get(1).map(|m| m.as_str()));
+  }
+
+  // Perl L2767/L2781-2782: `@classes` is class-only, NO dup-check.
+  let mut classes: Vec<(String, Option<String>)> = Vec::new();
   if ext_type == "cls" {
     for cap in CLS_RE.captures_iter(&code) {
-      let opts: Vec<String> = cap
-        .get(1)
-        .map(|m| {
-          m.as_str()
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .collect()
-        })
-        .unwrap_or_default();
-      let class = cap[2].trim().to_string();
+      let class = cap[2].to_string();
       if !class.is_empty() {
-        // Perl L2788: only load if we have a binding for it (notex => 1).
-        // `find_file` (post-fix) consults the compiled-binding registry
-        // when `notex=true`, so this returns Some for compiled `.cls`
-        // bindings like `revtex4-1` registered via latexml_package's
-        // BINDINGS (not just per-call `_binding_available` flags).
-        if find_file(
-          &s!("{class}.cls"),
-          Some(FindFileOptions {
-            notex: true,
-            ext_type: Some(Cow::Borrowed("cls")),
-            ..FindFileOptions::default()
-          }),
-        )
-        .is_some()
-          || lookup_bool(&s!("{class}.cls_loaded"))
-          || lookup_bool(&s!("{class}.cls_raw_loaded"))
-        {
-          let _ = load_class(&class, opts, Tokens::default());
-        }
+        classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
       }
     }
   }
-  if !packages.is_empty() {
+
+  // Perl L2784-2785: Info iff EITHER list is non-empty; message lists
+  // class names then package names, separated by ',' (no space).
+  if !classes.is_empty() || !packages.is_empty() {
+    let names: Vec<&str> = classes
+      .iter()
+      .map(|(n, _)| n.as_str())
+      .chain(packages.iter().map(|(n, _)| n.as_str()))
+      .collect();
     Info!(
       "dependencies",
       "dependencies",
-      s!(
-        "Loading dependencies for {}: {}",
-        path,
-        packages
-          .iter()
-          .map(|(p, _)| p.as_str())
-          .collect::<Vec<_>>()
-          .join(",")
-      )
+      s!("Loading dependencies for {}: {}", path, names.join(","))
     );
   }
-  for (pkg, opts) in packages {
-    // Only load if we have a binding (notex: true)
-    let _ = require_package(&pkg, RequireOptions {
-      options: opts,
-      notex: Some(true),
-      ..RequireOptions::default()
-    });
+
+  // Perl L2786-2789: foreach class — gate by `FindFile($class, type=>'cls',
+  // notex=>1)`, then `LoadClass(..., options=>[split ...])`.
+  for (class, raw_opts) in classes {
+    if find_file(
+      &class,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed("cls")),
+        notex: true, // Perl `notex => 1`
+        ..FindFileOptions::default()
+      }),
+    )
+    .is_some()
+    {
+      let opts: Vec<String> = raw_opts
+        .as_deref()
+        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
+        .unwrap_or_default();
+      let _ = load_class(&class, opts, Tokens::default());
+    }
+  }
+
+  // Perl L2790-2793: foreach package — gate by `FindFile($pkg, type=>'sty',
+  // notex=>1)`, then `RequirePackage(..., options=>[split ...])`.
+  for (pkg, raw_opts) in packages {
+    if find_file(
+      &pkg,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed("sty")),
+        notex: true, // Perl `notex => 1`
+        ..FindFileOptions::default()
+      }),
+    )
+    .is_some()
+    {
+      let opts: Vec<String> = raw_opts
+        .as_deref()
+        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
+        .unwrap_or_default();
+      let _ = require_package(&pkg, RequireOptions {
+        options: opts,
+        ..RequireOptions::default()
+      });
+    }
   }
 }
 
@@ -1791,12 +1812,21 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     return Some(file.to_string());
   }
   if pathname::is_absolute(file) {
-    // And if we've got an absolute path,
+    // Perl Package.pm L2089-2093:
+    //   if pathname_is_absolute($file) {
+    //     if (!$options{noltxml}) {
+    //       return $file . '.ltxml' if -f ($file . '.ltxml'); }
+    //     return $file if -f $file;
+    //     return; }
+    if !options.forbid_ltxml {
+      let ltxml = s!("{}.ltxml", file);
+      if Path::new(&ltxml).exists() {
+        return Some(ltxml);
+      }
+    }
     if Path::new(file).exists() {
-      // No need to search, just check if it exists.
       Some(file.to_string())
     } else {
-      // otherwise we're never going to find it.
       None
     }
   } else if pathname::is_nasty(file) {
@@ -1873,41 +1903,44 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
         return Some(file.to_string());
       }
     }
-    // If we're looking for TeX, look within our paths & installation first (faster than kpse)
+    // Perl L2123-2125: `elsif !notex && !interpreting && pathname_find($file,
+    // paths=>$paths)` — search local paths for raw TeX.
+    // (Rust does not yet honour `INTERPRETING_DEFINITIONS` — minor TODO,
+    //  acknowledged in the audit.)
     if !options.notex {
       if let Some(path) = pathname::find(file, PathnameFindOptions {
-        paths: Some(paths),
+        paths: Some(paths.clone()),
         ..PathnameFindOptions::default()
       }) {
         return Some(path);
       }
     }
-    // Otherwise, pass on to kpsewhich
-    // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
-    // The main point, though, is to we make only ONE (more) call.
-    // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
-    //       // Do we need to sanitize these environment variables?
-    // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
-    // local $ENV{TEXINPUTS} = join($Config::Config{'path_sep'},
-    //   @$paths, $ENV{TEXINPUTS} || $Config::Config{'path_sep'});
-    // my @candidates = (((!$options{noltxml} && !$nopaths) ? ("$file.ltxml") : ()),
-    //   (!$options{notex} ? ($file) : ()));
-    // if (my $result = pathname::kpsewhich(@candidates)) {
-    //   return (-f $result ? $result : undef); }
-    // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
-    //   return $path; }
-    // When notex is set, don't search for the raw TeX file via kpsewhich.
-    // This prevents non-TeX files (e.g. .lua) from being loaded as raw TeX.
-    //
-    // Additionally, when `search_paths_only` is set (from Perl Package.pm's
-    // `searchpaths_only => 1`, enabled by the `localrawstyles`/`localrawclasses`
-    // options to latexml.sty), skip the kpsewhich fallback into system texmf.
-    // This restricts raw .sty/.cls lookup to the user-supplied SEARCHPATHS
-    // (i.e. the paper's own bundle directory), matching Perl ref L2135.
-    if options.notex || options.search_paths_only {
-      None
-    } else {
-      pathname::kpsewhich(&[file])
+    // Perl L2131-2136: build kpsewhich candidate list:
+    //   @candidates = ( "$file.ltxml" if !noltxml && !nopaths,
+    //                   $file        if !notex );
+    //   if (!searchpaths_only) && pathname_kpsewhich(@candidates) → -f $result
+    // Perl gates the kpsewhich call only on `!searchpaths_only`; `notex`
+    // and `noltxml` instead control which candidate names are tried.
+    if options.search_paths_only {
+      return None;
+    }
+    let mut candidates: Vec<String> = Vec::new();
+    if !options.forbid_ltxml {
+      // Perl `!nopaths` (REMOTE_REQUEST) gate not yet modeled in Rust;
+      // we always include the .ltxml candidate when ltxml is allowed.
+      candidates.push(s!("{}.ltxml", file));
+    }
+    if !options.notex {
+      candidates.push(file.to_string());
+    }
+    if candidates.is_empty() {
+      return None;
+    }
+    let refs: Vec<&str> = candidates.iter().map(|s| s.as_str()).collect();
+    match pathname::kpsewhich(&refs) {
+      // Perl L2136: `(-f $result ? $result : undef)` — re-confirm existence.
+      Some(p) if Path::new(&p).exists() => Some(p),
+      _ => None,
     }
   }
 }

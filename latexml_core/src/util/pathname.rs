@@ -6,7 +6,12 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-/// configuration for filesystem search
+/// configuration for filesystem search.
+/// Mirrors Perl `LaTeXML::Util::Pathname::pathname_find`'s named-arg options;
+/// kpsewhich-fallback is NOT one of them — that lives in higher-level
+/// `LaTeXML::Package::FindFile_aux`, which calls `pathname_kpsewhich` after
+/// `pathname_find` returns empty. Keep this struct directory-search-only
+/// for parity.
 #[derive(Debug, Clone, Default)]
 pub struct PathnameFindOptions {
   /// the allowed/requested paths to search in
@@ -334,7 +339,10 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   paths
 }
 
-/// find the requested `pathname` using the `options` search configuration
+/// find the requested `pathname` using the `options` search configuration.
+/// Mirrors Perl `pathname_find` (LaTeXML/Util/Pathname.pm L305-310): directory
+/// search only — kpsewhich is the caller's responsibility (see
+/// `LaTeXML::Package::FindFile_aux`).
 pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   if !pathname.is_empty() {
     let paths = candidate_pathnames(pathname, options);

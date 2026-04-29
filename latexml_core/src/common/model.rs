@@ -390,6 +390,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
       paths,
       extensions: Some(vec![s!("model")]),
       installation_subdir: Some(s!("resources/RelaxNG")),
+      ..Default::default()
     });
 
     match pathname_opt {
