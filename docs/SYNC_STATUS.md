@@ -59,18 +59,24 @@ key safety net that triggers OmniBus directly.
   option handler. APIs in place: `input_definitions(handleoptions:
   true, options: opts, after: ...)`, `require_package(after:
   Tokens!(\compat@loadpackages))`, `load_class(opts, after)`.
-- [ ] **`<name>.<ext>-h@@k` hook firing for binding-loaded classes**.
-  `input_definitions` defines `\<name>.<ext>-h@@k = after_tokens`
-  at L284. For raw .cls files, Package.pm's `\ProcessOptions` then
-  fires `\<name>.<ext>-h@@k` after option processing. For Rust
-  binding-loaded classes (article_cls.rs), the hook isn't being
-  called — likely article_cls.rs's `ProcessOptions!()` doesn't go
-  through the same path that fires the h@@k. Audit `ProcessOptions!`
-  macro vs Perl `\ProcessOptions`. Need: at end of bound class's
-  `ProcessOptions!()`, fire `\<name>.cls-h@@k` if defined.
-- [ ] **Driver paper validation** (after the h@@k fix lands): all four
-  AAS-style papers (astro-ph9610252/9811043/9902095/9909093)
-  should convert with 0 errors via OmniBus → aas_macros chain.
+- [x] **`@unusedoptionlist` Stored::VecDequeStored read** (commit
+  `53cf080d7`). The h@@k mechanism + ProcessOptions push were
+  already wired correctly; the bug was in `\compat@loadpackages`'s
+  match arm — only matched `Stored::Strings`, missed the
+  `Stored::VecDequeStored` form that `state::push_value`
+  auto-vivifies on first push. Extended the reader to handle both.
+- [x] **Driver paper validation** (commit `53cf080d7`):
+  | Paper             | Before | After                       |
+  |-------------------|-------:|-----------------------------|
+  | astro-ph9610252   |      6 | **No obvious problems** ✓   |
+  | astro-ph9811043   |      8 | **No obvious problems** ✓   |
+  | astro-ph9902095   |      4 |  5 (only `\psfig`)          |
+  | astro-ph9909093   |     13 |  1 (only `\psfig`)          |
+
+### Remaining (separate from this priority)
+- `\psfig` undefined: psfig.sty.ltxml only does
+  `RequirePackage('epsfig')` and expects `\psfig` to be defined
+  elsewhere. Track separately.
 
 ### Driver papers (from sandbox_failures_181_html)
 
