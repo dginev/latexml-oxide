@@ -97,17 +97,35 @@ LoadDefinitions!({
   //======================================================================
   // LaTeX 2.09 compatibility
   //----------------------------------------------------------------------
-  // Perl: TeX.pool.ltxml L60-65
-  // \documentstyle[opts]{class} — LaTeX 2.09 command.
-  // Perl loads LaTeX.pool then re-queues \documentstyle token.
-  // Since our \documentclass already loads LaTeX.pool on first encounter,
-  // we can simply redirect \documentstyle → \documentclass.
-  // Perl: TeX.pool.ltxml L60-65
-  // Reads [options]{class}, loads LaTeX (or AmSTeX) pool, then re-emits
-  // \documentclass [options]{class} for the now-loaded LaTeX pool to handle.
+  // Perl latex_constructs.pool.ltxml:97-129 (`\documentstyle` afterDigest).
+  // LaTeX 2.09 compat shim. Three branches mirroring Perl strictly:
+  //
+  //   1. <class>.sty exists  → input_definitions("article", cls,
+  //                            handleoptions=true, options=opts)
+  //                          + require_package(class, as_class=true,
+  //                            after=\compat@loadpackages)
+  //   2. <class>.cls exists  → load_class(class, opts,
+  //                            after=\compat@loadpackages)
+  //   3. neither             → input_definitions("OmniBus", cls,
+  //                            handleoptions=true, options=opts,
+  //                            after=\compat@loadpackages)
+  //                          + require_package(class, as_class=true)
+  //
+  // Critical Perl semantics (matching latex_constructs.pool.ltxml:97-129):
+  //   * `handleoptions => 1` makes the cls's `\DeclareOption`/`\ProcessOptions`
+  //     consume the `<opts>` and route leftovers onto `@unusedoptionlist`.
+  //   * `after => \compat@loadpackages` runs *after* the cls finishes its
+  //     option-processing — at that point unmet options sit on the unused
+  //     list and `\compat@loadpackages` (`latex_constructs.rs:2502`) walks
+  //     them, RequirePackage's any that resolve, and triggers OmniBus when
+  //     anything went unmet. That is what lets `\documentstyle[paspconf]
+  //     {article}` transitively load `aas_macros.sty.ltxml` to define
+  //     `\affil` / `\altaffilmark` / `\acknowledgments` etc.
   DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
-    use latexml_core::binding::content::find_file;
+    use latexml_core::binding::content::{find_file, FindFileOptions, load_class};
     let class = class_tks.to_string();
+    let class = class.trim().to_string();
+
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("pool")),
@@ -116,93 +134,77 @@ LoadDefinitions!({
 
     state::assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
 
-    // Perl latex_constructs.pool.ltxml L114-119: if `<class>.sty` exists
-    // (filesystem OR Rust binding registry), the LaTeX-2.09 idiom expects
-    // `<class>` to be loaded as a package on top of `article.cls`. Without
-    // this, `\documentstyle{spackap}` (Kluwer Academic, ~5 papers) falls
-    // through to the OmniBus-cls fallback and never sees `\opening`/etc.
-    // Examples: `\documentstyle{spackap}` (kluwer.sty + spackap.sty are
-    // local zip files), `\documentstyle{aipproc}` (older arXiv pre-2002
-    // form). Class-form bindings (revtex_cls.rs etc.) are unaffected
-    // because their `.sty` is not registered.
-    //
-    // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')` which defaults
-    // to `notex = true` — the FindFile call consults the @ltxml_paths
-    // binding registry as well as the filesystem. Rust must do the same:
-    // for `\documentstyle{aipproc}` on a TL install where aipproc.sty is
-    // missing from disk but `aipproc_sty.rs` is registered, our pipeline
-    // must take the .sty path so the cls binding's `\author RequiredKeyVals`
-    // doesn't shadow article.cls's plain `\author[]{}`. Sandbox cluster of
-    // 4 papers (astro-ph9711070, hep-ex9805012, physics0011011,
-    // quant-ph0006101) all hit "Missing keyval arguments" on `\author`
-    // before this fix.
+    // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
+    // Perl helper redefines `\@maxsep` and `\@dblmaxsep`; if these come
+    // from another file and are already defined, redef is harmless.
+    let zero_dim = Stored::Number(latexml_core::common::number::Number::new(0));
+    state::assign_value("\\@maxsep", zero_dim.clone(), Some(Scope::Global));
+    state::assign_value("\\@dblmaxsep", zero_dim, Some(Scope::Global));
+
+    // Comma-list to Vec<String>. Whitespace-strip per Perl
+    // TrimmedCommaList. Empty entries dropped.
+    let opts_vec: Vec<String> = options_opt.as_ref()
+      .map(|t| t.to_string())
+      .unwrap_or_default()
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
+
+    // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')` which defaults to
+    // `notex = true` — FindFile consults the @ltxml_paths binding registry
+    // as well as the filesystem.
+    let notex = !state::lookup_bool("INCLUDE_CLASSES");
     let class_sty_found = find_file(
       &format!("{}.sty", class),
-      Some(latexml_core::binding::content::FindFileOptions {
-        notex: true,
-        ..Default::default()
-      }),
+      Some(FindFileOptions { notex, ..Default::default() }),
+    ).is_some();
+    let class_cls_found = !class_sty_found && find_file(
+      &format!("{}.cls", class),
+      Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some();
 
-    // In LaTeX 2.09, options are both class options AND packages to load.
-    // First load the class, then try to load each option as a package.
-    let actual_class = if class_sty_found { "article" } else { class.as_str() };
-    let mut result = Tokens!(T_CS!("\\documentclass"));
-    if let Some(ref opts) = options_opt {
-      let opts: &Tokens = opts;
-      result = Tokens!(result, T_OTHER!("["), opts.clone(), T_OTHER!("]"));
-    }
-    result = Tokens!(result, T_BEGIN!(), Explode!(actual_class), T_END!());
+    let after = Tokens!(T_CS!("\\compat@loadpackages"));
 
-    // When the class arrived via `.sty` route, emit `\RequirePackage{class}`
-    // BEFORE the option-as-package emissions so the class definitions land
-    // before any options' package code can reference them.
     if class_sty_found {
-      result = Tokens!(result,
-        T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(class.as_str()), T_END!()
-      );
+      // Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
+      // kluwer): load article.cls under it, then RequirePackage(class).
+      input_definitions("article", InputDefinitionOptions {
+        extension: Some(Cow::Borrowed("cls")),
+        options: opts_vec.clone(),
+        handleoptions: true,
+        noerror: true,
+        ..InputDefinitionOptions::default()
+      })?;
+      require_package(&class, RequireOptions {
+        options: opts_vec,
+        as_class: true,
+        after,
+        ..RequireOptions::default()
+      })?;
+    } else if class_cls_found {
+      // Branch 2 — `<class>.cls` exists: load it as the document class.
+      load_class(&class, opts_vec, after)?;
+    } else {
+      // Branch 3 — neither sty nor cls found. Load OmniBus to provide the
+      // wide AAS/elsevier/etc. coverage, then attempt the user-named class
+      // as a package (will likely no-op via missing_file warn).
+      input_definitions("OmniBus", InputDefinitionOptions {
+        extension: Some(Cow::Borrowed("cls")),
+        options: opts_vec.clone(),
+        handleoptions: true,
+        noerror: true,
+        after,
+        ..InputDefinitionOptions::default()
+      })?;
+      require_package(&class, RequireOptions {
+        options: opts_vec,
+        as_class: true,
+        ..RequireOptions::default()
+      })?;
     }
 
-    // After class loads, try each option as a package (Perl \compat@loadpackages
-    // in latex_constructs.pool.ltxml:137-154).
-    //
-    // Emit `\RequirePackage{opt}` unconditionally for non-kernel options.
-    // `require_package` internally tries: compiled binding dispatcher →
-    // external .ltxml → raw .sty (INTERPRETING_DEFINITIONS-gated) →
-    // find_file_fallback (strips version suffixes: aaspp4 → aaspp,
-    // emulateapj5 → emulateapj) → raw .sty again → kpsewhich. A missing
-    // option (e.g. `anonymous`) ends at a note-level log, not an error.
-    //
-    // This replaced an earlier `\IfFileExists{opt.sty}` wrapper and then a
-    // Rust-level `find_file + find_file_fallback` pre-check. Both had the
-    // same structural bug: compiled-in Rust bindings (like emulateapj_sty.rs)
-    // don't surface on the filesystem, so the pre-check missed them and
-    // skipped emitting \RequirePackage — leaving `\documentstyle[emulateapj]
-    // {article}` with ~15 undefined macros (astro-ph0009148 class). Perl's
-    // FindFile covers compiled-in .ltxml because they're real files in
-    // @ltxml_paths; Rust has no equivalent probe so we just let
-    // require_package make the decision.
-    //
-    // Skip-list below is the subset of LaTeX 2.09 class options that are
-    // NEVER packages (size, layout, mode). These are consumed by
-    // article.cls's option handler directly; emitting \RequirePackage for
-    // them would fail spuriously.
-    if let Some(opts) = options_opt {
-      let opts_str = opts.to_string();
-      for opt in opts_str.split(',') {
-        let opt = opt.trim();
-        if opt.is_empty() { continue; }
-        if opt.ends_with("pt") || opt == "landscape" || opt == "twocolumn"
-          || opt == "onecolumn" || opt == "draft" || opt == "final"
-          || opt == "preprint" || opt == "tighten" || opt == "manuscript" {
-          continue;
-        }
-        result = Tokens!(result,
-          T_CS!("\\RequirePackage"), T_BEGIN!(), Explode!(opt), T_END!()
-        );
-      }
-    }
-    Ok(result)
+    Ok(Tokens!())
   });
 });
 
