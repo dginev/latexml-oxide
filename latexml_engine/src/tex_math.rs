@@ -529,18 +529,20 @@ LoadDefinitions!({
     reversion => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => { end_mode("display_math")?; });
 
+  // Perl TeX_Math.pool.ltxml L142-153: DefConstructorI with NO xml:id,
+  // beforeDigest = enterHorizontal + beginMode('math'),
+  // properties = { mode => 'math' }, captureBody = 1.
   DefConstructor!("\\lx@begin@inline@math",
-    "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
+    "<ltx:Math mode='inline'><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     reversion    => Tokens!(T_MATH!()),
     before_digest => {
-      // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 151)
       enter_horizontal();
-      // begin_mode handles \everymath injection (Stomach.pm lines 504-507)
-      begin_mode("inline_math")?;
+      begin_mode("math")?;
     },
+    properties   => { stored_map!("mode" => "math") },
     capture_body => true);
   DefConstructor!(T_CS!("\\lx@end@inline@math"), None, None,
-    before_digest => { end_mode("inline_math")?; },
+    before_digest => { end_mode("math")?; },
     reversion    => Tokens!(T_MATH!())
   );
 

@@ -1191,11 +1191,14 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
 }
 
-/// Perl: six_wrap — wrap in inline math with optional color
+/// Perl siunitx.sty.ltxml L751-759: `sub six_wrap`. Reads color ONCE
+/// at entry and reuses the captured value for both the open `{ \color
+/// {...}` and the matching close `}`.
 fn six_wrap(content: Tokens) -> Tokens {
   let color = six_get_tokens_sym(six_pin!("color"));
+  let has_color = !color.is_empty();
   let mut tks = Vec::new();
-  if !color.is_empty() {
+  if has_color {
     tks.push(T_BEGIN!());
     tks.push(T_CS!("\\color"));
     tks.push(T_BEGIN!());
@@ -1205,7 +1208,7 @@ fn six_wrap(content: Tokens) -> Tokens {
   tks.push(T_CS!("\\lx@begin@inline@math"));
   tks.extend(content.unlist());
   tks.push(T_CS!("\\lx@end@inline@math"));
-  if !six_get_tokens_sym(six_pin!("color")).is_empty() {
+  if has_color {
     tks.push(T_END!());
   }
   Tokens::new(tks)

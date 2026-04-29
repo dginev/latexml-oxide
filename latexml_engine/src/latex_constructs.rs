@@ -4990,7 +4990,7 @@ LoadDefinitions!({
   locked     => true);
   DefEnvironment!("{math}",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
-    mode => "inline_math"
+    mode => "math"
   );
   // My first inclination is to Lock {math}, but it is surprisingly common to redefine it in silly
   // ways... So...?
