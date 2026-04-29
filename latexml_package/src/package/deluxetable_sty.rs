@@ -135,11 +135,7 @@ LoadDefinitions!({
   // yields the default 0pt. The \@empty lets and \pt@headfrac def are
   // order-insensitive but keep them together with the width init so the
   // block matches Perl one-for-one.
-  RawTeX!(r"\AtBeginDocument{%
-\let\tblnote@list\@empty
-\let\pt@caption\@empty
-\let\pt@head\@empty
-\let\pt@tail\@empty
-\pt@width\textwidth
-\def\pt@headfrac{.1}}");
+  at_begin_document(TokenizeInternal!(
+    r"\let\tblnote@list\@empty\let\pt@caption\@empty\let\pt@head\@empty\let\pt@tail\@empty\pt@width\textwidth\def\pt@headfrac{.1}"
+  ))?;
 });

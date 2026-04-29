@@ -17,9 +17,16 @@ the first pass completes.
 
 ### Small side goal
 
-1. Do a full audit for `AtBeginDocument` and ensure we have a function that matches the Perl AtBeginDocument() function.
-   We should always use the native form instead of a RawTeX or similar call to \AtBeginDocument . 
-   The Rust code has some mistakes related to this.
+1. **DONE 2026-04-29.** `AtBeginDocument` / `AtEndDocument` audit
+   complete. Native helpers `at_begin_document` / `at_end_document`
+   added to `latexml_package::prelude` (mirror Perl Package.pm:2798).
+   12 RawTeX/TeX wrappers across 11 binding files converted to push
+   directly to `@at@begin@document` / `@at@end@document` instead of
+   round-tripping through the `\AtBeginDocument` / `\AtEndDocument`
+   macros (which expl3 redefines to route through the L3 hook
+   system, making the pipeline expl3-state-dependent). Workspace
+   tests 1109/0/0; no remaining `RawTeX!`/`TeX!` wrappers around
+   any document/environment hook macro.
 
 2.
 

@@ -130,7 +130,9 @@ LoadDefinitions!({
   // clobbering any preamble-level redefinition from another package.
   DefMacro!("\\blx@bbl@booltrue{}",  "\\relax", locked => true);
   DefMacro!("\\blx@bbl@boolfalse{}", "\\relax", locked => true);
-  RawTeX!(r"\AtBeginDocument{\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}}");
+  at_begin_document(TokenizeInternal!(
+    r"\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}"
+  ))?;
   DefMacro!("\\keyw{}", "", locked => true);
   DefMacro!("\\range{}{}", "", locked => true);
   DefMacro!("\\lbibitem[]{}{}", "", locked => true);

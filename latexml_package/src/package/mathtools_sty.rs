@@ -20,7 +20,7 @@ LoadDefinitions!({
   // Perl L43: RequirePackage('amsmath', withoptions => 1)
   require_package_with_options("amsmath")?;
   // Perl: AtBeginDocument(sub { RequirePackage('graphicx'); });
-  RawTeX!("\\AtBeginDocument{\\RequirePackage{graphicx}}");
+  at_begin_document(TokenizeInternal!(r"\RequirePackage{graphicx}"))?;
 
   //======================================================================
   // 3 — Macros

@@ -32,7 +32,7 @@ LoadDefinitions!({
   });
 
   // Perl L35-36: AtBeginDocument — swap \documentclass to the intercept.
-  // Deferred via RawTeX \AtBeginDocument so the hook fires at the same
+  // Native push to @at@begin@document so the hook fires at the same
   // lifecycle point Perl uses.
-  RawTeX!(r"\AtBeginDocument{\let\documentclass\@standalone@documentclass}");
+  at_begin_document(TokenizeInternal!(r"\let\documentclass\@standalone@documentclass"))?;
 });

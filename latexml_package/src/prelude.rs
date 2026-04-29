@@ -24,3 +24,19 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
     _ => None,
   }
 }
+
+// Native equivalents of Perl `AtBeginDocument` / `AtEndDocument`
+// (`LaTeXML/Package.pm:2798-2826`). Append tokens to the queue consumed by
+// `\begin{document}` / `\end{document}` (latex_constructs.rs).
+//
+// Bindings should prefer these over `RawTeX!(r"\AtBeginDocument{...}")` so
+// the queue is populated directly without round-tripping through the
+// `\AtBeginDocument` macro (which expl3 redefines to route through the
+// L3 hook system).
+pub fn at_begin_document<T: Into<Stored>>(operations: T) -> Result<()> {
+  state::push_value("@at@begin@document", operations)
+}
+
+pub fn at_end_document<T: Into<Stored>>(operations: T) -> Result<()> {
+  state::push_value("@at@end@document", operations)
+}

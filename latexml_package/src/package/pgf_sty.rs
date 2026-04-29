@@ -39,5 +39,7 @@ LoadDefinitions!({
   DefMacro!("\\endpgfgraphicnamed", "");
 
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
-  RawTeX!("\\AtBeginDocument{\\expandafter\\def\\expandafter\\pgfpicture\\expandafter{\\expandafter\\lxSVG@picture\\pgfpicture}\\expandafter\\def\\expandafter\\endpgfpicture\\expandafter{\\endpgfpicture\\endlxSVG@picture}}");
+  at_begin_document(TokenizeInternal!(
+    r"\expandafter\def\expandafter\pgfpicture\expandafter{\expandafter\lxSVG@picture\pgfpicture}\expandafter\def\expandafter\endpgfpicture\expandafter{\endpgfpicture\endlxSVG@picture}"
+  ))?;
 });

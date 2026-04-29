@@ -84,11 +84,12 @@ LoadDefinitions!({
   DefMacro!("\\og", "\\guillemotleft\\nobreakspace");
   DefMacro!("\\fg", "\\nobreakspace\\guillemotright\\xspace");
 
-  // Symbols (Perl french.ldf.ltxml L32-35, AtBeginDocument)
-  DefMacro!("\\degre", "\\textdegree");
-  DefMacro!("\\degres", "\\hbox to 0.3em{\\degre}");
-  Let!("\\tild", "\\textasciitilde");
-  Let!("\\circonflexe", "\\textasciicircum");
+  // Perl french.ldf.ltxml L31-37: AtBeginDocument(sub { ... }) — defer
+  // so any later package's redefinition of \textdegree/\textasciitilde/
+  // \textasciicircum is captured (e.g. textcomp loaded after french.ldf).
+  at_begin_document(TokenizeInternal!(
+    r"\let\degre\textdegree\def\degres{\hbox to 0.3em{\degre}}\let\tild\textasciitilde\let\circonflexe\textasciicircum"
+  ))?;
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 

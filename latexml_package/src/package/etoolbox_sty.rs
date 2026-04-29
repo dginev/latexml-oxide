@@ -1713,7 +1713,7 @@ LoadDefinitions!({
   DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
   push_value("@after@end@document", arg.unlist())?; });
 
-  TeX!(r"\AtEndDocument{\let\AfterEndPreamble\@gobble}");
+  at_end_document(TokenizeInternal!(r"\let\AfterEndPreamble\@gobble"))?;
   //======================================================================
   // 2.6 Environment Hooks
 

@@ -81,7 +81,7 @@ LoadDefinitions!({
   // \xywithoption{latexml}{...} defers \selectdriver@{latexml} indefinitely,
   // causing massive token expansion during ProcessOptions). Fix: keep only
   // \AtBeginDocument for the full initialization, matching the Perl flow.
-  RawTeX!("\\AtBeginDocument{\\xyoption{latexml}}");
+  at_begin_document(TokenizeInternal!(r"\xyoption{latexml}"))?;
 
   // xy font primitives: do NOT pre-define these as empty macros!
   // xy.tex's \xyfont@ mechanism checks \ifx#1\undefined and only loads the font

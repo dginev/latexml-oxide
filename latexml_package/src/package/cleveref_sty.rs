@@ -20,9 +20,10 @@ LoadDefinitions!({
     assign_value("amsmath.sty_loaded", Stored::None, Some(Scope::Local));
   }
 
-  // Restore \label
-  // Perl: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
-  Let!("\\label", "\\lx@cleverref@label");
+  // Perl L29-30: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
+  // Deferred so any later package's `\label` redefinition lands BEFORE
+  // cleveref wraps it; eager Let here would clobber the wrong target.
+  at_begin_document(TokenizeInternal!(r"\let\label\lx@cleverref@label"))?;
 
   // Override raw TeX \crefname/\Crefname/\crefalias with safe stubs.
   // The raw cleveref.sty definitions use complex \expandafter chains and

@@ -1917,7 +1917,7 @@ LoadDefinitions!({
     }
   });
 
-  RawTeX!(r"\AtBeginDocument{\lx@six@initialize}");
+  at_begin_document(TokenizeInternal!(r"\lx@six@initialize"))?;
 
   //======================================================================
   // Unit object macros (fallback expansion).

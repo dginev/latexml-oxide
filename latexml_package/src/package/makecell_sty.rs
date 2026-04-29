@@ -27,7 +27,9 @@ LoadDefinitions!({
   });
 
   // Redefine \theadfont at BeginDocument to include heading marker
-  RawTeX!(r"\AtBeginDocument{\let\lx@orig@theadfont\theadfont\def\theadfont{\lx@orig@theadfont\lx@makecell@head}}");
+  at_begin_document(TokenizeInternal!(
+    r"\let\lx@orig@theadfont\theadfont\def\theadfont{\lx@orig@theadfont\lx@makecell@head}"
+  ))?;
 
   // Since we use \thead, disable guessing
   AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
