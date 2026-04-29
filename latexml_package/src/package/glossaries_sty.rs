@@ -261,9 +261,24 @@ LoadDefinitions!({
   DefMacro!("\\glsentrytext Semiverbatim", "");
   DefMacro!("\\glsentrylong Semiverbatim", "");
   DefMacro!("\\glsentryshort Semiverbatim", "");
-  DefMacro!("\\acrshort Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim", "");
-  DefMacro!("\\acrfull Semiverbatim", "");
+  // \acr* family — the real glossaries.sty defines short/long/full plus
+  // their `pl` (plural) and uppercase-first (`\Acr*`) variants. Perl's
+  // glossaries.sty.ltxml gets these via `InputDefinitions(noltxml=1)`
+  // raw-load of the actual TL glossaries.sty source. Rust's port stubs
+  // them here as no-ops to mirror the same set of bound CSes
+  // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
+  DefMacro!("\\acrshort Semiverbatim",   "");
+  DefMacro!("\\acrshortpl Semiverbatim", "");
+  DefMacro!("\\Acrshort Semiverbatim",   "");
+  DefMacro!("\\Acrshortpl Semiverbatim", "");
+  DefMacro!("\\acrlong Semiverbatim",    "");
+  DefMacro!("\\acrlongpl Semiverbatim",  "");
+  DefMacro!("\\Acrlong Semiverbatim",    "");
+  DefMacro!("\\Acrlongpl Semiverbatim",  "");
+  DefMacro!("\\acrfull Semiverbatim",    "");
+  DefMacro!("\\acrfullpl Semiverbatim",  "");
+  DefMacro!("\\Acrfull Semiverbatim",    "");
+  DefMacro!("\\Acrfullpl Semiverbatim",  "");
   // glossaries-internal macros that might be called
   DefMacro!("\\warn@noprintglossary", "");
   // glossary title macros
