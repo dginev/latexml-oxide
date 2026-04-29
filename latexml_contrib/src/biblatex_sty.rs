@@ -149,13 +149,26 @@ LoadDefinitions!({
   DefMacro!("\\biblatex@verb{}", "", locked => true);
   DefMacro!("\\biblatex@endverb", "", locked => true);
 
-  // Perl L400-408: \addbibresource / \bibliography (Let to \addbibresource).
-  // The Perl DefPrimitive splits comma-list and pushes biblatex_resources;
-  // for the no-bibliography-rebuild Rust path, simple stubs that swallow
-  // the args avoid the undefined-CS errors. \printbibliography below
-  // emits nothing in the absence of the rebuild pipeline.
-  DefMacro!("\\addbibresource OptionalKeyVals:biblatex {}", "", locked => true);
-  DefMacro!("\\bibliography{}", "", locked => true);
+  // Perl L400-408: \addbibresource{file,...} pushes onto biblatex_resources.
+  // Then `\biblatex@saved@bibliography` is bound to whatever `\bibliography`
+  // means at this point (classic LaTeX bibtex), and `\bibliography` is
+  // re-let to `\addbibresource` so any classic `\bibliography{...}`
+  // invocation in a biblatex doc just records resources.
+  // see arXiv:1502.02314 for a paper that left in classic \bibliography
+  // alongside biblatex; both forms must end up populating the resource list.
+  DefPrimitive!("\\addbibresource{}", sub[(file_list_arg)] {
+    // Perl: split(/\s*,\s*/, ToString($_[1])) — split on commas and
+    // strip surrounding whitespace.
+    let raw = file_list_arg.to_string();
+    for part in raw.split(',') {
+      let file = part.trim();
+      if !file.is_empty() {
+        push_value("biblatex_resources", Stored::String(arena::pin(file)))?;
+      }
+    }
+  });
+  Let!("\\biblatex@saved@bibliography", "\\bibliography");
+  Let!("\\bibliography",                "\\addbibresource");
 
   // Perl L410-418: \printbibliography → \biblatex@printbibliography (which
   // emits the saved \biblatex@saved@bibliography call). DEFERRED rebuilder;
