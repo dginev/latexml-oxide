@@ -248,9 +248,17 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// `latexml_package::dispatch`.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
+  // Perl pathname_find L383-389: strict-case first, case-insensitive fallback
+  // (matches `\documentclass{jhep}` against `JHEP.cls.ltxml`-style entries).
+  // See latexml_package::dispatch for the parallel comment.
   BINDINGS
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
+    .or_else(|| {
+      BINDINGS.iter().find(|(name, extension, _)| {
+        name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
+      })
+    })
     .map(|(_, _, loader)| loader())
 }
 

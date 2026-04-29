@@ -814,9 +814,19 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
+  // Perl pathname_find L383-389: try strict-case match first, then fall back
+  // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
+  // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
+  // Without the fallback, lowercase-input / uppercase-binding pairs miss
+  // and trigger spurious `missing_file` warnings.
   BINDINGS
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
+    .or_else(|| {
+      BINDINGS.iter().find(|(name, extension, _)| {
+        name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
+      })
+    })
     .map(|(_, _, loader)| loader())
 }
 

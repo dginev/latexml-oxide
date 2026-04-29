@@ -1878,10 +1878,20 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
       // on the FIRST `.`, mirroring `dispatch()`'s split rule so multi-dot
       // names like `pgfmath.code.tex` resolve as `("pgfmath", "code.tex")`).
       if let Some((base, ext)) = file.split_once('.') {
-        if crate::state::get_binding_names()
+        // Perl pathname_find L383-389: strict-case first, then case-insensitive
+        // fallback (mirrors the dispatcher's lookup). Without this, requests
+        // like `find_file("jhep.cls", notex=true)` would miss `("JHEP","cls")`
+        // entries that derive from Perl's `JHEP.cls.ltxml` filename.
+        let exact = crate::state::get_binding_names()
           .iter()
-          .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext))
-        {
+          .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext));
+        let nocase = exact
+          || crate::state::get_binding_names().iter().any(|slice| {
+            slice.iter().any(|(n, e)| {
+              n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext)
+            })
+          });
+        if nocase {
           return Some(file.to_string());
         }
       }
