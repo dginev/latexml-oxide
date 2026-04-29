@@ -64,15 +64,29 @@ if [[ ${#TEX_FILES[@]} -eq 0 ]]; then
   exit 1
 fi
 
-# If multiple, prefer one matching the arxiv id; else pick a likely main.
+# If multiple, prefer one matching the arxiv id or a "main"-ish basename.
+# Otherwise scan for the file containing \documentclass / \documentstyle —
+# subsidiary figure includes (e.g. nkfig1.tex in hep-ph0003141) come up
+# first alphabetically and would otherwise be picked by mistake.
 MAIN_TEX="${TEX_FILES[0]}"
+named_match=
 for f in "${TEX_FILES[@]}"; do
   base=$(basename "$f" .tex)
   if [[ "$base" == "$ARXIV_ID" || "$base" == "ms" || "$base" == "main" || "$base" == "paper" ]]; then
-    MAIN_TEX="$f"
+    named_match="$f"
     break
   fi
 done
+if [[ -n "$named_match" ]]; then
+  MAIN_TEX="$named_match"
+elif [[ ${#TEX_FILES[@]} -gt 1 ]]; then
+  for f in "${TEX_FILES[@]}"; do
+    if grep -lE '\\documentclass|\\documentstyle' "$f" >/dev/null 2>&1; then
+      MAIN_TEX="$f"
+      break
+    fi
+  done
+fi
 
 echo "[triage] arxiv_id : $ARXIV_ID"
 echo "[triage] main tex : $MAIN_TEX"
