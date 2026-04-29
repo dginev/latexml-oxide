@@ -566,10 +566,13 @@ LoadDefinitions!({
   mode => "restricted_horizontal",
   bounded => true,
   sizer => "#2",
-  //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
-  //   # And also things like \centerline that will end up bumping up to block level!
-  before_digest => {
-    reenter_text_mode(false)},
+  // Perl TeX_Box.pool.ltxml L300-334: `\hbox` has NO beforeDigest. The
+  // outer T_MATH binding (e.g. revtex3's `\lx@dollar@in@oldrevtex` set
+  // by the {equation} env) MUST persist into the hbox body so that the
+  // closing `$` inside `\hbox\bgroup ... $\egroup` can toggle back via
+  // the state-aware switch. Earlier Rust called `reenter_text_mode(false)`
+  // here, which rebound T_MATH to `\lx@dollar@in@textmode`, breaking the
+  // revtex3 `$ in equation` toggle (8+ sandbox papers, ~300 errors).
   after_digest => sub[whatsit] {
     let width : Option<RegisterValue> = {
       let spec = whatsit.get_arg(1);

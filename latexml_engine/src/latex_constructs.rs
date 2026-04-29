@@ -7612,12 +7612,17 @@ LoadDefinitions!({
   DefMacro!("\\depth", "0pt");
   DefMacro!("\\width", "0pt");
 
+  // Perl latex_constructs.pool.ltxml L4709-4714:
+  //   beforeDigest => sub { Let(T_MATH, T_CS('\lx@dollar@default')); }
+  // Rebinds `$` to the default text-mode toggle (so `\mbox{$x$}` opens
+  // inline math). Match Perl literally rather than via reenter_text_mode.
   DefConstructor!("\\mbox {}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
     mode => "text",
     bounded => true,
     sizer => "#1",
     before_digest => {
-      reenter_text_mode(false); }
+      Let!(T_MATH!(), "\\lx@dollar@default");
+    }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
@@ -7627,11 +7632,11 @@ LoadDefinitions!({
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox",
     robust => true);
   // Perl: enterHorizontal => 1 (now automatic via mode => "text")
+  // Perl latex_constructs.pool.ltxml L4718-4724: `\@makebox` has NO
+  // beforeDigest — the outer T_MATH binding persists.
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
-    before_digest => {
-      reenter_text_mode(false); },
     properties   => sub[args] {
       // Perl: (($_[2] ? (align => $makebox_alignment{...}) : ()), ($_[1] ? (width => $_[1]) : ()))
       let mut props = stored_map!();
@@ -7989,11 +7994,11 @@ LoadDefinitions!({
       ))
     }
   );
+  // Perl latex_constructs.pool.ltxml L4852-4855: `\raisebox` has NO
+  // beforeDigest — the outer T_MATH binding persists.
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
-    before_digest => {
-      reenter_text_mode(false); }
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );
