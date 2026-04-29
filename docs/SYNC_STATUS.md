@@ -52,32 +52,25 @@ key safety net that triggers OmniBus directly.
 
 ### Concrete checklist
 
-- [ ] **Replace `\documentstyle` DefMacro with DefConstructor**.
-  `OptionalKeyVals:DocType {}` signature; afterDigest captures
-  options + class strings.
-- [ ] **`compatDefinitions()` helper** — Perl L132-135: `DefRegister
-  '\@maxsep', '\@dblmaxsep'` to `Dimension(0)`. Already present
-  somewhere — verify or duplicate inline at afterDigest entry.
-- [ ] **Branch 1 (`<class>.sty` exists)**: `input_definitions("article",
-  cls, handleoptions=true, options=opts, noerror=true)` then
-  `require_package(class, as_class=true, after=Tokens(\compat@loadpackages))`.
-  Drop the existing inline RequirePackage emission.
-- [ ] **Branch 2 (`<class>.cls` exists)**: `load_class(class,
-  options=opts, after=Tokens(\compat@loadpackages))`.
-- [ ] **Branch 3 (neither found)**: `input_definitions("OmniBus", cls,
-  handleoptions=true, options=opts, noerror=true,
-  after=Tokens(\compat@loadpackages))` then
-  `require_package(class, as_class=true)`.
-- [ ] **`input_definitions(handleoptions=true, options=...)` semantics**.
-  Verify Rust's `input_definitions` accepts an `options` field that
-  primes the cls's option list. Audit `InputDefinitionOptions`.
-- [ ] **`require_package(after=...)` semantics**. Verify Rust's
-  `require_package` accepts an `after` field that schedules tokens
-  after the package's own end-of-load processing. Audit
-  `RequireOptions`.
-- [ ] **`\compat@loadpackages` already exists** (latex_constructs.rs:2502)
-  with the right Perl-faithful semantics. Verify nothing else needs
-  to change there.
+- [x] **Replace `\documentstyle` DefMacro with strict-Perl branches**
+  (commit `b093bdd30`). 3-branch dispatch mirroring
+  `latex_constructs.pool.ltxml:97-129`. Drops the per-option
+  `\RequirePackage{opt}` emission that bypassed article.cls's
+  option handler. APIs in place: `input_definitions(handleoptions:
+  true, options: opts, after: ...)`, `require_package(after:
+  Tokens!(\compat@loadpackages))`, `load_class(opts, after)`.
+- [ ] **`<name>.<ext>-h@@k` hook firing for binding-loaded classes**.
+  `input_definitions` defines `\<name>.<ext>-h@@k = after_tokens`
+  at L284. For raw .cls files, Package.pm's `\ProcessOptions` then
+  fires `\<name>.<ext>-h@@k` after option processing. For Rust
+  binding-loaded classes (article_cls.rs), the hook isn't being
+  called — likely article_cls.rs's `ProcessOptions!()` doesn't go
+  through the same path that fires the h@@k. Audit `ProcessOptions!`
+  macro vs Perl `\ProcessOptions`. Need: at end of bound class's
+  `ProcessOptions!()`, fire `\<name>.cls-h@@k` if defined.
+- [ ] **Driver paper validation** (after the h@@k fix lands): all four
+  AAS-style papers (astro-ph9610252/9811043/9902095/9909093)
+  should convert with 0 errors via OmniBus → aas_macros chain.
 
 ### Driver papers (from sandbox_failures_181_html)
 
