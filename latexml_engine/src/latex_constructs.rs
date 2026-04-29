@@ -2521,7 +2521,14 @@ LoadDefinitions!({
     };
     let mut had_missing = false;
     for opt in &unused_list {
-      let found = find_file(&format!("{opt}.sty"), None).is_some()
+      // Perl `FindFile($option, type=>'sty')` defaults to consulting the
+      // binding-registry too. Use `notex: true` so compiled-in Rust
+      // bindings (e.g. psfig_sty.rs, when paspconf-class doc loads
+      // `[psfig]` as an unused option) are considered "found" and
+      // `RequirePackage` is fired.
+      use latexml_core::binding::content::FindFileOptions;
+      let found = find_file(&format!("{opt}.sty"),
+        Some(FindFileOptions { notex: true, ..Default::default() })).is_some()
         || find_file_fallback(opt, "sty").is_some();
       if found {
         require_package(opt, RequireOptions::default())?;
