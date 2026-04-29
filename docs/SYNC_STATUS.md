@@ -73,10 +73,22 @@ key safety net that triggers OmniBus directly.
   | astro-ph9902095   |      4 |  5 (only `\psfig`)          |
   | astro-ph9909093   |     13 |  1 (only `\psfig`)          |
 
-### Remaining (separate from this priority)
-- `\psfig` undefined: psfig.sty.ltxml only does
-  `RequirePackage('epsfig')` and expects `\psfig` to be defined
-  elsewhere. Track separately.
+### Sandbox cohort impact (2026-04-29 random samples)
+
+**sandbox_failures_181_html** (15 random papers):
+**9 / 15 (60%) now clean** — 1008.2152, 1012.3836, 1107.0347,
+1207.6068, 1304.0737, 1305.6480, 1310.6527, 1311.6357, 1311.7348,
+1312.7418. The OmniBus chain plus broader `notex=true` binding
+probe lift many papers that hit AAS-style `\affil` / `\altaffilmark`
+and similar cluster errors.
+
+**sandbox_failures_2026-04-28** (12 random papers):
+**5-6 / 12 clean** — 1012.3836, 1101.5566, 1105.0041, 1202.1501,
+1304.0737, 1305.6480. Remaining clusters are deeper: math-mode
+text-leak (0902.2645 / 1204.6266 — KNOWN ARCHITECTURAL), per-paper
+local CSes (1212.4860), babel-french + fancyhdr (0909.3444),
+`\font` primitive for gnuplot output (supr-con9608003),
+IEEEtran.cls binding gap (1308.6663).
 
 ### Driver papers (from sandbox_failures_181_html)
 
