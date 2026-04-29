@@ -91,32 +91,34 @@ Three key documents track porting progress and known issues:
 
 Requires **Rust nightly**.
 
-We follow Rust best practice with four named profiles in `Cargo.toml`:
+We follow Rust best practice with three named profiles in `Cargo.toml`:
 
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
-| `test`  | `cargo test` (default profile for the test command) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. Local development. |
+| `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
 | `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
-| `release-light` | `cargo build --profile release-light` (also `tools/benchmark_10k.sh`, `tools/test_with_tl2023.sh`) | Local-iteration release. Same `opt-level = 3` as `release`, but `lto = "thin"` + `codegen-units = 16` for parallel builds (~2-3× faster wall-clock). Output is in `target/release-light/`. |
-| `release` | `cargo build --release` / `cargo run --release` | Distribution / final perf-of-record. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slowest build, fastest runtime — last few percent over `release-light`. |
+| `release` | `cargo build --release` / `cargo run --release` | Distribution / publishing only. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slow build (multi-minute), fastest runtime. **Reserved for publishing a stable state** — local iteration cannot afford it. |
 
-**Day-to-day development**: use the `test` profile via `cargo test` (no flag). It has full debug info, line-table backtraces, debug-assertions, and overflow-checks — best diagnosability when a regression breaks. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
+**Day-to-day development**: use the default `test` profile via `cargo test` / `cargo run` / `cargo build` (no flag). Full debug info, line-table backtraces, debug-assertions, overflow-checks. Best diagnosability when something fails. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
 
-**Local sandbox / perf iteration** (10k sandbox runs, perf experiments, regression-triage on a release-grade binary): use `--profile release-light`. ThinLTO + parallel codegen finish much faster than fat LTO, with negligible runtime cost on our hot paths.
+**Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_10k.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
 
-**Distribution / perf-of-record measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
+**Distribution / publish-grade measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release` once when shipping a stable state. The CI profile is for the GitHub runner only.
 
 ```bash
-# Run all tests (uses the `test` profile automatically)
+# Run all tests (default test profile)
 RUST_BACKTRACE=1 cargo test --tests -- --nocapture
 
-# Convert a formula (release-light for fast local iteration)
-cargo run --profile release-light --bin latexmlmath_oxide '1+1=2'
+# Convert a formula (default test profile, fast incremental rebuild)
+cargo run --bin latexmlmath_oxide -- '1+1=2'
 
-# Convert a document (release-light for fast local iteration)
-cargo run --profile release-light --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
+# Convert a document (default test profile)
+cargo run --bin latexml_oxide -- latexml_oxide/tests/hello/hello.tex
 
-# Distribution-grade build (slow, but max-optimised)
+# Triage a sandbox failure (test profile, full backtraces)
+tools/triage_failure.sh <arxiv_id>
+
+# Publish-grade build — reserved for shipping a stable state
 cargo build --release --bin latexml_oxide
 
 # Generate docs

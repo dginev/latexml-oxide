@@ -8,7 +8,7 @@
 # can be validated without waiting on CI.
 #
 # Usage:
-#   tools/test_with_tl2023.sh                          # full cargo test --profile release-light --tests --workspace
+#   tools/test_with_tl2023.sh                          # full cargo test --tests --workspace
 #   tools/test_with_tl2023.sh -p latexml --test 50_structure IEEE_test
 #   INSTALL_CI_PACKAGES=1 tools/test_with_tl2023.sh    # run tlmgr install for CI-parity collections first
 #   REBUILD_PERL_FORMATS=1 tools/test_with_tl2023.sh   # rebuild Perl dumps under TL2023 before tests
@@ -116,4 +116,4 @@ if [ "${REBUILD_PERL_FORMATS:-0}" = "1" ]; then
   echo
 fi
 
-exec cargo test --profile release-light --tests "$@" -- --test-threads=1
+exec cargo test --tests "$@" -- --test-threads=1
