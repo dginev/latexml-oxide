@@ -96,17 +96,29 @@ LoadDefinitions!({
   DefMacro!("\\bibnamedelimd",      "\\addlowpenspace");
   DefMacro!("\\bibnamedelimi",      "\\addnbspace");
 
-  // Perl L101-125: bibliography list/section. The Perl bodies stash
-  // `biblatex_with_keyvals` and dispatch into `biblatex_as_thebibliography`
-  // — DEFERRED. Stubbed empty (locked) so documents compile.
-  DefMacro!("\\datalist[]{}", "", locked => true);
-  DefMacro!("\\sortlist[]{}", "", locked => true);
+  // Perl L101-106: \datalist / \sortlist set the `biblatex_with_keyvals`
+  // flag globally — Perl's `\name` closure (Cycle 9) reads it to choose
+  // 3-arg vs 4-arg / keyval-vs-positional dispatch.
+  DefMacro!("\\datalist[]{}", sub[_args] {
+    state::assign_value("biblatex_with_keyvals", Stored::from(1),
+      Some(Scope::Global));
+    Ok(Tokens::new(vec![]))
+  });
+  DefMacro!("\\sortlist[]{}", sub[_args] {
+    state::assign_value("biblatex_with_keyvals", Stored::from(1),
+      Some(Scope::Global));
+    Ok(Tokens::new(vec![]))
+  });
+  // Perl L107-108: \lossort / \refsection — empty stubs.
   DefMacro!("\\lossort", "", locked => true);
   DefMacro!("\\refsection{}", "", locked => true);
+  // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
+  // → biblatex_as_thebibliography rebuilder. DEFERRED (Cycle 7).
   DefMacro!("\\enddatalist", "", locked => true);
   DefMacro!("\\endsortlist", "", locked => true);
   DefMacro!("\\endlossort", "", locked => true);
   DefMacro!("\\endrefsection", "", locked => true);
+  // Perl L127-263: \entry / \endentry deep closures. DEFERRED (Cycle 8).
   DefMacro!("\\entry{}{}{}", "", locked => true);
   DefMacro!("\\endentry", "", locked => true);
 
@@ -140,9 +152,14 @@ LoadDefinitions!({
   // Perl L364
   DefMacro!("\\range{}{}", "");
 
-  // Perl L367-369: \preamble closure stashes biblatex_preamble — DEFERRED.
-  // Stubbed: behave like the closure's $_[1] return value (passthrough).
-  DefMacro!("\\preamble{}", "#1", locked => true);
+  // Perl L367-369: \preamble{...} stashes the arg into biblatex_preamble
+  // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
+  // $_[1]) so the preamble is digested in the current context too.
+  DefMacro!("\\preamble{}", sub[(arg)] {
+    state::assign_value("biblatex_preamble",
+      Stored::Tokens(arg.clone()), Some(Scope::Global));
+    Ok(arg.clone())
+  });
 
   // Perl L371-397: \verb / \biblatex@verb / \biblatex@endverb closures.
   // DEFERRED — stubbed empty so \verb-based bib fields don't crash.
