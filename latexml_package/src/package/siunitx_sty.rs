@@ -1987,11 +1987,14 @@ LoadDefinitions!({
   //======================================================================
 
   // \DeclareSIUnit [kv] \cs {presentation}
-  DefPrimitive!("\\DeclareSIUnit[]", {
-    gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
-    gullet::skip_spaces()?;
-    let presentation = gullet::read_arg(ExpansionLevel::Off)?;
+  // Perl `DefPrimitive('\DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}', ...)`
+  // — `DefToken` reads either `\cs` directly OR `{\cs}` (braced) form.
+  // hepunits.sty L79+ writes `\DeclareSIUnit{\invbarn}{\barn\tothe{-1}}`
+  // (braced); siunitx's own internal config uses `\DeclareSIUnit \cs {…}`
+  // (unbraced). Both must work. `DefToken` parameter type covers both;
+  // earlier `gullet::read_token` would treat `{` as the token in the
+  // braced case and miss the binding entirely, leaving \invbarn undefined.
+  DefPrimitive!("\\DeclareSIUnit[] DefToken {}", sub[(_kv, cs, presentation)] {
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
