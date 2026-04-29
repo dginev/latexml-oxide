@@ -19,37 +19,13 @@ covers. No silent omissions.
 
 ### Concrete checklist
 
-- [x] **Cycle 1 (shallow declarators)** — 2026-04-29 (commit
-  `cc26dfaa1`). Strict-Perl mirror of L19-22 options, L37-99
-  cite/passthrough/spacing, L101-125 list-stubs, L265-268
-  BiblatexAuthor, L348-354 hooks, L429-491 Declare-API, L493-500
-  glue registers, L553-604 conditionals (50), L632-638 ppspace/sort,
-  L641-645 booltrue/false guard, L646-721 the* / blx@* macros,
-  L724-734 register block, L736-801 RawTeX with all 9 newbool +
-  60 newtoggle declarations in **exact** Perl order. Also fixed
-  the `\blx@maxsection@0` typo (Perl is `\blx@maxsegment@0`).
-- [x] **Cycle 2: `\addbibresource` DefPrimitive** (Perl L400-408)
-  — 2026-04-29 (commit `baab2d1d7`). DefPrimitive splits the
-  comma-separated arg via `\s*,\s*` and PushValue's each file onto
-  `biblatex_resources`. Lets `\biblatex@saved@bibliography ←
-  \bibliography` (preserves classic LaTeX bibliography meaning) and
-  `\bibliography ← \addbibresource` (routes any classic
-  `\bibliography{file}` invocation in a biblatex doc into the
-  resource list — see arXiv:1502.02314).
-- [x] **Cycle 5: `\datalist` / `\sortlist` AssignValue side-effect**
-  (Perl L101-106) — 2026-04-29 (commit `d1d976bbb`). Closure form
-  sets `biblatex_with_keyvals=1` globally; consumers (the deferred
-  `\name` dispatch in Cycle 9) read this to choose 3-arg vs 4-arg.
-- [x] **Cycle 6: `\preamble` closure** (Perl L367-369) — 2026-04-29
-  (commit `d1d976bbb`). Closure stashes the arg as
-  `biblatex_preamble` (Stored::Tokens) globally for the rebuilder
-  (Cycle 7) AND re-emits the arg (Perl returns `$_[1]`).
-- [x] **Bypass `@0` register parser fatal** — 2026-04-29 (commit
-  `69cfa1e5e`). `\blx@maxsegment@0` and `\blx@sectionciteorder@0`
-  CS names trip the prototype parser (regex `\\[a-zA-Z@]+` doesn't
-  match digit suffixes). Use the `DefRegister!(T_CS!(...), None,
-  value)` form to skip parse_prototype. Driver paper 1811.05702
-  now converts with **0 errors** (was 3 → 1 → 0).
+Cycles 1, 2, 5, 6 + the `@0` register parser-bypass landed
+2026-04-29 (commits `cc26dfaa1`, `baab2d1d7`, `d1d976bbb`,
+`69cfa1e5e`). Driver paper 1811.05702 now converts with **0
+errors** (was 3). Remaining cycles form the deep-closure
+bibliography rebuilder pipeline (Cycle 8 → 9 → 10 → 7 → 3) and
+must land together — partial implementations are dead code.
+
 - [ ] **Cycle 3: `\printbibliography` rebuilder** (Perl L410-418).
   Implement `\biblatex@printbibliography[]` to emit
   `\biblatex@saved@bibliography{<resources>}`. Pop
@@ -59,11 +35,6 @@ covers. No silent omissions.
   (Perl L371-397). Port the `init_verb` closure that escapes
   `\#`, `\%`, `\&` in URL fields and stashes via
   `biblatex_verb_content`.
-- [ ] **Cycle 5: `\datalist` / `\sortlist` AssignValue side-effect**
-  (Perl L101-106). Set `biblatex_with_keyvals` global. Currently
-  stubbed empty.
-- [ ] **Cycle 6: `\preamble` closure** (Perl L367-369). Stash
-  `biblatex_preamble` for use in the rebuilder; pass arg through.
 - [ ] **Cycle 7: `\enddatalist` / `\endsortlist` / `\endlossort` /
   `\endrefsection` → `biblatex_as_thebibliography`** (Perl
   L110-125). Walk the rebuilt entry list at end-of-list time and
@@ -114,21 +85,6 @@ Output: `~/data/10k_sandbox_html/results.tsv`. CI green at parent
 commit (`b8d793e3f`); fix-forward commits land on `claude-round-17`
 during the canvas, will be picked up by `--rerun-failures` after
 the first pass completes.
-
-### Small side goal
-
-1. **DONE 2026-04-29.** `AtBeginDocument` / `AtEndDocument` audit
-   complete. Native helpers `at_begin_document` / `at_end_document`
-   added to `latexml_package::prelude` (mirror Perl Package.pm:2798).
-   12 RawTeX/TeX wrappers across 11 binding files converted to push
-   directly to `@at@begin@document` / `@at@end@document` instead of
-   round-tripping through the `\AtBeginDocument` / `\AtEndDocument`
-   macros (which expl3 redefines to route through the L3 hook
-   system, making the pipeline expl3-state-dependent). Workspace
-   tests 1109/0/0; no remaining `RawTeX!`/`TeX!` wrappers around
-   any document/environment hook macro.
-
-2.
 
 ### Cluster ledger (live during canvas)
 
