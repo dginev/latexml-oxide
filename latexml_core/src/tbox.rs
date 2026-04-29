@@ -151,9 +151,13 @@ impl Tbox {
   }
 
   /// Whether this box is in math mode.
-  /// Perl: Box.pm::isMath (L79-81).
+  /// Perl: Box.pm::isMath (L79-81): `($mode || 'restricted_horizontal') =~ /math$/`.
+  /// Matches "math", "inline_math", "display_math".
   pub fn is_math(&self) -> bool {
-    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == pin!("math"))
+    match self.properties.get("mode") {
+      Some(Stored::String(s)) => arena::with(*s, |m| m.ends_with("math")),
+      _ => false,
+    }
   }
 
   /// Batch-insert properties. Equivalent to calling `set_property` for each
@@ -226,7 +230,9 @@ impl BoxOps for Tbox {
     };
 
     if !text.is_empty() {
-      if mode == pin!("math") {
+      // Perl Box::isMath: `mode =~ /math$/` matches "math" / "inline_math" / "display_math".
+      let mode_is_math = arena::with(mode, |m| m.ends_with("math"));
+      if mode_is_math {
         // Perl: DefMath ?#isMath — in text context, produce plain text.
         // Check if we're inside a math element by walking up the DOM.
         // This handles \And in author frontmatter (text) while preserving

@@ -622,8 +622,21 @@ pub fn def_math_primitive(
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |_args| {
         let locator = gullet::get_locator();
-        // Perl: DefMath with ?#isMath conditional produces text in text mode.
-        // The check happens at CONSTRUCTION time (not digestion time).
+        // Perl: defmath_prim L1810 — `my $mode = LookupValue('MODE');`
+        // The Tbox records the CURRENT digestion mode so that Box::isMath
+        // (mode =~ /math$/) returns false inside \text{} (restricted_horizontal),
+        // making `?#isMath` template fall through to the text branch.
+        let cur_mode = lookup_string_from_sym(arena::pin_static("MODE"));
+        let mode_static: &'static str = match cur_mode.as_str() {
+          "math" => "math",
+          "display_math" => "display_math",
+          "inline_math" => "inline_math",
+          "vertical" => "vertical",
+          "internal_vertical" => "internal_vertical",
+          "horizontal" => "horizontal",
+          "restricted_horizontal" => "restricted_horizontal",
+          _ => "math",
+        };
         let state_font = lookup_font().unwrap();
         // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
         let mathstyle_override: Option<&'static str> = if dynamic_mathstyle {
@@ -657,7 +670,7 @@ pub fn def_math_primitive(
           tokens: Tokens!(cs),
           font,
           properties: shared_options.to_hash_stored_with_overrides(
-            Some("math"),
+            Some(mode_static),
             mathstyle_override,
             scriptpos_override,
           ),
