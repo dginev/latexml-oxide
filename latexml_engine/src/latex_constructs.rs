@@ -2942,8 +2942,20 @@ LoadDefinitions!({
         );
       }
       // Perl: endMode('internal_vertical', 1) — noframe=1
-      // End mode without popping stack frame (executes beforeAfterGroup)
-      end_mode_opt("internal_vertical", true)?;
+      // End mode without popping stack frame (executes beforeAfterGroup).
+      //
+      // Skip the end-mode call if the document frame was never opened (e.g.
+      // AmsTeX papers using `\input amstex` + `\documentstyle{amsppt}` +
+      // `\enddocument` — they never call `\begin{document}`, so no
+      // `internal_vertical` mode-frame exists to close). Recognized by:
+      // current_environment is bound-on-top with value "document". Without
+      // this guard, AmsTeX papers fail with `Attempt to end mode
+      // 'internal_vertical' in 'vertical'` at the very last token.
+      let in_document_env = state::is_value_bound("current_environment", Some(0))
+        && state::lookup_string("current_environment") == "document";
+      if in_document_env {
+        end_mode_opt("internal_vertical", true)?;
+      }
       gullet::flush();
       boxes
   });
