@@ -885,8 +885,14 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml lines 240-310
 
   // Perl L283-284: multirow keyval type declarations
+  // Perl's `getPairs` returns ALL pairs regardless of DefKeyVal coverage,
+  // so `\@ams@multirow@bindings{name=multline}` works even though Perl
+  // doesn't declare `name`/`vattach` as keyvals. Rust filters via
+  // declared keys, so we must add the missing declarations here.
   DefKeyVal!("multirow", "width", "Dimension");
   DefKeyVal!("multirow", "rowsep", "Dimension");
+  DefKeyVal!("multirow", "name", "");
+  DefKeyVal!("multirow", "vattach", "");
 
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
   // Perl takes RequiredKeyVals:multirow + OptionalKeyVals (for before_row/after_row).
