@@ -5,8 +5,8 @@ use crate::binding::def::dialect::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
-use unidecode::unidecode;
 use unicode_normalization::UnicodeNormalization;
+use unidecode::unidecode;
 
 static TRAILING_PUNCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\.,;]+$").unwrap());
 static NON_ALNUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());
@@ -124,9 +124,7 @@ pub fn clean_bib_key(key: &str) -> String {
 
 /// Return the bibkey in a form to ACTUALLY lookup (Perl: NormalizeBibKey)
 /// Usually use clean_bib_key to preserve key in the original form (case)
-pub fn normalize_bib_key(key: &str) -> String {
-  clean_bib_key(key).to_lowercase()
-}
+pub fn normalize_bib_key(key: &str) -> String { clean_bib_key(key).to_lowercase() }
 
 /// Split comma-separated text into trimmed tokens (Perl: TrimmedCommaList)
 pub fn trimmed_comma_list(text: &str) -> Vec<String> {
@@ -211,5 +209,86 @@ mod tests {
     assert_eq!(roman_aux(1i64), "i");
     assert_eq!(roman_aux(1000i64), "m");
     assert_eq!(roman_aux(1999i64), "mcmxcix");
+  }
+
+  #[test]
+  fn clean_label_default_prefix() {
+    // Spaces become underscores; default prefix is "LABEL:".
+    assert_eq!(clean_label("foo bar", None), "LABEL:foo_bar");
+    assert_eq!(clean_label("simple", None), "LABEL:simple");
+  }
+
+  #[test]
+  fn clean_label_custom_prefix() {
+    assert_eq!(clean_label("thm:main", Some("REF")), "REF:thm:main");
+  }
+
+  #[test]
+  fn clean_label_empty_prefix_skips_colon() {
+    // Empty prefix means no prefix at all (not an empty-prefix colon).
+    let out = clean_label("foo bar", Some(""));
+    assert_eq!(out, "foo_bar");
+  }
+
+  #[test]
+  fn clean_label_trims_whitespace() {
+    // Leading/trailing whitespace trimmed before space-to-underscore.
+    assert_eq!(clean_label("  foo  ", None), "LABEL:foo");
+  }
+
+  #[test]
+  fn clean_class_name_basic() {
+    // clean_class_name strips spaces, converts to lowercase, removes
+    // non-class-safe chars.
+    let out = clean_class_name("foo");
+    assert!(out.contains("foo"), "got {out:?}");
+  }
+
+  #[test]
+  fn clean_bib_key_basic() {
+    // Bib keys are case-preserved but trimmed/cleaned.
+    let out = clean_bib_key("Author:2020");
+    assert!(!out.is_empty());
+  }
+
+  #[test]
+  fn normalize_bib_key_case_insensitive() {
+    // normalize_bib_key should produce the same output for case variants.
+    let a = normalize_bib_key("Author2020");
+    let b = normalize_bib_key("AUTHOR2020");
+    assert_eq!(a, b, "normalize_bib_key folds case (got {a:?} vs {b:?})");
+  }
+
+  #[test]
+  fn trimmed_comma_list_basic() {
+    let out = trimmed_comma_list("a, b ,c,  d");
+    assert_eq!(out, vec!["a", "b", "c", "d"]);
+  }
+
+  #[test]
+  fn trimmed_comma_list_handles_empty_segments() {
+    // Leading/trailing/internal empty comma positions — behavior may
+    // retain empty tokens or drop them depending on the implementation;
+    // just assert consistency with non-empty entries.
+    let out = trimmed_comma_list(",a,,b,");
+    assert!(
+      out.contains(&"a".to_string()) && out.contains(&"b".to_string()),
+      "got {out:?}"
+    );
+  }
+
+  #[test]
+  fn clean_url_removes_quotes_and_whitespace() {
+    // clean_url is lenient — it trims and normalizes. At minimum it
+    // must not break a well-formed URL.
+    let canonical = "http://example.com/path";
+    assert_eq!(clean_url(canonical), canonical);
+  }
+
+  #[test]
+  fn clean_index_key_trims_trailing_punct() {
+    // Per docstring: Applies NFC + strips trailing punctuation.
+    let out = clean_index_key("topic.");
+    assert_eq!(out, "topic", "got {out:?}");
   }
 }

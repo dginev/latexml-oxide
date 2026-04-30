@@ -18,6 +18,31 @@ LoadDefinitions!({
   // includes it, older may not).
   RawTeX!(r"\expandafter\ifx\csname l@polutonikogreek\endcsname\relax\newlanguage\l@polutonikogreek\fi");
 
+  // `activeacute` was historically an option to babel-spanish.ldf that
+  // activated `'` as an active accent. Some 1995-2010 papers wrote
+  // `\usepackage[<lang>,activeacute]{babel}` treating it as a language;
+  // modern babel doesn't recognize it as a language and `\InputIfFileExists
+  // {activeacute.ldf}` silently fails (no on-disk file in TL). Babel then
+  // proceeds and `\selectlanguage{...}` errors with "haven't defined the
+  // language 'activeacute' yet". We pre-register `\l@activeacute` plus the
+  // empty `<lang>` hooks so `\selectlanguage` resolves silently — actual
+  // active-acute-on-quote semantics are not reproduced (most affected
+  // papers only set this option as a side effect of preamble copy-paste).
+  RawTeX!(r"%
+    \expandafter\ifx\csname l@activeacute\endcsname\relax
+      \newlanguage\l@activeacute
+    \fi
+    \providecommand\captionsactiveacute{}%
+    \providecommand\extrasactiveacute{}%
+    \providecommand\noextrasactiveacute{}%
+    \providecommand\dateactiveacute{}");
+
+  // \bbl@opt@safe = \@empty inhibits some risky redefinitions in babel.
+  // Mirror Perl LaTeXML/lib/LaTeXML/Package/babel.def.ltxml: `Let('\bbl@opt@safe', '\@empty')`.
+  // Without this, babel.sty's option processing enters an infinite loop on
+  // some redefinition paths (verified: triggers token_limit:Timeout 100M).
+  RawTeX!(r"\let\bbl@opt@safe\@empty");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Sets DOCUMENT_LANGUAGE and force-sets \bbl@main@language from

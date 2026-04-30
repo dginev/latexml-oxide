@@ -14,14 +14,14 @@ use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::gullet;
 use crate::mouth::Mouth;
+use crate::pin;
 use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin;
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
-pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
+pub type ReaderPredigestFn = dyn Fn(ArgWrap, &[Tokens]) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
 
@@ -46,34 +46,34 @@ static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
-  pub novalue:       bool,
-  pub semiverbatim:  Option<Vec<char>>,
-  pub optional:      bool,
-  pub name:          SymStr,
-  pub spec:          SymStr,
-  pub extra:         Vec<Tokens>,
-  pub inner:         Option<Parameters>,
-  pub reader:        ReaderClosure,
-  pub predigest:     Option<ReaderPredigestClosure>,
-  pub reversion:     Option<ReversionClosure>,
+  pub novalue:            bool,
+  pub semiverbatim:       Option<Vec<char>>,
+  pub optional:           bool,
+  pub name:               SymStr,
+  pub spec:               SymStr,
+  pub extra:              Vec<Tokens>,
+  pub inner:              Option<Parameters>,
+  pub reader:             ReaderClosure,
+  pub predigest:          Option<ReaderPredigestClosure>,
+  pub reversion:          Option<ReversionClosure>,
   /// Reversion closure that operates on the original Digested argument.
   /// Takes precedence over `reversion` when the argument is a digested value.
   /// Perl equivalent: `reversion` option on DefParameterType with `undigested => 1`.
   pub digested_reversion: Option<DigestedReversionClosure>,
-  pub before_digest: Vec<BeforeDigestClosure>,
-  pub after_digest:  Vec<DigestionClosure>,
+  pub before_digest:      Vec<BeforeDigestClosure>,
+  pub after_digest:       Vec<DigestionClosure>,
 }
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
-      novalue:       false,
-      semiverbatim:  None,
-      optional:      false,
-      name:          arena::pin_static("parameter_default"),
-      spec:          pin!(""),
-      extra:         Vec::new(),
-      inner:         None,
-      reader:        Rc::new(|_args, _extra| {
+      novalue:            false,
+      semiverbatim:       None,
+      optional:           false,
+      name:               arena::pin_static("parameter_default"),
+      spec:               pin!(""),
+      extra:              Vec::new(),
+      inner:              None,
+      reader:             Rc::new(|_args, _extra| {
         Warn!(
           "Parameter",
           "mock_reader",
@@ -81,11 +81,11 @@ impl Default for Parameter {
         );
         Ok(ArgWrap::None)
       }),
-      predigest:     None,
-      reversion:     None,
+      predigest:          None,
+      reversion:          None,
       digested_reversion: None,
-      before_digest: Vec::new(),
-      after_digest:  Vec::new(),
+      before_digest:      Vec::new(),
+      after_digest:       Vec::new(),
     }
   }
 }
@@ -256,7 +256,9 @@ impl Parameter {
           self.optional = true;
         }
         self.reversion.clone_from(&descriptor.reversion);
-        self.digested_reversion.clone_from(&descriptor.digested_reversion);
+        self
+          .digested_reversion
+          .clone_from(&descriptor.digested_reversion);
         self.before_digest.clone_from(&descriptor.before_digest);
         self.after_digest.clone_from(&descriptor.after_digest);
         self.predigest.clone_from(&descriptor.predigest);
@@ -272,15 +274,13 @@ impl Parameter {
       ),
     }
     // Last but not least, initialize any "inner" parameters
-    self.inner = self
-      .inner
-      .map(|inner_ps| match inner_ps.clone().init() {
-        Ok(ps) => ps,
-        Err(e) => {
-          log::warn!("inner parameter init failed: {e}");
-          inner_ps
-        }
-      });
+    self.inner = self.inner.map(|inner_ps| match inner_ps.clone().init() {
+      Ok(ps) => ps,
+      Err(e) => {
+        log::warn!("inner parameter init failed: {e}");
+        inner_ps
+      },
+    });
     Ok(self)
   }
 
@@ -331,7 +331,7 @@ impl Parameter {
           value = value.neutralize(semi_chars);
         }
         ArgWrap::Tokens(value)
-      }
+      },
       other => other,
     };
     self.revert_catcodes()?;
@@ -412,7 +412,7 @@ impl Parameter {
       pre()?; // maybe pass extras?
     }
     let digested_value = if let Some(ref closure) = &self.predigest {
-      closure(value_arg)?
+      closure(value_arg, &self.extra)?
     } else {
       // Note: we have an open question for the type interface.
       //  What happens when a wrapped "None" value,
@@ -683,5 +683,94 @@ impl ToTokens for Parameter {
         ..Parameter::default()
       }
     });
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parameter_default_has_expected_fields() {
+    let p = Parameter::default();
+    assert!(!p.novalue);
+    assert!(p.semiverbatim.is_none());
+    assert!(!p.optional);
+    assert!(p.inner.is_none());
+    assert!(p.extra.is_empty());
+    assert!(p.before_digest.is_empty());
+    assert!(p.after_digest.is_empty());
+    assert!(p.predigest.is_none());
+    assert!(p.reversion.is_none());
+    assert!(p.digested_reversion.is_none());
+    assert_eq!(arena::to_string(p.name), "parameter_default");
+    assert_eq!(arena::to_string(p.spec), "");
+  }
+
+  #[test]
+  fn parameter_display_is_name() {
+    let mut p = Parameter::default();
+    p.name = arena::pin("Plain");
+    assert_eq!(format!("{p}"), "Plain");
+  }
+
+  #[test]
+  fn parameter_stringify_is_spec() {
+    let mut p = Parameter::default();
+    p.spec = arena::pin("{}");
+    assert_eq!(p.stringify(), "{}");
+  }
+
+  #[test]
+  fn parameter_partial_eq_by_name() {
+    // PartialEq compares by name only — Perl parity (closures can't
+    // be structurally compared).
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    a.name = arena::pin("x");
+    b.name = arena::pin("x");
+    assert_eq!(a, b);
+    b.name = arena::pin("y");
+    assert_ne!(a, b);
+  }
+
+  #[test]
+  fn parameters_new_and_take() {
+    let p = Parameter::default();
+    let ps = Parameters::new(vec![p]);
+    let taken = ps.take_parameters();
+    assert_eq!(taken.len(), 1);
+  }
+
+  #[test]
+  fn parameters_get_num_args_counts_valued() {
+    // novalue=true parameters don't count toward num_args.
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    let mut c = Parameter::default();
+    a.novalue = false;
+    b.novalue = true;
+    c.novalue = false;
+    let ps = Parameters::new(vec![a, b, c]);
+    assert_eq!(ps.get_num_args(), 2);
+  }
+
+  #[test]
+  fn parameters_empty() {
+    let ps = Parameters::new(vec![]);
+    assert_eq!(ps.get_num_args(), 0);
+    assert_eq!(ps.get_parameters().len(), 0);
+  }
+
+  #[test]
+  fn parameters_get_parameters_returns_refs_to_all() {
+    // get_parameters returns ALL, including novalue ones (num_args
+    // filters; get_parameters doesn't).
+    let mut a = Parameter::default();
+    let mut b = Parameter::default();
+    a.novalue = false;
+    b.novalue = true;
+    let ps = Parameters::new(vec![a, b]);
+    assert_eq!(ps.get_parameters().len(), 2);
   }
 }

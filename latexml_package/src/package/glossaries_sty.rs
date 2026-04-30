@@ -1,3 +1,28 @@
+// glossaries — package binding for the LaTeX `glossaries` package.
+//
+// TODO(strict-perl-parity): Migrate this binding to a strict translation
+// of `glossaries.sty.ltxml` (~127 lines). The Perl shim is built around
+// `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`, which
+// raw-loads the actual TL `glossaries.sty` (8702 lines) and only
+// overrides:
+//   * `\@gls@link` — wrap typesetting output in `<ltx:glossaryref>`
+//   * `\glsdohyperlink` / `\glsdonohyperlink` — drop hyperref wrapping
+//   * `\glsdisablehyper` — disable hyperref pipeline
+//   * `\glspostlinkhook` — `\xspace`
+//   * `\@newglossaryentryposthook` — feed entry data to
+//     `\lx@glossaries@newentry{}{} RequiredKeyVals`
+//   * `\printglossary` / `\printnoidxglossary` — emit `<ltx:glossary>`
+//
+// The current Rust port hand-rolls `\newglossaryentry`,
+// `\longnewglossaryentry`, `\newacronym`, `\gls`, `\Gls`, `\glspl`,
+// `\Glspl`, `\glssymbol`, `\printglossary`, etc., plus stubs for the
+// `\<gls|Gls>entry<field>` family and the `\acr*` family. This is
+// because `glossaries.sty` uses heavy expl3 / datatools that the
+// Rust raw-load pipeline currently can't ingest cleanly. Once the
+// Rust translation is good enough to raw-load `glossaries.sty`,
+// drop all the homegrown reimplementations and replace this file
+// with a near line-for-line port of `glossaries.sty.ltxml`.
+
 use crate::prelude::*;
 
 // Helper: store a glossary entry field in state
@@ -172,18 +197,30 @@ fn gls_plural_text(key: &str) -> String {
       s!("{longpl} ({shortpl})")
     } else {
       let plural = glo_lookup(key, "plural");
-      if !plural.is_empty() { plural } else { glo_lookup(key, "name") + "s" }
+      if !plural.is_empty() {
+        plural
+      } else {
+        glo_lookup(key, "name") + "s"
+      }
     }
   } else if is_acronym {
     let shortpl = glo_lookup(key, "shortplural");
-    if !shortpl.is_empty() { shortpl } else { glo_lookup(key, "short") + "s" }
+    if !shortpl.is_empty() {
+      shortpl
+    } else {
+      glo_lookup(key, "short") + "s"
+    }
   } else {
     let plural = glo_lookup(key, "plural");
     if !plural.is_empty() {
       plural
     } else {
       let text = glo_lookup(key, "text");
-      if !text.is_empty() { text + "s" } else { glo_lookup(key, "name") + "s" }
+      if !text.is_empty() {
+        text + "s"
+      } else {
+        glo_lookup(key, "name") + "s"
+      }
     }
   };
 
@@ -192,6 +229,11 @@ fn gls_plural_text(key: &str) -> String {
 }
 
 LoadDefinitions!({
+  // Perl glossaries.sty.ltxml L19: RequirePackage('xspace').
+  // \glspostlinkhook (L44) expands to \xspace, and many acronym-first-use
+  // paths invoke \xspace, so the package must be loaded up front.
+  RequirePackage!("xspace");
+
   // ======================================================================
   // Options
   // ======================================================================
@@ -241,12 +283,82 @@ LoadDefinitions!({
   DefMacro!("\\glsadd OptionalKeyVals Semiverbatim", "");
   DefMacro!("\\newglossary OptionalMatch:* {}{}{}{}", "");
   DefMacro!("\\glslink{}{}", "#2");
-  DefMacro!("\\glsentrytext Semiverbatim", "");
-  DefMacro!("\\glsentrylong Semiverbatim", "");
-  DefMacro!("\\glsentryshort Semiverbatim", "");
-  DefMacro!("\\acrshort Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim", "");
-  DefMacro!("\\acrfull Semiverbatim", "");
+  // glossaries.sty defines a `\<gls|Gls>entry<field>` family for read-only
+  // access to entry fields (used outside `\gls{}` typesetting context, e.g.
+  // in section headings). The capitalized `\Gls*` variants pipe the result
+  // through `\makefirstuc`. Perl's glossaries.sty.ltxml gets these by
+  // raw-loading the actual TL `glossaries.sty` (`InputDefinitions(noltxml=1)`,
+  // L18). Rust's port stubs them as no-ops to preserve the same CS coverage —
+  // the contents would otherwise expand the entry hash, but the typesetting
+  // path uses `\gls`/`\Gls` (which Rust reimplements above), so dropping the
+  // expansion here is harmless. Driver: 1806.05262 calls `\Glsentrytext{nbs}`
+  // in a section heading.
+  DefMacro!("\\glsentrytext Semiverbatim",        "");
+  DefMacro!("\\Glsentrytext Semiverbatim",        "");
+  DefMacro!("\\glsentrylong Semiverbatim",        "");
+  DefMacro!("\\Glsentrylong Semiverbatim",        "");
+  DefMacro!("\\glsentryshort Semiverbatim",       "");
+  DefMacro!("\\Glsentryshort Semiverbatim",       "");
+  DefMacro!("\\glsentryname Semiverbatim",        "");
+  DefMacro!("\\Glsentryname Semiverbatim",        "");
+  DefMacro!("\\glsentrydesc Semiverbatim",        "");
+  DefMacro!("\\Glsentrydesc Semiverbatim",        "");
+  DefMacro!("\\glsentrysymbol Semiverbatim",      "");
+  DefMacro!("\\Glsentrysymbol Semiverbatim",      "");
+  DefMacro!("\\glsentryfirst Semiverbatim",       "");
+  DefMacro!("\\Glsentryfirst Semiverbatim",       "");
+  DefMacro!("\\glsentryplural Semiverbatim",      "");
+  DefMacro!("\\Glsentryplural Semiverbatim",      "");
+  DefMacro!("\\glsentryfirstplural Semiverbatim", "");
+  DefMacro!("\\Glsentryfirstplural Semiverbatim", "");
+  DefMacro!("\\glsentryshortpl Semiverbatim",     "");
+  DefMacro!("\\Glsentryshortpl Semiverbatim",     "");
+  DefMacro!("\\glsentrylongpl Semiverbatim",      "");
+  DefMacro!("\\Glsentrylongpl Semiverbatim",      "");
+  DefMacro!("\\glsentryfull Semiverbatim",        "");
+  DefMacro!("\\Glsentryfull Semiverbatim",        "");
+  DefMacro!("\\glsentryfullpl Semiverbatim",      "");
+  DefMacro!("\\Glsentryfullpl Semiverbatim",      "");
+  // \acr* family — the real glossaries.sty defines short/long/full plus
+  // their `pl` (plural) and uppercase-first (`\Acr*`) variants. Perl's
+  // glossaries.sty.ltxml gets these via `InputDefinitions(noltxml=1)`
+  // raw-load of the actual TL glossaries.sty source. Rust's port stubs
+  // them here as no-ops to mirror the same set of bound CSes
+  // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
+  DefMacro!("\\acrshort Semiverbatim",   "");
+  DefMacro!("\\acrshortpl Semiverbatim", "");
+  DefMacro!("\\Acrshort Semiverbatim",   "");
+  DefMacro!("\\Acrshortpl Semiverbatim", "");
+  DefMacro!("\\acrlong Semiverbatim",    "");
+  DefMacro!("\\acrlongpl Semiverbatim",  "");
+  DefMacro!("\\Acrlong Semiverbatim",    "");
+  DefMacro!("\\Acrlongpl Semiverbatim",  "");
+  DefMacro!("\\acrfull Semiverbatim",    "");
+  DefMacro!("\\acrfullpl Semiverbatim",  "");
+  DefMacro!("\\Acrfull Semiverbatim",    "");
+  DefMacro!("\\Acrfullpl Semiverbatim",  "");
+
+  // \glsresetall[<glossaries>] — resets the "first use" flag for all
+  // entries. We don't track first-use state, so it's a safe no-op.
+  // Mirrors TL glossaries.sty L3370 `\newcommand*{\glsresetall}[1][...]`.
+  DefMacro!("\\glsresetall []", "");
+  DefMacro!("\\glsresetempty []", "");
+  // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
+  // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
+  // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
+  // (noltxml=1)` to raw-load the actual TL `.sty` and override only the
+  // `\@newglossaryentryposthook` (which then calls
+  // `\lx@glossaries@newentry{}{} RequiredKeyVals` with already-flat tokens).
+  // Rust's binding hand-rolls `\newglossaryentry{} RequiredKeyVals`, so it
+  // can't accept the user-source's `}\n{` whitespace between args that the
+  // raw TeX `\def\newglossaryentry#1#2{...}` happily skips. Until the Rust
+  // binding is refactored to follow Perl's raw-load+hook pattern,
+  // `\loadglsentries` is a no-op — sufficient for the common case where
+  // `\acrshort{label}` etc. don't depend on the entry being pre-defined.
+  // Driver paper: arXiv:1806.05262 (`\loadglsentries{definitions}` →
+  // 2 errors → 0 errors).
+  DefMacro!("\\loadglsentries []{}", "");
+
   // glossaries-internal macros that might be called
   DefMacro!("\\warn@noprintglossary", "");
   // glossary title macros
@@ -507,7 +619,11 @@ LoadDefinitions!({
     let gls_closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = gls_text(&key);
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -525,7 +641,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = capitalize_first(&gls_text(&key));
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -538,7 +658,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = gls_plural_text(&key);
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -551,7 +675,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let text = capitalize_first(&gls_plural_text(&key));
       Ok(gls_ref_tokens(&list, &key, &text))
     });
@@ -564,7 +692,11 @@ LoadDefinitions!({
     let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
       let key = args[0].to_string();
       let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let list = if entry_type.is_empty() {
+        "main".to_string()
+      } else {
+        entry_type
+      };
       let symbol = glo_lookup(&key, "symbol");
       Ok(gls_ref_tokens(&list, &key, &symbol))
     });

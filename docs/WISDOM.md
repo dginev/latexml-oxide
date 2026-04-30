@@ -418,12 +418,11 @@ as special tokens or parameter spec patterns and gets stuck in an infinite
 matching loop. Both `*` and `{}` are valid in TeX control sequences (e.g.
 `\eqnarray*`, `\begin{foo}`).
 
-**Workaround:** For `Let!`, use the `T_CS!()` wrapper. For `DefMacro!`, use
-`\csname...\endcsname` form or runtime `def_macro()` calls:
+**Workaround:** Always use the `T_CS!()` wrapper.
 
 ```rust
-DefMacro!("\\csname IEEEeqnarray*\\endcsname{}", "\\csname eqnarray*\\endcsname");
-Let!("\\csname endIEEEeqnarray*\\endcsname", "\\csname endeqnarray*\\endcsname");
+DefMacro!(T_CS!("\\IEEEeqnarray*"), "{}", T_CS!("\\eqnarray*"));
+Let!(T_CS!("\\endIEEEeqnarray*"), T_CS!("\\endeqnarray*"));
 ```
 
 **Refactoring needed:** `DefMacro!` and `Let!` should accept `T_CS!("\\foo*")`
@@ -750,9 +749,11 @@ modification) to defer until after frame pop.
 
 ## 32. parse_parameters(..., init_flag): true at runtime, false at compile-time
 
-**Discovery:** Attempting to flip mutual-exclusivity on the dump-load path
-surfaced "Missing argument {}" errors the moment any dump-provided Expandable
-tried to read an argument — e.g. `\@gobble{x}` said `x` was missing.
+**Discovery:** Strict-Perl `LoadFormat` mutual exclusivity (active 2026-04-26)
+depends on dump-provided Expandables reading arguments correctly when
+`_base.rs` is skipped. Initial flip-attempts surfaced "Missing argument {}"
+errors the moment any dump-provided Expandable tried to read an argument —
+e.g. `\@gobble{x}` said `x` was missing.
 
 **Analysis:** `def_parser::parse_parameters(proto, cs, init_flag)` has an
 `init_flag` parameter that controls whether each `Parameter` runs its
@@ -787,7 +788,8 @@ warning followed by "Missing argument {}", the root cause is an
 
 ## 33. Dump round-trip: nargs alone is insufficient for parameter fidelity
 
-**Discovery:** The D0 mutual-exclusivity PoC hung `00_tokenize` for 34+
+**Discovery:** Early strict-Perl `LoadFormat` PoC (the D0 effort that
+preceded the active 2026-04-26 mission) hung `00_tokenize` for 34+
 minutes at 300% CPU even AFTER landing all the `init_flag=true` and
 None-body-serialization fixes. Root cause traced to parameter-type
 flattening in the dump round-trip.
@@ -816,16 +818,16 @@ falls back to `"{}".repeat(nargs)` when proto fails to parse.
 for delimited-with-brace params; `parse_parameters`'s `PARAMSPECT_CHECK_RE`
 stops at `{`, so the tail mis-parses as a separate nested Plain with inner
 type "verbatim". Tests still pass because:
-- the `@`-internal gate shadows most dump entries via `_base.rs` closures
-- the v2 reader falls back gracefully on parse failure
-
-Full round-trip would require structural per-Parameter serialization
-(name + extra tokens) rather than a stringified summary.
+- the v3 structured Parameter sub-line encoding (commit `3e1f89eb2`)
+  carries `(name, spec, extra)` per Parameter, bypassing
+  `parse_parameters` for catcoded delimiters. See
+  `DUMP_FORMAT_PERL_ANALYSIS.md`.
+- the v2 reader falls back gracefully when v3 sub-lines are absent.
 
 **Key insight:** `Parameters::stringify` is NOT a true inverse of
-`parse_parameters`. For any round-trip scenario that installs dump-loaded
-definitions as the active runtime definitions (mutual-exclusivity, daemon
-mode, etc.), plan for structural serialization from the start.
+`parse_parameters`. The active strict-Perl `LoadFormat` dump install
+relies on the v3 structural encoding to keep `Until:`/`Match:` /
+`DefToken` parameters faithful through the dump round-trip.
 
 **Sentinel:** When a dump-loaded CS invokes with unexpected input
 interpretation — e.g. `\@ifnextchar[` reads `[{yes}` as arg #1 — check
@@ -930,3 +932,521 @@ continues; our port used to abort the whole conversion.
 "should never", "has no reason to fail", or "TODO: handle malformed
 values here", treat it as a parity gap to investigate, not a
 design assertion.
+
+## 36. `rebuild_idstore_from_dom()` timing: finalize-only, not Rewriting-entry
+
+**Context:** The post-processor's `idstore` maps `xml:id` → libxml2
+`Node`. Historically, upstream passes (math-parser `replace_tree`,
+various `unbind_node()` sites) dropped xml:id-bearing subtrees
+without calling `unrecord_id`, leaving dangling-Node entries that
+later passes could dereference and SIGSEGV (originally seen on
+arxiv:1605.08055; fixed in `337c1ef52` by adding
+`rebuild_idstore_from_dom()` at `finalize()` entry before
+`prune_xmduals`). Cycle 72 audited the specific call sites
+(parser.rs:456/639/690/856, rewrite.rs:522) and confirmed they
+now all have proper `unrecord_node_ids` / `remove_node` cascade
+coverage — so the rebuild at finalize is belt-and-suspenders
+pending 10k-sandbox re-verification on 1605.08055 (see
+SYNC_STATUS.md D3b [~] entry).
+
+**Wisdom:** do NOT also call `rebuild_idstore_from_dom` at the start
+of the Rewriting phase. Tried in session 128, broke `split_test`.
+When the DOM has duplicate xml:ids (rare but possible during
+math-parse), `findnodes` visits in document order so the FIRST-
+OCCURRENCE node wins the cache entry, but the prior idstore state may
+have had the LAST-OCCURRENCE node — which some rewrites depend on.
+Finalize is late enough that those rewrites have already fired, so
+the rebuild there is safe; at Rewriting-entry it isn't.
+
+## 37. `Document::safe_unlink` is mandatory for node drops
+
+**Context:** `libxml::tree::Node::unlink()` detaches a node from its
+parent but leaves any xml:id entries in the post-processor's idstore
+pointing at the now-orphaned subtree. Subsequent `dref_by_id` calls
+return nodes that may have been freed, producing SIGSEGV.
+
+**Wisdom:** every raw `node.unlink()` site in latexml-oxide must route
+through `Document::safe_unlink` unless one of these safe patterns
+applies:
+- **save-and-reparent** (`unlink` then immediately `add_child` /
+  `add_prev_sibling` / `append_tree`) — the id survives the move.
+- prior `unrecord_node_ids(node)` walk.
+- text / non-element nodes only (no xml:id possible).
+- routed through guarded `document.remove_node` / `document.replace_node`.
+
+`safe_unlink` is the id-cache-invalidating wrapper: recurse via
+`remove_node_aux` to `unrecord_id` the subtree, then call `unlink`.
+The audit of every site in `latexml_core` / `latexml_post` /
+`latexml_math_parser` is complete (round-17 cycles 51–58); new drops
+should use the guardian by default.
+
+## 38. `\vspace` kept as no-op stub; faithful port triggers moderncv paragraph-break regression
+
+**Context:** Perl `latex_constructs.pool.ltxml` L4692 defines
+`DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');` — a pure
+token-replacement macro. Rust `latex_constructs.rs:7206` instead has
+`DefPrimitive!("\\vspace OptionalMatch:* {}", None)` (empty body,
+silently drops the argument).
+
+**Why the divergence:** a prior port attempted the faithful DefMacro
+wiring and regressed the `moderncv/cs_cv.tex` test — `\vskip` in Rust
+digested as vertical-mode glue triggered an implicit `\par` when
+encountered in horizontal mode, breaking paragraphs that moderncv
+intended to keep intact. Perl's `\vskip` binding apparently produces
+a Whatsit without the paragraph-break side effect.
+
+**Wisdom:** **do NOT** flip `\vspace` to Perl-matching DefMacro as a
+naive Def*-parity fix. The kind swap is load-bearing — it hides a
+deeper asymmetry in Rust's `\vskip` horizontal-mode handling. The
+proper path to parity is:
+1. Port `\vskip` so its horizontal-mode digestion matches Perl (no
+   auto-\par).
+2. Then restore `\vspace` to `DefMacro!('\\vspace OptionalMatch:* {}', '\\vskip #2\\relax')`.
+
+Verify fix against `moderncv/cs_cv.tex` + any other `\vspace`-using
+regression tests before landing. Without step 1, step 2 breaks moderncv.
+
+## 40. `\#`/`\&`/`\%`/`\$` Def*-kind mismatch is intentional mode-split
+
+**Context:** Perl `plain_base.pool.ltxml` L70-76 defines each as a
+single `DefPrimitive` with a sub body that emits `Box('#', undef,
+undef, T_CS('\#'), role => '…', meaning => '…')` and similar. The Box
+carries role/meaning that double as text-mode and math-mode markers,
+converted downstream by the math parser / post-processor.
+
+Rust `plain_base.rs:62-68` instead uses `DefMacro` with `\ifmmode`
+dispatch into mode-specific helpers: `\lx@text@hash` (DefPrimitive
+emitting a text Box) and `\lx@math@hash` (DefMath emitting an XMath
+token directly).
+
+**Wisdom:** do NOT "fix" this Def*-kind mismatch by collapsing to a
+single Perl-matching DefPrimitive. The Rust split is a genuine
+semantic improvement — it emits proper XMath tokens in math mode at
+stomach level, rather than relying on post-processing to promote a
+text Box into a math token. Reverting loses mode-precision.
+
+If the Def*-parity audit flags these, the right resolution is to
+record them as an intentional divergence in OXIDIZED_DESIGN.md, not
+to kind-flip.
+
+**Same direct-emission improvement in texvc_sty.rs (30 entries).**
+Perl `texvc.sty.ltxml` defines MediaWiki's math subset as simple
+expansion aliases: `DefMacroI('\N', undef, '\mathbb{N}')`,
+`DefMacroI('\darr', undef, '\downarrow')`, etc. Rust redefines these
+as direct DefMath emissions with explicit semantic markup:
+`DefMath!("\\N", None, "\u{2115}", role => "ID", meaning =>
+"natural-numbers")`. Both produce the same visible math symbol
+(ℕ, ↓, etc.), but Rust's version carries `role`/`meaning`
+attributes that Perl's alias-chain loses by the time it reaches
+MathML output. All 30 texvc DP mismatches fit this shape — do NOT
+kind-flip; the Rust version is strictly more informative for
+accessibility/semantic consumers of the XML. Same categorization
+applies to any package binding where the audit shows `Perl=DefMacroI
+→ Rust=DefMath` for a symbol-alias CS.
+
+## 41. Math-mode Def*-kind mismatches are usually structural, not parity bugs
+
+**Context.** The Def*-parity audit (`tools/audit_def_parity.py`) flags
+math-mode CSes whose Rust kind differs from Perl's. Most are structural
+adaptations for missing Rust ParameterTypes, not parity bugs.
+
+**The four intentional/blocked cases:**
+
+| CS | Perl | Rust | Root cause |
+|----|------|------|------------|
+| `\mathchar` | `DefPrimitive('\mathchar Number', …decodeMathChar…Box)` | `DefConstructor("\\mathchar Number", "<ltx:XMTok …>", after_digest => …)` | Rust emits `<ltx:XMTok>` directly; Perl emits a Box the post-processor promotes. Rust is the more precise shape — kind-flip would regress output. |
+| `\left` / `\lx@right` | `DefConstructor('\left TeXDelimiter', "#1", …)` | `DefMacro!("\\left XToken", sub { …manual \delimiter<Number> handling… })` | Rust's `TeXDelimiter` ParameterType is incomplete — see detailed plan below. Current DefMacro workaround at `tex_math.rs:836` peels `\delimiter` + reads number + decodes glyph manually. |
+| picture primitives (`\line`/`\vector`/`\oval`/`\qbezier`/`\lx@pic@bezier`) | `DefPrimitive('\\line Pair:Number {Float}', …)` | `DefMacro!` unpacking `Match:( Until:, Until:) {Float}` into 3 args + forwarding to `\lx@pic@XXX{}{}{}` DefConstructor | Rust lacks `Pair:Number` as a ParameterType. Same functional parity, different factoring. |
+| amsmath `\aligned` / `\alignedat` | `DefConstructor('\aligned alignsafeOptional {}', …)` | `DefPrimitive!` with explicit `local_align_group_count(1000000)` + manual `gullet::read_optional` + unread | Rust lacks `alignsafeOptional`. Plain `[]` would trip handle_template's `&`-interception inside nested alignments. See `amsmath_sty.rs:1168`. |
+
+**Wisdom:** do NOT flip these to Perl-matching kinds naively. Each is
+load-bearing. The proper path to parity for any of them goes through
+porting the missing ParameterType first, then migrating the call sites.
+
+### ParameterType port candidates (ROI-ordered)
+
+Engine/ alone has **23 call sites** using these three ParameterTypes
+(grep `Pair:Number|PairList|TeXDelimiter|alignsafeOptional`). Package
+bindings add more.
+
+- **TeXDelimiter** — 10+ entries (tex_math `\left`/`\lx@right` 2,
+  revsymb `\biglb`/`\bigrb`/`\Biglb`/… 8, plus others). Highest ROI.
+  Already partially exists at `base_parameter_types.rs:693` (per Perl
+  PR#2596) — enhancement needed, not new port. Plan below.
+- **Pair:Number** (+ `PairList`) — 5-10 entries (picture primitives
+  + engine call sites). Medium ROI.
+- **alignsafeOptional** — 2-4 entries (amsmath `\aligned`/`\alignedat`).
+  Lowest ROI but simplest port (reads `[…]` with alignment-safe
+  wrapping).
+
+### TeXDelimiter enhancement plan (current truth, cycle 64 verified)
+
+**Rust already has `TeXDelimiter`** at `base_parameter_types.rs:693`
+and it's used successfully by `\big`/`\Big`/`\bigg`/`\Bigg` at
+`math_common.rs:962-964`. The current implementation uses
+`gullet::read_arg(ExpansionLevel::Partial)` (braced arg). The `\left` /
+`\lx@right` / revsymb `\biglb` family bypass it via DefMacro because
+the reader differs from Perl's in two dimensions:
+
+**Dimension 1 — reader shape (3 branches missing vs Perl
+`TeX_Math.pool.ltxml:709`):**
+```perl
+$gullet->skipFiller;
+my $token = $gullet->readXToken(0);               # single X-token, not read_arg
+if ($token && $token->getCatcode == CC_BEGIN) {   # BEGIN-unwrap once
+  $gullet->unread($gullet->readBalanced(1));
+  $gullet->skipFiller;
+  $token = $gullet->readXToken(0); }
+$token = T_CS('\lx@delimiterdot') if !defined($token) || ToString($token) eq '.';
+my ($delim) = $STATE->getStomach->invokeToken($token);  # ← see dim 2
+return $delim;
+```
+All three branches need porting (single-X-token read, BEGIN-unwrap,
+`.`/undef → `\lx@delimiterdot`).
+
+**Dimension 2 — `undigested => 1` is architectural, not a macro flag.**
+
+- `ArgWrap` (`latexml_core/src/definition/argument.rs:24`) has no
+  `Digested` variant.
+- `Parameter` (`latexml_core/src/parameter.rs:48`) has no
+  `undigested: bool` flag.
+- The existing `digested_reversion` hook on Parameter fires only on a
+  code path that reader-produced Digested values never currently reach.
+
+Closing this is the real blocker for `\left\delimiter<Number>`:
+without `invoke_token` being called from the reader, `\delimiter`'s
+number-reading primitive never consumes the following `<Number>`, so
+it dangles — which is exactly what `tex_math.rs:836`'s DefMacro
+workaround manually peels back. To add `undigested` semantics, either:
+- **(a)** extend `ArgWrap` with a `Digested(Box<Digested>)` variant +
+  plumb through `be_digested` as identity when already Digested
+  (cross-cutting across every arg-pipeline site), OR
+- **(b)** add `Parameter.undigested: bool` + a bypass-re-digestion
+  branch in the digestion-of-args phase (less invasive).
+
+**Scope: one full dedicated session touching latexml_core.** Partial
+progress via reader-only port (3 branches without `invoke_token`) is
+possible but closes ZERO DP audit entries — the call-site migrations
+need BOTH reader and `undigested` to work, since `\left\delimiter<num>`
+still breaks without the digested path. Cycle 64 verified this.
+
+**Prerequisites (confirmed exist):** `stomach::invoke_token`
+(`stomach.rs:776`), `gullet::skip_filler` (`gullet.rs:1203`),
+`gullet::read_x_token` (`gullet.rs:503`), `gullet::read_balanced`
+(`gullet.rs:716`), `\lx@delimiterdot` (`tex_math.rs:1184`).
+
+**Call sites to migrate once architecture is in place:**
+- `tex_math.rs:836` `\left` — replace DefMacro+manual peel with
+  `DefConstructor!("\\left TeXDelimiter", "#1", …)`.
+- `tex_math.rs:1192` `\lx@right` — same.
+- `revsymb_sty.rs:14-21` 8 `\biglb`/`\bigrb`/`\Biglb`/`\Bigrb`/
+  `\bigglb`/`\biggrb`/`\Bigglb`/`\Biggrb` — each becomes
+  `DefConstructor('\X TeXDelimiter', '#1', …)`.
+
+**Expected outcome:** 1097/0/0 tests green, DP audit shows 10+ entries
+cleared, `tex_math.rs:836` workaround removed, revsymb `\biglb` family
+collapses back to audit-clean DefConstructor form.
+
+### Broader takeaway
+
+For a Def*-kind mismatch audit, expect a sizable fraction to be
+structural adaptations (mode-splits, direct XML emission,
+parameter-type gaps), not parity bugs. Read the Perl body first; if
+the Rust shape is more precise or solves a missing-feature gap, the
+mismatch is likely intentional and belongs in OXIDIZED_DESIGN.md
+rather than a fix queue.
+
+## 42. AmSPPT DefConstructor→DefMacro "shim" pattern
+
+**Context:** Perl's `amsppt.sty.ltxml` ports Plain AMS-TeX typesetting
+primitives with full XML-structured DefConstructor definitions —
+e.g. `DefConstructor('\specialhead Until:\endspecialhead',
+"<ltx:chapter inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>", bounded=>1, properties=>…)`.
+
+Rust's `amsppt_sty.rs` instead provides **LaTeX-equivalent aliases**:
+`DefMacro!("\\specialhead", "\\section*")`, and similar for
+`\proclaim`, `\definition`, `\remark`, `\example`, `\demo`, `\roster`,
+`\footnote`, etc. (10+ DP audit mismatches from this pattern).
+
+**Wisdom:** amsppt is Plain AMS-TeX (pre-LaTeX); Rust pragmatically
+reuses LaTeX's section/environment machinery via aliases rather than
+reimplementing the XML-structuring DefConstructors. For arXiv content
+(where amsppt is rare), "close enough to LaTeX" output is acceptable
+and the full port isn't justified by usage frequency. Do NOT kind-
+flip these entries — the flip alone loses semantic content; the flip
+plus porting bodies is a multi-day effort justified only by
+documented amsppt-in-arXiv evidence.
+
+## 43. `\hook_use:n{begindocument}` dispatch is a Rust-only compensator
+
+**Context:** Perl LaTeXML treats l3hooks as a block of no-op stubs
+(`latex_base.pool.ltxml` L829-855) — no hook storage, no dispatch, no
+ordering engine. `\hook_use:n` in Perl is a no-op that swallows its
+argument.
+
+**Wisdom:** the `latex_constructs.rs:2501` `\hook_use:n{begindocument}`
+dispatch is NOT a parity gap — it is a Rust-only compensator for our
+raw `expl3-code.tex` load path (active when the dump doesn't short-
+circuit it). That path really does define `\hook_use:n` and enqueues
+hook code against it; Perl doesn't load `expl3-code.tex` so doesn't
+need the dispatch. Keep the gate; removing it silently regresses
+the raw-load path. Any future "clean up expl3 support" pass must
+preserve this compensator or replace the raw-load path first.
+
+## 44. `DefMacro(sub{…})` vs `DefPrimitive(sub{…})` are NOT interchangeable
+
+**Correction to an over-broad recent pattern** (several 2026-04-23
+breadcrumbs claimed a blanket equivalence — wrong).
+
+The two kinds agree on the **shape of the Perl body** (a sub that may
+have side effects and may return tokens), but they differ on **when
+and how the gullet sees the CS**:
+
+| Property | `DefMacro(sub{})` | `DefPrimitive(sub{})` |
+|---|---|---|
+| Expandable? | yes (gullet-level) | no (stomach-level) |
+| `read_x_token` over the CS | fires the sub, substitutes return | returns the CS token as-is |
+| Inside `\edef` / `\protected@edef` | sub runs, return inlined into definition | CS frozen as-is in the body |
+| `\ifx \cs \other` | compares expansion | compares primitive identity |
+| `\expandafter \cs` | triggers one expansion step | unchanged |
+| Side-effect timing | gullet-time (before stomach) | stomach-time |
+
+**Operational takeaway.** A Rust `DefPrimitive!(cs, sub{…})` is only a
+safe port of a Perl `DefMacro(cs, sub{…})` **if every call-site of the
+CS occurs in a non-expansion context** — i.e., the CS is always invoked
+at stomach time, never peeked by `read_x_token`, never captured by
+`\edef`, never compared via `\ifx`. For most state-mutating package
+helpers (e.g. `\DefineNamedColor`, `\lx@unactivate`,
+`\set@deluxetable@template`, `\lx@makecell@head`) the invariant does
+hold in practice — but the correctness is per-CS, not by-pattern.
+
+For gullet-reactive helpers (`\xspace` reads the next token; `\xglobal
+Token` peeks and decides; `\pgf@circ@stripdecimals Until:…` slices an
+argument stream) the distinction is observable and the two kinds are
+**not equivalent** in general. Those cases can still work because:
+- the outer protocol (what tokens follow the CS) dictates whether the
+  stomach-time consumption order matches the gullet-time expansion
+  order, AND
+- the CS is never placed inside a protected `\edef` or `\ifx` capture.
+
+When triaging a Perl `DefMacro(sub{})` → Rust `DefPrimitive(sub{})`
+mismatch, the right breadcrumb is **not** "WISDOM #41" (that entry is
+about math-mode structural ParameterType adaptations). The correct
+triage is:
+1. Name the gullet contexts that could observe the CS (calls from
+   `\edef`, `\ifx`, `\expandafter`, anything peeking with `readXToken`).
+2. Confirm none of them fire for this CS in practice (grep, or a
+   comment in the surrounding code that documents the invocation
+   contract).
+3. If confirmed, the DefPrimitive port is safe; otherwise it is a real
+   parity gap and needs a genuine DefMacro / sub-with-token-return.
+
+**Audit-tool consequence.** The Def*-parity audit surfaces every
+`DefMacro → DefPrimitive` mismatch. Most pass the per-CS test, but
+dismissing them all by pattern is unsafe. When in doubt, err toward
+keeping Perl's kind and porting the sub body as a DefMacro with
+gullet-token return.
+
+## #45 Rust `mode => "text"` auto-implies `enter_horizontal => true`
+
+When porting a Perl `DefConstructor` that carries
+`mode => 'restricted_horizontal', enterHorizontal => 1`, the Rust
+equivalent is `mode => "text"` alone — do NOT add
+`enter_horizontal => true` on top. The translation happens in
+`latexml_core/src/binding/def/dialect.rs:331-355`:
+
+```rust
+// Perl: mode => 'text' becomes restricted_horizontal + enterHorizontal
+let mut needs_enter_horizontal = options.enter_horizontal;
+let mode = if options.mode.as_deref() == Some("text") {
+  needs_enter_horizontal = true;
+  Some("restricted_horizontal".to_string())
+} else {
+  options.mode
+};
+```
+
+This applies to `DefConstructor`, `DefEnvironment`, and `DefMath`
+(three sites in `dialect.rs`).
+
+**When the explicit flag IS required:** Perl entries that carry
+`enterHorizontal => 1` with *no* `restricted_horizontal` mode (so
+Rust uses `mode => "restricted_horizontal"` verbatim, or no mode at
+all). Examples: `\ref`, `\lx@bibitem`, `\lx@bibnewblock`, `\@@bibref`,
+`\lx@@verbatim`.
+
+**Parity-sweep triage:** When scanning Perl for enterHorizontal gaps,
+filter out entries that already have `mode => 'restricted_horizontal'`
+on the same or an adjacent line — the Rust `mode => "text"` picks
+up the flag automatically, and any explicit `enter_horizontal =>
+true` on such a call is a harmless no-op that adds visual noise.
+
+## #46 `NewCounter(..., idprefix => 'X')` silently decays to empty prefix when routed through `\newcounter`
+
+**Finding (cycles 225/226):** Three Rust bindings had counter
+declarations that lost their Perl `idprefix => '<prefix>'` option:
+
+- `aas_support_sty`: `\@appendix` reset — `new_counter("equation",
+  "section", None)` (was missing Perl's `idprefix => 'E'`)
+- `subfig_sty`: subfigure/subtable — routed through `RawTeX!
+  ("\\newcounter{subfigure}[figure]")` (raw `\newcounter` has no
+  `idprefix` keyword; the LaTeXML option is lost)
+- pre-existing subfigure_sty and subfloat_sty already correct
+
+**Mechanism:** Perl's `NewCounter(...)` takes idprefix as a keyword
+and wires it into LaTeXML's id-registry. LaTeX's `\newcounter`
+takes only `[within]`; no way to express idprefix. So when a Rust
+port uses `RawTeX!("\\newcounter{X}[Y]")`, the counter is created
+without an idprefix → document IDs fall back to empty. The collision
+surfaces on the *second* instance of the parent (e.g. second
+appendix, or second figure with subfigures) since the first counter
+value has no prefix-namespace separation.
+
+**Detection pattern:**
+```
+for each Perl file with `idprefix =>`:
+  count Perl idprefix occurrences
+  count Rust idprefix=>"..." occurrences in same-named binding
+  if Perl > Rust → audit
+```
+
+**Fix template:** replace `RawTeX!("\\newcounter{C}[W]")` with
+`NewCounter!("C", "W", idprefix => "P")`; or convert a bare
+`new_counter("C", "W", None)` to
+`new_counter("C", "W", Some(NewCounterOptions { idprefix: "P", ..Default::default() }))`.
+See commits `8fb8bf569`, `d79d1a2e4` for concrete examples.
+
+**Don't over-apply:** theorem/spnewtheorem counters delegate to
+`define_new_theorem` which builds `idprefix => "Thm{name}"` itself;
+those bindings show as "deficits" in counted grep but aren't.
+
+## #47 `rust-libxml` `Node::clone` is Rc refcount bump; `_Node::drop` may call `xmlFreeNode`
+
+**Finding (cycle 236, 2026-04-23):** `latexmlpost_oxide` was SIGSEGVing
+on `$X$` plus an ar5iv preload. Root cause: the `rust-libxml`
+crate models `Node` as `Rc<RefCell<_Node>>`. When a `_Node` is dropped
+with `unlinked == true`, the `Drop` impl calls `xmlFreeNode` on the
+raw pointer. For nodes that are conceptually *doc-owned* (still
+reachable via the document tree, or still referenced by the idcache /
+objectDB) but temporarily held in a local `Node` handle, letting the
+local drop fire invokes `xmlFreeNode` on memory that `xmlFreeDoc` will
+free again at program end → UAF.
+
+**Symptom shape:** segfault at process teardown or at the drop of a
+post-processing phase's working set — not during the XML emission
+itself. The stdout XML/HTML reaches disk before the crash fires.
+
+**Fix pattern:** the `DocOwnedNode` RAII wrapper
+(`latexml_post/src/doc_owned_node.rs`) holds a `ManuallyDrop<Node>`
+that never runs the inner drop. Use it at exactly the sites where a
+`Node` handle is extracted and then dropped, but the underlying
+libxml2 allocation must remain live for the Doc to free:
+- `PostDocument::drop` idcache teardown
+- `math_processor::process_math_node` after `preremove_nodes` +
+  `remove_nodes` of the xmath subtree
+
+**What *not* to do:** scattered `mem::forget(node.clone())` ad-hoc.
+That works but masks intent and leaks the wrapper-level Rc counts on
+every call path. The RAII wrapper has one construction site, makes
+ownership explicit at the type level, and is what
+`safe_unlink`-adjacent reasoning should live under.
+
+**Upstream fix path:** expose `_Node::set_linked()` from rust-libxml so
+callers can toggle the "I own the allocation" flag without going
+through `ManuallyDrop`. Until then `DocOwnedNode` is the local
+workaround.
+
+**Related:** WISDOM #37 `Document::safe_unlink` is mandatory; this
+entry is the complement — unlinking is not always safe when the Doc
+still has the node under management.
+
+**Reproducer:** `docs/known_crashes/min_xmath_xmlid.tex` plus
+`--preload=ar5iv.sty` triggers the old crash on 5/5 runs with the
+pre-fix binary.
+
+## #48 Scan/default_handler's Perl→Rust size asymmetry demands a `<Math>`-skip
+
+**Finding (cycle 239, 2026-04-23):** `latexml_post::scan::Scan` was
+registering every XMTok/XMApp/XMRef/XMWrap/XMDual inside `<Math>` into
+the ObjectDB, making Scan dominate post-processing wall time for
+math-heavy papers (arXiv:0705.0790: 11.4 s of 17.8 s total, 65K nodes
+registered, ~98% of which have no downstream use).
+
+**Why it's a *Rust-specific* problem:** Perl LaTeXML's core does not
+emit `xml:id` on XM* nodes at all. Its `Scan::default_handler`
+short-circuits on `$id` being undef, so the inner-math tree is
+effectively skipped. The Rust port via ar5iv's `_ID_counter__` pattern
+*does* emit xml:id on every descendant (needed for XMRef idref
+resolution inside the math tree), so the literal Perl port of
+`default_handler` dutifully processes every one.
+
+**Fix shape (commit `0bc04e3eb`):** add an explicit `ltx:Math` branch
+in the dispatch that registers the outer Math element's id and then
+*returns without `scan_children`*. XMRef still resolves because
+`PostDocument::idcache` is built at parse time (not via Scan) and
+retains every xml:id. Only the ObjectDB entries for XM* descendants
+are skipped, which is correct because cross-reference / index /
+bibliography don't target math-internal ids.
+
+**Secondary cleanup in `default_handler`:** move `collect_common`
+*inside* the `if id.is_some()` — previously it ran for every node,
+built a `ScannedProps`, and discarded it on id miss. Pure perf.
+
+**When this is an intentional divergence from Perl and when not:** the
+Math handler is *structurally Rust-specific* — Perl has nothing
+to port. Note it in the code comment as a divergence, not a bug.
+The `collect_common`-guard is a literal Perl parity improvement
+(mirrors Perl Scan.pm L272-283).
+
+**Don't over-apply:** other subtrees *may* legitimately carry
+downstream-needed xml:ids (e.g. `ltx:figure`, `ltx:note`); those are
+handled by their own dispatch branches and already register properly.
+The Math skip is load-bearing specifically because XM* descendants are
+an ar5iv-preload artifact.
+
+## #49 Indirect-model memoisation must keep the max desirability, not the first
+
+**Symptom observed as:** `paralists_test` failing in the test-harness
+while the CLI binary (`latexml_oxide`) passed — `inparaenum` item
+bodies wrapped in `<picture xml:id="…pic1">` under test, but not via
+the bin. Earlier drafts of this entry blamed a harness vs binary
+divergence; that was wrong.
+
+**Actual root cause:** `latexml_core::common::model::compute_indirect_model_aux`
+memoised `desc[kid][start]` on *first visit* and skipped any later
+path. In the LaTeXML schema both `ltx:text` (autoOpen 1.0) and
+`ltx:picture` (autoOpen 0.5) are valid containers for `#PCDATA`, and
+`ltx:text` itself lists `ltx:picture` among its allowed children. When
+the recursion explored `ltx:text → ltx:picture → #PCDATA` before the
+direct `ltx:text → #PCDATA` child (which happens whenever the
+`HashSet`-backed `contents(ltx:text)` iteration yields `ltx:picture`
+first), it inserted `desc[#PCDATA][ltx:text] = 50` — the path
+desirability after picture's 0.5 attenuation — and blocked the 100
+score from the direct child. In the outer ranking loop at
+`state.rs::compute_indirect_model` the stored 50 tied with
+`desc[#PCDATA][ltx:picture] = 50`, and alphabetical sort put picture
+first, so `imodel[inline-item][#PCDATA] = ltx:picture`. Process hash
+seed determined iteration order, so the bin and test binaries picked
+different outcomes on the same input.
+
+**Fix:** Replace the "skip if already present" memoisation with a
+"skip only if prior ≥ current" check so max-desirability wins
+regardless of iteration order (model.rs ~L790). Remove WISDOM #49's
+old claim and the corresponding paralists ignore entry in
+`testable.rs`.
+
+**Reproducer (historical):**
+
+```bash
+# Pre-fix: either the bin or the test binary would produce the picture
+# wrap depending on the process hash seed.
+LATEXML_SAVE_ACTUAL=1 cargo test --tests -p latexml paralists_test --include-ignored
+diff /tmp/latexml_actual_paralists.xml latexml_oxide/tests/structure/paralists.xml
+```
+
+**When to apply:** Any auto-open regression where two openable tags
+compete for the same child (e.g. `ltx:text` vs `ltx:picture`,
+`ltx:p` vs `ltx:para` in `_CaptureBlock_`). Check that the indirect
+model returns the *maximum*-scoring intermediate, not the
+first-inserted one. Add a sorted tag iteration if determinism is
+needed beyond desirability ranking.

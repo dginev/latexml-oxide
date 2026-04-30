@@ -9,9 +9,13 @@
 
 use libxml::tree::Node;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use crate::document::{NodeData, PostDocument};
 use crate::processor::{PostError, Processor};
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// Result of converting a math node.
 #[derive(Debug, Clone)]
@@ -19,19 +23,19 @@ pub struct MathConversion {
   /// The processor that produced this conversion.
   pub processor_name: String,
   /// MIME type of the conversion (e.g., "application/mathml+xml").
-  pub mimetype: Option<String>,
+  pub mimetype:       Option<String>,
   /// The converted XML (as a NodeData tree).
-  pub xml: Option<NodeData>,
+  pub xml:            Option<NodeData>,
   /// String representation (for non-XML formats).
-  pub string: Option<String>,
+  pub string:         Option<String>,
   /// Image source path (for image-based conversions).
-  pub src: Option<String>,
+  pub src:            Option<String>,
   /// Image width.
-  pub width: Option<String>,
+  pub width:          Option<String>,
   /// Image height.
-  pub height: Option<String>,
+  pub height:         Option<String>,
   /// Image depth (baseline offset).
-  pub depth: Option<String>,
+  pub depth:          Option<String>,
 }
 
 /// Abstract base trait for math-processing post-processors.
@@ -78,14 +82,10 @@ pub trait MathProcessor: Processor {
   /// Primary format returns empty string; secondaries return their suffix.
   ///
   /// Port of `MathProcessor::rawIDSuffix`.
-  fn raw_id_suffix(&self) -> &str {
-    ""
-  }
+  fn raw_id_suffix(&self) -> &str { "" }
 
   /// Whether this processor is a secondary (parallel) processor.
-  fn is_secondary(&self) -> bool {
-    false
-  }
+  fn is_secondary(&self) -> bool { false }
 
   /// ID suffix: empty for primary, raw_id_suffix for secondary.
   ///
@@ -102,9 +102,7 @@ pub trait MathProcessor: Processor {
   /// Default: always true.
   ///
   /// Port of `MathProcessor::canConvert`.
-  fn can_convert(&self, _doc: &PostDocument, _math: &Node) -> bool {
-    true
-  }
+  fn can_convert(&self, _doc: &PostDocument, _math: &Node) -> bool { true }
 
   /// Optional preprocessing before conversion begins.
   ///
@@ -114,12 +112,7 @@ pub trait MathProcessor: Processor {
   /// Wrap the converted XML in the appropriate outer element (e.g., `m:math`).
   ///
   /// Port of `MathProcessor::outerWrapper`.
-  fn outer_wrapper(
-    &self,
-    _doc: &PostDocument,
-    _xmath: &Node,
-    conversion: NodeData,
-  ) -> NodeData {
+  fn outer_wrapper(&self, _doc: &PostDocument, _xmath: &Node, conversion: NodeData) -> NodeData {
     conversion
   }
 }
@@ -154,17 +147,42 @@ pub fn process_math(
   doc.mark_xm_node_visibility();
   processor.preprocess(doc, &maths);
 
-  // Count Math nodes, then process one at a time by re-fetching each time.
-  // This avoids holding multiple Rc references which prevents new_child.
-  let n = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]").len();
-
-  // Process in reverse order: nested math first (carried along with outer)
-  // Re-fetch each iteration to get a fresh single reference.
-  for i in (0..n).rev() {
-    let maths = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]");
-    if let Some(math) = maths.into_iter().nth(i) {
-      process_math_node(processor, doc, &math, keep_xmath)?;
+  // Re-fetch once after preprocess in case it restructured things (matches
+  // Perl Post.pm L307-308 "# Re-Fetch the math nodes, in case preprocessing
+  // has messed them up!!!"). Then iterate in reverse so nested math is
+  // converted first and carried along with the enclosing math.
+  let maths = doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]");
+  let n = maths.len();
+  // LATEXML_POST_AUDIT=1 records per-node wall-clock for the math
+  // post-processing loop — diagnosis aid for MathML::Presentation perf.
+  let audit = *POST_AUDIT;
+  let mut total_ns: u128 = 0;
+  let mut max_ns: u128 = 0;
+  let mut max_idx: usize = 0;
+  for (i, math) in maths.into_iter().rev().enumerate() {
+    let t0 = if audit {
+      Some(std::time::Instant::now())
+    } else {
+      None
+    };
+    process_math_node(processor, doc, &math, keep_xmath)?;
+    if let Some(t0) = t0 {
+      let ns = t0.elapsed().as_nanos();
+      total_ns += ns;
+      if ns > max_ns {
+        max_ns = ns;
+        max_idx = i;
+      }
     }
+  }
+  if audit {
+    log::info!(
+      "POST_AUDIT: {} math nodes in {}ms (max {}µs at index {})",
+      n,
+      total_ns / 1_000_000,
+      max_ns / 1_000,
+      max_idx
+    );
   }
 
   // Clean up _cvis/_pvis internal visibility markers from XMath nodes
@@ -192,16 +210,17 @@ fn process_math_node(
   };
 
   // Convert
-  let mut conversion = processor.convert_node(doc, &xmath)
+  let mut conversion = processor
+    .convert_node(doc, &xmath)
     .unwrap_or(MathConversion {
       processor_name: processor.get_name().to_string(),
-      mimetype: None,
-      xml: None,
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     });
 
   // Apply outer wrapper if we got XML
@@ -211,12 +230,12 @@ fn process_math_node(
     // Wrap string in ltx:text
     let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
     conversion.xml = Some(NodeData::Element {
-      tag: "ltx:text".to_string(),
+      tag:        "ltx:text".to_string(),
       attributes: Some(HashMap::from([(
         "class".to_string(),
         format!("ltx_math_{}", mimetype),
       )])),
-      children: vec![NodeData::Text(string.clone())],
+      children:   vec![NodeData::Text(string.clone())],
     });
   }
 
@@ -224,7 +243,16 @@ fn process_math_node(
     // Mark XMath IDs as reusable (it will be removed)
     doc.preremove_nodes(&[xmath.clone()]);
     // Remove XMath from the Math element
-    doc.remove_nodes(&[xmath]);
+    doc.remove_nodes(&[xmath.clone()]);
+    // After unlink, the `xmath` Rc must not fire `_Node::drop` — that
+    // would call `xmlFreeNode` on a subtree whose props/ns are still
+    // shared with the enclosing Document, leading to a UAF at
+    // `xmlFreeDoc` time. Wrap in `DocOwnedNode` which suppresses the
+    // Drop; `xmlFreeDoc` remains the sole owner.
+    //
+    // Reproducer (cycle 236): `$X$` with ar5iv preload → SIGSEGV in
+    // PMML pass without this wrapper. See docs/known_crashes/README.md.
+    let _kept = crate::doc_owned_node::DocOwnedNode::new(xmath);
   }
 
   // Remove blank text nodes from Math
@@ -270,4 +298,67 @@ fn maybe_set_math_image(math: &Node, conversion: &MathConversion) {
 /// Port of `MathProcessor::toProcess`.
 pub fn find_top_level_math(doc: &PostDocument) -> Vec<Node> {
   doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn math_conversion_clone_preserves() {
+    let c = MathConversion {
+      processor_name: "test".to_string(),
+      mimetype:       Some("application/mathml+xml".to_string()),
+      xml:            None,
+      string:         Some("x+y".to_string()),
+      src:            None,
+      width:          Some("5em".to_string()),
+      height:         None,
+      depth:          None,
+    };
+    let d = c.clone();
+    assert_eq!(d.processor_name, "test");
+    assert_eq!(d.mimetype.as_deref(), Some("application/mathml+xml"));
+    assert_eq!(d.string.as_deref(), Some("x+y"));
+    assert_eq!(d.width.as_deref(), Some("5em"));
+  }
+
+  #[test]
+  fn math_conversion_all_none_is_valid() {
+    // A MathConversion with nothing set is well-formed; it's just not
+    // useful output.
+    let c = MathConversion {
+      processor_name: "noop".to_string(),
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
+    };
+    assert!(c.mimetype.is_none());
+    assert!(c.xml.is_none());
+    assert!(c.string.is_none());
+    assert!(c.src.is_none());
+    assert!(c.width.is_none());
+    assert!(c.height.is_none());
+    assert!(c.depth.is_none());
+  }
+
+  #[test]
+  fn math_conversion_debug_is_non_empty() {
+    let c = MathConversion {
+      processor_name: "pmml".to_string(),
+      mimetype:       None,
+      xml:            None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
+    };
+    let s = format!("{c:?}");
+    assert!(s.contains("pmml"));
+  }
 }

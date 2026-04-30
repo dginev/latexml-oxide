@@ -3,17 +3,25 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
-  // Ignorable options
-  for option in ["a4paper", "letterpaper", "landscape",
+  // Ignorable options (Perl L22-30)
+  for option in ["a4paper", "letterpaper", "landscape", "portrait",
     "8pt", "9pt", "10pt", "11pt", "12pt",
-    "oneside", "twoside", "draft", "final",
+    "oneside", "twoside", "draft", "final", "e-only",
     "titlepage", "notitlepage", "onecolumn", "twocolumn",
-    "leqno", "reqno", "centertags", "tbtags",
-    "fleqn", "openright", "openany",
-    "makeindex", "nomath", "noamsfonts"].iter()
+    "centertags", "tbtags",
+    "openright", "openany",
+    "makeidx", "nomath", "noamsfonts", "psamsfonts"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // Perl L31-34: default ltx_leqno => 1 (left equation numbers), then
+  // `leqno` re-asserts, `reqno` clears, `fleqn` sets ltx_fleqn=1. Rust
+  // previously declared leqno/reqno/fleqn as no-ops, so amsbook docs
+  // with [reqno] still rendered left-numbered equations.
+  AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true);
+  DeclareOption!("leqno", { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
+  DeclareOption!("reqno", { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>); });
+  DeclareOption!("fleqn", { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{book}")?;
   });

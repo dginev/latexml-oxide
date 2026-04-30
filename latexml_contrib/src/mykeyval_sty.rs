@@ -5,23 +5,27 @@ LoadDefinitions!({
 
   DefKeyVal!("foo", "path", "Semiverbatim");
 
-  DefConstructor!("\\KVsimple OptionalKeyVals:foo",
-    "<ltx:graphics graphic='none' options='#1'/>");
+  DefConstructor!(
+    "\\KVsimple OptionalKeyVals:foo",
+    "<ltx:graphics graphic='none' options='#1'/>"
+  );
 
-  DefConstructor!("\\KVcomplex OptionalKeyVals:foo",
-    "<ltx:graphics graphic='none' imagewidth='&GetKeyVal(#1,width)' imageheight='&GetKeyVal(#1,height)'/>");
+  DefConstructor!(
+    "\\KVcomplex OptionalKeyVals:foo",
+    "<ltx:graphics graphic='none' imagewidth='&GetKeyVal(#1,width)' imageheight='&GetKeyVal(#1,height)'/>"
+  );
 
-  DefEnvironment!("{KVenv} OptionalKeyVals:foo",
-    "<ltx:text width='&GetKeyVal(#1,width)' height='&GetKeyVal(#1,height)'>#body</ltx:text>");
+  DefEnvironment!(
+    "{KVenv} OptionalKeyVals:foo",
+    "<ltx:text width='&GetKeyVal(#1,width)' height='&GetKeyVal(#1,height)'>#body</ltx:text>"
+  );
 
   // KVstruct: hand-written replacement closure because opening two consecutive
   // ltx:text child elements inside an environment body triggers a double-free
   // in the libxml node management. Instead, we use absorb_string for inline text.
   {
     let replacement: ReplacementClosure = Rc::new(
-      |document: &mut Document,
-       args: &Vec<Option<Digested>>,
-       props: &arena::SymHashMap<Stored>| {
+      |document: &mut Document, args: &Vec<Option<Digested>>, props: &arena::SymHashMap<Stored>| {
         document.open_element("ltx:text", None, None)?;
         // ?&GetKeyVal(#1,width)(Width: &GetKeyVal(#1,width))
         if let Some(width) = GetKeyVal(&args[0], "width") {

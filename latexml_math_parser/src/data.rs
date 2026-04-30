@@ -1,6 +1,6 @@
 use libxml::tree::{Node, NodeType};
-use std::cell::RefCell;
 use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 
 // Thread-local idstore for XMRef resolution during math parsing.
 // Set by the parser before parsing, cleared after.
@@ -30,7 +30,10 @@ fn resolve_xmref(node: &Node) -> Option<Node> {
     if let Some(idref) = node.get_attribute("idref") {
       // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
       let store_result = MATH_IDSTORE.with(|cell| {
-        cell.borrow().as_ref().and_then(|store| store.get(&idref).cloned())
+        cell
+          .borrow()
+          .as_ref()
+          .and_then(|store| store.get(&idref).cloned())
       });
       if store_result.is_some() {
         return store_result;
@@ -84,7 +87,9 @@ pub fn get_grammatical_role(node: &Node) -> String {
         let children: Vec<_> = node.get_child_elements();
         let content_role = children.first().and_then(|c| c.get_attribute("role"));
         let pres_role = children.get(1).and_then(|p| p.get_attribute("role"));
-        content_role.or(pres_role).unwrap_or_else(|| "UNKNOWN".to_string())
+        content_role
+          .or(pres_role)
+          .unwrap_or_else(|| "UNKNOWN".to_string())
       } else {
         "ATOM".to_string()
       }
@@ -118,5 +123,100 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
     item.get_attribute(key)
   } else {
     None
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use libxml::parser::Parser as XmlParser;
+  use libxml::tree::Document;
+
+  fn parse(xml: &str) -> Document { XmlParser::default().parse_string(xml).expect("parse xml") }
+
+  fn root(doc: &Document) -> Node { doc.get_root_element().expect("root element") }
+
+  #[test]
+  fn role_from_attribute_wins() {
+    let doc = parse(r#"<XMTok role="ADDOP" meaning="plus">+</XMTok>"#);
+    assert_eq!(get_grammatical_role(&root(&doc)), "ADDOP");
+  }
+
+  #[test]
+  fn role_xmtok_without_role_is_unknown() {
+    let doc = parse(r#"<XMTok>x</XMTok>"#);
+    assert_eq!(get_grammatical_role(&root(&doc)), "UNKNOWN");
+  }
+
+  #[test]
+  fn role_non_xmtok_without_role_is_atom() {
+    let doc = parse(r#"<XMApp><XMTok>f</XMTok></XMApp>"#);
+    assert_eq!(get_grammatical_role(&root(&doc)), "ATOM");
+  }
+
+  #[test]
+  fn role_xmdual_prefers_content_branch() {
+    let doc = parse(
+      r#"<XMDual><XMTok role="CONTENTROLE">c</XMTok><XMTok role="PRESROLE">p</XMTok></XMDual>"#,
+    );
+    assert_eq!(get_grammatical_role(&root(&doc)), "CONTENTROLE");
+  }
+
+  #[test]
+  fn role_xmdual_falls_back_to_presentation_branch() {
+    let doc = parse(r#"<XMDual><XMTok>c</XMTok><XMTok role="PRESROLE">p</XMTok></XMDual>"#);
+    assert_eq!(get_grammatical_role(&root(&doc)), "PRESROLE");
+  }
+
+  #[test]
+  fn role_xmdual_unknown_when_both_missing() {
+    let doc = parse(r#"<XMDual><XMTok>c</XMTok><XMTok>p</XMTok></XMDual>"#);
+    assert_eq!(get_grammatical_role(&root(&doc)), "UNKNOWN");
+  }
+
+  #[test]
+  fn meaning_from_meaning_attribute() {
+    let doc = parse(r#"<XMTok meaning="plus" name="+">+</XMTok>"#);
+    assert_eq!(get_token_meaning(&root(&doc)), "plus");
+  }
+
+  #[test]
+  fn meaning_falls_back_to_name() {
+    let doc = parse(r#"<XMTok name="+">+</XMTok>"#);
+    assert_eq!(get_token_meaning(&root(&doc)), "+");
+  }
+
+  #[test]
+  fn meaning_falls_back_to_content() {
+    let doc = parse(r#"<XMTok>x</XMTok>"#);
+    assert_eq!(get_token_meaning(&root(&doc)), "x");
+  }
+
+  #[test]
+  fn meaning_falls_back_to_role_when_no_content() {
+    let doc = parse(r#"<XMTok role="ADDOP"/>"#);
+    assert_eq!(get_token_meaning(&root(&doc)), "ADDOP");
+  }
+
+  #[test]
+  fn meaning_empty_when_nothing_present() {
+    let doc = parse(r#"<XMTok/>"#);
+    assert_eq!(get_token_meaning(&root(&doc)), "");
+  }
+
+  #[test]
+  fn idstore_set_and_clear_is_balanced() {
+    // Setting then clearing leaves no state.
+    let store: FxHashMap<String, Node> = FxHashMap::default();
+    set_math_idstore(store);
+    clear_math_idstore();
+    MATH_IDSTORE.with(|cell| assert!(cell.borrow().is_none()));
+  }
+
+  #[test]
+  fn idstore_clear_is_idempotent() {
+    clear_math_idstore();
+    clear_math_idstore();
+    MATH_IDSTORE.with(|cell| assert!(cell.borrow().is_none()));
   }
 }

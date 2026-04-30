@@ -25,16 +25,17 @@ fn add_math_rewrite_scoped_first(match_char: &str, role: &str, scope: &str) -> R
   attrs_map.insert("role".to_string(), role.to_string());
   let options = latexml_core::rewrite::RewriteOptions {
     xpath: Some(xpath),
-    scope: Some(latexml_core::state::Scope::Named(latexml_core::common::arena::pin(scope))),
+    scope: Some(latexml_core::state::Scope::Named(
+      latexml_core::common::arena::pin(scope),
+    )),
     attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(1),
     ..Default::default()
   };
-  state::unshift_value(
-    "DOCUMENT_REWRITE_RULES",
-    vec![latexml_core::rewrite::Rewrite::new("math", options)],
-  );
+  state::unshift_value("DOCUMENT_REWRITE_RULES", vec![
+    latexml_core::rewrite::Rewrite::new("math", options),
+  ]);
   Ok(())
 }
 

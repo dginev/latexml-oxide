@@ -1,12 +1,12 @@
 //! acmart.cls — ACM article class
 //! Perl: acmart.cls.ltxml (259 lines)
+use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
-use crate::engine::latex_constructs::{before_float, after_float};
 
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('amsart', withoptions => 1)
-  load_class("amsart", Vec::new(), Tokens!())?;
+  load_class_with_options("amsart", Tokens!())?;
 
   RequirePackage!("fancyhdr");
   RequirePackage!("geometry");
@@ -97,30 +97,39 @@ LoadDefinitions!({
   DefMacro!("\\email [] Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
 
   DefMacro!("\\orcid Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@orcid{\\@@orcid{#1}}}");
+  // Perl acmart.cls.ltxml has `mode=>'restricted_horizontal',
+  // enterHorizontal=>1` on \@@orcid and all eight affiliation
+  // constructors. enter_horizontal triggers an implicit horizontal-mode
+  // entry when invoked between paragraphs (vertical mode), so these
+  // text-shaped <ltx:text> wrappers don't get emitted as block-level
+  // children of the section root with no enclosing <ltx:p>. Same
+  // class as cancel_sty cycle 86 / hyperref cycle 87.
   DefConstructor!("\\@@orcid{}",
     "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
-    mode => "restricted_horizontal"
+    mode => "restricted_horizontal", enter_horizontal => true
   );
   DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
 
   //======================================================================
-  // Internal structure to affiliation
+  // Internal structure to affiliation — Perl uses enterHorizontal=>1
+  // on each so each `\institution{...}` etc. between paragraphs of an
+  // \affiliation block opens a paragraph instead of a stray block.
   DefConstructor!("\\position{}", "<ltx:text class='ltx_affiliation_position' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\institution{}", "<ltx:text class='ltx_affiliation_institution' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\department{}", "<ltx:text class='ltx_affiliation_department' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\streetaddress{}", "<ltx:text class='ltx_affiliation_streetaddress' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\city{}", "<ltx:text class='ltx_affiliation_city' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\state{}", "<ltx:text class='ltx_affiliation_state' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\postcode{}", "<ltx:text class='ltx_affiliation_postcode' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
   DefConstructor!("\\country{}", "<ltx:text class='ltx_affiliation_country' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", enter_horizontal => true);
 
   //======================================================================
   // Ignorable stuff
@@ -165,8 +174,17 @@ LoadDefinitions!({
   //======================================================================
   // Acknowledgements
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
-  // Simplified: inline the name directly. TODO: properties with digest_to_string
-  DefConstructor!("\\acks", "<ltx:acknowledgements name='Acknowledgements'>");
+  // Perl L167-168 ships properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))) }
+  // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
+  // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
+  // override. Use DigestIf! pattern (same as listings_sty:2060) to resolve
+  // dynamically. Inline `<ltx:acknowledgements name='#name'>` template
+  // matches the Perl form.
+  DefConstructor!("\\acks", "<ltx:acknowledgements name='#name'>",
+    properties => {
+      let name_toks = DigestIf!(T_CS!("\\acknowledgmentsname"))?;
+      stored_map!("name" => name_toks)
+    });
   DefConstructor!("\\endacks", "</ltx:acknowledgements>");
   DefMacro!("\\grantsponsor Semiverbatim {} Semiverbatim", "Sponsor #2 \\url{#3}");
   DefMacro!("\\grantnum OptionalSemiverbatim Semiverbatim {}", "Grant \\##3");
@@ -195,10 +213,21 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // Sidebar — Perl L200-202
+  // Sidebar — Perl L200-210
   DefMacro!("\\sidebarname", "Sidebar");
   DefMacro!("\\fnum@sidebar", "\\sidebarname\\nobreakspace\\thesidebar");
   DefMacro!("\\format@title@sidebar{}", "\\lx@tag{\\fnum@sidebar: }#1");
+
+  // Perl L204-210: the {sidebar} env wraps body in <ltx:sidebar>. The
+  // Perl signature is `{}{} Undigested [] {}` — title, bio, id, mark.
+  // Rust previously had no sidebar env defined so ACM papers using
+  // `\begin{sidebar}{title}...\end{sidebar}` hit undefined-env.
+  // Simplified template (Perl has the title / creator fields
+  // commented out too, so #body is the practical payload). The
+  // optional labels/id attributes resolve via LaTeXML's normal
+  // xml:id/labels machinery on DefEnvironment bodies.
+  DefEnvironment!("{sidebar}{} Undigested [] {}",
+    "<ltx:sidebar xml:id='#id'>#body</ltx:sidebar>");
 
   //======================================================================
   // Theorem styles via RawTeX

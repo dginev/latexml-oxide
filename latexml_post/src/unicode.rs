@@ -70,7 +70,10 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
   let mut map: HashMap<&'static str, HashMap<char, char>> = HashMap::new();
 
   // bold: full set (Latin + Greek + digits)
-  map.insert("bold", make_plane1_map(0x1D400, Some(0x1D6A8), Some(0x1D6C2), Some(0x1D7CE)));
+  map.insert(
+    "bold",
+    make_plane1_map(0x1D400, Some(0x1D6A8), Some(0x1D6C2), Some(0x1D7CE)),
+  );
 
   // italic: Latin + Greek, no digits. Special: h => PLANCK CONSTANT
   {
@@ -86,7 +89,10 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
   );
 
   // sans-serif: Latin + digits, no Greek
-  map.insert("sans-serif", make_plane1_map(0x1D5A0, None, None, Some(0x1D7E2)));
+  map.insert(
+    "sans-serif",
+    make_plane1_map(0x1D5A0, None, None, Some(0x1D7E2)),
+  );
 
   // bold-sans-serif: full set
   map.insert(
@@ -95,7 +101,10 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
   );
 
   // sans-serif-italic: Latin only
-  map.insert("sans-serif-italic", make_plane1_map(0x1D608, None, None, None));
+  map.insert(
+    "sans-serif-italic",
+    make_plane1_map(0x1D608, None, None, None),
+  );
 
   // sans-serif-bold-italic: Latin + Greek, no digits
   map.insert(
@@ -104,7 +113,10 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
   );
 
   // monospace: Latin + digits, no Greek
-  map.insert("monospace", make_plane1_map(0x1D670, None, None, Some(0x1D7F6)));
+  map.insert(
+    "monospace",
+    make_plane1_map(0x1D670, None, None, Some(0x1D7F6)),
+  );
 
   // script: Latin only, with 11 special character overrides
   {
@@ -521,7 +533,10 @@ mod tests {
 
   #[test]
   fn test_unicode_mathvariant_compound() {
-    assert_eq!(unicode_mathvariant("sansserif bold italic"), "sans-serif-bold-italic");
+    assert_eq!(
+      unicode_mathvariant("sansserif bold italic"),
+      "sans-serif-bold-italic"
+    );
     assert_eq!(unicode_mathvariant("blackboard bold"), "double-struck");
     assert_eq!(unicode_mathvariant("fraktur bold"), "bold-fraktur");
   }

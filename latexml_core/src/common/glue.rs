@@ -210,12 +210,20 @@ impl NumericOps for Glue {
   fn smaller<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let other_val = other.value_of();
-    if self.skip <= other_val { self } else { Self::new(other_val) }
+    if self.skip <= other_val {
+      self
+    } else {
+      Self::new(other_val)
+    }
   }
   fn larger<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
     let other_val = other.value_of();
-    if self.skip >= other_val { self } else { Self::new(other_val) }
+    if self.skip >= other_val {
+      self
+    } else {
+      Self::new(other_val)
+    }
   }
 }
 
@@ -533,5 +541,93 @@ impl Glue {
       }
     }
     string
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn fillcode_new_from_index() {
+    assert_eq!(FillCode::new(1), Some(FillCode::Fil));
+    assert_eq!(FillCode::new(2), Some(FillCode::Fill));
+    assert_eq!(FillCode::new(3), Some(FillCode::Filll));
+    assert_eq!(FillCode::new(0), None);
+    assert_eq!(FillCode::new(4), None);
+    assert_eq!(FillCode::new(100), None);
+  }
+
+  #[test]
+  fn fillcode_from_str_case_sensitive() {
+    assert_eq!(FillCode::from("fil"), Some(FillCode::Fil));
+    assert_eq!(FillCode::from("fill"), Some(FillCode::Fill));
+    assert_eq!(FillCode::from("filll"), Some(FillCode::Filll));
+    // Case-sensitive: uppercase is rejected.
+    assert_eq!(FillCode::from("FIL"), None);
+    assert_eq!(FillCode::from("Fil"), None);
+    assert_eq!(FillCode::from(""), None);
+    assert_eq!(FillCode::from("other"), None);
+  }
+
+  #[test]
+  fn fillcode_to_str_roundtrip() {
+    // from(to_str(c)) == c for all variants.
+    for code in [FillCode::Fil, FillCode::Fill, FillCode::Filll] {
+      let s = code.to_str();
+      assert_eq!(
+        FillCode::from(s),
+        Some(code),
+        "roundtrip broke at {code:?} via {s:?}"
+      );
+    }
+  }
+
+  #[test]
+  fn fillcode_display_matches_to_str() {
+    assert_eq!(format!("{}", FillCode::Fil), "fil");
+    assert_eq!(format!("{}", FillCode::Fill), "fill");
+    assert_eq!(format!("{}", FillCode::Filll), "filll");
+  }
+
+  #[test]
+  fn fillcode_ord_fil_lt_fill_lt_filll() {
+    // Derived Ord follows variant declaration order.
+    assert!(FillCode::Fil < FillCode::Fill);
+    assert!(FillCode::Fill < FillCode::Filll);
+  }
+
+  #[test]
+  fn glue_default_is_zero_skip_no_stretch() {
+    let g = Glue::default();
+    assert_eq!(g.skip, 0);
+    assert_eq!(g.plus, None);
+    assert_eq!(g.minus, None);
+    assert_eq!(g.pfill, None);
+    assert_eq!(g.mfill, None);
+  }
+
+  #[test]
+  fn glue_new_builds_skip_only() {
+    let g = <Glue as NumericOps>::new(65536);
+    assert_eq!(g.skip, 65536);
+    assert_eq!(g.plus, None);
+    assert_eq!(g.minus, None);
+  }
+
+  #[test]
+  fn glue_value_of_returns_skip() {
+    let g = Glue {
+      skip:  1234,
+      plus:  Some(10),
+      pfill: None,
+      minus: None,
+      mfill: None,
+    };
+    assert_eq!(
+      g.value_of(),
+      1234,
+      "value_of returns the skip, not the stretch"
+    );
   }
 }

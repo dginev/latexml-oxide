@@ -9,17 +9,21 @@ LoadDefinitions!({
   DefMacro!("\\lx@cleverref@label[]", "\\lx@cleverref@save@label");
 
   // Load the raw cleveref.sty (for language-dependent definitions)
-  // Pretend amsmath is loaded to avoid errors
-  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some());
+  // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
+  // #23, "amsmath is loaded" means EITHER `amsmath.sty_loaded` OR
+  // `amsmath.sty_raw_loaded` is set.
+  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some())
+    || state::with_value("amsmath.sty_raw_loaded", |v| v.is_some());
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
   InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   if !ams_loaded {
     assign_value("amsmath.sty_loaded", Stored::None, Some(Scope::Local));
   }
 
-  // Restore \label
-  // Perl: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
-  Let!("\\label", "\\lx@cleverref@label");
+  // Perl L29-30: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
+  // Deferred so any later package's `\label` redefinition lands BEFORE
+  // cleveref wraps it; eager Let here would clobber the wrong target.
+  at_begin_document(TokenizeInternal!(r"\let\label\lx@cleverref@label"))?;
 
   // Override raw TeX \crefname/\Crefname/\crefalias with safe stubs.
   // The raw cleveref.sty definitions use complex \expandafter chains and
@@ -160,7 +164,11 @@ fn cref_type(ctype: &str) -> String {
 /// Perl: crefMulti($starred, $labels, $showtype, $capitalized)
 /// Generates tokens for \cref{label1,label2,...}
 fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) -> Result<Tokens> {
-  let label_list: Vec<&str> = labels.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+  let label_list: Vec<&str> = labels
+    .split(',')
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+    .collect();
   let star = if starred { "*" } else { "" };
 
   if label_list.len() < 2 {
@@ -169,7 +177,11 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
     // We use {} parameter, so ~ (ACTIVE) expands to space.
     // Fix: embed catcode-12 ~ directly in show string by using \lx@tilde
     let show = if showtype {
-      if capitalized { "creftypecap\\lx@tilde refnum" } else { "creftype\\lx@tilde refnum" }
+      if capitalized {
+        "creftypecap\\lx@tilde refnum"
+      } else {
+        "creftype\\lx@tilde refnum"
+      }
     } else {
       "refnum"
     };
@@ -179,7 +191,11 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
   } else {
     // Multiple references
     let show = if showtype {
-      if capitalized { "creftypepluralcap\\lx@tilde refnum" } else { "creftypeplural\\lx@tilde refnum" }
+      if capitalized {
+        "creftypepluralcap\\lx@tilde refnum"
+      } else {
+        "creftypeplural\\lx@tilde refnum"
+      }
     } else {
       "refnum"
     };
@@ -189,13 +205,21 @@ fn cref_multi(starred: bool, labels: &str, showtype: bool, capitalized: bool) ->
 
     if label_list.len() == 2 {
       // Pair: use \crefpairconjunction
-      parts.push(s!("\\crefpairconjunction\\lx@cref{star}{{refnum}}{{{}}}", label_list[1]));
+      parts.push(s!(
+        "\\crefpairconjunction\\lx@cref{star}{{refnum}}{{{}}}",
+        label_list[1]
+      ));
     } else {
       // Multiple: use \crefmiddleconjunction for all but last, \creflastconjunction for last
-      for label in &label_list[1..label_list.len()-1] {
-        parts.push(s!("\\crefmiddleconjunction\\lx@cref{star}{{refnum}}{{{label}}}"));
+      for label in &label_list[1..label_list.len() - 1] {
+        parts.push(s!(
+          "\\crefmiddleconjunction\\lx@cref{star}{{refnum}}{{{label}}}"
+        ));
       }
-      parts.push(s!("\\creflastconjunction\\lx@cref{star}{{refnum}}{{{}}}", label_list.last().unwrap()));
+      parts.push(s!(
+        "\\creflastconjunction\\lx@cref{star}{{refnum}}{{{}}}",
+        label_list.last().unwrap()
+      ));
     }
     let expansion = parts.join("");
     Ok(mouth::tokenize_internal(&expansion))

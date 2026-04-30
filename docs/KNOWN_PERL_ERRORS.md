@@ -2,7 +2,7 @@
 
 This file documents issues in the original Perl LaTeXML codebase.
 These are upstream behaviors or design quirks — NOT bugs introduced by the Rust port.
-For Rust-specific error bookkeeping, see `latexml_package/src/engine/SYNC_STATUS.md`.
+For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 
 ---
 
@@ -301,3 +301,238 @@ Fixed by matching Perl's properties-based approach.
 **Rust fix:** Moved `svg_next_object()` to `properties` closures for clipPath
 constructors (`\lxSVG@drawpath@clipped`, `\lxSVG@discardpath@clipped`), matching
 Perl's digestion-phase counter increment timing.
+
+---
+
+## 13. Duplicate xml:id generation for `\subequations` after `\addtocounter{equation}{-1}` inside theorem with shared `equation` counter
+
+**Perl source:** `LaTeXML/Package/amsmath.sty.ltxml` (subequations environment)
+plus shared-counter interaction with `\newtheorem{thm}[equation]{...}`.
+
+**Symptom:** Documents with the pattern:
+```tex
+\newtheorem{thm}[equation]{Theorem}
+...
+\begin{thm} \label{...}
+...
+\end{thm}
+\addtocounter{equation}{-1}
+\begin{subequations}
+\begin{equation}\label{eq:foo}
+...
+\end{equation}
+\end{subequations}
+```
+trigger `Info:malformed:id Duplicated attribute xml:id` warnings in Perl LaTeXML.
+The preceding theorem got xml:id e.g. `S5.E2` (via the shared equation counter);
+the following subequations' equationgroup, after the `\addtocounter{-1}`,
+tries to use the same number and claims `S5.E2` as well.
+
+**Minimal trigger:** arxiv 1106.1389 (5 duplicate-id Info warnings in both
+Perl and Rust post-fix; Perl reports 14 sites but dedups them correctly too).
+
+**Impact in Perl:** non-fatal (Info-level warnings only) — `modifyID` appends
+`a`, `b`, … suffixes so the DOM ends up with unique xml:ids.
+
+**Impact in Rust (post-session-128 fix):** matches Perl — same 5 Info warnings,
+same deduped DOM. Prior to session 128, `record_id_with_node` had a shadow-
+variable bug (`let id = self.modify_id(…)` scoped to the `if let Some(prev)`
+block only) that caused the deduped id to be silently dropped; the caller
+wrote the original id to DOM and libxml2 validation subsequently spun
+O(n²) on the actual duplicates (100s timeout / 16 GB RSS on 1106.1389).
+Fixed in commit `bab8beb53`: extract `final_id` outside the `if let`.
+
+## 14. `eurosym.sty.ltxml` declares `gennorrow` option (typo for `gennarrow`)
+
+**File:** `lib/LaTeXML/Package/eurosym.sty.ltxml` L28.
+
+Perl:
+```perl
+DeclareOption('gennorrow', undef);
+```
+
+Upstream eurosym.sty uses `gennarrow` (narrow variant of the generic
+euro symbol). The Perl declaration is a typo — any user writing
+`\usepackage[gennarrow]{eurosym}` falls through to the default option
+handler instead of the registered no-op.
+
+**Rust behavior:** the Rust port (eurosym_sty.rs) declares both
+`gennarrow` (for correct user input) and `gennorrow` (Perl-parity).
+Both are no-ops in either form, so the practical impact is only
+log-order: Perl's log says "gennarrow is unknown, using default",
+Rust's says "gennarrow matched option, processed".
+
+---
+
+## 15. `revtex4_support.sty.ltxml` `\eqnum` body references `#2` with only one parameter
+
+**Perl source:** `LaTeXML/Package/revtex4_support.sty.ltxml` L172
+
+```perl
+DefMacro('\eqnum {}', '\lx@equation@settag{\edef\theequation{#2}\lx@make@tags{equation}}',
+  locked => 1);
+```
+
+**Root cause:** The signature `\eqnum {}` declares one required argument
+(`#1`), but the expansion references `#2`. `#2` is out of range and
+substitutes undefined/empty — so the `\edef` assigns an empty string to
+`\theequation`, and `\lx@make@tags{equation}` then emits whatever
+`\theequation` was before the body fired (likely the counter default).
+
+**Impact:** `\eqnum{foo}` in revtex4 docs always tags the equation with
+the counter value, never with the user-supplied label. Intended was
+probably `#1`.
+
+**Perl status:** Still present. Unfixed upstream.
+
+**Rust behavior:** `revtex4_support_sty.rs` defines `\eqnum{}` → `""`
+(silently drops the label). Semantically equivalent to Perl's buggy
+`#2`-is-empty behavior — both lose the user label. A faithful "fix
+Perl's typo" port using `#1` would be a deliberate divergence from
+upstream.
+
+---
+
+## 16. `aipproc.cls.ltxml` `\tablenote` body references `#1` (star flag) instead of `#2` (content)
+
+**Perl source:** `LaTeXML/Package/aipproc.cls.ltxml` L101
+
+```perl
+DefMacro('\tablenote OptionalMatch:* {}', '\footnote{#1}');
+```
+
+**Root cause:** The signature `OptionalMatch:* {}` occupies two
+positional slots — `#1` is the star flag (literal `*` or undef),
+`#2` is the required `{}` content. The body expands `\footnote{#1}`
+which passes the *star marker* (or empty) to `\footnote`, silently
+dropping the user's note content. The same file on L100 uses
+`\tablehead{}{}{}{}` → `\multicolumn{#1}{#2}{\parbox{#3}{#4}}` where
+the #N indexing is correct — so this is a localized typo.
+
+**Confirming convention:** other ltxml files using the same signature
+index content at `#2`. For example, `physics.sty.ltxml` L356:
+
+```perl
+DefMacro('\qqtext OptionalMatch:* {}', '\mbox{\ifx.#1.\quad\fi#2\quad}');
+```
+
+Here `#1` is explicitly tested as the star flag (`\ifx.#1.`) and `#2`
+is the content, proving the star occupies slot 1.
+
+**Impact:** `\tablenote{note}` in aipproc conference papers expands to
+`\footnote{}` (empty footnote) instead of `\footnote{note}`. The note
+body is lost; only the footnote marker remains.
+
+**Perl status:** Still present. Unfixed upstream.
+
+**Rust behavior:** `aipproc_cls.rs` L115 uses `\footnote{#2}` —
+semantically correct. A faithful port of Perl's buggy `#1` would
+silently lose note content; the Rust port deliberately diverges by
+indexing the content correctly. The sibling `elsart_support_core.sty`
+`\collab OptionalMatch:* {}` → `\author{#1}` exhibits the same
+pattern; `elsart_support_core_sty.rs` L135 likewise deliberately uses
+`#2` so the author name reaches `\author` (fix cycle 172).
+
+## 17. `titling.sty.ltxml` `\symbolthanksmark` redefined two lines later
+
+**Perl source:** `LaTeXML/Package/titling.sty.ltxml` L39 + L41
+
+```perl
+DefMacroI('\symbolthanksmark', undef, '\fnsymbol');        # L39
+DefMacro('\thanksmarkseries{}',  '');                       # L40
+DefMacro('\symbolthanksmark',    '');                       # L41 — overrides L39
+```
+
+**Root cause:** `\symbolthanksmark` is defined twice in consecutive
+statements. The second definition (empty body) always wins, so the
+first (`\fnsymbol` alias) is unreachable dead code.
+
+**Confirming convention:** the Perl `DefMacro`/`DefMacroI` pairing
+writes to the global state directly with no guard against prior
+definitions — the second call replaces the first unconditionally.
+
+**Impact:** Users of `\symbolthanksmark` get an empty expansion rather
+than the `\fnsymbol` numbering the first (abandoned) definition
+suggested. Likely a stale edit: either L39 was meant to be removed or
+L41 was meant to apply to a different CS.
+
+**Perl status:** Still present. Unfixed upstream as of the 2026-03 sync.
+
+**Rust behavior:** `titling_sty.rs` ports only the second (empty)
+definition — matches Perl's effective observable behavior. Preserving
+both would be bit-identical but would also preserve the dead code; the
+Rust port intentionally elides the shadowed L39.
+
+---
+
+## 18. `numprint` `\lenprint` — test reference is stale relative to current Perl
+
+**Perl source:** `LaTeXML/lib/LaTeXML/Package/numprint.sty.ltxml`
+
+**Symptom (revised 2026-04-28):** `tests/babel/numprints.xml` is
+heavily out-of-date relative to current Perl output. Verified via
+side-by-side run:
+* Test reference: 91 lines (truncated, presumably from a much older
+  Perl that errored at `\lenprint{\textwidth}`)
+* Current Perl output: **1689 lines** (`\lenprint` renders fully with
+  `<Math mode="inline" tex="\numprint[pt]{433.62}">…</Math>`)
+* Rust output: 622 lines (also renders `\lenprint` fully, structurally
+  similar to current Perl with some flat-vs-nested XMTok differences
+  inherited from the math-parser divergence)
+
+**Status:** The earlier rationale ("Perl baseline errors out, don't
+refresh test XML") no longer applies — Perl no longer errors. Both
+Rust and current Perl render the full content. The remaining gap is
+math-parser structural differences (XMApp-nested vs flat XMTok), which
+is the documented `KNOWN_PERL_ERRORS #8` (f_1 flat XMApp[role=ID])
+class of divergence — not specific to numprint.
+
+**How to apply:** When the math-parser nested-XMTok divergence is
+addressed, regenerate the test reference from current Perl. Until
+then, `numprints_test` remains documented as failing for
+math-parser-deep reasons.
+
+---
+
+## 19. TL2025 babel-french `frenchb` deprecation shim breaks Perl
+
+**TL source:** `texmf-dist/tex/generic/babel-french/frenchb.ldf`
+(babel-french 3.7e, 2025-08-15).
+
+**Symptom:** `\usepackage[frenchb]{babel}` (or any paper passing the
+deprecated `frenchb` option) on Perl LaTeXML with TL2025 emits:
+```
+Error:undefined:\bbl@main@language … is not defined.
+Error:latex:(babel) Package babel Error: You haven't defined the
+language '\bbl@main@language' yet.
+```
+
+**Root cause:** TL2025's `frenchb.ldf` is a 30-line deprecation
+shim that does `\chardef\l@frenchb=\l@french` and
+`\def\CurrentOption{french}` but does NOT chain `\input french.ldf`.
+Perl LaTeXML's `frenchb.ldf.ltxml` loads the shim raw and then
+relies on the never-firing chain.
+
+**Minimal example:**
+```tex
+\documentclass{article}
+\usepackage[frenchb]{babel}
+\begin{document}
+Bonjour.
+\end{document}
+```
+
+**Verification (2026-04-29):** Perl LaTeXML on TL2025 with
+`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`
+emits 2 errors on this 4-line min repro. Same paper produces
+2 errors on `0909.3444` (taln09 conference paper).
+
+**Impact:** Affects any paper using the deprecated `frenchb` option.
+Mostly older arXiv submissions written before babel-french 3.x
+mainstreamed `\usepackage[french]{babel}`.
+
+**Rust port status:** Rust now SUPERSEDES Perl on this — round-17
+commit `989c5a8ed` adds babel-level `\l@frenchb` + caption/extras/
+date hook aliases in `french_ldf.rs::load_definitions`, so
+`\selectlanguage{frenchb}` resolves silently. Rust converts
+0909.3444 with 0 errors; Perl baseline still emits 2.

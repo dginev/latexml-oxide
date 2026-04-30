@@ -42,9 +42,9 @@ pub struct ConstructorOptions {
   pub after_construct:  Vec<ConstructionClosure>,
 
   /// switch to horizontal mode before digesting (Perl: enterHorizontal => 1)
-  pub enter_horizontal:   bool,
+  pub enter_horizontal: bool,
   /// switch to vertical mode before digesting (Perl: leaveHorizontal => 1)
-  pub leave_horizontal:   bool,
+  pub leave_horizontal: bool,
 
   // environment-specific
   /// requires to be used in math mode
@@ -211,7 +211,11 @@ impl PartialEq for Constructor {
 
 impl fmt::Display for Constructor {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", <Self as Definition>::stringify_type(self, "Constructor"))
+    write!(
+      f,
+      "{}",
+      <Self as Definition>::stringify_type(self, "Constructor")
+    )
   }
 }
 impl Object for Constructor {
@@ -272,9 +276,11 @@ impl Definition for Constructor {
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
       let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-      Stored::String(crate::common::arena::pin(
-        if mode.is_empty() { "restricted_horizontal" } else { &mode },
-      ))
+      Stored::String(crate::common::arena::pin(if mode.is_empty() {
+        "restricted_horizontal"
+      } else {
+        &mode
+      }))
     });
     // $properties{level}   = $stomach->getBoxingLevel;
 
@@ -344,4 +350,65 @@ impl Definition for Constructor {
     Ok(Vec::new())
   }
   fn get_reversion_spec(&self) -> Option<Reversion> { self.reversion.clone() }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn constructor_options_default_all_false_none_empty() {
+    let o = ConstructorOptions::default();
+    assert!(o.nargs.is_none());
+    assert!(!o.bounded);
+    assert!(o.mode.is_none());
+    assert!(!o.enter_horizontal);
+    assert!(!o.leave_horizontal);
+    assert!(!o.require_math);
+    assert!(!o.forbid_math);
+    assert!(!o.capture_body);
+    assert!(o.font.is_none());
+    assert!(o.scope.is_none());
+    assert!(!o.robust);
+    assert!(!o.locked);
+    assert!(o.alias.is_none());
+    assert!(o.reversion.is_none());
+    assert!(o.sizer.is_none());
+    assert!(o.before_digest.is_empty());
+    assert!(o.after_digest.is_empty());
+    assert!(o.before_construct.is_empty());
+    assert!(o.after_construct.is_empty());
+    assert!(o.after_digest_begin.is_empty());
+    assert!(o.before_digest_end.is_empty());
+    assert!(o.after_digest_body.is_empty());
+  }
+
+  #[test]
+  fn constructor_default_fields() {
+    let c = Constructor::default();
+    assert!(c.nargs.is_none());
+    assert!(c.paramlist.is_none());
+    assert!(c.replacement.is_none());
+    assert!(c.sizer.is_none());
+    assert!(!c.capture_body);
+    assert!(c.alias.is_none());
+    assert!(c.reversion.is_none());
+    assert!(c.before_digest.is_empty());
+    assert!(c.after_digest.is_empty());
+    assert!(c.before_construct.is_empty());
+    assert!(c.after_construct.is_empty());
+    assert!(c.after_digest_body.is_empty());
+  }
+
+  #[test]
+  fn constructor_options_debug_includes_fields() {
+    // The hand-written Debug impl formats the struct; just verify it
+    // doesn't panic and produces a non-empty string that contains
+    // key field names.
+    let o = ConstructorOptions::default();
+    let s = format!("{o:?}");
+    assert!(s.contains("nargs"), "got {s:?}");
+    assert!(s.contains("bounded"), "got {s:?}");
+    assert!(s.contains("capture_body"), "got {s:?}");
+  }
 }

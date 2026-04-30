@@ -25,7 +25,14 @@ LoadDefinitions!({
     def_macro(T_CS!("\\enddeluxetable*"), None, ExpansionBody::Tokens(expansion), None)?;
   }
 
-  // Perl: DefMacro('\set@deluxetable@template AlignmentTemplate', sub { AssignValue('@deluxetable@template', $_[1]); });
+  // Perl: DefMacro('\set@deluxetable@template AlignmentTemplate', sub { AssignValue(...); }).
+  // Rust uses DefPrimitive — same AssignValue side effect at stomach time.
+  // WISDOM #44: DefMacro↔DefPrimitive is NOT universally equivalent; safe
+  // here because `\set@deluxetable@template` is only emitted by the
+  // `\deluxetable{...}` expansion and consumed immediately in document
+  // body, never captured by `\edef`.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\set@deluxetable@template` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\set@deluxetable@template AlignmentTemplate", sub[(template)] {
     AssignValue!("@deluxetable@template", template);
   });
@@ -122,10 +129,13 @@ LoadDefinitions!({
   DefMacro!("\\ulap{}", "#1");
   DefMacro!("\\dlap{}", "#1");
 
-  TeX!(r#"""
-\let\tblnote@list\@empty
-\let\pt@caption\@empty
-\let\pt@head\@empty
-\let\pt@tail\@empty
-"""#);
+  // Perl deluxetable.sty.ltxml L144-151 `AtBeginDocument` block. The
+  // deferred timing matters for `\pt@width\textwidth`: at binding-load
+  // \textwidth hasn't been sized by article.cls yet, so copying it here
+  // yields the default 0pt. The \@empty lets and \pt@headfrac def are
+  // order-insensitive but keep them together with the width init so the
+  // block matches Perl one-for-one.
+  at_begin_document(TokenizeInternal!(
+    r"\let\tblnote@list\@empty\let\pt@caption\@empty\let\pt@head\@empty\let\pt@tail\@empty\pt@width\textwidth\def\pt@headfrac{.1}"
+  ))?;
 });

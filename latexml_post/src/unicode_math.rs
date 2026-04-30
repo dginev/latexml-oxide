@@ -11,7 +11,7 @@
 
 use libxml::tree::Node;
 
-use crate::document::{element_children, PostDocument};
+use crate::document::{PostDocument, element_children};
 use crate::math_processor::{MathConversion, MathProcessor};
 use crate::processor::{ProcessResult, Processor};
 
@@ -28,37 +28,31 @@ const PREC_SYMBOL: i32 = 10;
 ///
 /// Port of `LaTeXML::Post::UnicodeMath`.
 pub struct UnicodeMath {
-  name: String,
+  name:         String,
   is_secondary: bool,
 }
 
 impl Default for UnicodeMath {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }
 
 impl UnicodeMath {
   pub fn new() -> Self {
     UnicodeMath {
-      name: "UnicodeMath".to_string(),
+      name:         "UnicodeMath".to_string(),
       is_secondary: false,
     }
   }
 }
 
 impl Processor for UnicodeMath {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
   }
 
-  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
-    Ok(vec![doc])
-  }
+  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult { Ok(vec![doc]) }
 }
 
 impl MathProcessor for UnicodeMath {
@@ -67,23 +61,19 @@ impl MathProcessor for UnicodeMath {
     let (string, _prec) = unimath_internal(doc, &math);
     Some(MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(UNICODE_MATH_MIMETYPE.to_string()),
-      xml: None,
-      string: Some(string),
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       Some(UNICODE_MATH_MIMETYPE.to_string()),
+      xml:            None,
+      string:         Some(string),
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     })
   }
 
-  fn raw_id_suffix(&self) -> &str {
-    ".muni"
-  }
+  fn raw_id_suffix(&self) -> &str { ".muni" }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
-  }
+  fn is_secondary(&self) -> bool { self.is_secondary }
 }
 
 /// Public entry point: convert a Math/XMath node to Unicode string.
@@ -129,9 +119,7 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 }
 
 /// Realize an XMRef node to its target.
-fn realize(doc: &PostDocument, node: &Node) -> Option<Node> {
-  doc.realize_xm_node(node)
-}
+fn realize(doc: &PostDocument, node: &Node) -> Option<Node> { doc.realize_xm_node(node) }
 
 // ======================================================================
 // Core conversion
@@ -144,9 +132,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
   let role = node.get_attribute("role").unwrap_or_default();
 
   match tag.as_str() {
-    "ltx:Math" | "ltx:XMath" => {
-      unimath_map(doc, &element_children(node))
-    }
+    "ltx:Math" | "ltx:XMath" => unimath_map(doc, &element_children(node)),
     "ltx:XMDual" => {
       let children = element_children(node);
       if children.len() >= 2 {
@@ -154,10 +140,8 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
       } else {
         unimath_error("Empty XMDual")
       }
-    }
-    "ltx:XMWrap" | "ltx:XMArg" => {
-      unimath_map(doc, &element_children(node))
-    }
+    },
+    "ltx:XMWrap" | "ltx:XMArg" => unimath_map(doc, &element_children(node)),
     "ltx:XMApp" => {
       let children = element_children(node);
       if children.is_empty() {
@@ -190,7 +174,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
           } else {
             ("\u{221A}".to_string(), PREC_MULOP)
           }
-        }
+        },
         (_, "nth-root") => {
           if args.len() >= 2 {
             let (n, _) = unimath_internal(doc, &args[1]);
@@ -205,7 +189,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         (_, "continued-fraction") => unimath_error("continued fraction"),
         ("FRACOP", _) => {
           if args.len() >= 2 {
@@ -223,35 +207,35 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("SUPERSCRIPTOP", _) => {
           if args.len() >= 2 {
             unimath_sup(doc, Some(&args[0]), &args[1])
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("SUBSCRIPTOP", _) => {
           if args.len() >= 2 {
             unimath_sub(doc, Some(&args[0]), &args[1])
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("OVERACCENT", _) => {
           if !args.is_empty() {
             unimath_overaccent(doc, op, &args[0])
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("UNDERACCENT", _) => {
           if !args.is_empty() {
             unimath_underaccent(doc, op, &args[0])
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("POSTFIX", _) => {
           if !args.is_empty() {
             let (op_str, _) = unimath_internal(doc, op);
@@ -260,14 +244,14 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
           } else {
             unimath_prefix(doc, op, args)
           }
-        }
+        },
         ("ENCLOSE", _) => {
           if !args.is_empty() {
             (unimath_nested(doc, &args[0], PREC_SYMBOL), PREC_SYMBOL)
           } else {
             ("".to_string(), PREC_SYMBOL)
           }
-        }
+        },
         _ => {
           // Check if it's an infix role
           if let Some(prec) = infix_prec(&op_role) {
@@ -276,9 +260,9 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
             // Default: prefix
             unimath_prefix(doc, op, args)
           }
-        }
+        },
       }
-    }
+    },
     "ltx:XMTok" => {
       let meaning = node.get_attribute("meaning").unwrap_or_default();
       if meaning == "absent" {
@@ -286,7 +270,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
       }
       let text = stylize_content(node);
       (text, PREC_SYMBOL)
-    }
+    },
     "ltx:XMHint" => ("".to_string(), 0),
     "ltx:XMArray" => {
       let rows: Vec<String> = element_children(node)
@@ -300,7 +284,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
         })
         .collect();
       (format!("\u{25A0}({})", rows.join("@")), 0)
-    }
+    },
     "ltx:XMText" => unimath_text(node),
     "ltx:XMRef" => {
       if let Some(target) = realize(doc, node) {
@@ -308,7 +292,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
       } else {
         unimath_error("Unresolved XMRef")
       }
-    }
+    },
     "ltx:ERROR" => unimath_error(&node.get_content()),
     _ => unimath_text(node),
   }
@@ -333,8 +317,14 @@ fn unimath_map(doc: &PostDocument, args: &[Node]) -> (String, i32) {
   let mut oprec = 0;
   // If wrapped in OPEN...CLOSE, it's a symbol-level expression
   if args.len() > 1 {
-    let first_role = args.first().and_then(|n| n.get_attribute("role")).unwrap_or_default();
-    let last_role = args.last().and_then(|n| n.get_attribute("role")).unwrap_or_default();
+    let first_role = args
+      .first()
+      .and_then(|n| n.get_attribute("role"))
+      .unwrap_or_default();
+    let last_role = args
+      .last()
+      .and_then(|n| n.get_attribute("role"))
+      .unwrap_or_default();
     if first_role == "OPEN" && last_role == "CLOSE" {
       oprec = PREC_SYMBOL;
     }
@@ -351,14 +341,22 @@ fn unimath_prefix(doc: &PostDocument, op: &Node, args: &[Node]) -> (String, i32)
     return ("".to_string(), PREC_SYMBOL);
   }
   let op_str = unimath_nested(doc, op, 0);
-  let args_str: String = args.iter().map(|a| unimath_nested(doc, a, PREC_SYMBOL)).collect();
+  let args_str: String = args
+    .iter()
+    .map(|a| unimath_nested(doc, a, PREC_SYMBOL))
+    .collect();
   (format!("{}{}", op_str, args_str), PREC_SYMBOL)
 }
 
 /// Infix application with explicit precedence.
 ///
 /// Port of `unimath_infix`.
-fn unimath_infix_with_prec(doc: &PostDocument, op: &Node, args: &[Node], prec: i32) -> (String, i32) {
+fn unimath_infix_with_prec(
+  doc: &PostDocument,
+  op: &Node,
+  args: &[Node],
+  prec: i32,
+) -> (String, i32) {
   if args.is_empty() {
     return ("".to_string(), PREC_SYMBOL);
   }
@@ -381,7 +379,9 @@ fn unimath_infix_with_prec(doc: &PostDocument, op: &Node, args: &[Node], prec: i
 ///
 /// Port of `unimath_sub`.
 fn unimath_sub(doc: &PostDocument, base: Option<&Node>, script: &Node) -> (String, i32) {
-  let ubase = base.map(|b| unimath_nested(doc, b, PREC_SCRIPTOP)).unwrap_or_default();
+  let ubase = base
+    .map(|b| unimath_nested(doc, b, PREC_SCRIPTOP))
+    .unwrap_or_default();
   let (uscript, prec) = unimath_internal(doc, script);
   let uscript = if prec < PREC_SCRIPTOP {
     format!("{{{}}}", uscript)
@@ -395,7 +395,9 @@ fn unimath_sub(doc: &PostDocument, base: Option<&Node>, script: &Node) -> (Strin
 ///
 /// Port of `unimath_sup`.
 fn unimath_sup(doc: &PostDocument, base: Option<&Node>, script: &Node) -> (String, i32) {
-  let ubase = base.map(|b| unimath_nested(doc, b, PREC_SCRIPTOP)).unwrap_or_default();
+  let ubase = base
+    .map(|b| unimath_nested(doc, b, PREC_SCRIPTOP))
+    .unwrap_or_default();
   let (uscript, prec) = unimath_internal(doc, script);
   let uscript = if prec < PREC_SCRIPTOP {
     format!("{{{}}}", uscript)
@@ -437,21 +439,24 @@ fn unimath_underaccent(doc: &PostDocument, op: &Node, base: &Node) -> (String, i
 ///
 /// Port of `stylizeContent` (simplified — full version needs unicode_convert).
 fn stylize_content(node: &Node) -> String {
-  let role = node.get_attribute("role").unwrap_or_else(|| "ID".to_string());
+  let role = node
+    .get_attribute("role")
+    .unwrap_or_else(|| "ID".to_string());
   let text = node.get_content();
   if text.is_empty() {
     // Fallback for empty tokens
     static DEFAULT_CONTENT: &[(&str, &str)] = &[
-      ("MULOP", "\u{2062}"),  // INVISIBLE TIMES
-      ("ADDOP", "\u{2064}"),  // INVISIBLE PLUS
-      ("PUNCT", "\u{2063}"),  // INVISIBLE SEPARATOR
+      ("MULOP", "\u{2062}"), // INVISIBLE TIMES
+      ("ADDOP", "\u{2064}"), // INVISIBLE PLUS
+      ("PUNCT", "\u{2063}"), // INVISIBLE SEPARATOR
     ];
     for (r, default) in DEFAULT_CONTENT {
       if role == *r {
         return default.to_string();
       }
     }
-    node.get_attribute("name")
+    node
+      .get_attribute("name")
       .or_else(|| node.get_attribute("meaning"))
       .unwrap_or(role)
   } else {
@@ -468,26 +473,24 @@ fn unimath_text(node: &Node) -> (String, i32) {
 }
 
 /// Error representation.
-fn unimath_error(msg: &str) -> (String, i32) {
-  (format!("\"ERROR {}\"", msg), PREC_SYMBOL)
-}
+fn unimath_error(msg: &str) -> (String, i32) { (format!("\"ERROR {}\"", msg), PREC_SYMBOL) }
 
 /// Map over-accent character to combining equivalent.
 fn overaccent_combining(acc: &str) -> Option<String> {
   let c = acc.chars().next()?;
   let combining = match c {
-    '^' => '\u{0302}',               // hat
-    '\u{02C7}' => '\u{030C}',       // check
-    '~' => '\u{0303}',              // tilde
-    '\u{0084}' => '\u{0301}',       // acute
-    '\u{0060}' => '\u{0300}',       // grave
-    '\u{02D9}' => '\u{0307}',       // dot
-    '\u{00AB}' => '\u{0308}',       // ddot
-    '\u{00AF}' => '\u{0304}',       // bar/overline
-    '\u{2192}' => '\u{20D7}',       // vec
-    '\u{02D8}' => '\u{0306}',       // breve
-    'o' => '\u{030A}',              // ring
-    '\u{02DD}' => '\u{030B}',       // double acute
+    '^' => '\u{0302}',        // hat
+    '\u{02C7}' => '\u{030C}', // check
+    '~' => '\u{0303}',        // tilde
+    '\u{0084}' => '\u{0301}', // acute
+    '\u{0060}' => '\u{0300}', // grave
+    '\u{02D9}' => '\u{0307}', // dot
+    '\u{00AB}' => '\u{0308}', // ddot
+    '\u{00AF}' => '\u{0304}', // bar/overline
+    '\u{2192}' => '\u{20D7}', // vec
+    '\u{02D8}' => '\u{0306}', // breve
+    'o' => '\u{030A}',        // ring
+    '\u{02DD}' => '\u{030B}', // double acute
     _ => return None,
   };
   Some(combining.to_string())

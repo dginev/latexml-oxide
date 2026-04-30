@@ -1,0 +1,82 @@
+{
+  // ─── rust-analyzer mitigations ──────────────────────────────────────────────
+  // Background: rust-analyzer (RA) on nightly + heavy proc-macro workspaces
+  // (latexml_codegen) has a known tendency to spin in long re-analysis loops,
+  // sometimes 10+ minutes. The settings below decouple RA from our terminal
+  // build flow so neither blocks the other.
+
+  // Don't run `cargo check` on every save — the workspace check takes 60-90 s
+  // cold and competes with our terminal `cargo test` / `cargo build` for the
+  // cargo lock and target/. We catch the same diagnostics via RA's in-memory
+  // analysis already.
+  "rust-analyzer.checkOnSave": false,
+
+  // Give rust-analyzer its OWN target directory so it never races with the
+  // terminal build (which uses `target/` for test/release/ci profiles).
+  // Without this, an open editor + `cargo run` / `cortex_worker` background
+  // canvas can trigger lock contention and surprise rebuilds of the *terminal*
+  // artifacts.
+  "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+
+  // Stability mode: disable proc-macro expansion in rust-analyzer. This
+  // workspace's latexml_codegen macros expand very large definition bodies,
+  // and RA can get stuck in re-analysis loops with high RAM growth. Terminal
+  // cargo builds/tests still compile proc macros normally; this only reduces
+  // editor-side macro intelligence.
+  "rust-analyzer.procMacro.enable": false,
+
+  // Build scripts are still useful because latex_dump.rs includes a file from
+  // OUT_DIR. Keeping them enabled avoids a large class of false unresolved
+  // include diagnostics without asking RA to expand every generated macro.
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
+
+  // No effect while procMacro.enable=false, but keep explicit in case proc
+  // macros are temporarily re-enabled for a focused editor session.
+  "rust-analyzer.procMacro.attributes.enable": false,
+
+  // Don't expand the deprecated/long-running diagnostics that occasionally
+  // get stuck on our larger generated files.
+  "rust-analyzer.diagnostics.experimental.enable": false,
+
+  // Avoid background pre-warming of analysis for the whole workspace. It is
+  // useful on small crates but costly here.
+  "rust-analyzer.cachePriming.enable": false,
+  "rust-analyzer.cachePriming.numThreads": 1,
+
+  // Keep RA from using every core during indexing; this lowers peak memory
+  // and keeps terminal builds responsive.
+  "rust-analyzer.numThreads": 2,
+
+  // Ignore large/generated/non-Rust trees. The target directory is especially
+  // important because this workspace can produce tens of GB of build output.
+  "rust-analyzer.files.exclude": [
+    "target",
+    "LaTeXML",
+    "html",
+    "arxiv-examples",
+    "resources/dumps"
+  ],
+
+  // Mirror the RA ignores at the VS Code file-watcher layer. Without this,
+  // cargo/rustc output under target/ can still wake the language server even
+  // when rust-analyzer itself would ignore the path.
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/target/**": true,
+    "**/LaTeXML/**": true,
+    "**/html/**": true,
+    "**/arxiv-examples/**": true,
+    "**/resources/dumps/**": true
+  },
+  "search.exclude": {
+    "**/target/**": true,
+    "**/LaTeXML/**": true,
+    "**/html/**": true,
+    "**/arxiv-examples/**": true,
+    "**/resources/dumps/**": true
+  },
+
+  // Never treat the working dir as multi-workspace; we have one Cargo workspace.
+  "rust-analyzer.linkedProjects": ["./Cargo.toml"]
+}

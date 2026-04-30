@@ -1,0 +1,24 @@
+% Regression test: elsart `\keyword{...}` (1-arg form) interacting with
+% babel-french via abstract+frontmatter scope. Mirrors the trigger of
+% hep-ph0702114 / 1710.03688. Pre-fix Rust output: 10001 errors with
+% \bbl@exp@aux undefined cascade. Post-fix: clean classification.
+%
+% Perl elsart_support_core.sty.ltxml L138-141 reads balanced arg via
+% gullet->readBalanced and wraps with \@keyword <arg> \@keyword@cut so
+% the XUntil terminator arrives via the inserted token. Rust now mirrors
+% via DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut").
+\documentclass{elsart}
+\usepackage[english,francais]{babel}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A}
+\address{X}
+\begin{abstract}
+\selectlanguage{francais}
+\keyword{Higgs; Boson; Symmetry}
+\end{abstract}
+\end{frontmatter}
+\selectlanguage{english}
+After.
+\end{document}

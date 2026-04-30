@@ -107,7 +107,7 @@
               <XMRef idref="S0.Ex4.m1.1"/>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">(</XMTok>
-                <XMApp xml:id="S0.Ex4.m1.1">
+                <XMApp xml:id="S0.Ex4.m1.1a">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMTok font="italic" role="ID">a</XMTok>
                   <XMTok font="italic" role="ID">b</XMTok>

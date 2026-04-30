@@ -9,7 +9,11 @@ LoadDefinitions!({
 
   // Enable xkvview metadata tracking for key definitions from this point on.
   // Only keys defined AFTER this flag is set will appear in \xkvview output.
-  state::assign_value("XKVVIEW_TRACKING", true, Some(latexml_core::state::Scope::Global));
+  state::assign_value(
+    "XKVVIEW_TRACKING",
+    true,
+    Some(latexml_core::state::Scope::Global),
+  );
 
   // Override \xkvview to build a table from registered keyval metadata.
   // The Perl xkvview.sty.ltxml intercepts \define@key etc. to store metadata,

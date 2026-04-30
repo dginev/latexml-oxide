@@ -26,4 +26,10 @@ LoadDefinitions!({
   // Override \cases to use plain TeX version
   DefMacro!("\\cases{}",
     "\\lx@gen@plain@cases{meaning=cases,left=\\lx@left\\{,conditionmode=text,style=\\textstyle}{#1}");
+  // Perl aa.cls.ltxml L57 resets the amsmath loaded-flag so documents
+  // that need amsmath's {cases} can `\usepackage{amsmath}` again after
+  // aa_support pulled amsmath in implicitly. Example:
+  // arXiv:astro-ph/0203101. Without this reset the re-RequirePackage
+  // is a no-op and {cases} stays as the plain-TeX version above.
+  AssignValue!("amsmath.sty_loaded" => Stored::None, Some(Scope::Global));
 });

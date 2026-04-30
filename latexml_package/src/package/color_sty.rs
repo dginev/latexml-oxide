@@ -37,16 +37,28 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
-      // Perl #2697 (2026): surface a diagnostic rather than silently
-      // returning BLACK — an unresolvable color name in a user expression
-      // usually indicates a typo or missing \definecolor. Our signature
-      // returns Color (not Result), so we use Warn rather than Perl's
-      // Error; still loud enough to surface in the log.
-      Warn!(
-        "misdefined",
-        "color",
-        &s!("could not resolve <color> name '{}'", name)
+      // Perl color.sty.ltxml L50-53:
+      //   AssignValue('color_'.$spec => Black);
+      //   Error('unexpected', $spec, $STATE->getStomach,
+      //     "Can't find color named '$spec'; assuming Black");
+      // Persist Black under this name so subsequent lookups resolve it
+      // without repeating the diagnostic, then surface an Error-status
+      // diagnostic. We inline the bookkeeping from the `Error!` macro
+      // because that macro is return-based (`Fatal!` at threshold) and
+      // `lookup_color_obj` returns `Color`, not `Result<Color>`.
+      assign_value(
+        &s!("color_{name}"),
+        Stored::String(arena::pin(color::BLACK.to_stored())),
+        None,
       );
+      latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Error, None);
+      if !latexml_core::common::error::is_log_output_suppressed() {
+        log::error!(
+          target: &format!("unexpected:{}", name),
+          "Can't find color named '{}'; assuming Black",
+          name
+        );
+      }
       color::BLACK
     },
   }
@@ -54,17 +66,33 @@ pub fn lookup_color_obj(name: &str) -> Color {
 
 /// Look up a named color from state. Returns hex string.
 /// Perl: LookupColor($name) in Package.pm
-pub fn lookup_color(name: &str) -> String {
-  lookup_color_obj(name).to_attribute()
-}
+pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
 
 LoadDefinitions!({
   //======================================================================
   // Ignorable options (mostly drivers)
   for option in &[
-    "monochrome", "debugshow", "dvipdf", "dvipdfm", "dvipdfmx", "pdftex", "xetex",
-    "dvipsone", "dviwindo", "emtex", "dviwin", "textures", "pctexps", "pctexwin",
-    "pctexhp", "pctex32", "truetex", "tcidvi", "vtex", "nodvipsnames", "usenames",
+    "monochrome",
+    "debugshow",
+    "dvipdf",
+    "dvipdfm",
+    "dvipdfmx",
+    "pdftex",
+    "xetex",
+    "dvipsone",
+    "dviwindo",
+    "emtex",
+    "dviwin",
+    "textures",
+    "pctexps",
+    "pctexwin",
+    "pctexhp",
+    "pctex32",
+    "truetex",
+    "tcidvi",
+    "vtex",
+    "nodvipsnames",
+    "usenames",
   ] {
     DeclareOption!(option, None);
   }
@@ -77,27 +105,52 @@ LoadDefinitions!({
 
   //======================================================================
   // \definecolor{name}{model}{spec}
-  // Perl: DefColor(ToString($name), ParseColor($model, $spec))
+  // Perl L59-63:
+  //   ($name, $model, $spec) = map { $_ && Expand($_) } $name, $model, $spec;
+  //   DefColor(ToString($name), ParseColor($model, $spec));
+  //   Box(undef, undef, undef,
+  //       Invocation(T_CS('\definecolor'), $name, $model, $spec));
   DefPrimitive!("\\definecolor{}{}{}", sub[(name, model, spec)] {
-    let name_str = do_expand(name)?.to_string();
-    let model_str = do_expand(model)?.to_string();
-    let spec_str = do_expand(spec)?.to_string();
+    let name_expanded = do_expand(name)?;
+    let model_expanded = do_expand(model)?;
+    let spec_expanded = do_expand(spec)?;
+    let name_str = name_expanded.to_string();
+    let model_str = model_expanded.to_string();
+    let spec_str = spec_expanded.to_string();
     // Use parse_color to handle all models including "named" lookups
     let color = parse_color(Some(&model_str), &spec_str);
     def_color(&name_str, &color, None)?;
-    Ok(Vec::new())
+    // Perl L63: Box with reversion Invocation so \definecolor round-trips
+    // into tex= attributes.
+    let reversion_tokens = Invocation!("\\definecolor",
+      vec![Some(name_expanded), Some(model_expanded), Some(spec_expanded)]);
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \DefineNamedColor{dmodel}{name}{model}{spec}
-  // Perl: DefColor('named_'.$name, ParseColor($model, $spec))
+  // Perl L69-73:
+  //   ($dmodel, $name, $model, $spec) = map { $_ && Expand($_) } ...;
+  //   DefColor('named_'.ToString($name), ParseColor($model, $spec));
+  //   Box(undef, undef, undef,
+  //       Invocation(T_CS('\DefineNamedColor'), $dmodel, $name, $model, $spec));
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(dmodel, name, model, spec)] {
-    let name_str = do_expand(name)?.to_string();
-    let model_str = do_expand(model)?.to_string();
-    let spec_str = do_expand(spec)?.to_string();
+    let dmodel_expanded = do_expand(dmodel)?;
+    let name_expanded = do_expand(name)?;
+    let model_expanded = do_expand(model)?;
+    let spec_expanded = do_expand(spec)?;
+    let name_str = name_expanded.to_string();
+    let model_str = model_expanded.to_string();
+    let spec_str = spec_expanded.to_string();
     let color = parse_color(Some(&model_str), &spec_str);
     let named_key = format!("named_{}", name_str);
     def_color(&named_key, &color, None)?;
-    Ok(Vec::new())
+    // Perl L73: Box with reversion Invocation preserving all four args.
+    let reversion_tokens = Invocation!("\\DefineNamedColor",
+      vec![Some(dmodel_expanded), Some(name_expanded),
+           Some(model_expanded), Some(spec_expanded)]);
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
+      reversion_tokens, arena::SymHashMap::default()))])
   });
 
   // \color[model]{spec} or \color{name}
@@ -158,10 +211,16 @@ LoadDefinitions!({
   });
 
   // \textcolor[model]{spec}{text}
-  DefMacro!("\\textcolor[]{}{}", "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}");
+  DefMacro!(
+    "\\textcolor[]{}{}",
+    "{\\ifx.#1.\\color{#2}\\else\\color[#1]{#2}\\fi#3}"
+  );
 
   // \colorbox[model]{spec}{text}
-  DefMacro!("\\colorbox[]{}{}", "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}");
+  DefMacro!(
+    "\\colorbox[]{}{}",
+    "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
+  );
 
   // \fcolorbox[model]{framespec}{bgspec}{text}
   DefConstructor!("\\fcolorbox[]{}{} Undigested",
@@ -186,11 +245,12 @@ LoadDefinitions!({
     }
   );
 
-  // Define \ifglobalcolors if not already defined (xcolor.sty defines it,
-  // but color.def may reference it). Default to false.
-  if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_none() {
-    DefConditional!("\\ifglobalcolors", { false });
-  }
+  // NOTE: Perl color.sty.ltxml does NOT define \ifglobalcolors — only
+  // xcolor.sty does (Perl xcolor.sty.ltxml L29). `def_color` in
+  // latexml_core::binding::content guards its ifglobalcolors check with
+  // `lookup_definition(\ifglobalcolors).is_some()`, so leaving the CS
+  // undefined here is the faithful behavior; the global-scope branch
+  // short-circuits naturally.
 
   //========================
   // Low-level stuff; redefined from LaTeX stubs (Perl color.sty.ltxml L122-132)
@@ -205,7 +265,10 @@ LoadDefinitions!({
   DefMacro!("\\color@endbox", "\\color@endgroup\\egroup");
 
   //========================
-  // Default defined colors (use global scope so they survive group boundaries)
+  // Default defined colors — Perl L136-145 runs these through RawTeX as
+  // ordinary `\definecolor` invocations with no explicit scope; they
+  // inherit the scope active at RawTeX-expansion time (the package-load
+  // group). Match that by passing `None` rather than forcing Global.
   for (name, model, spec) in &[
     ("black", "rgb", "0,0,0"),
     ("white", "rgb", "1,1,1"),
@@ -217,7 +280,7 @@ LoadDefinitions!({
     ("yellow", "cmyk", "0,0,1,0"),
   ] {
     let c = color_from_model_spec(model, spec);
-    def_color(name, &c, Some(Scope::Global))?;
+    def_color(name, &c, None)?;
   }
 
   //========================

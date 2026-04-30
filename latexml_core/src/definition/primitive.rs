@@ -2,21 +2,21 @@ use libxml::tree::Node;
 use std::borrow::Cow;
 
 use crate::Digested;
-use crate::common::arena::{SymHashMap};
-use crate::common::store::Stored;
+use crate::common::arena::SymHashMap;
 use crate::common::error::*;
 use crate::common::object::Object;
+use crate::common::store::Stored;
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
+use crate::pin;
 use crate::state::Scope;
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::pin;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {
@@ -36,6 +36,9 @@ pub struct PrimitiveOptions {
   pub before_digest:    Vec<BeforeDigestClosure>,
   pub after_digest:     Vec<DigestionClosure>,
   pub reversion:        Option<Reversion>,
+  /// The fontinfo lookup key for `\font`-defined primitives. See
+  /// `Primitive::font_id`.
+  pub font_id:          Option<crate::common::arena::data::SymStr>,
 }
 
 #[derive(Clone)]
@@ -51,6 +54,14 @@ pub struct Primitive {
   pub nargs:         Option<usize>,
   pub reversion:     Option<Reversion>,
   pub is_prefix:     bool,
+  /// Set on `\font`-defined primitives (Perl `LaTeXML::Core::Definition::FontDef::fontID`).
+  /// Holds the value-table key under which this CS's fontinfo hash lives
+  /// (e.g. `\tenrm` → `Some("fontinfo_\\tenrm")`). Lets the dumper round-trip
+  /// font-defined primitives via Perl's `FD(<cs>)` record (see
+  /// `Core/Dumper.pm` L356-389) — closures aren't serializable but the
+  /// font_id + the dumped `Stored::Font` value at that key let the reader
+  /// rebuild an equivalent merge-font Primitive.
+  pub font_id:       Option<crate::common::arena::data::SymStr>,
 }
 impl Default for Primitive {
   fn default() -> Self {
@@ -64,6 +75,7 @@ impl Default for Primitive {
       nargs:         None,
       reversion:     None,
       is_prefix:     false,
+      font_id:       None,
     }
   }
 }
@@ -177,5 +189,103 @@ impl Definition for Primitive {
     }
     // TODO: Rethink the memoize in this immutable setting
     // self.nargs = Some(nargs);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::common::arena;
+
+  #[test]
+  fn primitive_default_fields() {
+    let p = Primitive::default();
+    assert_eq!(arena::to_string(p.cs.text), "Primitive");
+    assert!(p.paramlist.is_none());
+    assert!(p.replacement.is_none());
+    assert!(p.alias.is_none());
+    assert!(p.before_digest.is_empty());
+    assert!(p.after_digest.is_empty());
+    assert!(p.nargs.is_none());
+    assert!(p.reversion.is_none());
+    assert!(!p.is_prefix);
+  }
+
+  #[test]
+  fn primitive_partial_eq_by_cs() {
+    // PartialEq compares by cs only — Perl parity (closures can't
+    // be structurally compared).
+    // Primitive doesn't derive Debug, so assert_eq! / assert_ne!
+    // can't format it on failure — use plain equality checks.
+    let mut a = Primitive::default();
+    let mut b = Primitive::default();
+    a.cs = T_CS!("\\foo");
+    b.cs = T_CS!("\\foo");
+    assert!(a == b, "same cs should compare equal");
+    b.cs = T_CS!("\\bar");
+    assert!(!(a == b), "different cs should not be equal");
+  }
+
+  #[test]
+  fn primitive_is_prefix_reflects_field() {
+    let mut p = Primitive::default();
+    assert!(!p.is_prefix());
+    p.is_prefix = true;
+    assert!(p.is_prefix());
+  }
+
+  #[test]
+  fn primitive_get_num_args_zero_without_params() {
+    let p = Primitive::default();
+    assert_eq!(p.get_num_args(), 0);
+  }
+
+  #[test]
+  fn primitive_get_num_args_uses_nargs_override() {
+    // If nargs is explicitly set, it takes precedence over paramlist.
+    let mut p = Primitive::default();
+    p.nargs = Some(3);
+    assert_eq!(p.get_num_args(), 3);
+  }
+
+  #[test]
+  fn primitive_before_digest_ref_returns_some_empty() {
+    let p = Primitive::default();
+    let bd = p.before_digest().expect("Some(&Vec)");
+    assert!(bd.is_empty());
+  }
+
+  #[test]
+  fn primitive_after_digest_ref_returns_some_empty() {
+    let p = Primitive::default();
+    let ad = p.after_digest().expect("Some(&Vec)");
+    assert!(ad.is_empty());
+  }
+
+  #[test]
+  fn primitive_get_parameters_none_by_default() {
+    let p = Primitive::default();
+    assert!(p.get_parameters().is_none());
+  }
+
+  #[test]
+  fn primitive_options_default_all_false() {
+    let o = PrimitiveOptions::default();
+    assert!(!o.bounded);
+    assert!(!o.is_prefix);
+    assert!(!o.require_math);
+    assert!(!o.forbid_math);
+    assert!(!o.robust);
+    assert!(!o.locked);
+    assert!(!o.enter_horizontal);
+    assert!(!o.leave_horizontal);
+    assert!(o.nargs.is_none());
+    assert!(o.scope.is_none());
+    assert!(o.font.is_none());
+    assert!(o.mode.is_none());
+    assert!(o.alias.is_none());
+    assert!(o.before_digest.is_empty());
+    assert!(o.after_digest.is_empty());
+    assert!(o.reversion.is_none());
   }
 }

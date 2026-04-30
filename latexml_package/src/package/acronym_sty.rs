@@ -1,6 +1,4 @@
-use crate::engine::latex_constructs::{
-  adjust_backmatter_element, note_backmatter_element,
-};
+use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -49,85 +47,162 @@ LoadDefinitions!({
   //======================================================================
   // Acronyms in the Text
 
-  // \lx@acronym{acronym}{listname}{showform}
+  // \lx@acronym{acronym}{listname}{showform}.
+  // Perl acronym.sty.ltxml has `enterHorizontal=>1`. Same vertical-
+  // mode-leak class as hyperref \url cycle 87 / xcolor \fcolorbox
+  // cycle 91: a bare `\ac{ABC}` between paragraphs at top level
+  // emits <ltx:glossaryref> outside any <ltx:p>, producing a
+  // structurally invalid block-level glossaryref node.
   DefConstructor!("\\lx@acronym Undigested {}{}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
-    mode => "text",
+    mode => "text", enter_horizontal => true,
     reversion => "#1{#2}"
   );
 
   DefMacro!("\\AC@acs{}", "\\lx@acronym{\\acs}{#1}{acronym}{short}");
   DefMacro!("\\AC@acl{}", "\\lx@acronym{\\acl}{#1}{acronym}{long}");
-  DefMacro!("\\AC@acsp{}", "\\lx@acronym{\\acsp}{#1}{acronym}{short-plural}");
-  DefMacro!("\\AC@aclp{}", "\\lx@acronym{\\aclp}{#1}{acronym}{long-plural}");
-  DefMacro!("\\AC@acsi{}", "\\lx@acronym{\\acsi}{#1}{acronym}{short-indefinite}");
-  DefMacro!("\\AC@aclI{}", "\\lx@acronym{\\aclI}{#1}{acronym}{long-indefinite}");
+  DefMacro!(
+    "\\AC@acsp{}",
+    "\\lx@acronym{\\acsp}{#1}{acronym}{short-plural}"
+  );
+  DefMacro!(
+    "\\AC@aclp{}",
+    "\\lx@acronym{\\aclp}{#1}{acronym}{long-plural}"
+  );
+  DefMacro!(
+    "\\AC@acsi{}",
+    "\\lx@acronym{\\acsi}{#1}{acronym}{short-indefinite}"
+  );
+  DefMacro!(
+    "\\AC@aclI{}",
+    "\\lx@acronym{\\aclI}{#1}{acronym}{long-indefinite}"
+  );
 
   // Short form
-  DefMacro!("\\acs OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acsa");
+  DefMacro!(
+    "\\acs OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acsa"
+  );
   DefMacro!("\\acsa{}", "\\@acs{#1}");
-  DefMacro!("\\@acs{}", "\\acsfont{\\AC@acs{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\@acs{}",
+    "\\acsfont{\\AC@acs{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
   // Long form
-  DefMacro!("\\acl OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@acl");
-  DefMacro!("\\@acl{}", "\\acsfont{\\AC@acl{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\acl OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@acl"
+  );
+  DefMacro!(
+    "\\@acl{}",
+    "\\acsfont{\\AC@acl{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
   // Full form: Long (short)
-  DefMacro!("\\acf OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfa");
+  DefMacro!(
+    "\\acf OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfa"
+  );
   DefMacro!("\\acfa{}", "\\@acf{#1}");
-  DefMacro!("\\@acf{}",
-    "\\ifAC@footnote\\acsfont{\\AC@acs{#1}}\\footnote{\\AC@placelabel{#1} \\AC@acl{#1}}\n\\else\\acffont{\\AC@placelabel{#1} \\AC@acl{#1} \\acfsfont{(\\acsfont{\\AC@acs{#1}})}}\\fi\n\\ifAC@starred\\else\\lx@AC@used{#1}\\fi");
+  DefMacro!(
+    "\\@acf{}",
+    "\\ifAC@footnote\\acsfont{\\AC@acs{#1}}\\footnote{\\AC@placelabel{#1} \\AC@acl{#1}}\n\\else\\acffont{\\AC@placelabel{#1} \\AC@acl{#1} \\acfsfont{(\\acsfont{\\AC@acs{#1}})}}\\fi\n\\ifAC@starred\\else\\lx@AC@used{#1}\\fi"
+  );
 
   // Italicized long (short)
-  DefMacro!("\\acfi OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfia");
-  DefMacro!("\\acfia{}",
-    "{\\itshape\\AC@acl{#1} }(\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi)");
+  DefMacro!(
+    "\\acfi OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfia"
+  );
+  DefMacro!(
+    "\\acfia{}",
+    "{\\itshape\\AC@acl{#1} }(\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi)"
+  );
 
   // Auto form
-  DefMacro!("\\ac OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@ac");
-  DefMacro!("\\@ac{}",
-    "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}");
+  DefMacro!(
+    "\\ac OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@ac"
+  );
+  DefMacro!(
+    "\\@ac{}",
+    "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}"
+  );
 
   // Indefinite article form
-  DefMacro!("\\iac OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@iac");
-  DefMacro!("\\Iac OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@Iac");
-  DefMacro!("\\@iac{}", "\\@iaci{#1} \\ifAC@starred\\ac*{#1}\\else\\ac{#1}\\fi");
-  DefMacro!("\\@Iac{}", "\\@firstupper{\\@iaci{#1}} \\ifAC@starred\\ac*{#1}\\else\\ac{#1}\\fi");
+  DefMacro!(
+    "\\iac OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@iac"
+  );
+  DefMacro!(
+    "\\Iac OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@Iac"
+  );
+  DefMacro!(
+    "\\@iac{}",
+    "\\@iaci{#1} \\ifAC@starred\\ac*{#1}\\else\\ac{#1}\\fi"
+  );
+  DefMacro!(
+    "\\@Iac{}",
+    "\\@firstupper{\\@iaci{#1}} \\ifAC@starred\\ac*{#1}\\else\\ac{#1}\\fi"
+  );
 
   // Plural forms
-  DefMacro!("\\acsp OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acspa");
+  DefMacro!(
+    "\\acsp OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acspa"
+  );
   DefMacro!("\\acspa{}", "\\@acsp{#1}");
-  DefMacro!("\\@acsp{}", "\\acsfont{\\AC@acsp{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\@acsp{}",
+    "\\acsfont{\\AC@acsp{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
-  DefMacro!("\\aclp OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@aclp");
-  DefMacro!("\\@aclp{}", "\\AC@aclp{#1}\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\aclp OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@aclp"
+  );
+  DefMacro!(
+    "\\@aclp{}",
+    "\\AC@aclp{#1}\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
-  DefMacro!("\\acfp OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfpa");
+  DefMacro!(
+    "\\acfp OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acfpa"
+  );
   DefMacro!("\\acfpa{}", "\\@acfp{#1}");
-  DefMacro!("\\@acfp{}",
-    "\\ifAC@footnote\\acsfont{\\AC@acsp{#1}}\\footnote{\\AC@placelabel{#1} \\AC@aclp{#1}}\n\\else\\acffont{\\AC@placelabel{#1} \\AC@aclp{#1} \\acfsfont{(\\acsfont{\\AC@acsp{#1}})}}\\fi\n\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\@acfp{}",
+    "\\ifAC@footnote\\acsfont{\\AC@acsp{#1}}\\footnote{\\AC@placelabel{#1} \\AC@aclp{#1}}\n\\else\\acffont{\\AC@placelabel{#1} \\AC@aclp{#1} \\acfsfont{(\\acsfont{\\AC@acsp{#1}})}}\\fi\n\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
-  DefMacro!("\\acp OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@acp");
-  DefMacro!("\\@acp{}",
-    "\\lx@AC@if{#1}{\\AC@acsp{#1}}{\\AC@aclp{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi");
+  DefMacro!(
+    "\\acp OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\@acp"
+  );
+  DefMacro!(
+    "\\@acp{}",
+    "\\lx@AC@if{#1}{\\AC@acsp{#1}}{\\AC@aclp{#1}}\\ifAC@starred\\else\\AC@logged{#1}\\fi"
+  );
 
-  DefMacro!("\\acsu OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acsua");
-  DefMacro!("\\acsua{}", "\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi\\acused{#1}");
-  DefMacro!("\\aclu OptionalMatch:*",
-    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\aclua");
-  DefMacro!("\\aclua{}", "\\ifAC@starred\\acl*{#1}\\else\\acl{#1}\\fi\\acused{#1}");
+  DefMacro!(
+    "\\acsu OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\acsua"
+  );
+  DefMacro!(
+    "\\acsua{}",
+    "\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi\\acused{#1}"
+  );
+  DefMacro!(
+    "\\aclu OptionalMatch:*",
+    "\\ifx.#1.\\AC@starredfalse\\else\\AC@starredtrue\\fi\\aclua"
+  );
+  DefMacro!(
+    "\\aclua{}",
+    "\\ifAC@starred\\acl*{#1}\\else\\acl{#1}\\fi\\acused{#1}"
+  );
 
   //======================================================================
   // Defining Acronyms
@@ -148,10 +223,16 @@ LoadDefinitions!({
   DefMacro!("\\acroextra{}", "#1");
 
   // \lx@acro@item{key}{short}{long}
-  DefMacro!("\\lx@acro@item{}[]{}", "\\lx@acro@@item{#1}{\\ifx.#2.#1\\else#2\\fi}{#3}");
-  DefMacro!("\\lx@acro@@item{}{}{}",
-    "\\lx@acro@@@item{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}");
-  DefConstructor!("\\lx@acro@@@item{}{}{}{}{}",
+  DefMacro!(
+    "\\lx@acro@item{}[]{}",
+    "\\lx@acro@@item{#1}{\\ifx.#2.#1\\else#2\\fi}{#3}"
+  );
+  DefMacro!(
+    "\\lx@acro@@item{}{}{}",
+    "\\lx@acro@@@item{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
+  );
+  DefConstructor!(
+    "\\lx@acro@@@item{}{}{}{}{}",
     "<ltx:glossaryentry inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -163,10 +244,16 @@ LoadDefinitions!({
     document.generate_id(node, "")?;
   });
 
-  DefMacro!("\\acrodef{}[]{}", "\\lx@acro@@def{#1}{\\ifx.#2.#1\\else#2\\fi}{#3}");
-  DefMacro!("\\lx@acro@@def{}{}{}",
-    "\\lx@acro@@@def{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}");
-  DefConstructor!("\\lx@acro@@@def{}{}{}{}{}",
+  DefMacro!(
+    "\\acrodef{}[]{}",
+    "\\lx@acro@@def{#1}{\\ifx.#2.#1\\else#2\\fi}{#3}"
+  );
+  DefMacro!(
+    "\\lx@acro@@def{}{}{}",
+    "\\lx@acro@@@def{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
+  );
+  DefConstructor!(
+    "\\lx@acro@@@def{}{}{}{}{}",
     "<ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -182,23 +269,30 @@ LoadDefinitions!({
   Let!("\\acro", "\\acrodef");
 
   // Non-standard definite articles
-  DefMacro!("\\lx@acro@phrase{}{}{}",
-    "{\\let\\acroextra\\@gobble\\lx@@acro@phrase{#1}{#2}{#3}}");
+  DefMacro!(
+    "\\lx@acro@phrase{}{}{}",
+    "{\\let\\acroextra\\@gobble\\lx@@acro@phrase{#1}{#2}{#3}}"
+  );
   // ^ float-up: glossarydefinition floats out of glossarylist to glossary
-  DefConstructor!("\\lx@@acro@phrase{}{}{}",
+  DefConstructor!(
+    "\\lx@@acro@phrase{}{}{}",
     "^ <ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='#2'>#3</ltx:glossaryphrase>\
      </ltx:glossarydefinition>"
   );
 
-  DefMacro!("\\acrodefindefinite{}{}{}",
-    "\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}");
+  DefMacro!(
+    "\\acrodefindefinite{}{}{}",
+    "\\lx@acro@phrase{#1}{short-indefinite}{#2}\\lx@acro@phrase{#1}{long-indefinite}{#3}"
+  );
   Let!("\\acroindefinite", "\\acrodefindefinite");
   Let!("\\newacroindefinite", "\\acrodefindefinite");
 
   // Non-standard plural forms
-  DefMacro!("\\acrodefplural{}[]{}",
-    "\\lx@acro@phrase{#1}{short-plural}{\\ifx.#2.#1\\else#2\\fi}\\lx@acro@phrase{#1}{long-plural}{#3}");
+  DefMacro!(
+    "\\acrodefplural{}[]{}",
+    "\\lx@acro@phrase{#1}{short-plural}{\\ifx.#2.#1\\else#2\\fi}\\lx@acro@phrase{#1}{long-plural}{#3}"
+  );
   Let!("\\acroplural", "\\acrodefplural");
   Let!("\\newacroplural", "\\acrodefplural");
 });

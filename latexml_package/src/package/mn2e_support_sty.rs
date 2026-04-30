@@ -4,24 +4,36 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Dependencies
-  RequirePackage!("natbib");
-  // mn2e.cls internal: base line skip (used in raw TeX class)
-  DefRegister!("\\@bls" => Dimension!("12pt"));
-
-  // Perl: mn2e_support.sty.ltxml L19-20 — load graphicx if option was set
+  // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
+  // only dcolumn/natbib/graphicx based on the matching option flags.
+  // NOTE: Perl does NOT load amsmath even when @useAMS is set — the
+  // raw-TeX `\if@useAMS\RequirePackage{amsmath,amssymb}\fi` from the .cls
+  // is DELIBERATELY bypassed. Loading amsmath makes `\cases` route through
+  // the amsmath `\lx@ams@cases@` constructor (DigestedBody — no explicit
+  // `\lx@end@alignment` close), whereas the base `\cases` from
+  // Base_XMath (`\lx@gen@plain@cases`) wraps the body with
+  // `\lx@end@alignment` which provides the clean termination.
+  // Regression path: paper 1112.6246 (`giersz_rv1.tex`, mn2e class)
+  // cascades 10001 mode-leak errors if amsmath is loaded here.
+  if state::lookup_int("@usedcolumn") != 0 {
+    RequirePackage!("dcolumn");
+  }
+  if state::lookup_int("@usenatbib") != 0 {
+    RequirePackage!("natbib");
+  }
   if state::lookup_int("@usegraphicx") != 0 {
     RequirePackage!("graphicx");
-  }
-  // mn2e.cls raw TeX: \if@useAMS\RequirePackage{amsmath,amssymb}\fi
-  // Since we don't load the raw class, check the flag and load AMS packages
-  if state::lookup_int("@useAMS") != 0 {
-    RequirePackage!("amsmath");
-    RequirePackage!("amssymb");
   }
 
   // Frontmatter — Perl L28-46
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
+  // Perl L31:
+  //   DefMacro('\author[]{}', sub { andSplit(T_CS('\lx@author'), $_[2]); });
+  // $_[2] is the mandatory body (author list); the optional `[short]` is
+  // consumed and discarded.
+  DefMacro!("\\author[]{}", sub[(_short, authors)] {
+    and_split(T_CS!("\\lx@author"), authors)
+  });
   DefMacro!("\\newauthor", "");
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
@@ -48,28 +60,20 @@ LoadDefinitions!({
     "<ltx:classification scheme='keywords'>#body</ltx:classification>");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
-  // Dates — Perl L61-66
-  DefMacro!("\\date[]{}", "\\@add@frontmatter{ltx:date}{#2}");
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
+  // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
+  DefMacro!("\\bsp", "");
 
-  // Affiliations — Perl L70-85
-  DefMacro!("\\@affil[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-
-  // Email
-  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-
-  // Acknowledgements — Perl L95
-  DefConstructor!("\\bsp", "");
-  Let!("\\ackn", "\\acknowledgments");
-  DefMacro!("\\acknowledgments", "\\section*{Acknowledgments}");
-
-  // Math shortcuts — Perl L120-175
-  DefMacro!("\\la", "\\lesssim");
-  DefMacro!("\\ga", "\\gtrsim");
-  DefMacro!("\\getsto", "\\rightleftharpoons");
+  // Math shortcuts — Perl mn2e_support.sty.ltxml L131-145.
+  // Perl binds these directly via DefMath, NOT by aliasing to amssymb
+  // CSes — mn2e_support is intentionally amssymb-free (see top-of-file
+  // comment on the dropped amsmath/amssymb RequirePackage). Aliasing
+  // \la → \lesssim leaves \la dangling whenever a paper doesn't load
+  // amssymb separately (sandbox 0911.3798, ~21 papers).
+  DefMath!("\\la", "\u{2272}", role => "RELOP",
+    meaning => "less-than-or-similar-to");
+  DefMath!("\\ga", "\u{2273}", role => "RELOP",
+    meaning => "greater-than-or-similar-to");
+  DefMath!("\\getsto", "\u{21C6}", role => "ARROW");
   DefMacro!("\\sun", "\u{2609}");
   DefMacro!("\\degr", "\u{00B0}");
   DefMacro!("\\arcmin", "\u{2032}");
@@ -87,29 +91,9 @@ LoadDefinitions!({
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
 
-  // Journal abbreviations — Perl L180-252
-  DefMacro!("\\mnras", "MNRAS");
-  DefMacro!("\\nat", "Nature");
-  DefMacro!("\\apj", "ApJ");
-  DefMacro!("\\apjl", "ApJ");
-  DefMacro!("\\apjs", "ApJS");
-  DefMacro!("\\aj", "AJ");
-  DefMacro!("\\aap", "A\\&A");
-  DefMacro!("\\aapr", "A\\&A~Rev.");
-  DefMacro!("\\aaps", "A\\&AS");
-  DefMacro!("\\araa", "ARA\\&A");
-  DefMacro!("\\pasp", "PASP");
-  DefMacro!("\\pasa", "PASA");
-  DefMacro!("\\pasj", "PASJ");
-  DefMacro!("\\prd", "Phys. Rev. D");
-  DefMacro!("\\prl", "Phys. Rev. Lett.");
-  DefMacro!("\\physrep", "Phys. Rep.");
-  DefMacro!("\\ssr", "Space Sci. Rev.");
-  DefMacro!("\\jcap", "J. Cosmology Astropart. Phys.");
-  DefMacro!("\\solphys", "Sol. Phys.");
-  DefMacro!("\\lrr", "Living Rev. Relativity");
-  DefMacro!("\\na", "New A");
-  DefMacro!("\\nar", "New A Rev.");
+  // Journal abbreviations (\mnras, \nat, \apj, \prd, ...) are NOT defined
+  // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
+  // (ported to aas_macros_sty.rs) where they wrap via \ref@jnl{...}.
 
   // Bold Greek — Perl L66-97
   DefMacro!("\\mn@boldsymbol{}", "\\boldsymbol{#1}");
@@ -276,4 +260,12 @@ LoadDefinitions!({
       after_equation(Some(whatsit))?;
     },
     locked => true);
+
+  // Perl mn2e_support.sty.ltxml L200-201 — declare two boolean ifs that
+  // mn2e papers test against later. \ifCUPmtlplainloaded gates a CUP
+  // plain-mode branch, \iffirstta gates the first-table-author flag.
+  // Sandbox astro-ph0207632 + astro-ph9807011 + astro-ph9909211 +
+  // astro-ph9907099 hit `\ifCUPmtlplainloaded` undefined.
+  RawTeX!(r"\newif\ifCUPmtlplainloaded");
+  RawTeX!(r"\newif\iffirstta");
 });

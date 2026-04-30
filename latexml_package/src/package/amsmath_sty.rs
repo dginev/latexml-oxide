@@ -64,20 +64,16 @@ fn ams_rearrangeable_bindings(
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
     open_row: Rc::new(|document, mut props| {
       // Read equation tags from state
-      if let Some(Stored::HashStored(eq_props)) =
-        state::remove_value("EQUATIONROW_PROPS")
-      {
+      if let Some(Stored::HashStored(eq_props)) = state::remove_value("EQUATIONROW_PROPS") {
         if let Some(id) = eq_props.get("id") {
           props.insert(String::from("xml:id"), Stored::from(id.to_string()));
         }
       }
       // Extract tags (Digested) before converting to string props
       let tags_digested = props.remove("tags");
-      let str_props: HashMap<String, String> = props.into_iter()
-        .map(|(k, v)| (k, v.to_string()))
-        .collect();
-      document
-        .open_element("ltx:equation", Some(str_props), None)?;
+      let str_props: HashMap<String, String> =
+        props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
+      document.open_element("ltx:equation", Some(str_props), None)?;
       // If we have digested tags, absorb them into the opened element
       if let Some(Stored::Digested(d)) = tags_digested {
         document.absorb(&d, None)?;
@@ -103,7 +99,8 @@ fn ams_rearrangeable_bindings(
   // toggle math/text mode via the default mechanism.
   // Adding the letdef here would cause nested \begin{aligned} inside \begin{align} to hang:
   // the after-template $ would run \lx@dollar@in@mathmode while inner frames are still on stack,
-  // mismatching MATH_ALIGN_$_BEGUN and opening restricted_horizontal mode instead of closing inline math.
+  // mismatching MATH_ALIGN_$_BEGUN and opening restricted_horizontal mode instead of closing inline
+  // math.
   state::let_i(
     &T_CS!("\\\\"),
     &T_CS!("\\lx@alignment@newline@noskip"),
@@ -127,16 +124,8 @@ fn ams_rearrangeable_bindings(
   // so such cells are skippable and the constructor is never invoked.
   // By routing \label through \lx@hidden@noalign, the label is processed at the
   // row level (equation element), ensuring labels= is always set.
-  state::let_i(
-    &T_CS!("\\lx@eqnarray@save@label"),
-    &T_CS!("\\label"),
-    None,
-  );
-  state::let_i(
-    &T_CS!("\\label"),
-    &T_CS!("\\lx@eqnarray@label"),
-    None,
-  );
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
+  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   Ok(())
 }
 
@@ -147,7 +136,9 @@ fn ams_gather_bindings() -> Result<()> {
 
   let col = Cell {
     before: Some(Tokens::new(vec![
-      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+      T_CS!("\\hfil"),
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
     ])),
     after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
     empty: true,
@@ -169,16 +160,16 @@ fn ams_align_bindings() -> Result<()> {
 
   let col1 = Cell {
     before: Some(Tokens::new(vec![
-      T_CS!("\\hfil"), T_MATH!(), T_CS!("\\displaystyle"),
+      T_CS!("\\hfil"),
+      T_MATH!(),
+      T_CS!("\\displaystyle"),
     ])),
     after: Some(Tokens::new(vec![T_MATH!()])),
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
-    before: Some(Tokens::new(vec![
-      T_MATH!(), T_CS!("\\displaystyle"),
-    ])),
+    before: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\displaystyle")])),
     after: Some(Tokens::new(vec![T_MATH!(), T_CS!("\\hfil")])),
     empty: true,
     ..Cell::default()
@@ -199,17 +190,15 @@ fn ams_aligned_bindings() -> Result<()> {
   use latexml_core::alignment::template::{Align, TemplateConfig};
 
   let col1 = Cell {
-    before: Some(Tokens::new(vec![
-      T_CS!("\\hfil"), T_CS!("\\displaystyle"),
-    ])),
-    align: Some(Align::Right),  // \hfil before → right-aligned
+    before: Some(Tokens::new(vec![T_CS!("\\hfil"), T_CS!("\\displaystyle")])),
+    align: Some(Align::Right), // \hfil before → right-aligned
     empty: true,
     ..Cell::default()
   };
   let col2 = Cell {
     before: Some(Tokens::new(vec![T_CS!("\\displaystyle")])),
     after: Some(Tokens::new(vec![T_CS!("\\hfil")])),
-    align: Some(Align::Left),  // \hfil after → left-aligned
+    align: Some(Align::Left), // \hfil after → left-aligned
     empty: true,
     ..Cell::default()
   };
@@ -262,80 +251,95 @@ LoadDefinitions!({
   // but for classes without a binding (jpsj2, etc.) that don't inherit from article,
   // amsmath must provide a fallback. new_counter() is safe to call even if already defined:
   // it skips register creation but still installs \the@equationgroup@ID etc.
-  // Matches Perl article.cls.ltxml L85: NewCounter('@equationgroup','document',idprefix=>'EG',idwithin=>'section')
+  // Matches Perl article.cls.ltxml L85:
+  // NewCounter('@equationgroup','document',idprefix=>'EG',idwithin=>'section')
   if lookup_definition(&T_CS!("\\the@equationgroup@ID"))?.is_none() {
     NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");
   }
 
   //======================================================================
+  // Perl: amsmath.sty.ltxml lines 766-767 — MaxMatrixCols counter
+  // caps the number of columns accepted in ams matrix environments.
+  // User papers may override via \setcounter{MaxMatrixCols}{N} so the
+  // counter must exist at binding-load time even though Rust's matrix
+  // code doesn't currently consult it.
+  NewCounter!("MaxMatrixCols");
+  SetCounter!("MaxMatrixCols", Number::new(10));
+
+  //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments
-  DefMacro!("\\lx@ams@matrix {}",
-    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment");
-  DefMacro!("\\lx@end@ams@matrix",
-    "\\lx@end@alignment\\lx@end@gen@matrix");
+  DefMacro!(
+    "\\lx@ams@matrix {}",
+    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\lx@end@ams@matrix",
+    "\\lx@end@alignment\\lx@end@gen@matrix"
+  );
 
-  DefMacro!("\\matrix",    "\\lx@ams@matrix{name=matrix,datameaning=matrix}");
+  DefMacro!(
+    "\\matrix",
+    "\\lx@ams@matrix{name=matrix,datameaning=matrix}"
+  );
   DefMacro!("\\endmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\pmatrix", "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}");
+  DefMacro!(
+    "\\pmatrix",
+    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}"
+  );
   DefMacro!("\\endpmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\bmatrix", "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}");
+  DefMacro!(
+    "\\bmatrix",
+    "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}"
+  );
   DefMacro!("\\endbmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\Bmatrix", "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}");
+  DefMacro!(
+    "\\Bmatrix",
+    "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}"
+  );
   DefMacro!("\\endBmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\vmatrix", "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}");
+  DefMacro!(
+    "\\vmatrix",
+    "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}"
+  );
   DefMacro!("\\endvmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\Vmatrix", "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}");
+  DefMacro!(
+    "\\Vmatrix",
+    "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}"
+  );
   DefMacro!("\\endVmatrix", "\\lx@end@ams@matrix");
   // Perl has a typo: "atameaning" instead of "datameaning". Match Perl to avoid XMDual wrapping.
-  DefMacro!("\\smallmatrix", "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}");
+  DefMacro!(
+    "\\smallmatrix",
+    "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}"
+  );
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
   DefMacro!("\\matrix@check{}", None);
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
-  DefMacro!("\\lx@ams@cases{}",
-    "\\lx@gen@cases@bindings{#1}\\lx@ams@cr@binding\\lx@ams@cases@{#1}\\lx@begin@alignment");
-  DefMacro!("\\lx@end@ams@cases",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\lx@end@gen@cases");
+  DefMacro!(
+    "\\lx@ams@cases{}",
+    "\\lx@gen@cases@bindings{#1}\\lx@ams@cr@binding\\lx@ams@cases@{#1}\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\lx@end@ams@cases",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\lx@end@gen@cases"
+  );
 
-  DefMacro!("\\cases",    "\\lx@ams@cases{name=cases,meaning=cases,left=\\lx@left\\{}");
+  DefMacro!(
+    "\\cases",
+    "\\lx@ams@cases{name=cases,meaning=cases,left=\\lx@left\\{}"
+  );
   DefMacro!("\\endcases", "\\lx@end@ams@cases");
 
   //======================================================================
   // Section 4.2 Math spacing commands
-  // \, == \thinspace
-  // \: == \medspace
-  // \; == \thickspace
-  // \quad
-  // \qquad
-  // \! == \negthinspace
-  // \negmedspace
-  // \negthickspace
-  // I think only these are new
-
-  // DefConstructorI('\thinspace', undef,
-  //   "?#isMath(<ltx:XMHint name='thinspace' width='#width'/>)(\x{2009})",
-  //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip'); } });
-  // DefConstructorI('\negthinspace', undef,
-  //   "?#isMath(<ltx:XMHint name='negthinspace' width='#width'/>)()",
-  //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip')->negate; } });
-  DefConstructor!(
-    "\\medspace",
-    "?#isMath(<ltx:XMHint name='medspace'/>)()"
-  );
-  DefConstructor!(
-    "\\negmedspace",
-    "?#isMath(<ltx:XMHint name='negmedspace'/>)()"
-  );
-  DefConstructor!(
-    "\\thickspace",
-    "?#isMath(<ltx:XMHint name='thickspace'/>)(\u{2004})"
-  );
-  DefConstructor!(
-    "\\negthickspace",
-    "?#isMath(<ltx:XMHint name='negthickspace'/>)()"
-  );
+  // \, == \thinspace, \: == \medspace, \; == \thickspace
+  // \! == \negthinspace, plus \quad, \qquad, \negmedspace, \negthickspace
+  // these are now native to LaTeX (see latex_constructs.rs C.7.7 Spacing,
+  // mirroring Perl latex_constructs.pool.ltxml L2498-2525). The amsmath
+  // pool no longer redefines them.
 
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");
@@ -364,11 +368,16 @@ LoadDefinitions!({
   DefMacro!("\\DOTSX", None);
   Let!("\\hdots", "\\lx@ldots");
 
-  // Perl: expands to N copies of \hdots (where N is the numeric argument)
-  DefPrimitive!("\\hdotsfor Number", sub[(n)] {
+  // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
+  // { T_CS('\hdots') } 1..$_[1]->valueOf) })` — a gullet-level macro
+  // expanding to N `\hdots` tokens. Matching Perl's DefMacro kind (was
+  // DefPrimitive with gullet::unread; observationally similar but the
+  // macro form means `\edef\x{\hdotsfor{3}}` fully resolves, whereas a
+  // primitive would leave `\hdotsfor` unexpanded).
+  DefMacro!("\\hdotsfor Number", sub[(n)] {
     let count = n.value_of().max(1) as usize;
     let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
-    gullet::unread(Tokens::new(toks));
+    Ok(Tokens::new(toks))
   });
 
   // Perl amsmath L848-860: Smart \dots — peek at following token's role.
@@ -393,20 +402,31 @@ LoadDefinitions!({
         .unwrap_or_default();
       let is_binop = matches!(role.as_str(), "ADDOP" | "BINOP" | "MULOP" | "RELOP");
       let ch = if is_binop { "\u{22EF}" } else { "\u{2026}" };
-      let font = lookup_font().unwrap()
+      let font = lookup_font()
+        .unwrap()
         .merge(fontmap!(family => "serif", series => "medium", shape => "upright"))
         .specialize(ch);
       let tbox = Tbox::new(
-        arena::pin(ch), Some(Rc::new(font)), None, Tokens!(T_CS!("\\dots")),
-        stored_map!("mode" => "math", "name" => "dots", "role" => "ID", "isMath" => true)
+        arena::pin(ch),
+        Some(Rc::new(font)),
+        None,
+        Tokens!(T_CS!("\\dots")),
+        stored_map!("mode" => "math", "name" => "dots", "role" => "ID", "isMath" => true),
       );
       let mut result: Vec<Digested> = vec![Digested::from(tbox)];
       result.extend(after_boxes); // put back the digested token
       Ok(result)
     }))),
-    PrimitiveOptions { scope: Some(Scope::Global), ..PrimitiveOptions::default() },
+    PrimitiveOptions {
+      scope: Some(Scope::Global),
+      ..PrimitiveOptions::default()
+    },
   )?;
-  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi", scope => Some(Scope::Global));
+  // Perl amsmath.sty.ltxml L860 passes `robust => 1` so \dots survives
+  // \write/\edef expansion — the math/text dispatch stays frozen rather
+  // than being pre-resolved against the wrong mode.
+  DefMacro!("\\dots", r"\ifmmode\lx@math@dots\else\lx@ldots\fi",
+    scope => Some(Scope::Global), robust => true);
 
   //======================================================================
   // Section 4.9 Extensible arrows
@@ -432,8 +452,14 @@ LoadDefinitions!({
       Ok(Tokens::new(tks))
     }
   );
-  DefMacro!("\\xrightarrow", "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}");
-  DefMacro!("\\xleftarrow", "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}");
+  DefMacro!(
+    "\\xrightarrow",
+    "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
+  );
+  DefMacro!(
+    "\\xleftarrow",
+    "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
+  );
   DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
     role => "ARROW", stretchy => true, alias => "\\leftarrow");
   DefMath!("\\lx@stretchy@rightarrow", "\u{2192}",
@@ -487,10 +513,14 @@ LoadDefinitions!({
   // Section 4.11.3 The \genfrac command
   // Perl: amsmath.sty.ltxml lines 1016-1094
   // \genfrac{open}{close}{thickness}{style}{numerator}{denominator}
-  DefMacro!("\\genfrac{}{}{}{}{}{}",
-    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}");
-  DefMacro!("\\lx@genfrac{}{}{}{}{}{}",
-    r"\if @#3@\if.#4.\lx@@genfrac{#1}{#2}{#5}{#6}\else\lx@@genfrac{#1}{#2}[#4]{#5}{#6}\fi\else\if.#4.\lx@@genfrac{#1}[#3]{#2}{#5}{#6}\else\lx@@genfrac{#1}[#3]{#2}[#4]{#5}{#6}\fi\fi");
+  DefMacro!(
+    "\\genfrac{}{}{}{}{}{}",
+    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}"
+  );
+  DefMacro!(
+    "\\lx@genfrac{}{}{}{}{}{}",
+    r"\if @#3@\if.#4.\lx@@genfrac{#1}{#2}{#5}{#6}\else\lx@@genfrac{#1}{#2}[#4]{#5}{#6}\fi\else\if.#4.\lx@@genfrac{#1}[#3]{#2}{#5}{#6}\else\lx@@genfrac{#1}[#3]{#2}[#4]{#5}{#6}\fi\fi"
+  );
 
   // Perl: DefConstructor('\lx@@genfrac{}[Dimension]{}[Number]', ...)
   // NOTE: Perl reads numer/denom manually in afterDigest with MergeFont in scope.
@@ -637,16 +667,22 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml line 85
   Let!("\\notag", "\\nonumber");
 
-  // Perl: amsmath.sty.ltxml lines 87-91
+  // Perl: amsmath.sty.ltxml lines 87-91 (locked=>1 prevents `\tag` from
+  // being redefined by downstream classes/packages — protects the
+  // star-variant `\let\fnum@equation\relax` formatting-off semantics).
   DefMacro!(
     "\\tag OptionalMatch:* {}",
-    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}"
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}",
+    locked => true
   );
 
   // Perl: amsmath.sty.ltxml line 100
   // \@ams@intertext ends the current alignment row, then inserts intertext via \noalign.
   // Perl: DefMacro('\@ams@intertext{}', '\lx@hidden@crcr\noalign{\@@ams@intertext{#1}}');
-  DefMacro!("\\@ams@intertext{}", "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}");
+  DefMacro!(
+    "\\@ams@intertext{}",
+    "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}"
+  );
   DefConstructor!(
     "\\@@ams@intertext{}",
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",
@@ -686,29 +722,39 @@ LoadDefinitions!({
   });
 
   DefConstructor!("\\@@amsgather SkipSpaces DigestedBody",
-    "#1",
-    before_digest => { bgroup(); },
-    after_construct => sub[document, _whatsit] {
-      if let Some(mut last) = document.get_node().get_last_child() {
-        rearrange_ams_gather(document, &mut last)?;
-      }
-    });
-  DefPrimitive!("\\end@amsgather", { egroup()?; });
+  "#1",
+  before_digest => { bgroup(); },
+  after_construct => sub[document, _whatsit] {
+    if let Some(mut last) = document.get_node().get_last_child() {
+      rearrange_ams_gather(document, &mut last)?;
+    }
+  });
+  DefPrimitive!("\\end@amsgather", {
+    egroup()?;
+  });
 
-  DefMacro!("\\gather",
+  DefMacro!(
+    "\\gather",
     "\\ifmmode\\let\\endgather\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\endgather",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsgather\\lx@hidden@egroup");
-  DefMacro!("\\csname gather*\\endcsname",
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endgather",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsgather\\lx@hidden@egroup"
+  );
+  DefMacro!(
+    "\\csname gather*\\endcsname",
     "\\ifmmode\\expandafter\\let\\csname endgather*\\endcsname\\endgathered\\gathered\\else\
      \\lx@hidden@bgroup\\@ams@gather@bindings\\@@amsgather\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\csname endgather*\\endcsname",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsgather\\lx@hidden@egroup");
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\csname endgather*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsgather\\lx@hidden@egroup"
+  );
 
   //======================================================================
   // Section 3.6 Equation groups with mutual alignment (align)
@@ -719,14 +765,16 @@ LoadDefinitions!({
   });
 
   DefConstructor!("\\@@amsalign SkipSpaces DigestedBody",
-    "#1",
-    before_digest => { bgroup(); },
-    after_construct => sub[document, _whatsit] {
-      if let Some(mut last) = document.get_node().get_last_child() {
-        rearrange_ams_align(document, &mut last)?;
-      }
-    });
-  DefPrimitive!("\\end@amsalign", { egroup()?; });
+  "#1",
+  before_digest => { bgroup(); },
+  after_construct => sub[document, _whatsit] {
+    if let Some(mut last) = document.get_node().get_last_child() {
+      rearrange_ams_align(document, &mut last)?;
+    }
+  });
+  DefPrimitive!("\\end@amsalign", {
+    egroup()?;
+  });
 
   DefMacro!("\\align",
     "\\ifmmode\\let\\endalign\\endaligned\\aligned\\else\
@@ -748,69 +796,103 @@ LoadDefinitions!({
     locked => true);
 
   // flalign — same as align for now (Perl treats it identically)
-  DefMacro!("\\flalign",
+  DefMacro!(
+    "\\flalign",
     "\\ifmmode\\let\\endfalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\endflalign",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
-  DefMacro!("\\csname flalign*\\endcsname",
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endflalign",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
+  DefMacro!(
+    "\\csname flalign*\\endcsname",
     "\\ifmmode\\expandafter\\let\\csname endfalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\csname endflalign*\\endcsname",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\csname endflalign*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
 
   // alignat — same as align (ignores number-of-pairs arg)
-  DefMacro!("\\alignat{}",
+  DefMacro!(
+    "\\alignat{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\endalignat",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
-  DefMacro!("\\csname alignat*\\endcsname{}",
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
+  DefMacro!(
+    "\\csname alignat*\\endcsname{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\csname endalignat*\\endcsname",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\csname endalignat*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
 
   // xalignat — like alignat but full-width (Perl L530-545)
-  DefMacro!("\\xalignat{}",
+  DefMacro!(
+    "\\xalignat{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\endxalignat",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
-  DefMacro!("\\csname xalignat*\\endcsname{}",
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
+  DefMacro!(
+    "\\csname xalignat*\\endcsname{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\csname endxalignat*\\endcsname",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\csname endxalignat*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
 
   // xxalignat — like xalignat (Perl L547-551)
-  DefMacro!("\\xxalignat{}",
+  DefMacro!(
+    "\\xxalignat{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\fi");
-  DefMacro!("\\endxxalignat",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup");
+     \\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endxxalignat",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
+  );
 
   //======================================================================
   // Section 3.3 Split equations without alignment (multline)
   // Perl: amsmath.sty.ltxml lines 240-310
 
   // Perl L283-284: multirow keyval type declarations
+  // Perl's `getPairs` returns ALL pairs regardless of DefKeyVal coverage,
+  // so `\@ams@multirow@bindings{name=multline}` works even though Perl
+  // doesn't declare `name`/`vattach` as keyvals. Rust filters via
+  // declared keys, so we must add the missing declarations here.
   DefKeyVal!("multirow", "width", "Dimension");
   DefKeyVal!("multirow", "rowsep", "Dimension");
+  DefKeyVal!("multirow", "name", "");
+  DefKeyVal!("multirow", "vattach", "");
 
   // Perl: \@ams@multirow@bindings — sets up single-column alignment template for multline
   // Perl takes RequiredKeyVals:multirow + OptionalKeyVals (for before_row/after_row).
@@ -893,96 +975,106 @@ LoadDefinitions!({
   });
 
   DefConstructor!("\\@@multline DigestedBody",
-    "<ltx:equation xml:id='#id'>#tags\
-     <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
-     </ltx:equation>",
-    mode => "display_math",
-    properties => { ref_step_counter("equation", false) },
-    before_digest => { bgroup(); },
-    after_digest => sub[whatsit] {
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
-      // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
-      if let Some(arg) = whatsit.get_arg(1) {
-        let mut body = arg.unlist();
-        body.push(Digested::default()); // sentinel for trailer (popped by set_body)
-        whatsit.set_body(body);
-      }
-    },
-    reversion => "\\begin{multline}#1\\end{multline}",
-    after_construct => sub[document, whatsit] {
-      // Perl: lastChild->lastChild->lastChild->lastChild
-      // equation > Math > XMath > XMArray
-      let node = document.get_node();
-      if let Some(array) = node.get_last_child()
-        .and_then(|n| n.get_last_child())
-        .and_then(|n| n.get_last_child())
-        .and_then(|n| n.get_last_child())
-      {
-        let align_rule = get_multirow_alignment_rule(whatsit);
-        rearrange_ams_multirow(document, array, &align_rule)?;
-      }
-    });
+  "<ltx:equation xml:id='#id'>#tags\
+   <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
+   </ltx:equation>",
+  mode => "display_math",
+  properties => { ref_step_counter("equation", false) },
+  before_digest => { bgroup(); },
+  after_digest => sub[whatsit] {
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
+    if let Some(arg) = whatsit.get_arg(1) {
+      let mut body = arg.unlist();
+      body.push(Digested::default()); // sentinel for trailer (popped by set_body)
+      whatsit.set_body(body);
+    }
+  },
+  reversion => "\\begin{multline}#1\\end{multline}",
+  after_construct => sub[document, whatsit] {
+    // Perl: lastChild->lastChild->lastChild->lastChild
+    // equation > Math > XMath > XMArray
+    let node = document.get_node();
+    if let Some(array) = node.get_last_child()
+      .and_then(|n| n.get_last_child())
+      .and_then(|n| n.get_last_child())
+      .and_then(|n| n.get_last_child())
+    {
+      let align_rule = get_multirow_alignment_rule(whatsit);
+      rearrange_ams_multirow(document, array, &align_rule)?;
+    }
+  });
   DefConstructor!("\\@@multlinestar DigestedBody",
-    "<ltx:equation>\
-     <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
-     </ltx:equation>",
-    mode => "display_math",
-    before_digest => { bgroup(); },
-    after_digest => sub[whatsit] {
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
-      if let Some(arg) = whatsit.get_arg(1) {
-        let mut body = arg.unlist();
-        body.push(Digested::default());
-        whatsit.set_body(body);
-      }
-    },
-    reversion => "\\begin{multline*}#1\\end{multline*}",
-    after_construct => sub[document, whatsit] {
-      let node = document.get_node();
-      if let Some(array) = node.get_last_child()
-        .and_then(|n| n.get_last_child())
-        .and_then(|n| n.get_last_child())
-        .and_then(|n| n.get_last_child())
-      {
-        let align_rule = get_multirow_alignment_rule(whatsit);
-        rearrange_ams_multirow(document, array, &align_rule)?;
-      }
-    });
-  DefPrimitive!("\\@end@multline", { egroup()?; });
+  "<ltx:equation>\
+   <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
+   </ltx:equation>",
+  mode => "display_math",
+  before_digest => { bgroup(); },
+  after_digest => sub[whatsit] {
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    if let Some(arg) = whatsit.get_arg(1) {
+      let mut body = arg.unlist();
+      body.push(Digested::default());
+      whatsit.set_body(body);
+    }
+  },
+  reversion => "\\begin{multline*}#1\\end{multline*}",
+  after_construct => sub[document, whatsit] {
+    let node = document.get_node();
+    if let Some(array) = node.get_last_child()
+      .and_then(|n| n.get_last_child())
+      .and_then(|n| n.get_last_child())
+      .and_then(|n| n.get_last_child())
+    {
+      let align_rule = get_multirow_alignment_rule(whatsit);
+      rearrange_ams_multirow(document, array, &align_rule)?;
+    }
+  });
+  DefPrimitive!("\\@end@multline", {
+    egroup()?;
+  });
 
-  DefMacro!("\\multline",
+  DefMacro!(
+    "\\multline",
     "\\ifmmode\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@AmS@multline\\lx@begin@alignment\
-     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\fi");
-  DefMacro!("\\endmultline",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup");
-  DefMacro!("\\csname multline*\\endcsname",
-    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment");
-  DefMacro!("\\csname endmultline*\\endcsname",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup");
+     \\else\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multline\\lx@begin@alignment\\fi"
+  );
+  DefMacro!(
+    "\\endmultline",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup"
+  );
+  DefMacro!(
+    "\\csname multline*\\endcsname",
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=multline}\\@@multlinestar\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\csname endmultline*\\endcsname",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup"
+  );
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
-    "#body",
-    mode => "display_math",
-    before_digest => { bgroup(); },
-    after_digest => sub[whatsit] {
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
-      if let Some(arg) = whatsit.get_arg(1) {
-        let mut body = arg.unlist();
-        body.push(Digested::default());
-        whatsit.set_body(body);
-      }
-    },
-    reversion => "\\multline#1\\endmultline",
-    after_construct => sub[document, whatsit] {
-      // Perl: lastChild (directly XMArray since template is #body)
-      if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = get_multirow_alignment_rule(whatsit);
-        rearrange_ams_multirow(document, last, &align_rule)?;
-      }
-    });
+  "#body",
+  mode => "display_math",
+  before_digest => { bgroup(); },
+  after_digest => sub[whatsit] {
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    if let Some(arg) = whatsit.get_arg(1) {
+      let mut body = arg.unlist();
+      body.push(Digested::default());
+      whatsit.set_body(body);
+    }
+  },
+  reversion => "\\multline#1\\endmultline",
+  after_construct => sub[document, whatsit] {
+    // Perl: lastChild (directly XMArray since template is #body)
+    if let Some(last) = document.get_node().get_last_child() {
+      let align_rule = get_multirow_alignment_rule(whatsit);
+      rearrange_ams_multirow(document, last, &align_rule)?;
+    }
+  });
 
   //======================================================================
   // Section 3.4 Split equations with alignment (split)
@@ -993,19 +1085,30 @@ LoadDefinitions!({
   });
 
   // Perl: \if@in@ams@align\lx@ams@marksplitinalign\fi prefix for split-in-align
-  DefMacro!("\\split",
+  DefMacro!(
+    "\\split",
     "\\if@in@ams@align\\lx@ams@marksplitinalign\\fi\
-     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment");
+     \\lx@hidden@bgroup\\@ams@aligned@bindings\\@@split\\lx@begin@alignment"
+  );
   // Perl: \if@in@ams@align — checks if current environment starts with "align"
   // Perl: grep { /^align/ } $STATE->lookupStackedValues('current_environment')
   DefConditional!("\\if@in@ams@align", {
     state::with_stacked_values_sym(pin!("current_environment"), |vals| {
-      vals.iter().any(|v| v.to_string().starts_with("align"))
+      vals.iter().any(|v| v.starts_with_text("align"))
     })
   });
-  // Perl: \lx@ams@marksplitinalign — constructor that marks the current _Capture_
-  // cell with colspan=2, align=center, then advances to the next column.
-  // Perl: afterDigest => sub { LookupValue('Alignment')->nextColumn; return; }
+  // Perl amsmath.sty.ltxml L338: DefConstructor('\lx@ams@marksplitinalign',
+  // sub { ... setAttribute(colspan=>2, align=>'center') on $capture ... },
+  // afterDigest => sub { LookupValue('Alignment')->nextColumn }, sizer=>0,
+  // reversion=>'') — a constructor whose emit is empty but whose main-sub
+  // body mutates the PREVIOUSLY-EMITTED _Capture_ ancestor. Rust uses
+  // DefPrimitive here because the Rust port doesn't store an XML-tree
+  // reference inside the whatsit's digest-time context; the equivalent
+  // cell-attribute mutation lives on the Rust Alignment.current_column()
+  // state and must execute at digest (stomach) time, before the capture
+  // cell is emitted as XML. Intentional DefConstructor → DefPrimitive
+  // kind divergence (WISDOM #44) — observable XML identical, but the
+  // state-mutation path differs.
   DefPrimitive!("\\lx@ams@marksplitinalign", {
     use latexml_core::alignment::template::Align;
     if let Some(alignment_stored) = state::lookup_alignment() {
@@ -1019,48 +1122,82 @@ LoadDefinitions!({
       }
     }
   });
-  DefMacro!("\\endsplit",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup");
-  DefPrimitive!("\\@end@split", { egroup()?; });
+  DefMacro!(
+    "\\endsplit",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@split\\lx@hidden@egroup"
+  );
+  DefPrimitive!("\\@end@split", {
+    egroup()?;
+  });
   DefConstructor!("\\@@split DigestedBody",
-    "#1",
-    before_digest => { bgroup(); },
-    reversion => "\\begin{split}#1\\end{split}",
-    after_construct => sub[document, _whatsit] {
-      if let Some(last) = document.get_node().get_last_child() {
-        rearrange_ams_split(document, last)?;
-      }
-    });
+  "#1",
+  before_digest => { bgroup(); },
+  reversion => "\\begin{split}#1\\end{split}",
+  after_construct => sub[document, _whatsit] {
+    if let Some(last) = document.get_node().get_last_child() {
+      rearrange_ams_split(document, last)?;
+    }
+  });
+  // Perl amsmath.sty.ltxml L359-362: `\@@@split` — same body as `\@@split`
+  // but WITHOUT the `beforeDigest => bgroup` opener. Used when the caller
+  // already manages its own group scope (so the inner split constructor
+  // doesn't double-wrap). Orphan in the ltxml source (no internal caller
+  // in amsmath or known peer packages), but kept for parity so a tpl
+  // writer or external expansion targeting `\@@@split` resolves.
+  DefConstructor!("\\@@@split DigestedBody",
+  "#1",
+  reversion => "\\begin{split}#1\\end{split}",
+  after_construct => sub[document, _whatsit] {
+    if let Some(last) = document.get_node().get_last_child() {
+      rearrange_ams_split(document, last)?;
+    }
+  });
 
   //======================================================================
   // Section 3.7 Alignment building blocks (gathered, aligned, alignedat)
   // Perl: amsmath.sty.ltxml lines 570-676
 
-  // Perl: \lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}\@@gathered\lx@begin@alignment
-  DefMacro!("\\gathered[]",
-    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=gathered,vattach=#1}\\@@gathered\\lx@begin@alignment");
-  DefMacro!("\\endgathered",
-    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@gathered\\lx@hidden@egroup");
-  DefPrimitive!("\\@end@gathered", { egroup()?; });
+  // Perl: \lx@hidden@bgroup\@ams@multirow@bindings{name=gathered,vattach=#1}\@@gathered\lx@begin@
+  // alignment
+  DefMacro!(
+    "\\gathered[]",
+    "\\lx@hidden@bgroup\\@ams@multirow@bindings{name=gathered,vattach=#1}\\@@gathered\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\endgathered",
+    "\\lx@hidden@cr{}\\lx@end@alignment\\@end@gathered\\lx@hidden@egroup"
+  );
+  DefPrimitive!("\\@end@gathered", {
+    egroup()?;
+  });
   DefConstructor!("\\@@gathered DigestedBody",
-    "#1",
-    before_digest => { bgroup(); },
-    after_digest => sub[whatsit] {
-      // Perl: { 'default' => 'center' } — all rows centered
-      whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
-    },
-    reversion => "\\begin{gathered}#1\\end{gathered}",
-    after_construct => sub[document, whatsit] {
-      if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = get_multirow_alignment_rule(whatsit);
-        rearrange_ams_multirow(document, last, &align_rule)?;
-      }
-    });
+  "#1",
+  before_digest => { bgroup(); },
+  after_digest => sub[whatsit] {
+    // Perl: { 'default' => 'center' } — all rows centered
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
+  },
+  reversion => "\\begin{gathered}#1\\end{gathered}",
+  after_construct => sub[document, whatsit] {
+    if let Some(last) = document.get_node().get_last_child() {
+      let align_rule = get_multirow_alignment_rule(whatsit);
+      rearrange_ams_multirow(document, last, &align_rule)?;
+    }
+  });
 
-  // Perl: DefMacro('\aligned alignsafeOptional', ...)
-  // alignsafeOptional reads optional arg WITHOUT triggering alignment machinery.
-  // Standard [] would cause &-interception by handle_template for the outer alignment,
-  // breaking nested \begin{aligned} inside \begin{align}.
+  // Perl amsmath.sty.ltxml L614 is `DefMacro('\aligned alignsafeOptional',
+  //   '\lx@hidden@bgroup\@ams@aligned@bindings\@@amsaligned\lx@begin@alignment',
+  //   locked=>1)` — a plain DefMacro whose `alignsafeOptional` prototype
+  // reads an optional [t]/[b] arg WITHOUT triggering the outer alignment
+  // machinery's `&`-interception. Rust doesn't yet have an
+  // `alignsafeOptional` parameter type, so the port uses a DefPrimitive
+  // whose body manually brackets the optional-read with
+  // `local_align_group_count(1000000)` / `expire_align_group_count` —
+  // the Rust-native equivalent of Perl's `local $LaTeXML::ALIGN_STATE
+  // = 1000000` that disables `&`-interception during the read. The
+  // primitive then `gullet::unread`s the same expansion Perl's DefMacro
+  // emits. Intentional DefMacro → DefPrimitive kind divergence
+  // (WISDOM #44) forced by the missing Rust parameter type.
   DefPrimitive!("\\aligned", {
     // Perl: local $LaTeXML::ALIGN_STATE = 1000000; — disable alignment check
     local_align_group_count(1000000);
@@ -1074,7 +1211,10 @@ LoadDefinitions!({
   DefMacro!("\\endaligned",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  // Perl: DefMacro('\alignedat{} alignsafeOptional', ...)
+  // Perl amsmath.sty.ltxml L617 is the same shape as `\aligned` above:
+  // DefMacro('\alignedat{} alignsafeOptional', …, locked=>1). Same
+  // alignsafeOptional-parameter-type gap forces the same DefPrimitive
+  // port. WISDOM #44 intentional divergence — mirror of `\aligned`.
   DefPrimitive!("\\alignedat", {
     let _nargs = gullet::read_arg(ExpansionLevel::Off)?; // consume mandatory {n}
     local_align_group_count(1000000);
@@ -1088,7 +1228,9 @@ LoadDefinitions!({
   DefMacro!("\\endalignedat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@amsaligned\\lx@hidden@egroup",
     locked => true);
-  DefPrimitive!("\\@end@amsaligned", { egroup()?; });
+  DefPrimitive!("\\@end@amsaligned", {
+    egroup()?;
+  });
   DefConstructor!("\\@@amsaligned DigestedBody",
     "#1",
     before_digest => { bgroup(); },
@@ -1097,14 +1239,19 @@ LoadDefinitions!({
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
   DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
-  DefMacro!("\\subarray{}",
-    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}");
+  DefMacro!(
+    "\\subarray{}",
+    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"
+  );
   DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
 
   //======================================================================
-  // subequations environment
-  DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin");
-  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+  // subequations environment — Perl amsmath.sty.ltxml L757-758 locks
+  // both macros so raw TeX or sibling packages can't clobber the
+  // subnumbering begin/end markers that the alignment machinery
+  // relies on for nested-equation numbering.
+  DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin", locked => true);
+  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end", locked => true);
 
   DefMacro!("\\DOTSB", None);
   DefMacro!("\\DOTSI", None);
@@ -1142,10 +1289,16 @@ LoadDefinitions!({
     )?;
   });
 
-  // Section 3.11.2 Cross references to equation numbers
+  // Section 3.11.2 Cross references to equation numbers.
+  // Perl amsmath.sty.ltxml has `mode=>'restricted_horizontal',
+  // enterHorizontal=>1`. enter_horizontal triggers an implicit
+  // horizontal-mode entry when invoked from vertical mode (e.g. when
+  // \eqref is the first token in a paragraph), opening <ltx:p>
+  // before the parenthesized ref instead of emitting bare text in
+  // vertical mode.
   DefConstructor!("\\eqref Semiverbatim",
     "(<ltx:ref labelref='#label' _force_font='true'/>)",
-    mode => "restricted_horizontal",
+    mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
@@ -1153,8 +1306,13 @@ LoadDefinitions!({
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 
-  // Perl: amsmath.sty.ltxml L882-896
-  DefMacro!("\\boxed{}", "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi");
+  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
+  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
+  DefMacro!(
+    "\\boxed{}",
+    "\\ifmmode\\boxed@math{#1}\\else\\boxed@text{#1}\\fi",
+    robust => true
+  );
   DefConstructor!("\\boxed@math{}",
     "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
     alias => "\\boxed");
@@ -1237,33 +1395,53 @@ LoadDefinitions!({
   DefMacro!("\\displaybreak[]", None);
 
   // Section 4.11: Inline fraction (\ifrac)
-  DefConstructor!("\\ifrac{}{}", "\
+  DefConstructor!(
+    "\\ifrac{}{}",
+    "\
     <ltx:XMApp>\
       <ltx:XMTok meaning='divide' role='MULOP' style='inline'>\u{2215}</ltx:XMTok>\
       #1\
       #2\
-    </ltx:XMApp>");
+    </ltx:XMApp>"
+  );
 
-  // Section 4.12: Continued fractions — Perl L1098-1125
-  // Perl saves mathstyle context and conditionally sets 'text' vs display.
-  // The mathstyle attribute tells the MathML renderer which fraction style to use.
-  assign_value("CFRACSTYLE", Stored::String(arena::pin("display")), Some(Scope::Global));
-  DefConstructor!("\\cfrac[] InFractionStyle InFractionStyle",
+  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1102-1125
+  // is structurally a DefMacro trampoline (`\cfrac` Lets itself to
+  // `\lx@inner@cfrac` and calls `\lx@inner@cfrac`) plus a
+  // DefConstructor implementing the XML emit. The Let-self-rebind is
+  // how Perl captures the mathstyle *once* on first invocation while
+  // subsequent nested `\cfrac`s reuse the captured style without
+  // another save. Rust fuses the trampoline-and-constructor into a
+  // single `\cfrac[]` DefConstructor + a CFRACSTYLE global that
+  // replaces the Let-self-rebind trick — the mathstyle attribute
+  // tells the MathML renderer which fraction style to use in both
+  // forms. Intentional DefMacro → DefConstructor kind divergence
+  // (WISDOM #44) — observable XML identical; the Let-rebind is a
+  // Perl-only stateful shortcut that Rust achieves via a scope-
+  // bounded global.
+  assign_value(
+    "CFRACSTYLE",
+    Stored::String(arena::pin("display")),
+    Some(Scope::Global),
+  );
+  DefConstructor!(
+    "\\cfrac[] InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
       <ltx:XMTok name='cfrac' meaning='continued-fraction' mathstyle='display'/>\
       <ltx:XMArg>#2</ltx:XMArg>\
       <ltx:XMArg>#3</ltx:XMArg>\
-    </ltx:XMApp>");
+    </ltx:XMApp>"
+  );
   DefConstructor!("\\cfracstyle{}", "",
-    after_digest => sub[whatsit] {
-      let style_str = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
-      let style = match style_str.trim() {
-        "d" => "display",
-        "i" => "inline",
-        other => other,
-      };
-      assign_value("CFRACSTYLE", Stored::String(arena::pin(style)), None);
-    });
+  after_digest => sub[whatsit] {
+    let style_str = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    let style = match style_str.trim() {
+      "d" => "display",
+      "i" => "inline",
+      other => other,
+    };
+    assign_value("CFRACSTYLE", Stored::String(arena::pin(style)), None);
+  });
 
   // Section 7.4: Multiple integrals dispatch
   // Perl: n=0→\idotsint, n=1→\int, n=2→\iint, n=3→\iiint, n≥4→\iiiint
@@ -1308,11 +1486,8 @@ use latexml_core::document;
 /// Perl L632-676: rearrangeLoneAMSAligned
 /// When an equation contains a lone aligned environment as its only content,
 /// restructure into equationgroup with one equation per row, each with MathFork.
-pub fn rearrange_lone_ams_aligned(
-  document: &mut Document,
-  equation: &mut Node,
-) -> Result<()> {
-  use crate::engine::base_xmath::{open_math_fork, close_math_fork};
+pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) -> Result<()> {
+  use crate::engine::base_xmath::{close_math_fork, open_math_fork};
   use latexml_core::common::xml::element_nodes;
 
   // Test: single ltx:Math child?
@@ -1404,7 +1579,9 @@ pub fn rearrange_lone_ams_aligned(
                 },
                 Err(_) => String::new(),
               }
-            } else { String::new() }
+            } else {
+              String::new()
+            }
           };
           document.set_box_to_absorb(None);
           let mut imath = document.open_element_at(&mut td, "ltx:Math", None, None)?;
@@ -1421,10 +1598,16 @@ pub fn rearrange_lone_ams_aligned(
           // map { $main->firstChild->appendChild($_) } map { $_->childNodes } @cells
           // This flattens by taking the CHILDREN of each cell's first child,
           // not the first child itself. We clone into main XMath.
-          if let Some(mut mx) = document.findnodes("ltx:XMath", Some(&main)).into_iter().next() {
+          if let Some(mut mx) = document
+            .findnodes("ltx:XMath", Some(&main))
+            .into_iter()
+            .next()
+          {
             // Get the first element child of the cell, then clone ITS children
             if let Some(stuff) = cn.get_first_element_child() {
-              let stuff_children: Vec<Node> = stuff.get_child_nodes().into_iter()
+              let stuff_children: Vec<Node> = stuff
+                .get_child_nodes()
+                .into_iter()
                 .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
                 .collect();
               if !stuff_children.is_empty() {
@@ -1445,7 +1628,8 @@ pub fn rearrange_lone_ams_aligned(
 
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
-/// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST, etc.
+/// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST,
+/// etc.
 pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
   let mut rules = Vec::new();
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT") {
@@ -1550,8 +1734,8 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
 /// The XMWrap content is a flat list of all cells, which the math parser
 /// will then parse as a regular expression.
 fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
-  let array_qname = arena::to_string(document::get_node_qname(&array));
-  if !array_qname.ends_with("XMArray") {
+  let array_qname_sym = document::get_node_qname(&array);
+  if !arena::with(array_qname_sym, |s| s.ends_with("XMArray")) {
     return Ok(());
   }
   let mut cells = extract_xm_array_cells(&array);
@@ -1637,8 +1821,8 @@ pub fn rearrange_ams_multirow(
   align_rules: &[(String, String)],
 ) -> Result<()> {
   use latexml_core::common::xml::element_nodes;
-  let array_qname = arena::to_string(document::get_node_qname(&array));
-  if !array_qname.ends_with("XMArray") {
+  let array_qname_sym = document::get_node_qname(&array);
+  if !arena::with(array_qname_sym, |s| s.ends_with("XMArray")) {
     return Ok(());
   }
   // Apply alignment rules to rows
@@ -1655,7 +1839,11 @@ pub fn rearrange_ams_multirow(
       continue;
     }
     let row_idx = if key == "last" {
-      if num_rows > 0 { num_rows - 1 } else { continue; }
+      if num_rows > 0 {
+        num_rows - 1
+      } else {
+        continue;
+      }
     } else if let Ok(idx) = key.parse::<usize>() {
       idx
     } else {
@@ -1676,10 +1864,7 @@ pub fn rearrange_ams_multirow(
 
 /// Perl: rearrangeAMSGather (amsmath.sty.ltxml L400-415)
 /// Each equation row consists of single equation. Pull math content up past _Capture_.
-pub fn rearrange_ams_gather(
-  document: &mut Document,
-  equationgroup: &mut Node,
-) -> Result<()> {
+pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
   let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
   for mut equation in equations {
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&equation));
@@ -1723,10 +1908,7 @@ pub fn rearrange_ams_gather(
 
 /// Perl: rearrangeAMSAlign (amsmath.sty.ltxml L460-473)
 /// Each equation row consists of pairs (LHS, =RHS); group accordingly.
-pub fn rearrange_ams_align(
-  document: &mut Document,
-  equationgroup: &mut Node,
-) -> Result<()> {
+pub fn rearrange_ams_align(document: &mut Document, equationgroup: &mut Node) -> Result<()> {
   use crate::engine::base_xmath::equationgroup_join_cols;
   let equations: Vec<Node> = document.findnodes("ltx:equation", Some(equationgroup));
   for mut equation in equations {
@@ -1789,15 +1971,21 @@ fn sideset_construct(
   let mut node = node_opt.unwrap_or_else(|| document.get_node().clone());
 
   // Get scriptpos prefix from base
-  let opx = node.get_first_element_child()
+  let opx = node
+    .get_first_element_child()
     .and_then(|ch| ch.get_attribute("scriptpos"))
     .map(|sp| {
       let prefix: String = sp.chars().take_while(|c| !c.is_ascii_digit()).collect();
-      if prefix.is_empty() { "post".to_string() } else { prefix }
+      if prefix.is_empty() {
+        "post".to_string()
+      } else {
+        prefix
+      }
     })
     .unwrap_or_else(|| "post".to_string());
 
-  let level0 = props.get("scriptlevel")
+  let level0 = props
+    .get("scriptlevel")
     .map(|v| v.to_string().parse::<usize>().unwrap_or(0))
     .unwrap_or(0);
   let mut level = level0;
@@ -1810,7 +1998,11 @@ fn sideset_construct(
     items.reverse();
     for item in items {
       if let Some(scriptop) = is_script(&item) {
-        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        let y = if scriptop.1 == Catcode::SUPER {
+          "SUPERSCRIPTOP"
+        } else {
+          "SUBSCRIPTOP"
+        };
         node = sideset_wrap_impl(document, node, "pre", y, level, &item)?;
         if scriptop.0 == "FLOATING" {
           level += 1;
@@ -1827,7 +2019,11 @@ fn sideset_construct(
         if scriptop.0 == "FLOATING" {
           level += 1;
         }
-        let y = if scriptop.1 == Catcode::SUPER { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" };
+        let y = if scriptop.1 == Catcode::SUPER {
+          "SUPERSCRIPTOP"
+        } else {
+          "SUBSCRIPTOP"
+        };
         node = sideset_wrap_impl(document, node, "post", y, level, &item)?;
       } else if !item.is_empty().unwrap_or(true) {
         after.push(item);
@@ -1891,4 +2087,3 @@ fn sideset_wrap_impl(
 }
 
 // Additional amsmath definitions are added inline in the LoadDefinitions block above.
-

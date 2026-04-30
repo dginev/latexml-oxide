@@ -39,26 +39,19 @@ LoadDefinitions!({
   DefKeyVal!("caption", "name", "", "");
   DefKeyVal!("caption", "type", "", "");
 
-  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key} in state
-  DefPrimitive!("\\captionsetup[]{}", sub[(_ignore, kv)] {
-    // Parse the braced argument as key=value pairs and store each
-    let kv_str = kv.to_string();
-    for pair in kv_str.split(',') {
-      let pair = pair.trim();
-      if pair.is_empty() { continue; }
-      let (key, value) = if let Some(eq_pos) = pair.find('=') {
-        (pair[..eq_pos].trim(), pair[eq_pos+1..].trim())
-      } else {
-        (pair, "true")
-      };
-      if !key.is_empty() {
-        let state_key = s!("CAPTION_{}", key);
-        state::assign_value(
-          &state_key,
-          Stored::String(arena::pin(value)),
-          None,
-        );
-      }
+  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key}
+  // in state. Perl uses `RequiredKeyVals:caption` so brace-nested and
+  // quoted values parse correctly; the prior Rust version accepted
+  // `{}` and manually split on `,`, which mis-parsed values containing
+  // commas inside braces (e.g. `font={normal,bold}`).
+  DefPrimitive!("\\captionsetup[] RequiredKeyVals:caption", sub[(_ignore, kv)] {
+    for (key, value) in kv.get_pairs() {
+      let state_key = s!("CAPTION_{key}");
+      state::assign_value(
+        &state_key,
+        Stored::String(arena::pin(value.to_string())),
+        None,
+      );
     }
   });
   DefMacro!("\\DeclareCaptionStyle{}[]{}", "");
@@ -106,8 +99,26 @@ LoadDefinitions!({
   );
   DefMacro!("\\@scaption{}", "\\@@caption{#1}");
 
-  // \captionof — fake a caption in any context
-  DefMacro!("\\maybe@@generic@caption", "\\@@generic@caption");
+  // \captionof — fake a caption in any context.
+  //
+  // Perl caption.sty.ltxml L110-115 routes through the `CAPTION_type` state
+  // value set by `\captionsetup{type=…}`: when the author has declared a
+  // float type, `\maybe@@generic@caption` expands to `\@captionof{type}`
+  // so the caption digests inside the proper environment; otherwise it
+  // falls through to `\@@generic@caption`. Rust previously hardcoded the
+  // fallback, silently dropping the captionsetup type.
+  DefMacro!("\\maybe@@generic@caption", sub[_args] {
+    if let Some(Stored::String(t)) = state::lookup_value("CAPTION_type") {
+      let ty = arena::with(t, |s| s.to_string());
+      if !ty.is_empty() {
+        let mut out = vec![T_CS!("\\@captionof"), T_BEGIN!()];
+        out.extend(ExplodeText!(&ty));
+        out.push(T_END!());
+        return Ok(Tokens::new(out));
+      }
+    }
+    Ok(Tokens!(T_CS!("\\@@generic@caption")))
+  });
   DefMacro!("\\captionof", "\\@ifstar{\\@scaptionof}{\\@captionof}");
   DefMacro!("\\@captionof{}[]{}", r"\@ifnext\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
   DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#4}}");

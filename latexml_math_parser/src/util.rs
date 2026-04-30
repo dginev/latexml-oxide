@@ -67,7 +67,9 @@ fn node_to_grammar_lexemes_ctx(
       // \xleftrightarrow[under]{over}) should be atomic terminals.
       // Extract the meaning from the inner ARROW/METARELOP child token.
       if role == "ARROW" || role == "METARELOP" {
-        let arrow_meaning = node.get_child_elements().into_iter()
+        let arrow_meaning = node
+          .get_child_elements()
+          .into_iter()
           .find(|ch| {
             let cr = ch.get_attribute("role");
             cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP")
@@ -101,7 +103,8 @@ fn node_to_grammar_lexemes_ctx(
         let is_script = matches!(role.as_str(), "POSTSUBSCRIPT" | "POSTSUPERSCRIPT");
         let ctx = last_was_bigop && is_script;
         let children = filter_hints(node.get_child_nodes());
-        let (mut inner_lexes, mut inner_nodes) = node_to_grammar_lexemes_ctx(&node, children, idx, ctx);
+        let (mut inner_lexes, mut inner_nodes) =
+          node_to_grammar_lexemes_ctx(&node, children, idx, ctx);
         for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
           lexemes.push(inner_lex);
           nodes.push(inner_node);
@@ -130,7 +133,10 @@ fn node_to_grammar_lexemes_ctx(
       }
       *idx += 1;
       // Track bigop tokens for bigop-specific script token emission
-      let is_bigop = matches!(role.as_str(), "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP");
+      let is_bigop = matches!(
+        role.as_str(),
+        "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP"
+      );
       last_was_bigop = is_bigop;
       // Normalize langle/rangle meaning for consistent grammar matching.
       // Do NOT remap to parentheses — langle_open/rangle_close tokens need
@@ -286,7 +292,11 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
           let _ = hint.set_attribute("role", "PUNCT");
           // Clean width: round to integer if close, matching Perl format
-          let s_rounded = if (s - s.round()).abs() < 0.01 { s.round() } else { s };
+          let s_rounded = if (s - s.round()).abs() < 0.01 {
+            s.round()
+          } else {
+            s
+          };
           let width = format!("{}pt", s_rounded);
           let _ = hint.set_attribute("width", &width);
           // Remove extraneous attributes from the reused hint node
@@ -333,8 +343,17 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         }
       },
       XM::Lexeme(lex, _) => {
-        // If arg is already XML, it's too late to get automatic ID's
-        let node = lookup_lex_node(lex, nodes).expect("lexemes should only have valid ids.");
+        // If arg is already XML, it's too late to get automatic ID's.
+        // lookup_lex_node now returns Err for malformed lex strings instead
+        // of panicking; skip the arg on failure rather than abort the whole
+        // ref-building pass.
+        let node = match lookup_lex_node(lex, nodes) {
+          Ok(n) => n,
+          Err(e) => {
+            log::warn!("create_xmrefs: skipping lexeme with invalid node lookup: {e}");
+            continue;
+          },
+        };
 
         match node.get_attribute("xml:id") {
           //  already has id, so refer to it.
@@ -345,7 +364,8 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           None => {
             // Generate xml:id for this node so we can reference it
             document.generate_id(&mut node.clone(), "")?;
-            let generated_id = node.get_attribute("xml:id")
+            let generated_id = node
+              .get_attribute("xml:id")
               .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
               .or_else(|| node.get_attribute("id"));
             if let Some(id) = generated_id {
@@ -399,4 +419,88 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
     }
   }
   Ok(refs)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn distill_lexeme_dash_separator() {
+    // Dash takes precedence over colon.
+    let (base, sep, lex) = distill_lexeme("UNKNOWN:italic-x");
+    assert_eq!(base, "UNKNOWN:italic");
+    assert_eq!(sep, "-");
+    assert_eq!(lex, "x");
+  }
+
+  #[test]
+  fn distill_lexeme_colon_only() {
+    let (base, sep, lex) = distill_lexeme("ROLE:foo");
+    assert_eq!(base, "ROLE");
+    assert_eq!(sep, ":");
+    assert_eq!(lex, "foo");
+  }
+
+  #[test]
+  fn distill_lexeme_no_separator() {
+    let (base, sep, lex) = distill_lexeme("bare");
+    assert_eq!(base, "");
+    assert_eq!(sep, "");
+    assert_eq!(lex, "bare");
+  }
+
+  #[test]
+  fn distill_lexeme_empty() {
+    let (base, sep, lex) = distill_lexeme("");
+    assert_eq!(base, "");
+    assert_eq!(sep, "");
+    assert_eq!(lex, "");
+  }
+
+  #[test]
+  fn distill_lexeme_trailing_dash() {
+    // Edge: last-dash splits after the last hyphen even when the tail is empty.
+    let (base, sep, lex) = distill_lexeme("foo-");
+    assert_eq!(base, "foo");
+    assert_eq!(sep, "-");
+    assert_eq!(lex, "");
+  }
+
+  #[test]
+  fn get_xmhint_spacing_mu_divides_by_1_8() {
+    assert!((get_xmhint_spacing("1.8mu") - 1.0).abs() < 1e-6);
+    assert!((get_xmhint_spacing("3.6mu") - 2.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_pt_passes_through() {
+    assert!((get_xmhint_spacing("1.667pt") - 1.667).abs() < 1e-6);
+    assert!((get_xmhint_spacing("10pt") - 10.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_em_times_ten() {
+    // em assumes 10pt font.
+    assert!((get_xmhint_spacing("0.5em") - 5.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_strips_plus_glue() {
+    // "2.77pt plus 2.77pt" extracts base "2.77pt".
+    assert!((get_xmhint_spacing("2.77pt plus 2.77pt") - 2.77).abs() < 1e-6);
+    assert!((get_xmhint_spacing("5pt minus 1pt") - 5.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_empty_is_zero() {
+    assert_eq!(get_xmhint_spacing(""), 0.0);
+    assert_eq!(get_xmhint_spacing("  "), 0.0);
+  }
+
+  #[test]
+  fn get_xmhint_spacing_unknown_unit_is_zero() {
+    assert_eq!(get_xmhint_spacing("5cm"), 0.0);
+    assert_eq!(get_xmhint_spacing("garbage"), 0.0);
+  }
 }

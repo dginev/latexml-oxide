@@ -24,6 +24,15 @@ LoadDefinitions!({
   });
 
   // Perl: DefPrimitive('\DeclareFloatingEnvironment OptionalKeyVals {}', sub { ... })
+  //
+  // Perl L64-80 creates both the `$type` and `$type*` envs with
+  // `beforeDigest => sub { beforeFloat($type [, double => 1]) }`. Rust
+  // delegates to `float_sty::define_float_environment` which calls
+  // `create_float_env` twice (once for `$type`, once for `$type*`, the
+  // latter with `is_double=true`). Both envs get a `before_float_ex`
+  // before_digest closure inside the helper (float_sty.rs:174-180).
+  // Audit breadcrumb: count-diff shows 2 Perl beforeDigest vs 0 here,
+  // but the hooks live in the shared helper — not a gap.
   DefPrimitive!("\\DeclareFloatingEnvironment OptionalKeyVals {}", sub[(options, ftype)] {
     let ftype = ftype.to_string();
     let within = options.as_ref()

@@ -25,6 +25,9 @@ use latexml_core::util::pathname::PathnameFindOptions;
 use latexml_codegen::LoadModel;
 use latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
 use latexml_math_parser::MathParser;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static LATEXML_DUMP: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP").ok());
 use latexml_package::prelude::{
   InputDefinitionOptions, InputOptions, input_content, input_definitions,
 };
@@ -35,20 +38,15 @@ static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]
 
 // Regex for parsing DefMathRewrite calls from .latexml files
 // Matches: DefMathRewrite( ... );
-static DEF_MATH_REWRITE_RE: Lazy<Regex> = Lazy::new(|| {
-  Regex::new(r"(?s)DefMathRewrite\(([^;]+)\);").unwrap()
-});
+static DEF_MATH_REWRITE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"(?s)DefMathRewrite\(([^;]+)\);").unwrap());
 // Key-value patterns within DefMathRewrite
-static SCOPE_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"scope\s*=>\s*'([^']+)'").unwrap());
-static MATCH_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"match\s*=>\s*'([^']*)'").unwrap());
-static ROLE_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"role\s*=>\s*'([^']+)'").unwrap());
+static SCOPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"scope\s*=>\s*'([^']+)'").unwrap());
+static MATCH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"match\s*=>\s*'([^']*)'").unwrap());
+static ROLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"role\s*=>\s*'([^']+)'").unwrap());
 static NAME_ATTR_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"(?:^|,)\s*name\s*=>\s*'([^']*)'").unwrap());
-static MEANING_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"meaning\s*=>\s*'([^']*)'").unwrap());
+static MEANING_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"meaning\s*=>\s*'([^']*)'").unwrap());
 
 #[derive(Default)]
 pub struct DigestionOptions {
@@ -105,21 +103,29 @@ impl DigestionAPI for Core {
     // should we reset the model also?
     model::initialize_model();
     // let paths = state::search_paths;
-    let dump_path = std::env::var("LATEXML_DUMP").ok();
+    let dump_path = LATEXML_DUMP.clone();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       // Perl: initializeState extracts extension and options from "name.ext[opt1,opt2]"
-      // Parse bracket options: "latexml.sty[nobibtex]" → name="latexml", ext="sty", options=["nobibtex"]
+      // Parse bracket options: "latexml.sty[nobibtex]" → name="latexml", ext="sty",
+      // options=["nobibtex"]
       let (preload_base, options) = if let Some(bracket_pos) = preload.find('[') {
         let base = preload[..bracket_pos].to_string();
         let opts_str = preload[bracket_pos + 1..].trim_end_matches(']');
-        let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        let opts: Vec<String> = opts_str
+          .split(',')
+          .map(|s| s.trim().to_string())
+          .filter(|s| !s.is_empty())
+          .collect();
         (base, opts)
       } else {
         (preload.clone(), vec![])
       };
       let (name, ext) = if let Some(pos) = preload_base.rfind('.') {
-        (preload_base[..pos].to_string(), preload_base[pos + 1..].to_string())
+        (
+          preload_base[..pos].to_string(),
+          preload_base[pos + 1..].to_string(),
+        )
       } else {
         (preload_base.clone(), String::from("sty"))
       };
@@ -154,12 +160,13 @@ impl DigestionAPI for Core {
           Ok(count) => {
             eprintln!(
               "[latexml-oxide] Loaded {} kernel definitions from {}",
-              count, path.display()
+              count,
+              path.display()
             );
-          }
+          },
           Err(e) => {
             eprintln!("[latexml-oxide] Warning: failed to load dump: {}", e);
-          }
+          },
         }
       }
     }
@@ -182,16 +189,29 @@ impl DigestionAPI for Core {
     };
     let mut dir_opt = None;
 
+    // Canonicalize relative paths so `Path::parent()` gives a real directory.
+    // `Path::new("foo.tex").parent()` returns `Some("")` (empty string) which
+    // poisons SEARCHPATHS / SOURCEDIRECTORY: an empty-string search-path
+    // entry resolves files via cwd-name with no normalization, changing the
+    // order in which resource files (e.g. `ts1enc.def` vs `t1enc.def`) are
+    // discovered. Concrete symptom: TS1 fontmap leaks into control-sequence
+    // construction → `cn` characters become `⚮♪` → `\c@cn` undefined →
+    // 381-error cascade (paper 0709.2868). Canonicalizing matches Perl's
+    // `File::Spec->splitpath` behavior which always yields a real directory.
+    let canonical_request = if pathname::is_literaldata(&request) || pathname::is_url(&request) {
+      request.clone()
+    } else {
+      std::fs::canonicalize(&request)
+        .ok()
+        .and_then(|p| p.to_str().map(String::from))
+        .unwrap_or_else(|| request.clone())
+    };
     let name = if pathname::is_literaldata(&request) {
       s!("Anonymous String")
     } else if pathname::is_url(&request) {
       request.clone()
     } else {
-      let path = Path::new(&request);
-      // _ext = match path.extension() {
-      //   Some(pe) => Some(pe.to_str().unwrap().to_string()),
-      //   None => None,
-      // };
+      let path = Path::new(&canonical_request);
       dir_opt = path.parent();
       match path.file_stem() {
         None => String::from("missing_name"),
@@ -392,7 +412,9 @@ impl DigestionAPI for Core {
       for mut marker in markers {
         let count = {
           let preceding = document.findnodes("preceding::ltx:Math[@_parsetrees][1]", Some(&marker));
-          preceding.into_iter().last()
+          preceding
+            .into_iter()
+            .last()
             .and_then(|m| m.get_attribute("_parsetrees"))
             .unwrap_or_else(|| "0".to_string())
         };
@@ -428,7 +450,7 @@ impl DigestionAPI for Core {
         Err(e) => {
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
           break;
-        }
+        },
       }
     }
     gullet::flush();
@@ -500,7 +522,7 @@ impl DigestionAPI for Core {
       // Perl Core.pm L200:
       //   $state->unshiftValue(GRAPHICSPATHS => $dir)
       //     if !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
-      if !state::get_graphics_paths().iter().any(|p| p == &dir) {
+      if !state::graphics_paths_contains(&dir) {
         state::graphics_paths_push_front(dir);
       }
       state::install_definition(
@@ -673,7 +695,13 @@ fn apply_lx_declarations(document: &mut Document) {
     .filter_map(|line| {
       let parts: Vec<&str> = line.splitn(5, '\t').collect();
       if parts.len() >= 4 {
-        Some((parts[0], parts[1], parts[2], parts[3], *parts.get(4).unwrap_or(&"")))
+        Some((
+          parts[0],
+          parts[1],
+          parts[2],
+          parts[3],
+          *parts.get(4).unwrap_or(&""),
+        ))
       } else {
         None
       }
@@ -700,7 +728,8 @@ fn apply_lx_declarations(document: &mut Document) {
       let mut cur = tok.get_parent();
       while let Some(p) = cur {
         if p.get_name() == "section" {
-          scope = p.get_property("id")
+          scope = p
+            .get_property("id")
             .or_else(|| p.get_attribute("xml:id"))
             .unwrap_or_default();
           break;
@@ -719,8 +748,7 @@ fn apply_lx_declarations(document: &mut Document) {
         // only apply to tokens within that section
         if !decl_id.is_empty() {
           if let Some(section_prefix) = decl_id.split('.').next() {
-            if !section_prefix.is_empty() && !tok_scope.is_empty()
-              && tok_scope != section_prefix {
+            if !section_prefix.is_empty() && !tok_scope.is_empty() && tok_scope != section_prefix {
               continue; // Wrong section — skip this declaration
             }
           }
@@ -885,4 +913,3 @@ fn renumber_collect_dfs(
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
   }
 }
-

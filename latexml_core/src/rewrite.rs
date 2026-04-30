@@ -1,6 +1,6 @@
 use crate::common::arena;
 use crate::common::error::*;
-use crate::document::{get_node_qname, Document};
+use crate::document::{Document, get_node_qname};
 use crate::state::Scope;
 use crate::tokens::Tokens;
 use libxml::tree::Node;
@@ -19,9 +19,9 @@ pub type RewriteRegexpClosure = Rc<dyn Fn(&str) -> Option<String>>;
 /// Perl: [$xpath, $nnodes, @wilds]
 #[derive(Debug, Clone)]
 pub struct MultiSelectEntry {
-  pub xpath: String,
+  pub xpath:  String,
   pub nnodes: usize,
-  pub wilds: Vec<WildPath>,
+  pub wilds:  Vec<WildPath>,
 }
 
 // ======================================================================
@@ -252,8 +252,8 @@ impl Rewrite {
             let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
             return RewriteClause {
               compiled: true,
-              op: RewriteOperator::Select,
-              pattern: RewritePattern::String(xpath),
+              op:       RewriteOperator::Select,
+              pattern:  RewritePattern::String(xpath),
             };
           }
           // Try with LABEL: prefix (clean_label adds it)
@@ -265,15 +265,15 @@ impl Rewrite {
             let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
             return RewriteClause {
               compiled: true,
-              op: RewriteOperator::Select,
-              pattern: RewritePattern::String(xpath),
+              op:       RewriteOperator::Select,
+              pattern:  RewritePattern::String(xpath),
             };
           }
           // Label not found — ignore this clause
           return RewriteClause {
             compiled: true,
-            op: RewriteOperator::Ignore,
-            pattern: RewritePattern::String(String::new()),
+            op:       RewriteOperator::Ignore,
+            pattern:  RewritePattern::String(String::new()),
           };
         } else if let Some(id_part) = scope_str.strip_prefix("id:") {
           if self.options.select_count.is_none() {
@@ -282,7 +282,8 @@ impl Rewrite {
           // Use get_property("id") for xml:id lookup (L2 workaround)
           // findnodes with @xml:id='...' fails in rust-libxml
           let target_id = id_part.to_string();
-          let scope_nodes: Vec<Node> = document.findnodes("descendant-or-self::*", None)
+          let scope_nodes: Vec<Node> = document
+            .findnodes("descendant-or-self::*", None)
             .into_iter()
             .filter(|n| {
               n.get_property("id").as_deref() == Some(&target_id)
@@ -293,28 +294,29 @@ impl Rewrite {
             // Found the scoped element — use it as the tree root for subsequent clauses
             return RewriteClause {
               compiled: true,
-              op: RewriteOperator::Select,
-              pattern: RewritePattern::NodeList(scope_nodes),
+              op:       RewriteOperator::Select,
+              pattern:  RewritePattern::NodeList(scope_nodes),
             };
           }
           // Scope not found — ignore this rule
           return RewriteClause {
             compiled: true,
-            op: RewriteOperator::Ignore,
-            pattern: RewritePattern::String(String::new()),
+            op:       RewriteOperator::Ignore,
+            pattern:  RewritePattern::String(String::new()),
           };
         }
         return RewriteClause {
           compiled: true,
-          op: RewriteOperator::Ignore,
-          pattern: RewritePattern::String(String::new()),
+          op:       RewriteOperator::Ignore,
+          pattern:  RewritePattern::String(String::new()),
         };
       }
     }
     // Match compilation:
     // Perl: match => $code → op='test', pattern=$code (closure returns $nnodes)
-    // Perl: match => $string → op='select', pattern=compile_match1($string) ([$xpath, $nnodes, @wilds])
-    // Perl: match => [$array] → op='multi_select', pattern=[compile_match1($_) for @$array]
+    // Perl: match => $string → op='select', pattern=compile_match1($string) ([$xpath, $nnodes,
+    // @wilds]) Perl: match => [$array] → op='multi_select', pattern=[compile_match1($_) for
+    // @$array]
     if op == RewriteOperator::Match {
       match pattern {
         RewritePattern::String(xpath) => {
@@ -324,8 +326,8 @@ impl Rewrite {
           }
           return RewriteClause {
             compiled: true,
-            op: RewriteOperator::Select,
-            pattern: RewritePattern::String(xpath),
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::String(xpath),
           };
         },
         RewritePattern::TestClosure(_) => {
@@ -403,39 +405,70 @@ impl Rewrite {
               let all = document.findnodes(xpath, None);
               if !all.is_empty() {
                 let tree_ptr = tree.node_ptr();
-                matches = all.into_iter().filter(|n| {
-                  let mut cur = n.get_parent();
-                  while let Some(p) = cur {
-                    if std::ptr::eq(p.node_ptr(), tree_ptr) { return true; }
-                    cur = p.get_parent();
-                  }
-                  false
-                }).collect();
+                matches = all
+                  .into_iter()
+                  .filter(|n| {
+                    let mut cur = n.get_parent();
+                    while let Some(p) = cur {
+                      if std::ptr::eq(p.node_ptr(), tree_ptr) {
+                        return true;
+                      }
+                      cur = p.get_parent();
+                    }
+                    false
+                  })
+                  .collect();
               }
             }
             // Only apply wildcard filtering on content Selects, not scope Selects
             let is_content_select = !xpath.contains("xml:id") && !xpath.contains("@id=");
             let wilds = if is_content_select {
               self.options.wildcard_paths.clone()
-            } else { None };
+            } else {
+              None
+            };
             // Get declare pattern metadata for Rust-side filtering
             // Only apply on content Selects, not scope Selects
             let declare_type = if is_content_select {
-              self.options.attributes_map.as_ref()
-                .and_then(|a| a.get("_declare_type")).cloned()
-            } else { None };
+              self
+                .options
+                .attributes_map
+                .as_ref()
+                .and_then(|a| a.get("_declare_type"))
+                .cloned()
+            } else {
+              None
+            };
             let declare_base = if is_content_select {
-              self.options.attributes_map.as_ref()
-                .and_then(|a| a.get("_declare_base")).cloned()
-            } else { None };
+              self
+                .options
+                .attributes_map
+                .as_ref()
+                .and_then(|a| a.get("_declare_base"))
+                .cloned()
+            } else {
+              None
+            };
             let declare_sub = if is_content_select {
-              self.options.attributes_map.as_ref()
-                .and_then(|a| a.get("_declare_sub")).cloned()
-            } else { None };
+              self
+                .options
+                .attributes_map
+                .as_ref()
+                .and_then(|a| a.get("_declare_sub"))
+                .cloned()
+            } else {
+              None
+            };
             let declare_accent = if is_content_select {
-              self.options.attributes_map.as_ref()
-                .and_then(|a| a.get("_declare_accent")).cloned()
-            } else { None };
+              self
+                .options
+                .attributes_map
+                .as_ref()
+                .and_then(|a| a.get("_declare_accent"))
+                .cloned()
+            } else {
+              None
+            };
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
@@ -443,8 +476,12 @@ impl Rewrite {
               // Rust-side filtering for declare pattern types (content Selects only)
               if let Some(ref dtype) = declare_type {
                 let passes = declare_node_matches(
-                  document, &node, dtype, declare_base.as_deref(),
-                  declare_sub.as_deref(), declare_accent.as_deref(),
+                  document,
+                  &node,
+                  dtype,
+                  declare_base.as_deref(),
+                  declare_sub.as_deref(),
+                  declare_accent.as_deref(),
                 );
                 if !passes {
                   continue;
@@ -458,13 +495,10 @@ impl Rewrite {
               // Scope Selects always pass nmatched=1; content Selects use select_count
               let nmatched_for_clause = if is_content_select {
                 self.options.select_count.unwrap_or(1)
-              } else { 1 };
-              self.apply_clause(
-                document,
-                &node,
-                nmatched_for_clause,
-                clauses.clone(),
-              )?;
+              } else {
+                1
+              };
+              self.apply_clause(document, &node, nmatched_for_clause, clauses.clone())?;
               if !marked.is_empty() {
                 unmark_wildcards(&marked);
               }
@@ -555,7 +589,9 @@ impl Rewrite {
                 if let Some(sib) = cur.get_next_sibling() {
                   cur = sib.clone();
                   nodes.push(sib);
-                } else { break; }
+                } else {
+                  break;
+                }
               }
               set_attributes_wild(document, attrs, nodes, nmatched)?;
             } else if nmatched > 1 {
@@ -615,8 +651,8 @@ impl Rewrite {
             }
           } else if let RewritePattern::String(regex_str) = pattern {
             // Fallback for uncompiled string regex: compile and apply as substitution
-            let re = regex::Regex::new(regex_str)
-              .unwrap_or_else(|_| regex::Regex::new("$^").unwrap());
+            let re =
+              regex::Regex::new(regex_str).unwrap_or_else(|_| regex::Regex::new("$^").unwrap());
             let text_nodes = document.findnodes("descendant-or-self::text()", Some(tree));
             for mut text_node in text_nodes {
               let content = text_node.get_content();
@@ -742,14 +778,19 @@ pub fn dom_to_xpath(document: &Document, node: &Node) -> CompiledMatch {
 
 /// Attributes excluded from XPath match predicates.
 fn is_excluded_match_attr(key: &str) -> bool {
-  matches!(key, "scriptpos" | "mathstyle" | "xml:id" | "fontsize" | "_font" | "_pvis" | "_cvis")
-    || key.starts_with('_')
+  matches!(
+    key,
+    "scriptpos" | "mathstyle" | "xml:id" | "fontsize" | "_font" | "_pvis" | "_cvis"
+  ) || key.starts_with('_')
 }
 
 /// Recursive DOM-to-XPath conversion.
 /// Returns (xpath_fragment, node_count, wildcard_count, wildcard_paths)
 fn dom_to_xpath_rec(
-  document: &Document, node: &Node, axis: &str, pos: Option<usize>,
+  document: &Document,
+  node: &Node,
+  axis: &str,
+  pos: Option<usize>,
 ) -> (String, usize, usize, Vec<WildPath>) {
   let node_type = node.get_type();
   // NodeList / DocumentFragment: sequence of children
@@ -804,9 +845,16 @@ fn dom_to_xpath_rec(
         let (child_xpath, _nn, _nw, _w) =
           dom_to_xpath_rec(document, &wc_children[0], "child", Some(1));
         let mut preds = vec![];
-        if let Some(p) = pos { preds.push(format!("position()={p}")); }
+        if let Some(p) = pos {
+          preds.push(format!("position()={p}"));
+        }
         preds.push(child_xpath);
-        return (format!("{axis}::{qname}[{}]", preds.join(" and ")), 1, 1, vec![]);
+        return (
+          format!("{axis}::{qname}[{}]", preds.join(" and ")),
+          1,
+          1,
+          vec![],
+        );
       } else {
         return (format!("{axis}::*"), 1, 1, vec![]);
       }
@@ -825,10 +873,12 @@ fn dom_to_xpath_rec(
     }
     // Child predicates
     if !children.is_empty() {
-      let all_text = children.iter().all(|c|
-        c.get_type() == Some(libxml::tree::NodeType::TextNode));
-      let all_elem = children.iter().all(|c|
-        c.get_type() == Some(libxml::tree::NodeType::ElementNode));
+      let all_text = children
+        .iter()
+        .all(|c| c.get_type() == Some(libxml::tree::NodeType::TextNode));
+      let all_elem = children
+        .iter()
+        .all(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode));
       if all_text {
         let text = node.get_content();
         predicates.push(format!("text()='{}'", text.replace('\'', "&apos;")));
@@ -858,7 +908,12 @@ fn dom_to_xpath_rec(
   }
   if node_type == Some(libxml::tree::NodeType::TextNode) {
     let text = node.get_content();
-    return (format!("*[text()='{}']", text.replace('\'', "&apos;")), 1, 0, vec![]);
+    return (
+      format!("*[text()='{}']", text.replace('\'', "&apos;")),
+      1,
+      0,
+      vec![],
+    );
   }
   (String::new(), 0, 0, vec![])
 }
@@ -866,7 +921,10 @@ fn dom_to_xpath_rec(
 /// Convert a sequence of sibling nodes to XPath with wildcard tracking.
 /// Perl: domToXPath_seq()
 fn dom_to_xpath_seq(
-  document: &Document, axis: &str, pos: Option<usize>, nodes: &[Node],
+  document: &Document,
+  axis: &str,
+  pos: Option<usize>,
+  nodes: &[Node],
 ) -> (String, usize, Vec<WildPath>) {
   if nodes.is_empty() {
     return (String::new(), 0, vec![]);
@@ -892,8 +950,7 @@ fn dom_to_xpath_seq(
   }
   // Remaining siblings
   for sib in &nodes[1..] {
-    let (xp, _nn, nw, w) =
-      dom_to_xpath_rec(document, sib, "following-sibling", Some(i - 1));
+    let (xp, _nn, nw, w) = dom_to_xpath_rec(document, sib, "following-sibling", Some(i - 1));
     sib_xpaths.push(xp);
     if nw > 0 {
       for _ in 0..nw {
@@ -924,7 +981,9 @@ fn nth_sibling(node: &Node, n: usize) -> Option<Node> {
       let mut next = n.get_next_sibling();
       // Skip non-element nodes
       while let Some(ref s) = next {
-        if s.get_type() == Some(libxml::tree::NodeType::ElementNode) { break; }
+        if s.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+          break;
+        }
         next = s.get_next_sibling();
       }
       next
@@ -941,7 +1000,9 @@ fn nth_child(node: &Node, n: usize) -> Option<Node> {
 /// Mark wildcard nodes in the matched tree.
 /// Perl: markWildcards($node, @wilds)
 pub fn mark_wildcards(node: &Node, wilds: &[WildPath]) -> Vec<Node> {
-  if wilds.is_empty() { return vec![]; }
+  if wilds.is_empty() {
+    return vec![];
+  }
   let mut n = node.clone();
   let _ = n.set_attribute("_has_wildcards", "1");
   let mut marked = Vec::new();
@@ -949,7 +1010,9 @@ pub fn mark_wildcards(node: &Node, wilds: &[WildPath]) -> Vec<Node> {
     let mut current = Some(node.clone());
     let mut first = true;
     for &idx in wild {
-      if current.is_none() { break; }
+      if current.is_none() {
+        break;
+      }
       current = if first {
         first = false;
         nth_sibling(current.as_ref().unwrap(), idx)
@@ -996,13 +1059,19 @@ pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
     // Perl: unconditionally returns the wildcard's ID.
     // Even if all descendants are already matched, the ID is still needed
     // for XMRef in the content arm. pruneXMDuals handles collapsing later.
-    let id = if let Some(existing) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
+    let id = if let Some(existing) = node
+      .get_property("xml:id")
+      .or_else(|| node.get_property("id"))
+    {
       existing
     } else {
       // Generate an ID for this node
       let mut n = node.clone();
       let _ = document.generate_id(&mut n, "");
-      node.get_property("xml:id").or_else(|| node.get_property("id")).unwrap_or_default()
+      node
+        .get_property("xml:id")
+        .or_else(|| node.get_property("id"))
+        .unwrap_or_default()
     };
     return vec![id];
   }
@@ -1030,8 +1099,10 @@ pub fn set_wildcard_ids(document: &mut Document, node: &Node) -> Vec<String> {
 /// </XMDual>
 /// ```
 pub fn set_attributes_wild(
-  document: &mut Document, attrs: &HashMap<String, String>,
-  nodes: Vec<Node>, _nmatched: usize,
+  document: &mut Document,
+  attrs: &HashMap<String, String>,
+  nodes: Vec<Node>,
+  _nmatched: usize,
 ) -> Result<()> {
   // Perl L197: return unless grep { !$_->getAttribute('_matched'); } @nodes;
   if nodes.iter().all(|n| n.has_attribute("_matched")) {
@@ -1064,7 +1135,9 @@ pub fn set_attributes_wild(
   // presentation nodes as direct children: XMDual[XMApp(content), node1, node2, ...]
   // This is a known R11 gap. The math parser handles both structures correctly.
   let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
-  let Some(mut dual_node) = wrapper else { return Ok(()); };
+  let Some(mut dual_node) = wrapper else {
+    return Ok(());
+  };
 
   // Set role on XMDual (Perl L209)
   if let Some(role) = attrs.get("role") {
@@ -1097,12 +1170,11 @@ pub fn set_attributes_wild(
   // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
   // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
   // XMWrap, we do the POSTSUBSCRIPT→SUBSCRIPTOP conversion here instead.
-  restructure_scripts_in_dual(&dual_node, doc)?;
+  restructure_scripts_in_dual(&dual_node, document)?;
 
   mark_seen_rec(&dual_node);
   Ok(())
 }
-
 
 /// Convert POSTSUBSCRIPT/POSTSUPERSCRIPT siblings into 3-child XMApp form
 /// inside XMDual's presentation children.
@@ -1114,13 +1186,21 @@ pub fn set_attributes_wild(
 /// the XMWrap presentation arm and restructures scripts.
 fn restructure_scripts_in_dual(
   dual: &Node,
-  doc: &libxml::tree::document::Document,
+  document: &mut crate::document::Document,
 ) -> Result<()> {
+  // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
+  // borrowed across Node::new(…, &doc) calls — we need the mut borrow
+  // live at `document.safe_unlink(script_node)` below.
+  let doc = document.get_document().clone();
   // Iterate over presentation children (skip first child = content arm)
-  let children: Vec<Node> = dual.get_child_nodes().into_iter()
+  let children: Vec<Node> = dual
+    .get_child_nodes()
+    .into_iter()
     .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
     .collect();
-  if children.len() < 2 { return Ok(()); } // Need at least content + 1 presentation node
+  if children.len() < 2 {
+    return Ok(());
+  } // Need at least content + 1 presentation node
 
   // Look for base + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling pairs
   let pres_children: Vec<Node> = children.into_iter().skip(1).collect(); // skip content arm
@@ -1133,12 +1213,16 @@ fn restructure_scripts_in_dual(
       if (next_role == "POSTSUBSCRIPT" || next_role == "POSTSUPERSCRIPT")
         && next.get_name() == "XMApp"
       {
-        let scriptop = if next_role == "POSTSUBSCRIPT" { "SUBSCRIPTOP" } else { "SUPERSCRIPTOP" };
+        let scriptop = if next_role == "POSTSUBSCRIPT" {
+          "SUBSCRIPTOP"
+        } else {
+          "SUPERSCRIPTOP"
+        };
 
         // Create new XMApp to hold the restructured script
-        let mut new_app = Node::new("XMApp", None, doc)?;
+        let mut new_app = Node::new("XMApp", None, &doc)?;
         // Create SUBSCRIPTOP/SUPERSCRIPTOP token (Perl uses "post1" scriptpos)
-        let mut scriptop_tok = Node::new("XMTok", None, doc)?;
+        let mut scriptop_tok = Node::new("XMTok", None, &doc)?;
         let _ = scriptop_tok.set_attribute("role", scriptop);
         let _ = scriptop_tok.set_attribute("scriptpos", "post1");
         new_app.add_child(&mut scriptop_tok)?;
@@ -1177,9 +1261,15 @@ fn restructure_scripts_in_dual(
           }
         }
 
-        // Replace the POSTSUBSCRIPT node with the new XMApp
+        // Replace the POSTSUBSCRIPT node with the new XMApp. The
+        // POSTSUBSCRIPT wrapper's own xml:id (if any) is now unrecorded
+        // proactively via `safe_unlink`, so the idstore no longer leaks
+        // a dangling entry that `mark_xmnode_visibility` could later
+        // deref via XMRef lookup. SYNC_STATUS.md D3b migration (replaces
+        // the session-128 rebuild-at-finalize workaround with a
+        // source-level guardian for this specific call path).
         script_node.add_prev_sibling(&mut new_app)?;
-        script_node.unlink();
+        document.safe_unlink(script_node);
 
         i += 2; // Skip both base and script
         continue;
@@ -1204,7 +1294,6 @@ fn mark_seen(node: &Node, nsibs: usize) {
   }
 }
 
-
 fn mark_seen_rec(node: &Node) {
   if node.has_attribute("_wildcard") {
     return;
@@ -1228,8 +1317,12 @@ fn mark_seen_rec(node: &Node) {
 /// - "accent": node is XMApp, check accent name in first child, optional base text
 /// - "simple": no extra filtering needed (XPath is specific enough)
 fn declare_node_matches(
-  document: &Document, node: &Node, pattern_type: &str, base_text: Option<&str>,
-  sub_text: Option<&str>, accent_name: Option<&str>,
+  document: &Document,
+  node: &Node,
+  pattern_type: &str,
+  base_text: Option<&str>,
+  sub_text: Option<&str>,
+  accent_name: Option<&str>,
 ) -> bool {
   let children = node.get_child_nodes();
   match pattern_type {
@@ -1243,7 +1336,10 @@ fn declare_node_matches(
       }
       // Check subscript content text
       if let Some(sub) = sub_text {
-        let sub_content = next_sib.as_ref().map(|s| s.get_content()).unwrap_or_default();
+        let sub_content = next_sib
+          .as_ref()
+          .map(|s| s.get_content())
+          .unwrap_or_default();
         if sub_content.trim() != sub {
           return false;
         }
@@ -1266,24 +1362,34 @@ fn declare_node_matches(
         return false;
       }
       // Check prime content
-      let sup_content = next_sib.as_ref().map(|s| s.get_content()).unwrap_or_default();
+      let sup_content = next_sib
+        .as_ref()
+        .map(|s| s.get_content())
+        .unwrap_or_default();
       sup_content.contains('′')
     },
     "accent" => {
       // XMApp with children: [accent_op, base_content]
-      if children.len() < 2 { return false; }
+      if children.len() < 2 {
+        return false;
+      }
       // Check accent name on first child
       if let Some(accent) = accent_name {
-        let first_name = children[0].get_property("name")
+        let first_name = children[0]
+          .get_property("name")
           .or_else(|| children[0].get_property("meaning"));
         if first_name.as_deref() != Some(accent) {
           return false;
         }
         // Accent ops should have OVERACCENT or UNDERACCENT role
         let role = children[0].get_property("role");
-        let is_accent = role.as_deref().map(|r|
-          r.contains("ACCENT")).unwrap_or(false);
-        if !is_accent { return false; }
+        let is_accent = role
+          .as_deref()
+          .map(|r| r.contains("ACCENT"))
+          .unwrap_or(false);
+        if !is_accent {
+          return false;
+        }
       }
       // Check base content text if specified
       if let Some(base) = base_text {
@@ -1310,8 +1416,8 @@ fn declare_node_matches(
         }
       }
       true
-    }
-    _ => true,        // Unknown type: pass through
+    },
+    _ => true, // Unknown type: pass through
   }
 }
 
@@ -1322,7 +1428,10 @@ fn declare_base_matches(node: &Node, base_spec: &str) -> bool {
     // Command base: match by meaning or name attribute
     let cmd = base_spec.trim_start_matches('\\');
     // Handle \mathcal{X} → check font=caligraphic + text=X
-    if let Some(inner) = cmd.strip_prefix("mathcal{").and_then(|s| s.strip_suffix('}')) {
+    if let Some(inner) = cmd
+      .strip_prefix("mathcal{")
+      .and_then(|s| s.strip_suffix('}'))
+    {
       let font = node.get_property("font").unwrap_or_default();
       let text = node.get_content();
       return font == "caligraphic" && text.trim() == inner;

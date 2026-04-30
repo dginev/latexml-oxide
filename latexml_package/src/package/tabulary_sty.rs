@@ -5,11 +5,17 @@ LoadDefinitions!({
   // Perl: tabulary.sty.ltxml
   RequirePackage!("array");
 
-  // \tabulary{Dimension}[]{}
+  // \tabulary{Dimension}[]{} — Perl L22/L24 both carry `locked => 1`,
+  // which keeps user-level \renewcommand or a later package's
+  // redefinition from replacing the tabulary→alignment trampoline
+  // (the raw tabulary.sty itself does this; the Perl lock prevents us
+  // from losing the binding when the raw sty is loaded alongside).
   DefMacro!("\\tabulary{}[]{}",
-    "\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabulary{#1}[#2]{#3}\\lx@begin@alignment");
+    "\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabulary{#1}[#2]{#3}\\lx@begin@alignment",
+    locked => true);
   DefMacro!("\\endtabulary",
-    "\\lx@end@alignment\\@end@tabulary");
+    "\\lx@end@alignment\\@end@tabulary",
+    locked => true);
   DefPrimitive!(T_CS!("\\@end@tabulary"), None, { stomach::egroup()?; });
   DefConstructor!("\\@@tabulary{Dimension}[] Undigested DigestedBody",
     "#4",

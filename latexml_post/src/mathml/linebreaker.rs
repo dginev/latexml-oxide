@@ -27,19 +27,19 @@ const CONVERSION_FACTOR: i32 = 2;
 
 /// Operators that prefer breaking BEFORE them.
 fn break_before_ops() -> HashSet<&'static str> {
-  ["+", "-", "\u{00B1}", "\u{2212}", "\u{2213}"].into_iter().collect()
+  ["+", "-", "\u{00B1}", "\u{2212}", "\u{2213}"]
+    .into_iter()
+    .collect()
 }
 
 /// Operators that prefer breaking AFTER them.
-fn break_after_ops() -> HashSet<&'static str> {
-  [","].into_iter().collect()
-}
+fn break_after_ops() -> HashSet<&'static str> { [","].into_iter().collect() }
 
 /// Relation operators (good breakpoints).
 fn relation_ops() -> HashSet<&'static str> {
   [
-    "=", "<", ">", "\u{2264}", "\u{2265}", "\u{2260}", "\u{226A}",
-    "\u{2261}", "\u{223C}", "\u{2243}", "\u{224D}", "\u{2248}", "\u{221D}",
+    "=", "<", ">", "\u{2264}", "\u{2265}", "\u{2260}", "\u{226A}", "\u{2261}", "\u{223C}",
+    "\u{2243}", "\u{224D}", "\u{2248}", "\u{221D}",
   ]
   .into_iter()
   .collect()
@@ -48,19 +48,15 @@ fn relation_ops() -> HashSet<&'static str> {
 /// Fence/delimiter operators (bad breakpoints).
 fn fence_ops() -> HashSet<&'static str> {
   [
-    "(", ")", "[", "]", "{", "}", "|", "||",
-    "\u{2308}", "\u{2309}", "\u{230A}", "\u{230B}",
-    "\u{27E8}", "\u{27E9}", "\u{27EA}", "\u{27EB}",
-    "\u{27EE}", "\u{27EF}",
+    "(", ")", "[", "]", "{", "}", "|", "||", "\u{2308}", "\u{2309}", "\u{230A}", "\u{230B}",
+    "\u{27E8}", "\u{27E9}", "\u{27EA}", "\u{27EB}", "\u{27EE}", "\u{27EF}",
   ]
   .into_iter()
   .collect()
 }
 
 /// Separator operators.
-fn separator_ops() -> HashSet<&'static str> {
-  [",", ";", ".", "\u{2063}"].into_iter().collect()
-}
+fn separator_ops() -> HashSet<&'static str> { [",", ";", ".", "\u{2063}"].into_iter().collect() }
 
 /// Invisible times → visible times conversion for breakpoints.
 fn convert_ops() -> Vec<(&'static str, &'static str)> {
@@ -71,20 +67,26 @@ fn convert_ops() -> Vec<(&'static str, &'static str)> {
 #[derive(Debug, Clone)]
 pub struct Layout {
   /// Total width in "em-like" units.
-  pub width: f64,
+  pub width:     f64,
   /// Total penalty score.
-  pub penalty: i32,
+  pub penalty:   i32,
   /// Whether this layout contains line breaks.
   pub has_break: bool,
   /// Break positions (indices into children).
-  pub breaks: Vec<usize>,
+  pub breaks:    Vec<usize>,
   /// Indentation depth for continuation lines.
-  pub indent: f64,
+  pub indent:    f64,
 }
 
 impl Layout {
   fn no_break(width: f64) -> Self {
-    Layout { width, penalty: 0, has_break: false, breaks: vec![], indent: 0.0 }
+    Layout {
+      width,
+      penalty: 0,
+      has_break: false,
+      breaks: vec![],
+      indent: 0.0,
+    }
   }
 }
 
@@ -95,9 +97,7 @@ pub struct Linebreaker {
 }
 
 impl Linebreaker {
-  pub fn new(target_width: f64) -> Self {
-    Linebreaker { target_width }
-  }
+  pub fn new(target_width: f64) -> Self { Linebreaker { target_width } }
 
   /// Find the best layout for a MathML expression that fits within target width.
   ///
@@ -107,10 +107,9 @@ impl Linebreaker {
     // Find the best layout: widest that fits, lowest penalty
     let mut best = Layout::no_break(self.estimate_width(node));
     for layout in &layouts {
-      if layout.width <= self.target_width
-        && (!best.has_break || layout.penalty < best.penalty) {
-          best = layout.clone();
-        }
+      if layout.width <= self.target_width && (!best.has_break || layout.penalty < best.penalty) {
+        best = layout.clone();
+      }
     }
     best
   }
@@ -122,12 +121,17 @@ impl Linebreaker {
     match node {
       NodeData::Text(s) => {
         vec![Layout::no_break(estimate_text_width(s))]
-      }
+      },
       NodeData::Element { tag, children, .. } => {
         // Don't break inside scripts, fractions, roots
-        if tag.starts_with("m:msub") || tag.starts_with("m:msup")
-          || tag == "m:mfrac" || tag == "m:msqrt" || tag == "m:mroot"
-          || tag == "m:munder" || tag == "m:mover" || tag == "m:munderover"
+        if tag.starts_with("m:msub")
+          || tag.starts_with("m:msup")
+          || tag == "m:mfrac"
+          || tag == "m:msqrt"
+          || tag == "m:mroot"
+          || tag == "m:munder"
+          || tag == "m:mover"
+          || tag == "m:munderover"
         {
           let w: f64 = children.iter().map(|c| self.estimate_width(c)).sum();
           return vec![Layout::no_break(w)];
@@ -141,7 +145,7 @@ impl Linebreaker {
         // Default: sum of children, no breaks
         let w: f64 = children.iter().map(|c| self.estimate_width(c)).sum();
         vec![Layout::no_break(w)]
-      }
+      },
       NodeData::XmlNode(_) => vec![Layout::no_break(1.0)],
     }
   }
@@ -178,12 +182,12 @@ impl Linebreaker {
 
             // Create a layout with a break at this point
             let indent = 2.0; // em
-            let width_after = children[i + 1..].iter()
+            let width_after = children[i + 1..]
+              .iter()
               .map(|c| self.estimate_width(c))
-              .sum::<f64>() + indent;
-            let width_before: f64 = children[..i].iter()
-              .map(|c| self.estimate_width(c))
-              .sum();
+              .sum::<f64>()
+              + indent;
+            let width_before: f64 = children[..i].iter().map(|c| self.estimate_width(c)).sum();
             let max_line = width_before.max(width_after);
 
             layouts.push(Layout {
@@ -200,7 +204,9 @@ impl Linebreaker {
 
     // Sort by width, then penalty; prune dominated layouts
     layouts.sort_by(|a, b| {
-      a.width.partial_cmp(&b.width).unwrap()
+      a.width
+        .partial_cmp(&b.width)
+        .unwrap()
         .then(a.penalty.cmp(&b.penalty))
     });
 
@@ -221,9 +227,11 @@ impl Linebreaker {
   fn estimate_width(&self, node: &NodeData) -> f64 {
     match node {
       NodeData::Text(s) => estimate_text_width(s),
-      NodeData::Element { children, .. } => {
-        children.iter().map(|c| self.estimate_width(c)).sum::<f64>().max(0.5)
-      }
+      NodeData::Element { children, .. } => children
+        .iter()
+        .map(|c| self.estimate_width(c))
+        .sum::<f64>()
+        .max(0.5),
       NodeData::XmlNode(_) => 1.0,
     }
   }
@@ -243,26 +251,126 @@ impl Linebreaker {
           new_children.push(child.clone());
           if layout.breaks.contains(&i) {
             new_children.push(NodeData::Element {
-              tag: "m:mspace".to_string(),
-              attributes: Some(std::collections::HashMap::from([
-                ("linebreak".to_string(), "newline".to_string()),
-              ])),
-              children: vec![],
+              tag:        "m:mspace".to_string(),
+              attributes: Some(std::collections::HashMap::from([(
+                "linebreak".to_string(),
+                "newline".to_string(),
+              )])),
+              children:   vec![],
             });
           }
         }
         NodeData::Element {
-          tag: tag.clone(),
+          tag:        tag.clone(),
           attributes: attributes.clone(),
-          children: new_children,
+          children:   new_children,
         }
-      }
+      },
       _ => node.clone(),
     }
   }
 }
 
 /// Estimate text width in em-like units (rough approximation).
-fn estimate_text_width(s: &str) -> f64 {
-  s.chars().count() as f64 * 0.6
+fn estimate_text_width(s: &str) -> f64 { s.chars().count() as f64 * 0.6 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn penalty_constants_ordering() {
+    // NOBREAK must dwarf every other penalty (used as "never break here" sentinel).
+    assert!(NOBREAK > PENALTY_LIMIT);
+    assert!(PENALTY_LIMIT > BADBREAK_FACTOR);
+    assert!(BADBREAK_FACTOR > POORBREAK_FACTOR);
+    assert!(POORBREAK_FACTOR > PENALTY_OK);
+    assert!(PENALTY_OK > 0);
+  }
+
+  #[test]
+  fn break_before_ops_contains_plus_minus() {
+    let ops = break_before_ops();
+    assert!(ops.contains("+"));
+    assert!(ops.contains("-"));
+    assert!(ops.contains("\u{00B1}")); // ±
+    assert!(ops.contains("\u{2212}")); // −
+  }
+
+  #[test]
+  fn break_after_ops_contains_comma() {
+    let ops = break_after_ops();
+    assert!(ops.contains(","));
+  }
+
+  #[test]
+  fn relation_ops_contains_common() {
+    let ops = relation_ops();
+    assert!(ops.contains("="));
+    assert!(ops.contains("<"));
+    assert!(ops.contains(">"));
+    assert!(ops.contains("\u{2264}")); // ≤
+    assert!(ops.contains("\u{2265}")); // ≥
+    assert!(ops.contains("\u{2260}")); // ≠
+  }
+
+  #[test]
+  fn fence_ops_contains_parens_brackets_braces() {
+    let ops = fence_ops();
+    for c in ["(", ")", "[", "]", "{", "}"] {
+      assert!(ops.contains(c), "missing {c}");
+    }
+  }
+
+  #[test]
+  fn separator_ops_distinct_from_relation() {
+    let sep = separator_ops();
+    let rel = relation_ops();
+    // Separators and relations should not overlap.
+    for s in &sep {
+      assert!(
+        !rel.contains(s),
+        "{s:?} should not be both separator and relation"
+      );
+    }
+    // Common separators present.
+    assert!(sep.contains(","));
+    assert!(sep.contains(";"));
+  }
+
+  #[test]
+  fn convert_ops_invisible_to_visible_times() {
+    let pairs = convert_ops();
+    assert_eq!(pairs.len(), 1);
+    assert_eq!(
+      pairs[0],
+      ("\u{2062}", "\u{00D7}"),
+      "INVISIBLE TIMES → MULTIPLICATION SIGN"
+    );
+  }
+
+  #[test]
+  fn layout_no_break_has_zero_penalty() {
+    let l = Layout::no_break(5.0);
+    assert_eq!(l.width, 5.0);
+    assert_eq!(l.penalty, 0);
+    assert!(!l.has_break);
+    assert!(l.breaks.is_empty());
+    assert_eq!(l.indent, 0.0);
+  }
+
+  #[test]
+  fn estimate_text_width_proportional_to_length() {
+    // 0.6 em per character (rough).
+    assert!((estimate_text_width("") - 0.0).abs() < 1e-6);
+    assert!((estimate_text_width("a") - 0.6).abs() < 1e-6);
+    assert!((estimate_text_width("abcde") - 3.0).abs() < 1e-6);
+  }
+
+  #[test]
+  fn estimate_text_width_counts_chars_not_bytes() {
+    // Unicode chars count as 1 each, even multi-byte.
+    // "αβγ" is 3 chars = 1.8 em, not 6 bytes.
+    assert!((estimate_text_width("αβγ") - 1.8).abs() < 1e-6);
+  }
 }

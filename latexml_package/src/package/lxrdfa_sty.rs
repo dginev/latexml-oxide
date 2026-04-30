@@ -13,17 +13,24 @@ fn rdf_attributes_from_digested(kv: &Digested) -> HashMap<String, String> {
           if let DigestedData::Whatsit(ref w) = *d.data() {
             let cs = w.borrow().get_definition().get_cs_name().to_string();
             cs == "\\ref" || cs == "\\ref "
-          } else { false }
+          } else {
+            false
+          }
         });
         if is_ref {
           // Extract label from \ref's second argument (the label text)
           if let Some(ref d) = digested_opt {
             if let DigestedData::Whatsit(ref w) = *d.data() {
-              let label = w.borrow().get_arg(2)
+              let label = w
+                .borrow()
+                .get_arg(2)
                 .map(|a| s!("LABEL:{}", a.to_string()))
-                .unwrap_or_else(|| w.borrow().get_arg(1)
-                  .map(|a| s!("LABEL:{}", a.to_string()))
-                  .unwrap_or_default());
+                .unwrap_or_else(|| {
+                  w.borrow()
+                    .get_arg(1)
+                    .map(|a| s!("LABEL:{}", a.to_string()))
+                    .unwrap_or_default()
+                });
               attrs.insert(s!("{}labelref", key), label);
               continue;
             }
@@ -63,7 +70,7 @@ fn rdf_attributes_from_argwrap(arg: &ArgWrap) -> HashMap<String, String> {
       } else {
         HashMap::default()
       }
-    }
+    },
   }
 }
 
@@ -91,7 +98,7 @@ fn process_rdf_key_value(key: &str, val: &ArgWrap, attrs: &mut HashMap<String, S
       attrs.insert(s!("{}idref", key), val_str[1..].to_string());
     } else if val_str.starts_with("\\ref{") && val_str.ends_with('}') {
       // Preamble fallback: \ref{label} as string → labelref
-      let label = &val_str[5..val_str.len()-1];
+      let label = &val_str[5..val_str.len() - 1];
       attrs.insert(s!("{}labelref", key), s!("LABEL:{}", label));
     } else {
       attrs.insert(key.to_string(), val_str);
@@ -110,7 +117,8 @@ fn extract_ref_label(d: &Digested) -> Option<String> {
     let wb = w.borrow();
     let cs = wb.get_definition().get_cs_name().to_string();
     if cs == "\\ref" || cs == "\\ref " {
-      let label = wb.get_arg(2)
+      let label = wb
+        .get_arg(2)
         .map(|a| s!("LABEL:{}", a.to_string()))
         .or_else(|| wb.get_arg(1).map(|a| s!("LABEL:{}", a.to_string())))
         .unwrap_or_default();
@@ -128,6 +136,28 @@ fn set_rdf_attrs_on_node(node: &mut Node, attrs: &HashMap<String, String>) {
 }
 
 LoadDefinitions!({
+  // Perl lxRDFa.sty.ltxml L20-26 + L28: `labels` option overrides \label
+  // and \lx@longtable@label to also emit a dcterms:alternative RDFa
+  // triple alongside the original \label. Rust omitted the option, so
+  // `\usepackage[labels]{lxRDFa}` silently didn't tag labels. Ported as
+  // Perl-equivalent DeclareOption + ProcessOptions. The expansion uses
+  // \lxRDFa which is defined later in the same load block — LaTeXML
+  // expands options lazily (at document time, not at package-load
+  // time), so forward-reference is fine.
+  DeclareOption!("labels", {
+    Let!("\\lxRDF@original@label", "\\label");
+    Let!("\\lxRDF@originallx@longtable@label", "\\lx@longtable@label");
+    DefMacro!(
+      "\\label Semiverbatim",
+      "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+    );
+    DefMacro!(
+      "\\lx@longtable@label Semiverbatim",
+      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+    );
+  });
+  ProcessOptions!();
+
   // DefKeyVal for the RDFa keyval family
   DefKeyVal!("RDFa", "about", "Semiverbatim");
   DefKeyVal!("RDFa", "resource", "Semiverbatim");
@@ -226,6 +256,9 @@ LoadDefinitions!({
   });
 
   // \lxRDF — body version (create <ltx:rdf> element)
+  // Perl lxRDFa.sty.ltxml L197-210 sets `alias => '\lxRDF'` so that a
+  // \lxRDF{...} body-form invocation reverts to the user-facing `\lxRDF`
+  // in the tex= attribute rather than the internal `\lxRDF@body` variant.
   DefConstructor!("\\lxRDF@body[] RequiredKeyVals:RDFa",
     sub[document, args, _props] {
       let savenode = document.float_to_element("ltx:rdf", false);
@@ -245,12 +278,15 @@ LoadDefinitions!({
         document.close_element("ltx:rdf")?;
         document.set_node(save);
       }
-    }
+    },
+    alias => "\\lxRDF"
   );
 
   Let!("\\lxRDF", "\\lxRDF@preamble");
-  let _ = state::push_value("@at@begin@document",
-    Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")));
+  let _ = state::push_value(
+    "@at@begin@document",
+    Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")),
+  );
 
   // Add prefix= attribute when document opens
   Tag!("ltx:document", after_open => sub[_document, node] {

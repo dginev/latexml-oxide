@@ -87,16 +87,16 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
   let isplain = style.starts_with("plain");
   let fnum_cs = s!("\\fnum@font@{ftype}");
   let fnum_body = if isplain { "\\rmfamily" } else { "\\bfseries" };
-  def_macro(T_CS!(fnum_cs), None, mouth::tokenize_internal(fnum_body), None)?;
+  def_macro(
+    T_CS!(fnum_cs),
+    None,
+    mouth::tokenize_internal(fnum_body),
+    None,
+  )?;
 
   // DefMacroI('\ext@'.$type, ..., $auxext)
   let ext_cs = s!("\\ext@{ftype}");
-  def_macro(
-    T_CS!(ext_cs),
-    None,
-    Tokens::new(ExplodeText!(auxext)),
-    None,
-  )?;
+  def_macro(T_CS!(ext_cs), None, Tokens::new(ExplodeText!(auxext)), None)?;
 
   // Create the float environment and starred variant
   let class = s!("ltx_float_{ftype}");
@@ -108,11 +108,16 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
 }
 
 fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
-  use crate::engine::latex_constructs::{after_float, before_float};
+  use crate::engine::latex_constructs::{after_float, before_float_ex};
 
   let class_val = class.to_string();
   // Extract the base type for before_float (remove trailing *)
   let base_type = name.trim_end_matches('*').to_string();
+  // Perl float.sty.ltxml L70: starred variant calls beforeFloat with
+  // `double => 1` so \hsize gets \textwidth (spans both columns) rather
+  // than \columnwidth (single column). The detect-by-name-suffix mirrors
+  // the DefEnvironmentI("$type*", ...) branch in Perl's \newfloat.
+  let is_double = name.ends_with('*');
   let style_str = style.to_string();
 
   let replacement: ReplacementClosure = Rc::new({
@@ -161,13 +166,15 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
 
-  let mut options = ConstructorOptions { mode: Some("internal_vertical".into()), 
-    ..Default::default() };
+  let mut options = ConstructorOptions {
+    mode: Some("internal_vertical".into()),
+    ..Default::default()
+  };
 
-  // before_digest: beforeFloat($type)
+  // before_digest: beforeFloat($type [, double => 1])
   let bt = base_type.clone();
   let before_closure: BeforeDigestClosure = Rc::new(move || {
-    before_float(&bt, None);
+    before_float_ex(&bt, None, is_double);
     Ok(Vec::new())
   });
   options.before_digest.push(before_closure);
@@ -195,7 +202,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 }
 
 /// Perl: addFloatFrames (float.sty.ltxml L76-85)
-fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
+pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
   let caption_qname = arena::pin_static("ltx:caption");
   let toccaption_qname = arena::pin_static("ltx:toccaption");
   let node = document.get_node();
@@ -213,7 +220,7 @@ fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
             break;
           }
         }
-      }
+      },
       "boxed" => {
         // inner frame: rectangle on first non-caption child
         for child in float_node.get_child_elements() {
@@ -224,8 +231,8 @@ fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
             break;
           }
         }
-      }
-      _ => {} // plain, plaintop — no framing
+      },
+      _ => {}, // plain, plaintop — no framing
     }
   }
   Ok(())

@@ -22,14 +22,29 @@ LoadDefinitions!({
   DefMacro!("\\bodytext{}", "");
   DefMacro!("\\htmlbody",   "");
 
-  // Hyperref variants — Perl L45-56
-  DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim", "<ltx:ref>#1</ltx:ref>");
+  // Hyperref variants — Perl L45-51
+  // Perl emits labelref='#label' on ltx:ref and pulls label from arg 4
+  // via CleanLabel. Rust stub was `<ltx:ref>#1</ltx:ref>` — the ref
+  // was emitted but without a label, so prior the link was inert.
+  DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim",
+    "<ltx:ref labelref='#label'>#1</ltx:ref>",
+    properties => sub[args] {
+      let label_arg = args[3].as_ref().map(ToString::to_string).unwrap_or_default();
+      Ok(stored_map!("label" => clean_label(&label_arg, None)))
+    });
   Let!("\\hyperrefhyper", "\\hyperrefdef");
   Let!("\\hyperrefpagedef", "\\hyperrefdef");
   Let!("\\hyperrefnoref", "\\hyperrefdef");
   Let!("\\hyperrefhtml", "\\hyperrefdef");
-  DefMacro!("\\hypercite[]{}{}{} Semiverbatim", "");
-  DefMacro!("\\htmlcite{}{}", "");
+
+  // Perl L53-56: \hypercite[pre]{key1}{key2}[post] Semiverbatim
+  // emits an <ltx:cite> with a nested <ltx:bibref>, including optional
+  // prefix/suffix phrases. Prior Rust stub was DefMacro!("","") which
+  // silently swallowed all content.
+  DefConstructor!("\\hypercite[]{}{}[] Semiverbatim",
+    "<ltx:cite>#4 <ltx:bibref bibrefs='#5'>?#2(<ltx:bibrefphrase>#2</ltx:bibrefphrase>)</ltx:bibref> #1</ltx:cite>",
+    enter_horizontal => true);
+  DefMacro!("\\htmlcite{}{}", "\\hypercite{#1}{}{#2}");
 
   // Image/border — Perl L57-61
   DefMacro!("\\htmlimage{}", "");
@@ -38,10 +53,40 @@ LoadDefinitions!({
   DefEnvironment!("{tex2html_deferred}", "#body");
   DefMacro!("\\htmladdtonavigation{}", "");
 
-  // rawhtml/htmlonly — Perl L66-88
-  // These environments skip their content (raw HTML not useful for LaTeXML)
-  DefEnvironment!("{rawhtml}", "");
-  DefEnvironment!("{htmlonly}", "");
+  // rawhtml/htmlonly — Perl L66-88. These envs wrap raw HTML that should
+  // bypass TeX tokenization entirely (angle brackets, ampersands, etc.
+  // would otherwise trip the tokenizer). Perl's pattern is
+  // `DefConstructorI(T_CS('\begin{foo}'), ..., afterDigest => ...)` with
+  // a closure that calls `gullet->readRawLine` until `\end{foo}`.
+  // Previously the Rust port used a plain DefEnvironment with empty body,
+  // which would attempt to digest the raw-HTML body as TeX tokens and
+  // fail on `<`/`>`/etc. Switch to the raw-line discard pattern.
+  DefConstructor!(T_CS!("\\begin{rawhtml}"), None, "",
+    reversion => "",
+    after_digest => sub[_whatsit] {
+      let endmark = "\\end{rawhtml}";
+      let mut nlines = 0;
+      gullet::read_raw_line(); // skip first line (after \begin{rawhtml})
+      while let Some(line) = gullet::read_raw_line() {
+        if line.trim_end() == endmark { break; }
+        nlines += 1;
+      }
+      let _ = nlines;
+    });
+  DefMacro!("\\endrawhtml", "");
+  DefConstructor!(T_CS!("\\begin{htmlonly}"), None, "",
+    reversion => "",
+    after_digest => sub[_whatsit] {
+      let endmark = "\\end{htmlonly}";
+      let mut nlines = 0;
+      gullet::read_raw_line(); // skip first line (after \begin{htmlonly})
+      while let Some(line) = gullet::read_raw_line() {
+        if line.trim_end() == endmark { break; }
+        nlines += 1;
+      }
+      let _ = nlines;
+    });
+  DefMacro!("\\endhtmlonly", "");
 
   // latexonly — Perl L92-98
   DefEnvironment!("{latexonly}", "#body");

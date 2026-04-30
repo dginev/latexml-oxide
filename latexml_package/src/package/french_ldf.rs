@@ -15,6 +15,10 @@ LoadDefinitions!({
   // xspace_sty up front so those expansions resolve, matching what
   // the raw french.ldf implicitly assumes.
   RequirePackage!("xspace");
+  // Perl french.ldf.ltxml L20: load textcomp for text symbols
+  // (\textdegree, \texttrademark, etc.) that French abbreviations
+  // may reference via the raw frenchb ordinals.
+  RequirePackage!("textcomp");
 
   // \captionsfrench — the French caption strings, equivalent to what
   // babel's frenchb.ldf defines. Use \providecommand so the raw load
@@ -80,16 +84,54 @@ LoadDefinitions!({
   DefMacro!("\\og", "\\guillemotleft\\nobreakspace");
   DefMacro!("\\fg", "\\nobreakspace\\guillemotright\\xspace");
 
-  // Symbols (Perl french.ldf.ltxml L32-35, AtBeginDocument)
-  DefMacro!("\\degre", "\\textdegree");
-  DefMacro!("\\degres", "\\hbox to 0.3em{\\degre}");
-  Let!("\\tild", "\\textasciitilde");
-  Let!("\\circonflexe", "\\textasciicircum");
+  // Perl french.ldf.ltxml L31-37: AtBeginDocument(sub { ... }) — defer
+  // so any later package's redefinition of \textdegree/\textasciitilde/
+  // \textasciicircum is captured (e.g. textcomp loaded after french.ldf).
+  at_begin_document(TokenizeInternal!(
+    r"\let\degre\textdegree\def\degres{\hbox to 0.3em{\degre}}\let\tild\textasciitilde\let\circonflexe\textasciicircum"
+  ))?;
+
+  // babel-french/french.ldf L1094-1098 + L1183-1184: French itemize labels
+  // are an em-dash, and \labelitemi-iv get \let'd to the Fr-prefixed
+  // versions when language is activated. The \let happens inside
+  // \extrasfrench, which fires at \begin{document} via babel's main
+  // language switch — so AT-BEGIN-DOCUMENT order is what makes any
+  // user `\renewcommand{\labelitemi}{...}` get clobbered (matches
+  // raw french.ldf semantics; Perl's babel pipeline runs the same
+  // sequence). Without this, papers that "renewcommand \labelitemi"
+  // to a typo CS like `\bullets` (1312.7418) error in itemize lookup,
+  // even though the body is unreachable in real French rendering.
+  RawTeX!(r"\providecommand\FrenchLabelItem{\textemdash}");
+  RawTeX!(r"\providecommand\Frlabelitemi{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemii{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemiii{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemiv{\FrenchLabelItem}");
+  at_begin_document(TokenizeInternal!(
+    r"\let\labelitemi\Frlabelitemi\let\labelitemii\Frlabelitemii\let\labelitemiii\Frlabelitemiii\let\labelitemiv\Frlabelitemiv"
+  ))?;
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 
-  // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml L30)
-  DefMacro!("\\nombre{}", "\\numprint{#1}");
+  // \frenchsetup — babel-french 3.x configuration command. Takes a
+  // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
+  // `ItemLabelsspaceitem=true`). Per babel-french/french.ldf L712-713,
+  // `\frenchbsetup` is `\let`'d to `\frenchsetup` (legacy alias).
+  // Configurations affect formatting subtleties that don't translate
+  // meaningfully to HTML — read-and-discard the keyval arg.
+  DefMacro!("\\frenchsetup RequiredKeyVals", "");
+  Let!("\\frenchbsetup", "\\frenchsetup");
+
+  // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml
+  // L29-30 is:
+  //   Let('\ltx@orig@nombre', '\nombre');
+  //   DefMacro('\nombre{}',
+  //     '\@ifpackageloaded{numprint}{\numprint{#1}}{\ltx@orig@nombre{#1}}');
+  //
+  // Rust skips the raw frenchb.ldf load, so there is no original \nombre
+  // to fall back to. If numprint isn't loaded we pass the argument
+  // through as-is (preserving Perl's numprint branch, falling back to
+  // a reasonable identity rather than an undefined-CS).
+  DefMacro!("\\nombre{}", "\\@ifpackageloaded{numprint}{\\numprint{#1}}{#1}");
 
   // French active-punctuation dispatch primitives for :;!? (frenchb.ldf's
   // \extrasfrench inserts a thin space before these chars). The catcode
@@ -126,4 +168,28 @@ LoadDefinitions!({
     let s = if in_french() { "\u{2006}?" } else { "?" };
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
+
+  // Babel-level `frenchb` language aliases — TL2025 babel-french 3.7e
+  // turned `frenchb.ldf` into a deprecation shim that only `\chardef`s
+  // `\l@frenchb=\l@french` and sets `\CurrentOption{french}`. It does
+  // NOT chain `\input french.ldf`, so when `\usepackage[frenchb]{babel}`
+  // runs, babel's `\selectlanguage{\bbl@main@language}` later errors
+  // with "haven't defined the language 'frenchb' yet". (Perl LaTeXML
+  // hits the same regression on TL2025 — 2 errors on 0909.3444.) We
+  // compensate by aliasing `\l@frenchb` and the `<lang>`-suffixed babel
+  // hooks to their `french` counterparts. No-op when the user only
+  // requested `french`. Idempotent — safe if the raw shim already ran.
+  RawTeX!(r"%
+    \expandafter\ifx\csname l@frenchb\endcsname\relax
+      \expandafter\ifx\csname l@french\endcsname\relax\newlanguage\l@french\fi
+      \chardef\l@frenchb=\l@french
+    \fi
+    \expandafter\let\csname captionsfrenchb\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrasfrenchb\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrasfrenchb\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname datefrenchb\expandafter\endcsname
+                    \csname datefrench\endcsname");
 });

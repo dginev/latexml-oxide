@@ -196,3 +196,109 @@ impl Locator {
     loc
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn new_builds_from_parts() {
+    let l = Locator::new("source.tex", 1, 2, 3, 4);
+    assert_eq!(l.from_line, 1);
+    assert_eq!(l.from_column, 2);
+    assert_eq!(l.to_line, 3);
+    assert_eq!(l.to_column, 4);
+  }
+
+  #[test]
+  fn is_range_false_for_point() {
+    // Point locator: to_line=0 AND to_column=0.
+    let l = Locator::new("source", 1, 1, 0, 0);
+    assert!(!l.is_range());
+  }
+
+  #[test]
+  fn is_range_true_when_any_to_set() {
+    let with_to_line = Locator::new("source", 1, 1, 5, 0);
+    let with_to_col = Locator::new("source", 1, 1, 0, 5);
+    assert!(with_to_line.is_range());
+    assert!(with_to_col.is_range());
+  }
+
+  #[test]
+  fn new_range_requires_same_source() {
+    let a = Locator::new("a.tex", 1, 1, 0, 0);
+    let b = Locator::new("b.tex", 5, 5, 0, 0);
+    assert!(
+      Locator::new_range(a, b).is_none(),
+      "different sources must return None"
+    );
+  }
+
+  #[test]
+  fn new_range_takes_from_and_to() {
+    let a = Locator::new("same.tex", 1, 2, 0, 0);
+    let b = Locator::new("same.tex", 5, 6, 0, 0);
+    let r = Locator::new_range(a, b).unwrap();
+    assert_eq!(r.from_line, 1);
+    assert_eq!(r.from_column, 2);
+    // When `to` is a point (not a range), its from_line/col are used
+    // as the to_line/col.
+    assert_eq!(r.to_line, 5);
+    assert_eq!(r.to_column, 6);
+  }
+
+  #[test]
+  fn new_range_propagates_to_range() {
+    // When `to` is itself a range, use its to_line/col (not its from_*)
+    let a = Locator::new("same.tex", 1, 1, 0, 0);
+    let b = Locator::new("same.tex", 5, 5, 10, 20);
+    let r = Locator::new_range(a, b).unwrap();
+    assert_eq!(r.from_line, 1);
+    assert_eq!(r.to_line, 10);
+    assert_eq!(r.to_column, 20);
+  }
+
+  #[test]
+  fn display_includes_source_and_line() {
+    let l = Locator::new("paper.tex", 42, 10, 0, 0);
+    let s = format!("{l}");
+    assert!(s.contains("paper"), "got {s:?}");
+    assert!(s.contains("line 42"), "got {s:?}");
+  }
+
+  #[test]
+  fn stringify_empty_source_is_anonymous_string() {
+    let l = Locator::new("", 1, 1, 0, 0);
+    let s = l.stringify();
+    assert!(s.contains("Anonymous String"), "got {s:?}");
+  }
+
+  #[test]
+  fn get_short_source_fallback_when_empty() {
+    let l = Locator::new("", 0, 0, 0, 0);
+    assert_eq!(l.get_short_source(""), "String");
+    assert_eq!(l.get_short_source("inline"), "inline");
+  }
+
+  #[test]
+  fn get_from_and_to_locators_preserve_source() {
+    let l = Locator::new("paper.tex", 1, 2, 3, 4);
+    let from = l.get_from_locator();
+    let to = l.get_to_locator();
+    assert_eq!(from.source, l.source);
+    assert_eq!(to.source, l.source);
+    // from_locator captures from_*, to_locator captures to_*.
+    assert_eq!(from.from_line, 1);
+    assert_eq!(from.from_column, 2);
+    assert_eq!(to.from_line, 3);
+    assert_eq!(to.from_column, 4);
+  }
+
+  #[test]
+  fn object_get_locator_returns_self() {
+    let l = Locator::new("paper.tex", 1, 2, 3, 4);
+    let got = l.get_locator();
+    assert_eq!(got, l);
+  }
+}

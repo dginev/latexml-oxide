@@ -8,7 +8,36 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("pstricks");
 
-  // Node definition macros — Perl L30-120
+  // Perl pst-node.sty.ltxml L91-107: register node-connection keyvals on
+  // the shared `pstricks` keyval group. Perl types PSAngle / PSDimension /
+  // PSDimDim / Float aren't currently registered Rust types; register with
+  // the untyped placeholder ("") since Rust pst-node stubs all connection
+  // commands to no-ops (DVI-only), so no consumer actually coerces these.
+  // Documents that switch on the key-presence (`\@ifundefined{KV@pstricks@
+  // angle@default}`) get the right answer.
+  for key in ["angle", "angleA", "angleB",
+              "arcangle", "arcangleA", "arcangleB",
+              "nodesep", "nodesepA", "nodesepB",
+              "offset", "arm", "armA", "armB",
+              "ncurv", "loopsize", "radius", "framesize"] {
+    DefKeyVal!("pstricks", key, "");
+  }
+
+  // Node definition macros — Perl L30-120. `\rnode` / `\pnode` etc. are
+  // Perl DefConstructor with coordinate-reading closures; Rust stubs them
+  // as DefMacro passthrough of the content (#3). DP-audit flags the kind
+  // flip. Structural — pst-node nodes need coordinate+position readers
+  // (same PSDim/PSAngle family as pstricks_support, WISDOM #41 parameter
+  // gap). Rust's passthrough preserves the label text in output; the
+  // geometric node-graph is simply not emitted. Not an `\edef` site.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-parameter-type):
+  // ALL node + connection stubs below share this single root cause —
+  // missing PSDim/PSAngle/PSDimDim/Float types — so the DefConstructor
+  // → DefMacro kind flips are a single-cluster waiver. Porting the
+  // PS* parameter-type family closes every rnode/Rnode/pnode/cnode/
+  // circlenode/ovalnode/trinode/dianode + nc*/pc* connection entry at
+  // once. Audit currently flags rnode+pnode explicitly.
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
   DefMacro!("\\pnode[]", "");
@@ -51,6 +80,17 @@ LoadDefinitions!({
   DefMacro!("\\Lput OptionalMatch:* []{}{}", "#3");
   DefMacro!("\\Mput OptionalMatch:* {}", "#1");
   DefMacro!("\\Rput OptionalMatch:* []{}{}", "#3");
+
+  // Perl pst-node.sty.ltxml L504-538: \Aput / \Bput — capitalized node-label
+  // macros. Perl signature is `OptionalMatch:* []` and the full path forwards
+  // through \Aput@start + \put@end label-put infrastructure (computeLabelPos,
+  // finishLabelPut, _psActiveTransform). Rust lacks that graphics pipeline —
+  // pst-node is stubbed DVI-only. Match the Perl signature exactly and
+  // expand to empty; any label written after (`\Aput[sep]{text}`) is
+  // emitted by normal expansion, matching the drop-args-pass-through
+  // behavior of sibling stubs \aput/\bput.
+  DefMacro!("\\Aput OptionalMatch:* []", "");
+  DefMacro!("\\Bput OptionalMatch:* []", "");
 
   // Box macros — Perl L460-520
   DefMacro!("\\psmatrix", "");

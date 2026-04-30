@@ -21,8 +21,8 @@ pub enum ManifestFormat {
 ///
 /// Port of `LaTeXML::Post::Manifest`.
 pub struct Manifest {
-  name: String,
-  format: Option<ManifestFormat>,
+  name:           String,
+  format:         Option<ManifestFormat>,
   site_directory: Option<String>,
 }
 
@@ -37,20 +37,18 @@ impl Manifest {
 }
 
 impl Processor for Manifest {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     match &self.format {
       Some(ManifestFormat::Epub) => {
         log::info!("EPUB manifest generation delegated to epub submodule");
         Ok(vec![doc])
-      }
+      },
       None => {
         log::warn!("No manifest format specified; skipping");
         Ok(vec![doc])
-      }
+      },
     }
   }
 }

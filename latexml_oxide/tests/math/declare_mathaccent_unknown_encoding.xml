@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml preamble="\DeclareMathAccent\widecheck{\mathalpha}{mathx}{113}"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\widecheck{x}" text="widecheck@(x)" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok name="widecheck" role="OVERACCENT"/>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

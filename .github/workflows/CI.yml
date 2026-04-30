@@ -11,68 +11,71 @@ jobs:
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 50
     env:
-      # The runner has ~16 GB RAM but the GitHub-hosted OS eats ~3-4 GB, and
-      # linker peaks can easily exceed 10 GB for the `latexml` aggregate crate
-      # (4 bin targets + lib + test executables). Previous CI runs OOM'd during
-      # the final codegen step. Every knob here is aimed at peak-RAM reduction,
-      # at the cost of some compile speed.
+      # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
-      # 1. Serialize rustc — only one compile at a time.
-      CARGO_BUILD_JOBS: 1
-      # 2. No debug info in release profile (workspace Cargo.toml sets debug=true
-      #    for production debugging; CI doesn't need it and it's a massive
-      #    contributor to peak RAM during linking).
-      CARGO_PROFILE_RELEASE_DEBUG: "0"
-      # 3. Lower optimization level — opt-level=1 is still fast enough for tests
-      #    and uses much less memory per codegen unit than the default opt-level=3.
-      CARGO_PROFILE_RELEASE_OPT_LEVEL: "1"
-      # 4. Many small codegen units (vs. the default 16) — smaller, cheaper
-      #    per-unit peaks during parallel codegen.
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
-      # 5. Split debuginfo / strip — harmless if debug=0 but defensive.
-      CARGO_PROFILE_RELEASE_STRIP: "debuginfo"
-      # 6. No LTO (default is already off for "release", but be explicit).
-      CARGO_PROFILE_RELEASE_LTO: "false"
-      # 7. Incremental caches are worthless on CI and cost RAM+disk.
+      # All build settings live on the dedicated `ci` profile in the
+      # workspace `Cargo.toml` (`[profile.ci]` + per-package overrides
+      # for `latexml_contrib` / `latexml_package`). That profile is
+      # version-controlled and reviewable; previously the same knobs
+      # lived as `CARGO_PROFILE_RELEASE_*` env-vars here, which had the
+      # side-effect of contaminating the `release` profile used for
+      # distribution. Use `--profile ci` from every cargo invocation.
+      #
+      # Other knobs:
+      #  * CARGO_BUILD_JOBS=2 — two rustc workers fit comfortably in
+      #    16 GB once the per-package codegen-units split (above) lands.
+      #    The previous OOM-kills (runs 25051556164 / 25055232786) came
+      #    from `latexml_contrib` codegen at jobs=2 with the default
+      #    codegen-units; the profile fix addresses that directly.
+      #  * mold linker — ~2-4× faster than ld and streams symbols
+      #    rather than slurping into RAM.
+      #  * --test-threads=2 — pgf/tikz cells can spike to GB-scale
+      #    working sets; conservative parallelism leaves headroom.
+      CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
-      # 8. Fetch via CLI git rather than libgit2 (smaller memory footprint).
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
+      # Minimal apt set: only what `make formats` + tests actually need.
+      # Removed: imagemagick, inkscape (graphics post-processing —
+      # not exercised by the test suite); texlive-lang-* (only en/de/fr/
+      # ru/el needed by tests, and texlive-lang-european is the heaviest
+      # superset). Net: ~1.5 GB less apt download + install time.
       - name: install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            mold \
             texlive texlive-latex-extra texlive-science \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
-            texlive-lang-cyrillic texlive-lang-european
+            texlive-lang-cyrillic
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
-      # That feature pulls in pericortex → zmq → zeromq-src (C library build),
-      # plus rand, chrono, tempdir, walkdir, zip v0.6 — ~15 min of extra
-      # compile time we don't need to validate the core conversion pipeline.
       # Cortex worker is a production deployment artifact, built separately.
-
-      # Rust-port equivalent of Perl's `make formats` — builds latexml_oxide
-      # once, then runs --init=latex.ltx to produce resources/dumps/latex.dump.txt
-      # against the runner's ambient texlive. The dump is NOT embedded by
-      # build.rs (it's read from disk at runtime), so the dump the test suite
-      # consumes matches the texlive the test runtime sees — not the
-      # developer-laptop-texlive-era snapshot the embedded dump used to freeze.
-      # See docs/SYNC_STATUS.md D0 for context.
+      #
+      # All cargo steps below run under the dedicated `ci` profile,
+      # which has per-package codegen-units splits to keep peak RSS
+      # under 16 GB even on the heaviest binding crates.
       - name: make formats
+        env:
+          PROFILE: ci
         run: tools/make_formats.sh
+
+      # Build test binaries first (--no-run) so the rustc/linker RSS peak
+      # completes and is reclaimed before we spin up test workers. On a
+      # warm rust-cache hit this is a no-op; on a cold cache it's the main
+      # memory-pressure phase and isolating it from the test phase is
+      # what fits the job back inside the 16 GB runner budget.
+      - name: build test binaries
+        run: cargo test --profile ci --tests --workspace --no-run
+
       - name: run tests
-        # We use --release because the test suite runs many full-document
-        # conversions and dev-profile runs are too slow even when compilation
-        # is faster. The env knobs above keep peak RAM manageable;
-        # --test-threads=1 serializes execution so at most one conversion's
-        # working set is live at a time.
-        run: cargo test --release --tests --workspace -- --test-threads=1
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2

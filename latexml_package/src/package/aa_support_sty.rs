@@ -13,10 +13,24 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
-  DeclareOption!("openbib", None);
+  // Perl aa_support.sty.ltxml L35-36: openbib injects inline CSS rendering
+  // bib blocks as display blocks. Prior Rust stub silently dropped the CSS
+  // resource — port the require_resource pattern from book_cls.rs L33-43.
+  DeclareOption!("openbib", {
+    use latexml_core::document::resource::Resource;
+    require_resource(Resource {
+      mimetype: "text/css".into(),
+      content: ".ltx_bibblock{display:block;}".into(),
+      ..Resource::default()
+    });
+  });
   DeclareOption!("cm", { RequirePackage!("textcomp"); });
   DeclareOption!("bibnumber", { RequirePackage!("natbib"); });
   DeclareOption!("bibauthoryear", { RequirePackage!("natbib"); });
+  // Perl aa_support.sty.ltxml L44: default options — ensures `bibauthoryear`
+  // (which loads natbib) is executed even when user loads aa.cls without
+  // options, matching Perl preamble semantics.
+  Digest!("\\ExecuteOptions{a4paper,twocolumn,utf8,hideoverfull,bibauthoryear}")?;
   ProcessOptions!();
 
   // Dependencies — Perl L47-63
@@ -107,7 +121,18 @@ LoadDefinitions!({
   // Acknowledgements — Perl L132-140
   //======================================================================
 
-  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
+  // Perl aa_support.sty.ltxml L132-138: \acknowledgements emits
+  // <ltx:acknowledgements name='#name'> where #name is the digested
+  // expansion of \acknowledgmentsname. Prior Rust port silently
+  // dropped the `name=` attribute — documents using the A&A binding
+  // and rendering the acknowledgement section in a tagset that
+  // surfaces a `@name` attribute would miss the heading.
+  DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
+    properties => sub[_args] {
+      let name = stomach::digest(T_CS!("\\acknowledgmentsname"))
+        .map(|d| d.to_string()).unwrap_or_default();
+      Ok(stored_map!("name" => name))
+    });
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
   Let!("\\acknowledgement", "\\acknowledgements");
   Let!("\\endacknowledgement", "\\endacknowledgements");
@@ -197,6 +222,11 @@ LoadDefinitions!({
   // Tables — Perl L220-231
   //======================================================================
 
+  // Perl: DefMacro('\longtab{}', '') with comment "just let it do the table
+  // contents as usual." Usage: `\longtab{N}{table-body}` — the {N} number is
+  // consumed; the table-body block flows through as normal tokens. Perl does
+  // NOT define a `{longtab}` environment, so we don't either; an extra
+  // DefEnvironment trips the mode-switch on `\end{...}` matching.
   DefMacro!("\\longtab{}", "");
   Let!("\\tablefoot", "\\footnote");
   DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
@@ -204,7 +234,6 @@ LoadDefinitions!({
   DefMacro!("\\tablefont", "\\small");
   DefMacro!("\\tablenote{}{}", "\\footnote{#2}");
   DefMacro!("\\tablecaption{}", "\\caption{#1}");
-  DefEnvironment!("{longtab}{}", "#body");
 
   //======================================================================
   // Typography — Perl L238-323
@@ -212,6 +241,16 @@ LoadDefinitions!({
 
   DefMacro!("\\vec{}", "\\ensuremath{\\mathbf{#1}}");
   DefMacro!("\\tens{}", "\\ensuremath{\\mathsf{#1}}");
+
+  // Perl aa_support.sty.ltxml L241/L243: expose the internal \@vec and
+  // \@tens DefMath entries that Perl's \vec / \tens would otherwise
+  // forward to (`\vec → \ensuremath{\@vec{#1}}`). Rust short-circuits via
+  // `\mathbf` / `\mathsf` above, but author code that writes `\@vec{}`
+  // or `\@tens{}` directly (or third-party bindings that Let-alias to
+  // them) hit undefined-CS without these. Add as additive DefMaths; the
+  // `\vec`/`\tens` entry points above keep their current output shape.
+  DefMath!("\\@vec{}",  "#1",            role => "ID", font => { forcebold => true });
+  DefMath!("\\@tens{}", "\\mathsf{#1}",  role => "ID");
 
   // \ion{symbol}{ionization} — Perl L247
   DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
@@ -257,6 +296,12 @@ LoadDefinitions!({
   DefMacro!("\\fh", "\\aas@fstack{h}");
   DefMacro!("\\fm", "\\aas@fstack{m}");
   DefMacro!("\\fs", "\\aas@fstack{s}");
+  // Perl aa_support.sty.ltxml L309-311: \fdg / \farcm / \farcs — additional
+  // fractional-notation shortcuts (degree, arcminute, arcsecond) missing
+  // from the Rust port. Add for astronomical-paper parity.
+  DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
+  DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
+  DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
   DefMacro!("\\fp", "\\aas@fstack{p}");
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
@@ -295,7 +340,8 @@ LoadDefinitions!({
   // Object names — Perl L357-360
   //======================================================================
 
-  DefMacro!("\\object{}", "#1");
+  DefConstructor!("\\object Semiverbatim",
+    "<ltx:text class='ltx_ast_objectname'>#1</ltx:text>");
   DefMacro!("\\listofobjects", "");
   DefMacro!("\\listobjectname", "List of Objects");
 
@@ -336,6 +382,12 @@ LoadDefinitions!({
   DefMacro!("\\tnote{}", "\\footnote{#1}");
   DefMacro!("\\at", "@");
   DefMacro!("\\citeyearpar{}", "");
+
+  // Perl L348-349: \bib@field@default@adsurl — ADS URL in bibitem.
+  // Verbatim arg lets % survive (A&A adsurls often contain %26 = &).
+  // Previously unported.
+  DefConstructor!("\\bib@field@default@adsurl Verbatim",
+    "<ltx:bib-url href='#1'>ADS entry</ltx:bib-url>");
 
   // \eprint — Perl L353
   DefMacro!("\\eprint[]{}", "{\\tt\\if!#1!#2\\else#1:#2\\fi}");

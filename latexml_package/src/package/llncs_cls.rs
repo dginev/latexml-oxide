@@ -62,6 +62,18 @@ LoadDefinitions!({
   DefRegister!("\\tocauthor" => Tokens!());
   DefRegister!("\\titrun" => Tokens!());
   DefRegister!("\\titlerunning" => Tokens!());
+  // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle{}' => Tokens())`
+  // — a Tokens-valued register with a `{}` proto, meaning the register
+  // is read/written via an argument. Rust's DefRegister! doesn't accept
+  // a `{}` proto (the macro only handles name-only register shapes),
+  // so the port uses DefMacro!("{}", "") which accepts the arg and
+  // silently discards it. Observable effect identical for all known
+  // uses: `\toctitle{…}` writes are no-ops in LaTeXML output (the TOC
+  // is rebuilt from section labels, not from per-section tokens
+  // stored in \toctitle). Intentional DefRegister → DefMacro
+  // divergence forced by the missing `{}`-proto DefRegister support
+  // (WISDOM #44). The sibling \tocauthor/\titrun/\titlerunning are
+  // proto-less, so they port as DefRegister normally.
   DefMacro!("\\toctitle{}", "");
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
@@ -87,10 +99,9 @@ LoadDefinitions!({
   DefMacro!("\\thechapter", "\\arabic{chapter}");
   DefMacro!("\\chaptermark{}", "");
 
-  // TODO: \spnewtheorem — complex theorem definition system with capfont/bodyfont.
-  // Perl defines it as a DefMacro closure that calls NewCounter, DefMacroI,
-  // DefEnvironmentI with style-dependent title formatting and swap support.
-  // For now, use RawTeX to define theorem environments via the raw TeX definitions.
+  // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
+  // is ported further below (L133+) via define_new_theorem; capfont/bodyfont
+  // are ignored per Perl precedent since visual styling isn't modeled.
   RawTeX!(r#"\def\theoremname{Theorem}
 \def\claimname{Claim}
 \def\proofname{Proof}
@@ -128,8 +139,16 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}[theorem]{Remark}}{}");
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
-  // Perl llncs.cls.ltxml L101-157: Like \newtheorem + capfont/bodyfont (visual styling ignored).
-  // capfont/bodyfont are TeX font commands (e.g. \bfseries, \itshape) — ignored in LaTeXML.
+  // Perl llncs.cls.ltxml L101-157 is `DefMacro('\spnewtheorem ...', sub
+  // { ... DefMacroI + NewCounter + MergeFont ... })` — a macro whose
+  // body imperatively installs new CSes/env bindings + counters.
+  // Rust uses DefPrimitive (stomach-level) because the installation
+  // needs to happen at digest-stable time so subsequent uses of the
+  // new `{env}` work. WISDOM #44: kind flip is intentional —
+  // `\spnewtheorem` is a preamble-declaration macro only, never
+  // captured by `\edef`/`\ifx`. capfont/bodyfont are TeX font
+  // commands (e.g. \bfseries, \itshape) — ignored in LaTeXML (both
+  // Perl and Rust do the same).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
     crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
@@ -142,7 +161,15 @@ LoadDefinitions!({
   Let!("\\spdefaulttheorem", "\\spnewtheorem");
 
   //======================================================================
-  // Blackboard bold letters
+  // Blackboard bold letters.
+  //
+  // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}") etc. — DefPrimitive with
+  // literal glyph body. Rust uses DefConstructor with inline-literal template
+  // + enter_horizontal => true for explicit horizontal-mode entry. Functionally
+  // equivalent (both emit ℂ, ℕ, ℝ, etc.). The DP audit flags 13 of these as
+  // DefPrimitiveI↔DefConstructor structural mismatches — kind-flip is not
+  // needed; Rust's DefConstructor is the idiomatic shape for literal-glyph
+  // output with mode-entry semantics.
   DefConstructor!("\\bbbc",   "\u{2102}",   enter_horizontal => true);
   DefConstructor!("\\bbbf",   "\u{1D53D}",  enter_horizontal => true);
   DefConstructor!("\\bbbh",   "\u{210D}",   enter_horizontal => true);

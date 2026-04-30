@@ -71,9 +71,16 @@ LoadDefinitions!({
   DefConstructor!("\\lx@authormark{}",
     "^ <ltx:contact role='affiliationmark' _mark='#1'></ltx:contact>");
 
-  // \affil — Perl L60-69
-  // Use a macro wrapper to handle the auto-mark counter logic,
-  // then call the constructor with the resolved mark.
+  // \affil — Perl authblk.sty.ltxml L60-69 is a single DefConstructor
+  // whose `afterDigest` reads `\the@affil` + StepCounter('@affil') inline
+  // to auto-generate the mark when `#1` is absent. Rust splits that into
+  // a DefMacro wrapper (which expands the counter+token glue at gullet
+  // time) delegating to a hidden `\lx@ab@affil` DefConstructor with a
+  // pre-resolved mark arg. The split is required because the Rust
+  // constructor API doesn't expose a `Digest(T_CS('\the@affil'))`
+  // equivalent inside `after_digest` with a writable counter step.
+  // Intentional kind divergence (DefConstructor → DefMacro wrapper);
+  // see WISDOM #44 — the observable XML is identical.
   DefMacro!("\\affil[]{}", sub[(opt_mark, body)] {
     let mark_toks = opt_mark.unwrap_or_default();
     let mark_str = mark_toks.to_string();
@@ -123,14 +130,11 @@ LoadDefinitions!({
 /// Moves affiliation text from ltx:note elements into matching ltx:contact elements.
 fn authblk_relocate_affil(document: &mut Document) -> Result<()> {
   // Find all affiliationmark contacts and affiliationtext notes
-  let author_nodes =
-    document.findnodes(".//ltx:contact[@role='affiliationmark' and @_mark]", None);
-  let affil_nodes =
-    document.findnodes(".//ltx:note[@role='affiliationtext']", None);
+  let author_nodes = document.findnodes(".//ltx:contact[@role='affiliationmark' and @_mark]", None);
+  let affil_nodes = document.findnodes(".//ltx:note[@role='affiliationtext']", None);
 
   // Build mark → affil_node mapping, unlinking affil nodes from DOM
-  let mut mark_to_affil: std::collections::HashMap<String, Node> =
-    std::collections::HashMap::new();
+  let mut mark_to_affil: std::collections::HashMap<String, Node> = std::collections::HashMap::new();
   for mut affil_node in affil_nodes {
     affil_node.unlink();
     if let Some(mark) = affil_node.get_attribute("mark") {
@@ -146,6 +150,15 @@ fn authblk_relocate_affil(document: &mut Document) -> Result<()> {
       let children = affil_node.get_child_nodes();
       document.append_clone(&mut author_node, children)?;
     }
+  }
+
+  // D3b: affil_nodes were unlinked above and never reattached — the
+  // detached subtrees would leave dangling idstore entries when the
+  // HashMap drops them. append_clone has now consumed the originals'
+  // ids via modify_id suffix mapping, so it's safe to recursively
+  // unrecord.
+  for (_, affil_node) in mark_to_affil.into_iter() {
+    document.unrecord_node_ids(&affil_node);
   }
 
   Ok(())

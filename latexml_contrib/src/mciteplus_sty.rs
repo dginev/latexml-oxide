@@ -1,9 +1,13 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "mciteplus.sty",
-    "mciteplus.sty is only minimally stubbed and will not be interpreted raw.");
-  RawTeX!(r"\providecommand{\mcitedefaultmidpunct}{;\space}
+  Warn!(
+    "missing_file",
+    "mciteplus.sty",
+    "mciteplus.sty is only minimally stubbed and will not be interpreted raw."
+  );
+  RawTeX!(
+    r"\providecommand{\mcitedefaultmidpunct}{;\space}
 \providecommand{\mcitedefaultendpunct}{.}
 \providecommand{\mcitedefaultseppunct}{\relax}
 \providecommand{\mcitedefaultsublistlabel}{\alph{mcitesubitemcount})\space}
@@ -21,7 +25,8 @@ LoadDefinitions!({
 \def\@mciteMacrof{f}
 \def\@mciteMacroh{h}
 \def\@mciteMacrobibitem{bibitem}
-\def\@mciteMacrosubitem{subitem}");
+\def\@mciteMacrosubitem{subitem}"
+  );
   DefMacro!("\\mciteSetBstMidEndSepPunct{}{}{}", "");
   DefMacro!("\\mciteSetMidEndSepPunct{}{}{}", "");
   DefMacro!("\\mciteSetBstSublistLabelBeginEnd{}{}{}", "");

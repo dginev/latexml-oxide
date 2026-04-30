@@ -16,7 +16,7 @@ use crate::processor::{ProcessResult, Processor};
 ///
 /// Port of `LaTeXML::Post::Scan`.
 pub struct Scan {
-  name: String,
+  name:   String,
   /// Reference to the shared ObjectDB.
   pub db: ObjectDB,
 }
@@ -24,23 +24,19 @@ pub struct Scan {
 /// Collected properties for a scanned element, ready for DB registration.
 struct ScannedProps {
   /// Properties to register.
-  props: Vec<(String, Value)>,
+  props:  Vec<(String, Value)>,
   /// Labels to register separately.
   labels: Vec<String>,
   /// The xml:id of the scanned element.
-  id: Option<String>,
+  id:     Option<String>,
 }
 
 impl ScannedProps {
-  fn push(&mut self, key: &str, val: Value) {
-    self.props.push((key.to_string(), val));
-  }
+  fn push(&mut self, key: &str, val: Value) { self.props.push((key.to_string(), val)); }
 }
 
 impl Scan {
-  pub fn new(db: ObjectDB) -> Self {
-    Scan { name: "Scan".to_string(), db }
-  }
+  pub fn new(db: ObjectDB) -> Self { Scan { name: "Scan".to_string(), db } }
 
   /// Recursively scan a node and its children.
   ///
@@ -54,22 +50,48 @@ impl Scan {
   /// Dispatch to the appropriate handler based on tag name.
   fn dispatch(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
     match tag {
-      "ltx:document" | "ltx:part" | "ltx:chapter" | "ltx:section" |
-      "ltx:appendix" | "ltx:subsection" | "ltx:subsubsection" |
-      "ltx:paragraph" | "ltx:subparagraph" | "ltx:bibliography" |
-      "ltx:index" | "ltx:glossary" | "ltx:theorem" | "ltx:proof"
-        => self.section_handler(doc, node, tag, parent_id),
-      "ltx:table" | "ltx:figure" | "ltx:float" | "ltx:listing"
-        => self.captioned_handler(doc, node, tag, parent_id),
-      "ltx:equation" | "ltx:equationgroup" | "ltx:item" | "ltx:listingline"
-        => self.labelled_handler(doc, node, tag, parent_id),
+      "ltx:document" | "ltx:part" | "ltx:chapter" | "ltx:section" | "ltx:appendix"
+      | "ltx:subsection" | "ltx:subsubsection" | "ltx:paragraph" | "ltx:subparagraph"
+      | "ltx:bibliography" | "ltx:index" | "ltx:glossary" | "ltx:theorem" | "ltx:proof" => {
+        self.section_handler(doc, node, tag, parent_id)
+      },
+      "ltx:table" | "ltx:figure" | "ltx:float" | "ltx:listing" => {
+        self.captioned_handler(doc, node, tag, parent_id)
+      },
+      "ltx:equation" | "ltx:equationgroup" | "ltx:item" | "ltx:listingline" => {
+        self.labelled_handler(doc, node, tag, parent_id)
+      },
       "ltx:anchor" => self.anchor_handler(doc, node, tag, parent_id),
+      // Math subtrees contain thousands of XMTok/XMApp/XMRef/XMWrap/XMDual
+      // nodes with xml:ids that serve only local math-tree navigation —
+      // they're not targets for cross-reference and do not need to appear
+      // in the Scan ObjectDB. Register the outer Math element's id,
+      // then skip descent. This drops Scan time on arXiv:0705.0790
+      // from 11.4 s → <1 s (the 65K XM* nodes were dominating).
+      //
+      // Rust-side intentional divergence from Perl Scan.pm, which
+      // descends blindly — but Perl doesn't emit xml:id on XM*
+      // descendants in the first place, so its default_handler short-
+      // circuits naturally. The ar5iv.sty preload in Rust populates
+      // xml:id everywhere via _ID_counter__, making this skip necessary
+      // for performance parity with Perl.
+      "ltx:Math" => {
+        let id = get_xml_id(node);
+        if let Some(ref id_str) = id {
+          let sp = self.collect_common(doc, node, tag, parent_id);
+          let key = format!("ID:{}", id_str);
+          self.register_scanned(&key, sp);
+          self.add_as_child(id_str, parent_id);
+        }
+        // No scan_children — XM* descendants are skipped.
+      },
       "ltx:note" => self.note_handler(doc, node, tag, parent_id),
       "ltx:bibitem" => self.bibitem_handler(doc, node, parent_id),
       "ltx:bibentry" => {},
       "ltx:indexmark" => self.indexmark_handler(doc, node, parent_id),
-      "ltx:glossaryentry" | "ltx:glossarydefinition"
-        => self.glossaryentry_handler(doc, node, tag, parent_id),
+      "ltx:glossaryentry" | "ltx:glossarydefinition" => {
+        self.glossaryentry_handler(doc, node, tag, parent_id)
+      },
       "ltx:ref" => self.ref_handler(doc, node, tag, parent_id),
       "ltx:bibref" => self.bibref_handler(doc, node, tag, parent_id),
       "ltx:glossaryref" => self.glossaryref_handler(doc, node, tag, parent_id),
@@ -90,7 +112,9 @@ impl Scan {
 
   /// Compute the page ID for the current document.
   fn page_id(&self, doc: &PostDocument) -> Option<String> {
-    doc.get_document_element().and_then(|root| get_xml_id(&root))
+    doc
+      .get_document_element()
+      .and_then(|root| get_xml_id(&root))
   }
 
   /// Compute the fragment ID for a node within its page.
@@ -167,7 +191,11 @@ impl Scan {
     // Perl uses cloneNode(1) deep copy; our libxml bindings only do ref copies.
     for tagnode in doc.findnodes_at("ltx:tags/ltx:tag", Some(node)) {
       let key = if let Some(role) = tagnode.get_attribute("role") {
-        if role.ends_with("refnum") { role } else { format!("tag:{}", role) }
+        if role.ends_with("refnum") {
+          role
+        } else {
+          format!("tag:{}", role)
+        }
       } else {
         "refnum".to_string()
       };
@@ -183,7 +211,9 @@ impl Scan {
     // Register labels
     if let Some(ref id) = sp.id {
       for label in &sp.labels {
-        self.db.register(label, vec![("id", Value::from(id.as_str()))]);
+        self
+          .db
+          .register(label, vec![("id", Value::from(id.as_str()))]);
       }
     }
     // Register main entry
@@ -199,7 +229,9 @@ impl Scan {
     let mut current_parent = parent_id.map(String::from);
     while let Some(ref pid) = current_parent {
       let key = format!("ID:{}", pid);
-      let has_children = self.db.lookup(&key)
+      let has_children = self
+        .db
+        .lookup(&key)
         .map(|e| e.has_value("children"))
         .unwrap_or(false);
       if has_children {
@@ -208,7 +240,9 @@ impl Scan {
         }
         return;
       }
-      let parent = self.db.lookup(&key)
+      let parent = self
+        .db
+        .lookup(&key)
         .and_then(|e| e.get_string("parent").map(String::from));
       current_parent = parent;
     }
@@ -217,10 +251,23 @@ impl Scan {
   // ======================================================================
   // Handlers
 
-  fn default_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
-    let sp = self.collect_common(doc, node, tag, parent_id);
-    let id = sp.id.clone();
+  fn default_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
+    // Mirror Perl Scan.pm default_handler (L272-283): only build ScannedProps
+    // when the node actually carries an xml:id. For typical papers with large
+    // <Math> subtrees, the XMTok/XMApp/XMRef/XMWrap/XMDual descendants have
+    // no id and `collect_common`'s attribute fetches + labels parsing are
+    // pure waste. arXiv:0705.0790 has 65K nodes (37K XMTok alone) and only
+    // ~1K carry ids — skipping collect_common on the other 64K drops Scan
+    // from 11.4 s → sub-second on that paper.
+    let id = get_xml_id(node);
     if let Some(ref id_str) = id {
+      let sp = self.collect_common(doc, node, tag, parent_id);
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
       self.add_as_child(id_str, parent_id);
@@ -229,7 +276,13 @@ impl Scan {
     self.scan_children(doc, node, effective_id);
   }
 
-  fn section_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn section_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let mut sp = self.collect_common(doc, node, tag, parent_id);
     let id = sp.id.clone();
     if let Some(ref id_str) = id {
@@ -252,19 +305,27 @@ impl Scan {
     self.scan_children(doc, node, effective_id);
   }
 
-  fn captioned_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn captioned_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let mut sp = self.collect_common(doc, node, tag, parent_id);
     let id = sp.id.clone();
     if let Some(ref id_str) = id {
       if let Some(role) = node.get_attribute("role") {
         sp.push("role", Value::from(role));
       }
-      let caption = doc.findnode_at("child::ltx:caption", node)
+      let caption = doc
+        .findnode_at("child::ltx:caption", node)
         .or_else(|| doc.findnode_at("descendant::ltx:caption", node));
       if let Some(ref cap) = caption {
         sp.push("caption", Value::from(cap.get_content()));
       }
-      let toccaption = doc.findnode_at("child::ltx:toccaption", node)
+      let toccaption = doc
+        .findnode_at("child::ltx:toccaption", node)
         .or_else(|| doc.findnode_at("descendant::ltx:toccaption", node));
       if let Some(ref tc) = toccaption {
         sp.push("toccaption", Value::from(tc.get_content()));
@@ -277,7 +338,13 @@ impl Scan {
     self.scan_children(doc, node, effective_id);
   }
 
-  fn labelled_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn labelled_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let mut sp = self.collect_common(doc, node, tag, parent_id);
     let id = sp.id.clone();
     if let Some(ref id_str) = id {
@@ -292,7 +359,13 @@ impl Scan {
     self.scan_children(doc, node, effective_id);
   }
 
-  fn anchor_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn anchor_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let mut sp = self.collect_common(doc, node, tag, parent_id);
     let id = sp.id.clone();
     if let Some(ref id_str) = id {
@@ -328,7 +401,7 @@ impl Scan {
       None => {
         self.scan_children(doc, node, parent_id);
         return;
-      }
+      },
     };
 
     let key = node.get_attribute("key");
@@ -341,7 +414,9 @@ impl Scan {
     if let Some(ref bibkey) = key {
       for list in lists_str.split_whitespace() {
         let label_key = format!("BIBLABEL:{}:{}", list, bibkey);
-        self.db.register(&label_key, vec![("id", Value::from(id.as_str()))]);
+        self
+          .db
+          .register(&label_key, vec![("id", Value::from(id.as_str()))]);
       }
     }
 
@@ -365,7 +440,16 @@ impl Scan {
       props.push(("fragid".to_string(), Value::from(fragid)));
     }
 
-    for role in &["authors", "fullauthors", "year", "number", "refnum", "title", "key", "bibtype"] {
+    for role in &[
+      "authors",
+      "fullauthors",
+      "year",
+      "number",
+      "refnum",
+      "title",
+      "key",
+      "bibtype",
+    ] {
       let xpath = format!("ltx:tags/ltx:tag[@role='{}']", role);
       if let Some(tagnode) = doc.findnode_at(&xpath, node) {
         let prop_name = match *role {
@@ -406,7 +490,13 @@ impl Scan {
     self.default_handler(doc, node, tag, parent_id);
   }
 
-  fn bibref_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn bibref_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let in_cited = !doc
       .findnodes_at(
         "ancestor::ltx:bibblock[contains(@class,'ltx_bib_cited')]",
@@ -418,9 +508,14 @@ impl Scan {
         let inlist = node.get_attribute("inlist").unwrap_or_default();
         let mut lists: Vec<&str> = inlist.split_whitespace().collect();
         lists.push("bibliography");
-        let label_keys: Vec<String> = keys.split(',')
+        let label_keys: Vec<String> = keys
+          .split(',')
           .filter(|k| !k.is_empty())
-          .flat_map(|bibkey| lists.iter().map(move |list| format!("BIBLABEL:{}:{}", list, bibkey)))
+          .flat_map(|bibkey| {
+            lists
+              .iter()
+              .map(move |list| format!("BIBLABEL:{}:{}", list, bibkey))
+          })
           .collect();
         for label_key in &label_keys {
           self.db.register(label_key, vec![]);
@@ -437,7 +532,13 @@ impl Scan {
     self.default_handler(doc, node, tag, parent_id);
   }
 
-  fn glossaryref_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn glossaryref_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     if let (Some(k), Some(l)) = (node.get_attribute("key"), node.get_attribute("inlist")) {
       let gkey = format!("GLOSSARY:{}:{}", l, k);
       self.db.register(&gkey, vec![]);
@@ -479,26 +580,42 @@ impl Scan {
 
     if !see_also.is_empty() {
       if let Some(entry) = self.db.lookup_mut(&key) {
-        let nodes: Vec<Value> = see_also.iter().map(|n| Value::from(n.get_content())).collect();
+        let nodes: Vec<Value> = see_also
+          .iter()
+          .map(|n| Value::from(n.get_content()))
+          .collect();
         entry.push_new("see_also", nodes);
       }
     } else if let Some(pid) = parent_id {
-      let style = node.get_attribute("style").unwrap_or_else(|| "normal".to_string());
+      let style = node
+        .get_attribute("style")
+        .unwrap_or_else(|| "normal".to_string());
       if let Some(entry) = self.db.lookup_mut(&key) {
         entry.note_association(&["referrers", pid, &style]);
       }
     }
   }
 
-  fn glossaryentry_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
-    let id = if tag == "ltx:glossaryentry" { get_xml_id(node) } else { None };
+  fn glossaryentry_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
+    let id = if tag == "ltx:glossaryentry" {
+      get_xml_id(node)
+    } else {
+      None
+    };
     let lists = node.get_attribute("inlist").unwrap_or_else(|| {
-      doc.findnode_at(
-        "ancestor::ltx:glossarylist[@lists] | ancestor::ltx:glossary[@lists]",
-        node,
-      )
-      .and_then(|p| p.get_attribute("lists"))
-      .unwrap_or_else(|| "glossary".to_string())
+      doc
+        .findnode_at(
+          "ancestor::ltx:glossarylist[@lists] | ancestor::ltx:glossary[@lists]",
+          node,
+        )
+        .and_then(|p| p.get_attribute("lists"))
+        .unwrap_or_else(|| "glossary".to_string())
     });
     let key = node.get_attribute("key").unwrap_or_default();
     let phrases = doc.findnodes_at("ltx:glossaryphrase", Some(node));
@@ -507,7 +624,9 @@ impl Scan {
       let gkey = format!("GLOSSARY:{}:{}", list, key);
       let entry = self.db.register(&gkey, vec![]);
       for phrase in &phrases {
-        let role = phrase.get_attribute("role").unwrap_or_else(|| "label".to_string());
+        let role = phrase
+          .get_attribute("role")
+          .unwrap_or_else(|| "label".to_string());
         let prop_key = format!("phrase:{}", role);
         entry.set_value(&prop_key, Value::from(phrase.get_content()));
       }
@@ -534,7 +653,9 @@ impl Scan {
     }
     let id = id.or_else(|| parent_id.map(String::from));
     let property = node.get_attribute("property");
-    let value = node.get_attribute("resource").or_else(|| node.get_attribute("content"));
+    let value = node
+      .get_attribute("resource")
+      .or_else(|| node.get_attribute("content"));
 
     if let (Some(prop), Some(val), Some(id_str)) = (property, value, id) {
       let db_key = format!("ID:{}", id_str);
@@ -543,7 +664,13 @@ impl Scan {
     }
   }
 
-  fn declare_handler(&mut self, doc: &PostDocument, node: &Node, tag: &str, parent_id: Option<&str>) {
+  fn declare_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+  ) {
     let decl_type = node.get_attribute("type");
     let sort = node.get_attribute("sortkey");
     let decl_id = get_xml_id(node);
@@ -561,7 +688,9 @@ impl Scan {
           let mut rel = Vec::new();
           for sym in &syms {
             let meaning = sym.get_attribute("meaning").unwrap_or_default();
-            if meaning.starts_with("delimited-") { continue; }
+            if meaning.starts_with("delimited-") {
+              continue;
+            }
             if sym.get_attribute("role").as_deref() == Some("RELOP") {
               rel.push(meaning);
             } else {
@@ -582,7 +711,8 @@ impl Scan {
       }
     } else if decl_type.is_none() && parent_id.is_some() {
       if let Some(ref did) = decl_id {
-        let has_content = description.is_some() || doc.findnode_at("ltx:tags/ltx:tag", node).is_some();
+        let has_content =
+          description.is_some() || doc.findnode_at("ltx:tags/ltx:tag", node).is_some();
         if has_content {
           let dkey = format!("DECLARATION:local:{}", did);
           let mut sp = self.collect_common(doc, node, tag, parent_id);
@@ -608,9 +738,7 @@ impl Scan {
 }
 
 impl Processor for Scan {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     let root = match doc.get_document_element() {
@@ -625,14 +753,18 @@ impl Processor for Scan {
     });
 
     if self.db.lookup("SITE_ROOT").is_none() {
-      self.db.register("SITE_ROOT", vec![("id", Value::from(id.as_str()))]);
+      self
+        .db
+        .register("SITE_ROOT", vec![("id", Value::from(id.as_str()))]);
     }
 
     self.scan(&doc, &root, None);
 
     let loc = doc.site_relative_destination().unwrap_or_default();
     let doc_key = format!("DOCUMENT:{}", loc);
-    self.db.register(&doc_key, vec![("id", Value::from(id.as_str()))]);
+    self
+      .db
+      .register(&doc_key, vec![("id", Value::from(id.as_str()))]);
 
     log::info!("Scan: DBStatus: {}", self.db.status());
     Ok(vec![doc])
@@ -658,7 +790,8 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
 
 /// Get xml:id from a node, trying both attribute forms.
 fn get_xml_id(node: &Node) -> Option<String> {
-  node.get_attribute("xml:id")
+  node
+    .get_attribute("xml:id")
     .or_else(|| node.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
 }
 
@@ -674,7 +807,7 @@ fn title_text_content(node: &Node) -> String {
     match c.get_type() {
       Some(NodeType::TextNode) => {
         result.push_str(&c.get_content());
-      }
+      },
       Some(NodeType::ElementNode) => {
         let name = c.get_name();
         if name == "tag" {
@@ -689,8 +822,8 @@ fn title_text_content(node: &Node) -> String {
         } else {
           result.push_str(&title_text_content(&c));
         }
-      }
-      _ => {}
+      },
+      _ => {},
     }
     child = c.get_next_sibling();
   }

@@ -109,3 +109,341 @@ Add `Pragma` rules that check mathematical conventions (e.g., consistency of var
 ---
 
 > **Adding new principles:** Number sequentially. Include: principle statement, **Why** (rationale), **Examples** (good vs bad code), **When to apply** (scope/triggers).
+
+---
+
+## Critical Performance Evaluation
+
+The current optimization work is directionally strong: the codebase already has
+an interner-aware style guide, a standing corpus, release-mode profiling notes,
+and specific evidence for math parsing and graphics/post-processing as the two
+dominant outlier families. To make the project world class, the next step is to
+treat performance as an engineering contract with budgets, attribution, and
+regression ownership, not as a sequence of useful local sweeps.
+
+### What "world class" should mean
+
+1. **Strict service quality parity.** Optimizations must preserve LaTeXML
+   semantics, diagnostics, output structure, resource handling, and failure
+   behavior unless a deliberate compatibility decision is documented. Fast but
+   non-equivalent conversions are regressions.
+
+2. **Predictable tail latency.** Median speedups are not enough. Track p50, p90,
+   p99, timeout rate, peak RSS, and output status across representative arXiv
+   classes. The product goal is fewer slow and failed papers, not just a faster
+   average paper.
+
+3. **Phase-attributed budgets.** Every run should be explainable by phase:
+   loading, digestion, math parsing, rewriting, graphics, XSLT, serialization,
+   and external tools. A global wall-clock number is useful for release gating
+   but too blunt for engineering decisions.
+
+4. **Optimization acceptance requires proof.** Each substantial optimization
+   needs a before/after benchmark on the corpus, one targeted stress case, and
+   an output-quality check. If the win is workload-specific, document the
+   workload boundary.
+
+5. **Fast paths must be conservative.** Direct builders, caches, and skipped
+   work should have narrow guards and fall back to the canonical path. The
+   default should be correctness-first with telemetry proving when a shortcut
+   was used.
+
+### Critical Gaps
+
+1. **No automated performance gate.** The corpus is documented but not yet a
+   hard CI signal. Add a `perf-corpus` job that stores JSONL artifacts
+   containing git SHA, command line, wall time, user/sys time, max RSS, phase
+   timings, warning/error counts, and output hash. Fail only on clear regressions
+   initially; trend everything.
+
+2. **Insufficient phase telemetry.** The current notes rely on manual `perf`
+   runs and selected phase splits. Add always-available low-overhead timers
+   around major phases and expensive subphases: package loading, file lookup,
+   gullet expansion, stomach digestion, Marpa parse, rewrite rules, graphics
+   probes/conversions, XSLT, and archive I/O.
+
+3. **Math parser remains the highest-risk hot path.** `1011.1955` shows that
+   Marpa can dominate both wall time and RSS. The highest leverage work is not
+   more generic allocation cleanup; it is ambiguity control and conservative
+   pre-Marpa handling for repeated unambiguous shapes.
+
+4. **External graphics work needs job-level accounting.** The post phase can be
+   dominated by `gs`, ImageMagick, and Inkscape. Track per-asset command, source
+   type, dimensions/page, output type, elapsed time, exit status, and cache hit.
+   Without that, heuristics will look good on one fixture and regress another.
+
+5. **Startup and package-loading costs matter for batch service.** Single-paper
+   CLI runs hide opportunities from persistent workers, warmed package state,
+   shared resources, and lookup caches. Measure cold vs warm worker conversion
+   separately.
+
+6. **Memory budgets are under-specified.** Peak RSS is recorded in selected
+   notes but not budgeted. Add limits by workload class and track top allocation
+   families with heap profiling for math-heavy and graphics-heavy cases.
+
+7. **Output quality needs automated comparison.** Performance wins should be
+   tied to output invariants: status severity, missing citation count, missing
+   image count, MathML count, node count, link/resource count, and selected
+   visual smoke tests. This protects service quality while allowing aggressive
+   optimization.
+
+### Priority Order
+
+**P0: Build the measurement system.** Add structured phase telemetry, corpus
+automation, and output-quality summaries. This is prerequisite work: without it,
+every optimization remains partly anecdotal.
+
+**P0: Stabilize the current outliers.** Keep `1011.1955` as the math/parser
+sentinel and `1005.1610` as the graphics/post sentinel. Add at least one
+bibliography-heavy, one macro-expansion-heavy, and one large-archive paper to
+avoid overfitting to the current Tier A set.
+
+**P1: Reduce Marpa work.** Use parse audits to identify repeated shapes, add
+strictly guarded direct-XM builders for simple unambiguous math, then reduce
+grammar ambiguity where the audit shows combinatorial parse families. Start
+with exact repeated-formula caching and narrow fast paths for atoms, scripts,
+simple function calls, comma lists, and relation forms; every fast path must
+fall back to Marpa when context is uncertain.
+
+**P1: Make graphics conversion observable and reusable.** Cache conversions by
+source identity, page, DPI, destination type, and relevant options. Coalesce
+identical jobs within a document before spawning external tools. Keep per-asset
+telemetry so cache behavior and slow tools are obvious.
+
+**P1: Remove avoidable allocator pressure.** Continue interner and clone cleanup
+only where profiles show it. Favor APIs that pass `SymStr`, slices, and borrowed
+tokens through hot paths instead of allocating temporary `String`/`Vec` values.
+
+**P2: Optimize service deployment.** For production workers, evaluate warmed
+state, pooled resource discovery, persistent temp directories, bounded external
+tool parallelism, CPU isolation, and timeout policy. These can beat code-level
+micro-optimizations at service scale.
+
+### Optimization Acceptance Checklist
+
+Before merging a performance change:
+
+1. Record release-mode before/after numbers for the standing corpus.
+2. Include one targeted benchmark for the exact suspected bottleneck.
+3. Compare output status and lightweight structural quality metrics.
+4. Report wall time, user/sys time, max RSS, and phase timings.
+5. State the expected workload boundary and any fallback path.
+6. Keep the change easy to disable if it relies on a heuristic.
+
+For math-parser changes, also record parse count distribution, total math parse
+time, MathML/XMath count, and any formulas that switch between Marpa and a fast
+path. Structural math output must be reviewed on math-heavy fixtures before the
+change is treated as a win.
+
+---
+
+## Standing Performance Corpus
+
+The following papers form the regression corpus for engine / arena / gullet /
+marpa changes. Run with a direct idle-serial invocation (no `cortex_worker`,
+no parallel load):
+
+```bash
+/home/deyan/git/latexml-oxide/target/release/latexml_oxide \
+  --preload=ar5iv.sty \
+  --path=/home/deyan/git/ar5iv-bindings/bindings \
+  --dest=/tmp/out.html --timeout=60 <main.tex>
+```
+
+Papers live as zipped sources under `/home/deyan/data/10k_sandbox/<id>.zip`;
+`complex/si.tex` is in-tree at `latexml_oxide/tests/complex/si.tex`. The
+helper script `tools/run_perf_corpus.sh` unzips each into a tmpdir and
+records `exit` + wall-clock.
+
+### Round-17 baseline (2026-04-21)
+
+| paper          | main.tex                           | dt (s) | class / note                    |
+|----------------|------------------------------------|-------:|----------------------------------|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.67  | aa, birkmult (stub-guard fix)   |
+| 1011.1955      | 1011.1955.tex                      |  3.49  | amsart `\DeclareMathSymbol`     |
+| 1009.1431      | 1009.1431.tex                      |  2.11  | —                                |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.59  | —                                |
+| 0909.2656      | main.tex                           |  2.74  | —                                |
+| 0911.4739      | lhc7.tex                           |  5.04  | JHEP — over 3s                  |
+| 1005.1610      | OAM100507.tex                      |  7.38  | iopart — over 3s                |
+| 0803.0466      | IIpaper15.tex                      |  2.31  | aa                               |
+| complex/si.tex | si.tex                             |  2.06  | siunitx-heavy                    |
+
+### Round-17 refresh (2026-04-21, after `aa3c7c1bb` graphics parallelism)
+
+| paper          | main.tex                           | dt (s) | Δ vs baseline |
+|----------------|------------------------------------|-------:|--------------:|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.69  |   +3% (noise) |
+| 1011.1955      | 1011.1955.tex                      |  3.49  |         flat  |
+| 1009.1431      | 1009.1431.tex                      |  2.11  |         flat  |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.69  |   +4% (noise) |
+| 0909.2656      | main.tex                           |  1.95  |          −29% |
+| 0911.4739      | lhc7.tex                           |  1.71  |          −66% |
+| 1005.1610      | OAM100507.tex                      |  2.57  |          −65% |
+| 0803.0466      | IIpaper15.tex                      |  1.35  |          −42% |
+| complex/si.tex | si.tex                             |  2.22  |   +8% (noise) |
+
+All Tier A papers now under 3.5 s — round-17 outliers resolved.
+Commit `aa3c7c1bb` parallelises the Graphics phase's `convert` subprocess
+fork-execs via `std::thread::scope` (no new dependency) with a worker
+cap of `min(available_parallelism, 8)`.
+
+### Round-17 second refresh (2026-04-21, after .to_string sweep)
+
+Cumulative 61-site `arena::to_string` → `arena::with` / closure refactor
+across 21 files (commits `741809e6e` through `7a5433cd4`). The sweep
+targets wasteful `String` allocations whose resolved content was used
+for a single comparison, prefix check, or passed as `&str` — replacing
+each with a closure that resolves the interned SymStr in place.
+
+| paper          | main.tex                           | dt (s) | Δ vs prev |
+|----------------|------------------------------------|-------:|----------:|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.70  |     flat  |
+| 1011.1955      | 1011.1955.tex                      |  3.48  |     flat  |
+| 1009.1431      | 1009.1431.tex                      |  2.09  |     flat  |
+| 1008.4386      | genealogy_final_CPAM.tex           |  2.61  |      −3%  |
+| 0909.2656      | main.tex                           |  1.96  |     flat  |
+| 0911.4739      | lhc7.tex                           |  1.67  |      −2%  |
+| 1005.1610      | OAM100507.tex                      |  2.42  |      −6%  |
+| 0803.0466      | IIpaper15.tex                      |  1.25  |      −7%  |
+| complex/si.tex | si.tex                             |  2.03  |      −9%  |
+
+complex/si.tex is the gullet-bound workload where the arena churn
+matters most — consistent with the session 116-117 finding that
+arena-interner probes dominate. Tier A papers are math/figure-bound
+and benefit less per site, but the accumulated saving is still
+visible.
+
+### 2026-04-30 refresh and profiling notes
+
+Fresh release CLI build (`cargo build --release --bin latexml_oxide`) and
+idle-serial corpus run:
+
+| paper          | main.tex                           | dt (s) | current read                 |
+|----------------|------------------------------------|-------:|------------------------------|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.76  | small math-heavy control     |
+| 1011.1955      | 1011.1955.tex                      |  3.88  | math-parser bound            |
+| 1009.1431      | 1009.1431.tex                      |  2.19  | under 3 s                    |
+| 1008.4386      | genealogy_final_CPAM.tex           |  3.17  | near-threshold outlier       |
+| 0909.2656      | main.tex                           |  2.56  | under 3 s                    |
+| 0911.4739      | lhc7.tex                           |  2.74  | under 3 s                    |
+| 1005.1610      | OAM100507.tex                      |  4.37  | post/graphics bound          |
+| 0803.0466      | IIpaper15.tex                      |  2.30  | under 3 s                    |
+| complex/si.tex | si.tex                             |  1.28  | no longer current bottleneck |
+
+Phase splits on representative outliers:
+
+| paper     | mode                                    | wall | user CPU | max RSS |
+|-----------|-----------------------------------------|-----:|---------:|--------:|
+| 1005.1610 | XML only                                | 0.88s |   0.83s | 240 MB  |
+| 1005.1610 | HTML                                    | 3.14s |  12.38s | 235 MB  |
+| 1005.1610 | HTML, `--nomathparse`                  | 2.69s |  13.68s | 176 MB  |
+| 1005.1610 | HTML, `--graphics-svg-threshold-kb 200` | 3.67s |  14.30s | 235 MB  |
+| 1011.1955 | XML only                                | 3.60s |   3.42s | 533 MB  |
+| 1011.1955 | XML, `--nomathparse`                   | 1.28s |   1.20s | 295 MB  |
+
+Hardware-counter profiling was enabled after the first pass. Release `perf`
+samples were collected from an unstripped release binary
+(`CARGO_PROFILE_RELEASE_STRIP=none cargo build --release --bin latexml_oxide`);
+normal release builds still follow the checked-in profile settings.
+
+`perf stat -d` split the two current outlier families cleanly:
+
+| paper     | mode     | elapsed | CPUs | read |
+|-----------|----------|--------:|-----:|------|
+| 1011.1955 | XML      | 3.78s   | 0.99 | single-core math/body conversion; backend pressure visible |
+| 1005.1610 | HTML     | 2.83s   | 3.92 | parallel external graphics/post-processing dominates |
+
+Flat release samples on `1011.1955` put the main XML cost back in Marpa:
+`marpa_r_earleme_complete` (7.45%), `postdot_items_create` (6.59%),
+`bv_scan` (2.48%), `marpa_b_new` (2.42%), `transitive_closure` (2.08%),
+`marpa_g_precompute` (1.43%), and `_marpa_avl_probe` (1.14%). Alloc/free
+and libxml/XPath work are the next visible bands. With `--nomathparse`, the
+Marpa band disappears and the remaining samples are libxml wrapper/node
+access, allocator traffic, and kpathsea package lookup/hash setup.
+
+Flat release samples on `1005.1610` HTML mostly land in child processes:
+Ghostscript (`gs`) and ImageMagick `convert` spend visible cycles in
+`png_write_row`, zlib, libc allocation/string routines, and Ghostscript
+internals. Rust-side Marpa functions are below 1% flat in that run. The earlier
+debug Callgrind sample on `0906.1883` was consistent with the release Marpa
+symbols, but should remain directional only.
+
+### Future directions
+
+1. **Math fast paths and cache before Marpa.** `1011.1955` spends about 2.3 s and 238 MB
+   RSS in math parsing. Its parse audit is dominated by simple repeated
+   shapes (`p(n)`, `eta(z)`, comma lists, simple subscripted function calls).
+   First add exact-token parse caching keyed by the normalized math token
+   sequence plus relevant context (display/inline style and bindings that affect
+   math meaning). Then add conservative direct-XM builders for unambiguous common
+   shapes before `parse_marpa`: single atoms, numbers, `x_i`, `x^2`, `x_i^j`,
+   simple function calls such as `p(n)` / `eta(z)`, comma lists, parenthesized
+   atoms, and simple relation forms such as `x=0` / `i\leq n`. Guard these
+   narrowly and fall back to Marpa whenever an operator, macro, font binding, or
+   grouping form is uncertain. Release `perf` now confirms Marpa
+   recognizer/precompute symbols as the largest XML-only hot band.
+
+2. **Grammar ambiguity reduction.** Release `perf` and debug Callgrind both
+   point at Marpa recognizer/precompute internals even when tree enumeration is capped.
+   Prioritize grammar changes around function application, juxtaposition,
+   comma lists, scripts, and `ATOM` boundaries. Use `LATEXML_PARSE_AUDIT=1`
+   to rank shapes by total corpus cost, not single pathological examples. Track
+   parse count, elapsed time, surviving semantic choices, and repetition count.
+   Prefer semantic pruning for invalid combinations before broad grammar surgery:
+   reject impossible double application, malformed operator chains, mismatched
+   or empty fences, invalid script targets, and nonsensical differential/operator
+   combinations during tree construction.
+
+3. **Graphics conversion cache/telemetry.** `1005.1610` is post/graphics
+   bound, with release samples landing mostly in `gs` / `convert` PNG and zlib
+   work. The small-vector SVG path is workload-specific: it is excellent for
+   pathological vector PDFs but slower on this mixed/raster paper. Add per-asset
+   timing and cache conversion results by source path, page, DPI, destination
+   type, and graphics options before adding more heuristics. Coalesce identical
+   conversion jobs within a document before spawning external tools, then make
+   the hit/miss behavior visible in the phase report.
+
+4. **Package/dump and libxml residual cost.** After `--nomathparse`, the
+   remaining `1011.1955` samples are not one Rust loop; they are libxml wrapper
+   access, allocator traffic, kpathsea package lookup, and dump/package loading
+   call paths. Treat this as a startup/batch-throughput direction: measure
+   whether preloaded state snapshots, package lookup caching, or lower-allocation
+   dump parsing help before optimizing individual call sites.
+
+5. **Allocation cleanup stays profile-driven.** The earlier `.to_string`
+   sweep paid off, but further arena/state/Tokens cleanup should target a
+   measured hot band. Candidate APIs remain `*_sym` state accessors,
+   `Tokens` numeric/string conversions, and deep `Stored` / `Tokens` copies.
+
+### Regression trigger
+
+Any corpus entry drifting wall-clock **> +15%** from its last recorded
+baseline between commits is a regression signal. Record the new row in a
+dated sub-heading here (don't overwrite); keep the old baseline so the drift
+is visible in history.
+
+### Validation: pathological-for-ImageMagick PDFs (issue #902)
+
+The vector-SVG graphics path (opt-in via `--graphics-svg-threshold-kb N`,
+round 17) is validated against `fig8.pdf` from
+[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
+(attached from arxiv:1807.01606), a 41 KB vector-authored PDF that
+`convert` rasterises absurdly slowly.
+
+End-to-end through `latexml_oxide --post` on a minimal 4-line document
+containing only `\includegraphics{fig8.pdf}`:
+
+| path                                | Graphics phase | total wall |
+|-------------------------------------|---------------:|-----------:|
+| default (ImageMagick `convert`)     |       32.4 s   |    32.4 s  |
+| `--graphics-svg-threshold-kb 200`   |       0.25 s   |     0.3 s  |
+| **speedup**                         |     **130×**   |   **111×** |
+
+arxiv:1807.01606 has 15 such PDFs; serial convert would be ~8 minutes
+(likely times out). Inkscape path: 15 × 0.25 s ≈ 4 s.
+
+Regression coverage: `test_vector_svg_pathological_convert_case` in
+`latexml_post/tests/integration.rs` asserts the inkscape path completes
+in <5 s on this fixture (silently skipped when inkscape is absent from
+PATH).

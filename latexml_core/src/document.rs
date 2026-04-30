@@ -17,9 +17,7 @@ use std::fmt::Write as _;
 use std::rc::Rc;
 
 use crate::TexMode;
-use crate::util::radix::radix_alpha;
 use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::pin;
 use crate::common::error::*;
 use crate::common::font::{FONT_TEXT_DEFAULT, Font};
 use crate::common::locator::Locator;
@@ -30,7 +28,9 @@ use crate::common::xml::{self, XML_NS, XPath};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
+use crate::pin;
 use crate::state;
+use crate::util::radix::radix_alpha;
 
 use crate::Tbox;
 use crate::document::resource::Resource;
@@ -117,7 +117,7 @@ impl Object for Document {
   }
 }
 
-/// Attachment policy for `Document::add_comment_ffi`. Kept module-local.
+/// Attachment policy for `Document::add_comment`. Kept module-local.
 enum Placement_ {
   AppendChild,
   PrevSibling,
@@ -132,7 +132,15 @@ impl Document {
     // documents (e.g. arxiv 0805.2376 with deep dcpic commutative-diagram
     // sharing), natural ref counts exceed the crate's default of 2 by
     // several orders of magnitude. Raise to 8192 to accommodate.
-    set_node_rc_guard(8192);
+    //
+    // libxml-rs implements this as a `pub static mut NODE_RC_MAX_GUARD:
+    // usize` with `unsafe { NODE_RC_MAX_GUARD = value; }` — concurrent
+    // writes from N test threads each constructing their own Document
+    // are a classic data race on a `static mut`. Gate the write through
+    // a `std::sync::Once` so it happens exactly once per process; reads
+    // from `Node::mut_node` then see a stable value.
+    static GUARD_INIT: std::sync::Once = std::sync::Once::new();
+    GUARD_INIT.call_once(|| set_node_rc_guard(8192));
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,
@@ -242,6 +250,19 @@ impl Document {
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
   pub fn finalize(&mut self) -> Result<()> {
+    // Belt-and-suspenders idstore rebuild before prune_xmduals.
+    // Originally guarded a SIGSEGV on arxiv 1605.08055 where
+    // `mark_xmnode_visibility` dereferenced dangling lookup_id
+    // entries while recursing through XMRef nodes. Cycle 72 audited
+    // the 5 hazard call sites the earlier comment listed (math-parser
+    // `replace_tree` at parser.rs:456/690, `unbind_node` loops at
+    // parser.rs:639/856 and rewrite.rs:522); all 5 now have proper
+    // unrecord_node_ids / remove_node-cascade coverage. The rebuild
+    // call is retained as a safety net pending empirical
+    // 10k-sandbox verification on 1605.08055 — see SYNC_STATUS.md
+    // D3b [~] entry. A fresh DOM walk drops any surviving dangling
+    // entries; duplicates in DOM get modify_id via record_node_ids.
+    self.rebuild_idstore_from_dom()?;
     self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
@@ -294,10 +315,7 @@ impl Document {
     // visited during the recursive descent.
     let plen = prefix.len();
     for (key, _) in node.get_attributes() {
-      if key.len() > plen
-        && key.starts_with(prefix)
-        && key.as_bytes()[plen] == b':'
-      {
+      if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
         return true;
       }
     }
@@ -358,12 +376,12 @@ impl Document {
     enum Work {
       Enter(Node),
       PostElement {
-        child: Node,
-        parent_qname: SymStr,
+        child:         Node,
+        parent_qname:  SymStr,
         was_forcefont: bool,
       },
       PostWork {
-        node: Node,
+        node:              Node,
         /// Bookkeeping attribute names captured during Enter, before tree modifications
         bookkeeping_attrs: Vec<String>,
       },
@@ -398,8 +416,7 @@ impl Document {
           // Perl: parent.insertAfter(XML::LibXML::Comment.new(comment), node)
 
           // Use boxed HashMap to reduce work item size — Font is ~500 bytes per entry
-          let mut pending_declaration: Box<HashMap<String, (String, Font)>> =
-            Box::default();
+          let mut pending_declaration: Box<HashMap<String, (String, Font)>> = Box::default();
 
           if self.has_node_font(&current) {
             let desired_font = self.get_node_font(&current);
@@ -424,8 +441,10 @@ impl Document {
                   // Merge and sort class values alphabetically, matching Perl's behavior
                   if let Some(ovalue) = current.get_attribute("class") {
                     let new_s = arena::with(value, |s| s.to_string());
-                    let mut classes: Vec<&str> =
-                      new_s.split_whitespace().chain(ovalue.split_whitespace()).collect();
+                    let mut classes: Vec<&str> = new_s
+                      .split_whitespace()
+                      .chain(ovalue.split_whitespace())
+                      .collect();
                     classes.sort();
                     classes.dedup();
                     value = arena::pin(classes.join(" "));
@@ -497,9 +516,7 @@ impl Document {
                 pending_declaration.remove(&key);
               }
               if can_contain(&current, FONT_ELEMENT_NAME) && !pending_declaration.is_empty() {
-                if let Some(mut text) =
-                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])?
-                {
+                if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])? {
                   for (key, (value, _properties)) in pending_declaration.iter() {
                     self.set_attribute(&mut text, key, value)?;
                   }
@@ -540,14 +557,28 @@ impl Document {
         },
         Work::PostWork {
           mut node,
-          bookkeeping_attrs,
+          bookkeeping_attrs: _captured_at_enter,
         } => {
-          // Remove bookkeeping attributes that were captured during Enter.
-          // Capture total attribute count before removal to determine if
-          // the node will have empty attributes after bookkeeping removal.
-          let total_attrs = node.get_attributes().len();
+          // Mirrors Perl `Document.pm:452`: at finalize time, ANY attribute
+          // whose name starts with `_` is internal bookkeeping and gets
+          // stripped. Re-derive the set at PostWork time rather than relying
+          // on the captured-at-Enter snapshot, because descendant
+          // `generate_id` calls can write `_ID_counter_<prefix>_` attributes
+          // ONTO the current node (their nearest-id-bearing ancestor) during
+          // child traversal — those late-added attrs were missing from the
+          // Enter snapshot and would otherwise leak into the output XML,
+          // causing duplicate xml:id collisions in the post-processing
+          // libxml2 validator (1312.5864 cluster: 70× `S8.T5.m2241 already
+          // defined`, where the Math element carried `_ID_counter__="1"`
+          // populated post-Enter).
+          let attrs_now = node.get_attributes();
+          let total_attrs = attrs_now.len();
+          let bookkeeping_attrs: Vec<&String> = attrs_now
+            .keys()
+            .filter(|name| name.starts_with('_'))
+            .collect();
           let bookkeeping_count = bookkeeping_attrs.len();
-          for name in &bookkeeping_attrs {
+          for name in bookkeeping_attrs {
             let _ = node.remove_attribute(name);
           }
           // If all attributes were bookkeeping, the node now has empty attrs.
@@ -689,10 +720,7 @@ impl Document {
   /// is returned to `reusable_node_buffers` (empty but with capacity intact)
   /// so the next `init_constructed_nodes` can reuse it without allocating.
   fn close_constructed_nodes(&mut self) {
-    let outer = self
-      .localized_constructed_nodes
-      .pop()
-      .unwrap_or_default();
+    let outer = self.localized_constructed_nodes.pop().unwrap_or_default();
     let mut inner = std::mem::replace(&mut self.constructed_nodes, outer);
     for n in inner.drain(..) {
       self.record_constructed_node(&n);
@@ -906,10 +934,14 @@ impl Document {
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
-    Debug!("document","close_element",
-      s!("Close element {:?} at {:?}",
-      qname,
-      self.document.node_to_string(&self.node))
+    Debug!(
+      "document",
+      "close_element",
+      s!(
+        "Close element {:?} at {:?}",
+        qname,
+        self.document.node_to_string(&self.node)
+      )
     );
     let qsym = arena::pin(qname);
     self.close_text_internal()?;
@@ -919,16 +951,16 @@ impl Document {
       let t = get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
-      if t == qsym
-        && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch"))
-      {
+      if t == qsym && !(t == pin!("ltx:text") && node.has_attribute("_fontswitch")) {
         break;
       }
       if !can_auto_close(&node) {
         cant_close.push(node.clone());
       }
       match node.get_parent() {
-        Some(parent) => { node = parent; }
+        Some(parent) => {
+          node = parent;
+        },
         None => break, // detached node — treat as not found
       }
     }
@@ -1119,10 +1151,10 @@ impl Document {
         Some(parent) => {
           n = parent;
           t = n.get_type();
-        }
+        },
         None => {
           t = None; // detached node — stop walking
-        }
+        },
       }
     }
 
@@ -1274,7 +1306,11 @@ impl Document {
         let local_name = node.get_name();
         let tag = if let Some(ns) = node.get_namespace() {
           let prefix = ns.get_prefix();
-          if prefix.is_empty() { local_name } else { s!("{}:{}", prefix, local_name) }
+          if prefix.is_empty() {
+            local_name
+          } else {
+            s!("{}:{}", prefix, local_name)
+          }
         } else {
           local_name
         };
@@ -1427,24 +1463,24 @@ impl Document {
   /// on the root element based on which RDFa prefixes are actually used.
   fn set_rdfa_prefixes(&mut self) {
     // Collect the RDFa prefix mapping from state
-    let prefix_map: HashMap<String, String> =
-      state::with_mapping_keys("RDFa_prefixes", |keys| {
-        let mut map = HashMap::default();
-        for key_sym in keys {
-          let key_str = arena::to_string(key_sym);
-          if let Some(stored) = state::lookup_mapping("RDFa_prefixes", &key_str) {
-            map.insert(key_str, stored.to_string());
-          }
+    let prefix_map: HashMap<String, String> = state::with_mapping_keys("RDFa_prefixes", |keys| {
+      let mut map = HashMap::default();
+      for key_sym in keys {
+        let key_str = arena::to_string(key_sym);
+        if let Some(stored) = state::lookup_mapping("RDFa_prefixes", &key_str) {
+          map.insert(key_str, stored.to_string());
         }
-        map
-      });
+      }
+      map
+    });
     if prefix_map.is_empty() {
       return;
     }
 
-    let non_rdf_prefixes: HashSet<&str> =
-      ["http", "https", "ftp"].iter().copied().collect();
-    let rdf_term_attrs = ["about", "resource", "property", "typeof", "rel", "rev", "datatype"];
+    let non_rdf_prefixes: HashSet<&str> = ["http", "https", "ftp"].iter().copied().collect();
+    let rdf_term_attrs = [
+      "about", "resource", "property", "typeof", "rel", "rev", "datatype",
+    ];
 
     // Build XPath to find elements with any RDFa term attribute
     let xpath = format!(
@@ -1552,44 +1588,23 @@ impl Document {
     Ok(self.node.clone())
   }
 
-  /// Safety-contract'd FFI: create a libxml2 comment node and attach it to
-  /// `anchor` according to the supplied Placement. Called from
-  /// `insert_comment`. Isolated here so the unsafe block lives in exactly
-  /// one place with a reviewed contract.
-  ///
-  /// Safety:
-  /// - `doc_ptr` must be a valid, live libxml2 document pointer (we obtained
-  ///   it from a Rust-managed `XmlDocument` that has not been dropped).
-  /// - `anchor` must be a node in that document.
-  /// - The C string for the comment text is constructed with CString::new,
-  ///   which rejects embedded NULs; we pass the ptr while the CString is
-  ///   still alive.
-  /// - libxml2 takes ownership of `comment_ptr` after xmlAddChild /
-  ///   xmlAddPrevSibling, so we do not need to free it ourselves.
-  fn add_comment_ffi(
-    doc_ptr: *mut libxml::bindings::_xmlDoc,
-    anchor: &Node,
-    comment_text: &str,
-    placement: Placement_,
-  ) {
-    use std::ffi::CString;
-    let Ok(c_text) = CString::new(comment_text) else { return };
-    unsafe {
-      let comment_ptr = libxml::bindings::xmlNewDocComment(
-        doc_ptr,
-        c_text.as_ptr() as *const u8,
-      );
-      if comment_ptr.is_null() {
-        return;
-      }
-      match placement {
-        Placement_::AppendChild => {
-          libxml::bindings::xmlAddChild(anchor.node_ptr(), comment_ptr);
-        },
-        Placement_::PrevSibling => {
-          libxml::bindings::xmlAddPrevSibling(anchor.node_ptr(), comment_ptr);
-        },
-      }
+  /// Create a libxml2 comment node and attach it to `anchor` according to
+  /// the supplied Placement. Called from `insert_comment`. Thin wrapper
+  /// around the safe rust-libxml API (`Node::new_comment` +
+  /// `add_child`/`add_prev_sibling`) — earlier versions of this method
+  /// made direct FFI calls, which is now forbidden by the D3b policy.
+  fn add_comment(document: &XmlDoc, anchor: &Node, comment_text: &str, placement: Placement_) {
+    let Ok(mut comment) = Node::new_comment(comment_text, document) else {
+      return;
+    };
+    let mut anchor = anchor.clone();
+    match placement {
+      Placement_::AppendChild => {
+        let _ = anchor.add_child(&mut comment);
+      },
+      Placement_::PrevSibling => {
+        let _ = anchor.add_prev_sibling(&mut comment);
+      },
     }
   }
 
@@ -1608,8 +1623,8 @@ impl Document {
     let comment_text = s!(" {} ", clean);
 
     if self.node.get_type() == Some(NodeType::DocumentNode) {
-      Self::add_comment_ffi(
-        self.document.doc_ptr(),
+      Self::add_comment(
+        &self.document,
         &self.node,
         &comment_text,
         Placement_::AppendChild,
@@ -1635,23 +1650,23 @@ impl Document {
           before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
 
         if before_is_comment {
-          Self::add_comment_ffi(
-            self.document.doc_ptr(),
+          Self::add_comment(
+            &self.document,
             &node,
             &comment_text,
             Placement_::AppendChild,
           );
         } else {
-          Self::add_comment_ffi(
-            self.document.doc_ptr(),
+          Self::add_comment(
+            &self.document,
             &prev_node,
             &comment_text,
             Placement_::PrevSibling,
           );
         }
       } else {
-        Self::add_comment_ffi(
-          self.document.doc_ptr(),
+        Self::add_comment(
+          &self.document,
           &node,
           &comment_text,
           Placement_::AppendChild,
@@ -1685,18 +1700,10 @@ impl Document {
         && (node_type == Some(NodeType::DocumentNode)
           || (node_type == Some(NodeType::ElementNode) && !can_contain(&self.node, "#PCDATA")))
       {
-        if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-          let nname = with_node_qname(&self.node, |n| n.to_string());
-          let cc = can_contain(&self.node, "#PCDATA");
-          eprintln!("DEBUG open_text SKIP spaces: text={:?} node_type={node_type:?} node={nname} can_contain_pcdata={cc}", text);
-        }
         return Ok(None);
       }
     }
     if matches!(&font.family.as_deref(), Some("nullfont")) {
-      if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-        eprintln!("DEBUG open_text SKIP nullfont: text={:?}", text);
-      }
       return Ok(None);
     };
     Debug!(
@@ -1808,7 +1815,7 @@ impl Document {
       None => {
         // Node has been detached — nothing to close up to.
         return Ok(());
-      }
+      },
     };
     let mut n = self.close_text_internal()?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
@@ -1818,11 +1825,13 @@ impl Document {
         break;
       }
       match n.get_parent() {
-        Some(parent) => { n = parent; }
+        Some(parent) => {
+          n = parent;
+        },
         None => {
           // Node was detached during close/collapse — bail out safely.
           break;
-        }
+        },
       }
     }
     self.set_node(&closeto);
@@ -1881,18 +1890,25 @@ impl Document {
       // Normalize key: get_attributes() returns "id" for xml:id attributes.
       // Check both "xml:id" and bare "id" with XML namespace for the special case.
       let is_xml_id = key.as_str() == "xml:id"
-        || (key.as_str() == "id" && from.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some());
+        || (key.as_str() == "id"
+          && from
+            .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+            .is_some());
       let effective_key = if is_xml_id { "xml:id" } else { key.as_str() };
       let is_forced = force.is_some_and(|f| f.contains(effective_key));
       // Special case attributes
       if is_xml_id {
-        // Use the replacement id
+        // Use the replacement id. record_id_with_node returns a
+        // deduplicated id when a DIFFERENT node already claims the
+        // same one; must use the return value, not the original `val`.
         let to_has_id = to.has_attribute("xml:id")
-          || to.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace").is_some();
+          || to
+            .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+            .is_some();
         if !to_has_id || is_forced {
           self.unrecord_id(val);
-          self.record_id_with_node(val, to);
-          to.set_attribute("xml:id", val)?;
+          let deduped = self.record_id_with_node(val, to);
+          to.set_attribute("xml:id", &deduped)?;
         }
       } else if MERGE_ATTRIBUTE_SPACEJOIN.contains(key.as_str()) {
         self.add_ss_values(to, key, val)?;
@@ -1923,13 +1939,6 @@ impl Document {
   fn open_text_internal(&mut self, text: &str) -> Result<Node> {
     if text.is_empty() {
       return Ok(self.node.clone());
-    }
-    if std::env::var("LATEXML_DEBUG_ALIGN").is_ok() && text.contains('\u{2003}') {
-      let nt = self.node.get_type();
-      let nn = with_node_qname(&self.node, |n| n.to_string());
-      let has_ns = HAS_NONSPACE_RE.is_match(text);
-      let cc = if nt == Some(NodeType::ElementNode) { can_contain(&self.node, "#PCDATA") } else { false };
-      eprintln!("DEBUG open_text_internal: text={:?} node_type={nt:?} node={nn} has_nonspace={has_ns} can_contain={cc}", text);
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
@@ -2030,18 +2039,32 @@ impl Document {
         );
         let same_as_last = if !same_as_orig {
           if let DigestedData::List(ref list) = orig.data() {
-            list.borrow().boxes.last().map(|b| std::ptr::eq(
-              thisbox.data() as *const DigestedData,
-              b.data() as *const DigestedData,
-            )).unwrap_or(false)
-          } else { false }
-        } else { false };
+            list
+              .borrow()
+              .boxes
+              .last()
+              .map(|b| {
+                std::ptr::eq(
+                  thisbox.data() as *const DigestedData,
+                  b.data() as *const DigestedData,
+                )
+              })
+              .unwrap_or(false)
+          } else {
+            false
+          }
+        } else {
+          false
+        };
         if !same_as_orig && !same_as_last {
           // Perl: List($origbox, $box, mode => $origbox->getProperty('mode'))
-          let mode = orig.get_property("mode")
-            .and_then(|m| if let Stored::String(s) = m.as_ref() {
+          let mode = orig.get_property("mode").and_then(|m| {
+            if let Stored::String(s) = m.as_ref() {
               Some(*s)
-            } else { None });
+            } else {
+              None
+            }
+          });
           let mut new_list = List::new(vec![orig.clone(), thisbox.clone()]);
           if let Some(mode_str) = mode {
             new_list.properties.insert("mode", Stored::String(mode_str));
@@ -2053,8 +2076,10 @@ impl Document {
       }
       // Propagate to autoopened ancestors
       match node.get_parent() {
-        Some(parent) if parent.get_type() == Some(NodeType::ElementNode)
-          && parent.get_attribute("_autoopened").is_some() => {
+        Some(parent)
+          if parent.get_type() == Some(NodeType::ElementNode)
+            && parent.get_attribute("_autoopened").is_some() =>
+        {
           node = parent;
         },
         _ => break,
@@ -2473,9 +2498,18 @@ impl Document {
         // SVG elements use plain id, not xml:id (matching Perl behavior)
         node.set_attribute(key, value)?;
       } else {
-        // LaTeXML elements: always use xml:id
-        self.record_id_with_node(value, node);
-        node.set_attribute("xml:id", value)?;
+        // LaTeXML elements: always use xml:id.
+        // record_id_with_node detects duplicates and returns a
+        // deduplicated id when a DIFFERENT node already claims the
+        // same id. Previously we discarded that return value and
+        // wrote the original `value`, which meant libxml2 saw two
+        // nodes with the same xml:id. The post-processing scan's
+        // libxml2 idHash lookups then ran O(n²) on any document
+        // with enough duplicates (see 1106.1389 / KNOWN_PERL_ERRORS
+        // #13: 14 duplicate-id sites from \addtocounter{equation}{-1}
+        // + \subequations inside a \newtheorem[equation] theorem).
+        let deduped = self.record_id_with_node(value, node);
+        node.set_attribute("xml:id", &deduped)?;
       }
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
@@ -2535,7 +2569,8 @@ impl Document {
       } else {
         let mut sorted = updated;
         sorted.sort();
-        node.set_attribute(key, &sorted.join(" "))
+        node
+          .set_attribute(key, &sorted.join(" "))
           .unwrap_or_default();
       }
     }
@@ -2603,10 +2638,7 @@ impl Document {
       Info!(
         "malformed",
         "id",
-        s!(
-          "Duplicated attribute xml:id. Using id='{}'",
-          new_id
-        )
+        s!("Duplicated attribute xml:id. Using id='{}'", new_id)
       );
       new_id
     } else {
@@ -2632,23 +2664,50 @@ impl Document {
     } else {
       None
     };
-    if let Some(prev) = prev_opt {
+    let final_id = if let Some(prev) = prev_opt {
       let badid = id;
-      let id = self.modify_id(id.to_owned());
+      let new_id = self.modify_id(id.to_owned());
       let message = s!(
         "Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
-        id,
+        new_id,
         self.document.node_to_string(node),
         badid,
         self.document.node_to_string(&prev)
       );
       Info!("malformed", "id", message);
-    }
-    self.idstore.insert(id.to_string(), node.clone());
-    id.to_string()
+      new_id
+    } else {
+      id.to_string()
+    };
+    self.idstore.insert(final_id.clone(), node.clone());
+    final_id
   }
 
   pub fn unrecord_id(&mut self, id: &str) { self.idstore.remove(id); }
+
+  /// Guardian-safe unlink: walk `node`'s subtree invalidating every `xml:id`
+  /// idstore entry, then detach it from its parent. Use this in preference
+  /// to a raw `node.unlink()` anywhere the node *might* carry an `xml:id`
+  /// (subtree reshuffles in math-parser, post-processing cleanup, etc.),
+  /// to prevent the dangling-Node class of bug that produced the 1605.08055
+  /// Finalizing-phase SIGSEGV (see SYNC_STATUS.md D3b).
+  ///
+  /// This is the unlink-only half of `remove_node` — it does **not** adjust
+  /// `self.node` / the insertion point, which is correct for callers that
+  /// intend to re-parent the unlinked subtree elsewhere (the common case).
+  /// Callers that want the insertion-point bookkeeping should use
+  /// `remove_node` instead.
+  pub fn safe_unlink(&mut self, mut node: Node) {
+    if node.get_type() == Some(NodeType::ElementNode) {
+      if let Some(id) = node.get_attribute_ns("id", XML_NS) {
+        self.unrecord_id(&id);
+      }
+      for child in node.get_child_nodes() {
+        self.remove_node_aux(child);
+      }
+    }
+    node.unlink();
+  }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
   pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
@@ -2669,6 +2728,30 @@ impl Document {
         self.unrecord_id(&id);
       }
     }
+  }
+
+  /// Discard the in-memory `idstore` cache and rebuild it from the
+  /// current DOM state. Historically guarded the 1605.08055 SIGSEGV
+  /// where `mark_xmnode_visibility` dereferenced dangling lookup_id
+  /// entries while recursing through XMRef targets.
+  ///
+  /// As of cycle 72, the 5 call sites that previously dropped nodes
+  /// without unrecord_id — math-parser `replace_tree` at
+  /// parser.rs:456/690 (cascades via remove_node) and `unbind_node`
+  /// loops at parser.rs:639/856 + rewrite.rs:522 (all have
+  /// preceding unrecord_node_ids guards) — are ID-safe. This rebuild
+  /// is retained as a belt-and-suspenders probe until the
+  /// 1605.08055 verification per SYNC_STATUS.md D3b lands.
+  ///
+  /// The rebuild is a DOM walk, so live id uniqueness is restored
+  /// alongside — duplicates already in DOM are resolved with
+  /// `modify_id`, matching `record_node_ids` semantics.
+  pub fn rebuild_idstore_from_dom(&mut self) -> Result<()> {
+    self.idstore.clear();
+    if let Some(root) = self.document.get_root_element() {
+      self.record_node_ids(&root)?;
+    }
+    Ok(())
   }
 
   /// Get a new, related, but unique id.
@@ -2741,7 +2824,23 @@ impl Document {
     Ok(())
   }
 
-  fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis: bool) -> Result<()> {
+  fn mark_xmnode_visibility_aux(&self, node: Node, cvis: bool, pvis: bool) -> Result<()> {
+    // Recurses to math-tree depth via XMDual/XMRef-following + element-
+    // child fan-out. Deep grammar-ambiguous papers (sandbox 0711.4787
+    // et al, #17) hit Rust's 8 MB main-thread stack here during the
+    // `Finalizing...` phase (via prune_xmduals → mark_xmnode_visibility).
+    // Grow the stack on demand instead of overflowing.
+    stacker::maybe_grow(64 * 1024, 4 * 1024 * 1024, move || {
+      self.mark_xmnode_visibility_aux_inner(node, cvis, pvis)
+    })
+  }
+
+  fn mark_xmnode_visibility_aux_inner(
+    &self,
+    mut node: Node,
+    cvis: bool,
+    mut pvis: bool,
+  ) -> Result<()> {
     if (!cvis || node.has_attribute("_cvis")) && (!pvis || node.has_attribute("_pvis")) {
       return Ok(());
     }
@@ -2929,7 +3028,7 @@ impl Document {
         NewArg::Pair(c_arg, mut p_arg) => {
           self.merge_attributes(&c_arg, &mut p_arg, Some(&CONTENT_TRANSFER))?;
           p_arg
-        }
+        },
       };
       node.unlink();
       compact_apply.add_child(&mut node)?;
@@ -2958,8 +3057,12 @@ impl Document {
           tref.set_attribute("idref", &branchid)?;
         } // Change dualid refs to branchid
       } else {
-        branch.set_attribute("xml:id", &dualid)?; // Just use same ID on the branch
-        self.record_id_with_node(&dualid, &branch);
+        // Assign the dual's id to the branch. Record first so we
+        // receive a deduplicated id if something else claimed it
+        // between the `unrecord_id` above and now — write the
+        // deduped value, not the original.
+        let deduped = self.record_id_with_node(&dualid, &branch);
+        branch.set_attribute("xml:id", &deduped)?;
       }
     }
     // Direct DOM swap: Perl uses replaceChild (no re-creation, no hooks fired twice)
@@ -3053,7 +3156,10 @@ impl Document {
 
   /// Decode a _font hash string to a Font object
   pub fn decode_font(&self, font_hash: &str) -> Option<&Font> {
-    font_hash.parse::<u64>().ok().and_then(|id| self.node_fonts.get(&id))
+    font_hash
+      .parse::<u64>()
+      .ok()
+      .and_then(|id| self.node_fonts.get(&id))
   }
 
   pub fn has_node_font(&self, node: &Node) -> bool {
@@ -3164,8 +3270,8 @@ impl Document {
     // Font resolution priority (matching Perl's openElement/openElementAt):
     // 1. Explicit font_opt parameter
     // 2. _font attribute in attributes hash
-    // 3. box_to_absorb.get_font() — the font of the current box being absorbed
-    //    (Perl: $attributes{_box} = $LaTeXML::BOX; $font = $attributes{_box}->getFont)
+    // 3. box_to_absorb.get_font() — the font of the current box being absorbed (Perl:
+    //    $attributes{_box} = $LaTeXML::BOX; $font = $attributes{_box}->getFont)
     // 4. Insertion point's font (final fallback, handled later)
     if font_opt.is_none() {
       if let Some(ref attrs) = attributes {
@@ -3316,7 +3422,8 @@ impl Document {
                   // Namespace already exists on root — find and reuse it.
                   // We search declarations then fall back to creating on the
                   // insertion point (which inherits from root).
-                  let found = root.get_namespace_declarations()
+                  let found = root
+                    .get_namespace_declarations()
                     .into_iter()
                     .find(|ns| ns.get_prefix() == prefix);
                   if found.is_none() {
@@ -3345,7 +3452,9 @@ impl Document {
       // try to find the root's default namespace first. This prevents inheriting
       // the parent's namespace when inside a different namespace context (e.g.,
       // SVG elements getting svg: prefix on LaTeXML elements like Math/XMath).
-      let root_ns = self.document.get_root_element()
+      let root_ns = self
+        .document
+        .get_root_element()
         .and_then(|r| r.get_namespace());
       let parent_ns = point.get_namespace();
       if let Some(ref rns) = root_ns {
@@ -3491,7 +3600,7 @@ impl Document {
                     fresh = self.modify_id(val.clone());
                     id_map.insert(val.clone(), fresh.clone());
                     id_map.get(&val).unwrap()
-                  }
+                  },
                 };
                 let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
@@ -3573,10 +3682,29 @@ impl Document {
   //     with the low-level libxml layer. I've encountered segfaults here.
   pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<()> {
     if let Some(_parent) = node.get_parent() {
+      // libxml2's xmlAddNextSibling merges consecutive text nodes: when both
+      // the reference sibling and the new node are TextNode, it appends the
+      // new node's content to the reference node and frees the new node. The
+      // Rust wrapper doesn't surface the merged result, so naively advancing
+      // `c0_opt` to `with_node` would capture a pointer to freed memory,
+      // producing silent data loss for the third+ insertion and eventually
+      // a libxml2 SIGSEGV when the dangling pointer is re-traversed (e.g.
+      // during a later XPath evaluation). Detect the text-text case and
+      // coalesce in-place instead.
       let mut c0_opt: Option<Node> = None;
       for mut with_node in with.into_iter() {
         with_node.unlink();
+        let is_text = with_node.get_type() == Some(NodeType::TextNode);
         if let Some(mut c0) = c0_opt {
+          let c0_is_text = c0.get_type() == Some(NodeType::TextNode);
+          if is_text && c0_is_text {
+            let existing = c0.get_content();
+            let added = with_node.get_content();
+            c0.set_content(&format!("{existing}{added}"))?;
+            // with_node is still a standalone (unlinked) text node; drop it.
+            c0_opt = Some(c0);
+            continue;
+          }
           c0.add_next_sibling(&mut with_node)?;
         } else {
           // first node, swap in
@@ -3769,7 +3897,10 @@ impl Document {
     let key = "labels";
     // Perl: start from lastChild of current node if it's an element
     let start = if self.node.get_type() == Some(NodeType::ElementNode) {
-      self.node.get_last_child().unwrap_or_else(|| self.node.clone())
+      self
+        .node
+        .get_last_child()
+        .unwrap_or_else(|| self.node.clone())
     } else {
       self.node.clone()
     };
@@ -3880,7 +4011,16 @@ impl Document {
         prefix = "id";
       }
 
-      let ctrkey = s!("_ID_counter_") + prefix + "_";
+      // Perl `Package.pm:939` (`'_ID_counter_' . ($prefix ? $prefix . '_' : '')`)
+      // — empty prefix uses `_ID_counter_` with a single trailing underscore,
+      // not `_ID_counter__`. Matters for interop with code that reads the
+      // attribute by exact name (e.g. `Base_XMath.pool.ltxml:940` reads
+      // `_ID_counter_` for the empty-prefix counter).
+      let ctrkey = if prefix.is_empty() {
+        s!("_ID_counter_")
+      } else {
+        s!("_ID_counter_") + prefix + "_"
+      };
       let a_ctr = ancestor.get_attribute(&ctrkey).unwrap_or_else(|| s!("0"));
 
       let ctr_int = 1 + a_ctr.parse::<u32>().unwrap_or(0);
@@ -3937,12 +4077,15 @@ impl Document {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
-          let mut attributes: HashMap<String, String> = child.get_attributes().into_iter().collect();
+          let mut attributes: HashMap<String, String> =
+            child.get_attributes().into_iter().collect();
           // Perl appendTree: REMOVE xml:id from source node before re-creation.
           // This prevents duplicate ID registration. The ID will be re-registered
           // by open_element_at when the new node is created with the same ID.
           if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
-            attributes.entry("xml:id".to_string()).or_insert(xmlid.clone());
+            attributes
+              .entry("xml:id".to_string())
+              .or_insert(xmlid.clone());
             // Unrecord before re-creation (Perl: $child->removeAttribute('xml:id') + unRecordID)
             self.unrecord_id(&xmlid);
           }
@@ -4153,20 +4296,19 @@ pub fn can_auto_close(node: &Node) -> bool {
   // OR it has autoClose set on tag properties
   match node.get_type() {
     Some(NodeType::TextNode) | Some(NodeType::CommentNode) => true,
-    Some(NodeType::ElementNode)
-      if !node.has_attribute("_noautoclose") => {
-        if node.has_attribute("_autoclose") {
-          true
-        } else {
-          state::with_tag_property(get_node_qname(node), |props_opt| {
-            if let Some(props) = props_opt {
-              props.auto_close.unwrap_or(false)
-            } else {
-              false
-            }
-          })
-        }
-      },
+    Some(NodeType::ElementNode) if !node.has_attribute("_noautoclose") => {
+      if node.has_attribute("_autoclose") {
+        true
+      } else {
+        state::with_tag_property(get_node_qname(node), |props_opt| {
+          if let Some(props) = props_opt {
+            props.auto_close.unwrap_or(false)
+          } else {
+            false
+          }
+        })
+      }
+    },
     _ => false,
   }
 }

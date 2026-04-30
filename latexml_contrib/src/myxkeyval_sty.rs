@@ -1,5 +1,5 @@
-use latexml_package::prelude::*;
 use latexml_core::keyval::{self, KeyvalConfig};
+use latexml_package::prelude::*;
 
 LoadDefinitions!({
   RequirePackage!("xkeyval");
@@ -51,9 +51,8 @@ LoadDefinitions!({
         para_attrs.insert("class".to_string(), "scenario".to_string());
         document.open_element("ltx:para", Some(para_attrs), None)?;
 
-        let get_kv = |key: &str| -> Option<String> {
-          GetKeyVal(&args[0], key).map(|d| d.to_string())
-        };
+        let get_kv =
+          |key: &str| -> Option<String> { GetKeyVal(&args[0], key).map(|d| d.to_string()) };
 
         // role class uses "cross" value (matching Perl .ltxml)
         let mut a = HashMap::default();
@@ -94,6 +93,11 @@ LoadDefinitions!({
     );
     let cs = T_CS!("\\scenario");
     let paramlist = parse_parameters("RequiredKeyVals:myxkeyval|scenario", &cs, true)?;
-    def_constructor(cs, paramlist, Some(replacement), ConstructorOptions::default());
+    def_constructor(
+      cs,
+      paramlist,
+      Some(replacement),
+      ConstructorOptions::default(),
+    );
   }
 });

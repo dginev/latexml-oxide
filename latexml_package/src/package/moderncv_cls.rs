@@ -29,12 +29,15 @@ LoadDefinitions!({
   DefMacro!("\\cvcolumncell", "");
   DefMacro!("\\cvdoubleitem", "");
 
+  // Perl L43, L49: enterHorizontal => 1 on both.
   DefConstructor!("\\cventry{}{}{}{}{}{}",
-    "<ltx:para class='ltx_cv_entry'><ltx:block class='ltx_cv_entry_date'>#1</ltx:block><ltx:block class='ltx_cv_entry_content'><ltx:inline-block class='ltx_font_bold'>#2,</ltx:inline-block><ltx:inline-block> #4, #5</ltx:inline-block></ltx:block></ltx:para>"
+    "<ltx:para class='ltx_cv_entry'><ltx:block class='ltx_cv_entry_date'>#1</ltx:block><ltx:block class='ltx_cv_entry_content'><ltx:inline-block class='ltx_font_bold'>#2,</ltx:inline-block><ltx:inline-block> #4, #5</ltx:inline-block></ltx:block></ltx:para>",
+    enter_horizontal => true
   );
 
   DefConstructor!("\\cvitem{}{}",
-    "<ltx:para class='ltx_cv_item'><ltx:block class='ltx_cv_item_label'>#1</ltx:block><ltx:block class='ltx_cv_item_content'>#2</ltx:block></ltx:para>"
+    "<ltx:para class='ltx_cv_item'><ltx:block class='ltx_cv_item_label'>#1</ltx:block><ltx:block class='ltx_cv_item_content'>#2</ltx:block></ltx:para>",
+    enter_horizontal => true
   );
 
   DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='homepage'>#1</ltx:contact>");

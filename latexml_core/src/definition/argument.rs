@@ -115,6 +115,30 @@ impl ArgWrap {
   pub fn is_some(&self) -> bool { !self.is_none() }
   pub fn is_none(&self) -> bool { matches!(self, ArgWrap::None) }
   pub fn is_tokens(&self) -> bool { matches!(self, ArgWrap::Tokens(_) | ArgWrap::Token(_)) }
+
+  /// Zero-alloc equivalent of `self.to_string() == target` for keyword
+  /// checks in DefMacro bodies. Forwards to `Token::with_str` /
+  /// `Tokens::eq_text` for the Token/Tokens variants (covering ~all
+  /// keyword-argument checks in practice); for other variants falls
+  /// back to `to_string() == target` since the Display impl allocates
+  /// anyway. See `Tokens::eq_text` for the walk semantics.
+  pub fn eq_text(&self, target: &str) -> bool {
+    match self {
+      ArgWrap::Tokens(tks) => tks.eq_text(target),
+      ArgWrap::Token(t) => t.with_str(|s| s == target),
+      other => other.to_string() == target,
+    }
+  }
+
+  /// Zero-alloc `self.to_string().starts_with(prefix)` for Tokens/Token
+  /// variants; falls back to full to_string for others.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    match self {
+      ArgWrap::Tokens(tks) => tks.starts_with_text(prefix),
+      ArgWrap::Token(t) => t.with_str(|s| s.starts_with(prefix)),
+      other => other.to_string().starts_with(prefix),
+    }
+  }
   pub fn mut_tokens(&mut self) -> Option<&mut Tokens> {
     match self {
       ArgWrap::Tokens(tks) => Some(tks),
@@ -620,5 +644,92 @@ impl From<ArgWrap> for Template {
       ArgWrap::AlignmentTemplate(t) => *t,
       other => panic!("illegal auto-cast to alignment::Template on {other:?}"),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn argwrap_default_is_none() {
+    let a = ArgWrap::default();
+    assert!(a.is_none());
+    assert!(!a.is_some());
+  }
+
+  #[test]
+  fn argwrap_number_is_some() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert!(a.is_some());
+    assert!(!a.is_none());
+  }
+
+  #[test]
+  fn argwrap_is_tokens_for_token_and_tokens() {
+    let a = ArgWrap::Tokens(Tokens::new(vec![]));
+    assert!(a.is_tokens());
+    let b = ArgWrap::Token(Token::default());
+    assert!(
+      b.is_tokens(),
+      "is_tokens is true for both Token and Tokens variants"
+    );
+    let c = ArgWrap::Number(Number::new(0));
+    assert!(!c.is_tokens());
+    let d = ArgWrap::None;
+    assert!(!d.is_tokens());
+  }
+
+  #[test]
+  fn argwrap_value_of_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(a.value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_value_of_dimension() {
+    let a = ArgWrap::Dimension(Dimension::new(65536));
+    assert_eq!(a.value_of(), 65536);
+  }
+
+  #[test]
+  fn argwrap_value_f64_float() {
+    let a = ArgWrap::Float(Float(3.14));
+    assert!((a.value_f64() - 3.14).abs() < 1e-6);
+  }
+
+  #[test]
+  #[allow(non_snake_case)]
+  fn argwrap_display_none_is_the_word_None() {
+    // Discovered: ArgWrap::None's Display writes "None" (the variant
+    // name), not empty string. Capital-N in fn name preserves the
+    // literal distinction — don't "fix" to lowercase.
+    let a = ArgWrap::None;
+    assert_eq!(format!("{a}"), "None");
+  }
+
+  #[test]
+  fn argwrap_display_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(format!("{a}"), "42");
+  }
+
+  #[test]
+  fn argwrap_try_to_number_from_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    let n = a.try_to_number().unwrap();
+    assert_eq!(n.value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_expect_number_from_number() {
+    let a = ArgWrap::Number(Number::new(42));
+    assert_eq!(a.expect_number().value_of(), 42);
+  }
+
+  #[test]
+  fn argwrap_owned_tokens_from_none_is_none() {
+    let a = ArgWrap::None;
+    assert!(a.owned_tokens().is_none());
   }
 }

@@ -4,8 +4,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // english.sty advises to do \usepackage[english]{babel} instead
-  // PassOptions not yet supported; just load babel directly
+  // Perl english.sty.ltxml:
+  //   PassOptions('babel', 'sty', 'english'); RequirePackage('babel');
+  // Rust `\PassOptionsToPackage{english}{babel}` pushes onto the same
+  // `opt@babel.sty` state queue that Perl's PassOptions helper uses
+  // (verified latex_constructs.rs:3436). Faithful parity.
+  raw_tex(r"\PassOptionsToPackage{english}{babel}")?;
   RequirePackage!("babel");
 
   // Raw-load english.ldf to register its `ver@english.ldf` entry and

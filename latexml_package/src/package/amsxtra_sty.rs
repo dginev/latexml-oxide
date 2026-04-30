@@ -5,11 +5,14 @@ LoadDefinitions!({
   // Perl: amsxtra.sty.ltxml
   RequirePackage!("amsmath");
 
-  // Perl: Tokens(T_SUPER, T_OTHER('^')) — superscript with caret char
-  DefMacro!("\\sphat", "^{\\hat{}}");
+  // Perl L23: Tokens(T_SUPER, T_OTHER('^')) — two raw tokens: superscript
+  // marker followed by a literal `^` (catcode OTHER). Expressed directly
+  // rather than the prior `^{\hat{}}` transcription, which introduced an
+  // unintended \hat-accent node semantically distinct from the Perl output.
+  DefMacro!("\\sphat", None, Tokens!(T_SUPER!(), T_OTHER!("^")));
   DefMacro!("\\spcheck", "^{\\vee}");
-  // Perl: Tokens(T_SUPER, T_OTHER('~')) — superscript with tilde char
-  DefMacro!("\\sptilde", "^{\\tilde{}}");
+  // Perl L25: Tokens(T_SUPER, T_OTHER('~')) — superscript + literal tilde.
+  DefMacro!("\\sptilde", None, Tokens!(T_SUPER!(), T_OTHER!("~")));
   DefMacro!("\\spdot", "^{\\dot}");
   DefMacro!("\\spddot", "^{\\dot\\dot}");
   DefMacro!("\\spdddot", "^{\\dot\\dot\\dot}");

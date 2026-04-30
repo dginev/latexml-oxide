@@ -60,7 +60,6 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
   for row in &mut alignment.rows {
     for cell in row.get_columns_mut() {
       if let Some(ref mut boxes) = &mut cell.boxes {
-
         let (w, mut h, mut d, cw, ch, cd) = boxes.get_size(Some(stored_map!(
             "align" => cell.align.as_ref().map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )))?;
@@ -69,9 +68,13 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
         let mut lpad = None;
         let mut rpad = None;
         if let Some(ref mut lspaces) = cell.lspaces {
-          let (lw, lh, ld, _, _, _) = lspaces.get_size(None)?;
+          let (lw, lh, ld, ..) = lspaces.get_size(None)?;
           if lw.value_of() != 0 {
-            fullw = if fullw.value_of() != 0 { fullw.add(lw) } else { lw };
+            fullw = if fullw.value_of() != 0 {
+              fullw.add(lw)
+            } else {
+              lw
+            };
             lpad = Some(lw);
           }
           if lh.value_of() != 0 {
@@ -82,9 +85,13 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
           }
         }
         if let Some(ref mut rspaces) = cell.rspaces {
-          let (rw, rh, rd, _, _, _) = rspaces.get_size(None)?;
+          let (rw, rh, rd, ..) = rspaces.get_size(None)?;
           if rw.value_of() != 0 {
-            fullw = if fullw.value_of() != 0 { fullw.add(rw) } else { rw };
+            fullw = if fullw.value_of() != 0 {
+              fullw.add(rw)
+            } else {
+              rw
+            };
             rpad = Some(rw);
           }
           if rh.value_of() != 0 {
@@ -104,9 +111,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
               || b.is_comment()
           });
         // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved
-        let empty = ((fullw.value_of() < 1
-          && (ch.value_of() < 1 && cd.value_of() < 1))
-          || isrule)
+        let empty = ((fullw.value_of() < 1 && (ch.value_of() < 1 && cd.value_of() < 1)) || isrule)
           && preserved_boxes(Some(boxes)).is_empty();
         let skippable = empty || boxes.is_skippable();
         cell.cached_width = Some(w);
@@ -226,7 +231,9 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
             }
           }
           if !sborder.is_empty() {
-            alignment.rows[i].get_columns_mut()[j].border.push_str(&sborder);
+            alignment.rows[i].get_columns_mut()[j]
+              .border
+              .push_str(&sborder);
           }
         }
       }
@@ -252,7 +259,11 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
   // First pass: determine which rows are prunable
   for i in 0..nrows {
     let row = &init_rows[i];
-    let next = if i + 1 < nrows { Some(&init_rows[i + 1]) } else { None };
+    let next = if i + 1 < nrows {
+      Some(&init_rows[i + 1])
+    } else {
+      None
+    };
     let mut prunable = true;
     let mut check_bracketting = false;
     let is_pseudo = row.is_pseudo();
@@ -364,7 +375,9 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           };
         }
         if !converted_border.is_empty() && j < rows[next_idx].get_columns().len() {
-          rows[next_idx].get_columns_mut()[j].border.push_str(&converted_border);
+          rows[next_idx].get_columns_mut()[j]
+            .border
+            .push_str(&converted_border);
         }
       }
       // Perl L773: save padding
@@ -557,7 +570,7 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
                 ls
               };
               // Compute rpadding from combined rspaces
-              if let Ok((rw, _, _, _, _, _)) = new_rspaces.clone().get_size(None) {
+              if let Ok((rw, ..)) = new_rspaces.clone().get_size(None) {
                 if rw.value_of() != 0 {
                   prev.right_padding = Some(rw.value_of() as usize);
                 }
@@ -733,7 +746,11 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   // Now compute the positions — one entry per row/col.
   let mut rowpos = Vec::with_capacity(alignment.rows.len());
   let mut colpos = Vec::with_capacity(
-    alignment.rows.front().map(|r| r.get_columns().len()).unwrap_or(0)
+    alignment
+      .rows
+      .front()
+      .map(|r| r.get_columns().len())
+      .unwrap_or(0),
   );
   let mut y: i64 = 0;
   // Row & column positions: left,top
@@ -796,7 +813,11 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
             }
           })
         })
-        .unwrap_or_else(|| Dimension::from_str("1ex").map(|d| d.value_of()).unwrap_or(0))
+        .unwrap_or_else(|| {
+          Dimension::from_str("1ex")
+            .map(|d| d.value_of())
+            .unwrap_or(0)
+        })
       };
       alignment.cached_height = Some(Dimension::new((y + c) / 2));
       alignment.cached_depth = Some(Dimension::new((y - c) / 2));

@@ -6,7 +6,14 @@ LoadDefinitions!({
   // Load raw TeX first
   InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // Mark thead et.al as headers (row & column)
+  // Mark thead et.al as headers (row & column).
+  // Perl is DefMacroI with an imperative sub body (no token return);
+  // Rust DefPrimitive runs at stomach time. WISDOM #44: the two kinds
+  // differ under expansion — safe here because `\lx@makecell@head` is
+  // injected by `\theadfont` inside alignment cells and never observed
+  // by `\edef` / `\ifx`.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\lx@makecell@head` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
     if let Some(alignment) = lookup_alignment() {
       if let Some(data) = alignment.alignment_cell() {
@@ -20,7 +27,9 @@ LoadDefinitions!({
   });
 
   // Redefine \theadfont at BeginDocument to include heading marker
-  RawTeX!(r"\AtBeginDocument{\let\lx@orig@theadfont\theadfont\def\theadfont{\lx@orig@theadfont\lx@makecell@head}}");
+  at_begin_document(TokenizeInternal!(
+    r"\let\lx@orig@theadfont\theadfont\def\theadfont{\lx@orig@theadfont\lx@makecell@head}"
+  ))?;
 
   // Since we use \thead, disable guessing
   AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);

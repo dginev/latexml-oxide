@@ -30,8 +30,17 @@ LoadDefinitions!({
     "twocolumn",
     r"\@twocolumntrue\columnwidth\textwidth\advance\columnwidth-\columnsep\divide\columnwidth2\relax"
   );
-  // DeclareOption!("openbib", sub {
-  //     RequireResource(None, type => "text/css", content => ".ltx_bibblock{display:block;}"); });
+  // Perl book.cls.ltxml L33-34: `openbib` injects inline CSS to render
+  // bib blocks as display blocks. Port via require_resource on an
+  // anonymous Resource — matches article_cls/report_cls handlers.
+  DeclareOption!("openbib", {
+    use latexml_core::document::resource::Resource;
+    require_resource(Resource {
+      mimetype: "text/css".into(),
+      content: ".ltx_bibblock{display:block;}".into(),
+      ..Resource::default()
+    });
+  });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
 

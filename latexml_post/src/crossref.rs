@@ -14,9 +14,18 @@ use crate::processor::{ProcessResult, Processor};
 
 /// Sectional element types that appear in TOCs.
 const NORMAL_TOC_TYPES: &[&str] = &[
-  "ltx:document", "ltx:part", "ltx:chapter", "ltx:section",
-  "ltx:subsection", "ltx:subsubsection", "ltx:paragraph", "ltx:subparagraph",
-  "ltx:index", "ltx:bibliography", "ltx:glossary", "ltx:appendix",
+  "ltx:document",
+  "ltx:part",
+  "ltx:chapter",
+  "ltx:section",
+  "ltx:subsection",
+  "ltx:subsubsection",
+  "ltx:paragraph",
+  "ltx:subparagraph",
+  "ltx:index",
+  "ltx:bibliography",
+  "ltx:glossary",
+  "ltx:appendix",
 ];
 
 /// Fallback fields when a requested ref show key is not found.
@@ -46,25 +55,25 @@ pub enum UrlStyle {
 ///
 /// Port of `LaTeXML::Post::CrossRef`.
 pub struct CrossRef {
-  name: String,
+  name:           String,
   /// Reference to the shared ObjectDB.
-  pub db: ObjectDB,
+  pub db:         ObjectDB,
   /// URL style for cross-references.
-  url_style: UrlStyle,
+  url_style:      UrlStyle,
   /// File extension used for output (e.g. "html", "xml").
-  extension: String,
+  extension:      String,
   /// Default show format for TOC refs.
-  toc_show: String,
+  toc_show:       String,
   /// Default show format for regular refs.
-  ref_show: String,
+  ref_show:       String,
   /// Minimum useful content length for refs.
   min_ref_length: usize,
   /// Join string between parent+child ref text.
-  ref_join: String,
+  ref_join:       String,
   /// Type of navigation TOC to add (e.g. "context").
   navigation_toc: Option<String>,
   /// Track missing references for reporting.
-  missing: HashMap<String, HashMap<String, HashMap<String, u32>>>,
+  missing:        HashMap<String, HashMap<String, HashMap<String, u32>>>,
 }
 
 impl CrossRef {
@@ -75,7 +84,11 @@ impl CrossRef {
       url_style,
       extension: "xml".to_string(),
       toc_show: "toctitle".to_string(),
-      ref_show: if number_sections { "refnum".to_string() } else { "title".to_string() },
+      ref_show: if number_sections {
+        "refnum".to_string()
+      } else {
+        "title".to_string()
+      },
       min_ref_length: 1,
       ref_join: " \u{2023} ".to_string(), // TRIANGULAR BULLET
       navigation_toc: None,
@@ -84,9 +97,7 @@ impl CrossRef {
   }
 
   /// Set the file extension for URL generation.
-  pub fn set_extension(&mut self, ext: &str) {
-    self.extension = ext.to_string();
-  }
+  pub fn set_extension(&mut self, ext: &str) { self.extension = ext.to_string(); }
 
   /// Set the navigation TOC format.
   pub fn set_navigation_toc(&mut self, format: &str) {
@@ -95,7 +106,8 @@ impl CrossRef {
 
   /// Note a missing reference.
   fn note_missing(&mut self, severity: &str, ref_type: &str, key: &str) {
-    self.missing
+    self
+      .missing
       .entry(severity.to_string())
       .or_default()
       .entry(ref_type.to_string())
@@ -121,9 +133,13 @@ impl CrossRef {
         let index_suffix = format!("index.{}", self.extension);
         if url.ends_with(&index_suffix) {
           let prefix = &url[..url.len() - index_suffix.len()];
-          url = if prefix.is_empty() { "./".to_string() } else { prefix.to_string() };
+          url = if prefix.is_empty() {
+            "./".to_string()
+          } else {
+            prefix.to_string()
+          };
         }
-      }
+      },
       UrlStyle::Negotiated => {
         let ext_suffix = format!(".{}", self.extension);
         if url.ends_with(&ext_suffix) {
@@ -132,8 +148,8 @@ impl CrossRef {
         if url.ends_with("/index") {
           url = url[..url.len() - 5].to_string();
         }
-      }
-      UrlStyle::File => {}
+      },
+      UrlStyle::File => {},
     }
 
     if url.is_empty() {
@@ -176,13 +192,18 @@ impl CrossRef {
         }
       }
       if pieces.is_empty() {
-        let has_type = entry.get_value("tag:creftypecap")
+        let has_type = entry
+          .get_value("tag:creftypecap")
           .or_else(|| entry.get_value("tag:creftype"));
         let has_refnum = entry.get_value("refnum");
         if has_type.is_some() && has_refnum.is_some() {
           is_dup = shown_so_far.contains("type") && shown_so_far.contains("refnum");
-          if let Some(t) = has_type { pieces.push(t.to_string()); }
-          if let Some(r) = has_refnum { pieces.push(r.to_string()); }
+          if let Some(t) = has_type {
+            pieces.push(t.to_string());
+          }
+          if let Some(r) = has_refnum {
+            pieces.push(r.to_string());
+          }
         } else if let Some(tr) = entry.get_value("typerefnum") {
           is_dup = shown_so_far.contains("type") && shown_so_far.contains("refnum");
           pieces.push(tr.to_string());
@@ -212,7 +233,11 @@ impl CrossRef {
       }
     }
 
-    if result.is_empty() { None } else { Some(result) }
+    if result.is_empty() {
+      None
+    } else {
+      Some(result)
+    }
   }
 
   /// Generate a title for the document itself.
@@ -220,14 +245,19 @@ impl CrossRef {
   /// Port of `CrossRef::generateDocumentTitle`.
   fn generate_document_title(&self, doc: &PostDocument) -> Option<String> {
     // Try to generate from the document's root ID
-    if let Some(docid) = doc.get_document_element().and_then(|r| r.get_attribute("xml:id")) {
+    if let Some(docid) = doc
+      .get_document_element()
+      .and_then(|r| r.get_attribute("xml:id"))
+    {
       let title = self.generate_title(doc, &docid, "toctitle");
       if title.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
         return title;
       }
     }
     // Fallback: look for a title element in the document
-    if let Some(node) = doc.findnode("//ltx:title | //ltx:toctitle | //ltx:caption | //ltx:toccaption") {
+    if let Some(node) =
+      doc.findnode("//ltx:title | //ltx:toctitle | //ltx:caption | //ltx:toccaption")
+    {
       let text = get_text_content_node(&node);
       if !text.is_empty() {
         return Some(text);
@@ -239,11 +269,7 @@ impl CrossRef {
   /// Generate content for a glossary reference.
   ///
   /// Port of `CrossRef::generateGlossaryRefTitle`.
-  fn generate_glossary_ref_title(
-    &self,
-    entry_key: &str,
-    show: &str,
-  ) -> Vec<NodeData> {
+  fn generate_glossary_ref_title(&self, entry_key: &str, show: &str) -> Vec<NodeData> {
     let entry = match self.db.lookup(entry_key) {
       Some(e) => e,
       None => return vec![],
@@ -252,12 +278,12 @@ impl CrossRef {
     let phrase_key = format!("phrase:{}", show);
     if let Some(val) = entry.get_value(&phrase_key) {
       return vec![NodeData::Element {
-        tag: "ltx:text".to_string(),
+        tag:        "ltx:text".to_string(),
         attributes: Some(HashMap::from([(
           "class".to_string(),
           format!("ltx_glossary_{}", show),
         )])),
-        children: vec![NodeData::Text(val.to_string())],
+        children:   vec![NodeData::Text(val.to_string())],
       }];
     }
 
@@ -266,12 +292,12 @@ impl CrossRef {
       let base_key = format!("phrase:{}", base_show);
       if let Some(val) = entry.get_value(&base_key) {
         return vec![NodeData::Element {
-          tag: "ltx:text".to_string(),
+          tag:        "ltx:text".to_string(),
           attributes: Some(HashMap::from([(
             "class".to_string(),
             format!("ltx_glossary_{}", show),
           )])),
-          children: vec![NodeData::Text(format!("{}s", val))],
+          children:   vec![NodeData::Text(format!("{}s", val))],
         }];
       }
     }
@@ -285,15 +311,12 @@ impl CrossRef {
           "a "
         };
         return vec![NodeData::Element {
-          tag: "ltx:text".to_string(),
+          tag:        "ltx:text".to_string(),
           attributes: Some(HashMap::from([(
             "class".to_string(),
             format!("ltx_glossary_{}", show),
           )])),
-          children: vec![
-            NodeData::Text(article.to_string()),
-            NodeData::Text(text),
-          ],
+          children:   vec![NodeData::Text(article.to_string()), NodeData::Text(text)],
         }];
       }
     }
@@ -347,7 +370,9 @@ impl CrossRef {
           }
           pending = self.ref_join.clone();
         }
-        let parent = self.db.lookup(&format!("ID:{}", id))
+        let parent = self
+          .db
+          .lookup(&format!("ID:{}", id))
           .and_then(|e| e.get_string("parent").map(String::from));
         match parent {
           Some(pid) => id = pid,
@@ -376,10 +401,17 @@ impl CrossRef {
 
     while !remaining.is_empty() {
       if remaining.starts_with(|c: char| c.is_alphanumeric()) {
-        let keyword: String = remaining.chars().take_while(|c| c.is_alphanumeric()).collect();
+        let keyword: String = remaining
+          .chars()
+          .take_while(|c| c.is_alphanumeric())
+          .collect();
         remaining = remaining[keyword.len()..].to_string();
         let key = keyword.to_lowercase();
-        let class = if key.contains("title") { "ltx_ref_title" } else { "ltx_ref_tag" };
+        let class = if key.contains("title") {
+          "ltx_ref_title"
+        } else {
+          "ltx_ref_tag"
+        };
 
         let mut keys_to_try = vec![key.clone(), format!("tag:{}", key)];
         keys_to_try.extend(ref_fallbacks(&key).iter().map(|s| s.to_string()));
@@ -390,9 +422,9 @@ impl CrossRef {
               ok = true;
               let text = val.to_string();
               stuff.push(NodeData::Element {
-                tag: "ltx:text".to_string(),
+                tag:        "ltx:text".to_string(),
                 attributes: Some(HashMap::from([("class".to_string(), class.to_string())])),
-                children: vec![NodeData::Text(text)],
+                children:   vec![NodeData::Text(text)],
               });
               break;
             }
@@ -414,13 +446,17 @@ impl CrossRef {
           stuff.push(NodeData::Text("\u{00A0}".to_string()));
         }
       } else if remaining.starts_with(|c: char| c.is_whitespace()) {
-        let ws: String = remaining.chars().take_while(|c| c.is_whitespace()).collect();
+        let ws: String = remaining
+          .chars()
+          .take_while(|c| c.is_whitespace())
+          .collect();
         remaining = remaining[ws.len()..].to_string();
         if !stuff.is_empty() {
           stuff.push(NodeData::Text(ws));
         }
       } else {
-        let sym: String = remaining.chars()
+        let sym: String = remaining
+          .chars()
           .take_while(|c| !c.is_alphanumeric() && *c != '{' && *c != '~')
           .collect();
         remaining = remaining[sym.len()..].to_string();
@@ -442,7 +478,10 @@ impl CrossRef {
   // Fill-in methods
 
   fn fill_in_relations(&mut self, doc: &mut PostDocument) {
-    let root_id = match doc.get_document_element().and_then(|r| r.get_attribute("xml:id")) {
+    let root_id = match doc
+      .get_document_element()
+      .and_then(|r| r.get_attribute("xml:id"))
+    {
       Some(id) => id,
       None => return,
     };
@@ -450,11 +489,15 @@ impl CrossRef {
     let mut current_id = root_id;
     let mut rel = "up".to_string();
     loop {
-      let parent_id = self.db.lookup(&format!("ID:{}", current_id))
+      let parent_id = self
+        .db
+        .lookup(&format!("ID:{}", current_id))
         .and_then(|e| e.get_string("parent").map(String::from));
       match parent_id {
         Some(pid) => {
-          let has_title = self.db.lookup(&format!("ID:{}", pid))
+          let has_title = self
+            .db
+            .lookup(&format!("ID:{}", pid))
             .and_then(|e| e.get_value("title"))
             .map(|v| v.is_truthy())
             .unwrap_or(false);
@@ -463,7 +506,7 @@ impl CrossRef {
             rel = format!("{} up", rel);
           }
           current_id = pid;
-        }
+        },
         None => break,
       }
     }
@@ -472,17 +515,20 @@ impl CrossRef {
   fn fill_in_tocs(&mut self, doc: &mut PostDocument) {
     let tocs = doc.findnodes("descendant::ltx:TOC[not(ltx:toclist)]");
     for toc in &tocs {
-      let id = doc.get_document_element()
+      let id = doc
+        .get_document_element()
         .and_then(|r| r.get_attribute("xml:id"))
         .unwrap_or_default();
-      let show = toc.get_attribute("show").unwrap_or_else(|| self.toc_show.clone());
+      let show = toc
+        .get_attribute("show")
+        .unwrap_or_else(|| self.toc_show.clone());
 
       let list = self.gen_toc(&id, &show);
       if !list.is_empty() {
         let toclist = NodeData::Element {
-          tag: "ltx:toclist".to_string(),
+          tag:        "ltx:toclist".to_string(),
           attributes: None,
-          children: list,
+          children:   list,
         };
         let mut toc_mut = toc.clone();
         doc.add_nodes(&mut toc_mut, &[toclist]);
@@ -504,7 +550,8 @@ impl CrossRef {
 
     let entry_type = entry.get_string("type").unwrap_or("");
     let is_toc_type = NORMAL_TOC_TYPES.contains(&entry_type);
-    let in_toc = entry.get_value("inlist")
+    let in_toc = entry
+      .get_value("inlist")
       .map(|v| match v {
         Value::Hash(h) => h.contains_key("toc"),
         _ => false,
@@ -514,30 +561,30 @@ impl CrossRef {
     if is_toc_type && in_toc {
       let type_name = entry_type.strip_prefix("ltx:").unwrap_or(entry_type);
       let mut toc_children = vec![NodeData::Element {
-        tag: "ltx:ref".to_string(),
+        tag:        "ltx:ref".to_string(),
         attributes: Some(HashMap::from([
           ("show".to_string(), show.to_string()),
           ("idref".to_string(), id.to_string()),
         ])),
-        children: vec![],
+        children:   vec![],
       }];
       if !kids.is_empty() {
         toc_children.push(NodeData::Element {
-          tag: "ltx:toclist".to_string(),
+          tag:        "ltx:toclist".to_string(),
           attributes: Some(HashMap::from([(
             "class".to_string(),
             format!("ltx_toclist_{}", type_name),
           )])),
-          children: kids,
+          children:   kids,
         });
       }
       vec![NodeData::Element {
-        tag: "ltx:tocentry".to_string(),
+        tag:        "ltx:tocentry".to_string(),
         attributes: Some(HashMap::from([(
           "class".to_string(),
           format!("ltx_tocentry_{}", type_name),
         )])),
-        children: toc_children,
+        children:   toc_children,
       }]
     } else {
       kids
@@ -545,19 +592,31 @@ impl CrossRef {
   }
 
   fn fill_in_frags(&self, doc: &PostDocument) {
-    for node in &doc.findnodes("//*[@xml:id]") {
-      // NOTE: get_attribute("xml:id") may not work in all libxml2 builds;
-      // get_property("id") is more reliable for xml: namespace attributes.
-      // TODO: Fix in rust-libxml — get_attribute should handle xml: prefix.
-      let id = node.get_attribute("xml:id")
-        .or_else(|| node.get_property("id"));
-      if let Some(id) = id {
-        if let Some(entry) = self.db.lookup(&format!("ID:{}", id)) {
-          if let Some(fragid) = entry.get_string("fragid") {
-            let mut n = node.clone();
-            n.set_attribute("fragid", fragid).ok();
-          }
-        }
+    // Invert loop: iterate DB entries (~1K on arXiv:0705.0790) and look up
+    // each node via the idcache, instead of iterating every xml:id-bearing
+    // node in the DOM (60K+ on math-heavy papers, ~98% of which map to
+    // XM* descendants with no DB entry). This avoids the XPath `//*[@xml:id]`
+    // result-set clone and 60K hashmap misses per paper.
+    //
+    // Correctness: fragids are only assigned to nodes that have a DB entry;
+    // the old DOM-iteration variant early-exited on `lookup` miss for every
+    // non-DB node, so the outputs match exactly.
+    for key in self.db.get_keys() {
+      let id = match key.strip_prefix("ID:") {
+        Some(rest) => rest,
+        None => continue,
+      };
+      let entry = match self.db.lookup(key) {
+        Some(e) => e,
+        None => continue,
+      };
+      let fragid = match entry.get_string("fragid") {
+        Some(f) => f,
+        None => continue,
+      };
+      if let Some(node) = doc.find_node_by_id(id) {
+        let mut n = node.clone();
+        n.set_attribute("fragid", fragid).ok();
       }
     }
   }
@@ -573,7 +632,9 @@ impl CrossRef {
 
       let mut ref_mut = ref_node.clone();
       let mut id = ref_node.get_attribute("idref");
-      let show = ref_node.get_attribute("show").unwrap_or_else(|| self.ref_show.clone());
+      let show = ref_node
+        .get_attribute("show")
+        .unwrap_or_else(|| self.ref_show.clone());
 
       if id.is_none() {
         if let Some(label) = ref_node.get_attribute("labelref") {
@@ -635,9 +696,15 @@ impl CrossRef {
     let bibrefs = doc.findnodes("//ltx:bibref");
     for bibref in &bibrefs {
       let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
-      let _show = bibref.get_attribute("show").unwrap_or_else(|| "refnum".to_string());
-      let sep = bibref.get_attribute("separator").unwrap_or_else(|| ",".to_string());
-      let lists_str = bibref.get_attribute("inlist").unwrap_or_else(|| "bibliography".to_string());
+      let _show = bibref
+        .get_attribute("show")
+        .unwrap_or_else(|| "refnum".to_string());
+      let sep = bibref
+        .get_attribute("separator")
+        .unwrap_or_else(|| ",".to_string());
+      let lists_str = bibref
+        .get_attribute("inlist")
+        .unwrap_or_else(|| "bibliography".to_string());
       let lists: Vec<&str> = lists_str.split_whitespace().collect();
 
       let mut refs: Vec<NodeData> = Vec::new();
@@ -647,7 +714,9 @@ impl CrossRef {
           let bkey = format!("BIBLABEL:{}:{}", list, key);
           if let Some(bentry) = self.db.lookup(&bkey) {
             found_id = bentry.get_string("id").map(String::from);
-            if found_id.is_some() { break; }
+            if found_id.is_some() {
+              break;
+            }
           }
         }
         if !refs.is_empty() {
@@ -661,24 +730,26 @@ impl CrossRef {
           }
           // Perl: use 'number' field for numeric citations (bare number without brackets).
           // The 'refnum' field includes brackets like "[13]", causing double brackets [[13]].
-          let refnum = self.db.lookup(&format!("ID:{}", id))
+          let refnum = self
+            .db
+            .lookup(&format!("ID:{}", id))
             .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
             .map(|v| v.to_string())
             .unwrap_or_else(|| key.to_string());
           refs.push(NodeData::Element {
-            tag: "ltx:ref".to_string(),
+            tag:        "ltx:ref".to_string(),
             attributes: Some(attrs),
-            children: vec![NodeData::Text(refnum)],
+            children:   vec![NodeData::Text(refnum)],
           });
         } else {
           self.note_missing("warn", "Entry for citation", key);
           refs.push(NodeData::Element {
-            tag: "ltx:ref".to_string(),
+            tag:        "ltx:ref".to_string(),
             attributes: Some(HashMap::from([
               ("idref".to_string(), key.to_string()),
               ("class".to_string(), "ltx_missing_citation".to_string()),
             ])),
-            children: vec![NodeData::Text(key.to_string())],
+            children:   vec![NodeData::Text(key.to_string())],
           });
         }
       }
@@ -694,10 +765,16 @@ impl CrossRef {
       if tag == "ltx:XMRef" || sym.get_attribute("href").is_some() {
         continue;
       }
-      let entry_key = sym.get_attribute("decl_id")
+      let entry_key = sym
+        .get_attribute("decl_id")
         .map(|did| format!("DECLARATION:local:{}", did))
-        .or_else(|| sym.get_attribute("meaning").map(|m| format!("DECLARATION:global:{}", m)));
-      let parent_id = entry_key.as_ref()
+        .or_else(|| {
+          sym
+            .get_attribute("meaning")
+            .map(|m| format!("DECLARATION:global:{}", m))
+        });
+      let parent_id = entry_key
+        .as_ref()
         .and_then(|ek| self.db.lookup(ek))
         .and_then(|entry| entry.get_string("parent").map(String::from));
       if let Some(pid) = parent_id {
@@ -713,7 +790,15 @@ impl CrossRef {
     for (severity, types) in &self.missing {
       for (ref_type, items) in types {
         let keys: Vec<&String> = items.keys().collect();
-        let msg = format!("Missing {}: {}", ref_type, keys.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(","));
+        let msg = format!(
+          "Missing {}: {}",
+          ref_type,
+          keys
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+        );
         match severity.as_str() {
           "error" => log::error!("{}", msg),
           "warn" => log::warn!("{}", msg),
@@ -725,9 +810,7 @@ impl CrossRef {
 }
 
 impl Processor for CrossRef {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     match doc.get_document_element() {
@@ -743,31 +826,30 @@ impl Processor for CrossRef {
     let doc_title = self.generate_document_title(&doc);
     let navtoc = self.navigation_toc.clone();
 
-    if (navtoc.is_some() || doc_title.is_some())
-      && doc.findnode("//ltx:navigation").is_none() {
-        if let Some(mut root) = doc.get_document_element() {
-          doc.add_nodes(&mut root, &[NodeData::Element {
-            tag: "ltx:navigation".to_string(),
-            attributes: None,
-            children: vec![],
-          }]);
-        }
+    if (navtoc.is_some() || doc_title.is_some()) && doc.findnode("//ltx:navigation").is_none() {
+      if let Some(mut root) = doc.get_document_element() {
+        doc.add_nodes(&mut root, &[NodeData::Element {
+          tag:        "ltx:navigation".to_string(),
+          attributes: None,
+          children:   vec![],
+        }]);
       }
+    }
     if let Some(ref format) = navtoc {
       if let Some(mut nav) = doc.findnode("//ltx:navigation") {
         doc.add_nodes(&mut nav, &[NodeData::Element {
-          tag: "ltx:TOC".to_string(),
+          tag:        "ltx:TOC".to_string(),
           attributes: Some(HashMap::from([("format".to_string(), format.clone())])),
-          children: vec![],
+          children:   vec![],
         }]);
       }
     }
     if let Some(ref title) = doc_title {
       if let Some(mut nav) = doc.findnode("//ltx:navigation") {
         doc.add_nodes(&mut nav, &[NodeData::Element {
-          tag: "ltx:title".to_string(),
+          tag:        "ltx:title".to_string(),
           attributes: None,
-          children: vec![NodeData::Text(title.clone())],
+          children:   vec![NodeData::Text(title.clone())],
         }]);
       }
     }
@@ -794,7 +876,9 @@ fn relative_url(target: &str, base: &str) -> String {
   }
   let target_parts: Vec<&str> = target.split('/').collect();
   let base_parts: Vec<&str> = base.split('/').collect();
-  let common = target_parts.iter().zip(base_parts.iter())
+  let common = target_parts
+    .iter()
+    .zip(base_parts.iter())
     .take_while(|(a, b)| a == b)
     .count();
   let mut result = String::new();
@@ -802,7 +886,11 @@ fn relative_url(target: &str, base: &str) -> String {
     result.push_str("../");
   }
   result.push_str(&target_parts[common..].join("/"));
-  if result.is_empty() { ".".to_string() } else { result }
+  if result.is_empty() {
+    ".".to_string()
+  } else {
+    result
+  }
 }
 
 /// Get text content from an XML node, normalizing whitespace.
@@ -816,9 +904,117 @@ fn get_text_content_node(node: &Node) -> String {
 }
 
 fn text_content(nodes: &[NodeData]) -> String {
-  nodes.iter().map(|n| match n {
-    NodeData::Text(s) => s.clone(),
-    NodeData::Element { children, .. } => text_content(children),
-    NodeData::XmlNode(n) => n.get_content(),
-  }).collect::<Vec<_>>().join("")
+  nodes
+    .iter()
+    .map(|n| match n {
+      NodeData::Text(s) => s.clone(),
+      NodeData::Element { children, .. } => text_content(children),
+      NodeData::XmlNode(n) => n.get_content(),
+    })
+    .collect::<Vec<_>>()
+    .join("")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn relative_url_identical_paths_is_dot() {
+    assert_eq!(relative_url("a/b.html", "a/b.html"), ".");
+  }
+
+  #[test]
+  fn relative_url_same_dir() {
+    // Both live under a/, so target becomes simply the sibling filename.
+    assert_eq!(relative_url("a/other.html", "a/index.html"), "other.html");
+  }
+
+  #[test]
+  fn relative_url_sibling_dir() {
+    // From a/index.html to b/x.html: up once, then down.
+    assert_eq!(relative_url("b/x.html", "a/index.html"), "../b/x.html");
+  }
+
+  #[test]
+  fn relative_url_deeply_nested_base() {
+    // Up past each intermediate dir of the base, then into the new path.
+    assert_eq!(
+      relative_url("top/sibling.html", "top/deep/nested/page.html"),
+      "../../sibling.html"
+    );
+  }
+
+  #[test]
+  fn relative_url_same_prefix_different_file() {
+    assert_eq!(
+      relative_url("a/b/c/target.html", "a/b/c/source.html"),
+      "target.html"
+    );
+  }
+
+  #[test]
+  fn ref_fallbacks_typerefnum_goes_to_refnum() {
+    assert_eq!(ref_fallbacks("typerefnum"), &["refnum"]);
+  }
+
+  #[test]
+  fn ref_fallbacks_title_chain() {
+    assert_eq!(ref_fallbacks("title"), &["toccaption"]);
+    assert_eq!(ref_fallbacks("toctitle"), &["title", "toccaption"]);
+    assert_eq!(ref_fallbacks("rawtoctitle"), &[
+      "toctitle",
+      "title",
+      "toccaption"
+    ]);
+    assert_eq!(ref_fallbacks("rawtitle"), &["title", "toccaption"]);
+  }
+
+  #[test]
+  fn ref_fallbacks_unknown_key_is_empty() {
+    let empty: &[&str] = &[];
+    assert_eq!(ref_fallbacks("nonexistent"), empty);
+    assert_eq!(ref_fallbacks(""), empty);
+  }
+
+  #[test]
+  fn text_content_flattens_text() {
+    let nodes = vec![
+      NodeData::Text("hello ".to_string()),
+      NodeData::Text("world".to_string()),
+    ];
+    assert_eq!(text_content(&nodes), "hello world");
+  }
+
+  #[test]
+  fn text_content_recurses_into_elements() {
+    let nodes = vec![NodeData::Element {
+      tag:        "span".to_string(),
+      attributes: None,
+      children:   vec![
+        NodeData::Text("inner ".to_string()),
+        NodeData::Text("text".to_string()),
+      ],
+    }];
+    assert_eq!(text_content(&nodes), "inner text");
+  }
+
+  #[test]
+  fn text_content_empty_list_is_empty_string() {
+    assert_eq!(text_content(&[]), "");
+  }
+
+  #[test]
+  fn text_content_mixed_text_and_nested_element() {
+    let nodes = vec![
+      NodeData::Text("outer ".to_string()),
+      NodeData::Element {
+        tag:        "em".to_string(),
+        attributes: None,
+        children:   vec![NodeData::Text("inner".to_string())],
+      },
+      NodeData::Text(" tail".to_string()),
+    ];
+    assert_eq!(text_content(&nodes), "outer inner tail");
+  }
 }

@@ -3,7 +3,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
-  DefMacro!("\\CD", "\\lx@ams@CD{name=CD,datameaning=commutative-diagram}");
+  DefMacro!(
+    "\\CD",
+    "\\lx@ams@CD{name=CD,datameaning=commutative-diagram}"
+  );
   DefMacro!(
     "\\lx@ams@CD RequiredKeyVals:lx@GEN",
     "\\lx@gen@matrix@bindings{#1}\\lx@ams@CD@bindings\\lx@ams@matrix@{#1}\\lx@begin@alignment"
@@ -26,37 +29,62 @@ LoadDefinitions!({
   // Implemented as a primitive that reads a token and unreads the appropriate CS.
   DefPrimitive!(T_CS!("\\cd@"), None, {
     let token = gullet::read_token()?.unwrap();
-    let token_text = arena::to_string(token.text);
-    let cs_name = format!("@{}", token_text);
+    let cs_name = token.with_str(|s| format!("@{s}"));
     gullet::unread(Tokens::from(T_CS!(&*cs_name)));
   });
 
   // Horizontal connectors
   // Perl: DefMacroI(T_CS('@>'), 'Until:> Until:>',
   //   '\lx@hidden@align\lx@amscd@stack{>}{\lx@amscd@rightarrow}{#1}{#2}\lx@hidden@align');
-  DefMacro!(T_CS!("@>"), "Until:> Until:>",
-    "\\lx@hidden@align\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@)"), "Until:) Until:)",
-    "\\lx@hidden@align\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@<"), "Until:< Until:<",
-    "\\lx@hidden@align\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@("), "Until:( Until:(",
-    "\\lx@hidden@align\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align");
-  DefMacro!(T_CS!("@="), None,
-    "\\lx@hidden@align\\lx@amscd@equals\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@>"),
+    "Until:> Until:>",
+    "\\lx@hidden@align\\lx@amscd@stack{>}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@)"),
+    "Until:) Until:)",
+    "\\lx@hidden@align\\lx@amscd@stack{)}{\\lx@amscd@rightarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@<"),
+    "Until:< Until:<",
+    "\\lx@hidden@align\\lx@amscd@stack{<}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@("),
+    "Until:( Until:(",
+    "\\lx@hidden@align\\lx@amscd@stack{(}{\\lx@amscd@leftarrow}{#1}{#2}\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@="),
+    None,
+    "\\lx@hidden@align\\lx@amscd@equals\\lx@hidden@align"
+  );
 
   // Vertical connectors
-  DefMacro!(T_CS!("@A"), "Until:A Until:A",
-    "\\lx@amscd@adjacent{A}{\\Big\\uparrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@V"), "Until:V Until:V",
-    "\\lx@amscd@adjacent{V}{\\Big\\downarrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@A"),
+    "Until:A Until:A",
+    "\\lx@amscd@adjacent{A}{\\Big\\uparrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@V"),
+    "Until:V Until:V",
+    "\\lx@amscd@adjacent{V}{\\Big\\downarrow}{#1}{#2}\\lx@hidden@align\\lx@hidden@align"
+  );
 
-  DefMacro!(T_CS!("@|"), None,
-    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@\\vert"), None,
-    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align");
-  DefMacro!(T_CS!("@."), None,
-    "\\lx@hidden@align\\lx@hidden@align");
+  DefMacro!(
+    T_CS!("@|"),
+    None,
+    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(
+    T_CS!("@\\vert"),
+    None,
+    "\\Big\\Vert\\lx@hidden@align\\lx@hidden@align"
+  );
+  DefMacro!(T_CS!("@."), None, "\\lx@hidden@align\\lx@hidden@align");
 
   DefRegister!("\\minaw@" => Dimension!("11.111pt"));
 
@@ -66,10 +94,14 @@ LoadDefinitions!({
   DefConstructor!("\\lx@amscd@stack Undigested {} ScriptStyle ScriptStyle",
     sub[document, args, props] {
       // args: [0]=reversion(Undigested), [1]=op({}), [2]=over(ScriptStyle), [3]=under(ScriptStyle)
-      let scriptpos = props.get("scriptpos")
-        .and_then(|v| if let Stored::String(s) = v { Some(arena::to_string(*s)) } else { None })
-        .unwrap_or_default();
-      let scriptpos_attr = if scriptpos.is_empty() { None } else { Some(("scriptpos".to_string(), scriptpos)) };
+      // Probe scriptpos in place — only resolve to an owned String
+      // when the value is non-empty (most amscd cells have no override).
+      let scriptpos_attr = props.get("scriptpos").and_then(|v| match v {
+        Stored::String(s) if !arena::with(*s, |p| p.is_empty()) => {
+          Some(("scriptpos".to_string(), arena::to_string(*s)))
+        },
+        _ => None,
+      });
 
       let op = args.get(1).and_then(|a| a.as_ref());
       let over = args.get(2).and_then(|a| a.as_ref());
@@ -183,7 +215,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@leftarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2190}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\leftarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -198,7 +231,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@rightarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2192}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\rightarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -213,7 +247,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@leftrightarrow"), None, {
     Tbox::new(
       arena::pin_static("\u{2194}"),
-      None, None,
+      None,
+      None,
       Tokens!(T_CS!("\\leftrightarrow")),
       stored_map!(
         "role" => "ARROW",
@@ -228,7 +263,8 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@amscd@equals"), None, {
     Tbox::new(
       arena::pin_static("="),
-      None, None,
+      None,
+      None,
       Tokens!(T_OTHER!("=")),
       stored_map!(
         "role" => "ARROW",

@@ -49,4 +49,14 @@ LoadDefinitions!({
 
   // Default: tight spacing (\,)
   Let!("\\ltx@units@spacing", "\\,");
+
+  // Perl units.sty.ltxml L55-58: `tight` / `loose` package options
+  // toggle the spacing between value and unit (\, vs ~). Rust had the
+  // default Let above but neither option nor the ExecuteOptions('tight')
+  // call, so `\usepackage[loose]{units}` silently fell through to tight
+  // spacing. Pure additive; no units test exercises these options.
+  DeclareOption!("tight", { Let!("\\ltx@units@spacing", "\\,"); });
+  DeclareOption!("loose", { Let!("\\ltx@units@spacing", "~");   });
+  Digest!("\\ExecuteOptions{tight}")?;
+  ProcessOptions!();
 });

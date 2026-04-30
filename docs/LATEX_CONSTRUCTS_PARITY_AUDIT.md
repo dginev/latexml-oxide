@@ -1,0 +1,359 @@
+# Latex Constructs Translation Order Audit
+
+## Headline numbers
+
+* Perl `LaTeXML/lib/LaTeXML/Engine/latex_constructs.pool.ltxml` — **6014 lines**
+* Rust `latexml_engine/src/latex_constructs.rs` — **9296 lines**
+
+Rust is **54% larger** than Perl. The user has flagged this as bloat. Some
+of it is legitimate (Rust's `DefMacro!` macro + `sub[...]` helpers expand
+to more characters per definition than Perl's terse `DefMacro` calls), but
+the gap is bigger than the per-line factor would predict. There IS extra
+content.
+
+## Order divergences found in the first 50 Perl lines
+
+Compared Perl L19-L48 (the file's preamble + LoadPool reloads) against
+Rust:
+
+| Perl L | Symbol/op | Rust position | Issue |
+|---|---|---|---|
+| 19 | `AssignValue plain_constructs._loaded undef` | rs:2337 | OK (state::assign_value) |
+| 20 | `AssignValue math_common._loaded undef` | rs:2342 | OK |
+| 21 | `LoadPool('plain_constructs')` | rs:2357 | OK (InnerPool!) |
+| 23 | `assignValue font => textDefault` | NOT FOUND (?) | Possibly missing |
+| 24 | `assignValue mathfont => mathDefault` | NOT FOUND (?) | Possibly missing |
+| 27 | `DefMacroI \f@encoding` | rs:5431 (~3000L LATER) | OUT OF ORDER |
+| 28 | `DefMacroI \cf@encoding` | rs:5434 | OUT OF ORDER |
+| 30 | `DefMacro \hline` | tex_tables.rs:418 | WRONG FILE |
+| 31 | `DefMacroI \ldots` | math_common.rs:814 | WRONG FILE |
+| 33 | `DefPrimitiveI \ASCII\^` | NOT FOUND | MISSING |
+| 34 | `DefPrimitiveI \ASCII\~` | NOT FOUND | MISSING |
+| 36 | `Let \par \lx@normal@par` | rs:2370 (just added) | **FIXED** by b3c114d79 |
+| 38 | `LoadPool('math_common')` | rs:2358 (collapsed earlier) | OUT OF ORDER (Perl runs this AFTER L36 Let; Rust runs both InnerPools at top) |
+| 41 | `DefAccent \k` | rs:8754 (~6000L LATER) | OUT OF ORDER (also redefined in t1enc_def, t5enc_def, t1enc_sty, cp852_def) |
+| 42 | `DefAccent \r` | likely similar | OUT OF ORDER |
+| 44 | `NewCounter('page')` | rs:3806 | LATER but probably OK |
+| 45 | `SetCounter(page,1)` | (need to find) | TBD |
+| 46 | `Let \newpage \eject` | NOT FOUND (?) | Possibly missing |
+| 47 | `Let \nobreakspace \lx@nobreakspace` | rs:4722 | LATER (~2500L) |
+
+## Why the order matters (per user directive)
+
+When the order is wrong:
+* Lookups during dump-load phases see stale or default bindings.
+* Re-Lets that depend on prior `Let` order silently no-op.
+* The recently-fixed `Let \par \lx@normal@par` is the textbook example —
+  Rust was missing it entirely, and box_test (and 50+ other tests) fail
+  silently because document-body `\par` resolves to the chain instead
+  of the Constructor.
+
+## Plan
+
+This audit needs to be pursued line-by-line through all 6014 Perl lines.
+That's at least a few iteration cycles of careful work. Approach:
+
+1. **Phase 1 (immediate)**: catalog Perl L1-L500 line-by-line, identify
+   each Rust analog (its file + line + form), flag DIVERGENCE/MISSING.
+   Fix any high-leverage missing/wrong-order ones (like the `\par` one).
+2. **Phase 2**: continue through L501-L3000.
+3. **Phase 3**: L3001-L6014.
+4. **Phase 4**: identify Rust content that DOESN'T appear in Perl —
+   either move to a more appropriate file, delete (if dead), or document
+   as intentional divergence.
+
+## Bloat hypotheses (Rust > Perl by 3300 lines)
+
+Without the audit, candidates include:
+* Long Rust comments documenting Perl line numbers (legitimate but
+  voluminous).
+* Helper functions inlined that Perl pulls from `LaTeXML::Package` lib.
+* Possibly stale code from earlier iterations that's been superseded.
+* DOM-walker helpers that need real Rust code where Perl uses Perl's
+  XML libs at runtime.
+
+Will be confirmed during the audit.
+
+## Symbol-set comparison (2026-04-29)
+
+Mechanically extracted top-level CS definitions from each side using
+shell + Python. Methodology: grep for `Def(Macro|Constructor|Primitive|
+Conditional|Register|Math|Accent|Environment)I?\(` and `Let(`/`NewCounter(`
+prefixes, capture the first `\foo` argument, dedupe.
+
+| File | Unique CSes |
+|---|---|
+| Perl `latex_constructs.pool.ltxml` | **683** |
+| Rust `latex_constructs.rs` | **980** |
+| In both | **584** (correctly ported) |
+| **Rust-only** | **396** (potential bloat — see `parity_data/latex_constructs_rust_only.txt`) |
+| **Perl-only** | **99** (translation gaps — see `parity_data/latex_constructs_perl_only.txt`) |
+
+### Where do the Rust-only CSes come from?
+
+Spot-check of `\@@par`, `\@@array`, `\@@bibref`, `\addtoversion`,
+`\addvspace` (all in the Rust-only list): NONE are defined as
+`Def…` or `Let` in any Perl `Engine/*.pool.ltxml`. So Perl gets these
+CSes from one of:
+
+1. **Raw `latex.ltx` load** — Perl reads the LaTeX kernel file and
+   captures its native `\def\addvspace#1{...}` etc. into the dump.
+   Rust's dump captures these too (verified e.g. `\addvspace` is at
+   `latex.dump.txt:6504` as an `M ... E` row).
+2. **Other Perl `.pool.ltxml`** files outside the Engine dir.
+3. **Generated by code paths** rather than explicit binding.
+
+So the "Rust-only" 396 are mostly LaTeX-kernel CSes that Rust port
+authors decided to give explicit overrides in `latex_constructs.rs`
+because either:
+* Defensive: don't rely on the dump alone — pin a Perl-faithful
+  binding directly. Keeps NODUMP path correct.
+* Behavior-correcting: the raw `\def` body doesn't survive Rust's
+  digester correctly, so the binding overrides it with explicit
+  `DefMacro!`/`DefConstructor!` sugar.
+* Stale: from earlier iterations, no longer needed now that the dump
+  captures them.
+
+### What to do about it
+
+For each Rust-only CS, the question is **does it need to exist in
+`latex_constructs.rs`?** Three buckets:
+
+1. **Keep in `latex_constructs.rs`** — if the CS has a Perl-faithful
+   override that genuinely improves on the raw `\def`. Document why.
+2. **Move to topic-appropriate file** — `\@@array` belongs in
+   `tex_tables.rs` (alongside `\hline`); `\@@bibref` belongs in
+   bibliography handling; `\addvspace` belongs in `tex_paragraph.rs`.
+   Rust currently violates topic boundaries that Perl maintains.
+3. **Delete** — if the dump captures the same body and the engine
+   binding is purely redundant. Test with `LATEXML_NODUMP=1` after
+   deletion to verify NODUMP path stays correct (the engine binding
+   is the only source then; deletion would break NODUMP unless the
+   binding is moved elsewhere).
+
+### Perl-only CSes (translation gaps to fill)
+
+99 CSes Perl defines but Rust doesn't. Spot picks: `\@@warning`,
+`\@centercr`, `\@spaces`, `\@verbatim`, `\@warning`, `\@elt`. Some
+are LaTeX kernel internals, some look like genuine missing
+overrides. Each needs check: does Rust's dump load the equivalent?
+
+Full lists in `parity_data/latex_constructs_*.txt`.
+
+### Recommended next step
+
+For the 396 Rust-only CSes, do a representative spot-check (~20
+random ones): for each, read its Rust definition, find what Perl's
+dump installs (or raw `latex.ltx` def), verify functional equivalence.
+If equivalent → mark for deletion (keep dump as source of truth).
+If divergent → either fix Rust to match Perl or document as
+intentional divergence.
+
+Best time-leverage: tackle the obvious topical-misplacements first
+(`\@@array` → `tex_tables.rs`, etc.).
+
+## Updated 2026-04-29 — combined latex_*.{rs,pool.ltxml}
+
+The previous comparison only looked at `latex_constructs.{rs,pool.ltxml}`.
+Many "Rust-only" entries actually live in Perl's `latex_base.pool.ltxml`
+(e.g. `\@@par` is at `latex_base:261`). Combining all three latex files on
+both sides gives a much more accurate view:
+
+| Side | Total CSes |
+|---|---|
+| Perl `latex_{constructs,base,bootstrap}.pool.ltxml` | **813** |
+| Rust `latex_{constructs,base,bootstrap}.rs` | **759** |
+| In both | **728** (89.5% match) |
+| **Rust-only** | **31** |
+| **Perl-only** | **85** |
+
+So the apparent 396-CS bloat was an artifact of the file-by-file
+comparison. Across the latex_* family, **Rust has only 31 truly extra
+CSes**, most of which are meaningful additions:
+
+* Modern LaTeX kernel CSes added post-2020 that Perl source predates:
+  `\IfClassAtLeastTF`, `\IfClassLoadedTF`, `\IfFileAtLeastTF`,
+  `\IfFormatAtLeastTF`, `\IfPackageAtLeastTF`, `\IfPackageLoadedTF`.
+* LaTeXML-helper CSes: `\ltx@hard@MessageBreak`, `\ltx@ifclassloaded`,
+  `\ltx@ifpackageloaded`, `\lx@filecontents@star`, `\lx@newline`.
+* List internals not yet in Perl source: `\@listi`-`\@listvi`,
+  `\@bls`, `\@maxlistdepth`.
+* Graphicx driver: `\Gin@driver`.
+* Document state stubs: `\document`, `\enddocument`,
+  `\thebibliography@ID`, `\maybe@end@title`.
+* Picture mode: `\oval`.
+* Encoding: `\textperiodcentered`.
+* Misc: `\@@appendix`, `\@latexbug`, `\@leftmark`, `\@rightmark`,
+  `\filecontents`.
+
+These are NOT bloat in any meaningful sense.
+
+### Revised bloat picture
+
+The 3300-line file-size delta between `latex_constructs.{rs,pool.ltxml}`
+is therefore mostly per-line verbosity, not extra CSes. Rust's macros
+(`DefMacro!("\\foo", "\\bar baz", before_digest => sub {...})`) expand
+to several lines per definition, where Perl's call (`DefMacro('\foo',
+'\bar baz', beforeDigest => sub {...})`) is more terse. Plus the Rust
+file carries extensive Perl-line-number comments (a useful translation
+practice but adds bulk).
+
+### Real gap: 85 Perl-only CSes
+
+`docs/parity_data/latex_combined_perl_only.txt` lists them. Sample:
+`\@bibitem`, `\@captype`, `\@charlb`, `\@charrb`, `\@dblfloat`,
+`\@desci`-`\@descvi`, `\@filef@und`, `\@float`, `\@include`,
+`\@itemi`-`\@itemvi`, `\@enumi`-`\@enumiv`, `\@trivlist`,
+`\bottomnumber`, `\dbltopnumber`, `\dotfill`, plus various font-size
+definitions (`\@viipt`-`\@xivpt`).
+
+Many of these are list/enumeration internals (`\@itemi`-`\@itemvi`,
+`\@desci`-`\@descvi`, `\@enumi`-`\@enumiv`). Verify whether they're
+captured by `latex.ltx` raw load + dump. If yes, no action needed —
+the dump IS the source of truth for those.
+
+If not, port them in correct file location to match Perl source order.
+
+### Revised conclusion
+
+The user's "3000-line bloat" framing was based on the per-file size
+comparison. Looking at *content* the picture is much narrower: 31
+real Rust-only CSes (mostly additions, not bloat) and 85 Perl-only
+CSes (genuine translation gaps).
+
+Action plan:
+1. Verify the 85 Perl-only CSes are dump-captured. Likely most are.
+2. For the 31 Rust-only, document each as intentional addition (modern
+   kernel, LaTeXML helper, etc.). No moves/deletes needed.
+3. The line-count divergence is per-line verbosity — leave alone unless
+   we want to compress macro syntax (separate concern).
+
+## Updated 2026-04-27 — `latex_constructs_rust_only.rs` migration
+
+Per user directive: the three Rust files
+`engine/latex_{base,bootstrap,constructs}.rs` should match the three
+Perl `LaTeXML/Engine/latex_{base,bootstrap,constructs}.pool.ltxml`
+files exactly. Anything Rust needs as a hotfix lives in the new
+`engine/latex_constructs_rust_only.rs` module, loaded LAST in the
+`LoadFormat('latex')` chain.
+
+**Migrated entries (commit `c35b3b2d2`)** — verified absent from any
+Perl latex_*.pool.ltxml:
+
+* `\@bls`, `\@latexbug`, `\ltx@hard@MessageBreak` (from latex_base.rs)
+* `\@maxlistdepth`, `\@listi`-`\@listvi` (no-op stubs)
+* `\IfPackageLoadedTF`, `\IfClassLoadedTF`, `\IfPackageAtLeastTF`,
+  `\IfClassAtLeastTF`, `\IfFormatAtLeastTF`, `\IfFileAtLeastTF`
+  (modern LaTeX3 kernel post-2020 file-load family)
+* `\ltx@ifpackageloaded`, `\ltx@ifclassloaded` (LaTeXML aliases)
+* `\maybe@end@title` (Rust titling-pipeline Constructor)
+* `\thebibliography@ID` (initial empty default)
+
+**Deferred for follow-up** (require helper-fn relocation):
+* `\filecontents`, `\lx@filecontents@star` — `cache_filecontents` Rust
+  helper would need to move alongside.
+
+**Test impact**: workspace 1081/18 unchanged baseline. 50_structure
+clean (45/0).
+
+## Updated 2026-04-27 — symbol-set audit v2 (tighter extraction)
+
+Earlier audit comparisons had high false-positive rates because
+extraction patterns missed several Rust definition forms (`DefMath!`,
+`DefAccent!`, `DefEnvironment!`, dynamic `T_CS!(s!(…))`, raw-TeX in
+closures). v2 extraction restricted to `Def…!`/`Let!`/`NewCounter!`
+first-arg only, and emits NewCounter side-effect CSes (`\thefoo`,
+`\c@foo`).
+
+| Side | Total CSes |
+|---|---|
+| Perl `latex_{base,bootstrap,constructs}.pool.ltxml` | **1279** |
+| Rust `latex_{base,bootstrap,constructs,constructs_rust_only}.rs` | **1207** |
+| In both | **1159** (~91% overlap) |
+| **Rust-only** | **48** |
+| **Perl-only** | **120** |
+
+`docs/parity_data/latex_combined_{rust,perl}_only_v2.txt` lists each.
+
+### Caveats
+
+The Perl-only list still contains a high false-positive rate. Spot
+checks: `\caption`, `\frac`, `\bfseries`, `\itshape`, `\array`, `\date`
+all show as "Perl-only" in v2 but are actually defined in Rust under
+forms the regex misses (e.g. `DefConstructor!`, `Tag!`, dynamic
+`T_CS!(s!(...))`). Estimated true Perl-only count is closer to ~50,
+not 120.
+
+The Rust-only count of 48 is more reliable. It includes the migration
+targets (now in `latex_constructs_rust_only.rs`) plus other modern
+kernel additions still in `latex_constructs.rs` itself
+(e.g. `\extrafloats`, `\@equationgroup` family, `\NewCommandCopy`,
+`\DeclareCommandCopy`, `\ShowCommand`, `\wlog`, picture extras
+`\lx@pic@line` etc.) that need eventual disposition (move to rust_only
+or document as intentional kernel-additions).
+
+### Methodology limit
+
+A symbol-set diff fundamentally cannot reach exact parity given
+Rust's many definition styles. The next-step approach is
+**line-by-line walk** through Perl `latex_constructs.pool.ltxml`,
+finding each Rust analog in any of the four latex_* files, in source
+order. Symbol-set diff stays useful as a coarse health indicator.
+
+## Updated 2026-04-28 — migration progress + v2 false-positive triage
+
+**Cumulative migrations** (commits `c35b3b2d2`, `3218517e4`,
+`67e9ce7e2`): 27 entries now isolated in
+`latex_constructs_rust_only.rs`.
+
+**v2 audit triage** of the 48 Rust-only entries:
+
+| Category | Count | Status |
+|---|---|---|
+| Migrated to `_rust_only.rs` | 27 | done |
+| FOUND in Perl (audit missed) | 5 | no action needed |
+| Runtime `NewCounter!` side-effects | 3 | no action — runtime conditional |
+| `DefEnvironment!` side-effects | 4 | needs migration but coupled to helpers (`before_float`, `after_float`) |
+| Coupled migrations remaining | 9 | requires helper-fn relocation |
+
+**FOUND in Perl** (false positives — Perl extraction missed them):
+* `\@@appendix` — used as Let target in
+  `latex_constructs.pool.ltxml:694`
+* `\document` — `Let(T_CS('\document'), T_CS('\begin{document}'))`
+  L333
+* `\enddocument` — L385
+* `\Gin@driver` — `DefMacroI(T_CS('\Gin@driver'), undef, Tokens())`
+  L5028
+* `\@leftmark`, `\@rightmark` — used in `\markboth` family
+
+**Runtime NewCounter side-effects** (false positives — these CSes
+are conditionally created at runtime by `eqnarray_bindings()`, not at
+load-time): `\c@@equationgroup`, `\@equationgroup`,
+`\the@equationgroup`.
+
+**DefEnvironment side-effects**: `\@dblfloat`, `\end@dblfloat`,
+`\@float`, `\end@float` are generated by the
+`DefEnvironment!("{@float}…")` and
+`DefEnvironment!("{@dblfloat}…")` calls at
+`latex_constructs.rs:6120-6143`. These ARE Rust-only definitions
+(Perl gets them from raw latex.ltx), but the DefEnvironment closures
+depend on Rust-internal helper fns (`before_float`, `after_float`,
+`before_float_ex`). Migration deferred — needs helper fns to be
+made `pub(super)` or relocated.
+
+**Coupled migrations remaining**:
+* `\@ensuremath` — paired with `\ensuremath` body redirection.
+* `\filecontents`, `\lx@filecontents@star` — need `cache_filecontents`
+  helper relocated.
+* `\ltx@input` — paired with `Let \@iinput \ltx@input` (Perl Let's to
+  `\lx@latex@input`; Rust naming differs).
+* `\lx@pic@line`, `\lx@pic@oval`, `\lx@pic@qbezier`,
+  `\lx@pic@vector` — Rust splits Perl's single picture-mode
+  Constructor into `\foo` macro + `\lx@pic@foo` Constructor;
+  4 DefConstructors with 31 uses of helper fns `px_value`/`fmt_px`.
+
+The migration cleanup has reached the point of diminishing returns
+on coupled cases. Next-step priority should pivot to either (a)
+test recovery (e.g. `halignatt_test`, `ifthen_test`) or (b)
+genuine line-by-line Perl→Rust order audit per the user's
+"exact same definitions in exact same order" directive.

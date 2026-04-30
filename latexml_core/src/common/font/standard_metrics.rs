@@ -42,6 +42,11 @@ impl Default for MetricData {
   }
 }
 
+// `parameters: &[...]` arrays in MetricData entries hold the upstream
+// TFM font dimensions (in 12.20 fixed-point f64). A handful exceed
+// rustfmt's 100-char width; rustfmt::skip preserves them as one row
+// per font, matching the original `.tfm` table layout.
+#[rustfmt::skip]
 pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
   raw_map!(
   "amsa" => MetricData {

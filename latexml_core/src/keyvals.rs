@@ -159,7 +159,11 @@ impl BoxOps for KeyVals {
     crate::common::dimension::Dimension,
   )> {
     use crate::common::dimension::Dimension;
-    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    Ok((
+      Dimension::default(),
+      Dimension::default(),
+      Dimension::default(),
+    ))
   }
 }
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -205,6 +209,15 @@ impl KeyVals {
       hook_missing,
     } = options;
     let prefix = prefix.unwrap_or_else(|| String::from("KV"));
+    // Perl KeyVals.pm #2777 (fdc8bf91, 2026-03-27):
+    // filter empty strings from the keyset list. Split("," , ",pstricks")
+    // (e.g. \pst@famlist accumulates as ",pstricks") yields ["", "pstricks"];
+    // the empty keyset caused keyval_qname("psset","","ArrowInside") to
+    // collide with raw \def\psset@@ArrowInside (a delimited-argument helper)
+    // and emit spurious "Missing argument" errors. Hardening here matches
+    // the Perl fix regardless of how keysets was constructed at the call
+    // site.
+    keysets.retain(|k| !k.is_empty());
     if keysets.is_empty() {
       keysets = vec![String::from("_anonymous_")];
     }
@@ -236,15 +249,36 @@ impl KeyVals {
     // throw an error (not really), unless we record the missing macros
     // Since we're not as obsessive about declaring ALL keys, we'll soften the blow
     if keysets.is_empty() {
-      let all_joined = allkeysets.join(",");
       if self.skip_missing == SkipMissing::None {
-        Info!(
-          "undefined",
-          "Encountered unknown KeyVals key",
-          s!(
-            "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
-          )
-        );
+        // Rate-limit: only emit Info the first time this (prefix, key,
+        // keysets) tuple fires. A large `tabular` with 700 rows can
+        // otherwise produce 700 identical "Encountered unknown KeyVals
+        // key 'vattach'" messages (arxiv 1709.05096), each allocating
+        // a formatted String + going through the log backend. Perl's
+        // Info() has an equivalent deduper in Error.pm via
+        // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
+        // and unbounded in count, so the first occurrence is always
+        // visible but repeats are silently dropped.
+        type SeenSet = std::collections::HashSet<(String, String, String)>;
+        thread_local! {
+          static SEEN_MISSING: std::cell::RefCell<SeenSet> =
+            std::cell::RefCell::new(SeenSet::new());
+        }
+        let all_joined = allkeysets.join(",");
+        let is_new = SEEN_MISSING.with(|cell| {
+          cell
+            .borrow_mut()
+            .insert((prefix.clone(), key.to_string(), all_joined.clone()))
+        });
+        if is_new {
+          Info!(
+            "undefined",
+            "Encountered unknown KeyVals key",
+            s!(
+              "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
+            )
+          );
+        }
       }
       return Vec::new();
     }
@@ -473,11 +507,7 @@ impl KeyVals {
             s!("'{key}' with prefix '{prefix}' not defined in '{keyset}'")
           );
         } else if matches!(keyval_get(&qname, "disabled"), Some(Stored::Bool(true))) {
-          Warn!(
-            "undefined",
-            "keyval",
-            s!("`{key}' has been disabled. ")
-          );
+          Warn!("undefined", "keyval", s!("`{key}' has been disabled. "));
         } else {
           // Define xkeyval internals per-key if needed
           if set_internals {
@@ -919,5 +949,117 @@ impl From<KeyVals> for Result<Option<Digested>> {
   fn from(value: KeyVals) -> Result<Option<Digested>> {
     let tmp: Digested = value.into();
     tmp.into()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn skip_missing_default_is_none() {
+    let s = SkipMissing::default();
+    assert_eq!(s, SkipMissing::None);
+  }
+
+  #[test]
+  fn skip_missing_variants_not_equal() {
+    assert_ne!(SkipMissing::None, SkipMissing::All);
+  }
+
+  #[test]
+  fn keyvals_config_default_all_empty() {
+    let c = KeyvalsConfig::default();
+    assert!(c.prefix.is_none());
+    assert!(c.keysets.is_empty());
+    assert!(!c.set_all);
+    assert!(!c.set_internals);
+    assert!(c.skip.is_empty());
+    assert_eq!(c.skip_missing, SkipMissing::None);
+    assert!(c.hook_missing.is_none());
+  }
+
+  #[test]
+  fn keyvals_default_prefix_and_anonymous_keyset() {
+    // Default KeyVals has prefix=KV, keysets=["_anonymous_"].
+    let kv = KeyVals::default();
+    assert_eq!(kv.prefix, "KV");
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+    assert!(!kv.set_all);
+    assert!(!kv.set_internals);
+  }
+
+  #[test]
+  fn keyvals_new_with_empty_keysets_defaults_to_anonymous() {
+    let kv = KeyVals::new(KeyvalsConfig::default());
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+  }
+
+  #[test]
+  fn keyvals_new_with_custom_keysets_preserved() {
+    let cfg = KeyvalsConfig {
+      keysets: vec!["tabular".to_string(), "array".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets.len(), 2);
+    assert_eq!(kv.keysets[0], "tabular");
+  }
+
+  #[test]
+  fn keyvals_new_custom_prefix() {
+    let cfg = KeyvalsConfig {
+      prefix: Some("P".to_string()),
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.prefix, "P");
+  }
+
+  #[test]
+  fn keyvals_new_default_prefix_on_none() {
+    let cfg = KeyvalsConfig {
+      prefix: None,
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.prefix, "KV");
+  }
+
+  #[test]
+  fn keyvals_new_set_all_flag() {
+    let cfg = KeyvalsConfig {
+      set_all: true,
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert!(kv.set_all);
+  }
+
+  #[test]
+  fn keyvals_new_filters_empty_keysets() {
+    // Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
+    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
+    // entry would collide with `\def\psset@@ArrowInside` via the
+    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
+    // path. Empty entries must be filtered before any default fallback.
+    let cfg = KeyvalsConfig {
+      keysets: vec!["".to_string(), "pstricks".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets, vec!["pstricks".to_string()]);
+  }
+
+  #[test]
+  fn keyvals_new_all_empty_keysets_defaults_to_anonymous() {
+    // If every keyset entry is empty, we still fall back to
+    // _anonymous_ (not retain an empty keyset).
+    let cfg = KeyvalsConfig {
+      keysets: vec!["".to_string(), "".to_string()],
+      ..KeyvalsConfig::default()
+    };
+    let kv = KeyVals::new(cfg);
+    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
   }
 }

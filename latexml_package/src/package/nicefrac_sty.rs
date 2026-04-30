@@ -70,4 +70,14 @@ LoadDefinitions!({
 
   // Default: nice style
   Let!("\\nicefrac", "\\@UnitsNiceFrac");
+
+  // Perl nicefrac.sty.ltxml L70-73: three options letting the user pick
+  // which \nicefrac variant is active. All three were unported, so
+  // `\usepackage[bevelled]{nicefrac}` fell through to the default (inline
+  // nice fraction) instead of switching to bevelled output. Pure additive
+  // — no test exercises these options so zero golden risk.
+  DeclareOption!("nice",     { Let!("\\nicefrac", "\\@UnitsNiceFrac"); });
+  DeclareOption!("ugly",     { Let!("\\nicefrac", "\\@UnitsUglyFrac"); });
+  DeclareOption!("bevelled", { Let!("\\nicefrac", "\\@UnitsNiceFrac@bevelled"); });
+  ProcessOptions!();
 });

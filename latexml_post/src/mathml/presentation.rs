@@ -14,8 +14,8 @@ use libxml::tree::Node;
 use std::cell::Cell;
 use std::collections::HashMap;
 
-use crate::document::{element_children, element_children_iter, NodeData, PostDocument};
 use super::operator_dictionary;
+use crate::document::{NodeData, PostDocument, element_children, element_children_iter};
 
 // Thread-local flag for invisible times emission.
 // When false, U+2062 is replaced with U+200B (zero-width space).
@@ -24,13 +24,9 @@ thread_local! {
 }
 
 /// Set whether to emit invisible times (called by MathML processor before rendering).
-pub fn set_invisible_times(emit: bool) {
-  INVISIBLE_TIMES.with(|f| f.set(emit));
-}
+pub fn set_invisible_times(emit: bool) { INVISIBLE_TIMES.with(|f| f.set(emit)); }
 
-fn get_invisible_times() -> bool {
-  INVISIBLE_TIMES.with(|f| f.get())
-}
+fn get_invisible_times() -> bool { INVISIBLE_TIMES.with(|f| f.get()) }
 
 /// Math style levels.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -82,9 +78,9 @@ fn is_embellishing_role(role: &str) -> bool {
 /// Default token content for invisible operators.
 fn default_token_content(role: &str) -> Option<&'static str> {
   match role {
-    "MULOP" => Some("\u{2062}"),  // INVISIBLE TIMES
-    "ADDOP" => Some("\u{2064}"),  // INVISIBLE PLUS
-    "PUNCT" => Some("\u{2063}"),  // INVISIBLE SEPARATOR
+    "MULOP" => Some("\u{2062}"), // INVISIBLE TIMES
+    "ADDOP" => Some("\u{2064}"), // INVISIBLE PLUS
+    "PUNCT" => Some("\u{2063}"), // INVISIBLE SEPARATOR
     _ => None,
   }
 }
@@ -135,7 +131,11 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
   // `get_qname`. On non-ltx nodes, fall through to the generic m:mtext
   // wrapping (same as the original catchall).
   let is_ltx = doc.qname_prefix(node).as_deref() == Some("ltx");
-  let localname = if is_ltx { node.get_name() } else { String::new() };
+  let localname = if is_ltx {
+    node.get_name()
+  } else {
+    String::new()
+  };
 
   // Follow XMRef
   if is_ltx && localname == "XMRef" {
@@ -150,10 +150,9 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
   if is_ltx {
     match localname.as_str() {
       "XMath" => {
-        let results: Vec<NodeData> =
-          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
+        let results: Vec<NodeData> = element_children_iter(node).map(|c| pmml(doc, &c)).collect();
         return pmml_row(results);
-      }
+      },
       "XMDual" => {
         let children = element_children(node);
         return if children.len() >= 2 {
@@ -161,12 +160,11 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
         } else {
           pmml_error("Empty XMDual")
         };
-      }
+      },
       "XMWrap" | "XMArg" => {
-        let results: Vec<NodeData> =
-          element_children_iter(node).map(|c| pmml(doc, &c)).collect();
+        let results: Vec<NodeData> = element_children_iter(node).map(|c| pmml(doc, &c)).collect();
         return pmml_row(results);
-      }
+      },
       "XMApp" => return pmml_apply(doc, node),
       "XMTok" => return pmml_token(doc, node),
       "XMHint" => return pmml_hint(doc, node),
@@ -183,16 +181,16 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
           }
         }
         return pmml_row(children);
-      }
-      _ => {}
+      },
+      _ => {},
     }
   }
 
   // Catchall: wrap content in m:mtext.
   NodeData::Element {
-    tag: "m:mtext".to_string(),
+    tag:        "m:mtext".to_string(),
     attributes: None,
-    children: vec![NodeData::Text(node.get_content())],
+    children:   vec![NodeData::Text(node.get_content())],
   }
 }
 
@@ -212,10 +210,14 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     let is_sub = role.contains("SUB");
     let tag = if is_sub { "m:msub" } else { "m:msup" };
     return NodeData::Element {
-      tag: tag.to_string(),
+      tag:        tag.to_string(),
       attributes: None,
-      children: vec![
-        NodeData::Element { tag: "m:mi".to_string(), attributes: None, children: vec![] },
+      children:   vec![
+        NodeData::Element {
+          tag:        "m:mi".to_string(),
+          attributes: None,
+          children:   vec![],
+        },
         pmml_scriptsize(doc, &children[0]),
       ],
     };
@@ -240,7 +242,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   match op_role.as_str() {
     "SUPERSCRIPTOP" | "SUBSCRIPTOP" if args.len() >= 2 => {
       pmml_script_full(doc, op, &args[0], &args[1])
-    }
+    },
     "FRACOP" if args.len() >= 2 => {
       let thickness = rop.get_attribute("thickness");
       let mut attrs = HashMap::new();
@@ -250,14 +252,11 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         }
       }
       NodeData::Element {
-        tag: "m:mfrac".to_string(),
+        tag:        "m:mfrac".to_string(),
         attributes: if attrs.is_empty() { None } else { Some(attrs) },
-        children: vec![
-          pmml_smaller(doc, &args[0]),
-          pmml_smaller(doc, &args[1]),
-        ],
+        children:   vec![pmml_smaller(doc, &args[0]), pmml_smaller(doc, &args[1])],
       }
-    }
+    },
     "OVERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1492-1504: check if base is XMApp with UNDERACCENT → m:munderover
       let base = &args[0];
@@ -267,25 +266,25 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         if inner_role == "UNDERACCENT" {
           // Combine into m:munderover: base_of_inner, under_accent, over_accent
           return NodeData::Element {
-            tag: "m:munderover".to_string(),
+            tag:        "m:munderover".to_string(),
             attributes: Some(HashMap::from([
               ("accent".to_string(), "true".to_string()),
               ("accentunder".to_string(), "true".to_string()),
             ])),
-            children: vec![
-              pmml(doc, &base_children[1]),  // the actual base
-              pmml(doc, &base_children[0]),   // the under-accent
-              pmml(doc, op),                  // the over-accent
+            children:   vec![
+              pmml(doc, &base_children[1]), // the actual base
+              pmml(doc, &base_children[0]), // the under-accent
+              pmml(doc, op),                // the over-accent
             ],
           };
         }
       }
       NodeData::Element {
-        tag: "m:mover".to_string(),
+        tag:        "m:mover".to_string(),
         attributes: Some(HashMap::from([("accent".to_string(), "true".to_string())])),
-        children: vec![pmml(doc, base), pmml(doc, op)],
+        children:   vec![pmml(doc, base), pmml(doc, op)],
       }
-    }
+    },
     "UNDERACCENT" if !args.is_empty() => {
       // Perl MathML.pm L1507-1519: check if base is XMApp with OVERACCENT → m:munderover
       let base = &args[0];
@@ -294,43 +293,46 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         let inner_role = base_children[0].get_attribute("role").unwrap_or_default();
         if inner_role == "OVERACCENT" {
           return NodeData::Element {
-            tag: "m:munderover".to_string(),
+            tag:        "m:munderover".to_string(),
             attributes: Some(HashMap::from([
               ("accent".to_string(), "true".to_string()),
               ("accentunder".to_string(), "true".to_string()),
             ])),
-            children: vec![
-              pmml(doc, &base_children[1]),  // the actual base
-              pmml(doc, op),                  // the under-accent
-              pmml(doc, &base_children[0]),   // the over-accent
+            children:   vec![
+              pmml(doc, &base_children[1]), // the actual base
+              pmml(doc, op),                // the under-accent
+              pmml(doc, &base_children[0]), // the over-accent
             ],
           };
         }
       }
       NodeData::Element {
-        tag: "m:munder".to_string(),
-        attributes: Some(HashMap::from([("accentunder".to_string(), "true".to_string())])),
-        children: vec![pmml(doc, base), pmml(doc, op)],
+        tag:        "m:munder".to_string(),
+        attributes: Some(HashMap::from([(
+          "accentunder".to_string(),
+          "true".to_string(),
+        )])),
+        children:   vec![pmml(doc, base), pmml(doc, op)],
       }
-    }
+    },
     "POSTFIX" if !args.is_empty() => {
       let mut items: Vec<NodeData> = args.iter().map(|a| pmml(doc, a)).collect();
       items.push(pmml(doc, op));
       pmml_row(items)
-    }
-    "ADDOP" | "RELOP" | "MULOP" | "BINOP" | "ARROW" | "METARELOP"
-    | "COMPOSEOP" | "MODIFIEROP" | "MIDDLE" => {
+    },
+    "ADDOP" | "RELOP" | "MULOP" | "BINOP" | "ARROW" | "METARELOP" | "COMPOSEOP" | "MODIFIEROP"
+    | "MIDDLE" => {
       // Infix: arg1 op arg2 op arg3 ...
       pmml_infix(doc, op, args)
-    }
+    },
     "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP" | "DIFFOP" => {
       // Big operator: Σ/∫ applied to args
       pmml_summation(doc, op, args)
-    }
+    },
     "OPEN" | "CLOSE" | "ENCLOSE" if !args.is_empty() => {
       // Fenced: (args)
       pmml_parenthesize(doc, op, args)
-    }
+    },
     _ if meaning == "multirelation" => {
       // Multirelation: a = b = c (interleaved args and operators)
       // Port of `Apply:?:multirelation` handler.
@@ -344,7 +346,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         }
       }
       pmml_row(items)
-    }
+    },
     _ => {
       // Default: function application
       if meaning == "limit-from" && !args.is_empty() {
@@ -356,25 +358,28 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         pmml_row(vec![
           pmml(doc, &args[0]),
           NodeData::Element {
-            tag: "m:mspace".to_string(),
-            attributes: Some(HashMap::from([("width".to_string(), "0.389em".to_string())])),
-            children: vec![],
+            tag:        "m:mspace".to_string(),
+            attributes: Some(HashMap::from([(
+              "width".to_string(),
+              "0.389em".to_string(),
+            )])),
+            children:   vec![],
           },
           pmml(doc, &args[1]),
         ])
       } else if meaning == "square-root" && !args.is_empty() {
         NodeData::Element {
-          tag: "m:msqrt".to_string(),
+          tag:        "m:msqrt".to_string(),
           attributes: None,
-          children: vec![pmml(doc, &args[0])],
+          children:   vec![pmml(doc, &args[0])],
         }
       } else if meaning == "continued-fraction" && args.len() >= 2 {
         pmml_cfrac(doc, op, &args[0], &args[1])
       } else if meaning == "nth-root" && args.len() >= 2 {
         NodeData::Element {
-          tag: "m:mroot".to_string(),
+          tag:        "m:mroot".to_string(),
           attributes: None,
-          children: vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
+          children:   vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
         }
       } else {
         // Generic application: op(arg1, arg2, ...)
@@ -385,7 +390,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         }
         pmml_row(items)
       }
-    }
+    },
   }
 }
 
@@ -393,7 +398,9 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `stylizeContent` + token converter.
 fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
-  let role = node.get_attribute("role").unwrap_or_else(|| "UNKNOWN".to_string());
+  let role = node
+    .get_attribute("role")
+    .unwrap_or_else(|| "UNKNOWN".to_string());
   let font = node.get_attribute("font");
   let mut text = node.get_content();
   let meaning = node.get_attribute("meaning");
@@ -403,9 +410,9 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     // "absent" means an empty placeholder (e.g., missing LHS in aligned equations).
     // Perl renders this as an empty <m:mi/>.
     return NodeData::Element {
-      tag: "m:mi".to_string(),
+      tag:        "m:mi".to_string(),
       attributes: None,
-      children: vec![],
+      children:   vec![],
     };
   }
 
@@ -605,9 +612,9 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
   }
 
   NodeData::Element {
-    tag: tag.to_string(),
+    tag:        tag.to_string(),
     attributes: if attrs.is_empty() { None } else { Some(attrs) },
-    children: vec![NodeData::Text(text)],
+    children:   vec![NodeData::Text(text)],
   }
 }
 
@@ -619,9 +626,9 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
   if let Some(w) = width {
     // Convert width to mspace
     NodeData::Element {
-      tag: "m:mspace".to_string(),
+      tag:        "m:mspace".to_string(),
       attributes: Some(HashMap::from([("width".to_string(), w)])),
-      children: vec![],
+      children:   vec![],
     }
   } else {
     // Empty hint
@@ -634,7 +641,9 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
 /// Port of `pmml_internal` XMArray branch.
 fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
-  let vattach = node.get_attribute("vattach").unwrap_or_else(|| "middle".to_string());
+  let vattach = node
+    .get_attribute("vattach")
+    .unwrap_or_else(|| "middle".to_string());
   let align = match vattach.as_str() {
     "top" => "bottom1",
     "middle" => "axis",
@@ -662,15 +671,19 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
       };
 
       cols.push(NodeData::Element {
-        tag: "m:mtd".to_string(),
-        attributes: if td_attrs.is_empty() { None } else { Some(td_attrs) },
-        children: cell_content,
+        tag:        "m:mtd".to_string(),
+        attributes: if td_attrs.is_empty() {
+          None
+        } else {
+          Some(td_attrs)
+        },
+        children:   cell_content,
       });
     }
     rows.push(NodeData::Element {
-      tag: "m:mtr".to_string(),
+      tag:        "m:mtr".to_string(),
       attributes: None,
-      children: cols,
+      children:   cols,
     });
   }
 
@@ -680,9 +693,13 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   }
 
   NodeData::Element {
-    tag: "m:mtable".to_string(),
-    attributes: if table_attrs.is_empty() { None } else { Some(table_attrs) },
-    children: rows,
+    tag:        "m:mtable".to_string(),
+    attributes: if table_attrs.is_empty() {
+      None
+    } else {
+      Some(table_attrs)
+    },
+    children:   rows,
   }
 }
 
@@ -692,21 +709,17 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
 /// Simple sub/superscript.
 fn pmml_script_simple(doc: &PostDocument, tag: &str, base: &Node, script: &Node) -> NodeData {
   NodeData::Element {
-    tag: tag.to_string(),
+    tag:        tag.to_string(),
     attributes: None,
-    children: vec![pmml(doc, base), pmml_scriptsize(doc, script)],
+    children:   vec![pmml(doc, base), pmml_scriptsize(doc, script)],
   }
 }
 
 /// Convert node at script size.
-fn pmml_scriptsize(doc: &PostDocument, node: &Node) -> NodeData {
-  pmml(doc, node)
-}
+fn pmml_scriptsize(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
 
 /// Convert node at smaller size (for fractions).
-fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData {
-  pmml(doc, node)
-}
+fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
 
 /// Infix operator: arg1 op arg2 op arg3 ...
 ///
@@ -792,10 +805,16 @@ fn pmml_script_decipher(
   let mut post_scripts: Vec<ScriptPair> = Vec::new();
 
   let role = op.get_attribute("role").unwrap_or_default();
-  let pos_str = op.get_attribute("scriptpos").unwrap_or_else(|| "post0".to_string());
-  let pos = if pos_str.starts_with("pre") { "pre" }
-    else if pos_str.starts_with("mid") { "mid" }
-    else { "post" };
+  let pos_str = op
+    .get_attribute("scriptpos")
+    .unwrap_or_else(|| "post0".to_string());
+  let pos = if pos_str.starts_with("pre") {
+    "pre"
+  } else if pos_str.starts_with("mid") {
+    "mid"
+  } else {
+    "post"
+  };
   let is_sub = role.contains("SUB");
 
   // Place first script
@@ -816,7 +835,8 @@ fn pmml_script_decipher(
   loop {
     // Realize XMRef
     let realized = if doc.is_qname(&current_base, "ltx:XMRef") {
-      current_base.get_attribute("idref")
+      current_base
+        .get_attribute("idref")
         .and_then(|id| doc.find_node_by_id(&id).cloned())
         .unwrap_or(current_base.clone())
     } else {
@@ -845,10 +865,16 @@ fn pmml_script_decipher(
 
     let xbase = &children[1];
     let xscript = &children[2];
-    let xpos_str = xop.get_attribute("scriptpos").unwrap_or_else(|| "post0".to_string());
-    let xpos = if xpos_str.starts_with("pre") { "pre" }
-      else if xpos_str.starts_with("mid") { "mid" }
-      else { "post" };
+    let xpos_str = xop
+      .get_attribute("scriptpos")
+      .unwrap_or_else(|| "post0".to_string());
+    let xpos = if xpos_str.starts_with("pre") {
+      "pre"
+    } else if xpos_str.starts_with("mid") {
+      "mid"
+    } else {
+      "post"
+    };
     let x_is_sub = xrole.contains("SUB");
     let xpair = if x_is_sub {
       (Some(xscript.clone()), None)
@@ -869,7 +895,7 @@ fn pmml_script_decipher(
         } else {
           pre_scripts.push(xpair);
         }
-      }
+      },
       "mid" => {
         if let Some(first) = mid_scripts.first_mut() {
           let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
@@ -881,7 +907,7 @@ fn pmml_script_decipher(
         } else {
           mid_scripts.push(xpair);
         }
-      }
+      },
       _ => {
         if let Some(first) = post_scripts.first_mut() {
           let slot = if x_is_sub { &mut first.0 } else { &mut first.1 };
@@ -893,7 +919,7 @@ fn pmml_script_decipher(
         } else {
           post_scripts.push(xpair);
         }
-      }
+      },
     }
 
     current_base = xbase.clone();
@@ -903,23 +929,30 @@ fn pmml_script_decipher(
 }
 
 /// Apply mid scripts (under/over) to a base.
-fn apply_mid_scripts(doc: &PostDocument, mut base: NodeData, mid_scripts: &[ScriptPair]) -> NodeData {
+fn apply_mid_scripts(
+  doc: &PostDocument,
+  mut base: NodeData,
+  mid_scripts: &[ScriptPair],
+) -> NodeData {
   for (sub_opt, sup_opt) in mid_scripts {
     let under = sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
     let over = sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s));
 
     base = match (under, over) {
       (Some(u), None) => NodeData::Element {
-        tag: "m:munder".to_string(), attributes: None,
-        children: vec![base, u],
+        tag:        "m:munder".to_string(),
+        attributes: None,
+        children:   vec![base, u],
       },
       (None, Some(o)) => NodeData::Element {
-        tag: "m:mover".to_string(), attributes: None,
-        children: vec![base, o],
+        tag:        "m:mover".to_string(),
+        attributes: None,
+        children:   vec![base, o],
       },
       (Some(u), Some(o)) => NodeData::Element {
-        tag: "m:munderover".to_string(), attributes: None,
-        children: vec![base, u, o],
+        tag:        "m:munderover".to_string(),
+        attributes: None,
+        children:   vec![base, u, o],
       },
       (None, None) => base,
     };
@@ -936,34 +969,74 @@ fn apply_multi_scripts(
   pre_scripts: &[ScriptPair],
   post_scripts: &[ScriptPair],
 ) -> NodeData {
-  let none_mml = || NodeData::Element { tag: "m:none".to_string(), attributes: None, children: vec![] };
+  let none_mml = || NodeData::Element {
+    tag:        "m:none".to_string(),
+    attributes: None,
+    children:   vec![],
+  };
 
   if !pre_scripts.is_empty() {
     // mmultiscripts with prescripts
     let mut children = vec![base];
     for (sub_opt, sup_opt) in post_scripts {
-      children.push(sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
-      children.push(sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
+      children.push(
+        sub_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
+      children.push(
+        sup_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
     }
     children.push(NodeData::Element {
-      tag: "m:mprescripts".to_string(), attributes: None, children: vec![],
+      tag:        "m:mprescripts".to_string(),
+      attributes: None,
+      children:   vec![],
     });
     for (sub_opt, sup_opt) in pre_scripts {
-      children.push(sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
-      children.push(sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
+      children.push(
+        sub_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
+      children.push(
+        sup_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
     }
     NodeData::Element {
-      tag: "m:mmultiscripts".to_string(), attributes: None, children,
+      tag: "m:mmultiscripts".to_string(),
+      attributes: None,
+      children,
     }
   } else if post_scripts.len() > 1 {
     // mmultiscripts with multiple postscripts
     let mut children = vec![base];
     for (sub_opt, sup_opt) in post_scripts {
-      children.push(sub_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
-      children.push(sup_opt.as_ref().map(|s| pmml_scriptsize(doc, s)).unwrap_or_else(none_mml));
+      children.push(
+        sub_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
+      children.push(
+        sup_opt
+          .as_ref()
+          .map(|s| pmml_scriptsize(doc, s))
+          .unwrap_or_else(none_mml),
+      );
     }
     NodeData::Element {
-      tag: "m:mmultiscripts".to_string(), attributes: None, children,
+      tag: "m:mmultiscripts".to_string(),
+      attributes: None,
+      children,
     }
   } else if post_scripts.is_empty() {
     base
@@ -972,16 +1045,23 @@ fn apply_multi_scripts(
     let (sub_opt, sup_opt) = &post_scripts[0];
     match (sub_opt, sup_opt) {
       (Some(sub_node), None) => NodeData::Element {
-        tag: "m:msub".to_string(), attributes: None,
-        children: vec![base, pmml_scriptsize(doc, sub_node)],
+        tag:        "m:msub".to_string(),
+        attributes: None,
+        children:   vec![base, pmml_scriptsize(doc, sub_node)],
       },
       (None, Some(sup_node)) => NodeData::Element {
-        tag: "m:msup".to_string(), attributes: None,
-        children: vec![base, pmml_scriptsize(doc, sup_node)],
+        tag:        "m:msup".to_string(),
+        attributes: None,
+        children:   vec![base, pmml_scriptsize(doc, sup_node)],
       },
       (Some(sub_node), Some(sup_node)) => NodeData::Element {
-        tag: "m:msubsup".to_string(), attributes: None,
-        children: vec![base, pmml_scriptsize(doc, sub_node), pmml_scriptsize(doc, sup_node)],
+        tag:        "m:msubsup".to_string(),
+        attributes: None,
+        children:   vec![
+          base,
+          pmml_scriptsize(doc, sub_node),
+          pmml_scriptsize(doc, sup_node),
+        ],
       },
       (None, None) => base,
     }
@@ -1000,9 +1080,9 @@ fn pmml_cfrac(doc: &PostDocument, _op: &Node, numer: &Node, denom: &Node) -> Nod
   // Simplified: just produce mfrac
   // Full version unrolls nested continued fractions and pulls \cdots up
   NodeData::Element {
-    tag: "m:mfrac".to_string(),
+    tag:        "m:mfrac".to_string(),
     attributes: None,
-    children: vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
+    children:   vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
   }
 }
 
@@ -1025,21 +1105,21 @@ fn pmml_row(children: Vec<NodeData>) -> NodeData {
 /// Create an mo element from a string.
 fn pmml_mo_str(text: &str) -> NodeData {
   NodeData::Element {
-    tag: "m:mo".to_string(),
+    tag:        "m:mo".to_string(),
     attributes: None,
-    children: vec![NodeData::Text(text.to_string())],
+    children:   vec![NodeData::Text(text.to_string())],
   }
 }
 
 /// Create a MathML error element.
 fn pmml_error(msg: &str) -> NodeData {
   NodeData::Element {
-    tag: "m:merror".to_string(),
+    tag:        "m:merror".to_string(),
     attributes: None,
-    children: vec![NodeData::Element {
-      tag: "m:mtext".to_string(),
+    children:   vec![NodeData::Element {
+      tag:        "m:mtext".to_string(),
       attributes: None,
-      children: vec![NodeData::Text(msg.to_string())],
+      children:   vec![NodeData::Text(msg.to_string())],
     }],
   }
 }
@@ -1070,17 +1150,17 @@ const SPACING_EPSILON: f64 = 0.01;
 /// Map LaTeXML role to TeX atom type.
 fn role_to_atom_type(role: &str) -> &'static str {
   match role {
-    "ATOM" | "UNKNOWN" | "ID" | "NUMBER" | "POSTFIX" | "FUNCTION"
-    | "DIFFOP" | "SUPOP" | "ELIDEOP" => "Ord",
-    "OPFUNCTION" | "TRIGFUNCTION" | "BIGOP" | "SUMOP" | "INTOP"
-    | "LIMITOP" | "OPERATOR" => "Op",
+    "ATOM" | "UNKNOWN" | "ID" | "NUMBER" | "POSTFIX" | "FUNCTION" | "DIFFOP" | "SUPOP"
+    | "ELIDEOP" => "Ord",
+    "OPFUNCTION" | "TRIGFUNCTION" | "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" | "OPERATOR" => "Op",
     "ADDOP" | "MULOP" | "BINOP" | "APPLYOP" | "COMPOSEOP" => "Bin",
     "RELOP" | "METARELOP" | "MODIFIEROP" | "MODIFIER" | "ARROW" => "Rel",
     "OPEN" => "Open",
     "CLOSE" => "Close",
     "PUNCT" | "VERTBAR" | "PERIOD" => "Punct",
-    "ARRAY" | "POSTSUBSCRIPT" | "POSTSUPERSCRIPT"
-    | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => "Inner",
+    "ARRAY" | "POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => {
+      "Inner"
+    },
     "MIDDLE" => "Ord",
     _ => "Ord",
   }
@@ -1090,13 +1170,33 @@ fn role_to_atom_type(role: &str) -> &'static str {
 fn atompair_spacing(left: &str, right: &str) -> i32 {
   match (left, right) {
     ("Ord", "Op") | ("Op", "Ord") | ("Op", "Op") | ("Close", "Op") => 1,
-    ("Ord", "Bin") | ("Bin", "Ord") | ("Bin", "Open") | ("Bin", "Inner")
-    | ("Close", "Bin") | ("Inner", "Bin") | ("Bin", "Op") => -2,
-    ("Ord", "Rel") | ("Rel", "Ord") | ("Op", "Rel") | ("Rel", "Open")
-    | ("Rel", "Inner") | ("Close", "Rel") | ("Inner", "Rel") | ("Rel", "Op") => -3,
-    ("Ord", "Inner") | ("Op", "Inner") | ("Close", "Inner") | ("Inner", "Inner")
-    | ("Inner", "Open") | ("Punct", "Ord") | ("Punct", "Op") | ("Punct", "Rel")
-    | ("Punct", "Open") | ("Punct", "Close") | ("Punct", "Punct") | ("Punct", "Inner")
+    ("Ord", "Bin")
+    | ("Bin", "Ord")
+    | ("Bin", "Open")
+    | ("Bin", "Inner")
+    | ("Close", "Bin")
+    | ("Inner", "Bin")
+    | ("Bin", "Op") => -2,
+    ("Ord", "Rel")
+    | ("Rel", "Ord")
+    | ("Op", "Rel")
+    | ("Rel", "Open")
+    | ("Rel", "Inner")
+    | ("Close", "Rel")
+    | ("Inner", "Rel")
+    | ("Rel", "Op") => -3,
+    ("Ord", "Inner")
+    | ("Op", "Inner")
+    | ("Close", "Inner")
+    | ("Inner", "Inner")
+    | ("Inner", "Open")
+    | ("Punct", "Ord")
+    | ("Punct", "Op")
+    | ("Punct", "Rel")
+    | ("Punct", "Open")
+    | ("Punct", "Close")
+    | ("Punct", "Punct")
+    | ("Punct", "Inner")
     | ("Inner", "Ord") => -1,
     ("Inner", "Op") => 1,
     _ => 0,
@@ -1115,22 +1215,33 @@ fn m_atom_type(tag: &str) -> Option<&'static str> {
 
 /// Check if a MathML tag is an embellished operator container.
 fn is_embellisher_tag(tag: &str) -> bool {
-  matches!(tag, "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover")
+  matches!(
+    tag,
+    "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover"
+  )
 }
 
 /// Check if a MathML tag is mrow-like.
 fn is_mrow_like(tag: &str) -> bool {
-  matches!(tag, "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd")
+  matches!(
+    tag,
+    "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd"
+  )
 }
 
 /// Check if text is an invisible operator.
 fn is_invisible_op(text: &str) -> bool {
-  !text.is_empty() && text.chars().all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
+  !text.is_empty()
+    && text
+      .chars()
+      .all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
 }
 
 /// Format em value.
 fn fmt_em(val: f64) -> String {
-  if val.abs() < SPACING_EPSILON { return "0em".to_string(); }
+  if val.abs() < SPACING_EPSILON {
+    return "0em".to_string();
+  }
   let s = format!("{:.3}", val);
   let s = s.trim_end_matches('0').trim_end_matches('.');
   format!("{}em", s)
@@ -1145,11 +1256,12 @@ fn get_node_role(node: &NodeData) -> String {
           return get_node_role(base);
         }
       }
-      attributes.as_ref()
+      attributes
+        .as_ref()
         .and_then(|a| a.get("_role"))
         .cloned()
         .unwrap_or_default()
-    }
+    },
     _ => String::new(),
   }
 }
@@ -1176,9 +1288,12 @@ fn is_node_text_invisible_op(node: &NodeData) -> bool {
   fn check(node: &NodeData, seen_any: &mut bool) -> bool {
     match node {
       NodeData::Text(t) => {
-        if !t.is_empty() { *seen_any = true; }
-        t.chars().all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
-      }
+        if !t.is_empty() {
+          *seen_any = true;
+        }
+        t.chars()
+          .all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
+      },
       NodeData::Element { children, .. } => children.iter().all(|c| check(c, seen_any)),
       _ => true,
     }
@@ -1197,13 +1312,12 @@ fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
 
 fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   match node {
-    NodeData::Element { attributes, .. } => {
-      attributes.as_ref()
-        .and_then(|a| a.get(key))
-        .and_then(|v| v.strip_suffix("em"))
-        .and_then(|v| v.parse::<f64>().ok())
-        .unwrap_or(0.0)
-    }
+    NodeData::Element { attributes, .. } => attributes
+      .as_ref()
+      .and_then(|a| a.get(key))
+      .and_then(|v| v.strip_suffix("em"))
+      .and_then(|v| v.parse::<f64>().ok())
+      .unwrap_or(0.0),
     _ => 0.0,
   }
 }
@@ -1212,13 +1326,19 @@ fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
 fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
   let prev_role_s = get_node_role(prev);
   let next_role_s = get_node_role(next);
-  let prev_role = if prev_role_s.is_empty() { "ATOM" } else { &prev_role_s };
-  let next_role = if next_role_s.is_empty() { "ATOM" } else { &next_role_s };
+  let prev_role = if prev_role_s.is_empty() {
+    "ATOM"
+  } else {
+    &prev_role_s
+  };
+  let next_role = if next_role_s.is_empty() {
+    "ATOM"
+  } else {
+    &next_role_s
+  };
 
-  let prev_type = m_atom_type(get_node_tag(prev))
-    .unwrap_or_else(|| role_to_atom_type(prev_role));
-  let next_type = m_atom_type(get_node_tag(next))
-    .unwrap_or_else(|| role_to_atom_type(next_role));
+  let prev_type = m_atom_type(get_node_tag(prev)).unwrap_or_else(|| role_to_atom_type(prev_role));
+  let next_type = m_atom_type(get_node_tag(next)).unwrap_or_else(|| role_to_atom_type(next_role));
 
   let tex_code = atompair_spacing(prev_type, next_type);
   let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
@@ -1239,12 +1359,20 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
-      set_node_attr(prev, "rspace", &fmt_em(if rem > SPACING_EPSILON { rem } else { 0.0 }));
+      set_node_attr(
+        prev,
+        "rspace",
+        &fmt_em(if rem > SPACING_EPSILON { rem } else { 0.0 }),
+      );
     } else {
       let p = prev_dict_right;
       let rem2 = target - p;
       if rem2 >= 0.0 {
-        set_node_attr(next, "lspace", &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }));
+        set_node_attr(
+          next,
+          "lspace",
+          &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }),
+        );
       }
     }
   } else if prev_is_mo {
@@ -1274,7 +1402,8 @@ pub fn adjust_spacing(node: &mut NodeData) {
         while i + 1 < len {
           let j = i + 1;
           // Skip invisible operators
-          if j + 1 < len && get_node_tag(&children[j]) == "m:mo"
+          if j + 1 < len
+            && get_node_tag(&children[j]) == "m:mo"
             && is_node_text_invisible_op(&children[j])
           {
             if j + 1 < len {
@@ -1319,6 +1448,157 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
     }
     for child in children {
       clean_internal_attrs(child);
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::collections::HashMap;
+
+  #[test]
+  fn math_style_step_down_monotone_saturates_at_scriptscript() {
+    assert_eq!(MathStyle::Display.step_down(), MathStyle::Text);
+    assert_eq!(MathStyle::Text.step_down(), MathStyle::Script);
+    assert_eq!(MathStyle::Script.step_down(), MathStyle::ScriptScript);
+    assert_eq!(MathStyle::ScriptScript.step_down(), MathStyle::ScriptScript);
+  }
+
+  #[test]
+  fn math_style_script_step_collapses_display_and_text() {
+    assert_eq!(MathStyle::Display.script_step(), MathStyle::Script);
+    assert_eq!(MathStyle::Text.script_step(), MathStyle::Script);
+    assert_eq!(MathStyle::Script.script_step(), MathStyle::ScriptScript);
+    assert_eq!(
+      MathStyle::ScriptScript.script_step(),
+      MathStyle::ScriptScript
+    );
+  }
+
+  #[test]
+  fn math_style_size_percent_matches_tex_tradition() {
+    assert_eq!(MathStyle::Display.size_percent(), "100%");
+    assert_eq!(MathStyle::Text.size_percent(), "100%");
+    assert_eq!(MathStyle::Script.size_percent(), "70%");
+    assert_eq!(MathStyle::ScriptScript.size_percent(), "50%");
+  }
+
+  #[test]
+  fn invisible_times_roundtrip() {
+    set_invisible_times(false);
+    assert!(!get_invisible_times());
+    set_invisible_times(true);
+    assert!(get_invisible_times());
+  }
+
+  #[test]
+  fn embellishing_role_matches_canonical_set() {
+    for r in [
+      "SUPERSCRIPTOP",
+      "SUBSCRIPTOP",
+      "OVERACCENT",
+      "UNDERACCENT",
+      "MODIFIER",
+      "MODIFIEROP",
+    ] {
+      assert!(is_embellishing_role(r), "{} should embellish", r);
+    }
+  }
+
+  #[test]
+  fn embellishing_role_rejects_others() {
+    for r in ["ADDOP", "MULOP", "ATOM", "UNKNOWN", ""] {
+      assert!(!is_embellishing_role(r), "{} should not embellish", r);
+    }
+  }
+
+  #[test]
+  fn default_token_content_maps_invisible_chars() {
+    assert_eq!(default_token_content("MULOP"), Some("\u{2062}"));
+    assert_eq!(default_token_content("ADDOP"), Some("\u{2064}"));
+    assert_eq!(default_token_content("PUNCT"), Some("\u{2063}"));
+  }
+
+  #[test]
+  fn default_token_content_none_for_other_roles() {
+    assert_eq!(default_token_content("ATOM"), None);
+    assert_eq!(default_token_content(""), None);
+    assert_eq!(default_token_content("RELOP"), None);
+  }
+
+  #[test]
+  fn clean_internal_attrs_removes_underscore_attrs() {
+    let mut node = NodeData::Element {
+      tag:        "mrow".to_string(),
+      attributes: Some(HashMap::from([
+        ("_role".to_string(), "MULOP".to_string()),
+        ("_lspace".to_string(), "4".to_string()),
+        ("keep".to_string(), "yes".to_string()),
+      ])),
+      children:   vec![],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { attributes, .. } = &node {
+      let attrs = attributes
+        .as_ref()
+        .expect("still has the non-internal attr");
+      assert_eq!(attrs.len(), 1);
+      assert_eq!(attrs.get("keep").map(String::as_str), Some("yes"));
+    } else {
+      panic!("expected element");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_unsets_attributes_when_empty() {
+    let mut node = NodeData::Element {
+      tag:        "mrow".to_string(),
+      attributes: Some(HashMap::from([
+        ("_role".to_string(), "MULOP".to_string()),
+        ("_largeop".to_string(), "true".to_string()),
+      ])),
+      children:   vec![],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { attributes, .. } = &node {
+      // All attrs were internal → attributes becomes None.
+      assert!(attributes.is_none());
+    } else {
+      panic!("expected element");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_recurses_into_children() {
+    let mut node = NodeData::Element {
+      tag:        "mrow".to_string(),
+      attributes: None,
+      children:   vec![NodeData::Element {
+        tag:        "mi".to_string(),
+        attributes: Some(HashMap::from([("_rspace".to_string(), "1".to_string())])),
+        children:   vec![],
+      }],
+    };
+    clean_internal_attrs(&mut node);
+    if let NodeData::Element { children, .. } = &node {
+      if let NodeData::Element { attributes, .. } = &children[0] {
+        assert!(attributes.is_none(), "recursion cleared child's only attr");
+      } else {
+        panic!("expected element child");
+      }
+    } else {
+      panic!("expected element root");
+    }
+  }
+
+  #[test]
+  fn clean_internal_attrs_ignores_text_nodes() {
+    let mut node = NodeData::Text("x".to_string());
+    clean_internal_attrs(&mut node);
+    match &node {
+      NodeData::Text(s) => assert_eq!(s, "x"),
+      _ => panic!("expected text untouched"),
     }
   }
 }

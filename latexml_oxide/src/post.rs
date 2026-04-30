@@ -7,25 +7,33 @@
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::object_db::ObjectDB;
 use latexml_post::processor::Processor;
+use once_cell::sync::Lazy;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// Options for the post-processing pipeline.
 pub struct PostOptions<'a> {
-  pub pmml: bool,
-  pub cmml: bool,
-  pub keep_xmath: bool,
-  pub stylesheet: Option<&'a str>,
-  pub destination: Option<&'a str>,
-  pub source_directory: Option<&'a str>,
-  pub nodefaultresources: bool,
-  pub css_files: &'a [String],
-  pub js_files: &'a [String],
-  pub noinvisibletimes: bool,
-  pub mathtex: bool,
-  pub navigationtoc: Option<&'a str>,
-  pub split: bool,
-  pub split_xpath: Option<String>,
-  pub split_naming: Option<&'a str>,
-  pub xslt_parameters: &'a [String],
+  pub pmml:                      bool,
+  pub cmml:                      bool,
+  pub keep_xmath:                bool,
+  pub stylesheet:                Option<&'a str>,
+  pub destination:               Option<&'a str>,
+  pub source_directory:          Option<&'a str>,
+  pub nodefaultresources:        bool,
+  pub css_files:                 &'a [String],
+  pub js_files:                  &'a [String],
+  pub noinvisibletimes:          bool,
+  pub mathtex:                   bool,
+  pub navigationtoc:             Option<&'a str>,
+  pub split:                     bool,
+  pub split_xpath:               Option<String>,
+  pub split_naming:              Option<&'a str>,
+  pub xslt_parameters:           &'a [String],
+  /// If > 0, try `inkscape` for PDF graphics smaller than this many KB
+  /// (vector-preservation path). Fall back to ImageMagick `convert` on
+  /// failure or timeout. Tracks upstream brucemiller/LaTeXML#902.
+  pub graphics_svg_threshold_kb: u32,
 }
 
 /// Run the post-processing pipeline on XML output.
@@ -33,9 +41,23 @@ pub struct PostOptions<'a> {
 /// Executes: Scan → MakeBibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups.
 pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let PostOptions {
-    pmml, cmml, keep_xmath, stylesheet, destination,
-    source_directory, nodefaultresources, css_files, js_files, noinvisibletimes,
-    mathtex, navigationtoc, split, ref split_xpath, split_naming, xslt_parameters,
+    pmml,
+    cmml,
+    keep_xmath,
+    stylesheet,
+    destination,
+    source_directory,
+    nodefaultresources,
+    css_files,
+    js_files,
+    noinvisibletimes,
+    mathtex,
+    navigationtoc,
+    split,
+    ref split_xpath,
+    split_naming,
+    xslt_parameters,
+    graphics_svg_threshold_kb,
   } = *opts;
 
   let mut doc_opts = PostDocumentOptions::default();
@@ -48,15 +70,33 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     sp.push(src_dir.to_string());
     doc_opts.searchpaths = Some(sp);
   }
+  let audit = *POST_AUDIT;
+  let audit_start = |name: &str| -> Option<(String, std::time::Instant)> {
+    if audit {
+      Some((name.to_string(), std::time::Instant::now()))
+    } else {
+      None
+    }
+  };
+  let audit_end = |started: Option<(String, std::time::Instant)>| {
+    if let Some((name, t0)) = started {
+      let ms = t0.elapsed().as_millis();
+      log::info!("POST_AUDIT phase {} took {}ms", name, ms);
+    }
+  };
+
+  let t_parse = audit_start("PostDocument::new_from_string");
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
       eprintln!("Post-processing: failed to parse XML: {}", e);
       return xml.to_string();
-    }
+    },
   };
+  audit_end(t_parse);
 
   // Phase 1: Scan
+  let t_scan = audit_start("Scan");
   let db = ObjectDB::new();
   let mut scanner = latexml_post::scan::Scan::new(db);
   let scan_nodes = scanner.to_process(&doc);
@@ -65,10 +105,12 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Err(e) => {
       eprintln!("Post-processing: Scan failed: {}", e);
       return xml.to_string();
-    }
+    },
   };
+  audit_end(t_scan);
 
   // Phase 1.5: MakeBibliography
+  let t_bib = audit_start("MakeBibliography");
   let db = scanner.db;
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
   let bib_nodes = bibmaker.to_process(&doc);
@@ -78,30 +120,32 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Err(e) => {
         eprintln!("Post-processing: MakeBibliography failed: {}", e);
         return xml.to_string();
-      }
+      },
     }
   } else {
     doc
   };
+  audit_end(t_bib);
 
   // Phase 2: CrossRef
+  let t_xref = audit_start("CrossRef");
   let db = bibmaker.db;
-  let mut crossref = latexml_post::crossref::CrossRef::new(
-    db,
-    latexml_post::crossref::UrlStyle::File,
-    true,
-  );
+  let mut crossref =
+    latexml_post::crossref::CrossRef::new(db, latexml_post::crossref::UrlStyle::File, true);
   let xref_nodes = crossref.to_process(&doc);
   let doc = match crossref.process(doc, xref_nodes) {
     Ok(mut docs) => docs.remove(0),
     Err(e) => {
       eprintln!("Post-processing: CrossRef failed: {}", e);
       return xml.to_string();
-    }
+    },
   };
+  audit_end(t_xref);
 
   // Phase 2.5: Graphics
-  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true);
+  let t_gfx = audit_start("Graphics");
+  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
+    .with_svg_threshold_kb(graphics_svg_threshold_kb);
   let graphics_nodes = graphics_proc.to_process(&doc);
   let doc = if !graphics_nodes.is_empty() {
     match graphics_proc.process(doc, graphics_nodes) {
@@ -109,11 +153,12 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Err(e) => {
         eprintln!("Post-processing: Graphics failed: {}", e);
         return xml.to_string();
-      }
+      },
     }
   } else {
     doc
   };
+  audit_end(t_gfx);
 
   // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
   // Without this, the XSLT picture template falls back to "as-TeX" mode and
@@ -128,7 +173,9 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // Workaround: extract SVG fragments from the INTERMEDIATE XML using
   // string processing (no libxml2 involvement), then inject them into
   // the final HTML AFTER XSLT completes.
+  let t_svg = audit_start("SVG extraction");
   let svg_fragments = extract_svg_fragments(xml);
+  audit_end(t_svg);
 
   // Phase 2.75: Split
   let doc = if split {
@@ -141,7 +188,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         Some(other) => {
           eprintln!("Unknown splitnaming '{}', using 'id'", other);
           latexml_post::split::SplitNaming::Id
-        }
+        },
       };
       let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
       let split_nodes = splitter.to_process(&doc);
@@ -151,11 +198,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
             eprintln!("Split into {} documents", docs.len());
           }
           docs.remove(0)
-        }
+        },
         Err(e) => {
           eprintln!("Post-processing: Split failed: {}", e);
           return xml.to_string();
-        }
+        },
       }
     } else {
       doc
@@ -189,7 +236,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   if let Some(xsl_path) = stylesheet {
     let mut searchpaths = vec![".".to_string()];
     if let Ok(exe) = std::env::current_exe() {
-      if let Some(project_root) = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()) {
+      if let Some(project_root) = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+      {
         searchpaths.insert(0, project_root.display().to_string());
       }
     }
@@ -223,9 +274,14 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   }
 
-  match post.process_chain(doc, &mut processors) {
+  let t_chain = audit_start("process_chain");
+  let chain_result = post.process_chain(doc, &mut processors);
+  audit_end(t_chain);
+  match chain_result {
     Ok(results) => {
+      let t_serialize = audit_start("to_xml_string");
       let output = results[0].to_xml_string();
+      audit_end(t_serialize);
       if stylesheet.is_some_and(|s| s.contains("html")) {
         // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
         // libxml2's to_string() includes it by default; we strip it here.
@@ -247,9 +303,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
           r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
         )
         .unwrap();
-        let mut output = void_selfclose_re
-          .replace_all(&output, "<$1$2>")
-          .to_string();
+        let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
         // Phase G: inject SVG fragments into empty ltx_picture spans
         if !svg_fragments.is_empty() {
           for (pic_id, svg_html) in &svg_fragments {
@@ -260,12 +314,14 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
               regex::escape(pic_id)
             );
             if let Ok(re) = regex::Regex::new(&pattern) {
-              output = re.replace(&output, |caps: &regex::Captures| {
-                format!(
-                  r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
-                  pic_id, &caps[1], svg_html
-                )
-              }).to_string();
+              output = re
+                .replace(&output, |caps: &regex::Captures| {
+                  format!(
+                    r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
+                    pic_id, &caps[1], svg_html
+                  )
+                })
+                .to_string();
             }
           }
         }
@@ -273,11 +329,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       } else {
         output
       }
-    }
+    },
     Err(e) => {
       eprintln!("Post-processing failed: {}", e);
       xml.to_string()
-    }
+    },
   }
 }
 
@@ -291,9 +347,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   let mut fragments = Vec::new();
   // Match <picture ... xml:id="ID" ... width="W" height="H" ...>CONTENT</picture>
-  let picture_re = regex::Regex::new(
-    r#"(?s)<picture([^>]*)>(.*?)</picture>"#
-  ).unwrap();
+  let picture_re = regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap();
   let id_re = regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap();
   let width_re = regex::Regex::new(r#"width="([^"]+)""#).unwrap();
   let height_re = regex::Regex::new(r#"height="([^"]+)""#).unwrap();
@@ -301,7 +355,10 @@ fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   for pic_caps in picture_re.captures_iter(xml) {
     let attrs = &pic_caps[1];
     let content = &pic_caps[2];
-    let id = id_re.captures(attrs).map(|c| c[1].to_string()).unwrap_or_default();
+    let id = id_re
+      .captures(attrs)
+      .map(|c| c[1].to_string())
+      .unwrap_or_default();
     let width = width_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
     let height = height_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
 
@@ -418,7 +475,10 @@ fn convert_picture_children_to_svg(content: &str) -> String {
       let coords: Vec<&str> = points.split_whitespace().collect();
       if coords.len() >= 4 {
         // SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
-        let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+        let d = format!(
+          "M {} C {} {} {}",
+          coords[0], coords[1], coords[2], coords[3]
+        );
         svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
       } else if coords.len() >= 3 {
         // Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
@@ -444,13 +504,17 @@ fn convert_picture_children_to_svg(content: &str) -> String {
 
   // Also handle direct children not inside <g> (e.g. top-level <bezier>, <line>)
   // These appear directly inside <picture> without a <g> wrapper
-  let direct_bezier_re = regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
+  let direct_bezier_re =
+    regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
   for bez_caps in direct_bezier_re.captures_iter(content) {
     let points = &bez_caps[1];
     let rest = &bez_caps[2];
     let coords: Vec<&str> = points.split_whitespace().collect();
     if coords.len() >= 4 {
-      let d = format!("M {} C {} {} {}", coords[0], coords[1], coords[2], coords[3]);
+      let d = format!(
+        "M {} C {} {} {}",
+        coords[0], coords[1], coords[2], coords[3]
+      );
       svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
     } else if coords.len() >= 3 {
       let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);

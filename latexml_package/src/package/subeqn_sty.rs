@@ -4,6 +4,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  DefMacro!("\\subequations",    "\\lx@equationgroup@subnumbering@begin");
-  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end");
+  // Perl subeqn.sty.ltxml L21-22 locks both `\subequations` and
+  // `\endsubequations`. arXiv papers commonly load subeqn.sty alongside
+  // amsmath (which also defines these names) — the lock keeps our
+  // \lx@equationgroup@subnumbering@* trampolines from being shadowed.
+  DefMacro!("\\subequations",    "\\lx@equationgroup@subnumbering@begin",
+    locked => true);
+  DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end",
+    locked => true);
 });

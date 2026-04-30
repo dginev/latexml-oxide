@@ -23,35 +23,45 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
     let text_str = text.untex();
     let has_star = star.is_some();
+    // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
+    // gets dynamic mid/post from current display style; bare form is always 'post'.
+    // revert_as => 'context' so source-export emits the user-facing CS name
+    // rather than the operatorname expansion. Both were previously dropped.
     let opts = MathPrimitiveOptions {
       role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
       font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
+      scriptpos: if has_star { None } else { Some("post".to_string()) },
+      dynamic_scriptpos: has_star,
+      revert_as: Some(std::borrow::Cow::Borrowed("context")),
       ..Default::default()};
     def_math(cs, None, text_str, opts)?;
   });
 
   // \operatorname*{text}
   DefConstructor!("\\operatorname OptionalMatch:* {}",
-    "<ltx:XMWrap role='#role' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
-    bounded => true, require_math => true,
-    font => { family => "serif", series => "medium", shape => "upright" },
-    properties => sub[args] {
-      let starred = args[0].is_some();
-      let role = if starred { "OPERATOR" } else { "OPFUNCTION" };
-      let scriptpos = if starred { "mid" } else { "post" };
-      Ok(stored_map!("role" => role, "scriptpos" => scriptpos))
-    });
+  "<ltx:XMWrap role='#role' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
+  bounded => true, require_math => true,
+  font => { family => "serif", series => "medium", shape => "upright" },
+  properties => sub[args] {
+    let starred = args[0].is_some();
+    let role = if starred { "OPERATOR" } else { "OPFUNCTION" };
+    let scriptpos = if starred { "mid" } else { "post" };
+    Ok(stored_map!("role" => role, "scriptpos" => scriptpos))
+  });
 
   DefConstructor!("\\operatornamewithlimits {}",
     "<ltx:XMWrap role='OPERATOR' scriptpos='mid'>#1</ltx:XMWrap>",
     bounded => true, require_math => true,
     font => { family => "serif", series => "medium", shape => "upright" });
 
-  // Operator variants
+  // Operator variants — Perl L33-38 ships scriptpos => \&doScriptpos so the
+  // operators sit mid (under/over) in display style and post (sub/super) in
+  // inline. Without it, Rust statically rendered everything as 'post', giving
+  // wrong placement in display-mode formulas.
   DefMath!("\\injlim", "inj lim",
-    role => "LIMITOP", meaning => "injective-limit");
+    role => "LIMITOP", meaning => "injective-limit", dynamic_scriptpos => true);
   DefMath!("\\projlim", "proj lim",
-    role => "LIMITOP", meaning => "projective-limit");
+    role => "LIMITOP", meaning => "projective-limit", dynamic_scriptpos => true);
 
   // Perl: amsopn.sty.ltxml — var limit operators
   DefMath!("\\varlimsup", "\\overline{\\operatorname{lim}}",
@@ -65,5 +75,8 @@ LoadDefinitions!({
 
   DefMacro!("\\nolimits@", "\\nolimits");
   DefMacro!("\\nmlimits@", "\\displaylimits");
-  DefMacro!("\\qopname{}{}{}", "\\mathop{#3}\\csname n#2limits@\\endcsname");
+  DefMacro!(
+    "\\qopname{}{}{}",
+    "\\mathop{#3}\\csname n#2limits@\\endcsname"
+  );
 });

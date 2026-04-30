@@ -20,7 +20,7 @@ LoadDefinitions!({
     ResetCounter!("ALC@line");
     // If not within an algorithm environment, step the counter for its id's
     let in_algorithm = state::with_stacked_values_sym(pin!("current_environment"), |vals| {
-      vals.iter().any(|s| s.to_string() == "algorithm")
+      vals.iter().any(|s| s.eq_text("algorithm"))
     });
     if !in_algorithm {
       ref_step_id("algorithm")?;

@@ -919,3 +919,159 @@ impl From<&str> for Token {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn catcode_name_covers_all_variants() {
+    // Ensure every Catcode variant produces a non-empty name.
+    use Catcode::*;
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
+      assert!(!cc.name().is_empty(), "{cc:?}.name() is empty");
+    }
+  }
+
+  #[test]
+  fn catcode_name_specific_values() {
+    assert_eq!(Catcode::ESCAPE.name(), "Escape");
+    assert_eq!(Catcode::BEGIN.name(), "Begin");
+    assert_eq!(Catcode::CS.name(), "ControlSequence");
+    assert_eq!(Catcode::LETTER.name(), "Letter");
+  }
+
+  #[test]
+  fn catcode_short_name_starts_with_t_prefix() {
+    use Catcode::*;
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
+      assert!(
+        cc.short_name().starts_with("T_"),
+        "{cc:?}.short_name() = {} lacks T_ prefix",
+        cc.short_name()
+      );
+    }
+  }
+
+  #[test]
+  fn catcode_meaning_mostly_nonempty() {
+    // Most variants have a TeX-meaning description.
+    assert!(!Catcode::ESCAPE.meaning().is_empty());
+    assert!(!Catcode::LETTER.meaning().is_empty());
+    assert!(!Catcode::OTHER.meaning().is_empty());
+    // A few (e.g. CS/MARKER/ARG) fall through to "".
+    assert_eq!(Catcode::CS.meaning(), "");
+  }
+
+  #[test]
+  fn is_primitive_checks() {
+    use Catcode::*;
+    // TeX primitives:
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
+    ] {
+      assert!(cc.is_primitive(), "{cc:?} should be primitive");
+    }
+    // Non-primitives:
+    for cc in [
+      IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
+      assert!(!cc.is_primitive(), "{cc:?} should not be primitive");
+    }
+  }
+
+  #[test]
+  fn is_executable_checks() {
+    use Catcode::*;
+    for cc in [BEGIN, END, MATH, ALIGN, SUPER, SUB, ACTIVE, CS] {
+      assert!(cc.is_executable(), "{cc:?} should be executable");
+    }
+    for cc in [
+      EOL, ESCAPE, PARAM, SPACE, IGNORE, LETTER, OTHER, COMMENT, INVALID, MARKER, ARG,
+    ] {
+      assert!(!cc.is_executable(), "{cc:?} should not be executable");
+    }
+  }
+
+  #[test]
+  fn is_neutralizable_set() {
+    use Catcode::*;
+    for cc in [MATH, ALIGN, PARAM, SUPER, SUB, ACTIVE] {
+      assert!(cc.is_neutralizable(), "{cc:?}");
+    }
+    assert!(!Catcode::CS.is_neutralizable());
+    assert!(!Catcode::LETTER.is_neutralizable());
+  }
+
+  #[test]
+  fn is_active_or_cs_narrow_set() {
+    assert!(Catcode::ACTIVE.is_active_or_cs());
+    assert!(Catcode::CS.is_active_or_cs());
+    assert!(!Catcode::LETTER.is_active_or_cs());
+    assert!(!Catcode::ESCAPE.is_active_or_cs());
+  }
+
+  #[test]
+  fn is_absorbable_space_letter_other_comment() {
+    use Catcode::*;
+    assert!(SPACE.is_absorbable());
+    assert!(LETTER.is_absorbable());
+    assert!(OTHER.is_absorbable());
+    assert!(COMMENT.is_absorbable());
+    // All else not absorbable.
+    assert!(!Catcode::CS.is_absorbable());
+    assert!(!Catcode::BEGIN.is_absorbable());
+  }
+
+  #[test]
+  fn is_gullet_holdable_comment_marker_only() {
+    assert!(Catcode::COMMENT.is_gullet_holdable());
+    assert!(Catcode::MARKER.is_gullet_holdable());
+    assert!(!Catcode::SPACE.is_gullet_holdable());
+    assert!(!Catcode::LETTER.is_gullet_holdable());
+  }
+
+  #[test]
+  fn is_balanced_interesting_begin_end_marker() {
+    assert!(Catcode::BEGIN.is_balanced_interesting());
+    assert!(Catcode::END.is_balanced_interesting());
+    assert!(Catcode::MARKER.is_balanced_interesting());
+    assert!(!Catcode::LETTER.is_balanced_interesting());
+    assert!(!Catcode::MATH.is_balanced_interesting());
+  }
+
+  #[test]
+  fn catcode_u8_roundtrip() {
+    // From<Catcode> for u8 + From<u8> for Catcode should round-trip
+    // (at least for the documented range 0..=18).
+    use Catcode::*;
+    for cc in [
+      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+    ] {
+      let b: u8 = cc.into();
+      let cc2: Catcode = b.into();
+      assert_eq!(cc, cc2, "roundtrip broke for {cc:?} (u8={b})");
+    }
+  }
+
+  #[test]
+  fn token_new_and_display() {
+    let t = Token::new("foo", Catcode::LETTER);
+    assert_eq!(format!("{t}"), "foo");
+    assert_eq!(t.code, Catcode::LETTER);
+  }
+
+  #[test]
+  fn token_arg_display_prepends_hash() {
+    // ARG catcode prepends # in Display.
+    let t = Token::new("1", Catcode::ARG);
+    assert_eq!(format!("{t}"), "#1");
+  }
+}

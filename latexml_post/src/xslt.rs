@@ -12,43 +12,36 @@ use std::path::Path;
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
 
-// EXSLT registration — needed for str:tokenize, math:*, etc. used in LaTeXML stylesheets.
-// The rust-libxslt crate doesn't yet expose this.
-// TODO: Add exsltRegisterAll() to the rust-libxslt crate.
-extern "C" {
-  fn exsltRegisterAll();
-}
-
 /// Resource type information.
 struct ResourceInfo {
   extension: &'static str,
-  subdir: &'static str,
+  subdir:    &'static str,
 }
 
 const RESOURCE_CSS: ResourceInfo = ResourceInfo {
   extension: "css",
-  subdir: "resources/CSS",
+  subdir:    "resources/CSS",
 };
 const RESOURCE_JS: ResourceInfo = ResourceInfo {
   extension: "js",
-  subdir: "resources/javascript",
+  subdir:    "resources/javascript",
 };
 
 /// XSLT post-processor: applies a stylesheet transformation.
 ///
 /// Port of `LaTeXML::Post::XSLT`.
 pub struct XSLT {
-  name: String,
+  name:               String,
   /// Path to the XSLT stylesheet.
-  stylesheet_path: Option<String>,
+  stylesheet_path:    Option<String>,
   /// Parameters to pass to the XSLT stylesheet.
-  parameters: HashMap<String, String>,
+  parameters:         HashMap<String, String>,
   /// Whether to remove resource requests (CSS/JS not copied).
-  no_resources: bool,
+  no_resources:       bool,
   /// Resource directory for copied resources.
   resource_directory: Option<String>,
   /// Search paths for finding resources.
-  searchpaths: Vec<String>,
+  searchpaths:        Vec<String>,
 }
 
 impl XSLT {
@@ -81,12 +74,7 @@ impl XSLT {
   /// Copy a resource file and return the path relative to the destination.
   ///
   /// Port of `XSLT::copyResource`.
-  fn copy_resource(
-    &self,
-    doc: &PostDocument,
-    src: &str,
-    resource_type: Option<&str>,
-  ) -> String {
+  fn copy_resource(&self, doc: &PostDocument, src: &str, resource_type: Option<&str>) -> String {
     // If it's a URL, return as-is
     if src.starts_with("http://") || src.starts_with("https://") || src.starts_with("//") {
       return src.to_string();
@@ -147,7 +135,7 @@ impl XSLT {
         } else {
           dest
         }
-      }
+      },
       None => {
         log::warn!(
           "Couldn't find resource file {} in paths {:?}",
@@ -155,15 +143,13 @@ impl XSLT {
           search_paths
         );
         src.to_string()
-      }
+      },
     }
   }
 }
 
 impl Processor for XSLT {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     let stylesheet_path = match &self.stylesheet_path {
@@ -189,12 +175,10 @@ impl Processor for XSLT {
       }
     }
 
-    // Register EXSLT extension functions (str:tokenize, etc.)
-    // SAFETY: libxslt C function with no inputs; modifies global function
-    // registry. Safe to call multiple times (libxslt guards against this
-    // internally). Must be called before any xsltApplyStylesheet.
-    // TODO: Move to rust-libxslt crate (L3)
-    unsafe { exsltRegisterAll(); }
+    // Register EXSLT extension functions (str:tokenize, math:*, etc.)
+    // used by LaTeXML stylesheets. Safe-wrapped upstream in
+    // rust-libxslt — `register_exslt()` is Once-guarded.
+    libxslt::register_exslt();
 
     // Parse the stylesheet using the libxslt crate
     let mut stylesheet = libxslt::parser::parse_file(&stylesheet_path)
@@ -203,16 +187,21 @@ impl Processor for XSLT {
     // Serialize and re-parse for transformation (transform consumes the doc)
     let doc_xml = doc.to_xml_string();
     let parser = libxml::parser::Parser::default();
-    let transform_doc = parser.parse_string(&doc_xml)
+    let transform_doc = parser
+      .parse_string(&doc_xml)
       .map_err(|e| PostError::Processing(format!("Failed to re-parse document: {:?}", e)))?;
 
     // Build parameters
-    let params: Vec<(&str, &str)> = self.parameters.iter()
+    let params: Vec<(&str, &str)> = self
+      .parameters
+      .iter()
       .map(|(k, v)| (k.as_str(), v.as_str()))
       .collect();
 
-    // Apply the transformation
-    let result_doc = stylesheet.transform(&transform_doc, params)
+    // Apply the transformation — libxslt 0.1.3 (post-KWARC upstream bump)
+    // takes the source Document by value rather than by reference.
+    let result_doc = stylesheet
+      .transform(transform_doc, params)
       .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))?;
 
     // Serialize as XML (not as_html). The as_html serializer in libxml2 drops
@@ -220,33 +209,33 @@ impl Processor for XSLT {
     // We fix HTML5-specific issues (self-closing non-void tags, closing void tags)
     // via regex post-processing in the binary's run_post_processing.
     let result_string = result_doc.to_string_with_options(libxml::tree::SaveOptions {
-      format: false,
-      no_declaration: true, // HTML5: no <?xml version...?> prolog
-      no_empty_tags: false,
-      no_xhtml: false,
-      xhtml: false,
-      as_xml: true,
-      as_html: false,
+      format:                     false,
+      no_declaration:             true, // HTML5: no <?xml version...?> prolog
+      no_empty_tags:              false,
+      no_xhtml:                   false,
+      xhtml:                      false,
+      as_xml:                     true,
+      as_html:                    false,
       non_significant_whitespace: false,
     });
 
     if result_string.is_empty() {
-      return Err(PostError::Processing("XSLT produced empty output".to_string()));
+      return Err(PostError::Processing(
+        "XSLT produced empty output".to_string(),
+      ));
     }
 
     // Create a new PostDocument from the result
-    let result_doc = PostDocument::new_from_string(
-      &result_string,
-      PostDocumentOptions {
-        destination: doc.destination.clone(),
-        destination_directory: doc.destination_directory.clone(),
-        site_directory: doc.site_directory.clone(),
-        source: doc.source.clone(),
-        source_directory: doc.source_directory.clone(),
-        searchpaths: Some(doc.searchpaths),
-        ..PostDocumentOptions::default()
-      },
-    ).map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
+    let result_doc = PostDocument::new_from_string(&result_string, PostDocumentOptions {
+      destination: doc.destination.clone(),
+      destination_directory: doc.destination_directory.clone(),
+      site_directory: doc.site_directory.clone(),
+      source: doc.source.clone(),
+      source_directory: doc.source_directory.clone(),
+      searchpaths: Some(doc.searchpaths.clone()),
+      ..PostDocumentOptions::default()
+    })
+    .map_err(|e| PostError::Processing(format!("Failed to parse XSLT result: {}", e)))?;
 
     Ok(vec![result_doc])
   }
@@ -259,26 +248,86 @@ impl Processor for XSLT {
 
 mod embedded_xslt {
   pub const FILES: &[(&str, &str)] = &[
-    ("LaTeXML-html5.xsl", include_str!("../../resources/XSLT/LaTeXML-html5.xsl")),
-    ("LaTeXML-all-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-all-xhtml.xsl")),
-    ("LaTeXML-bib-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-bib-xhtml.xsl")),
-    ("LaTeXML-block-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-block-xhtml.xsl")),
-    ("LaTeXML-common.xsl", include_str!("../../resources/XSLT/LaTeXML-common.xsl")),
-    ("LaTeXML-epub3.xsl", include_str!("../../resources/XSLT/LaTeXML-epub3.xsl")),
-    ("LaTeXML-html4.xsl", include_str!("../../resources/XSLT/LaTeXML-html4.xsl")),
-    ("LaTeXML-inline-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-inline-xhtml.xsl")),
-    ("LaTeXML-jats.xsl", include_str!("../../resources/XSLT/LaTeXML-jats.xsl")),
-    ("LaTeXML-math-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-math-xhtml.xsl")),
-    ("LaTeXML-meta-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-meta-xhtml.xsl")),
-    ("LaTeXML-misc-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-misc-xhtml.xsl")),
-    ("LaTeXML-para-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-para-xhtml.xsl")),
-    ("LaTeXML-picture-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-picture-xhtml.xsl")),
-    ("LaTeXML-structure-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-structure-xhtml.xsl")),
-    ("LaTeXML-tabular-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-tabular-xhtml.xsl")),
-    ("LaTeXML-tei.xsl", include_str!("../../resources/XSLT/LaTeXML-tei.xsl")),
-    ("LaTeXML-webpage-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-webpage-xhtml.xsl")),
-    ("LaTeXML-xhtml5.xsl", include_str!("../../resources/XSLT/LaTeXML-xhtml5.xsl")),
-    ("LaTeXML-xhtml.xsl", include_str!("../../resources/XSLT/LaTeXML-xhtml.xsl")),
+    (
+      "LaTeXML-html5.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-html5.xsl"),
+    ),
+    (
+      "LaTeXML-all-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-all-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-bib-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-bib-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-block-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-block-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-common.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-common.xsl"),
+    ),
+    (
+      "LaTeXML-epub3.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-epub3.xsl"),
+    ),
+    (
+      "LaTeXML-html4.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-html4.xsl"),
+    ),
+    (
+      "LaTeXML-inline-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-inline-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-jats.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-jats.xsl"),
+    ),
+    (
+      "LaTeXML-math-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-math-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-meta-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-misc-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-misc-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-para-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-para-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-picture-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-picture-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-structure-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-structure-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-tabular-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-tabular-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-tei.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-tei.xsl"),
+    ),
+    (
+      "LaTeXML-webpage-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-webpage-xhtml.xsl"),
+    ),
+    (
+      "LaTeXML-xhtml5.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-xhtml5.xsl"),
+    ),
+    (
+      "LaTeXML-xhtml.xsl",
+      include_str!("../../resources/XSLT/LaTeXML-xhtml.xsl"),
+    ),
   ];
 
   use std::path::PathBuf;

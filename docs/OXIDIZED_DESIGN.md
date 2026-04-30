@@ -821,3 +821,176 @@ unwinding logic at group close that has no downstream benefit.
 **Impact:** The `tests/babel/page545.xml` expected XML has been updated to
 the Rust form (single empty wrap). Any future test XMLs copied from Perl
 with this pattern should be similarly normalized.
+
+### 23. `_loaded` Flag Naming — Drop `ltxml_loaded`, Add `_raw_loaded`
+
+**Decision:** Rust uses a unified `<name>_loaded` flag for *bindings* (Rust
+modules under `latexml_package/src/package/`) and a separate `<name>_raw_loaded`
+flag for raw .sty/.cls/.def TeX files. The Perl `<name>.ltxml_loaded` form
+is dropped.
+
+**Perl behavior** (Package.pm L2311-2316, L2346-2347):
+- `loadLTXML` (binding load): sets BOTH `$request_loaded` AND
+  `$ltxname_loaded` where `$ltxname = $name . '.ltxml'`
+  (e.g. `babel.sty.ltxml_loaded`).
+- `loadTeXDefinitions` (raw .sty/.cls load): sets only `$request_loaded`
+  (e.g. `babel.sty_loaded`).
+- The `.ltxml`-suffixed key was a Perl-specific marker indicating "binding
+  loaded", checked by `\@ifpackageloaded` and `\RequirePackage` guards.
+
+**Rust translation:**
+- Binding load (Rust module dispatch, e.g. `babel_sty.rs`) → sets
+  `<filename>_loaded` (e.g. `babel.sty_loaded`). This is the ONLY flag
+  set on binding load.
+- Raw `.sty`/`.cls`/`.def` load (the underlying TeX file, possibly
+  triggered from inside a binding via `\input`) → sets
+  `<filename>_raw_loaded` (e.g. `babel.sty_raw_loaded`). This is the
+  ONLY flag set on raw load.
+- A binding `.rs` can load a raw `.sty` of the same name without the
+  flags clobbering each other:
+  - `babel_sty.rs` runs → `babel.sty_loaded = 1`
+  - inside, `InputDefinitions("babel", noltxml=true)` → `babel.sty_raw_loaded = 1`
+- Reads check the appropriate flag(s):
+  - "Was the binding loaded?" → `<filename>_loaded`
+  - "Was the raw file loaded?" → `<filename>_raw_loaded`
+  - "Either?" → check both
+
+**Rationale:** Perl's two-key scheme leaks the `.ltxml` filesystem suffix
+into the API. In Rust, bindings are compile-time modules with no `.ltxml`
+filename, so the Perl convention is meaningless and confusing. The
+`_loaded` rename simplifies the Rust API. The `_raw_loaded` key preserves
+the binding-vs-raw distinction needed for correctness (e.g., when a binding
+replaces a raw file, we should not double-load the raw file when something
+later `\input <name>.sty`s).
+
+**Migration:** Sites that check `<name>.ltxml_loaded` migrate to
+`<name>_loaded`. Sites that check whether the *raw* file was loaded use
+`<name>_raw_loaded`.
+
+**Status:** Decision made 2026-04-26 during babel.sty timeout investigation.
+Implementation completed 2026-04-26 (commits `1eb66c75c`, `de21ae928`,
+`01df250c6`). See `docs/archive/BABEL_TIMEOUT_BISECT.md` for the triggering
+investigation.
+
+#### Path-aware gating (commit `de21ae928`)
+
+CRITICAL invariant: a binding `<file>.rs` MUST be allowed to call
+`InputDefinitions(noltxml=>1)` for its same-named raw `.sty/.cls/.def`
+AFTER its own `_loaded` flag was already set. Examples:
+- `babel_sty.rs` → raw `babel.sty`
+- `cite_sty.rs` → raw `cite.sty`
+
+`input_definitions` therefore gates by the load path actually being
+taken (helper `already_handled` in `binding/content.rs:226`):
+- `noltxml=true` (raw-only path) → check ONLY `_raw_loaded`
+- `notex=true` (binding-only path) → check ONLY `_loaded`
+- otherwise (default: binding-then-raw) → check EITHER
+
+The step-4 raw-search gate (L437) drops the `_loaded` check entirely:
+when the search reaches step 4, the calling context has already
+decided to load raw (binding either failed or was suppressed via
+`noltxml`). Only the raw flag should block.
+
+`_load_binding` keeps a binding-only `_loaded` gate (mirrors Perl
+`loadLTXML` Package.pm L2311 which checks only the binding flag).
+
+#### Reader semantics (commit `01df250c6`)
+
+User-level "is X loaded?" queries consult EITHER flag — they don't
+care which path produced the load. This applies to:
+- `\@ifpackageloaded` / `\@ifclassloaded`
+  (`latex_constructs.rs:3598`)
+- `soul_sty.rs` color-presence checks (3 sites)
+- `cleveref_sty.rs` amsmath-fake-loaded probe
+
+#### Rationalization: drop `_found_loaded`
+
+The Rust port also accumulated a Rust-only `<filename>_found_loaded` flag
+that has no Perl equivalent. It's set at:
+- `binding/content.rs:334` — alongside `_loaded` on binding load
+- `binding/content.rs:441` — on raw-file load
+- Read at `binding/content.rs:565`, `:1247`, `:1368`, `:1510`
+
+The original intent was "binding actually fired AND loaded successfully"
+(distinct from "_loaded" which could be set even on early-skip paths).
+This distinction is not present in Perl and produces a third flag that
+shadows the same lifecycle.
+
+**Action**: Audit every `_found_loaded` site and either:
+- Replace with `_loaded` (in cases where it represents post-load state).
+- Replace with `_raw_loaded` (cases tracking raw .sty/.cls load).
+- Delete entirely (cases that duplicate `_loaded`).
+
+After the rename, the Rust set of `_loaded`-family flags should be
+EXACTLY: `<name>_loaded`, `<name>_raw_loaded`, `<name>_loaded_with_options`
+(matches Perl's `_loaded_with_options` at L2569/L2612).
+
+#### Important: Perl error semantics
+
+Perl's `loadLTXML` (L2296) and `loadTeXDefinitions` (L2332) BOTH set
+`_loaded` BEFORE attempting to read the file (L2315 & L2347). On read
+error, `_loaded` is already set, so subsequent calls early-skip.
+
+Rust's `binding/content.rs:317` mimics this for binding load. But Rust's
+`_found_loaded` was added because the existing `_loaded` flag is set
+even on error paths in some routes — so callers needed a way to ask
+"did the load *actually succeed*?".
+
+Perl does NOT have this distinction. Perl's caller of `loadLTXML` /
+`loadTeXDefinitions` checks the return value (truthy = success).
+
+**Migration plan (to be implemented carefully)**:
+1. Keep `_loaded` semantics exactly Perl-faithful: set BEFORE read
+   attempt, persist on error.
+2. The "did it succeed" question is answered by the `Result` return,
+   not a flag.
+3. The 6 sites that read `<name>_found_loaded` are checking "did it
+   actually load (not just attempt)". Audit each:
+   - If they truly need success-not-error semantics, add an explicit
+     return/result check at the call site rather than a flag.
+   - If they only need "loaded at all" semantics, switch to `_loaded`.
+4. Drop the `_found_loaded` flag in `dump_writer.rs` (it shouldn't
+   be in dumps) and `dump_reader.rs` (its skip-list).
+
+This must be done WITH CARE — the error behavior at `binding/content.rs:317`
+could be load-bearing for Rust-specific recursion guards. Implementer
+must run the full test suite and sandbox after each change.
+
+#### Perl's dump-format equivalent of SKIP_VALUE_CONTAINS
+
+Question: does Perl have an equivalent to Rust's
+`dump_reader::SKIP_VALUE_CONTAINS = ["_loaded"]`?
+
+**Answer**: NO. Perl's `latex_dump.pool.ltxml` dump emits all
+`_loaded` flags verbatim, e.g.:
+```
+V('antomega.cfg_loaded',1);
+V('dumyhyph.tex_loaded',1);
+V('expl3-code.tex_loaded',1);
+V('expl3.ltx.ltxml_loaded',1);
+V('expl3.ltx_loaded',1);
+```
+Perl carries BOTH `expl3.ltx_loaded` (raw) AND
+`expl3.ltx.ltxml_loaded` (binding) into the post-dump state.
+
+Why Rust needed the skip-list: the runtime engine treats the
+dump-loaded `<file>_loaded` flag as "raw was loaded", which makes
+subsequent `\input <file>` short-circuit and skips re-execution
+that the engine actually depends on (e.g., babel's hyphenation
+language registers).
+
+**Rationalization opportunity** with #23's binding/raw split:
+- Perl `<name>_loaded` (raw) → Rust `<name>_raw_loaded`
+- Perl `<name>.ltxml_loaded` (binding) → Rust `<name>_loaded`
+
+If `dump_writer` faithfully maps Perl's two-key scheme into Rust's
+two-key scheme, the dump's `_raw_loaded` entries correctly mark
+"already raw-loaded" state. The skip-list is then no longer a
+workaround but reflects intentional state. The underlying issue
+(raw-load short-circuiting) is solved by `LoadFormat`-style
+mutual exclusivity (dump-cache vs raw-load): one path is active
+at a time, never both. See SYNC_STATUS D0 "dump/_base
+mutual-exclusivity".
+
+After mutual-exclusivity lands, `SKIP_VALUE_CONTAINS` should
+become empty/removable.

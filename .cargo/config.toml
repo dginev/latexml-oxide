@@ -7,3 +7,20 @@ RUST_MIN_STACK = "16777216"
 # For fresh-test (regenerate kernel dump against ambient TeXLive, then test),
 # see `make fresh-test` in the top-level Makefile. Cargo aliases can't chain
 # shell commands, so that orchestration lives in make, not here.
+
+# Use the bundled `rust-lld` (LLD shipped with the Rust toolchain) as the
+# linker on Linux. Cuts link time roughly 2-3x vs the default BFD `ld` for
+# our binary size. Saves ~3-7s per release relink.
+#
+# `-Clinker-features=+lld` selects rust-lld; `-Zunstable-options` is required
+# because the flag is unstable on nightly. Project already requires nightly
+# (per CLAUDE.md), so the gate is fine. CI will need the same settings.
+#
+# Why rust-lld and not `gold`? rustc emits `the gold linker is deprecated and
+# has known bugs with Rust` when -fuse-ld=gold is used. lld is the recommended
+# fast linker. rust-lld ships with every nightly, no apt install needed.
+#
+# If a local install of `mold` becomes available, swap to it for a further
+# ~3-5x linker speedup (mold > lld > gold > bfd).
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Clinker-features=+lld", "-Zunstable-options"]

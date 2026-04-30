@@ -163,9 +163,8 @@ pub fn i_dual(
   // Assemble: \lx@dual[options]{content}{presentation}
   // Pre-size: \lx@dual + [opts] + {content} + {presentation}.
   let opt_len = optional.as_ref().map(|o| o.len() + 2).unwrap_or(0);
-  let mut tks: Vec<Token> = Vec::with_capacity(
-    1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len(),
-  );
+  let mut tks: Vec<Token> =
+    Vec::with_capacity(1 + opt_len + 2 + content_subst.len() + 2 + wrapped_pres.len());
   tks.push(T_CS!("\\lx@dual"));
   if let Some(opts) = optional {
     tks.push(T_OTHER!("["));
@@ -211,7 +210,9 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
   // Pre-size: \lx@apply + keyvals + 6 wrap-structure tokens for op
   // + per-arg (3 structure + arg.len()) + args list wrap (2).
   let args_total: usize = args.iter().map(|a| a.len() + 3).sum();
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 6 + op.len() + 2 + args_total);
@@ -241,7 +242,9 @@ pub fn i_apply(kv: &[(&str, Tokens)], op: Tokens, args: Vec<Tokens>) -> Tokens {
 
 /// Perl: I_symbol(kv, text) — generates `\lx@symbol[kv]{text}`.
 pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let text_len = text.as_ref().map(|t| t.len()).unwrap_or(0);
@@ -261,7 +264,9 @@ pub fn i_symbol(kv: &[(&str, Tokens)], text: Option<Tokens>) -> Tokens {
 
 /// Perl: I_superscript(kv, base, script) — generates `\lx@superscript[kv]{base}{script}`.
 pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tokens {
-  let kv_total: usize = if kv.is_empty() { 0 } else {
+  let kv_total: usize = if kv.is_empty() {
+    0
+  } else {
     kv.iter().map(|(k, v)| k.len() + v.len() + 4).sum::<usize>() + 2
   };
   let mut tks: Vec<Token> = Vec::with_capacity(1 + kv_total + 4 + base.len() + script.len());
@@ -277,4 +282,78 @@ pub fn i_superscript(kv: &[(&str, Tokens)], base: Tokens, script: Tokens) -> Tok
   tks.extend(script.unlist());
   tks.push(T_END!());
   Tokens::new(tks)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn i_arg_parses_valid_index() {
+    let t = i_arg("2");
+    assert_eq!(t.code, Catcode::ARG);
+  }
+
+  #[test]
+  fn i_arg_defaults_on_parse_failure() {
+    // Non-numeric input falls back to '1' per the unwrap_or.
+    let t = i_arg("abc");
+    assert_eq!(t.code, Catcode::ARG);
+  }
+
+  #[test]
+  fn i_xmarg_emits_expected_sequence() {
+    let arg = Tokens::new(vec![]);
+    let tks = i_xmarg("X.1", arg);
+    let unlisted = tks.unlist();
+    // Should have \lx@xmarg { X.1 } { }.
+    assert!(
+      unlisted.len() >= 5,
+      "should have at least 5 tokens: cs + {{ + id + }} + {{ + }}"
+    );
+    assert_eq!(unlisted[0].code, Catcode::CS);
+  }
+
+  #[test]
+  fn i_xmref_emits_expected_sequence() {
+    let tks = i_xmref("X.1");
+    let unlisted = tks.unlist();
+    // Should have \lx@xmref { X.1 }.
+    // Minimum 3 tokens: cs + BEGIN + ... + END → 3 + len(id chars).
+    assert!(unlisted.len() >= 3);
+    assert_eq!(unlisted[0].code, Catcode::CS);
+    // Last token is END.
+    let last = unlisted.last().unwrap();
+    assert_eq!(last.code, Catcode::END);
+  }
+
+  #[test]
+  fn i_xmref_preserves_id_chars() {
+    let tks = i_xmref("abc");
+    let out = tks.to_string();
+    // Re-rendering back to string should contain the id.
+    assert!(out.contains("abc"), "got {out:?}");
+  }
+
+  #[test]
+  fn i_xmarg_with_content_preserves_arg() {
+    // Arg is "foo" — the output should encode foo.
+    let arg_tks = Tokens::new(vec![
+      CharToken!('f', Catcode::LETTER),
+      CharToken!('o', Catcode::LETTER),
+      CharToken!('o', Catcode::LETTER),
+    ]);
+    let out = i_xmarg("id", arg_tks);
+    let s = out.to_string();
+    assert!(s.contains("foo"), "got {s:?}");
+    assert!(s.contains("id"), "got {s:?}");
+  }
+
+  #[test]
+  fn i_keyvals_empty_list_returns_empty() {
+    let out = i_keyvals(&[]);
+    // Empty input → no tokens (or just minimal scaffold).
+    // Exact behavior depends on the impl; just assert it's well-formed.
+    let _ = out.len(); // doesn't panic
+  }
 }

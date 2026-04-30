@@ -11,9 +11,7 @@ use std::fmt::Debug;
 ///
 /// Defines basic default methods for comparison, printing
 pub trait Object {
-  fn stringify(&self) -> String {
-    String::from("<unknown>")
-  }
+  fn stringify(&self) -> String { String::from("<unknown>") }
 
   fn isa_box(&self) -> bool { false }
   fn is_expandable(&self) -> bool { false }
@@ -32,7 +30,5 @@ pub trait Object {
   fn get_locator(&self) -> Locator { Locator::default() }
 
   /// each concrete object needs to provide its own path back to tokens
-  fn revert(&self) -> Result<Tokens> {
-    Ok(Tokens::new(vec![]))
-  }
+  fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(vec![])) }
 }

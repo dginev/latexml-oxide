@@ -147,3 +147,112 @@ pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
   }
   false
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use libxml::tree::Document;
+
+  #[test]
+  fn namespace_constants() {
+    assert_eq!(XML_NS, "http://www.w3.org/XML/1998/namespace");
+    assert_eq!(XMLNS_NS, "http://www.w3.org/2000/xmlns/");
+  }
+
+  fn build_tree() -> (Document, Node) {
+    let mut doc = Document::new().unwrap();
+    let mut root = Node::new("root", None, &doc).unwrap();
+    doc.set_root_element(&root);
+    // Mix of element + text siblings:
+    //   root: <a/> "text1" <b/> "text2" <c/>
+    let mut a = Node::new("a", None, &doc).unwrap();
+    let mut t1 = Node::new_text("text1", &doc).unwrap();
+    let mut b = Node::new("b", None, &doc).unwrap();
+    let mut t2 = Node::new_text("text2", &doc).unwrap();
+    let mut c = Node::new("c", None, &doc).unwrap();
+    root.add_child(&mut a).unwrap();
+    root.add_child(&mut t1).unwrap();
+    root.add_child(&mut b).unwrap();
+    root.add_child(&mut t2).unwrap();
+    root.add_child(&mut c).unwrap();
+    (doc, root)
+  }
+
+  #[test]
+  fn element_nodes_skips_text() {
+    let (_doc, root) = build_tree();
+    let children = element_nodes(&root);
+    assert_eq!(children.len(), 3);
+    assert_eq!(children[0].get_name(), "a");
+    assert_eq!(children[1].get_name(), "b");
+    assert_eq!(children[2].get_name(), "c");
+  }
+
+  #[test]
+  fn content_nodes_includes_text() {
+    let (_doc, root) = build_tree();
+    let children = content_nodes(&root);
+    assert_eq!(children.len(), 5, "3 elements + 2 text nodes");
+  }
+
+  #[test]
+  fn get_next_element_skips_text() {
+    let (_doc, root) = build_tree();
+    let a = element_nodes(&root)[0].clone();
+    let next = get_next_element(&a).expect("a has a next element");
+    assert_eq!(
+      next.get_name(),
+      "b",
+      "<a> next element must be <b>, skipping the text node"
+    );
+  }
+
+  #[test]
+  fn get_next_element_none_at_end() {
+    let (_doc, root) = build_tree();
+    let c = element_nodes(&root)[2].clone();
+    assert!(get_next_element(&c).is_none(), "last element has no next");
+  }
+
+  #[test]
+  fn get_prev_element_skips_text() {
+    let (_doc, root) = build_tree();
+    let b = element_nodes(&root)[1].clone();
+    let prev = get_prev_element(&b).expect("b has a prev element");
+    assert_eq!(
+      prev.get_name(),
+      "a",
+      "<b> prev element must be <a>, skipping text"
+    );
+  }
+
+  #[test]
+  fn get_prev_element_none_at_start() {
+    let (_doc, root) = build_tree();
+    let a = element_nodes(&root)[0].clone();
+    assert!(get_prev_element(&a).is_none(), "first element has no prev");
+  }
+
+  #[test]
+  fn is_descendant_or_self_true_for_self() {
+    let (_doc, root) = build_tree();
+    assert!(is_descendant_or_self(&root, &root));
+  }
+
+  #[test]
+  fn is_descendant_or_self_true_for_child() {
+    let (_doc, root) = build_tree();
+    let a = element_nodes(&root)[0].clone();
+    assert!(is_descendant_or_self(&a, &root));
+  }
+
+  #[test]
+  fn is_descendant_or_self_false_for_sibling() {
+    let (_doc, root) = build_tree();
+    let kids = element_nodes(&root);
+    assert!(
+      !is_descendant_or_self(&kids[0], &kids[1]),
+      "a is not a descendant of b"
+    );
+  }
+}

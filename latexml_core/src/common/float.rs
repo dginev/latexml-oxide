@@ -32,7 +32,8 @@ impl Object for Float {
         // `pin` takes `AsRef<str>` — `&String` borrows cleanly without
         // an extra `.to_string()` clone that `into_pin` would force.
         crate::common::arena::pin(&s),
-        None, None,
+        None,
+        None,
         Tokens::new(ExplodeText!(&s)),
         crate::common::arena::SymHashMap::default(),
       )
@@ -99,4 +100,78 @@ impl From<String> for Float {
   /// to match Perl's implicit numeric coercion — `Float("abc")` + x in
   /// Perl yields x, not a panic.
   fn from(spec: String) -> Self { Float(spec.trim().parse::<f64>().unwrap_or(0.0)) }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn floatformat_integer_gets_dot_zero() {
+    assert_eq!(floatformat(1.0), "1.0");
+    assert_eq!(floatformat(0.0), "0.0");
+    assert_eq!(floatformat(-5.0), "-5.0");
+  }
+
+  #[test]
+  fn floatformat_trims_trailing_zeros() {
+    assert_eq!(floatformat(1.5), "1.5");
+    assert_eq!(floatformat(1.25), "1.25");
+    assert_eq!(floatformat(0.10000), "0.1");
+  }
+
+  #[test]
+  fn tight_format_drops_dot_for_integers() {
+    assert_eq!(Float(1.0).to_tight_string(), "1");
+    assert_eq!(Float(0.0).to_tight_string(), "0");
+    assert_eq!(Float(1.5).to_tight_string(), "1.5");
+  }
+
+  #[test]
+  fn custom_float_format_precision() {
+    let out = custom_float_format(0.123456789, false);
+    assert!(
+      out.starts_with("0.12346") || out.starts_with("0.12345"),
+      "got {out:?}"
+    );
+  }
+
+  #[test]
+  fn from_str_nonnumeric_is_zero() {
+    assert_eq!(Float::from("abc").0, 0.0);
+    assert_eq!(Float::from("  xyz  ").0, 0.0);
+    assert_eq!(Float::from("").0, 0.0);
+  }
+
+  #[test]
+  fn from_str_numeric_parses() {
+    assert_eq!(Float::from("1.5").0, 1.5);
+    assert_eq!(Float::from("  -3.14  ").0, -3.14);
+    assert_eq!(Float::from("42").0, 42.0);
+  }
+
+  #[test]
+  fn from_string_matches_from_str() {
+    for s in &["1", "1.5", "", "abc", "-0.0001"] {
+      let a = Float::from(*s).0;
+      let b = Float::from(s.to_string()).0;
+      assert_eq!(a, b, "divergence on {s:?}: {a} vs {b}");
+    }
+  }
+
+  #[test]
+  fn float_arithmetic_roundtrip() {
+    let a = Float::new_f64(1.5);
+    let b = Float::new_f64(2.5);
+    assert_eq!(a.add(b).value_f64(), 4.0);
+    assert_eq!(b.subtract(a).value_f64(), 1.0);
+    assert_eq!(a.multiply(b).value_f64(), 3.75);
+    assert_eq!(b.divide(a).value_f64(), 2.5 / 1.5);
+  }
+
+  #[test]
+  fn float_negate() {
+    assert_eq!(Float::new_f64(1.5).negate().value_f64(), -1.5);
+    assert_eq!(Float::new_f64(0.0).negate().value_f64(), 0.0);
+  }
 }

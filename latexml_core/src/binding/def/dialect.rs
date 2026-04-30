@@ -6,7 +6,6 @@ use std::rc::Rc;
 use regex::Regex;
 
 // use crate::common::error::*;
-use crate::{BoxOps, Digested};
 use crate::binding::content::{merge_font, merge_font_ref};
 use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::IntoDigestedResult;
@@ -16,6 +15,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
@@ -31,7 +31,6 @@ use crate::definition::{
 use crate::document::Document;
 use crate::gullet;
 use crate::mouth;
-use crate::definition::argument::ArgWrap;
 use crate::parameter::{Parameter, Parameters};
 use crate::state::*;
 use crate::stomach::*;
@@ -39,6 +38,7 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::{BoxOps, Digested};
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -349,10 +349,14 @@ pub fn def_primitive(
     before_digest_env.push(forbid_math_closure);
   }
   if needs_enter_horizontal {
-    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_env.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_env.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
@@ -416,6 +420,7 @@ pub fn def_primitive(
       nargs: options.nargs,
       is_prefix: options.is_prefix,
       reversion: options.reversion,
+      font_id: options.font_id,
     },
     scope,
   );
@@ -617,8 +622,21 @@ pub fn def_math_primitive(
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |_args| {
         let locator = gullet::get_locator();
-        // Perl: DefMath with ?#isMath conditional produces text in text mode.
-        // The check happens at CONSTRUCTION time (not digestion time).
+        // Perl: defmath_prim L1810 — `my $mode = LookupValue('MODE');`
+        // The Tbox records the CURRENT digestion mode so that Box::isMath
+        // (mode =~ /math$/) returns false inside \text{} (restricted_horizontal),
+        // making `?#isMath` template fall through to the text branch.
+        let cur_mode = lookup_string_from_sym(arena::pin_static("MODE"));
+        let mode_static: &'static str = match cur_mode.as_str() {
+          "math" => "math",
+          "display_math" => "display_math",
+          "inline_math" => "inline_math",
+          "vertical" => "vertical",
+          "internal_vertical" => "internal_vertical",
+          "horizontal" => "horizontal",
+          "restricted_horizontal" => "restricted_horizontal",
+          _ => "math",
+        };
         let state_font = lookup_font().unwrap();
         // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
         let mathstyle_override: Option<&'static str> = if dynamic_mathstyle {
@@ -652,7 +670,7 @@ pub fn def_math_primitive(
           tokens: Tokens!(cs),
           font,
           properties: shared_options.to_hash_stored_with_overrides(
-            Some("math"),
+            Some(mode_static),
             mathstyle_override,
             scriptpos_override,
           ),
@@ -957,10 +975,14 @@ pub fn def_constructor(
     before_digest_closures.push(forbid_math_closure);
   }
   if needs_enter_horizontal {
-    before_digest_closures.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_closures.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_closures.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_closures.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref mode) = mode {
     let mode_clone = mode.clone();
@@ -1090,10 +1112,14 @@ pub fn def_environment(
 
   before_digest_env.push(atbegin_hook_closure);
   if options.enter_horizontal {
-    before_digest_env.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_env.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_env.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_env.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   // Perl Package.pm line 1908: beginMode($mode, 1) — noframe=1 since bgroup already pushed
   if let Some(ref mode) = mode {
@@ -1239,6 +1265,14 @@ pub fn def_environment(
     Some(ref emode) => {
       let emode = emode.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
+        // Perl Package.pm L1944-1945:
+        //   # Switch mode (w/stack frame pop), OR egroup
+        //   ($mode ? (sub { $_[0]->endMode($mode) }) : sub { $_[0]->egroup; }),
+        // endMode(mode) with no second arg defaults to noframe=0 — it DOES
+        // pop a frame. This pairs with L1902's `bgroup` + L1908's
+        // `beginMode($mode, 1)` (noframe=1, no push) on the begin side:
+        // bgroup pushes exactly one frame, beginMode writes MODE/BOUND_MODE
+        // Local into that frame, endMode pops the frame and reverts.
         end_mode(&emode)?;
         Ok(Vec::new())
       });
@@ -1280,12 +1314,18 @@ pub fn def_environment(
   // For the uncommon case opened by \csname env\endcsname
   // Perl Package.pm lines 1949-1969: \FOO gets the same hook pipeline as \begin{FOO}
   let mut before_digest_bare: Vec<BeforeDigestClosure> = Vec::new();
-  before_digest_bare.push(before_digest_simple!({ bgroup(); }));
+  before_digest_bare.push(before_digest_simple!({
+    bgroup();
+  }));
   if options.enter_horizontal {
-    before_digest_bare.push(before_digest_simple!({ enter_horizontal(); }));
+    before_digest_bare.push(before_digest_simple!({
+      enter_horizontal();
+    }));
   }
   if options.leave_horizontal {
-    before_digest_bare.push(before_digest_simple!({ leave_horizontal()?; }));
+    before_digest_bare.push(before_digest_simple!({
+      leave_horizontal()?;
+    }));
   }
   if let Some(ref bmode) = mode {
     let bmode = bmode.clone();

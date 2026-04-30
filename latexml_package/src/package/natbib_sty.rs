@@ -1,37 +1,91 @@
 use crate::prelude::*;
 
-// Helper: set citation style values (Perl: setCitationStyle)
-fn set_citation_style(pairs: &[(&str, &str)]) {
-  for (key, _value) in pairs {
+// Helper: set citation style values.
+// Perl natbib.sty.ltxml L379-405: sub setCitationStyle { while (@pairs) { ($key,$value)=... }
+// Unified dispatch: callers may pass flag-only pairs (value=None) from DeclareOption
+// handlers or key=value pairs (value=Some(tokens)) from `\setcitestyle`'s getPairs.
+fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
+  for (key, value) in pairs {
     match *key {
-      "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },
-      "numbers"    => { assign_value("CITE_STYLE", arena::pin("numbers"), None); },
-      "super"      => { assign_value("CITE_STYLE", arena::pin("super"), None); },
-      "round"      => {
+      // Perl L384: AssignValue(CITE_STYLE => 'authoryear');
+      "authoryear" => {
+        assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+      },
+      // Perl L385:
+      "numbers" => {
+        assign_value("CITE_STYLE", arena::pin("numbers"), None);
+      },
+      // Perl L386:
+      "super" => {
+        assign_value("CITE_STYLE", arena::pin("super"), None);
+      },
+      // Perl L387-388: AssignValue(CITE_OPEN=>T_OTHER('(')); AssignValue(CITE_CLOSE=>T_OTHER(')'));
+      "round" => {
         assign_value("CITE_OPEN", Stored::Token(T_OTHER!("(")), None);
         assign_value("CITE_CLOSE", Stored::Token(T_OTHER!(")")), None);
       },
+      // Perl L389-390:
       "square" => {
         assign_value("CITE_OPEN", Stored::Token(T_OTHER!("[")), None);
         assign_value("CITE_CLOSE", Stored::Token(T_OTHER!("]")), None);
       },
+      // Perl L391-392:
       "curly" => {
         assign_value("CITE_OPEN", Stored::Token(T_OTHER!("{")), None);
         assign_value("CITE_CLOSE", Stored::Token(T_OTHER!("}")), None);
       },
+      // Perl L393-394:
       "angle" => {
         assign_value("CITE_OPEN", Stored::Token(T_OTHER!("<")), None);
         assign_value("CITE_CLOSE", Stored::Token(T_OTHER!(">")), None);
       },
+      // Perl L395: AssignValue(CITE_OPEN => $value);
+      "open" => {
+        if let Some(v) = value {
+          assign_value("CITE_OPEN", Stored::Tokens(v.clone()), None);
+        }
+      },
+      // Perl L396:
+      "close" => {
+        if let Some(v) = value {
+          assign_value("CITE_CLOSE", Stored::Tokens(v.clone()), None);
+        }
+      },
+      // Perl L397:
       "semicolon" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
       },
+      // Perl L398:
       "comma" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(",")), None);
       },
+      // Perl L399: AssignValue(CITE_AY_SEPARATOR => $value);
+      "aysep" => {
+        if let Some(v) = value {
+          assign_value("CITE_AY_SEPARATOR", Stored::Tokens(v.clone()), None);
+        }
+      },
+      // Perl L400:
+      "yysep" => {
+        if let Some(v) = value {
+          assign_value("CITE_YY_SEPARATOR", Stored::Tokens(v.clone()), None);
+        }
+      },
+      // Perl L401:
+      "notesep" => {
+        if let Some(v) = value {
+          assign_value("CITE_NOTE_SEPARATOR", Stored::Tokens(v.clone()), None);
+        }
+      },
+      // Perl L402-404: fall-through — warn & default to authoryear.
       _ => {
         assign_value("CITE_STYLE", arena::pin("authoryear"), None);
-      }
+        Info!(
+          "unexpected",
+          key,
+          s!("Unexpected Citation Style keyword '{key}' using authoryear")
+        );
+      },
     }
   }
 }
@@ -44,29 +98,22 @@ fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
 }
 
 // Helper: get CITE_STYLE as string
-fn cite_style() -> String {
-  state::lookup_string("CITE_STYLE")
-}
+fn cite_style() -> String { state::lookup_string("CITE_STYLE") }
 
-fn cite_open() -> Tokens {
-  state::lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS)
-}
-fn cite_close() -> Tokens {
-  state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS)
-}
-fn cite_ns() -> Tokens {
-  state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS)
-}
-fn cite_ay() -> Tokens {
-  state::lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS)
-}
+fn cite_open() -> Tokens { state::lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS) }
+fn cite_close() -> Tokens { state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
+fn cite_ns() -> Tokens { state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
+fn cite_ay() -> Tokens { state::lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
 
 // Helper: handle the [pre][post] optional arg swap (if !post { pre,post = undef,pre })
 fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, Option<Tokens>) {
   if !is_some_and_nonempty(&post) {
     (None, pre.filter(|t| !t.is_empty()))
   } else {
-    (pre.filter(|t| !t.is_empty()), post.filter(|t| !t.is_empty()))
+    (
+      pre.filter(|t| !t.is_empty()),
+      post.filter(|t| !t.is_empty()),
+    )
   }
 }
 
@@ -74,41 +121,41 @@ LoadDefinitions!({
   //======================================================================
   // 5. Package Options
   DeclareOption!("numbers", {
-    set_citation_style(&[("numbers", "1")]);
+    set_citation_style(&[("numbers", None)]);
     Digest!("\\ExecuteOptions{square,comma,nobibstyle}")?;
   });
   DeclareOption!("super", {
-    set_citation_style(&[("super", "1")]);
+    set_citation_style(&[("super", None)]);
     assign_value("CITE_OPEN", Stored::Tokens(Tokens!()), None);
     assign_value("CITE_CLOSE", Stored::Tokens(Tokens!()), None);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("authoryear", {
-    set_citation_style(&[("authoryear", "1")]);
+    set_citation_style(&[("authoryear", None)]);
     Digest!("\\ExecuteOptions{round,semicolon,bibstyle}")?;
   });
   DeclareOption!("round", {
-    set_citation_style(&[("round", "1")]);
+    set_citation_style(&[("round", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("curly", {
-    set_citation_style(&[("curly", "1")]);
+    set_citation_style(&[("curly", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("square", {
-    set_citation_style(&[("square", "1")]);
+    set_citation_style(&[("square", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("angle", {
-    set_citation_style(&[("angle", "1")]);
+    set_citation_style(&[("angle", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("comma", {
-    set_citation_style(&[("comma", "1")]);
+    set_citation_style(&[("comma", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("semicolon", {
-    set_citation_style(&[("semicolon", "1")]);
+    set_citation_style(&[("semicolon", None)]);
     Digest!("\\ExecuteOptions{nobibstyle}")?;
   });
   DeclareOption!("colon", {
@@ -131,7 +178,7 @@ LoadDefinitions!({
   DeclareOption!("nonamebreak", "");
 
   // Perl: setCitationStyle(round => 1, semicolon => 1);
-  set_citation_style(&[("round", "1"), ("semicolon", "1")]);
+  set_citation_style(&[("round", None), ("semicolon", None)]);
 
   // \bibstyle dispatches to \bibstyle@NAME if defined
   DefMacro!("\\bibstyle{}", sub[(style_arg)] {
@@ -569,14 +616,14 @@ LoadDefinitions!({
   //======================================================================
   // 2.9 Selecting Citation Punctuation
 
-  // Perl: natbib.sty.ltxml L360-408 — \setcitestyle with KeyVals
+  // Perl natbib.sty.ltxml L363-375 — \setcitestyle keys.
+  // Note: Perl declares these exact keys — no `curly`, no `angle`. The internal
+  // `setCitationStyle` helper handles those flags via DeclareOption dispatch only.
   DefKeyVal!("natbib", "authoryear", "");
   DefKeyVal!("natbib", "numbers", "");
   DefKeyVal!("natbib", "super", "");
   DefKeyVal!("natbib", "round", "");
   DefKeyVal!("natbib", "square", "");
-  DefKeyVal!("natbib", "curly", "");
-  DefKeyVal!("natbib", "angle", "");
   DefKeyVal!("natbib", "open", "");
   DefKeyVal!("natbib", "close", "");
   DefKeyVal!("natbib", "semicolon", "");
@@ -586,93 +633,20 @@ LoadDefinitions!({
   DefKeyVal!("natbib", "yysep", "");
   DefKeyVal!("natbib", "notesep", "");
 
-  // \setcitestyle — parse key=value pairs and set CITE_* values
-  // Perl: setCitationStyle called with getPairs from RequiredKeyVals:natbib
-  DefPrimitive!("\\setcitestyle{}", sub[(kv)] {
-    // Brace-aware comma splitting for key=value pairs like: authoryear,round,citesep={;},aysep={,}
-    let kv_str = kv.to_string();
-    let mut pairs: Vec<String> = Vec::new();
-    let mut current = String::new();
-    let mut depth = 0i32;
-    for ch in kv_str.chars() {
-      if ch == '{' { depth += 1; current.push(ch); }
-      else if ch == '}' { depth -= 1; current.push(ch); }
-      else if ch == ',' && depth == 0 {
-        pairs.push(current.trim().to_string());
-        current = String::new();
-      } else {
-        current.push(ch);
-      }
-    }
-    if !current.trim().is_empty() { pairs.push(current.trim().to_string()); }
-
-    for pair in &pairs {
-      let pair = pair.trim();
-      if pair.is_empty() { continue; }
-      let (key, value) = if let Some(eq_pos) = pair.find('=') {
-        let v = pair[eq_pos+1..].trim();
-        // Strip outer braces from value: {;} → ;
-        let v = if v.starts_with('{') && v.ends_with('}') {
-          &v[1..v.len()-1]
-        } else { v };
-        (pair[..eq_pos].trim(), Some(v.to_string()))
-      } else {
-        (pair, None)
-      };
-      match key {
-        "authoryear" => { assign_value("CITE_STYLE", arena::pin("authoryear"), None); },
-        "numbers" => { assign_value("CITE_STYLE", arena::pin("numbers"), None); },
-        "super" => { assign_value("CITE_STYLE", arena::pin("super"), None); },
-        "round" => {
-          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("("))), None);
-          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!(")"))), None);
-        },
-        "square" => {
-          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("["))), None);
-          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!("]"))), None);
-        },
-        "curly" => {
-          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_BEGIN!())), None);
-          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_END!())), None);
-        },
-        "angle" => {
-          assign_value("CITE_OPEN", Stored::Tokens(Tokens!(T_OTHER!("<"))), None);
-          assign_value("CITE_CLOSE", Stored::Tokens(Tokens!(T_OTHER!(">"))), None);
-        },
-        "open" => if let Some(v) = value {
-          assign_value("CITE_OPEN", Stored::Tokens(mouth::tokenize_internal(&v)), None);
-        },
-        "close" => if let Some(v) = value {
-          assign_value("CITE_CLOSE", Stored::Tokens(mouth::tokenize_internal(&v)), None);
-        },
-        "semicolon" => {
-          assign_value("CITE_SEPARATOR", Stored::Tokens(Tokens!(T_OTHER!(";"))), None);
-        },
-        "comma" => {
-          assign_value("CITE_SEPARATOR", Stored::Tokens(Tokens!(T_OTHER!(","))), None);
-        },
-        "citesep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
-          assign_value("CITE_SEPARATOR", Stored::Tokens(toks), None);
-        },
-        "aysep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
-          assign_value("CITE_AY_SEPARATOR", Stored::Tokens(toks), None);
-        },
-        "yysep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
-          assign_value("CITE_YY_SEPARATOR", Stored::Tokens(toks), None);
-        },
-        "notesep" => if let Some(v) = value {
-          let toks = Tokens::new(v.chars().map(|c| Token { text: arena::pin_char(c), code: Catcode::OTHER }).collect::<Vec<_>>());
-          assign_value("CITE_NOTE_SEPARATOR", Stored::Tokens(toks), None);
-        },
-        _ => {
-          assign_value("CITE_STYLE", arena::pin("authoryear"), None);
-          Info!("unexpected", key, s!("Unexpected Citation Style keyword '{key}' using authoryear"));
-        }
-      }
-    }
+  // \setcitestyle — Perl L407-408: DefPrimitive('\setcitestyle RequiredKeyVals:natbib',
+  //   sub { setCitationStyle($_[1]->getPairs); });
+  DefPrimitive!("\\setcitestyle RequiredKeyVals:natbib", sub[(kv)] {
+    // Own each pair so the helper can borrow &str slices safely.
+    let owned: Vec<(String, Option<Tokens>)> = kv
+      .get_pairs()
+      .map(|(k, v)| {
+        let toks = v.as_tokens().ok().flatten().map(|c| c.into_owned());
+        (k.clone(), toks)
+      })
+      .collect();
+    let pairs: Vec<(&str, Option<Tokens>)> =
+      owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+    set_citation_style(&pairs);
   });
 
   // \bibpunct
@@ -722,20 +696,28 @@ LoadDefinitions!({
   DefMacro!("\\bibstyle@copernicus", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   Let!("\\bibstyle@egu", "\\bibstyle@copernicus");
   Let!("\\bibstyle@egs", "\\bibstyle@copernicus");
-  DefMacro!("\\bibstyle@agsm",
-    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}");
-  DefMacro!("\\bibstyle@kluwer",
-    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}");
-  DefMacro!("\\bibstyle@dcu",
-    "\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}");
+  DefMacro!(
+    "\\bibstyle@agsm",
+    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}"
+  );
+  DefMacro!(
+    "\\bibstyle@kluwer",
+    "\\bibpunct{(}{)}{,}{a}{}{,}\\gdef\\harvardand{\\&}"
+  );
+  DefMacro!(
+    "\\bibstyle@dcu",
+    "\\bibpunct{(}{)}{;}{a}{;}{,}\\gdef\\harvardand{and}"
+  );
   DefMacro!("\\bibstyle@aa", "\\bibpunct{(}{)}{;}{a}{}{,}");
   DefMacro!("\\bibstyle@pass", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@anngeo", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@nlinproc", "\\bibpunct{(}{)}{;}{a}{,}{,}");
   DefMacro!("\\bibstyle@cospar", "\\bibpunct{/}{/}{,}{n}{}{}");
   DefMacro!("\\bibstyle@esa", "\\bibpunct{(Ref.~}{)}{,}{n}{}{}");
-  DefMacro!("\\bibstyle@nature",
-    "\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}");
+  DefMacro!(
+    "\\bibstyle@nature",
+    "\\bibpunct{}{}{,}{s}{}{\\textsuperscript{,}}"
+  );
   DefMacro!("\\bibstyle@plain", "\\bibpunct{[}{]}{,}{n}{}{,}");
   Let!("\\bibstyle@alpha", "\\bibstyle@plain");
   Let!("\\bibstyle@abbrv", "\\bibstyle@plain");
@@ -943,29 +925,39 @@ LoadDefinitions!({
   Let!("\\bibitem", "\\lx@nat@bibitem");
 
   // RawTeX for citeauthoryear, astroncite, citename, harvarditem, NAT@ifcmd etc.
-  RawTeX!("\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
+  RawTeX!(
+    "\\def\\citeauthoryear#1#2#3(@)(@)\\@nil#4{%
 \\if\\relax#3\\relax%
 \\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}\\else%
-\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}");
+\\NAT@wrout{\\the@bibitem}{#3}{#2}{#1}{#4}\\fi}"
+  );
   RawTeX!("\\let\\natbib@citeauthoryear\\citeauthoryear");
-  RawTeX!("\\def\\astroncite#1#2(@)(@)\\@nil#3{%
-\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}");
+  RawTeX!(
+    "\\def\\astroncite#1#2(@)(@)\\@nil#3{%
+\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#3}}"
+  );
   RawTeX!("\\let\\natbib@astroncite\\astroncite");
-  RawTeX!("\\def\\citename#1#2(@)(@)\\@nil#3{%
-\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}");
+  RawTeX!(
+    "\\def\\citename#1#2(@)(@)\\@nil#3{%
+\\expandafter\\NAT@apalk#1#2, \\@nil{#3}}"
+  );
   RawTeX!("\\let\\natbib@citename\\citename");
-  RawTeX!("\\newcommand\\harvarditem[4][]{%
-\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}");
-  RawTeX!("\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
-\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}");
+  RawTeX!(
+    "\\newcommand\\harvarditem[4][]{%
+\\if\\relax#1\\relax\\bibitem[#2(#3)]{#4}\\else\\bibitem[#1(#3)#2]{#4}\\fi}"
+  );
+  RawTeX!(
+    "\\def\\NAT@apalk#1, #2, #3\\@nil#4{%
+\\NAT@wrout{\\the@bibitem}{#2}{#1}{}{#4}}"
+  );
 
   // \reset@natbib@cites
   DefPrimitive!("\\reset@natbib@cites", None,
-    after_digest => {
-      Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
-      Let!("\\astroncite", "\\natbib@astroncite");
-      Let!("\\citename", "\\natbib@citename");
-    });
+  after_digest => {
+    Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
+    Let!("\\astroncite", "\\natbib@astroncite");
+    Let!("\\citename", "\\natbib@citename");
+  });
 
   // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
   DefMacro!("\\@lbibitem[]{}",
@@ -974,15 +966,15 @@ LoadDefinitions!({
 
   // \@@lbibitem — constructor opening the bibitem element
   DefConstructor!("\\@@lbibitem Semiverbatim",
-    "<ltx:bibitem key='#key' xml:id='#id'>",
-    after_digest => sub[whatsit] {
-      let key_str = whatsit.get_arg(1).map(|a| {
-        clean_bib_key(&a.to_string())
-      }).unwrap_or_default();
-      let id = Digest!(T_CS!("\\the@bibitem@ID"))?.to_string();
-      whatsit.set_property("key", key_str);
-      whatsit.set_property("id", id);
-    });
+  "<ltx:bibitem key='#key' xml:id='#id'>",
+  after_digest => sub[whatsit] {
+    let key_str = whatsit.get_arg(1).map(|a| {
+      clean_bib_key(&a.to_string())
+    }).unwrap_or_default();
+    let id = Digest!(T_CS!("\\the@bibitem@ID"))?.to_string();
+    whatsit.set_property("key", key_str);
+    whatsit.set_property("id", id);
+  });
 
   //======================================================================
   // Misc macros
@@ -996,6 +988,12 @@ LoadDefinitions!({
   DefMacro!("\\harvardyearright", { cite_close() });
   DefMacro!("\\harvardand", "and");
 
+  // Perl L663-666: DefConstructor('\harvardurl Semiverbatim', ..., enterHorizontal => 1, ...).
+  // WISDOM #45 (wisdom_mode_text_auto_enter_horizontal): Rust's
+  // DefConstructor with `mode => "text"` already auto-triggers
+  // `needs_enter_horizontal`, so `mode => "text"` alone covers Perl's
+  // enterHorizontal => 1. Keeping `mode => "text"` and NOT adding a
+  // redundant `enter_horizontal => true`.
   DefConstructor!("\\harvardurl Semiverbatim",
     "<ltx:ref href='#href'>#1</ltx:ref>",
     mode => "text",
@@ -1011,9 +1009,6 @@ LoadDefinitions!({
   Let!("\\citeasnoun", "\\cite");
 
   DefMacro!("\\natexlab{}", "#1");
-
-  // \setcitestyle — removed old naive implementation (no brace-aware parsing).
-  // The brace-aware version is defined earlier in the file (after DefKeyVal declarations).
 });
 
 // Helper: peel a brace-delimited argument from a token list
@@ -1033,13 +1028,21 @@ fn nat_peel_arg(mut tokens: Vec<Token>) -> (Option<Tokens>, Vec<Token>) {
   while let Some(t) = tokens.first().cloned() {
     tokens.remove(0);
     let cc = t.get_catcode();
-    if cc == Catcode::BEGIN { level += 1; }
+    if cc == Catcode::BEGIN {
+      level += 1;
+    }
     if cc == Catcode::END {
       level -= 1;
-      if level == 0 { break; }
+      if level == 0 {
+        break;
+      }
     }
     arg.push(t);
   }
-  let result = if arg.is_empty() { None } else { Some(Tokens::new(arg)) };
+  let result = if arg.is_empty() {
+    None
+  } else {
+    Some(Tokens::new(arg))
+  };
   (result, tokens)
 }

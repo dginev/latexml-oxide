@@ -14,7 +14,7 @@ use crate::document::PostDocument;
 #[derive(Debug, Default, Clone)]
 pub struct ProcessorOptions {
   pub resource_directory: Option<String>,
-  pub resource_prefix: Option<String>,
+  pub resource_prefix:    Option<String>,
 }
 
 /// Result of processing: the document (possibly split into multiple).
@@ -44,9 +44,7 @@ impl std::fmt::Display for PostError {
 impl std::error::Error for PostError {}
 
 impl From<std::io::Error> for PostError {
-  fn from(err: std::io::Error) -> Self {
-    PostError::Io(err)
-  }
+  fn from(err: std::io::Error) -> Self { PostError::Io(err) }
 }
 
 /// Abstract base trait for all post-processors.
@@ -59,14 +57,10 @@ pub trait Processor {
   fn get_name(&self) -> &str;
 
   /// Resource directory for generated resources (images, etc.).
-  fn resource_directory(&self) -> Option<&str> {
-    None
-  }
+  fn resource_directory(&self) -> Option<&str> { None }
 
   /// Resource prefix for generated resource filenames.
-  fn resource_prefix(&self) -> Option<&str> {
-    None
-  }
+  fn resource_prefix(&self) -> Option<&str> { None }
 
   /// Return the nodes to be processed; by default the document element.
   /// This allows processors to focus on specific kinds of nodes,
@@ -104,9 +98,11 @@ pub trait Processor {
     let subdir = self.resource_directory().unwrap_or("");
     let prefix = self.resource_prefix().unwrap_or("x");
     let counter_key = format!("_max_{}_{}_counter_", subdir, prefix);
-    let n = doc.cache_lookup(&counter_key)
+    let n = doc
+      .cache_lookup(&counter_key)
       .and_then(|v| v.parse::<u32>().ok())
-      .unwrap_or(0) + 1;
+      .unwrap_or(0)
+      + 1;
     doc.cache_store(&counter_key, &n.to_string());
     let name = format!("{}{}", prefix, n);
     let mut path = PathBuf::from(subdir);
@@ -123,15 +119,15 @@ pub trait Processor {
 /// Information about a document class or package extracted from processing instructions.
 #[derive(Debug, Clone)]
 pub struct ClassInfo {
-  pub name: String,
-  pub options: String,
+  pub name:     String,
+  pub options:  String,
   pub oldstyle: Option<String>,
 }
 
 /// Information about a loaded package.
 #[derive(Debug, Clone)]
 pub struct PackageInfo {
-  pub name: String,
+  pub name:    String,
   pub options: String,
 }
 
@@ -155,12 +151,18 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
     }
     if let Some(cls) = entry.get("class") {
       class = Some(cls.clone());
-      classoptions = entry.get("options").cloned().unwrap_or_else(|| "onecolumn".to_string());
+      classoptions = entry
+        .get("options")
+        .cloned()
+        .unwrap_or_else(|| "onecolumn".to_string());
       oldstyle = entry.get("oldstyle").cloned();
     } else if let Some(pkg) = entry.get("package") {
       let opts = entry.get("options").cloned().unwrap_or_default();
       for p in pkg.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-        packages.push(PackageInfo { name: p.to_string(), options: opts.clone() });
+        packages.push(PackageInfo {
+          name:    p.to_string(),
+          options: opts.clone(),
+        });
       }
     }
   }
@@ -215,5 +217,70 @@ pub fn copy_foreign_attributes(target: &mut Node, source: &Node) {
     if target.get_attribute(key).is_none() {
       target.set_attribute(key, value).ok();
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn processor_options_default_is_empty() {
+    let o = ProcessorOptions::default();
+    assert!(o.resource_directory.is_none());
+    assert!(o.resource_prefix.is_none());
+  }
+
+  #[test]
+  fn processor_options_clone_preserves() {
+    let o = ProcessorOptions {
+      resource_directory: Some("/tmp".to_string()),
+      resource_prefix:    Some("pre".to_string()),
+    };
+    let c = o.clone();
+    assert_eq!(c.resource_directory, Some("/tmp".to_string()));
+    assert_eq!(c.resource_prefix, Some("pre".to_string()));
+  }
+
+  #[test]
+  fn post_error_display_processing() {
+    let e = PostError::Processing("boom".to_string());
+    let s = format!("{e}");
+    assert!(s.contains("Post-processing error"));
+    assert!(s.contains("boom"));
+  }
+
+  #[test]
+  fn post_error_display_xml() {
+    let e = PostError::Xml("malformed".to_string());
+    let s = format!("{e}");
+    assert!(s.contains("XML error"));
+    assert!(s.contains("malformed"));
+  }
+
+  #[test]
+  fn post_error_from_io_error() {
+    let io = std::io::Error::new(std::io::ErrorKind::NotFound, "x");
+    let pe: PostError = io.into();
+    match pe {
+      PostError::Io(_) => {},
+      other => panic!("expected Io, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn post_error_display_io() {
+    let io = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+    let e = PostError::Io(io);
+    let s = format!("{e}");
+    assert!(s.contains("I/O error"));
+  }
+
+  #[test]
+  fn post_error_impls_std_error() {
+    // The blanket impl lets us box it as dyn Error.
+    fn take_err<E: std::error::Error>(_: &E) {}
+    let e = PostError::Processing("x".to_string());
+    take_err(&e);
   }
 }

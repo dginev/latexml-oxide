@@ -1,8 +1,11 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!("missing_file", "mdframed.sty",
-    "mdframed.sty is only minimally stubbed and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "mdframed.sty",
+    "mdframed.sty is only minimally stubbed and will not be interpreted raw."
+  );
   RequirePackage!("kvoptions");
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
@@ -16,7 +19,23 @@ LoadDefinitions!({
   DefMacro!("\\mdfsetup{}", "");
   DefMacro!("\\mdfdefinestyle{}{}", "");
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // TODO: Perl has DefEnvironment for {mdframed}[] with inline-block framed="rectangle"
-  // and framecolor from current font color. Stubbed as empty for now.
-  DefEnvironment!("{mdframed}[]", "#body");
+  // Perl ar5iv-bindings/mdframed.sty.ltxml L31-34: wrap body in an
+  // inline-block with framed="rectangle" and framecolor from the current
+  // font color (`LookupValue('font')->getColor`). The template emits
+  // `framecolor=` only when the #framecolor property is set (via the
+  // `?#framecolor(...)` guard), so an unset color correctly omits the
+  // attribute rather than emitting `framecolor=''`.
+  DefEnvironment!(
+    "{mdframed}[]",
+    "<ltx:inline-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-block>",
+    properties => sub[_args] {
+      let mut props = arena::SymHashMap::default();
+      if let Some(font) = latexml_core::state::lookup_font() {
+        if let Some(color) = font.get_color() {
+          props.insert("framecolor", Stored::from(color.to_attribute()));
+        }
+      }
+      Ok(props)
+    }
+  );
 });

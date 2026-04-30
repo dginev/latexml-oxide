@@ -410,15 +410,36 @@ LoadDefinitions!({
   // Option processing
   //
 
-  // OptionalAngle parameter type: reads <...> delimited content
-  DefParameterType!(OptionalAngle, sub[_inner, _extra] {
-    if gullet::if_next(T_OTHER!("<"))? {
-      gullet::read_token()?; // skip <
-      gullet::read_until_token(T_OTHER!(">"))
-    } else {
-      Ok(Tokens!())
-    }
-  }, optional => true);
+  // OptionalAngle parameter type: reads <...> delimited content.
+  // Perl xkeyval.sty.ltxml L231-237: DefParameterType with reversion closure
+  // that wraps the read value in `<...>` on reversion (so `\DeclareOptionX`
+  // and friends' `tex=` attribute reconstructs the angle delimiters).
+  // The DefParameterType! macro's `reversion =>` key is locked to a
+  // Tokens-into-Option form used by DefConstructor, so assemble Parameter
+  // manually and register via DefParameterTypeWO!.
+  DefParameterTypeWO!(OptionalAngle, Parameter {
+    name: arena::pin_static("OptionalAngle"),
+    optional: true,
+    reader: reader!(_inner, _extra, {
+      if gullet::if_next(T_OTHER!("<"))? {
+        gullet::read_token()?;
+        gullet::read_until_token(T_OTHER!(">"))
+      } else {
+        Ok(Tokens!())
+      }
+    }),
+    reversion: Some(Rc::new(|tks: Vec<Token>, _params: Option<&Parameters>, _extra: &[Tokens]| -> Result<Tokens> {
+      if tks.is_empty() {
+        Ok(Tokens!())
+      } else {
+        let mut out: Vec<Token> = vec![T_OTHER!("<")];
+        out.extend(tks);
+        out.push(T_OTHER!(">"));
+        Ok(Tokens::new(out))
+      }
+    })),
+    ..Parameter::default()
+  });
 
   //
   // DeclareOptionX

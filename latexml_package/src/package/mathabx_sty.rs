@@ -8,8 +8,18 @@ LoadDefinitions!({
   // but they're not going to work well for that.
   DefMath!("\\notsign",    "|", role => "OPERATOR", meaning => "not");
   DefMath!("\\varnotsign", "/", role => "OPERATOR", meaning => "not");
-  // \changenotsign — stub (not implemented)
-  DefMacro!("\\changenotsign", None);
+  // \changenotsign — Perl mathabx.sty.ltxml L24-26 is a DefPrimitive that
+  // emits an Info('unexpected', '\changenotsign', ...,
+  // "The \changenotsign operation of mathabx is not implemented.").
+  // Rust had the stub silently swallow the CS, so documents invoking it
+  // got no feedback. Switch to DefPrimitive that emits the same info
+  // warning as Perl — helps authors understand why overlay-style negation
+  // isn't working.
+  DefPrimitive!("\\changenotsign", sub[_args] {
+    Info!("unexpected", "\\changenotsign",
+      "The \\changenotsign operation of mathabx is not implemented.");
+    Ok(Vec::new())
+  });
   // \cdotp
 
   //======================================================================

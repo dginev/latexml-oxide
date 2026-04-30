@@ -192,13 +192,13 @@ LoadDefinitions!({
        _props: &arena::SymHashMap<Stored>| {
         // pdfkey -> (property, object_attr)
         let pdfkey_property: &[(&str, &str, &str)] = &[
-          ("pdfauthor",      "dcterms:creator",  "content"),
-          ("pdfkeywords",    "dcterms:subject",  "content"),
-          ("pdflang",        "dcterms:language",  "content"),
-          ("pdfsubject",     "dcterms:subject",  "content"),
-          ("pdftitle",       "dcterms:title",    "content"),
-          ("pdfcopyright",   "dcterms:rights",   "content"),
-          ("pdflicenseurl",  "cc:licence",       "resource"),
+          ("pdfauthor", "dcterms:creator", "content"),
+          ("pdfkeywords", "dcterms:subject", "content"),
+          ("pdflang", "dcterms:language", "content"),
+          ("pdfsubject", "dcterms:subject", "content"),
+          ("pdftitle", "dcterms:title", "content"),
+          ("pdfcopyright", "dcterms:rights", "content"),
+          ("pdflicenseurl", "cc:licence", "resource"),
         ];
 
         let mut root = match document.document.get_root_element() {
@@ -212,15 +212,14 @@ LoadDefinitions!({
         keys.sort();
         for key_str in &keys {
           if let Some((_, property, object_attr)) =
-            pdfkey_property.iter().find(|(k, _, _)| k == key_str)
+            pdfkey_property.iter().find(|(k, ..)| k == key_str)
           {
             if let Some(value) = state::lookup_mapping("Hyperref_options", key_str) {
               let value_str = value.to_string();
               let mut attrs = HashMap::default();
               attrs.insert("property".to_string(), property.to_string());
               attrs.insert(object_attr.to_string(), value_str);
-              let mut node =
-                document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
+              let mut node = document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
               // Must set about="" directly — setAttribute omits empty attributes
               node.set_attribute("about", "")?;
               document.close_element_at(&mut node)?;
@@ -283,9 +282,13 @@ LoadDefinitions!({
   // RE-define from url w
   DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true);
 
+  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
+  // present. enter_horizontal => true was missing in the Rust port —
+  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
+  // outside any <ltx:p>, producing invalid block-level structure.
   DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    bounded   => true,
+    bounded   => true, enter_horizontal => true,
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
@@ -296,86 +299,94 @@ LoadDefinitions!({
     },
     sizer     => "#5",
     reversion => "#1#2#4#3");
-  // \nolinkurl{url}
+  // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1
   DefConstructor!(
     "\\nolinkurl Semiverbatim",
-    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>"
+    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>",
+    enter_horizontal => true
   );
 
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
   AssignValue!("BASE_URL" => url.to_string()); });
 
-  // \hyperimage{imageurl}{text}
+  // \hyperimage{imageurl}{text} — Perl L205-207: enterHorizontal=>1
   DefConstructor!(
     "\\hyperimage Semiverbatim {}",
-    "<ltx:graphic graphic='#1' description='#2'/>"
+    "<ltx:graphic graphic='#1' description='#2'/>",
+    enter_horizontal => true
   );
 
   DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
   // Perl L211-215: 2 argument form \hyperref[label]{text}
   DefConstructor!("\\hyperref@@ii OptionalSemiverbatim {}",
-    "<ltx:ref labelref='#label'>#2</ltx:ref>",
-    bounded => true, enter_horizontal => true,
-    properties => sub[args] {
-      let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
-    });
+  "<ltx:ref labelref='#label'>#2</ltx:ref>",
+  bounded => true, enter_horizontal => true,
+  properties => sub[args] {
+    let label = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+  });
   // Perl L217-222: 4 argument form \hyperref{url}{category}{name}{text}
   DefConstructor!("\\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim",
-    "<ltx:ref href='#href'>#4</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let base_url = state::lookup_string("BASE_URL");
-      let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let fragment = clean_id(&format!("{}.{}", cat, name));
-      let href = if base_url.is_empty() {
-        format!("#{}", fragment)
-      } else {
-        format!("{}#{}", base_url, fragment)
-      };
-      Ok(stored_map!("href" => href))
-    });
+  "<ltx:ref href='#href'>#4</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let base_url = state::lookup_string("BASE_URL");
+    let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let fragment = clean_id(&format!("{}.{}", cat, name));
+    let href = if base_url.is_empty() {
+      format!("#{}", fragment)
+    } else {
+      format!("{}#{}", base_url, fragment)
+    };
+    Ok(stored_map!("href" => href))
+  });
 
   // Perl L224-226: \htmlref{text}{label}
   DefConstructor!("\\htmlref Semiverbatim Semiverbatim",
-    "<ltx:ref labelref='#label'>#1</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
-    });
+  "<ltx:ref labelref='#label'>#1</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let label = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
+  });
 
   // Perl L228-230: \hyperlink{name}{text}
   DefConstructor!("\\hyperlink Semiverbatim {}",
-    "<ltx:ref idref='#id'>#2</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&name)))
-    });
+  "<ltx:ref idref='#id'>#2</ltx:ref>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&name)))
+  });
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
-  // Perl L252-254: \hyperdef{category}{name}{text}
-  // TODO: afterConstruct => \&localized_anchor (wraps content in ltx:anchor)
-  // For now, just output text with xml:id on a wrapper.
+  // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}
+  // Perl emits just `#3` / `#2` as content, then afterConstruct's
+  // localized_anchor wraps it in <ltx:anchor xml:id='#id'> at the first
+  // ancestor that can contain anchor. Rust approximates this by emitting
+  // <ltx:anchor> directly in the template — ltx:anchor is a valid Inline
+  // per the schema (Inline:=(ltx:Math,ltx:anchor,...)), so it fits where
+  // a plain text/content item was expected. Previously the template used
+  // <ltx:text xml:id='…'>, which is semantically weaker (a generic inline
+  // text wrapper vs. an anchor/target element) and didn't match the Perl
+  // semantics that downstream MathML/accessibility processors expect.
   DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
-    "<ltx:text xml:id='#id'>#3</ltx:text>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
-    });
-  // Perl L256-258: \hypertarget{name}{text}
+  "<ltx:anchor xml:id='#id'>#3</ltx:anchor>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
+  });
   DefConstructor!("\\hypertarget Semiverbatim {}",
-    "<ltx:text xml:id='#id'>#2</ltx:text>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => clean_id(&name)))
-    });
+  "<ltx:anchor xml:id='#id'>#2</ltx:anchor>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => clean_id(&name)))
+  });
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...
@@ -610,17 +621,24 @@ LoadDefinitions!({
   // \texorpdfstring{TeXString}{PDFstring}
   DefMacro!("\\texorpdfstring{}{}", "#1");
 
-  // if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
-  //   Let('\pdfstringdefPreHook', '\@empty'); }
-  // if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
-  //   Let('\pdfstringdefPostHook', '\@gobble'); }
+  // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
+  // the pdfstringdef hooks to sensible no-ops. Rust always defines them
+  // because no package-level binding currently claims these CSes.
+  Let!("\\pdfstringdefPreHook", "\\@empty");
+  Let!("\\pdfstringdefPostHook", "\\@gobble");
 
   //======================================================================
   // 4.2 Utility macros
-  // \hypercalcbp{dimen}
-  // DefMacro('\hypercalcbp{Dimension}', sub {
-  //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen->valueOf / $state->convertUnit('bp')); });
+  // Perl L420-423: \hypercalcbp{dimen} — convert a dimension to its
+  // value in big points (bp). Perl: Explode($dimen->valueOf / convertUnit('bp')).
+  // In Rust, Dimension::value_of returns sp (scaled points); state::convert_unit("bp")
+  // returns sp/bp. Their quotient is the bp value. Explode tokenizes the stringified
+  // float into character tokens.
+  DefMacro!("\\hypercalcbp {Dimension}", sub[(dimen)] {
+    let sp = dimen.value_of() as f64;
+    let bp = sp / state::convert_unit("bp");
+    Ok(Tokens::new(Explode!(format!("{}", bp))))
+  });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour

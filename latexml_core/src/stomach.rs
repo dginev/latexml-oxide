@@ -5,6 +5,14 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::Instant;
 
+/// Cached snapshot of `LXML_TRACE_BOUND_MODE` env var. Like the
+/// `TRACE_GROUP_END` cache in gullet.rs, this avoids per-digest
+/// `getenv` calls — glibc's `getenv` is unsafe under high-volume
+/// concurrent reads from many test threads, manifesting as SIGSEGV
+/// in `__GI_getenv` when running `cargo test --release --tests`.
+/// Sample once at static-init; subsequent reads are an atomic load.
+static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOUND_MODE").is_ok());
+
 // Conversion timeout: thread-local deadline. When set, digest loops check it.
 thread_local! {
   static CONVERSION_DEADLINE: Cell<Option<Instant>> = const { Cell::new(None) };
@@ -13,7 +21,11 @@ thread_local! {
 /// Set a conversion timeout (seconds from now). 0 = no timeout.
 pub fn set_timeout(seconds: u64) {
   if seconds > 0 {
-    CONVERSION_DEADLINE.with(|d| d.set(Some(Instant::now() + std::time::Duration::from_secs(seconds))));
+    CONVERSION_DEADLINE.with(|d| {
+      d.set(Some(
+        Instant::now() + std::time::Duration::from_secs(seconds),
+      ))
+    });
   } else {
     CONVERSION_DEADLINE.with(|d| d.set(None));
   }
@@ -31,6 +43,7 @@ pub fn check_timeout() -> Result<()> {
   })
 }
 
+use crate::comment::Comment;
 use crate::common::arena;
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::error::*;
@@ -39,17 +52,14 @@ use crate::common::font::Font;
 use crate::definition::Definition;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
+use crate::definition::register::RegisterValue;
 use crate::list::List;
 use crate::mouth::{Mouth, MouthOptions};
 use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::definition::register::RegisterValue;
-use crate::comment::Comment;
 use crate::{BoxOps, Digested, TexMode, gullet};
-
-
 
 static MAXSTACK: usize = 200;
 
@@ -98,7 +108,11 @@ pub fn initialize_stomach() {
     Some(Scope::Global),
   );
   assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  assign_value_sym(crate::pin!("groupInitiator"), "Initialization", Some(Scope::Global));
+  assign_value_sym(
+    crate::pin!("groupInitiator"),
+    "Initialization",
+    Some(Scope::Global),
+  );
   // Setup default fonts.
   assign_value("font", Font::text_default(), Some(Scope::Global));
   assign_value("mathfont", Font::math_default(), Some(Scope::Global));
@@ -132,7 +146,11 @@ pub fn push_stack_frame(nobox: bool) {
   ); // ALWAYS bind this!
   assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
   assign_value_sym(crate::pin!("groupNonBoxing"), nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(crate::pin!("groupInitiator"), current_token, Some(Scope::Local));
+  assign_value_sym(
+    crate::pin!("groupInitiator"),
+    current_token,
+    Some(Scope::Local),
+  );
   assign_value_sym(
     crate::pin!("groupInitiatorLocator"),
     gullet::get_locator(),
@@ -197,7 +215,10 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
 pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
-    Cow::Owned(s!("mode-switch to {}", crate::state::lookup_string_from_sym(crate::pin!("MODE"))))
+    Cow::Owned(s!(
+      "mode-switch to {}",
+      crate::state::lookup_string_from_sym(crate::pin!("MODE"))
+    ))
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // Current frame is a non-boxing group?
     Cow::Borrowed("non-boxing group")
@@ -235,11 +256,23 @@ pub fn bgroup() {
 /// decrementing the level of boxing.
 pub fn egroup() -> Result<()> {
   if is_value_bound("BOUND_MODE", Some(0)) {
+    // Diagnostic for cluster investigation (project_explsyntax_midload.md).
+    if *TRACE_BOUND_MODE {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let cur_tok = get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      eprintln!(
+        "[trace] egroup ERROR: cur_tok={cur_tok} BOUND_MODE={bound} MODE={mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().unwrap(),
+      get_current_token().unwrap_or(T_CS!("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -250,7 +283,7 @@ pub fn egroup() -> Result<()> {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
-      get_current_token().unwrap(),
+      get_current_token().unwrap_or(T_CS!("\\?")),
       s!("Attempt to close boxing group; {}", current_frame_message())
     );
   } else {
@@ -261,16 +294,77 @@ pub fn egroup() -> Result<()> {
   Ok(())
 }
 /// Begin a new level of binding by pushing a new stack frame.
-pub fn begingroup() { push_stack_frame(true); }
+pub fn begingroup() {
+  if *TRACE_BOUND_MODE {
+    let depth = crate::state::get_frame_depth();
+    let loc = gullet::get_locator();
+    eprintln!("[trace] begingroup pre-depth={depth} at {}", loc);
+  }
+  push_stack_frame(true);
+}
 /// End a level of binding by popping the last stack frame,
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
-  if is_value_bound("BOUND_MODE", Some(0)) {
+  if *TRACE_BOUND_MODE {
+    let depth = crate::state::get_frame_depth();
+    let bound = is_value_bound("BOUND_MODE", Some(0));
+    let loc = gullet::get_locator();
+    let tok = get_current_token().unwrap_or(T_CS!("\\?"));
+    if depth == 0 {
+      eprintln!(
+        "[trace] endgroup at locked frame: tok={} at {}\n{}",
+        tok,
+        loc,
+        std::backtrace::Backtrace::force_capture()
+      );
+    } else {
+      eprintln!(
+        "[trace] endgroup pre-depth={depth} bound_top={bound} tok={} at {}",
+        tok, loc
+      );
+    }
+  }
+  // BAND-AID (commit 3088dbd17 — under root-cause investigation, see
+  // `project_explsyntax_midload.md`): during raw .sty/.tex load
+  // (INTERPRETING_DEFINITIONS=true), suppress strict BOUND_MODE check.
+  // Empirically Perl emits zero errors on the same inputs while strict
+  // checks fire 19 times in our Rust during expl3-code.tex raw load.
+  // Latent bugs found 2026-04-25 when removing this guard:
+  //   - `#` (catcode PARAM) escapes to stomach
+  //   - `\q_stop` recursion
+  //   - residual `\group_end:` mode-switch error (not caught by strict end_mode_opt either —
+  //     separate divergence point)
+  //   - `\xparse-2018-04-12.sty-h@@k` undefined
+  // Each of those needs its own root-cause investigation.
+  let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
+  if interpreting {
+    // Diagnostic: capture band-aid suppression occurrences for analysis.
+    if *TRACE_BOUND_MODE && is_value_bound("BOUND_MODE", Some(0)) {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let frame_keys = crate::state::dump_top_frame_keys();
+      eprintln!(
+        "[trace] endgroup SUPPRESSED-ERR: BOUND_MODE={bound} MODE={mode} frame0_keys={frame_keys:?}",
+      );
+    }
+    pop_stack_frame(true)?;
+  } else if is_value_bound("BOUND_MODE", Some(0)) {
+    // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
+    if *TRACE_BOUND_MODE {
+      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      eprintln!(
+        "[trace] endgroup ERROR: BOUND_MODE={bound} MODE={mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().unwrap().to_string(),
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -281,7 +375,9 @@ pub fn endgroup() -> Result<()> {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
-      get_current_token().unwrap().to_string(),
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close non-boxing group; {}",
         current_frame_message()
@@ -307,6 +403,13 @@ pub fn set_mode(mode: &str) -> Result<()> {
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
   let bound_mode = bindable_mode(mode).unwrap_or(mode);
+  // Diagnostic
+  if *TRACE_BOUND_MODE {
+    eprintln!(
+      "[trace] set_mode mode={mode} bound_mode={bound_mode}\n{}",
+      std::backtrace::Backtrace::force_capture()
+    );
+  }
   assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
   assign_value("MODE", arena::pin(bound_mode), Some(Scope::Local));
   assign_value("IN_MATH", ismath, Some(Scope::Local));
@@ -331,8 +434,16 @@ pub fn set_mode(mode: &str) -> Result<()> {
       },
       ..Font::default()
     }));
-    assign_value("initial_math_font", Stored::Font(new_font.clone()), Some(Scope::Local));
+    assign_value(
+      "initial_math_font",
+      Stored::Font(new_font.clone()),
+      Some(Scope::Local),
+    );
     assign_font(new_font, Some(Scope::Local));
+    // Perl Stomach.pm:505 — `$STATE->assignValue(fontfamily => -1, 'local');`
+    // Resets `\fam` (whose getter reads `fontfamily`) on math entry so that
+    // text-mode `\rm` (which sets `fontfamily=0`) doesn't leak into math.
+    assign_value("fontfamily", -1_i64, Some(Scope::Local));
   } else {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math
@@ -370,15 +481,22 @@ fn bindable_mode(umode: &str) -> Option<&'static str> {
 /// appropriate for the mode.
 /// If `noframe` is true, skip pushing a stack frame (e.g. for \begin{document}).
 /// Perl: sub beginMode (Stomach.pm lines 474-517)
-pub fn begin_mode(mode: &str) -> Result<()> {
-  begin_mode_opt(mode, false)
-}
+pub fn begin_mode(mode: &str) -> Result<()> { begin_mode_opt(mode, false) }
 /// Like `begin_mode`, but with an explicit `noframe` option.
 /// When `noframe` is true, no stack frame is pushed (the caller already did bgroup).
 pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
     if !noframe {
       push_stack_frame(false); // Effectively bgroup
+    }
+    // Diagnostic: tracking who binds BOUND_MODE during raw .sty load
+    // (gated by LXML_TRACE_BOUND_MODE env var to avoid noise in normal runs).
+    // See project_explsyntax_midload.md memory for the active investigation.
+    if *TRACE_BOUND_MODE {
+      eprintln!(
+        "[trace] begin_mode_opt mode={mode} noframe={noframe} bound_mode={bound_mode}\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
     }
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
@@ -387,7 +505,11 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // Display math gets \everydisplay, inline math gets \everymath (not both).
     if bound_mode.contains("math") {
       let is_display = bound_mode == "display_math";
-      let reg_name = if is_display { "\\everydisplay" } else { "\\everymath" };
+      let reg_name = if is_display {
+        "\\everydisplay"
+      } else {
+        "\\everymath"
+      };
       if let Some(RegisterValue::Tokens(toks)) = lookup_register(reg_name, Vec::new())? {
         let toks = toks.unlist();
         if !toks.is_empty() {
@@ -404,25 +526,24 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 /// End processing in `mode`; an error is signalled if `stomach` is not
 /// currently in `mode`.  This also ends a level of grouping.
 /// Perl: sub endMode (Stomach.pm lines 522-541)
-pub fn end_mode(mode: &str) -> Result<()> {
-  end_mode_opt(mode, false)
-}
+pub fn end_mode(mode: &str) -> Result<()> { end_mode_opt(mode, false) }
 /// Like `end_mode`, but with an explicit `noframe` option.
 /// When `noframe` is true, executeBeforeAfterGroup is run but the stack frame is not popped.
 pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
-    // Perl Stomach.pm L527-531: check BOUND_MODE at frame 0
-    // The strict check is: BOUND_MODE must be bound in the current top frame AND match.
-    // However, BOUND_MODE may have been set in a different frame (e.g. the locked frame
-    // at frame_depth=0 for noframe=true, or a parent frame when extra groups are pushed
-    // inside an environment). When the bound value matches but isn't in the top frame's
-    // undo table, treat it as valid — the mode system is about tracking what mode we're in.
+    // Perl Stomach.pm L527-528:
+    //   if ((!$STATE->isValueBound('BOUND_MODE', 0))     # Last stack frame was NOT a mode switch
+    //     || ($STATE->lookupValue('BOUND_MODE') ne $mode))  # OR switch to a different mode
+    // Strict Perl-faithful: error if BOUND_MODE is not bound on the top
+    // frame, OR if its value doesn't match the mode being closed. (Earlier
+    // versions of this file used a lax value-only check as a workaround
+    // for the 1112.6246 halign frame-balance issue, since fixed in
+    // d162803d2.)
     let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-    if current_bound != bound_mode
-    {
+    let bound_on_top = is_value_bound("BOUND_MODE", Some(0));
+    if !bound_on_top || current_bound != bound_mode {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
-      // Just log the error and return — faithful to Perl's endMode.
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
@@ -460,8 +581,11 @@ pub fn enter_horizontal() {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
-    Warn!("unexpected", "enterHorizontal",
-      s!("Unexpected mode '{}' for enterHorizontal", mode));
+    Warn!(
+      "unexpected",
+      "enterHorizontal",
+      s!("Unexpected mode '{}' for enterHorizontal", mode)
+    );
   }
   // else: already horizontal or math — fine
 }
@@ -871,8 +995,11 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
       },
       meaning => {
         // Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
-        Error!("misdefined", token,
-          s!("Unexpected object in Stomach: {:?}", meaning));
+        Error!(
+          "misdefined",
+          token,
+          s!("Unexpected object in Stomach: {:?}", meaning)
+        );
       },
     }
     // _token_guard drops here, auto-expiring current token
@@ -884,19 +1011,30 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
 
 fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
   let cs = token.with_cs_name(|cs| String::from(cs));
-  note_status(LogStatus::Undefined, Some(&cs));
+  // Gate the undefined-CS summary tally and the Error! emission by
+  // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install
+  // the ERROR stub silently — forward references resolve when subsequent
+  // post-load fixups rebind the canonical CS (see expl3_sty.rs L161-167
+  // for \iow_wrap stubs that overwrite ERROR after the raw load). Mirrors
+  // the existing gate at state.rs::generate_error_stub L1018-L1030.
+  let suppressed = lookup_bool_sym(crate::pin!("SUPPRESS_UNDEFINED_ERRORS"));
+  if !suppressed {
+    note_status(LogStatus::Undefined, Some(&cs));
+  }
 
   // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
     let name = cs.replace("\\if", "");
-    let message = s!("The token {} is not defined.", token.stringify());
-    Error!(
-      "undefined",
-      token,
-      &message,
-      "Defining it now as with \\newif"
-    );
+    if !suppressed {
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!(
+        "undefined",
+        token,
+        &message,
+        "Defining it now as with \\newif"
+      );
+    }
     // install stub definitions for new conditional
     install_definition(
       Expandable::new(
@@ -921,13 +1059,15 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
     gullet::unread_one(*token); // Retry
     Ok(Vec::new())
   } else {
-    let message = s!("The token {} is not defined.", token.stringify());
-    Error!(
-      "undefined",
-      token,
-      &message,
-      "Defining it now as <ltx:ERROR/>"
-    );
+    if !suppressed {
+      let message = s!("The token {} is not defined.", token.stringify());
+      Error!(
+        "undefined",
+        token,
+        &message,
+        "Defining it now as <ltx:ERROR/>"
+      );
+    }
     install_definition(
       Constructor {
         cs: *token,

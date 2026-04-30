@@ -152,7 +152,10 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   while !replacement.is_empty() {
     _iter_count += 1;
     if _iter_count > 1000 {
-      panic!("compile_replacement_tokens: infinite loop detected after 1000 iterations. Remaining template: {:?}", &replacement[..replacement.len().min(200)]);
+      panic!(
+        "compile_replacement_tokens: infinite loop detected after 1000 iterations. Remaining template: {:?}",
+        &replacement[..replacement.len().min(200)]
+      );
     }
     let mut current_tag = String::new();
 

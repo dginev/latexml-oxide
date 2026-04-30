@@ -26,7 +26,7 @@ pub struct Entry {
   /// The key this entry is stored under.
   pub key: String,
   /// Attribute-value pairs.
-  values: HashMap<String, Value>,
+  values:  HashMap<String, Value>,
 }
 
 /// A value stored in an Entry.
@@ -85,15 +85,11 @@ impl Value {
 }
 
 impl From<&str> for Value {
-  fn from(s: &str) -> Self {
-    Value::String(s.to_string())
-  }
+  fn from(s: &str) -> Self { Value::String(s.to_string()) }
 }
 
 impl From<String> for Value {
-  fn from(s: String) -> Self {
-    Value::String(s)
-  }
+  fn from(s: String) -> Self { Value::String(s) }
 }
 
 impl std::fmt::Display for Value {
@@ -110,46 +106,34 @@ impl std::fmt::Display for Value {
 }
 
 impl From<Node> for Value {
-  fn from(n: Node) -> Self {
-    Value::Xml(n)
-  }
+  fn from(n: Node) -> Self { Value::Xml(n) }
 }
 
 impl From<bool> for Value {
-  fn from(b: bool) -> Self {
-    Value::Bool(b)
-  }
+  fn from(b: bool) -> Self { Value::Bool(b) }
 }
 
 impl From<Vec<String>> for Value {
-  fn from(v: Vec<String>) -> Self {
-    Value::List(v.into_iter().map(Value::String).collect())
-  }
+  fn from(v: Vec<String>) -> Self { Value::List(v.into_iter().map(Value::String).collect()) }
 }
 
 impl Entry {
   /// Create a new entry with the given key.
   pub fn new(key: &str) -> Self {
     Entry {
-      key: key.to_string(),
+      key:    key.to_string(),
       values: HashMap::new(),
     }
   }
 
   /// Get the entry's key.
-  pub fn get_key(&self) -> &str {
-    &self.key
-  }
+  pub fn get_key(&self) -> &str { &self.key }
 
   /// Check if the entry has a value for the given attribute.
-  pub fn has_value(&self, attr: &str) -> bool {
-    self.values.contains_key(attr)
-  }
+  pub fn has_value(&self, attr: &str) -> bool { self.values.contains_key(attr) }
 
   /// Get a value by attribute name.
-  pub fn get_value(&self, attr: &str) -> Option<&Value> {
-    self.values.get(attr)
-  }
+  pub fn get_value(&self, attr: &str) -> Option<&Value> { self.values.get(attr) }
 
   /// Get a string value by attribute name.
   pub fn get_string(&self, attr: &str) -> Option<&str> {
@@ -167,7 +151,10 @@ impl Entry {
   /// Get a children list (as string IDs).
   pub fn get_children(&self) -> Vec<String> {
     match self.values.get("children") {
-      Some(Value::List(items)) => items.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+      Some(Value::List(items)) => items
+        .iter()
+        .filter_map(|v| v.as_str().map(String::from))
+        .collect(),
       _ => vec![],
     }
   }
@@ -180,10 +167,10 @@ impl Entry {
       match value {
         Value::Null => {
           self.values.remove(key);
-        }
+        },
         _ => {
           self.values.insert(key.to_string(), value);
-        }
+        },
       }
     }
   }
@@ -193,10 +180,10 @@ impl Entry {
     match value {
       Value::Null => {
         self.values.remove(attr);
-      }
+      },
       _ => {
         self.values.insert(attr.to_string(), value);
-      }
+      },
     }
   }
 
@@ -289,23 +276,15 @@ pub struct ObjectDB {
 
 impl ObjectDB {
   /// Create a new empty ObjectDB.
-  pub fn new() -> Self {
-    ObjectDB {
-      objects: HashMap::new(),
-    }
-  }
+  pub fn new() -> Self { ObjectDB { objects: HashMap::new() } }
 
   /// Look up an entry by key.
   ///
   /// Port of `ObjectDB::lookup`.
-  pub fn lookup(&self, key: &str) -> Option<&Entry> {
-    self.objects.get(key)
-  }
+  pub fn lookup(&self, key: &str) -> Option<&Entry> { self.objects.get(key) }
 
   /// Look up an entry by key (mutable).
-  pub fn lookup_mut(&mut self, key: &str) -> Option<&mut Entry> {
-    self.objects.get_mut(key)
-  }
+  pub fn lookup_mut(&mut self, key: &str) -> Option<&mut Entry> { self.objects.get_mut(key) }
 
   /// Register an entry: create if new, or return existing.
   /// Sets the given properties on the entry.
@@ -325,9 +304,7 @@ impl ObjectDB {
   /// Remove an entry.
   ///
   /// Port of `ObjectDB::unregister`.
-  pub fn unregister(&mut self, key: &str) {
-    self.objects.remove(key);
-  }
+  pub fn unregister(&mut self, key: &str) { self.objects.remove(key); }
 
   /// Get all keys, sorted.
   ///
@@ -341,15 +318,11 @@ impl ObjectDB {
   /// Return a status string.
   ///
   /// Port of `ObjectDB::status`.
-  pub fn status(&self) -> String {
-    format!("{} objects", self.objects.len())
-  }
+  pub fn status(&self) -> String { format!("{} objects", self.objects.len()) }
 }
 
 impl Default for ObjectDB {
-  fn default() -> Self {
-    Self::new()
-  }
+  fn default() -> Self { Self::new() }
 }
 
 #[cfg(test)]
@@ -429,7 +402,11 @@ mod tests {
     db.register("C", vec![]);
 
     let keys = db.get_keys();
-    assert_eq!(keys, vec![&"A".to_string(), &"B".to_string(), &"C".to_string()]);
+    assert_eq!(keys, vec![
+      &"A".to_string(),
+      &"B".to_string(),
+      &"C".to_string()
+    ]);
   }
 
   #[test]

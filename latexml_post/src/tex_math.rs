@@ -16,29 +16,25 @@ const TEX_MIMETYPE: &str = "application/x-tex";
 ///
 /// Port of `LaTeXML::Post::TeXMath`.
 pub struct TeXMath {
-  name: String,
+  name:         String,
   is_secondary: bool,
 }
 
 impl Default for TeXMath {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }
 
 impl TeXMath {
   pub fn new() -> Self {
     TeXMath {
-      name: "TeXMath".to_string(),
+      name:         "TeXMath".to_string(),
       is_secondary: false,
     }
   }
 }
 
 impl Processor for TeXMath {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
@@ -56,21 +52,54 @@ impl MathProcessor for TeXMath {
     let tex = math.get_attribute("tex")?;
     Some(MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(TEX_MIMETYPE.to_string()),
-      xml: None,
-      string: Some(tex),
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       Some(TEX_MIMETYPE.to_string()),
+      xml:            None,
+      string:         Some(tex),
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     })
   }
 
-  fn raw_id_suffix(&self) -> &str {
-    ".tm"
+  fn raw_id_suffix(&self) -> &str { ".tm" }
+
+  fn is_secondary(&self) -> bool { self.is_secondary }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn tex_math_new_has_default_name() {
+    let tm = TeXMath::new();
+    assert_eq!(tm.get_name(), "TeXMath");
+    assert!(!tm.is_secondary);
   }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
+  #[test]
+  fn tex_math_default_matches_new() {
+    let a = TeXMath::default();
+    let b = TeXMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+  }
+
+  #[test]
+  fn tex_math_raw_id_suffix() {
+    let tm = TeXMath::new();
+    assert_eq!(tm.raw_id_suffix(), ".tm");
+  }
+
+  #[test]
+  fn tex_math_is_secondary_false_by_default() {
+    let tm = TeXMath::new();
+    assert!(!tm.is_secondary());
+  }
+
+  #[test]
+  fn tex_mimetype_is_application_x_tex() {
+    assert_eq!(TEX_MIMETYPE, "application/x-tex");
   }
 }

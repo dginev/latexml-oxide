@@ -99,8 +99,14 @@ LoadDefinitions!({
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
   DefRegister!("\\Urlmuskip", MuGlue::default());
 
-  DefPrimitive!("\\urldef{}", sub[(cmd)] {
+  // Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
+  // `{}` lets TeX parse a balanced brace group without expansion, then
+  // unreads it back so digest_next_body can digest up through \endgroup.
+  // Prior Rust had only one arg `{}` and no unread, so `\urldef\foo{...}`
+  // digested whatever followed in the input stream instead of the braced arg.
+  DefPrimitive!("\\urldef{}{}", sub[(cmd, start)] {
     let cmd = cmd.to_string();
+    gullet::unread(start);
     let expansion : Vec<Digested> = stomach::digest_next_body(Some(T_CS!("\\endgroup")))?;
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])

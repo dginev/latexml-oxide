@@ -1,47 +1,19 @@
-// Keyval tests
-use latexml::util::test::*;
+// Keyval tests — one #[test] fn per `tests/keyval/*.tex+.xml` pair,
+// generated at compile time by `tex_tests!`.
+//
+// Three tests (`keyvalstyle`, `xkeyvalstyle`, `xkeyvalview`) need the
+// `latexml_contrib` dispatcher to find test-local .sty files via the
+// noltxml raw-TeX passthrough. The remaining five don't, but
+// `latexml_contrib::dispatch` is a strict no-op for files it doesn't
+// recognise (returns `None`, the engine falls through to default
+// binding lookup), so applying it directory-wide is safe and keeps
+// the refactor clean.
 use std::rc::Rc;
-const DIR: &str = "tests/keyval";
 
-#[test]
-fn keyvalinline_test() {
-  latexml_test_single("tests/keyval/keyvalinline.tex", "keyvalinline", DIR, None, None);
-}
+use latexml::tex_tests;
 
-#[test]
-fn keyvalstyle_test() {
-  latexml_test_single("tests/keyval/keyvalstyle.tex", "keyvalstyle", DIR, None,
-    Some(Rc::new(latexml_contrib::dispatch)));
-}
-
-#[test]
-fn xkeyvaladv_test() {
-  latexml_test_single("tests/keyval/xkeyvaladv.tex", "xkeyvaladv", DIR, None, None);
-}
-
-#[test]
-fn xkeyvalbasic_test() {
-  latexml_test_single("tests/keyval/xkeyvalbasic.tex", "xkeyvalbasic", DIR, None, None);
-}
-
-#[test]
-fn keyvalemptyvalue_test() {
-  latexml_test_single("tests/keyval/keyvalemptyvalue.tex", "keyvalemptyvalue", DIR, None, None);
-}
-
-#[test]
-fn xkeyvalkvcompat_test() {
-  latexml_test_single("tests/keyval/xkeyvalkvcompat.tex", "xkeyvalkvcompat", DIR, None, None);
-}
-
-#[test]
-fn xkeyvalstyle_test() {
-  latexml_test_single("tests/keyval/xkeyvalstyle.tex", "xkeyvalstyle", DIR, None,
-    Some(Rc::new(latexml_contrib::dispatch)));
-}
-
-#[test]
-fn xkeyvalview_test() {
-  latexml_test_single("tests/keyval/xkeyvalview.tex", "xkeyvalview", DIR, None,
-    Some(Rc::new(latexml_contrib::dispatch)));
-}
+tex_tests!(
+  "tests/keyval",
+  None,
+  Some(Rc::new(latexml_contrib::dispatch))
+);

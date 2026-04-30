@@ -14,16 +14,42 @@ use latexml_core::state;
 use latexml_math_parser::*;
 
 fn main() -> Result<()> {
+  // 256 MB stack — see cortex_worker.rs for rationale (#17).
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .expect("spawn worker thread")
+    .join()
+    .expect("worker thread panicked")
+    .map_err(|s| s.into())
+}
+
+fn real_main() -> Result<()> {
   let mut argv: Vec<String> = env::args().skip(1).collect();
 
   // Parse flags
-  let pmml_flag = argv.iter().any(|a| a == "--pmml" || a == "--presentationmathml");
+  let pmml_flag = argv
+    .iter()
+    .any(|a| a == "--pmml" || a == "--presentationmathml");
   let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
   let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
-  argv.retain(|a| !["--pmml", "--presentationmathml", "--cmml", "--contentmathml",
-    "--quiet", "-q"].contains(&a.as_str()));
+  argv.retain(|a| {
+    ![
+      "--pmml",
+      "--presentationmathml",
+      "--cmml",
+      "--contentmathml",
+      "--quiet",
+      "-q",
+    ]
+    .contains(&a.as_str())
+  });
 
-  let log_level = if quiet_flag { log::LevelFilter::Warn } else { log::LevelFilter::Info };
+  let log_level = if quiet_flag {
+    log::LevelFilter::Warn
+  } else {
+    log::LevelFilter::Info
+  };
   latexml_core::util::logger::init(log_level).ok();
 
   let source = match argv.first() {
@@ -82,7 +108,7 @@ fn main() -> Result<()> {
         Err(e) => {
           eprintln!("MathML post-processing failed: {}", e);
           process::exit(1);
-        }
+        },
       }
     } else {
       // Raw XML output

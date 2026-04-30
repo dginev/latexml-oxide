@@ -6,6 +6,11 @@ LoadDefinitions!({
   // "no-space" tokens, insert a space. The no-space set includes:
   // T_BEGIN, T_END, punctuation (.,:;!?/')-~), and certain CS tokens.
   // This makes \No\xspace produce "No " before words but "No." before periods.
+  // Perl kind is DefMacro with a gullet-reading sub body; Rust DefPrimitive
+  // reads + unreads at stomach time. WISDOM #44: this is NOT a universal
+  // equivalence — `\xspace` inside `\edef` would behave differently (Perl
+  // expands at \edef time; Rust freezes the CS). Safe in practice because
+  // `\xspace` call sites are post-expansion text-mode position.
   DefPrimitive!("\\xspace", {
     let next = gullet::read_token()?;
     let is_no_space = next.as_ref().map(|t| {

@@ -146,3 +146,77 @@ impl TagOptions {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn tag_option_name_all_has_six() {
+    let all = TagOptionName::all();
+    assert_eq!(all.len(), 6);
+  }
+
+  #[test]
+  fn tag_option_name_is_prepend_vs_append() {
+    assert!(TagOptionName::AfterOpenEarly.is_prepend());
+    assert!(TagOptionName::AfterCloseEarly.is_prepend());
+    assert!(!TagOptionName::AfterOpen.is_prepend());
+    assert!(!TagOptionName::AfterClose.is_prepend());
+
+    assert!(TagOptionName::AfterOpen.is_append());
+    assert!(TagOptionName::AfterClose.is_append());
+    assert!(TagOptionName::AfterOpenLate.is_append());
+    assert!(TagOptionName::AfterCloseLate.is_append());
+    assert!(!TagOptionName::AfterOpenEarly.is_append());
+    assert!(!TagOptionName::AfterCloseEarly.is_append());
+  }
+
+  #[test]
+  fn tag_option_name_prepend_and_append_are_disjoint() {
+    // Every variant is either prepend OR append, not both.
+    for name in TagOptionName::all() {
+      let p = name.is_prepend();
+      let a = name.is_append();
+      assert!(
+        p != a,
+        "variant classification should be exactly one of prepend/append"
+      );
+    }
+  }
+
+  #[test]
+  fn tag_options_default_all_none() {
+    let t = TagOptions::default();
+    assert!(t.auto_open.is_none());
+    assert!(t.auto_close.is_none());
+    assert!(t.after_open.is_none());
+    assert!(t.after_close.is_none());
+    assert!(t.after_open_early.is_none());
+    assert!(t.after_close_early.is_none());
+    assert!(t.after_open_late.is_none());
+    assert!(t.after_close_late.is_none());
+  }
+
+  #[test]
+  fn tag_options_get_returns_stored_vec() {
+    let mut t = TagOptions::default();
+    // Initially all None.
+    assert!(t.get(&TagOptionName::AfterOpen).is_none());
+    // After set, get returns the slot.
+    t.after_open = Some(Vec::new());
+    assert!(t.get(&TagOptionName::AfterOpen).is_some());
+    assert_eq!(t.get(&TagOptionName::AfterOpen).unwrap().len(), 0);
+  }
+
+  #[test]
+  fn tag_options_get_independent_per_variant() {
+    // Setting one slot doesn't populate others.
+    let mut t = TagOptions::default();
+    t.after_open = Some(Vec::new());
+    assert!(t.get(&TagOptionName::AfterOpen).is_some());
+    assert!(t.get(&TagOptionName::AfterClose).is_none());
+    assert!(t.get(&TagOptionName::AfterOpenLate).is_none());
+    assert!(t.get(&TagOptionName::AfterCloseEarly).is_none());
+  }
+}

@@ -8,7 +8,6 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 
 use crate::alignment::Alignment;
-use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::common::arena::{self, SymHashMap, SymStr};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -20,6 +19,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
+use crate::common::{BindingDispatcher, LabelMappingHook};
 use crate::definition::Definition;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalType;
@@ -30,11 +30,11 @@ use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet;
 use crate::mouth;
+use crate::pin;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
 use crate::{Digested, DigestedData};
-use crate::pin;
 
 // expose Perl-style local assignments from state
 pub use crate::common::local_assignments::*;
@@ -258,14 +258,15 @@ pub struct State {
   pub bindings_dispatch:       Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
-  /// Names (without `.cls` suffix) of all class bindings the dispatchers
-  /// can load, stacked one slice per registered dispatcher. Used by
-  /// `load_class` to implement Perl's prefix-match fallback for unknown
-  /// class names (Package.pm L2702-2706). Populated at startup by each
-  /// binding crate via `add_class_binding_names`, so both
-  /// `latexml_package` and `latexml_contrib` contribute their classes to
-  /// the fallback pool.
-  pub class_binding_names:     Vec<&'static [&'static str]>,
+  /// All `(name, ext)` pairs for compile-time bindings the dispatchers can
+  /// load, stacked one slice per registered dispatcher. Populated at
+  /// startup by each binding crate via `add_binding_names`, so both
+  /// `latexml_package` and `latexml_contrib` contribute their classes/
+  /// styles/defs/pools to the fallback pool. Consumed by:
+  /// - `find_file(notex=true)` to resolve compile-time bindings without touching the filesystem.
+  /// - `load_class`'s Perl-parity prefix-match fallback (Package.pm L2702-2706) via the
+  ///   `get_class_binding_names()` filtered view.
+  pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
 }
@@ -316,7 +317,7 @@ impl Default for State {
       nomathparse:             false,
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
-      class_binding_names:     Vec::new(),
+      binding_names:           Vec::new(),
       label_mapping_hook:      None,
     }
   }
@@ -411,7 +412,13 @@ impl State {
         catcodes.insert('\t', SPACE);
         catcodes.insert('%', COMMENT);
         catcodes.insert('~', ACTIVE);
-        catcodes.insert('\0', ESCAPE);
+        // TeX standard: NUL (`\^^@`, U+0000) has catcode 9 IGNORED — see
+        // The TeXbook ch.8 `\catcode \^^@ = 9`. Silently discard NUL
+        // bytes that appear in input. Real-world bbl files (e.g.
+        // astro-ph0004127's spie4012-01a.bbl line 120) have stray NULs
+        // from BibTeX's `\"u`-mangling; without IGNORE we read the NUL
+        // as ESCAPE and the next letters as a (bogus) CS like `\uninger`.
+        catcodes.insert('\0', IGNORE);
         catcodes.insert('\u{000c}', ACTIVE);
         for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
           catcodes.insert(c, LETTER);
@@ -481,6 +488,56 @@ impl State {
       nomathparse,
       ..State::default()
     };
+    // INITEX-equivalent defaults — mirror Perl `State.pm:128-137`.
+    // Sets letter/digit mathcodes (class 7, family 1 for letters / 0 for digits),
+    // upper/lowercase mappings, and sfcode=999 for uppercase letters. Without
+    // these, dump-load path leaves letter mathcodes unset (plain.dump.txt only
+    // captures the 57 plain.tex OVERRIDES), so `\cal abc` math falls through
+    // the text path and loses meaning/role attributes. NODUMP path used to set
+    // these via plain_base.rs L17-41 only — not Perl-faithful since INITEX
+    // owns these (TeXbook ch.17 p309). Setting them here makes both paths
+    // consistent and matches Perl's State::new behaviour.
+    for c in b'0'..=b'9' {
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(c as char),
+        Stored::Charcode(0x7000 + c as u16),
+        None,
+      );
+    }
+    for c in b'a'..=b'z' {
+      let big = c - 32;
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(c as char),
+        Stored::Charcode(0x7100 + c as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Mathcode,
+        arena::pin_char(big as char),
+        Stored::Charcode(0x7100 + big as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Uccode,
+        arena::pin_char(c as char),
+        Stored::Charcode(big as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Lccode,
+        arena::pin_char(big as char),
+        Stored::Charcode(c as u16),
+        None,
+      );
+      state.assign_internal(
+        TableName::Sfcode,
+        arena::pin_char(big as char),
+        Stored::Charcode(999),
+        None,
+      );
+    }
     // TODO: should these be *fields* in state or really as in Perl - globally assigned values?
     state.assign_value(
       "DOCUMENTID",
@@ -614,11 +671,11 @@ impl State {
         if let Some(current) = values.front() {
           let key_pair = (tname, *key);
           let changed = match snap.get(&key_pair) {
-            None => true,    // new entry
+            None => true, // new entry
             Some(prev) => {
               // Compare string representations (cheap approximation of Perl's dump-based diff)
               format!("{:?}", current) != format!("{:?}", prev)
-            }
+            },
           };
           if changed && is_serializable(current) {
             diff.push((tname, *key, current.clone()));
@@ -638,7 +695,7 @@ impl State {
     }
   }
 
-  fn assign_internal(
+  pub(crate) fn assign_internal(
     &mut self,
     table_name: TableName,
     key: SymStr,
@@ -646,18 +703,34 @@ impl State {
     mut scope_opt: Option<Scope>,
   ) {
     // hotcode lookupDefinition for \globaldefs,
-    // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
-      if let Some(global_value) = globaldefs.front() {
-        // magic TeX register override: \globaldefs
-        match *global_value {
-          Stored::Int(1) => {
+    // since this is called extremely often and should be highly standardized.
+    // TeX semantics: positive → all assignments global, negative → \global
+    // ignored, zero → no override. `\globaldefs` is a Number register, so the
+    // stored variant is `Stored::Number`, NOT `Stored::Int` — Perl's `==`
+    // coerces both, Rust must unwrap explicitly. Perl `State.pm:144-151` uses
+    // strict `==1`/`==-1`; we slightly broaden to TeX's sign-based rule
+    // (matches behavior for the canonical `\globaldefs=1`/`\globaldefs=-1`
+    // uses while also handling rare `\globaldefs=2` etc).
+    // `Scope::Named(_)` is preserved per Perl's "ONLY override global/local/
+    // undef" rule (State.pm:146).
+    // Without this: pgfplots' `\pgfplots@pop@next@legend`
+    // (`\def\foo{{\globaldefs=1 \let\x=\relax}}`) silently drops the `\let`
+    // on group exit, leaving `\pgfplots@curlegend`/`@curplotlist` undefined
+    // and looping `\pgfplots@createlegend` at the digest wall-clock cap.
+    let preserve = matches!(scope_opt, Some(Scope::Named(_)));
+    if !preserve {
+      if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
+        if let Some(global_value) = globaldefs.front() {
+          let int_value: i64 = match *global_value {
+            Stored::Int(v) => v,
+            Stored::Number(n) => n.0,
+            _ => 0,
+          };
+          if int_value > 0 {
             scope_opt = Some(Scope::Global);
-          },
-          Stored::Int(-1) => {
+          } else if int_value < 0 {
             scope_opt = Some(Scope::Local);
-          },
-          _ => {},
+          }
         }
       }
     }
@@ -909,19 +982,19 @@ pub fn use_std_state() {
 }
 pub fn use_main_state() {
   match STATE_IN_USE.get() {
-      RotateState::Sty => {
-        let mut sty_state = sty_state_mut!();
-        let mut main_state = state_mut!();
-        std::mem::swap(&mut *sty_state, &mut *main_state);
-        STATE_IN_USE.set(RotateState::Main);
-      },
-      RotateState::Std => {
-        let mut std_state = std_state_mut!();
-        let mut main_state = state_mut!();
-        std::mem::swap(&mut *std_state, &mut *main_state);
-        STATE_IN_USE.set(RotateState::Main);
-      },
-      RotateState::Main => {},
+    RotateState::Sty => {
+      let mut sty_state = sty_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *sty_state, &mut *main_state);
+      STATE_IN_USE.set(RotateState::Main);
+    },
+    RotateState::Std => {
+      let mut std_state = std_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *std_state, &mut *main_state);
+      STATE_IN_USE.set(RotateState::Main);
+    },
+    RotateState::Main => {},
   };
 }
 
@@ -949,7 +1022,11 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       if arena::with(*s, |txt| {
         txt == "Anonymous String" || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
-        Info!("ignore", lock_key, s!("Ignoring redefinition of {lock_key}"));
+        Info!(
+          "ignore",
+          lock_key,
+          s!("Ignoring redefinition of {lock_key}")
+        );
       }
     }
   } else {
@@ -961,7 +1038,14 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
-  note_status(LogStatus::Undefined, Some(&cs));
+  // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
+  // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
+  // load with thousands of forward-references we install the ERROR stub
+  // without polluting the user-facing summary count. See
+  // project_kernel_dump_parity.md "iow_wrap residual" for full diagnosis.
+  if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+    note_status(LogStatus::Undefined, Some(&cs));
+  }
   // To minimize chatter, go ahead and define it...
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
@@ -1028,6 +1112,21 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 // TODO: Should this be a prelude?
 
 /// assigns a `Stored` value at the given key and scope
+/// Direct mirror of Perl's free-function form
+/// `LaTeXML::Core::State::assign_internal($STATE, $table, $key, $value, $scope)`
+/// (Core/State.pm L140). Bypasses every dialect / lock / let-chase / admission
+/// layer Rust has accreted on top of the table mutation; used by the dump
+/// loader (Core/Dumper.pm `V/Cc/Mc/Sc/Lc/Uc/Dc/Im/I/Lt`) so the dump replay
+/// matches Perl exactly: one record == one `assign_internal` call.
+pub fn assign_internal<T: Into<Stored>>(
+  table_name: TableName,
+  key: SymStr,
+  value: T,
+  scope: Option<Scope>,
+) {
+  state_mut!().assign_internal(table_name, key, value.into(), scope);
+}
+
 pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T, scope: S) {
   state_mut!().assign_value(key, value, scope)
 }
@@ -1420,7 +1519,10 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
 }
 /// Token-keyed variant of `lookup_register` — saves the per-call
 /// `T_CS!(&str)` pin for hot callers with a cached CS token.
-pub fn lookup_register_token(cs: &Token, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+pub fn lookup_register_token(
+  cs: &Token,
+  parameters: Vec<ArgWrap>,
+) -> Result<Option<RegisterValue>> {
   Ok(if let Some(defn) = lookup_definition(cs)? {
     if defn.is_register() {
       defn.value_of(parameters)
@@ -1827,13 +1929,13 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
       match lookup_meaning(&current) {
         Some(Stored::Token(next)) => {
           current = next; // follow chain
-        }
+        },
         Some(Stored::None) | None => break, // dead end — keep as Token
         Some(defn) => {
           // Found a real definition — use it directly
           meaning = defn;
           break;
-        }
+        },
       }
     }
   }
@@ -1993,9 +2095,85 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
 //======================================================================
 /// Starts a new level of grouping.
 /// Note that this is lower level than C<\bgroup>;
+/// Diagnostic helper: dump the keys in undo[0]'s value table.
+/// For temporary instrumentation only — no production callers should rely on this.
+pub fn dump_top_frame_keys() -> String {
+  let state = state!();
+  let f0 = state.undo.front().expect("undo is non-empty");
+  let mut entries: Vec<String> = Vec::new();
+  for (k, v) in f0.table(TableName::Value).iter() {
+    let val = state
+      .value
+      .get(k)
+      .and_then(|vec| vec.front())
+      .map(|s| format!("{s:?}"))
+      .unwrap_or_else(|| "<none>".into());
+    let ks: String = arena::with(*k, |s| s.to_string());
+    entries.push(format!("{ks}=[{v}, {val}]"));
+  }
+  entries.sort();
+  entries.join(", ")
+}
+
 pub fn push_frame() {
   // Easy: just push a new undo frame.
   state_mut!().undo.push_front(UndoFrame::default());
+}
+
+/// Snapshot of the keys currently bound at the topmost (calling) undo frame
+/// for the Meaning table. Used by Perl-style autoload triggers that need to
+/// promote everything a package's load just installed at this scope to
+/// GLOBAL — without that promotion, sibling autoload triggers fired AFTER
+/// a group pop would re-fire on a now-undefined sibling CS (the canonical
+/// case is `\begin{subequations}` triggering amsmath autoload at depth=N,
+/// then a later `\begin{align}` at depth=0 finding `\align` undefined
+/// because amsmath's depth=N install was popped on `\end{subequations}`).
+pub fn snapshot_top_frame_meaning_keys() -> Vec<SymStr> {
+  state!()
+    .undo
+    .front()
+    .map(|f| f.meaning.keys().copied().collect())
+    .unwrap_or_default()
+}
+
+/// Hoist every Meaning binding installed at the topmost frame since
+/// `pre_snapshot` was taken to GLOBAL scope. Idempotent: keys already
+/// in `pre_snapshot` are skipped. Operates on the Meaning table only —
+/// callers that need to promote Value/Catcode/etc. should add parallel
+/// helpers (none required so far).
+pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
+  let pre: rustc_hash::FxHashSet<SymStr> = pre_snapshot.iter().copied().collect();
+  let new_keys: Vec<SymStr> = {
+    let state = state!();
+    state
+      .undo
+      .front()
+      .map(|f| {
+        f.meaning
+          .keys()
+          .copied()
+          .filter(|k| !pre.contains(k))
+          .collect()
+      })
+      .unwrap_or_default()
+  };
+  for key in new_keys {
+    let current = {
+      let state = state!();
+      state
+        .meaning
+        .get(&key)
+        .and_then(|stack| stack.front().cloned())
+    };
+    if let Some(value) = current {
+      // Direct re-bind via assign_internal so we don't need to round-trip a
+      // full Token. The Meaning table is keyed by SymStr (the CS name);
+      // any future read via `assign_meaning(token, ...)` would reach the
+      // same cell. Scope::Global removes higher-frame undo entries and
+      // installs at the lowest non-locked frame.
+      state_mut!().assign_internal(TableName::Meaning, key, value, Some(Scope::Global));
+    }
+  }
 }
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
@@ -2031,13 +2209,7 @@ pub fn pop_frame() -> Result<()> {
 /// nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
-pub fn get_frame_depth() -> usize {
-  state!()
-    .undo
-    .iter()
-    .filter(|frame| !frame.locked)
-    .count()
-}
+pub fn get_frame_depth() -> usize { state!().undo.iter().filter(|frame| !frame.locked).count() }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?
@@ -2247,11 +2419,16 @@ pub fn get_active_scopes() -> Vec<SymStr> {
 /// convert a unit name into a `f64` scaling factor over `sp`
 pub fn convert_unit(unit_arg: &str) -> f64 {
   let unit = unit_arg.to_lowercase();
-  // Eventually try to track font size?
+  // Font-relative units fall back to 10pt metrics when no current font is
+  // set (e.g. pre-bootstrap unit conversion). Perl gets this via the
+  // built-in default font; matching with a static fallback is cheaper
+  // than forcing every caller to ensure a font frame exists.
+  let font_metric =
+    |getter: fn(&Font) -> i64| -> f64 { lookup_font().map(|f| getter(&f) as f64).unwrap_or(0.0) };
   match unit.as_str() {
-    "em" => lookup_font().unwrap().get_em_width() as f64,
-    "ex" => lookup_font().unwrap().get_ex_height() as f64,
-    "mu" => lookup_font().unwrap().get_mu_width() as f64,
+    "em" => font_metric(|f| f.get_em_width()),
+    "ex" => font_metric(|f| f.get_ex_height()),
+    "mu" => font_metric(|f| f.get_mu_width()),
     u => match UNITS.get(u) {
       Some(sp) => *sp,
       None => {
@@ -2480,30 +2657,65 @@ pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   state.extra_bindings_dispatch = Some(dispatcher);
 }
 
-/// Snapshot of all registered class-name slices (one per dispatcher).
-/// Callers (e.g. `load_class`) typically flatten this to iterate every
-/// candidate name across all registered binding crates.
-pub fn get_class_binding_names() -> Vec<&'static [&'static str]> {
-  state!().class_binding_names.clone()
+/// Snapshot of all registered (name, ext) binding pairs across all
+/// dispatchers. Used by `find_file(notex=true)` to detect compiled-binding
+/// existence regardless of extension (cls/sty/def/pool/code.tex/...).
+pub fn get_binding_names() -> Vec<&'static [(&'static str, &'static str)]> {
+  state!().binding_names.clone()
 }
-/// Append one crate's class-name slice. Call this from each binding crate's
-/// dispatcher-registration site (e.g. `set_bindings_dispatch` companion
-/// for `latexml_package`, `set_extra_bindings_dispatch` companion for
-/// `latexml_contrib`). Duplicates are deduplicated by pointer so repeated
-/// calls from the same crate don't inflate the fallback pool.
-pub fn add_class_binding_names(names: &'static [&'static str]) {
+/// Append one crate's `(name, ext)` slice. Companion to
+/// `set_bindings_dispatch` / `set_extra_bindings_dispatch` — call alongside
+/// dispatcher registration so `find_file` can resolve compile-time
+/// bindings. Duplicates are deduplicated by pointer so repeated calls from
+/// the same crate don't inflate the fallback pool.
+pub fn add_binding_names(names: &'static [(&'static str, &'static str)]) {
   let mut state = state_mut!();
-  // Pointer-level dedup: two slices from the same static are equal here.
   let ptr = names.as_ptr();
-  if state.class_binding_names.iter().any(|s| s.as_ptr() == ptr) {
+  if state.binding_names.iter().any(|s| s.as_ptr() == ptr) {
     return;
   }
-  state.class_binding_names.push(names);
+  state.binding_names.push(names);
 }
 
-pub fn get_label_mapping_hook() -> Option<LabelMappingHook> {
-  state!().label_mapping_hook.clone()
+/// Filtered view of `get_binding_names()` returning ONLY class names
+/// (without `.cls` suffix). Used by `load_class` for Perl's prefix-match
+/// fallback (Package.pm L2702-2706). Returns a flat `Vec<&str>` rather
+/// than per-crate slices — callers that need to preserve crate boundaries
+/// should iterate `get_binding_names()` directly.
+pub fn get_class_binding_names() -> Vec<&'static str> {
+  state!()
+    .binding_names
+    .iter()
+    .flat_map(|slice| slice.iter())
+    .filter(|(_, ext)| *ext == "cls")
+    .map(|(name, _)| *name)
+    .collect()
 }
+
+/// `true` when at least one registered binding declares `ext` as its
+/// extension. Used by `\input`'s heuristic to decide whether
+/// `\input{name.<ext>}` should consult the binding registry — e.g.
+/// `.sty`, `.cls`, `.def`, `.pool`, `code.tex` are all valid binding
+/// extensions, while `.eps`, `.png`, `.bib` are not. Matches by extension
+/// only (the `name` is checked separately by `dispatch()`'s exact lookup).
+pub fn is_binding_extension(ext: &str) -> bool {
+  state!()
+    .binding_names
+    .iter()
+    .any(|slice| slice.iter().any(|(_, e)| *e == ext))
+}
+
+/// `true` when a binding is registered for the exact `(name, ext)` pair.
+/// Convenience wrapper over the per-crate slices in `binding_names`.
+/// Mirrors `dispatch()`'s lookup but without the side effect of loading.
+pub fn binding_exists(name: &str, ext: &str) -> bool {
+  state!()
+    .binding_names
+    .iter()
+    .any(|slice| slice.iter().any(|(n, e)| *n == name && *e == ext))
+}
+
+pub fn get_label_mapping_hook() -> Option<LabelMappingHook> { state!().label_mapping_hook.clone() }
 pub fn set_label_mapping_hook(hook: LabelMappingHook) {
   let mut state = state_mut!();
   state.label_mapping_hook = Some(hook);
@@ -2521,6 +2733,14 @@ pub fn add_search_path(path: String) {
 pub fn search_paths_push_front(path: String) {
   let mut state = state_mut!();
   state.search_paths.push_front(path);
+}
+/// Replace the entire search_paths list (Perl: `AssignValue(SEARCHPATHS => [...])`).
+pub fn set_search_paths(paths: Vec<String>) {
+  let mut state = state_mut!();
+  state.search_paths.clear();
+  for p in paths {
+    state.search_paths.push_back(p);
+  }
 }
 pub fn has_search_paths() -> bool { !state!().search_paths.is_empty() }
 /// Mirror Perl's `LookupValue('GRAPHICSPATHS')` — a list value that all
@@ -2542,6 +2762,23 @@ pub fn get_graphics_paths() -> Vec<String> {
       _ => Vec::new(),
     })
     .unwrap_or_default()
+}
+
+/// Zero-alloc membership test for GRAPHICSPATHS. Mirrors the Perl idiom
+/// `grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') }` but
+/// without allocating an owned `Vec<String>` for a single boolean — the
+/// interned-symbol `with`/`with2` family resolves each path in place.
+pub fn graphics_paths_contains(needle: &str) -> bool {
+  lookup_value("GRAPHICSPATHS")
+    .map(|v| match v {
+      Stored::Strings(syms) => syms.iter().any(|s| arena::with(*s, |p| p == needle)),
+      Stored::VecDequeStored(vdq) => vdq.iter().any(|item| match item {
+        Stored::String(s) => arena::with(*s, |p| p == needle),
+        _ => false,
+      }),
+      _ => false,
+    })
+    .unwrap_or(false)
 }
 
 /// Mirror Perl's `$state->unshiftValue(GRAPHICSPATHS => $dir)`. Used by
@@ -2654,31 +2891,49 @@ pub fn is_serializable(stored: &Stored) -> bool {
     Glue(_) | MuGlue(_) | Dimension(_) | MuDimension(_) => true,
     Reversion(_) | KeyVal(_) => true,
     Chars(_) | Strings(_) => true,
-    // Expandable: serializable only if it has a Tokens body (not a Closure body)
-    Expandable(exp) => {
-      matches!(exp.get_expansion(),
-        Option::Some(crate::definition::ExpansionBody::Tokens(_)) | Option::None)
-    },
+    // Expandable: serializable when body is Tokens OR None (regular
+    // macros). Closure-bodied Expandables (e.g. `\expandafter`,
+    // `\unexpanded`, `\the` — defined via `DefMacro!` with a closure
+    // body) ALSO pass — dump_writer's `serialize_stored` emits a PA
+    // alias to the canonical CS so `\let \tex_expandafter:D
+    // \expandafter`-style aliases survive the dump. (Bug C parity fix
+    // — see project_kernel_dump_tdd.md.) The writer's add-only policy
+    // at load time skips entries whose key is already defined in the
+    // compiled engine, so primary CSes don't double-bind.
+    Expandable(_) => true,
     // Register: serializable (stores value + type, no closures)
     Register(_) => true,
     // Font: serializable (data only)
     Font(_) => true,
-    // Primitives/MathPrimitives: the CLOSURE can't be serialized, but the
-    // Primitive carries its own canonical CS name. If the entry's key
-    // differs from that canonical CS, this is a `\let`-alias we CAN
-    // capture (as a "PA" pointer) so the dump reader replays the `\let`
-    // at load time. dump_writer returns the PA/MPA tag; dump_reader
+    // Primitives/MathPrimitives/Conditionals: the CLOSURE can't be
+    // serialized, but each carries its own canonical CS name. If the
+    // entry's key differs from that canonical CS, this is a `\let`-alias
+    // we CAN capture (as a "PA" pointer) so the dump reader replays the
+    // `\let` at load time. dump_writer returns the PA tag; dump_reader
     // re-applies via state::let_i. This is how \tex_let:D, \tex_def:D,
-    // and the hundreds of other expl3-renamed primitives survive the
-    // dump without needing to re-run 36k lines of expl3-code.tex.
+    // \tex_ifx:D, \if_meaning:w, and the hundreds of other expl3-renamed
+    // primitives + conditionals survive the dump without needing to re-run
+    // 36k lines of expl3-code.tex.
     //
     // Returning true here only means "pass to dump_writer"; the writer's
-    // serialize_stored will emit Option::None for entries that ARE the
-    // primary (canonical) binding (key == primitive.cs), and those get
-    // filtered by the writer's `filter_map(serialize_stored)`.
-    Primitive(_) | MathPrimitive(_) => true,
-    // These contain closures — NOT serializable
-    Constructor(_) | Conditional(_) => false,
+    // serialize_stored emits the PA target. Self-aliases (primary CSes
+    // not yet aliased anywhere) typically don't appear in the diff because
+    // they're in the pre-snapshot — but if they do, the dump reader skips
+    // them by comparing key to target.
+    Primitive(_) | MathPrimitive(_) | Conditional(_) => true,
+    // Constructor: same logic as Primitive/Conditional. Constructors carry a
+    // closure body the dump can't serialize, BUT they each carry a canonical
+    // CS field. When the entry key differs from that CS, it's a `\let`-alias
+    // (e.g. `\let \tex_par:D \par` where `\par` is itself a `Let!` alias to
+    // `\lx@normal@par` — a Constructor). dump_writer emits `PA\t<cs>`;
+    // dump_reader replays via `state::let_i`. Mirrors Perl's writer:
+    // `dump_constructor` is undefined in `Dumper.pm`, but TeX_Job.pool
+    // `DumpFile`'s let-detection branch (L184-198) catches the (key !=
+    // value->getCSName) case and emits `Lt(key, letkey)`. Without this,
+    // `\tex_par:D`, `\tex_cr:D`, `\tex_noindent:D`, etc. drop from the dump
+    // because diff_from_snapshot filters them before the writer's
+    // Constructor arm sees them.
+    Constructor(_) => true,
     // Collections: serializable if contents are
     VecDequeStored(_) | HashStored(_) | HashString(_) => true,
     // Everything else: skip for safety
@@ -2719,7 +2974,9 @@ thread_local! {
 /// right after `latex_bootstrap` has loaded).
 pub fn stage_snapshot(name: &'static str) {
   let snap = take_snapshot();
-  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+  STAGED_SNAPSHOTS.with(|m| {
+    m.borrow_mut().insert(name, snap);
+  });
 }
 
 /// Stage an already-taken snapshot under a named key. Used by callers
@@ -2729,7 +2986,9 @@ pub fn stage_snapshot_value(
   name: &'static str,
   snap: std::collections::HashMap<(TableName, SymStr), Stored>,
 ) {
-  STAGED_SNAPSHOTS.with(|m| { m.borrow_mut().insert(name, snap); });
+  STAGED_SNAPSHOTS.with(|m| {
+    m.borrow_mut().insert(name, snap);
+  });
 }
 
 /// Retrieve a previously staged snapshot, if present.

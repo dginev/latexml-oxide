@@ -25,7 +25,11 @@ pub type IndirectModel = SymHashMap<SymHashMap<SymStr>>;
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
 static TAG_MODEL_LINE_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
-static CLASS_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
+// Mirrors Perl Model.pm L149: `m/^([^:=]+):=\(?([^)]*?)\)?$/` — the
+// `\(?…\)?` pair strips the surrounding parens from
+// `classname:=(elt1,elt2,...)` so the elements split cleanly.
+static CLASS_MODEL_LINE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
 static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 #[derive(Default, Debug)]
@@ -216,6 +220,75 @@ impl Model {
   pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymStr>) {
     self.schema_class.insert(classname, content);
   }
+
+  /// Serialise the loaded schema into the `.model` plain-text format
+  /// emitted by Perl `LaTeXML::Common::Model::compileSchema`
+  /// (Model.pm L121-136). Three kinds of lines, all newline-separated:
+  ///
+  /// * `prefix=namespace` for every entry in `document_namespaces` (sorted by prefix).
+  /// * `classname:=(elt1,elt2,...)` for every entry in `schema_class` (sorted by classname; each
+  ///   element list sorted).
+  /// * `tag{attr1,attr2}(child1,child2)` for every entry in `tagprop` (sorted by tag; attrs and
+  ///   children sorted; tags whose name starts with `!` are skipped — they are content-model-only
+  ///   negations).
+  ///
+  /// Output is identical to the Perl tool so a downstream
+  /// `tools/compileschema.sh` can diff Rust vs. Perl-generated
+  /// `LaTeXML.model` files byte-for-byte (modulo schema content).
+  pub fn dump_compiled_schema(&self) -> String {
+    fn sym_to_string(sym: SymStr) -> String { arena::with(sym, |s| s.to_string()) }
+    fn syms_sorted(set: impl IntoIterator<Item = SymStr>) -> Vec<String> {
+      let mut v: Vec<String> = set.into_iter().map(sym_to_string).collect();
+      v.sort();
+      v
+    }
+    let mut out = String::new();
+    let prefixes = syms_sorted(self.document_namespaces.keys().copied());
+    for prefix in &prefixes {
+      let ns_opt = self
+        .document_namespaces
+        .get_sym(arena::pin(prefix.as_str()));
+      let ns = match ns_opt {
+        Some(v) => sym_to_string(*v),
+        None => continue,
+      };
+      out.push_str(prefix);
+      out.push('=');
+      out.push_str(&ns);
+      out.push('\n');
+    }
+    let classnames = syms_sorted(self.schema_class.keys().copied());
+    for classname in &classnames {
+      let elements = match self.schema_class.get_sym(arena::pin(classname.as_str())) {
+        Some(set) => set,
+        None => continue,
+      };
+      let elt_names = syms_sorted(elements.iter().copied());
+      out.push_str(classname);
+      out.push_str(":=(");
+      out.push_str(&elt_names.join(","));
+      out.push_str(")\n");
+    }
+    let tags = syms_sorted(self.tagprop.keys().copied());
+    for tag in &tags {
+      if tag.starts_with('!') {
+        continue;
+      }
+      let frame = match self.tagprop.get_sym(arena::pin(tag.as_str())) {
+        Some(f) => f,
+        None => continue,
+      };
+      let attrs = syms_sorted(frame.attributes.iter().copied());
+      let children = syms_sorted(frame.model.iter().copied());
+      out.push_str(tag);
+      out.push('{');
+      out.push_str(&attrs.join(","));
+      out.push_str("}(");
+      out.push_str(&children.join(","));
+      out.push_str(")\n");
+    }
+    out
+  }
   pub fn describe_model(&self) {}
   fn load_internal_extensions(&mut self) {
     if !self.tagprop.contains_key("ltx:_CaptureBlock_") {
@@ -317,6 +390,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
       paths,
       extensions: Some(vec![s!("model")]),
       installation_subdir: Some(s!("resources/RelaxNG")),
+      ..Default::default()
     });
 
     match pathname_opt {
@@ -650,7 +724,10 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
     return true;
   }
 
-  if child == pin!("_WildCard_") || child == pin!("#Comment") || child == pin!("#ProcessingInstruction") || child == pin!("#DTD")
+  if child == pin!("_WildCard_")
+    || child == pin!("#Comment")
+    || child == pin!("#ProcessingInstruction")
+    || child == pin!("#DTD")
   {
     return true;
   }
@@ -782,11 +859,23 @@ pub(crate) fn compute_indirect_model_aux(
   let tag_contents: Vec<SymStr> = get_tag_contents(tag);
 
   for kid in tag_contents {
-    // Perl Document.pm L217: `next if $::DESC{$kid}{$start}`. Any prior
-    // visit wins, so don't recompute — the bookkeeping is keyed on (kid,
-    // start) and collisions pick the earliest (best) path by sort order.
-    if desc.entry_sym(kid).or_default().contains_key_sym(&start) {
-      continue;
+    // Memoise on (kid, start) to bound recursion in cyclic schemas, but
+    // retain the *maximum* desirability observed across paths — the
+    // outer loop in compute_indirect_model picks the highest-scoring
+    // starting tag, so the score stored here must reflect the best path,
+    // not the first one the hashmap iteration happened to surface.
+    //
+    // The prior "first visit wins" behavior (WISDOM #49) caused paralists
+    // test-harness runs to assign `desc[#PCDATA][ltx:text] = 50` when
+    // `contents(text)` iterated `ltx:picture` before `#PCDATA`: the
+    // sub-recursion `text → picture → #PCDATA` inserted 50 first and the
+    // direct `text → #PCDATA` path was skipped, forcing the auto-open
+    // path to pick `<ltx:picture>` instead of `<ltx:text>`.
+    let prior = desc.entry_sym(kid).or_default().get_sym(start).copied();
+    if let Some(prior_d) = prior {
+      if prior_d >= desirability {
+        continue;
+      }
     }
 
     if start != pin!("") {

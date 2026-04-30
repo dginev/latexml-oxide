@@ -6,8 +6,15 @@
 
 This project is in an **early beta** stage. Please avoid using it in any real world setting before mainline LaTeXML parity is reached.
 
-**Current status (2026-04-05):** All tests passing (100%), 0 ignored. 
-Full post-processing pipeline: `latexml_oxide --format=html5 --dest=paper.html paper.tex` produces complete HTML with cross-references, citations, MathML, and XSLT.
+**Current status (2026-04-30):** active strict-Perl parity work at
+the format/dump and package-loading boundary, followed by sandbox
+long-tail cleanup (see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)).
+Current local verification is `cargo test --tests` **1109/0/0** and
+the latest-row 7898-paper sandbox result is **7731 OK = 97.89%**.
+Full post-processing pipeline:
+`latexml_oxide --format=html5 --dest=paper.html paper.tex`
+produces complete HTML with cross-references, citations, MathML,
+and XSLT.
 
 ### Why?
 
@@ -37,32 +44,68 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkp
                    texlive texlive-latex-extra texlive-science
 ```
 
+#### Optional: Vector-preserving PDF → SVG
+
+For the opt-in `--graphics-svg-threshold-kb N` flag (see
+[docs/SYNC_STATUS.md](docs/SYNC_STATUS.md) and upstream
+[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)):
+
+```
+$ sudo apt install inkscape
+```
+
+`inkscape` is used to convert small vector-authored PDFs into vector SVG
+instead of rasterising them via ImageMagick `convert`. The path is
+disabled by default; if the flag is enabled but inkscape is missing at
+runtime, the pipeline silently falls back to `convert`.
+
+### Build profiles (Rust best practice)
+
+Four named profiles in `Cargo.toml`, each tuned for one purpose:
+
+| Profile | When | Goal |
+|---------|------|------|
+| **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
+| **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
+| **`release`** | local sandbox canvas / perf measurement | Laptop-throughput release: `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Strong runtime optimization while using the 20-thread local machine during release builds. |
+| **`maxperf`** | one-off absolute runtime build | Preserves the old maximum optimizer scope: `lto = "fat"`, `codegen-units = 1`. Slower and less parallel, but available when build time is irrelevant. |
+
 ### Sample use
 
-1. Make sure the tests pass first, via
+1. Make sure the tests pass first (uses the `test` profile automatically — no flag):
     ```bash
-    $ cargo test --release --tests
+    $ cargo test --tests
     ```
 
-2. convert an example formula:
+2. Convert an example formula (release-grade binary for performance work):
     ```bash
     $ cargo run --release --bin latexmlmath_oxide '1+1=2'
     ```
 
-3. convert an example document:
+3. Convert an example document:
     ```bash
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
+
+CI runs `cargo test --profile ci --tests` automatically; you should never
+need to invoke that profile by hand. For local performance benchmarking
+or when comparing against Perl LaTeXML, always use `--release`.
 
 ### Development Tips
 
 To enable linting quality control via rustfmt and clippy, you can activate the included hooks via:
 ```bash
-$ rustup component add rust-analyzer --toolchain nightly
 $ rustup component add rustfmt --toolchain nightly
 $ rustup component add clippy --toolchain nightly
 $ git config --local core.hooksPath .githooks/
 ```
+
+This workspace is heavy for rust-analyzer because of large proc-macro
+definition bodies. The checked-in `.vscode/settings.json` uses a
+stability profile: proc-macro expansion and cache priming are disabled,
+RA uses `target/rust-analyzer`, and large/generated directories are
+excluded from file watching. Terminal `cargo build` / `cargo test`
+still compile proc macros normally.
 
 To generate the project documentation locally, run:
 ```bash

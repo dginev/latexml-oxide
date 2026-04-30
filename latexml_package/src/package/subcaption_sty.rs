@@ -1,5 +1,5 @@
+use crate::engine::latex_constructs::{after_float, before_float, before_float_ex};
 use crate::prelude::*;
-use crate::engine::latex_constructs::{before_float, after_float};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -79,13 +79,15 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
+  // Perl L77: `{subfigure*}` passes double => 1, widening \hsize to
+  // \textwidth for two-column spans (vs \columnwidth).
   DefEnvironment!("{subfigure*}[]{Dimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
     </ltx:figure>",
     mode => "internal_vertical",
-    before_digest => { before_float("subfigure", Some("figure")); },
+    before_digest => { before_float_ex("subfigure", Some("figure"), true); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -99,13 +101,14 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
+  // Perl L97: `{subtable*}` passes double => 1 (see {subfigure*} above).
   DefEnvironment!("{subtable*}[]{Dimension}",
     "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
       #body\
     </ltx:table>",
     mode => "internal_vertical",
-    before_digest => { before_float("subtable", Some("table")); },
+    before_digest => { before_float_ex("subtable", Some("table"), true); },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 

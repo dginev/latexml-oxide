@@ -7,8 +7,8 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 
-use crate::document::{element_children, NodeData, PostDocument};
-use crate::math_processor::{math_is_parsed, MathConversion, MathProcessor};
+use crate::document::{NodeData, PostDocument, element_children};
+use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed};
 use crate::processor::{ProcessResult, Processor};
 
 const OM_URI: &str = "http://www.openmath.org/OpenMath";
@@ -21,41 +21,35 @@ type OmConverter = fn(&PostDocument, &Node) -> NodeData;
 ///
 /// Port of `LaTeXML::Post::OpenMath`.
 pub struct OpenMath {
-  name: String,
+  name:         String,
   is_secondary: bool,
-  hack_plane1: bool,
-  plane1: bool,
+  hack_plane1:  bool,
+  plane1:       bool,
 }
 
 impl Default for OpenMath {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }
 
 impl OpenMath {
   pub fn new() -> Self {
     OpenMath {
-      name: "OpenMath".to_string(),
+      name:         "OpenMath".to_string(),
       is_secondary: false,
-      hack_plane1: false,
-      plane1: true,
+      hack_plane1:  false,
+      plane1:       true,
     }
   }
 }
 
 impl Processor for OpenMath {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
   }
 
-  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
-    Ok(vec![doc])
-  }
+  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult { Ok(vec![doc]) }
 }
 
 impl MathProcessor for OpenMath {
@@ -69,13 +63,13 @@ impl MathProcessor for OpenMath {
 
     Some(MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(OM_MIMETYPE.to_string()),
-      xml: Some(xml),
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       Some(OM_MIMETYPE.to_string()),
+      xml:            Some(xml),
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     })
   }
 
@@ -91,12 +85,12 @@ impl MathProcessor for OpenMath {
     for secondary in &secondaries {
       let mimetype = secondary.mimetype.as_deref().unwrap_or("unknown");
       attr_children.push(NodeData::Element {
-        tag: "om:OMS".to_string(),
+        tag:        "om:OMS".to_string(),
         attributes: Some(HashMap::from([
           ("cd".to_string(), "Alternate".to_string()),
           ("name".to_string(), mimetype.to_string()),
         ])),
-        children: vec![],
+        children:   vec![],
       });
 
       if mimetype == OM_MIMETYPE {
@@ -105,15 +99,15 @@ impl MathProcessor for OpenMath {
         }
       } else if let Some(ref xml) = secondary.xml {
         attr_children.push(NodeData::Element {
-          tag: "om:OMFOREIGN".to_string(),
+          tag:        "om:OMFOREIGN".to_string(),
           attributes: None,
-          children: vec![xml.clone()],
+          children:   vec![xml.clone()],
         });
       } else if let Some(ref string) = secondary.string {
         attr_children.push(NodeData::Element {
-          tag: "om:OMSTR".to_string(),
+          tag:        "om:OMSTR".to_string(),
           attributes: None,
-          children: vec![NodeData::Text(string.clone())],
+          children:   vec![NodeData::Text(string.clone())],
         });
       }
     }
@@ -124,39 +118,33 @@ impl MathProcessor for OpenMath {
 
     MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(OM_MIMETYPE.to_string()),
-      xml: Some(NodeData::Element {
-        tag: "om:OMATTR".to_string(),
+      mimetype:       Some(OM_MIMETYPE.to_string()),
+      xml:            Some(NodeData::Element {
+        tag:        "om:OMATTR".to_string(),
         attributes: None,
-        children: attr_children,
+        children:   attr_children,
       }),
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     }
   }
 
   fn outer_wrapper(&self, _doc: &PostDocument, _xmath: &Node, conversion: NodeData) -> NodeData {
     NodeData::Element {
-      tag: "om:OMOBJ".to_string(),
+      tag:        "om:OMOBJ".to_string(),
       attributes: None,
-      children: vec![conversion],
+      children:   vec![conversion],
     }
   }
 
-  fn raw_id_suffix(&self) -> &str {
-    ".om"
-  }
+  fn raw_id_suffix(&self) -> &str { ".om" }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
-  }
+  fn is_secondary(&self) -> bool { self.is_secondary }
 
-  fn can_convert(&self, _doc: &PostDocument, math: &Node) -> bool {
-    math_is_parsed(math)
-  }
+  fn can_convert(&self, _doc: &PostDocument, math: &Node) -> bool { math_is_parsed(math) }
 
   fn preprocess(&self, _doc: &PostDocument, _nodes: &[Node]) {
     // Register om namespace (would need &mut doc)
@@ -205,7 +193,7 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
       } else {
         om_unparsed(doc, &children)
       }
-    }
+    },
     "ltx:XMDual" => {
       let children = element_children(node);
       if !children.is_empty() {
@@ -213,7 +201,7 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
       } else {
         om_error("Empty XMDual")
       }
-    }
+    },
     "ltx:XMApp" => {
       let children = element_children(node);
       if children.is_empty() {
@@ -225,57 +213,61 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
         oma_children.push(om_expr(doc, child));
       }
       NodeData::Element {
-        tag: "om:OMA".to_string(),
+        tag:        "om:OMA".to_string(),
         attributes: None,
-        children: oma_children,
+        children:   oma_children,
       }
-    }
+    },
     "ltx:XMTok" => {
       if let Some(meaning) = node.get_attribute("meaning") {
-        let cd = node.get_attribute("omcd").unwrap_or_else(|| "latexml".to_string());
+        let cd = node
+          .get_attribute("omcd")
+          .unwrap_or_else(|| "latexml".to_string());
         NodeData::Element {
-          tag: "om:OMS".to_string(),
+          tag:        "om:OMS".to_string(),
           attributes: Some(HashMap::from([
             ("name".to_string(), meaning),
             ("cd".to_string(), cd),
           ])),
-          children: vec![],
+          children:   vec![],
         }
       } else {
         // Variable
         let name = node.get_content();
         let name = if name.trim().is_empty() {
-          node.get_attribute("name").unwrap_or_else(|| "?".to_string())
+          node
+            .get_attribute("name")
+            .unwrap_or_else(|| "?".to_string())
         } else {
           name
         };
         NodeData::Element {
-          tag: "om:OMV".to_string(),
+          tag:        "om:OMV".to_string(),
           attributes: Some(HashMap::from([("name".to_string(), name)])),
-          children: vec![],
+          children:   vec![],
         }
       }
-    }
+    },
     "ltx:XMHint" => {
       // Hints are ignored in OpenMath
       NodeData::Text(String::new())
-    }
+    },
     "ltx:XMText" => {
       let text = node.get_content();
       NodeData::Element {
-        tag: "om:OMSTR".to_string(),
+        tag:        "om:OMSTR".to_string(),
         attributes: None,
-        children: vec![NodeData::Text(text)],
+        children:   vec![NodeData::Text(text)],
       }
-    }
+    },
     _ => {
       let text = node.get_content();
       NodeData::Element {
-        tag: "om:OMSTR".to_string(),
+        tag:        "om:OMSTR".to_string(),
         attributes: None,
-        children: vec![NodeData::Text(text)],
+        children:   vec![NodeData::Text(text)],
       }
-    }
+    },
   }
 }
 
@@ -286,12 +278,12 @@ fn om_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
   }
 
   let mut children = vec![NodeData::Element {
-    tag: "om:OMS".to_string(),
+    tag:        "om:OMS".to_string(),
     attributes: Some(HashMap::from([
       ("cd".to_string(), "ambiguous".to_string()),
       ("name".to_string(), "fragments".to_string()),
     ])),
-    children: vec![],
+    children:   vec![],
   }];
 
   for node in nodes {
@@ -312,22 +304,64 @@ fn om_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
 /// Create an OpenMath error element.
 fn om_error(msg: &str) -> NodeData {
   NodeData::Element {
-    tag: "om:OME".to_string(),
+    tag:        "om:OME".to_string(),
     attributes: None,
-    children: vec![
+    children:   vec![
       NodeData::Element {
-        tag: "om:OMS".to_string(),
+        tag:        "om:OMS".to_string(),
         attributes: Some(HashMap::from([
           ("name".to_string(), "unexpected".to_string()),
           ("cd".to_string(), "moreerrors".to_string()),
         ])),
-        children: vec![],
+        children:   vec![],
       },
       NodeData::Element {
-        tag: "om:OMSTR".to_string(),
+        tag:        "om:OMSTR".to_string(),
         attributes: None,
-        children: vec![NodeData::Text(msg.to_string())],
+        children:   vec![NodeData::Text(msg.to_string())],
       },
     ],
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn openmath_new_has_default_name() {
+    let o = OpenMath::new();
+    assert_eq!(o.get_name(), "OpenMath");
+    assert!(!o.is_secondary);
+    assert!(!o.hack_plane1);
+    assert!(o.plane1, "plane1 defaults to true");
+  }
+
+  #[test]
+  fn openmath_default_matches_new() {
+    let a = OpenMath::default();
+    let b = OpenMath::new();
+    assert_eq!(a.get_name(), b.get_name());
+    assert_eq!(a.is_secondary, b.is_secondary);
+    assert_eq!(a.plane1, b.plane1);
+    assert_eq!(a.hack_plane1, b.hack_plane1);
+  }
+
+  #[test]
+  fn openmath_raw_id_suffix() {
+    let o = OpenMath::new();
+    assert_eq!(o.raw_id_suffix(), ".om");
+  }
+
+  #[test]
+  fn openmath_is_secondary_false_by_default() {
+    let o = OpenMath::new();
+    assert!(!o.is_secondary());
+  }
+
+  #[test]
+  fn om_constants() {
+    assert_eq!(OM_URI, "http://www.openmath.org/OpenMath");
+    assert_eq!(OM_MIMETYPE, "application/openmath+xml");
   }
 }

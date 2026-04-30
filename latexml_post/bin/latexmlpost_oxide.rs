@@ -3,11 +3,11 @@
 //! Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--noscan] [--nocrossref]
 //!        [--stylesheet path.xsl] [--dest output.xml] input.xml
 
+use latexml_post::Post;
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;
 use latexml_post::processor::Processor;
 use latexml_post::xslt::XSLT;
-use latexml_post::Post;
 use std::collections::HashMap;
 
 fn main() {
@@ -24,19 +24,19 @@ fn main() {
     match args[i].as_str() {
       "--pmml" => pmml = true,
       "--keepXMath" | "--xmath" => keep_xmath = true,
-      "--noscan" | "--nocrossref" => {} // accepted but no-op for now
+      "--noscan" | "--nocrossref" => {}, // accepted but no-op for now
       "--stylesheet" => {
         i += 1;
         if i < args.len() {
           stylesheet = Some(args[i].clone());
         }
-      }
+      },
       "--dest" => {
         i += 1;
         if i < args.len() {
           dest_path = Some(args[i].clone());
         }
-      }
+      },
       arg if !arg.starts_with('-') => input_path = Some(arg.to_string()),
       other => eprintln!("Warning: unknown option '{}'", other),
     }
@@ -53,14 +53,13 @@ fn main() {
     pmml = true;
   }
 
-  let input = std::fs::read_to_string(&input_path)
-    .unwrap_or_else(|e| {
-      eprintln!("Failed to read {}: {}", input_path, e);
-      std::process::exit(1);
-    });
+  let input = std::fs::read_to_string(&input_path).unwrap_or_else(|e| {
+    eprintln!("Failed to read {}: {}", input_path, e);
+    std::process::exit(1);
+  });
 
-  let doc = PostDocument::new_from_string(&input, PostDocumentOptions::default())
-    .unwrap_or_else(|e| {
+  let doc =
+    PostDocument::new_from_string(&input, PostDocumentOptions::default()).unwrap_or_else(|e| {
       eprintln!("Failed to parse {}: {}", input_path, e);
       std::process::exit(1);
     });
@@ -74,19 +73,16 @@ fn main() {
   }
 
   if let Some(ref xsl_path) = stylesheet {
-    let searchpaths = vec![
-      "resources/XSLT".to_string(),
-      ".".to_string(),
-    ];
-    let xslt = XSLT::new(xsl_path, HashMap::new(), false, None, searchpaths)
-      .unwrap_or_else(|e| {
-        eprintln!("Failed to create XSLT processor: {}", e);
-        std::process::exit(1);
-      });
+    let searchpaths = vec!["resources/XSLT".to_string(), ".".to_string()];
+    let xslt = XSLT::new(xsl_path, HashMap::new(), false, None, searchpaths).unwrap_or_else(|e| {
+      eprintln!("Failed to create XSLT processor: {}", e);
+      std::process::exit(1);
+    });
     processors.push(Box::new(xslt));
   }
 
-  let results = post.process_chain(doc, &mut processors)
+  let results = post
+    .process_chain(doc, &mut processors)
     .unwrap_or_else(|e| {
       eprintln!("Post-processing failed: {}", e);
       std::process::exit(1);

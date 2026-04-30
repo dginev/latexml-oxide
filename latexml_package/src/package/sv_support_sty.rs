@@ -18,32 +18,68 @@ LoadDefinitions!({
 
   DefMacro!("\\emailname", "E-mail");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email' name='#name'>#1</ltx:contact>",
-    properties => {
-      Ok(stored_map!("name" => Digest!(T_CS!("\\emailname"))?))
-    });
-  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  properties => {
+    Ok(stored_map!("name" => Digest!(T_CS!("\\emailname"))?))
+  });
+  DefMacro!(
+    "\\email Semiverbatim",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}"
+  );
   DefMacro!("\\mailname", "\\textit{Correspondence}");
   DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='address' name='#name'>#1</ltx:contact>",
-    properties => {
-      Ok(stored_map!("name" => Digest!(T_CS!("\\mailname"))?))
-    });
-  DefMacro!("\\mail{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
+  properties => {
+    Ok(stored_map!("name" => Digest!(T_CS!("\\mailname"))?))
+  });
+  DefMacro!(
+    "\\mail{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}"
+  );
 
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}");
-  DefMacro!("\\subclassname", "\\textbf{Mathematics Subject Classification (2000)}");
-  DefMacro!("\\subclass{}", "\\@add@frontmatter{ltx:classification}[scheme=MSC,name={\\subclassname}]{#1}");
+  DefMacro!(
+    "\\keywords{}",
+    "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}"
+  );
+  DefMacro!(
+    "\\subclassname",
+    "\\textbf{Mathematics Subject Classification (2000)}"
+  );
+  DefMacro!(
+    "\\subclass{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=MSC,name={\\subclassname}]{#1}"
+  );
   DefMacro!("\\CRclassname", "\\textbf{CR Subject Classification}");
-  DefMacro!("\\CRclass{}", "\\@add@frontmatter{ltx:classification}[scheme=CR,name={\\CRclassname}]{#1}");
+  DefMacro!(
+    "\\CRclass{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=CR,name={\\CRclassname}]{#1}"
+  );
   DefMacro!("\\ESMname", "\\textbf{Electronic Supplementary Material}");
-  DefMacro!("\\ESM{}", "\\@add@frontmatter{ltx:note}[role=supplemental,name={\\ESMname}]{#1}");
+  DefMacro!(
+    "\\ESM{}",
+    "\\@add@frontmatter{ltx:note}[role=supplemental,name={\\ESMname}]{#1}"
+  );
   DefMacro!("\\PACSname", "\\textbf{PACS}");
-  DefMacro!("\\PACS{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs,name={\\PACSname}]{#1}");
+  DefMacro!(
+    "\\PACS{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=pacs,name={\\PACSname}]{#1}"
+  );
   DefMacro!("\\headnote{}", "\\@add@frontmatter{ltx:note}{#1}");
-  DefMacro!("\\dedication{}", "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
-  DefMacro!("\\offprints{}", "\\@add@frontmatter{ltx:note}[role=offprints]{#1}");
-  DefMacro!("\\journalname{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\papertype{}", "\\@add@frontmatter{ltx:classification}[scheme=papertype]{#1}");
+  DefMacro!(
+    "\\dedication{}",
+    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}"
+  );
+  DefMacro!(
+    "\\offprints{}",
+    "\\@add@frontmatter{ltx:note}[role=offprints]{#1}"
+  );
+  DefMacro!(
+    "\\journalname{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}"
+  );
+  DefMacro!(
+    "\\papertype{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=papertype]{#1}"
+  );
 
   Let!("\\journalopt", "\\@empty");
 
@@ -53,7 +89,10 @@ LoadDefinitions!({
   Let!("\\@orig@abstract", "\\abstract");
   // \abstract* — ignore
   DefMacro!("\\lx@ignore@sv@abstract{}", "");
-  DefMacro!("\\@abstract@with@arg{}", "\\@add@frontmatter{ltx:abstract}[name={\\abstractname}]{#1}");
+  DefMacro!(
+    "\\@abstract@with@arg{}",
+    "\\@add@frontmatter{ltx:abstract}[name={\\abstractname}]{#1}"
+  );
 
   DefMacro!("\\abstract OptionalMatch:*", sub[(star)] {
     if star.is_some() {
@@ -69,10 +108,10 @@ LoadDefinitions!({
 
   DefMacro!("\\ackname", "Acknowledgements");
   DefConstructor!("\\acknowledgements",
-    "<ltx:acknowledgements name='#name'>",
-    properties => {
-      Ok(stored_map!("name" => Digest!(T_CS!("\\ackname"))?))
-    });
+  "<ltx:acknowledgements name='#name'>",
+  properties => {
+    Ok(stored_map!("name" => Digest!(T_CS!("\\ackname"))?))
+  });
   DefMacro!("\\acknowledgement", "\\acknowledgements");
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
   DefConstructor!("\\endacknowledgement", "</ltx:acknowledgements>");
@@ -80,6 +119,19 @@ LoadDefinitions!({
 
   DefMacro!("\\noteaddname", "Note added in proof");
   DefMacro!("\\notename", "Note");
+
+  // Perl sv_support.sty.ltxml L89-90: the {noteadd} env wraps body in
+  // <ltx:note name='Note added in proof'>. Perl's `properties => {name =>
+  // Digest(\noteaddname)}` digests `\noteaddname` at expansion time.
+  // Rust doesn't easily support a Digested-closure property here, so we
+  // emit the same Perl output with the name string inlined. If the
+  // document redefines \noteaddname this diverges; Perl is faithful
+  // to the live value. Acceptable simplification — no Springer test
+  // exercises noteadd env.
+  DefEnvironment!(
+    "{noteadd}",
+    "<ltx:note name='Note added in proof'>#body</ltx:note>"
+  );
 
   Let!("\\orithanks", "\\thanks");
   DefMacro!("\\runheadhook", "");
@@ -113,11 +165,19 @@ LoadDefinitions!({
   DefMacro!("\\leftlegendglue", "");
 
   // Perl L122-123: theorem head swap toggles
-  DefPrimitive!("\\normalthmheadings", { state::assign_value("thm@swap", 0i64, Scope::Global); });
-  DefPrimitive!("\\reversethmheadings", { state::assign_value("thm@swap", 1i64, Scope::Global); });
+  DefPrimitive!("\\normalthmheadings", {
+    state::assign_value("thm@swap", 0i64, Scope::Global);
+  });
+  DefPrimitive!("\\reversethmheadings", {
+    state::assign_value("thm@swap", 1i64, Scope::Global);
+  });
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
   // Perl sv.cls.ltxml L92-185: Like \newtheorem + capfont/bodyfont (visual styling ignored).
+  // DP-flag: Perl DefMacro (sub body), Rust DefPrimitive — WISDOM #44.
+  // Safe: `\spnewtheorem` is a preamble-level declaration, never observed
+  // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
+  // LaTeXML/lib + ar5iv-bindings).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
     crate::engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
@@ -167,12 +227,19 @@ LoadDefinitions!({
   // Theorem environments — Perl L225-228
   DefEnvironment!("{theopargself*}", "#body");
   DefEnvironment!("{theopargself}", "#body");
-  DefEnvironment!("{translation}{}", "<ltx:quote role='translation' lang='#1'>#body</ltx:quote>");
+  DefEnvironment!(
+    "{translation}{}",
+    "<ltx:quote role='translation' lang='#1'>#body</ltx:quote>"
+  );
 
   //======================================================================
+  // QED — Perl sv_support.sty.ltxml has `enterHorizontal=>1` (matches
+  // amsthm L141). Without it, `\qed` at end of proof in vertical mode
+  // emits the U+220E text node outside any <ltx:p>.
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
     reversion => "\\qed");
   Let!("\\smartqed", "\\qed");
   Let!("\\squareforqed", "\\qed");
@@ -222,12 +289,19 @@ LoadDefinitions!({
   DefMacro!("\\lastevenhead", "");
 
   //======================================================================
-  // description environment with optional arg
+  // description environment with optional arg.
+  // Perl sv_support.sty.ltxml L286-289 sets `locked => 1` so a downstream
+  // class that re-loads sv_support's description (e.g. a sibling Springer
+  // template that defines its own `\renewenvironment{description}{}{}`)
+  // can't quietly drop the optional-arg-aware variant. Without locked,
+  // the optional `[<label-template>]` becomes invisible to the env's
+  // properties closure and itemization machinery sees a bare description.
   DefEnvironment!("{description}[]",
-    "<ltx:description xml:id='#id'>#body</ltx:description>",
-    properties => sub[_args] {
-      begin_itemize("description", None, BeginItemizeOptions::default())
-    });
+  "<ltx:description xml:id='#id'>#body</ltx:description>",
+  properties => sub[_args] {
+    begin_itemize("description", None, BeginItemizeOptions::default())
+  },
+  locked => true);
 
   // Perl sv_support.sty.ltxml L194-195: proof environment
   DefMacro!("\\proofname", "Proof");
@@ -235,9 +309,9 @@ LoadDefinitions!({
   // starred (*) = unnumbered = flag=Some
   crate::engine::latex_constructs::define_new_theorem(
     Some(Tokens!(T_OTHER!("*"))), // starred
-    Tokenize!("proof"),  // environment name
-    None,                // no shared counter
-    Some(Tokenize!("Proof")), // display title
-    None,                // no 'within' counter
+    Tokenize!("proof"),           // environment name
+    None,                         // no shared counter
+    Some(Tokenize!("Proof")),     // display title
+    None,                         // no 'within' counter
   )?;
 });

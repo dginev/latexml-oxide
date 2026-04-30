@@ -110,11 +110,12 @@ impl<OP: ToString + Sized, LEFT: Into<XM>, RIGHT: Into<XM>> From<(OP, LEFT, RIGH
 }
 impl<OP: ToString + Sized> From<(OP, Vec<XM>)> for XM {
   fn from(args: (OP, Vec<XM>)) -> XM {
-    if args.0.to_string() == "choices" {
+    let op_str = args.0.to_string();
+    if op_str == "choices" {
       XM::Choices(args.1.to_vec())
     } else {
       XM::Apply(
-        args.0.to_string().into(),
+        op_str.into(),
         Args(args.1.iter().cloned().map(Some).collect()),
         XProps::default(),
         Meta::default(),

@@ -101,12 +101,12 @@ struct Cli {
 #[allow(dead_code)] // Fields used when post-processing is enabled
 #[derive(Clone, Debug)]
 struct ConversionProfile {
-  preloads: Vec<String>,
-  pmml: bool,
-  mathtex: bool,
-  noinvisibletimes: bool,
+  preloads:           Vec<String>,
+  pmml:               bool,
+  mathtex:            bool,
+  noinvisibletimes:   bool,
   nodefaultresources: bool,
-  timeout: u64,
+  timeout:            u64,
 }
 
 impl ConversionProfile {
@@ -138,14 +138,14 @@ impl ConversionProfile {
 /// The CorTeX worker implementation for latexml-oxide
 #[derive(Clone)]
 struct LatexmlWorker {
-  service: String,
+  service:        String,
   source_address: String,
-  sink_address: String,
-  identity: String,
-  msg_size: usize,
-  threads: usize,
-  profile: ConversionProfile,
-  verbosity: i32,
+  sink_address:   String,
+  identity:       String,
+  msg_size:       usize,
+  threads:        usize,
+  profile:        ConversionProfile,
+  verbosity:      i32,
 }
 
 impl LatexmlWorker {
@@ -153,11 +153,10 @@ impl LatexmlWorker {
   /// Returns the path to the output ZIP file.
   fn convert_archive(&self, input_path: &Path) -> Result<PathBuf, Box<dyn Error>> {
     // Per-document timeout: two-layer guard.
-    //   1. Watchdog thread forcibly aborts after profile.timeout seconds.
-    //      Catches tight native loops (Marpa, libxml2, libxslt) that never
-    //      return to the Rust digestion loop.
-    //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for
-    //      the common case where digestion polls check_timeout.
+    //   1. Watchdog thread forcibly aborts after profile.timeout seconds. Catches tight native
+    //      loops (Marpa, libxml2, libxslt) that never return to the Rust digestion loop.
+    //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for the common case where
+    //      digestion polls check_timeout.
     // Watchdog cancels automatically on drop at end of this function.
     let _watchdog = latexml_core::watchdog::Watchdog::new(self.profile.timeout);
     if self.profile.timeout > 0 {
@@ -173,19 +172,19 @@ impl LatexmlWorker {
     preloads.extend(self.profile.preloads.iter().cloned());
 
     let opts = Config {
-      verbosity: self.verbosity,
-      format: OutputFormat::HTML5,
-      whatsin: DataSize::Document,
-      whatsout: DataSize::Document,
-      preamble: None,
-      postamble: None,
-      mode: None,
-      bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+      verbosity:               self.verbosity,
+      format:                  OutputFormat::HTML5,
+      whatsin:                 DataSize::Document,
+      whatsout:                DataSize::Document,
+      preamble:                None,
+      postamble:               None,
+      mode:                    None,
+      bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
       extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-      preload: Some(self.profile.preloads.clone()),
-      search_paths: Some(vec![source_dir.clone()]),
-      include_comments: Some(false),
-      nomathparse: None,
+      preload:                 Some(self.profile.preloads.clone()),
+      search_paths:            Some(vec![source_dir.clone()]),
+      include_comments:        Some(false),
+      nomathparse:             None,
     };
 
     let mut converter = Converter::from_config(opts.clone());
@@ -199,9 +198,8 @@ impl LatexmlWorker {
       .result
       .ok_or_else(|| format!("Conversion failed for {}", main_tex))?;
 
-    // 4. Create destination directory for images/resources
-    //    Perl LaTeXML.pm L200-205: derive HTML name from source TeX name
-    //    e.g., 9256.tex → 9256.html (format "html5" → extension "html")
+    // 4. Create destination directory for images/resources Perl LaTeXML.pm L200-205: derive HTML
+    //    name from source TeX name e.g., 9256.tex → 9256.html (format "html5" → extension "html")
     let source_name = Path::new(&main_tex)
       .file_stem()
       .and_then(|s| s.to_str())
@@ -213,22 +211,23 @@ impl LatexmlWorker {
 
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
     let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
-      pmml: self.profile.pmml,
-      cmml: true, // CorTeX produces both pmml and cmml
-      keep_xmath: false,
-      stylesheet: Some("resources/XSLT/LaTeXML-html5.xsl"),
-      destination: Some(&dest_html_str),
-      source_directory: Some(&source_dir),
-      nodefaultresources: self.profile.nodefaultresources,
-      css_files: &[],
-      js_files: &[],
-      noinvisibletimes: self.profile.noinvisibletimes,
-      mathtex: self.profile.mathtex,
-      navigationtoc: None,
-      split: false,
-      split_xpath: None,
-      split_naming: None,
-      xslt_parameters: &[],
+      pmml:                      self.profile.pmml,
+      cmml:                      true, // CorTeX produces both pmml and cmml
+      keep_xmath:                false,
+      stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
+      destination:               Some(&dest_html_str),
+      source_directory:          Some(&source_dir),
+      nodefaultresources:        self.profile.nodefaultresources,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          self.profile.noinvisibletimes,
+      mathtex:                   self.profile.mathtex,
+      navigationtoc:             None,
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
+      graphics_svg_threshold_kb: 0,
     });
 
     // 6. Get log and status (Perl: status line is last line of log)
@@ -236,8 +235,16 @@ impl LatexmlWorker {
     let log = format!("{}\n{}", response.log, status_str);
 
     // 7. Pack output ZIP: HTML (named after source) + images + log + status
-    let output_path = std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
-    pack_output_zip_with_resources(&output_path, &html_filename, &html, &log, &status_str, dest_dir.path())?;
+    let output_path =
+      std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
+    pack_output_zip_with_resources(
+      &output_path,
+      &html_filename,
+      &html,
+      &log,
+      &status_str,
+      dest_dir.path(),
+    )?;
 
     Ok(output_path)
   }
@@ -252,35 +259,20 @@ impl Worker for LatexmlWorker {
     Ok(file)
   }
 
-  fn message_size(&self) -> usize {
-    self.msg_size
-  }
+  fn message_size(&self) -> usize { self.msg_size }
 
-  fn get_service(&self) -> &str {
-    &self.service
-  }
+  fn get_service(&self) -> &str { &self.service }
 
-  fn get_source_address(&self) -> Cow<'_, str> {
-    Cow::Borrowed(&self.source_address)
-  }
+  fn get_source_address(&self) -> Cow<'_, str> { Cow::Borrowed(&self.source_address) }
 
-  fn get_sink_address(&self) -> Cow<'_, str> {
-    Cow::Borrowed(&self.sink_address)
-  }
+  fn get_sink_address(&self) -> Cow<'_, str> { Cow::Borrowed(&self.sink_address) }
 
-  fn pool_size(&self) -> usize {
-    self.threads
-  }
+  fn pool_size(&self) -> usize { self.threads }
 
-  fn set_identity(&mut self, identity: String) {
-    self.identity = identity;
-  }
+  fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
-  fn get_identity(&self) -> &str {
-    &self.identity
-  }
+  fn get_identity(&self) -> &str { &self.identity }
 }
-
 
 // --- Helper functions (shared with latexml_oxide.rs) ---
 
@@ -387,25 +379,24 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
   static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
   static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
-  static RE_DOCCLASS: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
-  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap());
-  static RE_INPUT_INCLUDE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
-  static RE_END_BYE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_END_BYE2: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_MAC_TEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+  static RE_DOCCLASS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap()
+  });
+  static RE_INPUT_INCLUDE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+  static RE_END_BYE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_MAC_TEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
   static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
-  static RE_BIBTEX: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
-  static RE_UUENCODE: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
-  static RE_WITHDRAWN: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"paper deliberately replaced by what little").unwrap());
+  static RE_BIBTEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+  static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+  static RE_WITHDRAWN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
   static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
@@ -413,8 +404,12 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   let mut vetoed: Vec<PathBuf> = Vec::new();
 
   for tex_file in &tex_files {
-    if !tex_file.exists() { continue; }
-    let Ok(raw) = fs::read(tex_file) else { continue };
+    if !tex_file.exists() {
+      continue;
+    }
+    let Ok(raw) = fs::read(tex_file) else {
+      continue;
+    };
     let content = String::from_utf8_lossy(&raw);
     let mut maybe_tex = false;
     let mut maybe_tex_priority = false;
@@ -423,12 +418,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
     for (lineno, raw_line) in content.lines().enumerate() {
       let lineno1 = lineno + 1;
-      if lineno1 <= 10 && (RE_AUTOIGNORE.is_match(raw_line)
-        || RE_TEXINFO.is_match(raw_line)
-        || RE_AUTOINCLUDE.is_match(raw_line))
+      if lineno1 <= 10
+        && (RE_AUTOIGNORE.is_match(raw_line)
+          || RE_TEXINFO.is_match(raw_line)
+          || RE_AUTOINCLUDE.is_match(raw_line))
       {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if lineno1 <= 12 {
         if let Some(cap) = RE_FORMAT_HINT.captures(raw_line) {
@@ -438,15 +435,21 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           } else {
             likelihood.insert(tex_file.clone(), 1.0);
           }
-          determined = true; break;
+          determined = true;
+          break;
         }
       }
       // Perl L128: strip comments for subsequent checks
-      let line = if let Some(pos) = raw_line.find('%') { &raw_line[..pos] } else { raw_line };
+      let line = if let Some(pos) = raw_line.find('%') {
+        &raw_line[..pos]
+      } else {
+        raw_line
+      };
 
       if RE_DOCCLASS.is_match(line) {
         likelihood.insert(tex_file.clone(), 3.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_MAYBE_TEX.is_match(line) {
         maybe_tex = true;
@@ -456,7 +459,8 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let mut vetoed_name = cap[1].to_string();
         if RE_AMSTEX.is_match(&vetoed_name) {
           likelihood.insert(tex_file.clone(), 2.0);
-          determined = true; break;
+          determined = true;
+          break;
         }
         if !vetoed_name.contains('.') {
           vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
@@ -464,19 +468,26 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         let base_dir = tex_file.parent().unwrap_or(dir);
         vetoed.push(base_dir.join(&vetoed_name));
       }
-      if RE_END_BYE.is_match(line) { maybe_tex_priority = true; }
-      if RE_END_BYE2.is_match(line) { maybe_tex_priority2 = true; }
+      if RE_END_BYE.is_match(line) {
+        maybe_tex_priority = true;
+      }
+      if RE_END_BYE2.is_match(line) {
+        maybe_tex_priority2 = true;
+      }
       if RE_MAC_TEX.is_match(line) {
         likelihood.insert(tex_file.clone(), 1.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_METAFONT.is_match(line) {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_BIBTEX.is_match(raw_line) {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_UUENCODE.is_match(raw_line) {
         if maybe_tex_priority {
@@ -486,18 +497,25 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         } else {
           likelihood.insert(tex_file.clone(), 0.0);
         }
-        determined = true; break;
+        determined = true;
+        break;
       }
       if RE_WITHDRAWN.is_match(line) {
         likelihood.insert(tex_file.clone(), 0.0);
-        determined = true; break;
+        determined = true;
+        break;
       }
     }
     if !determined {
-      let score = if maybe_tex_priority { 2.0 }
-        else if maybe_tex_priority2 { 1.5 }
-        else if maybe_tex { 1.0 }
-        else { 0.0 };
+      let score = if maybe_tex_priority {
+        2.0
+      } else if maybe_tex_priority2 {
+        1.5
+      } else if maybe_tex {
+        1.0
+      } else {
+        0.0
+      };
       likelihood.insert(tex_file.clone(), score);
     }
   }
@@ -508,7 +526,8 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Filter to score > 0, sort by score descending
-  let mut candidates: Vec<PathBuf> = likelihood.keys()
+  let mut candidates: Vec<PathBuf> = likelihood
+    .keys()
     .filter(|f| likelihood[*f] > 0.0)
     .cloned()
     .collect();
@@ -524,23 +543,27 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Heuristic 1: prefer shallowest path
   if candidates.len() > 1 {
-    let min_depth = candidates.iter()
+    let min_depth = candidates
+      .iter()
       .map(|f| f.strip_prefix(dir).unwrap_or(f).components().count())
-      .min().unwrap_or(0);
+      .min()
+      .unwrap_or(0);
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
   // Heuristic 2: prefer files with PDF-like \includegraphics
   if candidates.len() > 1 {
-    let pdf_candidates: Vec<PathBuf> = candidates.iter()
+    let pdf_candidates: Vec<PathBuf> = candidates
+      .iter()
       .filter(|f| {
         fs::read(f).ok().is_some_and(|raw| {
           let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics") &&
-          (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+          c.contains("\\includegraphics")
+            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
         })
       })
-      .cloned().collect();
+      .cloned()
+      .collect();
     if !pdf_candidates.is_empty() {
       candidates = pdf_candidates;
     }
@@ -548,9 +571,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Heuristic 3: prefer files with a matching .bbl file
   if candidates.len() > 1 {
-    let bbl_candidates: Vec<PathBuf> = candidates.iter()
+    let bbl_candidates: Vec<PathBuf> = candidates
+      .iter()
       .filter(|f| f.with_extension("bbl").exists())
-      .cloned().collect();
+      .cloned()
+      .collect();
     if !bbl_candidates.is_empty() {
       candidates = bbl_candidates;
     }
@@ -558,12 +583,16 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Heuristic 4: prefer common main file names
   if candidates.len() > 1 {
-    let common: Vec<PathBuf> = candidates.iter()
-      .filter(|f| f.file_name().is_some_and(|n| {
-        let n = n.to_str().unwrap_or("");
-        n == "main.tex" || n == "ms.tex" || n == "paper.tex"
-      }))
-      .cloned().collect();
+    let common: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| {
+        f.file_name().is_some_and(|n| {
+          let n = n.to_str().unwrap_or("");
+          n == "main.tex" || n == "ms.tex" || n == "paper.tex"
+        })
+      })
+      .cloned()
+      .collect();
     if !common.is_empty() {
       candidates = common;
     }
@@ -583,7 +612,9 @@ fn parse_readme_json(dir: &Path) -> Option<String> {
   let arr_end = rest.find(']')?;
   let arr = &rest[arr_start + 1..arr_end];
   for obj_str in arr.split('}') {
-    if !obj_str.contains("\"toplevel\"") { continue; }
+    if !obj_str.contains("\"toplevel\"") {
+      continue;
+    }
     if let Some(fn_pos) = obj_str.find("\"filename\"") {
       let after_key = &obj_str[fn_pos + 10..];
       let after_key = after_key.trim_start();
@@ -616,8 +647,8 @@ fn pack_output_zip_with_resources(
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
-  let options = zip::write::SimpleFileOptions::default()
-    .compression_method(zip::CompressionMethod::Deflated);
+  let options =
+    zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
   // HTML file named after the source TeX (Perl LaTeXML.pm L200-205)
   zip.start_file(html_filename, options)?;
@@ -667,6 +698,22 @@ fn add_dir_to_zip(
 // --- Main ---
 
 fn main() -> Result<(), Box<dyn Error>> {
+  // Run all work on a worker thread with a 256 MB stack so deeply
+  // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
+  // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
+  // the OS-default 8 MB main-thread stack during finalize/post-
+  // processing. Validated: 0711.4787 converts cleanly under
+  // `ulimit -s unlimited` (959 maths, Status:conversion:1).
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .expect("spawn worker thread")
+    .join()
+    .expect("worker thread panicked")
+    .map_err(|s| s.into())
+}
+
+fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
   let verbosity = if cli.quiet {
@@ -689,7 +736,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     other => {
       eprintln!("Unknown profile '{}', using ar5iv", other);
       ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.no_pmml, cli.no_mathtex)
-    }
+    },
   };
 
   let hostname = hostname::get()

@@ -1,0 +1,182 @@
+arxiv_id	first_error	class
+0909.3444	\GenericError Package babel Error: You haven't defined the language 'frenchb' yet.	article.cls
+1008.2152	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1012.3836	\section The token T_CS[\section] is not defined. Defining it now as <ltx:ERROR/>	?
+1107.0347	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1207.6068	\shipout The token T_CS[\shipout] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1211.4952	\GenericError Package babel Error: You haven't defined the language 'activeacute' yet.	article.cls
+1212.4860	} Attempt to close a group that switched to mode vertical; current frame is mode-switch to vertical 	article.cls
+1304.0737	\@nil The token T_CS[\@nil] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1305.6480	\NC@list The token T_CS[\NC@list] is not defined. Defining it now as <ltx:ERROR/>	revtex4.cls
+1308.6663	\ifCLASSINFOpdf The token T_CS[\ifCLASSINFOpdf] is not defined. Defining it now as with \newif	OmniBus.cls
+1310.6527	\shipout The token T_CS[\shipout] is not defined. Defining it now as <ltx:ERROR/>	elsarticle.cls
+1311.6357	\lx@end@gen@cases Attempt to close boxing group; current frame is non-boxing group due to T_CS[\begi	aa.cls
+1311.7348	} A closing } was supposed to be here	revtex4-1.cls
+1312.7418	\bullets The token T_CS[\bullets] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1404.1853	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1401.0971	(empty/abort)	eptcs.cls
+1406.1495	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1407.4764	\newmarks The token T_CS[\newmarks] is not defined. Defining it now as <ltx:ERROR/>	IEEEtran.cls
+1410.5293	\@nil The token T_CS[\@nil] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1407.5769	(empty/abort)	revtex4-1.cls
+1504.01713	\hbox Attempt to end mode `restricted_horizontal` in `restricted_horizontal`	article.cls
+1508.02945	\IfPackageLoadedTF The token T_CS[\IfPackageLoadedTF] is not defined. Defining it now as <ltx:ERROR/	revtex4-1.cls
+1507.08764	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	revtex4-1.cls
+1510.06919	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1602.02322	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1601.06002	\lx@end@gen@cases Attempt to close boxing group; current frame is non-boxing group due to T_CS[\begi	aa.cls
+1602.03151	} Attempt to close a group that switched to mode math; current frame is mode-switch to math due to T	aa.cls
+1603.08690	double-superscript Double superscript	article.cls
+1605.06046	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	svjour3.cls
+1605.00224	} A closing } was supposed to be here	revtex4-1.cls
+1605.07931	} A closing } was supposed to be here	revtex4-1.cls
+1605.08657	\lx@pic@put Attempt to end mode `restricted_horizontal` in `restricted_horizontal`	article.cls
+1607.06257	\section The token T_CS[\section] is not defined. Defining it now as <ltx:ERROR/>	?
+1607.03390	} A closing } was supposed to be here	IEEEtran.cls
+1608.00356	\@nil The token T_CS[\@nil] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1608.02970	} Attempt to close a group that switched to mode vertical; current frame is mode-switch to vertical 	article.cls
+1608.04650	ltx:Proof "ltx:Proof" isn't allowed in <ltx:section>	article.cls
+1611.00859	\@inpenc@test The token T_CS[\@inpenc@test] is not defined. Defining it now as <ltx:ERROR/>	aa9.cls
+1612.08904	<box> A <box> was supposed to be here.	article.cls
+1701.08750	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	article.cls
+1702.02851	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	revtex4-1.cls
+1702.08652	} A closing } was supposed to be here	article.cls
+1704.07415	\pics The token T_CS[\pics] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1704.05389	\frenchbsetup The token T_CS[\frenchbsetup] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1708.00524	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	article.cls
+1709.07806	\citenamefont The token T_CS[\citenamefont] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1710.03688	} Attempt to close a group that switched to mode horizontal; current frame is mode-switch to horizon	elsart4-1.cls
+1710.04068	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1710.11409	ltx:section "ltx:section" isn't allowed in <ltx:table>	aa.cls
+1710.08966	\box_new:N The token T_CS[\box_new:N] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1711.10191	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1711.11576	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1709.03426	\else Didn't expect a "T_CS[\\else]" since we seem not to be in a conditional	IEEEtran.cls
+1801.10219	\acrfullpl The token T_CS[\acrfullpl] is not defined. Defining it now as <ltx:ERROR/>	acmart.cls
+1802.05444	\textrhookrevepsilon The token T_CS[\textrhookrevepsilon] is not defined. Defining it now as <ltx:ER	article.cls
+1803.01296	\NewDocumentCommand The token T_CS[\NewDocumentCommand] is not defined. Defining it now as <ltx:ERRO	article.cls
+1803.03288	\DeclareKeys The token T_CS[\DeclareKeys] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+1804.05124	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	revtex4-1.cls
+1804.04412	} Gullet->readBalanced ran out of input in an unbalanced state	article.cls
+1805.12024	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	article.cls
+1806.01069	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	llncs.cls
+1806.05262	\loadglsentries The token T_CS[\loadglsentries] is not defined. Defining it now as <ltx:ERROR/>	elsarticle.cls
+1806.06448	\regex_const:Nn The token T_CS[\regex_const:Nn] is not defined. Defining it now as <ltx:ERROR/>	revtex4-1.cls
+1806.08417	\delimsize The token T_CS[\delimsize] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1807.10553	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	article.cls
+1808.01814	\lx@end@gen@cases Attempt to close boxing group; current frame is non-boxing group due to T_CS[\begi	aa.cls
+1808.03779	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	revtex4-1.cls
+1809.02527	} A closing } was supposed to be here	article.cls
+1810.12355	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	spie.cls
+1811.05702	\GenericError Package etoolbox Error: Toggle 'blx@citation' already defined	article.cls
+1811.12184	\@nil The token T_CS[\@nil] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+1812.01334	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:text>	revtex4-1.cls
+1812.01892	\endgroup Attempt to close a group that switched to mode restricted_horizontal; current frame is mod	IEEEtran.cls
+1812.02049	\box_new:N The token T_CS[\box_new:N] is not defined. Defining it now as <ltx:ERROR/>	revtex4.cls
+1812.04267	<box> A <box> was supposed to be here.	amsart.cls
+adap-org9905005	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+1902.11302	\IEEEoverridecommandlockouts The token T_CS[\IEEEoverridecommandlockouts] is not defined. Defining i	IEEEconf.cls
+alg-geom9505037	\normalshape The token T_CS[\normalshape] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+alg-geom9604020	\subsection The token T_CS[\subsection] is not defined. Defining it now as <ltx:ERROR/>	?
+1902.09816	\scAMS The token T_CS[\scAMS] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+astro-ph0004127	\uninger The token T_CS[\uninger] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+alg-geom9604001	\enddocument Attempt to end mode `internal_vertical` in `vertical`	?
+astro-ph0510646	\LoadClass The current command '\LoadClass' can only appear in the preamble	CoAst.cls
+astro-ph0512041	ltx:equation "ltx:equation" isn't allowed in <ltx:date>	revtex4.cls
+astro-ph0612758	\+ The token T_CS[\+] is not defined. Defining it now as <ltx:ERROR/>	?
+astro-ph9308008	\columns The token T_CS[\columns] is not defined. Defining it now as <ltx:ERROR/>	?
+astro-ph9608077	\citeauthoryear The token T_CS[\citeauthoryear] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+astro-ph9610252	\affil The token T_CS[\affil] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+astro-ph9708022	\columns The token T_CS[\columns] is not defined. Defining it now as <ltx:ERROR/>	?
+astro-ph9509018	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:para>	article.cls
+astro-ph9707220	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+astro-ph9811043	\affil The token T_CS[\affil] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+astro-ph9808081	(empty/abort)	article.cls
+astro-ph9902095	\affil The token T_CS[\affil] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+astro-ph0611848	\endgroup Attempt to close a group that switched to mode restricted_horizontal; current frame is mod	aa.cls
+astro-ph9909093	\altaffiltext The token T_CS[\altaffiltext] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+astro-ph9903386	\@add@institute Attempt to close a group that switched to mode math; current frame is mode-switch to	aa.cls
+cmp-lg9407011	\citeauthoryear The token T_CS[\citeauthoryear] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat0002112	\epsfbox The token T_CS[\epsfbox] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+chao-dyn9807038	ltx:XMArray "ltx:XMArray" isn't allowed in <ltx:para>	article.cls
+cond-mat0004060	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:para>	article.cls
+cond-mat0006048	\CITE The token T_CS[\CITE] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat0105023	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+cond-mat0109365	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+cond-mat0109437	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat0110319	\gnuplot The token T_CS[\gnuplot] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat0105079	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat0111039	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat0108473	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+cond-mat0210395	ltx:XMArray "ltx:XMArray" isn't allowed in <ltx:para>	article.cls
+cond-mat0412244	\gtrsim The token T_CS[\gtrsim] is not defined. Defining it now as <ltx:ERROR/>	ptptex.cls
+cond-mat9312047	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat9501085	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+cond-mat9508005	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:bibblock>	article.cls
+cond-mat9611206	\DeclareKeys The token T_CS[\DeclareKeys] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat9808062	\CITE The token T_CS[\CITE] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat9809258	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat9905237	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+cond-mat9909300	\CITE The token T_CS[\CITE] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+cond-mat9907439	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+cond-mat9907459	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat9911130	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+cond-mat9910106	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+funct-an9711006	\columns The token T_CS[\columns] is not defined. Defining it now as <ltx:ERROR/>	?
+gr-qc0105026	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:para>	article.cls
+gr-qc9710034	\address The token T_CS[\address] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+gr-qc9903047	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+gr-qc9902014	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+hep-lat9911021	\setdec The token T_CS[\setdec] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+hep-ph0007146	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+hep-ph0003251	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+hep-ph0003141	\gnuplot The token T_CS[\gnuplot] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+hep-ph0111196	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+hep-ph0106119	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+hep-ph0211359	<box> A <box> was supposed to be here.	article.cls
+hep-ph0304191	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+hep-ph0702114	} Attempt to close a group that switched to mode horizontal; current frame is mode-switch to horizon	elsart3-1.cls
+hep-ph9610404	\address The token T_CS[\address] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+hep-ph9807489	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+hep-ph9707314	ltx:XMArray "ltx:XMArray" isn't allowed in <ltx:table>	article.cls
+hep-ph9812354	\+ The token T_CS[\+] is not defined. Defining it now as <ltx:ERROR/>	?
+hep-ph9906508	ltx:XMArray "ltx:XMArray" isn't allowed in <ltx:para>	article.cls
+hep-th0004167	\npb The token T_CS[\npb] is not defined. Defining it now as <ltx:ERROR/>	jhep.cls
+hep-th0303034	\firstfigfalse The token T_CS[\firstfigfalse] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+hep-th9404085	\columns The token T_CS[\columns] is not defined. Defining it now as <ltx:ERROR/>	?
+hep-th9503228	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+hep-th9609235	\p@renwd The token T_CS[\p@renwd] is not defined. Defining it now as <ltx:ERROR/>	?
+hep-th9705047	\n@space The token T_CS[\n@space] is not defined. Defining it now as <ltx:ERROR/>	?
+hep-th9612221	\n@space The token T_CS[\n@space] is not defined. Defining it now as <ltx:ERROR/>	?
+hep-th9601176	double-superscript Double superscript	article.cls
+hep-th9503104	\+ The token T_CS[\+] is not defined. Defining it now as <ltx:ERROR/>	?
+math0004127	\oo The token T_CS[\oo] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+math0005251	\subsection The token T_CS[\subsection] is not defined. Defining it now as <ltx:ERROR/>	?
+math0302238	\section The token T_CS[\section] is not defined. Defining it now as <ltx:ERROR/>	?
+math0409425	\section The token T_CS[\section] is not defined. Defining it now as <ltx:ERROR/>	?
+math0411005	\DeclareMathOperator The token T_CS[\DeclareMathOperator] is not defined. Defining it now as <ltx:ER	alf-j-l.cls
+math0601451	\endgroup Attempt to close a group that switched to mode horizontal; current frame is mode-switch to	?
+math0606553	\lx The token T_CS[\lx] is not defined. Defining it now as <ltx:ERROR/>	amsart.cls
+math0609151	\copyrightinfo The token T_CS[\copyrightinfo] is not defined. Defining it now as <ltx:ERROR/>	conm-p-l.cls
+math0611842	\thethm The token T_CS[\thethm] is not defined. Defining it now as <ltx:ERROR/>	elsart.cls
+math9712228	\topins The token T_CS[\topins] is not defined. Defining it now as <ltx:ERROR/>	?
+math9805021	\manyby The token T_CS[\manyby] is not defined. Defining it now as <ltx:ERROR/>	?
+math9810139	\magnification The token T_CS[\magnification] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+math-ph0303066	double-subscript Double subscript	iopart.cls
+math-ph0406029	double-subscript Double subscript	report.cls
+nlin0205007	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+nucl-th0010030	\address The token T_CS[\address] is not defined. Defining it now as <ltx:ERROR/>	aipproc2.cls
+nucl-th0210016	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:para>	article.cls
+nucl-th0311071	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+nucl-th9609045	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:p>	article.cls
+nucl-th9706011	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+physics0003098	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+nucl-th9901056	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+physics0111165	\end{equation} Attempt to end mode `display_math` in `math`	article.cls
+physics0104046	ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:p>	article.cls
+q-alg9505016	\columns The token T_CS[\columns] is not defined. Defining it now as <ltx:ERROR/>	?
+quant-ph0211137	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:text>	article.cls
+quant-ph0203083	\gnuplot The token T_CS[\gnuplot] is not defined. Defining it now as <ltx:ERROR/>	article.cls
+math0605199	(empty/abort)	article.cls
+quant-ph9907042	ltx:XMApp "ltx:XMApp" isn't allowed in <ltx:para>	article.cls
+supr-con9608003	\gnuplot The token T_CS[\gnuplot] is not defined. Defining it now as <ltx:ERROR/>	article.cls

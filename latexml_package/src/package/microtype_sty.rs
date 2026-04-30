@@ -5,17 +5,22 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("etoolbox");
 
-  // All microtypography macros are no-ops
+  // All microtypography macros are no-ops.
+  // Perl uses `[]` optional args on the `Set*`/`DisableLigatures` family
+  // (context selectors like `[font name]`); Rust was using `OptionalMatch:*`
+  // which consumes a leading `*` not an optional bracket group. Fix to
+  // match Perl signatures so user-side `\SetProtrusion[ctx]{set}{list}`
+  // parses correctly instead of stranding the `[ctx]` as literal text.
   DefMacro!("\\microtypesetup{}", None);
-  DefMacro!("\\DeclareMicrotypeSet OptionalMatch:* {}{}", None);
-  DefMacro!("\\DeclareMicrotypeSetDefault{}", None);
+  DefMacro!("\\DeclareMicrotypeSet OptionalMatch:* []{}{}", None);
+  DefMacro!("\\DeclareMicrotypeSetDefault[]{}", None);
   DefMacro!("\\DeclareMicrotypeAlias{}{}", None);
-  DefMacro!("\\SetProtrusion OptionalMatch:* {}{}", None);
-  DefMacro!("\\SetTracking OptionalMatch:* {}{}", None);
-  DefMacro!("\\SetExpansion OptionalMatch:* {}{}", None);
-  DefMacro!("\\DisableLigatures OptionalMatch:* {}", None);
-  DefMacro!("\\SetExtraKerning OptionalMatch:* {}{}", None);
-  DefMacro!("\\SetExtraSpacing OptionalMatch:* {}{}", None);
+  DefMacro!("\\SetProtrusion[]{}{}", None);
+  DefMacro!("\\SetTracking[]{}{}", None);
+  DefMacro!("\\SetExpansion[]{}{}", None);
+  DefMacro!("\\DisableLigatures[]{}", None);
+  DefMacro!("\\SetExtraKerning[]{}{}", None);
+  DefMacro!("\\SetExtraSpacing[]{}{}", None);
   // \textls passes through #3 (the body)
   DefMacro!("\\textls OptionalMatch:* []{}", "#3");
   DefMacro!("\\lsstyle", None);

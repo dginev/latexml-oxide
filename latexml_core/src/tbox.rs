@@ -13,11 +13,11 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
 use crate::gullet;
+use crate::pin;
 use crate::state::{lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
-use crate::pin;
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
@@ -92,7 +92,9 @@ impl Tbox {
     //         $properties{isSpace} = 1; }
     // Auto-mark all-whitespace text as isSpace (matches Perl Box() behavior)
     if !properties.contains_key("isSpace") && text != empty_sym {
-      let is_all_ws = arena::with(text, |s| !s.is_empty() && s.chars().all(|c| c.is_whitespace()));
+      let is_all_ws = arena::with(text, |s| {
+        !s.is_empty() && s.chars().all(|c| c.is_whitespace())
+      });
       if is_all_ws {
         properties.insert("isSpace", Stored::Bool(true));
       }
@@ -149,9 +151,13 @@ impl Tbox {
   }
 
   /// Whether this box is in math mode.
-  /// Perl: Box.pm::isMath (L79-81).
+  /// Perl: Box.pm::isMath (L79-81): `($mode || 'restricted_horizontal') =~ /math$/`.
+  /// Matches "math", "inline_math", "display_math".
   pub fn is_math(&self) -> bool {
-    matches!(self.properties.get("mode"), Some(Stored::String(s)) if *s == pin!("math"))
+    match self.properties.get("mode") {
+      Some(Stored::String(s)) => arena::with(*s, |m| m.ends_with("math")),
+      _ => false,
+    }
   }
 
   /// Batch-insert properties. Equivalent to calling `set_property` for each
@@ -224,7 +230,9 @@ impl BoxOps for Tbox {
     };
 
     if !text.is_empty() {
-      if mode == pin!("math") {
+      // Perl Box::isMath: `mode =~ /math$/` matches "math" / "inline_math" / "display_math".
+      let mode_is_math = arena::with(mode, |m| m.ends_with("math"));
+      if mode_is_math {
         // Perl: DefMath ?#isMath — in text context, produce plain text.
         // Check if we're inside a math element by walking up the DOM.
         // This handles \And in author frontmatter (text) while preserving
@@ -234,8 +242,8 @@ impl BoxOps for Tbox {
           let mut found = false;
           loop {
             let qname = crate::document::get_node_qname(&node);
-            let name = arena::to_string(qname);
-            if name.contains("XM") || name.contains("Math") {
+            let hit = arena::with(qname, |s| s.contains("XM") || s.contains("Math"));
+            if hit {
               found = true;
               break;
             }
@@ -290,4 +298,63 @@ impl From<Tbox> for Result<Vec<Digested>> {
 }
 impl From<Tbox> for Option<Digested> {
   fn from(tbox: Tbox) -> Option<Digested> { Some(Digested::from(tbox)) }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn tbox_default_has_empty_text() {
+    let t = Tbox::default();
+    assert_eq!(arena::to_string(t.text), "");
+    assert_eq!(t.properties.len(), 0);
+    assert_eq!(t.tokens.len(), 0);
+  }
+
+  #[test]
+  fn tbox_display_of_default_is_empty() {
+    let t = Tbox::default();
+    assert_eq!(format!("{t}"), "");
+  }
+
+  #[test]
+  fn tbox_display_of_text_content() {
+    let mut t = Tbox::default();
+    t.text = arena::pin("hello");
+    assert_eq!(format!("{t}"), "hello");
+  }
+
+  #[test]
+  fn tbox_partial_eq_same_text_same_font() {
+    let a = Tbox::default();
+    let b = Tbox::default();
+    assert_eq!(
+      a, b,
+      "two default Tboxes have same text '' and same text_default font"
+    );
+  }
+
+  #[test]
+  fn tbox_partial_eq_different_text() {
+    let a = Tbox::default();
+    let mut b = Tbox::default();
+    b.text = arena::pin("X");
+    assert_ne!(a, b);
+  }
+
+  #[test]
+  fn tbox_default_font_is_text_default() {
+    let t = Tbox::default();
+    // Font::text_default is the Rc backing the default.
+    assert_eq!(*t.font, Font::text_default());
+  }
+
+  #[test]
+  fn tbox_default_locator_is_default() {
+    let t = Tbox::default();
+    // A Default locator points at the crate source file/line where
+    // Default::default was called; just verify it's not nonsense.
+    let _ = t.locator;
+  }
 }

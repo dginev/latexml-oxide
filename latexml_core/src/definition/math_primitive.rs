@@ -67,8 +67,8 @@ pub struct MathPrimitiveOptions {
   pub reorder:                bool,
   pub dual:                   bool,
   pub mathstyle:              Option<String>,
-  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation time
-  /// Perl: mathstyle => \&doVariablesizeOp
+  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation
+  /// time Perl: mathstyle => \&doVariablesizeOp
   pub dynamic_mathstyle:      bool,
   pub scriptpos:              Option<String>,
   /// Dynamic scriptpos: compute "mid"/"post" based on current font mathstyle at invocation time
@@ -205,10 +205,16 @@ impl MathPrimitiveOptions {
       h.insert("mode", Stored::String(crate::common::arena::pin_static(m)));
     }
     if let Some(ms) = mathstyle_override {
-      h.insert("mathstyle", Stored::String(crate::common::arena::pin_static(ms)));
+      h.insert(
+        "mathstyle",
+        Stored::String(crate::common::arena::pin_static(ms)),
+      );
     }
     if let Some(sp) = scriptpos_override {
-      h.insert("scriptpos", Stored::String(crate::common::arena::pin_static(sp)));
+      h.insert(
+        "scriptpos",
+        Stored::String(crate::common::arena::pin_static(sp)),
+      );
     }
     h
   }
@@ -323,5 +329,103 @@ impl Definition for MathPrimitive {
     }
     // TODO: Rethink the memoize in this immutable setting
     // self.nargs = Some(nargs);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn math_primitive_options_default_fields() {
+    let o = MathPrimitiveOptions::default();
+    // Spot-check representative fields from the ~30-field struct.
+    assert!(!o.bounded);
+    assert!(!o.is_prefix);
+    assert!(!o.require_math);
+    assert!(!o.forbid_math);
+    assert!(!o.locked);
+    assert!(!o.robust);
+    assert!(!o.protected);
+    assert!(!o.reorder);
+    assert!(!o.dual);
+    assert!(!o.dynamic_mathstyle);
+    assert!(!o.dynamic_scriptpos);
+    assert!(o.nogroup, "nogroup defaults to true (Perl parity)");
+    assert!(!o.hide_content_reversion);
+    assert!(o.name.is_none());
+    assert!(o.meaning.is_none());
+    assert!(o.role.is_none());
+    assert!(o.operator_role.is_none());
+    assert!(o.mathstyle.is_none());
+    assert!(o.scriptpos.is_none());
+    assert!(o.operator_scriptpos.is_none());
+    assert!(o.stretchy.is_none());
+    assert!(o.operator_stretchy.is_none());
+    assert!(o.revert_as.is_none());
+    assert!(o.lpadding.is_none());
+    assert!(o.rpadding.is_none());
+    assert!(o.before_digest.is_empty());
+    assert!(o.after_digest.is_empty());
+  }
+
+  #[test]
+  fn math_primitive_options_partial_eq_by_subset() {
+    // PartialEq compares name + meaning + role only — defaults of
+    // other fields don't affect equality.
+    let mut a = MathPrimitiveOptions::default();
+    let mut b = MathPrimitiveOptions::default();
+    a.name = Some("plus".into());
+    b.name = Some("plus".into());
+    assert!(a == b, "same name equal");
+    // Changing a non-compared field still keeps them equal.
+    a.locked = true;
+    assert!(a == b);
+    // Changing a compared field breaks equality.
+    b.name = Some("times".into());
+    assert!(!(a == b));
+  }
+
+  #[test]
+  fn math_primitive_options_to_hash_stored_empty_default() {
+    // Default options with no string fields set produces an empty
+    // HashMap.
+    let o = MathPrimitiveOptions::default();
+    let h = o.to_hash_stored();
+    assert_eq!(h.len(), 0);
+  }
+
+  #[test]
+  fn math_primitive_options_to_hash_stored_with_fields() {
+    let mut o = MathPrimitiveOptions::default();
+    o.meaning = Some("plus".into());
+    o.name = Some("+".into());
+    let h = o.to_hash_stored();
+    assert!(h.contains_key("meaning"));
+    assert!(h.contains_key("name"));
+    assert!(
+      !h.contains_key("role"),
+      "role=None shouldn't populate the hash"
+    );
+  }
+
+  #[test]
+  fn math_primitive_default_fields() {
+    let m = MathPrimitive::default();
+    assert!(m.paramlist.is_none());
+    assert!(m.replacement.is_none());
+    assert!(m.alias.is_none());
+    assert!(m.nargs.is_none());
+    // options and flags live in m.options, not directly on the struct.
+    assert!(m.options.reversion.is_none());
+    assert!(!m.options.is_prefix);
+  }
+
+  #[test]
+  fn math_primitive_partial_eq_by_cs() {
+    let a = MathPrimitive::default();
+    let b = MathPrimitive::default();
+    // Both defaults have the same cs → equal.
+    assert!(a == b);
   }
 }

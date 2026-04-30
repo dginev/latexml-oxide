@@ -50,7 +50,8 @@ LoadDefinitions!({
   DefMacro!("\\@inpenc@undefined", {
     let enc = lookup_string("INPUT_ENCODING");
     let message = s!(
-      "Keyboard character used is undefined in inputencoding {}", enc
+      "Keyboard character used is undefined in inputencoding {}",
+      enc
     );
     Error!("unexpected", "<char>", message);
   });

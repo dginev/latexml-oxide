@@ -9,9 +9,14 @@ LoadDefinitions!({
   //   which is accessible via show="title"
   //
   // TODO: The star forms prevent nested double links.
+  // Perl L28 passes `enterHorizontal => 1` so \nameref in vertical mode
+  // transitions into horizontal like \ref does. Rust was missing it, so
+  // a bare `\nameref{…}` at the start of a cell or a potential vmode
+  // position could skip the mode flip.
   DefConstructor!("\\nameref OptionalMatch:* Semiverbatim",
   "<ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
     show='title' labelref='#label' _force_font='true'/>",
+  enter_horizontal => true,
   properties => sub[args] {
     let label_arg = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
     Ok(stored_map!(

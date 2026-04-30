@@ -45,7 +45,14 @@ LoadDefinitions!({
   // Perl: dcolumn.sty.ltxml — decimal-aligned columns
   RequirePackage!("array");
 
-  // Perl: \lx@unactivate DefToken — resets mathcode of a character
+  // Perl: \lx@unactivate DefToken — resets mathcode of a character.
+  // Perl kind is DefMacro with an imperative sub body (no token return);
+  // Rust DefPrimitive runs the side effect at stomach time. WISDOM #44:
+  // the two kinds differ under expansion (`\edef` etc.); safe here because
+  // `\lx@unactivate` is only emitted inside `\DC@` expansions that execute
+  // at math-mode stomach time, never captured by `\edef`.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\lx@unactivate` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@unactivate DefToken", sub[(delim_tok)] {
     let delim_str = delim_tok.to_string();
     if let Some(ch) = delim_str.chars().next() {

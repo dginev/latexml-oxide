@@ -40,8 +40,8 @@ pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 #[allow(clippy::large_enum_variant)]
-// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties from having 
-//       the concrete structs in DigestedData vary a lot in size.
+// TODO: Investigate if the outer Rc<> wrap of Digested is enough to avoid performance penalties
+// from having       the concrete structs in DigestedData vary a lot in size.
 pub enum DigestedData {
   /// A TeX Box
   TBox(RefCell<Tbox>),
@@ -184,7 +184,9 @@ impl From<Whatsit> for Digested {
 }
 impl From<Alignment> for Digested {
   fn from(value: Alignment) -> Digested {
-    Digested(Rc::new(DigestedData::Alignment(Box::new(RefCell::new(value)))))
+    Digested(Rc::new(DigestedData::Alignment(Box::new(RefCell::new(
+      value,
+    )))))
   }
 }
 impl From<KeyVals> for Digested {
@@ -196,9 +198,7 @@ impl From<RegisterValue> for Digested {
   }
 }
 impl From<Comment> for Digested {
-  fn from(value: Comment) -> Digested {
-    Digested(Rc::new(DigestedData::Comment(value)))
-  }
+  fn from(value: Comment) -> Digested { Digested(Rc::new(DigestedData::Comment(value))) }
 }
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
@@ -422,7 +422,9 @@ impl BoxOps for Digested {
       KeyVals(ref kvs) => kvs.compute_size(options),
       Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
       Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
+      Postponed(_) | RegisterValue(_) | Comment(_) => {
+        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      },
     }
   }
 }
@@ -498,19 +500,24 @@ impl Digested {
       Comment(_) => true,
       TBox(ref b) => {
         let b = b.borrow();
-        if b.get_property_bool("isEmpty") || b.get_property_bool("isSpace")
+        if b.get_property_bool("isEmpty")
+          || b.get_property_bool("isSpace")
           || b.get_property_bool("alignmentSkippable")
         {
           true
         } else {
           // Perl: getString, check if only whitespace
-          b.get_string().ok().map(|s| s.trim().is_empty()).unwrap_or(false)
+          b.get_string()
+            .ok()
+            .map(|s| s.trim().is_empty())
+            .unwrap_or(false)
         }
       },
       List(ref l) => l.borrow().boxes.iter().all(|d| d.is_skippable()),
       Whatsit(ref w) => {
         let w = w.borrow();
-        if w.get_property_bool("isEmpty") || w.get_property_bool("isSpace")
+        if w.get_property_bool("isEmpty")
+          || w.get_property_bool("isSpace")
           || w.get_property_bool("alignmentSkippable")
         {
           true
@@ -570,5 +577,89 @@ impl Digested {
     } else {
       None
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn digested_from_tokens_roundtrip() {
+    let ts = Tokens::new(vec![]);
+    let d: Digested = ts.into();
+    // Default variant is Postponed for raw Tokens.
+    match &*d.0 {
+      DigestedData::Postponed(_) => {},
+      other => panic!("expected Postponed, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_string_is_postponed_tokens() {
+    let d: Digested = "abc".to_string().into();
+    match &*d.0 {
+      DigestedData::Postponed(_) => {},
+      other => panic!("expected Postponed, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_tbox_is_tbox_variant() {
+    let tb = Tbox::default();
+    let d: Digested = tb.into();
+    match &*d.0 {
+      DigestedData::TBox(_) => {},
+      other => panic!("expected TBox, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_list_is_list_variant() {
+    let l = List::default();
+    let d: Digested = l.into();
+    match &*d.0 {
+      DigestedData::List(_) => {},
+      other => panic!("expected List, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_whatsit_is_whatsit_variant() {
+    let w = Whatsit::default();
+    let d: Digested = w.into();
+    match &*d.0 {
+      DigestedData::Whatsit(_) => {},
+      other => panic!("expected Whatsit, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_from_keyvals_is_keyvals_variant() {
+    let kv = KeyVals::default();
+    let d: Digested = kv.into();
+    match &*d.0 {
+      DigestedData::KeyVals(_) => {},
+      other => panic!("expected KeyVals, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn digested_clone_shares_rc() {
+    // Digested is Rc-wrapped; clone should share the same underlying
+    // RefCell, not a deep copy.
+    let tb = Tbox::default();
+    let a: Digested = tb.into();
+    let b = a.clone();
+    // Rc strong count is at least 2 now.
+    assert!(Rc::strong_count(&a.0) >= 2);
+    assert!(Rc::strong_count(&b.0) >= 2);
+  }
+
+  #[test]
+  fn digested_ref_to_option_some() {
+    let d: Digested = Tbox::default().into();
+    let o: Option<Digested> = (&d).into();
+    assert!(o.is_some());
   }
 }

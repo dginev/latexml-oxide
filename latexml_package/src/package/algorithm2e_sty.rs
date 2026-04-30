@@ -23,17 +23,40 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => {
       use crate::engine::latex_constructs::before_float;
-      before_float("algorithm", None);
+      // Perl L73-86: mirror full beforeDigest sequence.
+      DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
+      DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
       Let!("\\par", "\\lx@algo@par");
+      Let!("\\parbox", "\\lx@algo@parbox");
       Let!("\\\\", "\\lx@algo@par");
+      Let!("\\strut", "\\lx@algo@strut");
       // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
       // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
       DefMacro!("\\BlankLine", "\\lx@algo@par");
       DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
+      before_float("algorithm", None);
     },
     after_digest => sub[whatsit] {
       use crate::engine::latex_constructs::after_float;
+      // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
+      // whatsit so afterConstruct's addFloatFrames draws the rectangle.
+      // Without this, algorithm2e's [boxed] / [boxruled] options silently
+      // dropped their frame instructions in Rust.
+      if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
+        if style_tokens.to_string().contains("box") {
+          whatsit.set_property("frame", Stored::from("boxed"));
+        }
+      }
       after_float(whatsit);
+    },
+    // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
+    // Pulls the frame from properties (set above for boxed/boxruled options)
+    // and dispatches to float_sty's add_float_frames helper.
+    after_construct => sub[document, whatsit] {
+      let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
+      if !style.is_empty() {
+        crate::package::float_sty::add_float_frames(document, &style)?;
+      }
     }
   );
   // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
@@ -49,7 +72,19 @@ LoadDefinitions!({
   DefMacro!("\\@marker{}", "");
 
   // Par dedup — Perl L109-116
-  // Conditional that prevents double-\par from producing blank lines
+  // Conditional that prevents double-\par from producing blank lines.
+  // Perl's dedup relies on `$STATE->setPrefix/getPrefix('didpar')` via a
+  // DefPrimitiveI+isPrefix pair; Rust has no setPrefix/getPrefix
+  // infrastructure, so the dedup is disabled (conditional never fires,
+  // setpar is a no-op, newpar always takes the else branch). Downstream
+  // callers only use the PAR-marker path, which still emits correctly.
+  //
+  // Intentional divergence (WISDOM #44 class: blocked-on-missing-state
+  // primitive): the \lx@algo@setpar DefPrimitiveI → DefMacro flip is
+  // the only observable footprint of the disabled dedup — when the
+  // setPrefix/getPrefix pair is implemented in Rust, this reverts
+  // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
+  // flags the single L82 entry.
   DefConditional!("\\if@lx@algo@par SkipSpaces");
   DefMacro!("\\lx@algo@setpar", "");
   DefMacro!("\\lx@algo@newpar{}{}", "#2");

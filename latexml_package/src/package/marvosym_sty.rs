@@ -2,18 +2,18 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   // Communication
-  DefPrimitive!("\\Pickup",     "\u{26AA}\u{0327}");
-  DefPrimitive!("\\Letter",     "\u{1F582}");
+  DefPrimitive!("\\Pickup", "\u{26AA}\u{0327}");
+  DefPrimitive!("\\Letter", "\u{1F582}");
   DefPrimitive!("\\Mobilefone", "\u{1F4F1}");
-  DefPrimitive!("\\Telefon",    "\u{260E}");
+  DefPrimitive!("\\Telefon", "\u{260E}");
   // Perl: DefMacro then DefPrimitive — the DefPrimitive overrides
   DefPrimitive!("\\fax", "FAX", bounded => true, font => {family => "sansserif", series => "bold"});
   DefMacro!("\\FAX", None, "\\lx@framed{\\fax}");
-  DefPrimitive!("\\Fax",        "\u{1F4E0}");
+  DefPrimitive!("\\Fax", "\u{1F4E0}");
   DefPrimitive!("\\Faxmachine", "\u{1F4E0}");
-  DefPrimitive!("\\Email",      "\u{1F584}");
-  DefPrimitive!("\\Lightning",  "\u{21AF}");
-  DefPrimitive!("\\EmailCT",    "\u{2607}");
+  DefPrimitive!("\\Email", "\u{1F584}");
+  DefPrimitive!("\\Lightning", "\u{21AF}");
+  DefPrimitive!("\\EmailCT", "\u{2607}");
   Let!("\\Emailct", "\\EmailCT");
 
   // Engineering
@@ -23,8 +23,8 @@ LoadDefinitions!({
   Let!("\\Loosebearing", "\\LooseBearing");
   DefMacro!("\\FixedBearing", None, "\\lx@nounicode{\\FixedBearing}");
   Let!("\\Fixedbearing", "\\FixedBearing");
-  DefPrimitive!("\\LeftTorque",  "\u{2938}");
-  Let!("\\Lefttorque",  "\\LeftTorque");
+  DefPrimitive!("\\LeftTorque", "\u{2938}");
+  Let!("\\Lefttorque", "\\LeftTorque");
   DefPrimitive!("\\RightTorque", "\u{2939}");
   Let!("\\Righttorque", "\\RightTorque");
   DefMacro!("\\Lineload", None, "\\lx@nounicode{\\Lineload}");
@@ -34,60 +34,78 @@ LoadDefinitions!({
 
   DefMacro!("\\Octosteel", None, "\\lx@nounicode{\\Octosteel}");
   Let!("\\OktoSteel", "\\Octosteel");
-  DefPrimitive!("\\HexaSteel",   "\u{2B23}");
-  Let!("\\Hexasteel",   "\\HexaSteel");
+  DefPrimitive!("\\HexaSteel", "\u{2B23}");
+  Let!("\\Hexasteel", "\\HexaSteel");
   DefPrimitive!("\\SquareSteel", "\u{25FC}");
   Let!("\\Squaresteel", "\\SquareSteel");
-  DefPrimitive!("\\RectSteel",   "\u{25AE}");
-  Let!("\\Rectsteel",   "\\RectSteel");
-  DefPrimitive!("\\Circsteel",   "\u{26AB}");
-  Let!("\\CircSteel",   "\\Circsteel");
-  DefPrimitive!("\\SquarePipe",  "\u{25FB}");
-  Let!("\\Squarepipe",  "\\SquarePipe");
-  DefPrimitive!("\\RectPipe",    "\u{25AF}");
-  Let!("\\Rectpipe",    "\\RectPipe");
-  DefPrimitive!("\\CircPipe",    "\u{26AA}");
-  Let!("\\Circpipe",    "\\CircPipe");
+  DefPrimitive!("\\RectSteel", "\u{25AE}");
+  Let!("\\Rectsteel", "\\RectSteel");
+  DefPrimitive!("\\Circsteel", "\u{26AB}");
+  Let!("\\CircSteel", "\\Circsteel");
+  DefPrimitive!("\\SquarePipe", "\u{25FB}");
+  Let!("\\Squarepipe", "\\SquarePipe");
+  DefPrimitive!("\\RectPipe", "\u{25AF}");
+  Let!("\\Rectpipe", "\\RectPipe");
+  DefPrimitive!("\\CircPipe", "\u{26AA}");
+  Let!("\\Circpipe", "\\CircPipe");
 
-  DefPrimitive!("\\lx@mvs@LSteel",                "\u{2517}");
-  DefPrimitive!("\\lx@mvs@RoundedLSteel",         "\u{2514}");
-  DefPrimitive!("\\lx@mvs@TSteel",                "\u{2533}");
-  DefPrimitive!("\\lx@mvs@RoundedTSteel",         "\u{252C}");
-  DefPrimitive!("\\lx@mvs@TTSteel@bottom",        "\u{253B}");
+  DefPrimitive!("\\lx@mvs@LSteel", "\u{2517}");
+  DefPrimitive!("\\lx@mvs@RoundedLSteel", "\u{2514}");
+  DefPrimitive!("\\lx@mvs@TSteel", "\u{2533}");
+  DefPrimitive!("\\lx@mvs@RoundedTSteel", "\u{252C}");
+  DefPrimitive!("\\lx@mvs@TTSteel@bottom", "\u{253B}");
   DefPrimitive!("\\lx@mvs@RoundedTTSteel@bottom", "\u{2534}");
-  DefMacro!("\\LSteel", None,
-    "\\lx@tweaked{yoffset=-0.5ex}{\\lx@mvs@LSteel}");
-  DefMacro!("\\RoundedLSteel", None,
-    "\\lx@tweaked{yoffset=-0.5ex}{\\lx@mvs@RoundedLSteel}");
-  DefMacro!("\\TSteel", None,
-    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@TSteel}");
-  DefMacro!("\\RoundedTSteel", None,
-    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@RoundedTSteel}");
-  DefMacro!("\\TTSteel", None,
-    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@TSteel}\\lx@tweaked{xoffset=-0.6em,yoffset=-0.5ex}{\\lx@mvs@TTSteel@bottom}");
-  DefMacro!("\\RoundedTTSteel", None,
-    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@RoundedTSteel}\\lx@tweaked{xoffset=-0.6em,yoffset=-0.5ex}{\\lx@mvs@RoundedTTSteel@bottom}");
+  DefMacro!(
+    "\\LSteel",
+    None,
+    "\\lx@tweaked{yoffset=-0.5ex}{\\lx@mvs@LSteel}"
+  );
+  DefMacro!(
+    "\\RoundedLSteel",
+    None,
+    "\\lx@tweaked{yoffset=-0.5ex}{\\lx@mvs@RoundedLSteel}"
+  );
+  DefMacro!(
+    "\\TSteel",
+    None,
+    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@TSteel}"
+  );
+  DefMacro!(
+    "\\RoundedTSteel",
+    None,
+    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@RoundedTSteel}"
+  );
+  DefMacro!(
+    "\\TTSteel",
+    None,
+    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@TSteel}\\lx@tweaked{xoffset=-0.6em,yoffset=-0.5ex}{\\lx@mvs@TTSteel@bottom}"
+  );
+  DefMacro!(
+    "\\RoundedTTSteel",
+    None,
+    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@RoundedTSteel}\\lx@tweaked{xoffset=-0.6em,yoffset=-0.5ex}{\\lx@mvs@RoundedTTSteel@bottom}"
+  );
   DefPrimitive!("\\FlatSteel", "\u{2501}");
-  DefPrimitive!("\\Valve",     "\u{25B6}\u{25C0}");
-  Let!("\\Lsteel",         "\\LSteel");
-  Let!("\\RoundedLsteel",  "\\RoundedLSteel");
-  Let!("\\Tsteel",         "\\TSteel");
-  Let!("\\RoundedTsteel",  "\\RoundedTSteel");
-  Let!("\\TTsteel",        "\\TTSteel");
+  DefPrimitive!("\\Valve", "\u{25B6}\u{25C0}");
+  Let!("\\Lsteel", "\\LSteel");
+  Let!("\\RoundedLsteel", "\\RoundedLSteel");
+  Let!("\\Tsteel", "\\TSteel");
+  Let!("\\RoundedTsteel", "\\RoundedTSteel");
+  Let!("\\TTsteel", "\\TTSteel");
   Let!("\\RoundedTTsteel", "\\RoundedTTSteel");
-  Let!("\\Flatsteel",      "\\FlatSteel");
+  Let!("\\Flatsteel", "\\FlatSteel");
 
   // Information
   DefMacro!("\\Industry", None, "\\lx@nounicode{\\Industry}");
-  DefPrimitive!("\\Coffeecup",    "\u{2615}");
+  DefPrimitive!("\\Coffeecup", "\u{2615}");
   DefPrimitive!("\\LeftScissors", "\u{2702}");
-  DefPrimitive!("\\CuttingLine",  "\u{2504}");
+  DefPrimitive!("\\CuttingLine", "\u{2504}");
   DefMacro!("\\RightScissors", None, "\\lx@hflipped{\\LeftScissors}");
   // Bizarre — yes, they're switched!
   Let!("\\Rightscissors", "\\LeftScissors");
-  Let!("\\Leftscissors",  "\\RightScissors");
+  Let!("\\Leftscissors", "\\RightScissors");
   DefPrimitive!("\\Football", "\u{26BD}");
-  DefPrimitive!("\\Bicycle",  "\u{1F6B2}");
+  DefPrimitive!("\\Bicycle", "\u{1F6B2}");
 
   DefPrimitive!("\\lx@mvs@Info", "\u{2139}");
   DefMacro!("\\Info", None, "\\lx@framed{\\lx@mvs@Info}");
@@ -98,27 +116,30 @@ LoadDefinitions!({
   Let!("\\Kutline", "\\CuttingLine");
 
   DefPrimitive!("\\lx@mvs@CutLeft", "\u{2701}");
-  DefMacro!("\\CutLeft", None,
-    "\\lx@mvs@CutLeft\\lx@tweaked{xoffset=-0.8em,yoffset=-0.4ex}{\\CutLine}");
+  DefMacro!(
+    "\\CutLeft",
+    None,
+    "\\lx@mvs@CutLeft\\lx@tweaked{xoffset=-0.8em,yoffset=-0.4ex}{\\CutLine}"
+  );
   DefMacro!("\\CutRight", None, "\\lx@hflipped{\\CutLeft}");
   // Bizarre — yes, they're switched!
   Let!("\\Cutright", "\\CutLeft");
-  Let!("\\Cutleft",  "\\CutRight");
+  Let!("\\Cutleft", "\\CutRight");
 
   DefPrimitive!("\\Wheelchair", "\u{267F}");
-  DefPrimitive!("\\Gentsroom",  "\u{1F6B9}");
+  DefPrimitive!("\\Gentsroom", "\u{1F6B9}");
   DefPrimitive!("\\Ladiesroom", "\u{1F6BA}");
 
-  DefPrimitive!("\\Checkedbox",   "\u{2611}");
-  DefPrimitive!("\\CrossedBox",   "\u{2612}");
+  DefPrimitive!("\\Checkedbox", "\u{2611}");
+  DefPrimitive!("\\CrossedBox", "\u{2612}");
   Let!("\\Crossedbox", "\\CrossedBox");
-  DefPrimitive!("\\HollowBox",    "\u{2610}");
+  DefPrimitive!("\\HollowBox", "\u{2610}");
   DefPrimitive!("\\PointingHand", "\u{261E}");
   Let!("\\Pointinghand", "\\PointingHand");
-  DefPrimitive!("\\WritingHand",  "\u{270D}");
-  Let!("\\Writinghand",  "\\WritingHand");
-  DefPrimitive!("\\MineSign",     "\u{2692}");
-  DefPrimitive!("\\Recycling",    "\u{2672}");
+  DefPrimitive!("\\WritingHand", "\u{270D}");
+  Let!("\\Writinghand", "\\WritingHand");
+  DefPrimitive!("\\MineSign", "\u{2692}");
+  DefPrimitive!("\\Recycling", "\u{2672}");
   DefMacro!("\\PackingWaste", None, "\\lx@nounicode{\\PackingWaste}");
 
   // Laundry
@@ -131,14 +152,23 @@ LoadDefinitions!({
   DefMacro!("\\NoWash", None, "\\lx@nounicode{\\Handwash}");
   Let!("\\Dontwash", "\\NoWash");
   DefPrimitive!("\\Tumbler", "\u{29C7}");
-  DefMacro!("\\NoTumbler", None,
-    "\\Tumbler\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}");
+  DefMacro!(
+    "\\NoTumbler",
+    None,
+    "\\Tumbler\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}"
+  );
   DefPrimitive!("\\lx@mvs@ChemicalCleaning", "\u{25EF}");
-  DefMacro!("\\NoChemicalCleaning", None,
-    "\\lx@mvs@ChemicalCleaning\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}");
+  DefMacro!(
+    "\\NoChemicalCleaning",
+    None,
+    "\\lx@mvs@ChemicalCleaning\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}"
+  );
   DefPrimitive!("\\Bleech", "\u{25B3}");
-  DefMacro!("\\NoBleech", None,
-    "\\Bleech\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}");
+  DefMacro!(
+    "\\NoBleech",
+    None,
+    "\\Bleech\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}"
+  );
   DefPrimitive!("\\CleaningA", "\u{24B6}");
   DefPrimitive!("\\CleaningP", "\u{24C5}");
   DefMacro!("\\CleaningPP", None, "\\underline{\\CleaningP}");
@@ -154,7 +184,11 @@ LoadDefinitions!({
   DefMacro!("\\NoIroning", None, "\\lx@nounicode{\\NoIroning}");
 
   DefMacro!("\\AtNinetyFive", None, "\\lx@nounicode{\\AtNinetyFive}");
-  DefMacro!("\\ShortNinetyFive", None, "\\lx@nounicode{\\ShortNinetyFive}");
+  DefMacro!(
+    "\\ShortNinetyFive",
+    None,
+    "\\lx@nounicode{\\ShortNinetyFive}"
+  );
   DefMacro!("\\AtSixty", None, "\\lx@nounicode{\\AtSixty}");
   DefMacro!("\\ShortSixty", None, "\\lx@nounicode{\\ShortSixty}");
   DefMacro!("\\ShortFifty", None, "\\lx@nounicode{\\ShortFifty}");
@@ -174,17 +208,17 @@ LoadDefinitions!({
   DefPrimitive!("\\EURtm", "\u{20AC}",
     bounded => true, font => {series => "bold"});
   Let!("\\EurDig", "\\EURdig");
-  Let!("\\EurHv",  "\\EURhv");
-  Let!("\\EurCr",  "\\EURcr");
-  Let!("\\EurTm",  "\\EURtm");
-  DefPrimitive!("\\Ecommerce",     "\u{212E}");
+  Let!("\\EurHv", "\\EURhv");
+  Let!("\\EurCr", "\\EURcr");
+  Let!("\\EurTm", "\\EURtm");
+  DefPrimitive!("\\Ecommerce", "\u{212E}");
   DefPrimitive!("\\EstimatedSign", "\u{212E}");
-  DefPrimitive!("\\Shilling",      "\u{00DF}");
+  DefPrimitive!("\\Shilling", "\u{00DF}");
   DefMacro!("\\Denarius", None, "\\lx@nounicode{\\Denarius}");
   DefMacro!("\\Deleatur", None, "\\lx@nounicode{\\Deleatur}");
   DefMacro!("\\Pfund", None, "\\lx@nounicode{\\Pfund}");
   DefPrimitive!("\\EyesDollar", "\u{1F4B2}");
-  DefPrimitive!("\\Florin",     "\u{0192}");
+  DefPrimitive!("\\Florin", "\u{0192}");
 
   // Safety
   DefMacro!("\\Stopsign", None, "\\lx@nounicode{\\Stopsign}");
@@ -194,28 +228,35 @@ LoadDefinitions!({
   DefMacro!("\\Estatically", None, "\\lx@nounicode{\\Estatically}");
   DefMacro!("\\Explosionsafe", None, "\\lx@nounicode{\\Explosionsafe}");
   DefPrimitive!("\\lx@mvs@laser", "\u{2739}");
-  DefMacro!("\\Laserbeam", None,
-    "\\lx@mvs@laser\\lx@tweaked{xoffset=-0.2em}{\\lx@emdash}");
-  DefPrimitive!("\\Biohazard",     "\u{2623}");
+  DefMacro!(
+    "\\Laserbeam",
+    None,
+    "\\lx@mvs@laser\\lx@tweaked{xoffset=-0.2em}{\\lx@emdash}"
+  );
+  DefPrimitive!("\\Biohazard", "\u{2623}");
   DefPrimitive!("\\Radioactivity", "\u{2622}");
   DefMacro!("\\BSEFree", None, "\\lx@nounicode{\\BSEFree}");
   DefMacro!("\\BSEfree", None, "\\lx@nounicode{\\BSEfree}");
 
   // Navigation
-  DefPrimitive!("\\RewindToIndex",  "|\u{25C0}");
-  DefPrimitive!("\\RewindToStart",  "|\u{25C0}\u{25C0}");
-  DefPrimitive!("\\Rewind",         "\u{25C0}");
-  DefPrimitive!("\\Forward",        "\u{25B6}");
-  DefPrimitive!("\\ForwardToEnd",   "\u{25B6}|");
+  DefPrimitive!("\\RewindToIndex", "|\u{25C0}");
+  DefPrimitive!("\\RewindToStart", "|\u{25C0}\u{25C0}");
+  DefPrimitive!("\\Rewind", "\u{25C0}");
+  DefPrimitive!("\\Forward", "\u{25B6}");
+  DefPrimitive!("\\ForwardToEnd", "\u{25B6}|");
   DefPrimitive!("\\ForwardToIndex", "\u{25B6}\u{25B6}|");
-  DefPrimitive!("\\MoveUp",         "\u{25B2}");
-  DefPrimitive!("\\MoveDown",       "\u{25BC}");
-  DefPrimitive!("\\ToTop",          "\u{25B2}\u{0305}");
-  DefPrimitive!("\\ToBottom",       "\u{25BC}\u{0332}");
+  DefPrimitive!("\\MoveUp", "\u{25B2}");
+  DefPrimitive!("\\MoveDown", "\u{25BC}");
+  DefPrimitive!("\\ToTop", "\u{25B2}\u{0305}");
+  DefPrimitive!("\\ToBottom", "\u{25BC}\u{0332}");
 
   // Computers
   DefPrimitive!("\\ComputerMouse", "\u{1F5B0}");
-  DefMacro!("\\SerialInterface", None, "\\lx@nounicode{\\SerialInterface}");
+  DefMacro!(
+    "\\SerialInterface",
+    None,
+    "\\lx@nounicode{\\SerialInterface}"
+  );
   DefPrimitive!("\\Keyboard", "\u{2328}");
   DefMacro!("\\SerialPort", None, "\\lx@nounicode{\\SerialPort}");
   DefMacro!("\\ParallelPort", None, "\\lx@nounicode{\\ParallelPort}");
@@ -270,11 +311,17 @@ LoadDefinitions!({
   DefPrimitive!("\\BarOver", "\u{203E}",
     bounded => true, font => {family => "sansserif", series => "bold"});
   DefPrimitive!("\\lx@mvs@rightarrow", "\u{2192}");
-  DefMacro!("\\arrowOver", None,
-    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@rightarrow}");
-  DefMacro!("\\ArrowOver", None,
-    "\\lx@tweaked{yoffset=0.7ex}{\\lx@mvs@rightarrow}");
-  Let!("\\Vectorarrow",     "\\arrowOver");
+  DefMacro!(
+    "\\arrowOver",
+    None,
+    "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@rightarrow}"
+  );
+  DefMacro!(
+    "\\ArrowOver",
+    None,
+    "\\lx@tweaked{yoffset=0.7ex}{\\lx@mvs@rightarrow}"
+  );
+  Let!("\\Vectorarrow", "\\arrowOver");
   Let!("\\Vectorarrowhigh", "\\ArrowOver");
   // Perl: DefMacro then DefPrimitive — the DefPrimitive overrides
   DefPrimitive!("\\StrikingThrough", "/",
@@ -301,46 +348,48 @@ LoadDefinitions!({
     bounded => true, font => {family => "sansserif", series => "bold"});
 
   // Biology
-  DefPrimitive!("\\Female",        "\u{2640}");
-  DefPrimitive!("\\Male",          "\u{2642}");
+  DefPrimitive!("\\Female", "\u{2640}");
+  DefPrimitive!("\\Male", "\u{2642}");
   DefPrimitive!("\\Hermaphrodite", "\u{26A5}");
-  DefPrimitive!("\\Neutral",       "\u{26AC}");
-  DefPrimitive!("\\FEMALE",        "\u{2640}");
-  DefPrimitive!("\\MALE",          "\u{2642}");
+  DefPrimitive!("\\Neutral", "\u{26AC}");
+  DefPrimitive!("\\FEMALE", "\u{2640}");
+  DefPrimitive!("\\MALE", "\u{2642}");
   DefPrimitive!("\\HERMAPHRODITE", "\u{26A5}");
   DefPrimitive!("\\FemaleFemale", "\u{26A2}");
-  DefPrimitive!("\\MaleMale",     "\u{26A3}");
-  DefPrimitive!("\\FemaleMale",   "\u{26A4}");
+  DefPrimitive!("\\MaleMale", "\u{26A3}");
+  DefPrimitive!("\\FemaleMale", "\u{26A4}");
 
   // Astronomy
-  DefPrimitive!("\\Sun",     "\u{2609}");
-  DefPrimitive!("\\Moon",    "\u{263D}");
+  DefPrimitive!("\\Sun", "\u{2609}");
+  DefPrimitive!("\\Moon", "\u{263D}");
   DefPrimitive!("\\Mercury", "\u{263F}");
-  DefPrimitive!("\\Venus",   "\u{2640}");
-  DefPrimitive!("\\Mars",    "\u{2642}");
+  DefPrimitive!("\\Venus", "\u{2640}");
+  DefPrimitive!("\\Mars", "\u{2642}");
   DefPrimitive!("\\Jupiter", "\u{2643}");
-  DefPrimitive!("\\Saturn",  "\u{2644}");
-  DefPrimitive!("\\Uranus",  "\u{2645}");
+  DefPrimitive!("\\Saturn", "\u{2644}");
+  DefPrimitive!("\\Uranus", "\u{2645}");
   DefPrimitive!("\\Neptune", "\u{2646}");
-  DefPrimitive!("\\Pluto",   "\u{2647}");
-  DefPrimitive!("\\Earth",   "\u{2641}");
+  DefPrimitive!("\\Pluto", "\u{2647}");
+  DefPrimitive!("\\Earth", "\u{2641}");
 
   // Astrology
-  DefPrimitive!("\\Aries",       "\u{2648}");
-  DefPrimitive!("\\Taurus",      "\u{2649}");
-  DefPrimitive!("\\Gemini",      "\u{264A}");
-  DefPrimitive!("\\Cancer",      "\u{264B}");
-  DefPrimitive!("\\Leo",         "\u{264C}");
-  DefPrimitive!("\\Virgo",       "\u{264D}");
-  DefPrimitive!("\\Libra",       "\u{264E}");
-  DefPrimitive!("\\Scorpio",     "\u{264F}");
+  DefPrimitive!("\\Aries", "\u{2648}");
+  DefPrimitive!("\\Taurus", "\u{2649}");
+  DefPrimitive!("\\Gemini", "\u{264A}");
+  DefPrimitive!("\\Cancer", "\u{264B}");
+  DefPrimitive!("\\Leo", "\u{264C}");
+  DefPrimitive!("\\Virgo", "\u{264D}");
+  DefPrimitive!("\\Libra", "\u{264E}");
+  DefPrimitive!("\\Scorpio", "\u{264F}");
   DefPrimitive!("\\Sagittarius", "\u{2650}");
-  DefPrimitive!("\\Capricorn",   "\u{2651}");
-  DefPrimitive!("\\Aquarius",    "\u{2652}");
-  DefPrimitive!("\\Pisces",      "\u{2653}");
+  DefPrimitive!("\\Capricorn", "\u{2651}");
+  DefPrimitive!("\\Aquarius", "\u{2652}");
+  DefPrimitive!("\\Pisces", "\u{2653}");
 
-  DefMacro!("\\Zodiac{}",
-    "\\ifcase#1\\or\\Aries\\or\\Taurus\\or\\Gemini\\or\\Cancer\\or\\Leo\\or\\Virgo\\or\\Libra\\or\\Scorpio\\or\\Sagittarius\\or\\Capricorn\\or\\Aquarius\\or\\Pisces\\else???\\fi");
+  DefMacro!(
+    "\\Zodiac{}",
+    "\\ifcase#1\\or\\Aries\\or\\Taurus\\or\\Gemini\\or\\Cancer\\or\\Leo\\or\\Virgo\\or\\Libra\\or\\Scorpio\\or\\Sagittarius\\or\\Capricorn\\or\\Aquarius\\or\\Pisces\\else???\\fi"
+  );
 
   // Others
   DefPrimitive!("\\YinYang", "\u{262F}");
@@ -353,25 +402,25 @@ LoadDefinitions!({
     bounded => true, font => {family => "sansserif", series => "bold"});
   DefPrimitive!("\\BOLogo", "BO",
     bounded => true, font => {family => "sansserif", series => "bold"});
-  Let!("\\BOLogoL",  "\\BOLogo");
-  Let!("\\BOLogoP",  "\\BOLogo");
+  Let!("\\BOLogoL", "\\BOLogo");
+  Let!("\\BOLogoP", "\\BOLogo");
   Let!("\\FHBOlogo", "\\BOLogo");
-  DefPrimitive!("\\Mundus",    "\u{1F30D}");
-  DefPrimitive!("\\Cross",     "\u{2020}");
+  DefPrimitive!("\\Mundus", "\u{1F30D}");
+  DefPrimitive!("\\Cross", "\u{2020}");
   DefPrimitive!("\\CeltCross", "\u{1F548}");
   Let!("\\Celtcross", "\\CeltCross");
-  DefPrimitive!("\\Ankh",      "\u{2625}");
+  DefPrimitive!("\\Ankh", "\u{2625}");
 
-  DefPrimitive!("\\Heart",     "\u{2661}");
-  DefPrimitive!("\\CircledA",  "\u{24B6}");
-  DefPrimitive!("\\Bouquet",   "\u{1F395}");
-  DefPrimitive!("\\Frowny",    "\u{2639}");
-  DefPrimitive!("\\Smiley",    "\u{263A}");
+  DefPrimitive!("\\Heart", "\u{2661}");
+  DefPrimitive!("\\CircledA", "\u{24B6}");
+  DefPrimitive!("\\Bouquet", "\u{1F395}");
+  DefPrimitive!("\\Frowny", "\u{2639}");
+  DefPrimitive!("\\Smiley", "\u{263A}");
   DefPrimitive!("\\PeaceDove", "\u{1F54A}");
   DefMacro!("\\Bat", None, "\\lx@nounicode{\\Bat}");
   DefPrimitive!("\\WomanFace", "\u{1F469}");
-  Let!("\\Womanface",   "\\WomanFace");
-  DefPrimitive!("\\ManFace",   "\u{1F468}");
+  Let!("\\Womanface", "\\WomanFace");
+  DefPrimitive!("\\ManFace", "\u{1F468}");
   Let!("\\MartinVogel", "\\ManFace");
 
   // Low-level font accessors — stubs

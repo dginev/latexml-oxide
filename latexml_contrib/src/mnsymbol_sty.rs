@@ -5,6 +5,9 @@ LoadDefinitions!({
   RequirePackage!("eufrak");
   RequirePackage!("amsmath");
   Let!("\\slimits@", "\\nolimits");
-  Warn!("missing_file", "MnSymbol.sty",
-    "MnSymbol.sty is not implemented and will not be interpreted raw.");
+  Warn!(
+    "missing_file",
+    "MnSymbol.sty",
+    "MnSymbol.sty is not implemented and will not be interpreted raw."
+  );
 });

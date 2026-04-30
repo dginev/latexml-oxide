@@ -12,4 +12,5 @@ crate-type = ["lib"]
 [dependencies]
 latexml_core = {path = "../latexml_core"}
 latexml_codegen = {path = "../latexml_codegen"}
+latexml_engine = {path = "../latexml_engine"}
 latexml_package = {path = "../latexml_package"}

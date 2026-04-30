@@ -1,5 +1,5 @@
+use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
-use crate::engine::latex_constructs::{before_float, after_float};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -76,10 +76,22 @@ LoadDefinitions!({
   DeclareOption!("FIGTOPCAP", "\\ExecuteOptions{figtopcap}\\subfiguretopcaptrue");
   DeclareOption!("TABBOTCAP", "\\ExecuteOptions{tabbotcap}\\subtabletopcapfalse");
   DeclareOption!("TABTOPCAP", "\\ExecuteOptions{tabtopcap}\\subtabletopcaptrue");
+  // Perl L96-105 / L106-115: 'loose' and 'tight' options each include two
+  // `\renewcommand*` lines for `\@thesubfigure` / `\@thesubtable` that
+  // adjust the separator between the subfigure label and its caption
+  // text. The prior Rust port dropped those lines, so a document using
+  // `\usepackage[loose]{subfigure}` got the length/skip adjustments but
+  // no caption-separator change. Restore the Perl-matching behavior.
   DeclareOption!("loose",
-    "\\subfigtopskip=10\\p@ \\subfigcapskip=10\\p@ \\subfigcaptopadj=0\\p@ \\subfigbottomskip=10\\p@ \\subfigcapmargin=10\\p@ \\subfiglabelskip=0.33em \\sf@tightfalse");
+    "\\subfigtopskip=10\\p@ \\subfigcapskip=10\\p@ \\subfigcaptopadj=0\\p@ \\subfigbottomskip=10\\p@ \\subfigcapmargin=10\\p@ \\subfiglabelskip=0.33em \
+     \\renewcommand*{\\@thesubfigure}{\\thesubfigure\\space}\
+     \\renewcommand*{\\@thesubtable}{\\thesubtable\\space}\
+     \\sf@tightfalse");
   DeclareOption!("tight",
-    "\\subfigtopskip=5\\p@ \\subfigcapskip=0\\p@ \\subfigcaptopadj=3\\p@ \\subfigbottomskip=5\\p@ \\subfigcapmargin=\\z@ \\subfiglabelskip=0.33em plus 0.07em minus 0.03em \\sf@tighttrue");
+    "\\subfigtopskip=5\\p@ \\subfigcapskip=0\\p@ \\subfigcaptopadj=3\\p@ \\subfigbottomskip=5\\p@ \\subfigcapmargin=\\z@ \\subfiglabelskip=0.33em plus 0.07em minus 0.03em \
+     \\renewcommand*{\\@thesubfigure}{\\thesubfigure\\hskip\\subfiglabelskip}\
+     \\renewcommand*{\\@thesubtable}{\\thesubtable\\hskip\\subfiglabelskip}\
+     \\sf@tighttrue");
 
   Digest!("\\ExecuteOptions{normal,footnotesize,FIGBOTCAP,TABBOTCAP,loose}")?;
   ProcessOptions!();
@@ -125,6 +137,5 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); });
 
   // Perl: DefMacro('\subref OptionalMatch:* Semiverbatim', '\ref{#2}');
-  // Note: OptionalMatch:* blocked by codegen star bug — use simple form
-  DefMacro!("\\subref Semiverbatim", "\\ref{#1}");
+  DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
 });

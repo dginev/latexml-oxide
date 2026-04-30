@@ -30,8 +30,7 @@ LoadDefinitions!({
       // Insert properties from LONGTABLE_PROPERTIES
       if let Some(Stored::HashStored(ref map)) = lookup_value("LONGTABLE_PROPERTIES") {
         for (k, v) in map.iter() {
-          let key = arena::to_string(*k);
-          whatsit.set_property(&key, v.clone());
+          arena::with(*k, |key| whatsit.set_property(key, v.clone()));
         }
       }
       // Insert head captions (from \endfirsthead or \endhead)
@@ -179,10 +178,18 @@ fn longtable_bindings(template: Template) -> Result<()> {
   let mut props = SymHashMap::default();
   props.insert("guess_headers", Stored::Bool(false));
   tabular_bindings(template, props, HashMap::default())?;
-  state::let_i(&T_CS!("\\endfirsthead"), &T_CS!("\\lx@longtable@endfirsthead"), None);
+  state::let_i(
+    &T_CS!("\\endfirsthead"),
+    &T_CS!("\\lx@longtable@endfirsthead"),
+    None,
+  );
   state::let_i(&T_CS!("\\endhead"), &T_CS!("\\lx@longtable@endhead"), None);
   state::let_i(&T_CS!("\\endfoot"), &T_CS!("\\lx@longtable@endfoot"), None);
-  state::let_i(&T_CS!("\\endlastfoot"), &T_CS!("\\lx@longtable@endlastfoot"), None);
+  state::let_i(
+    &T_CS!("\\endlastfoot"),
+    &T_CS!("\\lx@longtable@endlastfoot"),
+    None,
+  );
   state::let_i(&T_CS!("\\caption"), &T_CS!("\\lx@longtable@caption"), None);
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@longtable@label"), None);
   state::let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill@marker"), None);
@@ -196,7 +203,11 @@ fn longtable_bindings(template: Template) -> Result<()> {
 
   // properties happen too late!!! - do RefStepCounter now
   let props = ref_step_counter("table", false)?;
-  assign_value("LONGTABLE_PROPERTIES", Stored::HashStored(props), Some(Scope::Global));
+  assign_value(
+    "LONGTABLE_PROPERTIES",
+    Stored::HashStored(props),
+    Some(Scope::Global),
+  );
 
   Ok(())
 }

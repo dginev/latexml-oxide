@@ -17,9 +17,10 @@ LoadDefinitions!({
   RequirePackage!("calc");
   // TODO: add support for mhsetup
   // RequirePackage!("mhsetup");
-  RequirePackage!("amsmath");
+  // Perl L43: RequirePackage('amsmath', withoptions => 1)
+  require_package_with_options("amsmath")?;
   // Perl: AtBeginDocument(sub { RequirePackage('graphicx'); });
-  RawTeX!("\\AtBeginDocument{\\RequirePackage{graphicx}}");
+  at_begin_document(TokenizeInternal!(r"\RequirePackage{graphicx}"))?;
 
   //======================================================================
   // 3 — Macros
@@ -46,8 +47,12 @@ LoadDefinitions!({
   // 3.1
   //======================================================================
 
-  // Perl: enterHorizontal => 1 — not supported in template form, but #1 pass-through is fine
-  DefConstructor!("\\mathmbox{}", "#1");
+  // Perl mathtools.sty.ltxml has `enterHorizontal=>1`. The previous
+  // comment claimed enter_horizontal "not supported in template form"
+  // but that's no longer the case — DefConstructor! macro accepts the
+  // flag with bare-template body (see cycle 91 xcolor \fcolorbox,
+  // cycle 88 acmart affiliation fields, etc.). Match Perl on the flag.
+  DefConstructor!("\\mathmbox{}", "#1", enter_horizontal => true);
 
   // \mathllap — zero-width math overlap (left): xoffset = -width
   DefConstructor!("\\mathllap[]{}",
@@ -94,10 +99,15 @@ LoadDefinitions!({
   // passthrough. The visual width "smashing" is cosmetic.
   DefMacro!("\\smashoperator[]{}", "#2");
 
-  // \adjustlimits — Perl L180-199: two subscripted limit operators with aligned
-  // depth/height. The afterDigest computes max depth/height — cosmetic only.
-  // We use the simple macro form since the DefConstructor structure causes
-  // cascading diffs from scriptpos='mid' attributes.
+  // \adjustlimits — Perl mathtools.sty.ltxml L180-199 is a
+  // DefConstructor emitting `<ltx:XMApp>` with `scriptpos='mid'` +
+  // aligned-depth/height attributes computed in afterDigest. Rust uses
+  // a simpler DefMacro expanding to `#1_{#3}#4_{#6}` because the
+  // DefConstructor form caused cascading `scriptpos='mid'` diffs that
+  // propagate through every descendant XMApp's baseline calculation,
+  // and the depth/height alignment is cosmetic-only (both math-
+  // rendering backends ignore it). Intentional DefConstructor →
+  // DefMacro kind divergence (WISDOM #44).
   DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
 
   DefConstructor!("\\SwapAboveDisplaySkip", "");
@@ -112,6 +122,11 @@ LoadDefinitions!({
     use latexml_core::common::def_parser::parse_parameters;
 
     let name = name_arg.to_string();
+    // Perl L231-234: skip redefinition with Error('ignore', ...).
+    let mtstag_cs = T_CS!(&s!("\\@MTStag@{}", name));
+    if !is_definable(&mtstag_cs) {
+      Error!("ignore", mtstag_cs, "Ignoring redefinition (\\newtagform) of '{}'", name);
+    } else {
     // Perl: $open->unlist, $close->unlist, $style->unlist — preserve CS tokens
     let open_toks: Vec<Token> = open_arg.unlist();
     let close_toks: Vec<Token> = close_arg.unlist();
@@ -167,6 +182,7 @@ LoadDefinitions!({
       }))),
       PrimitiveOptions::default(),
     )?;
+    }
   });
 
   // \renewtagform — same logic as \newtagform (Perl skips isDefinable check)
@@ -549,7 +565,8 @@ LoadDefinitions!({
         let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
         crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
-    }
+    },
+    reversion => "\\begin{multlined}#1\\end{multlined}"
   );
   // Perl: \multlined[][] → \@multlined@tmp{name=multlined,...}\@@multlined\lx@begin@alignment
   // The \ifx/#1/ pattern: if #1 is empty, /==/ is true and vattach is omitted.
@@ -597,13 +614,21 @@ LoadDefinitions!({
     "\\lx@ams@cases{name=cases*,meaning=cases,left=\\lx@left\\{,style=\\textstyle,conditionmode=text}");
   DefMacro!("\\csname endcases*\\endcsname", "\\lx@end@ams@cases");
 
-  // TODO: Make this actually shift the equation
+  // Perl mathtools.sty.ltxml L638 defines \MoveEqLeft as bare T_ALIGN —
+  // i.e. the tokenizer-level `&` alignment tab. The string `"&"` below
+  // tokenizes to the same alignment tab under the math catcode regime
+  // where this macro is invoked. Perl's corresponding TODO note
+  // (shift-the-equation layout) is inherited.
   DefMacro!("\\MoveEqLeft[]", "&");
 
-  // TODO: Properly implement \Aboxed
+  // Perl mathtools.sty.ltxml L641 also ships `\Aboxed` as a passthrough
+  // `#1` and flags a proper-implementation TODO. The Rust binding matches
+  // — any improvement belongs upstream (layout/frame rendering).
   DefMacro!("\\Aboxed{}", "#1");
 
-  // TODO: Make these actually do something
+  // Perl mathtools.sty.ltxml L644-645 defines both `\ArrowBetweenLines` and
+  // its star form as empty tokens. The Rust `None` gives the same empty
+  // expansion. Upstream Perl also flags the "make it do something" TODO.
   DefMacro!("\\ArrowBetweenLines[]", None);
   DefMacro!("\\csname ArrowBetweenLines*\\endcsname[]", None);
   DefMacro!("\\vdotswithin{}",
@@ -939,7 +964,13 @@ LoadDefinitions!({
 
   // \newgathered{name}{pre_line}{post_line}{after}
   // Creates \name and \endname environments for gathered-like displays.
-  // Perl: DefMacro sub{} body creates runtime macros.
+  // Perl: DefMacro sub{} body that dynamically DefMacroI-installs runtime
+  // macros. Rust DefPrimitive does the installs at stomach time.
+  // WISDOM #44: NOT universally equivalent — safe here because
+  // `\newgathered` is a user-facing preamble declaration, not something
+  // that flows through `\edef`.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\newgathered` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\newgathered{}{}{}{}", sub[(name, _pre, _post, _after)] {
     let env_name = name.to_string();
     // Create \name macro → begins gathered alignment

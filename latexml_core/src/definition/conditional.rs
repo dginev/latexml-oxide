@@ -125,10 +125,13 @@ impl Definition for Conditional {
       Else | Or => self.invoke_else(),
       Fi => self.invoke_fi(),
       _ => {
-        let message = s!(
-          "Unknown conditional control sequence {}",
-          get_current_token().unwrap().stringify()
-        );
+        // Diagnostic-only path: format the current CS name, or "\\?" if the
+        // current-token register is empty. Never panic here — we are
+        // already in error-emission territory.
+        let cur = get_current_token()
+          .map(|t| t.stringify())
+          .unwrap_or_else(|| String::from("\\?"));
+        let message = s!("Unknown conditional control sequence {}", cur);
         Error!("unexpected", self.cs, message);
         Ok(Tokens!())
       },
@@ -174,8 +177,6 @@ pub struct IfFrame {
 
 impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
-    // TODO!!! Implement in full
-    // Keep a stack of the conditionals we are processing.
     let mut ifid = state::lookup_int("if_count");
     ifid += 1;
     state::assign_value("if_count", ifid, Some(Scope::Global));
@@ -327,7 +328,10 @@ impl Conditional {
       "expected",
       "\\fi",
       self,
-      s!("Missing \\fi or \\else, conditional fell off end. Conditional started at {:?}", _start)
+      s!(
+        "Missing \\fi or \\else, conditional fell off end. Conditional started at {:?}",
+        _start
+      )
     );
     Ok(Tokens!())
   }
@@ -346,8 +350,9 @@ impl Conditional {
     });
     let local_token = get_current_token().unwrap();
     if local_token.with_str(|s| s == "\\else") && stack_frame_opt.is_none() {
-      let stack_len = state::with_value("if_stack", |v| {
-        match v { Some(Stored::VecDequeStored(s)) => s.len(), _ => 0 }
+      let stack_len = state::with_value("if_stack", |v| match v {
+        Some(Stored::VecDequeStored(s)) => s.len(),
+        _ => 0,
       });
       log::warn!("\\else encountered with no active if-frame (stack_len={stack_len})");
     }
@@ -417,12 +422,90 @@ impl Conditional {
         Ok(Tokens!())
       }
     } else {
+      let cur = get_current_token()
+        .map(|t| t.stringify())
+        .unwrap_or_else(|| String::from("\\?"));
       let message = s!(
         "Didn't expect a {:?} since we seem not to be in a conditional",
-        get_current_token().unwrap().stringify()
+        cur
       );
       Error!("unexpected", "fi", message);
       Ok(Tokens!())
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn conditional_type_from_str_known_variants() {
+    assert_eq!(ConditionalType::from("\\if"), ConditionalType::If);
+    assert_eq!(ConditionalType::from("\\unless"), ConditionalType::Unless);
+    assert_eq!(ConditionalType::from("\\else"), ConditionalType::Else);
+    assert_eq!(ConditionalType::from("\\or"), ConditionalType::Or);
+    assert_eq!(ConditionalType::from("\\fi"), ConditionalType::Fi);
+  }
+
+  #[test]
+  fn conditional_type_from_str_unknown_falls_back_to_if() {
+    // The match's default arm is `_ => If`, not Unknown — that's a
+    // surprising but documented behavior in the source. Lock it in.
+    assert_eq!(ConditionalType::from("\\foo"), ConditionalType::If);
+    assert_eq!(ConditionalType::from(""), ConditionalType::If);
+  }
+
+  #[test]
+  fn conditional_type_equality() {
+    assert_eq!(ConditionalType::If, ConditionalType::If);
+    assert_ne!(ConditionalType::If, ConditionalType::Else);
+  }
+
+  #[test]
+  fn conditional_default_fields() {
+    let c = Conditional::default();
+    assert!(c.paramlist.is_none());
+    assert!(c.test.is_none());
+    assert_eq!(c.conditional_type, ConditionalType::Unknown);
+    assert!(c.skipper.is_none());
+  }
+
+  #[test]
+  fn conditional_partial_eq_by_cs() {
+    // PartialEq ignores conditional_type, skipper etc., compares by cs.
+    let a = Conditional::default();
+    let b = Conditional::default();
+    assert!(a == b, "defaults have same cs");
+  }
+
+  #[test]
+  fn conditional_is_expandable() {
+    let c = Conditional::default();
+    assert!(c.is_expandable());
+    // Conditionals are NOT definitions (they're expandable machinery).
+    // Actually the default Object::is_definition returns false; the
+    // trait default applies here.
+  }
+
+  #[test]
+  fn conditional_display_is_cs_text() {
+    let c = Conditional::default();
+    let s = format!("{c}");
+    assert_eq!(s, "Conditional");
+  }
+
+  #[test]
+  fn conditional_get_parameters_none_by_default() {
+    let c = Conditional::default();
+    assert!(c.get_parameters().is_none());
+  }
+
+  #[test]
+  fn conditional_options_default_all_none() {
+    let o = ConditionalOptions::default();
+    assert!(o.scope.is_none());
+    assert!(o.locked.is_none());
+    assert!(o.skipper.is_none());
   }
 }

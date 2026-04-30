@@ -2,6 +2,7 @@
 members = [
   "latexml_core",
   "latexml_codegen",
+  "latexml_engine",
   "latexml_package",
   "latexml_math_parser",
   "latexml_contrib",
@@ -11,4 +12,128 @@ members = [
 resolver = "2"
 
 [profile.release]
-debug = true
+# Local benchmark/deployment profile. This is tuned for the 32 GB / 20-thread
+# laptop used to rebuild the sandbox corpus: keep strong optimized binaries
+# while letting rustc/LLVM use the machine instead of serializing around one
+# huge codegen unit and a fat-LTO link.
+#
+# For a one-off "absolute smallest/fastest binary, build time irrelevant"
+# artifact, use `cargo build --profile maxperf ...`.
+opt-level = 3
+lto = "thin"
+codegen-units = 20
+strip = "symbols"
+debug = false
+incremental = false
+overflow-checks = false
+
+[profile.maxperf]
+inherits = "release"
+# Maximum optimizer scope. This can underuse a 20-thread laptop and take much
+# longer, but preserves the old "every last runtime percent" profile.
+lto = "fat"
+codegen-units = 1
+
+# Test profile — local `cargo test`. Optimised for *diagnosability*,
+# not for build speed or RAM economy. Devs typically have 32-64 GB
+# RAM, fast SSDs, and want the richest debugger experience when a
+# test panics, fails an assertion, or shows a regression. Use as much
+# RAM and CPU as needed.
+#
+# Settings (best practice for "make every failure easy to diagnose"):
+#
+#   opt-level = 1
+#       Minimum non-zero optimization. Keeps test runtime tolerable
+#       for our regression-heavy suite (full TeX inputs through
+#       digester + math parser; -O0 makes whole-test-suite runs
+#       multiple × longer). Stops short of -O2/-O3 because
+#       higher levels inline aggressively, which makes `RUST_BACKTRACE
+#       =1` traces less informative (frames merged, parameters
+#       missing) and breaks gdb single-step on the merged frames.
+#
+#   debug = "full" / debug-assertions = true / overflow-checks = true
+#       Maximum diagnostic information. `debug = "full"` (== `2`)
+#       includes types, locals, line numbers, scope info — what you
+#       want when stepping in gdb/lldb or reading a panic.
+#       `debug-assertions` keeps `debug_assert!(...)` live (catch
+#       invariant violations during testing). `overflow-checks`
+#       traps signed integer overflow as a panic so we see the
+#       offending math instead of silently wrapping.
+#
+#   incremental = true
+#       Devs run `cargo test` over and over. Incremental rebuilds
+#       reuse per-CGU artifacts on single-file edits, cutting
+#       iteration time by 5-10×.
+#
+#   split-debuginfo = "unpacked"
+#       Move the heavy DWARF tables out of the test executable into
+#       sibling .o.dwo files. Faster relinking on tiny edits, and
+#       gdb still finds them via `add-auto-load-safe-path`.
+#
+# codegen-units, lto: inherit cargo's `dev` defaults (256 / off) —
+# both already aligned with "fastest local rebuild" and require no
+# explicit override.
+[profile.test]
+opt-level = 1
+debug = "full"
+debug-assertions = true
+overflow-checks = true
+incremental = true
+split-debuginfo = "unpacked"
+
+# CI profile — GitHub Actions ubuntu-latest (4 vCPU / 16 GB RAM /
+# 50 min). Single goal: prove the test suite passes, using the
+# absolute minimum compile work and RAM. Not a deployment artifact;
+# nobody benchmarks or distributes from this profile.
+#
+# Used by `cargo test --profile ci` from `.github/workflows/CI.yml`.
+# Distinct from `[profile.test]` because local-dev machines have far
+# more RAM (32-64 GB) and benefit from -O2 runtime speed, while CI
+# wants the cheapest possible build.
+#
+# Settings, all chosen for "lowest RAM × fastest build, tests still pass":
+#
+#   inherits = "dev"
+#       The dev profile already optimises for compile speed
+#       (codegen-units = 256, opt-level = 0). We start from there
+#       and just turn off debug info we don't need.
+#
+#   opt-level = 0
+#       Skip the LLVM optimization phase entirely. This is the
+#       biggest single RAM and time saver. The runtime cost (tests
+#       run a few × slower) is far less than the build-time cost
+#       of running -O1+ over the whole dep graph.
+#
+#   debug = false / strip = "symbols"
+#       No DWARF, no symbol table — every byte saved on rustc
+#       output is RAM not held during link, and disk not written.
+#       CI doesn't need backtraces with line numbers; `RUST_BACKTRACE
+#       =1` in CI.yml still prints frame addresses if a test panics.
+#
+#   codegen-units = 256
+#       Maximum split = smallest per-CGU IR = lowest peak rustc
+#       RSS. rustc's internal parallelism is capped at num_cpus = 4
+#       on the runner, so "many tiny CGUs" only helps RAM (only 4
+#       are in flight at once per rustc).
+#
+#   lto = false
+#       LTO would defeat the whole point — pulls every CGU back
+#       into one big module at link time, doubles peak RAM.
+#
+#   incremental = false
+#       No reuse benefit on CI's cold-cache path; incremental files
+#       just consume disk + complicate the per-CGU split.
+#
+# Past CI failures (runs 25051556164, 25055232786) OOM-killed exit
+# 143 inside `latexml_contrib`'s LLVM optimization phase. With
+# opt-level=0 globally there IS no LLVM optimization phase to OOM in
+# — that whole class of failures goes away. No per-package overrides
+# needed.
+[profile.ci]
+inherits = "dev"
+opt-level = 0
+codegen-units = 256
+lto = false
+incremental = false
+debug = false
+strip = "symbols"

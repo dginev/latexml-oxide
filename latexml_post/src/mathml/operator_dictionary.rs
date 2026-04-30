@@ -5,21 +5,21 @@
 //! Maps (operator-content, form) → category → spacing and properties.
 
 /// Spacing constants (in em units, matching MathML Core).
-pub const THIN: f64 = 0.167;  // 3 mu
-pub const MED: f64 = 0.222;   // 4 mu
+pub const THIN: f64 = 0.167; // 3 mu
+pub const MED: f64 = 0.222; // 4 mu
 pub const THICK: f64 = 0.278; // 5 mu
 
 /// Properties returned by the operator dictionary lookup.
 #[derive(Debug, Clone, Default)]
 pub struct OpDictProperties {
-  pub lspace: f64,
-  pub rspace: f64,
-  pub stretchy: bool,
-  pub symmetric: bool,
-  pub largeop: bool,
+  pub lspace:        f64,
+  pub rspace:        f64,
+  pub stretchy:      bool,
+  pub symmetric:     bool,
+  pub largeop:       bool,
   pub movablelimits: bool,
-  pub fence: bool,
-  pub separator: bool,
+  pub fence:         bool,
+  pub separator:     bool,
 }
 
 /// Map LaTeXML role to MathML form.
@@ -29,8 +29,8 @@ pub fn role_to_form(role: &str) -> &'static str {
   match role {
     "OPEN" => "prefix",
     "CLOSE" | "VERTBAR" | "PERIOD" | "POSTFIX" => "postfix",
-    "OPFUNCTION" | "TRIGFUNCTION" | "BIGOP" | "SUMOP" | "INTOP"
-    | "LIMITOP" | "OPERATOR" | "DIFFOP" => "prefix",
+    "OPFUNCTION" | "TRIGFUNCTION" | "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" | "OPERATOR"
+    | "DIFFOP" => "prefix",
     _ => "infix",
   }
 }
@@ -107,8 +107,8 @@ fn lookup_category(content: &str, form: &str) -> &'static str {
 /// Two-ASCII-character operators (Perl's Operators_2_ascii_chars).
 fn two_ascii_char_index(content: &str) -> Option<usize> {
   const OPS: &[&str] = &[
-    "!!", "!=", "&&", "**", "*=", "++", "+=", "--",
-    "-=", "->", "//", "/=", ":=", "<=", "<>", "==", ">=", "||",
+    "!!", "!=", "&&", "**", "*=", "++", "+=", "--", "-=", "->", "//", "/=", ":=", "<=", "<>", "==",
+    ">=", "||",
   ];
   OPS.iter().position(|&op| op == content)
 }
@@ -146,38 +146,59 @@ fn lookup_infix(code: u32) -> Option<&'static str> {
     return Some("A");
   }
   // Category B: additive operators
-  if code == 0x002B || code == 0x002D || code == 0x002F || code == 0x00B1
-    || code == 0x00F7 || code == 0x2044
+  if code == 0x002B
+    || code == 0x002D
+    || code == 0x002F
+    || code == 0x00B1
+    || code == 0x00F7
+    || code == 0x2044
     || (0x2212..=0x2216).contains(&code)
     || (0x2227..=0x222A).contains(&code)
-    || code == 0x2236 || code == 0x2238
+    || code == 0x2236
+    || code == 0x2238
     || (0x228C..=0x228E).contains(&code)
-    || (0x2293..=0x2296).contains(&code) || code == 0x2298
+    || (0x2293..=0x2296).contains(&code)
+    || code == 0x2298
     || (0x229D..=0x229F).contains(&code)
     || (0x22BB..=0x22BD).contains(&code)
     || (0x22CE..=0x22CF).contains(&code)
     || (0x22D2..=0x22D3).contains(&code)
     || (0x2795..=0x2797).contains(&code)
     || (0x2A1F..=0x2A2E).contains(&code)
-    || (0x2A38..=0x2A3A).contains(&code) || code == 0x2A3E
-    || (0x2A40..=0x2A63).contains(&code) || code == 0x2ADB
-    || code == 0x2AF6 || code == 0x2AFB || code == 0x2AFD
+    || (0x2A38..=0x2A3A).contains(&code)
+    || code == 0x2A3E
+    || (0x2A40..=0x2A63).contains(&code)
+    || code == 0x2ADB
+    || code == 0x2AF6
+    || code == 0x2AFB
+    || code == 0x2AFD
   {
     return Some("B");
   }
   // Category C: multiplicative operators
-  if code == 0x0025 || code == 0x002A || code == 0x002E
-    || (0x003F..=0x0040).contains(&code) || code == 0x005E
-    || code == 0x00B7 || code == 0x00D7
-    || code == 0x2022 || code == 0x2043
-    || (0x2217..=0x2219).contains(&code) || code == 0x2240
-    || code == 0x2297 || (0x2299..=0x229B).contains(&code)
-    || (0x22A0..=0x22A1).contains(&code) || code == 0x22BA
+  if code == 0x0025
+    || code == 0x002A
+    || code == 0x002E
+    || (0x003F..=0x0040).contains(&code)
+    || code == 0x005E
+    || code == 0x00B7
+    || code == 0x00D7
+    || code == 0x2022
+    || code == 0x2043
+    || (0x2217..=0x2219).contains(&code)
+    || code == 0x2240
+    || code == 0x2297
+    || (0x2299..=0x229B).contains(&code)
+    || (0x22A0..=0x22A1).contains(&code)
+    || code == 0x22BA
     || (0x22C4..=0x22CC).contains(&code)
     || (0x2305..=0x2306).contains(&code)
-    || code == 0x27CB || code == 0x27CD
-    || (0x2A1D..=0x2A1E).contains(&code) || (0x2A2F..=0x2A3D).contains(&code)
-    || code == 0x2A3F || code == 0x2A50
+    || code == 0x27CB
+    || code == 0x27CD
+    || (0x2A1D..=0x2A1E).contains(&code)
+    || (0x2A2F..=0x2A3D).contains(&code)
+    || code == 0x2A3F
+    || code == 0x2A50
     || (0x2A64..=0x2A65).contains(&code)
   {
     return Some("C");
@@ -195,22 +216,40 @@ fn lookup_infix(code: u32) -> Option<&'static str> {
 
 fn lookup_prefix(code: u32) -> Option<&'static str> {
   // Category D: prefix operators (¬, ∀, ∃, ∇, ±, etc.)
-  if code == 0x0021 || code == 0x002B || code == 0x002D || code == 0x00AC || code == 0x00B1
-    || (0x2200..=0x2201).contains(&code) || (0x2203..=0x2204).contains(&code)
-    || code == 0x2207 || (0x2212..=0x2213).contains(&code)
-    || (0x221F..=0x2222).contains(&code) || (0x2234..=0x2235).contains(&code)
-    || code == 0x223C || (0x22BE..=0x22BF).contains(&code)
-    || code == 0x2310 || code == 0x2319
+  if code == 0x0021
+    || code == 0x002B
+    || code == 0x002D
+    || code == 0x00AC
+    || code == 0x00B1
+    || (0x2200..=0x2201).contains(&code)
+    || (0x2203..=0x2204).contains(&code)
+    || code == 0x2207
+    || (0x2212..=0x2213).contains(&code)
+    || (0x221F..=0x2222).contains(&code)
+    || (0x2234..=0x2235).contains(&code)
+    || code == 0x223C
+    || (0x22BE..=0x22BF).contains(&code)
+    || code == 0x2310
+    || code == 0x2319
   {
     return Some("D");
   }
   // Category F: open fences (prefix stretchy symmetric)
-  if code == 0x0028 || code == 0x005B || code == 0x007B || code == 0x007C
-    || code == 0x2016 || code == 0x2308 || code == 0x230A
-    || code == 0x2329 || code == 0x2772
-    || (0x27E6..=0x27EF).contains(&code) || code == 0x2980
+  if code == 0x0028
+    || code == 0x005B
+    || code == 0x007B
+    || code == 0x007C
+    || code == 0x2016
+    || code == 0x2308
+    || code == 0x230A
+    || code == 0x2329
+    || code == 0x2772
+    || (0x27E6..=0x27EF).contains(&code)
+    || code == 0x2980
     || (0x2983..=0x2999).contains(&code)
-    || code == 0x29D8 || code == 0x29DA || code == 0x29FC
+    || code == 0x29D8
+    || code == 0x29DA
+    || code == 0x29FC
   {
     return Some("F");
   }
@@ -219,9 +258,12 @@ fn lookup_prefix(code: u32) -> Option<&'static str> {
     return Some("H");
   }
   // Category J: sums/products (prefix symmetric largeop movablelimits)
-  if (0x220F..=0x2211).contains(&code) || (0x22C0..=0x22C3).contains(&code)
-    || (0x2A00..=0x2A0A).contains(&code) || (0x2A1D..=0x2A1E).contains(&code)
-    || code == 0x2AFC || code == 0x2AFF
+  if (0x220F..=0x2211).contains(&code)
+    || (0x22C0..=0x22C3).contains(&code)
+    || (0x2A00..=0x2A0A).contains(&code)
+    || (0x2A1D..=0x2A1E).contains(&code)
+    || code == 0x2AFC
+    || code == 0x2AFF
   {
     return Some("J");
   }
@@ -234,32 +276,63 @@ fn lookup_prefix(code: u32) -> Option<&'static str> {
 
 fn lookup_postfix(code: u32) -> Option<&'static str> {
   // Category E: postfix (!, %, degree, primes, etc.)
-  if (0x0021..=0x0022).contains(&code) || (0x0025..=0x0027).contains(&code)
-    || code == 0x0060 || code == 0x00A8 || code == 0x00B0
-    || (0x00B2..=0x00B4).contains(&code) || (0x00B8..=0x00B9).contains(&code)
-    || (0x02CA..=0x02CB).contains(&code) || (0x02D8..=0x02DA).contains(&code)
-    || code == 0x02DD || code == 0x0311 || code == 0x0325 || code == 0x0327
-    || (0x2032..=0x2037).contains(&code) || code == 0x2057
-    || (0x20DB..=0x20DC).contains(&code) || code == 0x23CD
+  if (0x0021..=0x0022).contains(&code)
+    || (0x0025..=0x0027).contains(&code)
+    || code == 0x0060
+    || code == 0x00A8
+    || code == 0x00B0
+    || (0x00B2..=0x00B4).contains(&code)
+    || (0x00B8..=0x00B9).contains(&code)
+    || (0x02CA..=0x02CB).contains(&code)
+    || (0x02D8..=0x02DA).contains(&code)
+    || code == 0x02DD
+    || code == 0x0311
+    || code == 0x0325
+    || code == 0x0327
+    || (0x2032..=0x2037).contains(&code)
+    || code == 0x2057
+    || (0x20DB..=0x20DC).contains(&code)
+    || code == 0x23CD
   {
     return Some("E");
   }
   // Category G: close fences (postfix stretchy symmetric)
-  if code == 0x0029 || code == 0x005D || code == 0x007C || code == 0x007D
-    || code == 0x2016 || code == 0x2309 || code == 0x230B
-    || code == 0x232A || code == 0x2773
-    || code == 0x27E7 || code == 0x27E9 || code == 0x27EB
-    || code == 0x27ED || code == 0x27EF || code == 0x2980
-    || (0x2984..=0x2998).contains(&code) || code == 0x2999
-    || code == 0x29D9 || code == 0x29DB || code == 0x29FD
+  if code == 0x0029
+    || code == 0x005D
+    || code == 0x007C
+    || code == 0x007D
+    || code == 0x2016
+    || code == 0x2309
+    || code == 0x230B
+    || code == 0x232A
+    || code == 0x2773
+    || code == 0x27E7
+    || code == 0x27E9
+    || code == 0x27EB
+    || code == 0x27ED
+    || code == 0x27EF
+    || code == 0x2980
+    || (0x2984..=0x2998).contains(&code)
+    || code == 0x2999
+    || code == 0x29D9
+    || code == 0x29DB
+    || code == 0x29FD
   {
     return Some("G");
   }
   // Category I: postfix stretchy accents
-  if (0x005E..=0x005F).contains(&code) || code == 0x007E || code == 0x00AF
-    || (0x02C6..=0x02C7).contains(&code) || code == 0x02C9 || code == 0x02CD
-    || code == 0x02DC || code == 0x02F7 || code == 0x0302 || code == 0x203E
-    || (0x2322..=0x2323).contains(&code) || (0x23B4..=0x23B5).contains(&code)
+  if (0x005E..=0x005F).contains(&code)
+    || code == 0x007E
+    || code == 0x00AF
+    || (0x02C6..=0x02C7).contains(&code)
+    || code == 0x02C9
+    || code == 0x02CD
+    || code == 0x02DC
+    || code == 0x02F7
+    || code == 0x0302
+    || code == 0x203E
+    || (0x2322..=0x2323).contains(&code)
+    || (0x23B4..=0x23B5).contains(&code)
     || (0x23DC..=0x23E1).contains(&code)
   {
     return Some("I");
@@ -272,20 +345,87 @@ fn lookup_postfix(code: u32) -> Option<&'static str> {
 /// Port of `$Category_data`.
 fn category_to_properties(category: &str) -> OpDictProperties {
   match category {
-    "A" => OpDictProperties { lspace: THICK, rspace: THICK, stretchy: true, ..Default::default() },
-    "B" => OpDictProperties { lspace: MED, rspace: MED, ..Default::default() },
-    "C" => OpDictProperties { lspace: THIN, rspace: THIN, ..Default::default() },
-    "D" => OpDictProperties { lspace: 0.0, rspace: 0.0, ..Default::default() },
-    "E" => OpDictProperties { lspace: 0.0, rspace: 0.0, ..Default::default() },
-    "F" => OpDictProperties { lspace: 0.0, rspace: 0.0, stretchy: true, symmetric: true, ..Default::default() },
-    "G" => OpDictProperties { lspace: 0.0, rspace: 0.0, stretchy: true, symmetric: true, ..Default::default() },
-    "H" => OpDictProperties { lspace: THIN, rspace: THIN, symmetric: true, largeop: true, ..Default::default() },
-    "I" => OpDictProperties { lspace: 0.0, rspace: 0.0, stretchy: true, ..Default::default() },
-    "J" => OpDictProperties { lspace: THIN, rspace: THIN, symmetric: true, largeop: true, movablelimits: true, ..Default::default() },
-    "K" => OpDictProperties { lspace: 0.0, rspace: 0.0, ..Default::default() },
-    "L" => OpDictProperties { lspace: THIN, rspace: 0.0, ..Default::default() },
-    "M" => OpDictProperties { lspace: 0.0, rspace: THIN, ..Default::default() },
-    _ => OpDictProperties { lspace: THICK, rspace: THICK, ..Default::default() }, // Default & ForceDefault
+    "A" => OpDictProperties {
+      lspace: THICK,
+      rspace: THICK,
+      stretchy: true,
+      ..Default::default()
+    },
+    "B" => OpDictProperties {
+      lspace: MED,
+      rspace: MED,
+      ..Default::default()
+    },
+    "C" => OpDictProperties {
+      lspace: THIN,
+      rspace: THIN,
+      ..Default::default()
+    },
+    "D" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      ..Default::default()
+    },
+    "E" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      ..Default::default()
+    },
+    "F" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      stretchy: true,
+      symmetric: true,
+      ..Default::default()
+    },
+    "G" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      stretchy: true,
+      symmetric: true,
+      ..Default::default()
+    },
+    "H" => OpDictProperties {
+      lspace: THIN,
+      rspace: THIN,
+      symmetric: true,
+      largeop: true,
+      ..Default::default()
+    },
+    "I" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      stretchy: true,
+      ..Default::default()
+    },
+    "J" => OpDictProperties {
+      lspace: THIN,
+      rspace: THIN,
+      symmetric: true,
+      largeop: true,
+      movablelimits: true,
+      ..Default::default()
+    },
+    "K" => OpDictProperties {
+      lspace: 0.0,
+      rspace: 0.0,
+      ..Default::default()
+    },
+    "L" => OpDictProperties {
+      lspace: THIN,
+      rspace: 0.0,
+      ..Default::default()
+    },
+    "M" => OpDictProperties {
+      lspace: 0.0,
+      rspace: THIN,
+      ..Default::default()
+    },
+    _ => OpDictProperties {
+      lspace: THICK,
+      rspace: THICK,
+      ..Default::default()
+    }, // Default & ForceDefault
   }
 }
 
@@ -296,14 +436,20 @@ fn is_fence_operator(content: &str) -> bool {
     None => return false,
   };
   (0x0028..=0x0029).contains(&c)
-    || c == 0x005B || c == 0x005D
+    || c == 0x005B
+    || c == 0x005D
     || (0x007B..=0x007D).contains(&c)
     || c == 0x2016
-    || (0x2018..=0x2019).contains(&c) || (0x201C..=0x201D).contains(&c)
-    || (0x2308..=0x230B).contains(&c) || (0x2329..=0x232A).contains(&c)
-    || (0x2772..=0x2773).contains(&c) || (0x27E6..=0x27EF).contains(&c)
-    || c == 0x2980 || (0x2983..=0x2999).contains(&c)
-    || (0x29D8..=0x29DB).contains(&c) || (0x29FC..=0x29FD).contains(&c)
+    || (0x2018..=0x2019).contains(&c)
+    || (0x201C..=0x201D).contains(&c)
+    || (0x2308..=0x230B).contains(&c)
+    || (0x2329..=0x232A).contains(&c)
+    || (0x2772..=0x2773).contains(&c)
+    || (0x27E6..=0x27EF).contains(&c)
+    || c == 0x2980
+    || (0x2983..=0x2999).contains(&c)
+    || (0x29D8..=0x29DB).contains(&c)
+    || (0x29FC..=0x29FD).contains(&c)
 }
 
 /// Check if a character is a separator (comma, semicolon, invisible separator).

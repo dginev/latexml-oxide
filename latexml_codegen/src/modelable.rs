@@ -15,7 +15,11 @@ use latexml_core::{fatal, s};
 
 static TAG_MODEL_LINE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
-static CLASS_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
+// Mirrors Perl Model.pm L149: `m/^([^:=]+):=\(?([^)]*?)\)?$/` — the
+// `\(?…\)?` pair strips the surrounding parens from
+// `classname:=(elt1,elt2,...)` so the elements split cleanly.
+static CLASS_MODEL_LINE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
 static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
@@ -35,6 +39,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     paths:               Some(vec![s!(".")]),
     extensions:          Some(vec![s!("model")]),
     installation_subdir: Some(s!("resources/RelaxNG")),
+    ..Default::default()
   });
 
   let path = match pathname_opt {

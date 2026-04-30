@@ -5,6 +5,14 @@ LoadDefinitions!({
   // Perl: multirow.sty.ltxml
 
   DefPrimitive!("\\multirowsetup", None);
+  // \multirow: structural split into DefMacro wrapper + internal DefPrimitive
+  // setup (2-layer pattern). Perl's single DefPrimitive digests all args;
+  // Rust separates the alignment-cell state mutation (primitive, below)
+  // from the \hbox-wrapped content flow (DefMacro at :52). The split lets
+  // content flow naturally through alignment cell boxes and enables the
+  // text-mode \hbox wrap used by 1004.2626 Table 6. (Not WISDOM #41 —
+  // that entry is about math-mode ParameterType adaptations.)
+  //
   // \lx@multirow@setup: internal primitive that sets rowspan/vattach on current cell.
   // Separated from content so that content flows naturally through alignment cell boxes.
   DefPrimitive!("\\lx@multirow@setup{Float}[]{}", sub[(nrows, attachment, _width)] {
@@ -39,11 +47,27 @@ LoadDefinitions!({
   });
   // \multirow[vpos]{nrows}[bigstruts]{width}[fixup]{content}
   //
-  // Perl multirow.sty.ltxml L38 wraps content in `\hbox{\multirowsetup #6}`
-  // and digests the whole thing. The \hbox forces text mode so nested
-  // `$…$` cleanly switches into math — otherwise in array cell context
-  // (outer math), the inner `$` toggles math OFF, landing the content in
-  // text mode with script errors. arxiv 1004.2626 Table 6 was the witness.
+  // Perl multirow.sty.ltxml L19 defines `\multirow` as DefPrimitive
+  // whose sub body reads the Alignment column, computes rowspan, and
+  // digests the content inline. Rust uses DefMacro instead so that
+  // the content can be wrapped in `\hbox{\multirowsetup #6}` at gullet
+  // expansion time — the \hbox forces text mode so nested `$…$` cleanly
+  // switches into math; without it, inside array-cell (outer math)
+  // context the inner `$` toggles math OFF, landing content in text
+  // mode with script errors (arxiv 1004.2626 Table 6 was the witness).
+  //
+  // Intentional DefPrimitive → DefMacro kind divergence (WISDOM #44).
+  // The rowspan/colspec computation moved into `\lx@multirow@setup`,
+  // a paired DefPrimitive that runs after gullet expansion. Observable
+  // XML remains identical to the Perl port for well-formed input, and
+  // strictly better (no script-mode bleed) for malformed input.
+  // Inside the hbox, `\\` is still bound to the surrounding tabular's
+  // `\lx@alignment@newline` which fires `\lx@begin@alignment` — invalid
+  // in restricted_horizontal mode. multirow's content allows `\\` as a
+  // soft line break (the package stacks rows visually). Rebind `\\` to
+  // `\lx@newline` (horizontal-mode break) at the start of the hbox so
+  // nested `\\` survives. Witness: arXiv:1504.01713 line 694
+  // `\multirow{6}{17pt}{$\alpha_\mathrm{exp}$\\$\alpha_\mathrm{C}$}`.
   DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
-    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\multirowsetup #6}");
+    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\let\\\\\\lx@newline\\multirowsetup #6}");
 });

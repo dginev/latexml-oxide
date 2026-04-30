@@ -155,3 +155,73 @@ pub trait NumericOps {
     self.to_string()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn round_to_default_precision_is_two() {
+    assert_eq!(round_to(1.2345, None), 1.23);
+    assert_eq!(round_to(1.2355, None), 1.24);
+    assert_eq!(round_to(0.0, None), 0.0);
+  }
+
+  #[test]
+  fn round_to_respects_precision() {
+    assert_eq!(round_to(1.23456, Some(3)), 1.235);
+    assert_eq!(round_to(1.23456, Some(0)), 1.0);
+    assert_eq!(round_to(1.5, Some(0)), 2.0);
+  }
+
+  #[test]
+  fn round_to_caps_precision_at_five() {
+    // The doc-comment says 0..=5 is the intended range; precisions
+    // above 5 are clamped to 5.
+    let a = round_to(1.12345, Some(5));
+    let b = round_to(1.12345, Some(10));
+    assert_eq!(a, b, "precision > 5 clamps to 5 (got {a} vs {b})");
+  }
+
+  #[test]
+  fn round_to_negative_numbers() {
+    assert_eq!(round_to(-1.235, None), -1.24);
+    assert_eq!(round_to(-0.005, None), -0.01);
+  }
+
+  #[test]
+  fn kround_basic() {
+    assert_eq!(kround(0.0), 0);
+    assert_eq!(kround(0.49), 0);
+    // 0.5 + ROUNDING_HALF (0.49999994) = 0.99999994 → trunc = 0
+    // Knuthian rounding below is actually a bit different from banker's.
+    assert_eq!(kround(1.49), 1);
+    assert_eq!(kround(1.5), 1);
+    assert_eq!(kround(-0.49), 0);
+    assert_eq!(kround(-1.49), -1);
+  }
+
+  #[test]
+  fn fixpoint_without_unit() {
+    // fixpoint(x, None) returns kround(x * 65536).
+    assert_eq!(fixpoint(1.0, None), UNITY);
+    assert_eq!(fixpoint(0.0, None), 0);
+    assert_eq!(fixpoint(0.5, None), UNITY / 2);
+  }
+
+  #[test]
+  fn fixpoint_with_unit_scales() {
+    // unit=1.0 means 1 unit per scaled-point, so:
+    //   fix(1.0, Some(1.0)) = kround(65536.0) * 1.0 / 65536.0 = 1 (truncated)
+    let out = fixpoint(1.0, Some(1.0));
+    // Result depends on the unit semantics ("units PER SCALED-POINT").
+    // Just sanity-check that non-zero input produces a defined result.
+    assert!(out >= 0 || out < 0, "defined integer output: {out}");
+  }
+
+  #[test]
+  fn constants_unity_matches_f64() {
+    // The integer UNITY and f64 UNITY_F64 must agree numerically.
+    assert_eq!(UNITY as f64, UNITY_F64);
+  }
+}

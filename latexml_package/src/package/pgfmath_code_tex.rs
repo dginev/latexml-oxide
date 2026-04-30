@@ -54,23 +54,36 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
 }
 
 /// Safe divisor — avoid division by zero
-fn pgfmath_divisor(v: f64) -> f64 {
-  if v == 0.0 { EPSILON } else { v }
-}
+fn pgfmath_divisor(v: f64) -> f64 { if v == 0.0 { EPSILON } else { v } }
 
 /// Convert degrees to radians (pgf default is degrees)
-fn pgfmath_arg_radians(arg: f64) -> f64 {
-  arg.to_radians()
-}
+fn pgfmath_arg_radians(arg: f64) -> f64 { arg.to_radians() }
 
 /// Factorial (matches Perl's memoized_pgf_factorial)
 fn pgfmath_factorial(n: i64) -> f64 {
   static FACTS: [f64; 22] = [
-    1.0, 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0,
-    40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0,
-    6227020800.0, 87178291200.0, 1307674368000.0,
-    20922789888000.0, 355687428096000.0, 6402373705728000.0,
-    121645100408832000.0, 2432902008176640000.0, 51090942171709440000.0,
+    1.0,
+    1.0,
+    2.0,
+    6.0,
+    24.0,
+    120.0,
+    720.0,
+    5040.0,
+    40320.0,
+    362880.0,
+    3628800.0,
+    39916800.0,
+    479001600.0,
+    6227020800.0,
+    87178291200.0,
+    1307674368000.0,
+    20922789888000.0,
+    355687428096000.0,
+    6402373705728000.0,
+    121645100408832000.0,
+    2432902008176640000.0,
+    51090942171709440000.0,
   ];
   let n = n.unsigned_abs() as usize;
   if n >= FACTS.len() {
@@ -87,7 +100,9 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
   // First try direct string (avoids expansion overhead for literal numbers)
   let s = arg.to_string();
   let s = strip_leading_double_negation(s.trim());
-  if s == "." { return 0.0; }
+  if s == "." {
+    return 0.0;
+  }
   if let Ok(v) = s.parse::<f64>() {
     return v;
   }
@@ -95,7 +110,9 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
   if let Ok(expanded) = gullet::do_expand(arg.clone()) {
     let s = expanded.to_string();
     let s = strip_leading_double_negation(s.trim());
-    if s == "." { return 0.0; }
+    if s == "." {
+      return 0.0;
+    }
     s.parse::<f64>().unwrap_or(0.0)
   } else {
     0.0
@@ -134,7 +151,9 @@ fn try_simple_number(input: &str) -> Option<String> {
   while pos < bytes.len() && bytes[pos].is_ascii_digit() {
     pos += 1;
   }
-  if pos == int_start { return None; }
+  if pos == int_start {
+    return None;
+  }
   let integer = &input[int_start..pos];
 
   // Optional decimal part: \.[\d.]*
@@ -150,7 +169,9 @@ fn try_simple_number(input: &str) -> Option<String> {
   };
 
   // Must be at end of string
-  if pos != bytes.len() { return None; }
+  if pos != bytes.len() {
+    return None;
+  }
 
   // Format result (Perl L332-344)
   let mut result = input.to_string();
@@ -213,24 +234,78 @@ const PGF_UNITS: &[&str] = &[
 
 /// Check if name is a known built-in function (Perl L720)
 fn is_builtin_function(name: &str) -> bool {
-  matches!(name,
-    "abs" | "acos" | "asin" | "atan2" | "atan" | "angle" | "bin" |
-    "ceil" | "cos" | "cosec" | "cosh" | "cot" | "deg" | "exp" |
-    "factorial" | "floor" | "frac" | "gcd" | "hex" | "Hex" | "int" |
-    "ifthenelse" | "iseven" | "isodd" | "isprime" | "ln" | "log10" |
-    "log2" | "max" | "min" | "mod" | "Mod" | "neg" | "not" | "oct" |
-    "pow" | "rad" | "random" | "real" | "round" | "scalar" | "sec" |
-    "sign" | "sin" | "sinh" | "sqrt" | "subtract" | "tan" | "tanh" |
-    "add" | "and" | "divide" | "div" | "equal" | "greater" | "less" |
-    "multiply" | "notequal" | "notgreater" | "notless" | "or" | "veclen"
+  matches!(
+    name,
+    "abs"
+      | "acos"
+      | "asin"
+      | "atan2"
+      | "atan"
+      | "angle"
+      | "bin"
+      | "ceil"
+      | "cos"
+      | "cosec"
+      | "cosh"
+      | "cot"
+      | "deg"
+      | "exp"
+      | "factorial"
+      | "floor"
+      | "frac"
+      | "gcd"
+      | "hex"
+      | "Hex"
+      | "int"
+      | "ifthenelse"
+      | "iseven"
+      | "isodd"
+      | "isprime"
+      | "ln"
+      | "log10"
+      | "log2"
+      | "max"
+      | "min"
+      | "mod"
+      | "Mod"
+      | "neg"
+      | "not"
+      | "oct"
+      | "pow"
+      | "rad"
+      | "random"
+      | "real"
+      | "round"
+      | "scalar"
+      | "sec"
+      | "sign"
+      | "sin"
+      | "sinh"
+      | "sqrt"
+      | "subtract"
+      | "tan"
+      | "tanh"
+      | "add"
+      | "and"
+      | "divide"
+      | "div"
+      | "equal"
+      | "greater"
+      | "less"
+      | "multiply"
+      | "notequal"
+      | "notgreater"
+      | "notless"
+      | "or"
+      | "veclen"
   )
 }
 
 /// Check if name is a known constant (zero-arity function) (Perl L717)
 fn is_builtin_constant(name: &str) -> bool {
-  matches!(name,
-    "e" | "pi" | "false" | "rand" | "rnd" | "true" |
-    "axis_height" | "rule_thickness"
+  matches!(
+    name,
+    "e" | "pi" | "false" | "rand" | "rnd" | "true" | "axis_height" | "rule_thickness"
   )
 }
 
@@ -244,8 +319,8 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "pi" => PI,
     "false" => 0.0,
     "true" => 1.0,
-    "rand" => 0.0,   // deterministic
-    "rnd" => 0.5,    // deterministic
+    "rand" => 0.0, // deterministic
+    "rnd" => 0.5,  // deterministic
     "axis_height" => 2.5,
     "rule_thickness" => 0.39998,
     // Arithmetic
@@ -275,10 +350,16 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
           a.abs() % b_abs
         }
       }
-    }
+    },
     "sign" => {
-      if a > 0.0 { 1.0 } else if a < 0.0 { -1.0 } else { 0.0 }
-    }
+      if a > 0.0 {
+        1.0
+      } else if a < 0.0 {
+        -1.0
+      } else {
+        0.0
+      }
+    },
     "factorial" => pgfmath_factorial(a as i64),
     // Trigonometric (input in degrees)
     "sin" => pgfmath_arg_radians(a).sin(),
@@ -287,7 +368,7 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "cot" => {
       let r = pgfmath_arg_radians(a);
       r.cos() / pgfmath_divisor(r.sin())
-    }
+    },
     "sec" => 1.0 / pgfmath_divisor(pgfmath_arg_radians(a).cos()),
     "cosec" => 1.0 / pgfmath_divisor(pgfmath_arg_radians(a).sin()),
     "asin" => a.asin().to_degrees(),
@@ -307,32 +388,98 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "deg" => a.to_degrees(),
     "rad" => a.to_radians(),
     // Comparison/logic
-    "equal" => if a == b { 1.0 } else { 0.0 },
-    "greater" => if a > b { 1.0 } else { 0.0 },
-    "less" => if a < b { 1.0 } else { 0.0 },
-    "notequal" => if a != b { 1.0 } else { 0.0 },
-    "notgreater" => if a <= b { 1.0 } else { 0.0 },
-    "notless" => if a >= b { 1.0 } else { 0.0 },
-    "and" => if a != 0.0 && b != 0.0 { 1.0 } else { 0.0 },
-    "or" => if a != 0.0 || b != 0.0 { 1.0 } else { 0.0 },
-    "not" => if a == 0.0 { 1.0 } else { 0.0 },
+    "equal" => {
+      if a == b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "greater" => {
+      if a > b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "less" => {
+      if a < b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "notequal" => {
+      if a != b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "notgreater" => {
+      if a <= b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "notless" => {
+      if a >= b {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "and" => {
+      if a != 0.0 && b != 0.0 {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "or" => {
+      if a != 0.0 || b != 0.0 {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "not" => {
+      if a == 0.0 {
+        1.0
+      } else {
+        0.0
+      }
+    },
     // Misc
     "max" => a.max(b),
     "min" => a.min(b),
-    "iseven" => if (a as i64) % 2 == 0 { 1.0 } else { 0.0 },
-    "isodd" => if (a as i64) % 2 != 0 { 1.0 } else { 0.0 },
+    "iseven" => {
+      if (a as i64) % 2 == 0 {
+        1.0
+      } else {
+        0.0
+      }
+    },
+    "isodd" => {
+      if (a as i64) % 2 != 0 {
+        1.0
+      } else {
+        0.0
+      }
+    },
     "hex" | "Hex" | "oct" | "bin" => a, // formatting functions — return value
     "ifthenelse" => {
       let c = args.get(2).copied().unwrap_or(0.0);
       if a != 0.0 { b } else { c }
-    }
+    },
     "veclen" => (a * a + b * b).sqrt(),
-    "scalar" => a, // just returns the value
+    "scalar" => a,                   // just returns the value
     "frac" => a - (a as i64 as f64), // fractional part
     _ => {
       // Try user-defined function
       pgfmath_apply_user(name, args).unwrap_or(0.0)
-    }
+    },
   }
 }
 
@@ -340,7 +487,10 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
 /// Perl: sub pgfmath_apply (L447-459)
 fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   let cs_name = format!("\\pgfmath{}@", name);
-  let cs_tok = Token { text: arena::pin(&cs_name), code: Catcode::CS };
+  let cs_tok = Token {
+    text: arena::pin(&cs_name),
+    code: Catcode::CS,
+  };
   // Check if the function is defined
   state::lookup_definition(&cs_tok).ok()?.as_ref()?;
   // Build invocation tokens: \pgfmath{name}@{arg1}{arg2}...
@@ -354,9 +504,7 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   // Digest the invocation (sets \pgfmathresult)
   let _ = stomach::digest(Tokens::from(tokens));
   // Read back \pgfmathresult via expansion
-  let result_tokens = gullet::do_expand(
-    Tokens::from(vec![T_CS!("\\pgfmathresult")])
-  ).ok()?;
+  let result_tokens = gullet::do_expand(Tokens::from(vec![T_CS!("\\pgfmathresult")])).ok()?;
   let s = result_tokens.to_string();
   s.trim().parse::<f64>().ok()
 }
@@ -365,13 +513,19 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
 /// Perl: sub pgfmath_checkuserconstant (L540-546)
 fn is_user_constant(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
-  let tok = Token { text: arena::pin(&cs), code: Catcode::CS };
+  let tok = Token {
+    text: arena::pin(&cs),
+    code: Catcode::CS,
+  };
   if state::lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   // Check arity — must be 0 for constant
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
-  let arity_tok = Token { text: arena::pin(&arity_cs), code: Catcode::CS };
+  let arity_tok = Token {
+    text: arena::pin(&arity_cs),
+    code: Catcode::CS,
+  };
   if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
     if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
       let s = expanded.to_string();
@@ -387,12 +541,18 @@ fn is_user_constant(name: &str) -> bool {
 /// Perl: sub pgfmath_checkuserfunction (L548-554)
 fn is_user_function(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
-  let tok = Token { text: arena::pin(&cs), code: Catcode::CS };
+  let tok = Token {
+    text: arena::pin(&cs),
+    code: Catcode::CS,
+  };
   if state::lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
-  let arity_tok = Token { text: arena::pin(&arity_cs), code: Catcode::CS };
+  let arity_tok = Token {
+    text: arena::pin(&arity_cs),
+    code: Catcode::CS,
+  };
   if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
     if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
       let s = expanded.to_string();
@@ -416,8 +576,8 @@ fn is_user_function(name: &str) -> bool {
 //                 FUNCTION0 | NUMBER UNIT | NUMBER | REGISTER
 
 struct PgfMathParser<'a> {
-  input: &'a [u8],
-  pos: usize,
+  input:          &'a [u8],
+  pos:            usize,
   /// Set to true when the parsed expression contains dimension units (pt, cm, etc.)
   /// Used by tikz's \tikz@checkunit via \ifpgfmathunitsdeclared
   units_declared: bool,
@@ -425,7 +585,11 @@ struct PgfMathParser<'a> {
 
 impl<'a> PgfMathParser<'a> {
   fn new(input: &'a str) -> Self {
-    Self { input: input.as_bytes(), pos: 0, units_declared: false }
+    Self {
+      input:          input.as_bytes(),
+      pos:            0,
+      units_declared: false,
+    }
   }
 
   /// Skip whitespace and braces (Perl: <skip:'[\s\{\}]*'>)
@@ -487,14 +651,16 @@ impl<'a> PgfMathParser<'a> {
   /// Try to match a comparison operator (Perl L726)
   fn try_cmp_op(&mut self) -> Option<String> {
     self.skip();
-    if self.pos >= self.input.len() { return None; }
+    if self.pos >= self.input.len() {
+      return None;
+    }
     // Two-char operators
     if self.pos + 1 < self.input.len() {
       let two = [self.input[self.pos], self.input[self.pos + 1]];
       let op = match &two {
         b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||" => {
           Some(std::str::from_utf8(&two).unwrap().to_string())
-        }
+        },
         _ => None,
       };
       if let Some(op) = op {
@@ -508,7 +674,7 @@ impl<'a> PgfMathParser<'a> {
         let op = (self.input[self.pos] as char).to_string();
         self.pos += 1;
         Some(op)
-      }
+      },
       _ => None,
     }
   }
@@ -518,16 +684,18 @@ impl<'a> PgfMathParser<'a> {
     let mut result = self.term()?;
     loop {
       self.skip();
-      if self.pos >= self.input.len() { break; }
+      if self.pos >= self.input.len() {
+        break;
+      }
       match self.input[self.pos] {
         b'+' => {
           self.pos += 1;
           result += self.term()?;
-        }
+        },
         b'-' => {
           self.pos += 1;
           result -= self.term()?;
-        }
+        },
         _ => break,
       }
     }
@@ -539,16 +707,18 @@ impl<'a> PgfMathParser<'a> {
     let mut result = self.factor()?;
     loop {
       self.skip();
-      if self.pos >= self.input.len() { break; }
+      if self.pos >= self.input.len() {
+        break;
+      }
       match self.input[self.pos] {
         b'*' => {
           self.pos += 1;
           result *= self.factor()?;
-        }
+        },
         b'/' => {
           self.pos += 1;
           result /= pgfmath_divisor(self.factor()?);
-        }
+        },
         _ => break,
       }
     }
@@ -568,7 +738,9 @@ impl<'a> PgfMathParser<'a> {
     let mut result = base;
     loop {
       self.skip();
-      if self.pos >= self.input.len() { break; }
+      if self.pos >= self.input.len() {
+        break;
+      }
       match self.input[self.pos] {
         b'!' => {
           // Avoid matching != (comparison)
@@ -577,7 +749,7 @@ impl<'a> PgfMathParser<'a> {
           }
           self.pos += 1;
           result = pgfmath_factorial(result as i64);
-        }
+        },
         b'r' => {
           // Only if not followed by letter (avoid matching identifiers)
           if self.pos + 1 < self.input.len() && self.input[self.pos + 1].is_ascii_alphabetic() {
@@ -585,7 +757,7 @@ impl<'a> PgfMathParser<'a> {
           }
           self.pos += 1;
           result = result.to_degrees();
-        }
+        },
         _ => break,
       }
     }
@@ -595,7 +767,9 @@ impl<'a> PgfMathParser<'a> {
   /// simplefactor — the core atom parser
   fn simplefactor(&mut self) -> Option<f64> {
     self.skip();
-    if self.pos >= self.input.len() { return None; }
+    if self.pos >= self.input.len() {
+      return None;
+    }
 
     // 1. Parenthesized expression: ( formula )
     if self.input[self.pos] == b'(' {
@@ -611,11 +785,11 @@ impl<'a> PgfMathParser<'a> {
       b'-' => {
         self.pos += 1;
         return Some(-self.simplefactor()?);
-      }
+      },
       b'+' => {
         self.pos += 1;
         return self.simplefactor();
-      }
+      },
       b'!' => {
         // Only prefix ! if not != (but != is at CMP level, unlikely here)
         if self.pos + 1 < self.input.len() && self.input[self.pos + 1] == b'=' {
@@ -624,8 +798,8 @@ impl<'a> PgfMathParser<'a> {
         self.pos += 1;
         let val = self.simplefactor()?;
         return Some(if val == 0.0 { 1.0 } else { 0.0 });
-      }
-      _ => {}
+      },
+      _ => {},
     }
 
     // 3. Try number first
@@ -728,7 +902,9 @@ impl<'a> PgfMathParser<'a> {
   /// Try to parse a number (Perl L707-712)
   fn try_number(&mut self) -> Option<f64> {
     self.skip();
-    if self.pos >= self.input.len() { return None; }
+    if self.pos >= self.input.len() {
+      return None;
+    }
 
     // Hex: 0x...
     if self.pos + 1 < self.input.len()
@@ -740,7 +916,9 @@ impl<'a> PgfMathParser<'a> {
       while self.pos < self.input.len() && self.input[self.pos].is_ascii_hexdigit() {
         self.pos += 1;
       }
-      if self.pos == start { return None; }
+      if self.pos == start {
+        return None;
+      }
       let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
       return Some(i64::from_str_radix(s, 16).unwrap_or(0) as f64);
     }
@@ -752,10 +930,14 @@ impl<'a> PgfMathParser<'a> {
     {
       self.pos += 2;
       let start = self.pos;
-      while self.pos < self.input.len() && (self.input[self.pos] == b'0' || self.input[self.pos] == b'1') {
+      while self.pos < self.input.len()
+        && (self.input[self.pos] == b'0' || self.input[self.pos] == b'1')
+      {
         self.pos += 1;
       }
-      if self.pos == start { return None; }
+      if self.pos == start {
+        return None;
+      }
       let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
       return Some(i64::from_str_radix(s, 2).unwrap_or(0) as f64);
     }
@@ -773,8 +955,7 @@ impl<'a> PgfMathParser<'a> {
     // Decimal point
     if self.pos < self.input.len() && self.input[self.pos] == b'.' {
       // Consume dot if we have leading digits OR next is digit
-      if has_digit
-        || (self.pos + 1 < self.input.len() && self.input[self.pos + 1].is_ascii_digit())
+      if has_digit || (self.pos + 1 < self.input.len() && self.input[self.pos + 1].is_ascii_digit())
       {
         self.pos += 1; // consume dot
         // Fractional digits (Perl [\d.]* — allows embedded dots like 1.2.3)
@@ -790,13 +971,18 @@ impl<'a> PgfMathParser<'a> {
       }
     }
 
-    if !has_digit || self.pos == start { return None; }
+    if !has_digit || self.pos == start {
+      return None;
+    }
 
     // Scientific notation: [eE][+-]?\d+
-    if self.pos < self.input.len() && (self.input[self.pos] == b'e' || self.input[self.pos] == b'E') {
+    if self.pos < self.input.len() && (self.input[self.pos] == b'e' || self.input[self.pos] == b'E')
+    {
       let saved = self.pos;
       self.pos += 1;
-      if self.pos < self.input.len() && (self.input[self.pos] == b'+' || self.input[self.pos] == b'-') {
+      if self.pos < self.input.len()
+        && (self.input[self.pos] == b'+' || self.input[self.pos] == b'-')
+      {
         self.pos += 1;
       }
       if self.pos < self.input.len() && self.input[self.pos].is_ascii_digit() {
@@ -815,7 +1001,9 @@ impl<'a> PgfMathParser<'a> {
   /// Try to match a TeX unit (Perl L714-715)
   fn try_unit(&mut self) -> Option<String> {
     self.skip();
-    if self.pos >= self.input.len() { return None; }
+    if self.pos >= self.input.len() {
+      return None;
+    }
     for &unit in PGF_UNITS {
       let bytes = unit.as_bytes();
       if self.pos + bytes.len() <= self.input.len()
@@ -862,7 +1050,9 @@ impl<'a> PgfMathParser<'a> {
     {
       self.pos += 1;
     }
-    std::str::from_utf8(&self.input[start..self.pos]).unwrap().to_string()
+    std::str::from_utf8(&self.input[start..self.pos])
+      .unwrap()
+      .to_string()
   }
 }
 
@@ -923,15 +1113,14 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
     return (result, false);
   }
 
-  // 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/
-  //    Handled by the parser below, since it's a subset of the grammar.
+  // 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/ Handled by the parser below,
+  //    since it's a subset of the grammar.
 
   // 3. Parse with recursive descent (replaces both Perl eval and RecDescent)
   let mut parser = PgfMathParser::new(input);
   if let Some(result) = parser.formula() {
     // Perl L378: forgive trailing ) or ]
-    let remaining = parser.remaining_trimmed()
-      .trim_start_matches([')', ']']);
+    let remaining = parser.remaining_trimmed().trim_start_matches([')', ']']);
     if !remaining.is_empty() {
       // Partial parse — still return what we got
     }
@@ -943,9 +1132,7 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
 }
 
 /// Convenience wrapper that returns only the result string
-pub fn pgfmathparse_eval(raw_input: &str) -> String {
-  pgfmathparse_eval_with_units(raw_input).0
-}
+pub fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
 
 // ==================== Macro Definitions ====================
 
@@ -1099,6 +1286,23 @@ LoadDefinitions!({
   DefMacro!("\\pgfmath@calc@widthof{}", "width(\"#1\")");
   DefMacro!("\\pgfmath@calc@heightof{}", "height(\"#1\")");
   DefMacro!("\\pgfmath@calc@depthof{}", "depth(\"#1\")");
+
+  // Perl pgfmath.code.tex.ltxml L321-327: inside pgfmathparse, seven calc
+  // package CSes are Let'd to the pgfmath@calc@* internals each time the
+  // parser runs. Rust's pgfmathparse is a native function, so we can't
+  // re-bind them per-call. Register the aliases at package-load time so
+  // users who call `\real{3.14}` or `\widthof{\hbox{foo}}` outside a
+  // pgfmathparse context still resolve the CS. If calc.sty is loaded
+  // first, pgfmath intentionally shadows its copies — matching Perl's
+  // "last definition wins" runtime semantics (calc's `\real` would be
+  // replaced on the first pgfmathparse call anyway).
+  Let!("\\real",     "\\pgfmath@calc@real");
+  Let!("\\minof",    "\\pgfmath@calc@minof");
+  Let!("\\maxof",    "\\pgfmath@calc@maxof");
+  Let!("\\ratio",    "\\pgfmath@calc@ratio");
+  Let!("\\widthof",  "\\pgfmath@calc@widthof");
+  Let!("\\heightof", "\\pgfmath@calc@heightof");
+  Let!("\\depthof",  "\\pgfmath@calc@depthof");
 
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })

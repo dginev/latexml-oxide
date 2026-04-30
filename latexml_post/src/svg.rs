@@ -13,7 +13,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::document::{element_children_iter, NodeData, PostDocument};
+use crate::document::{NodeData, PostDocument, element_children_iter};
 use crate::processor::{ProcessResult, Processor};
 
 const SVG_URI: &str = "http://www.w3.org/2000/svg";
@@ -27,21 +27,18 @@ pub struct SVG {
 }
 
 impl Default for SVG {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }
 
 impl SVG {
-  pub fn new() -> Self {
-    SVG { name: "SVG".to_string() }
-  }
+  pub fn new() -> Self { SVG { name: "SVG".to_string() } }
 
   /// Convert a single ltx:picture node to SVG.
   ///
   /// Port of `SVG::ProcessSVG`.
   fn process_svg(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
-    let h = node.get_attribute("height")
+    let h = node
+      .get_attribute("height")
       .map(|s| to_px(&s))
       .unwrap_or(0.0);
 
@@ -75,9 +72,9 @@ impl SVG {
     }
 
     Some(NodeData::Element {
-      tag: "svg:svg".to_string(),
+      tag:        "svg:svg".to_string(),
       attributes: Some(svg_attrs),
-      children: vec![g],
+      children:   vec![g],
     })
   }
 
@@ -103,12 +100,15 @@ impl SVG {
       _ => {
         // Foreign element: wrap in svg:foreignObject
         self.convert_foreign(doc, node)
-      }
+      },
     }
   }
 
   fn convert_picture(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
-    let h = node.get_attribute("height").map(|s| to_px(&s)).unwrap_or(0.0);
+    let h = node
+      .get_attribute("height")
+      .map(|s| to_px(&s))
+      .unwrap_or(0.0);
     let children = self.convert_children(doc, node);
     Some(NodeData::Element {
       tag: "svg:g".to_string(),
@@ -126,8 +126,13 @@ impl SVG {
     if node.get_attribute("framed").as_deref() == Some("true")
       && node.get_attribute("fillframe").as_deref() == Some("true")
     {
-      let fill = node.get_attribute("fill").unwrap_or_else(|| "white".to_string());
-      attrs.insert("filter".to_string(), format!("url(#bg{})", fill.replace('#', "")));
+      let fill = node
+        .get_attribute("fill")
+        .unwrap_or_else(|| "white".to_string());
+      attrs.insert(
+        "filter".to_string(),
+        format!("url(#bg{})", fill.replace('#', "")),
+      );
     }
     let children = self.convert_children(doc, node);
     Some(NodeData::Element {
@@ -186,38 +191,46 @@ impl SVG {
       let mut path_attrs = attrs;
       path_attrs.insert("d".to_string(), d);
       Some(NodeData::Element {
-        tag: "svg:path".to_string(),
+        tag:        "svg:path".to_string(),
         attributes: Some(path_attrs),
-        children: self.convert_children(doc, node),
+        children:   self.convert_children(doc, node),
       })
     } else {
       Some(NodeData::Element {
-        tag: "svg:rect".to_string(),
+        tag:        "svg:rect".to_string(),
         attributes: if attrs.is_empty() { None } else { Some(attrs) },
-        children: self.convert_children(doc, node),
+        children:   self.convert_children(doc, node),
       })
     }
   }
 
   fn convert_circle(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let mut attrs = self.copy_valid_attrs(node);
-    if let Some(x) = node.get_attribute("x") { attrs.insert("cx".to_string(), x); }
-    if let Some(y) = node.get_attribute("y") { attrs.insert("cy".to_string(), y); }
+    if let Some(x) = node.get_attribute("x") {
+      attrs.insert("cx".to_string(), x);
+    }
+    if let Some(y) = node.get_attribute("y") {
+      attrs.insert("cy".to_string(), y);
+    }
     Some(NodeData::Element {
-      tag: "svg:circle".to_string(),
+      tag:        "svg:circle".to_string(),
       attributes: Some(attrs),
-      children: self.convert_children(doc, node),
+      children:   self.convert_children(doc, node),
     })
   }
 
   fn convert_ellipse(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let mut attrs = self.copy_valid_attrs(node);
-    if let Some(x) = node.get_attribute("x") { attrs.insert("cx".to_string(), x); }
-    if let Some(y) = node.get_attribute("y") { attrs.insert("cy".to_string(), y); }
+    if let Some(x) = node.get_attribute("x") {
+      attrs.insert("cx".to_string(), x);
+    }
+    if let Some(y) = node.get_attribute("y") {
+      attrs.insert("cy".to_string(), y);
+    }
     Some(NodeData::Element {
-      tag: "svg:ellipse".to_string(),
+      tag:        "svg:ellipse".to_string(),
       attributes: Some(attrs),
-      children: self.convert_children(doc, node),
+      children:   self.convert_children(doc, node),
     })
   }
 
@@ -234,20 +247,24 @@ impl SVG {
           3 => "Q",
           _ => "T",
         };
-        let rest: String = coords[2..].chunks(2)
+        let rest: String = coords[2..]
+          .chunks(2)
           .map(|p| format!("{:.2},{:.2}", p[0], p.get(1).unwrap_or(&0.0)))
           .collect::<Vec<_>>()
           .join(" ");
-        attrs.insert("d".to_string(), format!("M {:.2},{:.2} {} {}", x0, y0, cmd, rest));
+        attrs.insert(
+          "d".to_string(),
+          format!("M {:.2},{:.2} {} {}", x0, y0, cmd, rest),
+        );
       }
     }
     if node.get_attribute("displayedpoints").is_some() {
       attrs.insert("stroke-dasharray".to_string(), "2".to_string());
     }
     Some(NodeData::Element {
-      tag: "svg:path".to_string(),
+      tag:        "svg:path".to_string(),
       attributes: Some(attrs),
-      children: self.convert_children(doc, node),
+      children:   self.convert_children(doc, node),
     })
   }
 
@@ -259,7 +276,9 @@ impl SVG {
     let a2 = parse_dim(&node.get_attribute("angle2").unwrap_or_default());
 
     let mut bb = a2 - a1;
-    if bb < 0.0 { bb += 360.0; }
+    if bb < 0.0 {
+      bb += 360.0;
+    }
     let large_arc = if bb > 180.0 { 1 } else { 0 };
 
     let a1r = a1 * PI / 180.0;
@@ -275,9 +294,9 @@ impl SVG {
     );
 
     Some(NodeData::Element {
-      tag: "svg:path".to_string(),
+      tag:        "svg:path".to_string(),
       attributes: Some(HashMap::from([("d".to_string(), d)])),
-      children: vec![],
+      children:   vec![],
     })
   }
 
@@ -289,7 +308,9 @@ impl SVG {
     let a2 = parse_dim(&node.get_attribute("angle2").unwrap_or_default());
 
     let mut bb = a2 - a1;
-    if bb < 0.0 { bb += 360.0; }
+    if bb < 0.0 {
+      bb += 360.0;
+    }
     let large_arc = if bb > 180.0 { 1 } else { 0 };
 
     let a1r = a1 * PI / 180.0;
@@ -309,36 +330,38 @@ impl SVG {
     all_attrs.insert("d".to_string(), d);
 
     Some(NodeData::Element {
-      tag: "svg:path".to_string(),
+      tag:        "svg:path".to_string(),
       attributes: Some(all_attrs),
-      children: vec![],
+      children:   vec![],
     })
   }
 
   fn convert_dots(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let points = node.get_attribute("points").unwrap_or_default();
     let coords = explode_coord(&points);
-    let dotsize = node.get_attribute("dotsize").unwrap_or_else(|| "2".to_string());
+    let dotsize = node
+      .get_attribute("dotsize")
+      .unwrap_or_else(|| "2".to_string());
 
     let mut circles = Vec::new();
     for chunk in coords.chunks(2) {
       if chunk.len() == 2 {
         circles.push(NodeData::Element {
-          tag: "svg:circle".to_string(),
+          tag:        "svg:circle".to_string(),
           attributes: Some(HashMap::from([
             ("cx".to_string(), format!("{:.2}", chunk[0])),
             ("cy".to_string(), format!("{:.2}", chunk[1])),
             ("r".to_string(), dotsize.clone()),
           ])),
-          children: vec![],
+          children:   vec![],
         });
       }
     }
 
     Some(NodeData::Element {
-      tag: "svg:g".to_string(),
+      tag:        "svg:g".to_string(),
       attributes: None,
-      children: circles,
+      children:   circles,
     })
   }
 
@@ -373,43 +396,47 @@ impl SVG {
     }
 
     Some(NodeData::Element {
-      tag: "svg:text".to_string(),
+      tag:        "svg:text".to_string(),
       attributes: Some(attrs),
-      children: vec![NodeData::Text(text)],
+      children:   vec![NodeData::Text(text)],
     })
   }
 
   /// Wrap foreign (non-picture) elements in svg:foreignObject.
   fn convert_foreign(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
-    let width = node.get_attribute("width")
+    let width = node
+      .get_attribute("width")
       .or_else(|| node.get_attribute("imagewidth"))
       .unwrap_or_else(|| "1pt".to_string());
-    let height = node.get_attribute("height")
+    let height = node
+      .get_attribute("height")
       .or_else(|| node.get_attribute("imageheight"))
       .unwrap_or_else(|| "1pt".to_string());
-    let depth = node.get_attribute("depth").unwrap_or_else(|| "0pt".to_string());
+    let depth = node
+      .get_attribute("depth")
+      .unwrap_or_else(|| "0pt".to_string());
 
     let h_px = to_px(&height);
     let d_px = to_px(&depth);
     let y = h_px + d_px;
 
     let fo = NodeData::Element {
-      tag: "svg:foreignObject".to_string(),
+      tag:        "svg:foreignObject".to_string(),
       attributes: Some(HashMap::from([
         ("width".to_string(), format!("{:.2}", to_px(&width))),
         ("height".to_string(), format!("{:.2}", h_px)),
         ("overflow".to_string(), "visible".to_string()),
       ])),
-      children: vec![NodeData::XmlNode(node.clone())],
+      children:   vec![NodeData::XmlNode(node.clone())],
     };
 
     Some(NodeData::Element {
-      tag: "svg:g".to_string(),
+      tag:        "svg:g".to_string(),
       attributes: Some(HashMap::from([(
         "transform".to_string(),
         format!("translate(0,{:.2}) scale(1,-1)", y),
       )])),
-      children: vec![fo],
+      children:   vec![fo],
     })
   }
 
@@ -426,17 +453,15 @@ impl SVG {
     let props = node.get_properties();
     for (key, value) in &props {
       match key.as_str() {
-        "d" | "r" | "rx" | "ry" | "x" | "y" | "width" | "height"
-        | "cx" | "cy" | "x1" | "y1" | "x2" | "y2"
-        | "fill" | "stroke" | "stroke-width" | "stroke-dasharray"
-        | "stroke-linecap" | "stroke-linejoin"
-        | "opacity" | "fill-opacity" | "stroke-opacity"
+        "d" | "r" | "rx" | "ry" | "x" | "y" | "width" | "height" | "cx" | "cy" | "x1" | "y1"
+        | "x2" | "y2" | "fill" | "stroke" | "stroke-width" | "stroke-dasharray"
+        | "stroke-linecap" | "stroke-linejoin" | "opacity" | "fill-opacity" | "stroke-opacity"
         | "transform" | "style" | "class" => {
           attrs.insert(key.clone(), value.clone());
-        }
-        "xml:id" => {} // Skip: IDs handled separately
-        k if k.starts_with('_') => {} // Skip internal attributes
-        _ => {}
+        },
+        "xml:id" => {},                // Skip: IDs handled separately
+        k if k.starts_with('_') => {}, // Skip internal attributes
+        _ => {},
       }
     }
     attrs
@@ -444,9 +469,7 @@ impl SVG {
 }
 
 impl Processor for SVG {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:picture[child::*[not(local-name()='svg')]]")
@@ -488,7 +511,10 @@ fn to_px(s: &str) -> f64 {
 /// Parse a dimension string to a float.
 fn parse_dim(s: &str) -> f64 {
   let trimmed = s.trim();
-  let num: String = trimmed.chars().take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+').collect();
+  let num: String = trimmed
+    .chars()
+    .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+')
+    .collect();
   num.parse::<f64>().unwrap_or(0.0)
 }
 
@@ -507,18 +533,135 @@ fn oval_path(part: &str, x: f64, y: f64, w: f64, h: f64, r: f64) -> String {
   match part {
     "t" => format!(
       "M {} {} L {} {} A {} {} 0 0 1 {} {} L {} {} A {} {} 0 0 1 {} {} L {} {}",
-      x, y - h / 2.0,
-      x, y - r, r, r, x + r, y,
-      x + w - r, y, r, r, x + w, y - r,
-      x + w, y - h / 2.0
+      x,
+      y - h / 2.0,
+      x,
+      y - r,
+      r,
+      r,
+      x + r,
+      y,
+      x + w - r,
+      y,
+      r,
+      r,
+      x + w,
+      y - r,
+      x + w,
+      y - h / 2.0
     ),
     "b" => format!(
       "M {} {} L {} {} A {} {} 0 0 1 {} {} L {} {} A {} {} 0 0 1 {} {} L {} {}",
-      x + w, y - h / 2.0,
-      x + w, y - h + r, r, r, x + w - r, y - h,
-      x + r, y - h, r, r, x, y - h + r,
-      x, y - h / 2.0
+      x + w,
+      y - h / 2.0,
+      x + w,
+      y - h + r,
+      r,
+      r,
+      x + w - r,
+      y - h,
+      x + r,
+      y - h,
+      r,
+      r,
+      x,
+      y - h + r,
+      x,
+      y - h / 2.0
     ),
     _ => format!("M {} {} L {} {}", x, y, x + w, y), // fallback
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn approx(a: f64, b: f64) -> bool { (a - b).abs() < 1e-6 }
+
+  #[test]
+  fn to_px_pt_scales_by_dpi_over_72_27() {
+    // 72.27pt = 1 inch = DPI pixels.
+    assert!(approx(to_px("72.27pt"), DPI));
+    assert!(approx(to_px("0pt"), 0.0));
+  }
+
+  #[test]
+  fn to_px_px_is_identity() {
+    assert!(approx(to_px("42px"), 42.0));
+    assert!(approx(to_px("  3.5px "), 3.5));
+  }
+
+  #[test]
+  fn to_px_em_rough_x10() {
+    // Rough approximation per the code comment; lock it in.
+    assert!(approx(to_px("2em"), 20.0));
+  }
+
+  #[test]
+  fn to_px_bare_number_is_f64() {
+    assert!(approx(to_px("7"), 7.0));
+    assert!(approx(to_px("  -1.5 "), -1.5));
+  }
+
+  #[test]
+  fn to_px_unknown_unit_is_zero() {
+    // No known suffix and no leading number → parse fails → 0.0.
+    assert!(approx(to_px("xyz"), 0.0));
+  }
+
+  #[test]
+  fn parse_dim_takes_leading_numeric_prefix() {
+    assert!(approx(parse_dim("12.5pt"), 12.5));
+    assert!(approx(parse_dim("-3.0em"), -3.0));
+    assert!(approx(parse_dim("+7px"), 7.0));
+  }
+
+  #[test]
+  fn parse_dim_no_leading_number_is_zero() {
+    assert!(approx(parse_dim("pt"), 0.0));
+    assert!(approx(parse_dim(""), 0.0));
+  }
+
+  #[test]
+  fn explode_coord_splits_on_space_and_comma() {
+    assert_eq!(explode_coord("1 2 3"), vec![1.0, 2.0, 3.0]);
+    assert_eq!(explode_coord("1,2,3"), vec![1.0, 2.0, 3.0]);
+    assert_eq!(explode_coord("1, 2 3"), vec![1.0, 2.0, 3.0]);
+  }
+
+  #[test]
+  fn explode_coord_skips_empty_and_non_numeric() {
+    // Empty tokens are filtered; non-numeric tokens are filtered by `parse.ok()`.
+    assert_eq!(explode_coord(",, 4  5,,"), vec![4.0, 5.0]);
+    assert_eq!(explode_coord("1 abc 2"), vec![1.0, 2.0]);
+  }
+
+  #[test]
+  fn explode_coord_empty_input_is_empty() {
+    assert!(explode_coord("").is_empty());
+    assert!(explode_coord("   ").is_empty());
+  }
+
+  #[test]
+  fn oval_path_top_starts_and_ends_at_half_height() {
+    // For the 't' branch the path begins at (x, y-h/2) and ends at (x+w, y-h/2).
+    let s = oval_path("t", 10.0, 20.0, 100.0, 40.0, 5.0);
+    assert!(s.starts_with("M 10 0 ")); // y - h/2 = 20 - 20 = 0
+    assert!(s.ends_with(" 110 0")); // x+w, y-h/2
+  }
+
+  #[test]
+  fn oval_path_bottom_traces_reverse_direction() {
+    // For the 'b' branch the path begins at (x+w, y-h/2) and ends at (x, y-h/2).
+    let s = oval_path("b", 10.0, 20.0, 100.0, 40.0, 5.0);
+    assert!(s.starts_with("M 110 0 "));
+    assert!(s.ends_with(" 10 0"));
+  }
+
+  #[test]
+  fn oval_path_unknown_part_uses_simple_line_fallback() {
+    let s = oval_path("?", 0.0, 0.0, 50.0, 10.0, 2.0);
+    assert_eq!(s, "M 0 0 L 50 0");
   }
 }

@@ -9,7 +9,7 @@ LoadDefinitions!({
   DeclareOption!("globalcitecopy", {
     AssignValue!("CITE_UNIT_GLOBAL" => true);
   });
-  DeclareOption!("labelstoglobalaux", { });
+  DeclareOption!("labelstoglobalaux", {});
   DeclareOption!("sectionbib", {
     AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
   });
@@ -19,26 +19,32 @@ LoadDefinitions!({
   ProcessOptions!();
 
   Let!("\\std@cite", "\\cite");
-  DefMacro!("\\cite", "\\@ifstar{\\lx@bibunits@setglobal\\std@cite}{\\lx@bibunits@resetglobal\\std@cite}");
+  DefMacro!(
+    "\\cite",
+    "\\@ifstar{\\lx@bibunits@setglobal\\std@cite}{\\lx@bibunits@resetglobal\\std@cite}"
+  );
 
   // Perl: sets CITE_UNIT to "bibliography buN" if not global
   DefPrimitive!("\\lx@bibunits@setglobal", None,
-    after_digest => {
-      if !lookup_bool("CITE_UNIT_GLOBAL") {
-        let unit = Digest!("\\bu@unitname")?.to_string();
-        assign_value("CITE_UNIT", arena::pin(s!("bibliography {unit}")), None);
-      }
-    });
+  after_digest => {
+    if !lookup_bool("CITE_UNIT_GLOBAL") {
+      let unit = Digest!("\\bu@unitname")?.to_string();
+      assign_value("CITE_UNIT", arena::pin(s!("bibliography {unit}")), None);
+    }
+  });
   // Perl: sets CITE_UNIT to "buN" if not global
   DefPrimitive!("\\lx@bibunits@resetglobal", None,
-    after_digest => {
-      if !lookup_bool("CITE_UNIT_GLOBAL") {
-        let unit = Digest!("\\bu@unitname")?.to_string();
-        assign_value("CITE_UNIT", arena::pin(&unit), None);
-      }
-    });
+  after_digest => {
+    if !lookup_bool("CITE_UNIT_GLOBAL") {
+      let unit = Digest!("\\bu@unitname")?.to_string();
+      assign_value("CITE_UNIT", arena::pin(&unit), None);
+    }
+  });
 
-  DefMacro!("\\defaultbibliography Semiverbatim", "\\gdef\\bu@bibdata{#1}");
+  DefMacro!(
+    "\\defaultbibliography Semiverbatim",
+    "\\gdef\\bu@bibdata{#1}"
+  );
   DefMacro!("\\defaultbibliographystyle{}", "\\gdef\\bu@bibstyle{#1}");
 
   // Perl: \bibliographyunit[\section] — intercepts sectional command to start bib units
@@ -71,20 +77,50 @@ LoadDefinitions!({
 
   // Perl: startBibunit() — increment counter and set CITE_UNIT
   DefPrimitive!("\\lx@startbibunit", None,
-    after_digest => {
-      Digest!("\\global\\advance\\@bibunitauxcnt1")?;
-      let unit = Digest!("\\bu@unitname")?.to_string();
-      let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
-        s!("bibliography {unit}")
-      } else {
-        unit
-      };
-      assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
-    });
+  after_digest => {
+    Digest!("\\global\\advance\\@bibunitauxcnt1")?;
+    let unit = Digest!("\\bu@unitname")?.to_string();
+    let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
+      s!("bibliography {unit}")
+    } else {
+      unit
+    };
+    assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
+  });
 
-  DefEnvironment!("{bibunit}[]", "#body");
+  // Perl bibunits.sty.ltxml L72-76: {bibunit}[] env has afterDigestBegin
+  // that reads the optional arg (falling back to \bu@bibstyle), applies it
+  // via setBibstyle, and then startBibunit()s the counter/CITE_UNIT dance.
+  // Prior Rust stub was "#body" with no hooks, so `\begin{bibunit}[style]`
+  // didn't step counters nor switch the bib style — nested bibliographies
+  // all shared the global CITE_UNIT and original BIBSTYLE.
+  DefEnvironment!("{bibunit}[]", "#body",
+  after_digest_begin => sub[whatsit] {
+    let arg_style = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    let arg_style = arg_style.trim().to_string();
+    let style = if !arg_style.is_empty() {
+      arg_style
+    } else {
+      gullet::do_expand(T_CS!("\\bu@bibstyle")).map(|t| t.to_string()).unwrap_or_default()
+    };
+    if !style.is_empty() {
+      crate::engine::latex_constructs::set_bibstyle(&style);
+    }
+    // startBibunit() equivalent: step counter + set CITE_UNIT.
+    Digest!("\\global\\advance\\@bibunitauxcnt1")?;
+    let unit = Digest!("\\bu@unitname")?.to_string();
+    let cite_unit = if lookup_bool("CITE_UNIT_GLOBAL") {
+      s!("bibliography {unit}")
+    } else {
+      unit
+    };
+    assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
+  });
 
-  DefMacro!("\\putbib[]", "\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}");
+  DefMacro!(
+    "\\putbib[]",
+    "\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}"
+  );
 
   // Perl: make \bibliography reset the backmatter element
   Let!("\\bu@orig@bibliography", "\\bibliography");
@@ -94,9 +130,9 @@ LoadDefinitions!({
   }
   DefMacro!("\\bibliography", "\\lx@reset@bibunit\\bu@orig@bibliography");
   DefPrimitive!("\\lx@reset@bibunit", None,
-    after_digest => {
-      if let Some(orig) = lookup_value("ORIG_BIBUNIT") {
-        state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
-      }
-    });
+  after_digest => {
+    if let Some(orig) = lookup_value("ORIG_BIBUNIT") {
+      state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
+    }
+  });
 });

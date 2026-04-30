@@ -2,7 +2,8 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   // Package options via TeX conditionals
-  TeX!(r#"""
+  TeX!(
+    r#"""
 \newif\if@plnewitem\@plnewitemtrue
 \newif\if@plnewenum\@plnewenumtrue
 \newif\if@plalwaysadjust\@plalwaysadjustfalse
@@ -13,7 +14,8 @@ LoadDefinitions!({
 \newif\if@plpointlessenum\@plpointlessenumfalse
 \newif\if@plflushright\@plflushrighttrue
 \newif\if@plloadcfg\@plloadcfgtrue
-"""#);
+"""#
+  );
 
   DeclareOption!("newitem", "\\@plnewitemtrue");
   DeclareOption!("olditem", "\\@plnewitemfalse");
@@ -177,7 +179,8 @@ LoadDefinitions!({
   );
 
   // pointedenum/pointlessenum
-  TeX!(r#"""
+  TeX!(
+    r#"""
 \def\pl@pointxxxenum{%
   \def\theenumi{\arabic{enumi}}%
   \def\theenumii{\theenumi.\arabic{enumii}}%
@@ -201,5 +204,6 @@ LoadDefinitions!({
 \def\pointlessenum{\pl@pointxxxenum\pl@pointlessenum}
 \if@plpointedenum\pointedenum\fi
 \if@plpointlessenum\pointlessenum\fi
-"""#);
+"""#
+  );
 });

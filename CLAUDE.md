@@ -2,6 +2,50 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
+## Active priority (refreshed 2026-04-30): strict-Perl parity
+
+Strict Perl parity at the format/dump and package-loading boundary is
+the current top priority, followed by sandbox long-tail cleanup.
+Current local verification in `docs/SYNC_STATUS.md`: `cargo test
+--tests` is **1109/0/0**, and the latest-row 7898-paper sandbox result
+is **7731 OK = 97.89%**. Working docs:
+[`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
+
+Concretely:
+
+1. **Strict `LoadFormat` mutual exclusivity** (Perl
+   `Package.pm:LoadFormat` L2734-2752). `tex.rs` and `latex.rs`
+   take exactly one branch:
+   * `bootstrap → dump → constructs` if `<format>.dump.txt` is on
+     disk and `LATEXML_NODUMP` is unset, OR
+   * `bootstrap → base → constructs` otherwise.
+   Never both.
+2. **Unconditional dump apply** in `dump_reader.rs`. Mirrors Perl
+   `Core/Dumper.pm` L59-67: every record calls
+   `assign_internal('global')`. No admission gate, no
+   skip-if-defined, no closure guards. The dump WILL overwrite
+   any prior definition.
+3. **Same-file definitions** as Perl. Every `\foo` defined in
+   `LaTeXML/blib/lib/LaTeXML/Engine/<file>.pool.ltxml` must be
+   defined in `latexml_engine/src/<file>.rs`. Use raw
+   `\outer\def`-style Token bodies wherever Perl uses `RawTeX`,
+   so the dump captures them as serializable Token-bodies, not
+   opaque Rust closures.
+4. **Perl-zero-error parity target**: `--init=plain.tex` and
+   `--init=latex.ltx` must complete with **zero errors**, matching
+   Perl. Any error during expl3-code.tex / latex.ltx raw-load is
+   a parity gap, not a thing to suppress with caps.
+
+The plain dump is the easier target — keep it perfect first, then
+tackle latex. Historical test regressions during the dump pivot are
+recorded in `SYNC_STATUS.md`; do not assume they are current without
+re-running the relevant test or dump-generation command.
+
+**Distribution follow-up** (after TL2025 dumps are robust): bundle
+multiple TL versions' dumps (TL2022 … TL2026) into the binary via
+`include_bytes!` + runtime selection by `kpsewhich --version`.
+
 ## Project Overview
 
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
@@ -12,27 +56,30 @@ Similarly, the test `.tex`, `.xml` and `.pdf` files often need to be copied from
 
 ## Workspace Structure
 
-Cargo workspace with 6 crates:
+Cargo workspace with 8 crates:
 
 - **latexml_core** — Core engine: tokenizer (mouth), macro expander (gullet), digester (stomach), document builder, state management, definitions, bindings
+- **latexml_engine** — TeX/LaTeX engine modules and kernel state
 - **latexml_oxide** — Top-level crate with binary targets (`latexml_oxide`, `latexmlmath_oxide`) and integration tests
 - **latexml_package** — TeX/LaTeX package system: compile-time macro engine, package loader, prelude
 - **latexml_math_parser** — Math expression parser with Marpa-style grammar
 - **latexml_codegen** — Proc macros for compile-time code generation (constructable, modelable, parametrizeable, testable, tokenizeable)
 - **latexml_contrib** — User-contributed style packages
+- **latexml_post** - post-processing functionality to HTML/MathML/ePub/JATS/... following the core XML generation phase
 
 Supporting directories:
 - `resources/` — CSS, JavaScript, RelaxNG schemas, XSLT, Profiles
 - `tools/` — Utility scripts (e.g. `compile_metrics.pl`)
 - `.githooks/` — Pre-push hook for quality checks
 - `docs/` — Internal project documentation (see below)
+- `background/` — TeX documentation and code, the original project generating PDF, which LaTeXML emulates and adapts
 
 ## Internal Documentation
 
 Three key documents track porting progress and known issues:
 
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
-- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_package/src/engine/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
+- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
 - **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
 - **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
 - **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this file to check if a translation difference was marked as intentional.
@@ -45,22 +92,37 @@ Three key documents track porting progress and known issues:
 
 ## Build & Test
 
-Requires **Rust nightly** (v1.83+).
+Requires **Rust nightly**.
 
-System dependencies (Ubuntu):
-```bash
-sudo apt install libxml2-dev libxslt1-dev libkpathsea-dev texlive-latex-base imagemagick
-```
+We follow Rust best practice with three named profiles in `Cargo.toml`:
+
+| Profile | Use | Tuned for |
+|---------|-----|-----------|
+| `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
+| `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
+| `release` | `cargo build --release` / `cargo run --release` | Distribution / publishing only. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slow build (multi-minute), fastest runtime. **Reserved for publishing a stable state** — local iteration cannot afford it. |
+
+**Day-to-day development**: use the default `test` profile via `cargo test` / `cargo run` / `cargo build` (no flag). Full debug info, line-table backtraces, debug-assertions, overflow-checks. Best diagnosability when something fails. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
+
+**Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_10k.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
+
+**Distribution / publish-grade measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release` once when shipping a stable state. The CI profile is for the GitHub runner only.
 
 ```bash
-# Run all tests
+# Run all tests (default test profile)
 RUST_BACKTRACE=1 cargo test --tests -- --nocapture
 
-# Convert a formula
-cargo run --release --bin latexmlmath_oxide '1+1=2'
+# Convert a formula (default test profile, fast incremental rebuild)
+cargo run --bin latexmlmath_oxide -- '1+1=2'
 
-# Convert a document
-cargo run --release --bin latexml_oxide latexml_oxide/tests/hello/hello.tex
+# Convert a document (default test profile)
+cargo run --bin latexml_oxide -- latexml_oxide/tests/hello/hello.tex
+
+# Triage a sandbox failure (test profile, full backtraces)
+tools/triage_failure.sh <arxiv_id>
+
+# Publish-grade build — reserved for shipping a stable state
+cargo build --release --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open
@@ -80,6 +142,13 @@ Enable linting hooks:
 rustup component add rust-analyzer rustfmt clippy --toolchain nightly
 git config --local core.hooksPath .githooks/
 ```
+
+Rust-analyzer stability: this workspace's `latexml_codegen` proc
+macros can make RA loop and allocate large amounts of RAM. The
+checked-in `.vscode/settings.json` intentionally disables RA proc-macro
+expansion/cache priming and excludes `target/`, `LaTeXML/`, generated
+HTML, sample corpora, and dumps. Keep terminal `cargo` as the source of
+truth for macro-expanded diagnostics.
 
 ## Architecture Notes
 
@@ -108,7 +177,7 @@ git config --local core.hooksPath .githooks/
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
-- **Follow the Work Plan in `docs/SYNC_STATUS.md`**: Always work on the first unchecked `[ ]` item in the "Work Plan — Ordered TODO List" section. Do not skip ahead or investigate what to do next until all preceding items are clearly completed. Mark items `[x]` when done.
+- **Active work**: drive the strict-Perl dump-parity mission described above. Concrete sub-tasks are tracked in `docs/PERL_LOADFORMAT_AUDIT.md` and `docs/SYNC_STATUS.md`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:
@@ -130,10 +199,6 @@ Do **not** stop early.
 | `LaTeXML::Core::State` | `latexml_core::state` — global state |
 | `LaTeXML::Core::Definition` | `latexml_core::definition` — macro/command defs |
 | `LaTeXML::Package` | `latexml_package` — package loading |
-
-## CI
-
-GitHub Actions runs on push/PR: installs system deps, uses Rust nightly, runs `cargo test`.
 
 ---
 

@@ -1,4 +1,47 @@
 use crate::prelude::*;
+use latexml_core::definition::register::RegisterValue;
+
+/// Perl floatfig.sty.ltxml L37-39: same direction-from-arg logic as
+/// floatflt — `v`/`r` prefix → right, else left.
+fn floatfig_float_direction(whatsit: &Whatsit) -> &'static str {
+  let pos_arg = whatsit
+    .get_arg(1)
+    .map(|a| a.to_string())
+    .unwrap_or_default();
+  let pos_arg = pos_arg.trim().to_string();
+  let pos = if !pos_arg.is_empty() {
+    pos_arg
+  } else if let Some(Stored::String(sym)) = state::lookup_value("floatfltpos") {
+    arena::with(sym, |s| s.to_string())
+  } else {
+    "v".to_string()
+  };
+  if pos.starts_with('v') || pos.starts_with('r') {
+    "right"
+  } else {
+    "left"
+  }
+}
+
+/// Perl `toPercent($_[2])` — 100 * dimen / \textwidth, formatted as "NN%".
+fn floatfig_pct_width(whatsit: &Whatsit) -> String {
+  let dim_arg = whatsit
+    .get_arg(2)
+    .map(|a| a.to_attribute())
+    .unwrap_or_default();
+  let Ok(dim) = Dimension::from_str(&dim_arg) else {
+    return String::new();
+  };
+  let tw = match state::lookup_register("\\textwidth", Vec::new()) {
+    Ok(Some(RegisterValue::Dimension(d))) => d.value_of(),
+    _ => return String::new(),
+  };
+  if tw == 0 {
+    return String::new();
+  }
+  let pct = (100 * dim.value_of()) / tw;
+  s!("{pct}%")
+}
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -18,11 +61,13 @@ LoadDefinitions!({
   // after_float's `digest(\@captype)` would error. See floatflt_sty.rs
   // commit 2b57844c4 for details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
-    "<ltx:figure xml:id='#id' inlist='#inlist' float='right'>#tags #body</ltx:figure>",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
     before_digest => {
       crate::engine::latex_constructs::before_float("figure", None);
     },
     after_digest => sub[whatsit] {
+      whatsit.set_property("float", floatfig_float_direction(whatsit));
+      whatsit.set_property("pctwidth", Stored::from(floatfig_pct_width(whatsit)));
       crate::engine::latex_constructs::after_float(whatsit);
     });
 
@@ -40,7 +85,8 @@ LoadDefinitions!({
   DefRegister!("\\hangcount", Number(0));
 
   DefRegister!("\\nosuccesstryfig", Number(0));
-  DefRegister!("\\figgutter", Dimension(0));
+  // Perl L64: figgutter default is 1pc, not 0pt.
+  DefRegister!("\\figgutter", Dimension::from_str("1pc")?);
   DefRegister!("\\htdone",      Number(0));
   DefRegister!("\\pageht",      Dimension(0));
   DefRegister!("\\startpageht", Dimension(0));

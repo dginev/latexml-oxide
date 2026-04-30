@@ -18,7 +18,7 @@ use libxml::tree::Node;
 use std::collections::HashMap;
 
 use crate::document::{NodeData, PostDocument};
-use crate::math_processor::{math_is_parsed, process_math, MathConversion, MathProcessor};
+use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed, process_math};
 use crate::processor::{ProcessResult, Processor};
 use crate::unicode;
 
@@ -31,59 +31,59 @@ const CMML_MIMETYPE: &str = "application/mathml-content+xml";
 /// Port of `LaTeXML::Post::MathML`.
 /// Handles both Presentation and Content MathML conversion.
 pub struct MathML {
-  name: String,
-  is_secondary: bool,
+  name:            String,
+  is_secondary:    bool,
   /// Whether to produce Content MathML (vs Presentation).
-  content_mathml: bool,
+  content_mathml:  bool,
   /// Whether to use plane1 Unicode characters for styled identifiers.
-  plane1: bool,
+  plane1:          bool,
   /// Whether to enable line-breaking.
-  linebreaking: bool,
+  linebreaking:    bool,
   /// Line width for line-breaking.
-  line_width: u32,
+  line_width:      u32,
   /// Whether to keep the XMath nodes alongside the generated MathML.
-  keep_xmath: bool,
+  keep_xmath:      bool,
   /// Whether to emit invisible times (U+2062). When false, replaces with zero-width space.
   /// Perl: $$MATHPROCESSOR{invisibletimes} — defaults to true.
   invisible_times: bool,
   /// Whether to include TeX source annotation in parallel MathML.
   /// Perl: --mathtex adds <m:annotation encoding='application/x-tex'>
-  mathtex: bool,
+  mathtex:         bool,
   /// Whether to add intent=":literal" on all <math> elements.
   /// ar5iv.sty.ltxml monkey-patches outerWrapper to add this.
-  intent_literal: bool,
+  intent_literal:  bool,
 }
 
 impl MathML {
   /// Create a Presentation MathML processor.
   pub fn new_presentation() -> Self {
     MathML {
-      name: "MathML::Presentation".to_string(),
-      is_secondary: false,
-      content_mathml: false,
-      plane1: true,
-      linebreaking: false,
-      line_width: 80,
-      keep_xmath: false,
+      name:            "MathML::Presentation".to_string(),
+      is_secondary:    false,
+      content_mathml:  false,
+      plane1:          true,
+      linebreaking:    false,
+      line_width:      80,
+      keep_xmath:      false,
       invisible_times: true,
-      mathtex: false,
-      intent_literal: false,
+      mathtex:         false,
+      intent_literal:  false,
     }
   }
 
   /// Create a Content MathML processor.
   pub fn new_content() -> Self {
     MathML {
-      name: "MathML::Content".to_string(),
-      is_secondary: false,
-      content_mathml: true,
-      plane1: true,
-      linebreaking: false,
-      line_width: 80,
-      keep_xmath: false,
+      name:            "MathML::Content".to_string(),
+      is_secondary:    false,
+      content_mathml:  true,
+      plane1:          true,
+      linebreaking:    false,
+      line_width:      80,
+      keep_xmath:      false,
       invisible_times: true,
-      mathtex: false,
-      intent_literal: false,
+      mathtex:         false,
+      intent_literal:  false,
     }
   }
 
@@ -123,9 +123,7 @@ impl MathML {
 }
 
 impl Processor for MathML {
-  fn get_name(&self) -> &str {
-    &self.name
-  }
+  fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
@@ -160,25 +158,24 @@ impl MathProcessor for MathML {
 
     // If mathtex is enabled, wrap in <m:semantics> with TeX annotation
     let final_xml = if self.mathtex {
-      let tex_str = xmath.get_parent()
+      let tex_str = xmath
+        .get_parent()
         .and_then(|p| p.get_attribute("tex"))
         .unwrap_or_default();
       if tex_str.is_empty() {
         xml
       } else {
         NodeData::Element {
-          tag: "m:semantics".to_string(),
+          tag:        "m:semantics".to_string(),
           attributes: None,
-          children: vec![
-            xml,
-            NodeData::Element {
-              tag: "m:annotation".to_string(),
-              attributes: Some(HashMap::from([
-                ("encoding".to_string(), "application/x-tex".to_string()),
-              ])),
-              children: vec![NodeData::Text(tex_str)],
-            },
-          ],
+          children:   vec![xml, NodeData::Element {
+            tag:        "m:annotation".to_string(),
+            attributes: Some(HashMap::from([(
+              "encoding".to_string(),
+              "application/x-tex".to_string(),
+            )])),
+            children:   vec![NodeData::Text(tex_str)],
+          }],
         }
       }
     } else {
@@ -187,13 +184,13 @@ impl MathProcessor for MathML {
 
     Some(MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(mimetype.to_string()),
-      xml: Some(final_xml),
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      mimetype:       Some(mimetype.to_string()),
+      xml:            Some(final_xml),
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     })
   }
 
@@ -218,38 +215,38 @@ impl MathProcessor for MathML {
       let mimetype = secondary.mimetype.as_deref().unwrap_or("unknown");
       if let Some(ref xml) = secondary.xml {
         children.push(NodeData::Element {
-          tag: "m:annotation-xml".to_string(),
+          tag:        "m:annotation-xml".to_string(),
           attributes: Some(HashMap::from([(
             "encoding".to_string(),
             mimetype.to_string(),
           )])),
-          children: vec![xml.clone()],
+          children:   vec![xml.clone()],
         });
       } else if let Some(ref string) = secondary.string {
         children.push(NodeData::Element {
-          tag: "m:annotation".to_string(),
+          tag:        "m:annotation".to_string(),
           attributes: Some(HashMap::from([(
             "encoding".to_string(),
             mimetype.to_string(),
           )])),
-          children: vec![NodeData::Text(string.clone())],
+          children:   vec![NodeData::Text(string.clone())],
         });
       }
     }
 
     MathConversion {
       processor_name: self.name.clone(),
-      mimetype: Some(MML_MIMETYPE.to_string()),
-      xml: Some(NodeData::Element {
+      mimetype:       Some(MML_MIMETYPE.to_string()),
+      xml:            Some(NodeData::Element {
         tag: "m:semantics".to_string(),
         attributes: None,
         children,
       }),
-      string: None,
-      src: None,
-      width: None,
-      height: None,
-      depth: None,
+      string:         None,
+      src:            None,
+      width:          None,
+      height:         None,
+      depth:          None,
     }
   }
 
@@ -258,9 +255,17 @@ impl MathProcessor for MathML {
     // Determine display mode and alttext from parent Math element
     // Port of MathML::outerWrapper (L77-100)
     if let Some(math) = xmath.get_parent() {
-      let mode = math.get_attribute("mode").unwrap_or_else(|| "inline".to_string());
-      attrs.insert("display".to_string(),
-        if mode == "display" { "block".to_string() } else { "inline".to_string() });
+      let mode = math
+        .get_attribute("mode")
+        .unwrap_or_else(|| "inline".to_string());
+      attrs.insert(
+        "display".to_string(),
+        if mode == "display" {
+          "block".to_string()
+        } else {
+          "inline".to_string()
+        },
+      );
       if let Some(tex) = math.get_attribute("tex") {
         attrs.insert("alttext".to_string(), tex);
       }
@@ -275,9 +280,9 @@ impl MathProcessor for MathML {
     }
 
     NodeData::Element {
-      tag: "m:math".to_string(),
+      tag:        "m:math".to_string(),
       attributes: Some(attrs),
-      children: vec![conversion],
+      children:   vec![conversion],
     }
   }
 
@@ -289,9 +294,7 @@ impl MathProcessor for MathML {
     }
   }
 
-  fn is_secondary(&self) -> bool {
-    self.is_secondary
-  }
+  fn is_secondary(&self) -> bool { self.is_secondary }
 
   fn can_convert(&self, _doc: &PostDocument, math: &Node) -> bool {
     // Content MathML requires parsed math
@@ -353,10 +356,7 @@ pub fn style_size(style: &str) -> &str {
 /// - Color, background, class, href attributes
 ///
 /// Returns (text, attributes_map).
-pub fn stylize_content(
-  node: &Node,
-  target_tag: &str,
-) -> (String, HashMap<String, String>) {
+pub fn stylize_content(node: &Node, target_tag: &str) -> (String, HashMap<String, String>) {
   let _is_element = true; // Node is always an element in our API
   let role = node.get_attribute("role").unwrap_or_default();
   let font = node.get_attribute("font");
@@ -386,7 +386,8 @@ pub fn stylize_content(
       }
     }
     if text.is_empty() {
-      text = node.get_attribute("name")
+      text = node
+        .get_attribute("name")
         .or_else(|| node.get_attribute("meaning"))
         .unwrap_or_else(|| role.clone());
     }
@@ -528,16 +529,28 @@ pub fn stylize_content(
     // (matching Perl's xor-based attribute generation)
     let stretchy = node.get_attribute("stretchy").as_deref() == Some("true");
     if stretchy != dict_props.stretchy {
-      attrs.insert("stretchy".to_string(), if stretchy { "true" } else { "false" }.to_string());
+      attrs.insert(
+        "stretchy".to_string(),
+        if stretchy { "true" } else { "false" }.to_string(),
+      );
     }
     if is_fence != dict_props.fence {
-      attrs.insert("fence".to_string(), if is_fence { "true" } else { "false" }.to_string());
+      attrs.insert(
+        "fence".to_string(),
+        if is_fence { "true" } else { "false" }.to_string(),
+      );
     }
     if is_sep != dict_props.separator {
-      attrs.insert("separator".to_string(), if is_sep { "true" } else { "false" }.to_string());
+      attrs.insert(
+        "separator".to_string(),
+        if is_sep { "true" } else { "false" }.to_string(),
+      );
     }
     if is_large != dict_props.largeop {
-      attrs.insert("largeop".to_string(), if is_large { "true" } else { "false" }.to_string());
+      attrs.insert(
+        "largeop".to_string(),
+        if is_large { "true" } else { "false" }.to_string(),
+      );
     }
     if is_large {
       attrs.insert("_largeop".to_string(), "1".to_string()); // For needsMathStyle
@@ -598,7 +611,14 @@ pub fn stylize_content(
 /// TeX math atom types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AtomType {
-  Ord, Op, Bin, Rel, Open, Close, Punct, Inner,
+  Ord,
+  Op,
+  Bin,
+  Rel,
+  Open,
+  Close,
+  Punct,
+  Inner,
 }
 
 /// Map LaTeXML role to TeX atom type.
@@ -616,10 +636,10 @@ pub fn role_to_atom_type(role: &str) -> AtomType {
     "ADDOP" | "MULOP" | "BINOP" | "APPLYOP" | "COMPOSEOP" => AtomType::Bin,
     "POSTFIX" | "SUPOP" | "DIFFOP" => AtomType::Ord,
     "FUNCTION" => AtomType::Ord,
-    "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR"
-    | "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" => AtomType::Op,
-    "POSTSUBSCRIPT" | "POSTSUPERSCRIPT"
-    | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => AtomType::Inner,
+    "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR" | "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" => {
+      AtomType::Op
+    },
+    "POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => AtomType::Inner,
     _ => AtomType::Ord,
   }
 }
@@ -645,15 +665,40 @@ pub fn tag_to_atom_type(tag: &str) -> Option<AtomType> {
 pub fn atom_pair_spacing(left: AtomType, right: AtomType) -> i32 {
   use AtomType::*;
   match (left, right) {
-    (Ord, Op) => 1, (Ord, Bin) => -2, (Ord, Rel) => -3, (Ord, Inner) => -1,
-    (Op, Ord) => 1, (Op, Op) => 1, (Op, Rel) => -3, (Op, Inner) => -1,
-    (Bin, Ord) => -2, (Bin, Op) => -2, (Bin, Open) => -2, (Bin, Inner) => -2,
-    (Rel, Ord) => -3, (Rel, Op) => -3, (Rel, Open) => -3, (Rel, Inner) => -3,
-    (Close, Op) => 1, (Close, Bin) => -2, (Close, Rel) => -3, (Close, Inner) => -1,
-    (Punct, Ord) => -1, (Punct, Op) => -1, (Punct, Rel) => -1,
-    (Punct, Open) => -1, (Punct, Close) => -1, (Punct, Punct) => -1, (Punct, Inner) => -1,
-    (Inner, Ord) => -1, (Inner, Op) => 1, (Inner, Bin) => -2,
-    (Inner, Rel) => -3, (Inner, Open) => -1, (Inner, Punct) => -1, (Inner, Inner) => -1,
+    (Ord, Op) => 1,
+    (Ord, Bin) => -2,
+    (Ord, Rel) => -3,
+    (Ord, Inner) => -1,
+    (Op, Ord) => 1,
+    (Op, Op) => 1,
+    (Op, Rel) => -3,
+    (Op, Inner) => -1,
+    (Bin, Ord) => -2,
+    (Bin, Op) => -2,
+    (Bin, Open) => -2,
+    (Bin, Inner) => -2,
+    (Rel, Ord) => -3,
+    (Rel, Op) => -3,
+    (Rel, Open) => -3,
+    (Rel, Inner) => -3,
+    (Close, Op) => 1,
+    (Close, Bin) => -2,
+    (Close, Rel) => -3,
+    (Close, Inner) => -1,
+    (Punct, Ord) => -1,
+    (Punct, Op) => -1,
+    (Punct, Rel) => -1,
+    (Punct, Open) => -1,
+    (Punct, Close) => -1,
+    (Punct, Punct) => -1,
+    (Punct, Inner) => -1,
+    (Inner, Ord) => -1,
+    (Inner, Op) => 1,
+    (Inner, Bin) => -2,
+    (Inner, Rel) => -3,
+    (Inner, Open) => -1,
+    (Inner, Punct) => -1,
+    (Inner, Inner) => -1,
     _ => 0,
   }
 }
@@ -668,7 +713,8 @@ pub const TEX_SPACING: [f64; 4] = [0.0, 0.167, 0.222, 0.2778];
 /// Port of `getXMHintSpacing`.
 pub fn get_xm_hint_spacing(width: &str) -> f64 {
   let trimmed = width.trim();
-  if let Some((num_str, unit)) = trimmed.rfind(|c: char| c.is_ascii_digit() || c == '.')
+  if let Some((num_str, unit)) = trimmed
+    .rfind(|c: char| c.is_ascii_digit() || c == '.')
     .map(|i| (&trimmed[..=i], trimmed[i + 1..].trim()))
   {
     let num: f64 = num_str.parse().unwrap_or(0.0);
@@ -696,7 +742,7 @@ pub fn needs_mathstyle(node: &NodeData) -> bool {
         }
       }
       children.iter().any(needs_mathstyle)
-    }
+    },
     _ => false,
   }
 }
@@ -711,14 +757,19 @@ pub fn fmt_em(val: f64) -> String {
     format!("{:.3}em", val)
       .trim_end_matches('0')
       .trim_end_matches('.')
-      .to_string() + "em"
+      .to_string()
+      + "em"
   }
 }
 
 /// Find an inherited attribute by walking up the LaTeXML ancestor chain.
 ///
 /// Port of `find_inherited_attribute`.
-pub fn find_inherited_attribute(_doc: &PostDocument, node: &Node, attribute: &str) -> Option<String> {
+pub fn find_inherited_attribute(
+  _doc: &PostDocument,
+  node: &Node,
+  attribute: &str,
+) -> Option<String> {
   let mut current = Some(node.clone());
   while let Some(ref n) = current {
     if let Some(ns) = n.get_namespace() {
@@ -755,10 +806,9 @@ pub fn find_inherited_attribute(_doc: &PostDocument, node: &Node, attribute: &st
 pub fn pmml_tag_for_role(role: &str) -> &'static str {
   match role {
     // Operators → m:mo
-    "PUNCT" | "PERIOD" | "OPEN" | "CLOSE" | "MIDDLE" | "VERTBAR"
-    | "ARROW" | "OVERACCENT" | "UNDERACCENT" | "ADDOP" | "MULOP"
-    | "BINOP" | "RELOP" | "METARELOP" | "MODIFIEROP" | "COMPOSEOP"
-    | "APPLYOP" | "OPERATOR" | "SUPOP" | "POSTFIX" | "DIFFOP" => "m:mo",
+    "PUNCT" | "PERIOD" | "OPEN" | "CLOSE" | "MIDDLE" | "VERTBAR" | "ARROW" | "OVERACCENT"
+    | "UNDERACCENT" | "ADDOP" | "MULOP" | "BINOP" | "RELOP" | "METARELOP" | "MODIFIEROP"
+    | "COMPOSEOP" | "APPLYOP" | "OPERATOR" | "SUPOP" | "POSTFIX" | "DIFFOP" => "m:mo",
     // Big operators → m:mo (with largeop)
     "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" => "m:mo",
     // Functions → m:mi (but rendered as operator names)
@@ -773,9 +823,7 @@ pub fn pmml_tag_for_role(role: &str) -> &'static str {
 /// Whether a role should use the "big operator" presentation style.
 ///
 /// Port of `Token:INTOP:?` → `\&pmml_bigop`, `Token:SUMOP:?` → `\&pmml_bigop`, etc.
-pub fn is_bigop_role(role: &str) -> bool {
-  matches!(role, "INTOP" | "SUMOP" | "BIGOP" | "LIMITOP")
-}
+pub fn is_bigop_role(role: &str) -> bool { matches!(role, "INTOP" | "SUMOP" | "BIGOP" | "LIMITOP") }
 
 /// Presentation handler type for XMApp nodes.
 ///
@@ -810,8 +858,8 @@ pub enum ApplyHandler {
 /// Port of the `Apply:ROLE:?` DefMathML declarations.
 pub fn apply_handler_for_role(role: &str) -> ApplyHandler {
   match role {
-    "ADDOP" | "MULOP" | "BINOP" | "RELOP" | "METARELOP" | "ARROW"
-    | "COMPOSEOP" | "MODIFIEROP" | "MIDDLE" => ApplyHandler::Infix,
+    "ADDOP" | "MULOP" | "BINOP" | "RELOP" | "METARELOP" | "ARROW" | "COMPOSEOP" | "MODIFIEROP"
+    | "MIDDLE" => ApplyHandler::Infix,
     "SUPERSCRIPTOP" | "SUBSCRIPTOP" => ApplyHandler::Script,
     "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP" => ApplyHandler::Summation,
     "DIFFOP" => ApplyHandler::Prefix,
@@ -850,10 +898,19 @@ pub fn cmml_element_for_meaning(meaning: &str) -> Option<&'static str> {
 ///
 /// Port of the `Apply:?:meaning` content DefMathML declarations.
 pub fn has_dedicated_cmml_structure(meaning: &str) -> bool {
-  matches!(meaning,
-    "square-root" | "nth-root" | "set" | "list"
-    | "open-interval" | "closed-interval" | "closed-open-interval" | "open-closed-interval"
-    | "formulae" | "multirelation" | "cases"
+  matches!(
+    meaning,
+    "square-root"
+      | "nth-root"
+      | "set"
+      | "list"
+      | "open-interval"
+      | "closed-interval"
+      | "closed-open-interval"
+      | "open-closed-interval"
+      | "formulae"
+      | "multirelation"
+      | "cases"
   )
 }
 
@@ -880,20 +937,20 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
   // Special case: stretchy arrows with specified width
   if width.is_some()
     && role.as_deref() == Some("ARROW")
-    && class.as_deref().map(|c| c.contains("ltx_horizontally_stretchy")).unwrap_or(false)
+    && class
+      .as_deref()
+      .map(|c| c.contains("ltx_horizontally_stretchy"))
+      .unwrap_or(false)
   {
     if let Some(ref w) = width {
       result = NodeData::Element {
-        tag: "m:mover".to_string(),
+        tag:        "m:mover".to_string(),
         attributes: None,
-        children: vec![
-          result,
-          NodeData::Element {
-            tag: "m:mspace".to_string(),
-            attributes: Some(HashMap::from([("width".to_string(), w.clone())])),
-            children: vec![],
-          },
-        ],
+        children:   vec![result, NodeData::Element {
+          tag:        "m:mspace".to_string(),
+          attributes: Some(HashMap::from([("width".to_string(), w.clone())])),
+          children:   vec![],
+        }],
       };
       return result;
     }
@@ -903,23 +960,45 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
   if width.is_some() || height.is_some() || depth.is_some() || xoff.is_some() || yoff.is_some() {
     // Convert result to mpadded (or wrap in one)
     let (tag, attrs, children) = match result {
-      NodeData::Element { ref tag, ref attributes, ref children } if tag == "m:mpadded" => {
-        (tag.clone(), attributes.clone().unwrap_or_default(), children.clone())
-      }
-      NodeData::Element { ref tag, ref attributes, ref children } if tag == "m:mrow" => {
-        ("m:mpadded".to_string(), attributes.clone().unwrap_or_default(), children.clone())
-      }
-      _ => {
-        ("m:mpadded".to_string(), HashMap::new(), vec![result.clone()])
-      }
+      NodeData::Element {
+        ref tag,
+        ref attributes,
+        ref children,
+      } if tag == "m:mpadded" => (
+        tag.clone(),
+        attributes.clone().unwrap_or_default(),
+        children.clone(),
+      ),
+      NodeData::Element {
+        ref tag,
+        ref attributes,
+        ref children,
+      } if tag == "m:mrow" => (
+        "m:mpadded".to_string(),
+        attributes.clone().unwrap_or_default(),
+        children.clone(),
+      ),
+      _ => ("m:mpadded".to_string(), HashMap::new(), vec![
+        result.clone(),
+      ]),
     };
 
     let mut padded_attrs = attrs;
-    if let Some(w) = width { padded_attrs.insert("width".to_string(), w); }
-    if let Some(h) = height { padded_attrs.insert("height".to_string(), h); }
-    if let Some(d) = depth { padded_attrs.insert("depth".to_string(), d); }
-    if let Some(x) = xoff { padded_attrs.insert("lspace".to_string(), x); }
-    if let Some(y) = yoff { padded_attrs.insert("voffset".to_string(), y); }
+    if let Some(w) = width {
+      padded_attrs.insert("width".to_string(), w);
+    }
+    if let Some(h) = height {
+      padded_attrs.insert("height".to_string(), h);
+    }
+    if let Some(d) = depth {
+      padded_attrs.insert("depth".to_string(), d);
+    }
+    if let Some(x) = xoff {
+      padded_attrs.insert("lspace".to_string(), x);
+    }
+    if let Some(y) = yoff {
+      padded_attrs.insert("voffset".to_string(), y);
+    }
 
     result = NodeData::Element {
       tag,
@@ -934,13 +1013,25 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
     if let NodeData::Element { attributes, .. } = &mut result {
       let attrs = attributes.get_or_insert_with(HashMap::new);
       let c = attrs.get("class").cloned().unwrap_or_default();
-      attrs.insert("class".to_string(),
-        if c.is_empty() { frame_class } else { format!("{} {}", c, frame_class) });
+      attrs.insert(
+        "class".to_string(),
+        if c.is_empty() {
+          frame_class
+        } else {
+          format!("{} {}", c, frame_class)
+        },
+      );
       if let Some(color) = node.get_attribute("framecolor") {
         let s = attrs.get("style").cloned().unwrap_or_default();
         let style = format!("border-color: {}", color);
-        attrs.insert("style".to_string(),
-          if s.is_empty() { style } else { format!("{}; {}", s, style) });
+        attrs.insert(
+          "style".to_string(),
+          if s.is_empty() {
+            style
+          } else {
+            format!("{}; {}", s, style)
+          },
+        );
       }
     }
   }
@@ -953,26 +1044,27 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
 /// Port of `pmml_row` + `filter_row`.
 pub fn pmml_row(items: Vec<NodeData>) -> NodeData {
   // Filter out ignorable items (those with _ignorable attribute)
-  let filtered: Vec<NodeData> = items.into_iter().filter(|item| {
-    match item {
+  let filtered: Vec<NodeData> = items
+    .into_iter()
+    .filter(|item| match item {
       NodeData::Element { attributes, .. } => {
         if let Some(ref attrs) = attributes {
           !attrs.contains_key("_ignorable")
         } else {
           true
         }
-      }
+      },
       _ => true,
-    }
-  }).collect();
+    })
+    .collect();
 
   if filtered.len() == 1 {
     filtered.into_iter().next().unwrap()
   } else {
     NodeData::Element {
-      tag: "m:mrow".to_string(),
+      tag:        "m:mrow".to_string(),
       attributes: None,
-      children: filtered,
+      children:   filtered,
     }
   }
 }
@@ -988,23 +1080,23 @@ pub fn pmml_parenthesize(item: NodeData, open: Option<&str>, close: Option<&str>
   let mut children = Vec::new();
   if let Some(o) = open {
     children.push(NodeData::Element {
-      tag: "m:mo".to_string(),
+      tag:        "m:mo".to_string(),
       attributes: Some(HashMap::from([
         ("fence".to_string(), "true".to_string()),
         ("stretchy".to_string(), "true".to_string()),
       ])),
-      children: vec![NodeData::Text(o.to_string())],
+      children:   vec![NodeData::Text(o.to_string())],
     });
   }
   children.push(item);
   if let Some(c) = close {
     children.push(NodeData::Element {
-      tag: "m:mo".to_string(),
+      tag:        "m:mo".to_string(),
       attributes: Some(HashMap::from([
         ("fence".to_string(), "true".to_string()),
         ("stretchy".to_string(), "true".to_string()),
       ])),
-      children: vec![NodeData::Text(c.to_string())],
+      children:   vec![NodeData::Text(c.to_string())],
     });
   }
 
@@ -1020,12 +1112,20 @@ pub fn pmml_parenthesize(item: NodeData, open: Option<&str>, close: Option<&str>
 /// Port of `pmml_punctuate`.
 pub fn pmml_punctuate(separators: &str, items: Vec<NodeData>) -> NodeData {
   if items.is_empty() {
-    return NodeData::Element { tag: "m:mrow".to_string(), attributes: None, children: vec![] };
+    return NodeData::Element {
+      tag:        "m:mrow".to_string(),
+      attributes: None,
+      children:   vec![],
+    };
   }
 
   let mut result = Vec::new();
   let mut sep_chars: Vec<char> = separators.chars().collect();
-  let last_sep = if sep_chars.is_empty() { ',' } else { *sep_chars.last().unwrap() };
+  let last_sep = if sep_chars.is_empty() {
+    ','
+  } else {
+    *sep_chars.last().unwrap()
+  };
 
   let mut iter = items.into_iter();
   result.push(iter.next().unwrap());
@@ -1037,9 +1137,12 @@ pub fn pmml_punctuate(separators: &str, items: Vec<NodeData>) -> NodeData {
       sep_chars.remove(0)
     };
     result.push(NodeData::Element {
-      tag: "m:mo".to_string(),
-      attributes: Some(HashMap::from([("separator".to_string(), "true".to_string())])),
-      children: vec![NodeData::Text(sep.to_string())],
+      tag:        "m:mo".to_string(),
+      attributes: Some(HashMap::from([(
+        "separator".to_string(),
+        "true".to_string(),
+      )])),
+      children:   vec![NodeData::Text(sep.to_string())],
     });
     result.push(item);
   }
@@ -1073,11 +1176,11 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
         t
       };
       vec![NodeData::Element {
-        tag: "m:mtext".to_string(),
+        tag:        "m:mtext".to_string(),
         attributes: None,
-        children: vec![NodeData::Text(text)],
+        children:   vec![NodeData::Text(text)],
       }]
-    }
+    },
     Some(NodeType::ElementNode) => {
       let tag = doc.get_qname(node).unwrap_or_default();
       match tag.as_str() {
@@ -1088,7 +1191,7 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
           } else {
             vec![]
           }
-        }
+        },
         "ltx:text" => {
           // Recurse on children
           let mut results = Vec::new();
@@ -1100,29 +1203,128 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
             }
           }
           results
-        }
+        },
         "ltx:picture" => {
-          // Picture in text: wrap in mtext
+          // Picture in text: wrap in mtext. Eagerly materialize the picture
+          // subtree into owned NodeData so the result is not tied to the
+          // source node's libxml2 lifetime. Perl: MathProcessor.pm
+          // convertXMTextContent (Post.pm L456-489). A lazy
+          // `NodeData::XmlNode(node.clone())` here SIGSEGVs in
+          // `add_xml_node` once the parent XMath is unlinked (its children
+          // are stripped into a detached document fragment and later
+          // accesses via the stale rust-libxml wrapper dereference freed
+          // memory — reproducible on 0710.1208 / 1110.2158 / 1605.07431).
           vec![NodeData::Element {
-            tag: "m:mtext".to_string(),
+            tag:        "m:mtext".to_string(),
             attributes: None,
-            children: vec![NodeData::XmlNode(node.clone())],
+            children:   convert_xm_text_content(doc, node, true),
           }]
-        }
+        },
         _ => {
           // Other elements: include as mtext with clone
           let text = node.get_content();
           let text = text.replace(|c: char| c.is_whitespace(), "\u{00A0}");
           vec![NodeData::Element {
-            tag: "m:mtext".to_string(),
+            tag:        "m:mtext".to_string(),
             attributes: None,
-            children: vec![NodeData::Text(if text.is_empty() { "\u{00A0}".to_string() } else { text })],
+            children:   vec![NodeData::Text(if text.is_empty() {
+              "\u{00A0}".to_string()
+            } else {
+              text
+            })],
           }]
-        }
+        },
       }
-    }
+    },
     _ => vec![],
   }
+}
+
+/// Eagerly materialize an XMText-or-picture subtree into owned NodeData.
+///
+/// Port of `LaTeXML::Post::MathProcessor::convertXMTextContent`
+/// (Post.pm L456-489). Walks `node` recursively and rebuilds the subtree
+/// as owned NodeData, so downstream consumers do not depend on the
+/// source node's libxml2 lifetime. Internal `_*` attributes and stray
+/// `xml:id` are dropped (Perl mirrors this); `fragid` would be remapped
+/// to a fresh id in Perl but MathML::Presentation does not carry a
+/// processor-level id suffix through this path, so we drop it too and
+/// let the surrounding MathML ids govern.
+///
+/// When `convert_spaces` is true, leading/trailing whitespace on text
+/// nodes is replaced with NBSP so the rendered MathML does not collapse
+/// the space. Nested `ltx:Math` would in Perl re-enter the MathML
+/// converter; we preserve it as a plain element subtree here (same
+/// limitation as the enclosing pmml_text_aux path: nested math in
+/// mtext is uncommon, and the XSLT stage can still render it).
+pub fn convert_xm_text_content(
+  _doc: &PostDocument,
+  node: &Node,
+  convert_spaces: bool,
+) -> Vec<NodeData> {
+  use libxml::tree::NodeType;
+
+  fn rebuild(node: &Node, convert_spaces: bool) -> Option<NodeData> {
+    match node.get_type() {
+      Some(NodeType::TextNode) => {
+        let mut text = node.get_content();
+        if convert_spaces {
+          if text.starts_with(char::is_whitespace) {
+            text = format!("\u{00A0}{}", text.trim_start());
+          }
+          if text.ends_with(char::is_whitespace) {
+            text = format!("{}\u{00A0}", text.trim_end());
+          }
+        }
+        Some(NodeData::Text(text))
+      },
+      Some(NodeType::ElementNode) => {
+        let tag = {
+          let local = node.get_name();
+          match node.get_namespace() {
+            Some(ns) => {
+              let prefix = ns.get_prefix();
+              if prefix.is_empty() {
+                local
+              } else {
+                format!("{prefix}:{local}")
+              }
+            },
+            None => local,
+          }
+        };
+        // Copy attributes, skipping internal `_*`, `xml:id`, and `fragid`.
+        // Matches Perl convertXMTextContent (Post.pm L479-483); the
+        // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
+        // which this helper does not receive — drop both here rather
+        // than forge a wrong id.
+        let mut attrs: HashMap<String, String> = HashMap::new();
+        for (k, v) in node.get_attributes() {
+          if k.starts_with('_') || k == "xml:id" || k == "fragid" {
+            continue;
+          }
+          attrs.insert(k, v);
+        }
+        let children: Vec<NodeData> = node
+          .get_child_nodes()
+          .iter()
+          .filter_map(|c| rebuild(c, convert_spaces))
+          .collect();
+        Some(NodeData::Element {
+          tag,
+          attributes: if attrs.is_empty() { None } else { Some(attrs) },
+          children,
+        })
+      },
+      _ => None,
+    }
+  }
+
+  node
+    .get_child_nodes()
+    .iter()
+    .filter_map(|c| rebuild(c, convert_spaces))
+    .collect()
 }
 
 /// Unwrap an mrow if it has no attributes.
@@ -1130,11 +1332,13 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
 /// Port of `pmml_unrow`.
 pub fn pmml_unrow(mml: NodeData) -> Vec<NodeData> {
   match mml {
-    NodeData::Element { ref tag, ref attributes, ref children }
-      if tag == "m:mrow" && attributes.as_ref().map(|a| a.is_empty()).unwrap_or(true) =>
-    {
+    NodeData::Element {
+      ref tag,
+      ref attributes,
+      ref children,
+    } if tag == "m:mrow" && attributes.as_ref().map(|a| a.is_empty()).unwrap_or(true) => {
       children.clone()
-    }
+    },
     _ => vec![mml],
   }
 }
@@ -1147,21 +1351,25 @@ pub fn pmml_unrow(mml: NodeData) -> Vec<NodeData> {
 // MathML's operator dictionary spacing.
 
 const EPSILON: f64 = 0.01; // em: ignore differences below this
-const FUDGE: f64 = 0.3;    // em: don't warn if can't adjust less than this
+const FUDGE: f64 = 0.3; // em: don't warn if can't adjust less than this
 
 /// MathML tags that are "atomic" (no internal spacing adjustment needed).
-fn is_atom_tag(tag: &str) -> bool {
-  matches!(tag, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext")
-}
+fn is_atom_tag(tag: &str) -> bool { matches!(tag, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") }
 
 /// MathML tags that are "mrow-like" (adjacent pairs need spacing checks).
 fn is_mrow_tag(tag: &str) -> bool {
-  matches!(tag, "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd")
+  matches!(
+    tag,
+    "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd"
+  )
 }
 
 /// MathML tags that are "embellishers" (base is first child).
 fn is_embellisher_tag(tag: &str) -> bool {
-  matches!(tag, "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover")
+  matches!(
+    tag,
+    "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover"
+  )
 }
 
 /// Walk the MathML tree and adjust spacing between adjacent items.
@@ -1169,9 +1377,7 @@ fn is_embellisher_tag(tag: &str) -> bool {
 /// Port of `space_walk`.
 /// This operates on the array-form MathML representation.
 /// In our case, NodeData serves the same purpose.
-pub fn adjust_spacing(node: &mut NodeData) {
-  space_walk(node);
-}
+pub fn adjust_spacing(node: &mut NodeData) { space_walk(node); }
 
 fn space_walk(node: &mut NodeData) {
   if let NodeData::Element { tag, children, .. } = node {
@@ -1228,12 +1434,11 @@ fn space_walk(node: &mut NodeData) {
 /// Get the _role attribute from a NodeData.
 fn get_role_from_node(node: &NodeData) -> String {
   match node {
-    NodeData::Element { attributes, .. } => {
-      attributes.as_ref()
-        .and_then(|a| a.get("_role"))
-        .cloned()
-        .unwrap_or_else(|| "ATOM".to_string())
-    }
+    NodeData::Element { attributes, .. } => attributes
+      .as_ref()
+      .and_then(|a| a.get("_role"))
+      .cloned()
+      .unwrap_or_else(|| "ATOM".to_string()),
     _ => "ATOM".to_string(),
   }
 }
@@ -1241,23 +1446,20 @@ fn get_role_from_node(node: &NodeData) -> String {
 /// Get a numeric internal attribute (like _lspace, _rspace, _lpadding, _rpadding).
 fn get_internal_attr(node: &NodeData, attr: &str) -> f64 {
   match node {
-    NodeData::Element { attributes, .. } => {
-      attributes.as_ref()
-        .and_then(|a| a.get(attr))
-        .and_then(|v| {
-          let s = v.trim_end_matches("em");
-          s.parse::<f64>().ok()
-        })
-        .unwrap_or(0.0)
-    }
+    NodeData::Element { attributes, .. } => attributes
+      .as_ref()
+      .and_then(|a| a.get(attr))
+      .and_then(|v| {
+        let s = v.trim_end_matches("em");
+        s.parse::<f64>().ok()
+      })
+      .unwrap_or(0.0),
     _ => 0.0,
   }
 }
 
 /// Check if a NodeData is an m:mo element.
-fn is_mo(node: &NodeData) -> bool {
-  matches!(node, NodeData::Element { tag, .. } if tag == "m:mo")
-}
+fn is_mo(node: &NodeData) -> bool { matches!(node, NodeData::Element { tag, .. } if tag == "m:mo") }
 
 /// Set an attribute on a NodeData element.
 fn set_attr(node: &mut NodeData, key: &str, value: &str) {
@@ -1323,9 +1525,15 @@ mod tests {
   #[test]
   fn test_apply_handler_for_role() {
     assert_eq!(apply_handler_for_role("ADDOP"), ApplyHandler::Infix);
-    assert_eq!(apply_handler_for_role("SUPERSCRIPTOP"), ApplyHandler::Script);
+    assert_eq!(
+      apply_handler_for_role("SUPERSCRIPTOP"),
+      ApplyHandler::Script
+    );
     assert_eq!(apply_handler_for_role("FRACOP"), ApplyHandler::Fraction);
-    assert_eq!(apply_handler_for_role("OVERACCENT"), ApplyHandler::OverAccent);
+    assert_eq!(
+      apply_handler_for_role("OVERACCENT"),
+      ApplyHandler::OverAccent
+    );
     assert_eq!(apply_handler_for_role("SUMOP"), ApplyHandler::Summation);
     assert_eq!(apply_handler_for_role("FUNCTION"), ApplyHandler::Generic);
   }
@@ -1340,8 +1548,14 @@ mod tests {
 
   #[test]
   fn test_encoding_for_mimetype() {
-    assert_eq!(encoding_for_mimetype("application/mathml-presentation+xml"), "MathML-Presentation");
-    assert_eq!(encoding_for_mimetype("application/mathml-content+xml"), "MathML-Content");
+    assert_eq!(
+      encoding_for_mimetype("application/mathml-presentation+xml"),
+      "MathML-Presentation"
+    );
+    assert_eq!(
+      encoding_for_mimetype("application/mathml-content+xml"),
+      "MathML-Content"
+    );
     assert_eq!(encoding_for_mimetype("image/svg+xml"), "SVG1.1");
     assert_eq!(encoding_for_mimetype("text/plain"), "text/plain");
   }
@@ -1368,7 +1582,7 @@ mod tests {
       NodeData::Element { tag, children, .. } => {
         assert_eq!(tag, "m:mrow");
         assert_eq!(children.len(), 3);
-      }
+      },
       _ => panic!("Expected Element"),
     }
   }
@@ -1381,7 +1595,7 @@ mod tests {
       NodeData::Element { tag, children, .. } => {
         assert_eq!(tag, "m:mrow");
         assert_eq!(children.len(), 3); // open, item, close
-      }
+      },
       _ => panic!("Expected mrow"),
     }
 

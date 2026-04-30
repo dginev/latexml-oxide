@@ -20,7 +20,13 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
       if let Some(pos) = id.rfind('.') {
         let suffix = &id[pos + 1..];
         let prefix: String = suffix.chars().take_while(|c| !c.is_ascii_digit()).collect();
-        let ctrkey = format!("_ID_counter_{}_", prefix);
+        // Perl `Package.pm:939` — empty prefix uses `_ID_counter_` (single
+        // trailing underscore), not `_ID_counter__`.
+        let ctrkey = if prefix.is_empty() {
+          "_ID_counter_".to_string()
+        } else {
+          format!("_ID_counter_{}_", prefix)
+        };
         if let Some(mut ancestor) = node.get_parent() {
           if let Some(ctr_str) = ancestor.get_attribute(&ctrkey) {
             if let Ok(ctr) = ctr_str.parse::<u32>() {
@@ -33,7 +39,13 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
       } else {
         // No dot — top-level id like "p7"
         let prefix: String = id.chars().take_while(|c| !c.is_ascii_digit()).collect();
-        let ctrkey = format!("_ID_counter_{}_", prefix);
+        // Perl `Package.pm:939` — empty prefix uses `_ID_counter_` (single
+        // trailing underscore), not `_ID_counter__`.
+        let ctrkey = if prefix.is_empty() {
+          "_ID_counter_".to_string()
+        } else {
+          format!("_ID_counter_{}_", prefix)
+        };
         // Find the ancestor with the counter (root element)
         if let Some(root) = document.get_document().get_root_element() {
           let mut root = root;

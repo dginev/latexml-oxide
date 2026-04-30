@@ -418,3 +418,111 @@ impl Template {
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn align_default_is_left() {
+    assert_eq!(Align::default(), Align::Left);
+  }
+
+  #[test]
+  fn align_char_code() {
+    assert_eq!(Align::Left.char_code(), 'l');
+    assert_eq!(Align::Right.char_code(), 'r');
+    assert_eq!(Align::Center.char_code(), 'c');
+    assert_eq!(Align::Justify.char_code(), 'p');
+    // Char variant falls back to 'c' for sizing.
+    assert_eq!(Align::Char(".".to_string()).char_code(), 'c');
+  }
+
+  #[test]
+  fn align_name() {
+    assert_eq!(Align::Left.name(), "left");
+    assert_eq!(Align::Right.name(), "right");
+    assert_eq!(Align::Center.name(), "center");
+    assert_eq!(Align::Justify.name(), "justify");
+    assert_eq!(Align::Char(".".to_string()).name(), "char:.");
+  }
+
+  #[test]
+  fn align_from_char_basic() {
+    assert_eq!(Align::from('l'), Align::Left);
+    assert_eq!(Align::from('r'), Align::Right);
+    assert_eq!(Align::from('c'), Align::Center);
+    assert_eq!(Align::from('p'), Align::Justify);
+  }
+
+  #[test]
+  fn align_from_char_unknown_is_default() {
+    // Unknown char falls back to Default (Left).
+    assert_eq!(Align::from('x'), Align::Left);
+    assert_eq!(Align::from('?'), Align::Left);
+  }
+
+  #[test]
+  fn axis_name() {
+    assert_eq!(Axis::Column.name(), "column");
+    assert_eq!(Axis::Row.name(), "row");
+  }
+
+  #[test]
+  fn axis_marker_name_is_inverse() {
+    // marker_name is intentionally "the other axis" — column's
+    // marker is a row, row's marker is a column (possibly a naming
+    // artifact from the Perl side).
+    assert_eq!(Axis::Column.marker_name(), "row");
+    assert_eq!(Axis::Row.marker_name(), "column");
+  }
+
+  #[test]
+  fn column_spec_display_chars() {
+    assert_eq!(format!("{}", ColumnSpec::Integer), "i");
+    assert_eq!(format!("{}", ColumnSpec::Empty), "_");
+    assert_eq!(format!("{}", ColumnSpec::Unknown), "?");
+    assert_eq!(format!("{}", ColumnSpec::Text), "t");
+    assert_eq!(format!("{}", ColumnSpec::MultiText), "tt");
+    assert_eq!(format!("{}", ColumnSpec::Math), "m");
+    assert_eq!(format!("{}", ColumnSpec::MathAltText), "mx");
+    assert_eq!(format!("{}", ColumnSpec::D), "d");
+    assert_eq!(format!("{}", ColumnSpec::Graphics), "g");
+  }
+
+  #[test]
+  fn column_spec_difference_heuristic_self_is_zero() {
+    // Like-to-like distances are 0 for each non-generic variant.
+    assert_eq!(
+      ColumnSpec::Empty.difference_heuristic(&ColumnSpec::Empty),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Math.difference_heuristic(&ColumnSpec::Math),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Integer.difference_heuristic(&ColumnSpec::Integer),
+      0.0
+    );
+    assert_eq!(
+      ColumnSpec::Text.difference_heuristic(&ColumnSpec::Text),
+      0.0
+    );
+    assert_eq!(ColumnSpec::D.difference_heuristic(&ColumnSpec::D), 0.0);
+    assert_eq!(
+      ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Graphics),
+      0.0
+    );
+  }
+
+  #[test]
+  fn column_spec_difference_heuristic_incompatible_is_large() {
+    // Graphics vs anything else → 0.75 (Perl's "strong difference").
+    assert_eq!(
+      ColumnSpec::Graphics.difference_heuristic(&ColumnSpec::Math),
+      0.75
+    );
+    assert_eq!(ColumnSpec::D.difference_heuristic(&ColumnSpec::Text), 0.75);
+  }
+}

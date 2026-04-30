@@ -14,10 +14,23 @@ LoadDefinitions!({
   ] {
     DeclareOption!(option, None);
   }
+  // Perl preview.sty.ltxml L40-41: per-environment options push their
+  // name into the `preview_environments` stacked value so downstream
+  // tooling can check which envs are marked for preview extraction.
+  // Rust had empty no-op stubs — port the push so any consumer of the
+  // stored value (e.g. a future preview post-processor) sees the set.
   for option in ["displaymath", "textmath", "graphics", "floats", "sections", "footnotes"] {
-    DeclareOption!(option, None);
+    let opt = option;
+    DeclareOption!(opt, {
+      let _ = state::push_value("preview_environments", Stored::from(opt));
+    });
   }
-  DeclareOption!("active", None);
+  // Perl L43: `active` option digests `\Previewtrue` to flip the
+  // \ifPreview conditional on. Without this, \ifPreview stays false and
+  // the `active` option has no observable effect.
+  DeclareOption!("active", {
+    Digest!("\\Previewtrue")?;
+  });
 
   DefMacro!("\\PreviewMacro OptionalMatch:* []{}", None);
   DefMacro!("\\PreviewEnvironment OptionalMatch:* []{}", None);

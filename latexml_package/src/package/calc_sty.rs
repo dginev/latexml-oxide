@@ -55,11 +55,13 @@ fn read_term(expr_type: &str) -> Result<RegisterValue> {
   while let Some(op) = gullet::read_keyword(&["*", "/"])? {
     let factor2 = read_value("Number")?;
     factor = match factor2 {
-      CalcValue::Flt(f) => {
-        apply_float_op(&factor, &op, f)
-      },
+      CalcValue::Flt(f) => apply_float_op(&factor, &op, f),
       CalcValue::Reg(rv) => {
-        if op == "*" { factor.multiply(rv) } else { factor.divide(rv) }
+        if op == "*" {
+          factor.multiply(rv)
+        } else {
+          factor.divide(rv)
+        }
       },
     };
   }
@@ -111,6 +113,123 @@ fn apply_float_op(val: &RegisterValue, op: &str, f: f64) -> RegisterValue {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use latexml_core::common::glue::Glue;
+  use latexml_core::common::numeric_ops::NumericOps;
+
+  #[test]
+  fn apply_float_op_number_multiply() {
+    let n = RegisterValue::Number(Number::new(10));
+    let result = apply_float_op(&n, "*", 2.5);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 25),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_number_divide() {
+    let n = RegisterValue::Number(Number::new(100));
+    let result = apply_float_op(&n, "/", 4.0);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 25),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_divide_by_zero_is_identity_divisor() {
+    // Guard: division by zero uses divisor=1 → returns the original value.
+    let n = RegisterValue::Number(Number::new(42));
+    let result = apply_float_op(&n, "/", 0.0);
+    match result {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 42),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_dimension_multiply() {
+    let d = RegisterValue::Dimension(Dimension::new(1000));
+    let result = apply_float_op(&d, "*", 0.5);
+    match result {
+      RegisterValue::Dimension(v) => assert_eq!(v.value_of(), 500),
+      other => panic!("expected Dimension, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_multiply_scales_all_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  100,
+      plus:  Some(10),
+      pfill: None,
+      minus: Some(5),
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "*", 3.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 300);
+        assert_eq!(v.plus, Some(30));
+        assert_eq!(v.minus, Some(15));
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_divide_scales_all_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  600,
+      plus:  Some(60),
+      pfill: None,
+      minus: Some(30),
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "/", 2.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 300);
+        assert_eq!(v.plus, Some(30));
+        assert_eq!(v.minus, Some(15));
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_glue_preserves_none_components() {
+    let g = RegisterValue::Glue(Glue {
+      skip:  100,
+      plus:  None,
+      pfill: None,
+      minus: None,
+      mfill: None,
+    });
+    let result = apply_float_op(&g, "*", 2.0);
+    match result {
+      RegisterValue::Glue(v) => {
+        assert_eq!(v.skip, 200);
+        assert!(v.plus.is_none());
+        assert!(v.minus.is_none());
+      },
+      other => panic!("expected Glue, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn apply_float_op_unsupported_variant_is_identity() {
+    // Anything not Number / Dimension / Glue hits the `_ => val.clone()` arm.
+    let muglue = RegisterValue::MuGlue(Default::default());
+    let result = apply_float_op(&muglue, "*", 3.14);
+    // Muglue clones through untouched.
+    assert_eq!(result, muglue);
+  }
+}
+
 fn read_value(expr_type: &str) -> Result<CalcValue> {
   gullet::skip_spaces()?;
   let peek = gullet::read_x_token(None, false, None)?;
@@ -128,29 +247,39 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   if peek == T_CS!("\\widthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let width = box_result.get_width(None)?.unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let width = box_result
+      .get_width(None)?
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(width));
   }
   // \heightof{...}
   if peek == T_CS!("\\heightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let height = box_result.get_height().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let height = box_result
+      .get_height()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height));
   }
   // \depthof{...}
   if peek == T_CS!("\\depthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let depth = box_result.get_depth().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let depth = box_result
+      .get_depth()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(depth));
   }
   // \totalheightof{...}
   if peek == T_CS!("\\totalheightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
-    let height = box_result.get_height().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
-    let depth = box_result.get_depth().unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let height = box_result
+      .get_height()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+    let depth = box_result
+      .get_depth()
+      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height.add(depth)));
   }
   // \real{<decimal>} — returns a Float factor for multiplication
@@ -199,7 +328,9 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // Else: literal value — put back token and read normally
   gullet::unread_one(peek);
   if expr_type == "Number" {
-    Ok(CalcValue::Reg(RegisterValue::Number(gullet::read_number()?)))
+    Ok(CalcValue::Reg(
+      RegisterValue::Number(gullet::read_number()?),
+    ))
   } else {
     Ok(CalcValue::Reg(RegisterValue::Glue(gullet::read_glue()?)))
   }

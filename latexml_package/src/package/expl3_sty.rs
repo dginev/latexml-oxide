@@ -2,87 +2,57 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: expl3.sty.ltxml — just 3 lines:
+  // Strict-Perl translation of LaTeXML/lib/LaTeXML/Package/expl3.sty.ltxml:
   //   LoadPool('LaTeX');
   //   InputDefinitions('expl3', type => 'lua');
   //   InputDefinitions('expl3', type => 'sty', noltxml => 1);
+  //
+  // The raw expl3.sty file has a TeX-level guard
+  //   \expandafter\ifx\csname tex_let:D\endcsname\relax
+  //     \expandafter\@firstofone\else\expandafter\@gobble\fi
+  //     {\input expl3-code.tex }%
+  // which detects the dump-loaded `\tex_let:D` PA-alias and skips
+  // re-loading expl3-code.tex. So this 3-line wrapper does the right
+  // thing: load lua portion, then load .sty (which short-circuits).
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
+  let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
 
-  // NOTE: Pre-definitions for l3file functions removed. The \exp_last_unbraced:NNNNo
-  // at line 11527 of expl3-code.tex now defines these naturally. Previous pre-defs
-  // caused \cs_new:Npn to find them already defined, triggering \msg_error:nnee
-  // which has a complex expansion chain that consumed the rest of the file.
-
-  // Short-circuit raw expl3.sty loading when the dump already provides
-  // expl3's core definitions (detected via `\tex_let:D`, which the raw
-  // expl3.sty itself uses as the gate for `\input expl3-code.tex` on
-  // line 54 of l3kernel/expl3.sty). This avoids re-digesting 36k lines
-  // of `expl3-code.tex` whose compiled form is already in the dump.
-  // Mirrors the TeX-level guard; we just inspect the same condition from
-  // Rust to avoid opening the raw mouth entirely.
-  let dump_has_expl3 = lookup_definition(&T_CS!("\\tex_let:D"))?.is_some();
-  if !dump_has_expl3 {
-    // Load raw expl3.sty — processes all 36K lines of expl3-code.tex.
-    // Suppress errors during loading: expl3-code.tex has many forward references
-    // (functions used before defined) and one expansion chain issue producing
-    // an extra \endcsname. Pre-definitions above eliminate the l3file forward-refs;
-    // SUPPRESS_UNDEFINED_ERRORS handles remaining forward-refs within the 36K lines.
-    state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, Some(Scope::Global));
-    state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, Some(Scope::Global));
-    // Suppress log output during loading: expl3-code.tex fires \errmessage for
-    // forward-ref errors and missing Unicode data files (harmless noise).
-    latexml_core::common::error::set_suppress_log_output(true);
-    let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
-      noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-    latexml_core::common::error::set_suppress_log_output(false);
-    state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, Some(Scope::Global));
-  }
-
-  // Post-load: set expl3 catcodes for fixup commands.
-  state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
-  // Define cmd module messages (normally from latex.ltx, not in our LaTeX pool)
-  // and suppress info messages to prevent \NewDocumentCommand from leaking text.
-  raw_tex(concat!(
-    r"\msg_new:nnn{cmd}{define-command}{Defining~command~#1~with~sig.~'#2'~\msg_line_context:.}",
-    r"\msg_new:nnn{cmd}{define-env}{Defining~environment~#1~with~sig.~'#2'~\msg_line_context:.}",
-    r"\msg_redirect_module:nnn{cmd}{info}{none}",
-    r"\msg_redirect_module:nnn{ltcmd}{info}{none}",
-    r"\cs_gset_protected:Npn\__kernel_msg_info:nnxx#1#2#3#4{}",
-  ))?;
-  // l3file fixups: the l3file section of expl3-code.tex has a subtle failure
-  // where some definitions (quarks, file name functions) don't survive loading.
-  // The expl3 core functions (\cs_new:Npn, \quark_new:N, etc.) ARE available
-  // at this point, so we use them directly (catcodes are LETTER for _ and :).
-  // Perl: all defined naturally by expl3-code.tex L12416-12430.
-  // Define unconditionally using \cs_gset — ERROR stubs from suppressed-error
-  // loading fool \cs_if_exist into thinking the CS is already defined.
-  // \quark_new:N uses \cs_gset_nopar:Npn which overwrites any existing def.
-  raw_tex(concat!(
-    r"\seq_gclear_new:N \g__file_record_seq",
-    r"\seq_gclear_new:N \l_file_search_path_seq",
-    r"\scan_new:N \s__file_stop",
-    r"\quark_new:N \q__file_nil",
-    r"\quark_new:N \q__file_recursion_tail",
-    r"\quark_new:N \q__file_recursion_stop",
-  ))?;
-  // \__kernel_file_name_sanitize:n — passthrough stub (overwrites ERROR stub)
-  raw_tex(r"\cs_gset:Npn \__kernel_file_name_sanitize:n #1 {#1}")?;
-  // \__file_quark_if_nil:nTF — conditional test for \q__file_nil
-  raw_tex(r"\__kernel_quark_new_conditional:Nn \__file_quark_if_nil:n { TF }")?;
-  // Safety net: restore catcodes if expl3.sty's \ExplSyntaxOff didn't run properly.
-  // Check both space and underscore catcodes — packages using \ProvidesExplPackage
-  // may restore space but leave underscore as LETTER if the restoration is group-local.
-  if state::lookup_catcode(' ') != Some(Catcode::SPACE)
-    || state::lookup_catcode('_') != Some(Catcode::SUB)
-  {
-    state::assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
-    state::assign_catcode('\t', Catcode::SPACE, Some(Scope::Global));
-    state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
-    state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-    state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
-    raw_tex(r"\endlinechar=13\relax")?;
-  }
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", false, Some(Scope::Global));
+  // expl3 case-folding override.
+  //
+  // The kernel `\__kernel_codepoint_case:nn` walks per-codepoint case maps
+  // built from `c__codepoint_<case>_<cp>_tl` constants. Those are populated
+  // by reading UnicodeData.txt / CaseFolding.txt / SpecialCasing.txt during
+  // expl3-code.tex's group-end block at L33074-33180. Our raw expl3 load
+  // currently fails to open those files (the `ior_open` chain trips on a
+  // file_input dispatch issue tracked separately), leaving the codepoint
+  // tables empty — so `\str_lowercase:n {Hello}` returns "Hello" unchanged.
+  //
+  // Override the kernel function with a Rust impl using `char::to_lowercase`
+  // and `char::to_uppercase` from std. Returns a triple `{cp1}{cp2}{cp3}`
+  // matching expl3's expected return contract — first slot is the primary
+  // result codepoint, slots 2/3 hold combining chars for compound mappings
+  // (e.g. "ß" → "SS" upper has slot1=S, slot2=S; we model only single-cp
+  // mappings here, leaving slots 2/3 blank). For ASCII this is exact; for
+  // non-Latin scripts that map to multi-char sequences (Latin extended,
+  // Greek, etc.) Rust's std char::to_lowercase yields the right primary cp.
+  DefMacro!(T_CS!("\\__kernel_codepoint_case:nn"), "{}{}", sub[(case_type, cp_str)] {
+    let case = case_type.to_string().to_lowercase();
+    let cp_text = cp_str.to_string();
+    let cp_n: u32 = cp_text.trim().parse().unwrap_or(0);
+    let result_cp = if cp_n == 0 {
+      0u32
+    } else if let Some(c) = char::from_u32(cp_n) {
+      let folded: String = match case.as_str() {
+        "lowercase" | "casefold" => c.to_lowercase().collect(),
+        "uppercase" | "titlecase" => c.to_uppercase().collect(),
+        _ => c.to_string(),
+      };
+      folded.chars().next().map(|fc| fc as u32).unwrap_or(cp_n)
+    } else {
+      cp_n
+    };
+    Ok(Tokenize!(&format!("{{{}}}{{}}{{}}", result_cp)))
+  });
 });

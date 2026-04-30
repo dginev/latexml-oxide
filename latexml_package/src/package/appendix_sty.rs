@@ -2,8 +2,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: appendix.sty.ltxml
-  // INCOMPLETE IMPLEMENTATION — covers the core environments
+  // Perl: appendix.sty.ltxml — 103 lines; Rust mirrors the macro set
+  // one-for-one (L32-100). Perl's own "INCOMPLETE IMPLEMENTATION" header
+  // at L20-23 is inherited, not a Rust gap — no further entries exist
+  // upstream. `\appendixpage` / `\addappheadtotoc` are commented out in
+  // both files (L28-30 Perl, absent in Rust); `\phantomsection` and
+  // `\restoreapp` likewise.
 
   DefMacro!("\\appendixname",     "Appendix");
   DefMacro!("\\appendixtocname",  "Appendices");

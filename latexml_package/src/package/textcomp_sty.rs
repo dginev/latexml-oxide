@@ -2,22 +2,22 @@ use crate::prelude::*;
 LoadDefinitions!({
   //======================================================================
   // Accent Symbols
-  DefAccent!("\\capitalacute",        '\u{0301}', "\u{00B4}");
-  DefAccent!("\\capitalbreve",        '\u{0306}', "\u{02D8}");
-  DefAccent!("\\capitalcaron",        '\u{030C}', "\u{02C7}");
+  DefAccent!("\\capitalacute", '\u{0301}', "\u{00B4}");
+  DefAccent!("\\capitalbreve", '\u{0306}', "\u{02D8}");
+  DefAccent!("\\capitalcaron", '\u{030C}', "\u{02C7}");
   DefAccent!("\\capitalcedilla",      '\u{0327}', "\u{00B8}", below => true);
-  DefAccent!("\\capitalcircumflex",   '\u{0302}', "\u{02C6}");
-  DefAccent!("\\capitaldieresis",     '\u{0308}', "\u{00A8}");
-  DefAccent!("\\capitaldotaccent",    '\u{0307}', "\u{02D9}");
-  DefAccent!("\\capitalgrave",        '\u{0300}', "\u{0060}");
+  DefAccent!("\\capitalcircumflex", '\u{0302}', "\u{02C6}");
+  DefAccent!("\\capitaldieresis", '\u{0308}', "\u{00A8}");
+  DefAccent!("\\capitaldotaccent", '\u{0307}', "\u{02D9}");
+  DefAccent!("\\capitalgrave", '\u{0300}', "\u{0060}");
   DefAccent!("\\capitalhungarumlaut", '\u{030B}', "\u{02DD}");
-  DefAccent!("\\capitalmacron",       '\u{0304}', "\u{00AF}");
-  DefAccent!("\\capitalnewtie",       '\u{0361}', "-");
-  DefAccent!("\\capitalogonek",       '\u{0328}', "\u{02DB}");
-  DefAccent!("\\capitalring",         '\u{030A}', "\u{02DA}");
-  DefAccent!("\\capitaltie",          '\u{0361}', "-");
-  DefAccent!("\\capitaltilde",        '\u{0303}', "\u{02DC}");
-  DefAccent!("\\newtie",              '\u{0361}', "-");
+  DefAccent!("\\capitalmacron", '\u{0304}', "\u{00AF}");
+  DefAccent!("\\capitalnewtie", '\u{0361}', "-");
+  DefAccent!("\\capitalogonek", '\u{0328}', "\u{02DB}");
+  DefAccent!("\\capitalring", '\u{030A}', "\u{02DA}");
+  DefAccent!("\\capitaltie", '\u{0361}', "-");
+  DefAccent!("\\capitaltilde", '\u{0303}', "\u{02DC}");
+  DefAccent!("\\newtie", '\u{0361}', "-");
 
   //======================================================================
   // Numerals

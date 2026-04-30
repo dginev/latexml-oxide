@@ -123,3 +123,67 @@ pub fn attribute_format(sp: i64, unit_opt: Option<&str>) -> String {
   let unit = unit_opt.unwrap_or("pt");
   s!("{:.1}{unit}", round_to(sp as f64 / UNITY_F64, Some(1)))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn fixedformat_zero() {
+    // Knuth's print_scaled of 0 with a unit.
+    assert_eq!(fixedformat(0, Some("pt")), "0.0pt");
+    assert_eq!(fixedformat(0, None), "0.0");
+  }
+
+  #[test]
+  fn fixedformat_one_sp_unit() {
+    // UNITY = 65536 scaled-points = 1pt.
+    assert_eq!(fixedformat(UNITY, Some("pt")), "1.0pt");
+    assert_eq!(fixedformat(2 * UNITY, Some("pt")), "2.0pt");
+  }
+
+  #[test]
+  fn fixedformat_negative() {
+    assert_eq!(fixedformat(-UNITY, Some("pt")), "-1.0pt");
+    assert_eq!(fixedformat(-2 * UNITY, Some("pt")), "-2.0pt");
+  }
+
+  #[test]
+  fn fixedformat_half_pt() {
+    // 0.5 pt = UNITY/2 = 32768 sp.
+    let out = fixedformat(UNITY / 2, Some("pt"));
+    assert_eq!(out, "0.5pt");
+  }
+
+  #[test]
+  fn attribute_format_defaults_to_pt() {
+    assert_eq!(attribute_format(UNITY, None), "1.0pt");
+    assert_eq!(attribute_format(UNITY, Some("pt")), "1.0pt");
+  }
+
+  #[test]
+  fn attribute_format_other_unit() {
+    assert_eq!(attribute_format(UNITY, Some("in")), "1.0in");
+  }
+
+  #[test]
+  fn attribute_format_rounds_to_one_decimal() {
+    // sp = UNITY * 1.25 → 1.3pt (round to 1 decimal, half-up).
+    let sp = (UNITY_F64 * 1.25) as i64;
+    let out = attribute_format(sp, None);
+    assert_eq!(out, "1.3pt", "got {out:?}");
+  }
+
+  #[test]
+  fn spec_to_f64_empty_is_zero() {
+    assert_eq!(Dimension::spec_to_f64("").unwrap(), 0.0);
+  }
+
+  #[test]
+  fn spec_to_f64_bare_number_is_scaled() {
+    // No unit → treated as scaled-points directly; the value is
+    // kround()-ed through, so "65536" stays 65536.
+    let out = Dimension::spec_to_f64("65536").unwrap();
+    assert_eq!(out, 65536.0);
+  }
+}

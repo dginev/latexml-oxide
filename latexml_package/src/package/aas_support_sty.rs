@@ -1,3 +1,4 @@
+use crate::engine::latex_constructs::{after_float, before_float_ex};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -72,6 +73,16 @@ LoadDefinitions!({
   DefPrimitive!("\\and", None);
   DefMacro!("\\authoremail", "\\email");
 
+  // Perl aas_support.sty.ltxml L119:
+  //   AddToMacro(T_CS('\@startsection@hook'),
+  //              TokenizeInternal('\let\email\@@email'));
+  // When a section starts, locally Let \email = \@@email so that
+  // \email{user@example} inside a section body renders as an inline
+  // mailto link (via \@@email) rather than being pushed to the
+  // frontmatter creator list. Pure additive parity port — no test
+  // exercises \email inside a section so no golden risk.
+  AddToMacro!("\\@startsection@hook", "\\let\\email\\@@email");
+
   // Affiliation marks — Perl L126-132
   DefMacro!("\\altaffilmark{}", "\\@altaffilmark{#1}");
   DefConstructor!("\\@altaffilmark{}", "<ltx:note role='affiliationmark' mark='#1'/>",
@@ -109,13 +120,26 @@ LoadDefinitions!({
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
   DefMacro!("\\gridline{}", "");
 
-  // Plate environments — Perl L179-201
+  // Plate environments — Perl aas_support.sty.ltxml L179-201.
+  // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
+  // assigns \hsize) and afterFloat (closes the float scope, sets the
+  // float number / id). The starred variant additionally passes
+  // `double => 1` so \hsize gets \textwidth instead of \columnwidth
+  // (two-column-spanning plate). Without these hooks, the Rust port
+  // emits an empty <ltx:float> shell that loses caption/number metadata
+  // and uses single-column box geometry even in the * variant.
+  // Template additionally needs `inlist='#inlist' ?#1(placement='#1')`
+  // to match the floats produced by \newfloat-style envs (acmart, rotating).
   DefEnvironment!("{plate}[]",
-    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    before_digest => { before_float_ex("plate", None, false); },
+    after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
   DefEnvironment!("{plate*}[]",
-    "<ltx:float xml:id='#id' class='ltx_float_plate'>#tags#body</ltx:float>",
+    "<ltx:float xml:id='#id' inlist='#inlist' ?#1(placement='#1') class='ltx_float_plate'>#tags#body</ltx:float>",
+    before_digest => { before_float_ex("plate", None, true); },
+    after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
 
@@ -139,8 +163,34 @@ LoadDefinitions!({
     enter_horizontal => true);
   DefMacro!("\\facilities{}", "\\@add@frontmatter{ltx:note}[role=facilities]{#1}");
 
-  // 2.11 Appendices
+  // 2.11 Appendices — Perl aas_support.sty.ltxml L247-249
   DefMacro!("\\appendix", "\\@appendix");
+  // `\@appendix` starts section-numbered appendices, then re-scopes the
+  // equation counter to reset within each appendix section. Perl uses
+  // `scope => 'global'` on the `\theequation` redefinition so the new
+  // numbering format outlives the current group — in Rust we pass
+  // Some(Scope::Global) to def_macro for the same effect. The appendix
+  // numbering is `\thesection\arabic{equation}` (no separator) — matches
+  // AAS journal style, distinct from Rust's `\eqsecnum` macro L369 which
+  // uses a dash separator.
+  DefPrimitive!("\\@appendix", {
+    start_appendices("section");
+    // Perl L248 passes `idprefix => 'E'` so appendix equations get
+    // xml:ids like `S1.E2`. Without the prefix, Rust falls back to the
+    // default (empty) and collides with body-equation ids once the
+    // document reaches its second appendix.
+    new_counter(
+      "equation",
+      "section",
+      Some(NewCounterOptions { idprefix: "E", ..Default::default() }),
+    )?;
+    def_macro(
+      T_CS!("\\theequation"),
+      None,
+      mouth::tokenize_internal("\\thesection\\arabic{equation}"),
+      Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
+    )?;
+  });
 
   // 2.12 Equations
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");
@@ -154,11 +204,40 @@ LoadDefinitions!({
   DefMacro!("\\markcite{}", "");
   RequirePackage!("natbib");
 
-  // References environment — Perl L283-293
-  DefConstructor!("\\references",
-    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
-  DefConstructor!("\\endreferences",
-    "</ltx:biblist></ltx:bibliography>");
+  // Perl aas_support.sty.ltxml:283-291:
+  //   DefConstructor('\references',
+  //     "<ltx:bibliography xml:id='#id' ... ><ltx:title>#title</ltx:title><ltx:biblist>",
+  //     afterDigest => sub { beginBibliography($_[1]); });
+  //   DefConstructor('\endreferences', sub { maybeCloseElement biblist/bibliography; });
+  //
+  // Without `afterDigest => beginBibliography`, Rust's \bibitem fires
+  // unguarded: the open `<ltx:biblist>` child-admission rules don't take
+  // effect (beginBibliography installs them), so `\bibitem` ends up
+  // absorbed by whatever the current element is — `<ltx:section>`,
+  // `<ltx:para>`, `<ltx:text>`, `<ltx:XMath>` in the 4 failing 10k-sandbox
+  // papers (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
+  // nucl-th0010030) → "malformed:ltx:bibitem isn't allowed in <ltx:X>".
+  //
+  // Matching revtex4_support_sty.rs:146-159's pattern for its own
+  // `\references` (which already calls begin_bibliography). The Perl
+  // attribute set (bibstyle/citestyle/sort/title) is richer than what
+  // the Rust template currently emits — that's a separate enhancement;
+  // landing the afterDigest hook alone is what closes the 4-paper
+  // malformed:ltx:bibitem cluster.
+  DefConstructor!(
+    "\\references",
+    "<ltx:bibliography xml:id='#id'><ltx:biblist>",
+    after_digest => sub[whatsit] {
+      crate::engine::latex_constructs::begin_bibliography(whatsit)?;
+    }
+  );
+  DefConstructor!(
+    "\\endreferences",
+    sub[document, _whatsit, _props] {
+      document.maybe_close_element("ltx:biblist")?;
+      document.maybe_close_element("ltx:bibliography")?;
+    }
+  );
   Let!("\\reference", "\\bibitem");
 
   RequirePackage!("graphicx");
@@ -173,10 +252,15 @@ LoadDefinitions!({
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 
   // 2.14.2 Figure Captions
-  // Perl: \figcaption checks if inside a figure environment.
+  // Perl: `DefMacro('\figcaption OptionalSemiverbatim', sub { ... })`.
+  // The optional arg is `OptionalSemiverbatim` — catcodes are neutralized
+  // so a literal `_` in `\figcaption[X_Y.ps]{...}` (paper-local filename
+  // hint for List-of-Figures) doesn't trigger the math-mode subscript
+  // catcode. Driver: arXiv:astro-ph/9808081 has 5× `\figcaption[X_Y.ps]`.
+  // \figcaption checks if inside a figure environment.
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
-  DefMacro!("\\figcaption[]", sub[(opt_arg)] {
+  DefMacro!("\\figcaption OptionalSemiverbatim", sub[(opt_arg)] {
     let env = state::lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {
       // Inside figure: act as \caption
@@ -202,6 +286,12 @@ LoadDefinitions!({
   state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
   state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
 
+  // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
+  // used by aas deluxetable tokenizes literal `$` from the template, so
+  // the package stashes an active math-shift token into `\savedollar`
+  // for later re-insertion. Port via state::let_i with T_MATH!().
+  state::let_i(&T_CS!("\\savedollar"), &T_MATH!(), None);
+
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
   DefConditional!("\\ifdeluxedecimals");
@@ -214,6 +304,35 @@ LoadDefinitions!({
 
   // Hidden column environment — Perl L374
   DefEnvironment!("{eatone}", "");
+
+  // Perl aas_support.sty.ltxml L373-389: hidden-column types `h` and `B`.
+  // Both wrap contents in \eatone (swallowed), producing a zero-width
+  // sentinel cell. Perl L385-389 adds `B` with a TODO to "break table
+  // eventually" — we match Perl's current behavior (identical to `h`).
+  // The more complex `D` and `d` decimal-alignment column types (Perl
+  // L349-356) use SplitTokens token-shuffling for dot alignment — the
+  // helper itself (`base_utilities::split_tokens` + XUntil parameter
+  // type) is now available, but porting is still deferred until a
+  // concrete aastex paper with `D`/`d` columns surfaces as a
+  // conversion gap, so the snapshot-regression risk is measurable.
+  DefColumnType!("h", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
+        after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("B", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
+        after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
 
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
@@ -287,16 +406,38 @@ LoadDefinitions!({
   DefPrimitive!("\\arcsec", "\u{2033}");
   DefMacro!("\\nodata", " ~$\\cdots$~ ");
 
-  // Perl L491: \aas@@fstack constructor — formats astronomical unit superscripts
+  // Perl L491-498: \aas@@fstack constructor — formats astronomical unit
+  // superscripts. Perl computes scriptpos dynamically as
+  // "mid" . $stomach->getScriptLevel — the trailing digit signals
+  // SUPERSCRIPTOP nesting depth (0 at top level, 1 inside a script,
+  // etc.). Rust previously hard-coded 'mid1', breaking nested usage.
+  // Also pickled `font => { shape => 'upright' }` (Perl L498) — the
+  // raised symbol is upright by convention regardless of the
+  // surrounding italic math font.
+  // Perl 98f6e5de (2025-08-12) added `sizer => '#2'` so the sizer is the
+  // symbol body (e.g. `d` in `\fd`), not the whole reversion — otherwise
+  // nested fstack expressions miscompute layout width.
   DefConstructor!("\\aas@@fstack Undigested {}",
     "<ltx:XMApp role='POSTFIX'>\
-       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='mid1'/>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/>\
        <ltx:XMTok>.</ltx:XMTok>\
        <ltx:XMWrap>#2</ltx:XMWrap>\
      </ltx:XMApp>",
     bounded => true,
-    reversion => "#1"
+    font => { shape => "upright" },
+    reversion => "#1",
+    sizer => "#2",
+    properties => sub[_args] {
+      Ok(stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())))
+    }
   );
+
+  // Perl aas_support.sty.ltxml L499: \aas@fstack{sym} — user-facing wrapper
+  // around \aas@@fstack that enforces math mode via \ensuremath. This is the
+  // CS other aastex-family bindings invoke when composing astronomical-unit
+  // stacks; the Rust port had only the internal \aas@@fstack DefConstructor,
+  // so direct consumers of \aas@fstack hit undefined-CS.
+  DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");
 
   DefMacro!("\\fd", "\\ensuremath{\\@fd}");
   DefMacro!("\\fh", "\\ensuremath{\\@fh}");
@@ -328,12 +469,16 @@ LoadDefinitions!({
   DefMacro!("\\threequarters", "\\ifmmode\\case{3}{4}\\else\\text@threequarters\\fi");
   DefPrimitive!("\\text@threequarters", "\u{00BE}");
 
-  // Photometric bands — Perl L529-533
-  DefPrimitive!("\\ubvr", "UBVR");
-  DefPrimitive!("\\ub", "U\u{2000}B");
-  DefPrimitive!("\\bv", "B\u{2000}V");
-  DefPrimitive!("\\vr", "V\u{2000}R");
-  DefPrimitive!("\\ur", "U\u{2000}R");
+  // Photometric bands — Perl aas_support.sty.ltxml L529-533. Each takes
+  // `bounded => 1, font => { shape => 'italic' }` so the italicization
+  // applies only to the band glyph and not to surrounding text — without
+  // bounded, an `\ubvr` mid-paragraph would italicize all subsequent text
+  // until the next font reset. Match Perl on both flags.
+  DefPrimitive!("\\ubvr", "UBVR", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\ub", "U\u{2000}B", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\bv", "B\u{2000}V", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\vr", "V\u{2000}R", bounded => true, font => { shape => "italic" });
+  DefPrimitive!("\\ur", "U\u{2000}R", bounded => true, font => { shape => "italic" });
 
   // amssymb aliases
   RequirePackage!("latexsym");
@@ -359,6 +504,12 @@ LoadDefinitions!({
   DefMacro!("\\Jpnom{}", "\\leavevmode\\hbox{\\boldmath$\\mathcal{#1}^{\\rm N}_{Jp}$}");
 
   // 2.17.5 Hypertext — Perl L563-577
+  // Perl L565: RequirePackage('url') — re-required here alongside the
+  // hypertext definitions so `\url{}` is guaranteed loaded before
+  // `\anchor`/`\@@email`/etc. AAS-macros that route URL content. The
+  // package loader no-ops a re-require, so this is a faithful
+  // transcription, not a repeated load.
+  RequirePackage!("url");
   DefConstructor!("\\anchor Semiverbatim Semiverbatim", "<ltx:ref href='#1'>#2</ltx:ref>",
     enter_horizontal => true);
   DefConstructor!("\\@@email Semiverbatim", "<ltx:ref href='mailto:#1'>#1</ltx:ref>",

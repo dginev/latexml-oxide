@@ -1,0 +1,191 @@
+//! Unit tests for `latexml_core::common::def_parser`.
+//!
+//! These cover the CS-name extraction branches of `parse_prototype` (plain
+//! `\foo`, `\csname foo\endcsname`, single-char `\(`, active char) and the
+//! parameter-spec extraction branches of `parse_parameters` (Nested `{...}`,
+//! Optional `[...]`, named spec `Name:extra`, and literal-Token fallback for
+//! bare delimiters like `+`).
+//!
+//! All tests run with `init_flag = false` (compile-time mode) to keep the
+//! parameters unvalidated — validation requires a running State which these
+//! unit tests don't set up.
+
+use latexml_core::T_CS;
+use latexml_core::common::arena;
+use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
+use latexml_core::state::{State, StateOptions, set_state};
+
+fn sym_str(s: latexml_core::common::arena::SymStr) -> String { arena::to_string(s) }
+
+fn setup() {
+  // parse_prototype / parse_parameters use mouth::tokenize_internal
+  // which needs thread-local State. An empty state is fine.
+  set_state(State::new(StateOptions::default()));
+}
+
+#[test]
+fn prototype_plain_cs() {
+  setup();
+  let (cs, params) = parse_prototype("\\foo", false).unwrap();
+  assert_eq!(cs, T_CS!("\\foo"));
+  assert!(params.is_none(), "no params for bare CS");
+}
+
+#[test]
+fn prototype_cs_with_trailing_param_spec() {
+  setup();
+  let (cs, params) = parse_prototype("\\foo{}", false).unwrap();
+  assert_eq!(cs, T_CS!("\\foo"));
+  let ps = params.expect("nested {} produces a Plain parameter");
+  assert_eq!(ps.get_parameters().len(), 1);
+  assert_eq!(sym_str(ps.get_parameters()[0].name), "Plain");
+}
+
+#[test]
+fn prototype_csname_endcsname() {
+  setup();
+  // `\csname theta\endcsname` should parse as `\theta`
+  let (cs, params) = parse_prototype("\\csname theta\\endcsname", false).unwrap();
+  assert_eq!(cs, T_CS!("\\theta"));
+  assert!(params.is_none());
+}
+
+#[test]
+fn prototype_csname_rejects_braces_at_compile_time() {
+  setup();
+  // init_flag=false → panics on brace-containing csname (see compile-time guard).
+  let result =
+    std::panic::catch_unwind(|| parse_prototype("\\csname begin{foo}\\endcsname", false));
+  assert!(
+    result.is_err(),
+    "compile-time csname with braces must panic"
+  );
+}
+
+#[test]
+fn prototype_single_char_cs() {
+  setup();
+  // `\(` is a single-char CS (punctuation after backslash).
+  let (cs, _) = parse_prototype("\\(", false).unwrap();
+  assert_eq!(cs, T_CS!("\\("));
+}
+
+#[test]
+fn prototype_empty_is_error() {
+  setup();
+  // Empty proto triggers the `fatal!` error path (returns Err, not panic).
+  let result = parse_prototype("", false);
+  assert!(result.is_err(), "empty prototype should return Err");
+}
+
+#[test]
+fn parse_parameters_empty_is_none() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("", &cs, false).unwrap();
+  assert!(ps.is_none());
+}
+
+#[test]
+fn parse_parameters_nested_plain() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("{}", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Plain");
+}
+
+#[test]
+fn parse_parameters_optional() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("[]", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Optional");
+}
+
+#[test]
+fn parse_parameters_optional_with_default() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("[Default:0]", &cs, false)
+    .unwrap()
+    .unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Optional");
+  // Default value is stored in extra
+  assert_eq!(params[0].extra.len(), 1);
+}
+
+#[test]
+fn parse_parameters_named_spec() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("Number", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Number");
+}
+
+#[test]
+fn parse_parameters_multiple() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("Number Number", &cs, false)
+    .unwrap()
+    .unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 2);
+}
+
+#[test]
+fn parse_parameters_mixed_optional_then_plain() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("[]{}", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 2);
+  assert_eq!(sym_str(params[0].name), "Optional");
+  assert_eq!(sym_str(params[1].name), "Plain");
+}
+
+#[test]
+fn parse_parameters_bare_delimiter_falls_back_to_literal_token() {
+  setup();
+  // A lone '+' doesn't match any named spec — the fallback produces a
+  // Token parameter with the '+' stored as OTHER in `extra`.
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("+", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Token");
+  assert_eq!(sym_str(params[0].spec), "Token");
+  assert!(!params[0].extra.is_empty());
+}
+
+#[test]
+fn parse_parameters_param_with_extra() {
+  setup();
+  let cs = T_CS!("\\foo");
+  let ps = parse_parameters("Until:stop", &cs, false).unwrap().unwrap();
+  let params = ps.get_parameters();
+  assert_eq!(params.len(), 1);
+  assert_eq!(sym_str(params[0].name), "Until");
+  assert_eq!(params[0].extra.len(), 1);
+}
+
+#[test]
+fn parse_parameters_caps_at_max_steps() {
+  setup();
+  // 60 consecutive `{}` groups blow past MAX_STEPS (50) and return Err via fatal!
+  let cs = T_CS!("\\foo");
+  let proto = "{}".repeat(60);
+  let result = parse_parameters(&proto, &cs, false);
+  assert!(
+    result.is_err(),
+    "over-MAX_STEPS prototype should return Err"
+  );
+}

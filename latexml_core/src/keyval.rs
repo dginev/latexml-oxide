@@ -55,10 +55,14 @@ impl KeyVal {
   }
   pub fn get_default(&self) -> Option<Stored> { self.get_prop("default") }
   pub fn get_type(&self) -> Option<Rc<Parameter>> {
-    match self.get_prop("type") {
-      Some(Stored::Parameter(p)) => Some(p),
+    // Read directly via with_value — avoids the Stored::clone that
+    // get_prop's lookup_value pays just so we can pattern-match on
+    // the Parameter variant and Rc::clone its body. Hot path during
+    // keyval parsing.
+    state::with_value(&s!("KEYVAL@type@{}", self.get_header()), |v| match v {
+      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
       _ => None,
-    }
+    })
   }
 }
 
@@ -157,26 +161,39 @@ pub fn enumerate_keyvals() -> Vec<KeyvalMeta> {
     Some(Stored::Strings(v)) => v.to_vec(),
     _ => Vec::new(),
   });
-  if registry.is_empty() { return Vec::new(); }
+  if registry.is_empty() {
+    return Vec::new();
+  }
   let mut result = Vec::new();
   for sym in registry {
-    let qname = arena::to_string(sym);
-    let key = keyval_get(&qname, "key_name")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    let prefix = keyval_get(&qname, "keyval_prefix")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "KV".to_string());
-    let keyset = keyval_get(&qname, "keyset")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    let kind = keyval_get(&qname, "kind")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "ordinary".to_string());
-    let default = keyval_get(&qname, "default")
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "[none]".to_string());
-    result.push(KeyvalMeta { key, prefix, keyset, kind, default });
+    // Resolve the interned qname once via a closure — the five
+    // keyval_get calls below all take `&str`, so we hand each the same
+    // resolved borrow rather than allocating a per-key String.
+    let entry = arena::with(sym, |qname| {
+      let key = keyval_get(qname, "key_name")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+      let prefix = keyval_get(qname, "keyval_prefix")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "KV".to_string());
+      let keyset = keyval_get(qname, "keyset")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+      let kind = keyval_get(qname, "kind")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "ordinary".to_string());
+      let default = keyval_get(qname, "default")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "[none]".to_string());
+      KeyvalMeta {
+        key,
+        prefix,
+        keyset,
+        kind,
+        default,
+      }
+    });
+    result.push(entry);
   }
   result
 }
@@ -242,7 +259,11 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   // store metadata for introspection (used by \xkvview)
   // only register when xkvview tracking is enabled
   if state::lookup_bool("XKVVIEW_TRACKING") {
-    keyval_set(&qname, "kind", Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))));
+    keyval_set(
+      &qname,
+      "kind",
+      Stored::Tokens(tokenize(kind.unwrap_or("ordinary"))),
+    );
     keyval_set(&qname, "keyval_prefix", Stored::Tokens(tokenize(prefix)));
     keyval_set(&qname, "keyset", Stored::Tokens(tokenize(keyset)));
     keyval_set(&qname, "key_name", Stored::Tokens(tokenize(key)));
@@ -270,8 +291,10 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
         Warn!(
           "unexpected",
           "keyval",
-          s!("Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
-          taking only first")
+          s!(
+            "Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
+          taking only first"
+          )
         );
       }
       keyval_set(&qname, "type", paramlist.take_parameters().remove(0).into());
@@ -511,4 +534,68 @@ fn define_boolean(
     true,
     None,
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn keyval_default_fields() {
+    let kv = KeyVal::default();
+    assert_eq!(kv.prefix, "KV");
+    assert!(kv.keyset.is_empty());
+    assert!(kv.key.is_empty());
+  }
+
+  #[test]
+  fn keyval_new_custom_prefix() {
+    let kv = KeyVal::new(
+      Some("custom".to_string()),
+      "ks".to_string(),
+      "k".to_string(),
+    );
+    assert_eq!(kv.prefix, "custom");
+    assert_eq!(kv.keyset, "ks");
+    assert_eq!(kv.key, "k");
+  }
+
+  #[test]
+  fn keyval_new_default_prefix_on_none() {
+    // None prefix → default "KV".
+    let kv = KeyVal::new(None, "ks".to_string(), "k".to_string());
+    assert_eq!(kv.prefix, "KV");
+  }
+
+  #[test]
+  fn keyval_get_header_format() {
+    let kv = KeyVal::new(
+      Some("P".to_string()),
+      "set".to_string(),
+      "width".to_string(),
+    );
+    assert_eq!(kv.get_header(), "P@set@width");
+  }
+
+  #[test]
+  fn keyval_get_header_default_prefix() {
+    let kv = KeyVal::new(None, "tabular".to_string(), "vattach".to_string());
+    assert_eq!(kv.get_header(), "KV@tabular@vattach");
+  }
+
+  #[test]
+  fn keyval_equality_by_all_fields() {
+    let a = KeyVal::new(Some("P".to_string()), "ks".to_string(), "k".to_string());
+    let b = KeyVal::new(Some("P".to_string()), "ks".to_string(), "k".to_string());
+    let c = KeyVal::new(Some("P".to_string()), "ks".to_string(), "other".to_string());
+    assert_eq!(a, b);
+    assert_ne!(a, c);
+  }
+
+  #[test]
+  fn keyval_qname_normalizes_empty_prefix() {
+    // Empty prefix is substituted with "KV".
+    assert_eq!(keyval_qname("", "set", "k"), "KV@set@k");
+    assert_eq!(keyval_qname("P", "set", "k"), "P@set@k");
+  }
 }

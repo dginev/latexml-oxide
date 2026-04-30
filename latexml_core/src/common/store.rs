@@ -557,6 +557,44 @@ impl PartialEq for Stored {
 unsafe impl Send for Stored {}
 unsafe impl Sync for Stored {}
 impl Stored {
+  /// Zero-alloc equivalent of `self.to_string() == target` for the two
+  /// string-carrying variants (`String`, `Tokens`). Falls back to
+  /// `to_string()` for everything else, where the Display impl allocates
+  /// anyway.
+  pub fn eq_text(&self, target: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v == target),
+      Stored::Tokens(t) => t.eq_text(target),
+      Stored::Token(t) => t.with_str(|v| v == target),
+      other => other.to_string() == target,
+    }
+  }
+
+  /// Zero-alloc `self.to_string().starts_with(prefix)` for the
+  /// string-carrying variants; falls back to `to_string()` for others.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v.starts_with(prefix)),
+      Stored::Tokens(t) => t.starts_with_text(prefix),
+      Stored::Token(t) => t.with_str(|v| v.starts_with(prefix)),
+      other => other.to_string().starts_with(prefix),
+    }
+  }
+
+  /// Zero-alloc `self.to_string().ends_with(suffix)` for the String /
+  /// Token variants (where the entire Display output equals the
+  /// interned text). For Tokens, we still walk into a small owned
+  /// String — ends_with requires anchoring at the tail and rolling
+  /// backward, which needs random access. Others fall back to
+  /// `to_string()` (cost paid anyway via the Display impl).
+  pub fn ends_with_text(&self, suffix: &str) -> bool {
+    match self {
+      Stored::String(s) => arena::with(*s, |v| v.ends_with(suffix)),
+      Stored::Token(t) => t.with_str(|v| v.ends_with(suffix)),
+      other => other.to_string().ends_with(suffix),
+    }
+  }
+
   /// helper method that uses `ToString::to_string` to flatten a map with Stored values
   // TODO: Obviously a performance issue, find a way to unify the interfaces where string allocation
   // is completely avoided until serialization in the XML.
@@ -565,7 +603,11 @@ impl Stored {
   pub fn cast_to_string_hash(in_map: &SymHashMap<Stored>) -> HashMap<String, String> {
     let mut out_map: HashMap<String, String> = HashMap::default();
     for (key, val) in in_map {
-      out_map.insert(arena::to_string(*key), val.to_string());
+      // Use to_attribute() so MuGlue/MuDimension widths are converted to pt
+      // (e.g. `3.0mu` → `1.66663pt`) before becoming XML attribute strings.
+      // Mirror Perl `attributeformat` which uses `ptValue` for mu-typed
+      // lengths in attribute context.
+      out_map.insert(arena::to_string(*key), val.to_attribute());
     }
     out_map
   }
@@ -588,7 +630,7 @@ impl Stored {
     match self {
       Stored::Dimension(ref v) => v.to_attribute(),
       Stored::Number(ref v) => v.to_attribute(),
-      //Stored::MuDimension(ref v) => v.to_attribute(),
+      Stored::MuDimension(ref v) => v.to_attribute(),
       Stored::Glue(ref v) => v.to_attribute(),
       Stored::MuGlue(ref v) => v.to_attribute(),
       other => other.to_string(),
@@ -895,9 +937,7 @@ impl From<KeyVals> for Stored {
 }
 
 impl From<crate::alignment::template::Template> for Stored {
-  fn from(t: crate::alignment::template::Template) -> Stored {
-    Stored::Template(Rc::new(t))
-  }
+  fn from(t: crate::alignment::template::Template) -> Stored { Stored::Template(Rc::new(t)) }
 }
 
 impl From<Option<&Stored>> for Stored {
@@ -914,8 +954,14 @@ impl From<Option<&Stored>> for Stored {
 
 impl From<&Stored> for bool {
   fn from(value: &Stored) -> bool {
+    // Mirror Perl's `if ($val)` truthiness: defined-and-nonzero is true,
+    // numeric-zero is false. Without the numeric-zero check, registers
+    // initialized to 0 (e.g. `\globaldefs` default, `\count255` unset)
+    // would read as "set" via `lookup_bool`, breaking flag-style probes.
     match value {
       Stored::Bool(b) => *b,
+      Stored::Int(0) => false,
+      Stored::Number(n) if n.0 == 0 => false,
       _ => true,
     }
   }
@@ -964,14 +1010,34 @@ impl<'a> From<&'a Stored> for Option<Number> {
   }
 }
 
+// MuGlue/MuDimension store raw mu in fixpoint units (1mu = 1/18 em).
+// Convert to scaled-pt by mirroring Perl `MuGlue::spValue` →
+// `fixpoint(mu/UNITY, MUWidth)` where `MUWidth = int(size * emwidth /
+// 18)`. The two-step integer truncation in Perl is load-bearing: a
+// single-step `(mu * size / 18)` gives a slightly larger value (109226
+// vs 109219 for 3mu at 10pt), and Knuth's `print_scaled` then formats
+// "1.66666pt" instead of the expected "1.66663pt". See
+// LaTeXML/lib/LaTeXML/Common/Font.pm:580 (getMUWidth) and
+// Core/MuGlue.pm spValue.
+fn mu_to_pt_value(mu_val: i64) -> i64 {
+  let fs = crate::state::lookup_font()
+    .and_then(|f| f.get_size())
+    .unwrap_or(10.0);
+  let unity = crate::common::numeric_ops::UNITY_F64;
+  // MUWidth = int(font_size * emwidth(=1.0*UNITY) / 18)
+  let muwidth = (fs * unity / 18.0) as i64;
+  // fixpoint(mu/UNITY, MUWidth) ≈ (mu_val * muwidth / UNITY).trunc()
+  ((mu_val as f64 * muwidth as f64 / unity).trunc()) as i64
+}
+
 impl<'a> From<&'a Stored> for Option<Dimension> {
   fn from(value: &'a Stored) -> Option<Dimension> {
     match value {
       Stored::Dimension(ref n) => Some(*n),
       Stored::Number(ref n) => Some(Dimension::new(n.value_of())),
       Stored::Glue(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Dimension::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
       _ => None,
     }
   }
@@ -982,8 +1048,8 @@ impl<'a> From<&'a Stored> for Option<Glue> {
     match value {
       Stored::Dimension(ref n) => Some(Glue::new(n.value_of())),
       Stored::Number(ref n) => Some(Glue::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Glue::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Glue::new(n.value_of())),
+      Stored::MuDimension(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
       Stored::Glue(ref n) => Some(*n),
       _ => None,
     }

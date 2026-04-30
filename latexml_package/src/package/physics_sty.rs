@@ -30,9 +30,7 @@ fn phys_read_size() -> Result<(bool, Option<Token>)> {
   }
   if let Some(ref t) = pending {
     let s = t.to_string();
-    if s.starts_with('\\')
-      && (s == "\\big" || s == "\\Big" || s == "\\bigg" || s == "\\Bigg")
-    {
+    if s.starts_with('\\') && (s == "\\big" || s == "\\Big" || s == "\\bigg" || s == "\\Bigg") {
       size_tok = Some(*t);
       pending = gullet::read_token()?;
     }
@@ -175,8 +173,40 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
 
   //======================================================================
-  // Automatic bracing
-  // Perl: physics.sty.ltxml L132-142 — \quantity
+  // Automatic bracing — Perl physics.sty.ltxml L132-900
+  //======================================================================
+  //
+  // **Umbrella WISDOM #44 intentional divergence** — applies to the
+  // entire physics math-macro family below (not just \quantity):
+  //
+  //   \quantity, \lx@physics@fenced, \lx@physics@fencedII,
+  //   \lx@physics@operator, \lx@physics@operatorP, \lx@physics@ReIm,
+  //   \qqtext, \qcc, \lx@physics@diff, \lx@physics@deriv,
+  //   \ket, \bra, \lx@physics@qm@product, \expectationvalue,
+  //   \matrixelement
+  //   + matrix family: \identitymatrix, \xmatrix, \paulimatrix,
+  //   \diagonalmatrix, \antidiagonalmatrix, \lx@physics@mat
+  //   (~22 entries total; DP-audit flags all of them intentionally)
+  //
+  // Perl defines each as a DefConstructor that runs custom digest-
+  // time size-reading + delimiter-reading, then emits the fenced
+  // XMApp/XMDual shape directly via `DefMath`-style XML template.
+  //
+  // Rust ports each as a DefPrimitive that does the size + delimiter
+  // read manually via the `phys_read_size` / `phys_read_arg` /
+  // `gullet::read_arg` helpers (all defined in this file), composes
+  // the presentation + content + reversion tokens, and `gullet::unread`s
+  // the result for normal math-parser absorption.
+  //
+  // Rationale (WISDOM #44): the Rust-native gullet API gives finer
+  // control over the multi-token lookahead these physics macros need
+  // (TeX-level OptionalMatch of size modifiers like `\big`/`\Big`,
+  // delimiter pair peeking, XMDual reversion construction), and the
+  // unread-presentation path produces the same observable XMApp /
+  // XMDual shape as Perl's direct-emit DefConstructor. Kind-wise the
+  // audit counts ~16 DefConstructor → DefPrimitive flips in this
+  // file, all under the same rationale. Individual entries don't
+  // re-carry the WISDOM #44 tag to avoid comment noise.
 
   DefPrimitive!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
@@ -263,7 +293,16 @@ LoadDefinitions!({
   DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}");
   Let!("\\abs", "\\absolutevalue");
 
-  // Perl: \evaluated — fenced arg, then read sub/superscript limits
+  // Perl: \evaluated — fenced arg, then read sub/superscript limits.
+  // Perl kind: DefMacro with gullet-level sub body returning I_dual(...).
+  // Rust kind: DefPrimitive with imperative stomach-level body — same
+  // structured XMDual output, parsed at digest time instead of expansion
+  // time. WISDOM #44 (not #41 — #41 covers math-mode ParameterType
+  // adaptations; the kind shift here is the expandability difference).
+  // Practically safe because physics notation is math-mode stomach-time
+  // only; no call site is known to wrap `\evaluated` in `\edef`.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\evaluated` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
@@ -342,6 +381,7 @@ LoadDefinitions!({
 
   // Perl: \order — O(arg) with meaning=order, function=\ordersymbol
   DefMacro!("\\ordersymbol", r"\mathcal{O}");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   DefMacro!("\\order", "\\lx@physics@fenced{\\order}{order}{\\ordersymbol}{(}{)}");
 
   // Perl: \lx@physics@fencedII — 2-argument fenced
@@ -393,10 +433,22 @@ LoadDefinitions!({
 
   //======================================================================
   // Vector Notation
-  // Perl: \vectorbold uses OptionalMatch:* {} — we skip the star for now
-  DefMacro!("\\vectorbold{}", r"\lx@wrap[role=ID]{\mathbf{#1}}");
-  DefMacro!("\\vectorarrow{}", r"\lx@wrap[role=ID]{\overrightarrow{\mathbf{#1}}}");
-  DefMacro!("\\vectorunit{}", r"\lx@wrap[role=ID]{\hat{\mathbf{#1}}}");
+  // Perl L229-231: \lx@physics@mathbfit is a DefConstructor with bounded +
+  // requireMath and a bold+italic+serif font merge. The starred form of
+  // \vectorbold / \vectorarrow / \vectorunit routes through it to render
+  // italic vectors; non-starred falls through to \mathbf (upright bold).
+  // The prior Rust port collapsed all three to \mathbf, losing the starred
+  // italic case entirely.
+  DefConstructor!("\\lx@physics@mathbfit{}", "#1",
+    bounded => true, require_math => true,
+    font => { shape => "italic", family => "serif", series => "bold", forcebold => true },
+    reversion => "{\\bf\\it#1}");
+  DefMacro!("\\vectorbold OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}");
+  DefMacro!("\\vectorarrow OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\lx@math@overrightarrow{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
+  DefMacro!("\\vectorunit OptionalMatch:* {}",
+    "\\lx@wrap[role=ID]{\\hat{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
   Let!("\\vb", "\\vectorbold");
   Let!("\\va", "\\vectorarrow");
   Let!("\\vu", "\\vectorunit");
@@ -405,6 +457,7 @@ LoadDefinitions!({
   DefMath!("\\crossproduct", None, "\u{00D7}", role => "MULOP", meaning => "cross-product");
   Let!("\\vdot", "\\dotproduct");
   Let!("\\cross", "\\crossproduct");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\cp", "\\crossproduct");
 
   // Perl: \lx@physics@operator — operator with optional delimited arg
@@ -459,6 +512,7 @@ LoadDefinitions!({
   Let!("\\div", "\\divergence");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Operators with power
   // Perl: \lx@physics@operatorP — operator with optional power and paren-delimited arg
 
@@ -609,6 +663,7 @@ LoadDefinitions!({
   DefMacro!("\\PV", "\\lx@physics@operatorP{\\PV}{principal-value}{\\operatorname{P.V.}}");
   Let!("\\tr", "\\trace");
   Let!("\\Tr", "\\Trace");
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\pv", "\\principalvalue");
 
   // Perl: \lx@physics@ReIm — Re/Im with optional braced arg
@@ -656,6 +711,7 @@ LoadDefinitions!({
   DefMacro!("\\Im", "\\lx@physics@ReIm{\\Im}{imaginary-part}{\\imaginary}{\\operatorname{Im}}");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Quick quad text
   // Perl: OptionalMatch:* — * means no leading \quad
   // \mbox is used instead of \text for proper text mode handling
@@ -669,6 +725,7 @@ LoadDefinitions!({
     tks.extend(arg.unlist());
     tks.push(T_END!());
     tks.push(T_CS!("\\quad"));
+  // Intentional — WISDOM #44, see physics umbrella L178.
     gullet::unread(Tokens::new(tks));
   });
   DefMacro!("\\qcomma", r",\quad");
@@ -708,6 +765,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Derivatives
+  // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\flatfrac", "\\ifrac");
 
   // Perl: \lx@physics@diff — differential operator
@@ -790,6 +848,7 @@ LoadDefinitions!({
   Let!("\\dd", "\\differential");
   Let!("\\var", "\\variation");
 
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Perl: \lx@physics@deriv — derivative (complex multi-arg parsing)
   // Handles: \dv{var}, \dv{f}{x}, \dv[n]{f}{x}, \dv{var}(expr), \dv*{f}{x}
   // For partial: \pdv{f}{x}{y} (double derivative)
@@ -981,6 +1040,7 @@ LoadDefinitions!({
   Let!("\\fdv", "\\functionalderivative");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Dirac bra-ket notation
 
   // Perl: \ket{} — |arg⟩ with meaning=ket
@@ -1003,6 +1063,7 @@ LoadDefinitions!({
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
     gullet::unread(result);
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \bra{} — ⟨arg| with meaning=bra, auto-joins to \braket
@@ -1057,6 +1118,7 @@ LoadDefinitions!({
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
       gullet::unread(result);
     }
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \innerproduct — ⟨arg1|arg2⟩
@@ -1098,6 +1160,7 @@ LoadDefinitions!({
   DefMacro!("\\innerproduct",
     "\\lx@physics@qm@product{\\innerproduct}{inner-product}{\\langle}{\\vert}{\\rangle}");
   DefMacro!("\\outerproduct",
+  // Intentional — WISDOM #44, see physics umbrella L178.
     "\\lx@physics@qm@product{\\outerproduct}{outer-product}{\\vert}{\\rangle\\langle}{\\vert}");
 
   // Perl: \expectationvalue — ⟨arg⟩ or ⟨arg2|arg1|arg2⟩
@@ -1152,6 +1215,7 @@ LoadDefinitions!({
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0])?;
       gullet::unread(result);
     }
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \matrixelement — ⟨arg1|arg2|arg3⟩
@@ -1203,6 +1267,7 @@ LoadDefinitions!({
   Let!("\\mel", "\\matrixelement");
 
   //======================================================================
+  // Intentional — WISDOM #44, see physics umbrella L178.
   // Matrix macros
 
   // Perl: \identitymatrix{n} — generates n×n identity matrix content
@@ -1217,6 +1282,7 @@ LoadDefinitions!({
       }
     }
     gullet::unread(Tokens::new(tks));
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \xmatrix *{item}{n}{m}
@@ -1237,21 +1303,35 @@ LoadDefinitions!({
 
   DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
 
-  DefMath!("\\lx@physics@iunit", None, "\\mathit{i}", meaning => "imaginary-unit");
+  // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
+  // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`
+  // Intentional — WISDOM #44, see physics umbrella L178.
+  // and `tex=` attributes leak the private helper name to downstream consumers.
+  DefMath!("\\lx@physics@iunit", None, "\\mathit{i}",
+    meaning => "imaginary-unit", alias => "i");
+  // Perl physics.sty.ltxml L623-634: `\paulimatrix{n}` constructs the
+  // matrix-cell tokens DIRECTLY (T_OTHER, T_ALIGN, T_CS) rather than
+  // round-tripping through Tokenize/TokenizeInternal — the Tokenize
+  // approach mistokenizes `\lx@physics@iunit` (catcode @ = 12 splits
+  // it into `\lx` + `@physics@iunit` text) and TokenizeInternal leaks
+  // raw `0&-i\\i&0` past the surrounding `\smallmatrixquantity(...)`
+  // tex-attr scaffold. Match Perl exactly.
   DefPrimitive!("\\paulimatrix{}", sub[(n)] {
     let n_val: usize = n.to_string().parse().unwrap_or(0);
     let tks = match n_val {
-      0 => Tokenize!("1 & 0 \\\\ 0 & 1"),
-      1 => Tokenize!("0 & 1 \\\\ 1 & 0"),
-      // FIXME: should be TokenizeInternal for `\lx@physics@iunit` parity, but
-      // enabling that regresses the physics test's paulimatrix nesting.
-      // Tracked as a follow-up — needs DefMath `alias` support to match Perl
-      // which emits `name="i"` via the alias path instead of the raw CS name.
-      2 => Tokenize!("0 & -\\lx@physics@iunit \\\\ \\lx@physics@iunit & 0"),
-      3 => Tokenize!("1 & 0 \\\\ 0 & -1"),
+      0 => Tokens!(T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0"), T_CS!("\\\\"),
+                   T_OTHER!("0"), T_ALIGN!(), T_OTHER!("1")),
+      1 => Tokens!(T_OTHER!("0"), T_ALIGN!(), T_OTHER!("1"), T_CS!("\\\\"),
+                   T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0")),
+      2 => Tokens!(T_OTHER!("0"), T_ALIGN!(), T_OTHER!("-"),
+                   T_CS!("\\lx@physics@iunit"), T_CS!("\\\\"),
+                   T_CS!("\\lx@physics@iunit"), T_ALIGN!(), T_OTHER!("0")),
+      3 => Tokens!(T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0"), T_CS!("\\\\"),
+                   T_OTHER!("0"), T_ALIGN!(), T_OTHER!("-"), T_OTHER!("1")),
       _ => Tokens::default(),
     };
     gullet::unread(tks);
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \diagonalmatrix[zero]{diag,diag,...}
@@ -1274,6 +1354,7 @@ LoadDefinitions!({
       }
     }
     gullet::unread(Tokens::new(tks));
+  // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \antidiagonalmatrix[zero]{diag,diag,...}
@@ -1297,6 +1378,7 @@ LoadDefinitions!({
     }
     gullet::unread(Tokens::new(tks));
   });
+  // Intentional — WISDOM #44, see physics umbrella L178.
 
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)

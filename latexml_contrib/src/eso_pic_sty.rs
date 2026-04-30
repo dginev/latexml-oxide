@@ -3,7 +3,9 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("keyval");
-  // INCOMPLETE IMPLEMENTATION — just a stub ignoring the functionality for now
+  // Perl-parity stubs (matches ar5iv-bindings/eso-pic.sty.ltxml L21-38
+  // exactly): all 17 shipout/grid CSes are `Tokens()` no-ops in Perl
+  // too. \LenToUnit is the one identity passthrough.
   DefMacro!("\\AddToShipoutPicture OptionalMatch:* {}", "");
   DefMacro!("\\AddToShipoutPictureBG OptionalMatch:* {}", "");
   DefMacro!("\\AddToShipoutPictureFG OptionalMatch:* {}", "");
@@ -21,5 +23,5 @@ LoadDefinitions!({
   DefMacro!("\\ClearShipoutPictureFG", "");
   DefMacro!("\\LenToUnit{}", "#1");
   DefMacro!("\\ProcessOptionsWithKV{}", "");
-  DefMacro!("\\gridSetup[]{}{}{}{}{}",  "");
+  DefMacro!("\\gridSetup[]{}{}{}{}{}", "");
 });

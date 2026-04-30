@@ -62,9 +62,12 @@ LoadDefinitions!({
   DefMacro!("\\mediumtext", "");
   DefMacro!("\\endmediumtext", "");
 
-  // 5.5 Acknowledgements
+  // 5.5 Acknowledgements — Perl revtex4_support.sty.ltxml L100-106.
+  // Perl: DefConstructor('\acknowledgments', "<ltx:acknowledgements name='#name'>",
+  //   properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))); });
   Tag!("ltx:acknowledgements", auto_close => true);
-  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements>");
+  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
+    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?)) });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   Let!("\\acknowledgements", "\\acknowledgments");
@@ -82,26 +85,71 @@ LoadDefinitions!({
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   DefMacro!("\\pagesofar", "");
 
-  // Endnotes — Perl L119-149
+  // Endnotes — Perl revtex4_support.sty.ltxml L120-149.
+  // For each constructor: if optional arg #1 is present, mark = arg1;
+  // else RefStepCounter('endnote') AND mark = DigestText(\theendnote).
+  // The make_note_tags helper in latex_constructs.rs implements exactly
+  // this dispatch (mark_opt + tag_opt=None branch).
   NewCounter!("endnote");
   DefConstructor!("\\endnote[]{}", "<ltx:note role='endnote' mark='#mark' xml:id='#id'>#tags#2</ltx:note>",
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    before_digest => { neutralize_font(); },
+    properties => sub[args] {
+      crate::engine::latex_constructs::make_note_tags("endnote", args[0].as_ref(), None)
+    });
   DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+    mode => "restricted_horizontal", enter_horizontal => true,
+    before_digest => { neutralize_font(); },
+    properties => sub[args] {
+      crate::engine::latex_constructs::make_note_tags("endnote", args[0].as_ref(), None)
+    });
   DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
-    mode => "internal_vertical");
+    mode => "internal_vertical",
+    before_digest => { neutralize_font(); },
+    properties => sub[args] {
+      // Perl L143-149: mark = arg1 OR Digest(\theendnote). (No RefStepCounter.)
+      let arg1 = args[0].as_ref();
+      let mark = match arg1 {
+        Some(m) => m.clone(),
+        None => stomach::digest(T_CS!("\\theendnote"))?,
+      };
+      Ok(stored_map!("mark" => mark))
+    });
 
   // 6. Math — Perl L159-176
   Let!("\\case", "\\frac");
   Let!("\\slantfrac", "\\frac");
+  // Perl L161-162 passes `locked => 1` so RevTeX's \text isn't silently
+  // replaced by amsmath's \text (which would miss the restricted_hmode
+  // treatment RevTeX relies on for inline-text-in-math spacing).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
-    mode => "restricted_horizontal");
+    mode => "restricted_horizontal", locked => true);
 
   // RevTeX3 bold math (obsolete in RevTeX4) — Perl L165-171
   DefConstructor!("\\bm{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
-  DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
-  DefConstructor!("\\pmb{}", "#1", bounded => true, require_math => true, font => { forcebold => true });
-  DefMacro!("\\eqnum{}", "");
+  // Perl L166-168: `locked => 1` keeps \bbox bold-wrapped even when a
+  // user or co-loaded package redefines it.
+  DefConstructor!("\\bbox{}", "#1", bounded => true, require_math => true,
+    font => { forcebold => true }, locked => true);
+  // Perl revtex4_support.sty.ltxml L169-171: \pmb wraps content in
+  // forcebold + family=blackboard + series=medium + shape=upright.
+  DefConstructor!("\\pmb{}", "#1", bounded => true, require_math => true,
+    font => { forcebold => true, family => "blackboard",
+      series => "medium", shape => "upright" });
+  // Perl revtex4_support.sty.ltxml L172:
+  //   DefMacro('\eqnum {}',
+  //     '\lx@equation@settag{\edef\theequation{#2}\lx@make@tags{equation}}',
+  //     locked => 1);
+  // The Perl body has a known bug — `#2` is out-of-range for a 1-arg macro
+  // (KNOWN_PERL_ERRORS.md #15) — so it always tags the equation with the
+  // counter default and silently drops the user-supplied label. Rust's
+  // empty body is semantically equivalent to Perl's broken effect (same
+  // dropped-label outcome) without re-implementing the buggy `#2` lookup.
+  // The `locked=>true` flag is independent of the body and IS load-bearing:
+  // it prevents a downstream class (revtex3_support? a sibling APS .cls?)
+  // from `\renewcommand`-ing \eqnum into something that re-introduces a
+  // tag-conflict. Match Perl on the lock.
+  DefMacro!("\\eqnum{}", "", locked => true);
   DefMacro!("\\mathletters", "");
   DefMacro!("\\endmathletters", "");
 
@@ -132,9 +180,20 @@ LoadDefinitions!({
     locked => true
   );
 
-  // 10. Tables — Perl L215-245
+  // 10. Tables — Perl revtex4_support.sty.ltxml L215-245.
+  // {quasitable} re-Lets tabular → longtable inside its body so that
+  // an embedded \begin{tabular}...\end{tabular} actually digests as
+  // \longtable (which can break across pages). Without these Lets,
+  // a quasitable degrades to a plain tabular and loses page-break
+  // capability — the entire reason the env exists.
   DefEnvironment!("{ruledtabular}", "#body");
-  DefEnvironment!("{quasitable}", "#body");
+  DefEnvironment!("{quasitable}", "#body",
+    before_digest => {
+      Let!(T_CS!("\\begin{tabular}"), T_CS!("\\begin{longtable}"));
+      Let!(T_CS!("\\end{tabular}"), T_CS!("\\end{longtable}"));
+      Let!("\\tabular", "\\longtable");
+      Let!("\\endtabular", "\\endlongtable");
+    });
   DefMacro!("\\squeezetable", "");
   DefMacro!("\\toprule", "\\hline\\hline");
   DefMacro!("\\colrule", "\\hline");

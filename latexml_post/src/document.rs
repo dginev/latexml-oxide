@@ -9,7 +9,7 @@
 //! - Persistent cache (key-value store)
 
 use libxml::parser::Parser as XmlParser;
-use libxml::tree::{set_node_rc_guard, Document, Namespace, Node, NodeType};
+use libxml::tree::{Document, Namespace, Node, NodeType, set_node_rc_guard};
 use libxml::xpath::Context as XPathContext;
 use regex::Regex;
 use std::collections::HashMap;
@@ -23,7 +23,8 @@ const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 /// Get the xml:id attribute value from a node.
 /// Handles both namespace-aware and plain attribute access.
 pub fn get_xml_id(node: &Node) -> Option<String> {
-  node.get_attribute_ns("id", XML_NS)
+  node
+    .get_attribute_ns("id", XML_NS)
     .or_else(|| node.get_attribute("xml:id"))
     .or_else(|| {
       // Fallback: check properties hash for "id" key
@@ -41,43 +42,75 @@ pub const LTX_NSURI: &str = "http://dlmf.nist.gov/LaTeXML";
 /// Port of `LaTeXML::Post::Document`.
 pub struct PostDocument {
   /// The underlying XML document.
-  document: Document,
+  document:                    Document,
   /// Destination file path for this document.
-  pub destination: Option<String>,
+  pub destination:             Option<String>,
   /// Destination directory (derived from destination).
-  pub destination_directory: Option<String>,
+  pub destination_directory:   Option<String>,
   /// Site root directory.
-  pub site_directory: Option<String>,
+  pub site_directory:          Option<String>,
   /// Source file path.
-  pub source: Option<String>,
+  pub source:                  Option<String>,
   /// Source directory.
-  pub source_directory: Option<String>,
+  pub source_directory:        Option<String>,
   /// Search paths for resources.
-  pub searchpaths: Vec<String>,
+  pub searchpaths:             Vec<String>,
   /// Namespace prefix → URI mapping.
-  pub namespaces: HashMap<String, String>,
+  pub namespaces:              HashMap<String, String>,
   /// URI → prefix reverse mapping.
-  pub namespace_uris: HashMap<String, String>,
+  pub namespace_uris:          HashMap<String, String>,
   /// ID cache: xml:id → node.
-  idcache: HashMap<String, Node>,
+  idcache:                     HashMap<String, Node>,
   /// IDs marked as reusable (will be removed later).
-  idcache_reusable: HashMap<String, bool>,
+  idcache_reusable:            HashMap<String, bool>,
   /// IDs reserved but not yet recorded.
-  idcache_reserve: HashMap<String, bool>,
+  idcache_reserve:             HashMap<String, bool>,
   /// Clash counters for uniquifyID.
-  idcache_clashes: HashMap<String, u32>,
+  idcache_clashes:             HashMap<String, u32>,
   /// Processing instructions from the document.
   pub processing_instructions: Vec<String>,
   /// Parent document (for split sub-documents).
-  pub parent_document: Option<Box<PostDocument>>,
+  pub parent_document:         Option<Box<PostDocument>>,
   /// ID of document we were split from.
-  pub split_from_id: Option<String>,
+  pub split_from_id:           Option<String>,
   /// Whether to validate the document.
-  pub validate: bool,
+  pub validate:                bool,
   /// Simple key-value cache (replaces Perl's DB_File tied hash).
-  cache: HashMap<String, String>,
+  cache:                       HashMap<String, String>,
   /// Whether caching is disabled.
-  pub nocache: bool,
+  pub nocache:                 bool,
+}
+
+impl Drop for PostDocument {
+  /// Rationalize Node lifetime between post-processing components.
+  /// `idcache` entries are Node *handles* into the C-owned libxml
+  /// Document tree — the Document owns the lifetime, Node wrappers
+  /// are lookup references.
+  ///
+  /// libxml 0.3.9's `_Node::drop` fires `xmlFreeNode(ptr)` whenever
+  /// the wrapper's internal `unlinked` flag is true. Math processing
+  /// calls `unlink_node()` on nodes as it replaces XMath subtrees
+  /// with MathML, flipping that flag for nodes still held by
+  /// `idcache`. The resulting drop sequence is:
+  ///   1. `document: Document` (declared first) → `xmlFreeDoc` walks the full tree including
+  ///      still-reachable nodes that share memory with idcache entries; freed.
+  ///   2. `idcache: HashMap<String, Node>` → each Node with `unlinked=true` fires `xmlFreeNode` on
+  ///      already-freed memory → SIGSEGV inside `xmlFreeNodeList`.
+  ///
+  /// Fix: hand each idcache entry to `DocOwnedNode` (see
+  /// `crate::doc_owned_node`), which suppresses the inner Rc's Drop
+  /// so `xmlFreeNode` never fires on already-freed memory.
+  /// `xmlFreeDoc` remains the sole owner of the C node memory.
+  /// Per-entry Rc control block leaks (~24 B) — bounded by
+  /// per-document idcache size and reclaimed at process exit.
+  /// Proper upstream fix: a public `set_linked()` setter on the
+  /// `libxml` crate's `Node`, which would let us relink before drop
+  /// rather than leaking.
+  fn drop(&mut self) {
+    for (_, node) in std::mem::take(&mut self.idcache) {
+      let _kept = crate::doc_owned_node::DocOwnedNode::new(node);
+    }
+  }
 }
 
 impl PostDocument {
@@ -160,7 +193,10 @@ impl PostDocument {
         let prefix = ns.get_prefix();
         if !prefix.is_empty() {
           let href = ns.get_href();
-          self.namespaces.entry(prefix.clone()).or_insert_with(|| href.clone());
+          self
+            .namespaces
+            .entry(prefix.clone())
+            .or_insert_with(|| href.clone());
           self.namespace_uris.entry(href).or_insert(prefix);
         }
       }
@@ -192,7 +228,9 @@ impl PostDocument {
   /// Port of `Post::Document::newFromFile`.
   pub fn new_from_file(path: &str, options: PostDocumentOptions) -> Result<Self, String> {
     let parser = XmlParser::default();
-    let doc = parser.parse_file(path).map_err(|e| format!("Failed to parse '{}': {}", path, e))?;
+    let doc = parser
+      .parse_file(path)
+      .map_err(|e| format!("Failed to parse '{}': {}", path, e))?;
     let mut opts = options;
     if opts.source.is_none() {
       opts.source = Some(path.to_string());
@@ -238,10 +276,10 @@ impl PostDocument {
     }
 
     let opts = PostDocumentOptions {
-      destination:           Some(destination.to_string()),
-      source:                self.source.clone(),
-      source_directory:      self.source_directory.clone(),
-      searchpaths:           Some(self.searchpaths.clone()),
+      destination: Some(destination.to_string()),
+      source: self.source.clone(),
+      source_directory: self.source_directory.clone(),
+      searchpaths: Some(self.searchpaths.clone()),
       ..PostDocumentOptions::default()
     };
     let mut subdoc = Self::new_internal(new_xml_doc, opts);
@@ -274,7 +312,8 @@ impl PostDocument {
     }
 
     // Copy resource elements (Perl: addNodes for ltx:resource)
-    let resources: Vec<NodeData> = self.findnodes("descendant::ltx:resource")
+    let resources: Vec<NodeData> = self
+      .findnodes("descendant::ltx:resource")
       .iter()
       .map(|r| NodeData::XmlNode(r.clone()))
       .collect();
@@ -292,7 +331,9 @@ impl PostDocument {
           if existing.is_empty() {
             doc_root.set_attribute("class", &pclass).ok();
           } else {
-            doc_root.set_attribute("class", &format!("{} {}", existing, pclass)).ok();
+            doc_root
+              .set_attribute("class", &format!("{} {}", existing, pclass))
+              .ok();
           }
         }
       }
@@ -305,49 +346,31 @@ impl PostDocument {
   // Accessors
 
   /// Get a reference to the underlying XML document.
-  pub fn get_document(&self) -> &Document {
-    &self.document
-  }
+  pub fn get_document(&self) -> &Document { &self.document }
 
   /// Get a mutable reference to the underlying XML document.
-  pub fn get_document_mut(&mut self) -> &mut Document {
-    &mut self.document
-  }
+  pub fn get_document_mut(&mut self) -> &mut Document { &mut self.document }
 
   /// Get the document's root element.
-  pub fn get_document_element(&self) -> Option<Node> {
-    self.document.get_root_element()
-  }
+  pub fn get_document_element(&self) -> Option<Node> { self.document.get_root_element() }
 
   /// Get the source path.
-  pub fn get_source(&self) -> Option<&str> {
-    self.source.as_deref()
-  }
+  pub fn get_source(&self) -> Option<&str> { self.source.as_deref() }
 
   /// Get the source directory.
-  pub fn get_source_directory(&self) -> &str {
-    self.source_directory.as_deref().unwrap_or(".")
-  }
+  pub fn get_source_directory(&self) -> &str { self.source_directory.as_deref().unwrap_or(".") }
 
   /// Get search paths.
-  pub fn get_search_paths(&self) -> &[String] {
-    &self.searchpaths
-  }
+  pub fn get_search_paths(&self) -> &[String] { &self.searchpaths }
 
   /// Get the destination path.
-  pub fn get_destination(&self) -> Option<&str> {
-    self.destination.as_deref()
-  }
+  pub fn get_destination(&self) -> Option<&str> { self.destination.as_deref() }
 
   /// Get the destination directory.
-  pub fn get_destination_directory(&self) -> Option<&str> {
-    self.destination_directory.as_deref()
-  }
+  pub fn get_destination_directory(&self) -> Option<&str> { self.destination_directory.as_deref() }
 
   /// Get the site directory.
-  pub fn get_site_directory(&self) -> Option<&str> {
-    self.site_directory.as_deref()
-  }
+  pub fn get_site_directory(&self) -> Option<&str> { self.site_directory.as_deref() }
 
   /// Return destination relative to site directory.
   ///
@@ -362,25 +385,30 @@ impl PostDocument {
 
   /// Return a pathname relative to the site directory.
   pub fn site_relative_pathname(&self, pathname: &str) -> Option<String> {
-    self.site_directory.as_ref().map(|site| pathdiff(pathname, site))
+    self
+      .site_directory
+      .as_ref()
+      .map(|site| pathdiff(pathname, site))
   }
 
   /// Get the destination file extension.
   pub fn get_destination_extension(&self) -> Option<String> {
     self.destination.as_ref().and_then(|d| {
-      Path::new(d).extension().map(|e| e.to_string_lossy().to_string())
+      Path::new(d)
+        .extension()
+        .map(|e| e.to_string_lossy().to_string())
     })
   }
 
   /// Serialize the document to an XML string.
-  pub fn to_xml_string(&self) -> String {
-    self.document.to_string()
-  }
+  pub fn to_xml_string(&self) -> String { self.document.to_string() }
 
   pub fn stringify(&self) -> String {
     format!(
       "Post::Document[{}]",
-      self.site_relative_destination().unwrap_or_else(|| "?".to_string())
+      self
+        .site_relative_destination()
+        .unwrap_or_else(|| "?".to_string())
     )
   }
 
@@ -390,9 +418,7 @@ impl PostDocument {
   /// Find nodes matching an XPath expression.
   ///
   /// Port of `Post::Document::findnodes`.
-  pub fn findnodes(&self, xpath: &str) -> Vec<Node> {
-    self.findnodes_at(xpath, None)
-  }
+  pub fn findnodes(&self, xpath: &str) -> Vec<Node> { self.findnodes_at(xpath, None) }
 
   /// Find nodes matching an XPath expression, relative to a given context node.
   pub fn findnodes_at(&self, xpath: &str, context_node: Option<&Node>) -> Vec<Node> {
@@ -419,13 +445,14 @@ impl PostDocument {
   }
 
   /// Find the first node matching an XPath expression.
-  pub fn findnode(&self, xpath: &str) -> Option<Node> {
-    self.findnodes(xpath).into_iter().next()
-  }
+  pub fn findnode(&self, xpath: &str) -> Option<Node> { self.findnodes(xpath).into_iter().next() }
 
   /// Find the first node matching an XPath expression, relative to a context node.
   pub fn findnode_at(&self, xpath: &str, context_node: &Node) -> Option<Node> {
-    self.findnodes_at(xpath, Some(context_node)).into_iter().next()
+    self
+      .findnodes_at(xpath, Some(context_node))
+      .into_iter()
+      .next()
   }
 
   /// Evaluate an XPath expression and return the string value.
@@ -472,19 +499,29 @@ impl PostDocument {
 
     // Parse simple patterns: "ltx:elem" or "ltx:elem[@attr='val']" or "ltx:elem/ltx:child"
     let parts: Vec<&str> = xpath.split('/').collect();
-    if parts.is_empty() { return results; }
+    if parts.is_empty() {
+      return results;
+    }
 
     fn match_element(node: &Node, pattern: &str) -> bool {
       let pattern = pattern.trim().trim_start_matches("ltx:");
       if let Some(bracket_pos) = pattern.find('[') {
         let elem_name = &pattern[..bracket_pos];
-        let attr_part = &pattern[bracket_pos+1..pattern.len()-1]; // strip [ and ]
-        if node.get_name() != elem_name { return false; }
+        let attr_part = &pattern[bracket_pos + 1..pattern.len() - 1]; // strip [ and ]
+        if node.get_name() != elem_name {
+          return false;
+        }
         // Parse @attr='value'
         if let Some(eq_pos) = attr_part.find('=') {
           let attr_name = attr_part[1..eq_pos].trim(); // skip @
-          let attr_val = attr_part[eq_pos+1..].trim().trim_matches('\'').trim_matches('"');
-          node.get_attribute(attr_name).map(|v| v == attr_val).unwrap_or(false)
+          let attr_val = attr_part[eq_pos + 1..]
+            .trim()
+            .trim_matches('\'')
+            .trim_matches('"');
+          node
+            .get_attribute(attr_name)
+            .map(|v| v == attr_val)
+            .unwrap_or(false)
         } else {
           true
         }
@@ -494,7 +531,9 @@ impl PostDocument {
     }
 
     fn collect_matching(node: &Node, parts: &[&str], results: &mut Vec<Node>) {
-      if parts.is_empty() { return; }
+      if parts.is_empty() {
+        return;
+      }
       let pattern = parts[0];
       // Handle "A | B" alternatives
       let alternatives: Vec<&str> = pattern.split('|').map(|s| s.trim()).collect();
@@ -524,10 +563,18 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::addNamespace`.
   pub fn add_namespace(&mut self, prefix: &str, nsuri: &str) {
-    let dominated = self.namespaces.get(prefix).map(|u| u == nsuri).unwrap_or(false);
+    let dominated = self
+      .namespaces
+      .get(prefix)
+      .map(|u| u == nsuri)
+      .unwrap_or(false);
     if !dominated {
-      self.namespaces.insert(prefix.to_string(), nsuri.to_string());
-      self.namespace_uris.insert(nsuri.to_string(), prefix.to_string());
+      self
+        .namespaces
+        .insert(prefix.to_string(), nsuri.to_string());
+      self
+        .namespace_uris
+        .insert(nsuri.to_string(), prefix.to_string());
       // Declare the namespace on the root element (without changing its own namespace).
       // Namespace::new() creates the declaration; we do NOT call set_namespace()
       // which would change the root element's own namespace.
@@ -551,7 +598,12 @@ impl PostDocument {
         Some(format!("{}:{}", prefix, localname))
       } else {
         // Auto-generate a prefix for unknown namespaces
-        let n = self.namespaces.keys().filter(|k| k.starts_with("_ns")).count() + 1;
+        let n = self
+          .namespaces
+          .keys()
+          .filter(|k| k.starts_with("_ns"))
+          .count()
+          + 1;
         Some(format!("_ns{}:{}", n, localname))
       }
     } else {
@@ -595,8 +647,12 @@ impl PostDocument {
     match (node.get_namespace(), expected_prefix) {
       (Some(ns), Some(ep)) => {
         let nsuri = ns.get_href();
-        self.namespace_uris.get(&nsuri).map(|p| p == ep).unwrap_or(false)
-      }
+        self
+          .namespace_uris
+          .get(&nsuri)
+          .map(|p| p == ep)
+          .unwrap_or(false)
+      },
       (None, None) => true,
       _ => false,
     }
@@ -617,9 +673,7 @@ impl PostDocument {
   /// Find a node by its xml:id.
   ///
   /// Port of `Post::Document::findNodeByID`.
-  pub fn find_node_by_id(&self, id: &str) -> Option<&Node> {
-    self.idcache.get(id)
-  }
+  pub fn find_node_by_id(&self, id: &str) -> Option<&Node> { self.idcache.get(id) }
 
   /// Generate a unique ID based on `baseid`, optionally applying a suffix.
   ///
@@ -644,10 +698,7 @@ impl PostDocument {
     {
       let clash_count = self.idcache_clashes.entry(cachekey.clone()).or_insert(0);
       *clash_count += 1;
-      id = apply_suffix(
-        &format!("{}{}", baseid, radix_alpha(*clash_count)),
-        suffix,
-      );
+      id = apply_suffix(&format!("{}{}", baseid, radix_alpha(*clash_count)), suffix);
     }
 
     self.idcache_reusable.remove(&id);
@@ -724,7 +775,7 @@ impl PostDocument {
       match child {
         NodeData::Text(text) => {
           parent.append_text(text).ok();
-        }
+        },
         NodeData::Element { tag, attributes, children } => {
           if tag == "_Fragment_" {
             self.add_nodes(parent, children);
@@ -738,19 +789,27 @@ impl PostDocument {
             // so elements like ltx:ref are created as <ref> not <ltx:ref>.
             let ns = nsuri.and_then(|uri| {
               // First check if the default namespace matches — prefer it to avoid ltx: prefix
-              parent.get_namespace_declarations().into_iter()
+              parent
+                .get_namespace_declarations()
+                .into_iter()
                 .find(|ns| ns.get_prefix().is_empty() && ns.get_href() == uri)
                 .or_else(|| {
-                  parent.get_namespaces(&self.document).into_iter()
+                  parent
+                    .get_namespaces(&self.document)
+                    .into_iter()
                     .find(|ns| ns.get_prefix().is_empty() && ns.get_href() == uri)
                 })
                 // Fall back to matching prefix
                 .or_else(|| {
-                  parent.get_namespace_declarations().into_iter()
+                  parent
+                    .get_namespace_declarations()
+                    .into_iter()
                     .find(|ns| ns.get_prefix() == prefix)
                 })
                 .or_else(|| {
-                  parent.get_namespaces(&self.document).into_iter()
+                  parent
+                    .get_namespaces(&self.document)
+                    .into_iter()
                     .find(|ns| ns.get_prefix() == prefix)
                 })
                 .or_else(|| {
@@ -786,10 +845,10 @@ impl PostDocument {
           } else {
             log::warn!("Tag '{}' has no namespace prefix", tag);
           }
-        }
+        },
         NodeData::XmlNode(source_node) => {
           self.add_xml_node(parent, source_node);
-        }
+        },
       }
     }
   }
@@ -828,10 +887,10 @@ impl PostDocument {
             }
           }
         }
-      }
+      },
       Some(NodeType::TextNode) => {
         parent.append_text(&source.get_content()).ok();
-      }
+      },
       Some(NodeType::DocumentFragNode) => {
         if let Some(child) = source.get_first_child() {
           let mut current = Some(child);
@@ -840,8 +899,8 @@ impl PostDocument {
             current = c.get_next_sibling();
           }
         }
-      }
-      _ => {}
+      },
+      _ => {},
     }
   }
 
@@ -1014,9 +1073,7 @@ impl PostDocument {
   /// Add CSS class(es) to a node.
   ///
   /// Port of `Post::Document::addClass`.
-  pub fn add_class(node: &mut Node, class: &str) {
-    Self::add_ss_values(node, "class", class);
-  }
+  pub fn add_class(node: &mut Node, class: &str) { Self::add_ss_values(node, "class", class); }
 
   // ======================================================================
   // XMath visibility marking
@@ -1192,22 +1249,22 @@ impl PostDocument {
     }
 
     let ref_node = NodeData::Element {
-      tag: "ltx:ref".to_string(),
+      tag:        "ltx:ref".to_string(),
       attributes: Some(HashMap::from([
         ("idref".to_string(), id.to_string()),
         ("rel".to_string(), relation.to_string()),
         ("show".to_string(), "toctitle".to_string()),
       ])),
-      children: vec![],
+      children:   vec![],
     };
 
     if let Some(mut nav) = self.findnode("//ltx:navigation") {
       self.add_nodes(&mut nav, &[ref_node]);
     } else if let Some(mut root) = self.get_document_element() {
       let nav_node = NodeData::Element {
-        tag: "ltx:navigation".to_string(),
+        tag:        "ltx:navigation".to_string(),
         attributes: None,
-        children: vec![ref_node],
+        children:   vec![ref_node],
       };
       self.add_nodes(&mut root, &[nav_node]);
     }
@@ -1275,9 +1332,7 @@ impl PostDocument {
   // Cache support
 
   /// Look up a value in the persistent cache.
-  pub fn cache_lookup(&self, key: &str) -> Option<String> {
-    self.cache.get(key).cloned()
-  }
+  pub fn cache_lookup(&self, key: &str) -> Option<String> { self.cache.get(key).cloned() }
 
   /// Store a value in the persistent cache.
   pub fn cache_store(&mut self, key: &str, value: &str) {
@@ -1285,9 +1340,7 @@ impl PostDocument {
   }
 
   /// Remove a value from the persistent cache.
-  pub fn cache_remove(&mut self, key: &str) {
-    self.cache.remove(key);
-  }
+  pub fn cache_remove(&mut self, key: &str) { self.cache.remove(key); }
 }
 
 // ======================================================================
@@ -1296,14 +1349,14 @@ impl PostDocument {
 /// Options for creating a PostDocument.
 #[derive(Debug, Default, Clone)]
 pub struct PostDocumentOptions {
-  pub destination: Option<String>,
+  pub destination:           Option<String>,
   pub destination_directory: Option<String>,
-  pub site_directory: Option<String>,
-  pub source: Option<String>,
-  pub source_directory: Option<String>,
-  pub searchpaths: Option<Vec<String>>,
-  pub validate: bool,
-  pub nocache: bool,
+  pub site_directory:        Option<String>,
+  pub source:                Option<String>,
+  pub source_directory:      Option<String>,
+  pub searchpaths:           Option<Vec<String>>,
+  pub validate:              bool,
+  pub nocache:               bool,
 }
 
 /// Recursive representation for building XML nodes.
@@ -1315,9 +1368,9 @@ pub enum NodeData {
   Text(String),
   /// An element node with tag (prefix:localname), optional attributes, and children.
   Element {
-    tag: String,
+    tag:        String,
     attributes: Option<HashMap<String, String>>,
-    children: Vec<NodeData>,
+    children:   Vec<NodeData>,
   },
   /// A reference to an existing XML node (will be cloned when added).
   XmlNode(Node),
@@ -1390,7 +1443,7 @@ mod tests {
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
          <section xml:id='s1'/>\
          <section xml:id='s2'/>\
-       </document>"
+       </document>",
     );
     let sections = doc.findnodes("//ltx:section");
     assert_eq!(sections.len(), 2);
@@ -1401,7 +1454,7 @@ mod tests {
     let doc = make_test_doc(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
          <p xml:id='p1'/>\
-       </document>"
+       </document>",
     );
     let mut doc = doc;
     // First call reserves a unique id based on "p1"
@@ -1428,7 +1481,7 @@ mod tests {
     let doc = make_test_doc(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
          <p xml:id='p1'/>\
-       </document>"
+       </document>",
     );
     let mut node = doc.findnode("//ltx:p").unwrap();
     PostDocument::add_class(&mut node, "foo bar");

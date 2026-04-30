@@ -97,8 +97,15 @@ impl BoxOps for List {
   }
 
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
-  fn compute_size(&self, mut options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
-    let font = self.font.as_ref().cloned().unwrap_or_else(Font::text_default);
+  fn compute_size(
+    &self,
+    mut options: HashMap<Stored>,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
+    let font = self
+      .font
+      .as_ref()
+      .cloned()
+      .unwrap_or_else(Font::text_default);
     // Perl: pass mode, vattach, and width from List properties through options
     // so that compute_boxes_size can determine layout mode
     //
@@ -111,9 +118,7 @@ impl BoxOps for List {
       if let Stored::String(s) = mode_str {
         options.insert("mode", Stored::String(*s));
       }
-    } else if self.properties.get("width").is_some()
-      && matches!(self.mode, Some(TexMode::Text))
-    {
+    } else if self.properties.get("width").is_some() && matches!(self.mode, Some(TexMode::Text)) {
       // Lists with width property set are from horizontal mode (paragraph layout)
       options.insert("mode", Stored::String(arena::pin_static("horizontal")));
     }
@@ -189,5 +194,81 @@ impl From<List> for Result<Digested> {
   fn from(value: List) -> Result<Digested> {
     let tmp: Digested = value.into();
     tmp.into()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn list_default_is_empty() {
+    let l = List::default();
+    assert!(l.is_empty());
+    assert_eq!(l.boxes.len(), 0);
+    assert_eq!(l.mode, None);
+    assert_eq!(l.font, None);
+  }
+
+  #[test]
+  fn list_new_from_empty_vec() {
+    let l = List::new(vec![]);
+    assert!(l.is_empty());
+    assert_eq!(l.boxes.len(), 0);
+  }
+
+  #[test]
+  fn list_display_empty_is_empty_string() {
+    let l = List::default();
+    assert_eq!(format!("{l}"), "");
+  }
+
+  #[test]
+  fn list_equality_same_empty() {
+    let a = List::default();
+    let b = List::default();
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn list_stringify_wraps_in_brackets() {
+    let l = List::default();
+    let s = l.stringify();
+    assert!(s.starts_with("List["), "got {s:?}");
+    assert!(s.ends_with(']'));
+  }
+
+  #[test]
+  fn list_get_properties_empty_by_default() {
+    let l = List::default();
+    assert_eq!(l.get_properties().len(), 0);
+  }
+
+  #[test]
+  fn list_set_property_persists() {
+    let mut l = List::default();
+    l.set_property("testkey", Stored::Bool(true));
+    assert!(l.get_properties().contains_key("testkey"));
+  }
+
+  #[test]
+  fn list_revert_empty_is_empty_tokens() {
+    let l = List::default();
+    let t = l.revert().expect("empty list reverts cleanly");
+    assert_eq!(t.len(), 0);
+  }
+
+  #[test]
+  fn list_unlist_ref_returns_borrowed_boxes() {
+    let l = List::default();
+    let refs = l.unlist_ref();
+    assert_eq!(refs.len(), 0);
+  }
+
+  #[test]
+  fn list_get_font_default_none() {
+    let l = List::default();
+    let f = l.get_font().unwrap();
+    assert!(f.is_none());
   }
 }

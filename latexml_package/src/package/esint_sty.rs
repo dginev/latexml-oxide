@@ -20,8 +20,10 @@ LoadDefinitions!({
     role => "INTOP", meaning => "quadruple-integral",
     dynamic_mathstyle => true);
   // dotsint: kludged composition of \int...\int
-  DefPrimitive!("\\lx@esint@dotsint",
-    "\\lx@kludged{\\int\\lx@tweaked{width=0.4em,xoffset=-0.3em,yoffset=0.4ex}{\\ldots}\\int}");
+  DefPrimitive!(
+    "\\lx@esint@dotsint",
+    "\\lx@kludged{\\int\\lx@tweaked{width=0.4em,xoffset=-0.3em,yoffset=0.4ex}{\\ldots}\\int}"
+  );
   DefMath!("\\dotsintop", None,
     "\\lx@kludged{\\int\\lx@tweaked{width=0.4em,xoffset=-0.3em,yoffset=0.4ex}{\\ldots}\\int}",
     role => "INTOP", meaning => "multiple-integral",
@@ -99,7 +101,7 @@ LoadDefinitions!({
     dynamic_mathstyle => true);
 
   // No unicode for these, guessing at meaning
-  DefPrimitive!("\\lx@esint@landup",   "-\u{25E0}-");
+  DefPrimitive!("\\lx@esint@landup", "-\u{25E0}-");
   DefPrimitive!("\\lx@esint@landdown", "-\u{25E1}-");
   DefMath!("\\landupintop", None,
     "\\lx@kludged{\\int{\\scriptscriptstyle\\mathchoice{\\lx@tweaked{width=0pt,xoffset=-1.1em,yoffset=0.2ex}{\\lx@esint@landup}}{\\lx@tweaked{width=0pt,xoffset=-0.9em,yoffset=0.2ex}{\\lx@esint@landup}}{\\lx@tweaked{width=0pt,xoffset=-0.9em,yoffset=0.2ex}{\\lx@esint@landup}}{\\lx@tweaked{width=0pt,xoffset=-0.9em,yoffset=0.2ex}{\\lx@esint@landup}}}}",

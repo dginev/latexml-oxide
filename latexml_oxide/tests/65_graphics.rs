@@ -1,59 +1,30 @@
 ///**********************************************************************
 /// Test cases for latexml_oxide — graphics suite
 ///**********************************************************************
-use latexml::util::test::*;
-use phf::phf_map;
+//
+// One #[test] fn per `tests/graphics/*.tex+.xml` pair, generated at
+// compile time by `tex_tests!`.
+//
+// One test (`keyval`) needs the `latexml_contrib` dispatcher to find
+// test-local .sty files via the noltxml raw-TeX passthrough. The
+// other 8 don't, but `latexml_contrib::dispatch` is a strict no-op
+// for files it doesn't recognise, so applying it directory-wide is
+// safe.
+//
+// A previous hand-written version registered a REQUIRES map gating
+// `colors` / `xcolors` on the presence of `dvipsnam.def`. The
+// `validate_requirements` runtime helper is currently a TODO stub
+// returning `true` unconditionally (see `util/test.rs:100`), so the
+// map was cosmetic. If REQUIRES gating is ever implemented, it will
+// need to be reintroduced here — probably as an `ignored_if_missing!`
+// macro invoked from inside the generated tests, not as a static
+// directory-level attribute.
 use std::rc::Rc;
 
-const DIR: &str = "tests/graphics";
-static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
-  "colors" => "dvipsnam.def",
-  "xcolors" => "dvipsnam.def"
-};
+use latexml::tex_tests;
 
-#[test]
-fn calc_test() {
-  latexml_test_single("tests/graphics/calc.tex", "calc", DIR, None, None);
-}
-
-#[test]
-fn colors_test() {
-  latexml_test_single("tests/graphics/colors.tex", "colors", DIR, Some(&REQUIRES), None);
-}
-
-#[test]
-fn framed_test() {
-  latexml_test_single("tests/graphics/framed.tex", "framed", DIR, None, None);
-}
-
-#[test]
-fn graphrot_test() {
-  latexml_test_single("tests/graphics/graphrot.tex", "graphrot", DIR, None, None);
-}
-
-#[test]
-fn keyval_test() {
-  latexml_test_single("tests/graphics/keyval.tex", "keyval", DIR, None,
-    Some(Rc::new(latexml_contrib::dispatch)));
-}
-
-#[test]
-
-fn picture_test() {
-  latexml_test_single("tests/graphics/picture.tex", "picture", DIR, None, None);
-}
-
-#[test]
-fn simplekv_test() {
-  latexml_test_single("tests/graphics/simplekv.tex", "simplekv", DIR, None, None);
-}
-
-#[test]
-fn xcolors_test() {
-  latexml_test_single("tests/graphics/xcolors.tex", "xcolors", DIR, Some(&REQUIRES), None);
-}
-
-#[test]
-fn xytest_test() {
-  latexml_test_single("tests/graphics/xytest.tex", "xytest", DIR, None, None);
-}
+tex_tests!(
+  "tests/graphics",
+  None,
+  Some(Rc::new(latexml_contrib::dispatch))
+);

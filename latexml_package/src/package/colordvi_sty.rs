@@ -3,7 +3,14 @@ use latexml_core::common::color::from_model_components;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>
+  // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>.
+  // Perl kind is DefMacro with an imperative sub body that returns no tokens;
+  // Rust DefPrimitive is the stomach-level analogue. WISDOM #44: the two
+  // kinds differ under `\edef`/`\ifx`/`\expandafter`; safe here because
+  // `\DefineNamedColor` is invoked at document-preamble stomach time by
+  // `\input{dvipsnam.def}`, never captured in an expansion context.
+  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+  // uses of `\DefineNamedColor` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\DefineNamedColor{}{}{}{}", sub[(_dmodel, name, model, spec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string().trim().to_string();
@@ -29,12 +36,17 @@ LoadDefinitions!({
     // `\lx@colordvi@setcolor` primitive below, which looks up the
     // previously-stored named color from the color registry and merges it
     // into the current font — no `\color` needed.
+    // Perl L28-29: scope => 'global' on both \text<name> and \<name>.
+    // Without it, named-color macros defined while colordvi loads inside
+    // a TeX group (e.g. via \input nested under \begingroup) would
+    // disappear at group close. Use \global\def to match Perl's global
+    // scope semantics — the bare \def fallback is local by default.
     let text_def = s!(
-      "\\expandafter\\def\\csname text{}\\endcsname{{\\lx@colordvi@setcolor{{{}}}}}",
+      "\\global\\expandafter\\def\\csname text{}\\endcsname{{\\lx@colordvi@setcolor{{{}}}}}",
       name_str, name_str
     );
     let name_def = s!(
-      "\\expandafter\\def\\csname {}\\endcsname#1{{{{\\csname text{}\\endcsname #1}}}}",
+      "\\global\\expandafter\\def\\csname {}\\endcsname#1{{{{\\csname text{}\\endcsname #1}}}}",
       name_str, name_str
     );
     for def_str in [&text_def, &name_def] {

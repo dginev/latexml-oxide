@@ -1,99 +1,14 @@
-//! Generic support layer for any LaTeXML binding file
+//! Generic support layer for any LaTeXML package binding file.
+//!
+//! Re-exports `latexml_engine::prelude::*` (the shared macro layer +
+//! latexml_core re-exports) and adds package-specific symbols that are
+//! only meaningful at the binding layer (`crate::package::*`,
+//! `GetKeyVal` constructor helper).
 
-pub use libxml::tree::{Namespace, Node, NodeType};
-pub use log;
-pub use once_cell::sync::Lazy;
-pub use regex::Regex;
-pub use rustc_hash::FxHashMap as HashMap;
-pub use std::borrow::Cow;
-pub use std::collections::VecDeque;
-pub use std::rc::Rc;
-pub use std::str::FromStr;
-pub use std::sync::Arc;
+pub use latexml_engine::prelude::*;
 
-pub use latexml_core::alignment::cell::Cell;
-pub use latexml_core::alignment::template::{Align, Template};
-pub use latexml_core::alignment::{Alignment, AlignmentConfig};
-pub use latexml_core::common::LabelMappingHook;
-pub use latexml_core::common::arena;
-pub use latexml_core::common::arena::*;
-pub use latexml_core::pin;
-pub use latexml_core::common::cleaners::*;
-pub use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
-pub use latexml_core::common::dimension::Dimension;
-pub use latexml_core::common::float::{Float, floatformat};
-pub use latexml_core::common::font;
-pub use latexml_core::common::font::Font;
-pub use latexml_core::common::glue::Glue;
-pub use latexml_core::common::locator::Locator;
-pub use latexml_core::common::model;
-pub use latexml_core::common::mudimension::MuDimension;
-pub use latexml_core::common::muglue::MuGlue;
-pub use latexml_core::common::number::Number;
-pub use latexml_core::common::numeric_ops::{NumericOps, UNITY, UNITY_F64};
-pub use latexml_core::common::object::Object;
-pub use latexml_core::common::xml::XML_NS;
-pub use latexml_core::definition::ConditionalClosure;
-pub use latexml_core::definition::argument::ArgWrap;
-pub use latexml_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
-pub use latexml_core::definition::constructor::ConstructorOptions;
-pub use latexml_core::definition::expandable::{Expandable, ExpandableOptions};
-pub use latexml_core::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
-pub use latexml_core::definition::primitive::{Primitive, PrimitiveOptions};
-pub use latexml_core::definition::register::{Register, RegisterType, RegisterValue, CharDefProps};
-pub use latexml_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
-  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveBody, PrimitiveClosure,
-  PrimitiveFn, PropertiesClosure, ReplacementClosure, Reversion,
-};
-pub use latexml_core::digested::{Digested, DigestedData};
-pub use latexml_core::document::Document;
-pub use latexml_core::document::resource::*;
-pub use latexml_core::document::tag::{TagOptionName, TagOptions};
-pub use latexml_core::gullet::*;
-pub use latexml_core::keyval::KeyvalConfig;
-pub use latexml_core::keyvals::{KeyVals, KeyvalsConfig};
-pub use latexml_core::ligature::{FontTestClosure, Ligature, LigatureMatcher, MathLigatureOptions};
-pub use latexml_core::list::List;
-pub use latexml_core::mouth;
-pub use latexml_core::mouth::{Mouth, MouthOptions};
-pub use latexml_core::parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure};
-pub use latexml_core::rewrite::{Rewrite, RewriteOptions};
-pub use latexml_core::state::*;
-pub use latexml_core::stomach::*;
-pub use latexml_core::tbox::Tbox;
-pub use latexml_core::token::*;
-pub use latexml_core::tokens::{NO_TOKENS, Tokens};
-pub use latexml_core::util::pathname;
-pub use latexml_core::util::radix;
-pub use latexml_core::whatsit::Whatsit;
-pub use latexml_core::*;
-pub use latexml_core::{BoxOps, Core, TexMode};
-// Macros:
-pub use latexml_core::{
-  T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_LETTER, T_MARKER, T_MATH, T_OTHER,
-  T_PARAM, T_SPACE, T_SUB, T_SUPER, Tokens,
-};
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------.
-
-// Re-export the public API available in latexml_core
-pub use latexml_core::binding::content::*;
-pub use latexml_core::binding::counter::dialect::*;
-pub use latexml_core::binding::def::dialect::*;
-pub use latexml_core::binding::def::traits::*;
-
-// Define the binding macro layer
-#[macro_use]
-pub mod setup_binding_language;
-
-// Export the package-level API
-pub use crate::engine::base_utilities::*;
-pub use crate::engine::latex_constructs::{
-  begin_appendices, end_appendices, make_note_tags, only_preamble,
-  relocate_footnote, start_appendices, tabular_bindings,
-};
+// Package-level API. Engine code does not need this; only the
+// `package/*.rs` files (and downstream binaries / contrib) do.
 pub use crate::package::*;
 
 // Functions callable from constructor templates via &GetKeyVal(#1,key) syntax.
@@ -108,4 +23,20 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
     },
     _ => None,
   }
+}
+
+// Native equivalents of Perl `AtBeginDocument` / `AtEndDocument`
+// (`LaTeXML/Package.pm:2798-2826`). Append tokens to the queue consumed by
+// `\begin{document}` / `\end{document}` (latex_constructs.rs).
+//
+// Bindings should prefer these over `RawTeX!(r"\AtBeginDocument{...}")` so
+// the queue is populated directly without round-tripping through the
+// `\AtBeginDocument` macro (which expl3 redefines to route through the
+// L3 hook system).
+pub fn at_begin_document<T: Into<Stored>>(operations: T) -> Result<()> {
+  state::push_value("@at@begin@document", operations)
+}
+
+pub fn at_end_document<T: Into<Stored>>(operations: T) -> Result<()> {
+  state::push_value("@at@end@document", operations)
 }

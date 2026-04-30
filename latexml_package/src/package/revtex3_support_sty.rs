@@ -43,6 +43,12 @@ LoadDefinitions!({
        \\if@lx@revtex@faketext@\\let\\@next\\egroup\\else\\let\\@next\\lx@revtex@nestmath\\fi\
      \\fi\\@next");
 
+  // The earlier latex_constructs.rs `\begin{equation}` is installed
+  // with `locked => true`. Under Perl `loadLTXML`'s UNLOCK scope, the
+  // redefinitions below override that lock — and Rust's `_load_binding`
+  // now wraps the dispatcher in `local_state_unlocked_guard(true)`
+  // (Package.pm:2318 parity), so no surgical lock-clear is needed.
+
   DefEnvironment!("{equation}",
     "<ltx:equation xml:id='#id'>\
      #tags\
@@ -66,9 +72,9 @@ LoadDefinitions!({
     properties => { ref_step_id("equation") },
     locked => true);
 
-  // Perl: DefConstructorI('\[', undef, ..., captureBody => 1, ...)
-  // In the Rust port, \[ is already defined in the LaTeX kernel with display_math mode.
-  // The revtex3 variant additionally rebinds $ inside. We override via DefConstructor.
+  // Perl revtex3_support.sty.ltxml L90-101: DefConstructorI('\[', undef, ...,
+  //   beforeDigest => sub { beginMode('display_math'); Let(T_MATH, '\lx@dollar@in@oldrevtex'); },
+  //   captureBody => 1, properties => sub { RefStepID('equation') });
   DefConstructor!("\\[",
     "<ltx:equation xml:id='#id'>\
      <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
@@ -77,5 +83,6 @@ LoadDefinitions!({
       stomach::begin_mode("display_math")?;
       Let!(T_MATH!(), "\\lx@dollar@in@oldrevtex");
     },
-    properties => { ref_step_id("equation") });
+    properties => { ref_step_id("equation") },
+    capture_body => true);
 });

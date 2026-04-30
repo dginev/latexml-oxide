@@ -4,10 +4,10 @@
 //! For each test `$name` there should be `$name.xml` (input) and
 //! `$name-post.xml` (expected output from `latexmlpost --keepXMath --pmml`).
 
+use latexml_post::Post;
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;
 use latexml_post::processor::Processor;
-use latexml_post::Post;
 
 const DIR: &str = "tests/post";
 
@@ -27,7 +27,8 @@ fn post_test(name: &str, max_allowed_diffs: usize) {
   let pmml = MathML::new_presentation().with_keep_xmath(true);
   let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
 
-  let results = post.process_chain(doc, &mut processors)
+  let results = post
+    .process_chain(doc, &mut processors)
     .expect("post-processing failed");
 
   assert_eq!(results.len(), 1, "Expected 1 output document");
@@ -73,7 +74,10 @@ fn post_test(name: &str, max_allowed_diffs: usize) {
       String::from_utf8_lossy(&diff_detail.stdout)
     );
   } else {
-    eprintln!("{}: {} diff lines (max allowed: {})", name, diff_count, max_allowed_diffs);
+    eprintln!(
+      "{}: {} diff lines (max allowed: {})",
+      name, diff_count, max_allowed_diffs
+    );
   }
 }
 
@@ -85,6 +89,4 @@ fn simplemath_post_test() {
 }
 
 #[test]
-fn hyperref_post_test() {
-  post_test("hyperref", 0);
-}
+fn hyperref_post_test() { post_test("hyperref", 0); }

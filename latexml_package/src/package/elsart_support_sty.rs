@@ -7,12 +7,25 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
 
+  // Perl elsart_support.sty.ltxml L23-24:
+  //   if (LookupValue('@amsthm')) { RequirePackage('amsthm'); }
+  // Papers that pass the `amsthm` class option get amsthm's
+  // \newtheorem{…} machinery; without it, elsart's theorem-like
+  // environments fall through to the plain-stub defaults below.
+  if state::lookup_bool_sym(pin!("@amsthm")) {
+    RequirePackage!("amsthm");
+  }
+
   // Theorem stubs (if amsthm not loaded)
   DefMacro!("\\theoremstyle{}", "");
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!("\\ltx@qed",
     "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true);
+    enter_horizontal => true,
+    // Perl L31: reversion => '\qed'. The `\ltx@qed` internal dispatcher
+    // should serialize back to `\qed` in `tex=` attributes so round-tripping
+    // through post-processors doesn't surface the internal CS name.
+    reversion => "\\qed");
 
   // Math symbols — Perl L37-42 (double-struck set notation)
   DefMath!("\\Cset", "\u{2102}", role => "ID", meaning => "complexes");
@@ -34,9 +47,19 @@ LoadDefinitions!({
   // Perl L58: \pol (rightwards arrow overaccent)
   DefMath!("\\pol Digested", "\u{2192}", operator_role => "OVERACCENT");
 
-  // Perl L51-53: \operatorname already defined in amsopn (ported — role='OPERATOR' here).
-  // Perl's elsart variant uses font family=serif only (amsopn adds upright+medium); we
-  // keep amsopn's version (loaded via amsmath) since both produce OPERATOR markup.
+  // Perl L51-53: elsart_support redefines \operatorname to ALWAYS emit
+  //   <ltx:XMWrap role='OPERATOR'> — distinct from amsopn's OPFUNCTION-when-
+  // unstarred / OPERATOR-when-starred split. Prior Rust port delegated to
+  // amsopn unchanged (comment incorrectly claimed "both produce OPERATOR
+  // markup"), so an elsart document's `\operatorname{lim}` silently got
+  // role='OPFUNCTION' instead of 'OPERATOR'. Restore the override.
+  DefConstructor!("\\operatorname OptionalMatch:* {}",
+    "<ltx:XMWrap role='OPERATOR' scriptpos='#scriptpos'>#2</ltx:XMWrap>",
+    bounded => true, require_math => true, font => { family => "serif" },
+    properties => sub[args] {
+      let scriptpos = if args[0].is_some() { "mid" } else { "post" };
+      Ok(stored_map!("scriptpos" => scriptpos))
+    });
 
   // Perl L55-56: \astsymbol{n}, \fnstar{n} — n-repeated Unicode char
   DefMacro!("\\astsymbol{}", sub[(n)] {
@@ -95,10 +118,42 @@ LoadDefinitions!({
   DefMacro!("\\nuc{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
   DefMacro!("\\itnuc{}{}", "\\ensuremath{{}^{#2}\\textit{#1}}");
 
+  // Perl elsart_support.sty.ltxml L63-65: \@@nuc — internal DefConstructor
+  // that \nuc and \itnuc forward through in Perl. Rust short-circuits
+  // \nuc/\itnuc above, so adding \@@nuc is purely defensive — external
+  // code or Let-aliases that call \@@nuc{element}{mass} directly now
+  // resolve to the Perl-faithful XMArg/XMApp wrapper with role=
+  // SUPERSCRIPTOP. Simplification: Perl's properties closure computes
+  // pos='pre<scriptlevel>' for pre-superscript positioning; we emit the
+  // wrap unconditionally (position is determined by surrounding XMath).
+  DefConstructor!("\\@@nuc{}{}",
+    "<ltx:XMArg><ltx:XMApp>\
+       <ltx:XMTok role='SUPERSCRIPTOP' scriptpos='pre'/>#1#2\
+     </ltx:XMApp></ltx:XMArg>");
+
   // Perl L92-102: algorithm counter + environment
   NewCounter!("algorithm");
   DefMacro!("\\thealgorithm", "\\arabic{algorithm}");
   DefMacro!("\\algorithmname", "Algorithm");
+  // Perl L96-102: {algorithm} env. Was unported — \begin{algorithm}
+  // hit an undefined-env error in any Elsevier paper. Rendered as a
+  // <ltx:theorem> with class ltx_theorem_algorithm + float
+  // numbering. Closing tag elided in the template; before/after
+  // float hooks attach number/id; after_construct closes the
+  // ltx:theorem at paragraph boundary (matches Perl's
+  // maybeCloseElement).
+  DefEnvironment!("{algorithm}",
+    "<ltx:theorem xml:id='#id' class='ltx_theorem_algorithm'>#tags#body</ltx:theorem>",
+    mode => "internal_vertical",
+    before_digest => {
+      use crate::engine::latex_constructs::before_float;
+      before_float("algorithm", None);
+    },
+    after_digest => sub[whatsit] {
+      use crate::engine::latex_constructs::after_float;
+      after_float(whatsit);
+    }
+  );
 
   // Perl L104: \pf proof environment
   RawTeX!("\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}[\\proofname]}{\\end{@proof}}}{}");
@@ -110,6 +165,15 @@ LoadDefinitions!({
 
   // Bibliography — Perl L117-175
   DefEnvironment!("{subbibitems}", "#body");
+
+  // Perl elsart_support.sty.ltxml L120: `{cv*}` env wraps its body in a
+  // <ltx:section class='ltx_cv'> with auto-title "Curriculum Vitae".
+  // Used in Elsevier journal submissions that include author CVs as a
+  // tail section. Rust had only the non-env `\cv` DefMacro below;
+  // `\begin{cv*}...\end{cv*}` hit undefined-env.
+  DefEnvironment!("{cv*}",
+    "<ltx:section class='ltx_cv'><ltx:title>Curriculum Vitae</ltx:title>#body</ltx:section>");
+
   DefMacro!("\\cv", "");
   DefMacro!("\\biboptions{}", "");
   DefMacro!("\\bibliographystyle{}", "");
@@ -177,9 +241,15 @@ LoadDefinitions!({
   DefMacro!("\\Slashbox", "/");
   DefMacro!("\\slashbox", "/");
 
-  // Perl L172: \note{...} wraps text in ltx:note (note: Perl also defines \note as a
-  // theorem env above via \newtheorem{note}{Note}, but the DefMacro shadows it — we
-  // match Perl's final binding).
+  // Perl elsart_support.sty.ltxml L172:
+  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
+  //
+  // That `# ?` marks the author's uncertainty — a DefMacro expansion body
+  // is a token stream (so `<`, `l`, `t`, `x`, `:`, `n`, `o`, `t`, `e`, `>`
+  // are 10 OTHER tokens, not an ltx:note open tag). The Rust port uses
+  // DefConstructor to emit a proper `<ltx:note>` element — matches the
+  // clear intent of the Perl source and what actually renders. Kept as
+  // an intentional Rust-over-Perl fix; the DP audit mismatch is expected.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
   DefMacro!("\\query{}", "");
 });

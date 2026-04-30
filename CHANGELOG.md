@@ -1,5 +1,66 @@
 # Change Log
 
+## [0.4.2] (in active development) — strict-Perl dump parity pivot
+
+  - **Status refresh 2026-04-30**: local `cargo test --tests` is
+    **1109/0/0**. Runtime dump resources are local/ignored files:
+    `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines.
+    Latest-row 7898-paper sandbox status is 7731 OK = 97.89%.
+  - **rust-analyzer stability profile**: `.vscode/settings.json`
+    disables RA proc-macro expansion/cache priming, limits RA worker
+    threads, keeps RA output in `target/rust-analyzer`, and excludes
+    large/generated trees from file watching.
+  - **LaTeX 2.09 `\documentstyle` option-flow recovery**: the old
+    shortcut body was replaced with strict-Perl three-branch semantics
+    for `.sty` / `.cls` / OmniBus fallback, `@unusedoptionlist`
+    handles both string and VecDeque storage, unused options probe the
+    compiled binding registry, and class-name probes use version
+    fallback.
+  - **Strict-Perl `LoadFormat` mutual exclusivity** (commit
+    `0c4d609ad`). `tex.rs` and `latex.rs` now mirror Perl
+    `Package.pm:LoadFormat` L2734-2752 exactly: `bootstrap → dump
+    → constructs` when the dump is on disk and `LATEXML_NODUMP` is
+    unset; `bootstrap → base → constructs` otherwise. Replaces the
+    older "always run all four" unified design that had been on
+    the back burner since 2026-04-18.
+  - **`dump_reader.rs` admission gates removed**. Mirrors Perl
+    `Core/Dumper.pm` L59-67 — every record calls
+    `assign_internal('global')` unconditionally, with no
+    skip-if-defined and no `:`-named filtering. Dumps now overwrite
+    any prior definition.
+  - **`Stored::Number` "Nm" marker** in dump format. Was sharing
+    "I" with `Stored::Int`, breaking register reads after the
+    strict split skipped `_base.rs`.
+  - **`plain.dump.txt` runtime loader** replaces the legacy
+    compiled-Rust `plain_dump.rs` (via `dump_codegen`). Matches
+    `latex_dump.rs` pattern; resolution paths: `LATEXML_NODUMP`,
+    `LATEXML_PLAIN_DUMP_PATH`, `LATEXML_DUMP_DIR`, exe-relative,
+    dev-tree.
+  - **`ini_tex.rs` LaTeX.pool preload**. `--init=latex.ltx` now
+    explicitly loads LaTeX.pool BEFORE the snapshot (commit
+    `209083ff4`), mirroring Perl's `make formats` recipe.
+    Eliminates the 10000-error abort during expl3-code.tex
+    raw-load. `latex.dump.txt` 19,797 → 24,987 entries (+26%);
+    zero undefined-CS errors during expl3 load.
+  - **Plain dump pollution removed** (commit `1e04a96c8`).
+    Autoload triggers (`\documentclass`, `\AtBeginDocument`,
+    `\Bbb`, `\align`, …), file-bookkeeping CSes
+    (`\@pushfilename`, `\@popfilename`), and early stubs are now
+    defined before the init/dump bootstrap snapshot, so they enter
+    the baseline and do NOT pollute the dump diff. Historical result:
+    plain.dump.txt 1238 → 1196 entries; current local dump is 959
+    lines after later cleanup.
+  - **`plain_base.rs` `\new*` family** converted to raw `\outer\def`
+    Token bodies (commit `0c4d609ad`), matching Perl
+    `plain_base.pool.ltxml:207-218` RawTeX block. Required because
+    Rust closures aren't serializable through the dump format —
+    when the strict split skips `_base.rs`, only Token bodies
+    survive in the dump.
+  - **Historical active gaps from the Apr 26 pivot** are preserved in
+    [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md), but
+    must be re-audited before action. Several were superseded by the
+    Apr 28-30 dump cleanup and package-loading fixes.
+
 ## [0.4.1] (in active development)
 
   - **D0 d.1 complete — dump / `_base` closure-only gap closed from
@@ -30,7 +91,7 @@
     #2697 DecodeColor Warn on unresolvable name;
     #4e3d1b8d filecontents header prepend "from source" line;
     #aaacdba2 nominal Locator on dump-loaded Expandables + Registers.
-  - **TRANSLATION_GAPS.md audit + ports**: verified every section
+  - **archive/TRANSLATION_GAPS.md audit + ports**: verified every section
     against current Rust source with line citations. Three small
     Box.pm helpers (`is_math`, `set_properties`, `total_height`) and
     `fracSizer` from TeX_Math.pool ported. Seven pdfTeX primitives

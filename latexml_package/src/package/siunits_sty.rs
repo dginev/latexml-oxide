@@ -15,6 +15,9 @@ LoadDefinitions!({
 
   DefMacro!("\\squaren{}", "{#1}^{2}");
 
-  // Apparently, all unit macros are available, all the time !!!
-  // TODO: six_enableUnitMacros(1) — stub; siunitx not fully ported
+  // Perl SIunits.sty.ltxml: unlike siunitx (which auto-enables per-\sisetup
+  // or per-\DeclareSIUnit), SIunits makes every unit macro unconditionally
+  // available. Port calls six_enable_unit_macros(1) at load — matching
+  // Perl's "all unit macros are available, all the time".
+  crate::package::siunitx_sty::six_enable_unit_macros(true);
 });

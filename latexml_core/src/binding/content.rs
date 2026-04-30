@@ -9,7 +9,6 @@ use std::rc::Rc;
 use crate::common::arena;
 use crate::common::arena::SymStr;
 use crate::common::error::*;
-use crate::state::let_i;
 use crate::common::font::{Font, Fontmap};
 use crate::common::model;
 use crate::document::resource::*;
@@ -18,6 +17,7 @@ use crate::gullet;
 use crate::gullet::do_expand;
 use crate::mouth::{Mouth, MouthOptions};
 use crate::parameter::{Parameter, Parameters};
+use crate::state::let_i;
 use crate::state::*;
 use crate::stomach::*;
 use crate::token::*;
@@ -43,46 +43,53 @@ thread_local! {
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
-  pub extension:     Option<Cow<'static, str>>,
+  pub extension:        Option<Cow<'static, str>>,
   /// package options to pass into the loaded library
-  pub options:       Vec<String>,
+  pub options:          Vec<String>,
   /// Tokens to process after the definition is loaded
-  pub after:         Tokens,
+  pub after:            Tokens,
   /// flag to forbid raw TeX sources
-  pub notex:         bool,
+  pub notex:            bool,
   /// flag to forbid errors ?
-  pub noerror:       bool,
+  pub noerror:          bool,
   /// flag to forbid binding dispatch
-  pub noltxml:       bool,
+  pub noltxml:          bool,
   /// collection of (package) options to process when loading the dependency
-  pub withoptions:   Option<Vec<String>>,
+  pub withoptions:      Option<Vec<String>>,
   /// flag to handle options, or ignore them
-  pub handleoptions: bool,
+  pub handleoptions:    bool,
   /// flag to process in .cls mode (default: false)
-  pub as_class:      bool,
+  pub as_class:         bool,
   /// flag to indicate reading the file raw in Gullet
-  pub raw:           bool,
+  pub raw:              bool,
   /// flag to allow reloading a previously loaded definitions file
-  pub reloadable:    bool,
+  pub reloadable:       bool,
   /// flag: set @ catcode to LETTER during loading (default true).
   /// Set to false for packages like xy.tex that need @ to stay as OTHER.
-  pub at_letter:     bool,
+  pub at_letter:        bool,
+  /// When set, raw-file lookup is restricted to the user-supplied
+  /// SEARCHPATHS (SOURCEDIRECTORY + graphicspaths), skipping the
+  /// kpsewhich fallback into system texmf. Matches Perl Package.pm's
+  /// `searchpaths_only => 1` — enabled by the `localrawstyles` option
+  /// to latexml.sty. Perl ref: Package.pm L2135, L2674.
+  pub searchpaths_only: bool,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
     InputDefinitionOptions {
-      extension:     None,
-      options:       Vec::new(),
-      after:         Tokens!(),
-      notex:         false,
-      noerror:       false,
-      noltxml:       false,
-      raw:           false,
-      reloadable:    false,
-      withoptions:   None,
-      handleoptions: false,
-      as_class:      false,
-      at_letter:     true,
+      extension:        None,
+      options:          Vec::new(),
+      after:            Tokens!(),
+      notex:            false,
+      noerror:          false,
+      noltxml:          false,
+      raw:              false,
+      reloadable:       false,
+      withoptions:      None,
+      handleoptions:    false,
+      as_class:         false,
+      at_letter:        true,
+      searchpaths_only: false,
     }
   }
 }
@@ -101,18 +108,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   if depth > MAX_INPUT_DEPTH {
     INPUT_DEPTH.with(|d| d.set(d.get() - 1));
     Fatal!(
-      Stomach, Recursion,
-      s!("Package loading depth exceeded {} (loading '{}').\
-        This usually means a missing binding causes infinite recursion.", MAX_INPUT_DEPTH, name)
+      Stomach,
+      Recursion,
+      s!(
+        "Package loading depth exceeded {} (loading '{}').\
+        This usually means a missing binding causes infinite recursion.",
+        MAX_INPUT_DEPTH,
+        name
+      )
     );
   }
 
   // Ensure depth cleanup on all exit paths via a guard
   struct InputDepthGuard;
   impl Drop for InputDepthGuard {
-    fn drop(&mut self) {
-      INPUT_DEPTH.with(|d| d.set(d.get() - 1));
-    }
+    fn drop(&mut self) { INPUT_DEPTH.with(|d| d.set(d.get() - 1)); }
   }
   let _guard = InputDepthGuard;
 
@@ -180,7 +190,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   };
   // Store the document class filename for xkeyval's isInClassFile check
   if as_type == "cls" && options.handleoptions {
-    assign_value("document_class_filename", filename.clone(), Some(Scope::Global));
+    assign_value(
+      "document_class_filename",
+      filename.clone(),
+      Some(Scope::Global),
+    );
   }
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
@@ -203,13 +217,37 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // Perl: early-stop if already loaded (checks request_loaded, name_loaded, etc.)
   // This prevents double-loading and breaks circular loading chains.
   // IMPORTANT: check BEFORE printing "Loading..." message to avoid spurious output.
-  let loaded_key = s!("{filename}_loaded");
-  if !options.reloadable && lookup_bool(&loaded_key) {
+  //
+  // Per OXIDIZED_DESIGN #23: gate on the flag matching the load path
+  // we'll actually take. CRITICAL invariant: a binding `<file>.rs` is
+  // allowed to call `InputDefinitions(noltxml=>1)` for its same-named
+  // raw .sty/.cls/.def AFTER its own `_loaded` flag was set — the raw
+  // load gates on `_raw_loaded`, not `_loaded`. Examples: babel_sty
+  // → raw babel.sty; cite_sty → raw cite.sty.
+  let opt_noltxml = options.noltxml;
+  let opt_notex = options.notex;
+  // Rust-only `_load_attempted` flag: set in the miss-handler below to
+  // prevent retry loops while keeping `_loaded` reserved for genuine
+  // binding success. Without this split the `_loaded`-on-miss hack
+  // shadowed `require_package`'s `!_loaded && !_raw_loaded`
+  // post-call check, disabling `maybe_require_dependencies` for any
+  // package that had no binding (e.g. paper-local `jinstpub.sty`).
+  let already_handled = |fkey: &str| -> bool {
+    if opt_noltxml {
+      lookup_bool(&s!("{fkey}_raw_loaded"))
+    } else if opt_notex {
+      lookup_bool(&s!("{fkey}_loaded")) || lookup_bool(&s!("{fkey}_load_attempted"))
+    } else {
+      lookup_bool(&s!("{fkey}_loaded"))
+        || lookup_bool(&s!("{fkey}_raw_loaded"))
+        || lookup_bool(&s!("{fkey}_load_attempted"))
+    }
+  };
+  if !options.reloadable && already_handled(&filename) {
     return Ok(());
   }
   // Also check without extension (Perl checks name_loaded too)
-  let name_loaded_key = s!("{name}_loaded");
-  if !options.reloadable && name != filename && lookup_bool(&name_loaded_key) {
+  if !options.reloadable && name != filename && already_handled(name) {
     return Ok(());
   }
 
@@ -224,13 +262,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // "babel.sty" definitions...` trace. Now only the outermost frame
   // announces — tracked per-filename via a state-value marker.
   let banner_key = s!("__loading_banner__{filename}");
-  let this_frame_announces =
-    crate::state::with_value(&banner_key, |v| v.is_none());
+  let this_frame_announces = crate::state::with_value(&banner_key, |v| v.is_none());
   if this_frame_announces {
     note_begin(&s!("Loading {:?} definitions", filename));
-    crate::state::assign_value(
-      &banner_key, true, Some(crate::state::Scope::Global),
-    );
+    crate::state::assign_value(&banner_key, true, Some(crate::state::Scope::Global));
   }
   def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
   def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
@@ -261,18 +296,25 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // \@addtofilelist before reading the file, so \@filelist is available inside)
   if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
     digest(Tokens!(
-      T_CS!("\\@addtofilelist"), T_BEGIN!(), Explode!(filename), T_END!()
+      T_CS!("\\@addtofilelist"),
+      T_BEGIN!(),
+      Explode!(filename),
+      T_END!()
     ))?;
   }
 
   // Skip loading entirely if already loaded (unless reloadable)
   // This prevents double-loading when e.g. smfart calls load_class("amsart")
   // after the binding already set the _loaded flag.
-  if !options.reloadable && lookup_bool(&s!("{filename}_loaded")) {
+  // Per OXIDIZED_DESIGN #23: gate by the load path's flag — same
+  // path-aware logic as the early-skip above. Allows a binding to
+  // load its same-named raw counterpart via `noltxml=>1`.
+  if !options.reloadable && already_handled(&filename) {
     if this_frame_announces {
       note_end(&s!("Loading {:?} definitions", filename));
       crate::state::assign_value(
-        &banner_key, crate::common::store::Stored::None,
+        &banner_key,
+        crate::common::store::Stored::None,
         Some(crate::state::Scope::Global),
       );
     }
@@ -285,23 +327,41 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     false
   } else {
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| {
-      if ext { Ok(true) } else { _load_binding(true, &filename, options.reloadable) }
+      if ext {
+        Ok(true)
+      } else {
+        _load_binding(true, &filename, options.reloadable)
+      }
     }) {
       Ok(v) => v,
       Err(e) => {
-        Error!("unexpected", &filename, s!("Error loading binding for '{}': {}", filename, e));
+        Error!(
+          "unexpected",
+          &filename,
+          s!("Error loading binding for '{}': {}", filename, e)
+        );
         // Mark as loaded even on error to prevent re-loading via raw path
         assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
         false
-      }
+      },
     }
   };
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
+    // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
+    // (e.g. `color.sty_loaded`) AND `$ltxname`_loaded (`color.sty.ltxml_loaded`),
+    // where `.ltxml` is the suffix of the Perl binding file. Rust's port
+    // keeps only the former — `.ltxml` is not a suffix in the Rust world, so
+    // binding-vs-raw-tex distinction is queryable via `*_loaded` directly.
+    // See OXIDIZED_DESIGN.md. Callers of the legacy `.ltxml_loaded` form
+    // must be migrated to `_loaded`.
+    // Per OXIDIZED_DESIGN #23: binding success → `<filename>_loaded`.
+    // Raw load tracks separately via `<filename>_raw_loaded` (see
+    // load_tex_definitions). The `_found_loaded` Rust-only flag is
+    // dropped — read sites check `_loaded || _raw_loaded` instead.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
-    assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
     // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
@@ -320,10 +380,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     //
     // Perl Package.pm FindFile search order (L2109-2139):
     //   1. .ltxml binding (handled above by load_binding/load_external_binding)
-    //   2. Raw TeX in search paths, BUT only if INTERPRETING_DEFINITIONS is true
-    //      (i.e. we're inside recursive loading from another raw TeX file)
-    //   3. FindFile_fallback — strip version suffixes, find generic .ltxml binding
-    //      (e.g. icml2024.sty → icml.sty.ltxml)
+    //   2. Raw TeX in search paths, BUT only if INTERPRETING_DEFINITIONS is true (i.e. we're inside
+    //      recursive loading from another raw TeX file)
+    //   3. FindFile_fallback — strip version suffixes, find generic .ltxml binding (e.g.
+    //      icml2024.sty → icml.sty.ltxml)
     //   4. Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
     //   5. kpsewhich
     //
@@ -340,7 +400,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           forbid_ltxml:      options.noltxml,
           notex:             false,
           ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: false,
+          search_paths_only: options.searchpaths_only,
         }),
       )
     } else {
@@ -354,8 +414,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       found_raw
     } else if !options.noltxml {
       if let Some(fallback) = find_file_fallback(name, &as_type) {
-        Info!("fallback", name,
-          s!("Interpreted as versioned package, falling back to {fallback}"));
+        Info!(
+          "fallback",
+          name,
+          s!("Interpreted as versioned package, falling back to {fallback}")
+        );
         // Load the fallback binding — use reloadable since we already marked original as "loaded"
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
         let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
@@ -381,10 +444,29 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     // Step 4: Raw TeX in search paths (without INTERPRETING_DEFINITIONS gate)
     // Perl Package.pm L2122-2125
+    //
+    // Per OXIDIZED_DESIGN #23: gate by `_raw_loaded` only — when a binding
+    // explicitly loads its raw counterpart via `noltxml=>1`, the binding's
+    // own `_loaded` flag is already set, but we MUST still proceed.
+    //
+    // EXCEPTION: if Step 3 (fallback ltxml binding) just succeeded, Perl's
+    // `if/elsif` flow (Package.pm:2118-2125) RETURNS on success and skips
+    // the raw-tex branch entirely. Rust's port uses sequential `let`
+    // bindings, so we must explicitly check `_loaded` here. Without this
+    // gate, `\RequirePackage{caption2}` loads `caption.sty.ltxml` via
+    // `find_file_fallback` (caption2 → caption strips trailing digit) AND
+    // then ALSO loads raw `caption2.sty`, which fires its
+    // `\@ifpackageloaded{caption}` mutual-exclusivity error. Same pattern
+    // applies to any package whose name ends in `[vV]?[-_.\d]+` and whose
+    // unsuffixed form has its own .ltxml binding.
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.notex && !interpreting
-      && (options.reloadable || !lookup_bool(&s!("{filename}_loaded")))
+    } else if lookup_bool(&s!("{filename}_loaded")) {
+      // Fallback ltxml binding already loaded — don't double-load the raw.
+      None
+    } else if !options.notex
+      && !interpreting
+      && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded")))
     {
       find_file(
         &filename,
@@ -392,7 +474,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           forbid_ltxml:      options.noltxml,
           notex:             false,
           ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: false,
+          search_paths_only: options.searchpaths_only,
         }),
       )
     } else {
@@ -401,12 +483,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
     if let Some(file) = found_raw {
       is_found_raw = true;
-      // Mark as successfully loaded — prevents maybeRequireDependencies from
-      // scanning for deps when the raw file was found and loaded.
-      // (Perl: InputDefinitions returns $file on success, which is truthy.)
-      assign_value(&s!("{filename}_found_loaded"), true, Some(Scope::Global));
+      // The raw load itself sets `<filename>_raw_loaded` via
+      // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
+      // check `_loaded || _raw_loaded` to detect "any load happened".
       load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
-    } else if !lookup_bool(&s!("{filename}_loaded")) {
+    } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
@@ -414,18 +495,42 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         if this_frame_announces {
           note_end(&s!("Loading {:?} definitions", filename));
           crate::state::assign_value(
-            &banner_key, crate::common::store::Stored::None,
+            &banner_key,
+            crate::common::store::Stored::None,
             Some(crate::state::Scope::Global),
           );
         }
         return Err(s!("File not found: {}", filename).into());
       }
-      // Mark as loaded even on failure — prevents retrying a missing file
-      // in a loop (e.g. when raw TeX repeatedly calls \RequirePackage).
-      assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-      Warn!("missing_file", name,
-        s!("Can't find binding or file for '{filename}'. \
-          No dispatcher entry and no raw file found on disk."));
+      // Perl Package.pm L2679 / L2715: maybeRequireDependencies($name, $type)
+      // is invoked when InputDefinitions returned undef ($success false).
+      // We mirror that here in the miss-handler, which is the only point
+      // where we know neither binding nor raw load occurred. Doing the
+      // dependency-scan BEFORE marking `_load_attempted` keeps the call
+      // exactly once-per-package and lets paper-local `.sty` files
+      // (e.g. jinstpub.sty bundling natbib + amsmath dependencies) wire
+      // up their transitively-bound prerequisites even when raw .sty
+      // loading is disabled (`INCLUDE_STYLES=false`, the default).
+      let scan_type =
+        options
+          .extension
+          .as_deref()
+          .unwrap_or(if options.as_class { "cls" } else { "sty" });
+      maybe_require_dependencies(name, scan_type);
+      // Rust-only retry guard: prevents re-attempting a missing file in
+      // a loop (raw TeX repeatedly calling \RequirePackage). Use a
+      // dedicated `_load_attempted` flag — NOT `_loaded` — so the
+      // post-input_definitions success check in `require_package`
+      // remains honest about whether anything actually loaded.
+      assign_value(&s!("{filename}_load_attempted"), true, Some(Scope::Global));
+      Warn!(
+        "missing_file",
+        name,
+        s!(
+          "Can't find binding or file for '{filename}'. \
+          No dispatcher entry and no raw file found on disk."
+        )
+      );
     }
   }
 
@@ -449,7 +554,20 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     if !prevext.is_empty() {
       def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None)?;
     }
-    digest(T_CS!("\\@popfilename"))?;
+    // Perl-faithful: Package.pm:2637 —
+    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
+    // Pair with the dispatched push above. Using `\@popfilename` (dump's
+    // expl3-wrapped) when both push/pop are defined; else `\lx@popfilename`
+    // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
+    // `\@popfilename` definedness independently (state may have changed
+    // mid-load); here we re-check too rather than threading a flag.
+    let pop_use_expl = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
+      && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+    if pop_use_expl {
+      digest(T_CS!("\\@popfilename"))?;
+    } else {
+      digest(T_CS!("\\lx@popfilename"))?;
+    }
     // Verify @currname was correctly restored, and force-fix if not
     let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
       do_expand(T_CS!("\\@currname"))?.to_string()
@@ -462,7 +580,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         T_CS!("\\@currname"),
         None,
         Tokens!(Explode!(prevname)),
-        Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
       )?;
     }
     if !prevext.is_empty() {
@@ -476,7 +597,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           T_CS!("\\@currext"),
           None,
           Tokens!(Explode!(prevext)),
-          Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }),
+          Some(ExpandableOptions {
+            scope: Some(Scope::Global),
+            ..ExpandableOptions::default()
+          }),
         )?;
       }
     }
@@ -485,7 +609,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   if this_frame_announces {
     note_end(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(
-      &banner_key, crate::common::store::Stored::None,
+      &banner_key,
+      crate::common::store::Stored::None,
       Some(crate::state::Scope::Global),
     );
   }
@@ -501,7 +626,11 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
   // (e.g. `\inputencoding{cp1251}` re-invokes cp1251.def to re-register
   // DeclareInputText mappings after `set_input_encoding` reset them).
-  let loaded_key = s!("{request}_found_loaded");
+  // OXIDIZED_DESIGN #23: binding load gates ONLY on the binding-specific
+  // `_loaded` flag (set on success below). A prior raw load
+  // (`_raw_loaded`) does NOT preclude the binding from loading — they
+  // are independent paths. Mirrors Perl `loadLTXML` (Package.pm L2311).
+  let loaded_key = s!("{request}_loaded");
   if !reloadable && lookup_bool(&loaded_key) {
     return Ok(true);
   }
@@ -513,17 +642,20 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
+      // Perl `Package.pm:loadLTXML L2318` wraps the binding-load body in
+      // `local $UNLOCKED = 1`, allowing bindings to override prior
+      // (locked) definitions. The guard auto-pops on drop.
+      let _unlock_guard =
+        crate::common::local_assignments::local_state_unlocked_guard(true);
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
           // Preemptively mark as loaded to avoid recursion.
 
-          // TODO: is this still true?
-          // Note (only!) that the binding version of this was loaded; still could load raw tex!
+          // Mark binding as loaded (raw `<request>_raw_loaded` is tracked
+          // separately by load_tex_definitions). Per OXIDIZED_DESIGN #23.
           assign_value(&loaded_key, true, Some(Scope::Global));
-          // if a binding load succeeded, mark the generic request as loaded.
-          assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
             Err(e) => Err(e),
@@ -545,9 +677,43 @@ fn before_input_handle_options(
   name: &str,
   as_type: &str,
 ) -> Result<()> {
-  // Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see
-  // expl3.sty.ltxml
-  digest(T_CS!("\\@pushfilename"))?;
+  // Perl-faithful translation of Package.pm:2578-2591:
+  //
+  //   my $pushpop = LookupDefinition(T_CS('\@pushfilename'))
+  //              && LookupDefinition(T_CS('\@popfilename'));
+  //   if ($pushpop) {
+  //     Digest(Tokens(T_CS('\@pushfilename'),
+  //         T_BEGIN, T_END, T_BEGIN, T_END, T_BEGIN, Explode($name), T_END));
+  //   } else {
+  //     Digest(T_CS('\lx@pushfilename'));
+  //   }
+  //
+  // The 3 trailing brace-arg pairs `{}{}{name}` feed
+  // `\@expl@push@filename@aux@@` (which the dump's `\@pushfilename`
+  // body chains into) — that aux takes 3 args. Without them it reads
+  // 3 garbage tokens from the input stream, corrupting the
+  // `\g__hook_name_stack_seq` push. Subsequent `\@popfilename`
+  // then sees an empty/corrupt seq, fires `\msg_error:nn{hooks}{extra-pop-label}`,
+  // whose `\use:e` (=`\edef`) chain expands `\q_no_value` and triggers
+  // recursion-detect. See docs/sandbox_failures_SYNC_STATUS.md
+  // "\q_no_value cascade" for the full investigation.
+  let push_defined = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some();
+  let pop_defined = lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+  if push_defined && pop_defined {
+    let mut pushtoks = vec![
+      T_CS!("\\@pushfilename"),
+      T_BEGIN!(),
+      T_END!(),
+      T_BEGIN!(),
+      T_END!(),
+      T_BEGIN!(),
+    ];
+    pushtoks.extend(Explode!(name));
+    pushtoks.push(T_END!());
+    digest(Tokens::new(pushtoks))?;
+  } else {
+    digest(T_CS!("\\lx@pushfilename"))?;
+  }
 
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
@@ -693,15 +859,61 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // (explicit local path).
   let binding_loaded = {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
-    let ext = clean_req.rsplit('.').next().unwrap_or("");
-    let is_tex_like = ext == clean_req.as_ref() || ext == "tex";
-    if !has_dir && is_tex_like {
-      let tex_name = if ext == "tex" {
-        clean_req.to_string()
+    // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
+    // `\input{name.<ext>}` resolves to a known binding extension AND a
+    // binding for `(name, ext)` is reachable, route to the binding
+    // instead of the on-disk raw file. Without this, papers using
+    // literal `\input{psfig.sty}` (common 1996-2005 idiom) fail because
+    // TL2025 dropped the on-disk file even though Rust has the binding.
+    //
+    // Extensions handled dynamically via `is_binding_extension`: any
+    // extension registered by `latexml_package` or `latexml_contrib`
+    // (cls / sty / def / fontmap / ldf / ltx / lua / pool / tex /
+    // code.tex / ...) is admitted, gating out `\input{foo.eps}`-style
+    // content paths.
+    //
+    // For .tex / no-extension paths we still use `load_binding` (exact
+    // dispatch lookup on `<name>.tex`) — a `<name>.tex` request is
+    // semantically "include this content", so suffix-stripping fallback
+    // (e.g. `mysetup.tex` → `setup.tex.ltxml`) would surprise more than
+    // it helps.
+    //
+    // For .sty / .cls / .def / etc — the binding-extension cases — we
+    // route through `input_definitions`, which gives us the full Step
+    // 1 → Step 3 → Step 4 ladder including `find_file_fallback`'s
+    // version-suffix strip. This is what makes `\input{psfig.sty}`
+    // pick up `psfig_sty.rs` AND `\input{caption2.sty}` fall back to
+    // `caption_sty.rs` exactly as Perl Package.pm:2266 does via
+    // `RequirePackage($name)`.
+    if !has_dir {
+      let ext = clean_req.rsplit('.').next().unwrap_or("");
+      let no_ext = ext == clean_req.as_ref();
+      if no_ext || ext == "tex" {
+        let tex_name = if ext == "tex" {
+          clean_req.to_string()
+        } else {
+          s!("{}.tex", clean_req)
+        };
+        load_binding(&tex_name)? || load_external_binding(&tex_name)?
+      } else if crate::state::is_binding_extension(ext) {
+        // Route through input_definitions for fallback-aware dispatch.
+        // The `name` arg expects no extension, so split it off.
+        let name = clean_req
+          .strip_suffix(&format!(".{}", ext))
+          .unwrap_or(&clean_req)
+          .to_string();
+        let result = input_definitions(&name, InputDefinitionOptions {
+          extension: Some(Cow::Owned(ext.to_string())),
+          noerror: true,
+          reloadable: true,
+          ..InputDefinitionOptions::default()
+        });
+        // input_definitions returns Err on not-found with noerror=true;
+        // treat that as "binding not loaded, fall through to raw".
+        result.is_ok()
       } else {
-        s!("{}.tex", clean_req)
-      };
-      load_binding(&tex_name)? || load_external_binding(&tex_name)?
+        false
+      }
     } else {
       false
     }
@@ -753,7 +965,19 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
-fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_letter: bool) -> Result<()> {
+fn load_tex_definitions(
+  request: &str,
+  pathname: &str,
+  reloadable: bool,
+  at_letter: bool,
+) -> Result<()> {
+  // Perl Package.pm L2334: $STATE->getStomach->leaveHorizontal_internal;
+  // Defensive cleanup before reading definitions — if we're somehow in
+  // horizontal mode while bound to vertical (e.g. after \par-less inline
+  // text), repack and flip MODE in-place. No-op in the common case but
+  // matches Perl's pre-load state hygiene.
+  crate::stomach::leave_horizontal_internal();
+
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -763,10 +987,15 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if lookup_bool(&s!("{request}_loaded")) && !reloadable && !pathname::is_reloadable(pathname) {
+    // Per OXIDIZED_DESIGN #23: raw .sty/.cls/.def load tracks
+    // `<request>_raw_loaded`, separate from the binding `<request>_loaded`.
+    // This lets a binding .rs load the raw file of the same name without
+    // the flags clobbering each other.
+    if lookup_bool(&s!("{request}_raw_loaded")) && !reloadable && !pathname::is_reloadable(pathname)
+    {
       return Ok(());
     }
-    assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{request}_raw_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -806,9 +1035,48 @@ fn load_tex_definitions(request: &str, pathname: &str, reloadable: bool, at_lett
     Ok(())
   })?;
 
-  assign_value_sym(crate::pin!("INTERPRETING_DEFINITIONS"), was_interpreting, None);
+  // Expl3 scope-exit cleanup: if a raw .sty load activated expl3 catcodes
+  // via `\ProvidesExplPackage` or explicit `\ExplSyntaxOn` and forgot to
+  // pair it with `\ExplSyntaxOff` (e.g. lipsum.sty, which relies on an
+  // `\AtEndOfPackage`-style hook the autoload chain doesn't register),
+  // digest `\ExplSyntaxOff` now so the pending `\group_begin:` frame pops
+  // and catcodes restore before the next package loads.
+  //
+  // Perl's `TeX.pool.ltxml` L44-47 acknowledges this as a known edge-
+  // case of the `\ProvidesExplPackage` autoload pattern.
+  //
+  // Skip expl3 / xparse / l3keys2e / expl3-code — those legitimately
+  // leave expl3 active for their callers.
+  {
+    let (_, base, _ext) = pathname::split(pathname);
+    let is_expl3_core = matches!(
+      base.as_str(),
+      "expl3" | "xparse" | "l3keys2e" | "expl3-code"
+    );
+    if !is_expl3_core
+      && lookup_catcode('_') == Some(Catcode::LETTER)
+      && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
+    {
+      let _ = invoke_token(&T_CS!("\\ExplSyntaxOff"));
+    }
+  }
+
+  assign_value_sym(
+    crate::pin!("INTERPRETING_DEFINITIONS"),
+    was_interpreting,
+    None,
+  );
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
+
+  // Perl Package.pm L2376: Let(T_CS('\ver@'.$request), T_CS('\fmtversion'), 'global');
+  // Mark the raw .sty/.tex as loaded so LaTeX's `\@ifpackageloaded` and
+  // `\RequirePackage` date-version guards work after a raw TeX load. Perl
+  // unconditionally Lets here (in contrast to the LTXML loader at line 339,
+  // which only Lets when undefined).
+  let ver_cs = T_CS!(s!("\\ver@{}", request));
+  let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
+
   Ok(())
 }
 
@@ -877,8 +1145,14 @@ pub fn process_options(inorder: bool) -> Result<()> {
     let mut list = Vec::new();
     for item in vdq.iter() {
       match item {
-        Stored::String(s) => { list.push(*s); },
-        Stored::Strings(ss) => { for s in ss.iter() { list.push(*s); } },
+        Stored::String(s) => {
+          list.push(*s);
+        },
+        Stored::Strings(ss) => {
+          for s in ss.iter() {
+            list.push(*s);
+          }
+        },
         _ => {},
       }
     }
@@ -906,9 +1180,8 @@ pub fn process_options(inorder: bool) -> Result<()> {
 
     for option in declared_options.iter() {
       match option {
-        Stored::String(content)
-          if cur_set.remove(content) || cls_set.remove(content) => {
-            execute_option_internal(*content)?;
+        Stored::String(content) if cur_set.remove(content) || cls_set.remove(content) => {
+          execute_option_internal(*content)?;
         },
         Stored::Strings(contents) => {
           for content in contents.iter() {
@@ -922,8 +1195,17 @@ pub fn process_options(inorder: bool) -> Result<()> {
     }
     // Only undeclared CURRENT options go to default handler (not class options).
     // Perl L2460-2461: "foreach my $option (@curroptions)" — class options excluded.
-    for option in cur_set.iter() {
-      execute_default_option_internal(*option)?;
+    // Iterate cur_options_list (Vec, ordered) instead of cur_set (HashSet,
+    // unordered) so unknown options enter `@unusedoptionlist` in source
+    // order. Otherwise `\documentstyle[a,b,c]` produces an arbitrary
+    // dispatch order, which breaks paper-local option chains that depend
+    // on left-to-right evaluation (e.g. `[aaspp4,tighten]` requires
+    // aaspp4's bindings — \tightenlines — to be defined before tighten.sty
+    // body fires; driver: astro-ph9707180).
+    for option in &cur_options_list {
+      if cur_set.contains(option) {
+        execute_default_option_internal(*option)?;
+      }
     }
   }
   // Now, undefine the handlers
@@ -936,13 +1218,17 @@ pub fn process_options(inorder: bool) -> Result<()> {
 fn execute_option_internal(option: SymStr) -> Result<bool> {
   let cs = T_CS!(arena::with(option, |opt| s!("\\ds@{opt}")));
   if lookup_definition(&cs)?.is_some() {
+    // Perl Package.pm L2482: `DefMacroI('\CurrentOption', undef, $option)` —
+    // tokenizes `$option` via Tokens(Explode($option)) so letters get
+    // catcode LETTER and others OTHER. Babel's `\ifx\CurrentOption\bbl@tempa`
+    // (where `\bbl@tempa{frenchb}` produces LETTER tokens) only matches when
+    // our `\CurrentOption` body has the same catcodes — packing the whole
+    // option string into one OTHER-catcode "string" token would make the
+    // \ifx silently false. Use SymExplodeText! to split per-character.
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
-      Tokens!(Token {
-        text: option,
-        code: Catcode::OTHER,
-      }),
+      Tokens!(SymExplodeText!(option)),
       None,
     )?;
 
@@ -968,13 +1254,12 @@ fn execute_option_internal(option: SymStr) -> Result<bool> {
 }
 
 fn execute_default_option_internal(option: SymStr) -> Result<bool> {
+  // Perl Package.pm L2494: `DefMacroI('\CurrentOption', undef, $option)`.
+  // Same catcode-faithful tokenization as execute_option_internal.
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
-    Tokens!(Token {
-      text: option,
-      code: Catcode::OTHER,
-    }),
+    Tokens!(SymExplodeText!(option)),
     None,
   )?;
   digest(T_CS!("\\default@ds"))?;
@@ -987,7 +1272,7 @@ fn reset_options() -> Result<()> {
     Stored::VecDequeStored(VecDeque::new()),
     None,
   );
-  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.to_string() == "cls" {
+  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.eq_text("cls") {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"
@@ -1055,10 +1340,20 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   {
     options.notex = Some(true);
   }
+  // Perl Package.pm L2674: top-level \RequirePackage can be limited to
+  // local sources via searchpaths_only. Triggered by the `localrawstyles`
+  // option to latexml.sty (sets `INCLUDE_STYLES => 'searchpaths'`).
+  // Only applies when raw TeX is allowed (notex==false); otherwise the
+  // gate is moot since find_file won't search on-disk anyway.
+  if !options.searchpaths_only
+    && !matches!(options.notex, Some(true))
+    && lookup_string("INCLUDE_STYLES") == "searchpaths"
+  {
+    options.searchpaths_only = true;
+  }
   if options.extension.is_none() {
     options.extension = Some("sty".into());
   }
-  let ext_type = options.extension.as_deref().unwrap_or("sty").to_string();
   let result = input_definitions(name, InputDefinitionOptions {
     extension: options.extension,
     handleoptions: true,
@@ -1072,19 +1367,48 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     as_class: options.as_class,
     noltxml: options.noltxml.unwrap_or(false),
     notex: options.notex.unwrap_or(false),
+    searchpaths_only: options.searchpaths_only,
     after: options.after,
     ..InputDefinitionOptions::default()
   });
-  // Perl Package.pm L2679: maybeRequireDependencies unless $success
-  // input_definitions returns Ok even when no binding/raw file was found
-  // (it just sets _loaded and warns). Perl checks the return value of
-  // InputDefinitions which returns undef on failure. We check the
-  // "_found_loaded" flag which is only set when an actual binding or
-  // raw TeX file was loaded (not set on error/not-found).
-  if !lookup_bool(&s!("{name}.{ext_type}_found_loaded")) {
-    maybe_require_dependencies(name, &ext_type);
-  }
+  // Perl Package.pm L2679 maybeRequireDependencies is invoked from
+  // input_definitions's miss-handler; nothing more to do here.
   result
+}
+
+/// Perl: `RequirePackage($name, withoptions => 1)` — forward the current
+/// package/class's options to the required child package. Reads
+/// `\@currname` / `\@currext` to identify the caller, looks up its
+/// `opt@<name>.<ext>` options, and passes them explicitly as the child's
+/// options list. Mirrors `load_class_with_options` for the package path.
+pub fn require_package_with_options(name: &str) -> Result<()> {
+  let currname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    do_expand(T_CS!("\\@currname"))?.to_string()
+  } else {
+    String::new()
+  };
+  let currext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+    do_expand(T_CS!("\\@currext"))?.to_string()
+  } else {
+    String::new()
+  };
+  let options: Vec<String> = if !currname.is_empty() {
+    let key = s!("opt@{}.{}", currname, currext);
+    lookup_vecdeque(&key)
+      .unwrap_or_default()
+      .iter()
+      .filter_map(|item| match item {
+        Stored::String(s) => Some(arena::to_string(*s)),
+        _ => None,
+      })
+      .collect()
+  } else {
+    Vec::new()
+  };
+  require_package(name, RequireOptions {
+    options,
+    ..RequireOptions::default()
+  })
 }
 
 /// Perl Package.pm L2759-2796: maybeRequireDependencies
@@ -1092,14 +1416,22 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
 /// scan the raw file for \RequirePackage/\usepackage/\LoadClass declarations
 /// and load any dependencies that DO have bindings. This is a "best effort"
 /// fallback that gives us the dependency chain without interpreting raw TeX.
+// Strict translation of Perl `Package.pm:maybeRequireDependencies`
+// (L2759-L2796). Scan a raw .sty/.cls file for transitive
+// `\RequirePackage`, `\usepackage`, and (for classes) `\LoadClass`
+// declarations and route them through `require_package` / `load_class`
+// so the corresponding bindings get pulled in even when the original
+// file has no .ltxml binding.
 fn maybe_require_dependencies(file: &str, ext_type: &str) {
   use once_cell::sync::Lazy;
   use regex::Regex;
 
-  // Re-entrancy guard: require_package → input_definitions → maybe_require_dependencies
-  // can recurse if a scanned dependency itself has no binding.
+  // Rust-only re-entrancy guard. Perl avoids this case by other means
+  // (the call-site of `maybeRequireDependencies` is the only entry).
   thread_local! { static SCANNING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
-  if SCANNING.with(|s| s.get()) { return; }
+  if SCANNING.with(|s| s.get()) {
+    return;
+  }
   SCANNING.with(|s| s.set(true));
   struct ResetGuard;
   impl Drop for ResetGuard {
@@ -1107,85 +1439,144 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   }
   let _guard = ResetGuard;
 
+  // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
+  // replacement is the empty string.
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
-  static PKG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
-    r"\\(?:RequirePackage|usepackage)\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-  ).unwrap());
-  static CLS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(
-    r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}"
-  ).unwrap());
-
-  // Find the raw file on disk by searching in search paths
-  let filename = s!("{}.{}", file, ext_type);
-  let paths = get_search_paths();
-  let raw_path = paths.iter().find_map(|dir| {
-    let candidate = if dir.is_empty() {
-      filename.clone()
-    } else {
-      format!("{}/{}", dir, filename)
-    };
-    if std::path::Path::new(&candidate).exists() { Some(candidate) } else { None }
-  }).or_else(|| {
-    // Also try kpsewhich
-    crate::util::pathname::find(&filename, crate::util::pathname::PathnameFindOptions::default())
+  // Perl L2777-2779 runs two separate substitutions, in this order:
+  // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
+  // collected order matches Perl's call order to `$collect`.
+  static REQ_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
   });
+  static USE_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
+  });
+  static CLS_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
+  });
+
+  // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
+  // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
+  let raw_path = find_file(
+    file,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Owned(ext_type.to_string())),
+      forbid_ltxml: true, // Perl `noltxml => 1`
+      ..FindFileOptions::default()
+    }),
+  );
   let Some(path) = raw_path else { return };
+
+  // Perl L2762-2766: slurp file. On failure, Warn and return (L2794-2795).
   let Ok(code) = std::fs::read_to_string(&path) else {
-    Warn!("I/O", "read", s!("Couldn't open {} to scan dependencies", path));
+    Warn!(
+      "I/O",
+      "read",
+      s!("Couldn't open {} to scan dependencies, $!", path)
+    );
     return;
   };
-  // Strip comments (Perl L2776)
-  let code = COMMENT_RE.replace_all(&code, "\n");
-  // Scan for \RequirePackage[options]{packages} and \usepackage[options]{packages}
-  let mut packages: Vec<(String, Vec<String>)> = Vec::new();
-  let mut seen = std::collections::HashSet::new();
-  for cap in PKG_RE.captures_iter(&code) {
-    let opts: Vec<String> = cap.get(1)
-      .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
-      .unwrap_or_default();
-    for pkg in cap[2].split(',') {
-      let pkg = pkg.trim().to_string();
-      // Perl L2773: skip if binding already loaded
-      if !pkg.is_empty() && !seen.contains(&pkg)
-        && !lookup_bool(&s!("{pkg}.sty_found_loaded"))
-      {
-        seen.insert(pkg.clone());
-        packages.push((pkg, opts.clone()));
+
+  // Perl L2776: strip comments (replacement empty).
+  let code = COMMENT_RE.replace_all(&code, "");
+
+  // Perl L2767-2774: shared `%dups` map, $collect closure splits on
+  // `\s*,\s*` and only enrolls a package once, AND only if its
+  // `.sty.ltxml_loaded` flag is unset.
+  let mut packages: Vec<(String, Option<String>)> = Vec::new();
+  let mut dups: std::collections::HashSet<String> = std::collections::HashSet::new();
+  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+  let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
+    for p in OPT_SPLIT.split(pkg_csv) {
+      if p.is_empty() {
+        continue;
+      }
+      // Perl L2773: `!$dups{$p} && !LookupValue($p . '.sty.ltxml_loaded')`
+      if !dups.contains(p) && !lookup_bool(&s!("{p}.sty.ltxml_loaded")) {
+        packages.push((p.to_string(), raw_options.map(|s| s.to_string())));
+        dups.insert(p.to_string());
       }
     }
+  };
+
+  // Perl L2777: `\RequirePackage` first.
+  for cap in REQ_RE.captures_iter(&code) {
+    collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
-  // For class files, also scan for \LoadClass (Perl L2781-2782)
+  // Perl L2778-2779: `\usepackage` second.
+  for cap in USE_RE.captures_iter(&code) {
+    collect(&cap[2], cap.get(1).map(|m| m.as_str()));
+  }
+
+  // Perl L2767/L2781-2782: `@classes` is class-only, NO dup-check.
+  let mut classes: Vec<(String, Option<String>)> = Vec::new();
   if ext_type == "cls" {
     for cap in CLS_RE.captures_iter(&code) {
-      let opts: Vec<String> = cap.get(1)
-        .map(|m| m.as_str().split(',').map(|s| s.trim().to_string()).collect())
-        .unwrap_or_default();
-      let class = cap[2].trim().to_string();
+      let class = cap[2].to_string();
       if !class.is_empty() {
-        // Perl L2788: only load if we have a binding for it (notex => 1)
-        if find_file(&s!("{class}.cls"), Some(FindFileOptions {
-          notex: true,
-          ext_type: Some(Cow::Borrowed("cls")),
-          ..FindFileOptions::default()
-        })).is_some() || lookup_bool(&s!("{class}.cls_loaded"))
-        {
-          let _ = load_class(&class, opts, Tokens::default());
-        }
+        classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
       }
     }
   }
-  if !packages.is_empty() {
-    Info!("dependencies", "dependencies",
-      s!("Loading dependencies for {}: {}", path,
-        packages.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(",")));
+
+  // Perl L2784-2785: Info iff EITHER list is non-empty; message lists
+  // class names then package names, separated by ',' (no space).
+  if !classes.is_empty() || !packages.is_empty() {
+    let names: Vec<&str> = classes
+      .iter()
+      .map(|(n, _)| n.as_str())
+      .chain(packages.iter().map(|(n, _)| n.as_str()))
+      .collect();
+    Info!(
+      "dependencies",
+      "dependencies",
+      s!("Loading dependencies for {}: {}", path, names.join(","))
+    );
   }
-  for (pkg, opts) in packages {
-    // Only load if we have a binding (notex: true)
-    let _ = require_package(&pkg, RequireOptions {
-      options: opts,
-      notex: Some(true),
-      ..RequireOptions::default()
-    });
+
+  // Perl L2786-2789: foreach class — gate by `FindFile($class, type=>'cls',
+  // notex=>1)`, then `LoadClass(..., options=>[split ...])`.
+  for (class, raw_opts) in classes {
+    if find_file(
+      &class,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed("cls")),
+        notex: true, // Perl `notex => 1`
+        ..FindFileOptions::default()
+      }),
+    )
+    .is_some()
+    {
+      let opts: Vec<String> = raw_opts
+        .as_deref()
+        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
+        .unwrap_or_default();
+      let _ = load_class(&class, opts, Tokens::default());
+    }
+  }
+
+  // Perl L2790-2793: foreach package — gate by `FindFile($pkg, type=>'sty',
+  // notex=>1)`, then `RequirePackage(..., options=>[split ...])`.
+  for (pkg, raw_opts) in packages {
+    if find_file(
+      &pkg,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Borrowed("sty")),
+        notex: true, // Perl `notex => 1`
+        ..FindFileOptions::default()
+      }),
+    )
+    .is_some()
+    {
+      let opts: Vec<String> = raw_opts
+        .as_deref()
+        .map(|s| OPT_SPLIT.split(s).map(|x| x.to_string()).collect())
+        .unwrap_or_default();
+      let _ = require_package(&pkg, RequireOptions {
+        options: opts,
+        ..RequireOptions::default()
+      });
+    }
   }
 }
 
@@ -1221,6 +1612,23 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
+/// Perl: `LoadClass($name, withoptions => 1)` — load a class passing the
+/// caller's class options through to the child. Reads `class_options` from
+/// state (populated by the outer `\documentclass` invocation) and forwards
+/// those as the child's options list, matching Perl Package.pm LoadClass's
+/// `withoptions` branch.
+pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
+  let class_opts = lookup_vecdeque("class_options").unwrap_or_default();
+  let options: Vec<String> = class_opts
+    .iter()
+    .filter_map(|item| match item {
+      Stored::String(s) => Some(arena::to_string(*s)),
+      _ => None,
+    })
+    .collect();
+  load_class(name, options, after)
+}
+
 pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()> {
   // Perl Package.pm LoadClass: $options{notex}=1 unless LookupValue('INCLUDE_CLASSES').
   // Defaults to NOT loading raw .cls. Only .cls.ltxml bindings are considered;
@@ -1228,11 +1636,15 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
   let notex_default = !lookup_bool("INCLUDE_CLASSES");
+  // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
+  // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
+  let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
     after: after.clone(),
     notex: notex_default,
+    searchpaths_only,
     handleoptions: true,
     noerror: true,
     ..InputDefinitionOptions::default()
@@ -1244,7 +1656,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
   // undefined and the `_` characters then reach the stomach as subscript
   // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
-  if !lookup_bool(&s!("{name}.cls_found_loaded")) {
+  if !lookup_bool(&s!("{name}.cls_loaded")) && !lookup_bool(&s!("{name}.cls_raw_loaded")) {
     maybe_require_dependencies(name, "cls");
   }
   // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
@@ -1254,46 +1666,56 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
   //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
   // Fall through to OmniBus only when nothing matches.
-  if (result.is_err() || !lookup_bool(&format!("{name}.cls_loaded")))
-    && name != "OmniBus" && name != "article" && !lookup_bool("OmniBus.cls_loaded") {
-      note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
+  if (result.is_err()
+    || (!lookup_bool(&format!("{name}.cls_loaded"))
+      && !lookup_bool(&format!("{name}.cls_raw_loaded"))))
+    && name != "OmniBus"
+    && name != "article"
+    && !lookup_bool("OmniBus.cls_loaded")
+    && !lookup_bool("OmniBus.cls_raw_loaded")
+  {
+    note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
 
-      // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
-      //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
-      // Flatten across ALL registered binding crates (latexml_package +
-      // latexml_contrib + any future extensions) so contrib classes like
-      // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
-      let alternate = {
-        let all_slices = crate::state::get_class_binding_names();
-        let mut sorted: Vec<&str> = all_slices.iter()
-          .flat_map(|s| s.iter().copied())
-          .filter(|n| *n != "OmniBus" && *n != name)
-          .collect();
-        sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
-        sorted.into_iter().find(|candidate| name.starts_with(candidate))
-      };
+    // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
+    //       my ($alternate) = grep { $class =~ /^\Q$_\E/ } @classes;
+    // Flatten across ALL registered binding crates (latexml_package +
+    // latexml_contrib + any future extensions) so contrib classes like
+    // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
+    let alternate = {
+      let mut sorted: Vec<&str> = crate::state::get_class_binding_names()
+        .into_iter()
+        .filter(|n| *n != "OmniBus" && *n != name)
+        .collect();
+      sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+      sorted
+        .into_iter()
+        .find(|candidate| name.starts_with(candidate))
+    };
 
-      let target = alternate.unwrap_or("OmniBus");
-      Warn!("missing_file", name,
-        format!("Can't find binding for class {name} (using {target})"),
-        "Anticipate undefined macros or environments");
-      let loaded = input_definitions(target, InputDefinitionOptions {
-        extension: Some(Cow::Borrowed("cls")),
-        options: options.clone(),
-        after: after.clone(),
-        notex: true,
-        handleoptions: true,
-        noerror: true,
-        ..InputDefinitionOptions::default()
-      });
-      // Perl Package.pm L2715: after loading the alternate class binding, scan
-      // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
-      // alternate rarely covers all dependencies the renamed class adds.
-      if alternate.is_some() {
-        maybe_require_dependencies(name, "cls");
-      }
-      return loaded;
+    let target = alternate.unwrap_or("OmniBus");
+    Warn!(
+      "missing_file",
+      name,
+      format!("Can't find binding for class {name} (using {target})"),
+      "Anticipate undefined macros or environments"
+    );
+    let loaded = input_definitions(target, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("cls")),
+      options: options.clone(),
+      after: after.clone(),
+      notex: true,
+      handleoptions: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+    // Perl Package.pm L2715: after loading the alternate class binding, scan
+    // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
+    // alternate rarely covers all dependencies the renamed class adds.
+    if alternate.is_some() {
+      maybe_require_dependencies(name, "cls");
     }
+    return loaded;
+  }
   result
 }
 
@@ -1346,7 +1768,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
 /// Perl Package.pm L2141-2210: FindFile_fallback
 /// Strip version/arxiv suffixes from package names to find existing bindings.
 /// Returns the fallback filename (with extension) if found.
-fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
+pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   use regex::Regex;
   // Suffixes with separator (Perl @find_fallback_suffixes)
   let suffix_rx = Regex::new(
@@ -1359,8 +1781,14 @@ fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   // `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
   let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").ok()?;
 
-  let mut base = name.to_string();
-  let mut changed = false;
+  // Strip a leading directory path (Perl Package.pm L2167-2170: FindFile_fallback
+  // calls `pathname_name($name)` first, so e.g. `\documentclass{./sty/IEEEtran}`
+  // routes the basename `IEEEtran` through the binding-name registry. Without
+  // this, `IEEEtran.cls.ltxml` is missed because `./sty/IEEEtran.cls.ltxml`
+  // never matches the @ltxml_paths registry. Driver paper: arXiv:1308.6663.
+  let basename = pathname::file_name(name);
+  let mut base = if basename.is_empty() { name.to_string() } else { basename };
+  let mut changed = base != name;
   // Iteratively strip suffixes, then glued, then prefixes
   loop {
     if let Some(m) = suffix_rx.find(&base) {
@@ -1401,14 +1829,24 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
   let cached = lookup_string(&s!("{}_contents", file));
   if !cached.is_empty() {
-    Some(file.to_string())
-  } else if pathname::is_absolute(file) {
-    // And if we've got an absolute path,
+    return Some(file.to_string());
+  }
+  if pathname::is_absolute(file) {
+    // Perl Package.pm L2089-2093:
+    //   if pathname_is_absolute($file) {
+    //     if (!$options{noltxml}) {
+    //       return $file . '.ltxml' if -f ($file . '.ltxml'); }
+    //     return $file if -f $file;
+    //     return; }
+    if !options.forbid_ltxml {
+      let ltxml = s!("{}.ltxml", file);
+      if Path::new(&ltxml).exists() {
+        return Some(ltxml);
+      }
+    }
     if Path::new(file).exists() {
-      // No need to search, just check if it exists.
       Some(file.to_string())
     } else {
-      // otherwise we're never going to find it.
       None
     }
   } else if pathname::is_nasty(file) {
@@ -1429,40 +1867,110 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // Rust equivalent of Perl's ".ltxml" check: if the binding dispatcher
     // has an entry for this file, consider it "found". This is how Perl's
     // FindFile discovers pgfsys-latexml.def.ltxml etc.
-    // We check the `{file}_binding_available` flag, which binding packages
-    // can set to pre-announce their availability to find_file.
-    if !options.forbid_ltxml && lookup_bool(&s!("{file}_binding_available")) {
-      return Some(file.to_string());
+    //
+    // Two registry kinds are consulted (in order of cost):
+    //  1. The per-call `{file}_binding_available` runtime flag, which packages can set to
+    //     pre-announce their availability (used by pgf_sty for `pgfsys-latexml.def`).
+    //  2. The compile-time class registry (latexml_package's `BINDINGS`) surfaced via
+    //     `state::get_class_binding_names()`. Without this, `find_file("revtex4-1.cls",
+    //     notex=true)` returned None for compiled-in bindings — so AIAA.cls's
+    //     `\LoadClass{revtex4-1}` was silently skipped, breaking the eager natbib transitive load
+    //     (1709.05096 / AIAA → 60s wall-clock SIGABRT in the autoload- trapped-by-abstract loop).
+    // Binding-marker fast paths. ONLY fire when caller has requested
+    // `notex=true` (i.e. caller wants binding-only search, not a real
+    // disk path). Without this gate, raw `\openin` /`\IfFileExists`
+    // calls (notex=false) get a literal binding name back as if it were
+    // a path — `Mouth::open_file` then fails / produces an empty mouth
+    // and `\ifeof` returns true, masking the file as missing. Mirrors
+    // Perl `pathname_find`: only `noltxml=>0,notex=>1` returns binding
+    // names; the disk-search variant only resolves real files.
+    // Triggered by 2026-04-26 t1enc.def-cascade investigation: raw
+    // fonttext.ltx's `\input  {t1enc.def}` opens via raw `\openin` /
+    // `\IfFileExists`; without this gate find_file returned literal
+    // "t1enc.def" → empty mouth → kernel's `\@missingfileerror` → 1M
+    // TooManyErrors during latex.ltx dump-build.
+    if !options.forbid_ltxml && options.notex {
+      if lookup_bool(&s!("{file}_binding_available")) {
+        return Some(file.to_string());
+      }
+      // Check the compile-time binding registries from latexml_package and
+      // latexml_contrib for ANY (name, ext) pair that matches `file` (split
+      // on the FIRST `.`, mirroring `dispatch()`'s split rule so multi-dot
+      // names like `pgfmath.code.tex` resolve as `("pgfmath", "code.tex")`).
+      if let Some((base, ext)) = file.split_once('.') {
+        // Perl pathname_find L383-389: strict-case first, then case-insensitive
+        // fallback (mirrors the dispatcher's lookup). Without this, requests
+        // like `find_file("jhep.cls", notex=true)` would miss `("JHEP","cls")`
+        // entries that derive from Perl's `JHEP.cls.ltxml` filename.
+        let exact = crate::state::get_binding_names()
+          .iter()
+          .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext));
+        let nocase = exact
+          || crate::state::get_binding_names().iter().any(|slice| {
+            slice.iter().any(|(n, e)| {
+              n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext)
+            })
+          });
+        if nocase {
+          return Some(file.to_string());
+        }
+      }
+    } else if !options.forbid_ltxml {
+      // Narrow notex=false (disk-search) fallback: ONLY honor explicit
+      // `<file>_binding_available` runtime flags, NOT the broad compile-time
+      // registry. Mirrors Perl `\openin` calling default-args FindFile —
+      // see `TeX_FileIO.pool.ltxml:50-64` "we SHOULD find an .ltxml version!"
+      //
+      // Use case: pgf.sty's pgfsys.code.tex `\pgfutil@InputIfFileExists{\pgfsysdriver}`
+      // → `\pgfutil@IfFileExists{pgfsys-latexml.def}` → `\openin` with notex=false.
+      // The openin impl in tex_file_io.rs creates an empty Mouth on
+      // Mouth::create failure, so \ifeof=false → pgf inputs the driver.
+      // pgf_sty.rs sets `pgfsys-latexml.def_binding_available=true` to
+      // enable this; without the flag we don't fake-find arbitrary binding
+      // names (which would re-introduce the t1enc.def `\@missingfileerror`
+      // cascade documented above the notex=true branch).
+      if lookup_bool(&s!("{file}_binding_available")) {
+        return Some(file.to_string());
+      }
     }
-    // If we're looking for TeX, look within our paths & installation first (faster than kpse)
+    // Perl L2123-2125: `elsif !notex && !interpreting && pathname_find($file,
+    // paths=>$paths)` — search local paths for raw TeX.
+    // (Rust does not yet honour `INTERPRETING_DEFINITIONS` — minor TODO,
+    //  acknowledged in the audit.)
     if !options.notex {
       if let Some(path) = pathname::find(file, PathnameFindOptions {
-        paths: Some(paths),
+        paths: Some(paths.clone()),
         ..PathnameFindOptions::default()
       }) {
         return Some(path);
       }
     }
-    // Otherwise, pass on to kpsewhich
-    // Depending on flags, maybe search for ltxml in texmf or for plain tex in ours!
-    // The main point, though, is to we make only ONE (more) call.
-    // return if grep { pathname::is_nasty($_) } @$paths;    // SECURITY! No nasty paths in cmdline
-    //       // Do we need to sanitize these environment variables?
-    // my $kpsewhich = which($ENV{LATEXML_KPSEWHICH} || 'kpsewhich');
-    // local $ENV{TEXINPUTS} = join($Config::Config{'path_sep'},
-    //   @$paths, $ENV{TEXINPUTS} || $Config::Config{'path_sep'});
-    // my @candidates = (((!$options{noltxml} && !$nopaths) ? ("$file.ltxml") : ()),
-    //   (!$options{notex} ? ($file) : ()));
-    // if (my $result = pathname::kpsewhich(@candidates)) {
-    //   return (-f $result ? $result : undef); }
-    // if ($urlbase && ($path = url_find($file, urlbase => $urlbase))) {
-    //   return $path; }
-    // When notex is set, don't search for the raw TeX file via kpsewhich.
-    // This prevents non-TeX files (e.g. .lua) from being loaded as raw TeX.
-    if options.notex {
-      None
-    } else {
-      pathname::kpsewhich(&[file])
+    // Perl L2131-2136: build kpsewhich candidate list:
+    //   @candidates = ( "$file.ltxml" if !noltxml && !nopaths,
+    //                   $file        if !notex );
+    //   if (!searchpaths_only) && pathname_kpsewhich(@candidates) → -f $result
+    // Perl gates the kpsewhich call only on `!searchpaths_only`; `notex`
+    // and `noltxml` instead control which candidate names are tried.
+    if options.search_paths_only {
+      return None;
+    }
+    let mut candidates: Vec<String> = Vec::new();
+    if !options.forbid_ltxml {
+      // Perl `!nopaths` (REMOTE_REQUEST) gate not yet modeled in Rust;
+      // we always include the .ltxml candidate when ltxml is allowed.
+      candidates.push(s!("{}.ltxml", file));
+    }
+    if !options.notex {
+      candidates.push(file.to_string());
+    }
+    if candidates.is_empty() {
+      return None;
+    }
+    let refs: Vec<&str> = candidates.iter().map(|s| s.as_str()).collect();
+    match pathname::kpsewhich(&refs) {
+      // Perl L2136: `(-f $result ? $result : undef)` — re-confirm existence.
+      Some(p) if Path::new(&p).exists() => Some(p),
+      _ => None,
     }
   }
 }
@@ -1517,18 +2025,22 @@ pub fn merge_font_ref(font: &Font) {
 
 /// Define a named color (Perl: DefColor).
 /// Stores as color_{name} and also defines \\color@{name} macro.
-pub fn def_color(name: &str, color: &crate::common::color::Color, scope: Option<Scope>) -> Result<()> {
+pub fn def_color(
+  name: &str,
+  color: &crate::common::color::Color,
+  scope: Option<Scope>,
+) -> Result<()> {
   use crate::common::color;
-  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) && IfCondition(\ifglobalcolors)
-  // Guard with lookup first: xcolor may not be loaded (e.g. colordvi-only documents)
-  let effective_scope =
-    if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
-      && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
-    {
-      Some(Scope::Global)
-    } else {
-      scope
-    };
+  // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) &&
+  // IfCondition(\ifglobalcolors) Guard with lookup first: xcolor may not be loaded (e.g.
+  // colordvi-only documents)
+  let effective_scope = if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+  {
+    Some(Scope::Global)
+  } else {
+    scope
+  };
   // Store in state as "model c1 c2 ..."
   let stored = color.to_stored();
   assign_value(
@@ -1580,7 +2092,12 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T) -> Result<Digested> {
   // valid changes of state!)
   begin_mode("text")?;
 
-  let font = lookup_font().unwrap(); // TODO: raise error if font missing
+  // Fall back to the global text default if no font is currently assigned —
+  // avoids a panic at this hot path (called from e.g. RefStepID / label
+  // digestion) when the state's "font" slot hasn't been initialised. Matches
+  // the same fallback `assign_value("font", Font::text_default(), …)` that
+  // stomach::init uses at startup.
+  let font = lookup_font().unwrap_or_else(|| Rc::new(crate::common::font::Font::text_default()));
   assign_font(
     Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
@@ -1796,19 +2313,19 @@ pub fn font_decode(
   let font = font_opt.unwrap_or_else(|| lookup_font().unwrap());
   let encoding = match encoding_opt {
     Some(enc) => enc.to_string(),
-    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+    None => font
+      .get_encoding()
+      .map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
-  // Check for family-specific map
+  // Check for family-specific map. Use with_value to avoid cloning the
+  // Stored envelope when the From<&Stored>→Option<Fontmap> impl only
+  // needs the enum variant discriminant + an Rc bump.
   let (effective_map, _effective_enc) = if let Some(family) = font.get_family() {
     let fam_key = s!("{}_{}_fontmap", encoding, family);
-    if let Some(fmap) = lookup_value(&fam_key) {
-      let fmap: Option<Fontmap> = fmap.into();
-      if let Some(fm) = fmap {
-        (Some(fm), s!("{}_{}", encoding, family))
-      } else {
-        (map, encoding)
-      }
+    let fam_map: Option<Fontmap> = with_value(&fam_key, |v| v.and_then(|s| s.into()));
+    if let Some(fm) = fam_map {
+      (Some(fm), s!("{}_{}", encoding, family))
     } else {
       (map, encoding)
     }
@@ -1824,26 +2341,20 @@ pub fn font_decode(
 
 /// Decode a string using the fontmap for a given encoding (Perl: FontDecodeString).
 /// If `implicit` is true, codepoints missing from the map decode to themselves.
-pub fn font_decode_string(
-  string: &str,
-  encoding_opt: Option<&str>,
-  implicit: bool,
-) -> String {
+pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool) -> String {
   let font = lookup_font().unwrap();
   let encoding = match encoding_opt {
     Some(enc) => enc.to_string(),
-    None => font.get_encoding().map_or("OT1".to_string(), |c| c.to_string()),
+    None => font
+      .get_encoding()
+      .map_or("OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
-  // Check for family-specific map
+  // Check for family-specific map — same with_value motivation as above.
   let effective_map = if let Some(family) = font.get_family() {
     let fam_key = s!("{}_{}_fontmap", encoding, family);
-    if let Some(fmap) = lookup_value(&fam_key) {
-      let fmap: Option<Fontmap> = fmap.into();
-      fmap.or(map)
-    } else {
-      map
-    }
+    let fam_map: Option<Fontmap> = with_value(&fam_key, |v| v.and_then(|s| s.into()));
+    fam_map.or(map)
   } else {
     map
   };
@@ -1882,11 +2393,9 @@ pub fn font_decode_string(
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
   let _ = preload_font_map(encoding); // infallible in practice; swallow Result
-  if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
-    map.into()
-  } else {
-    None
-  }
+  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
+  // Rc bump on the inner slice regardless.
+  with_value(&s!("{encoding}_fontmap"), |v| v.and_then(|s| s.into()))
 }
 pub fn preload_font_map(encoding: &str) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.

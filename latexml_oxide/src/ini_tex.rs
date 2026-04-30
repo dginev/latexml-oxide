@@ -12,10 +12,14 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
+use once_cell::sync::Lazy;
 use std::path::Path;
 
-use latexml_core::binding::content::input_definitions;
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static INIT_DEBUG: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INIT_DEBUG").is_some());
+
 use latexml_core::binding::content::InputDefinitionOptions;
+use latexml_core::binding::content::input_definitions;
 use latexml_core::state;
 
 use crate::converter::Converter;
@@ -29,37 +33,129 @@ pub fn dump_format(
 ) -> Result<usize, String> {
   eprintln!("[ini_tex] Dumping format from {}", init_file);
 
-  // Step 1: snapshot the state BEFORE raw-loading latex.ltx.
+  // Strict Perl `iniTeX` + `DumpFile` order:
   //
-  // Perl's DumpFile semantics: the diff captures "bootstrap → full
-  // kernel + raw latex.ltx extras". In Rust, at the point ini_tex fires
-  // we have TeX + plain pools loaded (≈2300 entries — includes `\let`,
-  // `\def`, `\relax`, and the other TeX primitives our PA aliases will
-  // reference). Step 1b below surgically preloads `latex_base.rs` so
-  // its `_base`-only CSes end up in the diff — without it, the
-  // `\makeatletter` autoload trigger never fires during `--init`'s
-  // raw-load path and 20 CSes (font-size aliases, scratch macros,
-  // output-routine stubs) would be missing from the dump.
+  //   Core.pm L168-212 (iniTeX, default mode='Base'):
+  //     initializeState('Base.pool');     # ← Step 1 below
+  //     installDefinition('\jobname', ...);
+  //     installDefinition('\dump', Tokens());  # no-op
+  //     DumpFile($file, $dest);           # ← Step 2 below
   //
-  // We stage this snapshot as "bootstrap" so dump_writer can classify
-  // let-alias targets: targets present in this snapshot → early
-  // section; targets appearing only after the raw-load → late section.
+  //   TeX_Job.pool.ltxml L120-220 (DumpFile):
+  //     LoadPool($name . '_bootstrap');   # ← Step 3 below
+  //     $snap = ...                       # ← Step 4 below
+  //     loadTeXDefinitions($name, ...)    # ← Step 5 below
+  //     diff                              # ← Step 6 below
+  //     write                             # ← Step 7 below
+  //
+  // CRITICAL: Perl iniTeX defaults to `mode='Base'`, so `Base.pool` is
+  // loaded BEFORE any bootstrap. Without it, raw plain.tex / latex.ltx
+  // can't expand any TeX primitive — every `\def`, `\catcode`,
+  // `\let`, `\edef` etc. is undefined and we get an error cascade.
+  // After Base.pool, only `<name>_bootstrap` is loaded — NEVER
+  // `<name>_base`, `<name>_dump`, or `<name>_constructs`. Those
+  // pollute the diff with `:locked` flags, base/constructs
+  // definitions, etc. that the dump should NOT carry.
+
+  // Step 1: Load Base.pool equivalent (Perl `initializeState('Base.pool')`).
+  eprintln!("[ini_tex] Loading Base.pool (Perl `initializeState('Base.pool')`)");
+  if let Err(e) = latexml_package::engine::base::load_definitions() {
+    eprintln!("[ini_tex] base warning: {}", e);
+  }
+
+  // Mark this as init/dump mode so machinery elsewhere (notably
+  // `tex_file_io::\\input`'s LaTeX-style brace-arg auto-load of
+  // `LaTeX.pool`) skips behaviors that would corrupt the dump-build
+  // — see `tex_file_io.rs` for the gate.
+  state::assign_value("INI_TEX_MODE", true, Some(state::Scope::Global));
+
+  // Clear LaTeX/expl3/AmSTeX autoload triggers and `\documentstyle`
+  // installed by `tex.rs` during `prepare_session`. These triggers
+  // pre-define `\makeatletter`, `\documentclass`, etc. — which then
+  // poison the snapshot, causing raw `latex.ltx` at L1798
+  // (`\DeclareRobustCommand\makeatletter`) to hit the "redefining"
+  // branch in `\declare@robustcommand` (L1388), which calls
+  // `\@latex@info{Redefining ...}` — but `\@latex@info` isn't
+  // defined until L1799, triggering an undefined-CS cascade.
+  //
+  // Perl `Core.pm::iniTeX` defaults to `mode='Base'` for dump-build,
+  // so `Base.pool` is loaded but `TeX.pool`'s autoload triggers are
+  // NOT. Mirror that here by clearing them right before the snapshot.
+  for trigger in &[
+    // LaTeX autoload triggers (tex.rs L149-167)
+    "\\documentclass",
+    "\\newcommand",
+    "\\renewcommand",
+    "\\newenvironment",
+    "\\renewenvironment",
+    "\\NeedsTeXFormat",
+    "\\ProvidesPackage",
+    "\\RequirePackage",
+    "\\ProvidesFile",
+    "\\makeatletter",
+    "\\makeatother",
+    "\\begin",
+    "\\listfiles",
+    "\\nofiles",
+    "\\typeout",
+    "\\PassOptionsToPackage",
+    // `\@load@latex@pool` itself
+    "\\@load@latex@pool",
+    // expl3 autoload triggers
+    "\\ExplSyntaxOn",
+    "\\ProvidesExplClass",
+    "\\ProvidesExplPackage",
+    // AmSTeX/amsmath autoload triggers
+    "\\mathfrak",
+    "\\mathbb",
+    "\\Bbb",
+    "\\theoremstyle",
+    "\\numberwithin",
+    "\\align",
+    "\\subequations",
+    "\\multline",
+    "\\curraddr",
+    "\\subjclass",
+    // `\documentstyle` was also defined in tex.rs as a runtime macro
+    "\\documentstyle",
+  ] {
+    state::assign_meaning(
+      &latexml_core::T_CS!(*trigger),
+      latexml_core::common::store::Stored::None,
+      Some(state::Scope::Global),
+    );
+  }
+
+  // Step 2 + 3: install \jobname / \dump (no-op), then load bootstrap.
+  // (Perl Core.pm L204-207 + TeX_Job.pool.ltxml L127-129)
+  let init_lower = init_file.to_ascii_lowercase();
+  let is_plain_init = init_lower.contains("plain");
+
+  if is_plain_init {
+    eprintln!("[ini_tex] Loading plain_bootstrap (mirrors Perl `LoadPool('plain_bootstrap')`)");
+    if let Err(e) = latexml_package::engine::plain_bootstrap::load_definitions() {
+      eprintln!("[ini_tex] plain_bootstrap warning: {}", e);
+    }
+  } else {
+    eprintln!("[ini_tex] Loading latex_bootstrap (mirrors Perl `LoadPool('latex_bootstrap')`)");
+    // latex_bootstrap.rs L11 does `InnerPool!(plain_bootstrap)` itself
+    // (mirrors Perl `LoadPool('plain_bootstrap')` at the top of
+    // latex_bootstrap.pool.ltxml), so plain_bootstrap state is included.
+    if let Err(e) = latexml_package::engine::latex_bootstrap::load_definitions() {
+      eprintln!("[ini_tex] latex_bootstrap warning: {}", e);
+    }
+  }
+
+  // Perl `DumpFile` L132-138: snapshot all tables AFTER the bootstrap pool.
   let snap = state::take_snapshot();
+  // Re-stage as "bootstrap" so `dump_writer` finds it for let-alias
+  // classification (early/late sections).
   state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
-  eprintln!("[ini_tex] Pre-dump snapshot: {} entries (staged as \"bootstrap\")", snap_size);
-
-  // Step 1b (D0 d.1): surgically load ONLY latex_base.rs after the
-  // snapshot so its _base-only CSes (\@tempa/b/c, \@currbox, \xpt and
-  // the other 17 entries listed in SYNC_STATUS) enter state before the
-  // raw latex.ltx load. We avoid the full latex.rs chain here —
-  // latex_bootstrap / latex_constructs / the old-dump load would
-  // contribute hundreds of unrelated entries and make the diff
-  // unreadable. The surgical call keeps the extra dump entries close
-  // to the 20-CS gap we actually care about.
-  if let Err(e) = latexml_package::engine::latex_base::load_definitions() {
-    eprintln!("[ini_tex] latex_base preload warning: {}", e);
-  }
+  eprintln!(
+    "[ini_tex] Snapshot taken at bootstrap ({} entries)",
+    snap_size
+  );
 
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)
@@ -74,21 +170,34 @@ pub fn dump_format(
   // Raw latex.ltx redefines commands already in the compiled engine ("already defined"),
   // and expl3-code.tex has forward references that produce transient errors.
   // All these errors are benign — the dump captures the final correct state.
-  let prev_suppress = latexml_core::common::error::set_suppress_log_output(true);
+  // Set LATEXML_INIT_DEBUG=1 to keep errors visible (for debugging the
+  // expl3 cascade — Perl parity target is zero errors during expl3 load).
+  let init_debug = *INIT_DEBUG;
+  let prev_suppress = latexml_core::common::error::set_suppress_log_output(!init_debug);
 
   // Suppress known expl3 loading errors at the state level too
-  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
-  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
+  state::assign_value("SUPPRESS_UNDEFINED_ERRORS", !init_debug, None);
+  state::assign_value("SUPPRESS_UNEXPECTED_ERRORS", !init_debug, None);
+
+  // Lift the MAX_ERRORS cap during dump-build. Raw latex.ltx contains
+  // many CSes our engine reports as errors (forward references in
+  // expl3-code.tex, `\@onlypreamble` checks, autoload triggers, etc.).
+  // The default 10000-error cap aborts dump-build before plain.tex's
+  // `\outer\def\newread`, `\loop`, etc. land in the diff. Mirrors Perl
+  // `DumpFile`'s behavior — Perl runs latex.ltx through to `\dump`
+  // regardless of error count.
+  state::assign_value("MAX_ERRORS", 1_000_000_i64, None);
 
   // Use the full filename with extension for proper file resolution
-  let load_name = if ext.is_empty() { name.clone() } else { format!("{}.{}", name, ext) };
-  let result = input_definitions(
-    &load_name,
-    InputDefinitionOptions {
-      noltxml: true,
-      ..InputDefinitionOptions::default()
-    },
-  );
+  let load_name = if ext.is_empty() {
+    name.clone()
+  } else {
+    format!("{}.{}", name, ext)
+  };
+  let result = input_definitions(&load_name, InputDefinitionOptions {
+    noltxml: true,
+    ..InputDefinitionOptions::default()
+  });
   if let Err(e) = result {
     eprintln!("[ini_tex] Warning during loading: {}", e);
   }
@@ -123,7 +232,7 @@ pub fn dump_format(
       std::fs::create_dir_all(dump_dir)
         .map_err(|e| format!("Failed to create {}: {}", dump_dir, e))?;
       (format!("{}/{}", dump_dir, dump_name), true)
-    }
+    },
   };
 
   if is_text_dump {
@@ -140,7 +249,10 @@ pub fn dump_format(
     let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff)?;
     let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
     let _ = std::fs::remove_file(&tmp);
-    eprintln!("[ini_tex] Generated {} Rust definitions to {}", rs_count, dest);
+    eprintln!(
+      "[ini_tex] Generated {} Rust definitions to {}",
+      rs_count, dest
+    );
     eprintln!("Format dump complete: {} entries written", rs_count);
     Ok(rs_count)
   }
@@ -150,10 +262,8 @@ pub fn dump_format(
 /// Reads the text dump and produces a .rs file with direct state assignment calls.
 pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, String> {
   eprintln!("[ini_tex] Generating Rust module from {}", dump_path);
-  let count = latexml_core::dump_codegen::generate_rs(
-    Path::new(dump_path),
-    Path::new(output_path),
-  )?;
+  let count =
+    latexml_core::dump_codegen::generate_rs(Path::new(dump_path), Path::new(output_path))?;
   eprintln!("[ini_tex] Generated {} entries to {}", count, output_path);
   Ok(count)
 }

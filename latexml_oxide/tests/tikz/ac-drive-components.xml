@@ -37,22 +37,22 @@
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 220.63 -51.2)">
             <svg:foreignObject height="102.41" overflow="visible" style="--ltx-fo-width:2.85em;--ltx-fo-height:7.4em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 102.41)" width="39.44"><inline-block class="ltx_minipage" vattach="top" width="2.85em">
                 <p/>
-                <picture class="ltx_align_left" height="102.4" width="268.29" xml:id="p1.pic1.pic1">
-                  <svg:svg height="102.4" overflow="visible" version="1.1" viewBox="0 0 268.29 102.4" width="268.29">
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,102.4) matrix(1 0 0 -1 0 0) translate(251.2,0) translate(0,2.22)">
+                <picture class="ltx_align_left" height="102.4" width="206.87" xml:id="p1.pic1.pic1">
+                  <svg:svg height="102.4" overflow="visible" version="1.1" viewBox="0 0 206.87 102.4" width="206.87">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,102.4) matrix(1 0 0 -1 0 0) translate(93.72,0) translate(0,2.22)">
                       <svg:path d="M 0 0 L 0 39.37 M -93.44 68.69 M -67.28 29.28 M 0 50.39 L 0 78.74" style="fill:none"/>
                       <svg:g stroke-width="0.79999pt">
                         <svg:path d="M -16.54 33.31 C -11.14 36.41 -5.99 39.37 0 39.37 C 5.99 39.37 11.14 36.41 16.54 33.31" style="fill:none"/>
                         <svg:path d="M -16.54 50.39 L 16.54 50.39" style="fill:none"/>
                       </svg:g>
-                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -177.84 65.23)">
+                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -19.81 65.23)">
                         <svg:foreignObject height="9.22" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.58em;--ltx-fo-depth:0.08em;" transform="matrix(1 0 0 -1 0 8.07)" width="10.76"><Math mode="inline" tex="+" text="+" xml:id="p1.pic1.pic1.m1">
                             <XMath>
                               <XMTok meaning="plus" role="ADDOP">+</XMTok>
                             </XMath>
                           </Math></svg:foreignObject>
                       </svg:g>
-                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -153.98 26.3)">
+                      <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 4.05 26.3)">
                         <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:1.11em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 5.96)" width="15.37"><Math mode="inline" tex="\vphantom{+}-" text="-" xml:id="p1.pic1.pic1.m2">
                             <XMath>
                               <XMTok meaning="minus" role="ADDOP">-</XMTok>

@@ -3,9 +3,21 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   // Perl: apackage.sty.ltxml
   DefMacro!("\\my@package@stuff", "");
-  DeclareOption!("acommonoption", "\\xdef\\my@package@stuff{\\my@package@stuff, acommonoption}");
-  DeclareOption!("apackageoption", "\\xdef\\my@package@stuff{\\my@package@stuff, apackageoption}");
-  DeclareOption!("anotherpackageoption", "\\xdef\\my@package@stuff{\\my@package@stuff, anotherpackageoption}");
+  DeclareOption!(
+    "acommonoption",
+    "\\xdef\\my@package@stuff{\\my@package@stuff, acommonoption}"
+  );
+  DeclareOption!(
+    "apackageoption",
+    "\\xdef\\my@package@stuff{\\my@package@stuff, apackageoption}"
+  );
+  DeclareOption!(
+    "anotherpackageoption",
+    "\\xdef\\my@package@stuff{\\my@package@stuff, anotherpackageoption}"
+  );
   ProcessOptions!();
-  DefMacro!("\\showpackagestuff", "\\par\\noindent Package options: \\my@package@stuff");
+  DefMacro!(
+    "\\showpackagestuff",
+    "\\par\\noindent Package options: \\my@package@stuff"
+  );
 });

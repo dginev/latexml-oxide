@@ -26,6 +26,7 @@
 //! - [`radix`] — Radix utilities for ID generation (a,b,...,z,aa,ab,...)
 
 // Core infrastructure
+pub mod doc_owned_node;
 pub mod document;
 pub mod math_processor;
 pub mod object_db;
@@ -57,6 +58,10 @@ pub mod xslt;
 
 use document::PostDocument;
 use processor::{PostError, Processor};
+use std::sync::LazyLock;
+
+// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// The post-processing pipeline driver.
 ///
@@ -71,18 +76,14 @@ pub struct Post {
 #[derive(Debug, Default)]
 pub struct PostStatus {
   pub warning_count: u32,
-  pub error_count: u32,
-  pub fatal_count: u32,
-  pub info_count: u32,
+  pub error_count:   u32,
+  pub fatal_count:   u32,
+  pub info_count:    u32,
 }
 
 impl Post {
   /// Create a new post-processing driver.
-  pub fn new() -> Self {
-    Post {
-      status: PostStatus::default(),
-    }
-  }
+  pub fn new() -> Self { Post { status: PostStatus::default() } }
 
   /// Run the processing chain on a document.
   ///
@@ -99,6 +100,7 @@ impl Post {
     let mut docs = vec![doc];
 
     log::info!("post-processing");
+    let audit = *POST_AUDIT;
 
     for processor in processors.iter_mut() {
       let mut new_docs = Vec::new();
@@ -117,7 +119,21 @@ impl Post {
             }
           );
           log::info!("{}", msg);
+          let t0 = if audit {
+            Some(std::time::Instant::now())
+          } else {
+            None
+          };
           let result_docs = processor.process(doc, nodes)?;
+          if let Some(t0) = t0 {
+            let ms = t0.elapsed().as_millis();
+            log::info!(
+              "POST_AUDIT stage {} took {}ms ({} nodes)",
+              processor.get_name(),
+              ms,
+              n
+            );
+          }
           new_docs.extend(result_docs);
         } else {
           new_docs.push(doc);
@@ -132,9 +148,7 @@ impl Post {
 }
 
 impl Default for Post {
-  fn default() -> Self {
-    Self::new()
-  }
+  fn default() -> Self { Self::new() }
 }
 
 #[cfg(test)]
@@ -149,7 +163,8 @@ mod tests {
     let doc = document::PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'/>",
       PostDocumentOptions::default(),
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut processors: Vec<Box<dyn Processor>> = vec![];
     let result = post.process_chain(doc, &mut processors);
@@ -163,7 +178,8 @@ mod tests {
     let doc = document::PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'><title>Test</title></document>",
       PostDocumentOptions::default(),
-    ).unwrap();
+    )
+    .unwrap();
 
     // Writer without destination prints to stdout (we just test it doesn't crash)
     let writer = Writer::new(Some(OutputFormat::Xml), false, false);
@@ -185,7 +201,8 @@ mod tests {
            </XMApp></XMath></Math></p></para>\
        </document>",
       PostDocumentOptions::default(),
-    ).unwrap();
+    )
+    .unwrap();
 
     let pmml = crate::mathml::MathML::new_presentation().with_keep_xmath(true);
     let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
@@ -195,8 +212,14 @@ mod tests {
     let output = docs[0].to_xml_string();
     eprintln!("PMML output:\n{}", output);
     // Should contain both XMath and m:math
-    assert!(output.contains("<XMath>") || output.contains("<XMath "), "XMath should be preserved");
-    assert!(output.contains("m:math"), "m:math element should be present");
+    assert!(
+      output.contains("<XMath>") || output.contains("<XMath "),
+      "XMath should be preserved"
+    );
+    assert!(
+      output.contains("m:math"),
+      "m:math element should be present"
+    );
     assert!(output.contains("m:mi"), "m:mi element should be present");
     assert!(output.contains("m:mo"), "m:mo element should be present");
   }
@@ -210,7 +233,8 @@ mod tests {
          <section xml:id='s2'><title>Second</title></section>\
        </document>",
       PostDocumentOptions::default(),
-    ).unwrap();
+    )
+    .unwrap();
 
     let db = object_db::ObjectDB::new();
     let scanner = scan::Scan::new(db);

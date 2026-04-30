@@ -11,18 +11,33 @@ fn current_background_hex() -> String {
 /// Look up a named color from state, returning hex attribute string.
 fn lookup_color_hex(name: &str) -> String {
   let key = s!("color_{name}");
-  match state::lookup_value(&key) {
+  // with_value avoids cloning the Stored envelope on the String arm.
+  state::with_value(&key, |v| match v {
     Some(Stored::String(sym)) => {
-      let stored_str = arena::with(sym, |s| s.to_string());
+      let stored_str = arena::with(*sym, |s| s.to_string());
       Color::from_stored(&stored_str)
         .map(|c| c.to_attribute())
         .unwrap_or_else(|| color::BLACK.to_attribute())
     },
     _ => color::BLACK.to_attribute(),
-  }
+  })
 }
 
 LoadDefinitions!({
+  // Intentional divergence (WISDOM #44 class: structural-adaptation, applies
+  // to the {shaded}/{shaded*}/{snugshade}/{snugshade*}/{titled-frame} envs
+  // below): Perl's `beforeDigest => sub { MergeFont(background =>
+  // LookupValue('color_shadecolor')); }` wraps the env body in a nested
+  // `<ltx:text backgroundcolor="…">` via the font-merge pipeline. Rust's
+  // ports look up `shadecolor` directly through `lookup_color_hex()` and
+  // set `backgroundcolor` only on the outer block created by `insertBlock`
+  // — no nested text wrappers. Matches Perl's visual intent (shaded box
+  // with BG colour) while producing a cleaner XML tree. Audit doesn't
+  // flag any kind mismatch here since both are DefEnvironment; this
+  // umbrella catalogues the `beforeDigest => MergeFont(…)` omission so a
+  // future reviewer searching for `color_shadecolor` doesn't re-derive
+  // the rationale from scratch.
+
   // {framed} Normal framed block-level box
   // Perl: framed.sty.ltxml lines 21-30
   DefEnvironment!("{framed}",
@@ -262,16 +277,22 @@ LoadDefinitions!({
       Ok(stored_map!("framecolor" => framecolor, "backgroundcolor" => bg))
     }
   );
-  DefMacro!("\\@titledframe@title{}",
-    "\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}");
-  DefConstructor!("\\@@titledframe@title{}",
-    "<ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'>#1</ltx:text>");
+  DefMacro!(
+    "\\@titledframe@title{}",
+    "\\@@titledframe@title{{\\fboxsep8pt\\fboxrule2pt\\pagecolor{TFFrameColor}\\textcolor{TFTitleColor} {#1}}}"
+  );
+  DefConstructor!(
+    "\\@@titledframe@title{}",
+    "<ltx:text cssstyle='display:block;margin:-8pt -8pt 8pt -8pt;padding:8pt'>#1</ltx:text>"
+  );
 
   //======================================================================
   // Customization macros
   // Perl: framed.sty.ltxml lines 126-130
-  DefMacro!("\\FrameCommand",
-    "\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox");
+  DefMacro!(
+    "\\FrameCommand",
+    "\\setlength\\fboxrule{\\FrameRule}\\setlength\\fboxsep{\\FrameSep}\\fbox"
+  );
   DefMacro!("\\FirstFrameCommand", "\\FrameCommand");
   DefMacro!("\\MidFrameCommand", "\\FrameCommand");
   DefMacro!("\\LastFrameCommand", "\\FrameCommand");

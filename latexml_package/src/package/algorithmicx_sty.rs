@@ -4,23 +4,33 @@ LoadDefinitions!({
   // Perl: algorithmicx.sty.ltxml
   // Was algorithmic.sty loaded? If so: BAIL immediately. (deeply incompatible)
   if state::has_meaning(&T_CS!("\\algorithmic")) {
-    Warn!("unexpected", "\\algorithmic",
-      "Another package has already defined \\algorithmic, will not load algorithmicx.sty");
+    Warn!(
+      "unexpected",
+      "\\algorithmic",
+      "Another package has already defined \\algorithmic, will not load algorithmicx.sty"
+    );
     return Ok(());
   }
 
   // Load core, make a few redefinitions
   InputDefinitions!("algorithmicx", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  state::let_i(&T_CS!("\\lx@orig@algorithmic"), &T_CS!("\\algorithmic"), None);
-  DefMacro!("\\algorithmic", "\\lx@setup@algorithmicx\\lx@orig@algorithmic");
+  state::let_i(
+    &T_CS!("\\lx@orig@algorithmic"),
+    &T_CS!("\\algorithmic"),
+    None,
+  );
+  DefMacro!(
+    "\\algorithmic",
+    "\\lx@setup@algorithmicx\\lx@orig@algorithmic"
+  );
 
   DefPrimitive!("\\lx@setup@algorithmicx", sub [_args] {
     ResetCounter!("ALG@line");
     // If we are not within an algorithm environment, step the counter for its id's
     let in_algorithm = state::with_stacked_values_sym(pin!("current_environment"), |vals| {
       vals.iter().any(|v| {
-        matches!(v, Stored::String(s) if arena::to_string(*s) == "algorithm")
+        matches!(v, Stored::String(s) if arena::with(*s, |v| v == "algorithm"))
       })
     });
     if !in_algorithm {
@@ -33,7 +43,10 @@ LoadDefinitions!({
   });
 
   // IGNORE \list 1st arg (we'll handle counter stepping in \item)
-  DefMacro!("\\lx@algorithmicx@beginlist{}{}", "\\lx@algorithmicx@beginlist@{#2}");
+  DefMacro!(
+    "\\lx@algorithmicx@beginlist{}{}",
+    "\\lx@algorithmicx@beginlist@{#2}"
+  );
   DefConstructor!("\\lx@algorithmicx@beginlist@{}", "<ltx:listing>");
 
   DefConstructor!("\\lx@algorithmicx@endlist", "</ltx:listing>",
@@ -44,8 +57,10 @@ LoadDefinitions!({
 
   // Empty lines still get an \item, but they're followed by \nointerlineskip!
   // We do NOT want to generate a listingline in those cases.
-  DefMacro!("\\lx@algorithmicx@item[]",
-    "\\@ifnextchar\\nointerlineskip{}{\\lx@algorithmicx@@item}");
+  DefMacro!(
+    "\\lx@algorithmicx@item[]",
+    "\\@ifnextchar\\nointerlineskip{}{\\lx@algorithmicx@@item}"
+  );
 
   // This imitates \item; just opens the ltx:listingline, but somebody's got to close it.
   DefConstructor!("\\lx@algorithmicx@@item",
@@ -83,8 +98,10 @@ LoadDefinitions!({
 
   // Hopefully this will only get used for right justifying a comment;
   // the ltx:text should autoclose at end of line?
-  DefConstructor!("\\lx@algorithmicx@hfill",
-    "<ltx:text cssstyle='float:right'>");
+  DefConstructor!(
+    "\\lx@algorithmicx@hfill",
+    "<ltx:text cssstyle='float:right'>"
+  );
 
   // Protect against obsolete versions of algorithmicx source
   DefMacro!("\\ALG@g{}", "");

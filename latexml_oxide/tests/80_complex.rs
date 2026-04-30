@@ -1,6 +1,7 @@
 #[macro_use]
-extern crate latexml_codegen;
+extern crate latexml_engine;
 #[macro_use]
+extern crate latexml_codegen;
 extern crate latexml_package;
 
 mod helpers;
@@ -22,7 +23,9 @@ pub fn complex_tests_dispatch(filename: &str) -> Option<Result<()>> {
 fn complex(name: &str) {
   latexml_test_single(
     &format!("tests/complex/{name}.tex"),
-    name, DIR, None,
+    name,
+    DIR,
+    None,
     Some(Rc::new(complex_tests_dispatch)),
   );
 }

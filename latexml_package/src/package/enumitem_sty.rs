@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use latexml_core::common::arena::SymHashMap;
-use latexml_core::definition::argument::ArgWrap;
 use latexml_core::definition::PropertiesClosure;
+use latexml_core::definition::argument::ArgWrap;
 use latexml_core::document::Document;
 
 /// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112
@@ -41,7 +41,10 @@ fn begin_enum_itemize(
   }
 
   // label / label* — Perl L94-101
-  let label_toks = hash.get("label").or_else(|| hash.get("label*")).and_then(argwrap_to_tokens);
+  let label_toks = hash
+    .get("label")
+    .or_else(|| hash.get("label*"))
+    .and_then(argwrap_to_tokens);
   if let Some(ref label) = label_toks {
     let llabel = replace_star(label, &T_OTHER!(&usecounter));
     let llabel = if hash.contains_key("label*") && level > 1 {
@@ -77,7 +80,11 @@ fn begin_enum_itemize(
   }
 
   // font / format — Perl L110-111
-  if let Some(font_toks) = hash.get("font").or_else(|| hash.get("format")).and_then(argwrap_to_tokens) {
+  if let Some(font_toks) = hash
+    .get("font")
+    .or_else(|| hash.get("format"))
+    .and_then(argwrap_to_tokens)
+  {
     def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
   }
 
@@ -85,7 +92,9 @@ fn begin_enum_itemize(
   let mut opts = BeginItemizeOptions::default();
   if let Some(aw) = hash.get("start") {
     match aw {
-      ArgWrap::Number(n) => { opts.start = Some(*n); },
+      ArgWrap::Number(n) => {
+        opts.start = Some(*n);
+      },
       ArgWrap::Tokens(toks) => {
         // start may arrive as a token string "12", parse it
         let s = toks.to_string().trim().to_string();
@@ -145,30 +154,35 @@ fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
 
 /// Perl: store_enumitem_defaults($name, $kv) — enumitem.sty.ltxml L228-237
 fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
-  let mut keys: Vec<String> = Vec::new();
-
-  // Load existing keys
-  if let Some(Stored::String(existing_keys)) = state::lookup_value(&s!("{name}@keys")) {
-    let keys_str = arena::to_string(existing_keys);
-    for k in keys_str.split(',') {
-      if !k.is_empty() {
-        keys.push(k.to_string());
-      }
-    }
-  }
+  // Load existing keys directly inside the state/arena closure pair —
+  // the intermediate keys_str String is avoided; we split the interned
+  // &str and collect owned keys straight into the Vec.
+  let mut keys: Vec<String> = state::with_value(&s!("{name}@keys"), |v| match v {
+    Some(Stored::String(s)) => arena::with(*s, |ks| {
+      ks.split(',')
+        .filter(|k| !k.is_empty())
+        .map(String::from)
+        .collect()
+    }),
+    _ => Vec::new(),
+  });
 
   for (key, val) in kv.get_pairs() {
     let val_key = s!("{name}@{key}");
     match val {
       ArgWrap::Tokens(t) => {
         state::assign_value(&val_key, Stored::Tokens(t.clone()), Some(Scope::Global));
-      }
+      },
       ArgWrap::None => {
         state::assign_value(&val_key, Stored::None, Some(Scope::Global));
-      }
+      },
       _ => {
-        state::assign_value(&val_key, Stored::String(arena::pin(val.to_string())), Some(Scope::Global));
-      }
+        state::assign_value(
+          &val_key,
+          Stored::String(arena::pin(val.to_string())),
+          Some(Scope::Global),
+        );
+      },
     }
     if !keys.contains(key) {
       keys.push(key.clone());
@@ -196,22 +210,37 @@ fn merged_enumitem_keyvals(
   ];
 
   for def_name in &default_names {
-    let keys_key = s!("{def_name}@keys");
-    if let Some(Stored::String(keys_sym)) = state::lookup_value(&keys_key) {
-      let keys_str = arena::to_string(keys_sym);
-      for key in keys_str.split(',') {
-        if !key.is_empty() {
-          let val_key = s!("{def_name}@{key}");
-          if let Some(val) = state::lookup_value(&val_key) {
-            let aw = match val {
-              Stored::Tokens(t) => ArgWrap::Tokens(t),
-              Stored::Number(n) => ArgWrap::Number(n),
-              Stored::None => ArgWrap::None,
-              Stored::String(s) => ArgWrap::Tokens(mouth::tokenize_internal(&arena::to_string(s))),
-              _ => ArgWrap::None,
-            };
-            hash.insert(key.to_string(), aw);
-          }
+    // with_value pulls the keys-string out of the Stored::String arm
+    // without cloning the envelope; the per-key inner lookup still
+    // needs to produce an owned ArgWrap, so we pay the clone there.
+    // Collect keys as owned Vec<String> inside state+arena closures
+    // so the split happens on the interned &str and the owned
+    // intermediary is smaller (Vec<String> of just the keys, not
+    // the whole comma-separated string plus allocs).
+    let keys: Vec<String> = state::with_value(&s!("{def_name}@keys"), |v| match v {
+      Some(Stored::String(s)) => arena::with(*s, |ks| {
+        ks.split(',')
+          .filter(|k| !k.is_empty())
+          .map(String::from)
+          .collect()
+      }),
+      _ => Vec::new(),
+    });
+    if keys.is_empty() {
+      continue;
+    }
+    for key in &keys {
+      if !key.is_empty() {
+        let val_key = s!("{def_name}@{key}");
+        if let Some(val) = state::lookup_value(&val_key) {
+          let aw = match val {
+            Stored::Tokens(t) => ArgWrap::Tokens(t),
+            Stored::Number(n) => ArgWrap::Number(n),
+            Stored::None => ArgWrap::None,
+            Stored::String(s) => ArgWrap::Tokens(arena::with(s, mouth::tokenize_internal)),
+            _ => ArgWrap::None,
+          };
+          hash.insert(key.to_string(), aw);
         }
       }
     }
@@ -301,17 +330,17 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
     Ok(Vec::new())
   });
 
-  let after_digest_body: DigestionClosure = Rc::new(|whatsit: &mut Whatsit| {
-    end_enum_itemize(whatsit)
-  });
+  let after_digest_body: DigestionClosure =
+    Rc::new(|whatsit: &mut Whatsit| end_enum_itemize(whatsit));
 
-  let options = ConstructorOptions { 
-    mode: Some("internal_vertical".into()), 
+  let options = ConstructorOptions {
+    mode: Some("internal_vertical".into()),
     locked: true,
     properties,
     before_digest_end: vec![before_digest_end],
     after_digest_body: vec![after_digest_body],
-    ..Default::default() };
+    ..Default::default()
+  };
   def_environment(listname.to_string(), paramlist, Some(replacement), options);
   Ok(())
 }
@@ -488,8 +517,11 @@ LoadDefinitions!({
   DefMacro!("\\setenumerate Optional {}", "\\setlist[enumerate,#1]{#2}");
   DefMacro!("\\setdescription Optional {}", "\\setlist[description,#1]{#2}");
 
-  // \restartlist — Perl: enumitem.sty.ltxml L128-140
-  DefPrimitive!("\\restartlist{}", sub[(listname)] {
+  // \restartlist — Perl enumitem.sty.ltxml L128-140 uses `DefMacro` with a
+  // side-effect sub returning undef (empty expansion). Match that kind:
+  // macro-level so the reset happens during gullet expansion, consistent
+  // with how Perl dispatches `\restartlist` inside `\begin{enumerate}`.
+  DefMacro!("\\restartlist{}", sub[(listname)] {
     let listname = listname.to_string();
     let counter = match listname.as_str() {
       "enumerate" => "enum",
@@ -504,6 +536,7 @@ LoadDefinitions!({
         SetCounter!(ctr_name, Number(0));
       }
     }
+    Ok(Tokens!())
   });
 
   // Not-yet-handled bits

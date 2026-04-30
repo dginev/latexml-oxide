@@ -91,14 +91,19 @@ impl From<Token> for Vec<Token> {
 impl From<Tokens> for Token {
   fn from(mut ts: Tokens) -> Token {
     if ts.0.is_empty() {
-      panic!("Tried to cast an empty Tokens object into a single Token");
+      // Match the &Tokens impl below: empty → \relax fallback rather
+      // than panic. Callers that must see the empty case are rare and
+      // should inspect Tokens directly.
+      T_CS!("\\relax")
     } else if ts.0.len() == 1 {
       ts.0.remove(0)
     } else {
-      panic!("Dangerous cast! Tokens->Token for {ts:?}");
-      //let code = ts.0.first().unwrap().get_catcode();
-      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
-      // single); Token::new(Cow::Owned(ts.to_string()), code)
+      // Prefer the first token and warn; cascading a panic here usually
+      // means a stringly-typed binding slot received a multi-token value
+      // (e.g. a macro argument coerced into a single-token slot). The
+      // first token preserves TEx's "grab a single token" semantics.
+      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      ts.0.remove(0)
     }
   }
 }
@@ -110,10 +115,8 @@ impl<'a> From<&'a Tokens> for Token {
     } else if ts.0.len() == 1 {
       ts.0[0]
     } else {
-      panic!("Dangerous cast! Tokens->Token for {ts:?}");
-      //let code = ts.0.first().unwrap().get_catcode();
-      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
-      // single); Token::new(Cow::Owned(ts.to_string()), code)
+      log::warn!("multi-token Tokens cast into single Token: {ts:?}");
+      ts.0[0]
     }
   }
 }
@@ -122,7 +125,7 @@ impl From<Option<Tokens>> for Token {
   fn from(ts_opt: Option<Tokens>) -> Token {
     match ts_opt {
       Some(ts) => ts.into(),
-      None => panic!("Casting a None (undef Tokens) into a Token is a Bug."),
+      None => T_CS!("\\relax"), // None → relax, matching the empty-Tokens path
     }
   }
 }
@@ -169,6 +172,89 @@ impl Tokens {
 
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.0.len() }
+
+  /// Zero-alloc equivalent of `self.to_string().starts_with(prefix)`.
+  /// Walks tokens byte-by-byte into `prefix` using the same Display
+  /// semantics as `eq_text` (COMMENT skipped, ARG prefixed with `#`).
+  /// Returns `true` once the full prefix has been consumed, even if
+  /// more token text follows.
+  pub fn starts_with_text(&self, prefix: &str) -> bool {
+    let mut remaining = prefix;
+    for t in &self.0 {
+      if remaining.is_empty() {
+        return true;
+      }
+      if t.code == crate::token::Catcode::COMMENT {
+        continue;
+      }
+      if t.code == crate::token::Catcode::ARG {
+        if !remaining.starts_with('#') {
+          return false;
+        }
+        remaining = &remaining[1..];
+        if remaining.is_empty() {
+          return true;
+        }
+      }
+      let keep_going = t.with_str(|text| {
+        if text.is_empty() {
+          return true;
+        }
+        if remaining.starts_with(text) {
+          remaining = &remaining[text.len()..];
+          true
+        } else if text.starts_with(remaining) {
+          // This token's text extends past `prefix` — prefix matches
+          // and we're done.
+          remaining = "";
+          true
+        } else {
+          false
+        }
+      });
+      if !keep_going {
+        return false;
+      }
+      if remaining.is_empty() {
+        return true;
+      }
+    }
+    remaining.is_empty()
+  }
+
+  /// Zero-alloc equivalent of `self.to_string() == target`. Walks the
+  /// contained tokens byte-by-byte, skipping COMMENT tokens (matching
+  /// `Display for Tokens`) and prefixing ARG tokens with `#` (matching
+  /// `Display for Token`). Returns `true` iff the rendered text exactly
+  /// equals `target`. Used by DefMacro bodies that check keyword
+  /// values like `true` / `false` / `swapnumber` without wanting to
+  /// allocate a fresh `String` per invocation.
+  pub fn eq_text(&self, target: &str) -> bool {
+    let mut remaining = target;
+    for t in &self.0 {
+      if t.code == crate::token::Catcode::COMMENT {
+        continue;
+      }
+      if t.code == crate::token::Catcode::ARG {
+        if !remaining.starts_with('#') {
+          return false;
+        }
+        remaining = &remaining[1..];
+      }
+      let ok = t.with_str(|text| {
+        if remaining.starts_with(text) {
+          remaining = &remaining[text.len()..];
+          true
+        } else {
+          false
+        }
+      });
+      if !ok {
+        return false;
+      }
+    }
+    remaining.is_empty()
+  }
 
   // Just a synonym for unlist in this reversion case
   pub fn revert(self) -> Vec<Token> { self.0 }
@@ -610,5 +696,110 @@ impl ToTokens for Token {
         }
       })
     });
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::common::arena;
+
+  fn letter_tok(s: &str) -> Token {
+    Token {
+      text: arena::pin(s),
+      code: Catcode::LETTER,
+    }
+  }
+
+  fn comment_tok(s: &str) -> Token {
+    Token {
+      text: arena::pin(s),
+      code: Catcode::COMMENT,
+    }
+  }
+
+  #[test]
+  fn empty_tokens_len_zero() {
+    let t = Tokens::new(vec![]);
+    assert_eq!(t.len(), 0);
+    assert!(t.is_empty());
+  }
+
+  #[test]
+  fn tokens_new_preserves_order() {
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    assert_eq!(t.len(), 3);
+    let list = t.unlist();
+    let texts: Vec<String> = list.iter().map(|t| arena::to_string(t.text)).collect();
+    assert_eq!(texts, vec!["a", "b", "c"]);
+  }
+
+  #[test]
+  fn tokens_unlist_ref_does_not_consume() {
+    let t = Tokens::new(vec![letter_tok("a")]);
+    let r = t.unlist_ref();
+    assert_eq!(r.len(), 1);
+    // t is still usable after unlist_ref.
+    assert_eq!(t.len(), 1);
+  }
+
+  #[test]
+  fn tokens_stringify_format() {
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b")]);
+    let s = t.stringify();
+    assert!(s.starts_with("Tokens["), "got {s:?}");
+    assert!(s.ends_with(']'));
+    assert!(s.contains("a"));
+    assert!(s.contains("b"));
+  }
+
+  #[test]
+  fn tokens_equals_ignores_comments_and_markers() {
+    // equals() filters out COMMENT and MARKER tokens before comparing.
+    let a = Tokens::new(vec![letter_tok("x"), comment_tok("%"), letter_tok("y")]);
+    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    assert!(a.equals(b), "comments should be ignored in equals()");
+  }
+
+  #[test]
+  fn tokens_equals_different_content() {
+    let a = Tokens::new(vec![letter_tok("x")]);
+    let b = Tokens::new(vec![letter_tok("y")]);
+    assert!(!a.equals(b));
+  }
+
+  #[test]
+  fn tokens_equals_different_lengths() {
+    let a = Tokens::new(vec![letter_tok("x")]);
+    let b = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    assert!(!a.equals(b));
+  }
+
+  #[test]
+  fn tokens_equals_both_empty() {
+    let a = Tokens::new(vec![]);
+    let b = Tokens::new(vec![]);
+    assert!(a.equals(b));
+  }
+
+  #[test]
+  fn tokens_unwrap_self_identity() {
+    let t = Tokens::new(vec![letter_tok("x")]);
+    assert_eq!(t.unwrap().len(), 1);
+  }
+
+  #[test]
+  fn tokens_revert_returns_vec() {
+    let t = Tokens::new(vec![letter_tok("x"), letter_tok("y")]);
+    let v = t.revert();
+    assert_eq!(v.len(), 2);
+  }
+
+  #[test]
+  fn tokens_display_joins_content() {
+    // Display on Tokens concatenates each token's Display.
+    let t = Tokens::new(vec![letter_tok("a"), letter_tok("b"), letter_tok("c")]);
+    let s = format!("{t}");
+    assert_eq!(s, "abc");
   }
 }

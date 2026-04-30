@@ -7,9 +7,9 @@ use crate::common::error::*;
 
 use crate::mouth;
 use crate::parameter::{Parameter, Parameters};
+use crate::pin;
 use crate::token::*;
 use crate::tokens::Tokens;
-use crate::pin;
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
@@ -88,8 +88,12 @@ pub fn parse_parameters(
       fatal!(
         Parameter,
         Misdefined,
-        s!("parse_parameters exceeded {} steps for {:?} (remaining: {:?})",
-          MAX_STEPS, cs, prototype)
+        s!(
+          "parse_parameters exceeded {} steps for {:?} (remaining: {:?})",
+          MAX_STEPS,
+          cs,
+          prototype
+        )
       );
     }
     let next_proto: Cow<str>;

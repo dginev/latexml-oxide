@@ -132,7 +132,13 @@ LoadDefinitions!({
   DefMacro!("\\corref{}", "");
   DefMacro!("\\corauthref{}", "");
   DefMacro!("\\cortext[]{}", "");
-  DefMacro!("\\collab OptionalMatch:* {}", "\\author{#1}");
+  // Perl elsart_support_core.sty.ltxml L47: body is `\author{#1}` but in
+  // the `OptionalMatch:* {}` signature `#1` is the star flag and `#2` is
+  // the content — the author name is silently dropped. Documented as a
+  // Perl bug in docs/KNOWN_PERL_ERRORS.md #16 (same root cause as
+  // aipproc.cls.ltxml's \tablenote). Rust deliberately uses `#2` so the
+  // author content reaches \author correctly.
+  DefMacro!("\\collab OptionalMatch:* {}", "\\author{#2}");
   Let!("\\collaboration", "\\collab");
   // Perl L50-51: route through lx@notetext for proper footnote handling
   DefMacro!("\\tnotetext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
@@ -217,7 +223,39 @@ LoadDefinitions!({
   // NOT DefEnvironment!, to properly scope the XUntil delimiter reading.
   DefMacro!(T_CS!("\\begin{keyword}"), None, "\\begingroup\\@keyword");
   DefMacro!(T_CS!("\\end{keyword}"), None, "\\@keyword@cut\\endgroup");
-  DefMacro!("\\keyword", "\\@keyword");
+  // Perl elsart_support_core.sty.ltxml L138-141: `\keyword{...}` (1-arg
+  // form) reads a balanced group and wraps with `\@keyword <arg>
+  // \@keyword@cut` so XUntil terminates at the inserted token.
+  //
+  // History — DO NOT switch this back to `read_balanced(_, _, false)`:
+  // commit 09bc60c2 ("\keyword absorbs trailing unbalanced }") tried to
+  // mirror Perl's `$gullet->readBalanced` with no args (require_open=
+  // false → level starts at 1) to absorb the legacy unbalanced-`}`
+  // idiom from arXiv:1710.03688 / hep-ph0702114, where the abstract
+  // ends:
+  //     \keyword{Keyword1; ...} \vskip ...\noindent{...e3}}
+  // (a trailing literal `}` past the keyword arg). For that input
+  // alone, `require_open=false` correctly consumes `{...} }` and stops.
+  //
+  // BUT for the common balanced form — `\keyword{Higgs; Boson}` with
+  // no trailing extra `}` (the test fixture
+  // `tests/babel/elsart_keyword_brace_form.tex` and the vast majority
+  // of real-world usage) — `require_open=false` reads past the
+  // matching `}`, walks through `\end{abstract}` (raw `\end` is a CS
+  // and CC_END count is unchanged across that expansion), then
+  // `\end{frontmatter}`, … all the way to EOF. The reader's pushback
+  // grows unboundedly on the way; in CI we observed a single
+  // `memory allocation of 21743271936 bytes failed` (21 GB) → SIGABRT
+  // before the test could even report. The cost of one paper's
+  // 1-error reduction is the entire test suite OOM-aborting at
+  // `81_babel::elsart_keyword_brace_form_test`.
+  //
+  // The trailing-`}` arxiv 1710.03688 / hep-ph0702114 case is now a
+  // deferred parity gap. Any future fix must distinguish balanced vs
+  // unbalanced input WITHOUT speculatively reading to EOF — e.g. peek
+  // for the trailing `}` after a strict balanced read, or scope the
+  // lenient reader by an explicit token budget.
+  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
@@ -237,7 +275,29 @@ LoadDefinitions!({
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
 
-  // Theorems — Perl L168-175
+  // Per-section equation numbering — Perl L161-163.
+  // Emit `\@addtoreset{equation}{section}` + per-section
+  // `\theequation` when the `seceqn` class option is active.
+  if state::lookup_bool("@seceqn") {
+    RawTeX!(r"\@addtoreset{equation}{section}");
+    DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
+  }
+
+  // Theorems — Perl elsart_support_core.sty.ltxml L168-175.
+  // Perl conditional on `@seceqn` flag (set by elsart.cls's `seceqn`
+  // class option):
+  //   if @seceqn:  `\newtheorem{thm}{Theorem}[section] \@addtoreset{thm}{section}`
+  //   else      :  `\newtheorem{thm}{Theorem}`
+  // Then aliases `\newdefinition` and `\newproof` to `\newtheorem`
+  // (elsdoc §7).
+  // The base `\newtheorem{thm}` declaration was missing in the prior
+  // Rust port — every `\begin{thm}` in elsart papers reported
+  // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
+  if state::lookup_bool("@seceqn") {
+    RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
+  } else {
+    RawTeX!(r"\newtheorem{thm}{Theorem}");
+  }
   Let!("\\newdefinition", "\\newtheorem");
   Let!("\\newproof", "\\newtheorem");
 
@@ -252,6 +312,9 @@ LoadDefinitions!({
   DefMacro!("\\printtables{}", "");
   DefMacro!("\\MARK{}", "");
   DefMacro!("\\mpfootnotemark", "");
+
+  // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
+  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
 
   // Float environment
   DefEnvironment!("{esmark}",  "#body");

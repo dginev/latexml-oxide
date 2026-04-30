@@ -1,0 +1,33 @@
+% Minimal reproducer for sandbox paper 1112.6246.
+%
+% Perl `latexml --preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`:
+%   exit 0, 0 errors. XML has clean <XMArray>/<XMRow> structure for \cases.
+%
+% Rust `target/release/latexml_oxide`:
+%   10001 errors / 1 fatal. First real error:
+%     min_1112 line 6 col 4 — Error:Unexpected:_ Script _ can only appear in math mode
+%   Second:
+%     min_1112 line 7 col 1-15 — Error:unexpected:\end{document}
+%       Attempt to end mode `internal_vertical` in `display_math`
+%
+% Two conditions combine to trigger the cascade:
+%  1. `mn2e` class (not `article`). mn2e rebinds `$` via
+%     `Let!(T_MATH!(), "\lx@dollar@in@mathmode")` in `\begin{equation}`
+%     before_digest (mn2e_support_sty.rs:321).
+%  2. Missing final `\cr` in `\cases{…}` body. With trailing `\cr`
+%     the error count drops 10001 → 2.
+%
+% The leak is a mode-frame level phenomenon in `\lx@end@alignment`
+% when last-row has no explicit `\cr`. `\end{equation}` can then never
+% pop the `display_math` frame cleanly. Reset of MATH_ALIGN_$_BEGUN
+% via after_digest_body DOES NOT help — tried 2026-04-24.
+%
+% See memory/project_1112_6246_residual.md for the full diagnosis.
+
+\documentclass[useAMS,usenatbib]{mn2e}
+\begin{document}
+\begin{equation}
+x = \cases{1 & $a$ \cr 2 & $b$, }
+\end{equation}
+$m_1$
+\end{document}

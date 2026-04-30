@@ -145,4 +145,81 @@ mod tests {
     assert_eq!(radix_alpha(26), "z");
     assert_eq!(radix_alpha(27), "aa");
   }
+
+  #[test]
+  fn alpha_alphabet_progression() {
+    assert_eq!(radix_alpha(28), "ab");
+    assert_eq!(radix_alpha(52), "az");
+    assert_eq!(radix_alpha(53), "ba");
+    // 26*27 = 702 should be the last two-letter (zz).
+    assert_eq!(radix_alpha(26 * 26 + 26), "zz");
+    assert_eq!(radix_alpha(26 * 26 + 26 + 1), "aaa");
+  }
+
+  #[test]
+  fn up_alpha_basic() {
+    assert_eq!(radix_up_alpha(0), "");
+    assert_eq!(radix_up_alpha(1), "A");
+    assert_eq!(radix_up_alpha(26), "Z");
+    assert_eq!(radix_up_alpha(27), "AA");
+  }
+
+  #[test]
+  fn up_alpha_vs_alpha_case_only() {
+    // For all n, up_alpha(n) should equal alpha(n).to_uppercase().
+    for n in 0..60 {
+      assert_eq!(
+        radix_up_alpha(n),
+        radix_alpha(n).to_uppercase(),
+        "divergence at {n}"
+      );
+    }
+  }
+
+  #[test]
+  fn greek_basic() {
+    assert_eq!(radix_greek(0), "");
+    assert_eq!(radix_greek(1), "α");
+    assert_eq!(radix_greek(24), "ω"); // ω is the 24th (skip final-sigma)
+    assert_eq!(radix_greek(25), "αα");
+  }
+
+  #[test]
+  fn up_greek_basic() {
+    assert_eq!(radix_up_greek(0), "");
+    assert_eq!(radix_up_greek(1), "Α");
+    assert_eq!(radix_up_greek(24), "Ω");
+  }
+
+  #[test]
+  fn up_roman_cases() {
+    assert_eq!(radix_up_roman(0), "");
+    assert_eq!(radix_up_roman(1), "I");
+    assert_eq!(radix_up_roman(4), "IV");
+    assert_eq!(radix_up_roman(1000), "M");
+    assert_eq!(radix_up_roman(1999), "MCMXCIX");
+  }
+
+  #[test]
+  fn radix_format_str_multi_char_symbols() {
+    // radix_format_str takes &[&str], useful for abbreviations.
+    let syms = &["one", "two", "three"];
+    assert_eq!(radix_format_str(0, syms), "");
+    assert_eq!(radix_format_str(1, syms), "one");
+    assert_eq!(radix_format_str(3, syms), "three");
+    // n=4 overflows into second digit: (4-1)%3=0→"one", (4-1)/3=1; (1-1)%3=0→"one" → "oneone"
+    assert_eq!(radix_format_str(4, syms), "oneone");
+  }
+
+  #[test]
+  fn radix_format_custom_symbols() {
+    // Single-char radix_format: same generation as alpha but with a
+    // user-chosen alphabet.
+    let syms = &['A', 'B'];
+    assert_eq!(radix_format(1, syms), "A");
+    assert_eq!(radix_format(2, syms), "B");
+    // n=3 → (3-1)%2=0→'A', (3-1)/2=1→'A' → "AA"
+    assert_eq!(radix_format(3, syms), "AA");
+    assert_eq!(radix_format(4, syms), "AB");
+  }
 }

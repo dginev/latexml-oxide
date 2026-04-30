@@ -63,13 +63,31 @@ LoadDefinitions!({
   // Frontmatter
   DefMacro!("\\layoutstyle{}", "");
 
-  // keywords: address, altaddress, email
-  // Perl: DefMacro('\author{} RequiredKeyVals', sub { ... complex Perl ... });
-  // Simplified: define \author with keyvals support
-  // The Perl version extracts address, altaddress, email from keyvals
-  // and wraps them in \lx@author / \lx@contact invocations.
-  // For now, provide the basic author definition.
-  DefMacro!("\\author{} RequiredKeyVals", "\\lx@author{#1}");
+  // Perl aipproc.cls.ltxml L74-84: \author{name} RequiredKeyVals — the
+  // keyvals carry address / altaddress / email, and the Perl sub wraps
+  // each present key in `\lx@contact{key}{value}`. Prior Rust version
+  // used the bare stub "\\lx@author{#1}" that silently dropped all keys.
+  DefMacro!("\\author{} RequiredKeyVals", sub[(author, kv)] {
+    let mut out: Vec<Token> = Vec::new();
+    // \lx@author{author}
+    out.push(T_CS!("\\lx@author"));
+    out.push(T_BEGIN!());
+    out.extend(author.unlist_ref().iter().cloned());
+    out.push(T_END!());
+    for field in ["address", "altaddress", "email"] {
+      if let Some(val) = kv.get_value(field) {
+        // \lx@contact{field}{value}
+        out.push(T_CS!("\\lx@contact"));
+        out.push(T_BEGIN!());
+        out.extend(ExplodeText!(field));
+        out.push(T_END!());
+        out.push(T_BEGIN!());
+        out.extend(val.revert()?.unlist());
+        out.push(T_END!());
+      }
+    }
+    Ok(Tokens::new(out))
+  });
 
   DefMacro!("\\keywordsname", "Keywords");
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordsname}]{#1}");
@@ -94,5 +112,22 @@ LoadDefinitions!({
   DefMacro!("\\spaceforfigure{}{}", "");
 
   DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\parbox{#3}{#4}}");
+  // Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*
+  // star flag), silently dropping the note content. See
+  // docs/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
+  // content) to match the documented sibling convention from physics.sty.
   DefMacro!("\\tablenote OptionalMatch:* {}", "\\footnote{#2}");
+
+  // Perl aipproc.cls.ltxml does NOT define \references — Perl behaves
+  // lossy-silent for `\begin{references}…\bibitem` under aipproc
+  // (drops the whole bibliography, reports "No obvious problems").
+  // Rust's stricter validator surfaces Error:malformed:ltx:bibitem
+  // "…isn't allowed in <ltx:section>". Rust-over-Perl improvement:
+  // alias to the thebibliography machinery so the content is
+  // preserved. Fixes 4 papers in SANDBOX_TRIAGE Class D bibitem-aipproc
+  // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
+  // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
+  DefMacro!("\\references", "\\thebibliography{}");
+  Let!("\\endreferences", "\\endthebibliography");
+  Let!("\\reference", "\\bibitem");
 });

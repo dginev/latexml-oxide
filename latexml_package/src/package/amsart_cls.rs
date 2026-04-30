@@ -8,7 +8,7 @@ LoadDefinitions!({
   // Document structure.
 
   // LoadClass('ams_core', withoptions => 1);
-  load_class("ams_core", Vec::new(), Tokens!())?;
+  load_class_with_options("ams_core", Tokens!())?;
   RequireResource!("ltx-amsart.css");
 
   // amsart.cls.ltxml : journal article

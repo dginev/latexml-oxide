@@ -2,6 +2,26 @@
 //! Perl: pgfsys-latexml.def.ltxml (1022 lines)
 //!
 //! Port of the SVG drawing primitives that make pgf/tikz produce SVG output.
+//!
+//! ## Def*-kind divergence from Perl (audit-flagged, intentional)
+//!
+//! The DP audit flags ~16 `\pgfsys@moveto`/`@lineto`/`@curveto`/`@rect`/etc.
+//! entries as Perl=DefConstructor↔Rust=DefPrimitive. Both are functionally
+//! equivalent:
+//!
+//! - **Perl** uses `DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '', ...)` with an
+//!   **empty XML template** — the `afterDigest` callback pushes path-data state (e.g. `M x y`) onto
+//!   an accumulating list. The SVG `<svg:path d="…">` is emitted later by a flush primitive like
+//!   `\pgfsys@stroke` / `\pgfsys@fill`.
+//! - **Rust** uses `DefPrimitive!(..., sub[(x, y)] { ... })` that does the same state accumulation
+//!   imperatively.
+//!
+//! Same path-buffering architecture, different `Def*` surface. The Rust
+//! DefPrimitive shape is more natural for the imperative state-mutation
+//! pattern; Perl's DefConstructor-with-empty-template is idiomatic Perl for
+//! "this CS doesn't produce local XML, but has post-digest state effects".
+//! Do NOT kind-flip these to DefConstructor — the Perl empty-template
+//! idiom doesn't map cleanly to Rust's DefConstructor! macro semantics.
 use crate::prelude::*;
 
 /// Helper: convert dimension to px value, rounded to 2 decimal places
@@ -26,7 +46,10 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   let new_path = if points.is_empty() {
     operation.to_string()
   } else {
-    let pts: Vec<String> = points.iter().map(|p| format!("{}", dim_to_px(*p))).collect();
+    let pts: Vec<String> = points
+      .iter()
+      .map(|p| format!("{}", dim_to_px(*p)))
+      .collect();
     format!("{} {}", operation, pts.join(" "))
   };
   let current = state::lookup_string("pgf_SVGpath");
@@ -35,7 +58,11 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   } else {
     format!("{} {}", current, new_path)
   };
-  state::assign_value("pgf_SVGpath", Stored::String(arena::pin(&combined)), Scope::Global);
+  state::assign_value(
+    "pgf_SVGpath",
+    Stored::String(arena::pin(&combined)),
+    Scope::Global,
+  );
 }
 
 /// Look up a pgf register as a Dimension
@@ -59,14 +86,18 @@ fn channel_to_u8(v: f64) -> u8 {
 /// Perl: Color('rgb', r, g, b)->toHex → "#RRGGBB"
 /// Returns tokens (not a string) because # must be catcode OTHER, not PARAMETER.
 fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
-  let hex = format!("{:02X}{:02X}{:02X}", channel_to_u8(r), channel_to_u8(g), channel_to_u8(b));
+  let hex = format!(
+    "{:02X}{:02X}{:02X}",
+    channel_to_u8(r),
+    channel_to_u8(g),
+    channel_to_u8(b)
+  );
   // Perl uses Explode() which creates catcode-12 (OTHER) tokens.
   // '#' as catcode OTHER, then hex digits as catcode OTHER.
   let mut tokens = vec![T_OTHER!("#")];
   tokens.extend(mouth::tokenize_internal(&hex).unlist());
   tokens
 }
-
 
 // Perl L149-157: DefParameterType('SVGMoveableBox', ...)
 // Defined in Perl but never used as a parameter type anywhere in the codebase.
@@ -81,12 +112,20 @@ fn foreign_object_check(document: &Document) -> Option<Node> {
   let mut node_opt = Some(document.get_node().clone());
   while let Some(node) = node_opt {
     let qname = document::get_node_qname(&node);
-    let qname_str = arena::to_string(qname);
-    if qname_str == "svg:svg" {
-      return None;
+    enum Probe {
+      Svg,
+      ForeignObject,
+      Other,
     }
-    if qname_str == "svg:foreignObject" {
-      return Some(node);
+    let probe = arena::with(qname, |s| match s {
+      "svg:svg" => Probe::Svg,
+      "svg:foreignObject" => Probe::ForeignObject,
+      _ => Probe::Other,
+    });
+    match probe {
+      Probe::Svg => return None,
+      Probe::ForeignObject => return Some(node),
+      Probe::Other => {},
     }
     node_opt = node.get_parent();
   }
@@ -142,14 +181,26 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
       // Perl: transform="matrix(1 0 0 -1 x y)" — flips Y-axis (pgf Y=up, SVG Y=down)
       // y = (h + d) - rowdepths[-1]  (baseline of last row)
-      let h: f64 = attrs.remove("cheight").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let d: f64 = attrs.remove("cdepth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let _w: f64 = attrs.remove("cwidth").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let h: f64 = attrs
+        .remove("cheight")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let d: f64 = attrs
+        .remove("cdepth")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let _w: f64 = attrs
+        .remove("cwidth")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
       let y = h + d;
-      attrs.entry("transform".to_string())
+      attrs
+        .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
       attrs.insert("_scopebegin".to_string(), "1".to_string());
-      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .map(Option::Some)
     }),
     // Perl L971-973: closeTikzAlignmentElement
     close_container: Rc::new(|document| document.close_element("svg:g")),
@@ -166,11 +217,34 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
       // Perl: transform="matrix(1 0 0 1 0 yy)" where yy = y + cheight
-      let y = props.get("y").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
-      let h = props.get("cheight").and_then(|v| if let Stored::Dimension(d) = v { Some(d.px_value(None)) } else { None }).unwrap_or(0.0);
+      let y = props
+        .get("y")
+        .and_then(|v| {
+          if let Stored::Dimension(d) = v {
+            Some(d.px_value(None))
+          } else {
+            None
+          }
+        })
+        .unwrap_or(0.0);
+      let h = props
+        .get("cheight")
+        .and_then(|v| {
+          if let Stored::Dimension(d) = v {
+            Some(d.px_value(None))
+          } else {
+            None
+          }
+        })
+        .unwrap_or(0.0);
       let yy = y + h;
-      attrs.insert("transform".to_string(), format!("matrix(1 0 0 1 0 {})", fmt_px(yy)));
-      document.open_element("svg:g", Some(attrs), None).and(Ok(()))
+      attrs.insert(
+        "transform".to_string(),
+        format!("matrix(1 0 0 1 0 {})", fmt_px(yy)),
+      );
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .and(Ok(()))
     }),
     close_row: Rc::new(|document| document.close_element("svg:g")),
     // Perl L991-1009: openTikzAlignmentCol — creates cell <svg:g> with X-position and Y-flip
@@ -186,13 +260,24 @@ fn tikz_alignment_bindings(
       attrs.insert("class".to_string(), class);
       attrs.insert("_scopebegin".to_string(), "1".to_string());
       // Perl: transform="matrix(1 0 0 -1 x 0)" — flip Y and position at column x
-      let x: f64 = attrs.remove("x").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-      let _y: f64 = attrs.remove("y").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+      let x: f64 = attrs
+        .remove("x")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+      let _y: f64 = attrs
+        .remove("y")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
       // Remove dimension props that shouldn't become XML attributes
-      attrs.remove("cwidth"); attrs.remove("cheight"); attrs.remove("cdepth");
-      attrs.entry("transform".to_string())
+      attrs.remove("cwidth");
+      attrs.remove("cheight");
+      attrs.remove("cdepth");
+      attrs
+        .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 {} 0)", fmt_px(x)));
-      document.open_element("svg:g", Some(attrs), None).map(Option::Some)
+      document
+        .open_element("svg:g", Some(attrs), None)
+        .map(Option::Some)
     }),
     close_column: Rc::new(|document| document.close_element("svg:g")),
     is_math,
@@ -294,8 +379,8 @@ LoadDefinitions!({
     sub[document, _args, props] {
       let current = document.get_node().clone();
       let current_qname = document::get_node_qname(&current);
-      let current_qname_str = arena::to_string(current_qname);
-      if current_qname_str.starts_with("svg:") {
+      let is_in_svg = arena::with(current_qname, |s| s.starts_with("svg:"));
+      if is_in_svg {
         // Already in SVG — just open a nested svg:g
         let minx = match props.get("minx") {
           Some(Stored::Float(f)) => f.0, _ => 0.0
@@ -350,11 +435,12 @@ LoadDefinitions!({
         document.open_element("svg:svg", Some(svg_attrs), None)?;
         // Perl L89: style => $props{style} (baseline vertical-align)
         if let Some(Stored::String(style)) = props.get("style") {
-          let s = arena::to_string(*style);
-          if !s.is_empty() {
-            let svg_node = document.get_node_mut();
-            let _ = svg_node.set_attribute("style", &s);
-          }
+          arena::with(*style, |s| {
+            if !s.is_empty() {
+              let svg_node = document.get_node_mut();
+              let _ = svg_node.set_attribute("style", s);
+            }
+          });
         }
 
         // Perl L91-92: x0=-(0+minx), y0=pxheight+miny
@@ -511,6 +597,35 @@ LoadDefinitions!({
     state::assign_value("pgf_clipnext", Stored::Int(0), None);
   });
 
+  //============================================================
+  // pgfsys low-level drawing primitives — Perl L242-577
+  //============================================================
+  //
+  // Umbrella WISDOM #44 intentional divergence for the whole
+  // block below:
+  //
+  // Perl pgfsys-latexml.def.ltxml defines each of \pgfsys@moveto,
+  // \pgfsys@lineto, \pgfsys@curveto, \pgfsys@rect, \pgfsys@closepath,
+  // \pgfsys@clipnext, \lxSVG@color@{rgb,cmyk,cmy,gray}@{stroke,fill},
+  // \lxSVG@{beginscope,endscope}, and a few more as
+  //   DefConstructor('\pgfsys@moveto{Dimension}{Dimension}', '',
+  //     afterDigest => sub { addToSVGPath('M', $_[1]->getArgs); },
+  //     sizer => 0);
+  // — constructors with an EMPTY template and sizer=0, whose only
+  // observable work lives in `afterDigest` (mutating the internal
+  // SVG-path buffer / color state).
+  //
+  // Rust ports these as DefPrimitive with the side-effect in the
+  // body sub. The direct primitive form does the same state
+  // mutation without the zero-sizer whatsit leaking into the
+  // digest tree. Kind-wise this is 17 DefConstructor →
+  // DefPrimitive flips, all under the same rationale (empty
+  // template + sizer=0 → no observable XML, only state).
+  //
+  // This applies uniformly to every pgfsys / lxSVG@color /
+  // lxSVG@scope binding in the block below; individual entries
+  // don't re-carry the WISDOM #44 tag to avoid comment noise.
+
   // Perl L242-276: path operations
   DefPrimitive!("\\pgfsys@moveto{Dimension}{Dimension}", sub[(x, y)] {
     add_to_svg_path("M", &[x, y]);
@@ -560,6 +675,13 @@ LoadDefinitions!({
   // 4. Stroking, filling, and clipping
   //===================================================================
 
+  // Intentional divergence (WISDOM #44 class: afterDigest-only state
+  // toggle): Perl L307 `\pgfsys@clipnext` is a DefConstructor whose
+  // constructor body is empty — the only observable effect is
+  // `AssignValue(pgf_clipnext=>1)` read back later by the next
+  // \pgfsys@drawpath. DefPrimitive is the idiomatic Rust shape for a
+  // pure-state-toggle CS with no XML emission. Same class as
+  // psfrag_sty's \psfragscanon/off. Audit flags the single L678 entry.
   DefPrimitive!("\\pgfsys@clipnext", {
     state::assign_value("pgf_clipnext", Stored::Int(1), None);
   });
@@ -734,8 +856,8 @@ LoadDefinitions!({
     sub[document, args, _props] {
       let current = document.get_node().clone();
       let qname = document::get_node_qname(&current);
-      let qname_str = arena::to_string(qname);
-      if qname_str.starts_with("ltx:") {
+      let is_ltx = arena::with(qname, |s| s.starts_with("ltx:"));
+      if is_ltx {
         document.open_element("svg:svg", Some(string_map!(
           "_autoopened" => "1".to_string(),
           "_autoclose" => "1".to_string()
@@ -993,6 +1115,12 @@ LoadDefinitions!({
     format!("#{:02X}{:02X}{:02X}", channel_to_u8(1.0-c), channel_to_u8(1.0-m), channel_to_u8(1.0-y))
   }
 
+  // Color-channel conversion bindings — same WISDOM #44 intentional
+  // divergence as the path-op block at the top of this file: Perl
+  // defines each as `DefConstructor('\lxSVG@color@…@…{}{}{}', '',
+  // afterDigest => sub { AssignValue('pgf@svg@…color' => …) })`;
+  // Rust ports as DefPrimitive with the AssignValue in the body.
+  // 8 DefConstructor → DefPrimitive flips (rgb/cmyk/cmy/gray × stroke/fill).
   DefPrimitive!("\\lxSVG@color@rgb@stroke{}{}{}", sub[args] {
     let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
     assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
@@ -1246,6 +1374,10 @@ LoadDefinitions!({
     }
   );
 
+  // Scope bindings — same WISDOM #44 intentional divergence as the
+  // path-op / color blocks above: Perl `DefConstructor` with empty
+  // template + afterDigest side-effect; Rust `DefPrimitive` with the
+  // side-effect in the body.
   DefPrimitive!("\\lxSVG@beginscope", {
     stomach::begingroup();
   });
@@ -1320,6 +1452,13 @@ LoadDefinitions!({
   //   no warnings 'recursion'; $document->absorb($arg); }, sizer => 0);
   // Use DefMacro to ensure content flows back through the normal pipeline.
   // The content is already pre-expanded (hex computed in Rust).
+  //
+  // Intentional divergence (WISDOM #44 class: re-digest-pipeline timing):
+  // Perl's DefConstructor+absorb re-enters the document digester; the
+  // Rust DefMacro pass-through puts #1 back on the input stream so the
+  // expansion + digest pipeline proceeds naturally. Observationally
+  // equivalent when the hex is pre-computed in Rust. Audit flags the
+  // single L1448 entry.
   DefMacro!("\\pgfsys@invoke{}", "#1", locked => true);
 
   DefMacro!("\\pgfsys@markposition{}", "");

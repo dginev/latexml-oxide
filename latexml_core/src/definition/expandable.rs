@@ -256,7 +256,80 @@ impl Expandable {
       is_outer: traits.outer || get_prefix("outer"),
       is_long: traits.long || get_prefix("long"),
       has_cc_arg,
+      alias: traits.alias,
       ..Expandable::default()
     })
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn expandable_default_flags_false() {
+    let e = Expandable::default();
+    assert!(!e.is_protected);
+    assert!(!e.is_long);
+    assert!(!e.is_outer);
+    assert!(!e.has_cc_arg);
+    assert!(e.alias.is_none());
+    assert!(e.paramlist.is_none());
+    assert!(e.expansion.is_none());
+  }
+
+  #[test]
+  fn expandable_default_has_default_cs() {
+    let e = Expandable::default();
+    // Default cs is a T_CS with empty text (produced by Token::default
+    // or similar). We can at least confirm the code is CS.
+    assert_eq!(e.cs.code, Catcode::CS);
+  }
+
+  #[test]
+  fn expandable_is_definition_and_expandable() {
+    let e = Expandable::default();
+    assert!(e.is_definition());
+    assert!(e.is_expandable());
+  }
+
+  #[test]
+  fn expandable_partial_eq_by_paramlist_and_expansion() {
+    // PartialEq ignores flags (protected/long/outer) and cs — it
+    // compares paramlist and expansion only.
+    let mut a = Expandable::default();
+    let mut b = Expandable::default();
+    // Both have paramlist=None, expansion=None → equal.
+    assert_eq!(a, b);
+    // Changing flags doesn't affect equality.
+    a.is_protected = true;
+    b.is_protected = false;
+    assert_eq!(a, b);
+  }
+
+  #[test]
+  fn expandable_get_num_args_zero_without_paramlist() {
+    let e = Expandable::default();
+    assert_eq!(e.get_num_args(), 0);
+  }
+
+  #[test]
+  fn expandable_get_parameters_none_by_default() {
+    let e = Expandable::default();
+    assert!(e.get_parameters().is_none());
+  }
+
+  #[test]
+  fn expandable_options_default_all_false() {
+    let o = ExpandableOptions::default();
+    assert!(!o.locked);
+    assert!(!o.protected);
+    assert!(!o.outer);
+    assert!(!o.long);
+    assert!(o.scope.is_none());
+    assert!(o.alias.is_none());
+    assert!(!o.mathactive);
+    assert!(!o.robust);
+    assert!(!o.nopack_parameters);
   }
 }

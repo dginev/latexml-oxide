@@ -38,7 +38,9 @@ fn should_skip_value(key: &str) -> bool {
 fn rust_escape(s: &str) -> String {
   if s.contains("\"#")
     || s.contains('\r')
-    || s.chars().any(|c| c.is_ascii_control() && c != '\n' && c != '\t')
+    || s
+      .chars()
+      .any(|c| c.is_ascii_control() && c != '\n' && c != '\t')
   {
     let mut out = String::with_capacity(s.len() + 8);
     out.push('"');
@@ -95,9 +97,9 @@ struct DimEntry {
   val: i64,
 }
 struct GlueEntry {
-  key: String,
-  skip: i64,
-  plus: Option<i64>,
+  key:   String,
+  skip:  i64,
+  plus:  Option<i64>,
   pfill: u8, // 0=None, 1=Fil, 2=Fill, 3=Filll
   minus: Option<i64>,
   mfill: u8,
@@ -111,25 +113,25 @@ struct CatcodeEntry {
   val: u8,
 }
 struct TokenEntry {
-  key: String,
-  cc: u8,
+  key:  String,
+  cc:   u8,
   text: String,
 }
 struct TokenListEntry {
-  key: String,
+  key:       String,
   tok_start: u32,
   tok_count: u16,
 }
 struct ExpandEntry {
-  cs: String,
-  nargs: u8,
-  flags: u8, // bit 0=long, bit 1=protected
+  cs:        String,
+  nargs:     u8,
+  flags:     u8, // bit 0=long, bit 1=protected
   tok_start: u32,
   tok_count: u16,
 }
 struct LetAliasEntry {
-  key: String,    // e.g. "\\tex_let:D"
-  target: String, // e.g. "\\let"
+  key:     String, // e.g. "\\tex_let:D"
+  target:  String, // e.g. "\\let"
   // Reserved for future use: when we start emitting MathPrimitive-specific
   // assignment calls, this flag distinguishes PA (ordinary Primitive alias)
   // from MPA (MathPrimitive alias). Today `state::let_i` handles both by
@@ -138,7 +140,7 @@ struct LetAliasEntry {
   is_math: bool,
 }
 struct TokData {
-  cc: u8,
+  cc:   u8,
   text: String,
 }
 
@@ -146,35 +148,35 @@ struct TokData {
 #[derive(Default)]
 struct DumpData {
   // Value table
-  bools: Vec<BoolEntry>,
-  ints: Vec<IntEntry>,
-  strings: Vec<StrEntry>,
-  dims: Vec<DimEntry>,
-  glues: Vec<GlueEntry>,
-  mudims: Vec<DimEntry>,
-  muglues: Vec<GlueEntry>,
-  charcodes: Vec<CharcodeEntry>,
-  catcode_vals: Vec<CatcodeEntry>,
+  bools:         Vec<BoolEntry>,
+  ints:          Vec<IntEntry>,
+  strings:       Vec<StrEntry>,
+  dims:          Vec<DimEntry>,
+  glues:         Vec<GlueEntry>,
+  mudims:        Vec<DimEntry>,
+  muglues:       Vec<GlueEntry>,
+  charcodes:     Vec<CharcodeEntry>,
+  catcode_vals:  Vec<CatcodeEntry>,
   single_tokens: Vec<TokenEntry>,
-  token_lists: Vec<TokenListEntry>,
-  nones: Vec<String>,
-  vecdeques: Vec<String>,
+  token_lists:   Vec<TokenListEntry>,
+  nones:         Vec<String>,
+  vecdeques:     Vec<String>,
 
   // Code tables
-  catcodes: Vec<CatcodeEntry>,
-  lccodes: Vec<CharcodeEntry>,
-  uccodes: Vec<CharcodeEntry>,
-  sfcodes: Vec<CharcodeEntry>,
-  delcodes: Vec<CharcodeEntry>,
+  catcodes:  Vec<CatcodeEntry>,
+  lccodes:   Vec<CharcodeEntry>,
+  uccodes:   Vec<CharcodeEntry>,
+  sfcodes:   Vec<CharcodeEntry>,
+  delcodes:  Vec<CharcodeEntry>,
   mathcodes: Vec<CharcodeEntry>,
 
   // Meaning table
-  let_defs: Vec<TokenEntry>,
+  let_defs:    Vec<TokenEntry>,
   expandables: Vec<ExpandEntry>,
   let_aliases: Vec<LetAliasEntry>, // PA / MPA entries
 
   // Token pools (flattened)
-  value_tokens: Vec<TokData>,
+  value_tokens:  Vec<TokData>,
   expand_tokens: Vec<TokData>,
 }
 
@@ -232,7 +234,7 @@ fn parse_dump(content: &str) -> DumpData {
             data.catcodes.push(CatcodeEntry { key, val: v });
           }
         }
-      }
+      },
       "LC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
         if val_parts.len() >= 2 {
@@ -240,7 +242,7 @@ fn parse_dump(content: &str) -> DumpData {
             data.lccodes.push(CharcodeEntry { key, val: v });
           }
         }
-      }
+      },
       "UC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
         if val_parts.len() >= 2 {
@@ -248,7 +250,7 @@ fn parse_dump(content: &str) -> DumpData {
             data.uccodes.push(CharcodeEntry { key, val: v });
           }
         }
-      }
+      },
       "SC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
         if val_parts.len() >= 2 {
@@ -256,7 +258,7 @@ fn parse_dump(content: &str) -> DumpData {
             data.sfcodes.push(CharcodeEntry { key, val: v });
           }
         }
-      }
+      },
       "DC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
         if val_parts.len() >= 2 {
@@ -264,7 +266,7 @@ fn parse_dump(content: &str) -> DumpData {
             data.delcodes.push(CharcodeEntry { key, val: v });
           }
         }
-      }
+      },
       "MC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
         if val_parts.len() >= 2 {
@@ -272,8 +274,8 @@ fn parse_dump(content: &str) -> DumpData {
             data.mathcodes.push(CharcodeEntry { key, val: v });
           }
         }
-      }
-      _ => {} // Skip unknown tables
+      },
+      _ => {}, // Skip unknown tables
     }
   }
 
@@ -301,54 +303,56 @@ fn parse_value(data: &mut DumpData, key: &str, rest: &str) {
       if let Ok(v) = val_data.parse::<i64>() {
         data.ints.push(IntEntry { key: key.to_string(), val: v });
       }
-    }
+    },
     "S" => data.strings.push(StrEntry {
       key: key.to_string(),
       val: url_decode(val_data),
     }),
     "CH" => {
       if let Ok(v) = val_data.parse::<u16>() {
-        data.charcodes.push(CharcodeEntry { key: key.to_string(), val: v });
+        data
+          .charcodes
+          .push(CharcodeEntry { key: key.to_string(), val: v });
       }
-    }
+    },
     "CC" => {
       if let Ok(v) = val_data.parse::<u8>() {
-        data.catcode_vals.push(CatcodeEntry { key: key.to_string(), val: v });
+        data
+          .catcode_vals
+          .push(CatcodeEntry { key: key.to_string(), val: v });
       }
-    }
+    },
     "D" => {
       if let Ok(v) = val_data.parse::<i64>() {
         data.dims.push(DimEntry { key: key.to_string(), val: v });
       }
-    }
+    },
     "G" => {
       if let Some(g) = parse_glue_data(key, val_data) {
         data.glues.push(g);
       }
-    }
+    },
     "MD" => {
       if let Ok(v) = val_data.parse::<i64>() {
         data.mudims.push(DimEntry { key: key.to_string(), val: v });
       }
-    }
+    },
     "MG" => {
       if let Some(g) = parse_glue_data(key, val_data) {
         data.muglues.push(g);
       }
-    }
+    },
     "T" => {
       if let Some((cc, text)) = parse_tok(val_data) {
-        data.single_tokens.push(TokenEntry {
-          key: key.to_string(),
-          cc,
-          text,
-        });
+        data
+          .single_tokens
+          .push(TokenEntry { key: key.to_string(), cc, text });
       }
-    }
+    },
     "TK" => {
       if val_data.is_empty() {
         data.token_lists.push(TokenListEntry {
-          key: key.to_string(),
+          key:       key.to_string(),
           tok_start: data.value_tokens.len() as u32,
           tok_count: 0,
         });
@@ -362,14 +366,14 @@ fn parse_value(data: &mut DumpData, key: &str, rest: &str) {
           }
         }
         data.token_lists.push(TokenListEntry {
-          key: key.to_string(),
+          key:       key.to_string(),
           tok_start: start,
           tok_count: count,
         });
       }
-    }
+    },
     "VD" => data.vecdeques.push(key.to_string()),
-    _ => {}
+    _ => {},
   }
 }
 
@@ -379,7 +383,7 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
     return;
   }
   match parts[0] {
-    "N" => {} // Skip None meanings
+    "N" => {}, // Skip None meanings
     "E" => {
       let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(4, '\t').collect();
       if eparts.len() < 4 {
@@ -414,13 +418,15 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
         tok_start: start,
         tok_count: count,
       });
-    }
+    },
     "T" => {
       let tok_s = parts.get(1).unwrap_or(&"");
       if let Some((cc, text)) = parse_tok(tok_s) {
-        data.let_defs.push(TokenEntry { key: key.to_string(), cc, text });
+        data
+          .let_defs
+          .push(TokenEntry { key: key.to_string(), cc, text });
       }
-    }
+    },
     "PA" | "MPA" => {
       // Primitive alias: \let <key> = <target>.
       // Emit as a call to state::let_i at load time; target must already
@@ -434,8 +440,8 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
         target,
         is_math: parts[0] == "MPA",
       });
-    }
-    _ => {}
+    },
+    _ => {},
   }
 }
 
@@ -466,7 +472,14 @@ fn parse_glue_data(key: &str, s: &str) -> Option<GlueEntry> {
     }
   }
 
-  Some(GlueEntry { key: key.to_string(), skip, plus, pfill, minus, mfill })
+  Some(GlueEntry {
+    key: key.to_string(),
+    skip,
+    plus,
+    pfill,
+    minus,
+    mfill,
+  })
 }
 
 // ---- Code generation ----
@@ -573,11 +586,13 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
   Ok(total)
 }
 
-fn we(e: std::io::Error) -> String {
-  format!("Write error: {}", e)
-}
+fn we(e: std::io::Error) -> String { format!("Write error: {}", e) }
 
-fn emit_bool_array(out: &mut std::fs::File, name: &str, entries: &[BoolEntry]) -> Result<(), String> {
+fn emit_bool_array(
+  out: &mut std::fs::File,
+  name: &str,
+  entries: &[BoolEntry],
+) -> Result<(), String> {
   writeln!(out, "static {name}: &[(&str, bool)] = &[").map_err(we)?;
   for e in entries {
     writeln!(out, "  ({}, {}),", rust_escape(&e.key), e.val).map_err(we)?;
@@ -615,7 +630,11 @@ fn emit_glue_array(
   entries: &[GlueEntry],
 ) -> Result<(), String> {
   // (key, skip, plus, pfill, minus, mfill)
-  writeln!(out, "static {name}: &[(&str, i64, Option<i64>, u8, Option<i64>, u8)] = &[").map_err(we)?;
+  writeln!(
+    out,
+    "static {name}: &[(&str, i64, Option<i64>, u8, Option<i64>, u8)] = &["
+  )
+  .map_err(we)?;
   for e in entries {
     let plus_s = match e.plus {
       Some(v) => format!("Some({v})"),
@@ -671,7 +690,14 @@ fn emit_token_array(
 ) -> Result<(), String> {
   writeln!(out, "static {name}: &[(&str, u8, &str)] = &[").map_err(we)?;
   for e in entries {
-    writeln!(out, "  ({}, {}, {}),", rust_escape(&e.key), e.cc, rust_escape(&e.text)).map_err(we)?;
+    writeln!(
+      out,
+      "  ({}, {}, {}),",
+      rust_escape(&e.key),
+      e.cc,
+      rust_escape(&e.text)
+    )
+    .map_err(we)?;
   }
   writeln!(out, "];\n").map_err(we)
 }
@@ -688,17 +714,18 @@ fn emit_let_alias_array(
 ) -> Result<(), String> {
   writeln!(out, "static {name}: &[(&str, &str)] = &[").map_err(we)?;
   for e in entries {
-    writeln!(out, "  ({}, {}),", rust_escape(&e.key), rust_escape(&e.target))
-      .map_err(we)?;
+    writeln!(
+      out,
+      "  ({}, {}),",
+      rust_escape(&e.key),
+      rust_escape(&e.target)
+    )
+    .map_err(we)?;
   }
   writeln!(out, "];\n").map_err(we)
 }
 
-fn emit_none_array(
-  out: &mut std::fs::File,
-  name: &str,
-  entries: &[String],
-) -> Result<(), String> {
+fn emit_none_array(out: &mut std::fs::File, name: &str, entries: &[String]) -> Result<(), String> {
   writeln!(out, "static {name}: &[&str] = &[").map_err(we)?;
   for e in entries {
     writeln!(out, "  {},", rust_escape(e)).map_err(we)?;
@@ -713,16 +740,19 @@ fn emit_token_list_array(
 ) -> Result<(), String> {
   writeln!(out, "static {name}: &[(&str, u32, u16)] = &[").map_err(we)?;
   for e in entries {
-    writeln!(out, "  ({}, {}, {}),", rust_escape(&e.key), e.tok_start, e.tok_count).map_err(we)?;
+    writeln!(
+      out,
+      "  ({}, {}, {}),",
+      rust_escape(&e.key),
+      e.tok_start,
+      e.tok_count
+    )
+    .map_err(we)?;
   }
   writeln!(out, "];\n").map_err(we)
 }
 
-fn emit_tok_pool(
-  out: &mut std::fs::File,
-  name: &str,
-  tokens: &[TokData],
-) -> Result<(), String> {
+fn emit_tok_pool(out: &mut std::fs::File, name: &str, tokens: &[TokData]) -> Result<(), String> {
   writeln!(out, "static {name}: &[(u8, &str)] = &[").map_err(we)?;
   for t in tokens {
     writeln!(out, "  ({}, {}),", t.cc, rust_escape(&t.text)).map_err(we)?;

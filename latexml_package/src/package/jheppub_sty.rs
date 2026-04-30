@@ -12,13 +12,25 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("inst_support");
 
-  // Author — Perl L32-34
+  // Author — Perl L32-34 carries `locked => 1`. The JHEP style overloads
+  // \author to always record institute marks and feed through
+  // \lx@author. Without the lock, latex.ltx \author (from article.cls)
+  // or a user-side \newcommand\author can replace our institute-tagging
+  // path and lose the [mark]-parsing branch.
   DefMacro!("\\author[]{}",
-    "\\ifx.#1.\\else\\@institutemark{#1}\\fi\\def\\@author{#2}\\lx@author{#2}");
+    "\\ifx.#1.\\else\\@institutemark{#1}\\fi\\def\\@author{#2}\\lx@author{#2}",
+    locked => true);
 
-  // Affiliation — Perl L36-38
+  // Affiliation — Perl L36-38 has `beforeDigest => sub { AssignValue(inPreamble => 0); }`
+  // so the body digests as if we're past \begin{document} — important since
+  // \affiliation is typically used inside the preamble-style frontmatter block.
+  // Without it, Rust left the inPreamble state on, which suppressed emitting the
+  // note in some code paths.
   DefConstructor!("\\affiliation[]{}",
-    "<ltx:note role='institutetext' mark='#1'>#2</ltx:note>", bounded => true);
+    "<ltx:note role='institutetext' mark='#1'>#2</ltx:note>", bounded => true,
+    before_digest => {
+      state::assign_value("inPreamble", false, None);
+    });
 
   // Footnote alias — Perl L41
   Let!("\\note", "\\footnote");
@@ -39,9 +51,17 @@ LoadDefinitions!({
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
   DefMacro!("\\collaborationImg[]{}", "");
 
-  // Acknowledgements — Perl L56-60
+  // Acknowledgements — Perl L56-60 emits `name='#name'` on
+  // <ltx:acknowledgements> with the name digested from
+  // \acknowledgmentsname. Rust was omitting the attribute, so
+  // downstream templates that need the title (e.g. HTML post-proc)
+  // had no name to pick up.
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
-  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements>");
+  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
+    properties => sub[_args] {
+      Ok(stored_map!("name" =>
+        stomach::digest(T_CS!("\\acknowledgmentsname"))?))
+    });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
   Tag!("ltx:acknowledgements", auto_close => true);
 

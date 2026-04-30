@@ -494,12 +494,12 @@ impl Default for Register {
       register_type: RegisterType::Number,
       getter:        None,
       setter:        None,
-      readonly:       false,
-      value:          None,
-      mathglyph:      None,
-      role:           None,
-      chardef_props:  HashMap::default(),
-      default:        None,
+      readonly:      false,
+      value:         None,
+      mathglyph:     None,
+      role:          None,
+      chardef_props: HashMap::default(),
+      default:       None,
     }
   }
 }
@@ -620,7 +620,9 @@ impl Definition for Register {
               props.insert("mathstyle", Stored::String(arena::pin_static(val)));
             }
           },
-          _ => { props.insert_sym(*k, v.clone()); }
+          _ => {
+            props.insert_sym(*k, v.clone());
+          },
         }
       }
       return Ok(vec![Digested::from(
@@ -760,7 +762,7 @@ impl Register {
     value: Option<RegisterValue>,
     mathglyph: Option<char>,
     role: Option<SymStr>,
-    props: CharDefProps
+    props: CharDefProps,
   ) -> Self {
     let chardef_props = props.to_hashmap();
     Register {
@@ -787,13 +789,13 @@ impl Register {
 }
 
 pub struct CharDefProps {
-  pub meaning: Option<SymStr>,
+  pub meaning:        Option<SymStr>,
   // pub name: Option<SymStr>,  // chardef_name: synthesized at invoke time from CS name
-  pub stretchy: Option<SymStr>,
-  pub scriptpos: Option<SymStr>,
-  pub mathstyle: Option<SymStr>,
+  pub stretchy:       Option<SymStr>,
+  pub scriptpos:      Option<SymStr>,
+  pub mathstyle:      Option<SymStr>,
   pub need_scriptpos: bool,
-  pub need_mathstyle: bool
+  pub need_mathstyle: bool,
 }
 impl CharDefProps {
   fn to_hashmap(&self) -> HashMap<Stored> {
@@ -820,6 +822,94 @@ impl CharDefProps {
       chardef_props.insert("need_mathstyle", Stored::Bool(true));
     }
     chardef_props
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn register_type_number_and_chardef_equal() {
+    // Perl parity: Number and CharDef are considered equal — a
+    // CharDef register can be assigned/compared as a Number.
+    // Documented in the `RegisterType::PartialEq trap` wisdom memory.
+    assert_eq!(RegisterType::Number, RegisterType::CharDef);
+    assert_eq!(RegisterType::CharDef, RegisterType::Number);
+  }
+
+  #[test]
+  fn register_type_distinct_between_other_variants() {
+    assert_ne!(RegisterType::Number, RegisterType::Dimension);
+    assert_ne!(RegisterType::Dimension, RegisterType::MuDimension);
+    assert_ne!(RegisterType::Glue, RegisterType::MuGlue);
+    assert_ne!(RegisterType::Token, RegisterType::Tokens);
+  }
+
+  #[test]
+  fn register_type_self_equality() {
+    // Each variant equals itself (except Any interactions).
+    for rt in [
+      RegisterType::Number,
+      RegisterType::Dimension,
+      RegisterType::MuDimension,
+      RegisterType::Glue,
+      RegisterType::MuGlue,
+      RegisterType::Token,
+      RegisterType::Tokens,
+    ] {
+      assert_eq!(rt, rt.clone(), "{rt:?}");
+    }
+  }
+
+  #[test]
+  fn register_value_from_number() {
+    let n = Number::new(42);
+    let rv: RegisterValue = n.into();
+    match rv {
+      RegisterValue::Number(v) => assert_eq!(v.value_of(), 42),
+      other => panic!("expected Number, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn register_value_from_dimension() {
+    let d = Dimension::new(65536);
+    let rv: RegisterValue = d.into();
+    match rv {
+      RegisterValue::Dimension(v) => assert_eq!(v.value_of(), 65536),
+      other => panic!("expected Dimension, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn register_value_from_pair() {
+    use crate::common::float::Float;
+    use crate::common::pair::Pair;
+    let p = Pair::new(Float(1.0), Float(2.0));
+    let rv: RegisterValue = p.into();
+    match rv {
+      RegisterValue::Pair(_) => {},
+      other => panic!("expected Pair, got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn register_type_from_value() {
+    // From<&RegisterValue> for RegisterType extracts the type tag.
+    let n = RegisterValue::Number(Number::new(1));
+    let d = RegisterValue::Dimension(Dimension::new(1));
+    assert_eq!(RegisterType::from(&n), RegisterType::Number);
+    assert_eq!(RegisterType::from(&d), RegisterType::Dimension);
+  }
+
+  #[test]
+  fn register_value_equality() {
+    let a = RegisterValue::Number(Number::new(42));
+    let b = RegisterValue::Number(Number::new(42));
+    let c = RegisterValue::Number(Number::new(43));
+    assert_eq!(a, b);
+    assert_ne!(a, c);
   }
 }
 
