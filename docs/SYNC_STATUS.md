@@ -258,16 +258,16 @@ recovery.
 |---|---|---|
 | `\f@encoding` / `\cf@encoding` panic — `Option::unwrap()` on `LookupFont`/`get_encoding` when text-only CS leaks into math mode | 0802.1100, 0811.2815, 0901.4716, 0904.1706, 0905.1491, 1203.2756 | **FIXED** `9420e6ff5` (chain `Option::and_then`, fall back to "" mirroring Perl `ExplodeText(undef)`) |
 | caption package internals — undefined `\caption@iflabelseparatorwithnewline`, `\caption@labelsep@name`, `\caption@@par` | 0711.0730, 1105.0041, 1202.1501 | **OPEN — architectural** Perl `caption.sty.ltxml` (134 lines) does NOT define these either; they come from upstream `caption.sty` raw-load. Gap is in our raw-load path, not the binding. Deferred until canvas done so we have full cluster size. |
-| `caption2` package — older, mutually-exclusive with `caption` | 1101.5566 | OPEN, small impact |
+| `caption2` package — older, mutually-exclusive with `caption` | 1101.5566 | **VERIFIED CLEAN 2026-04-29** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
 | `\section` undefined post-AMS-class-load | 1012.3836 | OPEN, investigate class-file flow |
 | math-mode `_`/`^` text-mode leak (math parser) | 0902.2645, 1204.6266 | OPEN, math-parser issue |
-| babel `frenchb` undefined language | 0909.3444 | **KNOWN DEFERRED** — TL2025 babel-french gap (memory entry `project_babel_francais_gap.md`, partially resolved 9df708fa9) |
+| babel `frenchb` undefined language | 0909.3444 | **FIXED 2026-04-29** `989c5a8ed` — TL2025 frenchb deprecation alias landed in `french_ldf.rs`. Min repro and full paper now clean. |
 | babel `activeacute` undefined language | 1211.4952 | OPEN, same family as babel-frenchb |
-| undefined paper-local CSes (`\invcmsq`, `\invcmsqpersecond`) | 1212.4860 | Per-paper, not architectural — likely Perl also unhappy |
-| `\@nil` + math `_` mode-leak (pgf interaction) | 1304.0737 | OPEN — combination, watch for additional pgf papers |
-| `\NC@list` undefined — `array.sty` internal helper | 1305.6480 | OPEN — array.sty binding gap |
-| IEEEtran.cls internals (`\ifCLASSINFOpdf`, `\IEEEauthorblockN`, `\IEEEauthorrefmark`) | 1308.6663 | OPEN — IEEEtran.cls.ltxml binding gap |
-| `subfigure.sty` brace mismatch | 1311.7348 | OPEN — investigate package |
+| undefined paper-local CSes (`\invcmsq`, `\invcmsqpersecond`) | 1212.4860 | **VERIFIED CLEAN 2026-04-29** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
+| `\@nil` + math `_` mode-leak (pgf interaction) | 1304.0737 | **VERIFIED CLEAN 2026-04-29** — 0 errors / 30 warnings on current HEAD. Pending sandbox-rebuild confirmation. |
+| `\NC@list` undefined — `array.sty` internal helper | 1305.6480 | **VERIFIED CLEAN 2026-04-29** — 0 errors / 126 warnings on current HEAD. Recovered by recent `find_file_binding_available` fix; pending sandbox-rebuild confirmation. |
+| IEEEtran.cls internals (`\ifCLASSINFOpdf`, `\IEEEauthorblockN`, `\IEEEauthorrefmark`) | 1308.6663 | **VERIFIED CLEAN 2026-04-29** — 0 errors on current HEAD. `find_file_fallback` resolves `./sty/IEEEtran` → `IEEEtran.cls.ltxml` binding. Pending sandbox-rebuild confirmation. |
+| `subfigure.sty` brace mismatch | 1311.7348 | **VERIFIED CLEAN 2026-04-29** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
 | paper-local `\bullets` | 1312.7418 | Per-paper, not architectural |
 | `1407.5769` math-parser infinite loop at page ~71 | 1407.5769 | **KNOWN DEFERRED** — documented in memory; Perl converts cleanly, Rust state-dependent hang in math parser |
 | **xy-pic** package — `\xymatrix`, `\ar` undefined (commutative diagrams) | 1409.7007 | OPEN — `xy.sty` binding gap; non-trivial package |
