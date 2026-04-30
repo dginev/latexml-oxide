@@ -260,9 +260,9 @@ recovery.
 | caption package internals — undefined `\caption@iflabelseparatorwithnewline`, `\caption@labelsep@name`, `\caption@@par` | 0711.0730, 1105.0041, 1202.1501 | **OPEN — architectural** Perl `caption.sty.ltxml` (134 lines) does NOT define these either; they come from upstream `caption.sty` raw-load. Gap is in our raw-load path, not the binding. Deferred until canvas done so we have full cluster size. |
 | `caption2` package — older, mutually-exclusive with `caption` | 1101.5566 | **VERIFIED CLEAN 2026-04-29** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
 | `\section` undefined post-AMS-class-load | 1012.3836 | OPEN, investigate class-file flow |
-| math-mode `_`/`^` text-mode leak (math parser) | 0902.2645, 1204.6266 | OPEN, math-parser issue |
+| math-mode `_`/`^` text-mode leak (math parser) | 0902.2645, 1204.6266 | **VERIFIED CLEAN 2026-04-30** — both papers convert with 0 errors on current HEAD. The math-leak architecture cluster has closed via cumulative fixes. Pending sandbox-rebuild confirmation. |
 | babel `frenchb` undefined language | 0909.3444 | **FIXED 2026-04-29** `989c5a8ed` — TL2025 frenchb deprecation alias landed in `french_ldf.rs`. Min repro and full paper now clean. |
-| babel `activeacute` undefined language | 1211.4952 | OPEN, same family as babel-frenchb |
+| babel `activeacute` undefined language | 1211.4952 | **FIXED 2026-04-30** — `activeacute` language stub (\l@activeacute + caption/extras/date hooks) added to `babel_sty.rs` so `\selectlanguage{activeacute}` resolves silently. 1 error → 0. |
 | undefined paper-local CSes (`\invcmsq`, `\invcmsqpersecond`) | 1212.4860 | **VERIFIED CLEAN 2026-04-29** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
 | `\@nil` + math `_` mode-leak (pgf interaction) | 1304.0737 | **VERIFIED CLEAN 2026-04-29** — 0 errors / 30 warnings on current HEAD. Pending sandbox-rebuild confirmation. |
 | `\NC@list` undefined — `array.sty` internal helper | 1305.6480 | **VERIFIED CLEAN 2026-04-29** — 0 errors / 126 warnings on current HEAD. Recovered by recent `find_file_binding_available` fix; pending sandbox-rebuild confirmation. |
@@ -271,10 +271,10 @@ recovery.
 | paper-local `\bullets` | 1312.7418 | Per-paper, not architectural |
 | `1407.5769` math-parser infinite loop at page ~71 | 1407.5769 | **KNOWN DEFERRED** — documented in memory; Perl converts cleanly, Rust state-dependent hang in math parser |
 | **xy-pic** package — `\xymatrix`, `\ar` undefined (commutative diagrams) | 1409.7007 | OPEN — `xy.sty` binding gap; non-trivial package |
-| `\@nil` + `\iffalse`/readBalanced unbalanced | 1410.5293, similar 1304.0737 | OPEN — kernel/etex helper gap |
-| math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | OPEN — math-parser / mode-tracker; growing cluster (6 papers) |
-| 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | OPEN — runaway allocation; possible math-parser parse-forest blowup |
-| `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | OPEN — keyval-vs-positional option mismatch; investigate aipproc.cls.ltxml + `\documentstyle` legacy dispatch (post `4e2b3777b`) |
+| `\@nil` + `\iffalse`/readBalanced unbalanced | 1410.5293, similar 1304.0737 | **VERIFIED CLEAN 2026-04-30** — both papers convert with 0 errors on current HEAD. Pending sandbox-rebuild confirmation. |
+| math-mode `_`/`^` text-mode leak (multi-error fatal) | 0902.2645, 1204.6266, 1503.00395, 1509.00524, 1601.07325, 1511.04697 | **VERIFIED CLEAN 2026-04-30** — all 6 papers convert with 0 errors on current HEAD; the architectural math-leak cluster has closed. Pending sandbox-rebuild confirmation. |
+| 2 GiB allocation abort after `\lx@note` mode mismatch | 1602.03151 | **VERIFIED CLEAN 2026-04-30** — converts with no obvious problems on current HEAD. Pending sandbox-rebuild confirmation. |
+| `\documentstyle{aipproc}` "Missing keyval arguments" — old AIP proceedings class | astro-ph9711070, hep-ex9805012, physics0011011, quant-ph0006101 | **VERIFIED CLEAN 2026-04-30** — astro-ph9711070 converts with no obvious problems on current HEAD; sweep the other 3 papers in next iteration. Pending sandbox-rebuild confirmation. |
 | `psfig.sty` not found | 7 papers (astro-ph0002288, 0103250, 0205108, 9802198, 9807011, hep-ph0102240, nucl-th0106028) | **REVISED: code-fixable.** psfig.sty IS dropped from TL but Rust HAS `psfig_sty.rs` binding registered. Papers use `\input{psfig.sty}` (raw \input of .sty), which Rust's `find_file` (notex=false default) doesn't probe for compiled bindings. Perl Package.pm:2260-2270 has explicit heuristic: if `\input` request looks like a .sty file AND the binding exists (notex=true probe), redirect to `RequirePackage(name)`. Rust's `Input!` doesn't mirror this. Fix: extend `\input` to consult binding registry for .sty/.cls extensions. |
 
 **Post-double-load-fix 2026-04-28 17:08 UTC (per-paper truth, latest entry per ID):**
