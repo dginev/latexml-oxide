@@ -1,5 +1,15 @@
 //! mhchem.sty — chemical formula typesetting.
 //!
+//! TODO(strict-perl-parity): once `latexml_engine` can faithfully
+//! handle the expl3 / xparse / chemgreek raw-load chain (currently
+//! the gaps are around `\group_begin:` non-boxing-frame handling
+//! and l3regex/l3tl-analysis register access during the chemgreek
+//! load triggered by the first `\ce{...}`), DELETE this binding so
+//! that `\usepackage{mhchem}` raw-loads the actual TL `mhchem.sty`,
+//! matching Perl LaTeXML's behavior (Perl has no `mhchem.sty.ltxml`).
+//! Driver paper: arXiv:1806.06448 (3 errors → 0 errors with this
+//! stub; full chemistry rendering needs the engine fix).
+//!
 //! Perl LaTeXML has no `mhchem.sty.ltxml` and raw-loads the actual
 //! TL `mhchem.sty` (which `\RequirePackage{chemgreek}` →
 //! `\RequirePackage{xparse}` → heavy expl3 machinery). Perl's expl3
