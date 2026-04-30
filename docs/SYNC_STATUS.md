@@ -24,11 +24,23 @@ backlog) now convert with 0 errors.** The cumulative recent fixes
 sandbox cleanups, `find_file_fallback` / `find_file_binding_available`,
 `5ce5615fb` / `af53cd9de` double-load fix, plus the IEEEtran / xy-pic
 / aipproc / psfig / caption / math-mode-leak resolutions) have closed
-nearly the entire prior-failure surface. The cluster ledger at
+nearly the entire prior-failure surface.
+
+**2026-04-30 latest-TSV sweep.** Sampled `latest_row_per_id` from the
+Apr 28 `results.tsv` (159 conversion_error / 4 conversion_fatal /
+3 abort / 1 timeout = 167 total non-OK):
+
+| Bucket | Sampled | Clean on HEAD |
+|---|---:|---:|
+| `conversion_error` | 30 of 159 | **29 / 30** (1 missing zip) |
+| `conversion_fatal` ∪ `abort` ∪ `timeout` | 8 of 8 | **7 / 8** (only `math0005251` still hangs at 60s timeout, 0 errors before kill) |
+
+**Combined coverage**: 127 of 130 valid-tested previously-failing
+papers now run cleanly on current HEAD. The cluster ledger at
 section §"Cluster ledger (live during canvas)" reflects this — only
-xy-pic (1409.7007) and the deferred 1407.5769 math-parser hang remain
-as real OPEN clusters. Final per-paper truth pending the sandbox
-rebuild in `~/data`.
+xy-pic (1409.7007), the deferred 1407.5769 math-parser hang, and a
+newly-confirmed `math0005251` hang remain as real OPEN clusters. Final
+per-paper truth pending the sandbox rebuild in `~/data`.
 
 Recent HEAD-side work after the first `\documentstyle` cleanup is not
 fully folded into the older narrative below:
