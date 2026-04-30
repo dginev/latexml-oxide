@@ -169,7 +169,7 @@ math9805021 were clean before.
 | 1710.03688 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch, French elsart |
 | 1802.05444 | 1 | `undefined:\textrhookrevepsilon` | tipa raw .sty load (contrib binding fires but raw input fails) |
 | 1804.04412 | 1 | `expected:}` | keyvals `readBalanced` unbalanced (Stage 5b parsing) |
-| astro-ph0004127 | 1 | `undefined:\uninger` | Mystery — location bogus, no `\uninger` in any source file |
+| astro-ph0004127 | 1 | `undefined:\uninger` | Bisected 2026-04-30: trigger is `\bibliography` + paper-local `.bbl` processing (truncations not reaching `\bibliography` are clean). Tiny doc + full `.bbl` reproduces. The string "uninger"/"inger" is NOT in the bbl, so the CS is being synthesized during Rust's `\thebibliography`/`\bibitem` digestion, not literally read. Next: instrument the bibliography-building path (`before_digest_bibliography`, `\thebibliography` constructor) to find which macro emits `\uninger`. Note: bibstyle is `spiebib` (unknown — Info, not error) |
 | astro-ph0512041 | 1 | `malformed:ltx:equation` | equation in `<ltx:date>` (schema/mode) |
 | astro-ph9608077 | 1 | `malformed:ltx:tags` | `<ltx:tags>` schema malformed |
 | hep-ph0702114 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch (same as 1710.03688) |
