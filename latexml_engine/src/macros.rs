@@ -170,6 +170,7 @@ macro_rules! parameter_rust_type {
   (Plain) => {Tokens};
   (Optional) => {Option<Tokens>};
   (OptionalMatch) => {Option<Tokens>};
+  (OptionalSemiverbatim) => {Option<Tokens>};
   (DefToken) => {Token};
   (Expanded) => {Tokens};
   (ExpandedPartially) => {Tokens};

@@ -252,10 +252,15 @@ LoadDefinitions!({
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 
   // 2.14.2 Figure Captions
-  // Perl: \figcaption checks if inside a figure environment.
+  // Perl: `DefMacro('\figcaption OptionalSemiverbatim', sub { ... })`.
+  // The optional arg is `OptionalSemiverbatim` — catcodes are neutralized
+  // so a literal `_` in `\figcaption[X_Y.ps]{...}` (paper-local filename
+  // hint for List-of-Figures) doesn't trigger the math-mode subscript
+  // catcode. Driver: arXiv:astro-ph/9808081 has 5× `\figcaption[X_Y.ps]`.
+  // \figcaption checks if inside a figure environment.
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
-  DefMacro!("\\figcaption[]", sub[(opt_arg)] {
+  DefMacro!("\\figcaption OptionalSemiverbatim", sub[(opt_arg)] {
     let env = state::lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {
       // Inside figure: act as \caption
