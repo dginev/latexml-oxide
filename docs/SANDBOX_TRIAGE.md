@@ -52,13 +52,16 @@ Debug info is dead weight: at this scale you only ever read the
 TSV summary, never a backtrace. So we use `--release`:
 
 ```
-cargo build --release --bin cortex_worker --features cortex
+cargo build --release --bin cortex_worker --features cortex --jobs 20
 tools/benchmark_10k.sh --workers 16 --timeout 120
 ```
 
-The release profile gives `lto = "fat"` + `codegen-units = 1`
-+ `strip = "symbols"` + `opt-level = 3`. The slow (~10 min cold)
-build is amortized over 10k conversions.
+The release profile gives `lto = "thin"` + `codegen-units = 20`
++ `strip = "symbols"` + `opt-level = 3`. For the local 32 GB /
+20-thread laptop, that keeps strong runtime optimization while using
+the available cores during a fresh build. For one-off maximum optimizer
+scope, `cargo build --profile maxperf ...` keeps the old `fat` LTO /
+single-CGU shape.
 
 The output is a single `results.tsv` (one row per arxiv ID) plus
 per-paper `.log` files in `$OUTPUT_DIR/`.
@@ -116,8 +119,8 @@ The two profiles' settings are *mutually exclusive optima*:
 | Setting             | Canvas (`release`) | Triage (`test`) | Why exclusive |
 |---------------------|-------------------:|----------------:|---|
 | `opt-level`         | 3                  | 1               | `-O3` inlines aggressively → backtraces lose frames + parameters; `-O1` has tolerable test runtime + faithful frames |
-| `lto`               | `"fat"`            | (off)           | LTO doubles link RAM and 5×s build time — fine once per 10k conversions, prohibitive per-edit |
-| `codegen-units`     | 1                  | 256             | Few CGUs = best optimization; many CGUs = best incremental rebuild |
+| `lto`               | `"thin"`           | (off)           | Thin LTO keeps cross-crate optimization but parallelizes better on the local 20-thread machine; full fat LTO is reserved for `maxperf` |
+| `codegen-units`     | 20                 | 256             | Moderate CGUs use local CPU during release builds; many CGUs remain best for incremental test rebuilds |
 | `debug`             | `false`            | `"full"`        | DWARF doubles binary size and disk I/O — wasted under `release`, essential under `test` |
 | `debug-assertions`  | off                | on              | Asserts cost runtime cycles — bad for wall-clock, great for invariant checking |
 | `incremental`       | false              | true            | Incremental artifacts skew LTO decisions; required for fast iteration |

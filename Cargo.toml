@@ -12,55 +12,27 @@ members = [
 resolver = "2"
 
 [profile.release]
-# Distribution-grade. Best practice for "ship to users / deploy /
-# benchmark" — maximize runtime performance, minimize binary size,
-# accept any build-time cost. Anyone running `cargo build --release`
-# (Cortex worker deployment, downstream packaging, perf measurement)
-# gets reproducible, fully-optimized binaries.
+# Local benchmark/deployment profile. This is tuned for the 32 GB / 20-thread
+# laptop used to rebuild the sandbox corpus: keep strong optimized binaries
+# while letting rustc/LLVM use the machine instead of serializing around one
+# huge codegen unit and a fat-LTO link.
 #
-# Knobs (each chosen per Rust release-profile best-practice):
-#
-#   opt-level = 3
-#       Full LLVM optimization. Default for `release`, kept explicit.
-#
-#   lto = "fat"
-#       Whole-program link-time optimization across the entire
-#       dep graph. Biggest single perf win for latexml's hot
-#       tokenizer/digester/math-parser loops (cross-crate inlining
-#       + DCE) and shrinks the final binary by ~30 % vs no-LTO.
-#       Costs minutes of link time + several GB of RAM, which is
-#       exactly the trade we want for a release build.
-#
-#   codegen-units = 1
-#       One LLVM module per crate = LLVM sees the whole crate at
-#       once → maximum intra-crate inlining + DCE + global opts.
-#       Slowest compile, fastest output. Combined with `lto = "fat"`,
-#       gives the LLVM optimizer the largest possible scope.
-#
-#   strip = "symbols"
-#       Strip ALL non-essential ELF symbol and debug data from the
-#       output for smallest binary. Coupled with `debug = false`,
-#       removes both line tables and symbol names.
-#
-#   debug = false
-#       No DWARF emitted in the first place — saves rustc work
-#       upstream of `strip`.
-#
-#   incremental = false
-#       Incremental release artifacts skew optimization decisions
-#       across runs and defeat the point of an LTO build.
-#
-#   overflow-checks = false
-#       Default for `release`, kept explicit. Integer wrap is safe
-#       in the hot paths and the check is a non-trivial cost on
-#       arithmetic-heavy loops.
+# For a one-off "absolute smallest/fastest binary, build time irrelevant"
+# artifact, use `cargo build --profile maxperf ...`.
 opt-level = 3
-lto = "fat"
-codegen-units = 1
+lto = "thin"
+codegen-units = 20
 strip = "symbols"
 debug = false
 incremental = false
 overflow-checks = false
+
+[profile.maxperf]
+inherits = "release"
+# Maximum optimizer scope. This can underuse a 20-thread laptop and take much
+# longer, but preserves the old "every last runtime percent" profile.
+lto = "fat"
+codegen-units = 1
 
 # Test profile — local `cargo test`. Optimised for *diagnosability*,
 # not for build speed or RAM economy. Devs typically have 32-64 GB
@@ -165,4 +137,3 @@ lto = false
 incremental = false
 debug = false
 strip = "symbols"
-

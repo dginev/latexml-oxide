@@ -61,13 +61,14 @@ runtime, the pipeline silently falls back to `convert`.
 
 ### Build profiles (Rust best practice)
 
-Three named profiles in `Cargo.toml`, each tuned for one purpose:
+Four named profiles in `Cargo.toml`, each tuned for one purpose:
 
 | Profile | When | Goal |
 |---------|------|------|
 | **`test`** (default for `cargo test`) | day-to-day development | Maximum debug info (`debug = "full"`, `debug-assertions`, `overflow-checks`), incremental rebuilds, `-O1` for tolerable test runtime. Use as much local RAM/CPU as needed. |
 | **`ci`**   | GitHub Actions only      | Lowest possible RAM (16 GB runner budget) and fastest compile (`opt-level = 0`, `codegen-units = 256`, no LTO). Just enough to prove tests pass. |
-| **`release`** | distribution / final perf measurement | Best practice release: `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`. Slowest build, fastest runtime, smallest binary. |
+| **`release`** | local sandbox canvas / perf measurement | Laptop-throughput release: `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Strong runtime optimization while using the 20-thread local machine during release builds. |
+| **`maxperf`** | one-off absolute runtime build | Preserves the old maximum optimizer scope: `lto = "fat"`, `codegen-units = 1`. Slower and less parallel, but available when build time is irrelevant. |
 
 ### Sample use
 

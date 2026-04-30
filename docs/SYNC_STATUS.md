@@ -372,13 +372,14 @@ large tikz/math documents; not architectural concerns.
 
 ## Build profiles & sandbox workflow (canvas / triage split)
 
-Three named profiles in `Cargo.toml`, each tuned for one purpose
+Four named profiles in `Cargo.toml`, each tuned for one purpose
 — and the 10k sandbox is run as a **two-phase pipeline** that
 uses two of them:
 
 | Profile | When | Goal |
 |---------|------|------|
-| `release` | sandbox **canvas** (`tools/benchmark_10k.sh`), perf measurement, distribution | `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`, `opt = 3` — slow build, fastest runtime |
+| `release` | sandbox **canvas** (`tools/benchmark_10k.sh`), perf measurement | `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`, `opt = 3` — optimized local build that uses the 20-thread laptop |
+| `maxperf` | one-off absolute runtime build | `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`, `opt = 3` — slowest build, maximum optimizer scope |
 | `test` (default) | sandbox **triage** (`tools/triage_failure.sh`), local `cargo test`, debugger | `debug = "full"`, `debug-assertions`, `overflow-checks`, `incremental`, `panic = "unwind"` |
 | `ci` | GitHub Actions only (16 GB / 4 vCPU) | `opt = 0`, `codegen-units = 256`, `lto = false` — minimum compile work, lowest peak RSS |
 
@@ -395,7 +396,7 @@ full backtraces, debug-assertions, ~5-second incremental
 rebuilds for the edit-rebuild-rerun loop.
 
 The two profiles are *adversarial* — what helps one hurts the
-other (`debug=full` doubles binary size; `lto=fat` defeats
+other (`debug=full` doubles binary size; LTO defeats
 incremental; `opt=0` torpedoes any real benchmark). One
 "compromise" profile would be bad at both jobs; the split is
 load-bearing.

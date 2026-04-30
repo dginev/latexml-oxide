@@ -14,16 +14,25 @@ set -euo pipefail
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+CUSTOM_WORKER_BIN=false
+if [[ -n "${WORKER_BIN:-}" ]]; then
+  CUSTOM_WORKER_BIN=true
+fi
+
 INPUT_DIR="${INPUT_DIR:-$HOME/data/10k_sandbox}"
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
-WORKER_BIN="${WORKER_BIN:-$(dirname "$0")/../target/release/cortex_worker}"
+WORKER_BIN="${WORKER_BIN:-$REPO_ROOT/target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
 WORKERS="${WORKERS:-16}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
 MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
+BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 LIMIT=0              # 0 = no limit
 RERUN_FAILURES=false
-MAX_OUTPUT_MB=200    # cap: skip output ZIPs larger than this
+MAX_OUTPUT_MB="${MAX_OUTPUT_MB:-200}"  # cap: skip output ZIPs larger than this
 
 # ─── Parse arguments ─────────────────────────────────────────────────────────
 
@@ -35,14 +44,14 @@ while [[ $# -gt 0 ]]; do
     --timeout)      TIMEOUT_S="$2"; shift 2 ;;
     --limit)        LIMIT="$2"; shift 2 ;;
     --rerun-failures) RERUN_FAILURES=true; shift ;;
-    --worker-bin)   WORKER_BIN="$2"; shift 2 ;;
+    --worker-bin)   WORKER_BIN="$2"; CUSTOM_WORKER_BIN=true; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
       echo "  --input-dir DIR       Input directory (default: \$HOME/data/10k_sandbox)"
       echo "  --output-dir DIR      Output directory (default: \$HOME/data/10k_sandbox_html)"
-      echo "  --workers N           Parallel workers (default: 4)"
+      echo "  --workers N           Parallel workers (default: 16)"
       echo "  --timeout SECS        Per-task wall-clock timeout (default: 120)"
       echo "  --limit N             Process only first N files (default: 0 = all)"
       echo "  --rerun-failures      Only re-run tasks that failed in previous run"
@@ -63,27 +72,41 @@ if [[ ! -d "$INPUT_DIR" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$WORKER_BIN" ]]; then
-  # Try resolving relative to script dir, preferring release then debug.
-  REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-  for candidate in "release" "debug"; do
-    if [[ -x "$REPO_ROOT/target/$candidate/cortex_worker" ]]; then
-      WORKER_BIN="$REPO_ROOT/target/$candidate/cortex_worker"
-      break
-    fi
-  done
-  if [[ ! -x "$WORKER_BIN" ]]; then
-    echo "ERROR: cortex_worker binary not found."
-    echo "  Build with: cargo build --release --bin cortex_worker  # publish-grade canvas"
-    echo "         (or: cargo build --bin cortex_worker            # local debug)"
+for required in cargo parallel timeout flock unzip awk find sort; do
+  if ! command -v "$required" >/dev/null 2>&1; then
+    echo "ERROR: required command not found: $required"
     exit 1
   fi
-fi
+done
 
 mkdir -p "$OUTPUT_DIR"
 
 # Disable core dumps globally for this script and all children
 ulimit -c 0
+
+BUILD_RUSTFLAGS="${RUSTFLAGS:-}"
+for flag in -Clinker-features=+lld -Zunstable-options -Ctarget-cpu=native; do
+  case " $BUILD_RUSTFLAGS " in
+    *" $flag "*) ;;
+    *) BUILD_RUSTFLAGS="${BUILD_RUSTFLAGS:+$BUILD_RUSTFLAGS }$flag" ;;
+  esac
+done
+
+echo "Building fresh release cortex_worker with ${BUILD_JOBS} cargo jobs ..."
+(
+  cd "$REPO_ROOT"
+  RUSTFLAGS="$BUILD_RUSTFLAGS" cargo build --release --bin cortex_worker --features cortex --jobs "$BUILD_JOBS"
+)
+
+if [[ "$CUSTOM_WORKER_BIN" == true ]]; then
+  echo "WARNING: using custom worker binary despite fresh release build: $WORKER_BIN"
+fi
+
+if [[ ! -x "$WORKER_BIN" ]]; then
+  echo "ERROR: cortex_worker binary not found after release build: $WORKER_BIN"
+  echo "  Expected build command: cargo build --release --bin cortex_worker --features cortex"
+  exit 1
+fi
 
 # ─── Disk space check ────────────────────────────────────────────────────────
 
@@ -111,7 +134,49 @@ fi
 TASK_LIST=$(mktemp)
 # trap set below after RUN_RESULTS is created
 
-if [[ "$RERUN_FAILURES" == true ]] && [[ -f "$RESULTS_TSV" ]]; then
+valid_status_zip() {
+  local zip_path="$1"
+  local status
+
+  [[ -f "$zip_path" ]] || return 1
+  unzip -tq "$zip_path" >/dev/null 2>&1 || return 1
+
+  status=$(unzip -p "$zip_path" status 2>/dev/null || true)
+  case "$status" in
+    Status:conversion:[0-3]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+has_completed_result() {
+  local arxiv_id="$1"
+  local row exit_code category output_zip
+
+  [[ -f "$RESULTS_TSV" ]] || return 1
+
+  row=$(awk -F'\t' -v id="$arxiv_id" 'NR>1 && $1 == id {line=$0} END {if (line != "") print line}' "$RESULTS_TSV")
+  [[ -n "$row" ]] || return 1
+
+  exit_code=$(awk -F'\t' '{print $3}' <<< "$row")
+  category=$(awk -F'\t' '{print $7}' <<< "$row")
+  output_zip="$OUTPUT_DIR/${arxiv_id}.zip"
+
+  if [[ "$exit_code" == "0" ]] || [[ "$category" == "ok" ]] ||
+     [[ "$category" == "conversion_error" ]] || [[ "$category" == "conversion_fatal" ]]; then
+    if valid_status_zip "$output_zip"; then
+      return 0
+    fi
+    return 1
+  fi
+
+  return 0
+}
+
+if [[ "$RERUN_FAILURES" == true ]]; then
+  if [[ ! -f "$RESULTS_TSV" ]]; then
+    echo "ERROR: --rerun-failures requested, but no previous results TSV exists: $RESULTS_TSV"
+    exit 1
+  fi
   # Re-run any non-OK paper, sorted by name. Includes both:
   #   - exit_code != 0 (panics, OOM, timeouts, aborts) AND
   #   - exit_code == 0 with category != "ok" (conversion_error, _fatal, etc.)
@@ -124,30 +189,18 @@ if [[ "$RERUN_FAILURES" == true ]] && [[ -f "$RESULTS_TSV" ]]; then
       echo "$input_zip"
     fi
   done > "$TASK_LIST"
-  # Remove old results for these failures so they get fresh entries
-  if [[ -s "$TASK_LIST" ]]; then
-    # Build grep pattern to exclude re-run IDs
-    EXCLUDE_PATTERN=$(sed 's|.*/||; s|\.zip$||' "$TASK_LIST" | paste -sd'|')
-    grep -vE "^(${EXCLUDE_PATTERN})\t" "$RESULTS_TSV" > "${RESULTS_TSV}.tmp" || true
-    # Keep header
-    head -1 "$RESULTS_TSV" > "${RESULTS_TSV}.new"
-    tail -n +2 "${RESULTS_TSV}.tmp" >> "${RESULTS_TSV}.new" 2>/dev/null || true
-    mv "${RESULTS_TSV}.new" "$RESULTS_TSV"
-    rm -f "${RESULTS_TSV}.tmp"
-  fi
 else
-  # Full run with resumability: skip files that already have output, sorted by name
-  echo "Mode: full run (skipping completed)"
+  # Full run with resumability: skip files only when both results and artifacts validate.
+  echo "Mode: full run (skipping completed validated rows)"
   SKIPPED=0
-  for zip in $(ls "$INPUT_DIR"/*.zip | sort); do
+  while IFS= read -r zip; do
     arxiv_id=$(basename "$zip" .zip)
-    output_zip="$OUTPUT_DIR/${arxiv_id}.zip"
-    if [[ -f "$output_zip" ]]; then
+    if has_completed_result "$arxiv_id"; then
       SKIPPED=$((SKIPPED + 1))
       continue
     fi
     echo "$zip"
-  done > "$TASK_LIST"
+  done < <(find "$INPUT_DIR" -maxdepth 1 -type f -name '*.zip' -print | sort) > "$TASK_LIST"
   if (( SKIPPED > 0 )); then
     echo "Skipped:   $SKIPPED already completed"
   fi
@@ -174,15 +227,6 @@ if [[ ! -f "$RESULTS_TSV" ]]; then
   printf "arxiv_id\tentry_id\texit_code\twall_time_s\toutput_size_bytes\tstatus_line\tcategory\n" > "$RESULTS_TSV"
 fi
 
-# Remove any stale entries for files we're about to (re-)process
-# This prevents duplicates when re-running failed tasks in full-run mode
-REPROCESS_IDS=$(sed 's|.*/||; s|\.zip$||' "$TASK_LIST" | paste -sd'|')
-if [[ -n "$REPROCESS_IDS" ]]; then
-  head -1 "$RESULTS_TSV" > "${RESULTS_TSV}.dedup"
-  tail -n +2 "$RESULTS_TSV" | grep -vE "^(${REPROCESS_IDS})\t" >> "${RESULTS_TSV}.dedup" 2>/dev/null || true
-  mv "${RESULTS_TSV}.dedup" "$RESULTS_TSV"
-fi
-
 # Track current-run results separately for accurate summary
 RUN_RESULTS=$(mktemp)
 trap "rm -f '$TASK_LIST' '$RUN_RESULTS'" EXIT
@@ -195,13 +239,17 @@ convert_one() {
   local arxiv_id
   arxiv_id=$(basename "$input_zip" .zip)
   local output_zip="$OUTPUT_DIR/${arxiv_id}.zip"
+  local output_tmp="$OUTPUT_DIR/.${arxiv_id}.zip.${BASHPID}.${RANDOM}.tmp"
   local log_file="$OUTPUT_DIR/${arxiv_id}.log"
+  local log_tmp="$OUTPUT_DIR/.${arxiv_id}.log.${BASHPID}.${RANDOM}.tmp"
 
   # Per-task temp directory (cleaned up even on kill)
   local task_tmp
   task_tmp=$(mktemp -d "${TMPDIR:-/tmp}/latexml_bench_${arxiv_id}_XXXXXX")
+  trap 'rm -rf "$task_tmp"; rm -f "$output_tmp" "$log_tmp"' RETURN
 
   local start_time wall_time exit_code output_size status_line category
+  category=""
 
   start_time=$(date +%s%N)
 
@@ -210,21 +258,21 @@ convert_one() {
   exit_code=0
   TMPDIR="$task_tmp" timeout --kill-after=10 "$TIMEOUT_S" \
     bash -c "ulimit -v $MAX_RAM_KB 2>/dev/null; exec \"\$@\"" -- \
-    "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_zip" \
+    "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_tmp" \
     --timeout "$TIMEOUT_S" \
-    2>"$log_file" || exit_code=$?
+    2>"$log_tmp" || exit_code=$?
 
   wall_time=$(( ($(date +%s%N) - start_time) / 1000000 ))  # milliseconds
 
   # Determine output size
-  if [[ -f "$output_zip" ]]; then
-    output_size=$(stat --format=%s "$output_zip" 2>/dev/null || echo 0)
+  if [[ -f "$output_tmp" ]]; then
+    output_size=$(stat --format=%s "$output_tmp" 2>/dev/null || echo 0)
 
     # Cap: remove oversized outputs (likely blowup)
     local output_mb=$(( output_size / 1048576 ))
     if (( output_mb > MAX_OUTPUT_MB )); then
       echo "WARNING: $arxiv_id output ${output_mb}MB exceeds ${MAX_OUTPUT_MB}MB cap, removing" >&2
-      rm -f "$output_zip"
+      rm -f "$output_tmp"
       output_size=0
       category="oversized"
     fi
@@ -234,9 +282,15 @@ convert_one() {
 
   # Extract status line from output ZIP if present
   status_line=""
-  if [[ -f "$output_zip" ]] && (( output_size > 0 )); then
-    status_line=$(unzip -p "$output_zip" status 2>/dev/null || echo "")
+  if [[ -f "$output_tmp" ]] && (( output_size > 0 )); then
+    if unzip -tq "$output_tmp" >/dev/null 2>&1; then
+      status_line=$(unzip -p "$output_tmp" status 2>/dev/null || echo "")
+    else
+      category="invalid_output"
+    fi
   fi
+  status_line=${status_line//$'\t'/ }
+  status_line=${status_line//$'\n'/ }
 
   # Categorize result
   # Status codes: 0=no_problem, 1=warnings, 2=errors, 3=fatal
@@ -245,12 +299,14 @@ convert_one() {
       0)
         if (( output_size == 0 )); then
           category="empty_output"
-        elif [[ "$status_line" == *"conversion:2"* ]]; then
-          category="conversion_error"
-        elif [[ "$status_line" == *"conversion:3"* ]]; then
-          category="conversion_fatal"
         else
-          category="ok"
+          case "$status_line" in
+            Status:conversion:0|Status:conversion:1) category="ok" ;;
+            Status:conversion:2) category="conversion_error" ;;
+            Status:conversion:3) category="conversion_fatal" ;;
+            "") category="missing_status" ;;
+            *) category="invalid_status" ;;
+          esac
         fi
         ;;
       124) category="timeout" ;;    # timeout(1) exit code
@@ -259,6 +315,20 @@ convert_one() {
       134) category="abort" ;;       # SIGABRT (panic)
       *)   category="error" ;;
     esac
+  fi
+
+  case "$category" in
+    ok|conversion_error|conversion_fatal)
+      mv -f "$output_tmp" "$output_zip"
+      ;;
+    *)
+      rm -f "$output_tmp"
+      output_size=0
+      ;;
+  esac
+
+  if [[ -f "$log_tmp" ]]; then
+    mv -f "$log_tmp" "$log_file"
   fi
 
   # Wall time in seconds (with 1 decimal)
@@ -271,12 +341,8 @@ convert_one() {
     "$arxiv_id" "$arxiv_id" "$exit_code" "$wall_time_s" "$output_size" "$status_line" "$category")
   (
     flock 200
-    echo "$result_line" >> "$RESULTS_TSV"
     echo "$result_line" >> "$RUN_RESULTS"
   ) 200>"${RESULTS_TSV}.lock"
-
-  # Cleanup per-task temp directory
-  rm -rf "$task_tmp"
 
   # Progress indicator to stderr
   echo "[$category] $arxiv_id  ${wall_time_s}s  ${output_size}B" >&2
@@ -292,15 +358,38 @@ echo ""
 
 RUN_START=$(date +%s)
 
+PARALLEL_EXIT=0
 parallel --will-cite \
   --jobs "$WORKERS" \
   convert_one {} \
-  < "$TASK_LIST"
+  < "$TASK_LIST" || PARALLEL_EXIT=$?
 
-PARALLEL_EXIT=$?
 if (( PARALLEL_EXIT != 0 )); then
   echo "Note: parallel exited with code $PARALLEL_EXIT (some tasks failed, see results)" >&2
 fi
+
+# Atomically merge current-run rows into the cumulative TSV after workers finish.
+# Existing rows are kept unless the current run produced a replacement row.
+MERGED_RESULTS=$(mktemp)
+RUN_IDS=$(mktemp)
+awk -F'\t' '{print $1}' "$RUN_RESULTS" | sort -u > "$RUN_IDS"
+{
+  head -1 "$RESULTS_TSV"
+  awk -F'\t' 'FNR == NR {ids[$1] = 1; next} FNR > 1 && !($1 in ids)' "$RUN_IDS" "$RESULTS_TSV"
+  cat "$RUN_RESULTS"
+} > "$MERGED_RESULTS"
+mv "$MERGED_RESULTS" "$RESULTS_TSV"
+
+# Avoid leaving stale success artifacts behind after a paper now fails before
+# producing a valid output ZIP.
+while IFS=$'\t' read -r arxiv_id _entry_id _exit_code _wall_time _output_size _status_line category; do
+  case "$category" in
+    ok|conversion_error|conversion_fatal) ;;
+    *) rm -f "$OUTPUT_DIR/${arxiv_id}.zip" ;;
+  esac
+done < "$RUN_RESULTS"
+
+rm -f "$RUN_IDS"
 
 RUN_END=$(date +%s)
 RUN_DURATION=$(( RUN_END - RUN_START ))
