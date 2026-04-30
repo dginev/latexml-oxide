@@ -56,6 +56,44 @@ static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
 
+/// Mirror of Perl `latex_constructs.pool.ltxml:2569-2574`'s
+/// `getShortSource =~ /^plain/` check. Two locator shapes count as
+/// "from plain":
+///   1. A short source starting with "plain" — e.g. `plain.tex`,
+///      `plain.dump.txt` — matching Perl's regex one-for-one.
+///   2. The Rust-only sentinel `<embedded:plain>` produced by
+///      dump-loaded definitions (`Locator::get_short_source` does
+///      not basename-strip this string because it contains a `:`).
+///
+/// We deliberately do NOT use looser `contains("plain.")` /
+/// `contains("/plain")` checks — they would match unrelated
+/// paths such as `complainttext.tex` or `…/plainness/foo.sty`.
+fn is_plain_definition_source(locator: Locator) -> bool {
+  if locator.get_short_source("").starts_with("plain") {
+    return true;
+  }
+  arena::with(locator.get_source(), |s| s == "<embedded:plain>")
+}
+
+/// Mirror of Perl `isDefinableLaTeX` (latex_constructs.pool.ltxml:2569-2574).
+/// Returns `(definable, plain_origin)`:
+///   * `definable` — Perl's bool result. The CS is either undefined,
+///     or its prior definition came from the plain pool (allowed to
+///     be overridden by LaTeX-pool `\newcommand`).
+///   * `plain_origin` — Rust-only flag. True when the prior definition
+///     came from plain. Callers use it to bypass any `<cs>:locked`
+///     guard installed on plain-pool CSes (Rust-specific lock
+///     mechanism not present in Perl). False when the CS was
+///     undefined (no prior locator → no lock to bypass).
+fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
+  if is_definable(cs) {
+    return Ok((true, false));
+  }
+  let plain = lookup_definition(cs)?
+    .is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
+  Ok((plain, plain))
+}
+
 //======================================================================
 // LaTeX helper functions (moved from latex_functions.rs)
 // Perl: inline in latex_constructs.pool.ltxml
@@ -5416,10 +5454,11 @@ LoadDefinitions!({
   // Found in arxiv 1611.05395.
   Let!("\\a", "\\@tabacckludge");
 
-  DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
+  DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
-    if !IsDefinable!(&cs_token) {
+    let (definable, plain_origin) = is_definable_latex(&cs_token)?;
+    if !definable {
       if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);
@@ -5427,6 +5466,12 @@ LoadDefinitions!({
       return Ok(vec![]);
     }
     let macro_args = convert_latex_args(nargs, opt)?;
+    // When the CS came from the plain pool, bypass any `<cs>:locked`
+    // guard so latex.ltx can layer over plain. RAII guard ensures the
+    // lock state is restored even if `DefMacro!` errors. No-op when
+    // the CS was previously undefined.
+    let _unlock = plain_origin.then(
+      || latexml_core::state::local_state_unlocked_guard(true));
     DefMacro!(cs_token, macro_args, body);
   });
 
