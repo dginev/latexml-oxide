@@ -14,7 +14,51 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ## Open tasks (highest leverage first)
 
-### 1. math0005251 — math-parser cumulative-state OOM
+### 1. **REGRESSION**: revtex `\begin{equation}$$...$$\end{equation}` (was 0, now 1+ errs)
+
+Bisected to commit `b093bdd30` (\documentstyle 3-branch DefMacro).
+At `b093bdd30~1` (`62e6291fe` era): hep-ph0003251 = **0 errors**.
+At HEAD: hep-ph0003251 = **351 errors** (242× `Unexpected:_` + 86×
+`Unexpected:^` + 13× `XMArray malformed` + …).
+
+**9-line min repro** (saved as `/tmp/revtex_array_dollar_repro.tex`):
+```latex
+\documentstyle{revtex}
+\begin{document}
+\begin{equation}
+$$\begin{array}{rcl}
+a &=& b\\
+\end{array}$$
+\end{equation}
+\end{document}
+```
+Perl: 0 errs. Rust HEAD: 1 err `Error:malformed:ltx:XMArray
+"ltx:XMArray" isn't allowed in <ltx:para>`.
+
+**Root cause** (suspected): revtex3_support's `\begin{equation}` Env
+binds `Let(T_MATH, '\lx@dollar@in@oldrevtex')` in beforeDigest, so
+inner `$` should toggle math/text. But Rust at HEAD hits the
+`$$\begin{array}` content with the wrong math frame, dumping the
+array into `<ltx:para>` instead of `<ltx:Math>`. The dollar-trick
+binding either isn't taking effect or the new tex_job.rs Branch 1
+flow disrupts state setup before revtex3_support is loaded. Min repro
+runs cleanly at b093bdd30~1, breaks at b093bdd30+ — so the load order
+or option-handling change broke the equation env's beforeDigest.
+
+* Goal: 9-line min repro produces 0 errors. hep-ph0003251 351 → 0.
+* Expected fix path: trace why `Let(T_MATH, ...)` in revtex3_support
+  equation env doesn't apply. Possibly revtex_sty's
+  `require_package_with_options("revtex3_support")` runs at a point
+  where the local Let inside DefEnvironment's beforeDigest doesn't
+  fire. Or the new article.cls flow rebinds T_MATH and clobbers it.
+* Acceptance: `latexml_oxide /tmp/revtex_array_dollar_repro.tex`
+  produces 0 errors. Validate hep-ph0003251 also reaches 0.
+* Workspace 1110/0/0 was reported on b093bdd30 but the test suite
+  doesn't cover this revtex equation variant — adding a TDD test
+  (e.g. `tests/structure/revtex_equation_dollar_array.{tex,xml}`)
+  alongside the fix is mandatory.
+
+### 2. math0005251 — math-parser cumulative-state OOM
 
 Only filesystem-level hard failure left in the April29 sandbox. Rust
 allocates ~28 GB digesting the paper's math while Perl finishes in
