@@ -279,6 +279,28 @@ LoadDefinitions!({
   DefMacro!("\\acrfullpl Semiverbatim",  "");
   DefMacro!("\\Acrfull Semiverbatim",    "");
   DefMacro!("\\Acrfullpl Semiverbatim",  "");
+
+  // \glsresetall[<glossaries>] — resets the "first use" flag for all
+  // entries. We don't track first-use state, so it's a safe no-op.
+  // Mirrors TL glossaries.sty L3370 `\newcommand*{\glsresetall}[1][...]`.
+  DefMacro!("\\glsresetall []", "");
+  DefMacro!("\\glsresetempty []", "");
+  // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
+  // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
+  // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
+  // (noltxml=1)` to raw-load the actual TL `.sty` and override only the
+  // `\@newglossaryentryposthook` (which then calls
+  // `\lx@glossaries@newentry{}{} RequiredKeyVals` with already-flat tokens).
+  // Rust's binding hand-rolls `\newglossaryentry{} RequiredKeyVals`, so it
+  // can't accept the user-source's `}\n{` whitespace between args that the
+  // raw TeX `\def\newglossaryentry#1#2{...}` happily skips. Until the Rust
+  // binding is refactored to follow Perl's raw-load+hook pattern,
+  // `\loadglsentries` is a no-op — sufficient for the common case where
+  // `\acrshort{label}` etc. don't depend on the entry being pre-defined.
+  // Driver paper: arXiv:1806.05262 (`\loadglsentries{definitions}` →
+  // 2 errors → 0 errors).
+  DefMacro!("\\loadglsentries []{}", "");
+
   // glossaries-internal macros that might be called
   DefMacro!("\\warn@noprintglossary", "");
   // glossary title macros
