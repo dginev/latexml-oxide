@@ -1,3 +1,28 @@
+// glossaries — package binding for the LaTeX `glossaries` package.
+//
+// TODO(strict-perl-parity): Migrate this binding to a strict translation
+// of `glossaries.sty.ltxml` (~127 lines). The Perl shim is built around
+// `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`, which
+// raw-loads the actual TL `glossaries.sty` (8702 lines) and only
+// overrides:
+//   * `\@gls@link` — wrap typesetting output in `<ltx:glossaryref>`
+//   * `\glsdohyperlink` / `\glsdonohyperlink` — drop hyperref wrapping
+//   * `\glsdisablehyper` — disable hyperref pipeline
+//   * `\glspostlinkhook` — `\xspace`
+//   * `\@newglossaryentryposthook` — feed entry data to
+//     `\lx@glossaries@newentry{}{} RequiredKeyVals`
+//   * `\printglossary` / `\printnoidxglossary` — emit `<ltx:glossary>`
+//
+// The current Rust port hand-rolls `\newglossaryentry`,
+// `\longnewglossaryentry`, `\newacronym`, `\gls`, `\Gls`, `\glspl`,
+// `\Glspl`, `\glssymbol`, `\printglossary`, etc., plus stubs for the
+// `\<gls|Gls>entry<field>` family and the `\acr*` family. This is
+// because `glossaries.sty` uses heavy expl3 / datatools that the
+// Rust raw-load pipeline currently can't ingest cleanly. Once the
+// Rust translation is good enough to raw-load `glossaries.sty`,
+// drop all the homegrown reimplementations and replace this file
+// with a near line-for-line port of `glossaries.sty.ltxml`.
+
 use crate::prelude::*;
 
 // Helper: store a glossary entry field in state
