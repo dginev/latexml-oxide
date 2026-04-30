@@ -216,6 +216,11 @@ LoadDefinitions!({
     if class_sty_found {
       // Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
       // kluwer): load article.cls under it, then RequirePackage(class).
+      // Pin extension to "sty" so the version-stripping fallback (e.g.
+      // aipproc2 → aipproc) prefers the binding registry's `.sty` entry
+      // instead of also probing for a same-name `.cls` (which has a
+      // different DefMacro signature for `\author` etc. that conflicts
+      // with the `.sty` body — root cause for nucl-th0010030).
       input_definitions("article", InputDefinitionOptions {
         extension: Some(Cow::Borrowed("cls")),
         options: opts_vec.clone(),
@@ -225,7 +230,7 @@ LoadDefinitions!({
       })?;
       require_package(&class, RequireOptions {
         options: opts_vec,
-        as_class: true,
+        extension: Some(Cow::Borrowed("sty")),
         after,
         ..RequireOptions::default()
       })?;
