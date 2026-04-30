@@ -261,4 +261,23 @@ LoadDefinitions!({
   //======================================================================
   // Step 6
   ProcessOptions!();
+
+  //======================================================================
+  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
+  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
+  // a stub, papers using `\xymatrix@1{a & b \\ c & d}` (e.g.
+  // arXiv:1409.7007) cascade 100+ "Stray alignment '&'" errors as the
+  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
+  // implicit-brace-stop pattern to read xy-pic's `@<modifier>` prefix
+  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
+  // swallows the brace-balanced body. The diagram is dropped — but
+  // the cascade is gone, matching latexml's general philosophy of
+  // "drop unsupported package content rather than fail conversion".
+  //
+  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
+  // option pipeline didn't auto-load matrix/arrow features.
+  RawTeX!(r"\@ifundefined{xymatrix}{%
+    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
+    \def\lx@xy@stub@xymatrix@body#1{}%
+  }{}");
 });
