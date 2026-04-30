@@ -78,6 +78,27 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-42 update:** **min repro confirmed** the divergence:
+```tex
+\documentclass{article}
+\renewcommand{\labelitemi}{$\bullets$}
+\begin{document}
+\begin{itemize}\item One\end{itemize}
+\end{document}
+```
+On THIS minimal input, BOTH Perl AND Rust report 1 error / 1
+undefined macro for `\bullets`. So at the min-repro level, both
+engines agree. Yet on the full Centralisateur.tex paper Perl
+reports "0 errors / 86 warnings" while Rust reports the error.
+The full paper differs from the min repro by 86 warnings worth
+of math-parser issues, hundreds of `\newcommand`s, multi-file
+`\input{}` chain. Something in that environment makes Perl skip
+the `\labelitemi` expansion. Investigation parked — the
+divergence is real but not min-reducible from a top-down bisect
+in 5 minutes. Next iteration: bisect by progressively stripping
+preamble macros from Centralisateur.tex until Perl-vs-Rust
+classification flips.
+
 * Tooling: `tools/triage_failure.sh <arxiv_id>` is the entry point.
 * Reference: `easy_rerun_failures_list.txt` (181 failure-list from
   earlier canvas, mostly already recovered).
