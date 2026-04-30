@@ -30,13 +30,26 @@ it back. `\xyxy@@ix@` body sets `@`=OTHER **before** `\toks9 =
 {body}` reads, so `\lx@dual` re-tokenizes as `\lx`+`@dual`. Stored
 in `\toks9`, later `\the\toks9` fires `\lx` undefined.
 
-Open hypotheses for the Perl-faithful fix: (1) Perl's `\toks =
-{balanced}` uses a different catcode snapshot; (2) Perl's
-`UnTeX($tokens, 1)` writes `.xyc` differently; (3) Perl reroutes
-`\xy@@ix@` via `xylatexml.tex.ltxml`; (4) Rust's one-step
-`remove_value("afterAssignment")` collapses local frames where
-Perl's two-step `lookup`+`assign(undef)` preserves them. Empirical
-band-aid (NOT applied): force `at_letter:true` on `.xyc` paths.
+**New angle (2026-04-30 evening):** xy.tex L38-46 defines
+`\xyreuncatcodes` to `\edef \xyuncatcodes {... \catcode64 \the\catcode 64
+...}` — i.e. `\xyuncatcodes` is a *snapshot* of the current
+catcode numbers, baked in at definition time, NOT a hard-coded
+reset to OTHER. After lines 47-112's flow (initial `\xyreuncatcodes`
+captures pre-state, then `\xycatcodes` sets `@`=LETTER, then
+`\xyresetcatcodes` re-snapshots so the new `\xyuncatcodes`
+contains `\catcode64 11`), `\xyuncatcodes` actually *preserves*
+`@`=LETTER. SYNC_STATUS's earlier "sets `@` to OTHER" claim was
+a misreading. The real question is whether our `\edef` correctly
+evaluates `\the\catcode 64` at definition time so the snapshot
+bakes in the right number — if not, `\xyuncatcodes` re-evaluates
+at use time to whatever catcode is current, causing the cell-body
+re-tokenization mismatch. **Next:** instrument
+`\meaning\xyuncatcodes` after each capture point and confirm the
+literal numbers in the body. Hypotheses 1-4 (Perl `\toks` reading
+catcode snapshot, `UnTeX` write semantics, `xylatexml.tex.ltxml`
+rerouting, one-step `remove_value` frame-collapse) remain open
+secondary candidates. Empirical band-aid (NOT applied): force
+`at_letter:true` on `.xyc` paths.
 Acceptance: min repro + math0606553.zip → 0 errs, tests 1110+/0/0.
 
 ### 1. math0005251 — math-parser cumulative-state OOM
