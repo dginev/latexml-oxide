@@ -90,6 +90,25 @@ LoadDefinitions!({
   at_begin_document(TokenizeInternal!(
     r"\let\degre\textdegree\def\degres{\hbox to 0.3em{\degre}}\let\tild\textasciitilde\let\circonflexe\textasciicircum"
   ))?;
+
+  // babel-french/french.ldf L1094-1098 + L1183-1184: French itemize labels
+  // are an em-dash, and \labelitemi-iv get \let'd to the Fr-prefixed
+  // versions when language is activated. The \let happens inside
+  // \extrasfrench, which fires at \begin{document} via babel's main
+  // language switch — so AT-BEGIN-DOCUMENT order is what makes any
+  // user `\renewcommand{\labelitemi}{...}` get clobbered (matches
+  // raw french.ldf semantics; Perl's babel pipeline runs the same
+  // sequence). Without this, papers that "renewcommand \labelitemi"
+  // to a typo CS like `\bullets` (1312.7418) error in itemize lookup,
+  // even though the body is unreachable in real French rendering.
+  RawTeX!(r"\providecommand\FrenchLabelItem{\textemdash}");
+  RawTeX!(r"\providecommand\Frlabelitemi{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemii{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemiii{\FrenchLabelItem}");
+  RawTeX!(r"\providecommand\Frlabelitemiv{\FrenchLabelItem}");
+  at_begin_document(TokenizeInternal!(
+    r"\let\labelitemi\Frlabelitemi\let\labelitemii\Frlabelitemii\let\labelitemiii\Frlabelitemiii\let\labelitemiv\Frlabelitemiv"
+  ))?;
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 
