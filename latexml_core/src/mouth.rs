@@ -344,10 +344,12 @@ impl Mouth {
       None
     };
     // Perl Mouth.pm L97: ProgressSpinup($$self{note_message}) — emit
-    // `(Processing definitions <source>...` when this mouth begins reading.
-    // The matching ProgressSpindown is in `finish()` (note_end below).
+    // `Processing definitions <source>` when this mouth begins reading.
+    // For now this is a simple Note-style line (no spinner / no timing);
+    // the matching ProgressSpindown (Mouth.pm L121) becomes a no-op,
+    // since `note_progress` doesn't pair.
     if let Some(ref msg) = self.note_message {
-      note_begin(msg);
+      note_progress(msg);
     }
     // Perl: at_letter saves/restores @ catcode independently of fordefinitions.
     // Use Scope::Global to ensure it persists across scope frame pops during file loading.
@@ -391,11 +393,9 @@ impl Mouth {
     if let Some(sic) = self.saved_include_comments.take() {
       assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
     }
-    if self.notes {
-      if let Some(ref msg) = self.note_message {
-        note_end(msg);
-      }
-    }
+    // Perl Mouth.pm L121 ProgressSpindown is a no-op for us — `initialize`
+    // emits a single Note-style line via `note_progress`, no matching
+    // close-tag is needed (no spinner/timer to terminate).
   }
   // Auxiliaries
 
