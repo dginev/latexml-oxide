@@ -163,6 +163,14 @@ LoadDefinitions!({
       extension: Some(Cow::Borrowed("pool")),
       ..InputDefinitionOptions::default()
     })?;
+    // Restore our `\documentstyle` impl after the LaTeX pool load. The
+    // latex_dump unconditionally redefines `\documentstyle` to the
+    // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
+    // overridden by latex_constructs.pool.ltxml's DefConstructor, but
+    // our latex_constructs.rs port doesn't redefine it. Re-Let to our
+    // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
+    // full diagnostic context (hep-th9912229 witness).
+    Let!("\\documentstyle", "\\lx@documentstyle@impl");
   });
 
   // Perl TeX.pool.ltxml L42-48: expl3 triggers

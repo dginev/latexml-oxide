@@ -121,7 +121,23 @@ LoadDefinitions!({
   //     anything went unmet. That is what lets `\documentstyle[paspconf]
   //     {article}` transitively load `aas_macros.sty.ltxml` to define
   //     `\affil` / `\altaffilmark` / `\acknowledgments` etc.
-  DefMacro!("\\documentstyle[]{}", sub[(options_opt, class_tks)] {
+  // The latex_dump unconditionally redefines `\documentstyle` with the
+  // kernel-style `\input{latex209.def}\documentclass` form (Perl
+  // latex_dump.pool.ltxml entry for `\documentstyle`). In Perl that
+  // version is itself overridden by latex_constructs.pool.ltxml's
+  // DefConstructor; in our Rust port `latex_constructs.rs` doesn't
+  // redefine `\documentstyle`, so without intervention any autoload-of-
+  // LaTeX-pool path (e.g. `\newcommand` before `\documentstyle`)
+  // replaces our impl with the dump's, breaking the
+  // `\compat@loadpackages` after-hook that dispatches `[epsf]` etc.
+  // from `@unusedoptionlist`. Witness: hep-th9912229
+  // (`\newcommand` before `\documentstyle[12pt,epsf]`).
+  //
+  // Workaround: register the impl under a stable backup name
+  // `\lx@documentstyle@impl` and `\let \documentstyle = \lx@documentstyle@impl`
+  // at the end of `\@load@latex@pool` so we restore our impl after
+  // every LaTeX pool load.
+  DefMacro!("\\lx@documentstyle@impl[]{}", sub[(options_opt, class_tks)] {
     use latexml_core::binding::content::{find_file, find_file_fallback, FindFileOptions, load_class};
     let class = class_tks.to_string();
     let class = class.trim().to_string();
@@ -237,6 +253,11 @@ LoadDefinitions!({
 
     Ok(Tokens!())
   });
+
+  // Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump
+  // may overwrite this on autoload; `\@load@latex@pool` (tex.rs) re-applies
+  // the Let after every pool load so our impl wins regardless.
+  Let!("\\documentstyle", "\\lx@documentstyle@impl");
 });
 
 // The \today macro's implementation lives in base_utilities::today()
