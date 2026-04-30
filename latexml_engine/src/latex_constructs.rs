@@ -5803,6 +5803,18 @@ LoadDefinitions!({
         encoding => enc.to_string()
       )
     );
+    // latex209.def L272-292 declares math fonts then uses
+    //   `\DeclareRobustCommand\it{\normalfont\itshape\mathgroup\symitalic}`.
+    // `\mathgroup` is `Let` to `\fam`, which expects a number. Plain TeX
+    // would `\newfam\itfam` + `\mathchardef\symitalic=\itfam`. Stub `\sym<name>`
+    // as a Let to `\z@` so `\fam\symitalic` parses cleanly (selecting fam 0,
+    // since LaTeXML doesn't track active math fams). Without this, papers
+    // using revtex 3.x + `{\it ...}` in math contexts hit `\symitalic`
+    // undefined errors. Witness: cond-mat9911130, math0007178, hep-th9912229.
+    let sym_cs = T_CS!(s!("\\sym{}", name));
+    if !IsDefined!(&sym_cs) {
+      Let!(&sym_cs, "\\z@");
+    }
   });
   DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
     let fontkey = s!("fontdeclarations@{}", name.to_string());
