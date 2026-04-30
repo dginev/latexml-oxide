@@ -78,6 +78,17 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-52 — 1608.04650 (1561-error outlier):** All 1561 errors share
+the same root: `Error:malformed:* isn't allowed in <ltx:Proof>` —
+754× `#PCDATA`, 593× `ltx:Math`, 80× `ltx:ref`, etc. Single content-
+schema mismatch on the `<ltx:Proof>` element (capital P). Perl on
+the same input emits 0 errors / 82 warnings, so Rust's `<ltx:Proof>`
+content model is over-restrictive vs Perl's. Paper uses
+mst-stylefile.sty (paper-local, no proof env redef) + amsthm-style
+`\begin{proof}…\end{proof}`. Likely fix: locate the constructor that
+emits `<ltx:Proof>` (capital) — should emit lowercase `<ltx:proof>`
+to match the schema's content-model definition. Investigation queued.
+
 **Iter-51 residual triage:**
 - `1802.05444` (`\textrhookrevepsilon`): tipa.sty IS raw-loaded by
   `latexml_contrib/src/tipa_sty.rs`, but T3 phonetic encoding chars
