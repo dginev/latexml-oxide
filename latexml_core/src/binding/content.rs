@@ -1195,8 +1195,17 @@ pub fn process_options(inorder: bool) -> Result<()> {
     }
     // Only undeclared CURRENT options go to default handler (not class options).
     // Perl L2460-2461: "foreach my $option (@curroptions)" — class options excluded.
-    for option in cur_set.iter() {
-      execute_default_option_internal(*option)?;
+    // Iterate cur_options_list (Vec, ordered) instead of cur_set (HashSet,
+    // unordered) so unknown options enter `@unusedoptionlist` in source
+    // order. Otherwise `\documentstyle[a,b,c]` produces an arbitrary
+    // dispatch order, which breaks paper-local option chains that depend
+    // on left-to-right evaluation (e.g. `[aaspp4,tighten]` requires
+    // aaspp4's bindings — \tightenlines — to be defined before tighten.sty
+    // body fires; driver: astro-ph9707180).
+    for option in &cur_options_list {
+      if cur_set.contains(option) {
+        execute_default_option_internal(*option)?;
+      }
     }
   }
   // Now, undefine the handlers
