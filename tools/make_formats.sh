@@ -26,7 +26,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-PROFILE="${PROFILE:-release}"
+PROFILE="${PROFILE:-debug}"
 
 case "$PROFILE" in
   release) CARGO_PROFILE_FLAG="--release" ;;
