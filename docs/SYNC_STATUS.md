@@ -14,82 +14,31 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ## Open tasks (highest leverage first)
 
-### 1. **RESOLVED**: revtex `\begin{equation}$$...$$\end{equation}` regression
+### 1. Locked-mechanism Perl-faithful audit
 
-Fixed in commit (this iter). hep-ph0003251 351 → 0. Tests 1110/0/0.
+Rust's `_load_binding` lacks Perl's `local $UNLOCKED = 1` wrapper
+(Package.pm:2318) around binding execution. Without it, sibling
+`.ltxml`/`.rs` bindings cannot redefine slots that an earlier
+binding installed with `locked => true`. The recently-fixed
+revtex3_support equation case worked around this by clearing the
+specific `:locked` flags before its redef; the long-term fix is
+to add the wrapper at `latexml_core/src/binding/content.rs:625`
+(`_load_binding`).
 
-**Root cause:** revtex3_support_sty.rs's `\begin{equation}` env redef
-was being silently dropped because latex_constructs.rs had already
-installed the standard equation env with `locked => true`. Rust's
-`install_definition` lock check (`state.rs:1013`) rejects redefs
-when `locked && !state_is_unlocked`. Perl handles this via
-`local $UNLOCKED = 1` during loadLTXML (Package.pm:2318) so
-sibling `.ltxml` bindings can override locked slots; Rust's
-`_load_binding` lacked that wrapper.
+A broad attempt regressed 5 unit tests (natbib_test, crazybib_test,
+percent_test, textcase_test, amstheorem_test) — most likely
+stale goldens masking the missing-unlock bug. Audit:
 
-**Fix path explored:** broad fix wrapping `_load_binding`'s
-dispatcher with `local_state_unlocked(true)` was Perl-faithful
-but regressed 5 unit tests (natbib, crazybib, percent, textcase,
-amstheorem) — natbib bibliography output diverged because some
-binding chain depended on locked slots staying locked. Reverted.
+* Compare each regressed test's Perl baseline output against
+  the diff with the broad-fix branch
+* Update goldens that match the Perl baseline (true parity gain)
+* For any that DON'T match Perl, identify which binding chain
+  depends on locked slots staying locked and fix forward
+* Then enable the `_load_binding` wrapper
 
-**Surgical fix:** clear the `:locked` flag for just
-`\begin{equation}` / `\end{equation}` / `\equation` / `\endequation`
-(plus `*` variants) in revtex3_support_sty.rs immediately before
-the redefinitions. The slots get re-locked when the new defs
-install with `locked => true`. Achieves the parity target without
-broadening the lock-bypass.
-
-**Audit deferred:** the `_load_binding` wrapper is the
-Perl-faithful long-term fix; the 5 regressed tests likely have
-stale goldens that masked the bug. Audit the locked mechanism
-and update goldens in a future iteration. See `LaTeXML/lib/LaTeXML
-/Core/State.pm:502-517` (Perl installDefinition) and
-`LaTeXML/lib/LaTeXML/Package.pm:2318` (Perl loadLTXML).
-
-Below: previous bisection notes (kept for context).
-
-Bisected to commit `b093bdd30` (\documentstyle 3-branch DefMacro).
-At `b093bdd30~1` (`62e6291fe` era): hep-ph0003251 = **0 errors**.
-At HEAD before this fix: hep-ph0003251 = **351 errors** (242× `Unexpected:_` + 86×
-`Unexpected:^` + 13× `XMArray malformed` + …).
-
-**9-line min repro** (saved as `/tmp/revtex_array_dollar_repro.tex`):
-```latex
-\documentstyle{revtex}
-\begin{document}
-\begin{equation}
-$$\begin{array}{rcl}
-a &=& b\\
-\end{array}$$
-\end{equation}
-\end{document}
-```
-Perl: 0 errs. Rust HEAD: 1 err `Error:malformed:ltx:XMArray
-"ltx:XMArray" isn't allowed in <ltx:para>`.
-
-**Root cause** (suspected): revtex3_support's `\begin{equation}` Env
-binds `Let(T_MATH, '\lx@dollar@in@oldrevtex')` in beforeDigest, so
-inner `$` should toggle math/text. But Rust at HEAD hits the
-`$$\begin{array}` content with the wrong math frame, dumping the
-array into `<ltx:para>` instead of `<ltx:Math>`. The dollar-trick
-binding either isn't taking effect or the new tex_job.rs Branch 1
-flow disrupts state setup before revtex3_support is loaded. Min repro
-runs cleanly at b093bdd30~1, breaks at b093bdd30+ — so the load order
-or option-handling change broke the equation env's beforeDigest.
-
-* Goal: 9-line min repro produces 0 errors. hep-ph0003251 351 → 0.
-* Expected fix path: trace why `Let(T_MATH, ...)` in revtex3_support
-  equation env doesn't apply. Possibly revtex_sty's
-  `require_package_with_options("revtex3_support")` runs at a point
-  where the local Let inside DefEnvironment's beforeDigest doesn't
-  fire. Or the new article.cls flow rebinds T_MATH and clobbers it.
-* Acceptance: `latexml_oxide /tmp/revtex_array_dollar_repro.tex`
-  produces 0 errors. Validate hep-ph0003251 also reaches 0.
-* Workspace 1110/0/0 was reported on b093bdd30 but the test suite
-  doesn't cover this revtex equation variant — adding a TDD test
-  (e.g. `tests/structure/revtex_equation_dollar_array.{tex,xml}`)
-  alongside the fix is mandatory.
+Acceptance: cargo test 1110+/0/0 with the wrapper applied AND
+existing surgical workarounds (revtex3_support equation
+unlocks) removable.
 
 ### 2. math0005251 — math-parser cumulative-state OOM
 
