@@ -5868,6 +5868,31 @@ LoadDefinitions!({
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
     DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);
     DefMacro!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
+
+    // Perl `latex_constructs.pool.ltxml:2781-2783`:
+    //   if (my $path = $encoding_str && FindFile(lc($encoding_str)."enc", type=>"dfu")) {
+    //     InputDefinitions($path); }
+    // Without this, `\DeclareFontEncoding{TS1}` (textcomp.sty.ltxml tail)
+    // never loads `ts1enc.dfu` and `\DeclareUnicodeCharacter` mappings
+    // from the .dfu are missing — surfacing as bogus undefineds when
+    // user input contains TS1 glyphs that should resolve via the .dfu.
+    use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
+    let enc_str = e.to_string();
+    if !enc_str.is_empty() {
+      let dfu_name = format!("{}enc", enc_str.to_lowercase());
+      if find_file(&dfu_name, Some(FindFileOptions {
+        forbid_ltxml: true,
+        notex: false,
+        ext_type: Some(Cow::Borrowed("dfu")),
+        search_paths_only: false,
+      })).is_some() {
+        let mut opts = InputDefinitionOptions::default();
+        opts.extension = Some(Cow::Borrowed("dfu"));
+        opts.noltxml = true;
+        opts.raw = true;
+        let _ = input_definitions(&dfu_name, opts);
+      }
+    }
   });
 
   DefMacro!("\\LastDeclaredEncoding", None, None);
