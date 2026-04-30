@@ -834,14 +834,29 @@ pub fn today() -> Result<String> {
     "November",
     "December",
   ];
-  let month = month_names[state::lookup_register("\\month", vec![])?
-    .unwrap()
-    .value_of() as usize
-    - 1];
-  let day = state::lookup_register("\\day", vec![])?.unwrap().value_of();
-  let year = state::lookup_register("\\year", vec![])?
-    .unwrap()
-    .value_of();
+  // Mirror Perl TeX_Job.pool.ltxml L52-55:
+  //   $MonthNames[LookupValue('\month')->valueOf - 1]
+  //     . " " . LookupValue('\day')->valueOf
+  //     . ', ' . LookupValue('\year')->valueOf
+  // Read from the VALUE table (assigned in tex_job.rs:47-49 at job
+  // startup), NOT the register-meaning table. `lookup_register` walks
+  // meanings and returns None when a class file (e.g. iopart.cls)
+  // `\def`s `\day` for its own purposes, panicking the unwrap on
+  // 1208.0134/1702.02270/1705.08909. Intentional Perl divergence:
+  // default to 1900-01-01 when a value is missing, where Perl would
+  // die on `Can't call method "valueOf" on undef` — keeps the
+  // conversion alive when something has clobbered the value table.
+  let read = |key: &str, default: i32| -> i32 {
+    match state::lookup_value(key) {
+      Some(Stored::Int(n)) => n as i32,
+      Some(Stored::Number(n)) => n.value_of() as i32,
+      _ => default,
+    }
+  };
+  let m = read("\\month", 1).clamp(1, 12) as usize;
+  let month = month_names[m - 1];
+  let day = read("\\day", 1);
+  let year = read("\\year", 1900);
   Ok(s!("{} {}, {}", month, day, year))
 }
 
