@@ -14,33 +14,7 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ## Open tasks (highest leverage first)
 
-### 1. Locked-mechanism Perl-faithful audit
-
-Rust's `_load_binding` lacks Perl's `local $UNLOCKED = 1` wrapper
-(Package.pm:2318) around binding execution. Without it, sibling
-`.ltxml`/`.rs` bindings cannot redefine slots that an earlier
-binding installed with `locked => true`. The recently-fixed
-revtex3_support equation case worked around this by clearing the
-specific `:locked` flags before its redef; the long-term fix is
-to add the wrapper at `latexml_core/src/binding/content.rs:625`
-(`_load_binding`).
-
-A broad attempt regressed 5 unit tests (natbib_test, crazybib_test,
-percent_test, textcase_test, amstheorem_test) — most likely
-stale goldens masking the missing-unlock bug. Audit:
-
-* Compare each regressed test's Perl baseline output against
-  the diff with the broad-fix branch
-* Update goldens that match the Perl baseline (true parity gain)
-* For any that DON'T match Perl, identify which binding chain
-  depends on locked slots staying locked and fix forward
-* Then enable the `_load_binding` wrapper
-
-Acceptance: cargo test 1110+/0/0 with the wrapper applied AND
-existing surgical workarounds (revtex3_support equation
-unlocks) removable.
-
-### 2. math0005251 — math-parser cumulative-state OOM
+### 1. math0005251 — math-parser cumulative-state OOM
 
 Only filesystem-level hard failure left in the April29 sandbox. Rust
 allocates ~28 GB digesting the paper's math while Perl finishes in
@@ -365,7 +339,37 @@ Perl. Add `latexml_oxide --dump-model` that writes the loaded
 schema in `.model` format, then extend `compileschema.sh` to call
 it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
 
-### 10. Distribution — bundle multi-TL dumps
+### 10. (Long-term, low-priority) `_load_binding` UNLOCKED audit
+
+Rust's `_load_binding` (`latexml_core/src/binding/content.rs:625`)
+lacks Perl's `local $UNLOCKED = 1` wrapper around the binding-load
+body (Package.pm:2318). Adding it is the Perl-faithful long-term
+fix that would let sibling `.ltxml`/`.rs` bindings cleanly redefine
+slots an earlier binding installed with `locked => true`. Trying
+the wrapper alone regressed 5 unit tests (natbib_test, crazybib_test,
+percent_test, textcase_test, amstheorem_test) — natbib's
+`<bibliography>` element stops opening, `<bibitem>` ends up nested
+inside `<para><p>0`. The "0" suggests a counter or value redef now
+takes effect that previously was blocked, but which natbib downstream
+state depends on staying blocked.
+
+Workaround that ships today: surgical `:locked` flag clears in
+`revtex3_support_sty.rs` immediately before its `\equation` redef
+(commit `663895c56`). Other bindings with the same need can use the
+same workaround until a wider audit completes.
+
+Audit plan when revisited:
+* Identify which bindings legitimately need to override locked
+  slots (the broad fix DOES enable this).
+* Identify which downstream binding state breaks under the broader
+  fix and trace the actual failing redef-ordering.
+* Fix the ordering issue forward, then enable the wrapper.
+* Acceptance: `cargo test --tests` 1110+/0/0 with wrapper applied
+  AND existing surgical workarounds removed.
+
+Deprioritized — current sandbox-recovery work has higher leverage.
+
+### 11. Distribution — bundle multi-TL dumps
 
 Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 `{plain,latex}.dump.txt` for TL2022 … TL2026 and select at runtime
