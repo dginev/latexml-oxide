@@ -234,7 +234,35 @@ LoadDefinitions!({
   // so the read consumes through `\end{abstract}` and beyond,
   // perturbing babel's queued `\aftergroup\bbl@pop@language` into
   // a `\bbl@exp@aux`-undefined cascade.
-  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
+  // Perl elsart_support_core.sty.ltxml L138-141 calls
+  // `$gullet->readBalanced` with no args (`require_open=false`), and
+  // Perl's `readBalanced` starts the brace-counter at `level=1`. That
+  // means the function reads tokens AS IF we're already inside an
+  // open brace group: it consumes the user's `{...}` AND one ADDITIONAL
+  // unbalanced `}` past the close. This is the legacy elsart idiom
+  // (commented at L134: "if you do that, you've got to end with an
+  // unbalanced }") — the trailing `}` is part of the `\keyword{...}`
+  // call, not part of the surrounding env.
+  //
+  // Driver: arXiv:1710.03688 ends its abstract with
+  //   `\keyword{Keyword1; ...} \vskip ...\noindent{...e3}}`
+  // (the literal trailing `}` is the "expected" unbalanced close).
+  //
+  // The Rust DSL form `\\keyword{}` uses a strict reader that consumes
+  // only `{...}` proper. Switch to a closure that calls
+  // `gullet::read_balanced(Off, false, false)` — `require_open=false`
+  // mirrors Perl's lenient mode.
+  {
+    let cs = T_CS!("\\keyword");
+    let closure: ExpansionClosure = Rc::new(|_args: Vec<ArgWrap>| {
+      let arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+      let mut out = vec![T_CS!("\\@keyword")];
+      out.extend(arg.unlist());
+      out.push(T_CS!("\\@keyword@cut"));
+      Ok(Tokens::new(out))
+    });
+    def_macro(cs, None, ExpansionBody::Closure(closure), None)?;
+  }
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
