@@ -4,11 +4,14 @@
 is error-free on every paper that Perl LaTeXML also converts cleanly.
 Perl is the ground truth; Perl-error-only papers are out of scope.
 
-Earlier per-iteration narrative is archived at
-`docs/archive/SYNC_STATUS_2026-04-30_pre-tasklist.md`. Tactical
-insights are in `docs/WISDOM.md`; upstream Perl bugs in
-`docs/KNOWN_PERL_ERRORS.md`; intentional divergences in
-`docs/OXIDIZED_DESIGN.md`.
+A sandbox paper is **in scope** iff Perl LaTeXML on TL2025 with
+`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` produces
+0 errors on it. Mission completes when every in-scope paper also
+produces 0 errors on Rust.
+
+Earlier per-iteration narrative: `docs/archive/`. Tactical insights:
+`docs/WISDOM.md`. Upstream Perl bugs: `docs/KNOWN_PERL_ERRORS.md`.
+Intentional divergences: `docs/OXIDIZED_DESIGN.md`.
 
 ---
 
@@ -16,132 +19,88 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ### 0. math0606553 — `\CompileMatrices` + `\xy@@ix@` re-tokenization
 
-In-progress investigation, paused mid-debug 2026-04-30. Single-error
-paper (`undefined:\lx`); affects every paper using `\usepackage{xy}`
-+ `\CompileMatrices` whose matrix cells contain `\lx@*` CSes (e.g.
-`\DeclareMathOperator` operators expand into `\lx@dual …`).
+Single-error paper (`undefined:\lx`); affects every paper using
+`\usepackage{xy}` + `\CompileMatrices` whose matrix cells contain
+`\lx@*` CSes (e.g. `\DeclareMathOperator` operators that expand into
+`\lx@dual …`). Min repro at
+`latexml_oxide/tests/graphics/xycompile.tex` (no `.xml` pair yet).
 
-**4-line min repro** (committed at
-`latexml_oxide/tests/graphics/xycompile.tex`, no `.xml` pair yet —
-test would fail until fix lands):
-```tex
-\documentclass{article}
-\usepackage[arrow,curve,matrix]{xy}
-\CompileMatrices
-\begin{document}\xymatrix{A \ar[r] & B}\end{document}
-```
-Triggered with `\DeclareMathOperator{\shom}{...}` and `\shom` in a
-matrix cell. Without `\CompileMatrices`, clean. With it, `\lx`
-undefined.
+Root cause: xy.tex compile mode writes a `.xyc` file, then `\input`s
+it back. `\xyxy@@ix@` body sets `@`=OTHER **before** `\toks9 =
+{body}` reads, so `\lx@dual` re-tokenizes as `\lx`+`@dual`. Stored
+in `\toks9`, later `\the\toks9` fires `\lx` undefined.
 
-**Root cause traced**: xy.tex compile mode writes a `.xyc` file via
-`\write` (UnTeX/`untex`), then `\input`s it back. Each cell entry is
-re-input via `\xy@@ix@{body}` which expands to `\xyxy@@ix@`'s body
-(xy.tex L266-267):
-```tex
-\xydef@\xyxy@@ix@{\begingroup
- \xyuncatcodes\afterassignment\endgroup\global\toks9=}
-```
-`\xyuncatcodes` sets `@` to OTHER **before** `\toks9 = {body}` reads
-the body. So `\lx@dual` inside the cell body re-tokenizes as
-`\lx`+`@dual` (wrong). Stored in `\toks9`. Later `\the\toks9` expands
-the bad tokens; `\lx` undefined error fires.
-
-**Perl works on the same input.** Open hypotheses to audit:
-1. Perl's `\toks N = {balanced}` reading uses a different catcode
-   snapshot than ours.
-2. Perl's `UnTeX($tokens, 1)` writes the `.xyc` content with a CS
-   form that re-tokenizes correctly even with `@`=OTHER.
-3. Perl's `\xy@@ix@` resolves to a different macro than ours
-   (Perl reroutes via `xylatexml.tex.ltxml`).
-4. Perl's `afterAssignment` is a two-step `lookup`+`assign(undef)`;
-   ours is one-step `remove_value`. If `remove_value` collapses
-   local frames, that could let group-pop revert wrong catcode.
-
-Empirical band-aid that fixes it (NOT applied — non-Perl-faithful):
-in `load_tex_content`, set `at_letter: true` when input path ends
-with `.xyc`.
-
-**Acceptance**: min repro → 0 errors AND full math0606553.zip → 0
-errors AND `cargo test --tests` 1110+/0/0.
+Open hypotheses for the Perl-faithful fix: (1) Perl's `\toks =
+{balanced}` uses a different catcode snapshot; (2) Perl's
+`UnTeX($tokens, 1)` writes `.xyc` differently; (3) Perl reroutes
+`\xy@@ix@` via `xylatexml.tex.ltxml`; (4) Rust's one-step
+`remove_value("afterAssignment")` collapses local frames where
+Perl's two-step `lookup`+`assign(undef)` preserves them. Empirical
+band-aid (NOT applied): force `at_letter:true` on `.xyc` paths.
+Acceptance: min repro + math0606553.zip → 0 errs, tests 1110+/0/0.
 
 ### 1. math0005251 — math-parser cumulative-state OOM
 
 Only filesystem-level hard failure left in the April29 sandbox. Rust
 allocates ~28 GB digesting the paper's math while Perl finishes in
-~10.5 s / 234 MB. Min repros run cleanly; the trigger requires
-enough prior math-state accumulation. See
-`memory/project_math_parser_state_cumulative_hangs.md`.
-
-* Goal: process `math0005251.zip` under 6 GB cap.
-* Expected fix path: grammar-level work in `latexml_math_parser`
-  (per-formula state reset is bounded but doesn't restore parity).
-* Acceptance: `( ulimit -v 6291456; latexml_oxide --preload=ar5iv.sty
-  math0005251.zip … )` exits 0 with non-empty HTML.
+~10.5 s / 234 MB. Min repros run cleanly; the trigger needs enough
+prior math-state accumulation. See
+`memory/project_math_parser_state_cumulative_hangs.md`. Expected
+fix is grammar-level work in `latexml_math_parser`.
+Acceptance: `( ulimit -v 6291456; latexml_oxide … math0005251.zip )`
+exits 0 with non-empty HTML.
 
 ### 2. math0601451 — `XMTok` / `XMApp` leaking into `<ltx:title>`
 
 1481× `Error:malformed:ltx:XMTok in <ltx:title>` (plus 54×
-`XMApp in <ltx:text>`) on a single amsppt + amstex paper.
-Distinct from the documented siunitx XMTok-in-text trigger.
+`XMApp in <ltx:text>`) on a single amsppt + amstex paper. Distinct
+from the siunitx XMTok-in-text trigger. Math constructs inside
+amsppt's `\title`/`\heading` need `XMText`-wrapped output, not raw
+XMath tokens. Scope: `latexml_engine/src/amsppt*` + the digest path
+that promotes XMath into text-context elements.
 
-* Goal: math constructs inside amsppt's `\title` / `\heading`
-  expand to `XMText`-wrapped content, not raw XMath tokens.
-* Scope: `latexml_engine/src/amsppt*` + the digest path that
-  promotes XMath into text-context elements.
-* Acceptance: `latexml_oxide … math0601451.zip` produces 0
-  `Error:malformed:ltx:XMTok` lines.
-
-### 3. siunitx XMTok-in-text (deferred from earlier session)
+### 3. siunitx XMTok-in-text
 
 `\num{2.6e7}` in text context emits pre-built XMath tokens that
-escape the inline-math wrap. Min repro is 4 lines; documented in
-`memory/project_xmtok_in_text_repro.md`.
-
-* Goal: `siunitx_sty.rs::six_format_scinumber` returns a properly
-  wrapped inline-math whatsit, not raw XMath.
-* Acceptance: 4-line min repro produces 0 errors.
+escape the inline-math wrap. 4-line min repro in
+`memory/project_xmtok_in_text_repro.md`. Fix:
+`siunitx_sty.rs::six_format_scinumber` should return a wrapped
+inline-math whatsit, not raw XMath.
 
 ### 4. Sandbox conv_error long-tail — full-canvas verification
 
 35 in-scope April-30 papers all clean in spot-check after
-`5e65deaec`. Pending: full 7898-paper rerun to verify no regressions
-elsewhere and update the headline number.
-
-* Tooling: `tools/benchmark_10k.sh` (defaults rebuild release
-  cortex_worker; takes 5-10 min compile + 20-30 min convert).
-* Acceptance: rebuild and update the dashboard row in this doc.
+`5e65deaec`. Pending: full 7898-paper rerun via
+`tools/benchmark_10k.sh` to verify no regressions and update the
+headline number.
 
 ### 5. AmSTeX.pool.ltxml — 70% gap
 
-112 defs, ~30% ported. Plain-TeX papers using `\input amstex`
-(e.g. math0601451) hit the gap. Low priority while sandbox impact
-stays small, but converting more amsppt/amstex papers depends on it.
+112 defs, ~30% ported. Plain-TeX papers using `\input amstex` (e.g.
+math0601451) hit the gap. Low priority while sandbox impact stays
+small, but converting more amsppt/amstex papers depends on it.
 
 ### 6. expl3 / pgfmath / pgfplots residual clusters
 
 Long-standing deep clusters parked in
 `docs/archive/sandbox_failures_SYNC_STATUS.md`. Re-survey whether
-recent fixes have reduced the surface enough to make individual
-items tractable.
-
-* `1803.03288` / `1902.08705` — expl3 cascade + pgfmath `\ifdim`.
-* `1305.3934` / `1404.1023` / `1405.3906` — pgfplots
-  `\pgfplots@curlegend` state-machine. Deferred fix-plan in
-  `latexml_package/src/package/pgfplots_sty.rs:18-28`.
+recent fixes have shrunk the surface enough to make individual
+items tractable. Notables: `1803.03288`/`1902.08705` (expl3 cascade
++ pgfmath `\ifdim`); `1305.3934`/`1404.1023`/`1405.3906` (pgfplots
+`\pgfplots@curlegend` state-machine, plan in
+`pgfplots_sty.rs:18-28`).
 
 ### 7. Schema generation — `--dump-model` CLI flag
 
 Stage 2 of `tools/compileschema.sh` (rng → model) still requires
-Perl. Add `latexml_oxide --dump-model` that writes the loaded
-schema in `.model` format, then extend `compileschema.sh` to call
-it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
+Perl. Add `latexml_oxide --dump-model` and diff Rust-emitted vs
+Perl-emitted `.model` from the same `.rnc`.
 
 ### 8. Distribution — bundle multi-TL dumps
 
 Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 `{plain,latex}.dump.txt` for TL2022 … TL2026 and select at runtime
-by `kpsewhich --version`. Currently dumps are loaded from
+by `kpsewhich --version`. Currently dumps load from
 `resources/dumps/` on disk.
 
 ---
@@ -152,7 +111,7 @@ by `kpsewhich --version`. Currently dumps are loaded from
 |------|--------|----------|
 | `base_parameter_types.rs` | MINOR | Parameterized `CommaList:Type` form unported (no Perl users). |
 | `tex_box.rs` | MINOR | Box dimension edge cases. |
-| `tex_fonts.rs` | MINOR | `\fontdimen` array semantics; `FontDef` simplified to `FontToken` blocks per-font `\hyphenchar`. |
+| `tex_fonts.rs` | MINOR | `\fontdimen` array semantics; per-font `\hyphenchar`. |
 | `tex_tables.rs` | MINOR | Padding CSS classes (XSLT concern). |
 | `plain_base.rs` | OPEN | Some closure-backed defs need conversion to Token bodies for dump round-trip. |
 | `latex_base.rs` | OPEN | Closure-backed defs need conversion or relocation to `latex_constructs.rs`. |
@@ -173,11 +132,10 @@ by `kpsewhich --version`. Currently dumps are loaded from
 
 * **Sandbox out-of-scope:** ns1–ns5 (52_namespace, no DTD); 2402.03300,
   2410.10068, 2511.03798 (Perl also fails).
-* **Perl-error-only papers (Rust SUPERSEDES Perl):** `1207.6068`,
-  `0909.3444` — Rust converts cleanly, Perl emits errors; tracked
-  here so they stay out of the parity target.
-* **Unported pools:** `AmSTeX.pool.ltxml` (~70% remaining), `BibTeX.pool.ltxml`
-  (skipped via `--nobibtex`).
+* **Rust supersedes Perl** (both still in scope, but Rust passes
+  where Perl errors): `1207.6068`, `0909.3444`.
+* **Unported pools:** `AmSTeX.pool.ltxml` (~70% remaining),
+  `BibTeX.pool.ltxml` (skipped via `--nobibtex`).
 
 ---
 
@@ -191,8 +149,3 @@ by `kpsewhich --version`. Currently dumps are loaded from
 | April-30 in-scope (35 papers) | 35/35 clean (spot-check) | 35/35 |
 | Filesystem-level hard failures in latest canvas | 1 (math0005251) | 0 |
 | `results.tsv` `ok` rate | 7796/7898 = 98.71% (Apr29 baseline) | match Perl on the same set |
-
-A sandbox paper is **in scope** iff Perl LaTeXML on TL2025 with
-`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` produces
-0 errors on it. The mission completes when every in-scope paper
-also produces 0 errors on Rust.
