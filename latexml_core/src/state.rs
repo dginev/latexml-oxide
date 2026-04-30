@@ -412,7 +412,13 @@ impl State {
         catcodes.insert('\t', SPACE);
         catcodes.insert('%', COMMENT);
         catcodes.insert('~', ACTIVE);
-        catcodes.insert('\0', ESCAPE);
+        // TeX standard: NUL (`\^^@`, U+0000) has catcode 9 IGNORED — see
+        // The TeXbook ch.8 `\catcode \^^@ = 9`. Silently discard NUL
+        // bytes that appear in input. Real-world bbl files (e.g.
+        // astro-ph0004127's spie4012-01a.bbl line 120) have stray NULs
+        // from BibTeX's `\"u`-mangling; without IGNORE we read the NUL
+        // as ESCAPE and the next letters as a (bogus) CS like `\uninger`.
+        catcodes.insert('\0', IGNORE);
         catcodes.insert('\u{000c}', ACTIVE);
         for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
           catcodes.insert(c, LETTER);

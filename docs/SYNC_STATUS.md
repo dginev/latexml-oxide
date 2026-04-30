@@ -153,16 +153,48 @@ Tests now 1110/0/0.
 
 **Round-17 deferred sandbox `~/data/10k_failures_April30/`** (35
 in-scope papers, all Perl-clean under `--preload=ar5iv.sty
---path=~/git/ar5iv-bindings/`). Status as of 2026-04-30 evening:
-**10/35 clean**. Cleared this session: cond-mat0110319,
-quant-ph0203083, supr-con9608003 (`\font\gnuplot` picture cluster
-via `gullet::read_keyword` Perl-faithful fix), cond-mat9911130,
+--path=~/git/ar5iv-bindings/bindings`). Status as of 2026-04-30
+late-evening sweep: **12/35 clean** (was 10 at session start).
+Cleared this session: cond-mat0110319, quant-ph0203083,
+supr-con9608003 (`\font\gnuplot` picture cluster via
+`gullet::read_keyword` Perl-faithful fix), cond-mat9911130,
 math0007178 (latex209 `\sym<font>` stubs), astro-ph0611848
 (`\longtab` env phantom def), hep-th9912229, cond-mat0103038
 (`\documentstyle` re-bind after latex_dump). 1504.01713,
-math9805021 were clean before.
+math9805021 clean since before.
+Cleared this round-17 session: **math0004127** (`\math<class>
+Digested` arg type, commit `9fa56e4c5`), **astro-ph0004127**
+(NUL byte catcode IGNORE not ESCAPE in `state.rs:415`).
 
-**Remaining 25 papers — error breakdown:**
+**Remaining 23 papers with errors — sweep 2026-04-30 latest:**
+
+| Paper | Errs | Notes |
+|---|---:|---|
+| 1710.03688 | 1 | `unexpected:}` — `\begin{abstract}` mode-switch, French elsart |
+| 1802.05444 | 1 | `undefined:\textrhookrevepsilon` — tipa T3 enc |
+| 1804.04412 | 1 | `expected:}` — keyvals `readBalanced` unbalanced |
+| astro-ph0512041 | 1 | `malformed:ltx:equation in <ltx:date>` — `\date{$$Id…$$}` schema |
+| astro-ph9608077 | 1 | `malformed:ltx:tags` |
+| hep-ph0702114 | 1 | `unexpected:}` (same as 1710.03688) |
+| hep-th9601176 | 1 | `unexpected:double-superscript` — `\hspace`/`\hs` math-mode Tbox not reaching `pop_box_list` |
+| math0111087 | 1 | `malformed:ltx:theorem` — amsppt `\proclaim` inside `\abstract` |
+| math0606553 | 1 | `undefined:\lx` — xy.sty `\CompileMatrices` `.xyc` re-tokenization, in-progress |
+| cmp-lg9407011 | 2 | `malformed:ltx:tags` |
+| alg-geom9604001 | 2 | `malformed:ltx:equation` |
+| 1806.06448 | 3 | `expected:}`/`expected:\fi` |
+| 1812.01892 | 4 | `unexpected:\@personname` IEEEtran |
+| astro-ph9808081 | 5 | `Unexpected:_` math-parser cumulative |
+| astro-ph9903386 | 5 | `Unexpected:^` math-parser cumulative |
+| math-ph0406029 | 8 | `unexpected:double-subscript` math-parser |
+| math0411005 | 8 | filecontents extracted file processing |
+| 1710.11409 | 9 | `malformed:ltx:section` schema; `\roman`/`\@ifundefined`/`\tag`/`\normalfont` |
+| math-ph0303066 | 10 | `unexpected:double-subscript` |
+| alg-geom9703018 | 10 | `\roman`/`\@ifundefined`/`\tag`/`\normalfont`/`\document`/`\lx@equation@settag` |
+| 1806.08417 | 13 | `\seq@after`/`\delimsize`; brace tracking |
+| alg-geom9604020 | 510 | amsppt cluster (deep `\proclaim` cascade) |
+| math0601451 | timeout | amsppt `\proclaim` id3 cascade (`Iter-17` notes below) |
+
+**Remaining 25 papers — error breakdown (older table, kept for context):**
 
 | Paper | Errs | Top error pattern | Likely root cause |
 |---|---|---|---|
