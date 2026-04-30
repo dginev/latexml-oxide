@@ -173,7 +173,7 @@ math9805021 were clean before.
 | astro-ph0512041 | 1 | `malformed:ltx:equation` | equation in `<ltx:date>` (schema/mode) |
 | astro-ph9608077 | 1 | `malformed:ltx:tags` | `<ltx:tags>` schema malformed |
 | hep-ph0702114 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch (same as 1710.03688) |
-| hep-th9601176 | 1 | `unexpected:double-superscript` | `\Si^{\mu\nu}'` math edge case |
+| hep-th9601176 | 1 | `unexpected:double-superscript` | Bisected 2026-04-30: trigger is `\hspace`-between-superscript-and-prime in math mode. Min repro `$x_a^{\mu\nu}\hspace{2em}'(p)$` errors in Rust, clean in Perl. Even visible-width hspace fails — so it's not the `if !s.is_empty()` short-circuit in `\hspace OptionalMatch:* {Dimension}` (latex_constructs.rs:7700). The `\hspace` Tbox either isn't reaching `pop_box_list` in `script_handler` (tex_math.rs:99), or its `isSpace` property isn't being read at the math-mode boundary. Next: instrument `script_handler` to log popped-box properties on this input |
 | ~~math0004127~~ | 0 | ~~`undefined:\oo`~~ | RESOLVED 2026-04-30: `\math<class>` constructors switched from `{}` (Plain) to `Digested` to mirror Perl `TeX_Math.pool.ltxml:689-697`. Plain expanded `\ifcase`'s body when there was no `{` after the CS, dragging `\oo` from the case-0 branch into evaluation. `\mathop` retained `{}` for now (`Digested` regresses `tests/math/testscripts` `scriptpos` depth-counting) |
 | math0111087 | 1 | `malformed:ltx:theorem` | amsppt `\proclaim` inside `\abstract` (schema) |
 | math0606553 | 1 | `undefined:\lx` | math-parser path during `\multline*`; `name`/`vattach` keyvals declared in `9d5cfb8ce` reduced Info noise but `\lx` source unidentified |
