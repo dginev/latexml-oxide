@@ -491,3 +491,48 @@ class of divergence — not specific to numprint.
 addressed, regenerate the test reference from current Perl. Until
 then, `numprints_test` remains documented as failing for
 math-parser-deep reasons.
+
+---
+
+## 19. TL2025 babel-french `frenchb` deprecation shim breaks Perl
+
+**TL source:** `texmf-dist/tex/generic/babel-french/frenchb.ldf`
+(babel-french 3.7e, 2025-08-15).
+
+**Symptom:** `\usepackage[frenchb]{babel}` (or any paper passing the
+deprecated `frenchb` option) on Perl LaTeXML with TL2025 emits:
+```
+Error:undefined:\bbl@main@language … is not defined.
+Error:latex:(babel) Package babel Error: You haven't defined the
+language '\bbl@main@language' yet.
+```
+
+**Root cause:** TL2025's `frenchb.ldf` is a 30-line deprecation
+shim that does `\chardef\l@frenchb=\l@french` and
+`\def\CurrentOption{french}` but does NOT chain `\input french.ldf`.
+Perl LaTeXML's `frenchb.ldf.ltxml` loads the shim raw and then
+relies on the never-firing chain.
+
+**Minimal example:**
+```tex
+\documentclass{article}
+\usepackage[frenchb]{babel}
+\begin{document}
+Bonjour.
+\end{document}
+```
+
+**Verification (2026-04-29):** Perl LaTeXML on TL2025 with
+`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`
+emits 2 errors on this 4-line min repro. Same paper produces
+2 errors on `0909.3444` (taln09 conference paper).
+
+**Impact:** Affects any paper using the deprecated `frenchb` option.
+Mostly older arXiv submissions written before babel-french 3.x
+mainstreamed `\usepackage[french]{babel}`.
+
+**Rust port status:** Rust now SUPERSEDES Perl on this — round-17
+commit `989c5a8ed` adds babel-level `\l@frenchb` + caption/extras/
+date hook aliases in `french_ldf.rs::load_definitions`, so
+`\selectlanguage{frenchb}` resolves silently. Rust converts
+0909.3444 with 0 errors; Perl baseline still emits 2.
