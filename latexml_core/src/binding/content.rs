@@ -643,20 +643,11 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   match taken_dispatcher {
     Some(ref dispatcher) => {
       // Perl `Package.pm:loadLTXML L2318` wraps the binding-load body in
-      // `local $UNLOCKED = 1`. The Perl-faithful equivalent is the two
-      // commented lines below. **Currently REVERTED** — wrapping the body
-      // in UNLOCKED breaks `\thebibliography` for ALL papers (with or
-      // without natbib): `\thebibliography`'s constructor never runs,
-      // so `<ltx:bibliography>` doesn't open and `<ltx:bibitem>` lands
-      // inside `<ltx:p>`. Suspect: a kernel/dump-loaded raw definer
-      // (latex.dump.txt or latex.ltx raw-load) overrides the
-      // `:locked` `\thebibliography` constructor under UNLOCK. Forward
-      // fix needs to find that override site and either restore lock
-      // around the kernel-construct definitions OR ensure no binding
-      // re-defines `\thebibliography`. See SYNC_STATUS section 10.
-      // crate::common::local_assignments::local_state_unlocked(true);
+      // `local $UNLOCKED = 1`, allowing bindings to override prior
+      // (locked) definitions. The guard auto-pops on drop.
+      let _unlock_guard =
+        crate::common::local_assignments::local_state_unlocked_guard(true);
       let result_opt = dispatcher(request);
-      // crate::common::local_assignments::expire_state_unlocked();
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.

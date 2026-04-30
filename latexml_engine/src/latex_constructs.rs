@@ -2012,6 +2012,10 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
   DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
+  // Perl L3939 — child ID prefixes (e.g., `\the@bibitem@ID`) chain off the
+  // parent counter's `@ID` macro. With parent counter `@lx@bibliography`,
+  // child IDs derive from `\the@lx@bibliography@ID`. Mirror Perl exactly.
+  DefMacro!(T_CS!("\\the@lx@bibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
   let title_opt = if let Some(bt) = bibtitle {
     Some(Digest!(bt)?)
@@ -7130,7 +7134,10 @@ LoadDefinitions!({
     r#"\let\bibitem\save@bibitem\let\par\save@par\let\\\save@backbackslash\bibitem"#
   );
 
-  NewCounter!("@bibitem", "bibliography", idprefix => "bib");
+  // Perl latex_constructs.pool.ltxml L4126 uses parent counter `@lx@bibliography`
+  // (declared at L3890). The `@lx@` prefix prevents the counter helper macro
+  // `\the<parent>` from colliding with `\thebibliography` (the env constructor).
+  NewCounter!("@bibitem", "@lx@bibliography", idprefix => "bib");
   DefMacro!("\\the@bibitem", "\\arabic{@bibitem}");
   DefMacro!("\\@biblabel{}", "[#1]");
   DefMacro!("\\fnum@@bibitem", "{\\@biblabel{\\the@bibitem}}");
