@@ -78,6 +78,22 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-55 — amsppt \\proclaim trigger identified:** Source pattern in
+both papers is `\proclaim{Theorem N.M } Let $X$ be ...` where the
+**body** has math. Rust's `\proclaim` impl (amsppt_sty.rs:147) and
+Perl's are nearly identical:
+```rust
+DefConstructor!("\\proclaim Undigested DigestUntil:\\endproclaim",
+    "<ltx:theorem class='ltx_theorem_proclaim'><ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+```
+Yet Perl handles it cleanly; Rust emits the body's `<ltx:XMTok>` *into*
+`<ltx:title>` rather than after `</ltx:title>`. Suggests the Rust
+constructor-template parser re-enters/re-emits inside the still-open
+`<ltx:title>` element instead of properly closing it before #2. Needs
+a focused trace of the constructor body insertion order. Would erase
+~2924 sandbox errors (math0601451 + alg-geom9604020).
+
 **Iter-54 amsppt cluster sized:** post `660103563` (the
 \@startsection fix erased 1561 errors of 1608.04650), the next big
 residual outliers are both amsppt+amstex papers:
