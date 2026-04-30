@@ -343,6 +343,12 @@ impl Mouth {
     } else {
       None
     };
+    // Perl Mouth.pm L97: ProgressSpinup($$self{note_message}) — emit
+    // `(Processing definitions <source>...` when this mouth begins reading.
+    // The matching ProgressSpindown is in `finish()` (note_end below).
+    if let Some(ref msg) = self.note_message {
+      note_begin(msg);
+    }
     // Perl: at_letter saves/restores @ catcode independently of fordefinitions.
     // Use Scope::Global to ensure it persists across scope frame pops during file loading.
     if self.at_letter {
