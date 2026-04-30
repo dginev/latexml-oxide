@@ -88,6 +88,7 @@ pub mod luatexbase_sty;
 pub mod mciteplus_sty;
 pub mod mdframed_sty;
 pub mod memoir_cls;
+pub mod mhchem_sty;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
 pub mod mssymb_tex;
@@ -229,6 +230,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
   ("memoir", "cls", memoir_cls::load_definitions),
+  ("mhchem", "sty", mhchem_sty::load_definitions),
   ("minted", "sty", minted_sty::load_definitions),
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
