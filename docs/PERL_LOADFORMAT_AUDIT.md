@@ -31,6 +31,47 @@ Active: spot-check `latex_constructs` extras for accidental drift vs
 intentional WISDOM #44 divergences, and re-run the count audit after
 the Apr 29-30 package/class fixes.
 
+**Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
+note).** A per-file diff of `latex_constructs.pool.ltxml` vs
+`latex_constructs.rs` (the source of the "1055 / 1199 → 13.5%
+extra" number above) overcounts drift because Perl and Rust split
+kernel-vs-construct CSes across files differently — most of the
+160-name surface vanishes once the diff is taken across the engine
+union. Engine-wide measurement (`Engine/*.pool.ltxml` ∪ all
+`latexml_engine/src/*.rs`):
+
+| Side | Unique CS names | Diff |
+|------|---:|---:|
+| Perl engine union | 2662 | — |
+| Rust engine union | 2364 | — |
+| Rust-only | — | 65 |
+| Perl-only | — | 363 |
+
+The 65-name Rust-only set, after inspection, is mostly
+intentional internals — `\lx@*` / `\ltx@*` plumbing, picture-env
+helpers (`\lx@pic@line`, `\lx@pic@oval`, `\lx@pic@qbezier`,
+`\lx@pic@vector`), math active-char primitives
+(`\lx@math@amp/dollar/hash/percent/underscore`), xparse-2018
+public API names (`\IfClassLoadedTF`, `\IfPackageAtLeastTF`,
+`\NewCommandCopy`, `\DeclareCommandCopy`), and pdfTeX primitives
+eagerly defined where Perl raw-loads them
+(`\pdfendthread`, `\pdfsavepos`, `\pdfsetrandomseed`,
+`\pdfstartthread`, `\pdfnoligatures`). Real drift candidates are
+small and mostly LaTeX kernel internals
+(`\@@appendix`, `\@begin@lrbox`, `\@listi…\@listvi`,
+`\@maxlistdepth`, `\@leftmark`, `\@rightmark`); these need
+case-by-case audit against `latex.ltx` raw load to confirm
+whether they should be deleted or renamed.
+
+The 363-name Perl-only set is dominated by `bib@entry@*`
+biblatex-style entries that Rust handles in `latexml_contrib`
+rather than the engine, plus pattern-misses (the regex doesn't
+catch `DefMath`/`DefRegister`/several variants on the Perl side).
+Not actionable as-is; a refined regex pass would shrink it.
+
+Diff lists for the next iteration: `/tmp/audit/rust_only_engine.txt`,
+`/tmp/audit/perl_only_engine.txt`.
+
 ## The strict split
 
 Perl `Package.pm:LoadFormat` (L2734-2752) is mutually exclusive:
