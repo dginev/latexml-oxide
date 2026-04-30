@@ -10,16 +10,35 @@ LoadDefinitions!({
   model::register_document_namespace("svg", Some("http://www.w3.org/2000/svg"));
 
   // Step 1: Catcode management
-  DefMacro!("\\xystycatcode", "12");
+  // Perl xy.sty.ltxml L19:
+  //   DefMacro('\xystycatcode', sub { Explode(LookupCatcode('@')); });
+  // Dynamically expands to the digit chars of `@`'s current catcode.
+  DefMacro!("\\xystycatcode", sub[_args] {
+    let cc = state::lookup_catcode('@')
+      .map(|cc| cc as u8).unwrap_or(12);
+    Tokens!(Explode!(s!("{}", cc)))
+  });
 
-  // Step 2: Load raw xy.tex (Perl: at_letter => 0)
-  // Save \@currname/\@currext before raw loading (xy.tex changes these internally)
-  // NOTE: Do NOT set @ to OTHER here — xy.tex manages its own catcodes internally.
-  // Setting @ to OTHER globally breaks xyline.tex loading because \xydef@ etc.
-  // get split at the @ boundary.
+  // Step 2: Load raw xy.tex (Perl: at_letter => 0).
+  // Perl xy.sty.ltxml L21 explicitly sets `\catcode`\@=12` before
+  // InputDefinitions('xy', type => 'tex'). xy.tex's L47 \xyreuncatcodes
+  // captures `@`'s catcode so that subsequent invocations of \xyuncatcodes
+  // (e.g. inside `\xyxy@@ix@`'s `\begingroup ... \xyuncatcodes ...
+  // \afterassignment\endgroup\global\toks9=` sequence used during
+  // `\CompileMatrices` re-input of `.xyc` files) restore the same value.
+  // Without this pre-assign, our binding-load path enters xy.tex with
+  // `@` = LETTER (from ambient binding-load context), so \xyuncatcodes
+  // ends up restoring `@` to LETTER — but the .xyc compile body relies
+  // on `\xycatcodes` having already set `@` = LETTER, and the local
+  // group-pop expectation breaks.
   let saved_currname = gullet::do_expand(T_CS!("\\@currname")).ok().map(|t| t.to_string());
   let saved_currext = gullet::do_expand(T_CS!("\\@currext")).ok().map(|t| t.to_string());
+  let saved_at_cc_before_xy = state::lookup_catcode('@');
+  state::assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
   InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
+  if let Some(cc) = saved_at_cc_before_xy {
+    state::assign_catcode('@', cc, Some(Scope::Global));
+  }
   // Restore \@currname/\@currext so ProcessOptions uses the correct package name
   if let Some(ref name) = saved_currname {
     def_macro(T_CS!("\\@currname"), None, Tokenize!(name), None)?;

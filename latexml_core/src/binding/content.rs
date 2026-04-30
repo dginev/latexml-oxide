@@ -642,20 +642,21 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
-      // Perl `Package.pm:loadLTXML L2318`:
-      //   local $LaTeXML::Core::State::UNLOCKED = 1;
-      // Bindings (`.ltxml`) must be allowed to override `:locked` CSes
-      // unconditionally — the lock is a guard against user-source `\def`/
-      // `\newcommand`, never against compiled binding code. Without this,
-      // SOURCEFILE during binding execution still points at the user's
-      // top-level `.tex`, so the `install_definition` lock-check
-      // mistakenly classifies binding-side redefinitions as
-      // "from document source" and silently drops them — leaving e.g.
-      // natbib's `\bibitem` overlay disabled, which surfaces in
-      // astro-ph9608077 as `<ltx:tags> in <ltx:tag>` schema errors.
-      crate::common::local_assignments::local_state_unlocked(true);
+      // Perl `Package.pm:loadLTXML L2318` wraps the binding-load body in
+      // `local $UNLOCKED = 1`. The Perl-faithful equivalent is the two
+      // commented lines below. **Currently REVERTED** — wrapping the body
+      // in UNLOCKED breaks `\thebibliography` for ALL papers (with or
+      // without natbib): `\thebibliography`'s constructor never runs,
+      // so `<ltx:bibliography>` doesn't open and `<ltx:bibitem>` lands
+      // inside `<ltx:p>`. Suspect: a kernel/dump-loaded raw definer
+      // (latex.dump.txt or latex.ltx raw-load) overrides the
+      // `:locked` `\thebibliography` constructor under UNLOCK. Forward
+      // fix needs to find that override site and either restore lock
+      // around the kernel-construct definitions OR ensure no binding
+      // re-defines `\thebibliography`. See SYNC_STATUS section 10.
+      // crate::common::local_assignments::local_state_unlocked(true);
       let result_opt = dispatcher(request);
-      crate::common::local_assignments::expire_state_unlocked();
+      // crate::common::local_assignments::expire_state_unlocked();
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
