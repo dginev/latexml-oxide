@@ -189,11 +189,95 @@ arena-interner probes dominate. Tier A papers are math/figure-bound
 and benefit less per site, but the accumulated saving is still
 visible.
 
-Diminishing returns: further .to_string cleanup should target a
-callgrind-identified hot band, not a blanket sweep. Next perf work
-should pivot to Stored struct rationalisation (see SYNC_STATUS
-"Rationalize the Stored enum" long-horizon task) or Tokens
-deep-copy reduction.
+### 2026-04-30 refresh and profiling notes
+
+Fresh release CLI build (`cargo build --release --bin latexml_oxide`) and
+idle-serial corpus run:
+
+| paper          | main.tex                           | dt (s) | current read                 |
+|----------------|------------------------------------|-------:|------------------------------|
+| 0906.1883      | VanNeervenWeis_final_version.tex   |  0.76  | small math-heavy control     |
+| 1011.1955      | 1011.1955.tex                      |  3.88  | math-parser bound            |
+| 1009.1431      | 1009.1431.tex                      |  2.19  | under 3 s                    |
+| 1008.4386      | genealogy_final_CPAM.tex           |  3.17  | near-threshold outlier       |
+| 0909.2656      | main.tex                           |  2.56  | under 3 s                    |
+| 0911.4739      | lhc7.tex                           |  2.74  | under 3 s                    |
+| 1005.1610      | OAM100507.tex                      |  4.37  | post/graphics bound          |
+| 0803.0466      | IIpaper15.tex                      |  2.30  | under 3 s                    |
+| complex/si.tex | si.tex                             |  1.28  | no longer current bottleneck |
+
+Phase splits on representative outliers:
+
+| paper     | mode                                    | wall | user CPU | max RSS |
+|-----------|-----------------------------------------|-----:|---------:|--------:|
+| 1005.1610 | XML only                                | 0.88s |   0.83s | 240 MB  |
+| 1005.1610 | HTML                                    | 3.14s |  12.38s | 235 MB  |
+| 1005.1610 | HTML, `--nomathparse`                  | 2.69s |  13.68s | 176 MB  |
+| 1005.1610 | HTML, `--graphics-svg-threshold-kb 200` | 3.67s |  14.30s | 235 MB  |
+| 1011.1955 | XML only                                | 3.60s |   3.42s | 533 MB  |
+| 1011.1955 | XML, `--nomathparse`                   | 1.28s |   1.20s | 295 MB  |
+
+Hardware-counter profiling was enabled after the first pass. Release `perf`
+samples were collected from an unstripped release binary
+(`CARGO_PROFILE_RELEASE_STRIP=none cargo build --release --bin latexml_oxide`);
+normal release builds still follow the checked-in profile settings.
+
+`perf stat -d` split the two current outlier families cleanly:
+
+| paper     | mode     | elapsed | CPUs | read |
+|-----------|----------|--------:|-----:|------|
+| 1011.1955 | XML      | 3.78s   | 0.99 | single-core math/body conversion; backend pressure visible |
+| 1005.1610 | HTML     | 2.83s   | 3.92 | parallel external graphics/post-processing dominates |
+
+Flat release samples on `1011.1955` put the main XML cost back in Marpa:
+`marpa_r_earleme_complete` (7.45%), `postdot_items_create` (6.59%),
+`bv_scan` (2.48%), `marpa_b_new` (2.42%), `transitive_closure` (2.08%),
+`marpa_g_precompute` (1.43%), and `_marpa_avl_probe` (1.14%). Alloc/free
+and libxml/XPath work are the next visible bands. With `--nomathparse`, the
+Marpa band disappears and the remaining samples are libxml wrapper/node
+access, allocator traffic, and kpathsea package lookup/hash setup.
+
+Flat release samples on `1005.1610` HTML mostly land in child processes:
+Ghostscript (`gs`) and ImageMagick `convert` spend visible cycles in
+`png_write_row`, zlib, libc allocation/string routines, and Ghostscript
+internals. Rust-side Marpa functions are below 1% flat in that run. The earlier
+debug Callgrind sample on `0906.1883` was consistent with the release Marpa
+symbols, but should remain directional only.
+
+### Future directions
+
+1. **Math fast paths before Marpa.** `1011.1955` spends about 2.3 s and 238 MB
+   RSS in math parsing. Its parse audit is dominated by simple repeated
+   shapes (`p(n)`, `eta(z)`, comma lists, simple subscripted function calls).
+   Add conservative direct-XM builders for unambiguous common shapes before
+   `parse_marpa`, then validate against the standing corpus and math tests.
+   Release `perf` now confirms Marpa recognizer/precompute symbols as the
+   largest XML-only hot band.
+
+2. **Grammar ambiguity reduction.** Release `perf` and debug Callgrind both
+   point at Marpa recognizer/precompute internals even when tree enumeration is capped.
+   Prioritize grammar changes around function application, juxtaposition,
+   comma lists, scripts, and `ATOM` boundaries. Use `LATEXML_PARSE_AUDIT=1`
+   to select repeated patterns before changing rules.
+
+3. **Graphics conversion cache/telemetry.** `1005.1610` is post/graphics
+   bound, with release samples landing mostly in `gs` / `convert` PNG and zlib
+   work. The small-vector SVG path is workload-specific: it is excellent for
+   pathological vector PDFs but slower on this mixed/raster paper. Add per-asset
+   timing and cache conversion results by source path, page, DPI, destination
+   type, and graphics options before adding more heuristics.
+
+4. **Package/dump and libxml residual cost.** After `--nomathparse`, the
+   remaining `1011.1955` samples are not one Rust loop; they are libxml wrapper
+   access, allocator traffic, kpathsea package lookup, and dump/package loading
+   call paths. Treat this as a startup/batch-throughput direction: measure
+   whether preloaded state snapshots, package lookup caching, or lower-allocation
+   dump parsing help before optimizing individual call sites.
+
+5. **Allocation cleanup stays profile-driven.** The earlier `.to_string`
+   sweep paid off, but further arena/state/Tokens cleanup should target a
+   measured hot band. Candidate APIs remain `*_sym` state accessors,
+   `Tokens` numeric/string conversions, and deep `Stored` / `Tokens` copies.
 
 ### Regression trigger
 
@@ -201,13 +285,6 @@ Any corpus entry drifting wall-clock **> +15%** from its last recorded
 baseline between commits is a regression signal. Record the new row in a
 dated sub-heading here (don't overwrite); keep the old baseline so the drift
 is visible in history.
-
-### Known outliers (as of round 17)
-
-- **0911.4739** and **1005.1610** exceed the old "all under 3s" claim from
-  the session 124 memory. Either workload drift (new markup or upstream
-  engine changes) or cold-bench sensitivity. Candidate papers for the next
-  perf investigation cycle.
 
 ### Validation: pathological-for-ImageMagick PDFs (issue #902)
 
