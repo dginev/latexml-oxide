@@ -510,19 +510,51 @@ Perl. Add `latexml_oxide --dump-model` that writes the loaded
 schema in `.model` format, then extend `compileschema.sh` to call
 it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
 
-### 10. (Long-term, low-priority) `_load_binding` UNLOCKED audit
+### 10. `_load_binding` UNLOCKED — wrapper applied, 5 forward fixes pending
 
-Rust's `_load_binding` (`latexml_core/src/binding/content.rs:625`)
-lacks Perl's `local $UNLOCKED = 1` wrapper around the binding-load
-body (Package.pm:2318). Adding it is the Perl-faithful long-term
-fix that would let sibling `.ltxml`/`.rs` bindings cleanly redefine
-slots an earlier binding installed with `locked => true`. Trying
-the wrapper alone regressed 5 unit tests (natbib_test, crazybib_test,
-percent_test, textcase_test, amstheorem_test) — natbib's
-`<bibliography>` element stops opening, `<bibitem>` ends up nested
-inside `<para><p>0`. The "0" suggests a counter or value redef now
-takes effect that previously was blocked, but which natbib downstream
-state depends on staying blocked.
+Wrapper applied 2026-04-30 (commit `825cb7024`) at
+`latexml_core/src/binding/content.rs:_load_binding` mirroring Perl
+`Package.pm:loadLTXML L2318` `local $UNLOCKED = 1`. Five tests
+regress with same downstream symptom (bibliography doesn't open,
+`<bibitem>` lands in `<para><p>0`):
+
+* `percent_test` (00_tokenize)
+* `textcase_test` (10_expansion)
+* `crazybib_test` (50_structure)
+* `natbib_test` (50_structure)
+* `amstheorem_test` (55_theorem)
+
+**natbib_test trace** (representative): under UNLOCK,
+`Let!("\\bibitem", "\\lx@nat@bibitem")` (natbib_sty.rs:925) now
+succeeds. Previously the lock kept `\bibitem` as the kernel
+`\if@lx@inbibliography\else\expandafter\lx@mung@bibliography...
+\lx@bibitem` constructor (with bibliography auto-mung). After
+UNLOCK, `\bibitem` is `\reset@natbib@cites\refstepcounter{@bibitem}
+\@ifnextchar[{\@lbibitem}{\@lbibitem[]}` — same body as Perl.
+But Rust's expansion leaks the literal text "0" before the
+`<ltx:bibitem>` opens, AND the surrounding `\thebibliography`
+env's `<ltx:bibliography>` doesn't wrap properly. Suspects:
+  * `\refstepcounter`'s side-effect — Perl primitive returns
+    nothing visible; Rust's may leak counter value text.
+  * `\reset@natbib@cites` definition or expansion order.
+  * `\thebibliography`'s `before_digest_bibliography` interaction
+    with the new (un-locked) `\bibitem` chain.
+
+Min repro for the leak (without natbib): `\refstepcounter{section}`
+in body — should be silent.
+
+Forward fix path:
+1. Determine why "0" leaks from the natbib `\bibitem` chain in Rust.
+2. Verify `\thebibliography` correctly enters its frame when
+   `\bibitem` is natbib's variant (not the kernel mung-wrapper).
+3. Run all 5 tests; confirm each passes.
+4. Remove surgical `:locked` clears from
+   `revtex3_support_sty.rs:56-63` and similar.
+
+Workaround (legacy): surgical `:locked` flag clears in
+`revtex3_support_sty.rs` immediately before its `\equation` redef
+(commit `663895c56`). Other bindings with the same need can use the
+same workaround until a wider audit completes.
 
 Workaround that ships today: surgical `:locked` flag clears in
 `revtex3_support_sty.rs` immediately before its `\equation` redef
