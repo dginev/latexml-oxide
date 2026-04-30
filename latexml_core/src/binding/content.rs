@@ -1767,8 +1767,14 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   // `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
   let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").ok()?;
 
-  let mut base = name.to_string();
-  let mut changed = false;
+  // Strip a leading directory path (Perl Package.pm L2167-2170: FindFile_fallback
+  // calls `pathname_name($name)` first, so e.g. `\documentclass{./sty/IEEEtran}`
+  // routes the basename `IEEEtran` through the binding-name registry. Without
+  // this, `IEEEtran.cls.ltxml` is missed because `./sty/IEEEtran.cls.ltxml`
+  // never matches the @ltxml_paths registry. Driver paper: arXiv:1308.6663.
+  let basename = pathname::file_name(name);
+  let mut base = if basename.is_empty() { name.to_string() } else { basename };
+  let mut changed = base != name;
   // Iteratively strip suffixes, then glued, then prefixes
   loop {
     if let Some(m) = suffix_rx.find(&base) {
