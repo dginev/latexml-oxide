@@ -217,10 +217,14 @@ LoadDefinitions!({
       Ok(())
     })?;
     // NOW digest the content — nested @add@to@frontmatter calls will see this entry as "last"
+    // Perl Base_Utility.pool.ltxml L204: `DigestText(Tokens($tokens))` — text-mode
+    // digest forces math content (e.g. `$$Id…$$` CVS markers in `\date{}`) to
+    // flatten into plain text instead of producing `<ltx:equation>` whatsits
+    // that wouldn't fit the schema slot (e.g. `<ltx:date>` rejects equations).
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
     wrapped_tokens.push(T_END!());
-    let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
+    let digested_tokens = DigestText!(Tokens::new(wrapped_tokens))?;
     // Fill in the placeholder
     state::with_value_mut("frontmatter", |val_opt| {
       let frontmatter = match val_opt {
