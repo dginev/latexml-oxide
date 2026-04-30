@@ -56,12 +56,25 @@ public API names (`\IfClassLoadedTF`, `\IfPackageAtLeastTF`,
 `\NewCommandCopy`, `\DeclareCommandCopy`), and pdfTeX primitives
 eagerly defined where Perl raw-loads them
 (`\pdfendthread`, `\pdfsavepos`, `\pdfsetrandomseed`,
-`\pdfstartthread`, `\pdfnoligatures`). Real drift candidates are
-small and mostly LaTeX kernel internals
-(`\@@appendix`, `\@begin@lrbox`, `\@listi…\@listvi`,
-`\@maxlistdepth`, `\@leftmark`, `\@rightmark`); these need
-case-by-case audit against `latex.ltx` raw load to confirm
-whether they should be deleted or renamed.
+`\pdfstartthread`, `\pdfnoligatures`).
+
+**2026-04-30 spot-check on the previously-flagged "real drift"
+candidates** confirms the surface is much smaller than the 65 number
+suggests — most are false positives or intentional stubs:
+
+| Candidate | Verdict |
+|---|---|
+| `\@@appendix` | **NOT drift** — Perl `latex_constructs.pool.ltxml:707` defines the identical body `\@startsection{appendix}{0}{}{}{}{}`. Iteration-3 regex missed it (false positive). |
+| `\@begin@lrbox` | **NOT drift** — Rust definition is commented out at `latex_constructs.rs:7890`. Regex matched the comment. |
+| `\@listi…\@listvi` | **Intentional safety stub** at `latex_constructs.rs:4831`-4838 with explicit comment: "stub them as no-ops since LaTeXML handles list formatting via CSS". |
+| `\@leftmark` / `\@rightmark` | Simple `Let!("\\@leftmark", "\\@firstoftwo")` at `latex_constructs.rs:3969`-3970. Redundant with latex.ltx raw-load but harmless; stays. |
+| `\@maxlistdepth` | `DefRegister!` initializing to 6 at `latex_constructs.rs:4827`. Standard kernel value; redundant with raw latex.ltx but harmless. |
+
+**Conclusion:** the actual strict-Perl drift surface in
+`latex_constructs` is essentially empty — a handful of redundant
+kernel-default initializations, none acute. The "13.5% extra in
+Rust" framing in the table above should be read as
+**organizational + safety-stub overhead**, not parity drift.
 
 The 363-name Perl-only set is dominated by `bib@entry@*`
 biblatex-style entries that Rust handles in `latexml_contrib`
