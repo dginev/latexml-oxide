@@ -510,111 +510,17 @@ Perl. Add `latexml_oxide --dump-model` that writes the loaded
 schema in `.model` format, then extend `compileschema.sh` to call
 it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
 
-### 10. `_load_binding` UNLOCKED — wrapper applied, 5 forward fixes pending
+### 10. UNLOCKED scopes — translate all 5 Perl sites
 
-Wrapper applied 2026-04-30 (commit `825cb7024`) at
-`latexml_core/src/binding/content.rs:_load_binding` mirroring Perl
-`Package.pm:loadLTXML L2318` `local $UNLOCKED = 1`. Five tests
-regress with same downstream symptom (bibliography doesn't open,
-`<bibitem>` lands in `<para><p>0`):
-
-* `percent_test` (00_tokenize)
-* `textcase_test` (10_expansion)
-* `crazybib_test` (50_structure)
-* `natbib_test` (50_structure)
-* `amstheorem_test` (55_theorem)
-
-**natbib_test trace** (representative): under UNLOCK,
-`Let!("\\bibitem", "\\lx@nat@bibitem")` (natbib_sty.rs:925) now
-succeeds. Previously the lock kept `\bibitem` as the kernel
-`\if@lx@inbibliography\else\expandafter\lx@mung@bibliography...
-\lx@bibitem` constructor (with bibliography auto-mung). After
-UNLOCK, `\bibitem` is `\reset@natbib@cites\refstepcounter{@bibitem}
-\@ifnextchar[{\@lbibitem}{\@lbibitem[]}` — same body as Perl.
-But Rust's output shows a `<div class="ltx_para">` wrapping the
-`<li class="ltx_bibitem">` directly — the `\thebibliography` env's
-`<ltx:bibliography>` opening is suppressed (or `<para>` opens
-prematurely before the bibliography frame can claim authority).
-
-**6-line min repro** (saved as `/tmp/xytest/leak.tex`):
-```tex
-\documentclass{article}\usepackage{natbib}
-\begin{document}
-\begin{thebibliography}{}
-\bibitem[A]{key1} body
-\end{thebibliography}
-\end{document}
-```
-Same `<para>`-wraps-`<bibitem>` symptom as the full natbib_test.
-
-**Refined hypothesis ruled out**: I initially suspected
-`\reset@natbib@cites` (DefPrimitive without DefPrimitiveI invisible
-semantics) was triggering `enter_horizontal`. Verified by reading
-`primitive.rs:invoke_primitive`: only the `String`-body branch calls
-`crate::stomach::enter_horizontal()`; the `Closure` branch (which
-applies to `\reset@natbib@cites` with `None`/`after_digest`) does
-NOT. So this is not the leak source.
-
-Next iteration concrete experiment: bisect the `\bibitem` body
-itself. Define a temporary `\bibitem-min` macro in natbib_test
-min repro that calls only `\@@lbibitem{key}` (skipping
-`\reset@natbib@cites`/`\refstepcounter`/`\@ifnextchar` chain). If
-the bibliography opens correctly, the trigger is in one of those
-three; bisect from there. If it still breaks, the trigger is in
-`\@@lbibitem` itself or in a downstream `\@lbibitem` → `\@@lbibitem`
-expansion order.
-
-**Iter-2026-04-30 narrowing**: The leak.tex repro under UNLOCK
-emits NO `<bibliography>` or `<biblist>` at all — just a stray
-`<para>` containing `<bibitem>`+`<bibblock>`. So `\thebibliography`
-constructor's template (`<ltx:bibliography…><ltx:title>…
-</ltx:title><ltx:biblist>`) never opens. Suspect:
-`before_digest_bibliography` (latex_constructs.rs:1919) calls
-`Digest!("\\@lx@inbibliographytrue")` and several runtime
-`DefMacro!`/`Let!` — running BEFORE the constructor template emits.
-One of these likely opens `<para>` first, which then auto-closes
-when `<bibitem>` enters. Targeted next-step: comment out
-`Digest!("\\@lx@inbibliographytrue")?` from
-`before_digest_bibliography` and re-run leak.tex; if `<bibliography>`
-opens, that Digest call is the culprit (under UNLOCK
-`\@lx@inbibliographytrue` may now redefine and emit visible state). Suspects:
-  * `\refstepcounter`'s side-effect — Perl primitive returns
-    nothing visible; Rust's may leak counter value text.
-  * `\reset@natbib@cites` definition or expansion order.
-  * `\thebibliography`'s `before_digest_bibliography` interaction
-    with the new (un-locked) `\bibitem` chain.
-
-Min repro for the leak (without natbib): `\refstepcounter{section}`
-in body — should be silent.
-
-Forward fix path:
-1. Determine why "0" leaks from the natbib `\bibitem` chain in Rust.
-2. Verify `\thebibliography` correctly enters its frame when
-   `\bibitem` is natbib's variant (not the kernel mung-wrapper).
-3. Run all 5 tests; confirm each passes.
-4. Remove surgical `:locked` clears from
-   `revtex3_support_sty.rs:56-63` and similar.
-
-Workaround (legacy): surgical `:locked` flag clears in
-`revtex3_support_sty.rs` immediately before its `\equation` redef
-(commit `663895c56`). Other bindings with the same need can use the
-same workaround until a wider audit completes.
-
-Workaround that ships today: surgical `:locked` flag clears in
-`revtex3_support_sty.rs` immediately before its `\equation` redef
-(commit `663895c56`). Other bindings with the same need can use the
-same workaround until a wider audit completes.
-
-Audit plan when revisited:
-* Identify which bindings legitimately need to override locked
-  slots (the broad fix DOES enable this).
-* Identify which downstream binding state breaks under the broader
-  fix and trace the actual failing redef-ordering.
-* Fix the ordering issue forward, then enable the wrapper.
-* Acceptance: `cargo test --tests` 1110+/0/0 with wrapper applied
-  AND existing surgical workarounds removed.
-
-Deprioritized — current sandbox-recovery work has higher leverage.
+Perl sets `local $UNLOCKED = 1` in 5 sites; Rust currently has 0
+— this is the next major Perl-faithful gap. Sites: `loadLTXML`
+body (Package.pm:2318), `executeBeforeDigest`/`executeAfterDigest`
+of Primitives (Primitive.pm:41,47), `executeAfterDigestBody` of
+Constructors (Constructor.pm:124), `\AppendToMacro`-style
+extension helper (Package.pm:2527). Plus one explicit `=0`
+re-lock in `loadTeXFile` (Package.pm:2364). Surgical
+`:locked` clear workaround stays in place
+(`revtex3_support_sty.rs:56-63`) until all five are wired.
 
 ### 11. Distribution — bundle multi-TL dumps
 
