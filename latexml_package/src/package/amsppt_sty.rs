@@ -235,6 +235,9 @@ LoadDefinitions!({
   // dropped it entirely; restore the Perl expansion for faithful
   // "by the same author" rendering.
   DefMacro!("\\bysame", "\\by ---");
+  // Perl amsppt.sty.ltxml L465: Let('\manyby', '\by').
+  // Used when listing multiple authors as `\ref \no N \manyby Auth1, Auth2`.
+  Let!("\\manyby", "\\by");
   DefMacro!("\\paper", "\\textit");
   DefMacro!("\\paperinfo{}", "#1");
   DefMacro!("\\jour{}", "\\textit{#1}");
