@@ -102,17 +102,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         putback.push_front(prev);
         continue;
       } else if prev.is_empty()? {
-        // Perl `TeX_Math.pool.ltxml:380-381`: "If empty, the script floats,
-        // can't conflict, but don't put back". The current call's `cs` already
-        // stays as `\lx@floating@*` (init value), but we ALSO need to leave an
-        // isEmpty-property marker for the NEXT script_handler invocation so a
-        // following `_` or `^` finds the bridge and sets `prevspace=true` —
-        // otherwise patterns like `A_{s}{}^{}_{}` (math-ph0303066) lose the
-        // empty-`{}` separator after `^{}` consumes it and the second `_`
-        // mis-flags `_{s}` as a duplicate. Push a synthetic isEmpty marker.
-        let mut marker = prev;
-        marker.set_property("isEmpty", Stored::Bool(true));
-        putback.push_front(marker);
+        // Perl `TeX_Math.pool.ltxml:378-379`: "If empty, the script floats,
+        // can't conflict, but don't put back". `cs` stays at `\lx@floating@*`
+        // (initial value); the empty `{}` is consumed.
         break;
       } else if let Some(prevop) = is_script(&prev) {
         if prevop.1 == cc {
