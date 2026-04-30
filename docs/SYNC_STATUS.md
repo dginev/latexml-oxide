@@ -531,9 +531,21 @@ succeeds. Previously the lock kept `\bibitem` as the kernel
 \lx@bibitem` constructor (with bibliography auto-mung). After
 UNLOCK, `\bibitem` is `\reset@natbib@cites\refstepcounter{@bibitem}
 \@ifnextchar[{\@lbibitem}{\@lbibitem[]}` — same body as Perl.
-But Rust's expansion leaks the literal text "0" before the
-`<ltx:bibitem>` opens, AND the surrounding `\thebibliography`
-env's `<ltx:bibliography>` doesn't wrap properly. Suspects:
+But Rust's output shows a `<div class="ltx_para">` wrapping the
+`<li class="ltx_bibitem">` directly — the `\thebibliography` env's
+`<ltx:bibliography>` opening is suppressed (or `<para>` opens
+prematurely before the bibliography frame can claim authority).
+
+**6-line min repro** (saved as `/tmp/xytest/leak.tex`):
+```tex
+\documentclass{article}\usepackage{natbib}
+\begin{document}
+\begin{thebibliography}{}
+\bibitem[A]{key1} body
+\end{thebibliography}
+\end{document}
+```
+Same `<para>`-wraps-`<bibitem>` symptom as the full natbib_test. Suspects:
   * `\refstepcounter`'s side-effect — Perl primitive returns
     nothing visible; Rust's may leak counter value text.
   * `\reset@natbib@cites` definition or expansion order.
