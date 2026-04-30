@@ -3326,7 +3326,30 @@ LoadDefinitions!({
         document.set_node(&point);
       }
       let clean_id = prop_string!(props,"id"); // TODO: CleanID($id);
-      let tagname = s!("ltx:{stype}");
+      // Mirror Perl `latex_constructs.pool.ltxml:599-607`: sanitize the type
+      // name so we don't open arbitrary elements outside the schema. Perl
+      // checks `isKnownTag(ltx:$type)`; if unknown, special-cases `ltx:app
+      // → ltx:appendix`, otherwise falls back to `ltx:section` and warns.
+      // Without this guard, papers that do
+      // `\newcommand\Proof{\@startsection{Proof}{5}{...}}` (e.g.
+      // mst-stylefile.sty in 1608.04650) opened `<ltx:Proof>` and cascaded
+      // 1500+ malformed errors on every nested element.
+      let tagname = {
+        let candidate = s!("ltx:{stype}");
+        // Known sectioning tags in the LaTeXML schema:
+        let known = matches!(stype.as_str(),
+          "part" | "chapter" | "section" | "subsection" | "subsubsection"
+          | "paragraph" | "subparagraph" | "appendix" | "bibliography" | "index");
+        if known {
+          candidate
+        } else if stype == "app" {
+          "ltx:appendix".to_string()
+        } else {
+          Warn!("malformed", &candidate,
+            s!("Tried to open an unknown tag {} for numbered section", candidate));
+          "ltx:section".to_string()
+        }
+      };
       document.open_element(&tagname,
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
@@ -3417,7 +3440,24 @@ LoadDefinitions!({
         document.set_node(&point);
       }
       let id = props.get("id").unwrap().to_string();
-      document.open_element(&s!("ltx:{stype}"),
+      // Mirror the same schema sanitization as \@@numbered@section above.
+      let stype_str = stype.to_string();
+      let tagname = {
+        let candidate = s!("ltx:{stype_str}");
+        let known = matches!(stype_str.as_str(),
+          "part" | "chapter" | "section" | "subsection" | "subsubsection"
+          | "paragraph" | "subparagraph" | "appendix" | "bibliography" | "index");
+        if known {
+          candidate
+        } else if stype_str == "app" {
+          "ltx:appendix".to_string()
+        } else {
+          Warn!("malformed", &candidate,
+            s!("Tried to open an unknown tag {} for unnumbered section", candidate));
+          "ltx:section".to_string()
+        }
+      };
+      document.open_element(&tagname,
         Some(string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
