@@ -90,10 +90,29 @@ fi
 
 echo "[triage] arxiv_id : $ARXIV_ID"
 echo "[triage] main tex : $MAIN_TEX"
-echo "[triage] profile  : test (cargo default — debug=full, incremental)"
-echo "[triage] running  : cargo run --bin latexml_oxide -- $MAIN_TEX $*"
-echo
 
 cd "$(dirname "$0")/.."
+
+# Use cortex_worker (the same binary the canvas uses), so triage results
+# match what tools/benchmark_10k.sh observed. Prefer the existing
+# release build; fall back to a fresh build if missing or stale.
+WORKER_BIN="${WORKER_BIN:-./target/release/cortex_worker}"
+if [[ ! -x "$WORKER_BIN" ]]; then
+  echo "[triage] building cortex_worker (release, --features cortex) ..."
+  cargo build --release --bin cortex_worker --features cortex
+fi
+
+# cortex_worker --standalone takes the .zip as input, not the .tex; emits
+# a result archive into --output. We run against the original .zip so
+# the worker's own unzip + cwd handling matches the canvas exactly.
+INPUT_ZIP="$SANDBOX_DIR/${ARXIV_ID}.zip"
+OUTPUT_TMP="${OUTPUT_TMP:-/tmp/triage_${ARXIV_ID}_$$.zip}"
+
+echo "[triage] worker   : $WORKER_BIN --standalone"
+echo "[triage] input    : $INPUT_ZIP"
+echo "[triage] output   : $OUTPUT_TMP"
+echo "[triage] running  : $WORKER_BIN --standalone --input $INPUT_ZIP --output $OUTPUT_TMP --timeout 120 $*"
+echo
+
 RUST_BACKTRACE="${RUST_BACKTRACE:-1}" \
-  exec cargo run --bin latexml_oxide -- "$MAIN_TEX" "$@"
+  exec "$WORKER_BIN" --standalone --input "$INPUT_ZIP" --output "$OUTPUT_TMP" --timeout 120 "$@"
