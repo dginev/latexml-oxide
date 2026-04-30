@@ -78,6 +78,18 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-50 quantified impact of `db8a4815a`:** 30-paper random sample
+from `results.tsv` conversion_error bucket on current HEAD:
+**17 fully clean (`No obvious problems`)**, 1 warnings-only, 12
+still error. **~60% recovered** from a previously-error bucket
+just from the paper-local sty discovery fix. Full canvas rebuild
+will likely show results.tsv conv_error count dropping from 93 to
+~37 (38 papers worth ~+0.5% on the 7898-paper canvas). Residual
+12-paper error pattern: 7 with 1-13 errors (per-paper long tail),
+2 outliers (alg-geom9604020 510 errs, 1608.04650 1561 errs likely
+amstex/amsppt cascade), 3 in the per-paper-stub bucket (`\gnuplot`,
+`\textrhookrevepsilon`, `\seq@after`, `\delimsize`).
+
 **Iter-49:** instrumented tex_fonts.rs with eprintln after the
 DefPrimitive! call. Confirmed at install time `\gnuplot` IS in the
 meaning table (`lookup_meaning("\\gnuplot") = true`). So the install
