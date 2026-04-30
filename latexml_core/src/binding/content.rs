@@ -642,7 +642,20 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
+      // Perl `Package.pm:loadLTXML L2318`:
+      //   local $LaTeXML::Core::State::UNLOCKED = 1;
+      // Bindings (`.ltxml`) must be allowed to override `:locked` CSes
+      // unconditionally — the lock is a guard against user-source `\def`/
+      // `\newcommand`, never against compiled binding code. Without this,
+      // SOURCEFILE during binding execution still points at the user's
+      // top-level `.tex`, so the `install_definition` lock-check
+      // mistakenly classifies binding-side redefinitions as
+      // "from document source" and silently drops them — leaving e.g.
+      // natbib's `\bibitem` overlay disabled, which surfaces in
+      // astro-ph9608077 as `<ltx:tags> in <ltx:tag>` schema errors.
+      crate::common::local_assignments::local_state_unlocked(true);
       let result_opt = dispatcher(request);
+      crate::common::local_assignments::expire_state_unlocked();
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
