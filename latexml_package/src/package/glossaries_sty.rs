@@ -258,9 +258,42 @@ LoadDefinitions!({
   DefMacro!("\\glsadd OptionalKeyVals Semiverbatim", "");
   DefMacro!("\\newglossary OptionalMatch:* {}{}{}{}", "");
   DefMacro!("\\glslink{}{}", "#2");
-  DefMacro!("\\glsentrytext Semiverbatim", "");
-  DefMacro!("\\glsentrylong Semiverbatim", "");
-  DefMacro!("\\glsentryshort Semiverbatim", "");
+  // glossaries.sty defines a `\<gls|Gls>entry<field>` family for read-only
+  // access to entry fields (used outside `\gls{}` typesetting context, e.g.
+  // in section headings). The capitalized `\Gls*` variants pipe the result
+  // through `\makefirstuc`. Perl's glossaries.sty.ltxml gets these by
+  // raw-loading the actual TL `glossaries.sty` (`InputDefinitions(noltxml=1)`,
+  // L18). Rust's port stubs them as no-ops to preserve the same CS coverage —
+  // the contents would otherwise expand the entry hash, but the typesetting
+  // path uses `\gls`/`\Gls` (which Rust reimplements above), so dropping the
+  // expansion here is harmless. Driver: 1806.05262 calls `\Glsentrytext{nbs}`
+  // in a section heading.
+  DefMacro!("\\glsentrytext Semiverbatim",        "");
+  DefMacro!("\\Glsentrytext Semiverbatim",        "");
+  DefMacro!("\\glsentrylong Semiverbatim",        "");
+  DefMacro!("\\Glsentrylong Semiverbatim",        "");
+  DefMacro!("\\glsentryshort Semiverbatim",       "");
+  DefMacro!("\\Glsentryshort Semiverbatim",       "");
+  DefMacro!("\\glsentryname Semiverbatim",        "");
+  DefMacro!("\\Glsentryname Semiverbatim",        "");
+  DefMacro!("\\glsentrydesc Semiverbatim",        "");
+  DefMacro!("\\Glsentrydesc Semiverbatim",        "");
+  DefMacro!("\\glsentrysymbol Semiverbatim",      "");
+  DefMacro!("\\Glsentrysymbol Semiverbatim",      "");
+  DefMacro!("\\glsentryfirst Semiverbatim",       "");
+  DefMacro!("\\Glsentryfirst Semiverbatim",       "");
+  DefMacro!("\\glsentryplural Semiverbatim",      "");
+  DefMacro!("\\Glsentryplural Semiverbatim",      "");
+  DefMacro!("\\glsentryfirstplural Semiverbatim", "");
+  DefMacro!("\\Glsentryfirstplural Semiverbatim", "");
+  DefMacro!("\\glsentryshortpl Semiverbatim",     "");
+  DefMacro!("\\Glsentryshortpl Semiverbatim",     "");
+  DefMacro!("\\glsentrylongpl Semiverbatim",      "");
+  DefMacro!("\\Glsentrylongpl Semiverbatim",      "");
+  DefMacro!("\\glsentryfull Semiverbatim",        "");
+  DefMacro!("\\Glsentryfull Semiverbatim",        "");
+  DefMacro!("\\glsentryfullpl Semiverbatim",      "");
+  DefMacro!("\\Glsentryfullpl Semiverbatim",      "");
   // \acr* family — the real glossaries.sty defines short/long/full plus
   // their `pl` (plural) and uppercase-first (`\Acr*`) variants. Perl's
   // glossaries.sty.ltxml gets these via `InputDefinitions(noltxml=1)`
