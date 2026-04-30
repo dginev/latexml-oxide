@@ -59,6 +59,53 @@ Tests now 1110/0/0.
 
 ### 5. Sandbox conv_error long-tail — per-paper triage
 
+**Round-17 deferred sandbox `~/data/10k_failures_April30/`** (35
+in-scope papers, all Perl-clean under `--preload=ar5iv.sty
+--path=~/git/ar5iv-bindings/`). Status as of 2026-04-30 evening:
+**10/35 clean**. Cleared this session: cond-mat0110319,
+quant-ph0203083, supr-con9608003 (`\font\gnuplot` picture cluster
+via `gullet::read_keyword` Perl-faithful fix), cond-mat9911130,
+math0007178 (latex209 `\sym<font>` stubs), astro-ph0611848
+(`\longtab` env phantom def), hep-th9912229, cond-mat0103038
+(`\documentstyle` re-bind after latex_dump). 1504.01713,
+math9805021 were clean before.
+
+**Remaining 25 papers — error breakdown:**
+
+| Paper | Errs | Top error pattern | Likely root cause |
+|---|---|---|---|
+| 1710.03688 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch, French elsart |
+| 1802.05444 | 1 | `undefined:\textrhookrevepsilon` | tipa raw .sty load (contrib binding fires but raw input fails) |
+| 1804.04412 | 1 | `expected:}` | keyvals `readBalanced` unbalanced (Stage 5b parsing) |
+| astro-ph0004127 | 1 | `undefined:\uninger` | Mystery — location bogus, no `\uninger` in any source file |
+| astro-ph0512041 | 1 | `malformed:ltx:equation` | equation in `<ltx:date>` (schema/mode) |
+| astro-ph9608077 | 1 | `malformed:ltx:tags` | `<ltx:tags>` schema malformed |
+| hep-ph0702114 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch (same as 1710.03688) |
+| hep-th9601176 | 1 | `unexpected:double-superscript` | `\Si^{\mu\nu}'` math edge case |
+| math0004127 | 1 | `undefined:\oo` | Rust `\ifcase` evaluates skipped branch — Rust core bug |
+| math0111087 | 1 | `malformed:ltx:theorem` | amsppt `\proclaim` inside `\abstract` (schema) |
+| math0606553 | 1 | `undefined:\lx` | math-parser path during `\multline*`; `name`/`vattach` keyvals declared in `9d5cfb8ce` reduced Info noise but `\lx` source unidentified |
+| alg-geom9604001 | 2 | `malformed:ltx:equation` | equation in text (schema) |
+| cmp-lg9407011 | 2 | `malformed:ltx:tags` | schema mode-switch |
+| 1806.06448 | 3 | `expected:}` `expected:\fi` | `\iffalse` not closed (post-`\end{document}` content) |
+| 1812.01892 | 4 | `unexpected:\@personname` | IEEEtran `@IEEEauthorhalign` mode-switch |
+| astro-ph9808081 | 5 | `Unexpected:_` | math-parser cumulative state |
+| astro-ph9903386 | 5 | `Unexpected:^` | math-parser cumulative state |
+| math0411005 | 8 | `undefined:\Trace,\DeclareMathOperator,…` | `\begin{filecontents}` extracted file processing |
+| math-ph0406029 | 8 | `unexpected:double-subscript` | math-parser |
+| 1710.11409 | 10 | `malformed:ltx:section` | schema |
+| alg-geom9703018 | 10 | `malformed:ltx:tags` | schema |
+| math-ph0303066 | 10 | `unexpected:double-subscript` | math-parser |
+| 1806.08417 | 13 | `unexpected:}` | brace tracking |
+| alg-geom9604020 | 510 | `expected:$` | amsppt cluster (deep `\proclaim` cascade) |
+| math0601451 | 2414 | `malformed:ltx:XMTok` | amsppt `\proclaim` id3 cascade (see Iter-17 detail below) |
+
+Min repros, deferred-fix notes, and per-paper diagnostics in
+`~/data/10k_failures_April30/in_scope_papers.txt` and memory file
+`memory/project_failures_april30_deferred.md`.
+
+
+
 `results.tsv` has ~93 papers in the conversion_error bucket. Iter
 39 sample of 12 random papers showed 2 fully clean on HEAD and 10
 with 1-26 errors each. **Iter-41 deeper triage** ran Perl baseline
