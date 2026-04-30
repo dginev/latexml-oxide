@@ -94,6 +94,41 @@ constructor-template parser re-enters/re-emits inside the still-open
 a focused trace of the constructor body insertion order. Would erase
 ~2924 sandbox errors (math0601451 + alg-geom9604020).
 
+**Iter-17 (round-17 cont.) — refined trigger localized to id3 in
+math0601451:** First two `\proclaim`s in the paper (Theorem 3.1
+xml:id=id1, Theorem 5.1 xml:id=id2) emit clean `<theorem
+class="ltx_theorem_proclaim">` with proper `<title>` containing only
+"Theorem N.M" and a `<para><p>` body. The third `\proclaim` —
+`\proclaim{Definition 2.1 } Let $X$ be a non-compact complete
+orbifold. Then we say that...` at source line 398 — emits **broken
+id3**: NO `class` attribute, `<title font="bold">` (font="bold" is
+*not* in the constructor template), and the title text overruns into
+"Definition 2.1  Let X be a non-compact complete orbifold" (the
+entire first sentence of the body). Subsequent body text is correctly
+in `<para><p>`. From id3 onward, deeper body math expressions begin
+absorbing `<theorem>` elements as descendants of `<XMath>`, producing
+the 1495 `XMTok-in-text`/`equation-in-text` cascade. The fact that
+id3 has no class means it was NOT opened by amsppt's `\proclaim`
+constructor — some other `<theorem>`-emitting CS ran instead. Fonts
+"bold" suggests a `\noindent {\bf ...}` section heading is involved.
+Hypothesis: between Theorem 5.1's `\endproclaim` (line 104) and
+Definition 2.1 (line 398), state-leak from the dump pivot causes
+a font-frame to leak; investigation deferred to a focused trace.
+
+**Iter-17 root cascade origin:** The very first errors in the log
+are at "Anonymous String" (1969 occurrences total) — emitted during
+macro expansion before any user-document line is reached. First two
+errors are `Attempt to close a group that switched to mode
+display_math` and `Attempt to end mode display_math in display_math`.
+This precedes ALL XMTok-in-text errors and is the original sin.
+Some macro is emitting a `\lx@begin@display@math` followed by an
+unmatched `}` close, leaving display-math state unbalanced from
+process-start. amsppt's `\proclaim` body Token-stream may include
+unbalanced `\par`/group tokens emitted by amstex format file. Need
+to trace which macro definition fires display-math at expansion
+time. Min repro elusive — naive 10-line `\proclaim{Theorem N}$$x=y$$
+\endproclaim` produces 0 errors.
+
 **Iter-54 amsppt cluster sized:** post `660103563` (the
 \@startsection fix erased 1561 errors of 1608.04650), the next big
 residual outliers are both amsppt+amstex papers:
