@@ -562,7 +562,22 @@ min repro that calls only `\@@lbibitem{key}` (skipping
 the bibliography opens correctly, the trigger is in one of those
 three; bisect from there. If it still breaks, the trigger is in
 `\@@lbibitem` itself or in a downstream `\@lbibitem` → `\@@lbibitem`
-expansion order. Suspects:
+expansion order.
+
+**Iter-2026-04-30 narrowing**: The leak.tex repro under UNLOCK
+emits NO `<bibliography>` or `<biblist>` at all — just a stray
+`<para>` containing `<bibitem>`+`<bibblock>`. So `\thebibliography`
+constructor's template (`<ltx:bibliography…><ltx:title>…
+</ltx:title><ltx:biblist>`) never opens. Suspect:
+`before_digest_bibliography` (latex_constructs.rs:1919) calls
+`Digest!("\\@lx@inbibliographytrue")` and several runtime
+`DefMacro!`/`Let!` — running BEFORE the constructor template emits.
+One of these likely opens `<para>` first, which then auto-closes
+when `<bibitem>` enters. Targeted next-step: comment out
+`Digest!("\\@lx@inbibliographytrue")?` from
+`before_digest_bibliography` and re-run leak.tex; if `<bibliography>`
+opens, that Digest call is the culprit (under UNLOCK
+`\@lx@inbibliographytrue` may now redefine and emit visible state). Suspects:
   * `\refstepcounter`'s side-effect — Perl primitive returns
     nothing visible; Rust's may leak counter value text.
   * `\reset@natbib@cites` definition or expansion order.
