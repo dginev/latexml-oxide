@@ -1348,13 +1348,18 @@ output.
 **Permanent sandbox ignores:** ns1–ns5 (52_namespace, no DTD);
 2402.03300, 2410.10068, 2511.03798 (Perl also fails).
 
-**Perl-error-only papers** (excluded from parity target — Perl
-itself fails under the same `--preload=ar5iv.sty
---path=~/git/ar5iv-bindings/bindings` profile):
+**Perl-error-only papers** (originally excluded from parity target
+because Perl itself failed under `--preload=ar5iv.sty
+--path=~/git/ar5iv-bindings/bindings`). **Status 2026-04-30: Rust
+now SUPERSEDES Perl on both** — current HEAD converts cleanly
+where Perl baseline still emits errors:
 
-- `1207.6068` — Perl emits 30 errors (acknowledgements-only file,
-  no `\documentclass`)
-- `0909.3444` — Perl emits 2 errors (frenchb babel missing)
+- `1207.6068` — Rust: 0 errors / "No obvious problems". Perl
+  baseline: 30 errors (acknowledgements-only file, no `\documentclass`).
+- `0909.3444` — Rust: 0 errors (fixed via `989c5a8ed`, TL2025
+  babel-french frenchb deprecation alias). Perl baseline: 2
+  errors on TL2025 (Perl LaTeXML hits same regression but lacks
+  the alias).
 
 ## Tikz — Known Diffs (vs Perl output)
 
