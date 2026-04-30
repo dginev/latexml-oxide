@@ -134,6 +134,28 @@ LoadDefinitions!({
 
     state::assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
 
+    // Perl TeX.pool.ltxml:60-65 — when the class triggers the AmSTeX pool
+    // (only `amsppt` today), Perl LoadPool's AmSTeX and *re-emits*
+    // `\documentstyle{class}` so the AmSTeX-pool-defined `\documentstyle`
+    // (amstex.rs L40) takes over. Critically, Perl never loads the LaTeX
+    // pool (`latex_constructs.pool.ltxml`) on the amsppt path, so its
+    // `Let('\magnification', '\@undefined')` (L56) never fires and plain
+    // TeX's `\magnification = \magstep N` keeps working. The Rust
+    // implementation previously fell through to the article.cls +
+    // RequirePackage chain unconditionally, which loads latex.ltx and
+    // re-binds `\magnification` to `\@undefined` — an amsppt-only
+    // regression. Mirror Perl: for amsppt, just RequirePackage(amsppt,
+    // as_class=true) and return. amstex.rs's `\documentstyle` does the
+    // same thing in the same way.
+    if pool == "AmSTeX" {
+      let _ = require_package(&class, RequireOptions {
+        notex: Some(true),
+        as_class: true,
+        ..RequireOptions::default()
+      });
+      return Ok(Tokens!());
+    }
+
     // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
     // Perl helper redefines `\@maxsep` and `\@dblmaxsep`; if these come
     // from another file and are already defined, redef is harmless.
