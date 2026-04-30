@@ -78,6 +78,17 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-51 residual triage:**
+- `1802.05444` (`\textrhookrevepsilon`): tipa.sty IS raw-loaded by
+  `latexml_contrib/src/tipa_sty.rs`, but T3 phonetic encoding chars
+  resolve via `\DeclareTextSymbolDefault{T3}` and need a t3enc.def
+  shim that maps T3 slots → Unicode codepoints. Significant work
+  (cluster of ~100 IPA glyphs). Deferred.
+- `cmp-lg9407011`: `Error:malformed:ltx:tags isn't allowed in
+  <ltx:tag>` — schema mismatch, deeper.
+- `1806.06448`: `\fi` mismatch / `Gullet->readBalanced ran out of
+  input` — conditional balancing, deeper.
+
 **Iter-50 quantified impact of `db8a4815a`:** 30-paper random sample
 from `results.tsv` conversion_error bucket on current HEAD:
 **17 fully clean (`No obvious problems`)**, 1 warnings-only, 12
