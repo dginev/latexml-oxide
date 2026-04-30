@@ -869,7 +869,7 @@ later `\input <name>.sty`s).
 
 **Status:** Decision made 2026-04-26 during babel.sty timeout investigation.
 Implementation completed 2026-04-26 (commits `1eb66c75c`, `de21ae928`,
-`01df250c6`). See `docs/BABEL_TIMEOUT_BISECT.md` for the triggering
+`01df250c6`). See `docs/archive/BABEL_TIMEOUT_BISECT.md` for the triggering
 investigation.
 
 #### Path-aware gating (commit `de21ae928`)

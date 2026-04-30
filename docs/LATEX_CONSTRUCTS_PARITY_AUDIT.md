@@ -3,7 +3,7 @@
 ## Headline numbers
 
 * Perl `LaTeXML/lib/LaTeXML/Engine/latex_constructs.pool.ltxml` — **6014 lines**
-* Rust `latexml_package/src/engine/latex_constructs.rs` — **9296 lines**
+* Rust `latexml_engine/src/latex_constructs.rs` — **9296 lines**
 
 Rust is **54% larger** than Perl. The user has flagged this as bloat. Some
 of it is legitimate (Rust's `DefMacro!` macro + `sub[...]` helpers expand

@@ -2,6 +2,20 @@
 
 ## [0.4.2] (in active development) — strict-Perl dump parity pivot
 
+  - **Status refresh 2026-04-30**: local `cargo test --tests` is
+    **1109/0/0**. Runtime dump resources are local/ignored files:
+    `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines.
+    Latest-row 7898-paper sandbox status is 7731 OK = 97.89%.
+  - **rust-analyzer stability profile**: `.vscode/settings.json`
+    disables RA proc-macro expansion/cache priming, limits RA worker
+    threads, keeps RA output in `target/rust-analyzer`, and excludes
+    large/generated trees from file watching.
+  - **LaTeX 2.09 `\documentstyle` option-flow recovery**: the old
+    shortcut body was replaced with strict-Perl three-branch semantics
+    for `.sty` / `.cls` / OmniBus fallback, `@unusedoptionlist`
+    handles both string and VecDeque storage, unused options probe the
+    compiled binding registry, and class-name probes use version
+    fallback.
   - **Strict-Perl `LoadFormat` mutual exclusivity** (commit
     `0c4d609ad`). `tex.rs` and `latex.rs` now mirror Perl
     `Package.pm:LoadFormat` L2734-2752 exactly: `bootstrap → dump
@@ -32,21 +46,20 @@
     Autoload triggers (`\documentclass`, `\AtBeginDocument`,
     `\Bbb`, `\align`, …), file-bookkeeping CSes
     (`\@pushfilename`, `\@popfilename`), and early stubs are now
-    defined BEFORE `stage_snapshot("plain_bootstrap")`, so they
-    enter the baseline and do NOT pollute the dump diff. Result:
-    plain.dump.txt 1238 → 1196 entries; pollution gone, content
-    (`\settabs`, `\@cclv`, `\null`, `\sett@b`, `\matrix`, `\loop`)
-    preserved.
+    defined before the init/dump bootstrap snapshot, so they enter
+    the baseline and do NOT pollute the dump diff. Historical result:
+    plain.dump.txt 1238 → 1196 entries; current local dump is 959
+    lines after later cleanup.
   - **`plain_base.rs` `\new*` family** converted to raw `\outer\def`
     Token bodies (commit `0c4d609ad`), matching Perl
     `plain_base.pool.ltxml:207-218` RawTeX block. Required because
     Rust closures aren't serializable through the dump format —
     when the strict split skips `_base.rs`, only Token bodies
     survive in the dump.
-  - **Active gaps** (top of [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md)):
-    plain dump 36 non-`\lx@` extras vs Perl (math symbols defined
-    pre-snapshot in `math_common.rs`); latex dump 302/752
-    `\tex_*:D` aliases missing (raw-expl3-load gap).
+  - **Historical active gaps from the Apr 26 pivot** are preserved in
+    [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md), but
+    must be re-audited before action. Several were superseded by the
+    Apr 28-30 dump cleanup and package-loading fixes.
 
 ## [0.4.1] (in active development)
 
@@ -78,7 +91,7 @@
     #2697 DecodeColor Warn on unresolvable name;
     #4e3d1b8d filecontents header prepend "from source" line;
     #aaacdba2 nominal Locator on dump-loaded Expandables + Registers.
-  - **TRANSLATION_GAPS.md audit + ports**: verified every section
+  - **archive/TRANSLATION_GAPS.md audit + ports**: verified every section
     against current Rust source with line citations. Three small
     Box.pm helpers (`is_math`, `set_properties`, `total_height`) and
     `fracSizer` from TeX_Math.pool ported. Seven pdfTeX primitives

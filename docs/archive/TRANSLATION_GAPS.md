@@ -7,8 +7,8 @@
 > at the bottom). Future translation-gap audits should be performed
 > with a fresh Perl↔Rust diff, not by extending this file.
 >
-> The active priority is now strict-Perl dump parity — see
-> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission".
+> Current priority is tracked in [`SYNC_STATUS.md`](../SYNC_STATUS.md)'s
+> dashboard.
 
 Generated 2026-03-15. Each `[ ]` marks an under-translated function. `[x]` when updated.
 

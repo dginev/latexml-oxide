@@ -5,7 +5,7 @@
 > order of loads and definitions is the exact same in perl and rust"
 
 For each Perl `LaTeXML/blib/lib/LaTeXML/Engine/*.pool.ltxml`, the
-corresponding `latexml_package/src/engine/*.rs` must:
+corresponding `latexml_engine/src/*.rs` must:
 1. Perform the **same** `LoadPool` / `LoadFormat` calls in the **same
    order** (mirrored as `InnerPool!(...)` or
    `crate::engine::<x>::load_definitions()`).

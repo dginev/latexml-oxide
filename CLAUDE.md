@@ -2,13 +2,15 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
-## Active priority (2026-04-26): strict-Perl dump parity
+## Active priority (refreshed 2026-04-30): strict-Perl parity
 
-Engine-dump parity is the current top priority. **Tests / 10k
-sandbox / CI-green concerns are LOWERED** until the dumps are
-complete and Perl-faithful. Working docs:
+Strict Perl parity at the format/dump and package-loading boundary is
+the current top priority, followed by sandbox long-tail cleanup.
+Current local verification in `docs/SYNC_STATUS.md`: `cargo test
+--tests` is **1109/0/0**, and the latest-row 7898-paper sandbox result
+is **7731 OK = 97.89%**. Working docs:
 [`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
-[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission".
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
 
 Concretely:
 
@@ -26,7 +28,7 @@ Concretely:
    any prior definition.
 3. **Same-file definitions** as Perl. Every `\foo` defined in
    `LaTeXML/blib/lib/LaTeXML/Engine/<file>.pool.ltxml` must be
-   defined in `latexml_package/src/engine/<file>.rs`. Use raw
+   defined in `latexml_engine/src/<file>.rs`. Use raw
    `\outer\def`-style Token bodies wherever Perl uses `RawTeX`,
    so the dump captures them as serializable Token-bodies, not
    opaque Rust closures.
@@ -35,9 +37,10 @@ Concretely:
    Perl. Any error during expl3-code.tex / latex.ltx raw-load is
    a parity gap, not a thing to suppress with caps.
 
-The plain dump is the easier target — get it perfect first, then
-tackle latex. Test regressions during this work are expected and
-acceptable — re-pass tests AFTER the dumps are complete + correct.
+The plain dump is the easier target — keep it perfect first, then
+tackle latex. Historical test regressions during the dump pivot are
+recorded in `SYNC_STATUS.md`; do not assume they are current without
+re-running the relevant test or dump-generation command.
 
 **Distribution follow-up** (after TL2025 dumps are robust): bundle
 multiple TL versions' dumps (TL2022 … TL2026) into the binary via
@@ -76,7 +79,7 @@ Supporting directories:
 Three key documents track porting progress and known issues:
 
 - **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
-- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_package/src/engine/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
+- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
 - **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
 - **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
 - **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this file to check if a translation difference was marked as intentional.
@@ -139,6 +142,13 @@ Enable linting hooks:
 rustup component add rust-analyzer rustfmt clippy --toolchain nightly
 git config --local core.hooksPath .githooks/
 ```
+
+Rust-analyzer stability: this workspace's `latexml_codegen` proc
+macros can make RA loop and allocate large amounts of RAM. The
+checked-in `.vscode/settings.json` intentionally disables RA proc-macro
+expansion/cache priming and excludes `target/`, `LaTeXML/`, generated
+HTML, sample corpora, and dumps. Keep terminal `cargo` as the source of
+truth for macro-expanded diagnostics.
 
 ## Architecture Notes
 

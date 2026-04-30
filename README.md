@@ -6,11 +6,12 @@
 
 This project is in an **early beta** stage. Please avoid using it in any real world setting before mainline LaTeXML parity is reached.
 
-**Current status (2026-04-26):** active strict-Perl dump-parity work
-(see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md) "Mission"). The
-engine dump is being aligned with Perl's `make formats` output;
-test regressions during this work are expected and will be cleared
-once the dumps stabilise. Full post-processing pipeline:
+**Current status (2026-04-30):** active strict-Perl parity work at
+the format/dump and package-loading boundary, followed by sandbox
+long-tail cleanup (see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)).
+Current local verification is `cargo test --tests` **1109/0/0** and
+the latest-row 7898-paper sandbox result is **7731 OK = 97.89%**.
+Full post-processing pipeline:
 `latexml_oxide --format=html5 --dest=paper.html paper.tex`
 produces complete HTML with cross-references, citations, MathML,
 and XSLT.
@@ -93,11 +94,17 @@ or when comparing against Perl LaTeXML, always use `--release`.
 
 To enable linting quality control via rustfmt and clippy, you can activate the included hooks via:
 ```bash
-$ rustup component add rust-analyzer --toolchain nightly
 $ rustup component add rustfmt --toolchain nightly
 $ rustup component add clippy --toolchain nightly
 $ git config --local core.hooksPath .githooks/
 ```
+
+This workspace is heavy for rust-analyzer because of large proc-macro
+definition bodies. The checked-in `.vscode/settings.json` uses a
+stability profile: proc-macro expansion and cache priming are disabled,
+RA uses `target/rust-analyzer`, and large/generated directories are
+excluded from file watching. Terminal `cargo build` / `cargo test`
+still compile proc macros normally.
 
 To generate the project documentation locally, run:
 ```bash

@@ -6,9 +6,16 @@ latex_constructs.pool.ltxml". This audit walks Perl line-by-line,
 maps each definition to its Rust analog (file + line), and flags
 order/file divergences.
 
+**Refresh note (2026-04-30):** this is a line-audit worksheet started
+before the Apr 28-30 `\documentstyle` and package-loading fixes. Some
+line numbers have drifted; current dashboard status lives in
+[`SYNC_STATUS.md`](SYNC_STATUS.md). Entries below should be used as
+triage leads, not as acceptance criteria without rechecking current
+code.
+
 **Methodology**: Walk Perl `LaTeXML/lib/LaTeXML/Engine/latex_constructs.pool.ltxml`
 top-down. For each definition, locate the Rust analog in any of
-`engine/latex_{base,bootstrap,constructs,constructs_rust_only}.rs`.
+`latexml_engine/src/latex_{base,bootstrap,constructs,constructs_rust_only}.rs`.
 
 Status legend:
 - ✅ PARITY — same form, comparable position
@@ -54,7 +61,7 @@ Status legend:
 | 73-85 | `DefConstructor '\documentclass …'` | latex_constructs.rs:~2410 | ✅ |
 | 87 | `AssignValue '@unusedoptionlist'` | latex_constructs.rs:2413 | ✅ |
 | 88-92 | `DefPrimitiveI '\warn@unusedclassoptions'` | latex_constructs.rs:2414 | ✅ |
-| 94+ | `DefConstructor '\documentstyle …'` | latex_constructs.rs:~2440 (verify) | ✅ |
+| 94+ | `DefConstructor '\documentstyle …'` | tex_job.rs / latex_constructs.rs option-flow split (verify current line) | ⚠ SHAPE DIVERGE; branch semantics recently fixed |
 
 ## Phase 1 findings
 
@@ -71,7 +78,7 @@ Status legend:
 
 | Perl L | Symbol/op | Rust file:line | Status |
 |---|---|---|---|
-| 100-129 | `\documentstyle` afterDigest body | latex_constructs.rs:~2440 | ✅ PARITY |
+| 100-129 | `\documentstyle` afterDigest body | tex_job.rs / latex_constructs.rs option-flow split | ⚠ SHAPE DIVERGE; current `DefMacro!` wrapper mirrors Perl branch dispatch but is not a literal `DefConstructor!` port |
 | 132-135 | `compatDefinitions` Perl-fn (`\@maxsep`,`\@dblmaxsep`) | latex_constructs.rs:6156-6157 | ↻ ORDER + ⚠ DIVERGE (Rust unconditional, Perl gated by `\documentstyle`) |
 | 137-153 | `DefPrimitiveI '\compat@loadpackages'` | latex_constructs.rs:2454 | ✅ PARITY |
 | 155-160 | `onlyPreamble` Perl-fn | latex_constructs.rs:2486 (comment) | ✅ |

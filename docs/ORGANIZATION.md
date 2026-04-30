@@ -51,7 +51,6 @@ tex.rs                     (≈ TeX.pool + Base.pool combined)
 ├── pdftex
 ├── base_deprecated
 ├── plain_bootstrap        (≈ plain_bootstrap.pool.ltxml)
-├── stage_snapshot("plain_bootstrap")    ← diff baseline for `--init=plain.tex`
 ├── if dump available && !LATEXML_NODUMP:
 │     plain_dump           (runtime loader for plain.dump.txt)
 │   else:
@@ -62,7 +61,6 @@ tex.rs                     (≈ TeX.pool + Base.pool combined)
 latex.rs                   (≈ LaTeX.pool)
 ├── LoadPool!("TeX")       (loads tex.rs above)
 ├── latex_bootstrap.rs     (≈ latex_bootstrap.pool.ltxml)
-├── stage_snapshot("latex_bootstrap")    ← diff baseline for `--init=latex.ltx`
 ├── if dump available && !LATEXML_NODUMP:
 │     latex_dump           (runtime loader for latex.dump.txt)
 │   else:
@@ -73,6 +71,10 @@ latex.rs                   (≈ LaTeX.pool)
 Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See
 [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the
 parity audit.
+
+Dump-build snapshots are taken by the init/dump-generation path
+(`ini_tex::dump_format`), not by the normal runtime `tex.rs` /
+`latex.rs` load chain.
 
 ## File-by-file mapping
 
@@ -118,8 +120,8 @@ parity audit.
 | `math_common.pool.ltxml` | `math_common.rs` | Greek, operators, relations, arrows, delimiters, log functions |
 
 Loading chain in `tex.rs` (strict-Perl `LoadFormat`):
-`InnerPool!(plain_bootstrap)` → `stage_snapshot("plain_bootstrap")`
-→ EITHER `InnerPool!(plain_dump)` OR `InnerPool!(plain_base)`
+`InnerPool!(plain_bootstrap)` → EITHER `InnerPool!(plain_dump)` OR
+`InnerPool!(plain_base)`
 (mutually exclusive) → `InnerPool!(plain_constructs)` (which loads
 `InnerPool!(math_common)`).
 
@@ -133,8 +135,8 @@ Loading chain in `tex.rs` (strict-Perl `LoadFormat`):
 
 Loading chain in `latex.rs` (strict-Perl `LoadFormat`):
 `LoadPool!("TeX")` → `InnerPool!(latex_bootstrap)` →
-`stage_snapshot("latex_bootstrap")` → EITHER `InnerPool!(latex_dump)`
-OR `InnerPool!(latex_base)` (mutually exclusive) →
+EITHER `InnerPool!(latex_dump)` OR `InnerPool!(latex_base)`
+(mutually exclusive) →
 `InnerPool!(latex_constructs)`.
 
 ### LaTeX constructs — section mapping

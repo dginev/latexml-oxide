@@ -2,13 +2,13 @@
 
 > **Status: technical reference (snapshotted 2026-03-28, Session 59).**
 > The Rewrite subsystem has been substantively ported (see
-> `TRANSLATION_GAPS.md` Section 4). The audit below documents the
+> `archive/TRANSLATION_GAPS.md` Section 4). The audit below documents the
 > remaining R1–R15 divergences in detail; check current code before
 > acting on any "MISSING" / "WRONG" classification, since some have
 > been fixed since the snapshot.
 >
-> The active priority is now strict-Perl dump parity — see
-> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission".
+> Current priority is tracked in [`SYNC_STATUS.md`](SYNC_STATUS.md)'s
+> dashboard.
 
 > **Date:** 2026-03-28 (Session 59)
 > **Perl source:** `LaTeXML/lib/LaTeXML/Core/Rewrite.pm` (561 lines)

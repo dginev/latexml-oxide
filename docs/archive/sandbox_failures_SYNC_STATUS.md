@@ -1,11 +1,10 @@
 # Sandbox Failures Worksheet — 181 papers
 
-> **Active priority (2026-04-26):** strict-Perl dump parity. See
-> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission" and
-> [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md). Sandbox
-> work continues opportunistically but is **not the gating front**.
-> Sandbox regressions during the dump-parity push are accepted —
-> re-validate after dumps stabilize.
+> **Status (refreshed 2026-04-30):** this is a historical worksheet
+> for the 181-paper focused failure subset. Current priority and
+> latest full-corpus counts live in [`SYNC_STATUS.md`](../SYNC_STATUS.md)'s
+> dashboard. Re-validate clusters on current HEAD before treating them
+> as active.
 
 Tracks per-cluster Rust→Perl translation gaps for the focused
 ~/data/sandbox_failures sandbox of error-producing papers. Each
@@ -31,13 +30,13 @@ papers with `[x]`.
 `astro-ph9308008, astro-ph9708022, funct-an9711006, hep-th9404085,
 q-alg9505016`) error with `\columns undefined`.
 
-**Status (2026-04-26): largely addressed by strict-Perl LoadFormat
-work.** The new `plain.dump.txt` (1196 entries, runtime-loaded by
+**Status (2026-04-26; historical): largely addressed by strict-Perl LoadFormat
+work.** The then-new `plain.dump.txt` (1196 entries, runtime-loaded by
 `plain_dump.rs`) captures `\settabs`/`\sett@b`/`\sett@bb`/`\s@tt@b`/
 `\columns` directly (verified post-`1e04a96c8`). Re-run the
 worksheet to confirm; expect these 5 papers cleared. Latex side is
 the next-up gap (302/752 `\tex_*:D` aliases missing — see
-`PERL_LOADFORMAT_AUDIT.md` "Remaining dump gaps").
+[`PERL_LOADFORMAT_AUDIT.md`](../PERL_LOADFORMAT_AUDIT.md) "Remaining dump gaps").
 
 ### Other clusters (181 - 5 = 176 remaining, deferred behind Track A)
 

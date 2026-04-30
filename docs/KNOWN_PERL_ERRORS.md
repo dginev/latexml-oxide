@@ -2,7 +2,7 @@
 
 This file documents issues in the original Perl LaTeXML codebase.
 These are upstream behaviors or design quirks — NOT bugs introduced by the Rust port.
-For Rust-specific error bookkeeping, see `latexml_package/src/engine/SYNC_STATUS.md`.
+For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 
 ---
 

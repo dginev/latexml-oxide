@@ -1,24 +1,65 @@
 # Engine Sync Status: Perl vs Rust
 
-## TOP PRIORITY (2026-04-29): strict-Perl `\documentstyle` DefConstructor
+## Current Verified State (2026-04-30)
 
-`\documentstyle` (LaTeX 2.09 compat shim) is currently a `DefMacro` in
-`latexml_engine/src/tex_job.rs:108` that:
-1. resolves `<class>.sty` vs `<class>.cls`,
-2. emits `\documentclass[opts]{class}`,
-3. emits `\RequirePackage{opt}` per option (after a hardcoded skip-list).
+This file is both a live status page and a historical work log. Treat
+this section as the current dashboard; older dated sections below may
+describe failures that have since been fixed.
 
-This bypasses Perl's option-handler flow entirely. As a result:
-- Class option processing never sees the options — they all get
-  emitted as `\RequirePackage` calls instead of being filtered by
-  the cls's `\DeclareOption` / `\ProcessOptions`.
-- Unknown options that aren't packages (e.g. `paspconf`, `aas2pp4`)
-  fail with `Warn:missing_file:<opt>` and are dropped silently —
-  they never reach `@unusedoptionlist`.
-- The `\compat@loadpackages` → OmniBus fallback (which Perl uses to
-  load `aas_macros.sty.ltxml` and provide `\affil` / `\altaffilmark`
-  / `\acknowledgments` / `\aap` / `\apj` / `\apjs` / `\mnras` /
-  etc.) never fires.
+Verified locally on this checkout:
+
+| Surface | Current result |
+|---|---:|
+| `cargo test --tests` | **1109 passed / 0 failed** |
+| `~/data/10k_sandbox_html/results.tsv` latest row per ID | **7731 / 7898 ok = 97.89%** |
+| Remaining latest sandbox categories | 159 `conversion_error`, 4 `conversion_fatal`, 3 `abort`, 1 `timeout` |
+| Runtime dump resources present locally | `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines |
+
+Recent HEAD-side work after the first `\documentstyle` cleanup is not
+fully folded into the older narrative below:
+
+- `b699e229a` — `\documentstyle` class-name resolution probes
+  `find_file_fallback` for versioned names.
+- `25c99d3d5` — `\DeclareSIUnit` accepts braced `{\cs}` forms via a
+  `DefToken` parameter.
+- `c883ff193` — `elsart_support_core` audited; missing `seceqn`/`thm`
+  theorem helpers added.
+- `c1f2b8acb`, `27e2577c0` — glossaries/acronym stubs expanded.
+- `aa273ffeb` — AMS `\subjclass` strict-Perl translation and `\sc`
+  support fix.
+
+## Current Top Priority
+
+The active engineering target remains **strict Perl parity at the
+format/dump and package-loading boundary**, followed by sandbox
+long-tail cleanup. The broad direction is still sound:
+
+1. Keep `LoadFormat` dump/base mutual exclusivity Perl-faithful.
+2. Keep dump reader/writer semantics moving toward Perl `Dumper.pm`.
+3. Close high-frequency sandbox package/class clusters with strict
+   translations, not local paper hacks.
+4. Re-run the full 7898-paper canvas on current HEAD before
+   reprioritizing deep work such as the biblatex rebuilder.
+
+## `\documentstyle` 2.09 Compatibility (corrected status)
+
+Status: **semantic branch-dispatch fix landed, but the Rust binding is
+still implemented as `DefMacro!`, not a literal Perl-shaped
+`DefConstructor!`.** The important old bug was removed: current
+`latexml_engine/src/tex_job.rs` no longer expands each option directly
+to `\RequirePackage{opt}`. It now implements the three Perl branches
+in Rust code, routes options through `handleoptions => true`, and
+schedules `\compat@loadpackages` after class/package processing.
+
+So the earlier checklist item should be read as:
+
+- [x] **Replace the old shortcut `\documentstyle` DefMacro body with
+  strict-Perl branch semantics** (commit `b093bdd30`, with follow-ups
+  `53cf080d7`, `469f58c01`, `b699e229a`).
+- [ ] **Optional shape cleanup:** convert the Rust implementation to a
+  true `DefConstructor!`/`after_digest` form only if that improves
+  maintainability or exposes a real behavior gap. Current evidence says
+  the branch semantics, not the macro kind, carried the sandbox win.
 
 ### Translation target — Perl `latex_constructs.pool.ltxml:97-129`
 
@@ -52,19 +93,23 @@ key safety net that triggers OmniBus directly.
 
 ### Concrete checklist
 
-- [x] **Replace `\documentstyle` DefMacro with strict-Perl branches**
-  (commit `b093bdd30`). 3-branch dispatch mirroring
-  `latex_constructs.pool.ltxml:97-129`. Drops the per-option
-  `\RequirePackage{opt}` emission that bypassed article.cls's
-  option handler. APIs in place: `input_definitions(handleoptions:
-  true, options: opts, after: ...)`, `require_package(after:
-  Tokens!(\compat@loadpackages))`, `load_class(opts, after)`.
+- [x] **Replace the shortcut DefMacro body with strict-Perl branches**
+  (commit `b093bdd30`). 3-branch dispatch mirrors
+  `latex_constructs.pool.ltxml:97-129`, drops the per-option
+  `\RequirePackage{opt}` emission, and routes options through class
+  option handling.
 - [x] **`@unusedoptionlist` Stored::VecDequeStored read** (commit
   `53cf080d7`). The h@@k mechanism + ProcessOptions push were
   already wired correctly; the bug was in `\compat@loadpackages`'s
   match arm — only matched `Stored::Strings`, missed the
   `Stored::VecDequeStored` form that `state::push_value`
   auto-vivifies on first push. Extended the reader to handle both.
+- [x] **`notex=true` binding probe for unused options** (commit
+  `469f58c01`). Lets `\compat@loadpackages` find compiled Rust
+  bindings such as `psfig_sty.rs` when the option was left unused by
+  the class.
+- [x] **Version/name fallback in class probes** (commit `b699e229a`).
+  Handles versioned legacy class names through `find_file_fallback`.
 - [x] **Driver paper validation** (commit `53cf080d7`):
   | Paper             | Before | After                       |
   |-------------------|-------:|-----------------------------|
@@ -101,22 +146,21 @@ IEEEtran.cls binding gap (1308.6663).
   13 errors
 
 Perl converts all four with **0 errors** by triggering OmniBus →
-aas_macros via the `\compat@loadpackages` fallback. The Rust port
-needs to match this strict semantics rather than the current
-DefMacro shortcut.
+aas_macros via the `\compat@loadpackages` fallback. The Rust port now
+matches the important option-flow semantics; remaining differences
+should be tested as concrete behavior gaps rather than assumed from
+the `DefMacro!` wrapper shape alone.
 
 ### Validation
 
-After landing the DefConstructor:
-1. `cargo build --bin latexml_oxide` clean, `cargo test --tests`
-   1109/0/0 (no kernel-level regressions).
-2. The four driver papers above must convert with 0 errors.
-3. Wider `sandbox_failures_181` retest: count of `Error:undefined`
-   for AAS-style CSes (\affil etc.) must drop to 0.
-4. No regression on `\documentstyle{aipproc}` keyval cluster
-   (4 papers; previously fixed by `4e2b3777b`).
-5. No regression on `\documentstyle{spackap}` Kluwer cluster
-   (5 papers; class-as-sty branch).
+Current verified validation:
+1. `cargo test --tests` clean: **1109/0/0**.
+2. The four driver papers above were recovered by the branch-dispatch
+   and unused-option fixes, modulo the separate `psfig` path noted in
+   the table.
+3. Wider sandbox latest-row status remains **7731 / 7898 ok** from the
+   Apr 28 TSV; re-run the canvas on current HEAD before using those
+   numbers for final prioritization.
 
 ## Earlier priority (2026-04-29): strict, complete biblatex.sty.ltxml → biblatex_sty.rs port
 
@@ -386,7 +430,7 @@ are LOWERED until the dumps are complete and Perl-faithful.
    `assign_internal('global')` without filters.
 3. **Same-file definitions** as Perl: every `\foo` defined in
    `Engine/<file>.pool.ltxml` must be defined in
-   `latexml_package/src/engine/<file>.rs`. Use raw `\outer\def`
+   `latexml_engine/src/<file>.rs`. Use raw `\outer\def`
    bodies wherever Perl uses RawTeX, so the dump captures them as
    serializable Token-bodies (not opaque Rust closures).
 4. **Perl-zero-error baseline**: `--init=plain.tex` and
@@ -430,7 +474,8 @@ proper `DefColumnType!` for both `n` and `N` mirroring Perl
   factors the shared body so both `DefColumnType!("n …")` and
   `DefColumnType!("N …")` reuse it without macro-literal duplication.
 
-**Test result:** numprints now produces the correct n/N column shape:
+**Original test result after `8cfcd9037`:** numprints produced the
+correct n/N column shape:
 ```xml
 <text align="right" width="..."><Math>…</Math></text>
 <text align="left"  width="..."><Math>…</Math></text>
@@ -442,9 +487,11 @@ remain (≈58 added / 63 removed lines after the column-type fix).
 None are numprint-specific — all are Math-parser or post-pad
 optimizations shared with other tests.
 
-Workspace impact: 81_babel goes from 6/7 to 6/7 (numprints still
-failing on the residual diffs); all other tests pass. 20_digestion
-suite intact (10/10).
+Current verified state (2026-04-30): `81_babel::numprints_test`
+passes, and the full `cargo test --tests` suite is **1109/0/0**. The
+residual diff analysis below is retained as historical context for
+the remaining math-parser/post-pad polish, not as an active test
+failure.
 
 ### Remaining numprints residual diff — math-parser ID and pad
 optimizations
@@ -516,7 +563,7 @@ and converted:
 
 - `latexml_core/src/{gullet,stomach}.rs` (`LXML_TRACE_GROUP_END`,
   `LXML_TRACE_BOUND_MODE` ×7) — the actual hot-path callers
-- `latexml_package/src/engine/{plain_dump,latex,tex,tex_job}.rs`
+- `latexml_engine/src/{plain_dump,latex,tex,tex_job}.rs`
 - `latexml_oxide/src/{core_interface,ini_tex,post,util/test}.rs`
 - `latexml_math_parser/src/parser.rs`
 - `latexml_post/src/{lib,math_processor,graphics}.rs`
@@ -603,7 +650,7 @@ captured, `\hook_*` family with 31 M-keys now captured); marked
 * `latexml_core/src/gullet.rs:1130-1148` — removed dead
   `runaway_reported` flag (assigned but never read; followed by
   unconditional `break`).
-* `latexml_package/src/engine/latex_constructs.rs:27` — removed
+* `latexml_engine/src/latex_constructs.rs:27` — removed
   unused `use std::ops::Deref;`.
 
 `cargo check --workspace`: clean. `cargo test --tests --release`:
@@ -925,20 +972,24 @@ in tab-alignment, glue, or counter-arithmetic contexts.
 Test suite: 50_structure 42/3 → 43/2 (+plainsample). Workspace
 total **248 passed / 27 failed**.
 
-**Still-deferred: latex.dump.txt regen OOMs at preload.ltx with a
+**Historical note (Apr 27 state; re-verify before acting): latex.dump.txt
+regen OOMs at preload.ltx with a
 4.6GB single allocation in `read_x_token` pushback Vec.** Likely a
 runaway macro expansion via `\ifcsname`. Not addressable with the
 csname-byte-cap (which only bounds the `cs` accumulator, not the
 gullet's pushback queue). Needs deeper investigation of which
 specific macro expansion goes infinite during latex.ltx kernel
-load. The on-disk `latex.dump.txt` (Apr 27 00:22 timestamp) remains
-the source-of-truth for latex tests.
+load. This entry predates the current **1109/0/0** test state and
+the local `resources/dumps/latex.dump.txt` line count of 25,792.
+Do not treat it as current without rerunning `tools/make_formats.sh`
+or `latexml_oxide --init=latex.ltx` on the current HEAD.
 
-**Known issue: latex.dump.txt regen OOMs at preload.ltx.**
+**Historical duplicate note (Apr 27 state; superseded unless reproduced):
+latex.dump.txt regen OOMs at preload.ltx.**
 Re-running `--init=latex.ltx` to regenerate the dump aborts with
 9.2GB allocation failure during preload.ltx raw-load. The on-disk
 `latex.dump.txt` (Apr 27 00:22 timestamp from previous session) is
-therefore the source-of-truth for latex tests in this wave. The
+therefore the source-of-truth for latex tests in that wave. The
 plain.dump.txt regenerates fine at ~6s. Tests like
 50_structure::epitest_test still fail due to `\p@=0pt` (the dump's
 register `value` field captures the Register definition's default,
@@ -1000,7 +1051,12 @@ OOM-leak-killed) to 12/14 passing:
   [wisdom_initex_letter_mathcodes.md] (#52). All 14/14
   `00_tokenize` tests pass.
 
-### Active gaps (as of 2026-04-26)
+### Historical active gaps (as of 2026-04-26)
+
+The bullets in this section are retained for archaeology. Several
+items have since been resolved or partially superseded by later Apr
+28-30 work. Check the current dashboard at the top of this file before
+promoting any bullet here back to active work.
 
 * **2026-04-26 (Perl `Dumper.pm` + `DumpFile` parity wave)**:
   Multi-commit refactor landing strict Perl parity at the
@@ -1134,17 +1190,14 @@ OOM-leak-killed) to 12/14 passing:
   conversion_fatal papers too. Investigation deferred to next
   session — affecting papers loaded with raw expl3.sty (not
   ar5iv-bundled expl3 codepath).
-* **Plain dump (the easier target — perfect this first).**
-  Currently 1196 entries vs Perl's ~1238. ~36 non-`\lx@` extras
-  remain in the Rust dump that Perl's `plain_dump.pool.ltxml`
-  does not contain (`\Box`, `\Diamond`, `\Join`, `\boldmath`,
-  `\unboldmath`, `\to`, `\lnot`, `\land`, `\lor`, `\sc`, `\sf`,
-  etc.). These are math symbols / font commands defined in
-  `math_common.rs` / `plain_base.rs` that load before
-  `stage_snapshot("plain_bootstrap")`. In Perl they live in
-  `latex_dump.pool.ltxml`, not `plain_dump.pool.ltxml`. Either
-  they should be moved post-snapshot in Rust, or the Perl
-  origin should be re-confirmed.
+* **Plain dump (historical Apr 26 snapshot).** This bullet predates
+  the Apr 28-30 dump cleanup. It recorded a 1196-entry Rust dump vs
+  Perl's ~1238 and ~36 non-`\lx@` extras (`\Box`, `\Diamond`,
+  `\Join`, `\boldmath`, `\unboldmath`, `\to`, `\lnot`, `\land`,
+  `\lor`, `\sc`, `\sf`, etc.). Current local `plain.dump.txt` is
+  959 lines. Re-run the dump audit before reviving this as active
+  work; the relevant snapshot point now lives in `ini_tex::dump_format`,
+  not a runtime `stage_snapshot("plain_bootstrap")` call in `tex.rs`.
 * **Latex dump — expl3 raw-load gap.** Manual `\global\let
   \tex_par:D\par` AT RUNTIME succeeds (long-body Expandable
   installed correctly), but the same `\__kernel_primitive:NN
@@ -1195,7 +1248,7 @@ the dumps are correct, re-validate.
   pre-strict-Perl): 7717/7898 OK = 97.71% clean. Many of the
   remaining 181 are deep multi-week clusters
   (math-parser shape, expl3 kernel cascade) tracked in
-  `docs/sandbox_failures_SYNC_STATUS.md`. Sandbox work
+  `docs/archive/sandbox_failures_SYNC_STATUS.md`. Sandbox work
   continues opportunistically but is **not** the gating front.
   Strict-Perl dump regressions during this work are accepted
   per user directive.
@@ -1384,7 +1437,7 @@ Pursued only after the dump parity mission is closed.
   raw expl3-code.tex load currently relies on suppression to
   finish; that's the parity gap. Cross-links the dump-parity
   mission — every primitive missing from the dump is also a
-  candidate for native port in `latexml_package/src/engine/`.
+  candidate for native port in `latexml_engine/src/`.
 * **Rationalize the `Stored` enum.** Universal value currency,
   so its memory footprint and method dispatch is a first-order
   driver. Variant set has grown organically; needs

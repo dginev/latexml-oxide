@@ -1,6 +1,14 @@
 # Babel.sty token_limit Timeout — Bisection (2026-04-26)
 
-> Investigation of the babel.sty raw-load loop affecting ~20 sandbox papers.
+> **Historical investigation.** This records the Apr 26 raw-load/dump
+> bisection that isolated a babel loop to the then-current dump-loaded
+> LaTeX state. It predates the Apr 28-30 dump and package-loading
+> fixes. Current status and acceptance numbers live in
+> [`SYNC_STATUS.md`](../SYNC_STATUS.md); re-run the minimal babel probe on
+> current `HEAD` before treating any root-cause claim below as active.
+>
+> Original scope: investigation of the babel.sty raw-load loop affecting
+> ~20 sandbox papers.
 
 ## Problem
 
@@ -162,9 +170,9 @@ or its execution context.
 
 ## CRITICAL FINDING (2026-04-26 iteration B): NODUMP works
 
-Setting `LATEXML_NODUMP=1` (which uses `latex_base.rs` source-level
-definitions instead of the `latex_dump.txt` precompiled state)
-makes the same babel probe load CLEANLY:
+At that point in the Apr 26 branch, setting `LATEXML_NODUMP=1` (which
+uses `latex_base.rs` source-level definitions instead of the dump-loaded
+state) made the same babel probe load CLEANLY:
 
 ```
 $ LATEXML_NODUMP=1 ./target/release/latexml_oxide /tmp/babel_simplest.tex
@@ -179,9 +187,10 @@ Error:unexpected:babel.sty Error loading binding for 'babel.sty':
 Error:token_limit:Timeout Token limit of 100000000 exceeded
 ```
 
-**The bug is in our dump-loaded state.** Some entry in
-`latex_dump.txt` corrupts a definition that babel.sty's option
-processing depends on. Likely candidates:
+**Historical conclusion:** the bug was in that branch's dump-loaded
+state. Some entry in `latex_dump.txt` corrupted a definition that
+babel.sty's option processing depended on. Likely candidates at the
+time were:
 - `\@ifpackagewith`, `\DeclareOption`, `\ProcessOptions`, `\ProcessOptions*`
 - `\edef`-friendly internals: `\bbl@trim@def`, `\bbl@xin@`, `\bbl@add`
 - LaTeX2e option list bookkeeping: `\@unprocessedoptions`,

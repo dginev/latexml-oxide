@@ -1,6 +1,6 @@
 # Kernel Dump Precompilation Design
 
-> **Active design (2026-04-26)**: aligned with the strict-Perl
+> **Active design (refreshed 2026-04-30)**: aligned with the strict-Perl
 > dump-parity mission (see [`SYNC_STATUS.md`](SYNC_STATUS.md)). The
 > dump is a faithful translation of Perl's `make formats` output —
 > mutual-exclusivity in `LoadFormat`, unconditional apply in
@@ -25,21 +25,23 @@ This writes:
 
 ```
 resources/dumps/
-  plain.dump.txt      # ~1196 entries (target ~1238 = Perl plain_dump)
-  latex.dump.txt      # ~25k entries
+  plain.dump.txt      # current local: 959 lines
+  latex.dump.txt      # current local: 25,792 lines
   texlive.version     # kpsewhich --version, for staleness detection
 ```
 
 `build.rs` cannot invoke `cargo run` (nested cargo is forbidden), so
 **the dumps cannot be regenerated from `cargo build` alone** — they
-are generated once and checked / cached on the dev machine.
+are generated explicitly by the developer/tooling and loaded from disk
+at runtime. `resources/dumps/` is ignored in git in this checkout; CI
+or local runs must provide/generate dumps as needed.
 
 ## Architecture
 
 ```
-latexml_package/src/engine/
+latexml_engine/src/
   plain_dump.rs       # runtime loader for plain.dump.txt
-  latex_dump.rs       # runtime loader for latex.dump.txt
+  latex_dump.rs       # includes the build.rs-generated runtime loader
   tex.rs              # plain LoadFormat: bootstrap → dump-or-base → constructs
   latex.rs            # latex LoadFormat: bootstrap → dump-or-base → constructs
 
@@ -54,7 +56,8 @@ Resolution order for `plain_dump.rs`:
 2. `LATEXML_PLAIN_DUMP_PATH=/path/to/plain.dump.txt` → load that file.
 3. `LATEXML_DUMP_DIR=/path/to/dir/` → look for `plain.dump.txt`.
 4. `<exe-dir>/../resources/dumps/plain.dump.txt` (installed binary).
-5. `$CARGO_MANIFEST_DIR/resources/dumps/plain.dump.txt` (dev tree).
+5. `$CARGO_MANIFEST_DIR/../resources/dumps/plain.dump.txt` (dev tree
+   from the `latexml_engine` crate).
 
 Identical paths for `latex_dump.rs` with `latex.dump.txt`.
 
@@ -63,10 +66,13 @@ Identical paths for `latex_dump.rs` with `latex.dump.txt`.
 Tab-separated, line-oriented text. Each record is one line:
 
 ```
-M\t<key>\t<body>           # Meaning (macro / primitive / conditional / …)
-PA\t<key>\t<target>        # Primitive Alias (\let-style)
-R\t<key>\t<value>          # Register / CharDef
-LC\t<key>\t<bool>          # Letter-Char flag
+V\t<key>\t<type>\t<data>                 # Value/register/font metadata
+M\t<key>\tE\t<cs>\t<nargs>\t<flags>\t…   # Expandable meaning
+M\t<key>\tPA\t<target>                   # Primitive alias / \let-style entry
+M\t<key>\tR\t…                           # Register / CharDef meaning
+M\t<key>\tN                              # Undefined/None meaning
+M\t<key>\tT\t<catcode>:<text>            # Token meaning
+LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 …
 ```
 
@@ -83,7 +89,6 @@ Both `tex.rs` (plain) and `latex.rs` mirror Perl
 
 ```rust
 InnerPool!(<format>_bootstrap);
-state::stage_snapshot("<format>_bootstrap");
 if !LATEXML_NODUMP && <format>_dump_available() {
   InnerPool!(<format>_dump);   // RUNTIME loader, NOT base
 } else {
@@ -100,8 +105,9 @@ Tells:
   branch, so anything that was post-LoadFormat in Perl belongs
   there.
 * All autoload triggers / file-bookkeeping CSes / early stubs
-  must be defined BEFORE `stage_snapshot` so they enter the
-  baseline and do NOT pollute the dump diff (commit `1e04a96c8`).
+  that should be outside the dump diff must be present before
+  `ini_tex::dump_format` takes its bootstrap snapshot. They should
+  not be loaded from the dump as runtime document state.
 
 ## Distribution follow-up (multi-version dumps)
 
@@ -116,7 +122,7 @@ fine for single-binary distribution.
 | Approach | plain.tex | latex.ltx |
 |----------|-----------|-----------|
 | Compiled Rust (.rs) | ~4.5k LOC, ~1s compile | ~350k LOC, ~30s compile |
-| Text + include_bytes! | ~50KB, 0s compile, ~5ms parse | ~8MB, 0s compile, ~50ms parse |
+| Text + runtime load | ~50KB, 0s compile, ~5ms parse | ~8MB, 0s compile, ~50ms parse |
 
 Text adds negligible runtime cost but saves significant compile
 time. The earlier compiled-Rust `plain_dump.rs` (via
@@ -125,11 +131,13 @@ matching `latex_dump.rs`.
 
 ## Staleness detection
 
-`build.rs` compares `resources/dumps/texlive.version` against
-ambient `kpsewhich --version`. Mismatch logs a `cargo:warning`. At
-runtime the engine logs a `Warn:latexml_dump TeXLive MISMATCH` if
+At runtime the LaTeX dump loader compares
+`resources/dumps/texlive.version` against ambient `kpsewhich
+--version`. Mismatch logs a `Warn:latexml_dump TeXLive MISMATCH` if
 the dump baseline doesn't match the running ecosystem. Opt-out:
-`LATEXML_SKIP_DUMP_STAMP_CHECK=1`.
+`LATEXML_SKIP_DUMP_STAMP_CHECK=1`. `build.rs` also watches the dump
+and stamp paths for cargo rerun purposes, but dump content is not
+embedded in the binary.
 
 ## See also
 

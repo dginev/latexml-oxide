@@ -113,7 +113,7 @@ matching Rust file, in the same source order, with the same shape.
 * **Massive ↻ MISPLACED cluster**: All Perl L177-347 entries are in
   Rust `latex_constructs.rs`, NOT `latex_base.rs`. Per CLAUDE.md
   "Every `\foo` defined in `LaTeXML/blib/lib/LaTeXML/Engine/<file>.pool.ltxml`
-  must be defined in `latexml_package/src/engine/<file>.rs`" — these
+  must be defined in `latexml_engine/src/<file>.rs`" — these
   should ALL move to `latex_base.rs`.
 * **⚠ Duplicate**: `\appendixname` defined twice in
   latex_constructs.rs (L3406 AND L9059). Perl also has it twice

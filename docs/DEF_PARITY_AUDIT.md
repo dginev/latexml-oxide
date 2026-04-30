@@ -6,8 +6,8 @@
 > breadcrumb pointing at WISDOM #41/#44 or a per-file umbrella. No
 > actionable kind-flip work remains.
 >
-> The active priority is now strict-Perl dump parity — see
-> [`SYNC_STATUS.md`](SYNC_STATUS.md) "Mission". This file remains as
+> Current priority is tracked in [`SYNC_STATUS.md`](SYNC_STATUS.md)'s
+> dashboard. This file remains as
 > a technical reference for the audit methodology and the per-cluster
 > classifications. Do not add new batches without first verifying the
 > direction is genuinely actionable (i.e. not already covered by a
@@ -26,7 +26,7 @@
 | contrib/  | 80            | 0 ✅            | 7                  |
 
 Sources:
-- engine/: Perl `LaTeXML/lib/LaTeXML/Engine/*.pool.ltxml` → Rust `latexml_package/src/engine/*.rs`
+- engine/: Perl `LaTeXML/lib/LaTeXML/Engine/*.pool.ltxml` → Rust `latexml_engine/src/*.rs`
 - package/: Perl `LaTeXML/lib/LaTeXML/Package/*.ltxml` → Rust under either `latexml_package/src/package/*.rs` or `latexml_contrib/src/*.rs` (tool searches both)
 - contrib/: Perl `ar5iv-bindings/bindings/*.ltxml` → Rust `latexml_contrib/src/*.rs`
 

@@ -191,7 +191,7 @@ is consumed by `\errmessage`'s arg. Then `\group_end:` closes the
 non-boxing frame cleanly.
 
 Rust's `\errmessage{}` is structurally identical
-(`latexml_package/src/engine/tex_debugging.rs:59`). So why does Rust
+(`latexml_engine/src/tex_debugging.rs:59`). So why does Rust
 produce the cascade? Hypothesis: a divergent flow control PATH or
 something earlier in the chain emits text-content `}` tokens that
 escape `\errmessage`'s read_balanced scope.
