@@ -1242,8 +1242,17 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
       } else if matches!(expansion_level, ExpansionLevel::Off) {
         Ok(Tokens!(token))
       } else {
-        unread_vec(vec![T_BEGIN!(), token, T_END!()]);
-        read_balanced(expansion_level, false, true)
+        // Perl Gullet.pm `readArg`:
+        //   return $self->readingFromMouth(Tokens(T_BEGIN, $token, T_END), sub {
+        //       readBalanced($self, $expanded, 0, 1); });
+        // Use an isolated mouth so leftover tokens (e.g. an extra `}` when
+        // `$token` itself happens to be T_END) cannot leak back into the
+        // caller's stream. `unread_vec` here would pollute the parent mouth.
+        let synth = Tokens::new(vec![T_BEGIN!(), token, T_END!()]);
+        reading_from_mouth(Mouth::default(), move || -> Result<Tokens> {
+          unread(synth);
+          read_balanced(expansion_level, false, true)
+        })
       }
     },
   }

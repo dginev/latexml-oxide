@@ -2025,6 +2025,17 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   for arg in args.into_iter() {
     let mut arg_toks = arg.unlist();
     arg_toks.push(T_CS!("\\MessageBreak"));
+    // Perl `make_message` pads each Expand input with two `\@spaces` tokens:
+    //   ToString(Expand($_, T_CS('\@spaces'), T_CS('\@spaces')))
+    // Comment in Perl: "expand padded with two \@spaces, to avoid pointless
+    // errors. e.g. a trailing `\csq@noline` from csquotes.sty (let to
+    // `\@gobble`) will produce a `gobble has no argument` error on every
+    // message." Same fix needed here for etoc.sty's
+    // `\PackageWarning{etoc}{...!\@gobbletwo}` — `\@gobbletwo` would otherwise
+    // consume the do_expand-inserted T_END closer, leaving readBalanced
+    // unbalanced.
+    arg_toks.push(T_CS!("\\@spaces"));
+    arg_toks.push(T_CS!("\\@spaces"));
     let arg_str = Expand!(arg_toks).to_string();
     message.push_str(&arg_str);
   }
