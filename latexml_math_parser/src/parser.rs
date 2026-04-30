@@ -1038,6 +1038,14 @@ impl MathParser {
     // this budget. For formulas where all trees are pruned (no unique
     // parse yet), use a longer budget before giving up.
     let converge_budget = std::time::Duration::from_millis(200);
+    // Pruned-only fast-fail: if we've spent significant time and seen
+    // many trees without finding a single semantic-acceptable parse,
+    // the grammar is exploring a combinatorial dead end. Bail before
+    // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
+    // pruned trees over 28s before timeout. After 2s with >200 prunes
+    // the marginal probability of finding a unique drops sharply.
+    let pruned_only_time_budget = std::time::Duration::from_secs(2);
+    let pruned_only_count_threshold: usize = 200;
     // Unique-tree cap: the pragmatics/selection step only needs a handful
     // of distinct parses. Beyond this, additional unique trees are almost
     // always script-attachment ordering variants that don't improve the
@@ -1063,6 +1071,18 @@ impl MathParser {
       // Time-budget convergence: if we have unique parses and have spent
       // >200ms, stop — the remaining trees are overwhelmingly duplicates.
       if !parses.is_empty() && start.elapsed() > converge_budget {
+        break;
+      }
+      // Pruned-only fast-fail: bail when we have NO unique parses, have
+      // already enumerated many trees, and have burned through the
+      // pruned-only budget. Without this, the loop runs to `max_time`
+      // (30s) on pathological multi-clause RELOP-list formulae where
+      // every grammar derivation is semantically pruned (e.g.
+      // 0804.1730 had 4536 enumerated → 0 unique → 28.29s).
+      if parses.is_empty()
+        && pruned_trees > pruned_only_count_threshold
+        && start.elapsed() > pruned_only_time_budget
+      {
         break;
       }
       // Note: we intentionally do NOT abort when no parse has been found
