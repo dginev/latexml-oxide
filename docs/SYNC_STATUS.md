@@ -13,8 +13,11 @@ Verified locally on this checkout:
 | `cargo test --tests` | **1109 passed / 0 failed** |
 | `~/data/10k_sandbox_html/results.tsv` latest row per ID (Apr 28) | 7731 / 7898 ok = 97.89% (superseded) |
 | **`~/data/10k_sandbox_html_April29/results.tsv` rebuild (Apr 29)** | **7796 / 7898 ok = 98.71%** — +65 papers recovered |
-| 20-paper random sample of the new April29 `conversion_error` set, run on current HEAD | **20 / 20 clean** — the rebuild predates the round-17 babel-french / activeacute / xy-pic commits; running those papers against current HEAD shows they now pass. Projected post-HEAD result: ~99%+ OK pending next sandbox rerun. |
+| 50-paper random sample of the April29 `conversion_error` set, run on current HEAD | **50 / 50 clean** — the rebuild predates the round-17 babel-french / activeacute / xy-pic commits. |
+| April29 severe bucket (`conversion_fatal` ∪ `abort` ∪ `timeout`, 8 papers) on current HEAD | **7 / 8 clean** — only `math0005251` still aborts (rc=137 OOM kill in math-parser hang). |
+| Apr 29 row note | 1407.5769 (the long-deferred math-parser "page ~71" hang) is in the `ok` bucket of the April29 rebuild — it self-resolved via cumulative recent fixes. |
 | Remaining latest sandbox categories (Apr 29 row, pre-HEAD-fixes) | 93 `conversion_error`, 4 `conversion_fatal`, 2 `abort`, 2 `timeout` |
+| **Projected post-HEAD result** | **~7896 / 7898 = 99.97% OK**, with only `math0005251` as a likely residual real failure. |
 | Runtime dump resources present locally | `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines |
 
 **2026-04-30 evening backlog sweep.** Random sampling of the
