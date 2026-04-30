@@ -78,6 +78,32 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-47 (after `db8a4815a`):** quant-ph0203083 still 1 error, but
+the trigger is *different* from the iter-43 hypothesis. Source has
+`\font\gnuplot=cmr10 at 10pt` followed by `\gnuplot` USE, **inside
+a `\begin{picture}` block**. Min repro:
+```tex
+\documentclass{article}
+\begin{document}
+\begin{picture}(100,100)(0,0)
+\font\gnuplot=cmr10 at 10pt
+\gnuplot
+\end{picture}
+\end{document}
+```
+- Rust: 1 error (\gnuplot undefined at line 5)
+- Perl: 0 errors
+
+`\font` at top level works in BOTH engines. The bug is specific to
+`\font` *inside `picture` env*. Both Perl FontDef.pm:42-43 and Rust
+tex_fonts.rs:137 install the FontDef CS as **local** scope; yet
+Perl handles the picture-frame correctly. Rust loses the def
+between the same-frame `\font\gnuplot=...` line and the `\gnuplot`
+invocation at the very next line. Suggests Rust's `\begin{picture}`
+opens an additional frame around the body, or `\font` body's
+DefPrimitive! installs into a frame that's already popped.
+Investigation queued — needs picture-env framing trace.
+
 **Iter-43 cluster (astro-ph + quant-ph):** sampled 4 more conv_error
 papers with main-file detection: ALL are Perl-clean (0 errors / a
 few warnings) and Rust-error on a small set of undefined CSes:
