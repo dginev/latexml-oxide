@@ -1762,6 +1762,10 @@ macro_rules! AddToMacro {
           None => Vec::new(),
         };
         expansion.extend($tokens.unlist());
+        // Perl Package.pm:2527 — `local $UNLOCKED = 1` allows the
+        // append-redefinition to bypass `:locked` (only an addition,
+        // never a replacement of the body's intent).
+        let _unlock_guard = ::latexml_core::common::local_assignments::local_state_unlocked_guard(true);
         def_macro(
           $cs,
           None,
