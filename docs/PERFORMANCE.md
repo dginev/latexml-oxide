@@ -200,7 +200,10 @@ avoid overfitting to the current Tier A set.
 
 **P1: Reduce Marpa work.** Use parse audits to identify repeated shapes, add
 strictly guarded direct-XM builders for simple unambiguous math, then reduce
-grammar ambiguity where the audit shows combinatorial parse families.
+grammar ambiguity where the audit shows combinatorial parse families. Start
+with exact repeated-formula caching and narrow fast paths for atoms, scripts,
+simple function calls, comma lists, and relation forms; every fast path must
+fall back to Marpa when context is uncertain.
 
 **P1: Make graphics conversion observable and reusable.** Cache conversions by
 source identity, page, DPI, destination type, and relevant options. Coalesce
@@ -226,6 +229,11 @@ Before merging a performance change:
 4. Report wall time, user/sys time, max RSS, and phase timings.
 5. State the expected workload boundary and any fallback path.
 6. Keep the change easy to disable if it relies on a heuristic.
+
+For math-parser changes, also record parse count distribution, total math parse
+time, MathML/XMath count, and any formulas that switch between Marpa and a fast
+path. Structural math output must be reviewed on math-heavy fixtures before the
+change is treated as a win.
 
 ---
 
@@ -363,19 +371,29 @@ symbols, but should remain directional only.
 
 ### Future directions
 
-1. **Math fast paths before Marpa.** `1011.1955` spends about 2.3 s and 238 MB
+1. **Math fast paths and cache before Marpa.** `1011.1955` spends about 2.3 s and 238 MB
    RSS in math parsing. Its parse audit is dominated by simple repeated
    shapes (`p(n)`, `eta(z)`, comma lists, simple subscripted function calls).
-   Add conservative direct-XM builders for unambiguous common shapes before
-   `parse_marpa`, then validate against the standing corpus and math tests.
-   Release `perf` now confirms Marpa recognizer/precompute symbols as the
-   largest XML-only hot band.
+   First add exact-token parse caching keyed by the normalized math token
+   sequence plus relevant context (display/inline style and bindings that affect
+   math meaning). Then add conservative direct-XM builders for unambiguous common
+   shapes before `parse_marpa`: single atoms, numbers, `x_i`, `x^2`, `x_i^j`,
+   simple function calls such as `p(n)` / `eta(z)`, comma lists, parenthesized
+   atoms, and simple relation forms such as `x=0` / `i\leq n`. Guard these
+   narrowly and fall back to Marpa whenever an operator, macro, font binding, or
+   grouping form is uncertain. Release `perf` now confirms Marpa
+   recognizer/precompute symbols as the largest XML-only hot band.
 
 2. **Grammar ambiguity reduction.** Release `perf` and debug Callgrind both
    point at Marpa recognizer/precompute internals even when tree enumeration is capped.
    Prioritize grammar changes around function application, juxtaposition,
    comma lists, scripts, and `ATOM` boundaries. Use `LATEXML_PARSE_AUDIT=1`
-   to select repeated patterns before changing rules.
+   to rank shapes by total corpus cost, not single pathological examples. Track
+   parse count, elapsed time, surviving semantic choices, and repetition count.
+   Prefer semantic pruning for invalid combinations before broad grammar surgery:
+   reject impossible double application, malformed operator chains, mismatched
+   or empty fences, invalid script targets, and nonsensical differential/operator
+   combinations during tree construction.
 
 3. **Graphics conversion cache/telemetry.** `1005.1610` is post/graphics
    bound, with release samples landing mostly in `gs` / `convert` PNG and zlib
