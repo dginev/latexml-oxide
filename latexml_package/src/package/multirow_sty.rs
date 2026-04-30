@@ -61,6 +61,13 @@ LoadDefinitions!({
   // a paired DefPrimitive that runs after gullet expansion. Observable
   // XML remains identical to the Perl port for well-formed input, and
   // strictly better (no script-mode bleed) for malformed input.
+  // Inside the hbox, `\\` is still bound to the surrounding tabular's
+  // `\lx@alignment@newline` which fires `\lx@begin@alignment` — invalid
+  // in restricted_horizontal mode. multirow's content allows `\\` as a
+  // soft line break (the package stacks rows visually). Rebind `\\` to
+  // `\lx@newline` (horizontal-mode break) at the start of the hbox so
+  // nested `\\` survives. Witness: arXiv:1504.01713 line 694
+  // `\multirow{6}{17pt}{$\alpha_\mathrm{exp}$\\$\alpha_\mathrm{C}$}`.
   DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
-    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\multirowsetup #6}");
+    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\let\\\\\\lx@newline\\multirowsetup #6}");
 });
