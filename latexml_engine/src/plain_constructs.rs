@@ -36,7 +36,16 @@ LoadDefinitions!({
   DefMath!("\\lx@math@hash",  None, "#", alias => "\\#");
   DefMath!("\\lx@math@amp",   None, "&", role  => "ADDOP", meaning => "and", alias => "\\&");
   DefMath!("\\lx@math@percent", None, "%", role  => "POSTFIX", meaning => "percent", alias => "\\%");
-  DefMath!("\\lx@math@dollar", None, "\\$", role => "OPERATOR", meaning => "currency-dollar",
+  // Display char is literal "$" (same pattern as \# / \& / \% / \_ above using
+  // literal chars, not escaped CS forms). Reverting to "\\$" via alias would
+  // re-trigger the \ifmmode\lx@math@dollar\else… expansion in dual-revert
+  // paths and recurse; reverting via the literal `$` char (which has MATH
+  // catcode but is wrapped in a finished math Box) terminates cleanly. Mirrors
+  // Perl `plain_base.pool.ltxml:76-77` `Box('$', undef, undef, T_CS('\$'),
+  // role => 'OPERATOR', meaning => 'currency-dollar')` — the Box's text is
+  // literal "$"; the T_CS('\$') reversion is a frozen token that is never
+  // re-digested, so Perl sees no loop.
+  DefMath!("\\lx@math@dollar", None, "$", role => "OPERATOR", meaning => "currency-dollar",
     alias => "\\$");
   DefMath!("\\lx@math@underscore", None, "_", alias => "\\_");
 
