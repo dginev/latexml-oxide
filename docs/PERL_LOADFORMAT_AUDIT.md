@@ -14,6 +14,14 @@ lines. The detailed call-count table below is from the 2026-04-28
 audit and should be re-run before using exact counts as acceptance
 criteria.
 
+**Zero-error target verification (2026-04-30 iter 40):** ran
+`latexml_oxide --init=plain.tex empty.tex` and
+`latexml_oxide --init=latex.ltx empty.tex` against the current HEAD
+binary. Both emit **0 errors**. Freshly-generated dump output
+matches on-disk dumps line-for-line (plain: 0 diff lines; latex: 1
+line diff — only the `texsys.aux_contents` build timestamp). Target
+#4 from CLAUDE.md is met.
+
 **Audit table (2026-04-28):**
 
 | File | Perl calls | Rust calls | Status |
