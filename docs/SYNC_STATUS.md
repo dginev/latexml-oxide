@@ -547,20 +547,22 @@ prematurely before the bibliography frame can claim authority).
 ```
 Same `<para>`-wraps-`<bibitem>` symptom as the full natbib_test.
 
-**Refined hypothesis (post-iteration)**: Perl uses
-`DefPrimitiveI('\reset@natbib@cites', undef, sub {...})` — the `I`
-variant is "invisible" (doesn't trigger `enter_horizontal`). Rust's
-`DefPrimitive!("\\reset@natbib@cites", None, after_digest => {...})`
-(natbib_sty.rs:955) lacks the invisible distinction. When
-`\reset@natbib@cites` fires inside `<biblist>`, Rust's digest path
-likely calls `enter_horizontal`, auto-closes `<biblist>`/`<bibliography>`
-(both have `auto_close => true`), and opens `<para>`. Subsequent
-`\@@lbibitem` then opens `<bibitem>` in the `<para>` — the symptom.
+**Refined hypothesis ruled out**: I initially suspected
+`\reset@natbib@cites` (DefPrimitive without DefPrimitiveI invisible
+semantics) was triggering `enter_horizontal`. Verified by reading
+`primitive.rs:invoke_primitive`: only the `String`-body branch calls
+`crate::stomach::enter_horizontal()`; the `Closure` branch (which
+applies to `\reset@natbib@cites` with `None`/`after_digest`) does
+NOT. So this is not the leak source.
 
-Forward-fix candidate: audit `DefPrimitive!` invocations in
-natbib_sty.rs (and others) — especially those with `None` body — and
-mark them as mode-invisible, OR flesh out the Rust dispatch macro
-to honor the Perl `DefPrimitiveI` semantics. Suspects:
+Next iteration concrete experiment: bisect the `\bibitem` body
+itself. Define a temporary `\bibitem-min` macro in natbib_test
+min repro that calls only `\@@lbibitem{key}` (skipping
+`\reset@natbib@cites`/`\refstepcounter`/`\@ifnextchar` chain). If
+the bibliography opens correctly, the trigger is in one of those
+three; bisect from there. If it still breaks, the trigger is in
+`\@@lbibitem` itself or in a downstream `\@lbibitem` → `\@@lbibitem`
+expansion order. Suspects:
   * `\refstepcounter`'s side-effect — Perl primitive returns
     nothing visible; Rust's may leak counter value text.
   * `\reset@natbib@cites` definition or expansion order.
