@@ -510,17 +510,14 @@ Perl. Add `latexml_oxide --dump-model` that writes the loaded
 schema in `.model` format, then extend `compileschema.sh` to call
 it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
 
-### 10. UNLOCKED scopes — translate all 5 Perl sites
+### 10. UNLOCKED scopes — DONE 2026-04-30
 
-Perl sets `local $UNLOCKED = 1` in 5 sites; Rust currently has 0
-— this is the next major Perl-faithful gap. Sites: `loadLTXML`
-body (Package.pm:2318), `executeBeforeDigest`/`executeAfterDigest`
-of Primitives (Primitive.pm:41,47), `executeAfterDigestBody` of
-Constructors (Constructor.pm:124), `\AppendToMacro`-style
-extension helper (Package.pm:2527). Plus one explicit `=0`
-re-lock in `loadTeXFile` (Package.pm:2364). Surgical
-`:locked` clear workaround stays in place
-(`revtex3_support_sty.rs:56-63`) until all five are wired.
+All 5 Perl `local $UNLOCKED = 1` sites translated:
+`execute_before_digest` / `execute_after_digest` /
+`execute_after_digest_body` (definition.rs), `_load_binding`
+body (binding/content.rs), `AddToMacro!` (setup_binding_language.rs).
+Plus explicit `=0` re-lock in raw TeX read (binding/content.rs).
+Surgical `:locked` clear in revtex3_support removed in `4e800c537`.
 
 ### 11. Distribution — bundle multi-TL dumps
 
