@@ -78,6 +78,35 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-43 cluster (astro-ph + quant-ph):** sampled 4 more conv_error
+papers with main-file detection: ALL are Perl-clean (0 errors / a
+few warnings) and Rust-error on a small set of undefined CSes:
+
+| paper | doc class/style | undefined in Rust |
+|---|---|---|
+| `astro-ph0607182` | `\documentstyle[…,ysc,…,epsf]{article}` | `\plotone` |
+| `astro-ph0512041` | `\documentclass[…]{revtex4}` | (1 unspecified) |
+| `astro-ph0611848` | `\documentclass{aa}` | (1 warn + 1 err) |
+| `quant-ph0203083` | (TBD) | `\gnuplot` |
+
+Perl detailed log on `astro-ph0607182` does NOT mention `\plotone`
+at all — Perl never invokes it, even though `\plotone{fig1k.eps}`
+sits inside a `\begin{figure}` body. Rust's
+`latexml_package/src/package/aas_support_sty.rs` exists, but isn't
+auto-loaded for plain `\documentstyle{article}` papers. Perl
+similarly doesn't auto-load `aas_support.sty.ltxml` for plain
+article — so the Perl tolerance is from a different mechanism
+(maybe `\documentstyle` 2.09-compat treats undefined CSes inside
+floats as text, or `\begin{figure}` body in plain article
+swallows unknown CSes silently).
+
+**Action plan:** add `Sub-task 5a` — investigate `\documentstyle`
+2.09-compat path's handling of undefined CSes inside float
+environments (`figure`, `table`). The 9-paper iter-41 sample +
+4-paper iter-43 sample suggests a sizeable cluster of Rust-only
+errors stem from this. Until the root divergence is found,
+do NOT add per-paper stubs (would mask the real bug).
+
 **Iter-42 update:** **min repro confirmed** the divergence:
 ```tex
 \documentclass{article}
