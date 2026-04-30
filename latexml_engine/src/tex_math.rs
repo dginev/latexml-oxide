@@ -786,9 +786,21 @@ LoadDefinitions!({
   // AND, rarely, they're empty.... Is it wrong to drop them?
   // Perl: adjustMathRole — wraps content in XMWrap, conditionally sets role
   // If single child already has an acceptable sub-role, DON'T override
-  DefConstructor!("\\mathord{}", sub[document, args, _props] {
+  // Perl: '\math<class> Digested' — TeX_Math.pool.ltxml L689-697.
+  // Using `Digested` (single math atom) instead of `{}` (Plain token-list)
+  // avoids spurious expansion of conditionals when there is no `{` after
+  // the CS. Min repro: `$\mathopen\ifcase 1 \oo\or\big(\or\Big(\else\oo\fi(x)$`
+  // — Plain mis-evaluated `\oo` (case 0); Digested follows the chosen
+  // branch correctly. See SYNC_STATUS Sec.5 math0004127 row.
+  DefConstructor!("\\mathord Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ID", None)?;
   }, bounded => true);
+  // \mathop kept as `{}` (Plain) — switching to `Digested` introduces an extra
+  // wrap layer that disturbs `scriptpos` depth-counting (regresses
+  // tests/math/testscripts: `mid2`/`post2` → `mid3`/`post3` for nested
+  // `\mathop{\mathop{A}…}…`). Perl uses `Digested` here too, so the
+  // remaining gap with Perl is in our depth-counting heuristic, not
+  // here. Revisit once `scriptpos` is computed Perl-faithfully.
   DefConstructor!("\\mathop{}", sub[document, args, props] {
     let sp = props.get("scriptpos").map(|v| v.to_string());
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BIGOP", sp.as_deref())?;
@@ -800,22 +812,22 @@ LoadDefinitions!({
       { "mid" } else { "post" };
       Ok(stored_map!("scriptpos" => pos))
     });
-  DefConstructor!("\\mathbin{}", sub[document, args, _props] {
+  DefConstructor!("\\mathbin Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "BINOP", None)?;
   }, bounded => true);
-  DefConstructor!("\\mathrel{}", sub[document, args, _props] {
+  DefConstructor!("\\mathrel Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "RELOP", None)?;
   }, bounded => true);
-  DefConstructor!("\\mathopen{}", sub[document, args, _props] {
+  DefConstructor!("\\mathopen Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "OPEN", None)?;
   }, bounded => true);
-  DefConstructor!("\\mathclose{}", sub[document, args, _props] {
+  DefConstructor!("\\mathclose Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "CLOSE", None)?;
   }, bounded => true);
-  DefConstructor!("\\mathpunct{}", sub[document, args, _props] {
+  DefConstructor!("\\mathpunct Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "PUNCT", None)?;
   }, bounded => true);
-  DefConstructor!("\\mathinner{}", sub[document, args, _props] {
+  DefConstructor!("\\mathinner Digested", sub[document, args, _props] {
     adjust_math_role(document, args.first().and_then(|a| a.as_ref()), "ATOM", None)?;
   }, bounded => true);
 

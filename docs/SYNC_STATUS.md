@@ -14,6 +14,98 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ## Open tasks (highest leverage first)
 
+### 0. math0606553 — `\CompileMatrices` + `\xy@@ix@` re-tokenization
+
+In-progress investigation, paused mid-debug 2026-04-30. Single-error
+paper (`undefined:\lx`); affects every paper using `\usepackage{xy}`
++ `\CompileMatrices` whose matrix cells contain `\lx@*` CSes (e.g.
+`\DeclareMathOperator` operators expand into `\lx@dual …`).
+
+**4-line min repro** (now committed at
+`latexml_oxide/tests/graphics/xycompile.tex`, **no `.xml` pair yet** —
+test would fail until fix lands):
+```tex
+\documentclass{article}
+\usepackage[arrow,curve,matrix]{xy}
+\CompileMatrices
+\begin{document}\xymatrix{A \ar[r] & B}\end{document}
+```
+Triggered with `\DeclareMathOperator{\shom}{...}` and `\shom` in a
+matrix cell. Without `\CompileMatrices`, clean. With it, `\lx`
+undefined.
+
+**Root cause traced**: xy.tex compile mode writes a `.xyc` file via
+`\write` (UnTeX/`untex`), then `\input`s it back. Each cell entry is
+re-input via `\xy@@ix@{body}` which expands to `\xyxy@@ix@`'s body
+(xy.tex L266-267):
+```tex
+\xydef@\xyxy@@ix@{\begingroup
+ \xyuncatcodes\afterassignment\endgroup\global\toks9=}
+```
+`\xyuncatcodes` sets `@` to OTHER **before** `\toks9 = {body}` reads
+the body. So `\lx@dual` inside the cell body re-tokenizes as
+`\lx`+`@dual` (wrong). Stored in `\toks9`. Later `\the\toks9` expands
+the bad tokens; `\lx` undefined error fires.
+
+**Catcode trace confirms**: at `\input min_repro-01.xyc`, `@`=OTHER.
+`\xycompiled` body fires `\xycatcodes` → `@`=LETTER (depth=8). Then
+each `\xy@@ix@{...}` opens `\begingroup` (depth=9), runs
+`\xyuncatcodes` → `@`=OTHER. `\afterassignment\endgroup` IS firing
+correctly (verified: 17× saved + 17× consumed via Register::digest →
+state::after_assignment), and the group does pop. But the body inside
+`\toks9={...}` was already tokenized at depth=9 with `@`=OTHER, so
+the popped-to-LETTER catcode comes too late.
+
+**Perl works on the same input.** Open question: how? Hypotheses to
+audit:
+1. Perl's `\toks N = {balanced}` reading uses a different catcode
+   snapshot than ours.
+2. Perl's `UnTeX($tokens, 1)` writes the `.xyc` content with a CS
+   form that re-tokenizes correctly even with `@`=OTHER (e.g.
+   inserts a guard or escapes differently).
+3. Perl's `\xy@@ix@` resolves to a different macro than ours
+   (`\meaning\xy@@ix@` in Perl returned the body of `\xy` itself,
+   not `\xyxy@@ix@`'s — strongly suggests Perl's `\plainxy@`
+   `\let\xy@@ix@=\xyxy@@ix@` did not fire in our test, OR Perl
+   reroutes `\xy@@ix@` via `xylatexml.tex.ltxml`).
+4. Perl's `remove_value`-equivalent for `afterAssignment` is a
+   two-step `lookupValue` + `assignValue(=>undef, 'global')`; ours
+   is one-step `remove_value`. If `remove_value` collapses local
+   frames where the two-step preserves them, that could let the
+   group-pop revert the wrong catcode binding. Worth a focused diff.
+
+**Perl-faithful changes already applied to `xy_sty.rs`** (compile but
+do not fix):
+* `\xystycatcode` is now `sub[_args]` returning `Explode(catcode('@'))`
+  dynamically (mirrors Perl xy.sty.ltxml L19), replacing the
+  `"12"` hard-coding.
+* Pre-`InputDefinitions` `assign_catcode('@', OTHER, Global)` and
+  post-load restore (mirrors xy.sty.ltxml L21
+  `AssignCatcode('@' => CC_OTHER)` + `\xyuncatcodes`'s implicit
+  reset back).
+
+**Empirical band-aid that DOES fix it** (NOT applied — non-Perl-
+faithful, recorded for reference): in `load_tex_content`
+(`latexml_core/src/binding/content.rs`), set `at_letter: true` when
+the input path ends with `.xyc`. Both min repro and full math0606553
+go to 0 errors. Side-stepping `\xyuncatcodes`'s effect by forcing
+`@`=LETTER throughout the .xyc input.
+
+**Next steps for the fix**:
+1. Verify hypothesis (3): patch Perl's xy.tex.ltxml to log
+   `\meaning\xy@@ix@` at .xyc-input time and compare to ours.
+2. Verify hypothesis (4): replace `remove_value("afterAssignment")`
+   in `state::after_assignment()` with `lookup_value` +
+   `assign_value(... Stored::None, Global)` and re-run min repro.
+3. Verify hypothesis (1)/(2): patch Perl's TeX_FileIO write to log
+   the bytes + Perl's `\toks` reader to log catcode of `@` at
+   read-time. Compare with our trace.
+
+* Acceptance: min repro → 0 errors AND full math0606553.zip → 0
+  errors AND `cargo test --tests` 1109+/0/0.
+* TDD test pair queued at `latexml_oxide/tests/graphics/xycompile.tex`;
+  needs an `.xml` golden once fix lands.
+
 ### 1. math0005251 — math-parser cumulative-state OOM
 
 Only filesystem-level hard failure left in the April29 sandbox. Rust
@@ -82,7 +174,7 @@ math9805021 were clean before.
 | astro-ph9608077 | 1 | `malformed:ltx:tags` | `<ltx:tags>` schema malformed |
 | hep-ph0702114 | 1 | `unexpected:}` | `\begin{abstract}` mode-switch (same as 1710.03688) |
 | hep-th9601176 | 1 | `unexpected:double-superscript` | `\Si^{\mu\nu}'` math edge case |
-| math0004127 | 1 | `undefined:\oo` | Rust `\ifcase` evaluates skipped branch — Rust core bug |
+| ~~math0004127~~ | 0 | ~~`undefined:\oo`~~ | RESOLVED 2026-04-30: `\math<class>` constructors switched from `{}` (Plain) to `Digested` to mirror Perl `TeX_Math.pool.ltxml:689-697`. Plain expanded `\ifcase`'s body when there was no `{` after the CS, dragging `\oo` from the case-0 branch into evaluation. `\mathop` retained `{}` for now (`Digested` regresses `tests/math/testscripts` `scriptpos` depth-counting) |
 | math0111087 | 1 | `malformed:ltx:theorem` | amsppt `\proclaim` inside `\abstract` (schema) |
 | math0606553 | 1 | `undefined:\lx` | math-parser path during `\multline*`; `name`/`vattach` keyvals declared in `9d5cfb8ce` reduced Info noise but `\lx` source unidentified |
 | alg-geom9604001 | 2 | `malformed:ltx:equation` | equation in text (schema) |
