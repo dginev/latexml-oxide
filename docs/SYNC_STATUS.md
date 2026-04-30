@@ -70,9 +70,11 @@ inline-math whatsit, not raw XMath.
 ### 4. Sandbox conv_error long-tail — full-canvas verification
 
 35 in-scope April-30 papers all clean in spot-check after
-`5e65deaec`. Pending: full 7898-paper rerun via
-`tools/benchmark_10k.sh` to verify no regressions and update the
-headline number.
+`5e65deaec`. Math-parser perf hotspot fixed in `5710a7157`
+(pruned-only fast-fail; 0804.1730 103.9 s → 19.3 s, expect
+similar wins across other heavy multi-clause papers). Pending:
+full 7898-paper rerun via `tools/benchmark_10k.sh` to verify no
+regressions and update the headline number.
 
 ### 5. AmSTeX.pool.ltxml — 70% gap
 
