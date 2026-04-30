@@ -43,6 +43,25 @@ LoadDefinitions!({
        \\if@lx@revtex@faketext@\\let\\@next\\egroup\\else\\let\\@next\\lx@revtex@nestmath\\fi\
      \\fi\\@next");
 
+  // The earlier latex_constructs.rs `\begin{equation}` definition is
+  // installed with `locked => true`, which would normally cause Rust's
+  // `install_definition` to silently drop the redefinitions below.
+  // Perl's `local $UNLOCKED = 1` during loadLTXML would let this through;
+  // Rust's binding-load path lacks that wrapper (broad-fix attempt
+  // regressed 5 tests via natbib bibliography reordering — see iter-20).
+  // Surgically clear the lock-flags for just the equation/equation*
+  // slots so revtex3_support's redefs can install. We do NOT re-set
+  // them: paper sources ignoring the lock is the whole point of the
+  // revtex `$$` faketext trick.
+  AssignValue!(r"\begin{equation}:locked", false, Scope::Global);
+  AssignValue!(r"\end{equation}:locked", false, Scope::Global);
+  AssignValue!(r"\equation:locked", false, Scope::Global);
+  AssignValue!(r"\endequation:locked", false, Scope::Global);
+  AssignValue!(r"\begin{equation*}:locked", false, Scope::Global);
+  AssignValue!(r"\end{equation*}:locked", false, Scope::Global);
+  AssignValue!(r"\equation*:locked", false, Scope::Global);
+  AssignValue!(r"\endequation*:locked", false, Scope::Global);
+
   DefEnvironment!("{equation}",
     "<ltx:equation xml:id='#id'>\
      #tags\

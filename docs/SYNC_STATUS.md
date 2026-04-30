@@ -14,11 +14,44 @@ insights are in `docs/WISDOM.md`; upstream Perl bugs in
 
 ## Open tasks (highest leverage first)
 
-### 1. **REGRESSION**: revtex `\begin{equation}$$...$$\end{equation}` (was 0, now 1+ errs)
+### 1. **RESOLVED**: revtex `\begin{equation}$$...$$\end{equation}` regression
+
+Fixed in commit (this iter). hep-ph0003251 351 → 0. Tests 1110/0/0.
+
+**Root cause:** revtex3_support_sty.rs's `\begin{equation}` env redef
+was being silently dropped because latex_constructs.rs had already
+installed the standard equation env with `locked => true`. Rust's
+`install_definition` lock check (`state.rs:1013`) rejects redefs
+when `locked && !state_is_unlocked`. Perl handles this via
+`local $UNLOCKED = 1` during loadLTXML (Package.pm:2318) so
+sibling `.ltxml` bindings can override locked slots; Rust's
+`_load_binding` lacked that wrapper.
+
+**Fix path explored:** broad fix wrapping `_load_binding`'s
+dispatcher with `local_state_unlocked(true)` was Perl-faithful
+but regressed 5 unit tests (natbib, crazybib, percent, textcase,
+amstheorem) — natbib bibliography output diverged because some
+binding chain depended on locked slots staying locked. Reverted.
+
+**Surgical fix:** clear the `:locked` flag for just
+`\begin{equation}` / `\end{equation}` / `\equation` / `\endequation`
+(plus `*` variants) in revtex3_support_sty.rs immediately before
+the redefinitions. The slots get re-locked when the new defs
+install with `locked => true`. Achieves the parity target without
+broadening the lock-bypass.
+
+**Audit deferred:** the `_load_binding` wrapper is the
+Perl-faithful long-term fix; the 5 regressed tests likely have
+stale goldens that masked the bug. Audit the locked mechanism
+and update goldens in a future iteration. See `LaTeXML/lib/LaTeXML
+/Core/State.pm:502-517` (Perl installDefinition) and
+`LaTeXML/lib/LaTeXML/Package.pm:2318` (Perl loadLTXML).
+
+Below: previous bisection notes (kept for context).
 
 Bisected to commit `b093bdd30` (\documentstyle 3-branch DefMacro).
 At `b093bdd30~1` (`62e6291fe` era): hep-ph0003251 = **0 errors**.
-At HEAD: hep-ph0003251 = **351 errors** (242× `Unexpected:_` + 86×
+At HEAD before this fix: hep-ph0003251 = **351 errors** (242× `Unexpected:_` + 86×
 `Unexpected:^` + 13× `XMArray malformed` + …).
 
 **9-line min repro** (saved as `/tmp/revtex_array_dollar_repro.tex`):
