@@ -7730,14 +7730,18 @@ LoadDefinitions!({
   //======================================================================
 
   DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[(_star,length)] {
+    // Perl `latex_constructs.pool.ltxml:4686-4691` always emits a Box once
+    // `DimensionToSpaces` returns a defined value — and `''` is defined,
+    // so a literal `\hspace{0pt}` still yields an `isSpace` whatsit. In
+    // math mode that Box becomes an `<ltx:XMHint>` atom that anchors a
+    // following script (`\hspace{0mm}^c`), preventing the false
+    // `unexpected:double-superscript` reported on 1603.08690 and similar
+    // papers. Do NOT gate on `!s.is_empty()`.
     let s = dimension_to_spaces(length);
-    if !s.is_empty() {
-      let length_tokens = length.revert()?;
-
-      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
-      Tbox::new(arena::pin(&s), None, None, tokens,
-        stored_map!("width" => length, "isSpace" => true));
-    }
+    let length_tokens = length.revert()?;
+    let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
+    Tbox::new(arena::pin(&s), None, None, tokens,
+      stored_map!("width" => length, "isSpace" => true))
   });
 
   // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');
