@@ -11,9 +11,10 @@ Verified locally on this checkout:
 | Surface | Current result |
 |---|---:|
 | `cargo test --tests` | **1109 passed / 0 failed** |
-| `~/data/10k_sandbox_html/results.tsv` latest row per ID | **7731 / 7898 ok = 97.89%** (Apr 28; sandbox rebuild in progress) |
-| `easy_rerun_failures_list.txt` 181 prior-failure backlog (60-paper random sample on HEAD) | **60 / 60 clean** — projected near-100% backlog recovery once sandbox rerun lands |
-| Remaining latest sandbox categories (Apr 28 row) | 159 `conversion_error`, 4 `conversion_fatal`, 3 `abort`, 1 `timeout` |
+| `~/data/10k_sandbox_html/results.tsv` latest row per ID (Apr 28) | 7731 / 7898 ok = 97.89% (superseded) |
+| **`~/data/10k_sandbox_html_April29/results.tsv` rebuild (Apr 29)** | **7796 / 7898 ok = 98.71%** — +65 papers recovered |
+| 20-paper random sample of the new April29 `conversion_error` set, run on current HEAD | **20 / 20 clean** — the rebuild predates the round-17 babel-french / activeacute / xy-pic commits; running those papers against current HEAD shows they now pass. Projected post-HEAD result: ~99%+ OK pending next sandbox rerun. |
+| Remaining latest sandbox categories (Apr 29 row, pre-HEAD-fixes) | 93 `conversion_error`, 4 `conversion_fatal`, 2 `abort`, 2 `timeout` |
 | Runtime dump resources present locally | `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines |
 
 **2026-04-30 evening backlog sweep.** Random sampling of the
