@@ -21,8 +21,8 @@ paper (`undefined:\lx`); affects every paper using `\usepackage{xy}`
 + `\CompileMatrices` whose matrix cells contain `\lx@*` CSes (e.g.
 `\DeclareMathOperator` operators expand into `\lx@dual …`).
 
-**4-line min repro** (now committed at
-`latexml_oxide/tests/graphics/xycompile.tex`, **no `.xml` pair yet** —
+**4-line min repro** (committed at
+`latexml_oxide/tests/graphics/xycompile.tex`, no `.xml` pair yet —
 test would fail until fix lands):
 ```tex
 \documentclass{article}
@@ -47,64 +47,23 @@ the body. So `\lx@dual` inside the cell body re-tokenizes as
 `\lx`+`@dual` (wrong). Stored in `\toks9`. Later `\the\toks9` expands
 the bad tokens; `\lx` undefined error fires.
 
-**Catcode trace confirms**: at `\input min_repro-01.xyc`, `@`=OTHER.
-`\xycompiled` body fires `\xycatcodes` → `@`=LETTER (depth=8). Then
-each `\xy@@ix@{...}` opens `\begingroup` (depth=9), runs
-`\xyuncatcodes` → `@`=OTHER. `\afterassignment\endgroup` IS firing
-correctly (verified: 17× saved + 17× consumed via Register::digest →
-state::after_assignment), and the group does pop. But the body inside
-`\toks9={...}` was already tokenized at depth=9 with `@`=OTHER, so
-the popped-to-LETTER catcode comes too late.
-
-**Perl works on the same input.** Open question: how? Hypotheses to
-audit:
+**Perl works on the same input.** Open hypotheses to audit:
 1. Perl's `\toks N = {balanced}` reading uses a different catcode
    snapshot than ours.
 2. Perl's `UnTeX($tokens, 1)` writes the `.xyc` content with a CS
-   form that re-tokenizes correctly even with `@`=OTHER (e.g.
-   inserts a guard or escapes differently).
+   form that re-tokenizes correctly even with `@`=OTHER.
 3. Perl's `\xy@@ix@` resolves to a different macro than ours
-   (`\meaning\xy@@ix@` in Perl returned the body of `\xy` itself,
-   not `\xyxy@@ix@`'s — strongly suggests Perl's `\plainxy@`
-   `\let\xy@@ix@=\xyxy@@ix@` did not fire in our test, OR Perl
-   reroutes `\xy@@ix@` via `xylatexml.tex.ltxml`).
-4. Perl's `remove_value`-equivalent for `afterAssignment` is a
-   two-step `lookupValue` + `assignValue(=>undef, 'global')`; ours
-   is one-step `remove_value`. If `remove_value` collapses local
-   frames where the two-step preserves them, that could let the
-   group-pop revert the wrong catcode binding. Worth a focused diff.
+   (Perl reroutes via `xylatexml.tex.ltxml`).
+4. Perl's `afterAssignment` is a two-step `lookup`+`assign(undef)`;
+   ours is one-step `remove_value`. If `remove_value` collapses
+   local frames, that could let group-pop revert wrong catcode.
 
-**Perl-faithful changes already applied to `xy_sty.rs`** (compile but
-do not fix):
-* `\xystycatcode` is now `sub[_args]` returning `Explode(catcode('@'))`
-  dynamically (mirrors Perl xy.sty.ltxml L19), replacing the
-  `"12"` hard-coding.
-* Pre-`InputDefinitions` `assign_catcode('@', OTHER, Global)` and
-  post-load restore (mirrors xy.sty.ltxml L21
-  `AssignCatcode('@' => CC_OTHER)` + `\xyuncatcodes`'s implicit
-  reset back).
+Empirical band-aid that fixes it (NOT applied — non-Perl-faithful):
+in `load_tex_content`, set `at_letter: true` when input path ends
+with `.xyc`.
 
-**Empirical band-aid that DOES fix it** (NOT applied — non-Perl-
-faithful, recorded for reference): in `load_tex_content`
-(`latexml_core/src/binding/content.rs`), set `at_letter: true` when
-the input path ends with `.xyc`. Both min repro and full math0606553
-go to 0 errors. Side-stepping `\xyuncatcodes`'s effect by forcing
-`@`=LETTER throughout the .xyc input.
-
-**Next steps for the fix**:
-1. Verify hypothesis (3): patch Perl's xy.tex.ltxml to log
-   `\meaning\xy@@ix@` at .xyc-input time and compare to ours.
-2. Verify hypothesis (4): replace `remove_value("afterAssignment")`
-   in `state::after_assignment()` with `lookup_value` +
-   `assign_value(... Stored::None, Global)` and re-run min repro.
-3. Verify hypothesis (1)/(2): patch Perl's TeX_FileIO write to log
-   the bytes + Perl's `\toks` reader to log catcode of `@` at
-   read-time. Compare with our trace.
-
-* Acceptance: min repro → 0 errors AND full math0606553.zip → 0
-  errors AND `cargo test --tests` 1109+/0/0.
-* TDD test pair queued at `latexml_oxide/tests/graphics/xycompile.tex`;
-  needs an `.xml` golden once fix lands.
+**Acceptance**: min repro → 0 errors AND full math0606553.zip → 0
+errors AND `cargo test --tests` 1110+/0/0.
 
 ### 1. math0005251 — math-parser cumulative-state OOM
 
@@ -128,9 +87,8 @@ Distinct from the documented siunitx XMTok-in-text trigger.
 
 * Goal: math constructs inside amsppt's `\title` / `\heading`
   expand to `XMText`-wrapped content, not raw XMath tokens.
-* Scope: `latexml_engine/src/amsppt*` (or wherever amsppt's title
-  capture lives) + the digest path that promotes XMath into
-  text-context elements.
+* Scope: `latexml_engine/src/amsppt*` + the digest path that
+  promotes XMath into text-context elements.
 * Acceptance: `latexml_oxide … math0601451.zip` produces 0
   `Error:malformed:ltx:XMTok` lines.
 
@@ -144,47 +102,23 @@ escape the inline-math wrap. Min repro is 4 lines; documented in
   wrapped inline-math whatsit, not raw XMath.
 * Acceptance: 4-line min repro produces 0 errors.
 
-### 4. `\lx@dual` recovery-recursion follow-up — regression test ✅ DONE
+### 4. Sandbox conv_error long-tail — full-canvas verification
 
-Done in commit `61bb505dc` — `tests/structure/math_dollar.{tex,xml}`.
-Tests now 1110/0/0.
+35 in-scope April-30 papers all clean in spot-check after
+`5e65deaec`. Pending: full 7898-paper rerun to verify no regressions
+elsewhere and update the headline number.
 
-### 5. Sandbox conv_error long-tail — per-paper triage
-
-**Round-17 deferred sandbox `~/data/10k_failures_April30/`** (35
-in-scope papers, all Perl-clean under `--preload=ar5iv.sty
---path=~/git/ar5iv-bindings/bindings`). Status 2026-04-30 evening:
-**all 35 clean** in spot-check.
-
-Final-mile fixes:
-* `ce5c247e9` `_load_binding` UNLOCK + Perl-faithful
-  `@lx@bibliography` parent counter rename.
-* `b15870b34` `AddToMacro!` UNLOCK guard.
-* `ef42bf0d0` `@add@frontmatter@now` text-mode digest
-  (Perl `DigestText`).
-* `8541d808d` `make_generic_message` `\@spaces` padding +
-  `read_arg` isolated-mouth (Perl `make_message` /
-  `readArg`-via-`readingFromMouth`).
-
-Open: full 7898-paper sandbox rerun to verify no regressions
-### 6. Sandbox results.tsv — fresh rebuild
-
-Last full canvas snapshot is `~/data/10k_sandbox_html_April29/results.tsv`
-(7796/7898 = 98.71% ok). Per-paper retest of the 12 hard failures
-shows 11/12 now resolved on HEAD. Re-run the canvas to capture the
-post-`f6a6175ea` headline number.
-
-* Tooling: `tools/benchmark_10k.sh --worker-bin <path>` (default
-  test profile).
+* Tooling: `tools/benchmark_10k.sh` (defaults rebuild release
+  cortex_worker; takes 5-10 min compile + 20-30 min convert).
 * Acceptance: rebuild and update the dashboard row in this doc.
 
-### 7. AmSTeX.pool.ltxml — 70% gap
+### 5. AmSTeX.pool.ltxml — 70% gap
 
 112 defs, ~30% ported. Plain-TeX papers using `\input amstex`
 (e.g. math0601451) hit the gap. Low priority while sandbox impact
 stays small, but converting more amsppt/amstex papers depends on it.
 
-### 8. expl3 / pgfmath / pgfplots residual clusters
+### 6. expl3 / pgfmath / pgfplots residual clusters
 
 Long-standing deep clusters parked in
 `docs/archive/sandbox_failures_SYNC_STATUS.md`. Re-survey whether
@@ -192,27 +126,18 @@ recent fixes have reduced the surface enough to make individual
 items tractable.
 
 * `1803.03288` / `1902.08705` — expl3 cascade + pgfmath `\ifdim`.
-* `1305.3934` / `1404.1023` / `1405.3906` — pgfplots `\pgfplots@curlegend`
-  state-machine. Deferred fix-plan in
+* `1305.3934` / `1404.1023` / `1405.3906` — pgfplots
+  `\pgfplots@curlegend` state-machine. Deferred fix-plan in
   `latexml_package/src/package/pgfplots_sty.rs:18-28`.
 
-### 9. Schema generation — `--dump-model` CLI flag
+### 7. Schema generation — `--dump-model` CLI flag
 
 Stage 2 of `tools/compileschema.sh` (rng → model) still requires
 Perl. Add `latexml_oxide --dump-model` that writes the loaded
 schema in `.model` format, then extend `compileschema.sh` to call
 it. Diff Rust-emitted vs Perl-emitted `.model` from the same `.rnc`.
 
-### 10. UNLOCKED scopes — DONE 2026-04-30
-
-All 5 Perl `local $UNLOCKED = 1` sites translated:
-`execute_before_digest` / `execute_after_digest` /
-`execute_after_digest_body` (definition.rs), `_load_binding`
-body (binding/content.rs), `AddToMacro!` (setup_binding_language.rs).
-Plus explicit `=0` re-lock in raw TeX read (binding/content.rs).
-Surgical `:locked` clear in revtex3_support removed in `4e800c537`.
-
-### 11. Distribution — bundle multi-TL dumps
+### 8. Distribution — bundle multi-TL dumps
 
 Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 `{plain,latex}.dump.txt` for TL2022 … TL2026 and select at runtime
@@ -260,11 +185,12 @@ by `kpsewhich --version`. Currently dumps are loaded from
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo test --tests` | 1109/0/0 | unchanged across all task work |
+| `cargo test --tests` | 1110/0/0 | unchanged across all task work |
 | `latexml_oxide --init=plain.tex` | 0 errors | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors | 0 errors |
+| April-30 in-scope (35 papers) | 35/35 clean (spot-check) | 35/35 |
 | Filesystem-level hard failures in latest canvas | 1 (math0005251) | 0 |
-| `results.tsv` `ok` rate | 7796/7898 = 98.71% (Apr29) | match Perl on the same set |
+| `results.tsv` `ok` rate | 7796/7898 = 98.71% (Apr29 baseline) | match Perl on the same set |
 
 A sandbox paper is **in scope** iff Perl LaTeXML on TL2025 with
 `--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings` produces
