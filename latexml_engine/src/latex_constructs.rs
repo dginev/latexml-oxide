@@ -2562,6 +2562,13 @@ LoadDefinitions!({
       // bindings (e.g. psfig_sty.rs, when paspconf-class doc loads
       // `[psfig]` as an unused option) are considered "found" and
       // `RequirePackage` is fired.
+      // TODO (sub-task 5a): `find_file(opt.sty)` does NOT find paper-
+      // local `.sty` files in SEARCHPATHS even with `ext_type` set —
+      // the iter-44 min repro `\documentstyle[mysty]{article}` with
+      // local `mysty.sty` still misses. Likely SEARCHPATHS does not
+      // include the input file's directory at \compat@loadpackages
+      // time. Affects ~50 astro-ph papers (ysc.sty, paspconf.sty,
+      // conf_iap.sty paper-local class-options).
       use latexml_core::binding::content::FindFileOptions;
       let found = find_file(&format!("{opt}.sty"),
         Some(FindFileOptions { notex: true, ..Default::default() })).is_some()
