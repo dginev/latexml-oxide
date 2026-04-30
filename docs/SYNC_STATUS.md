@@ -78,6 +78,18 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-49:** instrumented tex_fonts.rs with eprintln after the
+DefPrimitive! call. Confirmed at install time `\gnuplot` IS in the
+meaning table (`lookup_meaning("\\gnuplot") = true`). So the install
+succeeds; the meaning is **lost between line 4 and line 5** of the
+min repro. Strong evidence this is a frame-pop issue: either picture
+env, or the `\font` body's parameter parsing (`SkipSpaces Token …
+SkipMatch:= … TeXFileName`), opens a frame that gets popped before
+the `\gnuplot` invocation. `\def` doesn't have parameter parsing
+(it stores the body raw), so it's unaffected. Investigation has the
+right anchor for next iteration: trace `push_frame` calls during
+`\font`-body's parameter resolution.
+
 **Iter-48:** confirmed `\global\font\gnuplot=...` ALSO fails (err=1)
 but `\def\gnuplot{HELLO}` in the same picture-env body works (err=0).
 So the bug is **NOT** generic local-scope-frame issue — it's specific
