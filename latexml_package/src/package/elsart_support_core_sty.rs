@@ -225,44 +225,37 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\end{keyword}"), None, "\\@keyword@cut\\endgroup");
   // Perl elsart_support_core.sty.ltxml L138-141: `\keyword{...}` (1-arg
   // form) reads a balanced group and wraps with `\@keyword <arg>
-  // \@keyword@cut` so XUntil can terminate correctly. Without this,
-  // `\keyword{Higgs; Boson}` written outside a `\begin{keyword}...
-  // \end{keyword}` env (legacy elsart3-1 idiom — see hep-ph0702114
-  // / 1710.03688 with babel[english,francais]) leaves XUntil
-  // gobbling tokens until `\@keyword@cut` is found via some
-  // unrelated `\PACS`/`\MSC`/`\end{keyword}` — which never arrives,
-  // so the read consumes through `\end{abstract}` and beyond,
-  // perturbing babel's queued `\aftergroup\bbl@pop@language` into
-  // a `\bbl@exp@aux`-undefined cascade.
-  // Perl elsart_support_core.sty.ltxml L138-141 calls
-  // `$gullet->readBalanced` with no args (`require_open=false`), and
-  // Perl's `readBalanced` starts the brace-counter at `level=1`. That
-  // means the function reads tokens AS IF we're already inside an
-  // open brace group: it consumes the user's `{...}` AND one ADDITIONAL
-  // unbalanced `}` past the close. This is the legacy elsart idiom
-  // (commented at L134: "if you do that, you've got to end with an
-  // unbalanced }") — the trailing `}` is part of the `\keyword{...}`
-  // call, not part of the surrounding env.
+  // \@keyword@cut` so XUntil terminates at the inserted token.
   //
-  // Driver: arXiv:1710.03688 ends its abstract with
-  //   `\keyword{Keyword1; ...} \vskip ...\noindent{...e3}}`
-  // (the literal trailing `}` is the "expected" unbalanced close).
+  // History — DO NOT switch this back to `read_balanced(_, _, false)`:
+  // commit 09bc60c2 ("\keyword absorbs trailing unbalanced }") tried to
+  // mirror Perl's `$gullet->readBalanced` with no args (require_open=
+  // false → level starts at 1) to absorb the legacy unbalanced-`}`
+  // idiom from arXiv:1710.03688 / hep-ph0702114, where the abstract
+  // ends:
+  //     \keyword{Keyword1; ...} \vskip ...\noindent{...e3}}
+  // (a trailing literal `}` past the keyword arg). For that input
+  // alone, `require_open=false` correctly consumes `{...} }` and stops.
   //
-  // The Rust DSL form `\\keyword{}` uses a strict reader that consumes
-  // only `{...}` proper. Switch to a closure that calls
-  // `gullet::read_balanced(Off, false, false)` — `require_open=false`
-  // mirrors Perl's lenient mode.
-  {
-    let cs = T_CS!("\\keyword");
-    let closure: ExpansionClosure = Rc::new(|_args: Vec<ArgWrap>| {
-      let arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
-      let mut out = vec![T_CS!("\\@keyword")];
-      out.extend(arg.unlist());
-      out.push(T_CS!("\\@keyword@cut"));
-      Ok(Tokens::new(out))
-    });
-    def_macro(cs, None, ExpansionBody::Closure(closure), None)?;
-  }
+  // BUT for the common balanced form — `\keyword{Higgs; Boson}` with
+  // no trailing extra `}` (the test fixture
+  // `tests/babel/elsart_keyword_brace_form.tex` and the vast majority
+  // of real-world usage) — `require_open=false` reads past the
+  // matching `}`, walks through `\end{abstract}` (raw `\end` is a CS
+  // and CC_END count is unchanged across that expansion), then
+  // `\end{frontmatter}`, … all the way to EOF. The reader's pushback
+  // grows unboundedly on the way; in CI we observed a single
+  // `memory allocation of 21743271936 bytes failed` (21 GB) → SIGABRT
+  // before the test could even report. The cost of one paper's
+  // 1-error reduction is the entire test suite OOM-aborting at
+  // `81_babel::elsart_keyword_brace_form_test`.
+  //
+  // The trailing-`}` arxiv 1710.03688 / hep-ph0702114 case is now a
+  // deferred parity gap. Any future fix must distinguish balanced vs
+  // unbalanced input WITHOUT speculatively reading to EOF — e.g. peek
+  // for the trailing `}` after a strict balanced read, or scope the
+  // lenient reader by an explicit token budget.
+  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
