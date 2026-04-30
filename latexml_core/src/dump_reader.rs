@@ -3,12 +3,10 @@
 //! Loads a dump file produced by `latexml_oxide --init=latex.ltx --dest=dump`
 //! and replays the state assignments into the engine.
 //!
-//! **Loading policy:** The dump loads AFTER the compiled engine definitions.
-//! Meanings (M entries) use add-only policy: skip if the CS is already defined.
-//! Values (V entries) use add-only policy: skip if the key already has a value.
-//! This ensures compiled engine semantics (constructors, etc.) take priority
-//! over raw TeX definitions from the dump, matching Perl's approach where
-//! `latex_constructs` overrides the dump.
+//! **Loading policy:** `M` and `V` entries replay with Perl-style global
+//! assignment semantics, matching `Core/Dumper.pm`'s `I()` / `V()` helpers.
+//! Runtime-state filters below are narrow exceptions for entries that should
+//! never be useful from a format dump.
 //!
 //! Format: tab-separated lines:
 //!   V\tKEY\tTYPE\tDATA             — value assignment

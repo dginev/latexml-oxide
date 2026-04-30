@@ -2493,12 +2493,10 @@ LoadDefinitions!({
   // define \affil / \altaffilmark / \acknowledgments etc. that ~49 astro-ph
   // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE.md Class A).
   //
-  // TODO(next cycle): once \documentstyle is converted to a DefConstructor
-  // with afterDigest (mirroring Perl's dispatch — .sty/.cls/OmniBus
-  // branching), this primitive becomes the sole route for "unused option →
-  // package". Currently \documentstyle's tex_job.rs DefMacro still emits
-  // `\RequirePackage` tokens inline; that will be removed when the
-  // DefConstructor lands.
+  // Current \documentstyle implementation lives in tex_job.rs as a DefMacro
+  // whose body mirrors Perl's three afterDigest branches. It no longer emits
+  // one `\RequirePackage` per option inline; this primitive is the route for
+  // class-unconsumed options after `\ProcessOptions`.
   DefPrimitive!("\\compat@loadpackages", {
     use latexml_core::binding::content::{find_file, find_file_fallback};
     let unused_list: Vec<String> = match state::lookup_value("@unusedoptionlist") {
