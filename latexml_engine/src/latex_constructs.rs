@@ -5657,10 +5657,23 @@ LoadDefinitions!({
         def_primitive(cs, None, Some(PrimitiveBody::from(replacement_value)),
           PrimitiveOptions::default())?;
       }
-    } else if IsDefinable!(&cs) {
-      // Can't decode: define conditional fallback
-      DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
-      \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
+    } else {
+      // Can't decode: ensure both `\<encoding><cs>` and the bare `<cs>`
+      // have safe fallbacks. Without binding the encoding-specific form,
+      // any T3-using paper (e.g. tipa with arXiv:1802.05444's
+      // `\textrhookrevepsilon`) chains through `\?<cs>` to
+      // `\<encoding><cs>` and errors as undefined. Define the
+      // encoding-specific as a no-op silent macro — graceful degrade
+      // rather than ltx:ERROR insertion.
+      if IsDefinable!(&ecs) {
+        DefMacro!(ecs, None, Tokens!());
+      }
+      if IsDefinable!(&cs) {
+        // Conditional fallback: prefer `\<cf@encoding><cs>` if it exists,
+        // else the alias `\?<cs>` set up by `\DeclareTextSymbolDefault`.
+        DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
+        \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
+      }
     }
   });
 
