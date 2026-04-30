@@ -149,4 +149,28 @@ LoadDefinitions!({
     let s = if in_french() { "\u{2006}?" } else { "?" };
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
+
+  // Babel-level `frenchb` language aliases — TL2025 babel-french 3.7e
+  // turned `frenchb.ldf` into a deprecation shim that only `\chardef`s
+  // `\l@frenchb=\l@french` and sets `\CurrentOption{french}`. It does
+  // NOT chain `\input french.ldf`, so when `\usepackage[frenchb]{babel}`
+  // runs, babel's `\selectlanguage{\bbl@main@language}` later errors
+  // with "haven't defined the language 'frenchb' yet". (Perl LaTeXML
+  // hits the same regression on TL2025 — 2 errors on 0909.3444.) We
+  // compensate by aliasing `\l@frenchb` and the `<lang>`-suffixed babel
+  // hooks to their `french` counterparts. No-op when the user only
+  // requested `french`. Idempotent — safe if the raw shim already ran.
+  RawTeX!(r"%
+    \expandafter\ifx\csname l@frenchb\endcsname\relax
+      \expandafter\ifx\csname l@french\endcsname\relax\newlanguage\l@french\fi
+      \chardef\l@frenchb=\l@french
+    \fi
+    \expandafter\let\csname captionsfrenchb\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrasfrenchb\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrasfrenchb\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname datefrenchb\expandafter\endcsname
+                    \csname datefrench\endcsname");
 });

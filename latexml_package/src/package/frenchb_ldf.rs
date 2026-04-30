@@ -2,11 +2,14 @@
 //!
 //! Perl: `frenchb.ldf.ltxml` — calls `InputDefinitions('frenchb',
 //! type => 'ldf', noltxml => 1)` to raw-load TeX Live's `frenchb.ldf`.
-//! The TL shim (gated by `\ifx\CurrentOption\bbl@tempa{frenchb}`) does
-//! `\chardef\l@frenchb\l@french` to alias the language counter so babel's
-//! `\selectlanguage{frenchb}` resolves, then unconditionally `\input
-//! french.ldf` for the actual French setup. Our dispatcher routes the
-//! chained `\input french.ldf` back to `french_ldf::load_definitions`.
+//!
+//! NOTE: This module's `load_definitions` is currently NOT registered
+//! in `latexml_package/src/lib.rs` for `("frenchb","ldf")` — that slot
+//! is wired to `french_ldf::load_definitions`, where the babel-level
+//! frenchb-language alias fix lives (TL2025 babel-french 3.7e turned
+//! `frenchb.ldf` into a deprecation shim that doesn't chain
+//! `french.ldf`). This module is retained for documentation parity
+//! with Perl's `frenchb.ldf.ltxml`.
 use crate::prelude::*;
 
 #[rustfmt::skip]
