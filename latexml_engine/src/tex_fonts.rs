@@ -61,11 +61,19 @@ LoadDefinitions!({
   DefPrimitive!("\\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
-    // Read optional "at <dimen>" or "scaled <number>"
-    let at_pt = gullet::read_keyword(&["at"])?
-      .map(|_| gullet::read_dimension().unwrap().pt_value(None));
-    let scaled = gullet::read_keyword(&["scaled"])?
-      .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0);
+    // Read optional "at <dimen>" or "scaled <number>" — Perl: TeX_Fonts.pool.ltxml L88-94
+    //   if    ($gullet->readKeyword('at'))     { $at = $gullet->readDimension; }
+    //   elsif ($gullet->readKeyword('scaled')) { $scaled = $gullet->readNumber/1000; }
+    // The `elsif` is load-bearing: only one branch fires. Without it, an
+    // `at <dim> scaled <n>` input would have BOTH consumed instead of leaving
+    // `scaled <n>` in the stream as Perl does.
+    let mut at_pt = None;
+    let mut scaled = None;
+    if gullet::read_keyword(&["at"])?.is_some() {
+      at_pt = Some(gullet::read_dimension()?.pt_value(None));
+    } else if gullet::read_keyword(&["scaled"])?.is_some() {
+      scaled = Some(gullet::read_number()?.value_of() as f64 / 1000.0);
+    }
     let props_opt = if let Some(mut props) = font::decode_fontname(&name, at_pt, scaled) {
       props.name = Some(Cow::Owned(name.clone()));
       Some(props)
