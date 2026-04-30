@@ -78,6 +78,17 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-48:** confirmed `\global\font\gnuplot=...` ALSO fails (err=1)
+but `\def\gnuplot{HELLO}` in the same picture-env body works (err=0).
+So the bug is **NOT** generic local-scope-frame issue — it's specific
+to `\font` primitive's CS-install path. `tex_fonts.rs:137` calls
+`DefPrimitive!(cs, ...)` which dispatches to `def_primitive(cs, ...)`
+inside picture's frame. Either (a) `def_primitive` for runtime-CS
+(non-literal) installs into a different frame than `\def`, or (b)
+something during `\font`-body parsing pops the current frame before
+the install. Investigation continues — needs `def_primitive` source
+read + frame-state trace.
+
 **Iter-47 (after `db8a4815a`):** quant-ph0203083 still 1 error, but
 the trigger is *different* from the iter-43 hypothesis. Source has
 `\font\gnuplot=cmr10 at 10pt` followed by `\gnuplot` USE, **inside
