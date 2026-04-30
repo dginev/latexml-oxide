@@ -5664,14 +5664,25 @@ LoadDefinitions!({
     }
   });
 
-  // hmmm... what needs doing here; basically it means use this encoding as the default for the
-  // symbol
-  // Perl L2683: DefPrimitive('\DeclareTextSymbolDefault DefToken {}', sub { DefMacroI(...) })
-  // Kind-parity stub — Perl performs a DefMacroI side-effect registering a
-  // `\?<cs>` → `\<encoding><cs>` alias. Current Rust engine doesn't rely on
-  // that alias, so body stays None; matches Perl's stomach-level
-  // invocation kind.
-  DefPrimitive!("\\DeclareTextSymbolDefault DefToken {}", None);
+  // Perl `latex_constructs.pool.ltxml:2684-2688`:
+  //   DefPrimitive('\DeclareTextSymbolDefault DefToken {}', sub {
+  //     my ($stomach, $cs, $encoding) = @_;
+  //     $encoding = ToString(Expand($encoding));
+  //     DefMacroI(T_CS('\?' . ToString($cs)), undef,
+  //               T_CS('\' . $encoding . ToString($cs))); });
+  //
+  // Registers the `\?<cs>` → `\<encoding><cs>` alias used by the
+  // `DeclareTextSymbol` fallback (line 5662 above). Without this side
+  // effect, tipa-style `\DeclareTextSymbolDefault\textrhookrevepsilon{T3}`
+  // leaves `\textrhookrevepsilon` undefined for any encoding other than
+  // T3, so a paper that loads tipa but is typeset in T1 errors.
+  DefPrimitive!("\\DeclareTextSymbolDefault DefToken {}", sub[(cs, encoding)] {
+    let cs_str = cs.to_string();
+    let encoding_str = Expand!(encoding).to_string();
+    let alias_cs = T_CS!(s!("\\?{cs_str}"));
+    let target_cs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    DefMacro!(alias_cs, None, Some(target_cs.into()));
+  });
 
   //------------------------------------------------------------
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
