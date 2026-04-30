@@ -112,6 +112,123 @@ Add `Pragma` rules that check mathematical conventions (e.g., consistency of var
 
 ---
 
+## Critical Performance Evaluation
+
+The current optimization work is directionally strong: the codebase already has
+an interner-aware style guide, a standing corpus, release-mode profiling notes,
+and specific evidence for math parsing and graphics/post-processing as the two
+dominant outlier families. To make the project world class, the next step is to
+treat performance as an engineering contract with budgets, attribution, and
+regression ownership, not as a sequence of useful local sweeps.
+
+### What "world class" should mean
+
+1. **Strict service quality parity.** Optimizations must preserve LaTeXML
+   semantics, diagnostics, output structure, resource handling, and failure
+   behavior unless a deliberate compatibility decision is documented. Fast but
+   non-equivalent conversions are regressions.
+
+2. **Predictable tail latency.** Median speedups are not enough. Track p50, p90,
+   p99, timeout rate, peak RSS, and output status across representative arXiv
+   classes. The product goal is fewer slow and failed papers, not just a faster
+   average paper.
+
+3. **Phase-attributed budgets.** Every run should be explainable by phase:
+   loading, digestion, math parsing, rewriting, graphics, XSLT, serialization,
+   and external tools. A global wall-clock number is useful for release gating
+   but too blunt for engineering decisions.
+
+4. **Optimization acceptance requires proof.** Each substantial optimization
+   needs a before/after benchmark on the corpus, one targeted stress case, and
+   an output-quality check. If the win is workload-specific, document the
+   workload boundary.
+
+5. **Fast paths must be conservative.** Direct builders, caches, and skipped
+   work should have narrow guards and fall back to the canonical path. The
+   default should be correctness-first with telemetry proving when a shortcut
+   was used.
+
+### Critical Gaps
+
+1. **No automated performance gate.** The corpus is documented but not yet a
+   hard CI signal. Add a `perf-corpus` job that stores JSONL artifacts
+   containing git SHA, command line, wall time, user/sys time, max RSS, phase
+   timings, warning/error counts, and output hash. Fail only on clear regressions
+   initially; trend everything.
+
+2. **Insufficient phase telemetry.** The current notes rely on manual `perf`
+   runs and selected phase splits. Add always-available low-overhead timers
+   around major phases and expensive subphases: package loading, file lookup,
+   gullet expansion, stomach digestion, Marpa parse, rewrite rules, graphics
+   probes/conversions, XSLT, and archive I/O.
+
+3. **Math parser remains the highest-risk hot path.** `1011.1955` shows that
+   Marpa can dominate both wall time and RSS. The highest leverage work is not
+   more generic allocation cleanup; it is ambiguity control and conservative
+   pre-Marpa handling for repeated unambiguous shapes.
+
+4. **External graphics work needs job-level accounting.** The post phase can be
+   dominated by `gs`, ImageMagick, and Inkscape. Track per-asset command, source
+   type, dimensions/page, output type, elapsed time, exit status, and cache hit.
+   Without that, heuristics will look good on one fixture and regress another.
+
+5. **Startup and package-loading costs matter for batch service.** Single-paper
+   CLI runs hide opportunities from persistent workers, warmed package state,
+   shared resources, and lookup caches. Measure cold vs warm worker conversion
+   separately.
+
+6. **Memory budgets are under-specified.** Peak RSS is recorded in selected
+   notes but not budgeted. Add limits by workload class and track top allocation
+   families with heap profiling for math-heavy and graphics-heavy cases.
+
+7. **Output quality needs automated comparison.** Performance wins should be
+   tied to output invariants: status severity, missing citation count, missing
+   image count, MathML count, node count, link/resource count, and selected
+   visual smoke tests. This protects service quality while allowing aggressive
+   optimization.
+
+### Priority Order
+
+**P0: Build the measurement system.** Add structured phase telemetry, corpus
+automation, and output-quality summaries. This is prerequisite work: without it,
+every optimization remains partly anecdotal.
+
+**P0: Stabilize the current outliers.** Keep `1011.1955` as the math/parser
+sentinel and `1005.1610` as the graphics/post sentinel. Add at least one
+bibliography-heavy, one macro-expansion-heavy, and one large-archive paper to
+avoid overfitting to the current Tier A set.
+
+**P1: Reduce Marpa work.** Use parse audits to identify repeated shapes, add
+strictly guarded direct-XM builders for simple unambiguous math, then reduce
+grammar ambiguity where the audit shows combinatorial parse families.
+
+**P1: Make graphics conversion observable and reusable.** Cache conversions by
+source identity, page, DPI, destination type, and relevant options. Coalesce
+identical jobs within a document before spawning external tools. Keep per-asset
+telemetry so cache behavior and slow tools are obvious.
+
+**P1: Remove avoidable allocator pressure.** Continue interner and clone cleanup
+only where profiles show it. Favor APIs that pass `SymStr`, slices, and borrowed
+tokens through hot paths instead of allocating temporary `String`/`Vec` values.
+
+**P2: Optimize service deployment.** For production workers, evaluate warmed
+state, pooled resource discovery, persistent temp directories, bounded external
+tool parallelism, CPU isolation, and timeout policy. These can beat code-level
+micro-optimizations at service scale.
+
+### Optimization Acceptance Checklist
+
+Before merging a performance change:
+
+1. Record release-mode before/after numbers for the standing corpus.
+2. Include one targeted benchmark for the exact suspected bottleneck.
+3. Compare output status and lightweight structural quality metrics.
+4. Report wall time, user/sys time, max RSS, and phase timings.
+5. State the expected workload boundary and any fallback path.
+6. Keep the change easy to disable if it relies on a heuristic.
+
+---
+
 ## Standing Performance Corpus
 
 The following papers form the regression corpus for engine / arena / gullet /
@@ -265,7 +382,9 @@ symbols, but should remain directional only.
    work. The small-vector SVG path is workload-specific: it is excellent for
    pathological vector PDFs but slower on this mixed/raster paper. Add per-asset
    timing and cache conversion results by source path, page, DPI, destination
-   type, and graphics options before adding more heuristics.
+   type, and graphics options before adding more heuristics. Coalesce identical
+   conversion jobs within a document before spawning external tools, then make
+   the hit/miss behavior visible in the phase report.
 
 4. **Package/dump and libxml residual cost.** After `--nomathparse`, the
    remaining `1011.1955` samples are not one Rust loop; they are libxml wrapper
