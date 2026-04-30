@@ -222,6 +222,11 @@ LoadDefinitions!({
   // Tables — Perl L220-231
   //======================================================================
 
+  // Perl: DefMacro('\longtab{}', '') with comment "just let it do the table
+  // contents as usual." Usage: `\longtab{N}{table-body}` — the {N} number is
+  // consumed; the table-body block flows through as normal tokens. Perl does
+  // NOT define a `{longtab}` environment, so we don't either; an extra
+  // DefEnvironment trips the mode-switch on `\end{...}` matching.
   DefMacro!("\\longtab{}", "");
   Let!("\\tablefoot", "\\footnote");
   DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
@@ -229,7 +234,6 @@ LoadDefinitions!({
   DefMacro!("\\tablefont", "\\small");
   DefMacro!("\\tablenote{}{}", "\\footnote{#2}");
   DefMacro!("\\tablecaption{}", "\\caption{#1}");
-  DefEnvironment!("{longtab}{}", "#body");
 
   //======================================================================
   // Typography — Perl L238-323
