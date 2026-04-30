@@ -1309,17 +1309,25 @@ LoadDefinitions!({
   // and `tex=` attributes leak the private helper name to downstream consumers.
   DefMath!("\\lx@physics@iunit", None, "\\mathit{i}",
     meaning => "imaginary-unit", alias => "i");
+  // Perl physics.sty.ltxml L623-634: `\paulimatrix{n}` constructs the
+  // matrix-cell tokens DIRECTLY (T_OTHER, T_ALIGN, T_CS) rather than
+  // round-tripping through Tokenize/TokenizeInternal — the Tokenize
+  // approach mistokenizes `\lx@physics@iunit` (catcode @ = 12 splits
+  // it into `\lx` + `@physics@iunit` text) and TokenizeInternal leaks
+  // raw `0&-i\\i&0` past the surrounding `\smallmatrixquantity(...)`
+  // tex-attr scaffold. Match Perl exactly.
   DefPrimitive!("\\paulimatrix{}", sub[(n)] {
     let n_val: usize = n.to_string().parse().unwrap_or(0);
     let tks = match n_val {
-      0 => Tokenize!("1 & 0 \\\\ 0 & 1"),
-      1 => Tokenize!("0 & 1 \\\\ 1 & 0"),
-      // FIXME: should be TokenizeInternal for `\lx@physics@iunit` parity, but
-      // enabling that regresses the physics test's paulimatrix nesting.
-      // Tracked as a follow-up — needs DefMath `alias` support to match Perl
-      // which emits `name="i"` via the alias path instead of the raw CS name.
-      2 => Tokenize!("0 & -\\lx@physics@iunit \\\\ \\lx@physics@iunit & 0"),
-      3 => Tokenize!("1 & 0 \\\\ 0 & -1"),
+      0 => Tokens!(T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0"), T_CS!("\\\\"),
+                   T_OTHER!("0"), T_ALIGN!(), T_OTHER!("1")),
+      1 => Tokens!(T_OTHER!("0"), T_ALIGN!(), T_OTHER!("1"), T_CS!("\\\\"),
+                   T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0")),
+      2 => Tokens!(T_OTHER!("0"), T_ALIGN!(), T_OTHER!("-"),
+                   T_CS!("\\lx@physics@iunit"), T_CS!("\\\\"),
+                   T_CS!("\\lx@physics@iunit"), T_ALIGN!(), T_OTHER!("0")),
+      3 => Tokens!(T_OTHER!("1"), T_ALIGN!(), T_OTHER!("0"), T_CS!("\\\\"),
+                   T_OTHER!("0"), T_ALIGN!(), T_OTHER!("-"), T_OTHER!("1")),
       _ => Tokens::default(),
     };
     gullet::unread(tks);

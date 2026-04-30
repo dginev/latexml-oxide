@@ -4926,7 +4926,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex44">
-          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\pmat{0}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{1}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{2}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{3}\endlx@physics@smallmatrix)" text="list@(matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[0, 1], [1, 0]]), matrix@(Array[[0, - [] * @ * p * h * y * s * i * c * s * @ * i * u * n * i * t], [[] * @ * p * h * y * s * i * c * s * @ * i * u * n * i * t, 0]]), matrix@(Array[[1, 0], [0, - 1]]))" xml:id="S1.Ex44.m1">
+          <Math mode="display" tex="\smallmatrixquantity(\lx@physics@smallmatrix\pmat{0}\endlx@physics@smallmatrix)\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{1}\endlx@physics@smallmatrix)\qquad 0&amp;-\smallmatrixquantity(\lx@physics@smallmatrix\pmat{2}\endlx@physics@smallmatrix)\\&#10;i&amp;0\qquad\smallmatrixquantity(\lx@physics@smallmatrix\pmat{3}\endlx@physics@smallmatrix)" text="list@(matrix@(Array[[1, 0], [0, 1]]), matrix@(Array[[0, 1], [1, 0]]), matrix@(Array[[0, - imaginary-unit], [imaginary-unit, 0]]), matrix@(Array[[1, 0], [0, - 1]]))" xml:id="S1.Ex44.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -5018,47 +5018,13 @@
                             <XMCell align="center">
                               <XMApp>
                                 <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <ERROR class="undefined"/>
-                                  <XMTok fontsize="70%" role="UNKNOWN">@</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
-                                  <XMTok fontsize="70%" role="UNKNOWN">@</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
-                                </XMApp>
+                                <XMTok font="italic" fontsize="70%" meaning="imaginary-unit" name="i" role="UNKNOWN">i</XMTok>
                               </XMApp>
                             </XMCell>
                           </XMRow>
                           <XMRow>
                             <XMCell align="center">
-                              <XMApp>
-                                <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                <ERROR class="undefined"/>
-                                <XMTok fontsize="70%" role="UNKNOWN">@</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">c</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
-                                <XMTok fontsize="70%" role="UNKNOWN">@</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">u</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok>
-                              </XMApp>
+                              <XMTok font="italic" fontsize="70%" meaning="imaginary-unit" name="i" role="UNKNOWN">i</XMTok>
                             </XMCell>
                             <XMCell align="center">
                               <XMTok fontsize="70%" meaning="0" role="NUMBER">0</XMTok>
