@@ -52,25 +52,31 @@ escape the inline-math wrap. Min repro is 4 lines; documented in
   wrapped inline-math whatsit, not raw XMath.
 * Acceptance: 4-line min repro produces 0 errors.
 
-### 4. `\lx@dual` recovery-recursion follow-up — regression test
+### 4. `\lx@dual` recovery-recursion follow-up — regression test ✅ DONE
 
-The `f6a6175ea` fix (display char `"$"` not `"\\$"`) resolved the
-8-paper cluster. Add a TDD regression test so the fix can't drift.
-
-* Add `latexml_oxide/tests/structure/math_dollar.tex` containing
-  `$\$$` and matching `.xml` (run `cargo clean` to force test
-  rediscovery).
-* Acceptance: test passes; `cargo test --tests` stays at
-  current `1109+1 / 0 / 0`.
+Done in commit `61bb505dc` — `tests/structure/math_dollar.{tex,xml}`.
+Tests now 1110/0/0.
 
 ### 5. Sandbox conv_error long-tail — per-paper triage
 
 `results.tsv` has ~93 papers in the conversion_error bucket. Iter
 39 sample of 12 random papers showed 2 fully clean on HEAD and 10
-with 1-26 errors each — no shared cluster, mostly per-paper
-stub-undefined CSes (`\gnuplot`, `\bullets` typo) and mode-switch
-edge cases. Continue triaging in batches; add stubs only where
-Perl emits no error on the same input.
+with 1-26 errors each. **Iter-41 deeper triage** ran Perl baseline
+on 9 of those 10 (`alg-geom9604001`, `1710.03688`, `astro-ph9901170`,
+`supr-con9608003`, `1504.01713`, `astro-ph0309636`, `astro-ph0310631`,
+`1312.7418`, `astro-ph9608045`) — **all 9 are Perl-clean** = in scope.
+
+**Key insight (iter-41):** for at least `1312.7418` (`\bullets` undefined)
+and `supr-con9608003` (`\gnuplot` undefined), both Rust and Perl
+use the same `Error('undefined', …)` site, but Perl reports
+"Conversion complete: No obvious problems" while Rust reports
+"1 error". Hypothesis: Rust *invokes* the undefined CS during
+digest where Perl never reaches it. The trigger CS for `\bullets`
+is `\renewcommand{\labelitemi}{$\bullets$}` — body is just stored,
+not expanded, until `\labelitemi` is invoked. Either Rust eagerly
+expands the body, or Rust's `\labelitemi` is invoked in a context
+Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
+the trigger; the real fix is finding why Rust digests them.**
 
 * Tooling: `tools/triage_failure.sh <arxiv_id>` is the entry point.
 * Reference: `easy_rerun_failures_list.txt` (181 failure-list from
