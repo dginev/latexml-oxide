@@ -14,7 +14,7 @@ Verified locally on this checkout:
 | `~/data/10k_sandbox_html/results.tsv` latest row per ID (Apr 28) | 7731 / 7898 ok = 97.89% (superseded) |
 | **`~/data/10k_sandbox_html_April29/results.tsv` rebuild (Apr 29)** | **7796 / 7898 ok = 98.71%** — +65 papers recovered |
 | **86+ unique papers** of April29's 93 conv_error bucket sampled on current HEAD (iters 18, 19, 29) | **0 failures** — full-coverage sample confirms all conv_error recoveries hold. |
-| April29 severe bucket (`conversion_fatal` ∪ `abort` ∪ `timeout`, 8 papers) on current HEAD | **7 / 8 clean** — only `math0005251` still aborts (rc=137 OOM kill in math-parser hang). |
+| April29 severe bucket (`conversion_fatal` ∪ `abort` ∪ `timeout`, 8 papers) on current HEAD | **7 / 8 clean** at default 60s (1204.6266, 1401.0971, 1503.00395, 1506.09203, 1602.06701, math0605199, quant-ph0401134) — only `math0005251` still aborts (rc=137 OOM kill in math-parser hang). |
 | Apr 29 row note | 1407.5769 (the long-deferred math-parser "page ~71" hang) is in the `ok` bucket of the April29 rebuild — it self-resolved via cumulative recent fixes. |
 | Remaining latest sandbox categories (Apr 29 row, pre-HEAD-fixes) | 93 `conversion_error`, 4 `conversion_fatal`, 2 `abort`, 2 `timeout` |
 | **Projected post-HEAD result** | **~7896 / 7898 = 99.97% OK**, with only `math0005251` as a likely residual real failure. |
