@@ -123,28 +123,27 @@ LoadDefinitions!({
 
   DefMacro!("\\subjclassname", None,
     "\\textup{\\@subjclassyear} Mathematics Subject Classification");
-  // Perl: DefMacro('\subjclass[Default:\@subjclassyear]{}', ...);
-  // The Default: syntax provides \@subjclassyear as default for the optional arg.
-  // Implement by splitting into two macros: one that handles the default.
-  DefMacro!("\\subjclass[]{}", "\\lx@subjclass@{#1}{#2}");
-  DefMacro!("\\lx@subjclass@{}{}", sub[args] {
-    let year_str = args[0].to_string();
-    let body_str = args[1].to_string();
-    // If year is empty, use current \@subjclassyear; otherwise update it
-    let effective_year = if year_str.trim().is_empty() {
-      let expanded = gullet::do_expand(Tokens!(T_CS!("\\@subjclassyear")))?;
-      expanded.to_string()
-    } else {
-      // Update \@subjclassyear
-      def_macro(T_CS!("\\@subjclassyear"), None,
-        Some(ExpansionBody::from(year_str.as_str())), None)?;
-      year_str
-    };
-    let expansion = s!(
-      "\\@add@frontmatter{{ltx:classification}}[scheme={{{} Mathematics Subject Classification}},name={{\\subjclassname}}]{{{}}}",
-      effective_year, body_str);
-    Ok(mouth::tokenize_internal(&expansion))
-  });
+  // Perl ams_support.sty.ltxml L141-144: pure expansion macro. Translate
+  // `[Default:\@subjclassyear]` to `[\@subjclassyear]` (default-fill of
+  // empty optional arg) and inline the `\ifx.#1.\else\xdef…\fi` guard so
+  // the body tokens (`#2`) are passed straight through to
+  // `\@add@frontmatter` without a Rust-side `to_string` round-trip. The
+  // earlier Rust `\lx@subjclass@{}{}` reified `#2` to a string, which
+  // mangled `\sc AMS` into `\scAMS` (the trailing-space-after-CS rule
+  // doesn't survive `tokenize_internal`-after-`to_string`). Driver paper:
+  // arXiv:1902.09816 (`\subjclass{{\sc AMS Subject Classification:} ...}`).
+  // Perl ams_support.sty.ltxml L141-144 — strict translation:
+  // `[Default:\@subjclassyear]` provides `\@subjclassyear`-expansion as
+  // the Optional default when the user omits `[...]`. The `\ifx.#1.`
+  // guard updates the global year only when the user supplied a non-CS
+  // value. Body tokens (`#2`) pass straight through to
+  // `\@add@frontmatter` — no Rust-side `to_string` round-trip (which
+  // mangled `\sc AMS` into `\scAMS` by losing the trailing-space-after-CS
+  // rule). Driver paper: arXiv:1902.09816
+  // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
+  DefMacro!("\\subjclass[Default:\\@subjclassyear]{}",
+    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
+     \\@add@frontmatter{ltx:classification}[scheme={#1 Mathematics Subject Classification},name={\\subjclassname}]{#2}");
 
   DefMacro!("\\copyrightinfo{}{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #1: #2}");
