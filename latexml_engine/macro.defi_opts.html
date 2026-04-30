@@ -1,0 +1,281 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `defi_opts` macro in crate `latexml_engine`."><title>defi_opts in latexml_engine - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../static.files/storage-41dd4d93.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc macro"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">defi_opts</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.4.0</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">latexml_engine</a></div><h1>Macro <span class="macro">defi_<wbr>opts</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/latexml_engine/setup_binding_language.rs.html#1794-2502">Source</a> </span></div><pre class="rust item-decl"><code>macro_rules! defi_opts {
+    (@munch ($(,)?) -&gt; {$kind:ident,}) =&gt; { ... };
+    (@munch ($(,)?) -&gt; {$kind:ident, $([$id:ident @ $body:expr])+ } ) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? sub[$whatsit:ident, $args:ident] $body:block $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)?
+    sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $(sub)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? None, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? None)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? reversion $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? sub[$whatsit_arg:ident]
+    $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? sizer $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select_count $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? select_count $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? replace $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? replace $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? xpath $(:)?$(=&gt;)? $tokens:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? xpath $(:)?$(=&gt;)? $tokens:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? mode $(:)?$(=&gt;)? $literal:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? alias $(:)?$(=&gt;)? $literal:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scope $(:)?$(=&gt;)? $scope:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scope $(:)?$(=&gt;)? $scope:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? sub [ $font_whatsit:ident]
+    $body:block $($next:tt)*) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? { $($fkey:ident =&gt; $fvalue:literal),* } $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? $body:block $($next:tt)*) -&gt;
+  {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? font $(:)?$(=&gt;)? $props:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)?
+      sub[$args:ident] $body:block $($next:tt)*)
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? properties $(:)?$(=&gt;)? $var:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest_end $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest_end $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_digest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_begin $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_begin $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_body $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_digest_body $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_construct $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? before_construct $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_construct $(:)?$(=&gt;)? $var:ident $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? getter $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? getter $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? setter $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? setter $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open_late $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_open_late $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close_late $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? after_close_late $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? auto_open $(:)?$(=&gt;)? $auto:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? auto_close $(:)?$(=&gt;)? $auto:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? predigest $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? predigest $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? digested_reversion $(:)?$(=&gt;)? sub $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@digested_reversion (sub[$arg:ident] $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? Some($value:expr))
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? None)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? semiverbatim $(:)?$(=&gt;)? $value:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? role $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? role $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? meaning $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? meaning $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? name $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? name $(:)?$(=&gt;)? $literal:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? address $(:)?$(=&gt;)? $idval:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? address $(:)?$(=&gt;)? $idval:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? allocate $(:)?$(=&gt;)? $idval:expr, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? allocate $(:)?$(=&gt;)? $idval:expr)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? stretchy $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? stretchy $(:)?$(=&gt;)? $flag:literal)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_role $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_role $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_stretchy $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? operator_stretchy $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scriptpos $(:)?$(=&gt;)? $flag:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? scriptpos $(:)?$(=&gt;)? $flag:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? mathstyle $(:)?$(=&gt;)? $literal:literal, $($next:tt)*)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? mathstyle $(:)?$(=&gt;)? $literal:literal)
+  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? $id:ident $(:)?$(=&gt;)? $lit:literal $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@munch ( $(,)? $id:ident $(:)?$(=&gt;)? $body:block $($next:tt)*)
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest_end ($body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest ($(sub)? $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_digest ($(sub)? $body:block $($next:tt)* ) -&gt; {$kind:ident,
+    $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest (
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest_begin (
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest_begin (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest_body (
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_digest_body (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_construct (
+    sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_construct (
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@before_construct (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_construct (
+    sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_construct (
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_construct (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@getter (
+    sub[$args:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@getter (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@setter (
+    sub[$value:ident, $scope:ident, $args:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@setter (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open (
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open_late (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open_late (
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_open_late (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close (
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+    -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close_late (
+    sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close_late (
+    sub[$document:ident, $node:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@after_close_late (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@replace ($body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@replace (sub [$document_arg:ident, $node_arg:ident]
+    $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub [$whatsit:ident, $args:ident] $body:block $($next:tt)* )
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub [$args:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+                  -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@reversion (sub $body:block $($next:tt)*)
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@predigest (
+    sub[$whatsit:ident, $extra:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@predigest (
+    sub[$whatsit:ident] $body:block $($next:tt)* )
+      -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+    (@predigest (
+    $body:block $($next:tt)* ) -&gt; {$kind:ident, $([$key:ident @ $val:expr])*}) =&gt; { ... };
+}</code></pre></section></div></main></body></html>

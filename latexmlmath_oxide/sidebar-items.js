@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"static":["GLOBAL"]};
+window.SIDEBAR_ITEMS = {"fn":["main","real_main"],"static":["GLOBAL"]};

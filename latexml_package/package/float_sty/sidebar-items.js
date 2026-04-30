@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["define_float_environment","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["add_float_frames","define_float_environment","load_definitions"]};

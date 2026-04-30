@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/mhchem_sty.rs`."><title>mhchem_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>mhchem_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! mhchem.sty — chemical formula typesetting.
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! TODO(strict-perl-parity): once `latexml_engine` can faithfully
+<a href=#4 id=4 data-nosnippet>4</a>//! handle the expl3 / xparse / chemgreek raw-load chain (currently
+<a href=#5 id=5 data-nosnippet>5</a>//! the gaps are around `\group_begin:` non-boxing-frame handling
+<a href=#6 id=6 data-nosnippet>6</a>//! and l3regex/l3tl-analysis register access during the chemgreek
+<a href=#7 id=7 data-nosnippet>7</a>//! load triggered by the first `\ce{...}`), DELETE this binding so
+<a href=#8 id=8 data-nosnippet>8</a>//! that `\usepackage{mhchem}` raw-loads the actual TL `mhchem.sty`,
+<a href=#9 id=9 data-nosnippet>9</a>//! matching Perl LaTeXML's behavior (Perl has no `mhchem.sty.ltxml`).
+<a href=#10 id=10 data-nosnippet>10</a>//! Driver paper: arXiv:1806.06448 (3 errors → 0 errors with this
+<a href=#11 id=11 data-nosnippet>11</a>//! stub; full chemistry rendering needs the engine fix).
+<a href=#12 id=12 data-nosnippet>12</a>//!
+<a href=#13 id=13 data-nosnippet>13</a>//! Perl LaTeXML has no `mhchem.sty.ltxml` and raw-loads the actual
+<a href=#14 id=14 data-nosnippet>14</a>//! TL `mhchem.sty` (which `\RequirePackage{chemgreek}` →
+<a href=#15 id=15 data-nosnippet>15</a>//! `\RequirePackage{xparse}` → heavy expl3 machinery). Perl's expl3
+<a href=#16 id=16 data-nosnippet>16</a>//! emulation is mature enough that this works.
+<a href=#17 id=17 data-nosnippet>17</a>//!
+<a href=#18 id=18 data-nosnippet>18</a>//! Rust's expl3 emulation has gaps (e.g. `\group_begin:` non-boxing
+<a href=#19 id=19 data-nosnippet>19</a>//! frame handling, `\l__tl_analysis_*_int` register access in
+<a href=#20 id=20 data-nosnippet>20</a>//! l3regex/l3tl-analysis), so the chemgreek raw-load triggered by the
+<a href=#21 id=21 data-nosnippet>21</a>//! first `\ce{...}` invocation leaves the gullet in an unbalanced state
+<a href=#22 id=22 data-nosnippet>22</a>//! (open `\iffalse`, unmatched `{` at end-of-input).
+<a href=#23 id=23 data-nosnippet>23</a>//!
+<a href=#24 id=24 data-nosnippet>24</a>//! Until the expl3 cluster is fixed, this binding intercepts the
+<a href=#25 id=25 data-nosnippet>25</a>//! mhchem load and provides a minimal stub: `\ce{...}` typesets its
+<a href=#26 id=26 data-nosnippet>26</a>//! argument as roman text, no chemistry layout. This is a documented
+<a href=#27 id=27 data-nosnippet>27</a>//! divergence from Perl LaTeXML — the full chemistry rendering needs
+<a href=#28 id=28 data-nosnippet>28</a>//! a real port. Driver paper: 1806.06448 (3 errors → 0 errors).
+<a href=#29 id=29 data-nosnippet>29</a>//!
+<a href=#30 id=30 data-nosnippet>30</a>//! Stubs cover the public mhchem v3/v4 surface most papers actually
+<a href=#31 id=31 data-nosnippet>31</a>//! use: `\ce`, `\cee`, `\cf`, plus `\mhchemoptions` (no-op).
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="attr">#[rustfmt::skip]
+<a href=#36 id=36 data-nosnippet>36</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// Accept both v3 and v4: the package option is `version=N` — handled
+<a href=#38 id=38 data-nosnippet>38</a>  // at \usepackage time but irrelevant to our stub.
+<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mhchemoptions RequiredKeyVals"</span>, <span class="string">""</span>);
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// \ce{&lt;formula&gt;} — chemistry mode, typeset as text in roman.
+<a href=#42 id=42 data-nosnippet>42</a>  // Real mhchem renders subscripts, charges, arrows, etc. Stub treats
+<a href=#43 id=43 data-nosnippet>43</a>  // the formula as opaque text. Works in both math and text mode via
+<a href=#44 id=44 data-nosnippet>44</a>  // \text{} which is mode-neutral in our pipeline.
+<a href=#45 id=45 data-nosnippet>45</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ce{}"</span>,  <span class="string">"\\text{#1}"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cee{}"</span>, <span class="string">"\\text{#1}"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cf{}"</span>,  <span class="string">"\\text{#1}"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// \arrow / \chemarrow — used inside \ce arguments. Stub as small text
+<a href=#50 id=50 data-nosnippet>50</a>  // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
+<a href=#51 id=51 data-nosnippet>51</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\chemarrow"</span>, <span class="string">"\\rightarrow"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>});
+</code></pre></div></section></main></body></html>

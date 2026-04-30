@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["clean_bib_key","clean_class_name","clean_id","clean_index_key","clean_label","clean_url","compose_url","normalize_bib_key","roman_aux","trimmed_comma_list"]};

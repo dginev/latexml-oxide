@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_from_str","load_native_dump"]};
+window.SIDEBAR_ITEMS = {"fn":["flush_deferred_aliases","load_from_str","load_from_str_plain","load_native_dump"]};

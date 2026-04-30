@@ -1,0 +1,890 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/crckapb_sty.rs`."><title>crckapb_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>crckapb_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl ar5iv-bindings/crckapb.sty.ltxml — CRCKAPB document style for
+<a href=#6 id=6 data-nosnippet>6</a>  // Kluwer Academic Publishers Books (source: https://arxiv.org/macros/
+<a href=#7 id=7 data-nosnippet>7</a>  // crckapb.sty). The Perl port is essentially one large RawTeX block
+<a href=#8 id=8 data-nosnippet>8</a>  // wrapping the raw .sty contents. This Rust port mirrors that shape —
+<a href=#9 id=9 data-nosnippet>9</a>  // a ~875-line RawTeX! block plus the three top-level dependencies.
+<a href=#10 id=10 data-nosnippet>10</a>  </span><span class="macro">LoadClass!</span>(<span class="string">"book"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RequirePackage!</span>(<span class="string">"fleqn"</span>);
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">RequirePackage!</span>(<span class="string">"endnotes"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#15 id=15 data-nosnippet>15</a>\typeout{^^JDocument Style `CRCKAPB' &lt;version 1.0, June 1994&gt;/&lt;KAP&gt;.}
+<a href=#16 id=16 data-nosnippet>16</a>\typeout{ LaTeX style file for Books, Kluwer Academic Publishers^^J}
+<a href=#17 id=17 data-nosnippet>17</a>\def\author@uppercase{}    % Author's name(s) uppercase
+<a href=#18 id=18 data-nosnippet>18</a>\@ifundefined{abstractname}%
+<a href=#19 id=19 data-nosnippet>19</a>{\def\abstractname{Abstract}}{\relax}
+<a href=#20 id=20 data-nosnippet>20</a>\@ifundefined{keywordsname}%
+<a href=#21 id=21 data-nosnippet>21</a>{\def\keywordsname{Key words}}{\relax}
+<a href=#22 id=22 data-nosnippet>22</a>\@ifundefined{notesname}{\def\notesname{Notes}}{\relax}
+<a href=#23 id=23 data-nosnippet>23</a>\@ifundefined{acknowledgementsname}%
+<a href=#24 id=24 data-nosnippet>24</a>{\def\acknowledgementsname{Acknowledgements}}{\relax}
+<a href=#25 id=25 data-nosnippet>25</a>\@ifundefined{appendixname}{\def\appendixname{Appendix}}{\relax}
+<a href=#26 id=26 data-nosnippet>26</a>\def\@ptsize{2}
+<a href=#27 id=27 data-nosnippet>27</a>\@namedef{ds@10pt}{\def\@ptsize{0}}
+<a href=#28 id=28 data-nosnippet>28</a>\@namedef{ds@11pt}{\def\@ptsize{1}}
+<a href=#29 id=29 data-nosnippet>29</a>\@namedef{ds@12pt}{\def\@ptsize{2}}
+<a href=#30 id=30 data-nosnippet>30</a>\@twosidetrue     %  Defines twoside option.
+<a href=#31 id=31 data-nosnippet>31</a>% \@mparswitchtrue  %  Marginpars go on outside of page.
+<a href=#32 id=32 data-nosnippet>32</a>\def\ds@draft{\overfullrule 5pt}  % Causes overfull hboxes to be marked.
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a>\newif\if@nato
+<a href=#35 id=35 data-nosnippet>35</a>\newif\if@NATO
+<a href=#36 id=36 data-nosnippet>36</a>\newif\if@monograph
+<a href=#37 id=37 data-nosnippet>37</a>\newif\if@editedvolume
+<a href=#38 id=38 data-nosnippet>38</a>\newif\if@proceedings
+<a href=#39 id=39 data-nosnippet>39</a>\def\ds@nato{\@natotrue\typeout{^^JKAP -- NATO Series^^J}}
+<a href=#40 id=40 data-nosnippet>40</a>\def\ds@NATO{\@natotrue\typeout{^^JKAP -- NATO Series^^J}}
+<a href=#41 id=41 data-nosnippet>41</a>\def\ds@monograph{\@monographtrue\typeout{^^JKAP -- Monograph^^J}}
+<a href=#42 id=42 data-nosnippet>42</a>\def\ds@editedvolume{\@editedvolumetrue\typeout{^^JKAP -- Edited Volume^^J}}
+<a href=#43 id=43 data-nosnippet>43</a>\def\ds@proceedings{\@proceedingstrue\typeout{^^JKAP -- Proceedings^^J}}
+<a href=#44 id=44 data-nosnippet>44</a>
+<a href=#45 id=45 data-nosnippet>45</a>
+<a href=#46 id=46 data-nosnippet>46</a>\newif\if@subtitledefined
+<a href=#47 id=47 data-nosnippet>47</a>
+<a href=#48 id=48 data-nosnippet>48</a>\lineskip 1pt
+<a href=#49 id=49 data-nosnippet>49</a>\normallineskip 1pt
+<a href=#50 id=50 data-nosnippet>50</a>\def\baselinestretch{1}
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a>\oddsidemargin .2in % .25in
+<a href=#53 id=53 data-nosnippet>53</a>\evensidemargin .2in % 1.25in
+<a href=#54 id=54 data-nosnippet>54</a>
+<a href=#55 id=55 data-nosnippet>55</a>\marginparwidth 1in
+<a href=#56 id=56 data-nosnippet>56</a>\marginparsep 10pt % 7pt
+<a href=#57 id=57 data-nosnippet>57</a>
+<a href=#58 id=58 data-nosnippet>58</a>\topmargin -0.6mm % .73in
+<a href=#59 id=59 data-nosnippet>59</a>\headheight 12pt
+<a href=#60 id=60 data-nosnippet>60</a>\headsep 6mm % .275in
+<a href=#61 id=61 data-nosnippet>61</a>\footskip 39pt
+<a href=#62 id=62 data-nosnippet>62</a>
+<a href=#63 id=63 data-nosnippet>63</a>\textheight 19cm        % 21.5cm
+<a href=#64 id=64 data-nosnippet>64</a>\textwidth  12.5cm      % 15cm
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a>% \marginpar redefined: text is set within \fbox
+<a href=#67 id=67 data-nosnippet>67</a>
+<a href=#68 id=68 data-nosnippet>68</a>\long\def\@savemarbox#1#2{\global\setbox#1\vtop{\fbox{\vtop{\hsize\marginparwidth
+<a href=#69 id=69 data-nosnippet>69</a>    \@parboxrestore  \raggedright\footnotesize #2}}}}
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>\def\vsecspace#1{\ifvmode\if@nobreak\else\vskip #1\relax\fi\fi}
+<a href=#72 id=72 data-nosnippet>72</a>
+<a href=#73 id=73 data-nosnippet>73</a>\def\verse{\let\\=\@centercr
+<a href=#74 id=74 data-nosnippet>74</a>  \list{}{\itemsep\z@
+<a href=#75 id=75 data-nosnippet>75</a>  \parskip 12pt
+<a href=#76 id=76 data-nosnippet>76</a>  \itemindent -1.5em
+<a href=#77 id=77 data-nosnippet>77</a>  \listparindent \itemindent
+<a href=#78 id=78 data-nosnippet>78</a>  \rightmargin\leftmargin\advance\leftmargin 1.5em}\item[]}
+<a href=#79 id=79 data-nosnippet>79</a>\let\endverse\endlist
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a>\def\quotation{\par\normalsize
+<a href=#82 id=82 data-nosnippet>82</a>  \list{}{\listparindent 0pt
+<a href=#83 id=83 data-nosnippet>83</a>%  \leftmargin 0pt
+<a href=#84 id=84 data-nosnippet>84</a>  \leftmargin 1.5em
+<a href=#85 id=85 data-nosnippet>85</a>  \listparindent 1em
+<a href=#86 id=86 data-nosnippet>86</a>  \topsep .5ex plus 2pt minus 1pt
+<a href=#87 id=87 data-nosnippet>87</a>  \itemindent\listparindent
+<a href=#88 id=88 data-nosnippet>88</a>  \parsep 0pt plus 1pt}\item[]\hskip-1em}
+<a href=#89 id=89 data-nosnippet>89</a>\def\endquotation{\endlist\par}
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>
+<a href=#92 id=92 data-nosnippet>92</a>\def\quote{\list{}{\leftmargin 1.5em
+<a href=#93 id=93 data-nosnippet>93</a>  \topsep.5ex plus 2pt minus 1pt}\item[]}
+<a href=#94 id=94 data-nosnippet>94</a>\let\endquote=\endlist
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>\def\descriptionlabel#1{\hspace\labelsep \bf #1}
+<a href=#97 id=97 data-nosnippet>97</a>\def\description{\list{}{\labelwidth\z@
+<a href=#98 id=98 data-nosnippet>98</a>   \itemindent-\leftmargin
+<a href=#99 id=99 data-nosnippet>99</a>   \let\makelabel\descriptionlabel}}
+<a href=#100 id=100 data-nosnippet>100</a>\let\enddescription\endlist
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>\newdimen\descriptionmargin
+<a href=#103 id=103 data-nosnippet>103</a>\descriptionmargin=3em
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a>
+<a href=#106 id=106 data-nosnippet>106</a>\def\titlepage{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
+<a href=#107 id=107 data-nosnippet>107</a>     \else \newpage \fi \thispagestyle{empty}\c@page\z@}
+<a href=#108 id=108 data-nosnippet>108</a>
+<a href=#109 id=109 data-nosnippet>109</a>\def\endtitlepage{\if@restonecol\twocolumn \else \newpage \fi}
+<a href=#110 id=110 data-nosnippet>110</a>
+<a href=#111 id=111 data-nosnippet>111</a>
+<a href=#112 id=112 data-nosnippet>112</a>\arraycolsep 5pt     % Half the space between columns in an array environment.
+<a href=#113 id=113 data-nosnippet>113</a>\tabcolsep 6pt       % Half the space between columns in a tabular environment.
+<a href=#114 id=114 data-nosnippet>114</a>\arrayrulewidth .4pt % Width of rules in array and tabular environment.
+<a href=#115 id=115 data-nosnippet>115</a>\doublerulesep 2pt   % Space between adjacent rules in array or tabular env.
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>\tabbingsep \labelsep   % Space used by the \' command.  (See LaTeX manual.)
+<a href=#118 id=118 data-nosnippet>118</a>
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>\skip\@mpfootins = \skip\footins
+<a href=#121 id=121 data-nosnippet>121</a>
+<a href=#122 id=122 data-nosnippet>122</a>\fboxsep = 3pt    % Space left between box and text by \fbox and \framebox.
+<a href=#123 id=123 data-nosnippet>123</a>\fboxrule = .4pt  % Width of rules in box made by \fbox and \framebox.
+<a href=#124 id=124 data-nosnippet>124</a>
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a>\newcounter{part}
+<a href=#127 id=127 data-nosnippet>127</a>\newcounter {chapter}
+<a href=#128 id=128 data-nosnippet>128</a>\newcounter {section}[chapter]
+<a href=#129 id=129 data-nosnippet>129</a>\newcounter {subsection}[section]
+<a href=#130 id=130 data-nosnippet>130</a>\newcounter {subsubsection}[subsection]
+<a href=#131 id=131 data-nosnippet>131</a>\newcounter {paragraph}[subsubsection]
+<a href=#132 id=132 data-nosnippet>132</a>\newcounter {subparagraph}[paragraph]
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>\def\thepart          {\Roman{part}}
+<a href=#135 id=135 data-nosnippet>135</a>\def\thechapter       {\arabic{chapter}}
+<a href=#136 id=136 data-nosnippet>136</a>\if@monograph
+<a href=#137 id=137 data-nosnippet>137</a>  \def\thesection       {\thechapter.\arabic{section}}
+<a href=#138 id=138 data-nosnippet>138</a>\else
+<a href=#139 id=139 data-nosnippet>139</a>  \def\thesection       {\arabic{section}}
+<a href=#140 id=140 data-nosnippet>140</a>\fi
+<a href=#141 id=141 data-nosnippet>141</a>\def\thesubsection    {\thesection.\arabic{subsection}}
+<a href=#142 id=142 data-nosnippet>142</a>\def\thesubsubsection {\thesubsection .\arabic{subsubsection}}
+<a href=#143 id=143 data-nosnippet>143</a>\def\theparagraph     {\thesubsubsection.\arabic{paragraph}}
+<a href=#144 id=144 data-nosnippet>144</a>\def\thesubparagraph  {\theparagraph.\arabic{subparagraph}}
+<a href=#145 id=145 data-nosnippet>145</a>
+<a href=#146 id=146 data-nosnippet>146</a>\def\@chapapp{Chapter}
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a>
+<a href=#149 id=149 data-nosnippet>149</a>\def\part{\cleardoublepage   % Starts new page.
+<a href=#150 id=150 data-nosnippet>150</a>   \thispagestyle{plain}     % Page style of part page is 'plain'
+<a href=#151 id=151 data-nosnippet>151</a>  \if@twocolumn              % IF two-column style
+<a href=#152 id=152 data-nosnippet>152</a>     \onecolumn              %  THEN \onecolumn
+<a href=#153 id=153 data-nosnippet>153</a>     \@tempswatrue           %       @tempswa := true
+<a href=#154 id=154 data-nosnippet>154</a>    \else \@tempswafalse     %  ELSE @tempswa := false
+<a href=#155 id=155 data-nosnippet>155</a>  \fi                        % FI
+<a href=#156 id=156 data-nosnippet>156</a>  \hbox{}\vfil               % Add fil glue to center title
+<a href=#157 id=157 data-nosnippet>157</a>  \secdef\@part\@spart}
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>\def\@part[#1]#2{\ifnum \c@secnumdepth &gt;-2\relax  % IF secnumdepth &gt; -2
+<a href=#160 id=160 data-nosnippet>160</a>        \refstepcounter{part}                     %   THEN step part counter
+<a href=#161 id=161 data-nosnippet>161</a>        \addcontentsline{toc}{part}{\thepart      %        add toc line
+<a href=#162 id=162 data-nosnippet>162</a>        \hspace{1em}#1}\else                      %   ELSE add unnumbered line
+<a href=#163 id=163 data-nosnippet>163</a>        \addcontentsline{toc}{part}{#1}\fi        % FI
+<a href=#164 id=164 data-nosnippet>164</a>   \markboth{}{}
+<a href=#165 id=165 data-nosnippet>165</a>   {\centering                       % %% added 19 Jan 88
+<a href=#166 id=166 data-nosnippet>166</a>    \ifnum \c@secnumdepth &gt;-2\relax  % IF secnumdepth &gt; -2
+<a href=#167 id=167 data-nosnippet>167</a>      \huge\bf Part \thepart         %   THEN Print 'Part' and number
+<a href=#168 id=168 data-nosnippet>168</a>    \par                             %         in \huge bold.
+<a href=#169 id=169 data-nosnippet>169</a>    \vskip 20pt \fi                  %        Add space before title.
+<a href=#170 id=170 data-nosnippet>170</a>    \Huge \bf                        % FI
+<a href=#171 id=171 data-nosnippet>171</a>    #1\par}\@endpart}                % Print Title in \Huge bold.
+<a href=#172 id=172 data-nosnippet>172</a>
+<a href=#173 id=173 data-nosnippet>173</a>\def\@endpart{\vfil\newpage   % End page with 1fil glue.
+<a href=#174 id=174 data-nosnippet>174</a>   \if@twoside                % IF twoside printing
+<a href=#175 id=175 data-nosnippet>175</a>       \hbox{}                %   THEN Produce totally blank page
+<a href=#176 id=176 data-nosnippet>176</a>       \thispagestyle{empty}
+<a href=#177 id=177 data-nosnippet>177</a>       \newpage
+<a href=#178 id=178 data-nosnippet>178</a>   \fi                        % FI
+<a href=#179 id=179 data-nosnippet>179</a>   \if@tempswa                % IF @tempswa = true
+<a href=#180 id=180 data-nosnippet>180</a>     \twocolumn               %   THEN \twocolumn
+<a href=#181 id=181 data-nosnippet>181</a>   \fi}                       % FI
+<a href=#182 id=182 data-nosnippet>182</a>
+<a href=#183 id=183 data-nosnippet>183</a>\def\@spart#1{{\centering      % %% added 19 Jan 88
+<a href=#184 id=184 data-nosnippet>184</a>   \Huge \bf                   % Print title in \huge boldface
+<a href=#185 id=185 data-nosnippet>185</a>   #1\par}\@endpart}
+<a href=#186 id=186 data-nosnippet>186</a>
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>\def\@pnumwidth{1.55em}
+<a href=#189 id=189 data-nosnippet>189</a>\def\@tocrmarg {2.55em}
+<a href=#190 id=190 data-nosnippet>190</a>\def\@dotsep{4.5}
+<a href=#191 id=191 data-nosnippet>191</a>\setcounter{tocdepth}{2}
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>
+<a href=#194 id=194 data-nosnippet>194</a>\def\tableofcontents{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
+<a href=#195 id=195 data-nosnippet>195</a>  \fi\chapter*{{Table of Contents}\@mkboth{TABLE OF CONTENTS}{TABLE OF CONTENTS}}
+<a href=#196 id=196 data-nosnippet>196</a>  \@starttoc{toc}\if@restonecol\twocolumn\fi}
+<a href=#197 id=197 data-nosnippet>197</a>
+<a href=#198 id=198 data-nosnippet>198</a>\def\l@part#1#2{\addpenalty{-\@highpenalty}
+<a href=#199 id=199 data-nosnippet>199</a>   \addvspace{2.25em plus 1pt}  % space above part line
+<a href=#200 id=200 data-nosnippet>200</a>   \begingroup
+<a href=#201 id=201 data-nosnippet>201</a>   \@tempdima 3em         % width of box holding part number, used by
+<a href=#202 id=202 data-nosnippet>202</a>     \parindent \z@ \rightskip \@pnumwidth             %% \numberline
+<a href=#203 id=203 data-nosnippet>203</a>     \parfillskip -\@pnumwidth
+<a href=#204 id=204 data-nosnippet>204</a>     {\large \bf          % set line in \large boldface
+<a href=#205 id=205 data-nosnippet>205</a>     \leavevmode          % TeX command to enter horizontal mode.
+<a href=#206 id=206 data-nosnippet>206</a>     #1\hfil \hbox to\@pnumwidth{\hss #2}}\par
+<a href=#207 id=207 data-nosnippet>207</a>     \nobreak             % Never break after part entry
+<a href=#208 id=208 data-nosnippet>208</a>    \global\@nobreaktrue                        %% Added 24 May 89 as
+<a href=#209 id=209 data-nosnippet>209</a>    \everypar{\global\@nobreakfalse\everypar{}}%% suggested by Jerry Leichter
+<a href=#210 id=210 data-nosnippet>210</a>   \endgroup}
+<a href=#211 id=211 data-nosnippet>211</a>
+<a href=#212 id=212 data-nosnippet>212</a>\def\l@chapter#1#2{\addpenalty{-\@highpenalty}
+<a href=#213 id=213 data-nosnippet>213</a>   \vskip 1.0em plus 1pt  % space above chapter line
+<a href=#214 id=214 data-nosnippet>214</a>   \@tempdima 1.5em       % width of box holding chapter number
+<a href=#215 id=215 data-nosnippet>215</a>   \begingroup
+<a href=#216 id=216 data-nosnippet>216</a>     \parindent \z@ \rightskip \@pnumwidth
+<a href=#217 id=217 data-nosnippet>217</a>     \parfillskip -\@pnumwidth
+<a href=#218 id=218 data-nosnippet>218</a>     \bf                  % Boldface.
+<a href=#219 id=219 data-nosnippet>219</a>     \leavevmode          % TeX command to enter horizontal mode.
+<a href=#220 id=220 data-nosnippet>220</a>      \advance\leftskip\@tempdima  %% added 5 Feb 88 to conform to
+<a href=#221 id=221 data-nosnippet>221</a>      \hskip -\leftskip            %% 25 Jan 88 change to \numberline
+<a href=#222 id=222 data-nosnippet>222</a>     #1\nobreak\hfil \nobreak\hbox to\@pnumwidth{\hss #2}\par
+<a href=#223 id=223 data-nosnippet>223</a>     \penalty\@highpenalty %% added 24 May 89 as suggested by J. Leichter
+<a href=#224 id=224 data-nosnippet>224</a>   \endgroup}
+<a href=#225 id=225 data-nosnippet>225</a>
+<a href=#226 id=226 data-nosnippet>226</a>\def\l@section{\@dottedtocline{1}{1.5em}{2.3em}}
+<a href=#227 id=227 data-nosnippet>227</a>\def\l@subsection{\@dottedtocline{2}{3.8em}{3.2em}}
+<a href=#228 id=228 data-nosnippet>228</a>\def\l@subsubsection{\@dottedtocline{3}{7.0em}{4.1em}}
+<a href=#229 id=229 data-nosnippet>229</a>\def\l@paragraph{\@dottedtocline{4}{10em}{5em}}
+<a href=#230 id=230 data-nosnippet>230</a>\def\l@subparagraph{\@dottedtocline{5}{12em}{6em}}
+<a href=#231 id=231 data-nosnippet>231</a>
+<a href=#232 id=232 data-nosnippet>232</a>
+<a href=#233 id=233 data-nosnippet>233</a>\def\listoffigures{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
+<a href=#234 id=234 data-nosnippet>234</a>  \fi\chapter*{List of Figures\@mkboth
+<a href=#235 id=235 data-nosnippet>235</a>   {LIST OF FIGURES}{LIST OF FIGURES}}\@starttoc{lof}\if@restonecol
+<a href=#236 id=236 data-nosnippet>236</a>   \twocolumn\fi}
+<a href=#237 id=237 data-nosnippet>237</a>
+<a href=#238 id=238 data-nosnippet>238</a>\def\l@figure{\@dottedtocline{1}{1.5em}{2.3em}}
+<a href=#239 id=239 data-nosnippet>239</a>
+<a href=#240 id=240 data-nosnippet>240</a>\def\listoftables{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
+<a href=#241 id=241 data-nosnippet>241</a>  \fi\chapter*{List of Tables\@mkboth
+<a href=#242 id=242 data-nosnippet>242</a>   {LIST OF TABLES}{LIST OF TABLES}}\@starttoc{lot}\if@restonecol
+<a href=#243 id=243 data-nosnippet>243</a>    \twocolumn\fi}
+<a href=#244 id=244 data-nosnippet>244</a>
+<a href=#245 id=245 data-nosnippet>245</a>\let\l@table\l@figure
+<a href=#246 id=246 data-nosnippet>246</a>\let\@internalcite\cite
+<a href=#247 id=247 data-nosnippet>247</a>\def\kluwer@cite#1#2{}
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a>\setcounter{topnumber}{2}
+<a href=#250 id=250 data-nosnippet>250</a>\def\topfraction{.99}
+<a href=#251 id=251 data-nosnippet>251</a>\setcounter{bottomnumber}{1}
+<a href=#252 id=252 data-nosnippet>252</a>\def\bottomfraction{.3}
+<a href=#253 id=253 data-nosnippet>253</a>\setcounter{totalnumber}{3}
+<a href=#254 id=254 data-nosnippet>254</a>\def\textfraction{.01}
+<a href=#255 id=255 data-nosnippet>255</a>\def\floatpagefraction{.9}
+<a href=#256 id=256 data-nosnippet>256</a>\setcounter{dbltopnumber}{2}
+<a href=#257 id=257 data-nosnippet>257</a>\def\dbltopfraction{.7}
+<a href=#258 id=258 data-nosnippet>258</a>\def\dblfloatpagefraction{.5}
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>% FROM KLUWER.STY
+<a href=#262 id=262 data-nosnippet>262</a>
+<a href=#263 id=263 data-nosnippet>263</a>\newif\if@adjustcaption
+<a href=#264 id=264 data-nosnippet>264</a>\newif\if@captionabovetabular
+<a href=#265 id=265 data-nosnippet>265</a>\newif\if@tabularabovecaption
+<a href=#266 id=266 data-nosnippet>266</a>\newdimen\@tabularwidth
+<a href=#267 id=267 data-nosnippet>267</a>
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>\def\@tablecapfont{\footnotesize}
+<a href=#270 id=270 data-nosnippet>270</a>\def\@figcapfont{\footnotesize}
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a>\long\def\@makecaption#1#2{\vskip 10pt
+<a href=#273 id=273 data-nosnippet>273</a> \ifnum\cap@type=1
+<a href=#274 id=274 data-nosnippet>274</a>  \typeout{Figure \thefigure}%
+<a href=#275 id=275 data-nosnippet>275</a>  \setbox\@tempboxa\hbox{\@figcapfont #1 #2}%
+<a href=#276 id=276 data-nosnippet>276</a>  \ifdim \wd\@tempboxa &gt;\hsize \unhbox\@tempboxa\@figcapfont\par \else
+<a href=#277 id=277 data-nosnippet>277</a>   \hbox to\hsize{\hbox{}\hfil\box\@tempboxa\hfil} \fi \fi
+<a href=#278 id=278 data-nosnippet>278</a>  \ifnum\cap@type=2
+<a href=#279 id=279 data-nosnippet>279</a>   \typeout{\tablename\space\thetable}%
+<a href=#280 id=280 data-nosnippet>280</a>   \if@adjustcaption
+<a href=#281 id=281 data-nosnippet>281</a>   \if@tabularabovecaption\@maketablecaption{#1}{#2}\else
+<a href=#282 id=282 data-nosnippet>282</a>   \global\@captionabovetabulartrue\gdef\@captab{{#1}{#2}}\fi\else
+<a href=#283 id=283 data-nosnippet>283</a>   \@maketablecaption{#1}{#2}\fi\fi}
+<a href=#284 id=284 data-nosnippet>284</a>
+<a href=#285 id=285 data-nosnippet>285</a>
+<a href=#286 id=286 data-nosnippet>286</a>\long\def\@maketablecaption#1#2{\if@adjustcaption
+<a href=#287 id=287 data-nosnippet>287</a>    \setbox\@tempboxa\hbox{\@tablecapfont #1#2}%
+<a href=#288 id=288 data-nosnippet>288</a>    \ifdim\wd\@tempboxa&gt;\@tabularwidth
+<a href=#289 id=289 data-nosnippet>289</a>      \@tablecapfont
+<a href=#290 id=290 data-nosnippet>290</a>      \centerline{\parbox{\@tabularwidth}{\unhbox\@tempboxa}}\par
+<a href=#291 id=291 data-nosnippet>291</a>      \else
+<a href=#292 id=292 data-nosnippet>292</a>     \hbox to\hsize{\hfil\box\@tempboxa\hfil} \fi
+<a href=#293 id=293 data-nosnippet>293</a>  \else
+<a href=#294 id=294 data-nosnippet>294</a>    \setbox\@tempboxa\hbox{\@tablecapfont #2}%
+<a href=#295 id=295 data-nosnippet>295</a>    \ifdim\wd\@tempboxa&gt;\hsize #1 \unhbox\@tempboxa\@tablecapfont
+<a href=#296 id=296 data-nosnippet>296</a>    \else
+<a href=#297 id=297 data-nosnippet>297</a>    \hbox to\hsize{\hfil\box\@tempboxa\hfil} \fi
+<a href=#298 id=298 data-nosnippet>298</a>  \fi \vspace{3pt}}
+<a href=#299 id=299 data-nosnippet>299</a>
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a>\let\kap@tabular\tabular
+<a href=#302 id=302 data-nosnippet>302</a>\let\kap@endtabular\endtabular
+<a href=#303 id=303 data-nosnippet>303</a>
+<a href=#304 id=304 data-nosnippet>304</a>
+<a href=#305 id=305 data-nosnippet>305</a>% \hline redefined within tabular environment: 3pt extra space above and below
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>\def\tabular{%
+<a href=#309 id=309 data-nosnippet>309</a>\def\hline{\noalign{\ifnum0=`}\fi\vskip 3pt\hrule \@height \arrayrulewidth
+<a href=#310 id=310 data-nosnippet>310</a>\vskip 3pt \futurelet
+<a href=#311 id=311 data-nosnippet>311</a>   \@tempa\@xhline}
+<a href=#312 id=312 data-nosnippet>312</a>\begingroup\centering\if@captionabovetabular
+<a href=#313 id=313 data-nosnippet>313</a>  \else\global\@tabularabovecaptiontrue\fi
+<a href=#314 id=314 data-nosnippet>314</a>  \setbox\strutbox\hbox{\vrule height.8\baselineskip
+<a href=#315 id=315 data-nosnippet>315</a>  depth.4\baselineskip width\z@}\setbox0=\hbox\bgroup\kap@tabular}
+<a href=#316 id=316 data-nosnippet>316</a>\def\endtabular{\kap@endtabular\egroup\global\@tabularwidth\wd0
+<a href=#317 id=317 data-nosnippet>317</a>  \if@adjustcaption\if@captionabovetabular
+<a href=#318 id=318 data-nosnippet>318</a>  \expandafter\@maketablecaption\@captab\fi\fi\unhbox0\endgroup}
+<a href=#319 id=319 data-nosnippet>319</a>
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>
+<a href=#322 id=322 data-nosnippet>322</a>\newcounter{figure}[chapter]
+<a href=#323 id=323 data-nosnippet>323</a>\if@monograph
+<a href=#324 id=324 data-nosnippet>324</a>  \def\thefigure{\thechapter.\@arabic\c@figure}
+<a href=#325 id=325 data-nosnippet>325</a>\else
+<a href=#326 id=326 data-nosnippet>326</a>  \def\thefigure{\@arabic\c@figure}
+<a href=#327 id=327 data-nosnippet>327</a>\fi
+<a href=#328 id=328 data-nosnippet>328</a>\def\fps@figure{tbp}
+<a href=#329 id=329 data-nosnippet>329</a>\def\ftype@figure{1}
+<a href=#330 id=330 data-nosnippet>330</a>\def\ext@figure{lof}
+<a href=#331 id=331 data-nosnippet>331</a>\def\fnum@figure{\footnotesize{\it Figure~\thefigure.~~}}
+<a href=#332 id=332 data-nosnippet>332</a>% \def\figure{\@float{figure}}
+<a href=#333 id=333 data-nosnippet>333</a>\def\figure{\def\cap@type{1} \@float{figure}} % FROM KLUWER.STY
+<a href=#334 id=334 data-nosnippet>334</a>\let\endfigure\end@float
+<a href=#335 id=335 data-nosnippet>335</a>\@namedef{figure*}{\def\cap@type{1} \@dblfloat{figure}}
+<a href=#336 id=336 data-nosnippet>336</a>\@namedef{endfigure*}{\end@dblfloat}
+<a href=#337 id=337 data-nosnippet>337</a>
+<a href=#338 id=338 data-nosnippet>338</a>\newcounter{table}[chapter]
+<a href=#339 id=339 data-nosnippet>339</a>\if@monograph
+<a href=#340 id=340 data-nosnippet>340</a>\def\thetable{\thechapter.\@arabic\c@table}
+<a href=#341 id=341 data-nosnippet>341</a>\else
+<a href=#342 id=342 data-nosnippet>342</a>\def\thetable{\@arabic\c@table}
+<a href=#343 id=343 data-nosnippet>343</a>\fi
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a>\def\fps@table{tbp}
+<a href=#346 id=346 data-nosnippet>346</a>\def\ftype@table{2}
+<a href=#347 id=347 data-nosnippet>347</a>\def\ext@table{lot}
+<a href=#348 id=348 data-nosnippet>348</a>\def\fnum@table{\footnotesize{TABLE~\thetable.~~}}
+<a href=#349 id=349 data-nosnippet>349</a>% \def\table{\@float{table}}
+<a href=#350 id=350 data-nosnippet>350</a>\def\table{\def\cap@type{2}\@adjustcaptiontrue\@captionabovetabularfalse
+<a href=#351 id=351 data-nosnippet>351</a> \@tabularabovecaptionfalse\footnotesize \@float{table}}
+<a href=#352 id=352 data-nosnippet>352</a>\let\endtable\end@float
+<a href=#353 id=353 data-nosnippet>353</a>\@namedef{table*}{\def\cap@type{2}\@adjustcaptiontrue\@captionabovetabularfalse
+<a href=#354 id=354 data-nosnippet>354</a> \@tabularabovecaptionfalse\footnotesize \@dblfloat{table}}
+<a href=#355 id=355 data-nosnippet>355</a>\@namedef{endtable*}{\end@dblfloat}
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a>\def\maketitle{\kap@warning
+<a href=#359 id=359 data-nosnippet>359</a>  \typeout{ -- '\string\maketitle' is not needed, title is made by
+<a href=#360 id=360 data-nosnippet>360</a>  document style^^J}}
+<a href=#361 id=361 data-nosnippet>361</a>
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>\def\subtitle@#1{\gdef\@subtitle{#1}%
+<a href=#364 id=364 data-nosnippet>364</a>\global\@subtitledefinedtrue}
+<a href=#365 id=365 data-nosnippet>365</a>
+<a href=#366 id=366 data-nosnippet>366</a>
+<a href=#367 id=367 data-nosnippet>367</a>\def\maketitle@@{%
+<a href=#368 id=368 data-nosnippet>368</a>  \begingroup
+<a href=#369 id=369 data-nosnippet>369</a>    \setcounter{footnote}{0}%
+<a href=#370 id=370 data-nosnippet>370</a>    \def\thefootnote{\fnsymbol{footnote}}%
+<a href=#371 id=371 data-nosnippet>371</a>    \gdef\thanks##1{\footnotemark\begingroup
+<a href=#372 id=372 data-nosnippet>372</a>    \def\protect{\noexpand\protect\noexpand}\xdef\@thanks{\@thanks
+<a href=#373 id=373 data-nosnippet>373</a>        \protect\footnotetext[\the\c@footnote]{##1}}\endgroup}%
+<a href=#374 id=374 data-nosnippet>374</a>    \@maketitle
+<a href=#375 id=375 data-nosnippet>375</a>    \@thanks
+<a href=#376 id=376 data-nosnippet>376</a>  \endgroup
+<a href=#377 id=377 data-nosnippet>377</a>\setcounter{footnote}{0}
+<a href=#378 id=378 data-nosnippet>378</a>\let\maketitle\relax
+<a href=#379 id=379 data-nosnippet>379</a>\let\@maketitle\relax
+<a href=#380 id=380 data-nosnippet>380</a>\gdef\@thanks{}%
+<a href=#381 id=381 data-nosnippet>381</a>\gdef\@title{}%
+<a href=#382 id=382 data-nosnippet>382</a>\gdef\@authors{}%
+<a href=#383 id=383 data-nosnippet>383</a>\let\thanks\relax}
+<a href=#384 id=384 data-nosnippet>384</a>
+<a href=#385 id=385 data-nosnippet>385</a>
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a>\newif\if@keywords \@keywordsfalse
+<a href=#388 id=388 data-nosnippet>388</a>\def\@keywords{}
+<a href=#389 id=389 data-nosnippet>389</a> \long\def\keywords#1\end@keywords{\gdef\@keywords{#1}%
+<a href=#390 id=390 data-nosnippet>390</a>  \global\@keywordstrue}
+<a href=#391 id=391 data-nosnippet>391</a>
+<a href=#392 id=392 data-nosnippet>392</a>\newif\if@abstract \@abstractfalse
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a>\long\def\abstract#1\end#2{\gdef\@abstract{#1\end@keywords
+<a href=#395 id=395 data-nosnippet>395</a>  }\@abstracttrue\end{#2}}
+<a href=#396 id=396 data-nosnippet>396</a>\def\endabstract{\make@abstract\vskip24pt\relax}
+<a href=#397 id=397 data-nosnippet>397</a>\def\@abstract{}
+<a href=#398 id=398 data-nosnippet>398</a>\def\end@keywords{}
+<a href=#399 id=399 data-nosnippet>399</a>
+<a href=#400 id=400 data-nosnippet>400</a>% \def\make@abstract{{\normalsize\typeout{\abstractname}
+<a href=#401 id=401 data-nosnippet>401</a>%   {\noindent{\bf \abstractname.}\@abstract}\gdef\@abstract{}
+<a href=#402 id=402 data-nosnippet>402</a>%   \if@keywords{\vskip 1\baselineskip\typeout{\keywordsname}
+<a href=#403 id=403 data-nosnippet>403</a>%     \noindent{\bf \keywordsname:\/} \@keywords\gdef
+<a href=#404 id=404 data-nosnippet>404</a>%     \@keywords{}}\fi
+<a href=#405 id=405 data-nosnippet>405</a>% \par}}
+<a href=#406 id=406 data-nosnippet>406</a>
+<a href=#407 id=407 data-nosnippet>407</a>\def\make@abstract{{\normalsize\typeout{\abstractname}
+<a href=#408 id=408 data-nosnippet>408</a>  {\noindent{\bf \abstractname.}\@abstract}\gdef\@abstract{}
+<a href=#409 id=409 data-nosnippet>409</a>  \if@keywords{%
+<a href=#410 id=410 data-nosnippet>410</a>    \vskip 1\baselineskip\typeout{\keywordsname}
+<a href=#411 id=411 data-nosnippet>411</a>    \noindent{\bf \keywordsname:\/} \@keywords\gdef
+<a href=#412 id=412 data-nosnippet>412</a>    \@keywords{}%
+<a href=#413 id=413 data-nosnippet>413</a>}\fi
+<a href=#414 id=414 data-nosnippet>414</a>\par}}
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a>\if@monograph
+<a href=#417 id=417 data-nosnippet>417</a>
+<a href=#418 id=418 data-nosnippet>418</a>
+<a href=#419 id=419 data-nosnippet>419</a>\def\@maketitle{\begingroup
+<a href=#420 id=420 data-nosnippet>420</a>    \chapter{\@title}
+<a href=#421 id=421 data-nosnippet>421</a>\thispagestyle{myheadings}%  THISPAGESTYLE SHOULD COME AFTER TITLE
+<a href=#422 id=422 data-nosnippet>422</a>    \if@subtitledefined
+<a href=#423 id=423 data-nosnippet>423</a>     \begin{center}
+<a href=#424 id=424 data-nosnippet>424</a>      {\large\it \@subtitle}\par
+<a href=#425 id=425 data-nosnippet>425</a>     \end{center}
+<a href=#426 id=426 data-nosnippet>426</a>      \vskip 33pt
+<a href=#427 id=427 data-nosnippet>427</a>    \fi
+<a href=#428 id=428 data-nosnippet>428</a>  \endgroup
+<a href=#429 id=429 data-nosnippet>429</a>}
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a>
+<a href=#432 id=432 data-nosnippet>432</a>\else  % proceedings, editedvolume or NATO
+<a href=#433 id=433 data-nosnippet>433</a>
+<a href=#434 id=434 data-nosnippet>434</a>
+<a href=#435 id=435 data-nosnippet>435</a>
+<a href=#436 id=436 data-nosnippet>436</a>\newskip\afterauthinsskip
+<a href=#437 id=437 data-nosnippet>437</a>
+<a href=#438 id=438 data-nosnippet>438</a>\def\@maketitle{\begingroup
+<a href=#439 id=439 data-nosnippet>439</a>    \chapter{\@title}
+<a href=#440 id=440 data-nosnippet>440</a>% \thispagestyle{myheadings}%  THISPAGESTYLE SHOULD COME AFTER TITLE
+<a href=#441 id=441 data-nosnippet>441</a>\thispagestyle{empty}%
+<a href=#442 id=442 data-nosnippet>442</a>    \if@subtitledefined
+<a href=#443 id=443 data-nosnippet>443</a>     {\normalsize\it \@subtitle}\par
+<a href=#444 id=444 data-nosnippet>444</a>     \vskip 2\baselineskip%3pc
+<a href=#445 id=445 data-nosnippet>445</a>     \fi
+<a href=#446 id=446 data-nosnippet>446</a>     {\advance\leftskip by 5pc   % For indentation of \author &amp; \insitute
+<a href=#447 id=447 data-nosnippet>447</a>        \setbox\@tempboxa\vbox{\@formatauthorsandinstitutes}%
+<a href=#448 id=448 data-nosnippet>448</a>        \ifdim\ht\@tempboxa&lt;1.5pc \afterauthinsskip 4pc
+<a href=#449 id=449 data-nosnippet>449</a>        \else\ifdim\ht\@tempboxa&lt;2.5pc \afterauthinsskip 3pc
+<a href=#450 id=450 data-nosnippet>450</a>              \else\afterauthinsskip 2pc
+<a href=#451 id=451 data-nosnippet>451</a>              \fi
+<a href=#452 id=452 data-nosnippet>452</a>        \fi
+<a href=#453 id=453 data-nosnippet>453</a>    \normalsize\@formatauthorsandinstitutes
+<a href=#454 id=454 data-nosnippet>454</a>    \vskip \afterauthinsskip\relax}
+<a href=#455 id=455 data-nosnippet>455</a> \endgroup
+<a href=#456 id=456 data-nosnippet>456</a>}
+<a href=#457 id=457 data-nosnippet>457</a>
+<a href=#458 id=458 data-nosnippet>458</a>\fi
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a>
+<a href=#461 id=461 data-nosnippet>461</a>\newif\ifkern@mathmode \kern@mathmodefalse
+<a href=#462 id=462 data-nosnippet>462</a>
+<a href=#463 id=463 data-nosnippet>463</a>\def\kern@charspace{\kern 0.5ex}
+<a href=#464 id=464 data-nosnippet>464</a>\def\kern@wordspace{\unskip\hskip 0.5em}
+<a href=#465 id=465 data-nosnippet>465</a>
+<a href=#466 id=466 data-nosnippet>466</a>\def\@kap@tfor#1:=#2\do#3{\def\@fortmp{#2}\ifx\@fortmp\@empty
+<a href=#467 id=467 data-nosnippet>467</a>  \else\@tforloop#2\@nil\@nil\@@#1{#3}\fi}
+<a href=#468 id=468 data-nosnippet>468</a>
+<a href=#469 id=469 data-nosnippet>469</a>\def\charkern#1{\begingroup
+<a href=#470 id=470 data-nosnippet>470</a>  \def\@@kc{#1}
+<a href=#471 id=471 data-nosnippet>471</a>  \def\c@@k{@s@e@v@y}%
+<a href=#472 id=472 data-nosnippet>472</a>  \def\ck@@##1 @s@e@v@y\@@ck{\def\@@kc{##1}}%
+<a href=#473 id=473 data-nosnippet>473</a>  \def\ck@##1 ##2\@@ck{\def\@kc{##1}\def\@@kc{##2}}%
+<a href=#474 id=474 data-nosnippet>474</a>  \def\iterate{\expandafter\expandafter\expandafter\ck@
+<a href=#475 id=475 data-nosnippet>475</a>    \expandafter\@@kc\space @s@e@v@y\@@ck
+<a href=#476 id=476 data-nosnippet>476</a>    \expandafter\@kernword\expandafter{\@kc}%
+<a href=#477 id=477 data-nosnippet>477</a>    \ifx\@@kc\c@@k
+<a href=#478 id=478 data-nosnippet>478</a>      \let\next\relax
+<a href=#479 id=479 data-nosnippet>479</a>    \else
+<a href=#480 id=480 data-nosnippet>480</a>      \expandafter\ck@@\@@kc\@@ck
+<a href=#481 id=481 data-nosnippet>481</a>      \let\next\iterate\kern@wordspace
+<a href=#482 id=482 data-nosnippet>482</a>    \fi\next}\iterate
+<a href=#483 id=483 data-nosnippet>483</a>  \endgroup}
+<a href=#484 id=484 data-nosnippet>484</a>
+<a href=#485 id=485 data-nosnippet>485</a>\def\@kernword#1{\def\d@ll@rm@th{$}\@kap@tfor\@nextchar:=#1\do{%
+<a href=#486 id=486 data-nosnippet>486</a>    \ifx\@nextchar\d@ll@rm@th
+<a href=#487 id=487 data-nosnippet>487</a>      \ifkern@mathmode
+<a href=#488 id=488 data-nosnippet>488</a>        \kern@mathmodefalse
+<a href=#489 id=489 data-nosnippet>489</a>        $\kern@math$%
+<a href=#490 id=490 data-nosnippet>490</a>      \else
+<a href=#491 id=491 data-nosnippet>491</a>        \kern@mathmodetrue
+<a href=#492 id=492 data-nosnippet>492</a>        \xdef\kern@math{}%
+<a href=#493 id=493 data-nosnippet>493</a>      \fi
+<a href=#494 id=494 data-nosnippet>494</a>    \else
+<a href=#495 id=495 data-nosnippet>495</a>      \ifkern@mathmode
+<a href=#496 id=496 data-nosnippet>496</a>        \begingroup
+<a href=#497 id=497 data-nosnippet>497</a>          \def\protect{\noexpand}%
+<a href=#498 id=498 data-nosnippet>498</a>          \xdef\kern@math{\kern@math\@nextchar}%
+<a href=#499 id=499 data-nosnippet>499</a>        \endgroup
+<a href=#500 id=500 data-nosnippet>500</a>      \else
+<a href=#501 id=501 data-nosnippet>501</a>        \uppercase\expandafter{\@nextchar}\kern@charspace
+<a href=#502 id=502 data-nosnippet>502</a>      \fi
+<a href=#503 id=503 data-nosnippet>503</a>    \fi}}
+<a href=#504 id=504 data-nosnippet>504</a>
+<a href=#505 id=505 data-nosnippet>505</a>
+<a href=#506 id=506 data-nosnippet>506</a>
+<a href=#507 id=507 data-nosnippet>507</a>\def\numtoword#1{\ifcase#1\or one\or two\or three\or four\or
+<a href=#508 id=508 data-nosnippet>508</a>    five\or six\or seven\or eight\or nine\or ten\or eleven\or twelve\or
+<a href=#509 id=509 data-nosnippet>509</a>    thirteen\or fourteen\or fifteen\or sixteen\or seventeen\or
+<a href=#510 id=510 data-nosnippet>510</a>    eighteen\or nineteen\fi}
+<a href=#511 id=511 data-nosnippet>511</a>
+<a href=#512 id=512 data-nosnippet>512</a>\mark{{}{}}   % Initializes TeX's marks
+<a href=#513 id=513 data-nosnippet>513</a>
+<a href=#514 id=514 data-nosnippet>514</a>\if@monograph
+<a href=#515 id=515 data-nosnippet>515</a>
+<a href=#516 id=516 data-nosnippet>516</a>\def\ps@headings{\let\@mkboth\@gobbletwo
+<a href=#517 id=517 data-nosnippet>517</a>\def\@oddfoot{}\def\@evenfoot{}%       No feet.
+<a href=#518 id=518 data-nosnippet>518</a>\def\@evenhead{\rm\normalsize\hbox to 0pt{\thepage\hss}\hfil
+<a href=#519 id=519 data-nosnippet>519</a>  \small\leftmark\hfil}%
+<a href=#520 id=520 data-nosnippet>520</a>\def\@oddhead{\hbox{}\rm\small\hfil\rightmark\hfil
+<a href=#521 id=521 data-nosnippet>521</a>  \rm\normalsize\hbox to 0pt{\hss\thepage}}%
+<a href=#522 id=522 data-nosnippet>522</a>\def\chaptermark##1{%
+<a href=#523 id=523 data-nosnippet>523</a>\markboth{\expandafter\protect
+<a href=#524 id=524 data-nosnippet>524</a> \expandafter{CHAPTER \thechapter}}%
+<a href=#525 id=525 data-nosnippet>525</a> {\expandafter\protect\expandafter{\@runningtitle}}}%
+<a href=#526 id=526 data-nosnippet>526</a>
+<a href=#527 id=527 data-nosnippet>527</a>\def\sectionmark##1{}}
+<a href=#528 id=528 data-nosnippet>528</a>
+<a href=#529 id=529 data-nosnippet>529</a>\def\ps@myheadings{\let\@mkboth\@gobbletwo
+<a href=#530 id=530 data-nosnippet>530</a>\def\@oddhead{\hbox{}\rm\small\hfil\leftmark\hfil}%
+<a href=#531 id=531 data-nosnippet>531</a>\def\@oddfoot{\hbox{}\hfil\rm\normalsize\thepage\hfil}%
+<a href=#532 id=532 data-nosnippet>532</a>\let\@evenhead\@oddhead%
+<a href=#533 id=533 data-nosnippet>533</a>\let\@evenfoot\@oddfoot%
+<a href=#534 id=534 data-nosnippet>534</a>\def\chaptermark##1{}%
+<a href=#535 id=535 data-nosnippet>535</a>\def\sectionmark##1{}%
+<a href=#536 id=536 data-nosnippet>536</a>\def\subsectionmark##1{}}
+<a href=#537 id=537 data-nosnippet>537</a>
+<a href=#538 id=538 data-nosnippet>538</a>\else\if@proceedings
+<a href=#539 id=539 data-nosnippet>539</a>
+<a href=#540 id=540 data-nosnippet>540</a>\def\ps@headings{\let\@mkboth\@gobbletwo
+<a href=#541 id=541 data-nosnippet>541</a>\def\@oddfoot{}\def\@evenfoot{}%       No feet.
+<a href=#542 id=542 data-nosnippet>542</a>\def\@evenhead{\rm\normalsize\hbox to 0pt{\thepage\hss}\hfil
+<a href=#543 id=543 data-nosnippet>543</a> \small\@runningauthor\hfil}%
+<a href=#544 id=544 data-nosnippet>544</a>\def\@oddhead{\hbox{}\rm\small\hfil\rightmark\hfil
+<a href=#545 id=545 data-nosnippet>545</a>  \rm\normalsize\hbox to 0pt{\hss\thepage}}%
+<a href=#546 id=546 data-nosnippet>546</a>\def\chaptermark##1{%
+<a href=#547 id=547 data-nosnippet>547</a>\markboth{\expandafter\protect\expandafter{\@runningauthor}}%
+<a href=#548 id=548 data-nosnippet>548</a>{\expandafter\protect\expandafter{\@runningtitle}}}%
+<a href=#549 id=549 data-nosnippet>549</a>\def\sectionmark##1{}}
+<a href=#550 id=550 data-nosnippet>550</a>
+<a href=#551 id=551 data-nosnippet>551</a>\def\ps@myheadings{\let\@mkboth\@gobbletwo
+<a href=#552 id=552 data-nosnippet>552</a>   \def\@oddhead{\hbox{}\rm\small\hfil
+<a href=#553 id=553 data-nosnippet>553</a>   \expandafter{\@runningauthor}\hfil}%
+<a href=#554 id=554 data-nosnippet>554</a>\def\@oddfoot{{\parindent 0pt
+<a href=#555 id=555 data-nosnippet>555</a>  \parbox{\textwidth}{\hbox{}\vskip 3pt
+<a href=#556 id=556 data-nosnippet>556</a>  \hbox{}\hfil\rm\normalsize\thepage\hfil\\
+<a href=#557 id=557 data-nosnippet>557</a>  \vskip 0pt\small\@copyright}}}
+<a href=#558 id=558 data-nosnippet>558</a>  \let\@evenhead\@oddhead%
+<a href=#559 id=559 data-nosnippet>559</a>  \let\@evenfoot\@oddfoot%
+<a href=#560 id=560 data-nosnippet>560</a>  \def\chaptermark##1{}%
+<a href=#561 id=561 data-nosnippet>561</a>  \def\sectionmark##1{}%
+<a href=#562 id=562 data-nosnippet>562</a>  \def\subsectionmark##1{}}
+<a href=#563 id=563 data-nosnippet>563</a>
+<a href=#564 id=564 data-nosnippet>564</a>\else\if@editedvolume
+<a href=#565 id=565 data-nosnippet>565</a>
+<a href=#566 id=566 data-nosnippet>566</a>\def\ps@headings{\let\@mkboth\@gobbletwo
+<a href=#567 id=567 data-nosnippet>567</a>\def\@oddfoot{}\def\@evenfoot{}%       No feet.
+<a href=#568 id=568 data-nosnippet>568</a>\def\@evenhead{\rm\normalsize\hbox to 0pt{\thepage\hss}\hfil
+<a href=#569 id=569 data-nosnippet>569</a> \small\@runningauthor\hfil}%
+<a href=#570 id=570 data-nosnippet>570</a>\def\@oddhead{\hbox{}\rm\small\hfil\rightmark\hfil
+<a href=#571 id=571 data-nosnippet>571</a>  \rm\normalsize\hbox to 0pt{\hss\thepage}}%
+<a href=#572 id=572 data-nosnippet>572</a>\def\chaptermark##1{%
+<a href=#573 id=573 data-nosnippet>573</a>\markboth{\expandafter\protect\expandafter{\@runningauthor}}%
+<a href=#574 id=574 data-nosnippet>574</a>{\expandafter\protect\expandafter{\@runningtitle}}}%
+<a href=#575 id=575 data-nosnippet>575</a>\def\sectionmark##1{}}
+<a href=#576 id=576 data-nosnippet>576</a>
+<a href=#577 id=577 data-nosnippet>577</a>\def\ps@myheadings{\let\@mkboth\@gobbletwo
+<a href=#578 id=578 data-nosnippet>578</a>   \def\@oddhead{\hbox{}\rm\small\hfil
+<a href=#579 id=579 data-nosnippet>579</a>   \expandafter{\@runningauthor}\hfil}%
+<a href=#580 id=580 data-nosnippet>580</a>\def\@oddfoot{{\parindent 0pt
+<a href=#581 id=581 data-nosnippet>581</a>  \parbox{\textwidth}{\hbox{}\vskip 3pt
+<a href=#582 id=582 data-nosnippet>582</a>  \hbox{}\hfil\rm\normalsize\thepage\hfil\\
+<a href=#583 id=583 data-nosnippet>583</a>  \vskip 0pt\small\@copyright}}}
+<a href=#584 id=584 data-nosnippet>584</a>  \let\@evenhead\@oddhead%
+<a href=#585 id=585 data-nosnippet>585</a>  \let\@evenfoot\@oddfoot%
+<a href=#586 id=586 data-nosnippet>586</a>  \def\chaptermark##1{}%
+<a href=#587 id=587 data-nosnippet>587</a>  \def\sectionmark##1{}%
+<a href=#588 id=588 data-nosnippet>588</a>  \def\subsectionmark##1{}}
+<a href=#589 id=589 data-nosnippet>589</a>
+<a href=#590 id=590 data-nosnippet>590</a>\else % NATO
+<a href=#591 id=591 data-nosnippet>591</a>
+<a href=#592 id=592 data-nosnippet>592</a>\def\ps@headings{\let\@mkboth\@gobbletwo
+<a href=#593 id=593 data-nosnippet>593</a>\def\@oddfoot{}\def\@evenfoot{}%       No feet.
+<a href=#594 id=594 data-nosnippet>594</a>\def\@evenhead{\rm\normalsize\hbox to 0pt{\thepage\hss}\hfil}%
+<a href=#595 id=595 data-nosnippet>595</a>\def\@oddhead{\hfil\rm\normalsize\hbox to 0pt{\hss\thepage}}%
+<a href=#596 id=596 data-nosnippet>596</a>\def\chaptermark##1{}%
+<a href=#597 id=597 data-nosnippet>597</a>\def\sectionmark##1{}}
+<a href=#598 id=598 data-nosnippet>598</a>
+<a href=#599 id=599 data-nosnippet>599</a>\def\ps@myheadings{\let\@mkboth\@gobbletwo
+<a href=#600 id=600 data-nosnippet>600</a>\def\@oddfoot{}\def\@evenfoot{}%       No feet.
+<a href=#601 id=601 data-nosnippet>601</a>\def\@evenhead{}\def\@oddhead{}%
+<a href=#602 id=602 data-nosnippet>602</a>\def\chaptermark##1{}%
+<a href=#603 id=603 data-nosnippet>603</a>\def\sectionmark##1{}}
+<a href=#604 id=604 data-nosnippet>604</a>
+<a href=#605 id=605 data-nosnippet>605</a>\fi
+<a href=#606 id=606 data-nosnippet>606</a>\fi
+<a href=#607 id=607 data-nosnippet>607</a>\fi
+<a href=#608 id=608 data-nosnippet>608</a>
+<a href=#609 id=609 data-nosnippet>609</a>
+<a href=#610 id=610 data-nosnippet>610</a>\newif\if@runningtitleset
+<a href=#611 id=611 data-nosnippet>611</a>\newif\if@runningauthorset
+<a href=#612 id=612 data-nosnippet>612</a>
+<a href=#613 id=613 data-nosnippet>613</a>
+<a href=#614 id=614 data-nosnippet>614</a>  \def\runningtitle#1{\if@runningtitleset\else
+<a href=#615 id=615 data-nosnippet>615</a>    \xdef\@runningtitle{{\uppercase{#1}}}\fi
+<a href=#616 id=616 data-nosnippet>616</a>    \global\@runningtitlesettrue}
+<a href=#617 id=617 data-nosnippet>617</a>  \gdef\@runningtitle{}
+<a href=#618 id=618 data-nosnippet>618</a>
+<a href=#619 id=619 data-nosnippet>619</a>
+<a href=#620 id=620 data-nosnippet>620</a>% \def\runningauthor#1{\if@runningauthorset\else
+<a href=#621 id=621 data-nosnippet>621</a>%    \xdef\@runningauthor{#1}\global\@runningauthorsettrue\fi}
+<a href=#622 id=622 data-nosnippet>622</a>%    \gdef\@runningauthor{}
+<a href=#623 id=623 data-nosnippet>623</a>\def\runningauthor#1{\if@runningauthorset\else
+<a href=#624 id=624 data-nosnippet>624</a>   \xdef\@runningauthor{{\uppercase{#1}}}\fi
+<a href=#625 id=625 data-nosnippet>625</a>   \global\@runningauthorsettrue}
+<a href=#626 id=626 data-nosnippet>626</a>   \gdef\@runningauthor{}
+<a href=#627 id=627 data-nosnippet>627</a>
+<a href=#628 id=628 data-nosnippet>628</a>
+<a href=#629 id=629 data-nosnippet>629</a>
+<a href=#630 id=630 data-nosnippet>630</a>\newif\ifopening@opened \opening@openedfalse
+<a href=#631 id=631 data-nosnippet>631</a>\newif\ifopening@closed \opening@closedfalse
+<a href=#632 id=632 data-nosnippet>632</a>
+<a href=#633 id=633 data-nosnippet>633</a>\def\opening{\global\opening@openedtrue
+<a href=#634 id=634 data-nosnippet>634</a>  \let\title=\title@
+<a href=#635 id=635 data-nosnippet>635</a>  \let\subtitle=\subtitle@
+<a href=#636 id=636 data-nosnippet>636</a>  \let\author=\author@
+<a href=#637 id=637 data-nosnippet>637</a>  \let\institute=\institute@
+<a href=#638 id=638 data-nosnippet>638</a>  \let\date=\date@
+<a href=#639 id=639 data-nosnippet>639</a>  \let\thanks=\footnote}
+<a href=#640 id=640 data-nosnippet>640</a>\def\endopening{\global\opening@closedtrue
+<a href=#641 id=641 data-nosnippet>641</a>   \let\title=\opening@only
+<a href=#642 id=642 data-nosnippet>642</a>   \let\subtitle=\opening@only
+<a href=#643 id=643 data-nosnippet>643</a>   \let\author=\opening@only
+<a href=#644 id=644 data-nosnippet>644</a>   \let\institute=\opening@only
+<a href=#645 id=645 data-nosnippet>645</a>   \let\date=\opening@only}
+<a href=#646 id=646 data-nosnippet>646</a>
+<a href=#647 id=647 data-nosnippet>647</a>\def\opening@only#1{\kap@warning\typeout{ -- \string\title, \string\subtitle,
+<a href=#648 id=648 data-nosnippet>648</a>  \string\author, \string\institute, or \string\date { }effective only
+<a href=#649 id=649 data-nosnippet>649</a>  inside}\typeout{ -- opening environment. Please refer to Author's
+<a href=#650 id=650 data-nosnippet>650</a>  Instructions.^^J}}
+<a href=#651 id=651 data-nosnippet>651</a>
+<a href=#652 id=652 data-nosnippet>652</a>\let\title=\opening@only
+<a href=#653 id=653 data-nosnippet>653</a>\let\subtitle=\opening@only
+<a href=#654 id=654 data-nosnippet>654</a>\let\author=\opening@only
+<a href=#655 id=655 data-nosnippet>655</a>\let\institute=\opening@only
+<a href=#656 id=656 data-nosnippet>656</a>\let\date=\opening@only
+<a href=#657 id=657 data-nosnippet>657</a>
+<a href=#658 id=658 data-nosnippet>658</a>
+<a href=#659 id=659 data-nosnippet>659</a>\newtoks\t@a
+<a href=#660 id=660 data-nosnippet>660</a>\newtoks\t@b
+<a href=#661 id=661 data-nosnippet>661</a>\long\def\append@item#1\to#2{\t@a={\@k@p{#1}}\t@b=\expandafter{#2}%
+<a href=#662 id=662 data-nosnippet>662</a>  \xdef#2{\the\t@b\the\t@a}}
+<a href=#663 id=663 data-nosnippet>663</a>\def\get@left#1\to#2{\expandafter\g@l#1\g@l#1#2}
+<a href=#664 id=664 data-nosnippet>664</a>\long\def\g@l\@k@p#1#2\g@l#3#4{\def#4{#1}\def#3{#2}}
+<a href=#665 id=665 data-nosnippet>665</a>
+<a href=#666 id=666 data-nosnippet>666</a>\def\noauthors{}
+<a href=#667 id=667 data-nosnippet>667</a>
+<a href=#668 id=668 data-nosnippet>668</a>\def\@authors{}
+<a href=#669 id=669 data-nosnippet>669</a>\def\@allauthors{}
+<a href=#670 id=670 data-nosnippet>670</a>\def\@institutes{}
+<a href=#671 id=671 data-nosnippet>671</a>\def\authors@institute{}
+<a href=#672 id=672 data-nosnippet>672</a>
+<a href=#673 id=673 data-nosnippet>673</a>
+<a href=#674 id=674 data-nosnippet>674</a>% \\ is defined as space before runningtitle is read out
+<a href=#675 id=675 data-nosnippet>675</a>
+<a href=#676 id=676 data-nosnippet>676</a>% \def\title@#1{\gdef\@title{#1}\def\\{ }\xdef\@runningtitle{#1}}
+<a href=#677 id=677 data-nosnippet>677</a>
+<a href=#678 id=678 data-nosnippet>678</a>\def\title@#1{\gdef\@title{\uppercase{#1}}\def\\{ }\xdef\@runningtitle{#1}
+<a href=#679 id=679 data-nosnippet>679</a>               \typeout{KAP -- Title Uppercase}}
+<a href=#680 id=680 data-nosnippet>680</a>
+<a href=#681 id=681 data-nosnippet>681</a>\def\subtitle@#1{\gdef\@subtitle{#1}\global\@subtitledefinedtrue}
+<a href=#682 id=682 data-nosnippet>682</a>
+<a href=#683 id=683 data-nosnippet>683</a>
+<a href=#684 id=684 data-nosnippet>684</a>\def\author@#1{\append@item#1\to\@authors
+<a href=#685 id=685 data-nosnippet>685</a>  \append@item#1\to\@allauthors \xdef\@runningauthor{#1}}
+<a href=#686 id=686 data-nosnippet>686</a>\def\institute@#1{\append@item#1\to\@institutes
+<a href=#687 id=687 data-nosnippet>687</a>  \expandafter\append@item\expandafter{\@authors}\to\authors@institute
+<a href=#688 id=688 data-nosnippet>688</a>  \gdef\@authors{}}
+<a href=#689 id=689 data-nosnippet>689</a>
+<a href=#690 id=690 data-nosnippet>690</a>% \def\date@#1{\gdef\@date{#1}}
+<a href=#691 id=691 data-nosnippet>691</a>
+<a href=#692 id=692 data-nosnippet>692</a>\def\date@#1{}
+<a href=#693 id=693 data-nosnippet>693</a>
+<a href=#694 id=694 data-nosnippet>694</a>
+<a href=#695 id=695 data-nosnippet>695</a>\newif\ifthanks
+<a href=#696 id=696 data-nosnippet>696</a>\newbox\@kapbox
+<a href=#697 id=697 data-nosnippet>697</a>\newcount\@kapcount
+<a href=#698 id=698 data-nosnippet>698</a>
+<a href=#699 id=699 data-nosnippet>699</a>
+<a href=#700 id=700 data-nosnippet>700</a>\@ifundefined{author@uppercase}{
+<a href=#701 id=701 data-nosnippet>701</a>
+<a href=#702 id=702 data-nosnippet>702</a>  \typeout{KAP -- Author(s) Normal}
+<a href=#703 id=703 data-nosnippet>703</a>
+<a href=#704 id=704 data-nosnippet>704</a>  \def\@formatname#1#2{\@kapcount\c@footnote\begingroup
+<a href=#705 id=705 data-nosnippet>705</a>    \def\thanks##1{\global\thankstrue}\setbox\@kapbox\vbox{#1}\endgroup
+<a href=#706 id=706 data-nosnippet>706</a>    \c@footnote\@kapcount
+<a href=#707 id=707 data-nosnippet>707</a>    \begingroup
+<a href=#708 id=708 data-nosnippet>708</a>      \ifthanks
+<a href=#709 id=709 data-nosnippet>709</a>        \def\fn##1\thanks##2{{##1}\hbox
+<a href=#710 id=710 data-nosnippet>710</a>          to 0pt{#2\hss}\thanks{##2}}\expandafter\fn#1
+<a href=#711 id=711 data-nosnippet>711</a>      \else
+<a href=#712 id=712 data-nosnippet>712</a>        \def\fn##1{{##1}#2}\expandafter\fn\expandafter{#1}\fi
+<a href=#713 id=713 data-nosnippet>713</a>    \endgroup\global\thanksfalse}
+<a href=#714 id=714 data-nosnippet>714</a>
+<a href=#715 id=715 data-nosnippet>715</a>}{
+<a href=#716 id=716 data-nosnippet>716</a>
+<a href=#717 id=717 data-nosnippet>717</a>  \typeout{KAP -- Author(s) Uppercase}
+<a href=#718 id=718 data-nosnippet>718</a>
+<a href=#719 id=719 data-nosnippet>719</a>  \def\@formatname#1#2{\@kapcount\c@footnote\begingroup
+<a href=#720 id=720 data-nosnippet>720</a>  \def\thanks##1{\global\thankstrue}\setbox\@kapbox\vbox{#1}\endgroup
+<a href=#721 id=721 data-nosnippet>721</a>    \c@footnote\@kapcount
+<a href=#722 id=722 data-nosnippet>722</a>    \begingroup
+<a href=#723 id=723 data-nosnippet>723</a>      \ifthanks
+<a href=#724 id=724 data-nosnippet>724</a>        \def\fn##1\thanks##2{\uppercase{##1}\hbox
+<a href=#725 id=725 data-nosnippet>725</a>          to 0pt{#2\hss}\thanks{##2}}\expandafter\fn#1
+<a href=#726 id=726 data-nosnippet>726</a>      \else
+<a href=#727 id=727 data-nosnippet>727</a>        \def\fn##1{\uppercase{##1}#2}\expandafter\fn\expandafter{#1}\fi
+<a href=#728 id=728 data-nosnippet>728</a>    \endgroup\global\thanksfalse}
+<a href=#729 id=729 data-nosnippet>729</a>
+<a href=#730 id=730 data-nosnippet>730</a>}
+<a href=#731 id=731 data-nosnippet>731</a>
+<a href=#732 id=732 data-nosnippet>732</a>
+<a href=#733 id=733 data-nosnippet>733</a>\def\@formatauthors{{\small\begingroup
+<a href=#734 id=734 data-nosnippet>734</a>  \newcount\cnt@authors
+<a href=#735 id=735 data-nosnippet>735</a>  \cnt@authors=0\def\@k@p##1{\advance\cnt@authors by 1}\@curauths
+<a href=#736 id=736 data-nosnippet>736</a>  \def\@k@p##1{\advance\cnt@authors by -1
+<a href=#737 id=737 data-nosnippet>737</a>    \ifnum\cnt@authors&gt;1 \hbox{\@formatname{##1}{,}\penalty-1000}\space\fi
+<a href=#738 id=738 data-nosnippet>738</a>    \ifnum\cnt@authors=1 \hbox{\@formatname{##1}{} AND\penalty-1000}\space\fi
+<a href=#739 id=739 data-nosnippet>739</a>   \ifnum\cnt@authors&lt;1 \hbox{\@formatname{##1}{}}\par\fi}\@curauths
+<a href=#740 id=740 data-nosnippet>740</a>  \endgroup}}
+<a href=#741 id=741 data-nosnippet>741</a>
+<a href=#742 id=742 data-nosnippet>742</a>
+<a href=#743 id=743 data-nosnippet>743</a>\def\@formatinstitute{{\normalsize\it \@curinst\par}}
+<a href=#744 id=744 data-nosnippet>744</a>
+<a href=#745 id=745 data-nosnippet>745</a>\def\@formatauthorsandinstitutes{\begingroup
+<a href=#746 id=746 data-nosnippet>746</a>  \newcount\cnt@institutes
+<a href=#747 id=747 data-nosnippet>747</a>  \newcount\cnt@authors
+<a href=#748 id=748 data-nosnippet>748</a>  \newbox\@authbox
+<a href=#749 id=749 data-nosnippet>749</a>  \cnt@authors=0\def\@k@p##1{\advance\cnt@authors by 1}\@allauthors
+<a href=#750 id=750 data-nosnippet>750</a>  \xdef\@authnames{}%
+<a href=#751 id=751 data-nosnippet>751</a>  \begingroup
+<a href=#752 id=752 data-nosnippet>752</a>    \def\thanks##1{}%
+<a href=#753 id=753 data-nosnippet>753</a>    \def\@k@p##1{\advance\cnt@authors by -1
+<a href=#754 id=754 data-nosnippet>754</a>      \ifnum\cnt@authors=0 \xdef\@authnames{\@authnames ##1}\fi
+<a href=#755 id=755 data-nosnippet>755</a>      \ifnum\cnt@authors=1 \xdef\@authnames{##1\ AND }\fi
+<a href=#756 id=756 data-nosnippet>756</a>      \ifnum\cnt@authors&gt;1 \xdef\@authnames{##1\ ET AL.}\cnt@authors=0\fi}%
+<a href=#757 id=757 data-nosnippet>757</a>    \global\setbox\@authbox=\hbox{\@allauthors}%
+<a href=#758 id=758 data-nosnippet>758</a>    \expandafter\runningauthor\expandafter{\@authnames}
+<a href=#759 id=759 data-nosnippet>759</a>  \endgroup
+<a href=#760 id=760 data-nosnippet>760</a>  \cnt@institutes=0
+<a href=#761 id=761 data-nosnippet>761</a>  \def\@k@p##1{\advance\cnt@institutes by 1}\@institutes
+<a href=#762 id=762 data-nosnippet>762</a>  \loop\ifnum\cnt@institutes&gt;0
+<a href=#763 id=763 data-nosnippet>763</a>    \get@left\authors@institute\to\@curauths
+<a href=#764 id=764 data-nosnippet>764</a>    \noindent\@formatauthors
+<a href=#765 id=765 data-nosnippet>765</a>    \get@left\@institutes\to\@curinst
+<a href=#766 id=766 data-nosnippet>766</a>    \noindent\@formatinstitute
+<a href=#767 id=767 data-nosnippet>767</a>    \ifnum\cnt@institutes=2
+<a href=#768 id=768 data-nosnippet>768</a>      \vskip 0.4\baselineskip
+<a href=#769 id=769 data-nosnippet>769</a>       \noindent {\small AND} % and
+<a href=#770 id=770 data-nosnippet>770</a>    \fi
+<a href=#771 id=771 data-nosnippet>771</a>    \ifnum\cnt@institutes&gt;1
+<a href=#772 id=772 data-nosnippet>772</a>      \vskip 0.4\baselineskip
+<a href=#773 id=773 data-nosnippet>773</a>    \fi
+<a href=#774 id=774 data-nosnippet>774</a>    \advance\cnt@institutes by -1
+<a href=#775 id=775 data-nosnippet>775</a>  \repeat\endgroup}
+<a href=#776 id=776 data-nosnippet>776</a>
+<a href=#777 id=777 data-nosnippet>777</a>
+<a href=#778 id=778 data-nosnippet>778</a>\def\kap@warning{\typeout{^^J !! KAP Style File Warning}}
+<a href=#779 id=779 data-nosnippet>779</a>
+<a href=#780 id=780 data-nosnippet>780</a>\newread\@editorfile
+<a href=#781 id=781 data-nosnippet>781</a>\newread\@kapjrnls
+<a href=#782 id=782 data-nosnippet>782</a>\let\kapdocument\document
+<a href=#783 id=783 data-nosnippet>783</a>
+<a href=#784 id=784 data-nosnippet>784</a>\def\document{\kapdocument
+<a href=#785 id=785 data-nosnippet>785</a>  \ifopening@opened
+<a href=#786 id=786 data-nosnippet>786</a>    \ifopening@closed
+<a href=#787 id=787 data-nosnippet>787</a>    \else
+<a href=#788 id=788 data-nosnippet>788</a>      \@latexerr{`opening' environment not closed}{Close `opening' environment
+<a href=#789 id=789 data-nosnippet>789</a>        before beginning of document}
+<a href=#790 id=790 data-nosnippet>790</a>    \fi
+<a href=#791 id=791 data-nosnippet>791</a>  \else
+<a href=#792 id=792 data-nosnippet>792</a>    \@latexerr{No `opening' environment present}{Use `opening' environment
+<a href=#793 id=793 data-nosnippet>793</a>      before beginning of document}
+<a href=#794 id=794 data-nosnippet>794</a>  \fi
+<a href=#795 id=795 data-nosnippet>795</a>  \let\kap@chapter\chapter
+<a href=#796 id=796 data-nosnippet>796</a>  \def\chapter##1{\setcounter{chapter}{##1}\addtocounter{chapter}{-1}}
+<a href=#797 id=797 data-nosnippet>797</a>  \openin\@editorfile=\jobname.kap
+<a href=#798 id=798 data-nosnippet>798</a>  \ifeof\@editorfile
+<a href=#799 id=799 data-nosnippet>799</a>    \closein\@editorfile
+<a href=#800 id=800 data-nosnippet>800</a>  \else
+<a href=#801 id=801 data-nosnippet>801</a>    \closein\@editorfile \input{\jobname.kap} \setlastpage
+<a href=#802 id=802 data-nosnippet>802</a>    \typeout{^^J -- File `\jobname.tex' processed with Kluwer Editor file for:}
+<a href=#803 id=803 data-nosnippet>803</a>    \typeout{ -- \@journal^^J}
+<a href=#804 id=804 data-nosnippet>804</a>  \fi\par
+<a href=#805 id=805 data-nosnippet>805</a>  \let\chapter\kap@chapter
+<a href=#806 id=806 data-nosnippet>806</a>\maketitle@@}
+<a href=#807 id=807 data-nosnippet>807</a>
+<a href=#808 id=808 data-nosnippet>808</a>\let\kapenddocument\enddocument
+<a href=#809 id=809 data-nosnippet>809</a>\def\enddocument{\label{lastpage} \kapenddocument}
+<a href=#810 id=810 data-nosnippet>810</a>
+<a href=#811 id=811 data-nosnippet>811</a>\def\editor#1{\gdef\@kapident{\hbox{}\hfill\elvtt #1\\
+<a href=#812 id=812 data-nosnippet>812</a>  \hbox{}\hfill\jobname.tex - Date: \today~Time: \timenow\par}}
+<a href=#813 id=813 data-nosnippet>813</a>\let\typesetter\editor
+<a href=#814 id=814 data-nosnippet>814</a>\gdef\@kapident{}
+<a href=#815 id=815 data-nosnippet>815</a>
+<a href=#816 id=816 data-nosnippet>816</a>\newif\if@editorsset
+<a href=#817 id=817 data-nosnippet>817</a>\def\editors#1{\gdef\@editors{#1}\global\@editorssettrue}
+<a href=#818 id=818 data-nosnippet>818</a>\def\@editors{}
+<a href=#819 id=819 data-nosnippet>819</a>
+<a href=#820 id=820 data-nosnippet>820</a>\def\@copyright{\footnotesize\vskip 2\baselineskip\vskip1em
+<a href=#821 id=821 data-nosnippet>821</a>  \normalsize\@kapident}
+<a href=#822 id=822 data-nosnippet>822</a>
+<a href=#823 id=823 data-nosnippet>823</a>\newcount\@hour
+<a href=#824 id=824 data-nosnippet>824</a>\newcount\@minute
+<a href=#825 id=825 data-nosnippet>825</a>\def\timenow{\@hour=\time \divide\@hour by 60 \number\@hour:%
+<a href=#826 id=826 data-nosnippet>826</a>  \multiply\@hour by 60 \@minute=\time \global\advance\@minute by -\@hour%
+<a href=#827 id=827 data-nosnippet>827</a>  \ifnum\@minute&lt;10 0\number\@minute\else\number\@minute\fi}
+<a href=#828 id=828 data-nosnippet>828</a>
+<a href=#829 id=829 data-nosnippet>829</a>\def\journal#1{\@ifundefined{@#1}{\kap@warning\typeout{ --
+<a href=#830 id=830 data-nosnippet>830</a>      Journal code `#1' does not exist.^^J}}{\csname @#1\endcsname}
+<a href=#831 id=831 data-nosnippet>831</a>  \gdef\@copyright{\footnotesize
+<a href=#832 id=832 data-nosnippet>832</a>  \it
+<a href=#833 id=833 data-nosnippet>833</a>  \if@editorsset \@editors~(eds), \fi
+<a href=#834 id=834 data-nosnippet>834</a>  \@journal, \@firstpage--\@lastpage.
+<a href=#835 id=835 data-nosnippet>835</a>  \hfill\hbox{}\\
+<a href=#836 id=836 data-nosnippet>836</a>  \copyright~\number\@pubyear~{\it\@printline}
+<a href=#837 id=837 data-nosnippet>837</a>  \hfill\hbox{}\par
+<a href=#838 id=838 data-nosnippet>838</a>  \vskip 1em
+<a href=#839 id=839 data-nosnippet>839</a>  \normalsize\@kapident}}
+<a href=#840 id=840 data-nosnippet>840</a>\gdef\@journal{NAME OF JOURNAL}
+<a href=#841 id=841 data-nosnippet>841</a>
+<a href=#842 id=842 data-nosnippet>842</a>\def\book#1{\@ifundefined{@#1}{\kap@warning\typeout{ --
+<a href=#843 id=843 data-nosnippet>843</a>      Book code `#1' does not exist.^^J}}{\csname @#1\endcsname}
+<a href=#844 id=844 data-nosnippet>844</a>  \gdef\@copyright{\footnotesize
+<a href=#845 id=845 data-nosnippet>845</a>  \it
+<a href=#846 id=846 data-nosnippet>846</a>  \if@editorsset \@editors~(eds), \fi
+<a href=#847 id=847 data-nosnippet>847</a>  \@book, \@firstpage--\@lastpage.
+<a href=#848 id=848 data-nosnippet>848</a>  \hfill\hbox{}\\
+<a href=#849 id=849 data-nosnippet>849</a>  \copyright~\number\@pubyear~{\it\@printline}
+<a href=#850 id=850 data-nosnippet>850</a>  \hfill\hbox{}\par
+<a href=#851 id=851 data-nosnippet>851</a>  \vskip 1em
+<a href=#852 id=852 data-nosnippet>852</a>  \normalsize\@kapident}}
+<a href=#853 id=853 data-nosnippet>853</a>\gdef\@book{NAME OF BOOK PROJECT}
+<a href=#854 id=854 data-nosnippet>854</a>
+<a href=#855 id=855 data-nosnippet>855</a>\def\@printline{\@kap. \@prin\ \@country.}
+<a href=#856 id=856 data-nosnippet>856</a>\def\@kap{Kluwer Academic Publishers}
+<a href=#857 id=857 data-nosnippet>857</a>\def\@prin{Printed in}
+<a href=#858 id=858 data-nosnippet>858</a>
+<a href=#859 id=859 data-nosnippet>859</a>\def\country#1{\gdef\@country{#1}}
+<a href=#860 id=860 data-nosnippet>860</a>\gdef\@country{\@defaultcountry}
+<a href=#861 id=861 data-nosnippet>861</a>\def\defaultcountry#1{\gdef\@defaultcountry{#1}}
+<a href=#862 id=862 data-nosnippet>862</a>\defaultcountry{the Netherlands}
+<a href=#863 id=863 data-nosnippet>863</a>
+<a href=#864 id=864 data-nosnippet>864</a>\def\volume#1{\gdef\@volume{#1}}
+<a href=#865 id=865 data-nosnippet>865</a>\gdef\@volume{0}
+<a href=#866 id=866 data-nosnippet>866</a>
+<a href=#867 id=867 data-nosnippet>867</a>\def\pubyear#1{\gdef\@pubyear{#1}}
+<a href=#868 id=868 data-nosnippet>868</a>\gdef\@pubyear{\year}
+<a href=#869 id=869 data-nosnippet>869</a>
+<a href=#870 id=870 data-nosnippet>870</a>\def\firstpage#1{\c@page=0 \global\advance\c@page by #1
+<a href=#871 id=871 data-nosnippet>871</a>  \xdef\@firstpage{\thepage}}
+<a href=#872 id=872 data-nosnippet>872</a>\gdef\@firstpage{1}
+<a href=#873 id=873 data-nosnippet>873</a>
+<a href=#874 id=874 data-nosnippet>874</a>\def\lastpage#1{\gdef\@lastpage{#1}}
+<a href=#875 id=875 data-nosnippet>875</a>\def\setlastpage{\@ifundefined{r@lastpage}{}{\expandafter\@setlastp\r@lastpage}}
+<a href=#876 id=876 data-nosnippet>876</a>\def\@setlastp#1#2{\gdef\@lastpage{#2}}
+<a href=#877 id=877 data-nosnippet>877</a>\gdef\@lastpage{1}
+<a href=#878 id=878 data-nosnippet>878</a>
+<a href=#879 id=879 data-nosnippet>879</a>\def\received#1{\gdef\@pubdate{(#1)}}
+<a href=#880 id=880 data-nosnippet>880</a>\gdef\@pubdate{\@date}
+<a href=#881 id=881 data-nosnippet>881</a>
+<a href=#882 id=882 data-nosnippet>882</a>\def\today{\ifcase\month\or
+<a href=#883 id=883 data-nosnippet>883</a>  January\or February\or March\or April\or May\or June\or
+<a href=#884 id=884 data-nosnippet>884</a>  July\or August\or September\or October\or November\or December\fi
+<a href=#885 id=885 data-nosnippet>885</a>  \space\number\day, \number\year}
+<a href=#886 id=886 data-nosnippet>886</a>
+<a href=#887 id=887 data-nosnippet>887</a>\@addtoreset{equation}{chapter}   % Makes \chapter reset 'equation' counter.
+<a href=#888 id=888 data-nosnippet>888</a>"#</span>);
+<a href=#889 id=889 data-nosnippet>889</a>});
+</code></pre></div></section></main></body></html>

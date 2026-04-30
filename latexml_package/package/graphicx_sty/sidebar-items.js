@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["image_candidates","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["image_candidates","image_graphicx_sizer","load_definitions"]};

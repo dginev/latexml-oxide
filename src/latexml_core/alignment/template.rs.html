@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/alignment/template.rs`."><title>template.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/alignment/</div>template.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Support for tabular/array environments
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/alignment/template.rs`."><title>template.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/alignment/</div>template.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Support for tabular/array environments
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span><span class="kw">super</span>::cell::Cell;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::Digested;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -418,4 +418,112 @@
 <a href=#418 id=418 data-nosnippet>418</a>  <span class="kw">pub fn </span>unset_pseudo(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.pseudorow = <span class="bool-val">false</span>; }
 <a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">pub fn </span>is_pseudo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.pseudorow }
 <a href=#420 id=420 data-nosnippet>420</a>}
+<a href=#421 id=421 data-nosnippet>421</a>
+<a href=#422 id=422 data-nosnippet>422</a><span class="attr">#[cfg(test)]
+<a href=#423 id=423 data-nosnippet>423</a></span><span class="kw">mod </span>tests {
+<a href=#424 id=424 data-nosnippet>424</a>  <span class="kw">use </span>super::<span class="kw-2">*</span>;
+<a href=#425 id=425 data-nosnippet>425</a>
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="attr">#[test]
+<a href=#427 id=427 data-nosnippet>427</a>  </span><span class="kw">fn </span>align_default_is_left() {
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="macro">assert_eq!</span>(Align::default(), Align::Left);
+<a href=#429 id=429 data-nosnippet>429</a>  }
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a>  <span class="attr">#[test]
+<a href=#432 id=432 data-nosnippet>432</a>  </span><span class="kw">fn </span>align_char_code() {
+<a href=#433 id=433 data-nosnippet>433</a>    <span class="macro">assert_eq!</span>(Align::Left.char_code(), <span class="string">'l'</span>);
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="macro">assert_eq!</span>(Align::Right.char_code(), <span class="string">'r'</span>);
+<a href=#435 id=435 data-nosnippet>435</a>    <span class="macro">assert_eq!</span>(Align::Center.char_code(), <span class="string">'c'</span>);
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="macro">assert_eq!</span>(Align::Justify.char_code(), <span class="string">'p'</span>);
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="comment">// Char variant falls back to 'c' for sizing.
+<a href=#438 id=438 data-nosnippet>438</a>    </span><span class="macro">assert_eq!</span>(Align::Char(<span class="string">"."</span>.to_string()).char_code(), <span class="string">'c'</span>);
+<a href=#439 id=439 data-nosnippet>439</a>  }
+<a href=#440 id=440 data-nosnippet>440</a>
+<a href=#441 id=441 data-nosnippet>441</a>  <span class="attr">#[test]
+<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="kw">fn </span>align_name() {
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="macro">assert_eq!</span>(Align::Left.name(), <span class="string">"left"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="macro">assert_eq!</span>(Align::Right.name(), <span class="string">"right"</span>);
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="macro">assert_eq!</span>(Align::Center.name(), <span class="string">"center"</span>);
+<a href=#446 id=446 data-nosnippet>446</a>    <span class="macro">assert_eq!</span>(Align::Justify.name(), <span class="string">"justify"</span>);
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="macro">assert_eq!</span>(Align::Char(<span class="string">"."</span>.to_string()).name(), <span class="string">"char:."</span>);
+<a href=#448 id=448 data-nosnippet>448</a>  }
+<a href=#449 id=449 data-nosnippet>449</a>
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="attr">#[test]
+<a href=#451 id=451 data-nosnippet>451</a>  </span><span class="kw">fn </span>align_from_char_basic() {
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="macro">assert_eq!</span>(Align::from(<span class="string">'l'</span>), Align::Left);
+<a href=#453 id=453 data-nosnippet>453</a>    <span class="macro">assert_eq!</span>(Align::from(<span class="string">'r'</span>), Align::Right);
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="macro">assert_eq!</span>(Align::from(<span class="string">'c'</span>), Align::Center);
+<a href=#455 id=455 data-nosnippet>455</a>    <span class="macro">assert_eq!</span>(Align::from(<span class="string">'p'</span>), Align::Justify);
+<a href=#456 id=456 data-nosnippet>456</a>  }
+<a href=#457 id=457 data-nosnippet>457</a>
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="attr">#[test]
+<a href=#459 id=459 data-nosnippet>459</a>  </span><span class="kw">fn </span>align_from_char_unknown_is_default() {
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="comment">// Unknown char falls back to Default (Left).
+<a href=#461 id=461 data-nosnippet>461</a>    </span><span class="macro">assert_eq!</span>(Align::from(<span class="string">'x'</span>), Align::Left);
+<a href=#462 id=462 data-nosnippet>462</a>    <span class="macro">assert_eq!</span>(Align::from(<span class="string">'?'</span>), Align::Left);
+<a href=#463 id=463 data-nosnippet>463</a>  }
+<a href=#464 id=464 data-nosnippet>464</a>
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="attr">#[test]
+<a href=#466 id=466 data-nosnippet>466</a>  </span><span class="kw">fn </span>axis_name() {
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="macro">assert_eq!</span>(Axis::Column.name(), <span class="string">"column"</span>);
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="macro">assert_eq!</span>(Axis::Row.name(), <span class="string">"row"</span>);
+<a href=#469 id=469 data-nosnippet>469</a>  }
+<a href=#470 id=470 data-nosnippet>470</a>
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="attr">#[test]
+<a href=#472 id=472 data-nosnippet>472</a>  </span><span class="kw">fn </span>axis_marker_name_is_inverse() {
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="comment">// marker_name is intentionally "the other axis" — column's
+<a href=#474 id=474 data-nosnippet>474</a>    // marker is a row, row's marker is a column (possibly a naming
+<a href=#475 id=475 data-nosnippet>475</a>    // artifact from the Perl side).
+<a href=#476 id=476 data-nosnippet>476</a>    </span><span class="macro">assert_eq!</span>(Axis::Column.marker_name(), <span class="string">"row"</span>);
+<a href=#477 id=477 data-nosnippet>477</a>    <span class="macro">assert_eq!</span>(Axis::Row.marker_name(), <span class="string">"column"</span>);
+<a href=#478 id=478 data-nosnippet>478</a>  }
+<a href=#479 id=479 data-nosnippet>479</a>
+<a href=#480 id=480 data-nosnippet>480</a>  <span class="attr">#[test]
+<a href=#481 id=481 data-nosnippet>481</a>  </span><span class="kw">fn </span>column_spec_display_chars() {
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Integer), <span class="string">"i"</span>);
+<a href=#483 id=483 data-nosnippet>483</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Empty), <span class="string">"_"</span>);
+<a href=#484 id=484 data-nosnippet>484</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Unknown), <span class="string">"?"</span>);
+<a href=#485 id=485 data-nosnippet>485</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Text), <span class="string">"t"</span>);
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::MultiText), <span class="string">"tt"</span>);
+<a href=#487 id=487 data-nosnippet>487</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Math), <span class="string">"m"</span>);
+<a href=#488 id=488 data-nosnippet>488</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::MathAltText), <span class="string">"mx"</span>);
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::D), <span class="string">"d"</span>);
+<a href=#490 id=490 data-nosnippet>490</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, ColumnSpec::Graphics), <span class="string">"g"</span>);
+<a href=#491 id=491 data-nosnippet>491</a>  }
+<a href=#492 id=492 data-nosnippet>492</a>
+<a href=#493 id=493 data-nosnippet>493</a>  <span class="attr">#[test]
+<a href=#494 id=494 data-nosnippet>494</a>  </span><span class="kw">fn </span>column_spec_difference_heuristic_self_is_zero() {
+<a href=#495 id=495 data-nosnippet>495</a>    <span class="comment">// Like-to-like distances are 0 for each non-generic variant.
+<a href=#496 id=496 data-nosnippet>496</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#497 id=497 data-nosnippet>497</a>      ColumnSpec::Empty.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Empty),
+<a href=#498 id=498 data-nosnippet>498</a>      <span class="number">0.0
+<a href=#499 id=499 data-nosnippet>499</a>    </span>);
+<a href=#500 id=500 data-nosnippet>500</a>    <span class="macro">assert_eq!</span>(
+<a href=#501 id=501 data-nosnippet>501</a>      ColumnSpec::Math.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Math),
+<a href=#502 id=502 data-nosnippet>502</a>      <span class="number">0.0
+<a href=#503 id=503 data-nosnippet>503</a>    </span>);
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="macro">assert_eq!</span>(
+<a href=#505 id=505 data-nosnippet>505</a>      ColumnSpec::Integer.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Integer),
+<a href=#506 id=506 data-nosnippet>506</a>      <span class="number">0.0
+<a href=#507 id=507 data-nosnippet>507</a>    </span>);
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="macro">assert_eq!</span>(
+<a href=#509 id=509 data-nosnippet>509</a>      ColumnSpec::Text.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Text),
+<a href=#510 id=510 data-nosnippet>510</a>      <span class="number">0.0
+<a href=#511 id=511 data-nosnippet>511</a>    </span>);
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="macro">assert_eq!</span>(ColumnSpec::D.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::D), <span class="number">0.0</span>);
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="macro">assert_eq!</span>(
+<a href=#514 id=514 data-nosnippet>514</a>      ColumnSpec::Graphics.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Graphics),
+<a href=#515 id=515 data-nosnippet>515</a>      <span class="number">0.0
+<a href=#516 id=516 data-nosnippet>516</a>    </span>);
+<a href=#517 id=517 data-nosnippet>517</a>  }
+<a href=#518 id=518 data-nosnippet>518</a>
+<a href=#519 id=519 data-nosnippet>519</a>  <span class="attr">#[test]
+<a href=#520 id=520 data-nosnippet>520</a>  </span><span class="kw">fn </span>column_spec_difference_heuristic_incompatible_is_large() {
+<a href=#521 id=521 data-nosnippet>521</a>    <span class="comment">// Graphics vs anything else → 0.75 (Perl's "strong difference").
+<a href=#522 id=522 data-nosnippet>522</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#523 id=523 data-nosnippet>523</a>      ColumnSpec::Graphics.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Math),
+<a href=#524 id=524 data-nosnippet>524</a>      <span class="number">0.75
+<a href=#525 id=525 data-nosnippet>525</a>    </span>);
+<a href=#526 id=526 data-nosnippet>526</a>    <span class="macro">assert_eq!</span>(ColumnSpec::D.difference_heuristic(<span class="kw-2">&amp;</span>ColumnSpec::Text), <span class="number">0.75</span>);
+<a href=#527 id=527 data-nosnippet>527</a>  }
+<a href=#528 id=528 data-nosnippet>528</a>}
 </code></pre></div></section></main></body></html>

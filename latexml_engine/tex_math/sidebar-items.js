@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["adjust_mathstyle","frac_sizer","is_script","load_definitions","revert_script"],"static":["DELIMITER_MAP"],"struct":["DelimiterMeta"]};

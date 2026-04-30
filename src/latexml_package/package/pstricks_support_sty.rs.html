@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pstricks_support_sty.rs`."><title>pstricks_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pstricks_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pstricks_support.sty — PSTricks drawing support (DVI-only)
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pstricks_support_sty.rs`."><title>pstricks_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pstricks_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pstricks_support.sty — PSTricks drawing support (DVI-only)
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: pstricks_support.sty.ltxml — 1057 lines
 <a href=#3 id=3 data-nosnippet>3</a>//! Full PSTricks graphics system with coordinate transforms, custom parameter
 <a href=#4 id=4 data-nosnippet>4</a>//! types (PSCoord, PSDimension, PSAngle), and DefPSConstructor meta-definition.
@@ -15,75 +15,222 @@
 <a href=#15 id=15 data-nosnippet>15</a>  // Core coordinate/dimension readers — Perl L30-120 (complex Perl closures)
 <a href=#16 id=16 data-nosnippet>16</a>  // Stubbed: ReadPSDimension, ReadPSCoord, ReadPSAngle
 <a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a>  // Transform management — Perl L130-200
-<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pst@object{}"</span>, <span class="string">"#1"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\use@par"</span>, <span class="string">""</span>);
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\addto@par{}"</span>, <span class="string">""</span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psset{}"</span>, <span class="string">""</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psset@special{}"</span>, <span class="string">""</span>);
-<a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="comment">// Graphics parameters — Perl L200-350
-<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pslinewidth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0.8pt"</span>));
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psxunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psyunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pst@dima" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pst@dimb" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// Core drawing environments — Perl L400-500
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{pspicture}[][]"</span>, <span class="string">"#body"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{pspicture*}[][]"</span>, <span class="string">"#body"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// Line/shape constructors — Perl L500-700
-<a href=#38 id=38 data-nosnippet>38</a>  // All drawing commands are no-ops (DVI-only)
-<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psline[]"</span>, <span class="string">""</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pspolygon[]"</span>, <span class="string">""</span>);
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psframe[]"</span>, <span class="string">""</span>);
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscircle[]"</span>, <span class="string">""</span>);
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psellipse[]"</span>, <span class="string">""</span>);
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psarc[]"</span>, <span class="string">""</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pswedge[]"</span>, <span class="string">""</span>);
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psbezier[]"</span>, <span class="string">""</span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscurve[]"</span>, <span class="string">""</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psecurve[]"</span>, <span class="string">""</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psccurve[]"</span>, <span class="string">""</span>);
-<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\parabola[]"</span>, <span class="string">""</span>);
-<a href=#51 id=51 data-nosnippet>51</a>
-<a href=#52 id=52 data-nosnippet>52</a>  <span class="comment">// Placement — Perl L700-900
-<a href=#53 id=53 data-nosnippet>53</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\rput OptionalMatch:* [][]{}{}"</span>,  <span class="string">"#4"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\uput[]{}{}"</span>,  <span class="string">"#3"</span>);
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\multirput[]{}{}{}{}"</span>,  <span class="string">""</span>);
-<a href=#56 id=56 data-nosnippet>56</a>
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="comment">// Grid and axes — Perl L900-1000
-<a href=#58 id=58 data-nosnippet>58</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psgrid[]"</span>, <span class="string">""</span>);
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psaxes[]"</span>, <span class="string">""</span>);
-<a href=#60 id=60 data-nosnippet>60</a>
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// Custom object and clip — Perl L1000-1057
-<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pscustom[]"</span>, <span class="string">""</span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psclip[]"</span>, <span class="string">""</span>);
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endpsclip"</span>, <span class="string">""</span>);
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// Arrow tips
-<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psoverlay{}"</span>, <span class="string">""</span>);
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@getangle{}"</span>, <span class="string">""</span>);
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@number{}"</span>, <span class="string">""</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@coor"</span>, <span class="string">""</span>);
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L1042-1055: color shorthands. pstricks
-<a href=#73 id=73 data-nosnippet>73</a>  // re-binds these CSes (usually provided by color.sty / xcolor.sty as the
-<a href=#74 id=74 data-nosnippet>74</a>  // named colors) so that `\blue`, `\red`, etc. in figure/node text resolve
-<a href=#75 id=75 data-nosnippet>75</a>  // to a `\color{…}` call. Arxiv 1107.3732 uses `\node[…]{\blue{\small …}}`
-<a href=#76 id=76 data-nosnippet>76</a>  // inside `\tikzpicture`; without these, `\blue` is undefined and errors.
-<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\black"</span>, <span class="string">"\\color{black}"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\darkgray"</span>, <span class="string">"\\color{darkgray}"</span>);
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\gray"</span>, <span class="string">"\\color{gray}"</span>);
-<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lightgray"</span>, <span class="string">"\\color{lightgray}"</span>);
-<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\white"</span>, <span class="string">"\\color{white}"</span>);
-<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\blue"</span>, <span class="string">"\\color{blue}"</span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\red"</span>, <span class="string">"\\color{red}"</span>);
-<a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\green"</span>, <span class="string">"\\color{green}"</span>);
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\yellow"</span>, <span class="string">"\\color{yellow}"</span>);
-<a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\magenta"</span>, <span class="string">"\\color{magenta}"</span>);
-<a href=#87 id=87 data-nosnippet>87</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cyan"</span>, <span class="string">"\\color{cyan}"</span>);
-<a href=#88 id=88 data-nosnippet>88</a>});
+<a href=#18 id=18 data-nosnippet>18</a>  // Transform management — Perl L130-200. `\psset` / `\@@@ackscale` are
+<a href=#19 id=19 data-nosnippet>19</a>  // Perl DefConstructor / DefPrimitive — the Rust stubs are DefMacro
+<a href=#20 id=20 data-nosnippet>20</a>  // drops because the full body needs PSDim*/PSAngle/PSOrigin parameter
+<a href=#21 id=21 data-nosnippet>21</a>  // types that aren't ported (see WISDOM #41 — TeXDelimiter / Pair /
+<a href=#22 id=22 data-nosnippet>22</a>  // PSDim are all structural parameter-type gaps). DP-audit flags both
+<a href=#23 id=23 data-nosnippet>23</a>  // entries; safe until the parameter types land (no \edef site
+<a href=#24 id=24 data-nosnippet>24</a>  // observes these CSes; pstricks use is stomach-time invocation).
+<a href=#25 id=25 data-nosnippet>25</a>  //
+<a href=#26 id=26 data-nosnippet>26</a>  // Intentional divergence (WISDOM #44 class: DVI-only + parameter-type
+<a href=#27 id=27 data-nosnippet>27</a>  // blocker): pstricks is DVI-only — the tracker (_psActiveTransform /
+<a href=#28 id=28 data-nosnippet>28</a>  // ackTransform) lives only in PSTricks post-processing and is not
+<a href=#29 id=29 data-nosnippet>29</a>  // ported to Rust. Both the \psset DefConstructor → DefMacro flip
+<a href=#30 id=30 data-nosnippet>30</a>  // (L28) and the \@@@ackscale DefPrimitive → DefMacro flip (L181) are
+<a href=#31 id=31 data-nosnippet>31</a>  // no-op arg-consumers whose observable behavior under an
+<a href=#32 id=32 data-nosnippet>32</a>  // HTML/MathML backend is identical to a constructor body of "".
+<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pst@object{}"</span>, <span class="string">"#1"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\use@par"</span>, <span class="string">""</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\addto@par{}"</span>, <span class="string">""</span>);
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psset{}"</span>, <span class="string">""</span>);
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psset@special{}"</span>, <span class="string">""</span>);
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L580-606: register 22 pstricks keyvals
+<a href=#40 id=40 data-nosnippet>40</a>  // covering dot/arrow sizes, line styling, frame/arc/label spacing, and
+<a href=#41 id=41 data-nosnippet>41</a>  // coordinate units. Perl types PSDimFloat / PSAngle / PSDimension /
+<a href=#42 id=42 data-nosnippet>42</a>  // PSDimDim / PSOrigin / PSRegisterDimension / Float aren't registered
+<a href=#43 id=43 data-nosnippet>43</a>  // Rust types; register with the untyped placeholder ("") since this
+<a href=#44 id=44 data-nosnippet>44</a>  // binding is DVI-only and no consumer coerces these values. Author code
+<a href=#45 id=45 data-nosnippet>45</a>  // that tests `\@ifundefined{KV@pstricks@dotsize@default}` now sees the
+<a href=#46 id=46 data-nosnippet>46</a>  // Perl-equivalent answer.
+<a href=#47 id=47 data-nosnippet>47</a>  </span><span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"dotsize"</span>, <span class="string">"tbarsize"</span>, <span class="string">"dotangle"</span>,
+<a href=#48 id=48 data-nosnippet>48</a>              <span class="string">"arrowsize"</span>, <span class="string">"arrowlength"</span>, <span class="string">"arrowinset"</span>,
+<a href=#49 id=49 data-nosnippet>49</a>              <span class="string">"dotsep"</span>, <span class="string">"dash"</span>, <span class="string">"linewidth"</span>, <span class="string">"linearc"</span>, <span class="string">"framearc"</span>,
+<a href=#50 id=50 data-nosnippet>50</a>              <span class="string">"origin"</span>, <span class="string">"framesep"</span>, <span class="string">"labelsep"</span>, <span class="string">"doublesep"</span>,
+<a href=#51 id=51 data-nosnippet>51</a>              <span class="string">"arcsep"</span>, <span class="string">"arcsepA"</span>, <span class="string">"arcsepB"</span>,
+<a href=#52 id=52 data-nosnippet>52</a>              <span class="string">"unit"</span>, <span class="string">"xunit"</span>, <span class="string">"yunit"</span>, <span class="string">"runit"</span>] {
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="macro">DefKeyVal!</span>(<span class="string">"pstricks"</span>, key, <span class="string">""</span>);
+<a href=#54 id=54 data-nosnippet>54</a>  }
+<a href=#55 id=55 data-nosnippet>55</a>
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// Graphics parameters — Perl L200-350
+<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\pslinewidth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0.8pt"</span>));
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psxunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psyunit" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pst@dima" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pst@dimb" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// Core drawing environments — Perl L400-500
+<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{pspicture}[][]"</span>, <span class="string">"#body"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{pspicture*}[][]"</span>, <span class="string">"#body"</span>);
+<a href=#67 id=67 data-nosnippet>67</a>
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// Line/shape constructors — Perl L500-700
+<a href=#69 id=69 data-nosnippet>69</a>  // All drawing commands are no-ops (DVI-only)
+<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psline[]"</span>, <span class="string">""</span>);
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pspolygon[]"</span>, <span class="string">""</span>);
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psframe[]"</span>, <span class="string">""</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscircle[]"</span>, <span class="string">""</span>);
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psellipse[]"</span>, <span class="string">""</span>);
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psarc[]"</span>, <span class="string">""</span>);
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psarcn[]"</span>, <span class="string">""</span>);
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pswedge[]"</span>, <span class="string">""</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psbezier[]"</span>, <span class="string">""</span>);
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscurve[]"</span>, <span class="string">""</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psecurve[]"</span>, <span class="string">""</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psccurve[]"</span>, <span class="string">""</span>);
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\parabola[]"</span>, <span class="string">""</span>);
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>  <span class="comment">// Placement — Perl L700-900
+<a href=#85 id=85 data-nosnippet>85</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\rput OptionalMatch:* [][]{}{}"</span>,  <span class="string">"#4"</span>);
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\uput[]{}{}"</span>,  <span class="string">"#3"</span>);
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\multirput[]{}{}{}{}"</span>,  <span class="string">""</span>);
+<a href=#88 id=88 data-nosnippet>88</a>
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="comment">// Grid and axes — Perl L900-1000
+<a href=#90 id=90 data-nosnippet>90</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psgrid[]"</span>, <span class="string">""</span>);
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psaxes[]"</span>, <span class="string">""</span>);
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// Custom object and clip — Perl L1000-1057
+<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pscustom[]"</span>, <span class="string">""</span>);
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L996:
+<a href=#96 id=96 data-nosnippet>96</a>  //   DefEnvironment('{psclip} {}',
+<a href=#97 id=97 data-nosnippet>97</a>  //     '&lt;ltx:clip&gt; &lt;ltx:clippath&gt; #1 &lt;/ltx:clippath&gt; #body &lt;/ltx:clip&gt;');
+<a href=#98 id=98 data-nosnippet>98</a>  // Prior Rust stubbed both \psclip and \endpsclip to empty DefMacro,
+<a href=#99 id=99 data-nosnippet>99</a>  // losing the &lt;ltx:clip&gt;/&lt;ltx:clippath&gt; wrapping structure entirely.
+<a href=#100 id=100 data-nosnippet>100</a>  // Port as DefEnvironment matching Perl's signature and template.
+<a href=#101 id=101 data-nosnippet>101</a>  // (ltx:clip + ltx:clippath are declared in picture.rnc schema.)
+<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{psclip}{}"</span>,
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="string">"&lt;ltx:clip&gt;&lt;ltx:clippath&gt;#1&lt;/ltx:clippath&gt;#body&lt;/ltx:clip&gt;"</span>);
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L995:
+<a href=#106 id=106 data-nosnippet>106</a>  //   DefConstructor('\clipbox [PSDimension] {}',
+<a href=#107 id=107 data-nosnippet>107</a>  //     "&lt;ltx:g bclip='&amp;ptValue(#1)'&gt;#2&lt;/ltx:g&gt;");
+<a href=#108 id=108 data-nosnippet>108</a>  // PSDimension parameter type isn't ported (see WISDOM #41 structural
+<a href=#109 id=109 data-nosnippet>109</a>  // parameter-type gap), and &amp;ptValue is the Perl-side dimension-to-pt
+<a href=#110 id=110 data-nosnippet>110</a>  // converter that PSTricks post-processing consumes. Since pstricks is
+<a href=#111 id=111 data-nosnippet>111</a>  // DVI-only in Rust, the bclip attribute has no downstream reader — we
+<a href=#112 id=112 data-nosnippet>112</a>  // stub as a pass-through wrapper that still emits the &lt;ltx:g&gt; so the
+<a href=#113 id=113 data-nosnippet>113</a>  // structural nesting matches. The raw optional-arg string is passed
+<a href=#114 id=114 data-nosnippet>114</a>  // into bclip unchanged; harmless under the HTML/MathML backend.
+<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\clipbox[]{}"</span>, <span class="string">"&lt;ltx:g bclip='#1'&gt;#2&lt;/ltx:g&gt;"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Arrow tips
+<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psoverlay{}"</span>, <span class="string">""</span>);
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@getangle{}"</span>, <span class="string">""</span>);
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@number{}"</span>, <span class="string">""</span>);
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pst@coor"</span>, <span class="string">""</span>);
+<a href=#122 id=122 data-nosnippet>122</a>
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L1042-1055: color shorthands. pstricks
+<a href=#124 id=124 data-nosnippet>124</a>  // re-binds these CSes (usually provided by color.sty / xcolor.sty as the
+<a href=#125 id=125 data-nosnippet>125</a>  // named colors) so that `\blue`, `\red`, etc. in figure/node text resolve
+<a href=#126 id=126 data-nosnippet>126</a>  // to a `\color{…}` call. Arxiv 1107.3732 uses `\node[…]{\blue{\small …}}`
+<a href=#127 id=127 data-nosnippet>127</a>  // inside `\tikzpicture`; without these, `\blue` is undefined and errors.
+<a href=#128 id=128 data-nosnippet>128</a>  // Extra length registers — Perl L411-419.
+<a href=#129 id=129 data-nosnippet>129</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\psframesep" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"3pt"</span>));
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pslabelsep" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"5pt"</span>));
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psdotsize"  </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"2pt"</span>));
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\psrunit"    </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"1cm"</span>));
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Color definition shorthands — Perl L570-573.
+<a href=#135 id=135 data-nosnippet>135</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newgray{}{}"</span>,      <span class="string">"\\definecolor{#1}{gray}{#2}"</span>);
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\newrgbcolor{}{}"</span>,  <span class="string">"\\definecolor{#1}{rgb}{#2}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\newhsbcolor{}{}"</span>,  <span class="string">"\\definecolor{#1}{hsb}{#2}"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\newcmykcolor{}{}"</span>, <span class="string">"\\definecolor{#1}{cmyk}{#2}"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// Length helpers — Perl L650-651: Let to \setlength / \addtolength.
+<a href=#141 id=141 data-nosnippet>141</a>  </span><span class="macro">Let!</span>(<span class="string">"\\pssetlength"</span>,   <span class="string">"\\setlength"</span>);
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">Let!</span>(<span class="string">"\\psaddtolength"</span>, <span class="string">"\\addtolength"</span>);
+<a href=#143 id=143 data-nosnippet>143</a>
+<a href=#144 id=144 data-nosnippet>144</a>  <span class="comment">// Angle units — Perl L653-654. Sets `\degrees` state to 360 (default)
+<a href=#145 id=145 data-nosnippet>145</a>  // or to \degrees{angle}-provided value; \radians flips to 2π. The
+<a href=#146 id=146 data-nosnippet>146</a>  // angle value is stored via AssignValue and consulted by pstricks's
+<a href=#147 id=147 data-nosnippet>147</a>  // coord readers. Taken as-is from Perl.
+<a href=#148 id=148 data-nosnippet>148</a>  // `[Float]` would map to a non-typed Tokens under the current prelude;
+<a href=#149 id=149 data-nosnippet>149</a>  // Perl uses the raw string value as-is, so keep the argument as
+<a href=#150 id=150 data-nosnippet>150</a>  // Optional tokens and parse at use time.
+<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\degrees []"</span>, sub[(angle)] {
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="kw">let </span>v = angle
+<a href=#153 id=153 data-nosnippet>153</a>      .as_ref()
+<a href=#154 id=154 data-nosnippet>154</a>      .and_then(|t| t.to_string().trim().parse::&lt;f64&gt;().ok())
+<a href=#155 id=155 data-nosnippet>155</a>      .unwrap_or(<span class="number">360.0</span>);
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="macro">AssignValue!</span>(<span class="string">"\\degrees" </span>=&gt; Stored::from(v), <span class="prelude-val">None</span>);
+<a href=#157 id=157 data-nosnippet>157</a>  });
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\radians"</span>, {
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="macro">AssignValue!</span>(<span class="string">"\\degrees" </span>=&gt; Stored::from(std::f64::consts::TAU), <span class="prelude-val">None</span>);
+<a href=#160 id=160 data-nosnippet>160</a>  });
+<a href=#161 id=161 data-nosnippet>161</a>
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="comment">// Coordinate-mode no-ops — Perl L1037-1039. No effect in LaTeXML.
+<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\SpecialCoor"</span>, <span class="string">""</span>);
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NormalCoor"</span>,  <span class="string">""</span>);
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PSTricksOff"</span>, <span class="string">""</span>);
+<a href=#166 id=166 data-nosnippet>166</a>
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="comment">// Rotation constructors — Perl pstricks_support.sty.ltxml L1002-1006.
+<a href=#168 id=168 data-nosnippet>168</a>  // Produce &lt;ltx:g&gt; SVG-rotate wrappers. `bounded =&gt; 1` matches Perl —
+<a href=#169 id=169 data-nosnippet>169</a>  // restricts the body's group scope so subsequent text outside the
+<a href=#170 id=170 data-nosnippet>170</a>  // rotate doesn't inherit the wrapper's font/color side effects.
+<a href=#171 id=171 data-nosnippet>171</a>  // (Perl additionally calls `ackTransform('rotate(...)')` in
+<a href=#172 id=172 data-nosnippet>172</a>  // beforeDigest to compose the rotation onto the
+<a href=#173 id=173 data-nosnippet>173</a>  // `_psActiveTransform` state used downstream by ps-coordinate math
+<a href=#174 id=174 data-nosnippet>174</a>  // — that piece needs the Transform/_psActiveTransform infrastructure
+<a href=#175 id=175 data-nosnippet>175</a>  // which doesn't yet exist on the Rust side; deferred. See
+<a href=#176 id=176 data-nosnippet>176</a>  // pstricks_support.sty.ltxml `sub ackTransform`.)
+<a href=#177 id=177 data-nosnippet>177</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#178 id=178 data-nosnippet>178</a>    <span class="string">"\\rotateleft{}"</span>,
+<a href=#179 id=179 data-nosnippet>179</a>    <span class="string">"&lt;ltx:g transform='rotate(90)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#180 id=180 data-nosnippet>180</a>    bounded =&gt; <span class="bool-val">true
+<a href=#181 id=181 data-nosnippet>181</a>  </span>);
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefConstructor!</span>(
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="string">"\\rotateright{}"</span>,
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"&lt;ltx:g transform='rotate(-90)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#185 id=185 data-nosnippet>185</a>    bounded =&gt; <span class="bool-val">true
+<a href=#186 id=186 data-nosnippet>186</a>  </span>);
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">DefConstructor!</span>(
+<a href=#188 id=188 data-nosnippet>188</a>    <span class="string">"\\rotatedown{}"</span>,
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="string">"&lt;ltx:g transform='rotate(180)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#190 id=190 data-nosnippet>190</a>    bounded =&gt; <span class="bool-val">true
+<a href=#191 id=191 data-nosnippet>191</a>  </span>);
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// Perl pstricks_support.sty.ltxml L1009-1012: \@@@ackscale and the
+<a href=#194 id=194 data-nosnippet>194</a>  // \scalebox / \@@scalebox / \@@@scalebox trio that threads a scale
+<a href=#195 id=195 data-nosnippet>195</a>  // transform through the PSTricks _psActiveTransform tracker. The
+<a href=#196 id=196 data-nosnippet>196</a>  // tracker (ackTransform) isn't ported to Rust — it lives only in
+<a href=#197 id=197 data-nosnippet>197</a>  // PSTricks post-processing which Rust doesn't implement. Ship
+<a href=#198 id=198 data-nosnippet>198</a>  // \@@@ackscale as a no-op consume-the-arg stub so documents invoking
+<a href=#199 id=199 data-nosnippet>199</a>  // `\scalebox{0.5}{body}` via PSTricks don't hit undefined-CS.
+<a href=#200 id=200 data-nosnippet>200</a>  // `\scalebox` itself is provided by graphics_sty (standard LaTeX form);
+<a href=#201 id=201 data-nosnippet>201</a>  // not overriding it here keeps the tested scalebox golden intact.
+<a href=#202 id=202 data-nosnippet>202</a>  // Intentional DefPrimitive → DefMacro (WISDOM #44, same DVI-only
+<a href=#203 id=203 data-nosnippet>203</a>  // blocker as L18-31 umbrella).
+<a href=#204 id=204 data-nosnippet>204</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@@@ackscale{}"</span>, <span class="string">""</span>);
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\black"</span>, <span class="string">"\\color{black}"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\darkgray"</span>, <span class="string">"\\color{darkgray}"</span>);
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\gray"</span>, <span class="string">"\\color{gray}"</span>);
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lightgray"</span>, <span class="string">"\\color{lightgray}"</span>);
+<a href=#210 id=210 data-nosnippet>210</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\white"</span>, <span class="string">"\\color{white}"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\blue"</span>, <span class="string">"\\color{blue}"</span>);
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\red"</span>, <span class="string">"\\color{red}"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\green"</span>, <span class="string">"\\color{green}"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\yellow"</span>, <span class="string">"\\color{yellow}"</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\magenta"</span>, <span class="string">"\\color{magenta}"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cyan"</span>, <span class="string">"\\color{cyan}"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// Rotation wrappers — Perl pstricks_support.sty.ltxml L1002-1008.
+<a href=#219 id=219 data-nosnippet>219</a>  // Perl runs `ackTransform(...)` in before_digest to track the
+<a href=#220 id=220 data-nosnippet>220</a>  // transform for PSTricks post-processing (which Rust doesn't do —
+<a href=#221 id=221 data-nosnippet>221</a>  // pstricks is DVI-only here, documented at file-top WISDOM #44
+<a href=#222 id=222 data-nosnippet>222</a>  // class). Drop the before_digest and emit the &lt;ltx:g&gt; element
+<a href=#223 id=223 data-nosnippet>223</a>  // directly; visual result is identical under HTML/MathML backend.
+<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\rotateleft{}"</span>,  <span class="string">"&lt;ltx:g transform='rotate(90)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#225 id=225 data-nosnippet>225</a>    bounded =&gt; <span class="bool-val">true</span>);
+<a href=#226 id=226 data-nosnippet>226</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\rotateright{}"</span>, <span class="string">"&lt;ltx:g transform='rotate(-90)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#227 id=227 data-nosnippet>227</a>    bounded =&gt; <span class="bool-val">true</span>);
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\rotatedown{}"</span>,  <span class="string">"&lt;ltx:g transform='rotate(180)'&gt;#1&lt;/ltx:g&gt;"</span>,
+<a href=#229 id=229 data-nosnippet>229</a>    bounded =&gt; <span class="bool-val">true</span>);
+<a href=#230 id=230 data-nosnippet>230</a>  <span class="comment">// Note: `\scalebox` is left to graphics.sty's fully-featured
+<a href=#231 id=231 data-nosnippet>231</a>  // DefConstructor — pstricks's Perl override only swaps in its own
+<a href=#232 id=232 data-nosnippet>232</a>  // post-processing tracker (`\@@scalebox` → `\@@@scalebox`) which is
+<a href=#233 id=233 data-nosnippet>233</a>  // the DVI-only path we already omit above via the `\@@@ackscale`
+<a href=#234 id=234 data-nosnippet>234</a>  // no-op stub.
+<a href=#235 id=235 data-nosnippet>235</a></span>});
 </code></pre></div></section></main></body></html>

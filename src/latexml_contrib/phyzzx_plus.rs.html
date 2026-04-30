@@ -1,0 +1,1024 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/phyzzx_plus.rs`."><title>phyzzx_plus.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>phyzzx_plus.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl ar5iv-bindings/phyzzx.plus.ltxml — high-energy physics phyzzx
+<a href=#6 id=6 data-nosnippet>6</a>  // format addon. Source: http://arxiv.org/macros/phyzzx.plus. Perl port
+<a href=#7 id=7 data-nosnippet>7</a>  // is one 1013-line RawTeX block wrapping the raw phyzzx.plus file;
+<a href=#8 id=8 data-nosnippet>8</a>  // Rust mirrors that shape — straight RawTeX! with the identical body.
+<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#10 id=10 data-nosnippet>10</a>\newfam\ssfam     % Define a San Serif font family
+<a href=#11 id=11 data-nosnippet>11</a>\font\seventeenss =cmss10 scaled\magstep4
+<a href=#12 id=12 data-nosnippet>12</a>\font\fourteenss  =cmss10 scaled\magstep2
+<a href=#13 id=13 data-nosnippet>13</a>\font\twelvess    =cmss10 scaled\magstep1
+<a href=#14 id=14 data-nosnippet>14</a>\font\tenss       =cmss10
+<a href=#15 id=15 data-nosnippet>15</a>\font\niness      =cmss9
+<a href=#16 id=16 data-nosnippet>16</a>\font\eightss     =cmss8
+<a href=#17 id=17 data-nosnippet>17</a>%
+<a href=#18 id=18 data-nosnippet>18</a>\font\seventeenssbx =cmssbx10 scaled\magstep4
+<a href=#19 id=19 data-nosnippet>19</a>\font\fourteenssbx  =cmssbx10 scaled\magstep2
+<a href=#20 id=20 data-nosnippet>20</a>\font\twelvessbx    =cmssbx10 scaled\magstep1
+<a href=#21 id=21 data-nosnippet>21</a>\font\tenssbx       =cmssbx10
+<a href=#22 id=22 data-nosnippet>22</a>%
+<a href=#23 id=23 data-nosnippet>23</a>\def\seventeenpoint{\relax
+<a href=#24 id=24 data-nosnippet>24</a>    \textfont0=\seventeenrm          \scriptfont0=\twelverm
+<a href=#25 id=25 data-nosnippet>25</a>      \scriptscriptfont0=\ninerm
+<a href=#26 id=26 data-nosnippet>26</a>    \textfont1=\seventeeni           \scriptfont1=\twelvei
+<a href=#27 id=27 data-nosnippet>27</a>      \scriptscriptfont1=\ninei
+<a href=#28 id=28 data-nosnippet>28</a>    \textfont2=\seventeensy          \scriptfont2=\twelvesy
+<a href=#29 id=29 data-nosnippet>29</a>      \scriptscriptfont2=\ninesy
+<a href=#30 id=30 data-nosnippet>30</a>    \textfont3=\seventeenex          \scriptfont3=\twelveex
+<a href=#31 id=31 data-nosnippet>31</a>      \scriptscriptfont3=\ninex
+<a href=#32 id=32 data-nosnippet>32</a>    \textfont\itfam=\seventeenit    %\scriptfont\itfam=\twelveit
+<a href=#33 id=33 data-nosnippet>33</a>    \textfont\slfam=\seventeensl    %\scriptfont\slfam=\twelvesl
+<a href=#34 id=34 data-nosnippet>34</a>      \scriptscriptfont\slfam=\ninesl
+<a href=#35 id=35 data-nosnippet>35</a>    \textfont\bffam=\seventeenbf     \scriptfont\bffam=\twelvebf
+<a href=#36 id=36 data-nosnippet>36</a>      \scriptscriptfont\bffam=\ninebf
+<a href=#37 id=37 data-nosnippet>37</a>    \textfont\ttfam=\seventeentt
+<a href=#38 id=38 data-nosnippet>38</a>    \textfont\cpfam=\seventeencp
+<a href=#39 id=39 data-nosnippet>39</a>    \textfont\ssfam=\seventeenss     \scriptfont\ssfam=\twelvess
+<a href=#40 id=40 data-nosnippet>40</a>      \scriptscriptfont\ssfam=\niness
+<a href=#41 id=41 data-nosnippet>41</a>    \samef@nt
+<a href=#42 id=42 data-nosnippet>42</a>    \b@gheight=17pt
+<a href=#43 id=43 data-nosnippet>43</a>    \setbox\strutbox=\hbox{\vrule height 0.85\b@gheight
+<a href=#44 id=44 data-nosnippet>44</a>                                depth 0.35\b@gheight width\z@ }}
+<a href=#45 id=45 data-nosnippet>45</a>%
+<a href=#46 id=46 data-nosnippet>46</a>%
+<a href=#47 id=47 data-nosnippet>47</a>\def\fourteenf@nts{\relax
+<a href=#48 id=48 data-nosnippet>48</a>    \textfont0=\fourteenrm          \scriptfont0=\tenrm
+<a href=#49 id=49 data-nosnippet>49</a>      \scriptscriptfont0=\sevenrm
+<a href=#50 id=50 data-nosnippet>50</a>    \textfont1=\fourteeni           \scriptfont1=\teni
+<a href=#51 id=51 data-nosnippet>51</a>      \scriptscriptfont1=\seveni
+<a href=#52 id=52 data-nosnippet>52</a>    \textfont2=\fourteensy          \scriptfont2=\tensy
+<a href=#53 id=53 data-nosnippet>53</a>      \scriptscriptfont2=\sevensy
+<a href=#54 id=54 data-nosnippet>54</a>    \textfont3=\fourteenex          \scriptfont3=\twelveex
+<a href=#55 id=55 data-nosnippet>55</a>      \scriptscriptfont3=\tenex
+<a href=#56 id=56 data-nosnippet>56</a>    \textfont\itfam=\fourteenit     \scriptfont\itfam=\tenit
+<a href=#57 id=57 data-nosnippet>57</a>    \textfont\slfam=\fourteensl     \scriptfont\slfam=\tensl
+<a href=#58 id=58 data-nosnippet>58</a>    \textfont\bffam=\fourteenbf     \scriptfont\bffam=\tenbf
+<a href=#59 id=59 data-nosnippet>59</a>      \scriptscriptfont\bffam=\sevenbf
+<a href=#60 id=60 data-nosnippet>60</a>    \textfont\ttfam=\fourteentt
+<a href=#61 id=61 data-nosnippet>61</a>    \textfont\cpfam=\fourteencp
+<a href=#62 id=62 data-nosnippet>62</a>    \textfont\ssfam=\fourteenss     \scriptfont\ssfam=\tenss
+<a href=#63 id=63 data-nosnippet>63</a>        \scriptscriptfont\ssfam=\sevenrm }
+<a href=#64 id=64 data-nosnippet>64</a>%
+<a href=#65 id=65 data-nosnippet>65</a>\def\twelvef@nts{\relax
+<a href=#66 id=66 data-nosnippet>66</a>    \textfont0=\twelverm          \scriptfont0=\ninerm
+<a href=#67 id=67 data-nosnippet>67</a>      \scriptscriptfont0=\sixrm
+<a href=#68 id=68 data-nosnippet>68</a>    \textfont1=\twelvei           \scriptfont1=\ninei
+<a href=#69 id=69 data-nosnippet>69</a>      \scriptscriptfont1=\sixi
+<a href=#70 id=70 data-nosnippet>70</a>    \textfont2=\twelvesy           \scriptfont2=\ninesy
+<a href=#71 id=71 data-nosnippet>71</a>      \scriptscriptfont2=\sixsy
+<a href=#72 id=72 data-nosnippet>72</a>    \textfont3=\twelveex          \scriptfont3=\tenex
+<a href=#73 id=73 data-nosnippet>73</a>      \scriptscriptfont3=\tenex
+<a href=#74 id=74 data-nosnippet>74</a>    \textfont\itfam=\twelveit     \scriptfont\itfam=\nineit
+<a href=#75 id=75 data-nosnippet>75</a>    \textfont\slfam=\twelvesl     \scriptfont\slfam=\ninesl
+<a href=#76 id=76 data-nosnippet>76</a>    \textfont\bffam=\twelvebf     \scriptfont\bffam=\ninebf
+<a href=#77 id=77 data-nosnippet>77</a>      \scriptscriptfont\bffam=\sixbf
+<a href=#78 id=78 data-nosnippet>78</a>    \textfont\ttfam=\twelvett
+<a href=#79 id=79 data-nosnippet>79</a>    \textfont\cpfam=\twelvecp    \scriptfont\cpfam=\tencp
+<a href=#80 id=80 data-nosnippet>80</a>    \textfont\ssfam=\twelvess    \scriptfont\ssfam=\niness
+<a href=#81 id=81 data-nosnippet>81</a>      \scriptscriptfont\ssfam=\sixrm }
+<a href=#82 id=82 data-nosnippet>82</a>%
+<a href=#83 id=83 data-nosnippet>83</a>\def\tenf@nts{\relax
+<a href=#84 id=84 data-nosnippet>84</a>    \textfont0=\tenrm          \scriptfont0=\sevenrm
+<a href=#85 id=85 data-nosnippet>85</a>      \scriptscriptfont0=\fiverm
+<a href=#86 id=86 data-nosnippet>86</a>    \textfont1=\teni           \scriptfont1=\seveni
+<a href=#87 id=87 data-nosnippet>87</a>      \scriptscriptfont1=\fivei
+<a href=#88 id=88 data-nosnippet>88</a>    \textfont2=\tensy          \scriptfont2=\sevensy
+<a href=#89 id=89 data-nosnippet>89</a>      \scriptscriptfont2=\fivesy
+<a href=#90 id=90 data-nosnippet>90</a>    \textfont3=\tenex          \scriptfont3=\tenex
+<a href=#91 id=91 data-nosnippet>91</a>      \scriptscriptfont3=\tenex
+<a href=#92 id=92 data-nosnippet>92</a>    \textfont\itfam=\tenit     \scriptfont\itfam=\seveni  % no \sevenit
+<a href=#93 id=93 data-nosnippet>93</a>    \textfont\slfam=\tensl     \scriptfont\slfam=\sevenrm % no \sevensl
+<a href=#94 id=94 data-nosnippet>94</a>    \textfont\bffam=\tenbf     \scriptfont\bffam=\sevenbf
+<a href=#95 id=95 data-nosnippet>95</a>      \scriptscriptfont\bffam=\fivebf
+<a href=#96 id=96 data-nosnippet>96</a>    \textfont\ttfam=\tentt
+<a href=#97 id=97 data-nosnippet>97</a>    \textfont\cpfam=\tencp
+<a href=#98 id=98 data-nosnippet>98</a>    \textfont\ssfam=\tenss      \scriptfont\ssfam=\eightss
+<a href=#99 id=99 data-nosnippet>99</a>      \scriptscriptfont\ssfam=\fiverm }
+<a href=#100 id=100 data-nosnippet>100</a>%
+<a href=#101 id=101 data-nosnippet>101</a>\def\sans{\n@expand\f@m\ssfam}
+<a href=#102 id=102 data-nosnippet>102</a>%
+<a href=#103 id=103 data-nosnippet>103</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#104 id=104 data-nosnippet>104</a>% Later phyzzx mods from SLAC
+<a href=#105 id=105 data-nosnippet>105</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#106 id=106 data-nosnippet>106</a>%
+<a href=#107 id=107 data-nosnippet>107</a>\def\subspaces@t#1:#2;{\rel@x
+<a href=#108 id=108 data-nosnippet>108</a>      \baselineskip = \normalbaselineskip
+<a href=#109 id=109 data-nosnippet>109</a>      \multiply\baselineskip by #1 \divide\baselineskip by #2
+<a href=#110 id=110 data-nosnippet>110</a>      \lineskip = \normallineskip
+<a href=#111 id=111 data-nosnippet>111</a>      \multiply\lineskip by #1 \divide\lineskip by #2
+<a href=#112 id=112 data-nosnippet>112</a>      \lineskiplimit = \normallineskiplimit
+<a href=#113 id=113 data-nosnippet>113</a>      \multiply\lineskiplimit by #1 \divide\lineskiplimit by #2
+<a href=#114 id=114 data-nosnippet>114</a>      \parskip = \normalparskip
+<a href=#115 id=115 data-nosnippet>115</a>      \multiply\parskip by #1 \divide\parskip by #2
+<a href=#116 id=116 data-nosnippet>116</a>      \abovedisplayskip = \normaldisplayskip
+<a href=#117 id=117 data-nosnippet>117</a>      \multiply\abovedisplayskip by #1 \divide\abovedisplayskip by #2
+<a href=#118 id=118 data-nosnippet>118</a>      \belowdisplayskip = \abovedisplayskip
+<a href=#119 id=119 data-nosnippet>119</a>      \abovedisplayshortskip = \normaldispshortskip
+<a href=#120 id=120 data-nosnippet>120</a>      \multiply\abovedisplayshortskip by #1
+<a href=#121 id=121 data-nosnippet>121</a>        \divide\abovedisplayshortskip by #2
+<a href=#122 id=122 data-nosnippet>122</a>      \belowdisplayshortskip = \abovedisplayshortskip
+<a href=#123 id=123 data-nosnippet>123</a>      \advance\belowdisplayshortskip by \belowdisplayskip
+<a href=#124 id=124 data-nosnippet>124</a>      \divide\belowdisplayshortskip by 2
+<a href=#125 id=125 data-nosnippet>125</a>      \smallskipamount = \skipregister
+<a href=#126 id=126 data-nosnippet>126</a>      \multiply\smallskipamount by #1 \divide\smallskipamount by #2
+<a href=#127 id=127 data-nosnippet>127</a>      \medskipamount = \smallskipamount \multiply\medskipamount by 2
+<a href=#128 id=128 data-nosnippet>128</a>      \bigskipamount = \smallskipamount \multiply\bigskipamount by 4 }
+<a href=#129 id=129 data-nosnippet>129</a>%
+<a href=#130 id=130 data-nosnippet>130</a>\newif\ifcn@                 \cn@true
+<a href=#131 id=131 data-nosnippet>131</a>\newif\ifcn@@                \cn@@false
+<a href=#132 id=132 data-nosnippet>132</a>\def\numberedchapters{\cn@true}
+<a href=#133 id=133 data-nosnippet>133</a>\def\unnumberedchapters{\cn@false\sequentialequations}
+<a href=#134 id=134 data-nosnippet>134</a>%
+<a href=#135 id=135 data-nosnippet>135</a>\def\chapterreset{\gl@bal\advance\chapternumber by 1
+<a href=#136 id=136 data-nosnippet>136</a>   \ifnum\equanumber&lt;0 \else\gl@bal\equanumber=0\fi
+<a href=#137 id=137 data-nosnippet>137</a>   \sectionnumber=0 \let\sectionlabel=\rel@x
+<a href=#138 id=138 data-nosnippet>138</a>   \ifcn@ \gl@bal\cn@@true {\pr@tect
+<a href=#139 id=139 data-nosnippet>139</a>       \xdef\chapterlabel{\the\chapterstyle{\the\chapternumber}}}%
+<a href=#140 id=140 data-nosnippet>140</a>    \else \gl@bal\cn@@false \gdef\chapterlabel{\rel@x}\fi }
+<a href=#141 id=141 data-nosnippet>141</a>%
+<a href=#142 id=142 data-nosnippet>142</a>\def\@alpha#1{\count255='140 \advance\count255 by #1\char\count255}
+<a href=#143 id=143 data-nosnippet>143</a> \def\alphabetic{\n@expand\@alpha}
+<a href=#144 id=144 data-nosnippet>144</a>\def\@Alpha#1{\count255='100 \advance\count255 by #1\char\count255}
+<a href=#145 id=145 data-nosnippet>145</a> \def\Alphabetic{\n@expand\@Alpha}
+<a href=#146 id=146 data-nosnippet>146</a>\def\@Roman#1{\uppercase\expandafter{\romannumeral #1}}
+<a href=#147 id=147 data-nosnippet>147</a> \def\Roman{\n@expand\@Roman}
+<a href=#148 id=148 data-nosnippet>148</a>\def\@roman#1{\romannumeral #1}    \def\roman{\n@expand\@roman}
+<a href=#149 id=149 data-nosnippet>149</a>\def\@number#1{\number #1}         \def\Number{\n@expand\@number}
+<a href=#150 id=150 data-nosnippet>150</a>\def\BLANK#1{\rel@x}               \let\BLANC=\BLANK
+<a href=#151 id=151 data-nosnippet>151</a>%
+<a href=#152 id=152 data-nosnippet>152</a>\def\section#1{\par \ifnum\lastpenalty=30000\else
+<a href=#153 id=153 data-nosnippet>153</a>   \penalty-200\vskip\sectionskip \spacecheck\sectionminspace\fi
+<a href=#154 id=154 data-nosnippet>154</a>   \gl@bal\advance\sectionnumber by 1
+<a href=#155 id=155 data-nosnippet>155</a> {\pr@tect
+<a href=#156 id=156 data-nosnippet>156</a>   \xdef\sectionlabel{\ifcn@@ \chapterlabel.\fi
+<a href=#157 id=157 data-nosnippet>157</a>       \the\sectionstyle{\the\sectionnumber}%
+<a href=#158 id=158 data-nosnippet>158</a>                     }%
+<a href=#159 id=159 data-nosnippet>159</a>   \wlog{\string\section\space \sectionlabel}
+<a href=#160 id=160 data-nosnippet>160</a> }%
+<a href=#161 id=161 data-nosnippet>161</a>   \noindent {\caps\enspace\sectionlabel.~~#1}\par
+<a href=#162 id=162 data-nosnippet>162</a>   \nobreak\vskip\headskip \penalty 30000 }
+<a href=#163 id=163 data-nosnippet>163</a>%
+<a href=#164 id=164 data-nosnippet>164</a>\def\FRONTPAGE{\ifvoid255\else\vfill\penalty-20000\fi
+<a href=#165 id=165 data-nosnippet>165</a>   \gl@bal\pagenumber=1     \gl@bal\chapternumber=0
+<a href=#166 id=166 data-nosnippet>166</a>   \gl@bal\equanumber=0     \gl@bal\sectionnumber=0
+<a href=#167 id=167 data-nosnippet>167</a>   \gl@bal\referencecount=0 \gl@bal\figurecount=0
+<a href=#168 id=168 data-nosnippet>168</a>   \gl@bal\tablecount=0     \gl@bal\frontpagetrue
+<a href=#169 id=169 data-nosnippet>169</a>   \gl@bal\lastf@@t=0       \gl@bal\footsymbolcount=0
+<a href=#170 id=170 data-nosnippet>170</a>   \gl@bal\cn@@false }
+<a href=#171 id=171 data-nosnippet>171</a>\let\Frontpage=\FRONTPAGE
+<a href=#172 id=172 data-nosnippet>172</a>%
+<a href=#173 id=173 data-nosnippet>173</a>\def\makelabels{\afterassignment\Makelabels \sendername=} % extra s in ias
+<a href=#174 id=174 data-nosnippet>174</a>%                                                         % version
+<a href=#175 id=175 data-nosnippet>175</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#176 id=176 data-nosnippet>176</a>%%%%%%%%%%%%%%%%% modify phyzzx for UW label format %%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#177 id=177 data-nosnippet>177</a>%%%%%%%%%%%%%%%%  To produce labels, tex LABELFORM.TEX %%%%%%%%%%%%%%%%%%%%%%
+<a href=#178 id=178 data-nosnippet>178</a>%%%%%%%%%%%%%%%%  included at the end of the file  %%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#179 id=179 data-nosnippet>179</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#180 id=180 data-nosnippet>180</a>\begingroup
+<a href=#181 id=181 data-nosnippet>181</a> \catcode `\{ = 12  % Dirty trick to write out the character {
+<a href=#182 id=182 data-nosnippet>182</a> \catcode `\} = 12  % Dirty trick to write out the character }
+<a href=#183 id=183 data-nosnippet>183</a> \catcode `\[ = 1
+<a href=#184 id=184 data-nosnippet>184</a> \catcode `\] = 2
+<a href=#185 id=185 data-nosnippet>185</a> \gdef\labelformlabels[%
+<a href=#186 id=186 data-nosnippet>186</a>   \gdef\rwl@begin##1\cr[\rw@toks=[##1]\rel@x
+<a href=#187 id=187 data-nosnippet>187</a>        \immediate\write\labelswrite[\the\rw@toks]\futurelet\n@xt\rwl@next]
+<a href=#188 id=188 data-nosnippet>188</a>   \gdef\writenextlabel##1[%
+<a href=#189 id=189 data-nosnippet>189</a>        \immediate\write\labelswrite[  ]%
+<a href=#190 id=190 data-nosnippet>190</a>        \immediate\write\labelswrite[{]%
+<a href=#191 id=191 data-nosnippet>191</a>            \rwl@begin ##1%
+<a href=#192 id=192 data-nosnippet>192</a>            \rwl@end%
+<a href=#193 id=193 data-nosnippet>193</a>        \immediate\write\labelswrite[}]]%
+<a href=#194 id=194 data-nosnippet>194</a>   \gdef\writelabel##1[%
+<a href=#195 id=195 data-nosnippet>195</a>        \immediate\write\labelswrite[{]%
+<a href=#196 id=196 data-nosnippet>196</a>            \rwl@begin ##1%
+<a href=#197 id=197 data-nosnippet>197</a>            \rwl@end%
+<a href=#198 id=198 data-nosnippet>198</a>        \immediate\write\labelswrite[}]%
+<a href=#199 id=199 data-nosnippet>199</a>        \let\writelabel=\writenextlabel]%
+<a href=#200 id=200 data-nosnippet>200</a>]
+<a href=#201 id=201 data-nosnippet>201</a>\endgroup
+<a href=#202 id=202 data-nosnippet>202</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#203 id=203 data-nosnippet>203</a>% some phyzzx overrides
+<a href=#204 id=204 data-nosnippet>204</a>%
+<a href=#205 id=205 data-nosnippet>205</a>%
+<a href=#206 id=206 data-nosnippet>206</a>%\def\addressee#1{\bigskip\medskip
+<a href=#207 id=207 data-nosnippet>207</a>% \line{\hskip 0.5\hsize minus 0.5\hsize \the\date\hfil} \bigskip
+<a href=#208 id=208 data-nosnippet>208</a>% \vskip\lettertopfil
+<a href=#209 id=209 data-nosnippet>209</a>% \ialign to\hsize{\strut ##\hfil\tabskip 0pt plus \hsize \cr #1\crcr}
+<a href=#210 id=210 data-nosnippet>210</a>% \medskip\noindent\hskip\spskip}
+<a href=#211 id=211 data-nosnippet>211</a>%
+<a href=#212 id=212 data-nosnippet>212</a>\def\figitem#1{\r@fitem{#1.}}
+<a href=#213 id=213 data-nosnippet>213</a>\def\tabitem#1{\r@fitem{#1.}}
+<a href=#214 id=214 data-nosnippet>214</a>%
+<a href=#215 id=215 data-nosnippet>215</a>\def\ack{\ACK}   % make new phyzzx compatible with old phyzzx
+<a href=#216 id=216 data-nosnippet>216</a>%
+<a href=#217 id=217 data-nosnippet>217</a>\def\sequentialequations{\rel@x \ifnum\equanumber&lt;0 \else
+<a href=#218 id=218 data-nosnippet>218</a>  \gl@bal\equanumber=-\equanumber \gl@bal\advance\equanumber by -1 \fi }
+<a href=#219 id=219 data-nosnippet>219</a>%
+<a href=#220 id=220 data-nosnippet>220</a>%% a Journal macro that handles NPB and PR format
+<a href=#221 id=221 data-nosnippet>221</a>%\def\Journal#1&amp;#2&amp;#3(#4){\begingroup \let\Journal=\dummyj@urnal
+<a href=#222 id=222 data-nosnippet>222</a>%    \unskip,~#1\unskip~%
+<a href=#223 id=223 data-nosnippet>223</a>%    \ifPhysRev\bf\fi\ignorespaces #2\rm
+<a href=#224 id=224 data-nosnippet>224</a>%    \ifPhysRev\unskip,~\ignorespaces #3\fi
+<a href=#225 id=225 data-nosnippet>225</a>%    \unskip~(\afterassignment\j@ur \count255=#4)
+<a href=#226 id=226 data-nosnippet>226</a>%    \ifPhysRev\else\unskip,~\ignorespaces #3\fi
+<a href=#227 id=227 data-nosnippet>227</a>%    \endgroup\unskip\ignorespaces }
+<a href=#228 id=228 data-nosnippet>228</a>%
+<a href=#229 id=229 data-nosnippet>229</a>\def\boxit#1{\vbox{\hrule\hbox{\vrule\kern3pt
+<a href=#230 id=230 data-nosnippet>230</a>\vbox{\kern3pt#1\kern3pt}\kern3pt\vrule}\hrule}}
+<a href=#231 id=231 data-nosnippet>231</a>%
+<a href=#232 id=232 data-nosnippet>232</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#233 id=233 data-nosnippet>233</a>%%
+<a href=#234 id=234 data-nosnippet>234</a>%%            Making double-column  (these are modified from manmac.tex)
+<a href=#235 id=235 data-nosnippet>235</a>%%            with a full size columns as well.
+<a href=#236 id=236 data-nosnippet>236</a>%%            (This is still buggy--gives overfull boxes etc.)
+<a href=#237 id=237 data-nosnippet>237</a>%%            Report bugs to T.J. Allen (tjallen@wishep.physics.wisc.edu
+<a href=#238 id=238 data-nosnippet>238</a>%%            or  tja@theory3.caltech.edu)
+<a href=#239 id=239 data-nosnippet>239</a>%%
+<a href=#240 id=240 data-nosnippet>240</a>%%            This will NOT produce double columns in preprintmode since
+<a href=#241 id=241 data-nosnippet>241</a>%%            there are conflicting \output commands.  The whole
+<a href=#242 id=242 data-nosnippet>242</a>%%            macro should be rewritten using a modified \output.
+<a href=#243 id=243 data-nosnippet>243</a>%%
+<a href=#244 id=244 data-nosnippet>244</a>%%            Where you want
+<a href=#245 id=245 data-nosnippet>245</a>%%            the doublecolumn output to start, use \begindoublecolumns.
+<a href=#246 id=246 data-nosnippet>246</a>%%            Where you want to go back to single columns use
+<a href=#247 id=247 data-nosnippet>247</a>%%            \enddoublecolumns.  This produces output much like that
+<a href=#248 id=248 data-nosnippet>248</a>%%            of RevTeX.  If you wish to specify that there be a rule
+<a href=#249 id=249 data-nosnippet>249</a>%%            between the columns of output, then set \columnrulewidth
+<a href=#250 id=250 data-nosnippet>250</a>%%            = 0.4pt.
+<a href=#251 id=251 data-nosnippet>251</a>%%
+<a href=#252 id=252 data-nosnippet>252</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#253 id=253 data-nosnippet>253</a>%%
+<a href=#254 id=254 data-nosnippet>254</a>\newbox\partialpage
+<a href=#255 id=255 data-nosnippet>255</a>\newdimen\pageheight \pageheight=\vsize
+<a href=#256 id=256 data-nosnippet>256</a>\newdimen\pagewidth  \pagewidth=6.6truein
+<a href=#257 id=257 data-nosnippet>257</a>\newdimen\columnwidth  \columnwidth=3.2truein
+<a href=#258 id=258 data-nosnippet>258</a>\newdimen\columnrulewidth \columnrulewidth=0pt
+<a href=#259 id=259 data-nosnippet>259</a>\newdimen\ruleht \ruleht=.5pt
+<a href=#260 id=260 data-nosnippet>260</a>\newinsert\margin
+<a href=#261 id=261 data-nosnippet>261</a>%
+<a href=#262 id=262 data-nosnippet>262</a>\def\twocolumn{%
+<a href=#263 id=263 data-nosnippet>263</a>   \singlespace
+<a href=#264 id=264 data-nosnippet>264</a>   \vsize=9truein
+<a href=#265 id=265 data-nosnippet>265</a>   \pagetextwidth=\pagewidth
+<a href=#266 id=266 data-nosnippet>266</a>   \hsize=\pagewidth
+<a href=#267 id=267 data-nosnippet>267</a>   \titlepagewidth=\pagewidth
+<a href=#268 id=268 data-nosnippet>268</a>   \hoffset=0truein
+<a href=#269 id=269 data-nosnippet>269</a>   \voffset=0truein
+<a href=#270 id=270 data-nosnippet>270</a>   \dimen\margin=\maxdimen
+<a href=#271 id=271 data-nosnippet>271</a>   \count\margin=0 \skip\margin=0pt
+<a href=#272 id=272 data-nosnippet>272</a>%
+<a href=#273 id=273 data-nosnippet>273</a> \def\begindoublecolumns{
+<a href=#274 id=274 data-nosnippet>274</a>     \ifpr@printstyle
+<a href=#275 id=275 data-nosnippet>275</a>     \message{ I'm unable to print double columns in PREPRINTSTYLE }
+<a href=#276 id=276 data-nosnippet>276</a>     \end\fi
+<a href=#277 id=277 data-nosnippet>277</a>     \begingroup
+<a href=#278 id=278 data-nosnippet>278</a>     \global\vsize=2\pageheight
+<a href=#279 id=279 data-nosnippet>279</a>     \output={\global\setbox\partialpage=\vbox{\unvbox255\bigskip\bigskip}
+<a href=#280 id=280 data-nosnippet>280</a>         \global\vsize=2\pageheight\global\advance\vsize by -2\ht\partialpage
+<a href=#281 id=281 data-nosnippet>281</a>         \global\advance\vsize by 2\bigskipamount
+<a href=#282 id=282 data-nosnippet>282</a>         \global\advance\vsize by 1 pc}\eject % a little extra room; 1pc
+<a href=#283 id=283 data-nosnippet>283</a>     \output={\doublecolumnout\global\vsize=2\pageheight}
+<a href=#284 id=284 data-nosnippet>284</a>         \global\pagetextwidth=\columnwidth \global\hsize=\columnwidth}
+<a href=#285 id=285 data-nosnippet>285</a>%
+<a href=#286 id=286 data-nosnippet>286</a>% keeps footnotes on correct page
+<a href=#287 id=287 data-nosnippet>287</a>%
+<a href=#288 id=288 data-nosnippet>288</a>  \def\enddoublecolumns{\output={\balancecolumns\global\hsize=\pagewidth
+<a href=#289 id=289 data-nosnippet>289</a>                       \global\pagetextwidth=\pagewidth
+<a href=#290 id=290 data-nosnippet>290</a>                       \global\vsize=\pageheight
+<a href=#291 id=291 data-nosnippet>291</a>                       \unvbox255 }\eject\endgroup}
+<a href=#292 id=292 data-nosnippet>292</a>%
+<a href=#293 id=293 data-nosnippet>293</a>  \def\doublecolumnout{\splittopskip=\topskip \splitmaxdepth=\maxdepth
+<a href=#294 id=294 data-nosnippet>294</a>     \dimen@=\pageheight\advance\dimen@ by -\ht\partialpage
+<a href=#295 id=295 data-nosnippet>295</a>     \setbox0=\vsplit255 to\dimen@ \setbox2=\vsplit255 to \dimen@
+<a href=#296 id=296 data-nosnippet>296</a>     \onepageout\pagesofar \unvbox255 \penalty\outputpenalty}
+<a href=#297 id=297 data-nosnippet>297</a>%
+<a href=#298 id=298 data-nosnippet>298</a>  \def\pagesofar{\unvbox\partialpage
+<a href=#299 id=299 data-nosnippet>299</a>     \wd0=\columnwidth \wd2=\columnwidth \hbox to \pagewidth{\box0\hfil
+<a href=#300 id=300 data-nosnippet>300</a>     \columnrule \hfil \box2}}
+<a href=#301 id=301 data-nosnippet>301</a>%
+<a href=#302 id=302 data-nosnippet>302</a>  \def\columnrule{\vrule width \columnrulewidth height \ht2}
+<a href=#303 id=303 data-nosnippet>303</a>%
+<a href=#304 id=304 data-nosnippet>304</a>  \def\balancecolumns{\setbox0=\vbox{\unvbox255}\dimen@=\ht0
+<a href=#305 id=305 data-nosnippet>305</a>     \advance\dimen@ by \topskip \advance\dimen@ by-\baselineskip
+<a href=#306 id=306 data-nosnippet>306</a>     \advance\dimen@ by -2\ht\partialpage  % what if we begin and end on the
+<a href=#307 id=307 data-nosnippet>307</a>     \divide\dimen@ by2                    % same page?!?
+<a href=#308 id=308 data-nosnippet>308</a>     \splittopskip=\topskip
+<a href=#309 id=309 data-nosnippet>309</a>     {\vbadness=10000 \loop \global\setbox3=\copy0
+<a href=#310 id=310 data-nosnippet>310</a>        \global\setbox1=\vsplit3 to \dimen@
+<a href=#311 id=311 data-nosnippet>311</a>        \ifdim\ht3&gt;\dimen@ \global\advance\dimen@ by1pt \repeat}
+<a href=#312 id=312 data-nosnippet>312</a>     \setbox0=\vbox to \dimen@{\unvbox1} \setbox2=\vbox to \dimen@{\dimen2=\dp3
+<a href=#313 id=313 data-nosnippet>313</a>     \unvbox3 \kern-\dimen2 \vfil }
+<a href=#314 id=314 data-nosnippet>314</a>     \pagesofar }
+<a href=#315 id=315 data-nosnippet>315</a>%
+<a href=#316 id=316 data-nosnippet>316</a>   \def\onepageout##1{ \setbox0=\vbox{##1} \dimen@=\dp0
+<a href=#317 id=317 data-nosnippet>317</a>     \shipout\vbox{ % here we define one page of output
+<a href=#318 id=318 data-nosnippet>318</a>     \makeheadline
+<a href=#319 id=319 data-nosnippet>319</a>     \vbox to \pageheight{
+<a href=#320 id=320 data-nosnippet>320</a>       \boxmaxdepth=\maxdepth
+<a href=#321 id=321 data-nosnippet>321</a>       \ifvoid\margin\else % marginal info is present
+<a href=#322 id=322 data-nosnippet>322</a>       \rlap{\kern31pc\vbox to 0pt{\kern4pt\box\margin\vss}}\fi
+<a href=#323 id=323 data-nosnippet>323</a>       \ifvoid\topins\else\unvbox\topins\vskip\skip\topins\fi
+<a href=#324 id=324 data-nosnippet>324</a>       ##1                                  % now insert the main information
+<a href=#325 id=325 data-nosnippet>325</a>       \vskip\pagebottomfiller
+<a href=#326 id=326 data-nosnippet>326</a>       \ifvoid\footins\else\vskip\skip\footins\footrule\unvbox\footins\fi
+<a href=#327 id=327 data-nosnippet>327</a>       \ifr@ggedbottom\kern-\dimen@ \vfil\fi}  %need a replacement for here
+<a href=#328 id=328 data-nosnippet>328</a>       \makefootline}
+<a href=#329 id=329 data-nosnippet>329</a>     \advancepageno\frontpagefalse}
+<a href=#330 id=330 data-nosnippet>330</a>%
+<a href=#331 id=331 data-nosnippet>331</a> \def\makeheadline{\vbox to\z@{\vskip-22.5\p@
+<a href=#332 id=332 data-nosnippet>332</a>  \hbox to \pagewidth{\vbox to8.5\p@{}\the\headline}\vss}\nointerlineskip}
+<a href=#333 id=333 data-nosnippet>333</a>%
+<a href=#334 id=334 data-nosnippet>334</a> \def\makefootline{\baselineskip = 1.5\normalbaselineskip
+<a href=#335 id=335 data-nosnippet>335</a>             \hbox to \pagewidth{\the\footline}}
+<a href=#336 id=336 data-nosnippet>336</a>%\def\makefootline{\baselineskip24\p@\line{\the\footline}}
+<a href=#337 id=337 data-nosnippet>337</a>
+<a href=#338 id=338 data-nosnippet>338</a>%
+<a href=#339 id=339 data-nosnippet>339</a>  \def\footrule{\dimen@=\prevdepth\nointerlineskip
+<a href=#340 id=340 data-nosnippet>340</a>      \vbox to 0pt{\vskip -0.25\baselineskip \hrule width 0.62\pagewidth \vss}
+<a href=#341 id=341 data-nosnippet>341</a>      \prevdepth=\dimen@ }
+<a href=#342 id=342 data-nosnippet>342</a>%
+<a href=#343 id=343 data-nosnippet>343</a>  \def\Vfootnote##1{\insert\footins\bgroup
+<a href=#344 id=344 data-nosnippet>344</a>      \interlinepenalty=\interfootnotelinepenalty \floatingpenalty=20000
+<a href=#345 id=345 data-nosnippet>345</a>      \singl@true\doubl@false\Tenpoint \hsize=\pagewidth
+<a href=#346 id=346 data-nosnippet>346</a>      \splittopskip=\ht\strutbox \boxmaxdepth=\dp\strutbox
+<a href=#347 id=347 data-nosnippet>347</a>      \leftskip=\footindent \rightskip=\z@skip
+<a href=#348 id=348 data-nosnippet>348</a>      \parindent=0.5\footindent \parfillskip=0pt plus 1fil
+<a href=#349 id=349 data-nosnippet>349</a>      \spaceskip=\z@skip \xspaceskip=\z@skip \footnotespecial
+<a href=#350 id=350 data-nosnippet>350</a>      \Textindent{##1}\footstrut\futurelet\next\fo@t}
+<a href=#351 id=351 data-nosnippet>351</a>% make the footnotes all have the correct size and the same footrule!
+<a href=#352 id=352 data-nosnippet>352</a>%% Make column separators for large one-column equations %%%%%%%%%%%%%%%%%%%
+<a href=#353 id=353 data-nosnippet>353</a> \def\sp@cecheck##1{\dimen@=\pagegoal\advance\dimen@ by -\pagetotal
+<a href=#354 id=354 data-nosnippet>354</a>      \ifdim\dimen@&lt;##1 \ifdim\dimen@&gt;0pt \vfil\break \fi\fi}
+<a href=#355 id=355 data-nosnippet>355</a> \def\endleftcolumn{\dimen@=\pagegoal\advance\dimen@ by -\pagetotal
+<a href=#356 id=356 data-nosnippet>356</a>      \ifdim\dimen@&lt;\chapterminspace \ifdim\dimen@&gt;0pt \vfil\break \fi
+<a href=#357 id=357 data-nosnippet>357</a>      \hbox{\vbox{\hrule width \columnwidth}\hbox to 0.4pt
+<a href=#358 id=358 data-nosnippet>358</a>      {\vrule height 10pt depth 0pt}\hfil}\fi}
+<a href=#359 id=359 data-nosnippet>359</a> \def\beginrightcolumn{\dimen@=\pagegoal\advance\dimen@ by -\pagetotal
+<a href=#360 id=360 data-nosnippet>360</a>      \ifdim\dimen@&lt;\chapterminspace \ifdim\dimen@&gt;0pt \vfil\break \fi
+<a href=#361 id=361 data-nosnippet>361</a>      \hbox to \hsize{\hss\hbox{\vrule height 0pt depth 10pt
+<a href=#362 id=362 data-nosnippet>362</a>      \vbox{\hrule width \columnwidth}}}\fi}
+<a href=#363 id=363 data-nosnippet>363</a>}
+<a href=#364 id=364 data-nosnippet>364</a>%
+<a href=#365 id=365 data-nosnippet>365</a>%
+<a href=#366 id=366 data-nosnippet>366</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#367 id=367 data-nosnippet>367</a>%%
+<a href=#368 id=368 data-nosnippet>368</a>%%   Now start the draftmode and preprintmode enhancement features
+<a href=#369 id=369 data-nosnippet>369</a>%%                      (Homage to harvmac.tex)
+<a href=#370 id=370 data-nosnippet>370</a>%%   Report any bugs to  T.J. Allen
+<a href=#371 id=371 data-nosnippet>371</a>%%       tja@theory3.caltech.edu or
+<a href=#372 id=372 data-nosnippet>372</a>%%       tjallen@wishep.physics.wisc.edu
+<a href=#373 id=373 data-nosnippet>373</a>%%
+<a href=#374 id=374 data-nosnippet>374</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#375 id=375 data-nosnippet>375</a>
+<a href=#376 id=376 data-nosnippet>376</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#377 id=377 data-nosnippet>377</a>%%
+<a href=#378 id=378 data-nosnippet>378</a>%%       Here is the draftmode feature
+<a href=#379 id=379 data-nosnippet>379</a>%%
+<a href=#380 id=380 data-nosnippet>380</a>%%       Use the following on the preliminary draft,
+<a href=#381 id=381 data-nosnippet>381</a>%%       puts time/date on each page in writes labels in margins
+<a href=#382 id=382 data-nosnippet>382</a>%%       and puts reference labels on the reference page.
+<a href=#383 id=383 data-nosnippet>383</a>%%       Putting \draft in the beginning of the paper causes it
+<a href=#384 id=384 data-nosnippet>384</a>%%       to be printed in draftmode.  use \nodraftlabels to get rid of
+<a href=#385 id=385 data-nosnippet>385</a>%%       eqn, ref, and fig labels in draft mode
+<a href=#386 id=386 data-nosnippet>386</a>%%
+<a href=#387 id=387 data-nosnippet>387</a>%%       Timestamp routine bug fixed October 30, 1991 by T.J.A.
+<a href=#388 id=388 data-nosnippet>388</a>%%
+<a href=#389 id=389 data-nosnippet>389</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#390 id=390 data-nosnippet>390</a>%
+<a href=#391 id=391 data-nosnippet>391</a>\newif\ifdr@ftmode
+<a href=#392 id=392 data-nosnippet>392</a>\newtoks\r@flabeltoks
+<a href=#393 id=393 data-nosnippet>393</a>\def\draftmode{
+<a href=#394 id=394 data-nosnippet>394</a>   \pagetextwidth=6truein
+<a href=#395 id=395 data-nosnippet>395</a>   \fullhsize=6truein
+<a href=#396 id=396 data-nosnippet>396</a>   \titlepagewidth=6truein
+<a href=#397 id=397 data-nosnippet>397</a>   \vsize=8.3truein
+<a href=#398 id=398 data-nosnippet>398</a>   \normalspace
+<a href=#399 id=399 data-nosnippet>399</a>   \hoffset=0.3truein
+<a href=#400 id=400 data-nosnippet>400</a>   \voffset=0.2truein
+<a href=#401 id=401 data-nosnippet>401</a>   \advance\hoffset by\HOFFSET
+<a href=#402 id=402 data-nosnippet>402</a>   \advance\voffset by\VOFFSET
+<a href=#403 id=403 data-nosnippet>403</a>   \hsize=\pagetextwidth
+<a href=#404 id=404 data-nosnippet>404</a>   \tenpoint
+<a href=#405 id=405 data-nosnippet>405</a>   \baselineskip=24pt plus 2pt minus 2pt
+<a href=#406 id=406 data-nosnippet>406</a>   \dr@ftmodetrue
+<a href=#407 id=407 data-nosnippet>407</a>   \message{ DRAFTMODE }
+<a href=#408 id=408 data-nosnippet>408</a>   \writedraftlabels
+<a href=#409 id=409 data-nosnippet>409</a>   \def\timestring{\begingroup
+<a href=#410 id=410 data-nosnippet>410</a>     \count0 = \time \divide\count0 by 60
+<a href=#411 id=411 data-nosnippet>411</a>     \count2 = \count0  % the hour
+<a href=#412 id=412 data-nosnippet>412</a>     \count4 = \time \multiply\count0 by 60
+<a href=#413 id=413 data-nosnippet>413</a>     \advance\count4 by -\count0   % the minute
+<a href=#414 id=414 data-nosnippet>414</a>     \ifnum\count4&lt;10 \toks1={0} % get a leading zero.
+<a href=#415 id=415 data-nosnippet>415</a>     \else \toks1 = {}
+<a href=#416 id=416 data-nosnippet>416</a>     \fi
+<a href=#417 id=417 data-nosnippet>417</a>     \ifnum\count2&lt;12 \toks0={a.m.} %
+<a href=#418 id=418 data-nosnippet>418</a>          \ifnum\count2&lt;1 \count2=12 \fi% Make midnight `12'
+<a href=#419 id=419 data-nosnippet>419</a>     \else            \toks0={p.m.} %
+<a href=#420 id=420 data-nosnippet>420</a>           \ifnum\count2=12 % keep noon `12'
+<a href=#421 id=421 data-nosnippet>421</a>           \else
+<a href=#422 id=422 data-nosnippet>422</a>           \advance\count2 by -12 % keep afternoon times &lt; 12
+<a href=#423 id=423 data-nosnippet>423</a>           \fi
+<a href=#424 id=424 data-nosnippet>424</a>     \fi
+<a href=#425 id=425 data-nosnippet>425</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#426 id=426 data-nosnippet>426</a>%% \ifnum\count2=0 \count2 = 12\fi % make midnight `12'. %  There seems to
+<a href=#427 id=427 data-nosnippet>427</a>%%    be a bug in TeX when checking a count which has the value 0.
+<a href=#428 id=428 data-nosnippet>428</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#429 id=429 data-nosnippet>429</a>     \number\count2:\the\toks1 \number\count4\thinspace \the\toks0
+<a href=#430 id=430 data-nosnippet>430</a>   \endgroup}%
+<a href=#431 id=431 data-nosnippet>431</a>%
+<a href=#432 id=432 data-nosnippet>432</a>   \def\draftdate{{{\tt preliminary version:}\space{\rm
+<a href=#433 id=433 data-nosnippet>433</a>                                  \timestring\quad\the\date}}}
+<a href=#434 id=434 data-nosnippet>434</a>%
+<a href=#435 id=435 data-nosnippet>435</a>\def\R@FWRITE##1{\ifreferenceopen \else \gl@bal\referenceopentrue
+<a href=#436 id=436 data-nosnippet>436</a>     \immediate\openout\referencewrite=\jobname.refs
+<a href=#437 id=437 data-nosnippet>437</a>     \toks@={\begingroup \refoutspecials \catcode`\^^M=10 }%
+<a href=#438 id=438 data-nosnippet>438</a>     \immediate\write\referencewrite{\the\toks@}\fi
+<a href=#439 id=439 data-nosnippet>439</a>     \immediate\write\referencewrite%
+<a href=#440 id=440 data-nosnippet>440</a>     {\noexpand\refitem{\the\r@flabeltoks[\the\referencecount]}}%
+<a href=#441 id=441 data-nosnippet>441</a>     \p@rse@ndwrite \referencewrite ##1}
+<a href=#442 id=442 data-nosnippet>442</a>%
+<a href=#443 id=443 data-nosnippet>443</a>\def\refitem##1{\r@fitem{##1}}
+<a href=#444 id=444 data-nosnippet>444</a>\def\REF##1##2{\reflabel##1 \REFNUM ##1\REFWRITE{\ignorespaces ##2}}
+<a href=#445 id=445 data-nosnippet>445</a>\def\Ref##1##2{\reflabel##1 \Refnum ##1\REFWRITE{ ##2}}
+<a href=#446 id=446 data-nosnippet>446</a>\def\REFS##1##2{\reflabel##1 \REFNUM ##1%
+<a href=#447 id=447 data-nosnippet>447</a>\gl@bal\lastrefsbegincount=\referencecount\REFWRITE{ ##2}}
+<a href=#448 id=448 data-nosnippet>448</a>\def\refs{\REFS\?}
+<a href=#449 id=449 data-nosnippet>449</a>\def\refc{\REF\?}
+<a href=#450 id=450 data-nosnippet>450</a>\let\refscon=\refc       \let\REFSCON=\REF
+<a href=#451 id=451 data-nosnippet>451</a>%
+<a href=#452 id=452 data-nosnippet>452</a>}
+<a href=#453 id=453 data-nosnippet>453</a>\def\nodraftlabels{\def\leqlabel##1{}\def\eqlabel##1{}\def\reflabel##1{}%
+<a href=#454 id=454 data-nosnippet>454</a>\def\leqlabel##1{}}
+<a href=#455 id=455 data-nosnippet>455</a>\def\writedraftlabels{
+<a href=#456 id=456 data-nosnippet>456</a>  \def\eqlabel##1{{\escapechar-1\rlap{\sevenrm\hskip.05in\string##1}}}%
+<a href=#457 id=457 data-nosnippet>457</a>  \def\leqlabel##1{{\escapechar-1\llap{\sevenrm\string##1\hskip.05in}}}%
+<a href=#458 id=458 data-nosnippet>458</a>  \def\reflabel##1{\r@flabeltoks={{\escapechar-1\sevenrm\string##1\hskip.06in%
+<a href=#459 id=459 data-nosnippet>459</a>}}}}
+<a href=#460 id=460 data-nosnippet>460</a>\def\draft{\draftmode}
+<a href=#461 id=461 data-nosnippet>461</a>\def\draftstyle{\draftmode}
+<a href=#462 id=462 data-nosnippet>462</a>\nodraftlabels   % Make the default mode no labels
+<a href=#463 id=463 data-nosnippet>463</a>\dr@ftmodefalse  % Turn off draftmode
+<a href=#464 id=464 data-nosnippet>464</a>%
+<a href=#465 id=465 data-nosnippet>465</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#466 id=466 data-nosnippet>466</a>%%
+<a href=#467 id=467 data-nosnippet>467</a>%%   Here come macros for equation numbering.
+<a href=#468 id=468 data-nosnippet>468</a>%%   (Equation numbers are modified in draft mode)
+<a href=#469 id=469 data-nosnippet>469</a>%%
+<a href=#470 id=470 data-nosnippet>470</a>%%   Sections are automatically numbered independently, unless
+<a href=#471 id=471 data-nosnippet>471</a>%%   one puts the command \sequentialequations
+<a href=#472 id=472 data-nosnippet>472</a>%%
+<a href=#473 id=473 data-nosnippet>473</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#474 id=474 data-nosnippet>474</a>%
+<a href=#475 id=475 data-nosnippet>475</a>\def\eqname#1{\rel@x {\pr@tect
+<a href=#476 id=476 data-nosnippet>476</a>  \ifnum\equanumber&lt;0 \xdef#1{{\rm(\number-\equanumber)}}%
+<a href=#477 id=477 data-nosnippet>477</a>     \gl@bal\advance\equanumber by -1
+<a href=#478 id=478 data-nosnippet>478</a>  \else \gl@bal\advance\equanumber by 1
+<a href=#479 id=479 data-nosnippet>479</a>   \xdef#1{{\rm(\ifcn@@ \chapterlabel.\fi \number\equanumber)}}\fi
+<a href=#480 id=480 data-nosnippet>480</a>  }#1}
+<a href=#481 id=481 data-nosnippet>481</a>%
+<a href=#482 id=482 data-nosnippet>482</a>\def\eq{\eqname\?}
+<a href=#483 id=483 data-nosnippet>483</a>\def\eqn#1{\eqno\eqname{#1}\eqlabel#1}
+<a href=#484 id=484 data-nosnippet>484</a>\def\leqn#1{\leqno\leqlabel#1\eqname{#1}} %MODIFICATION
+<a href=#485 id=485 data-nosnippet>485</a>%
+<a href=#486 id=486 data-nosnippet>486</a>\def\eqinsert#1{\noalign{\dimen@=\prevdepth \nointerlineskip
+<a href=#487 id=487 data-nosnippet>487</a>   \setbox0=\hbox to\displaywidth{\hfil #1}
+<a href=#488 id=488 data-nosnippet>488</a>   \vbox to 0pt{\kern 0.5\baselineskip\hbox{$\!\box0\!$}\vss}
+<a href=#489 id=489 data-nosnippet>489</a>   \prevdepth=\dimen@}}  %MODIFICATION
+<a href=#490 id=490 data-nosnippet>490</a>%
+<a href=#491 id=491 data-nosnippet>491</a>\def\leqinsert#1{\eqinsert{#1\hfill}}
+<a href=#492 id=492 data-nosnippet>492</a>\def\mideqn#1{\eqinsert{\eqname{#1}}} %MODIFICATION
+<a href=#493 id=493 data-nosnippet>493</a>\def\midleqn#1{\leqinsert{\eqname{#1}}}
+<a href=#494 id=494 data-nosnippet>494</a>%
+<a href=#495 id=495 data-nosnippet>495</a>\def\eqnalign#1{\eqname{#1}} %MODIFICATION
+<a href=#496 id=496 data-nosnippet>496</a>%
+<a href=#497 id=497 data-nosnippet>497</a>%
+<a href=#498 id=498 data-nosnippet>498</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#499 id=499 data-nosnippet>499</a>%%
+<a href=#500 id=500 data-nosnippet>500</a>%%  Here come modified reference macros
+<a href=#501 id=501 data-nosnippet>501</a>%%
+<a href=#502 id=502 data-nosnippet>502</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#503 id=503 data-nosnippet>503</a>%
+<a href=#504 id=504 data-nosnippet>504</a>%
+<a href=#505 id=505 data-nosnippet>505</a>\def\refout{\par\penalty-400\vskip\chapterskip
+<a href=#506 id=506 data-nosnippet>506</a>   \spacecheck\referenceminspace
+<a href=#507 id=507 data-nosnippet>507</a>   \ifreferenceopen \Closeout\referencewrite \referenceopenfalse \fi
+<a href=#508 id=508 data-nosnippet>508</a>   \line{\ifpr@printstyle\twelverm\else\fourteenrm\fi
+<a href=#509 id=509 data-nosnippet>509</a>         \hfil REFERENCES\hfil}\vskip\headskip
+<a href=#510 id=510 data-nosnippet>510</a>   \input \jobname.refs
+<a href=#511 id=511 data-nosnippet>511</a>   }
+<a href=#512 id=512 data-nosnippet>512</a>\def\ACK{\par\penalty-100\medskip \spacecheck\sectionminspace
+<a href=#513 id=513 data-nosnippet>513</a>   \line{\ifpr@printstyle\twelverm\else\fourteenrm\fi
+<a href=#514 id=514 data-nosnippet>514</a>      \hfil ACKNOWLEDGEMENTS\hfil}\nobreak\vskip\headskip }
+<a href=#515 id=515 data-nosnippet>515</a>\def\tabout{\par\penalty-400
+<a href=#516 id=516 data-nosnippet>516</a>   \vskip\chapterskip\spacecheck\referenceminspace
+<a href=#517 id=517 data-nosnippet>517</a>   \iftableopen \Closeout\tablewrite \tableopenfalse \fi
+<a href=#518 id=518 data-nosnippet>518</a>   \line{\ifpr@printstyle\twelverm\else\fourteenrm\fi\hfil TABLE %
+<a href=#519 id=519 data-nosnippet>519</a>        CAPTIONS\hfil}
+<a href=#520 id=520 data-nosnippet>520</a>   \vskip\headskip
+<a href=#521 id=521 data-nosnippet>521</a>   \input \jobname.tabs
+<a href=#522 id=522 data-nosnippet>522</a>   }
+<a href=#523 id=523 data-nosnippet>523</a>\def\figout{\par\penalty-400
+<a href=#524 id=524 data-nosnippet>524</a>   \vskip\chapterskip\spacecheck\referenceminspace
+<a href=#525 id=525 data-nosnippet>525</a>   \iffigureopen \Closeout\figurewrite \figureopenfalse \fi
+<a href=#526 id=526 data-nosnippet>526</a>   \line{\ifpr@printstyle\twelverm\else\fourteenrm\fi\hfil FIGURE %
+<a href=#527 id=527 data-nosnippet>527</a>     CAPTIONS\hfil}
+<a href=#528 id=528 data-nosnippet>528</a>   \vskip\headskip
+<a href=#529 id=529 data-nosnippet>529</a>   \input \jobname.figs
+<a href=#530 id=530 data-nosnippet>530</a>   }
+<a href=#531 id=531 data-nosnippet>531</a>%
+<a href=#532 id=532 data-nosnippet>532</a>\def\masterreset{\begingroup\hsize=\pagetextwidth
+<a href=#533 id=533 data-nosnippet>533</a>   \global\pagenumber=1 \global\chapternumber=0
+<a href=#534 id=534 data-nosnippet>534</a>   \global\equanumber=0 \global\sectionnumber=0
+<a href=#535 id=535 data-nosnippet>535</a>   \global\referencecount=0 \global\figurecount=0 \global\tablecount=0
+<a href=#536 id=536 data-nosnippet>536</a>   \endgroup}
+<a href=#537 id=537 data-nosnippet>537</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#538 id=538 data-nosnippet>538</a>%%
+<a href=#539 id=539 data-nosnippet>539</a>%%   Here start the preprintmode enhancements
+<a href=#540 id=540 data-nosnippet>540</a>%%   To cause the paper to be printed in preprintmode, which
+<a href=#541 id=541 data-nosnippet>541</a>%%   emulates the l answer in harvmac, insert \preprint at the
+<a href=#542 id=542 data-nosnippet>542</a>%%   beginning of the file
+<a href=#543 id=543 data-nosnippet>543</a>%%
+<a href=#544 id=544 data-nosnippet>544</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#545 id=545 data-nosnippet>545</a>%%
+<a href=#546 id=546 data-nosnippet>546</a>%%   Next, I define output routines, footnotes &amp; related stuff.
+<a href=#547 id=547 data-nosnippet>547</a>%%   (The headline has been modified for draftmode and preprints
+<a href=#548 id=548 data-nosnippet>548</a>%%   may be produced in landscape form, two columns sideways)
+<a href=#549 id=549 data-nosnippet>549</a>%%
+<a href=#550 id=550 data-nosnippet>550</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#551 id=551 data-nosnippet>551</a>%
+<a href=#552 id=552 data-nosnippet>552</a>%
+<a href=#553 id=553 data-nosnippet>553</a>\newif\ifpr@printstyle \pr@printstylefalse
+<a href=#554 id=554 data-nosnippet>554</a>\newbox\leftpage
+<a href=#555 id=555 data-nosnippet>555</a>\newdimen\fullhsize
+<a href=#556 id=556 data-nosnippet>556</a>\newdimen\titlepagewidth
+<a href=#557 id=557 data-nosnippet>557</a>\newdimen\pagetextwidth
+<a href=#558 id=558 data-nosnippet>558</a>\def\preprintstyle{%
+<a href=#559 id=559 data-nosnippet>559</a>       \message{(This will be printed PREPRINTSTYLE)}
+<a href=#560 id=560 data-nosnippet>560</a>       \let\lr=L
+<a href=#561 id=561 data-nosnippet>561</a>       \frontpagetrue
+<a href=#562 id=562 data-nosnippet>562</a>       \pr@printstyletrue
+<a href=#563 id=563 data-nosnippet>563</a>       \vsize=7truein
+<a href=#564 id=564 data-nosnippet>564</a>       \pagetextwidth=4.75truein
+<a href=#565 id=565 data-nosnippet>565</a>       \fullhsize=10truein
+<a href=#566 id=566 data-nosnippet>566</a>       \titlepagewidth=8truein
+<a href=#567 id=567 data-nosnippet>567</a>       \normalspace
+<a href=#568 id=568 data-nosnippet>568</a>       \Tenpoint
+<a href=#569 id=569 data-nosnippet>569</a>       \voffset=-.31truein
+<a href=#570 id=570 data-nosnippet>570</a>       \hoffset=-.46truein
+<a href=#571 id=571 data-nosnippet>571</a>       \iffrontpage\hsize=\titlepagewidth\else\hsize=\pagetextwidth\fi
+<a href=#572 id=572 data-nosnippet>572</a>       %
+<a href=#573 id=573 data-nosnippet>573</a> \output={%
+<a href=#574 id=574 data-nosnippet>574</a>    \iffrontpage
+<a href=#575 id=575 data-nosnippet>575</a>      \shipout\vbox{\special{\printertype}\makeheadline
+<a href=#576 id=576 data-nosnippet>576</a>      \hbox to \fullhsize{\hfill\pagebody\hfill}}
+<a href=#577 id=577 data-nosnippet>577</a>      \advancepageno
+<a href=#578 id=578 data-nosnippet>578</a>    \else
+<a href=#579 id=579 data-nosnippet>579</a>       \almostshipout{\leftline{\vbox{\pagebody\makefootline}}}\advancepageno
+<a href=#580 id=580 data-nosnippet>580</a>    \fi}
+<a href=#581 id=581 data-nosnippet>581</a>        \def\almostshipout##1{\if L\lr \count2=1
+<a href=#582 id=582 data-nosnippet>582</a>             \message{[\the\count0.\the\count1.\the\count2]}
+<a href=#583 id=583 data-nosnippet>583</a>        \global\setbox\leftpage=##1 \global\let\lr=R
+<a href=#584 id=584 data-nosnippet>584</a>                             \else \count2=2
+<a href=#585 id=585 data-nosnippet>585</a>        \shipout\vbox{\special{\printertype}
+<a href=#586 id=586 data-nosnippet>586</a>        \hbox to\fullhsize{\hfill\box\leftpage\hskip0.5truein##1\hfill}}
+<a href=#587 id=587 data-nosnippet>587</a>        \global\let\lr=L     \fi}
+<a href=#588 id=588 data-nosnippet>588</a>   \multiply\chapterminspace by 7 \divide\chapterminspace by 9
+<a href=#589 id=589 data-nosnippet>589</a>   \multiply\sectionminspace by 7 \divide\sectionminspace by 9
+<a href=#590 id=590 data-nosnippet>590</a>   \multiply\referenceminspace by 7 \divide\referenceminspace  by 9
+<a href=#591 id=591 data-nosnippet>591</a>   \multiply\chapterskip by 7 \divide\chapterskip  by 9
+<a href=#592 id=592 data-nosnippet>592</a>   \multiply\sectionskip  by 7 \divide\sectionskip  by 9
+<a href=#593 id=593 data-nosnippet>593</a>   \multiply\headskip   by 7 \divide\headskip by 9
+<a href=#594 id=594 data-nosnippet>594</a>   \multiply\baselineskip   by 7 \divide\baselineskip by 9
+<a href=#595 id=595 data-nosnippet>595</a>   \multiply\abovedisplayskip by 7 \divide\abovedisplayskip by 9
+<a href=#596 id=596 data-nosnippet>596</a>   \belowdisplayskip = \abovedisplayskip
+<a href=#597 id=597 data-nosnippet>597</a>%
+<a href=#598 id=598 data-nosnippet>598</a>\def\advancepageno{\if L\lr \gl@bal\advance\pagen@ by 1\fi
+<a href=#599 id=599 data-nosnippet>599</a>   \ifnum\pagenumber&lt;0 \gl@bal\advance\pagenumber by -1
+<a href=#600 id=600 data-nosnippet>600</a>    \else\gl@bal\advance\pagenumber by 1 \fi
+<a href=#601 id=601 data-nosnippet>601</a>    \gl@bal\frontpagefalse  \swing@
+<a href=#602 id=602 data-nosnippet>602</a>    \gl@bal\hsize=\pagetextwidth}
+<a href=#603 id=603 data-nosnippet>603</a>} % end of preprintstyle specs
+<a href=#604 id=604 data-nosnippet>604</a>%
+<a href=#605 id=605 data-nosnippet>605</a>\let\preprint=\preprintstyle
+<a href=#606 id=606 data-nosnippet>606</a>\let\preprintmode=\preprintstyle
+<a href=#607 id=607 data-nosnippet>607</a>\tolerance=1000
+<a href=#608 id=608 data-nosnippet>608</a>%\def\printertype{ps: }
+<a href=#609 id=609 data-nosnippet>609</a>\def\printertype{}
+<a href=#610 id=610 data-nosnippet>610</a>%
+<a href=#611 id=611 data-nosnippet>611</a>% Default values for the fullsize document page
+<a href=#612 id=612 data-nosnippet>612</a>\def\oldpapersize{\ifpr@printstyle\relax\else
+<a href=#613 id=613 data-nosnippet>613</a>                  \ifdr@ftmode\relax\else
+<a href=#614 id=614 data-nosnippet>614</a>                  \pagetextwidth=6truein
+<a href=#615 id=615 data-nosnippet>615</a>                  \fullhsize=6truein
+<a href=#616 id=616 data-nosnippet>616</a>                  \titlepagewidth=6truein
+<a href=#617 id=617 data-nosnippet>617</a>                  \vsize=8.3truein
+<a href=#618 id=618 data-nosnippet>618</a>                  \hsize=\pagetextwidth
+<a href=#619 id=619 data-nosnippet>619</a>                  \Twelvepoint
+<a href=#620 id=620 data-nosnippet>620</a>                  \hoffset=0.3 truein
+<a href=#621 id=621 data-nosnippet>621</a>                  \voffset=0.2 truein
+<a href=#622 id=622 data-nosnippet>622</a>                  \advance\hoffset by\HOFFSET
+<a href=#623 id=623 data-nosnippet>623</a>                  \advance\voffset by\VOFFSET
+<a href=#624 id=624 data-nosnippet>624</a>                  \pagebottomfiller=0pc
+<a href=#625 id=625 data-nosnippet>625</a>                  \skip\footins=\bigskipamount
+<a href=#626 id=626 data-nosnippet>626</a>                  \normalspace\fi\fi}
+<a href=#627 id=627 data-nosnippet>627</a>%
+<a href=#628 id=628 data-nosnippet>628</a>\def\bigpapersize{\ifpr@printstyle\relax\else
+<a href=#629 id=629 data-nosnippet>629</a>                  \ifdr@ftmode\relax\else
+<a href=#630 id=630 data-nosnippet>630</a>                  \pagetextwidth=6.5truein
+<a href=#631 id=631 data-nosnippet>631</a>                  \fullhsize=6.5truein
+<a href=#632 id=632 data-nosnippet>632</a>                  \titlepagewidth=6.5truein
+<a href=#633 id=633 data-nosnippet>633</a>                  \hsize=\fullhsize
+<a href=#634 id=634 data-nosnippet>634</a>                  \vsize=9truein
+<a href=#635 id=635 data-nosnippet>635</a>                  \Twelvepoint
+<a href=#636 id=636 data-nosnippet>636</a>                  \hoffset=0.05 truein
+<a href=#637 id=637 data-nosnippet>637</a>                  \voffset=-0.1truein
+<a href=#638 id=638 data-nosnippet>638</a>                  \advance\hoffset by\HOFFSET
+<a href=#639 id=639 data-nosnippet>639</a>                  \advance\voffset by\VOFFSET
+<a href=#640 id=640 data-nosnippet>640</a>                  \pagebottomfiller=0pc
+<a href=#641 id=641 data-nosnippet>641</a>                  \skip\footins=\bigskipamount
+<a href=#642 id=642 data-nosnippet>642</a>                  \normalspace\fi\fi }
+<a href=#643 id=643 data-nosnippet>643</a>%
+<a href=#644 id=644 data-nosnippet>644</a>\paperheadline={\ifdr@ftmode\hfil\draftdate\else\hfill\fi}
+<a href=#645 id=645 data-nosnippet>645</a>%
+<a href=#646 id=646 data-nosnippet>646</a>\def\advancepageno{\gl@bal\advance\pagen@ by 1
+<a href=#647 id=647 data-nosnippet>647</a>    \ifnum\pagenumber&lt;0 \gl@bal\advance\pagenumber by -1
+<a href=#648 id=648 data-nosnippet>648</a>    \else\gl@bal\advance\pagenumber by 1 \fi
+<a href=#649 id=649 data-nosnippet>649</a>    \gl@bal\frontpagefalse  \swing@
+<a href=#650 id=650 data-nosnippet>650</a>    \gl@bal\hsize=\pagetextwidth} %MODIFICATION
+<a href=#651 id=651 data-nosnippet>651</a>%
+<a href=#652 id=652 data-nosnippet>652</a>\let\papersize=\bigpapersize
+<a href=#653 id=653 data-nosnippet>653</a>%
+<a href=#654 id=654 data-nosnippet>654</a>\papers
+<a href=#655 id=655 data-nosnippet>655</a>%
+<a href=#656 id=656 data-nosnippet>656</a>\def\lettersize{\fullhsize=6.5in
+<a href=#657 id=657 data-nosnippet>657</a>                \pagetextwidth=6.5in
+<a href=#658 id=658 data-nosnippet>658</a>                \hsize=\fullhsize
+<a href=#659 id=659 data-nosnippet>659</a>                \vsize=8.5in
+<a href=#660 id=660 data-nosnippet>660</a>                \hoffset=0in
+<a href=#661 id=661 data-nosnippet>661</a>                \voffset=0.5in
+<a href=#662 id=662 data-nosnippet>662</a>                \advance\hoffset by\HOFFSET
+<a href=#663 id=663 data-nosnippet>663</a>                \advance\voffset by\VOFFSET
+<a href=#664 id=664 data-nosnippet>664</a>                \pagebottomfiller=\letterbottomskip
+<a href=#665 id=665 data-nosnippet>665</a>                \skip\footins=\smallskipamount
+<a href=#666 id=666 data-nosnippet>666</a>                \multiply\skip\footins by 3
+<a href=#667 id=667 data-nosnippet>667</a>                \singlespace }
+<a href=#668 id=668 data-nosnippet>668</a>%
+<a href=#669 id=669 data-nosnippet>669</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#670 id=670 data-nosnippet>670</a>%%
+<a href=#671 id=671 data-nosnippet>671</a>%%   Here come chapter, section, subsection &amp; appendix macros.
+<a href=#672 id=672 data-nosnippet>672</a>%%
+<a href=#673 id=673 data-nosnippet>673</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#674 id=674 data-nosnippet>674</a>%%
+<a href=#675 id=675 data-nosnippet>675</a>%%  The following allows a shortcut for making titles bold etc.
+<a href=#676 id=676 data-nosnippet>676</a>%%  Just use \chapterheadstyle={\bf} in the beginning of the
+<a href=#677 id=677 data-nosnippet>677</a>%%  TeX file.
+<a href=#678 id=678 data-nosnippet>678</a>%%
+<a href=#679 id=679 data-nosnippet>679</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#680 id=680 data-nosnippet>680</a>\newtoks\chapterheadstyle  \chapterheadstyle={\relax}
+<a href=#681 id=681 data-nosnippet>681</a>%
+<a href=#682 id=682 data-nosnippet>682</a>\def\chapter#1{{\the\chapterheadstyle\par \penalty-300 \vskip\chapterskip
+<a href=#683 id=683 data-nosnippet>683</a>  \spacecheck\chapterminspace
+<a href=#684 id=684 data-nosnippet>684</a>  \chapterreset\titlestyle{\ifcn@@{\ifPhysRev\Roman{\the\chapternumber}.~
+<a href=#685 id=685 data-nosnippet>685</a>   \else{\the\chapternumber}.~\fi}\fi #1}
+<a href=#686 id=686 data-nosnippet>686</a>  \nobreak\vskip\headskip \penalty 30000
+<a href=#687 id=687 data-nosnippet>687</a>  \message{(\the\chapternumber. #1)}
+<a href=#688 id=688 data-nosnippet>688</a> {\pr@tect\wlog{\string\chapter\space \chapterlabel}} }}
+<a href=#689 id=689 data-nosnippet>689</a>\def\chap{\chapter}
+<a href=#690 id=690 data-nosnippet>690</a>\def\APPENDIX#1#2{{\the\chapterheadstyle\par\penalty-300\vskip\chapterskip
+<a href=#691 id=691 data-nosnippet>691</a>   \spacecheck\chapterminspace \chapterreset \xdef\chapterlabel{#1}
+<a href=#692 id=692 data-nosnippet>692</a>   \titlestyle{APPENDIX #2} \nobreak\vskip\headskip \penalty 30000
+<a href=#693 id=693 data-nosnippet>693</a>   \wlog{\string\Appendix~\chapterlabel} }}
+<a href=#694 id=694 data-nosnippet>694</a>%
+<a href=#695 id=695 data-nosnippet>695</a>\def\chapterreset{\gl@bal\advance\chapternumber by 1
+<a href=#696 id=696 data-nosnippet>696</a>   \ifnum\equanumber&lt;0 \else\gl@bal\equanumber=0\fi
+<a href=#697 id=697 data-nosnippet>697</a>   \gl@bal\sectionnumber=0 \let\sectionlabel=\rel@x
+<a href=#698 id=698 data-nosnippet>698</a>   \ifcn@ \gl@bal\cn@@true {\pr@tect
+<a href=#699 id=699 data-nosnippet>699</a>       \xdef\chapterlabel{{\the\chapterstyle{\the\chapternumber}}}}%
+<a href=#700 id=700 data-nosnippet>700</a>    \else \gl@bal\cn@@false \gdef\chapterlabel{\rel@x}\fi }%MODIFICATION
+<a href=#701 id=701 data-nosnippet>701</a>%
+<a href=#702 id=702 data-nosnippet>702</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#703 id=703 data-nosnippet>703</a>%%
+<a href=#704 id=704 data-nosnippet>704</a>%%      Various little user definitions
+<a href=#705 id=705 data-nosnippet>705</a>%%
+<a href=#706 id=706 data-nosnippet>706</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#707 id=707 data-nosnippet>707</a>%
+<a href=#708 id=708 data-nosnippet>708</a>\def\half{{\textstyle{1\over2}}}
+<a href=#709 id=709 data-nosnippet>709</a>\def\third{{\textstyle{1\over3}}}
+<a href=#710 id=710 data-nosnippet>710</a>\def\fourth{{\textstyle{1\over4}}}
+<a href=#711 id=711 data-nosnippet>711</a>\def\12{{1\over2}}
+<a href=#712 id=712 data-nosnippet>712</a>\def\etal{{\it et al.\ }}
+<a href=#713 id=713 data-nosnippet>713</a>\def\via{{\hbox{\it via}}}
+<a href=#714 id=714 data-nosnippet>714</a>\def\cf{{\hbox{\it cf.}}}
+<a href=#715 id=715 data-nosnippet>715</a>\def\sla{\raise.15ex\hbox{$/$}\kern-.57em}
+<a href=#716 id=716 data-nosnippet>716</a>\def\leaderfill{\leaders\hbox to 1em{\hss.\hss}\hfill}
+<a href=#717 id=717 data-nosnippet>717</a>\def\dual{{\,^*\kern-.20em}}  %%% produces a raised * in front of a form
+<a href=#718 id=718 data-nosnippet>718</a>\def\inner{\,{\vcenter{       %%%  symbol _| for vector, form inner product
+<a href=#719 id=719 data-nosnippet>719</a>      \hbox{ \kern 4pt
+<a href=#720 id=720 data-nosnippet>720</a>        \vrule width 0.5pt height 7pt}
+<a href=#721 id=721 data-nosnippet>721</a>      \hrule height 0.5pt}}\,}
+<a href=#722 id=722 data-nosnippet>722</a>\def\bx{{\vcenter{\hrule height 0.4pt
+<a href=#723 id=723 data-nosnippet>723</a>      \hbox{\vrule width 0.4pt height 10pt \kern 10pt
+<a href=#724 id=724 data-nosnippet>724</a>        \vrule width 0.4pt}
+<a href=#725 id=725 data-nosnippet>725</a>      \hrule height 0.4pt}}}
+<a href=#726 id=726 data-nosnippet>726</a>\def\sqr#1#2{{\vcenter{\hrule height.#2pt
+<a href=#727 id=727 data-nosnippet>727</a>      \hbox{\vrule width.#2pt height#1pt \kern#1pt
+<a href=#728 id=728 data-nosnippet>728</a>        \vrule width.#2pt}
+<a href=#729 id=729 data-nosnippet>729</a>      \hrule height.#2pt}}}
+<a href=#730 id=730 data-nosnippet>730</a>\def\rect#1#2#3#4{{\vcenter{\hrule height#3pt
+<a href=#731 id=731 data-nosnippet>731</a>      \hbox{\vrule width#4pt height#1pt \kern#1pt
+<a href=#732 id=732 data-nosnippet>732</a>        \vrule width#4pt}
+<a href=#733 id=733 data-nosnippet>733</a>      \hrule height#3pt}}}
+<a href=#734 id=734 data-nosnippet>734</a>\def\rec{\rect{15}{15}{.5}{.5}}
+<a href=#735 id=735 data-nosnippet>735</a>\def\bx{{\vcenter{\hrule height 0.4pt
+<a href=#736 id=736 data-nosnippet>736</a>      \hbox{\vrule width 0.4pt height 10pt \kern 10pt
+<a href=#737 id=737 data-nosnippet>737</a>        \vrule width 0.4pt}
+<a href=#738 id=738 data-nosnippet>738</a>      \hrule height 0.4pt}}}
+<a href=#739 id=739 data-nosnippet>739</a>\def\ssquare{\mathchoice\sqr34\sqr34\sqr{2.1}3\sqr{1.5}3}
+<a href=#740 id=740 data-nosnippet>740</a>\def\up#1{\leavevmode \raise.16ex\hbox{#1}}
+<a href=#741 id=741 data-nosnippet>741</a>\def\twiddle{\lower.9ex\rlap{$\kern-.1em\scriptstyle\sim$}}
+<a href=#742 id=742 data-nosnippet>742</a>\def\bigtwiddle{\lower1.ex\rlap{$\sim$}}
+<a href=#743 id=743 data-nosnippet>743</a>\def\gtwid{\mathrel{\raise.3ex\hbox{$&gt;$\kern-.75em\lower1ex\hbox{$\sim$}}}}
+<a href=#744 id=744 data-nosnippet>744</a>\def\ltwid{\mathrel{\raise.3ex\hbox{$&lt;$\kern-.75em\lower1ex\hbox{$\sim$}}}}
+<a href=#745 id=745 data-nosnippet>745</a>\def\square{\kern1pt\vbox{\hrule height 1.2pt\hbox{\vrule width 1.2pt\hskip 3pt
+<a href=#746 id=746 data-nosnippet>746</a>   \vbox{\vskip 6pt}\hskip 3pt\vrule width 0.6pt}\hrule height 0.6pt}\kern1pt}
+<a href=#747 id=747 data-nosnippet>747</a>\def\tdot#1{\mathord{\mathop{#1}\limits^{\kern2pt\ldots}}}
+<a href=#748 id=748 data-nosnippet>748</a>\def\super#1{$^{#1}$}
+<a href=#749 id=749 data-nosnippet>749</a>\def\pmb#1{\setbox0=\hbox{#1}    %  POOR MAN'S BOLD
+<a href=#750 id=750 data-nosnippet>750</a>  \kern-.025em\copy0\kern-\wd0
+<a href=#751 id=751 data-nosnippet>751</a>  \kern  .05em\copy0\kern-\wd0
+<a href=#752 id=752 data-nosnippet>752</a>  \kern-.025em\raise.0433em\box0 }
+<a href=#753 id=753 data-nosnippet>753</a>\def\qed{\vrule height 1.2ex width 0.5em}
+<a href=#754 id=754 data-nosnippet>754</a>\def\dalemb{{\cal t}} %%DALEMBERTIAN, USED TO BE \box
+<a href=#755 id=755 data-nosnippet>755</a>\def\grad{\nabla}
+<a href=#756 id=756 data-nosnippet>756</a>\def\const{{\rm const}}
+<a href=#757 id=757 data-nosnippet>757</a>\def\s{{\,\rm s}}
+<a href=#758 id=758 data-nosnippet>758</a>\def\cm{{\,\rm cm}}
+<a href=#759 id=759 data-nosnippet>759</a>\def\g{{\,\rm g}}
+<a href=#760 id=760 data-nosnippet>760</a>\def\coeff#1#2{\textstyle{#1\over #2}}
+<a href=#761 id=761 data-nosnippet>761</a>\def\partder#1#2{{{\partial #1}\over{\partial #2}}}
+<a href=#762 id=762 data-nosnippet>762</a>\def\Tr{\mathop{\rm Tr}\nolimits}
+<a href=#763 id=763 data-nosnippet>763</a>\def\gev{{\,\rm GeV}}
+<a href=#764 id=764 data-nosnippet>764</a>\def\ev{{\,\rm eV}}
+<a href=#765 id=765 data-nosnippet>765</a>\def\inv{^{\raise.15ex\hbox{${\scriptscriptstyle -}$}\kern-.05em 1}}
+<a href=#766 id=766 data-nosnippet>766</a>\def\dup{^{\vphantom{1}}}
+<a href=#767 id=767 data-nosnippet>767</a>\def\Dsl{\,\raise.15ex\hbox{/}\mkern-13.5mu D} %this one can be subscripted
+<a href=#768 id=768 data-nosnippet>768</a>\def\dsl{\raise.15ex\hbox{/}\kern-.57em\partial}
+<a href=#769 id=769 data-nosnippet>769</a>\def\del{\partial}
+<a href=#770 id=770 data-nosnippet>770</a>\def\Psl{\dsl}
+<a href=#771 id=771 data-nosnippet>771</a>\def\tr{{\rm tr}}
+<a href=#772 id=772 data-nosnippet>772</a>\font\bigit=cmti10 scaled \magstep1
+<a href=#773 id=773 data-nosnippet>773</a>\def\biglie{\hbox{\bigit\$}}       %pound sterling
+<a href=#774 id=774 data-nosnippet>774</a>\def\boxeqn#1{\vcenter{\vbox{\hrule\hbox{\vrule\kern3pt\vbox{\kern3pt
+<a href=#775 id=775 data-nosnippet>775</a>        \hbox{${\displaystyle #1}$}\kern3pt}\kern3pt\vrule}\hrule}}}
+<a href=#776 id=776 data-nosnippet>776</a>\def\mbox#1#2{\vcenter{\hrule \hbox{\vrule height#2in
+<a href=#777 id=777 data-nosnippet>777</a>                \kern#1in \vrule} \hrule}}  %e.g. \mbox{.1}{.1}
+<a href=#778 id=778 data-nosnippet>778</a>\hyphenation{anom-aly anom-alies coun-ter-term coun-ter-terms}
+<a href=#779 id=779 data-nosnippet>779</a>%%
+<a href=#780 id=780 data-nosnippet>780</a>%%       matters of taste
+<a href=#781 id=781 data-nosnippet>781</a>%%
+<a href=#782 id=782 data-nosnippet>782</a>%%
+<a href=#783 id=783 data-nosnippet>783</a>%%
+<a href=#784 id=784 data-nosnippet>784</a>%\def\tilde{\widetilde} \def\bar{\overline} \def\hat{\widehat}
+<a href=#785 id=785 data-nosnippet>785</a>\def\e#1{{\rm e}^{^{\textstyle#1}}}
+<a href=#786 id=786 data-nosnippet>786</a>\def\grad#1{\,\nabla\!_{{#1}}\,}
+<a href=#787 id=787 data-nosnippet>787</a>\def\ph{\varphi}
+<a href=#788 id=788 data-nosnippet>788</a>\def\psibar{\overline\psi}
+<a href=#789 id=789 data-nosnippet>789</a>\def\om#1#2{\omega^{#1}{}_{#2}}
+<a href=#790 id=790 data-nosnippet>790</a>\def\darr#1{\raise1.5ex\hbox{$\leftrightarrow$}\mkern-16.5mu #1}
+<a href=#791 id=791 data-nosnippet>791</a>\def\lie{\hbox{\it\$}} %pound sterling
+<a href=#792 id=792 data-nosnippet>792</a>\def\roughly#1{\raise.3ex\hbox{$#1$\kern-.75em\lower1ex\hbox{$\sim$}}}
+<a href=#793 id=793 data-nosnippet>793</a>%
+<a href=#794 id=794 data-nosnippet>794</a>%
+<a href=#795 id=795 data-nosnippet>795</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#796 id=796 data-nosnippet>796</a>%%
+<a href=#797 id=797 data-nosnippet>797</a>%%   Miscellaneous macros
+<a href=#798 id=798 data-nosnippet>798</a>%%
+<a href=#799 id=799 data-nosnippet>799</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#800 id=800 data-nosnippet>800</a>%
+<a href=#801 id=801 data-nosnippet>801</a>%\def\letter{\FRONTPAGE \letterhead \addressee }
+<a href=#802 id=802 data-nosnippet>802</a>%
+<a href=#803 id=803 data-nosnippet>803</a>%%% undertildes
+<a href=#804 id=804 data-nosnippet>804</a>\def\underwig#1{{
+<a href=#805 id=805 data-nosnippet>805</a>\setbox0=\hbox{$#1$}
+<a href=#806 id=806 data-nosnippet>806</a>\setbox1=\hbox{}
+<a href=#807 id=807 data-nosnippet>807</a>\wd1=\wd0
+<a href=#808 id=808 data-nosnippet>808</a>\ht1=\ht0
+<a href=#809 id=809 data-nosnippet>809</a>\dp1=\dp0
+<a href=#810 id=810 data-nosnippet>810</a>\setbox2=\hbox{$\rm\widetilde{\box1}$}
+<a href=#811 id=811 data-nosnippet>811</a>\dimen@=\ht2 \advance \dimen@ by \dp2 \advance \dimen@ by 1.5pt
+<a href=#812 id=812 data-nosnippet>812</a>\ht2=0pt \dp2=0pt
+<a href=#813 id=813 data-nosnippet>813</a>\hbox to 0pt{$#1$\hss} \lower\dimen@\box2
+<a href=#814 id=814 data-nosnippet>814</a>}}
+<a href=#815 id=815 data-nosnippet>815</a>%
+<a href=#816 id=816 data-nosnippet>816</a>\def\bunderwig#1{{
+<a href=#817 id=817 data-nosnippet>817</a>\setbox0=\hbox{$#1$}
+<a href=#818 id=818 data-nosnippet>818</a>\setbox1=\hbox{}
+<a href=#819 id=819 data-nosnippet>819</a>\wd1=\wd0
+<a href=#820 id=820 data-nosnippet>820</a>\ht1=\ht0
+<a href=#821 id=821 data-nosnippet>821</a>\dp1=\dp0
+<a href=#822 id=822 data-nosnippet>822</a>\setbox2=\hbox{$\seventeenrm\widetilde{\box1}$}
+<a href=#823 id=823 data-nosnippet>823</a>\dimen@=\the\ht2 \advance \dimen@ by \the\dp2 \advance \dimen@ by 1.5pt
+<a href=#824 id=824 data-nosnippet>824</a>\ht2=0pt \dp2=0pt
+<a href=#825 id=825 data-nosnippet>825</a>\hbox to 0pt{$#1$\hss} \lower\dimen@\box2
+<a href=#826 id=826 data-nosnippet>826</a>}}
+<a href=#827 id=827 data-nosnippet>827</a>%
+<a href=#828 id=828 data-nosnippet>828</a>\def\journal#1&amp;#2(#3){\unskip, \sl #1~\bf #2 \rm (19#3) }
+<a href=#829 id=829 data-nosnippet>829</a>                    % Journal reference. Alignment
+<a href=#830 id=830 data-nosnippet>830</a>                    % tabs &amp; set off name, vol, year, page
+<a href=#831 id=831 data-nosnippet>831</a>\def\npjournal#1&amp;#2&amp;#3&amp;#4&amp;{\unskip, #1~\rm #2 \rm (#3) #4}
+<a href=#832 id=832 data-nosnippet>832</a>\gdef\prjournal#1&amp;#2&amp;#3&amp;#4&amp;{\unskip, #1~\bf #2, \rm #4 (#3)}
+<a href=#833 id=833 data-nosnippet>833</a>\def\JOURNAL{\ifPhysRev\prjournal\else\npjournal\fi}
+<a href=#834 id=834 data-nosnippet>834</a>%
+<a href=#835 id=835 data-nosnippet>835</a>\def\coeff#1#2{\textstyle{#1\over #2}}
+<a href=#836 id=836 data-nosnippet>836</a>\def\partder#1#2{{\partial #1\over\partial #2}}
+<a href=#837 id=837 data-nosnippet>837</a>\def\bra#1{\left\langle #1\right|}
+<a href=#838 id=838 data-nosnippet>838</a>\def\ket#1{\left| #1\right\rangle}
+<a href=#839 id=839 data-nosnippet>839</a>\def\VEV#1{\left\langle #1\right\rangle}
+<a href=#840 id=840 data-nosnippet>840</a>\let\vev=\VEV
+<a href=#841 id=841 data-nosnippet>841</a>\def\Tr{\mathop{\rm Tr}\nolimits}
+<a href=#842 id=842 data-nosnippet>842</a>\let\int=\intop         \let\oint=\ointop
+<a href=#843 id=843 data-nosnippet>843</a>\def\semi{;\hfil\break}
+<a href=#844 id=844 data-nosnippet>844</a>\catcode`@=12 % at signs are no longer letters
+<a href=#845 id=845 data-nosnippet>845</a>%
+<a href=#846 id=846 data-nosnippet>846</a>\masterreset
+<a href=#847 id=847 data-nosnippet>847</a>\endinput
+<a href=#848 id=848 data-nosnippet>848</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#849 id=849 data-nosnippet>849</a>%%%%%%%%%%%% This is LABELFORM.TEX %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#850 id=850 data-nosnippet>850</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#851 id=851 data-nosnippet>851</a>%%
+<a href=#852 id=852 data-nosnippet>852</a>%%    Macro to make mailing labels on Avery sheets from an address file.
+<a href=#853 id=853 data-nosnippet>853</a>%%    Address file should be formatted as:
+<a href=#854 id=854 data-nosnippet>854</a>%%
+<a href=#855 id=855 data-nosnippet>855</a>%%       {
+<a href=#856 id=856 data-nosnippet>856</a>%%       &lt;name&gt;
+<a href=#857 id=857 data-nosnippet>857</a>%%       &lt;multi(&lt;=5)line address&gt;
+<a href=#858 id=858 data-nosnippet>858</a>%%       }
+<a href=#859 id=859 data-nosnippet>859</a>%%
+<a href=#860 id=860 data-nosnippet>860</a>%%       with a blank line between addresses and NO BLANK LINES at the
+<a href=#861 id=861 data-nosnippet>861</a>%%       BEGINNING or the END
+<a href=#862 id=862 data-nosnippet>862</a>%%
+<a href=#863 id=863 data-nosnippet>863</a>%%       The enhanced phyzzx.plus automatically formats the input file for
+<a href=#864 id=864 data-nosnippet>864</a>%%       addresses correctly if the command \labelformlabels is inserted
+<a href=#865 id=865 data-nosnippet>865</a>%%       BEFORE the \multiletter command
+<a href=#866 id=866 data-nosnippet>866</a>%%
+<a href=#867 id=867 data-nosnippet>867</a>%%  The present format has ELEVEN labels in each column, THREE columns/page
+<a href=#868 id=868 data-nosnippet>868</a>%%  and prints in a tenpoint san serif typeface
+<a href=#869 id=869 data-nosnippet>869</a>%%  (Appended to the end of this file is the format for EIGHT labels/column)
+<a href=#870 id=870 data-nosnippet>870</a>%%
+<a href=#871 id=871 data-nosnippet>871</a>%%   No matter what the name of the address file input is, the output will
+<a href=#872 id=872 data-nosnippet>872</a>%%   be called LABELFORM.DVI
+<a href=#873 id=873 data-nosnippet>873</a>%%
+<a href=#874 id=874 data-nosnippet>874</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#875 id=875 data-nosnippet>875</a>%
+<a href=#876 id=876 data-nosnippet>876</a>\font\tenss = cmss10
+<a href=#877 id=877 data-nosnippet>877</a>\tenss
+<a href=#878 id=878 data-nosnippet>878</a>\nopagenumbers
+<a href=#879 id=879 data-nosnippet>879</a>\baselineskip=9truept  % use 10truept here for labels with only four lines
+<a href=#880 id=880 data-nosnippet>880</a>\parindent 0pt
+<a href=#881 id=881 data-nosnippet>881</a>\hsize=8.5truein
+<a href=#882 id=882 data-nosnippet>882</a>\vsize=11 truein
+<a href=#883 id=883 data-nosnippet>883</a>\hoffset=-0.65 truein
+<a href=#884 id=884 data-nosnippet>884</a>\voffset=-0.795 truein
+<a href=#885 id=885 data-nosnippet>885</a>%
+<a href=#886 id=886 data-nosnippet>886</a>\newread\addrfileno
+<a href=#887 id=887 data-nosnippet>887</a>\loop\immediate\write16{ }
+<a href=#888 id=888 data-nosnippet>888</a>  \message{Address file name?  }
+<a href=#889 id=889 data-nosnippet>889</a>  \read-1 to \addrfile
+<a href=#890 id=890 data-nosnippet>890</a>  \immediate\write16{ }
+<a href=#891 id=891 data-nosnippet>891</a>  \openin\addrfileno=\addrfile
+<a href=#892 id=892 data-nosnippet>892</a>  \ifeof\addrfileno \immediate\write16{File not found.}
+<a href=#893 id=893 data-nosnippet>893</a>\repeat
+<a href=#894 id=894 data-nosnippet>894</a>%
+<a href=#895 id=895 data-nosnippet>895</a>\newbox\onelabel
+<a href=#896 id=896 data-nosnippet>896</a>\newbox\wall
+<a href=#897 id=897 data-nosnippet>897</a>\setbox\wall=\hbox to 0pt{\null}
+<a href=#898 id=898 data-nosnippet>898</a>\newcount\across  \across=0
+<a href=#899 id=899 data-nosnippet>899</a>\newcount\down    \down=0
+<a href=#900 id=900 data-nosnippet>900</a>%
+<a href=#901 id=901 data-nosnippet>901</a>\newif\ifanymore
+<a href=#902 id=902 data-nosnippet>902</a>\loop
+<a href=#903 id=903 data-nosnippet>903</a>  \endlinechar=`\^^M               % normal expansion of &lt;cr&gt;
+<a href=#904 id=904 data-nosnippet>904</a>  \begingroup\obeylines            % to get address read in with \par's
+<a href=#905 id=905 data-nosnippet>905</a>  \global\read\addrfileno to \addresslines  %
+<a href=#906 id=906 data-nosnippet>906</a>  \endgroup
+<a href=#907 id=907 data-nosnippet>907</a>  \setbox\onelabel=\hbox to 2.8truein{\vbox to 0.99truein{\vskip 3truept
+<a href=#908 id=908 data-nosnippet>908</a>      \hbox{\vbox{\hsize=2.8truein \addresslines}}
+<a href=#909 id=909 data-nosnippet>909</a>      \vfil}} %
+<a href=#910 id=910 data-nosnippet>910</a>  \setbox\wall=\hbox{\box\wall\box\onelabel}
+<a href=#911 id=911 data-nosnippet>911</a>  \advance\across by 1
+<a href=#912 id=912 data-nosnippet>912</a>  \ifnum\across=3                  % if 3 labels in a row, add row
+<a href=#913 id=913 data-nosnippet>913</a>      \box\wall
+<a href=#914 id=914 data-nosnippet>914</a>      \vskip -1.0pt                % correct downward creep
+<a href=#915 id=915 data-nosnippet>915</a>      \setbox\wall=\hbox to 0pt{\null}
+<a href=#916 id=916 data-nosnippet>916</a>      \advance\down by 1
+<a href=#917 id=917 data-nosnippet>917</a>      \across=0
+<a href=#918 id=918 data-nosnippet>918</a>      \ifnum\down=11               % if 11 rows on page, print page
+<a href=#919 id=919 data-nosnippet>919</a>          \eject
+<a href=#920 id=920 data-nosnippet>920</a>          \down=0
+<a href=#921 id=921 data-nosnippet>921</a>      \fi
+<a href=#922 id=922 data-nosnippet>922</a>  \fi
+<a href=#923 id=923 data-nosnippet>923</a>  \read\addrfileno to \emptyline   % 1 blank line divides addresses
+<a href=#924 id=924 data-nosnippet>924</a>  \ifeof\addrfileno\anymorefalse   % last line in the file
+<a href=#925 id=925 data-nosnippet>925</a>    \else\anymoretrue\fi           % otherwise repeat the loop
+<a href=#926 id=926 data-nosnippet>926</a>  \ifanymore
+<a href=#927 id=927 data-nosnippet>927</a>\repeat
+<a href=#928 id=928 data-nosnippet>928</a>\closein\addrfileno
+<a href=#929 id=929 data-nosnippet>929</a>\ifnum\across=0       % if addresses ended with a full row, no need to fill
+<a href=#930 id=930 data-nosnippet>930</a>  \else               % if addresses didn't end with a full row, fill it out
+<a href=#931 id=931 data-nosnippet>931</a>  \setbox\wall=\hbox to\hsize{\box\wall\hfill}
+<a href=#932 id=932 data-nosnippet>932</a>  \box\wall \vfill\eject
+<a href=#933 id=933 data-nosnippet>933</a>\fi
+<a href=#934 id=934 data-nosnippet>934</a>\bye
+<a href=#935 id=935 data-nosnippet>935</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#936 id=936 data-nosnippet>936</a>%%%%%%%%%%%% This is LABELFORM.TEX %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#937 id=937 data-nosnippet>937</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#938 id=938 data-nosnippet>938</a>%%
+<a href=#939 id=939 data-nosnippet>939</a>%%   Macro to make mailing labels on Avery sheets from an address file.
+<a href=#940 id=940 data-nosnippet>940</a>%%   Address file should be formatted as:
+<a href=#941 id=941 data-nosnippet>941</a>%%
+<a href=#942 id=942 data-nosnippet>942</a>%%
+<a href=#943 id=943 data-nosnippet>943</a>%%       {
+<a href=#944 id=944 data-nosnippet>944</a>%%       &lt;name&gt;
+<a href=#945 id=945 data-nosnippet>945</a>%%       &lt;multi(&lt;=6)line address&gt;
+<a href=#946 id=946 data-nosnippet>946</a>%%       }
+<a href=#947 id=947 data-nosnippet>947</a>%%
+<a href=#948 id=948 data-nosnippet>948</a>%%       with a blank line between addresses and NO BLANK LINES at the
+<a href=#949 id=949 data-nosnippet>949</a>%%       BEGINNING or the END
+<a href=#950 id=950 data-nosnippet>950</a>%%
+<a href=#951 id=951 data-nosnippet>951</a>%%   The enhanced phyzzx.plus automatically formats the input file for
+<a href=#952 id=952 data-nosnippet>952</a>%%   addresses correctly if the command \labelformlabels is inserted BEFORE
+<a href=#953 id=953 data-nosnippet>953</a>%%   the \multiletter command
+<a href=#954 id=954 data-nosnippet>954</a>%%
+<a href=#955 id=955 data-nosnippet>955</a>%%   The present format has EIGHT labels in each column, THREE columns/page
+<a href=#956 id=956 data-nosnippet>956</a>%%   and prints in a san serif typeface
+<a href=#957 id=957 data-nosnippet>957</a>%%
+<a href=#958 id=958 data-nosnippet>958</a>%%   No matter what the name of the address file input is, the output will
+<a href=#959 id=959 data-nosnippet>959</a>%%   be called LABELFORM.DVI
+<a href=#960 id=960 data-nosnippet>960</a>%%
+<a href=#961 id=961 data-nosnippet>961</a>%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#962 id=962 data-nosnippet>962</a>%
+<a href=#963 id=963 data-nosnippet>963</a>\font\tenss = cmss10
+<a href=#964 id=964 data-nosnippet>964</a>\tenss
+<a href=#965 id=965 data-nosnippet>965</a>\nopagenumbers
+<a href=#966 id=966 data-nosnippet>966</a>\baselineskip=9 truept
+<a href=#967 id=967 data-nosnippet>967</a>\parindent 0pt
+<a href=#968 id=968 data-nosnippet>968</a>\hsize=8.5truein
+<a href=#969 id=969 data-nosnippet>969</a>\vsize=11truein
+<a href=#970 id=970 data-nosnippet>970</a>\hoffset=-0.65truein
+<a href=#971 id=971 data-nosnippet>971</a>\voffset=-0.4truein
+<a href=#972 id=972 data-nosnippet>972</a>%
+<a href=#973 id=973 data-nosnippet>973</a>\newread\addrfileno
+<a href=#974 id=974 data-nosnippet>974</a>\loop\immediate\write16{ }
+<a href=#975 id=975 data-nosnippet>975</a>  \message{Address file name?  }
+<a href=#976 id=976 data-nosnippet>976</a>  \read-1 to \addrfile
+<a href=#977 id=977 data-nosnippet>977</a>  \immediate\write16{ }
+<a href=#978 id=978 data-nosnippet>978</a>  \openin\addrfileno=\addrfile
+<a href=#979 id=979 data-nosnippet>979</a>  \ifeof\addrfileno \immediate\write16{File not found.}
+<a href=#980 id=980 data-nosnippet>980</a>\repeat
+<a href=#981 id=981 data-nosnippet>981</a>%
+<a href=#982 id=982 data-nosnippet>982</a>\newbox\onelabel
+<a href=#983 id=983 data-nosnippet>983</a>\newbox\wall
+<a href=#984 id=984 data-nosnippet>984</a>\setbox\wall=\hbox to 0pt{\null}
+<a href=#985 id=985 data-nosnippet>985</a>\newcount\across  \across=0
+<a href=#986 id=986 data-nosnippet>986</a>\newcount\down    \down=0
+<a href=#987 id=987 data-nosnippet>987</a>%
+<a href=#988 id=988 data-nosnippet>988</a>\newif\ifanymore
+<a href=#989 id=989 data-nosnippet>989</a>\loop
+<a href=#990 id=990 data-nosnippet>990</a>  \endlinechar=`\^^M               % normal expansion of &lt;cr&gt;
+<a href=#991 id=991 data-nosnippet>991</a>  \begingroup\obeylines            % to get address read in with \par's
+<a href=#992 id=992 data-nosnippet>992</a>  \global\read\addrfileno to \addresslines  %
+<a href=#993 id=993 data-nosnippet>993</a>  \endgroup
+<a href=#994 id=994 data-nosnippet>994</a>  \setbox\onelabel=\hbox to 2.8truein{\vbox to 1.35truein{\vskip 3truept
+<a href=#995 id=995 data-nosnippet>995</a>      \hbox{\vbox{\hsize=2.8 truein \addresslines}}
+<a href=#996 id=996 data-nosnippet>996</a>      \vfil}} %
+<a href=#997 id=997 data-nosnippet>997</a>  \setbox\wall=\hbox{\box\wall\box\onelabel}
+<a href=#998 id=998 data-nosnippet>998</a>  \advance\across by 1
+<a href=#999 id=999 data-nosnippet>999</a>  \ifnum\across=3                  % if 3 labels in a row, add row
+<a href=#1000 id=1000 data-nosnippet>1000</a>      \box\wall
+<a href=#1001 id=1001 data-nosnippet>1001</a>      \vskip -1.0pt                % correct downward creep
+<a href=#1002 id=1002 data-nosnippet>1002</a>      \setbox\wall=\hbox to 0pt{\null}
+<a href=#1003 id=1003 data-nosnippet>1003</a>      \advance\down by 1
+<a href=#1004 id=1004 data-nosnippet>1004</a>      \across=0
+<a href=#1005 id=1005 data-nosnippet>1005</a>      \ifnum\down=8               % if 8 rows on page, print page
+<a href=#1006 id=1006 data-nosnippet>1006</a>          \eject
+<a href=#1007 id=1007 data-nosnippet>1007</a>          \down=0
+<a href=#1008 id=1008 data-nosnippet>1008</a>      \fi
+<a href=#1009 id=1009 data-nosnippet>1009</a>  \fi
+<a href=#1010 id=1010 data-nosnippet>1010</a>  \read\addrfileno to \emptyline   % 1 blank line divides addresses
+<a href=#1011 id=1011 data-nosnippet>1011</a>  \ifeof\addrfileno\anymorefalse   % last line in the file
+<a href=#1012 id=1012 data-nosnippet>1012</a>    \else\anymoretrue\fi           % otherwise repeat the loop
+<a href=#1013 id=1013 data-nosnippet>1013</a>  \ifanymore
+<a href=#1014 id=1014 data-nosnippet>1014</a>\repeat
+<a href=#1015 id=1015 data-nosnippet>1015</a>\closein\addrfileno
+<a href=#1016 id=1016 data-nosnippet>1016</a>\ifnum\across=0       % if addresses ended with a full row, no need to fill
+<a href=#1017 id=1017 data-nosnippet>1017</a>  \else               % if addresses didn't end with a full row, fill it out
+<a href=#1018 id=1018 data-nosnippet>1018</a>  \setbox\wall=\hbox to\hsize{\box\wall\hfill}
+<a href=#1019 id=1019 data-nosnippet>1019</a>  \box\wall \vfill\eject
+<a href=#1020 id=1020 data-nosnippet>1020</a>\fi
+<a href=#1021 id=1021 data-nosnippet>1021</a>
+<a href=#1022 id=1022 data-nosnippet>1022</a>"#</span>);
+<a href=#1023 id=1023 data-nosnippet>1023</a>});
+</code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pst_node_sty.rs`."><title>pst_node_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e22c616e4 2026-04-19)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pst_node_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pst-node.sty — PSTricks node connections (DVI-only)
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pst_node_sty.rs`."><title>pst_node_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (c935696dd 2026-04-29)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pst_node_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pst-node.sty — PSTricks node connections (DVI-only)
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: pst-node.sty.ltxml — 557 lines
 <a href=#3 id=3 data-nosnippet>3</a>//! Node definition and connection macros for PSTricks diagrams.
 <a href=#4 id=4 data-nosnippet>4</a>//! DVI-only: all node/connection commands produce no visible output.
@@ -8,64 +8,104 @@
 <a href=#8 id=8 data-nosnippet>8</a></span><span class="macro">LoadDefinitions!</span>({
 <a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">RequirePackage!</span>(<span class="string">"pstricks"</span>);
 <a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// Node definition macros — Perl L30-120
-<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\rnode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Rnode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pnode[]"</span>, <span class="string">""</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cnode[]{}"</span>, <span class="string">""</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cnode[]{}"</span>, <span class="string">""</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\circlenode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ovalnode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnode OptionalMatch:* []{}"</span>, <span class="string">""</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dotnode OptionalMatch:* []{}"</span>, <span class="string">""</span>);
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\trinode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dianode[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="comment">// Connection macros — Perl L130-350
-<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ncline OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcline OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nccurve OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pccurve OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncbar OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncdiag OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncangle OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncangles OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncloop OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncarc OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcbar OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcdiag OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcangle OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcangles OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcloop OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcarc OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#41 id=41 data-nosnippet>41</a>
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// Label macros — Perl L360-450
-<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\naput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nbput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\aput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
-<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mput OptionalMatch:* {}"</span>, <span class="string">"#1"</span>);
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Lput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Mput OptionalMatch:* {}"</span>, <span class="string">"#1"</span>);
-<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Rput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// Box macros — Perl L460-520
-<a href=#56 id=56 data-nosnippet>56</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psmatrix"</span>, <span class="string">""</span>);
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endpsmatrix"</span>, <span class="string">""</span>);
-<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psrowalign{}"</span>, <span class="string">""</span>);
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscolalign{}"</span>, <span class="string">""</span>);
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncdot"</span>, <span class="string">""</span>);
-<a href=#61 id=61 data-nosnippet>61</a>
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="comment">// Perl L224-232: \cnodeput OptionalMatch:* [] OptionalBracketed ZeroPSCoord {} {}
-<a href=#63 id=63 data-nosnippet>63</a>  // builds a \rput{\circlenode{#5}{#6}} expansion. For LaTeXML DVI-only
-<a href=#64 id=64 data-nosnippet>64</a>  // binding, reduce to placing the body.
-<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cnodeput OptionalMatch:* [] [] {}{}{}"</span>, <span class="string">"#6"</span>);
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// Perl L334-339: \ncdiagg {} {} — node diagonal connection; DVI-only no-op.
-<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ncdiagg OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// Perl L341-346: \pcdiagg — same shape.
-<a href=#69 id=69 data-nosnippet>69</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pcdiagg OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
-<a href=#70 id=70 data-nosnippet>70</a>});
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// Perl pst-node.sty.ltxml L91-107: register node-connection keyvals on
+<a href=#12 id=12 data-nosnippet>12</a>  // the shared `pstricks` keyval group. Perl types PSAngle / PSDimension /
+<a href=#13 id=13 data-nosnippet>13</a>  // PSDimDim / Float aren't currently registered Rust types; register with
+<a href=#14 id=14 data-nosnippet>14</a>  // the untyped placeholder ("") since Rust pst-node stubs all connection
+<a href=#15 id=15 data-nosnippet>15</a>  // commands to no-ops (DVI-only), so no consumer actually coerces these.
+<a href=#16 id=16 data-nosnippet>16</a>  // Documents that switch on the key-presence (`\@ifundefined{KV@pstricks@
+<a href=#17 id=17 data-nosnippet>17</a>  // angle@default}`) get the right answer.
+<a href=#18 id=18 data-nosnippet>18</a>  </span><span class="kw">for </span>key <span class="kw">in </span>[<span class="string">"angle"</span>, <span class="string">"angleA"</span>, <span class="string">"angleB"</span>,
+<a href=#19 id=19 data-nosnippet>19</a>              <span class="string">"arcangle"</span>, <span class="string">"arcangleA"</span>, <span class="string">"arcangleB"</span>,
+<a href=#20 id=20 data-nosnippet>20</a>              <span class="string">"nodesep"</span>, <span class="string">"nodesepA"</span>, <span class="string">"nodesepB"</span>,
+<a href=#21 id=21 data-nosnippet>21</a>              <span class="string">"offset"</span>, <span class="string">"arm"</span>, <span class="string">"armA"</span>, <span class="string">"armB"</span>,
+<a href=#22 id=22 data-nosnippet>22</a>              <span class="string">"ncurv"</span>, <span class="string">"loopsize"</span>, <span class="string">"radius"</span>, <span class="string">"framesize"</span>] {
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="macro">DefKeyVal!</span>(<span class="string">"pstricks"</span>, key, <span class="string">""</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  }
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// Node definition macros — Perl L30-120. `\rnode` / `\pnode` etc. are
+<a href=#27 id=27 data-nosnippet>27</a>  // Perl DefConstructor with coordinate-reading closures; Rust stubs them
+<a href=#28 id=28 data-nosnippet>28</a>  // as DefMacro passthrough of the content (#3). DP-audit flags the kind
+<a href=#29 id=29 data-nosnippet>29</a>  // flip. Structural — pst-node nodes need coordinate+position readers
+<a href=#30 id=30 data-nosnippet>30</a>  // (same PSDim/PSAngle family as pstricks_support, WISDOM #41 parameter
+<a href=#31 id=31 data-nosnippet>31</a>  // gap). Rust's passthrough preserves the label text in output; the
+<a href=#32 id=32 data-nosnippet>32</a>  // geometric node-graph is simply not emitted. Not an `\edef` site.
+<a href=#33 id=33 data-nosnippet>33</a>  //
+<a href=#34 id=34 data-nosnippet>34</a>  // Intentional divergence (WISDOM #44 class: blocked-on-parameter-type):
+<a href=#35 id=35 data-nosnippet>35</a>  // ALL node + connection stubs below share this single root cause —
+<a href=#36 id=36 data-nosnippet>36</a>  // missing PSDim/PSAngle/PSDimDim/Float types — so the DefConstructor
+<a href=#37 id=37 data-nosnippet>37</a>  // → DefMacro kind flips are a single-cluster waiver. Porting the
+<a href=#38 id=38 data-nosnippet>38</a>  // PS* parameter-type family closes every rnode/Rnode/pnode/cnode/
+<a href=#39 id=39 data-nosnippet>39</a>  // circlenode/ovalnode/trinode/dianode + nc*/pc* connection entry at
+<a href=#40 id=40 data-nosnippet>40</a>  // once. Audit currently flags rnode+pnode explicitly.
+<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\rnode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Rnode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pnode[]"</span>, <span class="string">""</span>);
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cnode[]{}"</span>, <span class="string">""</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cnode[]{}"</span>, <span class="string">""</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\circlenode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ovalnode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnode OptionalMatch:* []{}"</span>, <span class="string">""</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dotnode OptionalMatch:* []{}"</span>, <span class="string">""</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\trinode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dianode[]{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// Connection macros — Perl L130-350
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ncline OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcline OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nccurve OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pccurve OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncbar OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncdiag OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncangle OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncangles OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncloop OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncarc OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcbar OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcdiag OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcangle OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcangles OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcloop OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pcarc OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="comment">// Label macros — Perl L360-450
+<a href=#72 id=72 data-nosnippet>72</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\naput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nbput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\aput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bput OptionalMatch:* []{}"</span>, <span class="string">"#2"</span>);
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mput OptionalMatch:* {}"</span>, <span class="string">"#1"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Lput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Mput OptionalMatch:* {}"</span>, <span class="string">"#1"</span>);
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Rput OptionalMatch:* []{}{}"</span>, <span class="string">"#3"</span>);
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>  <span class="comment">// Perl pst-node.sty.ltxml L504-538: \Aput / \Bput — capitalized node-label
+<a href=#85 id=85 data-nosnippet>85</a>  // macros. Perl signature is `OptionalMatch:* []` and the full path forwards
+<a href=#86 id=86 data-nosnippet>86</a>  // through \Aput@start + \put@end label-put infrastructure (computeLabelPos,
+<a href=#87 id=87 data-nosnippet>87</a>  // finishLabelPut, _psActiveTransform). Rust lacks that graphics pipeline —
+<a href=#88 id=88 data-nosnippet>88</a>  // pst-node is stubbed DVI-only. Match the Perl signature exactly and
+<a href=#89 id=89 data-nosnippet>89</a>  // expand to empty; any label written after (`\Aput[sep]{text}`) is
+<a href=#90 id=90 data-nosnippet>90</a>  // emitted by normal expansion, matching the drop-args-pass-through
+<a href=#91 id=91 data-nosnippet>91</a>  // behavior of sibling stubs \aput/\bput.
+<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Aput OptionalMatch:* []"</span>, <span class="string">""</span>);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Bput OptionalMatch:* []"</span>, <span class="string">""</span>);
+<a href=#94 id=94 data-nosnippet>94</a>
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="comment">// Box macros — Perl L460-520
+<a href=#96 id=96 data-nosnippet>96</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\psmatrix"</span>, <span class="string">""</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endpsmatrix"</span>, <span class="string">""</span>);
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\psrowalign{}"</span>, <span class="string">""</span>);
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pscolalign{}"</span>, <span class="string">""</span>);
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ncdot"</span>, <span class="string">""</span>);
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="comment">// Perl L224-232: \cnodeput OptionalMatch:* [] OptionalBracketed ZeroPSCoord {} {}
+<a href=#103 id=103 data-nosnippet>103</a>  // builds a \rput{\circlenode{#5}{#6}} expansion. For LaTeXML DVI-only
+<a href=#104 id=104 data-nosnippet>104</a>  // binding, reduce to placing the body.
+<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cnodeput OptionalMatch:* [] [] {}{}{}"</span>, <span class="string">"#6"</span>);
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="comment">// Perl L334-339: \ncdiagg {} {} — node diagonal connection; DVI-only no-op.
+<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ncdiagg OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// Perl L341-346: \pcdiagg — same shape.
+<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pcdiagg OptionalMatch:* []{}{}"</span>, <span class="string">""</span>);
+<a href=#110 id=110 data-nosnippet>110</a>});
 </code></pre></div></section></main></body></html>

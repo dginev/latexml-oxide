@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Parameter","Parameters"],"type":["DigestedReversionClosure","ReaderClosure","ReaderFn","ReaderPredigestClosure","ReaderPredigestFn","ReversionClosure"]};

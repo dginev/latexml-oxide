@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["RegisterType","RegisterValue"],"struct":["CharDefProps","Register"],"type":["RegisterGetterClosure","RegisterSetterClosure"]};

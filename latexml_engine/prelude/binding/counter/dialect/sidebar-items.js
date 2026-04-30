@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_to_counter","begin_itemize","counter_value","maybe_note_label","maybe_peek_label","new_counter","ref_current_id","ref_step_counter","ref_step_id","ref_step_item_counter","rescue_caption_counters","reset_counter","set_enumeration_style","set_itemization_style","step_counter"],"struct":["BeginItemizeOptions","NewCounterOptions"]};

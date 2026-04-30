@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["matrix_template","parse_alignment_template","read_alignment_template"],"mod":["cell","template"],"struct":["Alignment","AlignmentConfig"],"type":["CloseColumnFn","CloseContainerFn","CloseRowFn","OpenColumnFn","OpenContainerFn","OpenRowFn"]};
