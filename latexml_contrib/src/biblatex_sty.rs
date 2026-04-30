@@ -1,5 +1,88 @@
 use latexml_package::prelude::*;
 
+// === biblatex .bbl entry-pipeline helpers ===
+// Mirror Perl ar5iv-bindings/biblatex.sty.ltxml entry/endentry/name/list/field
+// closures (L127-340). The .bbl file emits \entry{key}{type}{} … \endentry per
+// reference; between them \field/\strng/\list/\name records metadata into the
+// `biblatex_entry` HashStored, and \endentry flushes a `\bibitem[label]{key}
+// authors. \newblock title. \newblock In: journal. year, pages.` token stream
+// onto `rebuilt_bibtex_variant`. The list-end macros (\enddatalist etc.) wrap
+// the accumulated variant in `\thebibliography{count}…\endthebibliography`.
+
+fn bib_entry_get() -> SymHashMap<Stored> {
+  match state::lookup_value("biblatex_entry") {
+    Some(Stored::HashStored(map)) => map.clone(),
+    _ => SymHashMap::default(),
+  }
+}
+
+fn bib_entry_save(map: SymHashMap<Stored>) {
+  state::assign_value("biblatex_entry", Stored::HashStored(map), Some(Scope::Global));
+}
+
+fn bib_entry_set_tokens(name: &str, val: Tokens) {
+  let mut entry = bib_entry_get();
+  entry.insert(name, Stored::Tokens(val));
+  bib_entry_save(entry);
+}
+
+fn bib_entry_get_tokens(map: &SymHashMap<Stored>, name: &str) -> Option<Tokens> {
+  map.get(name).and_then(|s| match s {
+    Stored::Tokens(t) => Some(t.clone()),
+    _ => None,
+  })
+}
+
+fn bib_state_int(key: &str) -> i64 {
+  match state::lookup_value(key) {
+    Some(Stored::Int(n)) => n,
+    _ => 0,
+  }
+}
+
+fn bib_state_set_int(key: &str, value: i64) {
+  state::assign_value(key, Stored::Int(value), Some(Scope::Global));
+}
+
+fn bib_variant_push(toks: Vec<Token>) {
+  let mut acc: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
+    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    _ => Vec::new(),
+  };
+  acc.extend(toks);
+  state::assign_value("rebuilt_bibtex_variant", Stored::Tokens(Tokens::new(acc)),
+    Some(Scope::Global));
+}
+
+fn bib_as_thebibliography() -> Tokens {
+  let variant: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
+    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    _ => return Tokens::default(),
+  };
+  if variant.is_empty() {
+    return Tokens::default();
+  }
+  // Reset variant and entry-count so re-invocation is idempotent (matches
+  // Perl L113-115).
+  state::assign_value("rebuilt_bibtex_variant", Stored::Tokens(Tokens::default()),
+    Some(Scope::Global));
+  let count = bib_state_int("biblatex_entry_count");
+  bib_state_set_int("biblatex_entry_count", 0);
+  let preamble: Vec<Token> = match state::lookup_value("biblatex_preamble") {
+    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    _ => Vec::new(),
+  };
+  let mut result: Vec<Token> = Vec::with_capacity(variant.len() + 16);
+  result.push(T_CS!("\\thebibliography"));
+  result.push(T_BEGIN!());
+  result.extend(preamble);
+  result.extend(ExplodeText!(&count.to_string()));
+  result.push(T_END!());
+  result.extend(variant);
+  result.push(T_CS!("\\endthebibliography"));
+  Tokens::new(result)
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
@@ -113,14 +196,234 @@ LoadDefinitions!({
   DefMacro!("\\lossort", "", locked => true);
   DefMacro!("\\refsection{}", "", locked => true);
   // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
-  // → biblatex_as_thebibliography rebuilder. DEFERRED (Cycle 7).
-  DefMacro!("\\enddatalist", "", locked => true);
-  DefMacro!("\\endsortlist", "", locked => true);
-  DefMacro!("\\endlossort", "", locked => true);
-  DefMacro!("\\endrefsection", "", locked => true);
-  // Perl L127-263: \entry / \endentry deep closures. DEFERRED (Cycle 8).
-  DefMacro!("\\entry{}{}{}", "", locked => true);
-  DefMacro!("\\endentry", "", locked => true);
+  // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
+  // emitted by repeated \endentry calls in `\thebibliography{count}…
+  // \endthebibliography`.
+  DefMacro!("\\enddatalist", sub[_args] {
+    Ok(bib_as_thebibliography())
+  }, locked => true);
+  DefMacro!("\\endsortlist", sub[_args] {
+    Ok(bib_as_thebibliography())
+  }, locked => true);
+  DefMacro!("\\endlossort", sub[_args] {
+    Ok(bib_as_thebibliography())
+  }, locked => true);
+  DefMacro!("\\endrefsection", sub[_args] {
+    Ok(bib_as_thebibliography())
+  }, locked => true);
+
+  // Perl L127-130: \entry{key}{type}{} initializes the entry hash so that the
+  // following \field/\strng/\name/\list directives have a place to record
+  // metadata. The 3rd arg is options (Perl ignores it).
+  DefMacro!("\\entry{}{}{}", sub[(key, ty, _opts)] {
+    let mut entry: SymHashMap<Stored> = SymHashMap::default();
+    entry.insert("key", Stored::Tokens(key));
+    entry.insert("type", Stored::Tokens(ty));
+    bib_entry_save(entry);
+    Ok(Tokens::default())
+  }, locked => true);
+
+  // Perl L132-263: \endentry — flush the accumulated entry hash as a
+  // `\bibitem[label]{key} authors. \newblock title. \newblock In: journal.
+  // year, pages.` token stream onto rebuilt_bibtex_variant.
+  // Simplified port: handles label-or-auto-label, key, authors (if collected
+  // by \name as plain "fullname" tokens), title, journal/booktitle, year,
+  // pages, doi/url/eprint. Pre-typeset name strings (the `{names}` array
+  // form) are emitted comma-joined.
+  DefMacro!("\\endentry", sub[_args] {
+    let entry = bib_entry_get();
+    state::assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
+
+    // label: Perl uses labelalpha if present, else label, else auto-counter.
+    let label_toks = bib_entry_get_tokens(&entry, "labelalpha")
+      .or_else(|| bib_entry_get_tokens(&entry, "label"));
+    let label_str: String = match label_toks {
+      Some(t) if !t.is_empty() => {
+        // Perl: strip \word and braces from label for safety.
+        let s = t.to_string();
+        let mut cleaned = String::with_capacity(s.len());
+        let mut chars = s.chars();
+        while let Some(ch) = chars.next() {
+          if ch == '\\' {
+            // skip \word
+            for c in chars.by_ref() { if !c.is_ascii_alphabetic() { break; } }
+          } else if ch != '{' && ch != '}' {
+            cleaned.push(ch);
+          }
+        }
+        let cleaned = cleaned.trim().to_string();
+        if cleaned.is_empty() {
+          let n = bib_state_int("biblatex_auto_label") + 1;
+          bib_state_set_int("biblatex_auto_label", n);
+          n.to_string()
+        } else {
+          cleaned
+        }
+      },
+      _ => {
+        let n = bib_state_int("biblatex_auto_label") + 1;
+        bib_state_set_int("biblatex_auto_label", n);
+        n.to_string()
+      },
+    };
+
+    // Bump entry count for thebibliography wrapper.
+    bib_state_set_int("biblatex_entry_count", bib_state_int("biblatex_entry_count") + 1);
+
+    let mut variant: Vec<Token> = Vec::with_capacity(64);
+    let key_toks = bib_entry_get_tokens(&entry, "key").unwrap_or_default();
+    variant.push(T_CS!("\\bibitem"));
+    variant.push(T_OTHER!("["));
+    variant.extend(ExplodeText!(&label_str));
+    variant.push(T_OTHER!("]"));
+    variant.push(T_BEGIN!());
+    variant.extend(key_toks.unlist());
+    variant.push(T_END!());
+
+    // Authors: if \name stashed a comma-joined string under "authors_str",
+    // emit it. Defer the et-al / per-author re-tokenization for now — most
+    // .bbl files give us pre-formatted author tokens.
+    let authors_toks = bib_entry_get_tokens(&entry, "authors_str");
+    let mut have_authors = false;
+    if let Some(toks) = authors_toks {
+      if !toks.is_empty() {
+        variant.extend(toks.unlist());
+        have_authors = true;
+      }
+    }
+
+    // Title
+    if let Some(title) = bib_entry_get_tokens(&entry, "title") {
+      if !title.is_empty() {
+        if have_authors {
+          variant.push(T_CS!("\\newblock"));
+        }
+        variant.push(T_OTHER!("`"));
+        variant.push(T_OTHER!("`"));
+        variant.extend(title.unlist());
+        variant.push(T_OTHER!("'"));
+        variant.push(T_OTHER!("'"));
+      }
+    }
+    // Note
+    if let Some(note) = bib_entry_get_tokens(&entry, "note") {
+      if !note.is_empty() {
+        variant.push(T_SPACE!());
+        variant.extend(note.unlist());
+      }
+    }
+    // Journal / booktitle
+    let journal = bib_entry_get_tokens(&entry, "booktitle")
+      .or_else(|| bib_entry_get_tokens(&entry, "journaltitle"))
+      .or_else(|| bib_entry_get_tokens(&entry, "journal"));
+    if let Some(j) = journal.as_ref() {
+      if !j.is_empty() {
+        variant.push(T_CS!("\\newblock"));
+        variant.extend(ExplodeText!("In "));
+        variant.push(T_CS!("\\emph"));
+        variant.push(T_BEGIN!());
+        variant.extend(j.clone().unlist());
+        variant.push(T_END!());
+      }
+    }
+    // Volume + (number)
+    if let Some(volume) = bib_entry_get_tokens(&entry, "volume") {
+      if journal.is_some() && !volume.is_empty() {
+        variant.push(T_SPACE!());
+        variant.push(T_CS!("\\textbf"));
+        variant.push(T_BEGIN!());
+        variant.extend(volume.unlist());
+        if let Some(num) = bib_entry_get_tokens(&entry, "number") {
+          if !num.is_empty() {
+            variant.push(T_OTHER!("."));
+            variant.extend(num.unlist());
+          }
+        }
+        variant.push(T_END!());
+      }
+    }
+    // Publisher / location
+    if let Some(publisher) = bib_entry_get_tokens(&entry, "publisher") {
+      if !publisher.is_empty() {
+        variant.push(T_CS!("\\newblock"));
+        if let Some(loc) = bib_entry_get_tokens(&entry, "location") {
+          if !loc.is_empty() {
+            variant.extend(loc.unlist());
+            variant.push(T_OTHER!(":"));
+            variant.push(T_SPACE!());
+          }
+        }
+        variant.extend(publisher.unlist());
+      }
+    }
+    // Year
+    if let Some(year) = bib_entry_get_tokens(&entry, "year") {
+      if !year.is_empty() {
+        variant.push(T_OTHER!(","));
+        variant.push(T_SPACE!());
+        variant.extend(year.unlist());
+      }
+    }
+    // Pages
+    if let Some(pages) = bib_entry_get_tokens(&entry, "pages") {
+      if !pages.is_empty() {
+        variant.push(T_OTHER!(","));
+        variant.push(T_SPACE!());
+        variant.extend(ExplodeText!("pp. "));
+        variant.extend(pages.unlist());
+      }
+    }
+    // DOI / URL / eprint (URL-style)
+    if let Some(doi) = bib_entry_get_tokens(&entry, "doi") {
+      if !doi.is_empty() {
+        variant.push(T_CS!("\\newblock"));
+        variant.extend(ExplodeText!("DOI: "));
+        variant.push(T_CS!("\\href"));
+        variant.push(T_BEGIN!());
+        variant.extend(ExplodeText!("https://dx.doi.org/"));
+        variant.extend(doi.clone().unlist());
+        variant.push(T_END!());
+        variant.push(T_BEGIN!());
+        variant.extend(doi.unlist());
+        variant.push(T_END!());
+      }
+    } else if let Some(url) = bib_entry_get_tokens(&entry, "url") {
+      if !url.is_empty() {
+        variant.push(T_CS!("\\newblock"));
+        variant.extend(ExplodeText!("URL: "));
+        variant.push(T_CS!("\\url"));
+        variant.push(T_BEGIN!());
+        variant.extend(url.unlist());
+        variant.push(T_END!());
+      }
+    } else if let Some(eprint) = bib_entry_get_tokens(&entry, "eprint") {
+      if !eprint.is_empty() {
+        variant.push(T_CS!("\\newblock"));
+        let etype = bib_entry_get_tokens(&entry, "eprinttype")
+          .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
+        let etype = if etype == "ARXIV" { "arXiv".to_string() }
+          else if etype.is_empty() { "eprint".to_string() }
+          else { etype };
+        variant.extend(ExplodeText!(&format!("{etype}:")));
+        variant.push(T_SPACE!());
+        if etype == "arXiv" {
+          variant.push(T_CS!("\\href"));
+          variant.push(T_BEGIN!());
+          variant.extend(ExplodeText!("https://arxiv.org/abs/"));
+          variant.extend(eprint.clone().unlist());
+          variant.push(T_END!());
+          variant.push(T_BEGIN!());
+          variant.extend(eprint.unlist());
+          variant.push(T_END!());
+        } else {
+          variant.extend(eprint.unlist());
+        }
+      }
+    }
+
+    bib_variant_push(variant);
+    Ok(Tokens::default())
+  }, locked => true);
 
   // Perl L265-268: BiblatexAuthor keyvals
   DefKeyVal!("BiblatexAuthor", "given",   "");
@@ -128,15 +431,138 @@ LoadDefinitions!({
   DefKeyVal!("BiblatexAuthor", "family",  "");
   DefKeyVal!("BiblatexAuthor", "familyi", "");
 
-  // Perl L270-346: \name (3-arg vs 4-arg dispatch + author parser),
-  // \list (entry-field assigner) — DEFERRED, stubbed empty.
-  DefMacro!("\\name{}{}{}", "", locked => true);
-  DefMacro!("\\list{}{}{}", "", locked => true);
-  // Perl L355-363: \field, \strng — Perl uses DefPrimitive to record into
-  // the `biblatex_entry` hash. DEFERRED at the entry-pipeline level; stubbed
-  // as no-op DefMacro (consumer is itself stubbed).
-  DefMacro!("\\field{}{}", "", locked => true);
-  DefMacro!("\\strng{}{}", "", locked => true);
+  // Perl L270-346: \name{type}{count}{maybe-content} — biblatex's author
+  // record. The TeX-2.5+ .bbl shape is `\name{author}{N}{}{ {{}{Family}…} }`
+  // where the 3rd arg is empty and the 4th is the author body. Older variants
+  // pass 3 args. Simplified port: declare 4 mandatory args; the 4th-arg
+  // capture covers the modern shape used by the vast majority of arxiv .bbl
+  // files. The body holds N inner-author groups, each of the form
+  // `{hash}{family}{familyi}{given}{giveni}{}{}{}{}` — we extract family +
+  // given pairs into "Given Family" strings (no Perl-faithful keyval/hash
+  // ordering yet) and stash them comma-joined under `authors_str` /
+  // `editors_str` in the entry hash for `\endentry` to emit verbatim.
+  DefMacro!("\\name{}{}{}{}", sub[(ty, _count, _maybe, body)] {
+    let type_str = ty.to_string();
+    // The body's tokens start with `{` `{}` (empty hash) or `{hash=…}` then
+    // `{family}{familyi}{given}{giveni}{}{}{}{}` repeated, separated by
+    // optional whitespace. Walk top-level groups.
+    let body_toks: Vec<Token> = body.unlist();
+    // Helper: scan one balanced {...} group, advancing index.
+    fn read_group(tokens: &[Token], i: &mut usize) -> Option<Vec<Token>> {
+      while *i < tokens.len() {
+        let cc = tokens[*i].code;
+        if cc == Catcode::SPACE { *i += 1; continue; }
+        if cc == Catcode::BEGIN { break; }
+        return None; // not a group
+      }
+      if *i >= tokens.len() { return None; }
+      *i += 1; // consume BEGIN
+      let mut depth = 1usize;
+      let mut out = Vec::new();
+      while *i < tokens.len() {
+        let cc = tokens[*i].code;
+        if cc == Catcode::BEGIN {
+          depth += 1;
+          out.push(tokens[*i]);
+        } else if cc == Catcode::END {
+          depth -= 1;
+          if depth == 0 { *i += 1; return Some(out); }
+          out.push(tokens[*i]);
+        } else {
+          out.push(tokens[*i]);
+        }
+        *i += 1;
+      }
+      Some(out) // unterminated: best effort
+    }
+    let mut names: Vec<String> = Vec::new();
+    let mut idx = 0usize;
+    while idx < body_toks.len() {
+      // Skip space tokens between author groups.
+      while idx < body_toks.len() &&
+            body_toks[idx].code == Catcode::SPACE {
+        idx += 1;
+      }
+      if idx >= body_toks.len() { break; }
+      // Read the per-author group.
+      let author_grp = match read_group(&body_toks, &mut idx) {
+        Some(g) => g,
+        None => break,
+      };
+      // Inside, read up to 5 sub-groups: hash, family, familyi, given, giveni
+      let mut j = 0usize;
+      let _hash = read_group(&author_grp, &mut j);
+      let family = read_group(&author_grp, &mut j)
+        .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
+      let _familyi = read_group(&author_grp, &mut j);
+      let given = read_group(&author_grp, &mut j)
+        .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
+      // Trim whitespace.
+      let family = family.trim().to_string();
+      let given = given.trim().to_string();
+      let fullname = if !given.is_empty() && !family.is_empty() {
+        format!("{given} {family}")
+      } else if !family.is_empty() {
+        family
+      } else if !given.is_empty() {
+        given
+      } else {
+        continue;
+      };
+      names.push(fullname);
+    }
+    // Format with et-al limit (default 4 per Perl L192).
+    let etal_limit = bib_state_int("biblatex_maxbibnames");
+    let etal_limit = if etal_limit > 0 { etal_limit as usize } else { 4 };
+    let joined = if names.len() > etal_limit {
+      format!("{} et al.", names[0])
+    } else {
+      let mut acc = String::new();
+      let n = names.len();
+      for (k, name) in names.iter().enumerate() {
+        if k > 0 {
+          if k + 1 == n {
+            acc.push_str(" and ");
+          } else {
+            acc.push_str(", ");
+          }
+        }
+        acc.push_str(name);
+      }
+      acc
+    };
+    // Stash under "authors_str" or "editors_str" depending on type.
+    let key = if type_str.trim() == "editor" { "editors_str" } else { "authors_str" };
+    if !joined.is_empty() {
+      let toks = Tokens::new(ExplodeText!(&joined));
+      bib_entry_set_tokens(key, toks);
+    }
+    Ok(Tokens::default())
+  }, locked => true);
+
+  // Perl L342-346: \list{name}{count}{value} — record value under `name` in
+  // the entry hash. Perl ignores `count` for count==1 and notes "more
+  // support needed" for >1. Same here.
+  DefMacro!("\\list{}{}{}", sub[(name, _count, val)] {
+    let name_s = name.to_string();
+    bib_entry_set_tokens(name_s.trim(), val);
+    Ok(Tokens::default())
+  }, locked => true);
+
+  // Perl L355-363: \field{name}{value} / \strng{name}{value} — record value
+  // under `name` in the entry hash. Perl uses DefPrimitive (immediate
+  // side-effect, no expansion). DefMacro with sub gives equivalent behavior
+  // at digestion time since the body is empty.
+  DefMacro!("\\field{}{}", sub[(name, val)] {
+    let name_s = name.to_string();
+    bib_entry_set_tokens(name_s.trim(), val);
+    Ok(Tokens::default())
+  }, locked => true);
+  DefMacro!("\\strng{}{}", sub[(name, val)] {
+    let name_s = name.to_string();
+    bib_entry_set_tokens(name_s.trim(), val);
+    Ok(Tokens::default())
+  }, locked => true);
 
   // Perl L348-354
   DefMacro!("\\AtEveryBibitem{}",   "");
@@ -161,9 +587,55 @@ LoadDefinitions!({
     Ok(arg.clone())
   });
 
-  // Perl L371-397: \verb / \biblatex@verb / \biblatex@endverb closures.
-  // DEFERRED — stubbed empty so \verb-based bib fields don't crash.
-  DefMacro!("\\biblatex@verb{}", "", locked => true);
+  // Perl L371-397: \biblatex@verb{key}…\endverb captures a verbatim field
+  // that biblatex's .bbl emits in the form
+  //     \verb{key}
+  //     \verb VALUE
+  //     \endverb
+  // The first `\verb` is `\let`'d to `\biblatex@verb` and reads `{key}`;
+  // the second `\verb` then reads VALUE as a raw line; `\endverb` stores
+  // VALUE under key. Perl uses gullet->readRawLine + dynamic re-bind. Rust
+  // simulates the same effect with a single delimited macro that reads both
+  // `{key}` and "Until:\\endverb" — the captured body is everything between
+  // the first `\verb{key}` line and `\endverb`, including the second
+  // `\verb` token plus the URL chars. We strip the inner `\verb` token and
+  // surrounding whitespace before storing.
+  // Without this, \verb LEAKS the URL into body text — and consumes the
+  // first character (`h` of `http`) as a `{}` arg, producing the
+  // characteristic `ttp://…` corruption on egpaper_final.tex.
+  DefMacro!("\\biblatex@verb{} Until:\\endverb", sub[(key, body)] {
+    let key_str = key.to_string();
+    let body_toks = body.unlist();
+    // Skip leading whitespace + the inner `\verb` token + one space.
+    let mut start = 0usize;
+    while start < body_toks.len() {
+      let cc = body_toks[start].code;
+      if cc == Catcode::SPACE || cc == Catcode::EOL { start += 1; continue; }
+      break;
+    }
+    if start < body_toks.len() && body_toks[start].code == Catcode::CS {
+      // Skip the `\verb` CS token (or whatever CS leads — should be \verb).
+      start += 1;
+      // Skip following space tokens.
+      while start < body_toks.len() {
+        let cc = body_toks[start].code;
+        if cc == Catcode::SPACE || cc == Catcode::EOL { start += 1; continue; }
+        break;
+      }
+    }
+    // Strip trailing whitespace.
+    let mut end = body_toks.len();
+    while end > start {
+      let cc = body_toks[end - 1].code;
+      if cc == Catcode::SPACE || cc == Catcode::EOL { end -= 1; continue; }
+      break;
+    }
+    let value = Tokens::new(body_toks[start..end].to_vec());
+    bib_entry_set_tokens(key_str.trim(), value);
+    Ok(Tokens::default())
+  }, locked => true);
+  // \biblatex@endverb is consumed by the Until: delimiter on \biblatex@verb,
+  // but if it ever fires standalone (degenerate input), no-op it.
   DefMacro!("\\biblatex@endverb", "", locked => true);
 
   // Perl L400-408: \addbibresource{file,...} pushes onto biblatex_resources.
@@ -187,10 +659,26 @@ LoadDefinitions!({
   Let!("\\biblatex@saved@bibliography", "\\bibliography");
   Let!("\\bibliography",                "\\addbibresource");
 
-  // Perl L410-418: \printbibliography → \biblatex@printbibliography (which
-  // emits the saved \biblatex@saved@bibliography call). DEFERRED rebuilder;
-  // stubbed empty so the macro is defined.
-  DefMacro!("\\printbibliography[]", "", locked => true);
+  // Perl L410-418: \printbibliography → \biblatex@printbibliography, which
+  // emits the saved \biblatex@saved@bibliography call over popped resources.
+  DefMacro!("\\printbibliography",
+    "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\\biblatex@printbibliography");
+  DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
+    let mut resources = Vec::new();
+    while let Some(res) = state::pop_value("biblatex_resources")? {
+      if !resources.is_empty() {
+        resources.push(T_OTHER!(","));
+        resources.push(T_SPACE!());
+      }
+      resources.push(T_OTHER!(res.to_string()));
+    }
+    Ok(Tokens!(
+      T_CS!("\\biblatex@saved@bibliography"),
+      T_BEGIN!(),
+      Tokens::new(resources),
+      T_END!()
+    ))
+  }, locked => true);
 
   // Perl L420-424
   DefMacro!("\\warn{}", "");
