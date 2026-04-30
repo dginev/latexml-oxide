@@ -78,6 +78,21 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-54 amsppt cluster sized:** post `660103563` (the
+\@startsection fix erased 1561 errors of 1608.04650), the next big
+residual outliers are both amsppt+amstex papers:
+
+| paper | Rust errs | Perl errs | dominant pattern |
+|---|---:|---:|---|
+| math0601451  | 2414 | 0 | 1481× XMTok-in-title |
+| alg-geom9604020 | 510 | 4-warn | 172× XMTok-in-title |
+
+Combined ~**2924 sandbox errors** stem from amsppt's title machinery
+not wrapping math properly. Same root cause as the documented
+siunitx XMTok-in-text issue but in an amstex context. amsppt-fix
+candidates: amsppt_sty.rs title constructor, or AmSTeX.pool title
+emission. Investigation queued — high-value cluster if tractable.
+
 **Iter-53 — 1608.04650 root cause traced:** mst-stylefile.sty defines:
 ```
 \newcommand\Proof{\@startsection{Proof}{5}{...}{-1em}{\normalsize\sc}}
