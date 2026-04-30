@@ -1960,8 +1960,19 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
 
 /// Use tex_glue::dimension_to_spaces for the precise Perl-matching algorithm.
 /// This wrapper delegates to avoid breaking callers that import from here.
+///
+/// `Dimension::new` takes raw scaled-points (sp). `value_of()` returns the
+/// canonical i64 (sp for Dimension/Glue, units for Number). The previous
+/// implementation routed through `pt_value(None)` (which divides by UNITY)
+/// and then `new_f64` (which does NOT multiply back by UNITY), losing a
+/// factor of 65536 — so 2em (1310720 sp) became Dimension(20 sp) ≈ 0pt and
+/// `tex_glue::dimension_to_spaces` produced an empty string. That made
+/// `\hspace`'s `isSpace` Tbox skip the `if !s.is_empty()` gate at the
+/// caller, dropping the math-mode space marker between `^{...}` and a
+/// following `'` — surfacing as the false `unexpected:double-superscript`
+/// in hep-th9601176 (`\Si^{\mu\nu}\hs{0.25}'(p)`).
 pub fn dimension_to_spaces<T: NumericOps>(dimen: T) -> Cow<'static, str> {
-  let dim = Dimension::new_f64(dimen.pt_value(None));
+  let dim = Dimension::new(dimen.value_of());
   Cow::Owned(super::tex_glue::dimension_to_spaces(dim))
 }
 
