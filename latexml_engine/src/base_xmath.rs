@@ -1642,39 +1642,43 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   if all_ids.is_empty() {
     return;
   }
-  // Build a reverse lookup: for each id, map its base forms to the actual id
-  // E.g., "Ch0.E16.m2.1" could be the actual id for what was originally "Ch0.E16.m1.1"
-  // We use a simpler approach: map by the TRAILING number(s) after the last dot
+  // Build a reverse lookup keyed by the trailing numeric segment of the id
+  // (the per-equation node sequence number). IDs like
+  // `S3.E22.m1.5.mf` get keyed under `.5` so that XMRefs whose idref ended
+  // up with a stale `.mf`-or-other suffix can still resolve back to the
+  // surviving cloned id by matching on the same node-sequence number.
+  // Earlier this used `id.rfind('.')` which always landed in front of
+  // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
+  // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
+  // S3.E22 align/equation cluster (cloned to MathFork main branch).
+  let trailing_num_re = regex::Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
   let mut id_by_suffix: HashMap<String, String> = HashMap::new();
   for id in &all_ids {
-    // Extract suffix like ".1", ".2", ".3" etc.
-    if let Some(dot_pos) = id.rfind('.') {
-      let suffix = &id[dot_pos..];
-      id_by_suffix.insert(suffix.to_string(), id.clone());
+    if let Some(caps) = trailing_num_re.captures(id) {
+      // Key is `.NN`, value is the actual id.
+      let key = format!(".{}", caps.get(1).unwrap().as_str());
+      id_by_suffix.entry(key).or_insert_with(|| id.clone());
     }
     id_by_suffix.insert(id.clone(), id.clone()); // exact match
   }
   // Find all XMRef nodes and fix their idrefs
   let mut xmrefs: Vec<Node> = Vec::new();
   collect_xmrefs(root, &mut xmrefs);
-  let fixed_count = xmrefs.len();
   for mut xmref in xmrefs {
     if let Some(idref) = xmref.get_attribute("idref") {
       // Check if idref points to an existing id in the subtree
       if all_ids.contains(&idref) {
         continue;
       }
-      // Try to find the matching id by suffix
-      if let Some(dot_pos) = idref.rfind('.') {
-        let suffix = &idref[dot_pos..];
-        // Try suffix match: e.g. ".1" in idref matches ".1" in actual id
-        if let Some(actual_id) = id_by_suffix.get(suffix) {
+      // Try to find the matching id by trailing-numeric-segment.
+      if let Some(caps) = trailing_num_re.captures(&idref) {
+        let key = format!(".{}", caps.get(1).unwrap().as_str());
+        if let Some(actual_id) = id_by_suffix.get(&key) {
           xmref.set_attribute("idref", actual_id).ok();
         }
       }
     }
   }
-  let _ = fixed_count;
 }
 
 /// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
