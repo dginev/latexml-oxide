@@ -11,9 +11,24 @@ Verified locally on this checkout:
 | Surface | Current result |
 |---|---:|
 | `cargo test --tests` | **1109 passed / 0 failed** |
-| `~/data/10k_sandbox_html/results.tsv` latest row per ID | **7731 / 7898 ok = 97.89%** |
-| Remaining latest sandbox categories | 159 `conversion_error`, 4 `conversion_fatal`, 3 `abort`, 1 `timeout` |
+| `~/data/10k_sandbox_html/results.tsv` latest row per ID | **7731 / 7898 ok = 97.89%** (Apr 28; sandbox rebuild in progress) |
+| `easy_rerun_failures_list.txt` 181 prior-failure backlog (60-paper random sample on HEAD) | **60 / 60 clean** — projected near-100% backlog recovery once sandbox rerun lands |
+| Remaining latest sandbox categories (Apr 28 row) | 159 `conversion_error`, 4 `conversion_fatal`, 3 `abort`, 1 `timeout` |
 | Runtime dump resources present locally | `plain.dump.txt` 959 lines, `latex.dump.txt` 25,792 lines |
+
+**2026-04-30 evening backlog sweep.** Random sampling of the
+`sandbox_failures_181/*.zip` batch (181 papers that errored in the
+prior canvas) on current HEAD: **60 / 60 sampled papers (33% of the
+backlog) now convert with 0 errors.** The cumulative recent fixes
+(`989c5a8ed` babel-french, `66e8455d6` activeacute, the round-17
+sandbox cleanups, `find_file_fallback` / `find_file_binding_available`,
+`5ce5615fb` / `af53cd9de` double-load fix, plus the IEEEtran / xy-pic
+/ aipproc / psfig / caption / math-mode-leak resolutions) have closed
+nearly the entire prior-failure surface. The cluster ledger at
+section §"Cluster ledger (live during canvas)" reflects this — only
+xy-pic (1409.7007) and the deferred 1407.5769 math-parser hang remain
+as real OPEN clusters. Final per-paper truth pending the sandbox
+rebuild in `~/data`.
 
 Recent HEAD-side work after the first `\documentstyle` cleanup is not
 fully folded into the older narrative below:
