@@ -78,6 +78,25 @@ expands the body, or Rust's `\labelitemi` is invoked in a context
 Perl's isn't. **Adding `\bullets`/`\gnuplot` stubs would mask
 the trigger; the real fix is finding why Rust digests them.**
 
+**Iter-53 — 1608.04650 root cause traced:** mst-stylefile.sty defines:
+```
+\newcommand\Proof{\@startsection{Proof}{5}{...}{-1em}{\normalsize\sc}}
+\newenvironment{proof}{\Proof{Proof:}}{ \indent}
+```
+The user defines `\Proof` (capital) as a sectioning command via
+`\@startsection{Proof}{5}{...}` — first arg is "Proof" (the counter
+name). Rust's `\@startsection` impl uses arg #1 verbatim as the
+ltx element tag → `<ltx:Proof>` (capital P). Schema only has
+`<ltx:proof>` lowercase. So Rust opens an unknown element, and
+all subsequent inserts (1561 of them) hit
+`Error:malformed:* isn't allowed in <ltx:Proof>`.
+
+Faithful fix: Rust's `\@startsection` should normalize the first
+arg or map standard counter-names to ltx element tags via a lookup
+table — mirroring whatever Perl's `\@startsection` does (likely
+treats the first arg as a counter, not a tag name). 1561 sandbox
+errors collapse with one fix.
+
 **Iter-52 — 1608.04650 (1561-error outlier):** All 1561 errors share
 the same root: `Error:malformed:* isn't allowed in <ltx:Proof>` —
 754× `#PCDATA`, 593× `ltx:Math`, 80× `ltx:ref`, etc. Single content-
