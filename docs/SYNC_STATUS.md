@@ -545,7 +545,22 @@ prematurely before the bibliography frame can claim authority).
 \end{thebibliography}
 \end{document}
 ```
-Same `<para>`-wraps-`<bibitem>` symptom as the full natbib_test. Suspects:
+Same `<para>`-wraps-`<bibitem>` symptom as the full natbib_test.
+
+**Refined hypothesis (post-iteration)**: Perl uses
+`DefPrimitiveI('\reset@natbib@cites', undef, sub {...})` — the `I`
+variant is "invisible" (doesn't trigger `enter_horizontal`). Rust's
+`DefPrimitive!("\\reset@natbib@cites", None, after_digest => {...})`
+(natbib_sty.rs:955) lacks the invisible distinction. When
+`\reset@natbib@cites` fires inside `<biblist>`, Rust's digest path
+likely calls `enter_horizontal`, auto-closes `<biblist>`/`<bibliography>`
+(both have `auto_close => true`), and opens `<para>`. Subsequent
+`\@@lbibitem` then opens `<bibitem>` in the `<para>` — the symptom.
+
+Forward-fix candidate: audit `DefPrimitive!` invocations in
+natbib_sty.rs (and others) — especially those with `None` body — and
+mark them as mode-invisible, OR flesh out the Rust dispatch macro
+to honor the Perl `DefPrimitiveI` semantics. Suspects:
   * `\refstepcounter`'s side-effect — Perl primitive returns
     nothing visible; Rust's may leak counter value text.
   * `\reset@natbib@cites` definition or expansion order.
