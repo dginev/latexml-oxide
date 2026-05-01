@@ -299,23 +299,17 @@ mis-classified as failures (commit pending).
   at `stomach.rs:273` and `:363` egroup/endgroup error sites — needs
   per-position state to remember the last error.
 
-- [ ] **math0104021** (R=8 vs P=1) — amsppt `\ref ... \endref`
-  bibliography emits 7× `Error:unexpected:\endgroup ... mode-switch
-  to horizontal` (one per `\endref` call). 1× `\@ifundefined`
-  matches Perl. Root cause:
-  `\ref → \begingroup \@bibitem \@bibfield{random}`
-  `\endref → \@end@bibfield \@fill@bibitem \@end@bibitem \endgroup`.
-  The `\@bibitem` Constructor opening `<ltx:bibitem>` causes
-  begin_mode_opt(horizontal) to push a BOUND_MODE-tagged frame.
-  `\@end@bibitem`'s close-tag Constructor closes the element but
-  does NOT pop the mode frame, so `\endgroup` arrives with mode
-  frame on top → `stomach.rs:363` error path fires. Perl handles
-  this transparently in Document::close — gap is in Rust's
-  Constructor close-tag handling for elements that triggered
-  implicit mode-entry. See
-  `memory/project_amsppt_endref_endgroup_cascade.md` for full
-  trace. Same family as Cluster H. Fix locus deferred — needs
-  audit of close-tag/mode-pop coupling in `document.rs::close_element`.
+- [x] **math0104021** (R=8 → R=1, Perl-parity) — **FIXED**: amsppt's
+  `\roster ... \endroster` was a thin `\begin{enumerate}` wrapper
+  that left a mode-switch frame on the stack at `\endroster` time,
+  cascading 7 × `Error:unexpected:\endgroup` at every subsequent
+  `\endref`/`\end`. Replaced with a faithful Perl port (Perl
+  `amsppt.sty.ltxml:251-259`): `DefConstructor!('\\roster
+  DigestUntil:\\endroster', ..., bounded => true, ...)` plus
+  `\roster@item` Constructor and `Let!('\\endroster', '\\relax')`.
+  `bounded=>true` keeps the entire roster digestion in one frame
+  with proper mode coupling. Min repro: 0 errors (was 7).
+  Tests: 1110/0/0 (no regressions).
 
 - [ ] **hep-th0101146** (R=17 vs P=15) — `Error:malformed:ltx:XMApp`
   + `ltx:XMTok` "isn't allowed in <ltx:p>". Source has malformed

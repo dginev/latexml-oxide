@@ -169,9 +169,24 @@ LoadDefinitions!({
     after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
   Let!("\\enddemo", "\\relax");
 
-  // Lists — Perl L265-300
-  DefMacro!("\\roster", "\\begin{enumerate}");
-  DefMacro!("\\endroster", "\\end{enumerate}");
+  // Lists — Perl amsppt.sty.ltxml L245-259. Faithful Perl port replaces
+  // the prior thin `\begin{enumerate}` wrapper, which left a mode-switch
+  // frame on the stack at `\endroster` time and cascaded `\endgroup`
+  // errors at every subsequent `\endref`/`\end` (math0104021 +
+  // ~similar AmS-TeX papers using \roster). DigestUntil reads the body
+  // in one shot, bounded=>true keeps the entire frame self-contained.
+  NewCounter!("roster", "document", idprefix => "I");
+  NewCounter!("rosteritem", "roster", idprefix => "i");
+  DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
+  DefConstructor!("\\roster DigestUntil:\\endroster",
+    "<ltx:enumerate>#body</ltx:enumerate>",
+    bounded => true,
+    properties => sub[_args] { RefStepID!("roster") },
+    before_digest => { state::let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(state::Scope::Local)); });
+  DefConstructor!("\\roster@item",
+    "<ltx:item xml:id='#id'>?#1(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)",
+    properties => sub[_args] { RefStepID!("rosteritem") });
+  Let!("\\endroster", "\\relax");
 
   // Perl amsppt.sty.ltxml L261-263: \block — simple block-quote container.
   // Previously unported. DigestUntil parameter type landed in 27cc66b60
@@ -839,16 +854,12 @@ LoadDefinitions!({
   // doesn't trigger an undefined-CS error.
   DefMacro!("\\examplename", "Example");
 
-  // Perl amsppt.sty.ltxml L250: \therosteritem{#1} expands to \rom{(#1)}.
-  // Used by \roster … \item to wrap the auto-numbered index in upright
-  // parentheses. Previously unported.
-  DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
   // Perl L468: \edtext expands to "ed." — the editor-marker inserted in
   // bib entries after an `\editors{...}` field.
   DefMacro!("\\edtext", "ed.");
 
-  // Roster / layout — Perl L246, L265-270.
-  DefRegister!("\\rosteritemwd"        => Dimension::new(0));
+  // Layout dimens — Perl L265-270. (`\rosteritemwd` is registered with
+  // \roster above as part of the faithful Perl L246 port.)
   DefRegister!("\\pagenumwd"           => Dimension::new(0));
   DefRegister!("\\indenti"             => Dimension::new(0));
   DefRegister!("\\indentii"            => Dimension::new(0));
