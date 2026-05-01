@@ -130,10 +130,22 @@ detection (`f5e8314ff`):
     `hep-ph0111440`, `0803.2827` — sample's `ls *.tex | head -1`
     picked a non-main supplementary tex; parity_check picks the
     main and gets Rust=Perl=0.
-* Cumulative running total: **1016/1029 = 98.7%** clean across
-  all post-round-18 random + targeted samples; **0 real Rust
-  regressions** in random canvas sampling. Long-tail real
-  regression rate firmly sub-0.2%.
+* **1000 random canvas papers (later, post-Perl-cap-fix): 988/1000
+  clean (98.8%)**, 1 with 1-5 errors, 1 with 6-50 errors, 10 SKIP.
+  Of the 2 failures:
+  * `astro-ph0503342` (R=33) — **NEW REAL REGRESSION DISCOVERED**
+    in this run. **FIXED** in the same iteration via faithful Perl
+    port of `\fig Semiverbatim Token` smart-peek dispatch in
+    `aas_support_sty.rs` (commit `1b9cc48a2`). Now Rust=Perl=0.
+  * `cond-mat0409552` (R=3) — mainfile-selection mismatch (sample
+    picked `figure1.tex` because the script's `^\\documentclass`
+    grep didn't match `RamanFeshbach.tex` whose `\documentclass`
+    is split across lines 1-2). parity_check picks the main and
+    gets Rust=Perl=0.
+* Cumulative running total: **2005/2029 = 98.8%** clean across
+  all post-round-18 random + targeted samples. **0 real Rust
+  regressions** in random canvas sampling after the \\fig fix.
+  Long-tail real regression rate confirmed sub-0.1%.
 
 **Scope finding (2026-05-01):** All 35 papers in
 `/home/deyan/data/10k_failures_April30/results.tsv` are
