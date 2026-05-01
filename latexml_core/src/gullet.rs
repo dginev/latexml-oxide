@@ -778,10 +778,19 @@ pub fn read_balanced(
       },
     };
     if !is_open {
+      // Push the token back so subsequent reads (especially alignment `&`,
+      // newline `\\`, or `\end{tabular}`) recover gracefully when an
+      // upstream macro had a required `{}` arg with no `{...}` available
+      // (e.g. mn2e/multirow with a missing 3rd arg — 0903.4199 cascade).
+      // Without this, the consumed `&` was lost from alignment context,
+      // turning a 1-error "missing arg" into a 10001-cap `&`-cascade.
+      if let Some(t) = token_opt {
+        unread_one(t);
+      }
       Error!(
         "expected",
         "{",
-        s!("Expected opening '{{' got {token_opt:?}")
+        s!("Expected opening '{{'")
       );
       return Ok(Tokens!());
     }
