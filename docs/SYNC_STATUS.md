@@ -113,6 +113,16 @@ ALSO fails) and `cond-mat0201306` was **fixed 2026-05-01**
 (revtex4 .rty auto-load). Effective post-fix in-scope baseline:
 **100% on all sampled papers.**
 
+**Post-roster + post-Perl-cap-fix random sample (2026-05-01,
+later):** Re-verified after `\roster` Perl-port commit `050a32b1b`
+landed (5 amsppt papers cleared) and the parity_check Perl-cap
+detection (`f5e8314ff`):
+* 100 random canvas papers: **99/100 = 100% of valid (1 SKIP, no
+  .tex)**, zero failures in any tier.
+* Cumulative running total: **528/529 = 99.81%** clean across all
+  post-round-18 random + targeted samples (the only remaining
+  outlier is `0901.2408_emph_dollar` already in `docs/out-of-scope/`).
+
 **Scope finding (2026-05-01):** All 35 papers in
 `/home/deyan/data/10k_failures_April30/results.tsv` are
 **out-of-scope** for the 100k mission — `comm -23` against
