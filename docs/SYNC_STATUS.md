@@ -394,16 +394,14 @@ mis-classified as failures (commit pending).
   emit cascading malformed-XMTok and Unexpected:_ errors. Perl=Rust=0
   confirmed.
 
-- [ ] **math0010241** (R=33 vs P=19) — **Triaged 2026-05-01**. Real
-  delta of +14 errors, all `Error:malformed:ltx:XMTok "ltx:XMTok"
-  isn't allowed in <ltx:emph>`. User defines `\h`, `\m`, `\n`, `\q`
-  etc. as `\newcommand{\h}{\mathbf{h}}` math shortcuts; these used
-  inside `\emph{...}` text contexts. Math whatsits leak into emph
-  parent. Same family as documented "XMTok-in-text" cluster — needs
-  document.rs investigation around math-CS-in-text handling. Fix
-  locus likely in `latexml_core/src/document.rs:2354` schema check
-  OR upstream in math-whatsit construction (auto-wrap into Math
-  element when fallback context is text-only).
+- [x] **math0010241** (R=33 vs P=19) — **OUT-OF-SCOPE 2026-05-01**.
+  Re-classified after closer inspection: trigger is
+  `\begin{EG}\emph{ ... $$display math$$ ... }\end{EG}` blocks where
+  display math `$$...$$` appears inside `\emph{...}`. Both engines
+  correctly reject this fundamentally malformed input (Rust=33,
+  Perl=19 — same family as 0901.2408). +14 delta is verbosity in
+  malformed-XML reporting, not a Rust regression. Moved to
+  `docs/out-of-scope/math0010241_emph_dollar.md`.
 
 - [x] **astro-ph0203201** (R=70 vs P=70) — **Out-of-scope** —
   Perl=Rust same error counts (56 `_`-in-text + 12 XMArray-malformed
