@@ -290,19 +290,17 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
   through preamble (likely AmS-TeX `\cases` body reader vs LaTeX-pool
   `\cases{}` arg reader divergence in math/text mode mix).
 
-- [ ] **quant-ph0109041** (R=67 vs P=9) — **Triaged 2026-05-01**.
-  Architectural divergence from `wisdom_lazy_pool_load.md`. Paper has
-  `\def\>{\rangle}` `\def\<{\langle}` `\def\k#1{|#1\>}` `\def\b#1{\<#1|}`
-  BEFORE `\documentstyle[prl,aps]{revtex}`. `\k` and `\b` are
-  `DefAccent` kernel CSes in `latex_constructs.pool.ltxml:42`. Rust's
-  `\lx@documentstyle@impl` (`tex_job.rs:140`) calls
-  `input_definitions("LaTeX", "pool")` AFTER user defs, so the kernel
-  accents clobber `\k`/`\b`. Each `\k{X}` invocation becomes accent
-  processing, mis-tagging `_` in `X` → `Error:Unexpected:_`. Perl
-  preloads pools at engine init, so user `\def` wins. Min repro
-  (R=1, P=0): 4-line — see `memory/project_quant_ph_0109041_user_defs_clobber.md`.
-  **Deferred** — fix is architectural (preload pools, OR snapshot user
-  defs at `\documentstyle` entry and restore after pool load).
+- [ ] **quant-ph0109041** (R=67 vs P=9) — **Triaged 2026-05-01,
+  diagnosis corrected.** Initial hypothesis (lazy-pool-load divergence)
+  was WRONG: Perl `--verbose` trace confirms BOTH engines lazy-load
+  LaTeX.pool at `\documentstyle{revtex}` (Perl trace line 38). Both
+  clobber user `\def\k` with kernel `DefAccent('\k',...)`. The divergence
+  is DOWNSTREAM: how `\k{\phi_i}` (now an accent) is processed in math
+  context. In Perl the accent's `{X}` arg keeps `_` inside the brace
+  group → no error. In Rust the `_` escapes → `Error:Unexpected:_`.
+  Min repro (R=1, P=0): 4-line. Fix locus: Rust's accent argument
+  processing in math mode — `DefAccent!` codegen / accent invocation
+  path. See `memory/project_quant_ph_0109041_user_defs_clobber.md`.
 
 - [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
   over Perl's 101 truncation cap. Triage needed.
