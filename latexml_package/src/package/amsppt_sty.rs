@@ -363,27 +363,9 @@ LoadDefinitions!({
       props.insert("class", Stored::String(arena::pin(&class_str)));
       Ok(props)
     });
-  // Perl L445 emits `^key='#1'<ltx:tags><ltx:tag role='refnum'>#1</ltx:tag></ltx:tags>`.
-  // The `^key=` is a float-to-attribute directive that walks ancestors to
-  // find a node accepting the `key` attribute (`<ltx:bibitem>`). Rust's
-  // constructable codegen doesn't yet parse `^attr=...` syntax, so we
-  // emulate it via a `before_construct` closure: float to a key-accepting
-  // ancestor and `set_attribute("key", #1)` directly. Rest of the
-  // template (tags wrapper) renders as in Perl.
+  // Perl L445.
   DefConstructor!("\\@bibitem@tag{}",
-    "<ltx:tags><ltx:tag role='refnum'>#1</ltx:tag></ltx:tags>",
-    before_construct => sub[document, whatsit] {
-      let key_str = whatsit.get_arg(1)
-        .map(|a| a.to_string())
-        .unwrap_or_default();
-      if !key_str.is_empty() {
-        if let Some(savenode) = document.float_to_attribute("key") {
-          let mut node = document.get_node().clone();
-          document.set_attribute(&mut node, "key", &key_str)?;
-          document.set_node(&savenode);
-        }
-      }
-    });
+    "^key='#1'<ltx:tags><ltx:tag role='refnum'>#1</ltx:tag></ltx:tags>");
 
   // Perl L381-424: `\@fill@bibitem` — emits the formatted bib entry by
   // reading captured `amsbibitem@*` fields from state and building
