@@ -65,6 +65,52 @@ $$ x_1 $$
 \end{document}
 ```
 
+### 1.7 elsart `{proof}` env pre-empts user `\newenvironment` ✅ FIXED
+
+100k random sample (2026-05-01 v3, 2943/2971 valid = 99.06% clean).
+`0801.1844` was R=21 vs P=0 — Rust's `elsart_support_sty.rs:75`
+unconditionally defined `{proof}` with a `<ltx:proof><ltx:title>…`
+template. The paper has its own `\newenvironment{proof}{\noindent
+{\em Proof~}}{\hfill $\Box$}` (plain text, no title element). With
+Rust's pre-emptive definition, `\newenvironment{proof}` was a redef
+that lost; the env body's BOUND_MODE went `restricted_horizontal`
+(from `<ltx:title>`), so `$$..$$` shorthand silently exited inline
+math after first `$` and the body content cascaded as
+`Script ^/_ can only appear in math mode`. Fix (commit `26e011a0b`):
+remove the spurious DefEnvironment — Perl `elsart_support.sty.ltxml`
+also leaves `{proof}` undefined, letting user macros / amsthm define
+it. Tests 1112/0/0. New wisdom note:
+[`wisdom_dollar_dollar_bound_mode.md`](../.claude/projects/-home-deyan-git-latexml-oxide/memory/wisdom_dollar_dollar_bound_mode.md).
+
+**Same root family applies generally:** before adding
+`DefEnvironment!("{name}[]", ...)` in a class binding, search the
+Perl `*.cls.ltxml` / `*.sty.ltxml` to confirm Perl actually defines
+it there. If not, neither should we — papers commonly redefine these.
+
+### 1.8 100k random-sample baseline (2026-05-01)
+
+Random 3000-paper sample (post-fix): **2943 OK / 2971 valid =
+99.06% clean.** Of the 28 non-zero results, parity-check finds:
+* 24/28 BOTH CLEAN — sample false positives from concurrent
+  `xargs -P 8` contention (RAM/CPU pressure → spurious errors).
+  Re-runs in isolation produce 0 errors.
+* 1 OUT-OF-SCOPE (`0912.5373`, P=R=3).
+* 1 OUT-OF-SCOPE? Perl-capped (`hep-ph0001306`, P=101 R=146).
+* 1 small cosmetic delta (`math0508575` R=18 P=14, Δ=4): IEEEtran
+  `<ltx:title>` proof template makes both engines fail `$$..$$`
+  identically; the 4-error delta is Rust's script-error placeholder
+  emitting an extra `<ltx:XMTok>` per `^/_` (Perl emits a plain
+  text Box). Cosmetic; deferred.
+* 1 REAL REGRESSION cosmetic (`0710.0360` R=1 P=0): llncs
+  `\institute{LIP\thanks{...}, \\ {\tt …}}` — `\\` line-break inside
+  `\institute` arg switches to vertical mode and outer brace `\egroup`
+  trips `Attempt to close a group that switched to mode vertical`.
+  Single-error cosmetic; deferred.
+
+The 99% clean rate confirms long-tail real regressions are sub-1%;
+remaining triage work is finding clusters across larger samples
+rather than chasing individual papers.
+
 ### 1.6 math-ph0001015 — `\footnotetext` undefined in AmS-TeX flow ✅ FIXED
 
 100k stage-1 sample. AmS-TeX paper (`\input amstex \documentstyle{amsppt}`)
