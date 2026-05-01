@@ -19,6 +19,8 @@ pub struct Scan {
   name:   String,
   /// Reference to the shared ObjectDB.
   pub db: ObjectDB,
+  /// Root document id for the current scan.
+  page_id: Option<String>,
 }
 
 /// Collected properties for a scanned element, ready for DB registration.
@@ -36,7 +38,7 @@ impl ScannedProps {
 }
 
 impl Scan {
-  pub fn new(db: ObjectDB) -> Self { Scan { name: "Scan".to_string(), db } }
+  pub fn new(db: ObjectDB) -> Self { Scan { name: "Scan".to_string(), db, page_id: None } }
 
   /// Recursively scan a node and its children.
   ///
@@ -112,18 +114,16 @@ impl Scan {
 
   /// Compute the page ID for the current document.
   fn page_id(&self, doc: &PostDocument) -> Option<String> {
-    doc
-      .get_document_element()
-      .and_then(|root| get_xml_id(&root))
+    self
+      .page_id
+      .clone()
+      .or_else(|| doc.get_document_element().and_then(|root| get_xml_id(&root)))
   }
 
   /// Compute the fragment ID for a node within its page.
   fn in_page_id(&self, doc: &PostDocument, node: &Node) -> Option<String> {
     let id = get_xml_id(node)?;
-    let base_id = doc
-      .get_document_element()
-      .and_then(|root| get_xml_id(&root))
-      .unwrap_or_default();
+    let base_id = self.page_id(doc).unwrap_or_default();
 
     if id == base_id {
       None
@@ -189,7 +189,7 @@ impl Scan {
     // tag nodes (refnum, typerefnum, etc.)
     // Store as String (not Xml) to avoid dangling node references.
     // Perl uses cloneNode(1) deep copy; our libxml bindings only do ref copies.
-    for tagnode in doc.findnodes_at("ltx:tags/ltx:tag", Some(node)) {
+    for tagnode in child_tag_nodes(node) {
       let key = if let Some(role) = tagnode.get_attribute("role") {
         if role.ends_with("refnum") {
           role
@@ -270,7 +270,10 @@ impl Scan {
       let sp = self.collect_common(doc, node, tag, parent_id);
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
-      self.add_as_child(id_str, parent_id);
+      // Keep the ID entry addressable for refs/URLs, but do not add generic
+      // layout/math/text nodes to section children. TOCs only need primary
+      // structural children, and adding tens of thousands of table cells here
+      // turns Scan into quadratic duplicate checking.
     }
     let effective_id = id.as_deref().or(parent_id);
     self.scan_children(doc, node, effective_id);
@@ -758,7 +761,9 @@ impl Processor for Scan {
         .register("SITE_ROOT", vec![("id", Value::from(id.as_str()))]);
     }
 
+    self.page_id = Some(id.clone());
     self.scan(&doc, &root, None);
+    self.page_id = None;
 
     let loc = doc.site_relative_destination().unwrap_or_default();
     let doc_key = format!("DOCUMENT:{}", loc);
@@ -784,6 +789,24 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
       }
       current = c.get_next_sibling();
     }
+  }
+  result
+}
+
+fn child_tag_nodes(node: &Node) -> Vec<Node> {
+  let mut result = Vec::new();
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if c.get_type() == Some(NodeType::ElementNode) && c.get_name() == "tags" {
+      let mut tag_child = c.get_first_child();
+      while let Some(t) = tag_child {
+        if t.get_type() == Some(NodeType::ElementNode) && t.get_name() == "tag" {
+          result.push(t.clone());
+        }
+        tag_child = t.get_next_sibling();
+      }
+    }
+    child = c.get_next_sibling();
   }
   result
 }
