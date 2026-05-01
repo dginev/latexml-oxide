@@ -46,6 +46,49 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
 
 /// Returns true if log output is currently suppressed.
 pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
+
+/// Per-thread tracker for the most recently emitted error's
+/// `category:object` signature, plus the count of how many
+/// consecutive errors share the same signature. Used to detect
+/// runaway loops where a single pathological control-sequence (like
+/// plain-TeX `\tabalign` invoked in math mode → unbounded `\halign`
+/// cell loop) keeps emitting the same error indefinitely. See
+/// `wisdom_tabalign_math_runaway.md` for the canonical witness.
+#[thread_local]
+static LAST_ERROR_KEY: RefCell<Option<String>> = RefCell::new(None);
+#[thread_local]
+static CONSECUTIVE_ERROR_COUNT: std::cell::Cell<usize> = std::cell::Cell::new(0);
+
+/// Threshold for "same error fired this many times in a row → bail."
+/// Set well above any legitimate same-error pattern (a paper with
+/// 1000+ identical errors would already be near-useless output) but
+/// well below the 10000 MAX_ERRORS cap so runaway papers don't
+/// accumulate huge noise logs. Empirically, the pathological
+/// `\tabalign`-in-math-mode runaway hits >9000 consecutive same
+/// errors; this catches that at 2000 instead.
+pub const MAX_CONSECUTIVE_ERRORS: usize = 2000;
+
+/// Record an error signature; returns the new consecutive count.
+/// Call from the Error! macro after note_status. Resets count to 1
+/// on a different signature, increments on a match.
+pub fn note_consecutive_error(key: &str) -> usize {
+  let mut last = LAST_ERROR_KEY.borrow_mut();
+  if last.as_deref() == Some(key) {
+    let c = CONSECUTIVE_ERROR_COUNT.get() + 1;
+    CONSECUTIVE_ERROR_COUNT.set(c);
+    c
+  } else {
+    *last = Some(key.to_string());
+    CONSECUTIVE_ERROR_COUNT.set(1);
+    1
+  }
+}
+
+/// Reset the consecutive-error tracker (called from initialize_report).
+fn reset_consecutive_error_tracker() {
+  *LAST_ERROR_KEY.borrow_mut() = None;
+  CONSECUTIVE_ERROR_COUNT.set(0);
+}
 #[macro_export]
 macro_rules! report {
   () => {
@@ -105,6 +148,7 @@ pub fn get_status(status: LogStatus) -> usize {
 pub fn initialize_report() {
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
+  reset_consecutive_error_tracker();
 }
 
 /// Build a status message matching Perl's `getStatusMessage()`.
@@ -277,6 +321,26 @@ macro_rules! Error {
     };
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
+    }
+    // Runaway-loop early-bail: if the same error signature has fired
+    // MAX_CONSECUTIVE_ERRORS times in a row, we're stuck in a loop
+    // (the canonical witness is plain-TeX `\tabalign` invoked in math
+    // mode → unbounded `\halign` cell loop emitting `\hbox` end-mode
+    // mismatches). Bail before MAX_ERRORS so logs stay short and
+    // post-processing sees a clear cause. The threshold is well above
+    // any legitimate same-error pattern (real papers max out at a few
+    // hundred unique errors).
+    let __consec_key = format!("{}:{}", $category, $object);
+    let __consec = $crate::common::error::note_consecutive_error(&__consec_key);
+    if __consec > $crate::common::error::MAX_CONSECUTIVE_ERRORS {
+      Fatal!(
+        TooManyErrors,
+        MaxLimit($crate::common::error::MAX_CONSECUTIVE_ERRORS),
+        format!(
+          "Runaway: same error '{}' fired {} times in a row (cap = {})",
+          __consec_key, __consec, $crate::common::error::MAX_CONSECUTIVE_ERRORS
+        )
+      );
     }
   }}
 }
