@@ -268,28 +268,31 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 - [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
   over Perl's 101 truncation cap. Triage needed.
 
-- [ ] **hep-ph0102192** (R=4 vs P=0) — **Re-triaged 2026-05-01**:
-  Root cause is in `insert_block` (`base_utilities.rs:1469-1497`),
-  not in caption auto-open. The 4 errors are emitted from the
-  `Did not find a block-like candidate` fallback that renames
-  `_CaptureBlock_` to `ltx:block` even though the captured contents
-  include `<ltx:caption>` and `<ltx:toccaption>`. Tex paper has
-  `\begin{minipage}` inside `\begin{figure}` with pstricks coordinate
-  text BEFORE the minipage. The `\psline`/`\rput` text content opens
-  a `<ltx:p>` that doesn't auto-close before `\begin{minipage}`, so
-  `context_tag` at `insert_block` time is `ltx:p`, not `ltx:figure`.
-  `is_inline=true`, candidate list = `[ltx:inline-block,
-  ltx:inline-logical-block, ltx:inline-sectional-block]`, none of
-  which `can_contain_somehow` `ltx:caption` → all filtered out →
-  fallback renames to `ltx:block`. Perl produces
-  `<figure class="ltx_figure_panel ltx_minipage">` with auto-opened
-  figure parent, which means Perl either: (a) auto-closes the
-  outer `<ltx:p>` before `\begin{minipage}` (likely via `\centering`
-  whatsit interaction), or (b) the candidate selection considers
-  ancestors beyond `context_tag`. Need to compare Perl's full trace
-  to determine which. **Deferred to later round** — schema-aware
-  candidate selection is a deeper refactor than the worksheet
-  initially suggested.
+- [x] **hep-ph0102192** (R=4 → R=0) — **FIXED 2026-05-01**: real root
+  cause was that pstricks stubs (`pstricks_sty.rs`) did not consume the
+  variadic `(coord)(coord)…` PSCoordList that follows `\psline`,
+  `\pspolygon`, etc. Coordinates leaked as raw text and `\rput` text
+  bodies emitted into the surrounding paragraph, opening an `<ltx:p>`
+  that trapped the later `\begin{minipage}` block content. Two-part
+  fix: (a) added `\lx@psgobble@parens` recursive `\@ifnextchar(`
+  helper to absorb the trailing PSCoordList; (b) dropped the text body
+  from `\rput`/`\uput`/`\cput` (consume the paren coord and brace text
+  but emit nothing). Visible labels like "cocktail"/"thermal"
+  positioned via `\rput` are lost — fidelity regression. The right
+  long-term fix is to port Perl's `DefPSConstructor` framework so
+  pstricks output lives inside `<ltx:picture>` (where labels survive).
+  See follow-up worksheet item below.
+
+- [ ] **pstricks → ltx:picture wrapping** (large-scope feature) — Port
+  Perl's `DefPSConstructor` (`pstricks_support.sty.ltxml:491`) and the
+  `PSCoordList` parameter type so pstricks drawing commands emit
+  `<ltx:line>`/`<ltx:circle>` etc. inside an auto-opened `<ltx:picture>`
+  parent. Currently `\rput`/`\uput`/`\cput` text bodies are dropped to
+  keep the schema valid (commits `9df708fa9` partial, this round
+  drop-rput); restoring them requires the picture wrapper. See inline
+  TODO at `latexml_package/src/package/pstricks_sty.rs:51` and historical
+  `wisdom_*.md` notes (cycles 305-306, 2026-04-24, deferred per WISDOM
+  #41).
 
 - [ ] **math0004140** (R=1182 vs P=?) — High-error AmS-TeX paper.
   Triage to find single cascading root.
