@@ -342,17 +342,11 @@ mis-classified as failures (commit pending).
   cap. Dropping `\roster`'s leak collapses the entire downstream
   cascade. Perl=Rust=0 confirmed.
 
-- [ ] **quant-ph0109041** (R=67 vs P=9) — **Triaged 2026-05-01,
-  diagnosis corrected.** Initial hypothesis (lazy-pool-load divergence)
-  was WRONG: Perl `--verbose` trace confirms BOTH engines lazy-load
-  LaTeX.pool at `\documentstyle{revtex}` (Perl trace line 38). Both
-  clobber user `\def\k` with kernel `DefAccent('\k',...)`. The divergence
-  is DOWNSTREAM: how `\k{\phi_i}` (now an accent) is processed in math
-  context. In Perl the accent's `{X}` arg keeps `_` inside the brace
-  group → no error. In Rust the `_` escapes → `Error:Unexpected:_`.
-  Min repro (R=1, P=0): 4-line. Fix locus: Rust's accent argument
-  processing in math mode — `DefAccent!` codegen / accent invocation
-  path. See `memory/project_quant_ph_0109041_user_defs_clobber.md`.
+- [x] **quant-ph0109041** (R=67 → R=9, OUT-OF-SCOPE at parity)
+  — **FIXED 2026-05-01** by accent commit `ba2ab1dcf` (`mode => "text"`
+  drop from `\lx@applyaccent`). Rust=Perl=9; remaining 9 are Perl-baseline
+  errors from genuinely malformed `\k{...}` invocations on math-only
+  tokens. Now classified OUT-OF-SCOPE per parity_check.
 
 - [x] **astro-ph0204393** (R=113 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
   Perl=101 is the MAX_ERRORS cap. Cap-uncertain.
