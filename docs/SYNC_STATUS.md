@@ -294,6 +294,33 @@ Detailed phase splits and external-tool timings are preserved in
 * **1 Perl-capped** — `hep-ph0110283` (R=96 vs P=101 cap), parity
   undecidable.
 
+**20k canvas results.tsv refresh (2026-05-01, later still):** Reran
+parity_check on the 39 untriaged non-`ok` rows from
+`/home/deyan/data/100k_noproblem_sandbox_html/results.tsv` (the
+20,000-paper canvas baseline). Of the 32 that had a `.tex` to
+process (7 skipped — sweep-script artifact):
+* **19 BOTH_CLEAN** — silent recoveries from recent commits (canvas
+  log was stale): `astro-ph0002213`, `astro-ph0007367`,
+  `astro-ph0009248`, `astro-ph0011503`, `astro-ph0012401`,
+  `astro-ph0105525`, `astro-ph0203332`, `cond-mat0002096`,
+  `cond-mat0109091`, `cond-mat0201194`, `cond-mat0205452`,
+  `gr-qc0012092`, `math0104011`, `math0104094`, `nlin0106035`,
+  `physics0103080`, `quant-ph0203044`, `quant-ph0205175`,
+  `quant-ph0207078`.
+* **11 PERL_REGRESSIONs** — Rust beats current Perl:
+  `cond-mat0001201` (R=0 P=1), `cond-mat0005077` (R=0 P=2),
+  `cond-mat0101451` (R=0 P=1), `cond-mat0107098` (R=0 P=1),
+  `hep-lat0205019` (R=0 P=1), `hep-ph0004001` (R=0 P=1),
+  `hep-ph0005027` (R=0 P=1), `hep-ph0007073` (R=0 P=1),
+  `hep-ph0106352` (R=0 P=1), `hep-ph0109206` (R=0 P=2),
+  `hep-th0109174` (R=0 P=1).
+* **2 Perl-capped (OUT-OF-SCOPE?)** — `hep-ph0001306` (R=146 P=101)
+  and `hep-th0004072` (R=0 P=101).
+* **0 real Rust regressions** in this full canvas-failure cohort.
+
+**Combined: 13 papers where Rust supersedes current Perl** (2 from
+the round-18 TSV cohort + 11 from this canvas-failure cohort).
+
 The remaining real-regression set is now extremely small:
 * `hep-th0005268` (R=10001 cap vs P=26) — root-caused as the
   lazy-pool-load architectural divergence (`\def\<kernel-cs>` *before*
