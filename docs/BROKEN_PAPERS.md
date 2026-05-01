@@ -35,7 +35,22 @@ on sections that follow captioned figures.
 stream after captions accumulate state.
 **Memory:** [project_section_par_contamination.md](../memory/project_section_par_contamination.md).
 
-### 3. Math state cumulative — `\hbox` runaway
+### 3. emulateapj abstract footnote `\footnote{{...$\sim$...}}` math leak
+**Paper:** `astro-ph0503342` (R=33 vs P=0). Discovered in random-1000
+canvas sample 2026-05-01.
+**Trigger:** `\documentclass{emulateapj}`. Abstract contains a
+`\footnote{{% multi-line content with $\sim$ math and \_spec }}`
+where math/footnote interaction goes wrong. First error:
+`Gullet->readBalanced ran out of input in an unbalanced state`.
+Then schema malformations: `<ltx:figure>` materializes inside
+`<ltx:note>` (the footnote element); subsequent `\@@caption` end-mode
+fails because Rust thinks we're in `math` not `restricted_horizontal`.
+**Fix locus:** unidentified. Likely emulateapj/aastex `\footnote`
+or `\caption` constructor in the abstract context — probably
+related to how the footnote arg-reader interacts with `$\sim$`
+inline math and TeX comment lines (`%` newlines).
+
+### 4. Math state cumulative — `\hbox` runaway
 **Paper:** `hep-th0005268` (R=10001 cap vs P=26 Perl uncapped).
 **Trigger:** display math `\be ... \ee` block at line 737-739
 (after preceding `\be ... \ee` at 733-735). First localized error
@@ -51,7 +66,7 @@ fix masked (different unrelated trigger).
 ## Re-running these
 
 ```
-tools/parity_check.sh physics0002038 cond-mat0011517 math0010095 hep-th0005268
+tools/parity_check.sh physics0002038 cond-mat0011517 math0010095 hep-th0005268 astro-ph0503342
 ```
 
 Should always show:
@@ -59,6 +74,7 @@ Should always show:
 - `cond-mat0011517`: REAL REGRESSION (P=6 vs R=7)
 - `math0010095`: REAL REGRESSION (P=0 vs R=11)
 - `hep-th0005268`: REAL REGRESSION (P=26 vs R=10001)
+- `astro-ph0503342`: REAL REGRESSION (P=0 vs R=33)
 
 If any drop to OUT-OF-SCOPE or BOTH CLEAN, the corresponding fix has
 landed; remove from this list and credit the commit.
