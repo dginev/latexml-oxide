@@ -56,6 +56,26 @@ static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
 
+/// Defensive sanitizer for section-type identifiers (the `{section}` arg of
+/// `\@@numbered@section` etc.). Some upstream paths — notably figure-block +
+/// section sequencing in BoxedEPS-loading papers (Cluster A / math0010095) —
+/// allow a trailing `\par` (or other CS) token to pollute the section type
+/// string. The type identifier should always be a bare letter sequence
+/// (`section`, `subsection`, `appendix` …); strip a single trailing CS if
+/// present so downstream `\csname @<type>...@ID\endcsname`-style construction
+/// stays well-formed.
+fn strip_trailing_cs(stype: &str) -> String {
+  // Detect a trailing `\<letters>` token attached to the identifier. We strip
+  // exactly the well-known CS sentinels so we don't mis-mangle exotic but
+  // legitimate type names.
+  for tail in ["\\par", "\\@startsection@hook", "\\relax"] {
+    if let Some(stripped) = stype.strip_suffix(tail) {
+      return stripped.to_string();
+    }
+  }
+  stype.to_string()
+}
+
 /// Mirror of Perl `latex_constructs.pool.ltxml:2569-2574`'s
 /// `getShortSource =~ /^plain/` check. Two locator shapes count as
 /// "from plain":
@@ -3329,7 +3349,12 @@ LoadDefinitions!({
     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
     sub[document, args, props] {
       // args:=(stype,inlist,toctitle,title)
-      let stype = args[0].as_ref().unwrap().to_string();
+      // Sanitize stype: under some upstream conditions (figure-block + section
+      // sequencing — see math0010095 / Cluster A) the {} parameter reader picks
+      // up a trailing \par token that pollutes the section type identifier.
+      // \par should never appear inside a section type; strip any trailing
+      // backslash-prefixed CS to recover the bare identifier.
+      let stype = strip_trailing_cs(&args[0].as_ref().unwrap().to_string());
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
@@ -3408,7 +3433,8 @@ LoadDefinitions!({
       let title = args[3].as_ref().unwrap();
 
       maybe_peek_label()?;
-      let stype_str = stype.to_string();
+      // See Cluster A note in the body closure above; sanitize identical here.
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix" {
@@ -3424,13 +3450,15 @@ LoadDefinitions!({
         },
         None => title
       };
-      let stype_tokens = stype.revert()?;
+      // Cluster A: rebuild tokens from sanitized stype_str so the trailing
+      // \par token doesn't propagate into \lx@format@title@@'s body.
+      let stype_clean_tokens = Tokens::new(Explode!(stype_str));
       let title_tokens = title.revert()?;
       let invoked_title =
-        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens]);
+        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_clean_tokens.clone(), title_tokens]);
       let xtitle    = stomach::digest(invoked_title)?;
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype.revert()?, toctitle.revert()?]);
+          vec![stype_clean_tokens, toctitle.revert()?]);
       let xtoctitle = stomach::digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
@@ -3455,7 +3483,8 @@ LoadDefinitions!({
       }
       let id = props.get("id").unwrap().to_string();
       // Mirror the same schema sanitization as \@@numbered@section above.
-      let stype_str = stype.to_string();
+      // Cluster A: strip trailing CS (e.g. \par) from stype.
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let tagname = {
         let candidate = s!("ltx:{stype_str}");
         let known = matches!(stype_str.as_str(),
@@ -3491,7 +3520,8 @@ LoadDefinitions!({
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
       maybe_peek_label()?;
-      let stype_str = stype.to_string();
+      // Cluster A sanitization (see \@@numbered@section).
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix" {
