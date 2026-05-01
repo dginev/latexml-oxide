@@ -23,17 +23,17 @@ either suppress duplicate emit when same frame just errored on
 `end_mode_opt`, or audit Perl Stomach.pm for the divergence.
 **Memory:** unrecorded specific (just SYNC_STATUS).
 
-### 2. Cluster A — `\@@numbered@section args[0] = "section\par"`
-**Paper:** `math0010095` (R=11 vs P=0).
-**Trigger:** `\@@numbered@section{stype}{...}{...}{...}` Constructor
-receives `stype = "section\par"` instead of `"section"`. The trailing
-`\par` then breaks `\csname @section\thesection\endcsname` and
-related `\csname...\endcsname` constructions. Specifically appears
-on sections that follow captioned figures.
-**Fix locus:** `latexml_core/src/parameter.rs` `read_arguments` —
-`{}` parameter handler in vmode pulls trailing `\par` from outer
-stream after captions accumulate state.
-**Memory:** [project_section_par_contamination.md](../memory/project_section_par_contamination.md).
+### ~~2. Cluster A — `\@@numbered@section args[0] = "section\par"`~~ — FIXED
+**Paper:** `math0010095` was R=11 vs P=0. **FIXED** in commit
+`4d445b71c` (`latex_constructs.rs`): `\@@numbered@section` and
+`\@@unnumbered@section` now strip a trailing `\par` /
+`\@startsection@hook` / `\relax` token from `args[0]` (the section-type
+identifier) before propagating it to `ref_step_counter`,
+schema-tag selection, and the `\lx@format@title@@` invocation.
+Reverted token list is also rebuilt from the sanitized string.
+The trigger is a `{}` parameter reader picking up a trailing
+`\par` when an upstream BoxedEPS-style figure-block precedes the
+section. Now Rust=Perl=0.
 
 ### ~~3. emulateapj `\fig{...}` opens figure inside footnote~~ — FIXED
 **Paper:** `astro-ph0503342` was R=33 vs P=0. **FIXED** by porting
@@ -68,7 +68,7 @@ tools/parity_check.sh physics0002038 cond-mat0011517 math0010095 hep-th0005268
 Should always show:
 - `physics0002038`: REAL REGRESSION (P=4 vs R=5)
 - `cond-mat0011517`: REAL REGRESSION (P=6 vs R=7)
-- `math0010095`: REAL REGRESSION (P=0 vs R=11)
+- `math0010095`: BOTH CLEAN (FIXED `4d445b71c`)
 - `hep-th0005268`: REAL REGRESSION (P=26 vs R=10001)
 
 If any drop to OUT-OF-SCOPE or BOTH CLEAN, the corresponding fix has
