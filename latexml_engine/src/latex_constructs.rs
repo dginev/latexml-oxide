@@ -3082,7 +3082,17 @@ LoadDefinitions!({
   // but preserve it's "emph"-ness.
   // Perl latex_constructs.pool.ltxml L401-408: mode => 'restricted_horizontal',
   //   enterHorizontal => 1, font => { emph => 1 }, alias => '\emph', beforeDigest => {...}.
-  DefConstructor!("\\emph{}", "<ltx:emph _force_font='1'>#1",
+  // Perl emits `<ltx:text>` inside math context, `<ltx:emph>` outside —
+  // dispatch via `findnodes('ancestor::ltx:Math')` in the body sub.
+  // Rust template `?#isMath(...)(...)` is the equivalent gate (same
+  // pattern used by `\newline`, `\thinspace`, etc.) — ported 2026-05-01.
+  // Known remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
+  // Task 3 / 0901.2408): mode is "text" here vs Perl's
+  // 'restricted_horizontal' — flipping in isolation doesn't fix the
+  // `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper digester
+  // gating needed.
+  DefConstructor!("\\emph{}",
+    "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
     mode => "text",
     bounded        => true,
     enter_horizontal => true,
@@ -9656,4 +9666,24 @@ LoadDefinitions!({
   // since under unconditional-dump-apply the only way for the engine
   // override to survive is to apply it AFTER the dump has been read.
   DefMacro!("\\hline", r"\noalign{\@@alignment@hline}");
+
+  // Re-establish the engine `\documentstyle` impl after dump load. Same
+  // pattern as `\hline` above: under unconditional dump-apply the dump's
+  // `\documentstyle` body — `\input{latex209.def}\documentclass` — wins
+  // over the engine `Let \documentstyle = \lx@documentstyle@impl` from
+  // `tex_job.rs:279`. That dump body routes everything through
+  // `\documentclass`, which calls `load_class(name, opts,
+  // after=\AtBeginDocument\warn@unusedclassoptions)` — DROPPING the
+  // `\compat@loadpackages` after-hook our `\documentstyle` impl
+  // installs. Symptom: `\documentstyle[multicol,...]{revtex}` doesn't
+  // route the `multicol` option to `RequirePackage{multicol}`, leaving
+  // `\multicols`/`\multicolsep` undefined. Witness: cond-mat0109091.
+  //
+  // The Let-restore in `tex.rs` `\@load@latex@pool` only fires when an
+  // autoload trigger CS (\documentclass, \usepackage, …) is invoked
+  // AFTER engine init — but `\documentstyle` is not in the trigger
+  // list, so a paper whose first command is `\documentstyle` never
+  // gets the restore. Doing it here, at the end of the
+  // bootstrap → dump → constructs flow, guarantees our impl wins.
+  Let!("\\documentstyle", "\\lx@documentstyle@impl");
 });

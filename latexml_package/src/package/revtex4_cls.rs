@@ -53,6 +53,11 @@ LoadDefinitions!({
   ProcessOptions!();
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("revtex4_support");
+
+  // Perl revtex4.cls.ltxml L60-62: auto-load `<jobname>.rty` if present.
+  // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
+  // `\bracketOpen` etc.) in this file via revtex's runtime convention.
+  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     if state::lookup_bool(&s!("revtex_load_{}", pkg)) {

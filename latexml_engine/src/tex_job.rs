@@ -200,16 +200,30 @@ LoadDefinitions!({
     // this, versioned class names go to OmniBus → aipproc.sty.ltxml is
     // never loaded → `\epsfsize` etc. that aipproc.sty's
     // `RequirePackage('psfig'→'epsfig')` chain provides stay undefined.
+    // Check `<class>.sty` via binding registry (notex), version-strip
+    // fallback, AND disk-only probe (`forbid_ltxml: true`) so paper-local
+    // `<class>.sty` files (e.g. `mn1.sty` in astro-ph0002213, a LaTeX 2.09
+    // documentstyle file) win over a version-strip-derived `<class>.cls`
+    // (e.g. `mn1` → `mn.cls.ltxml`) which would drop the `[options]` since
+    // mn.cls's option-handler doesn't recognize them. Disk probe is gated
+    // on the absence of an exact `<class>.cls` binding to keep
+    // `\documentstyle{article}` routing through `article.cls.ltxml`
+    // rather than TeX Live's legacy disk `article.sty`.
+    let class_cls_binding_exact = find_file(
+      &format!("{}.cls", class),
+      Some(FindFileOptions { notex, ..Default::default() }),
+    ).is_some();
     let class_sty_found = find_file(
       &format!("{}.sty", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some()
+    || (!class_cls_binding_exact && find_file(
+      &class,
+      Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
+    ).is_some())
     || find_file_fallback(&class, "sty").is_some();
-    let class_cls_found = !class_sty_found && (find_file(
-      &format!("{}.cls", class),
-      Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some()
-    || find_file_fallback(&class, "cls").is_some());
+    let class_cls_found = !class_sty_found && (class_cls_binding_exact
+      || find_file_fallback(&class, "cls").is_some());
 
     let after = Tokens!(T_CS!("\\compat@loadpackages"));
 

@@ -52,6 +52,10 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("revtex4_support");
+
+  // Perl revtex4-1.cls.ltxml L60-63: auto-load `<jobname>.rty` if present.
+  // Same convention as revtex4 — paper-local macros stashed in .rty file.
+  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
   // Load AMS packages that were requested via options
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     if state::lookup_bool(&s!("revtex_load_{}", pkg)) {

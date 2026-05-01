@@ -8,7 +8,7 @@
 # the operator gets full backtraces, line numbers, and a 5-second
 # turnaround on subsequent rebuilds.
 #
-# Companion to tools/benchmark_10k.sh, which is the Phase-1 canvas runner
+# Companion to tools/benchmark_canvas.sh, which is the Phase-1 canvas runner
 # (release profile, no debug info, max throughput). See
 # docs/SANDBOX_TRIAGE.md "Two-phase workflow" for the philosophy.
 #
@@ -94,7 +94,7 @@ echo "[triage] main tex : $MAIN_TEX"
 cd "$(dirname "$0")/.."
 
 # Use cortex_worker (the same binary the canvas uses), so triage results
-# match what tools/benchmark_10k.sh observed. Prefer the existing
+# match what tools/benchmark_canvas.sh observed. Prefer the existing
 # release build; fall back to a fresh build if missing or stale.
 WORKER_BIN="${WORKER_BIN:-./target/release/cortex_worker}"
 if [[ ! -x "$WORKER_BIN" ]]; then

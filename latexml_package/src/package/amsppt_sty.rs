@@ -188,7 +188,67 @@ LoadDefinitions!({
   // helper in `latex_constructs.rs` that already carries the same
   // ltx:note wrapper + role attr). Intentional DefConstructor →
   // DefMacro kind divergence via delegation (WISDOM #44).
-  DefMacro!("\\footnote", "\\lx@note{footnote}");
+  // Perl amsppt.sty.ltxml L272-304 — footnote infrastructure. AmS-TeX flow
+  // (via `\input amstex \documentstyle{amsppt}`) does NOT load
+  // latex_constructs.rs's `\lx@note*` helpers, so naive delegation fails.
+  // We mirror Perl L272-304 directly: NewCounter sets up `\c@footnote` +
+  // default `\thefootnote`; `\footnote`/`\footnotemark`/`\footnotetext`
+  // are self-contained DefConstructors. When latex_constructs IS loaded
+  // (e.g. via `\usepackage{amsppt}` after a LaTeX `\documentclass`), these
+  // override the locked latex_constructs versions with amsppt's own
+  // definitions — same as Perl's behavior in that flow.
+  NewCounter!("footnote");
+  // Perl L273 redefines \thefootnote as a sub reading \c@footnote directly;
+  // NewCounter already gives us the same behavior via `\arabic{footnote}`.
+  // The closure form would only differ in tokenization corner cases not
+  // exercised by amsppt.
+  DefConstructor!("\\footnote[]{}",
+    "<ltx:note role='footnote' mark='#mark' xml:id='#id'>#2</ltx:note>",
+    mode => "internal_vertical",
+    before_digest => { neutralize_font(); },
+    properties => sub [args] {
+      let mark: Stored = match args[0].as_ref() {
+        Some(m) => m.clone().into(),
+        None => {
+          ref_step_counter("footnote", false)?;
+          digest_text(Tokens!(T_CS!("\\thefootnote")))?.into()
+        },
+      };
+      let mut props = SymHashMap::default();
+      props.insert("mark", mark);
+      Ok(props)
+    });
+  DefConstructor!("\\footnotemark[]",
+    "<ltx:note role='footnotemark' mark='#mark' xml:id='#id'/>",
+    mode => "text", enter_horizontal => true,
+    properties => sub [args] {
+      let mark: Stored = match args[0].as_ref() {
+        Some(m) => m.clone().into(),
+        None => {
+          ref_step_counter("footnote", false)?;
+          digest_text(Tokens!(T_CS!("\\thefootnote")))?.into()
+        },
+      };
+      let mut props = SymHashMap::default();
+      props.insert("mark", mark);
+      Ok(props)
+    });
+  // Perl L298-304: \footnotetext does NOT step the counter; reads
+  // current \thefootnote value directly.
+  DefConstructor!("\\footnotetext[]{}",
+    "<ltx:note role='footnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
+    mode => "internal_vertical",
+    properties => sub [args] {
+      let mark: Stored = match args[0].as_ref() {
+        Some(m) => m.clone().into(),
+        None => digest_text(Tokens!(T_CS!("\\thefootnote")))?.into(),
+      };
+      let mut props = SymHashMap::default();
+      props.insert("mark", mark);
+      Ok(props)
+    });
+  // Perl L306: same Tag-afterClose hook as latex_constructs.rs:3195
+  Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
   // Bibliography — Perl L355-500
   // Complex Perl closure system for reference formatting
@@ -556,6 +616,12 @@ LoadDefinitions!({
   DefMacro!("\\remarkfont", "\\rm");
   DefMacro!("\\remarkname", "Remark");
   DefMacro!("\\demonstrationname", "Demonstration");
+  // Perl amsppt.sty.ltxml L226 references `\examplename` in `\example`'s
+  // title-Digest call but never defines it (Perl's L190 comment notes the
+  // gap). Define it here for parity with `\definitionname` / `\remarkname` /
+  // `\demonstrationname` so the `\example {...}` constructor's title format
+  // doesn't trigger an undefined-CS error.
+  DefMacro!("\\examplename", "Example");
 
   // Perl amsppt.sty.ltxml L250: \therosteritem{#1} expands to \rom{(#1)}.
   // Used by \roster … \item to wrap the auto-numbered index in upright
