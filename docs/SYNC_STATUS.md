@@ -497,8 +497,32 @@ mis-classified as failures (commit pending).
   recent commits, no longer a failure. Marked in completed
   investigations table.
 
-- [ ] **hep-th0005268** (R=1000001 vs P=26) — Runaway cascade.
-  Termination-condition bug; identify recursion source.
+- [ ] **hep-th0005268** (R=10001 vs P=26) — **Root-caused 2026-05-01**:
+  the lazy-pool-load architectural divergence
+  (`memory/wisdom_lazy_pool_load.md`). The paper's preamble has
+  `\def\a{\alpha}` on line 21, *before* `\documentclass{article}` on
+  line 66. Perl preloads the LaTeX kernel so the user `\def` overrides
+  the kernel's `\let\a=\@tabacckludge`. Rust loads `latex_constructs`
+  *at* `\documentclass`, which clobbers the user's `\def\a` and
+  re-Lets `\a` to `\@tabacckludge`. In the body `\a+iN` is then read
+  as `\@tabacckludge {+}` → `\@changed@cmd \+\relax` → `\@inmathwarn`
+  warning + `\OT1\+` / `\TextSymbolUnavailable` recovery — and that
+  recovery path runs away in Rust (10001 × `\hbox`
+  end-mode-mismatch) where Perl emits one warning and continues.
+  Min repro:
+  ```
+  \def\a{\alpha}
+  \documentclass{article}
+  \begin{document} $\a + x$ \end{document}
+  ```
+  yields R=10001, P=0. Same file with `\def\a{\alpha}` *after*
+  `\documentclass` yields R=0. The recovery-path runaway is a
+  secondary Rust bug worth fixing for robustness, but the proper fix
+  is the architectural preload of latex_constructs ahead of any
+  user-preamble `\def\<kernel-cs>` so the user's overrides win
+  (matches Perl). Until then this paper is blocked on the
+  architectural fix; same family as `cond-mat0106160`,
+  `hep_ph0001306_documentstyle_clobber` already triaged out-of-scope.
 
 - [x] **hep-th0005159** (R=262 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
   Perl=101 is the MAX_ERRORS cap; cap-uncertain. Rust now at 262 (well
