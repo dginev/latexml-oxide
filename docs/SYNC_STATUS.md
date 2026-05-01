@@ -423,7 +423,7 @@ Parity-classified all 35 papers in the 1-5 tier via
 | OUT-OF-SCOPE (Rust=Perl) | 30 | All `\setdec`/`\CITE`/`\dec`/`\psfig` clusters; cond-mat0102064/0112063/astro-ph0201505 (`\b`-clobber-by-revtex `Unexpected:_`); hep-ph0008099/0109006/math0006234/math0204024/etc. malformed-XML/font/expected:`{` clusters |
 | PERL_REGRESSION (Rust < Perl) | 1 | hep-ex0204024 (R=2 vs P=4) — Rust supersedes Perl |
 | **FIXED post-sweep by `\roster` Perl-port `050a32b1b`** | 2 | math0203148 (R=2→0, was deferred to out-of-scope), math0106062 (R=4→0); both turned out to be \\roster mode-frame leak, NOT what the original triage suggested |
-| REAL REGRESSION | 1 | physics0002038 (R=5 vs P=4; Cluster H `\@add@frontmatter@now` extra error already documented) |
+| ~~REAL REGRESSION~~ → **OUT-OF-SCOPE 2026-05-01** | 0 | physics0002038 was R=5 vs P=4 in this triage; commit `7319e3fbc` `\@add@frontmatter@now` fix dropped the +1 Rust-only error to R=4 P=4 (parity). |
 
 **Implication:** The 1-5 error tier is dominated by out-of-scope
 (86%, 30/35). After the \\roster fix, only 1 real Rust-only
