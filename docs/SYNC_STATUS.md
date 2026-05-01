@@ -265,6 +265,59 @@ Of the 95 failing logs, parity classification (via
 also fails) / 25% real Rust regressions / ~5% Rust does better /
 ~20% silently fixed by recent commits but canvas log is stale.
 
+**Slow-row refresh (2026-05-01):** Reran all 11 rows from
+`/home/deyan/data/100k_noproblem_sandbox_html/results.tsv` with
+old `wall_time_s >= 30` against freshly rebuilt current HEAD. The
+bucket dropped from **672.1s old total to 56.1s current total**; the
+old `hep-ph0102035` timeout is now `ok` in 1.0s, and the old
+`hep-th0005268` abort is now a graceful `conversion_fatal` in 0.2s.
+Current live tail in that bucket is:
+`hep-th0109082` 11.0s (PiCTeX/XML-side), `hep-ph0107113` 10.2s
+(single slow EPS: `massplot_fin.eps` via Ghostscript/ImageMagick),
+`hep-th0008173` 7.4s (math parser + large XML), `astro-ph0012449`
+6.7s (7570 formulae), `math0107222` 5.8s (PiCTeX/XML-side).
+Detailed phase splits and external-tool timings are preserved in
+`.investigation/100k_slow_perf_2026-05-01.md`.
+
+**Round-18 TSV parity refresh (2026-05-01, later):** Reran
+`tools/parity_check.sh` on **all 48 papers** in
+`.investigation/round18_sweep_2026-05-01.tsv` with
+`Rust > 0 AND Rust < 100`. Result on current TL2025 + ar5iv-bindings:
+* **0 real Rust regressions** in this entire size band.
+* **46 OUT-OF-SCOPE** — Perl now also reports the same error count
+  on TL2025 (the original TSV had stale Perl=0 numbers; current Perl
+  reports the same as Rust for all single-to-double-digit-error
+  papers). These were never genuine Rust-only regressions on the
+  current upstream baseline.
+* **2 PERL_REGRESSIONs** — Rust does *better* than current Perl:
+  `hep-ph0112138` (R=6 vs P=12) and `hep-ex0204024` (R=2 vs P=4).
+* **1 Perl-capped** — `hep-ph0110283` (R=96 vs P=101 cap), parity
+  undecidable.
+
+The remaining real-regression set is now extremely small:
+* `hep-th0005268` (R=10001 cap vs P=26) — root-caused as the
+  lazy-pool-load architectural divergence (`\def\<kernel-cs>` *before*
+  `\documentclass`, see `wisdom_lazy_pool_load.md`) plus a secondary
+  `\tabalign`/`\halign` recovery-loop runaway
+  (`wisdom_tabalign_math_runaway.md`). Same family as the previously
+  triaged out-of-scope `cond-mat0106160` /
+  `hep_ph0001306_documentstyle_clobber`. Blocked on architectural
+  preload fix.
+* `hep-th0101146` (R=17 vs P=15, Δ=2) — cosmetic verbosity
+  divergence on already-malformed `$$ ... \end{equation}` input.
+  Two extra `ltx:XMTok`-in-`<ltx:p>` from constructor-template
+  emissions (separate path from `Tbox::be_absorbed`'s mode-aware
+  fallback). Deferred.
+* `pstricks → ltx:picture wrapping` — large-scope feature port
+  (Perl `DefPSConstructor`); see worksheet item further below.
+
+**Conclusion: the in-scope worksheet for the 100k canvas is
+effectively closed.** Phase 2 (100k stage 1 sweep) can be run with
+high confidence the long-tail will be near-empty; remaining
+investments should be in (a) the architectural preload fix, (b) the
+pstricks `<ltx:picture>` feature, and (c) the secondary
+`\halign`/`\hbox` recovery-loop robustness in `stomach.rs`.
+
 #### Completed investigations (sandbox papers fully resolved → 0 errors)
 
 | Paper | Cluster | Fix commit |
