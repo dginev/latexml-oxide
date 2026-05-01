@@ -5557,7 +5557,27 @@ LoadDefinitions!({
   // to match latex.ltx source. Inside a `tabbing` environment,
   // tabbing_bindings() overrides this local to `\@tabbing@accent`.
   // Found in arxiv 1611.05395.
-  Let!("\\a", "\\@tabacckludge");
+  //
+  // **Lazy-pool-load guard (2026-05-01)**: in Perl, the kernel
+  // `\let\a=\@tabacckludge` runs at engine init, BEFORE user TeX.
+  // If the user defines `\def\a{\alpha}` in their preamble (a
+  // common Greek-letter abbreviation), the user assignment runs
+  // LATER in TeX's normal "later wins" semantics and overrides the
+  // kernel Let cleanly. In Rust, `latex_constructs` runs at
+  // `\documentclass`-time (lazy-pool-load —
+  // `wisdom_lazy_pool_load.md`), AFTER the user preamble — so this
+  // bare `Let!` would clobber the user's `\def\a{\alpha}` and
+  // route subsequent `\a` invocations through the kernel
+  // `\@changed@cmd → \+ → \tabalign` chain that triggers a
+  // `\halign`/`\hbox` mode-mismatch runaway. Witness:
+  // hep-th0005268, see `wisdom_tabalign_math_runaway.md`.
+  //
+  // Guard: only Let `\a` if it's not already user-defined. The
+  // dump E record was rejected, so `\a` would be undefined here
+  // unless the user defined it.
+  if state::lookup_meaning(&T_CS!("\\a")).is_none() {
+    Let!("\\a", "\\@tabacckludge");
+  }
 
   DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {
