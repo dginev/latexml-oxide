@@ -239,9 +239,7 @@ LoadDefinitions!({
       Ok(())
     })?;
     AssignValue!("inPreamble", inpreamble);
-  },
-  before_digest => { stomach::bgroup(); },
-  after_digest => { let _ = stomach::egroup(); });
+  });
 
   // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // If $label is given, look for an item which has label=>$label,
