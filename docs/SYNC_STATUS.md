@@ -223,14 +223,14 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
   explicitly closing any open math frame. Min repro:
   `memory/project_aa_institute_xuntil_math_mode.md`.
 
-- [ ] **astro-ph0107583** (Cluster E, R=2) — Stray `&` from unescaped
-  `\bibitem[\protect\citename{Hirose & Osaki }1990]{...}`. Min repro
-  errors in BOTH engines; full paper errors only in Rust because Perl's
-  `Stomach::invokeToken` (Stomach.pm L187-189) self-deactivates
-  `T_ALIGN` → `\relax` LOCAL on first non-table encounter. Rust's
-  `stomach.rs:920-926` already has this guard for `Stored::Token`
-  meanings, but not for the Constructor-defined `&` primitive path.
-  Fix locus: extend the deactivation to the constructor branch as well.
+- [x] **astro-ph0107583** (Cluster E, R=2 → R=0) — **FIXED**: extended
+  the Perl-faithful `T_ALIGN` self-deactivation guard to the
+  `Stored::Constructor` branch in `stomach.rs:invoke_token` (mirror
+  Perl `Stomach.pm:187-189`). The `&` char-token's meaning is
+  Constructor-bound (TeX_Tables.pool L49), not Token, so the
+  pre-existing guard at the Token branch never fired. Now: first stray
+  `&` errors once and rebinds itself to `\relax` LOCAL; subsequent
+  stray `&`s no-op silently. Witness: astro-ph0107583 2 → 0.
 
 - [ ] **physics0002038 / cond-mat0011517** (Cluster H) — Rust emits a
   follow-up `Error:unexpected:} Attempt to close a group that switched
@@ -291,7 +291,7 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | B. tcilatex `\newcount\dispkind` | **fixed** mid-Round-18. |
 | C. `\documentstyle` dump-clobber | **fixed** `6e6497ede` (re-Let). |
 | D. aa-class `\institute` math leak | **open** — see worksheet. |
-| E. Stray `&` outside table | **open** — fix locus identified in `stomach.rs`. |
+| E. Stray `&` outside table | **fixed** — extended `T_ALIGN` deactivation guard to Constructor branch in `stomach.rs:invoke_token`. |
 | F. Cascading single-root | **open** — math0004140 + runaway cascades worksheet items. |
 | G. pstricks `\multips` | **fixed** `506cb8fe6`. |
 | H. Mode-stack `}` followup | **open** — error-tracker dedup work. |
