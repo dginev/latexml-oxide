@@ -344,13 +344,14 @@ mis-classified as failures (commit pending).
 
 #### In-scope worksheet (sandbox papers needing work — Perl=0, Rust>0)
 
-- [ ] **math0010095** (R=11) — `\thesection\par` + `\par@ID` cluster.
-  `\@@numbered@section`'s digested `args[0]` evaluates to `"section\par"`
-  for sections after captioned figures, even though `\@startsection`'s
-  emitted tokens are clean. Constructor `{}` arg digestion in vmode
-  pulls trailing `\par` from outer stream after captions accumulate
-  state. See `memory/project_section_par_contamination.md`. Fix locus:
-  `latexml_core/src/binding/parameters.rs` `{}` parameter handler.
+- [x] **math0010095** (R=11 → R=0) — **FIXED 2026-05-01** by symptom
+  patch in `latex_constructs.rs:strip_trailing_cs` (commit `4d445b71c`)
+  + Cluster A reprises (`b1ef89b34`, `de3213086`). Now BOTH CLEAN with
+  Perl. Underlying root cause (`{}` parameter reader pulling `\par`
+  into args[0] under specific BoxedEPS+section sequence) is still open
+  but no longer paper-visible — see
+  `memory/project_section_par_contamination.md` for residual
+  investigation notes if it resurfaces in future papers.
 
 - [x] **astro-ph0007367 / astro-ph0012401 / astro-ph9903386** (Cluster D,
   3 papers / 11 errors → 0) — **FIXED**: root cause was the `XUntil`
@@ -399,11 +400,20 @@ mis-classified as failures (commit pending).
   with proper mode coupling. Min repro: 0 errors (was 7).
   Tests: 1110/0/0 (no regressions).
 
-- [ ] **hep-th0101146** (R=17 vs P=15) — `Error:malformed:ltx:XMApp`
-  + `ltx:XMTok` "isn't allowed in <ltx:p>". Source has malformed
-  `$$ ... \end{equation} \begin{equation} ...` mismatch. Both engines
-  fail; Rust collapses 14 `_/^` errors into 2 malformed XML errors
-  while Perl emits per-position. Mostly a verbosity divergence.
+- [ ] **hep-th0101146** (R=17 vs P=15, Δ=2) — Both engines flag the
+  same 14 `Error:Unexpected:_/^ Script can only appear in math mode` +
+  1 `ltx:XMApp` malformed-in-`<ltx:p>`. Rust adds 2 extra
+  `ltx:XMTok`-in-`<ltx:p>` errors that Perl does not. Source has a
+  malformed `$$ ... \end{equation} \begin{equation} ...` mismatch.
+  Note: the related `Tbox::new` divergence — Rust hardcodes
+  `mode => 'math'` whenever IN_MATH at L118-119, vs Perl's
+  `mode => $mode` (current MODE state, see `Box.pm` L42-50) — was
+  investigated and a Perl-faithful fix prepared, but it regresses
+  `figure_mixed_content_test` (sizing depends on the hardcoded
+  math-mode tagging for inline-block figure panels). The 2-error
+  delta here likely traces to a different XMTok emission path
+  (constructor templates, not the Tbox fallback). Cosmetic
+  verbosity divergence on already-malformed input; deferred.
 
 - [x] **hep-th0010165** (R=206 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
   Perl=101 is the MAX_ERRORS cap (Perl bails at 101 via Fatal). True
@@ -490,8 +500,12 @@ mis-classified as failures (commit pending).
 - [ ] **hep-th0005268** (R=1000001 vs P=26) — Runaway cascade.
   Termination-condition bug; identify recursion source.
 
-- [ ] **hep-th0005159** (R=786478 vs P=101) — Same runaway cascade
-  family.
+- [x] **hep-th0005159** (R=262 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
+  Perl=101 is the MAX_ERRORS cap; cap-uncertain. Rust now at 262 (well
+  below its 10000 cap), so the prior 786478 number was pre-MAX_ERRORS-leak
+  fix `15f46ddf3`. parity_check tags this `OUT-OF-SCOPE? (Perl-capped,
+  cannot compare)`. Worksheet item closed pending a future paper that
+  exposes a directly-comparable variant.
 
 #### Out-of-scope (Perl also fails — moved to `docs/out-of-scope/`)
 
