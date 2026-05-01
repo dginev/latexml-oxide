@@ -100,27 +100,22 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml:97-129 (`\documentstyle` afterDigest).
   // LaTeX 2.09 compat shim. Three branches mirroring Perl strictly:
   //
-  //   1. <class>.sty exists  → input_definitions("article", cls,
-  //                            handleoptions=true, options=opts)
-  //                          + require_package(class, as_class=true,
-  //                            after=\compat@loadpackages)
-  //   2. <class>.cls exists  → load_class(class, opts,
-  //                            after=\compat@loadpackages)
-  //   3. neither             → input_definitions("OmniBus", cls,
-  //                            handleoptions=true, options=opts,
-  //                            after=\compat@loadpackages)
+  //   1. <class>.sty exists  → input_definitions("article", cls, handleoptions=true, options=opts)
+  //                          + require_package(class, as_class=true, after=\compat@loadpackages)
+  //   2. <class>.cls exists  → load_class(class, opts, after=\compat@loadpackages)
+  //   3. neither             → input_definitions("OmniBus", cls, handleoptions=true, options=opts,
+  //      after=\compat@loadpackages)
   //                          + require_package(class, as_class=true)
   //
   // Critical Perl semantics (matching latex_constructs.pool.ltxml:97-129):
-  //   * `handleoptions => 1` makes the cls's `\DeclareOption`/`\ProcessOptions`
-  //     consume the `<opts>` and route leftovers onto `@unusedoptionlist`.
-  //   * `after => \compat@loadpackages` runs *after* the cls finishes its
-  //     option-processing — at that point unmet options sit on the unused
-  //     list and `\compat@loadpackages` (`latex_constructs.rs:2502`) walks
-  //     them, RequirePackage's any that resolve, and triggers OmniBus when
-  //     anything went unmet. That is what lets `\documentstyle[paspconf]
-  //     {article}` transitively load `aas_macros.sty.ltxml` to define
-  //     `\affil` / `\altaffilmark` / `\acknowledgments` etc.
+  //   * `handleoptions => 1` makes the cls's `\DeclareOption`/`\ProcessOptions` consume the
+  //     `<opts>` and route leftovers onto `@unusedoptionlist`.
+  //   * `after => \compat@loadpackages` runs *after* the cls finishes its option-processing — at
+  //     that point unmet options sit on the unused list and `\compat@loadpackages`
+  //     (`latex_constructs.rs:2502`) walks them, RequirePackage's any that resolve, and triggers
+  //     OmniBus when anything went unmet. That is what lets `\documentstyle[paspconf] {article}`
+  //     transitively load `aas_macros.sty.ltxml` to define `\affil` / `\altaffilmark` /
+  //     `\acknowledgments` etc.
   // The latex_dump unconditionally redefines `\documentstyle` with the
   // kernel-style `\input{latex209.def}\documentclass` form (Perl
   // latex_dump.pool.ltxml entry for `\documentstyle`). In Perl that

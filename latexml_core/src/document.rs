@@ -2255,9 +2255,7 @@ impl Document {
     // `Stringify($node)` chain with a depth cap from `levels_opt`.
     let qn_for = |n: &Node| -> String {
       match n.get_type() {
-        Some(NodeType::ElementNode) => {
-          with_node_qname(n, |qname| format!("<{qname}>"))
-        },
+        Some(NodeType::ElementNode) => with_node_qname(n, |qname| format!("<{qname}>")),
         Some(NodeType::TextNode) => "#text".to_string(),
         Some(NodeType::DocumentNode) => "#document".to_string(),
         _ => "?".to_string(),

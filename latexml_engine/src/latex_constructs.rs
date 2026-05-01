@@ -14,6 +14,7 @@ use crate::base_utilities::insert_frontmatter;
 use crate::prelude::*;
 use crate::tex_tables::alignment_bindings;
 use latexml_core::alignment::template::TemplateConfig;
+use latexml_core::common::xml::is_descendant_or_self;
 use latexml_core::digested::DigestedData;
 use std::collections::VecDeque;
 
@@ -283,6 +284,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
         &format!(".//ltx:note[@role='{notetype}mark'][@mark='{mark}']"),
         None,
       ) {
+        if is_descendant_or_self(&marknote, node) {
+          continue;
+        }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
       }
     }
@@ -294,6 +298,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
         &format!(".//ltx:note[@role='{notetype}text'][@mark='{mark}']"),
         None,
       ) {
+        if is_descendant_or_self(node, &textnote) {
+          continue;
+        }
         relocate_footnote_aux(document, notetype, node, &mut textnote)?;
       }
     }

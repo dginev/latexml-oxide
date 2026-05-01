@@ -645,8 +645,7 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // Perl `Package.pm:loadLTXML L2318` wraps the binding-load body in
       // `local $UNLOCKED = 1`, allowing bindings to override prior
       // (locked) definitions. The guard auto-pops on drop.
-      let _unlock_guard =
-        crate::common::local_assignments::local_state_unlocked_guard(true);
+      let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
@@ -1445,15 +1444,12 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Perl L2777-2779 runs two separate substitutions, in this order:
   // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
   // collected order matches Perl's call order to `$collect`.
-  static REQ_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
-  });
-  static USE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
-  });
-  static CLS_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap()
-  });
+  static REQ_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  static USE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  static CLS_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -1787,7 +1783,11 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   // this, `IEEEtran.cls.ltxml` is missed because `./sty/IEEEtran.cls.ltxml`
   // never matches the @ltxml_paths registry. Driver paper: arXiv:1308.6663.
   let basename = pathname::file_name(name);
-  let mut base = if basename.is_empty() { name.to_string() } else { basename };
+  let mut base = if basename.is_empty() {
+    name.to_string()
+  } else {
+    basename
+  };
   let mut changed = base != name;
   // Iteratively strip suffixes, then glued, then prefixes
   loop {
@@ -1907,9 +1907,9 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
           .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext));
         let nocase = exact
           || crate::state::get_binding_names().iter().any(|slice| {
-            slice.iter().any(|(n, e)| {
-              n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext)
-            })
+            slice
+              .iter()
+              .any(|(n, e)| n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext))
           });
         if nocase {
           return Some(file.to_string());

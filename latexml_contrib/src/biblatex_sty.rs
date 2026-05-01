@@ -17,7 +17,11 @@ fn bib_entry_get() -> SymHashMap<Stored> {
 }
 
 fn bib_entry_save(map: SymHashMap<Stored>) {
-  state::assign_value("biblatex_entry", Stored::HashStored(map), Some(Scope::Global));
+  state::assign_value(
+    "biblatex_entry",
+    Stored::HashStored(map),
+    Some(Scope::Global),
+  );
 }
 
 fn bib_entry_set_tokens(name: &str, val: Tokens) {
@@ -50,8 +54,11 @@ fn bib_variant_push(toks: Vec<Token>) {
     _ => Vec::new(),
   };
   acc.extend(toks);
-  state::assign_value("rebuilt_bibtex_variant", Stored::Tokens(Tokens::new(acc)),
-    Some(Scope::Global));
+  state::assign_value(
+    "rebuilt_bibtex_variant",
+    Stored::Tokens(Tokens::new(acc)),
+    Some(Scope::Global),
+  );
 }
 
 fn bib_as_thebibliography() -> Tokens {
@@ -64,8 +71,11 @@ fn bib_as_thebibliography() -> Tokens {
   }
   // Reset variant and entry-count so re-invocation is idempotent (matches
   // Perl L113-115).
-  state::assign_value("rebuilt_bibtex_variant", Stored::Tokens(Tokens::default()),
-    Some(Scope::Global));
+  state::assign_value(
+    "rebuilt_bibtex_variant",
+    Stored::Tokens(Tokens::default()),
+    Some(Scope::Global),
+  );
   let count = bib_state_int("biblatex_entry_count");
   bib_state_set_int("biblatex_entry_count", 0);
   let preamble: Vec<Token> = match state::lookup_value("biblatex_preamble") {

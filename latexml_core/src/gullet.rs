@@ -787,11 +787,7 @@ pub fn read_balanced(
       if let Some(t) = token_opt {
         unread_one(t);
       }
-      Error!(
-        "expected",
-        "{",
-        s!("Expected opening '{{'")
-      );
+      Error!("expected", "{", s!("Expected opening '{{'"));
       return Ok(Tokens!());
     }
   }

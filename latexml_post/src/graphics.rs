@@ -634,8 +634,7 @@ impl Graphics {
       return Self::DEFAULT_RASTER_DENSITY;
     }
 
-    let max_density =
-      ((Self::MAX_RASTER_DIMENSION_PX as f64) * 72.0 / max_pt).floor() as u32;
+    let max_density = ((Self::MAX_RASTER_DIMENSION_PX as f64) * 72.0 / max_pt).floor() as u32;
     Self::DEFAULT_RASTER_DENSITY.min(max_density.max(1))
   }
 
@@ -1097,17 +1096,29 @@ mod tests {
     std::fs::create_dir_all(&tmp).unwrap();
     let normal = tmp.join("normal.eps");
     let huge = tmp.join("huge.eps");
-    std::fs::write(&normal, "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 567 567\n")
-      .unwrap();
-    std::fs::write(&huge, "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 14 14 11353 11353\n")
-      .unwrap();
+    std::fs::write(
+      &normal,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 567 567\n",
+    )
+    .unwrap();
+    std::fs::write(
+      &huge,
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 14 14 11353 11353\n",
+    )
+    .unwrap();
 
     assert_eq!(
       Graphics::raster_density_for_source(normal.to_str().unwrap()),
       Graphics::DEFAULT_RASTER_DENSITY
     );
-    assert_eq!(Graphics::raster_density_for_source(huge.to_str().unwrap()), 26);
-    assert_eq!(read_postscript_bounding_box(huge.to_str().unwrap()), Some((11339.0, 11339.0)));
+    assert_eq!(
+      Graphics::raster_density_for_source(huge.to_str().unwrap()),
+      26
+    );
+    assert_eq!(
+      read_postscript_bounding_box(huge.to_str().unwrap()),
+      Some((11339.0, 11339.0))
+    );
 
     std::fs::remove_dir_all(&tmp).ok();
   }

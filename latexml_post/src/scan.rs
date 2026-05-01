@@ -16,9 +16,9 @@ use crate::processor::{ProcessResult, Processor};
 ///
 /// Port of `LaTeXML::Post::Scan`.
 pub struct Scan {
-  name:   String,
+  name:    String,
   /// Reference to the shared ObjectDB.
-  pub db: ObjectDB,
+  pub db:  ObjectDB,
   /// Root document id for the current scan.
   page_id: Option<String>,
 }
@@ -38,7 +38,13 @@ impl ScannedProps {
 }
 
 impl Scan {
-  pub fn new(db: ObjectDB) -> Self { Scan { name: "Scan".to_string(), db, page_id: None } }
+  pub fn new(db: ObjectDB) -> Self {
+    Scan {
+      name: "Scan".to_string(),
+      db,
+      page_id: None,
+    }
+  }
 
   /// Recursively scan a node and its children.
   ///
@@ -114,10 +120,11 @@ impl Scan {
 
   /// Compute the page ID for the current document.
   fn page_id(&self, doc: &PostDocument) -> Option<String> {
-    self
-      .page_id
-      .clone()
-      .or_else(|| doc.get_document_element().and_then(|root| get_xml_id(&root)))
+    self.page_id.clone().or_else(|| {
+      doc
+        .get_document_element()
+        .and_then(|root| get_xml_id(&root))
+    })
   }
 
   /// Compute the fragment ID for a node within its page.
