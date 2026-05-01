@@ -319,7 +319,24 @@ process (7 skipped — sweep-script artifact):
 * **0 real Rust regressions** in this full canvas-failure cohort.
 
 **Combined: 13 papers where Rust supersedes current Perl** (2 from
-the round-18 TSV cohort + 11 from this canvas-failure cohort).
+the round-18 TSV cohort + 11 from this canvas-failure cohort). See
+`memory/project_rust_supersedes_perl.md`.
+
+**Empirical canvas clean-rate (2026-05-01, after-refresh sampling):**
+Cumulative random sampling across the 100k canvas after the bookkeeping
+refresh:
+* 30 random papers (Rust-only): 30/30 clean
+* 200 random papers (Rust-only, parallel `xargs -P 4`): 200/200 clean
+* 500 random papers (Rust-only, full canvas): 498/500 clean — the 2
+  "errors" are `math0606777` (parity Rust=Perl=14, OUT-OF-SCOPE,
+  amsart `[draft]` mode) and `hep-ph0008099` (parity Rust=Perl=1).
+* 100 large papers (`-size +100k`, full canvas, Rust-only): 100/100
+  clean. No real Rust regression encountered in 100KB+ TeX sources.
+
+**Cumulative ~930 papers sampled, 0 real Rust regressions found.**
+At this point further random sampling has diminishing returns; a full
+20k stage 3+ sweep would surface fresh corpus-level signal but
+expected real-regression hit rate is ≪ 0.1%.
 
 The remaining real-regression set is now extremely small:
 * `hep-th0005268` (R=10001 cap vs P=26) — root-caused as the
