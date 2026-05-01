@@ -208,6 +208,7 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | cond-mat0005077, cond-mat0101451, cond-mat0107098, hep-lat0205019, hep-ph0004001, hep-ph0005027, hep-ph0007073, hep-ph0106352, hep-ph0109206 | same revtex 3 `\iffirstfig`/`\iffirsttab` cluster (10 papers total verified clean) | `2ca053eb6`, `5c5f4dc1b` |
 | math0104094 | faithful Perl port of `\ref`/`\@bibitem`/`\@bibfield` bibliography chain (replaces stub) | `be1472d78` |
 | math0111087 | recovered by amsppt port + `^attr=` codegen | `be1472d78`, `a8d9ce055` |
+| astro-ph9903386, astro-ph0007367, astro-ph0012401 | Cluster D — `XUntil` no longer eagerly reads args of non-expandable defs | `16b9680c5` |
 | (Out-of-scope catalogue: `\CITE` typos, `\setdec`, `\dec`, `\psfig` — Perl also errors on these; not parity-Rust regressions) | | |
 | (Codegen infrastructure improvement: `^attr='value'` constructor template syntax — Perl Compiler.pm L137-148 — now parsed by Rust `latexml_codegen/src/constructable.rs`) | | `a8d9ce055` |
 
@@ -221,15 +222,20 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
   state. See `memory/project_section_par_contamination.md`. Fix locus:
   `latexml_core/src/binding/parameters.rs` `{}` parameter handler.
 
-- [ ] **astro-ph0007367 / astro-ph0012401 / astro-ph9903386** (Cluster D)
-  — aa-class `\institute{...\and...}` math-mode leak. Math frame opens
-  during `\@new@institute XUntil:\@end@institute` arg reading (when
-  `$^\S\,$` inside an `\and`-segment is consumed), BEFORE `\@add@institute`
-  is invoked. Tried `mode => "restricted_horizontal"` on the
-  constructor — made things worse (R=3→9 on astro-ph0012401). Need
-  `XUntil`-parameter-reader audit OR `\institute@and` boundary
-  explicitly closing any open math frame. Min repro:
-  `memory/project_aa_institute_xuntil_math_mode.md`.
+- [x] **astro-ph0007367 / astro-ph0012401 / astro-ph9903386** (Cluster D,
+  3 papers / 11 errors → 0) — **FIXED**: root cause was the `XUntil`
+  parameter type's expansion loop (`base_parameter_types.rs:254-256`)
+  unconditionally calling `defn.read_arguments()` on every CS with a
+  definition, including non-expandable ones (Primitive, Constructor,
+  Conditional, Register, MathPrimitive). For
+  `\hspace*{-4mm} $^*\,$` inside an `\institute{…}` body (read via
+  `\@new@institute XUntil:\@end@institute`), this triggered `\hspace`'s
+  primitive Dimension reader to over-consume past the `}` boundary —
+  swallowing the following `$` token and leaking math state. Fix:
+  restrict the eager `read_arguments` path to `Stored::Expandable`
+  only; push primitives/constructors as-is so digestion handles their
+  args at the proper time. Min repro:
+  `\institute{\hspace*{4mm} $^*$ X}` inside aa-class.
 
 - [x] **astro-ph0107583** (Cluster E, R=2 → R=0) — **FIXED**: extended
   the Perl-faithful `T_ALIGN` self-deactivation guard to the
