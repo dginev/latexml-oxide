@@ -204,6 +204,17 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | cond-mat0201306 | revtex4 `\jobname.rty` autoload | `6e6497ede` |
 | astro-ph0107583 | Cluster E — `T_ALIGN` deactivation guard for `Stored::Constructor` | `04a9766e7` |
 | hep-ph0204075 | now Rust=Perl=0 (recovered by recent commits, no specific fix needed) | (re-verified 2026-05-01) |
+| **Accent-fix cohort** (2026-05-01, commit `ba2ab1dcf` — drop `mode => "text"` from `\lx@applyaccent`): | | `ba2ab1dcf` |
+| quant-ph0109041 | Rust 67 → 9 (Perl-parity exact) | `ba2ab1dcf` |
+| quant-ph0203044 | Rust 4 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| gr-qc0012092 | Rust 7 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| cond-mat0201194 | Rust 4 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| cond-mat0109091 | Rust 3 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| astro-ph0105525 | Rust 13 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| astro-ph0011503 | Rust 2 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| astro-ph0009248 | Rust 3 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| astro-ph0007367 | Rust 3 → 0 (Perl=0 PARITY) | `ba2ab1dcf` |
+| hep-ph0007073 / hep-ph0005027 / hep-ph0004001 / hep-lat0205019 | Rust 1 → 0 (Perl=1 — Rust now better than Perl) | `ba2ab1dcf` |
 | hep-ph0102192 | pstricks PSCoordList consumption + drop `\rput`/`\uput`/`\cput` body | `4f3be1c35` |
 | hep-th0109174 | revtex 3 `\iffirstfig` declared as `DefConditional!` | `2ca053eb6` |
 | cond-mat0005077, cond-mat0101451, cond-mat0107098, hep-lat0205019, hep-ph0004001, hep-ph0005027, hep-ph0007073, hep-ph0106352, hep-ph0109206 | same revtex 3 `\iffirstfig`/`\iffirsttab` cluster (10 papers total verified clean) | `2ca053eb6`, `5c5f4dc1b` |
