@@ -2250,17 +2250,30 @@ impl Document {
       Error!("internal", "context", message);
       return Ok(String::new());
     }
-    let mut path = s!("TODO"); //TODO: Stringify($node);
+    // Build a context path like "<ltx:document><ltx:section><ltx:p>" by walking
+    // ancestors and prepending each element's qname. Mirrors Perl's
+    // `Stringify($node)` chain with a depth cap from `levels_opt`.
+    let qn_for = |n: &Node| -> String {
+      match n.get_type() {
+        Some(NodeType::ElementNode) => {
+          with_node_qname(n, |qname| format!("<{qname}>"))
+        },
+        Some(NodeType::TextNode) => "#text".to_string(),
+        Some(NodeType::DocumentNode) => "#document".to_string(),
+        _ => "?".to_string(),
+      }
+    };
+    let mut path = qn_for(&node);
     while let Some(parent_node) = node.get_parent() {
       node = parent_node;
       if let Some(levels_val) = levels {
         levels = Some(levels_val - 1);
         if levels_val <= 1 {
-          path = s!("...{}", path);
+          path = format!("...{path}");
           break;
         }
       }
-      // TODO: $path = Stringify($node) . $path; }
+      path = format!("{}{}", qn_for(&node), path);
     }
     Ok(path)
   }
