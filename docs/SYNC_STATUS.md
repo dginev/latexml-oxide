@@ -604,32 +604,28 @@ mis-classified as failures (commit pending).
   recent commits, no longer a failure. Marked in completed
   investigations table.
 
-- [ ] **hep-th0005268** (R=2029 vs P=26 — was 10001) — **Root-caused
-  2026-05-01**: the lazy-pool-load architectural divergence
-  (`memory/wisdom_lazy_pool_load.md`). The paper's preamble has
-  `\def\a{\alpha}` on line 21, *before* `\documentclass{article}` on
-  line 66. Perl preloads the LaTeX kernel so the user `\def` overrides
-  the kernel's `\let\a=\@tabacckludge`. Rust loads `latex_constructs`
-  *at* `\documentclass`, which clobbers the user's `\def\a` and
-  re-Lets `\a` to `\@tabacckludge`. In the body `\a+iN` is then read
-  as `\@tabacckludge {+}` → `\@changed@cmd \+\relax` → `\@inmathwarn`
-  warning + `\OT1\+` / `\TextSymbolUnavailable` recovery — and that
-  recovery path runs away in Rust (10001 × `\hbox`
-  end-mode-mismatch) where Perl emits one warning and continues.
-  Min repro:
+- [x] **hep-th0005268** (R=21 vs P=26 — was 10001) — **FIXED
+  2026-05-01** by commit `cda6cb247`: surgical lazy-pool-load guard
+  in `latex_constructs.rs:5560`. The kernel `\let\a=\@tabacckludge`
+  is now skipped when `\a` is already user-defined; under the
+  user's `\def\a{\alpha}` BEFORE `\documentclass`, `\a` is
+  preserved as `\alpha` and the body math works clean.
+  Rust=21 errors are real cascades from elsewhere in the paper
+  (stray `^/_` in math, malformed XML), not the spurious `\hbox`
+  runaway noise. **Now PERL_REGRESSION** — Rust supersedes
+  Perl (R=21 < P=26). Min repro
   ```
   \def\a{\alpha}
   \documentclass{article}
   \begin{document} $\a + x$ \end{document}
   ```
-  yields R=2001, P=0. Same file with `\def\a{\alpha}` *after*
-  `\documentclass` yields R=0. The runaway count is now bounded
-  by the consecutive-same-error cap (`MAX_CONSECUTIVE_ERRORS=2000`,
-  commit `e2026d78a`). The proper fix is still the architectural
-  preload of latex_constructs ahead of any user-preamble
-  `\def\<kernel-cs>` so the user's overrides win (matches Perl).
+  is now R=0, P=0. The pattern (`\let\<public-cs>=...` in
+  `latex_constructs` guarded by `is_already_user_defined`)
+  generalizes to other Let calls if similar witnesses surface,
+  but for now the targeted fix unblocks the canonical case.
   Same family as `cond-mat0106160`,
-  `hep_ph0001306_documentstyle_clobber` already triaged out-of-scope.
+  `hep_ph0001306_documentstyle_clobber` (still triaged
+  out-of-scope but may benefit from the same pattern).
 
 - [x] **hep-th0005159** (R=262 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
   Perl=101 is the MAX_ERRORS cap; cap-uncertain. Rust now at 262 (well
