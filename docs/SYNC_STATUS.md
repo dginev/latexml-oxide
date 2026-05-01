@@ -594,8 +594,8 @@ mis-classified as failures (commit pending).
   recent commits, no longer a failure. Marked in completed
   investigations table.
 
-- [ ] **hep-th0005268** (R=10001 vs P=26) — **Root-caused 2026-05-01**:
-  the lazy-pool-load architectural divergence
+- [ ] **hep-th0005268** (R=2029 vs P=26 — was 10001) — **Root-caused
+  2026-05-01**: the lazy-pool-load architectural divergence
   (`memory/wisdom_lazy_pool_load.md`). The paper's preamble has
   `\def\a{\alpha}` on line 21, *before* `\documentclass{article}` on
   line 66. Perl preloads the LaTeX kernel so the user `\def` overrides
@@ -612,13 +612,13 @@ mis-classified as failures (commit pending).
   \documentclass{article}
   \begin{document} $\a + x$ \end{document}
   ```
-  yields R=10001, P=0. Same file with `\def\a{\alpha}` *after*
-  `\documentclass` yields R=0. The recovery-path runaway is a
-  secondary Rust bug worth fixing for robustness, but the proper fix
-  is the architectural preload of latex_constructs ahead of any
-  user-preamble `\def\<kernel-cs>` so the user's overrides win
-  (matches Perl). Until then this paper is blocked on the
-  architectural fix; same family as `cond-mat0106160`,
+  yields R=2001, P=0. Same file with `\def\a{\alpha}` *after*
+  `\documentclass` yields R=0. The runaway count is now bounded
+  by the consecutive-same-error cap (`MAX_CONSECUTIVE_ERRORS=2000`,
+  commit `e2026d78a`). The proper fix is still the architectural
+  preload of latex_constructs ahead of any user-preamble
+  `\def\<kernel-cs>` so the user's overrides win (matches Perl).
+  Same family as `cond-mat0106160`,
   `hep_ph0001306_documentstyle_clobber` already triaged out-of-scope.
 
 - [x] **hep-th0005159** (R=262 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
