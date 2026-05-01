@@ -376,13 +376,16 @@ mis-classified as failures (commit pending).
   `&` errors once and rebinds itself to `\relax` LOCAL; subsequent
   stray `&`s no-op silently. Witness: astro-ph0107583 2 → 0.
 
-- [ ] **physics0002038 / cond-mat0011517** (Cluster H) — Rust emits a
-  follow-up `Error:unexpected:} Attempt to close a group that switched
-  to mode internal_vertical` after the underlying `\@personname` /
-  `\@add@frontmatter@now` mode-mismatch that Perl suppresses. P=4-6,
-  R=5-7 (single extra error per paper). Fix locus: error-tracker dedup
-  at `stomach.rs:273` and `:363` egroup/endgroup error sites — needs
-  per-position state to remember the last error.
+- [x] **physics0002038 / cond-mat0011517** (Cluster H) — **OUT-OF-SCOPE
+  at parity 2026-05-01**: parity_check shows `physics0002038 R=4 P=4`
+  and `cond-mat0011517 R=6 P=6`. Commit `7319e3fbc`
+  (`\@add@frontmatter@now` drop spurious bgroup/egroup) closed the +1
+  Rust-only follow-up. Both engines now emit identical error counts;
+  the underlying mode-mismatch (paper jams `\begin{minipage}` /
+  `\begin{quotation}` block content inside `\author{...}` whose
+  `\@personname{}` argument expects `restricted_horizontal`) is a
+  shared limitation, not a Rust regression. Worksheet item closed;
+  paper family classified out-of-scope per `parity_check.sh`.
 
 - [x] **math0104021** (R=8 → R=1, Perl-parity) — **FIXED**: amsppt's
   `\roster ... \endroster` was a thin `\begin{enumerate}` wrapper
