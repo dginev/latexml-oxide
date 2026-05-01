@@ -246,9 +246,18 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
   fail; Rust collapses 14 `_/^` errors into 2 malformed XML errors
   while Perl emits per-position. Mostly a verbosity divergence.
 
-- [ ] **hep-th0010165** (R=206 vs P=101) — Big cascade. Perl truncates
-  at 101; Rust doesn't. Likely single root unlocking the cascade.
-  Triage: identify first error, find binding gap.
+- [ ] **hep-th0010165** (R=206 vs P=101) — Big cascade. **Triaged
+  2026-05-01**: 194/206 errors are `expected:$ Missing $ closing
+  display math` at line 341 onward. First trigger is `For $p=4$, ...`
+  IMMEDIATELY after `\ee` (line 340). User defines
+  `\def\be{\begin{equation}} \def\ee{\end{equation}}` — but a 5-line
+  min-repro of just that pattern is CLEAN in both engines, so the
+  trigger is something specific to lines 188-340 of the paper that
+  leaves math mode open. Need bisection. Same family as Cluster F
+  (hep-th0005268, hep-th0005159 runaway cascades). Fix locus
+  unidentified — possibly a math-mode macro inside the `\be...\ee`
+  block (e.g. `\th`, `\a` shorthand definitions at top of paper)
+  triggers an unbalanced state.
 
 - [ ] **hep-ph0007044** (R=410 vs P=101) — Same big-cascade pattern as
   hep-th0010165. Triage needed.
@@ -259,7 +268,19 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 - [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
   over Perl's 101 truncation cap. Triage needed.
 
-- [ ] **hep-ph0102192** (R=4 vs P=0) — Newly discovered. Triage needed.
+- [ ] **hep-ph0102192** (R=4 vs P=0) — **Triaged 2026-05-01**: 4
+  errors of `Error:malformed:ltx:caption "ltx:caption" isn't allowed
+  in <ltx:block>` (and matching `ltx:toccaption`). Source has 4
+  `\caption{...}` calls inside `\begin{minipage}` after the user
+  commented out `\begin{figure}` / `\end{figure}` markers. Perl
+  builds clean output: `<caption>` appears with auto-opened figure
+  parent. Rust's document builder doesn't auto-open `<ltx:figure>`
+  for orphan captions when the caption's `\@captype` is "figure"
+  (set by a prior real figure env). Fix locus: `Document.rs`
+  `open_element` schema-aware auto-open path, or `\@@caption`
+  constructor's `before_digest` hook that should open `<ltx:figure>`
+  when not inside one. **High-leverage** — same fix likely covers
+  many similar sandbox papers with malformed user input.
 
 - [ ] **math0004140** (R=1182 vs P=?) — High-error AmS-TeX paper.
   Triage to find single cascading root.
