@@ -497,18 +497,28 @@ mis-classified as failures (commit pending).
   with proper mode coupling. Min repro: 0 errors (was 7).
   Tests: 1110/0/0 (no regressions).
 
-- [ ] **hep-th0101146** (R=17 vs P=15, Δ=2) — Both engines flag the
-  same 14 `Error:Unexpected:_/^ Script can only appear in math mode` +
-  1 `ltx:XMApp` malformed-in-`<ltx:p>`. Rust adds 2 extra
-  `ltx:XMTok`-in-`<ltx:p>` errors that Perl does not. Source has a
-  malformed `$$ ... \end{equation} \begin{equation} ...` mismatch.
+- [ ] **`ltx:XMTok`-in-`<ltx:p>` Δ=2 family** (cosmetic, multiple
+  papers) — Rust emits 2 extra `ltx:XMTok` malformed-in-`<ltx:p>`
+  errors versus Perl on revtex/article papers where math content
+  bleeds into a `<ltx:p>` parent due to a TeX-side mode-mismatch
+  (e.g. `${\mbox M}^{...}` script after `\mbox` switches in
+  `\matrix`, or `$$...\end{equation}` mismatch). Both engines flag
+  the underlying math-mode-violation error and the `ltx:XMApp` /
+  `ltx:XMDual` malformed-in-`<ltx:p>` follow-up. Rust additionally
+  emits 2 `ltx:XMTok`-in-`<ltx:p>` from constructor-template
+  emissions (separate path from `Tbox::be_absorbed`'s mode-aware
+  fallback). Witnesses:
+  * `hep-th0101146` (R=17 vs P=15, Δ=2): malformed
+    `$$ ... \end{equation} \begin{equation} ...`.
+  * `nlin0211024` (R=4 vs P=2, Δ=2, **discovered 2026-05-01**):
+    `$${\mbox M}^{RSTP}=...$$` inside `\begin{center}`.
   Note: the related `Tbox::new` divergence — Rust hardcodes
   `mode => 'math'` whenever IN_MATH at L118-119, vs Perl's
   `mode => $mode` (current MODE state, see `Box.pm` L42-50) — was
   investigated and a Perl-faithful fix prepared, but it regresses
   `figure_mixed_content_test` (sizing depends on the hardcoded
-  math-mode tagging for inline-block figure panels). The 2-error
-  delta here likely traces to a different XMTok emission path
+  math-mode tagging for inline-block figure panels). The Δ=2 likely
+  traces to a different XMTok emission path
   (constructor templates, not the Tbox fallback). Cosmetic
   verbosity divergence on already-malformed input; deferred.
 
