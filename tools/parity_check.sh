@@ -77,8 +77,12 @@ for paper in "${papers[@]}"; do
     continue
   fi
   ulimit -v 6291456
-  rust_errs=$(timeout "$TIMEOUT_SECS" "$RUST_BIN" --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:')
-  perl_errs=$(timeout "$TIMEOUT_SECS" latexml --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:')
+  # Match LaTeXML's "Error:<category>:" prefix (e.g. "Error:undefined:",
+  # "Error:unexpected:") — NOT the LaTeX kernel's "LaTeX hooks Error:"
+  # pass-through which is just an info-level rendering of kernel
+  # diagnostics.
+  rust_errs=$(timeout "$TIMEOUT_SECS" "$RUST_BIN" --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:[a-zA-Z_]+:')
+  perl_errs=$(timeout "$TIMEOUT_SECS" latexml --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:[a-zA-Z_]+:')
   status="UNKNOWN"
   if [[ "$rust_errs" -eq 0 && "$perl_errs" -eq 0 ]]; then
     status="BOTH CLEAN"
