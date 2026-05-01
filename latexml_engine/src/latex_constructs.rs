@@ -6384,7 +6384,18 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L3250-3258
   // Checks PREINCREMENTED_ first (set by beforeFloat with preincrement option).
   DefPrimitive!("\\@@add@caption@counters", {
-    let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
+    // Perl: $type = ToString(Digest(T_CS('\@captype')))
+    // Rust port had used `stomach::digest`, but stomach::digest's
+    // `read_x_token` loop in vmode (figure-environment body is vmode)
+    // can leak a trailing `\par` token into the result when the captype
+    // expansion completes — the digester continues reading beyond the
+    // expansion and picks up an environment-emitted `\par`. Use
+    // `do_expand` instead: it expands the macro one level (`\@captype`
+    // → "figure" letter tokens) and stops, mirroring Perl's `ToString`
+    // of the captype's body without invoking stomach digestion.
+    // Witness: math0010095 BoxedEPS+figure+caption produced
+    // `\thefigure\par` undefined errors when captype was "figure\par".
+    let captype = gullet::do_expand(T_CS!("\\@captype"))?.to_string();
     let prekey = s!("PREINCREMENTED_{captype}");
     let props = if let Some(Stored::HashStored(pre)) = state::remove_value(&prekey) {
       pre
