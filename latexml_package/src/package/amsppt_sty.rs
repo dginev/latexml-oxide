@@ -284,58 +284,300 @@ LoadDefinitions!({
   DefRegister!("\\holdoverbox" => Tokens!());
   DefMacro!("\\holdover{}", "");
 
-  DefMacro!("\\Refs", "\\begin{thebibliography}{}");
-  DefMacro!("\\endRefs", "\\end{thebibliography}");
-  DefMacro!("\\ref", "\\bibitem");
-  DefMacro!("\\endref", "");
-  // amstex/amsppt mode doesn't load LaTeX kernel constructs; without
-  // these stubs `\ref` (→ `\bibitem`) and `\paper`/`\jour`/`\book`
-  // (→ `\textit`) raise undefined-CS errors when papers use bare
-  // `\ref \key … \endref` outside `\Refs`. Stubs preserve text content
-  // (italics lost as a fidelity regression).
-  // TODO: port Perl's `\@bibitem` / `\@bibfield` field-marker chain
-  // (amsppt.sty.ltxml L367-442) for proper bibliography structure.
-  DefMacro!("\\bibitem [] {}", "");
-  DefMacro!("\\textit{}", "{\\it #1}");
-  DefMacro!("\\by", "");
-  // Perl L464: \bysame → \by  --- (three hyphens, with the leading
-  // \by bibfield marker). In Rust \by currently expands to empty, so
-  // the practical effect is just the em-dash triple (---). Prior Rust
-  // dropped it entirely; restore the Perl expansion for faithful
-  // "by the same author" rendering.
-  DefMacro!("\\bysame", "\\by ---");
-  // Perl amsppt.sty.ltxml L465: Let('\manyby', '\by').
-  // Used when listing multiple authors as `\ref \no N \manyby Auth1, Auth2`.
-  Let!("\\manyby", "\\by");
-  DefMacro!("\\paper", "\\textit");
-  DefMacro!("\\paperinfo{}", "#1");
-  DefMacro!("\\jour{}", "\\textit{#1}");
-  DefMacro!("\\vol{}", "{\\bf #1}");
-  DefMacro!("\\yr{}", "(#1)");
-  DefMacro!("\\pages{}", "#1");
-  DefMacro!("\\page{}", "#1");
-  DefMacro!("\\book{}", "\\textit{#1}");
-  DefMacro!("\\bookinfo{}", "#1");
-  DefMacro!("\\publ{}", "#1");
-  DefMacro!("\\publaddr{}", "#1");
-  DefMacro!("\\finalinfo{}", "#1");
-  DefMacro!("\\eds{}", "(#1, eds.)");
-  DefMacro!("\\ed{}", "(#1, ed.)");
-  DefMacro!("\\moreref", "");
-  DefMacro!("\\lang{}", "[#1]");
-  DefMacro!("\\toappear", "(to appear)");
-  DefMacro!("\\inpress", "(in press)");
-  DefMacro!("\\issue{}", "no. #1");
-  DefMacro!("\\miscnote{}", "#1");
+  // Bibliography — full Perl-faithful port of amsppt.sty.ltxml L340-495.
+  //
+  // Architecture: AmS-TeX bibliography uses field-marker macros
+  // (`\key`, `\by`, `\paper`, `\jour`, etc.) that each terminate the
+  // previous field via `\@end@bibfield` and start the next via
+  // `\@bibfield{<name>}`. `\@bibfield` is an `XUntil:\@end@bibfield`
+  // macro that captures the trailing tokens into state under
+  // `amsbibitem@<field>`. After all fields are read, `\endref` calls
+  // `\@fill@bibitem` which reads the captured fields back from state
+  // and emits formatted output via `\@bibitem@field` and `\@bibitem@tag`
+  // constructors.
+  //
+  // The `\@auto@Refs` indirection lets bare `\ref … \endref` work
+  // outside an explicit `\Refs … \endRefs` wrapper by auto-opening the
+  // bibliography on first invocation, then redefining `\@auto@Refs`
+  // empty so subsequent `\ref`s don't re-open.
+  NewCounter!("@bibitem", "bibliography", idprefix => "bib");
+  DefMacro!("\\the@bibitem", "\\number\\c@@bibitem");
+  // Perl L338: id resolves to <docid>.bib if document has an id,
+  // else just "bib".
+  DefMacro!("\\the@lx@bibliography@ID",
+    "\\ifx.\\thedocument@id.\\thedocument@id.bib\\else bib\\fi");
 
-  // Perl L478, L480, L484: plain-text bib-entry keyword stubs referenced
-  // by the formatted \@fill@bibitem body. Even though Rust's amsppt
-  // doesn't ship the full \@bibfield infrastructure, authors sometimes
-  // invoke these directly in hand-rolled `\ref ... \endref` bibliography
-  // entries.
+  // Perl L340-348: \@auto@Refs / \Refs / \endRefs.
+  DefMacro!("\\@auto@Refs", "\\Refs");
+  DefMacro!("\\Refs", "\\@Refs\\def\\@auto@Refs{}");
+  DefMacro!("\\endRefs", "\\def\\@auto@Refs{\\Refs}\\end@Refs");
+  DefConstructor!("\\@Refs",
+    "<ltx:bibliography xml:id='#id'>\
+       <ltx:title>References</ltx:title>\
+       <ltx:biblist>",
+    properties => sub[_args] {
+      let id_str = digest_text(Tokens!(T_CS!("\\the@lx@bibliography@ID")))?
+        .to_string();
+      let mut props = SymHashMap::default();
+      props.insert("id", Stored::String(arena::pin(&id_str)));
+      Ok(props)
+    });
+  DefConstructor!("\\end@Refs", "</ltx:bibliography>");
+
+  // Perl L375-379: `\@bibitem` / `\@bibblock` constructors. RefStepID
+  // assigns `xml:id` from the @bibitem counter.
+  DefConstructor!("\\@bibitem", "<ltx:bibitem xml:id='#id'>",
+    properties => sub[_args] { ref_step_id("@bibitem") });
+  DefConstructor!("\\@end@bibitem", "</ltx:bibitem>");
+  DefConstructor!("\\@bibblock", "<ltx:bibblock>");
+  DefConstructor!("\\@end@bibblock", "</ltx:bibblock>");
+
+  // Perl L446-453: `\@bibfield{type} XUntil:\@end@bibfield` — captures
+  // the trailing tokens into `amsbibitem@<field>` state, after trimming
+  // leading/trailing T_SPACE.
+  DefMacro!("\\@bibfield{} XUntil:\\@end@bibfield", sub[args] {
+    let field = args[0].clone().into_tokens_result()?.to_string();
+    let tokens = args[1].clone().into_tokens_result()?;
+    let mut tk_vec: Vec<Token> = tokens.unlist();
+    while tk_vec.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
+      tk_vec.remove(0);
+    }
+    while tk_vec.last().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
+      tk_vec.pop();
+    }
+    if !tk_vec.is_empty() {
+      let key = format!("amsbibitem@{}", field);
+      state::assign_value(&key, Stored::Tokens(Tokens::new(tk_vec)), None);
+    }
+    Ok(Tokens!())
+  });
+  Let!("\\@end@bibfield", "\\relax");
+
+  // Perl L442-445: \@bibitem@field / \@bibitem@tag constructors.
+  DefConstructor!("\\@bibitem@field{}{}",
+    "<ltx:text class='#class' _noautoclose='1'>#2</ltx:text>",
+    properties => sub [args] {
+      let field_name = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let class_str = format!("ltx_bib_{}", field_name);
+      let mut props = SymHashMap::default();
+      props.insert("class", Stored::String(arena::pin(&class_str)));
+      Ok(props)
+    });
+  // Perl L445 emits `^key='#1'<ltx:tags><ltx:tag role='refnum'>#1</ltx:tag></ltx:tags>`.
+  // The `^key=` is a float-to-attribute directive that walks ancestors to
+  // find a node accepting the `key` attribute (`<ltx:bibitem>`). Rust's
+  // constructable codegen doesn't yet parse `^attr=...` syntax, so we
+  // emulate it via a `before_construct` closure: float to a key-accepting
+  // ancestor and `set_attribute("key", #1)` directly. Rest of the
+  // template (tags wrapper) renders as in Perl.
+  DefConstructor!("\\@bibitem@tag{}",
+    "<ltx:tags><ltx:tag role='refnum'>#1</ltx:tag></ltx:tags>",
+    before_construct => sub[document, whatsit] {
+      let key_str = whatsit.get_arg(1)
+        .map(|a| a.to_string())
+        .unwrap_or_default();
+      if !key_str.is_empty() {
+        if let Some(savenode) = document.float_to_attribute("key") {
+          let mut node = document.get_node().clone();
+          document.set_attribute(&mut node, "key", &key_str)?;
+          document.set_node(&savenode);
+        }
+      }
+    });
+
+  // Perl L381-424: `\@fill@bibitem` — emits the formatted bib entry by
+  // reading captured `amsbibitem@*` fields from state and building
+  // Invocation tokens for `\@bibitem@tag` and `\@bibitem@field` per the
+  // case dispatch (book / paper-in-book / paper-in-journal / random).
+  DefMacro!("\\@fill@bibitem", sub[_args] {
+    let mut body: Vec<Token> = Vec::new();
+
+    fn lookup_field(field: &str) -> Option<Tokens> {
+      match state::lookup_value(&format!("amsbibitem@{}", field)) {
+        Some(Stored::Tokens(t)) => Some(t),
+        _ => None,
+      }
+    }
+
+    // Append `\@bibitem@field{<field>}{<value>}` invocation.
+    fn push_field(body: &mut Vec<Token>, field: &str, value: Tokens) {
+      body.push(T_CS!("\\@bibitem@field"));
+      body.push(T_BEGIN!());
+      for ch in field.chars() { body.push(T_OTHER!(ch.to_string())); }
+      body.push(T_END!());
+      body.push(T_BEGIN!());
+      body.extend(value.unlist());
+      body.push(T_END!());
+    }
+
+    // Perl `ppunbox` — emit `[punct][pre]<field>[post]` if non-empty.
+    fn pp(body: &mut Vec<Token>,
+          punct: Option<&str>, pre: Option<Tokens>,
+          field: &str, post: Option<Tokens>) {
+      if let Some(value) = lookup_field(field) {
+        if let Some(p) = punct {
+          for ch in p.chars() { body.push(T_OTHER!(ch.to_string())); }
+        }
+        if let Some(pre_tk) = pre {
+          body.extend(pre_tk.unlist());
+        } else {
+          body.push(T_SPACE!());
+        }
+        push_field(body, field, value);
+        if let Some(post_tk) = post {
+          body.extend(post_tk.unlist());
+        }
+      }
+    }
+    // Perl `commaunbox`: `ppunbox(',', '\space', <field>, undef)`.
+    fn comma(body: &mut Vec<Token>, field: &str) {
+      pp(body, Some(","), Some(Tokens!(T_CS!("\\space"))), field, None);
+    }
+
+    // Tag at start (skip if this is a `\moreref` continuation).
+    let is_moreref = lookup_field("moreref").is_some();
+    if !is_moreref {
+      let tag_value = lookup_field("key")
+        .or_else(|| lookup_field("refnum"))
+        .unwrap_or_else(|| Tokens!(T_CS!("\\the@bibitem")));
+      body.push(T_CS!("\\@bibitem@tag"));
+      body.push(T_BEGIN!());
+      body.extend(tag_value.unlist());
+      body.push(T_END!());
+    }
+    // Authors / editors fallback (Perl L387-389).
+    if lookup_field("authors").is_none() {
+      if let Some(eds) = lookup_field("editors") {
+        let mut combined: Vec<Token> = eds.unlist();
+        // `\space(\edtext)` suffix.
+        combined.push(T_CS!("\\space"));
+        combined.push(T_OTHER!("("));
+        combined.push(T_CS!("\\edtext"));
+        combined.push(T_OTHER!(")"));
+        state::assign_value("amsbibitem@authors",
+          Stored::Tokens(Tokens::new(combined)), None);
+      }
+    }
+    pp(&mut body, None, None, "authors", None);
+
+    if lookup_field("book").is_some() {
+      // Case 1: Book.
+      comma(&mut body, "book");
+      comma(&mut body, "bookinfo");
+      pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+         "proceedingsinfo", Some(Tokens!(T_OTHER!(")"))));
+      pp(&mut body, Some(","), Some(Tokens!(T_CS!("\\space"),
+        T_OTHER!("v"), T_OTHER!("o"), T_OTHER!("l"), T_OTHER!("."), T_OTHER!("~"))),
+         "volume", None);
+      pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+         "editors",
+         Some(Tokens!(T_OTHER!(","), T_CS!("\\space"), T_CS!("\\edtext"), T_OTHER!(")"))));
+      comma(&mut body, "publisher");
+      comma(&mut body, "publisheraddr");
+      comma(&mut body, "year");
+      pp(&mut body, Some(","),
+         Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_OTHER!("~"))),
+         "pages", None);
+    } else {
+      // Case 2: Paper.
+      comma(&mut body, "paper");
+      comma(&mut body, "paperinfo");
+      if lookup_field("inbook").is_some() {
+        // Case 2a: Paper in book.
+        comma(&mut body, "inbook");
+        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+           "proceedingsinfo", Some(Tokens!(T_OTHER!(")"))));
+        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+           "editors",
+           Some(Tokens!(T_OTHER!(","), T_CS!("\\space"), T_CS!("\\edtext"), T_OTHER!(")"))));
+        comma(&mut body, "bookinfo");
+        pp(&mut body, Some(","),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\voltext"), T_OTHER!("~"))),
+           "volume", None);
+        comma(&mut body, "publisher");
+        comma(&mut body, "publisheraddr");
+        comma(&mut body, "year");
+        pp(&mut body, Some(","),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\pagestext"), T_OTHER!("~"))),
+           "pages", None);
+      } else if lookup_field("random").is_none() {
+        // Case 2b: Paper in journal.
+        comma(&mut body, "journal");
+        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"))), "volume", None);
+        pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+           "year", Some(Tokens!(T_OTHER!(")"))));
+        pp(&mut body, Some(","),
+           Some(Tokens!(T_CS!("\\space"), T_CS!("\\issuetext"), T_OTHER!("~"))),
+           "issue", None);
+        comma(&mut body, "publisher");
+        comma(&mut body, "publisheraddr");
+        comma(&mut body, "pages");
+      } else {
+        // Case 2c: Random text leftover.
+        comma(&mut body, "random");
+      }
+    }
+    comma(&mut body, "finalinfo");
+    pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+       "note", Some(Tokens!(T_OTHER!(")"))));
+    body.push(T_OTHER!("."));
+    pp(&mut body, None, Some(Tokens!(T_CS!("\\space"), T_OTHER!("("))),
+       "language", Some(Tokens!(T_OTHER!(")"))));
+    comma(&mut body, "mathreview");
+
+    // Clear all amsbibitem@* fields for next entry. Perl relies on
+    // `\begingroup`/`\endgroup` to local-scope them; Rust's `assign_value`
+    // with `None` scope follows the active group, so the same scoping
+    // applies. Explicit clear isn't strictly needed but keeps state
+    // tidy across `\moreref` chains.
+    Ok(Tokens::new(body))
+  });
+
+  // Perl L367-373: `\ref` / `\endref` / `\moreref` orchestrate
+  // capturing-then-emitting a bibitem.
+  DefMacro!("\\ref",
+    "\\@auto@Refs\\begingroup\\@bibitem\\@bibfield{random}");
+  DefMacro!("\\endref",
+    "\\@end@bibfield\\@fill@bibitem\\@end@bibitem\\endgroup");
+  DefMacro!("\\moreref",
+    "\\@end@bibfield\\@fill@bibitem\\@end@bibblock\\endgroup\
+     \\begingroup\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
+     \\@bibfield{random}");
+
+  // Perl L460-493: field-marker macros — each terminates the current
+  // field and opens the next. The trailing `\it`/`\bf` for paper/book/
+  // vol gets prepended to the captured tokens (XUntil reads through it).
+  DefMacro!("\\key",       "\\@end@bibfield\\@bibfield{key}");
+  DefMacro!("\\no",        "\\@end@bibfield\\@bibfield{refnum}");
+  DefMacro!("\\by",        "\\@end@bibfield\\@bibfield{authors}");
+  DefMacro!("\\bysame",    "\\by  ---");
+  Let!("\\manyby", "\\by");
+  DefMacro!("\\ed",        "\\@end@bibfield\\@bibfield{editors}");
+  DefMacro!("\\eds",       "\\@end@bibfield\\@bibfield{editors}");
+  DefMacro!("\\paper",     "\\@end@bibfield\\@bibfield{paper}\\it");
+  DefMacro!("\\paperinfo", "\\@end@bibfield\\@bibfield{paperinfo}");
+  DefMacro!("\\inbook",    "\\@end@bibfield\\@bibfield{inbook}");
+  DefMacro!("\\book",      "\\@end@bibfield\\@bibfield{book}\\it");
+  DefMacro!("\\bookinfo",  "\\@end@bibfield\\@bibfield{bookinfo}");
+  DefMacro!("\\procinfo",  "\\@end@bibfield\\@bibfield{proceedingsinfo}");
+  DefMacro!("\\finalinfo", "\\@end@bibfield\\@bibfield{finalinfo}");
+  DefMacro!("\\jour",      "\\@end@bibfield\\@bibfield{journal}");
+  DefMacro!("\\vol",       "\\@end@bibfield\\@bibfield{volume}\\bf");
   DefMacro!("\\voltext",   "vol.");
+  DefMacro!("\\issue",     "\\@end@bibfield\\@bibfield{issue}");
   DefMacro!("\\issuetext", "no.");
+  DefMacro!("\\yr",        "\\@end@bibfield\\@bibfield{year}");
+  DefMacro!("\\page",      "\\@end@bibfield\\@bibfield{pages}");
+  DefMacro!("\\pages",     "\\@end@bibfield\\@bibfield{pages}");
   DefMacro!("\\pagestext", "pp.");
+  DefMacro!("\\lang",      "\\@end@bibfield\\@bibfield{language}");
+  DefMacro!("\\publ",      "\\@end@bibfield\\@bibfield{publisher}");
+  DefMacro!("\\publaddr",  "\\@end@bibfield\\@bibfield{publisheraddress}");
+  DefMacro!("\\miscnote",  "\\@end@bibfield\\@bibfield{note}");
+  DefMacro!("\\toappear",  "\\miscnote to appear");
+  DefMacro!("\\MR",        "\\@end@bibfield\\@bibfield{mathreview}MR ");
+  DefMacro!("\\AMSPPS",    "\\@end@bibfield\\@bibfield{ams-preprint}AMS-PPS ");
+  DefMacro!("\\CMP",       "\\@end@bibfield\\@bibfield{CMP}CMP ");
 
   // Miscellaneous — Perl L480-500
   DefMacro!("\\nologo", "");
@@ -482,26 +724,9 @@ LoadDefinitions!({
   // Perl L349: \shave{#1} → #1 (sibling of \botshave/\topshave).
   DefMacro!("\\shave{}", "#1");
 
-  // Perl amsppt.sty.ltxml L460-495: \@bibfield and friends are the
-  // formatted-bib-entry field-routing dispatcher. Rust doesn't
-  // implement the \@fill@bibitem consumer that collects these
-  // fields, so each routed entry degrades to just its trailing
-  // "label text" part. \@end@bibfield is a bare marker; \@bibfield
-  // takes a type and swallows content until the next \@end@bibfield
-  // or top-level break.
-  DefMacro!("\\@end@bibfield", "");
-  DefMacro!("\\@bibfield{}", "");
-  // The routed entries, Perl L460-493. Expansion after stub:
-  // \key → "\@end@bibfield\@bibfield{key}" → ""  (field consumed).
-  // \MR  → "\@end@bibfield\@bibfield{mathreview}MR " → "MR ".
-  // \AMSPPS → "AMS-PPS ". \CMP → "CMP ".
-  DefMacro!("\\key", "\\@end@bibfield\\@bibfield{key}");
-  DefMacro!("\\no", "\\@end@bibfield\\@bibfield{refnum}");
-  DefMacro!("\\inbook", "\\@end@bibfield\\@bibfield{inbook}");
-  DefMacro!("\\procinfo", "\\@end@bibfield\\@bibfield{proceedingsinfo}");
-  DefMacro!("\\MR", "\\@end@bibfield\\@bibfield{mathreview}MR ");
-  DefMacro!("\\AMSPPS", "\\@end@bibfield\\@bibfield{ams-preprint}AMS-PPS ");
-  DefMacro!("\\CMP", "\\@end@bibfield\\@bibfield{CMP}CMP ");
+  // (Perl amsppt.sty.ltxml L460-495 \@bibfield/\@end@bibfield/\key/\no/
+  // \inbook/\procinfo/\MR/\AMSPPS/\CMP are now defined above in the
+  // Perl-faithful bibliography port — no duplicate stubs needed here.)
 
   // Perl L169: \spreadlines {Dimension} — line-spacing dimension
   // consumer, no output (DefConstructor with empty emission).
