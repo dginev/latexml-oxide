@@ -276,8 +276,32 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 - [ ] **hep-ph0007044** (R=410 vs P=101) — Same big-cascade pattern as
   hep-th0010165. Triage needed.
 
-- [ ] **quant-ph0109041** (R=67 vs P=9) — Real-but-large delta. Triage
-  needed.
+- [ ] **math0205073** (R=10001 capped, was R=1M) — **Triaged
+  2026-05-01**. Runaway `\hbox`/`&` cascade in AmS-TeX `\cases` with
+  user `\pcases` macro. State-cumulative bug — bisects to lines 1-326
+  clean, lines 1-328 (adds first `\pcases{...}{...}\cr` row) → 1M
+  errors. Min synthetic repro doesn't trigger. The 1M-error count
+  was a separate dump-leak issue (MAX_ERRORS leaked into runtime via
+  dump bake-in) **FIXED** by commit `15f46ddf3` (filter MAX_ERRORS
+  in dump_reader+dump_writer). Underlying `\cases` mis-parse remains.
+  Perl=0. Same family as hep-th0010165 cascade. Fix locus
+  unidentified — needs deeper bisection of state accumulation
+  through preamble (likely AmS-TeX `\cases` body reader vs LaTeX-pool
+  `\cases{}` arg reader divergence in math/text mode mix).
+
+- [ ] **quant-ph0109041** (R=67 vs P=9) — **Triaged 2026-05-01**.
+  Architectural divergence from `wisdom_lazy_pool_load.md`. Paper has
+  `\def\>{\rangle}` `\def\<{\langle}` `\def\k#1{|#1\>}` `\def\b#1{\<#1|}`
+  BEFORE `\documentstyle[prl,aps]{revtex}`. `\k` and `\b` are
+  `DefAccent` kernel CSes in `latex_constructs.pool.ltxml:42`. Rust's
+  `\lx@documentstyle@impl` (`tex_job.rs:140`) calls
+  `input_definitions("LaTeX", "pool")` AFTER user defs, so the kernel
+  accents clobber `\k`/`\b`. Each `\k{X}` invocation becomes accent
+  processing, mis-tagging `_` in `X` → `Error:Unexpected:_`. Perl
+  preloads pools at engine init, so user `\def` wins. Min repro
+  (R=1, P=0): 4-line — see `memory/project_quant_ph_0109041_user_defs_clobber.md`.
+  **Deferred** — fix is architectural (preload pools, OR snapshot user
+  defs at `\documentstyle` entry and restore after pool load).
 
 - [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
   over Perl's 101 truncation cap. Triage needed.
