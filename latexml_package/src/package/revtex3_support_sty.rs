@@ -23,12 +23,14 @@ LoadDefinitions!({
   DefConditional!("\\ifpreprintsty");
   DefConditional!("\\ifsecnumbers");
   DefConditional!("\\ifsegabssty");
-  // Perl revtex 3 internals — `\iffirstfig` controls float placement on
-  // the first page; revtex 3 papers commonly set `\firstfigfalse` BEFORE
-  // `\begin{document}` to bypass the kludge. The Perl LaTeXML bindings
-  // for revtex don't pre-define it, so the user's `\firstfigfalse` raises
-  // an undefined-CS error. Witness: hep-th0109174 (R=1 → 0).
+  // Perl revtex 3 internals — `\iffirstfig`/`\iffirsttab` control float
+  // placement on the first page; revtex 3 papers commonly set
+  // `\firstfigfalse`/`\firsttabfalse` BEFORE `\begin{document}` to bypass
+  // the kludge. The Perl LaTeXML bindings for revtex don't pre-define
+  // these, so users' `\firstfigfalse`/`\firsttabfalse` raise undefined-CS
+  // errors. Witness: hep-th0109174, cond-mat0005077.
   DefConditional!("\\iffirstfig");
+  DefConditional!("\\iffirsttab");
 
   DefMacro!("\\eqsecnum",     "");
   DefMacro!("\\tightenlines", "");
