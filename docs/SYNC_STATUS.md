@@ -203,6 +203,7 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | cond-mat0205452 | recovered by Round-17 batch | (Round-17) |
 | cond-mat0201306 | revtex4 `\jobname.rty` autoload | `6e6497ede` |
 | astro-ph0107583 | Cluster E — `T_ALIGN` deactivation guard for `Stored::Constructor` | `04a9766e7` |
+| hep-ph0204075 | now Rust=Perl=0 (recovered by recent commits, no specific fix needed) | (re-verified 2026-05-01) |
 | hep-ph0102192 | pstricks PSCoordList consumption + drop `\rput`/`\uput`/`\cput` body | `4f3be1c35` |
 | hep-th0109174 | revtex 3 `\iffirstfig` declared as `DefConditional!` | `2ca053eb6` |
 | cond-mat0005077, cond-mat0101451, cond-mat0107098, hep-lat0205019, hep-ph0004001, hep-ph0005027, hep-ph0007073, hep-ph0106352, hep-ph0109206 | same revtex 3 `\iffirstfig`/`\iffirsttab` cluster (10 papers total verified clean) | `2ca053eb6`, `5c5f4dc1b` |
@@ -332,8 +333,37 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
   `wisdom_*.md` notes (cycles 305-306, 2026-04-24, deferred per WISDOM
   #41).
 
-- [ ] **math0004140** (R=1182 vs P=?) — High-error AmS-TeX paper.
-  Triage to find single cascading root.
+- [ ] **math0004140** (R=1177 vs P=0) — **Triaged 2026-05-01**.
+  AmS-TeX paper (`\input amstex \documentstyle{amsppt}`) with user
+  `\def\a{\alpha}` `\def\g{\gamma}` `\def\ti{\times}` etc. Top errors:
+  808 `Error:malformed:ltx:XMTok` + 173 `Error:Unexpected:_` + 108
+  `\lx@end@inline@math`. State-cumulative: min repro
+  `$U_\a\ti U_\beta$` after preamble = 0/0 in both engines (NOT
+  user-defs-clobber as initially suspected). Same `\cases`-style
+  state-cumulative cluster as math0205073. Fix locus unidentified.
+
+- [ ] **math0010241** (R=33 vs P=19) — **Triaged 2026-05-01**. Real
+  delta of +14 errors, all `Error:malformed:ltx:XMTok "ltx:XMTok"
+  isn't allowed in <ltx:emph>`. User defines `\h`, `\m`, `\n`, `\q`
+  etc. as `\newcommand{\h}{\mathbf{h}}` math shortcuts; these used
+  inside `\emph{...}` text contexts. Math whatsits leak into emph
+  parent. Same family as documented "XMTok-in-text" cluster — needs
+  document.rs investigation around math-CS-in-text handling. Fix
+  locus likely in `latexml_core/src/document.rs:2354` schema check
+  OR upstream in math-whatsit construction (auto-wrap into Math
+  element when fallback context is text-only).
+
+- [x] **astro-ph0203201** (R=70 vs P=70) — **Out-of-scope** —
+  Perl=Rust same error counts (56 `_`-in-text + 12 XMArray-malformed
+  + 2 `^`-in-text). Both fail identically.
+- [x] **cond-mat0103632** (R=20 vs P=20) — **Out-of-scope** — same.
+- [x] **hep-ph0110283** (R=98 vs P=101) — **Out-of-scope** — Rust
+  better than Perl (Perl saturates at 101 truncation cap).
+- [x] **hep-th0004072** (R=33 vs P=101) — **Out-of-scope** — Rust
+  better than Perl.
+- [x] **hep-ph0204075** (R=0 vs P=0) — **PASSING** — recovered by
+  recent commits, no longer a failure. Marked in completed
+  investigations table.
 
 - [ ] **hep-th0005268** (R=1000001 vs P=26) — Runaway cascade.
   Termination-condition bug; identify recursion source.
