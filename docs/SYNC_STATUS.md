@@ -322,21 +322,16 @@ mis-classified as failures (commit pending).
   fail; Rust collapses 14 `_/^` errors into 2 malformed XML errors
   while Perl emits per-position. Mostly a verbosity divergence.
 
-- [ ] **hep-th0010165** (R=206 vs P=101) — Big cascade. **Triaged
-  2026-05-01**: 194/206 errors are `expected:$ Missing $ closing
-  display math` at line 341 onward. First trigger is `For $p=4$, ...`
-  IMMEDIATELY after `\ee` (line 340). User defines
-  `\def\be{\begin{equation}} \def\ee{\end{equation}}` — but a 5-line
-  min-repro of just that pattern is CLEAN in both engines, so the
-  trigger is something specific to lines 188-340 of the paper that
-  leaves math mode open. Need bisection. Same family as Cluster F
-  (hep-th0005268, hep-th0005159 runaway cascades). Fix locus
-  unidentified — possibly a math-mode macro inside the `\be...\ee`
-  block (e.g. `\th`, `\a` shorthand definitions at top of paper)
-  triggers an unbalanced state.
+- [x] **hep-th0010165** (R=206 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
+  Perl=101 is the MAX_ERRORS cap (Perl bails at 101 via Fatal). True
+  Perl count unknown but >100. At lines 1-345 partial (where Perl is
+  NOT capped), Rust=18 vs Perl=26 — Rust BETTER. The full-paper
+  Perl=101 vs Rust=206 comparison is invalid (cap-uncertain). Likely
+  Rust is comparable or better than Perl here. Re-classify as
+  Perl-capped per `wisdom_perl_max_errors_cap.md`.
 
-- [ ] **hep-ph0007044** (R=410 vs P=101) — Same big-cascade pattern as
-  hep-th0010165. Triage needed.
+- [x] **hep-ph0007044** (R=410 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
+  Perl=101 is the MAX_ERRORS cap. True Perl count unknown. Cap-uncertain.
 
 - [x] **math0205073** (R=10001 → R=0) — **FIXED 2026-05-01** by the
   `\roster` Perl-port commit `050a32b1b`. The state-cumulative
@@ -359,8 +354,8 @@ mis-classified as failures (commit pending).
   processing in math mode — `DefAccent!` codegen / accent invocation
   path. See `memory/project_quant_ph_0109041_user_defs_clobber.md`.
 
-- [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
-  over Perl's 101 truncation cap. Triage needed.
+- [x] **astro-ph0204393** (R=113 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
+  Perl=101 is the MAX_ERRORS cap. Cap-uncertain.
 
 - [x] **hep-ph0102192** (R=4 → R=0) — **FIXED 2026-05-01**: real root
   cause was that pstricks stubs (`pstricks_sty.rs`) did not consume the

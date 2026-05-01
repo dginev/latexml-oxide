@@ -104,10 +104,21 @@ for paper in "${papers[@]}"; do
     rust_to_tag=" RUST_TIMEOUT(partial=$rust_errs)"
   fi
   status="UNKNOWN"
+  # Perl's MAX_ERRORS default is 100 + Fatal('too_many_errors'), i.e. it hits
+  # exactly 101 and bails. When Perl=101 the count is a CAP — Perl's true
+  # count is unknown and likely much larger. Don't classify as "Rust > Perl"
+  # in that case. Rust's default MAX_ERRORS is 10000.
+  perl_capped=""
+  if [[ "$perl_errs" -ge 101 ]]; then
+    perl_capped=" PERL_CAPPED@$perl_errs"
+  fi
   if [[ "$rust_errs" -eq 0 && "$perl_errs" -eq 0 ]]; then
     status="BOTH CLEAN"
   elif [[ "$rust_errs" -eq "$perl_errs" ]]; then
     status="OUT-OF-SCOPE (Perl=$perl_errs)"
+  elif [[ "$perl_errs" -ge 101 ]]; then
+    # Both engines have many errors; Perl truncated. Verdict undetermined.
+    status="OUT-OF-SCOPE? (Perl-capped P=$perl_errs vs R=$rust_errs; cannot compare)"
   elif [[ "$rust_errs" -gt "$perl_errs" ]]; then
     status="REAL REGRESSION (P=$perl_errs vs R=$rust_errs)"
   else
