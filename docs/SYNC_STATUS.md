@@ -206,8 +206,10 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | hep-ph0102192 | pstricks PSCoordList consumption + drop `\rput`/`\uput`/`\cput` body | `4f3be1c35` |
 | hep-th0109174 | revtex 3 `\iffirstfig` declared as `DefConditional!` | `2ca053eb6` |
 | cond-mat0005077, cond-mat0101451, cond-mat0107098, hep-lat0205019, hep-ph0004001, hep-ph0005027, hep-ph0007073, hep-ph0106352, hep-ph0109206 | same revtex 3 `\iffirstfig`/`\iffirsttab` cluster (10 papers total verified clean) | `2ca053eb6`, `5c5f4dc1b` |
-| math0104094 | amsppt-mode stubs for `\bibitem` and `\textit` | `8e63df960` |
+| math0104094 | faithful Perl port of `\ref`/`\@bibitem`/`\@bibfield` bibliography chain (replaces stub) | `be1472d78` |
+| math0111087 | recovered by amsppt port + `^attr=` codegen | `be1472d78`, `a8d9ce055` |
 | (Out-of-scope catalogue: `\CITE` typos, `\setdec`, `\dec`, `\psfig` — Perl also errors on these; not parity-Rust regressions) | | |
+| (Codegen infrastructure improvement: `^attr='value'` constructor template syntax — Perl Compiler.pm L137-148 — now parsed by Rust `latexml_codegen/src/constructable.rs`) | | `a8d9ce055` |
 
 #### In-scope worksheet (sandbox papers needing work — Perl=0, Rust>0)
 
