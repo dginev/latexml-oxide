@@ -176,52 +176,125 @@ Background: closed Phase 1 (10k canvas) hit 7731/7898 = 97.89%.
 Math-parser perf hotspot fixed in commit `5710a7157` (pruned-only
 fast-fail; 0804.1730 103.9 s → 19.3 s) carries forward to Phase 2.
 
-### 3a. Stage 1+2 sweep findings — real Rust regressions (2026-05-01)
+### 3a. Stage 1+2 sweep findings — sandbox investigation worksheet
 
-**20k-paper sweep complete: 19900/20000 = 99.50% clean.** Failure
-breakdown: 92 conversion_error + 3 error + 3 abort + 1 timeout +
-1 conversion_fatal = 100 total failures.
+**20k-paper sweep result (canvas log baseline 2026-05-01):
+19,905/20,000 = 99.52% clean** (lax `Error:[a-zA-Z_]+:` regex).
+Of the 95 failing logs, parity classification (via
+`tools/parity_check.sh`) splits roughly 50% out-of-scope (Perl
+also fails) / 25% real Rust regressions / ~5% Rust does better /
+~20% silently fixed by recent commits but canvas log is stale.
 
-Of those, batch Perl-vs-Rust diff identifies these as **real
-Rust-only regressions** (Perl=0, Rust>0):
+#### Completed investigations (sandbox papers fully resolved → 0 errors)
 
-| Paper | Perl | Rust | First error | Likely root |
-|---|---|---|---|---|
-| `astro-ph0002213` | 0 | 0 (was 1, **fixed** 2026-05-01) | `undefined:\psfig` | Fix: `tex_job.rs:203-220` `\documentstyle{}` dispatch now also probes for paper-local `<class>.sty` ON DISK (`forbid_ltxml: true`) before falling through to `.cls` and the version-strip fallback. Without this, papers shipping a paper-local `mn1.sty` (LaTeX 2.09 documentstyle file) fell through to `mn.cls` and dropped the `[epsfig]` option. Tests 1110/0/0. |
-| `cond-mat0002096` | 0 | 0 (was 1, side-effect of disk-sty fix) | exit-code 1 | Confirmed clean post-fix. |
-| `astro-ph0007367` | 0 | 3 | `Unexpected:^` + `\@add@institute` math-frame leak | aa-class `\institute{...}` cluster — known bug per `memory/project_aa_institute_xuntil_math_mode.md` (5-line min repro: `\\` newline `\hspace*` then `$^*\,$` inside `\institute{...\and...}` drops inline-math frame). |
-
-**In-scope cluster analysis (51 of 100 sweep failures diffed
-2026-05-01)**: 13 confirmed Rust-only regressions (Perl=0, Rust>0)
-group into shared root causes. **Post-fix verification (after
-today's 3 patches)**: 8/13 = **62% now convert cleanly**
-(astro-ph0002213, cond-mat0002096, gr-qc0003030, cond-mat0201194,
-quant-ph0207078, quant-ph0205175, quant-ph0203044, cond-mat0205452).
-5/13 still fail: math0010095 (13 errors), astro-ph0203332 (2),
-astro-ph0107583 (2), astro-ph0007367 (3), cond-mat0109091 (3).
-
-| Cluster | Papers | Trigger / root cause |
+| Paper | Cluster | Fix commit |
 |---|---|---|
-| **A. `\par` in CS-name** (`\thefigure\par`/`\ext@figure\par`) | math0010095 (13 → 11 — partial), astro-ph0203332 (2 → 0), astro-ph0011503 (also recovered to 0) | **PARTIALLY FIXED 2026-05-01** (commit `9c60a766c`): `\@@add@caption@counters` was reading captype via `stomach::digest(\@captype)`, which in vmode (figure-environment body) digests beyond the macro expansion and picks up a trailing `\par` token (state-N blank-line emission), producing "figure\\par" string. Fix: use `gullet::do_expand` instead — single-level macro expansion, no stomach digestion, no spurious `\par`. Mirrors Perl `ToString(Expand(...))` rather than `ToString(Digest(...))` semantics for label-only text retrieval. `latex_constructs.rs:6386-6398`. Tests still 1109/0/0. **Correction**: prior commit message claimed math0010095 went 13→0 — that was a strict-grep false positive (errors are inline within `(Building...Error:` markers; lax `Error:[a-z]+:` regex correctly counts 11). Actual residual: `\thesection\par` (~9 errors) + `\par@ID` from `\refstepcounter{section}` and `\@section`'s id formation — separate `\csname...\endcsname` paths not yet covered by the do_expand fix. astro-ph0203332 and astro-ph0011503 went 2→0 and 1→0 (single-figure papers with only `\thefigure\par` — fully resolved). math0010095 needs additional fixes for the `\thesection`/`\@section`-id paths. |
-| **B. Scientific Word `\dispkind`** | gr-qc0003030, cond-mat0201194, quant-ph0207078, quant-ph0205175, quant-ph0203044 (≥5) | **FIXED 2026-05-01**: `\input{tcilatex}` was loading the binding correctly, but Rust's `tcilatex_tex.rs` was MISSING the `\newcount\dispkind` declaration (Perl's `tcilatex.tex.ltxml:367` has it). Single-line port fix added at `tcilatex_tex.rs:120-130`. gr-qc0003030 (was 4) → 0 errors. quant-ph0207078 (was 7) → 0 errors. Tests 1110/0/0. |
-| **C. multicols old interface** | cond-mat0109091 | **FIXED 2026-05-01** (commit `6e6497ede`): root cause was `\documentstyle` getting clobbered by `latex_dump.pool.ltxml`'s body (`\input{latex209.def}\documentclass`), routing through `\documentclass`'s after-hook (`\AtBeginDocument\warn@unusedclassoptions`) instead of `\compat@loadpackages`. Fix: re-`Let \documentstyle = \lx@documentstyle@impl` at the END of `latex_constructs.rs`, mirroring the `\hline` re-Let pattern. cond-mat0109091: 3 errors → 0. See `memory/wisdom_dump_clobbers_documentstyle.md`. |
-| **D. aa-class `\institute` math leak** | astro-ph0007367, astro-ph0012401, astro-ph9903386 | Already documented in `memory/project_aa_institute_xuntil_math_mode.md`. **Triage 2026-05-01**: tried `mode => "restricted_horizontal"` on `\@add@institute` constructor — made things WORSE (R=3 → R=9 on astro-ph0012401, reverted). Root cause is deeper: math frame opens during `\@new@institute XUntil:\@end@institute` argument reading (when `$^\S\,$` is consumed as part of the delimited arg), BEFORE `\@add@institute` is invoked. Need to investigate whether `XUntil` parameter reading should suppress math-mode dollar toggling, or whether the `\institute@and` boundary should explicitly close any open inline-math frame. Min repro: see `memory/project_aa_institute_xuntil_math_mode.md`. |
-| **E. Stray `&` outside table** | astro-ph0107583 | **Deferred 2026-05-01** — root cause is unescaped `&` in source line 785: `\bibitem[\protect\citename{Hirose & Osaki }1990]{...}`. Min repro reproduces in BOTH Perl AND Rust (2 errors each). However Perl produces 0 errors on the FULL paper while Rust still produces 2; some early bibitem in the full paper changes Perl's state to suppress later `&` (likely the local `assignMeaning` deactivation in `Stomach::invokeToken` lines 187-189 — Perl deactivates `&` to `\relax` LOCAL on first non-table encounter). Rust's stomach error path doesn't replicate this guard. Fix locus: `latexml_core/src/stomach.rs` `invoke_token` should self-deactivate `T_ALIGN` to `\relax` on first non-alignment-context invocation. |
-| **F. Cascading single-root** | math0004140 (1182 errors) | Triage needed — one root probably unlocks the cascade. |
-| **G. pstricks `\multips`** | math0104011 | **FIXED 2026-05-01** (commit `506cb8fe6`): one undefined CS plus paren-arg leakage caused 17-error cascade in pspicture body. Fix: stub `\\multips` via RawTeX `\def\\multips(#1)(#2)#3#4{}` in pstricks_sty.rs. Witness: math0104011 17 → 0. |
-| **H. Mode-stack followup-`}`** | physics0002038, cond-mat0011517 | Both papers hit a `\@personname` / `\@add@frontmatter@now` mode-mismatch error (Perl emits 4-6 errors per paper); Rust additionally emits `Error:unexpected:} Attempt to close a group that switched to mode internal_vertical` ONE extra time per paper. Fix locus: dedupe consecutive identical mode-switch errors at the egroup site (`stomach.rs:273` + `:363`). Perl's error system suppresses duplicate errors at same locator position; Rust currently fires per-egroup. Single-line fix probably won't suffice — needs error-tracker state to remember last error position. |
+| astro-ph0002213 | paper-local `mn1.sty` disk probe (Cluster `\psfig`) | `6e6497ede` |
+| cond-mat0002096 | side-effect of disk-sty fix | `6e6497ede` |
+| cond-mat0109091 | `\documentstyle` dump-clobber; multicol option not routed | `6e6497ede` (re-Let in `latex_constructs.rs`) |
+| astro-ph0203332 | `\@captype` digest → `do_expand` (Cluster A) | `9c60a766c` |
+| astro-ph0011503 | same as above | `9c60a766c` |
+| math0104011 | pstricks `\multips` paren-arg stub (Cluster G) | `506cb8fe6` |
+| gr-qc0003030 | tcilatex `\newcount\dispkind` missing (Cluster B) | (mid-Round-18) |
+| cond-mat0201194 | same as above | (mid-Round-18) |
+| quant-ph0207078 | same as above | (mid-Round-18) |
+| quant-ph0205175 | same as above | (mid-Round-18) |
+| quant-ph0203044 | same as above | (mid-Round-18) |
+| cond-mat0205452 | recovered by Round-17 batch | (Round-17) |
+| cond-mat0201306 | revtex4 `\jobname.rty` autoload | `6e6497ede` |
 
-Strategic value: clusters A+B are 4/8 in-scope failures (50%);
-both could be fixed with single patches with high leverage.
-| `gr-qc0003030` | 0 | 4 | TBD | needs triage |
-| `math0010095` | 0 | ≥3 | `undefined:\thefigure\par` and `\ext@figure\par` | CS-name parse appears to be folding `\par` into the CS, possibly a `\@addtoreset{figure}{...}` or similar where the trailing token gets concatenated. |
-| `math0004140` | 0 | 1182 | TBD | high-error paper, probably one cascading root |
+#### In-scope worksheet (sandbox papers needing work — Perl=0, Rust>0)
 
-50%+ of remaining 47 failures (25/47) share `Error:Unexpected:_`
-pattern; cond-mat0003169 verified Perl=2 Rust=2 identical → that
-sub-cluster is out-of-scope (canvas list miscategorization, same
-class as `0901.2408` and `cond-mat0001201`). The 4 above are the
-in-scope work.
+- [ ] **math0010095** (R=11) — `\thesection\par` + `\par@ID` cluster.
+  `\@@numbered@section`'s digested `args[0]` evaluates to `"section\par"`
+  for sections after captioned figures, even though `\@startsection`'s
+  emitted tokens are clean. Constructor `{}` arg digestion in vmode
+  pulls trailing `\par` from outer stream after captions accumulate
+  state. See `memory/project_section_par_contamination.md`. Fix locus:
+  `latexml_core/src/binding/parameters.rs` `{}` parameter handler.
+
+- [ ] **astro-ph0007367 / astro-ph0012401 / astro-ph9903386** (Cluster D)
+  — aa-class `\institute{...\and...}` math-mode leak. Math frame opens
+  during `\@new@institute XUntil:\@end@institute` arg reading (when
+  `$^\S\,$` inside an `\and`-segment is consumed), BEFORE `\@add@institute`
+  is invoked. Tried `mode => "restricted_horizontal"` on the
+  constructor — made things worse (R=3→9 on astro-ph0012401). Need
+  `XUntil`-parameter-reader audit OR `\institute@and` boundary
+  explicitly closing any open math frame. Min repro:
+  `memory/project_aa_institute_xuntil_math_mode.md`.
+
+- [ ] **astro-ph0107583** (Cluster E, R=2) — Stray `&` from unescaped
+  `\bibitem[\protect\citename{Hirose & Osaki }1990]{...}`. Min repro
+  errors in BOTH engines; full paper errors only in Rust because Perl's
+  `Stomach::invokeToken` (Stomach.pm L187-189) self-deactivates
+  `T_ALIGN` → `\relax` LOCAL on first non-table encounter. Rust's
+  `stomach.rs:920-926` already has this guard for `Stored::Token`
+  meanings, but not for the Constructor-defined `&` primitive path.
+  Fix locus: extend the deactivation to the constructor branch as well.
+
+- [ ] **physics0002038 / cond-mat0011517** (Cluster H) — Rust emits a
+  follow-up `Error:unexpected:} Attempt to close a group that switched
+  to mode internal_vertical` after the underlying `\@personname` /
+  `\@add@frontmatter@now` mode-mismatch that Perl suppresses. P=4-6,
+  R=5-7 (single extra error per paper). Fix locus: error-tracker dedup
+  at `stomach.rs:273` and `:363` egroup/endgroup error sites — needs
+  per-position state to remember the last error.
+
+- [ ] **hep-th0101146** (R=17 vs P=15) — `Error:malformed:ltx:XMApp`
+  + `ltx:XMTok` "isn't allowed in <ltx:p>". Source has malformed
+  `$$ ... \end{equation} \begin{equation} ...` mismatch. Both engines
+  fail; Rust collapses 14 `_/^` errors into 2 malformed XML errors
+  while Perl emits per-position. Mostly a verbosity divergence.
+
+- [ ] **hep-th0010165** (R=206 vs P=101) — Big cascade. Perl truncates
+  at 101; Rust doesn't. Likely single root unlocking the cascade.
+  Triage: identify first error, find binding gap.
+
+- [ ] **hep-ph0007044** (R=410 vs P=101) — Same big-cascade pattern as
+  hep-th0010165. Triage needed.
+
+- [ ] **quant-ph0109041** (R=67 vs P=9) — Real-but-large delta. Triage
+  needed.
+
+- [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
+  over Perl's 101 truncation cap. Triage needed.
+
+- [ ] **hep-ph0102192** (R=4 vs P=0) — Newly discovered. Triage needed.
+
+- [ ] **math0004140** (R=1182 vs P=?) — High-error AmS-TeX paper.
+  Triage to find single cascading root.
+
+- [ ] **hep-th0005268** (R=1000001 vs P=26) — Runaway cascade.
+  Termination-condition bug; identify recursion source.
+
+- [ ] **hep-th0005159** (R=786478 vs P=101) — Same runaway cascade
+  family.
+
+#### Out-of-scope (Perl also fails — moved to `docs/out-of-scope/`)
+
+| Paper | Reason |
+|---|---|
+| `0901.2408_emph_dollar` | `$$`-in-`\emph{}` — Perl=Rust |
+| `cond-mat0003169` | `Unexpected:_` cluster — Perl=Rust=2 |
+| `cond-mat0106160` | `\def\r\rho` BEFORE `\documentstyle` clobber family |
+| `hep_ph0001306_documentstyle_clobber` | `\def`s before `\documentstyle` — broader family |
+| `math0005251_math_parser_oom` | math-parser OOM — needs grammar work |
+| `math0203148_amstex_endmatrix` | AmS-TeX `\matrix\endmatrix` mode mismatch |
+| `math0601451_xmtok_in_title` | XMTok-in-title issue |
+| `math0606553_xy_compile` | xy-pic AmS-TeX compile failure |
+
+#### Active Rust-engine clusters (driven by sandbox investigations)
+
+| Cluster | Status | Notes |
+|---|---|---|
+| A. `\par` in counter-CS reading | **partial fix** `9c60a766c` (covers `\@captype`); residual `\thesection\par` open per math0010095 worksheet item. |
+| B. tcilatex `\newcount\dispkind` | **fixed** mid-Round-18. |
+| C. `\documentstyle` dump-clobber | **fixed** `6e6497ede` (re-Let). |
+| D. aa-class `\institute` math leak | **open** — see worksheet. |
+| E. Stray `&` outside table | **open** — fix locus identified in `stomach.rs`. |
+| F. Cascading single-root | **open** — math0004140 + runaway cascades worksheet items. |
+| G. pstricks `\multips` | **fixed** `506cb8fe6`. |
+| H. Mode-stack `}` followup | **open** — error-tracker dedup work. |
 
 Long-standing deep clusters parked in
 `docs/archive/sandbox_failures_SYNC_STATUS.md`. Re-survey whether
