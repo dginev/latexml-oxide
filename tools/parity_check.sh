@@ -81,8 +81,28 @@ for paper in "${papers[@]}"; do
   # "Error:unexpected:") — NOT the LaTeX kernel's "LaTeX hooks Error:"
   # pass-through which is just an info-level rendering of kernel
   # diagnostics.
-  rust_errs=$(timeout "$TIMEOUT_SECS" "$RUST_BIN" --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:[a-zA-Z_]+:')
-  perl_errs=$(timeout "$TIMEOUT_SECS" latexml --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" 2>&1 | grep -cE 'Error:[a-zA-Z_]+:')
+  rust_log="$td/.rust.log"
+  perl_log="$td/.perl.log"
+  timeout "$TIMEOUT_SECS" "$RUST_BIN" --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" >"$rust_log" 2>&1
+  rust_rc=$?
+  timeout "$TIMEOUT_SECS" latexml --preload=ar5iv.sty --path="$AR5IV_PATH" "$mainfile" >"$perl_log" 2>&1
+  perl_rc=$?
+  rust_errs=$(grep -cE 'Error:[a-zA-Z_]+:' "$rust_log")
+  perl_errs=$(grep -cE 'Error:[a-zA-Z_]+:' "$perl_log")
+  # Some sandbox papers genuinely need >>2min for Perl LaTeXML; bumping
+  # the local timeout doesn't scale. If Perl timed out AND its partial
+  # log shows zero errors, treat the run as Perl=0 (paper is fine in
+  # Perl, just slow). See feedback_perl_parity_timeout_handling.md.
+  perl_to_tag=""
+  if [[ "$perl_rc" -eq 124 && "$perl_errs" -eq 0 ]]; then
+    perl_to_tag=" PERL_TIMEOUT_OK"
+  elif [[ "$perl_rc" -eq 124 ]]; then
+    perl_to_tag=" PERL_TIMEOUT(partial=$perl_errs)"
+  fi
+  rust_to_tag=""
+  if [[ "$rust_rc" -eq 124 ]]; then
+    rust_to_tag=" RUST_TIMEOUT(partial=$rust_errs)"
+  fi
   status="UNKNOWN"
   if [[ "$rust_errs" -eq 0 && "$perl_errs" -eq 0 ]]; then
     status="BOTH CLEAN"
@@ -93,6 +113,6 @@ for paper in "${papers[@]}"; do
   else
     status="PERL_REGRESSION (P=$perl_errs vs R=$rust_errs)"
   fi
-  printf "%-30s Rust=%-3s Perl=%-3s %s\n" "$paper" "$rust_errs" "$perl_errs" "$status"
+  printf "%-30s Rust=%-3s Perl=%-3s %s%s%s\n" "$paper" "$rust_errs" "$perl_errs" "$status" "$perl_to_tag" "$rust_to_tag"
   cd / && rm -rf "$td"
 done

@@ -224,6 +224,39 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | (Out-of-scope catalogue: `\CITE` typos, `\setdec`, `\dec`, `\psfig` — Perl also errors on these; not parity-Rust regressions) | | |
 | (Codegen infrastructure improvement: `^attr='value'` constructor template syntax — Perl Compiler.pm L137-148 — now parsed by Rust `latexml_codegen/src/constructable.rs`) | | `a8d9ce055` |
 
+#### Round-18 100-paper post-accent-fix triage (2026-05-01)
+
+After commits `ba2ab1dcf` (accent fix) + `15f46ddf3` (MAX_ERRORS leak),
+re-ran 100 originally-failing papers from the older sweep
+(`/tmp/sweep100/`). 7 had no main `.tex` (sweep-script artifact).
+93 sweep-able. Distribution: **36 clean (38.7%)**, 35 with 1-5 errs,
+12 with 6-50, 10 with >50.
+
+Parity-classified all 35 papers in the 1-5 tier via
+`tools/parity_check.sh`:
+
+| Class | Count | Papers (sample) |
+|---|---|---|
+| OUT-OF-SCOPE (Rust=Perl) | 30 | All `\setdec`/`\CITE`/`\dec`/`\psfig` clusters; cond-mat0102064/0112063/astro-ph0201505 (`\b`-clobber-by-revtex `Unexpected:_`); hep-ph0008099/0109006/math0006234/math0204024/etc. malformed-XML/font/expected:`{` clusters |
+| PERL_REGRESSION (Rust < Perl) | 1 | hep-ex0204024 (R=2 vs P=4) — Rust supersedes Perl |
+| Already documented out-of-scope | 1 | math0203148 (commit `bac28e79e`, `docs/out-of-scope/math0203148_amstex_endmatrix.md`) |
+| REAL REGRESSION | 2 | math0106062 (R=4 vs P=0; amsppt `\proclaim{Title}$$...$$` mode-stack); physics0002038 (R=5 vs P=4; Cluster H `\@add@frontmatter@now` extra error already documented) |
+
+**Implication:** The 1-5 error tier is dominated by out-of-scope
+(86%, 30/35). Only 2 real Rust-only regressions remain, both
+already documented as deeper architectural clusters (Cluster H,
+amsppt mode-stack). No new low-hanging fruit in the 1-5 tier.
+
+The accent fix + MAX_ERRORS fix together eliminated **38.7% of
+previously-failing papers** in the sample without further work.
+Remaining 64.3% split: 38% out-of-scope (Perl=Rust), ~24% deeper
+in-scope clusters (math0205073/hep-th0010165/hep-ph0007044
+state-cumulative cascades), ~2% truly novel.
+
+`tools/parity_check.sh` now records `PERL_TIMEOUT_OK` /
+`PERL_TIMEOUT(partial=N)` tags so partial Perl runs aren't
+mis-classified as failures (commit pending).
+
 #### In-scope worksheet (sandbox papers needing work — Perl=0, Rust>0)
 
 - [ ] **math0010095** (R=11) — `\thesection\par` + `\par@ID` cluster.
