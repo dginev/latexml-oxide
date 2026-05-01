@@ -119,9 +119,21 @@ landed (5 amsppt papers cleared) and the parity_check Perl-cap
 detection (`f5e8314ff`):
 * 100 random canvas papers: **99/100 = 100% of valid (1 SKIP, no
   .tex)**, zero failures in any tier.
-* Cumulative running total: **528/529 = 99.81%** clean across all
-  post-round-18 random + targeted samples (the only remaining
-  outlier is `0901.2408_emph_dollar` already in `docs/out-of-scope/`).
+* **500 random canvas papers: 488/500 clean (97.6%)**, 6 with 1-5
+  errors, 1 with 6-50 errors, 5 SKIP. parity_check on all 7
+  "failures" (using mainfile-with-`\documentstyle|\documentclass`
+  selection) shows: **0 real Rust regressions**. Breakdown:
+  * 1 × Rust BETTER than Perl: `0911.5052` (R=21 vs P=42)
+  * 2 × out-of-scope (Rust=Perl): `cond-mat0107019` (\dec/\setdec
+    cluster), `math0006234`
+  * 4 × mainfile-selection-mismatch: `gr-qc0507081`, `0709.3458`,
+    `hep-ph0111440`, `0803.2827` — sample's `ls *.tex | head -1`
+    picked a non-main supplementary tex; parity_check picks the
+    main and gets Rust=Perl=0.
+* Cumulative running total: **1016/1029 = 98.7%** clean across
+  all post-round-18 random + targeted samples; **0 real Rust
+  regressions** in random canvas sampling. Long-tail real
+  regression rate firmly sub-0.2%.
 
 **Scope finding (2026-05-01):** All 35 papers in
 `/home/deyan/data/10k_failures_April30/results.tsv` are
