@@ -202,6 +202,11 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | quant-ph0203044 | same as above | (mid-Round-18) |
 | cond-mat0205452 | recovered by Round-17 batch | (Round-17) |
 | cond-mat0201306 | revtex4 `\jobname.rty` autoload | `6e6497ede` |
+| astro-ph0107583 | Cluster E — `T_ALIGN` deactivation guard for `Stored::Constructor` | `04a9766e7` |
+| hep-ph0102192 | pstricks PSCoordList consumption + drop `\rput`/`\uput`/`\cput` body | `4f3be1c35` |
+| hep-th0109174 | revtex 3 `\iffirstfig` declared as `DefConditional!` | `2ca053eb6` |
+| cond-mat0005077 | revtex 3 `\iffirsttab` companion to `\iffirstfig` | `5c5f4dc1b` |
+| math0104094 | amsppt-mode stubs for `\bibitem` and `\textit` | `8e63df960` |
 
 #### In-scope worksheet (sandbox papers needing work — Perl=0, Rust>0)
 
