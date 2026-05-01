@@ -60,4 +60,14 @@ LoadDefinitions!({
   DefMacro!("\\NormalCoor", "");
   DefMacro!("\\degrees[]", "");
   DefMacro!("\\radians", "");
+
+  // \multips(rotation)(translation){n}{stuff} — pstricks "multiple put"
+  // for drawing N copies of an object along a translated step. Rust port
+  // doesn't raw-load pstricks.tex so this CS would otherwise be undefined.
+  // Use RawTeX with a `\def` that consumes the paren-delimited args plus
+  // the two brace args; the body is a no-op since pstricks output is
+  // already suppressed in pspicture stubs. Same pattern as
+  // `iopart_support_sty.rs:185`'s `\def\pt(#1){...}`.
+  // Witness: math0104011 (was 17 errors → 0 with this stub).
+  RawTeX!("\\def\\multips(#1)(#2)#3#4{}");
 });
