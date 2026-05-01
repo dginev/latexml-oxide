@@ -324,6 +324,22 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
 /// to assist debugging.
 // TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
 pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
+  // Defensive: under some upstream conditions the {} parameter reader pulls a
+  // trailing `\par` (or similar trailing CS) into a counter-type identifier
+  // before it reaches us (Cluster A: math0010095, hep-ph0204075). Strip it
+  // here so the downstream `\csname @<ctype>...@ID\endcsname` and similar
+  // constructions stay well-formed. We strip the same well-known sentinels
+  // as latex_constructs::strip_trailing_cs.
+  let ctype = {
+    let mut s = ctype;
+    for tail in ["\\par", "\\@startsection@hook", "\\relax"] {
+      if let Some(stripped) = s.strip_suffix(tail) {
+        s = stripped;
+        break;
+      }
+    }
+    s
+  };
   let ctr = with_mapping("counter_for_type", ctype, |meaning| match meaning {
     Some(Stored::String(ctr)) => arena::to_string(*ctr),
     _ => ctype.to_string(),

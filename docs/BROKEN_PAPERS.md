@@ -19,9 +19,12 @@ Rust emits an extra `Error:unexpected:} Attempt to close a group
 that switched to mode internal_vertical`. Perl absorbs this `}`
 silently between the end-mode error and the next CS-trigger error.
 **Fix locus:** `latexml_core/src/stomach.rs` `egroup`/`endgroup` —
-either suppress duplicate emit when same frame just errored on
-`end_mode_opt`, or audit Perl Stomach.pm for the divergence.
-**Memory:** unrecorded specific (just SYNC_STATUS).
+the Perl Stomach.pm code is functionally identical at this level
+(verified 2026-05-01). The divergence must be in either:
+(a) what frame structure `\@personname` constructor leaves behind
+when end_mode_opt fails (Rust may push frame differently than Perl),
+or (b) the `}` reaches Rust's egroup but Perl's egroup short-circuits
+through a different code path. Deferred — +1 cosmetic only.
 
 ### ~~2. Cluster A — `\@@numbered@section args[0] = "section\par"`~~ — FIXED
 **Paper:** `math0010095` was R=11 vs P=0. **FIXED** in commit
@@ -45,6 +48,31 @@ the 3-arg figure-with-caption form; otherwise treat as a single-arg
 always opened a figure, materializing `<ltx:figure>` inside
 `<ltx:note>` (schema violation) when papers used `\fig{label}`
 inside `\footnote{...}` or `\caption{...}`.
+
+### 4. mn2e `\hbox` mode-mismatch tabular cascade — NEW 2026-05-01
+**Paper:** `0903.4199` (R=10001 cap vs P=0).
+**Trigger:** `\documentclass{mn2e}`. First errors are 2x
+`\hbox Attempt to end mode 'restricted_horizontal' in 'restricted_horizontal'`
+followed by `\lx@begin@alignment` mode-switch error and a tabular
+cascade of 9989 `Error:unexpected:&` (alignment marks fired in
+broken state). The `&`-cascade hits the 10001 default cap.
+**Fix locus:** mn2e's `\hbox` usage in tabular machinery — likely
+similar family to 1112.6246 (FIXED via mn2e_support drop). Need
+to investigate which `\hbox{...}` in mn2e cls is hitting end_mode
+mismatch in restricted_horizontal context.
+**Witness:** discovered in random 2000-paper sample 2026-05-01.
+
+### 5. \thefootnote\par / \ext@footnote\par — Cluster A reprise
+**Paper:** `hep-ph0204075` (R=2 vs P=0).
+**Trigger:** Same `{}` parameter reader trailing-`\par` contamination
+as math0010095, but in footnote machinery. Errors:
+`\thefootnote\par` undefined + `\ext@footnote\par` undefined.
+The Cluster A symptom-fix in `\@@numbered@section` (commit
+`4d445b71c`) doesn't cover this path — `\refstepcounter{footnote}`
+or similar code goes through a different csname-build chain.
+**Fix locus:** Either (a) extend `strip_trailing_cs` to all
+`ref_step_counter` ctype inputs (in `latexml_core/src/binding/counter/dialect.rs`),
+or (b) fix the underlying parameter-reader bug.
 
 ### 3. Math state cumulative — `\hbox` runaway
 **Paper:** `hep-th0005268` (R=10001 cap vs P=26 Perl uncapped).

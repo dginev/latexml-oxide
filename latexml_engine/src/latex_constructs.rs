@@ -226,6 +226,12 @@ pub fn make_note_tags(
   mark_opt: Option<&Digested>,
   tag_opt: Option<Cow<Digested>>,
 ) -> Result<SymHashMap<Stored>> {
+  // Cluster A reprise (hep-ph0204075): strip a trailing \par that the {}
+  // parameter reader sometimes pulls into the counter identifier. Without
+  // this, the s!("\\the{counter}") and s!("\\ext@{counter}") paths below
+  // produce CSes named `\thefootnote\par` / `\ext@footnote\par`.
+  let counter = strip_trailing_cs(counter);
+  let counter = counter.as_str();
   if let Some(tag) = tag_opt {
     let mut props = ref_step_id(counter)?;
     let mark = match mark_opt {
@@ -3172,7 +3178,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
@@ -3187,7 +3193,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("role", s!("{note_type}mark").into());
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
@@ -3202,7 +3208,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref();
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
         stomach::digest(T_CS!(s!("\\the{note_type}")))?
