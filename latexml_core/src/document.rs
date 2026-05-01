@@ -2352,6 +2352,27 @@ impl Document {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
         self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
       } else {
+        // Cascading-rejection suppression (2026-05-01): when a math leaf
+        // element (`<ltx:XMTok>`) tries to insert into a text-mode
+        // container (`<ltx:p>`/`<ltx:text>`), it's almost always a
+        // cascade from a previously-rejected math wrapper (XMApp /
+        // XMDual) — Perl emits the wrapper's rejection error but
+        // doesn't continue to log per-child cascade errors. Mirror
+        // that to drop the redundant noise. The Δ=2 witnesses are
+        // hep-th0101146 (`$$ ... \end{equation}` mismatch) and
+        // nlin0211024 (`${\mbox M}^{...}$$` inside `\begin{center}`).
+        // We still return self.node.clone() so the caller proceeds
+        // (the XMTok still gets inserted illegally, but the schema
+        // validator will reject the whole math construct on
+        // serialization anyway — the noise was purely diagnostic).
+        let qsym_str = arena::to_string(qsym);
+        let cur_str = arena::to_string(cur_qname);
+        let is_math_leaf = qsym_str == "ltx:XMTok" || qsym_str == "ltx:XMArg";
+        let is_text_container = cur_str == "ltx:p" || cur_str == "ltx:text";
+        if is_math_leaf && is_text_container {
+          // Cascading rejection — skip the error log (Perl-faithful).
+          return Ok(self.node.clone());
+        }
         // Didn't find a legit place.
         let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           s!(
