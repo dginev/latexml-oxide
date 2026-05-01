@@ -221,6 +221,12 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 | math0104094 | faithful Perl port of `\ref`/`\@bibitem`/`\@bibfield` bibliography chain (replaces stub) | `be1472d78` |
 | math0111087 | recovered by amsppt port + `^attr=` codegen | `be1472d78`, `a8d9ce055` |
 | astro-ph9903386, astro-ph0007367, astro-ph0012401 | Cluster D — `XUntil` no longer eagerly reads args of non-expandable defs | `16b9680c5` |
+| **`\roster` Perl-port cohort** (2026-05-01, commit `050a32b1b` — DefConstructor + DigestUntil:\\endroster + bounded=>true): | | `050a32b1b` |
+| math0104021 | R=8 → R=1 (Perl-parity exact) | `050a32b1b` |
+| math0106062 | R=4 → R=0 (Perl=0 PARITY) | `050a32b1b` |
+| math0004140 | R=1177 → R=0 (Perl=0 PARITY) | `050a32b1b` |
+| math0203148 | R=2 → R=0 (Perl=0 PARITY); previously deferred as "out-of-scope/amstex_endmatrix" — actual cause was \\roster mode-frame leak, not \\matrix. Removed from out-of-scope catalog. | `050a32b1b` |
+| math0205073 | R=10001 (capped) → R=0 (Perl=0 PARITY); was the largest single-paper cascade. The math-cumulative `\\cases`/`\\pcases` hypothesis was a downstream symptom; root cause was the \\roster mode-frame leak earlier in the body. | `050a32b1b` |
 | (Out-of-scope catalogue: `\CITE` typos, `\setdec`, `\dec`, `\psfig` — Perl also errors on these; not parity-Rust regressions) | | |
 | (Codegen infrastructure improvement: `^attr='value'` constructor template syntax — Perl Compiler.pm L137-148 — now parsed by Rust `latexml_codegen/src/constructable.rs`) | | `a8d9ce055` |
 
@@ -239,13 +245,12 @@ Parity-classified all 35 papers in the 1-5 tier via
 |---|---|---|
 | OUT-OF-SCOPE (Rust=Perl) | 30 | All `\setdec`/`\CITE`/`\dec`/`\psfig` clusters; cond-mat0102064/0112063/astro-ph0201505 (`\b`-clobber-by-revtex `Unexpected:_`); hep-ph0008099/0109006/math0006234/math0204024/etc. malformed-XML/font/expected:`{` clusters |
 | PERL_REGRESSION (Rust < Perl) | 1 | hep-ex0204024 (R=2 vs P=4) — Rust supersedes Perl |
-| Already documented out-of-scope | 1 | math0203148 (commit `bac28e79e`, `docs/out-of-scope/math0203148_amstex_endmatrix.md`) |
-| REAL REGRESSION | 2 | math0106062 (R=4 vs P=0; amsppt `\proclaim{Title}$$...$$` mode-stack); physics0002038 (R=5 vs P=4; Cluster H `\@add@frontmatter@now` extra error already documented) |
+| **FIXED post-sweep by `\roster` Perl-port `050a32b1b`** | 2 | math0203148 (R=2→0, was deferred to out-of-scope), math0106062 (R=4→0); both turned out to be \\roster mode-frame leak, NOT what the original triage suggested |
+| REAL REGRESSION | 1 | physics0002038 (R=5 vs P=4; Cluster H `\@add@frontmatter@now` extra error already documented) |
 
 **Implication:** The 1-5 error tier is dominated by out-of-scope
-(86%, 30/35). Only 2 real Rust-only regressions remain, both
-already documented as deeper architectural clusters (Cluster H,
-amsppt mode-stack). No new low-hanging fruit in the 1-5 tier.
+(86%, 30/35). After the \\roster fix, only 1 real Rust-only
+regression remains in this tier (Cluster H), already documented.
 
 The accent fix + MAX_ERRORS fix together eliminated **38.7% of
 previously-failing papers** in the sample without further work.
@@ -333,18 +338,14 @@ mis-classified as failures (commit pending).
 - [ ] **hep-ph0007044** (R=410 vs P=101) — Same big-cascade pattern as
   hep-th0010165. Triage needed.
 
-- [ ] **math0205073** (R=10001 capped, was R=1M) — **Triaged
-  2026-05-01**. Runaway `\hbox`/`&` cascade in AmS-TeX `\cases` with
-  user `\pcases` macro. State-cumulative bug — bisects to lines 1-326
-  clean, lines 1-328 (adds first `\pcases{...}{...}\cr` row) → 1M
-  errors. Min synthetic repro doesn't trigger. The 1M-error count
-  was a separate dump-leak issue (MAX_ERRORS leaked into runtime via
-  dump bake-in) **FIXED** by commit `15f46ddf3` (filter MAX_ERRORS
-  in dump_reader+dump_writer). Underlying `\cases` mis-parse remains.
-  Perl=0. Same family as hep-th0010165 cascade. Fix locus
-  unidentified — needs deeper bisection of state accumulation
-  through preamble (likely AmS-TeX `\cases` body reader vs LaTeX-pool
-  `\cases{}` arg reader divergence in math/text mode mix).
+- [x] **math0205073** (R=10001 → R=0) — **FIXED 2026-05-01** by the
+  `\roster` Perl-port commit `050a32b1b`. The state-cumulative
+  hypothesis (AmS-TeX `\cases`/`\pcases` mis-parse) was wrong: the
+  earlier `\roster` mode-frame leak left BOUND_MODE bound on the
+  stack, then every subsequent `&` / `\cr` in the math body
+  triggered cascading mode-mismatch errors that hit the MAX_ERRORS
+  cap. Dropping `\roster`'s leak collapses the entire downstream
+  cascade. Perl=Rust=0 confirmed.
 
 - [ ] **quant-ph0109041** (R=67 vs P=9) — **Triaged 2026-05-01,
   diagnosis corrected.** Initial hypothesis (lazy-pool-load divergence)
@@ -387,14 +388,11 @@ mis-classified as failures (commit pending).
   `wisdom_*.md` notes (cycles 305-306, 2026-04-24, deferred per WISDOM
   #41).
 
-- [ ] **math0004140** (R=1177 vs P=0) — **Triaged 2026-05-01**.
-  AmS-TeX paper (`\input amstex \documentstyle{amsppt}`) with user
-  `\def\a{\alpha}` `\def\g{\gamma}` `\def\ti{\times}` etc. Top errors:
-  808 `Error:malformed:ltx:XMTok` + 173 `Error:Unexpected:_` + 108
-  `\lx@end@inline@math`. State-cumulative: min repro
-  `$U_\a\ti U_\beta$` after preamble = 0/0 in both engines (NOT
-  user-defs-clobber as initially suspected). Same `\cases`-style
-  state-cumulative cluster as math0205073. Fix locus unidentified.
+- [x] **math0004140** (R=1177 → R=0) — **FIXED 2026-05-01** by
+  the `\roster` Perl-port commit `050a32b1b`. Same root cause as
+  math0205073: `\roster` mode-frame leak made the entire math body
+  emit cascading malformed-XMTok and Unexpected:_ errors. Perl=Rust=0
+  confirmed.
 
 - [ ] **math0010241** (R=33 vs P=19) — **Triaged 2026-05-01**. Real
   delta of +14 errors, all `Error:malformed:ltx:XMTok "ltx:XMTok"
@@ -434,7 +432,7 @@ mis-classified as failures (commit pending).
 | `cond-mat0106160` | `\def\r\rho` BEFORE `\documentstyle` clobber family |
 | `hep_ph0001306_documentstyle_clobber` | `\def`s before `\documentstyle` — broader family |
 | `math0005251_math_parser_oom` | math-parser OOM — needs grammar work |
-| `math0203148_amstex_endmatrix` | AmS-TeX `\matrix\endmatrix` mode mismatch |
+| ~~`math0203148_amstex_endmatrix`~~ | **REMOVED 2026-05-01** — fixed by `\roster` Perl-port commit `050a32b1b` (was misdiagnosed as `\matrix` issue; actual cause was the `\roster` mode-frame leak, same family as math0104021) |
 | `math0601451_xmtok_in_title` | XMTok-in-title issue |
 | `math0606553_xy_compile` | xy-pic AmS-TeX compile failure |
 
