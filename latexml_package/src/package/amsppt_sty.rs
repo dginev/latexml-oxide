@@ -288,6 +288,15 @@ LoadDefinitions!({
   DefMacro!("\\endRefs", "\\end{thebibliography}");
   DefMacro!("\\ref", "\\bibitem");
   DefMacro!("\\endref", "");
+  // amstex/amsppt mode doesn't load LaTeX kernel constructs; without
+  // these stubs `\ref` (→ `\bibitem`) and `\paper`/`\jour`/`\book`
+  // (→ `\textit`) raise undefined-CS errors when papers use bare
+  // `\ref \key … \endref` outside `\Refs`. Stubs preserve text content
+  // (italics lost as a fidelity regression).
+  // TODO: port Perl's `\@bibitem` / `\@bibfield` field-marker chain
+  // (amsppt.sty.ltxml L367-442) for proper bibliography structure.
+  DefMacro!("\\bibitem [] {}", "");
+  DefMacro!("\\textit{}", "{\\it #1}");
   DefMacro!("\\by", "");
   // Perl L464: \bysame → \by  --- (three hyphens, with the leading
   // \by bibfield marker). In Rust \by currently expands to empty, so
