@@ -61,12 +61,14 @@ static CONSECUTIVE_ERROR_COUNT: std::cell::Cell<usize> = std::cell::Cell::new(0)
 
 /// Threshold for "same error fired this many times in a row → bail."
 /// Set well above any legitimate same-error pattern (a paper with
-/// 1000+ identical errors would already be near-useless output) but
+/// 500+ identical errors would already be near-useless output) but
 /// well below the 10000 MAX_ERRORS cap so runaway papers don't
 /// accumulate huge noise logs. Empirically, the pathological
 /// `\tabalign`-in-math-mode runaway hits >9000 consecutive same
-/// errors; this catches that at 2000 instead.
-pub const MAX_CONSECUTIVE_ERRORS: usize = 2000;
+/// errors; this catches that at 500 instead. The threshold was
+/// tightened from an initial 2000 after verifying no test in the
+/// 1112-test suite exceeds it.
+pub const MAX_CONSECUTIVE_ERRORS: usize = 500;
 
 /// Record an error signature; returns the new consecutive count.
 /// Call from the Error! macro after note_status. Resets count to 1
