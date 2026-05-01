@@ -75,6 +75,9 @@ pub struct Graphics {
 }
 
 impl Graphics {
+  const DEFAULT_RASTER_DENSITY: u32 = 150;
+  const MAX_RASTER_DIMENSION_PX: u32 = 4096;
+
   pub fn new(dpi: Option<u32>, trivial_scaling: bool) -> Self {
     let mut type_properties = HashMap::new();
 
@@ -616,6 +619,26 @@ impl Graphics {
     }
   }
 
+  fn raster_density_for_source(source: &str) -> u32 {
+    let source_lc = source.to_lowercase();
+    let is_postscript =
+      source_lc.ends_with(".eps") || source_lc.ends_with(".ps") || source_lc.ends_with(".ai");
+    if !is_postscript {
+      return Self::DEFAULT_RASTER_DENSITY;
+    }
+    let Some((w_pt, h_pt)) = read_postscript_bounding_box(source) else {
+      return Self::DEFAULT_RASTER_DENSITY;
+    };
+    let max_pt = w_pt.max(h_pt);
+    if max_pt <= 0.0 {
+      return Self::DEFAULT_RASTER_DENSITY;
+    }
+
+    let max_density =
+      ((Self::MAX_RASTER_DIMENSION_PX as f64) * 72.0 / max_pt).floor() as u32;
+    Self::DEFAULT_RASTER_DENSITY.min(max_density.max(1))
+  }
+
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
@@ -634,11 +657,12 @@ impl Graphics {
     };
     // Shell out to convert (matching Perl's approach)
     // -define pdf:use-cropbox=true matches Perl's Image::Magick option (line 466)
+    let density = Self::raster_density_for_source(source);
     let result = std::process::Command::new("convert")
       .arg("-define")
       .arg("pdf:use-cropbox=true")
       .arg("-density")
-      .arg("150")
+      .arg(density.to_string())
       .arg(&source_arg)
       .arg(dest)
       .output();
@@ -647,6 +671,27 @@ impl Graphics {
       Err(_) => false,
     }
   }
+}
+
+fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
+  let content = std::fs::read_to_string(source).ok()?;
+  for line in content.lines().take(80) {
+    let Some(rest) = line.strip_prefix("%%BoundingBox:") else {
+      continue;
+    };
+    let mut vals = rest
+      .split_whitespace()
+      .filter_map(|s| s.parse::<f64>().ok());
+    let (Some(x0), Some(y0), Some(x1), Some(y1)) =
+      (vals.next(), vals.next(), vals.next(), vals.next())
+    else {
+      return None;
+    };
+    let w = (x1 - x0).abs();
+    let h = (y1 - y0).abs();
+    return Some((w, h));
+  }
+  None
 }
 
 impl Processor for Graphics {
@@ -1042,6 +1087,27 @@ mod tests {
     assert!(!Graphics::should_try_svg_path(png.to_str().unwrap(), 200));
     // Missing file → false, not panic.
     assert!(!Graphics::should_try_svg_path("/no/such/file.pdf", 200));
+
+    std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  #[test]
+  fn postscript_density_caps_huge_bounding_box() {
+    let tmp = std::env::temp_dir().join("latexml_graphics_density_test");
+    std::fs::create_dir_all(&tmp).unwrap();
+    let normal = tmp.join("normal.eps");
+    let huge = tmp.join("huge.eps");
+    std::fs::write(&normal, "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 567 567\n")
+      .unwrap();
+    std::fs::write(&huge, "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 14 14 11353 11353\n")
+      .unwrap();
+
+    assert_eq!(
+      Graphics::raster_density_for_source(normal.to_str().unwrap()),
+      Graphics::DEFAULT_RASTER_DENSITY
+    );
+    assert_eq!(Graphics::raster_density_for_source(huge.to_str().unwrap()), 26);
+    assert_eq!(read_postscript_bounding_box(huge.to_str().unwrap()), Some((11339.0, 11339.0)));
 
     std::fs::remove_dir_all(&tmp).ok();
   }
