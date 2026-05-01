@@ -9,8 +9,15 @@ canvas sampling (1029 papers) confirms zero new real regressions.
 
 ## In-scope worksheet (Rust > Perl, Perl NOT capped)
 
-### 1. Cluster H — `\@personname`/`\@add@frontmatter@now` `}` follow-on
-**Papers:** `physics0002038` (R=5 vs P=4), `cond-mat0011517` (R=7 vs P=6).
+### ~~1. Cluster H — `\@personname`/`\@add@frontmatter@now` `}` follow-on~~ — FIXED
+**Papers:** `physics0002038` was R=5 vs P=4, `cond-mat0011517` was R=7 vs P=6.
+**FIXED** in commit `7319e3fbc` (`base_utilities.rs`): dropped the
+spurious `before_digest=>bgroup, after_digest=>egroup` wrapping
+around `\@add@frontmatter@now`. Perl's `bounded => 1` flag on Primitives
+is unused by the dispatcher (Primitive.pm doesn't push/pop a frame for
+it). Rust's group-wrap was the extra `}` that Perl never emitted.
+Both now match Perl exactly: OUT-OF-SCOPE (P=R, both have content errors).
+[Original cluster description below for reference.]
 **Delta:** +1 each (cosmetic).
 **Trigger:** revtex/aas papers where `\@personname` end-mode fails
 (Constructor `mode=>'restricted_horizontal'` in `\author{...}` body
