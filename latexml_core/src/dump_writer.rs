@@ -132,6 +132,19 @@ pub fn write_dump(
       continue;
     }
 
+    // Skip MAX_ERRORS — `ini_tex.rs:189` raises it to 1_000_000 during
+    // dump-build (so raw latex.ltx + expl3-code.tex can run through
+    // transient errors). It must NOT leak into runtime conversions:
+    // a 1M cap lets runaway error cascades (e.g. AmS-TeX `\cases` mis-
+    // parse → 1M `\hbox`/`&` per paper, math0205073) bypass the
+    // 10000 default. dump_reader has a parallel filter for the
+    // already-shipped dumps; this filter keeps future regenerations
+    // clean.
+    if matches!(*table, TableName::Value) && key_str == "MAX_ERRORS" {
+      skipped += 1;
+      continue;
+    }
+
     // Skip \@currname / \@currext file-IO bookkeeping. These are
     // assigned per-document during `\input` by `read_input_file_recursive`
     // (see `binding/content.rs:262-263`) to the literal filename's

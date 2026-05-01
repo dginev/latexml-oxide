@@ -728,7 +728,7 @@ mod tests {
     let prior = set_suppress_log_output(true);
     assert!(is_log_output_suppressed());
     let prior2 = set_suppress_log_output(false);
-    assert_eq!(prior2, true, "round-trip prior value");
+    assert!(prior2, "round-trip prior value");
     assert!(!is_log_output_suppressed());
     // Clean up to original state.
     set_suppress_log_output(prior);
