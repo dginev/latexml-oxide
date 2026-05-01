@@ -268,19 +268,28 @@ also fails) / 25% real Rust regressions / ~5% Rust does better /
 - [ ] **astro-ph0204393** (R=113 vs P=101) — Borderline; small delta
   over Perl's 101 truncation cap. Triage needed.
 
-- [ ] **hep-ph0102192** (R=4 vs P=0) — **Triaged 2026-05-01**: 4
-  errors of `Error:malformed:ltx:caption "ltx:caption" isn't allowed
-  in <ltx:block>` (and matching `ltx:toccaption`). Source has 4
-  `\caption{...}` calls inside `\begin{minipage}` after the user
-  commented out `\begin{figure}` / `\end{figure}` markers. Perl
-  builds clean output: `<caption>` appears with auto-opened figure
-  parent. Rust's document builder doesn't auto-open `<ltx:figure>`
-  for orphan captions when the caption's `\@captype` is "figure"
-  (set by a prior real figure env). Fix locus: `Document.rs`
-  `open_element` schema-aware auto-open path, or `\@@caption`
-  constructor's `before_digest` hook that should open `<ltx:figure>`
-  when not inside one. **High-leverage** — same fix likely covers
-  many similar sandbox papers with malformed user input.
+- [ ] **hep-ph0102192** (R=4 vs P=0) — **Re-triaged 2026-05-01**:
+  Root cause is in `insert_block` (`base_utilities.rs:1469-1497`),
+  not in caption auto-open. The 4 errors are emitted from the
+  `Did not find a block-like candidate` fallback that renames
+  `_CaptureBlock_` to `ltx:block` even though the captured contents
+  include `<ltx:caption>` and `<ltx:toccaption>`. Tex paper has
+  `\begin{minipage}` inside `\begin{figure}` with pstricks coordinate
+  text BEFORE the minipage. The `\psline`/`\rput` text content opens
+  a `<ltx:p>` that doesn't auto-close before `\begin{minipage}`, so
+  `context_tag` at `insert_block` time is `ltx:p`, not `ltx:figure`.
+  `is_inline=true`, candidate list = `[ltx:inline-block,
+  ltx:inline-logical-block, ltx:inline-sectional-block]`, none of
+  which `can_contain_somehow` `ltx:caption` → all filtered out →
+  fallback renames to `ltx:block`. Perl produces
+  `<figure class="ltx_figure_panel ltx_minipage">` with auto-opened
+  figure parent, which means Perl either: (a) auto-closes the
+  outer `<ltx:p>` before `\begin{minipage}` (likely via `\centering`
+  whatsit interaction), or (b) the candidate selection considers
+  ancestors beyond `context_tag`. Need to compare Perl's full trace
+  to determine which. **Deferred to later round** — schema-aware
+  candidate selection is a deeper refactor than the worksheet
+  initially suggested.
 
 - [ ] **math0004140** (R=1182 vs P=?) — High-error AmS-TeX paper.
   Triage to find single cascading root.
