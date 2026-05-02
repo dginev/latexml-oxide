@@ -8665,20 +8665,21 @@ LoadDefinitions!({
   );
 
   // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
-  DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", sub[args] {
-    // args: 0=Match:(, 1=x, 2=y, 3=Match:(, 4=dx, 5=dy, 6=n, 7=body
-    let x_str = args.get(1).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let y_str = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let dx_str = args.get(4).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let dy_str = args.get(5).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let n: i64 = args.get(6).map(|a| a.revert().unwrap_or_default().to_string()
+  DefMacro!("\\multiput Pair Pair {}{}", sub[args] {
+    let (x0, y0) = args.get(0).and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let (dx, dy) = args.get(1).and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let n: i64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()
       .trim().parse().unwrap_or(1)).unwrap_or(1);
-    let body = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let body = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
 
-    let mut x: f64 = x_str.trim().parse().unwrap_or(0.0);
-    let mut y: f64 = y_str.trim().parse().unwrap_or(0.0);
-    let dx: f64 = dx_str.trim().parse().unwrap_or(0.0);
-    let dy: f64 = dy_str.trim().parse().unwrap_or(0.0);
+    let mut x: f64 = x0;
+    let mut y: f64 = y0;
 
     // Each iteration emits roughly `8 + body.len()` tokens; pre-size
     // conservatively + use borrow-iter-copied for body to avoid the
