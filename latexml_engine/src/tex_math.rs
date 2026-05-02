@@ -207,8 +207,11 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     Ok(stuff)
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
+    // Perl-faithful lowercase category — matches TeX_Math.pool.ltxml:424
+    // `Error('unexpected', $c, $stomach, "Script $c can only appear in math
+    // mode")` and the rest of the engine's lowercase categories. Was a typo.
     Error!(
-      "Unexpected",
+      "unexpected",
       c,
       format!("Script {c} can only appear in math mode")
     );
