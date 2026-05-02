@@ -125,8 +125,16 @@ LoadDefinitions!({
   // beforeDigestEnd pops it and digests — firing the QED symbol at proof-end
   // unless \IEEEQEDhere already consumed the token inline. Mirrors the amsthm
   // \@proof / \end@proof stack pattern.
+  // Template drops the explicit </ltx:proof> close so the Tag-level
+  // auto_close (latex_constructs.rs:6176) handles cleanup. Mirrors
+  // amsthm's `\@proof` pattern (constructor template opens but doesn't
+  // close; `\end@proof` calls maybe_close_element). Without this, when
+  // \end{IEEEproof}'s end_mode triggers a mode-error and auto-closes
+  // <ltx:proof> early, the template's strict </ltx:proof> close emits
+  // a spurious "malformed:ltx:proof isn't open" cascade. Witnesses:
+  // 1001.3714, 0801.0061 (R=Δ+1 vs Perl, both Δ=1 cosmetic cascade).
   DefEnvironment!("{IEEEproof}[]",
-    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body#qed</ltx:proof>",
+    "<ltx:proof><ltx:title font='#font' _force_font='true' class='ltx_runin'>#title</ltx:title>#body#qed",
     properties => sub[_args] {
       // Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
       // Build a bold-italic font via digestion so the title attribute matches.
