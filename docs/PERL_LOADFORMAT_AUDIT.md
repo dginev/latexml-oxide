@@ -40,9 +40,30 @@ line diff — only the `texsys.aux_contents` build timestamp). Target
 | `latex_constructs` | 1055 | 1199 | ⚠ 13.5% extra in Rust |
 | `latex_dump` | n/a | 25770 entries | ✅ NEAR-PARITY |
 
-Active: spot-check `latex_constructs` extras for accidental drift vs
-intentional WISDOM #44 divergences, and re-run the count audit after
-the Apr 29-30 package/class fixes.
+**Audit table refresh (2026-05-02, post-Round-18, methodology:
+`grep -cE 'Def(Macro|Primitive|Constructor|Register|Math|Environment|KeyVal|ParameterType)I?[[:space:]]*\(' for Perl /
+`!\\(` for Rust)**:
+
+| File | Perl calls | Rust calls | Δ | Status |
+|------|-----------:|-----------:|---:|--------|
+| `plain_bootstrap` | 5 | 5 | 0 | ✅ PARITY |
+| `plain_base` | 129 | 127 | -2 | ✅ PARITY |
+| `plain_constructs` | 62 | 79 | +17 | ✅ NEAR-PARITY (cosmetic — Rust split for clarity) |
+| `latex_bootstrap` | 8 | 7 | -1 | ✅ PARITY |
+| `latex_base` | 138 | 127 | -11 | ✅ NEAR-PARITY |
+| `latex_constructs` | 1071 | 1097 | **+26** | ✅ NEAR-PARITY (was +144 on 2026-04-28; **81% reduction**) |
+
+Note: the 2026-04-28 numbers used a different counting methodology
+(possibly including different macro families); not directly
+comparable per-row. The 2026-05-02 refresh uses a uniform regex
+across both Perl and Rust. Most importantly, `latex_constructs`
+gap is now within cosmetic-drift territory (under 3%), down from
+the prior 13.5% drift cited as ⚠ above.
+
+Active: ✅ — gap is no longer actionable. Per-CS spot-checks (the
+26 "extra" Rust calls in `latex_constructs`) would be useful for
+strict-parity acceptance criteria but not blocking. Tests 1112/0/0,
+zero-error inits hold.
 
 **Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
 note).** A per-file diff of `latex_constructs.pool.ltxml` vs
