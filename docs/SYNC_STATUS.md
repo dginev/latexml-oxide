@@ -139,6 +139,26 @@ substantially obsolete; future canvas-error categorization should
 re-baseline from a fresh sweep rather than referencing this
 April 30 file.
 
+**Higher-R verification, 2026-05-01 evening**: re-checked 10 more
+TSV entries with R≥10. **All OUT-OF-SCOPE today**:
+* `math0010095` (R_old=11) → BOTH CLEAN — fixed by `4d445b71c` symptom-fix.
+* `math0010241` (R_old=33) → P=R=19 parity.
+* `hep-th0101146` (R_old=17) → P=R=15 parity.
+* `cond-mat0103632` (R_old=20) → P=R=20 parity.
+* `hep-ph0110283` (R_old=96) → R=96 vs Perl-capped 101.
+* `hep-ph0111449` (R_old=10) → P=R=10 parity.
+* `astro-ph0203201` (R_old=70) → P=R=70 parity.
+* `math0004140` (R_old=1177) → **BOTH CLEAN** — confirmed fix from
+  `050a32b1b` `\roster` mode-frame leak.
+* `astro-ph0204393` (R_old=113) → R=91 vs Perl-capped 101.
+* `hep-ph0007044` (R_old=410) → R=410 vs Perl-capped (cannot compare).
+
+Cumulative TSV verification: **45 entries spot-checked, 0 actual
+current Rust regressions**. The April 30 round18 TSV is fully
+obsoleted by interim fixes (especially `8d94c8d41` lowercase-error
+regex, `4d445b71c` symptom-fix, `050a32b1b` `\roster` mode-frame,
+`6b8d9865a` `\RequirePackage[opt]` option pass-through).
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
