@@ -64,16 +64,30 @@ for paper in "${papers[@]}"; do
   td=$(mktemp -d)
   cd "$td" && unzip -q "$zip" 2>/dev/null
   mainfile=""
-  # Some sandbox papers use .TEX (uppercase) extension (e.g. gr-qc0003030
-  # KERR2a.TEX). Glob both casings.
+  # 1) Strong rule — file matching .tex/.TEX/.latex extension AND containing
+  #    \documentclass/\documentstyle. Some sandbox papers use uppercase .TEX
+  #    (gr-qc0003030 KERR2a.TEX), some use .latex (nucl-ex0203017
+  #    collectif.latex), some use no extension at all (physics0103096 part1).
   shopt -s nullglob
-  for f in *.tex *.TEX; do
+  for f in *.tex *.TEX *.latex; do
     [[ -f "$f" ]] || continue
     if grep -lE '^\\documentstyle|^\\documentclass' "$f" >/dev/null 2>&1; then
       mainfile="$f"; break
     fi
   done
-  [[ -z "$mainfile" ]] && mainfile=$( (ls *.tex *.TEX 2>/dev/null) | head -1)
+  # 2) Fallback — extension-less plain files containing \documentstyle/class.
+  #    grep -I skips binary files (the .ps/.eps figures).
+  if [[ -z "$mainfile" ]]; then
+    for f in *; do
+      [[ -f "$f" ]] || continue
+      [[ "$f" == *.* ]] && continue  # has extension; was checked above or is binary
+      if grep -IlE '^\\documentstyle|^\\documentclass' "$f" >/dev/null 2>&1; then
+        mainfile="$f"; break
+      fi
+    done
+  fi
+  # 3) Last-resort fallback — alphabetical .tex/.TEX/.latex.
+  [[ -z "$mainfile" ]] && mainfile=$( (ls *.tex *.TEX *.latex 2>/dev/null) | head -1)
   shopt -u nullglob
   if [[ -z "$mainfile" ]]; then
     echo "$paper: SKIP (no .tex)"
