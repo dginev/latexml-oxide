@@ -190,7 +190,11 @@ commit `1a806f0a3` to handle these cases natively.)
   * `quant-ph0307103` (R=2 P=0) — `\og`/`\fg` undefined in babel[francais].
     Already-tracked cluster ([project_babel_francais_gap.md](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_babel_francais_gap.md)).
   * `1001.3714` (R=2 P=1) — `\endproof` malformed/unexpected. Proof-env cluster.
-  * `hep-th0412125` (R=4 P=0) — `expected:Match` parameter-spec mismatch.
+  * ~~`hep-th0412125` (R=4 P=0)~~ — FIXED `68dc4f429`. Was `\multiput`
+    parameter spec mismatch — Perl uses `Pair Pair {}{}`, Rust used
+    `Match:( Until:, Until:) Match:( Until:, Until:) {}{}` which can't
+    tolerate whitespace between the two pair-args. Switched to the
+    Pair-based signature.
 * 3 P=R parity (`0705.2160`, `0805.4425`, `hep-th0408196`).
 
 **Combined 1000+2000 sample (3000 papers)**: empirical real-regression
@@ -198,6 +202,13 @@ rate is **0.13% (4/3000)**. Of the 4 known regressions, all match
 existing planned-work clusters or are 1-paper outliers. The catch_unwind
 fix already silently saved 5 papers from hard panics in the 2000-sample
 alone.
+
+**Random 200-paper sample after `\multiput` fix (`68dc4f429`)**: 196 OK,
+1 NOMAIN, 1 caught-panic-but-clean (cs0503041 — `.sty` empty stem hits
+kpathsea underflow but catch_unwind absorbs and conversion completes
+cleanly), 2 transient errors that re-checked as BOTH CLEAN under
+`tools/parity_check.sh`. Effective rate: 200/200 R==0. Real-regression
+count drops to **3/3000** with hep-th0412125 fixed.
 
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust beats Perl on **14 confirmed
