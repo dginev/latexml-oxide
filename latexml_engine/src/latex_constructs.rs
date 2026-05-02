@@ -5967,7 +5967,13 @@ LoadDefinitions!({
     DefPrimitive!(cs, None, None, font => font);
   });
 
-  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", None);
+  // Perl latex_constructs.pool.ltxml L2764: defines the new CS as \relax.
+  // Without a body, papers like 0706.2748 (`\DeclareFixedFont{\mytabfont}...`)
+  // hit "T_CS[\mytabfont] is not defined" when later invoked.
+  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", sub[(cs, _enc, _fam, _ser, _sh, _sz)] {
+    let cs_tok = T_CS!(cs.to_string());
+    def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
+  });
   DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
   // Font declaration stubs (Perl latex_constructs.pool.ltxml)
   DefPrimitive!("\\DeclareFontShape{}{}{}{}{}{}", None);
