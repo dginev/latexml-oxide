@@ -204,6 +204,19 @@ effective R==0**.
 fixed; only error-equal-perl out-of-scope cases remain across the
 random samples.
 
+**Random 2000-paper sample post-IEEEproof (2026-05-02)**: 1968 OK,
+2 NOMAIN, 30 ERRs. Of the 30 spot-checked: most are concurrent-xargs
+false positives (re-check BOTH CLEAN), several are P=R parity
+out-of-scope, one is a confirmed Rust win (`hep-ph0510024` P=14 R=7),
+one is Perl-capped (`0907.2492` Perl=101 capped, R=4122), and **1
+new real regression**: `math0403005` (R=29 P=27, Δ=2 cosmetic
+cascade — `\noalign`/`\vtop` alignment-mode-frame mismatch where
+both engines fail similarly).
+
+Cumulative real-regression rate: **1/6000 (0.017%)** with the new
+math0403005 entry; cluster-rate-of-known-bugs remains effectively zero
+since both 1001.3714 and 0801.0061 are now Δ=0 post-IEEEproof fix.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
