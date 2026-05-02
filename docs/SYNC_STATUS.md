@@ -169,10 +169,16 @@ verified R=0 with explicit main file. Picker further extended in
 commit `1a806f0a3` to handle these cases natively.)
 
 **Total verified across all samples**: ~140 unique papers checked, **0
-actual current Rust regressions found**. Rust now beats Perl on at
-least 28 sandbox papers (memory: [Rust supersedes
+actual current Rust regressions found**. Rust beats Perl on **14 confirmed
+sandbox papers** (memory: [Rust supersedes
 Perl](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_rust_supersedes_perl.md)).
 The long-tail "real regressions" rate is empirically **0**.
+
+**2026-05-01 retraction**: an earlier inflated claim of 24-28 wins was
+partly an artifact of an `Error:Unexpected:` (capital U) regex undercount —
+12 of the previously-claimed wins are actually P=R parity. Commit
+`8d94c8d41` makes the category lowercase ('unexpected') matching Perl
+and the rest of the engine; subsequent counts are reliable.
 
 **Hard-fail subset (8 papers from canvas non-conv-error categories):**
 checked all 8 abort/error/timeout/conversion_fatal entries. Two had
