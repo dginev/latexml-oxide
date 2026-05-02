@@ -35,3 +35,7 @@ resources/dumps/
 arxiv-examples/
 *.latexml.log
 USER_OK.md
+
+# Local Claude Code settings and ad-hoc HTML conversion outputs
+.claude/
+html/
