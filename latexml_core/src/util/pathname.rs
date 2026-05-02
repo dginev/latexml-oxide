@@ -340,15 +340,48 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
 }
 
 /// find the requested `pathname` using the `options` search configuration.
-/// Mirrors Perl `pathname_find` (LaTeXML/Util/Pathname.pm L305-310): directory
-/// search only — kpsewhich is the caller's responsibility (see
+/// Mirrors Perl `pathname_find` (LaTeXML/Util/Pathname.pm L376-392): directory
+/// search with strict-case match preferred, falling back to a
+/// case-insensitive directory scan. The fallback is required for arxiv
+/// papers shipping uppercase filenames (e.g. `PASJ95.STY` referenced as
+/// `PASJ95.sty`) — Perl's regex pair pushes both strict and `/i` matches
+/// and returns the strict ones if any exist, otherwise the case-insensitive
+/// matches. kpsewhich is the caller's responsibility (see
 /// `LaTeXML::Package::FindFile_aux`).
 pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
-  if !pathname.is_empty() {
-    let paths = candidate_pathnames(pathname, options);
-    for path in paths {
-      if Path::new(&path).exists() {
-        return Some(path);
+  if pathname.is_empty() {
+    return None;
+  }
+  let paths = candidate_pathnames(pathname, options);
+  // Pass 1: strict-case existence check (the fast path; matches Perl's
+  // `$local_file =~ m/$regex/` strict regex).
+  for path in &paths {
+    if Path::new(path).exists() {
+      return Some(path.clone());
+    }
+  }
+  // Pass 2: case-insensitive directory scan (Perl's `/i` regex fallback).
+  // Only fired when no strict match existed; mirrors Perl's
+  // `return @paths ? @paths : @nocase_paths` ordering.
+  for path in &paths {
+    let p = Path::new(path);
+    let dir = match p.parent() {
+      Some(d) if !d.as_os_str().is_empty() => d,
+      _ => Path::new("."),
+    };
+    let target = match p.file_name().and_then(|n| n.to_str()) {
+      Some(n) => n,
+      None => continue,
+    };
+    let entries = match std::fs::read_dir(dir) {
+      Ok(e) => e,
+      Err(_) => continue,
+    };
+    for entry in entries.flatten() {
+      if let Some(name) = entry.file_name().to_str() {
+        if name.eq_ignore_ascii_case(target) {
+          return entry.path().to_str().map(String::from);
+        }
       }
     }
   }

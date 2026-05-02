@@ -1053,6 +1053,30 @@ by `kpsewhich --version`. Currently dumps load from
 
 ---
 
+## 2026-05-02: case-insensitive file lookup + documentstyle disk-probe raw-load
+
+`astro-ph0008100` (`\documentstyle[PASJadd]{PASJ95}` + uppercase-named
+local `PASJ95.STY` / `PASJADD.STY`): Rust=3 → Rust=0 (Perl=0).
+Tests stay 1112/0/0.
+
+* **`pathname.rs::find`** — Perl `pathname_find`
+  (`Util/Pathname.pm:376-392`) does a `/i` regex over directory
+  entries and falls back to case-insensitive matches when no strict
+  match exists. Rust used `Path::exists()` (strict-only), missing
+  `PASJ95.STY` when looked up as `PASJ95.sty`. Added a Pass-2
+  `read_dir + eq_ignore_ascii_case` fallback, only fired when Pass 1
+  finds nothing (mirrors Perl's `return @paths ? @paths : @nocase_paths`).
+* **`tex_job.rs` (Branch 1 of `\documentstyle`)** — when the
+  `<class>.sty` was found ONLY via paper-local disk-probe (no
+  binding, no fallback), pass `notex: Some(false)` to
+  `require_package` so the `INCLUDE_STYLES=false` gate doesn't
+  suppress the raw load. Mirrors the same fix from
+  `\compat@loadpackages` (commit bb4cf2e17). Same family of bugs
+  (paper-local sty discovery + raw-load gate).
+* Cluster impact: any LaTeX 2.09 paper shipping uppercase-named
+  `<file>.STY` / `<file>.CLS` (older tarballs, ~50 papers in canvas).
+  Unblocks PASJ-style class file discovery generically.
+
 ## 2026-05-02: \compat@loadpackages — disk-probe-found local sty must allow raw load
 
 `astro-ph0009248` (`\documentstyle[11pt,newpasp]{article}` + local

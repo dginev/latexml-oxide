@@ -204,20 +204,25 @@ LoadDefinitions!({
     // priority) instead of the local `mn1.sty` whose raw load is suppressed
     // by the default `INCLUDE_STYLES=false` gate. Witness: astro-ph0002213
     // (\documentstyle[epsfig]{mn1} + local mn1.sty + \begin{keywords}/\psfig).
+    let class_sty_binding = find_file(
+      &format!("{}.sty", class),
+      Some(FindFileOptions { notex, ..Default::default() }),
+    ).is_some();
+    let class_sty_fallback = find_file_fallback(&class, "sty").is_some();
     let class_cls_binding_exact = find_file(
       &format!("{}.cls", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some();
     let class_cls_via_fallback = find_file_fallback(&class, "cls").is_some();
-    let class_sty_found = find_file(
-      &format!("{}.sty", class),
-      Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some()
-    || (!class_cls_binding_exact && !class_cls_via_fallback && find_file(
-      &class,
-      Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
-    ).is_some())
-    || find_file_fallback(&class, "sty").is_some();
+    let class_sty_via_disk = !class_sty_binding
+      && !class_sty_fallback
+      && !class_cls_binding_exact
+      && !class_cls_via_fallback
+      && find_file(
+        &class,
+        Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
+      ).is_some();
+    let class_sty_found = class_sty_binding || class_sty_via_disk || class_sty_fallback;
     let class_cls_found = !class_sty_found && (class_cls_binding_exact
       || class_cls_via_fallback);
 
@@ -238,9 +243,18 @@ LoadDefinitions!({
         noerror: true,
         ..InputDefinitionOptions::default()
       })?;
+      // When the .sty was found ONLY via paper-local disk-probe (no
+      // binding, no fallback), pass `notex=false` to allow the raw
+      // load. Otherwise the default `INCLUDE_STYLES=false` gate inside
+      // require_package would force `notex=true` and suppress the
+      // load. Mirrors the `\compat@loadpackages` fix from commit
+      // bb4cf2e17. Witness: astro-ph0008100
+      // (\documentstyle[PASJadd]{PASJ95} + uppercase-named PASJ95.STY).
+      let notex_for_require = if class_sty_via_disk { Some(false) } else { None };
       require_package(&class, RequireOptions {
         options: opts_vec,
         extension: Some(Cow::Borrowed("sty")),
+        notex: notex_for_require,
         after,
         ..RequireOptions::default()
       })?;
