@@ -248,6 +248,22 @@ real regressions** — fix `317655f01` did not introduce regressions.
 **Cumulative real-regression rate: 0/9300** across all post-Round-18
 random + modern + post-fix samples.
 
+**May-1 canvas "abort/error/fatal" papers re-checked (2026-05-02)**:
+8 papers in May 1 results.tsv had non-conversion-error categories
+(3 abort, 3 error, 1 timeout, 1 conversion_fatal). Re-running them
+post-Round-18 fixes:
+* 5 are now **BOTH CLEAN**: `cond-mat0002096`, `astro-ph0006087`,
+  `astro-ph0202376`, `math0203148`, `math0205073` (intervening
+  commits resolved each).
+* 1 is now also clean: `hep-ph0102035` (was 120s timeout) — runs clean.
+* 1 is Rust-beats-Perl: `hep-th0005268` P=26 R=21 (already documented).
+* 1 is Perl-capped: `hep-th0005159` P=101+ (capped) vs R=260 — both
+  fail extensively; classified OUT-OF-SCOPE? per parity_check.
+
+The 92 conversion_error from May 1 are similarly stale. Wider sandbox
+audits would show even fewer real Rust regressions today than the
+20k-canvas snapshot suggests.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
