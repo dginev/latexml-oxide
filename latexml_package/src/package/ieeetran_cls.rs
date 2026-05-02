@@ -45,6 +45,15 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
   Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
 
+  // Real IEEEtran.cls L689 `\newif\if@technote \@technotefalse` — private flag
+  // (separate from the public `\ifCLASSOPTION*` mirrors). User code in
+  // technote-aware paragraphs (e.g. cs0502037 `\def\endkeywords{\if@technote
+  // \vspace{1.34ex}\else\vspace{0.67ex}\fi}`) reads `\if@technote` directly.
+  // Pre-define so `\if@technote` doesn't trip the "undefined cond"
+  // auto-define-as-iffalse path (works but emits an Error).
+  Let!("\\if@technote", "\\iffalse");
+  Let!("\\if@confmode", "\\iffalse");
+
   // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
   DefMacro!("\\IEEEdisplaynontitleabstractindextext", "");
