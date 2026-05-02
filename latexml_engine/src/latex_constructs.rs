@@ -3741,14 +3741,26 @@ LoadDefinitions!({
   "<?latexml package='#2' ?#1(options='#1')?>",
   before_digest =>  { only_preamble("\\RequirePackage") },
   after_digest => sub[whatsit] {
-    // let options  = whatsit.get_arg(1);
-    let packages = whatsit.get_arg(2).unwrap();
-  //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
-    for pkg in packages.to_string().split(',') {
-      let pkg_trimmed = pkg.trim();
-      if pkg_trimmed.is_empty() || pkg.starts_with('%') { continue; }
-      require_package(pkg, RequireOptions::default())?;
+    let options: Option<&Digested> = whatsit.get_arg(1);
+    let packages: Option<&Digested> = whatsit.get_arg(2);
+    let package_list: Vec<String> = match packages {
+      Some(value) => OPTS_REGEX.split(&value.to_string())
+        .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+      None => Vec::new(),
+    };
+    let options_list: Vec<String> = match options {
+      Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+      None => Vec::new(),
+    };
+    for package in package_list {
+      let pkg_trimmed = package.trim();
+      if pkg_trimmed.is_empty() { continue; }
+      require_package(&package, RequireOptions {
+        options: options_list.clone(),
+        ..RequireOptions::default()
+      })?;
     }
+    Ok(Vec::new())
   });
 
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
