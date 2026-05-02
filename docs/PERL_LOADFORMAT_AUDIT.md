@@ -89,6 +89,30 @@ These don't affect runtime correctness (zero-error inits still
 pass), but moving them to `latex_constructs.rs` is the strict-Perl
 parity refactoring backlog. Multi-iteration scope; not blocking.
 
+**2026-05-02 follow-up: dump-path resolution check**: spot-checked
+3 of the 45 violations against `resources/dumps/latex.dump.txt`:
+
+| CS | Dump-path? | Match Perl? |
+|---|---|---|
+| `\hexnumber@` | ✓ M-entry present | ✓ exact body |
+| `\on@line` | ✓ M-entry present | ✓ exact body |
+| `\stop` | ✓ M-entry present | ✗ kernel body, NOT Perl's `closeMouth(1)` override |
+
+Implication: the dump path provides most "missing source" CSes at
+runtime, so the violations are mostly **source-organization only**,
+not runtime failures. The exception is `\stop` (and likely a few
+others) where Perl's `latex_constructs.pool.ltxml` body is a
+deliberate runtime override of the kernel — those need careful
+Rust-side translation for full Perl parity.
+
+Per-CS strict-parity work should:
+1. Check if Perl's body in `latex_constructs.pool.ltxml` matches
+   the kernel/dump body — if YES, add to `latex_constructs.rs`
+   redundantly (cosmetic source-organization fix).
+2. If Perl's body is a **deliberate override** (different from
+   dump), translate carefully — these are the runtime-significant
+   cases.
+
 **Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
 note).** A per-file diff of `latex_constructs.pool.ltxml` vs
 `latex_constructs.rs` (the source of the "1055 / 1199 → 13.5%
