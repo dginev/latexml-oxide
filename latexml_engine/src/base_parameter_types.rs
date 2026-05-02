@@ -277,10 +277,29 @@ LoadDefinitions!({
         // `\@bibfield XUntil:\@end@bibfield`).
         let is_real_expandable =
           matches!(state::lookup_meaning(&token), Some(Stored::Expandable(_)));
-        if is_real_expandable {
+        // Definitional primitives (\def/\edef/\gdef/\xdef/\let/\futurelet) consume
+        // their target token from the input AT EXECUTION TIME — but XUntil's outer
+        // `read_x_token` would expand the target away if it's `\let`-bound to
+        // something expandable (e.g. `\@date` Let'd to `\@empty`). Witness:
+        // 0805.1712 elsart `\date{X}` inside `\begin{keyword}` body, where
+        // `\date` expands to `\def\@date{X}\@add@frontmatter{ltx:date}[...]{X}`,
+        // and inside the keyword's XUntil read, `\@date` (Let'd to `\@empty`)
+        // gets consumed by `read_x_token` BEFORE `\def` ever runs, leaving the
+        // captured tokens malformed (`\def {X} ...` with no def-target).
+        // Re-Invoke these primitives to read their parameters from the gullet
+        // here, matching Perl's XUntil L144-146 behavior. Targeted to the def
+        // family to avoid the `\hspace`/dimension-reader over-read issue
+        // recorded in the comment above (astro-ph9903386 leak).
+        let is_def_family = token.with_cs_name(|cs| {
+          matches!(cs, "\\def" | "\\edef" | "\\gdef" | "\\xdef"
+            | "\\let" | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
+        });
+        if is_real_expandable || is_def_family {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
             tokens.extend(Invocation!(token, args).unlist());
+          } else {
+            tokens.push(token);
           }
         } else {
           tokens.push(token);
