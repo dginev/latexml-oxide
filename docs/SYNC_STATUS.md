@@ -159,6 +159,13 @@ obsoleted by interim fixes (especially `8d94c8d41` lowercase-error
 regex, `4d445b71c` symptom-fix, `050a32b1b` `\roster` mode-frame,
 `6b8d9865a` `\RequirePackage[opt]` option pass-through).
 
+**Random 500-paper validation, 2026-05-01 evening**: 495 OK, 5 ERRs.
+All 5 ERRs parity-check: 2 BOTH CLEAN (transient false positives:
+`0807.1698`, `0709.3072`) + 3 OUT-OF-SCOPE (P=R parity:
+`cond-mat0107019` P=R=2, `cond-mat0306578` P=R=2, `hep-ph0602022`
+P=R=75). Effective rate: **500/500 R==0**. Real-regression count
+holds at 2/3000.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
