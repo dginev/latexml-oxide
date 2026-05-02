@@ -39,16 +39,15 @@ LoadDefinitions!({
   DefMacro!("\\mhchemoptions RequiredKeyVals", "");
 
   // \ce{<formula>} — chemistry mode. Real mhchem renders subscripts,
-  // charges, arrows, etc. Most papers invoke `\ce{H_2O}` etc. inside
-  // math context (equation*), so the body's `_`/`^` are math scripts.
-  // Routing through `\text{}` enters text mode where `_` errors out
-  // (regression seen on 0704.3190 going R=1→R=10).
-  // Stub: just unwrap the braces so the body is typeset in the
-  // ambient mode. Loses roman-text rendering for plain text-mode
-  // chemistry like `\ce{NaCl}`, but avoids cascading script errors.
-  DefMacro!("\\ce{}",  "{#1}");
-  DefMacro!("\\cee{}", "{#1}");
-  DefMacro!("\\cf{}",  "{#1}");
+  // charges, arrows, etc. Papers invoke \ce{H_2O} / \ce{N_2} both in
+  // math context (equation*) AND in text context (paragraphs).
+  // \ensuremath wraps body in math mode if not already in math, so
+  // `_`/`^` parse as scripts in both contexts. Loses roman-text
+  // rendering of plain text chemistry, but avoids cascading errors.
+  // Witness: 0907.1390 (`\ce{N_2}, \ce{O_2}` in text → R=3→0).
+  DefMacro!("\\ce{}",  "\\ensuremath{#1}");
+  DefMacro!("\\cee{}", "\\ensuremath{#1}");
+  DefMacro!("\\cf{}",  "\\ensuremath{#1}");
 
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
