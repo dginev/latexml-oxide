@@ -153,6 +153,15 @@ Of the 25 R=1 papers (Perl re-checked):
 **Random 50-paper "ok" sample**: 49 R=0, 1 R=1; the R=1 is `astro-ph0207181`
 P=R=1 parity (`\plotone` undefined in both — aastex macro).
 
+**Random 200-paper "ok" sample (with smart main-file picker — feedback_main_tex_picker.md)**:
+**200/200 R=0, 0 panics**. Earlier ad-hoc-bash one-liner runs flagged
+4 papers as R=1+ but the smart picker (prefer files containing
+`\documentclass`/`\documentstyle`) shows all are R=0; the ad-hoc
+loops were picking up xfig fragments and similar non-main `.tex`
+files. The `tools/parity_check.sh` script has the right logic since
+inception; commit `ddc16a28f` extends it to also handle `*.TEX`
+(uppercase) extension papers.
+
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust now beats Perl on at
 least 28 sandbox papers (memory: [Rust supersedes
