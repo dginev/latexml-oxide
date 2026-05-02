@@ -122,8 +122,14 @@ impl log::Log for LatexmlLogger {
 }
 
 /// initialize the logger at a given verbosity `level`
+///
+/// Returns the underlying `SetLoggerError` if another `log` global logger
+/// is already installed (e.g. an embedder set up `tracing-log` first).
+/// Callers can decide whether to ignore that — the in-process `bind_log` /
+/// `flush_log` buffers are independent of the `log` crate sink and keep
+/// working either way.
 pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
-  log::set_logger(&LOGGER).unwrap();
+  log::set_logger(&LOGGER)?;
   log::set_max_level(level);
   Ok(())
 }
