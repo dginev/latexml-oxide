@@ -64,13 +64,17 @@ for paper in "${papers[@]}"; do
   td=$(mktemp -d)
   cd "$td" && unzip -q "$zip" 2>/dev/null
   mainfile=""
-  for f in *.tex; do
+  # Some sandbox papers use .TEX (uppercase) extension (e.g. gr-qc0003030
+  # KERR2a.TEX). Glob both casings.
+  shopt -s nullglob
+  for f in *.tex *.TEX; do
     [[ -f "$f" ]] || continue
     if grep -lE '^\\documentstyle|^\\documentclass' "$f" >/dev/null 2>&1; then
       mainfile="$f"; break
     fi
   done
-  [[ -z "$mainfile" ]] && mainfile=$(ls *.tex 2>/dev/null | head -1)
+  [[ -z "$mainfile" ]] && mainfile=$( (ls *.tex *.TEX 2>/dev/null) | head -1)
+  shopt -u nullglob
   if [[ -z "$mainfile" ]]; then
     echo "$paper: SKIP (no .tex)"
     cd / && rm -rf "$td"
