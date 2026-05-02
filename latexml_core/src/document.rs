@@ -1940,6 +1940,13 @@ impl Document {
     if text.is_empty() {
       return Ok(self.node.clone());
     }
+    // Sibling guard to open_math_text_internal: libxml's append_text uses
+    // CString and panics on embedded NULs (forbidden in XML text per spec).
+    // Strip them up-front so all downstream append_text calls are safe.
+    if text.contains('\0') {
+      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+      return self.open_text_internal(&cleaned);
+    }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       Debug!(
