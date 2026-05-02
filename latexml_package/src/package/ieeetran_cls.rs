@@ -53,6 +53,16 @@ LoadDefinitions!({
   // auto-define-as-iffalse path (works but emits an Error).
   Let!("\\if@technote", "\\iffalse");
   Let!("\\if@confmode", "\\iffalse");
+  // IEEEtran journal default is two-column. Real IEEEtran.cls invokes
+  // `\twocolumn` (in journal mode) which sets the LaTeX kernel
+  // `\@twocolumntrue`. Mirror by setting `\if@twocolumn` to `\iftrue`
+  // unless the paper passed onecolumn explicitly. Witness: cs0502037
+  // user-installed `\def\endkeywords{\if@twocolumn\else\endquotation\fi}`
+  // wants the if-true branch (two-column → no `\endquotation`); without
+  // this, the `\else \endquotation` branch fires from `\keywords` opening
+  // `\quotation` (article default `\if@twocolumn=false`), producing an
+  // unmatched `\if`/`\fi` cascade by EOF.
+  Let!("\\if@twocolumn", "\\iftrue");
 
   // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
