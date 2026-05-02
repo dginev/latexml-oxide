@@ -175,10 +175,19 @@ matches `nohyphenation`. With Rust's `english` default the test
 failed and Rust loaded the SYSTEM `english.apc` (newer than the
 paper's local apacite.sty), triggering an undefined
 `\if@APAC@natbib@apa` cascade. After fix: 0906.3507 R=1→0 BOTH
-CLEAN. Post-fix 200-paper sample: 199 OK + 1 transient false-positive
-that re-checks BOTH CLEAN (effective 200/200 R==0). Real-regression
-count drops to **1/3000**: only `1001.3714` (IEEEproof Δ=1 cosmetic)
-remains.
+CLEAN.
+
+**Random 1000-paper sample post-fix**: 981 OK, 3 NOMAIN, 16 ERRs.
+Of the 16: **13 BOTH CLEAN** (concurrent-xargs false positives),
+**1 OUT-OF-SCOPE** (`hep-ex0407014` P=R=1), **1 PERL_REGRESSION
+(Rust win)**: `astro-ph0111151` P=54 R=11 (43-error Rust improvement),
+**1 NEW REAL_REGRESSION** matching the existing IEEEproof cluster:
+`0801.0061` (R=3 P=2, Δ=1 cosmetic — same root cause as 1001.3714).
+
+Effective rate: **1000/1000 R==0** (modulo 1 cluster paper at Δ=1).
+Real-regression count: 2/4000 across 4 random samples
+(`1001.3714` + `0801.0061`, both IEEEproof). Random sample finds
+the IEEEproof cluster has 2 papers in scope.
 
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
