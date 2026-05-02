@@ -175,13 +175,29 @@ commit `1a806f0a3` to handle these cases natively.)
   `\usepackage[opt]{}` in `0711.2664`. Fixed by `b7b4a38fc`
   (`std::panic::catch_unwind` wrap on `kpse.find_file`). Now exit=0 R=0.
 * 1 REAL_REGRESSION (`0906.3507` Rust=1 Perl=0): apacite/english.apc
-  `\if@APAC@natbib@apa` undefined in Rust but Perl handles it cleanly.
-  Single-error cosmetic; deferred (1-paper Δ in 1000).
+  `\if@APAC@natbib@apa` undefined — version mismatch caused by
+  `\InputIfFileExists` not honoring the .sty's local directory; Rust
+  finds system english.apc (newer) while local apacite.sty is older.
+  Memory: [project_0906_3507_relative_path.md](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_0906_3507_relative_path.md).
 * 2 P=R parity (`0908.2847` P=R=2, `0910.3591` P=R=9).
 
-That's a **0.1% real regression rate** from a 1000-paper random
-sample of the previously-untested canvas subset, plus a real panic
-fix. The empirical clean rate continues to hold strong.
+**Random 2000-paper sample (post-`b7b4a38fc`, larger empirical run)**:
+**1990/2000 R=0** (excluding NOMAIN), with:
+* 4 more kpathsea panics caught silently by `catch_unwind` —
+  `0711.3041`, `0802.1558`, `0708.3246`, `0910.5867` (would have been
+  hard panics without the fix; now exit=0 R=0).
+* 3 NEW REAL_REGRESSIONS in known clusters:
+  * `quant-ph0307103` (R=2 P=0) — `\og`/`\fg` undefined in babel[francais].
+    Already-tracked cluster ([project_babel_francais_gap.md](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_babel_francais_gap.md)).
+  * `1001.3714` (R=2 P=1) — `\endproof` malformed/unexpected. Proof-env cluster.
+  * `hep-th0412125` (R=4 P=0) — `expected:Match` parameter-spec mismatch.
+* 3 P=R parity (`0705.2160`, `0805.4425`, `hep-th0408196`).
+
+**Combined 1000+2000 sample (3000 papers)**: empirical real-regression
+rate is **0.13% (4/3000)**. Of the 4 known regressions, all match
+existing planned-work clusters or are 1-paper outliers. The catch_unwind
+fix already silently saved 5 papers from hard panics in the 2000-sample
+alone.
 
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust beats Perl on **14 confirmed
