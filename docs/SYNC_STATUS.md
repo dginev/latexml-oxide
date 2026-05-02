@@ -101,17 +101,15 @@ Random 3000-paper sample (post-fix): **2943 OK / 2971 valid =
   identically; the 4-error delta is Rust's script-error placeholder
   emitting an extra `<ltx:XMTok>` per `^/_` (Perl emits a plain
   text Box). Cosmetic; deferred.
-* 1 REAL REGRESSION cosmetic (`0710.0360` R=1 P=0): llncs
-  `\institute{X\thanks{Y.}\\ {Z}}` — `\thanks` inside `\institute`
-  followed by `\\` and a brace group trips `Attempt to close a group
-  that switched to mode horizontal` at end of `\institute`. Bisection
-  isolates the trigger as the conjunction of (1) `\thanks{}`, (2)
-  `\\`, (3) `{...}` group; any one removed makes it clean. Cosmetic
-  (institute note still emits acceptable text); root cause is the
-  `\person@thanks` constructor's mode-switch leaking BOUND_MODE into
-  the `\@add@institute` bounded frame. Investigation +
-  bisection in
-  [`project_0710_0360_thanks_in_institute.md`](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_0710_0360_thanks_in_institute.md).
+* ~~1 REAL REGRESSION cosmetic (`0710.0360` R=1 P=0)~~ **FIXED 2026-05-01**
+  by commit `6ea726eab`. Switched `\@new@institute` from `XUntil:` to
+  `Until:` in `inst_support_sty.rs`. XUntil's eager expansion of
+  `\thanks{HELLO}` mid-scan into `\def\@thanks{HELLO}\lx@make@thanks{HELLO}`
+  caused base_parameter_types.rs's per-token Invocation logic to
+  split `\def` from its CS-name argument, dropping the thanks body
+  entirely. With Until: the body is captured verbatim and `\thanks`
+  expands cleanly at digestion time. Cluster D papers
+  (astro-ph9903386 etc.) still pass R=0; tests 1112/0/0.
 
 The 99% clean rate confirms long-tail real regressions are sub-1%;
 remaining triage work is finding clusters across larger samples
