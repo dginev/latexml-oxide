@@ -102,10 +102,16 @@ Random 3000-paper sample (post-fix): **2943 OK / 2971 valid =
   emitting an extra `<ltx:XMTok>` per `^/_` (Perl emits a plain
   text Box). Cosmetic; deferred.
 * 1 REAL REGRESSION cosmetic (`0710.0360` R=1 P=0): llncs
-  `\institute{LIP\thanks{...}, \\ {\tt …}}` — `\\` line-break inside
-  `\institute` arg switches to vertical mode and outer brace `\egroup`
-  trips `Attempt to close a group that switched to mode vertical`.
-  Single-error cosmetic; deferred.
+  `\institute{X\thanks{Y.}\\ {Z}}` — `\thanks` inside `\institute`
+  followed by `\\` and a brace group trips `Attempt to close a group
+  that switched to mode horizontal` at end of `\institute`. Bisection
+  isolates the trigger as the conjunction of (1) `\thanks{}`, (2)
+  `\\`, (3) `{...}` group; any one removed makes it clean. Cosmetic
+  (institute note still emits acceptable text); root cause is the
+  `\person@thanks` constructor's mode-switch leaking BOUND_MODE into
+  the `\@add@institute` bounded frame. Investigation +
+  bisection in
+  [`project_0710_0360_thanks_in_institute.md`](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_0710_0360_thanks_in_institute.md).
 
 The 99% clean rate confirms long-tail real regressions are sub-1%;
 remaining triage work is finding clusters across larger samples
