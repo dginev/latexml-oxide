@@ -166,6 +166,20 @@ All 5 ERRs parity-check: 2 BOTH CLEAN (transient false positives:
 P=R=75). Effective rate: **500/500 R==0**. Real-regression count
 holds at 2/3000.
 
+**`\languagename` Perl-faithful default fix (`be7a235b7`)**: Rust
+defaulted `\languagename` to `english`, but Perl's latex_dump captures
+`\def\languagename{nohyphenation}`. The divergence root-caused
+0906.3507: apacite.sty L1422-1423 explicitly skips its
+`\InputIfFileExists{\languagename.apc}` block when languagename
+matches `nohyphenation`. With Rust's `english` default the test
+failed and Rust loaded the SYSTEM `english.apc` (newer than the
+paper's local apacite.sty), triggering an undefined
+`\if@APAC@natbib@apa` cascade. After fix: 0906.3507 R=1→0 BOTH
+CLEAN. Post-fix 200-paper sample: 199 OK + 1 transient false-positive
+that re-checks BOTH CLEAN (effective 200/200 R==0). Real-regression
+count drops to **1/3000**: only `1001.3714` (IEEEproof Δ=1 cosmetic)
+remains.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
