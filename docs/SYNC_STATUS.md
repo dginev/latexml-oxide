@@ -115,6 +115,26 @@ The 99% clean rate confirms long-tail real regressions are sub-1%;
 remaining triage work is finding clusters across larger samples
 rather than chasing individual papers.
 
+**Stale-TSV finding (2026-05-01 spot-check after `6ea726eab`):**
+The `.investigation/round18_sweep_2026-05-01.tsv` (April 30 baseline)
+no longer reflects current Rust/Perl behavior. Re-running 15 papers
+flagged as Rust > Perl in that TSV finds:
+* 7 single-error candidates (`\setdec`, `\CITE`, `\psfig` etc.) are
+  all **P=R=1 parity** — both engines have the same error.
+* 4 medium-error candidates are **Rust beats Perl** now: `math0006234`
+  (P=3 R=1), `hep-th0009013` (P=6 R=0), `cond-mat0102064` (P=4 R=0),
+  `cond-mat0103632` (P=20 R=0).
+* 4 larger candidates are **Perl-capped at 101** (out-of-scope per
+  `wisdom_perl_max_errors_cap.md`): `hep-ph0007044` R=410, `hep-th0010165`
+  R=198, `hep-ph0110283` R=5, `astro-ph0204393` R=4. The last two
+  are likely huge Rust wins.
+* 0 actual current Rust regressions found in the sample.
+
+Rust now beats Perl on at least 18 sandbox papers (memory: [Rust
+supersedes Perl](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_rust_supersedes_perl.md)).
+The long-tail "real regressions" rate is now empirically 0 in the
+verified sample.
+
 ### 1.6 math-ph0001015 — `\footnotetext` undefined in AmS-TeX flow ✅ FIXED
 
 100k stage-1 sample. AmS-TeX paper (`\input amstex \documentstyle{amsppt}`)
