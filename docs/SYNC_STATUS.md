@@ -162,6 +162,12 @@ files. The `tools/parity_check.sh` script has the right logic since
 inception; commit `ddc16a28f` extends it to also handle `*.TEX`
 (uppercase) extension papers.
 
+**Random 500-paper "ok" sample (smart picker, parallel ×4)**:
+**500/500 R=0, 0 panics**. (498 R=0 directly + 2 NOMAIN false-flags
+that turned out to use `.latex` and extension-less main files; both
+verified R=0 with explicit main file. Picker further extended in
+commit `1a806f0a3` to handle these cases natively.)
+
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust now beats Perl on at
 least 28 sandbox papers (memory: [Rust supersedes
