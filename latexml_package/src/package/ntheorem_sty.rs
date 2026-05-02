@@ -349,4 +349,14 @@ LoadDefinitions!({
     let val = CounterValue!(&ctr_str).value_of();
     Ok(Tokens::new(ExplodeText!(&radix::radix_up_greek(val as i64))))
   });
+
+  // Perl ntheorem.sty.ltxml L293: when option `standard` was given (sets
+  // `thm@usestd`), input the actual TL `ntheorem.std` config file. That
+  // file calls \newtheorem{theorem}{Theorem}, \newtheorem{lemma}{Lemma},
+  // \newtheorem{definition}{Definition}, etc. — without it, papers using
+  // [standard]{ntheorem} fail with `\begin{lemma}` undefined. Witness:
+  // 0810.4249 (R=1→0).
+  if state::lookup_bool("thm@usestd") {
+    InputDefinitions!("ntheorem", noltxml => true, extension => Some(Cow::Borrowed("std")));
+  }
 });
