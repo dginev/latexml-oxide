@@ -970,7 +970,10 @@ LoadDefinitions!({
         ..KVSpec::default()
       })
     } else {
-      Error!("Expected", "{", "Missing keyval arguments");
+      // Perl-faithful lowercase category — matches Base_ParameterTypes.pool.ltxml
+      // `Error('expected', '{', $gullet, "Missing keyval arguments")`. The
+      // engine convention is lowercase categories throughout.
+      Error!("expected", "{", "Missing keyval arguments");
       Ok(KeyVals::default())
     }
   }
