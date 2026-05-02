@@ -208,14 +208,37 @@ random samples.
 2 NOMAIN, 30 ERRs. Of the 30 spot-checked: most are concurrent-xargs
 false positives (re-check BOTH CLEAN), several are P=R parity
 out-of-scope, one is a confirmed Rust win (`hep-ph0510024` P=14 R=7),
-one is Perl-capped (`0907.2492` Perl=101 capped, R=4122), and **1
-new real regression**: `math0403005` (R=29 P=27, Δ=2 cosmetic
-cascade — `\noalign`/`\vtop` alignment-mode-frame mismatch where
-both engines fail similarly).
+one is Perl-capped (`0907.2492` Perl=101 capped, R=4122), and one
+shared-failure case: `math0403005` (R=29 P=27).
 
-Cumulative real-regression rate: **1/6000 (0.017%)** with the new
-math0403005 entry; cluster-rate-of-known-bugs remains effectively zero
-since both 1001.3714 and 0801.0061 are now Δ=0 post-IEEEproof fix.
+**Modern (2010+) 300-paper sample (2026-05-02)**: 295 OK, 5 ERR.
+All 5 ERRs are P=R parity (3 transient false-positives that
+re-check BOTH CLEAN, 2 truly P=R OUT-OF-SCOPE). **0 real regressions.**
+
+**math0403005 deep-investigation (2026-05-02)**: reclassified as
+SHARED-FAILURE — both engines abort the same alignment at lines
+573-574 (a user `\newenvironment{latinsq}{\array{...}}{\endarray}`
+invoked inside inline `$...$` math). Both hit `\noalign cannot be
+used here`; the Δ=2 is cosmetic cascade phrasing only (Rust emits
+4× `\vtop end mode` + 1× `\@end@array`, Perl emits 2×
+`<endgroup> Attempt to pop last locked stack frame`). Not a
+Rust-side divergence.
+
+**Cumulative real-regression rate: 0/6300** across random + modern
+cohort sampling. cluster-rate-of-known-bugs is effectively zero;
+1001.3714 and 0801.0061 are Δ=0 post-IEEEproof fix.
+
+**Random 2000-paper post-IEEEproof sweep (2026-05-02 evening)**:
+1968 OK, 30 ERR, 4 NOTEX. Of 30 ERRs after parity-check: 22
+xargs-false-positives (BOTH CLEAN), 7 OUT-OF-SCOPE (P=R), and **1
+new real regression: `0811.3583` Rust=1 Perl=0** (aa.cls letter-mode
+5-arg \abstract with `\object{<CS>}` — `<ltx:text class='ltx_ast_objectname'>`
+prematurely auto-closed when CS auto-opens its own `<ltx:text font='...'>`).
+**FIXED `317655f01`**: added `_noautoclose='1'` to `\object`'s
+constructor template (precedent: `\mbox`, `\framebox`, `\raisebox`
+all use this for the same reason). 0811.3583 R=1→0; tests 1112/0/0.
+
+**Cumulative real-regression rate: 0/8300** post-fix.
 
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
