@@ -65,6 +65,30 @@ Active: ✅ — gap is no longer actionable. Per-CS spot-checks (the
 strict-parity acceptance criteria but not blocking. Tests 1112/0/0,
 zero-error inits hold.
 
+**Same-file CS-name diff (2026-05-02 follow-up)**: 45 CSes are
+defined in Perl `latex_constructs.pool.ltxml` but not in Rust
+`latex_constructs.rs` (often defined in another Rust file). Per
+CLAUDE.md priority 3 ("Every `\foo` defined in `Engine/<file>` MUST
+be defined in `latexml_engine/src/<file>.rs`"), these are
+candidates for future same-file relocation:
+
+```
+\ASCII, \@caption@, \@caption@postlabel, \@captype, \@cite,
+\documentstyle, \ensuremath, \@filef@und, \fnum@, \@fontswitch,
+\@font@warning, \format@title@, \G@refundefinedtrue,
+\@@@hack@caption@, \@hack@caption@, \hexnumber@, \labelenum,
+\labelitem, \ldots, \list, \loggingoutput, \lx@end@verbatim,
+\lx@label, \lx@latex@input, \M@, \mathring, \newsavebox,
+\@nomath, \normalsfcodes, \on@line, \pic@@savebox, \pic@savebox,
+\reserved@a, \@savepicbox, \@settopoint, \showoutput,
+\showoverfull, \stop, \T@, \the, \theenum, \theequation,
+\theequation@ID, \tracingfonts, \@trivlist
+```
+
+These don't affect runtime correctness (zero-error inits still
+pass), but moving them to `latex_constructs.rs` is the strict-Perl
+parity refactoring backlog. Multi-iteration scope; not blocking.
+
 **Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
 note).** A per-file diff of `latex_constructs.pool.ltxml` vs
 `latex_constructs.rs` (the source of the "1055 / 1199 → 13.5%
