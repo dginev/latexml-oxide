@@ -2684,11 +2684,20 @@ LoadDefinitions!({
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
         let message = s!("The environment {} is not defined.", undef);
-        Error!("undefined", undef, message);
+        Error!("undefined", undef.clone(), message);
         note_status(LogStatus::Undefined, Some(&undef));
-        // TODO:
-        // state::install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
-        //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
+        // Perl latex_constructs.pool.ltxml L207-208: install a dummy
+        // constructor for `\<name>` so the env-trigger token has SOME
+        // definition. Otherwise it would re-fire as a separate
+        // "Error:undefined:\<name>" when the digester evaluates the
+        // pushed env-trigger below — doubling the error count for any
+        // unknown env. We can't directly mirror Perl's
+        //   `Stomach::makeError(undefined, $undef)`
+        // (which logs an Info, not an Error), so use a no-op DefMacro
+        // — the env-undefined Error above is already logged. Witness:
+        // 0810.4249 (\begin{lemma} on undefined `lemma` env: was Rust=2,
+        // Perl=1; now Rust=Perl=1).
+        def_macro(token.clone(), None, Tokens!(), None)?;
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
       out_tokens.push(T_CS!("\\begingroup"));
