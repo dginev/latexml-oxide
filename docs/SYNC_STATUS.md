@@ -34,6 +34,38 @@ Intentional divergences: `docs/OXIDIZED_DESIGN.md`.
 
 ## Open tasks (highest leverage first)
 
+### XUntil parameter type re-Invocation-emits Let-Token aliases ✅ FIXED `cfcf21cf2` (2026-05-02)
+
+**Witness:** math0610119 (Rust=1, Perl=0). `\sb` undefined inside
+amsppt's `\@bibfield XUntil:\@end@bibfield` field-capture path —
+direct `$\sb{0}$` worked, but the bibfield-capture path failed.
+
+**Root cause (base_parameter_types.rs XUntil):** The XUntil loop
+called `lookup_definition_stored(&token)` and used
+`matches!(defn, Stored::Expandable(_))` to decide whether to manually
+drive `read_arguments + Invocation!(token, args)` for expandable
+macros that escaped `read_x_token` (e.g. `\protected`).
+`lookup_definition_stored` synthetically wraps `Stored::Token`
+entries (e.g. `\sb` Let to T_SUB) as no-op Expandables for API
+uniformity, so `\sb` matched and was sent through `Invocation!` →
+`build_invocation`, whose `lookup_definition` rejects Token meanings
+and emitted "Can't invoke; it is undefined".
+
+**Fix:** Switch the gate to
+`state::lookup_meaning(&token)` returning a *genuine*
+`Stored::Expandable`. Token aliases now fall to
+`tokens.push(token)` and are resolved by the digester via meaning
+lookup when the captured stream is replayed.
+
+**Verification:**
+* min repro: `latexml_oxide/tests/trip/sb_in_amsppt_refs.tex`,
+  flipped from `#[ignore]` red TDD to green
+  (`tests/87_trip.rs::sb_in_amsppt_refs`).
+* full paper: math0610119 `Conversion complete: No obvious
+  problems` (was `1 error`).
+* `cargo test --tests` 1112/0/0 (zero regressions across the full
+  suite).
+
 ### 1.5 multicols + `$$ … $$` → text-mode `_` script error ✅ FIXED
 
 **Fix:** Added `mode => "internal_vertical"` to the `multicols` /
