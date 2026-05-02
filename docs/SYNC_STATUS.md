@@ -130,10 +130,22 @@ flagged as Rust > Perl in that TSV finds:
   are likely huge Rust wins.
 * 0 actual current Rust regressions found in the sample.
 
-Rust now beats Perl on at least 18 sandbox papers (memory: [Rust
+**Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
+Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
+43 R=0, 25 R=1, 18 R≥2. Of the 18 R≥2 papers:
+* 12 are P=R parity (not regressions)
+* 6 are **Rust strictly beats Perl** (NEW): `hep-ex0204024` (P=4 R=2),
+  `hep-ph0111449` (P=10 R=5), `hep-lat0110168` (P=7 R=6),
+  `hep-ph0112138` (P=12 R=6), `math0010241` (P=19 R=9 — was P=R=19
+  before commit `a094596a3`), `astro-ph0203201` (P=70 R=12).
+* `hep-ph0001306` is Perl-capped (P=101+ R=20) — likely Rust beats Perl.
+* 0 actual current Rust regressions in R≥2 territory.
+
+Rust now beats Perl on at least 24 sandbox papers (memory: [Rust
 supersedes Perl](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_rust_supersedes_perl.md)).
-The long-tail "real regressions" rate is now empirically 0 in the
-verified sample.
+The long-tail "real regressions" rate is now empirically **0** across
+the verified sample of 33 unique papers (the round-18 spot check
+plus the canvas R≥2 sample).
 
 ### 1.6 math-ph0001015 — `\footnotetext` undefined in AmS-TeX flow ✅ FIXED
 
