@@ -351,7 +351,7 @@ LoadDefinitions!({
   //======================================================================
 
   DefConstructor!("\\object Semiverbatim",
-    "<ltx:text class='ltx_ast_objectname'>#1</ltx:text>");
+    "<ltx:text class='ltx_ast_objectname' _noautoclose='1'>#1</ltx:text>");
   DefMacro!("\\listofobjects", "");
   DefMacro!("\\listobjectname", "List of Objects");
 
