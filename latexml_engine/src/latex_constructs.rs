@@ -2606,13 +2606,27 @@ LoadDefinitions!({
       // even though the paper-local sty defines them. Min repro:
       // `\documentstyle[mysty]{article}` with local mysty.sty.
       use latexml_core::binding::content::FindFileOptions;
-      let found = find_file(&format!("{opt}.sty"),
-        Some(FindFileOptions { notex: true, ..Default::default() })).is_some()
-        || find_file(opt,
-          Some(FindFileOptions { ext_type: Some("sty".into()), forbid_ltxml: true, ..Default::default() })).is_some()
-        || find_file_fallback(opt, "sty").is_some();
-      if found {
-        require_package(opt, RequireOptions::default())?;
+      let found_binding = find_file(&format!("{opt}.sty"),
+        Some(FindFileOptions { notex: true, ..Default::default() })).is_some();
+      let found_fallback = !found_binding && find_file_fallback(opt, "sty").is_some();
+      let found_disk = !found_binding && !found_fallback && find_file(opt,
+        Some(FindFileOptions { ext_type: Some("sty".into()), forbid_ltxml: true, ..Default::default() })).is_some();
+      if found_binding || found_fallback || found_disk {
+        // When the file was found ONLY via paper-local disk-probe (no
+        // .sty.ltxml binding and no version-strip fallback), we must
+        // explicitly enable raw TeX loading because the default
+        // `INCLUDE_STYLES=false` gate inside `require_package` would
+        // otherwise force `notex=true` and suppress the raw load. Without
+        // this, `\documentstyle[<opt>]{<class>}` with paper-local
+        // `<opt>.sty` (e.g. `newpasp.sty` in astro-ph0009248) fired
+        // RequirePackage but never actually loaded, leaving `\affil`,
+        // `\references`, etc. undefined.
+        let opts = if found_disk {
+          RequireOptions { notex: Some(false), ..RequireOptions::default() }
+        } else {
+          RequireOptions::default()
+        };
+        require_package(opt, opts)?;
       } else {
         had_missing = true;
         Info!("unexpected", opt, "Unexpected option '{}' passed via \\documentstyle", opt);

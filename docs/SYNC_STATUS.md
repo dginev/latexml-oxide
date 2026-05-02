@@ -1053,6 +1053,25 @@ by `kpsewhich --version`. Currently dumps load from
 
 ---
 
+## 2026-05-02: \compat@loadpackages — disk-probe-found local sty must allow raw load
+
+`astro-ph0009248` (`\documentstyle[11pt,newpasp]{article}` + local
+`newpasp.sty`): Rust=3 → Rust=0 (Perl=0). Tests stay 1112/0/0.
+
+* **`latex_constructs.rs` (`\compat@loadpackages`)** — track WHICH path
+  matched the option-package `find_file` probe (binding registry,
+  version-strip fallback, or paper-local disk). When matched ONLY via
+  the disk-probe (no .sty.ltxml binding, no fallback), pass
+  `notex: Some(false)` to `require_package` so the
+  `INCLUDE_STYLES=false` gate inside `require_package` doesn't force
+  `notex=true` and suppress the actual raw load.
+* This complements the 2026-05-02 cls-fallback fix below — same
+  family of bugs (paper-local sty discovery + raw-load suppression)
+  but on the OPTION-passthrough path rather than the class path.
+* Cluster impact: any LaTeX 2.09 paper with `\documentstyle[opt]{class}`
+  shipping a local `opt.sty` (no LaTeXML binding). Likely 50+ astro-ph
+  papers (per the in-tree comment block at `\compat@loadpackages`).
+
 ## 2026-05-02: \documentstyle cls-fallback priority + options forwarding
 
 `astro-ph0002213` (`\documentstyle[epsfig]{mn1}` + local `mn1.sty`):
