@@ -32,13 +32,16 @@ LoadDefinitions!({
   DefRegister!("\\language", Number!(0));
   DefPrimitive!("\\setlanguage Number", None);
 
-  // \languagename — current language name (text). babel's hyphen.cfg L175
-  // sets `\def\languagename{english}` as the format-time default; subsequent
-  // \selectlanguage{...} calls overwrite. Format-load isn't replicated in
-  // the Rust port, so packages that probe \languagename (lipsum, blindtext,
-  // hyperref language switches) hit undefined unless babel is loaded.
-  // Mirror the format-time default here so any paper has a baseline name.
-  DefMacro!("\\languagename", "english");
+  // \languagename — current language name (text). Perl's latex.dump captures
+  // `\def\languagename{nohyphenation}` as the format-time default
+  // (latex_dump.pool.ltxml L16522). Subsequent \selectlanguage{...} calls
+  // overwrite. Mirror that default exactly: apacite.sty L1422-1423 explicitly
+  // tests `\ifx\languagename<nohyphenation>` and skips its language-aware
+  // file lookup when the test passes, which is the Perl-clean path.
+  // Witness: 0906.3507 — Rust's prior "english" default caused apacite to
+  // load the system english.apc (newer than local apacite.sty), triggering
+  // an undefined `\if@APAC@natbib@apa` cascade.
+  DefMacro!("\\languagename", "nohyphenation");
 
   //======================================================================
   // codepoints used for hyphenation
