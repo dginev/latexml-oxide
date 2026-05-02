@@ -706,6 +706,15 @@ LoadDefinitions!({
           if key == "baseurl" {
             AssignValue!("BASE_URL" => value.to_string());
           }
+          // Perl hyperref.sty.ltxml L114-115: `if ($key eq 'colorlinks' and
+          // ToString($value) eq 'true') { RequirePackage('color'); }`. Earlier
+          // Rust port handled the bare `colorlinks` form but missed the
+          // `colorlinks=true` keyval — papers passing the option as
+          // `\usepackage[colorlinks=true]{hyperref}` had \textcolor undefined.
+          // Witness: 0902.2912.
+          if key == "colorlinks" && value == "true" {
+            RequirePackage!("color");
+          }
         }
       }
     }
