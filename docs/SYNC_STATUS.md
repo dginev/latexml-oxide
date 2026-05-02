@@ -130,6 +130,15 @@ flagged as Rust > Perl in that TSV finds:
   are likely huge Rust wins.
 * 0 actual current Rust regressions found in the sample.
 
+**Stale-TSV verification, 2026-05-01 evening (post-`6b8d9865a`)**:
+spot-checked an additional 20 entries from the round18 TSV — all 10
+R=1 candidates AND all 10 R=2-8 candidates parity-check today as
+**OUT-OF-SCOPE (P=R)**. Cumulative coverage: ~35 TSV entries
+re-checked, 0 actual current Rust regressions. The TSV is now
+substantially obsolete; future canvas-error categorization should
+re-baseline from a fresh sweep rather than referencing this
+April 30 file.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
