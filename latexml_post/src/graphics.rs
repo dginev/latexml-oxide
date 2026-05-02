@@ -25,6 +25,20 @@ static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
     .filter(|&n| n > 0)
 });
 
+static PDF_CROP_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+  regex::Regex::new(
+    r"/CropBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
+  )
+  .unwrap()
+});
+
+static PDF_MEDIA_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+  regex::Regex::new(
+    r"/MediaBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
+  )
+  .unwrap()
+});
+
 /// Properties for a graphics file type.
 #[derive(Debug, Clone)]
 pub struct TypeProperties {
@@ -76,7 +90,7 @@ pub struct Graphics {
 
 impl Graphics {
   const DEFAULT_RASTER_DENSITY: u32 = 150;
-  const MAX_RASTER_DIMENSION_PX: u32 = 4096;
+  const MAX_RASTER_DIMENSION_PX: u32 = 2048;
 
   pub fn new(dpi: Option<u32>, trivial_scaling: bool) -> Self {
     let mut type_properties = HashMap::new();
@@ -623,10 +637,15 @@ impl Graphics {
     let source_lc = source.to_lowercase();
     let is_postscript =
       source_lc.ends_with(".eps") || source_lc.ends_with(".ps") || source_lc.ends_with(".ai");
-    if !is_postscript {
-      return Self::DEFAULT_RASTER_DENSITY;
-    }
-    let Some((w_pt, h_pt)) = read_postscript_bounding_box(source) else {
+    let is_pdf = source_lc.ends_with(".pdf");
+    let page_box = if is_postscript {
+      read_postscript_bounding_box(source)
+    } else if is_pdf {
+      read_pdf_page_box(source)
+    } else {
+      None
+    };
+    let Some((w_pt, h_pt)) = page_box else {
       return Self::DEFAULT_RASTER_DENSITY;
     };
     let max_pt = w_pt.max(h_pt);
@@ -762,6 +781,22 @@ fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
     return Some((w, h));
   }
   None
+}
+
+fn read_pdf_page_box(source: &str) -> Option<(f64, f64)> {
+  let bytes = std::fs::read(source).ok()?;
+  let content = String::from_utf8_lossy(&bytes);
+  parse_pdf_page_box(&content, &PDF_CROP_BOX_RE)
+    .or_else(|| parse_pdf_page_box(&content, &PDF_MEDIA_BOX_RE))
+}
+
+fn parse_pdf_page_box(content: &str, re: &regex::Regex) -> Option<(f64, f64)> {
+  let captures = re.captures(content)?;
+  let x0 = captures.get(1)?.as_str().parse::<f64>().ok()?;
+  let y0 = captures.get(2)?.as_str().parse::<f64>().ok()?;
+  let x1 = captures.get(3)?.as_str().parse::<f64>().ok()?;
+  let y1 = captures.get(4)?.as_str().parse::<f64>().ok()?;
+  Some(((x1 - x0).abs(), (y1 - y0).abs()))
 }
 
 impl Processor for Graphics {
@@ -1184,7 +1219,7 @@ mod tests {
     );
     assert_eq!(
       Graphics::raster_density_for_source(huge.to_str().unwrap()),
-      26
+      13
     );
     assert_eq!(
       read_postscript_bounding_box(huge.to_str().unwrap()),
@@ -1192,6 +1227,31 @@ mod tests {
     );
 
     std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  #[test]
+  fn pdf_density_caps_huge_page_box() {
+    let tmp = std::env::temp_dir().join("latexml_graphics_pdf_density_test.pdf");
+    std::fs::write(
+      &tmp,
+      b"%PDF-1.4
+1 0 obj
+<< /Type /Page /MediaBox [0 0 4218 2437] >>
+endobj
+",
+    )
+    .unwrap();
+
+    assert_eq!(
+      read_pdf_page_box(tmp.to_str().unwrap()),
+      Some((4218.0, 2437.0))
+    );
+    assert_eq!(
+      Graphics::raster_density_for_source(tmp.to_str().unwrap()),
+      34
+    );
+
+    std::fs::remove_file(&tmp).ok();
   }
 
   /// SVG viewBox parsing extracts width/height.

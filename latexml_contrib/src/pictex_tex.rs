@@ -4,7 +4,7 @@
 //! boxes. In HTML this becomes thousands of positioned inline spans, which is
 //! slow and usually less useful than keeping the figure/caption structure.
 //! These stubs consume common PiCTeX drawing commands without rendering them.
-use crate::prelude::*;
+use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -17,6 +17,9 @@ LoadDefinitions!({
   DefMacro!("\\setquadratic", "");
   DefMacro!("\\stoprotation", "");
 
+  RawTeX!("\\def\\linethickness{\\@ifnextchar={\\lx@pictex@linethickness}{\\lx@pictex@linethickness@arg}}");
+  RawTeX!("\\def\\lx@pictex@linethickness=#1{}");
+  RawTeX!("\\def\\lx@pictex@linethickness@arg#1{}");
   RawTeX!("\\def\\setcoordinatesystem units <#1,#2>{}");
   RawTeX!("\\def\\setplotsymbol (#1){}");
   RawTeX!("\\def\\setdashes <#1>{}");

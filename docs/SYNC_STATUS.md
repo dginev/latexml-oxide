@@ -639,8 +639,26 @@ all 151 old `10-15s` rows. The `15-20s` tier dropped **477.7s ->
 66.5s** with no current row >=5s; the `10-15s` tier dropped
 **1727.5s -> 262.1s** with no current row >=5s. Combined old TSV
 `wall_time_s >= 10` coverage is now **3059.7s old total to 417.2s
-current total** (~7.3x). The current live tail remains entirely in
-the old `20s+` rows listed above.
+current total** (~7.3x).
+
+**Fresh current `>10s` check and speedups (2026-05-02):** A top slice
+from old `5-10s` rows found additional current `>10s` papers, so the
+active rule is confirmed current wall time, not stale TSV band. The
+confirmed `>10s` set, slowest to fastest, was:
+`hep-ph0107113` 71.1s, `hep-th0109082` 63.3s,
+`cond-mat0109294` 14.3s, `hep-th0207233` 12.3s,
+`physics0206034` 11.3s, `hep-ph0201192` 11.0s, and
+`astro-ph0003028` 10.7s. Two targeted speedups remove this tail:
+EPS graphics now try `ps2pdf -dEPSCrop` + `pdftocairo` before
+ImageMagick fallback, and PiCTeX raw inputs are stubbed in
+`latexml_contrib` (`prepictex.tex`, `pictex.tex`, `postpictex.tex`) to
+avoid expanding plots into thousands of positioned spans. Verification
+over all 15 current-tail candidates has max wall **2.81s**; the former
+top two are `hep-ph0107113` **71.1s -> 0.64s** and
+`hep-th0109082` **63.3s -> 0.70s**. Artifacts:
+`/tmp/100k_current_gt10_confirm.tsv`,
+`/tmp/100k_current_gt10_after_speedups.tsv`, and
+`.investigation/100k_slow_perf_2026-05-01.md`.
 
 **Round-18 TSV parity refresh (2026-05-01, later):** Reran
 `tools/parity_check.sh` on **all 48 papers** in
