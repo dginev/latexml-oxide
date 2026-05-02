@@ -185,9 +185,24 @@ Of the 16: **13 BOTH CLEAN** (concurrent-xargs false positives),
 `0801.0061` (R=3 P=2, Δ=1 cosmetic — same root cause as 1001.3714).
 
 Effective rate: **1000/1000 R==0** (modulo 1 cluster paper at Δ=1).
-Real-regression count: 2/4000 across 4 random samples
-(`1001.3714` + `0801.0061`, both IEEEproof). Random sample finds
-the IEEEproof cluster has 2 papers in scope.
+
+**IEEEproof env template fix (`856535249`)**: Both cluster papers
+now match Perl exactly:
+* `1001.3714` R=2 → R=1 (Perl P=1)
+* `0801.0061` R=3 → R=2 (Perl P=2)
+Cause: the IEEEproof DefEnvironment template had `</ltx:proof>` as
+its closing tag, becoming a strict `close_element` call. When
+`\end{IEEEproof}`'s `end_mode` triggered an auto_close on
+`<ltx:proof>` (via `Tag!("ltx:proof", auto_close => true)`), the
+template's strict close emitted a spurious malformed cascade.
+Mirroring amsthm's `\@proof` pattern: drop the explicit
+`</ltx:proof>` from the template; Tag-level auto_close cleans up at
+end-of-env. Tests 1112/0/0. Post-fix 200-paper sweep: **200/200
+effective R==0**.
+
+**Real-regression count: 0/4000.** All known cluster regressions
+fixed; only error-equal-perl out-of-scope cases remain across the
+random samples.
 
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
