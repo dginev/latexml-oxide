@@ -126,11 +126,15 @@ LoadDefinitions!({
     //   DefParameterType('Token', sub { $_[0]->readToken; });
     // No error raised on EOF — silently returns undef. Our prior impl
     // raised an error, which manifested as a cascade after upstream
-    // recovery (e.g. \^ with no argument in math mode). Strict-Perl
-    // parity: silent passthrough.
+    // recovery (e.g. \^ with no argument in math mode). EOF fallback
+    // returns `\relax` (a no-op token) so downstream `try_to_token`
+    // succeeds — using empty Tokens here would cascade
+    // "Error:expected:argument: try_to_token: empty Tokens" at the
+    // primitive's arg-coerce step (witness: 0910.2125 sub/superscript
+    // cascade where 13 errors match Perl + 1 extra Rust empty-Tokens).
     match gullet::read_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
-      None => Ok(ArgWrap::Tokens(Tokens!())),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
     }
   });
 
@@ -138,11 +142,11 @@ LoadDefinitions!({
   DefParameterType!(XToken, sub[_inner, _extra] {
     // Perl Base_ParameterTypes.pool.ltxml L94:
     //   DefParameterType('XToken', sub { $_[0]->readXToken; });
-    // Same silent passthrough on EOF — see Token comment above.
+    // Same `\relax`-sentinel passthrough on EOF — see Token comment above.
     if let Some(t) = gullet::read_x_token(None, false, None)? {
       Ok(ArgWrap::Token(t))
     } else {
-      Ok(ArgWrap::Tokens(Tokens!()))
+      Ok(ArgWrap::Token(T_CS!("\\relax")))
     }
   });
 
