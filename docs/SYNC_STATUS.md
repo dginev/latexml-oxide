@@ -578,14 +578,14 @@ mis-classified as failures (commit pending).
   emit cascading malformed-XMTok and Unexpected:_ errors. Perl=Rust=0
   confirmed.
 
-- [x] **math0010241** (R=33 vs P=19) — **OUT-OF-SCOPE 2026-05-01**.
-  Re-classified after closer inspection: trigger is
-  `\begin{EG}\emph{ ... $$display math$$ ... }\end{EG}` blocks where
-  display math `$$...$$` appears inside `\emph{...}`. Both engines
-  correctly reject this fundamentally malformed input (Rust=33,
-  Perl=19 — same family as 0901.2408). +14 delta is verbosity in
-  malformed-XML reporting, not a Rust regression. Moved to
-  `docs/out-of-scope/math0010241_emph_dollar.md`.
+- [x] **math0010241** (R=33 → R=19, =Perl) — **FIXED 2026-05-01**
+  by commit `a094596a3` extending the cascading-rejection
+  suppression to `<ltx:emph>` parents. Trigger is
+  `\begin{EG}\emph{ ... $$display math$$ ... }\end{EG}` blocks; both
+  engines correctly reject the fundamentally malformed input, but
+  Rust was emitting per-XMTok-child cascade noise that Perl does
+  not. The 14 XMTok-in-emph cascade emissions are now suppressed,
+  bringing Rust to exact parity with Perl=19.
 
 - [x] **astro-ph0203201** (R=70 vs P=70) — **Out-of-scope** —
   Perl=Rust same error counts (56 `_`-in-text + 12 XMArray-malformed
