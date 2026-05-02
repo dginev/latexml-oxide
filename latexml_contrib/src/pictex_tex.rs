@@ -35,4 +35,15 @@ LoadDefinitions!({
   // `\multiput{\sq} at 0 5  0 4 ... /`). Stub: gobble.
   RawTeX!("\\def\\put#1 at #2 #3 {}");
   RawTeX!("\\def\\multiput#1 at #2/{}");
+
+  // More PiCTeX commands needed by 0910.1304, math0608653.
+  RawTeX!("\\def\\setplotarea x from #1 to #2, y from #3 to #4 {}");
+  RawTeX!("\\def\\setshadesymbol (#1){}");
+  RawTeX!("\\def\\setshadegrid span <#1>{}");
+  // \vshade / \hshade: 3 nums then <flags> then triples until `/` terminator.
+  // Real PiCTeX uses \!Shadewhat to recursively peek-and-consume; our stub
+  // gobbles everything up to the first `/` token. Witness: math0608653
+  // (multi-line `\vshade -20 0 0 <z,z,,> -10 0 20\n <z,z,,> ... /`).
+  RawTeX!("\\def\\vshade#1/{}");
+  RawTeX!("\\def\\hshade#1/{}");
 });
