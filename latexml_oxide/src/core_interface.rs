@@ -189,8 +189,8 @@ impl DigestionAPI for Core {
   fn digest(
     &mut self,
     request: String,
-    _preamble: Option<String>,
-    _postamble: Option<String>,
+    preamble: Option<String>,
+    postamble: Option<String>,
     mode: Option<DigestionMode>,
     _no_init: bool,
   ) -> Result<Digested> {
@@ -263,9 +263,15 @@ impl DigestionAPI for Core {
       None,
     );
 
-    // $self->loadPostamble($options{postamble}) if $options{postamble};
+    // Reverse order, since last opened is first read!
+    // (Perl: Core.pm L154-157 in `digestFile`.)
+    if let Some(postamble) = postamble {
+      self.load_postamble(postamble);
+    }
     input_content(&request, InputOptions::default())?;
-    // $self->loadPreamble($options{preamble}) if $options{preamble};
+    if let Some(preamble) = preamble {
+      self.load_preamble(preamble);
+    }
 
     // // Now for the Hacky part for BibTeX!!!
     // if ($mode eq 'BibTeX') {
