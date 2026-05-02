@@ -602,6 +602,14 @@ from this tier are `math-ph0004021` 9.1s (math parser),
 6.2s (math parser + XML). Combined old TSV `wall_time_s >= 20`
 coverage is now **854.5s old total to 88.6s current total** (~9.6x).
 
+**Lower slow tiers (2026-05-02):** Reran all 28 old `15-20s` rows and
+all 151 old `10-15s` rows. The `15-20s` tier dropped **477.7s ->
+66.5s** with no current row >=5s; the `10-15s` tier dropped
+**1727.5s -> 262.1s** with no current row >=5s. Combined old TSV
+`wall_time_s >= 10` coverage is now **3059.7s old total to 417.2s
+current total** (~7.3x). The current live tail remains entirely in
+the old `20s+` rows listed above.
+
 **Round-18 TSV parity refresh (2026-05-01, later):** Reran
 `tools/parity_check.sh` on **all 48 papers** in
 `.investigation/round18_sweep_2026-05-01.tsv` with
@@ -1042,3 +1050,25 @@ by `kpsewhich --version`. Currently dumps load from
 | 10k canvas (Phase 1, complete) | 7731 / 7898 = 97.89% | n/a (canvas retired) |
 | Filesystem-level hard failures (10k) | 1 (math0005251) | 0 |
 | 100k "no-problem" canvas (Phase 2, active) | downloaded (100 000 ZIPs) — sweep pending | 100% match Perl |
+
+---
+
+## 2026-05-02: \documentstyle cls-fallback priority + options forwarding
+
+`astro-ph0002213` (`\documentstyle[epsfig]{mn1}` + local `mn1.sty`):
+Rust=3 → Rust=1 (Perl=0). Two surgical fixes; tests stay 1112/0/0.
+
+* **`tex_job.rs` — gate the paper-local disk-probe** on absence of ANY
+  `<class>.cls` binding (exact OR via `find_file_fallback`). Without
+  this gate, `\documentstyle{mn1}` was preempted by the local
+  `mn1.sty` whose raw load is suppressed by the default
+  `INCLUDE_STYLES=false`. With the gate, `mn1` falls through to
+  `mn.cls.ltxml` (Perl-faithful priority).
+* **`content.rs` — forward `options`/`after`** to the
+  `find_file_fallback` recursive `input_definitions` call. The prior
+  empty-handoff dropped the user `[options]` (e.g. `[epsfig]`) and the
+  `\compat@loadpackages` after-hook so the unused-option pass never
+  fired.
+* Residual: `\psfig` undefined (1 error) — `mn.cls.ltxml`'s
+  `PassOptions('article', 'cls', 'epsfig')` plumbing isn't reaching
+  `@unusedoptionlist` in Rust. Separate investigation.

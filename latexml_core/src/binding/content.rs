@@ -272,6 +272,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
   // them *always*, as a matter of course TODO: This *IS* inaccurate with the Package.pm
+  // Snapshot options.after / options.options BEFORE handleoptions consumes
+  // them so the fallback-binding recursive call (Step 3 below) can forward
+  // both to the fallback. Without this snapshot, mn1 → mn.cls.ltxml fallback
+  // ran with empty options/after and the user's `[epsfig]` was lost (see
+  // astro-ph0002213 root cause).
+  let original_after = options.after.clone();
+  let original_options = options.options.clone();
   // InputDefinitions, revisit at the right time and make sure it matches line-by-line (including
   // the subordinated methods)
   if options.handleoptions {
@@ -422,10 +429,17 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // Load the fallback binding — use reloadable since we already marked original as "loaded"
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
         let fallback_name = fallback.trim_end_matches(ext_suffix).to_string();
+        // Forward the original options + after-hook so fallback bindings see
+        // user-supplied class/package options (Perl-faithful: in Perl FindFile
+        // returns a path and the caller's options/after stay attached to the
+        // ORIGINAL `\@currname`-frame). Without this, `\documentstyle[epsfig]{mn1}`
+        // fell back to mn.cls.ltxml with empty options → mn.cls's option-handler
+        // never saw `epsfig` → `\compat@loadpackages` after-hook never fired
+        // → `\psfig` undefined. Witness: astro-ph0002213.
         let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
           extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
-          options: Vec::new(),
-          after: Tokens::default(),
+          options: original_options.clone(),
+          after: original_after.clone(),
           handleoptions: options.handleoptions,
           noerror: true,
           reloadable: true,

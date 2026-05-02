@@ -197,28 +197,29 @@ LoadDefinitions!({
     // `RequirePackage('psfig'→'epsfig')` chain provides stay undefined.
     // Check `<class>.sty` via binding registry (notex), version-strip
     // fallback, AND disk-only probe (`forbid_ltxml: true`) so paper-local
-    // `<class>.sty` files (e.g. `mn1.sty` in astro-ph0002213, a LaTeX 2.09
-    // documentstyle file) win over a version-strip-derived `<class>.cls`
-    // (e.g. `mn1` → `mn.cls.ltxml`) which would drop the `[options]` since
-    // mn.cls's option-handler doesn't recognize them. Disk probe is gated
-    // on the absence of an exact `<class>.cls` binding to keep
-    // `\documentstyle{article}` routing through `article.cls.ltxml`
-    // rather than TeX Live's legacy disk `article.sty`.
+    // `<class>.sty` files (e.g. `jinstpub.sty`, with no .cls counterpart)
+    // can be loaded as a class. Disk probe is gated on the absence of
+    // ANY `<class>.cls` binding (exact OR via version-strip fallback) so
+    // that `\documentstyle{mn1}` falls back to `mn.cls.ltxml` (Perl-faithful
+    // priority) instead of the local `mn1.sty` whose raw load is suppressed
+    // by the default `INCLUDE_STYLES=false` gate. Witness: astro-ph0002213
+    // (\documentstyle[epsfig]{mn1} + local mn1.sty + \begin{keywords}/\psfig).
     let class_cls_binding_exact = find_file(
       &format!("{}.cls", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some();
+    let class_cls_via_fallback = find_file_fallback(&class, "cls").is_some();
     let class_sty_found = find_file(
       &format!("{}.sty", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some()
-    || (!class_cls_binding_exact && find_file(
+    || (!class_cls_binding_exact && !class_cls_via_fallback && find_file(
       &class,
       Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
     ).is_some())
     || find_file_fallback(&class, "sty").is_some();
     let class_cls_found = !class_sty_found && (class_cls_binding_exact
-      || find_file_fallback(&class, "cls").is_some());
+      || class_cls_via_fallback);
 
     let after = Tokens!(T_CS!("\\compat@loadpackages"));
 
