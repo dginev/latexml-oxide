@@ -217,6 +217,18 @@ cleanly), 2 transient errors that re-checked as BOTH CLEAN under
 `tools/parity_check.sh`. Effective rate: 200/200 R==0. Real-regression
 count drops to **3/3000** with hep-th0412125 fixed.
 
+**Random 1000-paper sample after `\RequirePackage[opt]` fix
+(`6b8d9865a`)**: 990 OK, 1 NOMAIN, 9 ERRs that ALL parity-check as
+BOTH CLEAN (concurrent-xargs false positives). Effective rate:
+**1000/1000 R==0**. Real-regression count drops to **2/3000**:
+* `0906.3507` (R=1 P=0) — local-sty `\InputIfFileExists`
+* `1001.3714` (R=2 P=1) — IEEEproof env mode-frame mismatch (Δ=1 cosmetic)
+
+The wide-impact `\RequirePackage` fix surfaces no new clusters in the
+1000-paper sample. `cs0503041`-style empty-stem panics fully suppressed
+by commit `3465b89ad` (pre-filter `.sty` / `.cls` candidates before
+calling kpathsea).
+
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust beats Perl on **14 confirmed
 sandbox papers** (memory: [Rust supersedes
@@ -411,6 +423,16 @@ Current live tail in that bucket is:
 6.7s (7570 formulae), `math0107222` 5.8s (PiCTeX/XML-side).
 Detailed phase splits and external-tool timings are preserved in
 `.investigation/100k_slow_perf_2026-05-01.md`.
+
+**Second slow tier (2026-05-02):** Reran the remaining 8 rows with
+old `20 <= wall_time_s < 30`. That bucket dropped from **182.4s old
+total to 32.5s current total**. The old `math0205073`
+`conversion_fatal` is now `ok` in 1.1s, and the old `hep-th0005159`
+abort is now a graceful `conversion_error` in 0.3s. Current slow rows
+from this tier are `math-ph0004021` 9.1s (math parser),
+`astro-ph0107080` 8.6s (136 small PS graphics), and `math0006145`
+6.2s (math parser + XML). Combined old TSV `wall_time_s >= 20`
+coverage is now **854.5s old total to 88.6s current total** (~9.6x).
 
 **Round-18 TSV parity refresh (2026-05-01, later):** Reran
 `tools/parity_check.sh` on **all 48 papers** in
