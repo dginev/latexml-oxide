@@ -55,14 +55,14 @@ fn iopart_la_user_override() {
 }
 
 #[test]
-#[ignore = "math0610119: \\sb in amsppt \\Refs/\\paper context — see project_math0610119_sb_amsppt_refs.md"]
 fn sb_in_amsppt_refs() {
-  // math0610119 — `\sb` (Let to T_SUB) is not invokable inside
-  // amsppt's `\@bibfield XUntil:\@end@bibfield` field-capture path.
-  // Direct `$\sb{0}$` works (Let in plain_constructs is reached);
-  // the bug is at invocation time in build_invocation when
-  // `lookup_definition` for a Let-to-token alias returns None
-  // during the bibfield XUntil expansion.
+  // math0610119 — `\sb` (Let to T_SUB) inside amsppt's
+  // `\@bibfield XUntil:\@end@bibfield` field-capture path. Fixed by
+  // gating XUntil's "re-Invocation-emit" arm on `lookup_meaning`
+  // returning a genuine Stored::Expandable (not a Token-alias
+  // synthetically wrapped as Expandable by lookup_definition_stored).
+  // Token aliases now pass through unchanged for the digester to
+  // resolve via the meaning lookup. See base_parameter_types.rs XUntil.
   let (code, status) = run_trip("sb_in_amsppt_refs");
   assert_eq!(
     code, 0,

@@ -251,27 +251,35 @@ LoadDefinitions!({
         tokens.push(token);
         tokens.extend(gullet::read_balanced(ExpansionLevel::Off,false,false)?.unlist());
         tokens.push(T_END!());
-      } else if let Some(defn) = lookup_definition_stored(&token)? {
+      } else {
         // After read_x_token, an expandable macro should already have been
         // expanded — what remains here is non-expandable (Primitive,
-        // Constructor, Conditional, Register, MathPrimitive). Eagerly
-        // calling `read_arguments()` on those was a bug: e.g. for
-        // `\hspace*{-4mm} $^*\,$` inside an XUntil body, `\hspace`'s
-        // primitive `Dimension` reader would over-consume past `}`,
-        // eating the following `$` token and causing the math frame to
-        // leak (witness: astro-ph9903386 \institute math-mode leak).
-        // Only re-Invocation-emit for Expandable defs that for some
-        // reason escaped `read_x_token`'s expansion (e.g. \protected
-        // macros); push primitives/constructors/etc. as-is and let
-        // digestion handle their args.
-        if matches!(defn, Stored::Expandable(_)) {
-          let args = defn.read_arguments()?;
-          tokens.extend(Invocation!(token, args).unlist());
+        // Constructor, Conditional, Register, MathPrimitive) or a Let to
+        // a literal token. Eagerly calling `read_arguments()` on those
+        // was a bug: e.g. for `\hspace*{-4mm} $^*\,$` inside an XUntil
+        // body, `\hspace`'s primitive `Dimension` reader would
+        // over-consume past `}`, eating the following `$` token and
+        // causing the math frame to leak (witness: astro-ph9903386
+        // \institute math-mode leak). Only re-Invocation-emit for
+        // GENUINE Expandable defs that for some reason escaped
+        // `read_x_token`'s expansion (e.g. \protected macros). Inspect
+        // the raw `Stored` variant rather than `lookup_definition_stored`
+        // (which synthesizes a no-op Expandable around `Stored::Token`
+        // entries like `\sb`-Let-to-T_SUB; rebuilding such a synthesized
+        // invocation calls `build_invocation`, which rejects Token
+        // meanings and erroneously fires "Can't invoke; it is undefined"
+        // — witness: math0610119 `\sb` inside amsppt
+        // `\@bibfield XUntil:\@end@bibfield`).
+        let is_real_expandable =
+          matches!(state::lookup_meaning(&token), Some(Stored::Expandable(_)));
+        if is_real_expandable {
+          if let Some(defn) = lookup_definition_stored(&token)? {
+            let args = defn.read_arguments()?;
+            tokens.extend(Invocation!(token, args).unlist());
+          }
         } else {
           tokens.push(token);
         }
-      } else {
-        tokens.push(token);
       }
     }
     Ok(Tokens::new(tokens))
