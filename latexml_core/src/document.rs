@@ -2095,7 +2095,17 @@ impl Document {
     // And if there's already text???
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
-    node.append_text(text)?;
+    // libxml's append_text uses CString and panics on embedded NULs. NUL is
+    // forbidden in XML text per spec anyway, so strip it. Witness:
+    // astro-ph0202376 (a paper that produces math tokens with \char0 / NUL
+    // bytes embedded in their content). Matches Perl's libxml behavior which
+    // silently drops NULs in text content.
+    if text.contains('\0') {
+      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+      node.append_text(&cleaned)?;
+    } else {
+      node.append_text(text)?;
+    }
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state::get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
