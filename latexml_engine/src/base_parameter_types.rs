@@ -122,21 +122,26 @@ LoadDefinitions!({
 
   // Read the next token
   DefParameterType!(Token, sub[_inner, _extra] {
+    // Perl Base_ParameterTypes.pool.ltxml L91:
+    //   DefParameterType('Token', sub { $_[0]->readToken; });
+    // No error raised on EOF — silently returns undef. Our prior impl
+    // raised an error, which manifested as a cascade after upstream
+    // recovery (e.g. \^ with no argument in math mode). Strict-Perl
+    // parity: silent passthrough.
     match gullet::read_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
-      None => {
-        Error!("expected", "Token", "Paramater <Token> found None.");
-        Ok(ArgWrap::Tokens(Tokens!()))
-      }
+      None => Ok(ArgWrap::Tokens(Tokens!())),
     }
   });
 
   // Read the next token, after expanding any expandable ones.
   DefParameterType!(XToken, sub[_inner, _extra] {
+    // Perl Base_ParameterTypes.pool.ltxml L94:
+    //   DefParameterType('XToken', sub { $_[0]->readXToken; });
+    // Same silent passthrough on EOF — see Token comment above.
     if let Some(t) = gullet::read_x_token(None, false, None)? {
       Ok(ArgWrap::Token(t))
     } else {
-      Error!("expected","XToken", "Paramater <XToken> found None.");
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   });
