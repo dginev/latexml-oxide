@@ -91,6 +91,34 @@ pub trait DigestionAPI {
   }
 }
 
+/// Parse a preload spec into `(name, ext, options)`.
+///
+/// Mirrors Perl `Core.pm:initializeState` (regexes
+/// `s/^\[([^\]]*)\]//` then `s/\.(\w+)$//`): the option bracket
+/// comes at the *front*, e.g. `[ids,mathlexemes]latexml.sty`.
+/// Defaults to `ext = "sty"` when the spec has no `.<ext>` suffix.
+pub(crate) fn parse_preload_spec(preload: &str) -> (String, String, Vec<String>) {
+  let (base, options) = match preload
+    .strip_prefix('[')
+    .and_then(|rest| rest.find(']').map(|end| (&rest[..end], &rest[end + 1..])))
+  {
+    Some((opts_str, rest)) => {
+      let opts: Vec<String> = opts_str
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+      (rest.to_string(), opts)
+    },
+    None => (preload.to_string(), vec![]),
+  };
+  let (name, ext) = match base.rfind('.') {
+    Some(pos) => (base[..pos].to_string(), base[pos + 1..].to_string()),
+    None => (base.clone(), String::from("sty")),
+  };
+  (name, ext, options)
+}
+
 impl DigestionAPI for Core {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
     // reset the error REPORT singleton
@@ -106,39 +134,22 @@ impl DigestionAPI for Core {
     let dump_path = LATEXML_DUMP.clone();
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
-      // Perl: initializeState extracts extension and options from "name.ext[opt1,opt2]"
-      // Parse bracket options: "latexml.sty[nobibtex]" → name="latexml", ext="sty",
-      // options=["nobibtex"]
-      let (preload_base, options) = if let Some(bracket_pos) = preload.find('[') {
-        let base = preload[..bracket_pos].to_string();
-        let opts_str = preload[bracket_pos + 1..].trim_end_matches(']');
-        let opts: Vec<String> = opts_str
-          .split(',')
-          .map(|s| s.trim().to_string())
-          .filter(|s| !s.is_empty())
-          .collect();
-        (base, opts)
-      } else {
-        (preload.clone(), vec![])
-      };
-      let (name, ext) = if let Some(pos) = preload_base.rfind('.') {
-        (
-          preload_base[..pos].to_string(),
-          preload_base[pos + 1..].to_string(),
-        )
-      } else {
-        (preload_base.clone(), String::from("sty"))
-      };
+      let (name, ext, options) = parse_preload_spec(&preload);
       let handleoptions = ext == "sty" || ext == "cls";
-      // Pass package options via state (Perl: \PassOptionsToPackage equivalent)
+      // Pass package options via state (Perl: \PassOptionsToPackage equivalent).
+      // Match `\PassOptionsToPackage` at latex_constructs.rs L3838-3842: push the
+      // `Vec<String>` through `push_value` so it lands as a `Stored::Strings`
+      // batch inside the `opt@<name>.<ext>` `VecDequeStored`. The batch shape is
+      // what `collect_syms` (binding/content.rs L1157) flattens when
+      // `\ProcessOptions*` enumerates declared options; storing a single
+      // comma-joined `Stored::String("opt1,opt2")` instead silently bypasses
+      // every `DeclareOption!` site, so e.g. dvipsnames/svgnames/x11names
+      // palettes never load — visible as `Error:unexpected:Apricot Can't find
+      // color named 'Apricot'; assuming Black` on a `[dvipsnames]color.sty`
+      // preload.
       if !options.is_empty() {
         let opt_key = format!("opt@{name}.{ext}");
-        let opt_str = options.join(",");
-        state::assign_value(
-          &opt_key,
-          latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(&opt_str)),
-          Some(Scope::Global),
-        );
+        state::push_value(&opt_key, options)?;
       }
       input_definitions(&name, InputDefinitionOptions {
         extension: Some(ext.into()),
@@ -911,5 +922,94 @@ fn renumber_collect_dfs(
       continue;
     }
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::parse_preload_spec;
+
+  fn opts(v: &[&str]) -> Vec<String> { v.iter().map(|s| s.to_string()).collect() }
+
+  #[test]
+  fn preload_no_brackets_no_ext() {
+    assert_eq!(
+      parse_preload_spec("latexml"),
+      ("latexml".into(), "sty".into(), opts(&[]))
+    );
+  }
+
+  #[test]
+  fn preload_no_brackets_with_ext() {
+    assert_eq!(
+      parse_preload_spec("ar5iv.sty"),
+      ("ar5iv".into(), "sty".into(), opts(&[]))
+    );
+    assert_eq!(
+      parse_preload_spec("TeX.pool"),
+      ("TeX".into(), "pool".into(), opts(&[]))
+    );
+  }
+
+  #[test]
+  fn preload_front_brackets_with_options() {
+    // The historical-bug fixture: front-bracket form must produce a real name.
+    assert_eq!(
+      parse_preload_spec("[ids,mathlexemes]latexml.sty"),
+      (
+        "latexml".into(),
+        "sty".into(),
+        opts(&["ids", "mathlexemes"])
+      )
+    );
+    assert_eq!(
+      parse_preload_spec("[dvipsnames]color.sty"),
+      ("color".into(), "sty".into(), opts(&["dvipsnames"]))
+    );
+  }
+
+  #[test]
+  fn preload_class_with_options() {
+    assert_eq!(
+      parse_preload_spec("[twocolumn,11pt]article.cls"),
+      (
+        "article".into(),
+        "cls".into(),
+        opts(&["twocolumn", "11pt"])
+      )
+    );
+  }
+
+  #[test]
+  fn preload_options_trimmed_and_empty_stripped() {
+    assert_eq!(
+      parse_preload_spec("[ a , b ,, c ]name.sty"),
+      ("name".into(), "sty".into(), opts(&["a", "b", "c"]))
+    );
+  }
+
+  #[test]
+  fn preload_empty_brackets() {
+    assert_eq!(
+      parse_preload_spec("[]name.sty"),
+      ("name".into(), "sty".into(), opts(&[]))
+    );
+  }
+
+  #[test]
+  fn preload_unmatched_bracket_falls_through() {
+    // No closing `]` ⇒ treat the whole spec as the base, no options.
+    assert_eq!(
+      parse_preload_spec("[opt"),
+      ("[opt".into(), "sty".into(), opts(&[]))
+    );
+  }
+
+  #[test]
+  fn preload_dot_in_name_uses_last_segment_as_ext() {
+    assert_eq!(
+      parse_preload_spec("foo.bar.sty"),
+      ("foo.bar".into(), "sty".into(), opts(&[]))
+    );
   }
 }
