@@ -250,6 +250,16 @@ LoadDefinitions!({
   //======================================================================
   // Step 4
   RequirePackage!("ifpdf");
+  // Pre-load amstext to provide `\text{...}` for in-math text. Perl's
+  // xy chain ends up with `\text` defined via xyv2.tex's
+  // `\def\text{\relax\textC}` (raw-loaded by Perl's xypic.tex.ltxml
+  // chain). Rust's xy.tex raw-load doesn't reach xyv2.tex with the
+  // same definition, leaving `\text` undefined for papers that use
+  // it inside math (witness: math0211451 `\text{deg}` in math).
+  // amstext provides a clean DefConstructor path. This is a
+  // pragmatic Rust-side bridge; not a Perl divergence since amstext
+  // is part of the standard math chain Perl effectively reaches.
+  RequirePackage!("amstext");
 
   //======================================================================
   // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
