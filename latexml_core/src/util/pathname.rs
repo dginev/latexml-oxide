@@ -453,9 +453,14 @@ pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
       // shorter than some alt_suffix the format-table holds (the L73 normal-
       // suffix loop has a `filename.len() > suffix.len()` guard but the L92
       // alt_suffix loop does NOT). User input like `\usepackage[opt]{}`
-      // produces an empty filename which trips this. Wrap the call in
-      // catch_unwind so any malformed input degrades to "not found" instead
-      // of crashing the worker. Witness: 0711.2664 paper, sample1k.
+      // produces a `.sty` candidate (empty stem) which trips this. Pre-filter
+      // those: a basename starting with `.` and containing only an extension
+      // is bogus to look up. The catch_unwind below remains as defense-in-
+      // depth. Witnesses: 0711.2664 (`.sty`), cs0503041 (`.sty`).
+      let basename = candidate.rsplit(['/', '\\']).next().unwrap_or(candidate);
+      if basename.starts_with('.') && !basename[1..].contains('.') {
+        continue;
+      }
       let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         kpse.find_file(candidate)
       }));
