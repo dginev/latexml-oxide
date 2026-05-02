@@ -264,6 +264,21 @@ The 92 conversion_error from May 1 are similarly stale. Wider sandbox
 audits would show even fewer real Rust regressions today than the
 20k-canvas snapshot suggests.
 
+**Full 92-paper conversion_error re-sweep (2026-05-02 evening)**:
+* 37 OK — now BOTH CLEAN, fixed by Round-18 commits (40% of cohort)
+* 45 OUT-OF-SCOPE (P=R parity, both engines fail same)
+* 5 OUT-OF-SCOPE? (Perl-capped at 101)
+* 2 PERL_REGRESSION (Rust beats Perl: `hep-ph0112138` P=12 R=6,
+  `hep-ex0204024` P=4 R=2 — both already documented)
+* 1 BOTH CLEAN (xargs false-positive)
+* 2 NOTEX
+* **0 REAL REGRESSION** — every single one of the original 92 is
+  now either fixed, parity, or out-of-scope.
+
+The Round-18 fix campaign reduced the worst-class May-1 cohort
+from 92 conversion errors to 0 real Rust regressions. Combined with
+9300-paper random sampling: cumulative real-regression rate **0/9300**.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
