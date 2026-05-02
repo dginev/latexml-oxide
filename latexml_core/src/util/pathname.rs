@@ -448,7 +448,18 @@ pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   if let Some(ref kpse) = *KPSE.lock().unwrap() {
     for candidate in candidates {
-      if let Some(path) = kpse.find_file(candidate) {
+      // kpathsea-0.2.3 panics with "attempt to subtract with overflow" in
+      // `guess_format_from_filename` (lib.rs:92) when `filename.len()` is
+      // shorter than some alt_suffix the format-table holds (the L73 normal-
+      // suffix loop has a `filename.len() > suffix.len()` guard but the L92
+      // alt_suffix loop does NOT). User input like `\usepackage[opt]{}`
+      // produces an empty filename which trips this. Wrap the call in
+      // catch_unwind so any malformed input degrades to "not found" instead
+      // of crashing the worker. Witness: 0711.2664 paper, sample1k.
+      let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        kpse.find_file(candidate)
+      }));
+      if let Ok(Some(path)) = result {
         return Some(path);
       }
     }
