@@ -159,6 +159,21 @@ least 28 sandbox papers (memory: [Rust supersedes
 Perl](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_rust_supersedes_perl.md)).
 The long-tail "real regressions" rate is empirically **0**.
 
+**Hard-fail subset (8 papers from canvas non-conv-error categories):**
+checked all 8 abort/error/timeout/conversion_fatal entries. Two had
+Rust panics that this iteration fixed:
+* `astro-ph0006087` (deluxetable empty alignment) — index out of bounds
+  panic in `classify_alignment_rows` when ncols=0. Fixed by early-return
+  guard (commit `c924bdcde`).
+* `astro-ph0202376` (math token with embedded NUL byte) — libxml
+  `NulError` panic in `Document::open_math_text_internal`. Fixed by
+  filtering NULs in the math text path (`c924bdcde`) plus defensive
+  text-mode strip (`d13f71151`).
+
+Both papers now exit=0 R=0 matching Perl=0. Other hard-fail papers:
+4 had already been fixed since canvas, `hep-th0005268` was P=26 R=7
+(Rust beats Perl), `hep-th0005159` is Perl-capped P=101+.
+
 ### 1.6 math-ph0001015 — `\footnotetext` undefined in AmS-TeX flow ✅ FIXED
 
 100k stage-1 sample. AmS-TeX paper (`\input amstex \documentstyle{amsppt}`)
