@@ -638,6 +638,72 @@ impl Graphics {
     Self::DEFAULT_RASTER_DENSITY.min(max_density.max(1))
   }
 
+  fn should_try_eps_pdf_path(source: &str, page: Option<u32>) -> bool {
+    page.is_none() && source.to_lowercase().ends_with(".eps")
+  }
+
+  /// Some EPS files make ImageMagick/Ghostscript spend tens of seconds in
+  /// direct rasterization. Converting EPS to a cropped PDF first and then
+  /// rasterizing the PDF via poppler is much faster for those cases, while
+  /// still falling back to ImageMagick if either helper is unavailable.
+  fn convert_eps_via_pdf(source: &str, dest: &str, density: u32) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp_pdf = parent.join(format!(".{}.{}.pdf", stem, unique));
+    let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
+    let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
+    let timeout = std::time::Duration::from_secs(20);
+
+    let cleanup = |tmp_pdf: &Path, tmp_png: &Path| {
+      let _ = std::fs::remove_file(tmp_pdf);
+      let _ = std::fs::remove_file(tmp_png);
+    };
+
+    let mut ps2pdf = std::process::Command::new("ps2pdf");
+    ps2pdf.arg("-dEPSCrop").arg(source).arg(&tmp_pdf);
+    let ps2pdf_ok = Self::run_with_timeout(ps2pdf, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp_pdf.exists();
+    if !ps2pdf_ok {
+      cleanup(&tmp_pdf, &tmp_png);
+      return false;
+    }
+
+    let mut pdftocairo = std::process::Command::new("pdftocairo");
+    pdftocairo
+      .arg("-singlefile")
+      .arg("-png")
+      .arg("-r")
+      .arg(density.to_string())
+      .arg(&tmp_pdf)
+      .arg(&tmp_prefix);
+    let cairo_ok = Self::run_with_timeout(pdftocairo, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp_png.exists();
+    if !cairo_ok {
+      cleanup(&tmp_pdf, &tmp_png);
+      return false;
+    }
+
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp_png, dest)
+      .or_else(|_| std::fs::copy(&tmp_png, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    cleanup(&tmp_pdf, &tmp_png);
+    installed
+  }
+
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
@@ -657,6 +723,11 @@ impl Graphics {
     // Shell out to convert (matching Perl's approach)
     // -define pdf:use-cropbox=true matches Perl's Image::Magick option (line 466)
     let density = Self::raster_density_for_source(source);
+    if Self::should_try_eps_pdf_path(source, page)
+      && Self::convert_eps_via_pdf(source, dest, density)
+    {
+      return true;
+    }
     let result = std::process::Command::new("convert")
       .arg("-define")
       .arg("pdf:use-cropbox=true")
