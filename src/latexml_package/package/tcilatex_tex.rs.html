@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/tcilatex_tex.rs`."><title>tcilatex_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (f53b654a8 2026-04-30)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>tcilatex_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/tcilatex_tex.rs`."><title>tcilatex_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (67bcaa9c4 2026-05-01)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>tcilatex_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -122,468 +122,474 @@
 <a href=#122 id=122 data-nosnippet>122</a>\let\nographics=\draft
 <a href=#123 id=123 data-nosnippet>123</a>\newif\ifwasdraft
 <a href=#124 id=124 data-nosnippet>124</a>\wasdraftfalse
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>%  \GRAPHIC{ body }                                  %#1
-<a href=#127 id=127 data-nosnippet>127</a>%          { draft name }                            %#2
-<a href=#128 id=128 data-nosnippet>128</a>%          { contentswidth (scalar)  }               %#3
-<a href=#129 id=129 data-nosnippet>129</a>%          { contentsheight (scalar) }               %#4
-<a href=#130 id=130 data-nosnippet>130</a>%          { vertical shift when in-line (scalar) }  %#5
-<a href=#131 id=131 data-nosnippet>131</a>\def\GRAPHIC#1#2#3#4#5{%
-<a href=#132 id=132 data-nosnippet>132</a> \ifnum\draft=\@ne\draftbox{#2}{#3}{#4}{#5}%
-<a href=#133 id=133 data-nosnippet>133</a>  \else\graffile{#1}{#3}{#4}{#5}%
-<a href=#134 id=134 data-nosnippet>134</a>  \fi
-<a href=#135 id=135 data-nosnippet>135</a> }%
-<a href=#136 id=136 data-nosnippet>136</a>%
-<a href=#137 id=137 data-nosnippet>137</a>\def\addtoLaTeXparams#1{%
-<a href=#138 id=138 data-nosnippet>138</a>    \edef\LaTeXparams{\LaTeXparams #1}}%
-<a href=#139 id=139 data-nosnippet>139</a>%
-<a href=#140 id=140 data-nosnippet>140</a>\newif\ifBoxFrame \BoxFramefalse
-<a href=#141 id=141 data-nosnippet>141</a>\newif\ifOverFrame \OverFramefalse
-<a href=#142 id=142 data-nosnippet>142</a>\newif\ifUnderFrame \UnderFramefalse
-<a href=#143 id=143 data-nosnippet>143</a>
-<a href=#144 id=144 data-nosnippet>144</a>\def\BOXTHEFRAME#1{%
-<a href=#145 id=145 data-nosnippet>145</a>   \hbox{%
-<a href=#146 id=146 data-nosnippet>146</a>      \ifBoxFrame
-<a href=#147 id=147 data-nosnippet>147</a>         \frame{#1}%
-<a href=#148 id=148 data-nosnippet>148</a>      \else
-<a href=#149 id=149 data-nosnippet>149</a>         {#1}%
-<a href=#150 id=150 data-nosnippet>150</a>      \fi
-<a href=#151 id=151 data-nosnippet>151</a>   }%
-<a href=#152 id=152 data-nosnippet>152</a>}
-<a href=#153 id=153 data-nosnippet>153</a>
-<a href=#154 id=154 data-nosnippet>154</a>\def\doFRAMEparams#1{\BoxFramefalse\OverFramefalse\UnderFramefalse\readFRAMEparams#1\end}%
-<a href=#155 id=155 data-nosnippet>155</a>\def\readFRAMEparams#1{%
-<a href=#156 id=156 data-nosnippet>156</a> \ifx#1\end%
-<a href=#157 id=157 data-nosnippet>157</a>  \let\next=\relax
-<a href=#158 id=158 data-nosnippet>158</a>  \else
-<a href=#159 id=159 data-nosnippet>159</a>  \ifx#1i\dispkind=\z@\fi
-<a href=#160 id=160 data-nosnippet>160</a>  \ifx#1d\dispkind=\@ne\fi
-<a href=#161 id=161 data-nosnippet>161</a>  \ifx#1f\dispkind=\tw@\fi
-<a href=#162 id=162 data-nosnippet>162</a>  \ifx#1t\addtoLaTeXparams{t}\fi
-<a href=#163 id=163 data-nosnippet>163</a>  \ifx#1b\addtoLaTeXparams{b}\fi
-<a href=#164 id=164 data-nosnippet>164</a>  \ifx#1p\addtoLaTeXparams{p}\fi
-<a href=#165 id=165 data-nosnippet>165</a>  \ifx#1h\addtoLaTeXparams{h}\fi
-<a href=#166 id=166 data-nosnippet>166</a>  \ifx#1X\BoxFrametrue\fi
-<a href=#167 id=167 data-nosnippet>167</a>  \ifx#1O\OverFrametrue\fi
-<a href=#168 id=168 data-nosnippet>168</a>  \ifx#1U\UnderFrametrue\fi
-<a href=#169 id=169 data-nosnippet>169</a>  \ifx#1w
-<a href=#170 id=170 data-nosnippet>170</a>    \ifnum\draft=1\wasdrafttrue\else\wasdraftfalse\fi
-<a href=#171 id=171 data-nosnippet>171</a>    \draft=\@ne
-<a href=#172 id=172 data-nosnippet>172</a>  \fi
-<a href=#173 id=173 data-nosnippet>173</a>  \let\next=\readFRAMEparams
-<a href=#174 id=174 data-nosnippet>174</a>  \fi
-<a href=#175 id=175 data-nosnippet>175</a> \next
-<a href=#176 id=176 data-nosnippet>176</a> }%
-<a href=#177 id=177 data-nosnippet>177</a>%
-<a href=#178 id=178 data-nosnippet>178</a>%Macro for In-line graphics object
-<a href=#179 id=179 data-nosnippet>179</a>\def\IFRAME#1#2#3#4#5#6{%
-<a href=#180 id=180 data-nosnippet>180</a>      \bgroup
-<a href=#181 id=181 data-nosnippet>181</a>      \let\QCTOptA\empty
-<a href=#182 id=182 data-nosnippet>182</a>      \let\QCTOptB\empty
-<a href=#183 id=183 data-nosnippet>183</a>      \let\QCBOptA\empty
-<a href=#184 id=184 data-nosnippet>184</a>      \let\QCBOptB\empty
-<a href=#185 id=185 data-nosnippet>185</a>      #6%
-<a href=#186 id=186 data-nosnippet>186</a>      \parindent=0pt%
-<a href=#187 id=187 data-nosnippet>187</a>      \leftskip=0pt
-<a href=#188 id=188 data-nosnippet>188</a>      \rightskip=0pt
-<a href=#189 id=189 data-nosnippet>189</a>      \setbox0 = \hbox{\QCBOptA}%
-<a href=#190 id=190 data-nosnippet>190</a>      \@tempdima = #1\relax
-<a href=#191 id=191 data-nosnippet>191</a>      \ifOverFrame
-<a href=#192 id=192 data-nosnippet>192</a>          \typeout{This is not implemented yet}%
-<a href=#193 id=193 data-nosnippet>193</a>      \else
-<a href=#194 id=194 data-nosnippet>194</a>         \ifdim\wd0&gt;\@tempdima
-<a href=#195 id=195 data-nosnippet>195</a>            \advance\@tempdima by \@tempdima
-<a href=#196 id=196 data-nosnippet>196</a>            \ifdim\wd0 &gt;\@tempdima
-<a href=#197 id=197 data-nosnippet>197</a>               \textwidth=\@tempdima
-<a href=#198 id=198 data-nosnippet>198</a>               \setbox1 =\vbox{%
-<a href=#199 id=199 data-nosnippet>199</a>                  \noindent\hbox to \@tempdima{\hfill\GRAPHIC{#5}{#4}{#1}{#2}{#3}\hfill}\\%
-<a href=#200 id=200 data-nosnippet>200</a>                  \noindent\hbox to \@tempdima{\parbox[b]{\@tempdima}{\QCBOptA}}%
-<a href=#201 id=201 data-nosnippet>201</a>               }%
-<a href=#202 id=202 data-nosnippet>202</a>               \wd1=\@tempdima
-<a href=#203 id=203 data-nosnippet>203</a>            \else
-<a href=#204 id=204 data-nosnippet>204</a>               \textwidth=\wd0
-<a href=#205 id=205 data-nosnippet>205</a>               \setbox1 =\vbox{%
-<a href=#206 id=206 data-nosnippet>206</a>                 \noindent\hbox to \wd0{\hfill\GRAPHIC{#5}{#4}{#1}{#2}{#3}\hfill}\\%
-<a href=#207 id=207 data-nosnippet>207</a>                 \noindent\hbox{\QCBOptA}%
-<a href=#208 id=208 data-nosnippet>208</a>               }%
-<a href=#209 id=209 data-nosnippet>209</a>               \wd1=\wd0
-<a href=#210 id=210 data-nosnippet>210</a>            \fi
-<a href=#211 id=211 data-nosnippet>211</a>         \else
-<a href=#212 id=212 data-nosnippet>212</a>            \ifdim\wd0&gt;0pt
-<a href=#213 id=213 data-nosnippet>213</a>              \hsize=\@tempdima
-<a href=#214 id=214 data-nosnippet>214</a>              \setbox1 =\vbox{%
-<a href=#215 id=215 data-nosnippet>215</a>                \unskip\GRAPHIC{#5}{#4}{#1}{#2}{0pt}%
-<a href=#216 id=216 data-nosnippet>216</a>                \break
-<a href=#217 id=217 data-nosnippet>217</a>                \unskip\hbox to \@tempdima{\hfill \QCBOptA\hfill}%
-<a href=#218 id=218 data-nosnippet>218</a>              }%
-<a href=#219 id=219 data-nosnippet>219</a>              \wd1=\@tempdima
-<a href=#220 id=220 data-nosnippet>220</a>           \else
-<a href=#221 id=221 data-nosnippet>221</a>              \hsize=\@tempdima
-<a href=#222 id=222 data-nosnippet>222</a>              \setbox1 =\vbox{%
-<a href=#223 id=223 data-nosnippet>223</a>                \unskip\GRAPHIC{#5}{#4}{#1}{#2}{0pt}%
+<a href=#125 id=125 data-nosnippet>125</a>% Perl tcilatex.tex.ltxml L367: \newcount\dispkind. Used by \FRAME via
+<a href=#126 id=126 data-nosnippet>126</a>% \doFRAMEparams (i/d/f → 0/1/2). Was missing from this Rust binding —
+<a href=#127 id=127 data-nosnippet>127</a>% papers like gr-qc0003030, quant-ph0207078 (Scientific Word output)
+<a href=#128 id=128 data-nosnippet>128</a>% hit `Error:undefined:\dispkind` cascade without it. Fix 2026-05-01.
+<a href=#129 id=129 data-nosnippet>129</a>\newcount\dispkind
+<a href=#130 id=130 data-nosnippet>130</a>\dispkind=\z@
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a>%  \GRAPHIC{ body }                                  %#1
+<a href=#133 id=133 data-nosnippet>133</a>%          { draft name }                            %#2
+<a href=#134 id=134 data-nosnippet>134</a>%          { contentswidth (scalar)  }               %#3
+<a href=#135 id=135 data-nosnippet>135</a>%          { contentsheight (scalar) }               %#4
+<a href=#136 id=136 data-nosnippet>136</a>%          { vertical shift when in-line (scalar) }  %#5
+<a href=#137 id=137 data-nosnippet>137</a>\def\GRAPHIC#1#2#3#4#5{%
+<a href=#138 id=138 data-nosnippet>138</a> \ifnum\draft=\@ne\draftbox{#2}{#3}{#4}{#5}%
+<a href=#139 id=139 data-nosnippet>139</a>  \else\graffile{#1}{#3}{#4}{#5}%
+<a href=#140 id=140 data-nosnippet>140</a>  \fi
+<a href=#141 id=141 data-nosnippet>141</a> }%
+<a href=#142 id=142 data-nosnippet>142</a>%
+<a href=#143 id=143 data-nosnippet>143</a>\def\addtoLaTeXparams#1{%
+<a href=#144 id=144 data-nosnippet>144</a>    \edef\LaTeXparams{\LaTeXparams #1}}%
+<a href=#145 id=145 data-nosnippet>145</a>%
+<a href=#146 id=146 data-nosnippet>146</a>\newif\ifBoxFrame \BoxFramefalse
+<a href=#147 id=147 data-nosnippet>147</a>\newif\ifOverFrame \OverFramefalse
+<a href=#148 id=148 data-nosnippet>148</a>\newif\ifUnderFrame \UnderFramefalse
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a>\def\BOXTHEFRAME#1{%
+<a href=#151 id=151 data-nosnippet>151</a>   \hbox{%
+<a href=#152 id=152 data-nosnippet>152</a>      \ifBoxFrame
+<a href=#153 id=153 data-nosnippet>153</a>         \frame{#1}%
+<a href=#154 id=154 data-nosnippet>154</a>      \else
+<a href=#155 id=155 data-nosnippet>155</a>         {#1}%
+<a href=#156 id=156 data-nosnippet>156</a>      \fi
+<a href=#157 id=157 data-nosnippet>157</a>   }%
+<a href=#158 id=158 data-nosnippet>158</a>}
+<a href=#159 id=159 data-nosnippet>159</a>
+<a href=#160 id=160 data-nosnippet>160</a>\def\doFRAMEparams#1{\BoxFramefalse\OverFramefalse\UnderFramefalse\readFRAMEparams#1\end}%
+<a href=#161 id=161 data-nosnippet>161</a>\def\readFRAMEparams#1{%
+<a href=#162 id=162 data-nosnippet>162</a> \ifx#1\end%
+<a href=#163 id=163 data-nosnippet>163</a>  \let\next=\relax
+<a href=#164 id=164 data-nosnippet>164</a>  \else
+<a href=#165 id=165 data-nosnippet>165</a>  \ifx#1i\dispkind=\z@\fi
+<a href=#166 id=166 data-nosnippet>166</a>  \ifx#1d\dispkind=\@ne\fi
+<a href=#167 id=167 data-nosnippet>167</a>  \ifx#1f\dispkind=\tw@\fi
+<a href=#168 id=168 data-nosnippet>168</a>  \ifx#1t\addtoLaTeXparams{t}\fi
+<a href=#169 id=169 data-nosnippet>169</a>  \ifx#1b\addtoLaTeXparams{b}\fi
+<a href=#170 id=170 data-nosnippet>170</a>  \ifx#1p\addtoLaTeXparams{p}\fi
+<a href=#171 id=171 data-nosnippet>171</a>  \ifx#1h\addtoLaTeXparams{h}\fi
+<a href=#172 id=172 data-nosnippet>172</a>  \ifx#1X\BoxFrametrue\fi
+<a href=#173 id=173 data-nosnippet>173</a>  \ifx#1O\OverFrametrue\fi
+<a href=#174 id=174 data-nosnippet>174</a>  \ifx#1U\UnderFrametrue\fi
+<a href=#175 id=175 data-nosnippet>175</a>  \ifx#1w
+<a href=#176 id=176 data-nosnippet>176</a>    \ifnum\draft=1\wasdrafttrue\else\wasdraftfalse\fi
+<a href=#177 id=177 data-nosnippet>177</a>    \draft=\@ne
+<a href=#178 id=178 data-nosnippet>178</a>  \fi
+<a href=#179 id=179 data-nosnippet>179</a>  \let\next=\readFRAMEparams
+<a href=#180 id=180 data-nosnippet>180</a>  \fi
+<a href=#181 id=181 data-nosnippet>181</a> \next
+<a href=#182 id=182 data-nosnippet>182</a> }%
+<a href=#183 id=183 data-nosnippet>183</a>%
+<a href=#184 id=184 data-nosnippet>184</a>%Macro for In-line graphics object
+<a href=#185 id=185 data-nosnippet>185</a>\def\IFRAME#1#2#3#4#5#6{%
+<a href=#186 id=186 data-nosnippet>186</a>      \bgroup
+<a href=#187 id=187 data-nosnippet>187</a>      \let\QCTOptA\empty
+<a href=#188 id=188 data-nosnippet>188</a>      \let\QCTOptB\empty
+<a href=#189 id=189 data-nosnippet>189</a>      \let\QCBOptA\empty
+<a href=#190 id=190 data-nosnippet>190</a>      \let\QCBOptB\empty
+<a href=#191 id=191 data-nosnippet>191</a>      #6%
+<a href=#192 id=192 data-nosnippet>192</a>      \parindent=0pt%
+<a href=#193 id=193 data-nosnippet>193</a>      \leftskip=0pt
+<a href=#194 id=194 data-nosnippet>194</a>      \rightskip=0pt
+<a href=#195 id=195 data-nosnippet>195</a>      \setbox0 = \hbox{\QCBOptA}%
+<a href=#196 id=196 data-nosnippet>196</a>      \@tempdima = #1\relax
+<a href=#197 id=197 data-nosnippet>197</a>      \ifOverFrame
+<a href=#198 id=198 data-nosnippet>198</a>          \typeout{This is not implemented yet}%
+<a href=#199 id=199 data-nosnippet>199</a>      \else
+<a href=#200 id=200 data-nosnippet>200</a>         \ifdim\wd0&gt;\@tempdima
+<a href=#201 id=201 data-nosnippet>201</a>            \advance\@tempdima by \@tempdima
+<a href=#202 id=202 data-nosnippet>202</a>            \ifdim\wd0 &gt;\@tempdima
+<a href=#203 id=203 data-nosnippet>203</a>               \textwidth=\@tempdima
+<a href=#204 id=204 data-nosnippet>204</a>               \setbox1 =\vbox{%
+<a href=#205 id=205 data-nosnippet>205</a>                  \noindent\hbox to \@tempdima{\hfill\GRAPHIC{#5}{#4}{#1}{#2}{#3}\hfill}\\%
+<a href=#206 id=206 data-nosnippet>206</a>                  \noindent\hbox to \@tempdima{\parbox[b]{\@tempdima}{\QCBOptA}}%
+<a href=#207 id=207 data-nosnippet>207</a>               }%
+<a href=#208 id=208 data-nosnippet>208</a>               \wd1=\@tempdima
+<a href=#209 id=209 data-nosnippet>209</a>            \else
+<a href=#210 id=210 data-nosnippet>210</a>               \textwidth=\wd0
+<a href=#211 id=211 data-nosnippet>211</a>               \setbox1 =\vbox{%
+<a href=#212 id=212 data-nosnippet>212</a>                 \noindent\hbox to \wd0{\hfill\GRAPHIC{#5}{#4}{#1}{#2}{#3}\hfill}\\%
+<a href=#213 id=213 data-nosnippet>213</a>                 \noindent\hbox{\QCBOptA}%
+<a href=#214 id=214 data-nosnippet>214</a>               }%
+<a href=#215 id=215 data-nosnippet>215</a>               \wd1=\wd0
+<a href=#216 id=216 data-nosnippet>216</a>            \fi
+<a href=#217 id=217 data-nosnippet>217</a>         \else
+<a href=#218 id=218 data-nosnippet>218</a>            \ifdim\wd0&gt;0pt
+<a href=#219 id=219 data-nosnippet>219</a>              \hsize=\@tempdima
+<a href=#220 id=220 data-nosnippet>220</a>              \setbox1 =\vbox{%
+<a href=#221 id=221 data-nosnippet>221</a>                \unskip\GRAPHIC{#5}{#4}{#1}{#2}{0pt}%
+<a href=#222 id=222 data-nosnippet>222</a>                \break
+<a href=#223 id=223 data-nosnippet>223</a>                \unskip\hbox to \@tempdima{\hfill \QCBOptA\hfill}%
 <a href=#224 id=224 data-nosnippet>224</a>              }%
 <a href=#225 id=225 data-nosnippet>225</a>              \wd1=\@tempdima
-<a href=#226 id=226 data-nosnippet>226</a>           \fi
-<a href=#227 id=227 data-nosnippet>227</a>         \fi
-<a href=#228 id=228 data-nosnippet>228</a>         \@tempdimb=\ht1
-<a href=#229 id=229 data-nosnippet>229</a>         \advance\@tempdimb by \dp1
-<a href=#230 id=230 data-nosnippet>230</a>         \advance\@tempdimb by -#2%
-<a href=#231 id=231 data-nosnippet>231</a>         \advance\@tempdimb by #3%
-<a href=#232 id=232 data-nosnippet>232</a>         \leavevmode
-<a href=#233 id=233 data-nosnippet>233</a>         \raise -\@tempdimb \hbox{\box1}%
-<a href=#234 id=234 data-nosnippet>234</a>      \fi
-<a href=#235 id=235 data-nosnippet>235</a>      \egroup%
-<a href=#236 id=236 data-nosnippet>236</a>}%
-<a href=#237 id=237 data-nosnippet>237</a>%
-<a href=#238 id=238 data-nosnippet>238</a>%Macro for Display graphics object
-<a href=#239 id=239 data-nosnippet>239</a>\def\DFRAME#1#2#3#4#5{%
-<a href=#240 id=240 data-nosnippet>240</a> \begin{center}
-<a href=#241 id=241 data-nosnippet>241</a>     \let\QCTOptA\empty
-<a href=#242 id=242 data-nosnippet>242</a>     \let\QCTOptB\empty
-<a href=#243 id=243 data-nosnippet>243</a>     \let\QCBOptA\empty
-<a href=#244 id=244 data-nosnippet>244</a>     \let\QCBOptB\empty
-<a href=#245 id=245 data-nosnippet>245</a>     \ifOverFrame
-<a href=#246 id=246 data-nosnippet>246</a>        #5\QCTOptA\par
-<a href=#247 id=247 data-nosnippet>247</a>     \fi
-<a href=#248 id=248 data-nosnippet>248</a>     \GRAPHIC{#4}{#3}{#1}{#2}{\z@}
-<a href=#249 id=249 data-nosnippet>249</a>     \ifUnderFrame
-<a href=#250 id=250 data-nosnippet>250</a>        \nobreak\par #5\QCBOptA
-<a href=#251 id=251 data-nosnippet>251</a>     \fi
-<a href=#252 id=252 data-nosnippet>252</a> \end{center}%
-<a href=#253 id=253 data-nosnippet>253</a> }%
-<a href=#254 id=254 data-nosnippet>254</a>%
-<a href=#255 id=255 data-nosnippet>255</a>%Macro for Floating graphic object
-<a href=#256 id=256 data-nosnippet>256</a>\def\FFRAME#1#2#3#4#5#6#7{%
-<a href=#257 id=257 data-nosnippet>257</a> \begin{figure}[#1]%
-<a href=#258 id=258 data-nosnippet>258</a>  \let\QCTOptA\empty
-<a href=#259 id=259 data-nosnippet>259</a>  \let\QCTOptB\empty
-<a href=#260 id=260 data-nosnippet>260</a>  \let\QCBOptA\empty
-<a href=#261 id=261 data-nosnippet>261</a>  \let\QCBOptB\empty
-<a href=#262 id=262 data-nosnippet>262</a>  \ifOverFrame
-<a href=#263 id=263 data-nosnippet>263</a>    #4
-<a href=#264 id=264 data-nosnippet>264</a>    \ifx\QCTOptA\empty
-<a href=#265 id=265 data-nosnippet>265</a>    \else
-<a href=#266 id=266 data-nosnippet>266</a>      \ifx\QCTOptB\empty
-<a href=#267 id=267 data-nosnippet>267</a>        \caption{\QCTOptA}%
-<a href=#268 id=268 data-nosnippet>268</a>      \else
-<a href=#269 id=269 data-nosnippet>269</a>        \caption[\QCTOptB]{\QCTOptA}%
-<a href=#270 id=270 data-nosnippet>270</a>      \fi
-<a href=#271 id=271 data-nosnippet>271</a>    \fi
-<a href=#272 id=272 data-nosnippet>272</a>    \ifUnderFrame\else
-<a href=#273 id=273 data-nosnippet>273</a>      \label{#5}%
-<a href=#274 id=274 data-nosnippet>274</a>    \fi
-<a href=#275 id=275 data-nosnippet>275</a>  \else
-<a href=#276 id=276 data-nosnippet>276</a>    \UnderFrametrue%
-<a href=#277 id=277 data-nosnippet>277</a>  \fi
-<a href=#278 id=278 data-nosnippet>278</a>  \begin{center}\GRAPHIC{#7}{#6}{#2}{#3}{\z@}\end{center}%
-<a href=#279 id=279 data-nosnippet>279</a>  \ifUnderFrame
-<a href=#280 id=280 data-nosnippet>280</a>    #4
-<a href=#281 id=281 data-nosnippet>281</a>    \ifx\QCBOptA\empty
-<a href=#282 id=282 data-nosnippet>282</a>      \caption{}%
-<a href=#283 id=283 data-nosnippet>283</a>    \else
-<a href=#284 id=284 data-nosnippet>284</a>      \ifx\QCBOptB\empty
-<a href=#285 id=285 data-nosnippet>285</a>        \caption{\QCBOptA}%
-<a href=#286 id=286 data-nosnippet>286</a>      \else
-<a href=#287 id=287 data-nosnippet>287</a>        \caption[\QCBOptB]{\QCBOptA}%
-<a href=#288 id=288 data-nosnippet>288</a>      \fi
-<a href=#289 id=289 data-nosnippet>289</a>    \fi
-<a href=#290 id=290 data-nosnippet>290</a>    \label{#5}%
-<a href=#291 id=291 data-nosnippet>291</a>  \fi
-<a href=#292 id=292 data-nosnippet>292</a>  \end{figure}%
-<a href=#293 id=293 data-nosnippet>293</a> }%
-<a href=#294 id=294 data-nosnippet>294</a>%
-<a href=#295 id=295 data-nosnippet>295</a>%
-<a href=#296 id=296 data-nosnippet>296</a>\def\FRAME#1#2#3#4#5#6#7#8{%
-<a href=#297 id=297 data-nosnippet>297</a> \bgroup
-<a href=#298 id=298 data-nosnippet>298</a> \@ifundefined{bbl@deactivate}{}{\activesoff}
-<a href=#299 id=299 data-nosnippet>299</a> \ifnum\draft=\@ne
-<a href=#300 id=300 data-nosnippet>300</a>   \wasdrafttrue
-<a href=#301 id=301 data-nosnippet>301</a> \else
-<a href=#302 id=302 data-nosnippet>302</a>   \wasdraftfalse%
-<a href=#303 id=303 data-nosnippet>303</a> \fi
-<a href=#304 id=304 data-nosnippet>304</a> \def\LaTeXparams{}%
-<a href=#305 id=305 data-nosnippet>305</a> \dispkind=\z@
-<a href=#306 id=306 data-nosnippet>306</a> \def\LaTeXparams{}%
-<a href=#307 id=307 data-nosnippet>307</a> \doFRAMEparams{#1}%
-<a href=#308 id=308 data-nosnippet>308</a> \ifnum\dispkind=\z@\IFRAME{#2}{#3}{#4}{#7}{#8}{#5}\else
-<a href=#309 id=309 data-nosnippet>309</a>  \ifnum\dispkind=\@ne\DFRAME{#2}{#3}{#7}{#8}{#5}\else
-<a href=#310 id=310 data-nosnippet>310</a>   \ifnum\dispkind=\tw@
-<a href=#311 id=311 data-nosnippet>311</a>    \edef\@tempa{\noexpand\FFRAME{\LaTeXparams}}%
-<a href=#312 id=312 data-nosnippet>312</a>    \@tempa{#2}{#3}{#5}{#6}{#7}{#8}%
-<a href=#313 id=313 data-nosnippet>313</a>    \fi
-<a href=#314 id=314 data-nosnippet>314</a>   \fi
-<a href=#315 id=315 data-nosnippet>315</a>  \fi
-<a href=#316 id=316 data-nosnippet>316</a>  \ifwasdraft\draft=1\else\draft=0\fi{}%
-<a href=#317 id=317 data-nosnippet>317</a>  \egroup
-<a href=#318 id=318 data-nosnippet>318</a> }%
-<a href=#319 id=319 data-nosnippet>319</a>%
-<a href=#320 id=320 data-nosnippet>320</a>\def\TEXUX#1{"texux"}
-<a href=#321 id=321 data-nosnippet>321</a>
-<a href=#322 id=322 data-nosnippet>322</a>%
-<a href=#323 id=323 data-nosnippet>323</a>% Macros for text attributes:
-<a href=#324 id=324 data-nosnippet>324</a>%
-<a href=#325 id=325 data-nosnippet>325</a>\def\BF#1{{\bf {#1}}}%
-<a href=#326 id=326 data-nosnippet>326</a>\def\NEG#1{\leavevmode\hbox{\rlap{\thinspace/}{$#1$}}}%
-<a href=#327 id=327 data-nosnippet>327</a>%
-<a href=#328 id=328 data-nosnippet>328</a>% macros for user - defined functions
-<a href=#329 id=329 data-nosnippet>329</a>\def\func#1{\mathop{\rm #1}}%
-<a href=#330 id=330 data-nosnippet>330</a>\def\limfunc#1{\mathop{\rm #1}}%
-<a href=#331 id=331 data-nosnippet>331</a>
-<a href=#332 id=332 data-nosnippet>332</a>%
-<a href=#333 id=333 data-nosnippet>333</a>% miscellaneous
-<a href=#334 id=334 data-nosnippet>334</a>\long\def\QQQ#1#2{%
-<a href=#335 id=335 data-nosnippet>335</a>     \long\expandafter\def\csname#1\endcsname{#2}}%
-<a href=#336 id=336 data-nosnippet>336</a>\@ifundefined{QTP}{\def\QTP#1{}}{}
-<a href=#337 id=337 data-nosnippet>337</a>\@ifundefined{QEXCLUDE}{\def\QEXCLUDE#1{}}{}
-<a href=#338 id=338 data-nosnippet>338</a>\@ifundefined{Qlb}{\def\Qlb#1{#1}}{}
-<a href=#339 id=339 data-nosnippet>339</a>\@ifundefined{Qlt}{\def\Qlt#1{#1}}{}
-<a href=#340 id=340 data-nosnippet>340</a>\def\QWE{}%
-<a href=#341 id=341 data-nosnippet>341</a>\long\def\QQA#1#2{}%
-<a href=#342 id=342 data-nosnippet>342</a>\def\QTR#1#2{{\csname#1\endcsname #2}}
-<a href=#343 id=343 data-nosnippet>343</a>\long\def\TeXButton#1#2{#2}%
-<a href=#344 id=344 data-nosnippet>344</a>\long\def\QSubDoc#1#2{#2}%
-<a href=#345 id=345 data-nosnippet>345</a>\def\EXPAND#1[#2]#3{}%
-<a href=#346 id=346 data-nosnippet>346</a>\def\NOEXPAND#1[#2]#3{}%
-<a href=#347 id=347 data-nosnippet>347</a>\def\PROTECTED{}%
-<a href=#348 id=348 data-nosnippet>348</a>\def\LaTeXparent#1{}%
-<a href=#349 id=349 data-nosnippet>349</a>\def\ChildStyles#1{}%
-<a href=#350 id=350 data-nosnippet>350</a>\def\ChildDefaults#1{}%
-<a href=#351 id=351 data-nosnippet>351</a>\def\QTagDef#1#2#3{}%
-<a href=#352 id=352 data-nosnippet>352</a>%
-<a href=#353 id=353 data-nosnippet>353</a>% Macros for style editor docs
-<a href=#354 id=354 data-nosnippet>354</a>\@ifundefined{StyleEditBeginDoc}{\def\StyleEditBeginDoc{\relax}}{}
-<a href=#355 id=355 data-nosnippet>355</a>%
-<a href=#356 id=356 data-nosnippet>356</a>% Macros for footnotes
-<a href=#357 id=357 data-nosnippet>357</a>\def\QQfnmark#1{\footnotemark}
-<a href=#358 id=358 data-nosnippet>358</a>\def\QQfntext#1#2{\addtocounter{footnote}{#1}\footnotetext{#2}}
-<a href=#359 id=359 data-nosnippet>359</a>%
-<a href=#360 id=360 data-nosnippet>360</a>% Macros for indexing.
-<a href=#361 id=361 data-nosnippet>361</a>\def\MAKEINDEX{\makeatletter\input gnuindex.sty\makeatother\makeindex}%
-<a href=#362 id=362 data-nosnippet>362</a>\@ifundefined{INDEX}{\def\INDEX#1#2{}{}}{}%
-<a href=#363 id=363 data-nosnippet>363</a>\@ifundefined{SUBINDEX}{\def\SUBINDEX#1#2#3{}{}{}}{}%
-<a href=#364 id=364 data-nosnippet>364</a>\@ifundefined{initial}%
-<a href=#365 id=365 data-nosnippet>365</a>   {\def\initial#1{\bigbreak{\raggedright\large\bf #1}\kern 2\p@\penalty3000}}%
-<a href=#366 id=366 data-nosnippet>366</a>   {}%
-<a href=#367 id=367 data-nosnippet>367</a>\@ifundefined{entry}{\def\entry#1#2{\item {#1}, #2}}{}%
-<a href=#368 id=368 data-nosnippet>368</a>\@ifundefined{primary}{\def\primary#1{\item {#1}}}{}%
-<a href=#369 id=369 data-nosnippet>369</a>\@ifundefined{secondary}{\def\secondary#1#2{\subitem {#1}, #2}}{}%
-<a href=#370 id=370 data-nosnippet>370</a>%
-<a href=#371 id=371 data-nosnippet>371</a>%
-<a href=#372 id=372 data-nosnippet>372</a>\@ifundefined{ZZZ}{}{\MAKEINDEX\makeatletter}%
-<a href=#373 id=373 data-nosnippet>373</a>%
-<a href=#374 id=374 data-nosnippet>374</a>% Attempts to avoid problems with other styles
-<a href=#375 id=375 data-nosnippet>375</a>\@ifundefined{abstract}{%
-<a href=#376 id=376 data-nosnippet>376</a> \def\abstract{%
-<a href=#377 id=377 data-nosnippet>377</a>  \if@twocolumn
-<a href=#378 id=378 data-nosnippet>378</a>   \section*{Abstract (Not appropriate in this style!)}%
-<a href=#379 id=379 data-nosnippet>379</a>   \else \small
-<a href=#380 id=380 data-nosnippet>380</a>   \begin{center}{\bf Abstract\vspace{-.5em}\vspace{\z@}}\end{center}%
-<a href=#381 id=381 data-nosnippet>381</a>   \quotation
-<a href=#382 id=382 data-nosnippet>382</a>   \fi
-<a href=#383 id=383 data-nosnippet>383</a>  }%
-<a href=#384 id=384 data-nosnippet>384</a> }{%
-<a href=#385 id=385 data-nosnippet>385</a> }%
-<a href=#386 id=386 data-nosnippet>386</a>\@ifundefined{endabstract}{\def\endabstract
-<a href=#387 id=387 data-nosnippet>387</a>  {\if@twocolumn\else\endquotation\fi}}{}%
-<a href=#388 id=388 data-nosnippet>388</a>\@ifundefined{maketitle}{\def\maketitle#1{}}{}%
-<a href=#389 id=389 data-nosnippet>389</a>\@ifundefined{affiliation}{\def\affiliation#1{}}{}%
-<a href=#390 id=390 data-nosnippet>390</a>\@ifundefined{proof}{\def\proof{\noindent{\bfseries Proof. }}}{}%
-<a href=#391 id=391 data-nosnippet>391</a>\@ifundefined{endproof}{\def\endproof{\mbox{\ \rule{.1in}{.1in}}}}{}%
-<a href=#392 id=392 data-nosnippet>392</a>\@ifundefined{newfield}{\def\newfield#1#2{}}{}%
-<a href=#393 id=393 data-nosnippet>393</a>\@ifundefined{chapter}{\def\chapter#1{\par(Chapter head:)#1\par }%
-<a href=#394 id=394 data-nosnippet>394</a> \newcount\c@chapter}{}%
-<a href=#395 id=395 data-nosnippet>395</a>\@ifundefined{part}{\def\part#1{\par(Part head:)#1\par }}{}%
-<a href=#396 id=396 data-nosnippet>396</a>\@ifundefined{section}{\def\section#1{\par(Section head:)#1\par }}{}%
-<a href=#397 id=397 data-nosnippet>397</a>\@ifundefined{subsection}{\def\subsection#1%
-<a href=#398 id=398 data-nosnippet>398</a> {\par(Subsection head:)#1\par }}{}%
-<a href=#399 id=399 data-nosnippet>399</a>\@ifundefined{subsubsection}{\def\subsubsection#1%
-<a href=#400 id=400 data-nosnippet>400</a> {\par(Subsubsection head:)#1\par }}{}%
-<a href=#401 id=401 data-nosnippet>401</a>\@ifundefined{paragraph}{\def\paragraph#1%
-<a href=#402 id=402 data-nosnippet>402</a> {\par(Subsubsubsection head:)#1\par }}{}%
-<a href=#403 id=403 data-nosnippet>403</a>\@ifundefined{subparagraph}{\def\subparagraph#1%
-<a href=#404 id=404 data-nosnippet>404</a> {\par(Subsubsubsubsection head:)#1\par }}{}%
-<a href=#405 id=405 data-nosnippet>405</a>\@ifundefined{therefore}{\def\therefore{}}{}%
-<a href=#406 id=406 data-nosnippet>406</a>\@ifundefined{backepsilon}{\def\backepsilon{}}{}%
-<a href=#407 id=407 data-nosnippet>407</a>\@ifundefined{yen}{\def\yen{\hbox{\rm\rlap=Y}}}{}%
-<a href=#408 id=408 data-nosnippet>408</a>\@ifundefined{registered}{%
-<a href=#409 id=409 data-nosnippet>409</a>   \def\registered{\relax\ifmmode{}\r@gistered
-<a href=#410 id=410 data-nosnippet>410</a>                    \else$\m@th\r@gistered$\fi}%
-<a href=#411 id=411 data-nosnippet>411</a> \def\r@gistered{^{\ooalign
-<a href=#412 id=412 data-nosnippet>412</a>  {\hfil\raise.07ex\hbox{$\scriptstyle\rm\text{R}$}\hfil\crcr
-<a href=#413 id=413 data-nosnippet>413</a>  \mathhexbox20D}}}}{}%
-<a href=#414 id=414 data-nosnippet>414</a>\@ifundefined{Eth}{\def\Eth{}}{}%
-<a href=#415 id=415 data-nosnippet>415</a>\@ifundefined{eth}{\def\eth{}}{}%
-<a href=#416 id=416 data-nosnippet>416</a>\@ifundefined{Thorn}{\def\Thorn{}}{}%
-<a href=#417 id=417 data-nosnippet>417</a>\@ifundefined{thorn}{\def\thorn{}}{}%
-<a href=#418 id=418 data-nosnippet>418</a>% A macro to allow any symbol that requires math to appear in text
-<a href=#419 id=419 data-nosnippet>419</a>\def\TEXTsymbol#1{\mbox{$#1$}}%
-<a href=#420 id=420 data-nosnippet>420</a>\@ifundefined{degree}{\def\degree{{}^{\circ}}}{}%
-<a href=#421 id=421 data-nosnippet>421</a>%
-<a href=#422 id=422 data-nosnippet>422</a>% macros for T3TeX files
-<a href=#423 id=423 data-nosnippet>423</a>\newdimen\theight
-<a href=#424 id=424 data-nosnippet>424</a>\def\Column{%
-<a href=#425 id=425 data-nosnippet>425</a> \vadjust{\setbox\z@=\hbox{\scriptsize\quad\quad tcol}%
-<a href=#426 id=426 data-nosnippet>426</a>  \theight=\ht\z@\advance\theight by \dp\z@\advance\theight by \lineskip
-<a href=#427 id=427 data-nosnippet>427</a>  \kern -\theight \vbox to \theight{%
-<a href=#428 id=428 data-nosnippet>428</a>   \rightline{\rlap{\box\z@}}%
-<a href=#429 id=429 data-nosnippet>429</a>   \vss
-<a href=#430 id=430 data-nosnippet>430</a>   }%
-<a href=#431 id=431 data-nosnippet>431</a>  }%
-<a href=#432 id=432 data-nosnippet>432</a> }%
-<a href=#433 id=433 data-nosnippet>433</a>%
-<a href=#434 id=434 data-nosnippet>434</a>\def\qed{%
-<a href=#435 id=435 data-nosnippet>435</a> \ifhmode\unskip\nobreak\fi\ifmmode\ifinner\else\hskip5\p@\fi\fi
-<a href=#436 id=436 data-nosnippet>436</a> \hbox{\hskip5\p@\vrule width4\p@ height6\p@ depth1.5\p@\hskip\p@}%
-<a href=#437 id=437 data-nosnippet>437</a> }%
-<a href=#438 id=438 data-nosnippet>438</a>%
-<a href=#439 id=439 data-nosnippet>439</a>\def\cents{\hbox{\rm\rlap/c}}%
-<a href=#440 id=440 data-nosnippet>440</a>\def\miss{\hbox{\vrule height2\p@ width 2\p@ depth\z@}}%
-<a href=#441 id=441 data-nosnippet>441</a>%
-<a href=#442 id=442 data-nosnippet>442</a>\def\vvert{\Vert}%
-<a href=#443 id=443 data-nosnippet>443</a>%
-<a href=#444 id=444 data-nosnippet>444</a>\def\tcol#1{{\baselineskip=6\p@ \vcenter{#1}} \Column}  %
-<a href=#445 id=445 data-nosnippet>445</a>%
-<a href=#446 id=446 data-nosnippet>446</a>\def\dB{\hbox{{}}}%
-<a href=#447 id=447 data-nosnippet>447</a>\def\mB#1{\hbox{$#1$}}%
-<a href=#448 id=448 data-nosnippet>448</a>\def\nB#1{\hbox{#1}}%
+<a href=#226 id=226 data-nosnippet>226</a>           \else
+<a href=#227 id=227 data-nosnippet>227</a>              \hsize=\@tempdima
+<a href=#228 id=228 data-nosnippet>228</a>              \setbox1 =\vbox{%
+<a href=#229 id=229 data-nosnippet>229</a>                \unskip\GRAPHIC{#5}{#4}{#1}{#2}{0pt}%
+<a href=#230 id=230 data-nosnippet>230</a>              }%
+<a href=#231 id=231 data-nosnippet>231</a>              \wd1=\@tempdima
+<a href=#232 id=232 data-nosnippet>232</a>           \fi
+<a href=#233 id=233 data-nosnippet>233</a>         \fi
+<a href=#234 id=234 data-nosnippet>234</a>         \@tempdimb=\ht1
+<a href=#235 id=235 data-nosnippet>235</a>         \advance\@tempdimb by \dp1
+<a href=#236 id=236 data-nosnippet>236</a>         \advance\@tempdimb by -#2%
+<a href=#237 id=237 data-nosnippet>237</a>         \advance\@tempdimb by #3%
+<a href=#238 id=238 data-nosnippet>238</a>         \leavevmode
+<a href=#239 id=239 data-nosnippet>239</a>         \raise -\@tempdimb \hbox{\box1}%
+<a href=#240 id=240 data-nosnippet>240</a>      \fi
+<a href=#241 id=241 data-nosnippet>241</a>      \egroup%
+<a href=#242 id=242 data-nosnippet>242</a>}%
+<a href=#243 id=243 data-nosnippet>243</a>%
+<a href=#244 id=244 data-nosnippet>244</a>%Macro for Display graphics object
+<a href=#245 id=245 data-nosnippet>245</a>\def\DFRAME#1#2#3#4#5{%
+<a href=#246 id=246 data-nosnippet>246</a> \begin{center}
+<a href=#247 id=247 data-nosnippet>247</a>     \let\QCTOptA\empty
+<a href=#248 id=248 data-nosnippet>248</a>     \let\QCTOptB\empty
+<a href=#249 id=249 data-nosnippet>249</a>     \let\QCBOptA\empty
+<a href=#250 id=250 data-nosnippet>250</a>     \let\QCBOptB\empty
+<a href=#251 id=251 data-nosnippet>251</a>     \ifOverFrame
+<a href=#252 id=252 data-nosnippet>252</a>        #5\QCTOptA\par
+<a href=#253 id=253 data-nosnippet>253</a>     \fi
+<a href=#254 id=254 data-nosnippet>254</a>     \GRAPHIC{#4}{#3}{#1}{#2}{\z@}
+<a href=#255 id=255 data-nosnippet>255</a>     \ifUnderFrame
+<a href=#256 id=256 data-nosnippet>256</a>        \nobreak\par #5\QCBOptA
+<a href=#257 id=257 data-nosnippet>257</a>     \fi
+<a href=#258 id=258 data-nosnippet>258</a> \end{center}%
+<a href=#259 id=259 data-nosnippet>259</a> }%
+<a href=#260 id=260 data-nosnippet>260</a>%
+<a href=#261 id=261 data-nosnippet>261</a>%Macro for Floating graphic object
+<a href=#262 id=262 data-nosnippet>262</a>\def\FFRAME#1#2#3#4#5#6#7{%
+<a href=#263 id=263 data-nosnippet>263</a> \begin{figure}[#1]%
+<a href=#264 id=264 data-nosnippet>264</a>  \let\QCTOptA\empty
+<a href=#265 id=265 data-nosnippet>265</a>  \let\QCTOptB\empty
+<a href=#266 id=266 data-nosnippet>266</a>  \let\QCBOptA\empty
+<a href=#267 id=267 data-nosnippet>267</a>  \let\QCBOptB\empty
+<a href=#268 id=268 data-nosnippet>268</a>  \ifOverFrame
+<a href=#269 id=269 data-nosnippet>269</a>    #4
+<a href=#270 id=270 data-nosnippet>270</a>    \ifx\QCTOptA\empty
+<a href=#271 id=271 data-nosnippet>271</a>    \else
+<a href=#272 id=272 data-nosnippet>272</a>      \ifx\QCTOptB\empty
+<a href=#273 id=273 data-nosnippet>273</a>        \caption{\QCTOptA}%
+<a href=#274 id=274 data-nosnippet>274</a>      \else
+<a href=#275 id=275 data-nosnippet>275</a>        \caption[\QCTOptB]{\QCTOptA}%
+<a href=#276 id=276 data-nosnippet>276</a>      \fi
+<a href=#277 id=277 data-nosnippet>277</a>    \fi
+<a href=#278 id=278 data-nosnippet>278</a>    \ifUnderFrame\else
+<a href=#279 id=279 data-nosnippet>279</a>      \label{#5}%
+<a href=#280 id=280 data-nosnippet>280</a>    \fi
+<a href=#281 id=281 data-nosnippet>281</a>  \else
+<a href=#282 id=282 data-nosnippet>282</a>    \UnderFrametrue%
+<a href=#283 id=283 data-nosnippet>283</a>  \fi
+<a href=#284 id=284 data-nosnippet>284</a>  \begin{center}\GRAPHIC{#7}{#6}{#2}{#3}{\z@}\end{center}%
+<a href=#285 id=285 data-nosnippet>285</a>  \ifUnderFrame
+<a href=#286 id=286 data-nosnippet>286</a>    #4
+<a href=#287 id=287 data-nosnippet>287</a>    \ifx\QCBOptA\empty
+<a href=#288 id=288 data-nosnippet>288</a>      \caption{}%
+<a href=#289 id=289 data-nosnippet>289</a>    \else
+<a href=#290 id=290 data-nosnippet>290</a>      \ifx\QCBOptB\empty
+<a href=#291 id=291 data-nosnippet>291</a>        \caption{\QCBOptA}%
+<a href=#292 id=292 data-nosnippet>292</a>      \else
+<a href=#293 id=293 data-nosnippet>293</a>        \caption[\QCBOptB]{\QCBOptA}%
+<a href=#294 id=294 data-nosnippet>294</a>      \fi
+<a href=#295 id=295 data-nosnippet>295</a>    \fi
+<a href=#296 id=296 data-nosnippet>296</a>    \label{#5}%
+<a href=#297 id=297 data-nosnippet>297</a>  \fi
+<a href=#298 id=298 data-nosnippet>298</a>  \end{figure}%
+<a href=#299 id=299 data-nosnippet>299</a> }%
+<a href=#300 id=300 data-nosnippet>300</a>%
+<a href=#301 id=301 data-nosnippet>301</a>%
+<a href=#302 id=302 data-nosnippet>302</a>\def\FRAME#1#2#3#4#5#6#7#8{%
+<a href=#303 id=303 data-nosnippet>303</a> \bgroup
+<a href=#304 id=304 data-nosnippet>304</a> \@ifundefined{bbl@deactivate}{}{\activesoff}
+<a href=#305 id=305 data-nosnippet>305</a> \ifnum\draft=\@ne
+<a href=#306 id=306 data-nosnippet>306</a>   \wasdrafttrue
+<a href=#307 id=307 data-nosnippet>307</a> \else
+<a href=#308 id=308 data-nosnippet>308</a>   \wasdraftfalse%
+<a href=#309 id=309 data-nosnippet>309</a> \fi
+<a href=#310 id=310 data-nosnippet>310</a> \def\LaTeXparams{}%
+<a href=#311 id=311 data-nosnippet>311</a> \dispkind=\z@
+<a href=#312 id=312 data-nosnippet>312</a> \def\LaTeXparams{}%
+<a href=#313 id=313 data-nosnippet>313</a> \doFRAMEparams{#1}%
+<a href=#314 id=314 data-nosnippet>314</a> \ifnum\dispkind=\z@\IFRAME{#2}{#3}{#4}{#7}{#8}{#5}\else
+<a href=#315 id=315 data-nosnippet>315</a>  \ifnum\dispkind=\@ne\DFRAME{#2}{#3}{#7}{#8}{#5}\else
+<a href=#316 id=316 data-nosnippet>316</a>   \ifnum\dispkind=\tw@
+<a href=#317 id=317 data-nosnippet>317</a>    \edef\@tempa{\noexpand\FFRAME{\LaTeXparams}}%
+<a href=#318 id=318 data-nosnippet>318</a>    \@tempa{#2}{#3}{#5}{#6}{#7}{#8}%
+<a href=#319 id=319 data-nosnippet>319</a>    \fi
+<a href=#320 id=320 data-nosnippet>320</a>   \fi
+<a href=#321 id=321 data-nosnippet>321</a>  \fi
+<a href=#322 id=322 data-nosnippet>322</a>  \ifwasdraft\draft=1\else\draft=0\fi{}%
+<a href=#323 id=323 data-nosnippet>323</a>  \egroup
+<a href=#324 id=324 data-nosnippet>324</a> }%
+<a href=#325 id=325 data-nosnippet>325</a>%
+<a href=#326 id=326 data-nosnippet>326</a>\def\TEXUX#1{"texux"}
+<a href=#327 id=327 data-nosnippet>327</a>
+<a href=#328 id=328 data-nosnippet>328</a>%
+<a href=#329 id=329 data-nosnippet>329</a>% Macros for text attributes:
+<a href=#330 id=330 data-nosnippet>330</a>%
+<a href=#331 id=331 data-nosnippet>331</a>\def\BF#1{{\bf {#1}}}%
+<a href=#332 id=332 data-nosnippet>332</a>\def\NEG#1{\leavevmode\hbox{\rlap{\thinspace/}{$#1$}}}%
+<a href=#333 id=333 data-nosnippet>333</a>%
+<a href=#334 id=334 data-nosnippet>334</a>% macros for user - defined functions
+<a href=#335 id=335 data-nosnippet>335</a>\def\func#1{\mathop{\rm #1}}%
+<a href=#336 id=336 data-nosnippet>336</a>\def\limfunc#1{\mathop{\rm #1}}%
+<a href=#337 id=337 data-nosnippet>337</a>
+<a href=#338 id=338 data-nosnippet>338</a>%
+<a href=#339 id=339 data-nosnippet>339</a>% miscellaneous
+<a href=#340 id=340 data-nosnippet>340</a>\long\def\QQQ#1#2{%
+<a href=#341 id=341 data-nosnippet>341</a>     \long\expandafter\def\csname#1\endcsname{#2}}%
+<a href=#342 id=342 data-nosnippet>342</a>\@ifundefined{QTP}{\def\QTP#1{}}{}
+<a href=#343 id=343 data-nosnippet>343</a>\@ifundefined{QEXCLUDE}{\def\QEXCLUDE#1{}}{}
+<a href=#344 id=344 data-nosnippet>344</a>\@ifundefined{Qlb}{\def\Qlb#1{#1}}{}
+<a href=#345 id=345 data-nosnippet>345</a>\@ifundefined{Qlt}{\def\Qlt#1{#1}}{}
+<a href=#346 id=346 data-nosnippet>346</a>\def\QWE{}%
+<a href=#347 id=347 data-nosnippet>347</a>\long\def\QQA#1#2{}%
+<a href=#348 id=348 data-nosnippet>348</a>\def\QTR#1#2{{\csname#1\endcsname #2}}
+<a href=#349 id=349 data-nosnippet>349</a>\long\def\TeXButton#1#2{#2}%
+<a href=#350 id=350 data-nosnippet>350</a>\long\def\QSubDoc#1#2{#2}%
+<a href=#351 id=351 data-nosnippet>351</a>\def\EXPAND#1[#2]#3{}%
+<a href=#352 id=352 data-nosnippet>352</a>\def\NOEXPAND#1[#2]#3{}%
+<a href=#353 id=353 data-nosnippet>353</a>\def\PROTECTED{}%
+<a href=#354 id=354 data-nosnippet>354</a>\def\LaTeXparent#1{}%
+<a href=#355 id=355 data-nosnippet>355</a>\def\ChildStyles#1{}%
+<a href=#356 id=356 data-nosnippet>356</a>\def\ChildDefaults#1{}%
+<a href=#357 id=357 data-nosnippet>357</a>\def\QTagDef#1#2#3{}%
+<a href=#358 id=358 data-nosnippet>358</a>%
+<a href=#359 id=359 data-nosnippet>359</a>% Macros for style editor docs
+<a href=#360 id=360 data-nosnippet>360</a>\@ifundefined{StyleEditBeginDoc}{\def\StyleEditBeginDoc{\relax}}{}
+<a href=#361 id=361 data-nosnippet>361</a>%
+<a href=#362 id=362 data-nosnippet>362</a>% Macros for footnotes
+<a href=#363 id=363 data-nosnippet>363</a>\def\QQfnmark#1{\footnotemark}
+<a href=#364 id=364 data-nosnippet>364</a>\def\QQfntext#1#2{\addtocounter{footnote}{#1}\footnotetext{#2}}
+<a href=#365 id=365 data-nosnippet>365</a>%
+<a href=#366 id=366 data-nosnippet>366</a>% Macros for indexing.
+<a href=#367 id=367 data-nosnippet>367</a>\def\MAKEINDEX{\makeatletter\input gnuindex.sty\makeatother\makeindex}%
+<a href=#368 id=368 data-nosnippet>368</a>\@ifundefined{INDEX}{\def\INDEX#1#2{}{}}{}%
+<a href=#369 id=369 data-nosnippet>369</a>\@ifundefined{SUBINDEX}{\def\SUBINDEX#1#2#3{}{}{}}{}%
+<a href=#370 id=370 data-nosnippet>370</a>\@ifundefined{initial}%
+<a href=#371 id=371 data-nosnippet>371</a>   {\def\initial#1{\bigbreak{\raggedright\large\bf #1}\kern 2\p@\penalty3000}}%
+<a href=#372 id=372 data-nosnippet>372</a>   {}%
+<a href=#373 id=373 data-nosnippet>373</a>\@ifundefined{entry}{\def\entry#1#2{\item {#1}, #2}}{}%
+<a href=#374 id=374 data-nosnippet>374</a>\@ifundefined{primary}{\def\primary#1{\item {#1}}}{}%
+<a href=#375 id=375 data-nosnippet>375</a>\@ifundefined{secondary}{\def\secondary#1#2{\subitem {#1}, #2}}{}%
+<a href=#376 id=376 data-nosnippet>376</a>%
+<a href=#377 id=377 data-nosnippet>377</a>%
+<a href=#378 id=378 data-nosnippet>378</a>\@ifundefined{ZZZ}{}{\MAKEINDEX\makeatletter}%
+<a href=#379 id=379 data-nosnippet>379</a>%
+<a href=#380 id=380 data-nosnippet>380</a>% Attempts to avoid problems with other styles
+<a href=#381 id=381 data-nosnippet>381</a>\@ifundefined{abstract}{%
+<a href=#382 id=382 data-nosnippet>382</a> \def\abstract{%
+<a href=#383 id=383 data-nosnippet>383</a>  \if@twocolumn
+<a href=#384 id=384 data-nosnippet>384</a>   \section*{Abstract (Not appropriate in this style!)}%
+<a href=#385 id=385 data-nosnippet>385</a>   \else \small
+<a href=#386 id=386 data-nosnippet>386</a>   \begin{center}{\bf Abstract\vspace{-.5em}\vspace{\z@}}\end{center}%
+<a href=#387 id=387 data-nosnippet>387</a>   \quotation
+<a href=#388 id=388 data-nosnippet>388</a>   \fi
+<a href=#389 id=389 data-nosnippet>389</a>  }%
+<a href=#390 id=390 data-nosnippet>390</a> }{%
+<a href=#391 id=391 data-nosnippet>391</a> }%
+<a href=#392 id=392 data-nosnippet>392</a>\@ifundefined{endabstract}{\def\endabstract
+<a href=#393 id=393 data-nosnippet>393</a>  {\if@twocolumn\else\endquotation\fi}}{}%
+<a href=#394 id=394 data-nosnippet>394</a>\@ifundefined{maketitle}{\def\maketitle#1{}}{}%
+<a href=#395 id=395 data-nosnippet>395</a>\@ifundefined{affiliation}{\def\affiliation#1{}}{}%
+<a href=#396 id=396 data-nosnippet>396</a>\@ifundefined{proof}{\def\proof{\noindent{\bfseries Proof. }}}{}%
+<a href=#397 id=397 data-nosnippet>397</a>\@ifundefined{endproof}{\def\endproof{\mbox{\ \rule{.1in}{.1in}}}}{}%
+<a href=#398 id=398 data-nosnippet>398</a>\@ifundefined{newfield}{\def\newfield#1#2{}}{}%
+<a href=#399 id=399 data-nosnippet>399</a>\@ifundefined{chapter}{\def\chapter#1{\par(Chapter head:)#1\par }%
+<a href=#400 id=400 data-nosnippet>400</a> \newcount\c@chapter}{}%
+<a href=#401 id=401 data-nosnippet>401</a>\@ifundefined{part}{\def\part#1{\par(Part head:)#1\par }}{}%
+<a href=#402 id=402 data-nosnippet>402</a>\@ifundefined{section}{\def\section#1{\par(Section head:)#1\par }}{}%
+<a href=#403 id=403 data-nosnippet>403</a>\@ifundefined{subsection}{\def\subsection#1%
+<a href=#404 id=404 data-nosnippet>404</a> {\par(Subsection head:)#1\par }}{}%
+<a href=#405 id=405 data-nosnippet>405</a>\@ifundefined{subsubsection}{\def\subsubsection#1%
+<a href=#406 id=406 data-nosnippet>406</a> {\par(Subsubsection head:)#1\par }}{}%
+<a href=#407 id=407 data-nosnippet>407</a>\@ifundefined{paragraph}{\def\paragraph#1%
+<a href=#408 id=408 data-nosnippet>408</a> {\par(Subsubsubsection head:)#1\par }}{}%
+<a href=#409 id=409 data-nosnippet>409</a>\@ifundefined{subparagraph}{\def\subparagraph#1%
+<a href=#410 id=410 data-nosnippet>410</a> {\par(Subsubsubsubsection head:)#1\par }}{}%
+<a href=#411 id=411 data-nosnippet>411</a>\@ifundefined{therefore}{\def\therefore{}}{}%
+<a href=#412 id=412 data-nosnippet>412</a>\@ifundefined{backepsilon}{\def\backepsilon{}}{}%
+<a href=#413 id=413 data-nosnippet>413</a>\@ifundefined{yen}{\def\yen{\hbox{\rm\rlap=Y}}}{}%
+<a href=#414 id=414 data-nosnippet>414</a>\@ifundefined{registered}{%
+<a href=#415 id=415 data-nosnippet>415</a>   \def\registered{\relax\ifmmode{}\r@gistered
+<a href=#416 id=416 data-nosnippet>416</a>                    \else$\m@th\r@gistered$\fi}%
+<a href=#417 id=417 data-nosnippet>417</a> \def\r@gistered{^{\ooalign
+<a href=#418 id=418 data-nosnippet>418</a>  {\hfil\raise.07ex\hbox{$\scriptstyle\rm\text{R}$}\hfil\crcr
+<a href=#419 id=419 data-nosnippet>419</a>  \mathhexbox20D}}}}{}%
+<a href=#420 id=420 data-nosnippet>420</a>\@ifundefined{Eth}{\def\Eth{}}{}%
+<a href=#421 id=421 data-nosnippet>421</a>\@ifundefined{eth}{\def\eth{}}{}%
+<a href=#422 id=422 data-nosnippet>422</a>\@ifundefined{Thorn}{\def\Thorn{}}{}%
+<a href=#423 id=423 data-nosnippet>423</a>\@ifundefined{thorn}{\def\thorn{}}{}%
+<a href=#424 id=424 data-nosnippet>424</a>% A macro to allow any symbol that requires math to appear in text
+<a href=#425 id=425 data-nosnippet>425</a>\def\TEXTsymbol#1{\mbox{$#1$}}%
+<a href=#426 id=426 data-nosnippet>426</a>\@ifundefined{degree}{\def\degree{{}^{\circ}}}{}%
+<a href=#427 id=427 data-nosnippet>427</a>%
+<a href=#428 id=428 data-nosnippet>428</a>% macros for T3TeX files
+<a href=#429 id=429 data-nosnippet>429</a>\newdimen\theight
+<a href=#430 id=430 data-nosnippet>430</a>\def\Column{%
+<a href=#431 id=431 data-nosnippet>431</a> \vadjust{\setbox\z@=\hbox{\scriptsize\quad\quad tcol}%
+<a href=#432 id=432 data-nosnippet>432</a>  \theight=\ht\z@\advance\theight by \dp\z@\advance\theight by \lineskip
+<a href=#433 id=433 data-nosnippet>433</a>  \kern -\theight \vbox to \theight{%
+<a href=#434 id=434 data-nosnippet>434</a>   \rightline{\rlap{\box\z@}}%
+<a href=#435 id=435 data-nosnippet>435</a>   \vss
+<a href=#436 id=436 data-nosnippet>436</a>   }%
+<a href=#437 id=437 data-nosnippet>437</a>  }%
+<a href=#438 id=438 data-nosnippet>438</a> }%
+<a href=#439 id=439 data-nosnippet>439</a>%
+<a href=#440 id=440 data-nosnippet>440</a>\def\qed{%
+<a href=#441 id=441 data-nosnippet>441</a> \ifhmode\unskip\nobreak\fi\ifmmode\ifinner\else\hskip5\p@\fi\fi
+<a href=#442 id=442 data-nosnippet>442</a> \hbox{\hskip5\p@\vrule width4\p@ height6\p@ depth1.5\p@\hskip\p@}%
+<a href=#443 id=443 data-nosnippet>443</a> }%
+<a href=#444 id=444 data-nosnippet>444</a>%
+<a href=#445 id=445 data-nosnippet>445</a>\def\cents{\hbox{\rm\rlap/c}}%
+<a href=#446 id=446 data-nosnippet>446</a>\def\miss{\hbox{\vrule height2\p@ width 2\p@ depth\z@}}%
+<a href=#447 id=447 data-nosnippet>447</a>%
+<a href=#448 id=448 data-nosnippet>448</a>\def\vvert{\Vert}%
 <a href=#449 id=449 data-nosnippet>449</a>%
-<a href=#450 id=450 data-nosnippet>450</a>\def\note{$^{\dag}}%
+<a href=#450 id=450 data-nosnippet>450</a>\def\tcol#1{{\baselineskip=6\p@ \vcenter{#1}} \Column}  %
 <a href=#451 id=451 data-nosnippet>451</a>%
-<a href=#452 id=452 data-nosnippet>452</a>%
-<a href=#453 id=453 data-nosnippet>453</a>
-<a href=#454 id=454 data-nosnippet>454</a>\def\newfmtname{LaTeX2e}
-<a href=#455 id=455 data-nosnippet>455</a>\def\chkcompat{%
-<a href=#456 id=456 data-nosnippet>456</a>   \if@compatibility
-<a href=#457 id=457 data-nosnippet>457</a>   \else
-<a href=#458 id=458 data-nosnippet>458</a>     \usepackage{latexsym}
-<a href=#459 id=459 data-nosnippet>459</a>   \fi
-<a href=#460 id=460 data-nosnippet>460</a>}
-<a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a>\ifx\fmtname\newfmtname
-<a href=#463 id=463 data-nosnippet>463</a>  \DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}
-<a href=#464 id=464 data-nosnippet>464</a>  \DeclareOldFontCommand{\sf}{\normalfont\sffamily}{\mathsf}
-<a href=#465 id=465 data-nosnippet>465</a>  \DeclareOldFontCommand{\tt}{\normalfont\ttfamily}{\mathtt}
-<a href=#466 id=466 data-nosnippet>466</a>  \DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
-<a href=#467 id=467 data-nosnippet>467</a>  \DeclareOldFontCommand{\it}{\normalfont\itshape}{\mathit}
-<a href=#468 id=468 data-nosnippet>468</a>  \DeclareOldFontCommand{\sl}{\normalfont\slshape}{\@nomath\sl}
-<a href=#469 id=469 data-nosnippet>469</a>  \DeclareOldFontCommand{\sc}{\normalfont\scshape}{\@nomath\sc}
-<a href=#470 id=470 data-nosnippet>470</a>  \chkcompat
-<a href=#471 id=471 data-nosnippet>471</a>\fi
-<a href=#472 id=472 data-nosnippet>472</a>
-<a href=#473 id=473 data-nosnippet>473</a>%
-<a href=#474 id=474 data-nosnippet>474</a>% Greek bold macros
-<a href=#475 id=475 data-nosnippet>475</a>\def\FindBoldGroup{%
-<a href=#476 id=476 data-nosnippet>476</a>   {\setbox0=\hbox{$\mathbf{x\global\edef\theboldgroup{\the\mathgroup}}$}}%
-<a href=#477 id=477 data-nosnippet>477</a>}
+<a href=#452 id=452 data-nosnippet>452</a>\def\dB{\hbox{{}}}%
+<a href=#453 id=453 data-nosnippet>453</a>\def\mB#1{\hbox{$#1$}}%
+<a href=#454 id=454 data-nosnippet>454</a>\def\nB#1{\hbox{#1}}%
+<a href=#455 id=455 data-nosnippet>455</a>%
+<a href=#456 id=456 data-nosnippet>456</a>\def\note{$^{\dag}}%
+<a href=#457 id=457 data-nosnippet>457</a>%
+<a href=#458 id=458 data-nosnippet>458</a>%
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a>\def\newfmtname{LaTeX2e}
+<a href=#461 id=461 data-nosnippet>461</a>\def\chkcompat{%
+<a href=#462 id=462 data-nosnippet>462</a>   \if@compatibility
+<a href=#463 id=463 data-nosnippet>463</a>   \else
+<a href=#464 id=464 data-nosnippet>464</a>     \usepackage{latexsym}
+<a href=#465 id=465 data-nosnippet>465</a>   \fi
+<a href=#466 id=466 data-nosnippet>466</a>}
+<a href=#467 id=467 data-nosnippet>467</a>
+<a href=#468 id=468 data-nosnippet>468</a>\ifx\fmtname\newfmtname
+<a href=#469 id=469 data-nosnippet>469</a>  \DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}
+<a href=#470 id=470 data-nosnippet>470</a>  \DeclareOldFontCommand{\sf}{\normalfont\sffamily}{\mathsf}
+<a href=#471 id=471 data-nosnippet>471</a>  \DeclareOldFontCommand{\tt}{\normalfont\ttfamily}{\mathtt}
+<a href=#472 id=472 data-nosnippet>472</a>  \DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
+<a href=#473 id=473 data-nosnippet>473</a>  \DeclareOldFontCommand{\it}{\normalfont\itshape}{\mathit}
+<a href=#474 id=474 data-nosnippet>474</a>  \DeclareOldFontCommand{\sl}{\normalfont\slshape}{\@nomath\sl}
+<a href=#475 id=475 data-nosnippet>475</a>  \DeclareOldFontCommand{\sc}{\normalfont\scshape}{\@nomath\sc}
+<a href=#476 id=476 data-nosnippet>476</a>  \chkcompat
+<a href=#477 id=477 data-nosnippet>477</a>\fi
 <a href=#478 id=478 data-nosnippet>478</a>
-<a href=#479 id=479 data-nosnippet>479</a>\def\Greekmath#1#2#3#4{%
-<a href=#480 id=480 data-nosnippet>480</a>    \if@compatibility
-<a href=#481 id=481 data-nosnippet>481</a>        \ifnum\mathgroup=\symbold
-<a href=#482 id=482 data-nosnippet>482</a>           \mathchoice{\mbox{\boldmath$\displaystyle\mathchar"#1#2#3#4$}}%
-<a href=#483 id=483 data-nosnippet>483</a>                      {\mbox{\boldmath$\textstyle\mathchar"#1#2#3#4$}}%
-<a href=#484 id=484 data-nosnippet>484</a>                      {\mbox{\boldmath$\scriptstyle\mathchar"#1#2#3#4$}}%
-<a href=#485 id=485 data-nosnippet>485</a>                      {\mbox{\boldmath$\scriptscriptstyle\mathchar"#1#2#3#4$}}%
-<a href=#486 id=486 data-nosnippet>486</a>        \else
-<a href=#487 id=487 data-nosnippet>487</a>           \mathchar"#1#2#3#4%
-<a href=#488 id=488 data-nosnippet>488</a>        \fi
-<a href=#489 id=489 data-nosnippet>489</a>    \else
-<a href=#490 id=490 data-nosnippet>490</a>        \FindBoldGroup
-<a href=#491 id=491 data-nosnippet>491</a>        \ifnum\mathgroup=\theboldgroup
-<a href=#492 id=492 data-nosnippet>492</a>           \mathchoice{\mbox{\boldmath$\displaystyle\mathchar"#1#2#3#4$}}%
-<a href=#493 id=493 data-nosnippet>493</a>                      {\mbox{\boldmath$\textstyle\mathchar"#1#2#3#4$}}%
-<a href=#494 id=494 data-nosnippet>494</a>                      {\mbox{\boldmath$\scriptstyle\mathchar"#1#2#3#4$}}%
-<a href=#495 id=495 data-nosnippet>495</a>                      {\mbox{\boldmath$\scriptscriptstyle\mathchar"#1#2#3#4$}}%
-<a href=#496 id=496 data-nosnippet>496</a>        \else
-<a href=#497 id=497 data-nosnippet>497</a>           \mathchar"#1#2#3#4%
-<a href=#498 id=498 data-nosnippet>498</a>        \fi
-<a href=#499 id=499 data-nosnippet>499</a>      \fi}
-<a href=#500 id=500 data-nosnippet>500</a>
-<a href=#501 id=501 data-nosnippet>501</a>\newif\ifGreekBold  \GreekBoldfalse
-<a href=#502 id=502 data-nosnippet>502</a>\let\SAVEPBF=\pbf
-<a href=#503 id=503 data-nosnippet>503</a>\def\pbf{\GreekBoldtrue\SAVEPBF}%
-<a href=#504 id=504 data-nosnippet>504</a>%
-<a href=#505 id=505 data-nosnippet>505</a>
-<a href=#506 id=506 data-nosnippet>506</a>\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}}{}
-<a href=#507 id=507 data-nosnippet>507</a>\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}
-<a href=#508 id=508 data-nosnippet>508</a>\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}
-<a href=#509 id=509 data-nosnippet>509</a>\@ifundefined{conjecture}{\newtheorem{conjecture}[theorem]{Conjecture}}{}
-<a href=#510 id=510 data-nosnippet>510</a>\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}
-<a href=#511 id=511 data-nosnippet>511</a>\@ifundefined{axiom}{\newtheorem{axiom}{Axiom}}{}
-<a href=#512 id=512 data-nosnippet>512</a>\@ifundefined{remark}{\newtheorem{remark}{Remark}}{}
-<a href=#513 id=513 data-nosnippet>513</a>\@ifundefined{example}{\newtheorem{example}{Example}}{}
-<a href=#514 id=514 data-nosnippet>514</a>\@ifundefined{exercise}{\newtheorem{exercise}{Exercise}}{}
-<a href=#515 id=515 data-nosnippet>515</a>\@ifundefined{definition}{\newtheorem{definition}{Definition}}{}
-<a href=#516 id=516 data-nosnippet>516</a>
-<a href=#517 id=517 data-nosnippet>517</a>
-<a href=#518 id=518 data-nosnippet>518</a>\@ifundefined{mathletters}{%
-<a href=#519 id=519 data-nosnippet>519</a>  \newcounter{equationnumber}
-<a href=#520 id=520 data-nosnippet>520</a>  \def\mathletters{%
-<a href=#521 id=521 data-nosnippet>521</a>     \addtocounter{equation}{1}
-<a href=#522 id=522 data-nosnippet>522</a>     \edef\@currentlabel{\theequation}%
-<a href=#523 id=523 data-nosnippet>523</a>     \setcounter{equationnumber}{\c@equation}
-<a href=#524 id=524 data-nosnippet>524</a>     \setcounter{equation}{0}%
-<a href=#525 id=525 data-nosnippet>525</a>     \edef\theequation{\@currentlabel\noexpand\alph{equation}}%
-<a href=#526 id=526 data-nosnippet>526</a>  }
-<a href=#527 id=527 data-nosnippet>527</a>  \def\endmathletters{%
-<a href=#528 id=528 data-nosnippet>528</a>     \setcounter{equation}{\value{equationnumber}}%
-<a href=#529 id=529 data-nosnippet>529</a>  }
-<a href=#530 id=530 data-nosnippet>530</a>}{}
-<a href=#531 id=531 data-nosnippet>531</a>
-<a href=#532 id=532 data-nosnippet>532</a>%Logos
-<a href=#533 id=533 data-nosnippet>533</a>\@ifundefined{BibTeX}{%
-<a href=#534 id=534 data-nosnippet>534</a>    \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-<a href=#535 id=535 data-nosnippet>535</a>                 T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}}{}%
-<a href=#536 id=536 data-nosnippet>536</a>\@ifundefined{AmS}%
-<a href=#537 id=537 data-nosnippet>537</a>    {\def\AmS{{\protect\usefont{OMS}{cmsy}{m}{n}%
-<a href=#538 id=538 data-nosnippet>538</a>                A\kern-.1667em\lower.5ex\hbox{M}\kern-.125emS}}}{}%
-<a href=#539 id=539 data-nosnippet>539</a>\@ifundefined{AmSTeX}{\def\AmSTeX{\protect\AmS-\protect\TeX\@}}{}%
-<a href=#540 id=540 data-nosnippet>540</a>%
-<a href=#541 id=541 data-nosnippet>541</a>\RequirePackage{amsmath}
-<a href=#542 id=542 data-nosnippet>542</a>
-<a href=#543 id=543 data-nosnippet>543</a>%JCS - added braces and \mathop around \displaystyle\int, etc.
-<a href=#544 id=544 data-nosnippet>544</a>%
-<a href=#545 id=545 data-nosnippet>545</a>\def\tint{\mathop{\textstyle \int}}%
-<a href=#546 id=546 data-nosnippet>546</a>\def\tiint{\mathop{\textstyle \iint }}%
-<a href=#547 id=547 data-nosnippet>547</a>\def\tiiint{\mathop{\textstyle \iiint }}%
-<a href=#548 id=548 data-nosnippet>548</a>\def\tiiiint{\mathop{\textstyle \iiiint }}%
-<a href=#549 id=549 data-nosnippet>549</a>\def\tidotsint{\mathop{\textstyle \idotsint }}%
-<a href=#550 id=550 data-nosnippet>550</a>\def\toint{\mathop{\textstyle \oint}}%
-<a href=#551 id=551 data-nosnippet>551</a>\def\tsum{\mathop{\textstyle \sum }}%
-<a href=#552 id=552 data-nosnippet>552</a>\def\tprod{\mathop{\textstyle \prod }}%
-<a href=#553 id=553 data-nosnippet>553</a>\def\tbigcap{\mathop{\textstyle \bigcap }}%
-<a href=#554 id=554 data-nosnippet>554</a>\def\tbigwedge{\mathop{\textstyle \bigwedge }}%
-<a href=#555 id=555 data-nosnippet>555</a>\def\tbigoplus{\mathop{\textstyle \bigoplus }}%
-<a href=#556 id=556 data-nosnippet>556</a>\def\tbigodot{\mathop{\textstyle \bigodot }}%
-<a href=#557 id=557 data-nosnippet>557</a>\def\tbigsqcup{\mathop{\textstyle \bigsqcup }}%
-<a href=#558 id=558 data-nosnippet>558</a>\def\tcoprod{\mathop{\textstyle \coprod }}%
-<a href=#559 id=559 data-nosnippet>559</a>\def\tbigcup{\mathop{\textstyle \bigcup }}%
-<a href=#560 id=560 data-nosnippet>560</a>\def\tbigvee{\mathop{\textstyle \bigvee }}%
-<a href=#561 id=561 data-nosnippet>561</a>\def\tbigotimes{\mathop{\textstyle \bigotimes }}%
-<a href=#562 id=562 data-nosnippet>562</a>\def\tbiguplus{\mathop{\textstyle \biguplus }}%
-<a href=#563 id=563 data-nosnippet>563</a>%
-<a href=#564 id=564 data-nosnippet>564</a>%
-<a href=#565 id=565 data-nosnippet>565</a>%Macros for display size operators:
-<a href=#566 id=566 data-nosnippet>566</a>%
-<a href=#567 id=567 data-nosnippet>567</a>
-<a href=#568 id=568 data-nosnippet>568</a>\def\dint{\mathop{\displaystyle \int}}%
-<a href=#569 id=569 data-nosnippet>569</a>\def\diint{\mathop{\displaystyle \iint }}%
-<a href=#570 id=570 data-nosnippet>570</a>\def\diiint{\mathop{\displaystyle \iiint }}%
-<a href=#571 id=571 data-nosnippet>571</a>\def\diiiint{\mathop{\displaystyle \iiiint }}%
-<a href=#572 id=572 data-nosnippet>572</a>\def\didotsint{\mathop{\displaystyle \idotsint }}%
-<a href=#573 id=573 data-nosnippet>573</a>\def\doint{\mathop{\displaystyle \oint}}%
-<a href=#574 id=574 data-nosnippet>574</a>\def\dsum{\mathop{\displaystyle \sum }}%
-<a href=#575 id=575 data-nosnippet>575</a>\def\dprod{\mathop{\displaystyle \prod }}%
-<a href=#576 id=576 data-nosnippet>576</a>\def\dbigcap{\mathop{\displaystyle \bigcap }}%
-<a href=#577 id=577 data-nosnippet>577</a>\def\dbigwedge{\mathop{\displaystyle \bigwedge }}%
-<a href=#578 id=578 data-nosnippet>578</a>\def\dbigoplus{\mathop{\displaystyle \bigoplus }}%
-<a href=#579 id=579 data-nosnippet>579</a>\def\dbigodot{\mathop{\displaystyle \bigodot }}%
-<a href=#580 id=580 data-nosnippet>580</a>\def\dbigsqcup{\mathop{\displaystyle \bigsqcup }}%
-<a href=#581 id=581 data-nosnippet>581</a>\def\dcoprod{\mathop{\displaystyle \coprod }}%
-<a href=#582 id=582 data-nosnippet>582</a>\def\dbigcup{\mathop{\displaystyle \bigcup }}%
-<a href=#583 id=583 data-nosnippet>583</a>\def\dbigvee{\mathop{\displaystyle \bigvee }}%
-<a href=#584 id=584 data-nosnippet>584</a>\def\dbigotimes{\mathop{\displaystyle \bigotimes }}%
-<a href=#585 id=585 data-nosnippet>585</a>\def\dbiguplus{\mathop{\displaystyle \biguplus }}%
-<a href=#586 id=586 data-nosnippet>586</a>\makeatother
-<a href=#587 id=587 data-nosnippet>587</a>"##</span>);
-<a href=#588 id=588 data-nosnippet>588</a>});
+<a href=#479 id=479 data-nosnippet>479</a>%
+<a href=#480 id=480 data-nosnippet>480</a>% Greek bold macros
+<a href=#481 id=481 data-nosnippet>481</a>\def\FindBoldGroup{%
+<a href=#482 id=482 data-nosnippet>482</a>   {\setbox0=\hbox{$\mathbf{x\global\edef\theboldgroup{\the\mathgroup}}$}}%
+<a href=#483 id=483 data-nosnippet>483</a>}
+<a href=#484 id=484 data-nosnippet>484</a>
+<a href=#485 id=485 data-nosnippet>485</a>\def\Greekmath#1#2#3#4{%
+<a href=#486 id=486 data-nosnippet>486</a>    \if@compatibility
+<a href=#487 id=487 data-nosnippet>487</a>        \ifnum\mathgroup=\symbold
+<a href=#488 id=488 data-nosnippet>488</a>           \mathchoice{\mbox{\boldmath$\displaystyle\mathchar"#1#2#3#4$}}%
+<a href=#489 id=489 data-nosnippet>489</a>                      {\mbox{\boldmath$\textstyle\mathchar"#1#2#3#4$}}%
+<a href=#490 id=490 data-nosnippet>490</a>                      {\mbox{\boldmath$\scriptstyle\mathchar"#1#2#3#4$}}%
+<a href=#491 id=491 data-nosnippet>491</a>                      {\mbox{\boldmath$\scriptscriptstyle\mathchar"#1#2#3#4$}}%
+<a href=#492 id=492 data-nosnippet>492</a>        \else
+<a href=#493 id=493 data-nosnippet>493</a>           \mathchar"#1#2#3#4%
+<a href=#494 id=494 data-nosnippet>494</a>        \fi
+<a href=#495 id=495 data-nosnippet>495</a>    \else
+<a href=#496 id=496 data-nosnippet>496</a>        \FindBoldGroup
+<a href=#497 id=497 data-nosnippet>497</a>        \ifnum\mathgroup=\theboldgroup
+<a href=#498 id=498 data-nosnippet>498</a>           \mathchoice{\mbox{\boldmath$\displaystyle\mathchar"#1#2#3#4$}}%
+<a href=#499 id=499 data-nosnippet>499</a>                      {\mbox{\boldmath$\textstyle\mathchar"#1#2#3#4$}}%
+<a href=#500 id=500 data-nosnippet>500</a>                      {\mbox{\boldmath$\scriptstyle\mathchar"#1#2#3#4$}}%
+<a href=#501 id=501 data-nosnippet>501</a>                      {\mbox{\boldmath$\scriptscriptstyle\mathchar"#1#2#3#4$}}%
+<a href=#502 id=502 data-nosnippet>502</a>        \else
+<a href=#503 id=503 data-nosnippet>503</a>           \mathchar"#1#2#3#4%
+<a href=#504 id=504 data-nosnippet>504</a>        \fi
+<a href=#505 id=505 data-nosnippet>505</a>      \fi}
+<a href=#506 id=506 data-nosnippet>506</a>
+<a href=#507 id=507 data-nosnippet>507</a>\newif\ifGreekBold  \GreekBoldfalse
+<a href=#508 id=508 data-nosnippet>508</a>\let\SAVEPBF=\pbf
+<a href=#509 id=509 data-nosnippet>509</a>\def\pbf{\GreekBoldtrue\SAVEPBF}%
+<a href=#510 id=510 data-nosnippet>510</a>%
+<a href=#511 id=511 data-nosnippet>511</a>
+<a href=#512 id=512 data-nosnippet>512</a>\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}}{}
+<a href=#513 id=513 data-nosnippet>513</a>\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}
+<a href=#514 id=514 data-nosnippet>514</a>\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}
+<a href=#515 id=515 data-nosnippet>515</a>\@ifundefined{conjecture}{\newtheorem{conjecture}[theorem]{Conjecture}}{}
+<a href=#516 id=516 data-nosnippet>516</a>\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}
+<a href=#517 id=517 data-nosnippet>517</a>\@ifundefined{axiom}{\newtheorem{axiom}{Axiom}}{}
+<a href=#518 id=518 data-nosnippet>518</a>\@ifundefined{remark}{\newtheorem{remark}{Remark}}{}
+<a href=#519 id=519 data-nosnippet>519</a>\@ifundefined{example}{\newtheorem{example}{Example}}{}
+<a href=#520 id=520 data-nosnippet>520</a>\@ifundefined{exercise}{\newtheorem{exercise}{Exercise}}{}
+<a href=#521 id=521 data-nosnippet>521</a>\@ifundefined{definition}{\newtheorem{definition}{Definition}}{}
+<a href=#522 id=522 data-nosnippet>522</a>
+<a href=#523 id=523 data-nosnippet>523</a>
+<a href=#524 id=524 data-nosnippet>524</a>\@ifundefined{mathletters}{%
+<a href=#525 id=525 data-nosnippet>525</a>  \newcounter{equationnumber}
+<a href=#526 id=526 data-nosnippet>526</a>  \def\mathletters{%
+<a href=#527 id=527 data-nosnippet>527</a>     \addtocounter{equation}{1}
+<a href=#528 id=528 data-nosnippet>528</a>     \edef\@currentlabel{\theequation}%
+<a href=#529 id=529 data-nosnippet>529</a>     \setcounter{equationnumber}{\c@equation}
+<a href=#530 id=530 data-nosnippet>530</a>     \setcounter{equation}{0}%
+<a href=#531 id=531 data-nosnippet>531</a>     \edef\theequation{\@currentlabel\noexpand\alph{equation}}%
+<a href=#532 id=532 data-nosnippet>532</a>  }
+<a href=#533 id=533 data-nosnippet>533</a>  \def\endmathletters{%
+<a href=#534 id=534 data-nosnippet>534</a>     \setcounter{equation}{\value{equationnumber}}%
+<a href=#535 id=535 data-nosnippet>535</a>  }
+<a href=#536 id=536 data-nosnippet>536</a>}{}
+<a href=#537 id=537 data-nosnippet>537</a>
+<a href=#538 id=538 data-nosnippet>538</a>%Logos
+<a href=#539 id=539 data-nosnippet>539</a>\@ifundefined{BibTeX}{%
+<a href=#540 id=540 data-nosnippet>540</a>    \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+<a href=#541 id=541 data-nosnippet>541</a>                 T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}}{}%
+<a href=#542 id=542 data-nosnippet>542</a>\@ifundefined{AmS}%
+<a href=#543 id=543 data-nosnippet>543</a>    {\def\AmS{{\protect\usefont{OMS}{cmsy}{m}{n}%
+<a href=#544 id=544 data-nosnippet>544</a>                A\kern-.1667em\lower.5ex\hbox{M}\kern-.125emS}}}{}%
+<a href=#545 id=545 data-nosnippet>545</a>\@ifundefined{AmSTeX}{\def\AmSTeX{\protect\AmS-\protect\TeX\@}}{}%
+<a href=#546 id=546 data-nosnippet>546</a>%
+<a href=#547 id=547 data-nosnippet>547</a>\RequirePackage{amsmath}
+<a href=#548 id=548 data-nosnippet>548</a>
+<a href=#549 id=549 data-nosnippet>549</a>%JCS - added braces and \mathop around \displaystyle\int, etc.
+<a href=#550 id=550 data-nosnippet>550</a>%
+<a href=#551 id=551 data-nosnippet>551</a>\def\tint{\mathop{\textstyle \int}}%
+<a href=#552 id=552 data-nosnippet>552</a>\def\tiint{\mathop{\textstyle \iint }}%
+<a href=#553 id=553 data-nosnippet>553</a>\def\tiiint{\mathop{\textstyle \iiint }}%
+<a href=#554 id=554 data-nosnippet>554</a>\def\tiiiint{\mathop{\textstyle \iiiint }}%
+<a href=#555 id=555 data-nosnippet>555</a>\def\tidotsint{\mathop{\textstyle \idotsint }}%
+<a href=#556 id=556 data-nosnippet>556</a>\def\toint{\mathop{\textstyle \oint}}%
+<a href=#557 id=557 data-nosnippet>557</a>\def\tsum{\mathop{\textstyle \sum }}%
+<a href=#558 id=558 data-nosnippet>558</a>\def\tprod{\mathop{\textstyle \prod }}%
+<a href=#559 id=559 data-nosnippet>559</a>\def\tbigcap{\mathop{\textstyle \bigcap }}%
+<a href=#560 id=560 data-nosnippet>560</a>\def\tbigwedge{\mathop{\textstyle \bigwedge }}%
+<a href=#561 id=561 data-nosnippet>561</a>\def\tbigoplus{\mathop{\textstyle \bigoplus }}%
+<a href=#562 id=562 data-nosnippet>562</a>\def\tbigodot{\mathop{\textstyle \bigodot }}%
+<a href=#563 id=563 data-nosnippet>563</a>\def\tbigsqcup{\mathop{\textstyle \bigsqcup }}%
+<a href=#564 id=564 data-nosnippet>564</a>\def\tcoprod{\mathop{\textstyle \coprod }}%
+<a href=#565 id=565 data-nosnippet>565</a>\def\tbigcup{\mathop{\textstyle \bigcup }}%
+<a href=#566 id=566 data-nosnippet>566</a>\def\tbigvee{\mathop{\textstyle \bigvee }}%
+<a href=#567 id=567 data-nosnippet>567</a>\def\tbigotimes{\mathop{\textstyle \bigotimes }}%
+<a href=#568 id=568 data-nosnippet>568</a>\def\tbiguplus{\mathop{\textstyle \biguplus }}%
+<a href=#569 id=569 data-nosnippet>569</a>%
+<a href=#570 id=570 data-nosnippet>570</a>%
+<a href=#571 id=571 data-nosnippet>571</a>%Macros for display size operators:
+<a href=#572 id=572 data-nosnippet>572</a>%
+<a href=#573 id=573 data-nosnippet>573</a>
+<a href=#574 id=574 data-nosnippet>574</a>\def\dint{\mathop{\displaystyle \int}}%
+<a href=#575 id=575 data-nosnippet>575</a>\def\diint{\mathop{\displaystyle \iint }}%
+<a href=#576 id=576 data-nosnippet>576</a>\def\diiint{\mathop{\displaystyle \iiint }}%
+<a href=#577 id=577 data-nosnippet>577</a>\def\diiiint{\mathop{\displaystyle \iiiint }}%
+<a href=#578 id=578 data-nosnippet>578</a>\def\didotsint{\mathop{\displaystyle \idotsint }}%
+<a href=#579 id=579 data-nosnippet>579</a>\def\doint{\mathop{\displaystyle \oint}}%
+<a href=#580 id=580 data-nosnippet>580</a>\def\dsum{\mathop{\displaystyle \sum }}%
+<a href=#581 id=581 data-nosnippet>581</a>\def\dprod{\mathop{\displaystyle \prod }}%
+<a href=#582 id=582 data-nosnippet>582</a>\def\dbigcap{\mathop{\displaystyle \bigcap }}%
+<a href=#583 id=583 data-nosnippet>583</a>\def\dbigwedge{\mathop{\displaystyle \bigwedge }}%
+<a href=#584 id=584 data-nosnippet>584</a>\def\dbigoplus{\mathop{\displaystyle \bigoplus }}%
+<a href=#585 id=585 data-nosnippet>585</a>\def\dbigodot{\mathop{\displaystyle \bigodot }}%
+<a href=#586 id=586 data-nosnippet>586</a>\def\dbigsqcup{\mathop{\displaystyle \bigsqcup }}%
+<a href=#587 id=587 data-nosnippet>587</a>\def\dcoprod{\mathop{\displaystyle \coprod }}%
+<a href=#588 id=588 data-nosnippet>588</a>\def\dbigcup{\mathop{\displaystyle \bigcup }}%
+<a href=#589 id=589 data-nosnippet>589</a>\def\dbigvee{\mathop{\displaystyle \bigvee }}%
+<a href=#590 id=590 data-nosnippet>590</a>\def\dbigotimes{\mathop{\displaystyle \bigotimes }}%
+<a href=#591 id=591 data-nosnippet>591</a>\def\dbiguplus{\mathop{\displaystyle \biguplus }}%
+<a href=#592 id=592 data-nosnippet>592</a>\makeatother
+<a href=#593 id=593 data-nosnippet>593</a>"##</span>);
+<a href=#594 id=594 data-nosnippet>594</a>});
 </code></pre></div></section></main></body></html>
