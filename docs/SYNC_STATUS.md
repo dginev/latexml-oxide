@@ -236,6 +236,18 @@ the corpus is uniformly clean across publication eras.
 
 Combined post-fix coverage: **1400 papers, 0 new real regressions**.
 
+**revtex3 `\hbox\bgroup` cluster narrowed (2026-05-01)**: the 7-paper
+condensed-matter-physics cluster
+([project_revtex3_faketext_mode.md](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_revtex3_faketext_mode.md))
+is now isolated to a 6-line min repro that doesn't need REVTeX, math
+mode, or the `\openhbox` macro. The bug is in the gullet's handling
+of `\if`-CSes that are `\let`-aliased to `\iffalse` (created by
+`\newif` or manual `\let`). With `\iffalse`/`\ifnum 0=1` the same
+construct works clean. `\closehbox` (i.e. `\egroup`) in the SKIPPED
+if-branch produces a spurious egroup invocation, indicating the
+conditional skip path is mis-handling let-aliased conditionals.
+Deferred to deeper gullet investigation; not a band-aid candidate.
+
 **Total verified across all samples**: ~140 unique papers checked, **0
 actual current Rust regressions found**. Rust beats Perl on **14 confirmed
 sandbox papers** (memory: [Rust supersedes
