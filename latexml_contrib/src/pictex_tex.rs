@@ -28,4 +28,11 @@ LoadDefinitions!({
   RawTeX!("\\def\\putrule from #1 #2 to #3 #4{}");
   RawTeX!("\\def\\circulararc #1 degrees from #2 #3 center at #4 #5{}");
   RawTeX!("\\def\\arrow <#1> [#2] from #3 #4 to #5 #6{}");
+
+  // PiCTeX `\put` and `\multiput` use a different syntax than the LaTeX
+  // picture-env counterparts — they read "{<text>} at <x> <y>" instead of
+  // "(x,y){<text>}". Witness: math0407515 (`\put{...} at -6 2.5`,
+  // `\multiput{\sq} at 0 5  0 4 ... /`). Stub: gobble.
+  RawTeX!("\\def\\put#1 at #2 #3 {}");
+  RawTeX!("\\def\\multiput#1 at #2/{}");
 });
