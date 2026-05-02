@@ -1053,6 +1053,27 @@ by `kpsewhich --version`. Currently dumps load from
 
 ---
 
+## 2026-05-02: drop speculative iopart_support `\la → \lesssim` block
+
+`hep-ph0404036` (`\documentclass{iopart}` + `\newcommand\la{\langle}`):
+Rust=1 → Rust=0 (Perl=0). Tests stay 1112/0/0.
+
+* **`iopart_support_sty.rs`** had a Rust-only "Math symbols — Perl
+  L225-280" block defining `\la → \lesssim`, `\ga → \gtrsim`, `\sun`,
+  `\degr`, `\arcmin`, `\arcsec`. None of these exist in Perl's
+  `iopart_support.sty.ltxml` (verified: 0 grep matches). The comment's
+  cited Perl line range L225-280 actually contains bibliography macros
+  and journal abbreviations — pure speculative addition that
+  contradicted the "Perl is ground truth" rule.
+* The `\la → \lesssim` entry actively harmed user macros: papers
+  commonly do `\newcommand\la{\langle}`, but the pre-binding made
+  `\la` already-defined so `\newcommand` ignored the redefinition,
+  and the user's `\la n_G\ra` later expanded into the undefined
+  `\lesssim`.
+* Cluster impact: any iopart paper where the user defines `\la` /
+  `\ga` / `\sun` / `\degr` / `\arcmin` / `\arcsec` themselves
+  (common pattern for `\la=\langle` shorthand).
+
 ## 2026-05-02: case-insensitive file lookup + documentstyle disk-probe raw-load
 
 `astro-ph0008100` (`\documentstyle[PASJadd]{PASJ95}` + uppercase-named

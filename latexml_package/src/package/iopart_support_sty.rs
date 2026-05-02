@@ -148,13 +148,15 @@ LoadDefinitions!({
   DefMacro!("\\mr", "\\hline");
   DefEnvironment!("{indented}", "#body");
 
-  // Math symbols — Perl L225-280
-  DefMacro!("\\la", "\\lesssim");
-  DefMacro!("\\ga", "\\gtrsim");
-  DefMacro!("\\sun", "\u{2609}");
-  DefMacro!("\\degr", "\u{00B0}");
-  DefMacro!("\\arcmin", "\u{2032}");
-  DefMacro!("\\arcsec", "\u{2033}");
+  // NOTE: previously had speculative DefMacro!("\\la", "\\lesssim"),
+  // \\ga, \\sun, \\degr, \\arcmin, \\arcsec — none of these exist in
+  // Perl's iopart_support.sty.ltxml (verified). The `\la → \lesssim`
+  // entry actively HARMED user macros: papers commonly do
+  // `\newcommand\la{\langle}` (e.g. hep-ph0404036), but the prior
+  // pre-binding made `\la` already-defined so `\newcommand` ignored
+  // the redefinition, and the user's `\la n_G\ra` then expanded into
+  // the undefined `\lesssim`. The whole block was Rust-only divergence
+  // contradicting the "Perl is ground truth" rule.
 
   // Math operators — Perl L110-134
   DefMath!("\\rmd", "\u{2146}", role => "DIFFOP", meaning => "differential-d");
