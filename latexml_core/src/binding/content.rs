@@ -1776,6 +1776,41 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
 }
 
 /// Perl Package.pm L2141-2210: FindFile_fallback
+/// Pure-check variant of [`find_file_fallback`]: strips the same
+/// suffix/prefix patterns and reports whether the fallback name has a
+/// registered binding, but DOES NOT eagerly invoke the binding's
+/// `load_definitions`. Use this from pre-flight existence checks (e.g.
+/// `class_cls_via_fallback` in tex_job.rs) where firing the binding's
+/// body has side effects (\LoadClass, \RequirePackage) that contaminate
+/// the subsequent real load. Witness: astro-ph0002213 — the `\psfig`
+/// cluster fix (mn1 → mn fallback was eagerly running mn.cls's
+/// `\LoadClass{article}` before the `\documentstyle[epsfig]{mn1}`
+/// option-pass-through machinery had a chance to enqueue `epsfig` into
+/// `opt@article.cls`).
+pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
+  use crate::state::binding_exists;
+  use regex::Regex;
+  // Mirror find_file_fallback's regex set exactly.
+  let suffix_rx = match Regex::new(
+    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$"
+  ) { Ok(rx) => rx, Err(_) => return false };
+  let glued_rx = match Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$") {
+    Ok(rx) => rx, Err(_) => return false };
+  let prefix_rx = match Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)") {
+    Ok(rx) => rx, Err(_) => return false };
+  let basename = pathname::file_name(name);
+  let mut base = if basename.is_empty() { name.to_string() } else { basename };
+  let mut changed = base != name;
+  loop {
+    if let Some(m) = suffix_rx.find(&base) { base = base[..m.start()].to_string(); changed = true; continue; }
+    if let Some(m) = glued_rx.find(&base) { base = base[..m.start()].to_string(); changed = true; continue; }
+    if let Some(m) = prefix_rx.find(&base) { base = base[m.end()..].to_string(); changed = true; continue; }
+    break;
+  }
+  if !changed || base.is_empty() || base == name { return false; }
+  binding_exists(&base, ext_type)
+}
+
 /// Strip version/arxiv suffixes from package names to find existing bindings.
 /// Returns the fallback filename (with extension) if found.
 pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {

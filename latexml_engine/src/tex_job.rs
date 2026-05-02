@@ -133,7 +133,7 @@ LoadDefinitions!({
   // at the end of `\@load@latex@pool` so we restore our impl after
   // every LaTeX pool load.
   DefMacro!("\\lx@documentstyle@impl[]{}", sub[(options_opt, class_tks)] {
-    use latexml_core::binding::content::{find_file, find_file_fallback, FindFileOptions, load_class};
+    use latexml_core::binding::content::{find_file, find_file_fallback_exists, FindFileOptions, load_class};
     let class = class_tks.to_string();
     let class = class.trim().to_string();
 
@@ -208,12 +208,17 @@ LoadDefinitions!({
       &format!("{}.sty", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some();
-    let class_sty_fallback = find_file_fallback(&class, "sty").is_some();
+    // Pre-flight existence checks must NOT eagerly load the fallback
+    // binding (its body would run \LoadClass / \RequirePackage with no
+    // option-pass-through, contaminating the actual `\documentstyle`
+    // load that happens further below). Fix for the `\psfig` cluster
+    // (12 papers) — astro-ph0002213 R=1→0 with this gate change.
+    let class_sty_fallback = find_file_fallback_exists(&class, "sty");
     let class_cls_binding_exact = find_file(
       &format!("{}.cls", class),
       Some(FindFileOptions { notex, ..Default::default() }),
     ).is_some();
-    let class_cls_via_fallback = find_file_fallback(&class, "cls").is_some();
+    let class_cls_via_fallback = find_file_fallback_exists(&class, "cls");
     let class_sty_via_disk = !class_sty_binding
       && !class_sty_fallback
       && !class_cls_binding_exact
