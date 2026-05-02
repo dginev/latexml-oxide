@@ -497,30 +497,25 @@ mis-classified as failures (commit pending).
   with proper mode coupling. Min repro: 0 errors (was 7).
   Tests: 1110/0/0 (no regressions).
 
-- [ ] **`ltx:XMTok`-in-`<ltx:p>` Δ=2 family** (cosmetic, multiple
-  papers) — Rust emits 2 extra `ltx:XMTok` malformed-in-`<ltx:p>`
-  errors versus Perl on revtex/article papers where math content
-  bleeds into a `<ltx:p>` parent due to a TeX-side mode-mismatch
-  (e.g. `${\mbox M}^{...}` script after `\mbox` switches in
-  `\matrix`, or `$$...\end{equation}` mismatch). Both engines flag
-  the underlying math-mode-violation error and the `ltx:XMApp` /
-  `ltx:XMDual` malformed-in-`<ltx:p>` follow-up. Rust additionally
-  emits 2 `ltx:XMTok`-in-`<ltx:p>` from constructor-template
-  emissions (separate path from `Tbox::be_absorbed`'s mode-aware
-  fallback). Witnesses:
-  * `hep-th0101146` (R=17 vs P=15, Δ=2): malformed
-    `$$ ... \end{equation} \begin{equation} ...`.
-  * `nlin0211024` (R=4 vs P=2, Δ=2, **discovered 2026-05-01**):
-    `$${\mbox M}^{RSTP}=...$$` inside `\begin{center}`.
-  Note: the related `Tbox::new` divergence — Rust hardcodes
-  `mode => 'math'` whenever IN_MATH at L118-119, vs Perl's
-  `mode => $mode` (current MODE state, see `Box.pm` L42-50) — was
-  investigated and a Perl-faithful fix prepared, but it regresses
-  `figure_mixed_content_test` (sizing depends on the hardcoded
-  math-mode tagging for inline-block figure panels). The Δ=2 likely
-  traces to a different XMTok emission path
-  (constructor templates, not the Tbox fallback). Cosmetic
-  verbosity divergence on already-malformed input; deferred.
+- [x] **`ltx:XMTok`-in-`<ltx:p>` Δ=2 family** — **FIXED 2026-05-01**
+  by commit `a320deffa`: cascading-rejection suppression in
+  `document.rs:find_insertion_point_qsym`. When a math leaf element
+  (`<ltx:XMTok>` or `<ltx:XMArg>`) tries to insert into a text-mode
+  container (`<ltx:p>`/`<ltx:text>`), it's a cascade from an
+  already-rejected math wrapper (XMApp/XMDual). Perl emits the
+  wrapper's rejection but doesn't continue per-child error logging;
+  Rust now matches.
+  * `hep-th0101146`: R=17 → R=15 (Perl=15, exact parity)
+  * `nlin0211024`: R=4 → R=2 (Perl=2, exact parity)
+
+  Implementation is narrowly targeted: only suppresses the specific
+  `(qsym, parent)` pairs `(XMTok|XMArg, ltx:p|ltx:text)`. Other
+  malformed insertions still log normally. The element still "inserts"
+  via the existing fall-through return; only the redundant log
+  emission is suppressed. Side note: the related `Tbox::new`
+  divergence (hardcoded `mode => 'math'` vs Perl's `mode => $mode`)
+  remains unaddressed — investigated but regresses
+  `figure_mixed_content_test` sizing.
 
 - [x] **hep-th0010165** (R=206 vs P=101) — **OUT-OF-SCOPE? 2026-05-01**:
   Perl=101 is the MAX_ERRORS cap (Perl bails at 101 via Fatal). True
