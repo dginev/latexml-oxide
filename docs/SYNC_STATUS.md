@@ -187,8 +187,15 @@ commit `1a806f0a3` to handle these cases natively.)
   `0711.3041`, `0802.1558`, `0708.3246`, `0910.5867` (would have been
   hard panics without the fix; now exit=0 R=0).
 * 3 NEW REAL_REGRESSIONS in known clusters:
-  * `quant-ph0307103` (R=2 P=0) — `\og`/`\fg` undefined in babel[francais].
-    Already-tracked cluster ([project_babel_francais_gap.md](../.claude/projects/-home-deyan-git-latexml-oxide/memory/project_babel_francais_gap.md)).
+  * ~~`quant-ph0307103` (R=2 P=0)~~ — FIXED `6b8d9865a`. Was NOT a babel[francais]
+    issue at all — root cause was `\RequirePackage[opt]{name}` afterDigest
+    silently dropping the options arg (commented out and never wired to
+    `require_package`). cimath.sty calls `\RequirePackage[french]{babel}`
+    which loaded babel WITHOUT the french option, so babel never loaded
+    french.ldf and `\og`/`\fg` never got defined. Mirror'd the working
+    `\usepackage` pattern. This affects ANY paper using
+    `\RequirePackage[opt]{name}` — likely a wider impact than this single
+    regression suggests.
   * `1001.3714` (R=2 P=1) — `\endproof` malformed/unexpected. Proof-env cluster.
   * ~~`hep-th0412125` (R=4 P=0)~~ — FIXED `68dc4f429`. Was `\multiput`
     parameter spec mismatch — Perl uses `Pair Pair {}{}`, Rust used
