@@ -122,6 +122,12 @@ freely copied and distributed.}
 \let\nographics=\draft
 \newif\ifwasdraft
 \wasdraftfalse
+% Perl tcilatex.tex.ltxml L367: \newcount\dispkind. Used by \FRAME via
+% \doFRAMEparams (i/d/f → 0/1/2). Was missing from this Rust binding —
+% papers like gr-qc0003030, quant-ph0207078 (Scientific Word output)
+% hit `Error:undefined:\dispkind` cascade without it. Fix 2026-05-01.
+\newcount\dispkind
+\dispkind=\z@
 
 %  \GRAPHIC{ body }                                  %#1
 %          { draft name }                            %#2

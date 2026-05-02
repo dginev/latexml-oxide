@@ -92,8 +92,14 @@ LoadDefinitions!({
     r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi"
   );
 
-  // Perl: DefConstructor('\@math@daccent {}', "...", mode => 'text', alias => '\d', ...)
-  // Since mode => "text", the arg is always text, so textarg is always set.
+  // Perl plain_constructs.pool.ltxml L55-68 declares `mode => 'restricted_horizontal'`
+  // for this constructor. Rust uses `mode => "text"` because Rust's digest path for
+  // `\@math@daccent` invoked from math (`$\d$` → `\d` consumes closing `$` as arg)
+  // generates an end-mode mismatch with the Perl-aliased mode. Investigated 2026-04-30:
+  // changing mode to `restricted_horizontal` does NOT clear the cluster either; the
+  // root cause is the `\d{}` 1-arg macro consuming the closing `$` of inline math.
+  // Both Perl and Rust have the same `\d{}` definition; Perl handles the paper
+  // cleanly via downstream digest behavior we have not yet replicated. Deferred.
   DefConstructor!("\\@math@daccent {}",
     "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{22c5}</ltx:XMTok>\
      ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\
@@ -104,7 +110,8 @@ LoadDefinitions!({
         whatsit.set_property("textarg", arg);
       }
     });
-  // Perl: DefConstructor('\@math@baccent {}', "...", mode => 'text', alias => '\b', ...)
+  // Perl plain_constructs.pool.ltxml L70-83: mode => 'restricted_horizontal'.
+  // See \@math@daccent comment above re: deferred faithful translation.
   DefConstructor!("\\@math@baccent {}",
     "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\u{00AF}</ltx:XMTok>\
      ?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)\

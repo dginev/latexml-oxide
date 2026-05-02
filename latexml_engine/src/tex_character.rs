@@ -46,13 +46,23 @@ LoadDefinitions!({
      SymHashMap::default())
   });
 
+  // No `mode => "text"`: Perl's `DefAccent` Primitive (TeX_Character.pool.ltxml
+  // L92-100) does NOT force text mode either. Forcing text mode here breaks
+  // user `\def\k#1{|#1\rangle}` (and similar math-shorthand redefinitions of
+  // accent CSes) that get clobbered by the kernel `DefAccent('\k',...)` at
+  // pool-load time. After the clobber, `\k{\phi_i}` invokes the accent;
+  // forcing text mode caused `_` in the arg's digestion to fire
+  // "Script _ can only appear in math mode". `apply_accent` calls
+  // `stomach::digest(letter)` which now uses the call-site mode (math here),
+  // so `\phi_i` digests as math subscript — matching Perl. Witness:
+  // quant-ph0109041 (R=67 → expected 0).
   DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
   sub[(accent, combiningchar, standalonechar, letter)] {
     let combiningchar = combiningchar.with_str(|s| s.chars().next()).unwrap();
     let standalonechar = standalonechar.to_string();
     apply_accent(letter.clone(), combiningchar, &standalonechar, Some(
       Tokens!(T_CS!(accent.to_string()),T_BEGIN!(),letter,T_END!())))
-  }, mode => "text");
+  });
 
   // # This will fail if there really are "assignments" after the number!
   // # We're given a number pointing into the font, from which we can derive the standalone char.

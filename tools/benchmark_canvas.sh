@@ -1,14 +1,24 @@
 #!/bin/bash
-# benchmark_10k.sh — 10k sandbox benchmark runner for latexml-oxide
+# benchmark_canvas.sh — sandbox canvas benchmark runner for latexml-oxide
 #
 # Converts all ZIP archives in the input directory through cortex_worker
 # standalone mode, with timeout/RAM guards, resumability, and structured logging.
 #
+# Stages: a large canvas (e.g. the 100k "no-problem" sandbox at
+# ~/data/100k_noproblem_sandbox) can be partitioned into fixed-size stages
+# via `--stage N --stage-size 10000`. Each stage gets its own output
+# subdirectory `<OUTPUT_DIR>/stage_NN/` (and its own results.tsv) so stages
+# can be processed independently and merged later.
+#
 # Usage:
-#   ./tools/benchmark_10k.sh                    # full run, 4 workers
-#   ./tools/benchmark_10k.sh --limit 50         # dry run, first 50 files
-#   ./tools/benchmark_10k.sh --workers 8        # 8 parallel workers
-#   ./tools/benchmark_10k.sh --rerun-failures   # only re-run previous failures
+#   ./tools/benchmark_canvas.sh                                # full run
+#   ./tools/benchmark_canvas.sh --limit 50                     # dry run, first 50 files
+#   ./tools/benchmark_canvas.sh --workers 8                    # 8 parallel workers
+#   ./tools/benchmark_canvas.sh --rerun-failures               # only re-run previous failures
+#   ./tools/benchmark_canvas.sh --input-dir ~/data/100k_noproblem_sandbox \
+#                               --stage 1 --stage-size 10000   # first 10k slice
+#   ./tools/benchmark_canvas.sh --input-dir ~/data/100k_noproblem_sandbox \
+#                               --stage 5 --stage-size 10000   # 5th 10k slice
 
 set -euo pipefail
 
@@ -23,6 +33,10 @@ if [[ -n "${WORKER_BIN:-}" ]]; then
 fi
 
 INPUT_DIR="${INPUT_DIR:-$HOME/data/10k_sandbox}"
+OUTPUT_DIR_OVERRIDDEN=false
+if [[ -n "${OUTPUT_DIR:-}" ]]; then
+  OUTPUT_DIR_OVERRIDDEN=true
+fi
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
 WORKER_BIN="${WORKER_BIN:-$REPO_ROOT/target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
@@ -33,35 +47,78 @@ BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 LIMIT=0              # 0 = no limit
 RERUN_FAILURES=false
 MAX_OUTPUT_MB="${MAX_OUTPUT_MB:-200}"  # cap: skip output ZIPs larger than this
+# Find depth for input ZIPs. The 10k canvas ships flat
+# (`<dir>/<id>.zip`, depth 1). The 100k canvas at
+# `~/data/100k_noproblem_sandbox/` is nested
+# (`<dir>/arxmliv/<bucket>/<id>/<id>.zip`, depth 4). Bumping the
+# default to 5 covers both layouts; tighten via env if you need
+# to exclude deeper nesting.
+INPUT_MAXDEPTH="${INPUT_MAXDEPTH:-5}"
+# Stage selection: 0 means no slicing (process the whole canvas).
+# When STAGE > 0, the sorted task list is sliced to
+# [(STAGE-1)*STAGE_SIZE, STAGE*STAGE_SIZE) and OUTPUT_DIR is suffixed
+# with /stage_NN/ unless the caller overrode --output-dir explicitly.
+STAGE="${STAGE:-0}"
+STAGE_SIZE="${STAGE_SIZE:-10000}"
 
 # ─── Parse arguments ─────────────────────────────────────────────────────────
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --input-dir)    INPUT_DIR="$2"; shift 2 ;;
-    --output-dir)   OUTPUT_DIR="$2"; shift 2 ;;
+    --output-dir)   OUTPUT_DIR="$2"; OUTPUT_DIR_OVERRIDDEN=true; shift 2 ;;
     --workers)      WORKERS="$2"; shift 2 ;;
     --timeout)      TIMEOUT_S="$2"; shift 2 ;;
     --limit)        LIMIT="$2"; shift 2 ;;
     --rerun-failures) RERUN_FAILURES=true; shift ;;
     --worker-bin)   WORKER_BIN="$2"; CUSTOM_WORKER_BIN=true; shift 2 ;;
+    --stage)        STAGE="$2"; shift 2 ;;
+    --stage-size)   STAGE_SIZE="$2"; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
       echo "  --input-dir DIR       Input directory (default: \$HOME/data/10k_sandbox)"
       echo "  --output-dir DIR      Output directory (default: \$HOME/data/10k_sandbox_html)"
+      echo "                        When --stage N (>0) is given without --output-dir,"
+      echo "                        a /stage_NN/ subdirectory is appended automatically."
       echo "  --workers N           Parallel workers (default: 16)"
       echo "  --timeout SECS        Per-task wall-clock timeout (default: 120)"
-      echo "  --limit N             Process only first N files (default: 0 = all)"
+      echo "  --limit N             Process only first N files of the (post-stage) task"
+      echo "                        list (default: 0 = all)"
       echo "  --rerun-failures      Only re-run tasks that failed in previous run"
       echo "  --worker-bin PATH     Path to cortex_worker binary"
+      echo "  --stage N             Process the Nth slice of the input directory"
+      echo "                        (1-indexed; 0 = no slicing). Useful for the 100k"
+      echo "                        canvas: --stage 1..10 with --stage-size 10000."
+      echo "  --stage-size N        Slice size for --stage (default: 10000)"
       echo "  -h, --help            Show this help"
       exit 0
       ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+# ─── Stage handling ──────────────────────────────────────────────────────────
+# When STAGE > 0, append /stage_NN/ to the output dir (unless caller passed
+# --output-dir explicitly) so each stage gets its own results.tsv and ZIP set.
+
+if (( STAGE < 0 )); then
+  echo "ERROR: --stage must be >= 0 (got $STAGE)"
+  exit 1
+fi
+if (( STAGE_SIZE <= 0 )); then
+  echo "ERROR: --stage-size must be > 0 (got $STAGE_SIZE)"
+  exit 1
+fi
+
+STAGE_LABEL=""
+if (( STAGE > 0 )); then
+  STAGE_LABEL=$(printf "stage_%02d" "$STAGE")
+  if [[ "$OUTPUT_DIR_OVERRIDDEN" == false ]]; then
+    OUTPUT_DIR="$OUTPUT_DIR/$STAGE_LABEL"
+  fi
+fi
 
 RESULTS_TSV="$OUTPUT_DIR/results.tsv"
 
@@ -111,13 +168,18 @@ fi
 # ─── Disk space check ────────────────────────────────────────────────────────
 
 AVAIL_GB=$(df --output=avail "$OUTPUT_DIR" | tail -1 | awk '{printf "%.0f", $1/1048576}')
-INPUT_COUNT=$(find "$INPUT_DIR" -maxdepth 1 -name '*.zip' | wc -l)
+INPUT_COUNT=$(find "$INPUT_DIR" -maxdepth "$INPUT_MAXDEPTH" -name '*.zip' | wc -l)
 # Conservative estimate: 1 MB average output per input
 ESTIMATED_GB=$(( (INPUT_COUNT + 1023) / 1024 ))
 
-echo "=== 10k Sandbox Benchmark ==="
+echo "=== Sandbox Canvas Benchmark ==="
 echo "Input:     $INPUT_DIR ($INPUT_COUNT ZIPs)"
 echo "Output:    $OUTPUT_DIR"
+if (( STAGE > 0 )); then
+  STAGE_FROM=$(( (STAGE - 1) * STAGE_SIZE ))
+  STAGE_TO=$(( STAGE * STAGE_SIZE ))
+  echo "Stage:     $STAGE (slice [${STAGE_FROM}, ${STAGE_TO})) of size ${STAGE_SIZE}"
+fi
 echo "Workers:   $WORKERS"
 echo "Timeout:   ${TIMEOUT_S}s per task"
 echo "RAM limit: $((MAX_RAM_KB / 1048576)) GB per task"
@@ -133,6 +195,21 @@ fi
 
 TASK_LIST=$(mktemp)
 # trap set below after RUN_RESULTS is created
+
+# When --stage > 0, build a stage-restricted file list once. Both the
+# rerun-failures and full-run branches below filter their candidate set
+# through this list so a stage only ever sees its own slice of the canvas.
+STAGE_FILE_LIST=""
+if (( STAGE > 0 )); then
+  STAGE_FILE_LIST=$(mktemp)
+  STAGE_FROM=$(( (STAGE - 1) * STAGE_SIZE ))
+  find "$INPUT_DIR" -maxdepth "$INPUT_MAXDEPTH" -type f -name '*.zip' -print | sort \
+    | awk -v from="$STAGE_FROM" -v size="$STAGE_SIZE" \
+        'NR > from && NR <= from + size' \
+    > "$STAGE_FILE_LIST"
+  STAGE_COUNT=$(wc -l < "$STAGE_FILE_LIST")
+  echo "Stage filter: $STAGE_COUNT ZIPs in slice"
+fi
 
 valid_status_zip() {
   local zip_path="$1"
@@ -186,6 +263,12 @@ if [[ "$RERUN_FAILURES" == true ]]; then
   awk -F'\t' 'NR>1 && $7 != "ok" {print $1}' "$RESULTS_TSV" | sort | while read -r arxiv_id; do
     input_zip="$INPUT_DIR/${arxiv_id}.zip"
     if [[ -f "$input_zip" ]]; then
+      # When staged, only emit failures that fall inside the current
+      # stage's slice — other stages handle their own failures.
+      if [[ -n "$STAGE_FILE_LIST" ]] \
+         && ! grep -Fxq "$input_zip" "$STAGE_FILE_LIST"; then
+        continue
+      fi
       echo "$input_zip"
     fi
   done > "$TASK_LIST"
@@ -193,6 +276,12 @@ else
   # Full run with resumability: skip files only when both results and artifacts validate.
   echo "Mode: full run (skipping completed validated rows)"
   SKIPPED=0
+  if [[ -n "$STAGE_FILE_LIST" ]]; then
+    INPUT_LIST_SOURCE="$STAGE_FILE_LIST"
+  else
+    INPUT_LIST_SOURCE=$(mktemp)
+    find "$INPUT_DIR" -maxdepth "$INPUT_MAXDEPTH" -type f -name '*.zip' -print | sort > "$INPUT_LIST_SOURCE"
+  fi
   while IFS= read -r zip; do
     arxiv_id=$(basename "$zip" .zip)
     if has_completed_result "$arxiv_id"; then
@@ -200,7 +289,10 @@ else
       continue
     fi
     echo "$zip"
-  done < <(find "$INPUT_DIR" -maxdepth 1 -type f -name '*.zip' -print | sort) > "$TASK_LIST"
+  done < "$INPUT_LIST_SOURCE" > "$TASK_LIST"
+  if [[ "$INPUT_LIST_SOURCE" != "$STAGE_FILE_LIST" ]]; then
+    rm -f "$INPUT_LIST_SOURCE"
+  fi
   if (( SKIPPED > 0 )); then
     echo "Skipped:   $SKIPPED already completed"
   fi
@@ -229,7 +321,7 @@ fi
 
 # Track current-run results separately for accurate summary
 RUN_RESULTS=$(mktemp)
-trap "rm -f '$TASK_LIST' '$RUN_RESULTS'" EXIT
+trap "rm -f '$TASK_LIST' '$RUN_RESULTS' ${STAGE_FILE_LIST:+'$STAGE_FILE_LIST'}" EXIT
 
 # ─── Worker function ─────────────────────────────────────────────────────────
 # Exported so GNU parallel can call it in subshells.

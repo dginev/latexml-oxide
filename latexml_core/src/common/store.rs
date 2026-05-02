@@ -1176,7 +1176,7 @@ impl<'a> From<&'a Stored> for Token {
       Stored::String(text) => Token { text: *text, code: Catcode::CS },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
-        Warn!("Stored", "cast", message);
+        Warn!("stored", "cast", message);
         T_CS!(t.to_string())
       }, /* TODO, is this the right place to default to CS? Do we need a
           * custom method instead? */

@@ -318,15 +318,43 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       continue;
     }
 
-    // Attribute: a=v; assigns in current node? [May conflict with random replacement!?!]
-    let _qname_key_result = QNAME_KEY_RE.replace(&replacement, |refs: &Captures| -> String {
+    // Attribute: a='v' at the top level — typically prefixed by `^` to
+    // float to an ancestor accepting that attribute. Perl: Compiler.pm
+    // L137-148. Without `^`, falls back to setting the attribute on the
+    // current node (matches Perl's `$$self{node}` semantics).
+    let mut attr_key = String::new();
+    let qname_key_result = QNAME_KEY_RE.replace(&replacement, |refs: &Captures| -> String {
       is_match = true;
-      let _key = refs.get(1).map_or("", |m| m.as_str()).to_string();
-      // TODO: Implement full attribute assignment when a test fixture
-      // exercises this path. Until then return empty so a chance match
-      // doesn't crash code generation — callers dedupe via is_match.
+      attr_key = refs.get(1).map_or("", |m| m.as_str()).to_string();
       String::new()
     });
+    if is_match {
+      replacement = qname_key_result.to_string();
+      let val = translate_string(&mut replacement);
+      let key_str = attr_key.clone();
+      if has_floats {
+        operations.push(quote!(
+          {
+            let val_str: String = #val;
+            savenode = document.float_to_attribute(#key_str);
+            let mut node = document.get_node().clone();
+            document.set_attribute(&mut node, #key_str, &val_str)?;
+            if let Some(ref sn) = savenode { document.set_node(sn); }
+          }
+        ));
+        has_floats = false;
+        floats = String::new();
+      } else {
+        operations.push(quote!(
+          {
+            let val_str: String = #val;
+            let mut node = document.get_node().clone();
+            document.set_attribute(&mut node, #key_str, &val_str)?;
+          }
+        ));
+      }
+      continue;
+    }
 
     // Else random text
     let mut has_random_text = false;

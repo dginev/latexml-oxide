@@ -105,7 +105,16 @@ LoadDefinitions!({
   DefMacro!("\\institute{}",
     "\\bgroup\\setcounter{inst}{1}\\let\\and\\institute@and\\let\\iand\\institute@and\\let\\nand\\institute@and\\let\\lastand\\institute@and\\let\\at\\institute@and\\let\\email\\@in@inst@email\\@new@institute#1\\@end@institute\\egroup");
   DefMacro!("\\institute@and", "\\@end@institute\\stepcounter{inst}\\@new@institute");
-  DefMacro!("\\@new@institute XUntil:\\@end@institute", "\\if.#1.\\else\\@add@institute{#1}\\fi");
+  // Perl uses XUntil here, but XUntil's eager expansion causes `\thanks{...}`
+  // inside the body to expand to `\def\@thanks{...}\lx@make@thanks{...}` and
+  // then XUntil's per-token Invocation logic (base_parameter_types.rs) splits
+  // `\def\@thanks{...}` apart, dropping `\@thanks` (expanded to \@empty) and
+  // leaving an orphaned `\def{...}` that fails when digested. Using Until
+  // (no expansion) captures the body verbatim — `\thanks{HELLO}` stays as a
+  // CS token and expands cleanly at digestion time. Witness: 0710.0360
+  // (`\institute{X\thanks{Y.}\\ {\tt B}}`); also handles Cluster D
+  // (`\institute{\hspace*{-4mm} $^*$}`) without splitting math/dimension args.
+  DefMacro!("\\@new@institute Until:\\@end@institute", "\\if.#1.\\else\\@add@institute{#1}\\fi");
   Let!("\\@end@institute", "\\relax");
 
   // Email inside institute — Perl L73-77. name comes from \emailname,

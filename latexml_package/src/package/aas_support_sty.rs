@@ -143,10 +143,31 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
-  // Fig macros — Perl L205-221
+  // Fig macros — Perl L205-221. The smart `\fig` peeks the token after
+  // the first Semiverbatim arg: if it's `{` (T_BEGIN), it's a 3-arg
+  // figure-with-caption (`\fig{label}{width}{caption}`); otherwise it's
+  // a single-arg ref-like usage (`\fig{label}` → `\ref{label}`). This
+  // dispatch is needed for papers like astro-ph/0003209 + astro-ph0503342
+  // that redefine `\fig` as a one-arg `\ref` shorthand inside captions
+  // /footnotes — without this peek, `\fig{F:image}` always opens an
+  // `<ltx:figure>` element and can land inside `<ltx:note>`.
   DefMacro!("\\aas@fig Semiverbatim {Dimension}{}",
     "\\begin{figure}\\caption{#3}\\includegraphics[width=#2]{#1}\\end{figure}");
-  DefMacro!("\\fig Semiverbatim", "\\aas@fig{#1}");
+  DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] {
+    // Push back the args in correct order so the dispatched CS reads them.
+    // Push order is reversed for stack semantics: last unread is first read.
+    gullet::unread_one(test.clone());
+    gullet::unread_one(T_END!());
+    gullet::unread_vec(arg.clone().unlist());
+    gullet::unread_one(T_BEGIN!());
+    if test.get_catcode() == Catcode::BEGIN {
+      Ok(Tokens!(T_CS!("\\aas@fig")))
+    } else {
+      // see arXiv:astro-ph/0003209 for an example use as \ref while
+      // also loading aas_support.sty.ltxml
+      Ok(Tokens!(T_CS!("\\ref")))
+    }
+  });
   Let!("\\leftfig", "\\fig");
   Let!("\\rightfig", "\\fig");
   Let!("\\boxedfig", "\\fig");

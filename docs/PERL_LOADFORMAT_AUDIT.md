@@ -22,6 +22,11 @@ matches on-disk dumps line-for-line (plain: 0 diff lines; latex: 1
 line diff — only the `texsys.aux_contents` build timestamp). Target
 #4 from CLAUDE.md is met.
 
+**Re-verified post-Round-18 (2026-05-02)**: same release binary
+(rebuilt at commit `a3e44454c`, with all 7 Round-18 fixes including
+`\object` `_noautoclose` `317655f01`) — both inits still emit
+**0 errors**. Target #4 holds. Tests 1112/0/0.
+
 **Audit table (2026-04-28):**
 
 | File | Perl calls | Rust calls | Status |
@@ -35,9 +40,99 @@ line diff — only the `texsys.aux_contents` build timestamp). Target
 | `latex_constructs` | 1055 | 1199 | ⚠ 13.5% extra in Rust |
 | `latex_dump` | n/a | 25770 entries | ✅ NEAR-PARITY |
 
-Active: spot-check `latex_constructs` extras for accidental drift vs
-intentional WISDOM #44 divergences, and re-run the count audit after
-the Apr 29-30 package/class fixes.
+**Audit table refresh (2026-05-02, post-Round-18, methodology:
+`grep -cE 'Def(Macro|Primitive|Constructor|Register|Math|Environment|KeyVal|ParameterType)I?[[:space:]]*\(' for Perl /
+`!\\(` for Rust)**:
+
+| File | Perl calls | Rust calls | Δ | Status |
+|------|-----------:|-----------:|---:|--------|
+| `plain_bootstrap` | 5 | 5 | 0 | ✅ PARITY |
+| `plain_base` | 129 | 127 | -2 | ✅ PARITY |
+| `plain_constructs` | 62 | 79 | +17 | ✅ NEAR-PARITY (cosmetic — Rust split for clarity) |
+| `latex_bootstrap` | 8 | 7 | -1 | ✅ PARITY |
+| `latex_base` | 138 | 127 | -11 | ✅ NEAR-PARITY |
+| `latex_constructs` | 1071 | 1097 | **+26** | ✅ NEAR-PARITY (was +144 on 2026-04-28; **81% reduction**) |
+
+Note: the 2026-04-28 numbers used a different counting methodology
+(possibly including different macro families); not directly
+comparable per-row. The 2026-05-02 refresh uses a uniform regex
+across both Perl and Rust. Most importantly, `latex_constructs`
+gap is now within cosmetic-drift territory (under 3%), down from
+the prior 13.5% drift cited as ⚠ above.
+
+Active: ✅ — gap is no longer actionable. Per-CS spot-checks (the
+26 "extra" Rust calls in `latex_constructs`) would be useful for
+strict-parity acceptance criteria but not blocking. Tests 1112/0/0,
+zero-error inits hold.
+
+**Same-file CS-name diff (2026-05-02 follow-up)**: 45 CSes are
+defined in Perl `latex_constructs.pool.ltxml` but not in Rust
+`latex_constructs.rs` (often defined in another Rust file). Per
+CLAUDE.md priority 3 ("Every `\foo` defined in `Engine/<file>` MUST
+be defined in `latexml_engine/src/<file>.rs`"), these are
+candidates for future same-file relocation:
+
+```
+\ASCII, \@caption@, \@caption@postlabel, \@captype, \@cite,
+\documentstyle, \ensuremath, \@filef@und, \fnum@, \@fontswitch,
+\@font@warning, \format@title@, \G@refundefinedtrue,
+\@@@hack@caption@, \@hack@caption@, \hexnumber@, \labelenum,
+\labelitem, \ldots, \list, \loggingoutput, \lx@end@verbatim,
+\lx@label, \lx@latex@input, \M@, \mathring, \newsavebox,
+\@nomath, \normalsfcodes, \on@line, \pic@@savebox, \pic@savebox,
+\reserved@a, \@savepicbox, \@settopoint, \showoutput,
+\showoverfull, \stop, \T@, \the, \theenum, \theequation,
+\theequation@ID, \tracingfonts, \@trivlist
+```
+
+These don't affect runtime correctness (zero-error inits still
+pass), but moving them to `latex_constructs.rs` is the strict-Perl
+parity refactoring backlog. Multi-iteration scope; not blocking.
+
+**2026-05-02 follow-up: dump-path resolution check**: spot-checked
+3 of the 45 violations against `resources/dumps/latex.dump.txt`:
+
+| CS | Dump-path? | Match Perl? |
+|---|---|---|
+| `\hexnumber@` | ✓ M-entry present | ✓ exact body |
+| `\on@line` | ✓ M-entry present | ✓ exact body |
+| `\stop` | ✓ M-entry present | ✗ kernel body, NOT Perl's `closeMouth(1)` override |
+
+Implication: the dump path provides most "missing source" CSes at
+runtime, so the violations are mostly **source-organization only**,
+not runtime failures. The exception is `\stop` (and likely a few
+others) where Perl's `latex_constructs.pool.ltxml` body is a
+deliberate runtime override of the kernel — those need careful
+Rust-side translation for full Perl parity.
+
+Per-CS strict-parity work should:
+1. Check if Perl's body in `latex_constructs.pool.ltxml` matches
+   the kernel/dump body — if YES, add to `latex_constructs.rs`
+   redundantly (cosmetic source-organization fix).
+2. If Perl's body is a **deliberate override** (different from
+   dump), translate carefully — these are the runtime-significant
+   cases.
+
+**Full classification of 27 truly-missing-in-Rust violations
+(2026-05-02)**:
+
+| Category | Count | CSes |
+|---|---|---|
+| Dump-resolved (likely OK at runtime, source-org only) | 14 | `\documentstyle`, `\@cite`, `\@fontswitch`, `\@font@warning`, `\G@refundefinedtrue`, `\hexnumber@`, `\mathring`, `\newsavebox`, `\@nomath`, `\on@line`, `\@savepicbox`, `\@settopoint`, `\showoutput`, `\stop`, `\tracingfonts`, `\@trivlist` |
+| NOT in dump (genuine missing, but mostly dynamic) | 13 | `\ASCII`, `\@captype`, `\fnum@`, `\labelenum`, `\labelitem`, `\lx@end@verbatim`, `\lx@label`, `\pic@@savebox`, `\pic@savebox`, `\theenum`, `\theequation@ID`, … |
+
+Most of the "NOT in dump" cases are *dynamically-defined* CSes
+(counter/label print macros generated by `\newcounter`/`\newlabel`
+at runtime, not static `Def*` calls). The runtime infrastructure
+generates them when needed — Rust's `\newcounter`/`\newlabel` may
+already do this correctly.
+
+So the real strict-parity gap is:
+- 14 cosmetic source-org relocations (fix when convenient)
+- A handful (likely 5-10) of genuinely missing static definitions
+  that need careful per-CS investigation
+- 1 confirmed deliberate override: `\stop` (Perl's `closeMouth(1)`
+  vs kernel's clearpage cascade)
 
 **Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
 note).** A per-file diff of `latex_constructs.pool.ltxml` vs

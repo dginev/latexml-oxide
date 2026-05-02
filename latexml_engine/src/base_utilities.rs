@@ -239,9 +239,7 @@ LoadDefinitions!({
       Ok(())
     })?;
     AssignValue!("inPreamble", inpreamble);
-  },
-  before_digest => { stomach::bgroup(); },
-  after_digest => { let _ = stomach::egroup(); });
+  });
 
   // Append a piece of data to an existing frontmatter item that is contained in <$tag>
   // If $label is given, look for an item which has label=>$label,
@@ -355,10 +353,17 @@ LoadDefinitions!({
         Vec::new()
       }
     });
+    // Clear queue BEFORE digesting (revtex/aa.cls 0907.0384): if frontmatter
+    // body contains tokens that re-invoke \lx@frontmatterhere/fallback (e.g.
+    // through cls-supplied macros that themselves emit \@add@frontmatter
+    // calls), nested invocations would otherwise see the SAME queue and
+    // recursively re-digest it. Clear first → nested invocations see empty,
+    // safely skip — and any newly-pushed entries during this digest will be
+    // processed by the next invocation (or end-of-document fallback).
+    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     if !all_tokens.is_empty() {
       let _ = stomach::digest(Tokens::new(all_tokens));
     }
-    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
@@ -379,10 +384,12 @@ LoadDefinitions!({
         Vec::new()
       }
     });
+    // Mirror the queue-clear-before-digest pattern from \lx@frontmatterhere:
+    // prevents nested invocation re-digesting the same entries.
+    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     if !all_tokens.is_empty() {
       let _ = stomach::digest(Tokens::new(all_tokens));
     }
-    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
   });
 
   // Maintain a list of classes that apply to the document root.

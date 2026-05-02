@@ -965,7 +965,23 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         continue;
       },
       Some(Stored::Constructor(meaning)) => {
-        // Otherwise, a normal primitive or constructor
+        // Perl Stomach.pm L187-189: deactivate T_ALIGN to `\relax` LOCAL
+        // on first non-table encounter, to prevent error flood. The
+        // existing guard at the Stored::Token branch (above) only fires
+        // when `&` has been Let'd to another token, but the `&`
+        // CC_ALIGN char-token is bound to a Constructor (TeX_Tables.pool
+        // L49: `DefConstructorI('&', undef, sub { Error('unexpected', '&',
+        // $_[0], "Stray alignment \"&\"") })`), so it falls into THIS
+        // branch instead. Without this guard, papers with multiple stray
+        // `&` (e.g. astro-ph0107583's bibitem with unescaped `Hirose &
+        // Osaki`) emit one Error per occurrence; Perl emits ONE total
+        // because of the LOCAL `\relax` rebinding. Self-deactivate here
+        // too so subsequent `&` invocations no-op.
+        if token.get_catcode() == Catcode::ALIGN {
+          if let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax")) {
+            assign_meaning(&token, relax_meaning, Some(Scope::Local));
+          }
+        }
         result = meaning.invoke_primitive()?;
         if !meaning.is_prefix() {
           clear_prefixes(); // Clear prefixes unless we just set one.

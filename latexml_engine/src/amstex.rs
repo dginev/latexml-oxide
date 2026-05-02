@@ -130,12 +130,22 @@ LoadDefinitions!({
   // Document structure (Perl L144-158)
   DefMacro!("\\nofrills", "");
 
-  // \comment ... \endcomment — read raw lines until `\endcomment`.
-  // Perl L148-154 uses `$gullet->readRawLine`. Approximated as a
-  // raw-text gobbler via Until: token; the typical AmSTeX pattern
-  // `\comment ... \endcomment` is matched to-token here.
-  DefMacro!("\\comment Until:\\endcomment", "");
-  DefMacro!("\\endcomment", "");
+  // \comment ... \endcomment — Perl L148-154. Reads raw lines (no
+  // catcode interpretation) until a line equals `\endcomment`.
+  // Faithful port: discard the rest of the current line, then loop
+  // raw-line reads until we hit `\endcomment`.
+  DefPrimitive!("\\comment", sub[_args] {
+    // Perl: `$gullet->readRawLine; # IGNORE 1st line` — discards the
+    // remainder of the line that contained the `\comment` invocation.
+    gullet::read_raw_line();
+    while let Some(line) = gullet::read_raw_line() {
+      if line == "\\endcomment" {
+        break;
+      }
+    }
+  });
+  // No standalone `\endcomment` def — it's only ever consumed as a
+  // raw-line-equality marker by `\comment`'s loop above.
 
   Let!("\\plainproclaim", "\\proclaim");
   Let!("\\plainfootnote", "\\footnote");
@@ -280,13 +290,38 @@ LoadDefinitions!({
     }
   );
 
-  // \thickfrac / \thickfracwithdelims — peek for \thickness keyword.
-  // Approximation: route to \frac / \fracwithdelims unconditionally.
-  // The "with thickness" branch is rarely used in real AmSTeX papers
-  // and would require ifNext-style closures here.
-  Let!("\\thickfrac", "\\frac");
-  // \fracwithdelims is amsmath; if absent fall back to \frac.
-  Let!("\\thickfracwithdelims", "\\frac");
+  // \thickfrac — Perl L289-291. Peek for `\thickness`. If present,
+  // dispatch to `\@thickfrac` (which reads `\thickness <num> {a}{b}`
+  // and emits `\genfrac{}{}{<num>}{}{a}{b}`); otherwise fall through
+  // to `\frac`.
+  DefMacro!("\\thickfrac", sub[_args] {
+    if gullet::if_next(T_CS!("\\thickness"))? {
+      vec![T_CS!("\\@thickfrac")]
+    } else {
+      vec![T_CS!("\\frac")]
+    }
+  });
+  DefMacro!("\\@thickfrac Token Number {}{}",
+    "\\genfrac{}{}{#2}{}{#3}{#4}");
+
+  // \thickfracwithdelims — Perl L293-295. `\fracwithdelims` is an
+  // amsmath name; absent in our binding, so the no-thickness branch
+  // falls back to `\frac` like the original simplification. The
+  // thickness branch dispatches to `\@thickfracwithdelims` which
+  // expands to `\genfrac` with custom delimiters.
+  DefMacro!("\\thickfracwithdelims {}{}", sub[(d1, d2)] {
+    let dispatch = if gullet::if_next(T_CS!("\\thickness"))? {
+      T_CS!("\\@thickfracwithdelims")
+    } else {
+      T_CS!("\\frac")
+    };
+    let mut out = vec![dispatch];
+    out.push(T_BEGIN!()); out.extend(d1.unlist()); out.push(T_END!());
+    out.push(T_BEGIN!()); out.extend(d2.unlist()); out.push(T_END!());
+    out
+  });
+  DefMacro!("\\@thickfracwithdelims {}{} Token Number {}{}",
+    "\\genfrac{#1}{#2}{#4}{}{#5}{#6}");
 
   // \sp* accent shortcuts (Perl L297-307).
   DefMacro!("\\spcheck",  "^{\\vee}");
@@ -301,16 +336,60 @@ LoadDefinitions!({
   DefMacro!("\\spbar",    "^{-}");
   DefMacro!("\\spvec",    "^{\\rightarrow}");
 
-  // \boldsymbol DefToken — full Perl L339-343 dispatches via
-  // `\lx@ams@boldsymbol@<name>` if defined, else falls through to
-  // `\lx@ams@boldsymbol@ <token>`. Approximated here with the
-  // catchall constructor — the per-symbol dispatch is rarely visible
-  // in output.
+  // \boldsymbol DefToken — Perl L313-343. Per-symbol DefMath bindings
+  // for the punctuation characters (`\cdot`, `\prime`, brackets,
+  // braces, surd, S, P, dag, ddag) plus a catchall constructor for
+  // the wrap-and-bold case. The dispatcher in Perl L339-343 looks up
+  // `\lx@ams@boldsymbol@<name>` (with the leading backslash stripped
+  // from the token) and either returns that token directly or falls
+  // through to `\lx@ams@boldsymbol@ <token>`.
+  DefMath!("\\lx@ams@boldsymbol@cdot",   None, "\u{22C5}",
+    role => "MULOP", bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@prime",  None, "\u{2032}",
+    role => "SUPOP", locked => true, bounded => true,
+    font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@lbrack", None, "[",
+    role => "OPEN", stretchy => false, bounded => true,
+    font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@rbrack", None, "]",
+    role => "CLOSE", stretchy => false, bounded => true,
+    font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@lbrace", None, "{",
+    role => "OPEN", stretchy => false, alias => "\\{",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@rbrace", None, "}",
+    role => "CLOSE", stretchy => false, alias => "\\}",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@surd",   None, "\u{221A}",
+    role => "OPERATOR", meaning => "square-root",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@S",      None, "\u{00A7}",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@P",      None, "\u{00B6}",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@dag",    None, "\u{2020}",
+    bounded => true, font => {forcebold => true});
+  DefMath!("\\lx@ams@boldsymbol@ddag",   None, "\u{2021}",
+    bounded => true, font => {forcebold => true});
+
+  // Catchall wrap-and-bold for anything the per-symbol bindings don't
+  // cover (Perl L336-337).
   DefConstructor!("\\lx@ams@boldsymbol@{}", "#1",
     bounded => true, require_math => true,
     font => {forcebold => true});
-  DefMacro!("\\boldsymbol DefToken",
-    "\\lx@ams@boldsymbol@{#1}");
+
+  // Dispatcher (Perl L339-343).
+  DefMacro!("\\boldsymbol DefToken", sub[(token)] {
+    let raw = token.to_string();
+    let name = raw.strip_prefix('\\').unwrap_or(&raw);
+    let btoken_cs = format!("\\lx@ams@boldsymbol@{}", name);
+    let btoken = T_CS!(&btoken_cs);
+    if IsDefined!(&btoken) {
+      vec![btoken]
+    } else {
+      vec![T_CS!("\\lx@ams@boldsymbol@"), token]
+    }
+  });
 
   // Ignore-class (Perl L346-364)
   DefRegister!("\\buffer" => Dimension::new(0));

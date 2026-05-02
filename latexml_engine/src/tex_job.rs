@@ -100,27 +100,22 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml:97-129 (`\documentstyle` afterDigest).
   // LaTeX 2.09 compat shim. Three branches mirroring Perl strictly:
   //
-  //   1. <class>.sty exists  → input_definitions("article", cls,
-  //                            handleoptions=true, options=opts)
-  //                          + require_package(class, as_class=true,
-  //                            after=\compat@loadpackages)
-  //   2. <class>.cls exists  → load_class(class, opts,
-  //                            after=\compat@loadpackages)
-  //   3. neither             → input_definitions("OmniBus", cls,
-  //                            handleoptions=true, options=opts,
-  //                            after=\compat@loadpackages)
+  //   1. <class>.sty exists  → input_definitions("article", cls, handleoptions=true, options=opts)
+  //                          + require_package(class, as_class=true, after=\compat@loadpackages)
+  //   2. <class>.cls exists  → load_class(class, opts, after=\compat@loadpackages)
+  //   3. neither             → input_definitions("OmniBus", cls, handleoptions=true, options=opts,
+  //      after=\compat@loadpackages)
   //                          + require_package(class, as_class=true)
   //
   // Critical Perl semantics (matching latex_constructs.pool.ltxml:97-129):
-  //   * `handleoptions => 1` makes the cls's `\DeclareOption`/`\ProcessOptions`
-  //     consume the `<opts>` and route leftovers onto `@unusedoptionlist`.
-  //   * `after => \compat@loadpackages` runs *after* the cls finishes its
-  //     option-processing — at that point unmet options sit on the unused
-  //     list and `\compat@loadpackages` (`latex_constructs.rs:2502`) walks
-  //     them, RequirePackage's any that resolve, and triggers OmniBus when
-  //     anything went unmet. That is what lets `\documentstyle[paspconf]
-  //     {article}` transitively load `aas_macros.sty.ltxml` to define
-  //     `\affil` / `\altaffilmark` / `\acknowledgments` etc.
+  //   * `handleoptions => 1` makes the cls's `\DeclareOption`/`\ProcessOptions` consume the
+  //     `<opts>` and route leftovers onto `@unusedoptionlist`.
+  //   * `after => \compat@loadpackages` runs *after* the cls finishes its option-processing — at
+  //     that point unmet options sit on the unused list and `\compat@loadpackages`
+  //     (`latex_constructs.rs:2502`) walks them, RequirePackage's any that resolve, and triggers
+  //     OmniBus when anything went unmet. That is what lets `\documentstyle[paspconf] {article}`
+  //     transitively load `aas_macros.sty.ltxml` to define `\affil` / `\altaffilmark` /
+  //     `\acknowledgments` etc.
   // The latex_dump unconditionally redefines `\documentstyle` with the
   // kernel-style `\input{latex209.def}\documentclass` form (Perl
   // latex_dump.pool.ltxml entry for `\documentstyle`). In Perl that
@@ -200,16 +195,36 @@ LoadDefinitions!({
     // this, versioned class names go to OmniBus → aipproc.sty.ltxml is
     // never loaded → `\epsfsize` etc. that aipproc.sty's
     // `RequirePackage('psfig'→'epsfig')` chain provides stay undefined.
-    let class_sty_found = find_file(
+    // Check `<class>.sty` via binding registry (notex), version-strip
+    // fallback, AND disk-only probe (`forbid_ltxml: true`) so paper-local
+    // `<class>.sty` files (e.g. `jinstpub.sty`, with no .cls counterpart)
+    // can be loaded as a class. Disk probe is gated on the absence of
+    // ANY `<class>.cls` binding (exact OR via version-strip fallback) so
+    // that `\documentstyle{mn1}` falls back to `mn.cls.ltxml` (Perl-faithful
+    // priority) instead of the local `mn1.sty` whose raw load is suppressed
+    // by the default `INCLUDE_STYLES=false` gate. Witness: astro-ph0002213
+    // (\documentstyle[epsfig]{mn1} + local mn1.sty + \begin{keywords}/\psfig).
+    let class_sty_binding = find_file(
       &format!("{}.sty", class),
       Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some()
-    || find_file_fallback(&class, "sty").is_some();
-    let class_cls_found = !class_sty_found && (find_file(
+    ).is_some();
+    let class_sty_fallback = find_file_fallback(&class, "sty").is_some();
+    let class_cls_binding_exact = find_file(
       &format!("{}.cls", class),
       Some(FindFileOptions { notex, ..Default::default() }),
-    ).is_some()
-    || find_file_fallback(&class, "cls").is_some());
+    ).is_some();
+    let class_cls_via_fallback = find_file_fallback(&class, "cls").is_some();
+    let class_sty_via_disk = !class_sty_binding
+      && !class_sty_fallback
+      && !class_cls_binding_exact
+      && !class_cls_via_fallback
+      && find_file(
+        &class,
+        Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
+      ).is_some();
+    let class_sty_found = class_sty_binding || class_sty_via_disk || class_sty_fallback;
+    let class_cls_found = !class_sty_found && (class_cls_binding_exact
+      || class_cls_via_fallback);
 
     let after = Tokens!(T_CS!("\\compat@loadpackages"));
 
@@ -221,16 +236,38 @@ LoadDefinitions!({
       // instead of also probing for a same-name `.cls` (which has a
       // different DefMacro signature for `\author` etc. that conflicts
       // with the `.sty` body — root cause for nucl-th0010030).
-      input_definitions("article", InputDefinitionOptions {
+      // Choose article.cls vs OmniBus.cls as the underlying class. When
+      // the `.sty` was found via binding registry or version-strip
+      // fallback, the user's intent is "load this binding as the
+      // document class" — article.cls is the right base. When the
+      // `.sty` was found ONLY via paper-local disk-probe (no binding /
+      // no fallback), the file is an arbitrary user style that doesn't
+      // know about LaTeXML's frontmatter conventions; OmniBus is the
+      // right base because it provides broad fallback coverage
+      // (`\citeauthoryear` autoload trigger, generic `\affil`, etc.).
+      // Mirrors Perl's flow for paper-local-only `\documentstyle`
+      // classes (verified via `--verbose` on astro-ph0510540 and
+      // astro-ph0008100 — Perl loads OmniBus for both).
+      let underlying = if class_sty_via_disk { "OmniBus" } else { "article" };
+      input_definitions(underlying, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("cls")),
         options: opts_vec.clone(),
         handleoptions: true,
         noerror: true,
         ..InputDefinitionOptions::default()
       })?;
+      // When the .sty was found ONLY via paper-local disk-probe (no
+      // binding, no fallback), pass `notex=false` to allow the raw
+      // load. Otherwise the default `INCLUDE_STYLES=false` gate inside
+      // require_package would force `notex=true` and suppress the
+      // load. Mirrors the `\compat@loadpackages` fix from commit
+      // bb4cf2e17. Witness: astro-ph0008100
+      // (\documentstyle[PASJadd]{PASJ95} + uppercase-named PASJ95.STY).
+      let notex_for_require = if class_sty_via_disk { Some(false) } else { None };
       require_package(&class, RequireOptions {
         options: opts_vec,
         extension: Some(Cow::Borrowed("sty")),
+        notex: notex_for_require,
         after,
         ..RequireOptions::default()
       })?;

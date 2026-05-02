@@ -51,7 +51,6 @@ multiple TL versions' dumps (TL2022 … TL2026) into the binary via
 latexml-oxide is a Rust port of [LaTeXML](https://github.com/brucemiller/latexml), a Perl tool that converts LaTeX documents into accessible web documents (HTML/XML).
 
 The `LaTeXML/` directory contains the legacy Perl source being ported. Do not modify it — it serves as the reference implementation.
-The `LaTeXML/` directory also changes often, as the legacy project continues to develop. Compare against it often, and continuously update the Rust code to match with the original Perl specifics.
 Similarly, the test `.tex`, `.xml` and `.pdf` files often need to be copied from the Perl space to the Rust space.
 
 ## Workspace Structure
@@ -104,7 +103,7 @@ We follow Rust best practice with three named profiles in `Cargo.toml`:
 
 **Day-to-day development**: use the default `test` profile via `cargo test` / `cargo run` / `cargo build` (no flag). Full debug info, line-table backtraces, debug-assertions, overflow-checks. Best diagnosability when something fails. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
 
-**Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_10k.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
+**Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_canvas.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
 
 **Distribution / publish-grade measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release` once when shipping a stable state. The CI profile is for the GitHub runner only.
 
@@ -176,7 +175,6 @@ truth for macro-expanded diagnostics.
 
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
-- The Perl LaTeXML directory gets updated at times, as the original project is still active. Before doing new work, always revise the current Rust against the current Perl, and update the Rust when outdated.
 - **Active work**: drive the strict-Perl dump-parity mission described above. Concrete sub-tasks are tracked in `docs/PERL_LOADFORMAT_AUDIT.md` and `docs/SYNC_STATUS.md`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 

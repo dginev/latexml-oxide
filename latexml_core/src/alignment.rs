@@ -1318,6 +1318,12 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     }
   }
   // Now, do some border massaging...
+  // Empty-alignment guard: if ncols==0 (no columns in any row), there are no
+  // borders to massage. Skip the whole block to avoid out-of-bounds panics on
+  // `cols[0]` (witness: astro-ph0006087, garmire.tex deluxetable input).
+  if ncols == 0 {
+    return;
+  }
   for row in alignment.rows.iter_mut() {
     let cols = row.get_columns_mut();
     cols[0].border_left = Some(if v { 1 } else { 0 });

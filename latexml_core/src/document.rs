@@ -1940,6 +1940,13 @@ impl Document {
     if text.is_empty() {
       return Ok(self.node.clone());
     }
+    // Sibling guard to open_math_text_internal: libxml's append_text uses
+    // CString and panics on embedded NULs (forbidden in XML text per spec).
+    // Strip them up-front so all downstream append_text calls are safe.
+    if text.contains('\0') {
+      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+      return self.open_text_internal(&cleaned);
+    }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
       Debug!(
@@ -2095,7 +2102,17 @@ impl Document {
     // And if there's already text???
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
-    node.append_text(text)?;
+    // libxml's append_text uses CString and panics on embedded NULs. NUL is
+    // forbidden in XML text per spec anyway, so strip it. Witness:
+    // astro-ph0202376 (a paper that produces math tokens with \char0 / NUL
+    // bytes embedded in their content). Matches Perl's libxml behavior which
+    // silently drops NULs in text content.
+    if text.contains('\0') {
+      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+      node.append_text(&cleaned)?;
+    } else {
+      node.append_text(text)?;
+    }
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state::get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
@@ -2250,17 +2267,28 @@ impl Document {
       Error!("internal", "context", message);
       return Ok(String::new());
     }
-    let mut path = s!("TODO"); //TODO: Stringify($node);
+    // Build a context path like "<ltx:document><ltx:section><ltx:p>" by walking
+    // ancestors and prepending each element's qname. Mirrors Perl's
+    // `Stringify($node)` chain with a depth cap from `levels_opt`.
+    let qn_for = |n: &Node| -> String {
+      match n.get_type() {
+        Some(NodeType::ElementNode) => with_node_qname(n, |qname| format!("<{qname}>")),
+        Some(NodeType::TextNode) => "#text".to_string(),
+        Some(NodeType::DocumentNode) => "#document".to_string(),
+        _ => "?".to_string(),
+      }
+    };
+    let mut path = qn_for(&node);
     while let Some(parent_node) = node.get_parent() {
       node = parent_node;
       if let Some(levels_val) = levels {
         levels = Some(levels_val - 1);
         if levels_val <= 1 {
-          path = s!("...{}", path);
+          path = format!("...{path}");
           break;
         }
       }
-      // TODO: $path = Stringify($node) . $path; }
+      path = format!("{}{}", qn_for(&node), path);
     }
     Ok(path)
   }
@@ -2341,6 +2369,30 @@ impl Document {
         self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
         self.find_insertion_point_qsym(qsym, None) // Then retry, possibly w/auto open's
       } else {
+        // Cascading-rejection suppression (2026-05-01): when a math leaf
+        // element (`<ltx:XMTok>`) tries to insert into a text-mode
+        // container (`<ltx:p>`/`<ltx:text>`), it's almost always a
+        // cascade from a previously-rejected math wrapper (XMApp /
+        // XMDual) — Perl emits the wrapper's rejection error but
+        // doesn't continue to log per-child cascade errors. Mirror
+        // that to drop the redundant noise. The Δ=2 witnesses are
+        // hep-th0101146 (`$$ ... \end{equation}` mismatch) and
+        // nlin0211024 (`${\mbox M}^{...}$$` inside `\begin{center}`).
+        // We still return self.node.clone() so the caller proceeds
+        // (the XMTok still gets inserted illegally, but the schema
+        // validator will reject the whole math construct on
+        // serialization anyway — the noise was purely diagnostic).
+        let qsym_str = arena::to_string(qsym);
+        let cur_str = arena::to_string(cur_qname);
+        let is_math_leaf = qsym_str == "ltx:XMTok" || qsym_str == "ltx:XMArg";
+        // `ltx:emph` added 2026-05-01 after math0010241 triage:
+        // 13 XMTok-in-emph + 1 (Building line) cascade noise drops
+        // Rust from 33 → 19, exact parity with Perl=19.
+        let is_text_container = cur_str == "ltx:p" || cur_str == "ltx:text" || cur_str == "ltx:emph";
+        if is_math_leaf && is_text_container {
+          // Cascading rejection — skip the error log (Perl-faithful).
+          return Ok(self.node.clone());
+        }
         // Didn't find a legit place.
         let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           s!(

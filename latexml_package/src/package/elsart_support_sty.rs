@@ -71,11 +71,16 @@ LoadDefinitions!({
     Ok(Tokens!(T_OTHER!("\u{22C6}".repeat(count))))
   });
 
-  // Proof environment — Perl L38-60
-  DefEnvironment!("{proof}[]",
-    "<ltx:proof><ltx:title font='italic' _force_font='true' class='ltx_runin'>#title</ltx:title>#body</ltx:proof>",
-    properties => { stored_map!("title" => Stored::from("Proof")) }
-  );
+  // Perl elsart_support.sty.ltxml does NOT define a `{proof}` environment.
+  // Papers that use `\begin{proof}` either define it locally with
+  // `\newenvironment{proof}` (e.g. 0801.1844) or pull it in via the
+  // [amsthm] class option (which RequirePackages amsthm.sty.ltxml,
+  // which Lets `\begin{proof}` to `\begin{@proof}`). Defining it here
+  // unconditionally pre-empts user redefinitions and forces an
+  // `<ltx:proof>` wrapper whose `<ltx:title>` puts the body's BOUND_MODE
+  // into `restricted_horizontal`, breaking `$$...$$` shorthand which
+  // requires BOUND_MODE to end with `vertical` (TeX_Math.pool L65).
+  // Removing this restores Perl-faithful behavior.
 
   // Section formatting — Perl L63-120
   // These customize section numbering and font for Elsevier style

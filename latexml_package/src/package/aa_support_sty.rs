@@ -255,9 +255,19 @@ LoadDefinitions!({
   // \ion{symbol}{ionization} — Perl L247
   DefMacro!("\\ion{}{}", "{#1 \\textsc{#2}}");
 
-  // \element — simplified version — Perl L250
-  DefMacro!("\\element{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
-  DefMacro!("\\isotope{}{}", "\\ensuremath{{}^{#2}\\mathrm{#1}}");
+  // \element — Perl aa_support.sty.ltxml L250:
+  //   DefMacro('\element[][][][]{}', '\ensuremath{\@element[#1][#2][#3][#4]{\mathrm{#5}}}')
+  // signature is FOUR optional + ONE mandatory (charge/nucleons/protons/neutrons/symbol).
+  // Prior Rust port `\element{}{}` (two mandatory) caused `\element{O}/...`
+  // to greedily consume `/` as #2, leaving `$` unbalanced and producing
+  // `Attempt to end mode 'math' in 'math'` on multiline math like
+  // `$\element{O}/\element{C}\approx \element{C}/\element{He}$`
+  // (e.g. astro-ph0605551). Fix matches Perl: optional bracket args plus
+  // single mandatory symbol. The body simplification (drop `\@element`
+  // Constructor) is intentional — the chemical-element XMArg wrapper is
+  // not used for math-parser disambiguation.
+  DefMacro!("\\element[][][][]{}", "\\ensuremath{{}^{#2}\\mathrm{#5}}");
+  DefMacro!("\\isotope[][][][]{}", "\\ensuremath{{}^{#2}\\mathrm{#5}}");
 
   // Symbols — Perl L271-276
   DefPrimitive!("\\sun", "\u{2609}");
@@ -341,7 +351,7 @@ LoadDefinitions!({
   //======================================================================
 
   DefConstructor!("\\object Semiverbatim",
-    "<ltx:text class='ltx_ast_objectname'>#1</ltx:text>");
+    "<ltx:text class='ltx_ast_objectname' _noautoclose='1'>#1</ltx:text>");
   DefMacro!("\\listofobjects", "");
   DefMacro!("\\listobjectname", "List of Objects");
 

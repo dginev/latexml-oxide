@@ -1242,7 +1242,8 @@ pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
     other => {
       let message =
         s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
-      Error!("State", "Stored", message);
+      // Lowercase category for consistency with engine convention.
+      Error!("state", "Stored", message);
     },
   }
   Ok(())

@@ -95,8 +95,19 @@ LoadDefinitions!({
   // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
   // (ported to aas_macros_sty.rs) where they wrap via \ref@jnl{...}.
 
-  // Bold Greek — Perl L66-97
-  DefMacro!("\\mn@boldsymbol{}", "\\boldsymbol{#1}");
+  // Bold Greek — Perl L66-97. `\mn@boldsymbol` is a self-contained
+  // DefConstructor in Perl (L66): `'#1', bounded => 1, requireMath => 1,
+  // font => { forcebold => 1 }`. The earlier Rust port routed via
+  // `\boldsymbol{#1}` (DefMacro alias), but mn2e_support is intentionally
+  // amsmath/amsbsy-free (see top-of-file comment) so `\boldsymbol` is
+  // undefined and the alias errors out the moment any `\b<greek>` shortcut
+  // is used. Sandbox 100k stage 1 sample (round-18): astro-ph0001132
+  // `\documentstyle{mn}` paper failed conversion with
+  // `Error:undefined:\boldsymbol`. Round-18 fix: faithful DefConstructor
+  // mirror of Perl L66.
+  DefConstructor!("\\mn@boldsymbol{}", "#1",
+    bounded => true, require_math => true,
+    font => {forcebold => true});
   DefMacro!("\\balpha", "\\mn@boldsymbol{\\alpha}");
   DefMacro!("\\bbeta", "\\mn@boldsymbol{\\beta}");
   DefMacro!("\\bgamma", "\\mn@boldsymbol{\\gamma}");

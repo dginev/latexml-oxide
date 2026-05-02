@@ -1,0 +1,13 @@
+% Regression test for hep-ph0404036 (FIXED commit bf3397078).
+% iopart_support_sty.rs previously had speculative `\la → \lesssim`
+% binding which blocked user `\newcommand\la{\langle}` overrides.
+% Verified Perl-faithful: Perl's iopart_support.sty.ltxml has 0
+% references to `\la`. Test passes when binding is absent.
+\documentclass{iopart}
+\newcommand\la{\langle}
+\newcommand\ra{\rangle}
+\begin{document}
+\title{T}
+\maketitle
+Equation: $\la x \ra = 1$.
+\end{document}

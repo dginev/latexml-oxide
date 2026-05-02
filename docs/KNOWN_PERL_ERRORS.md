@@ -536,3 +536,55 @@ commit `989c5a8ed` adds babel-level `\l@frenchb` + caption/extras/
 date hook aliases in `french_ldf.rs::load_definitions`, so
 `\selectlanguage{frenchb}` resolves silently. Rust converts
 0909.3444 with 0 errors; Perl baseline still emits 2.
+
+---
+
+## 20. `AmSTeX.pool.ltxml` `\italic`/`\slanted`/`\boldkey` font hash duplicate keys
+
+**Perl source:** `LaTeXML/Engine/AmSTeX.pool.ltxml:278-286`
+
+**Symptom:** Three AmSTeX font commands have duplicate hash keys in
+their `font => { ... }` argument, so the second value silently
+overwrites the first:
+
+```perl
+DefConstructor('\italic{}', '#1', ...,
+  font => { shape => 'italic', series => 'medium', shape => 'upright' });
+DefConstructor('\slanted{}', '#1', ...,
+  font => { shape => 'slanted', series => 'medium', shape => 'upright' });
+DefConstructor('\boldkey{}', '#1', ...,
+  font => { series => 'bold', family => 'typewriter',
+            series => 'medium', shape => 'upright' });
+```
+
+In Perl `{}` is a hash literal; later keys overwrite earlier ones.
+So `\italic`, `\slanted`, and `\boldkey` end up applying:
+
+| CS | Effective shape | Effective series | Effective family |
+|---|---|---|---|
+| `\italic` | upright (NOT italic) | medium | inherited |
+| `\slanted` | upright (NOT slanted) | medium | inherited |
+| `\boldkey` | upright | medium (NOT bold) | typewriter |
+
+**Root cause:** Looks like a copy-paste error — the `'upright'` was
+likely meant to override the prior `\bold`-derived font that wraps
+the macro. But because the keys are the same name (not e.g. a hash
+merge), the original `italic`/`slanted`/`bold` settings are lost.
+
+**Impact:** The three CSes don't render in the intended style under
+Perl. AmSTeX papers using `\italic{...}` get upright, not italic.
+Real-world impact is minor since these CSes are rarely used directly
+in modern papers (most authors just write `\textit{...}` or use
+`amsmath` macros).
+
+**Rust port status:** Rust DIVERGES from Perl here intentionally.
+`amstex.rs:258-269` keeps only the *first* shape/series value
+(the obviously-correct one):
+* `\italic` → shape: italic, series: medium
+* `\slanted` → shape: slanted, series: medium
+* `\boldkey` → series: bold, family: typewriter, shape: upright
+
+This produces visually correct output. If strict Perl-bug parity is
+ever needed, swap the values to match the Perl typo's effective
+behavior (use `upright`/`medium` everywhere); it would be a regression
+in rendering quality, so the divergence stays.

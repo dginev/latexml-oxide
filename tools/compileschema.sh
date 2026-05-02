@@ -3,10 +3,9 @@
 # compileschema.sh — Rust-side port of LaTeXML/tools/compileschema
 # =====================================================================
 # Stage 1: rnc → rng via trang + URN-rewrite sed fix-up.
-# Stage 2: rng → LaTeXML.model — deferred pending a `--dump-model` flag
-#          on latexml_oxide; until then, regenerate LaTeXML.model with
-#          the upstream Perl toolchain (see LaTeXML/tools/compileschema
-#          lines 66-85).
+# Stage 2: rng → LaTeXML.model via `latexml_oxide --dump-model`. Output is
+#          byte-identical to Perl `bin/compileschema --schema=LaTeXML`
+#          (mirrors LaTeXML/tools/compileschema lines 66-85).
 # =====================================================================
 
 set -eu

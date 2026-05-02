@@ -9,8 +9,8 @@
 //   * `\glsdohyperlink` / `\glsdonohyperlink` — drop hyperref wrapping
 //   * `\glsdisablehyper` — disable hyperref pipeline
 //   * `\glspostlinkhook` — `\xspace`
-//   * `\@newglossaryentryposthook` — feed entry data to
-//     `\lx@glossaries@newentry{}{} RequiredKeyVals`
+//   * `\@newglossaryentryposthook` — feed entry data to `\lx@glossaries@newentry{}{}
+//     RequiredKeyVals`
 //   * `\printglossary` / `\printnoidxglossary` — emit `<ltx:glossary>`
 //
 // The current Rust port hand-rolls `\newglossaryentry`,
@@ -293,50 +293,50 @@ LoadDefinitions!({
   // path uses `\gls`/`\Gls` (which Rust reimplements above), so dropping the
   // expansion here is harmless. Driver: 1806.05262 calls `\Glsentrytext{nbs}`
   // in a section heading.
-  DefMacro!("\\glsentrytext Semiverbatim",        "");
-  DefMacro!("\\Glsentrytext Semiverbatim",        "");
-  DefMacro!("\\glsentrylong Semiverbatim",        "");
-  DefMacro!("\\Glsentrylong Semiverbatim",        "");
-  DefMacro!("\\glsentryshort Semiverbatim",       "");
-  DefMacro!("\\Glsentryshort Semiverbatim",       "");
-  DefMacro!("\\glsentryname Semiverbatim",        "");
-  DefMacro!("\\Glsentryname Semiverbatim",        "");
-  DefMacro!("\\glsentrydesc Semiverbatim",        "");
-  DefMacro!("\\Glsentrydesc Semiverbatim",        "");
-  DefMacro!("\\glsentrysymbol Semiverbatim",      "");
-  DefMacro!("\\Glsentrysymbol Semiverbatim",      "");
-  DefMacro!("\\glsentryfirst Semiverbatim",       "");
-  DefMacro!("\\Glsentryfirst Semiverbatim",       "");
-  DefMacro!("\\glsentryplural Semiverbatim",      "");
-  DefMacro!("\\Glsentryplural Semiverbatim",      "");
+  DefMacro!("\\glsentrytext Semiverbatim", "");
+  DefMacro!("\\Glsentrytext Semiverbatim", "");
+  DefMacro!("\\glsentrylong Semiverbatim", "");
+  DefMacro!("\\Glsentrylong Semiverbatim", "");
+  DefMacro!("\\glsentryshort Semiverbatim", "");
+  DefMacro!("\\Glsentryshort Semiverbatim", "");
+  DefMacro!("\\glsentryname Semiverbatim", "");
+  DefMacro!("\\Glsentryname Semiverbatim", "");
+  DefMacro!("\\glsentrydesc Semiverbatim", "");
+  DefMacro!("\\Glsentrydesc Semiverbatim", "");
+  DefMacro!("\\glsentrysymbol Semiverbatim", "");
+  DefMacro!("\\Glsentrysymbol Semiverbatim", "");
+  DefMacro!("\\glsentryfirst Semiverbatim", "");
+  DefMacro!("\\Glsentryfirst Semiverbatim", "");
+  DefMacro!("\\glsentryplural Semiverbatim", "");
+  DefMacro!("\\Glsentryplural Semiverbatim", "");
   DefMacro!("\\glsentryfirstplural Semiverbatim", "");
   DefMacro!("\\Glsentryfirstplural Semiverbatim", "");
-  DefMacro!("\\glsentryshortpl Semiverbatim",     "");
-  DefMacro!("\\Glsentryshortpl Semiverbatim",     "");
-  DefMacro!("\\glsentrylongpl Semiverbatim",      "");
-  DefMacro!("\\Glsentrylongpl Semiverbatim",      "");
-  DefMacro!("\\glsentryfull Semiverbatim",        "");
-  DefMacro!("\\Glsentryfull Semiverbatim",        "");
-  DefMacro!("\\glsentryfullpl Semiverbatim",      "");
-  DefMacro!("\\Glsentryfullpl Semiverbatim",      "");
+  DefMacro!("\\glsentryshortpl Semiverbatim", "");
+  DefMacro!("\\Glsentryshortpl Semiverbatim", "");
+  DefMacro!("\\glsentrylongpl Semiverbatim", "");
+  DefMacro!("\\Glsentrylongpl Semiverbatim", "");
+  DefMacro!("\\glsentryfull Semiverbatim", "");
+  DefMacro!("\\Glsentryfull Semiverbatim", "");
+  DefMacro!("\\glsentryfullpl Semiverbatim", "");
+  DefMacro!("\\Glsentryfullpl Semiverbatim", "");
   // \acr* family — the real glossaries.sty defines short/long/full plus
   // their `pl` (plural) and uppercase-first (`\Acr*`) variants. Perl's
   // glossaries.sty.ltxml gets these via `InputDefinitions(noltxml=1)`
   // raw-load of the actual TL glossaries.sty source. Rust's port stubs
   // them here as no-ops to mirror the same set of bound CSes
   // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
-  DefMacro!("\\acrshort Semiverbatim",   "");
+  DefMacro!("\\acrshort Semiverbatim", "");
   DefMacro!("\\acrshortpl Semiverbatim", "");
-  DefMacro!("\\Acrshort Semiverbatim",   "");
+  DefMacro!("\\Acrshort Semiverbatim", "");
   DefMacro!("\\Acrshortpl Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim",    "");
-  DefMacro!("\\acrlongpl Semiverbatim",  "");
-  DefMacro!("\\Acrlong Semiverbatim",    "");
-  DefMacro!("\\Acrlongpl Semiverbatim",  "");
-  DefMacro!("\\acrfull Semiverbatim",    "");
-  DefMacro!("\\acrfullpl Semiverbatim",  "");
-  DefMacro!("\\Acrfull Semiverbatim",    "");
-  DefMacro!("\\Acrfullpl Semiverbatim",  "");
+  DefMacro!("\\acrlong Semiverbatim", "");
+  DefMacro!("\\acrlongpl Semiverbatim", "");
+  DefMacro!("\\Acrlong Semiverbatim", "");
+  DefMacro!("\\Acrlongpl Semiverbatim", "");
+  DefMacro!("\\acrfull Semiverbatim", "");
+  DefMacro!("\\acrfullpl Semiverbatim", "");
+  DefMacro!("\\Acrfull Semiverbatim", "");
+  DefMacro!("\\Acrfullpl Semiverbatim", "");
 
   // \glsresetall[<glossaries>] — resets the "first use" flag for all
   // entries. We don't track first-use state, so it's a safe no-op.

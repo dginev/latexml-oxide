@@ -14,6 +14,7 @@ use crate::base_utilities::insert_frontmatter;
 use crate::prelude::*;
 use crate::tex_tables::alignment_bindings;
 use latexml_core::alignment::template::TemplateConfig;
+use latexml_core::common::xml::is_descendant_or_self;
 use latexml_core::digested::DigestedData;
 use std::collections::VecDeque;
 
@@ -55,6 +56,26 @@ static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
+
+/// Defensive sanitizer for section-type identifiers (the `{section}` arg of
+/// `\@@numbered@section` etc.). Some upstream paths — notably figure-block +
+/// section sequencing in BoxedEPS-loading papers (Cluster A / math0010095) —
+/// allow a trailing `\par` (or other CS) token to pollute the section type
+/// string. The type identifier should always be a bare letter sequence
+/// (`section`, `subsection`, `appendix` …); strip a single trailing CS if
+/// present so downstream `\csname @<type>...@ID\endcsname`-style construction
+/// stays well-formed.
+fn strip_trailing_cs(stype: &str) -> String {
+  // Detect a trailing `\<letters>` token attached to the identifier. We strip
+  // exactly the well-known CS sentinels so we don't mis-mangle exotic but
+  // legitimate type names.
+  for tail in ["\\par", "\\@startsection@hook", "\\relax"] {
+    if let Some(stripped) = stype.strip_suffix(tail) {
+      return stripped.to_string();
+    }
+  }
+  stype.to_string()
+}
 
 /// Mirror of Perl `latex_constructs.pool.ltxml:2569-2574`'s
 /// `getShortSource =~ /^plain/` check. Two locator shapes count as
@@ -206,6 +227,12 @@ pub fn make_note_tags(
   mark_opt: Option<&Digested>,
   tag_opt: Option<Cow<Digested>>,
 ) -> Result<SymHashMap<Stored>> {
+  // Cluster A reprise (hep-ph0204075): strip a trailing \par that the {}
+  // parameter reader sometimes pulls into the counter identifier. Without
+  // this, the s!("\\the{counter}") and s!("\\ext@{counter}") paths below
+  // produce CSes named `\thefootnote\par` / `\ext@footnote\par`.
+  let counter = strip_trailing_cs(counter);
+  let counter = counter.as_str();
   if let Some(tag) = tag_opt {
     let mut props = ref_step_id(counter)?;
     let mark = match mark_opt {
@@ -257,6 +284,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
         &format!(".//ltx:note[@role='{notetype}mark'][@mark='{mark}']"),
         None,
       ) {
+        if is_descendant_or_self(&marknote, node) {
+          continue;
+        }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
       }
     }
@@ -268,6 +298,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
         &format!(".//ltx:note[@role='{notetype}text'][@mark='{mark}']"),
         None,
       ) {
+        if is_descendant_or_self(node, &textnote) {
+          continue;
+        }
         relocate_footnote_aux(document, notetype, node, &mut textnote)?;
       }
     }
@@ -2573,13 +2606,27 @@ LoadDefinitions!({
       // even though the paper-local sty defines them. Min repro:
       // `\documentstyle[mysty]{article}` with local mysty.sty.
       use latexml_core::binding::content::FindFileOptions;
-      let found = find_file(&format!("{opt}.sty"),
-        Some(FindFileOptions { notex: true, ..Default::default() })).is_some()
-        || find_file(opt,
-          Some(FindFileOptions { ext_type: Some("sty".into()), forbid_ltxml: true, ..Default::default() })).is_some()
-        || find_file_fallback(opt, "sty").is_some();
-      if found {
-        require_package(opt, RequireOptions::default())?;
+      let found_binding = find_file(&format!("{opt}.sty"),
+        Some(FindFileOptions { notex: true, ..Default::default() })).is_some();
+      let found_fallback = !found_binding && find_file_fallback(opt, "sty").is_some();
+      let found_disk = !found_binding && !found_fallback && find_file(opt,
+        Some(FindFileOptions { ext_type: Some("sty".into()), forbid_ltxml: true, ..Default::default() })).is_some();
+      if found_binding || found_fallback || found_disk {
+        // When the file was found ONLY via paper-local disk-probe (no
+        // .sty.ltxml binding and no version-strip fallback), we must
+        // explicitly enable raw TeX loading because the default
+        // `INCLUDE_STYLES=false` gate inside `require_package` would
+        // otherwise force `notex=true` and suppress the raw load. Without
+        // this, `\documentstyle[<opt>]{<class>}` with paper-local
+        // `<opt>.sty` (e.g. `newpasp.sty` in astro-ph0009248) fired
+        // RequirePackage but never actually loaded, leaving `\affil`,
+        // `\references`, etc. undefined.
+        let opts = if found_disk {
+          RequireOptions { notex: Some(false), ..RequireOptions::default() }
+        } else {
+          RequireOptions::default()
+        };
+        require_package(opt, opts)?;
       } else {
         had_missing = true;
         Info!("unexpected", opt, "Unexpected option '{}' passed via \\documentstyle", opt);
@@ -3082,7 +3129,17 @@ LoadDefinitions!({
   // but preserve it's "emph"-ness.
   // Perl latex_constructs.pool.ltxml L401-408: mode => 'restricted_horizontal',
   //   enterHorizontal => 1, font => { emph => 1 }, alias => '\emph', beforeDigest => {...}.
-  DefConstructor!("\\emph{}", "<ltx:emph _force_font='1'>#1",
+  // Perl emits `<ltx:text>` inside math context, `<ltx:emph>` outside —
+  // dispatch via `findnodes('ancestor::ltx:Math')` in the body sub.
+  // Rust template `?#isMath(...)(...)` is the equivalent gate (same
+  // pattern used by `\newline`, `\thinspace`, etc.) — ported 2026-05-01.
+  // Known remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
+  // Task 3 / 0901.2408): mode is "text" here vs Perl's
+  // 'restricted_horizontal' — flipping in isolation doesn't fix the
+  // `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper digester
+  // gating needed.
+  DefConstructor!("\\emph{}",
+    "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
     mode => "text",
     bounded        => true,
     enter_horizontal => true,
@@ -3142,7 +3199,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
@@ -3157,7 +3214,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("role", s!("{note_type}mark").into());
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
@@ -3172,7 +3229,7 @@ LoadDefinitions!({
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref();
-    let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
         stomach::digest(T_CS!(s!("\\the{note_type}")))?
@@ -3319,7 +3376,12 @@ LoadDefinitions!({
     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
     sub[document, args, props] {
       // args:=(stype,inlist,toctitle,title)
-      let stype = args[0].as_ref().unwrap().to_string();
+      // Sanitize stype: under some upstream conditions (figure-block + section
+      // sequencing — see math0010095 / Cluster A) the {} parameter reader picks
+      // up a trailing \par token that pollutes the section type identifier.
+      // \par should never appear inside a section type; strip any trailing
+      // backslash-prefixed CS to recover the bare identifier.
+      let stype = strip_trailing_cs(&args[0].as_ref().unwrap().to_string());
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
@@ -3398,7 +3460,8 @@ LoadDefinitions!({
       let title = args[3].as_ref().unwrap();
 
       maybe_peek_label()?;
-      let stype_str = stype.to_string();
+      // See Cluster A note in the body closure above; sanitize identical here.
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix" {
@@ -3414,13 +3477,15 @@ LoadDefinitions!({
         },
         None => title
       };
-      let stype_tokens = stype.revert()?;
+      // Cluster A: rebuild tokens from sanitized stype_str so the trailing
+      // \par token doesn't propagate into \lx@format@title@@'s body.
+      let stype_clean_tokens = Tokens::new(Explode!(stype_str));
       let title_tokens = title.revert()?;
       let invoked_title =
-        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens]);
+        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_clean_tokens.clone(), title_tokens]);
       let xtitle    = stomach::digest(invoked_title)?;
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype.revert()?, toctitle.revert()?]);
+          vec![stype_clean_tokens, toctitle.revert()?]);
       let xtoctitle = stomach::digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
@@ -3445,7 +3510,8 @@ LoadDefinitions!({
       }
       let id = props.get("id").unwrap().to_string();
       // Mirror the same schema sanitization as \@@numbered@section above.
-      let stype_str = stype.to_string();
+      // Cluster A: strip trailing CS (e.g. \par) from stype.
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let tagname = {
         let candidate = s!("ltx:{stype_str}");
         let known = matches!(stype_str.as_str(),
@@ -3481,7 +3547,8 @@ LoadDefinitions!({
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
       maybe_peek_label()?;
-      let stype_str = stype.to_string();
+      // Cluster A sanitization (see \@@numbered@section).
+      let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix" {
@@ -3688,14 +3755,26 @@ LoadDefinitions!({
   "<?latexml package='#2' ?#1(options='#1')?>",
   before_digest =>  { only_preamble("\\RequirePackage") },
   after_digest => sub[whatsit] {
-    // let options  = whatsit.get_arg(1);
-    let packages = whatsit.get_arg(2).unwrap();
-  //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
-    for pkg in packages.to_string().split(',') {
-      let pkg_trimmed = pkg.trim();
-      if pkg_trimmed.is_empty() || pkg.starts_with('%') { continue; }
-      require_package(pkg, RequireOptions::default())?;
+    let options: Option<&Digested> = whatsit.get_arg(1);
+    let packages: Option<&Digested> = whatsit.get_arg(2);
+    let package_list: Vec<String> = match packages {
+      Some(value) => OPTS_REGEX.split(&value.to_string())
+        .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+      None => Vec::new(),
+    };
+    let options_list: Vec<String> = match options {
+      Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+      None => Vec::new(),
+    };
+    for package in package_list {
+      let pkg_trimmed = package.trim();
+      if pkg_trimmed.is_empty() { continue; }
+      require_package(&package, RequireOptions {
+        options: options_list.clone(),
+        ..RequireOptions::default()
+      })?;
     }
+    Ok(Vec::new())
   });
 
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
@@ -5504,7 +5583,27 @@ LoadDefinitions!({
   // to match latex.ltx source. Inside a `tabbing` environment,
   // tabbing_bindings() overrides this local to `\@tabbing@accent`.
   // Found in arxiv 1611.05395.
-  Let!("\\a", "\\@tabacckludge");
+  //
+  // **Lazy-pool-load guard (2026-05-01)**: in Perl, the kernel
+  // `\let\a=\@tabacckludge` runs at engine init, BEFORE user TeX.
+  // If the user defines `\def\a{\alpha}` in their preamble (a
+  // common Greek-letter abbreviation), the user assignment runs
+  // LATER in TeX's normal "later wins" semantics and overrides the
+  // kernel Let cleanly. In Rust, `latex_constructs` runs at
+  // `\documentclass`-time (lazy-pool-load —
+  // `wisdom_lazy_pool_load.md`), AFTER the user preamble — so this
+  // bare `Let!` would clobber the user's `\def\a{\alpha}` and
+  // route subsequent `\a` invocations through the kernel
+  // `\@changed@cmd → \+ → \tabalign` chain that triggers a
+  // `\halign`/`\hbox` mode-mismatch runaway. Witness:
+  // hep-th0005268, see `wisdom_tabalign_math_runaway.md`.
+  //
+  // Guard: only Let `\a` if it's not already user-defined. The
+  // dump E record was rejected, so `\a` would be undefined here
+  // unless the user defined it.
+  if state::lookup_meaning(&T_CS!("\\a")).is_none() {
+    Let!("\\a", "\\@tabacckludge");
+  }
 
   DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(_star,cs_token,nargs,opt,body)] {
@@ -6374,7 +6473,18 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L3250-3258
   // Checks PREINCREMENTED_ first (set by beforeFloat with preincrement option).
   DefPrimitive!("\\@@add@caption@counters", {
-    let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
+    // Perl: $type = ToString(Digest(T_CS('\@captype')))
+    // Rust port had used `stomach::digest`, but stomach::digest's
+    // `read_x_token` loop in vmode (figure-environment body is vmode)
+    // can leak a trailing `\par` token into the result when the captype
+    // expansion completes — the digester continues reading beyond the
+    // expansion and picks up an environment-emitted `\par`. Use
+    // `do_expand` instead: it expands the macro one level (`\@captype`
+    // → "figure" letter tokens) and stops, mirroring Perl's `ToString`
+    // of the captype's body without invoking stomach digestion.
+    // Witness: math0010095 BoxedEPS+figure+caption produced
+    // `\thefigure\par` undefined errors when captype was "figure\par".
+    let captype = gullet::do_expand(T_CS!("\\@captype"))?.to_string();
     let prekey = s!("PREINCREMENTED_{captype}");
     let props = if let Some(Stored::HashStored(pre)) = state::remove_value(&prekey) {
       pre
@@ -8581,20 +8691,21 @@ LoadDefinitions!({
   );
 
   // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
-  DefMacro!("\\multiput Match:( Until:, Until:) Match:( Until:, Until:) {}{}", sub[args] {
-    // args: 0=Match:(, 1=x, 2=y, 3=Match:(, 4=dx, 5=dy, 6=n, 7=body
-    let x_str = args.get(1).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let y_str = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let dx_str = args.get(4).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let dy_str = args.get(5).map(|a| a.revert().unwrap_or_default().to_string()).unwrap_or_default();
-    let n: i64 = args.get(6).map(|a| a.revert().unwrap_or_default().to_string()
+  DefMacro!("\\multiput Pair Pair {}{}", sub[args] {
+    let (x0, y0) = args.get(0).and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let (dx, dy) = args.get(1).and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let n: i64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()
       .trim().parse().unwrap_or(1)).unwrap_or(1);
-    let body = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let body = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
 
-    let mut x: f64 = x_str.trim().parse().unwrap_or(0.0);
-    let mut y: f64 = y_str.trim().parse().unwrap_or(0.0);
-    let dx: f64 = dx_str.trim().parse().unwrap_or(0.0);
-    let dy: f64 = dy_str.trim().parse().unwrap_or(0.0);
+    let mut x: f64 = x0;
+    let mut y: f64 = y0;
 
     // Each iteration emits roughly `8 + body.len()` tokens; pre-size
     // conservatively + use borrow-iter-copied for body to avoid the
@@ -9656,4 +9767,24 @@ LoadDefinitions!({
   // since under unconditional-dump-apply the only way for the engine
   // override to survive is to apply it AFTER the dump has been read.
   DefMacro!("\\hline", r"\noalign{\@@alignment@hline}");
+
+  // Re-establish the engine `\documentstyle` impl after dump load. Same
+  // pattern as `\hline` above: under unconditional dump-apply the dump's
+  // `\documentstyle` body — `\input{latex209.def}\documentclass` — wins
+  // over the engine `Let \documentstyle = \lx@documentstyle@impl` from
+  // `tex_job.rs:279`. That dump body routes everything through
+  // `\documentclass`, which calls `load_class(name, opts,
+  // after=\AtBeginDocument\warn@unusedclassoptions)` — DROPPING the
+  // `\compat@loadpackages` after-hook our `\documentstyle` impl
+  // installs. Symptom: `\documentstyle[multicol,...]{revtex}` doesn't
+  // route the `multicol` option to `RequirePackage{multicol}`, leaving
+  // `\multicols`/`\multicolsep` undefined. Witness: cond-mat0109091.
+  //
+  // The Let-restore in `tex.rs` `\@load@latex@pool` only fires when an
+  // autoload trigger CS (\documentclass, \usepackage, …) is invoked
+  // AFTER engine init — but `\documentstyle` is not in the trigger
+  // list, so a paper whose first command is `\documentstyle` never
+  // gets the restore. Doing it here, at the end of the
+  // bootstrap → dump → constructs flow, guarantees our impl wins.
+  Let!("\\documentstyle", "\\lx@documentstyle@impl");
 });

@@ -189,6 +189,14 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   match table {
     // V: Value entries (registers, fontdimen, font metadata).
     // Add-only policy: only loads if key has no existing value.
+    //
+    // Skip MAX_ERRORS: it was set to 1_000_000 in `ini_tex.rs` during
+    // dump-build (to let raw latex.ltx run through transient errors)
+    // and got captured into the dump. Loading that into a regular
+    // conversion lets runaway error cascades (e.g. AmS-TeX `\cases`
+    // mis-parse → 1M `\hbox`/`&` errors per paper) bypass the 10000
+    // default cap. Filter at read time so existing dumps are clean.
+    "V" if key == "MAX_ERRORS" => Ok(false),
     "V" => load_value(key, data),
     // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //

@@ -53,7 +53,7 @@ TSV summary, never a backtrace. So we use `--release`:
 
 ```
 cargo build --release --bin cortex_worker --features cortex --jobs 20
-tools/benchmark_10k.sh --workers 16 --timeout 120
+tools/benchmark_canvas.sh --workers 16 --timeout 120
 ```
 
 The release profile gives `lto = "thin"` + `codegen-units = 20`
@@ -103,8 +103,8 @@ KEEP_TMP=1 tools/triage_failure.sh 0704.0192
 ```
 
 `tools/triage_failure.sh` is the canonical Phase-2 entry point.
-It is the companion to `tools/benchmark_10k.sh` (Phase 1):
-benchmark_10k → release-grade canvas, triage_failure →
+It is the companion to `tools/benchmark_canvas.sh` (Phase 1):
+benchmark_canvas → release-grade canvas, triage_failure →
 test-grade single-paper rerun.
 
 For interactive debugging, use the same binary under gdb/lldb

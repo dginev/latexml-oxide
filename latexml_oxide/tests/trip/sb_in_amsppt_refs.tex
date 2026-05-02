@@ -1,0 +1,14 @@
+% Min repro for math0610119 (Rust=1, Perl=0).
+% `\sb` is `\let \sb T_SUB` (TeX primitive) by plain_base/plain_constructs.
+% Direct `$\sb{0}$` works in Rust, but inside amsppt's `\Refs/\ref/\paper`
+% (which captures fields via `\@bibfield XUntil:\@end@bibfield`),
+% the `\sb` lookup fails as "T_CS[\\sb] is not defined".
+% Root cause traced to build_invocation in amsbibitem field-capture path.
+\input amstex
+\documentstyle{amsppt}
+\topmatter \title T \endtitle \endtopmatter
+\document
+\Refs \widestnumber\key{ABC}
+\ref \no 1 \by R Author \paper Hecke operators on $\Gamma \sb{0}(m)$ \endref
+\endRefs
+\enddocument
