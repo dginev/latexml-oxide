@@ -38,13 +38,17 @@ LoadDefinitions!({
   // at \usepackage time but irrelevant to our stub.
   DefMacro!("\\mhchemoptions RequiredKeyVals", "");
 
-  // \ce{<formula>} — chemistry mode, typeset as text in roman.
-  // Real mhchem renders subscripts, charges, arrows, etc. Stub treats
-  // the formula as opaque text. Works in both math and text mode via
-  // \text{} which is mode-neutral in our pipeline.
-  DefMacro!("\\ce{}",  "\\text{#1}");
-  DefMacro!("\\cee{}", "\\text{#1}");
-  DefMacro!("\\cf{}",  "\\text{#1}");
+  // \ce{<formula>} — chemistry mode. Real mhchem renders subscripts,
+  // charges, arrows, etc. Most papers invoke `\ce{H_2O}` etc. inside
+  // math context (equation*), so the body's `_`/`^` are math scripts.
+  // Routing through `\text{}` enters text mode where `_` errors out
+  // (regression seen on 0704.3190 going R=1→R=10).
+  // Stub: just unwrap the braces so the body is typeset in the
+  // ambient mode. Loses roman-text rendering for plain text-mode
+  // chemistry like `\ce{NaCl}`, but avoids cascading script errors.
+  DefMacro!("\\ce{}",  "{#1}");
+  DefMacro!("\\cee{}", "{#1}");
+  DefMacro!("\\cf{}",  "{#1}");
 
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
