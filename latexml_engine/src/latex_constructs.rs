@@ -4917,6 +4917,14 @@ LoadDefinitions!({
     before_digest => { Digest!("\\par")?; }
   );
 
+  // Perl latex_constructs.pool.ltxml L1732: `DefMacro('\@trivlist', '\relax', locked => 1)`.
+  // Neutralizes the LaTeX kernel's complex `\@trivlist` body (which calls
+  // `\@noitemerr` under various edge conditions, e.g. `\if@newlist` true on
+  // entry). Without this override the dump's full kernel macro runs when
+  // user packages invoke `\@trivlist` directly (witness: 0802.2207 spr-astr-addons
+  // `\renewcommand\[{\begin{mathtrivlist}…}` where `mathtrivlist` calls
+  // `\@trivlist`, raising 3 spurious "missing \item" errors).
+  DefMacro!("\\@trivlist", "\\relax");
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
