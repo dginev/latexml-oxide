@@ -236,7 +236,20 @@ LoadDefinitions!({
       // instead of also probing for a same-name `.cls` (which has a
       // different DefMacro signature for `\author` etc. that conflicts
       // with the `.sty` body — root cause for nucl-th0010030).
-      input_definitions("article", InputDefinitionOptions {
+      // Choose article.cls vs OmniBus.cls as the underlying class. When
+      // the `.sty` was found via binding registry or version-strip
+      // fallback, the user's intent is "load this binding as the
+      // document class" — article.cls is the right base. When the
+      // `.sty` was found ONLY via paper-local disk-probe (no binding /
+      // no fallback), the file is an arbitrary user style that doesn't
+      // know about LaTeXML's frontmatter conventions; OmniBus is the
+      // right base because it provides broad fallback coverage
+      // (`\citeauthoryear` autoload trigger, generic `\affil`, etc.).
+      // Mirrors Perl's flow for paper-local-only `\documentstyle`
+      // classes (verified via `--verbose` on astro-ph0510540 and
+      // astro-ph0008100 — Perl loads OmniBus for both).
+      let underlying = if class_sty_via_disk { "OmniBus" } else { "article" };
+      input_definitions(underlying, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("cls")),
         options: opts_vec.clone(),
         handleoptions: true,

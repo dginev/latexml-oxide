@@ -1053,6 +1053,27 @@ by `kpsewhich --version`. Currently dumps load from
 
 ---
 
+## 2026-05-02: \documentstyle disk-probe Branch 1 — load OmniBus, not article
+
+`astro-ph0510540` (`\documentstyle[epsfig]{aprim}` + paper-local
+`aprim.sty`): Rust=1 → Rust=0 (Perl=0). Tests stay 1112/0/0.
+
+* The `class_sty_via_disk` Branch 1 (paper-local `<class>.sty`,
+  no binding) previously called `input_definitions("article", …)`
+  followed by `require_package(<class>, notex=Some(false))`. This
+  loaded `article.cls.ltxml` which lacks OmniBus's broad fallback
+  coverage (e.g. `\citeauthoryear` autoload trigger for natbib).
+* Switched to `OmniBus.cls` for the underlying class when matched
+  via disk-probe — verified via Perl `--verbose` that Perl loads
+  `OmniBus.cls.ltxml` for both this paper and astro-ph0008100
+  (PASJ95). The `class_sty_via_disk` raw-load via `notex=false`
+  remains so the paper-local `.sty` body still gets loaded.
+* When matched via binding registry / version-strip fallback, keep
+  `article.cls` as the underlying class (intent: "load this
+  binding as the document class").
+* Verified no regressions on astro-ph0008100, astro-ph0009248,
+  astro-ph0002213, hep-ph0404036.
+
 ## 2026-05-02: drop speculative iopart_support `\la → \lesssim` block
 
 `hep-ph0404036` (`\documentclass{iopart}` + `\newcommand\la{\langle}`):
