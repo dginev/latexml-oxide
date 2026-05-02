@@ -1,0 +1,12 @@
+% Min repro for astro-ph0002213 residual (Rust=1, Perl=0 partial).
+% `\documentstyle[epsfig]{mn1}` with paper-local mn1.sty:
+% mn1 → mn.cls.ltxml fallback (FIXED). Then `epsfig` option should
+% route through `\compat@loadpackages` and load epsfig.sty.ltxml,
+% which provides `\psfig`. Currently the option-passthrough plumbing
+% from mn.cls's PassOptions to article.cls doesn't populate
+% `@unusedoptionlist`, so `\compat@loadpackages` runs with empty
+% list and `\psfig` stays undefined.
+\documentstyle[epsfig]{article}
+\begin{document}
+\psfig{file=fig1.ps}
+\end{document}
