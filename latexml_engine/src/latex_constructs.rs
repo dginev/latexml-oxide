@@ -8679,8 +8679,13 @@ LoadDefinitions!({
     }
   );
 
-  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates
-  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) Match:( Until:, Until:) Match:( Until:, Until:)",
+  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates.
+  // Insert `SkipSpaces` between successive `Match:(` patterns so a single
+  // (or double) space between paren-tuples doesn't break the read; e.g.
+  //   \qbezier(6.4,0.5)(7.35,2)  (8.3,0.5)
+  // (witness: 0904.1097 line 422 has multi-space gaps between coord
+  // tuples, which previously failed `Missing argument Match:(`).
+  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
     "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
   DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
