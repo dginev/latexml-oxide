@@ -22,6 +22,11 @@ matches on-disk dumps line-for-line (plain: 0 diff lines; latex: 1
 line diff — only the `texsys.aux_contents` build timestamp). Target
 #4 from CLAUDE.md is met.
 
+**Re-verified post-Round-18 (2026-05-02)**: same release binary
+(rebuilt at commit `a3e44454c`, with all 7 Round-18 fixes including
+`\object` `_noautoclose` `317655f01`) — both inits still emit
+**0 errors**. Target #4 holds. Tests 1112/0/0.
+
 **Audit table (2026-04-28):**
 
 | File | Perl calls | Rust calls | Status |
