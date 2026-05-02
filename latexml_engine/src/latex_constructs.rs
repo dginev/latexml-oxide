@@ -3732,9 +3732,13 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
-      let package_list = match packages {
+      // Perl latex_constructs.pool.ltxml L795: `$pkg =~ s/\s+//g;` —
+      // strip ALL whitespace (including internal) from each package name
+      // so author typos like `\usepackage{graphic x}` resolve to graphicx.
+      let package_list: Vec<String> = match packages {
         Some(value) => OPTS_REGEX.split(&value.to_string())
-          .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+          .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+          .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
         None => Vec::new(),
       };
       let options_list = match options {
@@ -3757,9 +3761,12 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let options: Option<&Digested> = whatsit.get_arg(1);
     let packages: Option<&Digested> = whatsit.get_arg(2);
+    // Perl latex_constructs.pool.ltxml: `\RequirePackage` mirrors
+    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip.
     let package_list: Vec<String> = match packages {
       Some(value) => OPTS_REGEX.split(&value.to_string())
-        .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+        .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
@@ -3767,8 +3774,6 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     for package in package_list {
-      let pkg_trimmed = package.trim();
-      if pkg_trimmed.is_empty() { continue; }
       require_package(&package, RequireOptions {
         options: options_list.clone(),
         ..RequireOptions::default()
