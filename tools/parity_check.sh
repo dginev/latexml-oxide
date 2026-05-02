@@ -134,8 +134,13 @@ for paper in "${papers[@]}"; do
     status="BOTH CLEAN"
   elif [[ "$rust_errs" -eq "$perl_errs" ]]; then
     status="OUT-OF-SCOPE (Perl=$perl_errs)"
+  elif [[ "$perl_errs" -ge 101 && "$rust_errs" -lt "$perl_errs" ]]; then
+    # Perl hit MAX_ERRORS=101 cap (true count higher); Rust is below the
+    # cap. Rust is unambiguously better since Perl's true count >= 101.
+    # Classify as PERL_REGRESSION (Rust win), with a note tagging the cap.
+    status="PERL_REGRESSION (P>=$perl_errs vs R=$rust_errs; PERL_CAPPED)"
   elif [[ "$perl_errs" -ge 101 ]]; then
-    # Both engines have many errors; Perl truncated. Verdict undetermined.
+    # Rust >= Perl-cap — undetermined since Perl's true count is unknown.
     status="OUT-OF-SCOPE? (Perl-capped P=$perl_errs vs R=$rust_errs; cannot compare)"
   elif [[ "$rust_errs" -gt "$perl_errs" ]]; then
     status="REAL REGRESSION (P=$perl_errs vs R=$rust_errs)"
