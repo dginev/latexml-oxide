@@ -240,6 +240,14 @@ all use this for the same reason). 0811.3583 R=1→0; tests 1112/0/0.
 
 **Cumulative real-regression rate: 0/8300** post-fix.
 
+**Post-fix verification 1k random sample (2026-05-02 evening, ad9e0)**:
+985 OK, 11 ERR, 4 NOTEX. Of 11 ERRs: 10 BOTH CLEAN (xargs
+false-positives), 1 OUT-OF-SCOPE (P=R=29 on `0704.2511`). **0 new
+real regressions** — fix `317655f01` did not introduce regressions.
+
+**Cumulative real-regression rate: 0/9300** across all post-Round-18
+random + modern + post-fix samples.
+
 **Wider 92-paper canvas conversion_error sweep (2026-05-01 evening):**
 Refreshed all 92 `conversion_error` papers from the 20k canvas. R-distribution:
 43 R=0, 25 R=1, 18 R≥2.
