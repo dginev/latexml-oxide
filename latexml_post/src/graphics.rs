@@ -859,30 +859,35 @@ impl Processor for Graphics {
         options: String,
       },
       Convert {
-        idx:          usize,
-        source:       String,
-        options:      String,
-        page:         Option<u32>,
-        rel_dest:     String,
-        abs_dest_str: String,
-        /// `Some((rel_svg, abs_svg_str))` when the worker should
-        /// first attempt the inkscape-SVG path and only fall back
-        /// to `convert` on failure. `None` means the classic
-        /// raster-only path.
-        svg_paths:    Option<(String, String)>,
+        idx:     usize,
+        options: String,
+        job_id:  usize,
       },
     }
+    struct ConvertJob {
+      job_id:       usize,
+      source:       String,
+      page:         Option<u32>,
+      rel_dest:     String,
+      abs_dest_str: String,
+      /// `Some((rel_svg, abs_svg_str))` when the worker should
+      /// first attempt the inkscape-SVG path and only fall back
+      /// to `convert` on failure. `None` means the classic
+      /// raster-only path.
+      svg_paths:    Option<(String, String)>,
+    }
     struct ConvertOutcome {
-      idx:      usize,
+      job_id:   usize,
       /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
       imagesrc: Option<String>,
       /// Raw (pre-transform) dimensions read from whichever file we ended up with.
       raw_dims: Option<(u32, u32)>,
-      /// Options passed to transforms (captured once to avoid a DOM read off-thread).
-      options:  String,
     }
 
     let mut plans: Vec<Plan> = Vec::with_capacity(n_to_process);
+    let mut convert_jobs: Vec<ConvertJob> = Vec::new();
+    let mut convert_job_ids: HashMap<(String, Option<u32>, String), usize> = HashMap::new();
+    let mut convert_source_counts: HashMap<String, u32> = HashMap::new();
     for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);
@@ -907,45 +912,55 @@ impl Processor for Graphics {
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
       if needs_conversion || has_page {
-        let dest_name = if has_page {
-          resource_counter += 1;
-          format!("x{}", resource_counter)
+        let job_key = (source.clone(), page, options.clone());
+        let job_id = if let Some(&job_id) = convert_job_ids.get(&job_key) {
+          job_id
         } else {
-          Path::new(&source)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("image")
-            .to_string()
+          let prior_source_jobs = convert_source_counts.get(&source).copied().unwrap_or(0);
+          let dest_name = if has_page || prior_source_jobs > 0 {
+            resource_counter += 1;
+            format!("x{}", resource_counter)
+          } else {
+            Path::new(&source)
+              .file_stem()
+              .and_then(|s| s.to_str())
+              .unwrap_or("image")
+              .to_string()
+          };
+          convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
+          // Vector-SVG path: opt-in for small PDFs only. We prepare an
+          // alternate `.svg` destination path alongside the normal raster
+          // destination so the worker can try inkscape first, then fall
+          // back. The file-size heuristic gates this — see
+          // `should_try_svg_path`.
+          let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
+          let rel_dest = format!("{}.{}", dest_name, dest_type);
+          let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
+          if let Some(parent) = abs_dest.parent() {
+            std::fs::create_dir_all(parent).ok();
+          }
+          let abs_dest_str = abs_dest.to_string_lossy().to_string();
+          let svg_paths = if try_svg {
+            let rel_svg = format!("{}.svg", dest_name);
+            let abs_svg = PathBuf::from(&dest_dir).join(&rel_svg);
+            let abs_svg_str = abs_svg.to_string_lossy().to_string();
+            Some((rel_svg, abs_svg_str))
+          } else {
+            None
+          };
+          let job_id = convert_jobs.len();
+          convert_jobs.push(ConvertJob {
+            job_id,
+            source: source.clone(),
+            page,
+            rel_dest,
+            abs_dest_str,
+            svg_paths,
+          });
+          convert_job_ids.insert(job_key, job_id);
+          job_id
         };
-        // Vector-SVG path: opt-in for small PDFs only. We prepare an
-        // alternate `.svg` destination path alongside the normal raster
-        // destination so the worker can try inkscape first, then fall
-        // back. The file-size heuristic gates this — see
-        // `should_try_svg_path`.
-        let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
-        let rel_dest = format!("{}.{}", dest_name, dest_type);
-        let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
-        if let Some(parent) = abs_dest.parent() {
-          std::fs::create_dir_all(parent).ok();
-        }
-        let abs_dest_str = abs_dest.to_string_lossy().to_string();
-        let svg_paths = if try_svg {
-          let rel_svg = format!("{}.svg", dest_name);
-          let abs_svg = PathBuf::from(&dest_dir).join(&rel_svg);
-          let abs_svg_str = abs_svg.to_string_lossy().to_string();
-          Some((rel_svg, abs_svg_str))
-        } else {
-          None
-        };
-        plans.push(Plan::Convert {
-          idx,
-          source,
-          options,
-          page,
-          rel_dest,
-          abs_dest_str,
-          svg_paths,
-        });
+        plans.push(Plan::Convert { idx, options, job_id });
       } else {
         plans.push(Plan::Copy { idx, source, options });
       }
@@ -956,10 +971,7 @@ impl Processor for Graphics {
     // is single-threaded per invocation, so the ceiling is useful CPU
     // parallelism — capped at a reasonable limit to avoid fork/memory
     // storms with many-image papers.
-    let convert_count = plans
-      .iter()
-      .filter(|p| matches!(p, Plan::Convert { .. }))
-      .count();
+    let convert_count = convert_jobs.len();
     let worker_cap = std::thread::available_parallelism()
       .map(|n| n.get())
       .unwrap_or(4)
@@ -973,12 +985,10 @@ impl Processor for Graphics {
       use std::sync::atomic::{AtomicUsize, Ordering};
       let next = AtomicUsize::new(0);
       let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
-      // Collect just the Convert entries into a fresh Vec so worker index
-      // access is O(1).
-      let jobs: Vec<&Plan> = plans
-        .iter()
-        .filter(|p| matches!(p, Plan::Convert { .. }))
-        .collect();
+      // Unique conversion jobs only. Repeated nodes with the same
+      // source/page/options share one subprocess result, while distinct
+      // options keep separate outputs.
+      let jobs: Vec<&ConvertJob> = convert_jobs.iter().collect();
       std::thread::scope(|s| {
         for _ in 0..n_workers {
           s.spawn(|| {
@@ -987,28 +997,23 @@ impl Processor for Graphics {
               if i >= jobs.len() {
                 break;
               }
-              let Plan::Convert {
-                idx,
+              let ConvertJob {
+                job_id,
                 source,
-                options,
                 page,
                 rel_dest,
                 abs_dest_str,
                 svg_paths,
-              } = jobs[i]
-              else {
-                unreachable!()
-              };
+              } = jobs[i];
               // Try vector-SVG path first if requested for this source.
               // On success, pick dimensions from the SVG viewBox.
               let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
                 if Self::convert_image_svg(source, abs_svg, *page) {
                   let raw_dims = Self::read_svg_dimensions(abs_svg);
                   Some(ConvertOutcome {
-                    idx: *idx,
+                    job_id: *job_id,
                     imagesrc: Some(rel_svg.clone()),
                     raw_dims,
-                    options: options.clone(),
                   })
                 } else {
                   log::warn!(
@@ -1024,26 +1029,23 @@ impl Processor for Graphics {
                 o
               } else if Self::convert_image(source, abs_dest_str, dpi, *page) {
                 ConvertOutcome {
-                  idx:      *idx,
+                  job_id:   *job_id,
                   imagesrc: Some(rel_dest.clone()),
                   raw_dims: Self::read_image_dimensions(abs_dest_str),
-                  options:  options.clone(),
                 }
               } else {
                 log::warn!("Graphics: Failed to convert {} to {}", source, abs_dest_str);
                 if let Some(rel) = Self::copy_to_destination(source, source_dir_ref, dest_dir_ref) {
                   ConvertOutcome {
-                    idx:      *idx,
+                    job_id:   *job_id,
                     imagesrc: Some(rel),
                     raw_dims: Self::read_image_dimensions(source),
-                    options:  options.clone(),
                   }
                 } else {
                   ConvertOutcome {
-                    idx:      *idx,
+                    job_id:   *job_id,
                     imagesrc: None,
                     raw_dims: None,
-                    options:  options.clone(),
                   }
                 }
               };
@@ -1053,9 +1055,10 @@ impl Processor for Graphics {
         }
       });
       outcomes = out.into_inner().unwrap();
-      outcomes.sort_by_key(|o| o.idx);
+      outcomes.sort_by_key(|o| o.job_id);
     }
-    let mut outcome_iter = outcomes.into_iter().peekable();
+    let outcomes_by_job: HashMap<usize, ConvertOutcome> =
+      outcomes.into_iter().map(|o| (o.job_id, o)).collect();
 
     // Phase 3: serial DOM mutations. Preserves original node order.
     let apply_transforms =
@@ -1090,17 +1093,12 @@ impl Processor for Graphics {
             Self::set_graphic_src(&mut node_mut, &rel_str, w, h);
           }
         },
-        Plan::Convert { idx, .. } => {
-          // Pull the matching outcome. Outcomes are sorted by idx and each
-          // Convert plan has a unique idx, so peek-and-consume is correct.
-          if let Some(out) = outcome_iter.peek() {
-            if out.idx == *idx {
-              let out = outcome_iter.next().unwrap();
-              let mut node_mut = nodes[*idx].clone();
-              if let Some(imagesrc) = out.imagesrc {
-                let (w, h) = apply_transforms(&out.options, out.raw_dims);
-                Self::set_graphic_src(&mut node_mut, &imagesrc, w, h);
-              }
+        Plan::Convert { idx, options, job_id } => {
+          if let Some(out) = outcomes_by_job.get(job_id) {
+            let mut node_mut = nodes[*idx].clone();
+            if let Some(imagesrc) = &out.imagesrc {
+              let (w, h) = apply_transforms(options, out.raw_dims);
+              Self::set_graphic_src(&mut node_mut, imagesrc, w, h);
             }
           }
         },
@@ -1119,6 +1117,29 @@ impl Processor for Graphics {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  struct EnvGuard {
+    key: String,
+    old: Option<String>,
+  }
+
+  impl EnvGuard {
+    fn set(key: &str, value: &str) -> Self {
+      let old = std::env::var(key).ok();
+      std::env::set_var(key, value);
+      Self { key: key.to_string(), old }
+    }
+  }
+
+  impl Drop for EnvGuard {
+    fn drop(&mut self) {
+      if let Some(old) = &self.old {
+        std::env::set_var(&self.key, old);
+      } else {
+        std::env::remove_var(&self.key);
+      }
+    }
+  }
 
   /// `run_with_timeout` kills the child and returns `None` when the
   /// process exceeds the deadline. Uses `sleep` as a stand-in for any
@@ -1285,5 +1306,59 @@ endobj
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (124, 99));
     std::fs::remove_file(&tmp).ok();
+  }
+
+  #[test]
+  #[cfg(unix)]
+  fn process_coalesces_only_matching_conversion_options() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+    use std::os::unix::fs::PermissionsExt;
+
+    let tmp = std::env::temp_dir().join(format!("latexml_graphics_dedupe_{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let source = tmp.join("plot.ai");
+    std::fs::write(&source, "%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n").unwrap();
+    let log = tmp.join("convert.log");
+    let fake_convert = tmp.join("convert");
+    std::fs::write(
+      &fake_convert,
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\nexit 0\n",
+    )
+    .unwrap();
+    let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&fake_convert, perms).unwrap();
+
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    let _path_guard = EnvGuard::set("PATH", &format!("{}:{}", tmp.display(), old_path));
+    let _log_guard = EnvGuard::set("LATEXML_FAKE_CONVERT_LOG", log.to_str().unwrap());
+    let xml = format!(
+      r#"<?xml version="1.0"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
+  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
+  <graphics graphic="plot.ai" candidates="{0}" options="width=40pt"/>
+  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
+</document>"#,
+      source.display()
+    );
+    let mut doc_opts = PostDocumentOptions::default();
+    doc_opts.destination = Some(tmp.join("out.html").display().to_string());
+    doc_opts.source_directory = Some(tmp.display().to_string());
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true);
+    let nodes = graphics.to_process(&doc);
+    assert_eq!(nodes.len(), 3);
+
+    let docs = graphics.process(doc, nodes).unwrap();
+    let out = docs[0].to_xml_string();
+    let log_lines = std::fs::read_to_string(&log).unwrap().lines().count();
+    assert_eq!(
+      log_lines, 2,
+      "matching source/page/options should coalesce, but different options need separate conversions"
+    );
+    assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
+    assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
+
+    std::fs::remove_dir_all(&tmp).ok();
   }
 }
