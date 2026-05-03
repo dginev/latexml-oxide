@@ -48,6 +48,18 @@ isolated edge cases.
 `0901.0054` P>=101 vs R=15 capped), **0 REAL_REGRESSION**. The
 all-clean trajectory holds at 500-paper scale.
 
+**2026-05-03 Stage 1 (10k benchmark_canvas) cleared the gate**
+(`~/data/stage01_100k_html/`, release cortex_worker, 16 workers).
+**9965 [ok] / 34 [conversion_error] / 1 [error] = 99.65% raw OK.**
+Parity-triage of all 35 non-OK papers via `parity_check.sh` against
+current Perl LaTeXML: 1 BOTH CLEAN, 29 OUT-OF-SCOPE (Perl=Rust both
+>0), 4 OUT-OF-SCOPE? (Perl-capped at MAX_ERRORS=101), 1
+PERL_REGRESSION (`hep-th0005268` R=21 vs P=26),
+**0 REAL_REGRESSION**. Per
+[staged 100k protocol](feedback_staged_100k_protocol.md), the zero-
+regression gate is cleared. Stage 2 (20k cumulative) is unblocked.
+Triage TSV at `~/data/stage01_non_ok_parity.tsv`.
+
 **Round-19 verification**: re-tested all 29 papers from the original
 round-19 REAL_REGRESSION list; ALL now BOTH CLEAN or OUT-OF-SCOPE
 (no longer regressions).
