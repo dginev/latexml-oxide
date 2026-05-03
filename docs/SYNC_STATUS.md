@@ -207,7 +207,30 @@ Triage TSV at `~/data/stage08_non_ok_parity.tsv`. Cumulative
 through Stage 8: **79,812 OK / 80,000 = 99.77%** raw, **0
 unfixed REAL_REGRESSION across all 80k papers**.
 
-Stage 9 (90k cumulative) is unblocked.
+**2026-05-03 Stage 9 (10k slice [80000, 90000), cumulative=90k)
+cleared the gate** — `~/data/stage09_100k_html/`. **9985 [ok] /
+13 [conversion_error] / 1 [error] / 1 [timeout] = 99.85% raw OK**.
+15 errors → 5 PERL_REGRESSION (0808.3583, 0809.4243, 0810.4392,
+0811.1175, 0812.3908) + 1 PERL_CAPPED (0901.0054, P>=101 vs R=15) +
+2 BOTH-CLEAN-on-retry (0903.3183, 0903.3465 — transient
+cortex_worker SIGABRT/timeout under 16-worker contention) +
+7 OUT-OF-SCOPE + **0 REAL_REGRESSION**.
+
+Cumulative through Stage 9: **89,797 OK / 90,000 = 99.78%** raw,
+**0 unfixed REAL_REGRESSION across all 90k papers**.
+
+Concurrent CI fix: `xcolors_test` (65_graphics) had been failing
+since commit 39c7ad8b70 (xcolor: dvipsnames sRGB override) because
+that override silently changed many dvipsnames colors away from
+xcolor's naive `R=(1-c)(1-k)` math. After auditing pink and other
+near-tristimulus colors, the dvipsnames sRGB table was reverted in
+commit 66d61be6b7 (the c!p extrapolation fix is kept). xcolor's
+internal model is naive cmyk→rgb, and that's what most modern PDF
+viewers do; the Acrobat-SWOP override traded one set of "looks
+wrong" surprises for another. Reverting restores library-internal
+consistency.
+
+Stage 10 (final, 100k cumulative) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
