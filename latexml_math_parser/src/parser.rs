@@ -272,7 +272,16 @@ impl MathParser {
       crate::data::set_math_idstore(document.get_idstore_clone());
       for math in xmath_nodes {
         let math_ref = math.clone();
+        // Per-formula timing feeds the math_parse_buckets histogram in
+        // telemetry. ~20 ns Instant cost per formula is negligible vs Marpa.
+        // See docs/TELEMETRY.md.
+        let t0 = std::time::Instant::now();
         self.parse(math, document)?;
+        let elapsed_us = t0.elapsed().as_micros() as u64;
+        latexml_core::telemetry::record_math_parse(
+          elapsed_us,
+          self.last_parsetrees_count as u32,
+        );
         // Store parse tree count as attribute on the Math element for diagnostics.
         // Find the ancestor ltx:Math of this XMath node and set _parsetrees.
         if self.last_parsetrees_count > 0 {
