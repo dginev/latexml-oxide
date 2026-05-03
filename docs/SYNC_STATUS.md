@@ -31,7 +31,7 @@ Final classification after branch `claude-round-19`:
 | BOTH CLEAN | many | both Rust and Perl now produce 0 errors |
 | OUT-OF-SCOPE | many | Perl=Rust both >0; not Rust-only regressions |
 | PERL_REGRESSION | many | Rust beats Perl (40+ across full sweep) |
-| **REAL_REGRESSION** | **2** | REG-3 (0909.5169) fixed; REG-1 + REG-2 remain |
+| **REAL_REGRESSION** | **1** | REG-2 + REG-3 fixed; only REG-1 remains (broken-input cascade noise) |
 
 **Latest random-sample validation (150 papers, 100 ok + 50 failed)**:
 108 BOTH CLEAN, 0 REAL_REGRESSION, 12 Rust-beats-Perl wins, no
@@ -144,7 +144,22 @@ the digestion semantics.
 
 ---
 
-### REG-2: math-ph0501074 — `\lefteqn{pmatrix}` in `\begin{align}` (R=15, P=0)
+### REG-2: math-ph0501074 — FIXED `86b5e9a764` (2026-05-02 evening)
+
+R=15→0 BOTH CLEAN. Root cause: Rust's `read_next_conditional`
+(gullet.rs:1191) was calling `read_token`, which includes the
+"alignment-template trigger" (`align_group_count==0` + `&` →
+`handle_template`). Perl's `skipConditionalBody` reads at lower
+level, bypassing this trigger during `\else`-skip. When `\ifx.#1.\else`
+skipped past `\begin{pmatrix} 1 & 2 \end{pmatrix}` looking for
+`\else`, the `&` inside pmatrix was mistakenly handled as the OUTER
+align's column-end, mutating alignment state and cascading into 10
+mode-frame errors. Fix: switch `read_next_conditional` to use
+`read_internal_token` directly with manual BEGIN/END tracking,
+matching Perl byte-for-byte. See wisdom memory
+`wisdom_lefteqn_pmatrix_align_leak.md` for the deep bisect path.
+
+### REG-2 (HISTORICAL): math-ph0501074 — `\lefteqn{pmatrix}` in `\begin{align}` (R=15, P=0)
 
 **2026-05-02 deeper investigation**: refined to a triple-condition trigger
 `\nonumber + \lefteqn + \pmatrix`. Bisection via instrumented
