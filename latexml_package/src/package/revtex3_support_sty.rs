@@ -95,4 +95,14 @@ LoadDefinitions!({
     },
     properties => { ref_step_id("equation") },
     capture_body => true);
+
+  // RevTeX3 decimal-alignment macros for tabular columns.
+  //   \setdec 0.000   sets the format (read up to space)
+  //   \dec    1.234   aligns the value
+  // Used by ~12 cluster papers (nucl-th0002021 etc.) under
+  // \documentstyle[prc,aps]{revtex}. Perl LaTeXML's revtex3_support
+  // also lacks these — surpass-Perl stub. Decimal alignment is
+  // irrelevant for HTML; pass the value through, drop the format spec.
+  RawTeX!("\\def\\setdec #1 {}");
+  RawTeX!("\\def\\dec #1 {#1}");
 });
