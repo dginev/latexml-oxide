@@ -310,16 +310,15 @@ macro_rules! Error {
         $crate::generate_message!($message, $($details),*));
     }
     let max_from_state = $crate::state::lookup_int("MAX_ERRORS");
-    // Default to 100 in test mode, 10000 for real papers.
-    // Perl also defaults to 100, but Perl's error recovery is more forgiving —
-    // many things that are "errors" in our code are handled silently in Perl.
-    // Using 10000 allows most papers to complete and produce partial output.
+    // Match Perl LaTeXML default of 100 errors before Fatal('too_many_errors').
+    // Past 100 errors a paper has already failed comprehension; continuing
+    // produces noise without information. Override via state for tests
+    // or specific bindings (e.g. tikz_sty raises to 1000, dump-build raises
+    // to 1_000_000).
     let maxerrors = if max_from_state > 0 {
       max_from_state as usize
     } else {
-      // Check if we're in test mode (MAX_ERRORS explicitly set to 100 by test framework)
-      // vs real conversion (no MAX_ERRORS set, use generous default)
-      10000
+      100
     };
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
