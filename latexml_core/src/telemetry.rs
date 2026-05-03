@@ -344,6 +344,9 @@ fn write_json_string(out: &mut String, s: &str) {
 impl Telemetry {
   /// Serialize as a single-line JSON object (suitable for JSONL).
   /// Hand-written to avoid pulling serde into latexml_core.
+  // The `field!` macro always writes `first = false` after emitting; on the
+  // very last field that final write is naturally dead. Silence the warning.
+  #[allow(unused_assignments)]
   pub fn to_json_line(&self) -> String {
     use std::fmt::Write;
     let mut s = String::with_capacity(1024);
