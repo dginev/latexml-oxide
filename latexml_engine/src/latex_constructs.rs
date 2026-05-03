@@ -3142,11 +3142,14 @@ LoadDefinitions!({
   // dispatch via `findnodes('ancestor::ltx:Math')` in the body sub.
   // Rust template `?#isMath(...)(...)` is the equivalent gate (same
   // pattern used by `\newline`, `\thinspace`, etc.) — ported 2026-05-01.
-  // Known remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
-  // Task 3 / 0901.2408): mode is "text" here vs Perl's
-  // 'restricted_horizontal' — flipping in isolation doesn't fix the
-  // `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper digester
-  // gating needed.
+  // The earlier note here claimed a Rust-only `$$`-in-`\emph{}` math
+  // leak; verified 2026-05-03 it is SHARED-FAILURE with Perl, not a
+  // Rust-only divergence. Both engines treat `$$` inside
+  // `restricted_horizontal` as two inline-math toggles (per the
+  // `BOUND_MODE =~ /vertical$/` gate in `\lx@dollar@default`). See
+  // SYNC_STATUS.md Gate 2.A. mode "text" here is fine; flipping to
+  // "restricted_horizontal" is a stylistic difference but does not
+  // change the parity-relevant behavior.
   DefConstructor!("\\emph{}",
     "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
     mode => "text",

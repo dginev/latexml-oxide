@@ -339,37 +339,38 @@ following gates must clear in order:
   through the binding registry the same way `\usepackage` does.
 
 ### Gate 2: `_/^` cluster sub-causes (130 papers, the bulk)
-- [x] **Sub-cause A — `$$math$$` inside `\emph{...}` does not enter
-  display math** (verified 2026-05-03 via 6-line reproducer on
-  0705.0102):
+- [x] **Sub-cause A — `$$math$$` inside `\emph{...}` is SHARED-FAILURE
+  with Perl, NOT a Rust regression** (verified 2026-05-03):
   ```latex
   \documentclass{article}
   \begin{document}
   \emph{$$\bigcap_{n}\Sigma^{n}=0.$$}
   \end{document}
   ```
-  Produces `Error:unexpected:_` and `Error:unexpected:^` because the
-  digester treats the `\emph` body in text mode without honoring
-  the inner `$$ ... $$` mode shift. Perl produces 0 errors on the
-  same paper. Existing comment in
-  `latex_constructs.rs:3145-3149` already flags it: "Known
-  remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
-  Task 3 / 0901.2408): mode is 'text' here vs Perl's
-  'restricted_horizontal' — flipping in isolation doesn't fix the
-  `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper
-  digester gating needed." Witnesses: 0705.0102, plus most of the
-  ~57 papers that emit interleaved `_/^` + `\mathbb`/`\mathcal`
-  out-of-math warnings (signature: `\df`, `\rem`, `\setup`-style
-  `\newcommand{\foo}[1]{\begin{thmenv}\emph{#1}}` user pattern).
-- [ ] Implement deeper digester gating so `\emph{}`'s text-mode
-  scope still permits `$$`-mode entry (likely fix at digester
-  body-processing path, not at `DefConstructor!`).
+  Produces `Error:unexpected:_/^` in BOTH engines. Root cause is
+  shared logic in `\lx@dollar@default` (Perl
+  `TeX_Math.pool.ltxml:43-67`, Rust `tex_math.rs:424-457`):
+  display-math `$$` only fires when `BOUND_MODE` ends with
+  "vertical". Inside `\emph{...}`, BOUND_MODE is
+  `restricted_horizontal`, so `$$` falls through to inline
+  math — first `$` enters inline math, second `$` immediately
+  exits, leaving `_/^` in text mode → error. Sample parity
+  confirmed: 0705.0102 (R=36 vs P=36 with TIMEOUT_SECS=120;
+  parity-check 90s timeout falsely flagged REAL_REGRESSION via
+  partial Perl count 30); 0706.2347 R=P=6, 0707.0035 R=P=12,
+  0710.3749 R=P=10, 0801.0102 R=P=22 — all OUT-OF-SCOPE.
+  Surpassing Perl here would mean making `$$` inside `\emph`
+  enter display math even when Perl doesn't — a deliberate
+  Rust-beats-Perl divergence, not a parity fix. Deferred to
+  long-tail Phase C if business-justified.
 - [ ] Add digester instrumentation: log the macro that emitted each
   `_`/`^` token whose source is "Anonymous String" (no source line).
   Reveals additional sub-causes: (b) revert-token serializer leak,
   (c) user-class macro shadow.
 - [ ] Bisect 5 representative papers with smallest cortex.log to
-  confirm the sub-cause distribution.
+  confirm sub-cause distribution. Filter Perl-timeout false
+  positives by re-running with TIMEOUT_SECS=120+ before
+  classifying as REAL_REGRESSION.
 
 ### Gate 3: `endproof` (9 papers)
 - [ ] IEEEtran `\endproof` outside `\proof` env: stub or
