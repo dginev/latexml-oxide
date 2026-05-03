@@ -679,9 +679,8 @@ use latexml::post::PostOptions;
 
 /// Delegate post-processing to the library API.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
-  // Coarse PostScan attribution covering the whole post-processing pipeline.
-  // Sub-phases (Graphics, MathmlPres/Cont, Xslt) refined in a follow-up commit.
-  let _g = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::PostScan);
+  // Per-phase telemetry now lives inside latexml::post::run_post_processing
+  // (PostXmlParse, PostScan, Bibliography, Crossref, Graphics, Split, Xslt).
   latexml::post::run_post_processing(xml, opts)
 }
 
