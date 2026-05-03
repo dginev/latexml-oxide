@@ -837,10 +837,32 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
+  // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
+  // archives that contain a PDF mis-named with a `.tex` extension). Perl
+  // Pack.pm doesn't probe for this, but treating a PDF as TeX produces
+  // thousands of spurious parse errors, so emit the Perl-canonical
+  // `Fatal:invalid:not_tex_source` (status 3) and bail.
+  fn is_pdf_magic(path: &Path) -> bool {
+    let mut buf = [0u8; 5];
+    if let Ok(mut f) = std::fs::File::open(path) {
+      use std::io::Read;
+      if f.read(&mut buf).is_ok_and(|n| n == 5) {
+        return &buf == b"%PDF-";
+      }
+    }
+    false
+  }
+
   let mut tex_files: Vec<PathBuf> = Vec::new();
   collect_tex_files(dir, &mut tex_files, false);
+  let candidates_before_pdf_filter = tex_files.len();
+  tex_files.retain(|p| !is_pdf_magic(p));
+  if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
+    return Err("Fatal:invalid:not_tex_source PDF magic detected in source file (no TeX-format files in archive)".into());
+  }
   if tex_files.is_empty() {
     collect_tex_files(dir, &mut tex_files, true);
+    tex_files.retain(|p| !is_pdf_magic(p));
   }
   if tex_files.is_empty() {
     return Err("No .tex files found in directory".into());
