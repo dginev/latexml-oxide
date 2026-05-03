@@ -121,6 +121,10 @@ if (( STAGE > 0 )); then
 fi
 
 RESULTS_TSV="$OUTPUT_DIR/results.tsv"
+# Per-job telemetry JSONL accumulator (cortex_worker writes telemetry.json
+# inside each output ZIP; we extract & append here). End of run: gzip.
+# See docs/TELEMETRY.md.
+TELEMETRY_JSONL="$OUTPUT_DIR/telemetry.jsonl"
 
 # ─── Validate environment ────────────────────────────────────────────────────
 
@@ -412,6 +416,16 @@ convert_one() {
   case "$category" in
     ok|conversion_error|conversion_fatal)
       mv -f "$output_tmp" "$output_zip"
+      # Extract telemetry.json (single-line JSON) from the output ZIP
+      # and append to the corpus-wide JSONL accumulator. Failure is
+      # non-fatal — older binaries won't have the member.
+      local telem_line
+      if telem_line=$(unzip -p "$output_zip" telemetry.json 2>/dev/null) && [[ -n "$telem_line" ]]; then
+        (
+          flock 201
+          printf '%s\n' "$telem_line" >> "$TELEMETRY_JSONL"
+        ) 201>"${TELEMETRY_JSONL}.lock"
+      fi
       ;;
     *)
       rm -f "$output_tmp"
@@ -441,7 +455,7 @@ convert_one() {
 }
 
 export -f convert_one
-export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS
+export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
@@ -485,6 +499,14 @@ rm -f "$RUN_IDS"
 
 RUN_END=$(date +%s)
 RUN_DURATION=$(( RUN_END - RUN_START ))
+
+# Compress the per-job telemetry JSONL accumulator. Removes uncompressed
+# original. tools/perf_phase_summary.py reads the .gz directly.
+if [[ -s "$TELEMETRY_JSONL" ]]; then
+  gzip -f "$TELEMETRY_JSONL" 2>/dev/null && \
+    echo "Telemetry: $(zcat "${TELEMETRY_JSONL}.gz" | wc -l) records → ${TELEMETRY_JSONL}.gz"
+fi
+rm -f "${TELEMETRY_JSONL}.lock"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 
