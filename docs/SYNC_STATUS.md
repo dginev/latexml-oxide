@@ -42,6 +42,12 @@ PERL_REGRESSION (Rust beats Perl), 0 REAL_REGRESSION. Confirms the
 canvas is essentially clean post-fixes; remaining REG-1 + REG-2 are
 isolated edge cases.
 
+**2026-05-02 late-evening 500-paper random canvas sample
+(`/tmp/sample500.tsv`)**: 497 BOTH CLEAN, 3 PERL_REGRESSION
+(`cond-mat0004132` P=14 vs R=0; `astro-ph0407266` P=1 vs R=0;
+`0901.0054` P>=101 vs R=15 capped), **0 REAL_REGRESSION**. The
+all-clean trajectory holds at 500-paper scale.
+
 **Round-19 verification**: re-tested all 29 papers from the original
 round-19 REAL_REGRESSION list; ALL now BOTH CLEAN or OUT-OF-SCOPE
 (no longer regressions).
