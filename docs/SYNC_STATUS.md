@@ -159,95 +159,12 @@ mode-frame errors. Fix: switch `read_next_conditional` to use
 matching Perl byte-for-byte. See wisdom memory
 `wisdom_lefteqn_pmatrix_align_leak.md` for the deep bisect path.
 
-### REG-2 (HISTORICAL): math-ph0501074 — `\lefteqn{pmatrix}` in `\begin{align}` (R=15, P=0)
-
-**2026-05-02 deeper investigation**: refined to a triple-condition trigger
-`\nonumber + \lefteqn + \pmatrix`. Bisection via instrumented
-`\if@in@firstcolumn` (latex_constructs.rs:5381) shows:
-- Without `\nonumber`: alignment state at `\lefteqn` expansion is
-  in_row=false/col_n=0 → firstcol=TRUE → `\multicolumn{3}{l}{...}`
-  branch (clean).
-- With `\nonumber`: state is in_row=true/col_n=1 → firstcol=FALSE →
-  `\rlap{\lx@begin@inline@math …}` branch (broken with pmatrix).
-
-Both engines hit the same `\if@in@firstcolumn=FALSE` state when
-`\nonumber` precedes `\lefteqn` (verified via Perl `--debug=halign`).
-So the divergence is downstream — in how Rust digests
-`\rlap{\hbox{\lx@begin@inline@math … pmatrix … \lx@end@inline@math}}`.
-Direct rlap-form test: BOTH engines emit 2 errors. So the actual
-divergence is the additional 8 errors Rust emits when this rlap-form
-is reached via `\lefteqn`'s expansion path (vs Perl's clean handling).
-
-Working hypothesis: pmatrix's body capture inside the inline-math
-context interacts with `enter_horizontal()` from
-`\lx@begin@inline@math`'s before_digest, popping a frame that Perl
-keeps. Memory: `wisdom_lefteqn_pmatrix_align_leak.md` has the full
-trace and next-step plan. Difficulty: hard, deferred.
-
-**Witness paper**: `/home/deyan/data/100k_noproblem_sandbox/arxmliv/0501/math-ph0501074/math-ph0501074.zip`
-(file `Claeys-Kuijlaars.tex`, line 1832).
-
-**Bisected min repro** (memory: `wisdom_lefteqn_pmatrix_align_leak.md`):
-
-```latex
-\documentclass{article}
-\usepackage{amsmath}
-\begin{document}
-\begin{align} \nonumber
-    \lefteqn{
-    \begin{pmatrix} 1 & 2 \end{pmatrix} A^{-1}(y)} \\
-    & = B
-\end{align}
-\end{document}
-```
-
-Triggers 10 errors; without `pmatrix` (e.g. `\lefteqn{\begin{array}
-{c}1\end{array}}`) it's clean. So **pmatrix specifically** inside
-`\lefteqn` inside `\begin{align}` leaks the `\lx@begin@inline@math`
-mode-switch frame.
-
-**Plan of attack:**
-
-1. **Inspect Rust's pmatrix expansion** — `\pmatrix` in
-   `latexml_package/src/package/amsmath_sty.rs:287` expands to
-   `\lx@ams@matrix{name=pmatrix,…,left=\lx@left(,right=\lx@right)}`.
-   Trace `\lx@ams@matrix` and see if/when it pushes/pops alignment
-   frames inside an existing math context.
-2. **Inspect Rust's `\lefteqn`** —
-   `latexml_engine/src/latex_constructs.rs:5396` matches Perl exactly:
-   `\rlap{\lx@begin@inline@math\displaystyle #1\lx@end@inline@math}`.
-   The bug is NOT in `\lefteqn` itself.
-3. **Inspect `\rlap`** — find the Rust binding (likely in
-   `tex_box.rs` or similar) and verify it doesn't open a
-   stack-frame that pmatrix's `\\` row-sep would close in the
-   wrong order.
-4. **Trace with `LXML_TRACE_BOUND_MODE=1`** on the min repro to see
-   the exact sequence of begin_mode_opt calls and which `}` finally
-   raises egroup.
-5. **Compare to Perl** — Perl handles this paper cleanly. Diff
-   how Perl's `\lx@ams@matrix` (in `LaTeXML/Engine/amsmath.sty.ltxml`
-   or wherever) handles `\\` and column boundaries when the
-   surrounding context is `\rlap{\lx@begin@inline@math …
-   \lx@end@inline@math}`.
-6. **Fix candidates**:
-   * a. **Wrap `\lefteqn` body in extra group**: change Rust's
-        `\lefteqn{#1}` expansion to wrap `#1` in `{ }` so pmatrix's
-        `\\` is scoped to that group, preventing escape to the
-        outer align row-sep. Test that this doesn't visually change
-        the output.
-   * b. **Make pmatrix's `\\` Let-bind only inside its own
-        environment** — verify `\lx@ams@matrix`'s setup re-Lets
-        `\\` to `\lx@alignment@newline` in the right scope and pops
-        it on `\end{pmatrix}`.
-   * c. **Diagnose mode-frame leak**: the trace will reveal which
-        `\lx@begin@inline@math` frame isn't getting popped — fix
-        the symmetry there.
-7. **Verify**: math-ph0501074 R=15 → R=0 (== Perl) BOTH CLEAN.
-   Run full test suite + round-19 sweep for regressions.
-
-**Difficulty**: Hard — requires understanding the pmatrix /
-inline-math / align frame interaction. Each component is correct in
-isolation; the bug is in the cross-component composition.
+_REG-2 historical investigation log moved to commit history (86b5e9a764)
+and `wisdom_lefteqn_pmatrix_align_leak.md`. Root cause was NOT in the
+pmatrix/inline-math interaction (the original hypothesis); it was in
+`read_next_conditional` calling `read_token` and thus firing the
+alignment-template trigger during `\else`-skip. See
+`wisdom_skip_no_align_trigger.md` for the generic pattern._
 
 ---
 
