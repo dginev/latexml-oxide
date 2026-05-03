@@ -37,6 +37,15 @@ Final classification after branch `claude-round-19`:
 108 BOTH CLEAN, 0 REAL_REGRESSION, 12 Rust-beats-Perl wins, no
 regressions on previously-clean papers.
 
+**2026-05-02 100-paper random canvas sample**: 99 BOTH CLEAN, 1
+PERL_REGRESSION (Rust beats Perl), 0 REAL_REGRESSION. Confirms the
+canvas is essentially clean post-fixes; remaining REG-1 + REG-2 are
+isolated edge cases.
+
+**Round-19 verification**: re-tested all 29 papers from the original
+round-19 REAL_REGRESSION list; ALL now BOTH CLEAN or OUT-OF-SCOPE
+(no longer regressions).
+
 `cargo test --tests` 1124/0/0.
 
 **REG-3 root cause (fixed)**: `digest_alignment_column`'s OUTER loop
