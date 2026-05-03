@@ -76,20 +76,36 @@ master..claude-round-19`.
 already in the pre-fix 226-paper list**: zero truly new failures.
 56 pre-fix non-OK papers recovered. Phase A Gate 0 cleared.
 
-Residual breakdown (per error pattern, paper-count, sampled across
-the 170 non-OK):
+Residual breakdown (measured 2026-05-03 across all 226 unique non-OK
+papers from the 10 stages, bucketed by primary `Error:<class>:<token>`
+in the conversion log):
 
-| Error pattern | Papers | Cluster | Status |
+**Cluster 1: papers with `Error:unexpected:` (≈119 papers)**
+
+| Token | Papers | Cluster | Status |
 |---|---:|---|---|
-| `Error:unexpected:_` / `:^` (caret/script) | 78 | Sub-cause A `$$math$$` in horizontal mode | SHARED-FAILURE; Phase C |
-| `Error:expected:<box>` | 26 | Math constructor missing arg | mostly cascade noise; Phase C |
-| `Error:undefined:\@` | 19 | `at_letter` scope on `\input` boundary | Phase B #2 |
-| `Error:expected:{` | 18 | Group-brace mismatch | Phase C |
-| `Error:unexpected:\endproof` | 15 | Phase B Gate 3 SHARED-FAILURE confirmed | Phase C |
-| `Error:unexpected:}` | 7 | Group-brace mismatch | Phase C |
-| `Error:unexpected:\special_relax` / `\right` / `\noalign` | ~9 | Per-paper bugs | Phase C 1-2/day |
-| `Error:malformed:ltx:*` | ~10 | Schema overcontainment | Tracked in `wisdom_para_rule_schema_overcontain.md` |
-| `Error:unexpected:\@personname` etc. | ~5 | Frontmatter-cluster residual | Phase C |
+| `^,_` | 41 | Sub-cause A: `$$math$$` in horizontal mode | SHARED-FAILURE; Phase C surpass-Perl |
+| `_` (bare) | 21 | Sub-cause B: text-mode `_/^` reaching key-arg | mix SHARED-FAILURE + a few PERL_REGRESSION |
+| `\lx@NBSP` | 18 | `~` in `\csname r@LABEL\endcsname` (HEP papers, elsart.cls) | **PERL_REGRESSION ≈100%** (Rust=N, Perl=2N) |
+| `\endproof` | 7 | proof-cluster Gate 3 | SHARED-FAILURE; Phase C |
+| `^` (bare) | 5 | Sub-cause A variant (single-token) | SHARED-FAILURE; Phase C |
+| Combined-w/-other-tokens | ~27 | `\bm`, `\mbox`, `\@startsection`, `\end{equation}`, etc. | per-paper Phase C |
+
+**Cluster 2: papers WITHOUT `Error:unexpected:` (107 papers)**
+
+| Primary error | Papers | Cluster | Status |
+|---|---:|---|---|
+| `Error:undefined:\@` | 19 | `at_letter` scope on `\input` boundary | SHARED-FAILURE |
+| `Error:undefined:\@ifundefined` | 11 | non-LaTeX residual after the 33-paper LaTeX fix | needs sample-investigation |
+| `Error:expected:<box>` | 11 | math constructor missing arg | mostly cascade noise |
+| `Error:undefined:\CITE` | 10 | Sub-B family (auto-defined zero-arg constructor leaves `{key}` text-mode) | SHARED-FAILURE |
+| `Error:undefined:\psfig` | 7 | residual from `\input psfig.sty` (different from `\documentstyle[psfig]` already FIXED) | SHARED-FAILURE |
+| `Error:expected:{` | 7 | group-brace mismatch (user-malformed) | Phase C |
+| `Error:undefined:\setdec`/`\dec` | 10 | residual after FIXED cluster | needs sample-investigation |
+| `Error:malformed:ltx:XMApp` | 3 | schema overcontainment / math-parser | tracked in `wisdom_para_rule_schema_overcontain.md` |
+| `Error:malformed:ltx:acknowledgements` | 3 | schema overcontainment | same wisdom file |
+| (no `Error:*` at all) | 6 | non-error category fail (warnings + 0 errors but still classified non-OK) | needs investigation |
+| various rare-CS undefined | ~13 | `\endnote`, `\putrectangle`, `\lx`, `\vspace`, etc. | per-paper Phase C |
 
 ---
 
