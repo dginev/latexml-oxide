@@ -180,7 +180,24 @@ Triage TSV at `~/data/stage06_non_ok_parity.tsv`. Cumulative
 through Stage 6: **59,844 OK / 60,000 = 99.74%** raw, **0
 REAL_REGRESSION across all 60k papers**.
 
-Stage 7 (70k cumulative) is unblocked.
+**2026-05-03 Stage 7 (10k slice [60000, 70000), cumulative=70k)
+cleared the gate** — `~/data/stage07_100k_html/`. **9981 [ok] /
+19 [conversion_error] / 0 [error] = 99.81% raw OK** (tied with
+Stage 6 best). Triage of all 19 non-OK papers:
+
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| BOTH CLEAN | 1 | 0708.2784 (already-fixed in newer binary) |
+| OUT-OF-SCOPE | 13 | Perl=Rust both >0 |
+| PERL_REGRESSION | 4 | hep-ph0411166...0706.2862 — Rust beats Perl on 4 papers |
+| **REAL_REGRESSION (FIXED, self-introduced)** | **1** | **0705.3903 — `\setdashes <2mm>` in Plain TeX context** broke because my earlier `\setdashes`/`\setdots` rewrite (commit `2cbc6274fc`) used `\@ifnextchar<` which is a LaTeX2e kernel macro absent in Plain TeX. Replaced with `\futurelet` dispatch (commit `0f8475b8a2`). Verified R=11→0. Lesson: stay Plain-TeX-compatible in `latexml_contrib/src/pictex_tex.rs` since `\input pictex` runs in Plain-TeX preamble. |
+| **POST-FIX REAL_REGRESSION** | **0** | Stage 7 cleared the zero-regression gate |
+
+Triage TSV at `~/data/stage07_non_ok_parity.tsv`. Cumulative
+through Stage 7: **69,825 OK / 70,000 = 99.75%** raw, **0
+unfixed REAL_REGRESSION across all 70k papers**.
+
+Stage 8 (80k cumulative) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
