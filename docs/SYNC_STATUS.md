@@ -103,8 +103,9 @@ undefined; `\setdashes` required mandatory `<#1>` arg. Both stubs
 now use `\@ifnextchar<` dispatch supporting both `\setdots` and
 `\setdots <0.05cm>` forms (Perl-faithful no-op).
 
-Stage 3 (30k cumulative, slice [20000, 30000)) is unblocked per
-[staged 100k protocol](feedback_staged_100k_protocol.md).
+Stage 3 (30k cumulative, slice [20000, 30000)) **launched** at
+01:25 to `~/data/stage03_100k_html/` (release cortex_worker, 16
+workers). Per [staged 100k protocol](feedback_staged_100k_protocol.md).
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
