@@ -1161,7 +1161,22 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        if !quiet {
+        // Soft-expansion of character-equivalent CS tokens: a small
+        // set of "primitive" CSes whose entire semantic is to insert
+        // a single character (NBSP, etc.) are non-expandable, but
+        // when they surface inside `\csname...\endcsname` the user's
+        // intent is to use that character as part of the constructed
+        // name. Erroring here mismatches Perl LaTeXML on the canvas
+        // (witness: `\Ref~\cite{key}` → ~ → \lx@NBSP → cs-name error
+        // cluster of 18 papers, see SYNC_STATUS CLUSTER-NBSP).
+        let cs_str = token.with_str(|s| s.to_string());
+        let soft_char: Option<char> = match cs_str.as_str() {
+          "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
+          _ => None,
+        };
+        if let Some(c) = soft_char {
+          cs.push(c);
+        } else if !quiet {
           if lookup_definition(&token)?.is_some() {
             let message = s!(
               "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
