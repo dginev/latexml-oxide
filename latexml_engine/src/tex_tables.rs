@@ -710,7 +710,17 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
   let mut spanning = false;
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
-    // Scan till we get something NOT \omit, \noalign
+    // Scan till we get something NOT \omit, \noalign.
+    // Perl TeX_Tables.pool.ltxml L371-396: `$token` is set per readXToken call,
+    // so when the gullet returns undef (mouth exhausted), `!$token` triggers
+    // the early-return `return (undef, $token, undef, undef);`. In Rust the
+    // INNER 1 `while let Some(xtoken) = read()` branch only updates last_token
+    // on Some — when read returns None, last_token would stay at its prior
+    // value (e.g. a content token from a previous OUTER iteration), the
+    // `last_token.is_none()` check below would skip, and we'd re-feed the
+    // (column_before, marker, last_token) bundle into an empty gullet,
+    // looping infinitely. Reset to None per Perl's per-iteration semantics.
+    last_token = None;
     while let Some(xtoken) = gullet::read_x_token(Some(false), false, None)? {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();

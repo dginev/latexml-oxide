@@ -24,14 +24,14 @@ Intentional divergences: `docs/OXIDIZED_DESIGN.md`. Branch fix list:
 ## Current state (2026-05-02 evening)
 
 **Round-19 sandbox parity sweep**: 305 canvas-failed papers triaged.
-Final classification after branch `claude-round-19` (30 commits):
+Final classification after branch `claude-round-19`:
 
 | Verdict | Count | Notes |
 |--------|------:|-------|
 | BOTH CLEAN | many | both Rust and Perl now produce 0 errors |
 | OUT-OF-SCOPE | many | Perl=Rust both >0; not Rust-only regressions |
 | PERL_REGRESSION | many | Rust beats Perl (40+ across full sweep) |
-| **REAL_REGRESSION** | **3** | true Rust-only gaps — see "Open work" below |
+| **REAL_REGRESSION** | **2** | REG-3 (0909.5169) fixed; REG-1 + REG-2 remain |
 
 **Latest random-sample validation (150 papers, 100 ok + 50 failed)**:
 108 BOTH CLEAN, 0 REAL_REGRESSION, 12 Rust-beats-Perl wins, no
@@ -39,9 +39,26 @@ regressions on previously-clean papers.
 
 `cargo test --tests` 1124/0/0.
 
+**REG-3 root cause (fixed)**: `digest_alignment_column`'s OUTER loop
+in `latexml_engine/src/tex_tables.rs` did NOT reset `last_token`
+across iterations. Perl's `digestAlignmentColumn`
+(`LaTeXML/blib/lib/LaTeXML/Engine/TeX_Tables.pool.ltxml:367-396`)
+sets `$token` per `readXToken(0)` call, so when the gullet returns
+undef (mouth exhausted, e.g. mid-cell `\input` finishes) the
+`if (!$token)` check terminates the column. In Rust the
+`while let Some(xtoken) = read()` body only updates `last_token`
+on `Some`; on the OUTER iter after INNER 1 / INNER 2 exhausted
+the mouth, `last_token` still pointed at the previous content
+token, the `last_token.is_none() || last_is_end` check skipped,
+and the column re-fed `(column_before, marker, last_token)` into
+an empty gullet — re-invoking `\begin{picture}` infinitely.
+Fix: reset `last_token = None` at the start of each OUTER iter.
+One-line addition + 9-line comment, see
+`tex_tables.rs:711` (commit on top of round-19).
+
 ---
 
-## Open work — the 3 remaining REAL_REGRESSIONs
+## Open work — the 2 remaining REAL_REGRESSIONs
 
 Each requires dedicated multi-iteration architectural work. Bisections
 and root causes are recorded; the steps below are the proposed line
