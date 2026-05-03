@@ -207,6 +207,13 @@ struct Cli {
   /// (matches Perl `LaTeXML::Common::Model::compileSchema` output).
   #[arg(long)]
   dump_model: bool,
+
+  /// Write per-job telemetry as a single-line JSON record to this file.
+  /// Falls back to env `LATEXML_TELEMETRY_OUT` if not set. Emitted only
+  /// on the successful conversion path; codegen / dump-model exits skip it.
+  /// See `docs/TELEMETRY.md`.
+  #[arg(long, value_name = "PATH")]
+  telemetry_out: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -224,6 +231,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn real_main() -> Result<(), Box<dyn Error>> {
+  let wall_start = std::time::Instant::now();
   let cli = Cli::parse();
 
   // Initialize logger with verbosity level
@@ -327,6 +335,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     source
   };
+
+  // Stash a copy of the resolved main-tex path for end-of-run telemetry,
+  // since `source` itself is moved into `converter.convert(...)`.
+  let telemetry_source = source.clone();
 
   // Prepare converter
   let preload = if cli.preload_files.is_empty() {
@@ -569,13 +581,106 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
 
+  write_telemetry_record(cli.telemetry_out.as_deref(), &telemetry_source, wall_start, "ok", 0);
   process::exit(0);
+}
+
+/// Emit a single-line JSON telemetry record. No-op when neither
+/// `--telemetry-out` nor `LATEXML_TELEMETRY_OUT` is set. Errors writing
+/// the file are swallowed (the conversion already succeeded; logging
+/// the failure on stderr would be noise for batch runs).
+fn write_telemetry_record(
+  cli_path: Option<&str>,
+  source: &str,
+  wall_start: std::time::Instant,
+  category: &str,
+  exit_code: i32,
+) {
+  use latexml_core::telemetry;
+  let path = cli_path
+    .map(|s| s.to_string())
+    .or_else(|| std::env::var("LATEXML_TELEMETRY_OUT").ok());
+  let Some(path) = path else { return };
+
+  // paper_id ≈ source basename without extension; cortex_worker
+  // overrides this when it knows the arxiv id. Keep the binary's
+  // best-effort default for direct CLI users.
+  let paper_id = std::path::Path::new(source)
+    .file_stem()
+    .and_then(|s| s.to_str())
+    .unwrap_or("")
+    .to_string();
+  telemetry::set_paper_id(&paper_id);
+  telemetry::set_cmdline(&std::env::args().collect::<Vec<_>>().join(" "));
+  if let Ok(host) = std::env::var("HOSTNAME").or_else(|_| {
+    // Linux fallback: read /etc/hostname
+    std::fs::read_to_string("/etc/hostname").map(|s| s.trim().to_string())
+  }) {
+    telemetry::set_host(&host);
+  }
+  telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
+  telemetry::set_category(category);
+  telemetry::set_exit_code(exit_code);
+  telemetry::set_max_rss_kb(read_max_rss_kb());
+  let (cu, cs) = read_child_rusage_us();
+  telemetry::set_child_rusage_us(cu, cs);
+
+  let record = telemetry::take();
+  let line = record.to_json_line();
+  if let Some(parent) = std::path::Path::new(&path).parent() {
+    if !parent.as_os_str().is_empty() {
+      let _ = std::fs::create_dir_all(parent);
+    }
+  }
+  if let Ok(mut fh) = File::create(&path) {
+    let _ = writeln!(fh, "{line}");
+  }
+}
+
+/// Read peak resident-set size from `/proc/self/status` (`VmHWM`).
+/// Returns 0 on non-Linux or read failure.
+fn read_max_rss_kb() -> u64 {
+  std::fs::read_to_string("/proc/self/status")
+    .ok()
+    .and_then(|content| {
+      content
+        .lines()
+        .find(|l| l.starts_with("VmHWM:"))
+        .and_then(|l| l.split_whitespace().nth(1))
+        .and_then(|n| n.parse::<u64>().ok())
+    })
+    .unwrap_or(0)
+}
+
+/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
+/// Returns (0, 0) on failure or non-unix.
+#[cfg(unix)]
+fn read_child_rusage_us() -> (u64, u64) {
+  // SAFETY: getrusage(RUSAGE_CHILDREN, &ru) is async-signal-safe and
+  // populates the struct unconditionally on success.
+  unsafe {
+    let mut ru: libc::rusage = std::mem::zeroed();
+    if libc::getrusage(libc::RUSAGE_CHILDREN, &mut ru) == 0 {
+      let user = (ru.ru_utime.tv_sec as u64) * 1_000_000 + (ru.ru_utime.tv_usec as u64);
+      let sys = (ru.ru_stime.tv_sec as u64) * 1_000_000 + (ru.ru_stime.tv_usec as u64);
+      (user, sys)
+    } else {
+      (0, 0)
+    }
+  }
+}
+
+#[cfg(not(unix))]
+fn read_child_rusage_us() -> (u64, u64) {
+  (0, 0)
 }
 
 use latexml::post::PostOptions;
 
 /// Delegate post-processing to the library API.
 fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
+  // Per-phase telemetry now lives inside latexml::post::run_post_processing
+  // (PostXmlParse, PostScan, Bibliography, Crossref, Graphics, Split, Xslt).
   latexml::post::run_post_processing(xml, opts)
 }
 
@@ -732,10 +837,32 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
+  // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
+  // archives that contain a PDF mis-named with a `.tex` extension). Perl
+  // Pack.pm doesn't probe for this, but treating a PDF as TeX produces
+  // thousands of spurious parse errors, so emit the Perl-canonical
+  // `Fatal:invalid:not_tex_source` (status 3) and bail.
+  fn is_pdf_magic(path: &Path) -> bool {
+    let mut buf = [0u8; 5];
+    if let Ok(mut f) = std::fs::File::open(path) {
+      use std::io::Read;
+      if f.read(&mut buf).is_ok_and(|n| n == 5) {
+        return &buf == b"%PDF-";
+      }
+    }
+    false
+  }
+
   let mut tex_files: Vec<PathBuf> = Vec::new();
   collect_tex_files(dir, &mut tex_files, false);
+  let candidates_before_pdf_filter = tex_files.len();
+  tex_files.retain(|p| !is_pdf_magic(p));
+  if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
+    return Err("Fatal:invalid:not_tex_source PDF magic detected in source file (no TeX-format files in archive)".into());
+  }
   if tex_files.is_empty() {
     collect_tex_files(dir, &mut tex_files, true);
+    tex_files.retain(|p| !is_pdf_magic(p));
   }
   if tex_files.is_empty() {
     return Err("No .tex files found in directory".into());

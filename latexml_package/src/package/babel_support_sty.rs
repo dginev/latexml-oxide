@@ -74,6 +74,18 @@ pub fn babel_language_to_iso(lang: &str) -> Option<&'static str> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Many TL2025 babel language files (e.g. babel-italian italian.ldf,
+  // babel-spanish spanish.ldf) use etoolbox CSes like \ifdefstring inside
+  // hooks (e.g. `\bbl@beforestart`) and queue `\AtEndOfPackage{
+  // \RequirePackage{etoolbox}}` to satisfy them. Our `\AtEndOfPackage`
+  // machinery for raw-loaded `.ldf` chains doesn't reliably fire that
+  // queued load before babel hooks evaluate, so the test paper 0710.5177
+  // (`[english,italian]{article}`) fails with `\ifdefstring` undefined
+  // at `\bbl@beforestart`. Pre-loading etoolbox once for any babel-driven
+  // language tag closes that window. (Slight Perl divergence: Perl's
+  // `\AtEndOfPackage` chain succeeds organically.)
+  RequirePackage!("etoolbox");
+
   // Unicode quote characters (Perl L24-42)
   //
   // Perl: DefPrimitiveI('\ij', undef, "ij") etc. — DefPrimitive with literal

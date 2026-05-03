@@ -122,22 +122,31 @@ LoadDefinitions!({
 
   // Read the next token
   DefParameterType!(Token, sub[_inner, _extra] {
+    // Perl Base_ParameterTypes.pool.ltxml L91:
+    //   DefParameterType('Token', sub { $_[0]->readToken; });
+    // No error raised on EOF — silently returns undef. Our prior impl
+    // raised an error, which manifested as a cascade after upstream
+    // recovery (e.g. \^ with no argument in math mode). EOF fallback
+    // returns `\relax` (a no-op token) so downstream `try_to_token`
+    // succeeds — using empty Tokens here would cascade
+    // "Error:expected:argument: try_to_token: empty Tokens" at the
+    // primitive's arg-coerce step (witness: 0910.2125 sub/superscript
+    // cascade where 13 errors match Perl + 1 extra Rust empty-Tokens).
     match gullet::read_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
-      None => {
-        Error!("expected", "Token", "Paramater <Token> found None.");
-        Ok(ArgWrap::Tokens(Tokens!()))
-      }
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
     }
   });
 
   // Read the next token, after expanding any expandable ones.
   DefParameterType!(XToken, sub[_inner, _extra] {
+    // Perl Base_ParameterTypes.pool.ltxml L94:
+    //   DefParameterType('XToken', sub { $_[0]->readXToken; });
+    // Same `\relax`-sentinel passthrough on EOF — see Token comment above.
     if let Some(t) = gullet::read_x_token(None, false, None)? {
       Ok(ArgWrap::Token(t))
     } else {
-      Error!("expected","XToken", "Paramater <XToken> found None.");
-      Ok(ArgWrap::Tokens(Tokens!()))
+      Ok(ArgWrap::Token(T_CS!("\\relax")))
     }
   });
 
@@ -272,10 +281,29 @@ LoadDefinitions!({
         // `\@bibfield XUntil:\@end@bibfield`).
         let is_real_expandable =
           matches!(state::lookup_meaning(&token), Some(Stored::Expandable(_)));
-        if is_real_expandable {
+        // Definitional primitives (\def/\edef/\gdef/\xdef/\let/\futurelet) consume
+        // their target token from the input AT EXECUTION TIME — but XUntil's outer
+        // `read_x_token` would expand the target away if it's `\let`-bound to
+        // something expandable (e.g. `\@date` Let'd to `\@empty`). Witness:
+        // 0805.1712 elsart `\date{X}` inside `\begin{keyword}` body, where
+        // `\date` expands to `\def\@date{X}\@add@frontmatter{ltx:date}[...]{X}`,
+        // and inside the keyword's XUntil read, `\@date` (Let'd to `\@empty`)
+        // gets consumed by `read_x_token` BEFORE `\def` ever runs, leaving the
+        // captured tokens malformed (`\def {X} ...` with no def-target).
+        // Re-Invoke these primitives to read their parameters from the gullet
+        // here, matching Perl's XUntil L144-146 behavior. Targeted to the def
+        // family to avoid the `\hspace`/dimension-reader over-read issue
+        // recorded in the comment above (astro-ph9903386 leak).
+        let is_def_family = token.with_cs_name(|cs| {
+          matches!(cs, "\\def" | "\\edef" | "\\gdef" | "\\xdef"
+            | "\\let" | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
+        });
+        if is_real_expandable || is_def_family {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
             tokens.extend(Invocation!(token, args).unlist());
+          } else {
+            tokens.push(token);
           }
         } else {
           tokens.push(token);

@@ -2684,11 +2684,20 @@ LoadDefinitions!({
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
         let message = s!("The environment {} is not defined.", undef);
-        Error!("undefined", undef, message);
+        Error!("undefined", undef.clone(), message);
         note_status(LogStatus::Undefined, Some(&undef));
-        // TODO:
-        // state::install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
-        //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
+        // Perl latex_constructs.pool.ltxml L207-208: install a dummy
+        // constructor for `\<name>` so the env-trigger token has SOME
+        // definition. Otherwise it would re-fire as a separate
+        // "Error:undefined:\<name>" when the digester evaluates the
+        // pushed env-trigger below — doubling the error count for any
+        // unknown env. We can't directly mirror Perl's
+        //   `Stomach::makeError(undefined, $undef)`
+        // (which logs an Info, not an Error), so use a no-op DefMacro
+        // — the env-undefined Error above is already logged. Witness:
+        // 0810.4249 (\begin{lemma} on undefined `lemma` env: was Rust=2,
+        // Perl=1; now Rust=Perl=1).
+        def_macro(token.clone(), None, Tokens!(), None)?;
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
       out_tokens.push(T_CS!("\\begingroup"));
@@ -3133,11 +3142,14 @@ LoadDefinitions!({
   // dispatch via `findnodes('ancestor::ltx:Math')` in the body sub.
   // Rust template `?#isMath(...)(...)` is the equivalent gate (same
   // pattern used by `\newline`, `\thinspace`, etc.) — ported 2026-05-01.
-  // Known remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
-  // Task 3 / 0901.2408): mode is "text" here vs Perl's
-  // 'restricted_horizontal' — flipping in isolation doesn't fix the
-  // `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper digester
-  // gating needed.
+  // The earlier note here claimed a Rust-only `$$`-in-`\emph{}` math
+  // leak; verified 2026-05-03 it is SHARED-FAILURE with Perl, not a
+  // Rust-only divergence. Both engines treat `$$` inside
+  // `restricted_horizontal` as two inline-math toggles (per the
+  // `BOUND_MODE =~ /vertical$/` gate in `\lx@dollar@default`). See
+  // SYNC_STATUS.md Gate 2.A. mode "text" here is fine; flipping to
+  // "restricted_horizontal" is a stylistic difference but does not
+  // change the parity-relevant behavior.
   DefConstructor!("\\emph{}",
     "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
     mode => "text",
@@ -3732,9 +3744,13 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
-      let package_list = match packages {
+      // Perl latex_constructs.pool.ltxml L795: `$pkg =~ s/\s+//g;` —
+      // strip ALL whitespace (including internal) from each package name
+      // so author typos like `\usepackage{graphic x}` resolve to graphicx.
+      let package_list: Vec<String> = match packages {
         Some(value) => OPTS_REGEX.split(&value.to_string())
-          .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+          .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+          .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
         None => Vec::new(),
       };
       let options_list = match options {
@@ -3757,9 +3773,12 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let options: Option<&Digested> = whatsit.get_arg(1);
     let packages: Option<&Digested> = whatsit.get_arg(2);
+    // Perl latex_constructs.pool.ltxml: `\RequirePackage` mirrors
+    // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip.
     let package_list: Vec<String> = match packages {
       Some(value) => OPTS_REGEX.split(&value.to_string())
-        .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+        .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
@@ -3767,8 +3786,6 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     for package in package_list {
-      let pkg_trimmed = package.trim();
-      if pkg_trimmed.is_empty() { continue; }
       require_package(&package, RequireOptions {
         options: options_list.clone(),
         ..RequireOptions::default()
@@ -4903,6 +4920,14 @@ LoadDefinitions!({
     before_digest => { Digest!("\\par")?; }
   );
 
+  // Perl latex_constructs.pool.ltxml L1732: `DefMacro('\@trivlist', '\relax', locked => 1)`.
+  // Neutralizes the LaTeX kernel's complex `\@trivlist` body (which calls
+  // `\@noitemerr` under various edge conditions, e.g. `\if@newlist` true on
+  // entry). Without this override the dump's full kernel macro runs when
+  // user packages invoke `\@trivlist` directly (witness: 0802.2207 spr-astr-addons
+  // `\renewcommand\[{\begin{mathtrivlist}…}` where `mathtrivlist` calls
+  // `\@trivlist`, raising 3 spurious "missing \item" errors).
+  DefMacro!("\\@trivlist", "\\relax");
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
@@ -5953,7 +5978,13 @@ LoadDefinitions!({
     DefPrimitive!(cs, None, None, font => font);
   });
 
-  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", None);
+  // Perl latex_constructs.pool.ltxml L2764: defines the new CS as \relax.
+  // Without a body, papers like 0706.2748 (`\DeclareFixedFont{\mytabfont}...`)
+  // hit "T_CS[\mytabfont] is not defined" when later invoked.
+  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", sub[(cs, _enc, _fam, _ser, _sh, _sz)] {
+    let cs_tok = T_CS!(cs.to_string());
+    def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
+  });
   DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
   // Font declaration stubs (Perl latex_constructs.pool.ltxml)
   DefPrimitive!("\\DeclareFontShape{}{}{}{}{}{}", None);
@@ -8659,8 +8690,13 @@ LoadDefinitions!({
     }
   );
 
-  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates
-  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) Match:( Until:, Until:) Match:( Until:, Until:)",
+  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates.
+  // Insert `SkipSpaces` between successive `Match:(` patterns so a single
+  // (or double) space between paren-tuples doesn't break the read; e.g.
+  //   \qbezier(6.4,0.5)(7.35,2)  (8.3,0.5)
+  // (witness: 0904.1097 line 422 has multi-space gaps between coord
+  // tuples, which previously failed `Missing argument Match:(`).
+  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
     "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
   DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",

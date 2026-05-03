@@ -58,7 +58,6 @@ LoadDefinitions!({
   // classification entry via `\@add@frontmatter`.
   DefEnvironment!("{keywords}",
     "<ltx:classification scheme='keywords'>#body</ltx:classification>");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   DefMacro!("\\bsp", "");

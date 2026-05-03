@@ -112,112 +112,215 @@ Add `Pragma` rules that check mathematical conventions (e.g., consistency of var
 
 ---
 
-## Critical Performance Evaluation
+## Current Slow-Tail Diagnostic
 
-The current optimization work is directionally strong: the codebase already has
-an interner-aware style guide, a standing corpus, release-mode profiling notes,
-and specific evidence for math parsing and graphics/post-processing as the two
-dominant outlier families. To make the project world class, the next step is to
-treat performance as an engineering contract with budgets, attribution, and
-regression ownership, not as a sequence of useful local sweeps.
+Current data source: `/home/deyan/data/*/*.tsv`, checked 2026-05-02. Only
+`/home/deyan/data/100k_noproblem_sandbox_html/results.tsv` has a
+`wall_time_s` column and rows over 10 seconds. The 600-row sample has no
+`>10s` jobs. The `10k_failures_April30` TSVs track error counts only, so they
+cannot be used for wall-clock slow-tail analysis.
 
-### What "world class" should mean
+Reproduce the full slow set:
 
-1. **Strict service quality parity.** Optimizations must preserve LaTeXML
-   semantics, diagnostics, output structure, resource handling, and failure
-   behavior unless a deliberate compatibility decision is documented. Fast but
-   non-equivalent conversions are regressions.
+```bash
+awk -F '\t' 'NR==1{for(i=1;i<=NF;i++) ix[$i]=i; print; next}
+  $(ix["wall_time_s"])+0 > 10 {print}' \
+  /home/deyan/data/100k_noproblem_sandbox_html/results.tsv
+```
 
-2. **Predictable tail latency.** Median speedups are not enough. Track p50, p90,
-   p99, timeout rate, peak RSS, and output status across representative arXiv
-   classes. The product goal is fewer slow and failed papers, not just a faster
-   average paper.
+Summary of the 100k HTML run:
 
-3. **Phase-attributed budgets.** Every run should be explainable by phase:
-   loading, digestion, math parsing, rewriting, graphics, XSLT, serialization,
-   and external tools. A global wall-clock number is useful for release gating
-   but too blunt for engineering decisions.
+| metric | value |
+|--------|------:|
+| total jobs | 100,000 |
+| jobs over 10s | 1,862 |
+| slow-tail share | 1.862% |
+| slow-tail wall total | 27,698s |
+| slow-tail average | 14.88s |
+| slow-tail median | 12.5s |
+| slow-tail p90 | 20.7s |
+| slow-tail p95 | 26.9s |
+| slow-tail p99 | 42.9s |
+| max | 120.1s |
 
-4. **Optimization acceptance requires proof.** Each substantial optimization
-   needs a before/after benchmark on the corpus, one targeted stress case, and
-   an output-quality check. If the win is workload-specific, document the
-   workload boundary.
+Runtime buckets:
 
-5. **Fast paths must be conservative.** Direct builders, caches, and skipped
-   work should have narrow guards and fall back to the canonical path. The
-   default should be correctness-first with telemetry proving when a shortcut
-   was used.
+| wall time | jobs |
+|-----------|-----:|
+| 10-15s | 1,347 |
+| 15-20s | 310 |
+| 20-30s | 139 |
+| 30-60s | 56 |
+| 60s+ | 10 |
 
-### Critical Gaps
+Most slow jobs are successful conversions, not failure cases:
 
-1. **No automated performance gate.** The corpus is documented but not yet a
-   hard CI signal. Add a `perf-corpus` job that stores JSONL artifacts
-   containing git SHA, command line, wall time, user/sys time, max RSS, phase
-   timings, warning/error counts, and output hash. Fail only on clear regressions
-   initially; trend everything.
+| category | jobs |
+|----------|-----:|
+| ok | 1,841 |
+| conversion_error | 11 |
+| timeout | 5 |
+| abort | 3 |
+| conversion_fatal | 2 |
 
-2. **Insufficient phase telemetry.** The current notes rely on manual `perf`
-   runs and selected phase splits. Add always-available low-overhead timers
-   around major phases and expensive subphases: package loading, file lookup,
-   gullet expansion, stomach digestion, Marpa parse, rewrite rules, graphics
-   probes/conversions, XSLT, and archive I/O.
+Log-derived hints from the 1,862 slow rows:
 
-3. **Math parser remains the highest-risk hot path.** `1011.1955` shows that
-   Marpa can dominate both wall time and RSS. The highest leverage work is not
-   more generic allocation cleanup; it is ambiguity control and conservative
-   pre-Marpa handling for repeated unambiguous shapes.
+| signal | jobs |
+|--------|-----:|
+| 20+ graphics jobs | 559 |
+| 50+ graphics jobs | 123 |
+| output size >= 10 MB | 122 |
+| output size >= 25 MB | 16 |
+| 1000+ math formulae | 348 |
+| 2500+ math formulae | 49 |
+| DBStatus >= 10,000 objects | 64 |
+| Xy-pic log signal | 51 |
+| token-limit recovery | 1 |
 
-4. **External graphics work needs job-level accounting.** The post phase can be
-   dominated by `gs`, ImageMagick, and Inkscape. Track per-asset command, source
-   type, dimensions/page, output type, elapsed time, exit status, and cache hit.
-   Without that, heuristics will look good on one fixture and regress another.
+The slow tail has at least three distinct families:
 
-5. **Startup and package-loading costs matter for batch service.** Single-paper
-   CLI runs hide opportunities from persistent workers, warmed package state,
-   shared resources, and lookup caches. Measure cold vs warm worker conversion
-   separately.
+1. **Graphics/output-heavy successful jobs.** 613 slow rows have either 20+
+   graphics jobs or output >= 10 MB. Examples include `0809.3849` (34.0s,
+   228 graphics, 35.8 MB), `0908.3201` (57.0s, 70 graphics, 29.5 MB),
+   `1003.0368` (66.5s, 30.4 MB), and `0803.4343` (54.5s, 41.9 MB).
 
-6. **Memory budgets are under-specified.** Peak RSS is recorded in selected
-   notes but not budgeted. Add limits by workload class and track top allocation
-   families with heap profiling for math-heavy and graphics-heavy cases.
+2. **Math/large-document successful jobs.** 373 slow rows have either 1000+
+   formulae or 10,000+ DB objects. Examples include `astro-ph0204009` (114.8s,
+   2795 formulae, 47,610 DB objects), `0911.0884` (39.0s, 12,446 formulae),
+   `astro-ph0401354` (40.3s, 11,289 formulae), and `astro-ph0508017` (39.2s,
+   98,153 DB objects).
 
-7. **Output quality needs automated comparison.** Performance wins should be
-   tied to output invariants: status severity, missing citation count, missing
-   image count, MathML count, node count, link/resource count, and selected
-   visual smoke tests. This protects service quality while allowing aggressive
-   optimization.
+3. **Failure/control-flow outliers.** There are only 10 rows at 60s+, and half
+   are 120s timeouts. `0903.3465` is a 75.5s `conversion_fatal` with Xy-pic and
+   token-limit recovery; this is not a normal hot path and should be fixed as a
+   bounded recovery/timeout problem.
 
-### Priority Order
+Top slow rows:
 
-**P0: Build the measurement system.** Add structured phase telemetry, corpus
-automation, and output-quality summaries. This is prerequisite work: without it,
-every optimization remains partly anecdotal.
+| paper | wall | category | output | formulae | graphics | DB objects |
+|-------|-----:|----------|-------:|---------:|---------:|-----------:|
+| `hep-ph0102035` | 120.1s | timeout | 0 | 0 | 0 | 0 |
+| `math0608653` | 120.1s | timeout | 0 | 0 | 0 | 0 |
+| `0705.3903` | 120.1s | timeout | 0 | 0 | 0 | 0 |
+| `0907.3579` | 120.1s | timeout | 0 | 31 | 0 | 211 |
+| `1001.3715` | 120.0s | timeout | 0 | 233 | 9 | 1,185 |
+| `astro-ph0204009` | 114.8s | ok | 581 KB | 2,795 | 6 | 47,610 |
+| `hep-th0109082` | 78.5s | ok | 137 KB | 387 | 0 | 14,805 |
+| `0903.3465` | 75.5s | conversion_fatal | 834 B | 0 | 0 | 0 |
+| `hep-ph0107113` | 73.6s | ok | 113 KB | 101 | 4 | 393 |
+| `1003.0368` | 66.5s | ok | 30.4 MB | 141 | 4 | 264 |
 
-**P0: Stabilize the current outliers.** Keep `1011.1955` as the math/parser
-sentinel and `1005.1610` as the graphics/post sentinel. Add at least one
-bibliography-heavy, one macro-expansion-heavy, and one large-archive paper to
-avoid overfitting to the current Tier A set.
+## Improvement Plan
 
-**P1: Reduce Marpa work.** Use parse audits to identify repeated shapes, add
-strictly guarded direct-XM builders for simple unambiguous math, then reduce
-grammar ambiguity where the audit shows combinatorial parse families. Start
-with exact repeated-formula caching and narrow fast paths for atoms, scripts,
-simple function calls, comma lists, and relation forms; every fast path must
-fall back to Marpa when context is uncertain.
+The plan is ordered by expected slow-tail impact and confidence. Avoid broad
+"fast path" work unless a corpus audit proves the exact pattern and an output
+comparison proves equivalence.
 
-**P1: Make graphics conversion observable and reusable.** Cache conversions by
-source identity, page, DPI, destination type, and relevant options. Coalesce
-identical jobs within a document before spawning external tools. Keep per-asset
-telemetry so cache behavior and slow tools are obvious.
+### Mini starter plan
 
-**P1: Remove avoidable allocator pressure.** Continue interner and clone cleanup
-only where profiles show it. Favor APIs that pass `SymStr`, slices, and borrowed
-tokens through hot paths instead of allocating temporary `String`/`Vec` values.
+1. Add phase/count telemetry to the benchmark output before optimizing: phase
+   timings, formula count, graphics count, DB objects, max RSS, child-process
+   time, git SHA, command line, timeout, worker count, and host.
+2. Build three small sentinel lists from the current >10s tail:
+   `0809.3849`, `0908.3201`, `1003.0368`, `0803.4343`, `0907.4282` for
+   graphics/output; `astro-ph0204009`, `0911.0884`, `astro-ph0401354`,
+   `0809.5174`, `astro-ph0507615` for math/large-document behavior; and
+   `hep-ph0102035`, `math0608653`, `0705.3903`, `0907.3579`, `1001.3715`,
+   `0903.3465` for timeout/failure behavior.
+3. Profile those sentinels by family: per-asset command time and child CPU for
+   graphics; `LATEXML_PARSE_AUDIT=1` plus `--nomathparse` comparison for math;
+   last phase/log event before timeout for failures.
+4. If profiles confirm the current aggregate signal, implement graphics
+   telemetry, duplicate coalescing, and conversion caching before adding new
+   conversion heuristics.
+5. Fix timeout/fatal rows as bounded failure/control-flow issues, not normal
+   hot paths.
+6. Touch math parser behavior only after audit data proves the exact repeated
+   shape or ambiguity family; start with exact parsed-math caching or semantic
+   pruning, not broad direct builders.
 
-**P2: Optimize service deployment.** For production workers, evaluate warmed
-state, pooled resource discovery, persistent temp directories, bounded external
-tool parallelism, CPU isolation, and timeout policy. These can beat code-level
-micro-optimizations at service scale.
+### P0: Make every slow job phase-attributed — DONE 2026-05-03
+
+Implemented per the contract in [`docs/TELEMETRY.md`](TELEMETRY.md).
+
+Per-job phase wall + counts now emitted by `cortex_worker` as a
+single-line `telemetry.json` member of each output ZIP, aggregated by
+`tools/benchmark_canvas.sh` into `<output_dir>/telemetry.jsonl.gz`,
+and consumed by `tools/perf_phase_summary.py` (per-phase share, top-N
+papers, distribution) and `tools/perf_compare.py` (paired A/B Δwall,
+per-phase Δ%, regression list).
+
+Phases emitted (14 of 17 wrapped today; remaining 3 — Html5Fixups
+plus per-formula `math_parse_buckets` and `MathImages` — deferred):
+Bootstrap, Digest, Build, Rewrite, MathParse, PostXmlParse, PostScan,
+Bibliography, Crossref, Graphics, Split, MathmlPres, MathmlCont,
+Xslt, Serialize.
+
+Acceptance check on `0704.0023`: sum-of-phase / wall = 95.6% (>=92%
+gate). Confirms first telemetry-driven finding: `graphics` already
+visible at 38% of wall on a single arxiv paper, motivating the P1
+graphics conversion-cache work below.
+
+### P1: Graphics and output-heavy jobs
+
+This is the largest identifiable family in the current >10s tail. Work items:
+
+- Add per-asset graphics telemetry: source type, source bytes, page, requested
+  output type, command used, elapsed time, exit status, and cache hit/miss.
+- Cache conversions by source content identity plus page, DPI, destination type,
+  and relevant graphics options.
+- Coalesce duplicate graphics jobs within a document before spawning external
+  tools.
+- Add a large-output sentinel set from `0809.3849`, `0908.3201`, `1003.0368`,
+  `0803.4343`, and `0907.4282`; compare output size, image count, missing image
+  count, and wall time before/after.
+
+Do not add more global ImageMagick/Inkscape heuristics until per-asset telemetry
+shows which source types are slow and which path is correct for them.
+
+### P1: Math and large-document jobs
+
+Marpa remains important, but the 100k slow tail is not a single repeated
+simple-formula problem. Work items:
+
+- Run `LATEXML_PARSE_AUDIT=1` on `astro-ph0204009`, `0911.0884`,
+  `astro-ph0401354`, `0809.5174`, and `astro-ph0507615`; rank by total parse
+  time, parse count, and repeated token sequence.
+- Add exact parsed-math caching only where the audit shows repeated identical
+  normalized token streams under equivalent math context.
+- Prefer grammar/semantic pruning for demonstrably invalid ambiguity families:
+  malformed operator chains, impossible double application, invalid script
+  targets, empty/mismatched fences, and nonsensical differential/operator
+  combinations.
+- Track MathML count and structural output metrics before/after; a speedup that
+  changes math structure without an explicit compatibility decision is a
+  regression.
+
+Do not start with broad direct-XM builders for many common shapes. They are easy
+to make fast and hard to make LaTeXML-equivalent. Treat them as a later,
+per-shape optimization only after audit data, fixtures, and fallback behavior
+are clear.
+
+### P1: Failure/control-flow outliers
+
+The small 60s+ set should be handled separately from performance hot paths:
+
+- Re-run the five 120s timeouts with phase telemetry and captured last log
+  event. Timeouts with no formula/graphics counts likely die before normal
+  reporting and need better watchdog attribution.
+- Treat `0903.3465` as an Xy-pic/token-limit recovery bug. The goal is bounded
+  recovery and a clear fatal result, not making that path fast.
+- Add timeout rows to the regression corpus only after the failure mode is
+  minimized; otherwise they will make performance signals noisy.
+
+### P2: Allocation and startup cleanup
+
+Keep interner, clone, and package-loading work profile-driven. The earlier
+`.to_string` sweep was useful, but the current >10s data points first at
+graphics, math/document scale, and bounded failure handling. Candidate cleanup
+areas remain `*_sym` state accessors, `Tokens` conversions, deep `Stored` /
+`Tokens` copies, package lookup caching, and dump/package loading, but only
+after a slow-tail or sentinel profile shows them on the hot path.
 
 ### Optimization Acceptance Checklist
 
@@ -231,9 +334,9 @@ Before merging a performance change:
 6. Keep the change easy to disable if it relies on a heuristic.
 
 For math-parser changes, also record parse count distribution, total math parse
-time, MathML/XMath count, and any formulas that switch between Marpa and a fast
-path. Structural math output must be reviewed on math-heavy fixtures before the
-change is treated as a win.
+time, MathML/XMath count, and any formulas that use a cache or another
+nonstandard path. Structural math output must be reviewed on math-heavy fixtures
+before the change is treated as a win.
 
 ---
 
@@ -368,53 +471,6 @@ Ghostscript (`gs`) and ImageMagick `convert` spend visible cycles in
 internals. Rust-side Marpa functions are below 1% flat in that run. The earlier
 debug Callgrind sample on `0906.1883` was consistent with the release Marpa
 symbols, but should remain directional only.
-
-### Future directions
-
-1. **Math fast paths and cache before Marpa.** `1011.1955` spends about 2.3 s and 238 MB
-   RSS in math parsing. Its parse audit is dominated by simple repeated
-   shapes (`p(n)`, `eta(z)`, comma lists, simple subscripted function calls).
-   First add exact-token parse caching keyed by the normalized math token
-   sequence plus relevant context (display/inline style and bindings that affect
-   math meaning). Then add conservative direct-XM builders for unambiguous common
-   shapes before `parse_marpa`: single atoms, numbers, `x_i`, `x^2`, `x_i^j`,
-   simple function calls such as `p(n)` / `eta(z)`, comma lists, parenthesized
-   atoms, and simple relation forms such as `x=0` / `i\leq n`. Guard these
-   narrowly and fall back to Marpa whenever an operator, macro, font binding, or
-   grouping form is uncertain. Release `perf` now confirms Marpa
-   recognizer/precompute symbols as the largest XML-only hot band.
-
-2. **Grammar ambiguity reduction.** Release `perf` and debug Callgrind both
-   point at Marpa recognizer/precompute internals even when tree enumeration is capped.
-   Prioritize grammar changes around function application, juxtaposition,
-   comma lists, scripts, and `ATOM` boundaries. Use `LATEXML_PARSE_AUDIT=1`
-   to rank shapes by total corpus cost, not single pathological examples. Track
-   parse count, elapsed time, surviving semantic choices, and repetition count.
-   Prefer semantic pruning for invalid combinations before broad grammar surgery:
-   reject impossible double application, malformed operator chains, mismatched
-   or empty fences, invalid script targets, and nonsensical differential/operator
-   combinations during tree construction.
-
-3. **Graphics conversion cache/telemetry.** `1005.1610` is post/graphics
-   bound, with release samples landing mostly in `gs` / `convert` PNG and zlib
-   work. The small-vector SVG path is workload-specific: it is excellent for
-   pathological vector PDFs but slower on this mixed/raster paper. Add per-asset
-   timing and cache conversion results by source path, page, DPI, destination
-   type, and graphics options before adding more heuristics. Coalesce identical
-   conversion jobs within a document before spawning external tools, then make
-   the hit/miss behavior visible in the phase report.
-
-4. **Package/dump and libxml residual cost.** After `--nomathparse`, the
-   remaining `1011.1955` samples are not one Rust loop; they are libxml wrapper
-   access, allocator traffic, kpathsea package lookup, and dump/package loading
-   call paths. Treat this as a startup/batch-throughput direction: measure
-   whether preloaded state snapshots, package lookup caching, or lower-allocation
-   dump parsing help before optimizing individual call sites.
-
-5. **Allocation cleanup stays profile-driven.** The earlier `.to_string`
-   sweep paid off, but further arena/state/Tokens cleanup should target a
-   measured hot band. Candidate APIs remain `*_sym` state accessors,
-   `Tokens` numeric/string conversions, and deep `Stored` / `Tokens` copies.
 
 ### Regression trigger
 

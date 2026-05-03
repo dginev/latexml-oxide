@@ -159,8 +159,27 @@ LoadDefinitions!({
   // in the preamble. \span             c  combines adjacent entries in a table into a single
   // entry.
   DefPrimitive!("\\noalign", {
+    // Perl `DefPrimitiveI('\noalign', ...)`: bgroup() + error + lets.
+    // We MATCH Perl's bgroup but then read+discard the `{...}` body and
+    // egroup so the body's closing `}` doesn't leak past the bgroup
+    // frame. Without this body-consume, the user's `\hline`
+    // (= `\noalign{\@@alignment@hline}`) hitting the bad path (cell
+    // content rather than INNER 1's noalign branch) leaves the bgroup
+    // pushed AND its `{` pushes a SECOND frame, while only the body's
+    // `}` pops one — the `\noalign`'s primitive-bgroup leaks. The leak
+    // then cascades into \vtop/\hbox mode-end mismatches in p{}-column
+    // arrays (REG-1 / math0403005).
     bgroup();
     Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
+    // Consume the `{...}` body so its `}` matches our bgroup frame.
+    if let Some(tok) = gullet::read_token()? {
+      if tok.get_catcode() == Catcode::BEGIN {
+        let _ = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+      } else {
+        gullet::unread_one(tok);
+      }
+    }
+    egroup()?;
     Let!(&T_ALIGN!(), T_RELAX!());
     Let!(&T_CS!("\\noalign"), T_RELAX!());
     Let!(&T_CS!("\\omit"), T_RELAX!());
@@ -706,11 +725,24 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
-  let mut last_token: Option<Token> = None;
+  // Declared without initializer — Perl resets this to undef at the
+  // start of every OUTER iteration (see L742), so the initial value
+  // is genuinely dead. The compiler tracks definite-assignment for us.
+  let mut last_token: Option<Token>;
   let mut spanning = false;
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
-    // Scan till we get something NOT \omit, \noalign
+    // Scan till we get something NOT \omit, \noalign.
+    // Perl TeX_Tables.pool.ltxml L371-396: `$token` is set per readXToken call,
+    // so when the gullet returns undef (mouth exhausted), `!$token` triggers
+    // the early-return `return (undef, $token, undef, undef);`. In Rust the
+    // INNER 1 `while let Some(xtoken) = read()` branch only updates last_token
+    // on Some — when read returns None, last_token would stay at its prior
+    // value (e.g. a content token from a previous OUTER iteration), the
+    // `last_token.is_none()` check below would skip, and we'd re-feed the
+    // (column_before, marker, last_token) bundle into an empty gullet,
+    // looping infinitely. Reset to None per Perl's per-iteration semantics.
+    last_token = None;
     while let Some(xtoken) = gullet::read_x_token(Some(false), false, None)? {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();

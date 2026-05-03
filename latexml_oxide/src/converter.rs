@@ -6,6 +6,7 @@ use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
 use latexml_core::state::{add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch};
+use latexml_core::telemetry::{self, Phase};
 use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
 use std::rc::Rc;
 
@@ -87,10 +88,12 @@ impl Converter {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
+      let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
       if let Err(e) = self.initialize_session() {
         // We can't initialize, return error:
         e.log_fatal();
       }
+      drop(_g_bootstrap);
       if !self.ready {
         return ConversionResponse {
           result:      None,
@@ -178,13 +181,16 @@ impl Converter {
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-    let digest_result = self.core.digest(
-      source,
-      current_preamble,
-      current_postamble,
-      self.opts.mode.clone(),
-      true,
-    );
+    let digest_result = {
+      let _g = telemetry::phase(Phase::Digest);
+      self.core.digest(
+        source,
+        current_preamble,
+        current_postamble,
+        self.opts.mode.clone(),
+        true,
+      )
+    };
     let digested = match digest_result {
       Err(e) => {
         report_mut!().status_code = 3;
@@ -231,9 +237,15 @@ impl Converter {
         }
       },
       _ => {
-        dom_result = self.core.convert_document(digested);
+        dom_result = {
+          let _g = telemetry::phase(Phase::Build);
+          self.core.convert_document(digested)
+        };
         match dom_result {
-          Ok(dom) => dom.serialize_to_string(),
+          Ok(dom) => {
+            let _g = telemetry::phase(Phase::Serialize);
+            dom.serialize_to_string()
+          },
           Err(e) => {
             let message = s!("{:?}", e);
             let err = || {

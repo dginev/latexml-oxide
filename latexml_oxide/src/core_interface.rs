@@ -372,6 +372,8 @@ impl DigestionAPI for Core {
 
     let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
+      let _gp_rewrite =
+        latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
       note_begin("Rewriting");
       document.mark_xmnode_visibility()?;
       document.load_labels_for_rewrite()?;
@@ -403,8 +405,15 @@ impl DigestionAPI for Core {
     apply_lx_declarations(&mut document);
 
     if !state::get_nomathparse_flag() {
+      // Telemetry: count formulae and time the whole Marpa parse pass.
+      // Per-formula bucket histogram requires per-call instrumentation
+      // inside latexml_math_parser::parser::parse_math; deferred.
+      let xmath_count = document.findnodes("//ltx:XMath", None).len() as u32;
+      latexml_core::telemetry::set_formulae(xmath_count);
+      let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
+      drop(_gp);
       // Post-parse: mark failed XMath nodes as unparsed.
       // The parser's parse_kludge already handles OPEN/CLOSE wrapping + script attachment
       // (parse_kludgeScripts_rec), so we only need to add the unparsed CSS class here.

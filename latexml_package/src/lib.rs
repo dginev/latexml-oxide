@@ -406,9 +406,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ts1", "fontmap", package::ts1_fontmap::load_definitions),
   ("pzd", "fontmap", package::pzd_fontmap::load_definitions),
   ("pifont", "sty", package::pifont_sty::load_definitions),
-  ("prepictex", "tex", package::pictex_tex::load_definitions),
-  ("pictex", "tex", package::pictex_tex::load_definitions),
-  ("postpictex", "tex", package::pictex_tex::load_definitions),
   ("utf8", "def", package::utf8_def::load_definitions),
   // Perl utf8x.def.ltxml L18: "Note: this is a copy of utf8.def.ltxml
   // for now" — dispatch utf8x to the same loader.

@@ -103,6 +103,28 @@ impl Post {
     let audit = *POST_AUDIT;
 
     for processor in processors.iter_mut() {
+      // Map processor names to telemetry phases. See docs/TELEMETRY.md.
+      // Names come from each Processor's get_name() — XSLT prefixes
+      // with "XSLT[", MathML uses "MathML::Presentation"/"::Content".
+      // Anything unrecognised attributes to Xslt as a coarse fallback.
+      let pname = processor.get_name();
+      let phase = if pname.starts_with("MathML::Presentation") {
+        latexml_core::telemetry::Phase::MathmlPres
+      } else if pname.starts_with("MathML::Content") {
+        latexml_core::telemetry::Phase::MathmlCont
+      } else if pname.starts_with("XSLT") {
+        latexml_core::telemetry::Phase::Xslt
+      } else if pname.contains("Image") || pname.contains("image") {
+        // math_images / picture_images / latex_images all share the
+        // external-tool-rendering semantics of Graphics; classify them
+        // as MathImages when they are wired up to process_chain.
+        latexml_core::telemetry::Phase::MathImages
+      } else {
+        // Unknown processor — fall through to Xslt (least surprising
+        // catch-all for the post-XSLT-ish region).
+        latexml_core::telemetry::Phase::Xslt
+      };
+      let _gp = latexml_core::telemetry::phase(phase);
       let mut new_docs = Vec::new();
       for doc in docs {
         let nodes = processor.to_process(&doc);

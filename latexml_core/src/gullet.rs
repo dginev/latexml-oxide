@@ -1161,7 +1161,22 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        if !quiet {
+        // Soft-expansion of character-equivalent CS tokens: a small
+        // set of "primitive" CSes whose entire semantic is to insert
+        // a single character (NBSP, etc.) are non-expandable, but
+        // when they surface inside `\csname...\endcsname` the user's
+        // intent is to use that character as part of the constructed
+        // name. Erroring here mismatches Perl LaTeXML on the canvas
+        // (witness: `\Ref~\cite{key}` → ~ → \lx@NBSP → cs-name error
+        // cluster of 18 papers, see SYNC_STATUS CLUSTER-NBSP).
+        let cs_str = token.with_str(|s| s.to_string());
+        let soft_char: Option<char> = match cs_str.as_str() {
+          "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
+          _ => None,
+        };
+        if let Some(c) = soft_char {
+          cs.push(c);
+        } else if !quiet {
           if lookup_definition(&token)?.is_some() {
             let message = s!(
               "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
@@ -1187,13 +1202,29 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
 
 /// reads and discards tokens, until it encounters a conditional, if any.
 /// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
-/// from pushback/mouth and manually tracks ALIGN_STATE for { and }.
+/// from pushback/mouth (NOT through readToken) and manually tracks
+/// `$LaTeXML::ALIGN_STATE` for `{` and `}`. Critically, this bypasses the
+/// "alignment-template trigger" check that fires `handleTemplate` on `&`/`\cr`
+/// when align_group_count==0 — that check belongs to digestion, not to
+/// `\else`-skip. Rust's `read_token` includes the trigger; calling it from
+/// here would let pmatrix's `&` get treated as the OUTER alignment's
+/// column-end during `\ifx.#1.\else…\fi` skip when `#1` contains
+/// `\begin{pmatrix}…&…\end{pmatrix}`. (REG-2 / math-ph0501074: the 9-line
+/// `\nonumber+\lefteqn+\pmatrix` repro.) Use `read_internal_token` instead
+/// and track BEGIN/END manually, matching Perl byte-for-byte.
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   loop {
-    match read_token()? {
+    let next_low = read_internal_token();
+    match next_low {
       Some(token) => {
         let cc = token.get_catcode();
-        // Perl L128-130: ALIGN_STATE tracking for { and } now handled by read_token itself
+        // Perl L128-130: manual ALIGN_STATE tracking for `{` / `}` (avoids
+        // the trigger check that read_token applies).
+        match cc {
+          Catcode::BEGIN => increment_align_group_count(),
+          Catcode::END => decrement_align_group_count(),
+          _ => {},
+        }
         if cc.is_active_or_cs() {
           if let Some(cond_type) = lookup_conditional(&token) {
             return Ok(Some((token, cond_type)));

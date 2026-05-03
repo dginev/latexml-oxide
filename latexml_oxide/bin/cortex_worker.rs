@@ -152,6 +152,12 @@ impl LatexmlWorker {
   /// Run the conversion pipeline on an input ZIP archive.
   /// Returns the path to the output ZIP file.
   fn convert_archive(&self, input_path: &Path) -> Result<PathBuf, Box<dyn Error>> {
+    let wall_start = std::time::Instant::now();
+    let arxiv_id = input_path
+      .file_stem()
+      .and_then(|s| s.to_str())
+      .unwrap_or("")
+      .to_string();
     // Per-document timeout: two-layer guard.
     //   1. Watchdog thread forcibly aborts after profile.timeout seconds. Catches tight native
     //      loops (Marpa, libxml2, libxslt) that never return to the Rust digestion loop.
@@ -234,7 +240,27 @@ impl LatexmlWorker {
     let status_str = format!("Status:conversion:{}", response.status_code);
     let log = format!("{}\n{}", response.log, status_str);
 
-    // 7. Pack output ZIP: HTML (named after source) + images + log + status
+    // 7. Finalize per-job telemetry. Phase counters were populated by
+    //    the converter/post guards; here we fill in identifiers, wall,
+    //    and resource peaks before serializing.
+    let telemetry_json = {
+      use latexml_core::telemetry;
+      telemetry::set_paper_id(&arxiv_id);
+      telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
+      telemetry::set_category(match response.status_code {
+        0 | 1 => "ok",
+        2 => "conversion_error",
+        _ => "conversion_fatal",
+      });
+      telemetry::set_exit_code(response.status_code as i32);
+      telemetry::set_output_bytes(html.len() as u64);
+      telemetry::set_max_rss_kb(read_max_rss_kb_proc());
+      let (cu, cs) = read_child_rusage_us_proc();
+      telemetry::set_child_rusage_us(cu, cs);
+      telemetry::take().to_json_line()
+    };
+
+    // 8. Pack output ZIP: HTML (named after source) + images + log + status + telemetry
     let output_path =
       std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
     pack_output_zip_with_resources(
@@ -244,10 +270,45 @@ impl LatexmlWorker {
       &log,
       &status_str,
       dest_dir.path(),
+      &telemetry_json,
     )?;
 
     Ok(output_path)
   }
+}
+
+/// Read peak RSS in KB from /proc/self/status's VmHWM. 0 on failure.
+fn read_max_rss_kb_proc() -> u64 {
+  std::fs::read_to_string("/proc/self/status")
+    .ok()
+    .and_then(|content| {
+      content
+        .lines()
+        .find(|l| l.starts_with("VmHWM:"))
+        .and_then(|l| l.split_whitespace().nth(1))
+        .and_then(|n| n.parse::<u64>().ok())
+    })
+    .unwrap_or(0)
+}
+
+/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
+#[cfg(unix)]
+fn read_child_rusage_us_proc() -> (u64, u64) {
+  unsafe {
+    let mut ru: libc::rusage = std::mem::zeroed();
+    if libc::getrusage(libc::RUSAGE_CHILDREN, &mut ru) == 0 {
+      let user = (ru.ru_utime.tv_sec as u64) * 1_000_000 + (ru.ru_utime.tv_usec as u64);
+      let sys = (ru.ru_stime.tv_sec as u64) * 1_000_000 + (ru.ru_stime.tv_usec as u64);
+      (user, sys)
+    } else {
+      (0, 0)
+    }
+  }
+}
+
+#[cfg(not(unix))]
+fn read_child_rusage_us_proc() -> (u64, u64) {
+  (0, 0)
 }
 
 impl Worker for LatexmlWorker {
@@ -365,10 +426,32 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
+  // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
+  // archives that contain a PDF mis-named with a `.tex` extension). Perl
+  // Pack.pm doesn't probe for this, but treating a PDF as TeX produces
+  // thousands of spurious parse errors, so emit the Perl-canonical
+  // `Fatal:invalid:not_tex_source` (status 3) and bail.
+  fn is_pdf_magic(path: &Path) -> bool {
+    let mut buf = [0u8; 5];
+    if let Ok(mut f) = fs::File::open(path) {
+      use std::io::Read;
+      if f.read(&mut buf).is_ok_and(|n| n == 5) {
+        return &buf == b"%PDF-";
+      }
+    }
+    false
+  }
+
   let mut tex_files: Vec<PathBuf> = Vec::new();
   collect_tex_files(dir, &mut tex_files, false);
+  let candidates_before_pdf_filter = tex_files.len();
+  tex_files.retain(|p| !is_pdf_magic(p));
+  if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
+    return Err("Fatal:invalid:not_tex_source PDF magic detected in source file (no TeX-format files in archive)".into());
+  }
   if tex_files.is_empty() {
     collect_tex_files(dir, &mut tex_files, true);
+    tex_files.retain(|p| !is_pdf_magic(p));
   }
   if tex_files.is_empty() {
     return Err("No .tex files found in archive".into());
@@ -644,6 +727,7 @@ fn pack_output_zip_with_resources(
   log: &str,
   status: &str,
   resource_dir: &Path,
+  telemetry_json: &str,
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
@@ -664,6 +748,12 @@ fn pack_output_zip_with_resources(
 
   zip.start_file("status", options)?;
   zip.write_all(status.as_bytes())?;
+
+  // Per-job telemetry record (single-line JSON). benchmark_canvas.sh
+  // extracts this member and appends to <output_dir>/telemetry.jsonl.
+  // See docs/TELEMETRY.md.
+  zip.start_file("telemetry.json", options)?;
+  zip.write_all(telemetry_json.as_bytes())?;
 
   zip.finish()?;
   Ok(())

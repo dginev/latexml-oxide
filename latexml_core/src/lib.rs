@@ -69,6 +69,9 @@ pub mod util;
 /// Complements the cooperative `stomach::check_timeout` polling for native-code hotspots
 /// (Marpa, libxml2, libxslt) that don't return to the digestion loop.
 pub mod watchdog;
+/// Per-job structured telemetry: phase wall times, counts, resource peaks.
+/// See `docs/TELEMETRY.md` for the design contract.
+pub mod telemetry;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 

@@ -121,6 +121,10 @@ if (( STAGE > 0 )); then
 fi
 
 RESULTS_TSV="$OUTPUT_DIR/results.tsv"
+# Per-job telemetry JSONL accumulator (cortex_worker writes telemetry.json
+# inside each output ZIP; we extract & append here). End of run: gzip.
+# See docs/TELEMETRY.md.
+TELEMETRY_JSONL="$OUTPUT_DIR/telemetry.jsonl"
 
 # ─── Validate environment ────────────────────────────────────────────────────
 
@@ -412,6 +416,16 @@ convert_one() {
   case "$category" in
     ok|conversion_error|conversion_fatal)
       mv -f "$output_tmp" "$output_zip"
+      # Extract telemetry.json (single-line JSON) from the output ZIP
+      # and append to the corpus-wide JSONL accumulator. Failure is
+      # non-fatal — older binaries won't have the member.
+      local telem_line
+      if telem_line=$(unzip -p "$output_zip" telemetry.json 2>/dev/null) && [[ -n "$telem_line" ]]; then
+        (
+          flock 201
+          printf '%s\n' "$telem_line" >> "$TELEMETRY_JSONL"
+        ) 201>"${TELEMETRY_JSONL}.lock"
+      fi
       ;;
     *)
       rm -f "$output_tmp"
@@ -441,7 +455,7 @@ convert_one() {
 }
 
 export -f convert_one
-export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS
+export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
@@ -459,6 +473,50 @@ parallel --will-cite \
 if (( PARALLEL_EXIT != 0 )); then
   echo "Note: parallel exited with code $PARALLEL_EXIT (some tasks failed, see results)" >&2
 fi
+
+# Retry transient categories serially. Under 16-worker contention some
+# papers hit timeout/abort/oom_or_kill/error not because they fail but
+# because their share of CPU was insufficient (see resource-exhaustion
+# analysis in commit history). Retry pass runs each candidate once with
+# all cores free; results that flip to ok/conversion_* replace the
+# transient row in RUN_RESULTS.
+RETRY_LIST=$(mktemp)
+RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output)$'
+awk -F'\t' -v re="$RETRY_CANDIDATES_RE" '$7 ~ re {print $1"\t"$7}' "$RUN_RESULTS" \
+  | sort -u > "$RETRY_LIST"
+RETRY_COUNT=$(wc -l < "$RETRY_LIST" | tr -d ' ')
+if (( RETRY_COUNT > 0 )); then
+  echo ""
+  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially..." >&2
+  RETRY_FLIPPED=0
+  RETRY_RESULTS=$(mktemp)
+  while IFS=$'\t' read -r arxiv_id orig_category; do
+    # Locate the original input zip path from the original task list
+    input_zip=$(awk -v id="$arxiv_id" '{
+      n = split($0, parts, "/"); fname = parts[n]; sub(/\.zip$/, "", fname);
+      if (fname == id) { print; exit }
+    }' "$TASK_LIST")
+    [[ -z "$input_zip" ]] && continue
+    convert_one "$input_zip"
+  done < "$RETRY_LIST"
+  # Diff old vs new categories for retried IDs to count flips
+  RETRY_FLIPPED=$(awk -F'\t' -v list="$RETRY_LIST" '
+    BEGIN { while ((getline line < list) > 0) { split(line, a, "\t"); orig[a[1]] = a[2] } }
+    $1 in orig {
+      if (latest[$1] == "" || $2+0 > latest_id[$1]+0) { latest[$1] = $7; latest_id[$1] = $2 }
+    }
+    END {
+      flipped = 0
+      for (id in orig) {
+        new = latest[id]
+        if (new == "ok" || new == "conversion_error" || new == "conversion_fatal") flipped++
+      }
+      print flipped
+    }' "$RUN_RESULTS")
+  echo "Retry pass: $RETRY_FLIPPED of $RETRY_COUNT recovered to ok/conversion_*" >&2
+  rm -f "$RETRY_RESULTS"
+fi
+rm -f "$RETRY_LIST"
 
 # Atomically merge current-run rows into the cumulative TSV after workers finish.
 # Existing rows are kept unless the current run produced a replacement row.
@@ -485,6 +543,14 @@ rm -f "$RUN_IDS"
 
 RUN_END=$(date +%s)
 RUN_DURATION=$(( RUN_END - RUN_START ))
+
+# Compress the per-job telemetry JSONL accumulator. Removes uncompressed
+# original. tools/perf_phase_summary.py reads the .gz directly.
+if [[ -s "$TELEMETRY_JSONL" ]]; then
+  gzip -f "$TELEMETRY_JSONL" 2>/dev/null && \
+    echo "Telemetry: $(zcat "${TELEMETRY_JSONL}.gz" | wc -l) records → ${TELEMETRY_JSONL}.gz"
+fi
+rm -f "${TELEMETRY_JSONL}.lock"
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
 

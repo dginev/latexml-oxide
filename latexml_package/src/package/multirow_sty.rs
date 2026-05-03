@@ -68,6 +68,19 @@ LoadDefinitions!({
   // `\lx@newline` (horizontal-mode break) at the start of the hbox so
   // nested `\\` survives. Witness: arXiv:1504.01713 line 694
   // `\multirow{6}{17pt}{$\alpha_\mathrm{exp}$\\$\alpha_\mathrm{C}$}`.
-  DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]{}",
-    "\\lx@multirow@setup{#2}[#1]{#4}\\hbox{\\let\\\\\\lx@newline\\multirowsetup #6}");
+  // Gate the `\hbox{...content}` body on the actual presence of a
+  // brace-arg. The Perl multirow.sty.ltxml (Bruce's local version)
+  // `$content = Tokens() unless $content` neutralizes a missing 6th
+  // arg before reaching the `\hbox` digest. Our DefMacro substitutes
+  // `#6` unconditionally, so a malformed `\multirow{3}{*}` (next
+  // non-space is `&`) wraps the `&` token inside `\hbox{...&}` and
+  // triggers a cascade of "Stray alignment" + mode-frame errors
+  // (501 in 0903.4199, 4969 in 0908.2482). Use `\@ifnextchar\bgroup`
+  // to peek for an actual `{`-arg and only emit `\hbox{...}` when
+  // content is present; otherwise emit `\lx@multirow@setup` alone
+  // and leave `&` (or whatever comes next) for the outer tabular.
+  DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]",
+    "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox}{}");
+  DefMacro!("\\lx@multirow@hbox{}",
+    "\\hbox{\\let\\\\\\lx@newline\\multirowsetup #1}");
 });

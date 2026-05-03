@@ -246,10 +246,22 @@ LoadDefinitions!({
   Let!("\\overarrow",  "\\overrightarrow");
   Let!("\\underarrow", "\\underrightarrow");
 
-  // \frac — AmSTeX form; analogous to amsmath but in case neither
-  // amsmath flavor is preferred. (Perl L262-268)
-  // Falls back to plain \frac via \genfrac if upstream needs it.
-  DefMacro!("\\Cal{}", "{\\mathcal #1}");
+  // Perl AmSTeX.pool.ltxml L270:
+  //   DefConstructor('\Cal{}', '#1', bounded => 1, requireMath => 1,
+  //     font => { family => 'caligraphic', series => 'medium', shape => 'upright' },
+  //     enterHorizontal => 1);
+  //
+  // Earlier Rust translation routed `\Cal{X}` to `{\mathcal #1}` —
+  // but `\mathcal` lives in latex_constructs.pool.ltxml which is NOT
+  // loaded for the AmSTeX path (the amsppt-driven \documentstyle
+  // dispatcher in tex_job.rs only LoadPool's AmSTeX, not LaTeX). The
+  // resulting `\mathcal` undefined surfaced on plain-amstex papers.
+  // Match Perl by emitting `#1` directly with a calligraphic font frame.
+  // Witness: 0805.3554 `\input amstex` + `$\Cal X$` math.
+  DefConstructor!("\\Cal{}", "#1",
+    bounded => true, require_math => true,
+    font => {family => "caligraphic", series => "medium", shape => "upright"},
+    enter_horizontal => true);
 
   DefConstructor!("\\roman{}", "#1",
     bounded => true, require_math => true,

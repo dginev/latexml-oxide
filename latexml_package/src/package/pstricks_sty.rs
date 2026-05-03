@@ -42,6 +42,16 @@ LoadDefinitions!({
   DefMacro!("\\psdots OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\psdot OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\qline{}{}", "");
+
+  // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
+  // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by
+  // Perl's `InputDefinitions('pstricks', noltxml=>1)`. Our Rust binding
+  // doesn't raw-load pstricks.sty, so define a HTML-shrug stub here:
+  // emit just the body, dropping placement. Witness: 0905.1885
+  // (`\Rput[t](0,0){$H_1$}`).
+  DefMacro!("\\Rput OptionalMatch:* [] Pair {}", "#4");
+  DefMacro!("\\rput OptionalMatch:* [] Pair {}", "#4");
+  DefMacro!("\\uput OptionalMatch:* {} [] Pair {}", "#5");
   DefMacro!("\\qdisk{}{}", "");
 
   // Text placement — drop both coords AND the text body. Perl's

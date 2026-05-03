@@ -4,6 +4,7 @@
 //! (Scan → Bibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups).
 //! Used by both the `latexml_oxide` binary and the `cortex_worker` binary.
 
+use latexml_core::telemetry::{self, Phase};
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::object_db::ObjectDB;
 use latexml_post::processor::Processor;
@@ -85,17 +86,21 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   };
 
+  telemetry::phase_enter(Phase::PostXmlParse);
   let t_parse = audit_start("PostDocument::new_from_string");
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
       eprintln!("Post-processing: failed to parse XML: {}", e);
+      telemetry::phase_exit();
       return xml.to_string();
     },
   };
   audit_end(t_parse);
+  telemetry::phase_exit();
 
   // Phase 1: Scan
+  telemetry::phase_enter(Phase::PostScan);
   let t_scan = audit_start("Scan");
   let db = ObjectDB::new();
   let mut scanner = latexml_post::scan::Scan::new(db);
@@ -104,12 +109,15 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(mut docs) => docs.remove(0),
     Err(e) => {
       eprintln!("Post-processing: Scan failed: {}", e);
+      telemetry::phase_exit();
       return xml.to_string();
     },
   };
   audit_end(t_scan);
+  telemetry::phase_exit();
 
   // Phase 1.5: MakeBibliography
+  telemetry::phase_enter(Phase::Bibliography);
   let t_bib = audit_start("MakeBibliography");
   let db = scanner.db;
   let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
@@ -119,6 +127,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Ok(mut docs) => docs.remove(0),
       Err(e) => {
         eprintln!("Post-processing: MakeBibliography failed: {}", e);
+        telemetry::phase_exit();
         return xml.to_string();
       },
     }
@@ -126,8 +135,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     doc
   };
   audit_end(t_bib);
+  telemetry::phase_exit();
 
   // Phase 2: CrossRef
+  telemetry::phase_enter(Phase::Crossref);
   let t_xref = audit_start("CrossRef");
   let db = bibmaker.db;
   let mut crossref =
@@ -137,12 +148,15 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(mut docs) => docs.remove(0),
     Err(e) => {
       eprintln!("Post-processing: CrossRef failed: {}", e);
+      telemetry::phase_exit();
       return xml.to_string();
     },
   };
   audit_end(t_xref);
+  telemetry::phase_exit();
 
   // Phase 2.5: Graphics
+  telemetry::phase_enter(Phase::Graphics);
   let t_gfx = audit_start("Graphics");
   let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
     .with_svg_threshold_kb(graphics_svg_threshold_kb);
@@ -152,6 +166,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       Ok(mut docs) => docs.remove(0),
       Err(e) => {
         eprintln!("Post-processing: Graphics failed: {}", e);
+        telemetry::phase_exit();
         return xml.to_string();
       },
     }
@@ -159,6 +174,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     doc
   };
   audit_end(t_gfx);
+  telemetry::phase_exit();
 
   // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
   // Without this, the XSLT picture template falls back to "as-TeX" mode and
@@ -177,9 +193,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let svg_fragments = extract_svg_fragments(xml);
   audit_end(t_svg);
 
-  // Phase 2.75: Split
+  // Phase 2.75: Split (only attributes time when --split is on)
   let doc = if split {
-    if let Some(ref xpath) = split_xpath {
+    telemetry::phase_enter(Phase::Split);
+    let result = if let Some(ref xpath) = split_xpath {
       let naming = match split_naming {
         Some("id") | None => latexml_post::split::SplitNaming::Id,
         Some("idrelative") => latexml_post::split::SplitNaming::IdRelative,
@@ -197,15 +214,20 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
           if docs.len() > 1 {
             eprintln!("Split into {} documents", docs.len());
           }
-          docs.remove(0)
+          Ok(docs.remove(0))
         },
         Err(e) => {
           eprintln!("Post-processing: Split failed: {}", e);
-          return xml.to_string();
+          Err(())
         },
       }
     } else {
-      doc
+      Ok(doc)
+    };
+    telemetry::phase_exit();
+    match result {
+      Ok(d) => d,
+      Err(()) => return xml.to_string(),
     }
   } else {
     doc
@@ -274,6 +296,9 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   }
 
+  // process_chain attributes per-processor inside latexml_post::Post::
+  // process_chain (MathmlPres / MathmlCont / Xslt). No outer phase wrap
+  // needed; the inner per-processor guards cover their own time.
   let t_chain = audit_start("process_chain");
   let chain_result = post.process_chain(doc, &mut processors);
   audit_end(t_chain);
@@ -283,6 +308,8 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       let output = results[0].to_xml_string();
       audit_end(t_serialize);
       if stylesheet.is_some_and(|s| s.contains("html")) {
+        // Phase: Html5Fixups (regex post-XSLT cleanup + SVG injection).
+        let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
         // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
         // libxml2's to_string() includes it by default; we strip it here.
         let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
