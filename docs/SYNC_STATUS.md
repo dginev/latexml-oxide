@@ -77,8 +77,23 @@ current Perl LaTeXML: 1 BOTH CLEAN, 29 OUT-OF-SCOPE (Perl=Rust both
 PERL_REGRESSION (`hep-th0005268` R=21 vs P=26),
 **0 REAL_REGRESSION**. Per
 [staged 100k protocol](feedback_staged_100k_protocol.md), the zero-
-regression gate is cleared. Stage 2 (20k cumulative) is unblocked.
-Triage TSV at `~/data/stage01_non_ok_parity.tsv`.
+regression gate is cleared. Triage TSV at
+`~/data/stage01_non_ok_parity.tsv`.
+
+**2026-05-03 Stage 2 (10k slice [10000, 20000), cumulative=20k)
+launched** — `~/data/stage02_100k_html/`, release cortex_worker
+(16 workers, 120s timeout). Stage 1 took ~4h; expect Stage 2 to
+take similar wall-clock to complete then triage. Background log
+at `~/data/stage02_100k_html.log`. While Stage 2 runs, verified
+the lipsum cluster (memory project_lipsum_clist_map_73.md) is
+GREEN: `cargo test --test 83_expl3 str_lowercase` → 4/0/0 across
+all four lowercase variants (mixed/already/allcaps/Hello).
+
+Two stale build warnings cleaned up while waiting:
+- `tex_tables.rs:728` — `last_token` dead-init after REG-3 fix
+  (commit `a76724e361`).
+- `telemetry.rs:358` — `field!`-macro trailing dead-write
+  (commit `8711c8a66e`).
 
 **Round-19 verification**: re-tested all 29 papers from the original
 round-19 REAL_REGRESSION list; ALL now BOTH CLEAN or OUT-OF-SCOPE
