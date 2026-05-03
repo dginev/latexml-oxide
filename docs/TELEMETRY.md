@@ -345,22 +345,38 @@ join on `paper_id`, reports per-paper `Δwall`, `Δphase_us`,
 
 ---
 
-## 7. Schedule
+## 7. Status (2026-05-03)
 
-Phase 1 (Steps 1-2 + Step 5) — instrument latexml_oxide   →  1.5 days
-Phase 2 (Steps 3-4) — cortex_worker + JSON I/O            →  1   day
-Phase 3 (Step 6) — analytics script                       →  0.5 day
-Phase 4 (Steps 7-8) — tests + perf-compare tooling        →  0.5 day
-Validation — 100-paper run + acceptance checklist         →  0.5 day
+All eight steps landed on `claude-round-19`. Branch
+`claude-telemetry-foundation` was merged in and deleted; future
+work continues on a single branch.
 
-**Total: ~4 days** focused work. Calendar: across the 2000-paper
-parity sweep + 10k stage-1 sweep, both currently running, so most
-of this is implement-while-sweep-runs.
+| Step | What | Commit | Status |
+|---:|------|--------|:------:|
+| 1 | `latexml_core::telemetry` module + 4 unit tests | initial commit | ✅ |
+| 2 | Phase guards: Bootstrap / Digest / Build / Serialize in `converter.rs`; PostXmlParse / PostScan / Bibliography / Crossref / Graphics / Split / Xslt-coarse in `latexml_post`. **11 of 17 phases wrapped.** Rewrite, MathParse, MathImages, MathmlPres, MathmlCont, Html5Fixups deferred (require finer instrumentation in `process_chain` and `latexml_math_parser::parse`). | round 2 + refinement | ✅ partial |
+| 3 | `cortex_worker` writes `telemetry.json` member into output ZIP (paper_id, wall_us, max_rss_kb, child rusage, category, output_bytes, exit_code). | Step 3 commit | ✅ |
+| 4 | `latexml_oxide --telemetry-out=<path>` flag + helper. | Steps 4+5 commit | ✅ |
+| 5 | `latexml_core/build.rs` bakes `LATEXML_GIT_SHA`. | Steps 4+5 commit | ✅ |
+| 6 | `tools/perf_phase_summary.py` reads JSONL[.gz] OR a directory of cortex_worker output ZIPs. Reports per-phase share, top-5 by phase, sum-of-phase / wall distribution, ≥0.92 acceptance count. | Step 6 commit | ✅ |
+| 7 | `tests/001_telemetry.rs`: 2 integration tests (populate + JSON round-trip). | with Step 1 + 17-phase commit | ✅ |
+| 8 | `tools/perf_compare.py` paired A/B comparator (Δwall, per-phase Δ%, regression list >15%, distribution). | Step 8 commit | ✅ |
 
-Implementation lives on branch `claude-telemetry-foundation` off
-`claude-round-19`. Merges to `master` only after stage-1 (10k)
-parity validation completes clean — telemetry foundation is
-NOT a parity change but lands cleanly only on a known-good base.
+Smoke test on `0704.0023` (real arxiv paper): wall=1.35s, sum-of-
+phase=1.29s = **95.6% coverage** — exceeds the §6 acceptance ≥92%.
+
+Deferred follow-ups:
+- Wrap `latexml_math_parser::parse` to populate `math_parse_us` +
+  the bucket histogram (per-formula instrumentation).
+- Split process_chain phase wall into MathmlPres / MathmlCont /
+  Xslt / Html5Fixups (requires `latexml_post::Post::process_chain`
+  refactor to time each `Box<dyn Processor>`).
+- Wrap `latexml_core::rewrite` entry for the Rewrite phase.
+- `benchmark_canvas.sh` JSONL aggregation across the 10k+ output
+  ZIPs into a single gzipped `telemetry.jsonl.gz` per stage.
+
+These are tracked in `docs/PERFORMANCE.md` priority order; none
+block the foundation from being usable today.
 
 ---
 
