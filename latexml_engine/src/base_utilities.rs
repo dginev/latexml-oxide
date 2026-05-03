@@ -37,6 +37,12 @@ LoadDefinitions!({
       Ok(if_token)
     }
   }, locked=>true);
+  // \@ifundefined is a LaTeX-kernel macro, but our amsppt / amssymb
+  // bindings invoke it from Plain-TeX/AMSTeX context too — and those
+  // contexts don't load latex_constructs (which has the same Let).
+  // Surfacing it here makes it available regardless of which constructs
+  // pool is loaded. Surpasses Perl's Base_Utility.pool.ltxml gap.
+  Let!("\\@ifundefined", "\\lx@ifundefined");
 
   // Dash and space primitives used by ligatures and other mechanisms.
   // Perl Base_Utility.pool.ltxml L44-45
