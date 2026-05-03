@@ -314,6 +314,81 @@ from**. The accepted approach:
 
 **Highest-ROI next step**: Phase A re-sweep + Phase B.NBSP fix.
 
+## PR-readiness gates (accepted 2026-05-03)
+
+The cluster work this session (NBSP, @ifundefined, setdec/dec, \CITE)
+recovered ~55 papers on theoretical grounds — none of those gains are
+*measured* yet. Before opening a "100k canvas error-free" PR, the
+following gates must clear in order:
+
+### Gate 0: Re-sweep gives us numbers (load-bearing)
+- [ ] Build release `cortex_worker` from current HEAD (mimalloc +
+  MAX_ERRORS=100 + NBSP soft-expand + @ifundefined Let + setdec/dec
+  + \CITE).
+- [ ] Sweep all 100k with `tools/benchmark_canvas.sh --workers 16
+  --timeout 120`. Retry-on-transient pass auto-runs.
+- [ ] Triage every non-OK with `tools/parity_check.sh`. Targets:
+  - 0 REAL_REGRESSION across the whole 100k.
+  - Net error reduction ≥ 40 papers vs the pre-fix 226 baseline.
+  - Test suite green in CI (not just local).
+
+### Gate 1: psfig cluster (8 papers)
+- [ ] Trace `\input <name>.sty` dispatch for `psfig.sty` invocations.
+  Both engines currently fail; Perl's psfig.sty.ltxml is 1-line
+  `RequirePackage('epsfig')`. Surpass by routing the `\input` form
+  through the binding registry the same way `\usepackage` does.
+
+### Gate 2: `_/^` cluster sub-causes (130 papers, the bulk)
+- [ ] Add digester instrumentation: log the macro that emitted each
+  `_`/`^` token whose source is "Anonymous String" (no source line).
+  Reveals whether the trigger is (a) a buggy package binding,
+  (b) revert-token serializer leak, or (c) user-class macro shadow.
+- [ ] Bisect 5 representative papers with smallest cortex.log to
+  confirm the sub-cause. Then patch the common emitter.
+
+### Gate 3: `endproof` (9 papers)
+- [ ] IEEEtran `\endproof` outside `\proof` env: stub or
+  `_noautoclose`-style binding so the mode-mismatch error doesn't
+  fire. Investigate IEEEproof end_mode / @end@proof pattern.
+
+### Gate 4: Defenses (prevent drift)
+- [ ] **Regression-sample integration test**: pin the 41 newly-fixed
+  papers (NBSP 18 + setdec 12 + \CITE 11) as 0-error in
+  `latexml_oxide/tests/`. Codifies the wins; future regressions fail
+  CI before merge.
+- [ ] **CI nightly canvas**: random 1k-slice nightly with
+  `parity_check.sh` baseline diff blocking PRs that introduce new
+  REAL_REGRESSION. Cheap insurance against drift after the PR lands.
+
+### Gate 5: PR ready
+- [ ] All Gates 0-4 cleared.
+- [ ] SYNC_STATUS updated with measured numbers (not predicted).
+- [ ] PR description (1 paragraph): cluster count, papers recovered,
+  pre/post raw OK rate, link to integration test.
+
+### Critical pitfalls being explicitly tracked
+- Cascade audit on the soft-expand list — 5-paper sample is
+  insufficient; verify on the full 100k via Gate 0.
+- `\@ifundefined` global Let diverges slightly from Perl-faithful
+  organization (was LaTeX-only). Watch for Plain-TeX papers that
+  defined their own `\@ifundefined` and would now silently
+  conflict — Gate 0 will catch any.
+- `\CITE → \cite` collision risk if any paper does
+  `\renewcommand{\CITE}{...}` — Gate 0 will catch any.
+
+### Realistic timeline (accepted)
+- **Day 1** (today): Phase A re-sweep + Gate 0 triage. ~3h wall-clock
+  release-build + sweep, ~½d for triage of any new errors.
+- **Days 2-3**: Gate 1 (psfig) + Gate 3 (endproof). Both ~½d each.
+- **Days 4-7**: Gate 2 (`_/^` sub-cause bisection). Largest residual
+  cluster, deserves a week of focused work.
+- **Day 8**: Gate 4 (regression-sample test + CI nightly canvas).
+- **Day 9**: Gate 5 — open the PR.
+
+PR-able state expected ~9 calendar days from 2026-05-03 with measured
+numbers and meaningful integration tests, NOT a "we think this works"
+narrative.
+
 While Stage 2 ran, also:
 - Verified the lipsum cluster
   (`project_lipsum_clist_map_73.md`) is GREEN:
