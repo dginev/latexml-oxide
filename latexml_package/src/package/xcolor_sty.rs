@@ -278,8 +278,10 @@ fn apply_mix_expr(mut color: Color, mix_str: &str) -> Color {
     };
 
     if rest.is_empty() {
-      // No second color specified, mix with white
-      color = color.mix(&WHITE, pct.clamp(0.0, 100.0) / 100.0);
+      // No second color specified, mix with white. xcolor/pgf allow
+      // pct > 100 (extrapolation past the base = darker than the base);
+      // Color::mix clamps the resulting components to [0,1].
+      color = color.mix(&WHITE, pct / 100.0);
       break;
     }
     // Skip the ! before the name
@@ -295,7 +297,7 @@ fn apply_mix_expr(mut color: Color, mix_str: &str) -> Color {
     } else {
       lookup_xcolor(name)
     };
-    color = color.mix(&other, pct.clamp(0.0, 100.0) / 100.0);
+    color = color.mix(&other, pct / 100.0);
     remaining = next_rest;
   }
   color
@@ -560,6 +562,7 @@ LoadDefinitions!({
   for option in &["dvipsnames", "dvipsnames*"] {
     DeclareOption!(*option, {
       InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      crate::package::color_sty::override_dvipsnames_with_srgb()?;
     });
   }
   DeclareOption!("svgnames", {

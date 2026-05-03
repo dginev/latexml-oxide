@@ -68,6 +68,74 @@ pub fn lookup_color_obj(name: &str) -> Color {
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
 
+/// Canonical sRGB equivalents of the 68 dvipsnames colors.
+///
+/// dvipsnam.def defines each name in CMYK; pdftex writes those CMYK values
+/// straight into the PDF, and the viewer (Acrobat / poppler / etc.) converts
+/// them to sRGB using a CMYK ICC profile (typically US Web Coated SWOP v2).
+/// HTML output has no equivalent step — naive `R = (1-c)(1-k)` produces
+/// noticeably different (often teal-shifted) hues for blues and greens.
+///
+/// The xcolor manual itself does not publish hex equivalents (only the CMYK
+/// values + on-page swatches). The hex values below are the de-facto Acrobat
+/// rendering, cross-checked against two independent reproductions:
+///   - Manim community DVIPSNAMES constant
+///     (https://docs.manim.community/en/stable/reference/manim.utils.color.DVIPSNAMES.html)
+///   - Wikibooks "LaTeX/Colors"
+///     (https://en.wikibooks.org/wiki/LaTeX/Colors)
+/// Both sources agree on every entry. Black is given as the warm pre-press
+/// `#221E1F` that K=100% renders to, not pure `#000000`.
+const DVIPSNAMES_SRGB: &[(&str, u32)] = &[
+  ("Apricot",        0xFBB982), ("Aquamarine",     0x00B5BE),
+  ("Bittersweet",    0xC04F17), ("Black",          0x221E1F),
+  ("Blue",           0x2D2F92), ("BlueGreen",      0x00B3B8),
+  ("BlueViolet",     0x473992), ("BrickRed",       0xB6321C),
+  ("Brown",          0x792500), ("BurntOrange",    0xF7921D),
+  ("CadetBlue",      0x74729A), ("CarnationPink",  0xF282B4),
+  ("Cerulean",       0x00A2E3), ("CornflowerBlue", 0x41B0E4),
+  ("Cyan",           0x00AEEF), ("Dandelion",      0xFDBC42),
+  ("DarkOrchid",     0xA4538A), ("Emerald",        0x00A99D),
+  ("ForestGreen",    0x009B55), ("Fuchsia",        0x8C368C),
+  ("Goldenrod",      0xFFDF42), ("Gray",           0x949698),
+  ("Green",          0x00A64F), ("GreenYellow",    0xDFE674),
+  ("JungleGreen",    0x00A99A), ("Lavender",       0xF49EC4),
+  ("LimeGreen",      0x8DC73E), ("Magenta",        0xEC008C),
+  ("Mahogany",       0xA9341F), ("Maroon",         0xAF3235),
+  ("Melon",          0xF89E7B), ("MidnightBlue",   0x006795),
+  ("Mulberry",       0xA93C93), ("NavyBlue",       0x006EB8),
+  ("OliveGreen",     0x3C8031), ("Orange",         0xF58137),
+  ("OrangeRed",      0xED135A), ("Orchid",         0xAF72B0),
+  ("Peach",          0xF7965A), ("Periwinkle",     0x7977B8),
+  ("PineGreen",      0x008B72), ("Plum",           0x92268F),
+  ("ProcessBlue",    0x00B0F0), ("Purple",         0x99479B),
+  ("RawSienna",      0x974006), ("Red",            0xED1B23),
+  ("RedOrange",      0xF26035), ("RedViolet",      0xA1246B),
+  ("Rhodamine",      0xEF559F), ("RoyalBlue",      0x0071BC),
+  ("RoyalPurple",    0x613F99), ("RubineRed",      0xED017D),
+  ("Salmon",         0xF69289), ("SeaGreen",       0x3FBC9D),
+  ("Sepia",          0x671800), ("SkyBlue",        0x46C5DD),
+  ("SpringGreen",    0xC6DC67), ("Tan",            0xDA9D76),
+  ("TealBlue",       0x00AEB3), ("Thistle",        0xD883B7),
+  ("Turquoise",      0x00B4CE), ("Violet",         0x58429B),
+  ("VioletRed",      0xEF58A0), ("White",          0xFFFFFF),
+  ("WildStrawberry", 0xEE2967), ("Yellow",         0xFFF200),
+  ("YellowGreen",    0x98CC70), ("YellowOrange",   0xFAA21A),
+];
+
+/// Re-register the 68 dvipsnames colors in sRGB so HTML output matches
+/// the perceived PDF rendering. Call after `InputDefinitions("dvipsnam")`
+/// so these definitions overwrite the CMYK ones already loaded.
+pub fn override_dvipsnames_with_srgb() -> Result<()> {
+  use latexml_core::common::color::Color;
+  for (name, hex) in DVIPSNAMES_SRGB {
+    let r = ((hex >> 16) & 0xFF) as f64 / 255.0;
+    let g = ((hex >> 8) & 0xFF) as f64 / 255.0;
+    let b = (hex & 0xFF) as f64 / 255.0;
+    def_color(name, &Color::Rgb(r, g, b), Some(Scope::Global))?;
+  }
+  Ok(())
+}
+
 LoadDefinitions!({
   //======================================================================
   // Ignorable options (mostly drivers)
@@ -100,6 +168,7 @@ LoadDefinitions!({
   for option in &["dvips", "xdvi", "oztex", "dvipsnames"] {
     DeclareOption!(*option, {
       InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      override_dvipsnames_with_srgb()?;
     });
   }
 

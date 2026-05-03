@@ -239,10 +239,13 @@ impl Color {
     }
     let a = base.components();
     let b = other.components();
+    // Allow extrapolation (fraction outside [0,1]) so callers can express
+    // xcolor's `c!p` for p>100 ("darker than base"); clamp the resulting
+    // components back into the model's valid [0,1] range.
     let mixed: Vec<f64> = a
       .iter()
       .zip(b.iter())
-      .map(|(ai, bi)| fraction * ai + (1.0 - fraction) * bi)
+      .map(|(ai, bi)| (fraction * ai + (1.0 - fraction) * bi).clamp(0.0, 1.0))
       .collect();
     from_model_components(base.model(), &mixed)
   }
