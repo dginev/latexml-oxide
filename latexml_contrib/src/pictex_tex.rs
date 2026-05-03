@@ -22,7 +22,13 @@ LoadDefinitions!({
   RawTeX!("\\def\\lx@pictex@linethickness@arg#1{}");
   RawTeX!("\\def\\setcoordinatesystem units <#1,#2>{}");
   RawTeX!("\\def\\setplotsymbol (#1){}");
-  RawTeX!("\\def\\setdashes <#1>{}");
+  // PiCTeX `\setdashes`/`\setdots` accept an OPTIONAL `<spacing>` arg:
+  //   \setdashes              % default dash spacing
+  //   \setdashes <0.05cm>     % custom spacing
+  // Witness: math0107222 uses `\setdots` (no arg). Both forms must work.
+  RawTeX!("\\def\\setdashes{\\@ifnextchar<{\\lx@pictex@gobble@angle}{}}");
+  RawTeX!("\\def\\setdots{\\@ifnextchar<{\\lx@pictex@gobble@angle}{}}");
+  RawTeX!("\\def\\lx@pictex@gobble@angle<#1>{}");
   RawTeX!("\\def\\startrotation by #1 #2{}");
   RawTeX!("\\def\\plot#1/{}");
   RawTeX!("\\def\\putrule from #1 #2 to #3 #4{}");
