@@ -10,7 +10,13 @@ when every in-scope paper produces 0 errors on Rust too.
 non-OK** introduced; **56 papers recovered**. Round-20 fix series
 committed (`e1c3da3975`).
 
-**True Rust regression count: 0**. Re-classifying the 246 residual
+**True Rust regression count: 0** *for ported error conditions*.
+[Caveat: Error/Fatal coverage audit](ERROR_PARITY_AUDIT.md) reveals
+≈43% of Perl Error/Fatal callsites are absent in Rust (largely
+concentrated in `latexml_post` and 4 packages: siunitx, pgfmath,
+xcolor, calc). On the current 100k corpus this gap doesn't appear
+to be inflating the parity claim — but a few PERL_REGRESSION papers
+loading xcolor warrant re-verification. Re-classifying the 246 residual
 rows by parity-check verdict:
 
 | Verdict | Rows | Meaning |
