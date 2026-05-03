@@ -105,4 +105,11 @@ LoadDefinitions!({
   // irrelevant for HTML; pass the value through, drop the format spec.
   RawTeX!("\\def\\setdec #1 {}");
   RawTeX!("\\def\\dec #1 {#1}");
+
+  // \CITE — uppercase variant of \cite used in some revtex-era physics
+  // papers (~11 cluster: cond-mat0003169, hep-ph0103298, etc.). Author
+  // convention; not formally defined anywhere. Stub as alias to \cite
+  // so the bib key is still resolved. Surpass-Perl (Perl LaTeXML also
+  // errors here).
+  Let!("\\CITE", "\\cite");
 });
