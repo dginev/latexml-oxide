@@ -284,6 +284,17 @@ pub fn incr_error() {
 pub fn incr_fatal_error() {
   STATE.with(|s| s.borrow_mut().fatal_errors += 1);
 }
+/// Bulk-set status counts at finalize time from `common::error::REPORT`
+/// (the canonical Error!/Warn!/Fatal! counter). Avoids double-bookkeeping
+/// in every macro invocation; just snapshot once before serialization.
+pub fn set_status_counts(warnings: u32, errors: u32, fatal_errors: u32) {
+  STATE.with(|s| {
+    let mut t = s.borrow_mut();
+    t.warnings = warnings;
+    t.errors = errors;
+    t.fatal_errors = fatal_errors;
+  });
+}
 
 // ─── identifiers (binary-set) ───────────────────────────────────────────────
 

@@ -244,6 +244,7 @@ impl LatexmlWorker {
     //    the converter/post guards; here we fill in identifiers, wall,
     //    and resource peaks before serializing.
     let telemetry_json = {
+      use latexml_core::common::error::{LogStatus, get_status};
       use latexml_core::telemetry;
       telemetry::set_paper_id(&arxiv_id);
       telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
@@ -257,6 +258,16 @@ impl LatexmlWorker {
       telemetry::set_max_rss_kb(read_max_rss_kb_proc());
       let (cu, cs) = read_child_rusage_us_proc();
       telemetry::set_child_rusage_us(cu, cs);
+      // Snapshot Error!/Warn!/Fatal! counts from common::error::REPORT
+      // (the canonical counter populated by note_status). Without this
+      // copy the telemetry `errors`/`warnings`/`fatal_errors` fields
+      // stay 0 even when the log shows hundreds of errors — observed
+      // across stages 01-10 (190k jobs).
+      telemetry::set_status_counts(
+        get_status(LogStatus::Warning) as u32,
+        get_status(LogStatus::Error) as u32,
+        get_status(LogStatus::Fatal) as u32,
+      );
       telemetry::take().to_json_line()
     };
 
