@@ -239,21 +239,27 @@ comparison proves equivalence.
    shape or ambiguity family; start with exact parsed-math caching or semantic
    pruning, not broad direct builders.
 
-### P0: Make every slow job phase-attributed
+### P0: Make every slow job phase-attributed — DONE 2026-05-03
 
-The current TSV gives only total wall time, exit code, output size, status, and
-category. Logs expose useful hints, but not enough to make reliable engineering
-decisions. Add structured per-job JSONL or TSV fields for:
+Implemented per the contract in [`docs/TELEMETRY.md`](TELEMETRY.md).
 
-- phase timings: load, digest, build, rewrite, math parse, post scan, graphics,
-  MathML presentation/content, XSLT, serialization;
-- counts: formulae, graphics assets, DB objects, output bytes, warnings,
-  errors, fatal errors;
-- resource metrics: max RSS, child-process user/sys time, external tool count;
-- identifiers: git SHA, command line, timeout, worker count, host.
+Per-job phase wall + counts now emitted by `cortex_worker` as a
+single-line `telemetry.json` member of each output ZIP, aggregated by
+`tools/benchmark_canvas.sh` into `<output_dir>/telemetry.jsonl.gz`,
+and consumed by `tools/perf_phase_summary.py` (per-phase share, top-N
+papers, distribution) and `tools/perf_compare.py` (paired A/B Δwall,
+per-phase Δ%, regression list).
 
-Acceptance: the 100k run can be sorted by any phase without reading `.log`
-files, and the sum of phase timings explains most of wall time.
+Phases emitted (14 of 17 wrapped today; remaining 3 — Html5Fixups
+plus per-formula `math_parse_buckets` and `MathImages` — deferred):
+Bootstrap, Digest, Build, Rewrite, MathParse, PostXmlParse, PostScan,
+Bibliography, Crossref, Graphics, Split, MathmlPres, MathmlCont,
+Xslt, Serialize.
+
+Acceptance check on `0704.0023`: sum-of-phase / wall = 95.6% (>=92%
+gate). Confirms first telemetry-driven finding: `graphics` already
+visible at 38% of wall on a single arxiv paper, motivating the P1
+graphics conversion-cache work below.
 
 ### P1: Graphics and output-heavy jobs
 

@@ -48,6 +48,17 @@ isolated edge cases.
 `0901.0054` P>=101 vs R=15 capped), **0 REAL_REGRESSION**. The
 all-clean trajectory holds at 500-paper scale.
 
+**2026-05-03 Telemetry foundation landed** — 8/8 steps from
+[`docs/TELEMETRY.md`](TELEMETRY.md). Per-job phase wall + counts
+flow from `latexml_core::telemetry` through `cortex_worker` into
+`telemetry.json` ZIP members; `tools/benchmark_canvas.sh` aggregates
+to `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and
+`tools/perf_compare.py` consume. 14/17 phases wrapped (Bootstrap,
+Digest, Build, Rewrite, MathParse, PostXmlParse, PostScan,
+Bibliography, Crossref, Graphics, Split, MathmlPres, MathmlCont,
+Xslt, Serialize). 95.6% sum-of-phase coverage on 0704.0023 vs the
+≥92% acceptance gate.
+
 **2026-05-03 Stage 1 (10k benchmark_canvas) cleared the gate**
 (`~/data/stage01_100k_html/`, release cortex_worker, 16 workers).
 **9965 [ok] / 34 [conversion_error] / 1 [error] = 99.65% raw OK.**
