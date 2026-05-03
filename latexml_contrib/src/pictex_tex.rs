@@ -32,6 +32,9 @@ LoadDefinitions!({
   RawTeX!("\\def\\startrotation by #1 #2{}");
   RawTeX!("\\def\\plot#1/{}");
   RawTeX!("\\def\\putrule from #1 #2 to #3 #4{}");
+  // PiCTeX `\putrectangle corners at <x1> <y1> and <x2> <y2>`.
+  // Witness: quant-ph0406132 (line 208: `\putrectangle corners at 0.953 25.813 and 22.543 6.763`).
+  RawTeX!("\\def\\putrectangle corners at #1 #2 and #3 #4{}");
   RawTeX!("\\def\\circulararc #1 degrees from #2 #3 center at #4 #5{}");
   RawTeX!("\\def\\arrow <#1> [#2] from #3 #4 to #5 #6{}");
 
