@@ -357,12 +357,18 @@ Each requires dedicated multi-iteration architectural work. Bisections
 and root causes are recorded; the steps below are the proposed line
 of attack.
 
-### CLUSTER-NBSP: `\lx@NBSP` leaks inside `\csname...\endcsname` (18 papers)
+### CLUSTER-NBSP: `\lx@NBSP` leaks inside `\csname...\endcsname` — FIXED `75a5a42877` (2026-05-03)
 
-Identified during the 2026-05-03 100k post-mortem. SHARED-FAILURE with
-Perl LaTeXML (OUT-OF-SCOPE per parity_check), so fixing it puts Rust
-ahead of Perl on this cluster. **Surpass-Perl opportunity, not a real
-regression.**
+**Status: DONE.** All 18 witnesses now PERL_REGRESSION (Rust=0-3 vs
+Perl=4-66). ~542 Perl errors collectively recovered.
+
+Fix: in `latexml_core/src/gullet.rs` `read_cs_name_inner`, soft-expand
+a small closed set of CS tokens whose semantic is a single character
+(`\lx@NBSP`, `\lx@nobreakspace`, `\nobreakspace` → U+00A0). Push the
+char into the CS-name buffer instead of erroring. The set is closed;
+extend with new entries if more cases emerge.
+
+Original problem description (preserved for context):
 
 **Symptom**:
 ```
