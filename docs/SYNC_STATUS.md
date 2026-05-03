@@ -53,11 +53,18 @@ all-clean trajectory holds at 500-paper scale.
 flow from `latexml_core::telemetry` through `cortex_worker` into
 `telemetry.json` ZIP members; `tools/benchmark_canvas.sh` aggregates
 to `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and
-`tools/perf_compare.py` consume. 14/17 phases wrapped (Bootstrap,
+`tools/perf_compare.py` consume. **16/17 phases wrapped** (Bootstrap,
 Digest, Build, Rewrite, MathParse, PostXmlParse, PostScan,
 Bibliography, Crossref, Graphics, Split, MathmlPres, MathmlCont,
-Xslt, Serialize). 95.6% sum-of-phase coverage on 0704.0023 vs the
-≥92% acceptance gate.
+Xslt, Html5Fixups, Serialize — only the per-formula
+`math_parse_buckets` histogram remains deferred). 95.6% sum-of-phase
+coverage on 0704.0023 vs the ≥92% acceptance gate.
+
+**Test suite post-telemetry**: `cargo test --tests --no-fail-fast --
+--skip xcolors_test` → **1129/0/0 across 48 binaries** (xcolors_test
+skipped — pre-existing upstream regression from master `39c7ad8b70`,
+fixture not regenerated; tracked separately). Telemetry foundation
+introduced zero regressions on the full integration suite.
 
 **2026-05-03 Stage 1 (10k benchmark_canvas) cleared the gate**
 (`~/data/stage01_100k_html/`, release cortex_worker, 16 workers).
