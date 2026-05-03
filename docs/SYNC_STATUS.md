@@ -189,50 +189,78 @@ array context, the Pair reader fails to consume `(0,0)`, fires
 `Error:expected:Pair Missing argument Pair`, then mode-frame
 cascade explodes to 10001 errors (Rust's MAX_ERRORS cap).
 
+**Bisected min repro** (verified on this branch, 2026-05-02):
+
+```latex
+\documentclass{article}\begin{document}
+\begin{array}{c}\input test.pstex_t\end{array}
+\end{document}
+```
+with `test.pstex_t` containing just `\begin{picture}(0,0)\end{picture}\n`.
+
+* Perl: **0 errors** (clean).
+* Rust: **501 errors** cascade starting with `Error:unexpected:&
+  Extra alignment tab '&'` followed by `Error:expected:Pair Missing
+  argument Pair for Constructor[\begin{picture}…]`.
+
+Same content INLINE (no `\input`) is clean in Rust too. Same
+content in `\input` but OUTSIDE `\begin{array}` is clean. So the
+trigger is **`\begin{array}` + `\input` together**.
+
+**Refined diagnosis**: The first error is `Extra alignment tab '&'`
+— a `&` cell-separator token is leaking into the stream BEFORE
+picture's `Pair` reader runs, so `ifNext('(')` peeks and finds `&`,
+not `(`. Perl's identical Pair definition (latex_constructs.pool.ltxml:4900,
+also `ifNext`) doesn't fail because Perl's `\input`/array combo
+doesn't leak the `&`. **The bug is in Rust's `\input` or
+`\begin{array}`-cell-template token streaming, NOT in `Pair`.**
+
+(An earlier candidate — make Pair use expanding peek
+[`read_x_token` + unread] — was rejected: it's a divergence from
+Perl's `ifNext`, and only reduced the cascade to 501 errors without
+fixing the root cause.)
+
 **Plan of attack:**
 
-1. **Min repro** — verify that putting `\begin{array}{c}\begin{picture}
-   (0,0)\end{picture}\end{array}` (no `\input`) inside `\[ ... \]`
-   reproduces the `Pair` failure. Then add `\input` to confirm it's
-   not file-IO related.
-2. **Inspect `Pair` parameter type** — `latexml_engine/src/base_parameter_types.rs:193`
-   reads via `gullet::if_next(T_OTHER!("("))`. In math mode, what
-   catcode does `(` carry? It should be OTHER (math doesn't change
-   catcodes), but verify with a debug print.
-3. **Compare to Perl** — Perl handles this paper cleanly with 0
-   errors. Run Perl's `latexml --debug=tokens` on the min repro to
-   see how `(` reaches the picture's `Pair` reader.
-4. **Likely root cause hypotheses**:
-   * a. **Math-mode `\input` re-tokenizes** — when a file is `\input`'d
-        inside math mode, perhaps catcodes differ. Check
-        `latexml_core/src/binding/content.rs` `\input` impl.
-   * b. **Array's column template emits a token before picture** —
-        in math array, each cell may have `\hfil $\displaystyle` or
-        similar prepended that happens BEFORE picture's parameters
-        are read, eating something.
-   * c. **`Pair`'s `if_next` doesn't expand** — perhaps an expandable
-        token sits before `(` and Pair's peek doesn't expand it.
-        Switch to `if_next_x` (expanding peek) and re-test.
-5. **Fix candidates**:
-   * a. **Make Pair's open-paren peek expand expandable tokens**:
-        `gullet::if_next_x(T_OTHER!("("))` instead of `if_next`.
-   * b. **Stub pstex_t `\begin{picture}` in math mode**: if the
-        body is just `\includegraphics`, the picture env content
-        adds no value in math mode — make it a Math-aware no-op
-        that gobbles content via XUntil to `\end{picture}`.
-   * c. **Cap the error cascade at first `Pair` failure**: have
-        the picture env's failure path be a hard recovery — gobble
-        balanced text up to `\end{picture}` and skip silently.
-        This wouldn't fully fix the paper but would prevent the
-        10000-error explosion (R=10001 → R=1 OUT-OF-SCOPE if Perl
-        also has 1).
-6. **Verify**: 0909.5169 R=10001 → R≤1. Even cap-only fix is a
-   massive improvement (drops from "blows up MAX_ERRORS" to
-   "1 user-attributable error").
+1. **Inspect `\input` token-streaming** —
+   `latexml_engine/src/tex_file_io.rs:191`. When `\input` reads a
+   file, does it preserve the surrounding alignment context? In
+   particular, are the token-stream's pushback / catcode / align-state
+   markers correctly maintained across the file-IO boundary? Compare
+   with Perl's `\input` (TeX_FileIO.pool.ltxml).
+2. **Inspect `\begin{array}` cell-template setup** — find where
+   the `c`-column expands to `\hfil $\displaystyle ## $ \hfil &`
+   (or equivalent) and ensure the trailing `&` is the `\halign`-machinery
+   separator, not a user-visible gullet token.
+3. **Trace the actual token sequence** — temporarily add `eprintln!`
+   before `Pair`'s `ifNext` call to print the next 5 tokens. This
+   confirms whether `&` is sitting between `\begin{picture}` and
+   `(` (root cause is upstream) or whether `(` is consumed by Pair
+   itself (root cause is in Pair / read_token).
+4. **Diff with Perl trace** — `latexml --debug=tokens` on the
+   same min repro and compare the token sequence at the picture-env
+   boundary.
+5. **Fix candidates (in order of root-cause-fidelity)**:
+   * a. **Fix the `&` leak** — most likely a `\halign` /
+        `\begin{array}` template setup divergence. The fix should
+        match Perl's column-template emission so cell-separator
+        tokens stay inside the alignment machinery, not visible to
+        the gullet's `read_token`.
+   * b. **Cap error cascade at first `Pair` failure** (pragmatic
+        bound): when picture's required `Pair` reader returns
+        `ArgWrap::None`, instead of erroring + cascading, gobble
+        balanced text up to `\end{picture}` via XUntil and
+        silently emit an empty `<ltx:picture>`. This bounds the
+        damage at 1 error (or 0 if we Warn instead of Error).
+        Acceptable as a defense-in-depth even after fix (a) lands.
+6. **Verify**: 0909.5169 R=10001 → R=0 (== Perl) BOTH CLEAN under
+   fix (a). Sweep round-19 + 100-paper random ok-status sample to
+   confirm no regressions in any Pair-using construct (picture,
+   pstricks, qbezier, etc.).
 
-**Difficulty**: Medium-Hard — likely tractable via fix-candidate (a)
-[expanding `if_next`] but needs careful regression testing because
-many other constructs use `Pair` (picture, pstricks, qbezier, etc.).
+**Difficulty**: Hard — root cause is in `\halign` / `\input`
+machinery, not the easy "Pair reader" surface. Fix (b) is a
+low-risk fallback if (a) requires more iteration than available.
 
 ---
 
