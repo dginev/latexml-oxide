@@ -142,7 +142,29 @@ REAL_REGRESSION post-fix**.
 (Plain TeX path via `\input pictex`); added a 4-numeric-arg
 gobble stub matching pictex.tex's no-render policy.
 
-Stage 5 (50k cumulative, slice [40000, 50000)) is unblocked.
+**2026-05-03 Stage 5 (10k slice [40000, 50000), cumulative=50k)
+cleared the gate** — `~/data/stage05_100k_html/`. **9973 [ok] /
+27 [conversion_error] / 0 [error] = 99.73% raw OK**. Triage of
+all 27 non-OK papers:
+
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| OUT-OF-SCOPE | 17 | Perl=Rust both >0 (incl 1 OOS-cap cs0502050) |
+| PERL_REGRESSION | 8 | hep-ph0411166, hep-ph0501037, astro-ph0506245, cs0508085, hep-ph0508175, hep-ph0509359, hep-ph0510024, cond-mat0511296 |
+| **REAL_REGRESSION** | **0** | Two papers (cs0412098, astro-ph0502153) initially flagged REAL by 90s-Perl-timeout false positive; reclassified OUT-OF-SCOPE on TIMEOUT_SECS=300 retry (R=Perl in both cases) |
+
+Triage TSV at `~/data/stage05_non_ok_parity.tsv`. Cumulative
+through Stage 5: **49,863 OK / 50,000 = 99.73%** raw, **0
+REAL_REGRESSION across all 50k papers**.
+
+**Diagnostic insight**: At 90s Perl timeout, `parity_check.sh`
+can yield false-positive REAL_REGRESSIONs when Perl's first
+errors lag Rust's by more than the cutoff. Re-running with
+TIMEOUT_SECS=300 confirmed both candidates were OOS — Perl
+hits the same errors on full run, just slower. Future stages
+should use 5min retry on any REAL hits as a sanity check.
+
+Stage 6 (60k cumulative) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
