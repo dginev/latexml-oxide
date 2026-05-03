@@ -31,7 +31,7 @@ Final classification after branch `claude-round-19`:
 | BOTH CLEAN | many | both Rust and Perl now produce 0 errors |
 | OUT-OF-SCOPE | many | Perl=Rust both >0; not Rust-only regressions |
 | PERL_REGRESSION | many | Rust beats Perl (40+ across full sweep) |
-| **REAL_REGRESSION** | **1** | REG-2 + REG-3 fixed; only REG-1 remains (broken-input cascade noise) |
+| **REAL_REGRESSION** | **0** | All three regressions fixed (REG-1: 24b430885c, REG-2: 86b5e9a764, REG-3: 21811fe31d) |
 
 **Latest random-sample validation (150 papers, 100 ok + 50 failed)**:
 108 BOTH CLEAN, 0 REAL_REGRESSION, 12 Rust-beats-Perl wins, no
@@ -73,19 +73,15 @@ Each requires dedicated multi-iteration architectural work. Bisections
 and root causes are recorded; the steps below are the proposed line
 of attack.
 
-### REG-1: math0403005 — `\vtop` mode-frame leak (R=29, P=27, gap=2)
+### REG-1: math0403005 — FIXED `24b430885c` (2026-05-02 evening)
 
-**2026-05-02 reclassification: low-priority shared-failure noise**.
-Investigation showed the user TeX is malformed (misplaced `\hline` /
-`\noalign` inside a `p{Dimension}` array column whose cells wrap each
-entry in `\vtop{\hbox to <dim>\relax{...}}`). Both engines correctly
-detect the breakage; Rust just emits 4 extra `\vtop` end_mode errors
-during recovery while Perl emits 2 extra `<endgroup>` errors (net Rust
-+2). Both engines have IDENTICAL `endMode` and `\noalign` semantics.
-The divergence is in downstream frame-pop discipline during error
-recovery — fixing it requires architectural mode-frame work for a
-2-error gap on broken-input territory. Defer indefinitely; document
-as known divergence on broken-input recovery cascades.
+R=29 → R=3 (now PERL_REGRESSION; Rust beats Perl by 24).
+Root cause: `\noalign` primitive's `bgroup()` leaked a frame because
+the body's `{...}` was processed independently — the `{` pushed
+ANOTHER frame, the `}` popped only one, leaving the primitive's
+bgroup leaked. The leaked frame cascaded into `\vtop`/`\hbox`
+mode-end mismatches in p{}-column arrays. Fix: read+discard the
+`{...}` body and `egroup()` to balance the primitive's bgroup.
 
 **Witness paper**: `/home/deyan/data/100k_noproblem_sandbox/arxmliv/0403/math0403005/math0403005.zip`
 (file `scs8-for-arxiv.tex`, around lines 570-600).
