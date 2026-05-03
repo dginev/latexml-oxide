@@ -34,6 +34,7 @@ cortex = ["dep:pericortex", "dep:hostname"]
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 flate2 = "1"
+libc = "0.2"
 tar = "0.4"
 # Only deflate is actually used (CompressionMethod::Deflated). Disabling the
 # default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
