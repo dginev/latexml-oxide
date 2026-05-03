@@ -82,8 +82,8 @@ the 170 non-OK):
 | Day | Task | Outcome |
 |---|---|---|
 | ~~Today~~ DONE | Re-sweep + triage: 99.83% raw OK, **0 NEW non-OK**, 56 papers recovered. Gate 0 cleared. | Measured ✓ |
-| D+1 | Commit Round-20 fixes (parity_check, cluster_regressions, find_main_tex, alignment) | One coherent series |
-| D+2 | Bisect 5 `_/^` witnesses to confirm Sub-cause distribution (B/C may not exist; Sub-cause A dominates the 78-paper bucket) | Sub-cause table |
+| ~~D+1~~ DONE 2026-05-03 | Round-20 fixes committed (`e1c3da3975`) — parity_check, cluster_regressions, find_main_tex, alignment | One coherent series ✓ |
+| ~~D+2~~ DONE 2026-05-03 | Bisected 5 `_/^` witnesses → measured 4/5 Sub-A, 1/5 Sub-B, 0/5 Sub-C. Sub-C removed from active tracking. See sub-cause table below. | Sub-cause table ✓ |
 | D+3 | CI nightly canvas (random 1k slice with parity_check baseline diff) | Drift insurance |
 | D+4 | Open PR with measured numbers | Ship |
 
@@ -125,16 +125,53 @@ Sampled verdicts of remaining clusters:
 psfig via `\documentstyle[epsfig]` (12 papers, `a6b4cb5161`). Pinned
 as fixtures in `tests/06_cluster_regressions.rs`.
 
-**`_/^` cluster sub-causes** (78-paper bucket):
-- **Sub-cause A** — `$$math$$` in horizontal mode. Dominant pattern.
-- **Sub-cause B** — cite-key-with-underscore. Witness `cond-mat0112063`
-  (Rust=Perl=2): `\cite{Raimondi_etal}` / `\bibitem{us_fermionsII}`.
-  The `_` inside the key arg reaches the digester in text mode and
-  errors. Both engines fail identically — surpassing Perl would mean
-  swallowing the `_` inside cite-key reading via a catcode override.
-  Phase C surpass-Perl divergence.
-- **Sub-cause C** (revert-token serializer leak; user-class macro
-  shadow) — hypothetical, no witness identified yet.
+**`_/^` cluster sub-causes** (≈78-paper bucket — measured 2026-05-03):
+
+Distribution from a 5-witness bisection (3 from `^,_` bucket, 2 from
+bare `_`):
+
+| # | Paper | Bucket | Source pattern | Sub-cause |
+|---|---|---|---|---|
+| 1 | `hep-th0009013` | `^,_` | `\begin{abstract}…$$math$$…\end{abstract}` | **A** |
+| 2 | `math0010241` | `^,_` | amsart with `$$math$$` and macro-expanded math (Anonymous String) | **A** (likely; macro-expansion variant) |
+| 3 | `astro-ph0203201` | `_` | `\begin{center}…$$math$$…\end{center}` | **A** |
+| 4 | `cond-mat0003169` | `_` | `\CITE{IsobeUeda_deficit}` after undefined `\CITE` auto-defined as zero-arg constructor → arg digested as text group | **B** (variant) |
+| 5 | `hep-lat0110168` | `_` | `\begin{center}{\small …$$math$$…}\end{center}` | **A** |
+
+**Measured ratio: 4/5 Sub-A, 1/5 Sub-B, 0/5 Sub-C.** Consistent with
+the bucket size ratio (41 `^,_` + 21 `_` + 5 `^` = 67 bare-token
+papers; 13 with extra-token combinations; total ≈80, matching the 78
+SYNC_STATUS estimate).
+
+- **Sub-cause A** — `$$math$$` in non-vertical-mode (horizontal /
+  restricted_horizontal). Dominant pattern (≈80% of cluster). The
+  enclosing context is typically `\begin{abstract}`, `\begin{center}`,
+  or `\begin{center}{\small …}`. Per `wisdom_dollar_dollar_bound_mode`,
+  Rust's `\lx@dollar@default` only treats `$$` as display-math start
+  when `BOUND_MODE` ends with `vertical`; in any horizontal context
+  the `$$` is silently treated as text and `_/^` errors cascade.
+  **Both engines fail identically** — Perl-faithful behaviour matches
+  plain TeX. Surpass-Perl candidate: fall back to inline-math (`$..$`)
+  when `$$` lands in horizontal mode. Requires `OXIDIZED_DESIGN`
+  divergence entry.
+
+- **Sub-cause B** — text-mode `_/^` reaching a digester arg whose
+  catcodes weren't overridden. Witnesses:
+  - `cond-mat0112063` — `\cite{Raimondi_etal}`, `\bibitem{us_fermionsII}`.
+  - `cond-mat0003169` — `\CITE{IsobeUeda_deficit}` where `\CITE` is
+    undefined and auto-defined as zero-arg constructor, so the
+    `{IsobeUeda_deficit}` group is digested as text.
+  Both engines fail identically. Surpass-Perl plan: switch `_/^`
+  catcodes inside the key-bearing arg of `\cite`/`\bibitem` (and any
+  CS that treats its arg as a key). For the auto-defined-undefined-CS
+  variant, the better fix is to *consume + drop* one mandatory arg in
+  the auto-defined error constructor (matches user expectation when
+  the typo had a `{key}` form).
+
+- **Sub-cause C** (revert-token serializer leak / user-class macro
+  shadow) — **REMOVED 2026-05-03**: hypothetical, no witness in this
+  bisection or in any prior triage. Drop from active tracking unless
+  a witness emerges.
 
 ---
 
