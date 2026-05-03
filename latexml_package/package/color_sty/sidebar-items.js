@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","lookup_color","lookup_color_obj","parse_color"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","lookup_color","lookup_color_obj","override_dvipsnames_with_srgb","parse_color"]};
