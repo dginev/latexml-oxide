@@ -239,10 +239,80 @@ mis-named as `.tex`; landed `345ace6fb1` to emit
 REAL_REGRESSION**. Stage 10 saw one Perl-timeout false-positive
 (0912.2378 R=18 P=16-partial → R=18=P=18 on 5min retry).
 
-🎯 **MISSION ACCOMPLISHED — 100k canvas error-free.**
+🎯 **MISSION ACCOMPLISHED — 100k canvas REAL-regression-free.**
 Cumulative across all 10 stages: **99,774 OK / 100,000 = 99.77%**
 raw, **0 unfixed REAL_REGRESSION across all 100,000 papers**.
 Round-19 closes with the strongest sandbox guarantee yet.
+
+## Roadmap to true 100% (post-100k mission, accepted 2026-05-03)
+
+The remaining 226 / 100,000 (0.226%) are SHARED-FAILURE with Perl
+(80% confirmed via parity_check) — i.e. closing them requires
+**surpassing Perl parity**, not chasing Rust regressions. Realistic
+phased plan:
+
+### Phase A — Fundamentals (½ day, mostly shipped 2026-05-03)
+- [x] **MAX_ERRORS=100** matching Perl (`fc80907932`).
+- [x] **Retry-on-transient** in benchmark_canvas.sh (`cb178cff1e`).
+- [x] **mimalloc allocator** (3.4× at 16 workers).
+- [x] **`Fatal:invalid:not_tex_source` PDF guard** (`345ace6fb1`).
+- [x] **Removed 1 PDF-pretender** from corpus.
+- [ ] **Re-sweep 100k** with all four fixes; establish post-fix baseline.
+  Expected: ~210 errors (some transients flip clean).
+
+### Phase B — Cluster reduction (~2 weeks)
+One root cause × N papers. Land fix → recover N papers as a batch.
+- [ ] **CLUSTER-NBSP** (18 papers; see entry in this file). ~½ day.
+- [ ] **`_/^` cluster** (130 papers; partition into cite-key-`_`,
+  revtex3-options-`~`-cascade, and macro-expansion `Anonymous String`
+  sub-causes). 1-2 days each.
+- [ ] **`@`/`@ifundefined` cluster** (33 papers; `at_letter` scope on
+  `\input`/`\InputDefinitions` boundaries). ~1 day.
+- [ ] **`endproof`** (9; amsthm scope). ~½ day.
+- [ ] **psfig stubs** (8). ~½ day.
+- [ ] **setdec/dec stubs** (12). ~½ day.
+- [ ] **`\CITE` etc** (11; per-paper stubs in `latexml_contrib`). ~½ day.
+
+Realistic checkpoint after Phase B: **99.95-99.97%** (~30-50 papers).
+
+### Phase C — Long-tail (~1 month)
+- [ ] Triage each remaining paper at 1-2/day with min-repro → fix → land
+  → verify. Some need brand-new package bindings; some need digester
+  recovery patches that mirror Perl's silent-fix semantics.
+
+Realistic checkpoint: **99.99%** (≤10 errors).
+
+### Phase D — Defensive layers (~1 week, prevents drift)
+- [ ] **Auto-recovery on parse error**: skip the offending token rather
+  than counting it as fatal (mirroring Perl's recovery). Likely
+  absorbs 5-10 papers.
+- [ ] **Pre-screen extension**: `Fatal:invalid:` for empty TeX,
+  binary-content, severely-truncated `.tex` (extending the PDF guard).
+- [ ] **CI nightly canvas**: random 1k-slice nightly with
+  `parity_check.sh` baseline diff blocking PRs that introduce new
+  REAL_REGRESSION.
+
+### Phase E — The asymptote (declare 100%)
+True 100% requires either suppressing residual errors (cheating) or
+**redefining "ok" to exclude papers that no LaTeX engine can recover
+from**. The accepted approach:
+- [ ] After Phases B+C+D drive the residual <10, manually audit the
+  last papers; convert intractable ones to `Fatal:invalid:<reason>`
+  status via Phase D pre-screen. Canvas reports them as legitimate
+  skip rather than failure → **100% by definition**.
+
+### Effort summary
+| Phase | Effort | Expected % |
+|-------|--------|------------|
+| A     | ½ day  | 99.77% (confirmed) |
+| B     | 2 weeks| 99.95% |
+| C     | 1 month| 99.99% |
+| D     | 1 week | hold the line |
+| E     | 1 day  | 100% (by invalid-classification) |
+
+**Total**: ~6 weeks of focused work to declare 100k canvas error-free.
+
+**Highest-ROI next step**: Phase A re-sweep + Phase B.NBSP fix.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
