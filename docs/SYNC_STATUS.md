@@ -164,7 +164,23 @@ TIMEOUT_SECS=300 confirmed both candidates were OOS — Perl
 hits the same errors on full run, just slower. Future stages
 should use 5min retry on any REAL hits as a sanity check.
 
-Stage 6 (60k cumulative) is unblocked.
+**2026-05-03 Stage 6 (10k slice [50000, 60000), cumulative=60k)
+cleared the gate** — `~/data/stage06_100k_html/`. **9981 [ok] /
+19 [conversion_error] / 0 [error] = 99.81% raw OK** (best stage
+yet). Triage of all 19 non-OK papers:
+
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| OUT-OF-SCOPE | 13 | Perl=Rust both >0 |
+| OUT-OF-SCOPE? (Perl-cap) | 1 | astro-ph0603369 (R=310 vs P=101 capped) |
+| PERL_REGRESSION | 5 | gr-qc0601055, physics0602049, hep-ph0604191, physics0608148, plus 1 capped |
+| **REAL_REGRESSION** | **0** | Stage 6 cleared the zero-regression gate |
+
+Triage TSV at `~/data/stage06_non_ok_parity.tsv`. Cumulative
+through Stage 6: **59,844 OK / 60,000 = 99.74%** raw, **0
+REAL_REGRESSION across all 60k papers**.
+
+Stage 7 (70k cumulative) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
