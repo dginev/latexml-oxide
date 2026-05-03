@@ -40,19 +40,3 @@ fn cluster_setdec_dec() {
 fn cluster_cite_uppercase() {
   convert_clean("tests/cluster_regressions/cite_uppercase.tex");
 }
-
-/// `\emph{$$math$$}` triggers `Error:unexpected:_/^` because of
-/// shared `\lx@dollar@default` logic in BOTH Perl and Rust: the
-/// `$$`-as-display check requires `BOUND_MODE` to end with
-/// "vertical", and inside `\emph{...}` BOUND_MODE is
-/// "restricted_horizontal". This is SHARED-FAILURE with Perl,
-/// NOT a Rust regression — verified 2026-05-03 via parity check
-/// on 0705.0102 (R=Perl=36) and four other witnesses. Pinned as
-/// `#[ignore]`d sentinel so future changes that "fix" this in Rust
-/// (which would be Rust-beats-Perl divergence, not parity work)
-/// can flip the flag to mark the win. See SYNC_STATUS.md Gate 2.A.
-#[test]
-#[ignore = "Phase B Gate 2.A — emph+$$ shared-failure with Perl, not a regression"]
-fn cluster_emph_dollar_math() {
-  convert_clean("tests/cluster_regressions/emph_dollar_math.tex");
-}

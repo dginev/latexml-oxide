@@ -1,5 +1,71 @@
 # Change Log
 
+## [0.4.3] (round-19 — 100k canvas REAL-regression-free)
+
+  - **100k canvas mission accomplished**. Staged 10 × 10k validation
+    on the `100k_noproblem_sandbox` corpus: **99,774 OK / 100,000 =
+    99.77% raw, 0 unfixed REAL_REGRESSION across all 100k papers**.
+    Each stage cleared a zero-REAL_REGRESSION gate via
+    `parity_check.sh` triage at TIMEOUT_SECS=120+. Per-stage detail
+    archived in `docs/archive/round19_iteration_log.md`.
+  - **Telemetry foundation complete**. End-to-end per-job phase
+    instrumentation: `latexml_core::telemetry` records 17/17 phases
+    (Bootstrap, Digest, Build, Rewrite, MathParse, PostXmlParse,
+    PostScan, Bibliography, Crossref, Graphics, MathImages,
+    MathmlPres, MathmlCont, Split, Xslt, Html5Fixups, Serialize)
+    plus a per-formula `math_parse_buckets` histogram.
+    `cortex_worker` emits `telemetry.json` into output ZIPs;
+    `tools/benchmark_canvas.sh` aggregates to
+    `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and
+    `tools/perf_compare.py` consume. See `docs/TELEMETRY.md`.
+  - **Cluster fixes** (recovers user-visible papers vs Perl):
+    - `\lx@NBSP` / `\lx@nobreakspace` / `\nobreakspace` soft-expand
+      inside `\csname...\endcsname` (commit `75a5a42877`) — recovers
+      18 papers (Rust beats Perl, ~542 errors total).
+    - `\@ifundefined` made globally available via Let to
+      `\lx@ifundefined` (commit `5732f3c3b4`).
+    - revtex3 `\setdec` / `\dec` no-op stubs (`fe6cbd3a53`) and
+      `\CITE → \cite` Let (`0143ad5e59`) — covers ~23 revtex-era
+      physics papers.
+    - PiCTeX `\putrectangle` 4-numeric-arg gobble stub
+      (`3e71dc3f7e`); `\setdots` / `\setdashes` Plain-TeX-compatible
+      `\futurelet` dispatch (`0f8475b8a2`).
+  - **Robustness / Perl parity**:
+    - `MAX_ERRORS=100` default matches Perl's `Fatal('too_many_errors')`
+      cap (commit `fc80907932`). Was 10000.
+    - `Fatal:invalid:not_tex_source` PDF-magic guard in
+      `find_main_tex` (commit `345ace6fb1`) — refuses to convert
+      mis-named PDF files.
+    - `tools/parity_check.sh` lax `Error:[a-z]+:` regex catches
+      inline-error markers; `tools/benchmark_canvas.sh`
+      retry-on-transient pass for SIGABRT/timeout under load.
+  - **Performance**:
+    - `mimalloc` global allocator in `cortex_worker` and
+      `latexml_oxide` binaries — measured 3.4× speedup at 16 workers
+      (glibc arena-mutex contention fix).
+    - `latexml_post::graphics` deduplicates `convert` subprocess
+      invocations across `<ltx:graphics>` nodes sharing
+      `(source, page, options)` (commit `4a456dc8b0`); also fixes a
+      latent layering bug where two distinct option-sets for the
+      same source could overwrite each other's destination file.
+  - **Cluster-regression integration test**
+    (`latexml_oxide/tests/06_cluster_regressions.rs`): pins the
+    surpass-Perl wins (NBSP-in-csname, `\@ifundefined`,
+    `\setdec`/`\dec`, `\CITE`) as 0-error so future regressions
+    fail CI before merge.
+  - **Color regression resolved**: reverted the dvipsnames sRGB
+    override (commit `66d61be6b7`) after first-principles audit
+    found it diverged too far from xcolor's naive cmyk→rgb model
+    (which most modern PDF viewers use). The c!p extrapolation fix
+    is kept.
+  - **Parity-discipline lesson**: documented in
+    [`feedback_perl_parity_timeout_handling.md`](.claude/projects/-home-deyan-git-latexml-oxide/memory/feedback_perl_parity_timeout_handling.md):
+    `parity_check.sh` 90s timeout can falsely flag REAL_REGRESSION
+    when Perl's partial error count is below Rust's. Re-verify with
+    `TIMEOUT_SECS=120+` before classifying. Concrete sample:
+    0705.0102 reported as REAL at 90s (R=36 vs P-partial=30); at
+    120s P=R=36 → SHARED-FAILURE / OUT-OF-SCOPE.
+
 ## [0.4.2] (in active development) — strict-Perl dump parity pivot
 
   - **Status refresh 2026-04-30**: local `cargo test --tests` is
