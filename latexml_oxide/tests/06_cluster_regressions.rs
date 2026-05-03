@@ -40,3 +40,14 @@ fn cluster_setdec_dec() {
 fn cluster_cite_uppercase() {
   convert_clean("tests/cluster_regressions/cite_uppercase.tex");
 }
+
+/// `\emph{$$math$$}` triggers `Error:unexpected:_/^` because the
+/// digester does not honor the inner `$$` mode shift inside the
+/// `\emph` body's text-mode scope. Currently expected to fail
+/// (Phase B Gate 2 sub-cause A); see SYNC_STATUS.md and
+/// latex_constructs.rs:3145-3149. Witnesses include 0705.0102.
+#[test]
+#[ignore = "Phase B Gate 2.A — emph+$$ digester gap, deferred"]
+fn cluster_emph_dollar_math() {
+  convert_clean("tests/cluster_regressions/emph_dollar_math.tex");
+}

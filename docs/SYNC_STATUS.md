@@ -339,12 +339,37 @@ following gates must clear in order:
   through the binding registry the same way `\usepackage` does.
 
 ### Gate 2: `_/^` cluster sub-causes (130 papers, the bulk)
+- [x] **Sub-cause A — `$$math$$` inside `\emph{...}` does not enter
+  display math** (verified 2026-05-03 via 6-line reproducer on
+  0705.0102):
+  ```latex
+  \documentclass{article}
+  \begin{document}
+  \emph{$$\bigcap_{n}\Sigma^{n}=0.$$}
+  \end{document}
+  ```
+  Produces `Error:unexpected:_` and `Error:unexpected:^` because the
+  digester treats the `\emph` body in text mode without honoring
+  the inner `$$ ... $$` mode shift. Perl produces 0 errors on the
+  same paper. Existing comment in
+  `latex_constructs.rs:3145-3149` already flags it: "Known
+  remaining Perl-faithfulness gap (deferred — see SYNC_STATUS
+  Task 3 / 0901.2408): mode is 'text' here vs Perl's
+  'restricted_horizontal' — flipping in isolation doesn't fix the
+  `$$`-in-`\emph{}` math leak (verified 2026-05-01); deeper
+  digester gating needed." Witnesses: 0705.0102, plus most of the
+  ~57 papers that emit interleaved `_/^` + `\mathbb`/`\mathcal`
+  out-of-math warnings (signature: `\df`, `\rem`, `\setup`-style
+  `\newcommand{\foo}[1]{\begin{thmenv}\emph{#1}}` user pattern).
+- [ ] Implement deeper digester gating so `\emph{}`'s text-mode
+  scope still permits `$$`-mode entry (likely fix at digester
+  body-processing path, not at `DefConstructor!`).
 - [ ] Add digester instrumentation: log the macro that emitted each
   `_`/`^` token whose source is "Anonymous String" (no source line).
-  Reveals whether the trigger is (a) a buggy package binding,
-  (b) revert-token serializer leak, or (c) user-class macro shadow.
+  Reveals additional sub-causes: (b) revert-token serializer leak,
+  (c) user-class macro shadow.
 - [ ] Bisect 5 representative papers with smallest cortex.log to
-  confirm the sub-cause. Then patch the common emitter.
+  confirm the sub-cause distribution.
 
 ### Gate 3: `endproof` (9 papers)
 - [ ] IEEEtran `\endproof` outside `\proof` env: stub or
