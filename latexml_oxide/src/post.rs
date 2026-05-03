@@ -296,19 +296,20 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     }
   }
 
-  // process_chain runs MathML pres + cont + XSLT in sequence; attribute to
-  // Xslt as a coarse stand-in until per-processor splitting lands.
-  telemetry::phase_enter(Phase::Xslt);
+  // process_chain attributes per-processor inside latexml_post::Post::
+  // process_chain (MathmlPres / MathmlCont / Xslt). No outer phase wrap
+  // needed; the inner per-processor guards cover their own time.
   let t_chain = audit_start("process_chain");
   let chain_result = post.process_chain(doc, &mut processors);
   audit_end(t_chain);
-  telemetry::phase_exit();
   match chain_result {
     Ok(results) => {
       let t_serialize = audit_start("to_xml_string");
       let output = results[0].to_xml_string();
       audit_end(t_serialize);
       if stylesheet.is_some_and(|s| s.contains("html")) {
+        // Phase: Html5Fixups (regex post-XSLT cleanup + SVG injection).
+        let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
         // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
         // libxml2's to_string() includes it by default; we strip it here.
         let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")

@@ -114,7 +114,14 @@ impl Post {
         latexml_core::telemetry::Phase::MathmlCont
       } else if pname.starts_with("XSLT") {
         latexml_core::telemetry::Phase::Xslt
+      } else if pname.contains("Image") || pname.contains("image") {
+        // math_images / picture_images / latex_images all share the
+        // external-tool-rendering semantics of Graphics; classify them
+        // as MathImages when they are wired up to process_chain.
+        latexml_core::telemetry::Phase::MathImages
       } else {
+        // Unknown processor — fall through to Xslt (least surprising
+        // catch-all for the post-XSLT-ish region).
         latexml_core::telemetry::Phase::Xslt
       };
       let _gp = latexml_core::telemetry::phase(phase);
