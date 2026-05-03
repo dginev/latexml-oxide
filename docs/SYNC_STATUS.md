@@ -372,10 +372,16 @@ following gates must clear in order:
   positives by re-running with TIMEOUT_SECS=120+ before
   classifying as REAL_REGRESSION.
 
-### Gate 3: `endproof` (9 papers)
-- [ ] IEEEtran `\endproof` outside `\proof` env: stub or
-  `_noautoclose`-style binding so the mode-mismatch error doesn't
-  fire. Investigate IEEEproof end_mode / @end@proof pattern.
+### Gate 3: `endproof` (9 papers) — SHARED-FAILURE confirmed
+All 9 papers parity-checked at TIMEOUT_SECS=180 (2026-05-03):
+0803.3773 R=Perl=2, 0805.4425 R=Perl=20, 0811.3475 R=Perl=7,
+0905.2796 R=Perl=2, 0908.2847 R=Perl=2, 0911.0467 R=Perl=1,
+1001.3714 R=Perl=1, cs0604104 R=Perl=2, quant-ph0603031 R=Perl=1.
+All OUT-OF-SCOPE — `\endproof` outside the supported package
+contexts produces matching errors in Perl too. Same pattern as
+Gate 2.A. Surpassing Perl here would mean adding a global stub
+that both engines lack — Rust-beats-Perl divergence, not parity
+work. Deferred to long-tail Phase C.
 
 ### Gate 4: Defenses (prevent drift)
 - [ ] **Regression-sample integration test**: pin the 41 newly-fixed
