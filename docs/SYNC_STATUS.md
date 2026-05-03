@@ -197,7 +197,17 @@ Triage TSV at `~/data/stage07_non_ok_parity.tsv`. Cumulative
 through Stage 7: **69,825 OK / 70,000 = 99.75%** raw, **0
 unfixed REAL_REGRESSION across all 70k papers**.
 
-Stage 8 (80k cumulative) is unblocked.
+**2026-05-03 Stage 8 (10k slice [70000, 80000), cumulative=80k)
+cleared the gate** — `~/data/stage08_100k_html/`. **9987 [ok] /
+13 [conversion_error] / 0 [error] = 99.87% raw OK** (NEW best
+stage). 13 errors → 12 OUT-OF-SCOPE + 1 PERL_REGRESSION
+(0804.4000 R=12 vs P=24) + **0 REAL_REGRESSION**.
+
+Triage TSV at `~/data/stage08_non_ok_parity.tsv`. Cumulative
+through Stage 8: **79,812 OK / 80,000 = 99.77%** raw, **0
+unfixed REAL_REGRESSION across all 80k papers**.
+
+Stage 9 (90k cumulative) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
