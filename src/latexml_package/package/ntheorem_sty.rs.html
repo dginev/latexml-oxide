@@ -349,5 +349,15 @@
 <a href=#349 id=349 data-nosnippet>349</a>    <span class="kw">let </span>val = <span class="macro">CounterValue!</span>(<span class="kw-2">&amp;</span>ctr_str).value_of();
 <a href=#350 id=350 data-nosnippet>350</a>    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span>radix::radix_up_greek(val <span class="kw">as </span>i64))))
 <a href=#351 id=351 data-nosnippet>351</a>  });
-<a href=#352 id=352 data-nosnippet>352</a>});
+<a href=#352 id=352 data-nosnippet>352</a>
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="comment">// Perl ntheorem.sty.ltxml L293: when option `standard` was given (sets
+<a href=#354 id=354 data-nosnippet>354</a>  // `thm@usestd`), input the actual TL `ntheorem.std` config file. That
+<a href=#355 id=355 data-nosnippet>355</a>  // file calls \newtheorem{theorem}{Theorem}, \newtheorem{lemma}{Lemma},
+<a href=#356 id=356 data-nosnippet>356</a>  // \newtheorem{definition}{Definition}, etc. — without it, papers using
+<a href=#357 id=357 data-nosnippet>357</a>  // [standard]{ntheorem} fail with `\begin{lemma}` undefined. Witness:
+<a href=#358 id=358 data-nosnippet>358</a>  // 0810.4249 (R=1→0).
+<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="kw">if </span>state::lookup_bool(<span class="string">"thm@usestd"</span>) {
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="macro">InputDefinitions!</span>(<span class="string">"ntheorem"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"std"</span>)));
+<a href=#361 id=361 data-nosnippet>361</a>  }
+<a href=#362 id=362 data-nosnippet>362</a>});
 </code></pre></div></section></main></body></html>

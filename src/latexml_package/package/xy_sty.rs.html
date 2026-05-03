@@ -250,54 +250,64 @@
 <a href=#250 id=250 data-nosnippet>250</a>  <span class="comment">//======================================================================
 <a href=#251 id=251 data-nosnippet>251</a>  // Step 4
 <a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"ifpdf"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">//======================================================================
-<a href=#255 id=255 data-nosnippet>255</a>  // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
-<a href=#256 id=256 data-nosnippet>256</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"cmactex"</span>, <span class="string">"\\xyoption{dvips}"</span>);
-<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvips"</span>, <span class="string">"\\xyoption{dvips}"</span>);
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvitops"</span>, <span class="string">"\\xyoption{dvitops}"</span>);
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DeclareOption!</span>(<span class="string">"emtex"</span>, <span class="string">"\\xyoption{emtex}"</span>);
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ln"</span>, <span class="string">"\\xyoption{ln}"</span>);
-<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DeclareOption!</span>(<span class="string">"oztex"</span>, <span class="string">"\\xyoption{oztex}"</span>);
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DeclareOption!</span>(<span class="string">"textures"</span>, <span class="string">"\\xyoption{textures}"</span>);
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DeclareOption!</span>(<span class="string">"xdvi"</span>, <span class="string">"\\xyoption{xdvi}"</span>);
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pdftex"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfm"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfmx"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DeclareOption!</span>(<span class="string">"colour"</span>, <span class="string">"\\xyoption{color}"</span>);
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DeclareOption!</span>(<span class="string">"cmtip"</span>, <span class="string">"\\xyoption{cmtip}\\UseComputerModernTips"</span>);
-<a href=#269 id=269 data-nosnippet>269</a>  <span class="macro">DeclareOption!</span>(<span class="string">"10pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{10}}"</span>);
-<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DeclareOption!</span>(<span class="string">"11pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{11}}"</span>);
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DeclareOption!</span>(<span class="string">"12pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{12}}"</span>);
-<a href=#272 id=272 data-nosnippet>272</a>
-<a href=#273 id=273 data-nosnippet>273</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
-<a href=#274 id=274 data-nosnippet>274</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
-<a href=#275 id=275 data-nosnippet>275</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">let </span>current_option = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#277 id=277 data-nosnippet>277</a>    gullet::unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
-<a href=#278 id=278 data-nosnippet>278</a>  });
-<a href=#279 id=279 data-nosnippet>279</a>
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">//======================================================================
-<a href=#281 id=281 data-nosnippet>281</a>  // Step 6
-<a href=#282 id=282 data-nosnippet>282</a>  </span><span class="macro">ProcessOptions!</span>();
-<a href=#283 id=283 data-nosnippet>283</a>
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="comment">//======================================================================
-<a href=#285 id=285 data-nosnippet>285</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
-<a href=#286 id=286 data-nosnippet>286</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
-<a href=#287 id=287 data-nosnippet>287</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
-<a href=#288 id=288 data-nosnippet>288</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
-<a href=#289 id=289 data-nosnippet>289</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
-<a href=#290 id=290 data-nosnippet>290</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
-<a href=#291 id=291 data-nosnippet>291</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
-<a href=#292 id=292 data-nosnippet>292</a>  // swallows the brace-balanced body. The diagram is dropped — but
-<a href=#293 id=293 data-nosnippet>293</a>  // the cascade is gone, matching latexml's general philosophy of
-<a href=#294 id=294 data-nosnippet>294</a>  // "drop unsupported package content rather than fail conversion".
-<a href=#295 id=295 data-nosnippet>295</a>  //
-<a href=#296 id=296 data-nosnippet>296</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
-<a href=#297 id=297 data-nosnippet>297</a>  // option pipeline didn't auto-load matrix/arrow features.
-<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
-<a href=#299 id=299 data-nosnippet>299</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
-<a href=#300 id=300 data-nosnippet>300</a>    \def\lx@xy@stub@xymatrix@body#1{}%
-<a href=#301 id=301 data-nosnippet>301</a>  }{}"</span>);
-<a href=#302 id=302 data-nosnippet>302</a>});
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="comment">// Pre-load amstext to provide `\text{...}` for in-math text. Perl's
+<a href=#254 id=254 data-nosnippet>254</a>  // xy chain ends up with `\text` defined via xyv2.tex's
+<a href=#255 id=255 data-nosnippet>255</a>  // `\def\text{\relax\textC}` (raw-loaded by Perl's xypic.tex.ltxml
+<a href=#256 id=256 data-nosnippet>256</a>  // chain). Rust's xy.tex raw-load doesn't reach xyv2.tex with the
+<a href=#257 id=257 data-nosnippet>257</a>  // same definition, leaving `\text` undefined for papers that use
+<a href=#258 id=258 data-nosnippet>258</a>  // it inside math (witness: math0211451 `\text{deg}` in math).
+<a href=#259 id=259 data-nosnippet>259</a>  // amstext provides a clean DefConstructor path. This is a
+<a href=#260 id=260 data-nosnippet>260</a>  // pragmatic Rust-side bridge; not a Perl divergence since amstext
+<a href=#261 id=261 data-nosnippet>261</a>  // is part of the standard math chain Perl effectively reaches.
+<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amstext"</span>);
+<a href=#263 id=263 data-nosnippet>263</a>
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="comment">//======================================================================
+<a href=#265 id=265 data-nosnippet>265</a>  // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
+<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"cmactex"</span>, <span class="string">"\\xyoption{dvips}"</span>);
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvips"</span>, <span class="string">"\\xyoption{dvips}"</span>);
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvitops"</span>, <span class="string">"\\xyoption{dvitops}"</span>);
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="macro">DeclareOption!</span>(<span class="string">"emtex"</span>, <span class="string">"\\xyoption{emtex}"</span>);
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ln"</span>, <span class="string">"\\xyoption{ln}"</span>);
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DeclareOption!</span>(<span class="string">"oztex"</span>, <span class="string">"\\xyoption{oztex}"</span>);
+<a href=#272 id=272 data-nosnippet>272</a>  <span class="macro">DeclareOption!</span>(<span class="string">"textures"</span>, <span class="string">"\\xyoption{textures}"</span>);
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">DeclareOption!</span>(<span class="string">"xdvi"</span>, <span class="string">"\\xyoption{xdvi}"</span>);
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pdftex"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfm"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfmx"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DeclareOption!</span>(<span class="string">"colour"</span>, <span class="string">"\\xyoption{color}"</span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DeclareOption!</span>(<span class="string">"cmtip"</span>, <span class="string">"\\xyoption{cmtip}\\UseComputerModernTips"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DeclareOption!</span>(<span class="string">"10pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{10}}"</span>);
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DeclareOption!</span>(<span class="string">"11pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{11}}"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">DeclareOption!</span>(<span class="string">"12pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{12}}"</span>);
+<a href=#282 id=282 data-nosnippet>282</a>
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
+<a href=#284 id=284 data-nosnippet>284</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
+<a href=#285 id=285 data-nosnippet>285</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">let </span>current_option = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#287 id=287 data-nosnippet>287</a>    gullet::unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
+<a href=#288 id=288 data-nosnippet>288</a>  });
+<a href=#289 id=289 data-nosnippet>289</a>
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="comment">//======================================================================
+<a href=#291 id=291 data-nosnippet>291</a>  // Step 6
+<a href=#292 id=292 data-nosnippet>292</a>  </span><span class="macro">ProcessOptions!</span>();
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>  <span class="comment">//======================================================================
+<a href=#295 id=295 data-nosnippet>295</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
+<a href=#296 id=296 data-nosnippet>296</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
+<a href=#297 id=297 data-nosnippet>297</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
+<a href=#298 id=298 data-nosnippet>298</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
+<a href=#299 id=299 data-nosnippet>299</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
+<a href=#300 id=300 data-nosnippet>300</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
+<a href=#301 id=301 data-nosnippet>301</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
+<a href=#302 id=302 data-nosnippet>302</a>  // swallows the brace-balanced body. The diagram is dropped — but
+<a href=#303 id=303 data-nosnippet>303</a>  // the cascade is gone, matching latexml's general philosophy of
+<a href=#304 id=304 data-nosnippet>304</a>  // "drop unsupported package content rather than fail conversion".
+<a href=#305 id=305 data-nosnippet>305</a>  //
+<a href=#306 id=306 data-nosnippet>306</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
+<a href=#307 id=307 data-nosnippet>307</a>  // option pipeline didn't auto-load matrix/arrow features.
+<a href=#308 id=308 data-nosnippet>308</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
+<a href=#309 id=309 data-nosnippet>309</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
+<a href=#310 id=310 data-nosnippet>310</a>    \def\lx@xy@stub@xymatrix@body#1{}%
+<a href=#311 id=311 data-nosnippet>311</a>  }{}"</span>);
+<a href=#312 id=312 data-nosnippet>312</a>});
 </code></pre></div></section></main></body></html>

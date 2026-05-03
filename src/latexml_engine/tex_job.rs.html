@@ -133,7 +133,7 @@
 <a href=#133 id=133 data-nosnippet>133</a>  // at the end of `\@load@latex@pool` so we restore our impl after
 <a href=#134 id=134 data-nosnippet>134</a>  // every LaTeX pool load.
 <a href=#135 id=135 data-nosnippet>135</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@documentstyle@impl[]{}"</span>, sub[(options_opt, class_tks)] {
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="kw">use </span>latexml_core::binding::content::{find_file, find_file_fallback, FindFileOptions, load_class};
+<a href=#136 id=136 data-nosnippet>136</a>    <span class="kw">use </span>latexml_core::binding::content::{find_file, find_file_fallback_exists, FindFileOptions, load_class};
 <a href=#137 id=137 data-nosnippet>137</a>    <span class="kw">let </span>class = class_tks.to_string();
 <a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">let </span>class = class.trim().to_string();
 <a href=#139 id=139 data-nosnippet>139</a>
@@ -208,102 +208,107 @@
 <a href=#208 id=208 data-nosnippet>208</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}.sty"</span>, class),
 <a href=#209 id=209 data-nosnippet>209</a>      <span class="prelude-val">Some</span>(FindFileOptions { notex, ..Default::default() }),
 <a href=#210 id=210 data-nosnippet>210</a>    ).is_some();
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="kw">let </span>class_sty_fallback = find_file_fallback(<span class="kw-2">&amp;</span>class, <span class="string">"sty"</span>).is_some();
-<a href=#212 id=212 data-nosnippet>212</a>    <span class="kw">let </span>class_cls_binding_exact = find_file(
-<a href=#213 id=213 data-nosnippet>213</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}.cls"</span>, class),
-<a href=#214 id=214 data-nosnippet>214</a>      <span class="prelude-val">Some</span>(FindFileOptions { notex, ..Default::default() }),
-<a href=#215 id=215 data-nosnippet>215</a>    ).is_some();
-<a href=#216 id=216 data-nosnippet>216</a>    <span class="kw">let </span>class_cls_via_fallback = find_file_fallback(<span class="kw-2">&amp;</span>class, <span class="string">"cls"</span>).is_some();
-<a href=#217 id=217 data-nosnippet>217</a>    <span class="kw">let </span>class_sty_via_disk = !class_sty_binding
-<a href=#218 id=218 data-nosnippet>218</a>      &amp;&amp; !class_sty_fallback
-<a href=#219 id=219 data-nosnippet>219</a>      &amp;&amp; !class_cls_binding_exact
-<a href=#220 id=220 data-nosnippet>220</a>      &amp;&amp; !class_cls_via_fallback
-<a href=#221 id=221 data-nosnippet>221</a>      &amp;&amp; find_file(
-<a href=#222 id=222 data-nosnippet>222</a>        <span class="kw-2">&amp;</span>class,
-<a href=#223 id=223 data-nosnippet>223</a>        <span class="prelude-val">Some</span>(FindFileOptions { ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)), forbid_ltxml: <span class="bool-val">true</span>, ..Default::default() }),
-<a href=#224 id=224 data-nosnippet>224</a>      ).is_some();
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="kw">let </span>class_sty_found = class_sty_binding || class_sty_via_disk || class_sty_fallback;
-<a href=#226 id=226 data-nosnippet>226</a>    <span class="kw">let </span>class_cls_found = !class_sty_found &amp;&amp; (class_cls_binding_exact
-<a href=#227 id=227 data-nosnippet>227</a>      || class_cls_via_fallback);
-<a href=#228 id=228 data-nosnippet>228</a>
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="kw">let </span>after = <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\compat@loadpackages"</span>));
-<a href=#230 id=230 data-nosnippet>230</a>
-<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">if </span>class_sty_found {
-<a href=#232 id=232 data-nosnippet>232</a>      <span class="comment">// Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
-<a href=#233 id=233 data-nosnippet>233</a>      // kluwer): load article.cls under it, then RequirePackage(class).
-<a href=#234 id=234 data-nosnippet>234</a>      // Pin extension to "sty" so the version-stripping fallback (e.g.
-<a href=#235 id=235 data-nosnippet>235</a>      // aipproc2 → aipproc) prefers the binding registry's `.sty` entry
-<a href=#236 id=236 data-nosnippet>236</a>      // instead of also probing for a same-name `.cls` (which has a
-<a href=#237 id=237 data-nosnippet>237</a>      // different DefMacro signature for `\author` etc. that conflicts
-<a href=#238 id=238 data-nosnippet>238</a>      // with the `.sty` body — root cause for nucl-th0010030).
-<a href=#239 id=239 data-nosnippet>239</a>      // Choose article.cls vs OmniBus.cls as the underlying class. When
-<a href=#240 id=240 data-nosnippet>240</a>      // the `.sty` was found via binding registry or version-strip
-<a href=#241 id=241 data-nosnippet>241</a>      // fallback, the user's intent is "load this binding as the
-<a href=#242 id=242 data-nosnippet>242</a>      // document class" — article.cls is the right base. When the
-<a href=#243 id=243 data-nosnippet>243</a>      // `.sty` was found ONLY via paper-local disk-probe (no binding /
-<a href=#244 id=244 data-nosnippet>244</a>      // no fallback), the file is an arbitrary user style that doesn't
-<a href=#245 id=245 data-nosnippet>245</a>      // know about LaTeXML's frontmatter conventions; OmniBus is the
-<a href=#246 id=246 data-nosnippet>246</a>      // right base because it provides broad fallback coverage
-<a href=#247 id=247 data-nosnippet>247</a>      // (`\citeauthoryear` autoload trigger, generic `\affil`, etc.).
-<a href=#248 id=248 data-nosnippet>248</a>      // Mirrors Perl's flow for paper-local-only `\documentstyle`
-<a href=#249 id=249 data-nosnippet>249</a>      // classes (verified via `--verbose` on astro-ph0510540 and
-<a href=#250 id=250 data-nosnippet>250</a>      // astro-ph0008100 — Perl loads OmniBus for both).
-<a href=#251 id=251 data-nosnippet>251</a>      </span><span class="kw">let </span>underlying = <span class="kw">if </span>class_sty_via_disk { <span class="string">"OmniBus" </span>} <span class="kw">else </span>{ <span class="string">"article" </span>};
-<a href=#252 id=252 data-nosnippet>252</a>      input_definitions(underlying, InputDefinitionOptions {
-<a href=#253 id=253 data-nosnippet>253</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
-<a href=#254 id=254 data-nosnippet>254</a>        options: opts_vec.clone(),
-<a href=#255 id=255 data-nosnippet>255</a>        handleoptions: <span class="bool-val">true</span>,
-<a href=#256 id=256 data-nosnippet>256</a>        noerror: <span class="bool-val">true</span>,
-<a href=#257 id=257 data-nosnippet>257</a>        ..InputDefinitionOptions::default()
-<a href=#258 id=258 data-nosnippet>258</a>      })<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>      <span class="comment">// When the .sty was found ONLY via paper-local disk-probe (no
-<a href=#260 id=260 data-nosnippet>260</a>      // binding, no fallback), pass `notex=false` to allow the raw
-<a href=#261 id=261 data-nosnippet>261</a>      // load. Otherwise the default `INCLUDE_STYLES=false` gate inside
-<a href=#262 id=262 data-nosnippet>262</a>      // require_package would force `notex=true` and suppress the
-<a href=#263 id=263 data-nosnippet>263</a>      // load. Mirrors the `\compat@loadpackages` fix from commit
-<a href=#264 id=264 data-nosnippet>264</a>      // bb4cf2e17. Witness: astro-ph0008100
-<a href=#265 id=265 data-nosnippet>265</a>      // (\documentstyle[PASJadd]{PASJ95} + uppercase-named PASJ95.STY).
-<a href=#266 id=266 data-nosnippet>266</a>      </span><span class="kw">let </span>notex_for_require = <span class="kw">if </span>class_sty_via_disk { <span class="prelude-val">Some</span>(<span class="bool-val">false</span>) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
-<a href=#267 id=267 data-nosnippet>267</a>      require_package(<span class="kw-2">&amp;</span>class, RequireOptions {
-<a href=#268 id=268 data-nosnippet>268</a>        options: opts_vec,
-<a href=#269 id=269 data-nosnippet>269</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)),
-<a href=#270 id=270 data-nosnippet>270</a>        notex: notex_for_require,
-<a href=#271 id=271 data-nosnippet>271</a>        after,
-<a href=#272 id=272 data-nosnippet>272</a>        ..RequireOptions::default()
-<a href=#273 id=273 data-nosnippet>273</a>      })<span class="question-mark">?</span>;
-<a href=#274 id=274 data-nosnippet>274</a>    } <span class="kw">else if </span>class_cls_found {
-<a href=#275 id=275 data-nosnippet>275</a>      <span class="comment">// Branch 2 — `&lt;class&gt;.cls` exists: load it as the document class.
-<a href=#276 id=276 data-nosnippet>276</a>      </span>load_class(<span class="kw-2">&amp;</span>class, opts_vec, after)<span class="question-mark">?</span>;
-<a href=#277 id=277 data-nosnippet>277</a>    } <span class="kw">else </span>{
-<a href=#278 id=278 data-nosnippet>278</a>      <span class="comment">// Branch 3 — neither sty nor cls found. Load OmniBus to provide the
-<a href=#279 id=279 data-nosnippet>279</a>      // wide AAS/elsevier/etc. coverage, then attempt the user-named class
-<a href=#280 id=280 data-nosnippet>280</a>      // as a package (will likely no-op via missing_file warn).
-<a href=#281 id=281 data-nosnippet>281</a>      </span>input_definitions(<span class="string">"OmniBus"</span>, InputDefinitionOptions {
-<a href=#282 id=282 data-nosnippet>282</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
-<a href=#283 id=283 data-nosnippet>283</a>        options: opts_vec.clone(),
-<a href=#284 id=284 data-nosnippet>284</a>        handleoptions: <span class="bool-val">true</span>,
-<a href=#285 id=285 data-nosnippet>285</a>        noerror: <span class="bool-val">true</span>,
-<a href=#286 id=286 data-nosnippet>286</a>        after,
-<a href=#287 id=287 data-nosnippet>287</a>        ..InputDefinitionOptions::default()
-<a href=#288 id=288 data-nosnippet>288</a>      })<span class="question-mark">?</span>;
-<a href=#289 id=289 data-nosnippet>289</a>      require_package(<span class="kw-2">&amp;</span>class, RequireOptions {
-<a href=#290 id=290 data-nosnippet>290</a>        options: opts_vec,
-<a href=#291 id=291 data-nosnippet>291</a>        as_class: <span class="bool-val">true</span>,
-<a href=#292 id=292 data-nosnippet>292</a>        ..RequireOptions::default()
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="comment">// Pre-flight existence checks must NOT eagerly load the fallback
+<a href=#212 id=212 data-nosnippet>212</a>    // binding (its body would run \LoadClass / \RequirePackage with no
+<a href=#213 id=213 data-nosnippet>213</a>    // option-pass-through, contaminating the actual `\documentstyle`
+<a href=#214 id=214 data-nosnippet>214</a>    // load that happens further below). Fix for the `\psfig` cluster
+<a href=#215 id=215 data-nosnippet>215</a>    // (12 papers) — astro-ph0002213 R=1→0 with this gate change.
+<a href=#216 id=216 data-nosnippet>216</a>    </span><span class="kw">let </span>class_sty_fallback = find_file_fallback_exists(<span class="kw-2">&amp;</span>class, <span class="string">"sty"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="kw">let </span>class_cls_binding_exact = find_file(
+<a href=#218 id=218 data-nosnippet>218</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}.cls"</span>, class),
+<a href=#219 id=219 data-nosnippet>219</a>      <span class="prelude-val">Some</span>(FindFileOptions { notex, ..Default::default() }),
+<a href=#220 id=220 data-nosnippet>220</a>    ).is_some();
+<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">let </span>class_cls_via_fallback = find_file_fallback_exists(<span class="kw-2">&amp;</span>class, <span class="string">"cls"</span>);
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span>class_sty_via_disk = !class_sty_binding
+<a href=#223 id=223 data-nosnippet>223</a>      &amp;&amp; !class_sty_fallback
+<a href=#224 id=224 data-nosnippet>224</a>      &amp;&amp; !class_cls_binding_exact
+<a href=#225 id=225 data-nosnippet>225</a>      &amp;&amp; !class_cls_via_fallback
+<a href=#226 id=226 data-nosnippet>226</a>      &amp;&amp; find_file(
+<a href=#227 id=227 data-nosnippet>227</a>        <span class="kw-2">&amp;</span>class,
+<a href=#228 id=228 data-nosnippet>228</a>        <span class="prelude-val">Some</span>(FindFileOptions { ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)), forbid_ltxml: <span class="bool-val">true</span>, ..Default::default() }),
+<a href=#229 id=229 data-nosnippet>229</a>      ).is_some();
+<a href=#230 id=230 data-nosnippet>230</a>    <span class="kw">let </span>class_sty_found = class_sty_binding || class_sty_via_disk || class_sty_fallback;
+<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">let </span>class_cls_found = !class_sty_found &amp;&amp; (class_cls_binding_exact
+<a href=#232 id=232 data-nosnippet>232</a>      || class_cls_via_fallback);
+<a href=#233 id=233 data-nosnippet>233</a>
+<a href=#234 id=234 data-nosnippet>234</a>    <span class="kw">let </span>after = <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\compat@loadpackages"</span>));
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">if </span>class_sty_found {
+<a href=#237 id=237 data-nosnippet>237</a>      <span class="comment">// Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
+<a href=#238 id=238 data-nosnippet>238</a>      // kluwer): load article.cls under it, then RequirePackage(class).
+<a href=#239 id=239 data-nosnippet>239</a>      // Pin extension to "sty" so the version-stripping fallback (e.g.
+<a href=#240 id=240 data-nosnippet>240</a>      // aipproc2 → aipproc) prefers the binding registry's `.sty` entry
+<a href=#241 id=241 data-nosnippet>241</a>      // instead of also probing for a same-name `.cls` (which has a
+<a href=#242 id=242 data-nosnippet>242</a>      // different DefMacro signature for `\author` etc. that conflicts
+<a href=#243 id=243 data-nosnippet>243</a>      // with the `.sty` body — root cause for nucl-th0010030).
+<a href=#244 id=244 data-nosnippet>244</a>      // Choose article.cls vs OmniBus.cls as the underlying class. When
+<a href=#245 id=245 data-nosnippet>245</a>      // the `.sty` was found via binding registry or version-strip
+<a href=#246 id=246 data-nosnippet>246</a>      // fallback, the user's intent is "load this binding as the
+<a href=#247 id=247 data-nosnippet>247</a>      // document class" — article.cls is the right base. When the
+<a href=#248 id=248 data-nosnippet>248</a>      // `.sty` was found ONLY via paper-local disk-probe (no binding /
+<a href=#249 id=249 data-nosnippet>249</a>      // no fallback), the file is an arbitrary user style that doesn't
+<a href=#250 id=250 data-nosnippet>250</a>      // know about LaTeXML's frontmatter conventions; OmniBus is the
+<a href=#251 id=251 data-nosnippet>251</a>      // right base because it provides broad fallback coverage
+<a href=#252 id=252 data-nosnippet>252</a>      // (`\citeauthoryear` autoload trigger, generic `\affil`, etc.).
+<a href=#253 id=253 data-nosnippet>253</a>      // Mirrors Perl's flow for paper-local-only `\documentstyle`
+<a href=#254 id=254 data-nosnippet>254</a>      // classes (verified via `--verbose` on astro-ph0510540 and
+<a href=#255 id=255 data-nosnippet>255</a>      // astro-ph0008100 — Perl loads OmniBus for both).
+<a href=#256 id=256 data-nosnippet>256</a>      </span><span class="kw">let </span>underlying = <span class="kw">if </span>class_sty_via_disk { <span class="string">"OmniBus" </span>} <span class="kw">else </span>{ <span class="string">"article" </span>};
+<a href=#257 id=257 data-nosnippet>257</a>      input_definitions(underlying, InputDefinitionOptions {
+<a href=#258 id=258 data-nosnippet>258</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
+<a href=#259 id=259 data-nosnippet>259</a>        options: opts_vec.clone(),
+<a href=#260 id=260 data-nosnippet>260</a>        handleoptions: <span class="bool-val">true</span>,
+<a href=#261 id=261 data-nosnippet>261</a>        noerror: <span class="bool-val">true</span>,
+<a href=#262 id=262 data-nosnippet>262</a>        ..InputDefinitionOptions::default()
+<a href=#263 id=263 data-nosnippet>263</a>      })<span class="question-mark">?</span>;
+<a href=#264 id=264 data-nosnippet>264</a>      <span class="comment">// When the .sty was found ONLY via paper-local disk-probe (no
+<a href=#265 id=265 data-nosnippet>265</a>      // binding, no fallback), pass `notex=false` to allow the raw
+<a href=#266 id=266 data-nosnippet>266</a>      // load. Otherwise the default `INCLUDE_STYLES=false` gate inside
+<a href=#267 id=267 data-nosnippet>267</a>      // require_package would force `notex=true` and suppress the
+<a href=#268 id=268 data-nosnippet>268</a>      // load. Mirrors the `\compat@loadpackages` fix from commit
+<a href=#269 id=269 data-nosnippet>269</a>      // bb4cf2e17. Witness: astro-ph0008100
+<a href=#270 id=270 data-nosnippet>270</a>      // (\documentstyle[PASJadd]{PASJ95} + uppercase-named PASJ95.STY).
+<a href=#271 id=271 data-nosnippet>271</a>      </span><span class="kw">let </span>notex_for_require = <span class="kw">if </span>class_sty_via_disk { <span class="prelude-val">Some</span>(<span class="bool-val">false</span>) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#272 id=272 data-nosnippet>272</a>      require_package(<span class="kw-2">&amp;</span>class, RequireOptions {
+<a href=#273 id=273 data-nosnippet>273</a>        options: opts_vec,
+<a href=#274 id=274 data-nosnippet>274</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)),
+<a href=#275 id=275 data-nosnippet>275</a>        notex: notex_for_require,
+<a href=#276 id=276 data-nosnippet>276</a>        after,
+<a href=#277 id=277 data-nosnippet>277</a>        ..RequireOptions::default()
+<a href=#278 id=278 data-nosnippet>278</a>      })<span class="question-mark">?</span>;
+<a href=#279 id=279 data-nosnippet>279</a>    } <span class="kw">else if </span>class_cls_found {
+<a href=#280 id=280 data-nosnippet>280</a>      <span class="comment">// Branch 2 — `&lt;class&gt;.cls` exists: load it as the document class.
+<a href=#281 id=281 data-nosnippet>281</a>      </span>load_class(<span class="kw-2">&amp;</span>class, opts_vec, after)<span class="question-mark">?</span>;
+<a href=#282 id=282 data-nosnippet>282</a>    } <span class="kw">else </span>{
+<a href=#283 id=283 data-nosnippet>283</a>      <span class="comment">// Branch 3 — neither sty nor cls found. Load OmniBus to provide the
+<a href=#284 id=284 data-nosnippet>284</a>      // wide AAS/elsevier/etc. coverage, then attempt the user-named class
+<a href=#285 id=285 data-nosnippet>285</a>      // as a package (will likely no-op via missing_file warn).
+<a href=#286 id=286 data-nosnippet>286</a>      </span>input_definitions(<span class="string">"OmniBus"</span>, InputDefinitionOptions {
+<a href=#287 id=287 data-nosnippet>287</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)),
+<a href=#288 id=288 data-nosnippet>288</a>        options: opts_vec.clone(),
+<a href=#289 id=289 data-nosnippet>289</a>        handleoptions: <span class="bool-val">true</span>,
+<a href=#290 id=290 data-nosnippet>290</a>        noerror: <span class="bool-val">true</span>,
+<a href=#291 id=291 data-nosnippet>291</a>        after,
+<a href=#292 id=292 data-nosnippet>292</a>        ..InputDefinitionOptions::default()
 <a href=#293 id=293 data-nosnippet>293</a>      })<span class="question-mark">?</span>;
-<a href=#294 id=294 data-nosnippet>294</a>    }
-<a href=#295 id=295 data-nosnippet>295</a>
-<a href=#296 id=296 data-nosnippet>296</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#297 id=297 data-nosnippet>297</a>  });
-<a href=#298 id=298 data-nosnippet>298</a>
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump
-<a href=#300 id=300 data-nosnippet>300</a>  // may overwrite this on autoload; `\@load@latex@pool` (tex.rs) re-applies
-<a href=#301 id=301 data-nosnippet>301</a>  // the Let after every pool load so our impl wins regardless.
-<a href=#302 id=302 data-nosnippet>302</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
-<a href=#303 id=303 data-nosnippet>303</a>});
-<a href=#304 id=304 data-nosnippet>304</a>
-<a href=#305 id=305 data-nosnippet>305</a><span class="comment">// The \today macro's implementation lives in base_utilities::today()
-<a href=#306 id=306 data-nosnippet>306</a>// (used by the Today! macro in prelude/setup_binding_language.rs). An
-<a href=#307 id=307 data-nosnippet>307</a>// earlier parallel version here was dead code and has been removed; if
-<a href=#308 id=308 data-nosnippet>308</a>// ever needed, the base_utilities version is the canonical one.
+<a href=#294 id=294 data-nosnippet>294</a>      require_package(<span class="kw-2">&amp;</span>class, RequireOptions {
+<a href=#295 id=295 data-nosnippet>295</a>        options: opts_vec,
+<a href=#296 id=296 data-nosnippet>296</a>        as_class: <span class="bool-val">true</span>,
+<a href=#297 id=297 data-nosnippet>297</a>        ..RequireOptions::default()
+<a href=#298 id=298 data-nosnippet>298</a>      })<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>    }
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+<a href=#302 id=302 data-nosnippet>302</a>  });
+<a href=#303 id=303 data-nosnippet>303</a>
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="comment">// Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump
+<a href=#305 id=305 data-nosnippet>305</a>  // may overwrite this on autoload; `\@load@latex@pool` (tex.rs) re-applies
+<a href=#306 id=306 data-nosnippet>306</a>  // the Let after every pool load so our impl wins regardless.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
+<a href=#308 id=308 data-nosnippet>308</a>});
+<a href=#309 id=309 data-nosnippet>309</a>
+<a href=#310 id=310 data-nosnippet>310</a><span class="comment">// The \today macro's implementation lives in base_utilities::today()
+<a href=#311 id=311 data-nosnippet>311</a>// (used by the Today! macro in prelude/setup_binding_language.rs). An
+<a href=#312 id=312 data-nosnippet>312</a>// earlier parallel version here was dead code and has been removed; if
+<a href=#313 id=313 data-nosnippet>313</a>// ever needed, the base_utilities version is the canonical one.
 </span></code></pre></div></section></main></body></html>

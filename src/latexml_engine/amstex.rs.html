@@ -246,267 +246,279 @@
 <a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">Let!</span>(<span class="string">"\\overarrow"</span>,  <span class="string">"\\overrightarrow"</span>);
 <a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">Let!</span>(<span class="string">"\\underarrow"</span>, <span class="string">"\\underrightarrow"</span>);
 <a href=#248 id=248 data-nosnippet>248</a>
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// \frac — AmSTeX form; analogous to amsmath but in case neither
-<a href=#250 id=250 data-nosnippet>250</a>  // amsmath flavor is preferred. (Perl L262-268)
-<a href=#251 id=251 data-nosnippet>251</a>  // Falls back to plain \frac via \genfrac if upstream needs it.
-<a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Cal{}"</span>, <span class="string">"{\\mathcal #1}"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\roman{}"</span>, <span class="string">"#1"</span>,
-<a href=#255 id=255 data-nosnippet>255</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
-<a href=#256 id=256 data-nosnippet>256</a>    font =&gt; {family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>},
-<a href=#257 id=257 data-nosnippet>257</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\italic{}"</span>, <span class="string">"#1"</span>,
-<a href=#259 id=259 data-nosnippet>259</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
-<a href=#260 id=260 data-nosnippet>260</a>    font =&gt; {shape =&gt; <span class="string">"italic"</span>, series =&gt; <span class="string">"medium"</span>},
-<a href=#261 id=261 data-nosnippet>261</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\slanted{}"</span>, <span class="string">"#1"</span>,
-<a href=#263 id=263 data-nosnippet>263</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
-<a href=#264 id=264 data-nosnippet>264</a>    font =&gt; {shape =&gt; <span class="string">"slanted"</span>, series =&gt; <span class="string">"medium"</span>},
-<a href=#265 id=265 data-nosnippet>265</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\boldkey{}"</span>, <span class="string">"#1"</span>,
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// Perl AmSTeX.pool.ltxml L270:
+<a href=#250 id=250 data-nosnippet>250</a>  //   DefConstructor('\Cal{}', '#1', bounded =&gt; 1, requireMath =&gt; 1,
+<a href=#251 id=251 data-nosnippet>251</a>  //     font =&gt; { family =&gt; 'caligraphic', series =&gt; 'medium', shape =&gt; 'upright' },
+<a href=#252 id=252 data-nosnippet>252</a>  //     enterHorizontal =&gt; 1);
+<a href=#253 id=253 data-nosnippet>253</a>  //
+<a href=#254 id=254 data-nosnippet>254</a>  // Earlier Rust translation routed `\Cal{X}` to `{\mathcal #1}` —
+<a href=#255 id=255 data-nosnippet>255</a>  // but `\mathcal` lives in latex_constructs.pool.ltxml which is NOT
+<a href=#256 id=256 data-nosnippet>256</a>  // loaded for the AmSTeX path (the amsppt-driven \documentstyle
+<a href=#257 id=257 data-nosnippet>257</a>  // dispatcher in tex_job.rs only LoadPool's AmSTeX, not LaTeX). The
+<a href=#258 id=258 data-nosnippet>258</a>  // resulting `\mathcal` undefined surfaced on plain-amstex papers.
+<a href=#259 id=259 data-nosnippet>259</a>  // Match Perl by emitting `#1` directly with a calligraphic font frame.
+<a href=#260 id=260 data-nosnippet>260</a>  // Witness: 0805.3554 `\input amstex` + `$\Cal X$` math.
+<a href=#261 id=261 data-nosnippet>261</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\Cal{}"</span>, <span class="string">"#1"</span>,
+<a href=#262 id=262 data-nosnippet>262</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
+<a href=#263 id=263 data-nosnippet>263</a>    font =&gt; {family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>},
+<a href=#264 id=264 data-nosnippet>264</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\roman{}"</span>, <span class="string">"#1"</span>,
 <a href=#267 id=267 data-nosnippet>267</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
-<a href=#268 id=268 data-nosnippet>268</a>    font =&gt; {series =&gt; <span class="string">"bold"</span>, family =&gt; <span class="string">"typewriter"</span>, shape =&gt; <span class="string">"upright"</span>},
+<a href=#268 id=268 data-nosnippet>268</a>    font =&gt; {family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>},
 <a href=#269 id=269 data-nosnippet>269</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#270 id=270 data-nosnippet>270</a>
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="comment">// \frac InFractionStyle InFractionStyle — Perl L262-268.
-<a href=#272 id=272 data-nosnippet>272</a>  // The earlier port omitted this and relied on amsmath/latex_constructs
-<a href=#273 id=273 data-nosnippet>273</a>  // to provide \frac, but neither loads in pure-AmSTeX mode → \frac
-<a href=#274 id=274 data-nosnippet>274</a>  // surfaced as undefined on the first math-mode use. Faithful port
-<a href=#275 id=275 data-nosnippet>275</a>  // here mirrors latex_constructs.rs:5020-5034 — same XMApp output,
-<a href=#276 id=276 data-nosnippet>276</a>  // mathstyle property pulled from the active font.
-<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="string">"\\frac InFractionStyle InFractionStyle"</span>,
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="string">"&lt;ltx:XMApp&gt;\
-<a href=#280 id=280 data-nosnippet>280</a>      &lt;ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/&gt;\
-<a href=#281 id=281 data-nosnippet>281</a>      &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
-<a href=#282 id=282 data-nosnippet>282</a>      &lt;/ltx:XMApp&gt;"</span>,
-<a href=#283 id=283 data-nosnippet>283</a>    properties =&gt; {
-<a href=#284 id=284 data-nosnippet>284</a>      <span class="kw">let </span>ms = lookup_font()
-<a href=#285 id=285 data-nosnippet>285</a>        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()));
-<a href=#286 id=286 data-nosnippet>286</a>      <span class="kw">match </span>ms {
-<a href=#287 id=287 data-nosnippet>287</a>        <span class="prelude-val">Some</span>(s) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"mathstyle" </span>=&gt; s)),
-<a href=#288 id=288 data-nosnippet>288</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>()),
-<a href=#289 id=289 data-nosnippet>289</a>      }
-<a href=#290 id=290 data-nosnippet>290</a>    }
-<a href=#291 id=291 data-nosnippet>291</a>  );
-<a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// \thickfrac — Perl L289-291. Peek for `\thickness`. If present,
-<a href=#294 id=294 data-nosnippet>294</a>  // dispatch to `\@thickfrac` (which reads `\thickness &lt;num&gt; {a}{b}`
-<a href=#295 id=295 data-nosnippet>295</a>  // and emits `\genfrac{}{}{&lt;num&gt;}{}{a}{b}`); otherwise fall through
-<a href=#296 id=296 data-nosnippet>296</a>  // to `\frac`.
-<a href=#297 id=297 data-nosnippet>297</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfrac"</span>, sub[_args] {
-<a href=#298 id=298 data-nosnippet>298</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
-<a href=#299 id=299 data-nosnippet>299</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@thickfrac"</span>)]
-<a href=#300 id=300 data-nosnippet>300</a>    } <span class="kw">else </span>{
-<a href=#301 id=301 data-nosnippet>301</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)]
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\italic{}"</span>, <span class="string">"#1"</span>,
+<a href=#271 id=271 data-nosnippet>271</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
+<a href=#272 id=272 data-nosnippet>272</a>    font =&gt; {shape =&gt; <span class="string">"italic"</span>, series =&gt; <span class="string">"medium"</span>},
+<a href=#273 id=273 data-nosnippet>273</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\slanted{}"</span>, <span class="string">"#1"</span>,
+<a href=#275 id=275 data-nosnippet>275</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
+<a href=#276 id=276 data-nosnippet>276</a>    font =&gt; {shape =&gt; <span class="string">"slanted"</span>, series =&gt; <span class="string">"medium"</span>},
+<a href=#277 id=277 data-nosnippet>277</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\boldkey{}"</span>, <span class="string">"#1"</span>,
+<a href=#279 id=279 data-nosnippet>279</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
+<a href=#280 id=280 data-nosnippet>280</a>    font =&gt; {series =&gt; <span class="string">"bold"</span>, family =&gt; <span class="string">"typewriter"</span>, shape =&gt; <span class="string">"upright"</span>},
+<a href=#281 id=281 data-nosnippet>281</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#282 id=282 data-nosnippet>282</a>
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// \frac InFractionStyle InFractionStyle — Perl L262-268.
+<a href=#284 id=284 data-nosnippet>284</a>  // The earlier port omitted this and relied on amsmath/latex_constructs
+<a href=#285 id=285 data-nosnippet>285</a>  // to provide \frac, but neither loads in pure-AmSTeX mode → \frac
+<a href=#286 id=286 data-nosnippet>286</a>  // surfaced as undefined on the first math-mode use. Faithful port
+<a href=#287 id=287 data-nosnippet>287</a>  // here mirrors latex_constructs.rs:5020-5034 — same XMApp output,
+<a href=#288 id=288 data-nosnippet>288</a>  // mathstyle property pulled from the active font.
+<a href=#289 id=289 data-nosnippet>289</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="string">"\\frac InFractionStyle InFractionStyle"</span>,
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="string">"&lt;ltx:XMApp&gt;\
+<a href=#292 id=292 data-nosnippet>292</a>      &lt;ltx:XMTok meaning='divide' role='FRACOP' mathstyle='#mathstyle'/&gt;\
+<a href=#293 id=293 data-nosnippet>293</a>      &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
+<a href=#294 id=294 data-nosnippet>294</a>      &lt;/ltx:XMApp&gt;"</span>,
+<a href=#295 id=295 data-nosnippet>295</a>    properties =&gt; {
+<a href=#296 id=296 data-nosnippet>296</a>      <span class="kw">let </span>ms = lookup_font()
+<a href=#297 id=297 data-nosnippet>297</a>        .and_then(|f| f.get_mathstyle().map(|s| s.to_string()));
+<a href=#298 id=298 data-nosnippet>298</a>      <span class="kw">match </span>ms {
+<a href=#299 id=299 data-nosnippet>299</a>        <span class="prelude-val">Some</span>(s) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"mathstyle" </span>=&gt; s)),
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>()),
+<a href=#301 id=301 data-nosnippet>301</a>      }
 <a href=#302 id=302 data-nosnippet>302</a>    }
-<a href=#303 id=303 data-nosnippet>303</a>  });
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thickfrac Token Number {}{}"</span>,
-<a href=#305 id=305 data-nosnippet>305</a>    <span class="string">"\\genfrac{}{}{#2}{}{#3}{#4}"</span>);
-<a href=#306 id=306 data-nosnippet>306</a>
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="comment">// \thickfracwithdelims — Perl L293-295. `\fracwithdelims` is an
-<a href=#308 id=308 data-nosnippet>308</a>  // amsmath name; absent in our binding, so the no-thickness branch
-<a href=#309 id=309 data-nosnippet>309</a>  // falls back to `\frac` like the original simplification. The
-<a href=#310 id=310 data-nosnippet>310</a>  // thickness branch dispatches to `\@thickfracwithdelims` which
-<a href=#311 id=311 data-nosnippet>311</a>  // expands to `\genfrac` with custom delimiters.
-<a href=#312 id=312 data-nosnippet>312</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfracwithdelims {}{}"</span>, sub[(d1, d2)] {
-<a href=#313 id=313 data-nosnippet>313</a>    <span class="kw">let </span>dispatch = <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
-<a href=#314 id=314 data-nosnippet>314</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@thickfracwithdelims"</span>)
-<a href=#315 id=315 data-nosnippet>315</a>    } <span class="kw">else </span>{
-<a href=#316 id=316 data-nosnippet>316</a>      <span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)
-<a href=#317 id=317 data-nosnippet>317</a>    };
-<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[dispatch];
-<a href=#319 id=319 data-nosnippet>319</a>    out.push(<span class="macro">T_BEGIN!</span>()); out.extend(d1.unlist()); out.push(<span class="macro">T_END!</span>());
-<a href=#320 id=320 data-nosnippet>320</a>    out.push(<span class="macro">T_BEGIN!</span>()); out.extend(d2.unlist()); out.push(<span class="macro">T_END!</span>());
-<a href=#321 id=321 data-nosnippet>321</a>    out
-<a href=#322 id=322 data-nosnippet>322</a>  });
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thickfracwithdelims {}{} Token Number {}{}"</span>,
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="string">"\\genfrac{#1}{#2}{#4}{}{#5}{#6}"</span>);
-<a href=#325 id=325 data-nosnippet>325</a>
-<a href=#326 id=326 data-nosnippet>326</a>  <span class="comment">// \sp* accent shortcuts (Perl L297-307).
-<a href=#327 id=327 data-nosnippet>327</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\spcheck"</span>,  <span class="string">"^{\\vee}"</span>);
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sptilde"</span>,  <span class="string">"^{\\sim}"</span>);
-<a href=#329 id=329 data-nosnippet>329</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spacute"</span>,  <span class="string">"^{'}"</span>);
-<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spgrave"</span>,  <span class="string">"^{`}"</span>);
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spdot"</span>,    <span class="string">"^{.}"</span>);
-<a href=#332 id=332 data-nosnippet>332</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spddot"</span>,   <span class="string">"^{..}"</span>);
-<a href=#333 id=333 data-nosnippet>333</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spdddot"</span>,  <span class="string">"^{...}"</span>);
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spddddot"</span>, <span class="string">"^{....}"</span>);
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spbreve"</span>,  <span class="string">"^{\\hbox{\\u{}}}"</span>);
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spbar"</span>,    <span class="string">"^{-}"</span>);
-<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spvec"</span>,    <span class="string">"^{\\rightarrow}"</span>);
-<a href=#338 id=338 data-nosnippet>338</a>
-<a href=#339 id=339 data-nosnippet>339</a>  <span class="comment">// \boldsymbol DefToken — Perl L313-343. Per-symbol DefMath bindings
-<a href=#340 id=340 data-nosnippet>340</a>  // for the punctuation characters (`\cdot`, `\prime`, brackets,
-<a href=#341 id=341 data-nosnippet>341</a>  // braces, surd, S, P, dag, ddag) plus a catchall constructor for
-<a href=#342 id=342 data-nosnippet>342</a>  // the wrap-and-bold case. The dispatcher in Perl L339-343 looks up
-<a href=#343 id=343 data-nosnippet>343</a>  // `\lx@ams@boldsymbol@&lt;name&gt;` (with the leading backslash stripped
-<a href=#344 id=344 data-nosnippet>344</a>  // from the token) and either returns that token directly or falls
-<a href=#345 id=345 data-nosnippet>345</a>  // through to `\lx@ams@boldsymbol@ &lt;token&gt;`.
-<a href=#346 id=346 data-nosnippet>346</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@cdot"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>,
-<a href=#347 id=347 data-nosnippet>347</a>    role =&gt; <span class="string">"MULOP"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#348 id=348 data-nosnippet>348</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@prime"</span>,  <span class="prelude-val">None</span>, <span class="string">"\u{2032}"</span>,
-<a href=#349 id=349 data-nosnippet>349</a>    role =&gt; <span class="string">"SUPOP"</span>, locked =&gt; <span class="bool-val">true</span>, bounded =&gt; <span class="bool-val">true</span>,
-<a href=#350 id=350 data-nosnippet>350</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#351 id=351 data-nosnippet>351</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@lbrack"</span>, <span class="prelude-val">None</span>, <span class="string">"["</span>,
-<a href=#352 id=352 data-nosnippet>352</a>    role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>, bounded =&gt; <span class="bool-val">true</span>,
-<a href=#353 id=353 data-nosnippet>353</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@rbrack"</span>, <span class="prelude-val">None</span>, <span class="string">"]"</span>,
-<a href=#355 id=355 data-nosnippet>355</a>    role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>, bounded =&gt; <span class="bool-val">true</span>,
-<a href=#356 id=356 data-nosnippet>356</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#357 id=357 data-nosnippet>357</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@lbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"{"</span>,
-<a href=#358 id=358 data-nosnippet>358</a>    role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\{"</span>,
-<a href=#359 id=359 data-nosnippet>359</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#360 id=360 data-nosnippet>360</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@rbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"}"</span>,
-<a href=#361 id=361 data-nosnippet>361</a>    role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\}"</span>,
-<a href=#362 id=362 data-nosnippet>362</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@surd"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{221A}"</span>,
-<a href=#364 id=364 data-nosnippet>364</a>    role =&gt; <span class="string">"OPERATOR"</span>, meaning =&gt; <span class="string">"square-root"</span>,
-<a href=#365 id=365 data-nosnippet>365</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@S"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{00A7}"</span>,
-<a href=#367 id=367 data-nosnippet>367</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#368 id=368 data-nosnippet>368</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@P"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{00B6}"</span>,
-<a href=#369 id=369 data-nosnippet>369</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@dag"</span>,    <span class="prelude-val">None</span>, <span class="string">"\u{2020}"</span>,
+<a href=#303 id=303 data-nosnippet>303</a>  );
+<a href=#304 id=304 data-nosnippet>304</a>
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// \thickfrac — Perl L289-291. Peek for `\thickness`. If present,
+<a href=#306 id=306 data-nosnippet>306</a>  // dispatch to `\@thickfrac` (which reads `\thickness &lt;num&gt; {a}{b}`
+<a href=#307 id=307 data-nosnippet>307</a>  // and emits `\genfrac{}{}{&lt;num&gt;}{}{a}{b}`); otherwise fall through
+<a href=#308 id=308 data-nosnippet>308</a>  // to `\frac`.
+<a href=#309 id=309 data-nosnippet>309</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfrac"</span>, sub[_args] {
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
+<a href=#311 id=311 data-nosnippet>311</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@thickfrac"</span>)]
+<a href=#312 id=312 data-nosnippet>312</a>    } <span class="kw">else </span>{
+<a href=#313 id=313 data-nosnippet>313</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)]
+<a href=#314 id=314 data-nosnippet>314</a>    }
+<a href=#315 id=315 data-nosnippet>315</a>  });
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thickfrac Token Number {}{}"</span>,
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="string">"\\genfrac{}{}{#2}{}{#3}{#4}"</span>);
+<a href=#318 id=318 data-nosnippet>318</a>
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="comment">// \thickfracwithdelims — Perl L293-295. `\fracwithdelims` is an
+<a href=#320 id=320 data-nosnippet>320</a>  // amsmath name; absent in our binding, so the no-thickness branch
+<a href=#321 id=321 data-nosnippet>321</a>  // falls back to `\frac` like the original simplification. The
+<a href=#322 id=322 data-nosnippet>322</a>  // thickness branch dispatches to `\@thickfracwithdelims` which
+<a href=#323 id=323 data-nosnippet>323</a>  // expands to `\genfrac` with custom delimiters.
+<a href=#324 id=324 data-nosnippet>324</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfracwithdelims {}{}"</span>, sub[(d1, d2)] {
+<a href=#325 id=325 data-nosnippet>325</a>    <span class="kw">let </span>dispatch = <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@thickfracwithdelims"</span>)
+<a href=#327 id=327 data-nosnippet>327</a>    } <span class="kw">else </span>{
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)
+<a href=#329 id=329 data-nosnippet>329</a>    };
+<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[dispatch];
+<a href=#331 id=331 data-nosnippet>331</a>    out.push(<span class="macro">T_BEGIN!</span>()); out.extend(d1.unlist()); out.push(<span class="macro">T_END!</span>());
+<a href=#332 id=332 data-nosnippet>332</a>    out.push(<span class="macro">T_BEGIN!</span>()); out.extend(d2.unlist()); out.push(<span class="macro">T_END!</span>());
+<a href=#333 id=333 data-nosnippet>333</a>    out
+<a href=#334 id=334 data-nosnippet>334</a>  });
+<a href=#335 id=335 data-nosnippet>335</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@thickfracwithdelims {}{} Token Number {}{}"</span>,
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="string">"\\genfrac{#1}{#2}{#4}{}{#5}{#6}"</span>);
+<a href=#337 id=337 data-nosnippet>337</a>
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="comment">// \sp* accent shortcuts (Perl L297-307).
+<a href=#339 id=339 data-nosnippet>339</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\spcheck"</span>,  <span class="string">"^{\\vee}"</span>);
+<a href=#340 id=340 data-nosnippet>340</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sptilde"</span>,  <span class="string">"^{\\sim}"</span>);
+<a href=#341 id=341 data-nosnippet>341</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spacute"</span>,  <span class="string">"^{'}"</span>);
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spgrave"</span>,  <span class="string">"^{`}"</span>);
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spdot"</span>,    <span class="string">"^{.}"</span>);
+<a href=#344 id=344 data-nosnippet>344</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spddot"</span>,   <span class="string">"^{..}"</span>);
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spdddot"</span>,  <span class="string">"^{...}"</span>);
+<a href=#346 id=346 data-nosnippet>346</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spddddot"</span>, <span class="string">"^{....}"</span>);
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spbreve"</span>,  <span class="string">"^{\\hbox{\\u{}}}"</span>);
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spbar"</span>,    <span class="string">"^{-}"</span>);
+<a href=#349 id=349 data-nosnippet>349</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spvec"</span>,    <span class="string">"^{\\rightarrow}"</span>);
+<a href=#350 id=350 data-nosnippet>350</a>
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="comment">// \boldsymbol DefToken — Perl L313-343. Per-symbol DefMath bindings
+<a href=#352 id=352 data-nosnippet>352</a>  // for the punctuation characters (`\cdot`, `\prime`, brackets,
+<a href=#353 id=353 data-nosnippet>353</a>  // braces, surd, S, P, dag, ddag) plus a catchall constructor for
+<a href=#354 id=354 data-nosnippet>354</a>  // the wrap-and-bold case. The dispatcher in Perl L339-343 looks up
+<a href=#355 id=355 data-nosnippet>355</a>  // `\lx@ams@boldsymbol@&lt;name&gt;` (with the leading backslash stripped
+<a href=#356 id=356 data-nosnippet>356</a>  // from the token) and either returns that token directly or falls
+<a href=#357 id=357 data-nosnippet>357</a>  // through to `\lx@ams@boldsymbol@ &lt;token&gt;`.
+<a href=#358 id=358 data-nosnippet>358</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@cdot"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{22C5}"</span>,
+<a href=#359 id=359 data-nosnippet>359</a>    role =&gt; <span class="string">"MULOP"</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@prime"</span>,  <span class="prelude-val">None</span>, <span class="string">"\u{2032}"</span>,
+<a href=#361 id=361 data-nosnippet>361</a>    role =&gt; <span class="string">"SUPOP"</span>, locked =&gt; <span class="bool-val">true</span>, bounded =&gt; <span class="bool-val">true</span>,
+<a href=#362 id=362 data-nosnippet>362</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@lbrack"</span>, <span class="prelude-val">None</span>, <span class="string">"["</span>,
+<a href=#364 id=364 data-nosnippet>364</a>    role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>, bounded =&gt; <span class="bool-val">true</span>,
+<a href=#365 id=365 data-nosnippet>365</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@rbrack"</span>, <span class="prelude-val">None</span>, <span class="string">"]"</span>,
+<a href=#367 id=367 data-nosnippet>367</a>    role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>, bounded =&gt; <span class="bool-val">true</span>,
+<a href=#368 id=368 data-nosnippet>368</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#369 id=369 data-nosnippet>369</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@lbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"{"</span>,
+<a href=#370 id=370 data-nosnippet>370</a>    role =&gt; <span class="string">"OPEN"</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\{"</span>,
 <a href=#371 id=371 data-nosnippet>371</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@ddag"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{2021}"</span>,
-<a href=#373 id=373 data-nosnippet>373</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#374 id=374 data-nosnippet>374</a>
-<a href=#375 id=375 data-nosnippet>375</a>  <span class="comment">// Catchall wrap-and-bold for anything the per-symbol bindings don't
-<a href=#376 id=376 data-nosnippet>376</a>  // cover (Perl L336-337).
-<a href=#377 id=377 data-nosnippet>377</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ams@boldsymbol@{}"</span>, <span class="string">"#1"</span>,
-<a href=#378 id=378 data-nosnippet>378</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
-<a href=#379 id=379 data-nosnippet>379</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
-<a href=#380 id=380 data-nosnippet>380</a>
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="comment">// Dispatcher (Perl L339-343).
-<a href=#382 id=382 data-nosnippet>382</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\boldsymbol DefToken"</span>, sub[(token)] {
-<a href=#383 id=383 data-nosnippet>383</a>    <span class="kw">let </span>raw = token.to_string();
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">let </span>name = raw.strip_prefix(<span class="string">'\\'</span>).unwrap_or(<span class="kw-2">&amp;</span>raw);
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="kw">let </span>btoken_cs = <span class="macro">format!</span>(<span class="string">"\\lx@ams@boldsymbol@{}"</span>, name);
-<a href=#386 id=386 data-nosnippet>386</a>    <span class="kw">let </span>btoken = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>btoken_cs);
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>btoken) {
-<a href=#388 id=388 data-nosnippet>388</a>      <span class="macro">vec!</span>[btoken]
-<a href=#389 id=389 data-nosnippet>389</a>    } <span class="kw">else </span>{
-<a href=#390 id=390 data-nosnippet>390</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@ams@boldsymbol@"</span>), token]
-<a href=#391 id=391 data-nosnippet>391</a>    }
-<a href=#392 id=392 data-nosnippet>392</a>  });
-<a href=#393 id=393 data-nosnippet>393</a>
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Ignore-class (Perl L346-364)
-<a href=#395 id=395 data-nosnippet>395</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\buffer" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ChangeBuffer Dimension"</span>, <span class="string">"\\buffer#2\\relax"</span>);
-<a href=#397 id=397 data-nosnippet>397</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ResetBuffer"</span>,            <span class="string">""</span>);
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\shave{}"</span>,                <span class="string">"#1"</span>);
-<a href=#399 id=399 data-nosnippet>399</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\botshave{}"</span>,             <span class="string">"#1"</span>);
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topshave{}"</span>,             <span class="string">"#1"</span>);
-<a href=#401 id=401 data-nosnippet>401</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\minCDarrowwidth Dimension"</span>,  <span class="string">""</span>);
-<a href=#402 id=402 data-nosnippet>402</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pretend Until:\\haswidth {}"</span>, <span class="string">"#1"</span>);
-<a href=#403 id=403 data-nosnippet>403</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\snug"</span>, <span class="string">""</span>);
-<a href=#404 id=404 data-nosnippet>404</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\topsmash{}"</span>, <span class="string">"#1"</span>,   enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\botsmash{}"</span>, <span class="string">"#1"</span>,   enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#406 id=406 data-nosnippet>406</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\spreadmatrixlines Dimension"</span>, <span class="string">""</span>);
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MultlineGap Dimension"</span>, <span class="string">""</span>);
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\multlinegap Dimension"</span>, <span class="string">""</span>);
-<a href=#409 id=409 data-nosnippet>409</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nomultlinegap"</span>,         <span class="string">""</span>);
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a>  <span class="comment">// \innerhdotsfor / \spacehdots / \spaceinnerhdots — emit n copies
-<a href=#412 id=412 data-nosnippet>412</a>  // of \hdots (Perl L366-371). Uses sub-callback closures.
-<a href=#413 id=413 data-nosnippet>413</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\innerhdotsfor Number Match:\\after {}"</span>, sub[(n, _a, _b)] {
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
-<a href=#417 id=417 data-nosnippet>417</a>    Tokens::new(out)
-<a href=#418 id=418 data-nosnippet>418</a>  });
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spacehdots Number Match:\\for Number"</span>, sub[(n, _a, _b)] {
-<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
-<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
-<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
-<a href=#423 id=423 data-nosnippet>423</a>    Tokens::new(out)
-<a href=#424 id=424 data-nosnippet>424</a>  });
-<a href=#425 id=425 data-nosnippet>425</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spaceinnerhdots Number Match:\\for Number Match:\\after {}"</span>,
-<a href=#426 id=426 data-nosnippet>426</a>    sub[(n, _a, _b, _c, _d)] {
-<a href=#427 id=427 data-nosnippet>427</a>      <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
-<a href=#428 id=428 data-nosnippet>428</a>      <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
-<a href=#429 id=429 data-nosnippet>429</a>      <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
-<a href=#430 id=430 data-nosnippet>430</a>      Tokens::new(out)
-<a href=#431 id=431 data-nosnippet>431</a>    });
-<a href=#432 id=432 data-nosnippet>432</a>
-<a href=#433 id=433 data-nosnippet>433</a>  <span class="comment">// \foldedtext — peek for \foldedwidth, then \text. Approximation:
-<a href=#434 id=434 data-nosnippet>434</a>  // just use \text directly. (Perl L373-377)
-<a href=#435 id=435 data-nosnippet>435</a>  </span><span class="macro">Let!</span>(<span class="string">"\\foldedtext"</span>,    <span class="string">"\\text"</span>);
-<a href=#436 id=436 data-nosnippet>436</a>  <span class="macro">Let!</span>(<span class="string">"\\topfoldedtext"</span>, <span class="string">"\\text"</span>);
-<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">Let!</span>(<span class="string">"\\botfoldedtext"</span>, <span class="string">"\\text"</span>);
-<a href=#438 id=438 data-nosnippet>438</a>
-<a href=#439 id=439 data-nosnippet>439</a>  <span class="comment">// \Sb / \Sp — generalized over (substack/superstack). Uses internal
-<a href=#440 id=440 data-nosnippet>440</a>  // \lx@generalized@over machinery. (Perl L386-389)
-<a href=#441 id=441 data-nosnippet>441</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Sb"</span>, <span class="string">"\\lx@generalized@over{\\Sb}{meaning=substack}"</span>);
-<a href=#442 id=442 data-nosnippet>442</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Sp"</span>, <span class="string">"\\lx@generalized@over{\\Sp}{meaning=superstack}"</span>);
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="macro">Let!</span>(<span class="string">"\\endSb"</span>, <span class="string">"\\relax"</span>);
-<a href=#444 id=444 data-nosnippet>444</a>  <span class="macro">Let!</span>(<span class="string">"\\endSp"</span>, <span class="string">"\\relax"</span>);
-<a href=#445 id=445 data-nosnippet>445</a>
-<a href=#446 id=446 data-nosnippet>446</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thetag"</span>, sub[_args] {
-<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>v = lookup_value(<span class="string">"EQUATIONROW_NUMBER"</span>)
-<a href=#448 id=448 data-nosnippet>448</a>      .map(|s| s.to_string()).unwrap_or_default();
-<a href=#449 id=449 data-nosnippet>449</a>    <span class="macro">Explode!</span>(<span class="kw-2">&amp;</span>v)
-<a href=#450 id=450 data-nosnippet>450</a>  });
-<a href=#451 id=451 data-nosnippet>451</a>
-<a href=#452 id=452 data-nosnippet>452</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topaligned"</span>, <span class="string">"\\aligned[t]"</span>);
-<a href=#453 id=453 data-nosnippet>453</a>  <span class="macro">Let!</span>(<span class="string">"\\endtopaligned"</span>, <span class="string">"\\endaligned"</span>);
-<a href=#454 id=454 data-nosnippet>454</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\botaligned"</span>, <span class="string">"\\aligned[b]"</span>);
-<a href=#455 id=455 data-nosnippet>455</a>  <span class="macro">Let!</span>(<span class="string">"\\endbotaligned"</span>, <span class="string">"\\endaligned"</span>);
-<a href=#456 id=456 data-nosnippet>456</a>
-<a href=#457 id=457 data-nosnippet>457</a>  <span class="comment">// close enough? (Perl L399)
-<a href=#458 id=458 data-nosnippet>458</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\accentedsymbol{}{}"</span>, <span class="string">"\\def#1{#2}"</span>);
-<a href=#459 id=459 data-nosnippet>459</a>
-<a href=#460 id=460 data-nosnippet>460</a>  <span class="comment">// \cfrac / \endcfrac — uses bgroup/egroup + \\\\ rewire (Perl L402-411)
-<a href=#461 id=461 data-nosnippet>461</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\cfrac"</span>, <span class="string">""</span>,
-<a href=#462 id=462 data-nosnippet>462</a>    after_digest =&gt; sub[_w] {
-<a href=#463 id=463 data-nosnippet>463</a>      <span class="comment">// Perl: $stomach-&gt;bgroup; Let(T_CS("\\\\"), T_CS('\lx@cfrac'));
-<a href=#464 id=464 data-nosnippet>464</a>      </span>stomach::bgroup();
-<a href=#465 id=465 data-nosnippet>465</a>      raw_tex(<span class="string">r"\let\\\lx@cfrac"</span>)<span class="question-mark">?</span>;
-<a href=#466 id=466 data-nosnippet>466</a>    });
-<a href=#467 id=467 data-nosnippet>467</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endcfrac"</span>, <span class="string">""</span>,
-<a href=#468 id=468 data-nosnippet>468</a>    after_digest =&gt; sub[_w] {
-<a href=#469 id=469 data-nosnippet>469</a>      stomach::egroup()<span class="question-mark">?</span>;
-<a href=#470 id=470 data-nosnippet>470</a>    });
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">Let!</span>(<span class="string">"\\lcfrac"</span>, <span class="string">"\\cfrac"</span>);
-<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">Let!</span>(<span class="string">"\\rcfrac"</span>, <span class="string">"\\cfrac"</span>);
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@cfrac"</span>,
-<a href=#474 id=474 data-nosnippet>474</a>    <span class="string">"\\lx@generalized@over{\\\\}{meaning=continued-fraction,role=MULOP}\\displaystyle"</span>);
-<a href=#475 id=475 data-nosnippet>475</a>
-<a href=#476 id=476 data-nosnippet>476</a>  <span class="comment">//======================================================================
-<a href=#477 id=477 data-nosnippet>477</a>  // Dubious — raw newdimen/newtoks block (Perl L426-454)
-<a href=#478 id=478 data-nosnippet>478</a>  </span>raw_tex(<span class="macro">concat!</span>(
-<a href=#479 id=479 data-nosnippet>479</a>    <span class="string">r"\def\vspace@{\def\vspace##1{\crcr\noalign{\vskip##1\relax}}}"</span>,
-<a href=#480 id=480 data-nosnippet>480</a>    <span class="string">r"\newdimen\captionwidth@"</span>,
-<a href=#481 id=481 data-nosnippet>481</a>    <span class="string">r"\newdimen\smallcaptionwidth@"</span>,
-<a href=#482 id=482 data-nosnippet>482</a>    <span class="string">r"\newdimen\ex@"</span>,
-<a href=#483 id=483 data-nosnippet>483</a>    <span class="string">r"\newdimen\buffer@"</span>,
-<a href=#484 id=484 data-nosnippet>484</a>    <span class="string">r"\newdimen\spreadmlines@"</span>,
-<a href=#485 id=485 data-nosnippet>485</a>    <span class="string">r"\newdimen\lwidth@"</span>,
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="string">r"\newdimen\rwidth@"</span>,
-<a href=#487 id=487 data-nosnippet>487</a>    <span class="string">r"\newdimen\maxlwidth@"</span>,
-<a href=#488 id=488 data-nosnippet>488</a>    <span class="string">r"\newdimen\maxrwidth@"</span>,
-<a href=#489 id=489 data-nosnippet>489</a>    <span class="string">r"\newdimen\totwidth@"</span>,
-<a href=#490 id=490 data-nosnippet>490</a>    <span class="string">r"\newdimen\lineht@"</span>,
-<a href=#491 id=491 data-nosnippet>491</a>    <span class="string">r"\newdimen\gwidth@"</span>,
-<a href=#492 id=492 data-nosnippet>492</a>    <span class="string">r"\newdimen\gmaxwidth@"</span>,
-<a href=#493 id=493 data-nosnippet>493</a>    <span class="string">r"\newdimen\glineht@"</span>,
-<a href=#494 id=494 data-nosnippet>494</a>    <span class="string">r"\newdimen\multlinegap@"</span>,
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="string">r"\newdimen\multlinetaggap@"</span>,
-<a href=#496 id=496 data-nosnippet>496</a>    <span class="string">r"\newdimen\mwidth@"</span>,
-<a href=#497 id=497 data-nosnippet>497</a>    <span class="string">r"\newdimen\mlineht@"</span>,
-<a href=#498 id=498 data-nosnippet>498</a>    <span class="string">r"\newdimen\ltwidth@"</span>,
-<a href=#499 id=499 data-nosnippet>499</a>    <span class="string">r"\newdimen\rtwidth@"</span>,
-<a href=#500 id=500 data-nosnippet>500</a>    <span class="string">r"\newdimen\accentdimen@"</span>,
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="string">r"\newdimen\minaw@"</span>,
-<a href=#502 id=502 data-nosnippet>502</a>    <span class="string">r"\newdimen\minCDaw@"</span>,
-<a href=#503 id=503 data-nosnippet>503</a>    <span class="string">r"\newdimen\bigaw@"</span>,
-<a href=#504 id=504 data-nosnippet>504</a>    <span class="string">r"\newdimen\pmbraise@"</span>,
-<a href=#505 id=505 data-nosnippet>505</a>    <span class="string">r"\newtoks\hashtoks@"</span>,
-<a href=#506 id=506 data-nosnippet>506</a>  ))<span class="question-mark">?</span>;
-<a href=#507 id=507 data-nosnippet>507</a>
-<a href=#508 id=508 data-nosnippet>508</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\printoptions"</span>,    <span class="string">""</span>);
-<a href=#509 id=509 data-nosnippet>509</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\showallocations"</span>, <span class="string">""</span>);
-<a href=#510 id=510 data-nosnippet>510</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\syntax"</span>,          <span class="string">""</span>);
-<a href=#511 id=511 data-nosnippet>511</a>});
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@rbrace"</span>, <span class="prelude-val">None</span>, <span class="string">"}"</span>,
+<a href=#373 id=373 data-nosnippet>373</a>    role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">"\\}"</span>,
+<a href=#374 id=374 data-nosnippet>374</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@surd"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{221A}"</span>,
+<a href=#376 id=376 data-nosnippet>376</a>    role =&gt; <span class="string">"OPERATOR"</span>, meaning =&gt; <span class="string">"square-root"</span>,
+<a href=#377 id=377 data-nosnippet>377</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@S"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{00A7}"</span>,
+<a href=#379 id=379 data-nosnippet>379</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@P"</span>,      <span class="prelude-val">None</span>, <span class="string">"\u{00B6}"</span>,
+<a href=#381 id=381 data-nosnippet>381</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@dag"</span>,    <span class="prelude-val">None</span>, <span class="string">"\u{2020}"</span>,
+<a href=#383 id=383 data-nosnippet>383</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@ams@boldsymbol@ddag"</span>,   <span class="prelude-val">None</span>, <span class="string">"\u{2021}"</span>,
+<a href=#385 id=385 data-nosnippet>385</a>    bounded =&gt; <span class="bool-val">true</span>, font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="comment">// Catchall wrap-and-bold for anything the per-symbol bindings don't
+<a href=#388 id=388 data-nosnippet>388</a>  // cover (Perl L336-337).
+<a href=#389 id=389 data-nosnippet>389</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ams@boldsymbol@{}"</span>, <span class="string">"#1"</span>,
+<a href=#390 id=390 data-nosnippet>390</a>    bounded =&gt; <span class="bool-val">true</span>, require_math =&gt; <span class="bool-val">true</span>,
+<a href=#391 id=391 data-nosnippet>391</a>    font =&gt; {forcebold =&gt; <span class="bool-val">true</span>});
+<a href=#392 id=392 data-nosnippet>392</a>
+<a href=#393 id=393 data-nosnippet>393</a>  <span class="comment">// Dispatcher (Perl L339-343).
+<a href=#394 id=394 data-nosnippet>394</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\boldsymbol DefToken"</span>, sub[(token)] {
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="kw">let </span>raw = token.to_string();
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">let </span>name = raw.strip_prefix(<span class="string">'\\'</span>).unwrap_or(<span class="kw-2">&amp;</span>raw);
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>btoken_cs = <span class="macro">format!</span>(<span class="string">"\\lx@ams@boldsymbol@{}"</span>, name);
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>btoken = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>btoken_cs);
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>btoken) {
+<a href=#400 id=400 data-nosnippet>400</a>      <span class="macro">vec!</span>[btoken]
+<a href=#401 id=401 data-nosnippet>401</a>    } <span class="kw">else </span>{
+<a href=#402 id=402 data-nosnippet>402</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@ams@boldsymbol@"</span>), token]
+<a href=#403 id=403 data-nosnippet>403</a>    }
+<a href=#404 id=404 data-nosnippet>404</a>  });
+<a href=#405 id=405 data-nosnippet>405</a>
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="comment">// Ignore-class (Perl L346-364)
+<a href=#407 id=407 data-nosnippet>407</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\buffer" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ChangeBuffer Dimension"</span>, <span class="string">"\\buffer#2\\relax"</span>);
+<a href=#409 id=409 data-nosnippet>409</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ResetBuffer"</span>,            <span class="string">""</span>);
+<a href=#410 id=410 data-nosnippet>410</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\shave{}"</span>,                <span class="string">"#1"</span>);
+<a href=#411 id=411 data-nosnippet>411</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\botshave{}"</span>,             <span class="string">"#1"</span>);
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topshave{}"</span>,             <span class="string">"#1"</span>);
+<a href=#413 id=413 data-nosnippet>413</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\minCDarrowwidth Dimension"</span>,  <span class="string">""</span>);
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pretend Until:\\haswidth {}"</span>, <span class="string">"#1"</span>);
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\snug"</span>, <span class="string">""</span>);
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\topsmash{}"</span>, <span class="string">"#1"</span>,   enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#417 id=417 data-nosnippet>417</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\botsmash{}"</span>, <span class="string">"#1"</span>,   enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#418 id=418 data-nosnippet>418</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\spreadmatrixlines Dimension"</span>, <span class="string">""</span>);
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MultlineGap Dimension"</span>, <span class="string">""</span>);
+<a href=#420 id=420 data-nosnippet>420</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\multlinegap Dimension"</span>, <span class="string">""</span>);
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nomultlinegap"</span>,         <span class="string">""</span>);
+<a href=#422 id=422 data-nosnippet>422</a>
+<a href=#423 id=423 data-nosnippet>423</a>  <span class="comment">// \innerhdotsfor / \spacehdots / \spaceinnerhdots — emit n copies
+<a href=#424 id=424 data-nosnippet>424</a>  // of \hdots (Perl L366-371). Uses sub-callback closures.
+<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\innerhdotsfor Number Match:\\after {}"</span>, sub[(n, _a, _b)] {
+<a href=#426 id=426 data-nosnippet>426</a>    <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
+<a href=#429 id=429 data-nosnippet>429</a>    Tokens::new(out)
+<a href=#430 id=430 data-nosnippet>430</a>  });
+<a href=#431 id=431 data-nosnippet>431</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spacehdots Number Match:\\for Number"</span>, sub[(n, _a, _b)] {
+<a href=#432 id=432 data-nosnippet>432</a>    <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
+<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
+<a href=#435 id=435 data-nosnippet>435</a>    Tokens::new(out)
+<a href=#436 id=436 data-nosnippet>436</a>  });
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\spaceinnerhdots Number Match:\\for Number Match:\\after {}"</span>,
+<a href=#438 id=438 data-nosnippet>438</a>    sub[(n, _a, _b, _c, _d)] {
+<a href=#439 id=439 data-nosnippet>439</a>      <span class="kw">let </span>count = n.value_of() <span class="kw">as </span>usize;
+<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(count);
+<a href=#441 id=441 data-nosnippet>441</a>      <span class="kw">for _ in </span><span class="number">0</span>..count { out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hdots"</span>)); }
+<a href=#442 id=442 data-nosnippet>442</a>      Tokens::new(out)
+<a href=#443 id=443 data-nosnippet>443</a>    });
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a>  <span class="comment">// \foldedtext — peek for \foldedwidth, then \text. Approximation:
+<a href=#446 id=446 data-nosnippet>446</a>  // just use \text directly. (Perl L373-377)
+<a href=#447 id=447 data-nosnippet>447</a>  </span><span class="macro">Let!</span>(<span class="string">"\\foldedtext"</span>,    <span class="string">"\\text"</span>);
+<a href=#448 id=448 data-nosnippet>448</a>  <span class="macro">Let!</span>(<span class="string">"\\topfoldedtext"</span>, <span class="string">"\\text"</span>);
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="macro">Let!</span>(<span class="string">"\\botfoldedtext"</span>, <span class="string">"\\text"</span>);
+<a href=#450 id=450 data-nosnippet>450</a>
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="comment">// \Sb / \Sp — generalized over (substack/superstack). Uses internal
+<a href=#452 id=452 data-nosnippet>452</a>  // \lx@generalized@over machinery. (Perl L386-389)
+<a href=#453 id=453 data-nosnippet>453</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Sb"</span>, <span class="string">"\\lx@generalized@over{\\Sb}{meaning=substack}"</span>);
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Sp"</span>, <span class="string">"\\lx@generalized@over{\\Sp}{meaning=superstack}"</span>);
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="macro">Let!</span>(<span class="string">"\\endSb"</span>, <span class="string">"\\relax"</span>);
+<a href=#456 id=456 data-nosnippet>456</a>  <span class="macro">Let!</span>(<span class="string">"\\endSp"</span>, <span class="string">"\\relax"</span>);
+<a href=#457 id=457 data-nosnippet>457</a>
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thetag"</span>, sub[_args] {
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">let </span>v = lookup_value(<span class="string">"EQUATIONROW_NUMBER"</span>)
+<a href=#460 id=460 data-nosnippet>460</a>      .map(|s| s.to_string()).unwrap_or_default();
+<a href=#461 id=461 data-nosnippet>461</a>    <span class="macro">Explode!</span>(<span class="kw-2">&amp;</span>v)
+<a href=#462 id=462 data-nosnippet>462</a>  });
+<a href=#463 id=463 data-nosnippet>463</a>
+<a href=#464 id=464 data-nosnippet>464</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topaligned"</span>, <span class="string">"\\aligned[t]"</span>);
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="macro">Let!</span>(<span class="string">"\\endtopaligned"</span>, <span class="string">"\\endaligned"</span>);
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\botaligned"</span>, <span class="string">"\\aligned[b]"</span>);
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="macro">Let!</span>(<span class="string">"\\endbotaligned"</span>, <span class="string">"\\endaligned"</span>);
+<a href=#468 id=468 data-nosnippet>468</a>
+<a href=#469 id=469 data-nosnippet>469</a>  <span class="comment">// close enough? (Perl L399)
+<a href=#470 id=470 data-nosnippet>470</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\accentedsymbol{}{}"</span>, <span class="string">"\\def#1{#2}"</span>);
+<a href=#471 id=471 data-nosnippet>471</a>
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="comment">// \cfrac / \endcfrac — uses bgroup/egroup + \\\\ rewire (Perl L402-411)
+<a href=#473 id=473 data-nosnippet>473</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\cfrac"</span>, <span class="string">""</span>,
+<a href=#474 id=474 data-nosnippet>474</a>    after_digest =&gt; sub[_w] {
+<a href=#475 id=475 data-nosnippet>475</a>      <span class="comment">// Perl: $stomach-&gt;bgroup; Let(T_CS("\\\\"), T_CS('\lx@cfrac'));
+<a href=#476 id=476 data-nosnippet>476</a>      </span>stomach::bgroup();
+<a href=#477 id=477 data-nosnippet>477</a>      raw_tex(<span class="string">r"\let\\\lx@cfrac"</span>)<span class="question-mark">?</span>;
+<a href=#478 id=478 data-nosnippet>478</a>    });
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endcfrac"</span>, <span class="string">""</span>,
+<a href=#480 id=480 data-nosnippet>480</a>    after_digest =&gt; sub[_w] {
+<a href=#481 id=481 data-nosnippet>481</a>      stomach::egroup()<span class="question-mark">?</span>;
+<a href=#482 id=482 data-nosnippet>482</a>    });
+<a href=#483 id=483 data-nosnippet>483</a>  <span class="macro">Let!</span>(<span class="string">"\\lcfrac"</span>, <span class="string">"\\cfrac"</span>);
+<a href=#484 id=484 data-nosnippet>484</a>  <span class="macro">Let!</span>(<span class="string">"\\rcfrac"</span>, <span class="string">"\\cfrac"</span>);
+<a href=#485 id=485 data-nosnippet>485</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@cfrac"</span>,
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="string">"\\lx@generalized@over{\\\\}{meaning=continued-fraction,role=MULOP}\\displaystyle"</span>);
+<a href=#487 id=487 data-nosnippet>487</a>
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="comment">//======================================================================
+<a href=#489 id=489 data-nosnippet>489</a>  // Dubious — raw newdimen/newtoks block (Perl L426-454)
+<a href=#490 id=490 data-nosnippet>490</a>  </span>raw_tex(<span class="macro">concat!</span>(
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="string">r"\def\vspace@{\def\vspace##1{\crcr\noalign{\vskip##1\relax}}}"</span>,
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="string">r"\newdimen\captionwidth@"</span>,
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="string">r"\newdimen\smallcaptionwidth@"</span>,
+<a href=#494 id=494 data-nosnippet>494</a>    <span class="string">r"\newdimen\ex@"</span>,
+<a href=#495 id=495 data-nosnippet>495</a>    <span class="string">r"\newdimen\buffer@"</span>,
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="string">r"\newdimen\spreadmlines@"</span>,
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="string">r"\newdimen\lwidth@"</span>,
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="string">r"\newdimen\rwidth@"</span>,
+<a href=#499 id=499 data-nosnippet>499</a>    <span class="string">r"\newdimen\maxlwidth@"</span>,
+<a href=#500 id=500 data-nosnippet>500</a>    <span class="string">r"\newdimen\maxrwidth@"</span>,
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="string">r"\newdimen\totwidth@"</span>,
+<a href=#502 id=502 data-nosnippet>502</a>    <span class="string">r"\newdimen\lineht@"</span>,
+<a href=#503 id=503 data-nosnippet>503</a>    <span class="string">r"\newdimen\gwidth@"</span>,
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="string">r"\newdimen\gmaxwidth@"</span>,
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="string">r"\newdimen\glineht@"</span>,
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="string">r"\newdimen\multlinegap@"</span>,
+<a href=#507 id=507 data-nosnippet>507</a>    <span class="string">r"\newdimen\multlinetaggap@"</span>,
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="string">r"\newdimen\mwidth@"</span>,
+<a href=#509 id=509 data-nosnippet>509</a>    <span class="string">r"\newdimen\mlineht@"</span>,
+<a href=#510 id=510 data-nosnippet>510</a>    <span class="string">r"\newdimen\ltwidth@"</span>,
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="string">r"\newdimen\rtwidth@"</span>,
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="string">r"\newdimen\accentdimen@"</span>,
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="string">r"\newdimen\minaw@"</span>,
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="string">r"\newdimen\minCDaw@"</span>,
+<a href=#515 id=515 data-nosnippet>515</a>    <span class="string">r"\newdimen\bigaw@"</span>,
+<a href=#516 id=516 data-nosnippet>516</a>    <span class="string">r"\newdimen\pmbraise@"</span>,
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="string">r"\newtoks\hashtoks@"</span>,
+<a href=#518 id=518 data-nosnippet>518</a>  ))<span class="question-mark">?</span>;
+<a href=#519 id=519 data-nosnippet>519</a>
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\printoptions"</span>,    <span class="string">""</span>);
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\showallocations"</span>, <span class="string">""</span>);
+<a href=#522 id=522 data-nosnippet>522</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\syntax"</span>,          <span class="string">""</span>);
+<a href=#523 id=523 data-nosnippet>523</a>});
 </code></pre></div></section></main></body></html>
