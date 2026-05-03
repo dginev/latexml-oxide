@@ -253,8 +253,18 @@ pub fn record_math_parse(us: u64, parses: u32) {
 pub fn incr_graphics_asset() {
   STATE.with(|s| s.borrow_mut().graphics_assets += 1);
 }
+pub fn set_graphics_assets(n: u32) {
+  STATE.with(|s| s.borrow_mut().graphics_assets = n);
+}
 pub fn incr_graphics_subprocess() {
   STATE.with(|s| s.borrow_mut().graphics_subprocess_count += 1);
+}
+/// Bulk-add subprocess counts from a worker-pool tally. Used after
+/// `std::thread::scope` joins because per-worker `thread_local!` STATE
+/// is discarded on thread exit; counts accumulated in a shared
+/// `AtomicU32` are merged here.
+pub fn add_graphics_subprocess(n: u32) {
+  STATE.with(|s| s.borrow_mut().graphics_subprocess_count += n);
 }
 pub fn incr_external_tool() {
   STATE.with(|s| s.borrow_mut().external_tool_count += 1);

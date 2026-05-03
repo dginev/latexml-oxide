@@ -108,11 +108,121 @@ Add `Pragma` rules that check mathematical conventions (e.g., consistency of var
 
 ---
 
+## 5. External-Process Discipline (fork-exec is not free)
+
+**Principle:** Every external tool invocation (`gs`, `convert`, `inkscape`,
+`kpsewhich`, `pdfcrop`, …) costs 10–50 ms ambient before any real work,
+plus dynamic-linker and font-cache initialization for `gs` and
+`convert`. Coalesce, dedup, and cache *before* spawning, not after.
+
+**Why:** Telemetry across 190k arxiv documents shows the `graphics`
+phase at **36.5 % of total wall** — the single largest band, larger
+than `digest` (20.3 %) and `math_parse` (17.0 %). The bulk of that
+budget is `gs`/`convert`/`inkscape` fork-exec + child runtime, not
+work we can speed up by tuning Rust. Even a modest hit rate on a
+content-keyed cache (e.g. 30 %) translates to ~10 % off total wall
+across the corpus.
+
+**Examples:**
+```rust
+// BAD: spawn one convert per asset, regardless of duplicates
+for asset in assets {
+    Command::new("convert").args(...).status()?;
+}
+
+// BETTER: coalesce by source identity within a document
+let mut by_key: HashMap<CacheKey, Vec<&Asset>> = HashMap::new();
+for asset in &assets { by_key.entry(asset.cache_key()).or_default().push(asset); }
+for (key, group) in &by_key {
+    let result = run_convert_once(group[0])?;
+    for a in group { a.write_result(&result); }
+}
+
+// BEST: persistent on-disk cache keyed by source-hash + page + DPI + dest
+let key = blake3::hash([source_bytes, page.to_le_bytes(), dpi.to_le_bytes(),
+                        dest_kind.as_bytes(), opts.canonical()].concat());
+if let Some(cached) = cache.get(&key) { return Ok(cached); }
+let fresh = run_convert(...)?;
+cache.put(&key, &fresh);
+```
+
+**When to apply:** Any time you would call `Command::new(...)` inside a
+document conversion. The cost calculus is dominated by spawn-count
+× per-spawn overhead, not by per-call CPU once the child is running —
+so dedup/coalesce wins are larger than convert-flag tuning.
+
+**Cache-key correctness checklist:**
+- Include all inputs that change the output: source bytes (hash), page
+  index, target DPI, target format, and any flags that influence
+  rendering (background, antialiasing, density).
+- Exclude environment-derived noise (timestamps, tmpdir paths).
+- Exclude things that must invalidate: tool version (when fixing a
+  rendering bug, bump a `cache_namespace` constant rather than relying
+  on hash invalidation).
+
+---
+
 > **Adding new principles:** Number sequentially. Include: principle statement, **Why** (rationale), **Examples** (good vs bad code), **When to apply** (scope/triggers).
 
 ---
 
-## Current Slow-Tail Diagnostic
+## Current Phase Distribution (190k aggregate)
+
+> **Source of truth:** 10 stages × 10k arxiv documents (189,991 jobs total)
+> from `/home/deyan/data/stage{01..10}_100k_html/telemetry.jsonl.gz`,
+> collected 2026-05-02..03 with the per-job `cortex_worker` telemetry
+> wired in §P0. Sum-of-phases / wall = **97.78 %** (above the 92 % gate
+> from `docs/TELEMETRY.md`).
+
+| metric | value |
+|---|---:|
+| jobs measured | 189,991 |
+| total wall | 545,073 s (151.4 h) |
+| sum of phases | 532,968 s (97.78 % of wall) |
+| mean wall / job | 2.87 s |
+| total formulae | 39.16 M (mean 206 / job) |
+| total parse attempts | 39.06 M |
+| total parses surviving | 45.84 M (1.17× attempts → 17 % over-parse rate) |
+| max RSS observed | 1,692 MB |
+
+Phase breakdown (sorted by share of wall):
+
+| phase | sum_s | %wall | mean / job |
+|---|---:|---:|---:|
+| **graphics** | 199,020 | **36.51 %** | 1,047 ms |
+| **digest** | 110,495 | **20.27 %** | 582 ms |
+| **math_parse** | 92,613 | **16.99 %** | 488 ms |
+| **build** | 62,836 | **11.53 %** | 331 ms |
+| xslt | 39,264 | 7.20 % | 207 ms |
+| mathml_pres | 9,636 | 1.77 % | 51 ms |
+| post_xml_parse | 4,429 | 0.81 % | 23 ms |
+| serialize | 4,274 | 0.78 % | 23 ms |
+| rewrite | 3,682 | 0.68 % | 19 ms |
+| crossref | 2,116 | 0.39 % | 11 ms |
+| post_scan | 1,978 | 0.36 % | 10 ms |
+| mathml_cont | 1,764 | 0.32 % | 9 ms |
+| html5_fixups | 554 | 0.10 % | 3 ms |
+| bibliography | 308 | 0.06 % | 2 ms |
+
+**Top four bands account for 85 % of wall.** All other phases
+combined (xslt + mathml + post_*) are 12 %.
+
+**Outstanding telemetry gaps** (counters present in the schema but
+emitting zero across stages 01–10 — wrappers not wired or counter not
+incremented):
+- `graphics_assets`, `graphics_subprocess_count` — **wired
+  2026-05-03** (`latexml_post/src/graphics.rs` + `set_graphics_assets`
+  / `add_graphics_subprocess` in `latexml_core::telemetry`). Worker
+  threads tally a shared `AtomicU32` and merge into telemetry after
+  `std::thread::scope` joins (per-thread `thread_local!` STATE is
+  otherwise discarded on worker exit). Stage 11+ should show non-zero
+  values; verify on next sweep.
+- `external_tool_count`, `db_objects` — still zero across all stages.
+- `math_images_us` and `split_us` are also zero across all stages and
+  may simply not run on this corpus; verify before assuming they're
+  bugs.
+
+## Slow-Tail Snapshot (legacy framing — kept for history)
 
 Current data source: `/home/deyan/data/*/*.tsv`, checked 2026-05-02. Only
 `/home/deyan/data/100k_noproblem_sandbox_html/results.tsv` has a
@@ -212,32 +322,11 @@ Top slow rows:
 
 ## Improvement Plan
 
-The plan is ordered by expected slow-tail impact and confidence. Avoid broad
-"fast path" work unless a corpus audit proves the exact pattern and an output
-comparison proves equivalence.
-
-### Mini starter plan
-
-1. Add phase/count telemetry to the benchmark output before optimizing: phase
-   timings, formula count, graphics count, DB objects, max RSS, child-process
-   time, git SHA, command line, timeout, worker count, and host.
-2. Build three small sentinel lists from the current >10s tail:
-   `0809.3849`, `0908.3201`, `1003.0368`, `0803.4343`, `0907.4282` for
-   graphics/output; `astro-ph0204009`, `0911.0884`, `astro-ph0401354`,
-   `0809.5174`, `astro-ph0507615` for math/large-document behavior; and
-   `hep-ph0102035`, `math0608653`, `0705.3903`, `0907.3579`, `1001.3715`,
-   `0903.3465` for timeout/failure behavior.
-3. Profile those sentinels by family: per-asset command time and child CPU for
-   graphics; `LATEXML_PARSE_AUDIT=1` plus `--nomathparse` comparison for math;
-   last phase/log event before timeout for failures.
-4. If profiles confirm the current aggregate signal, implement graphics
-   telemetry, duplicate coalescing, and conversion caching before adding new
-   conversion heuristics.
-5. Fix timeout/fatal rows as bounded failure/control-flow issues, not normal
-   hot paths.
-6. Touch math parser behavior only after audit data proves the exact repeated
-   shape or ambiguity family; start with exact parsed-math caching or semantic
-   pruning, not broad direct builders.
+The plan is ordered by **share of total wall** as measured across the
+189,991-job aggregate above. Optimization work that targets a sub-1 %
+band must justify itself; the four headline bands (graphics, digest,
+math_parse, build) carry 85 % of wall and are the only places where
+single-digit-percent wins on aggregate are realistic.
 
 ### P0: Make every slow job phase-attributed — DONE 2026-05-03
 
@@ -261,45 +350,79 @@ gate). Confirms first telemetry-driven finding: `graphics` already
 visible at 38% of wall on a single arxiv paper, motivating the P1
 graphics conversion-cache work below.
 
-### P1: Graphics and output-heavy jobs
+### P1: Graphics phase (36.5 % of wall — top lever) — IN PROGRESS
 
-This is the largest identifiable family in the current >10s tail. Work items:
+This single phase outweighs every other Rust-internal phase combined.
+Work items, in order:
 
-- Add per-asset graphics telemetry: source type, source bytes, page, requested
-  output type, command used, elapsed time, exit status, and cache hit/miss.
-- Cache conversions by source content identity plus page, DPI, destination type,
-  and relevant graphics options.
-- Coalesce duplicate graphics jobs within a document before spawning external
-  tools.
-- Add a large-output sentinel set from `0809.3849`, `0908.3201`, `1003.0368`,
-  `0803.4343`, and `0907.4282`; compare output size, image count, missing image
-  count, and wall time before/after.
+1. **Wire per-asset graphics telemetry** — DONE 2026-05-03.
+   `graphics_assets` (set on main thread) and
+   `graphics_subprocess_count` (worker `AtomicU32` merged via
+   `add_graphics_subprocess` after `std::thread::scope` joins). Need a
+   single 10k sweep to confirm non-zero values, then we can speak
+   quantitatively about subproc-per-paper distribution.
+2. **Intra-document dedup** — already present in
+   `latexml_post/src/graphics.rs:888-962` via `convert_job_ids`
+   HashMap keyed on `(source, page, options)`. Mirrors Perl's
+   `$doc->cacheLookup`. No work needed.
+3. **Persistent on-disk cache** — *next concrete win*. Keyed on
+   `(blake3(source_bytes), page, dest_type, density, options_canonical)`
+   stored under `$LATEXML_OXIDE_CACHE_DIR`
+   (default `$XDG_CACHE_HOME/latexml-oxide/graphics/`). Hash namespace
+   bumps when convert / inkscape version changes (read once at startup
+   via `--version`). Add `graphics_cache_hits` / `_misses` counters to
+   the telemetry schema before landing the cache.
+4. **Output-size validation set** — `0809.3849`, `0908.3201`,
+   `1003.0368`, `0803.4343`, `0907.4282`; compare output bytes, image
+   count, missing-image count, and wall time before/after.
 
-Do not add more global ImageMagick/Inkscape heuristics until per-asset telemetry
-shows which source types are slow and which path is correct for them.
+Do not add more global ImageMagick/Inkscape heuristics until per-asset
+telemetry shows which source types are actually slow and which path is
+correct for each.
 
-### P1: Math and large-document jobs
+### P1: Digest + Build (31.8 % of wall — pure-Rust hot path)
 
-Marpa remains important, but the 100k slow tail is not a single repeated
-simple-formula problem. Work items:
+`digest` (20.27 %) + `build` (11.53 %) is *almost as large* as the
+graphics phase, but consists entirely of Rust code we control. There
+is no external-process slack to recover; wins come from the Principle
+1–3 hygiene already documented.
 
-- Run `LATEXML_PARSE_AUDIT=1` on `astro-ph0204009`, `0911.0884`,
-  `astro-ph0401354`, `0809.5174`, and `astro-ph0507615`; rank by total parse
-  time, parse count, and repeated token sequence.
-- Add exact parsed-math caching only where the audit shows repeated identical
-  normalized token streams under equivalent math context.
-- Prefer grammar/semantic pruning for demonstrably invalid ambiguity families:
-  malformed operator chains, impossible double application, invalid script
-  targets, empty/mismatched fences, and nonsensical differential/operator
-  combinations.
-- Track MathML count and structural output metrics before/after; a speedup that
-  changes math structure without an explicit compatibility decision is a
-  regression.
+- Run `cargo clippy --workspace -- -W clippy::perf -W clippy::redundant_clone`
+  and apply.
+- Profile a digest-heavy outlier from telemetry top-5 (`0911.3024`
+  76 % of paper wall, `0909.4601` 66 %) under release `perf`. Look for
+  `arena::*`, `Tokens::*`, and HashMap rehashes.
+- Audit hot `.clone()` sites on Token / Tokens / Vec<Token> per
+  Principle 2.
+- Don't over-index on micro-optimization — the digest phase reflects
+  expansion volume, and large papers are inherently expensive.
 
-Do not start with broad direct-XM builders for many common shapes. They are easy
-to make fast and hard to make LaTeXML-equivalent. Treat them as a later,
-per-shape optimization only after audit data, fixtures, and fallback behavior
-are clear.
+### P1: Math and large-document jobs (17.0 % of wall)
+
+The 190k aggregate shows **39.06 M parse attempts producing 45.84 M
+surviving parses** (1.17×) — a 17 % over-parse rate. That is precisely
+the lever Principle 4 targets. Math parsing is also the band most
+likely to interact with output structure, so any change must clear the
+acceptance checklist below.
+
+- Run `LATEXML_PARSE_AUDIT=1` on telemetry top-5 by `math_parse`:
+  `0912.4453` (60.6 % of paper wall), `1001.5072` (62.5 %),
+  `0912.5528` (35.6 %), `0908.4292` (46.8 %), `0909.3532` (62.0 %).
+  Rank by total parse time, attempt count, and repeated token sequence.
+- Add exact parsed-math caching only where the audit shows repeated
+  identical normalized token streams under equivalent math context.
+- Prefer grammar/semantic pruning for demonstrably invalid ambiguity
+  families: malformed operator chains, impossible double application,
+  invalid script targets, empty/mismatched fences, and nonsensical
+  differential/operator combinations.
+- Track MathML count and structural output metrics before/after; a
+  speedup that changes math structure without an explicit compatibility
+  decision is a regression.
+
+Do not start with broad direct-XM builders for many common shapes.
+They are easy to make fast and hard to make LaTeXML-equivalent. Treat
+them as a later, per-shape optimization only after audit data,
+fixtures, and fallback behavior are clear.
 
 ### P1: Failure/control-flow outliers
 
