@@ -725,7 +725,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
-  let mut last_token: Option<Token> = None;
+  // Declared without initializer — Perl resets this to undef at the
+  // start of every OUTER iteration (see L742), so the initial value
+  // is genuinely dead. The compiler tracks definite-assignment for us.
+  let mut last_token: Option<Token>;
   let mut spanning = false;
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
