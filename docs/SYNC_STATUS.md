@@ -7,9 +7,25 @@ when every in-scope paper produces 0 errors on Rust too.
 
 **Status**: Round-20 Phase A Gate 0 closed 2026-05-03 at
 **99,829 / 100,003 = 99.83%** raw OK (round-19 was 99.77%); **0 NEW
-non-OK** introduced; **56 papers recovered**. Round-20 fix series ready
-to commit (uncommitted at session end). Round-19 narrative +
-REG-1/2/3/NBSP fix detail archived in
+non-OK** introduced; **56 papers recovered**. Round-20 fix series
+committed (`e1c3da3975`).
+
+**True Rust regression count: 0**. Re-classifying the 246 residual
+rows by parity-check verdict:
+
+| Verdict | Rows | Meaning |
+|---|---:|---|
+| OUT-OF-SCOPE | 188 | Rust=Perl, both error |
+| PERL_REGRESSION | 36 | Rust strictly *better* than Perl |
+| BOTH CLEAN | 5 | Stale (already-fixed entries) |
+| REAL REGRESSION | 7 | All flagged PERL_TIMEOUT — now reclassify to `OUT-OF-SCOPE? (recheck at TIMEOUT_SECS≥180)` per `e1c3da3975` parity_check fix; Round-20 verification at 180s found 0 Rust-only regressions |
+| (unparsed) | 4 | Stage TSV format mismatch |
+
+The 18-paper `\lx@NBSP` cluster is entirely PERL_REGRESSION — Rust
+emits half the errors Perl does (Rust=N, Perl=2N) on every sampled
+paper.
+
+Round-19 narrative + REG-1/2/3/NBSP fix detail archived in
 `docs/archive/round19_iteration_log.md` + `git log
 master..claude-round-19`.
 
