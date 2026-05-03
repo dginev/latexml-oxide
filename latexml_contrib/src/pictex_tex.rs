@@ -25,9 +25,14 @@ LoadDefinitions!({
   // PiCTeX `\setdashes`/`\setdots` accept an OPTIONAL `<spacing>` arg:
   //   \setdashes              % default dash spacing
   //   \setdashes <0.05cm>     % custom spacing
-  // Witness: math0107222 uses `\setdots` (no arg). Both forms must work.
-  RawTeX!("\\def\\setdashes{\\@ifnextchar<{\\lx@pictex@gobble@angle}{}}");
-  RawTeX!("\\def\\setdots{\\@ifnextchar<{\\lx@pictex@gobble@angle}{}}");
+  // Witnesses:
+  //   - math0107222 uses bare `\setdots` (no arg)
+  //   - 0705.3903 (Plain TeX + \input pictex) uses `\setdashes <2mm>`
+  // Plain TeX context lacks `\@ifnextchar`, so use plain-TeX-compatible
+  // \futurelet dispatch that gobbles the optional `<...>` group.
+  RawTeX!("\\def\\setdashes{\\futurelet\\lx@pictex@next\\lx@pictex@maybeangle}");
+  RawTeX!("\\def\\setdots{\\futurelet\\lx@pictex@next\\lx@pictex@maybeangle}");
+  RawTeX!("\\def\\lx@pictex@maybeangle{\\ifx\\lx@pictex@next<\\expandafter\\lx@pictex@gobble@angle\\fi}");
   RawTeX!("\\def\\lx@pictex@gobble@angle<#1>{}");
   RawTeX!("\\def\\startrotation by #1 #2{}");
   RawTeX!("\\def\\plot#1/{}");
