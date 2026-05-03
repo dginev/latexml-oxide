@@ -159,8 +159,27 @@ LoadDefinitions!({
   // in the preamble. \span             c  combines adjacent entries in a table into a single
   // entry.
   DefPrimitive!("\\noalign", {
+    // Perl `DefPrimitiveI('\noalign', ...)`: bgroup() + error + lets.
+    // We MATCH Perl's bgroup but then read+discard the `{...}` body and
+    // egroup so the body's closing `}` doesn't leak past the bgroup
+    // frame. Without this body-consume, the user's `\hline`
+    // (= `\noalign{\@@alignment@hline}`) hitting the bad path (cell
+    // content rather than INNER 1's noalign branch) leaves the bgroup
+    // pushed AND its `{` pushes a SECOND frame, while only the body's
+    // `}` pops one — the `\noalign`'s primitive-bgroup leaks. The leak
+    // then cascades into \vtop/\hbox mode-end mismatches in p{}-column
+    // arrays (REG-1 / math0403005).
     bgroup();
     Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
+    // Consume the `{...}` body so its `}` matches our bgroup frame.
+    if let Some(tok) = gullet::read_token()? {
+      if tok.get_catcode() == Catcode::BEGIN {
+        let _ = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+      } else {
+        gullet::unread_one(tok);
+      }
+    }
+    egroup()?;
     Let!(&T_ALIGN!(), T_RELAX!());
     Let!(&T_CS!("\\noalign"), T_RELAX!());
     Let!(&T_CS!("\\omit"), T_RELAX!());
