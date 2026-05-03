@@ -207,13 +207,41 @@ Same content INLINE (no `\input`) is clean in Rust too. Same
 content in `\input` but OUTSIDE `\begin{array}` is clean. So the
 trigger is **`\begin{array}` + `\input` together**.
 
-**Refined diagnosis**: The first error is `Extra alignment tab '&'`
-— a `&` cell-separator token is leaking into the stream BEFORE
-picture's `Pair` reader runs, so `ifNext('(')` peeks and finds `&`,
-not `(`. Perl's identical Pair definition (latex_constructs.pool.ltxml:4900,
-also `ifNext`) doesn't fail because Perl's `\input`/array combo
-doesn't leak the `&`. **The bug is in Rust's `\input` or
-`\begin{array}`-cell-template token streaming, NOT in `Pair`.**
+**Refined diagnosis** (further deep-dive 2026-05-02):
+
+Backtrace from instrumented `picture.before_digest`:
+```
+0: closure at latex_constructs.rs:8443
+1: Constructor::execute_before_digest
+2: Constructor::invoke_primitive
+3: stomach::invoke_token
+4: tex_tables::digest_alignment_column at tex_tables.rs:809
+5: tex_tables::digest_alignment_body at tex_tables.rs:631
+6: closure for \@end@array's after_digest at tex_tables.rs:41
+```
+
+**The bug is in Rust's `\halign`/array cell re-digestion.** When
+`\@end@array` fires its `after_digest`, it calls
+`digest_alignment_body` which loops calling `digest_alignment_column`.
+That re-digests cell tokens. Each re-digestion of `\begin{picture}`
+creates a fresh picture invocation. The first iteration consumes
+`(0,0)` correctly via Pair, but subsequent iterations (which
+shouldn't be happening for a single-cell single-row array) keep
+re-invoking picture, each time finding `\end{picture}` next and
+firing "Missing argument Pair", cascading to 10001 errors.
+
+**Why `\input` matters**: When the picture content is INLINE
+(`\begin{array}{c}\begin{picture}(0,0)\end{picture}\end{array}`),
+the env-machinery captures picture's body BEFORE array
+sees the cell. Picture's body is closed before array starts cell
+walking. Single, clean invocation.
+
+When the content comes via `\input`, the file's tokens are pushed
+to the gullet and read DURING array's cell digestion. Picture's
+env-handler runs from inside `digest_alignment_column` (instead of
+outside). Body capture inside this nested context doesn't bound
+the alignment loop's iteration — picture's body tokens stay in the
+input stream and get re-walked.
 
 (An earlier candidate — make Pair use expanding peek
 [`read_x_token` + unread] — was rejected: it's a divergence from
