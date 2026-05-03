@@ -53,12 +53,14 @@ all-clean trajectory holds at 500-paper scale.
 flow from `latexml_core::telemetry` through `cortex_worker` into
 `telemetry.json` ZIP members; `tools/benchmark_canvas.sh` aggregates
 to `telemetry.jsonl.gz`; `tools/perf_phase_summary.py` and
-`tools/perf_compare.py` consume. **16/17 phases wrapped** (Bootstrap,
-Digest, Build, Rewrite, MathParse, PostXmlParse, PostScan,
-Bibliography, Crossref, Graphics, Split, MathmlPres, MathmlCont,
-Xslt, Html5Fixups, Serialize — only the per-formula
-`math_parse_buckets` histogram remains deferred). 95.6% sum-of-phase
-coverage on 0704.0023 vs the ≥92% acceptance gate.
+`tools/perf_compare.py` consume. **17/17 phases wrapped — foundation
+complete** (Bootstrap, Digest, Build, Rewrite, MathParse,
+PostXmlParse, PostScan, Bibliography, Crossref, Graphics,
+MathImages, MathmlPres, MathmlCont, Split, Xslt, Html5Fixups,
+Serialize). Per-formula `math_parse_buckets` histogram landed in
+commit `91cdebdebc`; smoke-test on math/array.tex (2 formulae)
+populates `[0,1,1,0,0,0,0,0,0]`. 95.6% sum-of-phase coverage on
+0704.0023 vs the ≥92% acceptance gate.
 
 **Test suite post-telemetry**: `cargo test --tests --no-fail-fast --
 --skip xcolors_test` → **1129/0/0 across 48 binaries** (xcolors_test

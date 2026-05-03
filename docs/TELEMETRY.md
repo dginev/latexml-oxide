@@ -354,7 +354,7 @@ work continues on a single branch.
 | Step | What | Commit | Status |
 |---:|------|--------|:------:|
 | 1 | `latexml_core::telemetry` module + 4 unit tests | initial commit | ✅ |
-| 2 | Phase guards: Bootstrap / Digest / Build / Rewrite / Serialize in `converter.rs` + `core_interface.rs`; MathParse around `MathParser::parse_math` with formulae count; PostXmlParse / PostScan / Bibliography / Crossref / Graphics / Split in `latexml_oxide/src/post.rs`; MathmlPres / MathmlCont / Xslt / MathImages dispatched per processor name in `latexml_post::Post::process_chain`; Html5Fixups around the post-XSLT regex cleanup. **16 of 17 phases wrapped.** Only `math_parse_buckets` per-formula histogram deferred (requires latexml_math_parser per-call instrumentation; risk of parser perf regression). | round 2 + refinement + 04ae2909ca | ✅ partial |
+| 2 | Phase guards: Bootstrap / Digest / Build / Rewrite / Serialize in `converter.rs` + `core_interface.rs`; MathParse around `MathParser::parse_math` with formulae count and per-formula `math_parse_buckets` histogram in `latexml_math_parser/src/parser.rs`; PostXmlParse / PostScan / Bibliography / Crossref / Graphics / Split in `latexml_oxide/src/post.rs`; MathmlPres / MathmlCont / Xslt / MathImages dispatched per processor name in `latexml_post::Post::process_chain`; Html5Fixups around the post-XSLT regex cleanup. **17 of 17 phases wrapped — foundation complete.** | round 2 + refinement + 04ae2909ca + 91cdebdebc | ✅ |
 | 3 | `cortex_worker` writes `telemetry.json` member into output ZIP (paper_id, wall_us, max_rss_kb, child rusage, category, output_bytes, exit_code). | Step 3 commit | ✅ |
 | 4 | `latexml_oxide --telemetry-out=<path>` flag + helper. | Steps 4+5 commit | ✅ |
 | 5 | `latexml_core/build.rs` bakes `LATEXML_GIT_SHA`. | Steps 4+5 commit | ✅ |
@@ -365,18 +365,18 @@ work continues on a single branch.
 Smoke test on `0704.0023` (real arxiv paper): wall=1.35s, sum-of-
 phase=1.29s = **95.6% coverage** — exceeds the §6 acceptance ≥92%.
 
-Deferred follow-ups:
-- Wrap `latexml_math_parser::parse` to populate `math_parse_us` +
-  the bucket histogram (per-formula instrumentation).
-- Split process_chain phase wall into MathmlPres / MathmlCont /
-  Xslt / Html5Fixups (requires `latexml_post::Post::process_chain`
-  refactor to time each `Box<dyn Processor>`).
-- Wrap `latexml_core::rewrite` entry for the Rewrite phase.
-- `benchmark_canvas.sh` JSONL aggregation across the 10k+ output
-  ZIPs into a single gzipped `telemetry.jsonl.gz` per stage.
+All originally-deferred follow-ups have landed:
+- ✅ `math_parse_buckets` per-formula histogram in
+  `latexml_math_parser/src/parser.rs` (commit `91cdebdebc`).
+- ✅ process_chain split into MathmlPres / MathmlCont / Xslt /
+  MathImages (commit `f0ed3a16dc` + `04ae2909ca`).
+- ✅ Rewrite phase guard around `core_interface` rewrites block
+  (commit `1bc0f84363`).
+- ✅ `benchmark_canvas.sh` JSONL aggregation, gzipped per stage
+  (commit `72cd018f54`).
 
-These are tracked in `docs/PERFORMANCE.md` priority order; none
-block the foundation from being usable today.
+The foundation is complete and ready for telemetry-driven
+optimization work in `docs/PERFORMANCE.md` Tier 1.
 
 ---
 
