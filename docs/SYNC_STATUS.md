@@ -119,8 +119,30 @@ Triage TSV at `~/data/stage03_non_ok_parity.tsv`. Cumulative
 through Stage 3: **29,914 OK / 30,000 papers = 99.71%**, with
 **0 REAL_REGRESSION across all 30k papers**.
 
-Stage 4 (40k cumulative, slice [30000, 40000)) is unblocked per
-[staged 100k protocol](feedback_staged_100k_protocol.md).
+**2026-05-03 Stage 4 (10k slice [30000, 40000), cumulative=40k)
+cleared the gate** — `~/data/stage04_100k_html/`. **9976 [ok] /
+24 [conversion_error] / 0 [error] = 99.76% raw OK** (best yet).
+Triage of all 24 non-OK papers:
+
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| BOTH CLEAN | 1 | math0409286 |
+| OUT-OF-SCOPE | 18 | Perl=Rust both >0 |
+| OUT-OF-SCOPE? | 1 | math0406156 (Perl-capped) |
+| PERL_REGRESSION | 3 | math0403005, hep-ph0407026, hep-ph0410354 |
+| REAL_REGRESSION (FIXED) | 1 | **quant-ph0406132 — fixed by `3e71dc3f7e`**: PiCTeX `\putrectangle` stub was missing; verified R=1→0 on patched binary |
+| **POST-FIX REAL_REGRESSION** | **0** | Stage 4 cleared the zero-regression gate |
+
+Triage TSV at `~/data/stage04_non_ok_parity.tsv`. Cumulative
+through Stage 4: **39,890 OK / 40,000 = 99.73%** raw, **0
+REAL_REGRESSION post-fix**.
+
+**`\putrectangle` fix (commit `3e71dc3f7e`)**: PiCTeX
+`\putrectangle corners at <x1> <y1> and <x2> <y2>` was undefined
+(Plain TeX path via `\input pictex`); added a 4-numeric-arg
+gobble stub matching pictex.tex's no-render policy.
+
+Stage 5 (50k cumulative, slice [40000, 50000)) is unblocked.
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
