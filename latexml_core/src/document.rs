@@ -3878,13 +3878,22 @@ impl Document {
     Ok(())
   }
 
-  pub fn make_error(&mut self, error_class: &str, _content: &str) -> Result<()> {
+  pub fn make_error(&mut self, error_class: &str, content: &str) -> Result<()> {
     let savenode_opt = if !self.is_openable("ltx:ERROR") {
       self.float_to_element("ltx:ERROR", false)?
     } else {
       None
     };
     self.open_element("ltx:ERROR", Some(string_map!("class"=>error_class)), None)?;
+    // Perl `Document.pm:makeError` L1346: `openText_internal($self,
+    // ToString($content))`. Drops the failing token name (`\foo`,
+    // `\bar`, …) as visible text inside the ERROR element so the
+    // HTML5 `<span class="ltx_ERROR ...">` is not empty. Without
+    // this, the user sees a zero-width invisible span where the
+    // problem source should be.
+    if !content.is_empty() {
+      self.open_text_internal(content)?;
+    }
     self.close_element("ltx:ERROR")?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
