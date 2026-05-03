@@ -231,6 +231,13 @@ pub fn incr_formulae() {
   STATE.with(|s| s.borrow_mut().formulae += 1);
 }
 
+/// Set the formulae count directly. Use when the document-wide count
+/// is known up front (e.g., right before `MathParser::parse_math` is
+/// invoked over all `<XMath>` nodes).
+pub fn set_formulae(n: u32) {
+  STATE.with(|s| s.borrow_mut().formulae = n);
+}
+
 /// Record one math parse: total time and number of successful parses
 /// returned (the Marpa parser may produce multiple ASF derivations
 /// for one input). Updates the histogram bucket for the elapsed time.
