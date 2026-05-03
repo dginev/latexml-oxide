@@ -562,7 +562,6 @@ LoadDefinitions!({
   for option in &["dvipsnames", "dvipsnames*"] {
     DeclareOption!(*option, {
       InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
-      crate::package::color_sty::override_dvipsnames_with_srgb()?;
     });
   }
   DeclareOption!("svgnames", {
