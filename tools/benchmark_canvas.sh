@@ -474,6 +474,50 @@ if (( PARALLEL_EXIT != 0 )); then
   echo "Note: parallel exited with code $PARALLEL_EXIT (some tasks failed, see results)" >&2
 fi
 
+# Retry transient categories serially. Under 16-worker contention some
+# papers hit timeout/abort/oom_or_kill/error not because they fail but
+# because their share of CPU was insufficient (see resource-exhaustion
+# analysis in commit history). Retry pass runs each candidate once with
+# all cores free; results that flip to ok/conversion_* replace the
+# transient row in RUN_RESULTS.
+RETRY_LIST=$(mktemp)
+RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output)$'
+awk -F'\t' -v re="$RETRY_CANDIDATES_RE" '$7 ~ re {print $1"\t"$7}' "$RUN_RESULTS" \
+  | sort -u > "$RETRY_LIST"
+RETRY_COUNT=$(wc -l < "$RETRY_LIST" | tr -d ' ')
+if (( RETRY_COUNT > 0 )); then
+  echo ""
+  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially..." >&2
+  RETRY_FLIPPED=0
+  RETRY_RESULTS=$(mktemp)
+  while IFS=$'\t' read -r arxiv_id orig_category; do
+    # Locate the original input zip path from the original task list
+    input_zip=$(awk -v id="$arxiv_id" '{
+      n = split($0, parts, "/"); fname = parts[n]; sub(/\.zip$/, "", fname);
+      if (fname == id) { print; exit }
+    }' "$TASK_LIST")
+    [[ -z "$input_zip" ]] && continue
+    convert_one "$input_zip"
+  done < "$RETRY_LIST"
+  # Diff old vs new categories for retried IDs to count flips
+  RETRY_FLIPPED=$(awk -F'\t' -v list="$RETRY_LIST" '
+    BEGIN { while ((getline line < list) > 0) { split(line, a, "\t"); orig[a[1]] = a[2] } }
+    $1 in orig {
+      if (latest[$1] == "" || $2+0 > latest_id[$1]+0) { latest[$1] = $7; latest_id[$1] = $2 }
+    }
+    END {
+      flipped = 0
+      for (id in orig) {
+        new = latest[id]
+        if (new == "ok" || new == "conversion_error" || new == "conversion_fatal") flipped++
+      }
+      print flipped
+    }' "$RUN_RESULTS")
+  echo "Retry pass: $RETRY_FLIPPED of $RETRY_COUNT recovered to ok/conversion_*" >&2
+  rm -f "$RETRY_RESULTS"
+fi
+rm -f "$RETRY_LIST"
+
 # Atomically merge current-run rows into the cumulative TSV after workers finish.
 # Existing rows are kept unless the current run produced a replacement row.
 MERGED_RESULTS=$(mktemp)
