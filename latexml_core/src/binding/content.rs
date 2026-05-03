@@ -810,10 +810,21 @@ pub fn input_content(request: &str, options: InputOptions) -> Result<()> {
   match filepath {
     // TODO: type => $options{type}, noltxml => 1
     Some(path) => load_tex_content(&path, options),
-    None => fatal!(Package, MissingFile, request),
-    /* TODO:
-     * Error("missing_file", request, state!().get_stomach().get_gullet(),
-     * "Can't find TeX file "+request, maybeReportSearchPaths())) */
+    None => {
+      // Perl Package.pm L2227-2233: `if (FindFile(...)) { loadTeXContent(...); }
+      // elsif (!$options{noerror}) { Error('missing_file', $request, ..., ...); }`
+      // Recoverable Error, NOT Fatal. Pre-fix, the Rust port emitted a
+      // `fatal!(Package, MissingFile)` that terminated the conversion on any
+      // missing-but-non-critical input — over-fatal-izing relative to Perl.
+      if !options.noerror {
+        Error!(
+          "missing_file",
+          request,
+          format!("Can't find TeX file {request}")
+        );
+      }
+      Ok(())
+    },
   }
 }
 
