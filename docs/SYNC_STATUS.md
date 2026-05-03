@@ -81,19 +81,42 @@ regression gate is cleared. Triage TSV at
 `~/data/stage01_non_ok_parity.tsv`.
 
 **2026-05-03 Stage 2 (10k slice [10000, 20000), cumulative=20k)
-launched** — `~/data/stage02_100k_html/`, release cortex_worker
-(16 workers, 120s timeout). Stage 1 took ~4h; expect Stage 2 to
-take similar wall-clock to complete then triage. Background log
-at `~/data/stage02_100k_html.log`. While Stage 2 runs, verified
-the lipsum cluster (memory project_lipsum_clist_map_73.md) is
-GREEN: `cargo test --test 83_expl3 str_lowercase` → 4/0/0 across
-all four lowercase variants (mixed/already/allcaps/Hello).
+cleared the gate** — `~/data/stage02_100k_html/`, release
+cortex_worker (16 workers, 120s timeout). **9974 [ok] / 26
+[conversion_error] / 0 [error] = 99.74% raw OK** (better than
+stage 1's 99.65%). Triage of all 26 non-OK papers via
+`parity_check.sh`:
 
-Two stale build warnings cleaned up while waiting:
-- `tex_tables.rs:728` — `last_token` dead-init after REG-3 fix
-  (commit `a76724e361`).
-- `telemetry.rs:358` — `field!`-macro trailing dead-write
-  (commit `8711c8a66e`).
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| BOTH CLEAN | 2 | math0107222 (fixed by `2cbc6274fc`), physics0207082 (Perl-timeout/now-OK) |
+| OUT-OF-SCOPE | 20 | Perl=Rust both >0; not Rust regressions |
+| PERL_REGRESSION | 4 | Rust beats Perl: hep-ph0112138 (R=6 vs P=12), hep-ex0204024 (R=2 vs P=4), hep-ph0110283 (R=96 vs P=101 capped), astro-ph0204393 (R=91 vs P=101 capped) |
+| **REAL_REGRESSION** | **0** | Stage 2 cleared the zero-regression gate |
+
+Rust supersedes Perl on 4 more papers (now 17+ total in
+[project_rust_supersedes_perl.md](feedback_no_speculative_bindings.md)).
+Triage TSV at `~/data/stage02_non_ok_parity.tsv`.
+
+**math0107222 fix (commit `2cbc6274fc`)**: PiCTeX `\setdots` was
+undefined; `\setdashes` required mandatory `<#1>` arg. Both stubs
+now use `\@ifnextchar<` dispatch supporting both `\setdots` and
+`\setdots <0.05cm>` forms (Perl-faithful no-op).
+
+Stage 3 (30k cumulative, slice [20000, 30000)) is unblocked per
+[staged 100k protocol](feedback_staged_100k_protocol.md).
+
+While Stage 2 ran, also:
+- Verified the lipsum cluster
+  (`project_lipsum_clist_map_73.md`) is GREEN:
+  `cargo test --test 83_expl3 str_lowercase` → 4/0/0.
+- Memory cleanup: marked `\vspace`, `\psfig`, lipsum, aa.cls,
+  `\setdots` clusters as fixed in `MEMORY.md` index.
+- Two stale build warnings cleaned up:
+  - `tex_tables.rs:728` — `last_token` dead-init after REG-3 fix
+    (commit `a76724e361`).
+  - `telemetry.rs:358` — `field!`-macro trailing dead-write
+    (commit `8711c8a66e`).
 
 **Round-19 verification**: re-tested all 29 papers from the original
 round-19 REAL_REGRESSION list; ALL now BOTH CLEAN or OUT-OF-SCOPE
