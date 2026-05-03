@@ -66,6 +66,18 @@ of attack.
 
 ### REG-1: math0403005 — `\vtop` mode-frame leak (R=29, P=27, gap=2)
 
+**2026-05-02 reclassification: low-priority shared-failure noise**.
+Investigation showed the user TeX is malformed (misplaced `\hline` /
+`\noalign` inside a `p{Dimension}` array column whose cells wrap each
+entry in `\vtop{\hbox to <dim>\relax{...}}`). Both engines correctly
+detect the breakage; Rust just emits 4 extra `\vtop` end_mode errors
+during recovery while Perl emits 2 extra `<endgroup>` errors (net Rust
++2). Both engines have IDENTICAL `endMode` and `\noalign` semantics.
+The divergence is in downstream frame-pop discipline during error
+recovery — fixing it requires architectural mode-frame work for a
+2-error gap on broken-input territory. Defer indefinitely; document
+as known divergence on broken-input recovery cascades.
+
 **Witness paper**: `/home/deyan/data/100k_noproblem_sandbox/arxmliv/0403/math0403005/math0403005.zip`
 (file `scs8-for-arxiv.tex`, around lines 570-600).
 
@@ -124,6 +136,29 @@ the digestion semantics.
 ---
 
 ### REG-2: math-ph0501074 — `\lefteqn{pmatrix}` in `\begin{align}` (R=15, P=0)
+
+**2026-05-02 deeper investigation**: refined to a triple-condition trigger
+`\nonumber + \lefteqn + \pmatrix`. Bisection via instrumented
+`\if@in@firstcolumn` (latex_constructs.rs:5381) shows:
+- Without `\nonumber`: alignment state at `\lefteqn` expansion is
+  in_row=false/col_n=0 → firstcol=TRUE → `\multicolumn{3}{l}{...}`
+  branch (clean).
+- With `\nonumber`: state is in_row=true/col_n=1 → firstcol=FALSE →
+  `\rlap{\lx@begin@inline@math …}` branch (broken with pmatrix).
+
+Both engines hit the same `\if@in@firstcolumn=FALSE` state when
+`\nonumber` precedes `\lefteqn` (verified via Perl `--debug=halign`).
+So the divergence is downstream — in how Rust digests
+`\rlap{\hbox{\lx@begin@inline@math … pmatrix … \lx@end@inline@math}}`.
+Direct rlap-form test: BOTH engines emit 2 errors. So the actual
+divergence is the additional 8 errors Rust emits when this rlap-form
+is reached via `\lefteqn`'s expansion path (vs Perl's clean handling).
+
+Working hypothesis: pmatrix's body capture inside the inline-math
+context interacts with `enter_horizontal()` from
+`\lx@begin@inline@math`'s before_digest, popping a frame that Perl
+keeps. Memory: `wisdom_lefteqn_pmatrix_align_leak.md` has the full
+trace and next-step plan. Difficulty: hard, deferred.
 
 **Witness paper**: `/home/deyan/data/100k_noproblem_sandbox/arxmliv/0501/math-ph0501074/math-ph0501074.zip`
 (file `Claeys-Kuijlaars.tex`, line 1832).
