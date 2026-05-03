@@ -287,6 +287,60 @@ Each requires dedicated multi-iteration architectural work. Bisections
 and root causes are recorded; the steps below are the proposed line
 of attack.
 
+### CLUSTER-NBSP: `\lx@NBSP` leaks inside `\csname...\endcsname` (18 papers)
+
+Identified during the 2026-05-03 100k post-mortem. SHARED-FAILURE with
+Perl LaTeXML (OUT-OF-SCOPE per parity_check), so fixing it puts Rust
+ahead of Perl on this cluster. **Surpass-Perl opportunity, not a real
+regression.**
+
+**Symptom**:
+```
+Error:unexpected:\lx@NBSP The control sequence "\lx@NBSP" should not
+appear between \csname and \endcsname (partial cs so far: "\r@")
+```
+fired from `latexml_core/src/gullet.rs:1171:13`
+(`read_cs_name_inner`).
+
+**Root cause**: when user code constructs `\csname r@<key>\endcsname`
+(e.g. via a custom `\Ref` or `\@ifundefined`-style macro), and `<key>`
+contains an active `~` token, the `~` expands to `\lx@NBSP` —
+defined as `DefPrimitive!` (non-expandable). `read_x_token` doesn't
+expand primitives, so the CS surfaces inside the csname loop and
+the gullet emits the "should not appear" error per TeX semantics.
+The trigger was traced in `hep-ph0112138` to `\Ref~\cite{Pana}` style
+patterns.
+
+**Witness papers** (18 total across stages 02-10):
+- 02/`hep-ph0112138`, 02/`hep-ex0204024`
+- 03/`hep-ph0211300`
+- 04/`hep-ph0407026`, 04/`hep-ph0410354`
+- 05/`hep-ph0411166`, 05/`hep-ph0501037`, 05/`hep-ph0508175`,
+  05/`hep-ph0509359`, 05/`hep-ph0510024`
+- 06/`physics0602049`, 06/`hep-ph0604191`
+- 07/`0706.2862`
+- 08/`0804.4000`
+- 09/`0808.3583`, 09/`0811.1175`
+- 10/`0907.1896`, 10/`0911.5052`
+
+(Cluster signature is concentrated in 2001-2007 hep-ph papers — strong
+indication of a single class/style file shared across the era.)
+
+**Proposed fix**: in `read_cs_name_inner` (gullet.rs around L1163),
+recognize a small "soft-expansion" set of CS tokens whose semantic is
+a literal character — currently `\lx@NBSP` (NBSP), and audit for
+similar tokens (`\lx@HSPACE`, `\nobreakspace`, etc.). When such a CS
+appears in the csname loop, push its character expansion into the
+buffer instead of erroring. Test plan:
+1. Create min-repro: `\Ref~\cite{key}` with the smallest revtex/jhep
+   class that triggers it.
+2. Confirm Rust=N, Perl=N error count beforehand.
+3. Land patch; verify Rust = 0 errors.
+4. parity_check.sh on all 18 witnesses; confirm Rust < Perl
+   (pure win since Perl still errors).
+
+
+
 ### REG-1: math0403005 — FIXED `24b430885c` (2026-05-02 evening)
 
 R=29 → R=3 (now PERL_REGRESSION; Rust beats Perl by 24).
