@@ -372,6 +372,8 @@ impl DigestionAPI for Core {
 
     let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
+      let _gp_rewrite =
+        latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
       note_begin("Rewriting");
       document.mark_xmnode_visibility()?;
       document.load_labels_for_rewrite()?;
