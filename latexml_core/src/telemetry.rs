@@ -13,8 +13,14 @@
 use std::cell::RefCell;
 use std::time::Instant;
 
-/// Coarse phase enum. 11 values; bumping requires updating
+/// Coarse phase enum. 17 values; bumping requires updating
 /// `Telemetry::write_json` and `tools/perf_phase_summary.py`.
+///
+/// Phase ordering reflects the conversion pipeline order
+/// (Bootstrap → Digest → Build → Rewrite → MathParse →
+/// PostXmlParse → PostScan → Bibliography → Crossref → Graphics →
+/// MathImages → MathmlPres → MathmlCont → Split → Xslt →
+/// Html5Fixups → Serialize) so flat dumps read in execution order.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Phase {
@@ -23,16 +29,30 @@ pub enum Phase {
   Build = 2,
   Rewrite = 3,
   MathParse = 4,
-  PostScan = 5,
-  Graphics = 6,
-  MathmlPres = 7,
-  MathmlCont = 8,
-  Xslt = 9,
-  Serialize = 10,
+  /// Parses the XML emitted by core into a `PostDocument`.
+  /// Size-proportional; material on large papers.
+  PostXmlParse = 5,
+  /// Scan phase of latexml_post: ID assignment, label resolution, etc.
+  PostScan = 6,
+  Bibliography = 7,
+  Crossref = 8,
+  /// External-tool dispatch for `\includegraphics` (convert / gs / inkscape).
+  Graphics = 9,
+  /// External-tool dispatch for picture/latex/math image rendering
+  /// (`picture_images.rs` + `latex_images.rs` + `math_images.rs`).
+  MathImages = 10,
+  MathmlPres = 11,
+  MathmlCont = 12,
+  /// Document splitting (only when `--split` is on; otherwise 0).
+  Split = 13,
+  Xslt = 14,
+  /// Final HTML tweaks after XSLT (asset paths, header/footer).
+  Html5Fixups = 15,
+  Serialize = 16,
 }
 
 impl Phase {
-  pub const COUNT: usize = 11;
+  pub const COUNT: usize = 17;
 
   pub fn as_str(self) -> &'static str {
     match self {
@@ -41,11 +61,17 @@ impl Phase {
       Phase::Build => "build",
       Phase::Rewrite => "rewrite",
       Phase::MathParse => "math_parse",
+      Phase::PostXmlParse => "post_xml_parse",
       Phase::PostScan => "post_scan",
+      Phase::Bibliography => "bibliography",
+      Phase::Crossref => "crossref",
       Phase::Graphics => "graphics",
+      Phase::MathImages => "math_images",
       Phase::MathmlPres => "mathml_pres",
       Phase::MathmlCont => "mathml_cont",
+      Phase::Split => "split",
       Phase::Xslt => "xslt",
+      Phase::Html5Fixups => "html5_fixups",
       Phase::Serialize => "serialize",
     }
   }
@@ -381,12 +407,18 @@ impl Telemetry {
         2 => Phase::Build,
         3 => Phase::Rewrite,
         4 => Phase::MathParse,
-        5 => Phase::PostScan,
-        6 => Phase::Graphics,
-        7 => Phase::MathmlPres,
-        8 => Phase::MathmlCont,
-        9 => Phase::Xslt,
-        10 => Phase::Serialize,
+        5 => Phase::PostXmlParse,
+        6 => Phase::PostScan,
+        7 => Phase::Bibliography,
+        8 => Phase::Crossref,
+        9 => Phase::Graphics,
+        10 => Phase::MathImages,
+        11 => Phase::MathmlPres,
+        12 => Phase::MathmlCont,
+        13 => Phase::Split,
+        14 => Phase::Xslt,
+        15 => Phase::Html5Fixups,
+        16 => Phase::Serialize,
         _ => unreachable!(),
       };
       s.push_str(",\"phase_");
