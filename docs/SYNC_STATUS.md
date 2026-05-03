@@ -103,9 +103,24 @@ undefined; `\setdashes` required mandatory `<#1>` arg. Both stubs
 now use `\@ifnextchar<` dispatch supporting both `\setdots` and
 `\setdots <0.05cm>` forms (Perl-faithful no-op).
 
-Stage 3 (30k cumulative, slice [20000, 30000)) **launched** at
-01:25 to `~/data/stage03_100k_html/` (release cortex_worker, 16
-workers). Per [staged 100k protocol](feedback_staged_100k_protocol.md).
+**2026-05-03 Stage 3 (10k slice [20000, 30000), cumulative=30k)
+cleared the gate** — `~/data/stage03_100k_html/`. **9975 [ok] /
+25 [conversion_error] / 0 [error] = 99.75% raw OK** (best stage
+yet — vs stage 1's 99.65% and stage 2's 99.74%). Triage of all
+25 non-OK papers via `parity_check.sh`:
+
+| Verdict | Count | Notes |
+|--------|------:|-------|
+| OUT-OF-SCOPE | 23 | Perl=Rust both >0; not Rust regressions |
+| PERL_REGRESSION | 2 | Rust beats Perl: hep-ph0211300 (R=24 vs P=48), hep-th0308103 (R=38 vs P=101 capped) |
+| **REAL_REGRESSION** | **0** | Stage 3 cleared the zero-regression gate |
+
+Triage TSV at `~/data/stage03_non_ok_parity.tsv`. Cumulative
+through Stage 3: **29,914 OK / 30,000 papers = 99.71%**, with
+**0 REAL_REGRESSION across all 30k papers**.
+
+Stage 4 (40k cumulative, slice [30000, 40000)) is unblocked per
+[staged 100k protocol](feedback_staged_100k_protocol.md).
 
 While Stage 2 ran, also:
 - Verified the lipsum cluster
