@@ -4,8 +4,10 @@
 #   - BOTH CLEAN          (Rust=0, Perl=0): conversion clean for both
 #   - OUT-OF-SCOPE        (Rust==Perl, both >0): paper Perl can't handle
 #                          either; not a Rust regression
-#   - REAL REGRESSION     (Rust > Perl): genuine Rust-only divergence,
-#                          worth investigating
+#   - OUT-OF-SCOPE? (...) (Perl-capped or Perl-timeout): cannot compare;
+#                          recheck with TIMEOUT_SECS>=180 before classifying
+#   - REAL REGRESSION     (Rust > Perl, Perl finished): genuine Rust-only
+#                          divergence, worth investigating
 #   - PERL_REGRESSION     (Rust < Perl): rare but theoretically possible
 #
 # This is the primary triage tool for the canvas-failure list. Most
@@ -142,6 +144,13 @@ for paper in "${papers[@]}"; do
   elif [[ "$perl_errs" -ge 101 ]]; then
     # Rust >= Perl-cap — undetermined since Perl's true count is unknown.
     status="OUT-OF-SCOPE? (Perl-capped P=$perl_errs vs R=$rust_errs; cannot compare)"
+  elif [[ "$rust_errs" -gt "$perl_errs" && "$perl_rc" -eq 124 ]]; then
+    # Perl timed out with partial count < Rust. CANNOT classify as REAL
+    # REGRESSION — Perl's true count is unknown and likely >= rust_errs
+    # (every paper verified at TIMEOUT_SECS=180 in this scenario has been
+    # SHARED-FAILURE; see SYNC_STATUS Round-20 verification).
+    # Recheck with TIMEOUT_SECS=180+ before any cluster work.
+    status="OUT-OF-SCOPE? (Perl-timeout, partial=$perl_errs vs R=$rust_errs; recheck at TIMEOUT_SECS>=180)"
   elif [[ "$rust_errs" -gt "$perl_errs" ]]; then
     status="REAL REGRESSION (P=$perl_errs vs R=$rust_errs)"
   else

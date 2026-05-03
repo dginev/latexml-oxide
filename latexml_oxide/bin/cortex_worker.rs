@@ -481,6 +481,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_WITHDRAWN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
   static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+  // Perl Pack.pm L128: `s/\%[^\r]*//`. Strip a single `%`-comment, stopping at
+  // the next `\r` (or string end). \r-aware so bare-\r-line-ended files (Mac
+  // classic) — which Perl reads as one big <$fh> "line" — still expose any
+  // `\documentclass` that follows a stripped comment. A naive
+  // `raw_line.find('%').map(|p| &raw_line[..p])` truncates everything past
+  // the first `%`, hiding post-comment `\documentclass` on \r-only files.
+  // Witness: cond-mat0002096, 0708.2784 in 100k canvas.
+  static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
@@ -522,12 +530,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           break;
         }
       }
-      // Perl L128: strip comments for subsequent checks
-      let line = if let Some(pos) = raw_line.find('%') {
-        &raw_line[..pos]
-      } else {
-        raw_line
-      };
+      // Perl L128: strip ONE `%`-comment up to the next `\r`. `\r`-aware
+      // so bare-`\r` line-ended files (read as one big "line" in Perl
+      // because `$/=\n`) preserve subsequent `\r\documentclass` chunks.
+      let stripped: std::borrow::Cow<str> = RE_STRIP_COMMENT.replacen(raw_line, 1, "");
+      let line: &str = &stripped;
 
       if RE_DOCCLASS.is_match(line) {
         likelihood.insert(tex_file.clone(), 3.0);

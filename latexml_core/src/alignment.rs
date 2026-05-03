@@ -209,12 +209,20 @@ impl Alignment {
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
     if let Some(row_idx) = self.current_row {
-      let row = self.rows.get_mut(row_idx).unwrap();
+      let Some(row) = self.rows.get_mut(row_idx) else { return };
       self.current_column = 1;
       if !cols.is_empty() {
+        // Perl Alignment.pm:128-130 — `$row->column($c)` returns undef
+        // for out-of-range column index and autovivifies a discarded
+        // temp hash, so the assignment silently no-ops. Match that
+        // here: skip indices that don't map to a real column instead
+        // of panicking on `.unwrap()`. Witness: 0708.2784 with a
+        // `\hline`/`\cline`-style line referencing a column past the
+        // tabular's column count.
         for c in cols {
-          let colspec = row.get_column_mut(c).unwrap();
-          colspec.border.push_str(border);
+          if let Some(colspec) = row.get_column_mut(c) {
+            colspec.border.push_str(border);
+          }
         }
       } else {
         for colspec in row.get_columns_mut() {
