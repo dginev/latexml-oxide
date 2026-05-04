@@ -492,8 +492,21 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "scalar" => a,                   // just returns the value
     "frac" => a - (a as i64 as f64), // fractional part
     _ => {
-      // Try user-defined function
-      pgfmath_apply_user(name, args).unwrap_or(0.0)
+      // Try user-defined function; if neither built-in nor user-defined,
+      // Perl pgfmath.code.tex.ltxml L457-459:
+      //   Error('unexpected', $op, undef, "Unimplemented pgfmath operator '$op'");
+      //   return 0;
+      pgfmath_apply_user(name, args).unwrap_or_else(|| {
+        let _ = (|| -> Result<()> {
+          Error!(
+            "unexpected",
+            name,
+            format!("Unimplemented pgfmath operator '{name}'")
+          );
+          Ok(())
+        })();
+        0.0
+      })
     },
   }
 }
