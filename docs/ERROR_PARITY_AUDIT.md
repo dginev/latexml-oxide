@@ -61,6 +61,24 @@ arxiv-sandbox's most common unit-of-measure package; `pgfmath` is
 loaded transitively by `tikz`; `xcolor` is near-universal in
 academic LaTeX.
 
+### Cleared since the audit (2026-05-03)
+
+These TODO sites were closed in the same session the audit landed:
+
+| Commit | File | What |
+|---|---|---|
+| `171caeacea` | `binding/content.rs:818` | `fatal!` → `Error!("missing_file", …)` — Perl-faithful recoverable, honour `noerror` |
+| `907cc5a52e` | `document.rs:1446` | Revived `set_node` DOCUMENT_FRAG_NODE check with `Error!("unexpected", …)` |
+| `c40e61162e` | `calc_sty.rs:247-284` | All 4 `\widthof`/`\heightof`/`\depthof`/`\totalheightof` Number-context guards |
+| `5f50f9717a` | `xcolor_sty.rs:508-525` | Color model_list/spec_list length-mismatch `Error!("unexpected", …)` |
+
+### Re-classified after closer inspection
+
+| Audit-claimed gap | Reality | Notes |
+|---|---|---|
+| `color_sty.rs:42` Error('unexpected', $spec, …) | **MATCHED via inlined mechanism** | Lines 40-61 manually inline `note_status(LogStatus::Error) + log::error!(…)`. Skips the `Error!` macro because `lookup_color_obj` returns `Color`, not `Result<Color>`. Behaviour is equivalent except loses the MAX_ERRORS Fatal-cap (after 100 errors → `Fatal('too_many_errors')`). Documenting as MATCHED-with-inline. |
+| `verbatim_sty.rs:181` Error("expected", "delimiter", …) | **NOT-PORTED (whole feature)** | The entire `\verb` redefinition body (lines 175-189) is commented-out, not just the Error site. Different gap class than "missing Error!". |
+
 ### Stubbed-out TODO sites in well-covered files
 
 These have a comment showing the original Perl `Error(...)` /
