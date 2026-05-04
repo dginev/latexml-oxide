@@ -876,11 +876,18 @@ fn xkeyval_setup_document_class() {
     return;
   }
   // oops, we did not have a documentclass
-  Warn!(
-    "undefined",
-    "xkeyval",
-    "Package xkeyval loaded before \\documentclass"
-  );
+  // Perl xkeyval.sty.ltxml L260: `Error('undefined', 'xkeyval', ...)`.
+  // Was Warn! pre-fix — severity downgrade vs Perl. Use Error! to match.
+  // IIFE wraps because the enclosing fn returns `()` and the Error!
+  // macro's Fatal-cap path uses `return Err(...)`.
+  let _ = (|| -> Result<()> {
+    Error!(
+      "undefined",
+      "xkeyval",
+      "Package xkeyval loaded before \\documentclass"
+    );
+    Ok(())
+  })();
   let _ = def_macro(
     T_CS!("\\XKV@documentclass"),
     None,
