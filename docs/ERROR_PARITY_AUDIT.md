@@ -84,6 +84,31 @@ These TODO sites were closed in the same session the audit landed:
 | `xcolor.sty.ltxml:333` Error('misdefined', 'color', "could not resolve <color> name in '$expression'") | **MATCHED via inlined mechanism** | The Rust `lookup_xcolor` (xcolor_sty.rs:132) calls `lookup_color_obj` (color_sty.rs:30-64) which inlines `note_status(LogStatus::Error) + log::error!` for an undefined color. Diagnostic message wording differs slightly from Perl ("Can't find color named '$spec'; assuming Black" vs "could not resolve <color> name in '$expression'") but error count + severity match. |
 | `xcolor.sty.ltxml:356` Error('misdefined', $expression, "syntax error in <color> expression") | **MATCHED via inlined mechanism** | Same as L333 — falls through to the same `lookup_color_obj` inlined error path. |
 | `tex_macro.rs L117` Fatal('expected', "#n", "Parameters not in order") | **NOT-PORTED at this layer** | The Perl tokenwise param-spec parser doesn't have a 1:1 Rust counterpart; Rust's `parse_parameters` is a higher-level prototype parser. The order-check would need a different point in the `\def` digestion path; out of scope for the audit. |
+| `latex_constructs.rs L4897` Error('misdefined', $itemtype, "Can't find reader for Pair items") | **NOT-PORTED (unported feature)** | Perl's `ReadPair` accepts `$itemtype` ('Number', 'Dimension', 'Float'); Rust `DefParameterType!(Pair, …)` at `base_parameter_types.rs:197` hardcodes Float. The `Pair:Type` parameterized form is unported (already noted in `SYNC_STATUS.md` as `base_parameter_types` MINOR). |
+| `latex_constructs.rs L4956` Error('undefined', 'dimension', "Undefined picture dimension, treated as \\unitlength") | **N/A — Perl-specific defensive recovery** | Perl `coerceDimension` checks `if (!defined $value)` to recover from a programmer-side bug producing `undef`. Rust's strongly-typed dimension API enforces non-undef values at compile time; the path is unreachable. |
+
+### Post-fix validation against today's residual
+
+Spot-checked whether the new `Error!` callsites would change the
+classification of any current PERL_REGRESSION paper (where Rust=N <
+Perl=M, both >0). Result: **0 papers move classification today**.
+
+| Fix | PERL_REGRESSION papers loading the package | Tripping the new Error path |
+|---|---:|---:|
+| xkeyval Warn→Error (loaded-before-`\documentclass`) | 0 | 0 |
+| xcolor model_list/spec_list mismatch | 4 | 0 |
+| pgfmath factorial overflow ≥22 | 0 | 0 |
+| pgfmath unimplemented operator | 0 | 0 |
+| calc.sty `\widthof`/`\heightof`/`\depthof`/`\totalheightof` Number-context | 0 | 0 |
+
+The 4 xcolor PERL_REGRESSION papers (`0809.4243`, `0901.0054`,
+`astro-ph0204393`, `astro-ph0506245`) all fail with generic math-mode
+issues unrelated to xcolor's specific error paths. The xcolor fix is
+correct hygiene but doesn't affect their classification.
+
+The fixes are still worth landing — they close real gaps that would
+have masked silent successes if encountered. Just none are
+encountered in the current 100k corpus residual.
 
 ### Stubbed-out TODO sites in well-covered files
 
