@@ -71,6 +71,8 @@ These TODO sites were closed in the same session the audit landed:
 | `907cc5a52e` | `document.rs:1446` | Revived `set_node` DOCUMENT_FRAG_NODE check with `Error!("unexpected", …)` |
 | `c40e61162e` | `calc_sty.rs:247-284` | All 4 `\widthof`/`\heightof`/`\depthof`/`\totalheightof` Number-context guards |
 | `5f50f9717a` | `xcolor_sty.rs:508-525` | Color model_list/spec_list length-mismatch `Error!("unexpected", …)` |
+| `1545871c00` | `pgfmath_code_tex.rs:88-95` | Factorial overflow `Error!("pgfmath", "overflow", …)` for n≥22 |
+| `29da2ee0fa` | `pgfmath_code_tex.rs:494-509` | Unimplemented-operator `Error!("unexpected", …)` in apply_fn dispatch |
 
 ### Re-classified after closer inspection
 
