@@ -1438,24 +1438,42 @@ impl Document {
   }
 
   pub fn set_node(&mut self, node: &Node) {
-    // TODO: Does the frag_node check still make sense here?
-
-    // if node.get_type() == Some(NodeType::DocumentNode) {  // Whoops
-    //   if let Some(first_child) = node.get_first_child() {
-    //     if let Some(_) = first_child.get_next_sibling() {
-    //       error!("unexpected:multiple-nodes TODO");
-    //       // Error('unexpected', 'multiple-nodes', $self,
-    // //   "Cannot set insertion point to a DOCUMENT_FRAG_NODE",
-    // Stringify($node)); }     } else {
-    //       set_node = first_child;
-    //     }
-    //   } else {
-    //       error!("unexpected:empty-nodes TODO");
-    //       // Error('unexpected', 'empty-nodes', $self,
-    //       //   "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"); }
-
-    //   }
-    self.node = node.clone();
+    // Perl Document.pm:setNode L74-87: if the candidate is a
+    // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
+    // descend to that child. The original Rust port had this check
+    // commented-out with a wrong-node-type marker (`DocumentNode`
+    // instead of `DocumentFragNode`); revived with the correct enum.
+    let mut chosen = node.clone();
+    if chosen.get_type() == Some(NodeType::DocumentFragNode) {
+      let children = chosen.get_child_nodes();
+      // Wrap the Error!/note_status side-effects in an IIFE to swallow the
+      // `Result<()>` the macro returns (it can early-return Err if the
+      // MAX_ERRORS cap is hit). `set_node` returns `()` and is called from
+      // 32 call-sites; threading `Result` through all of them is out of
+      // scope for an audit-fix. The hot path stays the same; the rare
+      // hit-the-cap case loses one escape attempt but the next Error!
+      // anywhere else will trigger the cap regardless.
+      let _ = (|| -> Result<()> {
+        if children.len() > 1 {
+          Error!(
+            "unexpected",
+            "multiple-nodes",
+            "Cannot set insertion point to a DOCUMENT_FRAG_NODE"
+          );
+        } else if children.is_empty() {
+          Error!(
+            "unexpected",
+            "empty-nodes",
+            "Cannot set insertion point to an empty DOCUMENT_FRAG_NODE"
+          );
+        }
+        Ok(())
+      })();
+      if let Some(first) = children.into_iter().next() {
+        chosen = first;
+      }
+    }
+    self.node = chosen;
   }
 
   // Internals
