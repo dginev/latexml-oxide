@@ -85,9 +85,24 @@ fn pgfmath_factorial(n: i64) -> f64 {
     2432902008176640000.0,
     51090942171709440000.0,
   ];
+  let n_orig = n;
   let n = n.unsigned_abs() as usize;
   if n >= FACTS.len() {
-    // Compute recursively for large n (unlikely in pgf)
+    // Perl pgfmath.code.tex.ltxml L68:
+    //   Error("pgfmath", "overflow", undef,
+    //     "Arithmetic overflow: $arg! is too large.");
+    // Original Perl returned 0 (Pgfmath::FALSE); Rust still computes the
+    // recursive product (matches what Perl did just-prior-to-error in some
+    // versions) but emits the same diagnostic. f64 will saturate to inf
+    // around n>=170, so the diagnostic is the user-visible signal.
+    let _ = (|| -> Result<()> {
+      Error!(
+        "pgfmath",
+        "overflow",
+        format!("Arithmetic overflow: {n_orig}! is too large.")
+      );
+      Ok(())
+    })();
     FACTS[21] * ((22..=n).fold(1.0, |acc, i| acc * i as f64))
   } else {
     FACTS[n]
@@ -477,8 +492,21 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "scalar" => a,                   // just returns the value
     "frac" => a - (a as i64 as f64), // fractional part
     _ => {
-      // Try user-defined function
-      pgfmath_apply_user(name, args).unwrap_or(0.0)
+      // Try user-defined function; if neither built-in nor user-defined,
+      // Perl pgfmath.code.tex.ltxml L457-459:
+      //   Error('unexpected', $op, undef, "Unimplemented pgfmath operator '$op'");
+      //   return 0;
+      pgfmath_apply_user(name, args).unwrap_or_else(|| {
+        let _ = (|| -> Result<()> {
+          Error!(
+            "unexpected",
+            name,
+            format!("Unimplemented pgfmath operator '{name}'")
+          );
+          Ok(())
+        })();
+        0.0
+      })
     },
   }
 }

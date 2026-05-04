@@ -14,6 +14,21 @@ fn convert_clean(source: &str) {
   c.initialize_session().expect("initialize");
   let r = c.convert(source.to_string());
   assert!(r.result.is_some(), "{source}: conversion produced no result");
+  // Count inline `Error:<class>:` markers (parity_check.sh's lax pattern,
+  // see feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE
+  // within `(Building...Error:..)` envelopes, not at line starts.
+  let n_errors = r.log.match_indices("Error:")
+    .filter(|(i, _)| {
+      let tail = r.log[*i + 6..].as_bytes();
+      let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
+      n_class > 0 && tail.get(n_class) == Some(&b':')
+    })
+    .count();
+  assert_eq!(
+    n_errors, 0,
+    "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",
+    r.status_code
+  );
   assert!(
     r.status_code <= 1,
     "{source}: status_code {} (expected 0/1), status={:?}",

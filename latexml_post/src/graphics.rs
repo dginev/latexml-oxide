@@ -831,6 +831,7 @@ impl Processor for Graphics {
     // Perl: effective DPI = DPI * magnify / zoomout (used for scale-to transforms)
     let effective_dpi = ((dpi as f64) * magnify / _zoomout) as u32;
     let n_to_process = nodes.len();
+    latexml_core::telemetry::set_graphics_assets(n_to_process as u32);
 
     // Counter for generating unique resource names (like Perl's generateResourcePathname)
     let mut resource_counter: u32 = 0;
@@ -982,9 +983,17 @@ impl Processor for Graphics {
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
       use std::sync::Mutex;
-      use std::sync::atomic::{AtomicUsize, Ordering};
+      use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
       let next = AtomicUsize::new(0);
       let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
+      // Subprocess tally: telemetry's thread_local! STATE is per-thread,
+      // and worker threads exit before `phase_us[graphics]` aggregation,
+      // so worker increments would be lost. Accumulate in a shared
+      // AtomicU32 here and merge into telemetry once the scope joins.
+      // One increment per `Self::convert_image_svg` / `Self::convert_image`
+      // call (the EPS-via-PDF internal pair counts as one).
+      let subproc_count = AtomicU32::new(0);
+      let subproc_ref = &subproc_count;
       // Unique conversion jobs only. Repeated nodes with the same
       // source/page/options share one subprocess result, while distinct
       // options keep separate outputs.
@@ -1008,6 +1017,7 @@ impl Processor for Graphics {
               // Try vector-SVG path first if requested for this source.
               // On success, pick dimensions from the SVG viewBox.
               let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                subproc_ref.fetch_add(1, Ordering::Relaxed);
                 if Self::convert_image_svg(source, abs_svg, *page) {
                   let raw_dims = Self::read_svg_dimensions(abs_svg);
                   Some(ConvertOutcome {
@@ -1027,7 +1037,10 @@ impl Processor for Graphics {
               };
               let outcome = if let Some(o) = svg_outcome {
                 o
-              } else if Self::convert_image(source, abs_dest_str, dpi, *page) {
+              } else if {
+                subproc_ref.fetch_add(1, Ordering::Relaxed);
+                Self::convert_image(source, abs_dest_str, dpi, *page)
+              } {
                 ConvertOutcome {
                   job_id:   *job_id,
                   imagesrc: Some(rel_dest.clone()),
@@ -1056,6 +1069,7 @@ impl Processor for Graphics {
       });
       outcomes = out.into_inner().unwrap();
       outcomes.sort_by_key(|o| o.job_id);
+      latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
     }
     let outcomes_by_job: HashMap<usize, ConvertOutcome> =
       outcomes.into_iter().map(|o| (o.job_id, o)).collect();

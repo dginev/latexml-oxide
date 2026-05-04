@@ -506,6 +506,20 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
       let model_list: Vec<&str> = models_str.split('/').collect();
       let spec_list: Vec<&str> = specs.split('/').collect();
       if model_list.len() != spec_list.len() {
+        // Perl xcolor.sty.ltxml L228-231:
+        // `Error('unexpected', $specs, ..., "Length of color model_list must
+        //  be same as spec_list.", "models is '$models'; specs is '$specs'");
+        // return Black();`
+        let _ = (|| -> Result<()> {
+          Error!(
+            "unexpected",
+            specs,
+            format!(
+              "Length of color model_list must be same as spec_list (models is '{models_str}'; specs is '{specs}')"
+            )
+          );
+          Ok(())
+        })();
         return BLACK;
       }
       // Choose first model (target model matching is TODO)

@@ -244,6 +244,7 @@ impl LatexmlWorker {
     //    the converter/post guards; here we fill in identifiers, wall,
     //    and resource peaks before serializing.
     let telemetry_json = {
+      use latexml_core::common::error::{LogStatus, get_status};
       use latexml_core::telemetry;
       telemetry::set_paper_id(&arxiv_id);
       telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
@@ -257,6 +258,16 @@ impl LatexmlWorker {
       telemetry::set_max_rss_kb(read_max_rss_kb_proc());
       let (cu, cs) = read_child_rusage_us_proc();
       telemetry::set_child_rusage_us(cu, cs);
+      // Snapshot Error!/Warn!/Fatal! counts from common::error::REPORT
+      // (the canonical counter populated by note_status). Without this
+      // copy the telemetry `errors`/`warnings`/`fatal_errors` fields
+      // stay 0 even when the log shows hundreds of errors — observed
+      // across stages 01-10 (190k jobs).
+      telemetry::set_status_counts(
+        get_status(LogStatus::Warning) as u32,
+        get_status(LogStatus::Error) as u32,
+        get_status(LogStatus::Fatal) as u32,
+      );
       telemetry::take().to_json_line()
     };
 
@@ -481,10 +492,26 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_WITHDRAWN: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
   static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+  // Perl Pack.pm L128: `s/\%[^\r]*//`. Strip a single `%`-comment, stopping at
+  // the next `\r` (or string end). \r-aware so bare-\r-line-ended files (Mac
+  // classic) — which Perl reads as one big <$fh> "line" — still expose any
+  // `\documentclass` that follows a stripped comment. A naive
+  // `raw_line.find('%').map(|p| &raw_line[..p])` truncates everything past
+  // the first `%`, hiding post-comment `\documentclass` on \r-only files.
+  // Witness: cond-mat0002096, 0708.2784 in 100k canvas.
+  static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
   let mut vetoed: Vec<PathBuf> = Vec::new();
+  // Phase D pre-screen: track sentinel reasons so the empty-candidates
+  // branch can return a categorized `Fatal:invalid:<reason>` (per
+  // SYNC_STATUS.md "Phase E asymptote: convert intractable papers to
+  // Fatal:invalid:<reason> via Phase D pre-screen"). Witness:
+  // 0903.3183.tex contains exactly `%auto-ignore` (12 bytes) — Perl
+  // skips, Rust pre-fix returned a generic "No viable .tex files"
+  // error indistinguishable from real failures.
+  let mut had_auto_ignore = false;
 
   for tex_file in &tex_files {
     if !tex_file.exists() {
@@ -507,6 +534,9 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           || RE_AUTOINCLUDE.is_match(raw_line))
       {
         likelihood.insert(tex_file.clone(), 0.0);
+        if RE_AUTOIGNORE.is_match(raw_line) {
+          had_auto_ignore = true;
+        }
         determined = true;
         break;
       }
@@ -522,12 +552,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           break;
         }
       }
-      // Perl L128: strip comments for subsequent checks
-      let line = if let Some(pos) = raw_line.find('%') {
-        &raw_line[..pos]
-      } else {
-        raw_line
-      };
+      // Perl L128: strip ONE `%`-comment up to the next `\r`. `\r`-aware
+      // so bare-`\r` line-ended files (read as one big "line" in Perl
+      // because `$/=\n`) preserve subsequent `\r\documentclass` chunks.
+      let stripped: std::borrow::Cow<str> = RE_STRIP_COMMENT.replacen(raw_line, 1, "");
+      let line: &str = &stripped;
 
       if RE_DOCCLASS.is_match(line) {
         likelihood.insert(tex_file.clone(), 3.0);
@@ -617,6 +646,15 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
 
   if candidates.is_empty() {
+    if had_auto_ignore {
+      // Phase D pre-screen: arxiv archives with only `%auto-ignore`
+      // sentinel are deliberately-replaced/withdrawn submissions.
+      // Surface as `Fatal:invalid:auto-ignore` so the canvas
+      // log-grep (lax `Error:[a-z]+:`) doesn't count it as an error.
+      return Err(
+        "Fatal:invalid:auto-ignore: archive contains only %auto-ignore sentinel files".into(),
+      );
+    }
     return Err("No viable .tex files found in archive".into());
   }
 
