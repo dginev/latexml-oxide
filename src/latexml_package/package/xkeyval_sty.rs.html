@@ -876,22 +876,29 @@
 <a href=#876 id=876 data-nosnippet>876</a>    <span class="kw">return</span>;
 <a href=#877 id=877 data-nosnippet>877</a>  }
 <a href=#878 id=878 data-nosnippet>878</a>  <span class="comment">// oops, we did not have a documentclass
-<a href=#879 id=879 data-nosnippet>879</a>  </span><span class="macro">Warn!</span>(
-<a href=#880 id=880 data-nosnippet>880</a>    <span class="string">"undefined"</span>,
-<a href=#881 id=881 data-nosnippet>881</a>    <span class="string">"xkeyval"</span>,
-<a href=#882 id=882 data-nosnippet>882</a>    <span class="string">"Package xkeyval loaded before \\documentclass"
-<a href=#883 id=883 data-nosnippet>883</a>  </span>);
-<a href=#884 id=884 data-nosnippet>884</a>  <span class="kw">let _ </span>= def_macro(
-<a href=#885 id=885 data-nosnippet>885</a>    <span class="macro">T_CS!</span>(<span class="string">"\\XKV@documentclass"</span>),
-<a href=#886 id=886 data-nosnippet>886</a>    <span class="prelude-val">None</span>,
-<a href=#887 id=887 data-nosnippet>887</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>())),
-<a href=#888 id=888 data-nosnippet>888</a>    <span class="prelude-val">None</span>,
-<a href=#889 id=889 data-nosnippet>889</a>  );
-<a href=#890 id=890 data-nosnippet>890</a>  <span class="kw">let _ </span>= def_macro(
-<a href=#891 id=891 data-nosnippet>891</a>    <span class="macro">T_CS!</span>(<span class="string">"\\XKV@classoptionslist"</span>),
-<a href=#892 id=892 data-nosnippet>892</a>    <span class="prelude-val">None</span>,
-<a href=#893 id=893 data-nosnippet>893</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>())),
-<a href=#894 id=894 data-nosnippet>894</a>    <span class="prelude-val">None</span>,
-<a href=#895 id=895 data-nosnippet>895</a>  );
-<a href=#896 id=896 data-nosnippet>896</a>}
+<a href=#879 id=879 data-nosnippet>879</a>  // Perl xkeyval.sty.ltxml L260: `Error('undefined', 'xkeyval', ...)`.
+<a href=#880 id=880 data-nosnippet>880</a>  // Was Warn! pre-fix — severity downgrade vs Perl. Use Error! to match.
+<a href=#881 id=881 data-nosnippet>881</a>  // IIFE wraps because the enclosing fn returns `()` and the Error!
+<a href=#882 id=882 data-nosnippet>882</a>  // macro's Fatal-cap path uses `return Err(...)`.
+<a href=#883 id=883 data-nosnippet>883</a>  </span><span class="kw">let _ </span>= (|| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#884 id=884 data-nosnippet>884</a>    <span class="macro">Error!</span>(
+<a href=#885 id=885 data-nosnippet>885</a>      <span class="string">"undefined"</span>,
+<a href=#886 id=886 data-nosnippet>886</a>      <span class="string">"xkeyval"</span>,
+<a href=#887 id=887 data-nosnippet>887</a>      <span class="string">"Package xkeyval loaded before \\documentclass"
+<a href=#888 id=888 data-nosnippet>888</a>    </span>);
+<a href=#889 id=889 data-nosnippet>889</a>    <span class="prelude-val">Ok</span>(())
+<a href=#890 id=890 data-nosnippet>890</a>  })();
+<a href=#891 id=891 data-nosnippet>891</a>  <span class="kw">let _ </span>= def_macro(
+<a href=#892 id=892 data-nosnippet>892</a>    <span class="macro">T_CS!</span>(<span class="string">"\\XKV@documentclass"</span>),
+<a href=#893 id=893 data-nosnippet>893</a>    <span class="prelude-val">None</span>,
+<a href=#894 id=894 data-nosnippet>894</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>())),
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="prelude-val">None</span>,
+<a href=#896 id=896 data-nosnippet>896</a>  );
+<a href=#897 id=897 data-nosnippet>897</a>  <span class="kw">let _ </span>= def_macro(
+<a href=#898 id=898 data-nosnippet>898</a>    <span class="macro">T_CS!</span>(<span class="string">"\\XKV@classoptionslist"</span>),
+<a href=#899 id=899 data-nosnippet>899</a>    <span class="prelude-val">None</span>,
+<a href=#900 id=900 data-nosnippet>900</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>())),
+<a href=#901 id=901 data-nosnippet>901</a>    <span class="prelude-val">None</span>,
+<a href=#902 id=902 data-nosnippet>902</a>  );
+<a href=#903 id=903 data-nosnippet>903</a>}
 </code></pre></div></section></main></body></html>
