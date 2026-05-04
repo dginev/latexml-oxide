@@ -504,6 +504,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
   let mut vetoed: Vec<PathBuf> = Vec::new();
+  // Phase D pre-screen: track sentinel reasons so the empty-candidates
+  // branch can return a categorized `Fatal:invalid:<reason>` (per
+  // SYNC_STATUS.md "Phase E asymptote: convert intractable papers to
+  // Fatal:invalid:<reason> via Phase D pre-screen"). Witness:
+  // 0903.3183.tex contains exactly `%auto-ignore` (12 bytes) — Perl
+  // skips, Rust pre-fix returned a generic "No viable .tex files"
+  // error indistinguishable from real failures.
+  let mut had_auto_ignore = false;
 
   for tex_file in &tex_files {
     if !tex_file.exists() {
@@ -526,6 +534,9 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           || RE_AUTOINCLUDE.is_match(raw_line))
       {
         likelihood.insert(tex_file.clone(), 0.0);
+        if RE_AUTOIGNORE.is_match(raw_line) {
+          had_auto_ignore = true;
+        }
         determined = true;
         break;
       }
@@ -635,6 +646,15 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
 
   if candidates.is_empty() {
+    if had_auto_ignore {
+      // Phase D pre-screen: arxiv archives with only `%auto-ignore`
+      // sentinel are deliberately-replaced/withdrawn submissions.
+      // Surface as `Fatal:invalid:auto-ignore` so the canvas
+      // log-grep (lax `Error:[a-z]+:`) doesn't count it as an error.
+      return Err(
+        "Fatal:invalid:auto-ignore: archive contains only %auto-ignore sentinel files".into(),
+      );
+    }
     return Err("No viable .tex files found in archive".into());
   }
 
