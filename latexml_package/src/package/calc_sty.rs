@@ -243,37 +243,65 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
       }
     },
   };
-  // \widthof{...}
+  // \widthof{...} — Perl calc.sty.ltxml L139-143
   if peek == T_CS!("\\widthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
+    if expr_type == "Number" {
+      Error!(
+        "unexpected",
+        "\\widthof",
+        format!("\\widthof not expected here (reading {expr_type})")
+      );
+    }
     let width = box_result
       .get_width(None)?
       .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(width));
   }
-  // \heightof{...}
+  // \heightof{...} — Perl calc.sty.ltxml L144-148
   if peek == T_CS!("\\heightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
+    if expr_type == "Number" {
+      Error!(
+        "unexpected",
+        "\\heightof",
+        format!("\\heightof not expected here (reading {expr_type})")
+      );
+    }
     let height = box_result
       .get_height()
       .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height));
   }
-  // \depthof{...}
+  // \depthof{...} — Perl calc.sty.ltxml L149-153
   if peek == T_CS!("\\depthof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
+    if expr_type == "Number" {
+      Error!(
+        "unexpected",
+        "\\depthof",
+        format!("\\depthof not expected here (reading {expr_type})")
+      );
+    }
     let depth = box_result
       .get_depth()
       .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(depth));
   }
-  // \totalheightof{...}
+  // \totalheightof{...} — Perl calc.sty.ltxml L154-158
   if peek == T_CS!("\\totalheightof") {
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
+    if expr_type == "Number" {
+      Error!(
+        "unexpected",
+        "\\totalheightof",
+        format!("\\totalheightof not expected here (reading {expr_type})")
+      );
+    }
     let height = box_result
       .get_height()
       .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
