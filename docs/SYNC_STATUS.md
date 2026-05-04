@@ -134,6 +134,24 @@ Phase E asymptote: convert intractable papers to
 `Fatal:invalid:<reason>` via Phase D pre-screen. Canvas reports them
 as legitimate skip → 100% by definition.
 
+**Phase D first landing 2026-05-03** (commit `48f0c1ce8a`):
+`%auto-ignore` archives now emit `Fatal:invalid:auto-ignore: archive
+contains only %auto-ignore sentinel files` from `find_main_tex`. The
+`Fatal:invalid:` prefix doesn't match parity_check.sh's lax
+`Error:[a-z]+:` regex, so canvas log-grep counts these as 0 errors
+(legitimate skip). Witness: `0903.3183.zip` (12 bytes literal
+`%auto-ignore`). Same pattern can be extended to `texinfo`,
+`auto-include`, withdrawn-paper sentinel, etc. as new witnesses
+emerge.
+
+**Stale-TSV validation 2026-05-03** (5 of the 6 "no Error:*" papers
+from the bucket map): `cond-mat0002096`, `0708.2784`, `0705.3903` now
+BOTH CLEAN with current binary (Round-20 fixes verified). `0903.3183`
+now Fatal:invalid:auto-ignore (Phase D, just-landed). `0907.2492`
+zip not present at expected path. Net effect: at least 4 papers in
+the residual TSVs are stale entries already-fixed by current binary
+and will recover on next sweep.
+
 Phase C long-tail (1 month) and Phase D defensive layers (1 week) follow
 the same per-cluster pattern; details in §Phase B clusters.
 
