@@ -73,6 +73,7 @@ These TODO sites were closed in the same session the audit landed:
 | `5f50f9717a` | `xcolor_sty.rs:508-525` | Color model_list/spec_list length-mismatch `Error!("unexpected", …)` |
 | `1545871c00` | `pgfmath_code_tex.rs:88-95` | Factorial overflow `Error!("pgfmath", "overflow", …)` for n≥22 |
 | `29da2ee0fa` | `pgfmath_code_tex.rs:494-509` | Unimplemented-operator `Error!("unexpected", …)` in apply_fn dispatch |
+| `1fe23fd123` | `xkeyval_sty.rs:879` | `Warn!` → `Error!` on package-loaded-before-`\documentclass` (severity downgrade vs Perl L260) |
 
 ### Re-classified after closer inspection
 
@@ -80,6 +81,9 @@ These TODO sites were closed in the same session the audit landed:
 |---|---|---|
 | `color_sty.rs:42` Error('unexpected', $spec, …) | **MATCHED via inlined mechanism** | Lines 40-61 manually inline `note_status(LogStatus::Error) + log::error!(…)`. Skips the `Error!` macro because `lookup_color_obj` returns `Color`, not `Result<Color>`. Behaviour is equivalent except loses the MAX_ERRORS Fatal-cap (after 100 errors → `Fatal('too_many_errors')`). Documenting as MATCHED-with-inline. |
 | `verbatim_sty.rs:181` Error("expected", "delimiter", …) | **NOT-PORTED (whole feature)** | The entire `\verb` redefinition body (lines 175-189) is commented-out, not just the Error site. Different gap class than "missing Error!". |
+| `xcolor.sty.ltxml:333` Error('misdefined', 'color', "could not resolve <color> name in '$expression'") | **MATCHED via inlined mechanism** | The Rust `lookup_xcolor` (xcolor_sty.rs:132) calls `lookup_color_obj` (color_sty.rs:30-64) which inlines `note_status(LogStatus::Error) + log::error!` for an undefined color. Diagnostic message wording differs slightly from Perl ("Can't find color named '$spec'; assuming Black" vs "could not resolve <color> name in '$expression'") but error count + severity match. |
+| `xcolor.sty.ltxml:356` Error('misdefined', $expression, "syntax error in <color> expression") | **MATCHED via inlined mechanism** | Same as L333 — falls through to the same `lookup_color_obj` inlined error path. |
+| `tex_macro.rs L117` Fatal('expected', "#n", "Parameters not in order") | **NOT-PORTED at this layer** | The Perl tokenwise param-spec parser doesn't have a 1:1 Rust counterpart; Rust's `parse_parameters` is a higher-level prototype parser. The order-check would need a different point in the `\def` digestion path; out of scope for the audit. |
 
 ### Stubbed-out TODO sites in well-covered files
 
