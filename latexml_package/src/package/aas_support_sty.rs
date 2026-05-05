@@ -156,7 +156,7 @@ LoadDefinitions!({
   DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] {
     // Push back the args in correct order so the dispatched CS reads them.
     // Push order is reversed for stack semantics: last unread is first read.
-    gullet::unread_one(test.clone());
+    gullet::unread_one(test);
     gullet::unread_one(T_END!());
     gullet::unread_vec(arg.clone().unlist());
     gullet::unread_one(T_BEGIN!());

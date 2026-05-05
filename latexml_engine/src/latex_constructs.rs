@@ -80,11 +80,11 @@ fn strip_trailing_cs(stype: &str) -> String {
 /// Mirror of Perl `latex_constructs.pool.ltxml:2569-2574`'s
 /// `getShortSource =~ /^plain/` check. Two locator shapes count as
 /// "from plain":
-///   1. A short source starting with "plain" — e.g. `plain.tex`,
-///      `plain.dump.txt` — matching Perl's regex one-for-one.
-///   2. The Rust-only sentinel `<embedded:plain>` produced by
-///      dump-loaded definitions (`Locator::get_short_source` does
-///      not basename-strip this string because it contains a `:`).
+///   1. A short source starting with "plain" — e.g. `plain.tex`, `plain.dump.txt` — matching Perl's
+///      regex one-for-one.
+///   2. The Rust-only sentinel `<embedded:plain>` produced by dump-loaded definitions
+///      (`Locator::get_short_source` does not basename-strip this string because it contains a
+///      `:`).
 ///
 /// We deliberately do NOT use looser `contains("plain.")` /
 /// `contains("/plain")` checks — they would match unrelated
@@ -98,20 +98,18 @@ fn is_plain_definition_source(locator: Locator) -> bool {
 
 /// Mirror of Perl `isDefinableLaTeX` (latex_constructs.pool.ltxml:2569-2574).
 /// Returns `(definable, plain_origin)`:
-///   * `definable` — Perl's bool result. The CS is either undefined,
-///     or its prior definition came from the plain pool (allowed to
-///     be overridden by LaTeX-pool `\newcommand`).
-///   * `plain_origin` — Rust-only flag. True when the prior definition
-///     came from plain. Callers use it to bypass any `<cs>:locked`
-///     guard installed on plain-pool CSes (Rust-specific lock
-///     mechanism not present in Perl). False when the CS was
-///     undefined (no prior locator → no lock to bypass).
+///   * `definable` — Perl's bool result. The CS is either undefined, or its prior definition came
+///     from the plain pool (allowed to be overridden by LaTeX-pool `\newcommand`).
+///   * `plain_origin` — Rust-only flag. True when the prior definition came from plain. Callers use
+///     it to bypass any `<cs>:locked` guard installed on plain-pool CSes (Rust-specific lock
+///     mechanism not present in Perl). False when the CS was undefined (no prior locator → no lock
+///     to bypass).
 fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if is_definable(cs) {
     return Ok((true, false));
   }
-  let plain = lookup_definition(cs)?
-    .is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
+  let plain =
+    lookup_definition(cs)?.is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
   Ok((plain, plain))
 }
 
@@ -2697,7 +2695,7 @@ LoadDefinitions!({
         // — the env-undefined Error above is already logged. Witness:
         // 0810.4249 (\begin{lemma} on undefined `lemma` env: was Rust=2,
         // Perl=1; now Rust=Perl=1).
-        def_macro(token.clone(), None, Tokens!(), None)?;
+        def_macro(token, None, Tokens!(), None)?;
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
       out_tokens.push(T_CS!("\\begingroup"));
@@ -6044,10 +6042,12 @@ LoadDefinitions!({
         ext_type: Some(Cow::Borrowed("dfu")),
         search_paths_only: false,
       })).is_some() {
-        let mut opts = InputDefinitionOptions::default();
-        opts.extension = Some(Cow::Borrowed("dfu"));
-        opts.noltxml = true;
-        opts.raw = true;
+        let opts = InputDefinitionOptions {
+          extension: Some(Cow::Borrowed("dfu")),
+          noltxml:   true,
+          raw:       true,
+          ..Default::default()
+        };
         let _ = input_definitions(&dfu_name, opts);
       }
     }
@@ -8728,7 +8728,7 @@ LoadDefinitions!({
 
   // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
   DefMacro!("\\multiput Pair Pair {}{}", sub[args] {
-    let (x0, y0) = args.get(0).and_then(|a| match a {
+    let (x0, y0) = args.first().and_then(|a| match a {
       ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
       _ => None,
     }).unwrap_or((0.0_f64, 0.0_f64));

@@ -320,8 +320,10 @@ mod tests {
 
   #[test]
   fn tbox_display_of_text_content() {
-    let mut t = Tbox::default();
-    t.text = arena::pin("hello");
+    let t = Tbox {
+      text: arena::pin("hello"),
+      ..Default::default()
+    };
     assert_eq!(format!("{t}"), "hello");
   }
 
@@ -338,8 +340,10 @@ mod tests {
   #[test]
   fn tbox_partial_eq_different_text() {
     let a = Tbox::default();
-    let mut b = Tbox::default();
-    b.text = arena::pin("X");
+    let b = Tbox {
+      text: arena::pin("X"),
+      ..Default::default()
+    };
     assert_ne!(a, b);
   }
 

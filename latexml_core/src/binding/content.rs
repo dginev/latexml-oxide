@@ -1803,22 +1803,47 @@ pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
   use regex::Regex;
   // Mirror find_file_fallback's regex set exactly.
   let suffix_rx = match Regex::new(
-    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$"
-  ) { Ok(rx) => rx, Err(_) => return false };
+    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$",
+  ) {
+    Ok(rx) => rx,
+    Err(_) => return false,
+  };
   let glued_rx = match Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$") {
-    Ok(rx) => rx, Err(_) => return false };
+    Ok(rx) => rx,
+    Err(_) => return false,
+  };
   let prefix_rx = match Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)") {
-    Ok(rx) => rx, Err(_) => return false };
+    Ok(rx) => rx,
+    Err(_) => return false,
+  };
   let basename = pathname::file_name(name);
-  let mut base = if basename.is_empty() { name.to_string() } else { basename };
+  let mut base = if basename.is_empty() {
+    name.to_string()
+  } else {
+    basename
+  };
   let mut changed = base != name;
   loop {
-    if let Some(m) = suffix_rx.find(&base) { base = base[..m.start()].to_string(); changed = true; continue; }
-    if let Some(m) = glued_rx.find(&base) { base = base[..m.start()].to_string(); changed = true; continue; }
-    if let Some(m) = prefix_rx.find(&base) { base = base[m.end()..].to_string(); changed = true; continue; }
+    if let Some(m) = suffix_rx.find(&base) {
+      base = base[..m.start()].to_string();
+      changed = true;
+      continue;
+    }
+    if let Some(m) = glued_rx.find(&base) {
+      base = base[..m.start()].to_string();
+      changed = true;
+      continue;
+    }
+    if let Some(m) = prefix_rx.find(&base) {
+      base = base[m.end()..].to_string();
+      changed = true;
+      continue;
+    }
     break;
   }
-  if !changed || base.is_empty() || base == name { return false; }
+  if !changed || base.is_empty() || base == name {
+    return false;
+  }
   binding_exists(&base, ext_type)
 }
 

@@ -212,8 +212,10 @@ mod tests {
   #[test]
   fn tag_options_get_independent_per_variant() {
     // Setting one slot doesn't populate others.
-    let mut t = TagOptions::default();
-    t.after_open = Some(Vec::new());
+    let t = TagOptions {
+      after_open: Some(Vec::new()),
+      ..Default::default()
+    };
     assert!(t.get(&TagOptionName::AfterOpen).is_some());
     assert!(t.get(&TagOptionName::AfterClose).is_none());
     assert!(t.get(&TagOptionName::AfterOpenLate).is_none());

@@ -209,7 +209,9 @@ impl Alignment {
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
     if let Some(row_idx) = self.current_row {
-      let Some(row) = self.rows.get_mut(row_idx) else { return };
+      let Some(row) = self.rows.get_mut(row_idx) else {
+        return;
+      };
       self.current_column = 1;
       if !cols.is_empty() {
         // Perl Alignment.pm:128-130 — `$row->column($c)` returns undef

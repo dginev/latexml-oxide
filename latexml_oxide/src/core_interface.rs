@@ -372,8 +372,7 @@ impl DigestionAPI for Core {
 
     let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
-      let _gp_rewrite =
-        latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
+      let _gp_rewrite = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Rewrite);
       note_begin("Rewriting");
       document.mark_xmnode_visibility()?;
       document.load_labels_for_rewrite()?;
@@ -987,11 +986,7 @@ mod tests {
   fn preload_class_with_options() {
     assert_eq!(
       parse_preload_spec("[twocolumn,11pt]article.cls"),
-      (
-        "article".into(),
-        "cls".into(),
-        opts(&["twocolumn", "11pt"])
-      )
+      ("article".into(), "cls".into(), opts(&["twocolumn", "11pt"]))
     );
   }
 

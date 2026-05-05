@@ -123,11 +123,13 @@ mod tests {
 
   #[test]
   fn cell_border_at_reads_correct_side() {
-    let mut c = Cell::default();
-    c.border_left = Some(1);
-    c.border_right = Some(2);
-    c.border_top = Some(3);
-    c.border_bottom = Some(4);
+    let c = Cell {
+      border_left: Some(1),
+      border_right: Some(2),
+      border_top: Some(3),
+      border_bottom: Some(4),
+      ..Default::default()
+    };
     assert_eq!(c.border_at(BorderSpec::Left), Some(1));
     assert_eq!(c.border_at(BorderSpec::Right), Some(2));
     assert_eq!(c.border_at(BorderSpec::Top), Some(3));

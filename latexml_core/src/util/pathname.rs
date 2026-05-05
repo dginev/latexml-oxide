@@ -315,9 +315,9 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
         // file extension matches either case of requested type.
         exts.push(String::new());
         // Also push the extension itself (Perl pushes both)
-        exts.push(format!(".{}", &ext));
+        exts.push(format!(".{}", ext));
       } else {
-        exts.push(format!(".{}", &ext));
+        exts.push(format!(".{}", ext));
       }
     }
   }
@@ -494,9 +494,8 @@ pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
       if basename.starts_with('.') && !basename[1..].contains('.') {
         continue;
       }
-      let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        kpse.find_file(candidate)
-      }));
+      let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(candidate)));
       if let Ok(Some(path)) = result {
         return Some(path);
       }

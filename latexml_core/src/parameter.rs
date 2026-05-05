@@ -709,15 +709,19 @@ mod tests {
 
   #[test]
   fn parameter_display_is_name() {
-    let mut p = Parameter::default();
-    p.name = arena::pin("Plain");
+    let p = Parameter {
+      name: arena::pin("Plain"),
+      ..Default::default()
+    };
     assert_eq!(format!("{p}"), "Plain");
   }
 
   #[test]
   fn parameter_stringify_is_spec() {
-    let mut p = Parameter::default();
-    p.spec = arena::pin("{}");
+    let p = Parameter {
+      spec: arena::pin("{}"),
+      ..Default::default()
+    };
     assert_eq!(p.stringify(), "{}");
   }
 

@@ -281,11 +281,13 @@ mod tests {
   #[test]
   fn penalty_constants_ordering() {
     // NOBREAK must dwarf every other penalty (used as "never break here" sentinel).
-    assert!(NOBREAK > PENALTY_LIMIT);
-    assert!(PENALTY_LIMIT > BADBREAK_FACTOR);
-    assert!(BADBREAK_FACTOR > POORBREAK_FACTOR);
-    assert!(POORBREAK_FACTOR > PENALTY_OK);
-    assert!(PENALTY_OK > 0);
+    const {
+      assert!(NOBREAK > PENALTY_LIMIT);
+      assert!(PENALTY_LIMIT > BADBREAK_FACTOR);
+      assert!(BADBREAK_FACTOR > POORBREAK_FACTOR);
+      assert!(POORBREAK_FACTOR > PENALTY_OK);
+      assert!(PENALTY_OK > 0);
+    }
   }
 
   #[test]

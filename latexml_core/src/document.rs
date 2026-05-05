@@ -2406,7 +2406,8 @@ impl Document {
         // `ltx:emph` added 2026-05-01 after math0010241 triage:
         // 13 XMTok-in-emph + 1 (Building line) cascade noise drops
         // Rust from 33 → 19, exact parity with Perl=19.
-        let is_text_container = cur_str == "ltx:p" || cur_str == "ltx:text" || cur_str == "ltx:emph";
+        let is_text_container =
+          cur_str == "ltx:p" || cur_str == "ltx:text" || cur_str == "ltx:emph";
         if is_math_leaf && is_text_container {
           // Cascading rejection — skip the error log (Perl-faithful).
           return Ok(self.node.clone());

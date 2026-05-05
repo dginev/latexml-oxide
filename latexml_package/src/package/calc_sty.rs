@@ -224,7 +224,7 @@ mod tests {
   fn apply_float_op_unsupported_variant_is_identity() {
     // Anything not Number / Dimension / Glue hits the `_ => val.clone()` arm.
     let muglue = RegisterValue::MuGlue(Default::default());
-    let result = apply_float_op(&muglue, "*", 3.14);
+    let result = apply_float_op(&muglue, "*", 3.125);
     // Muglue clones through untouched.
     assert_eq!(result, muglue);
   }
