@@ -46,14 +46,20 @@ MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 LIMIT=0              # 0 = no limit
 RERUN_FAILURES=false
+# When CLEANUP_OK=true, after the run delete output zips/logs for rows whose
+# category is "ok". Useful for bulk-canvas runs where only failure cases are
+# kept for triage and disk space is the binding constraint.
+CLEANUP_OK="${CLEANUP_OK:-false}"
 MAX_OUTPUT_MB="${MAX_OUTPUT_MB:-200}"  # cap: skip output ZIPs larger than this
 # Find depth for input ZIPs. The 10k canvas ships flat
 # (`<dir>/<id>.zip`, depth 1). The 100k canvas at
 # `~/data/100k_noproblem_sandbox/` is nested
-# (`<dir>/arxmliv/<bucket>/<id>/<id>.zip`, depth 4). Bumping the
-# default to 5 covers both layouts; tighten via env if you need
-# to exclude deeper nesting.
-INPUT_MAXDEPTH="${INPUT_MAXDEPTH:-5}"
+# (`<dir>/arxmliv/<bucket>/<id>/<id>.zip`, depth 4). The 430k canvas
+# at `~/data/430k_noproblem_sandbox/` adds an extra `data/` parent
+# (`<dir>/data/arxmliv/<bucket>/<id>/<id>.zip`, depth 5). Default 6
+# covers all known layouts with one level of headroom; tighten via
+# env if you need to exclude deeper nesting.
+INPUT_MAXDEPTH="${INPUT_MAXDEPTH:-6}"
 # Stage selection: 0 means no slicing (process the whole canvas).
 # When STAGE > 0, the sorted task list is sliced to
 # [(STAGE-1)*STAGE_SIZE, STAGE*STAGE_SIZE) and OUTPUT_DIR is suffixed
@@ -74,6 +80,7 @@ while [[ $# -gt 0 ]]; do
     --worker-bin)   WORKER_BIN="$2"; CUSTOM_WORKER_BIN=true; shift 2 ;;
     --stage)        STAGE="$2"; shift 2 ;;
     --stage-size)   STAGE_SIZE="$2"; shift 2 ;;
+    --cleanup-ok)   CLEANUP_OK=true; shift ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
@@ -92,6 +99,10 @@ while [[ $# -gt 0 ]]; do
       echo "                        (1-indexed; 0 = no slicing). Useful for the 100k"
       echo "                        canvas: --stage 1..10 with --stage-size 10000."
       echo "  --stage-size N        Slice size for --stage (default: 10000)"
+      echo "  --cleanup-ok          After the run, delete output zips/logs for"
+      echo "                        rows whose category is 'ok' (keeps only"
+      echo "                        failure artifacts; reclaims disk for bulk"
+      echo "                        canvas runs)"
       echo "  -h, --help            Show this help"
       exit 0
       ;;
@@ -538,6 +549,20 @@ while IFS=$'\t' read -r arxiv_id _entry_id _exit_code _wall_time _output_size _s
     *) rm -f "$OUTPUT_DIR/${arxiv_id}.zip" ;;
   esac
 done < "$RUN_RESULTS"
+
+# When --cleanup-ok is set, delete output zips and logs for "ok" rows so only
+# failure artifacts remain on disk. Telemetry and the row in results.tsv are
+# preserved (telemetry was already extracted during the run).
+if [[ "$CLEANUP_OK" == "true" ]]; then
+  CLEANUP_OK_COUNT=0
+  while IFS=$'\t' read -r arxiv_id _entry_id _exit_code _wall_time _output_size _status_line category; do
+    if [[ "$category" == "ok" ]]; then
+      rm -f "$OUTPUT_DIR/${arxiv_id}.zip" "$OUTPUT_DIR/${arxiv_id}.log"
+      CLEANUP_OK_COUNT=$((CLEANUP_OK_COUNT + 1))
+    fi
+  done < "$RUN_RESULTS"
+  echo "cleanup-ok: deleted artifacts for ${CLEANUP_OK_COUNT} ok rows"
+fi
 
 rm -f "$RUN_IDS"
 
