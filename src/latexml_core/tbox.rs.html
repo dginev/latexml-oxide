@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/tbox.rs`."><title>tbox.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (20de910db 2026-05-02)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>tbox.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/tbox.rs`."><title>tbox.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (cb40c25f6 2026-05-04)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>tbox.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>std::fmt;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::rc::Rc;
@@ -320,42 +320,46 @@
 <a href=#320 id=320 data-nosnippet>320</a>
 <a href=#321 id=321 data-nosnippet>321</a>  <span class="attr">#[test]
 <a href=#322 id=322 data-nosnippet>322</a>  </span><span class="kw">fn </span>tbox_display_of_text_content() {
-<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">let </span><span class="kw-2">mut </span>t = Tbox::default();
-<a href=#324 id=324 data-nosnippet>324</a>    t.text = arena::pin(<span class="string">"hello"</span>);
-<a href=#325 id=325 data-nosnippet>325</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"hello"</span>);
-<a href=#326 id=326 data-nosnippet>326</a>  }
-<a href=#327 id=327 data-nosnippet>327</a>
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="attr">#[test]
-<a href=#329 id=329 data-nosnippet>329</a>  </span><span class="kw">fn </span>tbox_partial_eq_same_text_same_font() {
-<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">let </span>a = Tbox::default();
-<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">let </span>b = Tbox::default();
-<a href=#332 id=332 data-nosnippet>332</a>    <span class="macro">assert_eq!</span>(
-<a href=#333 id=333 data-nosnippet>333</a>      a, b,
-<a href=#334 id=334 data-nosnippet>334</a>      <span class="string">"two default Tboxes have same text '' and same text_default font"
-<a href=#335 id=335 data-nosnippet>335</a>    </span>);
-<a href=#336 id=336 data-nosnippet>336</a>  }
-<a href=#337 id=337 data-nosnippet>337</a>
-<a href=#338 id=338 data-nosnippet>338</a>  <span class="attr">#[test]
-<a href=#339 id=339 data-nosnippet>339</a>  </span><span class="kw">fn </span>tbox_partial_eq_different_text() {
-<a href=#340 id=340 data-nosnippet>340</a>    <span class="kw">let </span>a = Tbox::default();
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">let </span><span class="kw-2">mut </span>b = Tbox::default();
-<a href=#342 id=342 data-nosnippet>342</a>    b.text = arena::pin(<span class="string">"X"</span>);
-<a href=#343 id=343 data-nosnippet>343</a>    <span class="macro">assert_ne!</span>(a, b);
-<a href=#344 id=344 data-nosnippet>344</a>  }
-<a href=#345 id=345 data-nosnippet>345</a>
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="attr">#[test]
-<a href=#347 id=347 data-nosnippet>347</a>  </span><span class="kw">fn </span>tbox_default_font_is_text_default() {
-<a href=#348 id=348 data-nosnippet>348</a>    <span class="kw">let </span>t = Tbox::default();
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="comment">// Font::text_default is the Rc backing the default.
-<a href=#350 id=350 data-nosnippet>350</a>    </span><span class="macro">assert_eq!</span>(<span class="kw-2">*</span>t.font, Font::text_default());
-<a href=#351 id=351 data-nosnippet>351</a>  }
-<a href=#352 id=352 data-nosnippet>352</a>
-<a href=#353 id=353 data-nosnippet>353</a>  <span class="attr">#[test]
-<a href=#354 id=354 data-nosnippet>354</a>  </span><span class="kw">fn </span>tbox_default_locator_is_default() {
-<a href=#355 id=355 data-nosnippet>355</a>    <span class="kw">let </span>t = Tbox::default();
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="comment">// A Default locator points at the crate source file/line where
-<a href=#357 id=357 data-nosnippet>357</a>    // Default::default was called; just verify it's not nonsense.
-<a href=#358 id=358 data-nosnippet>358</a>    </span><span class="kw">let _ </span>= t.locator;
-<a href=#359 id=359 data-nosnippet>359</a>  }
-<a href=#360 id=360 data-nosnippet>360</a>}
+<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">let </span>t = Tbox {
+<a href=#324 id=324 data-nosnippet>324</a>      text: arena::pin(<span class="string">"hello"</span>),
+<a href=#325 id=325 data-nosnippet>325</a>      ..Default::default()
+<a href=#326 id=326 data-nosnippet>326</a>    };
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"hello"</span>);
+<a href=#328 id=328 data-nosnippet>328</a>  }
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="attr">#[test]
+<a href=#331 id=331 data-nosnippet>331</a>  </span><span class="kw">fn </span>tbox_partial_eq_same_text_same_font() {
+<a href=#332 id=332 data-nosnippet>332</a>    <span class="kw">let </span>a = Tbox::default();
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="kw">let </span>b = Tbox::default();
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="macro">assert_eq!</span>(
+<a href=#335 id=335 data-nosnippet>335</a>      a, b,
+<a href=#336 id=336 data-nosnippet>336</a>      <span class="string">"two default Tboxes have same text '' and same text_default font"
+<a href=#337 id=337 data-nosnippet>337</a>    </span>);
+<a href=#338 id=338 data-nosnippet>338</a>  }
+<a href=#339 id=339 data-nosnippet>339</a>
+<a href=#340 id=340 data-nosnippet>340</a>  <span class="attr">#[test]
+<a href=#341 id=341 data-nosnippet>341</a>  </span><span class="kw">fn </span>tbox_partial_eq_different_text() {
+<a href=#342 id=342 data-nosnippet>342</a>    <span class="kw">let </span>a = Tbox::default();
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="kw">let </span>b = Tbox {
+<a href=#344 id=344 data-nosnippet>344</a>      text: arena::pin(<span class="string">"X"</span>),
+<a href=#345 id=345 data-nosnippet>345</a>      ..Default::default()
+<a href=#346 id=346 data-nosnippet>346</a>    };
+<a href=#347 id=347 data-nosnippet>347</a>    <span class="macro">assert_ne!</span>(a, b);
+<a href=#348 id=348 data-nosnippet>348</a>  }
+<a href=#349 id=349 data-nosnippet>349</a>
+<a href=#350 id=350 data-nosnippet>350</a>  <span class="attr">#[test]
+<a href=#351 id=351 data-nosnippet>351</a>  </span><span class="kw">fn </span>tbox_default_font_is_text_default() {
+<a href=#352 id=352 data-nosnippet>352</a>    <span class="kw">let </span>t = Tbox::default();
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="comment">// Font::text_default is the Rc backing the default.
+<a href=#354 id=354 data-nosnippet>354</a>    </span><span class="macro">assert_eq!</span>(<span class="kw-2">*</span>t.font, Font::text_default());
+<a href=#355 id=355 data-nosnippet>355</a>  }
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>  <span class="attr">#[test]
+<a href=#358 id=358 data-nosnippet>358</a>  </span><span class="kw">fn </span>tbox_default_locator_is_default() {
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="kw">let </span>t = Tbox::default();
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="comment">// A Default locator points at the crate source file/line where
+<a href=#361 id=361 data-nosnippet>361</a>    // Default::default was called; just verify it's not nonsense.
+<a href=#362 id=362 data-nosnippet>362</a>    </span><span class="kw">let _ </span>= t.locator;
+<a href=#363 id=363 data-nosnippet>363</a>  }
+<a href=#364 id=364 data-nosnippet>364</a>}
 </code></pre></div></section></main></body></html>

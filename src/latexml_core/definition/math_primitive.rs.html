@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/definition/math_primitive.rs`."><title>math_primitive.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (20de910db 2026-05-02)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/definition/</div>math_primitive.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/definition/math_primitive.rs`."><title>math_primitive.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (cb40c25f6 2026-05-04)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/definition/</div>math_primitive.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -397,36 +397,38 @@
 <a href=#397 id=397 data-nosnippet>397</a>
 <a href=#398 id=398 data-nosnippet>398</a>  <span class="attr">#[test]
 <a href=#399 id=399 data-nosnippet>399</a>  </span><span class="kw">fn </span>math_primitive_options_to_hash_stored_with_fields() {
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">let </span><span class="kw-2">mut </span>o = MathPrimitiveOptions::default();
-<a href=#401 id=401 data-nosnippet>401</a>    o.meaning = <span class="prelude-val">Some</span>(<span class="string">"plus"</span>.into());
-<a href=#402 id=402 data-nosnippet>402</a>    o.name = <span class="prelude-val">Some</span>(<span class="string">"+"</span>.into());
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span>h = o.to_hash_stored();
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="macro">assert!</span>(h.contains_key(<span class="string">"meaning"</span>));
-<a href=#405 id=405 data-nosnippet>405</a>    <span class="macro">assert!</span>(h.contains_key(<span class="string">"name"</span>));
-<a href=#406 id=406 data-nosnippet>406</a>    <span class="macro">assert!</span>(
-<a href=#407 id=407 data-nosnippet>407</a>      !h.contains_key(<span class="string">"role"</span>),
-<a href=#408 id=408 data-nosnippet>408</a>      <span class="string">"role=None shouldn't populate the hash"
-<a href=#409 id=409 data-nosnippet>409</a>    </span>);
-<a href=#410 id=410 data-nosnippet>410</a>  }
-<a href=#411 id=411 data-nosnippet>411</a>
-<a href=#412 id=412 data-nosnippet>412</a>  <span class="attr">#[test]
-<a href=#413 id=413 data-nosnippet>413</a>  </span><span class="kw">fn </span>math_primitive_default_fields() {
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">let </span>m = MathPrimitive::default();
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="macro">assert!</span>(m.paramlist.is_none());
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="macro">assert!</span>(m.replacement.is_none());
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="macro">assert!</span>(m.alias.is_none());
-<a href=#418 id=418 data-nosnippet>418</a>    <span class="macro">assert!</span>(m.nargs.is_none());
-<a href=#419 id=419 data-nosnippet>419</a>    <span class="comment">// options and flags live in m.options, not directly on the struct.
-<a href=#420 id=420 data-nosnippet>420</a>    </span><span class="macro">assert!</span>(m.options.reversion.is_none());
-<a href=#421 id=421 data-nosnippet>421</a>    <span class="macro">assert!</span>(!m.options.is_prefix);
-<a href=#422 id=422 data-nosnippet>422</a>  }
-<a href=#423 id=423 data-nosnippet>423</a>
-<a href=#424 id=424 data-nosnippet>424</a>  <span class="attr">#[test]
-<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="kw">fn </span>math_primitive_partial_eq_by_cs() {
-<a href=#426 id=426 data-nosnippet>426</a>    <span class="kw">let </span>a = MathPrimitive::default();
-<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">let </span>b = MathPrimitive::default();
-<a href=#428 id=428 data-nosnippet>428</a>    <span class="comment">// Both defaults have the same cs → equal.
-<a href=#429 id=429 data-nosnippet>429</a>    </span><span class="macro">assert!</span>(a == b);
-<a href=#430 id=430 data-nosnippet>430</a>  }
-<a href=#431 id=431 data-nosnippet>431</a>}
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">let </span>o = MathPrimitiveOptions {
+<a href=#401 id=401 data-nosnippet>401</a>      meaning: <span class="prelude-val">Some</span>(<span class="string">"plus"</span>.into()),
+<a href=#402 id=402 data-nosnippet>402</a>      name: <span class="prelude-val">Some</span>(<span class="string">"+"</span>.into()),
+<a href=#403 id=403 data-nosnippet>403</a>      ..Default::default()
+<a href=#404 id=404 data-nosnippet>404</a>    };
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">let </span>h = o.to_hash_stored();
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="macro">assert!</span>(h.contains_key(<span class="string">"meaning"</span>));
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="macro">assert!</span>(h.contains_key(<span class="string">"name"</span>));
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="macro">assert!</span>(
+<a href=#409 id=409 data-nosnippet>409</a>      !h.contains_key(<span class="string">"role"</span>),
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="string">"role=None shouldn't populate the hash"
+<a href=#411 id=411 data-nosnippet>411</a>    </span>);
+<a href=#412 id=412 data-nosnippet>412</a>  }
+<a href=#413 id=413 data-nosnippet>413</a>
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="attr">#[test]
+<a href=#415 id=415 data-nosnippet>415</a>  </span><span class="kw">fn </span>math_primitive_default_fields() {
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">let </span>m = MathPrimitive::default();
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="macro">assert!</span>(m.paramlist.is_none());
+<a href=#418 id=418 data-nosnippet>418</a>    <span class="macro">assert!</span>(m.replacement.is_none());
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="macro">assert!</span>(m.alias.is_none());
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="macro">assert!</span>(m.nargs.is_none());
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="comment">// options and flags live in m.options, not directly on the struct.
+<a href=#422 id=422 data-nosnippet>422</a>    </span><span class="macro">assert!</span>(m.options.reversion.is_none());
+<a href=#423 id=423 data-nosnippet>423</a>    <span class="macro">assert!</span>(!m.options.is_prefix);
+<a href=#424 id=424 data-nosnippet>424</a>  }
+<a href=#425 id=425 data-nosnippet>425</a>
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="attr">#[test]
+<a href=#427 id=427 data-nosnippet>427</a>  </span><span class="kw">fn </span>math_primitive_partial_eq_by_cs() {
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="kw">let </span>a = MathPrimitive::default();
+<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">let </span>b = MathPrimitive::default();
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="comment">// Both defaults have the same cs → equal.
+<a href=#431 id=431 data-nosnippet>431</a>    </span><span class="macro">assert!</span>(a == b);
+<a href=#432 id=432 data-nosnippet>432</a>  }
+<a href=#433 id=433 data-nosnippet>433</a>}
 </code></pre></div></section></main></body></html>
