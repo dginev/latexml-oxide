@@ -146,7 +146,7 @@ mod tests {
   #[test]
   fn from_str_numeric_parses() {
     assert_eq!(Float::from("1.5").0, 1.5);
-    assert_eq!(Float::from("  -3.14  ").0, -3.14);
+    assert_eq!(Float::from("  -3.125  ").0, -3.125);
     assert_eq!(Float::from("42").0, 42.0);
   }
 

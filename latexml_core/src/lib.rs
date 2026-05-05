@@ -63,15 +63,15 @@ pub mod dump_writer;
 pub mod stomach;
 /// A TeX-like digested Box
 pub mod tbox;
+/// Per-job structured telemetry: phase wall times, counts, resource peaks.
+/// See `docs/TELEMETRY.md` for the design contract.
+pub mod telemetry;
 /// Auxilary utilities that do not participate in the main conversion abstraction
 pub mod util;
 /// Main-level wall-clock watchdog that forcibly aborts the process after a deadline.
 /// Complements the cooperative `stomach::check_timeout` polling for native-code hotspots
 /// (Marpa, libxml2, libxslt) that don't return to the digestion loop.
 pub mod watchdog;
-/// Per-job structured telemetry: phase wall times, counts, resource peaks.
-/// See `docs/TELEMETRY.md` for the design contract.
-pub mod telemetry;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 

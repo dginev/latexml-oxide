@@ -1035,12 +1035,15 @@ impl Processor for Graphics {
               } else {
                 None
               };
-              let outcome = if let Some(o) = svg_outcome {
-                o
-              } else if {
+              let converted = if svg_outcome.is_none() {
                 subproc_ref.fetch_add(1, Ordering::Relaxed);
                 Self::convert_image(source, abs_dest_str, dpi, *page)
-              } {
+              } else {
+                false
+              };
+              let outcome = if let Some(o) = svg_outcome {
+                o
+              } else if converted {
                 ConvertOutcome {
                   job_id:   *job_id,
                   imagesrc: Some(rel_dest.clone()),
@@ -1355,9 +1358,11 @@ endobj
 </document>"#,
       source.display()
     );
-    let mut doc_opts = PostDocumentOptions::default();
-    doc_opts.destination = Some(tmp.join("out.html").display().to_string());
-    doc_opts.source_directory = Some(tmp.display().to_string());
+    let doc_opts = PostDocumentOptions {
+      destination: Some(tmp.join("out.html").display().to_string()),
+      source_directory: Some(tmp.display().to_string()),
+      ..Default::default()
+    };
     let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
     let mut graphics = Graphics::new(None, true);
     let nodes = graphics.to_process(&doc);

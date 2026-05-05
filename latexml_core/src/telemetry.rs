@@ -99,69 +99,69 @@ fn bucket_for(us: u64) -> usize {
 #[derive(Clone, Debug)]
 pub struct Telemetry {
   // Identifiers (set by the binary)
-  pub paper_id: String,
-  pub git_sha: String,
-  pub cmdline: String,
-  pub host: String,
-  pub timeout_s: u32,
+  pub paper_id:       String,
+  pub git_sha:        String,
+  pub cmdline:        String,
+  pub host:           String,
+  pub timeout_s:      u32,
   pub schema_version: u32,
 
   // Wall (microseconds)
-  pub wall_us: u64,
+  pub wall_us:  u64,
   pub phase_us: [u64; Phase::COUNT],
 
   // Counts
-  pub formulae: u32,
-  pub math_parse_attempts: u32,
-  pub math_parse_count: u64,
-  pub math_parse_buckets: [u32; 9],
-  pub graphics_assets: u32,
+  pub formulae:                  u32,
+  pub math_parse_attempts:       u32,
+  pub math_parse_count:          u64,
+  pub math_parse_buckets:        [u32; 9],
+  pub graphics_assets:           u32,
   pub graphics_subprocess_count: u32,
-  pub db_objects: u32,
-  pub output_bytes: u64,
-  pub warnings: u32,
-  pub errors: u32,
-  pub fatal_errors: u32,
-  pub external_tool_count: u32,
+  pub db_objects:                u32,
+  pub output_bytes:              u64,
+  pub warnings:                  u32,
+  pub errors:                    u32,
+  pub fatal_errors:              u32,
+  pub external_tool_count:       u32,
 
   // Resource
-  pub max_rss_kb: u64,
+  pub max_rss_kb:    u64,
   pub child_user_us: u64,
-  pub child_sys_us: u64,
+  pub child_sys_us:  u64,
 
   // Outcome (set by the binary at end)
-  pub category: String,
+  pub category:  String,
   pub exit_code: i32,
 }
 
 impl Default for Telemetry {
   fn default() -> Self {
     Telemetry {
-      paper_id: String::new(),
-      git_sha: option_env!("LATEXML_GIT_SHA").unwrap_or("").to_string(),
-      cmdline: String::new(),
-      host: String::new(),
-      timeout_s: 0,
-      schema_version: 1,
-      wall_us: 0,
-      phase_us: [0; Phase::COUNT],
-      formulae: 0,
-      math_parse_attempts: 0,
-      math_parse_count: 0,
-      math_parse_buckets: [0; 9],
-      graphics_assets: 0,
+      paper_id:                  String::new(),
+      git_sha:                   option_env!("LATEXML_GIT_SHA").unwrap_or("").to_string(),
+      cmdline:                   String::new(),
+      host:                      String::new(),
+      timeout_s:                 0,
+      schema_version:            1,
+      wall_us:                   0,
+      phase_us:                  [0; Phase::COUNT],
+      formulae:                  0,
+      math_parse_attempts:       0,
+      math_parse_count:          0,
+      math_parse_buckets:        [0; 9],
+      graphics_assets:           0,
       graphics_subprocess_count: 0,
-      db_objects: 0,
-      output_bytes: 0,
-      warnings: 0,
-      errors: 0,
-      fatal_errors: 0,
-      external_tool_count: 0,
-      max_rss_kb: 0,
-      child_user_us: 0,
-      child_sys_us: 0,
-      category: String::new(),
-      exit_code: 0,
+      db_objects:                0,
+      output_bytes:              0,
+      warnings:                  0,
+      errors:                    0,
+      fatal_errors:              0,
+      external_tool_count:       0,
+      max_rss_kb:                0,
+      child_user_us:             0,
+      child_sys_us:              0,
+      category:                  String::new(),
+      exit_code:                 0,
     }
   }
 }
@@ -197,8 +197,9 @@ pub fn phase_exit() {
   let now = Instant::now();
   STACK.with(|s| {
     let mut stack = s.borrow_mut();
-    let (p, started) =
-      stack.pop().expect("telemetry::phase_exit called without matching phase_enter");
+    let (p, started) = stack
+      .pop()
+      .expect("telemetry::phase_exit called without matching phase_enter");
     let dt = now.saturating_duration_since(started).as_micros() as u64;
     STATE.with(|st| st.borrow_mut().phase_us[p as usize] += dt);
     // Reset parent's start so it doesn't double-count our time.
@@ -214,9 +215,7 @@ pub struct PhaseGuard {
 }
 
 impl Drop for PhaseGuard {
-  fn drop(&mut self) {
-    phase_exit();
-  }
+  fn drop(&mut self) { phase_exit(); }
 }
 
 /// Convenience: `let _g = telemetry::phase(Phase::Digest);`
@@ -227,16 +226,12 @@ pub fn phase(p: Phase) -> PhaseGuard {
 
 // ─── counters ───────────────────────────────────────────────────────────────
 
-pub fn incr_formulae() {
-  STATE.with(|s| s.borrow_mut().formulae += 1);
-}
+pub fn incr_formulae() { STATE.with(|s| s.borrow_mut().formulae += 1); }
 
 /// Set the formulae count directly. Use when the document-wide count
 /// is known up front (e.g., right before `MathParser::parse_math` is
 /// invoked over all `<XMath>` nodes).
-pub fn set_formulae(n: u32) {
-  STATE.with(|s| s.borrow_mut().formulae = n);
-}
+pub fn set_formulae(n: u32) { STATE.with(|s| s.borrow_mut().formulae = n); }
 
 /// Record one math parse: total time and number of successful parses
 /// returned (the Marpa parser may produce multiple ASF derivations
@@ -250,15 +245,9 @@ pub fn record_math_parse(us: u64, parses: u32) {
   });
 }
 
-pub fn incr_graphics_asset() {
-  STATE.with(|s| s.borrow_mut().graphics_assets += 1);
-}
-pub fn set_graphics_assets(n: u32) {
-  STATE.with(|s| s.borrow_mut().graphics_assets = n);
-}
-pub fn incr_graphics_subprocess() {
-  STATE.with(|s| s.borrow_mut().graphics_subprocess_count += 1);
-}
+pub fn incr_graphics_asset() { STATE.with(|s| s.borrow_mut().graphics_assets += 1); }
+pub fn set_graphics_assets(n: u32) { STATE.with(|s| s.borrow_mut().graphics_assets = n); }
+pub fn incr_graphics_subprocess() { STATE.with(|s| s.borrow_mut().graphics_subprocess_count += 1); }
 /// Bulk-add subprocess counts from a worker-pool tally. Used after
 /// `std::thread::scope` joins because per-worker `thread_local!` STATE
 /// is discarded on thread exit; counts accumulated in a shared
@@ -266,24 +255,12 @@ pub fn incr_graphics_subprocess() {
 pub fn add_graphics_subprocess(n: u32) {
   STATE.with(|s| s.borrow_mut().graphics_subprocess_count += n);
 }
-pub fn incr_external_tool() {
-  STATE.with(|s| s.borrow_mut().external_tool_count += 1);
-}
-pub fn set_db_objects(n: u32) {
-  STATE.with(|s| s.borrow_mut().db_objects = n);
-}
-pub fn set_output_bytes(n: u64) {
-  STATE.with(|s| s.borrow_mut().output_bytes = n);
-}
-pub fn incr_warning() {
-  STATE.with(|s| s.borrow_mut().warnings += 1);
-}
-pub fn incr_error() {
-  STATE.with(|s| s.borrow_mut().errors += 1);
-}
-pub fn incr_fatal_error() {
-  STATE.with(|s| s.borrow_mut().fatal_errors += 1);
-}
+pub fn incr_external_tool() { STATE.with(|s| s.borrow_mut().external_tool_count += 1); }
+pub fn set_db_objects(n: u32) { STATE.with(|s| s.borrow_mut().db_objects = n); }
+pub fn set_output_bytes(n: u64) { STATE.with(|s| s.borrow_mut().output_bytes = n); }
+pub fn incr_warning() { STATE.with(|s| s.borrow_mut().warnings += 1); }
+pub fn incr_error() { STATE.with(|s| s.borrow_mut().errors += 1); }
+pub fn incr_fatal_error() { STATE.with(|s| s.borrow_mut().fatal_errors += 1); }
 /// Bulk-set status counts at finalize time from `common::error::REPORT`
 /// (the canonical Error!/Warn!/Fatal! counter). Avoids double-bookkeeping
 /// in every macro invocation; just snapshot once before serialization.
@@ -298,30 +275,14 @@ pub fn set_status_counts(warnings: u32, errors: u32, fatal_errors: u32) {
 
 // ─── identifiers (binary-set) ───────────────────────────────────────────────
 
-pub fn set_paper_id(id: &str) {
-  STATE.with(|s| s.borrow_mut().paper_id = id.to_string());
-}
-pub fn set_cmdline(s: &str) {
-  STATE.with(|st| st.borrow_mut().cmdline = s.to_string());
-}
-pub fn set_host(h: &str) {
-  STATE.with(|s| s.borrow_mut().host = h.to_string());
-}
-pub fn set_timeout_s(t: u32) {
-  STATE.with(|s| s.borrow_mut().timeout_s = t);
-}
-pub fn set_category(c: &str) {
-  STATE.with(|s| s.borrow_mut().category = c.to_string());
-}
-pub fn set_exit_code(e: i32) {
-  STATE.with(|s| s.borrow_mut().exit_code = e);
-}
-pub fn set_wall_us(w: u64) {
-  STATE.with(|s| s.borrow_mut().wall_us = w);
-}
-pub fn set_max_rss_kb(r: u64) {
-  STATE.with(|s| s.borrow_mut().max_rss_kb = r);
-}
+pub fn set_paper_id(id: &str) { STATE.with(|s| s.borrow_mut().paper_id = id.to_string()); }
+pub fn set_cmdline(s: &str) { STATE.with(|st| st.borrow_mut().cmdline = s.to_string()); }
+pub fn set_host(h: &str) { STATE.with(|s| s.borrow_mut().host = h.to_string()); }
+pub fn set_timeout_s(t: u32) { STATE.with(|s| s.borrow_mut().timeout_s = t); }
+pub fn set_category(c: &str) { STATE.with(|s| s.borrow_mut().category = c.to_string()); }
+pub fn set_exit_code(e: i32) { STATE.with(|s| s.borrow_mut().exit_code = e); }
+pub fn set_wall_us(w: u64) { STATE.with(|s| s.borrow_mut().wall_us = w); }
+pub fn set_max_rss_kb(r: u64) { STATE.with(|s| s.borrow_mut().max_rss_kb = r); }
 pub fn set_child_rusage_us(user: u64, sys: u64) {
   STATE.with(|s| {
     let mut t = s.borrow_mut();
@@ -332,14 +293,10 @@ pub fn set_child_rusage_us(user: u64, sys: u64) {
 
 /// Take the current telemetry record, replacing it with a fresh
 /// default. Use at end-of-process to serialize the result.
-pub fn take() -> Telemetry {
-  STATE.with(|s| std::mem::take(&mut *s.borrow_mut()))
-}
+pub fn take() -> Telemetry { STATE.with(|s| std::mem::take(&mut *s.borrow_mut())) }
 
 /// Read-only view for tests / instrumented assertions.
-pub fn with<R>(f: impl FnOnce(&Telemetry) -> R) -> R {
-  STATE.with(|s| f(&s.borrow()))
-}
+pub fn with<R>(f: impl FnOnce(&Telemetry) -> R) -> R { STATE.with(|s| f(&s.borrow())) }
 
 // ─── JSON serialization ─────────────────────────────────────────────────────
 
@@ -513,7 +470,11 @@ mod tests {
 
     let t = take();
     // Bootstrap should have accumulated time outside the Digest scope.
-    assert!(t.phase_us[Phase::Bootstrap as usize] >= 300, "bootstrap got {}", t.phase_us[0]);
+    assert!(
+      t.phase_us[Phase::Bootstrap as usize] >= 300,
+      "bootstrap got {}",
+      t.phase_us[0]
+    );
     // Digest should have ~500us (with slack for sleep imprecision).
     assert!(
       t.phase_us[Phase::Digest as usize] >= 400,

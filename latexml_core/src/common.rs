@@ -164,9 +164,11 @@ mod tests {
 
   #[test]
   fn config_clone_preserves_fields() {
-    let mut c = Config::default();
-    c.verbosity = 5;
-    c.preload = Some(vec!["ar5iv.sty".to_string()]);
+    let c = Config {
+      verbosity: 5,
+      preload: Some(vec!["ar5iv.sty".to_string()]),
+      ..Default::default()
+    };
     let c2 = c.clone();
     assert_eq!(c2.verbosity, 5);
     assert_eq!(c2.preload.as_ref().unwrap(), &vec!["ar5iv.sty".to_string()]);

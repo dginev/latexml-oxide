@@ -243,8 +243,10 @@ mod tests {
   #[test]
   fn primitive_get_num_args_uses_nargs_override() {
     // If nargs is explicitly set, it takes precedence over paramlist.
-    let mut p = Primitive::default();
-    p.nargs = Some(3);
+    let p = Primitive {
+      nargs: Some(3),
+      ..Default::default()
+    };
     assert_eq!(p.get_num_args(), 3);
   }
 

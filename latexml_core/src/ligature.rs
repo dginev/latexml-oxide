@@ -129,8 +129,10 @@ mod tests {
   fn ligature_debug_format_uses_regex() {
     // Debug writes just the regex (whatever formatting the Option
     // picks). Verify it doesn't panic and uses the regex field.
-    let mut l = Ligature::default();
-    l.regex = Some("test_regex".to_string());
+    let l = Ligature {
+      regex: Some("test_regex".to_string()),
+      ..Default::default()
+    };
     let out = format!("{l:?}");
     assert!(out.contains("test_regex"), "got {out:?}");
   }

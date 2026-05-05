@@ -278,10 +278,7 @@ impl MathParser {
         let t0 = std::time::Instant::now();
         self.parse(math, document)?;
         let elapsed_us = t0.elapsed().as_micros() as u64;
-        latexml_core::telemetry::record_math_parse(
-          elapsed_us,
-          self.last_parsetrees_count as u32,
-        );
+        latexml_core::telemetry::record_math_parse(elapsed_us, self.last_parsetrees_count as u32);
         // Store parse tree count as attribute on the Math element for diagnostics.
         // Find the ancestor ltx:Math of this XMath node and set _parsetrees.
         if self.last_parsetrees_count > 0 {
@@ -1160,7 +1157,7 @@ impl MathParser {
         deduped,
         parses.len(),
         start.elapsed(),
-        &input.trim().chars().take(200).collect::<String>()
+        input.trim().chars().take(200).collect::<String>()
       );
     }
 

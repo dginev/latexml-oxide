@@ -240,9 +240,8 @@ impl LatexmlWorker {
     let status_str = format!("Status:conversion:{}", response.status_code);
     let log = format!("{}\n{}", response.log, status_str);
 
-    // 7. Finalize per-job telemetry. Phase counters were populated by
-    //    the converter/post guards; here we fill in identifiers, wall,
-    //    and resource peaks before serializing.
+    // 7. Finalize per-job telemetry. Phase counters were populated by the converter/post guards;
+    //    here we fill in identifiers, wall, and resource peaks before serializing.
     let telemetry_json = {
       use latexml_core::common::error::{LogStatus, get_status};
       use latexml_core::telemetry;
@@ -318,9 +317,7 @@ fn read_child_rusage_us_proc() -> (u64, u64) {
 }
 
 #[cfg(not(unix))]
-fn read_child_rusage_us_proc() -> (u64, u64) {
-  (0, 0)
-}
+fn read_child_rusage_us_proc() -> (u64, u64) { (0, 0) }
 
 impl Worker for LatexmlWorker {
   fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {

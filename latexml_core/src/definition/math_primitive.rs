@@ -397,9 +397,11 @@ mod tests {
 
   #[test]
   fn math_primitive_options_to_hash_stored_with_fields() {
-    let mut o = MathPrimitiveOptions::default();
-    o.meaning = Some("plus".into());
-    o.name = Some("+".into());
+    let o = MathPrimitiveOptions {
+      meaning: Some("plus".into()),
+      name: Some("+".into()),
+      ..Default::default()
+    };
     let h = o.to_hash_stored();
     assert!(h.contains_key("meaning"));
     assert!(h.contains_key("name"));

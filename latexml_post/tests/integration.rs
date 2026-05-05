@@ -197,9 +197,11 @@ fn test_vector_svg_graphics_path() {
 </document>"#,
     src_copy.display()
   );
-  let mut doc_opts = PostDocumentOptions::default();
-  doc_opts.destination = Some(work.join("out.html").display().to_string());
-  doc_opts.source_directory = Some(work.display().to_string());
+  let doc_opts = PostDocumentOptions {
+    destination: Some(work.join("out.html").display().to_string()),
+    source_directory: Some(work.display().to_string()),
+    ..Default::default()
+  };
   let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
 
   let nodes = graphics.to_process(&doc);
@@ -278,9 +280,11 @@ fn test_vector_svg_pathological_convert_case() {
 </document>"#,
     src_copy.display()
   );
-  let mut doc_opts = PostDocumentOptions::default();
-  doc_opts.destination = Some(work.join("out.html").display().to_string());
-  doc_opts.source_directory = Some(work.display().to_string());
+  let doc_opts = PostDocumentOptions {
+    destination: Some(work.join("out.html").display().to_string()),
+    source_directory: Some(work.display().to_string()),
+    ..Default::default()
+  };
   let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
 
   let nodes = graphics.to_process(&doc);

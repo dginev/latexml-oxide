@@ -581,7 +581,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
 
-  write_telemetry_record(cli.telemetry_out.as_deref(), &telemetry_source, wall_start, "ok", 0);
+  write_telemetry_record(
+    cli.telemetry_out.as_deref(),
+    &telemetry_source,
+    wall_start,
+    "ok",
+    0,
+  );
   process::exit(0);
 }
 
@@ -671,9 +677,7 @@ fn read_child_rusage_us() -> (u64, u64) {
 }
 
 #[cfg(not(unix))]
-fn read_child_rusage_us() -> (u64, u64) {
-  (0, 0)
-}
+fn read_child_rusage_us() -> (u64, u64) { (0, 0) }
 
 use latexml::post::PostOptions;
 

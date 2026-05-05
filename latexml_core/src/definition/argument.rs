@@ -694,8 +694,8 @@ mod tests {
 
   #[test]
   fn argwrap_value_f64_float() {
-    let a = ArgWrap::Float(Float(3.14));
-    assert!((a.value_f64() - 3.14).abs() < 1e-6);
+    let a = ArgWrap::Float(Float(3.125));
+    assert!((a.value_f64() - 3.125).abs() < 1e-6);
   }
 
   #[test]

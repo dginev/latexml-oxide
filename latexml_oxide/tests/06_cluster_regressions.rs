@@ -9,17 +9,25 @@ use latexml_core::common::{Config, OutputFormat};
 
 fn convert_clean(source: &str) {
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config { format: OutputFormat::HTML5, ..Config::default() };
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    ..Config::default()
+  };
   let mut c = Converter::from_config(cfg);
   c.initialize_session().expect("initialize");
   let r = c.convert(source.to_string());
-  assert!(r.result.is_some(), "{source}: conversion produced no result");
+  assert!(
+    r.result.is_some(),
+    "{source}: conversion produced no result"
+  );
   // Count inline `Error:<class>:` markers (parity_check.sh's lax pattern,
   // see feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE
   // within `(Building...Error:..)` envelopes, not at line starts.
-  let n_errors = r.log.match_indices("Error:")
+  let n_errors = r
+    .log
+    .match_indices("Error:")
     .filter(|(i, _)| {
-      let tail = r.log[*i + 6..].as_bytes();
+      let tail = &r.log.as_bytes()[*i + 6..];
       let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
       n_class > 0 && tail.get(n_class) == Some(&b':')
     })
@@ -32,26 +40,19 @@ fn convert_clean(source: &str) {
   assert!(
     r.status_code <= 1,
     "{source}: status_code {} (expected 0/1), status={:?}",
-    r.status_code, r.status
+    r.status_code,
+    r.status
   );
 }
 
 #[test]
-fn cluster_nbsp_csname() {
-  convert_clean("tests/cluster_regressions/nbsp_csname.tex");
-}
+fn cluster_nbsp_csname() { convert_clean("tests/cluster_regressions/nbsp_csname.tex"); }
 
 #[test]
-fn cluster_at_ifundefined() {
-  convert_clean("tests/cluster_regressions/at_ifundefined.tex");
-}
+fn cluster_at_ifundefined() { convert_clean("tests/cluster_regressions/at_ifundefined.tex"); }
 
 #[test]
-fn cluster_setdec_dec() {
-  convert_clean("tests/cluster_regressions/setdec_dec.tex");
-}
+fn cluster_setdec_dec() { convert_clean("tests/cluster_regressions/setdec_dec.tex"); }
 
 #[test]
-fn cluster_cite_uppercase() {
-  convert_clean("tests/cluster_regressions/cite_uppercase.tex");
-}
+fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppercase.tex"); }

@@ -1,10 +1,9 @@
 //! Integration test for telemetry foundation (docs/TELEMETRY.md §6 acceptance).
 //!
 //! Runs a real Converter conversion on hello.tex and verifies:
-//! 1. The telemetry struct is populated with non-zero phase totals
-//!    where applicable.
-//! 2. `sum(phase_us) / wall_us >= 0.85` (loose for tiny doc; the §6.5
-//!    tighter ≥0.92 acceptance is for the 100-paper sample, not unit tests).
+//! 1. The telemetry struct is populated with non-zero phase totals where applicable.
+//! 2. `sum(phase_us) / wall_us >= 0.85` (loose for tiny doc; the §6.5 tighter ≥0.92 acceptance is
+//!    for the 100-paper sample, not unit tests).
 //! 3. The hand-written JSON serializer produces valid JSON.
 
 use latexml::converter::Converter;
