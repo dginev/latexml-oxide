@@ -21,23 +21,49 @@ LoadDefinitions!({
   DefConditional!("\\ifAppExists");
   // \inputminted[opts]{language}{filename} — Perl L43-53 reads the
   // referenced file via FindFile + Mouth->readRawLine, then wraps the
-  // contents in \begin{minted}{language}...\end{minted}. The Rust
-  // \begin{minted} short-circuits to \begin{lstlisting} (via the
-  // listings substrate chosen on Perl L30), so we wrap the contents
-  // accordingly. Missing files silently produce an empty listing —
-  // matches the Perl branch where FindFile returns undef.
+  // contents in \begin{minted}{language}...\end{minted}, relying on
+  // mintedEnvBody to read those tokens via `gullet->readUntil(T_CS('\end'))`.
+  //
+  // We can't go through \begin{lstlisting} the same way: lstlisting's
+  // body reader is `listings_read_raw_lines("lstlisting")` which reads
+  // RAW LINES FROM THE MOUTH (the underlying TeX source), not from
+  // tokens we've pushed back into the gullet. Routing \inputminted
+  // through `\begin{lstlisting} ... \end{lstlisting}` therefore
+  // discards the file content and instead consumes lines from the
+  // surrounding `.tex` file until it hits `\end{lstlisting}` —
+  // which never appears, so it eats the rest of the document.
+  // Driver: 1903.09408 (\inputminted inside \begin{listing} broke
+  // section nesting because \end{listing} got swallowed too).
+  //
+  // Solution: bypass \begin{lstlisting} entirely and call
+  // lst_process_display directly with the file contents, mirroring
+  // what `\begin{lstlisting}` does internally but with our string in
+  // place of the read_raw_lines call.
   use latexml_core::binding::content::find_file;
   DefMacro!("\\inputminted[]{}{}", sub[(_opts, _lang, file_arg)] {
     let file_str = file_arg.to_string();
-    let mut tokens: Vec<Token> = Vec::new();
-    tokens.push(T_CS!("\\begin{lstlisting}"));
-    if let Some(path) = find_file(&file_str, None) {
-      if let Ok(contents) = std::fs::read_to_string(&path) {
-        tokens.extend(Explode!(&contents));
-      }
+    let contents = find_file(&file_str, None)
+      .and_then(|path| std::fs::read_to_string(&path).ok())
+      .unwrap_or_default();
+    bgroup();
+    state::assign_value(
+      "current_environment",
+      Stored::String(arena::pin("lstlisting")),
+      None,
+    );
+    def_macro(
+      T_CS!("\\@currenvir"),
+      None,
+      Tokens!(T_OTHER!("lstlisting")),
+      None,
+    )?;
+    let mut result = lst_process_display(None, &contents);
+    // lst_process_display ends with T_END to balance bgroup we opened above
+    // (mirrors `\begin{lstlisting}`'s convention).
+    if !matches!(result.last(), Some(t) if t.get_catcode() == Catcode::END) {
+      result.push(T_END!());
     }
-    tokens.push(T_CS!("\\end{lstlisting}"));
-    Ok(Tokens::new(tokens))
+    Ok(Tokens::new(result))
   });
   DefMacro!("\\listoflistings", "");
   DefMacro!("\\listingscaption", "Listing");
