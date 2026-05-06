@@ -344,18 +344,51 @@ LoadDefinitions!({
   // raw-load of the actual TL glossaries.sty source. Rust's port stubs
   // them here as no-ops to mirror the same set of bound CSes
   // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
-  DefMacro!("\\acrshort Semiverbatim", "");
-  DefMacro!("\\acrshortpl Semiverbatim", "");
-  DefMacro!("\\Acrshort Semiverbatim", "");
-  DefMacro!("\\Acrshortpl Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim", "");
-  DefMacro!("\\acrlongpl Semiverbatim", "");
-  DefMacro!("\\Acrlong Semiverbatim", "");
-  DefMacro!("\\Acrlongpl Semiverbatim", "");
-  DefMacro!("\\acrfull Semiverbatim", "");
-  DefMacro!("\\acrfullpl Semiverbatim", "");
-  DefMacro!("\\Acrfull Semiverbatim", "");
-  DefMacro!("\\Acrfullpl Semiverbatim", "");
+  // Acronym short/long/full family. The real glossaries.sty looks each
+  // up via the entry's stored fields (\@gls@entry{<lbl>}{short}/{long}/...).
+  // Our stub doesn't track per-entry fields with that level of fidelity, so
+  // route everything through \gls / \glspl (which produce a glossaryref via
+  // the loaded entries). Better than no-op (which silently drops the label).
+  // Driver: 1801.10219 (\acrfullpl) and 2109.08389 (shortcuts \ac via routes).
+  DefMacro!("\\acrshort Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrshortpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrshort Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrshortpl Semiverbatim", "\\Glspl{#1}");
+  DefMacro!("\\acrlong Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrlongpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrlong Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrlongpl Semiverbatim", "\\Glspl{#1}");
+  DefMacro!("\\acrfull Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrfullpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrfull Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrfullpl Semiverbatim", "\\Glspl{#1}");
+
+  // glossaries shortcuts package option (TL glossaries.sty L3725-3760):
+  // \ac → \acrshort, \acp → \acrshortpl, \acl → \acrlong, \acs → \acrshort,
+  // \acf → \acrfull, \aclp → \acrlongpl, \acfp → \acrfullpl, \acsp → \acrshortpl,
+  // and the capitalized variants. The package default unconditionally
+  // defines them when `shortcuts` is in the option list. Our binding
+  // doesn't currently inspect the option list before installing them, but
+  // the unconditional install matches the user-written intent
+  // (`\usepackage[acronym,shortcuts]{glossaries}` is the typical incantation
+  // for these CSes; defining them when shortcuts isn't requested is harmless).
+  // Driver: 2109.08389 R=4 → R=0.
+  DefMacro!("\\ac Semiverbatim",   "\\acrshort{#1}");
+  DefMacro!("\\acp Semiverbatim",  "\\acrshortpl{#1}");
+  DefMacro!("\\acl Semiverbatim",  "\\acrlong{#1}");
+  DefMacro!("\\acs Semiverbatim",  "\\acrshort{#1}");
+  DefMacro!("\\acf Semiverbatim",  "\\acrfull{#1}");
+  DefMacro!("\\aclp Semiverbatim", "\\acrlongpl{#1}");
+  DefMacro!("\\acfp Semiverbatim", "\\acrfullpl{#1}");
+  DefMacro!("\\acsp Semiverbatim", "\\acrshortpl{#1}");
+  DefMacro!("\\Ac Semiverbatim",   "\\Acrshort{#1}");
+  DefMacro!("\\Acp Semiverbatim",  "\\Acrshortpl{#1}");
+  DefMacro!("\\Acl Semiverbatim",  "\\Acrlong{#1}");
+  DefMacro!("\\Acs Semiverbatim",  "\\Acrshort{#1}");
+  DefMacro!("\\Acf Semiverbatim",  "\\Acrfull{#1}");
+  DefMacro!("\\Aclp Semiverbatim", "\\Acrlongpl{#1}");
+  DefMacro!("\\Acfp Semiverbatim", "\\Acrfullpl{#1}");
+  DefMacro!("\\Acsp Semiverbatim", "\\Acrshortpl{#1}");
 
   // \glsresetall[<glossaries>] — resets the "first use" flag for all
   // entries. We don't track first-use state, so it's a safe no-op.
