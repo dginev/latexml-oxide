@@ -16,8 +16,49 @@ LoadDefinitions!({
   // thing: load lua portion, then load .sty (which short-circuits).
   LoadPool!("LaTeX");
   InputDefinitions!("expl3", extension => Some(Cow::Borrowed("lua")), notex => true);
+
+  // Mirror expl3.sty's TeX-level guard so we know whether the .sty load
+  // about to run will actually `\input expl3-code.tex` (cascade-prone
+  // raw load) or short-circuit it (dump path). The guard inside
+  // expl3.sty is `\ifx\csname tex_let:D\endcsname\relax {\input ...}`,
+  // so an undefined `\tex_let:D` here ⇒ raw load will fire.
+  let raw_load_will_run = lookup_meaning(&T_CS!("\\tex_let:D")).is_none();
+
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+
+  // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
+  // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }
+  // { define-command }` etc. for every `\NewDocumentCommand`, but
+  // expl3-code.tex defines only the `:nnee` variant — `:nnxx` is a
+  // deprecated argument-spec letter (`x` = e-expanded, replaced by
+  // `e` in modern expl3) that xparse-2018-04-12 expects but expl3
+  // never auto-generates. Without this stub the CS is undefined →
+  // generate_error_stub installs an `<ltx:ERROR>` Constructor and
+  // EVERY `\NewDocumentCommand` invocation leaks the error element
+  // plus the unused message-body args into document text.
+  //
+  // We define `\__kernel_msg_info:nnxx` as a 4-arg no-op, matching
+  // Perl LaTeXML's effective end-state (`\msg_info:nnxx` is a
+  // log-only path; we have no log channel so a no-op is the closest
+  // equivalent).
+  //
+  // The historical "\cs_end: cascade" that this stub also masked was
+  // root-caused and fixed in latexml_core/src/binding/content.rs:
+  // \@pushfilename now runs BEFORE \@currname/\@currext are set,
+  // matching latex.ltx:15518-15519. With that fix the prior need to
+  // also stub `\g__file_record_seq` is gone.
+  //
+  // GATE: only install when the raw .sty actually re-loaded
+  // expl3-code.tex. On the dump path the guard short-circuits the
+  // re-load and the dump already provides the right state.
+  if raw_load_will_run {
+    state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+    state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+    raw_tex(r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}")?;
+    state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+    state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  }
 
   // expl3 case-folding override.
   //

@@ -267,11 +267,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     note_begin(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(&banner_key, true, Some(crate::state::Scope::Global));
   }
-  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
-  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
 
-  // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
-  // them *always*, as a matter of course TODO: This *IS* inaccurate with the Package.pm
   // Snapshot options.after / options.options BEFORE handleoptions consumes
   // them so the fallback-binding recursive call (Step 3 below) can forward
   // both to the fallback. Without this snapshot, mn1 → mn.cls.ltxml fallback
@@ -279,8 +275,24 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // astro-ph0002213 root cause).
   let original_after = options.after.clone();
   let original_options = options.options.clone();
-  // InputDefinitions, revisit at the right time and make sure it matches line-by-line (including
-  // the subordinated methods)
+  // Strict-LaTeX-kernel order (latex.ltx `\@onefilewithoptions`, L15518-L15519):
+  //   \@pushfilename                        % capture OLD \@currname / \@currext
+  //   \xdef\@currname{ <new name> }         % then update to NEW
+  //
+  // We previously set \@currname/\@currext to the new file's name BEFORE
+  // calling `before_input_handle_options` (which performs the push). That
+  // captured the NEW name in the pushed triple, so `\@currnamestack` never
+  // held the empty `{}{}{<catcode>}` initial-state triple that
+  // expl3-code.tex's `\__file_tmp:w` recursion uses as its termination
+  // sentinel. Result: under raw expl3-code.tex load (LATEXML_NODUMP=1),
+  // the recursion ate past `\group_end:` into subsequent
+  // `\seq_new:N` / `\cs_new:Npn …` lines, producing the cs_end:
+  // cascade documented in .investigation/cs_end_bisect_round22/.
+  //
+  // Now: push first (uses current/OLD \@currname), then update inside
+  // before_input_handle_options (line 756-757). For the
+  // `handleoptions == false` path no push happens, so set the names
+  // directly here.
   if options.handleoptions {
     before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
     def_macro(
@@ -289,6 +301,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       options.after,
       None,
     )?;
+  } else {
+    def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
+    def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
   }
 
   if !current_options.is_empty() {
