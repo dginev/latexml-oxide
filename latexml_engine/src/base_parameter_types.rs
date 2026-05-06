@@ -992,6 +992,15 @@ LoadDefinitions!({
     _inner: Option<&Parameters>,
     extra: &[Tokens],
   ) -> Result<KeyVals> {
+    // Skip whitespace between this arg and the previous one. TeX-style
+    // parameter matching `#1#2{...}` skips spaces before each `{`-delimited
+    // group; our `RequiredKeyVals` parameter type checks `if_next(T_BEGIN)`
+    // directly, so without an explicit skip it errors on user input like
+    //   \newglossaryentry{RIS}\n{ name={...}, ... }
+    // (\n + indentation between args[0] and args[1]). Driver: 2203.11854
+    // R=1 → R=0 — Perl raw-loads glossaries.sty so `\newglossaryentry` is
+    // a 2-arg `\newcommand` whose TeX matching handles this natively.
+    gullet::skip_spaces()?;
     if gullet::if_next(T_BEGIN!())? {
       let mut extra_iter = extra.iter();
       // subtle!!! The first extra is the prefix, according to the Perl use.
