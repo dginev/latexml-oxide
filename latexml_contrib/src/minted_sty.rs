@@ -69,10 +69,41 @@ LoadDefinitions!({
   DefMacro!("\\SetupFloatingEnvironment{}{}", "");
   DefMacro!("\\mint[]{}", "\\verb");
   DefMacro!("\\mintinline[]{}", "\\verb");
-  // TODO: Perl has complex mintedEnvBody closure for {minted} environment
-  // that collects body and delegates to lstlisting. Stubbed for now.
-  DefMacro!(T_CS!("\\begin{minted}"), "[]{}", "\\begin{lstlisting}");
-  DefMacro!(T_CS!("\\end{minted}"), None, "\\end{lstlisting}");
+  // \begin{minted}[opts]{language} — port of Perl mintedEnvBody
+  // (minted.sty.ltxml L68-85). Read raw input lines until \end{minted},
+  // then dispatch to listings' lst_process_display, mirroring Perl's
+  // `bgroup; current_environment=lstlisting; lstProcessDisplay(...)`.
+  // Without this, the legacy `\begin{minted} -> \begin{lstlisting}`
+  // expansion lets lstlisting swallow the rest of the file because
+  // it never sees its own `\end{lstlisting}` marker (the user wrote
+  // `\end{minted}`).
+  use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
+  use latexml_core::stomach::bgroup;
+  {
+    let cs = T_CS!("\\begin{minted}");
+    let params = parse_parameters("[]{}", &cs, true)?;
+    let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |_args: Vec<ArgWrap>| {
+        bgroup();
+        state::assign_value(
+          "current_environment",
+          Stored::String(arena::pin("lstlisting")),
+          None,
+        );
+        def_macro(
+          T_CS!("\\@currenvir"),
+          None,
+          Tokens!(T_OTHER!("lstlisting")),
+          None,
+        )?;
+        let text = listings_read_raw_lines("minted");
+        let result = lst_process_display(None, &text);
+        Ok(Tokens::new(result))
+      },
+    )));
+    def_macro(cs, params, expansion, None)?;
+  }
+  // No \end{minted}: mintedEnvBody fully consumed it.
   DefMacro!(T_CS!("\\begin{listing}"), None, "\\begin{figure}");
   DefMacro!(T_CS!("\\end{listing}"), None, "\\end{figure}");
 });

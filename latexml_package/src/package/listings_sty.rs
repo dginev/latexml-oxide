@@ -70,7 +70,7 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 }
 
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
-fn listings_read_raw_lines(environment: &str) -> String {
+pub fn listings_read_raw_lines(environment: &str) -> String {
   let mut lines = Vec::new();
   gullet::read_raw_line(); // Ignore 1st line (following \begin{...})
   let end_re = Regex::new(&format!(
@@ -1634,7 +1634,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 }
 
 /// Perl: lstProcessDisplay — generate full display listing with optional caption/title.
-fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
+pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let (mut body, trailer) = lst_process_block(name.clone(), text);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
