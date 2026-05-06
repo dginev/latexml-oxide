@@ -362,6 +362,15 @@ LoadDefinitions!({
   // Mirrors TL glossaries.sty L3370 `\newcommand*{\glsresetall}[1][...]`.
   DefMacro!("\\glsresetall []", "");
   DefMacro!("\\glsresetempty []", "");
+  // \glsreset{<entry>} / \glsunset{<entry>} — TL glossaries.sty L3344-3360
+  // \newcommand*{\glsreset}[1]{...}: clears/sets the "first use" flag
+  // for a single entry. We don't track first-use state, so no-op.
+  // Both forms also accept an optional [<glossaries>] in the *all variants
+  // covered above.
+  DefMacro!("\\glsreset{}", "");
+  DefMacro!("\\glsunset{}", "");
+  DefMacro!("\\glslocalreset{}", "");
+  DefMacro!("\\glslocalunset{}", "");
   // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
   // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
   // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
