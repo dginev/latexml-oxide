@@ -1,5 +1,8 @@
 use crate::package::url_sty::LEADING_BACKSLASH_RE;
 use crate::prelude::*;
+use latexml_core::document::{can_contain_qsym, get_node_qname, Document};
+use latexml_core::common::error::Result as CoreResult;
+use libxml::tree::NodeType;
 
 LoadDefinitions!({
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
@@ -362,30 +365,32 @@ LoadDefinitions!({
   });
   DefMacro!("\\hyper@@link{}{}{}", "\\hyperlink{#2}{#3}");
 
-  // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}
-  // Perl emits just `#3` / `#2` as content, then afterConstruct's
-  // localized_anchor wraps it in <ltx:anchor xml:id='#id'> at the first
-  // ancestor that can contain anchor. Rust approximates this by emitting
-  // <ltx:anchor> directly in the template — ltx:anchor is a valid Inline
-  // per the schema (Inline:=(ltx:Math,ltx:anchor,...)), so it fits where
-  // a plain text/content item was expected. Previously the template used
-  // <ltx:text xml:id='…'>, which is semantically weaker (a generic inline
-  // text wrapper vs. an anchor/target element) and didn't match the Perl
-  // semantics that downstream MathML/accessibility processors expect.
+  // Perl L258-265: \hyperdef{category}{name}{text} and \hypertarget{name}{text}.
+  // Both emit just `#3`/`#2` as content; an after_construct hook then DFS-walks
+  // the just-built subtree and wraps the first descendant that ltx:anchor is
+  // allowed to contain in <ltx:anchor xml:id='#id'>. This matches Perl's
+  // localized_anchor and lets Pandoc-style `\hypertarget{n}{\section{T}}`
+  // hoist the section out — the section structure stays intact and the
+  // anchor lands inside the section title text rather than illegally
+  // wrapping the section itself.
   DefConstructor!("\\hyperdef Semiverbatim Semiverbatim Semiverbatim",
-  "<ltx:anchor xml:id='#id'>#3</ltx:anchor>",
-  enter_horizontal => true,
+  "#3",
   properties => sub[args] {
     let cat = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let name = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&format!("{}.{}", cat, name))))
+  },
+  after_construct => sub[document, whatsit] {
+    localized_anchor(document, whatsit)?;
   });
   DefConstructor!("\\hypertarget Semiverbatim {}",
-  "<ltx:anchor xml:id='#id'>#2</ltx:anchor>",
-  enter_horizontal => true,
+  "#2",
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))
+  },
+  after_construct => sub[document, whatsit] {
+    localized_anchor(document, whatsit)?;
   });
 
   // # Should create an anchor with automatically chosen name;
@@ -928,3 +933,55 @@ LoadDefinitions!({
   );
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });
+
+// Perl: hyperref.sty.ltxml `localized_anchor`. DFS walks the current node's
+// subtree and wraps the first descendant that ltx:anchor is allowed to
+// contain. The traversal mirrors Perl's pop+unshift order: candidates are
+// popped from the back and child nodes are unshifted to the front, so we
+// visit the rightmost element of each level before descending.
+fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()> {
+  let id = match whatsit.get_property("id") {
+    Some(v) => v.to_string(),
+    None => return Ok(()),
+  };
+  let mut candidates: Vec<libxml::tree::Node> = vec![document.get_node().clone()];
+  let mut found: Option<libxml::tree::Node> = None;
+  while let Some(candidate) = candidates.pop() {
+    match candidate.get_type() {
+      Some(NodeType::ElementNode) => {
+        let qname = get_node_qname(&candidate);
+        if can_contain_qsym(pin!("ltx:anchor"), qname) {
+          found = Some(candidate);
+          break;
+        }
+        // Perl: unshift(@candidates, $candidate->childNodes); pushes the child
+        // list to the front, so the rightmost child is popped next.
+        let children = candidate.get_child_nodes();
+        for child in children.into_iter().rev() {
+          candidates.insert(0, child);
+        }
+      },
+      // Perl: any non-element node short-circuits; the candidate (text node)
+      // is then wrapped, which works because anchor.model = Inline allows text.
+      _ => {
+        found = Some(candidate);
+        break;
+      },
+    }
+  }
+  if let Some(target) = found {
+    if let Some(mut anchor) = document.wrap_nodes("ltx:anchor", vec![target])? {
+      document.set_attribute(&mut anchor, "xml:id", &id)?;
+      if document.is_open(&anchor) {
+        document.close_node(&anchor)?;
+      }
+    } else {
+      Warn!("malformed", "ltx:anchor",
+        &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));
+    }
+  } else {
+    Warn!("malformed", "ltx:anchor",
+      &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));
+  }
+  Ok(())
+}

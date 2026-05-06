@@ -453,21 +453,11 @@ pub fn read_token() -> Result<Option<Token>> {
     next_token = read_internal_token();
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
 
-    // Wow!!!!! See TeX the Program \S 309
-    // Perl: alignment check → dont_expand check → else break
-    // ALIGN_STATE tracking happens AFTER the loop (Perl L320-324)
+    // Strict-Perl translation of Gullet.pm `readToken`:
+    //   alignment column-end check → \dont_expand check → break
+    //   ALIGN_STATE tracking happens AFTER the loop, on the FINAL
+    //   token to be returned (Perl L320-324).
     if let Some(ref nextt) = next_token {
-      // NOTE: Perl tracks { and } OUTSIDE the loop (after break), but in Rust
-      // we track here BEFORE checks. This is an intentional divergence:
-      // moving tracking after the loop causes expl3 kernel loading to proceed
-      // further into problematic modules (fp). The pre-check tracking prevents
-      // alignment triggers on { tokens (count becomes 1 before the check).
-      // Both orderings produce the same result for non-alignment tokens.
-      match nextt.get_catcode() {
-        Catcode::BEGIN => increment_align_group_count(),
-        Catcode::END => decrement_align_group_count(),
-        _ => {},
-      }
       if (align_group_count() == 0) && has_reading_alignment() {
         if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
           let reading_alignment = get_reading_alignment().unwrap();
@@ -490,6 +480,17 @@ pub fn read_token() -> Result<Option<Token>> {
       break;
     } else {
       break;
+    }
+  }
+  // Perl Gullet.pm L320-324: ALIGN_STATE tracking happens AFTER the loop,
+  // applied only to the FINAL returned token. Previously this was inside
+  // the loop BEFORE the alignment check, which prevented column-end
+  // template handling on `{` tokens (count became 1 before the check).
+  if let Some(ref nextt) = next_token {
+    match nextt.get_catcode() {
+      Catcode::BEGIN => increment_align_group_count(),
+      Catcode::END => decrement_align_group_count(),
+      _ => {},
     }
   }
   Ok(next_token)

@@ -103,8 +103,20 @@ LoadDefinitions!({
     assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
-  // Perl L55-64: @namedef, @nameuse, @cons, @car, @cdr, obeycr/restorecr
-  TeX!(
+  // Perl L55-64: obeycr/restorecr.
+  //
+  // `RawTeX!()` (runtime tokenisation), not `TeX!()`: the `\gdef\obeycr{...}`
+  // body contains literal `^^M` (CR) tokens whose catcode must be 13
+  // (ACTIVE) at definition-tokenisation time, so the inner `\def^^M{...}`
+  // actually rebinds the active CR token. `TeX!()`'s compile-time
+  // tokeniser sees `^^M` at default catcode 5 (END_OF_LINE) and consumes
+  // it as a newline, so the `\def^^M{...}` would never store an active CR
+  // token. The runtime `\catcode`\^^M=13` only matters if tokenisation is
+  // deferred to runtime — which is exactly what `RawTeX!()` provides.
+  // (`\obeycr` is also re-bound as a Rust `DefPrimitive` in
+  // `latex_constructs.rs`, so the visible end-user behaviour was masked,
+  // but the bootstrap definition is still worth getting right.)
+  RawTeX!(
     r"{\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
     \@gobblecr}%
     {\catcode`\^^M=13 \gdef\@gobblecr{\@ifnextchar
@@ -112,8 +124,24 @@ LoadDefinitions!({
     \gdef\restorecr{\catcode`\^^M5 }}"
   );
 
-  // Perl L73-90: strip@pt, sanitize, dospecials
-  TeX!(
+  // Perl L73-90: strip@pt, sanitize, dospecials.
+  //
+  // `\rem@pt` MUST be defined via `RawTeX!()` (runtime tokenisation), not
+  // `TeX!()` (compile-time tokenisation). The
+  //   \catcode`P=12 \catcode`T=12 \lowercase{\def\x{\def\rem@pt##1.##2PT{...}}}
+  //   \expandafter\endgroup\x
+  // dance only works if the inner `\def\x{...}` body is tokenised AFTER
+  // `\catcode`P=12 \catcode`T=12` has taken effect. `TeX!()` calls the
+  // proc-macro `compile_tokenize_internal!`, which tokenises the whole
+  // string at compile time against the fixed sty-state cattable, so the
+  // runtime `\catcode` directives never re-tokenise the already-baked
+  // token sequence and `\rem@pt`'s stored `pt` delimiter ends up at
+  // cat-LETTER. `\the\<dimen>` emits cat-OTHER chars (Explode!), so the
+  // cat-LETTER pattern never matches and `\strip@pt\<dimen>` produces
+  // garbage like `43362pt`. `RawTeX!()` re-tokenises at runtime, so the
+  // catcode trick survives — making `\rem@pt`'s pattern faithfully
+  // cat-OTHER and `\strip@pt` Perl-equivalent.
+  RawTeX!(
     r"\begingroup
   \catcode`P=12
   \catcode`T=12

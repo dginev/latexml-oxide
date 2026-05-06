@@ -114,8 +114,33 @@ LoadDefinitions!({
   //  \let       c  gives a control sequence a token's current meaning.
   // \futurelet  c  `<cs> <token1> <token2>' is equivalent to `\let <cs> = <token2> <token1>
   // <token2>'.
-  DefPrimitive!("\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token",
-  sub[(token1, token2)] {
+  // `\let` — TeXbook Ch 24:
+  //   `\let <cs> <equals> <one optional space> <token>`
+  // where `<equals> = <optional spaces> | <optional spaces> =`,
+  // and `<one optional space>` is exactly one space if present.
+  //
+  // Perl uses the parameter spec
+  //   `\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token`
+  // which in our engine routed the optional-`=` consumption through
+  // the generic Match parameter type's unread-on-no-match recovery.
+  // Implementing the read sequence explicitly here is Perl-faithful
+  // and TeX-faithful, and avoids a subtle interaction with the
+  // generic recovery path: `<one optional space>` is always tried,
+  // independent of whether `=` was consumed.
+  DefPrimitive!("\\let SkipSpaces Token", sub[(token1)] {
+    // <equals> = optional-spaces ['=']
+    gullet::skip_spaces()?;
+    if let Some(t) = gullet::read_token()? {
+      let is_eq =
+        t.get_catcode() == latexml_core::token::Catcode::OTHER && t.text == pin!("=");
+      if !is_eq {
+        gullet::unread_one(t);
+      }
+    }
+    // <one optional space>
+    gullet::skip_one_space(false)?;
+    // <token>
+    let token2 = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
     Let!(token1, token2);
   });
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
