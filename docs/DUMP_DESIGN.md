@@ -109,13 +109,117 @@ Tells:
   `ini_tex::dump_format` takes its bootstrap snapshot. They should
   not be loaded from the dump as runtime document state.
 
-## Distribution follow-up (multi-version dumps)
+## Distribution: single-binary embedding (landed)
 
-After TL2025 dumps are robust + tested: bundle several TL versions'
-dumps (TL2022 … TL2026) into the binary via `include_bytes!` +
-runtime selection by `kpsewhich --version`. Currently dumps load
-from disk under `resources/dumps/` — fine for development, not
-fine for single-binary distribution.
+Implemented on branch `distribution-include-bytes-bundling`.
+Versioned filenames + a `build.rs`-generated manifest:
+
+* On-disk layout: `resources/dumps/plain.YYYY.dump.txt`,
+  `latex.YYYY.dump.txt`, `texlive.YYYY.version` (one triple per
+  TeXLive year). Multiple years coexist in the directory.
+* `latexml_engine/build.rs` scans the directory, stages each year's
+  files into `$OUT_DIR`, and emits an
+  `embedded_dumps_manifest.rs` table with one
+  `EmbeddedDumpYear { year, plain, latex, stamp }` entry per year
+  (sorted descending). The manifest entries are populated via
+  `include_str!`, so all bundled dumps live in the binary's `.rodata`.
+* `latexml_engine::dump_paths::detect_ambient_texlive_year()` reads
+  `kpsewhich -var-value=SELFAUTOPARENT` (last path component →
+  4-digit year), with `pdflatex --version` as fallback.
+* Resolution chain (per `latex_dump_loader.rs` and `plain_dump.rs`):
+    1. `$LATEXML_NODUMP=1` → skip (Perl `LoadFormat` parity).
+    2. `$LATEXML_DUMP_PATH` (explicit full path; year inferred from
+       filename if matchable).
+    3. `$LATEXML_DUMP_DIR/<kind>.YYYY.dump.txt` (best year-match in
+       dir, else most-recent).
+    4. Installed layout: `<exe_dir>/../resources/dumps/<kind>.YYYY.dump.txt`.
+    5. Sibling-of-exe `<kind>.YYYY.dump.txt` (test binaries).
+    6. Dev-tree `$CARGO_MANIFEST_DIR/../resources/dumps/`.
+    7. Embedded fallback (compile-time `include_str!`). Opt-out:
+       `LATEXML_NO_EMBEDDED_DUMP=1`.
+* Year-matching policy at every step: prefer ambient, else
+  most-recent year present.
+
+## Multi-TL dump acquisition (out of scope for this PR)
+
+The infra above only embeds whatever years are physically present in
+`resources/dumps/` at build time. Today that's just TL2025 — the
+ambient install. Acquiring `*.YYYY.dump.txt` for additional years
+(TL2022 … TL2026) is a separate problem with a few options.
+
+### What determines a dump's bytes
+A dump is a function of two axes:
+1. **TeXLive-year kernel inputs** — the raw `plain.tex`, `latex.ltx`,
+   `expl3-code.tex`, kernel `.sty/.cls` shipped with that TL release.
+2. **latexml-oxide revision** — the engine bindings + dump-writer
+   serialization format.
+
+So adding a TL year produces a new `*.YYYY.dump.txt` once; a Rust
+change to the dump-writer or kernel bindings invalidates **all**
+years' dumps simultaneously.
+
+### Acquisition strategies
+
+**A. Multi-TL local install (developer-driven, simplest).** Install
+TL2022..TL2026 in `/usr/local/texlive/YYYY/` from TUG historic
+ISOs. `tools/make_formats.sh` already detects the year via
+`kpsewhich -var-value=SELFAUTOPARENT`; loop:
+```
+for yr in 2022 2023 2024 2025; do
+  PATH=/usr/local/texlive/$yr/bin/x86_64-linux:$PATH \
+    tools/make_formats.sh
+done
+```
+Pros: no extra infra. Cons: ~5GB per TL year on the host.
+
+**B. Docker per year.** Use TUG's `texlive/texlive:TLYYYY-historic`
+images. Either install Rust inside the container, or build
+`latexml_oxide` outside and bind-mount the binary in for the dump
+step. Pros: clean reproducibility. Cons: large image pulls.
+
+**C. CI matrix (canonical "official" path).** GitHub Actions
+workflow with `matrix.tl_year: [2022, 2023, 2024, 2025]`; each job
+runs `install-tl --no-interaction --scheme=basic` from TUG historic
++ `make_formats.sh`, then uploads the year's dump as an artifact. A
+collect-job assembles them into a PR or pushes to a `dumps-baseline`
+orphan branch. Pros: hands-off, automated. Cons: install-tl per
+year is slow (~10–30 min), needs runner caching.
+
+**D. CTAN kernel-source vendoring.** Vendor only the raw kernel
+inputs (`plain.tex`, `latex.ltx`, `expl3-code.tex`, …) per year into
+`resources/tl-kernel/YYYY/`; teach the dumper to read from that dir
+instead of via `kpsewhich`. Pros: no TL install needed for dumping.
+Cons: must enumerate the full transitive dependency set
+(graphics, hyperref, etc.) and re-vendor as latexml-oxide expands
+its raw-load coverage.
+
+### Storage of the resulting dumps
+Currently `resources/dumps/` is gitignored. Shipping multi-year
+embedded dumps requires the files to actually be present at build
+time. Options:
+1. **Commit them.** ~1 MB latex × 5 years ≈ 5 MB. Workable but
+   diffs are noisy and they re-churn whenever the dump-writer
+   changes.
+2. **Orphan branch / git submodule** holding the dumps. Build
+   tooling does a sparse checkout into `resources/dumps/`.
+3. **GitHub Release artifacts.** A `dumps-vN` tag publishes the
+   tarball; `build.rs` downloads-if-missing — adds a compile-time
+   network dep, generally an anti-pattern for cargo crates.
+4. **Git LFS.** Out-of-band; works for git tooling but breaks
+   `cargo publish` consumers who don't have LFS configured.
+
+### Recommended phasing
+1. **Now (this PR)**: versioned-filename infra + TL2025 only.
+2. **Short term**: add `tools/regen_all_dumps.sh` for strategy A
+   (locally-installed multi-TL), document in this file +
+   `tools/make_formats.sh` header.
+3. **Medium term**: pick a storage option (orphan branch is
+   probably best — keeps `master` history clean while letting
+   `build.rs` pull on demand) and land actual TL2022..TL2024 dump
+   triples.
+4. **Long term**: CI matrix that regenerates all years whenever
+   the dump-writer or engine bindings change, opening an automated
+   PR with the refreshed dumps.
 
 ## Why text format, not compiled Rust
 
@@ -131,13 +235,16 @@ matching `latex_dump.rs`.
 
 ## Staleness detection
 
-At runtime the LaTeX dump loader compares
-`resources/dumps/texlive.version` against ambient `kpsewhich
---version`. Mismatch logs a `Warn:latexml_dump TeXLive MISMATCH` if
-the dump baseline doesn't match the running ecosystem. Opt-out:
-`LATEXML_SKIP_DUMP_STAMP_CHECK=1`. `build.rs` also watches the dump
-and stamp paths for cargo rerun purposes, but dump content is not
-embedded in the binary.
+At runtime the LaTeX dump loader compares the chosen dump's sibling
+`texlive.YYYY.version` stamp (or, for the embedded fallback, the
+manifest entry's `stamp` field) against the ambient `kpsewhich
+--version`. Mismatch logs a `Warn:latexml_dump TeXLive MISMATCH`.
+Opt-out: `LATEXML_SKIP_DUMP_STAMP_CHECK=1`. `build.rs` watches every
+versioned dump + stamp file for cargo rerun. Bundled dump content
+*is* embedded in the binary via `include_str!` (see "Distribution"
+above) — `LATEXML_NO_EMBEDDED_DUMP=1` opts out of the embedded
+fallback when iterating locally and you want "no dump" to be
+visible rather than silently using the bundled snapshot.
 
 ## See also
 

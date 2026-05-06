@@ -217,17 +217,20 @@ pub fn dump_format(
   );
 
   // Step 4: Write the dump.
-  // Default: write text dump to resources/dumps/ for build.rs embedding.
-  // With --dest: write to the specified path.
+  // Default: write text dump to resources/dumps/<kind>.<YYYY>.dump.txt for
+  // build.rs embedding. With --dest: write to the specified path.
+  let kind = if name.contains("latex") { "latex" } else { "plain" };
+  let ambient_year = latexml_engine::dump_paths::detect_ambient_texlive_year();
   let (dest, is_text_dump) = match destination {
     Some(d) if d.ends_with(".rs") => (d.to_string(), false),
     Some(d) => (d.to_string(), true),
     None => {
-      let dump_name = if name.contains("latex") {
-        "latex.dump.txt"
-      } else {
-        "plain.dump.txt"
-      };
+      let year = ambient_year.ok_or_else(|| {
+        "Could not detect ambient TeXLive year (no kpsewhich/pdflatex). \
+         Pass --dest=<path> to override the dump filename."
+          .to_string()
+      })?;
+      let dump_name = latexml_engine::dump_paths::dump_filename(kind, year);
       let dump_dir = "resources/dumps";
       std::fs::create_dir_all(dump_dir)
         .map_err(|e| format!("Failed to create {}: {}", dump_dir, e))?;
@@ -238,8 +241,10 @@ pub fn dump_format(
   if is_text_dump {
     // Write text format (loaded at runtime via dump_reader::load_from_str)
     let write_count = latexml_core::dump_writer::write_dump(Path::new(&dest), &diff)?;
-    // Save TeX Live version for staleness detection
-    save_texlive_version();
+    // Save versioned TeX Live stamp for staleness detection.
+    if let Some(year) = ambient_year {
+      save_texlive_version(year);
+    }
     eprintln!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
     eprintln!("Format dump complete: {} entries written", write_count);
     Ok(write_count)
@@ -268,7 +273,7 @@ pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, St
   Ok(count)
 }
 
-fn save_texlive_version() {
+fn save_texlive_version(year: u32) {
   let version = std::process::Command::new("kpsewhich")
     .arg("--version")
     .output()
@@ -281,7 +286,8 @@ fn save_texlive_version() {
       }
     });
   if let Some(v) = version {
-    let _ = std::fs::write("resources/dumps/texlive.version", v.trim());
+    let stamp = latexml_engine::dump_paths::version_filename(year);
+    let _ = std::fs::write(format!("resources/dumps/{}", stamp), v.trim());
   }
 }
 

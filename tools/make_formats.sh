@@ -3,10 +3,13 @@
 #
 # Builds latexml_oxide (if needed) and runs TWO --init invocations
 # (mirroring Perl LaTeXML/Makefile.PL `formats` target which has two
-# distinct dumps):
-#   --init=plain.tex → resources/dumps/plain.dump.txt
-#   --init=latex.ltx → resources/dumps/latex.dump.txt
-# for the ambient TeX Live install.
+# distinct dumps). Dumps are written with versioned filenames tagged by
+# the ambient TeX Live release year (auto-detected via
+# `kpsewhich -var-value=SELFAUTOPARENT`):
+#   --init=plain.tex → resources/dumps/plain.YYYY.dump.txt
+#   --init=latex.ltx → resources/dumps/latex.YYYY.dump.txt
+# Multiple TL-year dumps coexist in resources/dumps/; the runtime picks
+# the one that matches the ambient TL (with most-recent-year fallback).
 #
 # Call this once after checkout, after any TeX Live upgrade, or before
 # running the test suite when matching a specific texlive is required
@@ -55,21 +58,27 @@ fi
 # doesn't redefine — without the plain dump those CSes are missing
 # at runtime. The binary writes each to resources/dumps/<basename>.dump.txt
 # relative to CWD.
-echo "[make_formats] generating plain.dump.txt (--init=plain.tex)..."
+TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+if [ -z "$TL_YEAR" ]; then
+  echo "[make_formats] could not detect TeXLive year via kpsewhich SELFAUTOPARENT" >&2
+  exit 3
+fi
+
+echo "[make_formats] generating plain.${TL_YEAR}.dump.txt (--init=plain.tex)..."
 "$BIN" --init=plain.tex
 
-echo "[make_formats] generating latex.dump.txt (--init=latex.ltx)..."
+echo "[make_formats] generating latex.${TL_YEAR}.dump.txt (--init=latex.ltx)..."
 "$BIN" --init=latex.ltx
 
 if [ -n "${LATEXML_DUMP_DIR:-}" ]; then
   mkdir -p "$LATEXML_DUMP_DIR"
-  cp resources/dumps/plain.dump.txt "$LATEXML_DUMP_DIR/plain.dump.txt" 2>/dev/null || true
-  cp resources/dumps/latex.dump.txt "$LATEXML_DUMP_DIR/latex.dump.txt"
-  cp resources/dumps/texlive.version "$LATEXML_DUMP_DIR/texlive.version" 2>/dev/null || true
+  cp "resources/dumps/plain.${TL_YEAR}.dump.txt" "$LATEXML_DUMP_DIR/" 2>/dev/null || true
+  cp "resources/dumps/latex.${TL_YEAR}.dump.txt" "$LATEXML_DUMP_DIR/"
+  cp "resources/dumps/texlive.${TL_YEAR}.version" "$LATEXML_DUMP_DIR/" 2>/dev/null || true
   echo "[make_formats] dumps copied to $LATEXML_DUMP_DIR"
 fi
 
 echo "[make_formats] done."
-echo "[make_formats]   plain dump: resources/dumps/plain.dump.txt"
-echo "[make_formats]   latex dump: resources/dumps/latex.dump.txt"
+echo "[make_formats]   plain dump: resources/dumps/plain.${TL_YEAR}.dump.txt"
+echo "[make_formats]   latex dump: resources/dumps/latex.${TL_YEAR}.dump.txt"
 kpsewhich --version | head -1 | sed 's/^/[make_formats] texlive: /'

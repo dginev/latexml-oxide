@@ -71,6 +71,13 @@ pub mod plain_bootstrap; // Perl: plain_bootstrap.pool.ltxml
 mod plain_constructs; // Perl: plain_constructs.pool.ltxml
 pub mod plain_dump; // Rust: precompiled plain.ltx state (auto-generated) // Perl: math_common.pool.ltxml
 
+// Versioned dump filename conventions + ambient-TeXLive year detection.
+pub mod dump_paths;
+
+// Compile-time-bundled fallback for plain.dump.txt + latex.dump.txt.
+// Used when no on-disk dump is resolvable (single-file binary distribution).
+pub mod embedded_dumps;
+
 // LaTeX format — LoadFormat('latex') chain called by latex.rs
 pub mod latex_base; // Perl: latex_base.pool.ltxml
 pub mod latex_bootstrap; // Perl: latex_bootstrap.pool.ltxml

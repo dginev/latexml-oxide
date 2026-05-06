@@ -2,9 +2,6 @@ use crate::prelude::*;
 use once_cell::sync::Lazy;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
-static PLAIN_DUMP_PATH: Lazy<Option<String>> =
-  Lazy::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
-static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
 static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
@@ -126,36 +123,11 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
 }
 
 /// Perl `FindFile($format._dump, ...)` parity for the plain dump.
-/// Returns `true` if `plain.dump.txt` is reachable through any of the
-/// runtime resolution paths (env overrides, exe-relative install layout,
-/// dev-tree). Mirrors `plain_dump::resolve_dump_path` exactly so the
-/// branch decision in `LoadFormat('plain')` doesn't drift.
+/// Delegates to [`crate::plain_dump::plain_dump_available`], which
+/// consults env overrides, the exe-relative install layout, the
+/// dev-tree path, and the embedded fallback.
 fn plain_dump_available() -> bool {
-  if let Some(p) = PLAIN_DUMP_PATH.as_deref() {
-    if std::path::Path::new(p).is_file() {
-      return true;
-    }
-  }
-  if let Some(dir) = DUMP_DIR.as_deref() {
-    if std::path::Path::new(dir).join("plain.dump.txt").is_file() {
-      return true;
-    }
-  }
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(exe_dir) = exe.parent() {
-      if exe_dir.join("../resources/dumps/plain.dump.txt").is_file() {
-        return true;
-      }
-      if exe_dir.join("plain.dump.txt").is_file() {
-        return true;
-      }
-    }
-  }
-  let dev = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../resources/dumps/plain.dump.txt"
-  );
-  std::path::Path::new(dev).is_file()
+  crate::plain_dump::plain_dump_available()
 }
 
 LoadDefinitions!({

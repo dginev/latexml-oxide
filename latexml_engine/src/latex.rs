@@ -10,6 +10,7 @@
 ///**********************************************************************
 use crate::prelude::*;
 use once_cell::sync::Lazy;
+use std::path::Path;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 static DUMP_PATH: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
@@ -17,37 +18,46 @@ static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP
 static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
+const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps");
+
 /// Perl `FindFile($format._dump, ...)` parity for the latex dump.
-/// Mirrors `latex_dump::resolve_dump_path` (defined in
-/// `OUT_DIR/latex_dump_loader.rs`). Returns true if `latex.dump.txt`
-/// is reachable — used by `LoadFormat('latex')` to decide between the
-/// dump branch and the base branch.
+/// Returns true when any `latex.YYYY.dump.txt` is reachable through env
+/// overrides, the exe-relative installed layout, the dev-tree path, or
+/// the embedded fallback. Used by `LoadFormat('latex')` to decide
+/// between the dump branch and the base branch.
 fn latex_dump_available() -> bool {
+  if *NODUMP {
+    return false;
+  }
   if let Some(p) = DUMP_PATH.as_deref() {
-    if std::path::Path::new(p).is_file() {
+    if Path::new(p).is_file() {
       return true;
     }
   }
+  let prefer = crate::dump_paths::detect_ambient_texlive_year();
   if let Some(dir) = DUMP_DIR.as_deref() {
-    if std::path::Path::new(dir).join("latex.dump.txt").is_file() {
+    if crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "latex", prefer).is_some() {
       return true;
     }
   }
   if let Ok(exe) = std::env::current_exe() {
     if let Some(exe_dir) = exe.parent() {
-      if exe_dir.join("../resources/dumps/latex.dump.txt").is_file() {
+      let installed = exe_dir.join("../resources/dumps");
+      if crate::dump_paths::resolve_versioned_in_dir(&installed, "latex", prefer).is_some() {
         return true;
       }
-      if exe_dir.join("latex.dump.txt").is_file() {
+      if crate::dump_paths::resolve_versioned_in_dir(exe_dir, "latex", prefer).is_some() {
         return true;
       }
     }
   }
-  let dev = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../resources/dumps/latex.dump.txt"
-  );
-  std::path::Path::new(dev).is_file()
+  let dev = Path::new(DEV_DUMPS_DIR);
+  if dev.is_dir()
+    && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some()
+  {
+    return true;
+  }
+  crate::embedded_dumps::embedded_latex_dump(prefer).is_some()
 }
 
 LoadDefinitions!({
