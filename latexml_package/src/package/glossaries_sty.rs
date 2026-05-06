@@ -287,6 +287,12 @@ LoadDefinitions!({
   DefMacro!("\\makenoidxglossaries", "");
   DefMacro!("\\makeglossaries", "");
   DefMacro!("\\glsnoidxstripaccents", "");
+  // glossaries.sty `\glsenableentrycount` enables per-entry usage counting;
+  // the `\gls` family then routes through `\cgls` etc. to record usage.
+  // Rust's stub of `\gls` doesn't track usage, so this is a no-op — but it
+  // must be defined or 2309.05205 (and any paper using glossaries v4+ entry
+  // counting) hits an undefined-CS error.
+  DefMacro!("\\glsenableentrycount", "");
   DefMacro!("\\setacronymstyle{}", "");
   DefMacro!("\\glsdisablehyper", "");
   DefMacro!("\\glsdohyperlink{}{}", "#2");
