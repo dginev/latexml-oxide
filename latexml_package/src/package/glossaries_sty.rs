@@ -234,6 +234,19 @@ LoadDefinitions!({
   // paths invoke \xspace, so the package must be loaded up front.
   RequirePackage!("xspace");
 
+  // Mirror raw glossaries.sty's transitive dependency on amsmath.
+  // Perl's binding raw-loads the actual glossaries.sty (via
+  // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`),
+  // which `\RequirePackage{datatool-base}`, which
+  // `\RequirePackage{amsmath}`. Our hand-rolled binding skips the
+  // raw-load (see file header), so the chain is broken and any paper
+  // that uses glossaries plus an amsmath-defined CS like
+  // \DeclareMathOperator without an explicit \usepackage{amsmath}
+  // hits "Error:undefined:\DeclareMathOperator" cascading through
+  // every operator the paper declares (e.g. canvas paper 2303.16633:
+  // 15 such errors, 0 in Perl).
+  RequirePackage!("amsmath");
+
   // ======================================================================
   // Options
   // ======================================================================
@@ -699,6 +712,100 @@ LoadDefinitions!({
       };
       let symbol = glo_lookup(&key, "symbol");
       Ok(gls_ref_tokens(&list, &key, &symbol))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+
+  // \glsfirst, \Glsfirst, \glsfirstplural, \Glsfirstplural — emit the
+  // entry's `first` form (long form for acronyms, falls back to `text`
+  // when no separate first-use form was declared). Same wrapping as
+  // \gls. Several arXiv papers (e.g. 2303.16633) use \glsfirst inside
+  // their definitions; without the binding the CS hits the undefined
+  // path. Perl's Bruce-binding raw-loads glossaries.sty which provides
+  // these via \newrobustcmd*; we mirror the user-facing behaviour
+  // (return formatted entry text + glossaryref wrapping).
+  {
+    let cs = T_CS!("\\glsfirst");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "first");
+      if text.is_empty() {
+        text = gls_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsfirst");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "first");
+      if text.is_empty() {
+        text = gls_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\glsfirstplural");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "firstplural");
+      if text.is_empty() {
+        text = gls_plural_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsfirstplural");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "firstplural");
+      if text.is_empty() {
+        text = gls_plural_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  // \glsdesc / \Glsdesc — emit the entry's description.
+  {
+    let cs = T_CS!("\\glsdesc");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let text = glo_lookup(&key, "description");
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsdesc");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let text = glo_lookup(&key, "description");
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
     });
     def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
   }
