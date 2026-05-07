@@ -296,33 +296,51 @@ LoadDefinitions!({
         // recorded in the comment above (astro-ph9903386 leak).
         let is_def_family = token.with_cs_name(|cs| {
           matches!(cs, "\\def" | "\\gdef"
-            | "\\let" | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
+            | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
         });
-        // \edef and \xdef are def-family BUT their DefExpanded body parameter
-        // expands tokens eagerly (`\itdefault` → `it` letters etc.). When the
-        // captured Invocation is reverted into the XUntil collector, the
-        // expanded letters lose their semantic grouping (e.g. `\edef\f@shape{\itdefault}`
-        // becomes `\edef i t` with `\f@shape` and braces dropped on revert).
-        // Capture them RAW: read `<Token> <until-brace>{<balanced-raw>}`
-        // without expansion. Witness: 2403.14274 IEEEconf
-        // `\begin{keywords}\itshape …` — `\itshape` expands through
-        // `\fontshape{\itdefault}` → `\edef\f@shape{\itdefault}`, captured as
-        // garbled letter sequence without the def-target.
-        let is_edef_family = token.with_cs_name(|cs| matches!(cs, "\\edef" | "\\xdef"));
-        if is_edef_family {
+        // \edef, \xdef AND \let need their target/body captured RAW — not
+        // through read_arguments→Invocation. Reasons:
+        //   - \edef/\xdef: DefExpanded body parameter expands eagerly
+        //     (`\itdefault` → `it`); Invocation revert drops the target
+        //     Token and the {…}-braces, leaving `\edef i t \selectfont`
+        //     stream that re-reads as malformed at EOF.
+        //     Driver: 2403.14274 IEEEconf `\itshape …`.
+        //   - \let: DefToken/Token reversion in some test paths emits the
+        //     `\let` token alone without the cs1/cs2 args, then the body
+        //     re-reads `\let \let \let …` recursively as `\let {…}` with
+        //     the next `\let`'s target = `{` — triggering 100-deep
+        //     recursion through `\lx@acronym`. Driver: 2103.11356 elsart
+        //     `\begin{keyword}\ac{CNNs} …`.
+        // Capture all three RAW: `<token> <skipped-spaces> <Token>
+        // <until-brace> {<balanced-raw>}`. Preserves original input
+        // exactly so re-emission re-reads cleanly.
+        let is_def_raw_capture =
+          token.with_cs_name(|cs| matches!(cs, "\\edef" | "\\xdef" | "\\let"));
+        if is_def_raw_capture {
           tokens.push(token);
           gullet::skip_spaces()?;
           if let Some(target) = gullet::read_token()? {
             tokens.push(target);
           }
-          // UntilBrace
-          if let Some(prebrace) = gullet::read_until_brace()? {
-            tokens.extend(prebrace.unlist());
+          // \let has no UntilBrace + body — just `<target> <value>`.
+          // \edef/\xdef have UntilBrace + balanced-body.
+          let is_let = token.with_cs_name(|cs| cs == "\\let");
+          if is_let {
+            // Read second token (the value to alias to).
+            // Optional `=` and one space are also valid in real TeX
+            // — DefToken handles those, but Token doesn't. Peek for `=`.
+            gullet::skip_spaces()?;
+            if let Some(value) = gullet::read_token()? {
+              tokens.push(value);
+            }
+          } else {
+            if let Some(prebrace) = gullet::read_until_brace()? {
+              tokens.extend(prebrace.unlist());
+            }
+            tokens.push(T_BEGIN!());
+            tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
+            tokens.push(T_END!());
           }
-          // Balanced body, no expansion
-          tokens.push(T_BEGIN!());
-          tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
-          tokens.push(T_END!());
         } else if is_real_expandable || is_def_family {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
