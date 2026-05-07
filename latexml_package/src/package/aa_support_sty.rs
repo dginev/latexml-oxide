@@ -267,7 +267,10 @@ LoadDefinitions!({
   // Constructor) is intentional — the chemical-element XMArg wrapper is
   // not used for math-parser disambiguation.
   DefMacro!("\\element[][][][]{}", "\\ensuremath{{}^{#2}\\mathrm{#5}}");
-  DefMacro!("\\isotope[][][][]{}", "\\ensuremath{{}^{#2}\\mathrm{#5}}");
+  // Perl aa_support.sty.ltxml does NOT define \isotope (only \element). User
+  // papers (e.g. 2011.10587) provide their own `\newcommand\isotope[2]{...}`
+  // which our pre-definition would silently shadow, producing a math-mode
+  // arg-consumption cascade. Stay Perl-faithful: don't define \isotope here.
 
   // Symbols — Perl L271-276
   DefPrimitive!("\\sun", "\u{2609}");
