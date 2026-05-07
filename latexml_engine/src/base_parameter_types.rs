@@ -295,10 +295,35 @@ LoadDefinitions!({
         // family to avoid the `\hspace`/dimension-reader over-read issue
         // recorded in the comment above (astro-ph9903386 leak).
         let is_def_family = token.with_cs_name(|cs| {
-          matches!(cs, "\\def" | "\\edef" | "\\gdef" | "\\xdef"
+          matches!(cs, "\\def" | "\\gdef"
             | "\\let" | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
         });
-        if is_real_expandable || is_def_family {
+        // \edef and \xdef are def-family BUT their DefExpanded body parameter
+        // expands tokens eagerly (`\itdefault` → `it` letters etc.). When the
+        // captured Invocation is reverted into the XUntil collector, the
+        // expanded letters lose their semantic grouping (e.g. `\edef\f@shape{\itdefault}`
+        // becomes `\edef i t` with `\f@shape` and braces dropped on revert).
+        // Capture them RAW: read `<Token> <until-brace>{<balanced-raw>}`
+        // without expansion. Witness: 2403.14274 IEEEconf
+        // `\begin{keywords}\itshape …` — `\itshape` expands through
+        // `\fontshape{\itdefault}` → `\edef\f@shape{\itdefault}`, captured as
+        // garbled letter sequence without the def-target.
+        let is_edef_family = token.with_cs_name(|cs| matches!(cs, "\\edef" | "\\xdef"));
+        if is_edef_family {
+          tokens.push(token);
+          gullet::skip_spaces()?;
+          if let Some(target) = gullet::read_token()? {
+            tokens.push(target);
+          }
+          // UntilBrace
+          if let Some(prebrace) = gullet::read_until_brace()? {
+            tokens.extend(prebrace.unlist());
+          }
+          // Balanced body, no expansion
+          tokens.push(T_BEGIN!());
+          tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
+          tokens.push(T_END!());
+        } else if is_real_expandable || is_def_family {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
             tokens.extend(Invocation!(token, args).unlist());
