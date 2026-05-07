@@ -29,8 +29,15 @@ static HOME_PATH: Lazy<String> = Lazy::new(|| match dirs::home_dir() {
   _ => s!("~"),
 });
 static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
+// Match Perl LaTeXML's permissive filename behavior: filenames may
+// contain commas, parens, ampersands, etc. that some user paths legitimately
+// use (e.g. `\input{5-Ack,terms}` resolving to `5-Ack,terms.tex`). Only
+// flag genuinely dangerous patterns: shell metacharacters that would
+// enable command injection via kpathsea or `\openin`. Driver: 2308.13679
+// `\input{5-Ack,terms}`. Mirrors Perl's missing nasty-check (Perl simply
+// passes filenames to kpathsea without a pre-filter).
 static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap());
+  Lazy::new(|| Regex::new(r#"[`$;|<>"\x00\n\r]"#).unwrap());
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
