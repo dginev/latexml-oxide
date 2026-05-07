@@ -5,12 +5,17 @@ Perl LaTeXML on TL2025 with `--preload=ar5iv.sty
 --path=~/git/ar5iv-bindings/bindings` produces 0 errors. Mission completes
 when every in-scope paper produces 0 errors on Rust too.
 
-**Status**: Round-22 active 2026-05-07. Round-20 Phase A Gate 0
-closed 2026-05-03 at **99,829 / 100,003 = 99.83%** raw OK on the 100k
-canvas. Round-22 sprint targets the 335-paper baseline-failure set
-(`~/round22_validate/inputs/`), now at **287/330 OK = 87.0%** projected
-(v17 sweep in flight, last full sweep v16 at 274/330 = 83.0%, baseline
-v10 = 249/350 = 71.1%). Round-21 work archived in `docs/archive/`.
+**Status**: Round-23 active 2026-05-07 (continuing from round-22).
+Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
+99.83%** raw OK on the 100k canvas. Round-22 sprint targeted the
+335-paper baseline-failure set (`~/round22_validate/inputs/`):
+- v10 baseline: 249/350 OK = 71.1%
+- v16 (mid-round): 274/330 = 83.0%
+- v17 (T1-cmd-loop fix): 289/330 = 87.6%
+- v18 (open_text walk + isotope + etoolbox-& + biblatex Let): 292/328 = 89.0%
+- **v19** (XUntil constructor-args + aas_support C/L/R): **294/328 = 89.6%**
+
+Round-21 work archived in `docs/archive/`.
 
 **True Rust regression count: 0** *for ported error conditions*.
 [Caveat: Error/Fatal coverage audit](ERROR_PARITY_AUDIT.md) reveals
