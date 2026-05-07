@@ -670,9 +670,20 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml lines 87-91 (locked=>1 prevents `\tag` from
   // being redefined by downstream classes/packages — protects the
   // star-variant `\let\fnum@equation\relax` formatting-off semantics).
+  //
+  // Use `\edef\theequation{#2}` rather than the upstream
+  // `\expandafter\def\expandafter\theequation\expandafter{#2}` chain.
+  // The chain only one-step-expands the FIRST token of #2, leaving any
+  // remaining `\theequation` reference inside #2 to be a recursive
+  // self-reference under the new def. Drivers like
+  // `\tag{\thesection.\theequation}` then OOM on infinite expansion.
+  // Perl has the same upstream bug; using \edef matches the comment's
+  // stated intent ("expand \theequation, but in text mode!").
+  // Driver: 2406.07616 SM.tex (and any amsmath doc using
+  // \tag{\thesection.\theequation}\stepcounter pattern).
   DefMacro!(
     "\\tag OptionalMatch:* {}",
-    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}",
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\edef\\theequation{#2}\\lx@make@tags{equation}}",
     locked => true
   );
 
