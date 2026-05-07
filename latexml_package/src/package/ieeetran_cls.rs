@@ -27,12 +27,14 @@ LoadDefinitions!({
   DeclareOption!("twocolumn", {});
   DeclareOption!("peerreview", {});
   DeclareOption!("peerreviewca", {});
-  ProcessOptions!();
-
-  // Load article as base
-  load_class("article", Vec::new(), Tokens!())?;
-
-  // Option conditionals — Perl L18-108
+  // Option conditionals — Perl L18-108. These are the FALSE defaults
+  // (mirroring `\newif\if@CLASSOPTIONcompsoc \@CLASSOPTIONcompsocfalse`).
+  // MUST come BEFORE ProcessOptions so the option-handler `\let` flips to
+  // `\iftrue` survive — the previous order placed these after ProcessOptions
+  // and silently clobbered any positive option flag the user passed (driver
+  // 2308.01854 `\documentclass[10pt,journal,compsoc]{IEEEtran}` had
+  // \ifCLASSOPTIONcompsoc unexpectedly false → user's
+  // `\ifCLASSOPTIONcompsoc \usepackage{url} \fi` skipped → \url undefined).
   Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
@@ -44,6 +46,11 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");
   Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
   Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
+
+  ProcessOptions!();
+
+  // Load article as base
+  load_class("article", Vec::new(), Tokens!())?;
 
   // Real IEEEtran.cls L689 `\newif\if@technote \@technotefalse` — private flag
   // (separate from the public `\ifCLASSOPTION*` mirrors). User code in
