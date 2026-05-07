@@ -3353,10 +3353,12 @@ impl Document {
     if font_opt.is_none() {
       if let Some(ref attrs) = attributes {
         if let Some(fontid) = attrs.get("_font") {
-          font_opt = self
-            .node_fonts
-            .get(&fontid.parse::<u64>().unwrap())
-            .cloned()
+          // Tolerate non-numeric `_font` attributes — see get_node_font
+          // for the same defensive read; same panic site, different
+          // call. Driver: 2406.14188.
+          if let Ok(id) = fontid.parse::<u64>() {
+            font_opt = self.node_fonts.get(&id).cloned();
+          }
         }
       }
     }
