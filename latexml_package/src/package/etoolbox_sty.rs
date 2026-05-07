@@ -198,7 +198,14 @@ LoadDefinitions!({
     tfalse
   } }, protected => true);
 
-  TeX!(
+  // RawTeX! (not TeX!): bodies in this block use `&` as a delimiter argument
+  // inside `\ifstrempty`, `\etb@ifcounter`, etc. At runtime, etoolbox sets
+  // `\catcode`\&=3` (MATH_SHIFT) earlier in the load. RawTeX tokenizes
+  // here-and-now so those `&` get catcode 3, not the compile-time default
+  // ALIGN_TAB (4). Without this, `\ifstrempty{}{...}{...}` inside an `align`
+  // environment fires column-template handling on the `&` arg to `\ifx`, which
+  // opens a stray `\lx@begin@inline@math` frame (driver: 1904.02116).
+  RawTeX!(
     r"
 
 % {<csname>}{<true>}{<false>}
