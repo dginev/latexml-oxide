@@ -43,7 +43,11 @@ LoadDefinitions!({
         i += 1;
       }
       if i >= len { break; }
-      let _key = body_str[key_start..i].trim().to_lowercase();
+      // Use char-vec slicing (NOT byte slicing on body_str) — affiliation
+      // text often contains UTF-8 multi-byte chars (accented names,
+      // diacritics) where the char-count `i` is not a byte boundary.
+      // Driver: 2407.00104 panic at `body_str[val_start..i]`.
+      let _key: String = chars[key_start..i].iter().collect::<String>().trim().to_lowercase();
       i += 1; // skip '='
 
       // Skip whitespace after '='
@@ -64,7 +68,7 @@ LoadDefinitions!({
           else if chars[i] == '}' { depth -= 1; }
           if depth > 0 { i += 1; }
         }
-        value = body_str[val_start..i].trim().to_string();
+        value = chars[val_start..i].iter().collect::<String>().trim().to_string();
         if i < len { i += 1; } // skip closing '}'
       } else {
         // Plain value: read until next comma or end
@@ -72,7 +76,7 @@ LoadDefinitions!({
         while i < len && chars[i] != ',' {
           i += 1;
         }
-        value = body_str[val_start..i].trim().to_string();
+        value = chars[val_start..i].iter().collect::<String>().trim().to_string();
       }
 
       // Only include known affiliation keys with non-empty values
