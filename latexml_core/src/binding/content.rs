@@ -432,9 +432,22 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Step 3: Try fallback (strip version suffixes) before raw TeX
     // Perl Package.pm L2118-2121: FindFile_fallback
     // e.g. natbib-arxiv_v2.sty → natbib.sty, icml2024.sty → icml.sty
+    //
+    // BUT skip the fallback if the name carries a directory prefix —
+    // that's a strong signal of a user-local file (`assets/equations`,
+    // `./sty/foo`), not a versioned vendor package. The fallback
+    // strips the directory and may match a contrib binding with a
+    // base name like "equations", silently substituting the wrong
+    // binding for the user's own `<paper>/assets/equations.sty`.
+    // Driver: 2405.18387 (\usepackage{assets/equations} fell through
+    // to latexml_contrib's equations.sty.ltxml, missing the user's
+    // local \averageprecision macro). Perl's FindFile_fallback only
+    // looks in `ltxml_paths` — it doesn't have a parallel
+    // contrib-binding registry, so it doesn't suffer this collision.
+    let has_path_prefix = name.contains('/') || name.contains('\\');
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml {
+    } else if !options.noltxml && !has_path_prefix {
       if let Some(fallback) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",
@@ -1373,9 +1386,19 @@ impl Default for RequireOptions {
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
+  // EXCEPTION: a name with a directory prefix (`assets/equations`,
+  // `./sty/foo`) is a strong signal of a user-local style file that
+  // ships with the paper. INCLUDE_STYLES=false is meant to gate
+  // arbitrary system-wide raw .sty loads; it shouldn't suppress files
+  // the user explicitly bundled with their submission. Driver:
+  // 2405.18387 — `\usepackage{assets/equations}` was silently dropped
+  // (notex=true skipped raw load) and \averageprecision came up
+  // undefined, even though `assets/equations.sty` was right there.
+  let has_path_prefix = name.contains('/') || name.contains('\\');
   if options.notex.is_none()
     && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
+    && !has_path_prefix
   {
     options.notex = Some(true);
   }
