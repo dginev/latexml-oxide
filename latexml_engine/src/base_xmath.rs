@@ -475,7 +475,11 @@ LoadDefinitions!({
           && !n.has_attribute("idref") {
         refs.push(n);    // we'll fill these in next
       } else { // generate & record ids for all referenced noces
-        let key = n.get_attribute("_xmkey").unwrap();
+        // Defensive: XPath should only return nodes with @_xmkey, but
+        // libxml2's tree mutation between query and iteration can leave
+        // a node without the attribute (driver: 2105.04174 panic at
+        // get_attribute("_xmkey").unwrap()).
+        let Some(key) = n.get_attribute("_xmkey") else { continue };
         if let Entry::Vacant(e) = ids.entry(key) {
           document.generate_id(&mut n, "")?; // Generate id if none already.
           e.insert(n.get_attribute_ns("id",XML_NS).unwrap_or_default());
@@ -483,7 +487,7 @@ LoadDefinitions!({
       }
     }
     for mut r in refs {                        // Now fill in the references
-      let r_xmkey = r.get_attribute("_xmkey").unwrap();
+      let Some(r_xmkey) = r.get_attribute("_xmkey") else { continue };
       if let Some(idref) = ids.get(&r_xmkey) {
         document.set_attribute(&mut r, "idref", idref)?;
       } else {
