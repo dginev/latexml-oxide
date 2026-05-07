@@ -3217,8 +3217,14 @@ impl Document {
     if let Some(element) = xml::closest_element(node) {
       // Use the closest element (for text nodes, this is the parent element)
       if let Some(fontid) = element.get_attribute("_font") {
-        if let Some(fnt) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
-          return fnt;
+        // Tolerate non-numeric `_font` attributes — they can occur when
+        // a corrupted property propagates across reversion (driver:
+        // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
+        // to the default font instead of aborting the run.
+        if let Ok(id) = fontid.parse::<u64>() {
+          if let Some(fnt) = self.node_fonts.get(&id) {
+            return fnt;
+          }
         }
       }
     }
