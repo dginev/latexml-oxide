@@ -117,6 +117,16 @@ LoadDefinitions!({
   DefMacro!("\\preface",           None);
   DefMacro!("\\thankstext",        None);
   DefMacro!("\\numberofauthors{}", None);
+  // Conference-template "equal contribution" markers. AAAI's aaai22.sty
+  // and similar define \equalcontrib only inside \@maketitle (locally
+  // scoped), so user code that calls it inside \author{} (before
+  // \maketitle) hits an undefined-CS error. neurips_*.sty and others
+  // also use this name. Pre-define to no-op at top level — the local
+  // \@maketitle redefinition will override at \maketitle time.
+  // Driver: 2103.05277, 2111.06599, 2006.08767 — 3 papers in the
+  // canvas-failing pool.
+  DefMacro!("\\equalcontrib",      None);
+  DefMacro!("\\equalcont",         None);
   DefMacro!("\\resumen{}",         "\\@add@frontmatter{ltx:abstract}{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
