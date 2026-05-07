@@ -669,6 +669,36 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
+  // Heuristic 1.5: deprioritize obvious vendor template / docs files.
+  // Many user uploads bundle the publisher's template along with the
+  // user's own paper. Examples we've hit: 1907.06674 ships
+  // `elsarticle-template-harv.tex`, `elsarticle-template-num.tex`,
+  // `elsdoc.tex` AND the user's `main_resubmit.tex` — picker chose
+  // `elsdoc.tex` (elsarticle docs file with `\includegraphics{...pdf}`
+  // examples) and produced 101 errors.
+  //
+  // Pattern: filenames containing `template`, ending in `-doc.tex`/
+  // `-docs.tex`/`elsdoc.tex`/`README.tex`. If the candidate set has
+  // BOTH template-looking and non-template files, drop the templates.
+  if candidates.len() > 1 {
+    let is_template_name = |f: &PathBuf| -> bool {
+      let n = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+      n.contains("template")
+        || n == "elsdoc.tex"
+        || n.ends_with("-doc.tex")
+        || n.ends_with("-docs.tex")
+        || n.starts_with("readme")
+    };
+    let non_template: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| !is_template_name(f))
+      .cloned()
+      .collect();
+    if !non_template.is_empty() && non_template.len() < candidates.len() {
+      candidates = non_template;
+    }
+  }
+
   // Heuristic 2: prefer files with a matching .bbl file
   // (.bbl is the strongest "this is the main file" signal — present
   // only when the user has compiled the doc through bibtex/biber.)
