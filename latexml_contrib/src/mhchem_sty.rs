@@ -44,10 +44,41 @@ LoadDefinitions!({
   // \ensuremath wraps body in math mode if not already in math, so
   // `_`/`^` parse as scripts in both contexts. Loses roman-text
   // rendering of plain text chemistry, but avoids cascading errors.
-  // Witness: 0907.1390 (`\ce{N_2}, \ce{O_2}` in text → R=3→0).
-  DefMacro!("\\ce{}",  "\\ensuremath{#1}");
-  DefMacro!("\\cee{}", "\\ensuremath{#1}");
-  DefMacro!("\\cf{}",  "\\ensuremath{#1}");
+  //
+  // Strip embedded `$` toggles from the body before re-entering math:
+  // mhchem v3 papers commonly write `\ce{Cs$_x$MA$_{1-x}$PbI3}` where
+  // the `$` pairs are mhchem's own subscript-grouping hint, NOT real
+  // math toggles. Without stripping, `\ensuremath{...$_x$...}` re-toggles
+  // out of math at the first `$`, leaving `_x` in text mode — which
+  // errors with "Script _ can only appear in math mode".
+  // Witnesses: 1908.05236 (\ce{MAPb(I_{1-x}Br_x)3}), 0907.1390 (\ce{N_2}).
+  fn strip_math_toggles(arg: &Tokens) -> Tokens {
+    let stripped: Vec<Token> = arg.unlist_ref().iter().copied()
+      .filter(|t| t.get_catcode() != Catcode::MATH)
+      .collect();
+    Tokens::new(stripped)
+  }
+  DefMacro!("\\ce{}", sub[(body)] {
+    let stripped = strip_math_toggles(&body);
+    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
+    result.extend(stripped.unlist());
+    result.push(T_END!());
+    Ok(Tokens::new(result))
+  });
+  DefMacro!("\\cee{}", sub[(body)] {
+    let stripped = strip_math_toggles(&body);
+    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
+    result.extend(stripped.unlist());
+    result.push(T_END!());
+    Ok(Tokens::new(result))
+  });
+  DefMacro!("\\cf{}", sub[(body)] {
+    let stripped = strip_math_toggles(&body);
+    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
+    result.extend(stripped.unlist());
+    result.push(T_END!());
+    Ok(Tokens::new(result))
+  });
 
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
