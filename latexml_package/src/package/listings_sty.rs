@@ -1916,8 +1916,17 @@ LoadDefinitions!({
   DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
     let env_name = name.to_string();
     let n: usize = n_arg.value_of() as usize;
-    // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt)
-    let has_opt = opt_arg.as_ref().is_some_and(|t| !t.is_empty());
+    // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).
+    // `[N][default]` syntax: N total args; if [default] present, the FIRST
+    // arg is OPTIONAL with that default value. The default IS allowed to
+    // be empty (`\lstnewenvironment{mycode}[1][]{...}{...}` is the
+    // typical "1-arg optional with empty default" form).
+    // Was: `is_some_and(|t| !t.is_empty())` — empty-default form was
+    // mis-classified as "no optional", producing a `{}` required-arg
+    // env that errored on `\begin{mycode}[caption=...]`. Driver: 2301.10618
+    // acmart paper using `\lstnewenvironment{mycode}[1][]{...}` then
+    // `\begin{mycode}[caption=...,label=...]`.
+    let has_opt = opt_arg.is_some();
     let mut param_spec = String::new();
     if has_opt {
       let opt_text = opt_arg.as_ref().unwrap().to_string();
