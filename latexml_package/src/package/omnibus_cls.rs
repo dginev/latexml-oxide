@@ -127,6 +127,39 @@ LoadDefinitions!({
   // canvas-failing pool.
   DefMacro!("\\equalcontrib",      None);
   DefMacro!("\\equalcont",         None);
+  // Springer Nature `sn-jnl.cls` style author-name and org-address parts
+  // (cls L519-525, L599-606). The cls defines them as low-level `\def`s
+  // wrapped in `\leavevmode\hbox{...}`, but our raw-class load path skips
+  // class .cls files by default (INCLUDE_CLASSES=false unless rawclasses
+  // option is passed), so the user's `\author{\fnm{First} \sur{Last}}` hits
+  // undefined CS. Stub at OmniBus level as passthrough — for unknown
+  // Springer-style classes that fall through to OmniBus, the author name
+  // renders as plain text in <ltx:personname>. Doesn't affect papers
+  // where the cls binding IS loaded (those override). Driver: 2403.18604,
+  // 2110.04544, ~40 sn-jnl papers in canvas pool.
+  DefMacro!("\\fnm{}",   "#1");      // first name
+  DefMacro!("\\sur{}",   " #1");     // surname (cls inserts ~)
+  DefMacro!("\\spfx{}",  "#1");      // surname prefix (e.g. "van")
+  DefMacro!("\\pfx{}",   "#1");      // name prefix (e.g. "Dr.")
+  DefMacro!("\\sfx{}",   "#1");      // name suffix
+  DefMacro!("\\tanm{}",  "#1");      // title-as-name
+  DefMacro!("\\dgr{}",   "#1");      // degree
+  DefMacro!("\\orgdiv{}",     "#1");
+  DefMacro!("\\orgname{}",    "#1");
+  DefMacro!("\\orgaddress{}", "#1");
+  DefMacro!("\\street{}",     "#1");
+  DefMacro!("\\postcode{}",   "#1");
+  DefMacro!("\\city{}",       "#1");
+  DefMacro!("\\country{}",    "#1");
+  // `\state` is a TeX 4-token `\count` register inside many classes (article
+  // declares it as `\newcount` for some configurations). We do NOT stub it
+  // here — overlapping with the kernel register would break papers that
+  // expect the integer. The few sn-jnl papers using `\state{...}` for
+  // address components will keep that error; all the OTHER fields above
+  // are non-conflicting. Same caution for `\affil` — already overloaded
+  // by amsart and other classes; leaving it to specific class bindings.
+  DefMacro!("\\bibcommenthead", None);
+  DefMacro!("\\jyear[]",        None);
   DefMacro!("\\resumen{}",         "\\@add@frontmatter{ltx:abstract}{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
