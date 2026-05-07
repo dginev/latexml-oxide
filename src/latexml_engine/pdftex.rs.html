@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/pdftex.rs`."><title>pdftex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e95e73209 2026-05-05)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>pdftex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/pdftex.rs`."><title>pdftex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (365c0e1d7 2026-05-06)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>pdftex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::cmp::Ordering;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="macro">LoadDefinitions!</span>({
@@ -130,169 +130,188 @@
 <a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\pdfretval"               </span>=&gt; Number::new(<span class="number">0</span>));
 <a href=#131 id=131 data-nosnippet>131</a>
 <a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// \pdfximage [ image attr spec ] general text (h, v, m)
-<a href=#133 id=133 data-nosnippet>133</a>  // \pdfrefximage object number (h, v, m)
-<a href=#134 id=134 data-nosnippet>134</a>  // \pdfannot annot type spec (h, v, m)
-<a href=#135 id=135 data-nosnippet>135</a>  // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfstartlink"</span>, <span class="prelude-val">None</span>);
-<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// \pdfendlink (h, m)
-<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfendlink"</span>, <span class="prelude-val">None</span>);
-<a href=#139 id=139 data-nosnippet>139</a>  <span class="comment">// \pdfoutline outline spec (h, v, m)
-<a href=#140 id=140 data-nosnippet>140</a>  // \pdfdest dest spec (h, v, m)
-<a href=#141 id=141 data-nosnippet>141</a>  // \pdfthread thread spec (h, v, m)
-<a href=#142 id=142 data-nosnippet>142</a>  // \pdfstartthread thread spec (v, m)
-<a href=#143 id=143 data-nosnippet>143</a>  // \pdfendthread (v, m)
-<a href=#144 id=144 data-nosnippet>144</a>  // \pdfsavepos (h, v, m)
-<a href=#145 id=145 data-nosnippet>145</a>
-<a href=#146 id=146 data-nosnippet>146</a>  // See lxRDFa for ideas how this info might be used!
-<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfinfo{}"</span>, <span class="prelude-val">None</span>);
-<a href=#148 id=148 data-nosnippet>148</a>
-<a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">// Ugh, what a mess of ugly syntax....
-<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">DefParameterType!</span>(OpenActionSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
-<a href=#151 id=151 data-nosnippet>151</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"openaction"</span>])<span class="question-mark">? </span>{
-<a href=#152 id=152 data-nosnippet>152</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"user"</span>, <span class="string">"goto"</span>])<span class="question-mark">? </span>{
-<a href=#153 id=153 data-nosnippet>153</a>        <span class="comment">// etc....
-<a href=#154 id=154 data-nosnippet>154</a>      </span>} } }), optional =&gt; <span class="bool-val">true</span>);
-<a href=#155 id=155 data-nosnippet>155</a>
-<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
-<a href=#157 id=157 data-nosnippet>157</a>  // Reads and discards the pdfTeX annotation-spec prefix:
-<a href=#158 id=158 data-nosnippet>158</a>  //   reserveobjnum  | useobjnum &lt;n&gt;  | stream [attr &lt;text&gt;]
-<a href=#159 id=159 data-nosnippet>159</a>  // then consumes the trailing general-text spec.
-<a href=#160 id=160 data-nosnippet>160</a>  </span><span class="macro">DefParameterType!</span>(OpenAnnotSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
-<a href=#161 id=161 data-nosnippet>161</a>    <span class="kw">if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"reserveobjnum"</span>])<span class="question-mark">?</span>.is_some() {
-<a href=#162 id=162 data-nosnippet>162</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(ArgWrap::None);
-<a href=#163 id=163 data-nosnippet>163</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"useobjnum"</span>])<span class="question-mark">?</span>.is_some() {
-<a href=#164 id=164 data-nosnippet>164</a>      <span class="kw">let _ </span>= gullet::read_number()<span class="question-mark">?</span>;
-<a href=#165 id=165 data-nosnippet>165</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"stream"</span>])<span class="question-mark">?</span>.is_some()
-<a href=#166 id=166 data-nosnippet>166</a>      &amp;&amp; read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"attr"</span>])<span class="question-mark">?</span>.is_some() {
-<a href=#167 id=167 data-nosnippet>167</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#168 id=168 data-nosnippet>168</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#169 id=169 data-nosnippet>169</a>      }
-<a href=#170 id=170 data-nosnippet>170</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#172 id=172 data-nosnippet>172</a>  }), optional =&gt; <span class="bool-val">true</span>);
-<a href=#173 id=173 data-nosnippet>173</a>
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="comment">// \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
-<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfannot OpenAnnotSpecification"</span>, <span class="prelude-val">None</span>);
-<a href=#176 id=176 data-nosnippet>176</a>  <span class="comment">// \pdfobj — same shape. Perl pdfTeX.pool L219.
-<a href=#177 id=177 data-nosnippet>177</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfobj OpenAnnotSpecification"</span>, <span class="prelude-val">None</span>);
-<a href=#178 id=178 data-nosnippet>178</a>
-<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfcatalog{} OpenActionSpecification"</span>, <span class="string">""</span>);
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfnames{}"</span>, <span class="string">""</span>);
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdftrailer{}"</span>, <span class="string">""</span>);
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapfile{}"</span>, <span class="string">""</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapline{}"</span>, <span class="string">""</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="comment">// \pdffontattr font general text
-<a href=#185 id=185 data-nosnippet>185</a>  // \pdffontexpand font expand spec
-<a href=#186 id=186 data-nosnippet>186</a>  // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
-<a href=#187 id=187 data-nosnippet>187</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\quitvmode"</span>, <span class="string">""</span>);
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="macro">DefPrimitive!</span>(
-<a href=#190 id=190 data-nosnippet>190</a>    <span class="string">"\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText"</span>,
-<a href=#191 id=191 data-nosnippet>191</a>    <span class="prelude-val">None
-<a href=#192 id=192 data-nosnippet>192</a>  </span>);
-<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// \special pdfspecial spec
-<a href=#194 id=194 data-nosnippet>194</a>  // \pdfresettimer
-<a href=#195 id=195 data-nosnippet>195</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimer"</span>, <span class="prelude-val">None</span>);
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimerresettimer"</span>, <span class="prelude-val">None</span>);
-<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// \pdfsetrandomseed number
-<a href=#198 id=198 data-nosnippet>198</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfsetrandomseed Number"</span>, <span class="prelude-val">None</span>);
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="comment">// \pdfnoligatures font (really a Token, but at this stub level we
-<a href=#200 id=200 data-nosnippet>200</a>  // just need to consume a single token argument)
-<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfnoligatures Token"</span>, <span class="prelude-val">None</span>);
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// \pdfsavepos — mark current position; no-op stub
-<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfsavepos"</span>, <span class="prelude-val">None</span>);
-<a href=#204 id=204 data-nosnippet>204</a>  <span class="comment">// \pdfstartthread / \pdfendthread — thread spec; no-op stubs
-<a href=#205 id=205 data-nosnippet>205</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfstartthread"</span>, <span class="prelude-val">None</span>);
-<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfendthread"</span>, <span class="prelude-val">None</span>);
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="comment">// Per-font extension codes (match \lpcode / \rpcode pattern)
-<a href=#208 id=208 data-nosnippet>208</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lpfcode Token Number"</span>, Number::new(<span class="number">0</span>));
-<a href=#209 id=209 data-nosnippet>209</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\rpfcode Token Number"</span>, Number::new(<span class="number">0</span>));
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// \pdfprimitive control sequence
-<a href=#211 id=211 data-nosnippet>211</a>  // TODO:
-<a href=#212 id=212 data-nosnippet>212</a>  // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
-<a href=#213 id=213 data-nosnippet>213</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfprimitive DefToken"</span>, <span class="string">"#1"</span>); <span class="comment">// we can just ignore the advanced effects for now.
-<a href=#214 id=214 data-nosnippet>214</a>
-<a href=#215 id=215 data-nosnippet>215</a>  // \pdfcolorstack stack_num {set|push|pop|current} [general_text]
-<a href=#216 id=216 data-nosnippet>216</a>  //
-<a href=#217 id=217 data-nosnippet>217</a>  // Perl pdfTeX.pool L210: reads stack-number + action keyword, then
-<a href=#218 id=218 data-nosnippet>218</a>  // consumes a trailing general-text spec UNLESS the action was `pop`
-<a href=#219 id=219 data-nosnippet>219</a>  // (which has no spec, just pops the top of the stack). All values
-<a href=#220 id=220 data-nosnippet>220</a>  // are discarded — our engine doesn't emit PDF colorstack operations.
-<a href=#221 id=221 data-nosnippet>221</a>  //
-<a href=#222 id=222 data-nosnippet>222</a>  // Using OptionalMatch for each keyword matches the Perl signature.
-<a href=#223 id=223 data-nosnippet>223</a>  // GeneralText is the balanced-group reader.
-<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="macro">DefPrimitive!</span>(
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="string">"\\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current"</span>,
-<a href=#226 id=226 data-nosnippet>226</a>    sub[(_number, _set, _push, pop, _current)] {
-<a href=#227 id=227 data-nosnippet>227</a>      <span class="comment">// If action was `pop`, there's no trailing general-text spec.
-<a href=#228 id=228 data-nosnippet>228</a>      // Otherwise read and discard the general-text argument.
-<a href=#229 id=229 data-nosnippet>229</a>      </span><span class="kw">if </span>pop.is_none() {
-<a href=#230 id=230 data-nosnippet>230</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#231 id=231 data-nosnippet>231</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#232 id=232 data-nosnippet>232</a>      }
-<a href=#233 id=233 data-nosnippet>233</a>    }
-<a href=#234 id=234 data-nosnippet>234</a>  );
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfsetmatrix"</span>, <span class="string">""</span>);
-<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfsave"</span>, <span class="string">""</span>);
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfrestore"</span>, <span class="string">""</span>);
-<a href=#238 id=238 data-nosnippet>238</a>
-<a href=#239 id=239 data-nosnippet>239</a>  <span class="comment">// general text → { balanced text }
-<a href=#240 id=240 data-nosnippet>240</a>  // attr spec → attr general text
-<a href=#241 id=241 data-nosnippet>241</a>  // resources spec → resources general text
-<a href=#242 id=242 data-nosnippet>242</a>  // rule spec → ( width | height | depth ) dimension [ rule spec ]
-<a href=#243 id=243 data-nosnippet>243</a>  // object type spec → reserveobjnum |
-<a href=#244 id=244 data-nosnippet>244</a>  // [ useobjnum number ]
-<a href=#245 id=245 data-nosnippet>245</a>  // [ stream [ attr spec ] ] object contents
-<a href=#246 id=246 data-nosnippet>246</a>  // annot type spec → reserveobjnum |
-<a href=#247 id=247 data-nosnippet>247</a>  // [ useobjnum number ] [ rule spec ] general text
-<a href=#248 id=248 data-nosnippet>248</a>  // object contents → file spec | general text
-<a href=#249 id=249 data-nosnippet>249</a>  // xform attr spec → [ attr spec ] [ resources spec ]
-<a href=#250 id=250 data-nosnippet>250</a>  // image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec
-<a href=#251 id=251 data-nosnippet>251</a>  // ] outline spec → [ attr spec ] action spec [ count number ] general text
-<a href=#252 id=252 data-nosnippet>252</a>  // action spec → user user-action spec | goto goto-action spec |
-<a href=#253 id=253 data-nosnippet>253</a>  // thread thread-action spec
-<a href=#254 id=254 data-nosnippet>254</a>  // user-action spec → general text
-<a href=#255 id=255 data-nosnippet>255</a>  // goto-action spec → numid |
-<a href=#256 id=256 data-nosnippet>256</a>  // [ file spec ] nameid |
-<a href=#257 id=257 data-nosnippet>257</a>  // [ file spec ] [ page spec ] general text |
-<a href=#258 id=258 data-nosnippet>258</a>  // file spec nameid newwindow spec |
-<a href=#259 id=259 data-nosnippet>259</a>  // file spec [ page spec ] general text newwindow spec
-<a href=#260 id=260 data-nosnippet>260</a>  // thread-action spec → [ file spec ] numid | [ file spec ] nameid
-<a href=#261 id=261 data-nosnippet>261</a>  // open-action spec → openaction action spec
-<a href=#262 id=262 data-nosnippet>262</a>  // colorspace spec → colorspace number
-<a href=#263 id=263 data-nosnippet>263</a>  // pdf box spec → mediabox | cropbox | bleedbox | trimbox | artbox
-<a href=#264 id=264 data-nosnippet>264</a>  // map spec → { [ map modifier ] balanced text }
-<a href=#265 id=265 data-nosnippet>265</a>  // map modifier → + | = | -
-<a href=#266 id=266 data-nosnippet>266</a>  // numid → num number
-<a href=#267 id=267 data-nosnippet>267</a>  // nameid → name general text
-<a href=#268 id=268 data-nosnippet>268</a>  // newwindow spec → newwindow | nonewwindow
-<a href=#269 id=269 data-nosnippet>269</a>  // dest spec → numid dest type | nameid dest type
-<a href=#270 id=270 data-nosnippet>270</a>  // dest type → xyz [ zoom number ] | fitr rule spec |
-<a href=#271 id=271 data-nosnippet>271</a>  // fitbh | fitbv | fitb | fith | fitv | fit
-<a href=#272 id=272 data-nosnippet>272</a>  // thread spec → [ rule spec ] [ attr spec ] id spec
-<a href=#273 id=273 data-nosnippet>273</a>  // id spec → numid | nameid
-<a href=#274 id=274 data-nosnippet>274</a>  // file spec → file general text
-<a href=#275 id=275 data-nosnippet>275</a>  // page spec → page number
-<a href=#276 id=276 data-nosnippet>276</a>  // expand spec → stretch shrink step [ autoexpand ]
-<a href=#277 id=277 data-nosnippet>277</a>  // stretch → number
-<a href=#278 id=278 data-nosnippet>278</a>  // shrink → number
-<a href=#279 id=279 data-nosnippet>279</a>  // step → number
-<a href=#280 id=280 data-nosnippet>280</a>  // pre spec → pre
-<a href=#281 id=281 data-nosnippet>281</a>  // pdfliteral spec → direct | page
-<a href=#282 id=282 data-nosnippet>282</a>  // pdfspecial spec → { [ pdfspecial id [ pdfspecial modifier ] ] balanced text }
-<a href=#283 id=283 data-nosnippet>283</a>  // pdfspecial id → pdf: | PDF:
-<a href=#284 id=284 data-nosnippet>284</a>  // pdfspecial modifier → direct:
-<a href=#285 id=285 data-nosnippet>285</a>  // stack action → set | push | pop | current
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\expanded XGeneralText"</span>, <span class="string">"#1"</span>);
-<a href=#288 id=288 data-nosnippet>288</a>
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfstrcmp XGeneralText XGeneralText"</span>, sub[(first,second)] {
-<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">match </span>first.to_string().cmp(<span class="kw-2">&amp;</span>second.to_string()) {
-<a href=#291 id=291 data-nosnippet>291</a>     Ordering::Greater =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"1"</span>)),
-<a href=#292 id=292 data-nosnippet>292</a>     Ordering::Equal =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)),
-<a href=#293 id=293 data-nosnippet>293</a>     Ordering::Less =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"-"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"1"</span>))
-<a href=#294 id=294 data-nosnippet>294</a>    }
-<a href=#295 id=295 data-nosnippet>295</a>  });
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfglyphtounicode{}{}"</span>, <span class="string">""</span>);
-<a href=#297 id=297 data-nosnippet>297</a>});
+<a href=#133 id=133 data-nosnippet>133</a>  // Real pdfTeX reads optional `[image attr spec]` then a balanced text
+<a href=#134 id=134 data-nosnippet>134</a>  // (the file path). Stub: drop a leading `[...]` if present, then
+<a href=#135 id=135 data-nosnippet>135</a>  // consume one balanced general-text arg. No PDF emission. Driver:
+<a href=#136 id=136 data-nosnippet>136</a>  // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfximage"</span>, sub[_args] {
+<a href=#138 id=138 data-nosnippet>138</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="comment">// discard up to matching `]`
+<a href=#141 id=141 data-nosnippet>141</a>      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet::read_token()<span class="question-mark">? </span>{
+<a href=#142 id=142 data-nosnippet>142</a>        <span class="kw">if </span><span class="macro">matches!</span>(t.get_catcode(), Catcode::OTHER) &amp;&amp; t.to_string() == <span class="string">"]" </span>{
+<a href=#143 id=143 data-nosnippet>143</a>          <span class="kw">break</span>;
+<a href=#144 id=144 data-nosnippet>144</a>        }
+<a href=#145 id=145 data-nosnippet>145</a>      }
+<a href=#146 id=146 data-nosnippet>146</a>    }
+<a href=#147 id=147 data-nosnippet>147</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#149 id=149 data-nosnippet>149</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
+<a href=#150 id=150 data-nosnippet>150</a>  });
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// \pdfrefximage object number (h, v, m) — discard the object number
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfrefximage Number"</span>, <span class="prelude-val">None</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="comment">// \pdfannot annot type spec (h, v, m)
+<a href=#154 id=154 data-nosnippet>154</a>  // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
+<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfstartlink"</span>, <span class="prelude-val">None</span>);
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// \pdfendlink (h, m)
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfendlink"</span>, <span class="prelude-val">None</span>);
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="comment">// \pdfoutline outline spec (h, v, m)
+<a href=#159 id=159 data-nosnippet>159</a>  // \pdfdest dest spec (h, v, m)
+<a href=#160 id=160 data-nosnippet>160</a>  // \pdfthread thread spec (h, v, m)
+<a href=#161 id=161 data-nosnippet>161</a>  // \pdfstartthread thread spec (v, m)
+<a href=#162 id=162 data-nosnippet>162</a>  // \pdfendthread (v, m)
+<a href=#163 id=163 data-nosnippet>163</a>  // \pdfsavepos (h, v, m)
+<a href=#164 id=164 data-nosnippet>164</a>
+<a href=#165 id=165 data-nosnippet>165</a>  // See lxRDFa for ideas how this info might be used!
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfinfo{}"</span>, <span class="prelude-val">None</span>);
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="comment">// Ugh, what a mess of ugly syntax....
+<a href=#169 id=169 data-nosnippet>169</a>  </span><span class="macro">DefParameterType!</span>(OpenActionSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"openaction"</span>])<span class="question-mark">? </span>{
+<a href=#171 id=171 data-nosnippet>171</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"user"</span>, <span class="string">"goto"</span>])<span class="question-mark">? </span>{
+<a href=#172 id=172 data-nosnippet>172</a>        <span class="comment">// etc....
+<a href=#173 id=173 data-nosnippet>173</a>      </span>} } }), optional =&gt; <span class="bool-val">true</span>);
+<a href=#174 id=174 data-nosnippet>174</a>
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
+<a href=#176 id=176 data-nosnippet>176</a>  // Reads and discards the pdfTeX annotation-spec prefix:
+<a href=#177 id=177 data-nosnippet>177</a>  //   reserveobjnum  | useobjnum &lt;n&gt;  | stream [attr &lt;text&gt;]
+<a href=#178 id=178 data-nosnippet>178</a>  // then consumes the trailing general-text spec.
+<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="macro">DefParameterType!</span>(OpenAnnotSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
+<a href=#180 id=180 data-nosnippet>180</a>    <span class="kw">if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"reserveobjnum"</span>])<span class="question-mark">?</span>.is_some() {
+<a href=#181 id=181 data-nosnippet>181</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(ArgWrap::None);
+<a href=#182 id=182 data-nosnippet>182</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"useobjnum"</span>])<span class="question-mark">?</span>.is_some() {
+<a href=#183 id=183 data-nosnippet>183</a>      <span class="kw">let _ </span>= gullet::read_number()<span class="question-mark">?</span>;
+<a href=#184 id=184 data-nosnippet>184</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"stream"</span>])<span class="question-mark">?</span>.is_some()
+<a href=#185 id=185 data-nosnippet>185</a>      &amp;&amp; read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"attr"</span>])<span class="question-mark">?</span>.is_some() {
+<a href=#186 id=186 data-nosnippet>186</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#187 id=187 data-nosnippet>187</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#188 id=188 data-nosnippet>188</a>      }
+<a href=#189 id=189 data-nosnippet>189</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#191 id=191 data-nosnippet>191</a>  }), optional =&gt; <span class="bool-val">true</span>);
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
+<a href=#194 id=194 data-nosnippet>194</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfannot OpenAnnotSpecification"</span>, <span class="prelude-val">None</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// \pdfobj — same shape. Perl pdfTeX.pool L219.
+<a href=#196 id=196 data-nosnippet>196</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfobj OpenAnnotSpecification"</span>, <span class="prelude-val">None</span>);
+<a href=#197 id=197 data-nosnippet>197</a>
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfcatalog{} OpenActionSpecification"</span>, <span class="string">""</span>);
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfnames{}"</span>, <span class="string">""</span>);
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdftrailer{}"</span>, <span class="string">""</span>);
+<a href=#201 id=201 data-nosnippet>201</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapfile{}"</span>, <span class="string">""</span>);
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfmapline{}"</span>, <span class="string">""</span>);
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="comment">// \pdffontattr font general text
+<a href=#204 id=204 data-nosnippet>204</a>  // \pdffontexpand font expand spec
+<a href=#205 id=205 data-nosnippet>205</a>  // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
+<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\quitvmode"</span>, <span class="string">""</span>);
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="comment">// \pdfliteral [ pdfliteral spec ] general text (h, v, m)
+<a href=#208 id=208 data-nosnippet>208</a>  </span><span class="macro">DefPrimitive!</span>(
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="string">"\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText"</span>,
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="prelude-val">None
+<a href=#211 id=211 data-nosnippet>211</a>  </span>);
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="comment">// \special pdfspecial spec
+<a href=#213 id=213 data-nosnippet>213</a>  // \pdfresettimer
+<a href=#214 id=214 data-nosnippet>214</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimer"</span>, <span class="prelude-val">None</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfresettimerresettimer"</span>, <span class="prelude-val">None</span>);
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="comment">// \pdfsetrandomseed number
+<a href=#217 id=217 data-nosnippet>217</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfsetrandomseed Number"</span>, <span class="prelude-val">None</span>);
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// \pdfnoligatures font (really a Token, but at this stub level we
+<a href=#219 id=219 data-nosnippet>219</a>  // just need to consume a single token argument)
+<a href=#220 id=220 data-nosnippet>220</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfnoligatures Token"</span>, <span class="prelude-val">None</span>);
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="comment">// \pdfsavepos — mark current position; no-op stub
+<a href=#222 id=222 data-nosnippet>222</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfsavepos"</span>, <span class="prelude-val">None</span>);
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="comment">// \pdfstartthread / \pdfendthread — thread spec; no-op stubs
+<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfstartthread"</span>, <span class="prelude-val">None</span>);
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfendthread"</span>, <span class="prelude-val">None</span>);
+<a href=#226 id=226 data-nosnippet>226</a>  <span class="comment">// Per-font extension codes (match \lpcode / \rpcode pattern)
+<a href=#227 id=227 data-nosnippet>227</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lpfcode Token Number"</span>, Number::new(<span class="number">0</span>));
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\rpfcode Token Number"</span>, Number::new(<span class="number">0</span>));
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="comment">// \pdfprimitive control sequence
+<a href=#230 id=230 data-nosnippet>230</a>  // TODO:
+<a href=#231 id=231 data-nosnippet>231</a>  // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
+<a href=#232 id=232 data-nosnippet>232</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pdfprimitive DefToken"</span>, <span class="string">"#1"</span>); <span class="comment">// we can just ignore the advanced effects for now.
+<a href=#233 id=233 data-nosnippet>233</a>
+<a href=#234 id=234 data-nosnippet>234</a>  // \pdfcolorstack stack_num {set|push|pop|current} [general_text]
+<a href=#235 id=235 data-nosnippet>235</a>  //
+<a href=#236 id=236 data-nosnippet>236</a>  // Perl pdfTeX.pool L210: reads stack-number + action keyword, then
+<a href=#237 id=237 data-nosnippet>237</a>  // consumes a trailing general-text spec UNLESS the action was `pop`
+<a href=#238 id=238 data-nosnippet>238</a>  // (which has no spec, just pops the top of the stack). All values
+<a href=#239 id=239 data-nosnippet>239</a>  // are discarded — our engine doesn't emit PDF colorstack operations.
+<a href=#240 id=240 data-nosnippet>240</a>  //
+<a href=#241 id=241 data-nosnippet>241</a>  // Using OptionalMatch for each keyword matches the Perl signature.
+<a href=#242 id=242 data-nosnippet>242</a>  // GeneralText is the balanced-group reader.
+<a href=#243 id=243 data-nosnippet>243</a>  </span><span class="macro">DefPrimitive!</span>(
+<a href=#244 id=244 data-nosnippet>244</a>    <span class="string">"\\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current"</span>,
+<a href=#245 id=245 data-nosnippet>245</a>    sub[(_number, _set, _push, pop, _current)] {
+<a href=#246 id=246 data-nosnippet>246</a>      <span class="comment">// If action was `pop`, there's no trailing general-text spec.
+<a href=#247 id=247 data-nosnippet>247</a>      // Otherwise read and discard the general-text argument.
+<a href=#248 id=248 data-nosnippet>248</a>      </span><span class="kw">if </span>pop.is_none() {
+<a href=#249 id=249 data-nosnippet>249</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
+<a href=#250 id=250 data-nosnippet>250</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#251 id=251 data-nosnippet>251</a>      }
+<a href=#252 id=252 data-nosnippet>252</a>    }
+<a href=#253 id=253 data-nosnippet>253</a>  );
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfsetmatrix"</span>, <span class="string">""</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfsave"</span>, <span class="string">""</span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfrestore"</span>, <span class="string">""</span>);
+<a href=#257 id=257 data-nosnippet>257</a>
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="comment">// general text → { balanced text }
+<a href=#259 id=259 data-nosnippet>259</a>  // attr spec → attr general text
+<a href=#260 id=260 data-nosnippet>260</a>  // resources spec → resources general text
+<a href=#261 id=261 data-nosnippet>261</a>  // rule spec → ( width | height | depth ) dimension [ rule spec ]
+<a href=#262 id=262 data-nosnippet>262</a>  // object type spec → reserveobjnum |
+<a href=#263 id=263 data-nosnippet>263</a>  // [ useobjnum number ]
+<a href=#264 id=264 data-nosnippet>264</a>  // [ stream [ attr spec ] ] object contents
+<a href=#265 id=265 data-nosnippet>265</a>  // annot type spec → reserveobjnum |
+<a href=#266 id=266 data-nosnippet>266</a>  // [ useobjnum number ] [ rule spec ] general text
+<a href=#267 id=267 data-nosnippet>267</a>  // object contents → file spec | general text
+<a href=#268 id=268 data-nosnippet>268</a>  // xform attr spec → [ attr spec ] [ resources spec ]
+<a href=#269 id=269 data-nosnippet>269</a>  // image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec
+<a href=#270 id=270 data-nosnippet>270</a>  // ] outline spec → [ attr spec ] action spec [ count number ] general text
+<a href=#271 id=271 data-nosnippet>271</a>  // action spec → user user-action spec | goto goto-action spec |
+<a href=#272 id=272 data-nosnippet>272</a>  // thread thread-action spec
+<a href=#273 id=273 data-nosnippet>273</a>  // user-action spec → general text
+<a href=#274 id=274 data-nosnippet>274</a>  // goto-action spec → numid |
+<a href=#275 id=275 data-nosnippet>275</a>  // [ file spec ] nameid |
+<a href=#276 id=276 data-nosnippet>276</a>  // [ file spec ] [ page spec ] general text |
+<a href=#277 id=277 data-nosnippet>277</a>  // file spec nameid newwindow spec |
+<a href=#278 id=278 data-nosnippet>278</a>  // file spec [ page spec ] general text newwindow spec
+<a href=#279 id=279 data-nosnippet>279</a>  // thread-action spec → [ file spec ] numid | [ file spec ] nameid
+<a href=#280 id=280 data-nosnippet>280</a>  // open-action spec → openaction action spec
+<a href=#281 id=281 data-nosnippet>281</a>  // colorspace spec → colorspace number
+<a href=#282 id=282 data-nosnippet>282</a>  // pdf box spec → mediabox | cropbox | bleedbox | trimbox | artbox
+<a href=#283 id=283 data-nosnippet>283</a>  // map spec → { [ map modifier ] balanced text }
+<a href=#284 id=284 data-nosnippet>284</a>  // map modifier → + | = | -
+<a href=#285 id=285 data-nosnippet>285</a>  // numid → num number
+<a href=#286 id=286 data-nosnippet>286</a>  // nameid → name general text
+<a href=#287 id=287 data-nosnippet>287</a>  // newwindow spec → newwindow | nonewwindow
+<a href=#288 id=288 data-nosnippet>288</a>  // dest spec → numid dest type | nameid dest type
+<a href=#289 id=289 data-nosnippet>289</a>  // dest type → xyz [ zoom number ] | fitr rule spec |
+<a href=#290 id=290 data-nosnippet>290</a>  // fitbh | fitbv | fitb | fith | fitv | fit
+<a href=#291 id=291 data-nosnippet>291</a>  // thread spec → [ rule spec ] [ attr spec ] id spec
+<a href=#292 id=292 data-nosnippet>292</a>  // id spec → numid | nameid
+<a href=#293 id=293 data-nosnippet>293</a>  // file spec → file general text
+<a href=#294 id=294 data-nosnippet>294</a>  // page spec → page number
+<a href=#295 id=295 data-nosnippet>295</a>  // expand spec → stretch shrink step [ autoexpand ]
+<a href=#296 id=296 data-nosnippet>296</a>  // stretch → number
+<a href=#297 id=297 data-nosnippet>297</a>  // shrink → number
+<a href=#298 id=298 data-nosnippet>298</a>  // step → number
+<a href=#299 id=299 data-nosnippet>299</a>  // pre spec → pre
+<a href=#300 id=300 data-nosnippet>300</a>  // pdfliteral spec → direct | page
+<a href=#301 id=301 data-nosnippet>301</a>  // pdfspecial spec → { [ pdfspecial id [ pdfspecial modifier ] ] balanced text }
+<a href=#302 id=302 data-nosnippet>302</a>  // pdfspecial id → pdf: | PDF:
+<a href=#303 id=303 data-nosnippet>303</a>  // pdfspecial modifier → direct:
+<a href=#304 id=304 data-nosnippet>304</a>  // stack action → set | push | pop | current
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\expanded XGeneralText"</span>, <span class="string">"#1"</span>);
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfstrcmp XGeneralText XGeneralText"</span>, sub[(first,second)] {
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">match </span>first.to_string().cmp(<span class="kw-2">&amp;</span>second.to_string()) {
+<a href=#310 id=310 data-nosnippet>310</a>     Ordering::Greater =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"1"</span>)),
+<a href=#311 id=311 data-nosnippet>311</a>     Ordering::Equal =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)),
+<a href=#312 id=312 data-nosnippet>312</a>     Ordering::Less =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"-"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"1"</span>))
+<a href=#313 id=313 data-nosnippet>313</a>    }
+<a href=#314 id=314 data-nosnippet>314</a>  });
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pdfglyphtounicode{}{}"</span>, <span class="string">""</span>);
+<a href=#316 id=316 data-nosnippet>316</a>});
 </code></pre></div></section></main></body></html>

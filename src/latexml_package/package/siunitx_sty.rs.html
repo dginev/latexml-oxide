@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/siunitx_sty.rs`."><title>siunitx_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e95e73209 2026-05-05)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>siunitx_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! siunitx.sty — SI units and number formatting
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/siunitx_sty.rs`."><title>siunitx_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (365c0e1d7 2026-05-06)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>siunitx_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! siunitx.sty — SI units and number formatting
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: siunitx.sty.ltxml (1817 lines)
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Full semantic port: number parsing, formatting with XMDual semantics,
@@ -2317,289 +2317,341 @@
 <a href=#2317 id=2317 data-nosnippet>2317</a>  <span class="macro">Let!</span>(<span class="string">"\\tablenum"</span>, <span class="string">"\\num"</span>);
 <a href=#2318 id=2318 data-nosnippet>2318</a>
 <a href=#2319 id=2319 data-nosnippet>2319</a>  <span class="comment">//======================================================================
-<a href=#2320 id=2320 data-nosnippet>2320</a>  // Table column types S and s
-<a href=#2321 id=2321 data-nosnippet>2321</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"S"</span>, {
-<a href=#2322 id=2322 data-nosnippet>2322</a>    with_current_build_template(|template_opt| {
-<a href=#2323 id=2323 data-nosnippet>2323</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-<a href=#2324 id=2324 data-nosnippet>2324</a>        ..latexml_core::alignment::cell::Cell::default()
-<a href=#2325 id=2325 data-nosnippet>2325</a>      })
-<a href=#2326 id=2326 data-nosnippet>2326</a>    });
-<a href=#2327 id=2327 data-nosnippet>2327</a>  });
-<a href=#2328 id=2328 data-nosnippet>2328</a>  <span class="macro">DefColumnType!</span>(<span class="string">"s"</span>, {
-<a href=#2329 id=2329 data-nosnippet>2329</a>    with_current_build_template(|template_opt| {
-<a href=#2330 id=2330 data-nosnippet>2330</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-<a href=#2331 id=2331 data-nosnippet>2331</a>        ..latexml_core::alignment::cell::Cell::default()
-<a href=#2332 id=2332 data-nosnippet>2332</a>      })
-<a href=#2333 id=2333 data-nosnippet>2333</a>    });
-<a href=#2334 id=2334 data-nosnippet>2334</a>  });
-<a href=#2335 id=2335 data-nosnippet>2335</a>
-<a href=#2336 id=2336 data-nosnippet>2336</a>  <span class="comment">//======================================================================
-<a href=#2337 id=2337 data-nosnippet>2337</a>  // Default options
-<a href=#2338 id=2338 data-nosnippet>2338</a>  //======================================================================
-<a href=#2339 id=2339 data-nosnippet>2339</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"\sisetup{
-<a href=#2340 id=2340 data-nosnippet>2340</a>  abbreviations,
-<a href=#2341 id=2341 data-nosnippet>2341</a>  binary-units,
-<a href=#2342 id=2342 data-nosnippet>2342</a>  input-product  = x,
-<a href=#2343 id=2343 data-nosnippet>2343</a>  input-quotient = /,
-<a href=#2344 id=2344 data-nosnippet>2344</a>  input-close-uncertainty = ),
-<a href=#2345 id=2345 data-nosnippet>2345</a>  input-complex-roots     = ij,
-<a href=#2346 id=2346 data-nosnippet>2346</a>  input-comparators       = {&lt;=&gt;\approx\ge\geq\gg\le\leq\ll\sim},
-<a href=#2347 id=2347 data-nosnippet>2347</a>  input-decimal-markers   = {.,},
-<a href=#2348 id=2348 data-nosnippet>2348</a>  input-digits            = 0123456789,
-<a href=#2349 id=2349 data-nosnippet>2349</a>  input-exponent-markers  = dDeE,
-<a href=#2350 id=2350 data-nosnippet>2350</a>  input-open-uncertainty  = (,
-<a href=#2351 id=2351 data-nosnippet>2351</a>  input-protect-tokens    = \approx\dots\ge\geq\gg\le\leq\ll\mp\pi\pm\sim,
-<a href=#2352 id=2352 data-nosnippet>2352</a>  input-signs             = +-\mp\pm,
-<a href=#2353 id=2353 data-nosnippet>2353</a>  input-symbols           = \dots\pi,
-<a href=#2354 id=2354 data-nosnippet>2354</a>  input-uncertainty-signs = \pm,
-<a href=#2355 id=2355 data-nosnippet>2355</a>  add-decimal-zero      = true,
-<a href=#2356 id=2356 data-nosnippet>2356</a>  add-integer-zero      = true,
-<a href=#2357 id=2357 data-nosnippet>2357</a>  retain-unity-mantissa = true,
-<a href=#2358 id=2358 data-nosnippet>2358</a>  bracket-numbers           = true,
-<a href=#2359 id=2359 data-nosnippet>2359</a>  close-bracket             = ),
-<a href=#2360 id=2360 data-nosnippet>2360</a>  complex-root-position     = after-number,
-<a href=#2361 id=2361 data-nosnippet>2361</a>  copy-decimal-marker       = false,
-<a href=#2362 id=2362 data-nosnippet>2362</a>  exponent-base             = 10,
-<a href=#2363 id=2363 data-nosnippet>2363</a>  exponent-product          = \times,
-<a href=#2364 id=2364 data-nosnippet>2364</a>  group-digits              = true,
-<a href=#2365 id=2365 data-nosnippet>2365</a>  group-minimum-digits      = 5,
-<a href=#2366 id=2366 data-nosnippet>2366</a>  group-separator           = \,,
-<a href=#2367 id=2367 data-nosnippet>2367</a>  open-bracket              = (,
-<a href=#2368 id=2368 data-nosnippet>2368</a>  output-close-uncertainty  = ),
-<a href=#2369 id=2369 data-nosnippet>2369</a>  output-complex-root       = \ensuremath{\mathrm{i}},
-<a href=#2370 id=2370 data-nosnippet>2370</a>  output-decimal-marker     = .,
-<a href=#2371 id=2371 data-nosnippet>2371</a>  output-open-uncertainty   = (,
-<a href=#2372 id=2372 data-nosnippet>2372</a>  fraction-function = \frac,
-<a href=#2373 id=2373 data-nosnippet>2373</a>  output-product    = \times,
-<a href=#2374 id=2374 data-nosnippet>2374</a>  output-quotient   = /,
-<a href=#2375 id=2375 data-nosnippet>2375</a>  parse-numbers     = true,
-<a href=#2376 id=2376 data-nosnippet>2376</a>  quotient-mode     = symbol,
-<a href=#2377 id=2377 data-nosnippet>2377</a>  prefixes-as-symbols = true,
-<a href=#2378 id=2378 data-nosnippet>2378</a>  bracket-unit-denominator     = true,
-<a href=#2379 id=2379 data-nosnippet>2379</a>  inter-unit-product           = \,,
-<a href=#2380 id=2380 data-nosnippet>2380</a>  per-mode                     = reciprocal,
-<a href=#2381 id=2381 data-nosnippet>2381</a>  per-symbol                   = /,
-<a href=#2382 id=2382 data-nosnippet>2382</a>  qualifier-mode               = subscript,
-<a href=#2383 id=2383 data-nosnippet>2383</a>  number-unit-product = \,,
-<a href=#2384 id=2384 data-nosnippet>2384</a>  product-units       = repeat,
-<a href=#2385 id=2385 data-nosnippet>2385</a>  list-final-separator = { and },
-<a href=#2386 id=2386 data-nosnippet>2386</a>  list-pair-separator  = { and },
-<a href=#2387 id=2387 data-nosnippet>2387</a>  list-separator       = {, },
-<a href=#2388 id=2388 data-nosnippet>2388</a>  list-units           = repeat,
-<a href=#2389 id=2389 data-nosnippet>2389</a>  range-phrase = { to },
-<a href=#2390 id=2390 data-nosnippet>2390</a>  range-units  = repeat,
-<a href=#2391 id=2391 data-nosnippet>2391</a>  bracket-numbers,
-<a href=#2392 id=2392 data-nosnippet>2392</a>  parse-numbers,
-<a href=#2393 id=2393 data-nosnippet>2393</a>  parse-units,
-<a href=#2394 id=2394 data-nosnippet>2394</a>  product-units,
-<a href=#2395 id=2395 data-nosnippet>2395</a>  number-angle-product=,
-<a href=#2396 id=2396 data-nosnippet>2396</a>  arc-separator=
-<a href=#2397 id=2397 data-nosnippet>2397</a>}"#</span>);
-<a href=#2398 id=2398 data-nosnippet>2398</a>
-<a href=#2399 id=2399 data-nosnippet>2399</a>  <span class="comment">//======================================================================
-<a href=#2400 id=2400 data-nosnippet>2400</a>  // Unit declarations
-<a href=#2401 id=2401 data-nosnippet>2401</a>  //======================================================================
-<a href=#2402 id=2402 data-nosnippet>2402</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
-<a href=#2403 id=2403 data-nosnippet>2403</a>\DeclareSIUnit \kilogram { \kilo \gram }
-<a href=#2404 id=2404 data-nosnippet>2404</a>\DeclareSIUnit \meter    { m }
-<a href=#2405 id=2405 data-nosnippet>2405</a>\DeclareSIUnit \metre    { \meter }
-<a href=#2406 id=2406 data-nosnippet>2406</a>\DeclareSIUnit \mole     { mol }
-<a href=#2407 id=2407 data-nosnippet>2407</a>\DeclareSIUnit \second   { s }
-<a href=#2408 id=2408 data-nosnippet>2408</a>\DeclareSIUnit \ampere   { A }
-<a href=#2409 id=2409 data-nosnippet>2409</a>\DeclareSIUnit \kelvin   { K }
-<a href=#2410 id=2410 data-nosnippet>2410</a>\DeclareSIUnit \candela  { cd }
-<a href=#2411 id=2411 data-nosnippet>2411</a>\DeclareSIUnit \gram { g }
-<a href=#2412 id=2412 data-nosnippet>2412</a>\DeclareSIPrefix \yocto { y } { -24 }
-<a href=#2413 id=2413 data-nosnippet>2413</a>\DeclareSIPrefix \zepto { z } { -21 }
-<a href=#2414 id=2414 data-nosnippet>2414</a>\DeclareSIPrefix \atto  { a } { -18 }
-<a href=#2415 id=2415 data-nosnippet>2415</a>\DeclareSIPrefix \femto { f } { -15 }
-<a href=#2416 id=2416 data-nosnippet>2416</a>\DeclareSIPrefix \pico  { p } { -12 }
-<a href=#2417 id=2417 data-nosnippet>2417</a>\DeclareSIPrefix \nano  { n } { -9 }
-<a href=#2418 id=2418 data-nosnippet>2418</a>\DeclareSIPrefix \micro { \SIUnitSymbolMicro } { -6 }
-<a href=#2419 id=2419 data-nosnippet>2419</a>\DeclareSIPrefix \milli { m } { -3 }
-<a href=#2420 id=2420 data-nosnippet>2420</a>\DeclareSIPrefix \centi { c } { -2 }
-<a href=#2421 id=2421 data-nosnippet>2421</a>\DeclareSIPrefix \deci  { d } { -1 }
-<a href=#2422 id=2422 data-nosnippet>2422</a>\DeclareSIPrefix \deca  { da } { 1 }
-<a href=#2423 id=2423 data-nosnippet>2423</a>\DeclareSIPrefix \deka  { da } { 1 }
-<a href=#2424 id=2424 data-nosnippet>2424</a>\DeclareSIPrefix \hecto { h }  { 2 }
-<a href=#2425 id=2425 data-nosnippet>2425</a>\DeclareSIPrefix \kilo  { k }  { 3 }
-<a href=#2426 id=2426 data-nosnippet>2426</a>\DeclareSIPrefix \mega  { M }  { 6 }
-<a href=#2427 id=2427 data-nosnippet>2427</a>\DeclareSIPrefix \giga  { G }  { 9 }
-<a href=#2428 id=2428 data-nosnippet>2428</a>\DeclareSIPrefix \tera  { T }  { 12 }
-<a href=#2429 id=2429 data-nosnippet>2429</a>\DeclareSIPrefix \peta  { P }  { 15 }
-<a href=#2430 id=2430 data-nosnippet>2430</a>\DeclareSIPrefix \exa   { E }  { 18 }
-<a href=#2431 id=2431 data-nosnippet>2431</a>\DeclareSIPrefix \zetta { Z }  { 21 }
-<a href=#2432 id=2432 data-nosnippet>2432</a>\DeclareSIPrefix \yotta { Y }  { 24 }
-<a href=#2433 id=2433 data-nosnippet>2433</a>\DeclareSIUnit \becquerel     { Bq }
-<a href=#2434 id=2434 data-nosnippet>2434</a>\DeclareSIUnit \celsius       { \SIUnitSymbolCelsius }
-<a href=#2435 id=2435 data-nosnippet>2435</a>\DeclareSIUnit \degreeCelsius { \SIUnitSymbolCelsius }
-<a href=#2436 id=2436 data-nosnippet>2436</a>\DeclareSIUnit \coulomb       { C }
-<a href=#2437 id=2437 data-nosnippet>2437</a>\DeclareSIUnit \farad         { F }
-<a href=#2438 id=2438 data-nosnippet>2438</a>\DeclareSIUnit \gray          { Gy }
-<a href=#2439 id=2439 data-nosnippet>2439</a>\DeclareSIUnit \hertz         { Hz }
-<a href=#2440 id=2440 data-nosnippet>2440</a>\DeclareSIUnit \henry         { H }
-<a href=#2441 id=2441 data-nosnippet>2441</a>\DeclareSIUnit \joule         { J }
-<a href=#2442 id=2442 data-nosnippet>2442</a>\DeclareSIUnit \katal         { kat }
-<a href=#2443 id=2443 data-nosnippet>2443</a>\DeclareSIUnit \lumen         { lm }
-<a href=#2444 id=2444 data-nosnippet>2444</a>\DeclareSIUnit \lux           { lx }
-<a href=#2445 id=2445 data-nosnippet>2445</a>\DeclareSIUnit \newton    { N }
-<a href=#2446 id=2446 data-nosnippet>2446</a>\DeclareSIUnit \ohm       { \SIUnitSymbolOhm }
-<a href=#2447 id=2447 data-nosnippet>2447</a>\DeclareSIUnit \pascal    { Pa }
-<a href=#2448 id=2448 data-nosnippet>2448</a>\DeclareSIUnit \radian    { rad }
-<a href=#2449 id=2449 data-nosnippet>2449</a>\DeclareSIUnit \siemens   { S }
-<a href=#2450 id=2450 data-nosnippet>2450</a>\DeclareSIUnit \sievert   { Sv }
-<a href=#2451 id=2451 data-nosnippet>2451</a>\DeclareSIUnit \steradian { sr }
-<a href=#2452 id=2452 data-nosnippet>2452</a>\DeclareSIUnit \tesla     { T }
-<a href=#2453 id=2453 data-nosnippet>2453</a>\DeclareSIUnit \volt      { V }
-<a href=#2454 id=2454 data-nosnippet>2454</a>\DeclareSIUnit \watt      { W }
-<a href=#2455 id=2455 data-nosnippet>2455</a>\DeclareSIUnit \weber     { Wb }
-<a href=#2456 id=2456 data-nosnippet>2456</a>\DeclareSIUnit \arcmin { \arcminute }
-<a href=#2457 id=2457 data-nosnippet>2457</a>\DeclareSIUnit \arcminute { \SIUnitSymbolArcminute }
-<a href=#2458 id=2458 data-nosnippet>2458</a>\DeclareSIUnit \arcsecond { \SIUnitSymbolArcsecond }
-<a href=#2459 id=2459 data-nosnippet>2459</a>\DeclareSIUnit \day { d }
-<a href=#2460 id=2460 data-nosnippet>2460</a>\DeclareSIUnit \degree { \SIUnitSymbolDegree }
-<a href=#2461 id=2461 data-nosnippet>2461</a>\DeclareSIUnit \hectare { ha }
-<a href=#2462 id=2462 data-nosnippet>2462</a>\DeclareSIUnit \hour    { h }
-<a href=#2463 id=2463 data-nosnippet>2463</a>\DeclareSIUnit \litre   { l }
-<a href=#2464 id=2464 data-nosnippet>2464</a>\DeclareSIUnit \liter   { L }
-<a href=#2465 id=2465 data-nosnippet>2465</a>\DeclareSIUnit \minute  { min }
-<a href=#2466 id=2466 data-nosnippet>2466</a>\DeclareSIUnit \percent { \% }
-<a href=#2467 id=2467 data-nosnippet>2467</a>\DeclareSIUnit \tonne   { t }
-<a href=#2468 id=2468 data-nosnippet>2468</a>\DeclareSIUnit \astronomicalunit { ua }
-<a href=#2469 id=2469 data-nosnippet>2469</a>\DeclareSIUnit \atomicmassunit   { u }
-<a href=#2470 id=2470 data-nosnippet>2470</a>\DeclareSIUnit \electronvolt     { eV }
-<a href=#2471 id=2471 data-nosnippet>2471</a>\DeclareSIUnit \dalton           { Da }
-<a href=#2472 id=2472 data-nosnippet>2472</a>\DeclareSIUnit \clight { c }
-<a href=#2473 id=2473 data-nosnippet>2473</a>\DeclareSIUnit \electronmass { m }
-<a href=#2474 id=2474 data-nosnippet>2474</a>\DeclareSIUnit \planckbar { \hbar }
-<a href=#2475 id=2475 data-nosnippet>2475</a>\DeclareSIUnit \elementarycharge { e }
-<a href=#2476 id=2476 data-nosnippet>2476</a>\DeclareSIUnit \bohr { a }
-<a href=#2477 id=2477 data-nosnippet>2477</a>\DeclareSIUnit \hartree { E }
-<a href=#2478 id=2478 data-nosnippet>2478</a>\DeclareSIUnit \angstrom     { \SIUnitSymbolAngstrom }
-<a href=#2479 id=2479 data-nosnippet>2479</a>\DeclareSIUnit \bar          { bar }
-<a href=#2480 id=2480 data-nosnippet>2480</a>\DeclareSIUnit \barn         { b }
-<a href=#2481 id=2481 data-nosnippet>2481</a>\DeclareSIUnit \bel          { B }
-<a href=#2482 id=2482 data-nosnippet>2482</a>\DeclareSIUnit \decibel      { \deci \bel }
-<a href=#2483 id=2483 data-nosnippet>2483</a>\DeclareSIUnit \knot         { kn }
-<a href=#2484 id=2484 data-nosnippet>2484</a>\DeclareSIUnit \mmHg         { mmHg }
-<a href=#2485 id=2485 data-nosnippet>2485</a>\DeclareSIUnit \nauticalmile { M }
-<a href=#2486 id=2486 data-nosnippet>2486</a>\DeclareSIUnit \neper        { Np }
-<a href=#2487 id=2487 data-nosnippet>2487</a>\DeclareSIPrePower  \square  { 2 }
-<a href=#2488 id=2488 data-nosnippet>2488</a>\DeclareSIPostPower \squared { 2 }
-<a href=#2489 id=2489 data-nosnippet>2489</a>\DeclareSIPrePower  \cubic   { 3 }
-<a href=#2490 id=2490 data-nosnippet>2490</a>\DeclareSIPostPower \cubed   { 3 }
-<a href=#2491 id=2491 data-nosnippet>2491</a>\DeclareSIPrePower  \Square  { 2 }
-<a href=#2492 id=2492 data-nosnippet>2492</a>\DeclareSIPrePower  \ssquare { 2 }
-<a href=#2493 id=2493 data-nosnippet>2493</a>"#</span>);
-<a href=#2494 id=2494 data-nosnippet>2494</a>
-<a href=#2495 id=2495 data-nosnippet>2495</a>  <span class="comment">//======================================================================
-<a href=#2496 id=2496 data-nosnippet>2496</a>  // Abbreviation units (from siunitx-abbreviations.cfg)
-<a href=#2497 id=2497 data-nosnippet>2497</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
-<a href=#2498 id=2498 data-nosnippet>2498</a>\DeclareSIUnit \A  { \ampere }
-<a href=#2499 id=2499 data-nosnippet>2499</a>\DeclareSIUnit \pA { \pico \ampere }
-<a href=#2500 id=2500 data-nosnippet>2500</a>\DeclareSIUnit \nA { \nano \ampere }
-<a href=#2501 id=2501 data-nosnippet>2501</a>\DeclareSIUnit \uA { \micro \ampere }
-<a href=#2502 id=2502 data-nosnippet>2502</a>\DeclareSIUnit \mA { \milli \ampere }
-<a href=#2503 id=2503 data-nosnippet>2503</a>\DeclareSIUnit \kA { \kilo \ampere }
-<a href=#2504 id=2504 data-nosnippet>2504</a>\DeclareSIUnit \Hz  { \hertz }
-<a href=#2505 id=2505 data-nosnippet>2505</a>\DeclareSIUnit \mHz { \milli \hertz }
-<a href=#2506 id=2506 data-nosnippet>2506</a>\DeclareSIUnit \kHz { \kilo \hertz }
-<a href=#2507 id=2507 data-nosnippet>2507</a>\DeclareSIUnit \MHz { \mega \hertz }
-<a href=#2508 id=2508 data-nosnippet>2508</a>\DeclareSIUnit \GHz { \giga \hertz }
-<a href=#2509 id=2509 data-nosnippet>2509</a>\DeclareSIUnit \THz { \tera \hertz }
-<a href=#2510 id=2510 data-nosnippet>2510</a>\DeclareSIUnit \mol  { \mole }
-<a href=#2511 id=2511 data-nosnippet>2511</a>\DeclareSIUnit \fmol { \femto \mole }
-<a href=#2512 id=2512 data-nosnippet>2512</a>\DeclareSIUnit \pmol { \pico \mole }
-<a href=#2513 id=2513 data-nosnippet>2513</a>\DeclareSIUnit \nmol { \nano \mole }
-<a href=#2514 id=2514 data-nosnippet>2514</a>\DeclareSIUnit \umol { \micro \mole }
-<a href=#2515 id=2515 data-nosnippet>2515</a>\DeclareSIUnit \mmol { \milli \mole }
-<a href=#2516 id=2516 data-nosnippet>2516</a>\DeclareSIUnit \kmol { \kilo \mole }
-<a href=#2517 id=2517 data-nosnippet>2517</a>\DeclareSIUnit \V  { \volt }
-<a href=#2518 id=2518 data-nosnippet>2518</a>\DeclareSIUnit \pV { \pico \volt }
-<a href=#2519 id=2519 data-nosnippet>2519</a>\DeclareSIUnit \nV { \nano \volt }
-<a href=#2520 id=2520 data-nosnippet>2520</a>\DeclareSIUnit \uV { \micro \volt }
-<a href=#2521 id=2521 data-nosnippet>2521</a>\DeclareSIUnit \mV { \milli \volt }
-<a href=#2522 id=2522 data-nosnippet>2522</a>\DeclareSIUnit \kV { \kilo \volt }
-<a href=#2523 id=2523 data-nosnippet>2523</a>\DeclareSIUnit \hl { \hecto \litre }
-<a href=#2524 id=2524 data-nosnippet>2524</a>\DeclareSIUnit \l  { \litre }
-<a href=#2525 id=2525 data-nosnippet>2525</a>\DeclareSIUnit \ml { \milli \litre }
-<a href=#2526 id=2526 data-nosnippet>2526</a>\DeclareSIUnit \ul { \micro \litre }
-<a href=#2527 id=2527 data-nosnippet>2527</a>\DeclareSIUnit \hL { \hecto \liter }
-<a href=#2528 id=2528 data-nosnippet>2528</a>\DeclareSIUnit \L  { \liter }
-<a href=#2529 id=2529 data-nosnippet>2529</a>\DeclareSIUnit \mL { \milli \liter }
-<a href=#2530 id=2530 data-nosnippet>2530</a>\DeclareSIUnit \uL { \micro \liter }
-<a href=#2531 id=2531 data-nosnippet>2531</a>\DeclareSIUnit \fg  { \femto \gram }
-<a href=#2532 id=2532 data-nosnippet>2532</a>\DeclareSIUnit \pg  { \pico \gram }
-<a href=#2533 id=2533 data-nosnippet>2533</a>\DeclareSIUnit \ng  { \nano \gram }
-<a href=#2534 id=2534 data-nosnippet>2534</a>\DeclareSIUnit \ug  { \micro \gram }
-<a href=#2535 id=2535 data-nosnippet>2535</a>\DeclareSIUnit \mg  { \milli \gram }
-<a href=#2536 id=2536 data-nosnippet>2536</a>\DeclareSIUnit \g   { \gram }
-<a href=#2537 id=2537 data-nosnippet>2537</a>\DeclareSIUnit \kg  { \kilo \gram }
-<a href=#2538 id=2538 data-nosnippet>2538</a>\DeclareSIUnit \amu { \atomicmassunit }
-<a href=#2539 id=2539 data-nosnippet>2539</a>\DeclareSIUnit \W   { \watt }
-<a href=#2540 id=2540 data-nosnippet>2540</a>\DeclareSIUnit \uW  { \micro \watt }
-<a href=#2541 id=2541 data-nosnippet>2541</a>\DeclareSIUnit \mW  { \milli \watt }
-<a href=#2542 id=2542 data-nosnippet>2542</a>\DeclareSIUnit \kW  { \kilo \watt }
-<a href=#2543 id=2543 data-nosnippet>2543</a>\DeclareSIUnit \MW  { \mega \watt }
-<a href=#2544 id=2544 data-nosnippet>2544</a>\DeclareSIUnit \GW  { \giga \watt }
-<a href=#2545 id=2545 data-nosnippet>2545</a>\DeclareSIUnit \J   { \joule }
-<a href=#2546 id=2546 data-nosnippet>2546</a>\DeclareSIUnit \uJ  { \micro \joule }
-<a href=#2547 id=2547 data-nosnippet>2547</a>\DeclareSIUnit \mJ  { \milli \joule }
-<a href=#2548 id=2548 data-nosnippet>2548</a>\DeclareSIUnit \kJ  { \kilo \joule }
-<a href=#2549 id=2549 data-nosnippet>2549</a>\DeclareSIUnit \eV  { \electronvolt }
-<a href=#2550 id=2550 data-nosnippet>2550</a>\DeclareSIUnit \meV { \milli \electronvolt }
-<a href=#2551 id=2551 data-nosnippet>2551</a>\DeclareSIUnit \keV { \kilo \electronvolt }
-<a href=#2552 id=2552 data-nosnippet>2552</a>\DeclareSIUnit \MeV { \mega \electronvolt }
-<a href=#2553 id=2553 data-nosnippet>2553</a>\DeclareSIUnit \GeV { \giga \electronvolt }
-<a href=#2554 id=2554 data-nosnippet>2554</a>\DeclareSIUnit \TeV { \tera \electronvolt }
-<a href=#2555 id=2555 data-nosnippet>2555</a>\DeclareSIUnit \kWh { \kilo \watt \hour }
-<a href=#2556 id=2556 data-nosnippet>2556</a>\DeclareSIUnit \m  { \metre }
-<a href=#2557 id=2557 data-nosnippet>2557</a>\DeclareSIUnit \pm { \pico \metre }
-<a href=#2558 id=2558 data-nosnippet>2558</a>\DeclareSIUnit \nm { \nano \metre }
-<a href=#2559 id=2559 data-nosnippet>2559</a>\DeclareSIUnit \um { \micro \metre }
-<a href=#2560 id=2560 data-nosnippet>2560</a>\DeclareSIUnit \mm { \milli \metre }
-<a href=#2561 id=2561 data-nosnippet>2561</a>\DeclareSIUnit \cm { \centi \metre }
-<a href=#2562 id=2562 data-nosnippet>2562</a>\DeclareSIUnit \dm { \deci \metre }
-<a href=#2563 id=2563 data-nosnippet>2563</a>\DeclareSIUnit \km { \kilo \metre }
-<a href=#2564 id=2564 data-nosnippet>2564</a>\DeclareSIUnit \K { \kelvin }
-<a href=#2565 id=2565 data-nosnippet>2565</a>\DeclareSIUnit \dB { \deci \bel }
-<a href=#2566 id=2566 data-nosnippet>2566</a>\DeclareSIUnit \F  { \farad }
-<a href=#2567 id=2567 data-nosnippet>2567</a>\DeclareSIUnit \fF { \femto \farad }
-<a href=#2568 id=2568 data-nosnippet>2568</a>\DeclareSIUnit \pF { \pico \farad }
-<a href=#2569 id=2569 data-nosnippet>2569</a>\DeclareSIUnit \N  { \newton }
-<a href=#2570 id=2570 data-nosnippet>2570</a>\DeclareSIUnit \mN { \milli \newton }
-<a href=#2571 id=2571 data-nosnippet>2571</a>\DeclareSIUnit \kN { \kilo \newton }
-<a href=#2572 id=2572 data-nosnippet>2572</a>\DeclareSIUnit \MN { \mega \newton }
-<a href=#2573 id=2573 data-nosnippet>2573</a>\DeclareSIUnit \Pa  { \pascal }
-<a href=#2574 id=2574 data-nosnippet>2574</a>\DeclareSIUnit \kPa { \kilo \pascal }
-<a href=#2575 id=2575 data-nosnippet>2575</a>\DeclareSIUnit \MPa { \mega \pascal }
-<a href=#2576 id=2576 data-nosnippet>2576</a>\DeclareSIUnit \GPa { \giga \pascal }
-<a href=#2577 id=2577 data-nosnippet>2577</a>\DeclareSIUnit \mohm { \milli \ohm }
-<a href=#2578 id=2578 data-nosnippet>2578</a>\DeclareSIUnit \kohm { \kilo \ohm }
-<a href=#2579 id=2579 data-nosnippet>2579</a>\DeclareSIUnit \Mohm { \mega \ohm }
-<a href=#2580 id=2580 data-nosnippet>2580</a>\DeclareSIUnit \s  { \second }
-<a href=#2581 id=2581 data-nosnippet>2581</a>\DeclareSIUnit \as { \atto \second }
-<a href=#2582 id=2582 data-nosnippet>2582</a>\DeclareSIUnit \fs { \femto \second }
-<a href=#2583 id=2583 data-nosnippet>2583</a>\DeclareSIUnit \ps { \pico \second }
-<a href=#2584 id=2584 data-nosnippet>2584</a>\DeclareSIUnit \ns { \nano \second }
-<a href=#2585 id=2585 data-nosnippet>2585</a>\DeclareSIUnit \us { \micro \second }
-<a href=#2586 id=2586 data-nosnippet>2586</a>\DeclareSIUnit \ms { \milli \second }
-<a href=#2587 id=2587 data-nosnippet>2587</a>\DeclareBinaryPrefix \kibi { Ki } { 10 }
-<a href=#2588 id=2588 data-nosnippet>2588</a>\DeclareBinaryPrefix \mebi { Mi } { 20 }
-<a href=#2589 id=2589 data-nosnippet>2589</a>\DeclareBinaryPrefix \gibi { Gi } { 30 }
-<a href=#2590 id=2590 data-nosnippet>2590</a>\DeclareBinaryPrefix \tebi { Ti } { 40 }
-<a href=#2591 id=2591 data-nosnippet>2591</a>\DeclareBinaryPrefix \pebi { Pi } { 50 }
-<a href=#2592 id=2592 data-nosnippet>2592</a>\DeclareBinaryPrefix \exbi { Ei } { 60 }
-<a href=#2593 id=2593 data-nosnippet>2593</a>\DeclareBinaryPrefix \zebi { Zi } { 70 }
-<a href=#2594 id=2594 data-nosnippet>2594</a>\DeclareBinaryPrefix \yobi { Yi } { 80 }
-<a href=#2595 id=2595 data-nosnippet>2595</a>\DeclareSIUnit \bit  { bit }
-<a href=#2596 id=2596 data-nosnippet>2596</a>\DeclareSIUnit \byte { B }
-<a href=#2597 id=2597 data-nosnippet>2597</a>"#</span>);
-<a href=#2598 id=2598 data-nosnippet>2598</a>
-<a href=#2599 id=2599 data-nosnippet>2599</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\highlight{}"</span>, <span class="string">"#1"</span>);
-<a href=#2600 id=2600 data-nosnippet>2600</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\of{}"</span>, <span class="string">"(#1)"</span>);
-<a href=#2601 id=2601 data-nosnippet>2601</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tothe{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#2602 id=2602 data-nosnippet>2602</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\raiseto{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#2603 id=2603 data-nosnippet>2603</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\per"</span>, <span class="string">"/"</span>);
-<a href=#2604 id=2604 data-nosnippet>2604</a>});
+<a href=#2320 id=2320 data-nosnippet>2320</a>  // Table column types S and s — Perl: DefColumnType('S Optional', ...) and
+<a href=#2321 id=2321 data-nosnippet>2321</a>  // 's Optional'. The optional `[&lt;options&gt;]` (e.g. round-precision=1) must
+<a href=#2322 id=2322 data-nosnippet>2322</a>  // be consumed by the column-type reader; otherwise each character of the
+<a href=#2323 id=2323 data-nosnippet>2323</a>  // option string leaks back into the tabular template parser as a separate
+<a href=#2324 id=2324 data-nosnippet>2324</a>  // column letter (driver: 1904.04279 with `S[round-precision=1]`).
+<a href=#2325 id=2325 data-nosnippet>2325</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"S Optional"</span>, {
+<a href=#2326 id=2326 data-nosnippet>2326</a>    with_current_build_template(|template_opt| {
+<a href=#2327 id=2327 data-nosnippet>2327</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+<a href=#2328 id=2328 data-nosnippet>2328</a>        ..latexml_core::alignment::cell::Cell::default()
+<a href=#2329 id=2329 data-nosnippet>2329</a>      })
+<a href=#2330 id=2330 data-nosnippet>2330</a>    });
+<a href=#2331 id=2331 data-nosnippet>2331</a>  });
+<a href=#2332 id=2332 data-nosnippet>2332</a>  <span class="macro">DefColumnType!</span>(<span class="string">"s Optional"</span>, {
+<a href=#2333 id=2333 data-nosnippet>2333</a>    with_current_build_template(|template_opt| {
+<a href=#2334 id=2334 data-nosnippet>2334</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+<a href=#2335 id=2335 data-nosnippet>2335</a>        ..latexml_core::alignment::cell::Cell::default()
+<a href=#2336 id=2336 data-nosnippet>2336</a>      })
+<a href=#2337 id=2337 data-nosnippet>2337</a>    });
+<a href=#2338 id=2338 data-nosnippet>2338</a>  });
+<a href=#2339 id=2339 data-nosnippet>2339</a>
+<a href=#2340 id=2340 data-nosnippet>2340</a>  <span class="comment">//======================================================================
+<a href=#2341 id=2341 data-nosnippet>2341</a>  // Default options
+<a href=#2342 id=2342 data-nosnippet>2342</a>  //======================================================================
+<a href=#2343 id=2343 data-nosnippet>2343</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"\sisetup{
+<a href=#2344 id=2344 data-nosnippet>2344</a>  abbreviations,
+<a href=#2345 id=2345 data-nosnippet>2345</a>  binary-units,
+<a href=#2346 id=2346 data-nosnippet>2346</a>  input-product  = x,
+<a href=#2347 id=2347 data-nosnippet>2347</a>  input-quotient = /,
+<a href=#2348 id=2348 data-nosnippet>2348</a>  input-close-uncertainty = ),
+<a href=#2349 id=2349 data-nosnippet>2349</a>  input-complex-roots     = ij,
+<a href=#2350 id=2350 data-nosnippet>2350</a>  input-comparators       = {&lt;=&gt;\approx\ge\geq\gg\le\leq\ll\sim},
+<a href=#2351 id=2351 data-nosnippet>2351</a>  input-decimal-markers   = {.,},
+<a href=#2352 id=2352 data-nosnippet>2352</a>  input-digits            = 0123456789,
+<a href=#2353 id=2353 data-nosnippet>2353</a>  input-exponent-markers  = dDeE,
+<a href=#2354 id=2354 data-nosnippet>2354</a>  input-open-uncertainty  = (,
+<a href=#2355 id=2355 data-nosnippet>2355</a>  input-protect-tokens    = \approx\dots\ge\geq\gg\le\leq\ll\mp\pi\pm\sim,
+<a href=#2356 id=2356 data-nosnippet>2356</a>  input-signs             = +-\mp\pm,
+<a href=#2357 id=2357 data-nosnippet>2357</a>  input-symbols           = \dots\pi,
+<a href=#2358 id=2358 data-nosnippet>2358</a>  input-uncertainty-signs = \pm,
+<a href=#2359 id=2359 data-nosnippet>2359</a>  add-decimal-zero      = true,
+<a href=#2360 id=2360 data-nosnippet>2360</a>  add-integer-zero      = true,
+<a href=#2361 id=2361 data-nosnippet>2361</a>  retain-unity-mantissa = true,
+<a href=#2362 id=2362 data-nosnippet>2362</a>  bracket-numbers           = true,
+<a href=#2363 id=2363 data-nosnippet>2363</a>  close-bracket             = ),
+<a href=#2364 id=2364 data-nosnippet>2364</a>  complex-root-position     = after-number,
+<a href=#2365 id=2365 data-nosnippet>2365</a>  copy-decimal-marker       = false,
+<a href=#2366 id=2366 data-nosnippet>2366</a>  exponent-base             = 10,
+<a href=#2367 id=2367 data-nosnippet>2367</a>  exponent-product          = \times,
+<a href=#2368 id=2368 data-nosnippet>2368</a>  group-digits              = true,
+<a href=#2369 id=2369 data-nosnippet>2369</a>  group-minimum-digits      = 5,
+<a href=#2370 id=2370 data-nosnippet>2370</a>  group-separator           = \,,
+<a href=#2371 id=2371 data-nosnippet>2371</a>  open-bracket              = (,
+<a href=#2372 id=2372 data-nosnippet>2372</a>  output-close-uncertainty  = ),
+<a href=#2373 id=2373 data-nosnippet>2373</a>  output-complex-root       = \ensuremath{\mathrm{i}},
+<a href=#2374 id=2374 data-nosnippet>2374</a>  output-decimal-marker     = .,
+<a href=#2375 id=2375 data-nosnippet>2375</a>  output-open-uncertainty   = (,
+<a href=#2376 id=2376 data-nosnippet>2376</a>  fraction-function = \frac,
+<a href=#2377 id=2377 data-nosnippet>2377</a>  output-product    = \times,
+<a href=#2378 id=2378 data-nosnippet>2378</a>  output-quotient   = /,
+<a href=#2379 id=2379 data-nosnippet>2379</a>  parse-numbers     = true,
+<a href=#2380 id=2380 data-nosnippet>2380</a>  quotient-mode     = symbol,
+<a href=#2381 id=2381 data-nosnippet>2381</a>  prefixes-as-symbols = true,
+<a href=#2382 id=2382 data-nosnippet>2382</a>  bracket-unit-denominator     = true,
+<a href=#2383 id=2383 data-nosnippet>2383</a>  inter-unit-product           = \,,
+<a href=#2384 id=2384 data-nosnippet>2384</a>  per-mode                     = reciprocal,
+<a href=#2385 id=2385 data-nosnippet>2385</a>  per-symbol                   = /,
+<a href=#2386 id=2386 data-nosnippet>2386</a>  qualifier-mode               = subscript,
+<a href=#2387 id=2387 data-nosnippet>2387</a>  number-unit-product = \,,
+<a href=#2388 id=2388 data-nosnippet>2388</a>  product-units       = repeat,
+<a href=#2389 id=2389 data-nosnippet>2389</a>  list-final-separator = { and },
+<a href=#2390 id=2390 data-nosnippet>2390</a>  list-pair-separator  = { and },
+<a href=#2391 id=2391 data-nosnippet>2391</a>  list-separator       = {, },
+<a href=#2392 id=2392 data-nosnippet>2392</a>  list-units           = repeat,
+<a href=#2393 id=2393 data-nosnippet>2393</a>  range-phrase = { to },
+<a href=#2394 id=2394 data-nosnippet>2394</a>  range-units  = repeat,
+<a href=#2395 id=2395 data-nosnippet>2395</a>  bracket-numbers,
+<a href=#2396 id=2396 data-nosnippet>2396</a>  parse-numbers,
+<a href=#2397 id=2397 data-nosnippet>2397</a>  parse-units,
+<a href=#2398 id=2398 data-nosnippet>2398</a>  product-units,
+<a href=#2399 id=2399 data-nosnippet>2399</a>  number-angle-product=,
+<a href=#2400 id=2400 data-nosnippet>2400</a>  arc-separator=
+<a href=#2401 id=2401 data-nosnippet>2401</a>}"#</span>);
+<a href=#2402 id=2402 data-nosnippet>2402</a>
+<a href=#2403 id=2403 data-nosnippet>2403</a>  <span class="comment">//======================================================================
+<a href=#2404 id=2404 data-nosnippet>2404</a>  // Unit declarations
+<a href=#2405 id=2405 data-nosnippet>2405</a>  //======================================================================
+<a href=#2406 id=2406 data-nosnippet>2406</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#2407 id=2407 data-nosnippet>2407</a>\DeclareSIUnit \kilogram { \kilo \gram }
+<a href=#2408 id=2408 data-nosnippet>2408</a>\DeclareSIUnit \meter    { m }
+<a href=#2409 id=2409 data-nosnippet>2409</a>\DeclareSIUnit \metre    { \meter }
+<a href=#2410 id=2410 data-nosnippet>2410</a>\DeclareSIUnit \mole     { mol }
+<a href=#2411 id=2411 data-nosnippet>2411</a>\DeclareSIUnit \second   { s }
+<a href=#2412 id=2412 data-nosnippet>2412</a>\DeclareSIUnit \ampere   { A }
+<a href=#2413 id=2413 data-nosnippet>2413</a>\DeclareSIUnit \kelvin   { K }
+<a href=#2414 id=2414 data-nosnippet>2414</a>\DeclareSIUnit \candela  { cd }
+<a href=#2415 id=2415 data-nosnippet>2415</a>\DeclareSIUnit \gram { g }
+<a href=#2416 id=2416 data-nosnippet>2416</a>\DeclareSIPrefix \yocto { y } { -24 }
+<a href=#2417 id=2417 data-nosnippet>2417</a>\DeclareSIPrefix \zepto { z } { -21 }
+<a href=#2418 id=2418 data-nosnippet>2418</a>\DeclareSIPrefix \atto  { a } { -18 }
+<a href=#2419 id=2419 data-nosnippet>2419</a>\DeclareSIPrefix \femto { f } { -15 }
+<a href=#2420 id=2420 data-nosnippet>2420</a>\DeclareSIPrefix \pico  { p } { -12 }
+<a href=#2421 id=2421 data-nosnippet>2421</a>\DeclareSIPrefix \nano  { n } { -9 }
+<a href=#2422 id=2422 data-nosnippet>2422</a>\DeclareSIPrefix \micro { \SIUnitSymbolMicro } { -6 }
+<a href=#2423 id=2423 data-nosnippet>2423</a>\DeclareSIPrefix \milli { m } { -3 }
+<a href=#2424 id=2424 data-nosnippet>2424</a>\DeclareSIPrefix \centi { c } { -2 }
+<a href=#2425 id=2425 data-nosnippet>2425</a>\DeclareSIPrefix \deci  { d } { -1 }
+<a href=#2426 id=2426 data-nosnippet>2426</a>\DeclareSIPrefix \deca  { da } { 1 }
+<a href=#2427 id=2427 data-nosnippet>2427</a>\DeclareSIPrefix \deka  { da } { 1 }
+<a href=#2428 id=2428 data-nosnippet>2428</a>\DeclareSIPrefix \hecto { h }  { 2 }
+<a href=#2429 id=2429 data-nosnippet>2429</a>\DeclareSIPrefix \kilo  { k }  { 3 }
+<a href=#2430 id=2430 data-nosnippet>2430</a>\DeclareSIPrefix \mega  { M }  { 6 }
+<a href=#2431 id=2431 data-nosnippet>2431</a>\DeclareSIPrefix \giga  { G }  { 9 }
+<a href=#2432 id=2432 data-nosnippet>2432</a>\DeclareSIPrefix \tera  { T }  { 12 }
+<a href=#2433 id=2433 data-nosnippet>2433</a>\DeclareSIPrefix \peta  { P }  { 15 }
+<a href=#2434 id=2434 data-nosnippet>2434</a>\DeclareSIPrefix \exa   { E }  { 18 }
+<a href=#2435 id=2435 data-nosnippet>2435</a>\DeclareSIPrefix \zetta { Z }  { 21 }
+<a href=#2436 id=2436 data-nosnippet>2436</a>\DeclareSIPrefix \yotta { Y }  { 24 }
+<a href=#2437 id=2437 data-nosnippet>2437</a>\DeclareSIUnit \becquerel     { Bq }
+<a href=#2438 id=2438 data-nosnippet>2438</a>\DeclareSIUnit \celsius       { \SIUnitSymbolCelsius }
+<a href=#2439 id=2439 data-nosnippet>2439</a>\DeclareSIUnit \degreeCelsius { \SIUnitSymbolCelsius }
+<a href=#2440 id=2440 data-nosnippet>2440</a>\DeclareSIUnit \coulomb       { C }
+<a href=#2441 id=2441 data-nosnippet>2441</a>\DeclareSIUnit \farad         { F }
+<a href=#2442 id=2442 data-nosnippet>2442</a>\DeclareSIUnit \gray          { Gy }
+<a href=#2443 id=2443 data-nosnippet>2443</a>\DeclareSIUnit \hertz         { Hz }
+<a href=#2444 id=2444 data-nosnippet>2444</a>\DeclareSIUnit \henry         { H }
+<a href=#2445 id=2445 data-nosnippet>2445</a>\DeclareSIUnit \joule         { J }
+<a href=#2446 id=2446 data-nosnippet>2446</a>\DeclareSIUnit \katal         { kat }
+<a href=#2447 id=2447 data-nosnippet>2447</a>\DeclareSIUnit \lumen         { lm }
+<a href=#2448 id=2448 data-nosnippet>2448</a>\DeclareSIUnit \lux           { lx }
+<a href=#2449 id=2449 data-nosnippet>2449</a>\DeclareSIUnit \newton    { N }
+<a href=#2450 id=2450 data-nosnippet>2450</a>\DeclareSIUnit \ohm       { \SIUnitSymbolOhm }
+<a href=#2451 id=2451 data-nosnippet>2451</a>\DeclareSIUnit \pascal    { Pa }
+<a href=#2452 id=2452 data-nosnippet>2452</a>\DeclareSIUnit \radian    { rad }
+<a href=#2453 id=2453 data-nosnippet>2453</a>\DeclareSIUnit \siemens   { S }
+<a href=#2454 id=2454 data-nosnippet>2454</a>\DeclareSIUnit \sievert   { Sv }
+<a href=#2455 id=2455 data-nosnippet>2455</a>\DeclareSIUnit \steradian { sr }
+<a href=#2456 id=2456 data-nosnippet>2456</a>\DeclareSIUnit \tesla     { T }
+<a href=#2457 id=2457 data-nosnippet>2457</a>\DeclareSIUnit \volt      { V }
+<a href=#2458 id=2458 data-nosnippet>2458</a>\DeclareSIUnit \watt      { W }
+<a href=#2459 id=2459 data-nosnippet>2459</a>\DeclareSIUnit \weber     { Wb }
+<a href=#2460 id=2460 data-nosnippet>2460</a>\DeclareSIUnit \arcmin { \arcminute }
+<a href=#2461 id=2461 data-nosnippet>2461</a>\DeclareSIUnit \arcminute { \SIUnitSymbolArcminute }
+<a href=#2462 id=2462 data-nosnippet>2462</a>\DeclareSIUnit \arcsecond { \SIUnitSymbolArcsecond }
+<a href=#2463 id=2463 data-nosnippet>2463</a>\DeclareSIUnit \day { d }
+<a href=#2464 id=2464 data-nosnippet>2464</a>\DeclareSIUnit \degree { \SIUnitSymbolDegree }
+<a href=#2465 id=2465 data-nosnippet>2465</a>\DeclareSIUnit \hectare { ha }
+<a href=#2466 id=2466 data-nosnippet>2466</a>\DeclareSIUnit \hour    { h }
+<a href=#2467 id=2467 data-nosnippet>2467</a>\DeclareSIUnit \litre   { l }
+<a href=#2468 id=2468 data-nosnippet>2468</a>\DeclareSIUnit \liter   { L }
+<a href=#2469 id=2469 data-nosnippet>2469</a>\DeclareSIUnit \minute  { min }
+<a href=#2470 id=2470 data-nosnippet>2470</a>\DeclareSIUnit \percent { \% }
+<a href=#2471 id=2471 data-nosnippet>2471</a>\DeclareSIUnit \tonne   { t }
+<a href=#2472 id=2472 data-nosnippet>2472</a>\DeclareSIUnit \astronomicalunit { ua }
+<a href=#2473 id=2473 data-nosnippet>2473</a>\DeclareSIUnit \atomicmassunit   { u }
+<a href=#2474 id=2474 data-nosnippet>2474</a>\DeclareSIUnit \electronvolt     { eV }
+<a href=#2475 id=2475 data-nosnippet>2475</a>\DeclareSIUnit \dalton           { Da }
+<a href=#2476 id=2476 data-nosnippet>2476</a>\DeclareSIUnit \clight { c }
+<a href=#2477 id=2477 data-nosnippet>2477</a>\DeclareSIUnit \electronmass { m }
+<a href=#2478 id=2478 data-nosnippet>2478</a>\DeclareSIUnit \planckbar { \hbar }
+<a href=#2479 id=2479 data-nosnippet>2479</a>\DeclareSIUnit \elementarycharge { e }
+<a href=#2480 id=2480 data-nosnippet>2480</a>\DeclareSIUnit \bohr { a }
+<a href=#2481 id=2481 data-nosnippet>2481</a>\DeclareSIUnit \hartree { E }
+<a href=#2482 id=2482 data-nosnippet>2482</a>\DeclareSIUnit \angstrom     { \SIUnitSymbolAngstrom }
+<a href=#2483 id=2483 data-nosnippet>2483</a>\DeclareSIUnit \bar          { bar }
+<a href=#2484 id=2484 data-nosnippet>2484</a>\DeclareSIUnit \barn         { b }
+<a href=#2485 id=2485 data-nosnippet>2485</a>\DeclareSIUnit \bel          { B }
+<a href=#2486 id=2486 data-nosnippet>2486</a>\DeclareSIUnit \decibel      { \deci \bel }
+<a href=#2487 id=2487 data-nosnippet>2487</a>\DeclareSIUnit \knot         { kn }
+<a href=#2488 id=2488 data-nosnippet>2488</a>\DeclareSIUnit \mmHg         { mmHg }
+<a href=#2489 id=2489 data-nosnippet>2489</a>\DeclareSIUnit \torr         { Torr }
+<a href=#2490 id=2490 data-nosnippet>2490</a>\DeclareSIUnit \nauticalmile { M }
+<a href=#2491 id=2491 data-nosnippet>2491</a>\DeclareSIUnit \neper        { Np }
+<a href=#2492 id=2492 data-nosnippet>2492</a>\DeclareSIPrePower  \square  { 2 }
+<a href=#2493 id=2493 data-nosnippet>2493</a>\DeclareSIPostPower \squared { 2 }
+<a href=#2494 id=2494 data-nosnippet>2494</a>\DeclareSIPrePower  \cubic   { 3 }
+<a href=#2495 id=2495 data-nosnippet>2495</a>\DeclareSIPostPower \cubed   { 3 }
+<a href=#2496 id=2496 data-nosnippet>2496</a>\DeclareSIPrePower  \Square  { 2 }
+<a href=#2497 id=2497 data-nosnippet>2497</a>\DeclareSIPrePower  \ssquare { 2 }
+<a href=#2498 id=2498 data-nosnippet>2498</a>"#</span>);
+<a href=#2499 id=2499 data-nosnippet>2499</a>
+<a href=#2500 id=2500 data-nosnippet>2500</a>  <span class="comment">//======================================================================
+<a href=#2501 id=2501 data-nosnippet>2501</a>  // Abbreviation units (from siunitx-abbreviations.cfg)
+<a href=#2502 id=2502 data-nosnippet>2502</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#2503 id=2503 data-nosnippet>2503</a>\DeclareSIUnit \A  { \ampere }
+<a href=#2504 id=2504 data-nosnippet>2504</a>\DeclareSIUnit \pA { \pico \ampere }
+<a href=#2505 id=2505 data-nosnippet>2505</a>\DeclareSIUnit \nA { \nano \ampere }
+<a href=#2506 id=2506 data-nosnippet>2506</a>\DeclareSIUnit \uA { \micro \ampere }
+<a href=#2507 id=2507 data-nosnippet>2507</a>\DeclareSIUnit \mA { \milli \ampere }
+<a href=#2508 id=2508 data-nosnippet>2508</a>\DeclareSIUnit \kA { \kilo \ampere }
+<a href=#2509 id=2509 data-nosnippet>2509</a>\DeclareSIUnit \Hz  { \hertz }
+<a href=#2510 id=2510 data-nosnippet>2510</a>\DeclareSIUnit \mHz { \milli \hertz }
+<a href=#2511 id=2511 data-nosnippet>2511</a>\DeclareSIUnit \kHz { \kilo \hertz }
+<a href=#2512 id=2512 data-nosnippet>2512</a>\DeclareSIUnit \MHz { \mega \hertz }
+<a href=#2513 id=2513 data-nosnippet>2513</a>\DeclareSIUnit \GHz { \giga \hertz }
+<a href=#2514 id=2514 data-nosnippet>2514</a>\DeclareSIUnit \THz { \tera \hertz }
+<a href=#2515 id=2515 data-nosnippet>2515</a>\DeclareSIUnit \mol  { \mole }
+<a href=#2516 id=2516 data-nosnippet>2516</a>\DeclareSIUnit \fmol { \femto \mole }
+<a href=#2517 id=2517 data-nosnippet>2517</a>\DeclareSIUnit \pmol { \pico \mole }
+<a href=#2518 id=2518 data-nosnippet>2518</a>\DeclareSIUnit \nmol { \nano \mole }
+<a href=#2519 id=2519 data-nosnippet>2519</a>\DeclareSIUnit \umol { \micro \mole }
+<a href=#2520 id=2520 data-nosnippet>2520</a>\DeclareSIUnit \mmol { \milli \mole }
+<a href=#2521 id=2521 data-nosnippet>2521</a>\DeclareSIUnit \kmol { \kilo \mole }
+<a href=#2522 id=2522 data-nosnippet>2522</a>\DeclareSIUnit \V  { \volt }
+<a href=#2523 id=2523 data-nosnippet>2523</a>\DeclareSIUnit \pV { \pico \volt }
+<a href=#2524 id=2524 data-nosnippet>2524</a>\DeclareSIUnit \nV { \nano \volt }
+<a href=#2525 id=2525 data-nosnippet>2525</a>\DeclareSIUnit \uV { \micro \volt }
+<a href=#2526 id=2526 data-nosnippet>2526</a>\DeclareSIUnit \mV { \milli \volt }
+<a href=#2527 id=2527 data-nosnippet>2527</a>\DeclareSIUnit \kV { \kilo \volt }
+<a href=#2528 id=2528 data-nosnippet>2528</a>\DeclareSIUnit \hl { \hecto \litre }
+<a href=#2529 id=2529 data-nosnippet>2529</a>\DeclareSIUnit \l  { \litre }
+<a href=#2530 id=2530 data-nosnippet>2530</a>\DeclareSIUnit \ml { \milli \litre }
+<a href=#2531 id=2531 data-nosnippet>2531</a>\DeclareSIUnit \ul { \micro \litre }
+<a href=#2532 id=2532 data-nosnippet>2532</a>\DeclareSIUnit \hL { \hecto \liter }
+<a href=#2533 id=2533 data-nosnippet>2533</a>\DeclareSIUnit \L  { \liter }
+<a href=#2534 id=2534 data-nosnippet>2534</a>\DeclareSIUnit \mL { \milli \liter }
+<a href=#2535 id=2535 data-nosnippet>2535</a>\DeclareSIUnit \uL { \micro \liter }
+<a href=#2536 id=2536 data-nosnippet>2536</a>\DeclareSIUnit \fg  { \femto \gram }
+<a href=#2537 id=2537 data-nosnippet>2537</a>\DeclareSIUnit \pg  { \pico \gram }
+<a href=#2538 id=2538 data-nosnippet>2538</a>\DeclareSIUnit \ng  { \nano \gram }
+<a href=#2539 id=2539 data-nosnippet>2539</a>\DeclareSIUnit \ug  { \micro \gram }
+<a href=#2540 id=2540 data-nosnippet>2540</a>\DeclareSIUnit \mg  { \milli \gram }
+<a href=#2541 id=2541 data-nosnippet>2541</a>\DeclareSIUnit \g   { \gram }
+<a href=#2542 id=2542 data-nosnippet>2542</a>\DeclareSIUnit \kg  { \kilo \gram }
+<a href=#2543 id=2543 data-nosnippet>2543</a>\DeclareSIUnit \amu { \atomicmassunit }
+<a href=#2544 id=2544 data-nosnippet>2544</a>\DeclareSIUnit \W   { \watt }
+<a href=#2545 id=2545 data-nosnippet>2545</a>\DeclareSIUnit \uW  { \micro \watt }
+<a href=#2546 id=2546 data-nosnippet>2546</a>\DeclareSIUnit \mW  { \milli \watt }
+<a href=#2547 id=2547 data-nosnippet>2547</a>\DeclareSIUnit \kW  { \kilo \watt }
+<a href=#2548 id=2548 data-nosnippet>2548</a>\DeclareSIUnit \MW  { \mega \watt }
+<a href=#2549 id=2549 data-nosnippet>2549</a>\DeclareSIUnit \GW  { \giga \watt }
+<a href=#2550 id=2550 data-nosnippet>2550</a>\DeclareSIUnit \J   { \joule }
+<a href=#2551 id=2551 data-nosnippet>2551</a>\DeclareSIUnit \uJ  { \micro \joule }
+<a href=#2552 id=2552 data-nosnippet>2552</a>\DeclareSIUnit \mJ  { \milli \joule }
+<a href=#2553 id=2553 data-nosnippet>2553</a>\DeclareSIUnit \kJ  { \kilo \joule }
+<a href=#2554 id=2554 data-nosnippet>2554</a>\DeclareSIUnit \eV  { \electronvolt }
+<a href=#2555 id=2555 data-nosnippet>2555</a>\DeclareSIUnit \meV { \milli \electronvolt }
+<a href=#2556 id=2556 data-nosnippet>2556</a>\DeclareSIUnit \keV { \kilo \electronvolt }
+<a href=#2557 id=2557 data-nosnippet>2557</a>\DeclareSIUnit \MeV { \mega \electronvolt }
+<a href=#2558 id=2558 data-nosnippet>2558</a>\DeclareSIUnit \GeV { \giga \electronvolt }
+<a href=#2559 id=2559 data-nosnippet>2559</a>\DeclareSIUnit \TeV { \tera \electronvolt }
+<a href=#2560 id=2560 data-nosnippet>2560</a>\DeclareSIUnit \kWh { \kilo \watt \hour }
+<a href=#2561 id=2561 data-nosnippet>2561</a>\DeclareSIUnit \m  { \metre }
+<a href=#2562 id=2562 data-nosnippet>2562</a>\DeclareSIUnit \pm { \pico \metre }
+<a href=#2563 id=2563 data-nosnippet>2563</a>\DeclareSIUnit \nm { \nano \metre }
+<a href=#2564 id=2564 data-nosnippet>2564</a>\DeclareSIUnit \um { \micro \metre }
+<a href=#2565 id=2565 data-nosnippet>2565</a>\DeclareSIUnit \mm { \milli \metre }
+<a href=#2566 id=2566 data-nosnippet>2566</a>\DeclareSIUnit \cm { \centi \metre }
+<a href=#2567 id=2567 data-nosnippet>2567</a>\DeclareSIUnit \dm { \deci \metre }
+<a href=#2568 id=2568 data-nosnippet>2568</a>\DeclareSIUnit \km { \kilo \metre }
+<a href=#2569 id=2569 data-nosnippet>2569</a>\DeclareSIUnit \K { \kelvin }
+<a href=#2570 id=2570 data-nosnippet>2570</a>\DeclareSIUnit \dB { \deci \bel }
+<a href=#2571 id=2571 data-nosnippet>2571</a>\DeclareSIUnit \F  { \farad }
+<a href=#2572 id=2572 data-nosnippet>2572</a>\DeclareSIUnit \fF { \femto \farad }
+<a href=#2573 id=2573 data-nosnippet>2573</a>\DeclareSIUnit \pF { \pico \farad }
+<a href=#2574 id=2574 data-nosnippet>2574</a>\DeclareSIUnit \N  { \newton }
+<a href=#2575 id=2575 data-nosnippet>2575</a>\DeclareSIUnit \mN { \milli \newton }
+<a href=#2576 id=2576 data-nosnippet>2576</a>\DeclareSIUnit \kN { \kilo \newton }
+<a href=#2577 id=2577 data-nosnippet>2577</a>\DeclareSIUnit \MN { \mega \newton }
+<a href=#2578 id=2578 data-nosnippet>2578</a>\DeclareSIUnit \Pa  { \pascal }
+<a href=#2579 id=2579 data-nosnippet>2579</a>\DeclareSIUnit \kPa { \kilo \pascal }
+<a href=#2580 id=2580 data-nosnippet>2580</a>\DeclareSIUnit \MPa { \mega \pascal }
+<a href=#2581 id=2581 data-nosnippet>2581</a>\DeclareSIUnit \GPa { \giga \pascal }
+<a href=#2582 id=2582 data-nosnippet>2582</a>\DeclareSIUnit \mohm { \milli \ohm }
+<a href=#2583 id=2583 data-nosnippet>2583</a>\DeclareSIUnit \kohm { \kilo \ohm }
+<a href=#2584 id=2584 data-nosnippet>2584</a>\DeclareSIUnit \Mohm { \mega \ohm }
+<a href=#2585 id=2585 data-nosnippet>2585</a>\DeclareSIUnit \s  { \second }
+<a href=#2586 id=2586 data-nosnippet>2586</a>\DeclareSIUnit \as { \atto \second }
+<a href=#2587 id=2587 data-nosnippet>2587</a>\DeclareSIUnit \fs { \femto \second }
+<a href=#2588 id=2588 data-nosnippet>2588</a>\DeclareSIUnit \ps { \pico \second }
+<a href=#2589 id=2589 data-nosnippet>2589</a>\DeclareSIUnit \ns { \nano \second }
+<a href=#2590 id=2590 data-nosnippet>2590</a>\DeclareSIUnit \us { \micro \second }
+<a href=#2591 id=2591 data-nosnippet>2591</a>\DeclareSIUnit \ms { \milli \second }
+<a href=#2592 id=2592 data-nosnippet>2592</a>\DeclareBinaryPrefix \kibi { Ki } { 10 }
+<a href=#2593 id=2593 data-nosnippet>2593</a>\DeclareBinaryPrefix \mebi { Mi } { 20 }
+<a href=#2594 id=2594 data-nosnippet>2594</a>\DeclareBinaryPrefix \gibi { Gi } { 30 }
+<a href=#2595 id=2595 data-nosnippet>2595</a>\DeclareBinaryPrefix \tebi { Ti } { 40 }
+<a href=#2596 id=2596 data-nosnippet>2596</a>\DeclareBinaryPrefix \pebi { Pi } { 50 }
+<a href=#2597 id=2597 data-nosnippet>2597</a>\DeclareBinaryPrefix \exbi { Ei } { 60 }
+<a href=#2598 id=2598 data-nosnippet>2598</a>\DeclareBinaryPrefix \zebi { Zi } { 70 }
+<a href=#2599 id=2599 data-nosnippet>2599</a>\DeclareBinaryPrefix \yobi { Yi } { 80 }
+<a href=#2600 id=2600 data-nosnippet>2600</a>\DeclareSIUnit \bit  { bit }
+<a href=#2601 id=2601 data-nosnippet>2601</a>\DeclareSIUnit \byte { B }
+<a href=#2602 id=2602 data-nosnippet>2602</a>"#</span>);
+<a href=#2603 id=2603 data-nosnippet>2603</a>
+<a href=#2604 id=2604 data-nosnippet>2604</a>  <span class="comment">// Version-1 compatibility units (siunitx-version-1.cfg). Activated by
+<a href=#2605 id=2605 data-nosnippet>2605</a>  // the `version-1-compatibility` package option. The v1.cfg file
+<a href=#2606 id=2606 data-nosnippet>2606</a>  // declares ~65 v1-only unit aliases (BAR, Day, Gray, atomicmass,
+<a href=#2607 id=2607 data-nosnippet>2607</a>  // arcmin, are, curie, gal, millibar, rad, rem, roentgen, micA, micg,
+<a href=#2608 id=2608 data-nosnippet>2608</a>  // picm, micm, Sec, mics, cmc, cubiccentimetre, cubicdecimetre, etc.).
+<a href=#2609 id=2609 data-nosnippet>2609</a>  // We always declare them — the names don't conflict with v3's
+<a href=#2610 id=2610 data-nosnippet>2610</a>  // DeclareSIUnit set above, so the cost is just a few extra entries.
+<a href=#2611 id=2611 data-nosnippet>2611</a>  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0.
+<a href=#2612 id=2612 data-nosnippet>2612</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#2613 id=2613 data-nosnippet>2613</a>\DeclareSIUnit \BAR        { \bar }
+<a href=#2614 id=2614 data-nosnippet>2614</a>\DeclareSIUnit \bbar       { \bar }
+<a href=#2615 id=2615 data-nosnippet>2615</a>\DeclareSIUnit \Day        { \day }
+<a href=#2616 id=2616 data-nosnippet>2616</a>\DeclareSIUnit \dday       { \day }
+<a href=#2617 id=2617 data-nosnippet>2617</a>\DeclareSIUnit \Gray       { \gray }
+<a href=#2618 id=2618 data-nosnippet>2618</a>\DeclareSIUnit \ggray      { \gray }
+<a href=#2619 id=2619 data-nosnippet>2619</a>\DeclareSIUnit \atomicmass { \atomicmassunit }
+<a href=#2620 id=2620 data-nosnippet>2620</a>\DeclareSIUnit \arcmin     { \arcminute }
+<a href=#2621 id=2621 data-nosnippet>2621</a>\DeclareSIUnit \arcsec     { \arcsecond }
+<a href=#2622 id=2622 data-nosnippet>2622</a>\DeclareSIUnit \are        { a }
+<a href=#2623 id=2623 data-nosnippet>2623</a>\DeclareSIUnit \curie      { Ci }
+<a href=#2624 id=2624 data-nosnippet>2624</a>\DeclareSIUnit \gal        { Gal }
+<a href=#2625 id=2625 data-nosnippet>2625</a>\DeclareSIUnit \millibar   { \milli \bar }
+<a href=#2626 id=2626 data-nosnippet>2626</a>\DeclareSIUnit \rad        { rad }
+<a href=#2627 id=2627 data-nosnippet>2627</a>\DeclareSIUnit \rem        { rem }
+<a href=#2628 id=2628 data-nosnippet>2628</a>\DeclareSIUnit \roentgen   { R }
+<a href=#2629 id=2629 data-nosnippet>2629</a>\DeclareSIUnit \micA       { \micro \ampere }
+<a href=#2630 id=2630 data-nosnippet>2630</a>\DeclareSIUnit \micmol     { \micro \mole   }
+<a href=#2631 id=2631 data-nosnippet>2631</a>\DeclareSIUnit \micl       { \micro \litre  }
+<a href=#2632 id=2632 data-nosnippet>2632</a>\DeclareSIUnit \micL       { \micro \liter  }
+<a href=#2633 id=2633 data-nosnippet>2633</a>\DeclareSIUnit \nanog      { \nano  \gram   }
+<a href=#2634 id=2634 data-nosnippet>2634</a>\DeclareSIUnit \micg       { \micro \gram   }
+<a href=#2635 id=2635 data-nosnippet>2635</a>\DeclareSIUnit \picm       { \pico  \metre  }
+<a href=#2636 id=2636 data-nosnippet>2636</a>\DeclareSIUnit \micm       { \micro \metre  }
+<a href=#2637 id=2637 data-nosnippet>2637</a>\DeclareSIUnit \Sec        { \second }
+<a href=#2638 id=2638 data-nosnippet>2638</a>\DeclareSIUnit \mics       { \micro \second }
+<a href=#2639 id=2639 data-nosnippet>2639</a>\DeclareSIUnit \cmc        { \centi \metre \cubed }
+<a href=#2640 id=2640 data-nosnippet>2640</a>\DeclareSIUnit \cubiccentimetre { \centi \metre \cubed }
+<a href=#2641 id=2641 data-nosnippet>2641</a>\DeclareSIUnit \cubicdecimetre  { \deci \metre \cubed }
+<a href=#2642 id=2642 data-nosnippet>2642</a>\DeclareSIUnit \molar      { \mole \per \cubic \deci \metre }
+<a href=#2643 id=2643 data-nosnippet>2643</a>\DeclareSIUnit \nb         { \nano \barn }
+<a href=#2644 id=2644 data-nosnippet>2644</a>\DeclareSIUnit \pb         { \pico \barn }
+<a href=#2645 id=2645 data-nosnippet>2645</a>\DeclareSIUnit \fb         { \femto \barn }
+<a href=#2646 id=2646 data-nosnippet>2646</a>\DeclareSIUnit \ab         { \atto \barn }
+<a href=#2647 id=2647 data-nosnippet>2647</a>\DeclareSIUnit \zb         { \zepto \barn }
+<a href=#2648 id=2648 data-nosnippet>2648</a>\DeclareSIUnit \yb         { \yocto \barn }
+<a href=#2649 id=2649 data-nosnippet>2649</a>"#</span>);
+<a href=#2650 id=2650 data-nosnippet>2650</a>
+<a href=#2651 id=2651 data-nosnippet>2651</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\highlight{}"</span>, <span class="string">"#1"</span>);
+<a href=#2652 id=2652 data-nosnippet>2652</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\of{}"</span>, <span class="string">"(#1)"</span>);
+<a href=#2653 id=2653 data-nosnippet>2653</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tothe{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#2654 id=2654 data-nosnippet>2654</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\raiseto{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#2655 id=2655 data-nosnippet>2655</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\per"</span>, <span class="string">"/"</span>);
+<a href=#2656 id=2656 data-nosnippet>2656</a>});
 </code></pre></div></section></main></body></html>

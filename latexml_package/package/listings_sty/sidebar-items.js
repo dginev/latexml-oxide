@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["listings_read_raw_lines","load_definitions","lst_process_display"]};

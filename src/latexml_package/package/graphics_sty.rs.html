@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/graphics_sty.rs`."><title>graphics_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e95e73209 2026-05-05)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>graphics_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/graphics_sty.rs`."><title>graphics_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (365c0e1d7 2026-05-06)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>graphics_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>latexml_core::common::dimension::attribute_format;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::common::numeric_ops::kround;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -459,44 +459,53 @@
 <a href=#459 id=459 data-nosnippet>459</a>
 <a href=#460 id=460 data-nosnippet>460</a>  <span class="comment">// == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 <a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a>  </span><span class="macro">Let!</span>(<span class="string">"\\Gin@decode"</span>, <span class="string">"\\@empty"</span>);
-<a href=#463 id=463 data-nosnippet>463</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@exclamation"</span>, <span class="string">"!"</span>);
-<a href=#464 id=464 data-nosnippet>464</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@page"</span>, <span class="string">"\\@empty"</span>);
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@pagebox"</span>, <span class="string">"cropbox"</span>);
-<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifGin@interpolate"</span>);
-<a href=#467 id=467 data-nosnippet>467</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@log"</span>, <span class="string">"\\wlog"</span>);
-<a href=#468 id=468 data-nosnippet>468</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@sizes"</span>, <span class="string">"\\relax"</span>);
-<a href=#469 id=469 data-nosnippet>469</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@scalex"</span>, <span class="string">"1"</span>);
-<a href=#470 id=470 data-nosnippet>470</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@scaley"</span>, <span class="string">"\\Gin@exclamation"</span>);
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="comment">// These reference macros that may not exist yet, so define them
-<a href=#472 id=472 data-nosnippet>472</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Gin@nat@height"</span>, <span class="string">""</span>);
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@nat@width"</span>, <span class="string">""</span>);
-<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@height"</span>, <span class="string">"\\Gin@nat@height"</span>);
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@width"</span>, <span class="string">"\\Gin@nat@width"</span>);
-<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@viewport@code"</span>, <span class="string">"\\relax"</span>);
-<a href=#477 id=477 data-nosnippet>477</a>
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="comment">// Perl: DefConditional('\ifGin@clip');
-<a href=#479 id=479 data-nosnippet>479</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifGin@clip"</span>);
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// Perl: DefMacro('\Gin@i [][]{}', '');
-<a href=#481 id=481 data-nosnippet>481</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Gin@i[][]{}"</span>, <span class="string">""</span>);
-<a href=#482 id=482 data-nosnippet>482</a>
-<a href=#483 id=483 data-nosnippet>483</a>  <span class="comment">// Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
-<a href=#484 id=484 data-nosnippet>484</a>  //   my $n = $num-&gt;valueOf; my $d = $denom-&gt;valueOf;
-<a href=#485 id=485 data-nosnippet>485</a>  //   DefMacro($cs, Tokens(Explode(($n == 0 ? 1 : $n / $d)))); });
-<a href=#486 id=486 data-nosnippet>486</a>  // \Gscale@div{\cs}{\dima}{\dimb} : \cs = \dima / \dimb.
-<a href=#487 id=487 data-nosnippet>487</a>  // Port matches the multido_sty \multido@step@d pattern (DefToken {Dimension}
-<a href=#488 id=488 data-nosnippet>488</a>  // arg + runtime DefMacro! install). Perl's `$n / $d` is a Perl scalar
-<a href=#489 id=489 data-nosnippet>489</a>  // division so we cast to f64; mirror the "0 divisor → 1" guard.
-<a href=#490 id=490 data-nosnippet>490</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\Gscale@div DefToken {Dimension} {Dimension}"</span>,
-<a href=#491 id=491 data-nosnippet>491</a>    sub[(cs, num, denom)] {
-<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">let </span>n = num.value_of() <span class="kw">as </span>f64;
-<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">let </span>d = denom.value_of() <span class="kw">as </span>f64;
-<a href=#494 id=494 data-nosnippet>494</a>    <span class="kw">let </span>ratio = <span class="kw">if </span>n == <span class="number">0.0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ n / d };
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(<span class="macro">format!</span>(<span class="string">"{ratio}"</span>))));
-<a href=#496 id=496 data-nosnippet>496</a>  });
-<a href=#497 id=497 data-nosnippet>497</a>
-<a href=#498 id=498 data-nosnippet>498</a>  <span class="comment">// Perl: \set@color defined elsewhere but referenced by graphics
-<a href=#499 id=499 data-nosnippet>499</a>  // Provide a no-op fallback if not already defined
-<a href=#500 id=500 data-nosnippet>500</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set@color"</span>, <span class="string">""</span>);
-<a href=#501 id=501 data-nosnippet>501</a>});
+<a href=#462 id=462 data-nosnippet>462</a>  // \Gin@extensions — comma-separated list of recognized image extensions.
+<a href=#463 id=463 data-nosnippet>463</a>  // Real graphics.sty assigns this from the chosen graphics driver
+<a href=#464 id=464 data-nosnippet>464</a>  // (.eps for dvips, .pdf,.png,.jpg for pdftex). User code rarely reads
+<a href=#465 id=465 data-nosnippet>465</a>  // it directly, but `\graphicspath` / `\@for` loops in third-party
+<a href=#466 id=466 data-nosnippet>466</a>  // packages (e.g. xkeyval drivers) iterate over it. Pre-define as
+<a href=#467 id=467 data-nosnippet>467</a>  // empty to suppress "undefined" cascades — the actual driver-specific
+<a href=#468 id=468 data-nosnippet>468</a>  // list is filled in elsewhere if a graphics driver binding loads.
+<a href=#469 id=469 data-nosnippet>469</a>  // Driver: 2103.04594.
+<a href=#470 id=470 data-nosnippet>470</a>  </span><span class="macro">Let!</span>(<span class="string">"\\Gin@extensions"</span>, <span class="string">"\\@empty"</span>);
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@decode"</span>, <span class="string">"\\@empty"</span>);
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@exclamation"</span>, <span class="string">"!"</span>);
+<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@page"</span>, <span class="string">"\\@empty"</span>);
+<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@pagebox"</span>, <span class="string">"cropbox"</span>);
+<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifGin@interpolate"</span>);
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@log"</span>, <span class="string">"\\wlog"</span>);
+<a href=#477 id=477 data-nosnippet>477</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@sizes"</span>, <span class="string">"\\relax"</span>);
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@scalex"</span>, <span class="string">"1"</span>);
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@scaley"</span>, <span class="string">"\\Gin@exclamation"</span>);
+<a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// These reference macros that may not exist yet, so define them
+<a href=#481 id=481 data-nosnippet>481</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Gin@nat@height"</span>, <span class="string">""</span>);
+<a href=#482 id=482 data-nosnippet>482</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Gin@nat@width"</span>, <span class="string">""</span>);
+<a href=#483 id=483 data-nosnippet>483</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@height"</span>, <span class="string">"\\Gin@nat@height"</span>);
+<a href=#484 id=484 data-nosnippet>484</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@req@width"</span>, <span class="string">"\\Gin@nat@width"</span>);
+<a href=#485 id=485 data-nosnippet>485</a>  <span class="macro">Let!</span>(<span class="string">"\\Gin@viewport@code"</span>, <span class="string">"\\relax"</span>);
+<a href=#486 id=486 data-nosnippet>486</a>
+<a href=#487 id=487 data-nosnippet>487</a>  <span class="comment">// Perl: DefConditional('\ifGin@clip');
+<a href=#488 id=488 data-nosnippet>488</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifGin@clip"</span>);
+<a href=#489 id=489 data-nosnippet>489</a>  <span class="comment">// Perl: DefMacro('\Gin@i [][]{}', '');
+<a href=#490 id=490 data-nosnippet>490</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Gin@i[][]{}"</span>, <span class="string">""</span>);
+<a href=#491 id=491 data-nosnippet>491</a>
+<a href=#492 id=492 data-nosnippet>492</a>  <span class="comment">// Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
+<a href=#493 id=493 data-nosnippet>493</a>  //   my $n = $num-&gt;valueOf; my $d = $denom-&gt;valueOf;
+<a href=#494 id=494 data-nosnippet>494</a>  //   DefMacro($cs, Tokens(Explode(($n == 0 ? 1 : $n / $d)))); });
+<a href=#495 id=495 data-nosnippet>495</a>  // \Gscale@div{\cs}{\dima}{\dimb} : \cs = \dima / \dimb.
+<a href=#496 id=496 data-nosnippet>496</a>  // Port matches the multido_sty \multido@step@d pattern (DefToken {Dimension}
+<a href=#497 id=497 data-nosnippet>497</a>  // arg + runtime DefMacro! install). Perl's `$n / $d` is a Perl scalar
+<a href=#498 id=498 data-nosnippet>498</a>  // division so we cast to f64; mirror the "0 divisor → 1" guard.
+<a href=#499 id=499 data-nosnippet>499</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\Gscale@div DefToken {Dimension} {Dimension}"</span>,
+<a href=#500 id=500 data-nosnippet>500</a>    sub[(cs, num, denom)] {
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">let </span>n = num.value_of() <span class="kw">as </span>f64;
+<a href=#502 id=502 data-nosnippet>502</a>    <span class="kw">let </span>d = denom.value_of() <span class="kw">as </span>f64;
+<a href=#503 id=503 data-nosnippet>503</a>    <span class="kw">let </span>ratio = <span class="kw">if </span>n == <span class="number">0.0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ n / d };
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(<span class="macro">format!</span>(<span class="string">"{ratio}"</span>))));
+<a href=#505 id=505 data-nosnippet>505</a>  });
+<a href=#506 id=506 data-nosnippet>506</a>
+<a href=#507 id=507 data-nosnippet>507</a>  <span class="comment">// Perl: \set@color defined elsewhere but referenced by graphics
+<a href=#508 id=508 data-nosnippet>508</a>  // Provide a no-op fallback if not already defined
+<a href=#509 id=509 data-nosnippet>509</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\set@color"</span>, <span class="string">""</span>);
+<a href=#510 id=510 data-nosnippet>510</a>});
 </code></pre></div></section></main></body></html>

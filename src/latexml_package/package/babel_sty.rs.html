@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_sty.rs`."><title>babel_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e95e73209 2026-05-05)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel.sty — multilingual support
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_sty.rs`."><title>babel_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (365c0e1d7 2026-05-06)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel.sty — multilingual support
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Perl: babel.sty.ltxml (30 lines) — `InputDefinitions('babel', noltxml=&gt;1)`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Our Rust port carries a thin orchestration layer on top of the raw babel
@@ -56,33 +56,59 @@
 <a href=#56 id=56 data-nosnippet>56</a>      .map(|t| t.to_string()).unwrap_or_default();
 <a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">let </span>opt_babel = gullet::do_expand(<span class="macro">Tokenize!</span>(<span class="string">r"\csname opt@babel.sty\endcsname"</span>))
 <a href=#58 id=58 data-nosnippet>58</a>      .map(|t| t.to_string()).unwrap_or_default();
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">let </span>pkg_last = opt_babel.split(<span class="string">','</span>).map(|s| s.trim().to_string())
-<a href=#60 id=60 data-nosnippet>60</a>      .rfind(|s| !s.is_empty() &amp;&amp; s != <span class="string">"nil"</span>).unwrap_or_default();
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">let </span>lang = <span class="kw">if </span>!pkg_last.is_empty() {
-<a href=#62 id=62 data-nosnippet>62</a>      pkg_last
-<a href=#63 id=63 data-nosnippet>63</a>    } <span class="kw">else if </span>main != <span class="string">"nil" </span>&amp;&amp; !main.is_empty() {
-<a href=#64 id=64 data-nosnippet>64</a>      main
-<a href=#65 id=65 data-nosnippet>65</a>    } <span class="kw">else </span>{
-<a href=#66 id=66 data-nosnippet>66</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]);
-<a href=#67 id=67 data-nosnippet>67</a>    };
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">let </span>iso = <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>lang);
-<a href=#69 id=69 data-nosnippet>69</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = iso {
-<a href=#70 id=70 data-nosnippet>70</a>      state::assign_value(<span class="string">"DOCUMENT_LANGUAGE"</span>,
-<a href=#71 id=71 data-nosnippet>71</a>        Stored::from(code.to_string()), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#72 id=72 data-nosnippet>72</a>      merge_font(Font { language: <span class="prelude-val">Some</span>(Cow::Owned(code.to_string())), ..Font::default() });
-<a href=#73 id=73 data-nosnippet>73</a>    }
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="comment">// Force-set \bbl@main@language globally so babel's AtBeginDocument
-<a href=#75 id=75 data-nosnippet>75</a>    // \selectlanguage{\bbl@main@language} picks up the user's intended
-<a href=#76 id=76 data-nosnippet>76</a>    // main language (the LAST option), not whichever .ldf's \ldf@finish
-<a href=#77 id=77 data-nosnippet>77</a>    // ran last. Babel's own chain then handles captions activation,
-<a href=#78 id=78 data-nosnippet>78</a>    // active-char shorthands, and per-language port dispatching.
-<a href=#79 id=79 data-nosnippet>79</a>    </span>def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\bbl@main@language"</span>), <span class="prelude-val">None</span>,
-<a href=#80 id=80 data-nosnippet>80</a>      <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lang.clone())),
-<a href=#81 id=81 data-nosnippet>81</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global), ..ExpandableOptions::default() }))<span class="question-mark">?</span>;
-<a href=#82 id=82 data-nosnippet>82</a>  });
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="comment">// Run mainlang at load time so DOCUMENT_LANGUAGE is set before
-<a href=#84 id=84 data-nosnippet>84</a>  // \begin{document} opens (and base_schema's after_open reads it).
-<a href=#85 id=85 data-nosnippet>85</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@babel@activate@mainlang"</span>);
-<a href=#86 id=86 data-nosnippet>86</a>
-<a href=#87 id=87 data-nosnippet>87</a>});
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="comment">// Modern babel accepts `main=&lt;lang&gt;` to pin the document main language
+<a href=#60 id=60 data-nosnippet>60</a>    // (driver: 2109.00402 \usepackage[main=english]{babel}). Two cases:
+<a href=#61 id=61 data-nosnippet>61</a>    //   - `main=&lt;lang&gt;`  → use &lt;lang&gt; directly (highest priority)
+<a href=#62 id=62 data-nosnippet>62</a>    //   - bare positional option (no `=`) → treat as a language candidate
+<a href=#63 id=63 data-nosnippet>63</a>    //   - `&lt;key&gt;=&lt;value&gt;` for any other key (e.g. `shorthands=off`,
+<a href=#64 id=64 data-nosnippet>64</a>    //     `provide=*`) → SKIP, it's an option not a language. Driver:
+<a href=#65 id=65 data-nosnippet>65</a>    //     2001.00747 `\usepackage[english, shorthands=off]{babel}` was
+<a href=#66 id=66 data-nosnippet>66</a>    //     selecting "off" as the language because we promoted any value-
+<a href=#67 id=67 data-nosnippet>67</a>    //     half of any key=value option.
+<a href=#68 id=68 data-nosnippet>68</a>    </span><span class="kw">let </span>main_kv = opt_babel.split(<span class="string">','</span>)
+<a href=#69 id=69 data-nosnippet>69</a>      .map(str::trim)
+<a href=#70 id=70 data-nosnippet>70</a>      .find_map(|s| s.strip_prefix(<span class="string">"main="</span>).map(str::trim).map(str::to_string));
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="comment">// Filter: drop key=value options AND babel-language MODIFIERS (sub-options
+<a href=#72 id=72 data-nosnippet>72</a>    // recognised by a single .ldf rather than a language by themselves).
+<a href=#73 id=73 data-nosnippet>73</a>    // Modifiers we know about:
+<a href=#74 id=74 data-nosnippet>74</a>    //   `es-*` (babel-spanish: es-tabla, es-cuadro, es-noindentfirst, …)
+<a href=#75 id=75 data-nosnippet>75</a>    // Driver: 2102.11084 `\usepackage[spanish, es-tabla]{babel}` selected
+<a href=#76 id=76 data-nosnippet>76</a>    // "es-tabla" as the language → "haven't defined the language 'es-tabla'"
+<a href=#77 id=77 data-nosnippet>77</a>    // GenericError.
+<a href=#78 id=78 data-nosnippet>78</a>    </span><span class="kw">let </span>is_lang_candidate = |s: <span class="kw-2">&amp;</span>str| -&gt; bool {
+<a href=#79 id=79 data-nosnippet>79</a>      !s.is_empty() &amp;&amp; s != <span class="string">"nil" </span>&amp;&amp; !s.contains(<span class="string">'='</span>)
+<a href=#80 id=80 data-nosnippet>80</a>        &amp;&amp; !s.starts_with(<span class="string">"es-"</span>)
+<a href=#81 id=81 data-nosnippet>81</a>    };
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">let </span>pkg_last = main_kv.unwrap_or_else(|| {
+<a href=#83 id=83 data-nosnippet>83</a>      opt_babel.split(<span class="string">','</span>).map(str::trim)
+<a href=#84 id=84 data-nosnippet>84</a>        .filter(|s| is_lang_candidate(s))
+<a href=#85 id=85 data-nosnippet>85</a>        .next_back().unwrap_or_default().to_string()
+<a href=#86 id=86 data-nosnippet>86</a>    });
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>lang = <span class="kw">if </span>!pkg_last.is_empty() {
+<a href=#88 id=88 data-nosnippet>88</a>      pkg_last
+<a href=#89 id=89 data-nosnippet>89</a>    } <span class="kw">else if </span>main != <span class="string">"nil" </span>&amp;&amp; !main.is_empty() {
+<a href=#90 id=90 data-nosnippet>90</a>      main
+<a href=#91 id=91 data-nosnippet>91</a>    } <span class="kw">else </span>{
+<a href=#92 id=92 data-nosnippet>92</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]);
+<a href=#93 id=93 data-nosnippet>93</a>    };
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">let </span>iso = <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>lang);
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = iso {
+<a href=#96 id=96 data-nosnippet>96</a>      state::assign_value(<span class="string">"DOCUMENT_LANGUAGE"</span>,
+<a href=#97 id=97 data-nosnippet>97</a>        Stored::from(code.to_string()), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#98 id=98 data-nosnippet>98</a>      merge_font(Font { language: <span class="prelude-val">Some</span>(Cow::Owned(code.to_string())), ..Font::default() });
+<a href=#99 id=99 data-nosnippet>99</a>    }
+<a href=#100 id=100 data-nosnippet>100</a>    <span class="comment">// Force-set \bbl@main@language globally so babel's AtBeginDocument
+<a href=#101 id=101 data-nosnippet>101</a>    // \selectlanguage{\bbl@main@language} picks up the user's intended
+<a href=#102 id=102 data-nosnippet>102</a>    // main language (the LAST option), not whichever .ldf's \ldf@finish
+<a href=#103 id=103 data-nosnippet>103</a>    // ran last. Babel's own chain then handles captions activation,
+<a href=#104 id=104 data-nosnippet>104</a>    // active-char shorthands, and per-language port dispatching.
+<a href=#105 id=105 data-nosnippet>105</a>    </span>def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\bbl@main@language"</span>), <span class="prelude-val">None</span>,
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lang.clone())),
+<a href=#107 id=107 data-nosnippet>107</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global), ..ExpandableOptions::default() }))<span class="question-mark">?</span>;
+<a href=#108 id=108 data-nosnippet>108</a>  });
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// Run mainlang at load time so DOCUMENT_LANGUAGE is set before
+<a href=#110 id=110 data-nosnippet>110</a>  // \begin{document} opens (and base_schema's after_open reads it).
+<a href=#111 id=111 data-nosnippet>111</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@babel@activate@mainlang"</span>);
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a>});
 </code></pre></div></section></main></body></html>
