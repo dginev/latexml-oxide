@@ -669,7 +669,26 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  // Heuristic 2: prefer files with PDF-like \includegraphics
+  // Heuristic 2: prefer files with a matching .bbl file
+  // (.bbl is the strongest "this is the main file" signal — present
+  // only when the user has compiled the doc through bibtex/biber.)
+  // Was H3, swapped before .includegraphics: 2011.11637 ships
+  // arxiv_paper.tex (with arxiv_paper.bbl) AND cvpr.tex (CVPR template
+  // with .includegraphics + .pdf refs). The .pdf-includegraphics
+  // heuristic was eliminating arxiv_paper.tex and leaving the template
+  // cvpr.tex — which doesn't define `\eg` etc., causing R=many.
+  if candidates.len() > 1 {
+    let bbl_candidates: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| f.with_extension("bbl").exists())
+      .cloned()
+      .collect();
+    if !bbl_candidates.is_empty() {
+      candidates = bbl_candidates;
+    }
+  }
+
+  // Heuristic 3: prefer files with PDF-like \includegraphics
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates
       .iter()
@@ -684,18 +703,6 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
       .collect();
     if !pdf_candidates.is_empty() {
       candidates = pdf_candidates;
-    }
-  }
-
-  // Heuristic 3: prefer files with a matching .bbl file
-  if candidates.len() > 1 {
-    let bbl_candidates: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| f.with_extension("bbl").exists())
-      .cloned()
-      .collect();
-    if !bbl_candidates.is_empty() {
-      candidates = bbl_candidates;
     }
   }
 
