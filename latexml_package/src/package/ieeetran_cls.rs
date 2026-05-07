@@ -543,4 +543,23 @@ LoadDefinitions!({
   // Disable internal alignment env (Perl L453-454)
   DefMacro!("\\@IEEEauthorhalign", "\\relax");
   DefMacro!("\\end@IEEEauthorhalign", "\\relax");
+
+  // \linebreakand — IEEEtran tip-jar macro that papers redefine to break
+  // a multi-row author halign across visual lines. The canonical
+  // tex.stackexchange recipe is:
+  //   \newcommand{\linebreakand}{
+  //     \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill
+  //     \begin{@IEEEauthorhalign}}
+  // The unbalanced `\end{...}\begin{...}` pair pops + pushes a frame
+  // on the live stack, which is fine in real IEEEtran (where the
+  // \author{...} body is wrapped in `\begin{@IEEEauthorhalign}...\end{@IEEEauthorhalign}`)
+  // but breaks our `\@personname`-wrapped frontmatter digest where
+  // there's no matching outer halign frame. Pre-define `\linebreakand`
+  // as a paragraph break so user `\newcommand{\linebreakand}{...}`
+  // can't override (it's already-defined → silently ignored), matching
+  // Perl's behavior where the user redefinition triggers
+  // ``\linebreakand:locked`` and gets dropped on the floor. Driver
+  // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
+  // multi-author papers using the linebreakand recipe).
+  DefMacro!("\\linebreakand", "\\par");
 });
