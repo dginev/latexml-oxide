@@ -2482,6 +2482,7 @@ LoadDefinitions!({
 \DeclareSIUnit \decibel      { \deci \bel }
 \DeclareSIUnit \knot         { kn }
 \DeclareSIUnit \mmHg         { mmHg }
+\DeclareSIUnit \torr         { Torr }
 \DeclareSIUnit \nauticalmile { M }
 \DeclareSIUnit \neper        { Np }
 \DeclareSIPrePower  \square  { 2 }
