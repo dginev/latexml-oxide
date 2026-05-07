@@ -1328,7 +1328,16 @@ LoadDefinitions!({
   }
 }, protected => true);
 
-  TeX!(
+  // RawTeX! (not TeX!): the DeclareListParser bodies (line `\etb@lst@...&`)
+  // use `&` as a delimiter sentinel. Perl's etoolbox.sty.ltxml sets
+  // `\catcode`\&=3` (MATH_SHIFT) at file head so that subsequent `\def`
+  // bodies capture `&` as MATH_SHIFT, not ALIGN_TAB. Compile-time TeX!
+  // tokenizes with default catcodes (`&` = ALIGN_TAB), so when
+  // `\docsvlist{a,b,c}` runs inside `\begin{align*}...\end{align*}`, the
+  // sentinel `&` triggers a column break and unwinds the math frame —
+  // 9-error cascade in driver 2108.09184. RawTeX! re-tokenizes at runtime
+  // when the etoolbox catcode override is in effect.
+  RawTeX!(
     r"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
