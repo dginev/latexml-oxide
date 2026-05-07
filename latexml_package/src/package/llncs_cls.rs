@@ -65,16 +65,22 @@ LoadDefinitions!({
   // Perl llncs.cls.ltxml L73: `DefRegister('\toctitle{}' => Tokens())`
   // — a Tokens-valued register with a `{}` proto, meaning the register
   // is read/written via an argument. Rust's DefRegister! doesn't accept
-  // a `{}` proto (the macro only handles name-only register shapes),
-  // so the port uses DefMacro!("{}", "") which accepts the arg and
-  // silently discards it. Observable effect identical for all known
-  // uses: `\toctitle{…}` writes are no-ops in LaTeXML output (the TOC
-  // is rebuilt from section labels, not from per-section tokens
-  // stored in \toctitle). Intentional DefRegister → DefMacro
-  // divergence forced by the missing `{}`-proto DefRegister support
-  // (WISDOM #44). The sibling \tocauthor/\titrun/\titlerunning are
-  // proto-less, so they port as DefRegister normally.
-  DefMacro!("\\toctitle{}", "");
+  // a `{}` proto (the macro only handles name-only register shapes).
+  //
+  // Was: DefMacro!("\\toctitle{}", "") — but this swallows the FOLLOWING
+  // TOKEN whenever `\toctitle` appears bare-name. Driver: 2112.13058
+  // user wrote `\tocauthor\toctitle\maketitle` (the sample llncs
+  // template). `\toctitle{}` ate `\maketitle` as its required arg,
+  // skipping the frontmatter-emitting \maketitle and producing
+  // "Can't close environment abstract" because abstract was processed
+  // without an open document-frontmatter slot.
+  //
+  // Fix: drop the `{}` proto; treat `\toctitle` as a no-op CS that
+  // accepts no arg. User code `\toctitle{TOC text}` will leave the
+  // `{TOC text}` as a balanced group that gets digested as empty
+  // text in the surrounding context — same observable output as the
+  // discarding-macro path.
+  DefMacro!("\\toctitle", "");
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
   DefRegister!("\\tocsecnum" => Dimension!("15pt"));
