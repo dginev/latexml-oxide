@@ -6057,6 +6057,17 @@ LoadDefinitions!({
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
     DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);
     DefMacro!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
+    // LaTeX kernel ltoutenc.dtx defines `\<encoding>-cmd #1#2{#2}` as part
+    // of \DeclareFontEncoding — the "switch to encoding-specific CS"
+    // dispatcher used by `\DeclareTextCommand` bodies. Without this, every
+    // `\i`-style symbol expansion hits an undefined `\T1-cmd` cascade
+    // that re-injects the original CS into the input and infinite-loops
+    // (driver: 2306.16410 — paper hangs in token-limit when reading
+    // `\citep{surís2023vipergpt}` after `\usepackage[T1]{fontenc}`,
+    // because `\i` expands to `\T1-cmd \i \T1\i` which loops back to
+    // `\i` when `\T1-cmd` isn't defined).
+    let enc_cmd = s!("\\{}-cmd", e);
+    DefMacro!(T_CS!(enc_cmd), "{}{}", "#2");
 
     // Perl `latex_constructs.pool.ltxml:2781-2783`:
     //   if (my $path = $encoding_str && FindFile(lc($encoding_str)."enc", type=>"dfu")) {
