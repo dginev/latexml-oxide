@@ -391,7 +391,15 @@ fn read_internal_token() -> Option<Token> {
     ref mut pending_comments,
     ..
   } = *gullet_mut!();
-  let pushback = &mut runtime.as_mut().unwrap().pushback;
+  // Defensive: gullet runtime can be None during early shutdown /
+  // recovery from a fatal error. Treat as "no more tokens" instead
+  // of panicking. Driver: 2404.06289 (natbib \NAT@@wrout cascade
+  // landed here after the conversion was already in error-recovery
+  // mode).
+  let Some(rt) = runtime.as_mut() else {
+    return None;
+  };
+  let pushback = &mut rt.pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop() {
     match pushback_token.get_catcode() {
