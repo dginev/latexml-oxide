@@ -2317,15 +2317,19 @@ LoadDefinitions!({
   Let!("\\tablenum", "\\num");
 
   //======================================================================
-  // Table column types S and s
-  DefColumnType!("S", {
+  // Table column types S and s — Perl: DefColumnType('S Optional', ...) and
+  // 's Optional'. The optional `[<options>]` (e.g. round-precision=1) must
+  // be consumed by the column-type reader; otherwise each character of the
+  // option string leaks back into the tabular template parser as a separate
+  // column letter (driver: 1904.04279 with `S[round-precision=1]`).
+  DefColumnType!("S Optional", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
         ..latexml_core::alignment::cell::Cell::default()
       })
     });
   });
-  DefColumnType!("s", {
+  DefColumnType!("s Optional", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
         ..latexml_core::alignment::cell::Cell::default()

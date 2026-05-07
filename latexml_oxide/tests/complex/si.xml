@@ -6854,56 +6854,36 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
           <thead>
             <tr>
-              <td align="left" border="tt" thead="column row">Some Values</td>
-              <td align="left" border="tt" thead="column row">Some Values</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Some Values</p>
-                </inline-block></td>
-              <td align="justify" border="tt" thead="column" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>Some Values</p>
-                </inline-block></td>
+              <td align="left" border="tt" thead="column">Some Values</td>
+              <td align="left" border="tt" thead="column">Some Values</td>
+              <td align="left" border="tt" thead="column">Some Values</td>
+              <td align="left" border="tt" thead="column">Some Values</td>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td align="left" border="t" thead="row">2.3456</td>
-              <td align="left" border="t" thead="row">2.3456</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>2.3456</p>
-                </inline-block></td>
-              <td align="justify" border="t" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>2.3456</p>
-                </inline-block></td>
+              <td align="left" border="t">2.3456</td>
+              <td align="left" border="t">2.3456</td>
+              <td align="left" border="t">2.3456</td>
+              <td align="left" border="t">2.3456</td>
             </tr>
             <tr>
-              <td align="left" thead="row">34.2345</td>
-              <td align="left" thead="row">34.2345</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>34.2345</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>34.2345</p>
-                </inline-block></td>
+              <td align="left">34.2345</td>
+              <td align="left">34.2345</td>
+              <td align="left">34.2345</td>
+              <td align="left">34.2345</td>
             </tr>
             <tr>
-              <td align="left" thead="row">56.7835</td>
-              <td align="left" thead="row">56.7835</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>56.7835</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>56.7835</p>
-                </inline-block></td>
+              <td align="left">56.7835</td>
+              <td align="left">56.7835</td>
+              <td align="left">56.7835</td>
+              <td align="left">56.7835</td>
             </tr>
             <tr>
-              <td align="left" border="bb" thead="row">90.473</td>
-              <td align="left" border="bb" thead="row">90.473</td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>90.473</p>
-                </inline-block></td>
-              <td align="justify" border="bb" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>90.473</p>
-                </inline-block></td>
+              <td align="left" border="bb">90.473</td>
+              <td align="left" border="bb">90.473</td>
+              <td align="left" border="bb">90.473</td>
+              <td align="left" border="bb">90.473</td>
             </tr>
           </tbody>
         </tabular>
@@ -6930,13 +6910,9 @@ uncertainty</title>
             <tr>
               <td align="left" border="tt" thead="column">Values</td>
               <td align="left" border="tt" thead="column">Values</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Values</p>
-                </inline-block></td>
-              <td align="justify" border="tt" thead="column" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>Values</p>
-                </inline-block></td>
-              <td align="right" border="tt" thead="column">Values</td>
+              <td align="left" border="tt" thead="column">Values</td>
+              <td align="left" border="tt" thead="column">Values</td>
+              <td align="left" border="tt" thead="column">Values</td>
               <td align="left" border="tt" thead="column">Values</td>
             </tr>
           </thead>
@@ -6944,49 +6920,33 @@ uncertainty</title>
             <tr>
               <td align="left" border="t">2.3</td>
               <td align="left" border="t">2.3</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>2.3(5)</p>
-                </inline-block></td>
-              <td align="justify" border="t" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>2.3(5)</p>
-                </inline-block></td>
-              <td align="right" border="t">2.3</td>
+              <td align="left" border="t">2.3(5)</td>
+              <td align="left" border="t">2.3(5)</td>
+              <td align="left" border="t">2.3</td>
               <td align="left" border="t">2.3e8</td>
             </tr>
             <tr>
               <td align="left">34.23</td>
               <td align="left">34.23</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>34.23(4)</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>34.23(4)</p>
-                </inline-block></td>
-              <td align="right">34.23</td>
+              <td align="left">34.23(4)</td>
+              <td align="left">34.23(4)</td>
+              <td align="left">34.23</td>
               <td align="left">34.23</td>
             </tr>
             <tr>
               <td align="left">56.78</td>
               <td align="left">56.78</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>56.78(3)</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>56.78(3)</p>
-                </inline-block></td>
-              <td align="right">-56.78</td>
+              <td align="left">56.78(3)</td>
+              <td align="left">56.78(3)</td>
+              <td align="left">-56.78</td>
               <td align="left">56.78e3</td>
             </tr>
             <tr>
               <td align="left" border="bb">3,76</td>
               <td align="left" border="bb">3,76</td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>3,76(2)</p>
-                </inline-block></td>
-              <td align="justify" border="bb" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>3.76(2)</p>
-                </inline-block></td>
-              <td align="right" border="bb">+-3.76</td>
+              <td align="left" border="bb">3,76(2)</td>
+              <td align="left" border="bb">3.76(2)</td>
+              <td align="left" border="bb">+-3.76</td>
               <td align="left" border="bb">e6</td>
             </tr>
           </tbody>
@@ -7056,59 +7016,39 @@ uncertainty</title>
             <tr>
               <td align="left" border="tt" thead="column">Values</td>
               <td align="left" border="tt" thead="column">Values</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Values</p>
-                </inline-block></td>
-              <td align="right" border="tt" thead="column">Values</td>
-              <td align="justify" border="tt" thead="column" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>Values</p>
-                </inline-block></td>
+              <td align="left" border="tt" thead="column">Values</td>
+              <td align="left" border="tt" thead="column">Values</td>
+              <td align="left" border="tt" thead="column">Values</td>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td align="left" border="t">2.3</td>
               <td align="left" border="t">2.3</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>2.3(5)</p>
-                </inline-block></td>
-              <td align="right" border="t">2.3</td>
-              <td align="justify" border="t" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>2.3e8</p>
-                </inline-block></td>
+              <td align="left" border="t">2.3(5)</td>
+              <td align="left" border="t">2.3</td>
+              <td align="left" border="t">2.3e8</td>
             </tr>
             <tr>
               <td align="left">34.23</td>
               <td align="left">34.23</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>34.23(4)</p>
-                </inline-block></td>
-              <td align="right">34.23</td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>34.23</p>
-                </inline-block></td>
+              <td align="left">34.23(4)</td>
+              <td align="left">34.23</td>
+              <td align="left">34.23</td>
             </tr>
             <tr>
               <td align="left">56.78</td>
               <td align="left">56.78</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>56.78(3)</p>
-                </inline-block></td>
-              <td align="right">-56.78</td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>56.78e3</p>
-                </inline-block></td>
+              <td align="left">56.78(3)</td>
+              <td align="left">-56.78</td>
+              <td align="left">56.78e3</td>
             </tr>
             <tr>
               <td align="left" border="bb">3,76</td>
               <td align="left" border="bb">3,76</td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>3.76(2)</p>
-                </inline-block></td>
-              <td align="right" border="bb">+-3.76</td>
-              <td align="justify" border="bb" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>e6</p>
-                </inline-block></td>
+              <td align="left" border="bb">3.76(2)</td>
+              <td align="left" border="bb">+-3.76</td>
+              <td align="left" border="bb">e6</td>
             </tr>
           </tbody>
         </tabular>
@@ -7260,37 +7200,29 @@ uncertainty</title>
           <thead>
             <tr>
               <td align="left" border="tt" thead="column row">Header</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Header / <Math mode="inline" tex="e3" text="e * 3" xml:id="S3.T23.m1">
-                      <XMath>
-                        <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">e</XMTok>
-                          <XMTok meaning="3" role="NUMBER">3</XMTok>
-                        </XMApp>
-                      </XMath>
-                    </Math></p>
-                </inline-block></td>
+              <td align="left" border="tt" thead="column">Header / <Math mode="inline" tex="e3" text="e * 3" xml:id="S3.T23.m1">
+                  <XMath>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                      <XMTok meaning="3" role="NUMBER">3</XMTok>
+                    </XMApp>
+                  </XMath>
+                </Math></td>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td align="left" border="t" thead="row">1.2e3</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>1.2e3</p>
-                </inline-block></td>
+              <td align="left" border="t">1.2e3</td>
             </tr>
             <tr>
               <td align="left" thead="row">3e2</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>3e2</p>
-                </inline-block></td>
+              <td align="left">3e2</td>
             </tr>
             <tr>
               <td align="left" border="bb" thead="row">1.0e4</td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>1.0e4</p>
-                </inline-block></td>
+              <td align="left" border="bb">1.0e4</td>
             </tr>
           </tbody>
         </tabular>
@@ -7354,87 +7286,63 @@ uncertainty</title>
         </tags>
         <toccaption><tag close=" ">25</tag>Aligning without parsing.</toccaption>
         <caption><tag close=": ">Table 25</tag>Aligning without parsing.</caption>
-        <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
+        <tabular class="ltx_centering" vattach="middle">
           <tbody>
             <tr>
-              <td align="left" border="tt" thead="row">Some values</td>
-              <td align="left" border="tt" thead="row">Some values</td>
-              <td align="justify" border="tt" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Some values</p>
-                </inline-block></td>
-              <td align="justify" border="tt" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>Some values</p>
-                </inline-block></td>
+              <td align="left" border="tt">Some values</td>
+              <td align="left" border="tt">Some values</td>
+              <td align="left" border="tt">Some values</td>
+              <td align="left" border="tt">Some values</td>
             </tr>
             <tr>
-              <td align="left" border="t" thead="row">2.35</td>
-              <td align="left" border="t" thead="row">2.35</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>2.35</p>
-                </inline-block></td>
-              <td align="justify" border="t" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>2.35</p>
-                </inline-block></td>
+              <td align="left" border="t">2.35</td>
+              <td align="left" border="t">2.35</td>
+              <td align="left" border="t">2.35</td>
+              <td align="left" border="t">2.35</td>
             </tr>
             <tr>
-              <td align="left" thead="row">34.234</td>
-              <td align="left" thead="row">34.234</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>34.234</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>34.234</p>
-                </inline-block></td>
+              <td align="left">34.234</td>
+              <td align="left">34.234</td>
+              <td align="left">34.234</td>
+              <td align="left">34.234</td>
             </tr>
             <tr>
-              <td align="left" thead="row">56.783</td>
-              <td align="left" thead="row">56.783</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>56.783</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>56.783</p>
-                </inline-block></td>
+              <td align="left">56.783</td>
+              <td align="left">56.783</td>
+              <td align="left">56.783</td>
+              <td align="left">56.783</td>
             </tr>
             <tr>
-              <td align="left" thead="row">3,762</td>
-              <td align="left" thead="row">3,762</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>3,762</p>
-                </inline-block></td>
-              <td align="justify" vattach="middle" width="0.0pt"><inline-block vattach="top">
-                  <p>3.762</p>
-                </inline-block></td>
+              <td align="left">3,762</td>
+              <td align="left">3,762</td>
+              <td align="left">3,762</td>
+              <td align="left">3.762</td>
             </tr>
             <tr>
-              <td align="left" border="bb" thead="row"><XMApp>
+              <td align="left" border="bb"><XMApp>
                   <XMTok meaning="square-root"/>
                   <XMArg>
                     <XMText>2</XMText>
                   </XMArg>
                 </XMApp></td>
-              <td align="left" border="bb" thead="row"><XMApp>
+              <td align="left" border="bb"><XMApp>
                   <XMTok meaning="square-root"/>
                   <XMArg>
                     <XMText>2</XMText>
                   </XMArg>
                 </XMApp></td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><block vattach="bottom">
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMArg>
-                      <XMText>2</XMText>
-                    </XMArg>
-                  </XMApp>
-                </block></td>
-              <td align="justify" border="bb" vattach="middle" width="0.0pt"><block vattach="top">
-                  <XMApp>
-                    <XMTok meaning="square-root"/>
-                    <XMArg>
-                      <XMText>2</XMText>
-                    </XMArg>
-                  </XMApp>
-                </block></td>
+              <td align="left" border="bb"><XMApp>
+                  <XMTok meaning="square-root"/>
+                  <XMArg>
+                    <XMText>2</XMText>
+                  </XMArg>
+                </XMApp></td>
+              <td align="left" border="bb"><XMApp>
+                  <XMTok meaning="square-root"/>
+                  <XMArg>
+                    <XMText>2</XMText>
+                  </XMArg>
+                </XMApp></td>
             </tr>
           </tbody>
         </tabular>
@@ -7460,39 +7368,29 @@ uncertainty</title>
             <tr>
               <td align="left" border="tt" thead="column">Values</td>
               <td align="left" border="tt" thead="column">Values</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Values</p>
-                </inline-block></td>
+              <td align="left" border="tt" thead="column">Values</td>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td align="left" border="t">992.435</td>
               <td align="left" border="t">992.435</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>992.435</p>
-                </inline-block></td>
+              <td align="left" border="t">992.435</td>
             </tr>
             <tr>
               <td align="left">7734.2344</td>
               <td align="left">7734.2344</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>7734.2344</p>
-                </inline-block></td>
+              <td align="left">7734.2344</td>
             </tr>
             <tr>
               <td align="left">56.7834</td>
               <td align="left">56.7834</td>
-              <td align="justify" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>56.7834</p>
-                </inline-block></td>
+              <td align="left">56.7834</td>
             </tr>
             <tr>
               <td align="left" border="bb">3,7462</td>
               <td align="left" border="bb">3,7462</td>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>3,7462</p>
-                </inline-block></td>
+              <td align="left" border="bb">3,7462</td>
             </tr>
           </tbody>
         </tabular>
@@ -7517,16 +7415,12 @@ uncertainty</title>
           <tbody>
             <tr>
               <td align="left" border="tt">Right-aligned</td>
-              <td align="justify" border="tt" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Centred text</p>
-                </inline-block></td>
+              <td align="left" border="tt">Centred text</td>
               <td align="left" border="tt">Left-aligned</td>
             </tr>
             <tr>
               <td align="left" border="bb t">/</td>
-              <td align="justify" border="bb t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>/</p>
-                </inline-block></td>
+              <td align="left" border="bb t">/</td>
               <td align="left" border="bb t">/</td>
             </tr>
           </tbody>
@@ -7561,28 +7455,22 @@ uncertainty</title>
             <tr>
               <td align="left" border="tt" thead="column">Flexible</td>
               <td align="left" border="tt" thead="column">Fixed</td>
-              <td align="justify" border="tt" thead="column" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>Flexible</p>
-                </inline-block></td>
-              <td align="center" border="tt" thead="column">Fixed</td>
+              <td align="left" border="tt" thead="column">Flexible</td>
+              <td align="left" border="tt" thead="column">Fixed</td>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td align="left" border="t">/</td>
               <td align="left" border="t">/</td>
-              <td align="justify" border="t" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>1.23</p>
-                </inline-block></td>
-              <td align="center" border="t">1.23</td>
+              <td align="left" border="t">1.23</td>
+              <td align="left" border="t">1.23</td>
             </tr>
             <tr>
               <td border="bb"/>
               <td border="bb"/>
-              <td align="justify" border="bb" vattach="bottom" width="0.0pt"><inline-block vattach="bottom">
-                  <p>45.6</p>
-                </inline-block></td>
-              <td align="center" border="bb">45.6</td>
+              <td align="left" border="bb">45.6</td>
+              <td align="left" border="bb">45.6</td>
             </tr>
           </tbody>
         </tabular>
