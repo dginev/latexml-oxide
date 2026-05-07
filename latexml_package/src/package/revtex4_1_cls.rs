@@ -26,13 +26,18 @@ LoadDefinitions!({
   {
     DeclareOption!(*substyle, None);
   }
-  // Perl: amsmath/amssymb/amsfonts options → add to toload list
-  // noamsmath/noamssymb/noamsfonts → remove from list
-  // After ProcessOptions, RequirePackage each one
+  // Perl revtex4-1.cls.ltxml L41-45: amsfonts/amssymb/amsmath are in
+  // @revtex_toload BY DEFAULT; positive options are no-ops, negative
+  // (`noamsmath`/`noamssymb`/`noamsfonts`) options REMOVE from the list.
+  // Was: defaulted to false and positive options set true — so
+  // `\documentclass[amsmath,...]{revtex4-1}` (driver: 2210.07776) failed
+  // to load amsmath because the DeclareOption handler appears not to fire
+  // for already-positively-listed options under our ProcessOptions flow.
+  // Mirror Perl's default-on behavior so `\boldsymbol` (defined in amsbsy
+  // pulled by amsmath) is available throughout the doc.
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    DeclareOption!(*pkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
-    });
+    state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
+    DeclareOption!(*pkg, None);
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
       state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
