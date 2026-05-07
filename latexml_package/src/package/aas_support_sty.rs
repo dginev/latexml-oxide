@@ -363,6 +363,42 @@ LoadDefinitions!({
     });
   });
 
+  // aastex631.cls L2357-2359: \newcolumntype{C}/{L}/{R} are "math-shift
+  // resistant" centered/left/right column types — they save the active
+  // `$` (`\savedollar`) and `\let$\relax` so cell content like `$x$` is
+  // treated as text rather than math-mode. Our Rust binding for
+  // aastex.cls.ltxml ports `aas_support` but never raw-loads the actual
+  // .cls file, so these `\newcolumntype` definitions never run.
+  // Driver: 2209.01632 — `\begin{deluxetable*}{ccC}` triggered "Extra
+  // alignment tab '&'" cascades because column type `C` was unrecognized
+  // by `read_alignment_template`. Behavior is approximated as plain
+  // c/l/r (the savedollar dance is unnecessary for our text-mode cells).
+  DefColumnType!("C", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_CS!("\\hfil"))),
+        after:  Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("L", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        after: Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+  DefColumnType!("R", {
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens!(T_CS!("\\hfil"))),
+        ..latexml_core::alignment::cell::Cell::default()
+      })
+    });
+  });
+
   DefMacro!("\\phn", "\\phantom{0}");
   DefMacro!("\\phd", "\\phantom{.}");
   DefMacro!("\\phs", "\\phantom{+}");
