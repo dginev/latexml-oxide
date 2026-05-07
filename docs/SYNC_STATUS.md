@@ -42,7 +42,19 @@ master..claude-round-19`.
 ## Round-22 (active 2026-05-07)
 
 ### Session contributions (commits, this branch)
-21 commits on `claude-round-22` since 2026-05-07 11:00 UTC:
+24 commits on `claude-round-22` since 2026-05-07 11:00 UTC.
+
+**Late-session adds (post-v17):**
+- `9fe3e77c92` `Document::open_text` walk: stop at explicit
+  (non-fontswitch) `<ltx:text>` wrappers — fixes 2402.16319
+  `\uline{\textbf{2}}` cascade.
+- `fc2ff67389` `aa_support_sty` drop spurious `\isotope` definition
+  (Perl never defined it) — fixes 2011.10587 `\newcommand\isotope`
+  shadow → math cascade (12 errors → 0).
+- `70a8f2280f` `etoolbox_sty` `DeclareListParser` block
+  `TeX!`→`RawTeX!` for `&` catcode — fixes 2108.09184 `\docsvlist`
+  in `align*` cascade (45 errors → 0). Also recovers 2110.11931
+  similar pattern.
 
 **Binding fixes (15):**
 - `f6fa966619` etoolbox `\ifstrempty` block `TeX!`→`RawTeX!` (1904.02116)
