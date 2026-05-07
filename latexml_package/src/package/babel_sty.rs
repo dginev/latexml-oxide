@@ -68,9 +68,20 @@ LoadDefinitions!({
     let main_kv = opt_babel.split(',')
       .map(str::trim)
       .find_map(|s| s.strip_prefix("main=").map(str::trim).map(str::to_string));
+    // Filter: drop key=value options AND babel-language MODIFIERS (sub-options
+    // recognised by a single .ldf rather than a language by themselves).
+    // Modifiers we know about:
+    //   `es-*` (babel-spanish: es-tabla, es-cuadro, es-noindentfirst, …)
+    // Driver: 2102.11084 `\usepackage[spanish, es-tabla]{babel}` selected
+    // "es-tabla" as the language → "haven't defined the language 'es-tabla'"
+    // GenericError.
+    let is_lang_candidate = |s: &str| -> bool {
+      !s.is_empty() && s != "nil" && !s.contains('=')
+        && !s.starts_with("es-")
+    };
     let pkg_last = main_kv.unwrap_or_else(|| {
       opt_babel.split(',').map(str::trim)
-        .filter(|s| !s.is_empty() && *s != "nil" && !s.contains('='))
+        .filter(|s| is_lang_candidate(s))
         .next_back().unwrap_or_default().to_string()
     });
     let lang = if !pkg_last.is_empty() {
