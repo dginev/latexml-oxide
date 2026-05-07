@@ -307,7 +307,21 @@ LoadDefinitions!({
     properties => {
       Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?))
     });
-  DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
+  // \endacknowledgments — tolerant close. A common pattern is
+  //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}
+  // where \bibliography opens <ltx:bibliography>; the auto_close on
+  // <ltx:acknowledgements> below cascades shut at that point, so the
+  // explicit \end{acknowledgments} would otherwise hit a malformed-close
+  // error. Check current node first; only emit </ltx:acknowledgements>
+  // when one is actually open. Driver: 2202.04803 R=1 → R=0; ~9 papers
+  // in this cluster.
+  DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
+    let cur = document.get_node().clone();
+    let has_open = document.findnode("ancestor-or-self::ltx:acknowledgements", Some(&cur)).is_some();
+    if has_open {
+      document.close_element("ltx:acknowledgements")?;
+    }
+  });
   Tag!("ltx:acknowledgements", auto_close => true);
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   Let!("\\acknowledgements",      "\\acknowledgments");
