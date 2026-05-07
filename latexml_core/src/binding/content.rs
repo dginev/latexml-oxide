@@ -433,21 +433,37 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Perl Package.pm L2118-2121: FindFile_fallback
     // e.g. natbib-arxiv_v2.sty → natbib.sty, icml2024.sty → icml.sty
     //
-    // BUT skip the fallback if the name carries a directory prefix —
-    // that's a strong signal of a user-local file (`assets/equations`,
-    // `./sty/foo`), not a versioned vendor package. The fallback
-    // strips the directory and may match a contrib binding with a
-    // base name like "equations", silently substituting the wrong
-    // binding for the user's own `<paper>/assets/equations.sty`.
-    // Driver: 2405.18387 (\usepackage{assets/equations} fell through
-    // to latexml_contrib's equations.sty.ltxml, missing the user's
-    // local \averageprecision macro). Perl's FindFile_fallback only
-    // looks in `ltxml_paths` — it doesn't have a parallel
-    // contrib-binding registry, so it doesn't suffer this collision.
+    // BUT skip the fallback if the name carries a directory prefix
+    // AND a raw file actually exists at that path. This signals a
+    // user-local file (`assets/equations.sty` shipping in the
+    // submission); the fallback would strip the directory and match
+    // a contrib binding by basename, silently substituting the wrong
+    // implementation. If no raw file exists, the path-prefixed name
+    // is just an alias for the system file (e.g.
+    // `\documentclass{misc/ieeetran}` where misc/ieeetran.cls is a
+    // local copy whose basename matches our IEEEtran.cls binding) —
+    // let the fallback proceed so the binding-by-basename path
+    // (driver: 2105.02087) still works.
+    // Drivers: 2405.18387 (assets/equations → must NOT fallback to
+    // contrib equations); 2105.02087 (misc/ieeetran → MUST fallback
+    // to IEEEtran binding). Perl's FindFile_fallback only looks in
+    // `ltxml_paths`; it doesn't have a contrib-binding registry, so
+    // it doesn't suffer this collision in the first place.
     let has_path_prefix = name.contains('/') || name.contains('\\');
+    let local_raw_exists = has_path_prefix
+      && !options.notex
+      && find_file(
+        &filename,
+        Some(FindFileOptions {
+          forbid_ltxml:      true,  // raw file only
+          notex:             false,
+          ext_type:          options.extension.as_ref().cloned(),
+          search_paths_only: options.searchpaths_only,
+        }),
+      ).is_some();
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml && !has_path_prefix {
+    } else if !options.noltxml && !local_raw_exists {
       if let Some(fallback) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",
