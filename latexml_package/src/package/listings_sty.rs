@@ -1990,6 +1990,12 @@ LoadDefinitions!({
   DefMacro!("\\thename", "");
   DefMacro!("\\lstnumbertyperefname", "line");
   DefMacro!("\\lst@HRefStepCounter{}", "");
+  // \lstname — placeholder for the current listing's filename (set inside
+  // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
+  // around L1708-L1717). Pre-define as empty at top level so users can
+  // reference it inside \lstset{title=\lstname,...} or other lazy-expansion
+  // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
+  DefMacro!("\\lstname", "");
 
   // Inline listing constructor
   DefConstructor!("\\@listings@inline {}",
