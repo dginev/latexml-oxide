@@ -148,6 +148,24 @@ LoadDefinitions!({
   DefMacro!("\\citeauthor", "\\cite", locked => true);
   DefMacro!("\\citetitle", "\\cite", locked => true);
 
+  // \parencites etc. — biblatex multi-cite variants. Real biblatex
+  // accepts an arbitrary number of `[prenote][postnote]{key}` triples
+  // which are individually rendered with parens around the whole list.
+  // Stub: degrade to \cite of the first key. Driver: 1906.11485.
+  DefMacro!("\\parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\citetexts  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\smartcites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\footcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\supercites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+
+  // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
+  DefMacro!("\\DeclareLabeldate {}", "");
+
   // Perl L64-67: passthroughs
   DefMacro!("\\unspace", "\\relax");
   DefMacro!("\\blx@imc@resetpunctfont", "\\relax");
