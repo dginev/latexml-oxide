@@ -227,10 +227,15 @@ LoadDefinitions!({
     // digest forces math content (e.g. `$$Id…$$` CVS markers in `\date{}`) to
     // flatten into plain text instead of producing `<ltx:equation>` whatsits
     // that wouldn't fit the schema slot (e.g. `<ltx:date>` rejects equations).
-    let mut wrapped_tokens = vec![T_BEGIN!()];
-    wrapped_tokens.extend(tokens.unlist());
-    wrapped_tokens.push(T_END!());
-    let digested_tokens = DigestText!(Tokens::new(wrapped_tokens))?;
+    //
+    // Was: wrapped tokens in T_BEGIN/T_END, opening an extra group inside
+    // DigestText. The extra group can interact with mode-changing tokens
+    // in the body (e.g. \itshape via DefPrimitive setting font, or
+    // \@@@affiliation in IEEEtran multi-author setups) such that the
+    // DigestText's end_mode("text") sees BOUND_MODE shifted by the inner
+    // group's font/mode side effects. Mirror Perl's `DigestText(Tokens($tokens))`
+    // — no wrap. Driver: 2403.14274 IEEEconf abstract+keywords+IEEEpeerreviewmaketitle.
+    let digested_tokens = DigestText!(tokens)?;
     // Fill in the placeholder
     state::with_value_mut("frontmatter", |val_opt| {
       let frontmatter = match val_opt {
