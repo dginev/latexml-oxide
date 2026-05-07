@@ -183,7 +183,15 @@ LoadDefinitions!({
   // In fact, the opposite is true - the recommended approach is to add a "protected => 1" flag
   // to the binding definition.
   let is_protected = definition.as_ref().unwrap().is_protected();
-  let is_expansion_protected = !is_protected && definition.unwrap().get_expansion().unwrap().to_string().starts_with("\\protected");
+  // get_expansion() returns Option — Definitions that hold a Tokens body but
+  // have no replacement (e.g. some Conditional/MathPrimitive variants the
+  // is_expandable() check above lets through) yield None. Treat None as
+  // "not expansion-protected" so the predicate falls through to tfalse,
+  // matching Perl's lenient `defined ToString(...)` chain.
+  let is_expansion_protected = !is_protected
+    && definition.unwrap().get_expansion()
+      .map(|e| e.to_string().starts_with("\\protected"))
+      .unwrap_or(false);
   if is_protected || is_expansion_protected {
     ttrue
   } else {

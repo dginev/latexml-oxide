@@ -6942,7 +6942,9 @@ LoadDefinitions!({
             num = String::new();
           },
           '-' => {
-            from = Some(num.parse::<usize>().unwrap());
+            // `\cline{-3}` (no leading number) is malformed but appears in
+            // the wild; treat it as `\cline{1-3}` rather than panicking.
+            from = Some(num.parse::<usize>().unwrap_or(1));
             num = String::new();
           }
           c if c.is_ascii_digit() => num.push(c_next),

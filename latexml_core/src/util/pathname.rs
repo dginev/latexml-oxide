@@ -93,12 +93,16 @@ pub fn is_raw(pathname: &str) -> bool {
 /// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 /// convert a (possibly relative) file path to an absolute one
+/// Returns the input unchanged when the path doesn't exist — `canonicalize`
+/// fails on NotFound, but `import.sty` / `svg.sty` etc. ask for `absolute()`
+/// of paths that were just constructed (e.g. \import{subdir}{file.sty} for
+/// subdir/file.sty before find_file resolves it). Panicking aborts the
+/// whole worker; lenient fallback lets find_file probe other dirs.
 pub fn absolute(path: &str) -> String {
-  Path::new(path)
-    .canonicalize()
-    .unwrap()
-    .to_string_lossy()
-    .to_string()
+  match Path::new(path).canonicalize() {
+    Ok(p)  => p.to_string_lossy().to_string(),
+    Err(_) => path.to_string(),
+  }
 }
 
 /// Split the pathname into components (dir,name,type).
