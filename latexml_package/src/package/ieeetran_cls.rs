@@ -508,6 +508,16 @@ LoadDefinitions!({
   DefMacro!("\\keywords@onearg{}",
     "\\@IEEEkeywords #1 \\@endIEEEkeywords");
   DefMacro!("\\endkeywords", "\\@endIEEEkeywords");
+  // Perl L406-407: explicit `\begin{keywords}` / `\end{keywords}` env-token
+  // aliases so user `\def\keywords` / `\def\endkeywords` redefinitions
+  // don't break the env semantics. Drivers: 2007.06704
+  // (`\def\keywords{...}\def\endkeywords{\par}` followed by
+  // `\begin{keywords}...\end{keywords}` — without these aliases, our
+  // standard `\begin{X} → \begingroup\X` expansion routed through user's
+  // `\par`-redef'd `\endkeywords`, leaving `\@IEEEkeywords`'s
+  // `XUntil:\@endIEEEkeywords` reading past EOF).
+  DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
+  DefMacro!(T_CS!("\\end{keywords}"),   None, "\\@endIEEEkeywords");
 
   // Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
   Let!("\\labelindent", "\\IEEElabelindent");
