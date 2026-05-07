@@ -3524,7 +3524,17 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = Node::new(tag, new_ns.clone(), &self.document).unwrap();
+    let mut newnode = match Node::new(tag, new_ns.clone(), &self.document) {
+      Ok(n) => n,
+      Err(_) => {
+        // libxml2 rejected the tag (e.g. NUL byte, malformed name).
+        // Bail out of element creation rather than aborting; caller
+        // can recover. Driver: 2304.07380 panic at Node::new unwrap.
+        let message = s!("failed to create element {:?}", tag);
+        Error!("document", "open_element_internal", message);
+        return Err(message.into());
+      },
+    };
     point.add_child(&mut newnode)?;
     if no_ns {
       // When no explicit namespace was determined (default namespace element),
