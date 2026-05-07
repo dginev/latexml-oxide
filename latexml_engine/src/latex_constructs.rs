@@ -4291,6 +4291,19 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@author", "\\@empty");
+  // \shortauthor / \shorttitle: many journal classes (mnras, arxiv,
+  // ICML, NeurIPS templates) reference \shortauthor in
+  // \hypersetup{pdfauthor=...} and similar before \author has run.
+  // Without an initial empty definition, the reference errors out.
+  // Perl-faithful: the standard idiom is `\renewcommand*{\author}[2][]
+  // {\gdef\shortauthor{#1}\gdef\@author{#2}}` in user-style; since our
+  // \author below is locked and that renewcommand cannot override it,
+  // we save the same value ourselves and pre-define empty so any
+  // earlier reference (driver: 2406.14142 arxiv.sty L64
+  // `\hypersetup{pdfauthor={\shortauthor}}` before \author fires) is
+  // safe.
+  DefMacro!("\\shortauthor", "\\@empty");
+  DefMacro!("\\shorttitle", "\\@empty");
   // Perl latex_constructs.pool.ltxml L1116:
   //   DefMacro('\author[]{}', '\def\@author{#2}\lx@make@authors@anded{#2}', locked => 1);
   // The optional `[short]` arg is standard for many journal classes (mn,
@@ -4301,7 +4314,13 @@ LoadDefinitions!({
   // bodies and produces XMTok-in-note schema errors (arxiv 0709.4470,
   // 0802.3360). The short form is used for running heads/toc and is
   // otherwise discarded.
-  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@make@authors@anded{#2}", locked => true);
+  // Also save the optional `[short]` arg to `\shortauthor` so that
+  // user-style references work even though our \author is locked
+  // (driver: 2406.14142 arxiv.sty's renewcommand cannot override our
+  // locked \author, so we must save \shortauthor ourselves).
+  DefMacro!("\\author[]{}",
+    "\\gdef\\shortauthor{#1}\\def\\@author{#2}\\lx@make@authors@anded{#2}",
+    locked => true);
   DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
