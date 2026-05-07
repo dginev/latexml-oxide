@@ -6381,7 +6381,17 @@ LoadDefinitions!({
   DefMacro!("\\cl@@ckpt", "\\@elt{page}");
 
   DefMacro!("\\value{}", sub[(value)] {
-    T_CS!(s!("\\c@{}", Expand!(value)))
+    let name = Expand!(value).to_string();
+    // `\newtheorem{lemma}[theorem]{Lemma}` shares theorem's counter — no
+    // \c@lemma is created, only the `counter_for_type` mapping. So
+    // `\value{lemma}` would expand to the undefined `\c@lemma`. Resolve
+    // through the mapping first. Driver: 2101.03928
+    // `\setcounter{lemmathreesets}{\value{lemma}}` (llncs paper).
+    let resolved = match state::lookup_mapping("counter_for_type", &name) {
+      Some(Stored::String(s)) => arena::with(s, |s| s.to_string()),
+      _ => name,
+    };
+    T_CS!(s!("\\c@{resolved}"))
   });
 
   DefMacro!("\\@arabic{Number}", sub[(number)] {
