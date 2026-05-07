@@ -8,20 +8,21 @@
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">pub mod </span>converter;
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">pub mod </span>core_interface;
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">pub mod </span>ini_tex;
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">pub mod </span>post;
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub mod </span>util;
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a><span class="doccomment">/// Load the embedded LaTeXML schema and return its compiled-model
-<a href=#15 id=15 data-nosnippet>15</a>/// serialisation in the `.model` plain-text format. Mirrors Perl
-<a href=#16 id=16 data-nosnippet>16</a>/// `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136). Used
-<a href=#17 id=17 data-nosnippet>17</a>/// by `tools/compileschema.sh` stage 2 (and the `--dump-model` flag
-<a href=#18 id=18 data-nosnippet>18</a>/// on the `latexml_oxide` binary) to regenerate `LaTeXML.model` from
-<a href=#19 id=19 data-nosnippet>19</a>/// the same source the runtime sees.
-<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub fn </span>dump_compiled_latexml_model() -&gt; String {
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="kw">use </span>latexml_codegen::LoadModel;
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  latexml_core::common::model::MODEL
-<a href=#24 id=24 data-nosnippet>24</a>    .borrow()
-<a href=#25 id=25 data-nosnippet>25</a>    .dump_compiled_schema()
-<a href=#26 id=26 data-nosnippet>26</a>}
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">pub mod </span>main_tex;
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub mod </span>post;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">pub mod </span>util;
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// Load the embedded LaTeXML schema and return its compiled-model
+<a href=#16 id=16 data-nosnippet>16</a>/// serialisation in the `.model` plain-text format. Mirrors Perl
+<a href=#17 id=17 data-nosnippet>17</a>/// `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136). Used
+<a href=#18 id=18 data-nosnippet>18</a>/// by `tools/compileschema.sh` stage 2 (and the `--dump-model` flag
+<a href=#19 id=19 data-nosnippet>19</a>/// on the `latexml_oxide` binary) to regenerate `LaTeXML.model` from
+<a href=#20 id=20 data-nosnippet>20</a>/// the same source the runtime sees.
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">pub fn </span>dump_compiled_latexml_model() -&gt; String {
+<a href=#22 id=22 data-nosnippet>22</a>  <span class="kw">use </span>latexml_codegen::LoadModel;
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  latexml_core::common::model::MODEL
+<a href=#25 id=25 data-nosnippet>25</a>    .borrow()
+<a href=#26 id=26 data-nosnippet>26</a>    .dump_compiled_schema()
+<a href=#27 id=27 data-nosnippet>27</a>}
 </code></pre></div></section></main></body></html>

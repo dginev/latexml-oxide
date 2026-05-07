@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dump_compiled_latexml_model"],"macro":["tex_tests"],"mod":["converter","core_interface","ini_tex","post","util"]};
+window.SIDEBAR_ITEMS = {"fn":["dump_compiled_latexml_model"],"macro":["tex_tests"],"mod":["converter","core_interface","ini_tex","main_tex","post","util"]};
