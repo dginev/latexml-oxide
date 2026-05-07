@@ -57,7 +57,12 @@ pub fn discard_env_body(kind: &str, source: &str) -> latexml_core::common::error
   loop {
     let _upto_end = gullet::read_until(&end_delim)?;
     let _drop_open = gullet::read_token()?;
-    let env = gullet::read_balanced(latexml_core::gullet::ExpansionLevel::Off, false, true)?;
+    // require_open=false because `_drop_open` just consumed the `{` —
+    // read_balanced should read the inside, not a second `{`. Mirrors
+    // Perl's argless `$gullet->readBalanced` which assumes the `{` is
+    // already open. Driver: 2402.09676 + nicematrix stub cascaded
+    // "Expected opening '{'" because of the spurious require_open.
+    let env = gullet::read_balanced(latexml_core::gullet::ExpansionLevel::Off, false, false)?;
     if env.to_string() == kind {
       break;
     }
