@@ -56,8 +56,23 @@ LoadDefinitions!({
       .map(|t| t.to_string()).unwrap_or_default();
     let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let pkg_last = opt_babel.split(',').map(|s| s.trim().to_string())
-      .rfind(|s| !s.is_empty() && s != "nil").unwrap_or_default();
+    // Modern babel accepts `main=<lang>` to pin the document main language
+    // (driver: 2109.00402 \usepackage[main=english]{babel}). Two cases:
+    //   - `main=<lang>`  → use <lang> directly (highest priority)
+    //   - bare positional option (no `=`) → treat as a language candidate
+    //   - `<key>=<value>` for any other key (e.g. `shorthands=off`,
+    //     `provide=*`) → SKIP, it's an option not a language. Driver:
+    //     2001.00747 `\usepackage[english, shorthands=off]{babel}` was
+    //     selecting "off" as the language because we promoted any value-
+    //     half of any key=value option.
+    let main_kv = opt_babel.split(',')
+      .map(str::trim)
+      .find_map(|s| s.strip_prefix("main=").map(str::trim).map(str::to_string));
+    let pkg_last = main_kv.unwrap_or_else(|| {
+      opt_babel.split(',').map(str::trim)
+        .filter(|s| !s.is_empty() && *s != "nil" && !s.contains('='))
+        .next_back().unwrap_or_default().to_string()
+    });
     let lang = if !pkg_last.is_empty() {
       pkg_last
     } else if main != "nil" && !main.is_empty() {
