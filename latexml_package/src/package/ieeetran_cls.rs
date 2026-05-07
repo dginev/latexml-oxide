@@ -92,6 +92,14 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:keywords}[name={Index Terms}]{#1}");
   DefMacro!("\\IEEEkeywords", "\\@IEEEkeywords");
   DefMacro!("\\endIEEEkeywords", "\\@endIEEEkeywords");
+  // Perl IEEEtran.cls.ltxml L152-153: explicit env-token aliases. Without
+  // these, our standard `\begin{X} → \begingroup\X` expansion routes
+  // through user-redefinable namespace and the `XUntil:\@endIEEEkeywords`
+  // terminator can be broken by user `\def\endIEEEkeywords`. Drivers:
+  // 2007.13436, 1812.09324 (`\@iffalse` cascade past EOF when the
+  // XUntil reader runs off the end).
+  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
+  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\@endIEEEkeywords");
 
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
