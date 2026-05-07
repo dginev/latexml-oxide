@@ -57,4 +57,16 @@ LoadDefinitions!({
     mode => "internal_vertical", locked => true,
     properties => { begin_itemize("itemize", Some("enum"), BeginItemizeOptions::default())? },
     before_digest_end => { Digest!("\\par")?; });
+
+  // Newer elsarticle.cls (2018+) added {graphicalabstract} and {highlights}
+  // for Elsevier journal submissions. Real templates wrap a TikZ figure or
+  // bullet list inside these and Elsevier's typesetter renders separately
+  // from the main body. For LaTeXML's HTML output, treat them as
+  // semantically-tagged note blocks. Driver: 1907.06674.
+  DefEnvironment!("{graphicalabstract}",
+    "<ltx:note role='graphicalabstract'>#body</ltx:note>",
+    mode => "internal_vertical", locked => true);
+  DefEnvironment!("{highlights}",
+    "<ltx:note role='highlights'>#body</ltx:note>",
+    mode => "internal_vertical", locked => true);
 });
