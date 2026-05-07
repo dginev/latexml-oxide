@@ -1764,7 +1764,18 @@ impl Document {
             break;
           }
         }
-        if get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
+        // Stop if not a font element, or if marked _noautoclose, or if
+        // this is an explicit (non-fontswitch) text wrapper. A constructor-
+        // opened `<ltx:text class='...'>` (e.g. `\uline{...}`) MUST NOT be
+        // closed-out-of by a font-distance heuristic just because the parent
+        // happens to score better — that produces an empty wrapper and
+        // siblings the inner content (driver: 2402.16319 `\uline{\textbf{2}}`
+        // inside `\sc` tabular). Only auto-opened fontswitch wrappers are
+        // safe to walk past.
+        if get_node_qname(&n) != element_sym
+          || n.has_attribute("_noautoclose")
+          || !n.has_attribute("_fontswitch")
+        {
           break;
         }
         match n.get_parent() {
