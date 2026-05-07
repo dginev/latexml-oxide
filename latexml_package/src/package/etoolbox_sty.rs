@@ -1295,7 +1295,13 @@ LoadDefinitions!({
       Info!("unexpected", "patchcmd", format!("Patchcmd is not supported on LaTeXML-native definitions, will not patch {}", cs));
       return Ok(failure)
     }
-    let expansion_tokens = match expansion.unwrap() {
+    let Some(expansion) = expansion else {
+      // Expandable but no expansion body — e.g. a Let-only alias or
+      // \def\foo{} with empty body. Treat as patch-failure (driver:
+      // 2105.06894 panic at unwrap).
+      return Ok(failure);
+    };
+    let expansion_tokens = match expansion {
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
