@@ -1694,7 +1694,15 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // if the binding is missing, fall through to OmniBus (below). Allowing raw
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
-  let notex_default = !lookup_bool("INCLUDE_CLASSES");
+  // EXCEPTION: a name with a directory prefix (`misc/ieeetran`,
+  // `./sty/foo`) is a strong signal of a user-local class file. The
+  // INCLUDE_CLASSES gate is meant to avoid arbitrary system .cls
+  // pollution; it shouldn't suppress files the user explicitly
+  // bundled. Driver: 2105.02087 (`\documentclass{misc/ieeetran}` —
+  // local copy of IEEEtran with author edits — fell through to
+  // OmniBus, missing \IEEEoverridecommandlockouts and friends).
+  let has_path_prefix = name.contains('/') || name.contains('\\');
+  let notex_default = !lookup_bool("INCLUDE_CLASSES") && !has_path_prefix;
   // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
