@@ -404,6 +404,27 @@ LoadDefinitions!({
   DefMacro!("\\glsunset{}", "");
   DefMacro!("\\glslocalreset{}", "");
   DefMacro!("\\glslocalunset{}", "");
+  // Field-expansion control: TL glossaries.sty L1390+. \glssetexpandfield
+  // {<field>}{<expand|noexpand>} controls whether a field is expanded at
+  // \newglossaryentry time. \glsnoexpandfields disables expansion globally.
+  // Our entries store fields as opaque strings, so these are no-ops.
+  DefMacro!("\\glssetexpandfield{}{}", "");
+  DefMacro!("\\glsnoexpandfields", "");
+  DefMacro!("\\glsexpandfields", "");
+  // \glsname / \glsdescription / \glssymbolname — read-only access to a
+  // single entry field. Like \glsentrytext, our stub returns empty since
+  // we don't keep typesetting fields easily accessible. Driver: 1812.05463
+  // and 8 papers in the canvas-failing pool. \glsplural also commonly used.
+  DefMacro!("\\glsname Semiverbatim", "");
+  DefMacro!("\\Glsname Semiverbatim", "");
+  DefMacro!("\\glsdescription Semiverbatim", "");
+  DefMacro!("\\Glsdescription Semiverbatim", "");
+  DefMacro!("\\glssymbolname Semiverbatim", "");
+  DefMacro!("\\Glssymbolname Semiverbatim", "");
+  // \glsplural — like \gls{} but for plural form. Route to \glspl which
+  // exists. Mirror Capitalized variant.
+  DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
   // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
   // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
   // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
