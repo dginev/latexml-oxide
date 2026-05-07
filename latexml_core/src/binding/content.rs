@@ -432,9 +432,38 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Step 3: Try fallback (strip version suffixes) before raw TeX
     // Perl Package.pm L2118-2121: FindFile_fallback
     // e.g. natbib-arxiv_v2.sty → natbib.sty, icml2024.sty → icml.sty
+    //
+    // BUT skip the fallback if the name carries a directory prefix
+    // AND a raw file actually exists at that path. This signals a
+    // user-local file (`assets/equations.sty` shipping in the
+    // submission); the fallback would strip the directory and match
+    // a contrib binding by basename, silently substituting the wrong
+    // implementation. If no raw file exists, the path-prefixed name
+    // is just an alias for the system file (e.g.
+    // `\documentclass{misc/ieeetran}` where misc/ieeetran.cls is a
+    // local copy whose basename matches our IEEEtran.cls binding) —
+    // let the fallback proceed so the binding-by-basename path
+    // (driver: 2105.02087) still works.
+    // Drivers: 2405.18387 (assets/equations → must NOT fallback to
+    // contrib equations); 2105.02087 (misc/ieeetran → MUST fallback
+    // to IEEEtran binding). Perl's FindFile_fallback only looks in
+    // `ltxml_paths`; it doesn't have a contrib-binding registry, so
+    // it doesn't suffer this collision in the first place.
+    let has_path_prefix = name.contains('/') || name.contains('\\');
+    let local_raw_exists = has_path_prefix
+      && !options.notex
+      && find_file(
+        &filename,
+        Some(FindFileOptions {
+          forbid_ltxml:      true,  // raw file only
+          notex:             false,
+          ext_type:          options.extension.as_ref().cloned(),
+          search_paths_only: options.searchpaths_only,
+        }),
+      ).is_some();
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml {
+    } else if !options.noltxml && !local_raw_exists {
       if let Some(fallback) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",
@@ -1373,9 +1402,19 @@ impl Default for RequireOptions {
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
+  // EXCEPTION: a name with a directory prefix (`assets/equations`,
+  // `./sty/foo`) is a strong signal of a user-local style file that
+  // ships with the paper. INCLUDE_STYLES=false is meant to gate
+  // arbitrary system-wide raw .sty loads; it shouldn't suppress files
+  // the user explicitly bundled with their submission. Driver:
+  // 2405.18387 — `\usepackage{assets/equations}` was silently dropped
+  // (notex=true skipped raw load) and \averageprecision came up
+  // undefined, even though `assets/equations.sty` was right there.
+  let has_path_prefix = name.contains('/') || name.contains('\\');
   if options.notex.is_none()
     && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
+    && !has_path_prefix
   {
     options.notex = Some(true);
   }
@@ -1671,7 +1710,15 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // if the binding is missing, fall through to OmniBus (below). Allowing raw
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
-  let notex_default = !lookup_bool("INCLUDE_CLASSES");
+  // EXCEPTION: a name with a directory prefix (`misc/ieeetran`,
+  // `./sty/foo`) is a strong signal of a user-local class file. The
+  // INCLUDE_CLASSES gate is meant to avoid arbitrary system .cls
+  // pollution; it shouldn't suppress files the user explicitly
+  // bundled. Driver: 2105.02087 (`\documentclass{misc/ieeetran}` —
+  // local copy of IEEEtran with author edits — fell through to
+  // OmniBus, missing \IEEEoverridecommandlockouts and friends).
+  let has_path_prefix = name.contains('/') || name.contains('\\');
+  let notex_default = !lookup_bool("INCLUDE_CLASSES") && !has_path_prefix;
   // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";

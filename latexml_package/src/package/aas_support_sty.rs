@@ -307,6 +307,14 @@ LoadDefinitions!({
   state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
   state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
 
+  // aastex631.cls L4780-4781:
+  //   \newif\ifstartlongtable
+  //   \def\startlongtable{\vskip1sp\global\startlongtabletrue}
+  // We treat as a no-op marker — our deluxetable / longtable handling
+  // doesn't need the conditional flag. Driver: 2209.01632 (aastex631)
+  // emitted "\startlongtable not defined" + alignment-tab cascade.
+  DefMacro!("\\startlongtable", "");
+
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so
   // the package stashes an active math-shift token into `\savedollar`

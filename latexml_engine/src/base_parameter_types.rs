@@ -295,10 +295,53 @@ LoadDefinitions!({
         // family to avoid the `\hspace`/dimension-reader over-read issue
         // recorded in the comment above (astro-ph9903386 leak).
         let is_def_family = token.with_cs_name(|cs| {
-          matches!(cs, "\\def" | "\\edef" | "\\gdef" | "\\xdef"
-            | "\\let" | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
+          matches!(cs, "\\def" | "\\gdef"
+            | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
         });
-        if is_real_expandable || is_def_family {
+        // \edef, \xdef AND \let need their target/body captured RAW — not
+        // through read_arguments→Invocation. Reasons:
+        //   - \edef/\xdef: DefExpanded body parameter expands eagerly
+        //     (`\itdefault` → `it`); Invocation revert drops the target
+        //     Token and the {…}-braces, leaving `\edef i t \selectfont`
+        //     stream that re-reads as malformed at EOF.
+        //     Driver: 2403.14274 IEEEconf `\itshape …`.
+        //   - \let: DefToken/Token reversion in some test paths emits the
+        //     `\let` token alone without the cs1/cs2 args, then the body
+        //     re-reads `\let \let \let …` recursively as `\let {…}` with
+        //     the next `\let`'s target = `{` — triggering 100-deep
+        //     recursion through `\lx@acronym`. Driver: 2103.11356 elsart
+        //     `\begin{keyword}\ac{CNNs} …`.
+        // Capture all three RAW: `<token> <skipped-spaces> <Token>
+        // <until-brace> {<balanced-raw>}`. Preserves original input
+        // exactly so re-emission re-reads cleanly.
+        let is_def_raw_capture =
+          token.with_cs_name(|cs| matches!(cs, "\\edef" | "\\xdef" | "\\let"));
+        if is_def_raw_capture {
+          tokens.push(token);
+          gullet::skip_spaces()?;
+          if let Some(target) = gullet::read_token()? {
+            tokens.push(target);
+          }
+          // \let has no UntilBrace + body — just `<target> <value>`.
+          // \edef/\xdef have UntilBrace + balanced-body.
+          let is_let = token.with_cs_name(|cs| cs == "\\let");
+          if is_let {
+            // Read second token (the value to alias to).
+            // Optional `=` and one space are also valid in real TeX
+            // — DefToken handles those, but Token doesn't. Peek for `=`.
+            gullet::skip_spaces()?;
+            if let Some(value) = gullet::read_token()? {
+              tokens.push(value);
+            }
+          } else {
+            if let Some(prebrace) = gullet::read_until_brace()? {
+              tokens.extend(prebrace.unlist());
+            }
+            tokens.push(T_BEGIN!());
+            tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
+            tokens.push(T_END!());
+          }
+        } else if is_real_expandable || is_def_family {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
             tokens.extend(Invocation!(token, args).unlist());
@@ -992,6 +1035,15 @@ LoadDefinitions!({
     _inner: Option<&Parameters>,
     extra: &[Tokens],
   ) -> Result<KeyVals> {
+    // Skip whitespace between this arg and the previous one. TeX-style
+    // parameter matching `#1#2{...}` skips spaces before each `{`-delimited
+    // group; our `RequiredKeyVals` parameter type checks `if_next(T_BEGIN)`
+    // directly, so without an explicit skip it errors on user input like
+    //   \newglossaryentry{RIS}\n{ name={...}, ... }
+    // (\n + indentation between args[0] and args[1]). Driver: 2203.11854
+    // R=1 → R=0 — Perl raw-loads glossaries.sty so `\newglossaryentry` is
+    // a 2-arg `\newcommand` whose TeX matching handles this natively.
+    gullet::skip_spaces()?;
     if gullet::if_next(T_BEGIN!())? {
       let mut extra_iter = extra.iter();
       // subtle!!! The first extra is the prefix, according to the Perl use.

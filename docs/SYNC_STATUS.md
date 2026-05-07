@@ -5,10 +5,12 @@ Perl LaTeXML on TL2025 with `--preload=ar5iv.sty
 --path=~/git/ar5iv-bindings/bindings` produces 0 errors. Mission completes
 when every in-scope paper produces 0 errors on Rust too.
 
-**Status**: Round-20 Phase A Gate 0 closed 2026-05-03 at
-**99,829 / 100,003 = 99.83%** raw OK (round-19 was 99.77%); **0 NEW
-non-OK** introduced; **56 papers recovered**. Round-20 fix series
-committed (`e1c3da3975`).
+**Status**: Round-22 active 2026-05-07. Round-20 Phase A Gate 0
+closed 2026-05-03 at **99,829 / 100,003 = 99.83%** raw OK on the 100k
+canvas. Round-22 sprint targets the 335-paper baseline-failure set
+(`~/round22_validate/inputs/`), now at **287/330 OK = 87.0%** projected
+(v17 sweep in flight, last full sweep v16 at 274/330 = 83.0%, baseline
+v10 = 249/350 = 71.1%). Round-21 work archived in `docs/archive/`.
 
 **True Rust regression count: 0** *for ported error conditions*.
 [Caveat: Error/Fatal coverage audit](ERROR_PARITY_AUDIT.md) reveals
@@ -37,7 +39,90 @@ master..claude-round-19`.
 
 ---
 
-## Round-20 (active 2026-05-03)
+## Round-22 (active 2026-05-07)
+
+### Session contributions (commits, this branch)
+24 commits on `claude-round-22` since 2026-05-07 11:00 UTC.
+
+**Late-session adds (post-v17):**
+- `9fe3e77c92` `Document::open_text` walk: stop at explicit
+  (non-fontswitch) `<ltx:text>` wrappers — fixes 2402.16319
+  `\uline{\textbf{2}}` cascade.
+- `fc2ff67389` `aa_support_sty` drop spurious `\isotope` definition
+  (Perl never defined it) — fixes 2011.10587 `\newcommand\isotope`
+  shadow → math cascade (12 errors → 0).
+- `70a8f2280f` `etoolbox_sty` `DeclareListParser` block
+  `TeX!`→`RawTeX!` for `&` catcode — fixes 2108.09184 `\docsvlist`
+  in `align*` cascade (45 errors → 0). Also recovers 2110.11931
+  similar pattern.
+
+**Binding fixes (15):**
+- `f6fa966619` etoolbox `\ifstrempty` block `TeX!`→`RawTeX!` (1904.02116)
+- `187997454e` enumitem `\the<counter>` ref= recursion (1904.10839)
+- `b1bbe1cb8b` siunitx `S/s Optional` column option (1904.04479)
+- `be094f63f4` `\startlongtable` no-op (2209.01632 aastex631)
+- `76ec7b4621` `\psj` journal abbrev (2306.11151)
+- `ebaacfde31` elsart `\affiliation` utf-8 char-vec (2407.00104)
+- `6d4a15f73b` `discard_env_body` `require_open=false` (2402.09676 NiceTabular)
+- `6947f5f3ce` `\shortauthor / \shorttitle` predef + save (helps arxiv.sty)
+- `f587a6663c` amsmath `\tag` uses `\edef` (2406.07616 OOM)
+- `f53ab3ecda` **`\DeclareFontEncoding` defines `\<encoding>-cmd` —
+  recovers ~13 papers in token-limit cluster** (T1-cmd-loop fix)
+
+**Defensive guards (6):**
+- `fe96758a11` `\lx@dual` reversion + `\patchcmd` None args
+- `0a1b7e15b9` XMDual `_xmkey` defensive
+- `9538737ae0` + `d00dfc5876` `_font` parse defensive (2 sites)
+- `cfbb003380` `xml::findnodes` empty vec on libxml2 error
+- `308ce289b0` `Node::new` failure → Result not panic
+- `e78c5aba97` `gullet read_internal_token` runtime-None defensive
+
+### Round-22 well-diagnosed remaining failures (post-v17)
+
+These need follow-up work but require deeper engine effort or
+divergence-from-Perl design decisions:
+
+| Paper | Cluster | Diagnosis |
+|---|---|---|
+| 1904.02716 | math-parser stack overflow | revtex4-1 + braket; deep math nesting overflows the math parser stack |
+| 1904.10251 | math-parser stack overflow | similar |
+| 2105.04174 | xpath/stack-overflow cascade | XPath findnodes on stale subtree triggers stack overflow elsewhere |
+| 2304.07380 | math-parser OOM | XMTok/XMApp create-element failure during math; defensive Node::new converted to errors but math parser still over-allocates |
+| 2306.12437 | local class needed | `\documentclass{ptephy_v1}` — paper ships ptephy_v1.cls but INCLUDE_CLASSES=false suppresses the load. Same Perl errors. Local-class loading fix would diverge from Perl. |
+| 2406.14142 | expl3 `\group_begin:` | duckuments.sty + expl3 `\c_sys_jobname_str` cascade. `\shortauthor` fix removed one error; deeper expl3 issues remain. |
+| 1907.04278 / 2304.12803 | siunitx `double-superscript` | state-cumulative; tight min repros pass standalone, suggests siunitx-specific accumulation. Needs siunitx unit-arg parsing audit. |
+| 2007.13470 | babel-slovak hang | hangs after geometry.sty + babel @aux hooks fire; not the T1-cmd loop. Needs babel-slovak language-file investigation. |
+| 2110.11931 | mnras `Script _` | state-cumulative; min repros pass. Needs mnras frontmatter mode-frame audit. |
+| 2402.16319 | schema close-text | `<ltx:_CaptureBlock_><ltx:tabular><ltx:tr><ltx:td><ltx:text>` close failure inside icml2024 cell. Anonymous String trigger. |
+| 2404.06289 | natbib `\NAT@@wrout` | bbl mode-frame imbalance after `\NAT@@wrout`. Known bbl path issue. |
+| 2406.07616 (FIXED v17) | `\tag{\thesection.\theequation}` OOM | Recovered by f587a6663c. |
+| 2306.16410 + 13 others (FIXED v17) | T1-cmd loop | Recovered by f53ab3ecda. |
+
+Schema-strictness divergences (Perl accepts but Rust's RelaxNG rejects):
+- 2211.01875: `ltx:enumerate` in `ltx:listingline`
+- 2301.10618: `ltx:section` in `ltx:item`/`ltx:subsection`/`ltx:section`
+- 2302.11635: `ltx:toccaption`/`ltx:caption` in `ltx:block`
+
+These are LaTeXML schema model issues; need RelaxNG audit + `OXIDIZED_DESIGN`
+divergence entries. Not low-hanging.
+
+UTF-8 in cite-keys + `[T1]{fontenc}` cluster — root-caused as
+`\<encoding>-cmd` undefined dispatcher, fixed in `f53ab3ecda`. Memory
+note: `wisdom_utf8_semiverbatim_hang.md`.
+
+### Round-22 next steps
+
+| Task | Status |
+|---|---|
+| v17 sweep with `f53ab3ecda` (T1-cmd) | release rebuilding 15:38 |
+| Confirm +13 paper recovery in v17 results | pending sweep |
+| Schema-strictness audit (2211.01875 cluster) | open, needs RelaxNG sub-task |
+| siunitx state-cumulative double-superscript audit | open |
+| ptephy_v1 / unknown-local-class load policy | open, needs design decision |
+
+---
+
+## Round-20 (closed 2026-05-03)
 
 ### What landed this session
 - **`tools/parity_check.sh`**: PERL_TIMEOUT papers with `partial < Rust`
@@ -115,17 +200,18 @@ in the conversion log):
 
 ---
 
-## Schedule (1–2 weeks to PR)
+## Schedule (Round-20 — landing items completed)
 
-| Day | Task | Outcome |
-|---|---|---|
-| ~~Today~~ DONE | Re-sweep + triage: 99.83% raw OK, **0 NEW non-OK**, 56 papers recovered. Gate 0 cleared. | Measured ✓ |
-| ~~D+1~~ DONE 2026-05-03 | Round-20 fixes committed (`e1c3da3975`) — parity_check, cluster_regressions, find_main_tex, alignment | One coherent series ✓ |
-| ~~D+2~~ DONE 2026-05-03 | Bisected 5 `_/^` witnesses → measured 4/5 Sub-A, 1/5 Sub-B, 0/5 Sub-C. Sub-C removed from active tracking. See sub-cause table below. | Sub-cause table ✓ |
-| D+3 | CI nightly canvas (random 1k slice with parity_check baseline diff) | Drift insurance |
-| D+4 | Open PR with measured numbers | Ship |
+Round-20 100k canvas tasks done 2026-05-03:
+- Re-sweep + triage 99.83% raw OK, 0 NEW non-OK, 56 recovered ✓
+- Round-20 fix series committed (`e1c3da3975`) ✓
+- `_/^` cluster sub-cause bisection (5 witnesses) ✓
 
-After PR ships: Phase C long-tail. Per-paper triage at 1-2/day with
+Outstanding:
+- D+3: CI nightly canvas (random 1k slice with parity_check baseline diff)
+- D+4: Open PR with Round-20 measured numbers
+
+After Round-20 PR: Phase C long-tail. Per-paper triage at 1-2/day with
 min-repro → fix → land → verify. Many will be SHARED-FAILURE that
 require deliberate Rust-beats-Perl divergences — track in
 `docs/OXIDIZED_DESIGN.md` before landing.

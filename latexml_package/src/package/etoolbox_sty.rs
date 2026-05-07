@@ -183,14 +183,29 @@ LoadDefinitions!({
   // In fact, the opposite is true - the recommended approach is to add a "protected => 1" flag
   // to the binding definition.
   let is_protected = definition.as_ref().unwrap().is_protected();
-  let is_expansion_protected = !is_protected && definition.unwrap().get_expansion().unwrap().to_string().starts_with("\\protected");
+  // get_expansion() returns Option — Definitions that hold a Tokens body but
+  // have no replacement (e.g. some Conditional/MathPrimitive variants the
+  // is_expandable() check above lets through) yield None. Treat None as
+  // "not expansion-protected" so the predicate falls through to tfalse,
+  // matching Perl's lenient `defined ToString(...)` chain.
+  let is_expansion_protected = !is_protected
+    && definition.unwrap().get_expansion()
+      .map(|e| e.to_string().starts_with("\\protected"))
+      .unwrap_or(false);
   if is_protected || is_expansion_protected {
     ttrue
   } else {
     tfalse
   } }, protected => true);
 
-  TeX!(
+  // RawTeX! (not TeX!): bodies in this block use `&` as a delimiter argument
+  // inside `\ifstrempty`, `\etb@ifcounter`, etc. At runtime, etoolbox sets
+  // `\catcode`\&=3` (MATH_SHIFT) earlier in the load. RawTeX tokenizes
+  // here-and-now so those `&` get catcode 3, not the compile-time default
+  // ALIGN_TAB (4). Without this, `\ifstrempty{}{...}{...}` inside an `align`
+  // environment fires column-template handling on the `&` arg to `\ifx`, which
+  // opens a stray `\lx@begin@inline@math` frame (driver: 1904.02116).
+  RawTeX!(
     r"
 
 % {<csname>}{<true>}{<false>}
@@ -1280,7 +1295,13 @@ LoadDefinitions!({
       Info!("unexpected", "patchcmd", format!("Patchcmd is not supported on LaTeXML-native definitions, will not patch {}", cs));
       return Ok(failure)
     }
-    let expansion_tokens = match expansion.unwrap() {
+    let Some(expansion) = expansion else {
+      // Expandable but no expansion body — e.g. a Let-only alias or
+      // \def\foo{} with empty body. Treat as patch-failure (driver:
+      // 2105.06894 panic at unwrap).
+      return Ok(failure);
+    };
+    let expansion_tokens = match expansion {
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
@@ -1307,7 +1328,16 @@ LoadDefinitions!({
   }
 }, protected => true);
 
-  TeX!(
+  // RawTeX! (not TeX!): the DeclareListParser bodies (line `\etb@lst@...&`)
+  // use `&` as a delimiter sentinel. Perl's etoolbox.sty.ltxml sets
+  // `\catcode`\&=3` (MATH_SHIFT) at file head so that subsequent `\def`
+  // bodies capture `&` as MATH_SHIFT, not ALIGN_TAB. Compile-time TeX!
+  // tokenizes with default catcodes (`&` = ALIGN_TAB), so when
+  // `\docsvlist{a,b,c}` runs inside `\begin{align*}...\end{align*}`, the
+  // sentinel `&` triggers a column break and unwinds the math frame —
+  // 9-error cascade in driver 2108.09184. RawTeX! re-tokenizes at runtime
+  // when the etoolbox catcode override is in effect.
+  RawTeX!(
     r"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}

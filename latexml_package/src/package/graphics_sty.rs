@@ -459,6 +459,15 @@ LoadDefinitions!({
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 
+  // \Gin@extensions — comma-separated list of recognized image extensions.
+  // Real graphics.sty assigns this from the chosen graphics driver
+  // (.eps for dvips, .pdf,.png,.jpg for pdftex). User code rarely reads
+  // it directly, but `\graphicspath` / `\@for` loops in third-party
+  // packages (e.g. xkeyval drivers) iterate over it. Pre-define as
+  // empty to suppress "undefined" cascades — the actual driver-specific
+  // list is filled in elsewhere if a graphics driver binding loads.
+  // Driver: 2103.04594.
+  Let!("\\Gin@extensions", "\\@empty");
   Let!("\\Gin@decode", "\\@empty");
   DefMacro!("\\Gin@exclamation", "!");
   Let!("\\Gin@page", "\\@empty");

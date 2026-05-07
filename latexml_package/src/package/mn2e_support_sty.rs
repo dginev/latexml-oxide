@@ -54,10 +54,45 @@ LoadDefinitions!({
   //
   // As an environment, `\endkeywords` is auto-defined, so raw
   // `mn2e-breakabs.sty` redefinitions of `\endkeywords` (which reference
-  // undefined `\SFB@keywordstrue`) never fire. Body digests as frontmatter
-  // classification entry via `\@add@frontmatter`.
-  DefEnvironment!("{keywords}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
+  // undefined `\SFB@keywordstrue`) never fire.
+  //
+  // Was: emitted `<ltx:classification>` directly via constructor template,
+  // which inserted the element at the current insertion point. Driver:
+  // 2003.11440 `\begin{abstract}...\begin{keywords}{...}\end{keywords}\end{abstract}`
+  // — the `\begin{keywords}` was nested INSIDE the open abstract, where
+  // ltx:classification isn't a valid child, producing
+  // "ltx:classification isn't allowed in <ltx:abstract>".
+  //
+  // Mirror Perl directly:
+  //   DefEnvironment('{keywords}', '',
+  //     afterDigest => sub {
+  //       my $frontmatter = LookupValue('frontmatter');
+  //       push(@{ $$frontmatter{'ltx:classification'} },
+  //         ['ltx:classification', { scheme => 'keywords' }, @LaTeXML::LIST]);
+  //       return; });
+  // — empty constructor template, after-digest hook captures the digested
+  // body list and pushes a (tag, attrs, body) entry under the
+  // `ltx:classification` key of the global frontmatter hash. No mode
+  // bracket, no locked flag — matches Perl.
+  DefEnvironment!("{keywords}", "",
+    after_digest => {
+      let body = List::new(clone_box_list());
+      with_value_mut("frontmatter", |fm_opt| {
+        let frontmatter = match fm_opt {
+          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+          _ => return Ok::<(), latexml_core::Error>(()),
+        };
+        let entry = (
+          "ltx:classification".to_string(),
+          Some(string_map!("scheme" => "keywords")),
+          body.into(),
+        );
+        frontmatter.entry("ltx:classification".to_string())
+          .or_insert_with(Vec::new)
+          .push(entry);
+        Ok(())
+      })?;
+    });
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   DefMacro!("\\bsp", "");

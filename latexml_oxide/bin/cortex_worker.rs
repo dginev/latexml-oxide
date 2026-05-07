@@ -669,7 +669,56 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  // Heuristic 2: prefer files with PDF-like \includegraphics
+  // Heuristic 1.5: deprioritize obvious vendor template / docs files.
+  // Many user uploads bundle the publisher's template along with the
+  // user's own paper. Examples we've hit: 1907.06674 ships
+  // `elsarticle-template-harv.tex`, `elsarticle-template-num.tex`,
+  // `elsdoc.tex` AND the user's `main_resubmit.tex` — picker chose
+  // `elsdoc.tex` (elsarticle docs file with `\includegraphics{...pdf}`
+  // examples) and produced 101 errors.
+  //
+  // Pattern: filenames containing `template`, ending in `-doc.tex`/
+  // `-docs.tex`/`elsdoc.tex`/`README.tex`. If the candidate set has
+  // BOTH template-looking and non-template files, drop the templates.
+  if candidates.len() > 1 {
+    let is_template_name = |f: &PathBuf| -> bool {
+      let n = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+      n.contains("template")
+        || n == "elsdoc.tex"
+        || n.ends_with("-doc.tex")
+        || n.ends_with("-docs.tex")
+        || n.starts_with("readme")
+    };
+    let non_template: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| !is_template_name(f))
+      .cloned()
+      .collect();
+    if !non_template.is_empty() && non_template.len() < candidates.len() {
+      candidates = non_template;
+    }
+  }
+
+  // Heuristic 2: prefer files with a matching .bbl file
+  // (.bbl is the strongest "this is the main file" signal — present
+  // only when the user has compiled the doc through bibtex/biber.)
+  // Was H3, swapped before .includegraphics: 2011.11637 ships
+  // arxiv_paper.tex (with arxiv_paper.bbl) AND cvpr.tex (CVPR template
+  // with .includegraphics + .pdf refs). The .pdf-includegraphics
+  // heuristic was eliminating arxiv_paper.tex and leaving the template
+  // cvpr.tex — which doesn't define `\eg` etc., causing R=many.
+  if candidates.len() > 1 {
+    let bbl_candidates: Vec<PathBuf> = candidates
+      .iter()
+      .filter(|f| f.with_extension("bbl").exists())
+      .cloned()
+      .collect();
+    if !bbl_candidates.is_empty() {
+      candidates = bbl_candidates;
+    }
+  }
+
+  // Heuristic 3: prefer files with PDF-like \includegraphics
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates
       .iter()
@@ -684,18 +733,6 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
       .collect();
     if !pdf_candidates.is_empty() {
       candidates = pdf_candidates;
-    }
-  }
-
-  // Heuristic 3: prefer files with a matching .bbl file
-  if candidates.len() > 1 {
-    let bbl_candidates: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| f.with_extension("bbl").exists())
-      .cloned()
-      .collect();
-    if !bbl_candidates.is_empty() {
-      candidates = bbl_candidates;
     }
   }
 

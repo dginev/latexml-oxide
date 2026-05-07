@@ -43,7 +43,12 @@ impl XPath {
           Ok(())
         };
         err().ok();
-        panic!("this is an external libxml2 error; unwinding...");
+        // libxml2 XPath failures (invalid context node, growth limit
+        // hit, malformed expression) used to panic and abort the run.
+        // Treat as "no matches" instead — the conversion can usually
+        // recover and produce most of the document. Drivers:
+        // 2105.04174, 2304.07380, 1904.02716 all aborted here.
+        Vec::new()
       },
     }
   }

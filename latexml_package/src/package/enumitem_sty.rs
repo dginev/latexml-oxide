@@ -76,7 +76,17 @@ fn begin_enum_itemize(
   // ref — Perl L102-109
   if let Some(ref_toks) = hash.get("ref").and_then(argwrap_to_tokens) {
     let rref = replace_star(&ref_toks, &T_OTHER!(&usecounter));
-    def_macro(T_CS!(s!("\\the{usecounter}")), None, rref, None)?;
+    // Perl L104-108 hotfix: if the ref body contains \the<usecounter>,
+    // expand it BEFORE redefining \the<usecounter> to itself — otherwise
+    // the redefinition is recursive (driver: 1904.10839 with
+    // ref=\theenumi{}).
+    let the_cs = s!("\\the{usecounter}");
+    let rref = if rref.to_string().contains(&the_cs) {
+      latexml_core::gullet::do_expand(rref)?
+    } else {
+      rref
+    };
+    def_macro(T_CS!(the_cs), None, rref, None)?;
   }
 
   // font / format — Perl L110-111

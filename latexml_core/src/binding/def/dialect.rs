@@ -144,11 +144,35 @@ pub fn def_conditional(
       options.scope,
     )
   } else {
-    let name_opt = cs.with_str(|custom| {
-      CONDITIONAL_CS_RE
-        .captures(custom)
-        .map(|captures| captures.get(1).map_or("", |m| m.as_str()).to_string())
+    // Perl Package.pm L1210-1219 — match `\<2chars><rest>` and warn (not
+    // error) when prefix is not `if`, but still proceed with user-defined
+    // conditional creation. Bug-for-bug compatible: e.g. `\newif\pgf@lib@svg@relative`
+    // (PGF library naming) creates `\f@lib@svg@relativetrue` etc. with the
+    // `pg` prefix consumed — package code that uses `\if\pgf@lib@svg@relative`
+    // still works because the Let to `\iffalse` runs unconditionally.
+    let (name_opt, warn_misnamed) = cs.with_str(|custom| {
+      // First try strict `\if<name>` / `\unless` — preferred path.
+      if let Some(captures) = CONDITIONAL_CS_RE.captures(custom) {
+        let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
+        return (Some(name), false);
+      }
+      // Perl-loose fallback: `\<2chars><rest>` — capture rest as `name`,
+      // emit a `misdefined` Warn since prefix isn't `if`.
+      let bytes = custom.as_bytes();
+      if bytes.len() > 3 && bytes[0] == b'\\' {
+        let rest = std::str::from_utf8(&bytes[3..]).ok().map(str::to_string);
+        (rest, true)
+      } else {
+        (None, false)
+      }
     });
+    if warn_misnamed {
+      let message = s!(
+        "The conditional {} is being defined but doesn't start with \\if",
+        cs
+      );
+      Warn!("misdefined", cs, message);
+    }
     if let Some(name) = name_opt {
       if !name.is_empty() && name != "case" && test.is_none() {
         // user-defined conditional, like with \newif

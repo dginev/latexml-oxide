@@ -4182,6 +4182,20 @@ LoadDefinitions!({
     r"\def\@date{#1}\
 \@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
+  // Conference-template "equal contribution" markers used inside \author{...}
+  // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
+  // ACM acmart, etc. The class binding typically defines them locally
+  // inside \@maketitle (scoped), which means user code that references
+  // them in \author{} (BEFORE \maketitle expands) hits an undefined-CS
+  // error. Pre-define at the kernel level as no-op markers — the local
+  // \@maketitle redefinition still applies at \maketitle time, so styled
+  // output keeps the footnote markers intact when the class supports them.
+  // Driver: 2103.05277, 2111.06599, 2006.08767. Previously stubbed in
+  // omnibus_cls.rs (commit 3f40bf8211) but OmniBus only loads as a
+  // class-binding fallback for unknown documentclasses; papers using
+  // \documentclass{article} with \usepackage{aaai22} don't trigger it.
+  DefMacro!("\\equalcontrib", None);
+  DefMacro!("\\equalcont",    None);
   // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
   //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
@@ -4277,6 +4291,19 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@author", "\\@empty");
+  // \shortauthor / \shorttitle: many journal classes (mnras, arxiv,
+  // ICML, NeurIPS templates) reference \shortauthor in
+  // \hypersetup{pdfauthor=...} and similar before \author has run.
+  // Without an initial empty definition, the reference errors out.
+  // Perl-faithful: the standard idiom is `\renewcommand*{\author}[2][]
+  // {\gdef\shortauthor{#1}\gdef\@author{#2}}` in user-style; since our
+  // \author below is locked and that renewcommand cannot override it,
+  // we save the same value ourselves and pre-define empty so any
+  // earlier reference (driver: 2406.14142 arxiv.sty L64
+  // `\hypersetup{pdfauthor={\shortauthor}}` before \author fires) is
+  // safe.
+  DefMacro!("\\shortauthor", "\\@empty");
+  DefMacro!("\\shorttitle", "\\@empty");
   // Perl latex_constructs.pool.ltxml L1116:
   //   DefMacro('\author[]{}', '\def\@author{#2}\lx@make@authors@anded{#2}', locked => 1);
   // The optional `[short]` arg is standard for many journal classes (mn,
@@ -4287,7 +4314,13 @@ LoadDefinitions!({
   // bodies and produces XMTok-in-note schema errors (arxiv 0709.4470,
   // 0802.3360). The short form is used for running heads/toc and is
   // otherwise discarded.
-  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@make@authors@anded{#2}", locked => true);
+  // Also save the optional `[short]` arg to `\shortauthor` so that
+  // user-style references work even though our \author is locked
+  // (driver: 2406.14142 arxiv.sty's renewcommand cannot override our
+  // locked \author, so we must save \shortauthor ourselves).
+  DefMacro!("\\author[]{}",
+    "\\gdef\\shortauthor{#1}\\def\\@author{#2}\\lx@make@authors@anded{#2}",
+    locked => true);
   DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
@@ -6024,6 +6057,17 @@ LoadDefinitions!({
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
     DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);
     DefMacro!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
+    // LaTeX kernel ltoutenc.dtx defines `\<encoding>-cmd #1#2{#2}` as part
+    // of \DeclareFontEncoding — the "switch to encoding-specific CS"
+    // dispatcher used by `\DeclareTextCommand` bodies. Without this, every
+    // `\i`-style symbol expansion hits an undefined `\T1-cmd` cascade
+    // that re-injects the original CS into the input and infinite-loops
+    // (driver: 2306.16410 — paper hangs in token-limit when reading
+    // `\citep{surís2023vipergpt}` after `\usepackage[T1]{fontenc}`,
+    // because `\i` expands to `\T1-cmd \i \T1\i` which loops back to
+    // `\i` when `\T1-cmd` isn't defined).
+    let enc_cmd = s!("\\{}-cmd", e);
+    DefMacro!(T_CS!(enc_cmd), "{}{}", "#2");
 
     // Perl `latex_constructs.pool.ltxml:2781-2783`:
     //   if (my $path = $encoding_str && FindFile(lc($encoding_str)."enc", type=>"dfu")) {
@@ -6367,7 +6411,17 @@ LoadDefinitions!({
   DefMacro!("\\cl@@ckpt", "\\@elt{page}");
 
   DefMacro!("\\value{}", sub[(value)] {
-    T_CS!(s!("\\c@{}", Expand!(value)))
+    let name = Expand!(value).to_string();
+    // `\newtheorem{lemma}[theorem]{Lemma}` shares theorem's counter — no
+    // \c@lemma is created, only the `counter_for_type` mapping. So
+    // `\value{lemma}` would expand to the undefined `\c@lemma`. Resolve
+    // through the mapping first. Driver: 2101.03928
+    // `\setcounter{lemmathreesets}{\value{lemma}}` (llncs paper).
+    let resolved = match state::lookup_mapping("counter_for_type", &name) {
+      Some(Stored::String(s)) => arena::with(s, |s| s.to_string()),
+      _ => name,
+    };
+    T_CS!(s!("\\c@{resolved}"))
   });
 
   DefMacro!("\\@arabic{Number}", sub[(number)] {
@@ -6928,7 +6982,9 @@ LoadDefinitions!({
             num = String::new();
           },
           '-' => {
-            from = Some(num.parse::<usize>().unwrap());
+            // `\cline{-3}` (no leading number) is malformed but appears in
+            // the wild; treat it as `\cline{1-3}` rather than panicking.
+            from = Some(num.parse::<usize>().unwrap_or(1));
             num = String::new();
           }
           c if c.is_ascii_digit() => num.push(c_next),

@@ -50,6 +50,20 @@ LoadDefinitions!({
     } else {
       open = open.as_other();
       close = open;
+      // Once we've determined the delimiter is non-brace (e.g. `|`),
+      // demote `{` and `}` to OTHER so read_until_token doesn't engage
+      // its balanced-read branch on `{`. Real users write
+      // `\\path|{partial,| ... |partial}|` across multiple
+      // \\urldef calls, where the `{` and `}` are LITERAL chars in
+      // separate `|...|` paths, not balanced TeX groups. Driver:
+      // 1906.08946 — without this demotion our read_until('|') on
+      // line 25's `\\path|{...,|` reads PAST the closing `|`,
+      // through line 26 and into line 27 looking for the matching
+      // `}` — which it finds in `lncs}@springer.com|`, swallowing
+      // the intervening `\\urldef{\\mailsb}` and `\\urldef{\\mailsc}`
+      // declarations entirely.
+      latexml_core::state::assign_catcode('{', Catcode::OTHER, Some(Scope::Local));
+      latexml_core::state::assign_catcode('}', Catcode::OTHER, Some(Scope::Local));
       gullet::read_until_token(close)?
     };
     end_semiverbatim()?;

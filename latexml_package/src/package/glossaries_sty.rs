@@ -234,6 +234,19 @@ LoadDefinitions!({
   // paths invoke \xspace, so the package must be loaded up front.
   RequirePackage!("xspace");
 
+  // Mirror raw glossaries.sty's transitive dependency on amsmath.
+  // Perl's binding raw-loads the actual glossaries.sty (via
+  // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`),
+  // which `\RequirePackage{datatool-base}`, which
+  // `\RequirePackage{amsmath}`. Our hand-rolled binding skips the
+  // raw-load (see file header), so the chain is broken and any paper
+  // that uses glossaries plus an amsmath-defined CS like
+  // \DeclareMathOperator without an explicit \usepackage{amsmath}
+  // hits "Error:undefined:\DeclareMathOperator" cascading through
+  // every operator the paper declares (e.g. canvas paper 2303.16633:
+  // 15 such errors, 0 in Perl).
+  RequirePackage!("amsmath");
+
   // ======================================================================
   // Options
   // ======================================================================
@@ -274,6 +287,12 @@ LoadDefinitions!({
   DefMacro!("\\makenoidxglossaries", "");
   DefMacro!("\\makeglossaries", "");
   DefMacro!("\\glsnoidxstripaccents", "");
+  // glossaries.sty `\glsenableentrycount` enables per-entry usage counting;
+  // the `\gls` family then routes through `\cgls` etc. to record usage.
+  // Rust's stub of `\gls` doesn't track usage, so this is a no-op — but it
+  // must be defined or 2309.05205 (and any paper using glossaries v4+ entry
+  // counting) hits an undefined-CS error.
+  DefMacro!("\\glsenableentrycount", "");
   DefMacro!("\\setacronymstyle{}", "");
   DefMacro!("\\glsdisablehyper", "");
   DefMacro!("\\glsdohyperlink{}{}", "#2");
@@ -325,24 +344,87 @@ LoadDefinitions!({
   // raw-load of the actual TL glossaries.sty source. Rust's port stubs
   // them here as no-ops to mirror the same set of bound CSes
   // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
-  DefMacro!("\\acrshort Semiverbatim", "");
-  DefMacro!("\\acrshortpl Semiverbatim", "");
-  DefMacro!("\\Acrshort Semiverbatim", "");
-  DefMacro!("\\Acrshortpl Semiverbatim", "");
-  DefMacro!("\\acrlong Semiverbatim", "");
-  DefMacro!("\\acrlongpl Semiverbatim", "");
-  DefMacro!("\\Acrlong Semiverbatim", "");
-  DefMacro!("\\Acrlongpl Semiverbatim", "");
-  DefMacro!("\\acrfull Semiverbatim", "");
-  DefMacro!("\\acrfullpl Semiverbatim", "");
-  DefMacro!("\\Acrfull Semiverbatim", "");
-  DefMacro!("\\Acrfullpl Semiverbatim", "");
+  // Acronym short/long/full family. The real glossaries.sty looks each
+  // up via the entry's stored fields (\@gls@entry{<lbl>}{short}/{long}/...).
+  // Our stub doesn't track per-entry fields with that level of fidelity, so
+  // route everything through \gls / \glspl (which produce a glossaryref via
+  // the loaded entries). Better than no-op (which silently drops the label).
+  // Driver: 1801.10219 (\acrfullpl) and 2109.08389 (shortcuts \ac via routes).
+  DefMacro!("\\acrshort Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrshortpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrshort Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrshortpl Semiverbatim", "\\Glspl{#1}");
+  DefMacro!("\\acrlong Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrlongpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrlong Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrlongpl Semiverbatim", "\\Glspl{#1}");
+  DefMacro!("\\acrfull Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\acrfullpl Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Acrfull Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\Acrfullpl Semiverbatim", "\\Glspl{#1}");
+
+  // glossaries shortcuts package option (TL glossaries.sty L3725-3760):
+  // \ac → \acrshort, \acp → \acrshortpl, \acl → \acrlong, \acs → \acrshort,
+  // \acf → \acrfull, \aclp → \acrlongpl, \acfp → \acrfullpl, \acsp → \acrshortpl,
+  // and the capitalized variants. The package default unconditionally
+  // defines them when `shortcuts` is in the option list. Our binding
+  // doesn't currently inspect the option list before installing them, but
+  // the unconditional install matches the user-written intent
+  // (`\usepackage[acronym,shortcuts]{glossaries}` is the typical incantation
+  // for these CSes; defining them when shortcuts isn't requested is harmless).
+  // Driver: 2109.08389 R=4 → R=0.
+  DefMacro!("\\ac Semiverbatim",   "\\acrshort{#1}");
+  DefMacro!("\\acp Semiverbatim",  "\\acrshortpl{#1}");
+  DefMacro!("\\acl Semiverbatim",  "\\acrlong{#1}");
+  DefMacro!("\\acs Semiverbatim",  "\\acrshort{#1}");
+  DefMacro!("\\acf Semiverbatim",  "\\acrfull{#1}");
+  DefMacro!("\\aclp Semiverbatim", "\\acrlongpl{#1}");
+  DefMacro!("\\acfp Semiverbatim", "\\acrfullpl{#1}");
+  DefMacro!("\\acsp Semiverbatim", "\\acrshortpl{#1}");
+  DefMacro!("\\Ac Semiverbatim",   "\\Acrshort{#1}");
+  DefMacro!("\\Acp Semiverbatim",  "\\Acrshortpl{#1}");
+  DefMacro!("\\Acl Semiverbatim",  "\\Acrlong{#1}");
+  DefMacro!("\\Acs Semiverbatim",  "\\Acrshort{#1}");
+  DefMacro!("\\Acf Semiverbatim",  "\\Acrfull{#1}");
+  DefMacro!("\\Aclp Semiverbatim", "\\Acrlongpl{#1}");
+  DefMacro!("\\Acfp Semiverbatim", "\\Acrfullpl{#1}");
+  DefMacro!("\\Acsp Semiverbatim", "\\Acrshortpl{#1}");
 
   // \glsresetall[<glossaries>] — resets the "first use" flag for all
   // entries. We don't track first-use state, so it's a safe no-op.
   // Mirrors TL glossaries.sty L3370 `\newcommand*{\glsresetall}[1][...]`.
   DefMacro!("\\glsresetall []", "");
   DefMacro!("\\glsresetempty []", "");
+  // \glsreset{<entry>} / \glsunset{<entry>} — TL glossaries.sty L3344-3360
+  // \newcommand*{\glsreset}[1]{...}: clears/sets the "first use" flag
+  // for a single entry. We don't track first-use state, so no-op.
+  // Both forms also accept an optional [<glossaries>] in the *all variants
+  // covered above.
+  DefMacro!("\\glsreset{}", "");
+  DefMacro!("\\glsunset{}", "");
+  DefMacro!("\\glslocalreset{}", "");
+  DefMacro!("\\glslocalunset{}", "");
+  // Field-expansion control: TL glossaries.sty L1390+. \glssetexpandfield
+  // {<field>}{<expand|noexpand>} controls whether a field is expanded at
+  // \newglossaryentry time. \glsnoexpandfields disables expansion globally.
+  // Our entries store fields as opaque strings, so these are no-ops.
+  DefMacro!("\\glssetexpandfield{}{}", "");
+  DefMacro!("\\glsnoexpandfields", "");
+  DefMacro!("\\glsexpandfields", "");
+  // \glsname / \glsdescription / \glssymbolname — read-only access to a
+  // single entry field. Like \glsentrytext, our stub returns empty since
+  // we don't keep typesetting fields easily accessible. Driver: 1812.05463
+  // and 8 papers in the canvas-failing pool. \glsplural also commonly used.
+  DefMacro!("\\glsname Semiverbatim", "");
+  DefMacro!("\\Glsname Semiverbatim", "");
+  DefMacro!("\\glsdescription Semiverbatim", "");
+  DefMacro!("\\Glsdescription Semiverbatim", "");
+  DefMacro!("\\glssymbolname Semiverbatim", "");
+  DefMacro!("\\Glssymbolname Semiverbatim", "");
+  // \glsplural — like \gls{} but for plural form. Route to \glspl which
+  // exists. Mirror Capitalized variant.
+  DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
+  DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
   // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
   // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
   // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
@@ -699,6 +781,100 @@ LoadDefinitions!({
       };
       let symbol = glo_lookup(&key, "symbol");
       Ok(gls_ref_tokens(&list, &key, &symbol))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+
+  // \glsfirst, \Glsfirst, \glsfirstplural, \Glsfirstplural — emit the
+  // entry's `first` form (long form for acronyms, falls back to `text`
+  // when no separate first-use form was declared). Same wrapping as
+  // \gls. Several arXiv papers (e.g. 2303.16633) use \glsfirst inside
+  // their definitions; without the binding the CS hits the undefined
+  // path. Perl's Bruce-binding raw-loads glossaries.sty which provides
+  // these via \newrobustcmd*; we mirror the user-facing behaviour
+  // (return formatted entry text + glossaryref wrapping).
+  {
+    let cs = T_CS!("\\glsfirst");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "first");
+      if text.is_empty() {
+        text = gls_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsfirst");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "first");
+      if text.is_empty() {
+        text = gls_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\glsfirstplural");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "firstplural");
+      if text.is_empty() {
+        text = gls_plural_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsfirstplural");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let mut text = glo_lookup(&key, "firstplural");
+      if text.is_empty() {
+        text = gls_plural_text(&key);
+      }
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  // \glsdesc / \Glsdesc — emit the entry's description.
+  {
+    let cs = T_CS!("\\glsdesc");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let text = glo_lookup(&key, "description");
+      Ok(gls_ref_tokens(&list, &key, &text))
+    });
+    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
+  }
+  {
+    let cs = T_CS!("\\Glsdesc");
+    let params = parse_parameters("Semiverbatim", &cs, true)?;
+    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
+      let key = args[0].to_string();
+      let entry_type = glo_lookup(&key, "type");
+      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
+      let text = glo_lookup(&key, "description");
+      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
     });
     def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
   }

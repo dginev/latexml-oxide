@@ -126,27 +126,51 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("babel_support");
 
-  // Perl L37-56: cite variants
-  DefMacro!("\\parencite", "\\cite", locked => true);
-  DefMacro!("\\Parencite", "\\cite", locked => true);
-  DefMacro!("\\Cite", "\\cite", locked => true);
+  // Perl L37-56: cite variants. Use `Let!` (not `DefMacro` with body=`\cite`)
+  // for the simple aliases: a DefMacro body of literal `\cite` produces an
+  // infinite loop when the user does `\let\cite\parencite` (a documented
+  // pattern in driver 2402.09928), because both CSes then expand to the
+  // token `\cite` which expands to `\cite` ad infinitum. `Let!` makes the
+  // alias resolve to the SAME Definition object directly (no
+  // expansion-then-relookup), so user redefinitions don't cycle.
+  Let!("\\parencite",    "\\cite");
+  Let!("\\Parencite",    "\\cite");
+  Let!("\\Cite",         "\\cite");
   DefMacro!("\\citet OptionalMatch:* [][] Semiverbatim",   "\\cite[#2 ]{#4}", locked => true);
   DefMacro!("\\citep OptionalMatch:* [][] Semiverbatim",   "\\cite[#2]{#4}",  locked => true);
   DefMacro!("\\citealt OptionalMatch:* [][] Semiverbatim", "\\cite[#2]{#4}",  locked => true);
   DefMacro!("\\citealp OptionalMatch:* [][] Semiverbatim", "\\cite[#2]{#4}",  locked => true);
-  DefMacro!("\\citenum", "\\cite", locked => true);
-  DefMacro!("\\citem", "\\cite", locked => true);
+  Let!("\\citenum",      "\\cite");
+  Let!("\\citem",        "\\cite");
   DefMacro!("\\autocite OptionalMatch:* [][]{}", "\\cite[#2]{#4}", locked => true);
   DefMacro!("\\Autocite OptionalMatch:* [][]{}", "\\cite[#2]{#4}", locked => true);
-  DefMacro!("\\fullcite", "\\cite", locked => true);
-  DefMacro!("\\footcite", "\\cite", locked => true);
-  DefMacro!("\\footcitetext", "\\cite", locked => true);
-  DefMacro!("\\smartcite", "\\cite", locked => true);
-  DefMacro!("\\textcite", "\\cite", locked => true);
-  DefMacro!("\\Textcite", "\\cite", locked => true);
-  DefMacro!("\\supercite", "\\cite", locked => true);
-  DefMacro!("\\citeauthor", "\\cite", locked => true);
-  DefMacro!("\\citetitle", "\\cite", locked => true);
+  Let!("\\fullcite",     "\\cite");
+  Let!("\\footcite",     "\\cite");
+  Let!("\\footcitetext", "\\cite");
+  Let!("\\smartcite",    "\\cite");
+  Let!("\\textcite",     "\\cite");
+  Let!("\\Textcite",     "\\cite");
+  Let!("\\supercite",    "\\cite");
+  Let!("\\citeauthor",   "\\cite");
+  Let!("\\citetitle",    "\\cite");
+
+  // \parencites etc. — biblatex multi-cite variants. Real biblatex
+  // accepts an arbitrary number of `[prenote][postnote]{key}` triples
+  // which are individually rendered with parens around the whole list.
+  // Stub: degrade to \cite of the first key. Driver: 1906.11485.
+  DefMacro!("\\parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\citetexts  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\Textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\smartcites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\footcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  DefMacro!("\\supercites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+
+  // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
+  DefMacro!("\\DeclareLabeldate {}", "");
 
   // Perl L64-67: passthroughs
   DefMacro!("\\unspace", "\\relax");

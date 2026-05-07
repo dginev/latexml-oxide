@@ -68,6 +68,9 @@ LoadDefinitions!({
   DefMacro!("\\physscr", "\\ref@jnl{Phys.~Scr}");
   DefMacro!("\\planss",  "\\ref@jnl{Planet.~Space~Sci.}");
   DefMacro!("\\procspie","\\ref@jnl{Proc.~SPIE}");
+  // aastex631.cls L1839: \newcommand\psj{\ref@jnl{PSJ}} — Planetary
+  // Science Journal abbreviation. Driver: 2306.11151.
+  DefMacro!("\\psj",     "\\ref@jnl{PSJ}");
 
   Let!("\\astap",   "\\aap");
   Let!("\\apjlett", "\\apjl");

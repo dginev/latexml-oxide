@@ -29,8 +29,15 @@ static HOME_PATH: Lazy<String> = Lazy::new(|| match dirs::home_dir() {
   _ => s!("~"),
 });
 static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
+// Match Perl LaTeXML's permissive filename behavior: filenames may
+// contain commas, parens, ampersands, etc. that some user paths legitimately
+// use (e.g. `\input{5-Ack,terms}` resolving to `5-Ack,terms.tex`). Only
+// flag genuinely dangerous patterns: shell metacharacters that would
+// enable command injection via kpathsea or `\openin`. Driver: 2308.13679
+// `\input{5-Ack,terms}`. Mirrors Perl's missing nasty-check (Perl simply
+// passes filenames to kpathsea without a pre-filter).
 static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap());
+  Lazy::new(|| Regex::new(r#"[`$;|<>"\x00\n\r]"#).unwrap());
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
@@ -86,12 +93,29 @@ pub fn is_raw(pathname: &str) -> bool {
 /// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 /// convert a (possibly relative) file path to an absolute one
+///
+/// `std::fs::canonicalize` requires the path to exist; many callers hand
+/// us paths that haven't been resolved yet (e.g. `\import{subdir}{f.sty}`
+/// constructs `subdir/f.sty` before `find_file` probes other dirs).
+/// Mirror Perl's `Cwd::abs_path`-style behavior: produce a lexically
+/// absolute path joined against `current_dir()` when the input is
+/// relative, then run it through our `canonical()` to collapse `.`/`..`
+/// components.
+///
+/// Panics only if `current_dir()` itself fails — that means the cwd was
+/// deleted out from under us, which we cannot safely resolve a relative
+/// path against (and silently returning the input could let a relative
+/// file reference target an attacker-controlled path).
 pub fn absolute(path: &str) -> String {
-  Path::new(path)
-    .canonicalize()
-    .unwrap()
-    .to_string_lossy()
-    .to_string()
+  let p = Path::new(path);
+  let joined: PathBuf = if p.is_absolute() {
+    p.to_path_buf()
+  } else {
+    let cwd = std::env::current_dir()
+      .expect("cannot make path absolute: current_dir() failed");
+    cwd.join(p)
+  };
+  canonical(&joined.to_string_lossy())
 }
 
 /// Split the pathname into components (dir,name,type).

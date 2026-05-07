@@ -70,7 +70,7 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 }
 
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
-fn listings_read_raw_lines(environment: &str) -> String {
+pub fn listings_read_raw_lines(environment: &str) -> String {
   let mut lines = Vec::new();
   gullet::read_raw_line(); // Ignore 1st line (following \begin{...})
   let end_re = Regex::new(&format!(
@@ -1634,7 +1634,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 }
 
 /// Perl: lstProcessDisplay — generate full display listing with optional caption/title.
-fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
+pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let (mut body, trailer) = lst_process_block(name.clone(), text);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
@@ -1916,8 +1916,17 @@ LoadDefinitions!({
   DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
     let env_name = name.to_string();
     let n: usize = n_arg.value_of() as usize;
-    // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt)
-    let has_opt = opt_arg.as_ref().is_some_and(|t| !t.is_empty());
+    // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).
+    // `[N][default]` syntax: N total args; if [default] present, the FIRST
+    // arg is OPTIONAL with that default value. The default IS allowed to
+    // be empty (`\lstnewenvironment{mycode}[1][]{...}{...}` is the
+    // typical "1-arg optional with empty default" form).
+    // Was: `is_some_and(|t| !t.is_empty())` — empty-default form was
+    // mis-classified as "no optional", producing a `{}` required-arg
+    // env that errored on `\begin{mycode}[caption=...]`. Driver: 2301.10618
+    // acmart paper using `\lstnewenvironment{mycode}[1][]{...}` then
+    // `\begin{mycode}[caption=...,label=...]`.
+    let has_opt = opt_arg.is_some();
     let mut param_spec = String::new();
     if has_opt {
       let opt_text = opt_arg.as_ref().unwrap().to_string();
@@ -1990,6 +1999,12 @@ LoadDefinitions!({
   DefMacro!("\\thename", "");
   DefMacro!("\\lstnumbertyperefname", "line");
   DefMacro!("\\lst@HRefStepCounter{}", "");
+  // \lstname — placeholder for the current listing's filename (set inside
+  // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
+  // around L1708-L1717). Pre-define as empty at top level so users can
+  // reference it inside \lstset{title=\lstname,...} or other lazy-expansion
+  // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
+  DefMacro!("\\lstname", "");
 
   // Inline listing constructor
   DefConstructor!("\\@listings@inline {}",
@@ -2869,6 +2884,17 @@ LoadDefinitions!({
   // Load language configuration files
   InputDefinitions!("listings", extension => Some(std::borrow::Cow::Borrowed("cfg")));
 
+  // Internal macros used by sibling bindings (e.g. cleveref) AND by the
+  // lang-file raw loads below (lstlang3.sty in particular calls
+  // `\lst@AddToHook{...}{...}` during definition). Define BEFORE the lang
+  // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
+  // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
+  DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
+  DefMacro!("\\lst@AddToHook{}{}", "");
+  DefMacro!("\\lst@AddToHookExe{}{}", "");
+  DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
+  DefMacro!("\\@lst", "lst");
+
   // Load all language files eagerly
   let lang_files_str = stomach::digest(T_CS!("\\lstlanguagefiles"))?.to_string();
   let lang_files: Vec<String> = lang_files_str
@@ -2880,13 +2906,6 @@ LoadDefinitions!({
   for file in &lang_files {
     let _ = input_definitions(file, NewDefault!(InputDefinitionOptions, noerror => true));
   }
-
-  // Internal macros used by sibling bindings (e.g. cleveref)
-  DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  DefMacro!("\\lst@AddToHook{}{}", "");
-  DefMacro!("\\lst@AddToHookExe{}{}", "");
-  DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
-  DefMacro!("\\@lst", "lst");
 });
 
 //======================================================================

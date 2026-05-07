@@ -2317,15 +2317,19 @@ LoadDefinitions!({
   Let!("\\tablenum", "\\num");
 
   //======================================================================
-  // Table column types S and s
-  DefColumnType!("S", {
+  // Table column types S and s — Perl: DefColumnType('S Optional', ...) and
+  // 's Optional'. The optional `[<options>]` (e.g. round-precision=1) must
+  // be consumed by the column-type reader; otherwise each character of the
+  // option string leaks back into the tabular template parser as a separate
+  // column letter (driver: 1904.04279 with `S[round-precision=1]`).
+  DefColumnType!("S Optional", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
         ..latexml_core::alignment::cell::Cell::default()
       })
     });
   });
-  DefColumnType!("s", {
+  DefColumnType!("s Optional", {
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
         ..latexml_core::alignment::cell::Cell::default()
@@ -2482,6 +2486,7 @@ LoadDefinitions!({
 \DeclareSIUnit \decibel      { \deci \bel }
 \DeclareSIUnit \knot         { kn }
 \DeclareSIUnit \mmHg         { mmHg }
+\DeclareSIUnit \torr         { Torr }
 \DeclareSIUnit \nauticalmile { M }
 \DeclareSIUnit \neper        { Np }
 \DeclareSIPrePower  \square  { 2 }
@@ -2594,6 +2599,53 @@ LoadDefinitions!({
 \DeclareBinaryPrefix \yobi { Yi } { 80 }
 \DeclareSIUnit \bit  { bit }
 \DeclareSIUnit \byte { B }
+"#);
+
+  // Version-1 compatibility units (siunitx-version-1.cfg). Activated by
+  // the `version-1-compatibility` package option. The v1.cfg file
+  // declares ~65 v1-only unit aliases (BAR, Day, Gray, atomicmass,
+  // arcmin, are, curie, gal, millibar, rad, rem, roentgen, micA, micg,
+  // picm, micm, Sec, mics, cmc, cubiccentimetre, cubicdecimetre, etc.).
+  // We always declare them — the names don't conflict with v3's
+  // DeclareSIUnit set above, so the cost is just a few extra entries.
+  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0.
+  RawTeX!(r#"
+\DeclareSIUnit \BAR        { \bar }
+\DeclareSIUnit \bbar       { \bar }
+\DeclareSIUnit \Day        { \day }
+\DeclareSIUnit \dday       { \day }
+\DeclareSIUnit \Gray       { \gray }
+\DeclareSIUnit \ggray      { \gray }
+\DeclareSIUnit \atomicmass { \atomicmassunit }
+\DeclareSIUnit \arcmin     { \arcminute }
+\DeclareSIUnit \arcsec     { \arcsecond }
+\DeclareSIUnit \are        { a }
+\DeclareSIUnit \curie      { Ci }
+\DeclareSIUnit \gal        { Gal }
+\DeclareSIUnit \millibar   { \milli \bar }
+\DeclareSIUnit \rad        { rad }
+\DeclareSIUnit \rem        { rem }
+\DeclareSIUnit \roentgen   { R }
+\DeclareSIUnit \micA       { \micro \ampere }
+\DeclareSIUnit \micmol     { \micro \mole   }
+\DeclareSIUnit \micl       { \micro \litre  }
+\DeclareSIUnit \micL       { \micro \liter  }
+\DeclareSIUnit \nanog      { \nano  \gram   }
+\DeclareSIUnit \micg       { \micro \gram   }
+\DeclareSIUnit \picm       { \pico  \metre  }
+\DeclareSIUnit \micm       { \micro \metre  }
+\DeclareSIUnit \Sec        { \second }
+\DeclareSIUnit \mics       { \micro \second }
+\DeclareSIUnit \cmc        { \centi \metre \cubed }
+\DeclareSIUnit \cubiccentimetre { \centi \metre \cubed }
+\DeclareSIUnit \cubicdecimetre  { \deci \metre \cubed }
+\DeclareSIUnit \molar      { \mole \per \cubic \deci \metre }
+\DeclareSIUnit \nb         { \nano \barn }
+\DeclareSIUnit \pb         { \pico \barn }
+\DeclareSIUnit \fb         { \femto \barn }
+\DeclareSIUnit \ab         { \atto \barn }
+\DeclareSIUnit \zb         { \zepto \barn }
+\DeclareSIUnit \yb         { \yocto \barn }
 "#);
 
   DefMacro!("\\highlight{}", "#1");

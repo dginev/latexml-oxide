@@ -328,8 +328,13 @@ LoadDefinitions!({
         // TODO: The data manamgement here is far from final.
         // Can we avoid clones? Can we consolidate the reversion variants?
         // let kvs = &args[0];
-        let c = &args[1];
-        let p = &args[2];
+        // Defensive bounds: when an upstream macro fires this whatsit's
+        // reversion with fewer than 3 args (e.g. recovery reversion of a
+        // partially-built whatsit, witness 2006.04775 panic at index 1
+        // len 0), use placeholder None rather than indexing OOB.
+        let none_arg: Option<Digested> = None;
+        let c = if args.len() > 1 { &args[1] } else { &none_arg };
+        let p = if args.len() > 2 { &args[2] } else { &none_arg };
         let reverted = match r.as_str() {
           "content" => match &cr {
           Some(Stored::Reversion(Reversion::Tokens(cr_tks))) => cr_tks.clone(),
@@ -470,7 +475,11 @@ LoadDefinitions!({
           && !n.has_attribute("idref") {
         refs.push(n);    // we'll fill these in next
       } else { // generate & record ids for all referenced noces
-        let key = n.get_attribute("_xmkey").unwrap();
+        // Defensive: XPath should only return nodes with @_xmkey, but
+        // libxml2's tree mutation between query and iteration can leave
+        // a node without the attribute (driver: 2105.04174 panic at
+        // get_attribute("_xmkey").unwrap()).
+        let Some(key) = n.get_attribute("_xmkey") else { continue };
         if let Entry::Vacant(e) = ids.entry(key) {
           document.generate_id(&mut n, "")?; // Generate id if none already.
           e.insert(n.get_attribute_ns("id",XML_NS).unwrap_or_default());
@@ -478,7 +487,7 @@ LoadDefinitions!({
       }
     }
     for mut r in refs {                        // Now fill in the references
-      let r_xmkey = r.get_attribute("_xmkey").unwrap();
+      let Some(r_xmkey) = r.get_attribute("_xmkey") else { continue };
       if let Some(idref) = ids.get(&r_xmkey) {
         document.set_attribute(&mut r, "idref", idref)?;
       } else {

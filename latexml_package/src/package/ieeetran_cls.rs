@@ -27,12 +27,14 @@ LoadDefinitions!({
   DeclareOption!("twocolumn", {});
   DeclareOption!("peerreview", {});
   DeclareOption!("peerreviewca", {});
-  ProcessOptions!();
-
-  // Load article as base
-  load_class("article", Vec::new(), Tokens!())?;
-
-  // Option conditionals — Perl L18-108
+  // Option conditionals — Perl L18-108. These are the FALSE defaults
+  // (mirroring `\newif\if@CLASSOPTIONcompsoc \@CLASSOPTIONcompsocfalse`).
+  // MUST come BEFORE ProcessOptions so the option-handler `\let` flips to
+  // `\iftrue` survive — the previous order placed these after ProcessOptions
+  // and silently clobbered any positive option flag the user passed (driver
+  // 2308.01854 `\documentclass[10pt,journal,compsoc]{IEEEtran}` had
+  // \ifCLASSOPTIONcompsoc unexpectedly false → user's
+  // `\ifCLASSOPTIONcompsoc \usepackage{url} \fi` skipped → \url undefined).
   Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
@@ -44,6 +46,11 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");
   Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
   Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
+
+  ProcessOptions!();
+
+  // Load article as base
+  load_class("article", Vec::new(), Tokens!())?;
 
   // Real IEEEtran.cls L689 `\newif\if@technote \@technotefalse` — private flag
   // (separate from the public `\ifCLASSOPTION*` mirrors). User code in
@@ -85,6 +92,14 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:keywords}[name={Index Terms}]{#1}");
   DefMacro!("\\IEEEkeywords", "\\@IEEEkeywords");
   DefMacro!("\\endIEEEkeywords", "\\@endIEEEkeywords");
+  // Perl IEEEtran.cls.ltxml L152-153: explicit env-token aliases. Without
+  // these, our standard `\begin{X} → \begingroup\X` expansion routes
+  // through user-redefinable namespace and the `XUntil:\@endIEEEkeywords`
+  // terminator can be broken by user `\def\endIEEEkeywords`. Drivers:
+  // 2007.13436, 1812.09324 (`\@iffalse` cascade past EOF when the
+  // XUntil reader runs off the end).
+  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
+  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\@endIEEEkeywords");
 
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
@@ -501,6 +516,16 @@ LoadDefinitions!({
   DefMacro!("\\keywords@onearg{}",
     "\\@IEEEkeywords #1 \\@endIEEEkeywords");
   DefMacro!("\\endkeywords", "\\@endIEEEkeywords");
+  // Perl L406-407: explicit `\begin{keywords}` / `\end{keywords}` env-token
+  // aliases so user `\def\keywords` / `\def\endkeywords` redefinitions
+  // don't break the env semantics. Drivers: 2007.06704
+  // (`\def\keywords{...}\def\endkeywords{\par}` followed by
+  // `\begin{keywords}...\end{keywords}` — without these aliases, our
+  // standard `\begin{X} → \begingroup\X` expansion routed through user's
+  // `\par`-redef'd `\endkeywords`, leaving `\@IEEEkeywords`'s
+  // `XUntil:\@endIEEEkeywords` reading past EOF).
+  DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
+  DefMacro!(T_CS!("\\end{keywords}"),   None, "\\@endIEEEkeywords");
 
   // Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
   Let!("\\labelindent", "\\IEEElabelindent");
@@ -543,4 +568,23 @@ LoadDefinitions!({
   // Disable internal alignment env (Perl L453-454)
   DefMacro!("\\@IEEEauthorhalign", "\\relax");
   DefMacro!("\\end@IEEEauthorhalign", "\\relax");
+
+  // \linebreakand — IEEEtran tip-jar macro that papers redefine to break
+  // a multi-row author halign across visual lines. The canonical
+  // tex.stackexchange recipe is:
+  //   \newcommand{\linebreakand}{
+  //     \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill
+  //     \begin{@IEEEauthorhalign}}
+  // The unbalanced `\end{...}\begin{...}` pair pops + pushes a frame
+  // on the live stack, which is fine in real IEEEtran (where the
+  // \author{...} body is wrapped in `\begin{@IEEEauthorhalign}...\end{@IEEEauthorhalign}`)
+  // but breaks our `\@personname`-wrapped frontmatter digest where
+  // there's no matching outer halign frame. Pre-define `\linebreakand`
+  // as a paragraph break so user `\newcommand{\linebreakand}{...}`
+  // can't override (it's already-defined → silently ignored), matching
+  // Perl's behavior where the user redefinition triggers
+  // ``\linebreakand:locked`` and gets dropped on the floor. Driver
+  // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
+  // multi-author papers using the linebreakand recipe).
+  DefMacro!("\\linebreakand", "\\par");
 });

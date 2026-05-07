@@ -130,7 +130,26 @@ LoadDefinitions!({
   DefRegister!("\\pdfretval"               => Number::new(0));
 
   // \pdfximage [ image attr spec ] general text (h, v, m)
-  // \pdfrefximage object number (h, v, m)
+  // Real pdfTeX reads optional `[image attr spec]` then a balanced text
+  // (the file path). Stub: drop a leading `[...]` if present, then
+  // consume one balanced general-text arg. No PDF emission. Driver:
+  // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
+  DefPrimitive!("\\pdfximage", sub[_args] {
+    gullet::skip_spaces()?;
+    if gullet::if_next(T_OTHER!("["))? {
+      // discard up to matching `]`
+      while let Some(t) = gullet::read_token()? {
+        if matches!(t.get_catcode(), Catcode::OTHER) && t.to_string() == "]" {
+          break;
+        }
+      }
+    }
+    gullet::skip_spaces()?;
+    let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+    Ok(vec![])
+  });
+  // \pdfrefximage object number (h, v, m) — discard the object number
+  DefPrimitive!("\\pdfrefximage Number", None);
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
   DefPrimitive!("\\pdfstartlink", None);

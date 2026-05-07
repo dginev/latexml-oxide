@@ -1764,7 +1764,18 @@ impl Document {
             break;
           }
         }
-        if get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
+        // Stop if not a font element, or if marked _noautoclose, or if
+        // this is an explicit (non-fontswitch) text wrapper. A constructor-
+        // opened `<ltx:text class='...'>` (e.g. `\uline{...}`) MUST NOT be
+        // closed-out-of by a font-distance heuristic just because the parent
+        // happens to score better — that produces an empty wrapper and
+        // siblings the inner content (driver: 2402.16319 `\uline{\textbf{2}}`
+        // inside `\sc` tabular). Only auto-opened fontswitch wrappers are
+        // safe to walk past.
+        if get_node_qname(&n) != element_sym
+          || n.has_attribute("_noautoclose")
+          || !n.has_attribute("_fontswitch")
+        {
           break;
         }
         match n.get_parent() {
@@ -3217,8 +3228,14 @@ impl Document {
     if let Some(element) = xml::closest_element(node) {
       // Use the closest element (for text nodes, this is the parent element)
       if let Some(fontid) = element.get_attribute("_font") {
-        if let Some(fnt) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
-          return fnt;
+        // Tolerate non-numeric `_font` attributes — they can occur when
+        // a corrupted property propagates across reversion (driver:
+        // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
+        // to the default font instead of aborting the run.
+        if let Ok(id) = fontid.parse::<u64>() {
+          if let Some(fnt) = self.node_fonts.get(&id) {
+            return fnt;
+          }
         }
       }
     }
@@ -3347,10 +3364,12 @@ impl Document {
     if font_opt.is_none() {
       if let Some(ref attrs) = attributes {
         if let Some(fontid) = attrs.get("_font") {
-          font_opt = self
-            .node_fonts
-            .get(&fontid.parse::<u64>().unwrap())
-            .cloned()
+          // Tolerate non-numeric `_font` attributes — see get_node_font
+          // for the same defensive read; same panic site, different
+          // call. Driver: 2406.14188.
+          if let Ok(id) = fontid.parse::<u64>() {
+            font_opt = self.node_fonts.get(&id).cloned();
+          }
         }
       }
     }
@@ -3516,7 +3535,17 @@ impl Document {
     };
 
     let no_ns = new_ns.is_none();
-    let mut newnode = Node::new(tag, new_ns.clone(), &self.document).unwrap();
+    let mut newnode = match Node::new(tag, new_ns.clone(), &self.document) {
+      Ok(n) => n,
+      Err(_) => {
+        // libxml2 rejected the tag (e.g. NUL byte, malformed name).
+        // Bail out of element creation rather than aborting; caller
+        // can recover. Driver: 2304.07380 panic at Node::new unwrap.
+        let message = s!("failed to create element {:?}", tag);
+        Error!("document", "open_element_internal", message);
+        return Err(message.into());
+      },
+    };
     point.add_child(&mut newnode)?;
     if no_ns {
       // When no explicit namespace was determined (default namespace element),

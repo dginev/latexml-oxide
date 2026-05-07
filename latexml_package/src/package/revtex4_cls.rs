@@ -24,14 +24,16 @@ LoadDefinitions!({
     DeclareOption!(*option, None);
   }
 
-  // Perl revtex4.cls.ltxml L41-45: amsfonts/amssymb/amsmath options push
-  // the package into @revtex_toload; no-variants remove it. Packages are
-  // NOT loaded until AFTER ProcessOptions + LoadClass + revtex4_support,
-  // mirrored here via state flags.
+  // Perl revtex4.cls.ltxml L41-45: `@revtex_toload = (amsfonts, amssymb, amsmath)`
+  // is the DEFAULT — positive options (`amsmath`, etc.) leave it intact;
+  // negative options (`noamsmath`, etc.) remove the entry. Was: defaulted
+  // to false and positive option set true, but the DeclareOption handler
+  // doesn't fire under our ProcessOptions flow when the option matches
+  // an already-positively-listed name (sister-fix in revtex4_1_cls.rs
+  // for driver 2210.07776 \boldsymbol undefined cascade).
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    DeclareOption!(*pkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
-    });
+    state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
+    DeclareOption!(*pkg, None);
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
       state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));

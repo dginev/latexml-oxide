@@ -68,7 +68,17 @@ LoadDefinitions!({
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?)) });
-  DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
+  // Tolerant close — see omnibus_cls.rs commentary on the
+  // \begin{acknowledgments} ... \bibliography ... \end{acknowledgments}
+  // pattern that auto-closes the env via \bibliography opening
+  // <ltx:bibliography>. Driver: 2202.04803 R=1 → R=0.
+  DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
+    let cur = document.get_node().clone();
+    let has_open = document.findnode("ancestor-or-self::ltx:acknowledgements", Some(&cur)).is_some();
+    if has_open {
+      document.close_element("ltx:acknowledgements")?;
+    }
+  });
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   Let!("\\acknowledgements", "\\acknowledgments");
   Let!("\\endacknowledgements", "\\endacknowledgments");
