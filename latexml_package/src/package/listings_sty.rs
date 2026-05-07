@@ -2875,6 +2875,17 @@ LoadDefinitions!({
   // Load language configuration files
   InputDefinitions!("listings", extension => Some(std::borrow::Cow::Borrowed("cfg")));
 
+  // Internal macros used by sibling bindings (e.g. cleveref) AND by the
+  // lang-file raw loads below (lstlang3.sty in particular calls
+  // `\lst@AddToHook{...}{...}` during definition). Define BEFORE the lang
+  // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
+  // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
+  DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
+  DefMacro!("\\lst@AddToHook{}{}", "");
+  DefMacro!("\\lst@AddToHookExe{}{}", "");
+  DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
+  DefMacro!("\\@lst", "lst");
+
   // Load all language files eagerly
   let lang_files_str = stomach::digest(T_CS!("\\lstlanguagefiles"))?.to_string();
   let lang_files: Vec<String> = lang_files_str
@@ -2886,13 +2897,6 @@ LoadDefinitions!({
   for file in &lang_files {
     let _ = input_definitions(file, NewDefault!(InputDefinitionOptions, noerror => true));
   }
-
-  // Internal macros used by sibling bindings (e.g. cleveref)
-  DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  DefMacro!("\\lst@AddToHook{}{}", "");
-  DefMacro!("\\lst@AddToHookExe{}{}", "");
-  DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
-  DefMacro!("\\@lst", "lst");
 });
 
 //======================================================================
