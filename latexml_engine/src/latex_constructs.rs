@@ -4182,6 +4182,20 @@ LoadDefinitions!({
     r"\def\@date{#1}\
 \@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
+  // Conference-template "equal contribution" markers used inside \author{...}
+  // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
+  // ACM acmart, etc. The class binding typically defines them locally
+  // inside \@maketitle (scoped), which means user code that references
+  // them in \author{} (BEFORE \maketitle expands) hits an undefined-CS
+  // error. Pre-define at the kernel level as no-op markers — the local
+  // \@maketitle redefinition still applies at \maketitle time, so styled
+  // output keeps the footnote markers intact when the class supports them.
+  // Driver: 2103.05277, 2111.06599, 2006.08767. Previously stubbed in
+  // omnibus_cls.rs (commit 3f40bf8211) but OmniBus only loads as a
+  // class-binding fallback for unknown documentclasses; papers using
+  // \documentclass{article} with \usepackage{aaai22} don't trigger it.
+  DefMacro!("\\equalcontrib", None);
+  DefMacro!("\\equalcont",    None);
   // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
   //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",

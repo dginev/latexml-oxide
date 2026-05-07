@@ -117,16 +117,9 @@ LoadDefinitions!({
   DefMacro!("\\preface",           None);
   DefMacro!("\\thankstext",        None);
   DefMacro!("\\numberofauthors{}", None);
-  // Conference-template "equal contribution" markers. AAAI's aaai22.sty
-  // and similar define \equalcontrib only inside \@maketitle (locally
-  // scoped), so user code that calls it inside \author{} (before
-  // \maketitle) hits an undefined-CS error. neurips_*.sty and others
-  // also use this name. Pre-define to no-op at top level — the local
-  // \@maketitle redefinition will override at \maketitle time.
-  // Driver: 2103.05277, 2111.06599, 2006.08767 — 3 papers in the
-  // canvas-failing pool.
-  DefMacro!("\\equalcontrib",      None);
-  DefMacro!("\\equalcont",         None);
+  // \equalcontrib / \equalcont are defined kernel-level in
+  // latex_constructs.rs — needed for ALL classes (not only OmniBus
+  // fallback) because aaai22.sty etc. ride on \documentclass{article}.
   // Springer Nature `sn-jnl.cls` style author-name and org-address parts
   // (cls L519-525, L599-606). The cls defines them as low-level `\def`s
   // wrapped in `\leavevmode\hbox{...}`, but our raw-class load path skips
