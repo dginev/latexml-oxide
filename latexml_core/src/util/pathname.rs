@@ -93,16 +93,29 @@ pub fn is_raw(pathname: &str) -> bool {
 /// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 /// convert a (possibly relative) file path to an absolute one
-/// Returns the input unchanged when the path doesn't exist — `canonicalize`
-/// fails on NotFound, but `import.sty` / `svg.sty` etc. ask for `absolute()`
-/// of paths that were just constructed (e.g. \import{subdir}{file.sty} for
-/// subdir/file.sty before find_file resolves it). Panicking aborts the
-/// whole worker; lenient fallback lets find_file probe other dirs.
+///
+/// `std::fs::canonicalize` requires the path to exist; many callers hand
+/// us paths that haven't been resolved yet (e.g. `\import{subdir}{f.sty}`
+/// constructs `subdir/f.sty` before `find_file` probes other dirs).
+/// Mirror Perl's `Cwd::abs_path`-style behavior: produce a lexically
+/// absolute path joined against `current_dir()` when the input is
+/// relative, then run it through our `canonical()` to collapse `.`/`..`
+/// components.
+///
+/// Panics only if `current_dir()` itself fails — that means the cwd was
+/// deleted out from under us, which we cannot safely resolve a relative
+/// path against (and silently returning the input could let a relative
+/// file reference target an attacker-controlled path).
 pub fn absolute(path: &str) -> String {
-  match Path::new(path).canonicalize() {
-    Ok(p)  => p.to_string_lossy().to_string(),
-    Err(_) => path.to_string(),
-  }
+  let p = Path::new(path);
+  let joined: PathBuf = if p.is_absolute() {
+    p.to_path_buf()
+  } else {
+    let cwd = std::env::current_dir()
+      .expect("cannot make path absolute: current_dir() failed");
+    cwd.join(p)
+  };
+  canonical(&joined.to_string_lossy())
 }
 
 /// Split the pathname into components (dir,name,type).
