@@ -86,6 +86,21 @@ LoadDefinitions!({
   // `\AtEndOfPackage` chain succeeds organically.)
   RequirePackage!("etoolbox");
 
+  // Pre-define `\bbl@languages` as an empty stub so any babel-XX.tex
+  // language file that references it at L21 (e.g. babel-german.tex,
+  // babel-italian.tex) finds something. babel.sty itself guards with
+  // `\ifx\bbl@languages\@undefined` (L266, L978) but the per-language
+  // .tex files do NOT — they assume `\bbl@languages` was set up by
+  // an earlier babel.sty load. With our `\usepackage[<lang>]{babel}`
+  // path, the language `.tex` is sometimes processed before babel.sty
+  // finishes its own setup; pre-defining here covers that load order.
+  // Mirrors the conditional definition in `nil.ldf.ltxml` (Perl L20-21
+  // / Rust nil_ldf.rs:6-8) but applied at the `babel_support` layer
+  // so it's always in scope before any lang.tex loads.
+  if !IsDefined!(&T_CS!("\\bbl@languages")) {
+    DefMacro!("\\bbl@languages", "");
+  }
+
   // Unicode quote characters (Perl L24-42)
   //
   // Perl: DefPrimitiveI('\ij', undef, "ij") etc. — DefPrimitive with literal
