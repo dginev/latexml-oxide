@@ -787,6 +787,22 @@ LoadDefinitions!({
   });
 
   // NAT@@wrout — constructor to produce the ltx:tags
+  //
+  // Perl uses `bounded => 1` here (`natbib.sty.ltxml:632`); the `bounded`
+  // flag triggers a `bgroup`/`egroup` pair around the constructor body.
+  // In Rust the equivalent `bounded => true` interacts badly with
+  // `\@@cite`-in-author-tag digestion: the inner `\@@cite` (mode='text',
+  // enterHorizontal) leaks a `BOUND_MODE`/`MODE` binding into our outer
+  // bgroup frame, and the closing `egroup` then errors with "Attempt
+  // to close a group that switched to mode internal_vertical".
+  // Driver: 2404.06289 — `\bibitem [{...\cite{a}...}]{key}` cascade
+  // (\NAT@wrout passes the expanded label tokens, which still contain
+  // `\@@cite[opt]{body}` Constructor invocations, to `#3`/authors).
+  // Skipping `bounded` — and thus the egroup's mode-frame check —
+  // matches what Perl gets in practice (Perl runs the same input
+  // cleanly), without the parselabel-rewrite churn. The Let on T_ALIGN
+  // moves into a manual bgroup/egroup so the assignment is still
+  // scope-isolated to argument digestion.
   DefConstructor!("\\NAT@@wrout{}{}{}{}{} Semiverbatim",
     "<ltx:tags>\
       ?#1(<ltx:tag role='number'>#1</ltx:tag>)\
@@ -796,8 +812,19 @@ LoadDefinitions!({
       ?#5(<ltx:tag role='refnum'>#5</ltx:tag>)\
       ?#6(<ltx:tag role='key'>#6</ltx:tag>)\
     </ltx:tags>",
-    bounded => true,
-    before_digest => { Let!(T_ALIGN!(), T_CS!("\\&")); }
+    before_digest => {
+      bgroup();
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+    },
+    after_digest => sub[_whatsit] {
+      // Soft egroup: pop_stack_frame directly, bypassing the standard
+      // `egroup`'s `is_value_bound("BOUND_MODE", Some(0))` mode-switch
+      // check. Inner `\@@cite`-style mode pushes can leak a BOUND_MODE
+      // binding into our frame, but we want to recover (matching Perl
+      // behavior on the same input).
+      latexml_core::stomach::pop_stack_frame(false)?;
+      Ok(Vec::new())
+    }
   );
 
   //======================================================================
@@ -853,8 +880,30 @@ LoadDefinitions!({
     }
 
     if bare {
-      // Expand the label and parse: Authors(Year)FullAuthors
-      let expanded = Expand!(label.clone());
+      // If the label contains "complex" CSes (e.g. `\cite`, `\href`) that
+      // expand into Constructor invocations whose parameter readers
+      // would drain the wrapping `do_expand` gullet hunting for absent
+      // arguments, the resulting `readBalanced ran out of input`
+      // diagnostic is spurious — extracting an author/year out of such
+      // a cite-bearing label is meaningless anyway. Skip the expansion
+      // and just walk the raw label tokens for the `(year)` pattern.
+      // Perl on the same input is silent (`natbib.sty.ltxml:564`'s
+      // `Expand` runs the macros differently for these cases). Driver:
+      // 2404.06289 `\bibitem [{...\cite{a}...}]{key}`.
+      let has_complex_cs = label.unlist_ref().iter().any(|t| {
+        if t.get_catcode() != Catcode::CS { return false; }
+        let n = t.to_string();
+        matches!(n.as_str(),
+          "\\cite" | "\\citet" | "\\citep" | "\\citeauthor" | "\\citeyear"
+          | "\\href" | "\\hyperref" | "\\url" | "\\nolinkurl"
+          | "\\BibitemOpen" | "\\BibitemShut" | "\\bibinfo" | "\\bibfield"
+        )
+      });
+      let expanded = if has_complex_cs {
+        label.clone()
+      } else {
+        Expand!(label.clone())
+      };
       let exp_tokens = expanded.unlist();
       let mut author_toks = Vec::new();
       let mut year_toks = Vec::new();
