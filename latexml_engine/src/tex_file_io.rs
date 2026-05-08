@@ -210,25 +210,8 @@ LoadDefinitions!({
         LoadPool!("LaTeX");
       }
     }
-    // Save @currname/@currext around the input call. Our input_definitions
-    // sets these but only restores them when handleoptions=true; plain
-    // \input uses handleoptions=false. Without a local save/restore, the
-    // callee's @currname leaks into the caller, breaking e.g. babel.sty's
-    // later \ProcessOptions* at L4291 after \input txtbabel.def.
-    let prev_currname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      Some(gullet::do_expand(T_CS!("\\@currname"))?.to_string())
-    } else { None };
-    let prev_currext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
-      Some(gullet::do_expand(T_CS!("\\@currext"))?.to_string())
-    } else { None };
     let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
     input(&Tokens::new(tks).to_string(), reloadable_opts)?;
-    if let Some(prev) = prev_currname {
-      def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(prev)), None)?;
-    }
-    if let Some(prev) = prev_currext {
-      def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prev)), None)?;
-    }
   });
   //======================================================================
   // Special output
