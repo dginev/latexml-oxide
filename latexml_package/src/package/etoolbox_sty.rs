@@ -47,6 +47,18 @@ LoadDefinitions!({
     DefMacro!(cs, args, body, protected => true, long => true); }
   Tokens!() });
 
+  // \csdef/\csedef/\csgdef/\csxdef — TL etoolbox.sty L849-852 defines
+  // these as `\newrobustcmd*{\csXXX}[1]{\expandafter\Xdef\csname#1\endcsname}`.
+  // Perl loads the raw .sty after .ltxml so it picks them up; Rust's
+  // .rs binding skips the raw .sty so they're undefined. Driver:
+  // 2205.03932 (`\csdef` Real Regression P=0 vs R=1 → 0).
+  // Direct DefMacro! since the TeX! block running \newrobustcmd has
+  // ordering issues with our bootstrap.
+  DefMacro!("\\csdef{}", "\\expandafter\\def\\csname #1\\endcsname");
+  DefMacro!("\\csedef{}", "\\expandafter\\edef\\csname #1\\endcsname");
+  DefMacro!("\\csgdef{}", "\\expandafter\\gdef\\csname #1\\endcsname");
+  DefMacro!("\\csxdef{}", "\\expandafter\\xdef\\csname #1\\endcsname");
+
   TeX!(
     r"
 % {<csname>}

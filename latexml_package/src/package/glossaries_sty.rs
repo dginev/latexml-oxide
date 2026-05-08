@@ -234,6 +234,13 @@ LoadDefinitions!({
   // paths invoke \xspace, so the package must be loaded up front.
   RequirePackage!("xspace");
 
+  // Mirror raw glossaries.sty's transitive dependency on etoolbox.
+  // TL `glossaries.sty:77` does `\RequirePackage{etoolbox}`, so any
+  // user-package that builds on glossaries (e.g. revtex preamble.sty
+  // using `\csdef` from etoolbox) gets it transitively. Without
+  // this, papers like 2205.03932 see `\csdef` undefined.
+  RequirePackage!("etoolbox");
+
   // Mirror raw glossaries.sty's transitive dependency on amsmath.
   // Perl's binding raw-loads the actual glossaries.sty (via
   // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`),
