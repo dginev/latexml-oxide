@@ -9839,6 +9839,22 @@ LoadDefinitions!({
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
   DefMacro!("\\@setsize{}{}{}{}", "");
 
+  // Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
+  // promised would live here. Without these, `\on@line` (used by
+  // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
+  // L8219) and friends are auto-defined as `<ltx:ERROR/>`, leaking
+  // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
+  DefMacro!("\\hexnumber@ {}",
+    r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi");
+  DefMacro!("\\on@line", r" on input line \the\inputlineno");
+  Let!("\\@warning",  "\\@latex@warning");
+  Let!("\\@@warning", "\\@latex@warning@no@line");
+  DefMacro!("\\G@refundefinedtrue", "");
+  DefMacro!("\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
+  DefMacro!("\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}");
+
   // Perl L5765-5766
   DefPrimitive!("\\makeatletter", {
     AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));

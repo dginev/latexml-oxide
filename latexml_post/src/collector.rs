@@ -172,7 +172,13 @@ impl Processor for Collector {
   fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
-    log::warn!("Abstract Collector::process called");
+    // Mirrors Perl Post.pm:177 `Fatal("misdefined", $self, $doc, "abstract; ...")`
+    // but at Warn severity (Rust trait can't fatal here without changing the
+    // signature). A concrete subtype reaching this branch is a misconfig.
+    log_post_warn!(
+      "misdefined", "Collector",
+      "Abstract Collector::process called — concrete subclass should override"
+    );
     Ok(vec![doc])
   }
 }

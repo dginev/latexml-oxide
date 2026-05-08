@@ -350,7 +350,14 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         let node = match lookup_lex_node(lex, nodes) {
           Ok(n) => n,
           Err(e) => {
-            log::warn!("create_xmrefs: skipping lexeme with invalid node lookup: {e}");
+            // Perl MathParser.pm:151 — Error('expected', 'id', undef,
+            //   "Cannot find a node with xml:id='$idref'", ...)
+            // We don't always have an idref string at this layer; the
+            // lookup error itself carries enough context.
+            log_math_error!(
+              "expected", "id",
+              "create_xmrefs: skipping lexeme with invalid node lookup: {}", e
+            );
             continue;
           },
         };

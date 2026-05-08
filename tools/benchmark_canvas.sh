@@ -362,11 +362,17 @@ convert_one() {
 
   # Run with timeout + RAM guard
   # timeout sends SIGTERM, then SIGKILL after 10s grace
+  # --path=…/ar5iv-bindings/originals: mirrors the Perl-LaTeXML
+  # production invocation (--path=~/git/ar5iv-bindings/bindings) so raw
+  # .tex files referenced by latexml_contrib bindings (harvmac, jnl,
+  # mssymb, …) are findable. The 80+ originals/*.tex are vendored in
+  # the repo precisely because they're not all in TeX Live.
   exit_code=0
   TMPDIR="$task_tmp" timeout --kill-after=10 "$TIMEOUT_S" \
     bash -c "ulimit -v $MAX_RAM_KB 2>/dev/null; exec \"\$@\"" -- \
     "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_tmp" \
     --timeout "$TIMEOUT_S" \
+    --path "$REPO_ROOT/ar5iv-bindings/originals" \
     2>"$log_tmp" || exit_code=$?
 
   wall_time=$(( ($(date +%s%N) - start_time) / 1000000 ))  # milliseconds

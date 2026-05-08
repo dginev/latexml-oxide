@@ -1,5 +1,13 @@
 extern crate rustc_hash;
 
+// Crate-wide diagnostic emission macros (`log_math_error!` /
+// `log_math_warn!` / `log_math_info!`). Loaded first via #[macro_use]
+// so every math_parser module can use them without explicit imports.
+// Mirrors latexml_post's diag.rs — emits structured
+// `Error:<class>:<object>` lines for harness aggregation.
+#[macro_use]
+mod diag;
+
 #[macro_use]
 mod grammar;
 mod data;

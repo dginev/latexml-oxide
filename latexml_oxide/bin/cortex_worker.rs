@@ -76,6 +76,13 @@ struct Cli {
   #[arg(long)]
   preload: Vec<String>,
 
+  /// Additional search paths (repeatable). Mirrors Perl LaTeXML's --path.
+  /// Each entry is prepended to the per-job source-dir search path so
+  /// e.g. `--path=ar5iv-bindings/originals` makes raw .tex files in
+  /// the ar5iv repo available to InputDefinitions.
+  #[arg(long = "path")]
+  search_paths: Vec<String>,
+
   /// Per-document timeout in seconds
   #[arg(long, default_value = "60")]
   timeout: u64,
@@ -146,6 +153,8 @@ struct LatexmlWorker {
   threads:        usize,
   profile:        ConversionProfile,
   verbosity:      i32,
+  /// Extra --path search dirs from CLI, prepended to per-job source_dir.
+  search_paths:   Vec<String>,
 }
 
 impl LatexmlWorker {
@@ -177,6 +186,10 @@ impl LatexmlWorker {
     let mut preloads = vec!["TeX.pool".to_string()];
     preloads.extend(self.profile.preloads.iter().cloned());
 
+    // Source dir first (per-job temp), then user --path entries.
+    let mut search_paths = vec![source_dir.clone()];
+    search_paths.extend(self.search_paths.iter().cloned());
+
     let opts = Config {
       verbosity:               self.verbosity,
       format:                  OutputFormat::HTML5,
@@ -188,7 +201,7 @@ impl LatexmlWorker {
       bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
       extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
       preload:                 Some(self.profile.preloads.clone()),
-      search_paths:            Some(vec![source_dir.clone()]),
+      search_paths:            Some(search_paths),
       include_comments:        Some(false),
       nomathparse:             None,
     };
@@ -923,6 +936,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     threads: cli.pool_size,
     profile,
     verbosity,
+    search_paths: cli.search_paths.clone(),
   };
 
   if cli.standalone {

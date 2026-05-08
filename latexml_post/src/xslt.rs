@@ -53,13 +53,30 @@ impl XSLT {
     searchpaths: Vec<String>,
   ) -> Result<Self, PostError> {
     if stylesheet.is_empty() {
+      // Perl XSLT.pm:36 — Error('expected', 'stylesheet', undef,
+      //   "No stylesheet specified!")
+      log_post_error!(
+        "expected", "stylesheet",
+        "No stylesheet specified!"
+      );
       return Err(PostError::Processing(
         "No stylesheet specified!".to_string(),
       ));
     }
 
     // Find the stylesheet file
-    let stylesheet_path = find_stylesheet(stylesheet, &searchpaths)?;
+    let stylesheet_path = match find_stylesheet(stylesheet, &searchpaths) {
+      Ok(p) => p,
+      Err(e) => {
+        // Perl XSLT.pm:42 — Error('missing-file', $stylesheet, undef,
+        //   "No stylesheet '$stylesheet' found!")
+        log_post_error!(
+          "missing-file", stylesheet,
+          "No stylesheet '{}' found!", stylesheet
+        );
+        return Err(e);
+      }
+    };
 
     Ok(XSLT {
       name: format!("XSLT[using {}]", stylesheet),
@@ -125,7 +142,10 @@ impl XSLT {
             let _ = fs::create_dir_all(parent);
           }
           if let Err(e) = fs::copy(&path, &dest) {
-            log::warn!("Couldn't copy {} to {}: {}", path, dest, e);
+            log_post_warn!(
+              "I/O", dest,
+              "Couldn't copy {} to {}: {}", path, dest, e
+            );
           }
         }
 
@@ -137,7 +157,8 @@ impl XSLT {
         }
       },
       None => {
-        log::warn!(
+        log_post_warn!(
+          "missing_file", src,
           "Couldn't find resource file {} in paths {:?}",
           src,
           search_paths
@@ -409,12 +430,18 @@ mod embedded_xslt {
       .get_or_init(|| {
         let dir = std::env::temp_dir().join("latexml_oxide_xslt");
         if let Err(e) = std::fs::create_dir_all(&dir) {
-          log::warn!("Failed to create XSLT temp dir: {e}");
+          log_post_warn!(
+            "I/O", "xslt_tempdir",
+            "Failed to create XSLT temp dir: {}", e
+          );
           return None;
         }
         for (name, content) in FILES {
           if let Err(e) = std::fs::write(dir.join(name), content) {
-            log::warn!("Failed to write embedded XSLT {name}: {e}");
+            log_post_warn!(
+              "I/O", name,
+              "Failed to write embedded XSLT {}: {}", name, e
+            );
             return None;
           }
         }

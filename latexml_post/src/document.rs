@@ -833,7 +833,10 @@ impl PostDocument {
           } else if let Some((prefix, localname)) = tag.split_once(':') {
             let nsuri = self.namespaces.get(prefix).cloned();
             if nsuri.is_none() {
-              log::warn!("No namespace on '{}'", tag);
+              log_post_warn!(
+                "malformed", "namespace",
+                "No namespace on '{}'", tag
+              );
             }
             // Find or create namespace for this prefix.
             // Prefer the default namespace (empty prefix) if it matches the target URI,
@@ -894,7 +897,10 @@ impl PostDocument {
               self.add_nodes(&mut new_node, children);
             }
           } else {
-            log::warn!("Tag '{}' has no namespace prefix", tag);
+            log_post_warn!(
+              "malformed", "namespace",
+              "Tag '{}' has no namespace prefix", tag
+            );
           }
         },
         NodeData::XmlNode(source_node) => {
@@ -1187,6 +1193,13 @@ impl PostDocument {
         if let Some(target) = self.find_node_by_id(&idref) {
           let mut target_mut = target.clone();
           self.mark_xm_node_visibility_aux(&mut target_mut, cvis, pvis);
+        } else {
+          // Perl Post.pm:1444 — Error('expected', 'id', undef,
+          //   "Cannot find a node with xml:id='$id'")
+          log_post_error!(
+            "expected", "id",
+            "Cannot find a node with xml:id='{}'", idref
+          );
         }
       }
     } else {
@@ -1202,7 +1215,16 @@ impl PostDocument {
   pub fn realize_xm_node(&self, node: &Node) -> Option<Node> {
     if self.is_qname(node, "ltx:XMRef") {
       let idref = node.get_attribute("idref")?;
-      self.find_node_by_id(&idref).cloned()
+      let realized = self.find_node_by_id(&idref).cloned();
+      if realized.is_none() {
+        // Perl Post.pm:1456 — Error('expected', 'id', undef,
+        //   "Cannot find a node with xml:id='$id'")
+        log_post_error!(
+          "expected", "id",
+          "Cannot find a node with xml:id='{}'", idref
+        );
+      }
+      realized
     } else {
       Some(node.clone())
     }
@@ -1351,7 +1373,14 @@ impl PostDocument {
         return Ok(());
       }
     }
-    log::warn!("No schema found for document validation");
+    // Perl Post.pm:973 — Error('I/O', $schema, undef, "Failed to load
+    //   RelaxNG schema $schema") when no usable schema; here we don't
+    //   even have a path. Reporting at warn (no schema = nothing to
+    //   validate, often a benign config) with the structured target.
+    log_post_warn!(
+      "missing_file", "schema",
+      "No schema found for document validation"
+    );
     Ok(())
   }
 
@@ -1379,14 +1408,16 @@ impl PostDocument {
     }
 
     if !dups.is_empty() {
-      log::warn!(
+      log_post_warn!(
+        "malformed", "id",
         "Duplicate IDs for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         dups.join(", ")
       );
     }
     if !missing.is_empty() {
-      log::warn!(
+      log_post_warn!(
+        "expected", "id",
         "Cached IDs not in document for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         missing.join(", ")

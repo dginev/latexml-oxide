@@ -965,10 +965,12 @@ impl CrossRef {
             .collect::<Vec<_>>()
             .join(",")
         );
+        // Perl CrossRef.pm L72-75: structured Error/Warn/Info with
+        // class='expected', object='ids'. Use harness-friendly target.
         match severity.as_str() {
-          "error" => log::error!("{}", msg),
-          "warn" => log::warn!("{}", msg),
-          _ => log::info!("{}", msg),
+          "error" => log_post_error!("expected", "ids", "{}", msg),
+          "warn" => log_post_warn!("expected", "ids", "{}", msg),
+          _ => log_post_info!("expected", "ids", "{}", msg),
         }
       }
     }

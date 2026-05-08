@@ -199,7 +199,13 @@ impl MathParser {
         self.engine = fresh_engine;
       },
       Err(e) => {
-        log::warn!(
+        // Perl MathParser.pm:56 Fatal("expected", "MathGrammar", …) —
+        // we deliberately downgrade to warn here because our caller
+        // already has a workable engine in `self.engine`; abandoning
+        // the conversion outright would be more disruptive than
+        // proceeding with the prior grammar state.
+        log_math_warn!(
+          "expected", "MathGrammar",
           "math parser: init_grammar fallback failed ({}) — leaving engine in last known state",
           e
         );
@@ -1134,7 +1140,10 @@ impl MathParser {
     self.last_parsetrees_count = parses.len();
 
     if ok_trees + pruned_trees > 10 {
-      log::warn!(
+      // Diagnostic only — high ambiguity isn't a Perl-side Error in
+      // MathParser.pm; the warn target uses a Rust-internal class.
+      log_math_warn!(
+        "ambiguous", "math",
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
         ok_trees + pruned_trees + deduped,
         ok_trees + deduped,
@@ -1505,8 +1514,11 @@ fn textrec(
   if tag == pin!("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
-      // Perl: Error('expected','arguments',...) then returns empty
-      log::warn!("XMApp element has no child arguments");
+      // Perl MathParser.pm:1394 — Error('expected', 'arguments', …)
+      log_math_error!(
+        "expected", "arguments",
+        "XMApp element has no child arguments"
+      );
       return String::new();
     }
     let arg_node = args.remove(0);
@@ -1539,7 +1551,12 @@ fn textrec(
     // whole conversion.
     let children = element_nodes(&node);
     let Some(content) = children.first() else {
-      log::warn!("XMDual element has no child arguments");
+      // Perl MathParser.pm:1394-style — XMDual without children is
+      // structurally as bad as XMApp without children.
+      log_math_error!(
+        "expected", "arguments",
+        "XMDual element has no child arguments"
+      );
       return String::new();
     };
     textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the

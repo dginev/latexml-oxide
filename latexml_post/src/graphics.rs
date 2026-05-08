@@ -13,6 +13,12 @@ use std::sync::LazyLock;
 use crate::document::PostDocument;
 use crate::processor::{ProcessResult, Processor};
 
+// Diagnostic emission: `log_post_error!` (and friends) live in
+// `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
+// diag;` in `lib.rs`. They emit harness-compatible structured Error
+// lines (`Error:<class>:<object> <msg>`) matching what
+// `latexml_core::common::error::Error!` produces.
+
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 // Parsed-and-validated at init: only positive integer values are
 // honored; everything else (unset, empty, "0", malformed) leaves
@@ -549,7 +555,10 @@ impl Graphics {
         true
       },
       None => {
-        log::warn!(
+        // Subprocess wall-clock timeout; class=`shell` mirrors Perl
+        // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
+        log_post_warn!(
+          "shell", "inkscape",
           "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
           source,
           timeout.as_secs()
@@ -624,6 +633,13 @@ impl Graphics {
   /// Run `cmd` and enforce a wall-clock timeout. Returns `Some(status)` on
   /// clean exit, `None` if the child was killed on timeout or spawn
   /// failed. Polls every 50 ms — cheap compared to the subprocess cost.
+  ///
+  /// On Unix, each child runs in its OWN session (setsid via pre_exec)
+  /// so a timeout kill targets the entire process group with `killpg`.
+  /// Without that, ImageMagick's `convert` was spawning `gs` and dying
+  /// on SIGKILL while leaving gs orphaned — those gs processes held on
+  /// for 10+ minutes per pathological PDF and stalled large sandbox
+  /// runs. The same hardening protects inkscape / pdftocairo / ps2pdf.
   fn run_with_timeout(
     mut cmd: std::process::Command,
     timeout: std::time::Duration,
@@ -632,13 +648,53 @@ impl Graphics {
     cmd
       .stdout(std::process::Stdio::null())
       .stderr(std::process::Stdio::null());
+    #[cfg(unix)]
+    {
+      use std::os::unix::process::CommandExt;
+      // SAFETY: setsid(2) is async-signal-safe and is the documented way
+      // to make a child process group leader between fork() and exec().
+      unsafe {
+        cmd.pre_exec(|| {
+          // SAFETY: same as above — async-signal-safe call permitted here.
+          if libc::setsid() == -1 {
+            // Fall back: setpgid(0, 0). If both fail we proceed anyway.
+            let _ = libc::setpgid(0, 0);
+          }
+          Ok(())
+        });
+      }
+    }
     let mut child = cmd.spawn().ok()?;
+    let pid = child.id() as i32;
+    let kill_group = || {
+      #[cfg(unix)]
+      {
+        // SIGTERM the whole group first (graceful), then SIGKILL after
+        // a brief grace if the leader is still alive. This matches what
+        // `timeout(1) --kill-after` does for the bench script's outer
+        // guard.
+        // SAFETY: killpg(2) on a known pid is documented + safe.
+        unsafe {
+          libc::killpg(pid, libc::SIGTERM);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        unsafe {
+          libc::killpg(pid, libc::SIGKILL);
+        }
+      }
+      #[cfg(not(unix))]
+      {
+        // Non-Unix platforms: best-effort PID kill only.
+        let _ = pid;
+      }
+    };
     let start = std::time::Instant::now();
     loop {
       match child.try_wait() {
         Ok(Some(status)) => return Some(status),
         Ok(None) => {
           if start.elapsed() >= timeout {
+            kill_group();
             let _ = child.kill();
             let _ = child.wait();
             return None;
@@ -646,6 +702,7 @@ impl Graphics {
           std::thread::sleep(std::time::Duration::from_millis(50));
         },
         Err(_) => {
+          kill_group();
           let _ = child.kill();
           let _ = child.wait();
           return None;
@@ -919,6 +976,11 @@ impl Graphics {
     // arbitrary `convert` invocation could run for minutes and stall
     // the entire post-processing phase. 60 s is enough for any
     // reasonably-sized graphic; tune via `LATEXML_CONVERT_TIMEOUT_SECS`.
+    //
+    // Crucially: `run_with_timeout` puts convert in its own process
+    // group via setsid+pre_exec (Unix), so killing convert on timeout
+    // also kills the gs grandchild. Without that, gs orphaned by a
+    // dying convert kept running 10+ min and stalled the sandbox.
     let mut cmd = std::process::Command::new("convert");
     cmd
       .arg("-define")
@@ -934,7 +996,8 @@ impl Graphics {
       // (The fake-convert test fixture exits 0 without producing a file.)
       Some(status) => status.success(),
       None => {
-        log::warn!(
+        log_post_warn!(
+          "shell", "convert",
           "Graphics: convert/gs for {} exceeded {} s — killed",
           source,
           timeout.as_secs()
@@ -1215,7 +1278,8 @@ impl Processor for Graphics {
                     raw_dims,
                   })
                 } else {
-                  log::warn!(
+                  log_post_warn!(
+                    "shell", "inkscape",
                     "Graphics: inkscape SVG path failed for {}, falling back to convert",
                     source
                   );
@@ -1239,7 +1303,17 @@ impl Processor for Graphics {
                   raw_dims: Self::read_image_dimensions(abs_dest_str),
                 }
               } else {
-                log::warn!("Graphics: Failed to convert {} to {}", source, abs_dest_str);
+                // Final-failure: every conversion path exhausted. Promoted
+                // from warn → Error 2026-05-08 because we want all
+                // images to convert successfully, and a silent warning
+                // hides regressions in the rasterizer chain.
+                // Error class/object mirror Perl Graphics.pm:274
+                // `Error('imageprocessing', $source, …)` so the
+                // harness aggregates with engine/package emissions.
+                log_post_error!(
+                  "imageprocessing", source,
+                  "Graphics: Failed to convert {} to {}", source, abs_dest_str
+                );
                 if let Some(rel) = Self::copy_to_destination(source, source_dir_ref, dest_dir_ref) {
                   ConvertOutcome {
                     job_id:   *job_id,
@@ -1281,7 +1355,15 @@ impl Processor for Graphics {
     for plan in &plans {
       match plan {
         Plan::NotFound { idx, graphic } => {
-          log::warn!("Graphics: No source found for {}", graphic);
+          // Promoted Warn → Error 2026-05-08: a missing graphic source
+          // is a real conversion failure, not a transient warning.
+          // Class/object mirror Perl Graphics.pm:216
+          // `Warn('expected', 'source', …)`, with the severity raised
+          // per the user's "we want all images to convert" stance.
+          log_post_error!(
+            "expected", "source",
+            "Graphics: No source found for {}", graphic
+          );
           let mut node_mut = nodes[*idx].clone();
           node_mut.set_attribute("imagesrc", graphic).ok();
         },

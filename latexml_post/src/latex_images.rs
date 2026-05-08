@@ -444,7 +444,12 @@ impl LaTeXImages {
       .output()
       .is_ok();
     if !latex_available {
-      log::error!("No latex command found; image generation will be skipped");
+      // Perl LaTeXImages.pm L134: Error('expected', $LATEXCMD, undef,
+      //   "No latex command ($LATEXCMD) found; Skipping.", ...)
+      log_post_error!(
+        "expected", "latex",
+        "No latex command found; image generation will be skipped"
+      );
       return false;
     }
     // Check for DVI converter
@@ -458,7 +463,10 @@ impl LaTeXImages {
       .output()
       .is_ok();
     if !dvi_available {
-      log::error!(
+      // Perl LaTeXImages.pm dvi-converter check: Error('expected',
+      //   $$self{dvicmd}, …) (parallel to the latex check at L134).
+      log_post_error!(
+        "expected", dvi_cmd,
         "No {} command found; image generation will be skipped",
         dvi_cmd
       );
@@ -480,7 +488,11 @@ impl LaTeXImages {
       DviMethod::DviSvgm => {
         // SVG: just copy
         if let Err(e) = std::fs::copy(src, dest) {
-          log::warn!("Failed to copy {} to {}: {}", src, dest, e);
+          // Perl LaTeXImages.pm I/O failure: Error('I/O', $dest, …)
+          log_post_error!(
+            "I/O", dest,
+            "Failed to copy {} to {}: {}", src, dest, e
+          );
           return None;
         }
         // SVG dimensions from file would need XML parsing
@@ -489,7 +501,10 @@ impl LaTeXImages {
       DviMethod::DviPng => {
         // PNG: already cropped by dvipng -T tight
         if let Err(e) = std::fs::copy(src, dest) {
-          log::warn!("Failed to copy {} to {}: {}", src, dest, e);
+          log_post_error!(
+            "I/O", dest,
+            "Failed to copy {} to {}: {}", src, dest, e
+          );
           return None;
         }
         // Would read PNG dimensions from file header

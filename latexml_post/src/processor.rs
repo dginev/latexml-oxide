@@ -168,7 +168,12 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
   }
 
   if class.is_none() {
-    log::warn!("No document class found; using article");
+    // Perl Post.pm:226 — Warn('expected', 'class', undef,
+    //   "No document class found; using article")
+    log_post_warn!(
+      "expected", "class",
+      "No document class found; using article"
+    );
   }
 
   let class_info = ClassInfo {

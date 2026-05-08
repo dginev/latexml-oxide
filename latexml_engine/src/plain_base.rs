@@ -47,9 +47,14 @@ LoadDefinitions!({
   // Actually, latex.ltx's definition (Perl plain_base.pool.ltxml L29-65).
   // \showoverfull and \loggingoutput are defined as no-ops in Knuth's
   // plain.tex; \tracingall references them so they must exist.
+  // \tracingfonts and \showoutput are also ignored debug primitives —
+  // Perl declares them in latex_constructs.pool.ltxml L5677-5679 alongside
+  // the others. Co-locating here so plain.tex users also get them.
   DefMacro!("\\hideoutput", None);
   DefMacro!("\\showoverfull", None);
   DefMacro!("\\loggingoutput", None);
+  DefMacro!("\\tracingfonts", None);
+  DefMacro!("\\showoutput", None);
   DefMacro!(
     "\\loggingall",
     r"\tracingstats\tw@

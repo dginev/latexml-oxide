@@ -164,7 +164,10 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log::warn!("Failed to load bibliography '{}': {}", bib, e),
+            Err(e) => log_post_warn!(
+              "I/O", bib,
+              "Failed to load bibliography '{}': {}", bib, e
+            ),
           }
         }
       }
@@ -190,7 +193,10 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log::warn!("Failed to load bibliography '{}': {}", path, e),
+            Err(e) => log_post_warn!(
+              "I/O", path,
+              "Failed to load bibliography '{}': {}", path, e
+            ),
           }
         }
       }
