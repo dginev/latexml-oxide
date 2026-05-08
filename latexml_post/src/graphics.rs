@@ -515,6 +515,16 @@ impl Graphics {
   /// plots and strict enough to prevent the 46 s+ runaway behaviour seen
   /// on Fade.pdf-class inputs.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
+    // First try poppler's `pdftocairo -svg`. Empirically 20-40× faster
+    // than inkscape on benign vector PDFs (e.g. matplotlib/pgfplots
+    // exports: 0.02 s vs 0.5 s) and produces equivalent or smaller SVG.
+    // We accept its output only if the result fits under
+    // `MAX_SVG_OUTPUT_BYTES`; pathological vector-heavy PDFs (e.g.
+    // R-Graphics `W.pdf`) can otherwise emit >100 MB SVG. On rejection
+    // or failure we fall through to inkscape, then to PNG raster.
+    if Self::convert_image_svg_pdftocairo(source, dest, page) {
+      return true;
+    }
     let mut cmd = std::process::Command::new("inkscape");
     cmd
       .arg("--export-type=svg")
@@ -526,7 +536,18 @@ impl Graphics {
     cmd.arg(source);
     let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
     match Self::run_with_timeout(cmd, timeout) {
-      Some(status) => status.success() && Path::new(dest).exists(),
+      Some(status) => {
+        if !(status.success() && Path::new(dest).exists()) {
+          return false;
+        }
+        // Reject pathological inkscape output that explodes to >100 MB
+        // — keep the dest hole open so the worker falls back to raster.
+        if Self::svg_output_too_large(dest) {
+          let _ = std::fs::remove_file(dest);
+          return false;
+        }
+        true
+      },
       None => {
         log::warn!(
           "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
@@ -534,6 +555,59 @@ impl Graphics {
           timeout.as_secs()
         );
         // Best-effort cleanup of a partial output.
+        let _ = std::fs::remove_file(dest);
+        false
+      },
+    }
+  }
+
+  /// Maximum acceptable SVG output size from a vector conversion. Above
+  /// this we discard the SVG and force the raster fallback — it's nearly
+  /// always cheaper to ship a 30 KB PNG than a 100 MB SVG even when both
+  /// are technically valid. Tuned from observed cases: well-behaved
+  /// matplotlib plots are ~500 KB - 2 MB; W.pdf-class explodes to
+  /// 70-115 MB across all known PDF→SVG tools.
+  const MAX_SVG_OUTPUT_BYTES: u64 = 8 * 1024 * 1024; // 8 MB
+
+  fn svg_output_too_large(path: &str) -> bool {
+    std::fs::metadata(path)
+      .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
+      .unwrap_or(false)
+  }
+
+  /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
+  /// poppler/cairo. Much faster than inkscape on the kind of vector PDFs
+  /// matplotlib/pgfplots produce. Returns true ONLY if the output is
+  /// reasonably-sized; otherwise we discard and let the caller try
+  /// inkscape (which sometimes simplifies further).
+  fn convert_image_svg_pdftocairo(source: &str, dest: &str, page: Option<u32>) -> bool {
+    let mut cmd = std::process::Command::new("pdftocairo");
+    cmd.arg("-svg");
+    if let Some(p) = page {
+      let p1 = p.max(1);
+      cmd
+        .arg("-f")
+        .arg(p1.to_string())
+        .arg("-l")
+        .arg(p1.to_string());
+    } else {
+      cmd.arg("-f").arg("1").arg("-l").arg("1");
+    }
+    cmd.arg(source).arg(dest);
+    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    match Self::run_with_timeout(cmd, timeout) {
+      Some(status) => {
+        if !(status.success() && Path::new(dest).exists()) {
+          let _ = std::fs::remove_file(dest);
+          return false;
+        }
+        if Self::svg_output_too_large(dest) {
+          let _ = std::fs::remove_file(dest);
+          return false;
+        }
+        true
+      },
+      None => {
         let _ = std::fs::remove_file(dest);
         false
       },
@@ -671,6 +745,77 @@ impl Graphics {
     page.is_none() && source.to_lowercase().ends_with(".eps")
   }
 
+  /// Whether to attempt the poppler `pdftocairo --png` fast-path for a PDF
+  /// source. The page argument cooperates with pdftocairo's 1-based
+  /// `-f`/`-l` page selector. Empirical: for vector-heavy PDFs (e.g.
+  /// R-Graphics output) `pdftocairo` rasterizes 25× faster than
+  /// ImageMagick-via-Ghostscript and produces a clean PNG, where the
+  /// inkscape SVG path explodes to >100 MB and `convert`/`gs` runs into
+  /// tens of seconds on a single page.
+  fn should_try_pdf_cairo_path(source: &str) -> bool {
+    source.to_lowercase().ends_with(".pdf")
+  }
+
+  /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
+  /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
+  /// the destination file was actually written.
+  fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
+    let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
+    let timeout = std::time::Duration::from_secs(20);
+
+    let cleanup = |tmp_png: &Path| {
+      let _ = std::fs::remove_file(tmp_png);
+    };
+
+    let mut pdftocairo = std::process::Command::new("pdftocairo");
+    pdftocairo
+      .arg("-singlefile")
+      .arg("-png")
+      .arg("-r")
+      .arg(density.to_string());
+    // graphicx page is 1-based; pdftocairo also uses 1-based.
+    if let Some(p) = page {
+      let p1 = p.max(1);
+      pdftocairo
+        .arg("-f")
+        .arg(p1.to_string())
+        .arg("-l")
+        .arg(p1.to_string());
+    } else {
+      // Default to first page (matches Perl/`convert` `[0]` behavior).
+      pdftocairo.arg("-f").arg("1").arg("-l").arg("1");
+    }
+    pdftocairo.arg(source).arg(&tmp_prefix);
+
+    let cairo_ok = Self::run_with_timeout(pdftocairo, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp_png.exists();
+    if !cairo_ok {
+      cleanup(&tmp_png);
+      return false;
+    }
+
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp_png, dest)
+      .or_else(|_| std::fs::copy(&tmp_png, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    cleanup(&tmp_png);
+    installed
+  }
+
   /// Some EPS files make ImageMagick/Ghostscript spend tens of seconds in
   /// direct rasterization. Converting EPS to a cropped PDF first and then
   /// rasterizing the PDF via poppler is much faster for those cases, while
@@ -754,6 +899,17 @@ impl Graphics {
     let density = Self::raster_density_for_source(source);
     if Self::should_try_eps_pdf_path(source, page)
       && Self::convert_eps_via_pdf(source, dest, density)
+    {
+      return true;
+    }
+    // For PDF sources, prefer poppler's `pdftocairo --png` over
+    // ImageMagick's `convert`-via-Ghostscript. Empirically 25× faster on
+    // vector-heavy PDFs (e.g. R-Graphics output), and avoids tens-of-seconds
+    // gs runaways. Falls through to the convert/gs path if pdftocairo is
+    // unavailable or fails for any reason.
+    if Self::should_try_pdf_cairo_path(source)
+      && dest.to_lowercase().ends_with(".png")
+      && Self::convert_pdf_via_pdftocairo(source, dest, density, page)
     {
       return true;
     }

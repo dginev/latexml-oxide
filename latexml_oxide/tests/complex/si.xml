@@ -131,7 +131,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
   </para>
   <para xml:id="p3">
     <p>Semantic again:
-<Math mode="inline" tex="0.094\text{\,}\pi\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}" text="0.094 * (pi * mm * mrad)" xml:id="p3.m1">
+<Math mode="inline" tex="0.094\text{\,}\pi\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{rad}" text="0.094 * (pi * mm * mrad)" xml:id="p3.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p3.m1.1"> </XMText>
@@ -147,7 +147,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       </Math><break/></p>
   </para>
   <para xml:id="p4">
-    <p><Math mode="inline" tex="0.094\text{\,}\frac{\mathrm{1}}{\mathrm{3}}\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}" text="0.094 * ((1 / 3) * mm * mrad)" xml:id="p4.m1">
+    <p><Math mode="inline" tex="0.094\text{\,}\frac{1}{3}\,\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{rad}" text="0.094 * ((1 / 3) * mm * mrad)" xml:id="p4.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p4.m1.1"> </XMText>
@@ -167,7 +167,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       </Math><break/></p>
   </para>
   <para xml:id="p5">
-    <p><Math mode="inline" tex="0.094\text{\,}\pi\mathrm{/}\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{r}\mathrm{a}\mathrm{d}^{3}" text="0.094 * ((pi / mm) * mrad ^ 3)" xml:id="p5.m1">
+    <p><Math mode="inline" tex="0.094\text{\,}\pi\mathrm{/}\mathrm{m}\mathrm{m}\,\mathrm{m}\mathrm{rad}^{3}" text="0.094 * ((pi / mm) * mrad ^ 3)" xml:id="p5.m1">
         <XMath>
           <XMApp>
             <XMText meaning="times" role="MULOP" xml:id="p5.m1.1"> </XMText>

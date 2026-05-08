@@ -1529,6 +1529,28 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
       result.push(T_BEGIN!());
       result.push(t);
       result.push(T_END!());
+    } else if tc == Catcode::BEGIN {
+      // Perl L1119-1123: peel an explicit `{...}` group and emit it as-is,
+      // WITHOUT re-walking its contents. Without this, the group's letters
+      // would be re-wrapped in `\mathrm{}` even though they were already
+      // wrapped by `six_resolve_unit_objects` (driver: `\mathrm{c}` from
+      // `\centi` → `\mathrm{\mathrm{c}}` double-wrap).
+      let mut g = Vec::new();
+      let mut level = 1;
+      for t2 in iter.by_ref() {
+        if t2.get_catcode() == Catcode::END {
+          level -= 1;
+          if level == 0 {
+            break;
+          }
+        } else if t2.get_catcode() == Catcode::BEGIN {
+          level += 1;
+        }
+        g.push(t2);
+      }
+      result.push(T_BEGIN!());
+      result.extend(g);
+      result.push(T_END!());
     } else {
       result.push(t);
     }
@@ -1578,9 +1600,17 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
             let pres = defn.presentation;
             if !pres.is_empty() {
-              // Emit raw presentation tokens — six_parse_literalunits will wrap
-              // LETTER tokens in \mathrm{} as needed
+              // Mirror Perl L1216 (`siunitx.sty.ltxml`):
+              //   `return Tokens(T_CS('\mathrm'), T_BEGIN, $pres, T_END);`
+              // The `\mathrm{...}` wrapper is required so each unit becomes a
+              // separate math atom; emitting raw presentation tokens leaves
+              // prepower/postpower presentations like `^{3}` (from `\cubic`)
+              // bare, which the math digester then sees as a second
+              // superscript on the preceding atom (driver: 2304.12803).
+              result.push(T_CS!("\\mathrm"));
+              result.push(T_BEGIN!());
               result.extend(pres.unlist());
+              result.push(T_END!());
               had_substitution = true;
               continue;
             }
@@ -1599,6 +1629,10 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
             if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
               let pres = defn.presentation;
               if !pres.is_empty() {
+                // Perl L1223: `Tokens($pres, T_BEGIN, $data, T_END)` — the
+                // presentation here takes the data as its argument (e.g.
+                // `\tothe{2}` → `^{2}`). The presentation already supplies
+                // its own grouping so we don't add a `\mathrm{...}` wrapper.
                 result.extend(pres.unlist());
                 result.push(T_BEGIN!());
                 result.extend(ExplodeText!(&arg));
