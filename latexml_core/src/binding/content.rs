@@ -129,28 +129,18 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   //
-  // Snapshot \@currname/\@currext UNCONDITIONALLY (independent of
-  // handleoptions). The handleoptions=true branch uses prevname/prevext
-  // to drive the \@pushfilename/\@popfilename stack dance. The
-  // handleoptions=false branch ALSO mutates \@currname/\@currext (so the
-  // inner load sees the new file's name) and so MUST restore them on
-  // exit — otherwise the new name leaks into subsequent loads.
-  //
-  // Witness: `\inputencoding{ansinew}` calls input_definitions("ansinew",
-  // "def") with handleoptions=false. Without restore, \@currname stays
-  // as "ansinew"/"def" after the call. The next \RequirePackage{expl3}
-  // (handleoptions=true) then captures "ansinew"/"def" as prevname,
-  // pushes that onto \@currnamestack, and expl3-code.tex's
-  // \__file_tmp:w 3-arg recursion (L11469-L11491) cannot find the
-  // expected empty `{}{}{<catcode>}` initial-state triple. The
-  // recursion eats past \group_end: into \cs_new:Npn lines, producing
-  // the L11515 file_name_expand cascade.
-  let prevname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+  // Snapshot \@currname/\@currext only when handleoptions=true. Perl
+  // Package.pm:2549-2550 does the same — both prevname and prevext are
+  // gated on options{handleoptions}. The handleoptions=false branch
+  // does NOT mutate \@currname/\@currext (mirrors plain LaTeX `\input`
+  // semantics; Perl L2580 likewise only mutates them inside its
+  // handleoptions=true branch).
+  let prevname = if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
     gullet::do_expand(T_CS!("\\@currname"))?.to_string()
   } else {
     String::new()
   };
-  let prevext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+  let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some() {
     gullet::do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
     String::new()
@@ -318,10 +308,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       options.after,
       None,
     )?;
-  } else {
-    def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
-    def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
   }
+  // No `else` branch: Perl Package.pm L2580-2611 only mutates
+  // \@currname/\@currext inside the handleoptions=true block. The
+  // handleoptions=false path mirrors plain LaTeX `\input`, which leaves
+  // them untouched. Mutating them here breaks \@currnamestack
+  // discipline: a subsequent inner \RequirePackage's \@pushfilename
+  // captures the leaked name instead of the empty initial-state value,
+  // and expl3-code.tex's \__file_tmp:w stack walk over-reads.
+  // Witnesses: 0805.4519 (inputenc+ansinew), 1705.00041
+  // (\usetikzlibrary{calligraphy}+spath3+expl3).
 
   if !current_options.is_empty() {
     assign_value(
@@ -680,32 +676,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       }
     }
     reset_options()?;
-  } else {
-    // handleoptions=false: we mutated \@currname/\@currext at L305-306 so
-    // the inner load (e.g. ansinew.def) sees the new file's name during
-    // \ProvidesFile etc. There's no \@pushfilename/\@popfilename pair on
-    // this path, so restore them ourselves to the snapshot taken at
-    // function entry. Without this, "ansinew"/"def" leaks into the next
-    // load, breaking expl3-code.tex's \__file_tmp:w stack walk.
-    def_macro(
-      T_CS!("\\@currname"),
-      None,
-      Tokens!(Explode!(prevname)),
-      Some(ExpandableOptions {
-        scope: Some(Scope::Global),
-        ..ExpandableOptions::default()
-      }),
-    )?;
-    def_macro(
-      T_CS!("\\@currext"),
-      None,
-      Tokens!(Explode!(prevext)),
-      Some(ExpandableOptions {
-        scope: Some(Scope::Global),
-        ..ExpandableOptions::default()
-      }),
-    )?;
   }
+  // No handleoptions=false cleanup needed: we never mutated
+  // \@currname/\@currext on that path (matching Perl).
   if this_frame_announces {
     note_end(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(
