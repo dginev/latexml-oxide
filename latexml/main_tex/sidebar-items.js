@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["find_main_tex"]};
+window.SIDEBAR_ITEMS = {"fn":["find_main_tex","is_pdf_magic"]};
