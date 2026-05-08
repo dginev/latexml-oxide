@@ -42,24 +42,18 @@ Round-23 commits (chronological):
 6. `3198b744ab` — natbib: `\NAT@@wrout` ditches `bounded => true` (manual bgroup + soft pop, bypassing egroup mode-frame guard) + `\lx@NAT@parselabel` skips `Expand!` on labels with complex CSes (`\cite`, `\href`, …). Driver: 2404.06289 (19 errors → 0).
 7. `d42de4439e` — `latexml_oxide` bin: bail with `Fatal:invalid:not_tex_source` for single-file inputs whose first 5 bytes are `%PDF-`. Mirrors the directory-mode `is_pdf_magic` already in `find_main_tex`. Driver: 2301.04210 (PDF mis-named `.tex`; was 101 cascading tokenizer errors → 1 Fatal).
 
-### Known Round-23 Rust-only bugs (no fix yet)
-
-- **Nested `\MakeLowercase{\MakeUppercase{...}}` drops content**. Driver
-  2009.10018 (16 errs vs Perl 14; the +2 are `\lx@note` and
-  `\@add@frontmatter@now` mode-end errors triggered downstream of the
-  lost case-change content inside the `\footnote{\MakeLowercase{\MakeUppercase{T}o appear in...}}` title).
-  Min repro: `\MakeLowercase{\MakeUppercase{abc}}` produces empty output
-  in `<p>...</p>` (Perl semantics expect `abc` per the standard
-  `\edef\reserved@a{\lx@latex@changecase{lower}{...}} \reserved@a`
-  fixed-point chain; outer lower changes literals AND emits
-  `\protect\MakeUppercase` opaquely, then the protected re-invocation
-  re-uppercases its arg). Trace shows outer
-  `lx_change_case_tokens` correctly returns
-  `\protect \MakeUppercase  { t } e s t .` but the post-edef invocation
-  of `\reserved@a` either fails to invoke the inner `\MakeUppercase`'s
-  own `\edef\reserved@a` or pops/closes a group too early — needs
-  gullet-level recursion trace. Not pursued in round-23 (deep
-  expansion-recursion debugging).
+8. `1790c32b1b` — `\MakeUppercase`/`\MakeLowercase` pre-stub
+   `\UTF@two/three/four@octets@noexpand` to `\@empty` so the body's
+   neutralisation `\let`s don't trigger `Error:undefined:` on the
+   `\edef\reserved@a{...}` partial-expansion phase. Real TeX's
+   `\let<undef>\<defined>` is a no-op without error.
+9. `31b6cc1e00` — `lx_read_and_change_case` inserts `\dont_expand`
+   between `\protect` and the munged robust CS in the fall-through
+   case (CS not in exclude list, not in case-mapping). Without it
+   the outer `\edef\reserved@a{...}` body's `Partial` expansion
+   re-invokes the unprotected munged macro, mangling captured tokens
+   and silently dropping the case-changed content during the later
+   `\reserved@a` invocation. Driver 2009.10018: 16 errors → 0.
 
 Sole remaining REAL_REGRESSION: **2406.14142** (21 errors). expl3 cascade — `\g__sys_everyjob_tl` never runs because `\everyjob` register is never expanded at job start, so `\c_sys_jobname_str` and friends stay undefined; downstream `\if_int_compare:w` fires 21+ relational-token errors. Perl gets 4 errors on the same input (also undefined-CS but no cascade). The actual fix needs an `\everyjob` job-start hook (matching Perl's gap, plus an error-recovery improvement to suppress the cascade). Tracked.
 
