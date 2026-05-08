@@ -448,6 +448,28 @@ LoadDefinitions!({
   // exists. Mirror Capitalized variant.
   DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
   DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
+  // \glsdescwidth / \glspagelistwidth — TL glossaries.sty defines these
+  // as `\newlength` registers used in glossary-table column widths
+  // (`p{\glsdescwidth}`). Papers do `\setlength{\glsdescwidth}{...}` in
+  // the preamble; without our register backing the assignment fails
+  // with "<variable> was supposed to be here". Driver: 1901.06637.
+  DefRegister!("\\glsdescwidth", Dimension::new(0));
+  DefRegister!("\\glspagelistwidth", Dimension::new(0));
+
+  // \glsXXXkey — TL `glossaries.sty` defines these as the literal field
+  // names a `\newacronym[<key>=<val>,…]` option recognises (e.g.
+  // `\glsshortpluralkey` → "shortplural"). Used as `\newacronym
+  // [\glsshortpluralkey=cas,\glslongpluralkey=...]{aca}{aca}{...}`.
+  // Driver: 1901.04016 + others. Define each to expand to its literal
+  // string so the keyval reader gets a real key name.
+  DefMacro!("\\glsshortkey", "short");
+  DefMacro!("\\glslongkey", "long");
+  DefMacro!("\\glsshortpluralkey", "shortplural");
+  DefMacro!("\\glslongpluralkey", "longplural");
+  DefMacro!("\\glssymbolpluralkey", "symbolplural");
+  DefMacro!("\\glsfirstpluralkey", "firstplural");
+  DefMacro!("\\glsdescpluralkey", "descriptionplural");
+  DefMacro!("\\glsuserkey", "user");
   // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
   // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
   // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
