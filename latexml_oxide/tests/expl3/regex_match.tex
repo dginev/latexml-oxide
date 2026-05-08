@@ -5,6 +5,12 @@
 \NewDocumentCommand{\matchnn}{mm}{%
   \regex_match:nnTF{#1}{#2}{Y}{N}%
 }
+\NewDocumentCommand{\matchnnT}{mm}{%
+  \regex_match:nnT{#1}{#2}{Y}%
+}
+\NewDocumentCommand{\matchnnF}{mm}{%
+  \regex_match:nnF{#1}{#2}{N}%
+}
 \ExplSyntaxOff
 \begin{document}
 A: \matchnn{\d+}{abc}.
@@ -16,4 +22,12 @@ C: \matchnn{\d+}{abc123}.
 D: \matchnn{[a-z]+}{ABC}.
 
 E: \matchnn{[a-z]+}{xyz}.
+
+F: \matchnnT{\d+}{42}{never} ok.
+
+G: \matchnnF{\d+}{abc} ok.
+
+H: \matchnn{(?:foo|bar)}{baz} done.
+
+I: \matchnn{(?:foo|bar)}{foo} done.
 \end{document}
