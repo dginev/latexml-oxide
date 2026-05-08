@@ -9444,6 +9444,16 @@ LoadDefinitions!({
   );
 
   // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
+  // Pre-define the UTF@*octets@noexpand CSes that the bodies below
+  // unconditionally `\let` to `\@empty`. Without these the `\edef`
+  // partial-expansion auto-defines them as `<ltx:ERROR/>` (unexpected
+  // for a guard meant to prevent expansion within case-change). Real
+  // TeX's `\let<undef>\@empty` is a no-op without error; mirror that
+  // by stubbing them as `\@empty` ahead of `\edef`. inputenc.sty
+  // overrides these when utf8 encoding is active.
+  Let!("\\UTF@two@octets@noexpand", "\\@empty");
+  Let!("\\UTF@three@octets@noexpand", "\\@empty");
+  Let!("\\UTF@four@octets@noexpand", "\\@empty");
   TeX!(
     r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \lx@prepare@case@mapping%
