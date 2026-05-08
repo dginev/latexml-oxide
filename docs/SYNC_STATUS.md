@@ -399,6 +399,56 @@ Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 
 ---
 
+## Long-term: consolidate post-processing graphics renderer
+
+Currently the post-processing graphics pipeline shells out to **four**
+external tools depending on source format and target asset:
+`convert` / `gs` (ImageMagick → Ghostscript) for PDF→PNG fallback,
+`inkscape` for PDF→SVG fallback, `pdftocairo` for the fast PDF→PNG
+and PDF→SVG paths (added 2026-05-07), and `ps2pdf` + `pdftocairo` for
+EPS→PNG. Each adds a runtime dependency, fork cost, and timeout
+plumbing; the convert/gs path in particular is 25-50× slower than
+`pdftocairo` on vector-heavy PDFs and produces no better output.
+
+Goal: **converge on a single primary renderer**, with a clearly-scoped
+fallback (or none). Two candidates worth evaluating:
+
+1. **`pdftocairo` (poppler)** as the sole subprocess renderer.
+   Empirically the fastest, available wherever TeXLive is, produces
+   clean PNG output and acceptable SVG for all benign PDFs we've
+   measured. SVG output explodes on R-Graphics-class PDFs, but the
+   8 MB size guard + PNG fallback already handles that case. Pros:
+   no new build dependency; binary already on the path.
+   Cons: still a subprocess, not a Rust crate.
+
+2. **`pdfium-render`** (Rust crate wrapping Google's PDFium). Pure
+   in-process rendering; same engine that powers Chrome's PDF view.
+   Mature for raster output; SVG export is more limited. Pros:
+   no subprocess, no fork cost. Cons: requires linking the PDFium
+   dynamic library at runtime — same external-dependency footprint
+   as poppler, but newer/less ubiquitous than poppler-utils.
+
+Tasks (in order):
+
+1. Benchmark `pdftocairo` vs `pdfium-render` on a representative
+   sample (W.pdf-class R-Graphics, matplotlib/pgfplots vector,
+   raster-embedded PDF, multi-page PDF with `--pdf-page`). Record
+   wall-clock + output-size + faithfulness vs Perl.
+2. Decide: single `pdftocairo` path, single `pdfium-render` path,
+   or `pdfium-render` primary with `pdftocairo` fallback. Prefer
+   the single-tool option if quality matches.
+3. Strip the unused fallbacks from `latexml_post/src/graphics.rs`
+   — `convert`/`gs`, `inkscape`, and the `ps2pdf` + `pdftocairo`
+   double-shell for EPS — once the primary renderer covers EPS via
+   poppler's `pdftops`/`pdftocairo` (or pdfium equivalent).
+
+Driver: 2303.02756 W.pdf (R-Graphics) ran `gs` at 110 s in v22 before
+my fix; the same paper now uses `pdftocairo --png` at 1.8 s. The
+fast path is already in; the long-term goal is to stop maintaining
+the slow paths.
+
+---
+
 ## Earlier work (archived)
 
 Round-17 / 18 / 19 narrative + REG-1, REG-2, REG-3, CLUSTER-NBSP
