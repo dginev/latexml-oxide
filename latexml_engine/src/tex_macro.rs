@@ -226,7 +226,24 @@ LoadDefinitions!({
   // [Since \the is expandable, perhaps should just be built into \the's code? Never need to revert]
   DefMacro!("\\the", {
     if let Some(token) = read_x_token(None, false, None)? {
-      if let Some(defn) = lookup_definition(&token)? {
+      // Follow `\let`-alias chain so that `\the \tex_count:D` (= `\count`)
+      // and `\the \__int_eval:w` (= `\numexpr`) — and any other expl3
+      // primitive-alias to a register-style CS — find the underlying
+      // register definition. Without this, `lookup_definition` returns
+      // None for `Stored::Token` let-aliases and `\the` falls through
+      // to the "undefined" branch, emitting a 0 plus a stub-installation.
+      // Driver: 2406.14142 expl3 regex VM (`\the \__int_eval:w ... \__int_eval_end:`).
+      let mut effective_token = token;
+      for _ in 0..16 {
+        match state::with_meaning(&effective_token, |m| match m {
+          Some(Stored::Token(t)) => Some(*t),
+          _ => None,
+        }) {
+          Some(t) if t != effective_token => effective_token = t,
+          _ => break,
+        }
+      }
+      if let Some(defn) = lookup_definition(&effective_token)? {
         if defn.is_register() {
           // SOME kind of register is acceptable
           let args = if let Some(params) = defn.get_parameters() {
