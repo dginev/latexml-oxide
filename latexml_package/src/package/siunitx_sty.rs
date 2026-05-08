@@ -1854,12 +1854,19 @@ fn make_unitobject_expansion(name: &str) -> Tokens {
 /// Perl L1227-1249: If presentation expands to more \lx@six@unitobject tokens,
 /// pass them through (alias collapsing, e.g. \metre → \meter).
 /// Otherwise fall back to \lx@six@unitobject{name}.
-fn make_collapsible_expansion(name: &str, presentation: &str) -> Tokens {
+///
+/// The presentation MUST be passed as Tokens (preserving CS catcodes), not
+/// stringified-then-re-exploded — `ExplodeText!` would turn `\meter` into
+/// the six character tokens `\`, `m`, `e`, `t`, `e`, `r` and silently break
+/// the alias chain. Perl's `DefMacroI` re-tokenizes its body string with
+/// current catcodes and produces a real CS token, so the Rust port must
+/// pass real CS tokens through.
+fn make_collapsible_expansion(name: &str, presentation: &Tokens) -> Tokens {
   let mut tks = vec![T_CS!("\\lx@six@unitobject@collapsible"), T_BEGIN!()];
   tks.extend(ExplodeText!(name));
   tks.push(T_END!());
   tks.push(T_BEGIN!());
-  tks.extend(ExplodeText!(presentation));
+  tks.extend(presentation.unlist_ref().iter().copied());
   tks.push(T_END!());
   Tokens::new(tks)
 }
@@ -2006,7 +2013,7 @@ LoadDefinitions!({
 
     // Define \lx@six@<name> → expands to \lx@six@unitobject@collapsible{name}{presentation}
     // Perl L1350-1351: Uses collapsible form to enable alias resolution
-    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
+    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
 
     // Let \cs = \relax if not yet defined
     if !state::has_meaning(&cs) {
@@ -2030,7 +2037,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     // Perl L1264: Uses collapsible form for prefix declarations
-    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &pres_str))?;
+    define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
     if !state::has_meaning(&cs) {
       state::let_i(&cs, &T_CS!("\\relax"), None);
     }
