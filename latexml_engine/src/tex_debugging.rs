@@ -179,7 +179,22 @@ LoadDefinitions!({
                   continue_flag = true;
                 } else {
                   arg_index+=1;
-                  p_spec = arena::pin(s!("#{arg_index}"));
+                  // Optional parameters (Optional, OptionalSemiverbatim,
+                  // OptionalKeyVals, etc.) round-trip through `\meaning`
+                  // as `[#N]` so etoolbox's `\robustify` re-`def`s the CS
+                  // with the correct `[]`-flagged parameter pattern,
+                  // preserving optional-arg semantics. Without the
+                  // brackets, `\robustify{\cite}` rebuilt `\cite` as
+                  // `#1#2` (two mandatory args) and subsequent
+                  // `\cite{x}\begin{equation}` mis-parsed `\begin` as
+                  // arg 2 — corrupting mode tracking and producing
+                  // "Script _ can only appear in math mode" cascades on
+                  // the next equation. Driver: 2110.11931.
+                  if param.optional {
+                    p_spec = arena::pin(s!("[#{arg_index}]"));
+                  } else {
+                    p_spec = arena::pin(s!("#{arg_index}"));
+                  }
                 }
               }
             }
