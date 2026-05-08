@@ -125,4 +125,34 @@ LoadDefinitions!({
     \edef\c_sys_timestamp_str{}%
     \edef\c_sys_shell_escape_int{0}%
   ");
+
+  // expl3 regex matching is implemented via a deeply intertwined chain of
+  // `\__regex_compile:n`, `\__regex_match:n`, `\__regex_if_match:nn`, etc.
+  // All of those routines drive `\if_int_compare:w` against
+  // `\l__regex_*_int` expl3 registers in ways that exercise gullet-level
+  // macro expansion timing very precisely. Our Rust port doesn't faithfully
+  // reproduce the timing, so when packages like `duckuments.sty` invoke
+  // `\regex_match:NnTF` against `\c_duckuments_example_regex` (a compiled
+  // regex constant), the expansion stalls and emits a 21-error cascade of
+  // `Error:expected:<relationaltoken>` + `Error:unexpected:fi:` at end of
+  // document.
+  //
+  // Short-circuit `\regex_match:NnTF` and friends: always take the FALSE
+  // branch. Duckuments' `\includegraphics` patcher then falls through to
+  // the plain `\includegraphics` path. This is a Rust-only divergence —
+  // Perl LaTeXML supports the regex tests properly. Driver: 2406.14142.
+  RawTeX!(r"
+    \def\__lx@regex@dummyN#1#2#3#4{#4}%
+    \expandafter\let\csname regex_match:NnTF\endcsname\__lx@regex@dummyN
+    \def\__lx@regex@dummyT#1#2#3{}%
+    \expandafter\let\csname regex_match:NnT\endcsname\__lx@regex@dummyT
+    \def\__lx@regex@dummyF#1#2#3{#3}%
+    \expandafter\let\csname regex_match:NnF\endcsname\__lx@regex@dummyF
+    \def\__lx@regex@dummynTF#1#2#3#4{#4}%
+    \expandafter\let\csname regex_match:nnTF\endcsname\__lx@regex@dummynTF
+    \def\__lx@regex@dummynT#1#2#3{}%
+    \expandafter\let\csname regex_match:nnT\endcsname\__lx@regex@dummynT
+    \def\__lx@regex@dummynF#1#2#3{#3}%
+    \expandafter\let\csname regex_match:nnF\endcsname\__lx@regex@dummynF
+  ");
 });
