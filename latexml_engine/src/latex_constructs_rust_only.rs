@@ -41,6 +41,17 @@ LoadDefinitions!({
   Let!("\\IfFormatAtLeastTF",  r"\@ifl@t@r@released");
   Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
 
+  // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
+  // for legacy 8-bit-encoding compat (used by papers that pre-date the
+  // 2018-04-01 default switch to UTF-8). Upstream `\let`s it to `\relax`
+  // after first use (L18324). LaTeXML's dump skips this section, so the
+  // CS arrives undefined — papers like 1711.09157 with
+  // `\UseRawInputEncoding` at line 1 col 1 fail with
+  // `Error:undefined:\UseRawInputEncoding`. Define as a no-op so the
+  // legacy preamble compiles silently; the encoding-switching behaviour
+  // is irrelevant for our XML pipeline.
+  Let!("\\UseRawInputEncoding", r"\relax");
+
   //======================================================================
   // 2. LaTeXML-internal helpers
   //======================================================================
