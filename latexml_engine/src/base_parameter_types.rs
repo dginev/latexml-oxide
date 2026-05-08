@@ -281,6 +281,19 @@ LoadDefinitions!({
         // `\@bibfield XUntil:\@end@bibfield`).
         let is_real_expandable =
           matches!(state::lookup_meaning(&token), Some(Stored::Expandable(_)));
+        // Perl XUntil L144-146: ALWAYS calls `readArguments` for any defined
+        // token, wrapping in `Invocation`. Without this, a Constructor
+        // body like `\href{u}{t}` → `\lx@hyper@url@\href{}{}{u}{t}` lets
+        // XUntil's outer `read_x_token` re-expand the `\href` token (which
+        // the Constructor is supposed to consume as Undigested arg #1),
+        // producing infinite recursion. Witness: 1902.01143 elsarticle
+        // `\begin{keyword} ... \href{...}{...}` hangs at 100M token limit.
+        // Targeted to Constructors only — Primitives have side-effecting
+        // arg readers (e.g. `\hspace`'s Dimension reader over-consumed
+        // past `}` in astro-ph9903386 — the recorded regression that
+        // motivated the original "bare-token push" else-branch).
+        let is_constructor =
+          matches!(state::lookup_meaning(&token), Some(Stored::Constructor(_)));
         // Definitional primitives (\def/\edef/\gdef/\xdef/\let/\futurelet) consume
         // their target token from the input AT EXECUTION TIME — but XUntil's outer
         // `read_x_token` would expand the target away if it's `\let`-bound to
@@ -341,7 +354,7 @@ LoadDefinitions!({
             tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
             tokens.push(T_END!());
           }
-        } else if is_real_expandable || is_def_family {
+        } else if is_real_expandable || is_def_family || is_constructor {
           if let Some(defn) = lookup_definition_stored(&token)? {
             let args = defn.read_arguments()?;
             tokens.extend(Invocation!(token, args).unlist());

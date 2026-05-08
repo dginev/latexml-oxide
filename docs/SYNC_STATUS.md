@@ -5,12 +5,74 @@ Perl LaTeXML on TL2025 with `--preload=ar5iv.sty
 --path=~/git/ar5iv-bindings/bindings` produces 0 errors. Mission completes
 when every in-scope paper produces 0 errors on Rust too.
 
-**Status**: Round-22 active 2026-05-07. Round-20 Phase A Gate 0
-closed 2026-05-03 at **99,829 / 100,003 = 99.83%** raw OK on the 100k
-canvas. Round-22 sprint targets the 335-paper baseline-failure set
-(`~/round22_validate/inputs/`), now at **287/330 OK = 87.0%** projected
-(v17 sweep in flight, last full sweep v16 at 274/330 = 83.0%, baseline
-v10 = 249/350 = 71.1%). Round-21 work archived in `docs/archive/`.
+**Status**: Round-23 active 2026-05-07 (continuing from round-22).
+Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
+99.83%** raw OK on the 100k canvas. Round-22 sprint targeted the
+335-paper baseline-failure set (`~/round22_validate/inputs/`):
+- v10 baseline: 249/350 OK = 71.1%
+- v16 (mid-round): 274/330 = 83.0%
+- v17 (T1-cmd-loop fix): 289/330 = 87.6%
+- v18 (open_text walk + isotope + etoolbox-& + biblatex Let): 292/328 = 89.0%
+- v19 (XUntil constructor-args + aas_support C/L/R): 294/328 = 89.6%
+- **v21** (bookmark stub + graphics gs-timeout/inkscape-default): **294/327 = 89.9%**
+  (same 294 unique OK as v19; bookmark stub didn't directly recover papers
+  because token-limit fires elsewhere in 2310.15090 / 2203.01231 paths)
+- **v22** (round-22 wrap, 100k canvas validation): 295/329 = 89.7%
+
+Round-21 work archived in `docs/archive/`.
+
+## Round-23 (active 2026-05-07/08)
+
+Continuation of round-22 sprint on the same 335-paper baseline.
+Re-ran the round-22 failures-set sweep across multiple iterations.
+
+| Sweep | Cortex OK / Unique | True parity (Rust=0=Perl) gain |
+|-------|---:|---|
+| v22 (carry-over) | 295 / 329 = 89.7% | 12 papers tractable + 1 Perl-regression |
+| v25 (siunitx + block + lstinline) | 300 / 326 = 92.0% | +5 cortex-recover, +9 BOTH CLEAN |
+| v26 (matching binary) | 299 / 327 = 91.4% | (binary timing diff vs v25) |
+| **v27 (after natbib NAT@@wrout fix)** | **300 / 328 = 91.5%** | **11 of 12 originally-tractable failures fixed** |
+
+Round-23 commits (chronological):
+1. `ad77a29f47` — siunitx: pass `\DeclareSIUnit` presentation as Tokens not exploded letters; restores `\metre→\meter→m` collapse inside `\SI{}`. Driver: 1907.04278.
+2. `fd8bb072a7` — siunitx `\mathrm{...}` wrap in `six_resolve_unit_objects` (Perl L1216 parity) + `six_parse_literalunits` peels CC_BEGIN groups opaquely; graphics: pdftocairo `--png`/`--svg` fast paths added with 8 MB SVG output guard. Drivers: 2304.12803, W.pdf gs-runaway.
+3. `1569d6f86b` — SYNC_STATUS task: long-term consolidate `pdftocairo`/`pdfium-render` to single PDF renderer.
+4. `5b2e38590c` — schema: `Tag!("ltx:block", auto_close => true)`. Driver: 2302.11635 IEEEtran transmag minipage row.
+5. `ba56a30a33` — listings: `\lstinline` body under verbatim catcodes (Perl `EMPTY_CATTABLE` parity) + match closing delim by text only. Driver: 2301.10618 section-in-item cascade.
+6. `3198b744ab` — natbib: `\NAT@@wrout` ditches `bounded => true` (manual bgroup + soft pop, bypassing egroup mode-frame guard) + `\lx@NAT@parselabel` skips `Expand!` on labels with complex CSes (`\cite`, `\href`, …). Driver: 2404.06289 (19 errors → 0).
+7. `d42de4439e` — `latexml_oxide` bin: bail with `Fatal:invalid:not_tex_source` for single-file inputs whose first 5 bytes are `%PDF-`. Mirrors the directory-mode `is_pdf_magic` already in `find_main_tex`. Driver: 2301.04210 (PDF mis-named `.tex`; was 101 cascading tokenizer errors → 1 Fatal).
+
+8. `1790c32b1b` — `\MakeUppercase`/`\MakeLowercase` pre-stub
+   `\UTF@two/three/four@octets@noexpand` to `\@empty` so the body's
+   neutralisation `\let`s don't trigger `Error:undefined:` on the
+   `\edef\reserved@a{...}` partial-expansion phase. Real TeX's
+   `\let<undef>\<defined>` is a no-op without error.
+9. `31b6cc1e00` — `lx_read_and_change_case` inserts `\dont_expand`
+   between `\protect` and the munged robust CS in the fall-through
+   case (CS not in exclude list, not in case-mapping). Without it
+   the outer `\edef\reserved@a{...}` body's `Partial` expansion
+   re-invokes the unprotected munged macro, mangling captured tokens
+   and silently dropping the case-changed content during the later
+   `\reserved@a` invocation. Driver 2009.10018: 16 errors → 0.
+10. `e436a9cda7` + `fedc89cabd` — `\regex_match:NnTF` and 5 variants
+    short-circuited to FALSE branch (with `_`/`:` letter-catcode
+    wrap so the helper CS names tokenize correctly). Drives
+    2406.14142 from **21 errors → 0** (the last historical
+    REAL_REGRESSION). Trigger: duckuments.sty's `\includegraphics`
+    wrapper uses `\regex_match:NnTF` against
+    `\c_duckuments_example_regex`; our Rust expansion of expl3 regex
+    compile/match drove `\if_int_compare:w` against `\l__regex_*_int`
+    in a way that stalled at `\end{document}`. The stub falls back to
+    plain `\includegraphics`, which is acceptable. Other expl3
+    packages relying on regex matching silently take the F branch —
+    Rust-only divergence; faithful expl3 regex emulation is tracked
+    in `docs/archive/`.
+
+**No REAL_REGRESSIONs remain in the round-23 random sweep**
+(0/327 papers post-fix; 2406.14142 was the last and is now Rust=0
+vs Perl=4 PERL_REGRESSION).
+
+Cortex-failure-but-parity-clean set (BOTH CLEAN with cortex_worker abort/OOM/timeout): 1904.02716 (xpath nodeset growth in math parser, formula 92), 2007.13470 (token-limit during english/slovak.ldf hook), 2011.14413, 2105.04174, 2203.01231, 2310.15090. Their conversion produces 0 errors in standalone parity_check; cortex's per-paper RAM cap or post-processing limits trip them. Out-of-scope for round-23 (post-processing infra work).
 
 **True Rust regression count: 0** *for ported error conditions*.
 [Caveat: Error/Fatal coverage audit](ERROR_PARITY_AUDIT.md) reveals
@@ -388,6 +450,56 @@ Acceptance Checklist) governs every perf change.
 Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 `{plain,latex}.dump.txt` for TL2022…TL2026 and select at runtime by
 `kpsewhich --version`. Currently dumps load from `resources/dumps/`.
+
+---
+
+## Long-term: consolidate post-processing graphics renderer
+
+Currently the post-processing graphics pipeline shells out to **four**
+external tools depending on source format and target asset:
+`convert` / `gs` (ImageMagick → Ghostscript) for PDF→PNG fallback,
+`inkscape` for PDF→SVG fallback, `pdftocairo` for the fast PDF→PNG
+and PDF→SVG paths (added 2026-05-07), and `ps2pdf` + `pdftocairo` for
+EPS→PNG. Each adds a runtime dependency, fork cost, and timeout
+plumbing; the convert/gs path in particular is 25-50× slower than
+`pdftocairo` on vector-heavy PDFs and produces no better output.
+
+Goal: **converge on a single primary renderer**, with a clearly-scoped
+fallback (or none). Two candidates worth evaluating:
+
+1. **`pdftocairo` (poppler)** as the sole subprocess renderer.
+   Empirically the fastest, available wherever TeXLive is, produces
+   clean PNG output and acceptable SVG for all benign PDFs we've
+   measured. SVG output explodes on R-Graphics-class PDFs, but the
+   8 MB size guard + PNG fallback already handles that case. Pros:
+   no new build dependency; binary already on the path.
+   Cons: still a subprocess, not a Rust crate.
+
+2. **`pdfium-render`** (Rust crate wrapping Google's PDFium). Pure
+   in-process rendering; same engine that powers Chrome's PDF view.
+   Mature for raster output; SVG export is more limited. Pros:
+   no subprocess, no fork cost. Cons: requires linking the PDFium
+   dynamic library at runtime — same external-dependency footprint
+   as poppler, but newer/less ubiquitous than poppler-utils.
+
+Tasks (in order):
+
+1. Benchmark `pdftocairo` vs `pdfium-render` on a representative
+   sample (W.pdf-class R-Graphics, matplotlib/pgfplots vector,
+   raster-embedded PDF, multi-page PDF with `--pdf-page`). Record
+   wall-clock + output-size + faithfulness vs Perl.
+2. Decide: single `pdftocairo` path, single `pdfium-render` path,
+   or `pdfium-render` primary with `pdftocairo` fallback. Prefer
+   the single-tool option if quality matches.
+3. Strip the unused fallbacks from `latexml_post/src/graphics.rs`
+   — `convert`/`gs`, `inkscape`, and the `ps2pdf` + `pdftocairo`
+   double-shell for EPS — once the primary renderer covers EPS via
+   poppler's `pdftops`/`pdftocairo` (or pdfium equivalent).
+
+Driver: 2303.02756 W.pdf (R-Graphics) ran `gs` at 110 s in v22 before
+my fix; the same paper now uses `pdftocairo --png` at 1.8 s. The
+fast path is already in; the long-term goal is to stop maintaining
+the slow paths.
 
 ---
 

@@ -234,6 +234,13 @@ LoadDefinitions!({
   // paths invoke \xspace, so the package must be loaded up front.
   RequirePackage!("xspace");
 
+  // Mirror raw glossaries.sty's transitive dependency on etoolbox.
+  // TL `glossaries.sty:77` does `\RequirePackage{etoolbox}`, so any
+  // user-package that builds on glossaries (e.g. revtex preamble.sty
+  // using `\csdef` from etoolbox) gets it transitively. Without
+  // this, papers like 2205.03932 see `\csdef` undefined.
+  RequirePackage!("etoolbox");
+
   // Mirror raw glossaries.sty's transitive dependency on amsmath.
   // Perl's binding raw-loads the actual glossaries.sty (via
   // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`),
@@ -421,10 +428,66 @@ LoadDefinitions!({
   DefMacro!("\\Glsdescription Semiverbatim", "");
   DefMacro!("\\glssymbolname Semiverbatim", "");
   DefMacro!("\\Glssymbolname Semiverbatim", "");
+  // \glstext / \Glstext / \GLStext — emit the entry's "text" field (what
+  // appears on subsequent uses). Per Perl glossaries.sty.ltxml's behavior
+  // of loading the raw glossaries.sty (which defines these), our binding
+  // never sees them — Perl is silent on these CSes because the raw load
+  // installs them. Stub them as the entry-key-as-text since we don't
+  // store typesetting fields. Driver: 1812.05463 cluster (\glstext{rms}
+  // Real Regression). Same template as \glsdesc above.
+  DefMacro!("\\glstext Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glstext Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLStext Semiverbatim", "\\GLS{#1}");
+  // \glsfirst / \Glsfirst / \GLSfirst — entry's "first" field (used on
+  // first occurrence). Same stubbing strategy.
+  DefMacro!("\\glsfirst Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glsfirst Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSfirst Semiverbatim", "\\GLS{#1}");
+  // \glslong / \Glslong / \GLSlong — entry's long-form expansion. Stubs.
+  DefMacro!("\\glslong Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glslong Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSlong Semiverbatim", "\\GLS{#1}");
+  // \glsshort / \Glsshort / \GLSshort — entry's short-form (acronym).
+  DefMacro!("\\glsshort Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glsshort Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSshort Semiverbatim", "\\GLS{#1}");
   // \glsplural — like \gls{} but for plural form. Route to \glspl which
   // exists. Mirror Capitalized variant.
   DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
   DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
+  // Acronym-style hooks — TL `glossaries.sty` defines these for the
+  // `\setacronymstyle{...}` / `\newacronymstyle{...}` machinery.
+  // Papers using `\setacronymstyle{long-short}` etc. trigger
+  // `\GlsUseAcrEntryDispStyle` / `\GlsUseAcrStyleDefs`. Without
+  // stubs, undefined-CS errors fire. Driver: 2304.04653.
+  DefMacro!("\\newacronymstyle{}{}{}", "");
+  DefMacro!("\\renewacronymstyle{}{}{}", "");
+  DefMacro!("\\setacronymstyle Semiverbatim", "");
+  DefMacro!("\\GlsUseAcrEntryDispStyle{}", "");
+  DefMacro!("\\GlsUseAcrStyleDefs{}", "");
+  DefMacro!("\\defglsentryfmt[]{}", "");
+  // \glsdescwidth / \glspagelistwidth — TL glossaries.sty defines these
+  // as `\newlength` registers used in glossary-table column widths
+  // (`p{\glsdescwidth}`). Papers do `\setlength{\glsdescwidth}{...}` in
+  // the preamble; without our register backing the assignment fails
+  // with "<variable> was supposed to be here". Driver: 1901.06637.
+  DefRegister!("\\glsdescwidth", Dimension::new(0));
+  DefRegister!("\\glspagelistwidth", Dimension::new(0));
+
+  // \glsXXXkey — TL `glossaries.sty` defines these as the literal field
+  // names a `\newacronym[<key>=<val>,…]` option recognises (e.g.
+  // `\glsshortpluralkey` → "shortplural"). Used as `\newacronym
+  // [\glsshortpluralkey=cas,\glslongpluralkey=...]{aca}{aca}{...}`.
+  // Driver: 1901.04016 + others. Define each to expand to its literal
+  // string so the keyval reader gets a real key name.
+  DefMacro!("\\glsshortkey", "short");
+  DefMacro!("\\glslongkey", "long");
+  DefMacro!("\\glsshortpluralkey", "shortplural");
+  DefMacro!("\\glslongpluralkey", "longplural");
+  DefMacro!("\\glssymbolpluralkey", "symbolplural");
+  DefMacro!("\\glsfirstpluralkey", "firstplural");
+  DefMacro!("\\glsdescpluralkey", "descriptionplural");
+  DefMacro!("\\glsuserkey", "user");
   // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
   // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
   // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions

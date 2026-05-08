@@ -157,7 +157,14 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
 
   while let Ok(Some(token)) = gullet::read_token() {
     if let Some(until_tok) = until {
-      if token.text == until_tok.text && token.code == until_tok.code {
+      // Perl `listings.sty.ltxml:291` matches by string only —
+      // `last if $until and $token->getString eq $until->getString;`.
+      // The verbatim catcode switch makes the `until` delimiter's
+      // catcode (e.g. END for `}`) differ from the body's reading
+      // catcode (OTHER), so a strict (text, code) match would never
+      // trigger and the body greedily consumes input. Match on
+      // interned text identity alone, mirroring Perl.
+      if token.text == until_tok.text {
         break;
       }
     }
@@ -1776,12 +1783,33 @@ LoadDefinitions!({
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());
-    // Read opening delimiter
+    // Read opening delimiter under NORMAL catcodes — so `{`/`}` keep
+    // BEGIN/END catcodes and the standard "closing brace" pairing works
+    // for `\lstinline{a_word}`-style invocations. Perl reads `$init`
+    // *before* the cattable swap (`listings.sty.ltxml:61` then `:289`).
     let init = gullet::read_token()?;
     let until = init.as_ref().map(|t| {
       if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
+    // Switch to verbatim catcodes BEFORE reading the body, so e.g.
+    // `\lstinline![ %rcx { 0 } ] = ... ->!` reads its `%` as OTHER
+    // rather than as a comment-trigger that drops the rest of the
+    // line and greedily consumes subsequent input hunting for the
+    // closing `!`. Mirrors Perl `listings.sty.ltxml:289` `local $STATE
+    // = $EMPTY_CATTABLE;`. Driver: 2301.10618 Tracking-mode `\item
+    // \lstinline![ %rcx … ]!` cascade.
+    //
+    // Apply catcode tweaks via a fresh `push_frame` (so they're popped
+    // on `pop_frame` below) — `begin_semiverbatim` would also reassign
+    // MODE/IN_MATH which is unwanted here (the `\lstinline` body lives
+    // inside the surrounding paragraph mode and the post-frame `\(`
+    // math switches must keep working).
+    state::push_frame();
+    for c in ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'] {
+      state::assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+    }
     let body = listings_read_raw_string(until.as_ref());
+    state::pop_frame()?;
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
       result.extend(pre.unlist());

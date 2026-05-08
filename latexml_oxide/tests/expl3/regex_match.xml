@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="xparse"?>
+<?latexml package="l3regex"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>A: N.</p>
+  </para>
+  <para xml:id="p2">
+    <p>B: Y.</p>
+  </para>
+  <para xml:id="p3">
+    <p>C: Y.</p>
+  </para>
+  <para xml:id="p4">
+    <p>D: N.</p>
+  </para>
+  <para xml:id="p5">
+    <p>E: Y.</p>
+  </para>
+  <para xml:id="p6">
+    <p>F: Ynever ok.</p>
+  </para>
+  <para xml:id="p7">
+    <p>G: N ok.</p>
+  </para>
+  <para xml:id="p8">
+    <p>H: N done.</p>
+  </para>
+  <para xml:id="p9">
+    <p>I: Y done.</p>
+  </para>
+</document>

@@ -20,7 +20,18 @@ LoadDefinitions!({
   DeclareOption!("nofonttune", {});
   DeclareOption!("captionsoff", {});
   DeclareOption!("compsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
-  DeclareOption!("comsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
+  // Perl `IEEEtran.cls.ltxml:103` adds `\RequirePackage{newtxmath}` for
+  // the `comsoc` option (which transitively brings in amssymb +
+  // amsfonts). Without it, papers using `\bigstar` etc. with
+  // `\documentclass[comsoc,...]{IEEEtran}` see the symbol as undefined
+  // (driver: 1902.10910 — `\bigstar` Real Regression). amssymb is the
+  // minimal subset that supplies the missing symbols; pulling
+  // newtxmath would also alter math fonts which we don't want to
+  // diverge from baseline IEEEtran's text-font behavior.
+  DeclareOption!("comsoc", {
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
+    RequirePackage!("amssymb");
+  });
   DeclareOption!("transmag", {});
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
   DeclareOption!("onecolumn", {});

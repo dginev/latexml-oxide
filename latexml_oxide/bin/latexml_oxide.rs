@@ -336,6 +336,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     source
   };
 
+  // Some arXiv source archives ship a PDF mis-named with a `.tex` extension
+  // (e.g. 2301.04210.tex). Perl LaTeXML detects the `%PDF-` magic and bails
+  // with a single Fatal; without this guard the binary catcode-tokenizes
+  // the PDF stream and emits ~100 Error:undefined / Error:unexpected lines.
+  if std::path::Path::new(&source).is_file() && latexml::main_tex::is_pdf_magic(std::path::Path::new(&source)) {
+    eprintln!("Fatal:invalid:not_tex_source PDF magic detected in source file '{}'", source);
+    process::exit(1);
+  }
+
   // Stash a copy of the resolved main-tex path for end-of-run telemetry,
   // since `source` itself is moved into `converter.convert(...)`.
   let telemetry_source = source.clone();

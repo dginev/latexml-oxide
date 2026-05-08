@@ -506,7 +506,18 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
             is_upper = false;
           }
         } else {
+          // Fall-through: not in exclude list, not in case-mapping. Pass
+          // both `\protect` and the munged CS through, but mark the CS
+          // un-expandable via `\dont_expand` so the OUTER `\edef`'s
+          // `Partial` body-reader doesn't re-invoke it. Without
+          // `\dont_expand`, the captured tokens go through `\edef` body
+          // expansion which would re-trigger the robust macro (whose
+          // body contains another `\edef\reserved@a{...}`), mangling
+          // the saved tokens and dropping content during the outer
+          // `\reserved@a` invocation. Driver: nested
+          // `\MakeLowercase{\MakeUppercase{...}}`.
           result.push(tok);
+          result.push(T_CS!("\\dont_expand"));
           result.push(next_tok);
         }
       }
@@ -7466,6 +7477,19 @@ LoadDefinitions!({
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
+  // `<ltx:block>` is the schema's "generic block fallback" — it appears as
+  // the rename target in `insert_block` when no more-specific candidate
+  // (figure/logical-block/sectional-block) can hold the content. When the
+  // content includes a `<caption>` (which `<block>` can't contain) but the
+  // context is an open `<p>` (which forces is_inline=true and rules out
+  // `<figure>`), the rename leaves caption inside `<block>` inside `<p>` —
+  // a schema error in both Rust and Perl. Marking `<block>` as
+  // `auto_close => true` lets `find_insertion_point` escape the wayward
+  // `<block>` later (when, say, an outer paragraph break lands).
+  // Driver: 2302.11635 IEEEtran transmag float with `\hrulefill` between
+  // minipage rows. Perl's vspace happens to fire `\par` at the right
+  // moment; Rust's doesn't, and we'd otherwise emit malformed XML.
+  Tag!("ltx:block", auto_close => true);
 
   //----------------------------------------------------------------------
   // We've got the same problem as LaTeX: Lather, Rinse, Repeat.
@@ -9431,6 +9455,16 @@ LoadDefinitions!({
   );
 
   // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase
+  // Pre-define the UTF@*octets@noexpand CSes that the bodies below
+  // unconditionally `\let` to `\@empty`. Without these the `\edef`
+  // partial-expansion auto-defines them as `<ltx:ERROR/>` (unexpected
+  // for a guard meant to prevent expansion within case-change). Real
+  // TeX's `\let<undef>\@empty` is a no-op without error; mirror that
+  // by stubbing them as `\@empty` ahead of `\edef`. inputenc.sty
+  // overrides these when utf8 encoding is active.
+  Let!("\\UTF@two@octets@noexpand", "\\@empty");
+  Let!("\\UTF@three@octets@noexpand", "\\@empty");
+  Let!("\\UTF@four@octets@noexpand", "\\@empty");
   TeX!(
     r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
   \lx@prepare@case@mapping%

@@ -806,6 +806,26 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // fall back to CS name (direct registers like `\count1`).
       let has_explicit_address = dump_address.is_some();
       reg.address = dump_address.unwrap_or_else(|| key.to_string());
+      // Copy parameters from the base register at the address slot if
+      // present. The dump R-line carries no parameter spec, so without
+      // this an alias like `\tex_skip:D` (R \skip G 0) loses the
+      // `Number` index parameter that the base `\skip` register has.
+      // At digest time this caused `\tex_skip:D 0 = ... sp \scan_stop:`
+      // to skip the index reading entirely — the `0`, `=`, and rest got
+      // treated as a glue value and stranded tokens. Driver: expl3
+      // regex VM through `\__tl_analysis_a_store:`. See
+      // project_expl3_regex_vm_engine.md item #2.
+      if reg.parameters.is_none() && reg.address != key.as_ref() {
+        let address_tok = Token {
+          text: arena::pin(&reg.address),
+          code: Catcode::CS,
+        };
+        if let Some(base_defn) = state::lookup_register_definition(&address_tok) {
+          if let Some(params) = base_defn.parameters.clone() {
+            reg.parameters = Some(params);
+          }
+        }
+      }
       if !matches!(reg_type, RegisterType::CharDef) {
         if let Some(ref rv) = reg_value {
           // Perl `R(...)` register dump-restore: the address slot
