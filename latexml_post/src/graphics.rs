@@ -25,6 +25,16 @@ static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
     .filter(|&n| n > 0)
 });
 
+/// Wall-clock timeout for the `convert` (ImageMagick / gs) subprocess.
+/// Defaults to 60 s; override via `LATEXML_CONVERT_TIMEOUT_SECS`. Same
+/// pattern as `INKSCAPE_TIMEOUT_SECS` — see WISDOM #56.
+static CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
+  std::env::var("LATEXML_CONVERT_TIMEOUT_SECS")
+    .ok()
+    .and_then(|s| s.parse::<u64>().ok())
+    .filter(|&n| n > 0)
+});
+
 static PDF_CROP_BOX_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
   regex::Regex::new(
     r"/CropBox\s*\[\s*([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))\s+([-+]?(?:\d+\.?\d*|\.\d+))",
@@ -747,19 +757,42 @@ impl Graphics {
     {
       return true;
     }
-    let result = std::process::Command::new("convert")
+    // Wall-clock timeout to bound `gs`-via-`convert` runaways on
+    // pathological PDFs (raster-heavy or with broken xref tables).
+    // Matches the inkscape path's defensive bound; without this, an
+    // arbitrary `convert` invocation could run for minutes and stall
+    // the entire post-processing phase. 60 s is enough for any
+    // reasonably-sized graphic; tune via `LATEXML_CONVERT_TIMEOUT_SECS`.
+    let mut cmd = std::process::Command::new("convert");
+    cmd
       .arg("-define")
       .arg("pdf:use-cropbox=true")
       .arg("-density")
       .arg(density.to_string())
       .arg(&source_arg)
-      .arg(dest)
-      .output();
-    match result {
-      Ok(output) => output.status.success(),
-      Err(_) => false,
+      .arg(dest);
+    let timeout = std::time::Duration::from_secs(Self::convert_timeout_secs());
+    match Self::run_with_timeout(cmd, timeout) {
+      // Mirror the original `cmd.output()` semantics: report success based
+      // on exit status alone, not on whether `dest` was actually written.
+      // (The fake-convert test fixture exits 0 without producing a file.)
+      Some(status) => status.success(),
+      None => {
+        log::warn!(
+          "Graphics: convert/gs for {} exceeded {} s — killed",
+          source,
+          timeout.as_secs()
+        );
+        let _ = std::fs::remove_file(dest);
+        false
+      },
     }
   }
+
+  /// Hard timeout (seconds) for the `convert` subprocess. Mirrors
+  /// `inkscape_timeout_secs`; default 60 s. Override via
+  /// `LATEXML_CONVERT_TIMEOUT_SECS` for debugging.
+  fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
 }
 
 fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
