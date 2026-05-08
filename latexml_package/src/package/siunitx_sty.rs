@@ -6,6 +6,24 @@
 use crate::prelude::*;
 use crate::xmath_helpers::*;
 
+/// Structured error emission for siunitx (parallels
+/// `latexml_post::diag::log_post_error!` and the engine `Error!` macro).
+///
+/// Why not `latexml_core::Error!`: the full macro early-returns
+/// `Err(LatexmlError)` on max-errors / runaway-loop, but the siunitx
+/// parsing helpers below return `Option<…>` / `Tokens` / `Vec<…>`,
+/// not `Result<_, LatexmlError>`, so the early-return would type-mismatch.
+/// The thin emit-only macro keeps the harness `Error:<class>:<object>`
+/// format contract while staying type-compatible.
+macro_rules! six_log_error {
+  ($category:expr, $object:expr, $msg:expr) => {
+    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+  };
+  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+  };
+}
+
 //======================================================================
 // SIX keyvals helpers
 //======================================================================
@@ -393,6 +411,20 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
           comparator: None,
         });
       }
+      // Imaginary part matched but no `input-complex-roots` key — incomplete
+      // complex form. Perl siunitx.sty.ltxml:266 — Error('unexpected',
+      // 'sign', undef, "expected to find complex number")
+      six_log_error!(
+        "unexpected", "sign",
+        "expected to find complex number"
+      );
+    } else {
+      // Perl siunitx.sty.ltxml:266 — same Error site (no imaginary part
+      // followed the matched sign).
+      six_log_error!(
+        "unexpected", "sign",
+        "expected to find complex number"
+      );
     }
   }
 
@@ -581,6 +613,14 @@ fn six_parse_number(expr: &Tokens) -> SixParseResult {
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let result = six_postprocess(six_match_number(&mut tokens));
     if !tokens.is_empty() {
+      // Perl siunitx.sty.ltxml:410 — Error('unexpected', $$tokens[0],
+      //   $gullet, "Not matched in \\num: ...")
+      let leftover = Tokens::new(tokens.clone()).to_string();
+      let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
+      six_log_error!(
+        "unexpected", first_obj,
+        "Not matched in \\num: {}", leftover
+      );
       return SixParseResult::Raw(expr.clone());
     }
     match result {
@@ -610,6 +650,14 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
       }
     }
     if !tokens.is_empty() {
+      // Perl siunitx.sty.ltxml:430 — Error('unexpected', $$tokens[0],
+      //   $gullet, "Not matched in \\num: ...")
+      let leftover = Tokens::new(tokens.clone()).to_string();
+      let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
+      six_log_error!(
+        "unexpected", first_obj,
+        "Not matched in \\num: {}", leftover
+      );
       return vec![SixParseResult::Raw(expr.clone())];
     }
     results
@@ -1101,7 +1149,15 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           six_format_infix(div, None, None, vec![fa1, fa2])
         }
       },
-      _ => Tokens::default(),
+      other => {
+        // Perl siunitx.sty.ltxml:642 — Error('unexpected', $op, undef,
+        //   "Unrecognized operator $op in siunitx number")
+        six_log_error!(
+          "unexpected", other,
+          "Unrecognized operator {} in siunitx number", other
+        );
+        Tokens::default()
+      },
     },
   }
 }
@@ -1482,6 +1538,14 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
       ])
     }
   } else {
+    // Perl siunitx.sty.ltxml:1094 — Error('unexpected', $permode, undef,
+    //   "Unknown siunitx per-mode $permode") for the catchall arm.
+    // In Rust we still emit the structured error; defaulting back to
+    // a flat unit product mirrors the Perl caller's recovery path.
+    six_log_error!(
+      "unexpected", permode,
+      "Unknown siunitx per-mode {}", permode
+    );
     six_format_unitproduct(false, units)
   }
 }

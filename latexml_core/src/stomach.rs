@@ -5,6 +5,8 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::Instant;
 
+use crate::digested::DigestedData;
+
 /// Cached snapshot of `LXML_TRACE_BOUND_MODE` env var. Like the
 /// `TRACE_GROUP_END` cache in gullet.rs, this avoids per-digest
 /// `getenv` calls — glibc's `getenv` is unsafe under high-volume
@@ -177,12 +179,52 @@ pub fn execute_before_after_group() -> Result<()> {
           },
         }
       }
-      // TODO
-      // if (my ($x) = grep { !$_->isaBox } @result) {
-      // Error('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" . Stringify($x) .
-      // "'"); @result = (makeMisdefinedError(@result)); }
+      // Perl Stomach.pm:182-183 — every digested item must be Box-like
+      // (TBox / List / Whatsit / Alignment); anything else is a binding
+      // bug. Emit Error per offender; the Box-like items still flow
+      // through to box_list so partial output is preserved.
+      // Perl additionally calls `@result = (makeMisdefinedError(@result))`
+      // collapsing everything to a single error sentinel — we keep
+      // the partial-output behaviour (Rust-side divergence; surfacing
+      // *the* offending item via Error! is what the harness needs to
+      // report, while the rest of the box stream is still useful).
+      //
+      // Implementation note: walk the result list with an index loop
+      // rather than `retain(|d| {…})`. The Error! macro can `return
+      // Err(…)` on the max-errors / runaway-loop guards, and a closure
+      // returning `bool` can't propagate that out — only an explicit
+      // for-loop in the surrounding `Result<()>` body can.
+      let mut filtered = Vec::with_capacity(result.len());
+      for d in result {
+        let is_box = matches!(
+          d.data(),
+          DigestedData::TBox(_)
+            | DigestedData::List(_)
+            | DigestedData::Whatsit(_)
+            | DigestedData::Alignment(_)
+        );
+        if is_box {
+          filtered.push(d);
+        } else {
+          let kind_label = match d.data() {
+            DigestedData::Postponed(_) => "Postponed",
+            DigestedData::KeyVals(_) => "KeyVals",
+            DigestedData::RegisterValue(_) => "RegisterValue",
+            DigestedData::Comment(_) => "Comment",
+            _ => "non-Box",
+          };
+          Error!(
+            "misdefined",
+            "<beforeAfterGroup>",
+            format!(
+              "Expected a Box|List|Whatsit, but got '{}' — dropping",
+              kind_label
+            )
+          );
+        }
+      }
       {
-        stomach_mut!().box_list.extend(result);
+        stomach_mut!().box_list.extend(filtered);
       }
     }
   }
