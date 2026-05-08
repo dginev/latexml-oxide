@@ -5,7 +5,77 @@ Perl LaTeXML on TL2025 with `--preload=ar5iv.sty
 --path=~/git/ar5iv-bindings/bindings` produces 0 errors. Mission completes
 when every in-scope paper produces 0 errors on Rust too.
 
-**Status**: Round-23 active 2026-05-07 (continuing from round-22).
+**Status**: Round-25 active 2026-05-08 (Round-24 done, scicite landed; expl3 file-machinery investigation paused mid-flight).
+
+### Round-25 active worklist (paused 2026-05-08, resume here)
+
+Working off the 10k_errors sandbox at `~/data/10k_errors_sandbox`.
+Latest local: `cargo test --tests` = **1139/0/0**. v4 bench in
+progress (`~/data/10k_errors_sandbox_html/` ~6k logs, 8 workers,
+`/tmp/10k_v4.log`).
+
+**Just landed** (Round-25):
+- `7edfb8eeb1` — `latexml_contrib::scicite_sty` short-circuit binding.
+  scicite.sty is a 513-line modified-cite.sty for the journal Science;
+  without a binding our parser hangs on its `\edef`/`\catcode` dance.
+  Mirrors `cite_sty.rs` — defines only the public API (`\citeleft`,
+  `\citeright`, …). Recovers the 7-paper hang cluster
+  (1010.2781, 1011.5494, 1102.0562, 1210.1294, 1303.2601, 1704.07345,
+  1706.03851). Smoke-tested on 1210.1294 → clean conversion.
+
+**"Core dump" investigation closed** (Round-25, no fix needed):
+The two suspected Rust panics (1607.04981, 1506.04659) are NOT
+panics. Both hit our internal 60s wall-clock watchdog →
+`SIGABRT`, which `timeout` reports as "dumped core". They are slow
+conversions, not crashes:
+- 1607.04981 — LyX/babel/hyperref maze, completes at ~90s
+- 1506.04659 — harvmac/epsf maze, completes after watchdog kill
+
+**Active investigation: expl3 file-machinery cluster (37 papers)**
+All fail in `expl3-code.tex` L11515-11533 (the `\__file_name_expand:n`
+chain). Witness 0805.4519 produces 5 errors:
+1. `Error:unexpected:\endcsname Extra \endcsname` (first error,
+   triggers cascade) — fires inside the `\cs_new:Npn
+   \__file_name_expand:n #1 { \exp_after:wN
+   \__file_name_expand_cleanup:Nw \cs:w __file_name = #1 \cs_end:
+   \__file_name_expand_end: }` at definition time. The body
+   appears to be expanded eagerly, firing `\cs_end:` and orphaning
+   `\__file_name_expand_end:`.
+2. `Error:undefined:\__file_name_expand_end:` — orphaned by (1)
+3. `Error:undefined:\__kernel_file_name_sanitize:n` — never gets
+   defined because (1) breaks the chain
+4. `Error:undefined:\l_file_search_path_seq` — same reason
+5. `Error:undefined:\g__file_record_seq` — same reason
+   (historical stub for this was removed after a content.rs fix
+   landed; the cluster shows the fix is incomplete).
+
+**Witness papers** confirmed in v4 logs:
+0805.4519, 1205.5794, 1210.1852, 1302.5168, 1309.4705, 1408.6202,
+1508.04912, 1509.02379, 1504.03628, 1605.03682 + ~27 more.
+
+Both witnesses load `revtex4` + `SIunits` — likely a downstream of
+SIunits/revtex4 pulling in expl3.
+
+**Next concrete steps to resume:**
+1. Re-run 0805.4519 with `RUST_LOG=trace` to find the macro-define
+   path that's expanding the body of `\cs_new:Npn`. Suspect: our
+   `\cs_new:Npn` (or the upstream `\cs:w` / `\cs_end:` aliases)
+   is evaluating the body at def-time.
+2. Find our `\cs_new:Npn` Rust impl. (The grep earlier returned
+   nothing in `latexml_engine/`/`latexml_package/expl3*.rs` —
+   it's defined elsewhere, possibly via a CS-alias scheme to
+   `\protected\def`. Track the meaning at expl3-code.tex L11515.)
+3. Compare with what Perl LaTeXML produces on the same witness
+   — if Perl is also failing, this is OUT-OF-SCOPE; otherwise
+   port Perl's def-time handling faithfully.
+4. Possible alternative: pre-register stubs for the four
+   `\__file_name_expand_*` / `\l_file_search_path_seq` /
+   `\g__file_record_seq` / `\__kernel_file_name_sanitize:n` CSes
+   in `expl3_sty.rs`'s post-load fixup (similar to the
+   `\__kernel_msg_info:nnxx` stub already there). This is a
+   symptom-suppress; the eager-body-expand bug is the root.
+
+
 Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
 99.83%** raw OK on the 100k canvas. Round-22 sprint targeted the
 335-paper baseline-failure set (`~/round22_validate/inputs/`):
