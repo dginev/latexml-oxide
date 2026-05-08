@@ -421,6 +421,29 @@ LoadDefinitions!({
   DefMacro!("\\Glsdescription Semiverbatim", "");
   DefMacro!("\\glssymbolname Semiverbatim", "");
   DefMacro!("\\Glssymbolname Semiverbatim", "");
+  // \glstext / \Glstext / \GLStext — emit the entry's "text" field (what
+  // appears on subsequent uses). Per Perl glossaries.sty.ltxml's behavior
+  // of loading the raw glossaries.sty (which defines these), our binding
+  // never sees them — Perl is silent on these CSes because the raw load
+  // installs them. Stub them as the entry-key-as-text since we don't
+  // store typesetting fields. Driver: 1812.05463 cluster (\glstext{rms}
+  // Real Regression). Same template as \glsdesc above.
+  DefMacro!("\\glstext Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glstext Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLStext Semiverbatim", "\\GLS{#1}");
+  // \glsfirst / \Glsfirst / \GLSfirst — entry's "first" field (used on
+  // first occurrence). Same stubbing strategy.
+  DefMacro!("\\glsfirst Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glsfirst Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSfirst Semiverbatim", "\\GLS{#1}");
+  // \glslong / \Glslong / \GLSlong — entry's long-form expansion. Stubs.
+  DefMacro!("\\glslong Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glslong Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSlong Semiverbatim", "\\GLS{#1}");
+  // \glsshort / \Glsshort / \GLSshort — entry's short-form (acronym).
+  DefMacro!("\\glsshort Semiverbatim", "\\gls{#1}");
+  DefMacro!("\\Glsshort Semiverbatim", "\\Gls{#1}");
+  DefMacro!("\\GLSshort Semiverbatim", "\\GLS{#1}");
   // \glsplural — like \gls{} but for plural form. Route to \glspl which
   // exists. Mirror Capitalized variant.
   DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
