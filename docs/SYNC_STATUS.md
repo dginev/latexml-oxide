@@ -17,8 +17,33 @@ Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
 - **v21** (bookmark stub + graphics gs-timeout/inkscape-default): **294/327 = 89.9%**
   (same 294 unique OK as v19; bookmark stub didn't directly recover papers
   because token-limit fires elsewhere in 2310.15090 / 2203.01231 paths)
+- **v22** (round-22 wrap, 100k canvas validation): 295/329 = 89.7%
 
 Round-21 work archived in `docs/archive/`.
+
+## Round-23 (active 2026-05-07/08)
+
+Continuation of round-22 sprint on the same 335-paper baseline.
+Re-ran the round-22 failures-set sweep across multiple iterations.
+
+| Sweep | Cortex OK / Unique | True parity (Rust=0=Perl) gain |
+|-------|---:|---|
+| v22 (carry-over) | 295 / 329 = 89.7% | 12 papers tractable + 1 Perl-regression |
+| v25 (siunitx + block + lstinline) | 300 / 326 = 92.0% | +5 cortex-recover, +9 BOTH CLEAN |
+| v26 (matching binary) | 299 / 327 = 91.4% | (binary timing diff vs v25) |
+| **v27 (after natbib NAT@@wrout fix)** | **300 / 328 = 91.5%** | **11 of 12 originally-tractable failures fixed** |
+
+Round-23 commits (chronological):
+1. `ad77a29f47` — siunitx: pass `\DeclareSIUnit` presentation as Tokens not exploded letters; restores `\metre→\meter→m` collapse inside `\SI{}`. Driver: 1907.04278.
+2. `fd8bb072a7` — siunitx `\mathrm{...}` wrap in `six_resolve_unit_objects` (Perl L1216 parity) + `six_parse_literalunits` peels CC_BEGIN groups opaquely; graphics: pdftocairo `--png`/`--svg` fast paths added with 8 MB SVG output guard. Drivers: 2304.12803, W.pdf gs-runaway.
+3. `1569d6f86b` — SYNC_STATUS task: long-term consolidate `pdftocairo`/`pdfium-render` to single PDF renderer.
+4. `5b2e38590c` — schema: `Tag!("ltx:block", auto_close => true)`. Driver: 2302.11635 IEEEtran transmag minipage row.
+5. `ba56a30a33` — listings: `\lstinline` body under verbatim catcodes (Perl `EMPTY_CATTABLE` parity) + match closing delim by text only. Driver: 2301.10618 section-in-item cascade.
+6. `3198b744ab` — natbib: `\NAT@@wrout` ditches `bounded => true` (manual bgroup + soft pop, bypassing egroup mode-frame guard) + `\lx@NAT@parselabel` skips `Expand!` on labels with complex CSes (`\cite`, `\href`, …). Driver: 2404.06289 (19 errors → 0).
+
+Sole remaining REAL_REGRESSION: **2406.14142** (21 errors). expl3 cascade — `\g__sys_everyjob_tl` never runs because `\everyjob` register is never expanded at job start, so `\c_sys_jobname_str` and friends stay undefined; downstream `\if_int_compare:w` fires 21+ relational-token errors. Perl gets 4 errors on the same input (also undefined-CS but no cascade). The actual fix needs an `\everyjob` job-start hook (matching Perl's gap, plus an error-recovery improvement to suppress the cascade). Tracked.
+
+Cortex-failure-but-parity-clean set (BOTH CLEAN with cortex_worker abort/OOM/timeout): 1904.02716 (xpath nodeset growth in math parser, formula 92), 2007.13470 (token-limit during english/slovak.ldf hook), 2011.14413, 2105.04174, 2203.01231, 2310.15090. Their conversion produces 0 errors in standalone parity_check; cortex's per-paper RAM cap or post-processing limits trip them. Out-of-scope for round-23 (post-processing infra work).
 
 **True Rust regression count: 0** *for ported error conditions*.
 [Caveat: Error/Fatal coverage audit](ERROR_PARITY_AUDIT.md) reveals
