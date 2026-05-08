@@ -448,6 +448,17 @@ LoadDefinitions!({
   // exists. Mirror Capitalized variant.
   DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
   DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
+  // Acronym-style hooks — TL `glossaries.sty` defines these for the
+  // `\setacronymstyle{...}` / `\newacronymstyle{...}` machinery.
+  // Papers using `\setacronymstyle{long-short}` etc. trigger
+  // `\GlsUseAcrEntryDispStyle` / `\GlsUseAcrStyleDefs`. Without
+  // stubs, undefined-CS errors fire. Driver: 2304.04653.
+  DefMacro!("\\newacronymstyle{}{}{}", "");
+  DefMacro!("\\renewacronymstyle{}{}{}", "");
+  DefMacro!("\\setacronymstyle Semiverbatim", "");
+  DefMacro!("\\GlsUseAcrEntryDispStyle{}", "");
+  DefMacro!("\\GlsUseAcrStyleDefs{}", "");
+  DefMacro!("\\defglsentryfmt[]{}", "");
   // \glsdescwidth / \glspagelistwidth — TL glossaries.sty defines these
   // as `\newlength` registers used in glossary-table column widths
   // (`p{\glsdescwidth}`). Papers do `\setlength{\glsdescwidth}{...}` in
