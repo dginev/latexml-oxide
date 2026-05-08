@@ -13,7 +13,10 @@ Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
 - v16 (mid-round): 274/330 = 83.0%
 - v17 (T1-cmd-loop fix): 289/330 = 87.6%
 - v18 (open_text walk + isotope + etoolbox-& + biblatex Let): 292/328 = 89.0%
-- **v19** (XUntil constructor-args + aas_support C/L/R): **294/328 = 89.6%**
+- v19 (XUntil constructor-args + aas_support C/L/R): 294/328 = 89.6%
+- **v21** (bookmark stub + graphics gs-timeout/inkscape-default): **294/327 = 89.9%**
+  (same 294 unique OK as v19; bookmark stub didn't directly recover papers
+  because token-limit fires elsewhere in 2310.15090 / 2203.01231 paths)
 
 Round-21 work archived in `docs/archive/`.
 
