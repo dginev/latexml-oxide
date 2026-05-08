@@ -43,6 +43,28 @@ Latest local: `cargo test --tests` = **1139/0/0**.
   csquotes test fixture re-improved (language-correct French/German
   quotes).
 
+**Format dump enabled 2026-05-08** (post-currfix landing). Generated
+`resources/dumps/latex.dump.txt` via `LATEXML_NODUMP=1 latexml_oxide
+--init=latex.ltx`. 25,439 entries, 3.9 MB, includes 389 expl3 markers
+(`\tex_let:D` PA-aliased to `\let`, `\cs_set:Npn`/`\cs_new:Npn`
+chain, etc.). Runtime auto-finds the dump from
+`resources/dumps/latex.dump.txt` (path 5 in `latex.rs::latex_dump_available`,
+relative to `CARGO_MANIFEST_DIR`). With the dump present,
+expl3.sty's TeX-level guard `\ifx\csname tex_let:D\endcsname\relax`
+short-circuits the `\input expl3-code.tex` raw-load entirely.
+
+Performance impact (30 cluster papers, average):
+- Without dump (raw expl3 load): ~25-35s per paper
+- With dump:                    ~0.5-3s per paper
+- **~10x average speedup**, reaching **46×** on `\usetikzlibrary{calligraphy}`
+  test (28.1s → 0.6s).
+
+`cargo test --tests` 1139/0/0 unchanged with dump enabled.
+
+The dump file is gitignored (per `.gitignore: resources/dumps/`) —
+local artifact, regenerated as needed. CLAUDE.md "Distribution
+follow-up" plans `include_bytes!` embedding for distribution.
+
 **"Core dump" investigation closed** (Round-25, no fix needed):
 The two suspected Rust panics (1607.04981, 1506.04659) are NOT
 panics. Both hit our internal 60s wall-clock watchdog →

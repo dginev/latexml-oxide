@@ -180,6 +180,24 @@ if [[ ! -x "$WORKER_BIN" ]]; then
   exit 1
 fi
 
+# ─── Format dump (latex.dump.txt) — generate if missing ──────────────────────
+# Without the dump, every paper that loads expl3 (tikz, siunitx, spath3,
+# csquotes, etc.) raw-loads the 36k-line expl3-code.tex (~25-30s/paper).
+# With the dump in place, expl3.sty's `\ifx\csname tex_let:D\endcsname\relax`
+# guard short-circuits the raw load → 1-3s/paper. ~10× canvas-wide speedup.
+DUMP_PATH="$REPO_ROOT/resources/dumps/latex.dump.txt"
+if [[ ! -f "$DUMP_PATH" ]]; then
+  echo "Generating $DUMP_PATH (one-time, ~5min)…"
+  (
+    cd "$REPO_ROOT"
+    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=latex.ltx
+  )
+  if [[ ! -f "$DUMP_PATH" ]]; then
+    echo "WARNING: latex.dump.txt did not get generated. Canvas will run with"
+    echo "  raw expl3 load (slow). Investigate ini-mode failures separately."
+  fi
+fi
+
 # ─── Disk space check ────────────────────────────────────────────────────────
 
 AVAIL_GB=$(df --output=avail "$OUTPUT_DIR" | tail -1 | awk '{printf "%.0f", $1/1048576}')
