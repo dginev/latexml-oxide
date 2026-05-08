@@ -1,0 +1,19 @@
+\documentclass{article}
+\usepackage{xparse}
+\usepackage{l3regex}
+\ExplSyntaxOn
+\NewDocumentCommand{\matchnn}{mm}{%
+  \regex_match:nnTF{#1}{#2}{Y}{N}%
+}
+\ExplSyntaxOff
+\begin{document}
+A: \matchnn{\d+}{abc}.
+
+B: \matchnn{\d+}{123}.
+
+C: \matchnn{\d+}{abc123}.
+
+D: \matchnn{[a-z]+}{ABC}.
+
+E: \matchnn{[a-z]+}{xyz}.
+\end{document}
