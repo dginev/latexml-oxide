@@ -54,8 +54,23 @@ Round-23 commits (chronological):
    re-invokes the unprotected munged macro, mangling captured tokens
    and silently dropping the case-changed content during the later
    `\reserved@a` invocation. Driver 2009.10018: 16 errors → 0.
+10. `e436a9cda7` + `fedc89cabd` — `\regex_match:NnTF` and 5 variants
+    short-circuited to FALSE branch (with `_`/`:` letter-catcode
+    wrap so the helper CS names tokenize correctly). Drives
+    2406.14142 from **21 errors → 0** (the last historical
+    REAL_REGRESSION). Trigger: duckuments.sty's `\includegraphics`
+    wrapper uses `\regex_match:NnTF` against
+    `\c_duckuments_example_regex`; our Rust expansion of expl3 regex
+    compile/match drove `\if_int_compare:w` against `\l__regex_*_int`
+    in a way that stalled at `\end{document}`. The stub falls back to
+    plain `\includegraphics`, which is acceptable. Other expl3
+    packages relying on regex matching silently take the F branch —
+    Rust-only divergence; faithful expl3 regex emulation is tracked
+    in `docs/archive/`.
 
-Sole remaining REAL_REGRESSION: **2406.14142** (21 errors). expl3 cascade — `\g__sys_everyjob_tl` never runs because `\everyjob` register is never expanded at job start, so `\c_sys_jobname_str` and friends stay undefined; downstream `\if_int_compare:w` fires 21+ relational-token errors. Perl gets 4 errors on the same input (also undefined-CS but no cascade). The actual fix needs an `\everyjob` job-start hook (matching Perl's gap, plus an error-recovery improvement to suppress the cascade). Tracked.
+**No REAL_REGRESSIONs remain in the round-23 random sweep**
+(0/327 papers post-fix; 2406.14142 was the last and is now Rust=0
+vs Perl=4 PERL_REGRESSION).
 
 Cortex-failure-but-parity-clean set (BOTH CLEAN with cortex_worker abort/OOM/timeout): 1904.02716 (xpath nodeset growth in math parser, formula 92), 2007.13470 (token-limit during english/slovak.ldf hook), 2011.14413, 2105.04174, 2203.01231, 2310.15090. Their conversion produces 0 errors in standalone parity_check; cortex's per-paper RAM cap or post-processing limits trip them. Out-of-scope for round-23 (post-processing infra work).
 
