@@ -321,7 +321,7 @@ fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>, fallback: bool) {
 
 // Skip files whose magic bytes identify them as PDF (e.g. arXiv source
 // archives that contain a PDF mis-named with a `.tex` extension).
-fn is_pdf_magic(path: &Path) -> bool {
+pub fn is_pdf_magic(path: &Path) -> bool {
     let mut buf = [0u8; 5];
     if let Ok(mut f) = std::fs::File::open(path) {
         use std::io::Read;
