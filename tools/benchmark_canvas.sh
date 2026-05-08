@@ -40,7 +40,7 @@ fi
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
 WORKER_BIN="${WORKER_BIN:-$REPO_ROOT/target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
-WORKERS="${WORKERS:-16}"
+WORKERS="${WORKERS:-20}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
 MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
@@ -89,7 +89,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --output-dir DIR      Output directory (default: \$HOME/data/10k_sandbox_html)"
       echo "                        When --stage N (>0) is given without --output-dir,"
       echo "                        a /stage_NN/ subdirectory is appended automatically."
-      echo "  --workers N           Parallel workers (default: 16)"
+      echo "  --workers N           Parallel workers (default: 20)"
       echo "  --timeout SECS        Per-task wall-clock timeout (default: 120)"
       echo "  --limit N             Process only first N files of the (post-stage) task"
       echo "                        list (default: 0 = all)"
