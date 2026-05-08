@@ -506,7 +506,18 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
             is_upper = false;
           }
         } else {
+          // Fall-through: not in exclude list, not in case-mapping. Pass
+          // both `\protect` and the munged CS through, but mark the CS
+          // un-expandable via `\dont_expand` so the OUTER `\edef`'s
+          // `Partial` body-reader doesn't re-invoke it. Without
+          // `\dont_expand`, the captured tokens go through `\edef` body
+          // expansion which would re-trigger the robust macro (whose
+          // body contains another `\edef\reserved@a{...}`), mangling
+          // the saved tokens and dropping content during the outer
+          // `\reserved@a` invocation. Driver: nested
+          // `\MakeLowercase{\MakeUppercase{...}}`.
           result.push(tok);
+          result.push(T_CS!("\\dont_expand"));
           result.push(next_tok);
         }
       }
