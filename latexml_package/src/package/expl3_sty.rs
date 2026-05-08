@@ -141,7 +141,15 @@ LoadDefinitions!({
   // branch. Duckuments' `\includegraphics` patcher then falls through to
   // the plain `\includegraphics` path. This is a Rust-only divergence —
   // Perl LaTeXML supports the regex tests properly. Driver: 2406.14142.
-  RawTeX!(r"
+  //
+  // Wrap in expl3 letter-catcodes for `_` and `:` so the `\__lx@regex@*`
+  // helper CS names tokenize correctly. Without this guard, `_` reads at
+  // SUB (math-script) catcode and each helper-define line leaks subscript
+  // tokens into outer state, breaking downstream papers (e.g. 2109.01821:
+  // 0 errors → 6 `Error:unexpected:_`).
+  state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+  state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+  raw_tex(r"
     \def\__lx@regex@dummyN#1#2#3#4{#4}%
     \expandafter\let\csname regex_match:NnTF\endcsname\__lx@regex@dummyN
     \def\__lx@regex@dummyT#1#2#3{}%
@@ -154,5 +162,7 @@ LoadDefinitions!({
     \expandafter\let\csname regex_match:nnT\endcsname\__lx@regex@dummynT
     \def\__lx@regex@dummynF#1#2#3{#3}%
     \expandafter\let\csname regex_match:nnF\endcsname\__lx@regex@dummynF
-  ");
+  ")?;
+  state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+  state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
 });
