@@ -7466,6 +7466,19 @@ LoadDefinitions!({
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
+  // `<ltx:block>` is the schema's "generic block fallback" — it appears as
+  // the rename target in `insert_block` when no more-specific candidate
+  // (figure/logical-block/sectional-block) can hold the content. When the
+  // content includes a `<caption>` (which `<block>` can't contain) but the
+  // context is an open `<p>` (which forces is_inline=true and rules out
+  // `<figure>`), the rename leaves caption inside `<block>` inside `<p>` —
+  // a schema error in both Rust and Perl. Marking `<block>` as
+  // `auto_close => true` lets `find_insertion_point` escape the wayward
+  // `<block>` later (when, say, an outer paragraph break lands).
+  // Driver: 2302.11635 IEEEtran transmag float with `\hrulefill` between
+  // minipage rows. Perl's vspace happens to fire `\par` at the right
+  // moment; Rust's doesn't, and we'd otherwise emit malformed XML.
+  Tag!("ltx:block", auto_close => true);
 
   //----------------------------------------------------------------------
   // We've got the same problem as LaTeX: Lather, Rinse, Repeat.
