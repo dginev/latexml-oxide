@@ -104,6 +104,7 @@ pub mod pinlabel_sty;
 pub mod program_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
+pub mod scicite_sty;
 pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
@@ -219,6 +220,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("oldgerm", "sty", oldgerm_sty::load_definitions),
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
+  ("scicite", "sty", scicite_sty::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
