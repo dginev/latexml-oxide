@@ -96,4 +96,33 @@ LoadDefinitions!({
     };
     Ok(Tokenize!(&format!("{{{}}}{{}}{{}}", result_cp)))
   });
+
+  // expl3 system-info constants normally bound by `\g__sys_everyjob_tl`
+  // expansion at job start (via `\everyjob`). Our engine never fires
+  // `\everyjob` (matching Perl's gap), so the tl never runs and these
+  // CSes stay undefined. When packages like `duckuments.sty` then do
+  //   `\str_if_eq_p:Vn \c_sys_jobname_str { example-image-duck }`
+  // the V-expansion triggers `\if_int_compare:w` cascades on Rust
+  // (Perl emits one undefined error and recovers; Rust's recovery
+  // re-fires per scan, surfacing 21+ relational-token cascades).
+  //
+  // Mirror the body of `\g__sys_everyjob_tl` for the constants
+  // duckuments-class packages actually consume — `\c_sys_jobname_str`
+  // (= jobname) plus the date/time int constants. Use plain `\Let`/
+  // `\edef` aliases rather than the full `\str_const:Ne` machinery
+  // because those expl3 constructors themselves require a working
+  // `\c_sys_jobname_str` at definition time.
+  //
+  // Driver: 2406.14142 (duckuments cascade, 21 errors → 4 expected
+  // (matching Perl's residual undefined-CS count)).
+  Let!("\\c_sys_jobname_str", "\\jobname");
+  RawTeX!(r"
+    \edef\c_sys_minute_int{0}%
+    \edef\c_sys_hour_int{0}%
+    \edef\c_sys_day_int{1}%
+    \edef\c_sys_month_int{1}%
+    \edef\c_sys_year_int{2026}%
+    \edef\c_sys_timestamp_str{}%
+    \edef\c_sys_shell_escape_int{0}%
+  ");
 });
