@@ -147,19 +147,34 @@ impl Definition for Expandable {
             false
           };
           if is_recursion {
-            // Self-referential macros like \pgfkeys@mainstop are used as sentinels
-            // in PGF. They should never be expanded — only compared via \ifx.
-            // When detected, return the token itself (not empty) so \ifx can still match.
-            // Perl: $expansion = TokensI() [empty], but we return self to preserve \ifx semantics.
-            // Note: returning self would cause re-expansion in normal contexts, but
-            // the recursion check prevents infinite loops (returns empty on second hit).
-            Error!(
-              "recursion",
-              self.cs,
-              format!("Token {} expands into itself!", self.cs),
-              "defining as empty"
+            // Self-referential macros (`\def\foo{\foo}`) are sentinel
+            // tokens — expl3 quarks (`\q_no_value`, `\q_nil`,
+            // `\q_recursion_tail`, …) and PGF keys (`\pgfkeys@mainstop`)
+            // are defined exactly this way via `\quark_new:N`. They
+            // must NEVER be expanded; identity matters only for `\ifx`
+            // comparisons and pattern-match delimiters.
+            //
+            // Re-install the CS as a `Stored::Token` self-alias so
+            // future reads in `read_x_token` dispatch via the LetTo
+            // outcome path: the gullet returns the token itself
+            // unchanged (non-expandable from the caller's perspective).
+            // This preserves `\ifx` identity-via-meaning AND breaks
+            // the infinite re-expansion loop that the previous
+            // "Tokens!()" recovery introduced silent breakage in
+            // (the empty return mangled callers using the quark as
+            // a delimiter, breaking `\__regex_clean_regex:n` and
+            // similar).
+            //
+            // Driver: expl3 regex VM, where `\q_recursion_tail` /
+            // `\q_recursion_stop` appear as delimiters during
+            // `\__regex_compile:n`. See
+            // `project_expl3_regex_vm_engine.md`.
+            crate::state::assign_meaning(
+              &self.cs,
+              Stored::Token(self.cs),
+              Some(Scope::Global),
             );
-            Tokens!()
+            Tokens!(self.cs)
           } else {
             tokens.clone()
           }
