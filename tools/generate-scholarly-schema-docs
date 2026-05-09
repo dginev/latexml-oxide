@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: generate-scholarly-schema-docs --schema FILE --output DIR [options]
+
+Generate standalone HTML documentation for a RelaxNG Compact (.rnc)
+schema. Pipeline:
+
+  1. trang      — convert RNC to RNG
+  2. genschema  — emit a LaTeXML manual.tex from the RNG
+  3. latexml_oxide --split --splitat=section
+                — render to HTML5, with a per-page sidebar TOC
+
+Required:
+  --schema FILE     Master RelaxNG Compact schema (entry-point .rnc file).
+                    Sibling .rnc files in the same directory are
+                    auto-included by trang.
+  --output DIR      Destination site directory.
+
+Options:
+  --work DIR        Temporary working directory.
+                    Default: <output>-work
+  --css FILE        Stylesheet path. Default: this script's bundled
+                    `resources/CSS/scholarly-schema-docs.css`.
+  --title STRING    Document title. Default: "Schema Reference".
+  --author STRING   Document author. Default: empty.
+  --help            Show this help.
+
+Requires `trang`, `latexml_oxide`, and `perl` (for genschema, which
+uses Perl LaTeXML's `LaTeXML::Common::Model::RelaxNG`) on $PATH or
+in the standard install locations.
+USAGE
+}
+
+oxide_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+schema=""
+output_dir=""
+work_dir=""
+css_file="$oxide_root/resources/CSS/scholarly-schema-docs.css"
+title="Schema Reference"
+author=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --schema) schema=$2; shift 2 ;;
+    --output) output_dir=$2; shift 2 ;;
+    --work)   work_dir=$2; shift 2 ;;
+    --css)    css_file=$2; shift 2 ;;
+    --title)  title=$2; shift 2 ;;
+    --author) author=$2; shift 2 ;;
+    --help)   usage; exit 0 ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$schema" || -z "$output_dir" ]]; then
+  echo "error: --schema and --output are required" >&2
+  usage >&2
+  exit 2
+fi
+
+if [[ -z "$work_dir" ]]; then
+  work_dir="${output_dir}-work"
+fi
+
+genschema="$oxide_root/tools/genschema"
+
+if ! command -v trang >/dev/null 2>&1; then
+  echo "error: trang is required on PATH" >&2
+  exit 1
+fi
+if ! command -v latexml_oxide >/dev/null 2>&1; then
+  echo "error: latexml_oxide is required on PATH" >&2
+  exit 1
+fi
+if [[ ! -x "$genschema" ]]; then
+  echo "error: genschema not executable at $genschema" >&2
+  exit 1
+fi
+if [[ ! -f "$css_file" ]]; then
+  echo "error: stylesheet not found at $css_file" >&2
+  exit 1
+fi
+if [[ ! -f "$schema" ]]; then
+  echo "error: schema not found at $schema" >&2
+  exit 1
+fi
+
+css_basename=$(basename "$css_file")
+schema_dir=$(cd "$(dirname "$schema")" && pwd)
+schema_base=$(basename "$schema" .rnc)
+
+rm -rf "$work_dir"
+mkdir -p "$work_dir" "$output_dir"
+
+# Trang resolves `include "..."` relative to its input's directory.
+# Copy all sibling .rnc files into the work dir so includes resolve.
+cp "$schema_dir"/*.rnc "$work_dir"/
+cp "$css_file" "$output_dir/$css_basename"
+
+trang "$work_dir/${schema_base}.rnc" "$work_dir/${schema_base}.rng"
+
+(
+  cd "$work_dir"
+  "$genschema" --force "${schema_base}.rng" schema.tex
+)
+
+cat > "$work_dir/schema-doc.tex" <<TEX
+\\documentclass{book}
+\\usepackage{latexml}
+\\usepackage{latexmlman}
+\\usepackage{makeidx}
+\\makeindex
+\\title{${title}}
+\\author{${author}}
+\\date{\\today}
+\\begin{document}
+\\maketitle
+\\tableofcontents
+\\chapter{${title}}
+\\input{schema}
+\\end{document}
+TEX
+
+(
+  cd "$work_dir"
+  latexml_oxide --format=html5 \
+    --split --splitnaming=labelrelative --splitat=section \
+    --navigationtoc=context \
+    --sourcedirectory="$work_dir" \
+    --dest="$output_dir/index.html" \
+    --nodefaultresources \
+    --css="$css_basename" \
+    schema-doc.tex
+)
+
+echo "Generated schema documentation at $output_dir/index.html"

@@ -1,0 +1,84 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use Carp;
+use Getopt::Long qw(:config no_ignore_case);
+use Pod::Usage;
+use lib "$FindBin::RealBin/../../blib/lib";
+use LaTeXML::Common::Error;
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+my $WORKDIR   = $FindBin::RealBin;
+my $SRCDIR    = $WORKDIR . "/../..";
+my $SCHEMADIR = "$SRCDIR/lib/LaTeXML/resources/RelaxNG";
+
+my $identity = "genschema (part of LaTeXML)";
+my ($force, $help) = (0, 0);
+GetOptions("force!" => \$force,
+  "help" => \$help,
+) or pod2usage(-message => $identity, -exitval => 1, -verbose => 0, -output => \*STDERR);
+pod2usage(-message => $identity, -exitval => 1, -verbose => 2, -output => \*STDOUT) if $help;
+
+my ($SCHEMA, $SCHEMADOC) = @ARGV;
+$SCHEMA    = "LaTeXML.rng"         unless $SCHEMA;
+$SCHEMADOC = "$WORKDIR/schema.tex" unless $SCHEMADOC;
+
+#======================================================================
+# Prepare LaTeX describing the Document Schema
+# This goes into an appendix of the manual
+#======================================================================
+#my $schemadoc = "$WORKDIR/schema.tex";
+if ($force || (!-f $SCHEMADOC) || (-M $SCHEMADIR < -M $SCHEMADOC)) {
+  UseLog('genschema.log');
+  print "Converting Schema in $SCHEMADIR to LaTeX\n";
+  my $SCHEMAOUT;
+  open($SCHEMAOUT, '>', $SCHEMADOC) or die "Couldn't open $SCHEMADOC for output:$!";
+  print $SCHEMAOUT RelaxNGDocumenter::documentSchema($SCHEMA);
+  close($SCHEMAOUT);
+}
+
+#======================================================================
+package RelaxNGDocumenter;
+# Leverage the extracted Schema structure to create documentation.
+use strict;
+use lib "$FindBin::RealBin/../../blib/lib";
+use LaTeXML::Global;
+use LaTeXML::Core;
+use LaTeXML::Common::Model;
+use LaTeXML::Common::Model::RelaxNG;
+
+sub documentSchema {
+  my ($name) = @_;
+  my $latexml = LaTeXML::Core->new(searchpaths => ['.'], verbosity => 1);
+  return $latexml->withState(sub {
+      my $model = $STATE->getModel();
+      $model->registerNamespace(ltx   => "http://dlmf.nist.gov/LaTeXML");
+      $model->registerNamespace(svg   => "http://www.w3.org/2000/svg");
+      $model->registerNamespace(xev   => "http://www.w3.org/2001/xml-events");
+      $model->registerNamespace(xlink => "http://www.w3.org/1999/xlink");
+
+      my $relaxng = $$model{schema} = LaTeXML::Common::Model::RelaxNG->new($model, $name);
+      ##  my @schema = $relaxng->scanExternal($name);
+      ##  @schema = map { $relaxng->simplify($_) } @schema;
+      $relaxng->loadSchema;
+
+      return $relaxng->documentModules; }); }
+
+#======================================================================
+__END__
+
+=head1 NAME
+
+C<genschema> - convert LaTeXML's Schema definitions to LaTeX documentation.
+
+=head1 SYNOPSIS
+
+genschema [options]
+
+ Options:
+  --force     Force regeneration of LaTeX from Schema definition.
+              (default: only if needed)
+  --help      Shows this help.
+
+=cut
