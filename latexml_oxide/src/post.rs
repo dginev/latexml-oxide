@@ -99,102 +99,23 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   audit_end(t_parse);
   telemetry::phase_exit();
 
-  // Phase 1: Scan
-  telemetry::phase_enter(Phase::PostScan);
-  let t_scan = audit_start("Scan");
-  let db = ObjectDB::new();
-  let mut scanner = latexml_post::scan::Scan::new(db);
-  let scan_nodes = scanner.to_process(&doc);
-  let doc = match scanner.process(doc, scan_nodes) {
-    Ok(mut docs) => docs.remove(0),
-    Err(e) => {
-      eprintln!("Post-processing: Scan failed: {}", e);
-      telemetry::phase_exit();
-      return xml.to_string();
-    },
-  };
-  audit_end(t_scan);
-  telemetry::phase_exit();
-
-  // Phase 1.5: MakeBibliography
-  telemetry::phase_enter(Phase::Bibliography);
-  let t_bib = audit_start("MakeBibliography");
-  let db = scanner.db;
-  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(db, false);
-  let bib_nodes = bibmaker.to_process(&doc);
-  let doc = if !bib_nodes.is_empty() {
-    match bibmaker.process(doc, bib_nodes) {
-      Ok(mut docs) => docs.remove(0),
-      Err(e) => {
-        eprintln!("Post-processing: MakeBibliography failed: {}", e);
-        telemetry::phase_exit();
-        return xml.to_string();
-      },
-    }
-  } else {
-    doc
-  };
-  audit_end(t_bib);
-  telemetry::phase_exit();
-
-  // Phase 2: CrossRef
-  telemetry::phase_enter(Phase::Crossref);
-  let t_xref = audit_start("CrossRef");
-  let db = bibmaker.db;
-  let mut crossref =
-    latexml_post::crossref::CrossRef::new(db, latexml_post::crossref::UrlStyle::File, true);
-  let xref_nodes = crossref.to_process(&doc);
-  let doc = match crossref.process(doc, xref_nodes) {
-    Ok(mut docs) => docs.remove(0),
-    Err(e) => {
-      eprintln!("Post-processing: CrossRef failed: {}", e);
-      telemetry::phase_exit();
-      return xml.to_string();
-    },
-  };
-  audit_end(t_xref);
-  telemetry::phase_exit();
-
-  // Phase 2.5: Graphics
-  telemetry::phase_enter(Phase::Graphics);
-  let t_gfx = audit_start("Graphics");
-  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
-    .with_svg_threshold_kb(graphics_svg_threshold_kb);
-  let graphics_nodes = graphics_proc.to_process(&doc);
-  let doc = if !graphics_nodes.is_empty() {
-    match graphics_proc.process(doc, graphics_nodes) {
-      Ok(mut docs) => docs.remove(0),
-      Err(e) => {
-        eprintln!("Post-processing: Graphics failed: {}", e);
-        telemetry::phase_exit();
-        return xml.to_string();
-      },
-    }
-  } else {
-    doc
-  };
-  audit_end(t_gfx);
-  telemetry::phase_exit();
-
-  // Phase 2.6: SVG (convert ltx:picture children to svg:svg + svg:* elements)
-  // Without this, the XSLT picture template falls back to "as-TeX" mode and
-  // emits an empty span — figures with picture-environment content are lost.
-  // Phase 2.6: SVG
-  // Convert ltx:picture elements to inline SVG for HTML output.
-  //
-  // The latexml_post::svg::SVG processor works correctly but causes a
-  // use-after-free crash in libxml2 during PostDocument cleanup (nodes
-  // unlinked by replace_node are freed but still referenced in the idcache).
-  //
-  // Workaround: extract SVG fragments from the INTERMEDIATE XML using
-  // string processing (no libxml2 involvement), then inject them into
-  // the final HTML AFTER XSLT completes.
+  // SVG extraction reads the pre-post XML before any in-tree mutation;
+  // do it once up-front so the regex-based fragment table is valid for
+  // every split sub-document below.
   let t_svg = audit_start("SVG extraction");
   let svg_fragments = extract_svg_fragments(xml);
   audit_end(t_svg);
 
-  // Phase 2.75: Split (only attributes time when --split is on)
-  let doc = if split {
+  // Perl-faithful pipeline order (latexmlpost L223-242):
+  //   Split → Scan → MakeBibliography → CrossRef → Graphics → ...
+  // Split runs FIRST so each downstream pass sees the per-page
+  // destination. With the previous order (Scan before Split), every
+  // entry's `location` was the root document and CrossRef built every
+  // ref as a within-page anchor — the user-visible TOC links pointed
+  // at `#Ch1` instead of `Ch1.html`.
+  //
+  // Phase 1: Split (only attributes time when --split is on)
+  let mut docs: Vec<PostDocument> = if split {
     telemetry::phase_enter(Phase::Split);
     let result = if let Some(ref xpath) = split_xpath {
       let naming = match split_naming {
@@ -210,11 +131,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       let mut splitter = latexml_post::split::Split::new(xpath, naming, false);
       let split_nodes = splitter.to_process(&doc);
       match splitter.process(doc, split_nodes) {
-        Ok(mut docs) => {
+        Ok(docs) => {
           if docs.len() > 1 {
             eprintln!("Split into {} documents", docs.len());
           }
-          Ok(docs.remove(0))
+          Ok(docs)
         },
         Err(e) => {
           eprintln!("Post-processing: Split failed: {}", e);
@@ -222,16 +143,110 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         },
       }
     } else {
-      Ok(doc)
+      Ok(vec![doc])
     };
     telemetry::phase_exit();
     match result {
-      Ok(d) => d,
+      Ok(ds) => ds,
       Err(()) => return xml.to_string(),
     }
   } else {
-    doc
+    vec![doc]
   };
+
+  // Helper: run one processor across every doc in a Vec, mirroring
+  // Perl Post.pm:50-65's `foreach $proc { @newdocs = ... }` loop.
+  // Each processor's per-doc `process` may return multiple docs (only
+  // Split actually does, and we've already run Split above), so the
+  // inner result is flattened back into `docs`.
+  fn run_phase<P: Processor + ?Sized>(
+    docs: Vec<PostDocument>,
+    proc: &mut P,
+    label: &'static str,
+  ) -> Result<Vec<PostDocument>, ()> {
+    let mut out: Vec<PostDocument> = Vec::with_capacity(docs.len());
+    for d in docs {
+      let nodes = proc.to_process(&d);
+      if nodes.is_empty() {
+        out.push(d);
+        continue;
+      }
+      match proc.process(d, nodes) {
+        Ok(processed) => out.extend(processed),
+        Err(e) => {
+          eprintln!("Post-processing: {} failed: {}", label, e);
+          return Err(());
+        },
+      }
+    }
+    Ok(out)
+  }
+
+  // Phase 2: Scan — runs on EACH sub-document so its entries register
+  // the per-page `location` and `pageid`. Single shared ObjectDB so
+  // the later CrossRef pass can resolve cross-doc refs.
+  let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
+  telemetry::phase_enter(Phase::PostScan);
+  let t_scan = audit_start("Scan");
+  docs = match run_phase(docs, &mut scanner, "Scan") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_scan);
+  telemetry::phase_exit();
+
+  // Phase 3: MakeBibliography
+  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(scanner.db, false);
+  telemetry::phase_enter(Phase::Bibliography);
+  let t_bib = audit_start("MakeBibliography");
+  docs = match run_phase(docs, &mut bibmaker, "MakeBibliography") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_bib);
+  telemetry::phase_exit();
+
+  // Phase 4: CrossRef
+  let mut crossref = latexml_post::crossref::CrossRef::new(
+    bibmaker.db,
+    latexml_post::crossref::UrlStyle::File,
+    true,
+  );
+  if let Some(navtoc) = navigationtoc {
+    crossref.set_navigation_toc(navtoc);
+  }
+  telemetry::phase_enter(Phase::Crossref);
+  let t_xref = audit_start("CrossRef");
+  docs = match run_phase(docs, &mut crossref, "CrossRef") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_xref);
+  telemetry::phase_exit();
+
+  // Phase 5: Graphics
+  let mut graphics_proc = latexml_post::graphics::Graphics::new(None, true)
+    .with_svg_threshold_kb(graphics_svg_threshold_kb);
+  telemetry::phase_enter(Phase::Graphics);
+  let t_gfx = audit_start("Graphics");
+  docs = match run_phase(docs, &mut graphics_proc, "Graphics") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_gfx);
+  telemetry::phase_exit();
 
   // Phase 3: MathML + XSLT
   let mut post = latexml_post::Post::new();
@@ -299,69 +314,113 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // process_chain attributes per-processor inside latexml_post::Post::
   // process_chain (MathmlPres / MathmlCont / Xslt). No outer phase wrap
   // needed; the inner per-processor guards cover their own time.
+  //
+  // Perl-faithful: pass ALL split docs to ProcessChain at once. Perl's
+  // `Post::ProcessChain_internal` (Post.pm L41-67) seeds `@docs = ($doc)`
+  // and lets each processor return a (possibly multi-element) list which
+  // becomes the input to the next processor. We've already produced the
+  // post-Split list above; ProcessChain just needs to fan MathML/XSLT
+  // across it.
+  let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
   let t_chain = audit_start("process_chain");
-  let chain_result = post.process_chain(doc, &mut processors);
+  let chain_result = post.process_chain(docs, &mut processors);
   audit_end(t_chain);
-  match chain_result {
-    Ok(results) => {
-      let t_serialize = audit_start("to_xml_string");
-      let output = results[0].to_xml_string();
-      audit_end(t_serialize);
-      if stylesheet.is_some_and(|s| s.contains("html")) {
-        // Phase: Html5Fixups (regex post-XSLT cleanup + SVG injection).
-        let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
-        // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
-        // libxml2's to_string() includes it by default; we strip it here.
-        let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
-          .unwrap()
-          .replace(&output, "")
-          .to_string();
-        let re = regex::Regex::new(
-          r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
-        )
-        .unwrap();
-        let output = re.replace_all(&output, "<$1$2></$1>").to_string();
-        let void_close_re = regex::Regex::new(
-          r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
-        )
-        .unwrap();
-        let output = void_close_re.replace_all(&output, "").to_string();
-        let void_selfclose_re = regex::Regex::new(
-          r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
-        )
-        .unwrap();
-        let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
-        // Phase G: inject SVG fragments into empty ltx_picture spans
-        if !svg_fragments.is_empty() {
-          for (pic_id, svg_html) in &svg_fragments {
-            // Replace <span id="ID" class="ltx_picture" style="..."></span>
-            // with <span id="ID" class="ltx_picture" style="...">SVG_CONTENT</span>
-            let pattern = format!(
-              r#"<span id="{}" class="ltx_picture"([^>]*)></span>"#,
-              regex::escape(pic_id)
-            );
-            if let Ok(re) = regex::Regex::new(&pattern) {
-              output = re
-                .replace(&output, |caps: &regex::Captures| {
-                  format!(
-                    r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
-                    pic_id, &caps[1], svg_html
-                  )
-                })
-                .to_string();
-            }
-          }
-        }
-        output
-      } else {
-        output
-      }
-    },
+  let results = match chain_result {
+    Ok(r) => r,
     Err(e) => {
       eprintln!("Post-processing failed: {}", e);
-      xml.to_string()
+      return xml.to_string();
     },
+  };
+
+  // Serialize + write each doc IMMEDIATELY in the loop (rather than
+  // collecting first then writing). Multi-doc PostDocument cleanup has
+  // a known libxml2 idcache use-after-free at process exit (see the
+  // SVG-processor note above this block) that can intermittently SIGSEGV
+  // after the last doc has been serialized. Writing eagerly inside the
+  // iteration means even if cleanup later trips, every page that finished
+  // post-processing is already on disk. The first doc's content is
+  // returned so the caller can also write it to --dest in non-split mode.
+  let mut main_output: Option<String> = None;
+  let n = results.len();
+  for (idx, doc) in results.into_iter().enumerate() {
+    let dest = doc.get_destination().map(String::from);
+    let t_serialize = audit_start("to_xml_string");
+    let output = doc.to_xml_string();
+    audit_end(t_serialize);
+    let output = if is_html_out {
+      finalize_html5(output, &svg_fragments)
+    } else {
+      output
+    };
+    // Write each doc to disk inside the loop. The single-file caller
+    // also writes the first doc's content to --dest; the redundant write
+    // is harmless and ensures the file is on disk even if a later libxml2
+    // cleanup tripwire fires.
+    if let Some(path) = dest.as_deref() {
+      if let Some(parent) = std::path::Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+          let _ = std::fs::create_dir_all(parent);
+        }
+      }
+      if let Err(e) = std::fs::write(path, &output) {
+        eprintln!("Post-processing: failed to write page {}: {}", path, e);
+      }
+    }
+    if main_output.is_none() {
+      main_output = Some(output);
+    }
+    let _ = n;
   }
+
+  main_output.unwrap_or_else(|| xml.to_string())
+}
+
+/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
+/// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
+/// so it can run on every split sub-document, not just the first.
+fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String {
+  let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
+  // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
+  // libxml2's to_string() includes it by default; we strip it here.
+  let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
+    .unwrap()
+    .replace(&output, "")
+    .to_string();
+  let re = regex::Regex::new(
+    r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
+  )
+  .unwrap();
+  let output = re.replace_all(&output, "<$1$2></$1>").to_string();
+  let void_close_re = regex::Regex::new(
+    r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
+  )
+  .unwrap();
+  let output = void_close_re.replace_all(&output, "").to_string();
+  let void_selfclose_re = regex::Regex::new(
+    r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
+  )
+  .unwrap();
+  let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
+  if !svg_fragments.is_empty() {
+    for (pic_id, svg_html) in svg_fragments {
+      let pattern = format!(
+        r#"<span id="{}" class="ltx_picture"([^>]*)></span>"#,
+        regex::escape(pic_id)
+      );
+      if let Ok(re) = regex::Regex::new(&pattern) {
+        output = re
+          .replace(&output, |caps: &regex::Captures| {
+            format!(
+              r#"<span id="{}" class="ltx_picture"{}>{}</span>"#,
+              pic_id, &caps[1], svg_html
+            )
+          })
+          .to_string();
+      }
+    }
+  }
+  output
 }
 
 /// Extract SVG fragments from intermediate LaTeXML XML.

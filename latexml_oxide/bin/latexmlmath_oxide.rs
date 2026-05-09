@@ -103,7 +103,7 @@ fn real_main() -> Result<()> {
       if cmml_flag {
         processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
       }
-      match post.process_chain(post_doc, &mut processors) {
+      match post.process_chain(vec![post_doc], &mut processors) {
         Ok(results) => println!("{}", results[0].to_xml_string()),
         Err(e) => {
           eprintln!("MathML post-processing failed: {}", e);

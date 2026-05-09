@@ -28,7 +28,7 @@ fn post_test(name: &str, max_allowed_diffs: usize) {
   let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
 
   let results = post
-    .process_chain(doc, &mut processors)
+    .process_chain(vec![doc], &mut processors)
     .expect("post-processing failed");
 
   assert_eq!(results.len(), 1, "Expected 1 output document");

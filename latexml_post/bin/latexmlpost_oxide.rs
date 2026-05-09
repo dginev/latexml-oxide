@@ -82,7 +82,7 @@ fn main() {
   }
 
   let results = post
-    .process_chain(doc, &mut processors)
+    .process_chain(vec![doc], &mut processors)
     .unwrap_or_else(|e| {
       eprintln!("Post-processing failed: {}", e);
       std::process::exit(1);
