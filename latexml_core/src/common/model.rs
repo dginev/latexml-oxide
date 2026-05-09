@@ -394,7 +394,15 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
 
     match pathname_opt {
       Some(compiled_path) => model.load_compiled_schema(&compiled_path),
-      None => model.schema.as_mut().unwrap().load_schema(),
+      None => {
+        let paths: Vec<&std::path::Path> =
+          search_paths.iter().map(std::path::Path::new).collect();
+        let schema = model.schema.as_mut().unwrap();
+        let schema_name = schema.name.clone();
+        if let Err(e) = schema.load_schema(&schema_name, &paths) {
+          Warn!("expected", "RelaxNG", "load_schema failed for {schema_name}: {e}");
+        }
+      },
     };
   }
   model.load_internal_extensions();
