@@ -131,6 +131,31 @@ struct Cli {
   #[arg(long, value_name = "STYLE")]
   navigationtoc: Option<String>,
 
+  /// Apply scholarly-schema doc-specific post-processing: kind chips
+  /// on definitions, pretty-printed structural content models, per-
+  /// module sidebar item index, and curated module narratives.
+  ///
+  /// Intended for use with the `tools/generate-scholarly-schema-docs`
+  /// pipeline — running on a generic LaTeXML document is harmless but
+  /// has no effect.
+  #[arg(long)]
+  schemadocs: bool,
+
+  /// Path to a TOML file with per-module annotations — curated
+  /// prose paragraphs prepended above each module's definitions
+  /// when `--schemadocs` is on. Loaded into the post-pipeline
+  /// `ObjectDB` under `MODULE:<name>` / `annotation`, alongside
+  /// other Scan/CrossRef metadata. Format:
+  ///
+  /// ```toml
+  /// [scholarly-ltx-blocks]
+  /// annotation = """Block-level content — paragraphs, lists, …"""
+  /// ```
+  ///
+  /// Optional; absent → no annotation banners.
+  #[arg(long, value_name = "PATH")]
+  schemadocs_module_annotations: Option<String>,
+
   /// Write conversion log to file
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
@@ -532,6 +557,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           noinvisibletimes: cli.noinvisibletimes,
           mathtex: cli.mathtex,
           navigationtoc: cli.navigationtoc.as_deref(),
+          schemadocs: cli.schemadocs,
+          schemadocs_module_annotations: cli.schemadocs_module_annotations.as_deref(),
           split: split_enabled,
           split_xpath,
           split_naming: cli.splitnaming.as_deref(),

@@ -26,6 +26,12 @@ Options:
                     `resources/CSS/scholarly-schema-docs.css`.
   --title STRING    Document title. Default: "Schema Reference".
   --author STRING   Document author. Default: empty.
+  --module-annotations FILE
+                    TOML file mapping module identifiers to per-module
+                    annotation paragraphs
+                    (`[name].annotation = """..."""`). Loaded into the
+                    post-pipeline ObjectDB alongside Scan/CrossRef
+                    metadata. Optional.
   --help            Show this help.
 
 Requires `trang`, `latexml_oxide`, and `perl` (for genschema, which
@@ -41,16 +47,18 @@ work_dir=""
 css_file="$oxide_root/resources/CSS/scholarly-schema-docs.css"
 title="Schema Reference"
 author=""
+module_annotations=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --schema) schema=$2; shift 2 ;;
-    --output) output_dir=$2; shift 2 ;;
-    --work)   work_dir=$2; shift 2 ;;
-    --css)    css_file=$2; shift 2 ;;
-    --title)  title=$2; shift 2 ;;
-    --author) author=$2; shift 2 ;;
-    --help)   usage; exit 0 ;;
+    --schema)              schema=$2; shift 2 ;;
+    --output)              output_dir=$2; shift 2 ;;
+    --work)                work_dir=$2; shift 2 ;;
+    --css)                 css_file=$2; shift 2 ;;
+    --title)               title=$2; shift 2 ;;
+    --author)              author=$2; shift 2 ;;
+    --module-annotations)  module_annotations=$2; shift 2 ;;
+    --help)                usage; exit 0 ;;
     *)
       echo "Unknown option: $1" >&2
       usage >&2
@@ -128,11 +136,21 @@ cat > "$work_dir/schema-doc.tex" <<TEX
 \\end{document}
 TEX
 
+annotations_arg=()
+if [[ -n "$module_annotations" ]]; then
+  if [[ ! -f "$module_annotations" ]]; then
+    echo "error: --module-annotations file not found: $module_annotations" >&2
+    exit 1
+  fi
+  annotations_arg=(--schemadocs-module-annotations "$module_annotations")
+fi
+
 (
   cd "$work_dir"
   latexml_oxide --format=html5 \
     --split --splitnaming=labelrelative --splitat=section \
     --navigationtoc=context \
+    --schemadocs "${annotations_arg[@]}" \
     --sourcedirectory="$work_dir" \
     --dest="$output_dir/index.html" \
     --nodefaultresources \
