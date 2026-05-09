@@ -19,6 +19,10 @@ name = "latexmlmath_oxide"
 path = "bin/latexmlmath_oxide.rs"
 
 [[bin]]
+name = "genschema_oxide"
+path = "bin/genschema_oxide.rs"
+
+[[bin]]
 name = "cortex_worker"
 path = "bin/cortex_worker.rs"
 required-features = ["cortex"]

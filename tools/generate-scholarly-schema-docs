@@ -9,7 +9,8 @@ Generate standalone HTML documentation for a RelaxNG Compact (.rnc)
 schema. Pipeline:
 
   1. trang      — convert RNC to RNG
-  2. genschema  — emit a LaTeXML manual.tex from the RNG
+  2. genschema_oxide
+                — emit a LaTeXML manual.tex from the RNG
   3. latexml_oxide --split --splitat=section
                 — render to HTML5, with a per-page sidebar TOC
 
@@ -32,9 +33,10 @@ Per-module narratives are sourced from `## comments` at the head of
 each RNC file (which trang preserves as `<a:documentation>`); no
 separate metadata file is needed.
 
-Requires `trang`, `latexml_oxide`, and `perl` (for genschema, which
-uses Perl LaTeXML's `LaTeXML::Common::Model::RelaxNG`) on $PATH or
-in the standard install locations.
+Requires `trang`, `latexml_oxide`, and `genschema_oxide` on $PATH.
+genschema_oxide is the native Rust replacement for the legacy Perl
+`tools/genschema` script — same RNG → schema.tex translation, no Perl
+LaTeXML dependency.
 USAGE
 }
 
@@ -73,8 +75,6 @@ if [[ -z "$work_dir" ]]; then
   work_dir="${output_dir}-work"
 fi
 
-genschema="$oxide_root/tools/genschema"
-
 if ! command -v trang >/dev/null 2>&1; then
   echo "error: trang is required on PATH" >&2
   exit 1
@@ -83,8 +83,8 @@ if ! command -v latexml_oxide >/dev/null 2>&1; then
   echo "error: latexml_oxide is required on PATH" >&2
   exit 1
 fi
-if [[ ! -x "$genschema" ]]; then
-  echo "error: genschema not executable at $genschema" >&2
+if ! command -v genschema_oxide >/dev/null 2>&1; then
+  echo "error: genschema_oxide is required on PATH" >&2
   exit 1
 fi
 if [[ ! -f "$css_file" ]]; then
@@ -112,7 +112,7 @@ trang "$work_dir/${schema_base}.rnc" "$work_dir/${schema_base}.rng"
 
 (
   cd "$work_dir"
-  "$genschema" --force "${schema_base}.rng" schema.tex
+  genschema_oxide "${schema_base}.rng" --module-abstract -o schema.tex
 )
 
 cat > "$work_dir/schema-doc.tex" <<TEX

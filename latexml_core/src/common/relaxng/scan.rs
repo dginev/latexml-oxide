@@ -167,16 +167,37 @@ fn combine_op_from_localname(name: &str) -> Option<CombineOp> {
   })
 }
 
-/// Encode `(ns?, local)` as the `prefix:local` qname Perl `Model::encodeQName`
-/// produces. With no namespace, returns `local` unchanged.
-fn encode_qname(rng: &Relaxng, ns: Option<&str>, local: &str) -> String {
+/// Encode `(ns?, local)` as the `prefix:local` qname Perl
+/// `Model::encodeQName` produces. With no namespace, returns `local`
+/// unchanged. For URIs without a non-empty prefix mapping yet,
+/// synthesises a fresh `namespace<N>` prefix and registers it (mirrors
+/// LaTeXML's `getDocumentNamespacePrefix(...)` auto-assignment).
+fn encode_qname(rng: &mut Relaxng, ns: Option<&str>, local: &str) -> String {
   match ns {
     None | Some("") => local.to_string(),
-    Some(uri) => match rng.document_namespaces.iter().find(|(_, v)| v.as_str() == uri) {
-      Some((prefix, _)) if !prefix.is_empty() => format!("{}:{}", prefix, local),
-      _ => format!("{{{}}}:{}", uri, local),
-    },
+    Some(uri) => format!("{}:{}", ensure_prefix(rng, uri), local),
   }
+}
+
+fn ensure_prefix(rng: &mut Relaxng, uri: &str) -> String {
+  if let Some((prefix, _)) = rng
+    .document_namespaces
+    .iter()
+    .find(|(p, u)| !p.is_empty() && u.as_str() == uri)
+  {
+    return prefix.clone();
+  }
+  let n = rng
+    .document_namespaces
+    .keys()
+    .filter(|p| p.starts_with("namespace"))
+    .count()
+    + 1;
+  let new_prefix = format!("namespace{}", n);
+  rng
+    .document_namespaces
+    .insert(new_prefix.clone(), uri.to_string());
+  new_prefix
 }
 
 /// Walk a single RelaxNG pattern node. `inherit_ns` is the namespace
