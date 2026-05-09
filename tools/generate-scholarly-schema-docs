@@ -25,6 +25,11 @@ Options:
                     Default: <output>-work
   --css FILE        Stylesheet path. Default: this script's bundled
                     `resources/CSS/scholarly-schema-docs.css`.
+  --catalog FILE    OASIS XML catalog passed to trang (-C) and
+                    XML_CATALOG_FILES — for schemas whose includes
+                    use `urn:` prefixes that need a rewrite map (e.g.
+                    LaTeXML's own .rnc set; the catalog ships at
+                    my-LaTeXML/lib/LaTeXML/LaTeXML.catalog).
   --title STRING    Document title. Default: "Schema Reference".
   --author STRING   Document author. Default: empty.
   --help            Show this help.
@@ -47,16 +52,18 @@ work_dir=""
 css_file="$oxide_root/resources/CSS/scholarly-schema-docs.css"
 title="Schema Reference"
 author=""
+catalog=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --schema) schema=$2; shift 2 ;;
-    --output) output_dir=$2; shift 2 ;;
-    --work)   work_dir=$2; shift 2 ;;
-    --css)    css_file=$2; shift 2 ;;
-    --title)  title=$2; shift 2 ;;
-    --author) author=$2; shift 2 ;;
-    --help)   usage; exit 0 ;;
+    --schema)  schema=$2; shift 2 ;;
+    --output)  output_dir=$2; shift 2 ;;
+    --work)    work_dir=$2; shift 2 ;;
+    --css)     css_file=$2; shift 2 ;;
+    --catalog) catalog=$2; shift 2 ;;
+    --title)   title=$2; shift 2 ;;
+    --author)  author=$2; shift 2 ;;
+    --help)    usage; exit 0 ;;
     *)
       echo "Unknown option: $1" >&2
       usage >&2
@@ -103,12 +110,37 @@ schema_base=$(basename "$schema" .rnc)
 rm -rf "$work_dir"
 mkdir -p "$work_dir" "$output_dir"
 
-# Trang resolves `include "..."` relative to its input's directory.
-# Copy all sibling .rnc files into the work dir so includes resolve.
+# Trang resolves bare `include "..."` relative to its input's
+# directory; URN-prefixed includes need an OASIS XML catalog.
 cp "$schema_dir"/*.rnc "$work_dir"/
 cp "$css_file" "$output_dir/$css_basename"
 
-trang "$work_dir/${schema_base}.rnc" "$work_dir/${schema_base}.rng"
+trang_args=()
+if [[ -n "$catalog" ]]; then
+  if [[ ! -f "$catalog" ]]; then
+    echo "error: catalog not found at $catalog" >&2
+    exit 1
+  fi
+  catalog_abs=$(cd "$(dirname "$catalog")" && pwd)/$(basename "$catalog")
+  trang_args+=(-C "$catalog_abs")
+  export XML_CATALOG_FILES="$catalog_abs"
+fi
+
+trang "${trang_args[@]}" "$work_dir/${schema_base}.rnc" "$work_dir/${schema_base}.rng"
+
+# Mirror tools/compileschema.sh: trang strips `urn:x-LaTeXML:RelaxNG:` from
+# include hrefs in its output. Restore the URN form so module names carry
+# the `:svg:` substring that `SKIP_SVG` keys on, and so cross-doc references
+# match the form `genschema_oxide` consumes via the catalog.
+if [[ -n "$catalog" ]]; then
+  for rng in "$work_dir"/*.rng; do
+    [[ -e "$rng" ]] || continue
+    sed -i \
+      -e 's|include href="LaTeXML-|include href="urn:x-LaTeXML:RelaxNG:LaTeXML-|g' \
+      -e 's|include href="svg/|include href="urn:x-LaTeXML:RelaxNG:svg:|g' \
+      "$rng"
+  done
+fi
 
 (
   cd "$work_dir"

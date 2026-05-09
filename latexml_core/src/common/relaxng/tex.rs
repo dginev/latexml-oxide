@@ -52,7 +52,7 @@ pub fn document_modules(rng: &Relaxng, opts: Options) -> String {
       _ => continue,
     };
     let _ = op;
-    if emit.opts.skip_svg && name.contains(":svg:") {
+    if emit.opts.skip_svg && is_svg_module(&name) {
       continue;
     }
     let mod_name = strip_urn_prefix(&name);
@@ -190,7 +190,7 @@ impl EmitState<'_> {
         parts.join("\n")
       },
       Pattern::Module { name, .. } => {
-        if self.opts.skip_svg && name.contains(":svg:") {
+        if self.opts.skip_svg && is_svg_module(name) {
           format!("\\item[\\textit{{Module }}{}] included.", clean_tex(name))
         } else {
           format!(
@@ -535,6 +535,16 @@ impl EmitState<'_> {
       Some(parts.join(", "))
     }
   }
+}
+
+/// Heuristic: is this module name an SVG module? Matches both the
+/// URN-prefixed form (`urn:x-LaTeXML:RelaxNG:svg:…`, the path-aware
+/// LaTeXML pipeline form) and the bare `svg…` filename stems trang
+/// emits when expanding LaTeXML.rnc with the OASIS catalog (which
+/// strips the `urn:` prefix). LaTeXML's own modules don't start with
+/// `svg`, so the prefix match doesn't false-positive.
+fn is_svg_module(name: &str) -> bool {
+  name.contains(":svg:") || name.starts_with("svg")
 }
 
 fn strip_first_qualifier(s: &str) -> String {

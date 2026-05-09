@@ -12,7 +12,8 @@ $ tools/generate-scholarly-schema-docs \
     --schema   path/to/schema.rnc      \
     --output   path/to/output-dir      \
     --title    "My Schema Reference"   \
-    --author   "Your Name"
+    --author   "Your Name"             \
+    [--catalog path/to/foo.catalog]
 ```
 
 That single invocation produces a complete `output-dir/` containing
@@ -22,6 +23,12 @@ every Pattern / Element / Attribute, pretty-printed structural content
 models, and a per-module narrative aside (sourced from the `##
 comments` at the head of each `.rnc` file via trang).
 
+`--catalog FILE` is for schemas whose `<include href="..."/>`
+directives use `urn:` prefixes that need a rewrite map (LaTeXML's own
+`.rnc` set is the example; the catalog ships at
+`my-LaTeXML/lib/LaTeXML/LaTeXML.catalog`). Without a catalog, trang
+defaults are sufficient for schemas with bare relative includes only.
+
 ### Required external tools
 
 | Tool | What it does | Where it comes from |
@@ -30,8 +37,21 @@ comments` at the head of each `.rnc` file via trang).
 | `latexml_oxide` | TeX → HTML5 with `--split --splitat=section`, `--schemadocs` post-pass for kind chips / content models / sidebar / narrative. | this workspace, `latexml_oxide/bin/latexml_oxide.rs` |
 | `genschema_oxide` | RNG → `schema.tex` (`\schemamodule{}` blocks of `\patterndef` / `\elementdef` / `\attrdef`). | this workspace, `latexml_oxide/bin/genschema_oxide.rs` |
 
-Both `latexml_oxide` and `genschema_oxide` come out of `cargo build`;
-`trang` you install once.
+`trang` you install once. The two oxide binaries are produced by
+`cargo build`; either install them globally:
+
+```bash
+$ cargo install --path latexml_oxide --bin latexml_oxide --bin genschema_oxide
+```
+
+…or prepend the build target to `PATH` for the session:
+
+```bash
+$ export PATH="$(pwd)/target/release:$PATH"   # or target/debug for dev builds
+```
+
+The orchestration shell looks them up via `command -v` and bails if
+either is missing.
 
 ## Step-by-step (what `generate-scholarly-schema-docs` runs internally)
 
@@ -39,11 +59,17 @@ If you want to drive the pipeline yourself, the orchestration shell
 runs roughly:
 
 ```bash
-# 1. Stage RNC files in a working directory; trang resolves
-#    `include "..."` relative to the master file's directory.
+# 1. Stage RNC files in a working directory; trang resolves bare
+#    `include "..."` relative to the master file's directory. Schemas
+#    that use `urn:`-prefixed includes (e.g. LaTeXML's own .rnc set)
+#    need an OASIS XML catalog passed to trang via -C and the matching
+#    XML_CATALOG_FILES env var.
 mkdir -p work/
 cp schema-dir/*.rnc work/
 trang work/master.rnc work/master.rng
+# Or, with a catalog:
+#   export XML_CATALOG_FILES=path/to/foo.catalog
+#   trang -C path/to/foo.catalog work/master.rnc work/master.rng
 
 # 2. RNG → LaTeX manual.tex (\schemamodule{}/\patterndef{}/\elementdef{}/...).
 #    --module-abstract lifts the first-patterndef doc-arg of each
@@ -71,7 +97,13 @@ cat > work/schema-doc.tex <<TEX
 \end{document}
 TEX
 
-# 4. TeX → split HTML5 site, with the schemadocs post-pass on each page.
+# 4. Copy the stylesheet next to the output so the per-page
+#    `<link rel="stylesheet" href="../scholarly-schema-docs.css">`
+#    references resolve.
+mkdir -p output
+cp resources/CSS/scholarly-schema-docs.css output/scholarly-schema-docs.css
+
+# 5. TeX → split HTML5 site, with the schemadocs post-pass on each page.
 latexml_oxide --format=html5                  \
   --split --splitnaming=labelrelative         \
   --splitat=section                           \
