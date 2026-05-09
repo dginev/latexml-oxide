@@ -12,7 +12,7 @@
 //! repositories against the same scanner via `latexml_core` as a
 //! dependency.
 
-use latexml_core::common::relaxng::{Pattern, Relaxng};
+use latexml_core::common::relaxng::{simplify::simplify_top, Pattern, Relaxng};
 use std::path::{Path, PathBuf};
 
 fn count_recursive(pat: &Pattern, predicate: &mut dyn FnMut(&Pattern) -> bool) -> usize {
@@ -113,5 +113,66 @@ fn scan_latexml_rng_smokes() {
   // Documentation annotations should appear.
   let doc_count = count_kind(&raw, |p| matches!(p, Pattern::Doc(_)));
   assert!(doc_count > 0, "expected some Doc annotations");
+}
+
+#[test]
+fn simplify_latexml_rng_populates_state() {
+  let candidates = [
+    "/home/deyan/git/my-LaTeXML/blib/lib/LaTeXML/resources/RelaxNG/LaTeXML.rng",
+    "/home/deyan/git/my-LaTeXML/lib/LaTeXML/resources/RelaxNG/LaTeXML.rng",
+  ];
+  let Some(rng_path) = first_existing(&candidates) else {
+    eprintln!("[skip] LaTeXML.rng not available on this host");
+    return;
+  };
+  let dir = rng_path.parent().unwrap();
+  let mut rng = Relaxng::new("LaTeXML");
+  let raw = latexml_core::common::relaxng::scan::scan_external(
+    &mut rng,
+    rng_path.file_name().unwrap().to_str().unwrap(),
+    None,
+    &[dir],
+  )
+  .expect("scan_external");
+  let _simplified = simplify_top(&mut rng, raw);
+
+  // Every <include>'d file appeared as a Module pushed in document
+  // order. The stock LaTeXML.rng pulls in many siblings.
+  assert!(
+    rng.modules.len() >= 5,
+    "expected ≥5 modules, got {}",
+    rng.modules.len()
+  );
+  // Every recorded module should be a Module variant (sanity).
+  assert!(
+    rng.modules.iter().all(|m| matches!(m, Pattern::Module { .. })),
+    "non-Module entry in rng.modules"
+  );
+  // Singleton element-defs populate elementdefs / element_reverse_defs.
+  // LaTeXML.rng has many of these (ltx:document, ltx:para, …).
+  assert!(
+    !rng.elementdefs.is_empty(),
+    "expected elementdefs to be populated"
+  );
+  assert_eq!(
+    rng.elementdefs.len(),
+    rng.element_reverse_defs.len(),
+    "elementdefs ↔ element_reverse_defs should be bijective"
+  );
+  // Defs table populated for non-trivial pattern groups.
+  assert!(!rng.defs.is_empty(), "expected defs to be populated");
+  // Used-by graph populated.
+  assert!(
+    !rng.uses_name.is_empty(),
+    "expected uses_name graph to be populated"
+  );
+  // Combiners recorded for every defs entry.
+  for key in rng.defs.keys() {
+    assert!(
+      rng.def_combiner.contains_key(key),
+      "missing def_combiner for {}",
+      key
+    );
+  }
 }
 
