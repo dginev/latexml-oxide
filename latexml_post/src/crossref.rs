@@ -8,7 +8,7 @@
 use libxml::tree::Node;
 use std::collections::HashMap;
 
-use crate::document::{NodeData, PostDocument};
+use crate::document::{get_xml_id, NodeData, PostDocument};
 use crate::object_db::{ObjectDB, Value};
 use crate::processor::{ProcessResult, Processor};
 
@@ -244,10 +244,13 @@ impl CrossRef {
   ///
   /// Port of `CrossRef::generateDocumentTitle`.
   fn generate_document_title(&self, doc: &PostDocument) -> Option<String> {
-    // Try to generate from the document's root ID
+    // Try to generate from the document's root ID. Use `get_xml_id` so we
+    // pick up ids stored in the xml namespace (Scan's default placement)
+    // as well as the bare "xml:id" attribute form.
     if let Some(docid) = doc
       .get_document_element()
-      .and_then(|r| r.get_attribute("xml:id"))
+      .as_ref()
+      .and_then(get_xml_id)
     {
       let title = self.generate_title(doc, &docid, "toctitle");
       if title.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
@@ -478,16 +481,18 @@ impl CrossRef {
   // Fill-in methods
 
   fn fill_in_relations(&mut self, doc: &mut PostDocument) {
-    let root_id = match doc
-      .get_document_element()
-      .and_then(|r| r.get_attribute("xml:id"))
-    {
+    // Same get_xml_id trick as generate_document_title: Scan stores ids
+    // in the xml namespace by default; without this, sub-docs would skip
+    // relation filling and never gain the prev/next/up navigation.
+    let page_id = match doc.get_document_element().as_ref().and_then(get_xml_id) {
       Some(id) => id,
       None => return,
     };
 
-    let mut current_id = root_id;
+    // 1. up / "up up" / "up up up" — walk ancestors that have a title.
+    let mut current_id = page_id.clone();
     let mut rel = "up".to_string();
+    let mut topmost = current_id.clone();
     loop {
       let parent_id = self
         .db
@@ -505,20 +510,181 @@ impl CrossRef {
             doc.add_navigation(&rel, &pid);
             rel = format!("{} up", rel);
           }
-          current_id = pid;
+          current_id = pid.clone();
+          topmost = pid;
         },
         None => break,
       }
     }
+
+    // 2. start — the topmost ancestor (root page), if different from us.
+    if topmost != page_id {
+      if let Some(top_pageid) = self
+        .db
+        .lookup(&format!("ID:{}", topmost))
+        .and_then(|e| e.get_string("pageid").map(String::from))
+      {
+        doc.add_navigation("start", &top_pageid);
+      }
+    }
+
+    // 3. prev / next — walk the page tree.
+    if let Some(prev) = self.find_previous_page_id(&page_id) {
+      doc.add_navigation("prev", &prev);
+    }
+    if let Some(next) = self.find_next_page_id(&page_id) {
+      doc.add_navigation("next", &next);
+    }
+  }
+
+  /// Return whether the given xml:id is registered as a primary page.
+  /// Port of `$entry->getValue('primary')`.
+  fn is_primary_page(&self, page_id: &str) -> bool {
+    self
+      .db
+      .lookup(&format!("ID:{}", page_id))
+      .and_then(|e| e.get_value("primary"))
+      .map(|v| v.is_truthy())
+      .unwrap_or(false)
+  }
+
+  /// Resolve `entry_id` to the pageid of the page that *contains* its
+  /// parent. Port of Perl `CrossRef::getParentPage`.
+  fn get_parent_page_id(&self, entry_id: &str) -> Option<String> {
+    let entry = self.db.lookup(&format!("ID:{}", entry_id))?;
+    let pageid = entry.get_string("pageid")?.to_string();
+    let page_entry = self.db.lookup(&format!("ID:{}", pageid))?;
+    let parent_id = page_entry.get_string("parent")?.to_string();
+    let parent_entry = self.db.lookup(&format!("ID:{}", parent_id))?;
+    Some(parent_entry.get_string("pageid")?.to_string())
+  }
+
+  /// Recursively collect distinct child page ids under `entry_id`.
+  /// Port of Perl `CrossRef::getChildPages`.
+  fn get_child_page_ids(&self, entry_id: &str) -> Vec<String> {
+    let entry = match self.db.lookup(&format!("ID:{}", entry_id)) {
+      Some(e) => e,
+      None => return Vec::new(),
+    };
+    let here_pageid = entry.get_string("pageid").map(String::from);
+    let children = entry.get_children();
+    let mut out = Vec::new();
+    for ch in children {
+      let ch_entry = match self.db.lookup(&format!("ID:{}", ch)) {
+        Some(e) => e,
+        None => continue,
+      };
+      let ch_pageid = match ch_entry.get_string("pageid") {
+        Some(p) => p.to_string(),
+        None => continue,
+      };
+      if here_pageid.as_deref() != Some(&ch_pageid) {
+        out.push(ch_pageid);
+      } else {
+        out.extend(self.get_child_page_ids(&ch));
+      }
+    }
+    out
+  }
+
+  /// Page immediately preceding `page_id` in tree order, restricted to
+  /// `primary` pages. Port of Perl `CrossRef::findPreviousPage`: previous
+  /// sibling if any, drilled into rightmost descendant.
+  fn find_previous_page_id(&self, page_id: &str) -> Option<String> {
+    let parent_id = self.get_parent_page_id(page_id)?;
+    let mut sibs = self.get_child_page_ids(&parent_id);
+    // Drop following sibs (rightward) until we hit ourselves.
+    while sibs.last().map(|s| s.as_str()) != Some(page_id) {
+      sibs.pop()?;
+    }
+    sibs.pop(); // remove ourselves
+    sibs.retain(|s| self.is_primary_page(s));
+    let mut current = sibs.pop()?;
+    loop {
+      let kids: Vec<String> = self
+        .get_child_page_ids(&current)
+        .into_iter()
+        .filter(|s| self.is_primary_page(s))
+        .collect();
+      match kids.into_iter().last() {
+        Some(deepest) => current = deepest,
+        None => break,
+      }
+    }
+    Some(current)
+  }
+
+  /// Page immediately following `page_id` in tree order, restricted to
+  /// `primary` pages. Port of Perl `CrossRef::findNextPage`: first child,
+  /// else walk up to find next sibling at progressively higher levels.
+  fn find_next_page_id(&self, page_id: &str) -> Option<String> {
+    let kids: Vec<String> = self
+      .get_child_page_ids(page_id)
+      .into_iter()
+      .filter(|s| self.is_primary_page(s))
+      .collect();
+    if let Some(first) = kids.into_iter().next() {
+      return Some(first);
+    }
+    let mut current = page_id.to_string();
+    loop {
+      let parent = self.get_parent_page_id(&current)?;
+      let mut sibs = self.get_child_page_ids(&parent);
+      while sibs.first().map(|s| s.as_str()) != Some(&current) {
+        if sibs.is_empty() {
+          return None;
+        }
+        sibs.remove(0);
+      }
+      sibs.remove(0); // drop ourselves
+      let next: Vec<String> = sibs.into_iter().filter(|s| self.is_primary_page(s)).collect();
+      if let Some(first) = next.into_iter().next() {
+        return Some(first);
+      }
+      current = parent;
+    }
   }
 
   fn fill_in_tocs(&mut self, doc: &mut PostDocument) {
-    let tocs = doc.findnodes("descendant::ltx:TOC[not(ltx:toclist)]");
+    // Perl Post.pm L946-948: Document::findnodes defaults the XPath
+    // context to documentElement. oxide's `findnodes(None)` defaults to
+    // the XML document node, where libxml2's `descendant::` axis evaluates
+    // differently — `descendant::ltx:TOC` matches zero from the doc node
+    // even though `//ltx:TOC` matches one. Pin the root explicitly so the
+    // user's `\tableofcontents` placeholder is reachable.
+    let tocs = match doc.get_document_element() {
+      Some(root) => doc.findnodes_at("descendant::ltx:TOC[not(ltx:toclist)]", Some(&root)),
+      None => Vec::new(),
+    };
     for toc in &tocs {
-      let id = doc
+      // Use the unified get_xml_id helper: Scan's `Document` fallback
+      // assigns xml:id via the xml namespace, which is invisible to a
+      // bare `get_attribute("xml:id")` lookup but is found by
+      // `get_attribute_ns("id", XML_NS)` (which get_xml_id tries first).
+      let mut id = doc
         .get_document_element()
-        .and_then(|r| r.get_attribute("xml:id"))
+        .as_ref()
+        .and_then(get_xml_id)
         .unwrap_or_default();
+      // `scope="global"` retargets the TOC to the topmost ancestor — used
+      // by the persistent sidebar so every split page shows the same tree.
+      // Default scope (`current` or absent) keeps the current-page id, so
+      // the inline `\tableofcontents` placeholder still produces a
+      // page-local TOC.
+      if toc.get_attribute("scope").as_deref() == Some("global") {
+        let mut root = id.clone();
+        loop {
+          let parent = self
+            .db
+            .lookup(&format!("ID:{}", root))
+            .and_then(|e| e.get_string("parent").map(String::from));
+          match parent {
+            Some(p) => root = p,
+            None => break,
+          }
+        }
+        id = root;
+      }
       let show = toc
         .get_attribute("show")
         .unwrap_or_else(|| self.toc_show.clone());
@@ -837,9 +1003,15 @@ impl Processor for CrossRef {
     }
     if let Some(ref format) = navtoc {
       if let Some(mut nav) = doc.findnode("//ltx:navigation") {
+        // `scope="global"` so fill_in_tocs walks from the root page,
+        // producing the full TOC on every split sub-page (rustdoc-style
+        // persistent sidebar).
         doc.add_nodes(&mut nav, &[NodeData::Element {
           tag:        "ltx:TOC".to_string(),
-          attributes: Some(HashMap::from([("format".to_string(), format.clone())])),
+          attributes: Some(HashMap::from([
+            ("format".to_string(), format.clone()),
+            ("scope".to_string(), "global".to_string()),
+          ])),
           children:   vec![],
         }]);
       }
