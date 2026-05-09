@@ -399,8 +399,9 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
           search_paths.iter().map(std::path::Path::new).collect();
         let schema = model.schema.as_mut().unwrap();
         let schema_name = schema.name.clone();
-        if let Err(e) = schema.load_schema(&schema_name, &paths) {
-          Warn!("expected", "RelaxNG", "load_schema failed for {schema_name}: {e}");
+        if let Err(err) = schema.load_schema(&schema_name, &paths) {
+          let msg = format!("load_schema failed for {}: {}", schema_name, err);
+          Warn!("expected", "RelaxNG", msg);
         }
       },
     };

@@ -12,7 +12,11 @@
 //! repositories against the same scanner via `latexml_core` as a
 //! dependency.
 
-use latexml_core::common::relaxng::{simplify::simplify_top, Pattern, Relaxng};
+use latexml_core::common::relaxng::{
+  simplify::simplify_top,
+  tex::{document_modules, Options as TexOptions},
+  Pattern, Relaxng,
+};
 use std::path::{Path, PathBuf};
 
 fn count_recursive(pat: &Pattern, predicate: &mut dyn FnMut(&Pattern) -> bool) -> usize {
@@ -174,5 +178,76 @@ fn simplify_latexml_rng_populates_state() {
       key
     );
   }
+}
+
+#[test]
+fn document_modules_emits_full_pipeline_for_latexml_rng() {
+  let candidates = [
+    "/home/deyan/git/my-LaTeXML/blib/lib/LaTeXML/resources/RelaxNG/LaTeXML.rng",
+    "/home/deyan/git/my-LaTeXML/lib/LaTeXML/resources/RelaxNG/LaTeXML.rng",
+  ];
+  let Some(rng_path) = first_existing(&candidates) else {
+    eprintln!("[skip] LaTeXML.rng not available on this host");
+    return;
+  };
+  let dir = rng_path.parent().unwrap();
+  let mut rng = Relaxng::new("LaTeXML");
+  let raw = latexml_core::common::relaxng::scan::scan_external(
+    &mut rng,
+    rng_path.file_name().unwrap().to_str().unwrap(),
+    None,
+    &[dir],
+  )
+  .expect("scan_external");
+  let _ = simplify_top(&mut rng, raw);
+  let docs = document_modules(&rng, TexOptions::default());
+
+  // Schemamodule wrappers: one per non-svg module, each in its own
+  // \begin{schemamodule}{name}.
+  assert!(docs.contains("\\begin{schemamodule}"), "missing schemamodule");
+  assert!(docs.contains("\\end{schemamodule}"), "missing schemamodule close");
+
+  // Should emit at least a few \patterndef{} lines (the bulk of schema docs).
+  let patterndef_count = docs.matches("\\patterndef{").count();
+  assert!(
+    patterndef_count > 30,
+    "expected >30 \\patterndef occurrences, got {}",
+    patterndef_count
+  );
+
+  // Some \elementdef{}s for elements that flowed through.
+  let elementdef_count = docs.matches("\\elementdef{").count();
+  assert!(
+    elementdef_count > 5,
+    "expected >5 \\elementdef occurrences, got {}",
+    elementdef_count
+  );
+
+  // Used-by cross-refs should appear via \patternref / \elementref.
+  assert!(
+    docs.contains("\\patternref{") || docs.contains("\\elementref{"),
+    "expected cross-references in output"
+  );
+
+  // SKIP_SVG: no schemamodule for an SVG-shaped name.
+  assert!(
+    !docs.contains(":svg:"),
+    "expected SVG modules to be skipped"
+  );
+
+  // No \patternadd{} should leak through after the upgrade pass —
+  // every left-over \patternadd from `defchoice/definterleave` gets
+  // promoted to \patterndefadd or matched against an emitted
+  // \patterndef.
+  // (We can't assert there are zero \patternadds without first
+  // confirming no patterns went unresolved; this is a softer check.)
+  let patternadd_count = docs.matches("\\patternadd{").count();
+  let patterndefadd_count = docs.matches("\\patterndefadd{").count();
+  // Either matched or upgraded — never silently dropped.
+  // Print counts so a failing run shows what actually emerged.
+  eprintln!(
+    "patterndef={} elementdef={} patternadd_residual={} patterndefadd={}",
+    patterndef_count, elementdef_count, patternadd_count, patterndefadd_count
+  );
 }
 

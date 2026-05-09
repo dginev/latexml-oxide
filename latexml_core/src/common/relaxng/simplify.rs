@@ -469,7 +469,7 @@ mod tests {
 
   #[test]
   fn simplify_records_uses_name() {
-    let xml = r#"
+    let _xml = r#"
       <grammar xmlns="http://relaxml.org/ns/structure/1.0"
                xmlns:rng="http://relaxng.org/ns/structure/1.0">
       </grammar>
