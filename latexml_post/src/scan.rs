@@ -778,6 +778,50 @@ impl Processor for Scan {
       .db
       .register(&doc_key, vec![("id", Value::from(id.as_str()))]);
 
+    // Perl Post::Scan L108-133: when scanning a doc that's not itself
+    // the site root and whose own entry has no parent yet, infer one.
+    // Without this step, the cross-document TOC produced by Split has
+    // the SITE_ROOT (e.g. "Document") with no `children` pointing at
+    // the per-page roots ("Ch1", "Ch1.S1", …) — CrossRef::fill_in_tocs
+    // then walks an empty children list and emits an empty TOC, so the
+    // index page's `\tableofcontents` placeholder collapses to a 27-
+    // line title-only page.
+    let site_id = self
+      .db
+      .lookup("SITE_ROOT")
+      .and_then(|e| e.get_string("id").map(String::from))
+      .unwrap_or_default();
+    let id_key = format!("ID:{}", id);
+    let needs_parent = self
+      .db
+      .lookup(&id_key)
+      .map(|e| !e.has_value("parent"))
+      .unwrap_or(false);
+    if !site_id.is_empty() && id != site_id && needs_parent {
+      // 1) Strip ".suffix" iteratively to find an ancestor id already in DB.
+      let mut parent_id: Option<String> = None;
+      let mut upid = id.clone();
+      while let Some(dot) = upid.rfind('.') {
+        upid.truncate(dot);
+        if !upid.is_empty() && self.db.lookup(&format!("ID:{}", upid)).is_some() {
+          parent_id = Some(upid.clone());
+          break;
+        }
+      }
+      // 2) Fallback to the site root.
+      if parent_id.is_none() {
+        parent_id = Some(site_id.clone());
+      }
+      if let Some(pid) = parent_id {
+        if pid != id {
+          if let Some(entry_mut) = self.db.lookup_mut(&id_key) {
+            entry_mut.set_values(vec![("parent", Value::from(pid.as_str()))]);
+          }
+          self.add_as_child(&id, Some(&pid));
+        }
+      }
+    }
+
     log::info!("Scan: DBStatus: {}", self.db.status());
     Ok(vec![doc])
   }
