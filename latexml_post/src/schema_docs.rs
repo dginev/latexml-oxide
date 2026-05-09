@@ -25,79 +25,61 @@
 
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::Path;
 use std::sync::OnceLock;
-
-use crate::object_db::{ObjectDB, Value};
 
 // ---------- public API ----------------------------------------------------
 
-/// Run all three schema-doc passes on a single page's HTML.
-///
-/// `module` is the module identifier extracted from the page filename
-/// (e.g. `scholarly-ltx-blocks` for `Ch1/schema.scholarly-ltx-blocks.html`);
-/// pass `None` for the chapter index page.
-///
-/// Per-module annotations (the prose paragraph rendered above the
-/// definitions) are read from `db` under the `MODULE:<name>` key with
-/// field `annotation`. Populate via `load_module_annotations` or by any
-/// other path that writes into the same ObjectDB.
-pub fn process_page(html: &str, module: Option<&str>, db: &ObjectDB) -> String {
-  let html = render_content_models(html);
+/// Run the schema-doc passes on a single page's HTML.
+pub fn process_page(html: &str) -> String {
+  let html = lift_module_narrative(html);
+  let html = render_content_models(&html);
   let html = decorate_definitions(&html);
-  let annotation = module
-    .and_then(|m| db.lookup(&format!("MODULE:{}", m)))
-    .and_then(|e| e.get_string("annotation"))
-    .map(String::from);
-  inject_module_sidebar(&html, annotation.as_deref())
+  inject_sidebar_index(&html)
 }
 
-/// Load per-module annotations from a TOML file in the simple form:
-///
-/// ```toml
-/// [scholarly-ltx-blocks]
-/// annotation = """
-/// Block-level content — paragraphs, lists, …
-/// """
-/// ```
-///
-/// Each entry is registered in `db` as a `MODULE:<name>` key with the
-/// `annotation` field set to the trimmed body. Anything more elaborate
-/// in the TOML (nested keys, arrays) is silently ignored.
-///
-/// This is one input path for module annotations; future paths (e.g.
-/// RNC `<a:documentation>` annotations extracted by genschema, or
-/// inline `\moduleabstract` macros) write into the same ObjectDB key
-/// space.
-pub fn load_module_annotations(db: &mut ObjectDB, path: &Path) {
-  let text = match fs::read_to_string(path) {
-    Ok(t) => t,
-    Err(_) => return,
-  };
-  let re = Regex::new(
-    r#"(?ms)^\[([^\]\n]+)\][^\[]*?^annotation\s*=\s*"""(.*?)"""\s*$"#,
-  )
-  .unwrap();
-  for cap in re.captures_iter(&text) {
-    let key = cap[1].trim().to_string();
-    let body = cap[2].trim().to_string();
-    if body.is_empty() {
-      continue;
-    }
-    db.register(
-      &format!("MODULE:{}", key),
-      vec![("annotation", Value::from(body.as_str()))],
-    );
+/// `\moduleabstract` is emitted by genschema right after
+/// `\begin{schemamodule}`, but the schemamodule env opens a
+/// description list — so the paragraph LaTeXML produces lands inside a
+/// `<dd>` instead of as a sibling of the section heading. Lift it out:
+/// remove the wrapping `<dt>…</dt><dd>…<p class="…schema_module_narrative…">…</p>…</dd>`
+/// from wherever it sits, and inject a clean
+/// `<aside class="schema_module_narrative"><p>…</p></aside>` directly
+/// below the section heading.
+fn lift_module_narrative(html: &str) -> String {
+  if html.contains(r#"<aside class="schema_module_narrative">"#) {
+    return html.to_string();
   }
-}
+  static NARRATIVE_RE: OnceLock<Regex> = OnceLock::new();
+  static HEADING_RE: OnceLock<Regex> = OnceLock::new();
 
-/// Extract the schema-module identifier from a sub-page path. Used by
-/// callers to look up the right TOML entry.
-pub fn module_name_for(path: &str) -> Option<String> {
-  static RE: OnceLock<Regex> = OnceLock::new();
-  let re = RE.get_or_init(|| Regex::new(r"schema\.(scholarly-ltx[\w-]*)\.html$").unwrap());
-  re.captures(path).map(|c| c[1].to_string())
+  // Match the empty <dt><dd>…<p class="ltx_p schema_module_narrative">TEXT</p></div></dd>
+  // that LaTeXML produces. The `<p>` always immediately follows
+  // `<div class="ltx_para">` and is followed by `</div></dd>`.
+  let narrative_re = NARRATIVE_RE.get_or_init(|| {
+    Regex::new(
+      r#"(?s)<dt[^>]*class="ltx_item"/>\s*<dd class="ltx_item">\s*<div [^>]*class="ltx_para">\s*<p class="ltx_p schema_module_narrative">(.*?)</p>\s*</div>\s*</dd>"#,
+    )
+    .unwrap()
+  });
+  let heading_re = HEADING_RE.get_or_init(|| {
+    Regex::new(r#"(?s)(<h1 class="ltx_title ltx_title_section">.*?</h1>)"#).unwrap()
+  });
+
+  let captures = match narrative_re.captures(html) {
+    Some(c) => c,
+    None => return html.to_string(),
+  };
+  let body = captures[1].trim().to_string();
+  let stripped = narrative_re.replace(html, "").into_owned();
+
+  let aside = format!(
+    r#"<aside class="schema_module_narrative"><p>{}</p></aside>"#,
+    body
+  );
+  let result = heading_re.replace(&stripped, |caps: &regex::Captures| {
+    format!("{}\n{}", &caps[1], aside)
+  });
+  result.into_owned()
 }
 
 // ---------- pass 1: content-model rendering -------------------------------
@@ -419,16 +401,7 @@ fn decorate_definitions(html: &str) -> String {
   out
 }
 
-// ---------- pass 3: sidebar item index + module narrative -----------------
-
-fn inject_module_sidebar(html: &str, summary: Option<&str>) -> String {
-  let html = inject_sidebar_index(html);
-  if let Some(s) = summary {
-    inject_module_narrative(&html, s)
-  } else {
-    html
-  }
-}
+// ---------- pass 3: sidebar item index ------------------------------------
 
 fn inject_sidebar_index(html: &str) -> String {
   if html.contains(r#"class="schema_module_index""#) {
@@ -511,23 +484,6 @@ fn inject_sidebar_index(html: &str) -> String {
 
   let result = navbar_re.replace(html, |caps: &regex::Captures| {
     format!("{}{}{}{}", &caps[1], fragment, in_schema, &caps[2])
-  });
-  result.into_owned()
-}
-
-fn inject_module_narrative(html: &str, summary: &str) -> String {
-  if html.contains(r#"class="schema_module_narrative""#) {
-    return html.to_string();
-  }
-  static HEADING_RE: OnceLock<Regex> = OnceLock::new();
-  let heading_re =
-    HEADING_RE.get_or_init(|| Regex::new(r#"(?s)(<h1 class="ltx_title ltx_title_section">.*?</h1>)"#).unwrap());
-  let narrative = format!(
-    r#"<aside class="schema_module_narrative"><p>{}</p></aside>"#,
-    summary
-  );
-  let result = heading_re.replace(html, |caps: &regex::Captures| {
-    format!("{}\n{}", &caps[1], narrative)
   });
   result.into_owned()
 }

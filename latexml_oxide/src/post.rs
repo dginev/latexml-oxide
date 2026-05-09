@@ -28,7 +28,6 @@ pub struct PostOptions<'a> {
   pub mathtex:                   bool,
   pub navigationtoc:             Option<&'a str>,
   pub schemadocs:                bool,
-  pub schemadocs_module_annotations: Option<&'a str>,
   pub split:                     bool,
   pub split_xpath:               Option<String>,
   pub split_naming:              Option<&'a str>,
@@ -57,7 +56,6 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     mathtex,
     navigationtoc,
     schemadocs,
-    schemadocs_module_annotations,
     split,
     ref split_xpath,
     split_naming,
@@ -186,24 +184,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     Ok(out)
   }
 
-  // Single in-memory ObjectDB threaded through Scan → MakeBibliography
-  // → CrossRef → schema_docs. Pre-populate with per-module annotations
-  // when `--schemadocs` is on, so the post-XSLT schema_docs pass can
-  // read them from the same store as Scan/CrossRef metadata.
-  let mut db = ObjectDB::new();
-  if schemadocs {
-    if let Some(path) = schemadocs_module_annotations {
-      latexml_post::schema_docs::load_module_annotations(
-        &mut db,
-        std::path::Path::new(path),
-      );
-    }
-  }
-
   // Phase 2: Scan — runs on EACH sub-document so its entries register
   // the per-page `location` and `pageid`. Single shared ObjectDB so
   // the later CrossRef pass can resolve cross-doc refs.
-  let mut scanner = latexml_post::scan::Scan::new(db);
+  let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
   telemetry::phase_enter(Phase::PostScan);
   let t_scan = audit_start("Scan");
   docs = match run_phase(docs, &mut scanner, "Scan") {
@@ -359,11 +343,6 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // iteration means even if cleanup later trips, every page that finished
   // post-processing is already on disk. The first doc's content is
   // returned so the caller can also write it to --dest in non-split mode.
-  // CrossRef has consumed and decorated the ObjectDB with relations,
-  // page IDs, etc. Borrow it for the post-XSLT schema_docs pass —
-  // that's where module annotations get rendered.
-  let schemadocs_db = &crossref.db;
-
   let mut main_output: Option<String> = None;
   let n = results.len();
   for (idx, doc) in results.into_iter().enumerate() {
@@ -377,10 +356,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       output
     };
     let output = if schemadocs && is_html_out {
-      let module = dest
-        .as_deref()
-        .and_then(latexml_post::schema_docs::module_name_for);
-      latexml_post::schema_docs::process_page(&output, module.as_deref(), schemadocs_db)
+      latexml_post::schema_docs::process_page(&output)
     } else {
       output
     };

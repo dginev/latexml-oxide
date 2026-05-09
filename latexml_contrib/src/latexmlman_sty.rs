@@ -87,6 +87,18 @@ LoadDefinitions!({
      \\hypertarget{schema.#1}{#2}\
      \\begin{patterndescription}#3\\end{patterndescription}");
 
+  //--- Module-level prose abstract -------------------------------------
+  // Synthesized by `tools/genschema` from the `## comments` at the
+  // head of each RNC module file (which trang preserves as
+  // `<a:documentation>` annotations). Emits a paragraph carrying the
+  // `schema_module_narrative` class token; CSS in
+  // `resources/CSS/scholarly-schema-docs.css` styles that class as the
+  // left-bordered narrative aside above each module's definitions.
+  DefConstructor!(
+    "\\moduleabstract{}",
+    "<ltx:p class='schema_module_narrative'>#1</ltx:p>"
+  );
+
   //--- Cross-references -----------------------------------------------
   DefMacro!("\\moduleref{}",  "\\hyperref[schema.#1]{{\\ttfamily #1}}");
   DefMacro!("\\patternref{}", "\\hyperlink{schema.#1}{{\\sffamily\\slshape #1}}");
