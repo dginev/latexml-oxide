@@ -87,6 +87,8 @@ Four named profiles in `Cargo.toml`, each tuned for one purpose:
     $ cargo run --release --bin latexml_oxide latexml_oxide/tests/structure/article.tex
     ```
 
+4. Generate a rustdoc-styled HTML5 site for a RelaxNG (`.rnc`) schema — see [docs/SCHEMA_DOCUMENTATION.md](docs/SCHEMA_DOCUMENTATION.md).
+
 CI runs `cargo test --profile ci --tests` automatically; you should never
 need to invoke that profile by hand. For local performance benchmarking
 or when comparing against Perl LaTeXML, always use `--release`.
