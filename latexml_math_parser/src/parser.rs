@@ -1514,11 +1514,17 @@ fn textrec(
   if tag == pin!("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
-      // Perl MathParser.pm:1394 — Error('expected', 'arguments', …)
-      log_math_error!(
-        "expected", "arguments",
-        "XMApp element has no child arguments"
-      );
+      // Perl `MathParser.pm:939-949` `textrec` for `ltx:XMApp` does:
+      //   my ($op, @args) = element_nodes($node);
+      //   $op = realizeXMNode($op);    # undef → undef
+      //   …textrec_apply($name, $op, @args)…
+      // i.e. silently passes undef ops through; the earlier "Error
+      // MathParser.pm:1394" attribution was incorrect (L1394 is in
+      // `Fence`, an unrelated path). Match the Perl-faithful silent
+      // degrade so a malformed math subtree doesn't flip canvas
+      // status — this is post-render serialization, not user-visible
+      // breakage. The empty-string return below preserves the
+      // pre-existing fall-through semantics.
       return String::new();
     }
     let arg_node = args.remove(0);
@@ -1551,12 +1557,12 @@ fn textrec(
     // whole conversion.
     let children = element_nodes(&node);
     let Some(content) = children.first() else {
-      // Perl MathParser.pm:1394-style — XMDual without children is
-      // structurally as bad as XMApp without children.
-      log_math_error!(
-        "expected", "arguments",
-        "XMDual element has no child arguments"
-      );
+      // Perl `MathParser.pm:950-954` `textrec` for `ltx:XMDual` does:
+      //   my ($content, $presentation) = element_nodes($node);
+      //   my $text = textrec($content, …);     # undef → '[missing]'
+      // — silently degrades. The earlier "MathParser.pm:1394-style"
+      // attribution was incorrect. Match Perl-faithful silent path:
+      // emit empty string and continue.
       return String::new();
     };
     textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
