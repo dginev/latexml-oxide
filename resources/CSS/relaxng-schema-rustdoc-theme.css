@@ -1,0 +1,1290 @@
+/* RelaxNG schema docs — rustdoc-inspired theme, adapted to LaTeXML HTML5.
+ *
+ * Three colour palettes — Light (default), Dark, Ayu — selected via the
+ * `[data-theme]` attribute on `<html>`. The boot script in
+ * `inject_theme_switcher` reads `localStorage["schema-theme"]` before
+ * paint and sets the attribute; a "system" preference falls back to
+ * `prefers-color-scheme`. CSS exposes the resolved palette via
+ * `:root[data-theme="…"]` blocks. The legacy `prefers-color-scheme`
+ * @media block kicks in only when no preference has been recorded yet
+ * (covers no-JS environments).
+ */
+
+:root,
+:root[data-theme="light"] {
+  --main-background: #ffffff;
+  --main-color: #14171a;
+  --secondary-color: #4a4a4a;
+  --muted-color: #707070;
+  --link-color: #1e62a3;
+  --link-hover-color: #103d6c;
+  --code-bg: #f0f0f0;
+  --code-color: #181818;
+  --code-fg-quiet: #404040;
+  --border-color: #c8c8c8;
+  --heading-border: #aaaaaa;
+  --soft-divider: rgba(0, 0, 0, 0.10);
+  --tag-color: #4a4a4a;
+  --kicker-color: #3d5772;
+  --highlight-bg: #fff5b3;
+  --selection-bg: #b8d4f7;
+
+  /* Accent colours used by the kind chips on definition headings
+   * and the operator / quantifier markers inside content models.
+   * Routed through tokens so the theme switcher controls them
+   * directly; the prior `@media (prefers-color-scheme: dark)` fall-
+   * throughs ignored explicit user choices. */
+  --chip-pattern-bg:    #3873ad;
+  --chip-element-bg:    #2a8a5f;
+  --chip-attribute-bg:  #a05a00;
+  --content-op-or:      #c97a00;
+  --content-op-and:     #4f7ad0;
+  --content-sup:        #6b9c4d;
+  /* "Experimental Draft" right-edge ribbon — strong red (W3C-style)
+   * on a near-white backdrop reads as a clear caution flag. */
+  --banner-bg:          #c0392b;
+  --banner-fg:          #ffffff;
+
+  --content-max-width: 62rem;
+  --sidebar-width: 16.625rem;
+  --indent: 1.375rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --header-height: 2.375rem;
+
+  --font-body: "Charter", "Iowan Old Style", "Source Serif 4", "Source Serif Pro",
+               Cambria, Georgia, "Times New Roman", serif;
+  --font-heading: "Inter", "Fira Sans", -apple-system, BlinkMacSystemFont,
+                  "Segoe UI", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-code: "SF Mono", "Source Code Pro", "Fira Mono", Menlo, Consolas,
+               "Liberation Mono", "DejaVu Sans Mono", monospace;
+}
+
+:root[data-theme="dark"] {
+  --main-background: #15181d;
+  --main-color: #f0f0f0;
+  --secondary-color: #c0c0c0;
+  --muted-color: #909090;
+  --link-color: #7cc4f0;
+  --link-hover-color: #b3dcfa;
+  --code-bg: #1d2026;
+  --code-color: #ededed;
+  --code-fg-quiet: #c5c5c5;
+  --border-color: #4a4e57;
+  --heading-border: #4a4e57;
+  --soft-divider: rgba(255, 255, 255, 0.10);
+  --tag-color: #b8b8b8;
+  --kicker-color: #b1c1d8;
+  --highlight-bg: #6a5520;
+  --selection-bg: #2e5a8e;
+  --chip-pattern-bg:    #2c5279;
+  --chip-element-bg:    #1f6342;
+  --chip-attribute-bg:  #6b3d00;
+  --content-op-or:      #f0b06b;
+  --content-op-and:     #79bdff;
+  --content-sup:        #a8d488;
+  /* Slightly muted on dark — fully-saturated red would punch through
+   * the rest of the chrome too aggressively. */
+  --banner-bg:          #a3322a;
+  --banner-fg:          #ffffff;
+}
+
+/* Ayu — warm dark palette inspired by rustdoc. Background/foreground
+ * sourced from rustdoc's ayu so the eye-feel matches; link / accent
+ * colours pulled from the same source for consistency with our code-
+ * highlight expectations. */
+:root[data-theme="ayu"] {
+  --main-background: #0f1419;
+  --main-color: #c5c5c5;
+  --secondary-color: #b0b0b0;
+  --muted-color: #788797;
+  --link-color: #39afd7;
+  --link-hover-color: #ffb454;
+  --code-bg: #191f26;
+  --code-color: #e6e1cf;
+  --code-fg-quiet: #a0a09a;
+  --border-color: #5c6773;
+  --heading-border: #5c6773;
+  --soft-divider: rgba(255, 255, 255, 0.05);
+  --tag-color: #9aa3ad;
+  --kicker-color: #ffb454;
+  --highlight-bg: rgba(255, 236, 164, 0.10);
+  --selection-bg: rgba(53, 132, 228, 0.35);
+  --chip-pattern-bg:    #2c5279;
+  --chip-element-bg:    #1f6342;
+  --chip-attribute-bg:  #6b3d00;
+  --content-op-or:      #ff7733;
+  --content-op-and:     #69f2df;
+  --content-sup:        #b8cc52;
+  /* Ayu's signature warm-amber accent reads as caution without
+   * fighting the palette. */
+  --banner-bg:          #ff7733;
+  --banner-fg:          #0f1419;
+}
+
+/* System fallback for no-JS visitors — only kicks in when the boot
+ * script hasn't set `data-theme` (e.g. JS disabled). Once any value
+ * is set on `<html>`, the explicit blocks above win. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --main-background: #15181d;
+    --main-color: #f0f0f0;
+    --secondary-color: #c0c0c0;
+    --muted-color: #909090;
+    --link-color: #7cc4f0;
+    --link-hover-color: #b3dcfa;
+    --code-bg: #1d2026;
+    --code-color: #ededed;
+    --code-fg-quiet: #c5c5c5;
+    --border-color: #4a4e57;
+    --heading-border: #4a4e57;
+    --soft-divider: rgba(255, 255, 255, 0.10);
+    --tag-color: #b8b8b8;
+    --kicker-color: #b1c1d8;
+    --highlight-bg: #6a5520;
+    --selection-bg: #2e5a8e;
+    --chip-pattern-bg:    #2c5279;
+    --chip-element-bg:    #1f6342;
+    --chip-attribute-bg:  #6b3d00;
+    --content-op-or:      #f0b06b;
+    --content-op-and:     #79bdff;
+    --content-sup:        #a8d488;
+    --banner-bg:          #a3322a;
+    --banner-fg:          #ffffff;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  /* `scroll-behavior: auto` is the browser default — anchor jumps
+   * snap instantly to the target. We intentionally avoid `smooth`
+   * here: smooth scroll on a long def page (300+ items) animates
+   * for several seconds, which obscures the `:target` highlight
+   * landing and feels sluggish for navigation-heavy use. */
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--main-color);
+  background: var(--main-background);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------- Persistent left sidebar (rustdoc-style navbar) ------- */
+
+nav.ltx_page_navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 0.75rem 2rem;
+  background: var(--code-bg);
+  border-right: 1px solid var(--border-color);
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  z-index: 1;
+}
+
+nav.ltx_page_navbar::-webkit-scrollbar { width: 8px; }
+nav.ltx_page_navbar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Per-module item index (rustdoc-style page navigator) ---- */
+
+nav.ltx_page_navbar section.schema_module_index {
+  margin: 0 0 1rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+nav.ltx_page_navbar section.schema_module_index h6.schema_index_heading {
+  margin: 0.7rem 0 0.25rem;
+  padding: 0 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kicker-color);
+}
+nav.ltx_page_navbar section.schema_module_index h6.schema_index_heading:first-child {
+  margin-top: 0.2rem;
+}
+
+nav.ltx_page_navbar ul.schema_index_list {
+  list-style: none;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border-left: 1px solid var(--border-color);
+  margin-left: 0.55rem;
+}
+
+nav.ltx_page_navbar ul.schema_index_list li {
+  margin: 0;
+}
+
+nav.ltx_page_navbar ul.schema_index_list a {
+  display: block;
+  padding: 0.18rem 0.55rem;
+  margin-left: -1px;
+  font-family: var(--font-code);
+  font-size: 0.82rem;
+  color: var(--secondary-color);
+  text-decoration: none;
+  border-bottom: none;
+  border-left: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+nav.ltx_page_navbar ul.schema_index_list a:hover {
+  color: var(--link-color);
+  border-left-color: var(--link-color);
+  background: var(--main-background);
+}
+
+/* "In schema" demarcation between page-local items and the global module list. */
+nav.ltx_page_navbar h6.schema_in_schema {
+  margin: 1.2rem 0 0.45rem;
+  padding: 0.6rem 0.55rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kicker-color);
+  border-top: 1px solid var(--border-color);
+}
+
+/* "start" / book root link — top of the sidebar */
+nav.ltx_page_navbar > a.ltx_ref[rel="start"] {
+  display: block;
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.6rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.005em;
+  color: var(--main-color);
+  background: var(--main-background);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+nav.ltx_page_navbar > a.ltx_ref[rel="start"]:hover {
+  border-color: var(--link-color);
+  color: var(--link-color);
+}
+
+/* Inline the TOC into the sidebar — strip the boxed look it has on the index page. */
+nav.ltx_page_navbar > nav.ltx_TOC {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 0.88rem;
+}
+
+nav.ltx_page_navbar > nav.ltx_TOC h6.ltx_title_contents {
+  display: none;
+}
+
+nav.ltx_page_navbar ol.ltx_toclist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav.ltx_page_navbar ol.ltx_toclist ol.ltx_toclist {
+  margin: 0.2rem 0 0.4rem 0;
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--border-color);
+  font-size: 0.88rem;
+}
+
+nav.ltx_page_navbar li.ltx_tocentry {
+  margin: 0.1rem 0;
+}
+
+nav.ltx_page_navbar li.ltx_tocentry > a.ltx_ref,
+nav.ltx_page_navbar li.ltx_tocentry > span.ltx_ref {
+  display: block;
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--radius-sm);
+  color: var(--secondary-color);
+  text-decoration: none;
+  border-bottom: none;
+  /* Wrap rather than truncate — narrow sidebar + module-name labels would
+     ellipsize the differentiating suffix. Wrapping keeps every label
+     fully visible. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+nav.ltx_page_navbar li.ltx_tocentry > a.ltx_ref:hover {
+  background: var(--main-background);
+  color: var(--link-color);
+}
+
+/* Each section entry is a module identifier — render it like code. */
+nav.ltx_page_navbar li.ltx_tocentry_section > a.ltx_ref .ltx_ref_title,
+nav.ltx_page_navbar li.ltx_tocentry_section > span.ltx_ref .ltx_ref_title {
+  font-family: var(--font-code);
+  font-size: 0.86rem;
+}
+
+nav.ltx_page_navbar li.ltx_tocentry_chapter > a.ltx_ref,
+nav.ltx_page_navbar li.ltx_tocentry_chapter > span.ltx_ref {
+  font-weight: 600;
+  color: var(--main-color);
+}
+
+nav.ltx_page_navbar span.ltx_ref_self {
+  background: color-mix(in srgb, var(--link-color) 12%, transparent);
+  color: var(--link-color) !important;
+  font-weight: 500;
+}
+
+/* ------- Top breadcrumb header ------- */
+
+header.ltx_page_header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 0 1.25rem;
+  padding: 0.45rem 0.75rem;
+  background: color-mix(in srgb, var(--main-background) 92%, transparent);
+  backdrop-filter: saturate(140%) blur(6px);
+  -webkit-backdrop-filter: saturate(140%) blur(6px);
+  border-bottom: 1px solid var(--border-color);
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+}
+
+/* (Universal `*[id] { scroll-margin-top: 5rem }` near the bottom
+ * handles every anchor-target offset; specific overrides have been
+ * removed so the global rule governs `#schema.X` and the
+ * `#I1.ix14`-style auto-ids equally.) */
+
+header.ltx_page_header .ltx_align_center {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+header.ltx_page_header a.ltx_ref {
+  color: var(--secondary-color);
+  text-decoration: none;
+  border-bottom: none;
+  white-space: nowrap;
+}
+header.ltx_page_header a.ltx_ref::before {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.4em;
+  border: 1.5px solid currentColor;
+  border-width: 1.5px 1.5px 0 0;
+  vertical-align: 0.05em;
+}
+header.ltx_page_header a.ltx_ref[rel="up"]::before     { transform: rotate(-45deg); }
+header.ltx_page_header a.ltx_ref[rel="prev"]::before   { transform: rotate(-135deg); }
+header.ltx_page_header a.ltx_ref[rel="next"]::before   { transform: rotate(45deg);
+                                                         margin-right: 0; margin-left: 0.4em; order: 2; }
+header.ltx_page_header a.ltx_ref[rel="next"] { display: inline-flex; align-items: center; }
+header.ltx_page_header a.ltx_ref:hover {
+  color: var(--link-color);
+}
+
+/* ------- Main content area ------- */
+
+.ltx_page_main {
+  max-width: var(--content-max-width);
+  margin: 0 auto 0 var(--sidebar-width);
+  padding: 0 1.5rem 4rem;
+}
+
+.ltx_page_main .ltx_page_content {
+  padding: 0 1rem;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+/* The root index.html has no sidebar — center its content. */
+body:not(:has(nav.ltx_page_navbar)) .ltx_page_main {
+  margin-left: auto;
+  padding: 1.25rem 1.5rem 4rem;
+}
+
+/* ------- Document header ------- */
+
+.ltx_title_document {
+  font-family: var(--font-heading);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 1rem 0 0.4rem;
+  color: var(--main-color);
+}
+
+.ltx_authors {
+  margin: 0.25rem 0 0;
+  color: var(--secondary-color);
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+}
+
+.ltx_personname { font-style: normal; }
+
+.ltx_dates {
+  margin: 0.25rem 0 1.6rem;
+  color: var(--muted-color);
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+}
+
+/* ------- Table of contents ------- */
+
+nav.ltx_TOC {
+  margin: 1.5rem 0 2.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--code-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+}
+
+nav.ltx_TOC h6.ltx_title_contents {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kicker-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4rem;
+}
+
+nav.ltx_TOC ol.ltx_toclist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav.ltx_TOC ol.ltx_toclist ol.ltx_toclist {
+  margin: 0.15rem 0 0.4rem 1rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--border-color);
+  font-size: 0.92rem;
+}
+
+nav.ltx_TOC li.ltx_tocentry {
+  margin: 0.2rem 0;
+  line-height: 1.45;
+}
+
+nav.ltx_TOC li.ltx_tocentry_chapter > a.ltx_ref { font-weight: 600; }
+
+nav.ltx_TOC a.ltx_ref {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: none;
+}
+
+nav.ltx_TOC a.ltx_ref:hover {
+  color: var(--link-hover-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+nav.ltx_TOC .ltx_ref_title { font-family: var(--font-heading); }
+
+/* ------- Headings ------- */
+
+.ltx_chapter,
+.ltx_section,
+.ltx_subsection,
+.ltx_subsubsection {
+  margin-top: 2.25rem;
+}
+
+.ltx_title {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--main-color);
+}
+
+h2.ltx_title_chapter,
+h3.ltx_title_section,
+h4.ltx_title_subsection,
+h5.ltx_title_subsubsection {
+  margin: 1.6rem 0 0.85rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--heading-border);
+}
+
+h2.ltx_title_chapter      { font-size: 1.65rem; font-weight: 600; }
+h3.ltx_title_section      { font-size: 1.3rem;  font-weight: 600; }
+h4.ltx_title_subsection   { font-size: 1.1rem;  font-weight: 600; }
+h5.ltx_title_subsubsection { font-size: 1rem;    font-weight: 600; }
+
+/* Rustdoc-style "eyebrow" line: parent module name shown above the
+ * leaf-page heading on subsection pages (Elements / Patterns / etc.). */
+.schema-eyebrow {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-heading);
+  color: var(--main-color);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.schema-eyebrow-link {
+  color: var(--main-color);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--border-color);
+}
+.schema-eyebrow-link:hover {
+  color: var(--main-color);
+  border-bottom-color: var(--main-color);
+}
+
+.ltx_tag_chapter,
+.ltx_tag_section,
+.ltx_tag_subsection,
+.ltx_tag_subsubsection {
+  color: var(--muted-color);
+  font-weight: 400;
+  margin-right: 0.45em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ------- Paragraphs ------- */
+
+.ltx_para  { margin: 0.85rem 0; }
+.ltx_p     { margin: 0.55rem 0; }
+.ltx_para.ltx_noindent .ltx_p:first-child,
+.ltx_p:first-child { margin-top: 0; }
+
+/* Description-list rows ("Attributes:" / "Content:" / "= value" pairs)
+ * already have row-spacing from `dt.ltx_item` / `dd.ltx_item`; the
+ * inner `<div class="ltx_para">` LaTeXML wraps each value in adds an
+ * extra 0.85rem gap that visually disconnects the label from its
+ * value. Collapse it so e.g. "ATTRIBUTE foo" sits flush above "= text". */
+.ltx_item > .ltx_para { margin: 0; }
+
+/* ------- Cover-page source-link footer ------- */
+
+/* Optional `\schemasource{label}{url}` paragraph emitted by the
+ * orchestration shell when the master `.rnc` lives in a git
+ * checkout. Reads as a muted footer beneath `\maketitle` linking
+ * back to the SHA-pinned upstream blob. */
+.ltx_para.schema_source {
+  margin: 0.4rem 0 1.2rem;
+  font-size: 0.85rem;
+  color: var(--muted-color);
+}
+.ltx_para.schema_source a {
+  color: var(--muted-color);
+  text-decoration: underline;
+  text-decoration-color: var(--soft-divider);
+  text-underline-offset: 2px;
+}
+.ltx_para.schema_source a:hover {
+  color: var(--link-color);
+  text-decoration-color: currentColor;
+}
+
+/* ------- Per-module narrative panel ------- */
+
+aside.schema_module_narrative {
+  margin: 0.6rem 0 1.5rem;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid var(--link-color);
+  background: color-mix(in srgb, var(--link-color) 6%, var(--main-background));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+aside.schema_module_narrative p {
+  margin: 0;
+  color: var(--secondary-color);
+}
+aside.schema_module_narrative code {
+  font-family: var(--font-code);
+  font-size: 0.9em;
+  background: var(--code-bg);
+  padding: 0.05em 0.35em;
+  border-radius: var(--radius-sm);
+}
+
+/* ------- Definition cards (Pattern/Element/Attribute) ------- */
+
+dl.ltx_description > dt.ltx_item.schema-def {
+  margin-top: 1.4rem;
+}
+dl.ltx_description > dt.ltx_item.schema-def:first-of-type {
+  margin-top: 0.8rem;
+}
+
+dt.schema-def > span.ltx_tag.ltx_tag_item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.schema-kind-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.32em 0.7em;
+  margin-right: 0.55em;
+  border-radius: 999px;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+  user-select: none;
+}
+.schema-kind-chip.kind-pattern        { color: #fff; background: var(--chip-pattern-bg); }
+.schema-kind-chip.kind-element        { color: #fff; background: var(--chip-element-bg); }
+.schema-kind-chip.kind-attribute      { color: #fff; background: var(--chip-attribute-bg); }
+.schema-kind-chip.kind-pattern-add    {
+  color: var(--secondary-color);
+  background: var(--code-bg);
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+.schema-name {
+  font-family: var(--font-code);
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--main-color);
+  word-break: break-all;
+}
+
+.schema-permalink {
+  margin-left: auto;
+  padding: 0 0.35em;
+  color: var(--muted-color);
+  text-decoration: none;
+  border-bottom: none;
+  font-weight: 600;
+  font-size: 0.95em;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+dt.schema-def:hover .schema-permalink,
+dt.schema-def:focus-within .schema-permalink {
+  opacity: 1;
+}
+.schema-permalink:hover {
+  color: var(--link-color);
+}
+
+/* ------- Schema entry list (the core of the page) ------- */
+
+dl.ltx_description {
+  margin: 1rem 0;
+  padding: 0;
+}
+
+dl.ltx_description > dt.ltx_item {
+  font-family: var(--font-heading);
+  margin: 1.4rem 0 0.4rem;
+  padding: 0.05rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Patternadd operator rows ("|=" / "&=" from `\item[\textbar=]` /
+ * `\item[\&=]` in `\patternadd`). The dt's inner kicker is bold-only
+ * (no italic) — every other kicker on this page is bold-italic
+ * ("Content:", "Used by:", "Element name", etc.) — so flow these dt
+ * + dd pairs inline so the operator sits next to its reference
+ * instead of wasting a vertical row.
+ *
+ * `vertical-align: top` (not baseline) keeps the `|=` anchored to
+ * the first line of the value — important for multi-line content
+ * models where baseline alignment puts the operator at the BOTTOM
+ * of a tall code block. The `padding-top` on the dt nudges the
+ * operator down to sit on the first textual line rather than the
+ * code block's outer-edge, since `code.schema-content-model` adds
+ * its own top padding.
+ *
+ * Falls back gracefully on browsers without `:has()` (just keeps
+ * the default block stacking). */
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic)) {
+  display: inline-block;
+  margin: 0.4rem 0.55em 0 0;
+  padding-top: 0.45rem;
+  vertical-align: top;
+}
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item {
+  display: inline-block;
+  margin: 0.4rem 0;
+  padding-left: 0;
+  border-left: 0;
+  vertical-align: top;
+}
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item > .ltx_para,
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item > .ltx_para > .ltx_p {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+dl.ltx_description > dd.ltx_item {
+  margin: 0 0 0.6rem;
+  padding-left: var(--indent);
+  border-left: 1px solid var(--soft-divider);
+}
+
+/* Lazy paint for long schema-def lists: skip layout/paint of off-
+ * screen items to keep large pages responsive. `contain-intrinsic-size`
+ * reserves vertical space so scrollbar position remains stable.
+ * Items remain in the DOM, so browser Ctrl-F still finds their
+ * contents; the def heading anchor (id="schema.X") and CSS-driven
+ * filter (.schema-filter-hidden) keep working too. */
+dl.ltx_description > dt.ltx_item.schema-def,
+dl.ltx_description > dt.ltx_item.schema-def + dd.ltx_item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 4rem;
+}
+
+/* JS-driven filter input above each long def list. Default invisible
+ * — index.js inserts/reveals it only when the list is long enough.
+ * `display: none` is what hides non-matching items when the user
+ * types; un-typed state leaves all items visible so Ctrl-F sees them. */
+.schema-filter {
+  position: sticky;
+  top: 2.2rem;
+  z-index: 1;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.4rem 0;
+  background: color-mix(in srgb, var(--main-background) 96%, transparent);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.schema-filter input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+  color: var(--main-color);
+  font-family: var(--font-code);
+  font-size: 0.9rem;
+}
+.schema-filter input[type="search"]:focus {
+  outline: 2px solid color-mix(in srgb, #3873ad 60%, transparent);
+  outline-offset: -1px;
+  border-color: #3873ad;
+}
+.schema-filter-count {
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.schema-filter-hidden { display: none !important; }
+
+/* nested dl indents more subtly */
+dl.ltx_description dl.ltx_description {
+  margin: 0.5rem 0 0.75rem;
+}
+
+dl.ltx_description dl.ltx_description > dt.ltx_item {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0.85rem 0 0.25rem;
+}
+
+/* ------- Item kicker label: "Pattern", "Element", "Attribute", … ------- */
+
+.ltx_tag_item .ltx_font_bold.ltx_font_italic {
+  display: inline;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kicker-color);
+  margin-right: 0.45em;
+  vertical-align: 0.05em;
+}
+
+/* The identifier *inside* the kicker (the actual pattern/element name) */
+.ltx_tag_item .ltx_font_bold.ltx_font_italic .ltx_text.ltx_font_sansserif.ltx_font_slanted {
+  display: inline;
+  font-family: var(--font-code);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--main-color);
+  background: var(--code-bg);
+  padding: 0.05em 0.4em;
+  border-radius: var(--radius-sm);
+  vertical-align: -0.05em;
+}
+
+/* Trailing punctuation inside the kicker (e.g. "Content:") */
+.ltx_tag_item .ltx_font_bold.ltx_font_italic .ltx_text.ltx_font_upright {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--kicker-color);
+  font-size: 0.9rem;
+}
+
+/* ------- Inline references ------- */
+
+a.ltx_ref {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+a.ltx_ref:hover {
+  color: var(--link-hover-color);
+  border-bottom-color: currentColor;
+}
+a.ltx_ref_self {
+  color: var(--main-color);
+  font-weight: 500;
+}
+
+/* Module-name refs — typewriter in source */
+a.ltx_ref.ltx_font_typewriter {
+  font-family: var(--font-code);
+  font-style: normal;
+  font-size: 0.9em;
+  background: var(--code-bg);
+  padding: 0.05em 0.4em;
+  border-radius: var(--radius-sm);
+  border-bottom: none;
+}
+a.ltx_ref.ltx_font_typewriter:hover {
+  background: color-mix(in srgb, var(--code-bg) 80%, var(--link-color) 20%);
+  color: var(--link-color);
+  border-bottom: none;
+}
+
+/* Pattern / element / attribute name refs — sansserif slanted in source */
+a.ltx_ref.ltx_font_sansserif.ltx_font_slanted {
+  font-family: var(--font-code);
+  font-style: normal;
+  font-size: 0.92em;
+  color: var(--link-color);
+  border-bottom: 1px dotted color-mix(in srgb, var(--link-color) 50%, transparent);
+}
+a.ltx_ref.ltx_font_sansserif.ltx_font_slanted:hover {
+  color: var(--link-hover-color);
+  border-bottom-style: solid;
+}
+
+/* ------- Generic font helpers ------- */
+
+.ltx_font_italic    { font-style: italic; }
+.ltx_font_bold      { font-weight: 600; }
+.ltx_font_upright   { font-style: normal; }
+.ltx_font_slanted   { font-style: oblique; font-variant: normal; }
+.ltx_font_smallcaps { font-variant-caps: small-caps; }
+.ltx_font_sansserif { font-family: var(--font-heading); }
+.ltx_font_serif     { font-family: var(--font-body); }
+.ltx_font_typewriter {
+  font-family: var(--font-code);
+  font-size: 0.92em;
+}
+
+/* Inline code-like spans */
+span.ltx_text.ltx_font_typewriter {
+  color: var(--code-color);
+  padding: 0.05em 0.35em;
+  border-radius: var(--radius-sm);
+}
+
+/* When typewriter appears inside a heading, drop the chip */
+.ltx_title span.ltx_text.ltx_font_typewriter,
+.ltx_tag_item .ltx_font_typewriter {
+  padding: 0;
+  border-radius: 0;
+}
+
+/* The two "Module foo-bar" titles use a sansserif span next to plain text */
+.ltx_title_section .ltx_text.ltx_font_typewriter {
+  font-family: var(--font-code);
+  font-weight: 500;
+  background: transparent;
+  padding: 0;
+}
+
+/* ------- Anchor / superscript helpers ------- */
+
+.ltx_anchor { display: inline-block; vertical-align: baseline; }
+.ltx_sup    { font-size: 0.7em; vertical-align: super; }
+
+/* ------- Structural content-model rendering ------- */
+
+code.schema-content-model {
+  display: block;
+  white-space: pre-wrap;
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  background: var(--code-bg);
+  color: var(--code-color);
+  border-left: 2px solid var(--border-color);
+  padding: 0.55em 0.85em;
+  margin: 0.3em 0 0.45em;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  /* Re-enable hyphenation breaks on long pattern names so long URLs and
+     tooltips don't overflow horizontally on narrow viewports. */
+  overflow-wrap: anywhere;
+}
+
+/* Operator coloring inside content models */
+code.schema-content-model .op {
+  font-weight: 600;
+  margin-right: 0.05em;
+  font-family: var(--font-code);
+}
+code.schema-content-model .op.op-or  { color: var(--content-op-or); }   /* amber: choice */
+code.schema-content-model .op.op-and { color: var(--content-op-and); }  /* blue:  interleave */
+code.schema-content-model .op.op-seq { color: var(--muted-color); }
+
+/* Quantifier superscripts */
+code.schema-content-model sup.ltx_sup {
+  color: var(--content-sup);
+  font-weight: 600;
+  font-size: 0.72em;
+  vertical-align: super;
+  margin-left: 0.05em;
+}
+
+/* Cross-references inside content models — drop chip styling, use a
+   restrained dotted underline so the operator structure is what reads. */
+code.schema-content-model a.ltx_ref,
+code.schema-content-model a.ltx_ref.ltx_font_sansserif.ltx_font_slanted {
+  font-family: var(--font-code);
+  font-style: normal;
+  font-size: 1em;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px dotted color-mix(in srgb, var(--link-color) 50%, transparent);
+}
+code.schema-content-model a.ltx_ref:hover {
+  background: transparent;
+  color: var(--link-hover-color);
+  border-bottom-style: solid;
+}
+
+/* Self-page references (no <a>) inside content models */
+code.schema-content-model span.ltx_ref.ltx_ref_self {
+  font-family: var(--font-code);
+  font-style: normal;
+  font-weight: 500;
+  background: transparent;
+  padding: 0;
+  border-bottom: none;
+  color: var(--main-color);
+}
+
+/* Italic "text" literal — the RelaxNG `text` keyword */
+code.schema-content-model span.ltx_text.ltx_font_italic {
+  font-style: italic;
+  color: var(--secondary-color);
+}
+
+/* ------- Footer ------- */
+
+.ltx_page_footer {
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--heading-border);
+  color: var(--muted-color);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.ltx_page_footer a       { color: var(--muted-color); border-bottom-color: transparent; }
+.ltx_page_footer a:hover { color: var(--link-color); }
+.ltx_page_logo img       { vertical-align: middle; opacity: 0.85; }
+
+/* ------- Misc ------- */
+
+::selection { background: var(--selection-bg); color: var(--main-color); }
+
+/* Anchor-target offset: every element that can be the target of a
+ * `#fragment` link gets pushed down on scroll-into-view so it clears
+ * the sticky page header AND the (also-sticky) schema filter input.
+ * Header is ~1.75rem + 1.25rem margin; filter input adds ~2.4rem
+ * when present. 5rem buys headroom for both with breathing space. */
+*[id]               { scroll-margin-top: 5rem; }
+a[name^="schema."]  { scroll-margin-top: 5rem; }
+
+/* Visible feedback on anchor jump: when a `<dt class="schema-def">`
+ * is the current `:target` (e.g. user clicked the § permalink or a
+ * cross-page ref), give it visible top padding plus a soft tint so
+ * it's obvious which row was landed on, AND so the row sits clearly
+ * below the sticky header rather than tucked against it.
+ *
+ * The padding is INSIDE the dt so it pushes the chip+name down from
+ * the section above; combined with `scroll-margin-top` this gives
+ * comfortable clearance both visually and at the scroll boundary. */
+dt.schema-def:target,
+section.schema-def:target {
+  padding-top: 1rem;
+  padding-bottom: 0.4rem;
+  background: color-mix(in srgb, #3873ad 8%, transparent);
+  border-radius: var(--radius-sm);
+  transition: background 0.4s ease-out;
+}
+dt.schema-def:target + dd.ltx_item {
+  background: color-mix(in srgb, #3873ad 4%, transparent);
+}
+
+/* Narrow viewports — collapse the sidebar above content. */
+@media (max-width: 56.25rem) {
+  nav.ltx_page_navbar {
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: 20rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+  }
+  .ltx_page_main {
+    margin-left: auto;
+    padding: 0 1rem 3rem;
+  }
+  header.ltx_page_header { position: static; }
+}
+
+@media (max-width: 45rem) {
+  .ltx_page_main { padding: 0 1rem 3rem; }
+  .ltx_title_document { font-size: 1.65rem; }
+  h2.ltx_title_chapter      { font-size: 1.4rem; }
+  h3.ltx_title_section      { font-size: 1.18rem; }
+  dl.ltx_description > dd.ltx_item { padding-left: 14px; }
+  :root { --indent: 14px; }
+}
+
+
+/* ---------- Theme switcher (Settings widget) ----------------------------
+ *
+ * Floating top-right button that opens a small popover with four
+ * theme radios (Light / Dark / Ayu / System). Markup is a `<details>`
+ * element — open state controlled by clicking the gear summary, click-
+ * outside dismissal handled by the wiring script. */
+
+.schema-theme-switcher {
+  position: fixed;
+  top: 0.55rem;
+  right: 0.85rem;
+  z-index: 200;
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+}
+.schema-theme-switcher > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.32rem 0.55rem;
+  background: var(--code-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--main-color);
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1;
+}
+.schema-theme-switcher > summary::-webkit-details-marker { display: none; }
+.schema-theme-switcher > summary::marker { content: ""; }
+.schema-theme-switcher > summary:hover,
+.schema-theme-switcher[open] > summary {
+  background: color-mix(in srgb, var(--code-bg) 80%, var(--main-color));
+  border-color: color-mix(in srgb, var(--border-color) 50%, var(--main-color));
+}
+.schema-theme-switcher .schema-gear {
+  font-size: 1.05em;
+  line-height: 1;
+}
+.schema-theme-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  background: var(--main-background);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.85rem 0.7rem;
+  min-width: 11rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.schema-theme-popover fieldset { border: 0; padding: 0; margin: 0; }
+.schema-theme-popover legend {
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--secondary-color);
+  padding: 0;
+  margin: 0 0 0.35rem;
+}
+.schema-theme-popover label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+  cursor: pointer;
+  color: var(--main-color);
+}
+.schema-theme-popover label:hover {
+  color: var(--link-color);
+}
+.schema-theme-popover input[type="radio"],
+.schema-theme-popover input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--link-color);
+  margin: 0;
+}
+
+/* Display-prefs fieldset — sits below the theme radios. */
+.schema-theme-popover fieldset.schema-pref-block {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--soft-divider);
+}
+
+/* Tasteful credit — small italic line at the bottom of the popover. */
+.schema-theme-credit {
+  margin: 0.7rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--soft-divider);
+  font-size: 0.72rem;
+  color: var(--muted-color);
+  text-align: center;
+}
+.schema-theme-credit a {
+  color: var(--muted-color);
+  text-decoration: underline;
+  text-decoration-color: var(--soft-divider);
+  text-underline-offset: 2px;
+}
+.schema-theme-credit a:hover {
+  color: var(--link-color);
+  text-decoration-color: currentColor;
+}
+
+@media print {
+  .schema-theme-switcher { display: none; }
+}
+
+/* ---------- Experimental Draft right-edge ribbon -------------------------
+ *
+ * Themed warning banner on the right edge of every schema-doc page,
+ * vertically centered. Modelled in spirit on the W3C Editor's Draft
+ * left-edge ribbon — flags that the docs are not yet stable.
+ * Background / foreground come from `--banner-bg` / `--banner-fg`,
+ * defined per theme so the colour stays legible under Light / Dark /
+ * Ayu without flat-out shouting.
+ *
+ * `pointer-events: none` keeps the ribbon from blocking clicks on
+ * any content it overlaps; `aria-label` on the markup gives the
+ * screen-reader text. */
+aside.schema-experimental-banner {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  pointer-events: none;
+  user-select: none;
+  /* Vertical writing — top-to-bottom on the right edge so the head
+   * tilts naturally to the right to read. */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  /* Banner shape */
+  padding: 1.1rem 0.45rem;
+  background: var(--banner-bg);
+  color: var(--banner-fg);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  /* Typography */
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  /* Subtle shadow so it lifts off the page on light themes */
+  box-shadow: -1px 0 6px rgba(0, 0, 0, 0.18);
+}
+@media print {
+  aside.schema-experimental-banner { display: none; }
+}
+/* On narrow viewports the ribbon competes with the content; tuck
+ * it away below the small-screen breakpoint. */
+@media (max-width: 45rem) {
+  aside.schema-experimental-banner { display: none; }
+}
+
+/* ---------- Display preference toggles ----------------------------------
+ *
+ * Fire when the boot script stamps the matching `data-pref-*="on"`
+ * attribute on `<html>`. CSS-only; no JS reads computed styles. */
+
+/* Hide sidebar: drop the persistent left navbar entirely so the main
+ * content fills the page. Mirrors the layout of pages that ship
+ * without a navbar (`body:not(:has(nav.ltx_page_navbar))`). */
+:root[data-pref-sidebar="on"] nav.ltx_page_navbar {
+  display: none;
+}
+:root[data-pref-sidebar="on"] .ltx_page_main {
+  margin-left: auto;
+  padding: 1.25rem 1.5rem 4rem;
+}
+

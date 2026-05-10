@@ -263,20 +263,55 @@ impl PostDocument {
   /// Port of Perl `Post::Document::newDocument`.
   /// The element is imported into a fresh XML document.
   /// Resources, processing instructions, and class attributes are copied from the parent.
-  pub fn new_document(&self, mut root: Node, destination: &str) -> Self {
+  pub fn new_document(&self, root: Node, destination: &str) -> Self {
     use libxml::tree::Document as XmlDocument;
-    // Create a fresh XML document and adopt the node as root.
-    // The node may already be unlinked from its original document.
-    let mut new_xml_doc = XmlDocument::new().expect("create XML doc");
-    // Try import first; if that fails (detached node), set directly
-    if let Ok(imported) = new_xml_doc.import_node(&mut root) {
-      new_xml_doc.set_root_element(&imported);
-    } else {
-      new_xml_doc.set_root_element(&root);
-    }
+    // Create a fresh XML document that owns a deep copy of `root`'s
+    // subtree as its root element.
+    //
+    // Perl Post.pm L831-839: `XML::LibXML::Document->new(...)` then
+    // `setDocumentElement($doc->importNode($root))`. importNode COPIES
+    // the subtree into the new doc; the new doc and the source no
+    // longer share C-side state.
+    //
+    // We use libxml-rs's `Document::dup_node_into_new_doc` (added in
+    // KWARC/rust-libxml `clone-document` branch). The earlier
+    // `import_node` route had two pitfalls that made it unusable for
+    // the Split.process_pages loop:
+    //   1. `import_node` gates on `Node::is_unlinked()`, a wrapper-
+    //      side flag with no public setter; the gate leaks `false`
+    //      across iterations because the previous call's set_linked()
+    //      mutated the wrapper Rc, forcing every page after the
+    //      first to Err.
+    //   2. Direct `xmlDocCopyNode(src, dst, 1)` returns NULL on the
+    //      second sibling page — the first recursive copy dirties
+    //      dict/ns state on the source doc such that subsequent
+    //      recursive copies fail their child-copy phase (verified:
+    //      extended=2 still works, isolating the failure to
+    //      recursive descent).
+    // dup_node_into_new_doc avoids both: it does
+    // `xmlCopyNode(node, 1)` (orphan deep copy, no source-doc state
+    // mutation), plants the copy into a freshly created xmlDoc, fixes
+    // up doc pointers via xmlSetTreeDoc, and reconciles namespaces.
+    // The returned Document shares zero C-side state with the source.
+    //
+    // SCOPE: this method is only called from `Split::process_pages`
+    // (split.rs L260); non-split flows do not pay the deep-copy cost.
+    let new_xml_doc: XmlDocument = XmlDocument::dup_node_into_new_doc(&root)
+      .expect("dup_node_into_new_doc returned NULL while creating split sub-document");
+    let _ = root;
 
     let opts = PostDocumentOptions {
       destination: Some(destination.to_string()),
+      // CRITICAL: inherit the parent's site_directory so the sub-doc's
+      // `site_relative_destination` carries any intermediate split
+      // directory (e.g. "Ch1/schema.scholarly-ltx.html") into DB
+      // location strings. Without this, every sub-doc defaults
+      // site_directory to its own destination_directory, which makes
+      // every per-doc `location` resolve to just the basename and
+      // CrossRef::generate_url then produces broken in-page anchors
+      // instead of the cross-doc relative URLs that the rendered TOC
+      // is supposed to walk.
+      site_directory: self.site_directory.clone(),
       source: self.source.clone(),
       source_directory: self.source_directory.clone(),
       searchpaths: Some(self.searchpaths.clone()),
@@ -320,6 +355,22 @@ impl PostDocument {
     if !resources.is_empty() {
       if let Some(mut doc_root) = subdoc.get_document_element() {
         subdoc.add_nodes(&mut doc_root, &resources);
+      }
+    }
+
+    // Copy class from top-level document element (Perl L777-782)
+    if let Some(parent_root) = self.get_document_element() {
+      if let Some(pclass) = parent_root.get_attribute("class") {
+        if let Some(mut doc_root) = subdoc.get_document_element() {
+          let existing = doc_root.get_attribute("class").unwrap_or_default();
+          if existing.is_empty() {
+            doc_root.set_attribute("class", &pclass).ok();
+          } else {
+            doc_root
+              .set_attribute("class", &format!("{} {}", existing, pclass))
+              .ok();
+          }
+        }
       }
     }
 
@@ -908,12 +959,27 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::removeNodes`.
   pub fn remove_nodes(&mut self, nodes: &[Node]) {
+    fn collect_ids_of_subtree(node: &Node, out: &mut Vec<String>) {
+      if node.get_type() != Some(NodeType::ElementNode) {
+        return;
+      }
+      if let Some(id) = get_xml_id(node) {
+        out.push(id);
+      }
+      let mut child = node.get_first_child();
+      while let Some(c) = child {
+        collect_ids_of_subtree(&c, out);
+        child = c.get_next_sibling();
+      }
+    }
+
     for node in nodes {
       if node.get_type() == Some(NodeType::ElementNode) {
-        for idd in self.findnodes_at("descendant-or-self::*[@xml:id]", Some(node)) {
-          if let Some(id) = idd.get_attribute("xml:id") {
-            self.idcache.remove(&id);
-          }
+        // Walk the subtree directly to enumerate xml:id descendants.
+        let mut ids = Vec::new();
+        collect_ids_of_subtree(node, &mut ids);
+        for id in ids {
+          self.idcache.remove(&id);
         }
       }
       let mut n = node.clone();

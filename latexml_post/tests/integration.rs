@@ -71,7 +71,7 @@ fn test_full_pipeline_empty() {
   let doc = PostDocument::new_from_string(SIMPLE_DOC, PostDocumentOptions::default()).unwrap();
   let mut post = Post::new();
   let mut processors: Vec<Box<dyn Processor>> = vec![];
-  let result = post.process_chain(doc, &mut processors);
+  let result = post.process_chain(vec![doc], &mut processors);
   assert!(result.is_ok());
   assert_eq!(result.unwrap().len(), 1);
 }
@@ -83,7 +83,7 @@ fn test_full_pipeline_with_scan() {
   let db = ObjectDB::new();
   let scanner = Scan::new(db);
   let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(scanner)];
-  let result = post.process_chain(doc, &mut processors);
+  let result = post.process_chain(vec![doc], &mut processors);
   assert!(result.is_ok());
   assert_eq!(result.unwrap().len(), 1);
 }

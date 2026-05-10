@@ -146,6 +146,70 @@ impl XSLT {
       },
     }
   }
+
+  /// Build a per-doc parameter map with `CSS`, `JAVASCRIPT`, and `ICON`
+  /// relativized so each split sub-page references the resource at the
+  /// correct relative path.
+  ///
+  /// The raw values are constructed as `"foo.css|bar.css"` (quoted,
+  /// pipe-separated basenames) by the binary's `run_post_processing`.
+  /// They are interpreted as paths relative to the site root, so
+  /// sub-pages need `../foo.css` etc.
+  fn relativize_resource_params(&self, doc: &PostDocument) -> HashMap<String, String> {
+    let mut out = self.parameters.clone();
+    let (Some(site), Some(dest)) = (doc.get_site_directory(), doc.get_destination_directory())
+    else {
+      return out;
+    };
+    let prefix = match relative_dir_prefix(site, dest) {
+      Some(p) => p,
+      None => return out,
+    };
+    if prefix.is_empty() {
+      return out;
+    }
+    for key in ["CSS", "JAVASCRIPT", "ICON"] {
+      if let Some(value) = out.get(key).cloned() {
+        out.insert(key.to_string(), relativize_quoted_pipe_list(&value, &prefix));
+      }
+    }
+    out
+  }
+}
+
+/// Walk-up prefix from `dest_dir` to `site_dir`. Returns `Some("")` when
+/// they're identical, `Some("../")` when `dest_dir` is one level deeper,
+/// `Some("../../")` two levels, etc. Returns `None` if `dest_dir` is not
+/// inside `site_dir`.
+fn relative_dir_prefix(site_dir: &str, dest_dir: &str) -> Option<String> {
+  let site = Path::new(site_dir);
+  let dest = Path::new(dest_dir);
+  let rel = dest.strip_prefix(site).ok()?;
+  let depth = rel.components().count();
+  Some("../".repeat(depth))
+}
+
+/// Apply `prefix` to every basename in a `"a|b|c"` quoted pipe-list, but
+/// only when the entry doesn't already look absolute or scheme-prefixed.
+fn relativize_quoted_pipe_list(value: &str, prefix: &str) -> String {
+  let inner = value.trim_matches('"');
+  let parts: Vec<String> = inner
+    .split('|')
+    .map(|p| {
+      let p = p.trim();
+      if p.is_empty()
+        || p.starts_with('/')
+        || p.starts_with("./")
+        || p.starts_with("../")
+        || p.contains("://")
+      {
+        p.to_string()
+      } else {
+        format!("{}{}", prefix, p)
+      }
+    })
+    .collect();
+  format!("\"{}\"", parts.join("|"))
 }
 
 impl Processor for XSLT {
@@ -191,9 +255,12 @@ impl Processor for XSLT {
       .parse_string(&doc_xml)
       .map_err(|e| PostError::Processing(format!("Failed to re-parse document: {:?}", e)))?;
 
-    // Build parameters
-    let params: Vec<(&str, &str)> = self
-      .parameters
+    // Build parameters, relativizing path-valued ones (CSS, JAVASCRIPT,
+    // ICON) for the current doc's destination. The crate-level params
+    // hold basenames in site-relative form; split sub-pages live in a
+    // subdirectory and need `../foo.css` etc. to resolve correctly.
+    let per_doc_params = self.relativize_resource_params(&doc);
+    let params: Vec<(&str, &str)> = per_doc_params
       .iter()
       .map(|(k, v)| (k.as_str(), v.as_str()))
       .collect();

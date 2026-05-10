@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: generate-scholarly-schema-docs --schema FILE --output DIR [options]
+
+Generate standalone HTML documentation for a RelaxNG Compact (.rnc)
+schema. Pipeline:
+
+  1. trang      — convert RNC to RNG
+  2. genschema_oxide
+                — emit a LaTeXML manual.tex from the RNG
+  3. latexml_oxide --split --splitat=section
+                — render to HTML5, with a per-page sidebar TOC
+
+Required:
+  --schema FILE     Master RelaxNG Compact schema (entry-point .rnc file).
+                    Sibling .rnc files in the same directory are
+                    auto-included by trang.
+  --output DIR      Destination site directory.
+
+Options:
+  --work DIR        Temporary working directory.
+                    Default: <output>-work
+  --css FILE        Stylesheet path. Default: this script's bundled
+                    `resources/CSS/relaxng-schema-rustdoc-theme.css`.
+  --catalog FILE    OASIS XML catalog passed to trang (-C) and
+                    XML_CATALOG_FILES — for schemas whose includes
+                    use `urn:` prefixes that need a rewrite map (e.g.
+                    LaTeXML's own .rnc set; the catalog ships at
+                    my-LaTeXML/lib/LaTeXML/LaTeXML.catalog).
+  --title STRING    Document title. Default: "Schema Reference".
+  --author STRING   Document author. Default: empty.
+  --help            Show this help.
+
+Per-module narratives are sourced from `## comments` at the head of
+each RNC file (which trang preserves as `<a:documentation>`); no
+separate metadata file is needed.
+
+Requires `trang`, `latexml_oxide`, and `genschema_oxide` on $PATH.
+genschema_oxide is the native Rust replacement for the legacy Perl
+`tools/genschema` script — same RNG → schema.tex translation, no Perl
+LaTeXML dependency.
+USAGE
+}
+
+oxide_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+schema=""
+output_dir=""
+work_dir=""
+css_file="$oxide_root/resources/CSS/relaxng-schema-rustdoc-theme.css"
+title="Schema Reference"
+author=""
+catalog=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --schema)  schema=$2; shift 2 ;;
+    --output)  output_dir=$2; shift 2 ;;
+    --work)    work_dir=$2; shift 2 ;;
+    --css)     css_file=$2; shift 2 ;;
+    --catalog) catalog=$2; shift 2 ;;
+    --title)   title=$2; shift 2 ;;
+    --author)  author=$2; shift 2 ;;
+    --help)    usage; exit 0 ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$schema" || -z "$output_dir" ]]; then
+  echo "error: --schema and --output are required" >&2
+  usage >&2
+  exit 2
+fi
+
+if [[ -z "$work_dir" ]]; then
+  work_dir="${output_dir}-work"
+fi
+
+if ! command -v trang >/dev/null 2>&1; then
+  echo "error: trang is required on PATH" >&2
+  exit 1
+fi
+if ! command -v latexml_oxide >/dev/null 2>&1; then
+  echo "error: latexml_oxide is required on PATH" >&2
+  exit 1
+fi
+if ! command -v genschema_oxide >/dev/null 2>&1; then
+  echo "error: genschema_oxide is required on PATH" >&2
+  exit 1
+fi
+if [[ ! -f "$css_file" ]]; then
+  echo "error: stylesheet not found at $css_file" >&2
+  exit 1
+fi
+if [[ ! -f "$schema" ]]; then
+  echo "error: schema not found at $schema" >&2
+  exit 1
+fi
+
+# Sister JS asset that ships next to the stylesheet — runtime for
+# the rustdoc-styled theme (Settings popover wiring + in-page
+# filter). The post-pass injects a `<script src>` reference with the
+# same basename, so the file must be copied into `$output_dir`.
+js_file="$oxide_root/resources/javascript/$(basename "$css_file" .css).js"
+if [[ ! -f "$js_file" ]]; then
+  echo "error: theme runtime not found at $js_file" >&2
+  exit 1
+fi
+
+css_basename=$(basename "$css_file")
+js_basename=$(basename "$js_file")
+schema_dir=$(cd "$(dirname "$schema")" && pwd)
+schema_base=$(basename "$schema" .rnc)
+
+rm -rf "$work_dir"
+mkdir -p "$work_dir" "$output_dir"
+
+# Trang resolves bare `include "..."` relative to its input's
+# directory; URN-prefixed includes need an OASIS XML catalog.
+cp "$schema_dir"/*.rnc "$work_dir"/
+cp "$css_file" "$output_dir/$css_basename"
+cp "$js_file"  "$output_dir/$js_basename"
+
+trang_args=()
+if [[ -n "$catalog" ]]; then
+  if [[ ! -f "$catalog" ]]; then
+    echo "error: catalog not found at $catalog" >&2
+    exit 1
+  fi
+  catalog_abs=$(cd "$(dirname "$catalog")" && pwd)/$(basename "$catalog")
+  trang_args+=(-C "$catalog_abs")
+  export XML_CATALOG_FILES="$catalog_abs"
+fi
+
+trang "${trang_args[@]}" "$work_dir/${schema_base}.rnc" "$work_dir/${schema_base}.rng"
+
+# Mirror tools/compileschema.sh: trang strips `urn:x-LaTeXML:RelaxNG:` from
+# include hrefs in its output. Restore the URN form so module names carry
+# the `:svg:` substring that `SKIP_SVG` keys on, and so cross-doc references
+# match the form `genschema_oxide` consumes via the catalog.
+if [[ -n "$catalog" ]]; then
+  for rng in "$work_dir"/*.rng; do
+    [[ -e "$rng" ]] || continue
+    sed -i \
+      -e 's|include href="LaTeXML-|include href="urn:x-LaTeXML:RelaxNG:LaTeXML-|g' \
+      -e 's|include href="svg/|include href="urn:x-LaTeXML:RelaxNG:svg:|g' \
+      "$rng"
+  done
+fi
+
+(
+  cd "$work_dir"
+  genschema_oxide "${schema_base}.rng" --module-abstract -o schema.tex
+)
+
+# Optional: detect that the master `.rnc` lives in a git checkout
+# and emit a `\schemasource{label}{url}` cover-page back-reference
+# that lands the reader at the schema file on the upstream host.
+# Composes a SHA-pinned GitHub-style `blob/<SHA>/<path>` URL
+# (GitLab's `/-/blob/...` substituted for hosts whose remote URL
+# names gitlab). Silently no-ops when the schema isn't tracked
+# (or isn't in a repo at all) — the cover page just won't carry
+# the source line.
+schema_source_line=""
+if git -C "$schema_dir" rev-parse --git-dir >/dev/null 2>&1; then
+  git_root=$(git -C "$schema_dir" rev-parse --show-toplevel)
+  git_sha=$(git -C "$schema_dir" rev-parse HEAD 2>/dev/null || true)
+  git_remote=$(git -C "$schema_dir" remote get-url origin 2>/dev/null || true)
+  schema_abs=$(cd "$(dirname "$schema")" && pwd)/$(basename "$schema")
+  if git -C "$schema_dir" ls-files --error-unmatch "$schema_abs" >/dev/null 2>&1 \
+       && [[ -n "$git_remote" && -n "$git_sha" ]]; then
+    rel_path=${schema_abs#$git_root/}
+    web_url=${git_remote%.git}
+    if [[ $web_url =~ ^git@([^:]+):(.+)$ ]]; then
+      web_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+    blob_segment="blob/$git_sha"
+    [[ $web_url == *gitlab* ]] && blob_segment="-/$blob_segment"
+    src_url="$web_url/$blob_segment/$rel_path"
+    src_label="$rel_path @ ${git_sha:0:7}"
+    schema_source_line="\\schemasource{${src_label}}{${src_url}}"
+  fi
+fi
+
+cat > "$work_dir/schema-doc.tex" <<TEX
+\\documentclass{article}
+\\usepackage{latexml}
+\\usepackage{latexmlman}
+\\usepackage{makeidx}
+\\makeindex
+\\title{${title}}
+\\author{${author}}
+\\date{\\today}
+\\begin{document}
+\\maketitle
+${schema_source_line}
+\\tableofcontents
+\\input{schema}
+\\end{document}
+TEX
+
+(
+  cd "$work_dir"
+  # `--schemadocs` auto-injects the theme CSS and JS basenames into
+  # the asset pipeline (XSLT then emits `<link>` / `<script src>` in
+  # `<head>`). The shell still copies the asset files into
+  # `$output_dir` above so the relative URLs resolve at runtime.
+  latexml_oxide --format=html5 \
+    --split --splitnaming=labelrelative --splitat=section \
+    --navigationtoc=context \
+    --schemadocs \
+    --sourcedirectory="$work_dir" \
+    --dest="$output_dir/index.html" \
+    --nodefaultresources \
+    schema-doc.tex
+)
+
+echo "Generated schema documentation at $output_dir/index.html"

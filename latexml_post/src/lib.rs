@@ -47,6 +47,7 @@ pub mod mathml;
 pub mod open_math;
 pub mod picture_images;
 pub mod scan;
+pub mod schema_docs;
 pub mod split;
 pub mod svg;
 pub mod tex_math;
@@ -94,10 +95,10 @@ impl Post {
   /// Port of `Post::ProcessChain` + `ProcessChain_internal`.
   pub fn process_chain(
     &mut self,
-    doc: PostDocument,
+    docs: Vec<PostDocument>,
     processors: &mut [Box<dyn Processor>],
   ) -> Result<Vec<PostDocument>, PostError> {
-    let mut docs = vec![doc];
+    let mut docs = docs;
 
     log::info!("post-processing");
     let audit = *POST_AUDIT;
@@ -189,7 +190,7 @@ mod tests {
     .unwrap();
 
     let mut processors: Vec<Box<dyn Processor>> = vec![];
-    let result = post.process_chain(doc, &mut processors);
+    let result = post.process_chain(vec![doc], &mut processors);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().len(), 1);
   }
@@ -206,7 +207,7 @@ mod tests {
     // Writer without destination prints to stdout (we just test it doesn't crash)
     let writer = Writer::new(Some(OutputFormat::Xml), false, false);
     let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(writer)];
-    let result = post.process_chain(doc, &mut processors);
+    let result = post.process_chain(vec![doc], &mut processors);
     assert!(result.is_ok());
   }
 
@@ -228,7 +229,7 @@ mod tests {
 
     let pmml = crate::mathml::MathML::new_presentation().with_keep_xmath(true);
     let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
-    let result = post.process_chain(doc, &mut processors);
+    let result = post.process_chain(vec![doc], &mut processors);
     assert!(result.is_ok());
     let docs = result.unwrap();
     let output = docs[0].to_xml_string();
@@ -261,7 +262,7 @@ mod tests {
     let db = object_db::ObjectDB::new();
     let scanner = scan::Scan::new(db);
     let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(scanner)];
-    let result = post.process_chain(doc, &mut processors);
+    let result = post.process_chain(vec![doc], &mut processors);
     assert!(result.is_ok());
   }
 }

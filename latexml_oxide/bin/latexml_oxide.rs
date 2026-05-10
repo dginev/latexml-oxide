@@ -131,6 +131,20 @@ struct Cli {
   #[arg(long, value_name = "STYLE")]
   navigationtoc: Option<String>,
 
+  /// Apply scholarly-schema doc-specific post-processing: kind chips
+  /// on definitions, pretty-printed structural content models, and a
+  /// per-module sidebar item index.
+  ///
+  /// Intended for use with the `tools/generate-scholarly-schema-docs`
+  /// pipeline — running on a generic LaTeXML document is harmless but
+  /// has no effect.
+  ///
+  /// Module-level narratives flow in from RNC `## comments` via
+  /// `tools/genschema` and the `\moduleabstract{}` macro; no separate
+  /// metadata input is needed.
+  #[arg(long)]
+  schemadocs: bool,
+
   /// Write conversion log to file
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
@@ -532,6 +546,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           noinvisibletimes: cli.noinvisibletimes,
           mathtex: cli.mathtex,
           navigationtoc: cli.navigationtoc.as_deref(),
+          schemadocs: cli.schemadocs,
           split: split_enabled,
           split_xpath,
           split_naming: cli.splitnaming.as_deref(),

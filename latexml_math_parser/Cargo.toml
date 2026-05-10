@@ -9,7 +9,7 @@ name = "latexml_math_parser"
 crate-type = ["lib"]
 
 [dependencies]
-libxml = "0.3.9"
+libxml = "0.3.10"
 regex = "1.7.1"
 log = "0.4"
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
