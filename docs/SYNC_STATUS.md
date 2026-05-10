@@ -85,6 +85,56 @@ rebased onto `bffd1be471` ("feat: Schema Docs and Split post-processor
 6 overlapping files (latexml_post pipeline reorder + `process_chain`
 signature change). `cargo test --tests` = **1185/0/0** post-rebase.
 
+**Post-rebase landings 2026-05-10**:
+- `21e730e71e` — promote two silent-content-loss signals from Info
+  to Warn/Error so the canvas no longer classifies broken papers as
+  `[ok]`. (1) `document.rs:2759` "Duplicated attribute xml:id"
+  Info→Error (bypasses the `Error!` macro because the function
+  returns `String`, not `Result`; calls `note_status(Error)` +
+  `log::error!` directly). (2) `keyvals.rs:274` "Encountered unknown
+  KeyVals key" Info→Warn (SeenSet still dedups per (prefix,key)
+  tuple). Intentional divergences from Perl `Document.pm:1454` /
+  `KeyVals.pm:97`. Witness `1410.8171`: previously `[ok]` despite
+  S3+ rendering as essentially empty; now reports
+  `Status:conversion:2` with 54 warnings + 3 errors.
+- `fc2aae7266` — `siunitx_sty::six_format_1unit`: replace
+  `ExplodeText!(&pre_resolved)` / `ExplodeText!(&u_resolved)` with
+  `mouth::tokenize` for the `\mathrm{...}` argument. The exploded
+  form turned the resolved-presentation string `"\SIUnitSymbolMicro"`
+  into 17 OTHER tokens (literal text in math output); tokenize
+  re-parses through std catcodes producing a single CS token. Prefix
+  and unit are tokenized separately so the boundary is preserved.
+  Witness 1410.8171: `\SI{0,1}{\micro\kelvin}` rendered the literal
+  `\SIUnitSymbolMicroK` in math; now renders as `µ K`. Test fixture
+  `tests/complex/si.xml` regenerated (169→77 lines; broken
+  `<XMWrap>...<XMTok>\</XMTok><XMTok>SIUnitSymbol*</XMTok></XMWrap>`
+  triplets collapse to clean `<XMTok>` per unit).
+
+- siunitx SIX boolean keyvals: pre-register the 32 boolean options
+  Perl `siunitx.sty.ltxml:38-54` registers via the `qw(...)` loop
+  (`abbreviations`, `binary-units`, `parse-numbers`, … through
+  `prefixes-as-symbols`). Without them, `\sisetup{abbreviations}` and
+  `\SI[detect-mode]{…}{…}` invocations fall through to the keyvals
+  unknown-key path and emit "Encountered unknown KeyVals key" at
+  Warn level (effective from `21e730e71e`). 1410.8171 dropped from
+  54 to 43 warnings post-fix; the residual 43 are non-boolean SIX
+  keys siunitx initializes via `\sisetup{...}` defaults that Perl
+  also leaves unregistered (information-level under Perl, surfaced
+  here by the Warn promotion). Strict-Perl parity preserved: only
+  the booleans Perl registers are registered in Rust.
+
+**1410.8171 outcome (2026-05-10)**: standalone re-run of
+`SarkanyPRArevision.tex` against the post-fix binary now reports
+**43 warnings, 0 errors** (vs prior `54 warnings; 3 errors`).
+The three `Error:malformed:id` "Duplicated attribute xml:id"
+events are gone — the siunitx CS-preserving tokenize fix
+(`fc2aae7266`) was the root cause: the broken token streams
+`<XMTok>\</XMTok><XMTok>SIUnitSymbolMicroK</XMTok>` triplets were
+producing the conflicting xml:id slots during math-parser
+absorption. With the µK unit collapsed to a clean single
+`<XMTok>` per glyph, the id-counter clash no longer happens.
+No XMath/_xmkey generator change needed.
+
 
 Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
 99.83%** raw OK on the 100k canvas. Round-22 sprint targeted the

@@ -1996,6 +1996,31 @@ LoadDefinitions!({
   RequirePackage!("array");
 
   //======================================================================
+  // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
+  //   foreach my $key (qw(...)) { DefKeyVal('SIX', $key, '', 'true'); }
+  // Without these registrations, the keyvals lookup during `\sisetup{...}`
+  // / `\SI[opts]{...}{...}` falls through to the unknown-key path and
+  // emits "Encountered unknown KeyVals key" (Warn-level after `21e730e71e`).
+  for key in [
+    "version-1-compatibility", "abbreviations", "binary-units",
+    "free-standing-units", "overwrite-functions",
+    "bracket-numbers", "detect-family", "detect-italic", "detect-mode",
+    "detect-shape", "detect-weight", "multi-part-units", "parse-numbers",
+    "parse-units", "product-units",
+    "copy-complex-root", "copy-decimal-marker",
+    "bracket-negative-numbers",
+    "separate-uncertainty", "tight-spacing",
+    "retain-explicit-plus", "add-decimal-zero", "add-integer-zero",
+    "retain-unity-mantissa", "retain-zero-exponent",
+    "omit-uncertainty",
+    "add-arc-degree-zero", "add-arc-minute-zero", "add-arc-second-zero",
+    "angle-symbol-over-decimal",
+    "sticky-per", "prefixes-as-symbols",
+  ] {
+    DefKeyVal!("SIX", key, "", "true");
+  }
+
+  //======================================================================
   // Key symbols
   DefMath!("\\SIUnitSymbolDegree", None, "\u{00B0}",
     meaning => "arcdegree", name => "");
