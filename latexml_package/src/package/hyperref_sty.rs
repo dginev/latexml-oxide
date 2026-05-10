@@ -183,6 +183,10 @@ LoadDefinitions!({
   for key in [
     "pdfauthortitle", "pdfcaptionwriter", "pdfcopyright",
     "pdflicenseurl", "pdfmetalang",
+    // Other documented hyperref keys not in Perl's option list:
+    "pdfinfo", "pdfremotestartview", "pdfencoding",
+    "pdfescapeform", "psdextra",
+    "pdfa", "pdfua", "pdfsuffix",
   ] {
     DefKeyVal!("Hyp", key, "");
   }

@@ -46,6 +46,21 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "vrml", "Semiverbatim");
   DefKeyVal!("Gin", "magnifiable", "", "true");
 
+  // Standard graphicx keyvals not pre-registered by Perl
+  // graphicx.sty.ltxml (silent at Info-level under Perl). Rust-only
+  // divergence paired with `21e730e71e` Info→Warn promotion.
+  // Documented in graphicx.dtx; commonly used: `bb=0 0 612 792`,
+  // `hiresbb`, `natwidth`, page selection, etc.
+  for key in [
+    "bb", "bbllx", "bblly", "bburx", "bbury",
+    "natwidth", "natheight", "hiresbb",
+    "pagebox", "page", "interpolate",
+    "decodearray", "command", "quiet",
+    "draft", "final", "type", "ext", "read", "origin",
+  ] {
+    DefKeyVal!("Gin", key, "");
+  }
+
   // Perl L49-50: Redefine \includegraphics to dispatch based on bracket
   // syntax: if a second [] follows, fall back to the old graphics.sty
   // `\@includegraphics`, otherwise use the graphicx keyval-style
