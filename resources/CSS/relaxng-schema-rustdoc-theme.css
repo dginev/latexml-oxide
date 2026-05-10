@@ -40,6 +40,10 @@
   --content-op-or:      #c97a00;
   --content-op-and:     #4f7ad0;
   --content-sup:        #6b9c4d;
+  /* "Experimental Draft" right-edge ribbon — strong red (W3C-style)
+   * on a near-white backdrop reads as a clear caution flag. */
+  --banner-bg:          #c0392b;
+  --banner-fg:          #ffffff;
 
   --content-max-width: 62rem;
   --sidebar-width: 16.625rem;
@@ -79,6 +83,10 @@
   --content-op-or:      #f0b06b;
   --content-op-and:     #79bdff;
   --content-sup:        #a8d488;
+  /* Slightly muted on dark — fully-saturated red would punch through
+   * the rest of the chrome too aggressively. */
+  --banner-bg:          #a3322a;
+  --banner-fg:          #ffffff;
 }
 
 /* Ayu — warm dark palette inspired by rustdoc. Background/foreground
@@ -108,6 +116,10 @@
   --content-op-or:      #ff7733;
   --content-op-and:     #69f2df;
   --content-sup:        #b8cc52;
+  /* Ayu's signature warm-amber accent reads as caution without
+   * fighting the palette. */
+  --banner-bg:          #ff7733;
+  --banner-fg:          #0f1419;
 }
 
 /* System fallback for no-JS visitors — only kicks in when the boot
@@ -137,6 +149,8 @@
     --content-op-or:      #f0b06b;
     --content-op-and:     #79bdff;
     --content-sup:        #a8d488;
+    --banner-bg:          #a3322a;
+    --banner-fg:          #ffffff;
   }
 }
 
@@ -1209,6 +1223,53 @@ dt.schema-def:target + dd.ltx_item {
 
 @media print {
   .schema-theme-switcher { display: none; }
+}
+
+/* ---------- Experimental Draft right-edge ribbon -------------------------
+ *
+ * Themed warning banner on the right edge of every schema-doc page,
+ * vertically centered. Modelled in spirit on the W3C Editor's Draft
+ * left-edge ribbon — flags that the docs are not yet stable.
+ * Background / foreground come from `--banner-bg` / `--banner-fg`,
+ * defined per theme so the colour stays legible under Light / Dark /
+ * Ayu without flat-out shouting.
+ *
+ * `pointer-events: none` keeps the ribbon from blocking clicks on
+ * any content it overlaps; `aria-label` on the markup gives the
+ * screen-reader text. */
+aside.schema-experimental-banner {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  pointer-events: none;
+  user-select: none;
+  /* Vertical writing — top-to-bottom on the right edge so the head
+   * tilts naturally to the right to read. */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  /* Banner shape */
+  padding: 1.1rem 0.45rem;
+  background: var(--banner-bg);
+  color: var(--banner-fg);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  /* Typography */
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  /* Subtle shadow so it lifts off the page on light themes */
+  box-shadow: -1px 0 6px rgba(0, 0, 0, 0.18);
+}
+@media print {
+  aside.schema-experimental-banner { display: none; }
+}
+/* On narrow viewports the ribbon competes with the content; tuck
+ * it away below the small-screen breakpoint. */
+@media (max-width: 45rem) {
+  aside.schema-experimental-banner { display: none; }
 }
 
 /* ---------- Display preference toggles ----------------------------------

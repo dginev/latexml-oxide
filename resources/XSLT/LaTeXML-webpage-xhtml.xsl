@@ -294,6 +294,11 @@
           <xsl:if test="not($USE_HTML5)"> <!--Unneeded in html5 -->
             <xsl:attribute name="type">text/javascript</xsl:attribute>
           </xsl:if>
+          <!-- Force paired `<script ...></script>` output. HTML5 forbids
+               the self-closing form for <script>; with no children the
+               serializer would emit `<script .../>` and the browser
+               would parse everything after as script source. -->
+          <xsl:text> </xsl:text>
         </xsl:element>
       </xsl:for-each>
     </xsl:if>
@@ -394,6 +399,8 @@
             <xsl:if test="not($USE_HTML5)"> <!--Unneeded in html5 -->
               <xsl:attribute name="type">text/javascript</xsl:attribute>
             </xsl:if>
+            <!-- See note in head-javascript: force paired tags. -->
+            <xsl:text> </xsl:text>
           </xsl:element>
         </xsl:for-each>
       </xsl:if>

@@ -284,13 +284,40 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       }
     }
     let mut xslt_params = std::collections::HashMap::new();
-    if !css_files.is_empty() {
-      xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_files.join("|")));
+
+    // When `--schemadocs` is on, auto-prepend the rustdoc-styled
+    // theme assets so callers don't need to repeat them on every
+    // invocation. Idempotent: skipped if the user has already
+    // listed the same basename via `--css` / `--javascript`.
+    let prepend = |list: &[String], extra: &str| -> Vec<String> {
+      if list.iter().any(|p| {
+        std::path::Path::new(p).file_name().and_then(|s| s.to_str()) == Some(extra)
+      }) {
+        list.to_vec()
+      } else {
+        let mut out = Vec::with_capacity(list.len() + 1);
+        out.push(extra.to_string());
+        out.extend_from_slice(list);
+        out
+      }
+    };
+    let css_effective: Vec<String> = if schemadocs {
+      prepend(css_files, latexml_post::schema_docs::THEME_CSS_BASENAME)
+    } else {
+      css_files.to_vec()
+    };
+    let js_effective: Vec<String> = if schemadocs {
+      prepend(js_files, latexml_post::schema_docs::THEME_JS_BASENAME)
+    } else {
+      js_files.to_vec()
+    };
+    if !css_effective.is_empty() {
+      xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_effective.join("|")));
     }
-    if !js_files.is_empty() {
+    if !js_effective.is_empty() {
       xslt_params.insert(
         "JAVASCRIPT".to_string(),
-        format!("\"{}\"", js_files.join("|")),
+        format!("\"{}\"", js_effective.join("|")),
       );
     }
     if let Some(navtoc) = navigationtoc {

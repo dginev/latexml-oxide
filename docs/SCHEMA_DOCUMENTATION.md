@@ -66,6 +66,24 @@ Each definition card carries:
 A per-module sidebar index (kind-grouped, alphabetised) sits at the
 top of the navbar; long pages get a JS-driven filter input.
 
+A small ⚙ Settings popover at the top-right of every page lets the
+reader switch between **Light / Dark / Ayu / System** colour
+themes (rustdoc-style) and hide the sidebar. Choices persist via
+`localStorage`; a pre-paint boot script stamps `data-theme` on
+`<html>` so the right palette is on screen before first paint —
+no flash. Wiring lives in
+`resources/javascript/relaxng-schema-rustdoc-theme.js` (sister of
+the CSS theme).
+
+The cover page (`index.html`) carries an optional **Source: …**
+back-reference linking to the schema file at the exact commit the
+docs were rendered from — the orchestration shell synthesises a
+SHA-pinned `…/blob/<SHA>/<rel-path>` URL when the master `.rnc`
+lives in a git checkout, and silently no-ops otherwise. Generated
+HTML pages also footer-tag with " (oxide)" so it's clear the
+renderer is the Rust port (the upstream Perl LaTeXML emits the
+same footer without the qualifier).
+
 ## Rendering decisions
 
 These shape what the reader sees inside a card. Each is a deliberate
@@ -78,12 +96,9 @@ trade-off between fidelity to the source RNC and visual clarity.
 | `X = element a {…} \| element b {…} \| …` (Choice/Group/Interleave of named elements) | Pattern Content: alphabetised `(a \| b \| c \| …)` of `\elementref` links + sibling `\elementdef` cards (one per unique name) | Embedding `\elementdef{…}` cards inside another card's body produced orphan `(`, `\|`, `)` text fragments because LaTeXML promotes `\item` macros out of paragraphs. The link-list keeps the structure visible; per-name siblings carry the actual content. |
 | Singleton `X = element Y {B}` with leading `## doc` (which blocks the simplify shortcut) | Same as above — Pattern body links to `Y`, sibling Element card carries `B` | Without this, the empty `<dd>` under "Content:" was the most common artifact. |
 | Any other pattern body containing nested `Pattern::Element` (mixed with refs, text, etc.) | Each Element renders inline as `\elementref{NAME}`; sibling `\elementdef` extracted | Same `\item`-promotion problem applied to mixed Choices like `(text & (element a {…} \| ref \| element b {…})*)`. Inline links are safe text. |
+| Element / attribute names in the schema's primary namespace (e.g. `xhtml:div`, `m:math`, `ltx:para`) | Rendered without the prefix — `div`, `math`, `para` | Auto-detected: `Relaxng::auto_strip_primary_namespace` looks up the prefix bound to the master grammar's `default namespace = "…"` URI and registers it for elision. The prefix is contextually obvious for every name in a schema doc, so dropping it removes a constant noise term. Cross-refs continue to resolve because the strip applies uniformly to id sources (`\elementdef`) and link targets (`\elementref`). |
 | Cross-ref href (`\elementref{xhtml:foo}` → `#schema.xhtml..foo`) | Decorator-side `id="schema.xhtml..foo"` on the matching `<dt>` | LaTeXML's `\cleanhypername` rewrites `:` → `..` in fragment ids; the post-pass mirrors that substitution so the dt-id and href agree. Nested `<dt>`s (e.g. when a pattern wraps a single element) are also promoted, with a per-page `seen_ids` HashSet preventing duplicate-id collisions. |
-
-The artifact hunter at `tests/audit/hunt_artifacts.py` (and the
-companion `audit_links.py`) currently report **0 broken links and 0
-visible artifacts** across the three reference sites (mathml-core,
-scholarly-ltx, LaTeXML).
+| Multi-paragraph `## comment` block at the top of a `.rnc` (≥ 2 paragraphs separated by blank lines) | First paragraph lifts to the module's narrative aside; remaining paragraphs stay on the first patterndef as its docstring | Single-paragraph docs are per-pattern annotations (e.g. `## Combined model for inline content.` above LaTeXML.rnc's `Inline.model`); lifting them would steal the per-pattern commentary. The two-paragraph rule preserves both intents. |
 
 ## Step-by-step (what `generate-scholarly-schema-docs` runs internally)
 
@@ -106,16 +121,27 @@ trang work/master.rnc work/master.rng
 #     work/*.rng
 
 # 2. RNG → LaTeX manual.tex.
-#    --module-abstract lifts the first-patterndef doc-arg of each
-#    schemamodule into a top-level \moduleabstract so it renders as
-#    the module's narrative aside. LaTeXML namespace conventions
-#    (xml/ltx/svg/xlink/m/xhtml) are pre-registered; for non-LaTeXML
-#    schemas pass `--no-latexml-defaults` plus `--ns prefix=URI`
-#    (repeatable) so the primary namespace doesn't fall back to
-#    `namespace1:foo`.
+#    --module-abstract lifts the FIRST paragraph of the first
+#    patterndef's doc-arg of each schemamodule into a top-level
+#    \moduleabstract — but only when there's more than one paragraph.
+#    Single-paragraph docs stay on the patterndef (they're per-pattern
+#    annotations, not module narratives). The schema's primary
+#    namespace prefix (e.g. `ltx:`/`xhtml:`/`m:`) is auto-detected from
+#    the master grammar's `default namespace = "…"` URI and elided
+#    from rendered display names.
+#
+#    LaTeXML namespace conventions (xml/ltx/svg/xlink/m/xhtml) are
+#    pre-registered; for non-LaTeXML schemas pass `--no-latexml-defaults`
+#    plus `--ns prefix=URI` (repeatable) so the primary namespace
+#    doesn't fall back to `namespace1:foo`.
 genschema_oxide work/master.rng --module-abstract -o work/schema.tex
 
 # 3. Wrap in a small driver document.
+#    `\schemasource{label}{url}` (optional) renders a "Source: …"
+#    back-reference under the title that links to the schema file
+#    on its upstream host. The orchestration shell synthesises this
+#    line from `git rev-parse HEAD` + `git remote get-url origin`
+#    when the master `.rnc` is tracked, and skips it otherwise.
 cat > work/schema-doc.tex <<'TEX'
 \documentclass{article}
 \usepackage{latexml}
@@ -127,6 +153,7 @@ cat > work/schema-doc.tex <<'TEX'
 \date{\today}
 \begin{document}
 \maketitle
+\schemasource{schema/foo.rnc @ abc1234}{https://github.com/owner/repo/blob/<sha>/schema/foo.rnc}
 \tableofcontents
 \input{schema}
 \end{document}
@@ -142,6 +169,10 @@ cp resources/javascript/relaxng-schema-rustdoc-theme.js \
    output/relaxng-schema-rustdoc-theme.js
 
 # 5. TeX → split HTML5 site, with the schemadocs post-pass on each page.
+#    `--schemadocs` auto-prepends the theme `--css` and `--javascript`
+#    asset basenames into the XSLT pipeline, so the cover-page <link>
+#    and <script src> are emitted by the standard asset path. No need
+#    to repeat them on the command line.
 latexml_oxide --format=html5                  \
   --split --splitnaming=labelrelative         \
   --splitat=section                           \
@@ -150,7 +181,6 @@ latexml_oxide --format=html5                  \
   --sourcedirectory=work                      \
   --dest=output/index.html                    \
   --nodefaultresources                        \
-  --css=relaxng-schema-rustdoc-theme.css      \
   work/schema-doc.tex
 ```
 
@@ -202,8 +232,10 @@ latexml_oxide --format=html5                  \
           │  Graphics, MathML, XSLT  │  ltx XML → HTML5
           │                          │
           │  schema_docs post-pass   │  per-page string transforms:
-          │   • lift_module_narrative│   <p schema_module_narrative>
-          │                          │     → <aside …>
+          │   • lift_module_narrative│   <div class="…schema_module_
+          │                          │     narrative">…</div> + any
+          │                          │     trailing marked siblings
+          │                          │     → one <aside …>
           │   • render_content_models│   one-line operator walls
           │                          │     → multi-line block
           │   • decorate_definitions │   kind chip + permalink +
@@ -215,8 +247,19 @@ latexml_oxide --format=html5                  \
           │                          │     multiple parent patterns)
           │   • inject_sidebar_index │   per-kind list per module,
           │                          │     injected into navbar
-          │   • inject_filter_script │   sticky filter input on long
-          │                          │     pages
+          │   • inject_theme_switcher│   ⚙ Settings popover markup
+          │                          │     only (Light / Dark / Ayu /
+          │                          │     System + Hide-sidebar). NO
+          │                          │     `<script>` or `<link>`
+          │                          │     emitted from this pass —
+          │                          │     `--schemadocs` auto-prepends
+          │                          │     the theme CSS and JS into
+          │                          │     the regular --css / --javascript
+          │                          │     XSLT pipeline upstream, so
+          │                          │     the assets are injected into
+          │                          │     <head> via the same code
+          │                          │     path any other --css /
+          │                          │     --javascript file uses.
           └──────────┬───────────────┘
                      │
                      ▼
@@ -240,12 +283,22 @@ latexml_oxide --format=html5                  \
 ## Notes for callers
 
 - **Per-module narratives** come from `## comments` at the head of
-  each `.rnc` file. trang preserves them as `<a:documentation>`;
-  `genschema_oxide --module-abstract` lifts the first-patterndef
-  doc-arg of each module to `\moduleabstract{…}`; the post-pass
-  renders that as a left-bordered aside above the section heading.
+  each `.rnc` file. trang preserves them as `<a:documentation>`.
+  `genschema_oxide --module-abstract` lifts the FIRST paragraph of
+  the first patterndef's doc-arg only when the doc has ≥ 2 paragraphs
+  — single-paragraph docs are per-pattern annotations and stay on
+  the patterndef. `\moduleabstract{…}` renders as a `<ltx:para
+  class="schema_module_narrative">`; the post-pass walks the marked
+  paragraph plus any sibling marked paragraphs into one
+  `<aside class="schema_module_narrative">` above the section heading.
 - **Module preamble** (`Includes: …`, `Start symbol: …`) is emitted
   as paragraph text under the module heading.
+- **Primary-namespace elision**: `Relaxng::auto_strip_primary_namespace`
+  reads the master grammar's `<grammar ns="…">` URI, looks up its
+  prefix in the document namespace map, and registers it for elision
+  in rendered display names. So an XHTML profile renders `div`/`span`
+  rather than `xhtml:div`/`xhtml:span`, and a MathML schema renders
+  `math`/`mrow` rather than `m:math`/`m:mrow`.
 - **Stable URLs**: every definition's `<dt>` carries
   `id="schema.<cleaned-name>"` where `clean_anchor_name` rewrites
   `:` → `..` to match LaTeXML's `\cleanhypername`. With
@@ -258,3 +311,21 @@ latexml_oxide --format=html5                  \
 - **Cross-page linking** uses LaTeXML's CrossRef pass; `\elementref`
   / `\patternref` resolve to the page where the referenced def
   lives, even if the link is in a different module's page.
+- **Reader controls (in-doc Settings)**: a fixed top-right ⚙ popover
+  exposes a Theme picker (Light / Dark / Ayu / System) and a
+  "Hide sidebar" toggle; choices persist via `localStorage`. Boot
+  script in `<head>` (non-deferred) applies the saved preference
+  before paint to avoid FOUC.
+- **Cover-page source link**: when the master `.rnc` lives in a git
+  checkout, the orchestration shell injects
+  `\schemasource{<rel-path> @ <short-sha>}{<https://host/owner/repo/blob/<sha>/<path>>}`
+  after `\maketitle`. SSH remotes (`git@host:user/repo`) are
+  rewritten to HTTPS; gitlab hosts get the `/-/blob/` segment.
+  Skipped when the file isn't tracked, the repo has no `origin`,
+  or no remote is configured.
+- **Footer attribution**: the page footer (from
+  `LaTeXML-webpage-xhtml.xsl`) reads
+  `Generated by [LaTeXML wordmark] (oxide)` — the `(oxide)` tag
+  marks that the renderer is the Rust port. The qualifier is
+  emitted on **every** page latexml_oxide produces, not just
+  schema docs.

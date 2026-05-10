@@ -207,6 +207,10 @@ TEX
 
 (
   cd "$work_dir"
+  # `--schemadocs` auto-injects the theme CSS and JS basenames into
+  # the asset pipeline (XSLT then emits `<link>` / `<script src>` in
+  # `<head>`). The shell still copies the asset files into
+  # `$output_dir` above so the relative URLs resolve at runtime.
   latexml_oxide --format=html5 \
     --split --splitnaming=labelrelative --splitat=section \
     --navigationtoc=context \
@@ -214,7 +218,6 @@ TEX
     --sourcedirectory="$work_dir" \
     --dest="$output_dir/index.html" \
     --nodefaultresources \
-    --css="$css_basename" \
     schema-doc.tex
 )
 

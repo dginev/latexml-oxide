@@ -27,6 +27,20 @@ use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
+/// Filename of the rustdoc-styled theme stylesheet that ships next
+/// to each schema-doc site. Auto-prepended to `--css` when
+/// `--schemadocs` is on, so callers don't need to remember it.
+/// The orchestration shell copies the source CSS into `$output_dir`
+/// under this same basename so the relative `<link>` resolves.
+pub const THEME_CSS_BASENAME: &str = "relaxng-schema-rustdoc-theme.css";
+
+/// Filename of the runtime script (theme-boot, popover wiring,
+/// in-page filter). Auto-prepended to `--javascript` when
+/// `--schemadocs` is on. The orchestration shell copies the source
+/// JS into `$output_dir` under the same basename so the relative
+/// `<script src>` resolves.
+pub const THEME_JS_BASENAME: &str = "relaxng-schema-rustdoc-theme.js";
+
 // ---------- public API ----------------------------------------------------
 
 /// Run the schema-doc passes on a single page's HTML.
@@ -41,27 +55,30 @@ pub fn process_page(html: &str) -> String {
   let html = render_content_models(&html);
   let html = decorate_definitions(&html);
   let html = inject_sidebar_index(&html);
-  inject_theme_switcher(&html)
+  let html = inject_theme_switcher(&html);
+  inject_experimental_banner(&html)
 }
 
-/// Inject the rustdoc-styled Settings popover (Theme + Display
-/// toggles) plus a non-deferred `<script src=…>` reference to the
-/// theme runtime. The runtime — `resources/javascript/relaxng-
-/// schema-rustdoc-theme.js` — handles three things, all of which
-/// used to live as inline scripts injected from this module:
+/// Inject the rustdoc-styled Settings popover *markup* — only the
+/// HTML widget that exposes Theme (Light / Dark / Ayu / System) and
+/// the Hide-sidebar toggle. **No `<script>` element is injected from
+/// here**; the runtime
+/// (`resources/javascript/relaxng-schema-rustdoc-theme.js`) is
+/// pulled in via the standard `--javascript=…` flag of `latexml_oxide`,
+/// which the orchestration shell (`tools/generate-scholarly-schema-docs`)
+/// passes alongside `--css=…`. The XSLT then emits a non-deferred
+/// `<script src>` in `<head>` for us — same code path the CSS
+/// `<link>` uses — so `applyTheme()` runs synchronously before paint.
+///
+/// The runtime handles three pieces of behaviour, all on the
+/// pre-existing widget markup this function injects:
 ///
 /// 1. Pre-paint application of `data-theme` / `data-pref-*` from
-///    `localStorage` (the script tag sits in `<head>` without
-///    `defer`/`async` so this runs before any body parsing).
+///    `localStorage`.
 /// 2. Settings popover wiring (radios + checkboxes + click-outside +
 ///    system colour-scheme listener) on `DOMContentLoaded`.
 /// 3. The in-page schema-def filter (sticky search above long def
 ///    lists) — replaces the prior `inject_filter_script` pass.
-///
-/// The post-pass orchestration shell
-/// (`tools/generate-scholarly-schema-docs`) copies the JS file into
-/// the output directory next to the HTML pages so this relative
-/// `<script src>` reference resolves on the served site.
 ///
 /// Settings widget shape:
 ///
@@ -83,21 +100,14 @@ pub fn process_page(html: &str) -> String {
 /// jump, line numbers on examples, deprecation, keyboard shortcuts)
 /// are out of scope — they don't apply to schema docs.
 fn inject_theme_switcher(html: &str) -> String {
-  if html.contains("data-schema-theme-script") {
+  if html.contains("data-schema-theme-widget") {
     return html.to_string();
   }
-  static HEAD_END_RE: OnceLock<Regex> = OnceLock::new();
   static BODY_OPEN_RE: OnceLock<Regex> = OnceLock::new();
-  let head_end_re = HEAD_END_RE.get_or_init(|| Regex::new(r"(?i)</head>").unwrap());
   let body_open_re = BODY_OPEN_RE.get_or_init(|| Regex::new(r"(?i)<body[^>]*>").unwrap());
 
-  // Single non-deferred script reference. `applyTheme()` inside the
-  // file runs synchronously before paint (HTML parsing pauses while
-  // we fetch + execute), so the right palette is on `<html>` before
-  // any body content renders.
-  let script_tag = r##"<script data-schema-theme-script src="relaxng-schema-rustdoc-theme.js"></script>"##;
-
-  // Settings widget — markup only; behaviour wired up by the JS file.
+  // Settings widget — markup only; behaviour wired up by the JS
+  // runtime fetched via `--javascript=relaxng-schema-rustdoc-theme.js`.
   let widget = r##"<details class="schema-theme-switcher" data-schema-theme-widget>
 <summary aria-label="Settings" title="Settings"><span class="schema-gear" aria-hidden="true">⚙</span></summary>
 <div class="schema-theme-popover" role="dialog" aria-label="Settings">
@@ -116,12 +126,31 @@ fn inject_theme_switcher(html: &str) -> String {
 </div>
 </details>"##;
 
-  let with_boot = head_end_re
-    .replace(html, |_caps: &regex::Captures| format!("{}</head>", script_tag))
-    .into_owned();
   body_open_re
-    .replace(&with_boot, |caps: &regex::Captures| {
+    .replace(html, |caps: &regex::Captures| {
       format!("{}{}", caps.get(0).unwrap().as_str(), widget)
+    })
+    .into_owned()
+}
+
+/// Inject a thin "Experimental Draft" ribbon along the right edge of
+/// every schema-doc page, vertically centered. Mirrors the spirit of
+/// the "W3C Editor's Draft" banner on W3C Working Draft pages —
+/// signals that the docs are not yet a stable / canonical reference.
+/// Themed: the ribbon background uses `var(--banner-bg)` /
+/// `var(--banner-fg)` tokens (defined per palette in the theme CSS).
+/// Pure CSS positioning; `pointer-events: none` so the banner doesn't
+/// block clicks on overlapping content.
+fn inject_experimental_banner(html: &str) -> String {
+  if html.contains("data-schema-experimental-banner") {
+    return html.to_string();
+  }
+  static BODY_OPEN_RE: OnceLock<Regex> = OnceLock::new();
+  let body_open_re = BODY_OPEN_RE.get_or_init(|| Regex::new(r"(?i)<body[^>]*>").unwrap());
+  let banner = r##"<aside class="schema-experimental-banner" data-schema-experimental-banner aria-label="Experimental Draft notice">Experimental Draft</aside>"##;
+  body_open_re
+    .replace(html, |caps: &regex::Captures| {
+      format!("{}{}", caps.get(0).unwrap().as_str(), banner)
     })
     .into_owned()
 }
