@@ -180,11 +180,25 @@ if [[ ! -x "$WORKER_BIN" ]]; then
   exit 1
 fi
 
-# ─── Format dump (latex.dump.txt) — generate if missing ──────────────────────
-# Without the dump, every paper that loads expl3 (tikz, siunitx, spath3,
+# ─── Format dumps (plain.dump.txt + latex.dump.txt) — generate if missing ───
+# Without the latex dump, every paper that loads expl3 (tikz, siunitx, spath3,
 # csquotes, etc.) raw-loads the 36k-line expl3-code.tex (~25-30s/paper).
 # With the dump in place, expl3.sty's `\ifx\csname tex_let:D\endcsname\relax`
 # guard short-circuits the raw load → 1-3s/paper. ~10× canvas-wide speedup.
+# The plain dump is smaller but symmetric — needed for the `LoadFormat('plain')`
+# strict-Perl path in tex.rs (see CLAUDE.md priority #1).
+PLAIN_DUMP_PATH="$REPO_ROOT/resources/dumps/plain.dump.txt"
+if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
+  echo "Generating $PLAIN_DUMP_PATH (one-time, <1min)…"
+  (
+    cd "$REPO_ROOT"
+    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=plain.tex
+  )
+  if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
+    echo "WARNING: plain.dump.txt did not get generated."
+  fi
+fi
+
 DUMP_PATH="$REPO_ROOT/resources/dumps/latex.dump.txt"
 if [[ ! -f "$DUMP_PATH" ]]; then
   echo "Generating $DUMP_PATH (one-time, ~5min)…"
