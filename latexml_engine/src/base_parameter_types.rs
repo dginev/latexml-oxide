@@ -775,12 +775,46 @@ LoadDefinitions!({
   // content wrapped in \begin{minipage}: 3× spurious "expected:<box>"
   // where Perl is clean).
   DefParameterType!(MoveableBox, sub[_inner, _extra] {
+    // TeX's `<box>` argument scanner accepts `<filler>` prefix
+    // (TeXbook p. 270, TeX-the-program §403 `scan_filler`): spaces
+    // AND `\relax`-meaning tokens. The LaTeX kernel's robust-command
+    // convention (`\DeclareRobustCommand`) expands `\rlap{x}` to
+    // `\protect\rlap {x}`, where `\protect` is `\let` to `\relax` at
+    // typesetting time. A one-token-only read here returns
+    // `\protect`/`\relax`, predigest invokes it as a no-op, leaving
+    // the actual `\rlap ` (with space) and its argument unread — and
+    // `expected:<box>` fires spuriously.
+    //
+    // Skip leading `\relax`-equivalents (resolving `\let` chains) so
+    // the reader lands on the box-producing token. Perl
+    // `Base_ParameterTypes.pool.ltxml:327-337` doesn't yet do this —
+    // anticipates the same upcoming Perl PR class as the `mode =>`
+    // machinery work.
+    //
+    // Driver: astro-ph0004263, lsim.tex repro:
+    //   `\def\lsim{\hbox{\raise.35ex\rlap{$<$}\lower.6ex\hbox{$\sim$}\ }}`
+    // — `\rlap{$<$}` after `\raise.35ex` previously hit the
+    // `expected:<box>` cascade. pdflatex handles this cleanly.
     gullet::skip_spaces()?;
-    if let Some(xtoken) = gullet::read_x_token(None, false, None)? {
-      Tokens!(xtoken)
-    } else {
-      Tokens!()
+    let mut result: Tokens = Tokens!();
+    loop {
+      let Some(xtoken) = gullet::read_x_token(None, false, None)? else {
+        break;
+      };
+      // Treat as filler iff the token's meaning is x-equal to `\relax`
+      // (covers `\let\protect=\relax`, which `let_i` stores by copying
+      // `\relax`'s Primitive into `\protect`'s meaning slot — so
+      // `lookup_meaning(\protect)` is the Primitive, not a Stored::Token).
+      let is_filler = xtoken.get_catcode() == Catcode::CS
+        && state::x_equals(&xtoken, &T_CS!("\\relax"));
+      if is_filler {
+        gullet::skip_spaces()?;
+        continue;
+      }
+      result = Tokens!(xtoken);
+      break;
     }
+    result
   }, predigest => sub[arg] {
     let token = arg.unlist().remove(0);
     let mut stuff = stomach::invoke_token(&token)?;
