@@ -110,15 +110,36 @@ signature change). `cargo test --tests` = **1185/0/0** post-rebase.
   `<XMWrap>...<XMTok>\</XMTok><XMTok>SIUnitSymbol*</XMTok></XMWrap>`
   triplets collapse to clean `<XMTok>` per unit).
 
-- `75bab231a5` — siunitx SIX boolean keyvals: pre-register the 32
-  boolean options Perl `siunitx.sty.ltxml:38-54` registers via the
-  `qw(...)` loop. Strict-Perl parity for the boolean half.
-- `4255f5a7cd` — siunitx SIX non-boolean keyvals: pre-register 45
-  additional keys siunitx itself uses via `\sisetup{...}` defaults
-  (L2495-2540). Rust-only refinement paired with `21e730e71e` —
-  siunitx-internal initialization is not a binding gap, so Warn is
-  reserved for genuinely unknown keys (typos, version drift, real
-  package gaps).
+- **Keyval registration cluster** (paired with `21e730e71e`'s
+  Info→Warn promotion; Rust-only divergences except where noted):
+  - `75bab231a5` — siunitx 32 boolean SIX keyvals (Perl-faithful,
+    mirrors `siunitx.sty.ltxml:38-54`).
+  - `4255f5a7cd` — siunitx 45 non-boolean SIX keyvals (Rust-only,
+    silences siunitx-internal `\sisetup{...}` defaults noise).
+  - `254b4f54c9` — hyperref ~80 Hyp keyvals (mirrors the existing
+    `DeclareOption` loop). Driver: 2304.12803.
+  - `ece08d7ea5` — 5 hyperxmp Hyp keys (`pdfcopyright`, etc.).
+    Driver: tests/complex/hypertest.tex.
+  - `be595f4084` — `tabular.vattach` + 5 listings/lstlang internal
+    keys. Drivers: tests/structure/{greek,numprints}.tex,
+    tests/tikz/various_colors.tex.
+  - `d27be28dc0` — siunitx 26 rounding/table keys + 16 mathtools
+    `mt` keys + 10 xargs keys + 2 `lx@GEN` keys (`atameaning`
+    typo, `alignment-required`). Drivers: tests/complex/si.tex,
+    tests/ams/mathtools.tex, tests/digestion/xargs.tex,
+    tests/complex/physics.tex.
+  - `3a65bf6a88` — graphicx 20 Gin keys (`bb`, `hiresbb`,
+    `natwidth`, …) + 8 hyperref keys (`pdfinfo`, `pdfa`, …).
+    Drivers: 1503.00123 (`bb=...`), 1807.08711 (`pdfinfo`).
+  - `571fa4ed87` — epsfig 18 epsGin keys + caption 22 keys.
+    Drivers: 2101.10980 (`\psfig{angle=180}`),
+    2110.03647 (`\usepackage[compatibility=false]{caption}`).
+
+  Net effect: the Warn promotion now reserves "Encountered unknown
+  KeyVals key" for genuine binding gaps (typos, package gaps, version
+  drift). Internal init noise across siunitx/hyperref/graphicx/listings/
+  mathtools/xargs/caption/epsfig is silenced. Sandbox sweeps post-fix
+  (160+ random papers across years 2007-2024) found 0 residual gaps.
 
 **1410.8171 outcome (2026-05-10)**: standalone re-run of
 `SarkanyPRArevision.tex` against the post-fix binary now reports
