@@ -271,7 +271,18 @@ impl KeyVals {
             .insert((prefix.clone(), key.to_string(), all_joined.clone()))
         });
         if is_new {
-          Info!(
+          // Intentional divergence from Perl (KeyVals.pm L97 uses Info).
+          // An unknown KeyVal key in `\setkeys` (non-starred) is the
+          // package binding admitting it doesn't recognise an option
+          // the user actually requested — the key's effect (formatting,
+          // rendering options) is silently dropped. For siunitx
+          // specifically this cascades into broken `\SI{}` expansion,
+          // which leaves bare control sequences in math and produces
+          // duplicated xml:id (witness: 1410.8171). Promoted to Warn
+          // so each unique missing key surfaces as a status_code=1
+          // (`[warn]` in the canvas), and a binding gap can't ship
+          // green.
+          Warn!(
             "undefined",
             "Encountered unknown KeyVals key",
             s!(

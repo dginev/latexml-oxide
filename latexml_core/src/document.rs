@@ -2756,7 +2756,23 @@ impl Document {
         badid,
         self.document.node_to_string(&prev)
       );
-      Info!("malformed", "id", message);
+      // Intentional divergence from Perl (Document.pm L1454 uses Info).
+      // Duplicated xml:id is silent content corruption: downstream MathML
+      // cross-refs, HTML anchors, and DOM uniqueness assumptions all
+      // pick one node arbitrarily, causing observed content loss
+      // (witness: 1410.8171, where siunitx breakage cascaded into
+      // duplicated math ids and large parts of section 3+ rendered
+      // as blank/wrong). Bumped to error severity so canvas classifies
+      // the paper as a failure rather than `[ok]`.
+      //
+      // Bypass the `Error!` macro: this function returns `String`
+      // (not `Result`), so the macro's Fatal-escalation path can't
+      // typecheck here. Manually mark the report and log at error
+      // level — same effect on `get_status_code()`.
+      crate::common::error::note_status(crate::common::error::LogStatus::Error, None);
+      if !crate::common::error::is_log_output_suppressed() {
+        log::error!(target: "malformed:id", "{}", message);
+      }
       new_id
     } else {
       id.to_string()
