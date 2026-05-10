@@ -3024,20 +3024,14 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">degreeCelsius</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolCelsius}" text="degreeCelsius" xml:id="S2.T2.m3">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                 </XMath>
               </Math></td>
             <td align="left">ohm</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">ohm</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolOhm}" text="ohm" xml:id="S2.T2.m4">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="ohm" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolOhm</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="ohm" name="SIUnitSymbolOhm" role="ID">Ω</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3219,10 +3213,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">degree</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolDegree}" text="degree" xml:id="S2.T3.m2">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="degree" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolDegree</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="degree" role="ID">°</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3267,10 +3258,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">arcminute</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolArcminute}" text="arcminute" xml:id="S2.T3.m7">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="arcminute" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolArcminute</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="arcminute" role="ID">′</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3288,10 +3276,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">arcsecond</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolArcsecond}" text="arcsecond" xml:id="S2.T3.m9">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="arcsecond" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolArcsecond</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="arcsecond" role="ID">″</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3410,10 +3395,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">planckbar</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\hbar}" text="planckbar" xml:id="S2.T4.m10">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="planckbar" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">hbar</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="planckbar" name="hbar" role="ID">ℏ</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3442,10 +3424,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left" border="t"><verbatim font="typewriter">\</verbatim><text font="typewriter">angstrom</text></td>
             <td align="left" border="t"><Math mode="inline" tex="\mathrm{\SIUnitSymbolAngstrom}" text="angstrom" xml:id="S2.T5.m1">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="angstrom" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolAngstrom</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="angstrom" name="SIUnitSymbolAngstrom" role="ID">Å</XMTok>
                 </XMath>
               </Math></td>
           </tr>
@@ -3707,18 +3686,12 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <td align="left" thead="row"><verbatim font="typewriter">\</verbatim><text font="typewriter">micro</text></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro}" text="micro" xml:id="S2.T6.m25">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="micro" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicro</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="micro" name="SIUnitSymbolMicro" role="ID">µ</XMTok>
                 </XMath>
               </Math></td>
             <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro}" text="micro" xml:id="S2.T6.m26">
                 <XMath>
-                  <XMWrap class="ltx_unit" meaning="micro" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicro</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="micro" name="SIUnitSymbolMicro" role="ID">µ</XMTok>
                 </XMath>
               </Math></td>
             <td align="left" thead="row">peta</td>
@@ -3862,11 +3835,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">ug</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">ug</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicrog}" text="microgram" xml:id="S2.T7.m4">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro g}" text="microgram" xml:id="S2.T7.m4">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microgram" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicrog</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">g</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -3928,11 +3901,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">um</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">um</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicrom}" text="micrometer" xml:id="S2.T7.m11">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro m}" text="micrometer" xml:id="S2.T7.m11">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="micrometer" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicrom</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">m</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4021,11 +3994,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">us</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">us</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicros}" text="microsecond" xml:id="S2.T7.m21">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro s}" text="microsecond" xml:id="S2.T7.m21">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microsecond" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicros</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">s</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4078,11 +4051,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">umol</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">umol</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicromol}" text="micromole" xml:id="S2.T7.m27">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro mol}" text="micromole" xml:id="S2.T7.m27">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="micromole" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicromol</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">mol</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4135,11 +4108,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">uA</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">uA</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicroA}" text="microampere" xml:id="S2.T7.m33">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro A}" text="microampere" xml:id="S2.T7.m33">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microampere" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicroA</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">A</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4174,11 +4147,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left" border="t">ul</td>
             <td align="left" border="t"><verbatim font="typewriter">\</verbatim><text font="typewriter">ul</text></td>
-            <td align="left" border="t"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicrol}" text="microlitre" xml:id="S2.T7.m37">
+            <td align="left" border="t"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro l}" text="microlitre" xml:id="S2.T7.m37">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microlitre" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicrol</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">l</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4213,11 +4186,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">uL</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">uL</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicroL}" text="microliter" xml:id="S2.T7.m41">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro L}" text="microliter" xml:id="S2.T7.m41">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microliter" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicroL</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">L</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4382,8 +4355,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="milliohm" role="ID">
                     <XMTok role="UNKNOWN">m</XMTok>
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolOhm</XMTok>
+                    <XMTok name="SIUnitSymbolOhm" role="UNKNOWN">Ω</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4395,8 +4367,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="kiloohm" role="ID">
                     <XMTok role="UNKNOWN">k</XMTok>
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolOhm</XMTok>
+                    <XMTok name="SIUnitSymbolOhm" role="UNKNOWN">Ω</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4408,8 +4379,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="megaohm" role="ID">
                     <XMTok role="UNKNOWN">M</XMTok>
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolOhm</XMTok>
+                    <XMTok name="SIUnitSymbolOhm" role="UNKNOWN">Ω</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4435,11 +4405,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">uV</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">uV</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicroV}" text="microvolt" xml:id="S2.T7.m64">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro V}" text="microvolt" xml:id="S2.T7.m64">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microvolt" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicroV</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">V</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4483,11 +4453,11 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">uW</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">uW</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicroW}" text="microwatt" xml:id="S2.T7.m69">
+            <td align="left"><Math mode="inline" tex="\mathrm{\SIUnitSymbolMicro W}" text="microwatt" xml:id="S2.T7.m69">
                 <XMath>
                   <XMWrap class="ltx_unit" meaning="microwatt" role="ID">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolMicroW</XMTok>
+                    <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                    <XMTok role="UNKNOWN">W</XMTok>
                   </XMWrap>
                 </XMath>
               </Math></td>
@@ -4856,12 +4826,9 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             <XMath>
               <XMTok role="UNKNOWN">a</XMTok>
             </XMath>
-          </Math><break/><Math mode="inline" tex="\mathrm{\mabbra}" text="mabbrb" xml:id="S2.SS1.p3.m2">
+          </Math><break/><Math mode="inline" tex="\mathrm{a}" text="mabbrb" xml:id="S2.SS1.p3.m2">
             <XMath>
-              <XMWrap class="ltx_unit" meaning="mabbrb" role="ID">
-                <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                <XMTok role="UNKNOWN">mabbra</XMTok>
-              </XMWrap>
+              <XMTok class="ltx_unit" meaning="mabbrb" role="ID">a</XMTok>
             </XMath>
           </Math><break/></p>
       </para>
@@ -5846,30 +5813,30 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   <XMTok class="ltx_unit" meaning="decisecond" role="ID">ds</XMTok>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicrog}}^{2}\text{\,}\mathrm{ds}" text="power@(microgram, 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m6">
+            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicro g}}^{2}\text{\,}\mathrm{ds}" text="power@(microgram, 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m6">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS7.p1.m6.1"> </XMText>
                   <XMApp xml:id="S2.SS1.SSS7.p1.m6.2">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMWrap class="ltx_unit" meaning="microgram" role="ID">
-                      <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                      <XMTok role="UNKNOWN">SIUnitSymbolMicrog</XMTok>
+                      <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                      <XMTok role="UNKNOWN">g</XMTok>
                     </XMWrap>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
                   <XMTok class="ltx_unit" meaning="decisecond" role="ID">ds</XMTok>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicrog}}^{2}\text{\,}\mathrm{ds}" text="power@(microgram, 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m7">
+            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicro g}}^{2}\text{\,}\mathrm{ds}" text="power@(microgram, 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m7">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS7.p1.m7.1"> </XMText>
                   <XMApp xml:id="S2.SS1.SSS7.p1.m7.2">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMWrap class="ltx_unit" meaning="microgram" role="ID">
-                      <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                      <XMTok role="UNKNOWN">SIUnitSymbolMicrog</XMTok>
+                      <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                      <XMTok role="UNKNOWN">g</XMTok>
                     </XMWrap>
                     <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
                   </XMApp>
@@ -5906,15 +5873,15 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   <XMTok class="ltx_unit" meaning="decisecond" role="ID">ds</XMTok>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicrog}}^{-2}\text{\,}\mathrm{ds}" text="power@(microgram, - 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m10">
+            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicro g}}^{-2}\text{\,}\mathrm{ds}" text="power@(microgram, - 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m10">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS7.p1.m10.1"> </XMText>
                   <XMApp xml:id="S2.SS1.SSS7.p1.m10.2">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMWrap class="ltx_unit" meaning="microgram" role="ID">
-                      <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                      <XMTok role="UNKNOWN">SIUnitSymbolMicrog</XMTok>
+                      <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                      <XMTok role="UNKNOWN">g</XMTok>
                     </XMWrap>
                     <XMApp>
                       <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
@@ -5924,15 +5891,15 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   <XMTok class="ltx_unit" meaning="decisecond" role="ID">ds</XMTok>
                 </XMApp>
               </XMath>
-            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicrog}}^{-2}\text{\,}\mathrm{ds}" text="power@(microgram, - 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m11">
+            </Math><break/><Math mode="inline" tex="{\mathrm{\SIUnitSymbolMicro g}}^{-2}\text{\,}\mathrm{ds}" text="power@(microgram, - 2) * decisecond" xml:id="S2.SS1.SSS7.p1.m11">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS7.p1.m11.1"> </XMText>
                   <XMApp xml:id="S2.SS1.SSS7.p1.m11.2">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMWrap class="ltx_unit" meaning="microgram" role="ID">
-                      <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                      <XMTok role="UNKNOWN">SIUnitSymbolMicrog</XMTok>
+                      <XMTok name="SIUnitSymbolMicro" role="UNKNOWN">µ</XMTok>
+                      <XMTok role="UNKNOWN">g</XMTok>
                     </XMWrap>
                     <XMApp>
                       <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
@@ -6399,19 +6366,13 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                     <XMApp xml:id="S2.SS2.SSS5.p1.m5.1">
                       <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS5.p1.m5.2"> </XMText>
                       <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m5.4">
-                        <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                        <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                      </XMWrap>
+                      <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                     </XMApp>
                     <XMText role="PUNCT"> to </XMText>
                     <XMApp xml:id="S2.SS2.SSS5.p1.m5.5">
                       <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS5.p1.m5.6"> </XMText>
                       <XMTok meaning="4" role="NUMBER">4</XMTok>
-                      <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m5.8">
-                        <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                        <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                      </XMWrap>
+                      <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                     </XMApp>
                   </XMWrap>
                 </XMDual>
@@ -6435,10 +6396,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       <XMText role="CLOSE">)</XMText>
                     </XMWrap>
                   </XMDual>
-                  <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m6.4">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                 </XMApp>
               </XMath>
             </Math> <break/><Math mode="inline" tex="2\text{\,}\mathrm{\SIUnitSymbolCelsius}4\text{\,}\mathrm{\SIUnitSymbolCelsius}" text="range@(2 * degreeCelsius, 4 * degreeCelsius)" xml:id="S2.SS2.SSS5.p1.m7">
@@ -6453,19 +6411,13 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                     <XMApp xml:id="S2.SS2.SSS5.p1.m7.1">
                       <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS5.p1.m7.2"> </XMText>
                       <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m7.4">
-                        <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                        <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                      </XMWrap>
+                      <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                     </XMApp>
                     <XMText role="PUNCT"> to </XMText>
                     <XMApp xml:id="S2.SS2.SSS5.p1.m7.5">
                       <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS5.p1.m7.6"> </XMText>
                       <XMTok meaning="4" role="NUMBER">4</XMTok>
-                      <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m7.8">
-                        <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                        <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                      </XMWrap>
+                      <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                     </XMApp>
                   </XMWrap>
                 </XMDual>
@@ -6486,10 +6438,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       <XMTok meaning="4" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m8.4">4</XMTok>
                     </XMWrap>
                   </XMDual>
-                  <XMWrap class="ltx_unit" meaning="degreeCelsius" role="ID" xml:id="S2.SS2.SSS5.p1.m8.5">
-                    <XMTok meaning="set-minus" role="ADDOP">\</XMTok>
-                    <XMTok role="UNKNOWN">SIUnitSymbolCelsius</XMTok>
-                  </XMWrap>
+                  <XMTok class="ltx_unit" meaning="degreeCelsius" name="SIUnitSymbolCelsius" role="ID">°C</XMTok>
                 </XMApp>
               </XMath>
             </Math><break/></p>

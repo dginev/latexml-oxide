@@ -1415,13 +1415,28 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
     unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or(""),
   );
 
-  // Build presentation: \mathrm{resolved prefix + resolved unit}
+  // Build presentation: \mathrm{resolved prefix + resolved unit}.
+  //
+  // Use `mouth::tokenize` (re-parses through the std catcode table)
+  // rather than `ExplodeText!` (turns every char into an OTHER token).
+  // For a prefix like `\micro` whose `resolve_unit_presentation` returns
+  // the string "\SIUnitSymbolMicro", `ExplodeText!` would produce 17
+  // literal OTHER tokens (\, S, I, U, n, i, t, S, y, m, b, o, l, M,
+  // i, c, r, o), losing CS-ness and rendering as the literal text
+  // `\SIUnitSymbolMicro` in the math output. With `mouth::tokenize`
+  // we get a single CS token that downstream digestion can re-expand
+  // to the µ glyph. Witness: 1410.8171 used to render `\SI{0,1}{\micro
+  // \kelvin}` as the literal text `\SIUnitSymbolMicroK` in math.
+  // Prefix and unit are tokenized separately (same as pre_resolved /
+  // u_resolved are computed separately), so the prefix→unit boundary
+  // is preserved at the Token level even though both strings happen
+  // to be ASCII.
   let mut pres_inner = Vec::new();
   if let Some(pr) = &pre_resolved {
-    pres_inner.extend(ExplodeText!(pr));
+    pres_inner.extend(mouth::tokenize(pr).unlist());
   }
   if let Some(ut) = &u_resolved {
-    pres_inner.extend(ExplodeText!(ut));
+    pres_inner.extend(mouth::tokenize(ut).unlist());
   }
 
   // \lx@unit{name}{\mathrm{presentation}}
