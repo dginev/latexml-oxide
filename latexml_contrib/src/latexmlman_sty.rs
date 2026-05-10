@@ -116,4 +116,21 @@ LoadDefinitions!({
   DefMacro!("\\moduleref{}",  "\\hyperref[schema.#1]{{\\ttfamily #1}}");
   DefMacro!("\\patternref{}", "\\hyperlink{schema.#1}{{\\sffamily\\slshape #1}}");
   DefMacro!("\\elementref{}", "\\hyperlink{schema.#1}{{\\sffamily #1}}");
+
+  //--- Source-link footer for the cover page --------------------------
+  // `\schemasource{label}{url}` renders a small "Source:" line that
+  // links back to the upstream schema file. The orchestration shell
+  // (`tools/generate-scholarly-schema-docs`) invokes it with
+  // git-derived values when the schema lives in a checkout — typically
+  // a SHA-pinned GitHub/GitLab `blob/SHA/path` URL — and skips the
+  // call entirely when the schema isn't in any git repo.
+  //
+  // Emitted as a `<ltx:para class='schema_source'>` so the post-pass
+  // / theme stylesheet can style it (small, muted) without touching
+  // the document body. Uses `\href` so the link target is the URL
+  // and the label remains a friendly path/SHA fragment.
+  DefConstructor!(
+    "\\schemasource{}{}",
+    "<ltx:para class='schema_source'><ltx:text>Source: </ltx:text><ltx:ref href='#2' class='ltx_url'><ltx:text class='ltx_font_typewriter'>#1</ltx:text></ltx:ref></ltx:para>"
+  );
 });

@@ -583,6 +583,28 @@ h5.ltx_title_subsubsection { font-size: 1rem;    font-weight: 600; }
  * value. Collapse it so e.g. "ATTRIBUTE foo" sits flush above "= text". */
 .ltx_item > .ltx_para { margin: 0; }
 
+/* ------- Cover-page source-link footer ------- */
+
+/* Optional `\schemasource{label}{url}` paragraph emitted by the
+ * orchestration shell when the master `.rnc` lives in a git
+ * checkout. Reads as a muted footer beneath `\maketitle` linking
+ * back to the SHA-pinned upstream blob. */
+.ltx_para.schema_source {
+  margin: 0.4rem 0 1.2rem;
+  font-size: 0.85rem;
+  color: var(--muted-color);
+}
+.ltx_para.schema_source a {
+  color: var(--muted-color);
+  text-decoration: underline;
+  text-decoration-color: var(--soft-divider);
+  text-underline-offset: 2px;
+}
+.ltx_para.schema_source a:hover {
+  color: var(--link-color);
+  text-decoration-color: currentColor;
+}
+
 /* ------- Per-module narrative panel ------- */
 
 aside.schema_module_narrative {

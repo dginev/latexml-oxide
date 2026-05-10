@@ -159,6 +159,35 @@ fi
   genschema_oxide "${schema_base}.rng" --module-abstract -o schema.tex
 )
 
+# Optional: detect that the master `.rnc` lives in a git checkout
+# and emit a `\schemasource{label}{url}` cover-page back-reference
+# that lands the reader at the schema file on the upstream host.
+# Composes a SHA-pinned GitHub-style `blob/<SHA>/<path>` URL
+# (GitLab's `/-/blob/...` substituted for hosts whose remote URL
+# names gitlab). Silently no-ops when the schema isn't tracked
+# (or isn't in a repo at all) — the cover page just won't carry
+# the source line.
+schema_source_line=""
+if git -C "$schema_dir" rev-parse --git-dir >/dev/null 2>&1; then
+  git_root=$(git -C "$schema_dir" rev-parse --show-toplevel)
+  git_sha=$(git -C "$schema_dir" rev-parse HEAD 2>/dev/null || true)
+  git_remote=$(git -C "$schema_dir" remote get-url origin 2>/dev/null || true)
+  schema_abs=$(cd "$(dirname "$schema")" && pwd)/$(basename "$schema")
+  if git -C "$schema_dir" ls-files --error-unmatch "$schema_abs" >/dev/null 2>&1 \
+       && [[ -n "$git_remote" && -n "$git_sha" ]]; then
+    rel_path=${schema_abs#$git_root/}
+    web_url=${git_remote%.git}
+    if [[ $web_url =~ ^git@([^:]+):(.+)$ ]]; then
+      web_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+    blob_segment="blob/$git_sha"
+    [[ $web_url == *gitlab* ]] && blob_segment="-/$blob_segment"
+    src_url="$web_url/$blob_segment/$rel_path"
+    src_label="$rel_path @ ${git_sha:0:7}"
+    schema_source_line="\\schemasource{${src_label}}{${src_url}}"
+  fi
+fi
+
 cat > "$work_dir/schema-doc.tex" <<TEX
 \\documentclass{article}
 \\usepackage{latexml}
@@ -170,6 +199,7 @@ cat > "$work_dir/schema-doc.tex" <<TEX
 \\date{\\today}
 \\begin{document}
 \\maketitle
+${schema_source_line}
 \\tableofcontents
 \\input{schema}
 \\end{document}
