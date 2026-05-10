@@ -41,7 +41,103 @@ pub fn process_page(html: &str) -> String {
   let html = render_content_models(&html);
   let html = decorate_definitions(&html);
   let html = inject_sidebar_index(&html);
+  let html = inject_theme_switcher(&html);
   inject_filter_script(&html)
+}
+
+/// Inject a Settings-button theme switcher (Light / Dark / Ayu /
+/// System) modeled on rustdoc's in-doc settings menu, plus a tiny
+/// boot script in `<head>` that resolves the saved preference and
+/// sets `<html data-theme="…">` BEFORE first paint to avoid a flash
+/// of the wrong palette.
+///
+/// Pieces:
+///
+/// * Boot script (in `<head>`): reads `localStorage["schema-theme"]`
+///   (`light` | `dark` | `ayu` | `system`, default `system`),
+///   resolves `system` against `prefers-color-scheme`, sets
+///   `data-theme` on `<html>`, and remembers the *raw* preference
+///   on `data-theme-pref` so the Settings popover can pre-select
+///   the matching radio.
+/// * Floating Settings button (top-right of the page): a `<details>`
+///   element whose `<summary>` is the gear, and whose body is a
+///   fieldset of four radios. Selecting a radio writes the choice
+///   to localStorage, updates `data-theme` / `data-theme-pref`, and
+///   stays open so the user sees the change apply.
+/// * Live system reaction: a `prefers-color-scheme` matchMedia
+///   listener flips `data-theme` when in `system` mode.
+fn inject_theme_switcher(html: &str) -> String {
+  if html.contains("data-schema-theme-script") {
+    return html.to_string();
+  }
+  static HEAD_END_RE: OnceLock<Regex> = OnceLock::new();
+  static BODY_OPEN_RE: OnceLock<Regex> = OnceLock::new();
+  let head_end_re = HEAD_END_RE.get_or_init(|| Regex::new(r"(?i)</head>").unwrap());
+  let body_open_re = BODY_OPEN_RE.get_or_init(|| Regex::new(r"(?i)<body[^>]*>").unwrap());
+
+  // Boot script — minified-by-hand so it stays tiny enough to
+  // inline on every page without ballooning bytes. The `try` guards
+  // pre-paint failures (e.g. localStorage blocked) without breaking
+  // page render.
+  let boot = r##"<script data-schema-theme-script>
+(function(){try{var p=localStorage.getItem('schema-theme')||'system';var t=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-theme-pref',p);}catch(e){}})();
+</script>"##;
+
+  // Settings widget — the markup carries no inline event handlers
+  // (CSP-friendly); the wiring script below attaches `change` and
+  // `keydown` handlers after parse.
+  let widget = r##"<details class="schema-theme-switcher" data-schema-theme-widget>
+<summary aria-label="Theme settings" title="Theme settings"><span class="schema-gear" aria-hidden="true">⚙</span></summary>
+<div class="schema-theme-popover" role="dialog" aria-label="Theme settings">
+<fieldset>
+<legend>Theme</legend>
+<label><input type="radio" name="schema-theme-radio" value="light"> Light</label>
+<label><input type="radio" name="schema-theme-radio" value="dark"> Dark</label>
+<label><input type="radio" name="schema-theme-radio" value="ayu"> Ayu</label>
+<label><input type="radio" name="schema-theme-radio" value="system"> System</label>
+</fieldset>
+</div>
+</details>
+<script data-schema-theme-wire>
+(function(){
+  var root = document.documentElement;
+  var pref = root.getAttribute('data-theme-pref') || 'system';
+  var radios = document.querySelectorAll('input[name="schema-theme-radio"]');
+  for (var i = 0; i < radios.length; i++) {
+    if (radios[i].value === pref) radios[i].checked = true;
+    radios[i].addEventListener('change', function(e){
+      var v = e.target.value;
+      try { localStorage.setItem('schema-theme', v); } catch (_) {}
+      var t = v === 'system'
+        ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : v;
+      root.setAttribute('data-theme', t);
+      root.setAttribute('data-theme-pref', v);
+    });
+  }
+  if (window.matchMedia) {
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e){
+      if (root.getAttribute('data-theme-pref') === 'system') {
+        root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      }
+    });
+  }
+  // Click-outside closes the popover.
+  document.addEventListener('click', function(e){
+    var d = document.querySelector('details[data-schema-theme-widget]');
+    if (d && d.open && !d.contains(e.target)) d.removeAttribute('open');
+  });
+})();
+</script>"##;
+
+  let with_boot = head_end_re
+    .replace(html, |_caps: &regex::Captures| format!("{}</head>", boot))
+    .into_owned();
+  body_open_re
+    .replace(&with_boot, |caps: &regex::Captures| {
+      format!("{}{}", caps.get(0).unwrap().as_str(), widget)
+    })
+    .into_owned()
 }
 
 /// Inject a small inline `<script>` that, on long def-list pages,

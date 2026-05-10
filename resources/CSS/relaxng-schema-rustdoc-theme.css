@@ -1,22 +1,33 @@
-/* Scholarly schema docs — rustdoc-inspired styling, adapted to LaTeXML HTML5 */
+/* RelaxNG schema docs — rustdoc-inspired theme, adapted to LaTeXML HTML5.
+ *
+ * Three colour palettes — Light (default), Dark, Ayu — selected via the
+ * `[data-theme]` attribute on `<html>`. The boot script in
+ * `inject_theme_switcher` reads `localStorage["schema-theme"]` before
+ * paint and sets the attribute; a "system" preference falls back to
+ * `prefers-color-scheme`. CSS exposes the resolved palette via
+ * `:root[data-theme="…"]` blocks. The legacy `prefers-color-scheme`
+ * @media block kicks in only when no preference has been recorded yet
+ * (covers no-JS environments).
+ */
 
-:root {
+:root,
+:root[data-theme="light"] {
   --main-background: #ffffff;
-  --main-color: #1a1a1a;
-  --secondary-color: #6b6b6b;
-  --muted-color: #8a8a8a;
-  --link-color: #3873ad;
-  --link-hover-color: #1f4f7d;
-  --code-bg: #f5f5f5;
-  --code-color: #2a2a2a;
-  --code-fg-quiet: #555;
-  --border-color: #e0e0e0;
-  --heading-border: #d2d2d2;
-  --soft-divider: rgba(0, 0, 0, 0.06);
-  --tag-color: #6b6b6b;
-  --kicker-color: #5d6f86;
-  --highlight-bg: #fff7c2;
-  --selection-bg: #cfe2ff;
+  --main-color: #14171a;
+  --secondary-color: #4a4a4a;
+  --muted-color: #707070;
+  --link-color: #1e62a3;
+  --link-hover-color: #103d6c;
+  --code-bg: #f0f0f0;
+  --code-color: #181818;
+  --code-fg-quiet: #404040;
+  --border-color: #c8c8c8;
+  --heading-border: #aaaaaa;
+  --soft-divider: rgba(0, 0, 0, 0.10);
+  --tag-color: #4a4a4a;
+  --kicker-color: #3d5772;
+  --highlight-bg: #fff5b3;
+  --selection-bg: #b8d4f7;
 
   --content-max-width: 980px;
   --sidebar-width: 240px;
@@ -33,24 +44,69 @@
                "Liberation Mono", "DejaVu Sans Mono", monospace;
 }
 
+:root[data-theme="dark"] {
+  --main-background: #15181d;
+  --main-color: #f0f0f0;
+  --secondary-color: #c0c0c0;
+  --muted-color: #909090;
+  --link-color: #7cc4f0;
+  --link-hover-color: #b3dcfa;
+  --code-bg: #1d2026;
+  --code-color: #ededed;
+  --code-fg-quiet: #c5c5c5;
+  --border-color: #4a4e57;
+  --heading-border: #4a4e57;
+  --soft-divider: rgba(255, 255, 255, 0.10);
+  --tag-color: #b8b8b8;
+  --kicker-color: #b1c1d8;
+  --highlight-bg: #6a5520;
+  --selection-bg: #2e5a8e;
+}
+
+/* Ayu — warm dark palette inspired by rustdoc. Background/foreground
+ * sourced from rustdoc's ayu so the eye-feel matches; link / accent
+ * colours pulled from the same source for consistency with our code-
+ * highlight expectations. */
+:root[data-theme="ayu"] {
+  --main-background: #0f1419;
+  --main-color: #c5c5c5;
+  --secondary-color: #b0b0b0;
+  --muted-color: #788797;
+  --link-color: #39afd7;
+  --link-hover-color: #ffb454;
+  --code-bg: #191f26;
+  --code-color: #e6e1cf;
+  --code-fg-quiet: #a0a09a;
+  --border-color: #5c6773;
+  --heading-border: #5c6773;
+  --soft-divider: rgba(255, 255, 255, 0.05);
+  --tag-color: #9aa3ad;
+  --kicker-color: #ffb454;
+  --highlight-bg: rgba(255, 236, 164, 0.10);
+  --selection-bg: rgba(53, 132, 228, 0.35);
+}
+
+/* System fallback for no-JS visitors — only kicks in when the boot
+ * script hasn't set `data-theme` (e.g. JS disabled). Once any value
+ * is set on `<html>`, the explicit blocks above win. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --main-background: #1b1b1d;
-    --main-color: #e6e6e6;
-    --secondary-color: #a8a8a8;
-    --muted-color: #7a7a7a;
-    --link-color: #79a8d3;
-    --link-hover-color: #b9d3ed;
-    --code-bg: #2a2a2a;
-    --code-color: #e3e3e3;
-    --code-fg-quiet: #b8b8b8;
-    --border-color: #3a3a3a;
-    --heading-border: #393939;
-    --soft-divider: rgba(255, 255, 255, 0.08);
-    --tag-color: #9c9c9c;
-    --kicker-color: #97a4b8;
-    --highlight-bg: #5a4a1a;
-    --selection-bg: #2c4a6e;
+  :root:not([data-theme]) {
+    --main-background: #15181d;
+    --main-color: #f0f0f0;
+    --secondary-color: #c0c0c0;
+    --muted-color: #909090;
+    --link-color: #7cc4f0;
+    --link-hover-color: #b3dcfa;
+    --code-bg: #1d2026;
+    --code-color: #ededed;
+    --code-fg-quiet: #c5c5c5;
+    --border-color: #4a4e57;
+    --heading-border: #4a4e57;
+    --soft-divider: rgba(255, 255, 255, 0.10);
+    --tag-color: #b8b8b8;
+    --kicker-color: #b1c1d8;
+    --highlight-bg: #6a5520;
+    --selection-bg: #2e5a8e;
   }
 }
 
@@ -994,3 +1050,86 @@ dt.schema-def:target + dd.ltx_item {
   dl.ltx_description > dd.ltx_item { padding-left: 14px; }
   :root { --indent: 14px; }
 }
+
+
+/* ---------- Theme switcher (Settings widget) ----------------------------
+ *
+ * Floating top-right button that opens a small popover with four
+ * theme radios (Light / Dark / Ayu / System). Markup is a `<details>`
+ * element — open state controlled by clicking the gear summary, click-
+ * outside dismissal handled by the wiring script. */
+
+.schema-theme-switcher {
+  position: fixed;
+  top: 0.55rem;
+  right: 0.85rem;
+  z-index: 200;
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+}
+.schema-theme-switcher > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.32rem 0.55rem;
+  background: var(--code-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--main-color);
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1;
+}
+.schema-theme-switcher > summary::-webkit-details-marker { display: none; }
+.schema-theme-switcher > summary::marker { content: ""; }
+.schema-theme-switcher > summary:hover,
+.schema-theme-switcher[open] > summary {
+  background: color-mix(in srgb, var(--code-bg) 80%, var(--main-color));
+  border-color: color-mix(in srgb, var(--border-color) 50%, var(--main-color));
+}
+.schema-theme-switcher .schema-gear {
+  font-size: 1.05em;
+  line-height: 1;
+}
+.schema-theme-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  background: var(--main-background);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.85rem 0.7rem;
+  min-width: 11rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.schema-theme-popover fieldset { border: 0; padding: 0; margin: 0; }
+.schema-theme-popover legend {
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--secondary-color);
+  padding: 0;
+  margin: 0 0 0.35rem;
+}
+.schema-theme-popover label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+  cursor: pointer;
+  color: var(--main-color);
+}
+.schema-theme-popover label:hover {
+  color: var(--link-color);
+}
+.schema-theme-popover input[type="radio"] {
+  cursor: pointer;
+  accent-color: var(--link-color);
+  margin: 0;
+}
+@media print {
+  .schema-theme-switcher { display: none; }
+}
+
