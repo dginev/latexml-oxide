@@ -290,6 +290,23 @@ LoadDefinitions!({
   DefKeyVal!("XMath", "operator_omcd", "");
   DefKeyVal!("XMath", "scriptpos", "");
   DefKeyVal!("XMath", "revert_as", "");
+  // `\lxDeclare` / `\lxDefMath` semantically extract `tag` and
+  // `description` from XMath-context keyvals (Perl latexml.sty.ltxml
+  // `normalizeDeclareKeys`). Perl tolerates these as unregistered
+  // (Info-level pass-through). Register them so the post-`21e730e71e`
+  // Warn level doesn't fire on every \lxDeclare invocation. Witness:
+  // tests/math/declare.tex.
+  DefKeyVal!("XMath", "tag", "");
+  DefKeyVal!("XMath", "description", "");
+  DefKeyVal!("XMath", "term", "");
+  DefKeyVal!("XMath", "short", "");
+  DefKeyVal!("XMath", "label", "");
+  DefKeyVal!("XMath", "scope", "");
+  DefKeyVal!("XMath", "alias", "");
+  DefKeyVal!("XMath", "cd", "");
+  DefKeyVal!("XMath", "trace", "");
+  DefKeyVal!("XMath", "nowrap", "");
+  DefKeyVal!("XMath", "replace", "");
 
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
