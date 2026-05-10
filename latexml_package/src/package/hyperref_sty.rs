@@ -160,6 +160,15 @@ LoadDefinitions!({
     "pdflang",
   ] {
     DeclareOption!(option, None);
+    // Rust-only divergence (paired with `21e730e71e` Info→Warn promotion):
+    // also register each hyperref option as a Hyp keyval so `\hypersetup{
+    // colorlinks=true,citecolor=…}` doesn't trip the unknown-key Warn path.
+    // Perl `hyperref.sty.ltxml:110` only registers `baseurl`; everything
+    // else falls through `KeyVals.pm:97` at Info level (silent). Without
+    // this registration, every hyperref-using paper emits 3-10 Warn lines
+    // per `\hypersetup`. Driver: 2304.12803 (4 Hyp warnings, all the
+    // common color-link options).
+    DefKeyVal!("Hyp", option, "");
   }
 
   // \hypersetup{keyvals} configures various parameters,
