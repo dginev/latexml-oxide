@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["clean_tex","document_modules"],"struct":["Options"]};

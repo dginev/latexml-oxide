@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["lift_module_abstract","main","parse_ns_arg","resolve_schema_path"],"static":["GLOBAL"],"struct":["Cli"]};

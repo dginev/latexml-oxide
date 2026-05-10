@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Relaxng"]};
+window.SIDEBAR_ITEMS = {"enum":["CombineOp","DefCombiner","Pattern"],"mod":["scan","simplify","tex"],"struct":["Relaxng"]};

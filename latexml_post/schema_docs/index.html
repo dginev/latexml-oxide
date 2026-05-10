@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Schema-doc post-processing — visual customizations for `--splitat=section` schema documentation."><title>latexml_post::schema_docs - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (82bee9650 2026-05-09)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module schema_docs</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_post/index.html">latexml_<wbr>post</a><span class="version">0.2.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module schema_<wbr>docs</a></h2><h3><a href="#constants">Module Items</a></h3><ul class="block"><li><a href="#constants" title="Constants">Constants</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>post</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_post</a></div><h1>Module <span>schema_<wbr>docs</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_post/schema_docs.rs.html#1-863">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Schema-doc post-processing — visual customizations for <code>--splitat=section</code>
+schema documentation.</p>
+<p>Three string-level passes run against each split sub-page after the
+standard LaTeXML XSLT has produced HTML:</p>
+<ol>
+<li>
+<p><strong>Content-model rendering</strong> — pretty-print RelaxNG-style structural
+expressions (<code>A , B | C?</code>) from one-line walls into operator-leading
+multi-line layout. Replaces <code>tools/render-content-models.py</code>.</p>
+</li>
+<li>
+<p><strong>Definition-card decoration</strong> — promote <code>schema.X</code> anchor ids onto
+parent <code>&lt;dt&gt;</code> elements, wrap kind words (“Pattern” / “Element” /
+“Attribute” / “Add to”) in chip spans, and append <code>§</code> permalink
+anchors. Replaces <code>tools/decorate-definitions.py</code>.</p>
+</li>
+<li>
+<p><strong>Sidebar item index + module narrative</strong> — collect each page’s
+Pattern/Element/Attribute definitions and inject a per-module item
+index into the navbar, and prepend a curated narrative aside above
+the section heading (loaded from a TOML file). Replaces
+<code>tools/inject-module-sidebar.py</code>.</p>
+</li>
+</ol>
+<p>All three passes are idempotent: re-running on already-processed HTML
+is a no-op. The driver is <code>process_page</code>; <code>load_summaries</code> reads the
+per-module narrative TOML once.</p>
+</div></details><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.THEME_CSS_BASENAME.html" title="constant latexml_post::schema_docs::THEME_CSS_BASENAME">THEME_<wbr>CSS_<wbr>BASENAME</a></dt><dd>Filename of the rustdoc-styled theme stylesheet that ships next
+to each schema-doc site. Auto-prepended to <code>--css</code> when
+<code>--schemadocs</code> is on, so callers don’t need to remember it.
+The orchestration shell copies the source CSS into <code>$output_dir</code>
+under this same basename so the relative <code>&lt;link&gt;</code> resolves.</dd><dt><a class="constant" href="constant.THEME_JS_BASENAME.html" title="constant latexml_post::schema_docs::THEME_JS_BASENAME">THEME_<wbr>JS_<wbr>BASENAME</a></dt><dd>Filename of the runtime script (theme-boot, popover wiring,
+in-page filter). Auto-prepended to <code>--javascript</code> when
+<code>--schemadocs</code> is on. The orchestration shell copies the source
+JS into <code>$output_dir</code> under the same basename so the relative
+<code>&lt;script src&gt;</code> resolves.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.process_page.html" title="fn latexml_post::schema_docs::process_page">process_<wbr>page</a></dt><dd>Run the schema-doc passes on a single page’s HTML.</dd></dl></section></div></main></body></html>

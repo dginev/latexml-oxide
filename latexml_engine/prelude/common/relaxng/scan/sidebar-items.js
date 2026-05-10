@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ScanError"],"fn":["scan_external","scan_string"]};

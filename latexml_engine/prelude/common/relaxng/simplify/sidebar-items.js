@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["extract_start","simplify","simplify_combination","simplify_top"]};
