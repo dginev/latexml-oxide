@@ -2019,6 +2019,35 @@ LoadDefinitions!({
   ] {
     DefKeyVal!("SIX", key, "", "true");
   }
+  // Non-boolean SIX options that siunitx initializes via the
+  // `\sisetup{...}` defaults block below (L2495-L2540 in this file).
+  // Perl leaves these unregistered (Info-level pass-through under
+  // KeyVals.pm:97). Rust would otherwise emit ~30 Warn entries per
+  // siunitx-using paper after `21e730e71e`'s Info→Warn promotion —
+  // pure noise from siunitx-internal initialization, not user typos.
+  // Rust-only divergence: register the keys siunitx uses so the Warn
+  // level is reserved for genuinely unknown keys (typos, version drift).
+  for key in [
+    "input-product", "input-quotient", "input-close-uncertainty",
+    "input-complex-roots", "input-comparators", "input-decimal-markers",
+    "input-digits", "input-exponent-markers", "input-open-uncertainty",
+    "input-protect-tokens", "input-signs", "input-symbols",
+    "input-uncertainty-signs",
+    "close-bracket", "open-bracket", "complex-root-position",
+    "exponent-base", "exponent-product",
+    "group-digits", "group-minimum-digits", "group-separator",
+    "output-close-uncertainty", "output-complex-root",
+    "output-decimal-marker", "output-open-uncertainty",
+    "output-product", "output-quotient",
+    "fraction-function", "quotient-mode", "per-mode", "per-symbol",
+    "qualifier-mode", "bracket-unit-denominator",
+    "inter-unit-product", "number-unit-product", "number-angle-product",
+    "list-final-separator", "list-pair-separator", "list-separator",
+    "list-units", "range-phrase", "range-units",
+    "arc-separator", "alsoload", "color",
+  ] {
+    DefKeyVal!("SIX", key, "", "");
+  }
 
   //======================================================================
   // Key symbols
