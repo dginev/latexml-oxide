@@ -194,40 +194,50 @@ fn lift_module_abstract(tex: &str) -> String {
   //   \begin{schemamodule}{NAME}
   //   \par\noindent\textit{Includes:} …            (optional preamble)
   //   \begin{description}
-  //   \elementdef{…}{DOC}{…}  OR  \patterndef{…}{DOC}{…}
+  //   \patterndef{…}{DOC}{…}        ← only this is liftable
   //
-  // Promote the first def's DOC up to the module-section level
-  // (above the description-list opener) so it renders as a per-module
-  // narrative aside, not as part of one specific def. The def's
-  // doc-arg becomes empty.
+  // Promote the first patterndef's DOC up to the module-section
+  // level (above the description-list opener) so it renders as a
+  // per-module narrative aside, not as part of one specific pattern.
+  // The patterndef's doc-arg then becomes empty.
+  //
+  // **Why only patterndef.** A `## doc` placed *before* a define in
+  // the .rnc lands inside `<define>` (sibling of `<element>`) — that
+  // shape is what produces a `\patterndef` with a doc-arg, and the
+  // author's intent is typically a module-level narrative.
+  // A `## doc` placed *inside* `define = ## … element …` lands
+  // inside `<element>` instead, the simplify singleton-shortcut
+  // hoists the element out of the define, and `\elementdef` ends up
+  // carrying that doc. Those docs are element-specific (e.g. "The
+  // document root." on `\elementdef{document}` in LaTeXML-structure)
+  // — lifting them would silently steal the per-element commentary.
   let re = regex::Regex::new(concat!(
     r"(\\begin\{schemamodule\}\{[^}]+\}\n)",
     r"((?:\\par\\noindent[^\n]*\n)*)",
     r"(\\begin\{description\}\n)",
-    r"\\(elementdef|patterndef)\{([^}]+)\}\{([^}]*)\}\{",
+    r"\\patterndef\{([^}]+)\}\{([^}]*)\}\{",
   ))
   .expect("static regex compiles");
   re.replace_all(tex, |caps: &regex::Captures| {
     let module_head = &caps[1];
     let preamble = &caps[2];
     let desc_open = &caps[3];
-    let def_kind = &caps[4]; // "elementdef" or "patterndef"
-    let pname = &caps[5];
+    let pname = &caps[4];
     // Match Perl's `if ($doc =~ /\S/)` — promote whenever any
     // non-whitespace exists, but DON'T trim the doc itself: the
     // trailing newline emitted by `Pattern::Doc` is part of the
     // canonical schema.tex shape.
-    let doc = &caps[6];
+    let doc = &caps[5];
     let has_content = doc.chars().any(|c| !c.is_whitespace());
     if has_content {
       format!(
-        "{}{}\\moduleabstract{{{}}}\n{}\\{}{{{}}}{{}}{{",
-        module_head, preamble, doc, desc_open, def_kind, pname
+        "{}{}\\moduleabstract{{{}}}\n{}\\patterndef{{{}}}{{}}{{",
+        module_head, preamble, doc, desc_open, pname
       )
     } else {
       format!(
-        "{}{}{}\\{}{{{}}}{{}}{{",
-        module_head, preamble, desc_open, def_kind, pname
+        "{}{}{}\\patterndef{{{}}}{{}}{{",
+        module_head, preamble, desc_open, pname
       )
     }
   })
