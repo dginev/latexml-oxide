@@ -418,7 +418,26 @@ impl EmitState<'_> {
       return String::new();
     }
     self.defined_patterns.insert(cleaned_name.clone(), 1);
-    format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, docs, body)
+    // Extract any nested non-wildcard `Pattern::Element` descendants
+    // into sibling `\elementdef` cards so the inline `\elementref`
+    // links in the patterndef body resolve to a card on the same
+    // page. Skip when no descendants — most patterns have none.
+    let extras = collect_element_descendants(&spec);
+    let mut out = format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, docs, body);
+    for (el_name, el_body) in &extras {
+      let cleaned_el = clean_tex_name(el_name);
+      let (el_attr, el_content) = self.to_tex_body(el_body);
+      let mut eb = el_attr;
+      if !el_content.is_empty() {
+        eb.push_str(&format!("\\item[\\textit{{Content}}:] {}", el_content));
+      }
+      eb.push_str(&format!(
+        "\\item[\\textit{{Used by}}:] \\patternref{{{}}}",
+        cleaned_name
+      ));
+      out.push_str(&format!("\\elementdef{{{}}}{{}}{{{}}}\n", cleaned_el, eb));
+    }
+    out
   }
 
   fn to_tex_element(&mut self, qname: &str, data: &[Pattern]) -> String {
@@ -479,11 +498,23 @@ impl EmitState<'_> {
     format!("\\attrdef{{{}}}{{{}}}{{{}}}", cleaned, docs, content)
   }
 
-  /// Inline content-model rendering of an `<element><anyName/>...</element>`
-  /// (or `<nsName/>`) pattern. Returns a TeX fragment of the form
-  /// `\textit{element}~\texttt{NAME}~\{ BODY \}` — text-shaped, suitable
-  /// for embedding inside another pattern's content model.
+  /// Inline rendering of an `<element>` pattern when it sits inside
+  /// another pattern's body — produce text that won't trip LaTeXML's
+  /// `\item` promotion.
+  ///
+  /// For real-name elements (e.g. `xhtml:div`) returns just
+  /// `\elementref{xhtml:div}` — a link to the sibling `\elementdef`
+  /// card that `to_tex_def`'s extraction emits. The body itself
+  /// belongs on that card, not inlined here.
+  ///
+  /// For wildcard names (`*`, `*:*`, `prefix:*`), there is no card to
+  /// link to, so render the wildcard inline as
+  /// `\textit{element}~\texttt{NAME}~\{BODY\}` so the body's content
+  /// model is at least visible somewhere.
   fn render_inline_element(&mut self, qname: &str, data: &[Pattern]) -> String {
+    if !is_wildcard_name(qname) {
+      return format!("\\elementref{{{}}}", clean_tex_name(qname));
+    }
     let cleaned = clean_tex_name(qname);
     let (_docs, spec) = self.extract_docs(data);
     let parts: Vec<String> = spec.iter().map(|p| self.to_tex(p)).collect();
@@ -645,7 +676,27 @@ impl EmitState<'_> {
     } else {
       data
     };
-    let inner: Vec<String> = data.iter().map(|p| self.to_tex(p)).collect();
+    // Render Element / Attribute children inline (text-shape) instead
+    // of as `\elementdef` / `\attrdef` cards. The card macros expand
+    // to `\item[…]` which LaTeXML promotes out of the surrounding
+    // paragraph, leaving the Combination's `(`, `~\textbar~`, `)`
+    // tokens as orphan text fragments around an unrelated sibling
+    // list. Inline rendering keeps the whole Combination on a single
+    // text line. (For wildcard names, `to_tex_element`/`to_tex_attribute`
+    // already routes to inline.)
+    let inner: Vec<String> = data
+      .iter()
+      .map(|p| match p {
+        Pattern::Element { name, body } if !is_wildcard_name(name) => {
+          self.render_inline_element(name, body)
+        },
+        Pattern::Attribute { name, body } if !is_wildcard_name(name) => {
+          let cleaned = clean_tex_name(name);
+          self.render_inline_attribute(&cleaned, body)
+        },
+        _ => self.to_tex(p),
+      })
+      .collect();
     match op {
       CombineOp::Group => {
         if inner.len() == 1 {
@@ -745,6 +796,14 @@ impl EmitState<'_> {
         },
         Pattern::Ref { qname } if qname_ends_with_attributes(qname) => {
           attr_patterns.push(self.to_tex(&item));
+        },
+        // Direct element children — render inline (just the link)
+        // instead of `\elementdef{…}` so a pattern body like
+        // `text, element a {…}, text` doesn't end up with the card
+        // promoting itself out of the surrounding paragraph.
+        // `to_tex_def` extracts these into sibling cards.
+        Pattern::Element { name, body } if !is_wildcard_name(name) => {
+          content.push(self.render_inline_element(name, body));
         },
         _ => content.push(self.to_tex(&item)),
       }
@@ -904,6 +963,51 @@ fn strip_first_qualifier(s: &str) -> String {
     }
   }
   s.to_string()
+}
+
+/// Walk `spec` (recursively into `Combination`s but never into
+/// `Element` bodies) and collect every distinct non-wildcard
+/// `Pattern::Element { name, body }`. First occurrence per name wins
+/// — so `element a {B1} | element a {B2}` extracts as a single
+/// `xhtml:a` carrying `B1`, since the post-pass can only assign
+/// `id="schema.xhtml..a"` to one anchor anyway.
+///
+/// The collected list drives `to_tex_def`'s per-element sibling
+/// `\elementdef` extraction: pattern bodies render Elements inline as
+/// `\elementref{name}` links, and the corresponding card sits as a
+/// sibling of the patterndef so the link resolves on the same page.
+fn collect_element_descendants<'a>(
+  spec: &'a [Pattern],
+) -> Vec<(String, &'a [Pattern])> {
+  let mut out = Vec::new();
+  let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+  for p in spec {
+    walk_for_elements(p, &mut out, &mut seen);
+  }
+  out
+}
+
+fn walk_for_elements<'a>(
+  p: &'a Pattern,
+  out: &mut Vec<(String, &'a [Pattern])>,
+  seen: &mut std::collections::HashSet<String>,
+) {
+  match p {
+    Pattern::Element { name, body } => {
+      if !is_wildcard_name(name) && seen.insert(name.clone()) {
+        out.push((name.clone(), body.as_slice()));
+      }
+      // Don't recurse into Element body — that's the element's own
+      // content model, not separate elements that should become
+      // siblings of the parent pattern.
+    },
+    Pattern::Combination { body, .. } => {
+      for c in body {
+        walk_for_elements(c, out, seen);
+      }
+    },
+    _ => {},
+  }
 }
 
 /// Classify an `<attribute>` body as a "simple type" suitable for
