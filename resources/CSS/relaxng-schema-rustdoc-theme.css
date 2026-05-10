@@ -29,6 +29,18 @@
   --highlight-bg: #fff5b3;
   --selection-bg: #b8d4f7;
 
+  /* Accent colours used by the kind chips on definition headings
+   * and the operator / quantifier markers inside content models.
+   * Routed through tokens so the theme switcher controls them
+   * directly; the prior `@media (prefers-color-scheme: dark)` fall-
+   * throughs ignored explicit user choices. */
+  --chip-pattern-bg:    #3873ad;
+  --chip-element-bg:    #2a8a5f;
+  --chip-attribute-bg:  #a05a00;
+  --content-op-or:      #c97a00;
+  --content-op-and:     #4f7ad0;
+  --content-sup:        #6b9c4d;
+
   --content-max-width: 62rem;
   --sidebar-width: 16.625rem;
   --indent: 1.375rem;
@@ -61,6 +73,12 @@
   --kicker-color: #b1c1d8;
   --highlight-bg: #6a5520;
   --selection-bg: #2e5a8e;
+  --chip-pattern-bg:    #2c5279;
+  --chip-element-bg:    #1f6342;
+  --chip-attribute-bg:  #6b3d00;
+  --content-op-or:      #f0b06b;
+  --content-op-and:     #79bdff;
+  --content-sup:        #a8d488;
 }
 
 /* Ayu — warm dark palette inspired by rustdoc. Background/foreground
@@ -84,6 +102,12 @@
   --kicker-color: #ffb454;
   --highlight-bg: rgba(255, 236, 164, 0.10);
   --selection-bg: rgba(53, 132, 228, 0.35);
+  --chip-pattern-bg:    #2c5279;
+  --chip-element-bg:    #1f6342;
+  --chip-attribute-bg:  #6b3d00;
+  --content-op-or:      #ff7733;
+  --content-op-and:     #69f2df;
+  --content-sup:        #b8cc52;
 }
 
 /* System fallback for no-JS visitors — only kicks in when the boot
@@ -107,6 +131,12 @@
     --kicker-color: #b1c1d8;
     --highlight-bg: #6a5520;
     --selection-bg: #2e5a8e;
+    --chip-pattern-bg:    #2c5279;
+    --chip-element-bg:    #1f6342;
+    --chip-attribute-bg:  #6b3d00;
+    --content-op-or:      #f0b06b;
+    --content-op-and:     #79bdff;
+    --content-sup:        #a8d488;
   }
 }
 
@@ -610,20 +640,14 @@ dt.schema-def > span.ltx_tag.ltx_tag_item {
   white-space: nowrap;
   user-select: none;
 }
-.schema-kind-chip.kind-pattern        { color: #fff; background: #3873ad; }
-.schema-kind-chip.kind-element        { color: #fff; background: #2a8a5f; }
-.schema-kind-chip.kind-attribute      { color: #fff; background: #a05a00; }
+.schema-kind-chip.kind-pattern        { color: #fff; background: var(--chip-pattern-bg); }
+.schema-kind-chip.kind-element        { color: #fff; background: var(--chip-element-bg); }
+.schema-kind-chip.kind-attribute      { color: #fff; background: var(--chip-attribute-bg); }
 .schema-kind-chip.kind-pattern-add    {
   color: var(--secondary-color);
   background: var(--code-bg);
   box-shadow: inset 0 0 0 1px var(--border-color);
 }
-@media (prefers-color-scheme: dark) {
-  .schema-kind-chip.kind-pattern   { background: #2c5279; }
-  .schema-kind-chip.kind-element   { background: #1f6342; }
-  .schema-kind-chip.kind-attribute { background: #6b3d00; }
-}
-
 .schema-name {
   font-family: var(--font-code);
   font-weight: 500;
@@ -670,15 +694,25 @@ dl.ltx_description > dt.ltx_item {
  * `\item[\&=]` in `\patternadd`). The dt's inner kicker is bold-only
  * (no italic) — every other kicker on this page is bold-italic
  * ("Content:", "Used by:", "Element name", etc.) — so flow these dt
- * + dd pairs inline so the short `|=` operator sits on the same line
- * as its reference instead of wasting a vertical row. Falls back
- * gracefully on browsers without `:has()` (just keeps the default
- * block stacking). */
+ * + dd pairs inline so the operator sits next to its reference
+ * instead of wasting a vertical row.
+ *
+ * `vertical-align: top` (not baseline) keeps the `|=` anchored to
+ * the first line of the value — important for multi-line content
+ * models where baseline alignment puts the operator at the BOTTOM
+ * of a tall code block. The `padding-top` on the dt nudges the
+ * operator down to sit on the first textual line rather than the
+ * code block's outer-edge, since `code.schema-content-model` adds
+ * its own top padding.
+ *
+ * Falls back gracefully on browsers without `:has()` (just keeps
+ * the default block stacking). */
 dl.ltx_description
   > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic)) {
   display: inline-block;
   margin: 0.4rem 0.55em 0 0;
-  vertical-align: baseline;
+  padding-top: 0.45rem;
+  vertical-align: top;
 }
 dl.ltx_description
   > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
@@ -687,7 +721,7 @@ dl.ltx_description
   margin: 0.4rem 0;
   padding-left: 0;
   border-left: 0;
-  vertical-align: baseline;
+  vertical-align: top;
 }
 dl.ltx_description
   > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
@@ -805,6 +839,7 @@ dl.ltx_description dl.ltx_description > dt.ltx_item {
   text-transform: none;
   letter-spacing: 0;
   color: var(--kicker-color);
+  font-size: 0.9rem;
 }
 
 /* ------- Inline references ------- */
@@ -858,7 +893,7 @@ a.ltx_ref.ltx_font_sansserif.ltx_font_slanted:hover {
 .ltx_font_italic    { font-style: italic; }
 .ltx_font_bold      { font-weight: 600; }
 .ltx_font_upright   { font-style: normal; }
-.ltx_font_slanted   { font-style: italic; }
+.ltx_font_slanted   { font-style: oblique; font-variant: normal; }
 .ltx_font_smallcaps { font-variant-caps: small-caps; }
 .ltx_font_sansserif { font-family: var(--font-heading); }
 .ltx_font_serif     { font-family: var(--font-body); }
@@ -920,25 +955,17 @@ code.schema-content-model .op {
   margin-right: 0.05em;
   font-family: var(--font-code);
 }
-code.schema-content-model .op.op-or  { color: #c97a00; }   /* amber: choice */
-code.schema-content-model .op.op-and { color: #4f7ad0; }   /* blue:  interleave */
+code.schema-content-model .op.op-or  { color: var(--content-op-or); }   /* amber: choice */
+code.schema-content-model .op.op-and { color: var(--content-op-and); }  /* blue:  interleave */
 code.schema-content-model .op.op-seq { color: var(--muted-color); }
-
-@media (prefers-color-scheme: dark) {
-  code.schema-content-model .op.op-or  { color: #f0b06b; }
-  code.schema-content-model .op.op-and { color: #79bdff; }
-}
 
 /* Quantifier superscripts */
 code.schema-content-model sup.ltx_sup {
-  color: #6b9c4d;
+  color: var(--content-sup);
   font-weight: 600;
   font-size: 0.72em;
   vertical-align: super;
   margin-left: 0.05em;
-}
-@media (prefers-color-scheme: dark) {
-  code.schema-content-model sup.ltx_sup { color: #a8d488; }
 }
 
 /* Cross-references inside content models — drop chip styling, use a
