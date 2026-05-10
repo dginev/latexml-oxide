@@ -4481,8 +4481,20 @@ LoadDefinitions!({
       Let!("\\centering", "\\relax");
       state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\maketitle", "\\unwind@titlepage");
-      // In titlepage, abstract is simpler: direct body
-      DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>");
+      // In titlepage, abstract is simpler: direct body. The
+      // surrounding titlepage is internal_vertical, but if we leave
+      // this redefinition without an explicit mode, paragraph entry
+      // inside the abstract body pushes a horizontal frame, after
+      // which BOUND_MODE no longer ends with "vertical" — and the
+      // `$$math$$` display-math check in `TeX_Math.pool.ltxml:65`
+      // (Rust mirror at tex_math.rs:447) silently fails to recognize
+      // the second `$`, cascading to `_/^` "can only appear in math
+      // mode" errors. Driver: hep-th0009013 (abstract inside
+      // titlepage with `$$math$$` after preceding paragraph text).
+      // The standard `\abstract` env at L4408 already sets
+      // `mode => "internal_vertical"` for the same reason. Match it.
+      DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
+        mode => "internal_vertical");
       Let!("\\abstract", "\\abstract@onearg");
     },
     before_digest_end => {
