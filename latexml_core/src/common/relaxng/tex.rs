@@ -494,7 +494,7 @@ impl EmitState<'_> {
   fn to_tex_attribute(&mut self, name: &str, data: &[Pattern]) -> String {
     let cleaned = clean_tex_name(name, &self.rng.display_strip_prefixes);
     if let Some(rest) = cleaned.strip_prefix('!') {
-      return format!("\\item[\\textit{{Exluding attribute }}]\\texttt{{{}}}", rest);
+      return format!("\\item[\\textit{{Excluding attribute }}]\\texttt{{{}}}", rest);
     }
     // Same wildcard-handling rationale as `to_tex_element`: render inline
     // so the parent pattern's body doesn't pick up a nested `\attrdef`
@@ -993,9 +993,9 @@ fn strip_first_qualifier(s: &str) -> String {
 /// `\elementdef` extraction: pattern bodies render Elements inline as
 /// `\elementref{name}` links, and the corresponding card sits as a
 /// sibling of the patterndef so the link resolves on the same page.
-fn collect_element_descendants<'a>(
-  spec: &'a [Pattern],
-) -> Vec<(String, &'a [Pattern])> {
+fn collect_element_descendants(
+  spec: &[Pattern],
+) -> Vec<(String, &[Pattern])> {
   let mut out = Vec::new();
   let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
   for p in spec {

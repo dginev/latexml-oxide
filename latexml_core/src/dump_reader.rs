@@ -815,7 +815,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // treated as a glue value and stranded tokens. Driver: expl3
       // regex VM through `\__tl_analysis_a_store:`. See
       // project_expl3_regex_vm_engine.md item #2.
-      if reg.parameters.is_none() && reg.address != key.as_ref() {
+      if reg.parameters.is_none() && reg.address != key {
         let address_tok = Token {
           text: arena::pin(&reg.address),
           code: Catcode::CS,

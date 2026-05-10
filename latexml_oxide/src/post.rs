@@ -372,7 +372,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // returned so the caller can also write it to --dest in non-split mode.
   let mut main_output: Option<String> = None;
   let n = results.len();
-  for (idx, doc) in results.into_iter().enumerate() {
+  for doc in results.into_iter() {
     let dest = doc.get_destination().map(String::from);
     let t_serialize = audit_start("to_xml_string");
     let output = doc.to_xml_string();

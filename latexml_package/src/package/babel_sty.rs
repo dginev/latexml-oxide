@@ -80,9 +80,7 @@ LoadDefinitions!({
         && !s.starts_with("es-")
     };
     let pkg_last = main_kv.unwrap_or_else(|| {
-      opt_babel.split(',').map(str::trim)
-        .filter(|s| is_lang_candidate(s))
-        .next_back().unwrap_or_default().to_string()
+      opt_babel.split(',').map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
     });
     let lang = if !pkg_last.is_empty() {
       pkg_last

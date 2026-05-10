@@ -247,7 +247,7 @@ fn scan_pattern(
     "rng:data" => Ok(vec![Pattern::Data(node.get_attribute("type").unwrap_or_default())]),
     "rng:externalRef" => {
       let href = node.get_attribute("href").unwrap_or_default();
-      let paths: Vec<&Path> = ctx.search_paths.iter().copied().collect();
+      let paths: Vec<&Path> = ctx.search_paths.to_vec();
       scan_external(rng, &href, ns_ref, &paths)
     },
     "rng:grammar" => {
@@ -384,7 +384,7 @@ fn scan_grammar_item(
     "rng:div" => scan_grammar_content(rng, ns_ref, children, ctx),
     "rng:include" => {
       let href = node.get_attribute("href").unwrap_or_default();
-      let paths: Vec<&Path> = ctx.search_paths.iter().copied().collect();
+      let paths: Vec<&Path> = ctx.search_paths.to_vec();
       // Find + parse the included file.
       let path = find_file(&href, &paths)
         .ok_or_else(|| ScanError::FileNotFound(href.clone()))?;

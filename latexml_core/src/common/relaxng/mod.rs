@@ -258,14 +258,23 @@ impl Relaxng {
   /// from rendered display names. Call after scan + simplify, before
   /// `tex::document_modules`. No-op when there's no primary namespace
   /// or when its prefix is the default (empty) one.
+  ///
+  /// When two prefixes map to the same URI (rare — a schema author
+  /// could declare `xmlns:foo="…"` and `xmlns:bar="…"` to the same
+  /// namespace), the lexicographically smallest prefix wins. We sort
+  /// the candidates explicitly so the chosen prefix is identical
+  /// between builds: `document_namespaces` is a `FxHashMap`, whose
+  /// iteration order isn't a stable contract.
   pub fn auto_strip_primary_namespace(&mut self) {
     let Some(uri) = self.primary_namespace.clone() else { return; };
-    let prefix = self
+    let mut candidates: Vec<&String> = self
       .document_namespaces
       .iter()
-      .find(|(p, u)| !p.is_empty() && u.as_str() == uri.as_str())
-      .map(|(p, _)| p.clone());
-    if let Some(p) = prefix {
+      .filter(|(p, u)| !p.is_empty() && u.as_str() == uri.as_str())
+      .map(|(p, _)| p)
+      .collect();
+    candidates.sort();
+    if let Some(p) = candidates.first().map(|s| s.to_string()) {
       self.register_display_prefix_strip(p);
     }
   }
