@@ -467,9 +467,17 @@ fn decorate_definitions(html: &str) -> String {
   static DT_RE: OnceLock<Regex> = OnceLock::new();
   static ANCHOR_RE: OnceLock<Regex> = OnceLock::new();
 
+  // Match `<dt class="ltx_item">` with the kicker structure
+  // `<bold-italic>KIND <sansserif>NAME</></></dt>` at any nesting depth
+  // — top-level (e.g. `id="I1.ix3"`) and nested (e.g.
+  // `id="I1.ix3.I3.ix2"`) both qualify. Nested matches are how a
+  // pattern like `ltx.span.elem = element span {...}` exposes its
+  // inner `\elementdef{xhtml:span}` so that `\elementref{xhtml:span}`
+  // cross-refs resolve. Duplicate-id collisions across multiple
+  // nested defs of the same name are guarded below by `seen_ids`.
   let dt_re = DT_RE.get_or_init(|| {
     Regex::new(concat!(
-      r#"(?s)<dt id="(I\d+\.ix\d+)" class="ltx_item">"#,
+      r#"(?s)<dt id="([^"]+)" class="ltx_item">"#,
       r#"<span class="ltx_tag ltx_tag_item">"#,
       r#"<span class="ltx_text ltx_font_bold ltx_font_italic">"#,
       r"([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+",
@@ -503,16 +511,40 @@ fn decorate_definitions(html: &str) -> String {
   let anchors: Vec<regex::Match<'_>> = anchor_re.find_iter(html).collect();
 
   let mut rewrites: Vec<(usize, usize, String)> = Vec::new();
+  // The same xhtml:NAME often appears as a nested elementdef under
+  // several wrapping pattern defs on one page (e.g. `xhtml:div`
+  // appears 5x in scaffold.html as the body of distinct ltx.*.elem
+  // patterns). We can only assign `id="schema.xhtml..div"` to one of
+  // them; the rest stay as ordinary nested kicker rows. Pick the
+  // first occurrence — that's what LaTeXML's `\hypertarget` would
+  // also pick.
+  let mut seen_ids: HashSet<String> = HashSet::new();
+  // Skip nested attribute promotion: attribute names (`dir`, `class`,
+  // `id`, …) routinely repeat across patterns and would collide.
+  // Top-level attribute defs don't exist in this schema flavour.
+  let promotable = |kind: &str, depth: usize| -> bool {
+    if depth == 0 {
+      return true; // top-level: always (Pattern/Element/Attribute/Add to).
+    }
+    matches!(kind, "Pattern" | "Element")
+  };
 
   for (i, dt) in dts.iter().enumerate() {
     let dt_match = dt.get(0).unwrap();
     let next_pos = dts.get(i + 1).map(|n| n.get(0).unwrap().start()).unwrap_or(html.len());
-    let _old_id = &dt[1];
+    let raw_id = &dt[1];
     let kind = &dt[2];
     let name = &dt[3];
     let Some(class) = kind_class(kind) else {
       continue;
     };
+    // `I1.ix3` is depth-0 (top-level dl), `I1.ix3.I3.ix2` is depth-1
+    // (nested dl), etc. Each `.I\d+.ix\d+` pair past the first counts
+    // one level of nesting.
+    let depth = raw_id.matches(".ix").count().saturating_sub(1);
+    if !promotable(kind, depth) {
+      continue;
+    }
 
     // Derive the def's anchor id from kind + name. Doing this from
     // the heading text (rather than searching for a sibling `<a
@@ -522,11 +554,22 @@ fn decorate_definitions(html: &str) -> String {
     // so cross-page links to `#schema.X` resolve here. Patternadds
     // get a separate `schema.add.<name>` so they don't clash with
     // the canonical def's `schema.<name>`.
+    //
+    // Pass the name through `clean_anchor_name` so the id matches the
+    // hrefs that LaTeXML's `\hyperlink{\cleanhypername{schema.X}}`
+    // emits in `\elementref` / `\patternref` body text — `:` becomes
+    // `..`, otherwise xhtml:foo dt ids never resolve their cross-refs.
+    let cleaned_name = clean_anchor_name(name);
     let new_id = if kind == "Add to" {
-      format!("schema.add.{}", name)
+      format!("schema.add.{}", cleaned_name)
     } else {
-      format!("schema.{}", name)
+      format!("schema.{}", cleaned_name)
     };
+    if !seen_ids.insert(new_id.clone()) {
+      // Another dt already claimed this id on this page — leave the
+      // duplicate as a plain kicker row.
+      continue;
+    }
 
     let new_dt = format!(
       concat!(
@@ -716,9 +759,77 @@ fn pattern_suffix(name: &str) -> Option<&str> {
 
 // ---------- helpers -------------------------------------------------------
 
+/// Mirror `latexmlman.sty`'s `\cleanhypername` macro for HTML anchor
+/// ids. The macro splits on `:` and rejoins with `..` (because `:`
+/// inside a TeX `\hypertarget` argument is brittle), so a raw name
+/// like `xhtml:header` ends up in HTML hrefs as `xhtml..header`. The
+/// schema-doc decorator builds dt ids from raw names, so without this
+/// transform every `\elementref{xhtml:foo}` / `\patternref{xhtml:foo}`
+/// produced by LaTeXML lands on a non-existent `#schema.xhtml..foo`
+/// while the dt sits at `#schema.xhtml:foo`. Underscores survive as
+/// `_` in both forms; only `:` needs the substitution.
+fn clean_anchor_name(name: &str) -> String {
+  name.replace(':', "..")
+}
+
 fn html_escape(s: &str) -> String {
   s.replace('&', "&amp;")
     .replace('<', "&lt;")
     .replace('>', "&gt;")
     .replace('"', "&quot;")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn clean_anchor_name_replaces_colon_with_double_dot() {
+    assert_eq!(clean_anchor_name("xhtml:header"), "xhtml..header");
+    assert_eq!(clean_anchor_name("m:annotation-xml"), "m..annotation-xml");
+    // No colons → unchanged.
+    assert_eq!(clean_anchor_name("ltx.span.elem"), "ltx.span.elem");
+    // Multiple colons all flip.
+    assert_eq!(clean_anchor_name("a:b:c"), "a..b..c");
+    // Underscores survive — only `:` is cleaned.
+    assert_eq!(clean_anchor_name("foo_bar"), "foo_bar");
+  }
+
+  #[test]
+  fn nested_element_dt_is_promoted_to_schema_def() {
+    // Synthesise a tiny page with a nested `\elementdef{xhtml:span}`-
+    // shaped dt sitting inside a parent `\patterndef{ltx.span.elem}`-
+    // shaped dt. The post-pass should give *both* a `schema.X` id so
+    // cross-refs to either resolve.
+    let html = r##"<dl class="ltx_description">
+<dt id="I1.ix3" class="ltx_item"><span class="ltx_tag ltx_tag_item"><span class="ltx_text ltx_font_bold ltx_font_italic">Pattern <span class="ltx_text ltx_font_sansserif ltx_font_bold">ltx.span.elem</span></span></span></dt>
+<dd class="ltx_item"><dl class="ltx_description">
+<dt id="I1.ix3.I3.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_item"><span class="ltx_text ltx_font_bold ltx_font_italic">Element <span class="ltx_text ltx_font_sansserif ltx_font_upright">xhtml:span</span></span></span></dt>
+</dl></dd>
+</dl>"##;
+    let out = decorate_definitions(html);
+    assert!(
+      out.contains(r#"id="schema.ltx.span.elem""#),
+      "top-level pattern dt should get schema.ltx.span.elem:\n{}",
+      out
+    );
+    assert!(
+      out.contains(r#"id="schema.xhtml..span""#),
+      "nested element dt should be promoted with cleaned name:\n{}",
+      out
+    );
+  }
+
+  #[test]
+  fn duplicate_nested_name_keeps_only_first_id() {
+    // `xhtml:div` defined twice as nested elementdef — second occurrence
+    // must NOT claim the same id (would be invalid HTML).
+    let html = r##"<dl class="ltx_description">
+<dt id="I1.ix1.I1.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_item"><span class="ltx_text ltx_font_bold ltx_font_italic">Element <span class="ltx_text ltx_font_sansserif ltx_font_upright">xhtml:div</span></span></span></dt>
+<dt id="I1.ix2.I2.ix2" class="ltx_item"><span class="ltx_tag ltx_tag_item"><span class="ltx_text ltx_font_bold ltx_font_italic">Element <span class="ltx_text ltx_font_sansserif ltx_font_upright">xhtml:div</span></span></span></dt>
+</dl>"##;
+    let out = decorate_definitions(html);
+    let count = out.matches(r#"id="schema.xhtml..div""#).count();
+    assert_eq!(count, 1, "only the first nested dt should claim the id:\n{}", out);
+  }
 }
