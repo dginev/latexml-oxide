@@ -11,7 +11,8 @@ RESOLVED 2026-05-08 — see commits `588ad90263`, `1d21ee0d29`).
 ### Round-25 active worklist
 
 Working off the 10k_errors sandbox at `~/data/10k_errors_sandbox`.
-Latest local: `cargo test --tests` = **1139/0/0**.
+Latest local: `cargo test --tests` = **1185/0/0** (post-rebase onto
+master commit `bffd1be471`, +schema-docs + split post-processor).
 
 **Just landed** (Round-25):
 - `7edfb8eeb1` — `latexml_contrib::scicite_sty` short-circuit binding.
@@ -73,12 +74,16 @@ conversions, not crashes:
 - 1607.04981 — LyX/babel/hyperref maze, completes at ~90s
 - 1506.04659 — harvmac/epsf maze, completes after watchdog kill
 
-**Cleanup TODO** (low-priority follow-up to the @currname fix):
-- `tex_file_io.rs:213-231` save/restore around `\input` is now a
-  pure no-op (input_definitions no longer mutates \@currname on
-  handleoptions=false). Safe to delete.
-- `xy_sty.rs:33-48` save/restore around xy.tex InputDefinitions is
-  similarly redundant.
+**Cleanup landed 2026-05-08** (commit `8ac3eae2c4`, post-rebase): the
+two redundant @currname save/restore wrappers in `tex_file_io.rs` and
+`xy_sty.rs` deleted — input_definitions no longer mutates @currname on
+the handleoptions=false path, so the wrappers were pure no-ops.
+
+**Master rebase landed 2026-05-10**: branch `large-scale-testing-round-1`
+rebased onto `bffd1be471` ("feat: Schema Docs and Split post-processor
+#230"). All 12 local commits replayed cleanly — no conflicts despite
+6 overlapping files (latexml_post pipeline reorder + `process_chain`
+signature change). `cargo test --tests` = **1185/0/0** post-rebase.
 
 
 Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
