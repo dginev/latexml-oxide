@@ -134,7 +134,8 @@ TEX
 
 # 4. Stage the stylesheet so per-page <link rel=stylesheet> resolves.
 mkdir -p output
-cp resources/CSS/scholarly-schema-docs.css output/scholarly-schema-docs.css
+cp resources/CSS/relaxng-schema-rustdoc-theme.css \
+   output/relaxng-schema-rustdoc-theme.css
 
 # 5. TeX → split HTML5 site, with the schemadocs post-pass on each page.
 latexml_oxide --format=html5                  \
@@ -145,7 +146,7 @@ latexml_oxide --format=html5                  \
   --sourcedirectory=work                      \
   --dest=output/index.html                    \
   --nodefaultresources                        \
-  --css=scholarly-schema-docs.css             \
+  --css=relaxng-schema-rustdoc-theme.css      \
   work/schema-doc.tex
 ```
 
@@ -227,7 +228,7 @@ latexml_oxide --format=html5                  \
 | TeX manual.tex emission (incl. attribute grouping, wildcard inline, element-choice extraction) | `latexml_core::common::relaxng::tex` |
 | Schema-doc TeX macros (`\schemamodule`, `\elementdef`, `\patterndef`, `\moduleabstract`, …) | `latexml_contrib::latexmlman_sty` |
 | Visual post-pass (kind chips, content models, sidebar, narrative lift, anchor-id cleanup) | `latexml_post::schema_docs` |
-| CSS shipped at site | `resources/CSS/scholarly-schema-docs.css` |
+| CSS shipped at site (rustdoc-styled theme, reusable) | `resources/CSS/relaxng-schema-rustdoc-theme.css` |
 | RNG → schema.tex CLI | `latexml_oxide/bin/genschema_oxide.rs` |
 | Pipeline orchestration shell | `tools/generate-scholarly-schema-docs` |
 

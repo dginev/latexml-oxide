@@ -97,8 +97,9 @@ LoadDefinitions!({
   // head of each RNC module file (which trang preserves as
   // `<a:documentation>` annotations). Emits a paragraph carrying the
   // `schema_module_narrative` class token; CSS in
-  // `resources/CSS/scholarly-schema-docs.css` styles that class as the
-  // left-bordered narrative aside above each module's definitions.
+  // `resources/CSS/relaxng-schema-rustdoc-theme.css` styles that
+  // class as the left-bordered narrative aside above each module's
+  // definitions.
   DefConstructor!(
     "\\moduleabstract{}",
     "<ltx:p class='schema_module_narrative'>#1</ltx:p>"

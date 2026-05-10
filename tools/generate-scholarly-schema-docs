@@ -24,7 +24,7 @@ Options:
   --work DIR        Temporary working directory.
                     Default: <output>-work
   --css FILE        Stylesheet path. Default: this script's bundled
-                    `resources/CSS/scholarly-schema-docs.css`.
+                    `resources/CSS/relaxng-schema-rustdoc-theme.css`.
   --catalog FILE    OASIS XML catalog passed to trang (-C) and
                     XML_CATALOG_FILES — for schemas whose includes
                     use `urn:` prefixes that need a rewrite map (e.g.
@@ -49,7 +49,7 @@ oxide_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 schema=""
 output_dir=""
 work_dir=""
-css_file="$oxide_root/resources/CSS/scholarly-schema-docs.css"
+css_file="$oxide_root/resources/CSS/relaxng-schema-rustdoc-theme.css"
 title="Schema Reference"
 author=""
 catalog=""
