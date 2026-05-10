@@ -2756,23 +2756,22 @@ impl Document {
         badid,
         self.document.node_to_string(&prev)
       );
-      // Intentional divergence from Perl (Document.pm L1454 uses Info).
-      // Duplicated xml:id is silent content corruption: downstream MathML
-      // cross-refs, HTML anchors, and DOM uniqueness assumptions all
-      // pick one node arbitrarily, causing observed content loss
-      // (witness: 1410.8171, where siunitx breakage cascaded into
-      // duplicated math ids and large parts of section 3+ rendered
-      // as blank/wrong). Bumped to error severity so canvas classifies
-      // the paper as a failure rather than `[ok]`.
-      //
-      // Bypass the `Error!` macro: this function returns `String`
-      // (not `Result`), so the macro's Fatal-escalation path can't
-      // typecheck here. Manually mark the report and log at error
-      // level — same effect on `get_status_code()`.
-      crate::common::error::note_status(crate::common::error::LogStatus::Error, None);
-      if !crate::common::error::is_log_output_suppressed() {
-        log::error!(target: "malformed:id", "{}", message);
-      }
+      // Perl-faithful (Document.pm L1454): Info-level. The id-counter
+      // collision is the dedup-recovery path (`modify_id` appends
+      // suffix), not silent corruption. The earlier Error-level
+      // promotion was motivated by 1410.8171 (Sárkány PRA), but root-
+      // cause investigation showed the empty-S3+ rendering there was
+      // the siunitx ExplodeText! tokenization bug (fixed by
+      // fc2aae7266), not the dedup recovery. After that fix, the
+      // residual dedup events on the canvas are SHARED with Perl —
+      // the in-tree test fixture tests/math/declare.xml itself bakes
+      // in the `xml:id="S1.Ex1.m1.2a"` dedup result, confirming
+      // Perl produces the same behavior. Downstream broken XMRefs
+      // (post-dedup) emit Warn:expected:node "No node found with
+      // id=…" which already surfaces the consequence at the appro-
+      // priate severity. Math-parser hygiene fix (preventing the
+      // collision in the first place) is tracked separately.
+      Info!("malformed", "id", message);
       new_id
     } else {
       id.to_string()
