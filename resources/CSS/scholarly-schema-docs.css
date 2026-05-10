@@ -490,6 +490,13 @@ h5.ltx_title_subsubsection { font-size: 1rem;    font-weight: 600; }
 .ltx_para.ltx_noindent .ltx_p:first-child,
 .ltx_p:first-child { margin-top: 0; }
 
+/* Description-list rows ("Attributes:" / "Content:" / "= value" pairs)
+ * already have row-spacing from `dt.ltx_item` / `dd.ltx_item`; the
+ * inner `<div class="ltx_para">` LaTeXML wraps each value in adds an
+ * extra 0.85rem gap that visually disconnects the label from its
+ * value. Collapse it so e.g. "ATTRIBUTE foo" sits flush above "= text". */
+.ltx_item > .ltx_para { margin: 0; }
+
 /* ------- Per-module narrative panel ------- */
 
 aside.schema_module_narrative {
@@ -772,7 +779,6 @@ a.ltx_ref.ltx_font_sansserif.ltx_font_slanted:hover {
 
 /* Inline code-like spans */
 span.ltx_text.ltx_font_typewriter {
-  background: var(--code-bg);
   color: var(--code-color);
   padding: 0.05em 0.35em;
   border-radius: var(--radius-sm);
@@ -781,7 +787,6 @@ span.ltx_text.ltx_font_typewriter {
 /* When typewriter appears inside a heading, drop the chip */
 .ltx_title span.ltx_text.ltx_font_typewriter,
 .ltx_tag_item .ltx_font_typewriter {
-  background: transparent;
   padding: 0;
   border-radius: 0;
 }

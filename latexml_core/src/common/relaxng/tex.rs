@@ -13,6 +13,7 @@
 //! same defaults as upstream.
 
 use rustc_hash::FxHashMap as HashMap;
+use std::collections::BTreeMap;
 
 use super::{CombineOp, DefCombiner, Pattern, Relaxng};
 
@@ -374,7 +375,13 @@ impl EmitState<'_> {
       if let Some(stored) = self.rng.defs.get(qname) {
         if self.is_content(stored) && !self.is_attributes(stored) {
           let (xattr, xcontent) = self.to_tex_body(std::slice::from_ref(stored));
-          if xattr.is_empty() && !xcontent.is_empty() && xcontent != content {
+          // Suppress when the stored form differs from `content` only by
+          // the outer `(...)` wrap that `to_tex_combination(Group)` adds:
+          // for patterns like `anyElement` the def-args path renders the
+          // body unwrapped while the stored-Combination path re-wraps it,
+          // and emitting both yields a near-duplicate Expansion block.
+          let unwrapped = strip_outer_parens(&xcontent);
+          if xattr.is_empty() && !xcontent.is_empty() && xcontent != content && unwrapped != content {
             body.push_str(&format!("\\item[\\textit{{Expansion}}:] {}", xcontent));
           }
         }
@@ -394,6 +401,17 @@ impl EmitState<'_> {
     let local = qname.strip_prefix("ltx:").unwrap_or(qname);
     if self.opts.skip_xhtml && local == "xhtml:*" {
       return String::new();
+    }
+    // Wildcard element names (`*`, `*:*`, `prefix:*`) come from `<anyName/>`
+    // / `<nsName/>` in the source schema — they describe "an element of
+    // any name", not a real definable element. Render them inline as a
+    // content-model expression so they sit gracefully inside the parent
+    // pattern's body. Emitting `\elementdef{*}{...}` here would inject a
+    // nested definition card (with its own Content/Attribute rows) into
+    // the parent card, which is the rendering bug visible on patterns
+    // like `anyElement`.
+    if is_wildcard_name(qname) {
+      return self.render_inline_element(qname, data);
     }
     let cleaned = clean_tex_name(qname);
     let (docs, spec) = self.extract_docs(data);
@@ -415,6 +433,15 @@ impl EmitState<'_> {
 
   fn to_tex_attribute(&mut self, name: &str, data: &[Pattern]) -> String {
     let cleaned = clean_tex_name(name);
+    if let Some(rest) = cleaned.strip_prefix('!') {
+      return format!("\\item[\\textit{{Exluding attribute }}]\\texttt{{{}}}", rest);
+    }
+    // Same wildcard-handling rationale as `to_tex_element`: render inline
+    // so the parent pattern's body doesn't pick up a nested `\attrdef`
+    // item card for a name like `*` or `*:*`.
+    if is_wildcard_name(&cleaned) {
+      return self.render_inline_attribute(&cleaned, data);
+    }
     let (docs, spec) = self.extract_docs(data);
     let content = if spec.is_empty() {
       String::from("\\typename{text}")
@@ -425,13 +452,55 @@ impl EmitState<'_> {
         .collect::<Vec<_>>()
         .join(" ")
     };
-    if let Some(rest) = cleaned.strip_prefix('!') {
-      return format!("\\item[\\textit{{Exluding attribute }}]\\texttt{{{}}}", rest);
-    }
     format!("\\attrdef{{{}}}{{{}}}{{{}}}", cleaned, docs, content)
   }
 
+  /// Inline content-model rendering of an `<element><anyName/>...</element>`
+  /// (or `<nsName/>`) pattern. Returns a TeX fragment of the form
+  /// `\textit{element}~\texttt{NAME}~\{ BODY \}` — text-shaped, suitable
+  /// for embedding inside another pattern's content model.
+  fn render_inline_element(&mut self, qname: &str, data: &[Pattern]) -> String {
+    let cleaned = clean_tex_name(qname);
+    let (_docs, spec) = self.extract_docs(data);
+    let parts: Vec<String> = spec.iter().map(|p| self.to_tex(p)).collect();
+    let parts: Vec<String> = parts.into_iter().filter(|s| !s.is_empty()).collect();
+    if parts.is_empty() {
+      format!("\\textit{{element}}~\\texttt{{{}}}", cleaned)
+    } else {
+      format!(
+        "\\textit{{element}}~\\texttt{{{}}}~\\{{{}\\}}",
+        cleaned,
+        parts.join(", ")
+      )
+    }
+  }
+
+  /// Inline rendering of an `<attribute><anyName/>...</attribute>` (or
+  /// `<nsName/>`) pattern: `\textit{attribute}~\texttt{NAME}=CONTENT`.
+  fn render_inline_attribute(&mut self, cleaned: &str, data: &[Pattern]) -> String {
+    let (_docs, spec) = self.extract_docs(data);
+    let content = if spec.is_empty() {
+      String::from("\\typename{text}")
+    } else {
+      spec
+        .iter()
+        .map(|p| self.to_tex(p))
+        .collect::<Vec<_>>()
+        .join(" ")
+    };
+    format!("\\textit{{attribute}}~\\texttt{{{}}}={}", cleaned, content)
+  }
+
   fn to_tex_combination(&mut self, op: CombineOp, data: &[Pattern]) -> String {
+    // Collapse adjacent wildcard pairs (`*` followed by `*:*`) — they
+    // come from a single `<anyName/>` and would otherwise render twice.
+    let dedup_owned: Vec<Pattern>;
+    let data: &[Pattern] = if has_wildcard_pair(data) {
+      dedup_owned = dedupe_wildcard_pairs(data);
+      &dedup_owned
+    } else {
+      data
+    };
     let inner: Vec<String> = data.iter().map(|p| self.to_tex(p)).collect();
     match op {
       CombineOp::Group => {
@@ -490,10 +559,34 @@ impl EmitState<'_> {
     // Perl uses shift+unshift to inline-expand `*_attributes`/`*_model`
     // refs and attribute-shaped Combinations as their members are
     // encountered. A front-poppable deque mirrors that traversal.
+    // Dedupe `*`/`*:*` wildcard pairs at this layer too: the def-args
+    // path (`<define>` with a single wildcard `<element>` body) feeds
+    // them straight in without a Combination wrapper.
+    let dedup_owned: Vec<Pattern>;
+    let data: &[Pattern] = if has_wildcard_pair(data) {
+      dedup_owned = dedupe_wildcard_pairs(data);
+      &dedup_owned
+    } else {
+      data
+    };
+    // Group "trivial-body" attributes by their datatype so a long run
+    // of identical `attribute foo {text}` rows collapses into a single
+    // `Text attributes: a, b, c` line. Wildcards (`*`, `*:*`) skip the
+    // grouping path — they have no enumerable name. Attributes carrying
+    // a `Doc` annotation also skip it (we'd lose the doc otherwise).
+    // Key = the type label ("text" / "string" / …); BTreeMap gives a
+    // stable alphabetical render order across types.
+    let mut grouped: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut deque: std::collections::VecDeque<Pattern> = data.iter().cloned().collect();
     while let Some(item) = deque.pop_front() {
       match &item {
-        Pattern::Attribute { .. } => {
+        Pattern::Attribute { name, body } => {
+          if let Some(t) = simple_attr_type(body) {
+            if !is_wildcard_name(name) {
+              grouped.entry(t).or_default().push(clean_tex_name(name));
+              continue;
+            }
+          }
           attributes.push(self.to_tex(&item));
         },
         Pattern::Combination { body, .. } if self.is_attributes(&item) => {
@@ -517,6 +610,22 @@ impl EmitState<'_> {
     if !attr_patterns.is_empty() {
       attr_str.push_str("\\item[\\textit{Attributes}:] ");
       attr_str.push_str(&attr_patterns.join(", "));
+    }
+    // Grouped lines render before the per-attribute cards: the bulk
+    // overview reads first, then any non-trivial typed attributes.
+    // Each name is wrapped in `\texttt{...}` so it lands under
+    // `.ltx_font_typewriter` (var(--font-code) — SF Mono / Fira Mono
+    // / etc.) in the rendered HTML; commas stay in body type so the
+    // names visually separate.
+    for (type_name, mut names) in grouped {
+      names.sort();
+      let monospaced: Vec<String> =
+        names.iter().map(|n| format!("\\texttt{{{}}}", n)).collect();
+      attr_str.push_str(&format!(
+        "\\item[\\textit{{{}}}:] {}",
+        attr_group_label(&type_name),
+        monospaced.join(", "),
+      ));
     }
     for a in attributes {
       attr_str.push_str(&a);
@@ -653,6 +762,126 @@ fn strip_first_qualifier(s: &str) -> String {
   s.to_string()
 }
 
+/// Classify an `<attribute>` body as a "simple type" suitable for
+/// grouping in the `to_tex_body` compression line. Returns the type
+/// label (e.g. `"text"`, `"string"`, `"integer"`) when the body is one
+/// of the trivial shapes:
+///
+/// * empty (`<attribute name="foo"/>` — implicitly text-valued),
+/// * `[Pattern::Text]` (RNC `attribute foo {text}`),
+/// * `[Pattern::Data(t)]` (RNC `attribute foo {xsd:t}`).
+///
+/// A body carrying a `Doc` annotation is rejected: the per-attribute
+/// docstring would be lost in the grouped form, so those keep their
+/// individual `\attrdef` cards.
+fn simple_attr_type(body: &[Pattern]) -> Option<String> {
+  if body.iter().any(|p| matches!(p, Pattern::Doc(_))) {
+    return None;
+  }
+  match body {
+    [] => Some("text".into()),
+    [Pattern::Text] => Some("text".into()),
+    [Pattern::Data(t)] => Some(t.clone()),
+    _ => None,
+  }
+}
+
+/// Format the kicker label for a grouped-attribute line:
+/// `"text" → "Text attributes"`, `"string" → "String attributes"`,
+/// `"anyURI" → "AnyURI attributes"`. Capitalises the first character
+/// of the type name and appends ` attributes`.
+fn attr_group_label(type_name: &str) -> String {
+  let cleaned = clean_tex(type_name);
+  let mut chars = cleaned.chars();
+  match chars.next() {
+    None => "Attributes".into(),
+    Some(c) => format!(
+      "{}{} attributes",
+      c.to_uppercase().collect::<String>(),
+      chars.as_str()
+    ),
+  }
+}
+
+/// True if `name` is an `<anyName/>` / `<nsName/>` wildcard:
+/// `*` (no namespace), `*:*` (any namespace, any local) or `prefix:*`
+/// (any local within a namespace). These names come from the scanner's
+/// expansion of `<anyName/>` / `<nsName/>` in `scan_name_class` and
+/// don't denote real definable element / attribute names.
+fn is_wildcard_name(name: &str) -> bool {
+  name == "*" || name == "*:*" || name.ends_with(":*")
+}
+
+/// True if `data` contains an adjacent `*` then `*:*` Element pair
+/// (or the same shape for Attribute). Used as a cheap pre-check so the
+/// dedupe path only allocates when there's actually something to fold.
+fn has_wildcard_pair(data: &[Pattern]) -> bool {
+  data.windows(2).any(|w| is_wildcard_pair(&w[0], &w[1]))
+}
+
+fn is_wildcard_pair(a: &Pattern, b: &Pattern) -> bool {
+  match (a, b) {
+    (Pattern::Element { name: n1, .. }, Pattern::Element { name: n2, .. })
+    | (Pattern::Attribute { name: n1, .. }, Pattern::Attribute { name: n2, .. }) => {
+      n1 == "*" && n2 == "*:*"
+    },
+    _ => false,
+  }
+}
+
+/// Walk `data` and collapse each adjacent `*` / `*:*` Element- or
+/// Attribute-pair (produced by the scanner from a single `<anyName/>`)
+/// into the single `*:*` form. The pair always shares its body since
+/// `scan_pattern_element` / `scan_pattern_attribute` build both members
+/// from the same `body_proto.clone()`, so dropping the `*` half loses
+/// no information.
+fn dedupe_wildcard_pairs(data: &[Pattern]) -> Vec<Pattern> {
+  let mut out = Vec::with_capacity(data.len());
+  let mut i = 0;
+  while i < data.len() {
+    if i + 1 < data.len() && is_wildcard_pair(&data[i], &data[i + 1]) {
+      // Keep the `*:*` member (data[i+1]) — it's the broader form and
+      // reads more clearly in the rendered content model.
+      out.push(data[i + 1].clone());
+      i += 2;
+    } else {
+      out.push(data[i].clone());
+      i += 1;
+    }
+  }
+  out
+}
+
+/// If `s` is wrapped in matching outer parentheses (no other unbalanced
+/// content at top level), return the unwrapped slice; otherwise `s`.
+/// Used by the Expansion suppression in `to_tex_def` to detect when the
+/// stored-Combination form differs from the raw def-args form by only
+/// an outer `(...)` wrap.
+fn strip_outer_parens(s: &str) -> &str {
+  let bytes = s.as_bytes();
+  if bytes.first() != Some(&b'(') || bytes.last() != Some(&b')') {
+    return s;
+  }
+  // Confirm the outer `(` matches the outer `)` (no `(A)(B)` slip).
+  let mut depth = 0i32;
+  for (i, b) in bytes.iter().enumerate() {
+    match b {
+      b'(' => depth += 1,
+      b')' => {
+        depth -= 1;
+        if depth == 0 && i + 1 != bytes.len() {
+          return s;
+        }
+      },
+      _ => {},
+    }
+  }
+  if depth != 0 {
+    return s;
+  }
+  &s[1..s.len() - 1]
+}
+
 fn qname_ends_with_attributes(qname: &str) -> bool {
   // Matches the Perl regex `[^a-zA-Z]attributes$`.
   let rest = qname.strip_suffix("attributes").unwrap_or("");
@@ -786,6 +1015,172 @@ mod tests {
     assert!(out.contains("\\patternadd{X}"));
     // -1 marker recorded so the post-pass can upgrade if no \patterndef was emitted.
     assert_eq!(emit.defined_patterns.get("X").copied(), Some(-1));
+  }
+
+  #[test]
+  fn trivial_text_attributes_collapse_into_grouped_line() {
+    // A long run of `attribute foo {text}?, ...` (the MathML on-event
+    // attribute pattern) used to render as 30+ ATTRIBUTE / = text rows.
+    // Compressed form: a single `Text attributes: a, b, c` line, names
+    // sorted alphabetically.
+    let xml = r##"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <define name="OnEvent">
+          <group>
+            <optional><attribute name="onclick"><text/></attribute></optional>
+            <optional><attribute name="onabort"><text/></attribute></optional>
+            <optional><attribute name="onblur"><text/></attribute></optional>
+          </group>
+        </define>
+      </grammar>
+    "##;
+    use crate::common::relaxng::scan::scan_string;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    let wrapped = vec![Pattern::Module { name: "m".into(), body: raw }];
+    let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
+    let out = document_modules(&rng, Options::default());
+
+    assert!(
+      out.contains(
+        "\\item[\\textit{Text attributes}:] \\texttt{onabort}, \\texttt{onblur}, \\texttt{onclick}"
+      ),
+      "expected sorted Text attributes line with monospaced names, got:\n{}",
+      out
+    );
+    assert!(
+      !out.contains("\\attrdef{onclick}"),
+      "trivial text attribute should not render as a per-attribute card:\n{}",
+      out
+    );
+  }
+
+  #[test]
+  fn typed_attributes_grouped_per_type_label() {
+    // Mixed simple types: text, xsd:string, xsd:integer. Each type
+    // gets its own grouped line; non-trivial bodies stay as cards.
+    let xml = r##"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0"
+               datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+        <define name="P">
+          <group>
+            <attribute name="a"><text/></attribute>
+            <attribute name="b"><data type="string"/></attribute>
+            <attribute name="c"><data type="integer"/></attribute>
+            <attribute name="d">
+              <choice><value>x</value><value>y</value></choice>
+            </attribute>
+          </group>
+        </define>
+      </grammar>
+    "##;
+    use crate::common::relaxng::scan::scan_string;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    let wrapped = vec![Pattern::Module { name: "m".into(), body: raw }];
+    let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
+    let out = document_modules(&rng, Options::default());
+
+    assert!(out.contains("\\item[\\textit{Text attributes}:] \\texttt{a}"), "{}", out);
+    assert!(out.contains("\\item[\\textit{String attributes}:] \\texttt{b}"), "{}", out);
+    assert!(out.contains("\\item[\\textit{Integer attributes}:] \\texttt{c}"), "{}", out);
+    // The enum-bodied attribute must keep its individual card.
+    assert!(out.contains("\\attrdef{d}"), "{}", out);
+  }
+
+  #[test]
+  fn anyelement_renders_inline_without_nested_cards() {
+    // Regression: `anyElement = element (*) {(attribute * {text}|text|anyElement)*}`
+    // used to emit `\elementdef{*}{...}` and `\attrdef{*}{...}` cards
+    // nested inside the `\patterndef{anyElement}{...}` body, and the
+    // `*` / `*:*` wildcard pair from `<anyName/>` was double-rendered.
+    let xml = r##"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <define name="anyElement">
+          <element>
+            <anyName/>
+            <zeroOrMore>
+              <choice>
+                <attribute><anyName/><text/></attribute>
+                <text/>
+                <ref name="anyElement"/>
+              </choice>
+            </zeroOrMore>
+          </element>
+        </define>
+      </grammar>
+    "##;
+    use crate::common::relaxng::scan::scan_string;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    let wrapped = vec![Pattern::Module { name: "m".into(), body: raw }];
+    let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
+    let out = document_modules(&rng, Options::default());
+
+    assert!(
+      out.contains("\\patterndef{anyElement}"),
+      "expected anyElement patterndef, got:\n{}",
+      out
+    );
+    assert!(
+      !out.contains("\\elementdef{*}"),
+      "wildcard element rendered as nested elementdef card:\n{}",
+      out
+    );
+    assert!(
+      !out.contains("\\elementdef{*:*}"),
+      "wildcard element rendered as nested elementdef card:\n{}",
+      out
+    );
+    assert!(
+      !out.contains("\\attrdef{*}"),
+      "wildcard attribute rendered as nested attrdef card:\n{}",
+      out
+    );
+    assert!(
+      !out.contains("\\attrdef{*:*}"),
+      "wildcard attribute rendered as nested attrdef card:\n{}",
+      out
+    );
+    assert!(
+      out.contains("\\textit{element}~\\texttt{*:*}"),
+      "expected inline element render for wildcard:\n{}",
+      out
+    );
+    assert!(
+      out.contains("\\textit{attribute}~\\texttt{*:*}"),
+      "expected inline attribute render for wildcard:\n{}",
+      out
+    );
+    // Expansion line should be suppressed — content already shows the full body.
+    assert!(
+      !out.contains("\\textit{Expansion}"),
+      "Expansion duplicates Content for anyElement; should be suppressed:\n{}",
+      out
+    );
+  }
+
+  #[test]
+  fn dedupe_wildcard_pairs_collapses_adjacent() {
+    let body = vec![
+      Pattern::Element { name: "*".into(), body: vec![Pattern::Text] },
+      Pattern::Element { name: "*:*".into(), body: vec![Pattern::Text] },
+      Pattern::Ref { qname: "x".into() },
+    ];
+    let folded = dedupe_wildcard_pairs(&body);
+    assert_eq!(folded.len(), 2);
+    match &folded[0] {
+      Pattern::Element { name, .. } => assert_eq!(name, "*:*"),
+      other => panic!("expected Element *:*, got {:?}", other),
+    }
+  }
+
+  #[test]
+  fn strip_outer_parens_only_when_outer_match() {
+    assert_eq!(strip_outer_parens("(abc)"), "abc");
+    assert_eq!(strip_outer_parens("(a)(b)"), "(a)(b)");
+    assert_eq!(strip_outer_parens("abc"), "abc");
+    assert_eq!(strip_outer_parens("(a"), "(a");
   }
 
   #[test]
