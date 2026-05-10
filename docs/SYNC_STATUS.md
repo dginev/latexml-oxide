@@ -110,30 +110,32 @@ signature change). `cargo test --tests` = **1185/0/0** post-rebase.
   `<XMWrap>...<XMTok>\</XMTok><XMTok>SIUnitSymbol*</XMTok></XMWrap>`
   triplets collapse to clean `<XMTok>` per unit).
 
-- siunitx SIX boolean keyvals: pre-register the 32 boolean options
-  Perl `siunitx.sty.ltxml:38-54` registers via the `qw(...)` loop
-  (`abbreviations`, `binary-units`, `parse-numbers`, … through
-  `prefixes-as-symbols`). Without them, `\sisetup{abbreviations}` and
-  `\SI[detect-mode]{…}{…}` invocations fall through to the keyvals
-  unknown-key path and emit "Encountered unknown KeyVals key" at
-  Warn level (effective from `21e730e71e`). 1410.8171 dropped from
-  54 to 43 warnings post-fix; the residual 43 are non-boolean SIX
-  keys siunitx initializes via `\sisetup{...}` defaults that Perl
-  also leaves unregistered (information-level under Perl, surfaced
-  here by the Warn promotion). Strict-Perl parity preserved: only
-  the booleans Perl registers are registered in Rust.
+- `75bab231a5` — siunitx SIX boolean keyvals: pre-register the 32
+  boolean options Perl `siunitx.sty.ltxml:38-54` registers via the
+  `qw(...)` loop. Strict-Perl parity for the boolean half.
+- `4255f5a7cd` — siunitx SIX non-boolean keyvals: pre-register 45
+  additional keys siunitx itself uses via `\sisetup{...}` defaults
+  (L2495-2540). Rust-only refinement paired with `21e730e71e` —
+  siunitx-internal initialization is not a binding gap, so Warn is
+  reserved for genuinely unknown keys (typos, version drift, real
+  package gaps).
 
 **1410.8171 outcome (2026-05-10)**: standalone re-run of
 `SarkanyPRArevision.tex` against the post-fix binary now reports
-**43 warnings, 0 errors** (vs prior `54 warnings; 3 errors`).
-The three `Error:malformed:id` "Duplicated attribute xml:id"
-events are gone — the siunitx CS-preserving tokenize fix
-(`fc2aae7266`) was the root cause: the broken token streams
-`<XMTok>\</XMTok><XMTok>SIUnitSymbolMicroK</XMTok>` triplets were
-producing the conflicting xml:id slots during math-parser
-absorption. With the µK unit collapsed to a clean single
-`<XMTok>` per glyph, the id-counter clash no longer happens.
-No XMath/_xmkey generator change needed.
+`Conversion complete: No obvious problems` — **0 warnings, 0 errors**
+(vs prior `54 warnings; 3 errors`). Three independent fixes
+combined:
+1. `fc2aae7266` — siunitx CS-preserving tokenize: collapses µK into
+   a clean single `<XMTok>` per glyph. Eliminated the 3
+   `Error:malformed:id` "Duplicated attribute xml:id" events as a
+   side-effect (broken `<XMTok>\</XMTok><XMTok>SIUnitSymbolMicroK
+   </XMTok>` triplets were producing the conflicting xml:id slots
+   during math-parser absorption; with clean tokenization the
+   id-counter clash is impossible).
+2. `75bab231a5` — Perl-faithful boolean DefKeyVals: silenced 11
+   warnings.
+3. `4255f5a7cd` — Rust-only non-bool DefKeyVals: silenced the
+   remaining 32 warnings. No XMath/_xmkey generator change needed.
 
 
 Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
