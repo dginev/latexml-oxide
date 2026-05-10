@@ -342,6 +342,30 @@ impl EmitState<'_> {
     }
     let cleaned_name = clean_tex(&stripped);
     let (docs, spec) = self.extract_docs(data);
+
+    // Compact rendering for `X = element a {B} | element b {B} | …`
+    // shapes, where every alternative is a same-bodied element. The
+    // generic path emits one `\elementdef` card per branch wrapped in
+    // `(... ~\textbar~ ...)`; that produces orphan `(`, `|`, `)` text
+    // around the cards once LaTeXML promotes each `\item` into a
+    // sibling list. The compact form lists the names monospaced and
+    // shows the shared body once.
+    if combiner.is_empty() {
+      if let Some((op, elements)) = self.detect_element_choice(&spec) {
+        let (pattern_body, element_defs) =
+          self.render_element_choice(qname, &cleaned_name, op, &elements);
+        if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
+          return String::new();
+        }
+        self.defined_patterns.insert(cleaned_name.clone(), 1);
+        let mut out = format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, docs, pattern_body);
+        for ed in element_defs {
+          out.push_str(&ed);
+        }
+        return out;
+      }
+    }
+
     let (attr, content) = self.to_tex_body(&spec);
 
     if !combiner.is_empty() {
@@ -473,6 +497,126 @@ impl EmitState<'_> {
         parts.join(", ")
       )
     }
+  }
+
+  /// Detect a pattern body that's "purely a list of element
+  /// definitions" — either a bare singleton (`pattern X = element Y {…}`
+  /// with a leading `## doc` that blocks the simplify shortcut) or a
+  /// Choice/Group/Interleave of N non-wildcard elements
+  /// (`X = element a {…} | element b {…} | …`). Both shapes
+  /// mishandle in the generic path: nested `\elementdef` macros
+  /// render as cards inside the patterndef body, jumping out of
+  /// their `\item` and leaving empty `<dd>`s or orphan `(... | ...)`
+  /// punctuation. `to_tex_def` swaps them for an alphabetised
+  /// `\elementref` Choice expression in the patterndef body plus
+  /// sibling `\elementdef` cards (one per unique name).
+  fn detect_element_choice<'a>(
+    &self,
+    spec: &'a [Pattern],
+  ) -> Option<(CombineOp, Vec<(String, &'a [Pattern])>)> {
+    if spec.len() != 1 {
+      return None;
+    }
+    // Bare singleton: `spec = [Element]`. Treat as a 1-element Choice
+    // (op doesn't matter — the renderer never inserts a separator for
+    // a single name).
+    if let Pattern::Element { name, body } = &spec[0] {
+      if is_wildcard_name(name) {
+        return None;
+      }
+      return Some((CombineOp::Choice, vec![(name.clone(), body.as_slice())]));
+    }
+    let Pattern::Combination { op, body } = &spec[0] else {
+      return None;
+    };
+    if !matches!(op, CombineOp::Choice | CombineOp::Group | CombineOp::Interleave) {
+      return None;
+    }
+    if body.is_empty() {
+      return None;
+    }
+    let mut elements: Vec<(String, &'a [Pattern])> = Vec::with_capacity(body.len());
+    for child in body {
+      let Pattern::Element { name, body: el_body } = child else {
+        return None;
+      };
+      if is_wildcard_name(name) {
+        return None;
+      }
+      elements.push((name.clone(), el_body.as_slice()));
+    }
+    Some((*op, elements))
+  }
+
+  /// Render `detect_element_choice` output. Returns:
+  ///
+  /// * the patterndef body — a single `Content` line whose value is
+  ///   an alphabetised expression `(name1 | name2 | …)` of
+  ///   `\elementref` links to the sibling cards. The post-pass's
+  ///   `render_content_models` then pretty-prints it with operator-
+  ///   leading layout. Plus the regular Used-by line.
+  /// * a list of `\elementdef{name}{}{…}` strings — one per unique
+  ///   element name (deduped, source-order kept). Each carries its
+  ///   own body (so distinct-bodied variants of the same name keep
+  ///   their first-seen body), plus a Used-by line citing the parent
+  ///   pattern.
+  fn render_element_choice(
+    &mut self,
+    qname: &str,
+    parent_clean: &str,
+    op: CombineOp,
+    elements: &[(String, &[Pattern])],
+  ) -> (String, Vec<String>) {
+    // Pattern body: one Choice/Group/Interleave expression of
+    // alphabetised \elementref links. Use the op-appropriate join
+    // string so the post-pass tokenizer sees the same operator
+    // tokens it does for any other content-model expression.
+    let mut sorted_names: Vec<String> = elements.iter().map(|(n, _)| n.clone()).collect();
+    sorted_names.sort();
+    sorted_names.dedup();
+    let names_tex: Vec<String> = sorted_names
+      .iter()
+      .map(|n| format!("\\elementref{{{}}}", clean_tex_name(n)))
+      .collect();
+    let sep = match op {
+      CombineOp::Choice => " ~\\textbar~ ",
+      CombineOp::Interleave => " ~\\&~ ",
+      CombineOp::Group => ", ",
+      _ => " ~\\textbar~ ",
+    };
+    let content = if names_tex.len() == 1 {
+      names_tex[0].clone()
+    } else {
+      format!("({})", names_tex.join(sep))
+    };
+    let mut body = format!("\\item[\\textit{{Content}}:] {}", content);
+    if let Some(uses) = self.symbol_uses(qname) {
+      body.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
+    }
+
+    // Sibling \elementdef cards. Dedupe by name (first occurrence
+    // wins): two `element a {B1} | element a {B2}` branches collapse
+    // to a single `xhtml:a` card carrying B1, since the post-pass
+    // can only assign `id="schema.xhtml..a"` to one anchor anyway.
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut element_defs: Vec<String> = Vec::new();
+    for (name, el_body) in elements {
+      if !seen.insert(name.clone()) {
+        continue;
+      }
+      let cleaned = clean_tex_name(name);
+      let (el_attr, el_content) = self.to_tex_body(el_body);
+      let mut eb = el_attr;
+      if !el_content.is_empty() {
+        eb.push_str(&format!("\\item[\\textit{{Content}}:] {}", el_content));
+      }
+      eb.push_str(&format!(
+        "\\item[\\textit{{Used by}}:] \\patternref{{{}}}",
+        parent_clean
+      ));
+      element_defs.push(format!("\\elementdef{{{}}}{{}}{{{}}}\n", cleaned, eb));
+    }
+    (body, element_defs)
   }
 
   /// Inline rendering of an `<attribute><anyName/>...</attribute>` (or
@@ -1181,6 +1325,109 @@ mod tests {
     assert_eq!(strip_outer_parens("(a)(b)"), "(a)(b)");
     assert_eq!(strip_outer_parens("abc"), "abc");
     assert_eq!(strip_outer_parens("(a"), "(a");
+  }
+
+  #[test]
+  fn element_choice_renders_as_namelinks_plus_sibling_cards() {
+    // `X = element a {B} | element b {B} | element c {B}` — Pattern
+    // Content shows an alphabetised Choice expression of name links;
+    // sibling \elementdef cards carry per-element bodies. No nested
+    // `\elementdef` inside the patterndef body — that produced
+    // orphan `(... | ... | ...)` punctuation in earlier renderings.
+    let xml = r##"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0"
+               ns="http://example.org/ns">
+        <define name="X">
+          <choice>
+            <element name="a"><ref name="B"/></element>
+            <element name="b"><ref name="B"/></element>
+            <element name="c"><ref name="B"/></element>
+          </choice>
+        </define>
+        <define name="B"><text/></define>
+      </grammar>
+    "##;
+    use crate::common::relaxng::scan::scan_string;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    let wrapped = vec![Pattern::Module { name: "m".into(), body: raw }];
+    let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
+    let out = document_modules(&rng, Options::default());
+
+    // Pattern body: a single Content line with alphabetised name links
+    // joined by Choice operator, NO nested \elementdef cards.
+    let patterndef = out
+      .find("\\patterndef{X}")
+      .map(|i| &out[i..out[i..].find("\\elementdef").map(|j| i + j).unwrap_or(out.len())])
+      .expect("patterndef X present");
+    assert!(
+      patterndef.contains("\\item[\\textit{Content}:]"),
+      "patterndef should expose Content line, got:\n{}",
+      patterndef
+    );
+    let pos_a = patterndef.find("\\elementref{namespace1:a}").expect("a present");
+    let pos_b = patterndef.find("\\elementref{namespace1:b}").expect("b present");
+    let pos_c = patterndef.find("\\elementref{namespace1:c}").expect("c present");
+    assert!(pos_a < pos_b && pos_b < pos_c, "expected alphabetised order: {}", patterndef);
+    assert!(patterndef.contains("\\textbar"), "expected | separator: {}", patterndef);
+    assert!(
+      !patterndef.contains("\\elementdef{namespace1:"),
+      "patterndef body should NOT carry nested elementdef cards:\n{}",
+      patterndef
+    );
+
+    // Sibling \elementdef cards exist for each unique name with the
+    // body and a Used-by line pointing back at the parent pattern.
+    assert!(out.contains("\\elementdef{namespace1:a}"), "{}", out);
+    assert!(out.contains("\\elementdef{namespace1:b}"), "{}", out);
+    assert!(out.contains("\\elementdef{namespace1:c}"), "{}", out);
+    assert!(
+      out.contains("\\patternref{X}"),
+      "per-element card should cite parent in Used by:\n{}",
+      out
+    );
+  }
+
+  #[test]
+  fn differing_bodies_keep_first_occurrence_per_name() {
+    // `X = element a {b1} | element b {b2}` — distinct bodies, both
+    // still Pattern::Element. Pattern Content lists both names; each
+    // gets a sibling card with its own body. Two `element a` would
+    // collapse to one card (first wins), since both can't share id.
+    let xml = r##"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0"
+               ns="http://example.org/ns">
+        <define name="X">
+          <choice>
+            <element name="a"><text/></element>
+            <element name="a"><ref name="B"/></element>
+            <element name="b"><text/></element>
+          </choice>
+        </define>
+        <define name="B"><text/></define>
+      </grammar>
+    "##;
+    use crate::common::relaxng::scan::scan_string;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    let wrapped = vec![Pattern::Module { name: "m".into(), body: raw }];
+    let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
+    let out = document_modules(&rng, Options::default());
+
+    // Pattern body lists 'a' and 'b' (deduped, alphabetised).
+    let patterndef = out
+      .find("\\patterndef{X}")
+      .map(|i| &out[i..out[i..].find("\\elementdef").map(|j| i + j).unwrap_or(out.len())])
+      .unwrap();
+    assert_eq!(
+      patterndef.matches("\\elementref{namespace1:a}").count(),
+      1,
+      "duplicate 'a' should appear once in body: {}",
+      patterndef
+    );
+    // One \elementdef per unique name (a, b).
+    assert_eq!(out.matches("\\elementdef{namespace1:a}").count(), 1, "{}", out);
+    assert_eq!(out.matches("\\elementdef{namespace1:b}").count(), 1, "{}", out);
   }
 
   #[test]

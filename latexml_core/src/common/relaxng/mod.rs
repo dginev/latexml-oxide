@@ -77,7 +77,7 @@ pub enum CombineOp {
 /// | `module`           | [`Pattern::Module`] |
 /// | `override`         | [`Pattern::Override`] (consumed by simplify) |
 /// | `'#PCDATA'` (string leaf) | [`Pattern::Text`] |
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
   /// Reference to a defined pattern. `qname` is the bare name during
   /// `scan` and `binding:name` after `simplify`.
