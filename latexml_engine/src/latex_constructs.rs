@@ -4540,12 +4540,25 @@ LoadDefinitions!({
   // ======================================================================
 
 
+  // `mode => "internal_vertical"`: LaTeX's `{center}`/`{flushleft}`/
+  // `{flushright}` open a trivlist (vertical structure); the body's
+  // `\par` switches into horizontal for paragraph text but BOUND_MODE
+  // stays vertical so display-math recognition (`tex_math.rs:447`
+  // mirror of `TeX_Math.pool.ltxml:65`: `$$` only consumed when
+  // BOUND_MODE ends with "vertical") works inside the body. Perl
+  // `latex_constructs.pool.ltxml:1262-1264` doesn't set `mode =>`
+  // — anticipates an upstream Perl PR fleshing out the `mode =>`
+  // machinery. Without this, papers using `\begin{center}$$X$$
+  // \end{center}` lose the display math, the second `$` reads as
+  // closing the first inline, and array content lands inside
+  // `<ltx:p>` triggering schema violations. Driver: astro-ph0203201
+  // (table*+center+$$+array).
   DefEnvironment!("{center}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     // aligning will take care of \\\\ "rows"
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   DefMacro!("\\endcenter", None);
@@ -4553,12 +4566,12 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_left", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   DefEnvironment!("{flushright}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_right", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
   // both as environments, and as single commands". The bare `\flushleft` /
   // `\flushright` commands (without matching `\end...`) are used as
