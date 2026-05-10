@@ -251,7 +251,7 @@ LoadDefinitions!({
     }
   });
 
-  // Adapted from graphicx.sty.ltxml — handles \special{...} graphics
+  // Adapted from graphicx.sty.ltxml — handles \special{psfile=…} graphics
   DefKeyVal!("SpecialPS", "angle", "");
   DefKeyVal!("SpecialPS", "voffset", "");
   DefKeyVal!("SpecialPS", "hoffset", "");
@@ -259,11 +259,62 @@ LoadDefinitions!({
   DefKeyVal!("SpecialPS", "vsize", "");
   DefKeyVal!("SpecialPS", "hscale", "");
   DefKeyVal!("SpecialPS", "vscale", "");
-  // Simplified: just include the graphic without complex sizer logic
-  // Perl uses \lx@special@graphics; we also support the \ltx@ deprecated form
+  // Perl `tex_file_io.pool.ltxml` (the `\lx@special@graphics`
+  // DefConstructor in the commented block below): strip surrounding
+  // quotes from the path, search GRAPHICSPATHS for candidates, map
+  // psfile-style options (hscale/vscale/hsize/vsize/angle/h+voffset)
+  // to graphicx-style options (xscale/yscale/width/height/angle/trim
+  // +clip). The prior Rust port was a one-liner emitting
+  // `<ltx:graphics graphic='#2'/>` with the raw quoted path and no
+  // candidates, so the post-processor couldn't find the source even
+  // when it was present in the source directory. Driver:
+  // astro-ph0002170 (8 `\special{psfile="figN.ps" angle=… hsize=…}`
+  // invocations, all emitting `expected:source` warnings before this
+  // fix).
   DefConstructor!(
     "\\lx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim",
-    "<ltx:graphics graphic='#2'/>"
+    "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
+    properties => sub[args] {
+      // arg 0: keyvals, arg 1: graphic path (Semiverbatim)
+      let raw = args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
+      // Perl L276: `$path =~ s/("+)(.+)\g1/$2/;` — strip matched pairs
+      // of double-quotes around the value (`\special{psfile="fig.ps"}`
+      // arrives with the quotes in the argument string).
+      let path_trimmed = raw.trim().trim_matches('"').to_string();
+      let candidates = latexml_core::util::image::image_candidates(&path_trimmed);
+      // Map psfile-style options to graphicx-style. Perl L282-311.
+      let mut options_vec: Vec<String> = Vec::new();
+      if let Some(ref kv_digested) = args[0] {
+        if let DigestedData::KeyVals(ref kv) = kv_digested.data() {
+          let mut h_off: f64 = 0.0;
+          let mut v_off: f64 = 0.0;
+          for (key, value) in kv.get_pairs() {
+            let s = value.to_string();
+            match key.as_str() {
+              "hscale" => if let Ok(n) = s.trim().parse::<f64>() {
+                options_vec.push(format!("xscale={}", n / 100.0));
+              },
+              "vscale" => if let Ok(n) = s.trim().parse::<f64>() {
+                options_vec.push(format!("yscale={}", n / 100.0));
+              },
+              "hsize" => options_vec.push(format!("width={}", s.trim())),
+              "vsize" => options_vec.push(format!("height={}", s.trim())),
+              "angle" => options_vec.push(format!("angle={}", s.trim())),
+              "hoffset" => h_off = s.trim().parse::<f64>().unwrap_or(0.0),
+              "voffset" => v_off = s.trim().parse::<f64>().unwrap_or(0.0),
+              _ => {},
+            }
+          }
+          if h_off != 0.0 || v_off != 0.0 {
+            options_vec.push(format!("trim={} {} 0 0", -h_off, -v_off));
+            options_vec.push("clip=true".to_string());
+          }
+        }
+      }
+      let options = options_vec.join(",");
+      Ok(stored_map!("path" => path_trimmed, "candidates" => candidates, "options" => options))
+    },
+    mode => "text"
   );
   Let!("\\ltx@special@graphics", "\\lx@special@graphics");
   // Original Perl (more complete):

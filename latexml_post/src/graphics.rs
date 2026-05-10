@@ -341,6 +341,16 @@ impl Graphics {
 
   /// Find graphicspath from processing instructions.
   fn find_graphics_paths(&self, doc: &PostDocument) -> Vec<String> {
+    // Perl `Post/Graphics.pm:91`:
+    //   [map { pathname_canonical($_) }
+    //    $self->findGraphicsPaths($doc), $doc->getSearchPaths]
+    // — the search paths are the union of graphicspath PIs PLUS the
+    // document's own search paths (typically the source directory). The
+    // prior Rust port included only the PI half, which left every paper
+    // with raw `.ps`/`.eps`/etc. files in the source directory (and no
+    // explicit `\graphicspath{...}`) emitting `Error:expected:source`
+    // for every figure, even though the source files are present.
+    // Driver: astro-ph0002170 (8 .ps figures in the zip, all "not found").
     let re = regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
     let mut paths = Vec::new();
     for pi in doc.findnodes(".//processing-instruction('latexml')") {
@@ -349,6 +359,7 @@ impl Graphics {
         paths.push(cap[1].to_string());
       }
     }
+    paths.extend(doc.get_search_paths().iter().cloned());
     paths
   }
 
@@ -1355,14 +1366,18 @@ impl Processor for Graphics {
     for plan in &plans {
       match plan {
         Plan::NotFound { idx, graphic } => {
-          // Promoted Warn → Error 2026-05-08: a missing graphic source
-          // is a real conversion failure, not a transient warning.
-          // Class/object mirror Perl Graphics.pm:216
-          // `Warn('expected', 'source', …)`, with the severity raised
-          // per the user's "we want all images to convert" stance.
-          log_post_error!(
+          // Perl `Post/Graphics.pm:216` uses Warn level. An earlier
+          // Rust-only promotion to Error (2026-05-08) was motivated by
+          // "we want all images to convert", but the real driver of the
+          // not-found cases on the canvas is the missing
+          // `doc.get_search_paths()` half of `find_graphics_paths`
+          // (just fixed above), not actual missing files. With sources
+          // findable, this branch hits only when the .tex literally
+          // references a non-existent file — exactly the case Perl
+          // emits at Warn level. Restore Perl-faithful Warn.
+          log_post_warn!(
             "expected", "source",
-            "Graphics: No source found for {}", graphic
+            "No graphic source found; skipping (source was '{}')", graphic
           );
           let mut node_mut = nodes[*idx].clone();
           node_mut.set_attribute("imagesrc", graphic).ok();
