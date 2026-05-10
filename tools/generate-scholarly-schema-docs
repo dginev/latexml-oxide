@@ -103,7 +103,18 @@ if [[ ! -f "$schema" ]]; then
   exit 1
 fi
 
+# Sister JS asset that ships next to the stylesheet — runtime for
+# the rustdoc-styled theme (Settings popover wiring + in-page
+# filter). The post-pass injects a `<script src>` reference with the
+# same basename, so the file must be copied into `$output_dir`.
+js_file="$oxide_root/resources/javascript/$(basename "$css_file" .css).js"
+if [[ ! -f "$js_file" ]]; then
+  echo "error: theme runtime not found at $js_file" >&2
+  exit 1
+fi
+
 css_basename=$(basename "$css_file")
+js_basename=$(basename "$js_file")
 schema_dir=$(cd "$(dirname "$schema")" && pwd)
 schema_base=$(basename "$schema" .rnc)
 
@@ -114,6 +125,7 @@ mkdir -p "$work_dir" "$output_dir"
 # directory; URN-prefixed includes need an OASIS XML catalog.
 cp "$schema_dir"/*.rnc "$work_dir"/
 cp "$css_file" "$output_dir/$css_basename"
+cp "$js_file"  "$output_dir/$js_basename"
 
 trang_args=()
 if [[ -n "$catalog" ]]; then

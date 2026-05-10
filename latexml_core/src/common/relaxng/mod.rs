@@ -168,6 +168,22 @@ pub struct Relaxng {
   /// Document-namespace prefix → URI, populated as the scanner sees
   /// `xmlns:` attributes on RelaxNG nodes.
   pub document_namespaces: HashMap<String, String>,
+
+  /// The master grammar's `<grammar ns="…">` URI — populated by the
+  /// first call to `scan_external` (i.e. the schema entry point).
+  /// Subsequent included grammars don't overwrite it. Used by the
+  /// schema-doc emitter to auto-register the corresponding namespace
+  /// prefix for elision in display names.
+  pub primary_namespace: Option<String>,
+
+  /// Namespace prefixes whose `prefix:` part should be elided from
+  /// rendered display names in the schema docs (`clean_tex_name`),
+  /// since they're contextually obvious for the schema. Auto-populated
+  /// from `primary_namespace` when the schema-doc emission starts —
+  /// e.g. LaTeXML's `default namespace = "http://dlmf.nist.gov/LaTeXML"`
+  /// (mapped to the `ltx` prefix) becomes a strip-prefix so display
+  /// names read `para` rather than `ltx:para`.
+  pub display_strip_prefixes: Vec<String>,
 }
 
 impl Default for Relaxng {
@@ -183,6 +199,8 @@ impl Default for Relaxng {
       uses_name:            HashMap::default(),
       internal_grammars:    0,
       document_namespaces:  HashMap::default(),
+      primary_namespace:    None,
+      display_strip_prefixes: Vec::new(),
     }
   }
 }
@@ -224,6 +242,32 @@ impl Relaxng {
     self.register_namespace("m", "http://www.w3.org/1998/Math/MathML");
     self.register_namespace("xhtml", "http://www.w3.org/1999/xhtml");
     self
+  }
+
+  /// Register a namespace prefix to elide from rendered display names
+  /// in the schema docs. Idempotent — duplicates are dropped.
+  pub fn register_display_prefix_strip(&mut self, prefix: impl Into<String>) {
+    let prefix = prefix.into();
+    if !self.display_strip_prefixes.contains(&prefix) {
+      self.display_strip_prefixes.push(prefix);
+    }
+  }
+
+  /// Look up `primary_namespace` in `document_namespaces` and, if it
+  /// resolves to a non-empty prefix, register that prefix for elision
+  /// from rendered display names. Call after scan + simplify, before
+  /// `tex::document_modules`. No-op when there's no primary namespace
+  /// or when its prefix is the default (empty) one.
+  pub fn auto_strip_primary_namespace(&mut self) {
+    let Some(uri) = self.primary_namespace.clone() else { return; };
+    let prefix = self
+      .document_namespaces
+      .iter()
+      .find(|(p, u)| !p.is_empty() && u.as_str() == uri.as_str())
+      .map(|(p, _)| p.clone());
+    if let Some(p) = prefix {
+      self.register_display_prefix_strip(p);
+    }
   }
 
   /// Insert a `<?latexml RelaxNGSchema="..."?>` processing instruction

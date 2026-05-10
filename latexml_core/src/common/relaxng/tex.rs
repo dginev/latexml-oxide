@@ -176,10 +176,23 @@ pub fn clean_tex(s: &str) -> String {
   out
 }
 
-/// `cleanTeXName`: clean_tex + strip a leading `ltx:` prefix.
-fn clean_tex_name(s: &str) -> String {
+/// `cleanTeXName`: clean_tex + strip any leading prefix listed in
+/// `display_strip_prefixes`. The strip list is auto-populated from
+/// the schema's `default namespace` URI (mapped to its prefix) — see
+/// `Relaxng::auto_strip_primary_namespace`. So a LaTeXML schema
+/// (primary `http://dlmf.nist.gov/LaTeXML` → `ltx`) renders
+/// `\elementref{para}` rather than `\elementref{ltx:para}`; an
+/// XHTML-flavoured schema's `xhtml:div` reads as `div`; a MathML
+/// schema's `m:math` reads as `math`.
+fn clean_tex_name(s: &str, strip_prefixes: &[String]) -> String {
   let cleaned = clean_tex(s);
-  cleaned.strip_prefix("ltx:").map(String::from).unwrap_or(cleaned)
+  for prefix in strip_prefixes {
+    let with_colon = format!("{}:", prefix);
+    if let Some(rest) = cleaned.strip_prefix(&with_colon) {
+      return rest.to_string();
+    }
+  }
+  cleaned
 }
 
 fn strip_urn_prefix(s: &str) -> String {
@@ -213,7 +226,11 @@ fn wrap_angle_text(s: &str) -> String {
 impl EmitState<'_> {
   fn to_tex(&mut self, p: &Pattern) -> String {
     match p {
-      Pattern::Doc(s) => format!("{}\n", clean_tex(s)),
+      // Trailing blank line so adjacent `<a:documentation>` annotations
+      // (trang emits one per `## comment` block separated by a blank
+      // line) survive into TeX as *paragraph-separated* prose, not a
+      // single run-on. LaTeXML reads a blank line as `\par`.
+      Pattern::Doc(s) => format!("{}\n\n", clean_tex(s)),
       Pattern::Ref { qname } => self.to_tex_ref(qname),
       Pattern::Def { combiner, name, body } => {
         let combiner_label = match combiner {
@@ -295,7 +312,7 @@ impl EmitState<'_> {
         }
       },
       Pattern::ParentRef { qname } => self.to_tex_ref(qname),
-      Pattern::ElementRef { qname } => format!("\\elementref{{{}}}", clean_tex_name(qname)),
+      Pattern::ElementRef { qname } => format!("\\elementref{{{}}}", clean_tex_name(qname, &self.rng.display_strip_prefixes)),
       Pattern::Override { module, .. } => self.to_tex(module),
       Pattern::Text => clean_tex("#PCDATA"),
     }
@@ -303,7 +320,7 @@ impl EmitState<'_> {
 
   fn to_tex_ref(&self, name: &str) -> String {
     if let Some(el) = self.rng.elementdefs.get(name) {
-      let cleaned = clean_tex_name(el);
+      let cleaned = clean_tex_name(el, &self.rng.display_strip_prefixes);
       if self.opts.skip_xhtml && cleaned == "xhtml:*" {
         return String::from("\\texttt{xhtml:*}");
       }
@@ -425,7 +442,7 @@ impl EmitState<'_> {
     let extras = collect_element_descendants(&spec);
     let mut out = format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, docs, body);
     for (el_name, el_body) in &extras {
-      let cleaned_el = clean_tex_name(el_name);
+      let cleaned_el = clean_tex_name(el_name, &self.rng.display_strip_prefixes);
       let (el_attr, el_content) = self.to_tex_body(el_body);
       let mut eb = el_attr;
       if !el_content.is_empty() {
@@ -456,7 +473,7 @@ impl EmitState<'_> {
     if is_wildcard_name(qname) {
       return self.render_inline_element(qname, data);
     }
-    let cleaned = clean_tex_name(qname);
+    let cleaned = clean_tex_name(qname, &self.rng.display_strip_prefixes);
     let (docs, spec) = self.extract_docs(data);
     let (attr, content) = self.to_tex_body(&spec);
     let content = if content.is_empty() {
@@ -475,7 +492,7 @@ impl EmitState<'_> {
   }
 
   fn to_tex_attribute(&mut self, name: &str, data: &[Pattern]) -> String {
-    let cleaned = clean_tex_name(name);
+    let cleaned = clean_tex_name(name, &self.rng.display_strip_prefixes);
     if let Some(rest) = cleaned.strip_prefix('!') {
       return format!("\\item[\\textit{{Exluding attribute }}]\\texttt{{{}}}", rest);
     }
@@ -513,9 +530,9 @@ impl EmitState<'_> {
   /// model is at least visible somewhere.
   fn render_inline_element(&mut self, qname: &str, data: &[Pattern]) -> String {
     if !is_wildcard_name(qname) {
-      return format!("\\elementref{{{}}}", clean_tex_name(qname));
+      return format!("\\elementref{{{}}}", clean_tex_name(qname, &self.rng.display_strip_prefixes));
     }
-    let cleaned = clean_tex_name(qname);
+    let cleaned = clean_tex_name(qname, &self.rng.display_strip_prefixes);
     let (_docs, spec) = self.extract_docs(data);
     let parts: Vec<String> = spec.iter().map(|p| self.to_tex(p)).collect();
     let parts: Vec<String> = parts.into_iter().filter(|s| !s.is_empty()).collect();
@@ -607,7 +624,7 @@ impl EmitState<'_> {
     sorted_names.dedup();
     let names_tex: Vec<String> = sorted_names
       .iter()
-      .map(|n| format!("\\elementref{{{}}}", clean_tex_name(n)))
+      .map(|n| format!("\\elementref{{{}}}", clean_tex_name(n, &self.rng.display_strip_prefixes)))
       .collect();
     let sep = match op {
       CombineOp::Choice => " ~\\textbar~ ",
@@ -635,7 +652,7 @@ impl EmitState<'_> {
       if !seen.insert(name.clone()) {
         continue;
       }
-      let cleaned = clean_tex_name(name);
+      let cleaned = clean_tex_name(name, &self.rng.display_strip_prefixes);
       let (el_attr, el_content) = self.to_tex_body(el_body);
       let mut eb = el_attr;
       if !el_content.is_empty() {
@@ -691,7 +708,7 @@ impl EmitState<'_> {
           self.render_inline_element(name, body)
         },
         Pattern::Attribute { name, body } if !is_wildcard_name(name) => {
-          let cleaned = clean_tex_name(name);
+          let cleaned = clean_tex_name(name, &self.rng.display_strip_prefixes);
           self.render_inline_attribute(&cleaned, body)
         },
         _ => self.to_tex(p),
@@ -778,7 +795,7 @@ impl EmitState<'_> {
         Pattern::Attribute { name, body } => {
           if let Some(t) = simple_attr_type(body) {
             if !is_wildcard_name(name) {
-              grouped.entry(t).or_default().push(clean_tex_name(name));
+              grouped.entry(t).or_default().push(clean_tex_name(name, &self.rng.display_strip_prefixes));
               continue;
             }
           }
@@ -932,7 +949,7 @@ impl EmitState<'_> {
     }
     for t in &transformed {
       if let Some(name) = t.strip_prefix("element:") {
-        parts.push(format!("\\elementref{{{}}}", clean_tex_name(name)));
+        parts.push(format!("\\elementref{{{}}}", clean_tex_name(name, &self.rng.display_strip_prefixes)));
       }
     }
     if parts.is_empty() {
@@ -1175,9 +1192,17 @@ mod tests {
   }
 
   #[test]
-  fn clean_tex_name_strips_ltx_prefix() {
-    assert_eq!(clean_tex_name("ltx:para"), "para");
-    assert_eq!(clean_tex_name("xhtml:div"), "xhtml:div");
+  fn clean_tex_name_consults_strip_list() {
+    let strip_ltx = vec!["ltx".to_string()];
+    assert_eq!(clean_tex_name("ltx:para", &strip_ltx), "para");
+    // Prefixes not in the strip list survive intact.
+    assert_eq!(clean_tex_name("xhtml:div", &strip_ltx), "xhtml:div");
+    // Multi-prefix list — first match wins.
+    let strip_both = vec!["xhtml".to_string(), "ltx".to_string()];
+    assert_eq!(clean_tex_name("xhtml:div", &strip_both), "div");
+    assert_eq!(clean_tex_name("ltx:para", &strip_both), "para");
+    // Empty strip list, no strip.
+    assert_eq!(clean_tex_name("ltx:para", &[]), "ltx:para");
   }
 
   #[test]

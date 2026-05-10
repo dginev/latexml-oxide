@@ -142,6 +142,14 @@ fn main() {
   };
   let _ = simplify_top(&mut rng, raw);
 
+  // Auto-elide the schema's primary namespace prefix from rendered
+  // display names — `default namespace = "http://…"` in the master
+  // RNG resolves to a prefix in `document_namespaces`; that prefix
+  // becomes contextually obvious for every element / attribute name
+  // on the site, so we drop it (`xhtml:div` → `div`, `ltx:para` →
+  // `para`, `m:math` → `math`).
+  rng.auto_strip_primary_namespace();
+
   let tex_opts = TexOptions {
     skip_svg:   !cli.no_skip_svg,
     skip_aria:  !cli.no_skip_aria,
@@ -228,16 +236,37 @@ fn lift_module_abstract(tex: &str) -> String {
     // trailing newline emitted by `Pattern::Doc` is part of the
     // canonical schema.tex shape.
     let doc = &caps[5];
-    let has_content = doc.chars().any(|c| !c.is_whitespace());
-    if has_content {
+    // Split the doc-arg into paragraphs (`extract_docs` separates
+    // adjacent `<a:documentation>` blocks with `\n\n`). The lift
+    // rule:
+    //
+    // * 0 paragraphs: nothing to do.
+    // * 1 paragraph: leave it on the patterndef. A single `## doc`
+    //   on a `<define>` is per-pattern documentation (e.g.
+    //   "Combined model for inline content." annotates `Inline.model`
+    //   in LaTeXML.rnc) — lifting it would steal the per-pattern
+    //   commentary and present it as a module narrative.
+    // * ≥ 2 paragraphs: lift the FIRST as the module narrative, keep
+    //   the rest on the patterndef. The convention: a `## comment`
+    //   block at the top of a file (separated from the next block
+    //   by a blank line) is the module narrative; subsequent blocks
+    //   document the first define.
+    let paragraphs: Vec<&str> = doc
+      .split("\n\n")
+      .map(str::trim)
+      .filter(|p| !p.is_empty())
+      .collect();
+    if paragraphs.len() >= 2 {
+      let module_para = paragraphs[0];
+      let pattern_doc = paragraphs[1..].join("\n\n");
       format!(
-        "{}{}\\moduleabstract{{{}}}\n{}\\patterndef{{{}}}{{}}{{",
-        module_head, preamble, doc, desc_open, pname
+        "{}{}\\moduleabstract{{{}}}\n{}\\patterndef{{{}}}{{{}\n}}{{",
+        module_head, preamble, module_para, desc_open, pname, pattern_doc
       )
     } else {
       format!(
-        "{}{}{}\\patterndef{{{}}}{{}}{{",
-        module_head, preamble, desc_open, pname
+        "{}{}{}\\patterndef{{{}}}{{{}}}{{",
+        module_head, preamble, desc_open, pname, doc
       )
     }
   })

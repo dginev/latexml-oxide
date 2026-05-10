@@ -83,6 +83,18 @@ pub fn scan_external(
   // just record the prefix→URI map.)
   collect_namespaces(rng, root);
 
+  // First-call-wins: capture the master grammar's `ns="…"` URI as
+  // the schema's primary namespace. Recursive scan_external calls
+  // (for `<externalRef>` etc.) don't overwrite this — they're
+  // satellite modules whose ns may differ from the entry-point.
+  if rng.primary_namespace.is_none() {
+    if let Some(uri) = root.get_attribute("ns") {
+      if !uri.is_empty() {
+        rng.primary_namespace = Some(uri);
+      }
+    }
+  }
+
   let modname = strip_rng_ext(name);
   let mut new_paths: Vec<&Path> = Vec::with_capacity(search_paths.len() + 1);
   let dir = path.parent().unwrap_or(Path::new("."));

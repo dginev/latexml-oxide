@@ -29,12 +29,12 @@
   --highlight-bg: #fff5b3;
   --selection-bg: #b8d4f7;
 
-  --content-max-width: 980px;
-  --sidebar-width: 240px;
-  --indent: 22px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --header-height: 38px;
+  --content-max-width: 62rem;
+  --sidebar-width: 16.625rem;
+  --indent: 1.375rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --header-height: 2.375rem;
 
   --font-body: "Charter", "Iowan Old Style", "Source Serif 4", "Source Serif Pro",
                Cambria, Georgia, "Times New Roman", serif;
@@ -158,7 +158,7 @@ nav.ltx_page_navbar {
 nav.ltx_page_navbar::-webkit-scrollbar { width: 8px; }
 nav.ltx_page_navbar::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* ---- Per-module item index (rustdoc-style page navigator) ---- */
@@ -740,7 +740,7 @@ dl.ltx_description > dt.ltx_item.schema-def + dd.ltx_item {
   min-width: 0;
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--code-bg);
   color: var(--main-color);
   font-family: var(--font-code);
@@ -1017,7 +1017,7 @@ section.schema-def:target {
   padding-top: 1rem;
   padding-bottom: 0.4rem;
   background: color-mix(in srgb, #3873ad 8%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: background 0.4s ease-out;
 }
 dt.schema-def:target + dd.ltx_item {
@@ -1025,12 +1025,12 @@ dt.schema-def:target + dd.ltx_item {
 }
 
 /* Narrow viewports — collapse the sidebar above content. */
-@media (max-width: 900px) {
+@media (max-width: 56.25rem) {
   nav.ltx_page_navbar {
     position: static;
     width: 100%;
     height: auto;
-    max-height: 320px;
+    max-height: 20rem;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
     padding: 0.75rem 1rem;
@@ -1042,7 +1042,7 @@ dt.schema-def:target + dd.ltx_item {
   header.ltx_page_header { position: static; }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 45rem) {
   .ltx_page_main { padding: 0 1rem 3rem; }
   .ltx_title_document { font-size: 1.65rem; }
   h2.ltx_title_chapter      { font-size: 1.4rem; }
@@ -1124,12 +1124,57 @@ dt.schema-def:target + dd.ltx_item {
 .schema-theme-popover label:hover {
   color: var(--link-color);
 }
-.schema-theme-popover input[type="radio"] {
+.schema-theme-popover input[type="radio"],
+.schema-theme-popover input[type="checkbox"] {
   cursor: pointer;
   accent-color: var(--link-color);
   margin: 0;
 }
+
+/* Display-prefs fieldset — sits below the theme radios. */
+.schema-theme-popover fieldset.schema-pref-block {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--soft-divider);
+}
+
+/* Tasteful credit — small italic line at the bottom of the popover. */
+.schema-theme-credit {
+  margin: 0.7rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--soft-divider);
+  font-size: 0.72rem;
+  color: var(--muted-color);
+  text-align: center;
+}
+.schema-theme-credit a {
+  color: var(--muted-color);
+  text-decoration: underline;
+  text-decoration-color: var(--soft-divider);
+  text-underline-offset: 2px;
+}
+.schema-theme-credit a:hover {
+  color: var(--link-color);
+  text-decoration-color: currentColor;
+}
+
 @media print {
   .schema-theme-switcher { display: none; }
+}
+
+/* ---------- Display preference toggles ----------------------------------
+ *
+ * Fire when the boot script stamps the matching `data-pref-*="on"`
+ * attribute on `<html>`. CSS-only; no JS reads computed styles. */
+
+/* Hide sidebar: drop the persistent left navbar entirely so the main
+ * content fills the page. Mirrors the layout of pages that ship
+ * without a navbar (`body:not(:has(nav.ltx_page_navbar))`). */
+:root[data-pref-sidebar="on"] nav.ltx_page_navbar {
+  display: none;
+}
+:root[data-pref-sidebar="on"] .ltx_page_main {
+  margin-left: auto;
+  padding: 1.25rem 1.5rem 4rem;
 }
 

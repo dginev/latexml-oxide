@@ -41,31 +41,47 @@ pub fn process_page(html: &str) -> String {
   let html = render_content_models(&html);
   let html = decorate_definitions(&html);
   let html = inject_sidebar_index(&html);
-  let html = inject_theme_switcher(&html);
-  inject_filter_script(&html)
+  inject_theme_switcher(&html)
 }
 
-/// Inject a Settings-button theme switcher (Light / Dark / Ayu /
-/// System) modeled on rustdoc's in-doc settings menu, plus a tiny
-/// boot script in `<head>` that resolves the saved preference and
-/// sets `<html data-theme="…">` BEFORE first paint to avoid a flash
-/// of the wrong palette.
+/// Inject the rustdoc-styled Settings popover (Theme + Display
+/// toggles) plus a non-deferred `<script src=…>` reference to the
+/// theme runtime. The runtime — `resources/javascript/relaxng-
+/// schema-rustdoc-theme.js` — handles three things, all of which
+/// used to live as inline scripts injected from this module:
 ///
-/// Pieces:
+/// 1. Pre-paint application of `data-theme` / `data-pref-*` from
+///    `localStorage` (the script tag sits in `<head>` without
+///    `defer`/`async` so this runs before any body parsing).
+/// 2. Settings popover wiring (radios + checkboxes + click-outside +
+///    system colour-scheme listener) on `DOMContentLoaded`.
+/// 3. The in-page schema-def filter (sticky search above long def
+///    lists) — replaces the prior `inject_filter_script` pass.
 ///
-/// * Boot script (in `<head>`): reads `localStorage["schema-theme"]`
-///   (`light` | `dark` | `ayu` | `system`, default `system`),
-///   resolves `system` against `prefers-color-scheme`, sets
-///   `data-theme` on `<html>`, and remembers the *raw* preference
-///   on `data-theme-pref` so the Settings popover can pre-select
-///   the matching radio.
-/// * Floating Settings button (top-right of the page): a `<details>`
-///   element whose `<summary>` is the gear, and whose body is a
-///   fieldset of four radios. Selecting a radio writes the choice
-///   to localStorage, updates `data-theme` / `data-theme-pref`, and
-///   stays open so the user sees the change apply.
-/// * Live system reaction: a `prefers-color-scheme` matchMedia
-///   listener flips `data-theme` when in `system` mode.
+/// The post-pass orchestration shell
+/// (`tools/generate-scholarly-schema-docs`) copies the JS file into
+/// the output directory next to the HTML pages so this relative
+/// `<script src>` reference resolves on the served site.
+///
+/// Settings widget shape:
+///
+/// * Theme fieldset — 4 radios (Light / Dark / Ayu / System), keyed
+///   to `localStorage["schema-theme"]`.
+/// * Display fieldset — 1 checkbox:
+///
+///   | localStorage key   | `<html>` attribute  | CSS effect |
+///   |--------------------|---------------------|------------|
+///   | `schema-pref-sidebar` | `data-pref-sidebar="on"` | hide `nav.ltx_page_navbar` |
+///
+///   (Sans-serif font swap and content-model wrap were tried but
+///   removed — neither was easy to use, and the results were
+///   marginal compared to the existing layout.)
+///
+/// * Tasteful credit line linking to the rustdoc reference docs.
+///
+/// Other rustdoc settings (auto-hide methods, search single-result
+/// jump, line numbers on examples, deprecation, keyboard shortcuts)
+/// are out of scope — they don't apply to schema docs.
 fn inject_theme_switcher(html: &str) -> String {
   if html.contains("data-schema-theme-script") {
     return html.to_string();
@@ -75,20 +91,16 @@ fn inject_theme_switcher(html: &str) -> String {
   let head_end_re = HEAD_END_RE.get_or_init(|| Regex::new(r"(?i)</head>").unwrap());
   let body_open_re = BODY_OPEN_RE.get_or_init(|| Regex::new(r"(?i)<body[^>]*>").unwrap());
 
-  // Boot script — minified-by-hand so it stays tiny enough to
-  // inline on every page without ballooning bytes. The `try` guards
-  // pre-paint failures (e.g. localStorage blocked) without breaking
-  // page render.
-  let boot = r##"<script data-schema-theme-script>
-(function(){try{var p=localStorage.getItem('schema-theme')||'system';var t=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-theme-pref',p);}catch(e){}})();
-</script>"##;
+  // Single non-deferred script reference. `applyTheme()` inside the
+  // file runs synchronously before paint (HTML parsing pauses while
+  // we fetch + execute), so the right palette is on `<html>` before
+  // any body content renders.
+  let script_tag = r##"<script data-schema-theme-script src="relaxng-schema-rustdoc-theme.js"></script>"##;
 
-  // Settings widget — the markup carries no inline event handlers
-  // (CSP-friendly); the wiring script below attaches `change` and
-  // `keydown` handlers after parse.
+  // Settings widget — markup only; behaviour wired up by the JS file.
   let widget = r##"<details class="schema-theme-switcher" data-schema-theme-widget>
-<summary aria-label="Theme settings" title="Theme settings"><span class="schema-gear" aria-hidden="true">⚙</span></summary>
-<div class="schema-theme-popover" role="dialog" aria-label="Theme settings">
+<summary aria-label="Settings" title="Settings"><span class="schema-gear" aria-hidden="true">⚙</span></summary>
+<div class="schema-theme-popover" role="dialog" aria-label="Settings">
 <fieldset>
 <legend>Theme</legend>
 <label><input type="radio" name="schema-theme-radio" value="light"> Light</label>
@@ -96,42 +108,16 @@ fn inject_theme_switcher(html: &str) -> String {
 <label><input type="radio" name="schema-theme-radio" value="ayu"> Ayu</label>
 <label><input type="radio" name="schema-theme-radio" value="system"> System</label>
 </fieldset>
+<fieldset class="schema-pref-block">
+<legend>Display</legend>
+<label><input type="checkbox" data-schema-pref="sidebar"> Hide sidebar</label>
+</fieldset>
+<p class="schema-theme-credit">Theme inspired by <a href="https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html" rel="noopener">rustdoc</a>.</p>
 </div>
-</details>
-<script data-schema-theme-wire>
-(function(){
-  var root = document.documentElement;
-  var pref = root.getAttribute('data-theme-pref') || 'system';
-  var radios = document.querySelectorAll('input[name="schema-theme-radio"]');
-  for (var i = 0; i < radios.length; i++) {
-    if (radios[i].value === pref) radios[i].checked = true;
-    radios[i].addEventListener('change', function(e){
-      var v = e.target.value;
-      try { localStorage.setItem('schema-theme', v); } catch (_) {}
-      var t = v === 'system'
-        ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : v;
-      root.setAttribute('data-theme', t);
-      root.setAttribute('data-theme-pref', v);
-    });
-  }
-  if (window.matchMedia) {
-    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e){
-      if (root.getAttribute('data-theme-pref') === 'system') {
-        root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-      }
-    });
-  }
-  // Click-outside closes the popover.
-  document.addEventListener('click', function(e){
-    var d = document.querySelector('details[data-schema-theme-widget]');
-    if (d && d.open && !d.contains(e.target)) d.removeAttribute('open');
-  });
-})();
-</script>"##;
+</details>"##;
 
   let with_boot = head_end_re
-    .replace(html, |_caps: &regex::Captures| format!("{}</head>", boot))
+    .replace(html, |_caps: &regex::Captures| format!("{}</head>", script_tag))
     .into_owned();
   body_open_re
     .replace(&with_boot, |caps: &regex::Captures| {
@@ -140,70 +126,6 @@ fn inject_theme_switcher(html: &str) -> String {
     .into_owned()
 }
 
-/// Inject a small inline `<script>` that, on long def-list pages,
-/// adds a sticky search input above the description list. The input
-/// applies `display: none` (via `.schema-filter-hidden`) to non-
-/// matching `<dt>`+`<dd>` pairs as the user types. Items default to
-/// visible, so browser Ctrl-F still finds anything in the DOM.
-fn inject_filter_script(html: &str) -> String {
-  if html.contains("data-schema-filter-script") {
-    return html.to_string();
-  }
-  // Only inject on pages that actually have a schema-def description list.
-  if !html.contains(r#"class="ltx_item schema-def""#) {
-    return html.to_string();
-  }
-  static BODY_END_RE: OnceLock<Regex> = OnceLock::new();
-  let body_end_re = BODY_END_RE.get_or_init(|| Regex::new(r"(?i)</body>").unwrap());
-
-  let script = r##"<script data-schema-filter-script>
-(function(){
-  var dl = document.querySelector('dl.ltx_description');
-  if (!dl) return;
-  var dts = dl.querySelectorAll(':scope > dt.schema-def');
-  if (dts.length < 25) return;
-  var wrap = document.createElement('div');
-  wrap.className = 'schema-filter';
-  var input = document.createElement('input');
-  input.type = 'search';
-  input.placeholder = 'Filter by name… (' + dts.length + ' items)';
-  input.setAttribute('aria-label','Filter schema definitions');
-  var count = document.createElement('span');
-  count.className = 'schema-filter-count';
-  wrap.appendChild(input);
-  wrap.appendChild(count);
-  dl.parentNode.insertBefore(wrap, dl);
-  var items = Array.prototype.map.call(dts, function(dt){
-    var nameEl = dt.querySelector('.schema-name');
-    var name = nameEl ? nameEl.textContent.toLowerCase() : '';
-    var dd = dt.nextElementSibling;
-    if (dd && dd.tagName !== 'DD') dd = null;
-    return { dt: dt, dd: dd, name: name };
-  });
-  function apply(query){
-    var q = (query || '').trim().toLowerCase();
-    var visible = 0;
-    items.forEach(function(it){
-      var match = !q || it.name.indexOf(q) !== -1;
-      if (match) {
-        it.dt.classList.remove('schema-filter-hidden');
-        if (it.dd) it.dd.classList.remove('schema-filter-hidden');
-        visible++;
-      } else {
-        it.dt.classList.add('schema-filter-hidden');
-        if (it.dd) it.dd.classList.add('schema-filter-hidden');
-      }
-    });
-    count.textContent = q ? (visible + ' / ' + items.length) : '';
-  }
-  input.addEventListener('input', function(e){ apply(e.target.value); });
-})();
-</script>"##;
-
-  body_end_re
-    .replace(html, |_caps: &regex::Captures| format!("{}</body>", script))
-    .into_owned()
-}
 
 /// Trim the cross-page navbar TOC ("IN SCHEMA") to two levels —
 /// modules at level 1 and kind buckets (Patterns / Elements / …) at
@@ -273,43 +195,92 @@ fn inject_parent_eyebrow(html: &str) -> String {
     .into_owned()
 }
 
-/// `\moduleabstract` produces a `<ltx:p class="schema_module_narrative">`
-/// element. Under the bucketed-subsection layout that paragraph lives
-/// directly under the module's `\section{Module …}`, between the
-/// section heading and the kind-bucket subsections. The post-pass
-/// promotes it from an inline `<p>` into a left-bordered
+/// `\moduleabstract` produces `<ltx:para class="schema_module_narrative">`
+/// which LaTeXML's HTML output renders as a marked
+/// `<div class="ltx_para schema_module_narrative">` for the first
+/// paragraph, *plus* one unmarked `<div class="ltx_para">` per
+/// subsequent paragraph (the marker class doesn't survive across
+/// `\par` breaks inside the macro arg). Trang emits one
+/// `<a:documentation>` per `## comment` block in the source RNC,
+/// and our `extract_docs` joins them with blank lines, so a module
+/// with multiple `## comment` paragraphs lands as multiple `<p>`s
+/// in this run.
+///
+/// The post-pass walks the marked div *and every immediately-
+/// following `<div class="ltx_para">` sibling* up to the next
+/// non-paragraph element (typically the description-list opener),
+/// then folds the whole run into one left-bordered
 /// `<aside class="schema_module_narrative">` block right after the
-/// section heading so CSS can style it as a callout.
+/// section heading. Each source paragraph stays in its own `<p>`
+/// inside the aside.
 fn lift_module_narrative(html: &str) -> String {
   if html.contains(r#"<aside class="schema_module_narrative">"#) {
     return html.to_string();
   }
-  static NARRATIVE_RE: OnceLock<Regex> = OnceLock::new();
+  static NARRATIVE_OPEN_RE: OnceLock<Regex> = OnceLock::new();
+  static EXTRA_PARA_RE: OnceLock<Regex> = OnceLock::new();
+  static P_RE: OnceLock<Regex> = OnceLock::new();
   static HEADING_RE: OnceLock<Regex> = OnceLock::new();
 
-  // Match the LaTeXML-rendered `<p class="ltx_p schema_module_narrative">…</p>`
-  // wherever it sits, optionally inside a wrapping `<div class="ltx_para">`.
-  let narrative_re = NARRATIVE_RE.get_or_init(|| {
+  // Step 1: locate the first `schema_module_narrative` div, capturing
+  // the whole `<div …>…</div>` (class order is liberal — either
+  // `ltx_para` or `schema_module_narrative` may come first).
+  let narrative_open_re = NARRATIVE_OPEN_RE.get_or_init(|| {
     Regex::new(
-      r#"(?s)(?:<div [^>]*class="ltx_para[^"]*">\s*)?<p class="ltx_p schema_module_narrative">(.*?)</p>(?:\s*</div>)?"#,
+      r#"(?s)<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#,
     )
     .unwrap()
+  });
+  // Step 2: anchor-at-start regex that matches whitespace + one
+  // additional `<div class="…schema_module_narrative…">…</div>`
+  // sibling — `genschema_oxide`'s lift emits one `\moduleabstract`
+  // per source paragraph so every paragraph carries the marker
+  // class. Walking ONLY marked siblings (not generic `ltx_para`
+  // divs) avoids accidentally consuming the wrapper around the
+  // description list (which is `<div class="ltx_para">` itself in
+  // some splits).
+  let extra_para_re = EXTRA_PARA_RE.get_or_init(|| {
+    Regex::new(
+      r#"(?s)\A\s*<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#,
+    )
+    .unwrap()
+  });
+  // Step 3: pull every `<p class="ltx_p">…</p>` out of the combined
+  // run — they're the paragraphs to splice into the aside.
+  let p_re = P_RE.get_or_init(|| {
+    Regex::new(r#"(?s)<p class="ltx_p[^"]*">.*?</p>"#).unwrap()
   });
   let heading_re = HEADING_RE.get_or_init(|| {
     Regex::new(r#"(?s)(<h1 class="ltx_title ltx_title_section">.*?</h1>)"#).unwrap()
   });
 
-  let captures = match narrative_re.captures(html) {
-    Some(c) => c,
+  let first = match narrative_open_re.find(html) {
+    Some(m) => m,
     None => return html.to_string(),
   };
-  let body = captures[1].trim().to_string();
-  let stripped = narrative_re.replace(html, "").into_owned();
-
+  // Extend the match through any contiguous trailing
+  // `<div class="ltx_para">` siblings.
+  let mut end = first.end();
+  while end < html.len() {
+    let rest = &html[end..];
+    match extra_para_re.find(rest) {
+      Some(m) => end += m.end(),
+      None => break,
+    }
+  }
+  let block = &html[first.start()..end];
+  let paragraphs: Vec<&str> = p_re.find_iter(block).map(|m| m.as_str()).collect();
+  let inner = paragraphs.join("\n");
   let aside = format!(
-    r#"<aside class="schema_module_narrative"><p>{}</p></aside>"#,
-    body
+    r#"<aside class="schema_module_narrative">{}</aside>"#,
+    inner
   );
+
+  // Strip the original block, then insert the aside right after
+  // the section heading.
+  let mut stripped = String::with_capacity(html.len());
+  stripped.push_str(&html[..first.start()]);
+  stripped.push_str(&html[end..]);
   let result = heading_re.replace(&stripped, |caps: &regex::Captures| {
     format!("{}\n{}", &caps[1], aside)
   });

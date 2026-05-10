@@ -100,9 +100,16 @@ LoadDefinitions!({
   // `resources/CSS/relaxng-schema-rustdoc-theme.css` styles that
   // class as the left-bordered narrative aside above each module's
   // definitions.
+  // `<ltx:para>` (a paragraph-block, not a single paragraph) so
+  // multi-paragraph abstracts — produced when trang emits more than
+  // one `<a:documentation>` per define — keep all their `<p>`s
+  // wrapped under one element with the `schema_module_narrative`
+  // marker class. With `<ltx:p>`, LaTeXML closes the paragraph at
+  // the first `\par` and starts new `<p>`s without the class, which
+  // leaves the trailing prose stranded outside the post-pass aside.
   DefConstructor!(
     "\\moduleabstract{}",
-    "<ltx:p class='schema_module_narrative'>#1</ltx:p>"
+    "<ltx:para class='schema_module_narrative'>#1</ltx:para>"
   );
 
   //--- Cross-references -----------------------------------------------
