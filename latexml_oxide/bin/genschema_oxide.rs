@@ -10,6 +10,7 @@
 //!
 //! ```text
 //! genschema_oxide <RNG> [--output FILE] [--path DIR ...] [--module-abstract]
+//!                       [--ns prefix=URI ...] [--no-latexml-defaults]
 //!                       [--no-skip-svg] [--no-skip-aria] [--no-skip-xhtml]
 //! ```
 
@@ -62,6 +63,35 @@ struct Cli {
   /// narrative aside rather than inline with one specific pattern.
   #[arg(long)]
   module_abstract: bool,
+
+  /// Pre-register a namespace prefix → URI binding before scanning.
+  /// Repeatable. Useful when a `.rnc` declares `default namespace =
+  /// "..."` without a prefix: trang strips the binding to the default
+  /// `<grammar ns="..."/>`, leaving no `xmlns:` for the scanner to
+  /// pick up, so element names render as the synthesized fallback
+  /// `namespaceN:foo`. `--ns tei=http://www.tei-c.org/ns/1.0` makes
+  /// them render as `tei:foo` instead.
+  #[arg(long = "ns", value_name = "PREFIX=URI", value_parser = parse_ns_arg)]
+  ns: Vec<(String, String)>,
+
+  /// Skip the built-in LaTeXML namespace defaults (`xml`, `ltx`,
+  /// `svg`, `xlink`, `m`, `xhtml`). Use when documenting a non-LaTeXML
+  /// schema; pair with `--ns` to declare your own conventions.
+  #[arg(long)]
+  no_latexml_defaults: bool,
+}
+
+fn parse_ns_arg(arg: &str) -> Result<(String, String), String> {
+  let (prefix, uri) = arg
+    .split_once('=')
+    .ok_or_else(|| format!("expected `prefix=URI`, got `{}`", arg))?;
+  if prefix.is_empty() {
+    return Err("prefix may not be empty".into());
+  }
+  if uri.is_empty() {
+    return Err("URI may not be empty".into());
+  }
+  Ok((prefix.to_string(), uri.to_string()))
 }
 
 fn main() {
@@ -91,6 +121,12 @@ fn main() {
     .unwrap_or("schema")
     .to_string();
   let mut rng = Relaxng::new(schema_name);
+  if !cli.no_latexml_defaults {
+    rng.with_latexml_defaults();
+  }
+  for (prefix, uri) in &cli.ns {
+    rng.register_namespace(prefix, uri);
+  }
 
   let raw = match scan_external(
     &mut rng,
@@ -151,26 +187,48 @@ fn resolve_schema_path(schema: &Path, paths: &[PathBuf]) -> Option<PathBuf> {
 /// narrative rather than as documentation attached to one specific
 /// pattern.
 fn lift_module_abstract(tex: &str) -> String {
-  let re = regex::Regex::new(
-    r#"(\\begin\{schemamodule\}\{[^}]+\}\s*\n)\\patterndef\{([^}]+)\}\{([^}]*)\}\{"#,
-  )
+  // Unified per-module rendering — no kind subsections; defs flow
+  // into a single `description` env after the optional preamble.
+  // Structure:
+  //
+  //   \begin{schemamodule}{NAME}
+  //   \par\noindent\textit{Includes:} …            (optional preamble)
+  //   \begin{description}
+  //   \elementdef{…}{DOC}{…}  OR  \patterndef{…}{DOC}{…}
+  //
+  // Promote the first def's DOC up to the module-section level
+  // (above the description-list opener) so it renders as a per-module
+  // narrative aside, not as part of one specific def. The def's
+  // doc-arg becomes empty.
+  let re = regex::Regex::new(concat!(
+    r"(\\begin\{schemamodule\}\{[^}]+\}\n)",
+    r"((?:\\par\\noindent[^\n]*\n)*)",
+    r"(\\begin\{description\}\n)",
+    r"\\(elementdef|patterndef)\{([^}]+)\}\{([^}]*)\}\{",
+  ))
   .expect("static regex compiles");
   re.replace_all(tex, |caps: &regex::Captures| {
-    let head = &caps[1];
-    let pname = &caps[2];
+    let module_head = &caps[1];
+    let preamble = &caps[2];
+    let desc_open = &caps[3];
+    let def_kind = &caps[4]; // "elementdef" or "patterndef"
+    let pname = &caps[5];
     // Match Perl's `if ($doc =~ /\S/)` — promote whenever any
     // non-whitespace exists, but DON'T trim the doc itself: the
     // trailing newline emitted by `Pattern::Doc` is part of the
     // canonical schema.tex shape.
-    let doc = &caps[3];
+    let doc = &caps[6];
     let has_content = doc.chars().any(|c| !c.is_whitespace());
     if has_content {
       format!(
-        "{}\\moduleabstract{{{}}}\n\\patterndef{{{}}}{{}}{{",
-        head, doc, pname
+        "{}{}\\moduleabstract{{{}}}\n{}\\{}{{{}}}{{}}{{",
+        module_head, preamble, doc, desc_open, def_kind, pname
       )
     } else {
-      format!("{}\\patterndef{{{}}}{{}}{{", head, pname)
+      format!(
+        "{}{}{}\\{}{{{}}}{{}}{{",
+        module_head, preamble, desc_open, def_kind, pname
+      )
     }
   })
   .into_owned()

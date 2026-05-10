@@ -533,6 +533,13 @@ fn collect_namespaces(rng: &mut Relaxng, root: RoNode) {
     if href.starts_with("http://relaxng.org") {
       continue;
     }
+    // If the schema author bound a different prefix to this URI, drop
+    // any pre-seeded conventional binding so the schema's choice wins.
+    if !prefix.is_empty() {
+      rng
+        .document_namespaces
+        .retain(|p, u| p == &prefix || u != &href);
+    }
     rng.document_namespaces.insert(prefix, href);
   }
 }

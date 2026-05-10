@@ -148,7 +148,7 @@ fi
 )
 
 cat > "$work_dir/schema-doc.tex" <<TEX
-\\documentclass{book}
+\\documentclass{article}
 \\usepackage{latexml}
 \\usepackage{latexmlman}
 \\usepackage{makeidx}
@@ -159,7 +159,6 @@ cat > "$work_dir/schema-doc.tex" <<TEX
 \\begin{document}
 \\maketitle
 \\tableofcontents
-\\chapter{${title}}
 \\input{schema}
 \\end{document}
 TEX

@@ -46,6 +46,11 @@ struct EmitState<'a> {
 pub fn document_modules(rng: &Relaxng, opts: Options) -> String {
   let mut emit = EmitState { rng, opts, defined_patterns: HashMap::default() };
   let mut docs = String::new();
+  // Each Module renders as one page (`--splitat=section`), regardless
+  // of def count. Page-size is mitigated client-side by CSS lazy
+  // paint and a JS search/filter input — splitting the module across
+  // multiple pages would break Ctrl-F across the whole module, which
+  // is the primary navigation affordance.
   for module in &rng.modules {
     let (op, name, content) = match module {
       Pattern::Module { name, body } => ("module", name.clone(), body),
@@ -56,10 +61,79 @@ pub fn document_modules(rng: &Relaxng, opts: Options) -> String {
       continue;
     }
     let mod_name = strip_urn_prefix(&name);
-    docs.push_str(&format!("\n\\begin{{schemamodule}}{{{}}}", mod_name));
+
+    // Modules typically wrap their content in a single
+    // `Pattern::Grammar`; descend into it so the iteration sees each
+    // individual def directly.
+    let to_emit: Vec<&Pattern> = content
+      .iter()
+      .flat_map(|item| match item {
+        Pattern::Grammar { body, .. } => body.iter().collect::<Vec<_>>(),
+        other => vec![other],
+      })
+      .collect();
+
+    let mut preamble = String::new();
+    // Outer-Grammar "Includes:" preamble line (collected once,
+    // emitted on the first synthetic group's page if partitioning).
     for item in content {
+      if let Pattern::Grammar { body, .. } = item {
+        let mods: Vec<String> = body
+          .iter()
+          .filter_map(|d| match d {
+            Pattern::Module { name, .. } => Some(name.clone()),
+            _ => None,
+          })
+          .collect();
+        if !mods.is_empty() {
+          let refs: Vec<String> = mods
+            .iter()
+            .map(|m| format!("\\moduleref{{{}}}", clean_tex(m)))
+            .collect();
+          if !preamble.is_empty() {
+            preamble.push('\n');
+          }
+          preamble.push_str(&format!(
+            "\\par\\noindent\\textit{{Includes:}} {}.",
+            refs.join(", ")
+          ));
+        }
+      }
+    }
+
+    // Render each def, preserving source order in `defs`.
+    let mut defs: Vec<String> = Vec::new();
+    for item in &to_emit {
+      // Module entries already accounted for in the Includes line.
+      if matches!(item, Pattern::Module { .. }) {
+        continue;
+      }
+      let rendered = emit.to_tex(item);
+      if rendered.is_empty() {
+        continue;
+      }
+      match item {
+        Pattern::Doc(_) | Pattern::Start { .. } => {
+          if !preamble.is_empty() {
+            preamble.push('\n');
+          }
+          preamble.push_str(&rendered);
+        },
+        _ => defs.push(rendered),
+      }
+    }
+
+    docs.push_str(&format!("\n\\begin{{schemamodule}}{{{}}}", mod_name));
+    if !preamble.is_empty() {
       docs.push('\n');
-      docs.push_str(&emit.to_tex(item));
+      docs.push_str(&preamble);
+    }
+    let body = defs.join("\n");
+    if !body.is_empty() {
+      docs.push_str(&format!(
+        "\n\\begin{{description}}\n{}\n\\end{{description}}",
+        body
+      ));
     }
     docs.push_str("\n\\end{schemamodule}");
   }
@@ -154,20 +228,30 @@ impl EmitState<'_> {
       Pattern::Data(t) => format!("\\typename{{{}}}", clean_tex(t)),
       Pattern::Value(v) => format!("\\attrval{{{}}}", clean_tex(v)),
       Pattern::Start { body } => {
+        // Module-level <start>: emit as a paragraph, not a description-
+        // list item. The Perl original emitted
+        // `\item[\textit{Start}]\textbf{==}\ root`, but that depended
+        // on living inside the moduledescription environment that the
+        // old section-split layout opened. With per-def subsection
+        // splitting there's no enclosing list at module scope, so
+        // module-preamble notes flow as prose.
         let (docs, spec) = self.extract_docs(body);
         let content = spec
           .iter()
           .map(|p| self.to_tex(p))
           .collect::<Vec<_>>()
           .join(" ");
-        let mut s = format!("\\item[\\textit{{Start}}]\\textbf{{==}}\\ {}", content);
+        let mut s = format!("\\par\\noindent\\textit{{Start symbol:}} {}", content);
         if !docs.is_empty() {
           s.push_str(&format!(" \\par{}", docs));
         }
         s
       },
       Pattern::Grammar { body, .. } => {
-        // Collapse leading module includes into a single \item[Included]
+        // The grammar's leading <include>'s become an "Includes" line
+        // of `\moduleref{…}`s, then the rest of the body (defs, doc,
+        // etc.) flows through normally. Module preamble is paragraph
+        // text — see Pattern::Start above for rationale.
         let mut mods: Vec<String> = Vec::new();
         let mut rest: Vec<&Pattern> = Vec::new();
         for d in body {
@@ -176,25 +260,35 @@ impl EmitState<'_> {
             other => rest.push(other),
           }
         }
-        let mut parts: Vec<String> = Vec::new();
+        let mut out = String::new();
         if !mods.is_empty() {
           let refs: Vec<String> = mods
             .iter()
             .map(|m| format!("\\moduleref{{{}}}", clean_tex(m)))
             .collect();
-          parts.push(format!("\\item[\\textit{{Included}}]{}", refs.join(", ")));
+          out.push_str(&format!(
+            "\\par\\noindent\\textit{{Includes:}} {}.\n",
+            refs.join(", ")
+          ));
         }
         for r in rest {
-          parts.push(self.to_tex(r));
+          out.push_str(&self.to_tex(r));
+          out.push('\n');
         }
-        parts.join("\n")
+        out
       },
       Pattern::Module { name, .. } => {
+        // Standalone Module reference (rare — most are absorbed into
+        // the parent Grammar's "Includes" line). Emit as a brief
+        // paragraph note rather than a list item.
         if self.opts.skip_svg && is_svg_module(name) {
-          format!("\\item[\\textit{{Module }}{}] included.", clean_tex(name))
+          format!(
+            "\\par\\noindent\\textit{{Module}} \\texttt{{{}}} \\textit{{included}}.",
+            clean_tex(name)
+          )
         } else {
           format!(
-            "\\item[\\textit{{Module }}\\moduleref{{{}}}] included.",
+            "\\par\\noindent\\textit{{Module}} \\moduleref{{{}}} \\textit{{included}}.",
             clean_tex(name)
           )
         }

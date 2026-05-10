@@ -38,37 +38,42 @@ LoadDefinitions!({
   DefMacro!("\\cs{}",       "{\\ttfamily $\\backslash$#1}");
   DefMacro!("\\typename{}", "\\textit{#1}");
 
+  //--- Schema module section ------------------------------------------
+  // `\schemamodule` is a labeled section. Definitions inside it are
+  // \newtheorem-defined named statements, NOT subsections — so they
+  // appear as `<ltx:theorem>` blocks at module scope, side-by-side
+  // with the module preamble paragraphs.
+  DefMacro!("\\schemamodule{}",
+    "\\section{Module \\texttt{#1}}\\label{schema.#1}");
+  DefMacro!("\\endschemamodule", "");
+
   //--- Schema-doc list environments -----------------------------------
-  // The *description envs are aliases for `description`. We use the
-  // \newenvironment desugaring (\X/\endX as a DefMacro pair) so the
-  // body templates are expanded as TeX rather than emitted verbatim
-  // as XML — DefEnvironment! is XML-emitting only.
-  DefMacro!("\\moduledescription",       "\\begin{description}");
-  DefMacro!("\\endmoduledescription",    "\\end{description}");
+  // Each kind bucket (`\subsection{Patterns}` / `\subsection{Elements}`)
+  // wraps its defs in a description list. Defs are list items; their
+  // bodies open further description lists for facts (Attributes /
+  // Content / Used by). Mirrors upstream `latexmlman.sty` exactly —
+  // nested `<ltx:item>`s under another item are valid (an inline
+  // `\elementdef` inside a pattern's content becomes a nested `<dl>`),
+  // which avoids the structural conflict that bare-`\subsubsection`
+  // defs hit when nested inside another def's content model.
   DefMacro!("\\elementdescription",      "\\begin{description}");
   DefMacro!("\\endelementdescription",   "\\end{description}");
   DefMacro!("\\patterndescription",      "\\begin{description}");
   DefMacro!("\\endpatterndescription",   "\\end{description}");
 
-  //--- Schema module section ------------------------------------------
-  // Mirrors upstream `latexmlman.sty`'s `\section{Module {\perlfont #1}}`.
-  // We use the bare \section{...} form (no optional [short] arg) since
-  // oxide's \section is defined without optional-arg parsing; passing
-  // `\section[X]{Y}` would be misparsed and produce no section element.
-  DefMacro!("\\schemamodule{}",
-    "\\section{Module \\texttt{#1}}\\label{schema.#1}\
-     \\raggedright\
-     \\begin{moduledescription}");
-  DefMacro!("\\endschemamodule", "\\end{moduledescription}");
-
   //--- Schema definition macros ---------------------------------------
-  // Each emits a `description`-list `\item` with a hypertarget.
-  // Body wrapped in the relevant *description env when nonempty.
+  // Definitions are description-list items, matching the upstream
+  // `RelaxNG.pm` shape (Perl `\elementdef`/`\patterndef` always
+  // emitted `\item[Element/Pattern …]`, not a section command). The
+  // anchor is `\hypertarget{schema.<name>}{…}` (paired with
+  // `\hyperlink` in the cross-references below).
   DefMacro!("\\elementdef{}{}{}",
     "\\item[\\textit{Element }{\\bfseries\\schemafont #1}]\
      \\hypertarget{schema.#1}{#2}\
      \\begin{elementdescription}#3\\end{elementdescription}");
 
+  // \attrdef stays an `\item` — it only ever appears inside an
+  // \elementdef / \patterndef body's description list.
   DefMacro!("\\attrdef{}{}{}",
     "\\item[\\textit{Attribute }{\\bfseries\\schemafont #1}] = #3\
      \\par\\noindent #2");

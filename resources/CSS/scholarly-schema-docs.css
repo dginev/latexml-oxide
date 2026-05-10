@@ -59,7 +59,12 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
+  /* `scroll-behavior: auto` is the browser default — anchor jumps
+   * snap instantly to the target. We intentionally avoid `smooth`
+   * here: smooth scroll on a long def page (300+ items) animates
+   * for several seconds, which obscures the `:target` highlight
+   * landing and feels sluggish for navigation-heavy use. */
+  scroll-behavior: auto;
 }
 
 body {
@@ -272,6 +277,11 @@ header.ltx_page_header {
   font-size: 0.85rem;
 }
 
+/* (Universal `*[id] { scroll-margin-top: 5rem }` near the bottom
+ * handles every anchor-target offset; specific overrides have been
+ * removed so the global rule governs `#schema.X` and the
+ * `#I1.ix14`-style auto-ids equally.) */
+
 header.ltx_page_header .ltx_align_center {
   display: flex;
   flex-wrap: wrap;
@@ -426,7 +436,6 @@ nav.ltx_TOC .ltx_ref_title { font-family: var(--font-heading); }
   line-height: 1.25;
   letter-spacing: -0.005em;
   color: var(--main-color);
-  scroll-margin-top: 1rem;
 }
 
 h2.ltx_title_chapter,
@@ -442,6 +451,26 @@ h2.ltx_title_chapter      { font-size: 1.65rem; font-weight: 600; }
 h3.ltx_title_section      { font-size: 1.3rem;  font-weight: 600; }
 h4.ltx_title_subsection   { font-size: 1.1rem;  font-weight: 600; }
 h5.ltx_title_subsubsection { font-size: 1rem;    font-weight: 600; }
+
+/* Rustdoc-style "eyebrow" line: parent module name shown above the
+ * leaf-page heading on subsection pages (Elements / Patterns / etc.). */
+.schema-eyebrow {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-heading);
+  color: var(--main-color);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.schema-eyebrow-link {
+  color: var(--main-color);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--border-color);
+}
+.schema-eyebrow-link:hover {
+  color: var(--main-color);
+  border-bottom-color: var(--main-color);
+}
 
 .ltx_tag_chapter,
 .ltx_tag_section,
@@ -488,7 +517,6 @@ aside.schema_module_narrative code {
 
 dl.ltx_description > dt.ltx_item.schema-def {
   margin-top: 1.4rem;
-  scroll-margin-top: 1rem;
 }
 dl.ltx_description > dt.ltx_item.schema-def:first-of-type {
   margin-top: 0.8rem;
@@ -503,15 +531,19 @@ dt.schema-def > span.ltx_tag.ltx_tag_item {
 }
 
 .schema-kind-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-heading);
   font-size: 0.66rem;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.18em 0.55em;
+  padding: 0.32em 0.7em;
+  margin-right: 0.55em;
   border-radius: 999px;
-  vertical-align: 0.15em;
+  vertical-align: 0.1em;
   white-space: nowrap;
   user-select: none;
 }
@@ -569,7 +601,6 @@ dl.ltx_description > dt.ltx_item {
   padding: 0.05rem 0;
   font-size: 1rem;
   font-weight: 500;
-  scroll-margin-top: 0.5rem;
 }
 
 dl.ltx_description > dd.ltx_item {
@@ -577,6 +608,58 @@ dl.ltx_description > dd.ltx_item {
   padding-left: var(--indent);
   border-left: 1px solid var(--soft-divider);
 }
+
+/* Lazy paint for long schema-def lists: skip layout/paint of off-
+ * screen items to keep large pages responsive. `contain-intrinsic-size`
+ * reserves vertical space so scrollbar position remains stable.
+ * Items remain in the DOM, so browser Ctrl-F still finds their
+ * contents; the def heading anchor (id="schema.X") and CSS-driven
+ * filter (.schema-filter-hidden) keep working too. */
+dl.ltx_description > dt.ltx_item.schema-def,
+dl.ltx_description > dt.ltx_item.schema-def + dd.ltx_item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 4rem;
+}
+
+/* JS-driven filter input above each long def list. Default invisible
+ * — index.js inserts/reveals it only when the list is long enough.
+ * `display: none` is what hides non-matching items when the user
+ * types; un-typed state leaves all items visible so Ctrl-F sees them. */
+.schema-filter {
+  position: sticky;
+  top: 2.2rem;
+  z-index: 1;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.4rem 0;
+  background: color-mix(in srgb, var(--main-background) 96%, transparent);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.schema-filter input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--main-color);
+  font-family: var(--font-code);
+  font-size: 0.9rem;
+}
+.schema-filter input[type="search"]:focus {
+  outline: 2px solid color-mix(in srgb, #3873ad 60%, transparent);
+  outline-offset: -1px;
+  border-color: #3873ad;
+}
+.schema-filter-count {
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.schema-filter-hidden { display: none !important; }
 
 /* nested dl indents more subtly */
 dl.ltx_description dl.ltx_description {
@@ -817,7 +900,34 @@ code.schema-content-model span.ltx_text.ltx_font_italic {
 
 ::selection { background: var(--selection-bg); color: var(--main-color); }
 
-*[id] { scroll-margin-top: 1rem; }
+/* Anchor-target offset: every element that can be the target of a
+ * `#fragment` link gets pushed down on scroll-into-view so it clears
+ * the sticky page header AND the (also-sticky) schema filter input.
+ * Header is ~1.75rem + 1.25rem margin; filter input adds ~2.4rem
+ * when present. 5rem buys headroom for both with breathing space. */
+*[id]               { scroll-margin-top: 5rem; }
+a[name^="schema."]  { scroll-margin-top: 5rem; }
+
+/* Visible feedback on anchor jump: when a `<dt class="schema-def">`
+ * is the current `:target` (e.g. user clicked the § permalink or a
+ * cross-page ref), give it visible top padding plus a soft tint so
+ * it's obvious which row was landed on, AND so the row sits clearly
+ * below the sticky header rather than tucked against it.
+ *
+ * The padding is INSIDE the dt so it pushes the chip+name down from
+ * the section above; combined with `scroll-margin-top` this gives
+ * comfortable clearance both visually and at the scroll boundary. */
+dt.schema-def:target,
+section.schema-def:target {
+  padding-top: 1rem;
+  padding-bottom: 0.4rem;
+  background: color-mix(in srgb, #3873ad 8%, transparent);
+  border-radius: 4px;
+  transition: background 0.4s ease-out;
+}
+dt.schema-def:target + dd.ltx_item {
+  background: color-mix(in srgb, #3873ad 4%, transparent);
+}
 
 /* Narrow viewports — collapse the sidebar above content. */
 @media (max-width: 900px) {

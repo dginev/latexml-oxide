@@ -19,6 +19,8 @@
 //! several methods at once; the Rust version threads `&mut self` the
 //! same way.
 
+use crate::common::model::LTX_NAMESPACE;
+use crate::common::xml::XML_NS;
 use crate::document::Document;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -190,6 +192,38 @@ impl Relaxng {
   /// populate from an RNG file.
   pub fn new(name: impl Into<String>) -> Self {
     Relaxng { name: name.into(), ..Self::default() }
+  }
+
+  /// Register a `prefix → URI` binding ahead of scanning. Mirrors
+  /// `Model::register_namespace` for standalone callers (which don't
+  /// have a live `Model` to consult). Callers that already populated
+  /// the schema's `xmlns:` declarations dynamically don't need this;
+  /// it's intended for namespaces that trang flattens away — the most
+  /// common case is a `.rnc` whose `default namespace = "..."` carries
+  /// no prefix, so the URI is preserved on `<grammar ns="..."/>` but
+  /// no `xmlns:` survives. Later calls overwrite earlier ones.
+  pub fn register_namespace(
+    &mut self,
+    prefix: impl Into<String>,
+    uri: impl Into<String>,
+  ) {
+    self.document_namespaces.insert(prefix.into(), uri.into());
+  }
+
+  /// Register the prefixes that `Model::new_default()` ships with the
+  /// LaTeXML schema (`xml`, `ltx`, `svg`, `xlink`, `m`, `xhtml`). The
+  /// runtime `Model` resolves these via its own registry, so this is
+  /// only needed for *standalone* tooling (the `genschema_oxide`
+  /// binary, integration tests against `LaTeXML.rng`) where we don't
+  /// have a Model object to consult. Returns `&mut self` for chaining.
+  pub fn with_latexml_defaults(&mut self) -> &mut Self {
+    self.register_namespace("xml", XML_NS);
+    self.register_namespace("ltx", LTX_NAMESPACE);
+    self.register_namespace("svg", "http://www.w3.org/2000/svg");
+    self.register_namespace("xlink", "http://www.w3.org/1999/xlink");
+    self.register_namespace("m", "http://www.w3.org/1998/Math/MathML");
+    self.register_namespace("xhtml", "http://www.w3.org/1999/xhtml");
+    self
   }
 
   /// Insert a `<?latexml RelaxNGSchema="..."?>` processing instruction
