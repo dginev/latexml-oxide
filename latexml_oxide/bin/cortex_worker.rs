@@ -246,6 +246,7 @@ impl LatexmlWorker {
       split_xpath:               None,
       split_naming:              None,
       xslt_parameters:           &[],
+      schemadocs:                false,
       // Enable vector-SVG path for PDFs <= 200 KB. Vector-authored PDFs
       // (matplotlib, pgfplots, TikZ-export) are typically <100 KB; raster-
       // embedded PDFs are usually >500 KB. The 200 KB cutoff favors
