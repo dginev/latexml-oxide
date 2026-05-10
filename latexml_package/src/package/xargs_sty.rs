@@ -2,6 +2,13 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   DefKeyVal!("xargs", "usedefault", "", "");
+  // xargs uses positional numeric keys (1, 2, ..., for argument defaults)
+  // plus `addprefix` (\global et al). Perl `xargs.sty.ltxml:27` only
+  // registers `usedefault`; the rest ride on Info-level pass-through
+  // (silent under Perl). Rust-only divergence paired with `21e730e71e`.
+  for key in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "addprefix"] {
+    DefKeyVal!("xargs", key, "");
+  }
 
   DefParameterType!(XArgsOptional, sub[_inner, extra] {
     let no_tks = &NO_TOKENS;

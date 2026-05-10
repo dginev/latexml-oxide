@@ -826,8 +826,13 @@ LoadDefinitions!({
   DefKeyVal!("lx@GEN", "right", "");
   DefKeyVal!("lx@GEN", "ncolumns", "");
   DefKeyVal!("lx@GEN", "alignment", "");
+  DefKeyVal!("lx@GEN", "alignment-required", "");
   DefKeyVal!("lx@GEN", "rowsep", "");
   DefKeyVal!("lx@GEN", "conditionmode", "");
+  // `atameaning` is a Perl typo retained on purpose (see amsmath_sty.rs
+  // around `\smallmatrix` — fixing the typo would change XMDual wrapping
+  // behavior). Register so the Warn-level keyvals path doesn't fire.
+  DefKeyVal!("lx@GEN", "atameaning", "");
 
   // Perl: Base_XMath.pool.ltxml line 575
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {

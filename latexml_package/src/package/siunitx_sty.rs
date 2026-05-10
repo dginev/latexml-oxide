@@ -2045,6 +2045,19 @@ LoadDefinitions!({
     "list-final-separator", "list-pair-separator", "list-separator",
     "list-units", "range-phrase", "range-units",
     "arc-separator", "alsoload", "color",
+    // siunitx 2.x rounding / formatting / table-figure / scientific
+    // options exercised by `tests/complex/si.tex`.
+    "round-mode", "round-precision", "round-half", "round-minimum",
+    "round-integer-to-decimal",
+    "scientific-notation", "fixed-exponent", "exponent-to-prefix",
+    "explicit-sign", "literal-superscript-as-power",
+    "minimum-integer-digits", "group-four-digits", "negative-color",
+    "output-exponent-marker", "power-font",
+    "qualifier-phrase", "uncertainty-separator",
+    "table-figures-decimal", "table-figures-exponent",
+    "table-figures-integer", "table-format",
+    "table-number-alignment",
+    "table-space-text-post", "table-space-text-pre",
   ] {
     DefKeyVal!("SIX", key, "", "");
   }
