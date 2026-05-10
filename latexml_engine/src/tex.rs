@@ -243,20 +243,28 @@ LoadDefinitions!({
   // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
   // `Base.pool` (no LoadFormat) before `DumpFile`.
   if !*INI_MODE {
+    // Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
+    //   if dump available: bootstrap → dump → constructs (NO base)
+    //   else:              bootstrap → base → constructs (NO dump)
     if !*NODUMP && plain_dump_available() {
-      InnerPool!(plain_dump); // Perl: plain_dump.pool.ltxml
+      InnerPool!(plain_dump); // runtime loader for resources/dumps/plain.dump.txt
     } else {
       InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
     }
     InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common
-  }
 
-  // Perl: LoadFormat('plain') — precompiled plain.tex state.
-  // TODO: Enable once dump has full parity (Let, CharDef, Register entries).
-  // Requires _loaded flags to prevent re-loading raw TeX files.
-  // if let Err(e) = crate::plain_dump::load_definitions() {
-  //   log::warn!("plain_dump: {}", e);
-  // }
+    // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
+    // defined at dump-load time were queued; flush them now that
+    // plain_constructs has run.
+    let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+    if applied + skipped > 0 {
+      log::info!(
+        "[plain_dump] deferred aliases: {} applied, {} skipped",
+        applied,
+        skipped
+      );
+    }
+  }
 
   //======================================================================
   // After all other rewrites have acted, a little cleanup
