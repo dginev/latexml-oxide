@@ -610,6 +610,40 @@ dl.ltx_description > dt.ltx_item {
   font-weight: 500;
 }
 
+/* Patternadd operator rows ("|=" / "&=" from `\item[\textbar=]` /
+ * `\item[\&=]` in `\patternadd`). The dt's inner kicker is bold-only
+ * (no italic) — every other kicker on this page is bold-italic
+ * ("Content:", "Used by:", "Element name", etc.) — so flow these dt
+ * + dd pairs inline so the short `|=` operator sits on the same line
+ * as its reference instead of wasting a vertical row. Falls back
+ * gracefully on browsers without `:has()` (just keeps the default
+ * block stacking). */
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic)) {
+  display: inline-block;
+  margin: 0.4rem 0.55em 0 0;
+  vertical-align: baseline;
+}
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item {
+  display: inline-block;
+  margin: 0.4rem 0;
+  padding-left: 0;
+  border-left: 0;
+  vertical-align: baseline;
+}
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item > .ltx_para,
+dl.ltx_description
+  > dt.ltx_item:has(> .ltx_tag_item > .ltx_text.ltx_font_bold:not(.ltx_font_italic))
+  + dd.ltx_item > .ltx_para > .ltx_p {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
 dl.ltx_description > dd.ltx_item {
   margin: 0 0 0.6rem;
   padding-left: var(--indent);
