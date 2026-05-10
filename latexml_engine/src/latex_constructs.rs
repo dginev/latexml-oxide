@@ -6895,6 +6895,12 @@ LoadDefinitions!({
   // Keyvals are for attributes for the alignment.
   // Typical keys are width, vattach,...
   DefKeyVal!("tabular", "width", "Dimension");
+  // `vattach` is passed internally by `\tabular[]{}` expansion below
+  // (`[vattach=#1]\@@tabular...`) but Perl latex_constructs.pool.ltxml
+  // also leaves it unregistered (Info-level pass-through). Rust-only
+  // divergence paired with `21e730e71e` Info→Warn promotion: register
+  // it so the internal usage doesn't trip the unknown-key Warn path.
+  DefKeyVal!("tabular", "vattach", "");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
     sub[(template, attributes_opt)] {
     let attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
