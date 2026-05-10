@@ -175,6 +175,18 @@ LoadDefinitions!({
   // for each pdf keyword, provide [property,(content|resource),datatype]
   DefKeyVal!("Hyp", "baseurl", "Semiverbatim");
 
+  // hyperxmp extension keys. Perl `hyperref.sty.ltxml:99-105` lists
+  // these inside the `%pdfkey_property` hash but never calls DefKeyVal
+  // for them — they ride on the Info-level pass-through for unknown
+  // keys. Register them on the Rust side for the same Warn-suppression
+  // rationale as the main option loop above.
+  for key in [
+    "pdfauthortitle", "pdfcaptionwriter", "pdfcopyright",
+    "pdflicenseurl", "pdfmetalang",
+  ] {
+    DefKeyVal!("Hyp", key, "");
+  }
+
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //   hyperref_setoption($key, Digest($value)); });
