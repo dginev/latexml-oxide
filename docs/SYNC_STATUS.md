@@ -245,7 +245,19 @@ Rust 4 vs Perl 11 (`-7`); `1004.4165` `-4`; `1004.4170`/`1005.2727`
 each `-2`. Top SHARED-FAILURE patterns: `\GenericError` (8),
 `_/^` cascade (5), `\@` AmSTeX (3), `\ifpst@useCalc` (1),
 `\endproof` (1), `\usepackage` (1). Mini-sandbox exhausted;
-ready for stage 12.
+advanced to stage 12.
+
+**Stage 12 canvas (2026-05-11)**: 9961/10000 = **99.61% OK**.
+39 failures (highest single-stage count so far) triaged:
+**0 RUST-REGRESSION**, 33 SHARED-FAILURE, 5 RUST-CLEANER,
+1 BOTH-CLEAN intermittent. Standout RUST-CLEANER:
+`1107.5988` Rust 87 vs Perl 102 (`-15`). Top SHARED-FAILURE
+patterns: `_/^` cascade (16 — heavy concentration in this stage),
+`\GenericError` (12), `^` math-mode cascade (5), `\ifpst@useCalc`
+(1), `\vect` undefined (1), `malformed:ltx:p` (1), `expected:{` (1).
+The `_/^` concentration reflects 2011-era arXiv papers' increased
+use of plain-TeX/AmSTeX preambles vs LaTeX. Mini-sandbox
+exhausted; ready for stage 13.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
