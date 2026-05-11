@@ -99,7 +99,6 @@ pub mod oldgerm_sty;
 pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
-pub mod pictex_tex;
 pub mod pinlabel_sty;
 pub mod program_sty;
 pub mod pst_plot_sty;
@@ -185,9 +184,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "plus", phyzzx_plus::load_definitions),
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
-  ("prepictex", "tex", pictex_tex::load_definitions),
-  ("pictex", "tex", pictex_tex::load_definitions),
-  ("postpictex", "tex", pictex_tex::load_definitions),
   ("program", "sty", program_sty::load_definitions),
   ("scrpage", "sty", scrpage_sty::load_definitions),
   ("scrpage2", "sty", scrpage2_sty::load_definitions),
