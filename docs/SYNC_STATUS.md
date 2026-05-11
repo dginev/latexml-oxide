@@ -122,6 +122,27 @@ signature change). `cargo test --tests` = **1185/0/0** post-rebase.
   emits 8 `Error:malformed:ltx:XMArray` + 19-ish `_/^` cascade. Perl
   emits 19 errors + 22 warnings on same paper. SHARED-FAILURE.
 
+- **plain-TeX `\input psfig.sty` reload mid-document** — papers using
+  plain TeX (no `\documentclass`) with multiple `\input psfig.sty`
+  invocations scattered through the body. The first `\input` loads
+  the binding (RequirePackage epsfig → defines `\psfig`); subsequent
+  `\input`s hit a reload path that unconditionally re-routes through
+  the raw `psfig.sty` on disk, where mid-file plain-TeX constructs
+  expect a `\hbox`/`\vbox` build context that LaTeXML cannot provide.
+  Perl LaTeXML hits the identical `Error:undefined:\psfig` at the
+  exact same source line (255 col 1). Witnesses: cond-mat0010356,
+  cond-mat0101405. SHARED-FAILURE.
+
+**Stage 1 mini-sandbox completion (2026-05-10)**: 34 failure-set
+papers verified Rust-vs-Perl with `--path=~/git/ar5iv-bindings
+--preload=ar5iv.sty`. Final distribution:
+  * 16 BOTH-CLEAN (recovered after the binding-fallback policy fix
+    `52ca5d6299` + earlier revtex4 default-amsmath flip).
+  * 17 SHARED-FAILURE (logged above; both engines fail identically).
+  * 1 RUST-CLEANER (hep-th0005268: Rust 21 vs Perl 26).
+  * **0 RUST-REGRESSION.**
+Mini-sandbox exhausted; ready for stage 2 advance.
+
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
   to Warn/Error so the canvas no longer classifies broken papers as
