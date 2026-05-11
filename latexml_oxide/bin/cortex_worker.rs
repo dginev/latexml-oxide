@@ -691,35 +691,17 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  // Heuristic 1.5: deprioritize obvious vendor template / docs files.
-  // Many user uploads bundle the publisher's template along with the
-  // user's own paper. Examples we've hit: 1907.06674 ships
-  // `elsarticle-template-harv.tex`, `elsarticle-template-num.tex`,
-  // `elsdoc.tex` AND the user's `main_resubmit.tex` — picker chose
-  // `elsdoc.tex` (elsarticle docs file with `\includegraphics{...pdf}`
-  // examples) and produced 101 errors.
-  //
-  // Pattern: filenames containing `template`, ending in `-doc.tex`/
-  // `-docs.tex`/`elsdoc.tex`/`README.tex`. If the candidate set has
-  // BOTH template-looking and non-template files, drop the templates.
-  if candidates.len() > 1 {
-    let is_template_name = |f: &PathBuf| -> bool {
-      let n = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
-      n.contains("template")
-        || n == "elsdoc.tex"
-        || n.ends_with("-doc.tex")
-        || n.ends_with("-docs.tex")
-        || n.starts_with("readme")
-    };
-    let non_template: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| !is_template_name(f))
-      .cloned()
-      .collect();
-    if !non_template.is_empty() && non_template.len() < candidates.len() {
-      candidates = non_template;
-    }
-  }
+  // NOTE: Perl Pack.pm L196-218 only applies these heuristics in this
+  // exact order: shallowest-path → PDF-like \includegraphics → .bbl →
+  // common-name (`main`/`ms`/`paper`.tex) → lexicographic. A previous
+  // "Heuristic 1.5" filtered candidates by filename keywords (template,
+  // elsdoc, readme) — but Perl doesn't have that filter, and the Perl-
+  // equivalent lexicographic tiebreaker handles the class-self-docs
+  // case correctly (e.g. 2107.07756: `quantum-template.tex` <
+  // `quantumarticle.tex` so the user's paper wins by lex order).
+  // Reverting to strict Perl-parity per feedback_prefer_root_cause
+  // guidance: prefer matching upstream heuristics over a hand-curated
+  // SURPASS-PERL filter that diverges from arXiv::FileGuess.
 
   // Heuristic 2: prefer files with a matching .bbl file
   // (.bbl is the strongest "this is the main file" signal — present
@@ -741,14 +723,33 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Heuristic 3: prefer files with PDF-like \includegraphics
+  // Perl Pack.pm L222-244 heuristic_check_for_pdftex: requires the
+  // strict form `\includegraphics[^%]*\.(pdf|png|gif|jpg)\s?\}` on a
+  // non-commented line, OR `\pdfoutput=1` in the first 5 such lines.
+  // The previous substring-based check (`contains("\\includegraphics")
+  // && contains(".pdf")`) was too lax: elsdoc.tex (1907.06674) has both
+  // tokens — `\includegraphics` examples in code samples, `.pdf` in
+  // unrelated discussion text — without any actual `\includegraphics
+  // {file.pdf}` invocation. Strict regex eliminates the false positive
+  // and aligns with arXiv::FileGuess.
+  static RE_INCLUDEGRAPHICS_PDF: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?im)^[^%\n\r]*\\includegraphics[^%\n\r]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap()
+  });
+  static RE_PDFOUTPUT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[^%\n\r]*\\pdfoutput(?:\s+)?=(?:\s+)?1").unwrap());
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates
       .iter()
       .filter(|f| {
         fs::read(f).ok().is_some_and(|raw| {
           let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics")
-            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+          if RE_INCLUDEGRAPHICS_PDF.is_match(&c) {
+            return true;
+          }
+          // Perl: $pdfoutput_checks >= 0 limits to first 5 matching candidate
+          // lines (any line matching `\pdfoutput=1`). Approximate by scanning
+          // the whole file — the regex requires non-commented context already.
+          RE_PDFOUTPUT.is_match(&c)
         })
       })
       .cloned()
