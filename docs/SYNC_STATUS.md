@@ -417,7 +417,25 @@ Standout RUST-CLEANER: `1805.03020` Rust 1 vs Perl 10 (`-9`);
 `1803.01753` `-5`; `1802.01039` `-2`. Top SHARED-FAILURE
 patterns: `\GenericError` (8), `_/^` cascade (8), `^` math-mode
 (3), `\endproof` (2), `\bibitem`, `\titlebox`, `\usetikzlibrary`
-(1 each). Mini-sandbox exhausted; ready for stage 23.
+(1 each). Mini-sandbox exhausted; advanced to stage 23.
+
+**Stage 23 canvas (2026-05-11)**: 9959/10000 = **99.59% OK**.
+41 failures triaged: **1 RUST-REGRESSION fixed**, 5 deferred,
+32 SHARED-FAILURE, 3 RUST-CLEANER. Witness `1808.04659`:
+`\newglossarystyle` undefined in sub-input `acronyms.tex`.
+Fix `ab043cc826`: add no-op stubs for `\newglossarystyle`,
+`\renewglossarystyle`, `\glossarystyle`, `\setglossarystyle` to
+glossaries_sty.rs. 2 errors → 0. Deferred:
+  - `1811.00981`: `\WSCpagesetup` paper-local CS.
+  - `1810.01273`: `\unexpected:}` cascade.
+  - `1809.07035`: `\lx@hidden@egroup` cascade.
+  - `1810.00383`: listingline malformed (recurrence).
+  - `1901.01605`: `^` cascade Rust 107 vs Perl 102.
+Standout RUST-CLEANER: `1810.13097` Rust 9 vs Perl 37 (`-28`);
+`1812.01372`/`1809.08836` each `-5`. Top SHARED-FAILURE patterns:
+`\GenericError` (17), `_/^` cascade (5), `^` math-mode (2),
+`\@` AmSTeX, `\keywords`, `\lx@hidden@egroup`, `malformed:XMApp`
+(1 each). Mini-sandbox exhausted; ready for stage 24.
 
 **Cumulative through stage 20 (200k papers, 47% of corpus)**:
 25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
