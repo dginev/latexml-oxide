@@ -385,7 +385,25 @@ Standout RUST-CLEANER: `1612.07821` Rust 23 vs Perl 26 (`-3`);
 `1702.02056` / `1702.07132` each `-2`. Top SHARED-FAILURE patterns:
 `\GenericError` (8), `_/^` cascade (8), `^` math-mode (3),
 `\section` (1), `\titlestring` (1), `\´` (1).
-Mini-sandbox exhausted; ready for stage 21.
+Mini-sandbox exhausted; advanced to stage 21.
+
+**Stage 21 canvas (2026-05-11)**: 9963/10000 = **99.63% OK**.
+37 failures triaged: **4 RUST-REGRESSIONs deferred** (all
+multi-event cascades — per loop skip-rule), 31 SHARED-FAILURE,
+2 RUST-CLEANER. Deferred:
+  - `1711.09558`/`1707.05859`/`1801.01828`: `\GenericError`
+    cascade amplification (paper preamble redefines
+    `\GenericError`; cascade dwarfs the root cause).
+  - `1709.09268`: `ltx:listingline` malformed (recurrence of
+    the 1309.5049 listings.sty XML emit issue).
+Notable RUST-CLEANER deltas: `1711.00728` Rust 4 vs Perl 107
+(`-103`); `1712.01695` Rust 2 vs Perl 102 (`-100`). Both papers
+gain ~100 points of Rust-CLEANER advantage via cleaner
+error-recovery in the `\GenericError` path. Top SHARED-FAILURE
+patterns: `\GenericError` (13), `_/^` cascade (8), `^` math-mode
+(2), `\section` (2), `\@` AmSTeX, `\newtheorem`, `\blfootnote`,
+`{tikzpicture}`, `\ANL`, `&` (1 each).
+Mini-sandbox exhausted; ready for stage 22.
 
 **Cumulative through stage 20 (200k papers, 47% of corpus)**:
 25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
