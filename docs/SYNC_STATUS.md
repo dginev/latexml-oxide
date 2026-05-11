@@ -85,6 +85,78 @@ rebased onto `bffd1be471` ("feat: Schema Docs and Split post-processor
 6 overlapping files (latexml_post pipeline reorder + `process_chain`
 signature change). `cargo test --tests` = **1185/0/0** post-rebase.
 
+## Planned: replace hand-stub bindings with raw-load (2026-05-11)
+
+**Strategic direction** (user feedback 2026-05-11): when Rust ships a
+`*_sty.rs` hand-stub that intercepts the actual TexLive `*.sty`
+file because raw-load fails on expl3/xparse/l3* emulation gaps, the
+**proper** fix is to **improve the Rust engine until raw-load works**,
+not to extend the stub indefinitely. Perl LaTeXML raw-loads these
+packages successfully via its mature expl3 emulation; every stub we
+ship is a divergence from Perl and an accumulator of incomplete
+coverage. See [`memory/feedback_prefer_raw_load.md`].
+
+**Affected stubs and gap measurements:**
+
+### `latexml_contrib/src/mhchem_sty.rs`
+- Intercepts: TL `mhchem.sty` (~640 lines).
+- Real chain: `chemgreek` → `xparse` → expl3 (`\group_begin:`,
+  `\__file_tmp:w`, l3regex, l3tl-analysis).
+- Status: existing TODO at file head says "DELETE this binding
+  once engine can faithfully handle the expl3/xparse/chemgreek
+  raw-load chain". Driver: arXiv:1806.06448.
+- Gap (Rust): `\group_begin:` non-boxing-frame handling,
+  `\l__tl_analysis_*_int` register access in l3regex/l3tl-analysis.
+
+### `latexml_package/src/package/glossaries_sty.rs`
+- Intercepts: TL `glossaries.sty` (7714 lines as of TL2025).
+- Real chain: dependency-scan triggers `ifthen`, `xkeyval`,
+  `mfirstuc`, `textcase`, `xfor`, `datatool-base`, `amsgen`,
+  `etoolbox`, `glossary-long`, `glossary-super`, `glossary-list`,
+  `glossary-tree`, `translator`, `shellesc`, `tracklang`,
+  `glossary-hypernav`, `glossaries`.
+- **Measured gap (2026-05-11)**: with this stub disabled,
+  raw-load fires; several deps bail out (no Rust binding +
+  raw-load fails on expl3 emulation gaps), leaving
+  `\makenoidxglossaries`, `\newglossaryentry`, `\gls`,
+  `\printnoidxglossaries` undefined.
+- Specific dependency packages needing engine support to load
+  raw: `mfirstuc`, `xfor`, `datatool-base`, `glossary-long`,
+  `glossary-super`, `glossary-list`, `glossary-tree`,
+  `tracklang`, `glossary-hypernav`.
+- Stub is the load-bearing path today. Drivers: 1808.04659
+  (`\newglossarystyle`, stage 23 RUST-REGRESSION resolved
+  by stub-extension `ab043cc826` — interim fix only).
+
+### Plan of attack
+
+1. **Foundation pass — expl3 / l3* emulation**. Profile the
+   first few `Error:undefined:\<expl3-internal>` and
+   `Error:unexpected:\group_begin:` from each raw-load attempt;
+   land one engine fix per cluster. Verify by re-running the
+   raw-load on the same witness and watching the error count
+   drop. Repeat until raw-load is clean for ONE small
+   dependency (e.g. `xfor` is a good first target — fewer
+   pages, narrower scope).
+2. **Per-package raw-load enablement**. After foundations are
+   solid, disable the corresponding `*_sty.rs` stub for
+   `mhchem` and `glossaries`. Re-run their canvas witnesses.
+   Once a stub is no longer load-bearing, replace it with the
+   thin Perl-style override file (the small set of
+   `\@gls@link`-style hooks that wrap raw-loaded output
+   in `<ltx:glossaryref>` / `<ltx:graphics>`).
+3. **Regression guard**. Add to the per-stage triage: when a
+   new `\<missing-cs>` error surfaces in a paper that loads a
+   currently-stubbed package, document the gap rather than
+   land a new no-op stub. Witnesses that BLOCK stage advance
+   may still get a stub as an interim fix, but the commit
+   should note the stub is interim.
+
+**Out-of-scope here** (separate track, see `OXIDIZED_DESIGN.md`):
+strict Perl `\@gls@link`-style hooks for the post-raw-load
+overrides. Those are the "easy part" — the engine emulation
+gap is the actual work.
+
 ## SHARED-FAILURE log (Perl + Rust both fail identically)
 
 - **`\def\<one-letter-CS>` before `\documentclass`** — user code like
