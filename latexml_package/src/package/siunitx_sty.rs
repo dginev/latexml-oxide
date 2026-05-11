@@ -2181,7 +2181,14 @@ LoadDefinitions!({
   // (unbraced). Both must work. `DefToken` parameter type covers both;
   // earlier `gullet::read_token` would treat `{` as the token in the
   // braced case and miss the binding entirely, leaving \invbarn undefined.
-  DefPrimitive!("\\DeclareSIUnit[] DefToken {}", sub[(_kv, cs, presentation)] {
+  // Spec mirrors Perl `\DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}`
+  // (siunitx.sty.ltxml:1343). The `SkipSpaces` between `[]` and the
+  // CS is load-bearing: papers commonly write
+  // `\DeclareSIUnit[opt=val] \dBm{dBm}` with a space before the CS,
+  // which without `SkipSpaces` causes the DefToken arg to read the
+  // space character and the actual CS to be parsed as the body.
+  // Driver: 1501.03532 (stage 17 RUST-REGRESSION: \dBm undefined).
+  DefPrimitive!("\\DeclareSIUnit[] SkipSpaces DefToken {}", sub[(_kv, cs, presentation)] {
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
