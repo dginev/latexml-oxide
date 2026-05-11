@@ -930,25 +930,44 @@ LoadDefinitions!({
   });
   DefMacro!("\\colormask", None);
 
-  // Color series
-  DefPrimitive!("\\definecolorseries{}{}{}[]{}", sub[(name, model, method, bmodel_opt, bspec)] {
+  // Color series — full 7-arg form, mirroring Perl xcolor.sty.ltxml L651:
+  //   DefPrimitive('\definecolorseries{}{}{}[]{}[]{}', sub { ... });
+  // The two optional [] are the base-model and step-model. PGF data-
+  // visualization invokes via `\definecolorseries{...}{...}{step}[hsb]{...}{...}`
+  // (line 2403 of tikzlibrarydatavisualization.code.tex); without the
+  // optional in our parameter list, `[hsb]` was being read as a single-
+  // char `[` token for the 4th `{}` argument, then `parse_xcolor`
+  // looked up `[` as a color name → "Can't find color named '['".
+  // Witness: 1904.03581 (`\usetikzlibrary{datavisualization}` → 1 error,
+  // Perl 0 errors).
+  DefPrimitive!("\\definecolorseries{}{}{}[]{}[]{}",
+                sub[(name, model, method, bmodel_opt, bspec, smodel_opt, sspec)] {
     let name_str = do_expand(name)?.to_string();
     let model_str = do_expand(model)?.to_string();
     let method_str = do_expand(method)?.to_string();
     let bspec_str = do_expand(bspec)?.to_string();
+    let sspec_str = do_expand(sspec)?.to_string();
     let bmodel_str = bmodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+    let smodel_str = smodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
+
     let base = parse_xcolor(bmodel_str.as_deref(), &bspec_str, Some(&model_str));
-    // Store base and method
-    assign_value(&s!("color_series_{name_str}_base"), Stored::String(arena::pin(base.to_stored())), Some(Scope::Global));
-    assign_value(&s!("color_series_{name_str}_method"), Stored::String(arena::pin(method_str)), Some(Scope::Global));
+    // Perl L658-660: 'step'/'grad' use Color($model, split(/,/, ToString($sspec)))
+    // for the delta; 'last' uses ParseXColor($smodel, $sspec, $model).
+    let delta = if method_str == "step" || method_str == "grad" {
+      color_from_model_spec(&model_str, &sspec_str)
+    } else {
+      parse_xcolor(smodel_str.as_deref(), &sspec_str, Some(&model_str))
+    };
+
+    assign_value(&s!("color_series_{name_str}_base"),
+      Stored::String(arena::pin(base.to_stored())), Some(Scope::Global));
+    assign_value(&s!("color_series_{name_str}_method"),
+      Stored::String(arena::pin(method_str)), Some(Scope::Global));
+    assign_value(&s!("color_series_{name_str}_delta"),
+      Stored::String(arena::pin(delta.to_stored())), Some(Scope::Global));
     Ok(Vec::new())
   });
 
-  // Handle the second optional+required pair for delta spec
-  // Perl: '\definecolorseries{}{}{}[]{}[]{}' — 7 args
-  // Simplified: we handle the common 5-arg form above, and the 7-arg form via a wrapper
-  // Actually let's override with the full 7-arg form
-  // For now the 5-arg form handles the test cases (which use {last}{.}{-.})
 
   // \resetcolorseries[div]{name}
   // reset/initialize the color series <name> for <div> steps.
@@ -1016,51 +1035,6 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\colorseriescycle", "16");
-
-  // \definecolorseries full 7-arg form — override the 5-arg form
-  // Perl: '\definecolorseries{}{}{}[]{}[]{}'
-  // We need to handle this properly for the test: \definecolorseries{foo}{rgb}{last}{.}{-.}
-  // Note: the 5-arg form above already handles the basic case.
-  // The test uses: {foo}{rgb}{last}{.}{-.} — base="." (current), last="-." (complement)
-  // Let's update the 5-arg handler to also store the delta
-
-  // Actually, let me fix the 5-arg DefPrimitive above to handle the sspec part.
-  // The Perl prototype is: '\definecolorseries{}{}{}[]{}[]{}'
-  // With 7 args: name, model, method, [bmodel], bspec, [smodel], sspec
-  // Our 5-arg form handles: name, model, method, [bmodel], bspec
-  // We need to also read smodel and sspec!
-
-  // Override: redefine as macro that reads all args
-  // For test compatibility, let's handle the case where bspec and sspec
-  // appear as consecutive {} groups without optional [] between them
-
-  // The test: \definecolorseries{foo}{rgb}{last}{.}{-.}
-  // This is: name=foo, model=rgb, method=last, bspec=., sspec=-.
-  // (no optional bmodel or smodel)
-
-  // Let me redefine with the full parameter spec
-  DefPrimitive!("\\definecolorseries{}{}{}{}{}", sub[(name, model, method, bspec, sspec)] {
-    let name_str = do_expand(name)?.to_string();
-    let model_str = do_expand(model)?.to_string();
-    let method_str = do_expand(method)?.to_string();
-    let bspec_str = do_expand(bspec)?.to_string();
-    let sspec_str = do_expand(sspec)?.to_string();
-
-    let base = parse_xcolor(None, &bspec_str, Some(&model_str));
-    let delta = if method_str == "step" || method_str == "grad" {
-      color_from_model_spec(&model_str, &sspec_str)
-    } else {
-      parse_xcolor(None, &sspec_str, Some(&model_str))
-    };
-
-    assign_value(&s!("color_series_{name_str}_base"),
-      Stored::String(arena::pin(base.to_stored())), Some(Scope::Global));
-    assign_value(&s!("color_series_{name_str}_method"),
-      Stored::String(arena::pin(method_str)), Some(Scope::Global));
-    assign_value(&s!("color_series_{name_str}_delta"),
-      Stored::String(arena::pin(delta.to_stored())), Some(Scope::Global));
-    Ok(Vec::new())
-  });
 
   // Arithmetic
   Let!("\\rmultiply", "\\multiply");
