@@ -8,19 +8,22 @@ RUST_MIN_STACK = "16777216"
 # see `make fresh-test` in the top-level Makefile. Cargo aliases can't chain
 # shell commands, so that orchestration lives in make, not here.
 
-# Use the bundled `rust-lld` (LLD shipped with the Rust toolchain) as the
-# linker on Linux. Cuts link time roughly 2-3x vs the default BFD `ld` for
-# our binary size. Saves ~3-7s per release relink.
+# Linker + rustc parallel-frontend tuning for x86_64 Linux.
 #
-# `-Clinker-features=+lld` selects rust-lld; `-Zunstable-options` is required
-# because the flag is unstable on nightly. Project already requires nightly
-# (per CLAUDE.md), so the gate is fine. CI will need the same settings.
+# Linker: `mold` (faster than `lld`, much faster than `bfd`). mold ≥ 1.4 is
+# stable for Rust binaries; mold 2.30 ships in Ubuntu. We pass it via cc's
+# `-fuse-ld=mold` (gcc ≥ 12 understands this; this system runs gcc 13.3).
+# Order of preference: mold > rust-lld > gold > bfd. Saves ~3-5× linker
+# wall-clock vs lld on our binary size.
 #
-# Why rust-lld and not `gold`? rustc emits `the gold linker is deprecated and
-# has known bugs with Rust` when -fuse-ld=gold is used. lld is the recommended
-# fast linker. rust-lld ships with every nightly, no apt install needed.
+# Parallel rustc frontend: `-Zthreads=8` enables the parallel parser /
+# borrow-checker / type-checker in nightly rustc, which is single-threaded
+# by default. 8 threads is a sweet spot — higher values plateau due to
+# lock contention inside rustc. Speeds up the per-crate frontend phase
+# 20-40% on this 28-thread CPU. Nightly-only; project already requires
+# nightly (CLAUDE.md).
 #
-# If a local install of `mold` becomes available, swap to it for a further
-# ~3-5x linker speedup (mold > lld > gold > bfd).
+# `-Zunstable-options` is the umbrella gate that enables `-Zthreads` as a
+# normal flag instead of erroring as unknown.
 [target.x86_64-unknown-linux-gnu]
-rustflags = ["-Clinker-features=+lld", "-Zunstable-options"]
+rustflags = ["-Clink-arg=-fuse-ld=mold", "-Zthreads=8", "-Zunstable-options"]
