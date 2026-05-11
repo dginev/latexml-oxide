@@ -348,7 +348,25 @@ Mini-sandbox exhausted; advanced to stage 18.
 SHARED-FAILURE patterns: `\GenericError` (16), `_/^` cascade (11),
 `^` math-mode (3), `\@` AmSTeX (1), `\ead` Elsevier (1),
 `\ifpst@useCalc` (1), `\section` cluster (1), `\endproof` (1),
-`malformed:ltx:text` (1). Mini-sandbox exhausted; ready for stage 19.
+`malformed:ltx:text` (1). Mini-sandbox exhausted; advanced to stage 19.
+
+**Stage 19 canvas (2026-05-11)**: 9962/9998 = **99.64% OK**.
+36 failures triaged: **2 RUST-REGRESSIONs fixed**, 2 deferred,
+29 SHARED-FAILURE, 3 RUST-CLEANER. Witnesses (both fixed by
+`e9b7673bab`):
+  - `1607.04783`: `\eVperc` undefined (`\SI{2.7}{\giga\eVperc}`,
+    paper uses `\usepackage[alsoload=hep]{siunitx}`).
+  - `1608.03221`: `\gauss` undefined.
+Root cause: hep/particle-physics block from Perl
+`siunitx.sty.ltxml:1795-1812` (12 units) was incomplete in Rust
+(only 6 `*barn` aliases ported). Added the missing 12. Deferred:
+  - `1604.02275`: `\color[` parsing edge case
+  - `1608.06454`: `\.` (dot) token-undefined cascade
+Standout RUST-CLEANER: `1606.03888` Rust 51 vs Perl 66 (`-15`);
+`1603.06802` `-2`. Top SHARED-FAILURE patterns: `\GenericError`
+(13), `_/^` cascade (10), `\endproof` (1), `\idxquad` (2 papers),
+`\cite` (1), `\ytableausetup` (1), `\rec` (1).
+Mini-sandbox exhausted; ready for stage 20.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
