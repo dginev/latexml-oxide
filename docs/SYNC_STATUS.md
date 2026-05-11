@@ -325,7 +325,22 @@ Standout RUST-CLEANER: `1403.6207` Rust 2 vs Perl 6 (`-4`);
 `_/^` cascade (16), `\GenericError` (16), `^` math-mode (2),
 `\@` AmSTeX (2), `\definecolor` (1), `\genova` (1), `\abs` (1),
 `misdefined:\list` (1), `\endproof` (1). Mini-sandbox exhausted;
-ready for stage 17.
+advanced to stage 17.
+
+**Stage 17 canvas (2026-05-11)**: 9970/9998 = **99.72% OK**.
+28 failures triaged: **1 RUST-REGRESSION fixed**, 25 SHARED-FAILURE,
+2 RUST-CLEANER. Witness `1501.03532`:
+`\DeclareSIUnit[number-unit-product = \ ] \dBm{dBm}` followed by
+`\SI{...}{\dBm}` left `\dBm` undefined. Fix `8609c8e793`: add
+`SkipSpaces` to the parameter spec
+(`\DeclareSIUnit[] SkipSpaces DefToken {}`), mirroring Perl
+`siunitx.sty.ltxml:1343`. Without SkipSpaces, the space after
+`]` was being consumed as the DefToken value. 1 error → 0.
+Standout RUST-CLEANER: `1501.03446` Rust 10 vs Perl 15 (`-5`);
+`1504.05740` 28 vs 31 (`-3`). Top SHARED-FAILURE patterns:
+`\GenericError` (11), `_/^` cascade (7), `^` math-mode (2),
+`\@` AmSTeX (1), `\DeclareMathOperator` (1), `malformed:XMDual` (1).
+Mini-sandbox exhausted; ready for stage 18.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
