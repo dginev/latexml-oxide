@@ -24,16 +24,26 @@ LoadDefinitions!({
     DeclareOption!(*option, None);
   }
 
-  // Perl revtex4.cls.ltxml L41-45: `@revtex_toload = (amsfonts, amssymb, amsmath)`
-  // is the DEFAULT — positive options (`amsmath`, etc.) leave it intact;
-  // negative options (`noamsmath`, etc.) remove the entry. Was: defaulted
-  // to false and positive option set true, but the DeclareOption handler
-  // doesn't fire under our ProcessOptions flow when the option matches
-  // an already-positively-listed name (sister-fix in revtex4_1_cls.rs
-  // for driver 2210.07776 \boldsymbol undefined cascade).
+  // Perl revtex4.cls.ltxml L40-45:
+  //   my @revtex_toload = ();        # EMPTY by default
+  //   foreach my $pkg (qw(amsfonts amssymb amsmath)) {
+  //     DeclareOption($pkg,   sub { push(@revtex_toload, $pkg); });
+  //     DeclareOption("no$pkg", sub { @revtex_toload = grep {…} … }); }
+  // i.e. amsfonts/amssymb/amsmath are only loaded if the user explicitly
+  // passes that option to `\documentclass`. The earlier Rust port flipped
+  // the default to TRUE — its comment claimed to mirror Perl's
+  // `@revtex_toload = (amsfonts,amssymb,amsmath)` default, but Perl's
+  // actual literal is `()`. The flip caused papers that don't opt in to
+  // amsmath to nevertheless get amsmath's `\cases` redefinition, which
+  // then mis-parses plain TeX `\cases{X & Y \cr}` and cascades into
+  // `unexpected:\end{equation}` + downstream `unexpected:_/^`. RUST
+  // REGRESSION — Perl-faithful fix: empty default, positive option ⇒
+  // set load=true.
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
-    DeclareOption!(*pkg, None);
+    let pkg_owned = pkg.to_string();
+    DeclareOption!(*pkg, {
+      state::assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
+    });
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
       state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
