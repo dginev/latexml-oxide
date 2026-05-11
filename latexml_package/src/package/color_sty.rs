@@ -92,10 +92,22 @@ LoadDefinitions!({
     "tcidvi",
     "vtex",
     "nodvipsnames",
-    "usenames",
   ] {
     DeclareOption!(option, None);
   }
+  // `usenames` makes `\DefineNamedColor` ALSO expose the color under
+  // the plain name (no `named_` prefix), so `\color{Blue}` after
+  // `\usepackage[usenames,dvipsnames]{color}` resolves to the
+  // dvipsnam.def-loaded `Blue`. LaTeX color.sty L84-87 implements this
+  // by redefining `\c@lor@usename` to actually register the lookup; we
+  // emulate by setting a flag the `\DefineNamedColor` primitive
+  // honors. Mirrors Perl `color.sty.ltxml` (which silently relied on
+  // the listings.sty option-deferral path; this is the more direct
+  // fix). Driver: 1205.2217 (`\lstset{keywordstyle=...\color{Blue}}`
+  // 16 × `unexpected:Blue` → 0 errors).
+  DeclareOption!("usenames", {
+    state::assign_value("color_usenames_active", true, Some(Scope::Global));
+  });
   // Options that want the dvipsnam definitions
   for option in &["dvips", "xdvi", "oztex", "dvipsnames"] {
     DeclareOption!(*option, {
@@ -145,6 +157,13 @@ LoadDefinitions!({
     let color = parse_color(Some(&model_str), &spec_str);
     let named_key = format!("named_{}", name_str);
     def_color(&named_key, &color, None)?;
+    // Perl color.sty L84-87 + L133 `\c@lor@usename`: with the
+    // `usenames` package option, ALSO expose the plain name so
+    // `\color{Blue}` works after `\DefineNamedColor{named}{Blue}...`.
+    // Driver: 1205.2217 dvipsnam.def's 68 named colors used directly.
+    if state::lookup_bool("color_usenames_active") {
+      def_color(&name_str, &color, None)?;
+    }
     // Perl L73: Box with reversion Invocation preserving all four args.
     let reversion_tokens = Invocation!("\\DefineNamedColor",
       vec![Some(dmodel_expanded), Some(name_expanded),
