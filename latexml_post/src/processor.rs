@@ -5,7 +5,7 @@
 
 use libxml::tree::Node;
 use regex::Regex;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::PathBuf;
 
 use crate::document::PostDocument;
@@ -145,7 +145,7 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
 
   for pi in doc.findnodes(".//processing-instruction('latexml')") {
     let data = pi.get_content();
-    let mut entry = HashMap::new();
+    let mut entry = HashMap::default();
     for cap in pi_re.captures_iter(&data) {
       entry.insert(cap[1].to_string(), cap[2].to_string());
     }

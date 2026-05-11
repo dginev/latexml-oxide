@@ -623,7 +623,7 @@ impl State {
   /// Returns a HashMap mapping (table_name, key) → Stored value.
   /// Only captures the front (current) value of each key.
   /// Used before processing latex.ltx to diff what changed.
-  pub fn snapshot(&self) -> std::collections::HashMap<(TableName, SymStr), Stored> {
+  pub fn snapshot(&self) -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> {
     let tables = [
       TableName::Value,
       TableName::Meaning,
@@ -634,7 +634,7 @@ impl State {
       TableName::Uccode,
       TableName::Delcode,
     ];
-    let mut snap = std::collections::HashMap::new();
+    let mut snap = rustc_hash::FxHashMap::default();
     for &tname in &tables {
       let table = self.table(tname);
       for (key, values) in table {
@@ -652,7 +652,7 @@ impl State {
   /// since those can't be serialized — they come from Rust engine code.
   pub fn diff_from_snapshot(
     &self,
-    snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+    snap: &rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
   ) -> Vec<(TableName, SymStr, Stored)> {
     let tables = [
       TableName::Value,
@@ -2943,13 +2943,13 @@ pub fn is_serializable(stored: &Stored) -> bool {
 }
 
 /// Take a snapshot of the current State (for dump diff).
-pub fn take_snapshot() -> std::collections::HashMap<(TableName, SymStr), Stored> {
+pub fn take_snapshot() -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> {
   state!().snapshot()
 }
 
 /// Compute diff from snapshot and return changed serializable entries.
 pub fn diff_snapshot(
-  snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+  snap: &rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
 ) -> Vec<(TableName, SymStr, Stored)> {
   state!().diff_from_snapshot(snap)
 }
@@ -2962,7 +2962,7 @@ pub fn diff_snapshot(
 // Without this hook the snapshot is taken after `_base.rs` + `_constructs.rs`
 // have also run, making the diff far narrower than Perl's dump. See
 // SYNC_STATUS D0 (d.1).
-type StateSnapshot = std::collections::HashMap<(TableName, SymStr), Stored>;
+type StateSnapshot = rustc_hash::FxHashMap<(TableName, SymStr), Stored>;
 type StagedSnapshotMap = rustc_hash::FxHashMap<&'static str, StateSnapshot>;
 
 thread_local! {
@@ -2985,7 +2985,7 @@ pub fn stage_snapshot(name: &'static str) {
 /// waiting for a pool hook.
 pub fn stage_snapshot_value(
   name: &'static str,
-  snap: std::collections::HashMap<(TableName, SymStr), Stored>,
+  snap: rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
 ) {
   STAGED_SNAPSHOTS.with(|m| {
     m.borrow_mut().insert(name, snap);
@@ -2995,6 +2995,6 @@ pub fn stage_snapshot_value(
 /// Retrieve a previously staged snapshot, if present.
 pub fn get_staged_snapshot(
   name: &str,
-) -> Option<std::collections::HashMap<(TableName, SymStr), Stored>> {
+) -> Option<rustc_hash::FxHashMap<(TableName, SymStr), Stored>> {
   STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
 }

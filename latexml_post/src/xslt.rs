@@ -5,7 +5,7 @@
 //! Handles CSS/JS/icon resource copying.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::fs;
 use std::path::Path;
 

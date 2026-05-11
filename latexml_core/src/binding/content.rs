@@ -1562,7 +1562,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // `\s*,\s*` and only enrolls a package once, AND only if its
   // `.sty.ltxml_loaded` flag is unset.
   let mut packages: Vec<(String, Option<String>)> = Vec::new();
-  let mut dups: std::collections::HashSet<String> = std::collections::HashSet::new();
+  let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {

@@ -8,7 +8,7 @@
 //! since XMath removal would break subsequent formatters.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::{NodeData, PostDocument, element_children_iter};
 use crate::math_processor::{MathConversion, MathProcessor};
@@ -57,7 +57,7 @@ impl MathProcessor for XMath {
         .collect();
       Some(NodeData::Element {
         tag: "ltx:XMath".to_string(),
-        attributes: Some(HashMap::from([("_sourced".to_string(), "1".to_string())])),
+        attributes: Some(HashMap::from_iter([("_sourced".to_string(), "1".to_string())])),
         children,
       })
     } else {

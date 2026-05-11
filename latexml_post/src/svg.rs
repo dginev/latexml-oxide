@@ -10,7 +10,7 @@
 //! The top-level picture gets `transform="translate(0,h) scale(1,-1)"`.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::f64::consts::PI;
 
 use crate::document::{NodeData, PostDocument, element_children_iter};
@@ -50,7 +50,7 @@ impl SVG {
     let g_transform = format!("translate(0,{:.2}) scale(1,-1)", h);
     let g = NodeData::Element {
       tag: "svg:g".to_string(),
-      attributes: Some(HashMap::from([("transform".to_string(), g_transform)])),
+      attributes: Some(HashMap::from_iter([("transform".to_string(), g_transform)])),
       children,
     };
 
@@ -59,7 +59,7 @@ impl SVG {
     let height = node.get_attribute("height").map(|s| to_px(&s));
     let clip = node.get_attribute("clip").as_deref() == Some("true");
 
-    let mut svg_attrs = HashMap::new();
+    let mut svg_attrs = HashMap::default();
     svg_attrs.insert("version".to_string(), "1.1".to_string());
     if let Some(w) = width {
       svg_attrs.insert("width".to_string(), format!("{:.2}", w));
@@ -112,7 +112,7 @@ impl SVG {
     let children = self.convert_children(doc, node);
     Some(NodeData::Element {
       tag: "svg:g".to_string(),
-      attributes: Some(HashMap::from([(
+      attributes: Some(HashMap::from_iter([(
         "transform".to_string(),
         format!("translate(0,{:.2}) scale(1,-1)", h),
       )])),
@@ -295,7 +295,7 @@ impl SVG {
 
     Some(NodeData::Element {
       tag:        "svg:path".to_string(),
-      attributes: Some(HashMap::from([("d".to_string(), d)])),
+      attributes: Some(HashMap::from_iter([("d".to_string(), d)])),
       children:   vec![],
     })
   }
@@ -348,7 +348,7 @@ impl SVG {
       if chunk.len() == 2 {
         circles.push(NodeData::Element {
           tag:        "svg:circle".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("cx".to_string(), format!("{:.2}", chunk[0])),
             ("cy".to_string(), format!("{:.2}", chunk[1])),
             ("r".to_string(), dotsize.clone()),
@@ -370,7 +370,7 @@ impl SVG {
     let y = node.get_attribute("y").unwrap_or_else(|| "0".to_string());
     let text = node.get_content();
 
-    let mut attrs = HashMap::new();
+    let mut attrs = HashMap::default();
     attrs.insert("x".to_string(), x);
     attrs.insert("y".to_string(), y);
     // Text needs to be un-flipped
@@ -422,7 +422,7 @@ impl SVG {
 
     let fo = NodeData::Element {
       tag:        "svg:foreignObject".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("width".to_string(), format!("{:.2}", to_px(&width))),
         ("height".to_string(), format!("{:.2}", h_px)),
         ("overflow".to_string(), "visible".to_string()),
@@ -432,7 +432,7 @@ impl SVG {
 
     Some(NodeData::Element {
       tag:        "svg:g".to_string(),
-      attributes: Some(HashMap::from([(
+      attributes: Some(HashMap::from_iter([(
         "transform".to_string(),
         format!("translate(0,{:.2}) scale(1,-1)", y),
       )])),
@@ -449,7 +449,7 @@ impl SVG {
 
   /// Copy valid SVG attributes from a LaTeXML node.
   fn copy_valid_attrs(&self, node: &Node) -> HashMap<String, String> {
-    let mut attrs = HashMap::new();
+    let mut attrs = HashMap::default();
     let props = node.get_properties();
     for (key, value) in &props {
       match key.as_str() {

@@ -341,8 +341,8 @@ impl Document {
   /// during parsing. After finalization (which includes prune_xmduals), some ids
   /// are no longer referenced. Perl's parser doesn't generate these ids.
   pub fn cleanup_unreferenced_xmtok_ids(&mut self) {
-    use std::collections::HashSet;
-    let mut referenced_ids: HashSet<String> = HashSet::new();
+    use rustc_hash::FxHashSet as HashSet;
+    let mut referenced_ids: HashSet<String> = HashSet::default();
     for node in self.findnodes("descendant-or-self::*[@idref]", None) {
       if let Some(idref) = node.get_attribute("idref") {
         referenced_ids.insert(idref);

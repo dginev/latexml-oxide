@@ -6,7 +6,7 @@
 //! This data is used by later processors (CrossRef, MakeIndex, etc.).
 
 use libxml::tree::{Node, NodeType};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::PostDocument;
 use crate::object_db::{ObjectDB, Value};
@@ -186,7 +186,7 @@ impl Scan {
 
     // inlist
     if let Some(listnames) = node.get_attribute("inlist") {
-      let mut inlist = HashMap::new();
+      let mut inlist = HashMap::default();
       for name in listnames.split_whitespace() {
         inlist.insert(name.to_string(), Value::Bool(true));
       }
@@ -572,7 +572,7 @@ impl Scan {
     let key = format!("INDEX:{}", key_parts.join(":"));
 
     let inlist = node.get_attribute("inlist").map(|listnames| {
-      let mut h = HashMap::new();
+      let mut h = HashMap::default();
       for name in listnames.split_whitespace() {
         h.insert(name.to_string(), Value::Bool(true));
       }

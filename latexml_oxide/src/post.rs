@@ -283,7 +283,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         searchpaths.insert(0, project_root.display().to_string());
       }
     }
-    let mut xslt_params = std::collections::HashMap::new();
+    let mut xslt_params = rustc_hash::FxHashMap::default();
 
     // When `--schemadocs` is on, auto-prepend the rustdoc-styled
     // theme assets so callers don't need to repeat them on every

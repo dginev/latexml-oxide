@@ -5,7 +5,7 @@
 //! Uses a converter table (DefOpenMath) for dispatching Token/Apply conversion.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::{NodeData, PostDocument, element_children};
 use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed};
@@ -86,7 +86,7 @@ impl MathProcessor for OpenMath {
       let mimetype = secondary.mimetype.as_deref().unwrap_or("unknown");
       attr_children.push(NodeData::Element {
         tag:        "om:OMS".to_string(),
-        attributes: Some(HashMap::from([
+        attributes: Some(HashMap::from_iter([
           ("cd".to_string(), "Alternate".to_string()),
           ("name".to_string(), mimetype.to_string()),
         ])),
@@ -225,7 +225,7 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
           .unwrap_or_else(|| "latexml".to_string());
         NodeData::Element {
           tag:        "om:OMS".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("name".to_string(), meaning),
             ("cd".to_string(), cd),
           ])),
@@ -243,7 +243,7 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
         };
         NodeData::Element {
           tag:        "om:OMV".to_string(),
-          attributes: Some(HashMap::from([("name".to_string(), name)])),
+          attributes: Some(HashMap::from_iter([("name".to_string(), name)])),
           children:   vec![],
         }
       }
@@ -279,7 +279,7 @@ fn om_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
 
   let mut children = vec![NodeData::Element {
     tag:        "om:OMS".to_string(),
-    attributes: Some(HashMap::from([
+    attributes: Some(HashMap::from_iter([
       ("cd".to_string(), "ambiguous".to_string()),
       ("name".to_string(), "fragments".to_string()),
     ])),
@@ -309,7 +309,7 @@ fn om_error(msg: &str) -> NodeData {
     children:   vec![
       NodeData::Element {
         tag:        "om:OMS".to_string(),
-        attributes: Some(HashMap::from([
+        attributes: Some(HashMap::from_iter([
           ("name".to_string(), "unexpected".to_string()),
           ("cd".to_string(), "moreerrors".to_string()),
         ])),

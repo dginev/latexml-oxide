@@ -1664,7 +1664,7 @@ fn collect_xmrefs(node: &Node, refs: &mut Vec<Node>) {
 /// xml:id/idref pairs. This function scans the subtree for all xml:ids,
 /// then updates XMRef idrefs to point to actual existing ids.
 fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
-  use std::collections::HashMap;
+  use rustc_hash::FxHashMap as HashMap;
   // Collect all xml:ids in the subtree, keyed by their "base" (without suffix variants)
   // Collect xml:ids from the subtree by walking the DOM directly
   // (XPath namespace handling may miss xml:id attributes)
@@ -1683,7 +1683,7 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
   let trailing_num_re = regex::Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
-  let mut id_by_suffix: HashMap<String, String> = HashMap::new();
+  let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {
       // Key is `.NN`, value is the actual id.

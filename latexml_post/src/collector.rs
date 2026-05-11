@@ -6,7 +6,7 @@
 //! Supports splitting collected content into sub-documents by initial letter.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 
 use crate::document::{NodeData, PostDocument};
@@ -101,7 +101,7 @@ pub fn make_sub_collection_documents(
               attributes: None,
               children:   vec![NodeData::Element {
                 tag:        "ltx:ref".to_string(),
-                attributes: Some(HashMap::from([
+                attributes: Some(HashMap::from_iter([
                   ("idref".to_string(), id.clone()),
                   ("show".to_string(), "refnum".to_string()),
                 ])),
@@ -114,7 +114,7 @@ pub fn make_sub_collection_documents(
 
       let toc = NodeData::Element {
         tag:        "ltx:TOC".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "format".to_string(),
           "veryshort".to_string(),
         )])),
@@ -240,7 +240,7 @@ mod tests {
   fn make_sub_collection_documents_empty_map_returns_empty() {
     let mut doc = doc_with_dest(None);
     let root = doc.get_document_element().expect("root");
-    let collections: HashMap<String, Vec<NodeData>> = HashMap::new();
+    let collections: HashMap<String, Vec<NodeData>> = HashMap::default();
     let result = make_sub_collection_documents(&mut doc, &root, &collections);
     assert!(result.is_empty());
   }
@@ -251,7 +251,7 @@ mod tests {
     // initials[1..] (needs PostDocument::newDocument infra). Lock that in.
     let mut doc = doc_with_dest(None);
     let root = doc.get_document_element().expect("root");
-    let mut collections: HashMap<String, Vec<NodeData>> = HashMap::new();
+    let mut collections: HashMap<String, Vec<NodeData>> = HashMap::default();
     collections.insert("A".to_string(), vec![NodeData::Text("entry-a".to_string())]);
     collections.insert("B".to_string(), vec![NodeData::Text("entry-b".to_string())]);
     let result = make_sub_collection_documents(&mut doc, &root, &collections);

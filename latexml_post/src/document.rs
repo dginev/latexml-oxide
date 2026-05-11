@@ -12,7 +12,7 @@ use libxml::parser::Parser as XmlParser;
 use libxml::tree::{Document, Namespace, Node, NodeType, set_node_rc_guard};
 use libxml::xpath::Context as XPathContext;
 use regex::Regex;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 use unicode_normalization::UnicodeNormalization;
 
@@ -149,9 +149,9 @@ impl PostDocument {
       dest_dir.clone()
     };
 
-    let mut namespaces = HashMap::new();
+    let mut namespaces = HashMap::default();
     namespaces.insert("ltx".to_string(), LTX_NSURI.to_string());
-    let mut namespace_uris = HashMap::new();
+    let mut namespace_uris = HashMap::default();
     namespace_uris.insert(LTX_NSURI.to_string(), "ltx".to_string());
 
     PostDocument {
@@ -164,15 +164,15 @@ impl PostDocument {
       searchpaths: options.searchpaths.unwrap_or_default(),
       namespaces,
       namespace_uris,
-      idcache: HashMap::new(),
-      idcache_reusable: HashMap::new(),
-      idcache_reserve: HashMap::new(),
-      idcache_clashes: HashMap::new(),
+      idcache: HashMap::default(),
+      idcache_reusable: HashMap::default(),
+      idcache_reserve: HashMap::default(),
+      idcache_clashes: HashMap::default(),
       processing_instructions: Vec::new(),
       parent_document: None,
       split_from_id: None,
       validate: options.validate,
-      cache: HashMap::new(),
+      cache: HashMap::default(),
       nocache: options.nocache,
     }
   }
@@ -1085,7 +1085,7 @@ impl PostDocument {
     let copy = node.clone();
 
     // Find all IDs and remap them
-    let mut idmap: HashMap<String, String> = HashMap::new();
+    let mut idmap: HashMap<String, String> = HashMap::default();
     for mut n in self.findnodes_at("descendant-or-self::*[@xml:id]", Some(&copy)) {
       if let Some(id) = n.get_attribute("xml:id") {
         let newid = self.uniquify_id(&id, id_suffix);
@@ -1338,7 +1338,7 @@ impl PostDocument {
 
     let ref_node = NodeData::Element {
       tag:        "ltx:ref".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("idref".to_string(), id.to_string()),
         ("rel".to_string(), relation.to_string()),
         ("show".to_string(), "toctitle".to_string()),
@@ -1388,7 +1388,7 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::idcheck`.
   pub fn idcheck(&self) {
-    let mut doc_ids: HashMap<String, bool> = HashMap::new();
+    let mut doc_ids: HashMap<String, bool> = HashMap::default();
     let mut dups = Vec::new();
 
     for node in self.findnodes("//*[@xml:id]") {

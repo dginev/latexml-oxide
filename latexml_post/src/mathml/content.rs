@@ -13,7 +13,7 @@
 //! - XMDual → follows the content branch
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::{NodeData, PostDocument, element_children};
 
@@ -293,7 +293,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
             tag:        "m:interval".to_string(),
-            attributes: Some(HashMap::from([("closure".to_string(), "open".to_string())])),
+            attributes: Some(HashMap::from_iter([("closure".to_string(), "open".to_string())])),
             children:   items,
           }
         },
@@ -301,7 +301,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
             tag:        "m:interval".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "closure".to_string(),
               "closed".to_string(),
             )])),
@@ -312,7 +312,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
             tag:        "m:interval".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "closure".to_string(),
               "closed-open".to_string(),
             )])),
@@ -323,7 +323,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
             tag:        "m:interval".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "closure".to_string(),
               "open-closed".to_string(),
             )])),
@@ -423,7 +423,7 @@ fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           let mut children = vec![NodeData::Element {
             tag:        "m:csymbol".to_string(),
-            attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
+            attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
             children:   vec![NodeData::Text("formulae-sequence".to_string())],
           }];
           children.extend(items);
@@ -477,7 +477,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
     if let Some(cd) = node.get_attribute("omcd") {
       return NodeData::Element {
         tag:        "m:csymbol".to_string(),
-        attributes: Some(HashMap::from([("cd".to_string(), cd)])),
+        attributes: Some(HashMap::from_iter([("cd".to_string(), cd)])),
         children:   vec![NodeData::Text(m.clone())],
       };
     }
@@ -491,7 +491,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       };
       return NodeData::Element {
         tag:        "m:cn".to_string(),
-        attributes: Some(HashMap::from([("type".to_string(), cn_type.to_string())])),
+        attributes: Some(HashMap::from_iter([("type".to_string(), cn_type.to_string())])),
         children:   vec![NodeData::Text(m.clone())],
       };
     }
@@ -499,7 +499,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
     // Default: csymbol with latexml cd
     return NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from([("cd".to_string(), "latexml".to_string())])),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), "latexml".to_string())])),
       children:   vec![NodeData::Text(m.clone())],
     };
   }
@@ -515,18 +515,18 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       };
       NodeData::Element {
         tag:        "m:cn".to_string(),
-        attributes: Some(HashMap::from([("type".to_string(), cn_type.to_string())])),
+        attributes: Some(HashMap::from_iter([("type".to_string(), cn_type.to_string())])),
         children:   vec![NodeData::Text(content)],
       }
     },
     "SUPERSCRIPTOP" => NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
       children:   vec![NodeData::Text("superscript".to_string())],
     },
     "SUBSCRIPTOP" => NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
       children:   vec![NodeData::Text("subscript".to_string())],
     },
     _ => {
@@ -558,7 +558,7 @@ fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
   } else {
     NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from([("cd".to_string(), "latexml".to_string())])),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), "latexml".to_string())])),
       children:   vec![NodeData::Text(meaning.to_string())],
     }
   }
@@ -646,7 +646,7 @@ fn cmml_array(doc: &PostDocument, node: &Node) -> NodeData {
 fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
   let mut results = vec![NodeData::Element {
     tag:        "m:csymbol".to_string(),
-    attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
+    attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
     children:   vec![NodeData::Text("fragments".to_string())],
   }];
 
@@ -655,7 +655,7 @@ fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
     if tag == "ltx:XMTok" && node.get_attribute("role").as_deref() == Some("UNKNOWN") {
       results.push(NodeData::Element {
         tag:        "m:csymbol".to_string(),
-        attributes: Some(HashMap::from([("cd".to_string(), "unknown".to_string())])),
+        attributes: Some(HashMap::from_iter([("cd".to_string(), "unknown".to_string())])),
         children:   vec![NodeData::Text(node.get_content())],
       });
     } else {
@@ -677,7 +677,7 @@ fn cmml_error(symbol: &str) -> NodeData {
     attributes: None,
     children:   vec![NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
       children:   vec![NodeData::Text(symbol.to_string())],
     }],
   }

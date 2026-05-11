@@ -5,7 +5,7 @@
 //! that identifies section-level elements to extract as separate documents.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 
 use crate::document::{NodeData, PostDocument, get_xml_id};
@@ -238,7 +238,7 @@ impl Split {
 
         // Build TOC entry
         if let Some(id) = get_xml_id(&page) {
-          let mut toc_attrs = HashMap::new();
+          let mut toc_attrs = HashMap::default();
           toc_attrs.insert("idref".to_string(), id);
           toc_attrs.insert("show".to_string(), "toctitle".to_string());
           let tocentry = NodeData::Element {
@@ -272,7 +272,7 @@ impl Split {
           .is_empty();
         if !has_toc {
           let parent_type = parent.get_name();
-          let mut toclist_attrs = HashMap::new();
+          let mut toclist_attrs = HashMap::default();
           toclist_attrs.insert("class".to_string(), format!("ltx_toclist_{}", parent_type));
           let toc_node = NodeData::Element {
             tag:        "ltx:TOC".to_string(),
@@ -468,7 +468,7 @@ impl Processor for Split {
       document: Some(doc),
     };
 
-    let mut haschildren = HashMap::new();
+    let mut haschildren = HashMap::default();
     Self::presort_pages(&mut tree, &mut haschildren, pages);
 
     // Take doc out so we can pass &PostDocument and &mut tree without borrow conflict

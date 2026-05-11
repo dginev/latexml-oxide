@@ -4,10 +4,10 @@
 /// bypass the TeX-based fontdimen intarray code in expl3-code.tex.
 use crate::prelude::*;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 thread_local! {
-  static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::new());
+  static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::default());
 }
 
 fn intarray_key(token: &Token, index: i64) -> String { s!("__intarray_{}_{}", token, index) }

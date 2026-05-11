@@ -875,7 +875,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   }
 
   // Deduplicate and sort CSS classes (matching Perl's addSSValues sort behavior)
-  let mut seen = std::collections::HashSet::new();
+  let mut seen = rustc_hash::FxHashSet::default();
   let mut deduped: Vec<String> = css_classes
     .iter()
     .filter(|c| seen.insert((*c).clone()))

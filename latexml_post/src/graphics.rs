@@ -6,7 +6,7 @@
 //! and sets the `imagesrc`, `imagewidth`, `imageheight` attributes.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -109,7 +109,7 @@ impl Graphics {
   const MAX_RASTER_DIMENSION_PX: u32 = 2048;
 
   pub fn new(dpi: Option<u32>, trivial_scaling: bool) -> Self {
-    let mut type_properties = HashMap::new();
+    let mut type_properties = HashMap::default();
 
     // Default type properties matching Perl
     for ext in &["ai", "pdf", "ps", "eps"] {
@@ -1150,8 +1150,8 @@ impl Processor for Graphics {
 
     let mut plans: Vec<Plan> = Vec::with_capacity(n_to_process);
     let mut convert_jobs: Vec<ConvertJob> = Vec::new();
-    let mut convert_job_ids: HashMap<(String, Option<u32>, String), usize> = HashMap::new();
-    let mut convert_source_counts: HashMap<String, u32> = HashMap::new();
+    let mut convert_job_ids: HashMap<(String, Option<u32>, String), usize> = HashMap::default();
+    let mut convert_source_counts: HashMap<String, u32> = HashMap::default();
     for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);

@@ -16,7 +16,7 @@
 //! 9. Store results in cache; set node attributes
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::PostDocument;
 use crate::processor::{PostError, ProcessResult, Processor, find_documentclass_and_packages};
@@ -149,7 +149,7 @@ impl LaTeXImages {
     extract_tex: &dyn Fn(&PostDocument, &Node) -> Option<String>,
   ) -> Result<(), PostError> {
     // Step 1: Collect unique TeX strings
-    let mut table: HashMap<String, ImageEntry> = HashMap::new();
+    let mut table: HashMap<String, ImageEntry> = HashMap::default();
     let mut n_total = 0u32;
 
     for node in nodes {

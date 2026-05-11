@@ -6,7 +6,7 @@
 //! titles, and navigation links.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::{get_xml_id, NodeData, PostDocument};
 use crate::object_db::{ObjectDB, Value};
@@ -92,7 +92,7 @@ impl CrossRef {
       min_ref_length: 1,
       ref_join: " \u{2023} ".to_string(), // TRIANGULAR BULLET
       navigation_toc: None,
-      missing: HashMap::new(),
+      missing: HashMap::default(),
     }
   }
 
@@ -282,7 +282,7 @@ impl CrossRef {
     if let Some(val) = entry.get_value(&phrase_key) {
       return vec![NodeData::Element {
         tag:        "ltx:text".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "class".to_string(),
           format!("ltx_glossary_{}", show),
         )])),
@@ -296,7 +296,7 @@ impl CrossRef {
       if let Some(val) = entry.get_value(&base_key) {
         return vec![NodeData::Element {
           tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "class".to_string(),
             format!("ltx_glossary_{}", show),
           )])),
@@ -315,7 +315,7 @@ impl CrossRef {
         };
         return vec![NodeData::Element {
           tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "class".to_string(),
             format!("ltx_glossary_{}", show),
           )])),
@@ -426,7 +426,7 @@ impl CrossRef {
               let text = val.to_string();
               stuff.push(NodeData::Element {
                 tag:        "ltx:text".to_string(),
-                attributes: Some(HashMap::from([("class".to_string(), class.to_string())])),
+                attributes: Some(HashMap::from_iter([("class".to_string(), class.to_string())])),
                 children:   vec![NodeData::Text(text)],
               });
               break;
@@ -728,7 +728,7 @@ impl CrossRef {
       let type_name = entry_type.strip_prefix("ltx:").unwrap_or(entry_type);
       let mut toc_children = vec![NodeData::Element {
         tag:        "ltx:ref".to_string(),
-        attributes: Some(HashMap::from([
+        attributes: Some(HashMap::from_iter([
           ("show".to_string(), show.to_string()),
           ("idref".to_string(), id.to_string()),
         ])),
@@ -737,7 +737,7 @@ impl CrossRef {
       if !kids.is_empty() {
         toc_children.push(NodeData::Element {
           tag:        "ltx:toclist".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "class".to_string(),
             format!("ltx_toclist_{}", type_name),
           )])),
@@ -746,7 +746,7 @@ impl CrossRef {
       }
       vec![NodeData::Element {
         tag:        "ltx:tocentry".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "class".to_string(),
           format!("ltx_tocentry_{}", type_name),
         )])),
@@ -889,7 +889,7 @@ impl CrossRef {
           refs.push(NodeData::Text(format!("{} ", sep)));
         }
         if let Some(id) = found_id {
-          let mut attrs = HashMap::new();
+          let mut attrs = HashMap::default();
           attrs.insert("idref".to_string(), id.clone());
           if let Some(url) = self.generate_url(doc, &id) {
             attrs.insert("href".to_string(), url);
@@ -911,7 +911,7 @@ impl CrossRef {
           self.note_missing("warn", "Entry for citation", key);
           refs.push(NodeData::Element {
             tag:        "ltx:ref".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("idref".to_string(), key.to_string()),
               ("class".to_string(), "ltx_missing_citation".to_string()),
             ])),
@@ -1010,7 +1010,7 @@ impl Processor for CrossRef {
         // persistent sidebar).
         doc.add_nodes(&mut nav, &[NodeData::Element {
           tag:        "ltx:TOC".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("format".to_string(), format.clone()),
             ("scope".to_string(), "global".to_string()),
           ])),

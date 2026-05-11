@@ -21,6 +21,7 @@ log = "0.4"
 regex = "1.7.1"
 unicode-normalization = "0.1.25"
 imagesize = "0.14"
+rustc-hash = "2.0.0"
 # Telemetry-only — used in process_chain to attribute time to the
 # correct Phase based on each processor's get_name(). See docs/TELEMETRY.md.
 latexml_core = {path = "../latexml_core"}

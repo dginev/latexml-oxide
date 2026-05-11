@@ -1920,13 +1920,13 @@ fn adjust_math_role(
 }
 
 pub fn adjust_mathstyle(outerstyle: &str, boxes: &[Digested]) {
-  let mut adjusted: std::collections::HashSet<usize> = std::collections::HashSet::new();
+  let mut adjusted: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
   adjust_mathstyle_rec(outerstyle, &mut adjusted, boxes);
 }
 
 fn adjust_mathstyle_rec(
   outerstyle: &str,
-  adjusted: &mut std::collections::HashSet<usize>,
+  adjusted: &mut rustc_hash::FxHashSet<usize>,
   boxes: &[Digested],
 ) {
   for box_item in boxes {

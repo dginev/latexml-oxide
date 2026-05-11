@@ -102,7 +102,7 @@ pub fn image_candidates(path: &str) -> String {
   }
 
   // Deduplicate while preserving order
-  let mut seen = std::collections::HashSet::new();
+  let mut seen = rustc_hash::FxHashSet::default();
   candidates.retain(|c| seen.insert(c.clone()));
 
   if candidates.is_empty() {

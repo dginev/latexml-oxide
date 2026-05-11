@@ -5,7 +5,7 @@ use crate::common::dimension::Dimension;
 use crate::state::Stored;
 use crate::token::Token;
 use crate::tokens::Tokens;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Debug, Display};
@@ -261,7 +261,7 @@ impl Template {
       y: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
-      properties: std::collections::HashMap::new(),
+      properties: rustc_hash::FxHashMap::default(),
     }
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }
