@@ -1,1139 +1,152 @@
-// glossaries — package binding for the LaTeX `glossaries` package.
-//
-// TODO(strict-perl-parity): Migrate this binding to a strict translation
-// of `glossaries.sty.ltxml` (~127 lines). The Perl shim is built around
-// `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`, which
-// raw-loads the actual TL `glossaries.sty` (7714 lines as of TL2025)
-// and only overrides:
-//   * `\@gls@link` — wrap typesetting output in `<ltx:glossaryref>`
-//   * `\glsdohyperlink` / `\glsdonohyperlink` — drop hyperref wrapping
-//   * `\glsdisablehyper` — disable hyperref pipeline
-//   * `\glspostlinkhook` — `\xspace`
-//   * `\@newglossaryentryposthook` — feed entry data to `\lx@glossaries@newentry{}{}
-//     RequiredKeyVals`
-//   * `\printglossary` / `\printnoidxglossary` — emit `<ltx:glossary>`
-//
-// **Empirical gap to raw-load (measured 2026-05-11):** when this stub
-// is disabled and raw-load fires, glossaries.sty's dependency-scan
-// triggers loading of `ifthen`, `xkeyval`, `mfirstuc`, `textcase`,
-// `xfor`, `datatool-base`, `amsgen`, `etoolbox`, `glossary-long`,
-// `glossary-super`, `glossary-list`, `glossary-tree`, `translator`,
-// `shellesc`, `tracklang`, `glossary-hypernav`, `glossaries`. Several
-// dependencies bail out (no Rust binding + raw-load fails on expl3
-// emulation gaps), leaving `\makenoidxglossaries`, `\newglossaryentry`,
-// `\gls`, `\printnoidxglossaries` undefined. So pursuit of raw-load
-// parity requires fixing the upstream expl3/datatool dep chain
-// first — out of reach for a single fix-cycle.
-//
-// The current Rust port hand-rolls `\newglossaryentry`,
-// `\longnewglossaryentry`, `\newacronym`, `\gls`, `\Gls`, `\glspl`,
-// `\Glspl`, `\glssymbol`, `\printglossary`, etc., plus stubs for the
-// `\<gls|Gls>entry<field>` family and the `\acr*` family. This is
-// because `glossaries.sty` uses heavy expl3 / datatools that the
-// Rust raw-load pipeline currently can't ingest cleanly. Once the
-// Rust translation is good enough to raw-load `glossaries.sty`,
-// drop all the homegrown reimplementations and replace this file
-// with a near line-for-line port of `glossaries.sty.ltxml`.
-//
-// **Direction (user feedback 2026-05-11):** prefer fixing the
-// engine until raw-load works over extending this hand-stub.
-// New `\<missing-cs>` errors that surface in canvas runs should
-// document the gap rather than land as another no-op stub, unless
-// the stub is a clear blocker for a specific witness AND the
-// underlying engine fix is genuinely multi-session.
+//! glossaries.sty — strict translation of Perl `glossaries.sty.ltxml` (126L).
+//!
+//! Perl raw-loads real TL glossaries.sty (~8700 lines) via
+//! `InputDefinitions(noltxml=>1)`, then layers surgical overrides:
+//!   - wrap `\@gls@link` output in `<ltx:glossaryref>`
+//!   - hook `\@newglossaryentryposthook` to emit `<ltx:glossarydefinition>`
+//!   - redefine `\printglossary` to emit `<ltx:glossary>`
+//!
+//! This Rust file mirrors the Perl 1:1.
 
+use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
 use crate::prelude::*;
+use latexml_core::definition::argument::ArgWrap;
+use latexml_core::digested::DigestedData;
 
-// Helper: store a glossary entry field in state
-fn glo_store(label: &str, field: &str, value: &str) {
-  if !value.is_empty() {
-    state::assign_value(
-      &s!("glo@{label}@{field}"),
-      Stored::String(arena::pin(value)),
-      Some(Scope::Global),
-    );
-  }
-}
-
-// Helper: look up a glossary entry field from state
-fn glo_lookup(label: &str, field: &str) -> String {
-  state::lookup_value(&s!("glo@{label}@{field}"))
-    .map(|s| s.to_string())
-    .unwrap_or_default()
-}
-
-// Helper: capitalize first letter of a string
-fn capitalize_first(s: &str) -> String {
-  let mut chars = s.chars();
-  match chars.next() {
-    None => String::new(),
-    Some(c) => c.to_uppercase().to_string() + chars.as_str(),
-  }
-}
-
-// Helper: store a full glossary entry from extracted key-value pairs
-// and register the glossary type. Returns the sorted list of (role, value) pairs
-// for XML emission.
-fn store_glossary_entry(
-  label: &str,
-  entry_type: &str,
-  fields: &[(&str, String)],
-) -> Vec<(String, String)> {
-  // Store the type
-  glo_store(label, "type", entry_type);
-
-  // Register this glossary type
-  let types_key = "glossary_types";
-  let mut types: Vec<String> = state::lookup_value(types_key)
-    .map(|s| {
-      s.to_string()
-        .split(',')
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect()
-    })
-    .unwrap_or_default();
-  if !types.contains(&entry_type.to_string()) {
-    types.push(entry_type.to_string());
-    state::assign_value(
-      types_key,
-      Stored::String(arena::pin(types.join(","))),
-      Some(Scope::Global),
-    );
-  }
-
-  // Store all fields and collect non-empty ones for XML emission
-  let mut phrases: Vec<(String, String)> = Vec::new();
-  for (field, value) in fields {
-    if !value.is_empty() {
-      glo_store(label, field, value);
-      phrases.push((field.to_string(), value.clone()));
-    }
-  }
-
-  // Sort by role name (matching Perl's `sort keys %$hash`)
-  phrases.sort_by(|a, b| a.0.cmp(&b.0));
-  phrases
-}
-
-// Helper: build <glossarydefinition> XML with <glossaryphrase> children
-fn build_glossary_definition(
-  document: &mut Document,
-  label: &str,
-  entry_type: &str,
-  phrases: &[(String, String)],
-) -> Result<()> {
-  let mut attrs = HashMap::default();
-  attrs.insert("inlist".into(), entry_type.to_string());
-  attrs.insert("key".into(), label.to_string());
-  document.open_element("ltx:glossarydefinition", Some(attrs), None)?;
-
-  for (role, value) in phrases {
-    let mut phrase_attrs = HashMap::default();
-    phrase_attrs.insert("key".into(), label.to_string());
-    phrase_attrs.insert("role".into(), role.clone());
-    document.open_element("ltx:glossaryphrase", Some(phrase_attrs), None)?;
-    document.absorb_string(value, &Default::default())?;
-    document.close_element("ltx:glossaryphrase")?;
-  }
-
-  document.close_element("ltx:glossarydefinition")?;
-  Ok(())
-}
-
-// Helper: build tokens for \lx@glossaryref{list}{key}{text}
-fn gls_ref_tokens(list: &str, key: &str, text: &str) -> Tokens {
-  let mut toks = vec![T_CS!("\\lx@glossaryref")];
-  toks.push(T_BEGIN!());
-  toks.extend(ExplodeText!(list));
-  toks.push(T_END!());
-  toks.push(T_BEGIN!());
-  toks.extend(ExplodeText!(key));
-  toks.push(T_END!());
-  toks.push(T_BEGIN!());
-  toks.extend(ExplodeText!(text));
-  toks.push(T_END!());
-  Tokens::new(toks)
-}
-
-// Determine the display text for \gls{key}
-fn gls_text(key: &str) -> String {
-  let entry_type = glo_lookup(key, "type");
-  let is_acronym = entry_type == "acronym";
-  let used_key = s!("glo@{key}@used");
-  let used = state::lookup_value(&used_key)
-    .map(|s| matches!(s, Stored::Bool(true)))
-    .unwrap_or(false);
-
-  let text = if is_acronym && !used {
-    // First use of acronym with long-short style: "long (short)"
-    let long = glo_lookup(key, "long");
-    let short = glo_lookup(key, "short");
-    if !long.is_empty() && !short.is_empty() {
-      s!("{long} ({short})")
-    } else if !short.is_empty() {
-      short
-    } else {
-      glo_lookup(key, "name")
-    }
-  } else if is_acronym {
-    // Subsequent use: short form
-    let short = glo_lookup(key, "short");
-    if !short.is_empty() {
-      short
-    } else {
-      glo_lookup(key, "name")
-    }
-  } else {
-    // Regular entry: text or name
-    let text = glo_lookup(key, "text");
-    if !text.is_empty() {
-      text
-    } else {
-      glo_lookup(key, "name")
-    }
-  };
-
-  // Mark as used
-  state::assign_value(&used_key, Stored::Bool(true), Some(Scope::Global));
-  text
-}
-
-// Determine the display text for \glspl{key} (plural)
-fn gls_plural_text(key: &str) -> String {
-  let entry_type = glo_lookup(key, "type");
-  let is_acronym = entry_type == "acronym";
-  let used_key = s!("glo@{key}@used");
-  let used = state::lookup_value(&used_key)
-    .map(|s| matches!(s, Stored::Bool(true)))
-    .unwrap_or(false);
-
-  let text = if is_acronym && !used {
-    // First use of acronym plural: "longs (shorts)"
-    let longpl = glo_lookup(key, "longplural");
-    let shortpl = glo_lookup(key, "shortplural");
-    if !longpl.is_empty() && !shortpl.is_empty() {
-      s!("{longpl} ({shortpl})")
-    } else {
-      let plural = glo_lookup(key, "plural");
-      if !plural.is_empty() {
-        plural
-      } else {
-        glo_lookup(key, "name") + "s"
-      }
-    }
-  } else if is_acronym {
-    let shortpl = glo_lookup(key, "shortplural");
-    if !shortpl.is_empty() {
-      shortpl
-    } else {
-      glo_lookup(key, "short") + "s"
-    }
-  } else {
-    let plural = glo_lookup(key, "plural");
-    if !plural.is_empty() {
-      plural
-    } else {
-      let text = glo_lookup(key, "text");
-      if !text.is_empty() {
-        text + "s"
-      } else {
-        glo_lookup(key, "name") + "s"
-      }
-    }
-  };
-
-  state::assign_value(&used_key, Stored::Bool(true), Some(Scope::Global));
-  text
-}
-
+#[rustfmt::skip]
 LoadDefinitions!({
-  // Perl glossaries.sty.ltxml L19: RequirePackage('xspace').
-  // \glspostlinkhook (L44) expands to \xspace, and many acronym-first-use
-  // paths invoke \xspace, so the package must be loaded up front.
+  // Perl L18-19.
+  InputDefinitions!("glossaries", extension => Some(Cow::Borrowed("sty")), noltxml => true);
   RequirePackage!("xspace");
 
-  // Mirror raw glossaries.sty's transitive dependency on etoolbox.
-  // TL `glossaries.sty:77` does `\RequirePackage{etoolbox}`, so any
-  // user-package that builds on glossaries (e.g. revtex preamble.sty
-  // using `\csdef` from etoolbox) gets it transitively. Without
-  // this, papers like 2205.03932 see `\csdef` undefined.
-  RequirePackage!("etoolbox");
-
-  // Mirror raw glossaries.sty's transitive dependency on amsmath.
-  // Perl's binding raw-loads the actual glossaries.sty (via
-  // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`),
-  // which `\RequirePackage{datatool-base}`, which
-  // `\RequirePackage{amsmath}`. Our hand-rolled binding skips the
-  // raw-load (see file header), so the chain is broken and any paper
-  // that uses glossaries plus an amsmath-defined CS like
-  // \DeclareMathOperator without an explicit \usepackage{amsmath}
-  // hits "Error:undefined:\DeclareMathOperator" cascading through
-  // every operator the paper declares (e.g. canvas paper 2303.16633:
-  // 15 such errors, 0 in Perl).
-  RequirePackage!("amsmath");
-
-  // ======================================================================
-  // Options
-  // ======================================================================
-  DeclareOption!("acronyms", "");
-  DeclareOption!("toc", "");
-  DeclareOption!("section", "");
-  DeclareOption!("numberedsection", "");
-  DeclareOption!("nonumberlist", "");
-  DeclareOption!("nopostdot", "");
-  DeclareOption!("nomain", "");
-  DeclareOption!("style", "");
-  ProcessOptions!();
-
-  // When "acronyms" option is loaded, register the "acronym" glossary type.
-  // The "main" type is always registered.
-  {
-    state::assign_value(
-      "glossary_types",
-      Stored::String(arena::pin("main")),
-      Some(Scope::Global),
-    );
-    // Check if acronyms option was given
-    let raw_options = state::lookup_value("package_options:glossaries")
-      .map(|s| s.to_string())
-      .unwrap_or_default();
-    if raw_options.contains("acronyms") {
-      state::assign_value(
-        "glossary_types",
-        Stored::String(arena::pin("main,acronym")),
-        Some(Scope::Global),
-      );
-    }
-  }
-
-  // ======================================================================
-  // Setup macros (no-ops and stubs)
-  // ======================================================================
-  DefMacro!("\\makenoidxglossaries", "");
-  DefMacro!("\\makeglossaries", "");
+  // Perl L21: Silence pointless warnings.
   DefMacro!("\\glsnoidxstripaccents", "");
-  // glossaries.sty `\glsenableentrycount` enables per-entry usage counting;
-  // the `\gls` family then routes through `\cgls` etc. to record usage.
-  // Rust's stub of `\gls` doesn't track usage, so this is a no-op — but it
-  // must be defined or 2309.05205 (and any paper using glossaries v4+ entry
-  // counting) hits an undefined-CS error.
-  DefMacro!("\\glsenableentrycount", "");
-  DefMacro!("\\setacronymstyle{}", "");
-  DefMacro!("\\glsdisablehyper", "");
-  DefMacro!("\\glsdohyperlink{}{}", "#2");
-  DefMacro!("\\glsdonohyperlink{}{}", "#2");
-  DefMacro!("\\glspostlinkhook", "");
-  DefMacro!("\\glsaddall OptionalKeyVals", "");
-  DefMacro!("\\glsadd OptionalKeyVals Semiverbatim", "");
-  DefMacro!("\\newglossary OptionalMatch:* {}{}{}{}", "");
-  // `\newglossarystyle{name}{body}` / `\renewglossarystyle{name}{body}`
-  // — Perl raw-loads the real glossaries.sty when its binding doesn't
-  // catch these; Rust port doesn't, so define no-op stubs (style
-  // selection is print-only metadata that doesn't affect HTML/MathML
-  // output). Witness: 1808.04659 (stage 23 RUST-REGRESSION) — paper
-  // has `\newglossarystyle{long-tabular}{...}` in acronyms.tex.
-  DefMacro!("\\newglossarystyle{}{}", "");
-  DefMacro!("\\renewglossarystyle{}{}", "");
-  DefMacro!("\\glossarystyle{}", "");
-  DefMacro!("\\setglossarystyle{}", "");
-  DefMacro!("\\glslink{}{}", "#2");
-  // \glsdisp[opts]{label}{text} — typesets `text` as a glossary-linked
-  // reference to `label`. TL glossaries.sty L4162-4179:
-  //   \newrobustcmd*{\glsdisp}{\@gls@hyp@opt\@glsdisp}
-  //   \newcommand*{\@glsdisp}[3][]{...}
-  // The `*` variant (witness 1910.01256 `\glsdisp*{mae}{Mean Absolute
-  // Error (MAE)}`) suppresses the hyperref wrapping. We emit just the
-  // display text — matching `\glslink` behavior — and drop the label
-  // (glossary cross-ref work happens in `\gls` family elsewhere).
-  DefMacro!("\\glsdisp OptionalMatch:* []{}{}", "#4");
-  DefMacro!("\\Glsdisp OptionalMatch:* []{}{}", "#4");
-  // glossaries.sty defines a `\<gls|Gls>entry<field>` family for read-only
-  // access to entry fields (used outside `\gls{}` typesetting context, e.g.
-  // in section headings). The capitalized `\Gls*` variants pipe the result
-  // through `\makefirstuc`. Perl's glossaries.sty.ltxml gets these by
-  // raw-loading the actual TL `glossaries.sty` (`InputDefinitions(noltxml=1)`,
-  // L18). Rust's port stubs them as no-ops to preserve the same CS coverage —
-  // the contents would otherwise expand the entry hash, but the typesetting
-  // path uses `\gls`/`\Gls` (which Rust reimplements above), so dropping the
-  // expansion here is harmless. Driver: 1806.05262 calls `\Glsentrytext{nbs}`
-  // in a section heading.
-  DefMacro!("\\glsentrytext Semiverbatim", "");
-  DefMacro!("\\Glsentrytext Semiverbatim", "");
-  DefMacro!("\\glsentrylong Semiverbatim", "");
-  DefMacro!("\\Glsentrylong Semiverbatim", "");
-  DefMacro!("\\glsentryshort Semiverbatim", "");
-  DefMacro!("\\Glsentryshort Semiverbatim", "");
-  DefMacro!("\\glsentryname Semiverbatim", "");
-  DefMacro!("\\Glsentryname Semiverbatim", "");
-  DefMacro!("\\glsentrydesc Semiverbatim", "");
-  DefMacro!("\\Glsentrydesc Semiverbatim", "");
-  DefMacro!("\\glsentrysymbol Semiverbatim", "");
-  DefMacro!("\\Glsentrysymbol Semiverbatim", "");
-  DefMacro!("\\glsentryfirst Semiverbatim", "");
-  DefMacro!("\\Glsentryfirst Semiverbatim", "");
-  DefMacro!("\\glsentryplural Semiverbatim", "");
-  DefMacro!("\\Glsentryplural Semiverbatim", "");
-  DefMacro!("\\glsentryfirstplural Semiverbatim", "");
-  DefMacro!("\\Glsentryfirstplural Semiverbatim", "");
-  DefMacro!("\\glsentryshortpl Semiverbatim", "");
-  DefMacro!("\\Glsentryshortpl Semiverbatim", "");
-  DefMacro!("\\glsentrylongpl Semiverbatim", "");
-  DefMacro!("\\Glsentrylongpl Semiverbatim", "");
-  DefMacro!("\\glsentryfull Semiverbatim", "");
-  DefMacro!("\\Glsentryfull Semiverbatim", "");
-  DefMacro!("\\glsentryfullpl Semiverbatim", "");
-  DefMacro!("\\Glsentryfullpl Semiverbatim", "");
-  // \acr* family — the real glossaries.sty defines short/long/full plus
-  // their `pl` (plural) and uppercase-first (`\Acr*`) variants. Perl's
-  // glossaries.sty.ltxml gets these via `InputDefinitions(noltxml=1)`
-  // raw-load of the actual TL glossaries.sty source. Rust's port stubs
-  // them here as no-ops to mirror the same set of bound CSes
-  // (driver paper: arXiv:1801.10219 invokes `\acrfullpl`).
-  // Acronym short/long/full family. The real glossaries.sty looks each
-  // up via the entry's stored fields (\@gls@entry{<lbl>}{short}/{long}/...).
-  // Our stub doesn't track per-entry fields with that level of fidelity, so
-  // route everything through \gls / \glspl (which produce a glossaryref via
-  // the loaded entries). Better than no-op (which silently drops the label).
-  // Driver: 1801.10219 (\acrfullpl) and 2109.08389 (shortcuts \ac via routes).
-  DefMacro!("\\acrshort Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\acrshortpl Semiverbatim", "\\glspl{#1}");
-  DefMacro!("\\Acrshort Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\Acrshortpl Semiverbatim", "\\Glspl{#1}");
-  DefMacro!("\\acrlong Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\acrlongpl Semiverbatim", "\\glspl{#1}");
-  DefMacro!("\\Acrlong Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\Acrlongpl Semiverbatim", "\\Glspl{#1}");
-  DefMacro!("\\acrfull Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\acrfullpl Semiverbatim", "\\glspl{#1}");
-  DefMacro!("\\Acrfull Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\Acrfullpl Semiverbatim", "\\Glspl{#1}");
 
-  // glossaries shortcuts package option (TL glossaries.sty L3725-3760):
-  // \ac → \acrshort, \acp → \acrshortpl, \acl → \acrlong, \acs → \acrshort,
-  // \acf → \acrfull, \aclp → \acrlongpl, \acfp → \acrfullpl, \acsp → \acrshortpl,
-  // and the capitalized variants. The package default unconditionally
-  // defines them when `shortcuts` is in the option list. Our binding
-  // doesn't currently inspect the option list before installing them, but
-  // the unconditional install matches the user-written intent
-  // (`\usepackage[acronym,shortcuts]{glossaries}` is the typical incantation
-  // for these CSes; defining them when shortcuts isn't requested is harmless).
-  // Driver: 2109.08389 R=4 → R=0.
-  DefMacro!("\\ac Semiverbatim",   "\\acrshort{#1}");
-  DefMacro!("\\acp Semiverbatim",  "\\acrshortpl{#1}");
-  DefMacro!("\\acl Semiverbatim",  "\\acrlong{#1}");
-  DefMacro!("\\acs Semiverbatim",  "\\acrshort{#1}");
-  DefMacro!("\\acf Semiverbatim",  "\\acrfull{#1}");
-  DefMacro!("\\aclp Semiverbatim", "\\acrlongpl{#1}");
-  DefMacro!("\\acfp Semiverbatim", "\\acrfullpl{#1}");
-  DefMacro!("\\acsp Semiverbatim", "\\acrshortpl{#1}");
-  DefMacro!("\\Ac Semiverbatim",   "\\Acrshort{#1}");
-  DefMacro!("\\Acp Semiverbatim",  "\\Acrshortpl{#1}");
-  DefMacro!("\\Acl Semiverbatim",  "\\Acrlong{#1}");
-  DefMacro!("\\Acs Semiverbatim",  "\\Acrshort{#1}");
-  DefMacro!("\\Acf Semiverbatim",  "\\Acrfull{#1}");
-  DefMacro!("\\Aclp Semiverbatim", "\\Acrlongpl{#1}");
-  DefMacro!("\\Acfp Semiverbatim", "\\Acrfullpl{#1}");
-  DefMacro!("\\Acsp Semiverbatim", "\\Acrshortpl{#1}");
-
-  // \glsresetall[<glossaries>] — resets the "first use" flag for all
-  // entries. We don't track first-use state, so it's a safe no-op.
-  // Mirrors TL glossaries.sty L3370 `\newcommand*{\glsresetall}[1][...]`.
-  DefMacro!("\\glsresetall []", "");
-  DefMacro!("\\glsresetempty []", "");
-  // \glsreset{<entry>} / \glsunset{<entry>} — TL glossaries.sty L3344-3360
-  // \newcommand*{\glsreset}[1]{...}: clears/sets the "first use" flag
-  // for a single entry. We don't track first-use state, so no-op.
-  // Both forms also accept an optional [<glossaries>] in the *all variants
-  // covered above.
-  DefMacro!("\\glsreset{}", "");
-  DefMacro!("\\glsunset{}", "");
-  DefMacro!("\\glslocalreset{}", "");
-  DefMacro!("\\glslocalunset{}", "");
-  // Field-expansion control: TL glossaries.sty L1390+. \glssetexpandfield
-  // {<field>}{<expand|noexpand>} controls whether a field is expanded at
-  // \newglossaryentry time. \glsnoexpandfields disables expansion globally.
-  // Our entries store fields as opaque strings, so these are no-ops.
-  DefMacro!("\\glssetexpandfield{}{}", "");
-  DefMacro!("\\glsnoexpandfields", "");
-  DefMacro!("\\glsexpandfields", "");
-  // \glsname / \glsdescription / \glssymbolname — read-only access to a
-  // single entry field. Like \glsentrytext, our stub returns empty since
-  // we don't keep typesetting fields easily accessible. Driver: 1812.05463
-  // and 8 papers in the canvas-failing pool. \glsplural also commonly used.
-  DefMacro!("\\glsname Semiverbatim", "");
-  DefMacro!("\\Glsname Semiverbatim", "");
-  DefMacro!("\\glsdescription Semiverbatim", "");
-  DefMacro!("\\Glsdescription Semiverbatim", "");
-  DefMacro!("\\glssymbolname Semiverbatim", "");
-  DefMacro!("\\Glssymbolname Semiverbatim", "");
-  // \glstext / \Glstext / \GLStext — emit the entry's "text" field (what
-  // appears on subsequent uses). Per Perl glossaries.sty.ltxml's behavior
-  // of loading the raw glossaries.sty (which defines these), our binding
-  // never sees them — Perl is silent on these CSes because the raw load
-  // installs them. Stub them as the entry-key-as-text since we don't
-  // store typesetting fields. Driver: 1812.05463 cluster (\glstext{rms}
-  // Real Regression). Same template as \glsdesc above.
-  DefMacro!("\\glstext Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\Glstext Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\GLStext Semiverbatim", "\\GLS{#1}");
-  // \glsfirst / \Glsfirst / \GLSfirst — entry's "first" field (used on
-  // first occurrence). Same stubbing strategy.
-  DefMacro!("\\glsfirst Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\Glsfirst Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\GLSfirst Semiverbatim", "\\GLS{#1}");
-  // \glslong / \Glslong / \GLSlong — entry's long-form expansion. Stubs.
-  DefMacro!("\\glslong Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\Glslong Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\GLSlong Semiverbatim", "\\GLS{#1}");
-  // \glsshort / \Glsshort / \GLSshort — entry's short-form (acronym).
-  DefMacro!("\\glsshort Semiverbatim", "\\gls{#1}");
-  DefMacro!("\\Glsshort Semiverbatim", "\\Gls{#1}");
-  DefMacro!("\\GLSshort Semiverbatim", "\\GLS{#1}");
-  // \glsplural — like \gls{} but for plural form. Route to \glspl which
-  // exists. Mirror Capitalized variant.
-  DefMacro!("\\glsplural Semiverbatim", "\\glspl{#1}");
-  DefMacro!("\\Glsplural Semiverbatim", "\\Glspl{#1}");
-  // Acronym-style hooks — TL `glossaries.sty` defines these for the
-  // `\setacronymstyle{...}` / `\newacronymstyle{...}` machinery.
-  // Papers using `\setacronymstyle{long-short}` etc. trigger
-  // `\GlsUseAcrEntryDispStyle` / `\GlsUseAcrStyleDefs`. Without
-  // stubs, undefined-CS errors fire. Driver: 2304.04653.
-  DefMacro!("\\newacronymstyle{}{}{}", "");
-  DefMacro!("\\renewacronymstyle{}{}{}", "");
-  DefMacro!("\\setacronymstyle Semiverbatim", "");
-  DefMacro!("\\GlsUseAcrEntryDispStyle{}", "");
-  DefMacro!("\\GlsUseAcrStyleDefs{}", "");
-  DefMacro!("\\defglsentryfmt[]{}", "");
-  // \glsdescwidth / \glspagelistwidth — TL glossaries.sty defines these
-  // as `\newlength` registers used in glossary-table column widths
-  // (`p{\glsdescwidth}`). Papers do `\setlength{\glsdescwidth}{...}` in
-  // the preamble; without our register backing the assignment fails
-  // with "<variable> was supposed to be here". Driver: 1901.06637.
-  DefRegister!("\\glsdescwidth", Dimension::new(0));
-  DefRegister!("\\glspagelistwidth", Dimension::new(0));
-
-  // \glsXXXkey — TL `glossaries.sty` defines these as the literal field
-  // names a `\newacronym[<key>=<val>,…]` option recognises (e.g.
-  // `\glsshortpluralkey` → "shortplural"). Used as `\newacronym
-  // [\glsshortpluralkey=cas,\glslongpluralkey=...]{aca}{aca}{...}`.
-  // Driver: 1901.04016 + others. Define each to expand to its literal
-  // string so the keyval reader gets a real key name.
-  DefMacro!("\\glsshortkey", "short");
-  DefMacro!("\\glslongkey", "long");
-  DefMacro!("\\glsshortpluralkey", "shortplural");
-  DefMacro!("\\glslongpluralkey", "longplural");
-  DefMacro!("\\glssymbolpluralkey", "symbolplural");
-  DefMacro!("\\glsfirstpluralkey", "firstplural");
-  DefMacro!("\\glsdescpluralkey", "descriptionplural");
-  DefMacro!("\\glsuserkey", "user");
-  // \loadglsentries[<gls-type>]{<file>} — TL glossaries.sty L3543 expands
-  // to `\input{#2}`. We stub it as a no-op rather than `\input`-ing the
-  // entries file: Perl LaTeXML's glossaries.sty.ltxml uses `InputDefinitions
-  // (noltxml=1)` to raw-load the actual TL `.sty` and override only the
-  // `\@newglossaryentryposthook` (which then calls
-  // `\lx@glossaries@newentry{}{} RequiredKeyVals` with already-flat tokens).
-  // Rust's binding hand-rolls `\newglossaryentry{} RequiredKeyVals`, so it
-  // can't accept the user-source's `}\n{` whitespace between args that the
-  // raw TeX `\def\newglossaryentry#1#2{...}` happily skips. Until the Rust
-  // binding is refactored to follow Perl's raw-load+hook pattern,
-  // `\loadglsentries` is a no-op — sufficient for the common case where
-  // `\acrshort{label}` etc. don't depend on the entry being pre-defined.
-  // Driver paper: arXiv:1806.05262 (`\loadglsentries{definitions}` →
-  // 2 errors → 0 errors).
-  DefMacro!("\\loadglsentries []{}", "");
-
-  // glossaries-internal macros that might be called
-  DefMacro!("\\warn@noprintglossary", "");
-  // glossary title macros
-  DefMacro!("\\glossaryname", "Glossary");
-  DefMacro!("\\acronymname", "Acronyms");
-
-  // ======================================================================
-  // \lx@glossaryref{list}{key}{text}
-  // The constructor that wraps glossary references in <ltx:glossaryref>
-  // ======================================================================
-  DefConstructor!(
-    "\\lx@glossaryref{}{}{}",
-    "<ltx:glossaryref inlist='#1' key='#2'>#3</ltx:glossaryref>",
-    enter_horizontal => true
-  );
-
-  // ======================================================================
-  // \newglossaryentry{label} RequiredKeyVals
-  // ======================================================================
-  DefConstructor!("\\newglossaryentry{} RequiredKeyVals",
-    sub [document, args] {
-      let label = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
-      let entry_type = glo_lookup(&label, "type");
-      let entry_type = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-
-      // Collect the phrases that were stored during after_digest
-      let phrases_key = s!("glo@{label}@_phrases");
-      let phrases_str = state::lookup_value(&phrases_key)
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      let phrases: Vec<(String, String)> = if phrases_str.is_empty() {
-        Vec::new()
-      } else {
-        phrases_str
-          .split('\x1F') // unit separator
-          .filter(|s| !s.is_empty())
-          .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '\x1E'); // record separator
-            let role = parts.next()?;
-            let value = parts.next().unwrap_or("");
-            if value.is_empty() { None } else { Some((role.to_string(), value.to_string())) }
-          })
-          .collect()
-      };
-
-      build_glossary_definition(document, &label, &entry_type, &phrases)?;
-    },
-    after_digest => sub[whatsit] {
-      let label = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
-
-      // Extract key-value pairs from the RequiredKeyVals argument
-      let mut fields: Vec<(&str, String)> = Vec::new();
-      if let Some(kv_arg) = whatsit.get_arg(2) {
-        if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
-          let hash = kv.get_hash_digested();
-          // Extract known fields
-          for field in &["name", "description", "text", "plural", "first", "firstplural",
-                        "sort", "symbol", "symbolplural", "counter", "see", "parent",
-                        "prefix", "short", "shortplural", "long", "longplural"] {
-            if let Some(value) = hash.get(*field) {
-              if !value.is_empty() {
-                fields.push((field, value.clone()));
-              }
-            }
-          }
-        }
-      }
-
-      // Compute sort default: sort defaults to name if not provided
-      let has_sort = fields.iter().any(|(f, _)| *f == "sort");
-      if !has_sort {
-        if let Some(name) = fields.iter().find(|(f, _)| *f == "name").map(|(_, v)| v.clone()) {
-          fields.push(("sort", name));
-        }
-      }
-
-      // Determine entry type (default: main)
-      let entry_type = glo_lookup(&label, "type");
-      let entry_type = if entry_type.is_empty() { "main" } else { &entry_type };
-
-      // Store all fields and get sorted phrases for XML
-      let phrases = store_glossary_entry(&label, entry_type, &fields);
-
-      // Serialize phrases for the constructor to read back
-      let phrases_str: String = phrases
-        .iter()
-        .map(|(role, value)| s!("{role}\x1E{value}"))
-        .collect::<Vec<_>>()
-        .join("\x1F");
-      state::assign_value(
-        &s!("glo@{label}@_phrases"),
-        Stored::String(arena::pin(&phrases_str)),
-        Some(Scope::Global),
-      );
-
-      Ok(Vec::new())
-    }
-  );
-
-  // ======================================================================
-  // \longnewglossaryentry{label}{kv}{description}
-  // Same as \newglossaryentry but with description as a separate argument
-  // ======================================================================
-  DefConstructor!("\\longnewglossaryentry{} RequiredKeyVals {}",
-    sub [document, args] {
-      let label = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
-      let entry_type = glo_lookup(&label, "type");
-      let entry_type = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-
-      let phrases_key = s!("glo@{label}@_phrases");
-      let phrases_str = state::lookup_value(&phrases_key)
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      let phrases: Vec<(String, String)> = if phrases_str.is_empty() {
-        Vec::new()
-      } else {
-        phrases_str
-          .split('\x1F')
-          .filter(|s| !s.is_empty())
-          .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '\x1E');
-            let role = parts.next()?;
-            let value = parts.next().unwrap_or("");
-            if value.is_empty() { None } else { Some((role.to_string(), value.to_string())) }
-          })
-          .collect()
-      };
-
-      build_glossary_definition(document, &label, &entry_type, &phrases)?;
-    },
-    after_digest => sub[whatsit] {
-      let label = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
-
-      let mut fields: Vec<(&str, String)> = Vec::new();
-
-      // Extract key-value pairs
-      if let Some(kv_arg) = whatsit.get_arg(2) {
-        if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
-          let hash = kv.get_hash_digested();
-          for field in &["name", "text", "plural", "first", "firstplural",
-                        "sort", "symbol", "symbolplural", "counter", "see", "parent",
-                        "prefix", "short", "shortplural", "long", "longplural"] {
-            if let Some(value) = hash.get(*field) {
-              if !value.is_empty() {
-                fields.push((field, value.clone()));
-              }
-            }
-          }
-        }
-      }
-
-      // Get description from arg 3
-      let desc = whatsit.get_arg(3).map(|d| d.to_string()).unwrap_or_default();
-      if !desc.is_empty() {
-        fields.push(("description", desc));
-      }
-
-      // Compute sort default
-      let has_sort = fields.iter().any(|(f, _)| *f == "sort");
-      if !has_sort {
-        if let Some(name) = fields.iter().find(|(f, _)| *f == "name").map(|(_, v)| v.clone()) {
-          fields.push(("sort", name));
-        }
-      }
-
-      let entry_type = glo_lookup(&label, "type");
-      let entry_type = if entry_type.is_empty() { "main" } else { &entry_type };
-
-      let phrases = store_glossary_entry(&label, entry_type, &fields);
-
-      let phrases_str: String = phrases
-        .iter()
-        .map(|(role, value)| s!("{role}\x1E{value}"))
-        .collect::<Vec<_>>()
-        .join("\x1F");
-      state::assign_value(
-        &s!("glo@{label}@_phrases"),
-        Stored::String(arena::pin(&phrases_str)),
-        Some(Scope::Global),
-      );
-
-      Ok(Vec::new())
-    }
-  );
-
-  // ======================================================================
-  // \newacronym{label}{short}{long/description}
-  // Defines an acronym entry
-  // ======================================================================
-  DefConstructor!("\\newacronym{}{}{}",
-    sub [document, args] {
-      let label = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
-
-      let phrases_key = s!("glo@{label}@_phrases");
-      let phrases_str = state::lookup_value(&phrases_key)
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      let phrases: Vec<(String, String)> = if phrases_str.is_empty() {
-        Vec::new()
-      } else {
-        phrases_str
-          .split('\x1F')
-          .filter(|s| !s.is_empty())
-          .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '\x1E');
-            let role = parts.next()?;
-            let value = parts.next().unwrap_or("");
-            if value.is_empty() { None } else { Some((role.to_string(), value.to_string())) }
-          })
-          .collect()
-      };
-
-      build_glossary_definition(document, &label, "acronym", &phrases)?;
-    },
-    after_digest => sub[whatsit] {
-      let label = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
-      let short = whatsit.get_arg(2).map(|d| d.to_string()).unwrap_or_default();
-      let long = whatsit.get_arg(3).map(|d| d.to_string()).unwrap_or_default();
-
-      // Set type before storing
-      glo_store(&label, "type", "acronym");
-
-      let fields: Vec<(&str, String)> = vec![
-        ("description", long.clone()),
-        ("long", long.clone()),
-        ("longplural", s!("{long}s")),
-        ("name", short.clone()),
-        ("short", short.clone()),
-        ("shortplural", s!("{short}s")),
-        ("sort", short.clone()),
-        ("text", short.clone()),
-      ];
-
-      let phrases = store_glossary_entry(&label, "acronym", &fields);
-
-      let phrases_str: String = phrases
-        .iter()
-        .map(|(role, value)| s!("{role}\x1E{value}"))
-        .collect::<Vec<_>>()
-        .join("\x1F");
-      state::assign_value(
-        &s!("glo@{label}@_phrases"),
-        Stored::String(arena::pin(&phrases_str)),
-        Some(Scope::Global),
-      );
-
-      Ok(Vec::new())
-    }
-  );
-
-  // ======================================================================
-  // \gls, \Gls, \glspl, \Glspl, \glssymbol
-  // Runtime macros that expand to \lx@glossaryref{list}{key}{text}
-  // ======================================================================
-  {
-    let gls_cs = T_CS!("\\gls");
-    let gls_params = parse_parameters("Semiverbatim", &gls_cs, true)?;
-    let gls_closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() {
-        "main".to_string()
-      } else {
-        entry_type
-      };
-      let text = gls_text(&key);
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(
-      gls_cs,
-      gls_params,
-      ExpansionBody::Closure(gls_closure),
-      None,
-    )?;
-  }
-
-  {
-    let cs = T_CS!("\\Gls");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() {
-        "main".to_string()
-      } else {
-        entry_type
-      };
-      let text = capitalize_first(&gls_text(&key));
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    let cs = T_CS!("\\glspl");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() {
-        "main".to_string()
-      } else {
-        entry_type
-      };
-      let text = gls_plural_text(&key);
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    let cs = T_CS!("\\Glspl");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() {
-        "main".to_string()
-      } else {
-        entry_type
-      };
-      let text = capitalize_first(&gls_plural_text(&key));
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    let cs = T_CS!("\\glssymbol");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() {
-        "main".to_string()
-      } else {
-        entry_type
-      };
-      let symbol = glo_lookup(&key, "symbol");
-      Ok(gls_ref_tokens(&list, &key, &symbol))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  // \glsfirst, \Glsfirst, \glsfirstplural, \Glsfirstplural — emit the
-  // entry's `first` form (long form for acronyms, falls back to `text`
-  // when no separate first-use form was declared). Same wrapping as
-  // \gls. Several arXiv papers (e.g. 2303.16633) use \glsfirst inside
-  // their definitions; without the binding the CS hits the undefined
-  // path. Perl's Bruce-binding raw-loads glossaries.sty which provides
-  // these via \newrobustcmd*; we mirror the user-facing behaviour
-  // (return formatted entry text + glossaryref wrapping).
-  {
-    let cs = T_CS!("\\glsfirst");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let mut text = glo_lookup(&key, "first");
-      if text.is_empty() {
-        text = gls_text(&key);
-      }
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-  {
-    let cs = T_CS!("\\Glsfirst");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let mut text = glo_lookup(&key, "first");
-      if text.is_empty() {
-        text = gls_text(&key);
-      }
-      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-  {
-    let cs = T_CS!("\\glsfirstplural");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let mut text = glo_lookup(&key, "firstplural");
-      if text.is_empty() {
-        text = gls_plural_text(&key);
-      }
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-  {
-    let cs = T_CS!("\\Glsfirstplural");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let mut text = glo_lookup(&key, "firstplural");
-      if text.is_empty() {
-        text = gls_plural_text(&key);
-      }
-      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-  // \glsdesc / \Glsdesc — emit the entry's description.
-  {
-    let cs = T_CS!("\\glsdesc");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let text = glo_lookup(&key, "description");
-      Ok(gls_ref_tokens(&list, &key, &text))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-  {
-    let cs = T_CS!("\\Glsdesc");
-    let params = parse_parameters("Semiverbatim", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let key = args[0].to_string();
-      let entry_type = glo_lookup(&key, "type");
-      let list = if entry_type.is_empty() { "main".to_string() } else { entry_type };
-      let text = glo_lookup(&key, "description");
-      Ok(gls_ref_tokens(&list, &key, &capitalize_first(&text)))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  // ======================================================================
-  // \printglossary, \printnoidxglossary, \printnoidxglossaries, \printglossaries
-  // ======================================================================
-  DefConstructor!("\\lx@printglossary{}{}",
-    "<ltx:glossary xml:id='#1' lists='#2'><ltx:title>#title</ltx:title></ltx:glossary>",
+  //======================================================================
+  // Perl L26-37: wrap `\@gls@link` in `<ltx:glossaryref>`.
+  Let!("\\lx@orig@glossaries@gls@link", "\\@gls@link");
+  DefMacro!("\\@gls@link[]{}{}",
+    "\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}");
+  DefConstructor!("\\lx@glossaries@gls@link{}{}{}",
+    "<ltx:glossaryref inlist='#list' key='#2'>#3</ltx:glossaryref>",
+    enter_horizontal => true,
     properties => sub[args] {
-      let glo_type = args[1].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".into());
-      // Look up title macro for this type
-      let title = if glo_type == "acronym" {
-        "Acronyms".to_string()
-      } else {
-        "Glossary".to_string()
-      };
-      let title_digested = digest_text(Tokens::new(ExplodeText!(&title)))?;
-      Ok(stored_map!("title" => title_digested))
+      // Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
+      let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
+      let list = if list.is_empty() { "main".to_string() } else { list };
+      Ok(stored_map!("list" => list))
+    });
+
+  //======================================================================
+  // Perl L40-42: skip over hyperref wrapping; we handle it.
+  DefMacro!("\\glsdohyperlink{}{}",   "#2");
+  DefMacro!("\\glsdonohyperlink{}{}", "#2");
+  RawTeX!("\\glsdisablehyper");
+
+  // Perl L45: This seems necessary, although it ought to be built in???
+  DefMacro!("\\glspostlinkhook", "\\xspace");
+
+  //======================================================================
+  // Perl L52-83: hook `\@newglossaryentryposthook` so each entry produces
+  // a structured `<ltx:glossarydefinition>` with one `<ltx:glossaryphrase>`
+  // per field. The keys mirror Perl exactly; the closing `}` is required
+  // because the hook body is interpreted as a single argument group.
+  DefMacro!("\\@newglossaryentryposthook",
+    "\\lx@glossaries@newentry{\\@glo@type}{\\glslabel}{\
+name=\\@glo@name,\
+description=\\@glo@desc,\
+symbol=\\@glo@symbol,\
+symbolplural=\\@glo@symbolplural,\
+text=\\@glo@text,\
+plural=\\@glo@plural,\
+first=\\@glo@first,\
+firstplural=\\@glo@firstplural,\
+sort=\\@glo@sort,\
+counter=\\@glo@counter,\
+see=\\@glo@see,\
+parent=\\@glo@parent,\
+prefix=\\@glo@prefix,\
+short=\\@glo@short,\
+shortplural=\\@glo@shortpl,\
+long=\\@glo@long,\
+longplural=\\@glo@longpl\
+}");
+
+  // Perl L85-97: DefConstructor that emits the structured definition.
+  // Iterate the keyvals in sorted-by-key order and insert one
+  // `<ltx:glossaryphrase>` per non-empty value (matches Perl's
+  // `if ToString($value)` guard).
+  DefConstructor!("\\lx@glossaries@newentry{}{} RequiredKeyVals",
+    sub[document, args, _props] {
+      let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
+      let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      document.open_element("ltx:glossarydefinition",
+        Some(string_map!("key" => key.clone(), "inlist" => list)), None)?;
+      if let Some(kv_digested) = args[2].as_ref() {
+        if let DigestedData::KeyVals(ref kvs) = *kv_digested.data() {
+          // Sort by role (Perl: `sort keys %$hash`).
+          let mut pairs: Vec<(String, ArgWrap)> = kvs.get_pairs()
+            .map(|(k, v)| (k.clone(), v.clone())).collect();
+          pairs.sort_by(|a, b| a.0.cmp(&b.0));
+          for (role, val) in pairs {
+            let val_str = val.to_string();
+            if val_str.is_empty() { continue; }
+            // Insert <ltx:glossaryphrase key=key role=role>val</ltx:glossaryphrase>
+            document.open_element("ltx:glossaryphrase",
+              Some(string_map!("key" => key.clone(), "role" => role)), None)?;
+            document.absorb_string(&val_str, &NO_PROPERTIES)?;
+            document.close_element("ltx:glossaryphrase")?;
+          }
+        }
+      }
+      document.close_element("ltx:glossarydefinition")?;
     }
   );
 
-  {
-    // \printglossary OptionalKeyVals → expand to \lx@printglossary{id}{type}
-    let cs = T_CS!("\\printglossary");
-    let params = parse_parameters("OptionalKeyVals", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let glo_type = if !args.is_empty() {
-        let kv_str = args[0].to_string();
-        // Extract type= from keyvals
-        if let Some(pos) = kv_str.find("type=") {
-          let rest = &kv_str[pos + 5..];
-          rest.split(',').next().unwrap_or("main").trim().to_string()
-        } else {
-          "main".to_string()
-        }
-      } else {
-        "main".to_string()
-      };
-      let docid = state::lookup_value("docid")
-        .map(|s| s.to_string())
+  //======================================================================
+  // Perl L101-104: redefine `\printglossary` to dispatch to our constructor.
+  DefMacro!("\\printglossary",
+    "\\global\\let\\warn@noprintglossary\\relax\
+\\@ifnextchar[{\\lx@printglossary}{\\lx@printglossary[type=main]}");
+  // Perl L105.
+  Let!("\\printnoidxglossary", "\\printglossary");
+
+  // Perl L107-117: emit `<ltx:glossary>` placeholder with computed id,
+  // list, and title. The XSLT pipeline later expands it into the actual
+  // rendered glossary entries.
+  DefConstructor!("\\lx@printglossary OptionalKeyVals",
+    "<ltx:glossary xml:id='#id' lists='#list'>\
+<ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
+</ltx:glossary>",
+    properties => sub[args] {
+      // Perl L113-117 — compute type (default 'main'), title (digest
+      // \@glotype@<type>@title), and id (docid + ".glo." + cleaned type).
+      let typ = args[0].as_ref().and_then(|d| {
+        if let DigestedData::KeyVals(ref kvs) = *d.data() {
+          kvs.get_value("type").map(|v| v.to_string())
+        } else { None }
+      }).unwrap_or_else(|| "main".to_string());
+      let title_cs = s!("\\@glotype@{typ}@title");
+      let title = stomach::digest(T_CS!(&*title_cs))
+        .map(|d| d.to_string()).unwrap_or_default();
+      let docid = state::lookup_value("thedocument@ID")
+        .and_then(|v| match v { Stored::String(s) => Some(arena::to_string(s)), _ => None })
         .unwrap_or_default();
+      let cleaned = typ.chars().filter(|c| c.is_alphanumeric()).collect::<String>();
       let id = if docid.is_empty() {
-        s!("glo.{glo_type}")
+        format!("glo.{cleaned}")
       } else {
-        s!("{docid}.glo.{glo_type}")
+        format!("{docid}.glo.{cleaned}")
       };
-
-      let mut toks = vec![T_CS!("\\lx@printglossary")];
-      toks.push(T_BEGIN!());
-      toks.extend(ExplodeText!(&id));
-      toks.push(T_END!());
-      toks.push(T_BEGIN!());
-      toks.extend(ExplodeText!(&glo_type));
-      toks.push(T_END!());
-      Ok(Tokens::new(toks))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    // \printnoidxglossary — same as \printglossary
-    let cs = T_CS!("\\printnoidxglossary");
-    let params = parse_parameters("OptionalKeyVals", &cs, true)?;
-    let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| {
-      let glo_type = if !args.is_empty() {
-        let kv_str = args[0].to_string();
-        if let Some(pos) = kv_str.find("type=") {
-          let rest = &kv_str[pos + 5..];
-          rest.split(',').next().unwrap_or("main").trim().to_string()
-        } else {
-          "main".to_string()
-        }
-      } else {
-        "main".to_string()
-      };
-      let docid = state::lookup_value("docid")
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-      let id = if docid.is_empty() {
-        s!("glo.{glo_type}")
-      } else {
-        s!("{docid}.glo.{glo_type}")
-      };
-      let mut toks = vec![T_CS!("\\lx@printglossary")];
-      toks.push(T_BEGIN!());
-      toks.extend(ExplodeText!(&id));
-      toks.push(T_END!());
-      toks.push(T_BEGIN!());
-      toks.extend(ExplodeText!(&glo_type));
-      toks.push(T_END!());
-      Ok(Tokens::new(toks))
-    });
-    def_macro(cs, params, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    // \printnoidxglossaries — prints all registered glossary types
-    let cs = T_CS!("\\printnoidxglossaries");
-    let closure: ExpansionClosure = Rc::new(move |_args: Vec<ArgWrap>| {
-      let types_str = state::lookup_value("glossary_types")
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "main".to_string());
-      let types: Vec<&str> = types_str.split(',').filter(|s| !s.is_empty()).collect();
-
-      let mut toks = Vec::new();
-      for glo_type in types {
-        let docid = state::lookup_value("docid")
-          .map(|s| s.to_string())
-          .unwrap_or_default();
-        let id = if docid.is_empty() {
-          s!("glo.{glo_type}")
-        } else {
-          s!("{docid}.glo.{glo_type}")
-        };
-        toks.push(T_CS!("\\lx@printglossary"));
-        toks.push(T_BEGIN!());
-        toks.extend(ExplodeText!(&id));
-        toks.push(T_END!());
-        toks.push(T_BEGIN!());
-        toks.extend(ExplodeText!(glo_type));
-        toks.push(T_END!());
-      }
-      Ok(Tokens::new(toks))
-    });
-    def_macro(cs, None, ExpansionBody::Closure(closure), None)?;
-  }
-
-  {
-    // \printglossaries — same as \printnoidxglossaries
-    let cs = T_CS!("\\printglossaries");
-    let closure: ExpansionClosure = Rc::new(move |_args: Vec<ArgWrap>| {
-      let types_str = state::lookup_value("glossary_types")
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "main".to_string());
-      let types: Vec<&str> = types_str.split(',').filter(|s| !s.is_empty()).collect();
-
-      let mut toks = Vec::new();
-      for glo_type in types {
-        let docid = state::lookup_value("docid")
-          .map(|s| s.to_string())
-          .unwrap_or_default();
-        let id = if docid.is_empty() {
-          s!("glo.{glo_type}")
-        } else {
-          s!("{docid}.glo.{glo_type}")
-        };
-        toks.push(T_CS!("\\lx@printglossary"));
-        toks.push(T_BEGIN!());
-        toks.extend(ExplodeText!(&id));
-        toks.push(T_END!());
-        toks.push(T_BEGIN!());
-        toks.extend(ExplodeText!(glo_type));
-        toks.push(T_END!());
-      }
-      Ok(Tokens::new(toks))
-    });
-    def_macro(cs, None, ExpansionBody::Closure(closure), None)?;
-  }
+      Ok(stored_map!("list" => typ, "id" => id, "title" => title))
+    },
+    after_digest => sub[whatsit] {
+      // Perl L114: noteBackmatterElement(<whatsit>, 'ltx:glossary');
+      note_backmatter_element(whatsit, "ltx:glossary");
+    },
+    before_construct => sub[doc, whatsit] {
+      // Perl L117: adjustBackmatterElement($_[0], $_[1]);
+      adjust_backmatter_element(doc, whatsit)?;
+    }
+  );
 });
