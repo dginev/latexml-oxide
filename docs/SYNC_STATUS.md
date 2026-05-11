@@ -257,7 +257,23 @@ patterns: `_/^` cascade (16 — heavy concentration in this stage),
 (1), `\vect` undefined (1), `malformed:ltx:p` (1), `expected:{` (1).
 The `_/^` concentration reflects 2011-era arXiv papers' increased
 use of plain-TeX/AmSTeX preambles vs LaTeX. Mini-sandbox
-exhausted; ready for stage 13.
+exhausted; advanced to stage 13.
+
+**Stage 13 canvas (2026-05-11)**: 9958/10000 = **99.58% OK**.
+42 failures (41 errors + 1 fatal) triaged:
+**1 RUST-REGRESSION fixed**, 35 SHARED-FAILURE, 6 RUST-CLEANER.
+Witness `1205.2217`: 16 × `Error:unexpected:Blue`/`Purple` after
+`\usepackage[usenames,dvipsnames]{color}` + `\lstset` with
+color-styled keywordstyles. Fix `4c98699468`: implement the
+`usenames` option, which makes `\DefineNamedColor{named}{X}{...}`
+ALSO register `X` directly (LaTeX color.sty L84-87, L133).
+Standout RUST-CLEANER: `1203.0262` Rust 9 vs Perl 26 (`-17`);
+`1208.1436` 10 vs 13 (`-3`); 4 papers each `-2` on
+`\GenericError` chains. Top SHARED-FAILURE patterns: `_/^`
+cascade (21 — continuing 2011+ AmSTeX preamble trend),
+`^` math-mode (8), `\GenericError` (8), `malformed:ltx:XMArray`
+(2), `\Ob`/`\Otterbein`/`\ANL` paper-local CSes (1 each).
+Mini-sandbox exhausted; ready for stage 14.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
