@@ -183,7 +183,17 @@ Top SHARED-FAILURE patterns: `_/^` cascade (5 — concentrated in
 `cs/...` papers); `\@` AmSTeX (3); `\GenericError` (4); `\psfig`,
 `\@math@baccent`, `^` cascades (1 each). `cs0502050` was reported
 fatal during stage but verified clean on re-run — intermittent
-timeout-related. Mini-sandbox exhausted; ready for stage 6.
+timeout-related. Mini-sandbox exhausted; advanced to stage 6.
+
+**Stage 6 canvas (2026-05-11)**: 9982/10000 = **99.82% OK**.
+18 failures (17 errors + 1 fatal `astro-ph0603369`) triaged:
+**0 RUST-REGRESSION**, 15 SHARED-FAILURE, 3 RUST-CLEANER. Standout
+Rust wins: `gr-qc0601055` Rust 60 vs Perl 91 errors (`-31`);
+`math0605681` Rust 2 vs Perl 13 (`-11`); `nlin0603058` 67 vs 69.
+Top SHARED-FAILURE patterns: `_/^` cascade (8 — concentrated in
+`cs/...` + `math/...` papers); `\GenericError` (3); `\endproof` (2);
+`\@` AmSTeX (1); `\ifpst@useCalc` (1); `\scriptsize` undefined (1).
+Mini-sandbox exhausted; ready for stage 7.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
