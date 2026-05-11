@@ -2847,6 +2847,22 @@ LoadDefinitions!({
 \DeclareSIUnit \ab         { \atto \barn }
 \DeclareSIUnit \zb         { \zepto \barn }
 \DeclareSIUnit \yb         { \yocto \barn }
+% hep / particle-physics units — Perl siunitx.sty.ltxml L1795-1812.
+% Activated by `\usepackage[alsoload=hep]{siunitx}` or
+% `version-1-compatibility`. Driver: 1607.04783 (stage 19 RUST-
+% REGRESSION: `\eVperc`/`\gauss`/`\nanobarn` undefined).
+\DeclareSIUnit \gon        { gon }
+\DeclareSIUnit \clight     { \text { \ensuremath { c } } }
+\DeclareSIUnit \micron     { \micro \metre }
+\DeclareSIUnit \mrad       { \milli \rad }
+\DeclareSIUnit \gauss      { G }
+\DeclareSIUnit \eVperc     { \eV \per \clight }
+\DeclareSIUnit \nanobarn   { \nano \barn }
+\DeclareSIUnit \picobarn   { \pico \barn }
+\DeclareSIUnit \femtobarn  { \femto \barn }
+\DeclareSIUnit \attobarn   { \atto \barn }
+\DeclareSIUnit \zeptobarn  { \zepto \barn }
+\DeclareSIUnit \yoctobarn  { \yocto \barn }
 "#);
 
   DefMacro!("\\highlight{}", "#1");

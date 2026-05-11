@@ -3339,9 +3339,9 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
           <tr>
             <td align="left">clight</td>
             <td align="left"><verbatim font="typewriter">\</verbatim><text font="typewriter">clight</text></td>
-            <td align="left"><Math mode="inline" tex="\mathrm{c}" text="clight" xml:id="S2.T4.m4">
+            <td align="left"><Math mode="inline" tex="\mathrm{\text{$c$}}" text="clight" xml:id="S2.T4.m4">
                 <XMath>
-                  <XMTok class="ltx_unit" meaning="clight" role="ID">c</XMTok>
+                  <XMTok class="ltx_unit" font="italic" meaning="clight" role="ID">c</XMTok>
                 </XMath>
               </Math></td>
           </tr>
