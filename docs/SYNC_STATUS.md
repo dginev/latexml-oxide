@@ -366,7 +366,34 @@ Standout RUST-CLEANER: `1606.03888` Rust 51 vs Perl 66 (`-15`);
 `1603.06802` `-2`. Top SHARED-FAILURE patterns: `\GenericError`
 (13), `_/^` cascade (10), `\endproof` (1), `\idxquad` (2 papers),
 `\cite` (1), `\ytableausetup` (1), `\rec` (1).
-Mini-sandbox exhausted; ready for stage 20.
+Mini-sandbox exhausted; advanced to stage 20.
+
+**Stage 20 canvas (2026-05-11)**: 9970/10000 = **99.70% OK**.
+30 failures triaged: **5 RUST-REGRESSIONs deferred**,
+22 SHARED-FAILURE, 3 RUST-CLEANER. All RUST-REGRESSIONs in this
+stage require deeper investigation:
+  - `1612.08438`: `\colorbox` undefined when hyperref is pre-loaded
+    by `PoS.cls` — late `\usepackage[colorlinks=true]{hyperref}`
+    no-ops, color.sty never loads.
+  - `1701.07720`: `\diagram`/`\rto`/`\dto`/`\enddiagram` — Paul
+    Taylor's diagrams.sty (no Perl binding, but Perl handles
+    it cleanly somehow; needs investigation).
+  - `1703.04419`: `\color[` parsing.
+  - `1705.07737`: `\hbox` unexpected (mode-leak).
+  - `1611.01748`: `\GenericError` chain cascade (Rust 5 vs Perl 1).
+Standout RUST-CLEANER: `1612.07821` Rust 23 vs Perl 26 (`-3`);
+`1702.02056` / `1702.07132` each `-2`. Top SHARED-FAILURE patterns:
+`\GenericError` (8), `_/^` cascade (8), `^` math-mode (3),
+`\section` (1), `\titlestring` (1), `\´` (1).
+Mini-sandbox exhausted; ready for stage 21.
+
+**Cumulative through stage 20 (200k papers, 47% of corpus)**:
+25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
+investigation. Per-stage OK% range: 99.58-99.91%. Rust port
+maintains structural parity with Perl LaTeXML for the arxmliv
+corpus; remaining residue is dominated by SHARED-FAILUREs with
+Perl (mostly `_/^` text-mode cascades and `\GenericError`
+chains).
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
