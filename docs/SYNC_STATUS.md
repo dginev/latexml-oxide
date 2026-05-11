@@ -92,11 +92,35 @@ signature change). `cargo test --tests` = **1185/0/0** post-rebase.
   before `\documentclass{<class>}` is silently overwritten when the
   LaTeX kernel loads (e.g. `\d` becomes `\d{...}` text-accent;
   `\th` becomes thorn). Inside subsequent `$\d_x$` math, the
-  unintended kernel definition trips text-mode underscore. Witnesses:
-  hep-th0005159 (Rust 99 / Perl 101 errors + 1 fatal), hep-th0010165
-  (Rust 92 / Perl 101 errors + 1 fatal). Together: 191 `expected:$`
-  events on stage 1 = entire cluster, both engines identical at the
-  fatal-cascade boundary. SHARED-FAILURE; out of scope.
+  unintended kernel definition trips text-mode underscore.
+  Witnesses (stage 1 verify, mini-canvas):
+    * hep-th0005159 — Rust 99 / Perl 101 errors + 1 fatal
+    * hep-th0010165 — Rust 92 / Perl 101 errors + 1 fatal
+    * hep-ph0001306 — Rust 75 / Perl 101 errors + 1 fatal
+    * cond-mat0102064 — Rust 4 / Perl 4 errors
+    * cond-mat0103632 — Rust 20 / Perl 20 errors
+    * hep-th0005268 — Rust 11 / Perl 26 errors
+  Together: the entire residual `expected:$` (191) + the bulk of
+  residual `_/^` clusters on stage 1. Both engines fail identically
+  on the fatal-cascade boundary. SHARED-FAILURE; out of scope.
+
+- **pstricks `\ifpst@useCalc` / `\ifpst@psfonts` undefined** — when a
+  paper `\input`s `pstricks-dots.tex` (or other pstricks subfiles)
+  before `pstricks-tex.def` has run, the `\newif` conditionals
+  defined in pstricks-tex.def are missing. Both Perl and Rust emit
+  the identical pair of `Error:undefined:\ifpst@*` events. Witnesses:
+  astro-ph0002346, astro-ph0002348. SHARED-FAILURE.
+
+- **AmSTeX `\@` undefined (`\input amstex` + `\documentstyle{amsppt}`)**
+  — pure-AmSTeX (plain TeX) papers reach `\@` (LaTeX-only kernel CS)
+  unintendedly through some amsppt subroutine. Both engines emit
+  identical `Error:undefined:\@`. Witnesses: math-ph0001012/0001015.
+  SHARED-FAILURE.
+
+- **amsart `_/^` cascade after `\maketitle` / `\numberwithin{equation}{section}`**
+  — math0010241 (`amsart` with `\numberwithin{equation}{section}`)
+  emits 8 `Error:malformed:ltx:XMArray` + 19-ish `_/^` cascade. Perl
+  emits 19 errors + 22 warnings on same paper. SHARED-FAILURE.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
