@@ -157,7 +157,15 @@ mkdir -p "$OUTPUT_DIR"
 ulimit -c 0
 
 BUILD_RUSTFLAGS="${RUSTFLAGS:-}"
-for flag in -Clinker-features=+lld -Zunstable-options -Ctarget-cpu=native; do
+# Linker: prefer mold > rust-lld > default. mold cuts release link wall-clock
+# ~3-5x vs rust-lld on this binary size. Falls back to rust-lld if mold isn't
+# on PATH (CI runners, fresh checkouts).
+if command -v mold >/dev/null 2>&1; then
+  LINKER_FLAG="-Clink-arg=-fuse-ld=mold"
+else
+  LINKER_FLAG="-Clinker-features=+lld"
+fi
+for flag in "$LINKER_FLAG" -Zunstable-options -Ctarget-cpu=native -Zthreads=8; do
   case " $BUILD_RUSTFLAGS " in
     *" $flag "*) ;;
     *) BUILD_RUSTFLAGS="${BUILD_RUSTFLAGS:+$BUILD_RUSTFLAGS }$flag" ;;
