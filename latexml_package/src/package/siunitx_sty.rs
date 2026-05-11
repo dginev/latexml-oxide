@@ -2824,8 +2824,15 @@ LoadDefinitions!({
 \DeclareSIUnit \Sec        { \second }
 \DeclareSIUnit \mics       { \micro \second }
 \DeclareSIUnit \cmc        { \centi \metre \cubed }
+\DeclareSIUnit \dmc        { \deci  \metre \cubed }
+\DeclareSIUnit \cms        { \centi \metre \squared }
+\DeclareSIUnit \centimetrecubed   { \centi \metre \cubed }
+\DeclareSIUnit \centimetresquared { \centi \metre \squared }
 \DeclareSIUnit \cubiccentimetre { \centi \metre \cubed }
 \DeclareSIUnit \cubicdecimetre  { \deci \metre \cubed }
+\DeclareSIUnit \squarecentimetre { \centi \metre \squared }
+\DeclareSIUnit \squaremetre      { \metre \squared }
+\DeclareSIUnit \squarekilometre  { \kilo \metre \squared }
 \DeclareSIUnit \molar      { \mole \per \cubic \deci \metre }
 \DeclareSIUnit \nb         { \nano \barn }
 \DeclareSIUnit \pb         { \pico \barn }
