@@ -183,11 +183,14 @@ gap is the actual work.
   the identical pair of `Error:undefined:\ifpst@*` events. Witnesses:
   astro-ph0002346, astro-ph0002348. SHARED-FAILURE.
 
-- **AmSTeX `\@` undefined (`\input amstex` + `\documentstyle{amsppt}`)**
-  — pure-AmSTeX (plain TeX) papers reach `\@` (LaTeX-only kernel CS)
-  unintendedly through some amsppt subroutine. Both engines emit
-  identical `Error:undefined:\@`. Witnesses: math-ph0001012/0001015.
-  SHARED-FAILURE.
+- ~~**AmSTeX `\@` undefined (`\input amstex` + `\documentstyle{amsppt}`)**~~
+  **RESOLVED 2026-05-11** (commit `1cb3c81a6d`): both ports were
+  shared-failing because amstex.tex L165 (`\edef\@{\string @}`) was
+  unmirrored in our AmSTeX pool. Adding `DefMacro!("\\@", "@")` in
+  `amstex.rs` fixes 36 papers across the canvas (math-ph0001012/15,
+  math0209244, math0311498, …, 2012.06011, 1809.08150). SURPASS-PERL,
+  but a faithful translation of the canonical AmSTeX `.tex` file.
+  See `docs/KNOWN_PERL_ERRORS.md` §21 for the Perl-upstream gap.
 
 - **amsart `_/^` cascade after `\maketitle` / `\numberwithin{equation}{section}`**
   — math0010241 (`amsart` with `\numberwithin{equation}{section}`)
@@ -1076,6 +1079,35 @@ ordered by impact:
 - **P2 allocation/startup cleanup** — only after profile shows hot
   path; `*_sym` accessors, `Tokens` conversions, `Stored` deep copies,
   package lookup caching, dump loading.
+
+### Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)
+
+Goal: on the arxmliv glossaries-witness paper `1910.01256` (CVPR-style
+~6-page article with `\usepackage[acronym]{glossaries}`, 110 math
+formulae, .bbl included), `latexml_oxide --format html` must complete
+strictly faster than two `pdflatex` passes on the same source. Beating
+pdflatex on its own playing field is the badge of honor we want.
+
+Baseline measured 2026-05-11 (release binary, fresh source dir per run):
+
+| Pipeline                            | Real time | User    | RSS    |
+|-------------------------------------|-----------|---------|--------|
+| `latexml_oxide → HTML` (1 cmd)      | 3.13 s    | 3.88 s  | 225 MB |
+| `pdflatex × 2`                      | 2.89 s    | 2.57 s  |  64 MB |
+
+Headroom needed: ~0.25 s real, ~1.3 s user. RSS gap is structural
+(Marpa math grammar tables + interned states) and out of scope here.
+
+Acceptance: `latexml_oxide --format html /tmp/glo_oxide/root.tex` ≤
+2.88 s real time on this machine, measured the same way (fresh dir,
+release build), without regressing the `cargo test` workspace count
+or any other PERFORMANCE.md baseline doc.
+
+Likely candidates to profile first (informed by phase telemetry):
+post-processing XSLT pass, math-parser amortized cost on 110
+formulae, dump-replay overhead, package autoload chain for glossaries.
+Use `LATEXML_PHASE_AUDIT=1` and `perf_phase_summary.py` to attribute
+time before touching code.
 
 Optimization Acceptance Checklist (PERFORMANCE.md §Optimization
 Acceptance Checklist) governs every perf change.
