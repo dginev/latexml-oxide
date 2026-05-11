@@ -25,6 +25,80 @@ macro_rules! six_log_error {
 }
 
 //======================================================================
+// Perl siunitx.sty.ltxml L1747-1817: six_load_compat1 — RawTeX block of
+// DeclareSIPrePower / DeclareSIUnit calls fired when the user opts in
+// via `\usepackage[version-1-compatibility]{siunitx}` or any
+// `\usepackage[alsoload=<x>]{siunitx}` (e.g. `alsoload=synchem` for
+// `\Molar`). Copied verbatim from the Perl source so the v2-by-default
+// engine still recognises legacy aliases used by older arXiv papers.
+const SIX_LOAD_COMPAT1: &str = r"
+\DeclareSIPrePower \Square  { 2 }
+\DeclareSIPrePower \ssquare { 2 }
+\DeclareSIUnit \BAR   { \bar }
+\DeclareSIUnit \bbar  { \bar }
+\DeclareSIUnit \Day   { \day }
+\DeclareSIUnit \dday  { \day }
+\DeclareSIUnit \Gray  { \gray }
+\DeclareSIUnit \ggray { \gray }
+\DeclareSIUnit \atomicmass { \atomicmassunit }
+\DeclareSIUnit \arcmin     { \arcminute }
+\DeclareSIUnit \arcsec     { \arcsecond }
+\DeclareSIUnit \are      { a }
+\DeclareSIUnit \curie    { Ci }
+\DeclareSIUnit \gal      { Gal }
+\DeclareSIUnit \millibar { \milli \bar }
+\DeclareSIUnit \rad      { rad }
+\DeclareSIUnit \rem      { rem }
+\DeclareSIUnit \roentgen { R }
+\DeclareSIUnit \micA   { \micro \ampere }
+\DeclareSIUnit \micmol { \micro \mole   }
+\DeclareSIUnit \micl   { \micro \litre  }
+\DeclareSIUnit \micL   { \micro \liter  }
+\DeclareSIUnit \nanog  { \nano  \gram   }
+\DeclareSIUnit \micg   { \micro \gram   }
+\DeclareSIUnit \picm   { \pico  \metre  }
+\DeclareSIUnit \micm   { \micro \metre  }
+\DeclareSIUnit \Sec    { \second }
+\DeclareSIUnit \mics   { \micro \second }
+\DeclareSIUnit \cmc    { \centi \metre \cubed }
+\DeclareSIUnit \dmc    { \deci  \metre \cubed }
+\DeclareSIUnit \cms    { \centi \metre \squared }
+\DeclareSIUnit \centimetrecubed   { \centi \metre \cubed }
+\DeclareSIUnit \centimetresquared { \centi \metre \squared }
+\DeclareSIUnit \cubiccentimetre   { \centi \metre \cubed }
+\DeclareSIUnit \cubicdecimetre    { \deci \metre \cubed }
+\DeclareSIUnit \squarecentimetre  { \centi \metre \squared }
+\DeclareSIUnit \squaremetre       { \metre \squared }
+\DeclareSIUnit \squarekilometre   { \kilo \metre \squared }
+\DeclareSIUnit \parsec    { pc }
+\DeclareSIUnit \lightyear { ly }
+\DeclareSIUnit \gmol  { g  \text { - } mol }
+\DeclareSIUnit \kgmol { kg \text { - } mol }
+\DeclareSIUnit \lbmol { lb \text { - } mol }
+\DeclareSIUnit \molar { \mole \per \cubic \deci \metre }
+\DeclareSIUnit \Molar { \textsc { m } }
+\DeclareSIUnit \torr  { Torr }
+\DeclareSIUnit \gon    { gon }
+\DeclareSIUnit \clight { \text { \ensuremath { c } } }
+\DeclareSIUnit \micron    { \micro \metre }
+\DeclareSIUnit \mrad      { \milli \rad }
+\DeclareSIUnit \gauss     { G }
+\DeclareSIUnit \eVperc    { \eV \per \clight }
+\DeclareSIUnit \nanobarn  { \nano \barn }
+\DeclareSIUnit \picobarn  { \pico \barn }
+\DeclareSIUnit \femtobarn { \femto \barn }
+\DeclareSIUnit \attobarn  { \atto \barn }
+\DeclareSIUnit \zeptobarn { \zepto \barn }
+\DeclareSIUnit \yoctobarn { \yocto \barn }
+\DeclareSIUnit \nb        { \nano \barn }
+\DeclareSIUnit \pb        { \pico \barn }
+\DeclareSIUnit \fb        { \femto \barn }
+\DeclareSIUnit \ab        { \atto \barn }
+\DeclareSIUnit \zb        { \zepto \barn }
+\DeclareSIUnit \yb        { \yocto \barn }
+";
+
+//======================================================================
 // SIX keyvals helpers
 //======================================================================
 
@@ -2102,6 +2176,41 @@ LoadDefinitions!({
   //======================================================================
   // \lx@six@initialize
   DefPrimitive!("\\lx@six@initialize", {
+    // Perl siunitx.sty.ltxml L112-115: rebuild and digest \sisetup{...}
+    // from `opt@siunitx.sty` package-option list — so options passed via
+    // `\usepackage[alsoload=synchem, ...]{siunitx}` reach the SIX_*
+    // state values (otherwise only \sisetup{...} in the doc body would
+    // populate them).
+    //   my $pkgoptions = LookupValue('opt@siunitx.sty');
+    //   my $setup = $pkgoptions && Tokenize('\sisetup{' . join(',', @$pkgoptions) . '}');
+    //   Digest($setup) if $setup;
+    let pkg_opts: Vec<String> = match state::lookup_value("opt@siunitx.sty") {
+      Some(Stored::VecDequeStored(vdq)) => vdq.iter().filter_map(|item| match item {
+        Stored::String(s) => Some(arena::with(*s, |s| s.to_string())),
+        _ => None,
+      }).collect(),
+      Some(Stored::Strings(rc)) => rc.iter().map(|s| arena::with(*s, |s| s.to_string())).collect(),
+      _ => Vec::new(),
+    };
+    if !pkg_opts.is_empty() {
+      let setup = format!("\\sisetup{{{}}}", pkg_opts.join(","));
+      Digest!(Tokenize!(&setup))?;
+    }
+
+    // Perl siunitx.sty.ltxml L115-121: if version-1-compatibility OR
+    // alsoload is set, load six_load_compat1's DeclareSIPrePower /
+    // DeclareSIUnit chain. The user's `\usepackage[alsoload=synchem]
+    // {siunitx}` sets alsoload=synchem (truthy) so compat1 fires;
+    // `\Molar`, `\torr`, `\angstrom`, `\parsec`, `\lightyear` etc.
+    // become defined. Witness: 2209.04575 (Quantum Sci. Technol., uses
+    // `\SI{50}{\micro\Molar}`).
+    let v1_compat = six_get_bool_sym(six_pin!("version-1-compatibility"));
+    let alsoload = six_get_sym(six_pin!("alsoload"))
+      .map(|s| !s.to_string().trim().is_empty())
+      .unwrap_or(false);
+    if v1_compat || alsoload {
+      RawTeX!(SIX_LOAD_COMPAT1);
+    }
     if six_get_bool_sym(six_pin!("free-standing-units")) {
       six_enable_unit_macros(six_get_bool_sym(six_pin!("overwrite-functions")));
     }
