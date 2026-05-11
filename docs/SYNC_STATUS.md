@@ -273,7 +273,22 @@ Standout RUST-CLEANER: `1203.0262` Rust 9 vs Perl 26 (`-17`);
 cascade (21 — continuing 2011+ AmSTeX preamble trend),
 `^` math-mode (8), `\GenericError` (8), `malformed:ltx:XMArray`
 (2), `\Ob`/`\Otterbein`/`\ANL` paper-local CSes (1 each).
-Mini-sandbox exhausted; ready for stage 14.
+Mini-sandbox exhausted; advanced to stage 14.
+
+**Stage 14 canvas (2026-05-11)**: 9963/10000 = **99.63% OK**.
+37 failures triaged: **2 RUST-REGRESSIONs fixed**,
+32 SHARED-FAILURE, 3 RUST-CLEANER. Witnesses (both pstricks-
+related, both fixed by `cb84b8781f`):
+  - `1208.6481`: `\scalebox` undefined — paper loads pstricks
+    but not graphicx. Added `\scalebox{}{}` to
+    `pstricks_support_sty.rs` (Perl `pstricks_support.sty.ltxml:1010`).
+  - `1304.4491`: `\nccircle` undefined — Perl `pst-node.sty.ltxml`
+    has it; Rust `pst_node_sty.rs` missed it. Added stubs for
+    `\nccircle`, `\pccircle`, `\ncdiagg`, `\pcdiagg`.
+RUST-CLEANER set: `1209.4820`/`1301.3682` (`\section` cluster),
+`1305.0208` (`-2`). Top SHARED-FAILURE patterns: `_/^` cascade (17),
+`^` math-mode (5), `\@` AmSTeX (3), `\GenericError` (3).
+Mini-sandbox exhausted; ready for stage 15.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
