@@ -141,7 +141,25 @@ papers verified Rust-vs-Perl with `--path=~/git/ar5iv-bindings
   * 17 SHARED-FAILURE (logged above; both engines fail identically).
   * 1 RUST-CLEANER (hep-th0005268: Rust 21 vs Perl 26).
   * **0 RUST-REGRESSION.**
-Mini-sandbox exhausted; ready for stage 2 advance.
+Mini-sandbox exhausted; advanced to stage 2.
+
+**Stage 2 canvas (2026-05-10)**: 9991/10000 = **99.91% OK**.
+9 failures triaged. 1 RUST-REGRESSION fixed (`hep-ph0109006` —
+`\xpt`/`\ixpt` undefined cluster, cured by `9673bf8b98` which
+loads raw `latex209.def` post-`latex.ltx` during dump-build so
+LaTeX 2.09 user-facing pt-family wrappers reach the dump).
+Remaining 8: 5 SHARED-FAILURE, 2 RUST-CLEANER, 1 NO_TEX.
+Mini-sandbox exhausted; advanced to stage 3.
+
+**Stage 3 canvas (2026-05-10)**: 9984/10000 = **99.84% OK**.
+16 failures triaged: **0 RUST-REGRESSION**, 14 SHARED-FAILURE,
+2 RUST-CLEANER (`cond-mat0308059`: Rust 1 vs Perl 3;
+`hep-th0308103`: Rust 38 vs Perl 102). Top SHARED-FAILURE patterns
+match earlier stages: `\psfig` (3 papers), `Error:expected:{`
+math arg gaps (4 papers), `\@` AmSTeX (1), `\GenericError`
+chain (3), `\@personname`/`\endflushright` cascades (2),
+`{instit}` (1), `_/^` text-mode cascades (2). Mini-sandbox
+exhausted; ready for stage 4.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
