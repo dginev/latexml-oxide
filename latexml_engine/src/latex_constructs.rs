@@ -53,6 +53,25 @@ fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
 // declared option callback wouldn't fire — silently turning the option
 // into an unused-global.
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+
+// Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
+// raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
+// strip whitespace from EACH element including the first/last.
+// OPTS_REGEX only strips whitespace around the comma delimiters, so a
+// leading-space bracket `[ amsmath, amssymb]` produces a first
+// element ` amsmath` (still has leading space) which fails to match
+// any DeclareOption. Wrap every OPTS_REGEX.split site with this
+// helper to mirror TrimmedCommaList exactly.
+// Witness: 2210.07776 (`\documentclass[ amsmath,amssymb,...]
+// {revtex4-1}` — leading space prevented amsmath option from firing,
+// so amsmath/amsbsy never loaded, so `\boldsymbol` was undefined).
+fn split_trim_options(s: &str) -> Vec<String> {
+  OPTS_REGEX
+    .split(s)
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty())
+    .collect()
+}
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
@@ -2534,7 +2553,7 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
@@ -3763,7 +3782,7 @@ LoadDefinitions!({
         None => Vec::new(),
       };
       let options_list = match options {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       for package in package_list {
@@ -3791,7 +3810,7 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
-      Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+      Some(opts) => split_trim_options(&opts.to_string()),
       None => Vec::new(),
     };
     for package in package_list {
@@ -3811,8 +3830,7 @@ LoadDefinitions!({
       let class_arg: Option<&Digested> = whatsit.get_arg(2);
       let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
       let options: Vec<String> = match options_arg {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string())
-          .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       load_class(&class, options, Tokens!())?;
