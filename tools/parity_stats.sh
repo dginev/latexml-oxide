@@ -42,7 +42,7 @@ fi
 # Rust latexml-oxide targets the ar5iv configuration of Perl LaTeXML,
 # not stock Perl. All parity runs preload ar5iv.sty from ar5iv-bindings
 # so the comparison baseline matches what Rust emulates.
-AR5IV_BINDINGS="${AR5IV_BINDINGS:-$HOME/git/ar5iv-bindings}"
+AR5IV_BINDINGS="${AR5IV_BINDINGS:-$HOME/git/ar5iv-bindings/bindings}"
 LATEXML_PARITY_FLAGS=(--path="$AR5IV_BINDINGS" --preload=ar5iv.sty)
 
 ARXMLIV="${ARXMLIV:-$HOME/data/arxmliv}"
