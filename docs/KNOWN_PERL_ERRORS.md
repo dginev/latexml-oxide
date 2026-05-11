@@ -588,3 +588,49 @@ This produces visually correct output. If strict Perl-bug parity is
 ever needed, swap the values to match the Perl typo's effective
 behavior (use `upright`/`medium` everywhere); it would be a regression
 in rendering quality, so the divergence stays.
+
+---
+
+## 21. `AmSTeX.pool.ltxml` missing `\edef\@{\string @}` from amstex.tex L165
+
+**Perl source:** `LaTeXML/blib/lib/LaTeXML/Engine/AmSTeX.pool.ltxml` (no `\@` definition)
+
+**Symptom:** AmSTeX documents (`\input amstex` + `\documentstyle{...}`)
+that embed email addresses as `user\@host.tld` report:
+```
+Error:undefined:\@ The token T_CS[\@] is not defined.
+```
+The conversion bails before producing usable XML.
+
+**Root cause:** `amstex.tex` line 165 redefines `\@` (which TeX/plain
+binds as a sentence-end no-op) to expand to the literal character `@`
+via `\edef\@{\string @}`. This is the canonical AmSTeX way to write
+an at-sign — used pervasively for emails in author-address blocks.
+Perl LaTeXML's `AmSTeX.pool.ltxml` does not mirror this redefinition,
+so `plain_base.pool.ltxml`'s `DefConstructor('\@', '')` (which absorbs
+`\@` to empty) stays in effect. Then `amsppt.sty`'s subsequent
+`\let\@sf\empty@\relaxnext@` chain (lines 788/807) — or the user's
+inline `\@` — looks up the bare `\@` later and reports it as
+undefined / produces malformed output.
+
+**Minimal example:**
+```tex
+\input amstex
+\documentstyle{amsppt}
+e-mail: ramm\@math.ksu.edu
+\bye
+```
+
+**Impact:** 36 papers across staged_canvas runs (math-ph0001012/15,
+math0209244, math0311498, …, 2012.06011, 1809.08150) fail because of
+this single missing redefinition. All match the AmSTeX-email
+signature.
+
+**Rust resolution:** Mirror `amstex.tex` directly in `amstex.rs`:
+```rust
+DefMacro!("\\@", "@");
+```
+(Perl-equivalent literal translation of the canonical AmSTeX source —
+faithful to the upstream `.tex` file, divergent only from Perl
+LaTeXML's incomplete pool.) Fixed at commit time; all 36 sampled
+witnesses now convert with 0 errors.

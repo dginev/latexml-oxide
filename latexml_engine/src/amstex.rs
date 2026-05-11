@@ -89,6 +89,18 @@ LoadDefinitions!({
 
   DefMacro!("\\boldnotloaded{}", "");
 
+  // amstex.tex L165: `\edef\@{\string @}` — `\@` expands to the literal
+  // `@` character. Pattern: AmSTeX papers write email addresses as
+  // `user\@host.tld` (e.g. 0001015 math-ph: `ramm\@math.ksu.edu`).
+  // Without this override, plain_base's `DefConstructor!("\\@", "")`
+  // (Perl plain_base.pool.ltxml L234) absorbs the `\@` to empty, and
+  // amsppt.sty's subsequent `\let\@sf\empty@\relaxnext@` (L788/L807)
+  // tries to look up the bare `\@` and reports it undefined.
+  // Mirror amstex.tex exactly: redefine `\@` to expand to `@`.
+  // (Not in Perl AmSTeX.pool.ltxml — SURPASS-PERL, but a faithful
+  // translation of the canonical amstex.tex behavior.)
+  DefMacro!("\\@", "@");
+
   DefMacro!("\\galleys",  "");
   DefMacro!("\\flushpar", "\\par\\noindent");
 
