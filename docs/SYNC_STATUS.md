@@ -233,7 +233,19 @@ Mini-sandbox exhausted; advanced to stage 10.
 each `-2`. Top SHARED-FAILURE patterns continue the established
 distribution: `\GenericError` chain (11), `_/^` cascade (10),
 `\endproof` (2), `\DeclareMathOperator` (1), `malformed:ltx:logical-block` (1).
-Mini-sandbox exhausted; ready for stage 11.
+Mini-sandbox exhausted; advanced to stage 11.
+
+**Stage 11 canvas (2026-05-11)**: 9980/10000 = **99.80% OK**.
+20 failures triaged: **1 RUST-REGRESSION fixed**, 15 SHARED-FAILURE,
+4 RUST-CLEANER. Witness `1006.4335` (`\cms` undefined): Rust
+1 error → 0 errors via `a85b50ce2b` (siunitx v1-compat area/volume
+abbreviations — 7 missing aliases vs Perl's
+`siunitx.sty.ltxml:1779-1786`). RUST-CLEANER set: `1009.1106`
+Rust 4 vs Perl 11 (`-7`); `1004.4165` `-4`; `1004.4170`/`1005.2727`
+each `-2`. Top SHARED-FAILURE patterns: `\GenericError` (8),
+`_/^` cascade (5), `\@` AmSTeX (3), `\ifpst@useCalc` (1),
+`\endproof` (1), `\usepackage` (1). Mini-sandbox exhausted;
+ready for stage 12.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
