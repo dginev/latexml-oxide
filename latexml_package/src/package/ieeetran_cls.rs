@@ -20,17 +20,21 @@ LoadDefinitions!({
   DeclareOption!("nofonttune", {});
   DeclareOption!("captionsoff", {});
   DeclareOption!("compsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
-  // Perl `IEEEtran.cls.ltxml:103` adds `\RequirePackage{newtxmath}` for
-  // the `comsoc` option (which transitively brings in amssymb +
-  // amsfonts). Without it, papers using `\bigstar` etc. with
-  // `\documentclass[comsoc,...]{IEEEtran}` see the symbol as undefined
-  // (driver: 1902.10910 — `\bigstar` Real Regression). amssymb is the
-  // minimal subset that supplies the missing symbols; pulling
-  // newtxmath would also alter math fonts which we don't want to
-  // diverge from baseline IEEEtran's text-font behavior.
+  // Perl `IEEEtran.cls.ltxml:103` (TL2025) for the `comsoc` option:
+  //   \DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse
+  //                         \CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}
+  // Mirror Perl exactly. newtxmath transitively brings in txfonts (which
+  // defines `\coloneqq`, `\bigstar`, and a wide TX-math symbol family
+  // used by IEEEtran/comsoc papers). An earlier divergence loaded only
+  // `amssymb` here to "minimize font drift" — but Perl ground truth
+  // says newtxmath, so re-match.
+  // Witnesses: 1902.10910 (`\bigstar`), 2201.11831 (`\coloneqq` —
+  // comsoc + amsmath only; Perl renders \coloneqq because txfonts.sty
+  // is transitively loaded, Rust pre-fix returned `Error:undefined:
+  // \coloneqq` because only amssymb was loaded).
   DeclareOption!("comsoc", {
     Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
-    RequirePackage!("amssymb");
+    RequirePackage!("newtxmath");
   });
   DeclareOption!("transmag", {});
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
