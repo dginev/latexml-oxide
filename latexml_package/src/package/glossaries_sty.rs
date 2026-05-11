@@ -308,6 +308,16 @@ LoadDefinitions!({
   DefMacro!("\\glsaddall OptionalKeyVals", "");
   DefMacro!("\\glsadd OptionalKeyVals Semiverbatim", "");
   DefMacro!("\\newglossary OptionalMatch:* {}{}{}{}", "");
+  // `\newglossarystyle{name}{body}` / `\renewglossarystyle{name}{body}`
+  // — Perl raw-loads the real glossaries.sty when its binding doesn't
+  // catch these; Rust port doesn't, so define no-op stubs (style
+  // selection is print-only metadata that doesn't affect HTML/MathML
+  // output). Witness: 1808.04659 (stage 23 RUST-REGRESSION) — paper
+  // has `\newglossarystyle{long-tabular}{...}` in acronyms.tex.
+  DefMacro!("\\newglossarystyle{}{}", "");
+  DefMacro!("\\renewglossarystyle{}{}", "");
+  DefMacro!("\\glossarystyle{}", "");
+  DefMacro!("\\setglossarystyle{}", "");
   DefMacro!("\\glslink{}{}", "#2");
   // glossaries.sty defines a `\<gls|Gls>entry<field>` family for read-only
   // access to entry fields (used outside `\gls{}` typesetting context, e.g.
