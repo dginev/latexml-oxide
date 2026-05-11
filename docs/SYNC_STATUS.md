@@ -210,7 +210,21 @@ old-id stages. Mini-sandbox exhausted; advanced to stage 8.
 (intermittent `0801.0061`). Top SHARED-FAILURE patterns:
 `\GenericError` chain (9), `_/^` cascade (5), `\@` AmSTeX (2),
 `\endproof` (1), `\vspace` undefined (1), `malformed:XMApp` (1).
-Mini-sandbox exhausted; ready for stage 9.
+Mini-sandbox exhausted; advanced to stage 9.
+
+**Stage 9 canvas (2026-05-11)**: 9976/9999 = **99.77% OK**.
+23 failures (22 errors + 1 fatal) triaged. One row hits the
+RUST-REGRESSION verdict by count (`0901.0054`, Rust 54 vs Perl
+13) but is non-actionable cascade-noise: paper uses
+`\begin{filecontents*}{cc.cls}` to embed a custom class, then
+loads it; both engines have the same root failures (`{align*}`
+before amsmath, missing pstricks helpers), but Rust amplifies
+into 30+ `_/^` text-mode cascades vs Perl 4 × `\the}`. Per loop
+rule "skip cascade noise", deferred as cascade-amplification
+divergence to revisit if it appears with same root in ≥3 papers.
+Standout RUST-CLEANER: `0809.4243` Rust 35 vs Perl 58 (`-23`);
+`0812.3908` 5 vs 12 (`-7`). 18 SHARED-FAILURE.
+Mini-sandbox exhausted; ready for stage 10.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
