@@ -403,7 +403,21 @@ error-recovery in the `\GenericError` path. Top SHARED-FAILURE
 patterns: `\GenericError` (13), `_/^` cascade (8), `^` math-mode
 (2), `\section` (2), `\@` AmSTeX, `\newtheorem`, `\blfootnote`,
 `{tikzpicture}`, `\ANL`, `&` (1 each).
-Mini-sandbox exhausted; ready for stage 22.
+Mini-sandbox exhausted; advanced to stage 22.
+
+**Stage 22 canvas (2026-05-11)**: 9970/9999 = **99.71% OK**.
+29 failures triaged: **4 RUST-REGRESSIONs deferred**,
+22 SHARED-FAILURE, 3 RUST-CLEANER. Deferred:
+  - `1804.04886`: babel "Unknown option 'english\n'" — trailing
+    newline tokenization issue in option parsing.
+  - `1807.04759`/`1805.01039`: `\lx@end@inline@math` /
+    `\lx@begin@alignment` cascades (skip-list).
+  - `1803.03998`: `_/^` cascade amplification (Rust 10 vs Perl 5).
+Standout RUST-CLEANER: `1805.03020` Rust 1 vs Perl 10 (`-9`);
+`1803.01753` `-5`; `1802.01039` `-2`. Top SHARED-FAILURE
+patterns: `\GenericError` (8), `_/^` cascade (8), `^` math-mode
+(3), `\endproof` (2), `\bibitem`, `\titlebox`, `\usetikzlibrary`
+(1 each). Mini-sandbox exhausted; ready for stage 23.
 
 **Cumulative through stage 20 (200k papers, 47% of corpus)**:
 25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
