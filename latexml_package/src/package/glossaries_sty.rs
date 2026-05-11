@@ -3,8 +3,8 @@
 // TODO(strict-perl-parity): Migrate this binding to a strict translation
 // of `glossaries.sty.ltxml` (~127 lines). The Perl shim is built around
 // `InputDefinitions('glossaries', type => 'sty', noltxml => 1)`, which
-// raw-loads the actual TL `glossaries.sty` (8702 lines) and only
-// overrides:
+// raw-loads the actual TL `glossaries.sty` (7714 lines as of TL2025)
+// and only overrides:
 //   * `\@gls@link` — wrap typesetting output in `<ltx:glossaryref>`
 //   * `\glsdohyperlink` / `\glsdonohyperlink` — drop hyperref wrapping
 //   * `\glsdisablehyper` — disable hyperref pipeline
@@ -12,6 +12,18 @@
 //   * `\@newglossaryentryposthook` — feed entry data to `\lx@glossaries@newentry{}{}
 //     RequiredKeyVals`
 //   * `\printglossary` / `\printnoidxglossary` — emit `<ltx:glossary>`
+//
+// **Empirical gap to raw-load (measured 2026-05-11):** when this stub
+// is disabled and raw-load fires, glossaries.sty's dependency-scan
+// triggers loading of `ifthen`, `xkeyval`, `mfirstuc`, `textcase`,
+// `xfor`, `datatool-base`, `amsgen`, `etoolbox`, `glossary-long`,
+// `glossary-super`, `glossary-list`, `glossary-tree`, `translator`,
+// `shellesc`, `tracklang`, `glossary-hypernav`, `glossaries`. Several
+// dependencies bail out (no Rust binding + raw-load fails on expl3
+// emulation gaps), leaving `\makenoidxglossaries`, `\newglossaryentry`,
+// `\gls`, `\printnoidxglossaries` undefined. So pursuit of raw-load
+// parity requires fixing the upstream expl3/datatool dep chain
+// first — out of reach for a single fix-cycle.
 //
 // The current Rust port hand-rolls `\newglossaryentry`,
 // `\longnewglossaryentry`, `\newacronym`, `\gls`, `\Gls`, `\glspl`,
@@ -22,6 +34,13 @@
 // Rust translation is good enough to raw-load `glossaries.sty`,
 // drop all the homegrown reimplementations and replace this file
 // with a near line-for-line port of `glossaries.sty.ltxml`.
+//
+// **Direction (user feedback 2026-05-11):** prefer fixing the
+// engine until raw-load works over extending this hand-stub.
+// New `\<missing-cs>` errors that surface in canvas runs should
+// document the gap rather than land as another no-op stub, unless
+// the stub is a clear blocker for a specific witness AND the
+// underlying engine fix is genuinely multi-session.
 
 use crate::prelude::*;
 
