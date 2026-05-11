@@ -208,6 +208,55 @@ gap is the actual work.
   exact same source line (255 col 1). Witnesses: cond-mat0010356,
   cond-mat0101405. SHARED-FAILURE.
 
+## Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column
+
+**Status (2026-05-11):** repro minimised; root cause partly understood;
+deferred for a multi-session investigation. Documented here so future
+loops can pick it up.
+
+**Witness:** stage 31 paper 2210.13325 — `\documentclass{elsarticle}`
++ `\usepackage{glossaries}` + `\begin{tabular}{|p{1cm}|l|p{5cm}|...}`
+filled with `\gls{ddos}`, `\gls{mitm}` etc. Rust 8 errors, Perl 0.
+
+**Minimal repro:**
+```tex
+\documentclass{article}
+\usepackage[acronym]{glossaries}
+\newacronym{ddos}{DDoS}{Distributed Denial of Service}
+\begin{document}
+\begin{tabular}{|p{5cm}|} \hline
+\gls{ddos} \\ \hline
+\end{tabular}
+\end{document}
+```
+Rust: 7 errors starting with `Error:unexpected:\vtop Attempt to end
+mode internal_vertical in internal_vertical`. Perl: 0 errors.
+
+**What's known:**
+- Trigger is the combination of (a) a `\gls`-family command from the
+  glossaries package (DefConstructor with `enter_horizontal => true`),
+  and (b) a `p{}` column body (which expands `\@startpbox` to
+  `\vtop\bgroup\setlength\hsize{...}\@arrayparboxrestore`).
+- Replace `\gls` with literal "DDoS" → 0 errors.
+- Replace `p{...}` with `l` → 0 errors.
+- `\acrshort{ddos}` triggers it identically; `acronym` package's
+  `\acro{...}` does NOT. So the trigger is glossaries-family, not
+  generic `\xspace`/lookahead.
+- Already commit `197018f818` made VBoxContents/HBoxContents pass
+  the explicit Perl-canonical mode (`internal_vertical` /
+  `restricted_horizontal`) instead of the live MODE value. That fixed
+  a related drift but did not resolve this cascade.
+
+**Likely root cause:** frame-counting mismatch when the body-reader
+(`predigest_box_contents_in_mode`) digests tokens inside an inner
+`\vtop\bgroup` from `\@startpbox`, while the surrounding alignment
+also opened a frame. `\gls`'s constructor with `enter_horizontal =>
+true` mutates MODE in place (no new frame) but the subsequent group
+closes may misalign frame BOUND_MODE bindings with the outer `\vtop`'s
+mode bookkeeping. Trace-with `LXML_TRACE_BOUND_MODE` and a careful
+look at the inner/outer `\vtop` interaction inside `\@startpbox` /
+`\@endpbox` are likely the entry points.
+
 **Stage 1 mini-sandbox completion (2026-05-10)**: 34 failure-set
 papers verified Rust-vs-Perl with `--path=~/git/ar5iv-bindings
 --preload=ar5iv.sty`. Final distribution:
