@@ -340,7 +340,15 @@ Standout RUST-CLEANER: `1501.03446` Rust 10 vs Perl 15 (`-5`);
 `1504.05740` 28 vs 31 (`-3`). Top SHARED-FAILURE patterns:
 `\GenericError` (11), `_/^` cascade (7), `^` math-mode (2),
 `\@` AmSTeX (1), `\DeclareMathOperator` (1), `malformed:XMDual` (1).
-Mini-sandbox exhausted; ready for stage 18.
+Mini-sandbox exhausted; advanced to stage 18.
+
+**Stage 18 canvas (2026-05-11)**: 9966/10000 = **99.66% OK**.
+34 failures triaged: **0 RUST-REGRESSION**, 32 SHARED-FAILURE,
+2 RUST-CLEANER (`1509.05326` `-4`, `1509.00744` `-2`). Top
+SHARED-FAILURE patterns: `\GenericError` (16), `_/^` cascade (11),
+`^` math-mode (3), `\@` AmSTeX (1), `\ead` Elsevier (1),
+`\ifpst@useCalc` (1), `\section` cluster (1), `\endproof` (1),
+`malformed:ltx:text` (1). Mini-sandbox exhausted; ready for stage 19.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
