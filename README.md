@@ -40,7 +40,7 @@ but adapted for Rust bindings.
 
 Example for Ubuntu:
 ```
-$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 \
+$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 mold \
                    texlive texlive-latex-extra texlive-science
 ```
 
