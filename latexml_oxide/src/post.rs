@@ -200,8 +200,27 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   audit_end(t_scan);
   telemetry::phase_exit();
 
+  // Phase 2b: MakeIndex (Perl LaTeXML.pm L466-470)
+  //   Runs BEFORE MakeBibliography in Perl. Populates `<ltx:indexlist>`
+  //   inside `<ltx:index>` placeholders and `<ltx:glossarylist>` inside
+  //   `<ltx:glossary>` placeholders, using the `GLOSSARY:*` / `INDEX:*`
+  //   entries Scan registered in the ObjectDB. Without this pass, glossary
+  //   sections render empty in HTML (witness: tests/structure/glossary.tex).
+  let mut indexer = latexml_post::make_index::MakeIndex::new(scanner.db, false, false);
+  telemetry::phase_enter(Phase::PostScan);
+  let t_idx = audit_start("MakeIndex");
+  docs = match run_phase(docs, &mut indexer, "MakeIndex") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_idx);
+  telemetry::phase_exit();
+
   // Phase 3: MakeBibliography
-  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(scanner.db, false);
+  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
   telemetry::phase_enter(Phase::Bibliography);
   let t_bib = audit_start("MakeBibliography");
   docs = match run_phase(docs, &mut bibmaker, "MakeBibliography") {

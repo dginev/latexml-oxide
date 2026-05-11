@@ -544,6 +544,57 @@ raw-load also fails. Future fix path: intercept legacy babel
 options in babel_sty.rs binding. Mini-sandbox exhausted; ready
 for stage 25.
 
+**Stage 25 canvas (2026-05-11)**: 9959/9996 = **99.63% OK**.
+37 failures triaged: **3 RUST-REGRESSIONs fixed**, 2 deferred,
+~22 SHARED-FAILURE (mostly babel-language `\GenericError` 22 +
+Script-`_` 4), 2 math-parser Task #10 (`malformed:XMApp`),
+others (`\protect`/`\slimits@`/`\algnewlanguage` undefined).
+Fixed:
+  - `1904.03581` cluster (`Error:unexpected:[`) — tikz
+    datavisualization passes literal `[hsb]` as 4th arg to
+    `\definecolorseries`; our 5-arg `{}{}{}{}{}` parser ate
+    just `[` for the 4th arg, then `parse_xcolor(None,"[",...)`
+    looked up `[` as a color name. Fix `087dc31aaf`: replace
+    with Perl-faithful `{}{}{}[]{}[]{}` (xcolor.sty.ltxml L651).
+    Also resolves stage 25 papers `1910.00631`, `2002.01243`.
+  - `1910.01256` (`Error:undefined:\glsdisp`) — TL glossaries.sty
+    L4162 `\newrobustcmd*{\glsdisp}` was missing from our
+    glossaries binding. Fix `e22ab01185` (hand-stub addition).
+    Subsequently subsumed by `3883d4d14d` (strict translation
+    of glossaries.sty.ltxml) which raw-loads glossaries.sty
+    and gets `\glsdisp` for free.
+  - **Major rewrite** `3883d4d14d`: glossaries_sty.rs reduced
+    from 1140-line hand-stub to 129-line strict translation of
+    Perl glossaries.sty.ltxml (126L). Now raw-loads real TL
+    glossaries.sty via `InputDefinitions(noltxml=>1)` and
+    surgically overrides `\@gls@link` → `<ltx:glossaryref>`,
+    `\@newglossaryentryposthook` → `<ltx:glossarydefinition>`,
+    `\printglossary` → `<ltx:glossary>`. Witness 1910.01256
+    Chrome preview: text expansion (`Salient Object Detection
+    (SOD)` first-use, `SOD` subsequent) byte-for-byte matches
+    Perl latexmlc `--format=html`. Test fixture
+    `tests/structure/glossary.xml` matches except 1 line
+    (`\Gls{cabbage}` → "Cabbage"), which is the open
+    `\__kernel_codepoint_case:nn` engine gap — the case-mapping
+    constants aren't populated in our dump because the autoload
+    trigger for expl3 is suppressed when `\ExplSyntaxOn` is
+    pre-defined by the dump itself, so our Rust override of
+    `\__kernel_codepoint_case:nn` never installs.
+Deferred:
+  - `\Gls`-case-fold engine bug above (Task #19).
+  - `1911.10829`: `\algnewlanguage` undefined (algorithmicx).
+  - `1911.10893`: `\slimits@`/`\rangle` undefined inside
+    custom `\csname` chain.
+  - `2001.01100`: `\protect` between `\csname`/`\endcsname` in
+    pgfplotstable.
+  - 4 Script-`_` papers (1907.05494/1908.00749/1903.04122 etc.):
+    same IEEEproof `$$`-math cluster as stage 24.
+
+Top SHARED-FAILURE: babel-language `\GenericError` (22),
+Script-`_` IEEEproof (4), `\protect` in csname (1), `\endgroup`
+cascade (1). Babel cluster traces to modern TL babel.sty's
+legacy-option rejection; Perl also fails.
+
 **Cumulative through stage 20 (200k papers, 47% of corpus)**:
 25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
 investigation. Per-stage OK% range: 99.58-99.91%. Rust port

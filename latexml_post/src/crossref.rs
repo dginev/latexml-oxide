@@ -837,6 +837,15 @@ impl CrossRef {
   }
 
   fn fill_in_glossaryrefs(&mut self, doc: &mut PostDocument) {
+    // Mirrors Perl CrossRef.pm L454-481 fill_in_glossaryrefs:
+    //   - resolve `<ltx:glossaryref key=… inlist=…>` against the
+    //     GLOSSARY:list:key DB entry registered by Scan + MakeIndex,
+    //   - copy the entry's id into `idref` so a later fill_in_refs
+    //     pass converts it to `href`,
+    //   - copy `phrase:description` into `title` so the XSLT inline
+    //     template renders a tooltip,
+    //   - fall back to the bare key + `ltx_missing` class when the
+    //     entry is not in the DB or has no displayable content.
     for ref_node in &doc.findnodes("descendant::ltx:glossaryref") {
       let mut ref_mut = ref_node.clone();
       let key = ref_node.get_attribute("key").unwrap_or_default();
@@ -846,6 +855,15 @@ impl CrossRef {
       if let Some(entry) = self.db.lookup(&gkey) {
         if let Some(id) = entry.get_string("id") {
           ref_mut.set_attribute("idref", id).ok();
+        }
+        // Perl L465-467: copy phrase:definition (Rust schema uses
+        // phrase:description) into `title` if not already set.
+        if ref_mut.get_attribute("title").is_none() {
+          if let Some(desc) = entry.get_string("phrase:description") {
+            if !desc.is_empty() {
+              ref_mut.set_attribute("title", desc).ok();
+            }
+          }
         }
       } else {
         self.note_missing("warn", "Glossary Entry for key", &key);
