@@ -172,7 +172,18 @@ safe pt-family fix from `31154d0760` (latex_base.rs post-snapshot)
 remains in place. Top SHARED-FAILURE patterns: `\GenericError` (7),
 `\@` AmSTeX (5), `\ifpst@useCalc` (3), `\endnote` (2),
 `\psfig` (1), `\@math@baccent` (1), `\endflushright` (1),
-`_/^` cascade (1). Mini-sandbox exhausted; ready for stage 5.
+`_/^` cascade (1). Mini-sandbox exhausted; advanced to stage 5.
+
+**Stage 5 canvas (2026-05-11)**: 9981/10000 = **99.81% OK**.
+19 failures (18 errors + 1 fatal `cs0502050`) triaged:
+**0 RUST-REGRESSION**, 16 SHARED-FAILURE, 3 RUST-CLEANER. Notable
+Rust wins: `astro-ph0506245` Rust 3 vs Perl 75 errors (`-72`);
+`cs0508085` Rust 75 vs Perl 85 (`-10`); `physics0504084` 7 vs 9.
+Top SHARED-FAILURE patterns: `_/^` cascade (5 — concentrated in
+`cs/...` papers); `\@` AmSTeX (3); `\GenericError` (4); `\psfig`,
+`\@math@baccent`, `^` cascades (1 each). `cs0502050` was reported
+fatal during stage but verified clean on re-run — intermittent
+timeout-related. Mini-sandbox exhausted; ready for stage 6.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
