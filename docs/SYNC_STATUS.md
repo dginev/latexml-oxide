@@ -224,7 +224,24 @@ rule "skip cascade noise", deferred as cascade-amplification
 divergence to revisit if it appears with same root in ≥3 papers.
 Standout RUST-CLEANER: `0809.4243` Rust 35 vs Perl 58 (`-23`);
 `0812.3908` 5 vs 12 (`-7`). 18 SHARED-FAILURE.
-Mini-sandbox exhausted; ready for stage 10.
+Mini-sandbox exhausted; advanced to stage 10.
+
+**Stage 10 canvas (2026-05-11)**: 9970/9999 = **99.71% OK**.
+29 failures triaged: **0 RUST-REGRESSION**, 25 SHARED-FAILURE,
+3 RUST-CLEANER, 1 intermittent BOTH-CLEAN. RUST-CLEANER set:
+`0909.3255` Rust 16 vs Perl 24 (`-8`); `0909.0026`/`1003.1466`
+each `-2`. Top SHARED-FAILURE patterns continue the established
+distribution: `\GenericError` chain (11), `_/^` cascade (10),
+`\endproof` (2), `\DeclareMathOperator` (1), `malformed:ltx:logical-block` (1).
+Mini-sandbox exhausted; ready for stage 11.
+
+**Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
+16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
+stage 2 + 1 in stage 7 via dump improvements). Per-stage OK% range:
+99.71-99.91%. All remaining residue is SHARED-FAILURE with Perl,
+RUST-CLEANER (Rust beats Perl), or non-actionable cascade-noise.
+Rust port is at structural parity with Perl LaTeXML for the
+arxmliv corpus.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
