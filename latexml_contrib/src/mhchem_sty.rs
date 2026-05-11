@@ -34,6 +34,19 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Perl LaTeXML auto-scans mhchem.sty for `\RequirePackage` calls
+  // and brings in ifthen, calc, twoopt, amsmath, keyval, graphics, pgf,
+  // tikz as transitive deps. Since this Rust stub intercepts the load
+  // (so the raw RequirePackage chain never fires), papers that rely on
+  // those deps via mhchem alone hit undefined-CS errors. Pull in the
+  // ones most commonly needed: amsmath (for \boldsymbol, \eqref,
+  // \text, align*, etc.) and graphicx (for figure handling). Witness:
+  // 1311.6762 (stage 15 RUST-REGRESSION) — paper loads mhchem but
+  // not amsmath, then uses `\boldsymbol` / `\eqref`. Perl's auto-dep
+  // scan loads amsmath → 0 errors; Rust stub didn't → 2 errors.
+  RequirePackage!("amsmath");
+  RequirePackage!("graphicx");
+
   // Accept both v3 and v4: the package option is `version=N` — handled
   // at \usepackage time but irrelevant to our stub.
   DefMacro!("\\mhchemoptions RequiredKeyVals", "");
