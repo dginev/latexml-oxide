@@ -193,7 +193,16 @@ Rust wins: `gr-qc0601055` Rust 60 vs Perl 91 errors (`-31`);
 Top SHARED-FAILURE patterns: `_/^` cascade (8 — concentrated in
 `cs/...` + `math/...` papers); `\GenericError` (3); `\endproof` (2);
 `\@` AmSTeX (1); `\ifpst@useCalc` (1); `\scriptsize` undefined (1).
-Mini-sandbox exhausted; ready for stage 7.
+Mini-sandbox exhausted; advanced to stage 7.
+
+**Stage 7 canvas (2026-05-11)**: 9977/10000 = **99.77% OK**.
+23 failures (21 errors + 2 fatals `0704.1130` / `physics0701092`)
+triaged: **0 RUST-REGRESSION**, 22 SHARED-FAILURE, 1 RUST-CLEANER
+(`0706.2862` Rust 3 vs Perl 46 errors, `-43`). Top SHARED-FAILURE
+patterns: `_/^` cascade (10), `\GenericError` (7), `\@` AmSTeX (4),
+`\lx` undefined (1), `\vspace` undefined (1). First stage with new
+arXiv id format (`YYMM.NNNNN`) — failures distribute identically to
+old-id stages. Mini-sandbox exhausted; ready for stage 8.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
