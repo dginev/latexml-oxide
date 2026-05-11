@@ -509,6 +509,41 @@ Standout RUST-CLEANER: `1810.13097` Rust 9 vs Perl 37 (`-28`);
 `\@` AmSTeX, `\keywords`, `\lx@hidden@egroup`, `malformed:XMApp`
 (1 each). Mini-sandbox exhausted; ready for stage 24.
 
+**Stage 24 canvas (2026-05-11)**: 9965/9998 = **99.67% OK**.
+33 failures triaged: **1 RUST-REGRESSION fixed**, 2 deferred,
+20 SHARED-FAILURE, 6 RUST-CLEANER, 2 math-parser Task #10
+(`expected:id` cluster). Witness `1907.03162` (`\usepackage{pstricks,
+pst-plot, pst-eps, pst-grad, pgfplots}` + ar5iv preload):
+`Error:undefined:\ifpst@useCalc` at pstricks.tex line 1228.
+Root cause: Rust's `pstricks_sty.rs` was a hand stub; Perl
+`pstricks.sty.ltxml` raw-loads real pstricks.sty via
+`InputDefinitions('pstricks', noltxml=>1)`, which executes the
+7 \newifs (\ifpst@useCalc, \ifpst@psfonts, etc.) that pstricks.tex
+later references. Fix `85cf242dba`: switch pstricks_sty.rs to
+`InputDefinitions!("pstricks", noltxml=>true)` matching Perl; keep
+hand-stub draw-command overrides AFTER raw-load. 2 errors → 0.
+Deferred:
+  - `1904.03581`: `Error:unexpected:[ Can't find color named '['`
+    triggered by `\usetikzlibrary{datavisualization}` somewhere
+    in the 2733-line library file. Minimal repro reproduces but
+    bisection did not isolate which line emits `[` into color
+    parsing. delta=1 (rust 1 vs perl 0).
+  - `1903.01661`/`1903.00290`/etc.: `Error:unexpected:_` Script
+    underscore inside `$$ ... $$` math, only triggered with
+    IEEEtran-style proof envs. Minimal repros do not trigger;
+    requires interaction with surrounding doc context.
+Standout RUST-CLEANER: `1907.05384` Rust 1 vs Perl 102 (`-101`);
+`1907.07910` `-58` (\uv undefined cascade); `1902.06947` `-19`;
+`1907.04807` `-4`; `1904.10997` `-3`. Top SHARED-FAILURE patterns:
+babel-language `Unknown option` (13: italian/spanish/polish/
+catalan/croatian/czech/portuguese/brazil), `_/^` cascade
+(7 IEEEtran proof), `\endproof`, `<box>`, `\etalchar` (1 each).
+The babel cluster is upstream: modern TL babel.sty rejects
+legacy option syntax (`\usepackage[italian]{babel}`) — Perl
+raw-load also fails. Future fix path: intercept legacy babel
+options in babel_sty.rs binding. Mini-sandbox exhausted; ready
+for stage 25.
+
 **Cumulative through stage 20 (200k papers, 47% of corpus)**:
 25 RUST-REGRESSIONs fixed total, 11 deferred for deeper
 investigation. Per-stage OK% range: 99.58-99.91%. Rust port
