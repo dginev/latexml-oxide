@@ -288,7 +288,27 @@ related, both fixed by `cb84b8781f`):
 RUST-CLEANER set: `1209.4820`/`1301.3682` (`\section` cluster),
 `1305.0208` (`-2`). Top SHARED-FAILURE patterns: `_/^` cascade (17),
 `^` math-mode (5), `\@` AmSTeX (3), `\GenericError` (3).
-Mini-sandbox exhausted; ready for stage 15.
+Mini-sandbox exhausted; advanced to stage 15.
+
+**Stage 15 canvas (2026-05-11)**: 9960/10000 = **99.60% OK**.
+40 failures triaged: **1 RUST-REGRESSION fixed**, 3 deferred,
+31 SHARED-FAILURE, 5 RUST-CLEANER. Witness `1311.6762`:
+`\boldsymbol`/`\eqref` undefined (paper loads mhchem but not
+amsmath). Fix `2bd41220b4`: mhchem stub now
+`RequirePackage("amsmath")` + `RequirePackage("graphicx")` to
+mirror Perl's auto-dep scan output. 2 errors → 0. Deferred:
+  - `1306.2888`: `_` in author email `einstein1_25@fisica.ugto.mx`
+    parsed in text mode (aipproc.cls path). Complex documentclass
+    interaction; needs aipproc-specific email handling.
+  - `1309.5049`: `ltx:listingline` / `_CaptureBlock_` tag mismatch
+    pairs (4+4 errors). Structural listings.sty XML emit issue,
+    deeper fix.
+  - `1308.3030`: `\endgroup` cascade — on the loop skip-list.
+Standout RUST-CLEANER: `1312.3586` Rust 7 vs Perl 16 (`-9`);
+`1401.3172` 23 vs 29 (`-6`). Top SHARED-FAILURE patterns:
+`_/^` cascade (15), `^` math-mode (8), `\GenericError` (12),
+`\@` AmSTeX (3), `\defaultleftmargin` (1), `bangfont` missing (1).
+Mini-sandbox exhausted; ready for stage 16.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
