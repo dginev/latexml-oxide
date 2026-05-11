@@ -202,7 +202,15 @@ triaged: **0 RUST-REGRESSION**, 22 SHARED-FAILURE, 1 RUST-CLEANER
 patterns: `_/^` cascade (10), `\GenericError` (7), `\@` AmSTeX (4),
 `\lx` undefined (1), `\vspace` undefined (1). First stage with new
 arXiv id format (`YYMM.NNNNN`) — failures distribute identically to
-old-id stages. Mini-sandbox exhausted; ready for stage 8.
+old-id stages. Mini-sandbox exhausted; advanced to stage 8.
+
+**Stage 8 canvas (2026-05-11)**: 9978/10000 = **99.78% OK**.
+22 failures triaged: **0 RUST-REGRESSION**, 19 SHARED-FAILURE,
+1 RUST-CLEANER (`0808.1135` 1 vs 3), 1 BOTH-CLEAN on re-verify
+(intermittent `0801.0061`). Top SHARED-FAILURE patterns:
+`\GenericError` chain (9), `_/^` cascade (5), `\@` AmSTeX (2),
+`\endproof` (1), `\vspace` undefined (1), `malformed:XMApp` (1).
+Mini-sandbox exhausted; ready for stage 9.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
