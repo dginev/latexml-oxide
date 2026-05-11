@@ -85,6 +85,19 @@ rebased onto `bffd1be471` ("feat: Schema Docs and Split post-processor
 6 overlapping files (latexml_post pipeline reorder + `process_chain`
 signature change). `cargo test --tests` = **1185/0/0** post-rebase.
 
+## SHARED-FAILURE log (Perl + Rust both fail identically)
+
+- **`\def\<one-letter-CS>` before `\documentclass`** — user code like
+  `\def \d {\delta}`, `\def \th {\theta}`, `\def \b {\beta}` placed
+  before `\documentclass{<class>}` is silently overwritten when the
+  LaTeX kernel loads (e.g. `\d` becomes `\d{...}` text-accent;
+  `\th` becomes thorn). Inside subsequent `$\d_x$` math, the
+  unintended kernel definition trips text-mode underscore. Witnesses:
+  hep-th0005159 (Rust 99 / Perl 101 errors + 1 fatal), hep-th0010165
+  (Rust 92 / Perl 101 errors + 1 fatal). Together: 191 `expected:$`
+  events on stage 1 = entire cluster, both engines identical at the
+  fatal-cascade boundary. SHARED-FAILURE; out of scope.
+
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
   to Warn/Error so the canvas no longer classifies broken papers as
