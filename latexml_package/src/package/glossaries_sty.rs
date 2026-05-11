@@ -338,6 +338,16 @@ LoadDefinitions!({
   DefMacro!("\\glossarystyle{}", "");
   DefMacro!("\\setglossarystyle{}", "");
   DefMacro!("\\glslink{}{}", "#2");
+  // \glsdisp[opts]{label}{text} — typesets `text` as a glossary-linked
+  // reference to `label`. TL glossaries.sty L4162-4179:
+  //   \newrobustcmd*{\glsdisp}{\@gls@hyp@opt\@glsdisp}
+  //   \newcommand*{\@glsdisp}[3][]{...}
+  // The `*` variant (witness 1910.01256 `\glsdisp*{mae}{Mean Absolute
+  // Error (MAE)}`) suppresses the hyperref wrapping. We emit just the
+  // display text — matching `\glslink` behavior — and drop the label
+  // (glossary cross-ref work happens in `\gls` family elsewhere).
+  DefMacro!("\\glsdisp OptionalMatch:* []{}{}", "#4");
+  DefMacro!("\\Glsdisp OptionalMatch:* []{}{}", "#4");
   // glossaries.sty defines a `\<gls|Gls>entry<field>` family for read-only
   // access to entry fields (used outside `\gls{}` typesetting context, e.g.
   // in section headings). The capitalized `\Gls*` variants pipe the result
