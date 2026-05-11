@@ -159,7 +159,20 @@ match earlier stages: `\psfig` (3 papers), `Error:expected:{`
 math arg gaps (4 papers), `\@` AmSTeX (1), `\GenericError`
 chain (3), `\@personname`/`\endflushright` cascades (2),
 `{instit}` (1), `_/^` text-mode cascades (2). Mini-sandbox
-exhausted; ready for stage 4.
+exhausted; advanced to stage 4.
+
+**Stage 4 canvas (2026-05-10)**: 9974/10000 = **99.74% OK**.
+26 failures (25 errors + 1 fatal) triaged: **0 RUST-REGRESSION**,
+23 SHARED-FAILURE, 3 RUST-CLEANER (3 papers with Rust 1 vs Perl 3
+on `\GenericError` chain). Note: an earlier attempt to load
+`latex209.def` raw during dump-build (commit `9673bf8b98`)
+regressed 87 modern `\documentclass` papers via the file's
+`\@documentclasshook` override; reverted via `ac0965abfd`. The
+safe pt-family fix from `31154d0760` (latex_base.rs post-snapshot)
+remains in place. Top SHARED-FAILURE patterns: `\GenericError` (7),
+`\@` AmSTeX (5), `\ifpst@useCalc` (3), `\endnote` (2),
+`\psfig` (1), `\@math@baccent` (1), `\endflushright` (1),
+`_/^` cascade (1). Mini-sandbox exhausted; ready for stage 5.
 
 **Post-rebase landings 2026-05-10**:
 - `21e730e71e` — promote two silent-content-loss signals from Info
