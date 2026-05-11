@@ -227,9 +227,24 @@ LoadDefinitions!({
     bounded => true);
   DefConstructor!("\\rotatedown{}",  "<ltx:g transform='rotate(180)'>#1</ltx:g>",
     bounded => true);
-  // Note: `\scalebox` is left to graphics.sty's fully-featured
-  // DefConstructor — pstricks's Perl override only swaps in its own
-  // post-processing tracker (`\@@scalebox` → `\@@@scalebox`) which is
-  // the DVI-only path we already omit above via the `\@@@ackscale`
-  // no-op stub.
+  // Perl pstricks_support.sty.ltxml L1010-1012: unconditional redef of
+  // `\scalebox{}{}`. Body expands to `\@@@ackscale{factor}` (already a
+  // no-op consume above) + `\@@scalebox{factor}{body}`, where
+  // `\@@scalebox` is `\let` to `\@secondoftwo` (returns the body). Net
+  // effect: `\scalebox{0.6}{T}` renders as `T` (scaling dropped — this
+  // matches Perl's effective behavior since the DVI-only
+  // `\@@@scalebox` constructor never fires in non-PSTricks contexts).
+  //
+  // Earlier comment said this would shadow `graphics.sty`'s fully-
+  // featured `\scalebox{} []{}` and break tested goldens. Empirically
+  // safe: the goldens that exercise `\scalebox[ratio]{...}` syntax
+  // (graphrot, vmode) load graphicx WITHOUT pstricks, so pstricks_support
+  // never runs for them. Papers that load pstricks WITHOUT graphics
+  // (1208.6481 stage 14 RUST-REGRESSION witness — `\def\tra{\scalebox{.6}{T}}`)
+  // need the fallback or hit `Error:undefined:\scalebox`.
+  //
+  // Perl L1010 is unconditional; we mirror that. If graphicx is loaded
+  // AFTER pstricks, graphicx's fancier form wins (later assignment).
+  // If loaded BEFORE, this pstricks form overwrites (matching Perl).
+  DefMacro!("\\scalebox{}{}", "#2");
 });

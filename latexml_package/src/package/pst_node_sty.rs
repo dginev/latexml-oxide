@@ -67,6 +67,14 @@ LoadDefinitions!({
   DefMacro!("\\pcangles OptionalMatch:* []{}{}", "");
   DefMacro!("\\pcloop OptionalMatch:* []{}{}", "");
   DefMacro!("\\pcarc OptionalMatch:* []{}{}", "");
+  // `\nccircle{node}{radius}` — Perl pst-node.sty.ltxml `DefPSConstructor`.
+  // We stub it to empty here; the actual arc rendering is PSTricks-DVI-only
+  // and not ported. Witness: 1304.4491 (stage 14 RUST-REGRESSION).
+  DefMacro!("\\nccircle OptionalMatch:* []{}{}", "");
+  DefMacro!("\\pccircle OptionalMatch:* []{}{}", "");
+  // `\ncdiagg{node}{node}` (extended diagonal) and `\pcdiagg` — also stubs.
+  DefMacro!("\\ncdiagg OptionalMatch:* []{}{}", "");
+  DefMacro!("\\pcdiagg OptionalMatch:* []{}{}", "");
 
   // Label macros — Perl L360-450
   DefMacro!("\\naput OptionalMatch:* []{}", "#2");
