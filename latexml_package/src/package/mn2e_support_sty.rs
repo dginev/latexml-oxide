@@ -233,6 +233,17 @@ LoadDefinitions!({
   // Table/proof — Perl L174-192
   DefMacro!("\\contcaption", "\\caption{continued}");
   DefMacro!("\\proofname", "Proof");
+  // Perl mn2e_support.sty.ltxml L177-181: \begin{proof} → <ltx:proof>.
+  // mn2e papers commonly use \begin{proof}...\end{proof} without
+  // loading amsthm — mn2e provides its own proof environment.
+  // Witness: 1402.1373 (stage 16 RUST-REGRESSION).
+  DefEnvironment!("{proof}",
+    "<ltx:proof><ltx:title>#title</ltx:title>#body</ltx:proof>",
+    properties => sub[_args] {
+      let title = Expand!(Tokens!(T_CS!("\\proofname"))).to_string();
+      Ok(stored_map!("title" => title))
+    }
+  );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
   DefMacro!("\\loadboldmathitalic", "");
