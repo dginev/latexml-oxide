@@ -308,7 +308,24 @@ Standout RUST-CLEANER: `1312.3586` Rust 7 vs Perl 16 (`-9`);
 `1401.3172` 23 vs 29 (`-6`). Top SHARED-FAILURE patterns:
 `_/^` cascade (15), `^` math-mode (8), `\GenericError` (12),
 `\@` AmSTeX (3), `\defaultleftmargin` (1), `bangfont` missing (1).
-Mini-sandbox exhausted; ready for stage 16.
+Mini-sandbox exhausted; advanced to stage 16.
+
+**Stage 16 canvas (2026-05-11)**: 9959/10000 = **99.59% OK**.
+41 failures triaged: **1 RUST-REGRESSION fixed**, 1 deferred,
+35 SHARED-FAILURE, 3 RUST-CLEANER. Witness `1402.1373`:
+`{proof}` environment undefined (paper uses
+`\documentclass[useAMS]{mn2e}` and `\begin{proof}` without
+amsthm). Fix `1a74fc8eb1`: add `DefEnvironment!("{proof}", ...)`
+to `mn2e_support_sty.rs`, mirroring Perl
+`mn2e_support.sty.ltxml:177-181`. 1 error → 0. Deferred:
+  - `1404.3281`: `<char>` × 4 inputencoding errors (non-ASCII
+    bytes in source without proper inputenc declaration).
+Standout RUST-CLEANER: `1403.6207` Rust 2 vs Perl 6 (`-4`);
+`1404.7097`/`1405.4779` each `-2`. Top SHARED-FAILURE patterns:
+`_/^` cascade (16), `\GenericError` (16), `^` math-mode (2),
+`\@` AmSTeX (2), `\definecolor` (1), `\genova` (1), `\abs` (1),
+`misdefined:\list` (1), `\endproof` (1). Mini-sandbox exhausted;
+ready for stage 17.
 
 **Cumulative through stage 10 (100k papers, 24% of 426k corpus)**:
 16 RUST-REGRESSIONs identified and fixed (all in stages 1-2 + 1 in
