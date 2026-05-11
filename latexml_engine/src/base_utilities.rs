@@ -1038,29 +1038,50 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {
 /// When a vertical-mode List has exactly one non-empty item and that item's mode
 /// is also vertical, return the item directly instead of wrapping in a List.
 /// This enables `is_vbox` property propagation for nested \vbox/\vtop.
-pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
+pub fn predigest_box_contents(tokens: ArgWrap) -> Result<Option<Digested>> {
+  // Default: use the CURRENT mode (legacy behavior, e.g. for `{Body}` arguments
+  // that aren't \vbox/\vtop/\hbox-flavored). For VBoxContents / HBoxContents,
+  // call predigest_box_contents_in_mode("internal_vertical" / "restricted_horizontal")
+  // explicitly so we mirror Perl's `readBoxContents(..., $mode)` (TeX_Box.pool.ltxml L133).
+  let mode = state::lookup_string_from_sym(pin!("MODE"));
+  predigest_box_contents_in_mode(tokens, &mode)
+}
+
+/// Perl-faithful body-digest for VBoxContents / HBoxContents parameters.
+/// Mirrors `readBoxContents($gullet, $everybox, $mode)` exactly:
+/// pushes a fresh frame for `$mode`, digests tokens until matching T_END,
+/// pops the frame.
+///
+/// The mode-aware variant matters when `\vtop` is invoked inside a `p{}`
+/// column body (alignment is in horizontal mode, but the `\vtop`'s VBox
+/// content must be digested in internal_vertical mode so `\@startpbox`'s
+/// `\vtop\bgroup ...` doesn't try to close groups in the wrong mode).
+/// Witness: 2210.13325 `\begin{tabular}{|p{1cm}|...}` — pre-fix Rust
+/// inherited the surrounding horizontal mode and emitted `\vtop`
+/// errors; Perl uses 'internal_vertical' here regardless of where the
+/// `\vtop` was invoked.
+pub fn predigest_box_contents_in_mode(
+  _tokens: ArgWrap,
+  mode: &str,
+) -> Result<Option<Digested>> {
   // Perl: readBoxContents calls beginMode($mode) / endMode($mode) around the body reading.
   // This creates a scoped frame where enterHorizontal can change MODE inplace.
   // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
   // BOUND_MODE ending in 'vertical', triggers repackHorizontal, then pops the frame.
   //
-  // We replicate this by adding our own beginMode/endMode pair, matching Perl's
-  // readBoxContents (TeX_Box.pool.ltxml lines 145, 153).
-  //
   // NOTE: read_box_contents already consumed the opening { or \bgroup via defined_as(T_BEGIN).
   // invoke_token(T_BEGIN) pushes a synthetic group frame. The matching } or \egroup
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.
-  let current_mode = state::lookup_string_from_sym(pin!("MODE"));
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
-  if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
-    stomach::begin_mode(&current_mode)?;
+  if mode.ends_with("vertical") || mode.ends_with("horizontal") {
+    stomach::begin_mode(mode)?;
   }
   let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     // Perl: $stomach->endMode($mode)
-    if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
-      stomach::end_mode(&current_mode)?;
+    if mode.ends_with("vertical") || mode.ends_with("horizontal") {
+      stomach::end_mode(mode)?;
     }
     Ok(None)
   } else {
@@ -1079,12 +1100,12 @@ pub fn predigest_box_contents(_tokens: ArgWrap) -> Result<Option<Digested>> {
       state::assign_value_inplace_sym(pin!("MODE"), arena::pin(&bound_mode));
     }
     // Perl: $stomach->endMode($mode) — pop the frame
-    if current_mode.ends_with("vertical") || current_mode.ends_with("horizontal") {
-      stomach::end_mode(&current_mode)?;
+    if mode.ends_with("vertical") || mode.ends_with("horizontal") {
+      stomach::end_mode(mode)?;
     }
     // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
-    if !current_mode.is_empty() {
-      item.set_property("mode", Stored::String(arena::pin(current_mode)));
+    if !mode.is_empty() {
+      item.set_property("mode", Stored::String(arena::pin(mode)));
     }
     // Apply Perl's List() single-item simplification for vertical modes.
     // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box

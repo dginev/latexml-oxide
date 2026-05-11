@@ -494,14 +494,18 @@ LoadDefinitions!({
   DefRegister!("\\everyhbox", Tokens!());
   DefRegister!("\\everyvbox", Tokens!());
 
+  // Perl TeX_Box.pool.ltxml L156-167: HBoxContents/VBoxContents both call
+  // readBoxContents($gullet, $everybox, $mode) with the mode argument
+  // hardcoded to 'restricted_horizontal' / 'internal_vertical'
+  // respectively — independent of the current mode at invocation time.
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
       read_box_contents(state::lookup_tokens("\\everyhbox")) },
     predigest => sub[arg] {
-      predigest_box_contents(arg) });
+      predigest_box_contents_in_mode(arg, "restricted_horizontal") });
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
       read_box_contents(state::lookup_tokens("\\everyvbox")) },
     predigest => sub[arg] {
-      predigest_box_contents(arg) });
+      predigest_box_contents_in_mode(arg, "internal_vertical") });
 
   // This re-binds a number of important control sequences to their default text binding.
   // This is useful within common boxing or footnote macros that can appear within
