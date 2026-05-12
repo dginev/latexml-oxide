@@ -218,6 +218,61 @@ gap is the actual work.
   exact same source line (255 col 1). Witnesses: cond-mat0010356,
   cond-mat0101405. SHARED-FAILURE.
 
+## Known engine gap: cleveref × algorithmicx × hyperref infinite-loop
+
+**Status (2026-05-11):** repro minimised (8 lines); deferred for
+multi-session investigation. The 60 s wall-clock guard catches it in
+production; the worker zip is missing, no XML output produced.
+
+**Witness:** stage 34 paper 2403.15855 (Springer Nature `sn-jnl` class,
+algorithm block at line 224). Rust hangs after cleveref reports
+"`algorithmicx' support loaded"; Perl finishes the same paper in <1 s
+(87 errors, no hang).
+
+**Minimal repro:**
+```tex
+\documentclass{article}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\begin{document}
+\begin{algorithmic}
+\item a
+\end{algorithmic}
+\end{document}
+```
+Rust: hangs at the 60 s wall-clock guard. Perl: 1 error, completes.
+
+**What's known:**
+- All three packages required. Dropping any one (hyperref, cleveref, or
+  algpseudocode) makes the conversion finish.
+- The hang begins at the first list item inside `\begin{algorithmic}`
+  (the `{\ALG@step}` label callback). With both
+  `\g@addto@macro\ALG@step{...\refstepcounter\@cref@getprefix\xdef...}`
+  and `\g@addto@macro\ALG@beginalgorithmic{...\cref@currentlabel...}`
+  cleveref augmentations active, repeated expansion through
+  `\@cref@getprefix \cref@currentlabel \@nil \cref@currentprefix`
+  appears to feed into `\xdef\cref@currentprefix{\cref@currentprefix}`
+  loop somewhere.
+- Cleveref's `\refstepcounter` redef (which resets `\cref@currentlabel`)
+  IS active (confirmed via `\show\refstepcounter`). So the
+  self-reference path we saw with a hand-built minimal cleveref does
+  NOT directly apply to the real cleveref load.
+- Perl raw-loads the same `cleveref.sty` and emits the same augments;
+  the difference is in how Rust's expansion machinery handles
+  `\protected@edef`/`\@ifnextchar`/`\@cref@getprefix` chain inside the
+  list `\ALG@step` callback. Likely something is loop-like (repeated
+  `\@cref@getprefix` call on each list item) rather than truly
+  infinite.
+
+**Next step (next session):** instrument the gullet token-loop with
+a debug counter when processing `\ALG@step` inside an algorithmic list,
+or step through cleveref's `\refstepcounter@noarg{ALG@line}` with
+`\tracingmacros=1` and compare to Perl's trace.
+
+**Severity:** RUST-REGRESSION but contained (the wall-clock guard
+catches it, no zip produced for ~handful of papers). Deferred.
+
 ## Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column
 
 **Status (2026-05-11):** repro minimised; root cause partly understood;
