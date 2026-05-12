@@ -2068,6 +2068,15 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("amstext");
   RequirePackage!("array");
+  // siunitx's unit parser accepts `\cancel{<unit>}` as a "style"
+  // (registered as a builtin below), and the formatter at
+  // `six_format_1unit` emits `\cancel{...}` in the output token stream.
+  // Auto-load the cancel binding so papers that use the unit-cancel
+  // style without explicitly `\usepackage{cancel}`'ing it still
+  // convert. (TL siunitx registers its own internal `\cancel` for the
+  // same reason: `\__siunitx_unit_set_symbolic:Npnn \cancel { ... }`.)
+  // Witness: arXiv:2602.18218 `\SI{1}{\milli\electronvolt\per\cancel{c^2}}`.
+  RequirePackage!("cancel");
 
   //======================================================================
   // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
