@@ -1,18 +1,29 @@
 # Engine Sync Status — Active Worklist
 
-**Mission (closed 2026-05-12)**: 100k "no-problem" sandbox parity on
-the 426,555-paper arxmliv corpus, in-scope iff Perl LaTeXML on TL2025
-(`--preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`) produced
-0 errors. Round-25 stages 1-43 closed at **~99.85% aggregate OK**,
-stage 41 = **100.00%**, 30 RUST-REGRESSIONs fixed; ~15 deferred (all
-single-paper niche or cascade-amplification). Pre-Round-25 sprint
-records live in [`archive/round19_iteration_log.md`].
+**Active mission (Round-26, opened 2026-05-12)**: be **error-free on
+the 100,000-paper "warning" subset** of the arxmliv corpus — papers
+where Perl LaTeXML on TL2025 emits at least one warning (i.e. not
+the prior "no-problem" subset). Source list: `~/data/all_warnings.txt`
+(1,551,849 rows); the chosen 100k is the *last* 100,000 entries by
+date, rsync'd to `~/data/recent_warning_papers/`.
 
-**Active focus**: retire hand-stub bindings via raw-load. Remaining
-blocker is the **mhchem 77-error expl3 csname-protocol gap** — see
-"mhchem retirement" below.
+Stage-1 baseline (first 10k, 2026-05-12 with worker 16, timeout 120s):
+**9929/10000 OK = 99.29%** — 65 conversion_error, 6 conversion_fatal.
+Slightly below the Round-25 99.79–99.89% per-stage range, as expected
+for the warning subset. Per-paper triage in flight.
 
-`cargo test --tests` = **1185/0/0**.
+**Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
+the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
+~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
+~15 deferred (single-paper niche or cascade-amplification). Pre-Round-25
+sprint records live in [`archive/round19_iteration_log.md`].
+
+**Active engine focus**: retire hand-stub bindings via raw-load.
+Remaining blocker is the **mhchem 77-error expl3 csname-protocol
+gap** — see "mhchem retirement" below.
+
+`cargo test --tests` = **1185/0/0**. `cargo clippy --workspace
+--all-targets` = **0 warnings**.
 
 ---
 
