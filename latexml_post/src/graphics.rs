@@ -955,7 +955,25 @@ impl Graphics {
   }
 
   fn should_try_eps_pdf_path(source: &str, page: Option<u32>) -> bool {
-    page.is_none() && source.to_lowercase().ends_with(".eps")
+    // DISABLED 2026-05-12 after 1303.5091 regression.
+    //
+    // The `ps2pdf -dEPSCrop` step injects `/Rotate N` PDF annotations
+    // based on EPS internal orientation hints. PDF's `/Rotate` is
+    // CLOCKWISE (per PDF spec), but graphicx `angle=N` is
+    // COUNTER-CLOCKWISE — these are OPPOSITE conventions. After
+    // pdftocairo respects /Rotate, applying our `angle` rotation on
+    // top yields content that's 180° off (upside-down).
+    //
+    // Perl LaTeXML doesn't use ps2pdf — it uses ImageMagick `convert`
+    // (which spawns Ghostscript via the EPS delegate) directly, and
+    // ImageMagick's Rotate takes degrees in CCW = matches graphicx.
+    //
+    // Match that: route EPS through the `convert` path, which is
+    // slower than ps2pdf+pdftocairo but produces correctly-oriented
+    // output. The performance hit only affects EPS-source documents
+    // (rare in the canvas — PDF dominates modern arXiv).
+    let _ = (source, page);
+    false
   }
 
   /// Whether to attempt the poppler `pdftocairo --png` fast-path for a PDF
@@ -1627,23 +1645,18 @@ impl Processor for Graphics {
             let mut node_mut = nodes[*idx].clone();
             if let Some(imagesrc) = &out.imagesrc {
               // Plan::Convert handles non-raster sources (EPS, PS, PDF,
-              // AI). For EPS, `convert_eps_via_pdf` runs ps2pdf which
-              // injects `/Rotate N` into the intermediate PDF based on
-              // the EPS's internal orientation hints; pdftocairo then
-              // RESPECTS that /Rotate when rasterizing, effectively
-              // pre-applying the graphicx angle rotation. Applying our
-              // angle rotation on top would double-count. So we ONLY
-              // apply rotation to .pdf sources — the EPS path is
-              // already complete after ps2pdf+pdftocairo.
+              // AI). With ps2pdf's /Rotate-injection path disabled (see
+              // should_try_eps_pdf_path), all of these now go through
+              // ImageMagick `convert` (or pdftocairo for plain .pdf),
+              // neither of which pre-applies graphicx rotation. So
+              // apply the graphicx angle uniformly here.
               //
-              // Discovered 2026-05-12 via paper 1303.5091 (Figs 5-7).
+              // Perl semantics (Util/Image.pm:image_graphicx_complex
+              // L390-394): `image_internalop('Rotate', degrees => -$a1)`.
+              // ImageMagick Rotate is CCW (matches graphicx); from CLI
+              // it's CW → pass -angle to match Perl's intent.
               let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-              let src_is_pdf = convert_jobs.get(*job_id)
-                .and_then(|j| Path::new(&j.source).extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| e.eq_ignore_ascii_case("pdf")))
-                .unwrap_or(false);
-              if angle.abs() > 0.5 && src_is_pdf {
+              if angle.abs() > 0.5 {
                 let dest_full = PathBuf::from(&dest_dir).join(imagesrc);
                 Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
               }
