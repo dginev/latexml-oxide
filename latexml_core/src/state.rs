@@ -298,12 +298,16 @@ impl Default for State {
       meaning:                 HashMap::with_capacity_and_hasher(131_072, Default::default()),
       stash:                   HashMap::default(),
       stash_active:            HashMap::default(),
-      catcode:                 HashMap::default(),
-      mathcode:                HashMap::default(),
-      sfcode:                  HashMap::default(),
-      lccode:                  HashMap::default(),
-      uccode:                  HashMap::default(),
-      delcode:                 HashMap::default(),
+      // Char-keyed tables: ASCII alphabet + a smattering of high-codepoint
+      // entries get installed (textcomp + ts1enc.dfu populate ~200-300
+      // entries each). Pre-size to 512 to skip the 8→16→…→256→512
+      // doubling chain on startup.
+      catcode:                 HashMap::with_capacity_and_hasher(512, Default::default()),
+      mathcode:                HashMap::with_capacity_and_hasher(512, Default::default()),
+      sfcode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      lccode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      uccode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      delcode:                 HashMap::with_capacity_and_hasher(512, Default::default()),
       // Table bookkeeping
       undo:                    undo_vdq,
       // stateful runtime - data structures
