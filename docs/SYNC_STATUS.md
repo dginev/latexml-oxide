@@ -61,22 +61,29 @@ coverage. See [`memory/feedback_prefer_raw_load.md`].
 - Status: existing TODO at file head says "DELETE this binding
   once engine can faithfully handle the expl3/xparse/chemgreek
   raw-load chain". Driver: arXiv:1806.06448.
-- **Measured gap (2026-05-12)**: raw-load probe (mhchem stub
+- **Measured gap (initial 2026-05-12)**: raw-load probe (mhchem stub
   temporarily replaced with `InputDefinitions("mhchem", noltxml=>1)`)
-  on a `\ce{H2O}` paper produces **92 errors**, all in the
-  expl3 emulation layer:
-    * `\exp_args:Nc` between `\csname`/`\endcsname` (Error:unexpected)
+  on a `\ce{H2O}` paper produced **92 errors**.
+- **Reduced to 77 errors (2026-05-12, commit `f8e20b648e`)**:
+  generalised the gullet csname-reader to substitute any
+  `\let`-to-char CS (Stored::Token whose target is LETTER/OTHER/
+  SPACE) with its character — was hardcoded for `\lx@NBSP` only.
+  Killed the `\exp_stop_f:`-undefined cluster (~15 errors).
+- Remaining 77-error residue:
+    * `\exp_args:Nc` between `\csname`/`\endcsname` — partial-cs
+      accumulation; root cause not yet isolated
     * `\scan_stop:`, `\s__tl`, `\tex_skip:D` between csname/endcsname
-    * `\exp_stop_f:` undefined
-    * `\fi:` appearing outside conditional (Error:unexpected:fi)
+      (these are PA-aliased to `\relax`; real TeX errors on these
+      inside csname, may be SHARED-FAILURE)
+    * `\fi:` appearing outside conditional
     * `<relationaltoken>` expected (numeric comparison gaps)
   Probe restored; the contrib stub remains the load-bearing path.
-  Chemgreek shim added (`chemgreek_sty.rs`) so direct
-  `\usepackage{chemgreek}` does raw-load — but mhchem itself
-  remains stubbed.
-- Engine work needed: faithful `\exp_*` / `\__tl_*` / `\__file_*` /
-  `\scan_stop:` / `\group_begin:` etc. — i.e. proper csname-time
-  exp-and-mark protocol from expl3. Tracked in Round-26 candidates.
+  Chemgreek shim added so direct `\usepackage{chemgreek}` raw-loads.
+- Engine work to retire stub: isolate `\exp_args:Nc` partial-cs
+  issue (the partial-cs message shows `\exp_args:Nc` text appended
+  literally, hinting at a non-expansion path); fix relational-token
+  numeric scanner; verify `\fi:` PA-aliasing is honoured by the
+  conditional tracker. Tracked in Round-26 candidates.
 
 ### `latexml_package/src/package/glossaries_sty.rs` — **DONE 2026-05-12**
 - Intercepts: TL `glossaries.sty` (7714 lines as of TL2025).
