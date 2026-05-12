@@ -510,7 +510,8 @@ Acceptance Checklist) governs every perf change.
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump and `LATEXML_NODUMP=1` paths) | 0 errors |
 | 420k arxmliv canvas (stages 1-43) | **99.56-100.00% per stage**, stage 41 = **100.00%**, ~99.85% aggregate | 100% match Perl |
 | Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
-| Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.10 s pre-2026-05-12 perf pass) | mini-benchmark target 2.88 s release on 1910.01256 |
+| Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.31 s pre-2026-05-12 perf pass — **6× speedup**) | mini-benchmark target 2.88 s release on 1910.01256 |
+| Per-conversion wall time (release build, same fixture) | ~0.17-0.20 s | mini-benchmark target 2.88 s release on 1910.01256 |
 
 ---
 
