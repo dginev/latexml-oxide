@@ -9,8 +9,17 @@ date, rsync'd to `~/data/recent_warning_papers/`.
 
 Stage-1 baseline (first 10k, 2026-05-12 with worker 16, timeout 120s):
 **9929/10000 OK = 99.29%** — 65 conversion_error, 6 conversion_fatal.
-Slightly below the Round-25 99.79–99.89% per-stage range, as expected
-for the warning subset. Per-paper triage in flight.
+
+Stage-1 re-sweep (2026-05-12 evening, after `42d87de4fe` size-error
+silencing + `868aec6794` algorithmicx `is_defined` fix): **9941/10000
+OK = 99.41%** — 53 conversion_error, 6 conversion_fatal. **+12
+recovered (all AISTATS "Running heading author" cluster), 0
+regressions.** Remaining 59 failures cluster as: babel "Unknown
+option" SHARED with Perl (~14), pgfplots `\lx@text@ampR` `&`-leak
+(~7), expl3 csname-protocol cluster (same root as mhchem retirement
+gap; ~5), undefined-CS (algorithmicx-style `\Subsection`/`\textit`/
+`\qq`/`\polhk`/etc.; ~15), missing class files (~3), tikz parser
+giveup (~1), token-limit / Xy-pic fatals (~6), various (~8).
 
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
