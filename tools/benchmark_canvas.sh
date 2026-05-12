@@ -531,20 +531,32 @@ if (( PARALLEL_EXIT != 0 )); then
   echo "Note: parallel exited with code $PARALLEL_EXIT (some tasks failed, see results)" >&2
 fi
 
-# Retry transient categories serially. Under 16-worker contention some
-# papers hit timeout/abort/oom_or_kill/error not because they fail but
-# because their share of CPU was insufficient (see resource-exhaustion
-# analysis in commit history). Retry pass runs each candidate once with
-# all cores free; results that flip to ok/conversion_* replace the
-# transient row in RUN_RESULTS.
+# Retry transient categories serially. Under 12-16-worker contention some
+# papers hit timeout/abort/oom_or_kill/error/segfault not because they
+# fail but because their share of CPU was insufficient — heavy parallel
+# load can trip the internal 60 s watchdog on a paper that takes <1 s
+# standalone, surfacing as a `timeout: the monitored command dumped
+# core` exit (categorised as "segfault" by the row classifier). Retry
+# pass runs each candidate once with all cores free AND a 2× longer
+# timeout, then merges the new row in place of the flaky one. The 2×
+# timeout is enough to cover intrinsically slow papers like
+# math0608653 (43 s standalone → tips watchdog under sweep) without
+# letting actual hangs run indefinitely.
 RETRY_LIST=$(mktemp)
-RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output)$'
+RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output|segfault)$'
 awk -F'\t' -v re="$RETRY_CANDIDATES_RE" '$7 ~ re {print $1"\t"$7}' "$RUN_RESULTS" \
   | sort -u > "$RETRY_LIST"
 RETRY_COUNT=$(wc -l < "$RETRY_LIST" | tr -d ' ')
 if (( RETRY_COUNT > 0 )); then
   echo ""
-  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially..." >&2
+  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially with 2× timeout..." >&2
+  # Double TIMEOUT_S for the retry pass and re-export so the
+  # `convert_one` subshells (run in this process, not under
+  # `parallel`) pick it up. Restore at end so SUMMARY reporting
+  # references the parallel-pass cap.
+  ORIG_TIMEOUT_S=$TIMEOUT_S
+  TIMEOUT_S=$((TIMEOUT_S * 2))
+  export TIMEOUT_S
   RETRY_FLIPPED=0
   RETRY_RESULTS=$(mktemp)
   while IFS=$'\t' read -r arxiv_id orig_category; do
@@ -556,6 +568,8 @@ if (( RETRY_COUNT > 0 )); then
     [[ -z "$input_zip" ]] && continue
     convert_one "$input_zip"
   done < "$RETRY_LIST"
+  TIMEOUT_S=$ORIG_TIMEOUT_S
+  export TIMEOUT_S
   # Diff old vs new categories for retried IDs to count flips
   RETRY_FLIPPED=$(awk -F'\t' -v list="$RETRY_LIST" '
     BEGIN { while ((getline line < list) > 0) { split(line, a, "\t"); orig[a[1]] = a[2] } }
@@ -577,15 +591,26 @@ rm -f "$RETRY_LIST"
 
 # Atomically merge current-run rows into the cumulative TSV after workers finish.
 # Existing rows are kept unless the current run produced a replacement row.
+# When the retry-pass fires, the same arxiv_id can appear twice in
+# RUN_RESULTS (first the flake, then the serial retry); dedup by
+# keeping the LAST occurrence per id — that's the retried row, which
+# overrides the original.
 MERGED_RESULTS=$(mktemp)
 RUN_IDS=$(mktemp)
-awk -F'\t' '{print $1}' "$RUN_RESULTS" | sort -u > "$RUN_IDS"
+DEDUPED_RUN=$(mktemp)
+# tac | awk-first-seen | tac → keep LAST occurrence per id, in
+# original order of last-appearance. Handles the retry-pass case
+# where a flaky paper has both a stale-flake row and a serial-retry
+# row in RUN_RESULTS.
+tac "$RUN_RESULTS" | awk -F'\t' '!seen[$1]++' | tac > "$DEDUPED_RUN"
+awk -F'\t' '{print $1}' "$DEDUPED_RUN" | sort -u > "$RUN_IDS"
 {
   head -1 "$RESULTS_TSV"
   awk -F'\t' 'FNR == NR {ids[$1] = 1; next} FNR > 1 && !($1 in ids)' "$RUN_IDS" "$RESULTS_TSV"
-  cat "$RUN_RESULTS"
+  cat "$DEDUPED_RUN"
 } > "$MERGED_RESULTS"
 mv "$MERGED_RESULTS" "$RESULTS_TSV"
+rm -f "$DEDUPED_RUN"
 
 # Avoid leaving stale success artifacts behind after a paper now fails before
 # producing a valid output ZIP.
