@@ -366,124 +366,48 @@ landing the keyval cluster + siunitx CS-tokenize fix. Highlights:
 - **1410.8171 outcome (2026-05-10)**: `SarkanyPRArevision.tex` now
   reports `No obvious problems` (was 54 warnings + 3 errors).
 
-## Round-20/22/23 (archived 2026-05-03 → 2026-05-08)
+## Round-17 → 23 (archived)
 
-Three sprints closed before the Round-25 stage walk. Full narratives
-moved to `docs/archive/round19_iteration_log.md`. One-paragraph each:
+All pre-Round-25 sprint narratives live in
+`docs/archive/round19_iteration_log.md`. Headline numbers:
 
-- **Round-20 (closed 2026-05-03)**: 100k canvas Phase A Gate 0
-  closure at **99,829 / 100,003 = 99.83%** raw OK. 56 papers recovered,
-  0 NEW non-OK. Key fixes: `parity_check.sh` PERL_TIMEOUT
-  reclassification, `find_main_tex` `\r`-aware comment-stripper
-  (cond-mat0002096, 0708.2784), `alignment.rs:add_line` autoviv on
-  `\hline`/`\cline` past column count, `tests/06_cluster_regressions.rs`
-  greps `Error:<class>:`. Phase D first landing `48f0c1ce8a`:
-  `%auto-ignore` archives emit `Fatal:invalid:auto-ignore` (legitimate
-  skip, not error).
+- **Round-20** (closed 2026-05-03): 100k canvas at **99.83% raw OK**,
+  Phase A Gate 0 cleared. 0 NEW non-OK, 56 recovered.
+- **Round-22** (closed 2026-05-07): 335-paper baseline-failure
+  sprint, **295 / 329 = 89.7%** unique OK at v22 wrap.
+- **Round-23** (closed 2026-05-08): **300 / 328 = 91.5%** unique OK;
+  natbib `\NAT@@wrout` (3198b744ab), siunitx `\DeclareSIUnit`,
+  pdftocairo png/svg fast paths, listings `\lstinline` verbatim,
+  `\MakeUppercase` UTF@N@octets pre-stub, `lx_read_and_change_case`
+  `\dont_expand` insertion. 0 REAL_REGRESSIONs at end-state.
+- **Round-17/18/19**: see archive. Major commits: `d44f1cb38`
+  (`\relax` sentinel on EOF), `817d91624` (XUntil re-Invoke),
+  `6ac613b48` (xy.sty preloads amstext), `a6b4cb5161` (psfig
+  cluster), `342b237199` (ntheorem [standard]).
 
-- **Round-22 (active 2026-05-07)**: 335-paper baseline-failure
-  sprint. v22 closing: **295 / 329 = 89.7%** unique OK. 24 commits
-  including `9fe3e77c92` (Document::open_text `<ltx:text>` walk
-  stop), `fc2ff67389` (aa_support drop spurious `\isotope`),
-  `70a8f2280f` (etoolbox `DeclareListParser` `TeX!`→`RawTeX!`),
-  `f53ab3ecda` (`\DeclareFontEncoding` defines `<encoding>-cmd` —
-  recovers 13 T1-cmd-loop papers), defensive xml::findnodes/Node::new
-  guards. Residual: math-parser stack-overflows (1904.02716/1904.10251),
-  expl3 group_begin (2406.14142 — later fixed by `e436a9cda7` +
-  `fedc89cabd` regex stubs), schema-strictness divergences (2211.01875,
-  2301.10618, 2302.11635).
+## Phase B clusters — residual SHARED-FAILUREs (archived 2026-05-03)
 
-- **Round-23 (active 2026-05-07/08)**: continuation. Final v27:
-  **300 / 328 = 91.5%** with `3198b744ab` natbib `\NAT@@wrout`
-  bgroup/Expand-on-labels fix (2404.06289: 19→0). Other landings:
-  `ad77a29f47` siunitx `\DeclareSIUnit` presentation; `fd8bb072a7`
-  siunitx `\mathrm` wrap + pdftocairo png/svg fast paths;
-  `5b2e38590c` `ltx:block` auto-close (2302.11635); `ba56a30a33`
-  listings `\lstinline` body under verbatim catcodes (2301.10618);
-  `d42de4439e` bin: `Fatal:invalid:not_tex_source` on `%PDF` magic
-  (2301.04210); `1790c32b1b` `\MakeUppercase` pre-stub UTF@N@octets;
-  `31b6cc1e00` lx_read_and_change_case `\dont_expand` insertion
-  (2009.10018: 16→0); `e436a9cda7`+`fedc89cabd` regex stubs
-  (2406.14142: 21→0 — last historical REAL_REGRESSION).
+Post-Phase-A-Gate-0 sampling found that every remaining cluster
+papers is SHARED-FAILURE with Perl, not a Rust-only regression:
 
-  **End-state**: 0 REAL_REGRESSIONs remain; remaining cortex-failure
-  rows are RAM/post-processing capped (1904.02716, 2007.13470,
-  2011.14413, 2105.04174, 2203.01231, 2310.15090). True Rust regression
-  count: 0 for ported error conditions. Error/Fatal coverage audit
-  in `ERROR_PARITY_AUDIT.md` notes ~43% of Perl callsites absent in
-  Rust (concentrated in `latexml_post` and siunitx/pgfmath/xcolor/calc).
+| Cluster | Papers | Verdict |
+|---|---:|---|
+| `_/^` Sub-A: `$$math$$` in horizontal mode | 78 | SHARED-FAILURE; surpass-Perl candidate (would need `OXIDIZED_DESIGN` entry to fall back to `$..$`) |
+| `_/^` Sub-B: `_/^` in `\cite`/`\bibitem` key | ~5-10 | SHARED-FAILURE; surpass-Perl candidate (would switch arg catcodes) |
+| `\endproof` outside amsthm | 15 | SHARED-FAILURE |
+| `\@` (at_letter scope on `\input`) | 4 | SHARED-FAILURE |
+| `\psfig` via `\input psfig.sty` | 6 | SHARED-FAILURE (different from `\documentstyle[psfig]`) |
+| `Error:expected:<box>` cascade | 26 | mostly cascade noise from earlier errors |
+| `Error:expected:{` brace mismatch | 18 | user-malformed TeX |
 
-## Phase B clusters (the work pool)
+**Already-recovered clusters** are pinned as fixtures in
+`tests/06_cluster_regressions.rs`: NBSP-in-csname (18 papers),
+`\@ifundefined` (33), `\setdec`/`\dec` (12), `\CITE` (11), psfig
+via `\documentstyle[epsfig]` (12, `a6b4cb5161`).
 
-**Re-classification after Phase A Gate 0 (2026-05-03):** every paper
-in the post-fix 170-paper residual that I sampled is SHARED-FAILURE
-(Rust = Perl), not a Rust-only regression. The "easy Phase B cluster
-wins" the prior plan envisioned have all been harvested by round-19
-or earlier. Remaining work is Phase C "surpass Perl" territory.
-
-Sampled verdicts of remaining clusters:
-
-| Cluster | Papers | Sample verdict | Classification |
-|---|---:|---|---|
-| `_/^` (Sub-cause A: `$$math$$` in horizontal mode) | 78 | Rust=Perl on all witnesses | SHARED-FAILURE / Phase C surpass-Perl |
-| `\endproof` outside amsthm | 15 | All 9 originally sampled Rust=Perl | SHARED-FAILURE / Phase C |
-| `\@` (at_letter scope on `\input`) | 4 | 0708.2570/0801.0329/0808.1829/0901.0353 all Rust=Perl=1 | SHARED-FAILURE / Phase C |
-| `\psfig` via `\input psfig.sty` | 6 | cond-mat0010356 etc. Rust=Perl=1 | SHARED-FAILURE / Phase C (different from `\documentstyle[psfig]` already fixed) |
-| `Error:expected:<box>` cascade | 26 | Mostly cascade noise from earlier errors | Phase C 1-2/day |
-| `Error:expected:{` brace mismatch | 18 | User-malformed TeX | Phase C |
-
-**Already-recovered clusters (committed)**: NBSP-in-csname (18),
-`\@ifundefined` (33 — LaTeX-only), `\setdec`/`\dec` (12), `\CITE` (11),
-psfig via `\documentstyle[epsfig]` (12 papers, `a6b4cb5161`). Pinned
-as fixtures in `tests/06_cluster_regressions.rs`.
-
-**`_/^` cluster sub-causes** (≈78-paper bucket — measured 2026-05-03):
-
-Distribution from a 5-witness bisection (3 from `^,_` bucket, 2 from
-bare `_`):
-
-| # | Paper | Bucket | Source pattern | Sub-cause |
-|---|---|---|---|---|
-| 1 | `hep-th0009013` | `^,_` | `\begin{abstract}…$$math$$…\end{abstract}` | **A** |
-| 2 | `math0010241` | `^,_` | amsart with `$$math$$` and macro-expanded math (Anonymous String) | **A** (likely; macro-expansion variant) |
-| 3 | `astro-ph0203201` | `_` | `\begin{center}…$$math$$…\end{center}` | **A** |
-| 4 | `cond-mat0003169` | `_` | `\CITE{IsobeUeda_deficit}` after undefined `\CITE` auto-defined as zero-arg constructor → arg digested as text group | **B** (variant) |
-| 5 | `hep-lat0110168` | `_` | `\begin{center}{\small …$$math$$…}\end{center}` | **A** |
-
-**Measured ratio: 4/5 Sub-A, 1/5 Sub-B, 0/5 Sub-C.** Consistent with
-the bucket size ratio (41 `^,_` + 21 `_` + 5 `^` = 67 bare-token
-papers; 13 with extra-token combinations; total ≈80, matching the 78
-SYNC_STATUS estimate).
-
-- **Sub-cause A** — `$$math$$` in non-vertical-mode (horizontal /
-  restricted_horizontal). Dominant pattern (≈80% of cluster). The
-  enclosing context is typically `\begin{abstract}`, `\begin{center}`,
-  or `\begin{center}{\small …}`. Per `wisdom_dollar_dollar_bound_mode`,
-  Rust's `\lx@dollar@default` only treats `$$` as display-math start
-  when `BOUND_MODE` ends with `vertical`; in any horizontal context
-  the `$$` is silently treated as text and `_/^` errors cascade.
-  **Both engines fail identically** — Perl-faithful behaviour matches
-  plain TeX. Surpass-Perl candidate: fall back to inline-math (`$..$`)
-  when `$$` lands in horizontal mode. Requires `OXIDIZED_DESIGN`
-  divergence entry.
-
-- **Sub-cause B** — text-mode `_/^` reaching a digester arg whose
-  catcodes weren't overridden. Witnesses:
-  - `cond-mat0112063` — `\cite{Raimondi_etal}`, `\bibitem{us_fermionsII}`.
-  - `cond-mat0003169` — `\CITE{IsobeUeda_deficit}` where `\CITE` is
-    undefined and auto-defined as zero-arg constructor, so the
-    `{IsobeUeda_deficit}` group is digested as text.
-  Both engines fail identically. Surpass-Perl plan: switch `_/^`
-  catcodes inside the key-bearing arg of `\cite`/`\bibitem` (and any
-  CS that treats its arg as a key). For the auto-defined-undefined-CS
-  variant, the better fix is to *consume + drop* one mandatory arg in
-  the auto-defined error constructor (matches user expectation when
-  the typo had a `{key}` form).
-
-- **Sub-cause C** (revert-token serializer leak / user-class macro
-  shadow) — **REMOVED 2026-05-03**: hypothetical, no witness in this
-  bisection or in any prior triage. Drop from active tracking unless
-  a witness emerges.
+The two surpass-Perl candidates above remain open. The CLAUDE.md
+guard rules them out of automatic loop work without an explicit
+upstream-PR design entry.
 
 ---
 
@@ -575,10 +499,11 @@ Acceptance Checklist) governs every perf change.
 | Gate | Current | Target |
 |---|---|---|
 | `cargo test --tests` | **1185/0/0** | unchanged across all task work |
-| `latexml_oxide --init=plain.tex` | 0 errors | 0 errors |
-| `latexml_oxide --init=latex.ltx` | 0 errors | 0 errors |
+| `latexml_oxide --init=plain.tex` | 0 errors (dump and `LATEXML_NODUMP=1` paths) | 0 errors |
+| `latexml_oxide --init=latex.ltx` | 0 errors (dump and `LATEXML_NODUMP=1` paths) | 0 errors |
 | 420k arxmliv canvas (stages 1-43) | **99.56-100.00% per stage**, stage 41 = **100.00%**, ~99.85% aggregate | 100% match Perl |
-| Round-25 cumulative regressions | **30 fixed, ~15 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
+| Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
+| Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.10 s pre-2026-05-12 perf pass) | mini-benchmark target 2.88 s release on 1910.01256 |
 
 ---
 
@@ -638,14 +563,3 @@ my fix; the same paper now uses `pdftocairo --png` at 1.8 s. The
 fast path is already in; the long-term goal is to stop maintaining
 the slow paths.
 
----
-
-## Earlier work (archived)
-
-Round-17 / 18 / 19 narrative + REG-1, REG-2, REG-3, CLUSTER-NBSP
-detail moved to `docs/archive/round19_iteration_log.md`. Commit log:
-`git log --oneline master..claude-round-19`. Major commits include
-`d44f1cb38` (`\relax` sentinel on EOF), `817d91624` (XUntil
-`\def`-family re-Invoke), `6ac613b48` (xy.sty preloads amstext),
-`a6b4cb5161` (psfig cluster), `342b237199` (ntheorem [standard]),
-plus 25+ others.
