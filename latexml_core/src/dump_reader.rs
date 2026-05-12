@@ -464,10 +464,15 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       //        typed params; loses brace-in-delimiter forms.
       //   v1 — nargs only: "{}".repeat(nargs), all params flattened to
       //        Plain. Kept as last resort so ancient dumps still load.
-      let eparts: Vec<&str> = rest.splitn(6, '\t').collect();
-      if eparts.len() < 4 {
-        return Err("Incomplete Expandable entry".into());
-      }
+      // Direct iter destructure — saves the Vec<&str>::collect()
+      // allocation × ~80k E entries.
+      let mut eit = rest.splitn(6, '\t');
+      let alias_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let nargs_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let flags_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let tok_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let proto_field = eit.next();
+      let v3_field = eit.next();
 
       // eparts[0] is the alias-cs from the dump (Perl-side: the cs of
       // the Definition object that this entry was let-aliased from).
@@ -487,21 +492,20 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // many lookup paths and triggers infinite-loop regressions in
       // `\@nil` handling, etc. Keep blast radius tight.
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
-      let alias_decoded = url_decode(eparts[0]);
+      let alias_decoded = url_decode(alias_field);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
       let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
         Some(alias_decoded)
       } else {
         None
       };
-      let nargs: usize = eparts[1].parse().unwrap_or(0);
-      let flags = eparts[2];
-      let tok_data = eparts[3];
-      let proto_opt = eparts
-        .get(4)
-        .map(|s| url_decode(s))
+      let nargs: usize = nargs_field.parse().unwrap_or(0);
+      let flags = flags_field;
+      let tok_data = tok_field;
+      let proto_opt = proto_field
+        .map(url_decode)
         .filter(|s| !s.is_empty());
-      let v3_opt = eparts.get(5).filter(|s| !s.is_empty());
+      let v3_opt = v3_field.filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
       let is_protected = flags.contains('P');
@@ -699,21 +703,22 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // address (`\count22`) held the default 0 — `\settabs 20\columns`
       // looped infinitely because `\m@ne == 0` never advanced `\count@`
       // toward 0 in `\loop\ifnum\count@>\z@\@nother\repeat`.
-      let rparts: Vec<&str> = rest.splitn(5, '\t').collect();
-      if rparts.len() < 3 {
-        return Err("Incomplete Register entry".into());
-      }
-      let rtype = rparts[1];
-      let value_str = rparts[2];
-      let mathglyph = rparts
-        .get(3)
+      // Direct iter destructure, mirroring the E-branch pattern.
+      let mut rit = rest.splitn(5, '\t');
+      let r_cs = rit.next().ok_or("Incomplete Register entry")?;
+      let r_type = rit.next().ok_or("Incomplete Register entry")?;
+      let r_value = rit.next().ok_or("Incomplete Register entry")?;
+      let r_glyph_field = rit.next();
+      let r_addr_field = rit.next();
+      let rtype = r_type;
+      let value_str = r_value;
+      let mathglyph = r_glyph_field
         .filter(|s| !s.is_empty())
         .and_then(|s| s.parse::<u32>().ok())
         .and_then(char::from_u32);
-      let dump_address: Option<String> = rparts
-        .get(4)
+      let dump_address: Option<String> = r_addr_field
         .filter(|s| !s.is_empty())
-        .map(|s| url_decode(s));
+        .map(url_decode);
       // For register-aliases (M-line key != register's internal cs), the
       // storage slot lives at the cs name, not the alias key. e.g.
       //   M  \tex_endlinechar:D  R  \endlinechar  N  0
@@ -724,7 +729,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // \ExplSyntaxOn's `\tex_endlinechar:D = 32 \scan_stop:` line, which
       // in turn breaks the entire dump-path expl3 whitespace handling
       // (8 expl3 tests). Mirror Perl's address-via-internal-cs semantics.
-      let internal_cs_decoded = url_decode(rparts[0]);
+      let internal_cs_decoded = url_decode(r_cs);
       let dump_address: Option<String> = dump_address.or_else(|| {
         if internal_cs_decoded != *key && !internal_cs_decoded.is_empty() {
           Some(internal_cs_decoded)
