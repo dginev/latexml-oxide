@@ -169,22 +169,24 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
 /// Parse a single dump line and load it. Returns Ok(true) if loaded,
 /// Ok(false) if filtered (e.g. corrupt MC/DC), Err on parse error.
 fn parse_and_load(line: &str) -> Result<bool, String> {
-  let parts: Vec<&str> = line.splitn(3, '\t').collect();
-  if parts.len() < 2 {
-    return Err("Too few fields".into());
-  }
-
-  let table = parts[0];
+  // Direct splitn iteration — saves the per-line Vec<&str> allocation
+  // that splitn(3).collect() was doing × 110k dump entries.
+  let mut it = line.splitn(3, '\t');
+  let table = it.next().ok_or("Too few fields")?;
+  let raw_key = match it.next() {
+    Some(k) => k,
+    None => return Err("Too few fields".into()),
+  };
   // Key decode: Cow borrows the original &str when no `%` escape is
   // present (the overwhelming majority). Saves a per-line allocation
   // for the ~25k dump entries that have plain CS-name keys.
-  let key_cow: std::borrow::Cow<'_, str> = if parts[1].contains('%') {
-    std::borrow::Cow::Owned(url_decode(parts[1]))
+  let key_cow: std::borrow::Cow<'_, str> = if raw_key.contains('%') {
+    std::borrow::Cow::Owned(url_decode(raw_key))
   } else {
-    std::borrow::Cow::Borrowed(parts[1])
+    std::borrow::Cow::Borrowed(raw_key)
   };
   let key = key_cow.as_ref();
-  let data = if parts.len() > 2 { parts[2] } else { "" };
+  let data = it.next().unwrap_or("");
 
   match table {
     // V: Value entries (registers, fontdimen, font metadata).
