@@ -15,6 +15,16 @@ Latest local: `cargo test --tests` = **1185/0/0** (post-rebase onto
 master commit `bffd1be471`, +schema-docs + split post-processor).
 
 **Just landed** (Round-25):
+- `488ed74c41` — `mn2e_support_sty::\ion` Perl-parity wrap in `\text`.
+  Perl `mn2e_support.sty.ltxml:151` wraps `\ion{}{}` body in `\text{…}`
+  so the second arg can safely contain inline-math toggles like
+  `$\beta$`. The previous Rust form `"#1\\,{\\sc #2}"` omitted the
+  mode-switching wrapper, so an inner `$` inside `\ion{H}{$\beta$}`
+  toggled math at a non-mode-switch frame, producing
+  `Error:unexpected:\lx@end@inline@math Attempt to end mode math in math`.
+  Fixes RUST-REGRESSIONs 2001.07651 (mnras, rust=2→0) and 1807.04759
+  (mnras, rust=4→0). Mini-sandbox stage_25: 9/41 papers now fully
+  clean (incl. both targets). `cargo test --tests` 1185/0/0.
 - `7edfb8eeb1` — `latexml_contrib::scicite_sty` short-circuit binding.
   scicite.sty is a 513-line modified-cite.sty for the journal Science;
   without a binding our parser hangs on its `\edef`/`\catcode` dance.
