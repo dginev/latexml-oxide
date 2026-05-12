@@ -3,7 +3,14 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: algorithmicx.sty.ltxml
   // Was algorithmic.sty loaded? If so: BAIL immediately. (deeply incompatible)
-  if state::has_meaning(&T_CS!("\\algorithmic")) {
+  // NOTE: must use `is_defined_token` (Perl `IsDefined`) — not `has_meaning` —
+  // because users routinely do `\let\algorithmic\relax` before loading
+  // algpseudocode (which loads us via the algorithmicx chain) to opt out
+  // of algorithmic.sty. `\let X \relax` is *defined* in the state machine
+  // but is "LaTeX-y undefined" — Perl's `IsDefined` treats it as undefined,
+  // so the bail does not fire and the algorithmicx setup proceeds.
+  // Witness: arXiv:2603.09221 (`\let\algorithmic\relax` + algpseudocode).
+  if is_defined_token(&T_CS!("\\algorithmic")) {
     Warn!(
       "unexpected",
       "\\algorithmic",
