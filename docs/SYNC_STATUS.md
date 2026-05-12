@@ -16,86 +16,30 @@ glossaries — see "Planned" below).
 `cargo test --tests` = **1185/0/0** (post-rebase onto master commit
 `bffd1be471`, +schema-docs + split post-processor).
 
-**Just landed** (Round-25):
-- `488ed74c41` — `mn2e_support_sty::\ion` Perl-parity wrap in `\text`.
-  Perl `mn2e_support.sty.ltxml:151` wraps `\ion{}{}` body in `\text{…}`
-  so the second arg can safely contain inline-math toggles like
-  `$\beta$`. The previous Rust form `"#1\\,{\\sc #2}"` omitted the
-  mode-switching wrapper, so an inner `$` inside `\ion{H}{$\beta$}`
-  toggled math at a non-mode-switch frame, producing
-  `Error:unexpected:\lx@end@inline@math Attempt to end mode math in math`.
-  Fixes RUST-REGRESSIONs 2001.07651 (mnras, rust=2→0) and 1807.04759
-  (mnras, rust=4→0). Mini-sandbox stage_25: 9/41 papers now fully
-  clean (incl. both targets). `cargo test --tests` 1185/0/0.
-- `7edfb8eeb1` — `latexml_contrib::scicite_sty` short-circuit binding.
-  scicite.sty is a 513-line modified-cite.sty for the journal Science;
-  without a binding our parser hangs on its `\edef`/`\catcode` dance.
-  Mirrors `cite_sty.rs` — defines only the public API (`\citeleft`,
-  `\citeright`, …). Recovers the 7-paper hang cluster
-  (1010.2781, 1011.5494, 1102.0562, 1210.1294, 1303.2601, 1704.07345,
-  1706.03851). Smoke-tested on 1210.1294 → clean conversion.
-- `588ad90263` + `1d21ee0d29` — **expl3 file-machinery cluster
-  (60 papers) RESOLVED**. Root cause: `input_definitions`
-  unconditionally mutated `\@currname`/`\@currext` even on the
-  `handleoptions=false` path, contradicting Perl `Package.pm:2580-2611`
-  (which only mutates them inside the handleoptions=true block).
-  The leaked name was then captured as the "empty sentinel" by inner
-  `\RequirePackage` pushes onto `\@currnamestack`, breaking
-  expl3-code.tex's `\__file_tmp:w` stack walk and producing the L11515
-  `\__file_name_expand:n` cascade. Two witness chains:
-  * `\inputencoding{ansinew}` → `input_definitions("ansinew","def",
-     handleoptions=false)` → leaks "ansinew"/"def" → next
-     `\RequirePackage{expl3}` push poisoned. Witness: 0805.4519.
-  * `\usetikzlibrary{calligraphy}` →
-     `input_definitions("tikzlibrarycalligraphy.code","tex",
-     handleoptions=false)` → leaks → inner spath3 push poisoned.
-     Witness: 1705.00041.
-  Fix: drop the Rust-only mutation; match Perl exactly.
-  Verification: 60/60 cluster papers (extracted by grep on the v4 logs)
-  now have zero file_name_expand errors; 25/60 fully clean. Babel
-  csquotes test fixture re-improved (language-correct French/German
-  quotes).
+**Round-25 landings** (compressed):
 
-**Format dump enabled 2026-05-08** (post-currfix landing). Generated
-`resources/dumps/latex.dump.txt` via `LATEXML_NODUMP=1 latexml_oxide
---init=latex.ltx`. 25,439 entries, 3.9 MB, includes 389 expl3 markers
-(`\tex_let:D` PA-aliased to `\let`, `\cs_set:Npn`/`\cs_new:Npn`
-chain, etc.). Runtime auto-finds the dump from
-`resources/dumps/latex.dump.txt` (path 5 in `latex.rs::latex_dump_available`,
-relative to `CARGO_MANIFEST_DIR`). With the dump present,
-expl3.sty's TeX-level guard `\ifx\csname tex_let:D\endcsname\relax`
-short-circuits the `\input expl3-code.tex` raw-load entirely.
+| Commit | Driver | What |
+|---|---|---|
+| `488ed74c41` | 2001.07651, 1807.04759 | mn2e_support `\ion` Perl-parity `\text{...}` wrap (`\$\beta\$` math toggles safe) |
+| `7edfb8eeb1` | 7-paper hang | `latexml_contrib::scicite_sty` (Science journal cite stub) |
+| `588ad90263`+`1d21ee0d29` | 60-paper expl3 cluster | `input_definitions` `@currname` leak on handleoptions=false; Perl `Package.pm:2580-2611` parity fix |
+| `8ac3eae2c4` | post-cleanup | removed redundant `tex_file_io`/`xy_sty` `@currname` wrappers (no-ops after the fix above) |
+| Master rebase 2026-05-10 | — | branch onto `bffd1be471` (schema-docs + split post-processor); 12 commits replayed, 1185/0/0 |
+| `488ed74c41`–`be45566b7e` | session 4 | `\ion` + math-CS protected flags + cleveref×hyperref dispatch + recursion guard + `\genfrac` raw readArg |
+| `662571777f`+`92c1a40850`+`6c9ad70d38` | glossaries chain | mfirstuc + datatool-base + chemgreek + substr raw-load shims |
 
-Performance impact (30 cluster papers, average):
-- Without dump (raw expl3 load): ~25-35s per paper
-- With dump:                    ~0.5-3s per paper
-- **~10x average speedup**, reaching **46×** on `\usetikzlibrary{calligraphy}`
-  test (28.1s → 0.6s).
+**Format dump enabled 2026-05-08** (`resources/dumps/latex.dump.txt`,
+25,439 entries, 3.9 MB, 389 expl3 markers). Dump path 5 in
+`latex.rs::latex_dump_available`. With dump present, expl3.sty's
+`\ifx\csname tex_let:D\endcsname\relax` short-circuits the raw
+`\input expl3-code.tex`. Perf: 30-cluster avg ~10× faster, peak 46×
+(`\usetikzlibrary{calligraphy}` 28.1s → 0.6s). Tests stable; dump
+file is gitignored.
 
-`cargo test --tests` 1139/0/0 unchanged with dump enabled.
-
-The dump file is gitignored (per `.gitignore: resources/dumps/`) —
-local artifact, regenerated as needed. CLAUDE.md "Distribution
-follow-up" plans `include_bytes!` embedding for distribution.
-
-**"Core dump" investigation closed** (Round-25, no fix needed):
-The two suspected Rust panics (1607.04981, 1506.04659) are NOT
-panics. Both hit our internal 60s wall-clock watchdog →
-`SIGABRT`, which `timeout` reports as "dumped core". They are slow
-conversions, not crashes:
-- 1607.04981 — LyX/babel/hyperref maze, completes at ~90s
-- 1506.04659 — harvmac/epsf maze, completes after watchdog kill
-
-**Cleanup landed 2026-05-08** (commit `8ac3eae2c4`, post-rebase): the
-two redundant @currname save/restore wrappers in `tex_file_io.rs` and
-`xy_sty.rs` deleted — input_definitions no longer mutates @currname on
-the handleoptions=false path, so the wrappers were pure no-ops.
-
-**Master rebase landed 2026-05-10**: branch `large-scale-testing-round-1`
-rebased onto `bffd1be471` ("feat: Schema Docs and Split post-processor
-#230"). All 12 local commits replayed cleanly — no conflicts despite
-6 overlapping files (latexml_post pipeline reorder + `process_chain`
-signature change). `cargo test --tests` = **1185/0/0** post-rebase.
+**"Core dump" investigations closed**: 1607.04981 (LyX/babel/hyperref,
+~90s) and 1506.04659 (harvmac/epsf) are NOT panics — internal 60s
+watchdog SIGABRT mislabelled by `timeout` as "dumped core". Slow,
+not crashing.
 
 ## Planned: replace hand-stub bindings with raw-load (2026-05-11)
 
@@ -134,54 +78,42 @@ coverage. See [`memory/feedback_prefer_raw_load.md`].
   `\scan_stop:` / `\group_begin:` etc. — i.e. proper csname-time
   exp-and-mark protocol from expl3. Tracked in Round-26 candidates.
 
-### `latexml_package/src/package/glossaries_sty.rs`
+### `latexml_package/src/package/glossaries_sty.rs` — **DONE 2026-05-12**
 - Intercepts: TL `glossaries.sty` (7714 lines as of TL2025).
-- Real chain: dependency-scan triggers `ifthen`, `xkeyval`,
-  `mfirstuc`, `textcase`, `xfor`, `datatool-base`, `amsgen`,
-  `etoolbox`, `glossary-long`, `glossary-super`, `glossary-list`,
-  `glossary-tree`, `translator`, `shellesc`, `tracklang`,
-  `glossary-hypernav`, `glossaries`.
-- **Measured gap (2026-05-11)**: with this stub disabled,
-  raw-load fires; several deps bail out (no Rust binding +
-  raw-load fails on expl3 emulation gaps), leaving
-  `\makenoidxglossaries`, `\newglossaryentry`, `\gls`,
-  `\printnoidxglossaries` undefined.
-- Specific dependency packages needing engine support to load
-  raw: `mfirstuc`, `xfor`, `datatool-base`, `glossary-long`,
-  `glossary-super`, `glossary-list`, `glossary-tree`,
-  `tracklang`, `glossary-hypernav`.
-- Stub is the load-bearing path today. Drivers: 1808.04659
-  (`\newglossarystyle`, stage 23 RUST-REGRESSION resolved
-  by stub-extension `ab043cc826` — interim fix only).
+- **Status: production raw-load**. Commit `3883d4d14d` swapped from
+  1140-line hand-stub to 129-line strict translation of Perl
+  `glossaries.sty.ltxml` (which raw-loads TL glossaries.sty via
+  `InputDefinitions(noltxml=>1)`). This session's add-ons closed
+  the remaining dependency gaps:
+  - `662571777f` — mfirstuc + datatool-base raw-load shims
+  - `92c1a40850` — chemgreek raw-load shim
+  - `6c9ad70d38` — substr raw-load shim
+  Surgical overrides remain in `glossaries_sty.rs` for `\@gls@link`
+  → `<ltx:glossaryref>`, `\@newglossaryentryposthook` →
+  `<ltx:glossarydefinition>`, `\printglossary` → `<ltx:glossary>`.
+- **End-to-end verification (2026-05-12)**: elsarticle + glossaries +
+  3-column tabular with `\gls`/`\acrshort` → **0 errors**. Three
+  styles (long/list/tree) all clean. Witness 1910.01256 Chrome
+  preview byte-for-byte matches Perl latexmlc `--format=html`.
 
 ### Plan of attack
 
-1. **Foundation pass — expl3 / l3* emulation**. Profile the
-   first few `Error:undefined:\<expl3-internal>` and
-   `Error:unexpected:\group_begin:` from each raw-load attempt;
-   land one engine fix per cluster. Verify by re-running the
-   raw-load on the same witness and watching the error count
-   drop. Repeat until raw-load is clean for ONE small
-   dependency (e.g. `xfor` is a good first target — fewer
-   pages, narrower scope).
-2. **Per-package raw-load enablement**. After foundations are
-   solid, disable the corresponding `*_sty.rs` stub for
-   `mhchem` and `glossaries`. Re-run their canvas witnesses.
-   Once a stub is no longer load-bearing, replace it with the
-   thin Perl-style override file (the small set of
-   `\@gls@link`-style hooks that wrap raw-loaded output
-   in `<ltx:glossaryref>` / `<ltx:graphics>`).
-3. **Regression guard**. Add to the per-stage triage: when a
-   new `\<missing-cs>` error surfaces in a paper that loads a
-   currently-stubbed package, document the gap rather than
-   land a new no-op stub. Witnesses that BLOCK stage advance
-   may still get a stub as an interim fix, but the commit
-   should note the stub is interim.
-
-**Out-of-scope here** (separate track, see `OXIDIZED_DESIGN.md`):
-strict Perl `\@gls@link`-style hooks for the post-raw-load
-overrides. Those are the "easy part" — the engine emulation
-gap is the actual work.
+1. ~~**Foundation pass — expl3 / l3* emulation for glossaries
+   chain**~~ **DONE 2026-05-12** (xfor + mfirstuc + datatool-base
+   + chemgreek + substr + tracklang shims; transitive substr /
+   datatool-fp / fp-* / glossary-long / glossary-super /
+   glossary-list / glossary-tree / glossary-hypernav all load
+   0-error).
+2. **mhchem retirement**: blocked by **92-error expl3
+   csname-protocol gap** (measured 2026-05-12). Specific
+   primitives: `\exp_args:Nc`, `\scan_stop:`, `\s__tl`,
+   `\tex_skip:D`, `\exp_stop_f:`, csname-time `\fi:`, relational
+   gaps. Engine work tracked as Round-26 candidate.
+3. **Regression guard**. When a new `\<missing-cs>` error
+   surfaces in a paper that loads a currently-stubbed package,
+   document the gap rather than land a no-op stub. Witnesses
+   that BLOCK stage advance may still get a stub as an interim
+   fix; commit body should note "interim".
 
 ## SHARED-FAILURE log (Perl + Rust both fail identically)
 
@@ -367,94 +299,28 @@ OOMs under 16-worker concurrency (converge cleanly standalone). All
 30 fixed regressions match Perl semantics; see Phase B clusters
 below for the residual sub-cause taxonomy.
 
-**Post-rebase landings 2026-05-10**:
-- `21e730e71e` — promote two silent-content-loss signals from Info
-  to Warn/Error so the canvas no longer classifies broken papers as
-  `[ok]`. (1) `document.rs:2759` "Duplicated attribute xml:id"
-  Info→Error (bypasses the `Error!` macro because the function
-  returns `String`, not `Result`; calls `note_status(Error)` +
-  `log::error!` directly). (2) `keyvals.rs:274` "Encountered unknown
-  KeyVals key" Info→Warn (SeenSet still dedups per (prefix,key)
-  tuple). Intentional divergences from Perl `Document.pm:1454` /
-  `KeyVals.pm:97`. Witness `1410.8171`: previously `[ok]` despite
-  S3+ rendering as essentially empty; now reports
-  `Status:conversion:2` with 54 warnings + 3 errors.
-- `fc2aae7266` — `siunitx_sty::six_format_1unit`: replace
-  `ExplodeText!(&pre_resolved)` / `ExplodeText!(&u_resolved)` with
-  `mouth::tokenize` for the `\mathrm{...}` argument. The exploded
-  form turned the resolved-presentation string `"\SIUnitSymbolMicro"`
-  into 17 OTHER tokens (literal text in math output); tokenize
-  re-parses through std catcodes producing a single CS token. Prefix
-  and unit are tokenized separately so the boundary is preserved.
-  Witness 1410.8171: `\SI{0,1}{\micro\kelvin}` rendered the literal
-  `\SIUnitSymbolMicroK` in math; now renders as `µ K`. Test fixture
-  `tests/complex/si.xml` regenerated (169→77 lines; broken
-  `<XMWrap>...<XMTok>\</XMTok><XMTok>SIUnitSymbol*</XMTok></XMWrap>`
-  triplets collapse to clean `<XMTok>` per unit).
+**Post-rebase landings 2026-05-10** (compressed): 12 commits
+landing the keyval cluster + siunitx CS-tokenize fix. Highlights:
 
-- **Keyval registration cluster** (paired with `21e730e71e`'s
-  Info→Warn promotion; Rust-only divergences except where noted):
-  - `75bab231a5` — siunitx 32 boolean SIX keyvals (Perl-faithful,
-    mirrors `siunitx.sty.ltxml:38-54`).
-  - `4255f5a7cd` — siunitx 45 non-boolean SIX keyvals (Rust-only,
-    silences siunitx-internal `\sisetup{...}` defaults noise).
-  - `254b4f54c9` — hyperref ~80 Hyp keyvals (mirrors the existing
-    `DeclareOption` loop). Driver: 2304.12803.
-  - `ece08d7ea5` — 5 hyperxmp Hyp keys (`pdfcopyright`, etc.).
-    Driver: tests/complex/hypertest.tex.
-  - `be595f4084` — `tabular.vattach` + 5 listings/lstlang internal
-    keys. Drivers: tests/structure/{greek,numprints}.tex,
-    tests/tikz/various_colors.tex.
-  - `d27be28dc0` — siunitx 26 rounding/table keys + 16 mathtools
-    `mt` keys + 10 xargs keys + 2 `lx@GEN` keys (`atameaning`
-    typo, `alignment-required`). Drivers: tests/complex/si.tex,
-    tests/ams/mathtools.tex, tests/digestion/xargs.tex,
-    tests/complex/physics.tex.
-  - `3a65bf6a88` — graphicx 20 Gin keys (`bb`, `hiresbb`,
-    `natwidth`, …) + 8 hyperref keys (`pdfinfo`, `pdfa`, …).
-    Drivers: 1503.00123 (`bb=...`), 1807.08711 (`pdfinfo`).
-  - `571fa4ed87` — epsfig 18 epsGin keys + caption 22 keys.
-    Drivers: 2101.10980 (`\psfig{angle=180}`),
-    2110.03647 (`\usepackage[compatibility=false]{caption}`).
-
-  Net effect: the Warn promotion now reserves "Encountered unknown
-  KeyVals key" for genuine binding gaps (typos, package gaps, version
-  drift). Internal init noise across siunitx/hyperref/graphicx/listings/
-  mathtools/xargs/caption/epsfig is silenced. Sandbox sweeps post-fix
-  (160+ random papers across years 2007-2024) found 0 residual gaps.
-
-**1410.8171 outcome (2026-05-10)**: standalone re-run of
-`SarkanyPRArevision.tex` against the post-fix binary now reports
-`Conversion complete: No obvious problems` — **0 warnings, 0 errors**
-(vs prior `54 warnings; 3 errors`). Three independent fixes
-combined:
-1. `fc2aae7266` — siunitx CS-preserving tokenize: collapses µK into
-   a clean single `<XMTok>` per glyph. Eliminated the 3
-   `Error:malformed:id` "Duplicated attribute xml:id" events as a
-   side-effect (broken `<XMTok>\</XMTok><XMTok>SIUnitSymbolMicroK
-   </XMTok>` triplets were producing the conflicting xml:id slots
-   during math-parser absorption; with clean tokenization the
-   id-counter clash is impossible).
-2. `75bab231a5` — Perl-faithful boolean DefKeyVals: silenced 11
-   warnings.
-3. `4255f5a7cd` — Rust-only non-bool DefKeyVals: silenced the
-   remaining 32 warnings. No XMath/_xmkey generator change needed.
-
-
-Round-20 Phase A Gate 0 closed 2026-05-03 at **99,829 / 100,003 =
-99.83%** raw OK on the 100k canvas. Round-22 sprint targeted the
-335-paper baseline-failure set (`~/round22_validate/inputs/`):
-- v10 baseline: 249/350 OK = 71.1%
-- v16 (mid-round): 274/330 = 83.0%
-- v17 (T1-cmd-loop fix): 289/330 = 87.6%
-- v18 (open_text walk + isotope + etoolbox-& + biblatex Let): 292/328 = 89.0%
-- v19 (XUntil constructor-args + aas_support C/L/R): 294/328 = 89.6%
-- **v21** (bookmark stub + graphics gs-timeout/inkscape-default): **294/327 = 89.9%**
-  (same 294 unique OK as v19; bookmark stub didn't directly recover papers
-  because token-limit fires elsewhere in 2310.15090 / 2203.01231 paths)
-- **v22** (round-22 wrap, 100k canvas validation): 295/329 = 89.7%
-
-Round-21 work archived in `docs/archive/`.
+- `21e730e71e` — silent-content-loss promotion: `Duplicated attribute
+  xml:id` Info→Error; `Encountered unknown KeyVals key` Info→Warn.
+  Witness 1410.8171: previously `[ok]` despite empty S3+; now reports
+  legitimate `Status:conversion:2`. Intentional Perl divergences.
+- `fc2aae7266` — siunitx `six_format_1unit`: replace `ExplodeText!`
+  with `mouth::tokenize` so `\SIUnitSymbolMicro` becomes a single CS
+  token, not 17 OTHER tokens. Test fixture `tests/complex/si.xml`
+  regenerated 169→77 lines. Witness 1410.8171: `\SI{0,1}{\micro\kelvin}`
+  now renders correctly as µK.
+- **Keyval registration cluster** (8 commits, `75bab231a5` /
+  `4255f5a7cd` / `254b4f54c9` / `ece08d7ea5` / `be595f4084` /
+  `d27be28dc0` / `3a65bf6a88` / `571fa4ed87`): siunitx 32 bool + 45
+  non-bool + 26 rounding/table SIX; hyperref ~80 Hyp + 8 graphics;
+  hyperxmp 5; mathtools 16 mt; xargs 10; tabular vattach + listings;
+  graphicx 20 Gin; epsfig 18 epsGin + caption 22. Net effect: warn
+  reserved for genuine binding gaps; sandbox 160+ papers found
+  0 residual gaps.
+- **1410.8171 outcome (2026-05-10)**: `SarkanyPRArevision.tex` now
+  reports `No obvious problems` (was 54 warnings + 3 errors).
 
 ## Round-20/22/23 (archived 2026-05-03 → 2026-05-08)
 
