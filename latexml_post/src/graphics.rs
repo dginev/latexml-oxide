@@ -360,11 +360,14 @@ impl Graphics {
     // explicit `\graphicspath{...}`) emitting `Error:expected:source`
     // for every figure, even though the source files are present.
     // Driver: astro-ph0002170 (8 .ps figures in the zip, all "not found").
-    let re = regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    use std::sync::LazyLock;
+    static GRAPHICSPATH_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
     let mut paths = Vec::new();
     for pi in doc.findnodes(".//processing-instruction('latexml')") {
       let text = pi.get_content();
-      if let Some(cap) = re.captures(&text) {
+      if let Some(cap) = GRAPHICSPATH_RE.captures(&text) {
         paths.push(cap[1].to_string());
       }
     }
@@ -1417,9 +1420,37 @@ fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
 
 fn read_pdf_page_box(source: &str) -> Option<(f64, f64)> {
   let bytes = std::fs::read(source).ok()?;
+  // Fast-fail: most modern PDFs (matplotlib, pgfplots, …) compress
+  // their page dictionary inside an object stream, so `/MediaBox` and
+  // `/CropBox` never appear as raw bytes. Skip the UTF-8 conversion
+  // (which iterates Utf8Chunks across the entire file) when no
+  // candidate token is present. Measured 2026-05-12 on 1910.01256:
+  // ~10 ms saved across the 5-PDF graphics phase.
+  let has_crop = memchr_find(&bytes, b"/CropBox").is_some();
+  let has_media = memchr_find(&bytes, b"/MediaBox").is_some();
+  if !has_crop && !has_media {
+    return None;
+  }
   let content = String::from_utf8_lossy(&bytes);
   parse_pdf_page_box(&content, &PDF_CROP_BOX_RE)
     .or_else(|| parse_pdf_page_box(&content, &PDF_MEDIA_BOX_RE))
+}
+
+/// Byte-level substring search (no UTF-8 conversion). Std-only —
+/// avoids pulling in `memchr` for one call site.
+fn memchr_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+  if needle.is_empty() || needle.len() > haystack.len() {
+    return None;
+  }
+  let first = needle[0];
+  let mut i = 0;
+  while i + needle.len() <= haystack.len() {
+    if haystack[i] == first && &haystack[i..i + needle.len()] == needle {
+      return Some(i);
+    }
+    i += 1;
+  }
+  None
 }
 
 fn parse_pdf_page_box(content: &str, re: &regex::Regex) -> Option<(f64, f64)> {
