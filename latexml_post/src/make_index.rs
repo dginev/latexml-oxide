@@ -422,7 +422,7 @@ impl MakeIndex {
     // test fixture and the vast majority of glossary entries), lowercase
     // comparison matches the expected order: "Cabbage" sorts beside
     // "cabbage" rather than before all lowercase letters.
-    entries.sort_by(|a, b| a.sort_key.to_lowercase().cmp(&b.sort_key.to_lowercase()));
+    entries.sort_by_key(|a| a.sort_key.to_lowercase());
     entries
   }
 

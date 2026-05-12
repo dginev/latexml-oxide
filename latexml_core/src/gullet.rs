@@ -396,9 +396,7 @@ fn read_internal_token() -> Option<Token> {
   // of panicking. Driver: 2404.06289 (natbib \NAT@@wrout cascade
   // landed here after the conversion was already in error-recovery
   // mode).
-  let Some(rt) = runtime.as_mut() else {
-    return None;
-  };
+  let rt = runtime.as_mut()?;
   let pushback = &mut rt.pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop() {

@@ -494,6 +494,13 @@ fn decorate_definitions(html: &str) -> String {
   }
   static DT_RE: OnceLock<Regex> = OnceLock::new();
   static ANCHOR_RE: OnceLock<Regex> = OnceLock::new();
+  // Strip-id regex consumed inside the per-dt loop below. Lifted out of
+  // the loop to satisfy clippy's `regex_creation_in_loops` — `OnceLock`
+  // already ensures the compile happens once across the program, but
+  // putting it at function scope makes that explicit.
+  static STRIP_ID_RE: OnceLock<Regex> = OnceLock::new();
+  let strip_id_re = STRIP_ID_RE
+    .get_or_init(|| Regex::new(r#" id="schema\.[^"]+""#).unwrap());
 
   // Match `<dt class="ltx_item">` with the kicker structure
   // `<bold-italic>KIND <sansserif>NAME</></></dt>` at any nesting depth
@@ -625,9 +632,6 @@ fn decorate_definitions(html: &str) -> String {
       .iter()
       .find(|a| a.start() >= dt_match.end() && a.start() < next_pos);
     if let Some(a) = matching {
-      static STRIP_ID_RE: OnceLock<Regex> = OnceLock::new();
-      let strip_id_re = STRIP_ID_RE
-        .get_or_init(|| Regex::new(r#" id="schema\.[^"]+""#).unwrap());
       let stripped = strip_id_re.replace(a.as_str(), "").into_owned();
       rewrites.push((a.start(), a.end(), stripped));
     }
@@ -693,8 +697,12 @@ fn inject_sidebar_index(html: &str) -> String {
   .collect();
 
   // Insertion-ordered subgroups: for "Pattern", key = suffix. For
-  // every other kind, key = "" (single bucket).
-  let mut by_kind: HashMap<&str, Vec<(String, Vec<(String, String)>)>> = HashMap::default();
+  // every other kind, key = "" (single bucket). The inner pair is
+  // `(dt_anchor, item_label)`; the outer pair groups them under a
+  // subgroup label.
+  type Subgroup = Vec<(String, String)>;
+  type Bucket = (String, Subgroup);
+  let mut by_kind: HashMap<&str, Vec<Bucket>> = HashMap::default();
 
   for cap in item_re.captures_iter(html) {
     let dt_id = cap[1].to_string();
