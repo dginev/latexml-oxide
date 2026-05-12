@@ -532,13 +532,26 @@ impl Graphics {
   /// plots and strict enough to prevent the 46 s+ runaway behaviour seen
   /// on Fade.pdf-class inputs.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
-    // First try poppler's `pdftocairo -svg`. Empirically 20-40× faster
-    // than inkscape on benign vector PDFs (e.g. matplotlib/pgfplots
-    // exports: 0.02 s vs 0.5 s) and produces equivalent or smaller SVG.
-    // We accept its output only if the result fits under
+    // Try fast vector rasterizers in order of measured speed +
+    // gzip-compressibility on the canvas slow-tail. Each is gated by
     // `MAX_SVG_OUTPUT_BYTES`; pathological vector-heavy PDFs (e.g.
-    // R-Graphics `W.pdf`) can otherwise emit >100 MB SVG. On rejection
-    // or failure we fall through to inkscape, then to PNG raster.
+    // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so
+    // the caller falls back to raster.
+    //
+    // Order:
+    //   1. mutool (MuPDF) — fastest (~2× pdftocairo). Mutool's SVG
+    //      output is also ~4× more gzip-compressible than pdftocairo's,
+    //      important when serving `.svgz` directly. Measured 2026-05-12
+    //      on matplotlib AugmentedMSRA10KExperimentVIIIpos.pdf (894 KB):
+    //         pdftocairo: 1.17 s, 29.9 MB raw / 6.0 MB gz
+    //         mutool:     0.52 s, 29.7 MB raw / 1.5 MB gz
+    //   2. pdftocairo (poppler) — fallback. 20-40× faster than inkscape
+    //      on benign vector PDFs (matplotlib/pgfplots: 0.02 s vs 0.5 s).
+    //   3. inkscape — last vector resort. Some PDFs that fail both
+    //      poppler and mutool still render via inkscape.
+    if Self::convert_image_svg_mutool(source, dest, page) {
+      return true;
+    }
     if Self::convert_image_svg_pdftocairo(source, dest, page) {
       return true;
     }
@@ -593,6 +606,72 @@ impl Graphics {
     std::fs::metadata(path)
       .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
       .unwrap_or(false)
+  }
+
+  /// `mutool convert -F svg` rasterizes the page's vector content to
+  /// SVG via MuPDF. Faster than pdftocairo on heavy vector PDFs (~2×)
+  /// AND produces output that gzip-compresses 4× better (matplotlib
+  /// AugmentedMSRA10K…pos.pdf: 29.7 MB raw / **1.5 MB gz** with mutool
+  /// vs 6 MB gz with pdftocairo). Important when serving `.svgz`.
+  ///
+  /// mutool's `convert` writes one file per page using a printf-style
+  /// pattern; we use `%d` so the output lands at e.g. `dest1.svg` and
+  /// then rename to the caller's `dest` so the same single-file
+  /// contract applies as for `convert_image_svg_pdftocairo`.
+  fn convert_image_svg_mutool(source: &str, dest: &str, page: Option<u32>) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp_pattern = parent.join(format!(".{}.{}.mutool_svg%d.svg", stem, unique));
+    let tmp_pattern_str = tmp_pattern.to_string_lossy().to_string();
+    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
+    let tmp_actual = parent.join(format!(
+      ".{}.{}.mutool_svg{}.svg",
+      stem, unique, p1
+    ));
+    let cleanup = || {
+      let _ = std::fs::remove_file(&tmp_actual);
+    };
+
+    let mut cmd = std::process::Command::new("mutool");
+    cmd
+      .arg("convert")
+      .arg("-F")
+      .arg("svg")
+      .arg("-o")
+      .arg(&tmp_pattern_str)
+      .arg(source)
+      .arg(p1.to_string());
+    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let ok = Self::run_with_timeout(cmd, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp_actual.exists();
+    if !ok {
+      cleanup();
+      return false;
+    }
+    if std::fs::metadata(&tmp_actual)
+      .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
+      .unwrap_or(true)
+    {
+      cleanup();
+      return false;
+    }
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp_actual, dest)
+      .or_else(|_| std::fs::copy(&tmp_actual, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    cleanup();
+    installed
   }
 
   /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
