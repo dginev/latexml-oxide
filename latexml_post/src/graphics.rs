@@ -502,18 +502,38 @@ impl Graphics {
   /// Pre-condition: `dest` exists. Post-condition: `dest` is
   /// in-place rotated.
   fn rotate_image_inplace(dest: &str, angle_deg: f64) -> bool {
+    // Sibling temp file to avoid IM's flaky in-place rewrite semantics.
+    let dest_path = std::path::Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp = parent.join(format!(".{}.{}.rotated", stem, unique));
     let mut cmd = std::process::Command::new("convert");
-    // `-rotate N` rotates clockwise. graphicx's angle is also
-    // measured clockwise (TeX's tradition), so pass through.
     cmd
       .arg(dest)
       .arg("-rotate")
       .arg(format!("{}", angle_deg))
-      .arg(dest);
+      .arg(&tmp);
     let timeout = std::time::Duration::from_secs(30);
-    Self::run_with_timeout(cmd, timeout)
-      .map(|status| status.success())
+    let cmd_ok = Self::run_with_timeout(cmd, timeout)
+      .map(|s| s.success())
       .unwrap_or(false)
+      && tmp.exists();
+    if !cmd_ok {
+      let _ = std::fs::remove_file(&tmp);
+      return false;
+    }
+    let renamed = std::fs::rename(&tmp, dest)
+      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
+      .is_ok();
+    let _ = std::fs::remove_file(&tmp);
+    renamed
   }
 
   /// Copy a source image to the destination directory, preserving relative paths.
@@ -966,6 +986,7 @@ impl Graphics {
   /// Returns true only when the destination file was actually written.
   /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    eprintln!("DBG convert_pdf_via_mutool: src={} dest={}", source, dest);
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1013,6 +1034,7 @@ impl Graphics {
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    eprintln!("DBG convert_pdf_via_pdftocairo: src={} dest={}", source, dest);
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1585,9 +1607,12 @@ impl Processor for Graphics {
               .to_string_lossy()
               .to_string()
           });
-          // Apply angle rotation in-place on the copied file. Perl
-          // semantics (Util/Image.pm:image_graphicx_complex L390-394):
-          // ImageMagick `Rotate` with `degrees => -$a1` — graphicx
+          // Plan::Copy fires only for raster sources (web-native PNG /
+          // JPG / GIF) where `dest_type == src_ext`. graphicx `angle=`
+          // rotation IS meaningful here — the source carries no PDF
+          // /Rotate metadata to pre-rotate from. Apply via convert.
+          // Perl semantics (Util/Image.pm:image_graphicx_complex
+          // L390-394): IM `Rotate` with `degrees => -$a1` — graphicx
           // angle is CCW; convert -rotate is CW; negate to convert.
           let angle = Self::parse_angle_option(options).unwrap_or(0.0);
           if angle.abs() > 0.5 {
@@ -1601,9 +1626,24 @@ impl Processor for Graphics {
           if let Some(out) = outcomes_by_job.get(job_id) {
             let mut node_mut = nodes[*idx].clone();
             if let Some(imagesrc) = &out.imagesrc {
-              // Apply angle rotation in-place on the converted file.
+              // Plan::Convert handles non-raster sources (EPS, PS, PDF,
+              // AI). For EPS, `convert_eps_via_pdf` runs ps2pdf which
+              // injects `/Rotate N` into the intermediate PDF based on
+              // the EPS's internal orientation hints; pdftocairo then
+              // RESPECTS that /Rotate when rasterizing, effectively
+              // pre-applying the graphicx angle rotation. Applying our
+              // angle rotation on top would double-count. So we ONLY
+              // apply rotation to .pdf sources — the EPS path is
+              // already complete after ps2pdf+pdftocairo.
+              //
+              // Discovered 2026-05-12 via paper 1303.5091 (Figs 5-7).
               let angle = Self::parse_angle_option(options).unwrap_or(0.0);
-              if angle.abs() > 0.5 {
+              let src_is_pdf = convert_jobs.get(*job_id)
+                .and_then(|j| Path::new(&j.source).extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("pdf")))
+                .unwrap_or(false);
+              if angle.abs() > 0.5 && src_is_pdf {
                 let dest_full = PathBuf::from(&dest_dir).join(imagesrc);
                 Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
               }
