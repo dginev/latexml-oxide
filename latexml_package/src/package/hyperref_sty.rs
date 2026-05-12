@@ -545,7 +545,27 @@ LoadDefinitions!({
   });
 
   Let!("\\HyOrg@addtoreset", "\\@addtoreset");
+  // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
+  // '\refstepcounter')`. We go one step further and mirror the real
+  // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to
+  // dispatch through `\H@refstepcounter`. This is what real-world
+  // packages assume — most notably `cleveref.sty:2045-2053` patches
+  // `\H@refstepcounter` (under `\@ifpackageloaded{hyperref}`) to set
+  // `\cref@currentlabel`. Without the dispatch, that patch is dead
+  // code: `\refstepcounter` stays bound to the kernel primitive,
+  // `\cref@currentlabel` keeps its `\ALG@beginalgorithmic` placeholder
+  // `[line][\arabic{ALG@line}][\cref@currentprefix]\theALG@line`,
+  // and the cleveref-augmented `\ALG@step` then does
+  // `\xdef\cref@currentprefix{\cref@currentprefix}` — a runaway
+  // self-expansion that Perl LaTeXML catches with an in-engine
+  // recursion guard (`Expandable.pm:81-89`), but Rust hangs at the
+  // worker wall-clock guard.
+  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). Hyperref's
+  // anchor side-effects (Hy@raisedlink, hyper@anchorstart/end) are
+  // PDF-only and intentionally skipped — only the dispatch matters
+  // for the XML pipeline.
   Let!("\\H@refstepcounter", "\\refstepcounter");
+  DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
 

@@ -218,60 +218,60 @@ gap is the actual work.
   exact same source line (255 col 1). Witnesses: cond-mat0010356,
   cond-mat0101405. SHARED-FAILURE.
 
-## Known engine gap: cleveref × algorithmicx × hyperref infinite-loop
+## ~~Known engine gap: cleveref × algorithmicx × hyperref infinite-loop~~
 
-**Status (2026-05-11):** repro minimised (8 lines); deferred for
-multi-session investigation. The 60 s wall-clock guard catches it in
-production; the worker zip is missing, no XML output produced.
+**RESOLVED 2026-05-11** (two-part Perl-parity fix). Witness 2403.15855
+(Springer Nature `sn-jnl`) now converts cleanly; 8-line minimal repro
+(algpseudocode + hyperref + cleveref + `\begin{algorithmic}\item a`)
+finishes in <1 s with no errors. `cargo test --workspace --tests
+--no-fail-fast` = 1185/0/0.
 
-**Witness:** stage 34 paper 2403.15855 (Springer Nature `sn-jnl` class,
-algorithm block at line 224). Rust hangs after cleveref reports
-"`algorithmicx' support loaded"; Perl finishes the same paper in <1 s
-(87 errors, no hang).
+**Two layers were needed** — neither alone is sufficient, both reflect
+faithful Perl behaviour:
 
-**Minimal repro:**
-```tex
-\documentclass{article}
-\usepackage{algpseudocode}
-\usepackage{hyperref}
-\usepackage{cleveref}
-\begin{document}
-\begin{algorithmic}
-\item a
-\end{algorithmic}
-\end{document}
-```
-Rust: hangs at the 60 s wall-clock guard. Perl: 1 error, completes.
+1. **`\refstepcounter → \H@refstepcounter` dispatch** in
+   `latexml_package::hyperref_sty`. Real `hyperref.sty:6631+6638-6657`
+   does:
+   ```tex
+   \let\H@refstepcounter\refstepcounter
+   \def\refstepcounter#1{ \H@refstepcounter{#1} … }
+   ```
+   Perl `hyperref.sty.ltxml:383` skips the `\def` — it relies on a
+   Perl-side recursion guard (next bullet) to keep cleveref happy.
+   We instead mirror real hyperref: `Let` + `DefMacro!("\\refstepcounter
+   {}", "\\H@refstepcounter{#1}")`. This is principled because
+   downstream packages (notably cleveref `cleveref.sty:2045-2053`)
+   patch `\H@refstepcounter` to set `\cref@currentlabel`, and that
+   patch only fires if `\refstepcounter` actually dispatches through
+   `\H@refstepcounter`. Without the dispatch, `\cref@currentlabel`
+   retained its `\ALG@beginalgorithmic` placeholder
+   `[line][\arabic{ALG@line}][\cref@currentprefix]\theALG@line`, the
+   `\@@cref@getprefix` body did `\def\cref@currentprefix
+   {\cref@currentprefix}` (self-ref), and `\xdef
+   \cref@currentprefix{\cref@currentprefix}` looped.
 
-**What's known:**
-- All three packages required. Dropping any one (hyperref, cleveref, or
-  algpseudocode) makes the conversion finish.
-- The hang begins at the first list item inside `\begin{algorithmic}`
-  (the `{\ALG@step}` label callback). With both
-  `\g@addto@macro\ALG@step{...\refstepcounter\@cref@getprefix\xdef...}`
-  and `\g@addto@macro\ALG@beginalgorithmic{...\cref@currentlabel...}`
-  cleveref augmentations active, repeated expansion through
-  `\@cref@getprefix \cref@currentlabel \@nil \cref@currentprefix`
-  appears to feed into `\xdef\cref@currentprefix{\cref@currentprefix}`
-  loop somewhere.
-- Cleveref's `\refstepcounter` redef (which resets `\cref@currentlabel`)
-  IS active (confirmed via `\show\refstepcounter`). So the
-  self-reference path we saw with a hand-built minimal cleveref does
-  NOT directly apply to the real cleveref load.
-- Perl raw-loads the same `cleveref.sty` and emits the same augments;
-  the difference is in how Rust's expansion machinery handles
-  `\protected@edef`/`\@ifnextchar`/`\@cref@getprefix` chain inside the
-  list `\ALG@step` callback. Likely something is loop-like (repeated
-  `\@cref@getprefix` call on each list item) rather than truly
-  infinite.
+2. **Self-recursion guard fixed in `latexml_core::definition::expandable`**.
+   Perl `Expandable.pm:81-89` errors with
+   `Token X expands into itself!` and substitutes empty tokens for the
+   invocation. The Rust port already detected the recursion but tried
+   to "fix" it by `assign_meaning(self.cs, Stored::Token(self.cs))` —
+   a NO-OP because `assign_meaning` short-circuits on `token == mt`
+   (state.rs:1918-1922). The Expandable definition stayed in place
+   and the guard re-fired forever. Replaced with the Perl strategy:
+   `Error!("recursion", cs, "Token X expands into itself!"); Tokens!()`.
+   Identity for expl3 quarks (`\q_no_value`, …) is preserved because
+   quarks are `\cs_new_protected:Npn` — protected expandables aren't
+   expanded under the partial-expansion path, so the guard never
+   fires; `\ifx`-by-meaning stays distinct.
 
-**Next step (next session):** instrument the gullet token-loop with
-a debug counter when processing `\ALG@step` inside an algorithmic list,
-or step through cleveref's `\refstepcounter@noarg{ALG@line}` with
-`\tracingmacros=1` and compare to Perl's trace.
+The two layers are complementary: (1) fixes the *cause* of the
+runaway expansion (cleveref's patch now fires properly); (2) is the
+*safety net* — any other downstream package that hits a similar
+`\def\foo{\foo}` situation gets a visible error instead of a hang.
 
-**Severity:** RUST-REGRESSION but contained (the wall-clock guard
-catches it, no zip produced for ~handful of papers). Deferred.
+Driver: 2403.15855 (Springer Nature `sn-jnl` class).
+Files: `latexml_package/src/package/hyperref_sty.rs`,
+`latexml_core/src/definition/expandable.rs`.
 
 ## Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column
 
