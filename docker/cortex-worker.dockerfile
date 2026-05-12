@@ -29,8 +29,14 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2 libxslt1.1 libkpathsea6 libzmq5 \
     texlive-latex-base texlive-latex-extra texlive-science \
-    imagemagick \
+    imagemagick poppler-utils mupdf-tools \
     && rm -rf /var/lib/apt/lists/*
+# poppler-utils provides pdftocairo (default fast PDF→PNG/SVG path).
+# mupdf-tools provides `mutool draw`, the first-choice PDF rasterizer
+# (~2× faster than pdftocairo on matplotlib/pgfplots scatter PDFs and
+# ~4× more gzip-compressible SVG output). Graceful fallback to
+# pdftocairo if missing, but cortex workers process the canvas
+# slow-tail PDFs where the speedup matters most.
 
 # Copy binary
 COPY --from=builder /build/target/release/cortex_worker /usr/local/bin/
