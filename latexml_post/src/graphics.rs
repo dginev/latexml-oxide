@@ -824,6 +824,70 @@ impl Graphics {
     source.to_lowercase().ends_with(".pdf")
   }
 
+  /// Rasterize a PDF directly via MuPDF's `mutool draw`. ~1.8× faster
+  /// than `pdftocairo` on vector-heavy matplotlib/pgfplots scatter
+  /// PDFs (the dominant slow-tail on the canvas), comparable on simple
+  /// figures. Returns true only when the destination file was actually
+  /// written. Falls through to pdftocairo on failure.
+  ///
+  /// Measured 2026-05-12 on 1910.01256 figures:
+  ///   AugmentedMSRA10K…pos.pdf (894 KB scatter): pdftocairo 0.86 s →
+  ///     mutool 0.48 s (-44%)
+  ///   MSRA10Kpos.pdf (199 KB scatter):           0.21 s → 0.12 s
+  ///   flowchart.pdf (930 KB block diagram):      0.11 s → 0.04 s
+  fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
+    let timeout = std::time::Duration::from_secs(20);
+
+    let cleanup = |tmp: &Path| {
+      let _ = std::fs::remove_file(tmp);
+    };
+
+    let mut mutool = std::process::Command::new("mutool");
+    mutool
+      .arg("draw")
+      .arg("-o")
+      .arg(&tmp)
+      .arg("-r")
+      .arg(density.to_string())
+      .arg("-F")
+      .arg("png");
+    if let Some(p) = page {
+      let p1 = p.max(1);
+      mutool.arg(source).arg(p1.to_string());
+    } else {
+      // Default to first page only (parity with pdftocairo's -f 1 -l 1).
+      mutool.arg(source).arg("1");
+    }
+
+    let mutool_ok = Self::run_with_timeout(mutool, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp.exists();
+    if !mutool_ok {
+      cleanup(&tmp);
+      return false;
+    }
+
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp, dest)
+      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    cleanup(&tmp);
+    installed
+  }
+
   /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
@@ -970,16 +1034,21 @@ impl Graphics {
     {
       return true;
     }
-    // For PDF sources, prefer poppler's `pdftocairo --png` over
-    // ImageMagick's `convert`-via-Ghostscript. Empirically 25× faster on
-    // vector-heavy PDFs (e.g. R-Graphics output), and avoids tens-of-seconds
-    // gs runaways. Falls through to the convert/gs path if pdftocairo is
-    // unavailable or fails for any reason.
-    if Self::should_try_pdf_cairo_path(source)
-      && dest.to_lowercase().ends_with(".png")
-      && Self::convert_pdf_via_pdftocairo(source, dest, density, page)
-    {
-      return true;
+    // For PDF sources, try fast rasterizers in order of measured speed
+    // on the canvas slow-tail (matplotlib/pgfplots scatter PDFs):
+    //   1. mutool (MuPDF) — fastest on vector-heavy scatter PDFs (~1.8×
+    //      faster than pdftocairo on the slow tail). Optional dep.
+    //   2. pdftocairo (poppler) — universally available where TL is.
+    //      25× faster than convert/gs on vector PDFs.
+    //   3. convert/gs (ImageMagick + Ghostscript) — last-resort fallback,
+    //      with hard timeout to avoid gs runaways.
+    if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
+      if Self::convert_pdf_via_mutool(source, dest, density, page) {
+        return true;
+      }
+      if Self::convert_pdf_via_pdftocairo(source, dest, density, page) {
+        return true;
+      }
     }
     // Wall-clock timeout to bound `gs`-via-`convert` runaways on
     // pathological PDFs (raster-heavy or with broken xref tables).
