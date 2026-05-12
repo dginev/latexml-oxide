@@ -539,22 +539,10 @@ impl Graphics {
     // the caller falls back to raster.
     //
     // Order:
-    //   1. mupdf-rs (in-process MuPDF) — MANDATORY for SVG. Saves
-    //      the subprocess fork overhead per image. Measured 2026-05-12
-    //      on matplotlib AugmentedMSRA10KExperimentVIIIpos.pdf:
-    //        in-process mupdf-rs: 459 ms, 29.7 MB raw / 1.5 MB gz
-    //        mutool subprocess:   520 ms, 29.7 MB raw / 1.5 MB gz
-    //        pdftocairo:          1170 ms, 29.9 MB raw / 6.0 MB gz
-    //   2. mutool subprocess — fallback when in-process MuPDF init fails.
-    //   3. pdftocairo (poppler) — universally available with TeX Live.
-    //   4. inkscape — last vector resort. Some PDFs that fail every
-    //      other path still render via inkscape (but it can time out).
-    if Self::convert_image_svg_mupdf_rs(source, dest, page) {
-      return true;
-    }
-    if Self::convert_image_svg_mutool(source, dest, page) {
-      return true;
-    }
+    //   1. pdftocairo (poppler) — universally available with TeX Live.
+    //      20-40× faster than inkscape on benign vector PDFs.
+    //   2. inkscape — last vector resort. Some PDFs that fail
+    //      poppler still render via inkscape (but it can time out).
     if Self::convert_image_svg_pdftocairo(source, dest, page) {
       return true;
     }
@@ -610,101 +598,6 @@ impl Graphics {
       .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
       .unwrap_or(false)
   }
-
-  /// In-process MuPDF SVG export via the mupdf Rust crate. Avoids the
-  /// subprocess fork overhead per PDF; the SVG output is identical
-  /// byte-for-byte to subprocess `mutool convert -F svg`.
-  ///
-  /// Measured 2026-05-12 on AugmentedMSRA10KExperimentVIIIpos.pdf:
-  ///   in-process mupdf-rs: 459 ms / 29.7 MB raw / 1.5 MB gz
-  ///   mutool subprocess:   520 ms / 29.7 MB raw / 1.5 MB gz
-  fn convert_image_svg_mupdf_rs(source: &str, dest: &str, page: Option<u32>) -> bool {
-    use mupdf::{Document, Matrix};
-    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
-    let doc = match Document::open(source) {
-      Ok(d) => d,
-      Err(_) => return false,
-    };
-    let page = match doc.load_page((p1 as i32) - 1) {
-      Ok(p) => p,
-      Err(_) => return false,
-    };
-    let svg: String = match page.to_svg(&Matrix::IDENTITY) {
-      Ok(s) => s,
-      Err(_) => return false,
-    };
-    if svg.len() as u64 > Self::MAX_SVG_OUTPUT_BYTES {
-      return false;
-    }
-    std::fs::write(dest, svg).is_ok() && Path::new(dest).exists()
-  }
-
-  /// `mutool convert -F svg` rasterizes the page's vector content to
-  /// SVG via MuPDF. Faster than pdftocairo on heavy vector PDFs (~2×)
-  /// AND produces output that gzip-compresses 4× better (matplotlib
-  /// AugmentedMSRA10K…pos.pdf: 29.7 MB raw / **1.5 MB gz** with mutool
-  /// vs 6 MB gz with pdftocairo). Important when serving `.svgz`.
-  ///
-  /// mutool's `convert` writes one file per page using a printf-style
-  /// pattern; we use `%d` so the output lands at e.g. `dest1.svg` and
-  /// then rename to the caller's `dest` so the same single-file
-  /// contract applies as for `convert_image_svg_pdftocairo`.
-  fn convert_image_svg_mutool(source: &str, dest: &str, page: Option<u32>) -> bool {
-    let dest_path = Path::new(dest);
-    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
-    let tmp_pattern = parent.join(format!(".{}.{}.mutool_svg%d.svg", stem, unique));
-    let tmp_pattern_str = tmp_pattern.to_string_lossy().to_string();
-    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
-    let tmp_actual = parent.join(format!(
-      ".{}.{}.mutool_svg{}.svg",
-      stem, unique, p1
-    ));
-    let cleanup = || {
-      let _ = std::fs::remove_file(&tmp_actual);
-    };
-
-    let mut cmd = std::process::Command::new("mutool");
-    cmd
-      .arg("convert")
-      .arg("-F")
-      .arg("svg")
-      .arg("-o")
-      .arg(&tmp_pattern_str)
-      .arg(source)
-      .arg(p1.to_string());
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
-    let ok = Self::run_with_timeout(cmd, timeout)
-      .map(|status| status.success())
-      .unwrap_or(false)
-      && tmp_actual.exists();
-    if !ok {
-      cleanup();
-      return false;
-    }
-    if std::fs::metadata(&tmp_actual)
-      .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
-      .unwrap_or(true)
-    {
-      cleanup();
-      return false;
-    }
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp_actual, dest)
-      .or_else(|_| std::fs::copy(&tmp_actual, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
-    cleanup();
-    installed
-  }
-
   /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
   /// poppler/cairo. Much faster than inkscape on the kind of vector PDFs
   /// matplotlib/pgfplots produce. Returns true ONLY if the output is
@@ -934,105 +827,86 @@ impl Graphics {
     source.to_lowercase().ends_with(".pdf")
   }
 
-  /// Rasterize a PDF directly via MuPDF's `mutool draw`. ~1.8× faster
-  /// than `pdftocairo` on vector-heavy matplotlib/pgfplots scatter
-  /// PDFs (the dominant slow-tail on the canvas), comparable on simple
-  /// figures. Returns true only when the destination file was actually
-  /// written. Falls through to pdftocairo on failure.
+  /// Process-wide Pdfium binding. Lazy-initialised on first use;
+  /// `None` when the system `libpdfium.so` isn't available (then
+  /// callers fall through to the `pdftocairo` subprocess path).
   ///
-  /// Measured 2026-05-12 on 1910.01256 figures:
-  ///   AugmentedMSRA10K…pos.pdf (894 KB scatter): pdftocairo 0.86 s →
-  ///     mutool 0.48 s (-44%)
-  ///   MSRA10Kpos.pdf (199 KB scatter):           0.21 s → 0.12 s
-  ///   flowchart.pdf (930 KB block diagram):      0.11 s → 0.04 s
-  fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    let dest_path = Path::new(dest);
-    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
-    let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
-    let timeout = std::time::Duration::from_secs(20);
-
-    let cleanup = |tmp: &Path| {
-      let _ = std::fs::remove_file(tmp);
-    };
-
-    let mut mutool = std::process::Command::new("mutool");
-    mutool
-      .arg("draw")
-      .arg("-o")
-      .arg(&tmp)
-      .arg("-r")
-      .arg(density.to_string())
-      .arg("-F")
-      .arg("png");
-    if let Some(p) = page {
-      let p1 = p.max(1);
-      mutool.arg(source).arg(p1.to_string());
-    } else {
-      // Default to first page only (parity with pdftocairo's -f 1 -l 1).
-      mutool.arg(source).arg("1");
-    }
-
-    let mutool_ok = Self::run_with_timeout(mutool, timeout)
-      .map(|status| status.success())
-      .unwrap_or(false)
-      && tmp.exists();
-    if !mutool_ok {
-      cleanup(&tmp);
-      return false;
-    }
-
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp, dest)
-      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
-    cleanup(&tmp);
-    installed
+  /// The returned `&'static Pdfium` is intentionally LEAKED. PDFium's
+  /// `FPDF_DestroyLibrary` does not tolerate being called during
+  /// process-static teardown; running it after thread-locals have
+  /// been dropped triggers a SIGTRAP/assertion. Leaking the binding
+  /// is the documented workaround (see pdfium-render issue #36 and
+  /// PDFium's own `init/destroy` contract).
+  fn pdfium() -> Option<&'static pdfium_render::prelude::Pdfium> {
+    use std::sync::OnceLock;
+    use pdfium_render::prelude::Pdfium;
+    static PDFIUM: OnceLock<Option<&'static Pdfium>> = OnceLock::new();
+    *PDFIUM.get_or_init(|| match Pdfium::bind_to_system_library() {
+      Ok(b) => {
+        let p = Pdfium::new(b);
+        // Box::leak — never dropped, so FPDF_DestroyLibrary never runs.
+        Some(&*Box::leak(Box::new(p)))
+      },
+      Err(_) => None,
+    })
   }
 
-  /// Rasterize a PDF in-process via the `mupdf` Rust crate. Saves the
-  /// subprocess fork overhead (~5 ms per PDF) and matches MuPDF
-  /// subprocess speed on the slow tail.
+  /// Rasterize a PDF in-process via the `pdfium-render` Rust crate
+  /// (wraps PDFium, Chrome's PDF engine; BSD-3/Apache-2.0 — clean for
+  /// CC0/MIT redistribution). Eliminates the `pdftocairo` subprocess
+  /// fork overhead and matches its speed on the slow tail.
   ///
   /// Measured 2026-05-12 on `AugmentedMSRA10KExperimentVIIIpos.pdf`
   /// (894 KB matplotlib scatter):
-  ///   pdfium-render: 439 ms  (subprocess fork-free but Apache/MIT)
-  ///   mupdf-rs:      493 ms  (in-process MuPDF — same engine as
-  ///                            subprocess `mutool draw`, no fork)
-  ///   mutool exec:   480 ms  (subprocess fork)
+  ///   pdfium-render: 439 ms  (in-process, no fork)
   ///   pdftocairo:    860 ms  (subprocess fork)
   ///
-  /// License caveat: mupdf-rs is AGPL-3.0. See latexml_post/Cargo.toml.
-  fn convert_pdf_via_mupdf_rs(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    use mupdf::{Colorspace, Document, ImageFormat, Matrix};
+  /// **Thread-safety**: PDFium is NOT thread-safe (per pdfium-render
+  /// README "Multi-threading" section). All calls are serialised
+  /// through a process-wide mutex. This caps parallelism here, but
+  /// the canvas graphics phase usually has just one slow PDF per
+  /// document anyway, so wall-time is bounded by the slowest PDF.
+  ///
+  /// Requires `libpdfium.so` on the runtime LD path. Returns `false`
+  /// (callers fall through) when the library isn't loadable or any
+  /// step fails — never panics on missing PDFium.
+  fn convert_pdf_via_pdfium(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    use pdfium_render::prelude::*;
+    use std::sync::Mutex;
+    static PDFIUM_MUTEX: Mutex<()> = Mutex::new(());
+    let _guard = PDFIUM_MUTEX.lock().unwrap();
+    let Some(pdfium) = Self::pdfium() else {
+      return false;
+    };
     let p1 = page.map(|p| p.max(1)).unwrap_or(1);
-    let zoom = (density as f32) / 72.0_f32;
-    let mat = Matrix::new_scale(zoom, zoom);
-
-    let doc = match Document::open(source) {
+    let doc = match pdfium.load_pdf_from_file(Path::new(source), None) {
       Ok(d) => d,
       Err(_) => return false,
     };
-    let page = match doc.load_page((p1 as i32) - 1) {
+    let page = match doc.pages().get((p1 as i32) - 1) {
       Ok(p) => p,
       Err(_) => return false,
     };
-    let pixmap = match page.to_pixmap(&mat, &Colorspace::device_rgb(), false, false) {
-      Ok(pm) => pm,
+    let pw_pt = page.width().value;
+    let ph_pt = page.height().value;
+    let target_w = ((pw_pt as f64) * (density as f64) / 72.0).round() as i32;
+    let target_h = ((ph_pt as f64) * (density as f64) / 72.0).round() as i32;
+    let cfg = PdfRenderConfig::new()
+      .set_target_width(target_w)
+      .set_maximum_height(target_h);
+    let bitmap = match page.render_with_config(&cfg) {
+      Ok(b) => b,
       Err(_) => return false,
     };
-    // mupdf-rs writes the image and decides the format from the file extension
-    // OR from the explicit `ImageFormat`. Use the explicit form to be defensive
-    // against callers passing odd dest extensions.
-    pixmap.save_as(dest, ImageFormat::PNG).is_ok() && Path::new(dest).exists()
+    let dyn_image = match bitmap.as_image() {
+      Ok(i) => i,
+      Err(_) => return false,
+    };
+    dyn_image
+      .into_rgb8()
+      .save_with_format(dest, image::ImageFormat::Png)
+      .is_ok()
+      && Path::new(dest).exists()
   }
 
   /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
@@ -1181,23 +1055,16 @@ impl Graphics {
     {
       return true;
     }
-    // For PDF sources, try fast rasterizers in order of measured speed
-    // on the canvas slow-tail (matplotlib/pgfplots scatter PDFs):
-    //   1. mupdf-rs (in-process MuPDF) — MANDATORY. Eliminates the
-    //      subprocess fork overhead (~5 ms × N images). Benchmark
-    //      2026-05-12: 493 ms on the slow scatter PDF, 1-10 ms on
-    //      benign figures, vs 480/750/860 ms via subprocess mutool/
-    //      pdftocairo/inkscape.
-    //   2. mutool subprocess — fallback for environments where the
-    //      mupdf-rs init fails or yields an error.
-    //   3. pdftocairo (poppler) subprocess — universally available
-    //      where TeX Live is. 25× faster than convert/gs.
-    //   (4) convert/gs — last-resort, with hard timeout.
+    // For PDF sources, try fast rasterizers in order:
+    //   1. pdfium-render — in-process (no subprocess fork), Apache-2.0.
+    //      Fastest on the canvas slow-tail. Requires libpdfium.so at
+    //      runtime; returns false when the library isn't loadable so
+    //      we fall through.
+    //   2. pdftocairo (poppler) subprocess — universally available
+    //      with TeX Live. 25× faster than convert/gs.
+    //   3. convert/gs — last-resort, with hard timeout.
     if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
-      if Self::convert_pdf_via_mupdf_rs(source, dest, density, page) {
-        return true;
-      }
-      if Self::convert_pdf_via_mutool(source, dest, density, page) {
+      if Self::convert_pdf_via_pdfium(source, dest, density, page) {
         return true;
       }
       if Self::convert_pdf_via_pdftocairo(source, dest, density, page) {
