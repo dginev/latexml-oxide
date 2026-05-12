@@ -120,8 +120,15 @@ impl Graphics {
   pub fn new(dpi: Option<u32>, trivial_scaling: bool) -> Self {
     let mut type_properties = HashMap::default();
 
-    // Default type properties matching Perl
-    for ext in &["ai", "pdf", "ps", "eps"] {
+    // Default type properties matching Perl.
+    // `.epsi` (EPS Interchange — EPS with optional embedded TIFF
+    // preview, e.g. HIGZ / CERN PAW output) and `.epsf` are EPS
+    // variants browsers can't render natively but `gs` rasterises
+    // identically to plain `.eps`. SURPASS-PERL: Perl LaTeXML also
+    // omits these from its type_properties so the files were copied
+    // verbatim and rendered as broken images. Witness:
+    // hep-ph0608319 Fig 1 (refit_av_extra.epsi, HIGZ 1.29/04 output).
+    for ext in &["ai", "pdf", "ps", "eps", "epsi", "epsf"] {
       type_properties.insert(ext.to_string(), TypeProperties {
         destination_type: Some("png".to_string()),
         transparent: true,
@@ -174,6 +181,8 @@ impl Graphics {
         "jpg",
         "jpeg",
         "eps",
+        "epsi",
+        "epsf",
         "ps",
         "postscript",
         "ai",
@@ -1009,8 +1018,11 @@ impl Graphics {
       .map(|d| d.clamp(50, 600))
       .unwrap_or(Self::DEFAULT_RASTER_DENSITY);
     let source_lc = source.to_lowercase();
-    let is_postscript =
-      source_lc.ends_with(".eps") || source_lc.ends_with(".ps") || source_lc.ends_with(".ai");
+    let is_postscript = source_lc.ends_with(".eps")
+      || source_lc.ends_with(".epsi")
+      || source_lc.ends_with(".epsf")
+      || source_lc.ends_with(".ps")
+      || source_lc.ends_with(".ai");
     let is_pdf = source_lc.ends_with(".pdf");
     let page_box = if is_postscript {
       read_postscript_bounding_box(source)
@@ -1416,7 +1428,10 @@ impl Graphics {
     // files have NO `%%Orientation:` comment, so they go through the
     // gs path as before.
     let src_lc = source.to_lowercase();
-    let is_postscript = src_lc.ends_with(".eps") || src_lc.ends_with(".ps");
+    let is_postscript = src_lc.ends_with(".eps")
+      || src_lc.ends_with(".epsi")
+      || src_lc.ends_with(".epsf")
+      || src_lc.ends_with(".ps");
     if is_postscript && page.is_none() {
       if Self::postscript_is_landscape(source)
         && Self::convert_eps_via_pdf(source, dest, density)

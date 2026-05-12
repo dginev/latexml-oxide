@@ -880,9 +880,17 @@ impl CrossRef {
     let bibrefs = doc.findnodes("//ltx:bibref");
     for bibref in &bibrefs {
       let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
-      let _show = bibref
+      let show = bibref
         .get_attribute("show")
         .unwrap_or_else(|| "refnum".to_string());
+      // natbib emits show patterns like:
+      //   "AuthorsPhrase1Year"           → \citep{X} → "Author (Year)"
+      //   "Authors Phrase1YearPhrase2"  → \citet{X} → "Author (Year)"
+      //   "refnum"                       → numeric / default
+      // Anything containing "Author" or "Year" wants the author-year
+      // text built from the bibentry's `authors`/`year` fields; the
+      // legacy refnum-only path serves the numeric case.
+      let want_authoryear = show.contains("Author") || show.contains("Year");
       let sep = bibref
         .get_attribute("separator")
         .unwrap_or_else(|| ",".to_string());
@@ -912,18 +920,61 @@ impl CrossRef {
           if let Some(url) = self.generate_url(doc, &id) {
             attrs.insert("href".to_string(), url);
           }
+          // Build the display text: author-year when natbib's `show`
+          // requests it AND the bibentry has the author/year metadata;
+          // otherwise fall back to the numeric `number`/`refnum`
+          // (matches the legacy path).
           // Perl: use 'number' field for numeric citations (bare number without brackets).
           // The 'refnum' field includes brackets like "[13]", causing double brackets [[13]].
-          let refnum = self
-            .db
-            .lookup(&format!("ID:{}", id))
-            .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
-            .map(|v| v.to_string())
-            .unwrap_or_else(|| key.to_string());
+          let entry = self.db.lookup(&format!("ID:{}", id));
+          let display = if want_authoryear {
+            let authors = entry
+              .and_then(|e| {
+                e.get_value("authors")
+                  .or_else(|| e.get_value("fullauthors"))
+                  .or_else(|| e.get_value("keytag"))
+              })
+              .map(|v| v.to_string())
+              .map(|s| s.trim().to_string())
+              .filter(|s| !s.is_empty());
+            let year = entry
+              .and_then(|e| e.get_value("year").or_else(|| e.get_value("typetag")))
+              .map(|v| v.to_string())
+              .map(|s| s.trim().to_string())
+              .filter(|s| !s.is_empty());
+            match (authors, year) {
+              (Some(a), Some(y)) => {
+                // `Phrase1`/`Phrase2` in the show string mark where
+                // open/close paren or yyseparator usually go in Perl's
+                // bibrefphrase markup. We collapse to a simple
+                // "Authors Year" form: `\citep` (AuthorsPhrase1Year)
+                // becomes "Author Year" inside the surrounding
+                // parens emitted by the citemacro; `\citet`
+                // (Authors Phrase1YearPhrase2) becomes "Author Year"
+                // with the macro adding the year-parens. Good enough
+                // for visual parity with the PDF in the common case.
+                format!("{} {}", a, y)
+              },
+              (Some(a), None) => a,
+              (None, Some(y)) => y,
+              (None, None) => {
+                // No author/year metadata → fall back to refnum.
+                entry
+                  .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
+                  .map(|v| v.to_string())
+                  .unwrap_or_else(|| key.to_string())
+              },
+            }
+          } else {
+            entry
+              .and_then(|e| e.get_value("number").or_else(|| e.get_value("refnum")))
+              .map(|v| v.to_string())
+              .unwrap_or_else(|| key.to_string())
+          };
           refs.push(NodeData::Element {
             tag:        "ltx:ref".to_string(),
             attributes: Some(attrs),
-            children:   vec![NodeData::Text(refnum)],
+            children:   vec![NodeData::Text(display)],
           });
         } else {
           self.note_missing("warn", "Entry for citation", key);
