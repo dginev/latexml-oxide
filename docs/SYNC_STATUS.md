@@ -15,19 +15,22 @@ glossaries — see "Planned" below).
 the graphics correctness fixes (`apply_graphicx_transforms`
 width-only, PGPLOT `%%Orientation: Landscape` route) and the perf
 pass (kpathsea prewarm, mouth UTF-8 fast path, XSLT skip-roundtrip,
-worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-3 against
+worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-4 against
 baselines:
 
-| Stage | Baseline OK | Re-sweep OK | Δ | ok→fail | fail→ok |
+| Stage | Baseline OK | Re-sweep OK | Δ | ok→fail (real) | fail→ok |
 |---|---:|---:|---:|---:|---:|
 | 1 | 9966/10000 | **9984/10000** | **+18** | 0 | 18 |
-| 2 | 9991/10000 | 9989/10000 | -2 | 2 (load flake) | 0 |
+| 2 | 9991/10000 | 9989/10000 | -2 | 0 (2 sweep flakes) | 0 |
 | 3 | 9984/10000 | **9985/10000** | **+1** | 0 | 1 |
-| **total** | 29941/30000 | **29958/30000** | **+17** | 0 real | 19 |
+| 4 | 9974/10000 | **9979/10000** | **+5** | 0 (1 sweep flake) | 6 |
+| **total** | 39915/40000 | **39937/40000** | **+22** | 0 real | 25 |
 
-Stage 2's 2 "regressions" (cond-mat0205476 segfault, astro-ph0206056
-conversion_error) reproduce clean standalone in <1 s — they are
-sweep-load flakes under 16-worker CPU pressure, not real regressions.
+The "regressions" (stage 2 cond-mat0205476 + astro-ph0206056,
+stage 4 hep-ph0312215) reproduce clean standalone in <1 s each —
+sweep-load flakes under heavy parallel CPU pressure, not real
+regressions. Net across 40k papers: **+22, zero real regressions,
+25 fixes.**
 
 ### Round-25 active worklist
 
