@@ -671,19 +671,20 @@ LoadDefinitions!({
   // being redefined by downstream classes/packages — protects the
   // star-variant `\let\fnum@equation\relax` formatting-off semantics).
   //
-  // Use `\edef\theequation{#2}` rather than the upstream
-  // `\expandafter\def\expandafter\theequation\expandafter{#2}` chain.
-  // The chain only one-step-expands the FIRST token of #2, leaving any
-  // remaining `\theequation` reference inside #2 to be a recursive
-  // self-reference under the new def. Drivers like
-  // `\tag{\thesection.\theequation}` then OOM on infinite expansion.
-  // Perl has the same upstream bug; using \edef matches the comment's
-  // stated intent ("expand \theequation, but in text mode!").
-  // Driver: 2406.07616 SM.tex (and any amsmath doc using
-  // \tag{\thesection.\theequation}\stepcounter pattern).
+  // We mirror the Perl `\expandafter\def\expandafter\theequation\expandafter{#2}`
+  // chain verbatim. An earlier translation used `\edef\theequation{#2}` to
+  // sidestep the `\tag{\theequation}` self-recursion, but `\edef` fully
+  // expands `#2` — and when `#2` contains math like `$\binom{n}{m}$`,
+  // `\binom`'s body recursion produces a >2 GB Tokens buffer (OOM).
+  // The `\expandafter`-chain only one-step-expands the head token of `#2`,
+  // which is what amsmath intends. The pathological
+  // `\tag{\thesection.\theequation}` recursion case is a SHARED-FAILURE
+  // (Perl also hangs); ARM ulimit -v guards the worker.
+  // Driver for OOM regression: 2311.16416 proof.tex L287 with
+  // `\tag{$\binom{n}{m} \le n^{m}/m!$ and …}`.
   DefMacro!(
     "\\tag OptionalMatch:* {}",
-    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\edef\\theequation{#2}\\lx@make@tags{equation}}",
+    "\\lx@equation@settag{\\ifx#1*\\let\\fnum@equation\\relax\\fi\\expandafter\\def\\expandafter\\theequation\\expandafter{#2}\\lx@make@tags{equation}}",
     locked => true
   );
 

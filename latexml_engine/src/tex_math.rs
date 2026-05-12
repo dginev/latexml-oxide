@@ -1444,23 +1444,42 @@ LoadDefinitions!({
     }
   );
 
+  // In real TeX, `\atop`, `\over`, `\above`, `\abovewithdelims`,
+  // `\atopwithdelims`, `\overwithdelims` are PRIMITIVES (not macros).
+  // LaTeXML wraps them as macros whose expansion contains the CS itself
+  // (`\atop → \lx@generalized@over{\atop}{thickness=0pt}`). That's safe
+  // for regular gullet expansion — the inner `\atop` lands in the
+  // `Undigested` arg slot and is never re-expanded — but any forced
+  // expansion (`\edef`, `\write`, `\message`) walks past brace levels
+  // and re-expands the inner `\atop`, producing infinite recursion.
+  // Marking them `protected` matches TeX's primitive behaviour: `\edef`
+  // bodies treat the CS as a single token, regular expansion still
+  // dispatches through the `\lx@generalized@over` constructor.
+  // Driver for OOM regression: `\edef\theequation{$\binom{n}{m}$}`
+  // from amsmath `\tag` (witness 2311.16416 proof.tex L287).
   DefMacro!(
     "\\above Dimension",
-    "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}"
+    "\\lx@generalized@over{\\above #1}{meaning=divide,thickness=#1}",
+    protected => true
   );
   DefMacro!(
     "\\abovewithdelims Token Token Dimension",
-    "\\lx@generalized@over{\\abovewithdelims #1 #2 #3}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide,thickness=#3}"
+    "\\lx@generalized@over{\\abovewithdelims #1 #2 #3}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide,thickness=#3}",
+    protected => true
   );
-  DefMacro!("\\atop", "\\lx@generalized@over{\\atop}{thickness=0pt}");
+  DefMacro!("\\atop", "\\lx@generalized@over{\\atop}{thickness=0pt}",
+    protected => true);
   DefMacro!(
     "\\atopwithdelims Token Token",
-    "\\lx@generalized@over{\\atopwithdelims #1 #2}{thickness=0pt,left={\\lx@left#1},right={\\lx@right#2}}"
+    "\\lx@generalized@over{\\atopwithdelims #1 #2}{thickness=0pt,left={\\lx@left#1},right={\\lx@right#2}}",
+    protected => true
   );
-  DefMacro!("\\over", "\\lx@generalized@over{\\over}{meaning=divide}");
+  DefMacro!("\\over", "\\lx@generalized@over{\\over}{meaning=divide}",
+    protected => true);
   DefMacro!(
     "\\overwithdelims Token Token",
-    "\\lx@generalized@over{\\overwithdelims #1 #2}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide}"
+    "\\lx@generalized@over{\\overwithdelims #1 #2}{left={\\lx@left#1},right={\\lx@right#2},meaning=divide}",
+    protected => true
   );
 
   //======================================================================

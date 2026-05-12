@@ -462,8 +462,11 @@ LoadDefinitions!({
 
   // \Sb / \Sp — generalized over (substack/superstack). Uses internal
   // \lx@generalized@over machinery. (Perl L386-389)
-  DefMacro!("\\Sb", "\\lx@generalized@over{\\Sb}{meaning=substack}");
-  DefMacro!("\\Sp", "\\lx@generalized@over{\\Sp}{meaning=superstack}");
+  // `protected` matches TeX-primitive semantics — see tex_math.rs.
+  DefMacro!("\\Sb", "\\lx@generalized@over{\\Sb}{meaning=substack}",
+    protected => true);
+  DefMacro!("\\Sp", "\\lx@generalized@over{\\Sp}{meaning=superstack}",
+    protected => true);
   Let!("\\endSb", "\\relax");
   Let!("\\endSp", "\\relax");
 
