@@ -123,7 +123,9 @@ LoadDefinitions!({
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
-  DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
+  // Perl mn2e_support.sty.ltxml L151: \text wrapper switches mode out of math,
+  // so the second arg can contain inline-math toggles like `$\beta$`.
+  DefMacro!("\\ion{}{}", "\\text{#1\\,\\textsc{\\lowercase{#2}}}");
 
   // Journal abbreviations (\mnras, \nat, \apj, \prd, ...) are NOT defined
   // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
