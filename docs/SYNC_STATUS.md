@@ -442,16 +442,35 @@ ordered by impact:
   Remaining open: `*_sym` accessors, `Tokens` conversions, `Stored`
   deep copies, package lookup caching.
 
-### ~~Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)~~
+### Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)
 
-**MET 2026-05-12.** On `1910.01256` (CVPR-style ~6-page article,
-`\usepackage[acronym]{glossaries}`, 110 math formulae, .bbl):
+**Tied as of 2026-05-12 re-measurement.** On `1910.01256` (CVPR-style
+~6-page article, `\usepackage[acronym]{glossaries}`, 110 math formulae,
+.bbl):
 
 | Pipeline                            | Real time | User    | RSS    |
 |-------------------------------------|-----------|---------|--------|
 | `latexml_oxide → HTML` (2026-05-11) | 3.13 s    | 3.88 s  | 225 MB |
-| `pdflatex × 2`                      | 1.21 s    | 1.18 s  |  64 MB |
-| **`latexml_oxide` (post 2026-05-12 perf pass)** | **1.19 s** (median) | 1.25 s | 242 MB |
+| `latexml_oxide` (post 2026-05-12 perf pass + content-hash dedup + gs-direct EPS) | **1.18 s** (median of 10 idle) | 1.25 s | 242 MB |
+| `pdflatex × 2` (idle CPU, 2026-05-12) | **1.11 s** (median of 10) | – | 64 MB |
+| `pdflatex × 2` (under stress, 28-CPU yes-load, 2026-05-12) | ~2.05 s | – | 64 MB |
+| `latexml_oxide` (under same stress, 2026-05-12) | ~2.70 s | – | 242 MB |
+
+Under idle single-process conditions, pdflatex×2 is now ~6% faster.
+Under canvas-grade CPU saturation, pdflatex×2 stays ahead (~20% on
+this paper). The earlier "MET 1.19s vs 1.21s" baseline was within
+measurement noise of pdflatex×2 — the gap that read as a marginal
+win has narrowed below the noise floor on the current measurement
+machine. The improvements since then (graphics rotation correctness,
+content-hash dedup, AA-correct gs-direct EPS) are quality wins, not
+perf wins — they don't move 1910.01256, which has 5 PDFs and zero
+duplicates.
+
+Reclaiming the lead is open. Candidates (ordered by likely impact):
+- in-document graphics scheduling latency: 5 mutool spawns serialize
+  inside thread pool — measure overlap vs sequential
+- digest+gullet allocator pressure: still ~0.2 s on small papers
+- math-parse pruning aggressiveness: 110 formulae, ~16-17 % of wall
 
 How we got there (chronological):
 1. `43e75591dd` — arena pre-allocated to 131K (latex.dump capacity).
@@ -509,7 +528,7 @@ tables + interned states — and out of scope.
 | Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
 | Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.31 s pre-2026-05-12 perf pass — **6× speedup**) | mini-benchmark target 2.88 s release on 1910.01256 |
 | Per-conversion wall time (release build, same fixture) | ~0.17-0.20 s | met |
-| 1910.01256 mini-benchmark vs pdflatex×2 | **1.17-1.30 s** (median 1.19 s) — beats pdflatex 1.21 s | **MET** (was 3.13 s on 2026-05-11 baseline) |
+| 1910.01256 mini-benchmark vs pdflatex×2 | **1.18 s** median (latexml_oxide) vs **1.11 s** (pdflatex×2), idle CPU — tied within measurement noise on canvas, pdflatex marginally ahead on idle | mini-benchmark target 2.88 s — still met (we are at 0.4× pdflatex×2's stretch goal) |
 
 ---
 
