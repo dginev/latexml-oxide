@@ -1146,6 +1146,36 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
   }
 }
 
+// Recognise "implicit alignment tab" CS tokens, i.e. `\let\amp=&`.
+// Real TeX treats `\amp` (whose meaning is the `&` char-token with
+// catcode ALIGN) as an alignment tab in `\halign` preambles and
+// bodies — see texbook.tex p.~277 ("implicit characters") and
+// tex.web @<Manufacture a control...@> (cur_cmd dispatch by meaning,
+// not by token catcode).
+fn is_implicit_align(t: &Token) -> bool {
+  if t.get_catcode() != Catcode::CS {
+    return false;
+  }
+  matches!(
+    latexml_core::state::lookup_meaning(t),
+    Some(Stored::Token(tt)) if tt.get_catcode() == Catcode::ALIGN
+  )
+}
+
+// `\cr` / `\crcr` `\let`-equivalents. Less common in the wild than
+// implicit `&` but covered by the same Knuth-TeX semantics.
+fn is_implicit_cr(t: &Token) -> bool {
+  if t.get_catcode() != Catcode::CS {
+    return false;
+  }
+  match latexml_core::state::lookup_meaning(t) {
+    Some(Stored::Token(tt)) if tt.get_catcode() == Catcode::CS => {
+      tt.with_str(|s| s == "\\cr" || s == "\\crcr")
+    }
+    _ => false,
+  }
+}
+
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let t = gullet::read_non_space()?;
@@ -1193,7 +1223,8 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       // Found the template's column slot
       before = false;
       tokens.push(t);
-    } else if cc == Catcode::ALIGN || t == T_CS!("\\cr") || t == T_CS!("\\crcr") {
+    } else if cc == Catcode::ALIGN || t == T_CS!("\\cr") || t == T_CS!("\\crcr")
+      || is_implicit_align(&t) || is_implicit_cr(&t) {
       // End the column
       if before {
         // Leading & means repeated columns
@@ -1224,8 +1255,8 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
         post.clear();
         before = true;
       }
-      if cc != Catcode::ALIGN {
-        break; // \cr or \crcr ends the template
+      if cc != Catcode::ALIGN && !is_implicit_align(&t) {
+        break; // \cr or \crcr (explicit or implicit) ends the template
       }
       tokens.push(t);
     } else if before {
