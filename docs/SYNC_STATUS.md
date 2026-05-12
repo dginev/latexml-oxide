@@ -420,10 +420,14 @@ PERFORMANCE.md sets the policy for performance work. Active items
 ordered by impact:
 
 - **P0 done** — phase-attributed telemetry, telemetry.jsonl.gz, perf_phase_summary.py, perf_compare.py.
-- **P1 graphics & output-heavy jobs** — biggest identifiable slow tail.
-  Per-asset graphics telemetry + content-identity conversion cache +
-  duplicate coalescing. Sentinels: 0809.3849, 0908.3201, 1003.0368,
-  0803.4343, 0907.4282.
+- **P1 graphics & output-heavy jobs** — primary rasterizer
+  optimization DONE 2026-05-12 (`5244a5a4e2` → `feaf8bcd16`):
+  subprocess `mutool draw` is now the first PDF→PNG/SVG attempt,
+  ~1.7× faster than pdftocairo on the canvas slow-tail (matplotlib /
+  pgfplots scatter PDFs). Graphics phase on 1910.01256 dropped from
+  1031 ms to ~480 ms. Still-open: content-identity conversion
+  cache + duplicate coalescing across documents. Sentinels:
+  0809.3849, 0908.3201, 1003.0368, 0803.4343, 0907.4282.
 - **P1 math/large-document jobs** — `LATEXML_PARSE_AUDIT=1` on
   astro-ph0204009, 0911.0884, astro-ph0401354, 0809.5174,
   astro-ph0507615; rank by total parse time + repeated token sequences.
@@ -523,51 +527,40 @@ Once TL2025 dumps stay robust through a CI cycle: `include_bytes!`
 
 ---
 
-## Long-term: consolidate post-processing graphics renderer
+## Post-processing graphics renderer chain (decided 2026-05-12)
 
-Currently the post-processing graphics pipeline shells out to **four**
-external tools depending on source format and target asset:
-`convert` / `gs` (ImageMagick → Ghostscript) for PDF→PNG fallback,
-`inkscape` for PDF→SVG fallback, `pdftocairo` for the fast PDF→PNG
-and PDF→SVG paths (added 2026-05-07), and `ps2pdf` + `pdftocairo` for
-EPS→PNG. Each adds a runtime dependency, fork cost, and timeout
-plumbing; the convert/gs path in particular is 25-50× slower than
-`pdftocairo` on vector-heavy PDFs and produces no better output.
+After a full evaluation including in-process Rust crates and CLI
+benchmarks (see `latexml_post/src/graphics.rs` comments + commit
+history `5244a5a4e2` → `feaf8bcd16`), the rasterizer chain is now
+**subprocess-only** with measured-speed ordering:
 
-Goal: **converge on a single primary renderer**, with a clearly-scoped
-fallback (or none). Two candidates worth evaluating:
+  PDF → PNG:
+    1. `mutool draw`         — MuPDF CLI, ~1.7× faster than pdftocairo
+                                on matplotlib/pgfplots scatter PDFs
+    2. `pdftocairo --png`    — poppler fallback, 25× faster than gs
+    3. `convert` + `gs`      — last-resort, hard-timeout 60 s
 
-1. **`pdftocairo` (poppler)** as the sole subprocess renderer.
-   Empirically the fastest, available wherever TeXLive is, produces
-   clean PNG output and acceptable SVG for all benign PDFs we've
-   measured. SVG output explodes on R-Graphics-class PDFs, but the
-   8 MB size guard + PNG fallback already handles that case. Pros:
-   no new build dependency; binary already on the path.
-   Cons: still a subprocess, not a Rust crate.
+  PDF → SVG:
+    1. `mutool convert -F svg` — MuPDF CLI, ~4× more gzip-compressible
+                                  output than pdftocairo
+    2. `pdftocairo --svg`      — poppler fallback
+    3. `inkscape`              — last-resort vector, hard-timeout 15 s
 
-2. **`pdfium-render`** (Rust crate wrapping Google's PDFium). Pure
-   in-process rendering; same engine that powers Chrome's PDF view.
-   Mature for raster output; SVG export is more limited. Pros:
-   no subprocess, no fork cost. Cons: requires linking the PDFium
-   dynamic library at runtime — same external-dependency footprint
-   as poppler, but newer/less ubiquitous than poppler-utils.
+**Subprocess only — no library linking.** AGPL/GPL on the underlying
+C libraries (MuPDF, poppler) does NOT propagate to latexml_oxide
+because we invoke standalone binaries via `exec`, not link the
+libraries. Same legal pattern as a non-GPL tool invoking `git`.
 
-Tasks (in order):
+**Rust-crate alternatives rejected (2026-05-12)**:
+  - `mupdf-rs`     — AGPL-3.0, incompatible with project CC0 license
+  - `poppler-rs`   — GPL, same problem
+  - `pdfium-render` — Apache-2.0/BSD-3 (license-clean) BUT PDFium isn't
+                      thread-safe; serialising the 5-worker graphics
+                      phase through a Mutex wipes out the fork-free
+                      benefit (measured: 1.33 s vs 1.21 s subprocess
+                      pdftocairo on 1910.01256).
 
-1. Benchmark `pdftocairo` vs `pdfium-render` on a representative
-   sample (W.pdf-class R-Graphics, matplotlib/pgfplots vector,
-   raster-embedded PDF, multi-page PDF with `--pdf-page`). Record
-   wall-clock + output-size + faithfulness vs Perl.
-2. Decide: single `pdftocairo` path, single `pdfium-render` path,
-   or `pdfium-render` primary with `pdftocairo` fallback. Prefer
-   the single-tool option if quality matches.
-3. Strip the unused fallbacks from `latexml_post/src/graphics.rs`
-   — `convert`/`gs`, `inkscape`, and the `ps2pdf` + `pdftocairo`
-   double-shell for EPS — once the primary renderer covers EPS via
-   poppler's `pdftops`/`pdftocairo` (or pdfium equivalent).
-
-Driver: 2303.02756 W.pdf (R-Graphics) ran `gs` at 110 s in v22 before
-my fix; the same paper now uses `pdftocairo --png` at 1.8 s. The
-fast path is already in; the long-term goal is to stop maintaining
-the slow paths.
+Required apt packages: `poppler-utils` (mandatory), `mupdf-tools`
+(recommended optional, ~1.7× faster), `imagemagick + ghostscript`
+(last-resort), `inkscape` (SVG last-resort).
 
