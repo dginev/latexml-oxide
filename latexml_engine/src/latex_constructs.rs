@@ -53,6 +53,25 @@ fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
 // declared option callback wouldn't fire — silently turning the option
 // into an unused-global.
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+
+// Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
+// raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
+// strip whitespace from EACH element including the first/last.
+// OPTS_REGEX only strips whitespace around the comma delimiters, so a
+// leading-space bracket `[ amsmath, amssymb]` produces a first
+// element ` amsmath` (still has leading space) which fails to match
+// any DeclareOption. Wrap every OPTS_REGEX.split site with this
+// helper to mirror TrimmedCommaList exactly.
+// Witness: 2210.07776 (`\documentclass[ amsmath,amssymb,...]
+// {revtex4-1}` — leading space prevented amsmath option from firing,
+// so amsmath/amsbsy never loaded, so `\boldsymbol` was undefined).
+fn split_trim_options(s: &str) -> Vec<String> {
+  OPTS_REGEX
+    .split(s)
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty())
+    .collect()
+}
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
@@ -2534,7 +2553,7 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
@@ -3763,7 +3782,7 @@ LoadDefinitions!({
         None => Vec::new(),
       };
       let options_list = match options {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       for package in package_list {
@@ -3791,7 +3810,7 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
-      Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
+      Some(opts) => split_trim_options(&opts.to_string()),
       None => Vec::new(),
     };
     for package in package_list {
@@ -3811,8 +3830,7 @@ LoadDefinitions!({
       let class_arg: Option<&Digested> = whatsit.get_arg(2);
       let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
       let options: Vec<String> = match options_arg {
-        Some(opts) => OPTS_REGEX.split(&opts.to_string())
-          .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
+        Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
       load_class(&class, options, Tokens!())?;
@@ -4481,8 +4499,20 @@ LoadDefinitions!({
       Let!("\\centering", "\\relax");
       state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\maketitle", "\\unwind@titlepage");
-      // In titlepage, abstract is simpler: direct body
-      DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>");
+      // In titlepage, abstract is simpler: direct body. The
+      // surrounding titlepage is internal_vertical, but if we leave
+      // this redefinition without an explicit mode, paragraph entry
+      // inside the abstract body pushes a horizontal frame, after
+      // which BOUND_MODE no longer ends with "vertical" — and the
+      // `$$math$$` display-math check in `TeX_Math.pool.ltxml:65`
+      // (Rust mirror at tex_math.rs:447) silently fails to recognize
+      // the second `$`, cascading to `_/^` "can only appear in math
+      // mode" errors. Driver: hep-th0009013 (abstract inside
+      // titlepage with `$$math$$` after preceding paragraph text).
+      // The standard `\abstract` env at L4408 already sets
+      // `mode => "internal_vertical"` for the same reason. Match it.
+      DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
+        mode => "internal_vertical");
       Let!("\\abstract", "\\abstract@onearg");
     },
     before_digest_end => {
@@ -4528,12 +4558,25 @@ LoadDefinitions!({
   // ======================================================================
 
 
+  // `mode => "internal_vertical"`: LaTeX's `{center}`/`{flushleft}`/
+  // `{flushright}` open a trivlist (vertical structure); the body's
+  // `\par` switches into horizontal for paragraph text but BOUND_MODE
+  // stays vertical so display-math recognition (`tex_math.rs:447`
+  // mirror of `TeX_Math.pool.ltxml:65`: `$$` only consumed when
+  // BOUND_MODE ends with "vertical") works inside the body. Perl
+  // `latex_constructs.pool.ltxml:1262-1264` doesn't set `mode =>`
+  // — anticipates an upstream Perl PR fleshing out the `mode =>`
+  // machinery. Without this, papers using `\begin{center}$$X$$
+  // \end{center}` lose the display math, the second `$` reads as
+  // closing the first inline, and array content lands inside
+  // `<ltx:p>` triggering schema violations. Driver: astro-ph0203201
+  // (table*+center+$$+array).
   DefEnvironment!("{center}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     // aligning will take care of \\\\ "rows"
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   DefMacro!("\\endcenter", None);
@@ -4541,12 +4584,12 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_left", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   DefEnvironment!("{flushright}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_right", document, props)?;
     Ok(())
-  });
+  }, mode => "internal_vertical");
   // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
   // both as environments, and as single commands". The bare `\flushleft` /
   // `\flushright` commands (without matching `\end...`) are used as
@@ -6895,6 +6938,12 @@ LoadDefinitions!({
   // Keyvals are for attributes for the alignment.
   // Typical keys are width, vattach,...
   DefKeyVal!("tabular", "width", "Dimension");
+  // `vattach` is passed internally by `\tabular[]{}` expansion below
+  // (`[vattach=#1]\@@tabular...`) but Perl latex_constructs.pool.ltxml
+  // also leaves it unregistered (Info-level pass-through). Rust-only
+  // divergence paired with `21e730e71e` Info→Warn promotion: register
+  // it so the internal usage doesn't trip the unknown-key Warn path.
+  DefKeyVal!("tabular", "vattach", "");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
     sub[(template, attributes_opt)] {
     let attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
@@ -9838,6 +9887,22 @@ LoadDefinitions!({
 
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
   DefMacro!("\\@setsize{}{}{}{}", "");
+
+  // Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
+  // promised would live here. Without these, `\on@line` (used by
+  // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
+  // L8219) and friends are auto-defined as `<ltx:ERROR/>`, leaking
+  // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
+  DefMacro!("\\hexnumber@ {}",
+    r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi");
+  DefMacro!("\\on@line", r" on input line \the\inputlineno");
+  Let!("\\@warning",  "\\@latex@warning");
+  Let!("\\@@warning", "\\@latex@warning@no@line");
+  DefMacro!("\\G@refundefinedtrue", "");
+  DefMacro!("\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
+  DefMacro!("\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}");
 
   // Perl L5765-5766
   DefPrimitive!("\\makeatletter", {

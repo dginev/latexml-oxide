@@ -169,22 +169,24 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
 /// Parse a single dump line and load it. Returns Ok(true) if loaded,
 /// Ok(false) if filtered (e.g. corrupt MC/DC), Err on parse error.
 fn parse_and_load(line: &str) -> Result<bool, String> {
-  let parts: Vec<&str> = line.splitn(3, '\t').collect();
-  if parts.len() < 2 {
-    return Err("Too few fields".into());
-  }
-
-  let table = parts[0];
+  // Direct splitn iteration — saves the per-line Vec<&str> allocation
+  // that splitn(3).collect() was doing × 110k dump entries.
+  let mut it = line.splitn(3, '\t');
+  let table = it.next().ok_or("Too few fields")?;
+  let raw_key = match it.next() {
+    Some(k) => k,
+    None => return Err("Too few fields".into()),
+  };
   // Key decode: Cow borrows the original &str when no `%` escape is
   // present (the overwhelming majority). Saves a per-line allocation
   // for the ~25k dump entries that have plain CS-name keys.
-  let key_cow: std::borrow::Cow<'_, str> = if parts[1].contains('%') {
-    std::borrow::Cow::Owned(url_decode(parts[1]))
+  let key_cow: std::borrow::Cow<'_, str> = if raw_key.contains('%') {
+    std::borrow::Cow::Owned(url_decode(raw_key))
   } else {
-    std::borrow::Cow::Borrowed(parts[1])
+    std::borrow::Cow::Borrowed(raw_key)
   };
   let key = key_cow.as_ref();
-  let data = if parts.len() > 2 { parts[2] } else { "" };
+  let data = it.next().unwrap_or("");
 
   match table {
     // V: Value entries (registers, fontdimen, font metadata).
@@ -310,18 +312,20 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
   // maps to `assign_internal($STATE, 'value', $key, $val, 'global')` —
   // unconditional global write. No skip-if-defined.
 
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.is_empty() {
-    return Err("Missing value type".into());
-  }
+  // Avoid the per-line Vec<&str> allocation — direct iter destructure
+  // matches the pattern used in load_meaning and parse_and_load.
+  let mut top_it = data.splitn(2, '\t');
+  let kind = top_it.next().ok_or("Missing value type")?;
+  let rest = top_it.next().unwrap_or("");
+  // Helper to default to "0" for numeric parses (the prior code used
+  // `rest_or_zero.parse()`).
+  let rest_or_zero = if rest.is_empty() { "0" } else { rest };
 
-  let value = match parts[0] {
+  let value = match kind {
     "N" => return Ok(false), // Don't load None values (would erase existing)
-    "B" => Stored::Bool(parts.get(1).map(|s| *s == "1").unwrap_or(false)),
+    "B" => Stored::Bool(rest == "1"),
     "I" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad int: {}", e))?;
       Stored::Int(n)
@@ -329,14 +333,12 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
     // "Nm": Stored::Number marker (distinct from "I" Stored::Int) —
     // see dump_writer's Number serializer for rationale.
     "Nm" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad number: {}", e))?;
       Stored::Number(crate::common::number::Number(n))
     },
-    "S" => Stored::from(url_decode(parts.get(1).unwrap_or(&""))),
+    "S" => Stored::from(url_decode(rest)),
     "F" => {
       // Stored::Font — written by dump_writer's Stored::Font arm.
       // Format: F\tname=...\x1fsize=...\x1ffamily=...\x1f...
@@ -345,7 +347,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       use crate::common::font::Font;
       use std::borrow::Cow;
       let mut font = Font::default();
-      for kv in parts.get(1).unwrap_or(&"").split('\x1f') {
+      for kv in rest.split('\x1f') {
         if let Some((k, v)) = kv.split_once('=') {
           let v_dec = url_decode(v);
           match k {
@@ -370,47 +372,39 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       Stored::Font(std::rc::Rc::new(font))
     },
     "CH" => {
-      let n: u16 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: u16 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad charcode: {}", e))?;
       Stored::Charcode(n)
     },
     "CC" => {
-      let n: u8 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: u8 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad catcode: {}", e))?;
       Stored::Catcode(Catcode::from(n))
     },
     "T" => {
-      let tok = parse_token(parts.get(1).unwrap_or(&""))?;
+      let tok = parse_token(rest)?;
       Stored::Token(tok)
     },
     "TK" => {
-      let toks = parse_token_list(parts.get(1).unwrap_or(&""))?;
+      let toks = parse_token_list(rest)?;
       Stored::Tokens(Tokens::from(toks))
     },
     "D" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad dimension: {}", e))?;
       Stored::Dimension(crate::common::dimension::Dimension(n))
     },
-    "G" => Stored::Glue(parse_glue(parts.get(1).unwrap_or(&"0"))?),
+    "G" => Stored::Glue(parse_glue(rest_or_zero)?),
     "MD" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad mudimension: {}", e))?;
       Stored::MuDimension(crate::common::mudimension::MuDimension(n))
     },
-    "MG" => Stored::MuGlue(parse_muglue(parts.get(1).unwrap_or(&"0"))?),
+    "MG" => Stored::MuGlue(parse_muglue(rest_or_zero)?),
     "VD" => return Ok(false), // Don't load empty VecDeque (runtime state)
     _ => return Ok(false),    // Unknown value type
   };
@@ -447,12 +441,13 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // 'global')` — unconditional global write. No skip-if-defined, no
   // admission filter.
 
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.is_empty() {
-    return Err("Missing meaning type".into());
-  }
+  // Avoid the per-line Vec<&str> allocation — this fn runs ~80k times
+  // during latex.dump load (every M entry).
+  let mut top_it = data.splitn(2, '\t');
+  let kind = top_it.next().ok_or("Missing meaning type")?;
+  let rest = top_it.next().unwrap_or("");
 
-  match parts[0] {
+  match kind {
     "N" => {
       // None meaning — skip (don't define as undefined)
       Ok(false)
@@ -469,10 +464,15 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       //        typed params; loses brace-in-delimiter forms.
       //   v1 — nargs only: "{}".repeat(nargs), all params flattened to
       //        Plain. Kept as last resort so ancient dumps still load.
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(6, '\t').collect();
-      if eparts.len() < 4 {
-        return Err("Incomplete Expandable entry".into());
-      }
+      // Direct iter destructure — saves the Vec<&str>::collect()
+      // allocation × ~80k E entries.
+      let mut eit = rest.splitn(6, '\t');
+      let alias_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let nargs_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let flags_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let tok_field = eit.next().ok_or("Incomplete Expandable entry")?;
+      let proto_field = eit.next();
+      let v3_field = eit.next();
 
       // eparts[0] is the alias-cs from the dump (Perl-side: the cs of
       // the Definition object that this entry was let-aliased from).
@@ -492,21 +492,20 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // many lookup paths and triggers infinite-loop regressions in
       // `\@nil` handling, etc. Keep blast radius tight.
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
-      let alias_decoded = url_decode(eparts[0]);
+      let alias_decoded = url_decode(alias_field);
       let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
       let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
         Some(alias_decoded)
       } else {
         None
       };
-      let nargs: usize = eparts[1].parse().unwrap_or(0);
-      let flags = eparts[2];
-      let tok_data = eparts[3];
-      let proto_opt = eparts
-        .get(4)
-        .map(|s| url_decode(s))
+      let nargs: usize = nargs_field.parse().unwrap_or(0);
+      let flags = flags_field;
+      let tok_data = tok_field;
+      let proto_opt = proto_field
+        .map(url_decode)
         .filter(|s| !s.is_empty());
-      let v3_opt = eparts.get(5).filter(|s| !s.is_empty());
+      let v3_opt = v3_field.filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
       let is_protected = flags.contains('P');
@@ -601,7 +600,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       //   sub Im { State::assign_internal($STATE,'meaning',
       //            $_[0], $_[1], 'global'); }
       // Direct write — no `\let`-chase, no chain follow.
-      let tok = parse_token(parts.get(1).unwrap_or(&""))?;
+      let tok = parse_token(rest)?;
       state::assign_internal(
         TableName::Meaning,
         cs_tok.get_cs_name(),
@@ -623,7 +622,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // in parse_value above).
       use crate::definition::BeforeDigestClosure;
       use crate::definition::primitive::Primitive;
-      let font_id_raw = url_decode(parts.get(1).unwrap_or(&""));
+      let font_id_raw = url_decode(rest);
       let font_id_pin = arena::pin(&font_id_raw);
       let font_id_str = font_id_raw.clone();
       let cs_for_fontdef = cs_tok;
@@ -658,7 +657,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // dump — without this the expl3.sty short-circuit guard
       // `\ifx\csname tex_let:D\endcsname\relax` never fires and the 36k
       // lines of expl3-code.tex get reprocessed on every run.
-      let target_cs_raw = url_decode(parts.get(1).unwrap_or(&""));
+      let target_cs_raw = url_decode(rest);
       if target_cs_raw == key {
         return Ok(false);
       }
@@ -704,21 +703,22 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // address (`\count22`) held the default 0 — `\settabs 20\columns`
       // looped infinitely because `\m@ne == 0` never advanced `\count@`
       // toward 0 in `\loop\ifnum\count@>\z@\@nother\repeat`.
-      let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(5, '\t').collect();
-      if rparts.len() < 3 {
-        return Err("Incomplete Register entry".into());
-      }
-      let rtype = rparts[1];
-      let value_str = rparts[2];
-      let mathglyph = rparts
-        .get(3)
+      // Direct iter destructure, mirroring the E-branch pattern.
+      let mut rit = rest.splitn(5, '\t');
+      let r_cs = rit.next().ok_or("Incomplete Register entry")?;
+      let r_type = rit.next().ok_or("Incomplete Register entry")?;
+      let r_value = rit.next().ok_or("Incomplete Register entry")?;
+      let r_glyph_field = rit.next();
+      let r_addr_field = rit.next();
+      let rtype = r_type;
+      let value_str = r_value;
+      let mathglyph = r_glyph_field
         .filter(|s| !s.is_empty())
         .and_then(|s| s.parse::<u32>().ok())
         .and_then(char::from_u32);
-      let dump_address: Option<String> = rparts
-        .get(4)
+      let dump_address: Option<String> = r_addr_field
         .filter(|s| !s.is_empty())
-        .map(|s| url_decode(s));
+        .map(url_decode);
       // For register-aliases (M-line key != register's internal cs), the
       // storage slot lives at the cs name, not the alias key. e.g.
       //   M  \tex_endlinechar:D  R  \endlinechar  N  0
@@ -729,7 +729,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // \ExplSyntaxOn's `\tex_endlinechar:D = 32 \scan_stop:` line, which
       // in turn breaks the entire dump-path expl3 whitespace handling
       // (8 expl3 tests). Mirror Perl's address-via-internal-cs semantics.
-      let internal_cs_decoded = url_decode(rparts[0]);
+      let internal_cs_decoded = url_decode(r_cs);
       let dump_address: Option<String> = dump_address.or_else(|| {
         if internal_cs_decoded != *key && !internal_cs_decoded.is_empty() {
           Some(internal_cs_decoded)
@@ -884,11 +884,13 @@ fn char_key(ch: char) -> crate::common::arena::SymStr {
 /// Perl `Cc()` (`Core/Dumper.pm` L60): `assign_internal('catcode', ..., 'global')`.
 fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad catcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CC" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad catcode data: {}", data))?;
+  if tag != "CC" {
     return Err(format!("Bad catcode data: {}", data));
   }
-  let cc: u8 = parts[1]
+  let cc: u8 = val_str
     .parse()
     .map_err(|e| format!("Bad catcode value: {}", e))?;
   state::assign_internal(
@@ -904,11 +906,13 @@ fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Lc()` (`Core/Dumper.pm` L63): `assign_internal('lccode', ..., 'global')`.
 fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad lccode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad lccode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad lccode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad lccode value: {}", e))?;
   state::assign_internal(
@@ -924,11 +928,13 @@ fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Uc()` (`Core/Dumper.pm` L64): `assign_internal('uccode', ..., 'global')`.
 fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad uccode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad uccode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad uccode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad uccode value: {}", e))?;
   state::assign_internal(
@@ -944,11 +950,13 @@ fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Sc()` (`Core/Dumper.pm` L62): `assign_internal('sfcode', ..., 'global')`.
 fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad sfcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad sfcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad sfcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad sfcode value: {}", e))?;
   state::assign_internal(
@@ -964,11 +972,13 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
 /// Mirrors Perl `Core/Dumper.pm:dump_delcode` round-trip.
 fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad delcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad delcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad delcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad delcode value: {}", e))?;
   crate::state::assign_delcode(ch, val, Some(crate::state::Scope::Global));
@@ -979,11 +989,13 @@ fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
 /// Mirrors Perl `Core/Dumper.pm:dump_mathcode` round-trip.
 fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad mathcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad mathcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad mathcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad mathcode value: {}", e))?;
   crate::state::assign_mathcode(ch, val, Some(crate::state::Scope::Global));
@@ -1015,7 +1027,16 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
   if s.is_empty() {
     return Ok(Vec::new());
   }
-  s.split(',').map(parse_token).collect()
+  // Pre-size the Vec. Avg ~19.6 tokens/list across the 16k E-entries
+  // in latex.dump; the default `.collect()` size_hint is (0, None) so
+  // Vec resizes ~log2(19) ≈ 5 times per call. Counting commas first
+  // (one extra pass over the str) eliminates those re-allocs.
+  let n = s.bytes().filter(|b| *b == b',').count() + 1;
+  let mut out = Vec::with_capacity(n);
+  for tok in s.split(',') {
+    out.push(parse_token(tok)?);
+  }
+  Ok(out)
 }
 
 /// Decode the v3 structured Parameters encoding emitted by

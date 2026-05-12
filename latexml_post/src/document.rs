@@ -12,7 +12,7 @@ use libxml::parser::Parser as XmlParser;
 use libxml::tree::{Document, Namespace, Node, NodeType, set_node_rc_guard};
 use libxml::xpath::Context as XPathContext;
 use regex::Regex;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 use unicode_normalization::UnicodeNormalization;
 
@@ -149,9 +149,9 @@ impl PostDocument {
       dest_dir.clone()
     };
 
-    let mut namespaces = HashMap::new();
+    let mut namespaces = HashMap::default();
     namespaces.insert("ltx".to_string(), LTX_NSURI.to_string());
-    let mut namespace_uris = HashMap::new();
+    let mut namespace_uris = HashMap::default();
     namespace_uris.insert(LTX_NSURI.to_string(), "ltx".to_string());
 
     PostDocument {
@@ -164,15 +164,15 @@ impl PostDocument {
       searchpaths: options.searchpaths.unwrap_or_default(),
       namespaces,
       namespace_uris,
-      idcache: HashMap::new(),
-      idcache_reusable: HashMap::new(),
-      idcache_reserve: HashMap::new(),
-      idcache_clashes: HashMap::new(),
+      idcache: HashMap::default(),
+      idcache_reusable: HashMap::default(),
+      idcache_reserve: HashMap::default(),
+      idcache_clashes: HashMap::default(),
       processing_instructions: Vec::new(),
       parent_document: None,
       split_from_id: None,
       validate: options.validate,
-      cache: HashMap::new(),
+      cache: HashMap::default(),
       nocache: options.nocache,
     }
   }
@@ -833,7 +833,10 @@ impl PostDocument {
           } else if let Some((prefix, localname)) = tag.split_once(':') {
             let nsuri = self.namespaces.get(prefix).cloned();
             if nsuri.is_none() {
-              log::warn!("No namespace on '{}'", tag);
+              log_post_warn!(
+                "malformed", "namespace",
+                "No namespace on '{}'", tag
+              );
             }
             // Find or create namespace for this prefix.
             // Prefer the default namespace (empty prefix) if it matches the target URI,
@@ -894,7 +897,10 @@ impl PostDocument {
               self.add_nodes(&mut new_node, children);
             }
           } else {
-            log::warn!("Tag '{}' has no namespace prefix", tag);
+            log_post_warn!(
+              "malformed", "namespace",
+              "Tag '{}' has no namespace prefix", tag
+            );
           }
         },
         NodeData::XmlNode(source_node) => {
@@ -1079,7 +1085,7 @@ impl PostDocument {
     let copy = node.clone();
 
     // Find all IDs and remap them
-    let mut idmap: HashMap<String, String> = HashMap::new();
+    let mut idmap: HashMap<String, String> = HashMap::default();
     for mut n in self.findnodes_at("descendant-or-self::*[@xml:id]", Some(&copy)) {
       if let Some(id) = n.get_attribute("xml:id") {
         let newid = self.uniquify_id(&id, id_suffix);
@@ -1187,6 +1193,13 @@ impl PostDocument {
         if let Some(target) = self.find_node_by_id(&idref) {
           let mut target_mut = target.clone();
           self.mark_xm_node_visibility_aux(&mut target_mut, cvis, pvis);
+        } else {
+          // Perl Post.pm:1444 — Error('expected', 'id', undef,
+          //   "Cannot find a node with xml:id='$id'")
+          log_post_error!(
+            "expected", "id",
+            "Cannot find a node with xml:id='{}'", idref
+          );
         }
       }
     } else {
@@ -1202,7 +1215,16 @@ impl PostDocument {
   pub fn realize_xm_node(&self, node: &Node) -> Option<Node> {
     if self.is_qname(node, "ltx:XMRef") {
       let idref = node.get_attribute("idref")?;
-      self.find_node_by_id(&idref).cloned()
+      let realized = self.find_node_by_id(&idref).cloned();
+      if realized.is_none() {
+        // Perl Post.pm:1456 — Error('expected', 'id', undef,
+        //   "Cannot find a node with xml:id='$id'")
+        log_post_error!(
+          "expected", "id",
+          "Cannot find a node with xml:id='{}'", idref
+        );
+      }
+      realized
     } else {
       Some(node.clone())
     }
@@ -1316,7 +1338,7 @@ impl PostDocument {
 
     let ref_node = NodeData::Element {
       tag:        "ltx:ref".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("idref".to_string(), id.to_string()),
         ("rel".to_string(), relation.to_string()),
         ("show".to_string(), "toctitle".to_string()),
@@ -1351,7 +1373,14 @@ impl PostDocument {
         return Ok(());
       }
     }
-    log::warn!("No schema found for document validation");
+    // Perl Post.pm:973 — Error('I/O', $schema, undef, "Failed to load
+    //   RelaxNG schema $schema") when no usable schema; here we don't
+    //   even have a path. Reporting at warn (no schema = nothing to
+    //   validate, often a benign config) with the structured target.
+    log_post_warn!(
+      "missing_file", "schema",
+      "No schema found for document validation"
+    );
     Ok(())
   }
 
@@ -1359,7 +1388,7 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::idcheck`.
   pub fn idcheck(&self) {
-    let mut doc_ids: HashMap<String, bool> = HashMap::new();
+    let mut doc_ids: HashMap<String, bool> = HashMap::default();
     let mut dups = Vec::new();
 
     for node in self.findnodes("//*[@xml:id]") {
@@ -1379,14 +1408,16 @@ impl PostDocument {
     }
 
     if !dups.is_empty() {
-      log::warn!(
+      log_post_warn!(
+        "malformed", "id",
         "Duplicate IDs for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         dups.join(", ")
       );
     }
     if !missing.is_empty() {
-      log::warn!(
+      log_post_warn!(
+        "expected", "id",
         "Cached IDs not in document for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         missing.join(", ")

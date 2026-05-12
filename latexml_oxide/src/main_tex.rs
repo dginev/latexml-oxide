@@ -76,8 +76,8 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     }
 
     // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
-    let mut likelihood: std::collections::HashMap<PathBuf, f32> =
-        std::collections::HashMap::new();
+    let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> =
+        rustc_hash::FxHashMap::default();
     let mut vetoed: Vec<PathBuf> = Vec::new();
     let mut had_auto_ignore = false;
 

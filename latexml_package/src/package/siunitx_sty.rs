@@ -6,6 +6,98 @@
 use crate::prelude::*;
 use crate::xmath_helpers::*;
 
+/// Structured error emission for siunitx (parallels
+/// `latexml_post::diag::log_post_error!` and the engine `Error!` macro).
+///
+/// Why not `latexml_core::Error!`: the full macro early-returns
+/// `Err(LatexmlError)` on max-errors / runaway-loop, but the siunitx
+/// parsing helpers below return `Option<…>` / `Tokens` / `Vec<…>`,
+/// not `Result<_, LatexmlError>`, so the early-return would type-mismatch.
+/// The thin emit-only macro keeps the harness `Error:<class>:<object>`
+/// format contract while staying type-compatible.
+macro_rules! six_log_error {
+  ($category:expr, $object:expr, $msg:expr) => {
+    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+  };
+  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+  };
+}
+
+//======================================================================
+// Perl siunitx.sty.ltxml L1747-1817: six_load_compat1 — RawTeX block of
+// DeclareSIPrePower / DeclareSIUnit calls fired when the user opts in
+// via `\usepackage[version-1-compatibility]{siunitx}` or any
+// `\usepackage[alsoload=<x>]{siunitx}` (e.g. `alsoload=synchem` for
+// `\Molar`). Copied verbatim from the Perl source so the v2-by-default
+// engine still recognises legacy aliases used by older arXiv papers.
+const SIX_LOAD_COMPAT1: &str = r"
+\DeclareSIPrePower \Square  { 2 }
+\DeclareSIPrePower \ssquare { 2 }
+\DeclareSIUnit \BAR   { \bar }
+\DeclareSIUnit \bbar  { \bar }
+\DeclareSIUnit \Day   { \day }
+\DeclareSIUnit \dday  { \day }
+\DeclareSIUnit \Gray  { \gray }
+\DeclareSIUnit \ggray { \gray }
+\DeclareSIUnit \atomicmass { \atomicmassunit }
+\DeclareSIUnit \arcmin     { \arcminute }
+\DeclareSIUnit \arcsec     { \arcsecond }
+\DeclareSIUnit \are      { a }
+\DeclareSIUnit \curie    { Ci }
+\DeclareSIUnit \gal      { Gal }
+\DeclareSIUnit \millibar { \milli \bar }
+\DeclareSIUnit \rad      { rad }
+\DeclareSIUnit \rem      { rem }
+\DeclareSIUnit \roentgen { R }
+\DeclareSIUnit \micA   { \micro \ampere }
+\DeclareSIUnit \micmol { \micro \mole   }
+\DeclareSIUnit \micl   { \micro \litre  }
+\DeclareSIUnit \micL   { \micro \liter  }
+\DeclareSIUnit \nanog  { \nano  \gram   }
+\DeclareSIUnit \micg   { \micro \gram   }
+\DeclareSIUnit \picm   { \pico  \metre  }
+\DeclareSIUnit \micm   { \micro \metre  }
+\DeclareSIUnit \Sec    { \second }
+\DeclareSIUnit \mics   { \micro \second }
+\DeclareSIUnit \cmc    { \centi \metre \cubed }
+\DeclareSIUnit \dmc    { \deci  \metre \cubed }
+\DeclareSIUnit \cms    { \centi \metre \squared }
+\DeclareSIUnit \centimetrecubed   { \centi \metre \cubed }
+\DeclareSIUnit \centimetresquared { \centi \metre \squared }
+\DeclareSIUnit \cubiccentimetre   { \centi \metre \cubed }
+\DeclareSIUnit \cubicdecimetre    { \deci \metre \cubed }
+\DeclareSIUnit \squarecentimetre  { \centi \metre \squared }
+\DeclareSIUnit \squaremetre       { \metre \squared }
+\DeclareSIUnit \squarekilometre   { \kilo \metre \squared }
+\DeclareSIUnit \parsec    { pc }
+\DeclareSIUnit \lightyear { ly }
+\DeclareSIUnit \gmol  { g  \text { - } mol }
+\DeclareSIUnit \kgmol { kg \text { - } mol }
+\DeclareSIUnit \lbmol { lb \text { - } mol }
+\DeclareSIUnit \molar { \mole \per \cubic \deci \metre }
+\DeclareSIUnit \Molar { \textsc { m } }
+\DeclareSIUnit \torr  { Torr }
+\DeclareSIUnit \gon    { gon }
+\DeclareSIUnit \clight { \text { \ensuremath { c } } }
+\DeclareSIUnit \micron    { \micro \metre }
+\DeclareSIUnit \mrad      { \milli \rad }
+\DeclareSIUnit \gauss     { G }
+\DeclareSIUnit \eVperc    { \eV \per \clight }
+\DeclareSIUnit \nanobarn  { \nano \barn }
+\DeclareSIUnit \picobarn  { \pico \barn }
+\DeclareSIUnit \femtobarn { \femto \barn }
+\DeclareSIUnit \attobarn  { \atto \barn }
+\DeclareSIUnit \zeptobarn { \zepto \barn }
+\DeclareSIUnit \yoctobarn { \yocto \barn }
+\DeclareSIUnit \nb        { \nano \barn }
+\DeclareSIUnit \pb        { \pico \barn }
+\DeclareSIUnit \fb        { \femto \barn }
+\DeclareSIUnit \ab        { \atto \barn }
+\DeclareSIUnit \zb        { \zepto \barn }
+\DeclareSIUnit \yb        { \yocto \barn }
+";
+
 //======================================================================
 // SIX keyvals helpers
 //======================================================================
@@ -393,6 +485,20 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
           comparator: None,
         });
       }
+      // Imaginary part matched but no `input-complex-roots` key — incomplete
+      // complex form. Perl siunitx.sty.ltxml:266 — Error('unexpected',
+      // 'sign', undef, "expected to find complex number")
+      six_log_error!(
+        "unexpected", "sign",
+        "expected to find complex number"
+      );
+    } else {
+      // Perl siunitx.sty.ltxml:266 — same Error site (no imaginary part
+      // followed the matched sign).
+      six_log_error!(
+        "unexpected", "sign",
+        "expected to find complex number"
+      );
     }
   }
 
@@ -581,6 +687,14 @@ fn six_parse_number(expr: &Tokens) -> SixParseResult {
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let result = six_postprocess(six_match_number(&mut tokens));
     if !tokens.is_empty() {
+      // Perl siunitx.sty.ltxml:410 — Error('unexpected', $$tokens[0],
+      //   $gullet, "Not matched in \\num: ...")
+      let leftover = Tokens::new(tokens.clone()).to_string();
+      let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
+      six_log_error!(
+        "unexpected", first_obj,
+        "Not matched in \\num: {}", leftover
+      );
       return SixParseResult::Raw(expr.clone());
     }
     match result {
@@ -610,6 +724,14 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
       }
     }
     if !tokens.is_empty() {
+      // Perl siunitx.sty.ltxml:430 — Error('unexpected', $$tokens[0],
+      //   $gullet, "Not matched in \\num: ...")
+      let leftover = Tokens::new(tokens.clone()).to_string();
+      let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
+      six_log_error!(
+        "unexpected", first_obj,
+        "Not matched in \\num: {}", leftover
+      );
       return vec![SixParseResult::Raw(expr.clone())];
     }
     results
@@ -1101,7 +1223,15 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           six_format_infix(div, None, None, vec![fa1, fa2])
         }
       },
-      _ => Tokens::default(),
+      other => {
+        // Perl siunitx.sty.ltxml:642 — Error('unexpected', $op, undef,
+        //   "Unrecognized operator $op in siunitx number")
+        six_log_error!(
+          "unexpected", other,
+          "Unrecognized operator {} in siunitx number", other
+        );
+        Tokens::default()
+      },
     },
   }
 }
@@ -1359,13 +1489,28 @@ fn six_format_1unit(unit: &SixUnit) -> Tokens {
     unit.unit.as_ref().map(|u| u.name.as_str()).unwrap_or(""),
   );
 
-  // Build presentation: \mathrm{resolved prefix + resolved unit}
+  // Build presentation: \mathrm{resolved prefix + resolved unit}.
+  //
+  // Use `mouth::tokenize` (re-parses through the std catcode table)
+  // rather than `ExplodeText!` (turns every char into an OTHER token).
+  // For a prefix like `\micro` whose `resolve_unit_presentation` returns
+  // the string "\SIUnitSymbolMicro", `ExplodeText!` would produce 17
+  // literal OTHER tokens (\, S, I, U, n, i, t, S, y, m, b, o, l, M,
+  // i, c, r, o), losing CS-ness and rendering as the literal text
+  // `\SIUnitSymbolMicro` in the math output. With `mouth::tokenize`
+  // we get a single CS token that downstream digestion can re-expand
+  // to the µ glyph. Witness: 1410.8171 used to render `\SI{0,1}{\micro
+  // \kelvin}` as the literal text `\SIUnitSymbolMicroK` in math.
+  // Prefix and unit are tokenized separately (same as pre_resolved /
+  // u_resolved are computed separately), so the prefix→unit boundary
+  // is preserved at the Token level even though both strings happen
+  // to be ASCII.
   let mut pres_inner = Vec::new();
   if let Some(pr) = &pre_resolved {
-    pres_inner.extend(ExplodeText!(pr));
+    pres_inner.extend(mouth::tokenize(pr).unlist());
   }
   if let Some(ut) = &u_resolved {
-    pres_inner.extend(ExplodeText!(ut));
+    pres_inner.extend(mouth::tokenize(ut).unlist());
   }
 
   // \lx@unit{name}{\mathrm{presentation}}
@@ -1482,6 +1627,14 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
       ])
     }
   } else {
+    // Perl siunitx.sty.ltxml:1094 — Error('unexpected', $permode, undef,
+    //   "Unknown siunitx per-mode $permode") for the catchall arm.
+    // In Rust we still emit the structured error; defaulting back to
+    // a flat unit product mirrors the Perl caller's recovery path.
+    six_log_error!(
+      "unexpected", permode,
+      "Unknown siunitx per-mode {}", permode
+    );
     six_format_unitproduct(false, units)
   }
 }
@@ -1917,6 +2070,73 @@ LoadDefinitions!({
   RequirePackage!("array");
 
   //======================================================================
+  // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
+  //   foreach my $key (qw(...)) { DefKeyVal('SIX', $key, '', 'true'); }
+  // Without these registrations, the keyvals lookup during `\sisetup{...}`
+  // / `\SI[opts]{...}{...}` falls through to the unknown-key path and
+  // emits "Encountered unknown KeyVals key" (Warn-level after `21e730e71e`).
+  for key in [
+    "version-1-compatibility", "abbreviations", "binary-units",
+    "free-standing-units", "overwrite-functions",
+    "bracket-numbers", "detect-family", "detect-italic", "detect-mode",
+    "detect-shape", "detect-weight", "multi-part-units", "parse-numbers",
+    "parse-units", "product-units",
+    "copy-complex-root", "copy-decimal-marker",
+    "bracket-negative-numbers",
+    "separate-uncertainty", "tight-spacing",
+    "retain-explicit-plus", "add-decimal-zero", "add-integer-zero",
+    "retain-unity-mantissa", "retain-zero-exponent",
+    "omit-uncertainty",
+    "add-arc-degree-zero", "add-arc-minute-zero", "add-arc-second-zero",
+    "angle-symbol-over-decimal",
+    "sticky-per", "prefixes-as-symbols",
+  ] {
+    DefKeyVal!("SIX", key, "", "true");
+  }
+  // Non-boolean SIX options that siunitx initializes via the
+  // `\sisetup{...}` defaults block below (L2495-L2540 in this file).
+  // Perl leaves these unregistered (Info-level pass-through under
+  // KeyVals.pm:97). Rust would otherwise emit ~30 Warn entries per
+  // siunitx-using paper after `21e730e71e`'s Info→Warn promotion —
+  // pure noise from siunitx-internal initialization, not user typos.
+  // Rust-only divergence: register the keys siunitx uses so the Warn
+  // level is reserved for genuinely unknown keys (typos, version drift).
+  for key in [
+    "input-product", "input-quotient", "input-close-uncertainty",
+    "input-complex-roots", "input-comparators", "input-decimal-markers",
+    "input-digits", "input-exponent-markers", "input-open-uncertainty",
+    "input-protect-tokens", "input-signs", "input-symbols",
+    "input-uncertainty-signs",
+    "close-bracket", "open-bracket", "complex-root-position",
+    "exponent-base", "exponent-product",
+    "group-digits", "group-minimum-digits", "group-separator",
+    "output-close-uncertainty", "output-complex-root",
+    "output-decimal-marker", "output-open-uncertainty",
+    "output-product", "output-quotient",
+    "fraction-function", "quotient-mode", "per-mode", "per-symbol",
+    "qualifier-mode", "bracket-unit-denominator",
+    "inter-unit-product", "number-unit-product", "number-angle-product",
+    "list-final-separator", "list-pair-separator", "list-separator",
+    "list-units", "range-phrase", "range-units",
+    "arc-separator", "alsoload", "color",
+    // siunitx 2.x rounding / formatting / table-figure / scientific
+    // options exercised by `tests/complex/si.tex`.
+    "round-mode", "round-precision", "round-half", "round-minimum",
+    "round-integer-to-decimal",
+    "scientific-notation", "fixed-exponent", "exponent-to-prefix",
+    "explicit-sign", "literal-superscript-as-power",
+    "minimum-integer-digits", "group-four-digits", "negative-color",
+    "output-exponent-marker", "power-font",
+    "qualifier-phrase", "uncertainty-separator",
+    "table-figures-decimal", "table-figures-exponent",
+    "table-figures-integer", "table-format",
+    "table-number-alignment",
+    "table-space-text-post", "table-space-text-pre",
+  ] {
+    DefKeyVal!("SIX", key, "", "");
+  }
+
+  //======================================================================
   // Key symbols
   DefMath!("\\SIUnitSymbolDegree", None, "\u{00B0}",
     meaning => "arcdegree", name => "");
@@ -1956,6 +2176,41 @@ LoadDefinitions!({
   //======================================================================
   // \lx@six@initialize
   DefPrimitive!("\\lx@six@initialize", {
+    // Perl siunitx.sty.ltxml L112-115: rebuild and digest \sisetup{...}
+    // from `opt@siunitx.sty` package-option list — so options passed via
+    // `\usepackage[alsoload=synchem, ...]{siunitx}` reach the SIX_*
+    // state values (otherwise only \sisetup{...} in the doc body would
+    // populate them).
+    //   my $pkgoptions = LookupValue('opt@siunitx.sty');
+    //   my $setup = $pkgoptions && Tokenize('\sisetup{' . join(',', @$pkgoptions) . '}');
+    //   Digest($setup) if $setup;
+    let pkg_opts: Vec<String> = match state::lookup_value("opt@siunitx.sty") {
+      Some(Stored::VecDequeStored(vdq)) => vdq.iter().filter_map(|item| match item {
+        Stored::String(s) => Some(arena::with(*s, |s| s.to_string())),
+        _ => None,
+      }).collect(),
+      Some(Stored::Strings(rc)) => rc.iter().map(|s| arena::with(*s, |s| s.to_string())).collect(),
+      _ => Vec::new(),
+    };
+    if !pkg_opts.is_empty() {
+      let setup = format!("\\sisetup{{{}}}", pkg_opts.join(","));
+      Digest!(Tokenize!(&setup))?;
+    }
+
+    // Perl siunitx.sty.ltxml L115-121: if version-1-compatibility OR
+    // alsoload is set, load six_load_compat1's DeclareSIPrePower /
+    // DeclareSIUnit chain. The user's `\usepackage[alsoload=synchem]
+    // {siunitx}` sets alsoload=synchem (truthy) so compat1 fires;
+    // `\Molar`, `\torr`, `\angstrom`, `\parsec`, `\lightyear` etc.
+    // become defined. Witness: 2209.04575 (Quantum Sci. Technol., uses
+    // `\SI{50}{\micro\Molar}`).
+    let v1_compat = six_get_bool_sym(six_pin!("version-1-compatibility"));
+    let alsoload = six_get_sym(six_pin!("alsoload"))
+      .map(|s| !s.to_string().trim().is_empty())
+      .unwrap_or(false);
+    if v1_compat || alsoload {
+      RawTeX!(SIX_LOAD_COMPAT1);
+    }
     if six_get_bool_sym(six_pin!("free-standing-units")) {
       six_enable_unit_macros(six_get_bool_sym(six_pin!("overwrite-functions")));
     }
@@ -2035,7 +2290,14 @@ LoadDefinitions!({
   // (unbraced). Both must work. `DefToken` parameter type covers both;
   // earlier `gullet::read_token` would treat `{` as the token in the
   // braced case and miss the binding entirely, leaving \invbarn undefined.
-  DefPrimitive!("\\DeclareSIUnit[] DefToken {}", sub[(_kv, cs, presentation)] {
+  // Spec mirrors Perl `\DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}`
+  // (siunitx.sty.ltxml:1343). The `SkipSpaces` between `[]` and the
+  // CS is load-bearing: papers commonly write
+  // `\DeclareSIUnit[opt=val] \dBm{dBm}` with a space before the CS,
+  // which without `SkipSpaces` causes the DefToken arg to read the
+  // space character and the actual CS to be parsed as the body.
+  // Driver: 1501.03532 (stage 17 RUST-REGRESSION: \dBm undefined).
+  DefPrimitive!("\\DeclareSIUnit[] SkipSpaces DefToken {}", sub[(_kv, cs, presentation)] {
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
@@ -2678,8 +2940,15 @@ LoadDefinitions!({
 \DeclareSIUnit \Sec        { \second }
 \DeclareSIUnit \mics       { \micro \second }
 \DeclareSIUnit \cmc        { \centi \metre \cubed }
+\DeclareSIUnit \dmc        { \deci  \metre \cubed }
+\DeclareSIUnit \cms        { \centi \metre \squared }
+\DeclareSIUnit \centimetrecubed   { \centi \metre \cubed }
+\DeclareSIUnit \centimetresquared { \centi \metre \squared }
 \DeclareSIUnit \cubiccentimetre { \centi \metre \cubed }
 \DeclareSIUnit \cubicdecimetre  { \deci \metre \cubed }
+\DeclareSIUnit \squarecentimetre { \centi \metre \squared }
+\DeclareSIUnit \squaremetre      { \metre \squared }
+\DeclareSIUnit \squarekilometre  { \kilo \metre \squared }
 \DeclareSIUnit \molar      { \mole \per \cubic \deci \metre }
 \DeclareSIUnit \nb         { \nano \barn }
 \DeclareSIUnit \pb         { \pico \barn }
@@ -2687,6 +2956,22 @@ LoadDefinitions!({
 \DeclareSIUnit \ab         { \atto \barn }
 \DeclareSIUnit \zb         { \zepto \barn }
 \DeclareSIUnit \yb         { \yocto \barn }
+% hep / particle-physics units — Perl siunitx.sty.ltxml L1795-1812.
+% Activated by `\usepackage[alsoload=hep]{siunitx}` or
+% `version-1-compatibility`. Driver: 1607.04783 (stage 19 RUST-
+% REGRESSION: `\eVperc`/`\gauss`/`\nanobarn` undefined).
+\DeclareSIUnit \gon        { gon }
+\DeclareSIUnit \clight     { \text { \ensuremath { c } } }
+\DeclareSIUnit \micron     { \micro \metre }
+\DeclareSIUnit \mrad       { \milli \rad }
+\DeclareSIUnit \gauss      { G }
+\DeclareSIUnit \eVperc     { \eV \per \clight }
+\DeclareSIUnit \nanobarn   { \nano \barn }
+\DeclareSIUnit \picobarn   { \pico \barn }
+\DeclareSIUnit \femtobarn  { \femto \barn }
+\DeclareSIUnit \attobarn   { \atto \barn }
+\DeclareSIUnit \zeptobarn  { \zepto \barn }
+\DeclareSIUnit \yoctobarn  { \yocto \barn }
 "#);
 
   DefMacro!("\\highlight{}", "#1");

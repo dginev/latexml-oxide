@@ -867,6 +867,78 @@ later `\input <name>.sty`s).
 `<name>_loaded`. Sites that check whether the *raw* file was loaded use
 `<name>_raw_loaded`.
 
+### 24. Graphics Content-Hash Deduplication
+
+**Decision:** The graphics post-processor (`latexml_post::Graphics`)
+deduplicates conversion and copy work by the SipHash of the source
+file's bytes (paired with the graphicx `options=` string), not by
+source path. Byte-identical sources with the same options produce a
+single conversion job and a single output file in the bundle; every
+`<ltx:graphics>` node that resolved to that content references the
+shared dest.
+
+**Perl behavior:** `LaTeXML::Post::Graphics::process` walks
+`<ltx:graphics>` nodes serially and calls
+`processGraphic`/`generate_resource` per node. Two nodes that resolve
+to byte-identical files at different paths (or the same path multiple
+times) trigger two `Image::Magick` reads and two `Write` calls,
+producing two output files in the bundle (`foo-1.png`, `foo-2.png` or
+similar).
+
+**Rust behavior:** Source bytes are hashed once
+(`std::hash::DefaultHasher` / SipHash, 64-bit). The key
+`(content_hash, options)` indexes a `HashMap<JobKey, usize>` for the
+parallel-conversion path and a `HashMap<CopyKey, String>` for the
+raster-copy path. On hit, the existing dest is reused and the node's
+`imagesrc` points at the first-seen filename. The `options` part of
+the key is essential: graphicx `angle=` is applied via an in-place
+post-conversion `convert -rotate`, so different rotations of the same
+content need separate output files.
+
+**Rationale:** Author-list and badge papers re-include the same icon
+hundreds of times. Witness arXiv:2402.01336 (LHCb 1067-author paper)
+includes `figs/orcidIcon.pdf` 1067 times via `\lhcborcid`. Without
+dedup that's 1067 PDF→PNG conversions and 1067 entries in the bundle;
+with dedup it's 1 conversion and 17 total output files for the 1083
+`<ltx:graphics>` nodes. The per-node walk is preserved, only the
+expensive subprocess + file-write side-effects are coalesced.
+
+**Impact:** Output bundles for graphics-heavy papers shrink
+proportionally to their duplicate rate. The graphics phase wall time
+drops by the same ratio because subprocess fork-exec is the dominant
+cost (see `docs/PERFORMANCE.md` §5). HTML output still has the
+correct number of `<img>` tags — only the underlying file count is
+deduplicated.
+
+### 25. Direct Ghostscript EPS Path
+
+**Decision:** EPS and PS sources are rasterized by calling `gs`
+directly with the same flags ImageMagick's delegate uses, bypassing
+the `convert` wrapper. `convert` remains the fallback.
+
+**Perl behavior:** `LaTeXML::Util::Image::image_graphicx_complex`
+calls `Image::Magick::Read` / `Write` for every conversion, which
+shells out to `gs` for PostScript inputs.
+
+**Rust behavior:** `convert_eps_via_gs` runs `gs -q -dNOPAUSE -dBATCH
+-dSAFER -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dMaxBitmap=500000000
+-dAlignToPixels=0 -dGridFitTT=2 -dEPSCrop -sDEVICE=pngalpha
+-r{density} -sOutputFile={tmp} {source}` and atomically renames the
+result into place. The antialiasing and bitmap flags mirror IM's
+`delegate.xml` `ps:alpha` entry, so output quality matches `convert`.
+On failure, falls through to `convert`/`gs` via the existing path.
+
+**Rationale:** `convert` shells out to `gs` anyway — invoking `gs`
+ourselves saves the IM read-pipeline overhead (50–200 ms per
+image). gs uses CCW Rotate, the same convention as graphicx and IM,
+so this does not reintroduce the rotation regression we saw with the
+disabled `ps2pdf -dEPSCrop` path (which produced a PDF with a `/Rotate`
+metadata entry that's CW in PDF spec).
+
+**Impact:** EPS-heavy papers see ~1.7-1.8× faster graphics phase
+on the EPS bands. Measured on `lhcb-logo.eps`: 72 ms (gs-direct)
+vs 127 ms (`convert`).
+
 **Status:** Decision made 2026-04-26 during babel.sty timeout investigation.
 Implementation completed 2026-04-26 (commits `1eb66c75c`, `de21ae928`,
 `01df250c6`). See `docs/archive/BABEL_TIMEOUT_BISECT.md` for the triggering

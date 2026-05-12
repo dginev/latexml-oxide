@@ -160,11 +160,36 @@ LoadDefinitions!({
     "pdflang",
   ] {
     DeclareOption!(option, None);
+    // Rust-only divergence (paired with `21e730e71e` Info→Warn promotion):
+    // also register each hyperref option as a Hyp keyval so `\hypersetup{
+    // colorlinks=true,citecolor=…}` doesn't trip the unknown-key Warn path.
+    // Perl `hyperref.sty.ltxml:110` only registers `baseurl`; everything
+    // else falls through `KeyVals.pm:97` at Info level (silent). Without
+    // this registration, every hyperref-using paper emits 3-10 Warn lines
+    // per `\hypersetup`. Driver: 2304.12803 (4 Hyp warnings, all the
+    // common color-link options).
+    DefKeyVal!("Hyp", option, "");
   }
 
   // \hypersetup{keyvals} configures various parameters,
   // for each pdf keyword, provide [property,(content|resource),datatype]
   DefKeyVal!("Hyp", "baseurl", "Semiverbatim");
+
+  // hyperxmp extension keys. Perl `hyperref.sty.ltxml:99-105` lists
+  // these inside the `%pdfkey_property` hash but never calls DefKeyVal
+  // for them — they ride on the Info-level pass-through for unknown
+  // keys. Register them on the Rust side for the same Warn-suppression
+  // rationale as the main option loop above.
+  for key in [
+    "pdfauthortitle", "pdfcaptionwriter", "pdfcopyright",
+    "pdflicenseurl", "pdfmetalang",
+    // Other documented hyperref keys not in Perl's option list:
+    "pdfinfo", "pdfremotestartview", "pdfencoding",
+    "pdfescapeform", "psdextra",
+    "pdfa", "pdfua", "pdfsuffix",
+  ] {
+    DefKeyVal!("Hyp", key, "");
+  }
 
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
@@ -520,7 +545,27 @@ LoadDefinitions!({
   });
 
   Let!("\\HyOrg@addtoreset", "\\@addtoreset");
+  // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
+  // '\refstepcounter')`. We go one step further and mirror the real
+  // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to
+  // dispatch through `\H@refstepcounter`. This is what real-world
+  // packages assume — most notably `cleveref.sty:2045-2053` patches
+  // `\H@refstepcounter` (under `\@ifpackageloaded{hyperref}`) to set
+  // `\cref@currentlabel`. Without the dispatch, that patch is dead
+  // code: `\refstepcounter` stays bound to the kernel primitive,
+  // `\cref@currentlabel` keeps its `\ALG@beginalgorithmic` placeholder
+  // `[line][\arabic{ALG@line}][\cref@currentprefix]\theALG@line`,
+  // and the cleveref-augmented `\ALG@step` then does
+  // `\xdef\cref@currentprefix{\cref@currentprefix}` — a runaway
+  // self-expansion that Perl LaTeXML catches with an in-engine
+  // recursion guard (`Expandable.pm:81-89`), but Rust hangs at the
+  // worker wall-clock guard.
+  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). Hyperref's
+  // anchor side-effects (Hy@raisedlink, hyper@anchorstart/end) are
+  // PDF-only and intentionally skipped — only the dispatch matters
+  // for the XML pipeline.
   Let!("\\H@refstepcounter", "\\refstepcounter");
+  DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
 

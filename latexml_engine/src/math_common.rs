@@ -1154,10 +1154,15 @@ LoadDefinitions!({
 
   //======================================================================
   // \choose & friends — Perl: math_common.pool.ltxml L634-642
+  // `protected` matches the TeX-primitive semantics — see the comment
+  // on `\atop`/`\over`/`\above` in `tex_math.rs` for the same rationale.
   DefMacro!("\\choose",
-    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}");
+    "\\lx@generalized@over{\\choose}{meaning=binomial,thickness=0pt,left=\\lx@left(,right=\\lx@right)}",
+    protected => true);
   DefMacro!("\\brace",
-    "\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}");
+    "\\lx@generalized@over{\\brace}{thickness=0pt,left=\\lx@left\\{,right=\\lx@right\\}}",
+    protected => true);
   DefMacro!("\\brack",
-    "\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}");
+    "\\lx@generalized@over{\\brack}{thickness=0pt,left=\\lx@left[,right=\\lx@right]}",
+    protected => true);
 });

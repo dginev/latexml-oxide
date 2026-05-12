@@ -1170,14 +1170,47 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        // Soft-expansion of character-equivalent CS tokens: a small
-        // set of "primitive" CSes whose entire semantic is to insert
-        // a single character (NBSP, etc.) are non-expandable, but
-        // when they surface inside `\csname...\endcsname` the user's
-        // intent is to use that character as part of the constructed
-        // name. Erroring here mismatches Perl LaTeXML on the canvas
-        // (witness: `\Ref~\cite{key}` → ~ → \lx@NBSP → cs-name error
-        // cluster of 18 papers, see SYNC_STATUS CLUSTER-NBSP).
+        // Soft-expansion of character-equivalent CS tokens — a
+        // documented Rust-port divergence from Knuth TeX.
+        //
+        // Real-TeX semantics (cited from background/):
+        //   - tex.web @<Manufacture a control...@> L7745-7758: the
+        //     \csname loop calls `get_x_token`; if `cur_cs != 0`
+        //     (i.e. the expanded token is *any* CS — including
+        //     `\let`-to-char "implicit characters"), the loop EXITS,
+        //     and unless that CS is `\endcsname` an error fires:
+        //     "Missing \endcsname inserted; the control sequence
+        //     marked <to be read again> should not appear between
+        //     \csname and \endcsname."
+        //   - texbook.tex p.~277 (line 3001-3002): "after
+        //     `\let\lq=` the control sequence token `\lq` will not
+        //     expand into a character token, nor *is* it a
+        //     character token!". `\let`-to-char produces an
+        //     *implicit character* that real TeX still treats as a
+        //     CS for csname purposes.
+        //
+        // Why diverge: our Rust port's expansion pipeline produces
+        // a swath of Stored::Token CSes (PA-aliased single-char
+        // expl3 primitives like `\exp_stop_f:` = frozen space, plus
+        // `\lx@NBSP` from the CLUSTER-NBSP path) that surface in
+        // the csname stream where real TeX wouldn't reach this
+        // state at all. Hard-erroring like Knuth would mismatch the
+        // real-world expl3 / mhchem / glossaries loads — our
+        // upstream gullet pushes these tokens further than Knuth's
+        // expansion would. We soft-substitute the underlying char
+        // so the constructed name is what the author meant.
+        //
+        // Witnesses:
+        //   - `\lx@NBSP` (round-19 CLUSTER-NBSP, 18 papers): `~`
+        //     active char defined as `\lx@NBSP` (Stored::Token of
+        //     U+00A0) surfacing in `\csname r@LABEL\endcsname`.
+        //   - `\exp_stop_f:` (mhchem raw-load 2026-05-12, 92→77
+        //     errors): expl3 frozen-space token reaching csname
+        //     stream during raw mhchem.sty load.
+        //
+        // Hardcoded carve-out for `\lx@NBSP` etc. stays for
+        // historical clarity; the general `Stored::Token` case
+        // below handles other PA-aliased CSes uniformly.
         let cs_str = token.with_str(|s| s.to_string());
         let soft_char: Option<char> = match cs_str.as_str() {
           "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
@@ -1185,6 +1218,31 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         };
         if let Some(c) = soft_char {
           cs.push(c);
+        } else if let Some(Stored::Token(letted)) = crate::state::lookup_meaning(&token) {
+          // CS is \let-equivalent to a single token. If that token is
+          // a character (LETTER/OTHER/SPACE), append its string repr
+          // to the constructed csname — mirrors real TeX's behaviour
+          // of substituting the let-target into the csname stream.
+          // Non-character lets (Catcode::CS, MATH, etc.) fall through
+          // to the error branches below.
+          let target_cc = letted.get_catcode();
+          if matches!(
+            target_cc,
+            Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+          ) {
+            if target_cc == Catcode::SPACE {
+              cs.push(' ');
+            } else {
+              letted.with_str(|s| cs.push_str(s));
+            }
+          } else if !quiet {
+            let message = s!(
+              "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
+              token,
+              cs
+            );
+            Error!("unexpected", token, message);
+          }
         } else if !quiet {
           if lookup_definition(&token)?.is_some() {
             let message = s!(

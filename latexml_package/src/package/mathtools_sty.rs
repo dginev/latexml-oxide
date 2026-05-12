@@ -26,6 +26,25 @@ LoadDefinitions!({
   // 3 — Macros
   //======================================================================
 
+  // mt keyset for `\mathtoolsset`. Perl `mathtools.sty.ltxml` doesn't
+  // call DefKeyVal for any of these — `\mathtoolsset` stashes whatever
+  // pairs you hand it as `\@mt@mathtoolsset@<key>` macros and looks
+  // them up via `\@mt@getmtoption`. With `21e730e71e`'s Info→Warn
+  // promotion, mathtools-using papers emit a Warn per call. Rust-only
+  // divergence: register the documented mathtools.dtx options.
+  for key in [
+    "showonlyrefs", "showmanualtags",
+    "mathic", "centercolon", "prescript-arg-format",
+    "prescript-sub-format", "prescript-sup-format",
+    "smallmatrix-align", "smallmatrix-inner-space",
+    "multlined-pos", "multlined-width",
+    "shortvdotsadjustabove", "shortvdotsadjustbelow",
+    "firstline-afterskip", "lastline-preskip",
+    "centered-mhchem-above-below",
+  ] {
+    DefKeyVal!("mt", key, "");
+  }
+
   // \mathtoolsset — stores keyval pairs as macros \@mt@mathtoolsset@<key>
   // Perl: DefPrimitive('\mathtoolsset RequiredKeyVals', sub { ... getPairs ... DefMacro })
   DefPrimitive!("\\mathtoolsset RequiredKeyVals:mt", sub[(kv)] {

@@ -12,6 +12,18 @@ LoadDefinitions!({
   DefKeyVal!("epsGin", "file",   "Semiverbatim");
   DefKeyVal!("epsGin", "prolog", "Semiverbatim");
   DefKeyVal!("epsGin", "silent", "");
+  // epsfig also accepts standard graphicx-like options. Perl
+  // epsfig.sty.ltxml leaves them unregistered; Rust-only divergence
+  // paired with `21e730e71e`. Driver: 2101.10980 uses
+  // `\psfig{file=...,angle=180,...}`.
+  for key in [
+    "angle", "scale", "totalheight", "trim", "viewport",
+    "bb", "bbllx", "bblly", "bburx", "bbury",
+    "hiresbb", "natwidth", "natheight",
+    "draft", "final", "type", "ext", "read",
+  ] {
+    DefKeyVal!("epsGin", key, "");
+  }
   // Perl epsfig.sty.ltxml L35-52: \psfig RequiredKeyVals:epsGin emits
   // an ltx:graphics element. properties closure extracts 'file' or
   // 'figure' key as the graphic path, removes those keys from the kv

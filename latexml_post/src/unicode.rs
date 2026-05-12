@@ -5,7 +5,7 @@
 //! (U+1D400–U+1D7FF) based on mathvariant style. Also handles superscript/subscript
 //! mappings and font name normalization to MathML mathvariant values.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::sync::LazyLock;
 
 /// Build a Plane 1 character mapping from base addresses.
@@ -23,7 +23,7 @@ fn make_plane1_map(
   greek_lower: Option<u32>,
   digits: Option<u32>,
 ) -> HashMap<char, char> {
-  let mut map = HashMap::new();
+  let mut map = HashMap::default();
   // Latin uppercase A-Z
   for i in 0..26u32 {
     let src = char::from_u32('A' as u32 + i).unwrap();
@@ -67,7 +67,7 @@ fn make_plane1_map(
 ///
 /// Port of Perl's `%unicode_map` hash.
 static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyLock::new(|| {
-  let mut map: HashMap<&'static str, HashMap<char, char>> = HashMap::new();
+  let mut map: HashMap<&'static str, HashMap<char, char>> = HashMap::default();
 
   // bold: full set (Latin + Greek + digits)
   map.insert(
@@ -167,7 +167,7 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
 
   // superscript: scattered Unicode characters
   {
-    let mut m = HashMap::new();
+    let mut m = HashMap::default();
     m.insert('\u{2032}', '\''); // \prime
     m.insert('0', '\u{2070}');
     m.insert('1', '\u{00B9}');
@@ -247,7 +247,7 @@ static UNICODE_MAP: LazyLock<HashMap<&'static str, HashMap<char, char>>> = LazyL
 
   // subscript: scattered Unicode characters
   {
-    let mut m = HashMap::new();
+    let mut m = HashMap::default();
     m.insert('0', '\u{2080}');
     m.insert('1', '\u{2081}');
     m.insert('2', '\u{2082}');
@@ -313,7 +313,7 @@ pub fn unicode_convert(string: &str, style: &str) -> Option<String> {
 ///
 /// Port of Perl's `%mathvariants` hash (28 entries → 12 canonical variants).
 static MATHVARIANTS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-  let mut m = HashMap::new();
+  let mut m = HashMap::default();
   m.insert("upright", "normal");
   m.insert("serif", "normal");
   m.insert("medium", "normal");

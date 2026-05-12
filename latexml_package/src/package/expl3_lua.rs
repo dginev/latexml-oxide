@@ -4,10 +4,10 @@
 /// bypass the TeX-based fontdimen intarray code in expl3-code.tex.
 use crate::prelude::*;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 thread_local! {
-  static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::new());
+  static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::default());
 }
 
 fn intarray_key(token: &Token, index: i64) -> String { s!("__intarray_{}_{}", token, index) }
@@ -42,6 +42,35 @@ where F: FnOnce(&mut Vec<i64>) -> R {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // 2026-05-11: Rust-native intarray bindings DISABLED in favor of the
+  // OLD-path font-hack implementation provided by raw expl3-code.tex.
+  //
+  // The motivating issue was glossaries → mfirstuc → expl3 case folding
+  // (`\Gls{cabbage}` → "Cabbage") returning empty case maps because the
+  // codepoint setup block stores per-codepoint case data in IntArrays
+  // (`\g__codepoint_<case>_blocks_intarray`). Two engine gaps fed the
+  // mismatch:
+  //   1. `\fontdimen` had no setter, so OLD-path writes were silent
+  //      no-ops. Fixed in tex_fonts.rs.
+  //   2. The font shared key normalised "at <N> sp" to "0.0pt" / "0.000000pt",
+  //      collapsing every cmr10-derived intarray into the same fontdimen
+  //      bucket. Also fixed in tex_fonts.rs.
+  //
+  // With (1)+(2) fixed, the OLD-path font-hack stores intarray state
+  // faithfully. Keeping the Rust-native overrides AT THE SAME TIME caused
+  // a split: `\intarray_count:N` (Rust) read from the empty Rust HashMap
+  // and reported 0, then `\__intarray_gset:Nww`'s bounds check rejected
+  // every write — so even though fontdimen storage worked, no value ever
+  // reached it. Path B (read from font-hack inside Rust overrides) would
+  // duplicate logic; Path A (drop Rust overrides) lets the
+  // dump-loaded expl3-code.tex definitions run end-to-end. Choosing Path A.
+  //
+  // If this file ever resurrects Rust-native intarray, ALSO override
+  // `\__intarray_gset:Nww`, `\__intarray_bounds:NNnTF`, `\__kernel_intarray_gset:Nnn`,
+  // and the `\intarray_count:N` raw-load definition so the Rust storage
+  // is the single source of truth.
+
+  /*
   // \__intarray:w — marker token (protected primitive)
   DefPrimitive!(T_CS!("\\__intarray:w"), None, sub[_args] {
     Error!("unexpected", "\\__intarray:w", "Unexpected isolated \\__intarray:w?");
@@ -168,4 +197,14 @@ LoadDefinitions!({
     Error!("unimplemented", "intarray_gset_range",
       "\\__intarray_gset_range:w is not yet implemented");
   });
+  */
+  // Reference unused fns to satisfy dead-code lint.
+  let _: fn() -> Result<String> = read_intarray_key;
+  let _ = intarray_key;
 });
+
+// Silence dead-code warning on `with_intarray` while bindings are commented out.
+#[allow(dead_code)]
+fn _unused_with_intarray(key: &str) -> usize {
+  with_intarray(key, |arr| arr.len())
+}

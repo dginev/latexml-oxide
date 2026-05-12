@@ -10,7 +10,7 @@
 # so we can diff before/after.
 #
 # Usage:
-#   ./tools/rerun_failures.sh             # full re-run, 16 workers, 120s timeout
+#   ./tools/rerun_failures.sh             # full re-run, 20 workers, 60s timeout
 #   ./tools/rerun_failures.sh --workers 8
 #   ./tools/rerun_failures.sh --rerun-failures   # only re-run papers that failed last run
 #
@@ -36,7 +36,7 @@ fi
 count=$(ls "$INPUT_DIR"/*.zip 2>/dev/null | wc -l)
 echo "Re-running $count failure papers from $INPUT_DIR → $OUTPUT_DIR"
 
-# Defaults: 12 workers, 6 GB RAM ceiling per worker, 60 s wall-clock
+# Defaults: 20 workers, 6 GB RAM ceiling per worker, 60 s wall-clock
 # per task. Override by exporting MAX_RAM_KB / WORKERS / TIMEOUT_S
 # before invocation, or by passing flags through to benchmark_10k.sh.
 export MAX_RAM_KB="${MAX_RAM_KB:-6291456}"   # 6 GB in KB
@@ -44,6 +44,6 @@ export MAX_RAM_KB="${MAX_RAM_KB:-6291456}"   # 6 GB in KB
 exec "$(dirname "$0")/benchmark_10k.sh" \
   --input-dir "$INPUT_DIR" \
   --output-dir "$OUTPUT_DIR" \
-  --workers 12 \
+  --workers 20 \
   --timeout 60 \
   "$@"

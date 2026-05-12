@@ -99,11 +99,11 @@ pub mod oldgerm_sty;
 pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
-pub mod pictex_tex;
 pub mod pinlabel_sty;
 pub mod program_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
+pub mod scicite_sty;
 pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
@@ -184,9 +184,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "plus", phyzzx_plus::load_definitions),
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
-  ("prepictex", "tex", pictex_tex::load_definitions),
-  ("pictex", "tex", pictex_tex::load_definitions),
-  ("postpictex", "tex", pictex_tex::load_definitions),
   ("program", "sty", program_sty::load_definitions),
   ("scrpage", "sty", scrpage_sty::load_definitions),
   ("scrpage2", "sty", scrpage2_sty::load_definitions),
@@ -219,6 +216,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("oldgerm", "sty", oldgerm_sty::load_definitions),
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
+  ("scicite", "sty", scicite_sty::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),

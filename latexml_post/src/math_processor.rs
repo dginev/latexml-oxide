@@ -8,7 +8,7 @@
 //! - XMText content conversion
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::sync::LazyLock;
 
 use crate::document::{NodeData, PostDocument};
@@ -66,7 +66,13 @@ pub trait MathProcessor: Processor {
     secondaries: Vec<MathConversion>,
   ) -> MathConversion {
     if !secondaries.is_empty() {
-      log::error!(
+      // No direct Perl counterpart — `combine_parallel` is the trait's
+      // default impl; concrete overrides handle their own merging.
+      // Reaching this base impl with secondaries means a misconfigured
+      // chain. Use class=`misdefined`, object=`combineParallel` per
+      // the wider `Error('misdefined', …)` convention (Post.pm:177/434).
+      log_post_error!(
+        "misdefined", "combineParallel",
         "Abstract combineParallel: dropping extra markup from: {}",
         secondaries
           .iter()
@@ -231,7 +237,7 @@ fn process_math_node(
     let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
     conversion.xml = Some(NodeData::Element {
       tag:        "ltx:text".to_string(),
-      attributes: Some(HashMap::from([(
+      attributes: Some(HashMap::from_iter([(
         "class".to_string(),
         format!("ltx_math_{}", mimetype),
       )])),

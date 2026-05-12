@@ -7,7 +7,7 @@
 //! range-style page references, and glossary entry formatting.
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::document::{NodeData, PostDocument};
@@ -37,8 +37,8 @@ impl IndexTree {
       phrase:           None,
       phrase_text:      None,
       full_phrase_text: None,
-      subtrees:         HashMap::new(),
-      referrers:        HashMap::new(),
+      subtrees:         HashMap::default(),
+      referrers:        HashMap::default(),
       see_also:         Vec::new(),
     }
   }
@@ -87,7 +87,7 @@ impl MakeIndex {
     }
     log::info!("MakeIndex: {} entries", keys.len());
 
-    let mut all_phrases: HashMap<String, String> = HashMap::new();
+    let mut all_phrases: HashMap<String, String> = HashMap::default();
     let mut tree = IndexTree::new(index_id);
 
     for key in &keys {
@@ -177,7 +177,7 @@ impl MakeIndex {
         attributes: tree
           .key
           .as_ref()
-          .map(|k| HashMap::from([("key".to_string(), k.clone())])),
+          .map(|k| HashMap::from_iter([("key".to_string(), k.clone())])),
         children:   vec![NodeData::Text(phrase.clone())],
       });
     }
@@ -200,13 +200,13 @@ impl MakeIndex {
       {
         links.push(NodeData::Element {
           tag:        "ltx:ref".to_string(),
-          attributes: Some(HashMap::from([("idref".to_string(), target_id.clone())])),
+          attributes: Some(HashMap::from_iter([("idref".to_string(), target_id.clone())])),
           children:   vec![NodeData::Text(see_text.clone())],
         });
       } else {
         links.push(NodeData::Element {
           tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from([("font".to_string(), "italic".to_string())])),
+          attributes: Some(HashMap::from_iter([("font".to_string(), "italic".to_string())])),
           children:   vec![NodeData::Text(see_text.clone())],
         });
       }
@@ -230,7 +230,7 @@ impl MakeIndex {
       attributes: if tree.id.is_empty() {
         None
       } else {
-        Some(HashMap::from([("xml:id".to_string(), tree.id.clone())]))
+        Some(HashMap::from_iter([("xml:id".to_string(), tree.id.clone())]))
       },
       children,
     }
@@ -300,7 +300,7 @@ impl MakeIndex {
 
     let ref_node = NodeData::Element {
       tag:        "ltx:ref".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("idref".to_string(), id.to_string()),
         ("show".to_string(), "typerefnum".to_string()),
       ])),
@@ -310,7 +310,7 @@ impl MakeIndex {
     if primary_style != "normal" {
       NodeData::Element {
         tag:        "ltx:text".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "font".to_string(),
           primary_style.to_string(),
         )])),
@@ -324,11 +324,15 @@ impl MakeIndex {
   /// Get glossary entries from the ObjectDB.
   ///
   /// Port of `MakeIndex::getGlossaryEntries`.
-  fn get_glossary_entries(&self, lists: &str, glossary_id: &str) -> Vec<GlossaryEntry> {
-    let list_set: std::collections::HashSet<&str> = lists.split(',').collect();
+  fn get_glossary_entries(&mut self, lists: &str, glossary_id: &str) -> Vec<GlossaryEntry> {
+    let list_set: rustc_hash::FxHashSet<&str> = lists.split(',').collect();
     let mut entries = Vec::new();
 
-    for db_key in self.db.get_keys() {
+    // Clone the keys up-front so we can do mutable `lookup_mut` writes
+    // inside the loop (registering `id` so CrossRef can resolve refs).
+    let keys: Vec<String> = self.db.get_keys().into_iter().cloned().collect();
+    for db_key in &keys {
+      let db_key = db_key.as_str();
       if !db_key.starts_with("GLOSSARY:") {
         continue;
       }
@@ -371,15 +375,23 @@ impl MakeIndex {
           sort_key,
           formatted: NodeData::Element {
             tag:        "ltx:glossaryentry".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("lists".to_string(), lists.to_string()),
-              ("xml:id".to_string(), id),
+              ("xml:id".to_string(), id.clone()),
+              // fragid mirrors xml:id so the XSLT `add_id` template emits
+              // `<dt id="glo.main.cabbage">`. Without fragid, the dt
+              // renders as `<dt class="..."/>` only. Normally CrossRef's
+              // fill_in_frags populates fragid from the ObjectDB ID entry,
+              // but our new glossaryentry nodes are created AFTER Scan
+              // already ran, so the DB has no `ID:<id>` entry to source
+              // from. Setting fragid eagerly here matches the end state.
+              ("fragid".to_string(), id.clone()),
               ("key".to_string(), key.to_string()),
             ])),
             children:   vec![
               NodeData::Element {
                 tag:        "ltx:glossaryphrase".to_string(),
-                attributes: Some(HashMap::from([
+                attributes: Some(HashMap::from_iter([
                   ("role".to_string(), "label".to_string()),
                   ("key".to_string(), key.to_string()),
                 ])),
@@ -387,7 +399,7 @@ impl MakeIndex {
               },
               NodeData::Element {
                 tag:        "ltx:glossaryphrase".to_string(),
-                attributes: Some(HashMap::from([(
+                attributes: Some(HashMap::from_iter([(
                   "role".to_string(),
                   "definition".to_string(),
                 )])),
@@ -396,9 +408,21 @@ impl MakeIndex {
             ],
           },
         });
+        // Register the entry's id back in the DB so CrossRef's
+        // fill_in_glossaryrefs can resolve `<glossaryref key="X">` to
+        // the corresponding `<glossaryentry xml:id=…>`. Mirrors Perl
+        // MakeIndex.pm where the entry construction sets `id`.
+        if let Some(entry_mut) = self.db.lookup_mut(db_key) {
+          entry_mut.set_value("id", Value::from(id.clone()));
+        }
       }
     }
-    entries.sort_by(|a, b| a.sort_key.cmp(&b.sort_key));
+    // Perl `MakeIndex.pm` L487: `$doc->unisort(keys %hash)` — Unicode-
+    // aware case-insensitive sort. For ASCII-Latin (which covers the
+    // test fixture and the vast majority of glossary entries), lowercase
+    // comparison matches the expected order: "Cabbage" sorts beside
+    // "cabbage" rather than before all lowercase letters.
+    entries.sort_by(|a, b| a.sort_key.to_lowercase().cmp(&b.sort_key.to_lowercase()));
     entries
   }
 

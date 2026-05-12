@@ -290,6 +290,23 @@ LoadDefinitions!({
   DefKeyVal!("XMath", "operator_omcd", "");
   DefKeyVal!("XMath", "scriptpos", "");
   DefKeyVal!("XMath", "revert_as", "");
+  // `\lxDeclare` / `\lxDefMath` semantically extract `tag` and
+  // `description` from XMath-context keyvals (Perl latexml.sty.ltxml
+  // `normalizeDeclareKeys`). Perl tolerates these as unregistered
+  // (Info-level pass-through). Register them so the post-`21e730e71e`
+  // Warn level doesn't fire on every \lxDeclare invocation. Witness:
+  // tests/math/declare.tex.
+  DefKeyVal!("XMath", "tag", "");
+  DefKeyVal!("XMath", "description", "");
+  DefKeyVal!("XMath", "term", "");
+  DefKeyVal!("XMath", "short", "");
+  DefKeyVal!("XMath", "label", "");
+  DefKeyVal!("XMath", "scope", "");
+  DefKeyVal!("XMath", "alias", "");
+  DefKeyVal!("XMath", "cd", "");
+  DefKeyVal!("XMath", "trace", "");
+  DefKeyVal!("XMath", "nowrap", "");
+  DefKeyVal!("XMath", "replace", "");
 
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
@@ -826,8 +843,13 @@ LoadDefinitions!({
   DefKeyVal!("lx@GEN", "right", "");
   DefKeyVal!("lx@GEN", "ncolumns", "");
   DefKeyVal!("lx@GEN", "alignment", "");
+  DefKeyVal!("lx@GEN", "alignment-required", "");
   DefKeyVal!("lx@GEN", "rowsep", "");
   DefKeyVal!("lx@GEN", "conditionmode", "");
+  // `atameaning` is a Perl typo retained on purpose (see amsmath_sty.rs
+  // around `\smallmatrix` — fixing the typo would change XMDual wrapping
+  // behavior). Register so the Warn-level keyvals path doesn't fire.
+  DefKeyVal!("lx@GEN", "atameaning", "");
 
   // Perl: Base_XMath.pool.ltxml line 575
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
@@ -1642,7 +1664,7 @@ fn collect_xmrefs(node: &Node, refs: &mut Vec<Node>) {
 /// xml:id/idref pairs. This function scans the subtree for all xml:ids,
 /// then updates XMRef idrefs to point to actual existing ids.
 fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
-  use std::collections::HashMap;
+  use rustc_hash::FxHashMap as HashMap;
   // Collect all xml:ids in the subtree, keyed by their "base" (without suffix variants)
   // Collect xml:ids from the subtree by walking the DOM directly
   // (XPath namespace handling may miss xml:id attributes)
@@ -1661,7 +1683,7 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
   let trailing_num_re = regex::Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
-  let mut id_by_suffix: HashMap<String, String> = HashMap::new();
+  let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {
       // Key is `.NN`, value is the actual id.

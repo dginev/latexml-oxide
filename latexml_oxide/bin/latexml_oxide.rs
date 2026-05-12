@@ -248,6 +248,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let wall_start = std::time::Instant::now();
   let cli = Cli::parse();
 
+  // Kick off kpathsea pre-init in a background thread. Force-runs
+  // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
+  // first real `find_file` from digest sees the fast post-init path
+  // instead of paying ~30-40 ms of setup on its first lookup. The
+  // worker holds the global KPSE mutex while it probes, so a main-
+  // thread `kpsewhich(...)` racing in early would block briefly —
+  // but in practice dump load + arg parsing run for >50 ms before
+  // any digest-time package resolution, so the warm-up usually
+  // completes before its first real consumer arrives.
+  // Disabled by `LATEXML_NO_KPATHSEA_PREWARM=1` for A/B benchmarking.
+  let kpse_prewarm_enabled = std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err();
+  let _kpse_warmup_handle = if kpse_prewarm_enabled {
+    Some(std::thread::spawn(latexml_core::util::pathname::prewarm_kpathsea))
+  } else {
+    None
+  };
+
   // Initialize logger with verbosity level
   let verbosity: i32 = if cli.quiet {
     -1

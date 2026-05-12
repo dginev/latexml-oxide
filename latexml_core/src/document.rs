@@ -341,8 +341,8 @@ impl Document {
   /// during parsing. After finalization (which includes prune_xmduals), some ids
   /// are no longer referenced. Perl's parser doesn't generate these ids.
   pub fn cleanup_unreferenced_xmtok_ids(&mut self) {
-    use std::collections::HashSet;
-    let mut referenced_ids: HashSet<String> = HashSet::new();
+    use rustc_hash::FxHashSet as HashSet;
+    let mut referenced_ids: HashSet<String> = HashSet::default();
     for node in self.findnodes("descendant-or-self::*[@idref]", None) {
       if let Some(idref) = node.get_attribute("idref") {
         referenced_ids.insert(idref);
@@ -2756,6 +2756,21 @@ impl Document {
         badid,
         self.document.node_to_string(&prev)
       );
+      // Perl-faithful (Document.pm L1454): Info-level. The id-counter
+      // collision is the dedup-recovery path (`modify_id` appends
+      // suffix), not silent corruption. The earlier Error-level
+      // promotion was motivated by 1410.8171 (Sárkány PRA), but root-
+      // cause investigation showed the empty-S3+ rendering there was
+      // the siunitx ExplodeText! tokenization bug (fixed by
+      // fc2aae7266), not the dedup recovery. After that fix, the
+      // residual dedup events on the canvas are SHARED with Perl —
+      // the in-tree test fixture tests/math/declare.xml itself bakes
+      // in the `xml:id="S1.Ex1.m1.2a"` dedup result, confirming
+      // Perl produces the same behavior. Downstream broken XMRefs
+      // (post-dedup) emit Warn:expected:node "No node found with
+      // id=…" which already surfaces the consequence at the appro-
+      // priate severity. Math-parser hygiene fix (preventing the
+      // collision in the first place) is tracked separately.
       Info!("malformed", "id", message);
       new_id
     } else {

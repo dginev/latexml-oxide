@@ -13,7 +13,7 @@ jobs:
             - name: install dependencies
               uses: ryankurte/action-apt@v0.2.0
               with:
-                packages: "libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6"
+                packages: "libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold"
             - name: Checkout Repository
               uses: actions/checkout@v2
 

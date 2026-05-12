@@ -26,18 +26,26 @@ LoadDefinitions!({
   {
     DeclareOption!(*substyle, None);
   }
-  // Perl revtex4-1.cls.ltxml L41-45: amsfonts/amssymb/amsmath are in
-  // @revtex_toload BY DEFAULT; positive options are no-ops, negative
-  // (`noamsmath`/`noamssymb`/`noamsfonts`) options REMOVE from the list.
-  // Was: defaulted to false and positive options set true — so
-  // `\documentclass[amsmath,...]{revtex4-1}` (driver: 2210.07776) failed
-  // to load amsmath because the DeclareOption handler appears not to fire
-  // for already-positively-listed options under our ProcessOptions flow.
-  // Mirror Perl's default-on behavior so `\boldsymbol` (defined in amsbsy
-  // pulled by amsmath) is available throughout the doc.
+  // Perl revtex4-1.cls.ltxml L40-45:
+  //   my @revtex_toload = ();        # EMPTY by default
+  //   foreach my $pkg (qw(amsfonts amssymb amsmath)) {
+  //     DeclareOption($pkg,   sub { push(@revtex_toload, $pkg); });
+  //     DeclareOption("no$pkg", sub { @revtex_toload = grep {…} … }); }
+  // Same Perl-faithful empty default as revtex4_cls.rs sister fix.
+  // Was: defaulted to TRUE with the misattributed claim that Perl's
+  // default is the full list; Perl's actual default is `()`. The flip
+  // pulled amsmath into papers that don't opt in, and amsmath's `\cases`
+  // redefinition then mis-parsed plain TeX `\cases{… & … \cr}` inside
+  // `\begin{equation}`. RUST REGRESSION — drop the default-true.
+  //
+  // Driver 2210.07776's `\boldsymbol undefined` cascade was the
+  // originally-claimed motivation; if it regresses, the proper fix is
+  // in the DeclareOption / ProcessOptions handler (separate work).
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    state::assign_value(&s!("revtex_load_{}", pkg), true, Some(Scope::Global));
-    DeclareOption!(*pkg, None);
+    let pkg_owned = pkg.to_string();
+    DeclareOption!(*pkg, {
+      state::assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
+    });
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
       state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));

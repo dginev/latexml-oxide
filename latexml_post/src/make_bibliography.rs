@@ -15,7 +15,7 @@
 //! 7. Optionally split by initial letter
 
 use libxml::tree::Node;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::path::Path;
 
 use crate::document::{NodeData, PostDocument, PostDocumentOptions};
@@ -164,7 +164,10 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log::warn!("Failed to load bibliography '{}': {}", bib, e),
+            Err(e) => log_post_warn!(
+              "I/O", bib,
+              "Failed to load bibliography '{}': {}", bib, e
+            ),
           }
         }
       }
@@ -190,7 +193,10 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log::warn!("Failed to load bibliography '{}': {}", path, e),
+            Err(e) => log_post_warn!(
+              "I/O", path,
+              "Failed to load bibliography '{}': {}", path, e
+            ),
           }
         }
       }
@@ -242,7 +248,7 @@ impl MakeBibliography {
     // Build a map: lc(bibkey) → { bibkey, bibentry, citations }
     // Import bibentry nodes into the main document so that XPath queries
     // (which use the main document's namespace context) work correctly.
-    let mut entries: HashMap<String, BibEntryData> = HashMap::new();
+    let mut entries: HashMap<String, BibEntryData> = HashMap::default();
     let bib_docs = self.get_bibliographies(doc);
     for bibdoc in &bib_docs {
       for bibentry in bibdoc.findnodes("//ltx:bibentry") {
@@ -279,8 +285,8 @@ impl MakeBibliography {
           title: String::new(),
           entry_type: String::new(),
           number: 0,
-          referrers: HashSet::new(),
-          bibreferrers: HashSet::new(),
+          referrers: HashSet::default(),
+          bibreferrers: HashSet::default(),
           citations,
           bibentry: Some(imported),
         });
@@ -355,8 +361,8 @@ impl MakeBibliography {
                     title:         String::new(),
                     entry_type:    String::new(),
                     number:        0,
-                    referrers:     HashSet::new(),
-                    bibreferrers:  HashSet::new(),
+                    referrers:     HashSet::default(),
+                    bibreferrers:  HashSet::default(),
                     citations:     Vec::new(),
                     bibentry:      None,
                   });
@@ -380,8 +386,8 @@ impl MakeBibliography {
 
     // Step 3: Process queue — transitively include cited entries.
     // For each key, extract names/year/title from bibentry XML.
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut included: HashMap<String, BibEntryData> = HashMap::new();
+    let mut seen: HashSet<String> = HashSet::default();
+    let mut included: HashMap<String, BibEntryData> = HashMap::default();
     let mut missing_keys: Vec<String> = Vec::new();
 
     while let Some(bibkey) = queue.pop() {
@@ -551,7 +557,7 @@ impl MakeBibliography {
     sorted_keys.sort();
 
     // Port of suffix detection: track by author_year, assign suffixes when duplicated.
-    let mut ay_last: HashMap<String, String> = HashMap::new(); // ay → last sort_key with this ay
+    let mut ay_last: HashMap<String, String> = HashMap::default(); // ay → last sort_key with this ay
     for key in &sorted_keys {
       if let Some(entry) = included.get(key) {
         let ay = entry.author_year.clone();
@@ -638,7 +644,7 @@ impl MakeBibliography {
 
     NodeData::Element {
       tag:        "ltx:biblist".to_string(),
-      attributes: Some(HashMap::from([("xml:id".to_string(), id)])),
+      attributes: Some(HashMap::from_iter([("xml:id".to_string(), id)])),
       children:   items,
     }
   }
@@ -676,7 +682,7 @@ impl MakeBibliography {
     // Number tag
     tags.push(NodeData::Element {
       tag:        "ltx:tag".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("role".to_string(), "number".to_string()),
         ("class".to_string(), "ltx_bib_number".to_string()),
       ])),
@@ -700,7 +706,7 @@ impl MakeBibliography {
       CitationStyle::Numbers => {
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_key".to_string()),
             ("open".to_string(), "[".to_string()),
@@ -720,7 +726,7 @@ impl MakeBibliography {
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_abbrv".to_string()),
             ("open".to_string(), "[".to_string()),
@@ -749,7 +755,7 @@ impl MakeBibliography {
         }
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "refnum".to_string()),
             ("class".to_string(), "ltx_bib_author-year".to_string()),
           ])),
@@ -777,7 +783,7 @@ impl MakeBibliography {
     for ref_id in &sorted_referrers {
       citedby.push(NodeData::Element {
         tag:        "ltx:ref".to_string(),
-        attributes: Some(HashMap::from([
+        attributes: Some(HashMap::from_iter([
           ("idref".to_string(), ref_id.to_string()),
           ("show".to_string(), "typerefnum".to_string()),
         ])),
@@ -789,7 +795,7 @@ impl MakeBibliography {
       sorted_bibrefs.sort();
       citedby.push(NodeData::Element {
         tag:        "ltx:bibref".to_string(),
-        attributes: Some(HashMap::from([
+        attributes: Some(HashMap::from_iter([
           (
             "bibrefs".to_string(),
             sorted_bibrefs
@@ -813,7 +819,7 @@ impl MakeBibliography {
       block_children.push(NodeData::Text(".".to_string()));
       children.push(NodeData::Element {
         tag:        "ltx:bibblock".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "class".to_string(),
           "ltx_bib_cited".to_string(),
         )])),
@@ -823,7 +829,7 @@ impl MakeBibliography {
 
     NodeData::Element {
       tag: "ltx:bibitem".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("xml:id".to_string(), id),
         ("key".to_string(), cited_key.to_string()),
         ("type".to_string(), entry.entry_type.clone()),
@@ -861,13 +867,13 @@ impl MakeBibliography {
         let first_text = surnames[0].get_content();
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
           children:   vec![NodeData::Text(first_text), NodeData::Element {
             tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "class".to_string(),
               "ltx_bib_etal".to_string(),
             )])),
@@ -886,7 +892,7 @@ impl MakeBibliography {
         }
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "fullauthors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
@@ -896,7 +902,7 @@ impl MakeBibliography {
         has_names = true;
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
@@ -910,7 +916,7 @@ impl MakeBibliography {
         has_names = true;
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
@@ -926,7 +932,7 @@ impl MakeBibliography {
         has_key = true;
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "key".to_string()),
             ("class".to_string(), "ltx_bib_key".to_string()),
           ])),
@@ -945,7 +951,7 @@ impl MakeBibliography {
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "year".to_string()),
             ("class".to_string(), "ltx_bib_year".to_string()),
           ])),
@@ -961,7 +967,7 @@ impl MakeBibliography {
         has_typetag = true;
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "bibtype".to_string()),
             ("class".to_string(), "ltx_bib_type".to_string()),
           ])),
@@ -976,7 +982,7 @@ impl MakeBibliography {
       {
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "title".to_string()),
             ("class".to_string(), "ltx_bib_title".to_string()),
           ])),
@@ -989,7 +995,7 @@ impl MakeBibliography {
         has_names = true;
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "authors".to_string()),
             ("class".to_string(), "ltx_bib_author".to_string()),
           ])),
@@ -998,7 +1004,7 @@ impl MakeBibliography {
         if entry.authors_full != entry.authors_short {
           tags.push(NodeData::Element {
             tag:        "ltx:tag".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("role".to_string(), "fullauthors".to_string()),
               ("class".to_string(), "ltx_bib_author".to_string()),
             ])),
@@ -1011,7 +1017,7 @@ impl MakeBibliography {
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "year".to_string()),
             ("class".to_string(), "ltx_bib_year".to_string()),
           ])),
@@ -1021,7 +1027,7 @@ impl MakeBibliography {
       if !entry.title.is_empty() {
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
-          attributes: Some(HashMap::from([
+          attributes: Some(HashMap::from_iter([
             ("role".to_string(), "title".to_string()),
             ("class".to_string(), "ltx_bib_title".to_string()),
           ])),
@@ -1156,7 +1162,7 @@ impl MakeBibliography {
           if !content.is_empty() {
             items.push(NodeData::Element {
               tag:        "ltx:text".to_string(),
-              attributes: Some(HashMap::from([(
+              attributes: Some(HashMap::from_iter([(
                 "class".to_string(),
                 format!("ltx_bib_{}", field_spec.class),
               )])),
@@ -1188,7 +1194,7 @@ impl MakeBibliography {
           let mut items = vec![NodeData::Text("Note: ".to_string())];
           items.push(NodeData::Element {
             tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "class".to_string(),
               "ltx_bib_note".to_string(),
             )])),
@@ -1206,7 +1212,7 @@ impl MakeBibliography {
           let mut items = vec![NodeData::Text("External Links: ".to_string())];
           items.push(NodeData::Element {
             tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "class".to_string(),
               "ltx_bib_links".to_string(),
             )])),
@@ -1261,7 +1267,7 @@ impl Processor for MakeBibliography {
 
       if self.split {
         // Split by initial letter
-        let mut by_initial: HashMap<String, HashMap<String, &BibEntryData>> = HashMap::new();
+        let mut by_initial: HashMap<String, HashMap<String, &BibEntryData>> = HashMap::default();
         for (key, entry) in &entries {
           by_initial
             .entry(entry.initial.clone())
@@ -2288,7 +2294,7 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
             attributes: None,
             children:   vec![NodeData::Element {
               tag:        "ltx:bibref".to_string(),
-              attributes: Some(HashMap::from([
+              attributes: Some(HashMap::from_iter([
                 ("bibrefs".to_string(), bibrefs),
                 ("show".to_string(), "title, author".to_string()),
               ])),
@@ -2361,7 +2367,7 @@ fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData
     result.push(NodeData::Text(sep.to_string()));
     result.push(NodeData::Element {
       tag:        "ltx:text".to_string(),
-      attributes: Some(HashMap::from([(
+      attributes: Some(HashMap::from_iter([(
         "class".to_string(),
         "ltx_bib_etal".to_string(),
       )])),
@@ -2389,7 +2395,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
         if let Some(href) = href {
           links.push(NodeData::Element {
             tag:        "ltx:ref".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("href".to_string(), href),
               ("class".to_string(), format!("{} ltx_bib_external", scheme)),
             ])),
@@ -2398,7 +2404,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
         } else {
           links.push(NodeData::Element {
             tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "class".to_string(),
               format!("{} ltx_bib_external", scheme),
             )])),
@@ -2409,7 +2415,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
       "ltx:bib-links" => {
         links.push(NodeData::Element {
           tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "class".to_string(),
             "ltx_bib_external".to_string(),
           )])),
@@ -2420,7 +2426,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
         if let Some(href) = href {
           links.push(NodeData::Element {
             tag:        "ltx:ref".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("href".to_string(), href),
               ("class".to_string(), "ltx_bib_external".to_string()),
             ])),
@@ -2673,7 +2679,7 @@ fn clone_entry(e: &BibEntryData) -> BibEntryData {
 
 /// Create a bibblock element with xml:space="preserve".
 fn make_bibblock(class: &str, content: &[NodeData]) -> NodeData {
-  let mut attrs = HashMap::new();
+  let mut attrs = HashMap::default();
   attrs.insert("xml:space".to_string(), "preserve".to_string());
   if !class.is_empty() {
     attrs.insert("class".to_string(), class.to_string());

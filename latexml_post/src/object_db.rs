@@ -16,7 +16,7 @@
 //! - `NOTATION:<name>` — notation entries
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 /// A single entry in the ObjectDB.
 ///
@@ -122,7 +122,7 @@ impl Entry {
   pub fn new(key: &str) -> Self {
     Entry {
       key:    key.to_string(),
-      values: HashMap::new(),
+      values: HashMap::default(),
     }
   }
 
@@ -240,7 +240,7 @@ impl Entry {
     let hash = self
       .values
       .entry(first.to_string())
-      .or_insert_with(|| Value::Hash(HashMap::new()));
+      .or_insert_with(|| Value::Hash(HashMap::default()));
 
     if let Value::Hash(ref mut h) = hash {
       let mut current = h;
@@ -252,7 +252,7 @@ impl Entry {
           // Intermediate: navigate/create hash
           let entry = current
             .entry(key.to_string())
-            .or_insert_with(|| Value::Hash(HashMap::new()));
+            .or_insert_with(|| Value::Hash(HashMap::default()));
           if let Value::Hash(ref mut inner) = entry {
             current = inner;
           } else {
@@ -276,7 +276,7 @@ pub struct ObjectDB {
 
 impl ObjectDB {
   /// Create a new empty ObjectDB.
-  pub fn new() -> Self { ObjectDB { objects: HashMap::new() } }
+  pub fn new() -> Self { ObjectDB { objects: HashMap::default() } }
 
   /// Look up an entry by key.
   ///

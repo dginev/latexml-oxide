@@ -23,8 +23,8 @@
       </tags>
       <title><tag close=" ">1.1</tag>french</title>
       <para xml:id="S1.SS1.p1">
-        <p><text class="ltx_inline-quote ltx_outerquote">“Citation extérieure”</text>
-<text class="ltx_inline-quote ltx_outerquote">“Extérieure <text class="ltx_inline-quote ltx_innerquote">‘intérieur’</text> extérieure”</text></p>
+        <p><text class="ltx_inline-quote ltx_outerquote">« Citation extérieure »</text>
+<text class="ltx_inline-quote ltx_outerquote">« Extérieure <text class="ltx_inline-quote ltx_innerquote">“intérieur”</text> extérieure »</text></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:lang="de" xml:id="S1.SS2">
@@ -35,8 +35,8 @@
       </tags>
       <title><tag close=" ">1.2</tag>german</title>
       <para xml:id="S1.SS2.p1">
-        <p><text class="ltx_inline-quote ltx_outerquote">“Äußeres Zitat”</text>
-<text class="ltx_inline-quote ltx_outerquote">“Äußeres <text class="ltx_inline-quote ltx_innerquote">‘inneres’</text> Äußeres”</text></p>
+        <p><text class="ltx_inline-quote ltx_outerquote">„Äußeres Zitat“</text>
+<text class="ltx_inline-quote ltx_outerquote">„Äußeres <text class="ltx_inline-quote ltx_innerquote">‚inneres‘</text> Äußeres“</text></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:id="S1.SS3">
@@ -67,9 +67,9 @@
       </tags>
       <title><tag close=" ">2.1</tag>french</title>
       <para xml:id="S2.SS1.p1">
-        <p><text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">“Citation extérieure”</text>
-<text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">“Extérieure <text class="ltx_inline-quote ltx_innerquote">‘intérieur’</text> extérieure”</text>
-<text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">“Extérieure <text class="ltx_inline-quote ltx_innerquote">‘intérieur’</text> extérieure”</text></p>
+        <p><text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">« Citation extérieure »</text>
+<text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">« Extérieure <text class="ltx_inline-quote ltx_innerquote">“intérieur”</text> extérieure »</text>
+<text class="ltx_inline-quote ltx_outerquote" xml:lang="fr">« Extérieure <text class="ltx_inline-quote ltx_innerquote">“intérieur”</text> extérieure »</text></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:id="S2.SS2">
@@ -80,9 +80,9 @@
       </tags>
       <title><tag close=" ">2.2</tag>german</title>
       <para xml:id="S2.SS2.p1">
-        <p><text class="ltx_inline-quote ltx_outerquote" xml:lang="de">“Äußeres Zitat”</text>
-<text class="ltx_inline-quote ltx_outerquote" xml:lang="de">“Äußeres <text class="ltx_inline-quote ltx_innerquote">‘inneres’</text> Äußeres”</text>
-<text class="ltx_inline-quote ltx_outerquote" xml:lang="de">“Äußeres <text class="ltx_inline-quote ltx_innerquote">‘inneres’</text> Äußeres”</text></p>
+        <p><text class="ltx_inline-quote ltx_outerquote" xml:lang="de">„Äußeres Zitat“</text>
+<text class="ltx_inline-quote ltx_outerquote" xml:lang="de">„Äußeres <text class="ltx_inline-quote ltx_innerquote">‚inneres‘</text> Äußeres“</text>
+<text class="ltx_inline-quote ltx_outerquote" xml:lang="de">„Äußeres <text class="ltx_inline-quote ltx_innerquote">‚inneres‘</text> Äußeres“</text></p>
       </para>
     </subsection>
   </section>
@@ -101,7 +101,7 @@
       </tags>
       <title><tag close=" ">3.1</tag>french</title>
       <para xml:id="S3.SS1.p1">
-        <p><text class="ltx_textquote"><text class="ltx_inline-quote ltx_outerquote">“du texte ici”</text><text class="ltx_citation"> (Citation)</text></text></p>
+        <p><text class="ltx_textquote"><text class="ltx_inline-quote ltx_outerquote">« du texte ici »</text><text class="ltx_citation"> (Citation)</text></text></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:lang="de" xml:id="S3.SS2">
@@ -112,7 +112,7 @@
       </tags>
       <title><tag close=" ">3.2</tag>german</title>
       <para xml:id="S3.SS2.p1">
-        <p><text class="ltx_textquote"><text class="ltx_inline-quote ltx_outerquote">“etwas Text hier”</text><text class="ltx_citation"> (Zitat)</text></text></p>
+        <p><text class="ltx_textquote"><text class="ltx_inline-quote ltx_outerquote">„etwas Text hier“</text><text class="ltx_citation"> (Zitat)</text></text></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:id="S3.SS3">
@@ -135,8 +135,8 @@
     </tags>
     <title><tag close=" ">4</tag>textquote in foreign Language</title>
     <para xml:id="S4.p1">
-      <p><text class="ltx_textquote" xml:lang="fr"><text class="ltx_inline-quote ltx_outerquote">“du texte ici”</text><text class="ltx_citation" xml:lang="en"> (Citation)</text></text>
-<text class="ltx_textquote" xml:lang="de"><text class="ltx_inline-quote ltx_outerquote">“etwas Text hier”</text><text class="ltx_citation" xml:lang="en"> (Zitat)</text></text></p>
+      <p><text class="ltx_textquote" xml:lang="fr"><text class="ltx_inline-quote ltx_outerquote">« du texte ici »</text><text class="ltx_citation" xml:lang="en"> (Citation)</text></text>
+<text class="ltx_textquote" xml:lang="de"><text class="ltx_inline-quote ltx_outerquote">„etwas Text hier“</text><text class="ltx_citation" xml:lang="en"> (Zitat)</text></text></p>
     </para>
   </section>
   <section inlist="toc" xml:id="S5">

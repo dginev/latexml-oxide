@@ -30,8 +30,18 @@ type Interner = StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>;
 
 #[thread_local]
 static ARENA: Lazy<RefCell<Interner>> = Lazy::new(|| {
+  // 131,072 = 2^17 — sized to absorb the latex.dump (109,863 entries)
+  // plus a typical conversion's content (~15k more), so the hot path
+  // hits no reallocation. Profiled 2026-05-12: a representative
+  // `\usepackage{glossaries}` + math conversion ends at ~125,628
+  // strings allocated.
+  //
+  // Cost: ~2-3 MB extra startup memory vs the prior 32,768. Worth it
+  // when running batched conversions over a corpus (one fewer
+  // BufferBackend Vec realloc + HashMap rehash per process startup);
+  // negligible on a single short-lived run.
   RefCell::new(StringInterner::with_capacity_and_hasher(
-    32_768,
+    131_072,
     BuildHasherDefault::<FxHasher>::default(),
   ))
 });

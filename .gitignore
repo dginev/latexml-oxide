@@ -39,3 +39,14 @@ USER_OK.md
 # Local Claude Code settings and ad-hoc HTML conversion outputs
 .claude/
 html/
+
+# Reference / read-only mirror trees (Perl LaTeXML upstream sources,
+# community ar5iv-bindings .ltxml, TeXbook + tex.web). These live
+# alongside the repo for cross-reference during the Perl→Rust port
+# but are never modified or compiled. Per CLAUDE.md, LaTeXML/ is
+# the ground-truth reference and must not be edited.
+# `LaTeXML` here matches both a symlink and a real directory; the
+# trailing-slash form on the others stays since they're true dirs.
+LaTeXML
+ar5iv-bindings/
+background/

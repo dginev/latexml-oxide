@@ -8,7 +8,7 @@ use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::mathml::MathML;
 use latexml_post::processor::Processor;
 use latexml_post::xslt::XSLT;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -74,7 +74,7 @@ fn main() {
 
   if let Some(ref xsl_path) = stylesheet {
     let searchpaths = vec!["resources/XSLT".to_string(), ".".to_string()];
-    let xslt = XSLT::new(xsl_path, HashMap::new(), false, None, searchpaths).unwrap_or_else(|e| {
+    let xslt = XSLT::new(xsl_path, HashMap::default(), false, None, searchpaths).unwrap_or_else(|e| {
       eprintln!("Failed to create XSLT processor: {}", e);
       std::process::exit(1);
     });

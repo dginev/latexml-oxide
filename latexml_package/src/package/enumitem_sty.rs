@@ -210,8 +210,8 @@ fn merged_enumitem_keyvals(
   name: &str,
   level: i64,
   argkv: Option<&KeyVals>,
-) -> std::collections::HashMap<String, ArgWrap> {
-  let mut hash = std::collections::HashMap::new();
+) -> rustc_hash::FxHashMap<String, ArgWrap> {
+  let mut hash = rustc_hash::FxHashMap::default();
 
   let default_names = [
     "enumitem_defaults".to_string(),

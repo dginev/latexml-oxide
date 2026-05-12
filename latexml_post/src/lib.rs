@@ -25,6 +25,15 @@
 //! - [`math_processor`] — `MathProcessor` trait: abstract base for math converters
 //! - [`radix`] — Radix utilities for ID generation (a,b,...,z,aa,ab,...)
 
+// Crate-wide diagnostic emission macros
+// (`log_post_error!`, `log_post_warn!`, `log_post_info!`,
+// `log_post_fatal!`). Loaded first via #[macro_use] so every
+// post-processor module can use them without explicit imports —
+// matching how `latexml_engine`'s prelude makes the engine-level
+// `Error!`/`Warn!` macros visible.
+#[macro_use]
+pub mod diag;
+
 // Core infrastructure
 pub mod doc_owned_node;
 pub mod document;

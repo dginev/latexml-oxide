@@ -42,6 +42,58 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
 static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
+
+/// Force-initialize the kpathsea global state and warm up the per-
+/// format suffix tables.
+///
+/// **Why:** `Kpaths::find_file` lazily inits the kpse format-info
+/// table for each format type the first time a matching filename is
+/// looked up. The chain is
+/// `find_file → guess_format_from_filename → kpathsea_init_format →
+/// kpathsea_init_db → kpathsea_cnf_get → hash_insert_normalized`,
+/// taking ~30-40 ms total across the first dozen lookups. Profile
+/// data on 1910.01256 (2026-05-12, perf at 4 kHz) attributes 3.5 %
+/// of wall to that chain.
+///
+/// **What this does:** acquires the `KPSE` mutex once and runs a
+/// single `find_file` probe per common file format. Each probe
+/// guarantees `kpathsea_init_format` runs for that format type, so
+/// every subsequent real lookup hits the post-init fast path.
+///
+/// **Concurrency:** invoke this on a background thread spawned at
+/// process start, *before* digest begins. The mutex serialises with
+/// future kpathsea consumers — main thread blocks briefly if it
+/// races into `kpsewhich(...)` while we still hold the lock, but
+/// usually digest takes 100+ ms to reach its first package load by
+/// which point this routine has finished. Idempotent: re-entry
+/// while in flight is a no-op (lock contention only).
+pub fn prewarm_kpathsea() {
+  let kpse_guard = KPSE.lock().unwrap();
+  let Some(ref kpse) = *kpse_guard else {
+    return;
+  };
+  // One probe per common format. Filenames need not exist; the
+  // suffix-table init runs regardless. The first probe (".tex")
+  // bears the bulk of the cost because it triggers
+  // `kpathsea_init_db` itself; the rest are sub-millisecond.
+  for sentinel in &[
+    "warmup_lxoxide.tex",
+    "warmup_lxoxide.sty",
+    "warmup_lxoxide.cls",
+    "warmup_lxoxide.def",
+    "warmup_lxoxide.bst",
+    "warmup_lxoxide.fmt",
+    "warmup_lxoxide.afm",
+    "warmup_lxoxide.tfm",
+    "warmup_lxoxide.pfb",
+    "warmup_lxoxide.enc",
+    "warmup_lxoxide.map",
+  ] {
+    // catch_unwind defends against the same kpathsea-0.2.3 overflow
+    // bug that kpsewhich() guards against (see kpsewhich docs).
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(sentinel)));
+  }
+}
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
 static CANONICAL_URL_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^((?:https|http|ftp)://[^/]*)").unwrap());

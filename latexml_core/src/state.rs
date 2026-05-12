@@ -288,17 +288,26 @@ impl Default for State {
     undo_vdq.push_front(top_frame);
 
     State {
-      // Tables
-      value:                   HashMap::default(),
-      meaning:                 HashMap::default(),
+      // Tables — pre-size the two largest to absorb dump load. The
+      // `meaning` table receives 109,863 entries from latex.dump
+      // alone, so without pre-sizing it doubles 5+ times during
+      // dump load (each rehash is O(N)). `value` receives several
+      // thousand register/state-key entries through the lifecycle.
+      // Effective capacity (FxHashMap, 0.875 load factor): 131072 → ~115k.
+      value:                   HashMap::with_capacity_and_hasher(8_192, Default::default()),
+      meaning:                 HashMap::with_capacity_and_hasher(131_072, Default::default()),
       stash:                   HashMap::default(),
       stash_active:            HashMap::default(),
-      catcode:                 HashMap::default(),
-      mathcode:                HashMap::default(),
-      sfcode:                  HashMap::default(),
-      lccode:                  HashMap::default(),
-      uccode:                  HashMap::default(),
-      delcode:                 HashMap::default(),
+      // Char-keyed tables: ASCII alphabet + a smattering of high-codepoint
+      // entries get installed (textcomp + ts1enc.dfu populate ~200-300
+      // entries each). Pre-size to 512 to skip the 8→16→…→256→512
+      // doubling chain on startup.
+      catcode:                 HashMap::with_capacity_and_hasher(512, Default::default()),
+      mathcode:                HashMap::with_capacity_and_hasher(512, Default::default()),
+      sfcode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      lccode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      uccode:                  HashMap::with_capacity_and_hasher(512, Default::default()),
+      delcode:                 HashMap::with_capacity_and_hasher(512, Default::default()),
       // Table bookkeeping
       undo:                    undo_vdq,
       // stateful runtime - data structures
@@ -623,7 +632,7 @@ impl State {
   /// Returns a HashMap mapping (table_name, key) → Stored value.
   /// Only captures the front (current) value of each key.
   /// Used before processing latex.ltx to diff what changed.
-  pub fn snapshot(&self) -> std::collections::HashMap<(TableName, SymStr), Stored> {
+  pub fn snapshot(&self) -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> {
     let tables = [
       TableName::Value,
       TableName::Meaning,
@@ -634,7 +643,7 @@ impl State {
       TableName::Uccode,
       TableName::Delcode,
     ];
-    let mut snap = std::collections::HashMap::new();
+    let mut snap = rustc_hash::FxHashMap::default();
     for &tname in &tables {
       let table = self.table(tname);
       for (key, values) in table {
@@ -652,7 +661,7 @@ impl State {
   /// since those can't be serialized — they come from Rust engine code.
   pub fn diff_from_snapshot(
     &self,
-    snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+    snap: &rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
   ) -> Vec<(TableName, SymStr, Stored)> {
     let tables = [
       TableName::Value,
@@ -2943,13 +2952,13 @@ pub fn is_serializable(stored: &Stored) -> bool {
 }
 
 /// Take a snapshot of the current State (for dump diff).
-pub fn take_snapshot() -> std::collections::HashMap<(TableName, SymStr), Stored> {
+pub fn take_snapshot() -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> {
   state!().snapshot()
 }
 
 /// Compute diff from snapshot and return changed serializable entries.
 pub fn diff_snapshot(
-  snap: &std::collections::HashMap<(TableName, SymStr), Stored>,
+  snap: &rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
 ) -> Vec<(TableName, SymStr, Stored)> {
   state!().diff_from_snapshot(snap)
 }
@@ -2962,7 +2971,7 @@ pub fn diff_snapshot(
 // Without this hook the snapshot is taken after `_base.rs` + `_constructs.rs`
 // have also run, making the diff far narrower than Perl's dump. See
 // SYNC_STATUS D0 (d.1).
-type StateSnapshot = std::collections::HashMap<(TableName, SymStr), Stored>;
+type StateSnapshot = rustc_hash::FxHashMap<(TableName, SymStr), Stored>;
 type StagedSnapshotMap = rustc_hash::FxHashMap<&'static str, StateSnapshot>;
 
 thread_local! {
@@ -2985,7 +2994,7 @@ pub fn stage_snapshot(name: &'static str) {
 /// waiting for a pool hook.
 pub fn stage_snapshot_value(
   name: &'static str,
-  snap: std::collections::HashMap<(TableName, SymStr), Stored>,
+  snap: rustc_hash::FxHashMap<(TableName, SymStr), Stored>,
 ) {
   STAGED_SNAPSHOTS.with(|m| {
     m.borrow_mut().insert(name, snap);
@@ -2995,6 +3004,6 @@ pub fn stage_snapshot_value(
 /// Retrieve a previously staged snapshot, if present.
 pub fn get_staged_snapshot(
   name: &str,
-) -> Option<std::collections::HashMap<(TableName, SymStr), Stored>> {
+) -> Option<rustc_hash::FxHashMap<(TableName, SymStr), Stored>> {
   STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
 }

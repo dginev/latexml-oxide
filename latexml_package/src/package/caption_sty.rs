@@ -38,6 +38,19 @@ LoadDefinitions!({
   DefKeyVal!("caption", "listformat", "", "");
   DefKeyVal!("caption", "name", "", "");
   DefKeyVal!("caption", "type", "", "");
+  // Additional caption.sty options not in Perl's pre-registration list.
+  // Rust-only divergence paired with `21e730e71e` Info→Warn promotion.
+  for key in [
+    "compatibility", "calcmargin", "ignoreLTcapwidth",
+    "captionlinewidth", "subrefformat",
+    "subskip", "belowskip", "aboveskip",
+    "rule", "tableposition", "labelseparator",
+    "options", "ruled", "boxed",
+    "above", "below", "outside", "inside",
+    "centerlast", "centering", "raggedright", "raggedleft",
+  ] {
+    DefKeyVal!("caption", key, "");
+  }
 
   // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key}
   // in state. Perl uses `RequiredKeyVals:caption` so brace-nested and

@@ -40,11 +40,27 @@ but adapted for Rust bindings.
 
 Example for Ubuntu:
 ```
-$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 \
-                   texlive texlive-latex-extra texlive-science
+$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkpathsea-dev libkpathsea6 mold \
+                   texlive texlive-latex-extra texlive-science poppler-utils
 ```
 
-#### Optional: Vector-preserving PDF → SVG
+`poppler-utils` provides `pdftocairo`, used as the default fast PDF →
+PNG/SVG rasterizer (≈25× faster than ImageMagick `convert` on
+vector-heavy PDFs).
+
+#### Optional but recommended: MuPDF tools (≈2× faster PDF conversion)
+
+```
+$ sudo apt install mupdf-tools
+```
+
+`mutool draw` (MuPDF) is tried **before** `pdftocairo` for PDF →
+PNG/SVG conversion. Measured 2026-05-12: on a matplotlib scatter
+PDF, mutool runs in 0.48 s vs pdftocairo's 0.86 s, and its SVG
+output is ~4× more gzip-compressible. Falls through to `pdftocairo`
+if `mutool` is not on PATH — install is optional.
+
+#### Optional: inkscape fallback for vector-preserving PDF → SVG
 
 For the opt-in `--graphics-svg-threshold-kb N` flag (see
 [docs/SYNC_STATUS.md](docs/SYNC_STATUS.md) and upstream
@@ -54,10 +70,10 @@ For the opt-in `--graphics-svg-threshold-kb N` flag (see
 $ sudo apt install inkscape
 ```
 
-`inkscape` is used to convert small vector-authored PDFs into vector SVG
-instead of rasterising them via ImageMagick `convert`. The path is
-disabled by default; if the flag is enabled but inkscape is missing at
-runtime, the pipeline silently falls back to `convert`.
+`inkscape` is used as the **last-resort** SVG converter when both
+`mutool` and `pdftocairo` fail. The path is disabled by default; if
+the flag is enabled but inkscape is missing at runtime, the pipeline
+silently falls back to raster `convert`.
 
 ### Build profiles (Rust best practice)
 

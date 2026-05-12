@@ -128,6 +128,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
+  //
+  // Snapshot \@currname/\@currext only when handleoptions=true. Perl
+  // Package.pm:2549-2550 does the same — both prevname and prevext are
+  // gated on options{handleoptions}. The handleoptions=false branch
+  // does NOT mutate \@currname/\@currext (mirrors plain LaTeX `\input`
+  // semantics; Perl L2580 likewise only mutates them inside its
+  // handleoptions=true branch).
   let prevname = if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
     gullet::do_expand(T_CS!("\\@currname"))?.to_string()
   } else {
@@ -301,10 +308,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       options.after,
       None,
     )?;
-  } else {
-    def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
-    def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
   }
+  // No `else` branch: Perl Package.pm L2580-2611 only mutates
+  // \@currname/\@currext inside the handleoptions=true block. The
+  // handleoptions=false path mirrors plain LaTeX `\input`, which leaves
+  // them untouched. Mutating them here breaks \@currnamestack
+  // discipline: a subsequent inner \RequirePackage's \@pushfilename
+  // captures the leaked name instead of the empty initial-state value,
+  // and expl3-code.tex's \__file_tmp:w stack walk over-reads.
+  // Witnesses: 0805.4519 (inputenc+ansinew), 1705.00041
+  // (\usetikzlibrary{calligraphy}+spath3+expl3).
 
   if !current_options.is_empty() {
     assign_value(
@@ -429,42 +442,30 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       None
     };
 
-    // Step 3: Try fallback (strip version suffixes) before raw TeX
-    // Perl Package.pm L2118-2121: FindFile_fallback
-    // e.g. natbib-arxiv_v2.sty → natbib.sty, icml2024.sty → icml.sty
+    // Step 3: Try fallback (strip version suffixes / dir prefix) before raw TeX.
+    // Perl Package.pm L2118-2121: FindFile_fallback.
     //
-    // BUT skip the fallback if the name carries a directory prefix
-    // AND a raw file actually exists at that path. This signals a
-    // user-local file (`assets/equations.sty` shipping in the
-    // submission); the fallback would strip the directory and match
-    // a contrib binding by basename, silently substituting the wrong
-    // implementation. If no raw file exists, the path-prefixed name
-    // is just an alias for the system file (e.g.
-    // `\documentclass{misc/ieeetran}` where misc/ieeetran.cls is a
-    // local copy whose basename matches our IEEEtran.cls binding) —
-    // let the fallback proceed so the binding-by-basename path
-    // (driver: 2105.02087) still works.
-    // Drivers: 2405.18387 (assets/equations → must NOT fallback to
-    // contrib equations); 2105.02087 (misc/ieeetran → MUST fallback
-    // to IEEEtran binding). Perl's FindFile_fallback only looks in
-    // `ltxml_paths`; it doesn't have a contrib-binding registry, so
-    // it doesn't suffer this collision in the first place.
-    let has_path_prefix = name.contains('/') || name.contains('\\');
-    let local_raw_exists = has_path_prefix
-      && !options.notex
-      && find_file(
-        &filename,
-        Some(FindFileOptions {
-          forbid_ltxml:      true,  // raw file only
-          notex:             false,
-          ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: options.searchpaths_only,
-        }),
-      ).is_some();
+    // Design policy: bindings ALWAYS win over local raw .sty/.cls files.
+    // The `.rs` bindings are hand-tuned for the conversion, so if a
+    // fallback name resolves to a registered binding we dispatch there
+    // unconditionally. Raw TeX is the last-resort path (Step 4).
+    //
+    // Two flavors are recorded via [`FallbackKind`] for informational
+    // log messages only — both always fire when the binding exists:
+    //   - Versioned: suffix/prefix actually stripped (Perl-faithful).
+    //     Drivers: 1206.0536 (mysvjour3 → svjour3),
+    //     astro-ph0005021 (./aaspp4 → ./aaspp — aaspp4.sty ships
+    //     locally with plain-TeX `\startdata`; the engine's
+    //     alignment-aware binding still wins, matching Perl).
+    //   - BasenameOnly: only directory prefix removed. Rust-specific
+    //     extension keyed to our contrib-binding registry. Drivers:
+    //     2105.02087 (misc/ieeetran → IEEEtran binding);
+    //     2405.18387 (assets/equations → equations binding, because
+    //     we ship a tuned binding for this name).
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml && !local_raw_exists {
-      if let Some(fallback) = find_file_fallback(name, &as_type) {
+    } else if !options.noltxml {
+      if let Some((fallback, _kind)) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",
           name,
@@ -664,6 +665,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     }
     reset_options()?;
   }
+  // No handleoptions=false cleanup needed: we never mutated
+  // \@currname/\@currext on that path (matching Perl).
   if this_frame_announces {
     note_end(&s!("Loading {:?} definitions", filename));
     crate::state::assign_value(
@@ -1559,7 +1562,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // `\s*,\s*` and only enrolls a package once, AND only if its
   // `.sty.ltxml_loaded` flag is unset.
   let mut packages: Vec<(String, Option<String>)> = Vec::new();
-  let mut dups: std::collections::HashSet<String> = std::collections::HashSet::new();
+  let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
@@ -1909,9 +1912,33 @@ pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
   binding_exists(&base, ext_type)
 }
 
+/// Kind of fallback that matched, returned by [`find_file_fallback`].
+///
+/// `Versioned` — suffix/prefix stripping changed the basename (Perl
+/// FindFile_fallback's core function). Drivers: 1206.0536 (mysvjour3
+/// → svjour3), astro-ph0005021 (./aaspp4 → ./aaspp).
+///
+/// `BasenameOnly` — the *only* change was directory-prefix removal,
+/// matching the binding registry by leaf name. This is a Rust-specific
+/// extension on top of Perl's FindFile_fallback that exists because
+/// our contrib-binding registry is keyed by basename. Drivers:
+/// 2105.02087 (misc/ieeetran → IEEEtran binding); 2405.18387
+/// (assets/equations → equations binding).
+///
+/// Both kinds win unconditionally over local raw `.sty`/`.cls` files
+/// at the call site (see `input_definitions` Step 3): the `.rs`
+/// bindings are hand-tuned for the conversion, so a binding match
+/// always supersedes a co-located vendored copy. The variant is
+/// preserved for diagnostics and potential future policy tweaks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FallbackKind {
+  Versioned,
+  BasenameOnly,
+}
+
 /// Strip version/arxiv suffixes from package names to find existing bindings.
-/// Returns the fallback filename (with extension) if found.
-pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
+/// Returns the fallback filename (with extension) and which kind of fallback fired.
+pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, FallbackKind)> {
   use regex::Regex;
   // Suffixes with separator (Perl @find_fallback_suffixes)
   let suffix_rx = Regex::new(
@@ -1935,38 +1962,48 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<String> {
   } else {
     basename
   };
-  let mut changed = base != name;
+  let dir_stripped = base != name;
+  let mut suffix_stripped = false;
   // Iteratively strip suffixes, then glued, then prefixes
   loop {
     if let Some(m) = suffix_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     if let Some(m) = glued_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     if let Some(m) = prefix_rx.find(&base) {
       base = base[m.end()..].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     break;
   }
 
-  if !changed || base.is_empty() || base == name {
+  if !suffix_stripped && !dir_stripped {
     return None;
   }
+  if base.is_empty() || base == name {
+    return None;
+  }
+
+  let kind = if suffix_stripped {
+    FallbackKind::Versioned
+  } else {
+    FallbackKind::BasenameOnly
+  };
 
   let fallback_filename = format!("{base}.{ext_type}");
   // Check if fallback binding exists
   if load_binding(&fallback_filename).unwrap_or(false) {
     // Binding exists but was loaded by the check — it's OK, the caller will mark loaded
-    Some(fallback_filename)
+    Some((fallback_filename, kind))
   } else if load_external_binding(&fallback_filename).unwrap_or(false) {
-    Some(fallback_filename)
+    Some((fallback_filename, kind))
   } else {
     None
   }

@@ -24,7 +24,7 @@
 //! per-module narrative TOML once.
 
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::sync::OnceLock;
 
 /// Filename of the rustdoc-styled theme stylesheet that ships next
@@ -546,7 +546,7 @@ fn decorate_definitions(html: &str) -> String {
   // them; the rest stay as ordinary nested kicker rows. Pick the
   // first occurrence — that's what LaTeXML's `\hypertarget` would
   // also pick.
-  let mut seen_ids: HashSet<String> = HashSet::new();
+  let mut seen_ids: HashSet<String> = HashSet::default();
   // Skip nested attribute promotion: attribute names (`dir`, `class`,
   // `id`, …) routinely repeat across patterns and would collide.
   // Top-level attribute defs don't exist in this schema flavour.
@@ -674,7 +674,7 @@ fn inject_sidebar_index(html: &str) -> String {
     .unwrap()
   });
 
-  let mut seen: HashSet<(String, String)> = HashSet::new();
+  let mut seen: HashSet<(String, String)> = HashSet::default();
   // Top-level navbar buckets, in order:
   //   Patterns are SUBDIVIDED by their last dot-suffix
   //   ("PATTERNS — ELEM", "PATTERNS — ATTRS", ...) so a long flat list
@@ -694,7 +694,7 @@ fn inject_sidebar_index(html: &str) -> String {
 
   // Insertion-ordered subgroups: for "Pattern", key = suffix. For
   // every other kind, key = "" (single bucket).
-  let mut by_kind: HashMap<&str, Vec<(String, Vec<(String, String)>)>> = HashMap::new();
+  let mut by_kind: HashMap<&str, Vec<(String, Vec<(String, String)>)>> = HashMap::default();
 
   for cap in item_re.captures_iter(html) {
     let dt_id = cap[1].to_string();

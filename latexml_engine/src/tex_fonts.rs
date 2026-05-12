@@ -68,9 +68,12 @@ LoadDefinitions!({
     // `at <dim> scaled <n>` input would have BOTH consumed instead of leaving
     // `scaled <n>` in the stream as Perl does.
     let mut at_pt = None;
+    let mut at_sp = None;  // raw sp value, needed for shared-key precision
     let mut scaled = None;
     if gullet::read_keyword(&["at"])?.is_some() {
-      at_pt = Some(gullet::read_dimension()?.pt_value(None));
+      let d = gullet::read_dimension()?;
+      at_sp = Some(d.value_of());            // exact sp count, lossless
+      at_pt = Some(d.pt_value(None));        // ≈2-decimal pt for display
     } else if gullet::read_keyword(&["scaled"])?.is_some() {
       scaled = Some(gullet::read_number()?.value_of() as f64 / 1000.0);
     }
@@ -88,8 +91,29 @@ LoadDefinitions!({
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
     }
+    // When `scaled <N>` was used, derive `at_sp` from the resolved size
+    // so two `\font` declarations resolving to the same effective size
+    // (e.g. `at 5pt` vs `scaled 500` of cmr10) share the same shared
+    // key — without this, hyphenchar/fontdimen writes through one are
+    // invisible from the other. plainfonts_test L42 catches this.
+    if at_sp.is_none() {
+      if let Some(sz_pt) = props_opt.as_ref().and_then(|p| p.size) {
+        at_sp = Some((sz_pt * 65536.0).round() as i64);
+      }
+    }
     // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
-    // Shared font key: fonts with same name+size share hyphenchar/skewchar
+    // Shared font key: fonts with same name+size share hyphenchar/skewchar.
+    // Precision matters here — expl3's intarray font-hack creates a
+    // distinct `\font \foo = cmr10 at <N> sp` for each intarray, where
+    // <N> is a unique integer (the intarray table index). Rounding to
+    // `.1pt` (or any pt-decimal precision) collapses all these to
+    // `0.0pt` and breaks intarray storage because all "different"
+    // intarrays then share the same fontdimen backing. Use the raw
+    // sp integer (lossless) in the key so e.g. `at 23 sp` and `at 24 sp`
+    // are guaranteed distinct. Keep the pt-formatted form for `\meaning`
+    // display, but separate the two concerns.
+    // `at_str_opt` is used only for the `\meaning` display ("at 5.0pt").
+    // The shared key uses `at_sp` (lossless sp count) for uniqueness.
     let at_str_opt = if let Some(at_val) = at_pt {
       Some(s!("{at_val:.1}pt"))
     } else if let Some(_sc) = scaled {
@@ -97,7 +121,13 @@ LoadDefinitions!({
     } else {
       None
     };
-    let shared_key = if let Some(ref at_str) = at_str_opt {
+    // Compose the shared key using exact sp value (or `at_str_opt` for
+    // the `scaled` branch which has no sp). Two `\font` calls with
+    // different sp sizes produce different shared keys, so their
+    // fontdimen/hyphenchar/skewchar state stays independent.
+    let shared_key = if let Some(sp) = at_sp {
+      s!("fontinfo_{name} at {sp}sp")
+    } else if let Some(ref at_str) = at_str_opt {
       s!("fontinfo_{name} at {at_str}")
     } else {
       s!("fontinfo_{name}")
@@ -195,6 +225,41 @@ LoadDefinitions!({
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();
+      let font_token = args.remove(0).expected_token();
+      let cs_str = font_token.to_string();
+      // Per-font fontdimen<p> override. Resolve to the canonical
+      // font identity via the token's Primitive `font_id` (which is
+      // shared across `\let` aliases — mirrors Perl's FontDef object
+      // sharing on `\let`). Without this indirection, `\let \fb = \fa`
+      // followed by `\fontdimen 1 \fb = 42pt` would store under
+      // `font_shared_key_\fb` while `\the\fontdimen 1 \fb` reads
+      // `font_shared_key_\fa`, producing 0pt.
+      //
+      // Witness: tests/structure/glossary.tex `\Gls{cabbage}` → "Cabbage"
+      // needs expl3's `c__codepoint_uppercase_index_intarray` populated,
+      // and the c__ alias is created via `\cs_gset_eq:cc { c__... }
+      // { g__... }` (=`\let`).
+      let canonical_cs = state::lookup_meaning(&font_token)
+        .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
+                      else { None })
+        .map(|fid| {
+          let s = arena::with(fid, |x| x.to_string());
+          s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
+        })
+        .unwrap_or_else(|| cs_str.clone());
+      let fd_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => arena::with(*s, |sk| s!("fontdimen_{sk}_{p}")),
+        _ => s!("fontdimen_{canonical_cs}_{p}"),
+      });
+      let stored_val = state::with_value(&fd_key, |v| match v {
+        Some(Stored::Dimension(d)) => Some(*d),
+        Some(Stored::Number(n)) => Some(Dimension::new(n.value_of())),
+        _ => None,
+      });
+      if let Some(d) = stored_val { return Some(d.into()); }
+      // Fall-through: hard-coded cmr10-like defaults for indices that
+      // user code commonly reads (\fontdimen2..22) when no explicit write
+      // has happened. Preserves the prior behaviour for math layout code.
       match p {
         2 => Dimension::from_str("0.5em").ok()?,    // interword space
         5 => Dimension::from_str("1ex").ok()?,      // x-height
@@ -207,6 +272,30 @@ LoadDefinitions!({
         22 => Dimension::from_str("0.25em").ok()?,  // math axis height (cmsy10: 2.5pt at 10pt)
         _ => Dimension::new(0)
       }
+    },
+    setter => sub[value, _scope, args] {
+      let p = args.remove(0).expect_number().value_of();
+      let font_token = args.remove(0).expected_token();
+      let cs_str = font_token.to_string();
+      // Resolve to canonical font identity via Primitive.font_id —
+      // matches the getter so `\let`-aliased fonts share storage.
+      let canonical_cs = state::lookup_meaning(&font_token)
+        .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
+                      else { None })
+        .map(|fid| {
+          let s = arena::with(fid, |x| x.to_string());
+          s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
+        })
+        .unwrap_or_else(|| cs_str.clone());
+      let fd_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => arena::with(*s, |sk| s!("fontdimen_{sk}_{p}")),
+        _ => s!("fontdimen_{canonical_cs}_{p}"),
+      });
+      state::assign_value(
+        &fd_key,
+        Stored::Dimension(value.into()),
+        Some(Scope::Global),
+      );
     }
   );
   // \defaultskewchar / \defaulthyphenchar moved up to mirror Perl

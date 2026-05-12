@@ -23,7 +23,7 @@
 
 use latexml_package::prelude::*;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 
 thread_local! {
   /// One error per kind per conversion run, matching Perl's

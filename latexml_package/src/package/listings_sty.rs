@@ -875,7 +875,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   }
 
   // Deduplicate and sort CSS classes (matching Perl's addSSValues sort behavior)
-  let mut seen = std::collections::HashSet::new();
+  let mut seen = rustc_hash::FxHashSet::default();
   let mut deduped: Vec<String> = css_classes
     .iter()
     .filter(|c| seen.insert((*c).clone()))
@@ -2201,6 +2201,14 @@ LoadDefinitions!({
   DefKeyVal!("LST", "postbreak", "");
   DefKeyVal!("LST", "breakindent", "Dimension");
   DefKeyVal!("LST", "breakautoindent", "", "true");
+  DefKeyVal!("LST", "breakatwhitespace", "", "true");
+  DefKeyVal!("LST", "tabs", "");
+  // listings language-style internal keys (lstlang*.sty / language=...
+  // declarations). Perl listings.sty.ltxml leaves them unregistered;
+  // Rust-only divergence paired with `21e730e71e` Info→Warn promotion.
+  DefKeyVal!("LST", "procnamekeys", "");
+  DefKeyVal!("LST", "moreprocnamekeys", "");
+  DefKeyVal!("LST", "MoreSelectCharTable", "");
 
   // 4.11 Frames
   DefKeyVal!("LST", "frame", "");

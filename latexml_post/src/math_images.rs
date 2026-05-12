@@ -103,7 +103,10 @@ impl MathProcessor for MathImages {
       }
     }
 
-    log::warn!("MathImages: no cached image for '{}'", key);
+    log_post_warn!(
+      "missing_file", "math_images",
+      "MathImages: no cached image for '{}'", key
+    );
     Some(MathConversion {
       processor_name: self.name.clone(),
       mimetype:       None,

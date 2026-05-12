@@ -1,11 +1,24 @@
-//! pstricks.sty — PSTricks graphics package (stubs)
-//! PSTricks requires DVI backend; we just stub commands to prevent errors.
+//! pstricks.sty — PSTricks graphics package
+//! PSTricks requires DVI backend; we raw-load real pstricks.sty to set
+//! up internal state (\ifpst@useCalc, \ifpst@psfonts, …) then override
+//! user-facing drawing commands as HTML-friendly no-ops.
 //! Perl: pstricks.sty.ltxml (44L) + pstricks_support.sty.ltxml (1057L)
 use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("xcolor");
+  // Perl pstricks.sty.ltxml L40-42:
+  //   InputDefinitions('pstricks', type => 'sty', noltxml => 1);
+  // The raw-load executes the 7 \newifs (\ifpst@useCalc,
+  // \ifpst@psfonts, \ifpstGSfonts, \if@check@engine, \ifpst@xetex,
+  // \ifpst@autopdf, \ifpst@distiller) plus the option processing
+  // machinery. Downstream pstricks.tex (line 1228 \ifpst@useCalc)
+  // depends on these being defined. Without the raw-load the hand-
+  // stub left \ifpst@useCalc/\ifpst@psfonts undefined; witness:
+  // 1907.03162 (`\usepackage{pstricks, pst-plot, pst-eps, pst-grad}`
+  // → 2 Error:undefined diagnostics, vs Perl 0 errors).
+  InputDefinitions!("pstricks", extension => Some(Cow::Borrowed("sty")), noltxml => true);
   // Perl pstricks.sty.ltxml L44: `RequirePackage('pstricks_support')`.
   // pstricks_support defines color-CS shorthands (`\blue`, `\red`, …)
   // that PSTricks-using papers (e.g. arxiv 1107.3732) reference inside

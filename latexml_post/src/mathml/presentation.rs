@@ -12,7 +12,7 @@
 
 use libxml::tree::Node;
 use std::cell::Cell;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use super::operator_dictionary;
 use crate::document::{NodeData, PostDocument, element_children, element_children_iter};
@@ -245,7 +245,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
     },
     "FRACOP" if args.len() >= 2 => {
       let thickness = rop.get_attribute("thickness");
-      let mut attrs = HashMap::new();
+      let mut attrs = HashMap::default();
       if let Some(ref t) = thickness {
         if t == "0" || t == "0pt" {
           attrs.insert("linethickness".to_string(), "0".to_string());
@@ -267,7 +267,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
           // Combine into m:munderover: base_of_inner, under_accent, over_accent
           return NodeData::Element {
             tag:        "m:munderover".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("accent".to_string(), "true".to_string()),
               ("accentunder".to_string(), "true".to_string()),
             ])),
@@ -281,7 +281,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       }
       NodeData::Element {
         tag:        "m:mover".to_string(),
-        attributes: Some(HashMap::from([("accent".to_string(), "true".to_string())])),
+        attributes: Some(HashMap::from_iter([("accent".to_string(), "true".to_string())])),
         children:   vec![pmml(doc, base), pmml(doc, op)],
       }
     },
@@ -294,7 +294,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
         if inner_role == "OVERACCENT" {
           return NodeData::Element {
             tag:        "m:munderover".to_string(),
-            attributes: Some(HashMap::from([
+            attributes: Some(HashMap::from_iter([
               ("accent".to_string(), "true".to_string()),
               ("accentunder".to_string(), "true".to_string()),
             ])),
@@ -308,7 +308,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       }
       NodeData::Element {
         tag:        "m:munder".to_string(),
-        attributes: Some(HashMap::from([(
+        attributes: Some(HashMap::from_iter([(
           "accentunder".to_string(),
           "true".to_string(),
         )])),
@@ -359,7 +359,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
           pmml(doc, &args[0]),
           NodeData::Element {
             tag:        "m:mspace".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "width".to_string(),
               "0.389em".to_string(),
             )])),
@@ -446,7 +446,7 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     text = "\u{200B}".to_string(); // ZERO WIDTH SPACE
   }
 
-  let mut attrs = HashMap::new();
+  let mut attrs = HashMap::default();
 
   // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
   // default operator spacing that creates visible gaps between letters.
@@ -627,7 +627,7 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
     // Convert width to mspace
     NodeData::Element {
       tag:        "m:mspace".to_string(),
-      attributes: Some(HashMap::from([("width".to_string(), w)])),
+      attributes: Some(HashMap::from_iter([("width".to_string(), w)])),
       children:   vec![],
     }
   } else {
@@ -655,7 +655,7 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
     for cell_node in element_children(&row_node) {
       let cell_align = cell_node.get_attribute("align");
       let colspan = cell_node.get_attribute("colspan");
-      let mut td_attrs = HashMap::new();
+      let mut td_attrs = HashMap::default();
       if let Some(a) = cell_align {
         td_attrs.insert("columnalign".to_string(), a);
       }
@@ -687,7 +687,7 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
     });
   }
 
-  let mut table_attrs = HashMap::new();
+  let mut table_attrs = HashMap::default();
   if align != "axis" {
     table_attrs.insert("align".to_string(), align.to_string());
   }
@@ -1305,7 +1305,7 @@ fn is_node_text_invisible_op(node: &NodeData) -> bool {
 
 fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
   if let NodeData::Element { attributes, .. } = node {
-    let attrs = attributes.get_or_insert_with(HashMap::new);
+    let attrs = attributes.get_or_insert_with(HashMap::default);
     attrs.insert(key.to_string(), value.to_string());
   }
 }
@@ -1455,7 +1455,7 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use std::collections::HashMap;
+  use rustc_hash::FxHashMap as HashMap;
 
   #[test]
   fn math_style_step_down_monotone_saturates_at_scriptscript() {
@@ -1531,7 +1531,7 @@ mod tests {
   fn clean_internal_attrs_removes_underscore_attrs() {
     let mut node = NodeData::Element {
       tag:        "mrow".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("_role".to_string(), "MULOP".to_string()),
         ("_lspace".to_string(), "4".to_string()),
         ("keep".to_string(), "yes".to_string()),
@@ -1554,7 +1554,7 @@ mod tests {
   fn clean_internal_attrs_unsets_attributes_when_empty() {
     let mut node = NodeData::Element {
       tag:        "mrow".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("_role".to_string(), "MULOP".to_string()),
         ("_largeop".to_string(), "true".to_string()),
       ])),
@@ -1576,7 +1576,7 @@ mod tests {
       attributes: None,
       children:   vec![NodeData::Element {
         tag:        "mi".to_string(),
-        attributes: Some(HashMap::from([("_rspace".to_string(), "1".to_string())])),
+        attributes: Some(HashMap::from_iter([("_rspace".to_string(), "1".to_string())])),
         children:   vec![],
       }],
     };

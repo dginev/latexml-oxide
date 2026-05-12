@@ -815,8 +815,8 @@ fn renumber_math_ids(document: &mut Document) {
   // Reuse allocations across Math nodes
   let mut id_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
   let mut idref_entries: Vec<(libxml::tree::Node, String)> = Vec::new();
-  let mut id_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-  let mut referenced_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+  let mut id_map: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+  let mut referenced_ids: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
 
   for mut math_node in math_nodes {
     let math_id = match math_node.get_attribute_ns("id", xml_ns) {

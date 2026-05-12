@@ -134,7 +134,7 @@ fn authblk_relocate_affil(document: &mut Document) -> Result<()> {
   let affil_nodes = document.findnodes(".//ltx:note[@role='affiliationtext']", None);
 
   // Build mark → affil_node mapping, unlinking affil nodes from DOM
-  let mut mark_to_affil: std::collections::HashMap<String, Node> = std::collections::HashMap::new();
+  let mut mark_to_affil: rustc_hash::FxHashMap<String, Node> = rustc_hash::FxHashMap::default();
   for mut affil_node in affil_nodes {
     affil_node.unlink();
     if let Some(mark) = affil_node.get_attribute("mark") {

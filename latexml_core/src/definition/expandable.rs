@@ -127,7 +127,43 @@ impl Definition for Expandable {
           // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
           // Tracing: Perl prints tracingCSName -> tracetoString(expansion)
           // Not implemented — silently skip to avoid panic on \tracingmacros=1
-          // For trivial expansion, make sure we don't get \cs or \relax\cs direct recursion!
+          // For trivial expansion, make sure we don't get \cs or
+          // \relax\cs direct recursion!  Perl: Expandable.pm L81-89.
+          //   if (!$onceonly && $$self{cs}) {
+          //     my ($t0, $t1) = ($$expansion[0], $$expansion[1]);
+          //     if ($t0 && ($t0->equals($$self{cs})
+          //         || ($t1 && $t1->equals($$self{cs})
+          //              && $t0->equals(T_CS('\protect'))))) {
+          //       Error('recursion', $$self{cs}, …,
+          //         "Token X expands into itself!", "defining as empty");
+          //       $expansion = TokensI(); } }
+          //
+          // Detect `\def\foo{\foo}` and `\def\foo{\protect\foo}`. Both
+          // are runaway-expansion landmines under any full-expansion
+          // context (`\edef`, `\xdef`, `\write`, `\message`). Perl
+          // reports an `Error:recursion` and substitutes an empty
+          // expansion for this invocation; the stored definition is
+          // unchanged (subsequent invocations re-detect and re-error).
+          //
+          // A previous Rust port tried to re-install the CS as
+          // `Stored::Token(self.cs)` to preserve `\ifx` identity for
+          // expl3 quarks (`\q_no_value`, `\q_nil`, …) and PGF keys
+          // (`\pgfkeys@mainstop`). That was a no-op: `assign_meaning`'s
+          // `token == mt` short-circuit (state.rs:1918-1922) rejects
+          // the `\foo → \foo` self-let, so the Expandable definition
+          // stayed in place and the recursion guard re-fired forever.
+          // Witness: cleveref × algorithmicx × hyperref on 2403.15855,
+          // where `\xdef\cref@currentprefix{\cref@currentprefix}` hung
+          // at the 60 s wall-clock guard.
+          //
+          // Identity for expl3 quarks is independent of this path: the
+          // quarks are defined `\cs_new_protected:Npn`, so they are
+          // protected expandables. Under partial expansion (the normal
+          // path) protected expandables aren't expanded at all — the
+          // recursion guard never fires, and the stored body keeps the
+          // CS as its first token, so `\ifx`-by-meaning comparisons
+          // remain distinct. Under full expansion the Error+empty
+          // recovery matches Perl exactly.
           let is_recursion = if !once_only {
             let token_vec = tokens.unlist_ref();
             let t0_opt = token_vec.first();
@@ -147,34 +183,12 @@ impl Definition for Expandable {
             false
           };
           if is_recursion {
-            // Self-referential macros (`\def\foo{\foo}`) are sentinel
-            // tokens — expl3 quarks (`\q_no_value`, `\q_nil`,
-            // `\q_recursion_tail`, …) and PGF keys (`\pgfkeys@mainstop`)
-            // are defined exactly this way via `\quark_new:N`. They
-            // must NEVER be expanded; identity matters only for `\ifx`
-            // comparisons and pattern-match delimiters.
-            //
-            // Re-install the CS as a `Stored::Token` self-alias so
-            // future reads in `read_x_token` dispatch via the LetTo
-            // outcome path: the gullet returns the token itself
-            // unchanged (non-expandable from the caller's perspective).
-            // This preserves `\ifx` identity-via-meaning AND breaks
-            // the infinite re-expansion loop that the previous
-            // "Tokens!()" recovery introduced silent breakage in
-            // (the empty return mangled callers using the quark as
-            // a delimiter, breaking `\__regex_clean_regex:n` and
-            // similar).
-            //
-            // Driver: expl3 regex VM, where `\q_recursion_tail` /
-            // `\q_recursion_stop` appear as delimiters during
-            // `\__regex_compile:n`. See
-            // `project_expl3_regex_vm_engine.md`.
-            crate::state::assign_meaning(
-              &self.cs,
-              Stored::Token(self.cs),
-              Some(Scope::Global),
+            Error!(
+              "recursion",
+              &self.cs.to_string(),
+              s!("Token {} expands into itself!", self.cs)
             );
-            Tokens!(self.cs)
+            Tokens!()
           } else {
             tokens.clone()
           }

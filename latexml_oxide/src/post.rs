@@ -200,8 +200,27 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   audit_end(t_scan);
   telemetry::phase_exit();
 
+  // Phase 2b: MakeIndex (Perl LaTeXML.pm L466-470)
+  //   Runs BEFORE MakeBibliography in Perl. Populates `<ltx:indexlist>`
+  //   inside `<ltx:index>` placeholders and `<ltx:glossarylist>` inside
+  //   `<ltx:glossary>` placeholders, using the `GLOSSARY:*` / `INDEX:*`
+  //   entries Scan registered in the ObjectDB. Without this pass, glossary
+  //   sections render empty in HTML (witness: tests/structure/glossary.tex).
+  let mut indexer = latexml_post::make_index::MakeIndex::new(scanner.db, false, false);
+  telemetry::phase_enter(Phase::PostScan);
+  let t_idx = audit_start("MakeIndex");
+  docs = match run_phase(docs, &mut indexer, "MakeIndex") {
+    Ok(d) => d,
+    Err(()) => {
+      telemetry::phase_exit();
+      return xml.to_string();
+    },
+  };
+  audit_end(t_idx);
+  telemetry::phase_exit();
+
   // Phase 3: MakeBibliography
-  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(scanner.db, false);
+  let mut bibmaker = latexml_post::make_bibliography::MakeBibliography::new(indexer.db, false);
   telemetry::phase_enter(Phase::Bibliography);
   let t_bib = audit_start("MakeBibliography");
   docs = match run_phase(docs, &mut bibmaker, "MakeBibliography") {
@@ -283,7 +302,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         searchpaths.insert(0, project_root.display().to_string());
       }
     }
-    let mut xslt_params = std::collections::HashMap::new();
+    let mut xslt_params = rustc_hash::FxHashMap::default();
 
     // When `--schemadocs` is on, auto-prepend the rustdoc-styled
     // theme assets so callers don't need to repeat them on every
@@ -414,28 +433,34 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 /// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
 /// so it can run on every split sub-document, not just the first.
 fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String {
+  use std::sync::LazyLock;
+  // Cached at first call — regex compile is the slow part of `Regex::new`,
+  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
+  static XML_PROLOG_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^<\?xml[^?]*\?>\s*").unwrap());
+  static NON_VOID_SELF_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
+    ).unwrap()
+  });
+  static VOID_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
+    ).unwrap()
+  });
+  static VOID_SELF_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
+    ).unwrap()
+  });
+
   let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
   // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
   // libxml2's to_string() includes it by default; we strip it here.
-  let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
-    .unwrap()
-    .replace(&output, "")
-    .to_string();
-  let re = regex::Regex::new(
-    r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
-  )
-  .unwrap();
-  let output = re.replace_all(&output, "<$1$2></$1>").to_string();
-  let void_close_re = regex::Regex::new(
-    r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
-  )
-  .unwrap();
-  let output = void_close_re.replace_all(&output, "").to_string();
-  let void_selfclose_re = regex::Regex::new(
-    r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
-  )
-  .unwrap();
-  let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
+  let output = XML_PROLOG_RE.replace(&output, "").to_string();
+  let output = NON_VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2></$1>").to_string();
+  let output = VOID_CLOSE_RE.replace_all(&output, "").to_string();
+  let mut output = VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2>").to_string();
   if !svg_fragments.is_empty() {
     for (pic_id, svg_html) in svg_fragments {
       let pattern = format!(
@@ -465,12 +490,29 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
 ///
 /// Returns (picture_id, svg_html) pairs for post-XSLT injection.
 fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
+  use std::sync::LazyLock;
+  // Fast-fail: most documents have no `<picture>` elements (tikz / pgf
+  // is uncommon in the canvas). Skip the backtracking lazy-match
+  // regex (`(?s)...(.*?)`) when `<picture` doesn't appear as a literal
+  // substring. `str::contains` is a SIMD-accelerated byte search and
+  // takes microseconds even on ~MB inputs.
+  if !xml.contains("<picture") {
+    return Vec::new();
+  }
+  static PICTURE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap()
+  });
+  static ID_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
+  static WIDTH_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"width="([^"]+)""#).unwrap());
+  static HEIGHT_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"height="([^"]+)""#).unwrap());
   let mut fragments = Vec::new();
-  // Match <picture ... xml:id="ID" ... width="W" height="H" ...>CONTENT</picture>
-  let picture_re = regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap();
-  let id_re = regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap();
-  let width_re = regex::Regex::new(r#"width="([^"]+)""#).unwrap();
-  let height_re = regex::Regex::new(r#"height="([^"]+)""#).unwrap();
+  let picture_re = &*PICTURE_RE;
+  let id_re = &*ID_RE;
+  let width_re = &*WIDTH_RE;
+  let height_re = &*HEIGHT_RE;
 
   for pic_caps in picture_re.captures_iter(xml) {
     let attrs = &pic_caps[1];

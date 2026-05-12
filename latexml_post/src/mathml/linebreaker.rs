@@ -13,7 +13,7 @@
 //!    - Each combination scored by width + penalty
 //! 3. Apply the best layout's breaks
 
-use std::collections::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 
 use crate::document::NodeData;
 
@@ -252,7 +252,7 @@ impl Linebreaker {
           if layout.breaks.contains(&i) {
             new_children.push(NodeData::Element {
               tag:        "m:mspace".to_string(),
-              attributes: Some(std::collections::HashMap::from([(
+              attributes: Some(rustc_hash::FxHashMap::from_iter([(
                 "linebreak".to_string(),
                 "newline".to_string(),
               )])),

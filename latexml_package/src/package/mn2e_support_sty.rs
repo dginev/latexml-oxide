@@ -123,7 +123,9 @@ LoadDefinitions!({
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
-  DefMacro!("\\ion{}{}", "#1\\,{\\sc #2}");
+  // Perl mn2e_support.sty.ltxml L151: \text wrapper switches mode out of math,
+  // so the second arg can contain inline-math toggles like `$\beta$`.
+  DefMacro!("\\ion{}{}", "\\text{#1\\,\\textsc{\\lowercase{#2}}}");
 
   // Journal abbreviations (\mnras, \nat, \apj, \prd, ...) are NOT defined
   // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
@@ -233,6 +235,17 @@ LoadDefinitions!({
   // Table/proof — Perl L174-192
   DefMacro!("\\contcaption", "\\caption{continued}");
   DefMacro!("\\proofname", "Proof");
+  // Perl mn2e_support.sty.ltxml L177-181: \begin{proof} → <ltx:proof>.
+  // mn2e papers commonly use \begin{proof}...\end{proof} without
+  // loading amsthm — mn2e provides its own proof environment.
+  // Witness: 1402.1373 (stage 16 RUST-REGRESSION).
+  DefEnvironment!("{proof}",
+    "<ltx:proof><ltx:title>#title</ltx:title>#body</ltx:proof>",
+    properties => sub[_args] {
+      let title = Expand!(Tokens!(T_CS!("\\proofname"))).to_string();
+      Ok(stored_map!("title" => title))
+    }
+  );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
   DefMacro!("\\loadboldmathitalic", "");

@@ -76,6 +76,13 @@ struct Cli {
   #[arg(long)]
   preload: Vec<String>,
 
+  /// Additional search paths (repeatable). Mirrors Perl LaTeXML's --path.
+  /// Each entry is prepended to the per-job source-dir search path so
+  /// e.g. `--path=ar5iv-bindings/originals` makes raw .tex files in
+  /// the ar5iv repo available to InputDefinitions.
+  #[arg(long = "path")]
+  search_paths: Vec<String>,
+
   /// Per-document timeout in seconds
   #[arg(long, default_value = "60")]
   timeout: u64,
@@ -146,6 +153,8 @@ struct LatexmlWorker {
   threads:        usize,
   profile:        ConversionProfile,
   verbosity:      i32,
+  /// Extra --path search dirs from CLI, prepended to per-job source_dir.
+  search_paths:   Vec<String>,
 }
 
 impl LatexmlWorker {
@@ -177,6 +186,10 @@ impl LatexmlWorker {
     let mut preloads = vec!["TeX.pool".to_string()];
     preloads.extend(self.profile.preloads.iter().cloned());
 
+    // Source dir first (per-job temp), then user --path entries.
+    let mut search_paths = vec![source_dir.clone()];
+    search_paths.extend(self.search_paths.iter().cloned());
+
     let opts = Config {
       verbosity:               self.verbosity,
       format:                  OutputFormat::HTML5,
@@ -188,7 +201,7 @@ impl LatexmlWorker {
       bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
       extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
       preload:                 Some(self.profile.preloads.clone()),
-      search_paths:            Some(vec![source_dir.clone()]),
+      search_paths:            Some(search_paths),
       include_comments:        Some(false),
       nomathparse:             None,
     };
@@ -233,6 +246,7 @@ impl LatexmlWorker {
       split_xpath:               None,
       split_naming:              None,
       xslt_parameters:           &[],
+      schemadocs:                false,
       // Enable vector-SVG path for PDFs <= 200 KB. Vector-authored PDFs
       // (matplotlib, pgfplots, TikZ-export) are typically <100 KB; raster-
       // embedded PDFs are usually >500 KB. The 200 KB cutoff favors
@@ -507,7 +521,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
-  let mut likelihood: std::collections::HashMap<PathBuf, f32> = std::collections::HashMap::new();
+  let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> = rustc_hash::FxHashMap::default();
   let mut vetoed: Vec<PathBuf> = Vec::new();
   // Phase D pre-screen: track sentinel reasons so the empty-candidates
   // branch can return a categorized `Fatal:invalid:<reason>` (per
@@ -677,35 +691,17 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     candidates.retain(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == min_depth);
   }
 
-  // Heuristic 1.5: deprioritize obvious vendor template / docs files.
-  // Many user uploads bundle the publisher's template along with the
-  // user's own paper. Examples we've hit: 1907.06674 ships
-  // `elsarticle-template-harv.tex`, `elsarticle-template-num.tex`,
-  // `elsdoc.tex` AND the user's `main_resubmit.tex` — picker chose
-  // `elsdoc.tex` (elsarticle docs file with `\includegraphics{...pdf}`
-  // examples) and produced 101 errors.
-  //
-  // Pattern: filenames containing `template`, ending in `-doc.tex`/
-  // `-docs.tex`/`elsdoc.tex`/`README.tex`. If the candidate set has
-  // BOTH template-looking and non-template files, drop the templates.
-  if candidates.len() > 1 {
-    let is_template_name = |f: &PathBuf| -> bool {
-      let n = f.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
-      n.contains("template")
-        || n == "elsdoc.tex"
-        || n.ends_with("-doc.tex")
-        || n.ends_with("-docs.tex")
-        || n.starts_with("readme")
-    };
-    let non_template: Vec<PathBuf> = candidates
-      .iter()
-      .filter(|f| !is_template_name(f))
-      .cloned()
-      .collect();
-    if !non_template.is_empty() && non_template.len() < candidates.len() {
-      candidates = non_template;
-    }
-  }
+  // NOTE: Perl Pack.pm L196-218 only applies these heuristics in this
+  // exact order: shallowest-path → PDF-like \includegraphics → .bbl →
+  // common-name (`main`/`ms`/`paper`.tex) → lexicographic. A previous
+  // "Heuristic 1.5" filtered candidates by filename keywords (template,
+  // elsdoc, readme) — but Perl doesn't have that filter, and the Perl-
+  // equivalent lexicographic tiebreaker handles the class-self-docs
+  // case correctly (e.g. 2107.07756: `quantum-template.tex` <
+  // `quantumarticle.tex` so the user's paper wins by lex order).
+  // Reverting to strict Perl-parity per feedback_prefer_root_cause
+  // guidance: prefer matching upstream heuristics over a hand-curated
+  // SURPASS-PERL filter that diverges from arXiv::FileGuess.
 
   // Heuristic 2: prefer files with a matching .bbl file
   // (.bbl is the strongest "this is the main file" signal — present
@@ -727,14 +723,33 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Heuristic 3: prefer files with PDF-like \includegraphics
+  // Perl Pack.pm L222-244 heuristic_check_for_pdftex: requires the
+  // strict form `\includegraphics[^%]*\.(pdf|png|gif|jpg)\s?\}` on a
+  // non-commented line, OR `\pdfoutput=1` in the first 5 such lines.
+  // The previous substring-based check (`contains("\\includegraphics")
+  // && contains(".pdf")`) was too lax: elsdoc.tex (1907.06674) has both
+  // tokens — `\includegraphics` examples in code samples, `.pdf` in
+  // unrelated discussion text — without any actual `\includegraphics
+  // {file.pdf}` invocation. Strict regex eliminates the false positive
+  // and aligns with arXiv::FileGuess.
+  static RE_INCLUDEGRAPHICS_PDF: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?im)^[^%\n\r]*\\includegraphics[^%\n\r]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap()
+  });
+  static RE_PDFOUTPUT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[^%\n\r]*\\pdfoutput(?:\s+)?=(?:\s+)?1").unwrap());
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates
       .iter()
       .filter(|f| {
         fs::read(f).ok().is_some_and(|raw| {
           let c = String::from_utf8_lossy(&raw);
-          c.contains("\\includegraphics")
-            && (c.contains(".pdf") || c.contains(".png") || c.contains(".jpg"))
+          if RE_INCLUDEGRAPHICS_PDF.is_match(&c) {
+            return true;
+          }
+          // Perl: $pdfoutput_checks >= 0 limits to first 5 matching candidate
+          // lines (any line matching `\pdfoutput=1`). Approximate by scanning
+          // the whole file — the regex requires non-commented context already.
+          RE_PDFOUTPUT.is_match(&c)
         })
       })
       .cloned()
@@ -886,6 +901,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
+  // Spawn kpathsea pre-init in a background thread (overlaps the
+  // ~30-40 ms `kpathsea_init_db` cost with arg parse + dump load).
+  // Same rationale + env knob as the latexml_oxide bin — see
+  // `latexml_core::util::pathname::prewarm_kpathsea`.
+  let kpse_prewarm_enabled = std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err();
+  let _kpse_warmup_handle = if kpse_prewarm_enabled {
+    Some(std::thread::spawn(
+      latexml_core::util::pathname::prewarm_kpathsea,
+    ))
+  } else {
+    None
+  };
+
   let verbosity = if cli.quiet {
     -1
   } else if cli.verbose {
@@ -923,6 +951,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     threads: cli.pool_size,
     profile,
     verbosity,
+    search_paths: cli.search_paths.clone(),
   };
 
   if cli.standalone {

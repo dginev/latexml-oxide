@@ -40,7 +40,7 @@ fi
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
 WORKER_BIN="${WORKER_BIN:-$REPO_ROOT/target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
-WORKERS="${WORKERS:-16}"
+WORKERS="${WORKERS:-20}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
 MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
@@ -89,7 +89,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --output-dir DIR      Output directory (default: \$HOME/data/10k_sandbox_html)"
       echo "                        When --stage N (>0) is given without --output-dir,"
       echo "                        a /stage_NN/ subdirectory is appended automatically."
-      echo "  --workers N           Parallel workers (default: 16)"
+      echo "  --workers N           Parallel workers (default: 20)"
       echo "  --timeout SECS        Per-task wall-clock timeout (default: 120)"
       echo "  --limit N             Process only first N files of the (post-stage) task"
       echo "                        list (default: 0 = all)"
@@ -157,7 +157,15 @@ mkdir -p "$OUTPUT_DIR"
 ulimit -c 0
 
 BUILD_RUSTFLAGS="${RUSTFLAGS:-}"
-for flag in -Clinker-features=+lld -Zunstable-options -Ctarget-cpu=native; do
+# Linker: prefer mold > rust-lld > default. mold cuts release link wall-clock
+# ~3-5x vs rust-lld on this binary size. Falls back to rust-lld if mold isn't
+# on PATH (CI runners, fresh checkouts).
+if command -v mold >/dev/null 2>&1; then
+  LINKER_FLAG="-Clink-arg=-fuse-ld=mold"
+else
+  LINKER_FLAG="-Clinker-features=+lld"
+fi
+for flag in "$LINKER_FLAG" -Zunstable-options -Ctarget-cpu=native -Zthreads=8; do
   case " $BUILD_RUSTFLAGS " in
     *" $flag "*) ;;
     *) BUILD_RUSTFLAGS="${BUILD_RUSTFLAGS:+$BUILD_RUSTFLAGS }$flag" ;;
@@ -178,6 +186,38 @@ if [[ ! -x "$WORKER_BIN" ]]; then
   echo "ERROR: cortex_worker binary not found after release build: $WORKER_BIN"
   echo "  Expected build command: cargo build --release --bin cortex_worker --features cortex"
   exit 1
+fi
+
+# ─── Format dumps (plain.dump.txt + latex.dump.txt) — generate if missing ───
+# Without the latex dump, every paper that loads expl3 (tikz, siunitx, spath3,
+# csquotes, etc.) raw-loads the 36k-line expl3-code.tex (~25-30s/paper).
+# With the dump in place, expl3.sty's `\ifx\csname tex_let:D\endcsname\relax`
+# guard short-circuits the raw load → 1-3s/paper. ~10× canvas-wide speedup.
+# The plain dump is smaller but symmetric — needed for the `LoadFormat('plain')`
+# strict-Perl path in tex.rs (see CLAUDE.md priority #1).
+PLAIN_DUMP_PATH="$REPO_ROOT/resources/dumps/plain.dump.txt"
+if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
+  echo "Generating $PLAIN_DUMP_PATH (one-time, <1min)…"
+  (
+    cd "$REPO_ROOT"
+    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=plain.tex
+  )
+  if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
+    echo "WARNING: plain.dump.txt did not get generated."
+  fi
+fi
+
+DUMP_PATH="$REPO_ROOT/resources/dumps/latex.dump.txt"
+if [[ ! -f "$DUMP_PATH" ]]; then
+  echo "Generating $DUMP_PATH (one-time, ~5min)…"
+  (
+    cd "$REPO_ROOT"
+    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=latex.ltx
+  )
+  if [[ ! -f "$DUMP_PATH" ]]; then
+    echo "WARNING: latex.dump.txt did not get generated. Canvas will run with"
+    echo "  raw expl3 load (slow). Investigate ini-mode failures separately."
+  fi
 fi
 
 # ─── Disk space check ────────────────────────────────────────────────────────
@@ -362,11 +402,17 @@ convert_one() {
 
   # Run with timeout + RAM guard
   # timeout sends SIGTERM, then SIGKILL after 10s grace
+  # --path=…/ar5iv-bindings/originals: mirrors the Perl-LaTeXML
+  # production invocation (--path=~/git/ar5iv-bindings/bindings) so raw
+  # .tex files referenced by latexml_contrib bindings (harvmac, jnl,
+  # mssymb, …) are findable. The 80+ originals/*.tex are vendored in
+  # the repo precisely because they're not all in TeX Live.
   exit_code=0
   TMPDIR="$task_tmp" timeout --kill-after=10 "$TIMEOUT_S" \
     bash -c "ulimit -v $MAX_RAM_KB 2>/dev/null; exec \"\$@\"" -- \
     "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_tmp" \
     --timeout "$TIMEOUT_S" \
+    --path "$REPO_ROOT/ar5iv-bindings/originals" \
     2>"$log_tmp" || exit_code=$?
 
   wall_time=$(( ($(date +%s%N) - start_time) / 1000000 ))  # milliseconds
@@ -485,20 +531,32 @@ if (( PARALLEL_EXIT != 0 )); then
   echo "Note: parallel exited with code $PARALLEL_EXIT (some tasks failed, see results)" >&2
 fi
 
-# Retry transient categories serially. Under 16-worker contention some
-# papers hit timeout/abort/oom_or_kill/error not because they fail but
-# because their share of CPU was insufficient (see resource-exhaustion
-# analysis in commit history). Retry pass runs each candidate once with
-# all cores free; results that flip to ok/conversion_* replace the
-# transient row in RUN_RESULTS.
+# Retry transient categories serially. Under 12-16-worker contention some
+# papers hit timeout/abort/oom_or_kill/error/segfault not because they
+# fail but because their share of CPU was insufficient — heavy parallel
+# load can trip the internal 60 s watchdog on a paper that takes <1 s
+# standalone, surfacing as a `timeout: the monitored command dumped
+# core` exit (categorised as "segfault" by the row classifier). Retry
+# pass runs each candidate once with all cores free AND a 2× longer
+# timeout, then merges the new row in place of the flaky one. The 2×
+# timeout is enough to cover intrinsically slow papers like
+# math0608653 (43 s standalone → tips watchdog under sweep) without
+# letting actual hangs run indefinitely.
 RETRY_LIST=$(mktemp)
-RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output)$'
+RETRY_CANDIDATES_RE='^(timeout|abort|oom_or_kill|error|missing_status|invalid_status|invalid_output|empty_output|segfault)$'
 awk -F'\t' -v re="$RETRY_CANDIDATES_RE" '$7 ~ re {print $1"\t"$7}' "$RUN_RESULTS" \
   | sort -u > "$RETRY_LIST"
 RETRY_COUNT=$(wc -l < "$RETRY_LIST" | tr -d ' ')
 if (( RETRY_COUNT > 0 )); then
   echo ""
-  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially..." >&2
+  echo "Retry pass: $RETRY_COUNT transient result(s) — running serially with 2× timeout..." >&2
+  # Double TIMEOUT_S for the retry pass and re-export so the
+  # `convert_one` subshells (run in this process, not under
+  # `parallel`) pick it up. Restore at end so SUMMARY reporting
+  # references the parallel-pass cap.
+  ORIG_TIMEOUT_S=$TIMEOUT_S
+  TIMEOUT_S=$((TIMEOUT_S * 2))
+  export TIMEOUT_S
   RETRY_FLIPPED=0
   RETRY_RESULTS=$(mktemp)
   while IFS=$'\t' read -r arxiv_id orig_category; do
@@ -510,6 +568,8 @@ if (( RETRY_COUNT > 0 )); then
     [[ -z "$input_zip" ]] && continue
     convert_one "$input_zip"
   done < "$RETRY_LIST"
+  TIMEOUT_S=$ORIG_TIMEOUT_S
+  export TIMEOUT_S
   # Diff old vs new categories for retried IDs to count flips
   RETRY_FLIPPED=$(awk -F'\t' -v list="$RETRY_LIST" '
     BEGIN { while ((getline line < list) > 0) { split(line, a, "\t"); orig[a[1]] = a[2] } }
@@ -531,15 +591,26 @@ rm -f "$RETRY_LIST"
 
 # Atomically merge current-run rows into the cumulative TSV after workers finish.
 # Existing rows are kept unless the current run produced a replacement row.
+# When the retry-pass fires, the same arxiv_id can appear twice in
+# RUN_RESULTS (first the flake, then the serial retry); dedup by
+# keeping the LAST occurrence per id — that's the retried row, which
+# overrides the original.
 MERGED_RESULTS=$(mktemp)
 RUN_IDS=$(mktemp)
-awk -F'\t' '{print $1}' "$RUN_RESULTS" | sort -u > "$RUN_IDS"
+DEDUPED_RUN=$(mktemp)
+# tac | awk-first-seen | tac → keep LAST occurrence per id, in
+# original order of last-appearance. Handles the retry-pass case
+# where a flaky paper has both a stale-flake row and a serial-retry
+# row in RUN_RESULTS.
+tac "$RUN_RESULTS" | awk -F'\t' '!seen[$1]++' | tac > "$DEDUPED_RUN"
+awk -F'\t' '{print $1}' "$DEDUPED_RUN" | sort -u > "$RUN_IDS"
 {
   head -1 "$RESULTS_TSV"
   awk -F'\t' 'FNR == NR {ids[$1] = 1; next} FNR > 1 && !($1 in ids)' "$RUN_IDS" "$RESULTS_TSV"
-  cat "$RUN_RESULTS"
+  cat "$DEDUPED_RUN"
 } > "$MERGED_RESULTS"
 mv "$MERGED_RESULTS" "$RESULTS_TSV"
+rm -f "$DEDUPED_RUN"
 
 # Avoid leaving stale success artifacts behind after a paper now fails before
 # producing a valid output ZIP.

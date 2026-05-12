@@ -15,7 +15,7 @@ pub mod operator_dictionary;
 pub mod presentation;
 
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::document::{NodeData, PostDocument};
 use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed, process_math};
@@ -170,7 +170,7 @@ impl MathProcessor for MathML {
           attributes: None,
           children:   vec![xml, NodeData::Element {
             tag:        "m:annotation".to_string(),
-            attributes: Some(HashMap::from([(
+            attributes: Some(HashMap::from_iter([(
               "encoding".to_string(),
               "application/x-tex".to_string(),
             )])),
@@ -216,7 +216,7 @@ impl MathProcessor for MathML {
       if let Some(ref xml) = secondary.xml {
         children.push(NodeData::Element {
           tag:        "m:annotation-xml".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "encoding".to_string(),
             mimetype.to_string(),
           )])),
@@ -225,7 +225,7 @@ impl MathProcessor for MathML {
       } else if let Some(ref string) = secondary.string {
         children.push(NodeData::Element {
           tag:        "m:annotation".to_string(),
-          attributes: Some(HashMap::from([(
+          attributes: Some(HashMap::from_iter([(
             "encoding".to_string(),
             mimetype.to_string(),
           )])),
@@ -251,7 +251,7 @@ impl MathProcessor for MathML {
   }
 
   fn outer_wrapper(&self, _doc: &PostDocument, xmath: &Node, conversion: NodeData) -> NodeData {
-    let mut attrs = HashMap::new();
+    let mut attrs = HashMap::default();
     // Determine display mode and alttext from parent Math element
     // Port of MathML::outerWrapper (L77-100)
     if let Some(math) = xmath.get_parent() {
@@ -401,7 +401,7 @@ pub fn stylize_content(node: &Node, target_tag: &str) -> (String, HashMap<String
   // Determine mathvariant from font.
   // Port of Perl stylizeContent lines 689-756.
   let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
-  let mut attrs = HashMap::new();
+  let mut attrs = HashMap::default();
 
   // Single char mi: italic is default, "normal" must be stated explicitly
   // Perl L717-719
@@ -948,7 +948,7 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
         attributes: None,
         children:   vec![result, NodeData::Element {
           tag:        "m:mspace".to_string(),
-          attributes: Some(HashMap::from([("width".to_string(), w.clone())])),
+          attributes: Some(HashMap::from_iter([("width".to_string(), w.clone())])),
           children:   vec![],
         }],
       };
@@ -978,7 +978,7 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
         attributes.clone().unwrap_or_default(),
         children.clone(),
       ),
-      _ => ("m:mpadded".to_string(), HashMap::new(), vec![
+      _ => ("m:mpadded".to_string(), HashMap::default(), vec![
         result.clone(),
       ]),
     };
@@ -1011,7 +1011,7 @@ pub fn pmml_maybe_resize(node: &Node, result: NodeData) -> NodeData {
   if let Some(frame) = node.get_attribute("framed") {
     let frame_class = format!("ltx_framed_{}", frame);
     if let NodeData::Element { attributes, .. } = &mut result {
-      let attrs = attributes.get_or_insert_with(HashMap::new);
+      let attrs = attributes.get_or_insert_with(HashMap::default);
       let c = attrs.get("class").cloned().unwrap_or_default();
       attrs.insert(
         "class".to_string(),
@@ -1081,7 +1081,7 @@ pub fn pmml_parenthesize(item: NodeData, open: Option<&str>, close: Option<&str>
   if let Some(o) = open {
     children.push(NodeData::Element {
       tag:        "m:mo".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("fence".to_string(), "true".to_string()),
         ("stretchy".to_string(), "true".to_string()),
       ])),
@@ -1092,7 +1092,7 @@ pub fn pmml_parenthesize(item: NodeData, open: Option<&str>, close: Option<&str>
   if let Some(c) = close {
     children.push(NodeData::Element {
       tag:        "m:mo".to_string(),
-      attributes: Some(HashMap::from([
+      attributes: Some(HashMap::from_iter([
         ("fence".to_string(), "true".to_string()),
         ("stretchy".to_string(), "true".to_string()),
       ])),
@@ -1138,7 +1138,7 @@ pub fn pmml_punctuate(separators: &str, items: Vec<NodeData>) -> NodeData {
     };
     result.push(NodeData::Element {
       tag:        "m:mo".to_string(),
-      attributes: Some(HashMap::from([(
+      attributes: Some(HashMap::from_iter([(
         "separator".to_string(),
         "true".to_string(),
       )])),
@@ -1298,7 +1298,7 @@ pub fn convert_xm_text_content(
         // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
         // which this helper does not receive — drop both here rather
         // than forge a wrong id.
-        let mut attrs: HashMap<String, String> = HashMap::new();
+        let mut attrs: HashMap<String, String> = HashMap::default();
         for (k, v) in node.get_attributes() {
           if k.starts_with('_') || k == "xml:id" || k == "fragid" {
             continue;
@@ -1464,7 +1464,7 @@ fn is_mo(node: &NodeData) -> bool { matches!(node, NodeData::Element { tag, .. }
 /// Set an attribute on a NodeData element.
 fn set_attr(node: &mut NodeData, key: &str, value: &str) {
   if let NodeData::Element { attributes, .. } = node {
-    let attrs = attributes.get_or_insert_with(HashMap::new);
+    let attrs = attributes.get_or_insert_with(HashMap::default);
     attrs.insert(key.to_string(), value.to_string());
   }
 }

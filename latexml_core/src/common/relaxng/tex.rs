@@ -646,7 +646,7 @@ impl EmitState<'_> {
     // wins): two `element a {B1} | element a {B2}` branches collapse
     // to a single `xhtml:a` card carrying B1, since the post-pass
     // can only assign `id="schema.xhtml..a"` to one anchor anyway.
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut seen: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
     let mut element_defs: Vec<String> = Vec::new();
     for (name, el_body) in elements {
       if !seen.insert(name.clone()) {
@@ -997,7 +997,7 @@ fn collect_element_descendants(
   spec: &[Pattern],
 ) -> Vec<(String, &[Pattern])> {
   let mut out = Vec::new();
-  let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+  let mut seen: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   for p in spec {
     walk_for_elements(p, &mut out, &mut seen);
   }
@@ -1007,7 +1007,7 @@ fn collect_element_descendants(
 fn walk_for_elements<'a>(
   p: &'a Pattern,
   out: &mut Vec<(String, &'a [Pattern])>,
-  seen: &mut std::collections::HashSet<String>,
+  seen: &mut rustc_hash::FxHashSet<String>,
 ) {
   match p {
     Pattern::Element { name, body } => {
