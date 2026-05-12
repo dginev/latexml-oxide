@@ -901,6 +901,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
+  // Spawn kpathsea pre-init in a background thread (overlaps the
+  // ~30-40 ms `kpathsea_init_db` cost with arg parse + dump load).
+  // Same rationale + env knob as the latexml_oxide bin — see
+  // `latexml_core::util::pathname::prewarm_kpathsea`.
+  let kpse_prewarm_enabled = std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err();
+  let _kpse_warmup_handle = if kpse_prewarm_enabled {
+    Some(std::thread::spawn(
+      latexml_core::util::pathname::prewarm_kpathsea,
+    ))
+  } else {
+    None
+  };
+
   let verbosity = if cli.quiet {
     -1
   } else if cli.verbose {

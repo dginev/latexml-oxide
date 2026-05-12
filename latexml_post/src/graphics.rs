@@ -485,23 +485,51 @@ impl Graphics {
       }
     }
 
-    // Apply transforms (matching Perl's image_graphicx_trivial)
+    // Apply transforms (matching Perl's image_graphicx_trivial).
+    //
+    // graphicx semantics (texbook L182 of graphics.dtx):
+    //   * scale=S         — both dims × S
+    //   * width=W only    — preserve aspect: height auto-scales by W/raw_w
+    //   * height=H only   — preserve aspect: width auto-scales by H/raw_h
+    //   * width=W height=H (no keepaspectratio)
+    //                     — stretch independently
+    //   * +keepaspectratio — use the more constraining dimension
+    //
+    // Earlier Rust port did `th = target_height.unwrap_or(h / dppt)` in the
+    // width-only path, which fed the unscaled raw height back through and
+    // emitted `width=W height=raw_pixels` — visibly wrong (square sources
+    // displayed as 4:1 ribbons; witness astro-ph0005397 Fig 11 sfh_burst).
     if let Some(s) = scale {
       w *= s;
       h *= s;
-    } else if target_width.is_some() || target_height.is_some() {
-      let tw = target_width.unwrap_or(w / dppt);
-      let th = target_height.unwrap_or(h / dppt);
-      if keep_aspect {
-        // Preserve aspect ratio: use the more constraining dimension
-        let scale_w = tw / (w / dppt);
-        let scale_h = th / (h / dppt);
-        let s = scale_w.min(scale_h);
-        w = (w / dppt * s * dppt).ceil();
-        h = (h / dppt * s * dppt).ceil();
-      } else {
-        w = (tw * dppt).ceil();
-        h = (th * dppt).ceil();
+    } else {
+      match (target_width, target_height) {
+        (Some(tw), Some(th)) if keep_aspect => {
+          let scale_w = tw / (w / dppt);
+          let scale_h = th / (h / dppt);
+          let s = scale_w.min(scale_h);
+          w = (w / dppt * s * dppt).ceil();
+          h = (h / dppt * s * dppt).ceil();
+        },
+        (Some(tw), Some(th)) => {
+          w = (tw * dppt).ceil();
+          h = (th * dppt).ceil();
+        },
+        (Some(tw), None) => {
+          // width-only: auto-scale height proportionally.
+          let s = tw / (w / dppt);
+          w = (tw * dppt).ceil();
+          h = (h * s).ceil();
+        },
+        (None, Some(th)) => {
+          // height-only: auto-scale width proportionally.
+          let s = th / (h / dppt);
+          h = (th * dppt).ceil();
+          w = (w * s).ceil();
+        },
+        (None, None) => {
+          // No dimension hints — keep raw pixel size.
+        },
       }
     }
 
@@ -1003,6 +1031,32 @@ impl Graphics {
     base.min(max_density.max(1))
   }
 
+  /// Returns true when the PS / EPS file's DSC header declares
+  /// `%%Orientation: Landscape`. PGPLOT and a handful of older
+  /// scientific renderers emit landscape PS files with a portrait
+  /// `%%BoundingBox` — content is drawn rotated 90° on the page, and
+  /// PS-level renderers (gs, IM) ignore the Orientation hint, producing
+  /// visibly upside-down output. ps2pdf is the one tool in the chain
+  /// that honors the comment by writing `/Rotate 90` into the PDF
+  /// header; pdftocairo then renders the rotated PDF correctly.
+  ///
+  /// Witness: astro-ph0103041 NickMorgan.fig2.ps. Only the first ~80
+  /// lines of the DSC prologue are scanned because all conforming PS
+  /// files emit `%%Orientation:` early.
+  fn postscript_is_landscape(source: &str) -> bool {
+    let Ok(file) = std::fs::File::open(source) else {
+      return false;
+    };
+    use std::io::BufRead;
+    let reader = std::io::BufReader::new(file);
+    for line in reader.lines().take(80).map_while(Result::ok) {
+      if let Some(rest) = line.strip_prefix("%%Orientation:") {
+        return rest.trim().eq_ignore_ascii_case("Landscape");
+      }
+    }
+    false
+  }
+
   fn should_try_eps_pdf_path(source: &str, page: Option<u32>) -> bool {
     // DISABLED 2026-05-12 after 1303.5091 regression.
     //
@@ -1329,10 +1383,31 @@ impl Graphics {
     // saved per image. Falls through to `convert` on any failure.
     // Only attempted when no page selector is present (EPS is
     // single-page; PS multi-page handled by `convert`'s `[N]` syntax).
+    //
+    // EXCEPT: when the PS file declares `%%Orientation: Landscape` in
+    // its header comments — typical of PGPLOT output, e.g.
+    // astro-ph0103041 NickMorgan.fig2.ps. Direct gs / convert ignore
+    // the Orientation comment and render at literal portrait BBox
+    // coordinates, producing visibly upside-down output. ps2pdf
+    // honors %%Orientation and writes `/Rotate 90` into the resulting
+    // PDF; pdftocairo then honors the PDF rotation and emits
+    // correctly-oriented landscape pixels. Route those through the
+    // pdf-intermediate path. The earlier disabled `should_try_eps_pdf_path`
+    // was about an ORTHOGONAL bug (graphicx angle= compounding with
+    // ps2pdf-injected /Rotate on portrait files) — the 1303.5091 EPS
+    // files have NO `%%Orientation:` comment, so they go through the
+    // gs path as before.
     let src_lc = source.to_lowercase();
     let is_postscript = src_lc.ends_with(".eps") || src_lc.ends_with(".ps");
-    if is_postscript && page.is_none() && Self::convert_eps_via_gs(source, dest, density) {
-      return true;
+    if is_postscript && page.is_none() {
+      if Self::postscript_is_landscape(source)
+        && Self::convert_eps_via_pdf(source, dest, density)
+      {
+        return true;
+      }
+      if Self::convert_eps_via_gs(source, dest, density) {
+        return true;
+      }
     }
     // For PDF sources, try fast subprocess rasterizers in measured-
     // speed order. Subprocess (not linked) so library license doesn't
