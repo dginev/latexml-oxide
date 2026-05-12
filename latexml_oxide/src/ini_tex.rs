@@ -157,35 +157,6 @@ pub fn dump_format(
     snap_size
   );
 
-  // Step 1.5: Load `latex_base` AFTER the snapshot so its definitions
-  // land in the post-load diff and get captured into the dump.
-  //
-  // Why this matters: latex_base.rs's user-facing LaTeX 2.09 stubs
-  // (`\vpt`/`\ixpt`/`\xpt`/...) are NOT redefined by raw latex.ltx
-  // (latex.ltx only sets the *internal* `\@vpt`/`\@xpt` values). If we
-  // didn't include them in the snapshot diff they'd be permanently
-  // missing under the dump-path (`LoadFormat('latex')` strict split
-  // skips latex_base.rs when a dump is present). Witness:
-  // hep-ph0109006's `\documentstyle[bbox]{aipproc}` chain loads bbox.sty
-  // raw, which `\expandafter\def\expandafter\xpt{\xpt …}`s on top of
-  // the kernel's `\xpt` — fails under Rust because `\xpt` was
-  // undefined under the dump path.
-  //
-  // Snapshot ordering: latex_base AFTER bootstrap snap → its defs are
-  // in the diff. Raw latex.ltx then loads on top → wherever latex.ltx
-  // redefines, latex.ltx wins (most-recent assignment captured). For
-  // the leftover latex_base-only CSes, latex_base's defs persist into
-  // the dump.
-  //
-  // Plain init (`--init=plain.tex`) skips this — `latex_base` is LaTeX-
-  // specific and irrelevant to the plain dump.
-  if !is_plain_init {
-    eprintln!("[ini_tex] Loading latex_base post-snapshot so its definitions reach the dump diff");
-    if let Err(e) = latexml_package::engine::latex_base::load_definitions() {
-      eprintln!("[ini_tex] latex_base warning: {}", e);
-    }
-  }
-
   // Step 2: Process the init file as raw TeX definitions.
   // Perl: loadTeXDefinitions($name, $path, type => $type)
   // This digests the file through the engine, creating definitions.
