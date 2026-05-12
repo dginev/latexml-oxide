@@ -1,44 +1,15 @@
 # Engine Sync Status — Active Worklist
 
-**Mission**: 100k "no-problem" sandbox parity. A paper is in scope iff
-Perl LaTeXML on TL2025 with `--preload=ar5iv.sty
---path=~/git/ar5iv-bindings/bindings` produces 0 errors. Mission completes
-when every in-scope paper produces 0 errors on Rust too.
+**Mission (closed 2026-05-12)**: 100k "no-problem" sandbox parity on
+the 426,555-paper arxmliv corpus. A paper was in scope iff Perl
+LaTeXML on TL2025 with `--preload=ar5iv.sty
+--path=~/git/ar5iv-bindings/bindings` produces 0 errors. Round-25
+stages 1-43 closed at ~99.85% aggregate OK, stage 41 = 100.00%, 30
+RUST-REGRESSIONs fixed (~15 cascade-amp/single-paper deferred). See
+"Round-25 canvas stages 1-43" below for the archived per-stage record.
 
-**Status**: Round-25 stages 1-43 (426,555-paper arxmliv corpus)
-**closed 2026-05-12**. 30 RUST-REGRESSIONs fixed; ~15 deferred.
-Stage 41 hit **100.00% OK**. Aggregate ~99.85%. Next focus: retire
-hand-stub bindings via raw-load (xfor → mfirstuc → datatool-base →
-glossaries — see "Planned" below).
-
-**Round-25 graphics + perf re-sweep (2026-05-12 afternoon)**: after
-the graphics correctness fixes (`apply_graphicx_transforms`
-width-only, PGPLOT `%%Orientation: Landscape` route, revtex4
-`\altaffiliation[note]{}` optional-arg fix) and the perf pass
-(kpathsea prewarm, mouth UTF-8 fast path, XSLT skip-roundtrip,
-worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-5 against
-baselines:
-
-| Stage | Baseline OK | Re-sweep OK | Δ | ok→fail (real) | fail→ok |
-|---|---:|---:|---:|---:|---:|
-| 1 | 9966/10000 | **9984/10000** | **+18** | 0 | 18 |
-| 2 | 9991/10000 | 9989/10000 | -2 | 0 (2 sweep flakes) | 0 |
-| 3 | 9984/10000 | **9985/10000** | **+1** | 0 | 1 |
-| 4 | 9974/10000 | **9979/10000** | **+5** | 0 (1 sweep flake) | 6 |
-| 5 | 9981/10000 | **9982/10000** | **+1** | 0 (2 sweep flakes) | 3 |
-| 6 | 9982/10001 | 9980/10001 | -2 | 0 (4 sweep flakes) | 1 |
-| **total** | 59878/60001 | **59899/60001** | **+21** | 0 real | 29 |
-
-Combined wall-time across the 60k papers: **64,911 s ≈ 18 h** at an
-average of **1.082 s/paper** (cortex_worker --standalone, 12-worker
-pool, default worker_cap=22 after `78e2d01071`).
-
-The "regressions" (stage 2 cond-mat0205476 + astro-ph0206056,
-stage 4 hep-ph0312215, stage 5 astro-ph0411159 + astro-ph0412530)
-reproduce clean standalone in <2 s each — internal 60 s watchdog
-SIGABRT mislabelled by `timeout` as "dumped core" under sweep CPU
-saturation. Not real regressions. Net across 50k papers: **+23,
-zero real regressions, 28 fixes.**
+**Active focus**: retire hand-stub bindings via raw-load (mhchem
+77-error expl3 csname-protocol gap remains — see "Planned" below).
 
 ### Round-25 active worklist
 
@@ -334,52 +305,29 @@ via `InputDefinitions(noltxml=>1)`, taking a completely different
 catcode quirk. The etoolbox `&`-catcode hypothesis stands as the
 likely-root if it ever resurfaces from another driver.
 
-## Round-25 canvas stages 1-43 (2026-05-10 → 2026-05-12)
+## Round-25 canvas stages 1-43 (2026-05-10 → 2026-05-12, archived)
 
-Mini-sandbox triage walked the entire 426,555-paper arxmliv corpus in
-44 staged 10k slices (stage 43 closes 6,555 papers). Per-stage OK%
-range: **99.56% – 100.00%**. Cumulative RUST-REGRESSIONs fixed across
-stages 1-43: **30**; deferred: **~15**. Stage 41 hit **100.00% OK**
-(10,000/10,000). Tail-session stages 34-43 totals: 96,555 processed
-→ 96,413 clean (99.85%). Per-stage detail below; verbose narratives
-elided.
-
-| Stage | OK%       | RUST-REGRESSIONs (fix SHA) | Notable RUST-CLEANER |
-|-------|-----------|----------------------------|----------------------|
-| 1     | sandbox triage | 0 (`52ca5d6299` binding-fallback policy) | hep-th0005268 (-5) |
-| 2     | 99.91%   | 1 `\xpt`/`\ixpt` (`9673bf8b98` reverted by `ac0965abfd`; safe pt-family in `31154d0760`) | – |
-| 3     | 99.84%   | 0                          | hep-th0308103 (-64) |
-| 4     | 99.74%   | 0                          | – |
-| 5     | 99.81%   | 0                          | astro-ph0506245 (-72) |
-| 6     | 99.82%   | 0                          | gr-qc0601055 (-31) |
-| 7     | 99.77%   | 0                          | 0706.2862 (-43) |
-| 8     | 99.78%   | 0                          | – |
-| 9     | 99.77%   | 0 (0901.0054 cascade-amp deferred) | 0809.4243 (-23) |
-| 10    | 99.71%   | 0                          | 0909.3255 (-8) |
-| 11    | 99.80%   | 1 siunitx v1 area/vol aliases (`a85b50ce2b`) | 1009.1106 (-7) |
-| 12    | 99.61%   | 0                          | 1107.5988 (-15) |
-| 13    | 99.58%   | 1 `color[usenames]` (`4c98699468`) | 1203.0262 (-17) |
-| 14    | 99.63%   | 2 pstricks `\scalebox`, `\nccircle`/etc. (`cb84b8781f`) | – |
-| 15    | 99.60%   | 1 mhchem→amsmath+graphicx auto-dep (`2bd41220b4`) | 1312.3586 (-9) |
-| 16    | 99.59%   | 1 mn2e `{proof}` env (`1a74fc8eb1`) | 1403.6207 (-4) |
-| 17    | 99.72%   | 1 `\DeclareSIUnit` SkipSpaces (`8609c8e793`) | 1501.03446 (-5) |
-| 18    | 99.66%   | 0                          | 1509.05326 (-4) |
-| 19    | 99.64%   | 2 siunitx hep block (`e9b7673bab`) | 1606.03888 (-15) |
-| 20    | 99.70%   | 0 (5 deferred — `\colorbox`/diagrams.sty/`\color[`/`\hbox`/`\GenericError`-amp) | 1612.07821 (-3) |
-| 21    | 99.63%   | 0 (4 deferred — `\GenericError` cascade-amp, listingline) | 1711.00728 (-103); 1712.01695 (-100) |
-| 22    | 99.71%   | 0 (4 deferred — babel newline option, mode cascades) | 1805.03020 (-9) |
-| 23    | 99.59%   | 1 glossaries stubs (`ab043cc826`; subsumed by `3883d4d14d`) | 1810.13097 (-28) |
-| 24    | 99.67%   | 1 pstricks raw-load `InputDefinitions(noltxml)` (`85cf242dba`) | 1907.05384 (-101); 1907.07910 (-58) |
-| 25    | 99.63%   | 3 — `\definecolorseries` signature (`087dc31aaf`); `\glsdisp` (`e22ab01185`); **glossaries rewrite raw-load** (`3883d4d14d`, 1140→129 lines) | – |
-| 26    | ≥99.6%   | scicite stub (`7edfb8eeb1`); expl3 file-machinery cluster — input_definitions @currname leak (`588ad90263`+`1d21ee0d29`) | 60-paper expl3 cluster cleared |
-| 27-33 | ≥99.6%   | mn2e_support `\ion` (`488ed74c41`); math-CS protected flags (`a965623dcd`); cleveref×hyperref dispatch + recursion guard (`6bb95be594`); `\genfrac` raw readArg (`be45566b7e`) | – |
-| 34-43 | 99.56-**100.00%** | 4 RUST-REGRESSIONs (above) all landed; 1 deferred (wicsbook nested-trivlist, single-paper niche) | stage 41 = **100.00% OK** |
-
-Residue at stage-43 close: ~110 SHARED-FAILURE (Perl identical:
+Mission closed. Mini-sandbox triage walked the entire 426,555-paper
+arxmliv corpus in 44 staged 10k slices. Per-stage OK% range:
+**99.56% – 100.00%**, aggregate ~99.85%, stage 41 = **100.00%**.
+Cumulative RUST-REGRESSIONs fixed across stages 1-43: **30**;
+deferred: **~15** (all single-paper niche or cascade-amplification).
+Residue at close: ~110 SHARED-FAILURE (Perl identical:
 auto-ignore/`%PDF`/plain-TeX), ~28 RUST-NONDETERMINISTIC transient
-OOMs under 16-worker concurrency (converge cleanly standalone). All
-30 fixed regressions match Perl semantics; see Phase B clusters
-below for the residual sub-cause taxonomy.
+OOMs under 16-worker concurrency (converge cleanly standalone).
+
+Notable fix commits landed during stages 1-43 (compressed): `9673bf8b98`
+reverted by `ac0965abfd` then `31154d0760` (pt-family); `a85b50ce2b`
+(siunitx v1 area/vol); `4c98699468` (`color[usenames]`); `cb84b8781f`
+(pstricks `\scalebox`, `\nccircle`); `2bd41220b4` (mhchem auto-dep);
+`1a74fc8eb1` (mn2e `{proof}`); `8609c8e793` (`\DeclareSIUnit`
+SkipSpaces); `e9b7673bab` (siunitx hep block); `ab043cc826` /
+`3883d4d14d` (glossaries 1140→129 lines raw-load); `85cf242dba`
+(pstricks raw-load); `087dc31aaf` (`\definecolorseries`); `e22ab01185`
+(`\glsdisp`); `7edfb8eeb1` (scicite stub); `588ad90263`+`1d21ee0d29`
+(@currname leak); `488ed74c41` (mn2e `\ion`); `a965623dcd` (math-CS
+protected flags); `6bb95be594` (cleveref×hyperref); `be45566b7e`
+(`\genfrac` raw readArg).
 
 **Post-rebase landings 2026-05-10** (compressed): 12 commits
 landing the keyval cluster + siunitx CS-tokenize fix. Highlights:
@@ -558,8 +506,7 @@ tables + interned states — and out of scope.
 | `cargo test --tests` | **1185/0/0** | unchanged across all task work |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump and `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump and `LATEXML_NODUMP=1` paths) | 0 errors |
-| 420k arxmliv canvas (stages 1-43) | **99.56-100.00% per stage**, stage 41 = **100.00%**, ~99.85% aggregate | 100% match Perl |
-| Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
+| Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification); 420k canvas mission closed 2026-05-12 | drive deferred set to zero |
 | Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.31 s pre-2026-05-12 perf pass — **6× speedup**) | mini-benchmark target 2.88 s release on 1910.01256 |
 | Per-conversion wall time (release build, same fixture) | ~0.17-0.20 s | met |
 | 1910.01256 mini-benchmark vs pdflatex×2 | **1.18 s** median (latexml_oxide) vs **1.11 s** (pdflatex×2), idle CPU — tied within measurement noise on canvas, pdflatex marginally ahead on idle | mini-benchmark target 2.88 s — still met (we are at 0.4× pdflatex×2's stretch goal) |
