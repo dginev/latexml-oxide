@@ -433,28 +433,34 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 /// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
 /// so it can run on every split sub-document, not just the first.
 fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String {
+  use std::sync::LazyLock;
+  // Cached at first call — regex compile is the slow part of `Regex::new`,
+  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
+  static XML_PROLOG_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^<\?xml[^?]*\?>\s*").unwrap());
+  static NON_VOID_SELF_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
+    ).unwrap()
+  });
+  static VOID_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
+    ).unwrap()
+  });
+  static VOID_SELF_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+      r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
+    ).unwrap()
+  });
+
   let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
   // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
   // libxml2's to_string() includes it by default; we strip it here.
-  let output = regex::Regex::new(r"^<\?xml[^?]*\?>\s*")
-    .unwrap()
-    .replace(&output, "")
-    .to_string();
-  let re = regex::Regex::new(
-    r"<(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^>]*)?/>",
-  )
-  .unwrap();
-  let output = re.replace_all(&output, "<$1$2></$1>").to_string();
-  let void_close_re = regex::Regex::new(
-    r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
-  )
-  .unwrap();
-  let output = void_close_re.replace_all(&output, "").to_string();
-  let void_selfclose_re = regex::Regex::new(
-    r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
-  )
-  .unwrap();
-  let mut output = void_selfclose_re.replace_all(&output, "<$1$2>").to_string();
+  let output = XML_PROLOG_RE.replace(&output, "").to_string();
+  let output = NON_VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2></$1>").to_string();
+  let output = VOID_CLOSE_RE.replace_all(&output, "").to_string();
+  let mut output = VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2>").to_string();
   if !svg_fragments.is_empty() {
     for (pic_id, svg_html) in svg_fragments {
       let pattern = format!(
@@ -484,12 +490,21 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
 ///
 /// Returns (picture_id, svg_html) pairs for post-XSLT injection.
 fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
+  use std::sync::LazyLock;
+  static PICTURE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap()
+  });
+  static ID_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
+  static WIDTH_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"width="([^"]+)""#).unwrap());
+  static HEIGHT_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"height="([^"]+)""#).unwrap());
   let mut fragments = Vec::new();
-  // Match <picture ... xml:id="ID" ... width="W" height="H" ...>CONTENT</picture>
-  let picture_re = regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap();
-  let id_re = regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap();
-  let width_re = regex::Regex::new(r#"width="([^"]+)""#).unwrap();
-  let height_re = regex::Regex::new(r#"height="([^"]+)""#).unwrap();
+  let picture_re = &*PICTURE_RE;
+  let id_re = &*ID_RE;
+  let width_re = &*WIDTH_RE;
+  let height_re = &*HEIGHT_RE;
 
   for pic_caps in picture_re.captures_iter(xml) {
     let attrs = &pic_caps[1];
