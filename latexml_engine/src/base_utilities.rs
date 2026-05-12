@@ -1116,24 +1116,52 @@ pub fn predigest_box_contents_in_mode(
   }
 }
 
-/// Check if a List contains only simple horizontal content (TBoxes/Comments),
-/// not structured content like Whatsits or sub-Lists. This guards against
-/// repack being triggered for cases like `\vtop{\begin{tabular}...}` where
-/// the tabular processing leaks MODE='horizontal' but the content should
-/// NOT be paragraph-wrapped.
+/// Check if a List contains only simple horizontal content (TBoxes,
+/// Comments, or sub-Lists whose mode is horizontal/restricted_horizontal/
+/// math). This guards against repack being triggered for cases like
+/// `\vtop{\begin{tabular}...}` where the tabular processing leaks
+/// MODE='horizontal' but the content (an Alignment/Whatsit) should NOT
+/// be paragraph-wrapped.
+///
+/// Inline brace-groups `{...}` inside running text produce sub-Lists
+/// (one per group) whose mode is `restricted_horizontal`. Without
+/// accepting those, e.g. `\vbox{\small\bfseries hello {,} world}` would
+/// fail the repack gate and be measured as 3 separate vertical lines.
+/// Witness: aistats2026.sty's `\def\And{\unskip{,}\enspace}` in the
+/// `\@runningauthor` body — every author separator emits a `{,}` group
+/// that fragments the vbox into many short rows, making `\ht\autrun`
+/// far exceed 10pt and triggering the class's `\PackageError{Document}
+/// {Running heading author exceeds size limitations}` (driver paper:
+/// arXiv:2602.11863).
 fn has_only_simple_horizontal_content(item: &Digested) -> bool {
   if let DigestedData::List(l) = item.data() {
     let list = l.borrow();
-    // Filter out empty items
     let non_empty: Vec<_> = list
       .boxes
       .iter()
       .filter(|b| !b.get_property_bool("isEmpty"))
       .collect();
-    // If all non-empty items are TBoxes or Comments, it's simple horizontal content
-    non_empty
-      .iter()
-      .all(|b| matches!(b.data(), DigestedData::TBox(_) | DigestedData::Comment(_)))
+    non_empty.iter().all(|b| match b.data() {
+      DigestedData::TBox(_) | DigestedData::Comment(_) => true,
+      DigestedData::List(sub) => {
+        // Inline brace-groups `{...}` in horizontal context digest to
+        // a sub-List with no `mode` property (implicit hbox). Accept
+        // those plus sub-Lists explicitly tagged as horizontal-flavour.
+        // Reject `mode=vertical|internal_vertical` (structural
+        // sub-vboxes) and any other tagged mode.
+        let sub_mode = sub
+          .borrow()
+          .properties
+          .get("mode")
+          .map(|v| v.to_string())
+          .unwrap_or_default();
+        matches!(
+          sub_mode.as_str(),
+          "" | "horizontal" | "restricted_horizontal" | "math"
+        )
+      },
+      _ => false,
+    })
   } else {
     false
   }
@@ -1161,10 +1189,14 @@ fn repack_horizontal_in_list(item: &mut Digested) {
         .get_property("mode")
         .map(|v| v.to_string())
         .unwrap_or_else(|| "horizontal".to_string());
-      if child_mode == "horizontal" || child_mode == "restricted_horizontal" || child_mode == "math"
+      // Empty-string mode means "implicit hbox" — produced by inline
+      // brace-groups `{...}` in horizontal context. Treat as horizontal
+      // so the surrounding running text doesn't get fragmented.
+      let effective_mode = if child_mode.is_empty() { "horizontal" } else { child_mode.as_str() };
+      if effective_mode == "horizontal" || effective_mode == "restricted_horizontal" || effective_mode == "math"
       {
         // Perl: $keep = 1 if ($mode ne 'horizontal') || !$item->getProperty('isSpace');
-        if child_mode != "horizontal" || !child.get_property_bool("isSpace") {
+        if effective_mode != "horizontal" || !child.get_property_bool("isSpace") {
           keep = true;
         }
         para.push(child);
