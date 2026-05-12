@@ -1027,7 +1027,16 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
   if s.is_empty() {
     return Ok(Vec::new());
   }
-  s.split(',').map(parse_token).collect()
+  // Pre-size the Vec. Avg ~19.6 tokens/list across the 16k E-entries
+  // in latex.dump; the default `.collect()` size_hint is (0, None) so
+  // Vec resizes ~log2(19) ≈ 5 times per call. Counting commas first
+  // (one extra pass over the str) eliminates those re-allocs.
+  let n = s.bytes().filter(|b| *b == b',').count() + 1;
+  let mut out = Vec::with_capacity(n);
+  for tok in s.split(',') {
+    out.push(parse_token(tok)?);
+  }
+  Ok(out)
 }
 
 /// Decode the v3 structured Parameters encoding emitted by
