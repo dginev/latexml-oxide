@@ -312,18 +312,20 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
   // maps to `assign_internal($STATE, 'value', $key, $val, 'global')` —
   // unconditional global write. No skip-if-defined.
 
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.is_empty() {
-    return Err("Missing value type".into());
-  }
+  // Avoid the per-line Vec<&str> allocation — direct iter destructure
+  // matches the pattern used in load_meaning and parse_and_load.
+  let mut top_it = data.splitn(2, '\t');
+  let kind = top_it.next().ok_or("Missing value type")?;
+  let rest = top_it.next().unwrap_or("");
+  // Helper to default to "0" for numeric parses (the prior code used
+  // `rest_or_zero.parse()`).
+  let rest_or_zero = if rest.is_empty() { "0" } else { rest };
 
-  let value = match parts[0] {
+  let value = match kind {
     "N" => return Ok(false), // Don't load None values (would erase existing)
-    "B" => Stored::Bool(parts.get(1).map(|s| *s == "1").unwrap_or(false)),
+    "B" => Stored::Bool(rest == "1"),
     "I" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad int: {}", e))?;
       Stored::Int(n)
@@ -331,14 +333,12 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
     // "Nm": Stored::Number marker (distinct from "I" Stored::Int) —
     // see dump_writer's Number serializer for rationale.
     "Nm" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad number: {}", e))?;
       Stored::Number(crate::common::number::Number(n))
     },
-    "S" => Stored::from(url_decode(parts.get(1).unwrap_or(&""))),
+    "S" => Stored::from(url_decode(rest)),
     "F" => {
       // Stored::Font — written by dump_writer's Stored::Font arm.
       // Format: F\tname=...\x1fsize=...\x1ffamily=...\x1f...
@@ -347,7 +347,7 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       use crate::common::font::Font;
       use std::borrow::Cow;
       let mut font = Font::default();
-      for kv in parts.get(1).unwrap_or(&"").split('\x1f') {
+      for kv in rest.split('\x1f') {
         if let Some((k, v)) = kv.split_once('=') {
           let v_dec = url_decode(v);
           match k {
@@ -372,47 +372,39 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       Stored::Font(std::rc::Rc::new(font))
     },
     "CH" => {
-      let n: u16 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: u16 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad charcode: {}", e))?;
       Stored::Charcode(n)
     },
     "CC" => {
-      let n: u8 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: u8 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad catcode: {}", e))?;
       Stored::Catcode(Catcode::from(n))
     },
     "T" => {
-      let tok = parse_token(parts.get(1).unwrap_or(&""))?;
+      let tok = parse_token(rest)?;
       Stored::Token(tok)
     },
     "TK" => {
-      let toks = parse_token_list(parts.get(1).unwrap_or(&""))?;
+      let toks = parse_token_list(rest)?;
       Stored::Tokens(Tokens::from(toks))
     },
     "D" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad dimension: {}", e))?;
       Stored::Dimension(crate::common::dimension::Dimension(n))
     },
-    "G" => Stored::Glue(parse_glue(parts.get(1).unwrap_or(&"0"))?),
+    "G" => Stored::Glue(parse_glue(rest_or_zero)?),
     "MD" => {
-      let n: i64 = parts
-        .get(1)
-        .unwrap_or(&"0")
+      let n: i64 = rest_or_zero
         .parse()
         .map_err(|e| format!("Bad mudimension: {}", e))?;
       Stored::MuDimension(crate::common::mudimension::MuDimension(n))
     },
-    "MG" => Stored::MuGlue(parse_muglue(parts.get(1).unwrap_or(&"0"))?),
+    "MG" => Stored::MuGlue(parse_muglue(rest_or_zero)?),
     "VD" => return Ok(false), // Don't load empty VecDeque (runtime state)
     _ => return Ok(false),    // Unknown value type
   };
@@ -449,12 +441,13 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   // 'global')` — unconditional global write. No skip-if-defined, no
   // admission filter.
 
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.is_empty() {
-    return Err("Missing meaning type".into());
-  }
+  // Avoid the per-line Vec<&str> allocation — this fn runs ~80k times
+  // during latex.dump load (every M entry).
+  let mut top_it = data.splitn(2, '\t');
+  let kind = top_it.next().ok_or("Missing meaning type")?;
+  let rest = top_it.next().unwrap_or("");
 
-  match parts[0] {
+  match kind {
     "N" => {
       // None meaning — skip (don't define as undefined)
       Ok(false)
@@ -471,7 +464,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       //        typed params; loses brace-in-delimiter forms.
       //   v1 — nargs only: "{}".repeat(nargs), all params flattened to
       //        Plain. Kept as last resort so ancient dumps still load.
-      let eparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(6, '\t').collect();
+      let eparts: Vec<&str> = rest.splitn(6, '\t').collect();
       if eparts.len() < 4 {
         return Err("Incomplete Expandable entry".into());
       }
@@ -603,7 +596,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       //   sub Im { State::assign_internal($STATE,'meaning',
       //            $_[0], $_[1], 'global'); }
       // Direct write — no `\let`-chase, no chain follow.
-      let tok = parse_token(parts.get(1).unwrap_or(&""))?;
+      let tok = parse_token(rest)?;
       state::assign_internal(
         TableName::Meaning,
         cs_tok.get_cs_name(),
@@ -625,7 +618,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // in parse_value above).
       use crate::definition::BeforeDigestClosure;
       use crate::definition::primitive::Primitive;
-      let font_id_raw = url_decode(parts.get(1).unwrap_or(&""));
+      let font_id_raw = url_decode(rest);
       let font_id_pin = arena::pin(&font_id_raw);
       let font_id_str = font_id_raw.clone();
       let cs_for_fontdef = cs_tok;
@@ -660,7 +653,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // dump — without this the expl3.sty short-circuit guard
       // `\ifx\csname tex_let:D\endcsname\relax` never fires and the 36k
       // lines of expl3-code.tex get reprocessed on every run.
-      let target_cs_raw = url_decode(parts.get(1).unwrap_or(&""));
+      let target_cs_raw = url_decode(rest);
       if target_cs_raw == key {
         return Ok(false);
       }
@@ -706,7 +699,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // address (`\count22`) held the default 0 — `\settabs 20\columns`
       // looped infinitely because `\m@ne == 0` never advanced `\count@`
       // toward 0 in `\loop\ifnum\count@>\z@\@nother\repeat`.
-      let rparts: Vec<&str> = parts.get(1).unwrap_or(&"").splitn(5, '\t').collect();
+      let rparts: Vec<&str> = rest.splitn(5, '\t').collect();
       if rparts.len() < 3 {
         return Err("Incomplete Register entry".into());
       }
