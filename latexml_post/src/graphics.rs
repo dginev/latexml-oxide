@@ -1226,10 +1226,14 @@ impl Graphics {
     let tmp = parent.join(format!(".{}.{}.gs", stem, unique));
     let timeout = std::time::Duration::from_secs(30);
     let dest_lc = dest.to_lowercase();
+    // pngalpha matches IM's `ps:alpha` delegate (the default EPS→PNG
+    // path). It produces an RGBA PNG where blank canvas is transparent
+    // — important for plot backgrounds matching document background.
+    // png16m would force a white background regardless of source.
     let device = if dest_lc.ends_with(".jpg") || dest_lc.ends_with(".jpeg") {
       "jpeg"
     } else {
-      "png16m"
+      "pngalpha"
     };
 
     let mut cmd = std::process::Command::new("gs");
@@ -1238,6 +1242,18 @@ impl Graphics {
       .arg("-dNOPAUSE")
       .arg("-dBATCH")
       .arg("-dSAFER")
+      // Antialiasing — IM passes these through its delegate by
+      // default. Without them gs produces aliased, jagged output
+      // that's visibly worse than `convert`. 4 = max quality;
+      // 2 = balanced; 1 = off. Matches IM's delegate.xml defaults.
+      .arg("-dTextAlphaBits=4")
+      .arg("-dGraphicsAlphaBits=4")
+      // Render the entire page in memory rather than band-by-band.
+      // Eliminates seam artifacts on large pages. Mirrors IM's
+      // delegate.xml: -dMaxBitmap=500000000.
+      .arg("-dMaxBitmap=500000000")
+      .arg("-dAlignToPixels=0")
+      .arg("-dGridFitTT=2")
       // -dEPSCrop here means "honor the EPS BoundingBox when rendering"
       // (a gs rendering flag), NOT the ps2pdf flag that injected
       // /Rotate in the earlier disabled path. gs writing PNG never

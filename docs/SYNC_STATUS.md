@@ -30,6 +30,7 @@ glossaries — see "Planned" below).
 | `6a7d8fee7d` | `\let\amp=&` halign | tex_tables: implicit-`&`/`\cr` in `\halign` preamble (Knuth-faithful) |
 | `43e75591dd`+`c6067ca6f5`+`22bf0619cf` | perf | arena + meaning + char-keyed HashMaps pre-allocated to skip startup growth |
 | `228471f5e1` | perf | dump_reader: drop per-line Vec alloc (~800 ms debug / ~30 ms release per conversion) |
+| `48fd96ac75` | 2402.01336 (LHCb 1067-author) | graphics: content-hash dedup (Plan::Copy + Plan::Convert key on SipHash(content) instead of source path; 1083-node paper → 17 output files) + direct gs EPS path (1.7× faster than IM convert, matches IM antialiasing flags) |
 
 **Format dump enabled 2026-05-08** (`resources/dumps/latex.dump.txt`,
 25,439 entries, 3.9 MB, 389 expl3 markers). Dump path 5 in

@@ -151,6 +151,26 @@ document conversion. The cost calculus is dominated by spawn-count
 × per-spawn overhead, not by per-call CPU once the child is running —
 so dedup/coalesce wins are larger than convert-flag tuning.
 
+**Status (2026-05-12, commit `48fd96ac75`):** in-document coalescing
+landed for both raster-copy (`Plan::Copy`) and raster-convert
+(`Plan::Convert`). The dedup key is `(SipHash(content),
+graphicx_options)` — two byte-identical sources with the same options
+produce one conversion + one output bundle entry; the first source's
+filename names the dest. Witness: arXiv:2402.01336 (LHCb 1067-author
+paper using `\lhcborcid`) — 1083 `<ltx:graphics>` nodes collapse to
+**17 output files**. The persistent on-disk cache (BEST case above)
+is still open; the in-memory dedup covers the within-document case
+that dominates author-list / icon-repeat papers.
+
+**Direct Ghostscript EPS path (commit `48fd96ac75`):** EPS/PS sources
+now route through `gs -dEPSCrop -sDEVICE=pngalpha` directly, skipping
+ImageMagick's wrapper around the same renderer. Includes
+`-dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dMaxBitmap=500000000` so
+output quality matches `convert`'s default delegate. Measured on
+`lhcb-logo.eps`: 72 ms (gs-direct + AA) vs 127 ms (`convert`) ≈ 1.8×
+faster. Same CCW Rotate convention as graphicx and `convert`, so no
+rotation regression. `convert` remains the fallback when `gs` fails.
+
 **Cache-key correctness checklist:**
 - Include all inputs that change the output: source bytes (hash), page
   index, target DPI, target format, and any flags that influence
