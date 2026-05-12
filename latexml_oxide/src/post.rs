@@ -491,6 +491,14 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
 /// Returns (picture_id, svg_html) pairs for post-XSLT injection.
 fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   use std::sync::LazyLock;
+  // Fast-fail: most documents have no `<picture>` elements (tikz / pgf
+  // is uncommon in the canvas). Skip the backtracking lazy-match
+  // regex (`(?s)...(.*?)`) when `<picture` doesn't appear as a literal
+  // substring. `str::contains` is a SIMD-accelerated byte search and
+  // takes microseconds even on ~MB inputs.
+  if !xml.contains("<picture") {
+    return Vec::new();
+  }
   static PICTURE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap()
   });

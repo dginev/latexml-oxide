@@ -1660,10 +1660,20 @@ impl Processor for Graphics {
     // parallelism — capped at a reasonable limit to avoid fork/memory
     // storms with many-image papers.
     let convert_count = convert_jobs.len();
+    // Worker cap controls fork-fan-out of mutool / pdftocairo / convert.
+    // Each spawn pulls libgs + libpoppler + libpng into a fresh
+    // address space (~30 ms ambient), so on graphics-heavy papers
+    // (e.g. LHCb 2402.01336 with 17 unique PDFs) sub-batches at
+    // cap = 8 added wasted batch boundaries on a 28-CPU host. We now
+    // bound by `available_parallelism()` directly with a generous
+    // 32-thread ceiling — high enough to one-shot the typical
+    // tail-paper graphics fan but low enough to avoid fork-storm
+    // pathologies on tiny VMs. The 1910.01256 mini-bench (5 PDFs) is
+    // unaffected because it was already <= the prior cap.
     let worker_cap = std::thread::available_parallelism()
       .map(|n| n.get())
       .unwrap_or(4)
-      .clamp(1, 8);
+      .clamp(1, 32);
     let n_workers = convert_count.min(worker_cap).max(1);
     let source_dir_ref = source_dir.as_str();
     let dest_dir_ref = dest_dir.as_str();
