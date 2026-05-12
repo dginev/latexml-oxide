@@ -264,7 +264,16 @@ LoadDefinitions!({
     "\\newtheorem{assum}[thm]{Assumption}",
     "\\newtheorem{prop}[thm]{Proposition}",
     "\\newtheorem{crit}[thm]{Criterion}",
-    "\\theoremstyle{definition}",
+    // Guard `\theoremstyle{definition}` with `\@ifundefined` so the
+    // stub does NOT error when the document deliberately undefined
+    // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
+    // by `\usepackage{amsthm}`-as-no-op-because-already-loaded). The
+    // stub is a *fallback* for env auto-loading; if the document
+    // chose to disable `\theoremstyle`, respect that choice instead
+    // of resurrecting an undefined-error. Witness: arXiv:2603.11260,
+    // 2603.11265 (ifacconf.cls -> theorem.sty -> amsthm pre-loaded,
+    // then user `\let\theoremstyle\@undefined`).
+    "\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}",
     "\\newtheorem{defn}[thm]{Definition}",
     "\\newtheorem{exmp}[thm]{Example}",
     "\\newtheorem{rem}[thm]{Remark}",
