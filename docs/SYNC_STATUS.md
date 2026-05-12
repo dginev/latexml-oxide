@@ -244,6 +244,27 @@ Driver: 2403.15855 (Springer Nature `sn-jnl` class).
 Files: `latexml_package/src/package/hyperref_sty.rs`,
 `latexml_core/src/definition/expandable.rs`.
 
+## Implicit-character semantics (2026-05-12)
+
+Knuth TeX's "implicit characters" (texbook p.~277) are CSes that
+were `\let`-equivalenced to a character token. The implicit form
+dispatches by the underlying char's command in most contexts but
+not all. Current Rust-port status:
+
+| Primitive | Implicit-character handling | Status |
+|---|---|---|
+| `\ifcat\X A` (X let to letter) | matches both letters | ✓ working |
+| `\if\X X` (X let to char X) | same char comparison | ✓ working |
+| `\ifx\X\Y` (both let to same char) | recognises equivalence | ✓ working |
+| Math `$\X b$` (X let to `+`) | renders as math operator | ✓ working |
+| `\halign` preamble `\amp` (let to `&`) | column separator | ✓ commit `6a7d8fee7d` |
+| `\halign` preamble `\rowEnd` (let to `\cr`) | row separator | ✓ commit `6a7d8fee7d` |
+| `\halign` body `\rowEnd` (let to `\cr`) | row separator at digest time | ✗ niche gap |
+| `\csname` consumption | Knuth: error; we: soft-substitute | divergence (commit `f8e20b648e`, citations in `latexml_core/src/gullet.rs`) |
+
+The `\halign` body-side implicit-`\cr` gap is a low-impact niche
+(`\let\rowEnd=\cr` is rare in real papers). Open if witnesses emerge.
+
 ## ~~Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column~~
 
 **RESOLVED 2026-05-12** (silent side-effect of glossaries raw-load
