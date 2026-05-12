@@ -453,11 +453,25 @@ impl Mouth {
       let file_str = if is_latin1 {
         raw_line.iter().map(|&b| b as char).collect::<String>()
       } else {
-        // Fallback: try UTF-8 with lossy conversion
-        String::from_utf8_lossy(raw_line).into_owned()
+        // Fast path for valid UTF-8 (overwhelming majority of TeX
+        // source under `inputenc[utf8]`). `str::from_utf8` validates
+        // the whole slice in a tight SIMD loop and returns a
+        // borrow on success — no `Utf8Chunks::next` iteration
+        // looking for invalid bytes. Fall back to `from_utf8_lossy`
+        // only when validation fails.
+        match str::from_utf8(raw_line) {
+          Ok(s) => s.to_string(),
+          Err(_) => String::from_utf8_lossy(raw_line).into_owned(),
+        }
       };
-      let replaced = file_str.replace('\u{FFFD}', " ");
-      if replaced.len() != file_str.len() {
+      // Replace the U+FFFD inserted by lossy decode with space. For
+      // valid-UTF-8 inputs (no FFFD), skip the replace+log scan
+      // entirely. The original logic compared `replaced.len()` to
+      // `file_str.len()` to detect FFFD presence indirectly; the
+      // explicit `contains` is cheaper and lets us avoid the
+      // unconditional `replace` walk on every input line.
+      let has_fffd = file_str.contains('\u{FFFD}');
+      if has_fffd {
         let encoding_name = crate::common::arena::to_string(*encoding_sym);
         Info!(
           "misdefined",
@@ -467,8 +481,10 @@ impl Mouth {
           "",
           location
         );
+        file_str.replace('\u{FFFD}', " ")
+      } else {
+        file_str
       }
-      replaced
     } else {
       // No encoding set — interpret as UTF-8, with fallback.
       // For non-UTF-8 bytes, we keep them as raw Latin-1 chars.
