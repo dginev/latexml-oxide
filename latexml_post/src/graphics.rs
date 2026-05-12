@@ -1354,19 +1354,41 @@ impl Graphics {
     // of a 1020 × 1320 px canvas with a 968-pixel blank above it.
     // `-dFIXEDMEDIA` makes gs ignore the embedded `setpagedevice` and
     // honour our explicit dimensions. Witness: astro-ph0503029 fig 7.
-    if let Some((w_pt, h_pt)) = read_postscript_bounding_box(source) {
+    //
+    // When the BoundingBox is offset from origin (e.g.
+    // `%%BoundingBox: 117 242 524 567` in hep-ph0608319/data6.ps),
+    // FIXED page-size alone isn't enough — content drawn at PS
+    // (117, 242) lands OUTSIDE a (407, 325) page. Translate via
+    // PostScript `-c "<x0_neg> <y0_neg> translate"` BEFORE the EPS
+    // file is interpreted, shifting the content to origin (0, 0).
+    // PS `-c` snippet executes after the device init but before the
+    // file load. Witness: hep-ph0608319/data6.ps (`(atend)` header,
+    // real BBox `117 242 524 567`) — without translate the rendered
+    // 992 × 1403 letter page has a tiny content blob; with translate
+    // we get a tight 407 × 325 pt crop matching what convert produces.
+    // Device init flags must precede `-c` / `-f` because gs `-f`
+    // takes the NEXT argument as a file to interpret; anything after
+    // `-f` is no longer parsed as an option.
+    cmd
+      .arg(format!("-sDEVICE={}", device))
+      .arg(format!("-r{}", density))
+      .arg(format!("-sOutputFile={}", tmp.display()));
+    let bbox_full = read_postscript_bounding_box_full(source);
+    if let Some((x0, y0, w_pt, h_pt)) = bbox_full {
       let w = w_pt.max(1.0).ceil() as u32;
       let h = h_pt.max(1.0).ceil() as u32;
       cmd
         .arg("-dFIXEDMEDIA")
         .arg(format!("-dDEVICEWIDTHPOINTS={}", w))
         .arg(format!("-dDEVICEHEIGHTPOINTS={}", h));
+      if x0.abs() > 0.5 || y0.abs() > 0.5 {
+        cmd
+          .arg("-c")
+          .arg(format!("{} {} translate", -x0, -y0))
+          .arg("-f");
+      }
     }
-    cmd
-      .arg(format!("-sDEVICE={}", device))
-      .arg(format!("-r{}", density))
-      .arg(format!("-sOutputFile={}", tmp.display()))
-      .arg(source);
+    cmd.arg(source);
     let gs_ok = Self::run_with_timeout(cmd, timeout)
       .map(|s| s.success())
       .unwrap_or(false)
@@ -1505,25 +1527,71 @@ impl Graphics {
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
 }
 
-fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
+/// Returns the EPS BoundingBox as `(x0, y0, w, h)` where (x0, y0) is
+/// the lower-left corner of the content in PS coords and (w, h) is
+/// the content extent. Callers needing only the extent can ignore the
+/// origin via `_`-destructuring or `.map(|(_, _, w, h)| (w, h))`.
+///
+/// Handles three DSC variants:
+///  1. `%%BoundingBox: x0 y0 x1 y1` in the header (most files).
+///  2. `%%BoundingBox: (atend)` in the header, real values in the
+///     Trailer at end-of-file (some HIGZ, PAW, certain pswrite output).
+///  3. `%%HiResBoundingBox: x0.x y0.y x1.x y1.y` — used when literal
+///     `%%BoundingBox:` is missing.
+fn read_postscript_bounding_box_full(source: &str) -> Option<(f64, f64, f64, f64)> {
   let content = std::fs::read_to_string(source).ok()?;
-  for line in content.lines().take(80) {
-    let Some(rest) = line.strip_prefix("%%BoundingBox:") else {
-      continue;
-    };
-    let mut vals = rest
-      .split_whitespace()
-      .filter_map(|s| s.parse::<f64>().ok());
-    let (Some(x0), Some(y0), Some(x1), Some(y1)) =
-      (vals.next(), vals.next(), vals.next(), vals.next())
-    else {
-      return None;
-    };
-    let w = (x1 - x0).abs();
-    let h = (y1 - y0).abs();
-    return Some((w, h));
+  let mut header_lines = content.lines().take(80);
+  let mut atend = false;
+  let mut hi_res: Option<(f64, f64, f64, f64)> = None;
+  for line in &mut header_lines {
+    if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
+      let rest_trim = rest.trim();
+      if rest_trim.eq_ignore_ascii_case("(atend)") {
+        atend = true;
+        continue;
+      }
+      if let Some(b) = parse_bbox_quadruple(rest) {
+        return Some(b);
+      }
+    } else if let Some(rest) = line.strip_prefix("%%HiResBoundingBox:") {
+      hi_res = hi_res.or_else(|| parse_bbox_quadruple(rest));
+    }
   }
-  None
+  if atend {
+    // Scan the last ~80 lines for a Trailer-section BoundingBox.
+    let tail: Vec<&str> = content.lines().rev().take(80).collect();
+    for line in tail {
+      if let Some(rest) = line.strip_prefix("%%BoundingBox:") {
+        let rest_trim = rest.trim();
+        if rest_trim.eq_ignore_ascii_case("(atend)") {
+          continue;
+        }
+        if let Some(b) = parse_bbox_quadruple(rest) {
+          return Some(b);
+        }
+      }
+    }
+  }
+  hi_res
+}
+
+fn parse_bbox_quadruple(s: &str) -> Option<(f64, f64, f64, f64)> {
+  let mut vals = s.split_whitespace().filter_map(|s| s.parse::<f64>().ok());
+  let (Some(x0), Some(y0), Some(x1), Some(y1)) =
+    (vals.next(), vals.next(), vals.next(), vals.next())
+  else {
+    return None;
+  };
+  let w = (x1 - x0).abs();
+  let h = (y1 - y0).abs();
+  Some((x0, y0, w, h))
+}
+
+/// Legacy width/height-only accessor for callers that don't need the
+/// origin offset. Use `read_postscript_bounding_box_full` when you
+/// need to translate the content to PS origin (0, 0).
+fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
+  read_postscript_bounding_box_full(source).map(|(_, _, w, h)| (w, h))
 }
 
 fn read_pdf_page_box(source: &str) -> Option<(f64, f64)> {
