@@ -117,8 +117,22 @@ coverage. See [`memory/feedback_prefer_raw_load.md`].
 - Status: existing TODO at file head says "DELETE this binding
   once engine can faithfully handle the expl3/xparse/chemgreek
   raw-load chain". Driver: arXiv:1806.06448.
-- Gap (Rust): `\group_begin:` non-boxing-frame handling,
-  `\l__tl_analysis_*_int` register access in l3regex/l3tl-analysis.
+- **Measured gap (2026-05-12)**: raw-load probe (mhchem stub
+  temporarily replaced with `InputDefinitions("mhchem", noltxml=>1)`)
+  on a `\ce{H2O}` paper produces **92 errors**, all in the
+  expl3 emulation layer:
+    * `\exp_args:Nc` between `\csname`/`\endcsname` (Error:unexpected)
+    * `\scan_stop:`, `\s__tl`, `\tex_skip:D` between csname/endcsname
+    * `\exp_stop_f:` undefined
+    * `\fi:` appearing outside conditional (Error:unexpected:fi)
+    * `<relationaltoken>` expected (numeric comparison gaps)
+  Probe restored; the contrib stub remains the load-bearing path.
+  Chemgreek shim added (`chemgreek_sty.rs`) so direct
+  `\usepackage{chemgreek}` does raw-load — but mhchem itself
+  remains stubbed.
+- Engine work needed: faithful `\exp_*` / `\__tl_*` / `\__file_*` /
+  `\scan_stop:` / `\group_begin:` etc. — i.e. proper csname-time
+  exp-and-mark protocol from expl3. Tracked in Round-26 candidates.
 
 ### `latexml_package/src/package/glossaries_sty.rs`
 - Intercepts: TL `glossaries.sty` (7714 lines as of TL2025).

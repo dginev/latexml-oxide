@@ -115,6 +115,7 @@ pub mod courier_sty;
 pub mod crop_sty;
 pub mod cropmark_sty;
 pub mod csquotes_sty;
+pub mod chemgreek_sty;
 pub mod datatool_base_sty;
 pub mod dcolumn_sty;
 pub mod deluxetable_sty;
