@@ -538,11 +538,17 @@ impl Graphics {
     // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so
     // the caller falls back to raster.
     //
-    // Order:
-    //   1. pdftocairo (poppler) — universally available with TeX Live.
+    // Order (subprocess; library license doesn't propagate):
+    //   1. mutool (MuPDF CLI) — fastest, plus ~4× more
+    //      gzip-compressible SVG output than pdftocairo (1.5 MB vs
+    //      6.0 MB gz on matplotlib scatter).
+    //   2. pdftocairo (poppler) — universally available with TeX Live.
     //      20-40× faster than inkscape on benign vector PDFs.
-    //   2. inkscape — last vector resort. Some PDFs that fail
+    //   3. inkscape — last vector resort. Some PDFs that fail
     //      poppler still render via inkscape (but it can time out).
+    if Self::convert_image_svg_mutool(source, dest, page) {
+      return true;
+    }
     if Self::convert_image_svg_pdftocairo(source, dest, page) {
       return true;
     }
@@ -598,6 +604,74 @@ impl Graphics {
       .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
       .unwrap_or(false)
   }
+  /// `mutool convert -F svg` (MuPDF CLI) — first-choice SVG vector
+  /// converter. Faster than `pdftocairo -svg` on vector-heavy PDFs
+  /// (~2×), AND produces output that gzip-compresses ~4× better when
+  /// served as `.svgz`. Subprocess invocation — no MuPDF code linked.
+  ///
+  /// Measured 2026-05-12 on matplotlib AugmentedMSRA10K…pos.pdf:
+  ///   pdftocairo -svg: 1.17 s, 29.9 MB raw, 6.0 MB gz
+  ///   mutool convert:  0.52 s, 29.7 MB raw, 1.5 MB gz
+  ///
+  /// mutool's `convert` emits one file per page via a printf-style
+  /// pattern. We use `%d` to capture the requested page and rename
+  /// the result to the caller's `dest`.
+  fn convert_image_svg_mutool(source: &str, dest: &str, page: Option<u32>) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp_pattern = parent.join(format!(".{}.{}.mutool_svg%d.svg", stem, unique));
+    let tmp_pattern_str = tmp_pattern.to_string_lossy().to_string();
+    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
+    let tmp_actual = parent.join(format!(
+      ".{}.{}.mutool_svg{}.svg",
+      stem, unique, p1
+    ));
+    let cleanup = || {
+      let _ = std::fs::remove_file(&tmp_actual);
+    };
+
+    let mut cmd = std::process::Command::new("mutool");
+    cmd
+      .arg("convert")
+      .arg("-F")
+      .arg("svg")
+      .arg("-o")
+      .arg(&tmp_pattern_str)
+      .arg(source)
+      .arg(p1.to_string());
+    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let ok = Self::run_with_timeout(cmd, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp_actual.exists();
+    if !ok {
+      cleanup();
+      return false;
+    }
+    if std::fs::metadata(&tmp_actual)
+      .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
+      .unwrap_or(true)
+    {
+      cleanup();
+      return false;
+    }
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp_actual, dest)
+      .or_else(|_| std::fs::copy(&tmp_actual, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    cleanup();
+    installed
+  }
+
   /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
   /// poppler/cairo. Much faster than inkscape on the kind of vector PDFs
   /// matplotlib/pgfplots produce. Returns true ONLY if the output is
@@ -826,6 +900,67 @@ impl Graphics {
   fn should_try_pdf_cairo_path(source: &str) -> bool {
     source.to_lowercase().ends_with(".pdf")
   }
+
+  /// Rasterize a PDF via the `mutool draw` subprocess (MuPDF CLI).
+  /// ~1.7× faster than `pdftocairo` on vector-heavy matplotlib /
+  /// pgfplots scatter PDFs (the canvas slow-tail).
+  ///
+  /// Subprocess invocation only — we do NOT link the MuPDF C library
+  /// or the `mupdf-rs` Rust crate into our binary, so MuPDF's AGPL-3.0
+  /// license does not propagate. Same legal pattern as invoking
+  /// `/bin/git` or `ffmpeg` from a non-GPL program.
+  ///
+  /// Measured 2026-05-12 on AugmentedMSRA10KExperimentVIIIpos.pdf
+  /// (894 KB matplotlib scatter):
+  ///   mutool draw:    0.48 s
+  ///   pdftocairo:     0.86 s
+  ///
+  /// Returns true only when the destination file was actually written.
+  /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
+  fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = dest_path
+      .file_name()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let unique = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .map(|d| d.as_nanos())
+      .unwrap_or(0);
+    let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
+    let timeout = std::time::Duration::from_secs(20);
+
+    let mut cmd = std::process::Command::new("mutool");
+    cmd
+      .arg("draw")
+      .arg("-o")
+      .arg(&tmp)
+      .arg("-r")
+      .arg(density.to_string())
+      .arg("-F")
+      .arg("png");
+    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
+    cmd.arg(source).arg(p1.to_string());
+
+    let mutool_ok = Self::run_with_timeout(cmd, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
+      && tmp.exists();
+    if !mutool_ok {
+      let _ = std::fs::remove_file(&tmp);
+      return false;
+    }
+
+    let _ = std::fs::remove_file(dest);
+    let installed = std::fs::rename(&tmp, dest)
+      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
+      .is_ok()
+      && dest_path.exists();
+    let _ = std::fs::remove_file(&tmp);
+    installed
+  }
+
   /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
@@ -972,20 +1107,24 @@ impl Graphics {
     {
       return true;
     }
-    // For PDF sources, prefer poppler's `pdftocairo --png` over
-    // ImageMagick's `convert`-via-Ghostscript. Empirically 25× faster on
-    // vector-heavy PDFs (e.g. R-Graphics output), and avoids tens-of-seconds
-    // gs runaways. Subprocess fork gives free thread safety +
-    // parallelism. In-process Rust PDF crates were evaluated 2026-05-12
-    // and rejected: mupdf-rs is AGPL-3.0, poppler-rs is GPL, and
-    // pdfium-render (BSD-3) requires single-thread serialisation
-    // because PDFium isn't thread-safe — which negates the fork-free
-    // benefit on our 5-worker graphics phase.
-    if Self::should_try_pdf_cairo_path(source)
-      && dest.to_lowercase().ends_with(".png")
-      && Self::convert_pdf_via_pdftocairo(source, dest, density, page)
-    {
-      return true;
+    // For PDF sources, try fast subprocess rasterizers in measured-
+    // speed order. Subprocess (not linked) so library license doesn't
+    // propagate — same legal pattern as invoking `git` or `ffmpeg`.
+    // In-process Rust crates were evaluated 2026-05-12 and rejected
+    // (mupdf-rs AGPL, poppler-rs GPL, pdfium-render single-threaded).
+    //
+    //   1. mutool (MuPDF CLI) — ~1.7× faster than pdftocairo on the
+    //      canvas slow-tail (matplotlib/pgfplots scatter PDFs).
+    //   2. pdftocairo (poppler) — universally available with TeX Live;
+    //      25× faster than convert/gs.
+    //   3. convert/gs — last-resort, hard-timeout-bounded.
+    if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
+      if Self::convert_pdf_via_mutool(source, dest, density, page) {
+        return true;
+      }
+      if Self::convert_pdf_via_pdftocairo(source, dest, density, page) {
+        return true;
+      }
     }
     // Wall-clock timeout to bound `gs`-via-`convert` runaways on
     // pathological PDFs (raster-heavy or with broken xref tables).
