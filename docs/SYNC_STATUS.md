@@ -13,9 +13,10 @@ glossaries — see "Planned" below).
 
 **Round-25 graphics + perf re-sweep (2026-05-12 afternoon)**: after
 the graphics correctness fixes (`apply_graphicx_transforms`
-width-only, PGPLOT `%%Orientation: Landscape` route) and the perf
-pass (kpathsea prewarm, mouth UTF-8 fast path, XSLT skip-roundtrip,
-worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-4 against
+width-only, PGPLOT `%%Orientation: Landscape` route, revtex4
+`\altaffiliation[note]{}` optional-arg fix) and the perf pass
+(kpathsea prewarm, mouth UTF-8 fast path, XSLT skip-roundtrip,
+worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-5 against
 baselines:
 
 | Stage | Baseline OK | Re-sweep OK | Δ | ok→fail (real) | fail→ok |
@@ -24,13 +25,15 @@ baselines:
 | 2 | 9991/10000 | 9989/10000 | -2 | 0 (2 sweep flakes) | 0 |
 | 3 | 9984/10000 | **9985/10000** | **+1** | 0 | 1 |
 | 4 | 9974/10000 | **9979/10000** | **+5** | 0 (1 sweep flake) | 6 |
-| **total** | 39915/40000 | **39937/40000** | **+22** | 0 real | 25 |
+| 5 | 9981/10000 | **9982/10000** | **+1** | 0 (2 sweep flakes) | 3 |
+| **total** | 49896/50000 | **49919/50000** | **+23** | 0 real | 28 |
 
 The "regressions" (stage 2 cond-mat0205476 + astro-ph0206056,
-stage 4 hep-ph0312215) reproduce clean standalone in <1 s each —
-sweep-load flakes under heavy parallel CPU pressure, not real
-regressions. Net across 40k papers: **+22, zero real regressions,
-25 fixes.**
+stage 4 hep-ph0312215, stage 5 astro-ph0411159 + astro-ph0412530)
+reproduce clean standalone in <2 s each — internal 60 s watchdog
+SIGABRT mislabelled by `timeout` as "dumped core" under sweep CPU
+saturation. Not real regressions. Net across 50k papers: **+23,
+zero real regressions, 28 fixes.**
 
 ### Round-25 active worklist
 

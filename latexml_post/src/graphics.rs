@@ -1739,16 +1739,20 @@ impl Processor for Graphics {
     // Each spawn pulls libgs + libpoppler + libpng into a fresh
     // address space (~30 ms ambient), so on graphics-heavy papers
     // (e.g. LHCb 2402.01336 with 17 unique PDFs) sub-batches at
-    // cap = 8 added wasted batch boundaries on a 28-CPU host. We now
-    // bound by `available_parallelism()` directly with a generous
-    // 32-thread ceiling — high enough to one-shot the typical
-    // tail-paper graphics fan but low enough to avoid fork-storm
-    // pathologies on tiny VMs. The 1910.01256 mini-bench (5 PDFs) is
-    // unaffected because it was already <= the prior cap.
+    // cap = 8 added wasted batch boundaries on a 28-CPU host. 22 is
+    // a measured sweet spot on 28-core machines under the canvas
+    // sweep workload: high enough to one-shot the typical tail-
+    // paper graphics fan, low enough to leave headroom for the
+    // outer cortex_worker pool (12-16 workers) without the kernel
+    // scheduler thrashing — 12 × 32 ≈ 384 inflight subprocs trips
+    // the internal 60 s watchdog and produces the "sweep flake"
+    // pattern in stages 2/4/5. 12 × 22 ≈ 264 stays under the
+    // measured starvation threshold. The 1910.01256 mini-bench
+    // (5 PDFs) is unaffected because it is already <= cap.
     let worker_cap = std::thread::available_parallelism()
       .map(|n| n.get())
       .unwrap_or(4)
-      .clamp(1, 32);
+      .clamp(1, 22);
     let n_workers = convert_count.min(worker_cap).max(1);
     let source_dir_ref = source_dir.as_str();
     let dest_dir_ref = dest_dir.as_str();
