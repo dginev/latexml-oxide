@@ -20,13 +20,16 @@ glossaries — see "Planned" below).
 
 | Commit | Driver | What |
 |---|---|---|
-| `488ed74c41` | 2001.07651, 1807.04759 | mn2e_support `\ion` Perl-parity `\text{...}` wrap (`\$\beta\$` math toggles safe) |
+| `488ed74c41` | 2001.07651, 1807.04759 | mn2e_support `\ion` Perl-parity `\text{...}` wrap |
 | `7edfb8eeb1` | 7-paper hang | `latexml_contrib::scicite_sty` (Science journal cite stub) |
-| `588ad90263`+`1d21ee0d29` | 60-paper expl3 cluster | `input_definitions` `@currname` leak on handleoptions=false; Perl `Package.pm:2580-2611` parity fix |
-| `8ac3eae2c4` | post-cleanup | removed redundant `tex_file_io`/`xy_sty` `@currname` wrappers (no-ops after the fix above) |
-| Master rebase 2026-05-10 | — | branch onto `bffd1be471` (schema-docs + split post-processor); 12 commits replayed, 1185/0/0 |
-| `488ed74c41`–`be45566b7e` | session 4 | `\ion` + math-CS protected flags + cleveref×hyperref dispatch + recursion guard + `\genfrac` raw readArg |
+| `588ad90263`+`1d21ee0d29` | 60-paper expl3 cluster | `input_definitions` `@currname` leak fix |
+| `488ed74c41`–`be45566b7e` | session 4 | math-CS protected flags + cleveref×hyperref dispatch + recursion guard + `\genfrac` raw readArg |
 | `662571777f`+`92c1a40850`+`6c9ad70d38` | glossaries chain | mfirstuc + datatool-base + chemgreek + substr raw-load shims |
+| `81ec5536d9` | 2210.13325 | vtop × gls × p RESOLVED (silent side-effect of glossaries rewrite) |
+| `f8e20b648e` | mhchem 92→77 | gullet csname `\let`-to-char substitution (cited tex.web + texbook) |
+| `6a7d8fee7d` | `\let\amp=&` halign | tex_tables: implicit-`&`/`\cr` in `\halign` preamble (Knuth-faithful) |
+| `43e75591dd`+`c6067ca6f5`+`22bf0619cf` | perf | arena + meaning + char-keyed HashMaps pre-allocated to skip startup growth |
+| `228471f5e1` | perf | dump_reader: drop per-line Vec alloc (~800 ms debug / ~30 ms release per conversion) |
 
 **Format dump enabled 2026-05-08** (`resources/dumps/latex.dump.txt`,
 25,439 entries, 3.9 MB, 389 expl3 markers). Dump path 5 in
@@ -426,9 +429,13 @@ ordered by impact:
   astro-ph0507615; rank by total parse time + repeated token sequences.
 - **P1 failure/control-flow outliers** — re-run 5 timeouts with phase
   telemetry; `0903.3465` is an Xy-pic/token-limit recovery bug.
-- **P2 allocation/startup cleanup** — only after profile shows hot
-  path; `*_sym` accessors, `Tokens` conversions, `Stored` deep copies,
-  package lookup caching, dump loading.
+- **P2 allocation/startup cleanup** — partial landings 2026-05-12:
+  arena pre-alloc 32K → 131K (`43e75591dd`), `State::meaning` pre-alloc
+  131K (`c6067ca6f5`), char-keyed `catcode`/`mathcode`/etc 512
+  (`22bf0619cf`), `dump_reader::parse_and_load` Vec elimination
+  (`228471f5e1` — ~800 ms debug / ~20-30 ms release per conversion).
+  Remaining open: `*_sym` accessors, `Tokens` conversions, `Stored`
+  deep copies, package lookup caching.
 
 ### Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)
 
