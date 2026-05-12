@@ -884,11 +884,13 @@ fn char_key(ch: char) -> crate::common::arena::SymStr {
 /// Perl `Cc()` (`Core/Dumper.pm` L60): `assign_internal('catcode', ..., 'global')`.
 fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad catcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CC" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad catcode data: {}", data))?;
+  if tag != "CC" {
     return Err(format!("Bad catcode data: {}", data));
   }
-  let cc: u8 = parts[1]
+  let cc: u8 = val_str
     .parse()
     .map_err(|e| format!("Bad catcode value: {}", e))?;
   state::assign_internal(
@@ -904,11 +906,13 @@ fn load_catcode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Lc()` (`Core/Dumper.pm` L63): `assign_internal('lccode', ..., 'global')`.
 fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad lccode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad lccode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad lccode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad lccode value: {}", e))?;
   state::assign_internal(
@@ -924,11 +928,13 @@ fn load_lccode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Uc()` (`Core/Dumper.pm` L64): `assign_internal('uccode', ..., 'global')`.
 fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad uccode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad uccode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad uccode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad uccode value: {}", e))?;
   state::assign_internal(
@@ -944,11 +950,13 @@ fn load_uccode(key: &str, data: &str) -> Result<bool, String> {
 /// Perl `Sc()` (`Core/Dumper.pm` L62): `assign_internal('sfcode', ..., 'global')`.
 fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad sfcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad sfcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad sfcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad sfcode value: {}", e))?;
   state::assign_internal(
@@ -964,11 +972,13 @@ fn load_sfcode(key: &str, data: &str) -> Result<bool, String> {
 /// Mirrors Perl `Core/Dumper.pm:dump_delcode` round-trip.
 fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad delcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad delcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad delcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad delcode value: {}", e))?;
   crate::state::assign_delcode(ch, val, Some(crate::state::Scope::Global));
@@ -979,11 +989,13 @@ fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
 /// Mirrors Perl `Core/Dumper.pm:dump_mathcode` round-trip.
 fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
   let ch = decode_char_key(key).ok_or_else(|| format!("Bad mathcode char: {}", key))?;
-  let parts: Vec<&str> = data.splitn(2, '\t').collect();
-  if parts.len() < 2 || parts[0] != "CH" {
+  let (tag, val_str) = data
+    .split_once('\t')
+    .ok_or_else(|| format!("Bad mathcode data: {}", data))?;
+  if tag != "CH" {
     return Err(format!("Bad mathcode data: {}", data));
   }
-  let val: u16 = parts[1]
+  let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad mathcode value: {}", e))?;
   crate::state::assign_mathcode(ch, val, Some(crate::state::Scope::Global));
