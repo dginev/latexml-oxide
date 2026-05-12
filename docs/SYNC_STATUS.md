@@ -166,6 +166,22 @@ coverage. See [`memory/feedback_prefer_raw_load.md`].
   exact same source line (255 col 1). Witnesses: cond-mat0010356,
   cond-mat0101405. SHARED-FAILURE.
 
+- **Paul Taylor `diagrams.tex` time-bomb** — papers using
+  `\usepackage{diagrams}` with the TL `diagrams.tex` v3.96 ship a
+  `\count@=\year\multiply\count@12 \advance\count@\month
+  \ifnum\count@>24307 \message{because this one expired in July
+  2025!}\expandafter\endinput\fi` time-bomb at L2630-2631 of the
+  raw file. As of 2026-05 (`\year*12+\month = 24317 > 24307`) the
+  file aborts via `\endinput` before defining `\diagram`/`\rTo`/
+  `\dTo`/etc., even when `--path=$HOME/git/ar5iv-bindings/originals`
+  exposes the raw file. Perl handles this by shipping a stub that
+  comments out `InputDefinitions('diagrams', noltxml=>1)` — the
+  raw file would abort anyway. Rust mirrors that stub
+  (`latexml_contrib/src/diagrams_tex.rs`): emit a single
+  `Error:undefined:{diagram}` per kind, discard the body. Witness:
+  1701.07720. SHARED-FAILURE. Re-evaluate when Paul Taylor ships
+  v3.97 with a later expiry.
+
 ## ~~Known engine gap: cleveref × algorithmicx × hyperref infinite-loop~~
 
 **RESOLVED 2026-05-11** (two-part Perl-parity fix). Witness 2403.15855
