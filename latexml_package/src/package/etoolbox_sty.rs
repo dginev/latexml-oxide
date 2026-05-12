@@ -59,7 +59,23 @@ LoadDefinitions!({
   DefMacro!("\\csgdef{}", "\\expandafter\\gdef\\csname #1\\endcsname");
   DefMacro!("\\csxdef{}", "\\expandafter\\xdef\\csname #1\\endcsname");
 
-  TeX!(
+  // RawTeX! (not TeX!): this block contains `\ifdefmacro`, `\ifdefprefix`,
+  // `\ifdefparam` etc. whose `\edef` bodies end with a literal `&` token
+  // used as a delimited-param delimiter. At runtime, etoolbox has set
+  // `\catcode`\&=3` (MATH_SHIFT) earlier in the load so the `&` tokens
+  // are safe to embed in macro patterns even when the macros are later
+  // invoked inside an alignment (`{tabular}` p-column cell, `{align}`,
+  // etc.). Compile-time `TeX!` tokenizes here-and-now with default
+  // catcodes — so `&` would be cc=ALIGN_TAB (4), and pattern-matching
+  // at invocation time scans the token stream looking for cc=4 `&`,
+  // which IS the alignment cell terminator → the alignment frame
+  // closes mid-pattern, the macro never returns, and the cell content
+  // falls through as ill-formed.
+  // Witness: 2210.13325 — `\gls{ddos}` inside `\begin{tabular}{|p{5cm}|}`
+  // routes through `\ifdefempty`→`\ifdefmacro`/`\ifdefparam`, which
+  // (under TeX!) had cc=4 `&` in pattern, triggering a 7-error
+  // `\vtop`/`\@@tabular` cascade.
+  RawTeX!(
     r"
 % {<csname>}
 
