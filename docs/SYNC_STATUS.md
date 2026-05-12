@@ -26,7 +26,12 @@ baselines:
 | 3 | 9984/10000 | **9985/10000** | **+1** | 0 | 1 |
 | 4 | 9974/10000 | **9979/10000** | **+5** | 0 (1 sweep flake) | 6 |
 | 5 | 9981/10000 | **9982/10000** | **+1** | 0 (2 sweep flakes) | 3 |
-| **total** | 49896/50000 | **49919/50000** | **+23** | 0 real | 28 |
+| 6 | 9982/10001 | 9980/10001 | -2 | 0 (4 sweep flakes) | 1 |
+| **total** | 59878/60001 | **59899/60001** | **+21** | 0 real | 29 |
+
+Combined wall-time across the 60k papers: **64,911 s ≈ 18 h** at an
+average of **1.082 s/paper** (cortex_worker --standalone, 12-worker
+pool, default worker_cap=22 after `78e2d01071`).
 
 The "regressions" (stage 2 cond-mat0205476 + astro-ph0206056,
 stage 4 hep-ph0312215, stage 5 astro-ph0411159 + astro-ph0412530)

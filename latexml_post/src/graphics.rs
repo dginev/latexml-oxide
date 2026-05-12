@@ -1332,7 +1332,25 @@ impl Graphics {
       // (a gs rendering flag), NOT the ps2pdf flag that injected
       // /Rotate in the earlier disabled path. gs writing PNG never
       // produces PDF metadata, so this is safe.
-      .arg("-dEPSCrop")
+      .arg("-dEPSCrop");
+    // When the EPS declares a `%%BoundingBox`, force the device
+    // page-size to match it AND lock it via `-dFIXEDMEDIA`. Some EPS
+    // files (notably `pswrite`-output, e.g. AFPL Ghostscript-generated
+    // figures like astro-ph0503029/figure7.eps) embed their own
+    // `setpagedevice` calls that override `-dEPSCrop` and force a full
+    // US-Letter page (612 × 792 pt), so the content lands at the bottom
+    // of a 1020 × 1320 px canvas with a 968-pixel blank above it.
+    // `-dFIXEDMEDIA` makes gs ignore the embedded `setpagedevice` and
+    // honour our explicit dimensions. Witness: astro-ph0503029 fig 7.
+    if let Some((w_pt, h_pt)) = read_postscript_bounding_box(source) {
+      let w = w_pt.max(1.0).ceil() as u32;
+      let h = h_pt.max(1.0).ceil() as u32;
+      cmd
+        .arg("-dFIXEDMEDIA")
+        .arg(format!("-dDEVICEWIDTHPOINTS={}", w))
+        .arg(format!("-dDEVICEHEIGHTPOINTS={}", h));
+    }
+    cmd
       .arg(format!("-sDEVICE={}", device))
       .arg(format!("-r{}", density))
       .arg(format!("-sOutputFile={}", tmp.display()))
