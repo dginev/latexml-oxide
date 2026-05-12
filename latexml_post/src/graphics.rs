@@ -402,14 +402,42 @@ impl Graphics {
     }
   }
 
+  /// Parse `angle=N` from graphicx options. Returns angle normalised
+  /// to one of {0, 90, 180, 270} when within 5° of those targets,
+  /// otherwise the raw float (rotation of arbitrary angles is
+  /// handled separately and is more complex due to bounding-box
+  /// changes).
+  fn parse_angle_option(options: &str) -> Option<f64> {
+    for opt in options.split(',') {
+      let opt = opt.trim();
+      if let Some((key, val)) = opt.split_once('=') {
+        if key.trim() == "angle" {
+          return val.trim().parse::<f64>().ok();
+        }
+      }
+    }
+    None
+  }
+
   /// Parse graphicx options and apply transforms to image dimensions.
   /// Port of Perl's `getTransform` + `image_graphicx_trivial`.
   ///
-  /// Handles: scale=N, width=Npt, height=Npt, keepaspectratio
+  /// Handles: scale=N, width=Npt, height=Npt, keepaspectratio, angle=N.
   fn apply_graphicx_transforms(raw_w: u32, raw_h: u32, options: &str, dpi: u32) -> (u32, u32) {
     let dppt = dpi as f64 / 72.27; // dots per point
-    let mut w = raw_w as f64;
-    let mut h = raw_h as f64;
+
+    // angle=N — for axis-aligned rotations (90, -90, 180, 270, ...),
+    // swap width/height so the HTML's imagewidth/imageheight attrs
+    // match the rotated physical image. Driver: 1303.5091 Figs 5-7
+    // use `[angle=90,scale=0.75]` and rendered upside-down without
+    // this swap.
+    let angle = Self::parse_angle_option(options).unwrap_or(0.0);
+    let rot_mod = ((angle.rem_euclid(360.0) + 0.5).floor() as i32 % 360 + 360) % 360;
+    let (mut w, mut h) = if rot_mod == 90 || rot_mod == 270 {
+      (raw_h as f64, raw_w as f64)
+    } else {
+      (raw_w as f64, raw_h as f64)
+    };
 
     // Parse options as key=value pairs
     let mut scale: Option<f64> = None;
@@ -466,6 +494,26 @@ impl Graphics {
     }
 
     (w.max(1.0) as u32, h.max(1.0) as u32)
+  }
+
+  /// Physically rotate a rasterized image via `convert -rotate N`.
+  /// Called after the rasterizer produces a PNG when graphicx
+  /// options include `angle=N`. Returns true on success.
+  /// Pre-condition: `dest` exists. Post-condition: `dest` is
+  /// in-place rotated.
+  fn rotate_image_inplace(dest: &str, angle_deg: f64) -> bool {
+    let mut cmd = std::process::Command::new("convert");
+    // `-rotate N` rotates clockwise. graphicx's angle is also
+    // measured clockwise (TeX's tradition), so pass through.
+    cmd
+      .arg(dest)
+      .arg("-rotate")
+      .arg(format!("{}", angle_deg))
+      .arg(dest);
+    let timeout = std::time::Duration::from_secs(30);
+    Self::run_with_timeout(cmd, timeout)
+      .map(|status| status.success())
+      .unwrap_or(false)
   }
 
   /// Copy a source image to the destination directory, preserving relative paths.
@@ -1529,22 +1577,36 @@ impl Processor for Graphics {
         },
         Plan::Copy { idx, source, options } => {
           let mut node_mut = nodes[*idx].clone();
-          if let Some(rel) = Self::copy_to_destination(source, &source_dir, &dest_dir) {
-            let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
-            Self::set_graphic_src(&mut node_mut, &rel, w, h);
-          } else {
-            let rel_path = Path::new(source)
+          let rel_opt = Self::copy_to_destination(source, &source_dir, &dest_dir);
+          let rel = rel_opt.unwrap_or_else(|| {
+            Path::new(source)
               .strip_prefix(&source_dir)
-              .unwrap_or(Path::new(source));
-            let rel_str = rel_path.to_string_lossy().to_string();
-            let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
-            Self::set_graphic_src(&mut node_mut, &rel_str, w, h);
+              .unwrap_or(Path::new(source))
+              .to_string_lossy()
+              .to_string()
+          });
+          // Apply angle rotation in-place on the copied file. Perl
+          // semantics (Util/Image.pm:image_graphicx_complex L390-394):
+          // ImageMagick `Rotate` with `degrees => -$a1` — graphicx
+          // angle is CCW; convert -rotate is CW; negate to convert.
+          let angle = Self::parse_angle_option(options).unwrap_or(0.0);
+          if angle.abs() > 0.5 {
+            let dest_full = PathBuf::from(&dest_dir).join(&rel);
+            Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
           }
+          let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
+          Self::set_graphic_src(&mut node_mut, &rel, w, h);
         },
         Plan::Convert { idx, options, job_id } => {
           if let Some(out) = outcomes_by_job.get(job_id) {
             let mut node_mut = nodes[*idx].clone();
             if let Some(imagesrc) = &out.imagesrc {
+              // Apply angle rotation in-place on the converted file.
+              let angle = Self::parse_angle_option(options).unwrap_or(0.0);
+              if angle.abs() > 0.5 {
+                let dest_full = PathBuf::from(&dest_dir).join(imagesrc);
+                Self::rotate_image_inplace(&dest_full.to_string_lossy(), -angle);
+              }
               let (w, h) = apply_transforms(options, out.raw_dims);
               Self::set_graphic_src(&mut node_mut, imagesrc, w, h);
             }
