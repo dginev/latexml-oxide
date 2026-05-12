@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (82bee9650 2026-05-09)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// `latexml_engine` carries the macro layer (`DefMacro!`, `LoadDefinitions!`,
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// `latexml_engine` carries the macro layer (`DefMacro!`, `LoadDefinitions!`,
 <a href=#2 id=2 data-nosnippet>2</a>// `compile_*!`) since the engine extraction; latexml_package keeps the
 <a href=#3 id=3 data-nosnippet>3</a>// prelude that adds `package::*` etc. (no #[macro_use] needed on
 <a href=#4 id=4 data-nosnippet>4</a>// latexml_package — it forwards macros transparently via the
@@ -99,11 +99,11 @@
 <a href=#99 id=99 data-nosnippet>99</a><span class="kw">pub mod </span>pb_diagram_sty;
 <a href=#100 id=100 data-nosnippet>100</a><span class="kw">pub mod </span>phyzzx_plus;
 <a href=#101 id=101 data-nosnippet>101</a><span class="kw">pub mod </span>phyzzx_tex;
-<a href=#102 id=102 data-nosnippet>102</a><span class="kw">pub mod </span>pictex_tex;
-<a href=#103 id=103 data-nosnippet>103</a><span class="kw">pub mod </span>pinlabel_sty;
-<a href=#104 id=104 data-nosnippet>104</a><span class="kw">pub mod </span>program_sty;
-<a href=#105 id=105 data-nosnippet>105</a><span class="kw">pub mod </span>pst_plot_sty;
-<a href=#106 id=106 data-nosnippet>106</a><span class="kw">pub mod </span>savetrees_sty;
+<a href=#102 id=102 data-nosnippet>102</a><span class="kw">pub mod </span>pinlabel_sty;
+<a href=#103 id=103 data-nosnippet>103</a><span class="kw">pub mod </span>program_sty;
+<a href=#104 id=104 data-nosnippet>104</a><span class="kw">pub mod </span>pst_plot_sty;
+<a href=#105 id=105 data-nosnippet>105</a><span class="kw">pub mod </span>savetrees_sty;
+<a href=#106 id=106 data-nosnippet>106</a><span class="kw">pub mod </span>scicite_sty;
 <a href=#107 id=107 data-nosnippet>107</a><span class="kw">pub mod </span>scrbook_cls;
 <a href=#108 id=108 data-nosnippet>108</a><span class="kw">pub mod </span>scrpage2_sty;
 <a href=#109 id=109 data-nosnippet>109</a><span class="kw">pub mod </span>scrpage_sty;
@@ -184,112 +184,110 @@
 <a href=#184 id=184 data-nosnippet>184</a>  (<span class="string">"phyzzx"</span>, <span class="string">"plus"</span>, phyzzx_plus::load_definitions),
 <a href=#185 id=185 data-nosnippet>185</a>  (<span class="string">"phyzzx"</span>, <span class="string">"tex"</span>, phyzzx_tex::load_definitions),
 <a href=#186 id=186 data-nosnippet>186</a>  (<span class="string">"pinlabel"</span>, <span class="string">"sty"</span>, pinlabel_sty::load_definitions),
-<a href=#187 id=187 data-nosnippet>187</a>  (<span class="string">"prepictex"</span>, <span class="string">"tex"</span>, pictex_tex::load_definitions),
-<a href=#188 id=188 data-nosnippet>188</a>  (<span class="string">"pictex"</span>, <span class="string">"tex"</span>, pictex_tex::load_definitions),
-<a href=#189 id=189 data-nosnippet>189</a>  (<span class="string">"postpictex"</span>, <span class="string">"tex"</span>, pictex_tex::load_definitions),
-<a href=#190 id=190 data-nosnippet>190</a>  (<span class="string">"program"</span>, <span class="string">"sty"</span>, program_sty::load_definitions),
-<a href=#191 id=191 data-nosnippet>191</a>  (<span class="string">"scrpage"</span>, <span class="string">"sty"</span>, scrpage_sty::load_definitions),
-<a href=#192 id=192 data-nosnippet>192</a>  (<span class="string">"scrpage2"</span>, <span class="string">"sty"</span>, scrpage2_sty::load_definitions),
-<a href=#193 id=193 data-nosnippet>193</a>  (<span class="string">"stix2"</span>, <span class="string">"sty"</span>, stix2_sty::load_definitions),
-<a href=#194 id=194 data-nosnippet>194</a>  (<span class="string">"stix"</span>, <span class="string">"sty"</span>, stix_sty::load_definitions),
-<a href=#195 id=195 data-nosnippet>195</a>  (<span class="string">"svg-extract"</span>, <span class="string">"sty"</span>, svg_extract_sty::load_definitions),
-<a href=#196 id=196 data-nosnippet>196</a>  (<span class="string">"tipa"</span>, <span class="string">"sty"</span>, tipa_sty::load_definitions),
-<a href=#197 id=197 data-nosnippet>197</a>  (<span class="string">"tlp"</span>, <span class="string">"cls"</span>, tlp_cls::load_definitions),
-<a href=#198 id=198 data-nosnippet>198</a>  (<span class="string">"axessibility"</span>, <span class="string">"sty"</span>, axessibility_sty::load_definitions),
-<a href=#199 id=199 data-nosnippet>199</a>  (<span class="string">"biblatex"</span>, <span class="string">"sty"</span>, biblatex_sty::load_definitions),
-<a href=#200 id=200 data-nosnippet>200</a>  (<span class="string">"breqn"</span>, <span class="string">"sty"</span>, breqn_sty::load_definitions),
-<a href=#201 id=201 data-nosnippet>201</a>  (<span class="string">"catchfile"</span>, <span class="string">"sty"</span>, catchfile_sty::load_definitions),
-<a href=#202 id=202 data-nosnippet>202</a>  (<span class="string">"changepage"</span>, <span class="string">"sty"</span>, changepage_sty::load_definitions),
-<a href=#203 id=203 data-nosnippet>203</a>  (<span class="string">"CJK"</span>, <span class="string">"sty"</span>, cjk_sty::load_definitions),
-<a href=#204 id=204 data-nosnippet>204</a>  (<span class="string">"CJKutf8"</span>, <span class="string">"sty"</span>, cjkutf8_sty::load_definitions),
-<a href=#205 id=205 data-nosnippet>205</a>  (<span class="string">"cmcal"</span>, <span class="string">"sty"</span>, cmcal_sty::load_definitions),
-<a href=#206 id=206 data-nosnippet>206</a>  (<span class="string">"datetime2"</span>, <span class="string">"sty"</span>, datetime2_sty::load_definitions),
-<a href=#207 id=207 data-nosnippet>207</a>  (<span class="string">"datetime"</span>, <span class="string">"sty"</span>, datetime_sty::load_definitions),
-<a href=#208 id=208 data-nosnippet>208</a>  (<span class="string">"ed"</span>, <span class="string">"sty"</span>, ed_sty::load_definitions),
-<a href=#209 id=209 data-nosnippet>209</a>  (<span class="string">"emlines"</span>, <span class="string">"sty"</span>, emlines_sty::load_definitions),
-<a href=#210 id=210 data-nosnippet>210</a>  (<span class="string">"hobby"</span>, <span class="string">"code.tex"</span>, hobby_code_tex::load_definitions),
-<a href=#211 id=211 data-nosnippet>211</a>  (<span class="string">"hyphenat"</span>, <span class="string">"sty"</span>, hyphenat_sty::load_definitions),
-<a href=#212 id=212 data-nosnippet>212</a>  (<span class="string">"ifdraft"</span>, <span class="string">"sty"</span>, ifdraft_sty::load_definitions),
-<a href=#213 id=213 data-nosnippet>213</a>  (<span class="string">"l3draw"</span>, <span class="string">"sty"</span>, l3draw_sty::load_definitions),
-<a href=#214 id=214 data-nosnippet>214</a>  (<span class="string">"lettrine"</span>, <span class="string">"sty"</span>, lettrine_sty::load_definitions),
-<a href=#215 id=215 data-nosnippet>215</a>  (<span class="string">"libertine"</span>, <span class="string">"sty"</span>, libertine_sty::load_definitions),
-<a href=#216 id=216 data-nosnippet>216</a>  (<span class="string">"ltablex"</span>, <span class="string">"sty"</span>, ltablex_sty::load_definitions),
-<a href=#217 id=217 data-nosnippet>217</a>  (<span class="string">"MnSymbol"</span>, <span class="string">"sty"</span>, mnsymbol_sty::load_definitions),
-<a href=#218 id=218 data-nosnippet>218</a>  (<span class="string">"mssymb"</span>, <span class="string">"tex"</span>, mssymb_tex::load_definitions),
-<a href=#219 id=219 data-nosnippet>219</a>  (<span class="string">"oldgerm"</span>, <span class="string">"sty"</span>, oldgerm_sty::load_definitions),
-<a href=#220 id=220 data-nosnippet>220</a>  (<span class="string">"pst-plot"</span>, <span class="string">"sty"</span>, pst_plot_sty::load_definitions),
-<a href=#221 id=221 data-nosnippet>221</a>  (<span class="string">"savetrees"</span>, <span class="string">"sty"</span>, savetrees_sty::load_definitions),
-<a href=#222 id=222 data-nosnippet>222</a>  (<span class="string">"scrbook"</span>, <span class="string">"cls"</span>, scrbook_cls::load_definitions),
-<a href=#223 id=223 data-nosnippet>223</a>  (<span class="string">"tabularray"</span>, <span class="string">"sty"</span>, tabularray_sty::load_definitions),
-<a href=#224 id=224 data-nosnippet>224</a>  (<span class="string">"xltabular"</span>, <span class="string">"sty"</span>, xltabular_sty::load_definitions),
-<a href=#225 id=225 data-nosnippet>225</a>  (<span class="string">"xr"</span>, <span class="string">"sty"</span>, xr_sty::load_definitions),
-<a href=#226 id=226 data-nosnippet>226</a>  (<span class="string">"ar5iv"</span>, <span class="string">"sty"</span>, ar5iv_sty::load_definitions),
-<a href=#227 id=227 data-nosnippet>227</a>  (<span class="string">"arxbj"</span>, <span class="string">"cls"</span>, arxbj_cls::load_definitions),
-<a href=#228 id=228 data-nosnippet>228</a>  (<span class="string">"arydshln"</span>, <span class="string">"sty"</span>, arydshln_sty::load_definitions),
-<a href=#229 id=229 data-nosnippet>229</a>  (<span class="string">"changes"</span>, <span class="string">"sty"</span>, changes_sty::load_definitions),
-<a href=#230 id=230 data-nosnippet>230</a>  (<span class="string">"currfile"</span>, <span class="string">"sty"</span>, currfile_sty::load_definitions),
-<a href=#231 id=231 data-nosnippet>231</a>  (<span class="string">"diagrams"</span>, <span class="string">"tex"</span>, diagrams_tex::load_definitions),
-<a href=#232 id=232 data-nosnippet>232</a>  (<span class="string">"equations"</span>, <span class="string">"sty"</span>, equations_sty::load_definitions),
-<a href=#233 id=233 data-nosnippet>233</a>  (<span class="string">"eso-pic"</span>, <span class="string">"sty"</span>, eso_pic_sty::load_definitions),
-<a href=#234 id=234 data-nosnippet>234</a>  (<span class="string">"forest"</span>, <span class="string">"sty"</span>, forest_sty::load_definitions),
-<a href=#235 id=235 data-nosnippet>235</a>  (<span class="string">"harvmac"</span>, <span class="string">"tex"</span>, harvmac_tex::load_definitions),
-<a href=#236 id=236 data-nosnippet>236</a>  (<span class="string">"mciteplus"</span>, <span class="string">"sty"</span>, mciteplus_sty::load_definitions),
-<a href=#237 id=237 data-nosnippet>237</a>  (<span class="string">"mdframed"</span>, <span class="string">"sty"</span>, mdframed_sty::load_definitions),
-<a href=#238 id=238 data-nosnippet>238</a>  (<span class="string">"memoir"</span>, <span class="string">"cls"</span>, memoir_cls::load_definitions),
-<a href=#239 id=239 data-nosnippet>239</a>  (<span class="string">"mhchem"</span>, <span class="string">"sty"</span>, mhchem_sty::load_definitions),
-<a href=#240 id=240 data-nosnippet>240</a>  (<span class="string">"minted"</span>, <span class="string">"sty"</span>, minted_sty::load_definitions),
-<a href=#241 id=241 data-nosnippet>241</a>  (<span class="string">"nicematrix"</span>, <span class="string">"sty"</span>, nicematrix_sty::load_definitions),
-<a href=#242 id=242 data-nosnippet>242</a>  (<span class="string">"pb-diagram"</span>, <span class="string">"sty"</span>, pb_diagram_sty::load_definitions),
-<a href=#243 id=243 data-nosnippet>243</a>  (<span class="string">"siamltex"</span>, <span class="string">"cls"</span>, siamltex_cls::load_definitions),
-<a href=#244 id=244 data-nosnippet>244</a>  (<span class="string">"svn-multi"</span>, <span class="string">"sty"</span>, svn_multi_sty::load_definitions),
-<a href=#245 id=245 data-nosnippet>245</a>  (<span class="string">"svninfo"</span>, <span class="string">"sty"</span>, svninfo_sty::load_definitions),
-<a href=#246 id=246 data-nosnippet>246</a>  (<span class="string">"tabu"</span>, <span class="string">"sty"</span>, tabu_sty::load_definitions),
-<a href=#247 id=247 data-nosnippet>247</a>  (<span class="string">"ucs"</span>, <span class="string">"sty"</span>, ucs_sty::load_definitions),
-<a href=#248 id=248 data-nosnippet>248</a>  (<span class="string">"ut-thesis"</span>, <span class="string">"cls"</span>, ut_thesis_cls::load_definitions),
-<a href=#249 id=249 data-nosnippet>249</a>  (<span class="string">"ws-p8-50x6-00"</span>, <span class="string">"cls"</span>, ws_p8_50x6_00_cls::load_definitions),
-<a href=#250 id=250 data-nosnippet>250</a>];
-<a href=#251 id=251 data-nosnippet>251</a>
-<a href=#252 id=252 data-nosnippet>252</a><span class="doccomment">/// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`,
-<a href=#253 id=253 data-nosnippet>253</a>/// `"hobby.code.tex"`) through its compiled `load_definitions` fn, or return
-<a href=#254 id=254 data-nosnippet>254</a>/// `None` when the filename has no registered binding. Splits on the *first*
-<a href=#255 id=255 data-nosnippet>255</a>/// `.` so `("hobby", "code.tex", …)` matches correctly — mirrors
-<a href=#256 id=256 data-nosnippet>256</a>/// `latexml_package::dispatch`.
-<a href=#257 id=257 data-nosnippet>257</a></span><span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">let </span>(base, ext) = filename.split_once(<span class="string">'.'</span>)<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// Perl pathname_find L383-389: strict-case first, case-insensitive fallback
-<a href=#260 id=260 data-nosnippet>260</a>  // (matches `\documentclass{jhep}` against `JHEP.cls.ltxml`-style entries).
-<a href=#261 id=261 data-nosnippet>261</a>  // See latexml_package::dispatch for the parallel comment.
-<a href=#262 id=262 data-nosnippet>262</a>  </span>BINDINGS
-<a href=#263 id=263 data-nosnippet>263</a>    .iter()
-<a href=#264 id=264 data-nosnippet>264</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
-<a href=#265 id=265 data-nosnippet>265</a>    .or_else(|| {
-<a href=#266 id=266 data-nosnippet>266</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
-<a href=#267 id=267 data-nosnippet>267</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
-<a href=#268 id=268 data-nosnippet>268</a>      })
-<a href=#269 id=269 data-nosnippet>269</a>    })
-<a href=#270 id=270 data-nosnippet>270</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
-<a href=#271 id=271 data-nosnippet>271</a>}
-<a href=#272 id=272 data-nosnippet>272</a>
-<a href=#273 id=273 data-nosnippet>273</a><span class="doccomment">/// All registered (name, extension) pairs for this crate's BINDINGS.
-<a href=#274 id=274 data-nosnippet>274</a>/// Mirror of `latexml_package::binding_names`. Consumed by
-<a href=#275 id=275 data-nosnippet>275</a>/// `find_file(notex=true)` to detect compiled-binding existence across
-<a href=#276 id=276 data-nosnippet>276</a>/// all registered extensions (cls/sty/def/pool/code.tex/...). The class
-<a href=#277 id=277 data-nosnippet>277</a>/// names (entries with `ext == "cls"`) flow into `load_class`'s
-<a href=#278 id=278 data-nosnippet>278</a>/// Perl-parity prefix-match fallback via the
-<a href=#279 id=279 data-nosnippet>279</a>/// `state::get_class_binding_names()` filtered view.
-<a href=#280 id=280 data-nosnippet>280</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
-<a href=#281 id=281 data-nosnippet>281</a>  <span class="kw">use </span>std::sync::OnceLock;
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
-<a href=#283 id=283 data-nosnippet>283</a>  NAMES
-<a href=#284 id=284 data-nosnippet>284</a>    .get_or_init(|| {
-<a href=#285 id=285 data-nosnippet>285</a>      BINDINGS
-<a href=#286 id=286 data-nosnippet>286</a>        .iter()
-<a href=#287 id=287 data-nosnippet>287</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
-<a href=#288 id=288 data-nosnippet>288</a>        .collect()
-<a href=#289 id=289 data-nosnippet>289</a>    })
-<a href=#290 id=290 data-nosnippet>290</a>    .as_slice()
-<a href=#291 id=291 data-nosnippet>291</a>}
-<a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a><span class="comment">// III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled
-<a href=#294 id=294 data-nosnippet>294</a>// and made visible to the main latexml-oxide executable
+<a href=#187 id=187 data-nosnippet>187</a>  (<span class="string">"program"</span>, <span class="string">"sty"</span>, program_sty::load_definitions),
+<a href=#188 id=188 data-nosnippet>188</a>  (<span class="string">"scrpage"</span>, <span class="string">"sty"</span>, scrpage_sty::load_definitions),
+<a href=#189 id=189 data-nosnippet>189</a>  (<span class="string">"scrpage2"</span>, <span class="string">"sty"</span>, scrpage2_sty::load_definitions),
+<a href=#190 id=190 data-nosnippet>190</a>  (<span class="string">"stix2"</span>, <span class="string">"sty"</span>, stix2_sty::load_definitions),
+<a href=#191 id=191 data-nosnippet>191</a>  (<span class="string">"stix"</span>, <span class="string">"sty"</span>, stix_sty::load_definitions),
+<a href=#192 id=192 data-nosnippet>192</a>  (<span class="string">"svg-extract"</span>, <span class="string">"sty"</span>, svg_extract_sty::load_definitions),
+<a href=#193 id=193 data-nosnippet>193</a>  (<span class="string">"tipa"</span>, <span class="string">"sty"</span>, tipa_sty::load_definitions),
+<a href=#194 id=194 data-nosnippet>194</a>  (<span class="string">"tlp"</span>, <span class="string">"cls"</span>, tlp_cls::load_definitions),
+<a href=#195 id=195 data-nosnippet>195</a>  (<span class="string">"axessibility"</span>, <span class="string">"sty"</span>, axessibility_sty::load_definitions),
+<a href=#196 id=196 data-nosnippet>196</a>  (<span class="string">"biblatex"</span>, <span class="string">"sty"</span>, biblatex_sty::load_definitions),
+<a href=#197 id=197 data-nosnippet>197</a>  (<span class="string">"breqn"</span>, <span class="string">"sty"</span>, breqn_sty::load_definitions),
+<a href=#198 id=198 data-nosnippet>198</a>  (<span class="string">"catchfile"</span>, <span class="string">"sty"</span>, catchfile_sty::load_definitions),
+<a href=#199 id=199 data-nosnippet>199</a>  (<span class="string">"changepage"</span>, <span class="string">"sty"</span>, changepage_sty::load_definitions),
+<a href=#200 id=200 data-nosnippet>200</a>  (<span class="string">"CJK"</span>, <span class="string">"sty"</span>, cjk_sty::load_definitions),
+<a href=#201 id=201 data-nosnippet>201</a>  (<span class="string">"CJKutf8"</span>, <span class="string">"sty"</span>, cjkutf8_sty::load_definitions),
+<a href=#202 id=202 data-nosnippet>202</a>  (<span class="string">"cmcal"</span>, <span class="string">"sty"</span>, cmcal_sty::load_definitions),
+<a href=#203 id=203 data-nosnippet>203</a>  (<span class="string">"datetime2"</span>, <span class="string">"sty"</span>, datetime2_sty::load_definitions),
+<a href=#204 id=204 data-nosnippet>204</a>  (<span class="string">"datetime"</span>, <span class="string">"sty"</span>, datetime_sty::load_definitions),
+<a href=#205 id=205 data-nosnippet>205</a>  (<span class="string">"ed"</span>, <span class="string">"sty"</span>, ed_sty::load_definitions),
+<a href=#206 id=206 data-nosnippet>206</a>  (<span class="string">"emlines"</span>, <span class="string">"sty"</span>, emlines_sty::load_definitions),
+<a href=#207 id=207 data-nosnippet>207</a>  (<span class="string">"hobby"</span>, <span class="string">"code.tex"</span>, hobby_code_tex::load_definitions),
+<a href=#208 id=208 data-nosnippet>208</a>  (<span class="string">"hyphenat"</span>, <span class="string">"sty"</span>, hyphenat_sty::load_definitions),
+<a href=#209 id=209 data-nosnippet>209</a>  (<span class="string">"ifdraft"</span>, <span class="string">"sty"</span>, ifdraft_sty::load_definitions),
+<a href=#210 id=210 data-nosnippet>210</a>  (<span class="string">"l3draw"</span>, <span class="string">"sty"</span>, l3draw_sty::load_definitions),
+<a href=#211 id=211 data-nosnippet>211</a>  (<span class="string">"lettrine"</span>, <span class="string">"sty"</span>, lettrine_sty::load_definitions),
+<a href=#212 id=212 data-nosnippet>212</a>  (<span class="string">"libertine"</span>, <span class="string">"sty"</span>, libertine_sty::load_definitions),
+<a href=#213 id=213 data-nosnippet>213</a>  (<span class="string">"ltablex"</span>, <span class="string">"sty"</span>, ltablex_sty::load_definitions),
+<a href=#214 id=214 data-nosnippet>214</a>  (<span class="string">"MnSymbol"</span>, <span class="string">"sty"</span>, mnsymbol_sty::load_definitions),
+<a href=#215 id=215 data-nosnippet>215</a>  (<span class="string">"mssymb"</span>, <span class="string">"tex"</span>, mssymb_tex::load_definitions),
+<a href=#216 id=216 data-nosnippet>216</a>  (<span class="string">"oldgerm"</span>, <span class="string">"sty"</span>, oldgerm_sty::load_definitions),
+<a href=#217 id=217 data-nosnippet>217</a>  (<span class="string">"pst-plot"</span>, <span class="string">"sty"</span>, pst_plot_sty::load_definitions),
+<a href=#218 id=218 data-nosnippet>218</a>  (<span class="string">"savetrees"</span>, <span class="string">"sty"</span>, savetrees_sty::load_definitions),
+<a href=#219 id=219 data-nosnippet>219</a>  (<span class="string">"scicite"</span>, <span class="string">"sty"</span>, scicite_sty::load_definitions),
+<a href=#220 id=220 data-nosnippet>220</a>  (<span class="string">"scrbook"</span>, <span class="string">"cls"</span>, scrbook_cls::load_definitions),
+<a href=#221 id=221 data-nosnippet>221</a>  (<span class="string">"tabularray"</span>, <span class="string">"sty"</span>, tabularray_sty::load_definitions),
+<a href=#222 id=222 data-nosnippet>222</a>  (<span class="string">"xltabular"</span>, <span class="string">"sty"</span>, xltabular_sty::load_definitions),
+<a href=#223 id=223 data-nosnippet>223</a>  (<span class="string">"xr"</span>, <span class="string">"sty"</span>, xr_sty::load_definitions),
+<a href=#224 id=224 data-nosnippet>224</a>  (<span class="string">"ar5iv"</span>, <span class="string">"sty"</span>, ar5iv_sty::load_definitions),
+<a href=#225 id=225 data-nosnippet>225</a>  (<span class="string">"arxbj"</span>, <span class="string">"cls"</span>, arxbj_cls::load_definitions),
+<a href=#226 id=226 data-nosnippet>226</a>  (<span class="string">"arydshln"</span>, <span class="string">"sty"</span>, arydshln_sty::load_definitions),
+<a href=#227 id=227 data-nosnippet>227</a>  (<span class="string">"changes"</span>, <span class="string">"sty"</span>, changes_sty::load_definitions),
+<a href=#228 id=228 data-nosnippet>228</a>  (<span class="string">"currfile"</span>, <span class="string">"sty"</span>, currfile_sty::load_definitions),
+<a href=#229 id=229 data-nosnippet>229</a>  (<span class="string">"diagrams"</span>, <span class="string">"tex"</span>, diagrams_tex::load_definitions),
+<a href=#230 id=230 data-nosnippet>230</a>  (<span class="string">"equations"</span>, <span class="string">"sty"</span>, equations_sty::load_definitions),
+<a href=#231 id=231 data-nosnippet>231</a>  (<span class="string">"eso-pic"</span>, <span class="string">"sty"</span>, eso_pic_sty::load_definitions),
+<a href=#232 id=232 data-nosnippet>232</a>  (<span class="string">"forest"</span>, <span class="string">"sty"</span>, forest_sty::load_definitions),
+<a href=#233 id=233 data-nosnippet>233</a>  (<span class="string">"harvmac"</span>, <span class="string">"tex"</span>, harvmac_tex::load_definitions),
+<a href=#234 id=234 data-nosnippet>234</a>  (<span class="string">"mciteplus"</span>, <span class="string">"sty"</span>, mciteplus_sty::load_definitions),
+<a href=#235 id=235 data-nosnippet>235</a>  (<span class="string">"mdframed"</span>, <span class="string">"sty"</span>, mdframed_sty::load_definitions),
+<a href=#236 id=236 data-nosnippet>236</a>  (<span class="string">"memoir"</span>, <span class="string">"cls"</span>, memoir_cls::load_definitions),
+<a href=#237 id=237 data-nosnippet>237</a>  (<span class="string">"mhchem"</span>, <span class="string">"sty"</span>, mhchem_sty::load_definitions),
+<a href=#238 id=238 data-nosnippet>238</a>  (<span class="string">"minted"</span>, <span class="string">"sty"</span>, minted_sty::load_definitions),
+<a href=#239 id=239 data-nosnippet>239</a>  (<span class="string">"nicematrix"</span>, <span class="string">"sty"</span>, nicematrix_sty::load_definitions),
+<a href=#240 id=240 data-nosnippet>240</a>  (<span class="string">"pb-diagram"</span>, <span class="string">"sty"</span>, pb_diagram_sty::load_definitions),
+<a href=#241 id=241 data-nosnippet>241</a>  (<span class="string">"siamltex"</span>, <span class="string">"cls"</span>, siamltex_cls::load_definitions),
+<a href=#242 id=242 data-nosnippet>242</a>  (<span class="string">"svn-multi"</span>, <span class="string">"sty"</span>, svn_multi_sty::load_definitions),
+<a href=#243 id=243 data-nosnippet>243</a>  (<span class="string">"svninfo"</span>, <span class="string">"sty"</span>, svninfo_sty::load_definitions),
+<a href=#244 id=244 data-nosnippet>244</a>  (<span class="string">"tabu"</span>, <span class="string">"sty"</span>, tabu_sty::load_definitions),
+<a href=#245 id=245 data-nosnippet>245</a>  (<span class="string">"ucs"</span>, <span class="string">"sty"</span>, ucs_sty::load_definitions),
+<a href=#246 id=246 data-nosnippet>246</a>  (<span class="string">"ut-thesis"</span>, <span class="string">"cls"</span>, ut_thesis_cls::load_definitions),
+<a href=#247 id=247 data-nosnippet>247</a>  (<span class="string">"ws-p8-50x6-00"</span>, <span class="string">"cls"</span>, ws_p8_50x6_00_cls::load_definitions),
+<a href=#248 id=248 data-nosnippet>248</a>];
+<a href=#249 id=249 data-nosnippet>249</a>
+<a href=#250 id=250 data-nosnippet>250</a><span class="doccomment">/// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`,
+<a href=#251 id=251 data-nosnippet>251</a>/// `"hobby.code.tex"`) through its compiled `load_definitions` fn, or return
+<a href=#252 id=252 data-nosnippet>252</a>/// `None` when the filename has no registered binding. Splits on the *first*
+<a href=#253 id=253 data-nosnippet>253</a>/// `.` so `("hobby", "code.tex", …)` matches correctly — mirrors
+<a href=#254 id=254 data-nosnippet>254</a>/// `latexml_package::dispatch`.
+<a href=#255 id=255 data-nosnippet>255</a></span><span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="kw">let </span>(base, ext) = filename.split_once(<span class="string">'.'</span>)<span class="question-mark">?</span>;
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="comment">// Perl pathname_find L383-389: strict-case first, case-insensitive fallback
+<a href=#258 id=258 data-nosnippet>258</a>  // (matches `\documentclass{jhep}` against `JHEP.cls.ltxml`-style entries).
+<a href=#259 id=259 data-nosnippet>259</a>  // See latexml_package::dispatch for the parallel comment.
+<a href=#260 id=260 data-nosnippet>260</a>  </span>BINDINGS
+<a href=#261 id=261 data-nosnippet>261</a>    .iter()
+<a href=#262 id=262 data-nosnippet>262</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
+<a href=#263 id=263 data-nosnippet>263</a>    .or_else(|| {
+<a href=#264 id=264 data-nosnippet>264</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
+<a href=#265 id=265 data-nosnippet>265</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
+<a href=#266 id=266 data-nosnippet>266</a>      })
+<a href=#267 id=267 data-nosnippet>267</a>    })
+<a href=#268 id=268 data-nosnippet>268</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
+<a href=#269 id=269 data-nosnippet>269</a>}
+<a href=#270 id=270 data-nosnippet>270</a>
+<a href=#271 id=271 data-nosnippet>271</a><span class="doccomment">/// All registered (name, extension) pairs for this crate's BINDINGS.
+<a href=#272 id=272 data-nosnippet>272</a>/// Mirror of `latexml_package::binding_names`. Consumed by
+<a href=#273 id=273 data-nosnippet>273</a>/// `find_file(notex=true)` to detect compiled-binding existence across
+<a href=#274 id=274 data-nosnippet>274</a>/// all registered extensions (cls/sty/def/pool/code.tex/...). The class
+<a href=#275 id=275 data-nosnippet>275</a>/// names (entries with `ext == "cls"`) flow into `load_class`'s
+<a href=#276 id=276 data-nosnippet>276</a>/// Perl-parity prefix-match fallback via the
+<a href=#277 id=277 data-nosnippet>277</a>/// `state::get_class_binding_names()` filtered view.
+<a href=#278 id=278 data-nosnippet>278</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="kw">use </span>std::sync::OnceLock;
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
+<a href=#281 id=281 data-nosnippet>281</a>  NAMES
+<a href=#282 id=282 data-nosnippet>282</a>    .get_or_init(|| {
+<a href=#283 id=283 data-nosnippet>283</a>      BINDINGS
+<a href=#284 id=284 data-nosnippet>284</a>        .iter()
+<a href=#285 id=285 data-nosnippet>285</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
+<a href=#286 id=286 data-nosnippet>286</a>        .collect()
+<a href=#287 id=287 data-nosnippet>287</a>    })
+<a href=#288 id=288 data-nosnippet>288</a>    .as_slice()
+<a href=#289 id=289 data-nosnippet>289</a>}
+<a href=#290 id=290 data-nosnippet>290</a>
+<a href=#291 id=291 data-nosnippet>291</a><span class="comment">// III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled
+<a href=#292 id=292 data-nosnippet>292</a>// and made visible to the main latexml-oxide executable
 </span></code></pre></div></section></main></body></html>

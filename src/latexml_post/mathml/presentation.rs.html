@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/mathml/presentation.rs`."><title>presentation.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (82bee9650 2026-05-09)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/mathml/</div>presentation.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Presentation MathML rendering rules.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/mathml/presentation.rs`."><title>presentation.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/mathml/</div>presentation.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Presentation MathML rendering rules.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::MathML::Presentation` (146 lines) +
 <a href=#4 id=4 data-nosnippet>4</a>//! the presentation portion of `LaTeXML::Post::MathML` (main module, ~1000 lines).
@@ -12,7 +12,7 @@
 <a href=#12 id=12 data-nosnippet>12</a>
 <a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">use </span>libxml::tree::Node;
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>std::cell::Cell;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>std::collections::HashMap;
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#16 id=16 data-nosnippet>16</a>
 <a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span><span class="kw">super</span>::operator_dictionary;
 <a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span><span class="kw">crate</span>::document::{NodeData, PostDocument, element_children, element_children_iter};
@@ -245,7 +245,7 @@
 <a href=#245 id=245 data-nosnippet>245</a>    },
 <a href=#246 id=246 data-nosnippet>246</a>    <span class="string">"FRACOP" </span><span class="kw">if </span>args.len() &gt;= <span class="number">2 </span>=&gt; {
 <a href=#247 id=247 data-nosnippet>247</a>      <span class="kw">let </span>thickness = rop.get_attribute(<span class="string">"thickness"</span>);
-<a href=#248 id=248 data-nosnippet>248</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
+<a href=#248 id=248 data-nosnippet>248</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
 <a href=#249 id=249 data-nosnippet>249</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) = thickness {
 <a href=#250 id=250 data-nosnippet>250</a>        <span class="kw">if </span>t == <span class="string">"0" </span>|| t == <span class="string">"0pt" </span>{
 <a href=#251 id=251 data-nosnippet>251</a>          attrs.insert(<span class="string">"linethickness"</span>.to_string(), <span class="string">"0"</span>.to_string());
@@ -267,7 +267,7 @@
 <a href=#267 id=267 data-nosnippet>267</a>          <span class="comment">// Combine into m:munderover: base_of_inner, under_accent, over_accent
 <a href=#268 id=268 data-nosnippet>268</a>          </span><span class="kw">return </span>NodeData::Element {
 <a href=#269 id=269 data-nosnippet>269</a>            tag:        <span class="string">"m:munderover"</span>.to_string(),
-<a href=#270 id=270 data-nosnippet>270</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#270 id=270 data-nosnippet>270</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#271 id=271 data-nosnippet>271</a>              (<span class="string">"accent"</span>.to_string(), <span class="string">"true"</span>.to_string()),
 <a href=#272 id=272 data-nosnippet>272</a>              (<span class="string">"accentunder"</span>.to_string(), <span class="string">"true"</span>.to_string()),
 <a href=#273 id=273 data-nosnippet>273</a>            ])),
@@ -281,7 +281,7 @@
 <a href=#281 id=281 data-nosnippet>281</a>      }
 <a href=#282 id=282 data-nosnippet>282</a>      NodeData::Element {
 <a href=#283 id=283 data-nosnippet>283</a>        tag:        <span class="string">"m:mover"</span>.to_string(),
-<a href=#284 id=284 data-nosnippet>284</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"accent"</span>.to_string(), <span class="string">"true"</span>.to_string())])),
+<a href=#284 id=284 data-nosnippet>284</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"accent"</span>.to_string(), <span class="string">"true"</span>.to_string())])),
 <a href=#285 id=285 data-nosnippet>285</a>        children:   <span class="macro">vec!</span>[pmml(doc, base), pmml(doc, op)],
 <a href=#286 id=286 data-nosnippet>286</a>      }
 <a href=#287 id=287 data-nosnippet>287</a>    },
@@ -294,7 +294,7 @@
 <a href=#294 id=294 data-nosnippet>294</a>        <span class="kw">if </span>inner_role == <span class="string">"OVERACCENT" </span>{
 <a href=#295 id=295 data-nosnippet>295</a>          <span class="kw">return </span>NodeData::Element {
 <a href=#296 id=296 data-nosnippet>296</a>            tag:        <span class="string">"m:munderover"</span>.to_string(),
-<a href=#297 id=297 data-nosnippet>297</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#297 id=297 data-nosnippet>297</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#298 id=298 data-nosnippet>298</a>              (<span class="string">"accent"</span>.to_string(), <span class="string">"true"</span>.to_string()),
 <a href=#299 id=299 data-nosnippet>299</a>              (<span class="string">"accentunder"</span>.to_string(), <span class="string">"true"</span>.to_string()),
 <a href=#300 id=300 data-nosnippet>300</a>            ])),
@@ -308,7 +308,7 @@
 <a href=#308 id=308 data-nosnippet>308</a>      }
 <a href=#309 id=309 data-nosnippet>309</a>      NodeData::Element {
 <a href=#310 id=310 data-nosnippet>310</a>        tag:        <span class="string">"m:munder"</span>.to_string(),
-<a href=#311 id=311 data-nosnippet>311</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#311 id=311 data-nosnippet>311</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#312 id=312 data-nosnippet>312</a>          <span class="string">"accentunder"</span>.to_string(),
 <a href=#313 id=313 data-nosnippet>313</a>          <span class="string">"true"</span>.to_string(),
 <a href=#314 id=314 data-nosnippet>314</a>        )])),
@@ -359,7 +359,7 @@
 <a href=#359 id=359 data-nosnippet>359</a>          pmml(doc, <span class="kw-2">&amp;</span>args[<span class="number">0</span>]),
 <a href=#360 id=360 data-nosnippet>360</a>          NodeData::Element {
 <a href=#361 id=361 data-nosnippet>361</a>            tag:        <span class="string">"m:mspace"</span>.to_string(),
-<a href=#362 id=362 data-nosnippet>362</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#362 id=362 data-nosnippet>362</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#363 id=363 data-nosnippet>363</a>              <span class="string">"width"</span>.to_string(),
 <a href=#364 id=364 data-nosnippet>364</a>              <span class="string">"0.389em"</span>.to_string(),
 <a href=#365 id=365 data-nosnippet>365</a>            )])),
@@ -446,7 +446,7 @@
 <a href=#446 id=446 data-nosnippet>446</a>    text = <span class="string">"\u{200B}"</span>.to_string(); <span class="comment">// ZERO WIDTH SPACE
 <a href=#447 id=447 data-nosnippet>447</a>  </span>}
 <a href=#448 id=448 data-nosnippet>448</a>
-<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
 <a href=#450 id=450 data-nosnippet>450</a>
 <a href=#451 id=451 data-nosnippet>451</a>  <span class="comment">// Perl: zero-width space &lt;mo&gt; needs lspace/rspace="0em" to prevent browser
 <a href=#452 id=452 data-nosnippet>452</a>  // default operator spacing that creates visible gaps between letters.
@@ -627,7 +627,7 @@
 <a href=#627 id=627 data-nosnippet>627</a>    <span class="comment">// Convert width to mspace
 <a href=#628 id=628 data-nosnippet>628</a>    </span>NodeData::Element {
 <a href=#629 id=629 data-nosnippet>629</a>      tag:        <span class="string">"m:mspace"</span>.to_string(),
-<a href=#630 id=630 data-nosnippet>630</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"width"</span>.to_string(), w)])),
+<a href=#630 id=630 data-nosnippet>630</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"width"</span>.to_string(), w)])),
 <a href=#631 id=631 data-nosnippet>631</a>      children:   <span class="macro">vec!</span>[],
 <a href=#632 id=632 data-nosnippet>632</a>    }
 <a href=#633 id=633 data-nosnippet>633</a>  } <span class="kw">else </span>{
@@ -655,7 +655,7 @@
 <a href=#655 id=655 data-nosnippet>655</a>    <span class="kw">for </span>cell_node <span class="kw">in </span>element_children(<span class="kw-2">&amp;</span>row_node) {
 <a href=#656 id=656 data-nosnippet>656</a>      <span class="kw">let </span>cell_align = cell_node.get_attribute(<span class="string">"align"</span>);
 <a href=#657 id=657 data-nosnippet>657</a>      <span class="kw">let </span>colspan = cell_node.get_attribute(<span class="string">"colspan"</span>);
-<a href=#658 id=658 data-nosnippet>658</a>      <span class="kw">let </span><span class="kw-2">mut </span>td_attrs = HashMap::new();
+<a href=#658 id=658 data-nosnippet>658</a>      <span class="kw">let </span><span class="kw-2">mut </span>td_attrs = HashMap::default();
 <a href=#659 id=659 data-nosnippet>659</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = cell_align {
 <a href=#660 id=660 data-nosnippet>660</a>        td_attrs.insert(<span class="string">"columnalign"</span>.to_string(), a);
 <a href=#661 id=661 data-nosnippet>661</a>      }
@@ -687,7 +687,7 @@
 <a href=#687 id=687 data-nosnippet>687</a>    });
 <a href=#688 id=688 data-nosnippet>688</a>  }
 <a href=#689 id=689 data-nosnippet>689</a>
-<a href=#690 id=690 data-nosnippet>690</a>  <span class="kw">let </span><span class="kw-2">mut </span>table_attrs = HashMap::new();
+<a href=#690 id=690 data-nosnippet>690</a>  <span class="kw">let </span><span class="kw-2">mut </span>table_attrs = HashMap::default();
 <a href=#691 id=691 data-nosnippet>691</a>  <span class="kw">if </span>align != <span class="string">"axis" </span>{
 <a href=#692 id=692 data-nosnippet>692</a>    table_attrs.insert(<span class="string">"align"</span>.to_string(), align.to_string());
 <a href=#693 id=693 data-nosnippet>693</a>  }
@@ -1305,7 +1305,7 @@
 <a href=#1305 id=1305 data-nosnippet>1305</a>
 <a href=#1306 id=1306 data-nosnippet>1306</a><span class="kw">fn </span>set_node_attr(node: <span class="kw-2">&amp;mut </span>NodeData, key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) {
 <a href=#1307 id=1307 data-nosnippet>1307</a>  <span class="kw">if let </span>NodeData::Element { attributes, .. } = node {
-<a href=#1308 id=1308 data-nosnippet>1308</a>    <span class="kw">let </span>attrs = attributes.get_or_insert_with(HashMap::new);
+<a href=#1308 id=1308 data-nosnippet>1308</a>    <span class="kw">let </span>attrs = attributes.get_or_insert_with(HashMap::default);
 <a href=#1309 id=1309 data-nosnippet>1309</a>    attrs.insert(key.to_string(), value.to_string());
 <a href=#1310 id=1310 data-nosnippet>1310</a>  }
 <a href=#1311 id=1311 data-nosnippet>1311</a>}
@@ -1455,7 +1455,7 @@
 <a href=#1455 id=1455 data-nosnippet>1455</a><span class="attr">#[cfg(test)]
 <a href=#1456 id=1456 data-nosnippet>1456</a></span><span class="kw">mod </span>tests {
 <a href=#1457 id=1457 data-nosnippet>1457</a>  <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#1458 id=1458 data-nosnippet>1458</a>  <span class="kw">use </span>std::collections::HashMap;
+<a href=#1458 id=1458 data-nosnippet>1458</a>  <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#1459 id=1459 data-nosnippet>1459</a>
 <a href=#1460 id=1460 data-nosnippet>1460</a>  <span class="attr">#[test]
 <a href=#1461 id=1461 data-nosnippet>1461</a>  </span><span class="kw">fn </span>math_style_step_down_monotone_saturates_at_scriptscript() {
@@ -1531,7 +1531,7 @@
 <a href=#1531 id=1531 data-nosnippet>1531</a>  </span><span class="kw">fn </span>clean_internal_attrs_removes_underscore_attrs() {
 <a href=#1532 id=1532 data-nosnippet>1532</a>    <span class="kw">let </span><span class="kw-2">mut </span>node = NodeData::Element {
 <a href=#1533 id=1533 data-nosnippet>1533</a>      tag:        <span class="string">"mrow"</span>.to_string(),
-<a href=#1534 id=1534 data-nosnippet>1534</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#1534 id=1534 data-nosnippet>1534</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#1535 id=1535 data-nosnippet>1535</a>        (<span class="string">"_role"</span>.to_string(), <span class="string">"MULOP"</span>.to_string()),
 <a href=#1536 id=1536 data-nosnippet>1536</a>        (<span class="string">"_lspace"</span>.to_string(), <span class="string">"4"</span>.to_string()),
 <a href=#1537 id=1537 data-nosnippet>1537</a>        (<span class="string">"keep"</span>.to_string(), <span class="string">"yes"</span>.to_string()),
@@ -1554,7 +1554,7 @@
 <a href=#1554 id=1554 data-nosnippet>1554</a>  </span><span class="kw">fn </span>clean_internal_attrs_unsets_attributes_when_empty() {
 <a href=#1555 id=1555 data-nosnippet>1555</a>    <span class="kw">let </span><span class="kw-2">mut </span>node = NodeData::Element {
 <a href=#1556 id=1556 data-nosnippet>1556</a>      tag:        <span class="string">"mrow"</span>.to_string(),
-<a href=#1557 id=1557 data-nosnippet>1557</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#1557 id=1557 data-nosnippet>1557</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#1558 id=1558 data-nosnippet>1558</a>        (<span class="string">"_role"</span>.to_string(), <span class="string">"MULOP"</span>.to_string()),
 <a href=#1559 id=1559 data-nosnippet>1559</a>        (<span class="string">"_largeop"</span>.to_string(), <span class="string">"true"</span>.to_string()),
 <a href=#1560 id=1560 data-nosnippet>1560</a>      ])),
@@ -1576,7 +1576,7 @@
 <a href=#1576 id=1576 data-nosnippet>1576</a>      attributes: <span class="prelude-val">None</span>,
 <a href=#1577 id=1577 data-nosnippet>1577</a>      children:   <span class="macro">vec!</span>[NodeData::Element {
 <a href=#1578 id=1578 data-nosnippet>1578</a>        tag:        <span class="string">"mi"</span>.to_string(),
-<a href=#1579 id=1579 data-nosnippet>1579</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"_rspace"</span>.to_string(), <span class="string">"1"</span>.to_string())])),
+<a href=#1579 id=1579 data-nosnippet>1579</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"_rspace"</span>.to_string(), <span class="string">"1"</span>.to_string())])),
 <a href=#1580 id=1580 data-nosnippet>1580</a>        children:   <span class="macro">vec!</span>[],
 <a href=#1581 id=1581 data-nosnippet>1581</a>      }],
 <a href=#1582 id=1582 data-nosnippet>1582</a>    };

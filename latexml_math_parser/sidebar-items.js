@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_grammatical_role","node_to_grammar_lexemes","text_form"],"macro":["default_registry","register","registry","rule","rules","start","token","unp"],"struct":["MathParser"]};
+window.SIDEBAR_ITEMS = {"fn":["get_grammatical_role","node_to_grammar_lexemes","text_form"],"macro":["default_registry","log_math_error","log_math_info","log_math_warn","register","registry","rule","rules","start","token","unp"],"struct":["MathParser"]};

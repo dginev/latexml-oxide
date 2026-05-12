@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/svg.rs`."><title>svg.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (82bee9650 2026-05-09)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>svg.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! SVG rendering processor.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/svg.rs`."><title>svg.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>svg.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! SVG rendering processor.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::SVG` (522 lines of Perl).
 <a href=#4 id=4 data-nosnippet>4</a>//! Converts `ltx:picture` elements to SVG by traversing LaTeXML picture
@@ -10,7 +10,7 @@
 <a href=#10 id=10 data-nosnippet>10</a>//! The top-level picture gets `transform="translate(0,h) scale(1,-1)"`.
 <a href=#11 id=11 data-nosnippet>11</a>
 <a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use </span>libxml::tree::Node;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>std::collections::HashMap;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>std::f64::consts::PI;
 <a href=#15 id=15 data-nosnippet>15</a>
 <a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span><span class="kw">crate</span>::document::{NodeData, PostDocument, element_children_iter};
@@ -50,7 +50,7 @@
 <a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">let </span>g_transform = <span class="macro">format!</span>(<span class="string">"translate(0,{:.2}) scale(1,-1)"</span>, h);
 <a href=#51 id=51 data-nosnippet>51</a>    <span class="kw">let </span>g = NodeData::Element {
 <a href=#52 id=52 data-nosnippet>52</a>      tag: <span class="string">"svg:g"</span>.to_string(),
-<a href=#53 id=53 data-nosnippet>53</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"transform"</span>.to_string(), g_transform)])),
+<a href=#53 id=53 data-nosnippet>53</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"transform"</span>.to_string(), g_transform)])),
 <a href=#54 id=54 data-nosnippet>54</a>      children,
 <a href=#55 id=55 data-nosnippet>55</a>    };
 <a href=#56 id=56 data-nosnippet>56</a>
@@ -59,7 +59,7 @@
 <a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">let </span>height = node.get_attribute(<span class="string">"height"</span>).map(|s| to_px(<span class="kw-2">&amp;</span>s));
 <a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">let </span>clip = node.get_attribute(<span class="string">"clip"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>);
 <a href=#61 id=61 data-nosnippet>61</a>
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">let </span><span class="kw-2">mut </span>svg_attrs = HashMap::new();
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">let </span><span class="kw-2">mut </span>svg_attrs = HashMap::default();
 <a href=#63 id=63 data-nosnippet>63</a>    svg_attrs.insert(<span class="string">"version"</span>.to_string(), <span class="string">"1.1"</span>.to_string());
 <a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(w) = width {
 <a href=#65 id=65 data-nosnippet>65</a>      svg_attrs.insert(<span class="string">"width"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"{:.2}"</span>, w));
@@ -112,7 +112,7 @@
 <a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>children = <span class="self">self</span>.convert_children(doc, node);
 <a href=#113 id=113 data-nosnippet>113</a>    <span class="prelude-val">Some</span>(NodeData::Element {
 <a href=#114 id=114 data-nosnippet>114</a>      tag: <span class="string">"svg:g"</span>.to_string(),
-<a href=#115 id=115 data-nosnippet>115</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#115 id=115 data-nosnippet>115</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#116 id=116 data-nosnippet>116</a>        <span class="string">"transform"</span>.to_string(),
 <a href=#117 id=117 data-nosnippet>117</a>        <span class="macro">format!</span>(<span class="string">"translate(0,{:.2}) scale(1,-1)"</span>, h),
 <a href=#118 id=118 data-nosnippet>118</a>      )])),
@@ -295,7 +295,7 @@
 <a href=#295 id=295 data-nosnippet>295</a>
 <a href=#296 id=296 data-nosnippet>296</a>    <span class="prelude-val">Some</span>(NodeData::Element {
 <a href=#297 id=297 data-nosnippet>297</a>      tag:        <span class="string">"svg:path"</span>.to_string(),
-<a href=#298 id=298 data-nosnippet>298</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"d"</span>.to_string(), d)])),
+<a href=#298 id=298 data-nosnippet>298</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"d"</span>.to_string(), d)])),
 <a href=#299 id=299 data-nosnippet>299</a>      children:   <span class="macro">vec!</span>[],
 <a href=#300 id=300 data-nosnippet>300</a>    })
 <a href=#301 id=301 data-nosnippet>301</a>  }
@@ -348,7 +348,7 @@
 <a href=#348 id=348 data-nosnippet>348</a>      <span class="kw">if </span>chunk.len() == <span class="number">2 </span>{
 <a href=#349 id=349 data-nosnippet>349</a>        circles.push(NodeData::Element {
 <a href=#350 id=350 data-nosnippet>350</a>          tag:        <span class="string">"svg:circle"</span>.to_string(),
-<a href=#351 id=351 data-nosnippet>351</a>          attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#351 id=351 data-nosnippet>351</a>          attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#352 id=352 data-nosnippet>352</a>            (<span class="string">"cx"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"{:.2}"</span>, chunk[<span class="number">0</span>])),
 <a href=#353 id=353 data-nosnippet>353</a>            (<span class="string">"cy"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"{:.2}"</span>, chunk[<span class="number">1</span>])),
 <a href=#354 id=354 data-nosnippet>354</a>            (<span class="string">"r"</span>.to_string(), dotsize.clone()),
@@ -370,7 +370,7 @@
 <a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">let </span>y = node.get_attribute(<span class="string">"y"</span>).unwrap_or_else(|| <span class="string">"0"</span>.to_string());
 <a href=#371 id=371 data-nosnippet>371</a>    <span class="kw">let </span>text = node.get_content();
 <a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
 <a href=#374 id=374 data-nosnippet>374</a>    attrs.insert(<span class="string">"x"</span>.to_string(), x);
 <a href=#375 id=375 data-nosnippet>375</a>    attrs.insert(<span class="string">"y"</span>.to_string(), y);
 <a href=#376 id=376 data-nosnippet>376</a>    <span class="comment">// Text needs to be un-flipped
@@ -422,7 +422,7 @@
 <a href=#422 id=422 data-nosnippet>422</a>
 <a href=#423 id=423 data-nosnippet>423</a>    <span class="kw">let </span>fo = NodeData::Element {
 <a href=#424 id=424 data-nosnippet>424</a>      tag:        <span class="string">"svg:foreignObject"</span>.to_string(),
-<a href=#425 id=425 data-nosnippet>425</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([
+<a href=#425 id=425 data-nosnippet>425</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([
 <a href=#426 id=426 data-nosnippet>426</a>        (<span class="string">"width"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"{:.2}"</span>, to_px(<span class="kw-2">&amp;</span>width))),
 <a href=#427 id=427 data-nosnippet>427</a>        (<span class="string">"height"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"{:.2}"</span>, h_px)),
 <a href=#428 id=428 data-nosnippet>428</a>        (<span class="string">"overflow"</span>.to_string(), <span class="string">"visible"</span>.to_string()),
@@ -432,7 +432,7 @@
 <a href=#432 id=432 data-nosnippet>432</a>
 <a href=#433 id=433 data-nosnippet>433</a>    <span class="prelude-val">Some</span>(NodeData::Element {
 <a href=#434 id=434 data-nosnippet>434</a>      tag:        <span class="string">"svg:g"</span>.to_string(),
-<a href=#435 id=435 data-nosnippet>435</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#435 id=435 data-nosnippet>435</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#436 id=436 data-nosnippet>436</a>        <span class="string">"transform"</span>.to_string(),
 <a href=#437 id=437 data-nosnippet>437</a>        <span class="macro">format!</span>(<span class="string">"translate(0,{:.2}) scale(1,-1)"</span>, y),
 <a href=#438 id=438 data-nosnippet>438</a>      )])),
@@ -449,7 +449,7 @@
 <a href=#449 id=449 data-nosnippet>449</a>
 <a href=#450 id=450 data-nosnippet>450</a>  <span class="doccomment">/// Copy valid SVG attributes from a LaTeXML node.
 <a href=#451 id=451 data-nosnippet>451</a>  </span><span class="kw">fn </span>copy_valid_attrs(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node) -&gt; HashMap&lt;String, String&gt; {
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
 <a href=#453 id=453 data-nosnippet>453</a>    <span class="kw">let </span>props = node.get_properties();
 <a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">for </span>(key, value) <span class="kw">in </span><span class="kw-2">&amp;</span>props {
 <a href=#455 id=455 data-nosnippet>455</a>      <span class="kw">match </span>key.as_str() {

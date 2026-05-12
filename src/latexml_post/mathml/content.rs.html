@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/mathml/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (82bee9650 2026-05-09)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/mathml/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Content MathML rendering rules.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/mathml/content.rs`."><title>content.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/mathml/</div>content.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Content MathML rendering rules.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::MathML::Content` (31 lines) + the content
 <a href=#4 id=4 data-nosnippet>4</a>//! portion of `LaTeXML::Post::MathML` (main module, ~400 lines).
@@ -13,7 +13,7 @@
 <a href=#13 id=13 data-nosnippet>13</a>//! - XMDual → follows the content branch
 <a href=#14 id=14 data-nosnippet>14</a>
 <a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">use </span>libxml::tree::Node;
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span>std::collections::HashMap;
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#17 id=17 data-nosnippet>17</a>
 <a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span><span class="kw">crate</span>::document::{NodeData, PostDocument, element_children};
 <a href=#19 id=19 data-nosnippet>19</a>
@@ -293,7 +293,7 @@
 <a href=#293 id=293 data-nosnippet>293</a>          <span class="kw">let </span>items: Vec&lt;NodeData&gt; = args.iter().map(|a| cmml(doc, a)).collect();
 <a href=#294 id=294 data-nosnippet>294</a>          NodeData::Element {
 <a href=#295 id=295 data-nosnippet>295</a>            tag:        <span class="string">"m:interval"</span>.to_string(),
-<a href=#296 id=296 data-nosnippet>296</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"closure"</span>.to_string(), <span class="string">"open"</span>.to_string())])),
+<a href=#296 id=296 data-nosnippet>296</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"closure"</span>.to_string(), <span class="string">"open"</span>.to_string())])),
 <a href=#297 id=297 data-nosnippet>297</a>            children:   items,
 <a href=#298 id=298 data-nosnippet>298</a>          }
 <a href=#299 id=299 data-nosnippet>299</a>        },
@@ -301,7 +301,7 @@
 <a href=#301 id=301 data-nosnippet>301</a>          <span class="kw">let </span>items: Vec&lt;NodeData&gt; = args.iter().map(|a| cmml(doc, a)).collect();
 <a href=#302 id=302 data-nosnippet>302</a>          NodeData::Element {
 <a href=#303 id=303 data-nosnippet>303</a>            tag:        <span class="string">"m:interval"</span>.to_string(),
-<a href=#304 id=304 data-nosnippet>304</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#304 id=304 data-nosnippet>304</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#305 id=305 data-nosnippet>305</a>              <span class="string">"closure"</span>.to_string(),
 <a href=#306 id=306 data-nosnippet>306</a>              <span class="string">"closed"</span>.to_string(),
 <a href=#307 id=307 data-nosnippet>307</a>            )])),
@@ -312,7 +312,7 @@
 <a href=#312 id=312 data-nosnippet>312</a>          <span class="kw">let </span>items: Vec&lt;NodeData&gt; = args.iter().map(|a| cmml(doc, a)).collect();
 <a href=#313 id=313 data-nosnippet>313</a>          NodeData::Element {
 <a href=#314 id=314 data-nosnippet>314</a>            tag:        <span class="string">"m:interval"</span>.to_string(),
-<a href=#315 id=315 data-nosnippet>315</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#315 id=315 data-nosnippet>315</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#316 id=316 data-nosnippet>316</a>              <span class="string">"closure"</span>.to_string(),
 <a href=#317 id=317 data-nosnippet>317</a>              <span class="string">"closed-open"</span>.to_string(),
 <a href=#318 id=318 data-nosnippet>318</a>            )])),
@@ -323,7 +323,7 @@
 <a href=#323 id=323 data-nosnippet>323</a>          <span class="kw">let </span>items: Vec&lt;NodeData&gt; = args.iter().map(|a| cmml(doc, a)).collect();
 <a href=#324 id=324 data-nosnippet>324</a>          NodeData::Element {
 <a href=#325 id=325 data-nosnippet>325</a>            tag:        <span class="string">"m:interval"</span>.to_string(),
-<a href=#326 id=326 data-nosnippet>326</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(
+<a href=#326 id=326 data-nosnippet>326</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
 <a href=#327 id=327 data-nosnippet>327</a>              <span class="string">"closure"</span>.to_string(),
 <a href=#328 id=328 data-nosnippet>328</a>              <span class="string">"open-closed"</span>.to_string(),
 <a href=#329 id=329 data-nosnippet>329</a>            )])),
@@ -423,7 +423,7 @@
 <a href=#423 id=423 data-nosnippet>423</a>          <span class="kw">let </span>items: Vec&lt;NodeData&gt; = args.iter().map(|a| cmml(doc, a)).collect();
 <a href=#424 id=424 data-nosnippet>424</a>          <span class="kw">let </span><span class="kw-2">mut </span>children = <span class="macro">vec!</span>[NodeData::Element {
 <a href=#425 id=425 data-nosnippet>425</a>            tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#426 id=426 data-nosnippet>426</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
+<a href=#426 id=426 data-nosnippet>426</a>            attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
 <a href=#427 id=427 data-nosnippet>427</a>            children:   <span class="macro">vec!</span>[NodeData::Text(<span class="string">"formulae-sequence"</span>.to_string())],
 <a href=#428 id=428 data-nosnippet>428</a>          }];
 <a href=#429 id=429 data-nosnippet>429</a>          children.extend(items);
@@ -477,7 +477,7 @@
 <a href=#477 id=477 data-nosnippet>477</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cd) = node.get_attribute(<span class="string">"omcd"</span>) {
 <a href=#478 id=478 data-nosnippet>478</a>      <span class="kw">return </span>NodeData::Element {
 <a href=#479 id=479 data-nosnippet>479</a>        tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#480 id=480 data-nosnippet>480</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), cd)])),
+<a href=#480 id=480 data-nosnippet>480</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), cd)])),
 <a href=#481 id=481 data-nosnippet>481</a>        children:   <span class="macro">vec!</span>[NodeData::Text(m.clone())],
 <a href=#482 id=482 data-nosnippet>482</a>      };
 <a href=#483 id=483 data-nosnippet>483</a>    }
@@ -491,7 +491,7 @@
 <a href=#491 id=491 data-nosnippet>491</a>      </span>};
 <a href=#492 id=492 data-nosnippet>492</a>      <span class="kw">return </span>NodeData::Element {
 <a href=#493 id=493 data-nosnippet>493</a>        tag:        <span class="string">"m:cn"</span>.to_string(),
-<a href=#494 id=494 data-nosnippet>494</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"type"</span>.to_string(), cn_type.to_string())])),
+<a href=#494 id=494 data-nosnippet>494</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"type"</span>.to_string(), cn_type.to_string())])),
 <a href=#495 id=495 data-nosnippet>495</a>        children:   <span class="macro">vec!</span>[NodeData::Text(m.clone())],
 <a href=#496 id=496 data-nosnippet>496</a>      };
 <a href=#497 id=497 data-nosnippet>497</a>    }
@@ -499,7 +499,7 @@
 <a href=#499 id=499 data-nosnippet>499</a>    <span class="comment">// Default: csymbol with latexml cd
 <a href=#500 id=500 data-nosnippet>500</a>    </span><span class="kw">return </span>NodeData::Element {
 <a href=#501 id=501 data-nosnippet>501</a>      tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#502 id=502 data-nosnippet>502</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"latexml"</span>.to_string())])),
+<a href=#502 id=502 data-nosnippet>502</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"latexml"</span>.to_string())])),
 <a href=#503 id=503 data-nosnippet>503</a>      children:   <span class="macro">vec!</span>[NodeData::Text(m.clone())],
 <a href=#504 id=504 data-nosnippet>504</a>    };
 <a href=#505 id=505 data-nosnippet>505</a>  }
@@ -515,18 +515,18 @@
 <a href=#515 id=515 data-nosnippet>515</a>      </span>};
 <a href=#516 id=516 data-nosnippet>516</a>      NodeData::Element {
 <a href=#517 id=517 data-nosnippet>517</a>        tag:        <span class="string">"m:cn"</span>.to_string(),
-<a href=#518 id=518 data-nosnippet>518</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"type"</span>.to_string(), cn_type.to_string())])),
+<a href=#518 id=518 data-nosnippet>518</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"type"</span>.to_string(), cn_type.to_string())])),
 <a href=#519 id=519 data-nosnippet>519</a>        children:   <span class="macro">vec!</span>[NodeData::Text(content)],
 <a href=#520 id=520 data-nosnippet>520</a>      }
 <a href=#521 id=521 data-nosnippet>521</a>    },
 <a href=#522 id=522 data-nosnippet>522</a>    <span class="string">"SUPERSCRIPTOP" </span>=&gt; NodeData::Element {
 <a href=#523 id=523 data-nosnippet>523</a>      tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#524 id=524 data-nosnippet>524</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
+<a href=#524 id=524 data-nosnippet>524</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
 <a href=#525 id=525 data-nosnippet>525</a>      children:   <span class="macro">vec!</span>[NodeData::Text(<span class="string">"superscript"</span>.to_string())],
 <a href=#526 id=526 data-nosnippet>526</a>    },
 <a href=#527 id=527 data-nosnippet>527</a>    <span class="string">"SUBSCRIPTOP" </span>=&gt; NodeData::Element {
 <a href=#528 id=528 data-nosnippet>528</a>      tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#529 id=529 data-nosnippet>529</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
+<a href=#529 id=529 data-nosnippet>529</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
 <a href=#530 id=530 data-nosnippet>530</a>      children:   <span class="macro">vec!</span>[NodeData::Text(<span class="string">"subscript"</span>.to_string())],
 <a href=#531 id=531 data-nosnippet>531</a>    },
 <a href=#532 id=532 data-nosnippet>532</a>    <span class="kw">_ </span>=&gt; {
@@ -558,7 +558,7 @@
 <a href=#558 id=558 data-nosnippet>558</a>  } <span class="kw">else </span>{
 <a href=#559 id=559 data-nosnippet>559</a>    NodeData::Element {
 <a href=#560 id=560 data-nosnippet>560</a>      tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#561 id=561 data-nosnippet>561</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"latexml"</span>.to_string())])),
+<a href=#561 id=561 data-nosnippet>561</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"latexml"</span>.to_string())])),
 <a href=#562 id=562 data-nosnippet>562</a>      children:   <span class="macro">vec!</span>[NodeData::Text(meaning.to_string())],
 <a href=#563 id=563 data-nosnippet>563</a>    }
 <a href=#564 id=564 data-nosnippet>564</a>  }
@@ -646,7 +646,7 @@
 <a href=#646 id=646 data-nosnippet>646</a></span><span class="kw">fn </span>cmml_unparsed(doc: <span class="kw-2">&amp;</span>PostDocument, nodes: <span class="kw-2">&amp;</span>[Node]) -&gt; NodeData {
 <a href=#647 id=647 data-nosnippet>647</a>  <span class="kw">let </span><span class="kw-2">mut </span>results = <span class="macro">vec!</span>[NodeData::Element {
 <a href=#648 id=648 data-nosnippet>648</a>    tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#649 id=649 data-nosnippet>649</a>    attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
+<a href=#649 id=649 data-nosnippet>649</a>    attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
 <a href=#650 id=650 data-nosnippet>650</a>    children:   <span class="macro">vec!</span>[NodeData::Text(<span class="string">"fragments"</span>.to_string())],
 <a href=#651 id=651 data-nosnippet>651</a>  }];
 <a href=#652 id=652 data-nosnippet>652</a>
@@ -655,7 +655,7 @@
 <a href=#655 id=655 data-nosnippet>655</a>    <span class="kw">if </span>tag == <span class="string">"ltx:XMTok" </span>&amp;&amp; node.get_attribute(<span class="string">"role"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"UNKNOWN"</span>) {
 <a href=#656 id=656 data-nosnippet>656</a>      results.push(NodeData::Element {
 <a href=#657 id=657 data-nosnippet>657</a>        tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#658 id=658 data-nosnippet>658</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"unknown"</span>.to_string())])),
+<a href=#658 id=658 data-nosnippet>658</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"unknown"</span>.to_string())])),
 <a href=#659 id=659 data-nosnippet>659</a>        children:   <span class="macro">vec!</span>[NodeData::Text(node.get_content())],
 <a href=#660 id=660 data-nosnippet>660</a>      });
 <a href=#661 id=661 data-nosnippet>661</a>    } <span class="kw">else </span>{
@@ -677,7 +677,7 @@
 <a href=#677 id=677 data-nosnippet>677</a>    attributes: <span class="prelude-val">None</span>,
 <a href=#678 id=678 data-nosnippet>678</a>    children:   <span class="macro">vec!</span>[NodeData::Element {
 <a href=#679 id=679 data-nosnippet>679</a>      tag:        <span class="string">"m:csymbol"</span>.to_string(),
-<a href=#680 id=680 data-nosnippet>680</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
+<a href=#680 id=680 data-nosnippet>680</a>      attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(<span class="string">"cd"</span>.to_string(), <span class="string">"ambiguous"</span>.to_string())])),
 <a href=#681 id=681 data-nosnippet>681</a>      children:   <span class="macro">vec!</span>[NodeData::Text(symbol.to_string())],
 <a href=#682 id=682 data-nosnippet>682</a>    }],
 <a href=#683 id=683 data-nosnippet>683</a>  }
