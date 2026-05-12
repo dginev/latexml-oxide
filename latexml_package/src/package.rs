@@ -383,6 +383,7 @@ pub mod subfigure_sty;
 pub mod subfiles_cls;
 pub mod subfiles_sty;
 pub mod subfloat_sty;
+pub mod substr_sty;
 pub mod supertabular_sty;
 pub mod sv_support_sty;
 pub mod svg_sty;

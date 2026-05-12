@@ -460,6 +460,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mfirstuc", "sty", package::mfirstuc_sty::load_definitions),
   ("datatool-base", "sty", package::datatool_base_sty::load_definitions),
   ("chemgreek", "sty", package::chemgreek_sty::load_definitions),
+  ("substr", "sty", package::substr_sty::load_definitions),
   ("shellesc", "sty", package::shellesc_sty::load_definitions),
   ("tracklang", "sty", package::tracklang_sty::load_definitions),
   ("translator", "sty", package::translator_sty::load_definitions),
