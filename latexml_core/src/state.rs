@@ -288,9 +288,14 @@ impl Default for State {
     undo_vdq.push_front(top_frame);
 
     State {
-      // Tables
-      value:                   HashMap::default(),
-      meaning:                 HashMap::default(),
+      // Tables — pre-size the two largest to absorb dump load. The
+      // `meaning` table receives 109,863 entries from latex.dump
+      // alone, so without pre-sizing it doubles 5+ times during
+      // dump load (each rehash is O(N)). `value` receives several
+      // thousand register/state-key entries through the lifecycle.
+      // Effective capacity (FxHashMap, 0.875 load factor): 131072 → ~115k.
+      value:                   HashMap::with_capacity_and_hasher(8_192, Default::default()),
+      meaning:                 HashMap::with_capacity_and_hasher(131_072, Default::default()),
       stash:                   HashMap::default(),
       stash_active:            HashMap::default(),
       catcode:                 HashMap::default(),
