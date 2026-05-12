@@ -289,17 +289,11 @@ Driver: 2403.15855 (Springer Nature `sn-jnl` class).
 Files: `latexml_package/src/package/hyperref_sty.rs`,
 `latexml_core/src/definition/expandable.rs`.
 
-## Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column
+## ~~Known engine gap: `\vtop` × `\gls{...}` × `p{}` tabular column~~
 
-**Status (2026-05-11):** repro minimised; root cause partly understood;
-deferred for a multi-session investigation. Documented here so future
-loops can pick it up.
+**RESOLVED 2026-05-12** (silent side-effect of glossaries raw-load
+chain rewrite). Driver 2210.13325 and minimal repro:
 
-**Witness:** stage 31 paper 2210.13325 — `\documentclass{elsarticle}`
-+ `\usepackage{glossaries}` + `\begin{tabular}{|p{1cm}|l|p{5cm}|...}`
-filled with `\gls{ddos}`, `\gls{mitm}` etc. Rust 8 errors, Perl 0.
-
-**Minimal repro:**
 ```tex
 \documentclass{article}
 \usepackage[acronym]{glossaries}
@@ -310,53 +304,21 @@ filled with `\gls{ddos}`, `\gls{mitm}` etc. Rust 8 errors, Perl 0.
 \end{tabular}
 \end{document}
 ```
-Rust: 7 errors starting with `Error:unexpected:\vtop Attempt to end
-mode internal_vertical in internal_vertical`. Perl: 0 errors.
 
-**What's known:**
-- Trigger is the combination of (a) a `\gls`-family command from the
-  glossaries package (DefConstructor with `enter_horizontal => true`),
-  and (b) a `p{}` column body (which expands `\@startpbox` to
-  `\vtop\bgroup\setlength\hsize{...}\@arrayparboxrestore`).
-- Replace `\gls` with literal "DDoS" → 0 errors.
-- Replace `p{...}` with `l` → 0 errors.
-- `\acrshort{ddos}` triggers it identically; `acronym` package's
-  `\acro{...}` does NOT. So the trigger is glossaries-family, not
-  generic `\xspace`/lookahead.
-- Already commit `197018f818` made VBoxContents/HBoxContents pass
-  the explicit Perl-canonical mode (`internal_vertical` /
-  `restricted_horizontal`) instead of the live MODE value. That fixed
-  a related drift but did not resolve this cascade.
+now converts at **0 errors** (was 7 errors with cascade starting
+`Error:unexpected:\vtop Attempt to end mode internal_vertical`).
+Stress test with elsarticle + 3-column tabular + 3 acronyms via
+`\gls`/`\acrshort` likewise 0 errors. Output is properly nested
+`<tabular><tbody><tr><td><inline-block><p><glossaryref>...`.
 
-**Likely root cause (updated 2026-05-11):** etoolbox's `&`-catcode-3
-trick is not surviving in our raw-loaded `\edef\ifdefparam#1{...&}`
-body. Pattern reduces beyond the `\vtop` mode-mismatch surface error:
-trace shows the underlying trigger is `\let \testempty \@empty
-\ifdefempty \testempty {X}{Y}` inside a `p{}` cell — the `\gls`
-chain only matters because it routes through `\ifdefempty`.
-`\ifdefempty` calls `\ifdefparam` which uses `&` as a delimited-param
-delimiter (etoolbox.sty L42 sets `\catcode\&=3` to make this safe
-inside alignments; etoolbox restores via `\AtEndOfPackage`). The macro
-bodies tokenized while `&` is catcode 3 should keep the `&` tokens at
-catcode 3 forever. Our raw_tex DOES apply `\catcode\&=3` (verified by
-`LXML_TRACE_RAWTEX_CC=1` — `cc(&)` flips ALIGN→MATH after that line
-runs) but at invocation time inside a tabular the macro acts as
-though its `&` is catcode 4 — so the `&` delimiter is interpreted by
-the alignment, the macro's delimited-param parser fails to match, and
-the cascade propagates `\vtop`/`\lx@begin@alignment`/`\@@tabular`
-mode-mismatch errors.
-Workaround verified: writing `{\catcode\&=12 \let\testempty\@empty
-\ifdefempty\testempty{X}{Y}}` inside the cell fixes the cascade — so
-the upstream `\edef` did NOT freeze the catcode-3 tokens correctly,
-and the runtime catcode dominates. Further: investigation needs to
-check how `\edef`'s `DefExpanded` parameter (gullet::read_balanced
-in `base_parameter_types.rs:404`) interacts with the live catcode
-state — specifically whether the body's character→token catcode
-mapping happens AT edef invocation (correct, would freeze cc=3) or
-deferred to expansion time (incorrect, picks up cc=4 from the
-tabular). The `predigest_box_contents_in_mode` (commit `f709810b18`)
-fix is downstream of this and reduces the cascade from 7→3 errors
-on the minimal repro by routing the body through the correct mode.
+Likely fixed-by-chain: the etoolbox `&`-catcode-3 trick that gated
+the original cascade was only relevant because the prior hand-stub
+glossaries binding routed through `\ifdefempty`/`\ifdefparam`. The
+commit-`3883d4d14d` rewrite swapped to raw-load TL glossaries.sty
+via `InputDefinitions(noltxml=>1)`, taking a completely different
+`\gls`-implementation path that doesn't trip the `\edef`-frozen-
+catcode quirk. The etoolbox `&`-catcode hypothesis stands as the
+likely-root if it ever resurfaces from another driver.
 
 ## Round-25 canvas stages 1-43 (2026-05-10 → 2026-05-12)
 
