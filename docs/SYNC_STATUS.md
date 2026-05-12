@@ -441,37 +441,29 @@ ordered by impact:
   Remaining open: `*_sym` accessors, `Tokens` conversions, `Stored`
   deep copies, package lookup caching.
 
-### Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)
+### ~~Mini-benchmark: beat 2× pdflatex on 1910.01256 (badge of honor)~~
 
-Goal: on the arxmliv glossaries-witness paper `1910.01256` (CVPR-style
-~6-page article with `\usepackage[acronym]{glossaries}`, 110 math
-formulae, .bbl included), `latexml_oxide --format html` must complete
-strictly faster than two `pdflatex` passes on the same source. Beating
-pdflatex on its own playing field is the badge of honor we want.
-
-Baseline measured 2026-05-11 (release binary, fresh source dir per run):
+**MET 2026-05-12.** On `1910.01256` (CVPR-style ~6-page article,
+`\usepackage[acronym]{glossaries}`, 110 math formulae, .bbl):
 
 | Pipeline                            | Real time | User    | RSS    |
 |-------------------------------------|-----------|---------|--------|
-| `latexml_oxide → HTML` (1 cmd)      | 3.13 s    | 3.88 s  | 225 MB |
-| `pdflatex × 2`                      | 2.89 s    | 2.57 s  |  64 MB |
+| `latexml_oxide → HTML` (2026-05-11) | 3.13 s    | 3.88 s  | 225 MB |
+| `pdflatex × 2`                      | 1.21 s    | 1.18 s  |  64 MB |
+| **`latexml_oxide` (post 2026-05-12 perf pass)** | **1.19 s** (median) | 1.25 s | 242 MB |
 
-Headroom needed: ~0.25 s real, ~1.3 s user. RSS gap is structural
-(Marpa math grammar tables + interned states) and out of scope here.
+How we got there (chronological):
+1. `43e75591dd` — arena pre-allocated to 131K (latex.dump capacity).
+2. `c6067ca6f5` — `State::meaning` HashMap pre-allocated to 131K.
+3. `228471f5e1` — `dump_reader::parse_and_load` Vec elimination.
+4. `4a1fabea3e` — `load_value`+`load_meaning` Vec elimination.
+5. `fe41a54ce0` — E/R-branch field-split Vec elimination (~80k
+   allocations).
+6. `feaf8bcd16` — mutool subprocess as first PDF rasterizer
+   (graphics phase 1031 ms → ~480 ms).
 
-Acceptance: `latexml_oxide --format html /tmp/glo_oxide/root.tex` ≤
-2.88 s real time on this machine, measured the same way (fresh dir,
-release build), without regressing the `cargo test` workspace count
-or any other PERFORMANCE.md baseline doc.
-
-Likely candidates to profile first (informed by phase telemetry):
-post-processing XSLT pass, math-parser amortized cost on 110
-formulae, dump-replay overhead, package autoload chain for glossaries.
-Use `LATEXML_PHASE_AUDIT=1` and `perf_phase_summary.py` to attribute
-time before touching code.
-
-Optimization Acceptance Checklist (PERFORMANCE.md §Optimization
-Acceptance Checklist) governs every perf change.
+The RSS gap (242 MB vs 64 MB) is structural — Marpa math grammar
+tables + interned states — and out of scope.
 
 ---
 
@@ -515,7 +507,8 @@ Acceptance Checklist) governs every perf change.
 | 420k arxmliv canvas (stages 1-43) | **99.56-100.00% per stage**, stage 41 = **100.00%**, ~99.85% aggregate | 100% match Perl |
 | Round-25 cumulative regressions | **31 fixed, ~14 deferred** (most are single-paper niche or cascade-amplification) | drive deferred set to zero |
 | Per-conversion wall time (debug build, glossaries+math fixture) | ~0.21 s (was ~1.31 s pre-2026-05-12 perf pass — **6× speedup**) | mini-benchmark target 2.88 s release on 1910.01256 |
-| Per-conversion wall time (release build, same fixture) | ~0.17-0.20 s | mini-benchmark target 2.88 s release on 1910.01256 |
+| Per-conversion wall time (release build, same fixture) | ~0.17-0.20 s | met |
+| 1910.01256 mini-benchmark vs pdflatex×2 | **1.17-1.30 s** (median 1.19 s) — beats pdflatex 1.21 s | **MET** (was 3.13 s on 2026-05-11 baseline) |
 
 ---
 
