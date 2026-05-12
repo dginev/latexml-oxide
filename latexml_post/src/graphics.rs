@@ -826,89 +826,6 @@ impl Graphics {
   fn should_try_pdf_cairo_path(source: &str) -> bool {
     source.to_lowercase().ends_with(".pdf")
   }
-
-  /// Process-wide Pdfium binding. Lazy-initialised on first use;
-  /// `None` when the system `libpdfium.so` isn't available (then
-  /// callers fall through to the `pdftocairo` subprocess path).
-  ///
-  /// The returned `&'static Pdfium` is intentionally LEAKED. PDFium's
-  /// `FPDF_DestroyLibrary` does not tolerate being called during
-  /// process-static teardown; running it after thread-locals have
-  /// been dropped triggers a SIGTRAP/assertion. Leaking the binding
-  /// is the documented workaround (see pdfium-render issue #36 and
-  /// PDFium's own `init/destroy` contract).
-  fn pdfium() -> Option<&'static pdfium_render::prelude::Pdfium> {
-    use std::sync::OnceLock;
-    use pdfium_render::prelude::Pdfium;
-    static PDFIUM: OnceLock<Option<&'static Pdfium>> = OnceLock::new();
-    *PDFIUM.get_or_init(|| match Pdfium::bind_to_system_library() {
-      Ok(b) => {
-        let p = Pdfium::new(b);
-        // Box::leak — never dropped, so FPDF_DestroyLibrary never runs.
-        Some(&*Box::leak(Box::new(p)))
-      },
-      Err(_) => None,
-    })
-  }
-
-  /// Rasterize a PDF in-process via the `pdfium-render` Rust crate
-  /// (wraps PDFium, Chrome's PDF engine; BSD-3/Apache-2.0 — clean for
-  /// CC0/MIT redistribution). Eliminates the `pdftocairo` subprocess
-  /// fork overhead and matches its speed on the slow tail.
-  ///
-  /// Measured 2026-05-12 on `AugmentedMSRA10KExperimentVIIIpos.pdf`
-  /// (894 KB matplotlib scatter):
-  ///   pdfium-render: 439 ms  (in-process, no fork)
-  ///   pdftocairo:    860 ms  (subprocess fork)
-  ///
-  /// **Thread-safety**: PDFium is NOT thread-safe (per pdfium-render
-  /// README "Multi-threading" section). All calls are serialised
-  /// through a process-wide mutex. This caps parallelism here, but
-  /// the canvas graphics phase usually has just one slow PDF per
-  /// document anyway, so wall-time is bounded by the slowest PDF.
-  ///
-  /// Requires `libpdfium.so` on the runtime LD path. Returns `false`
-  /// (callers fall through) when the library isn't loadable or any
-  /// step fails — never panics on missing PDFium.
-  fn convert_pdf_via_pdfium(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    use pdfium_render::prelude::*;
-    use std::sync::Mutex;
-    static PDFIUM_MUTEX: Mutex<()> = Mutex::new(());
-    let _guard = PDFIUM_MUTEX.lock().unwrap();
-    let Some(pdfium) = Self::pdfium() else {
-      return false;
-    };
-    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
-    let doc = match pdfium.load_pdf_from_file(Path::new(source), None) {
-      Ok(d) => d,
-      Err(_) => return false,
-    };
-    let page = match doc.pages().get((p1 as i32) - 1) {
-      Ok(p) => p,
-      Err(_) => return false,
-    };
-    let pw_pt = page.width().value;
-    let ph_pt = page.height().value;
-    let target_w = ((pw_pt as f64) * (density as f64) / 72.0).round() as i32;
-    let target_h = ((ph_pt as f64) * (density as f64) / 72.0).round() as i32;
-    let cfg = PdfRenderConfig::new()
-      .set_target_width(target_w)
-      .set_maximum_height(target_h);
-    let bitmap = match page.render_with_config(&cfg) {
-      Ok(b) => b,
-      Err(_) => return false,
-    };
-    let dyn_image = match bitmap.as_image() {
-      Ok(i) => i,
-      Err(_) => return false,
-    };
-    dyn_image
-      .into_rgb8()
-      .save_with_format(dest, image::ImageFormat::Png)
-      .is_ok()
-      && Path::new(dest).exists()
-  }
-
   /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
@@ -1055,21 +972,20 @@ impl Graphics {
     {
       return true;
     }
-    // For PDF sources, try fast rasterizers in order:
-    //   1. pdfium-render — in-process (no subprocess fork), Apache-2.0.
-    //      Fastest on the canvas slow-tail. Requires libpdfium.so at
-    //      runtime; returns false when the library isn't loadable so
-    //      we fall through.
-    //   2. pdftocairo (poppler) subprocess — universally available
-    //      with TeX Live. 25× faster than convert/gs.
-    //   3. convert/gs — last-resort, with hard timeout.
-    if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
-      if Self::convert_pdf_via_pdfium(source, dest, density, page) {
-        return true;
-      }
-      if Self::convert_pdf_via_pdftocairo(source, dest, density, page) {
-        return true;
-      }
+    // For PDF sources, prefer poppler's `pdftocairo --png` over
+    // ImageMagick's `convert`-via-Ghostscript. Empirically 25× faster on
+    // vector-heavy PDFs (e.g. R-Graphics output), and avoids tens-of-seconds
+    // gs runaways. Subprocess fork gives free thread safety +
+    // parallelism. In-process Rust PDF crates were evaluated 2026-05-12
+    // and rejected: mupdf-rs is AGPL-3.0, poppler-rs is GPL, and
+    // pdfium-render (BSD-3) requires single-thread serialisation
+    // because PDFium isn't thread-safe — which negates the fork-free
+    // benefit on our 5-worker graphics phase.
+    if Self::should_try_pdf_cairo_path(source)
+      && dest.to_lowercase().ends_with(".png")
+      && Self::convert_pdf_via_pdftocairo(source, dest, density, page)
+    {
+      return true;
     }
     // Wall-clock timeout to bound `gs`-via-`convert` runaways on
     // pathological PDFs (raster-heavy or with broken xref tables).
