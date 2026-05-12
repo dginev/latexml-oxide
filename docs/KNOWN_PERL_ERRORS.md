@@ -634,3 +634,71 @@ DefMacro!("\\@", "@");
 faithful to the upstream `.tex` file, divergent only from Perl
 LaTeXML's incomplete pool.) Fixed at commit time; all 36 sampled
 witnesses now convert with 0 errors.
+
+## 22. `\altaffiliation` missing optional `[note]` arg in `revtex4_support.sty.ltxml`
+
+**Perl pattern (revtex4_support.sty.ltxml):**
+```perl
+DefMacro('\affiliation{}',  '\@add@to@frontmatter{ltx:creator}{\@@@affiliation{#1}}');
+DefMacro('\altaddress',     '\altaffiliation');
+DefMacro('\altaffiliation', '\affiliation');
+```
+
+**Real REVTeX4 semantics:** `\altaffiliation[note]{address}` accepts an
+optional leading note (typical `[Also at ]`) that is prepended to the
+address text. Perl's binding drops the `[]` from the signature, so the
+TeX parser reads the `[` token as `#1` of `\affiliation{}`, emitting a
+bare literal `[` into `<ltx:contact role='affiliation'>` and dumping
+the rest of the note (`Also at ]`) into the author-name slot.
+
+**Witness:** physics0210041 (stage 3 sweep). Source:
+```tex
+\author{Lars Egil Helseth}
+\address{Max Planck Institute of Colloids and Interfaces, D-14424 Potsdam, Germany}%
+\altaffiliation[Also at ]{Department of Physics, University of Oslo, ...}%
+```
+Output before fix:
+```html
+<span class="ltx_contact ltx_role_affiliation">Max Planck Institute …</span>
+<span class="ltx_contact ltx_role_affiliation">[</span>
+```
+
+**Rust resolution:** `latexml_package::revtex4_support_sty` now uses
+`\altaffiliation[]{}` with body `\@add@to@frontmatter{ltx:creator}
+{\@@@affiliation{#1#2}}`; same shape on `\altaddress`. When no
+optional `[]` is present, `#1` is empty and the original single-arg
+behaviour is recovered. SURPASS-PERL.
+
+## 23. `article.cls.ltxml` `\Huge` defined as 29.8 pt — diverges from LaTeX's 24.88 pt
+
+**Perl pattern (`Package/article.cls.ltxml`, also `book.cls.ltxml`,
+`slides.cls.ltxml`):**
+```perl
+DefPrimitiveI('\Huge', undef, undef, font => { size => 29.8 });
+```
+
+**Real LaTeX (`article.cls` 10pt option):**
+```tex
+\renewcommand\Huge{\@setfontsize\Huge{24.88}{30}}
+```
+
+At a 10pt body, real LaTeX `\Huge` is 248.8% of the base; Perl emits
+298%, an extra ~20% in size. Visible whenever an author uses `\Huge`
+to scale subfigure panel labels — they come out noticeably larger
+than the kerned typography of a typesetter would produce.
+
+Cross-check: Perl's own `Common/Font.pm` declares `Huge => 2.488`
+(semantic-name table, matching LaTeX). The `.cls.ltxml` size override
+of 29.8 is the inconsistency.
+
+**Witness:** cond-mat0301062 §S4.F2 / F3 — `\centerline{\Huge (a)}` /
+`\centerline{\Huge\bf (b)}` subfigure markers render at
+`font-size:298%`. Both Perl and Rust output 298%.
+
+**Rust resolution:** *not yet patched.* Tracking as Perl-faithful
+divergence from real LaTeX. Switching `\Huge` to 24.88 in
+`article_cls.rs`/`book_cls.rs`/`slides_cls.rs` would be a SURPASS-PERL
+change correcting the font scaling to match LaTeX defaults; safe
+because the `Common/Font.pm` semantic value already encodes 24.88.
+Open for future round if visual quality matters more than Perl-test
+parity.

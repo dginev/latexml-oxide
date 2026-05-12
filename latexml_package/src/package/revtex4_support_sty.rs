@@ -19,8 +19,22 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
   DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-  DefMacro!("\\altaddress", "\\altaffiliation");
-  DefMacro!("\\altaffiliation", "\\affiliation");
+  // `\altaffiliation[note]{address}` — REVTeX4 alternative-affiliation
+  // construct with an OPTIONAL leading note (e.g. `[Also at ]`).
+  // Without the `[]` arg in the signature the `[Also at ]` text was
+  // mis-parsed: `\affiliation{}` greedily read `[` as `#1`, emitting
+  // a bare literal `[` into `<ltx:contact role='affiliation'>` and
+  // dumping the rest of the note into the author name slot.
+  // Witness: physics0210041 (revtex4 `\altaffiliation[Also at ]{Dept of
+  // Physics, University of Oslo, ...}`). Real LaTeX's revtex4
+  // `\altaffiliation` takes `[note]{address}` and prepends note to
+  // address. Concatenating `#1#2` matches that semantics; when there
+  // is no optional `[]`, #1 is empty and behaviour matches the legacy
+  // single-arg path. SURPASS-PERL: Perl LaTeXML
+  // `revtex4_support.sty.ltxml` also lacks the optional arg and has
+  // the same misformatting on this witness.
+  DefMacro!("\\altaddress[]{}",     "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
+  DefMacro!("\\altaffiliation[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
   DefMacro!("\\andname", "and");
   DefMacro!("\\collaboration", "");
   DefMacro!("\\noaffiliation", "");
