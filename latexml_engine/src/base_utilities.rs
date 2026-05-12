@@ -2127,8 +2127,19 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   }
 
   egroup()?;
+  // Downgrade vendor-class typesetting-only errors to Info. Publisher
+  // classes routinely guard line widths, header heights, and other
+  // PDF-layout concerns with `\PackageError`/`\GenericError`. We
+  // produce XML/HTML, not PDF — these guards have no semantic value
+  // in our output. See WISDOM #50 and
+  // memory/feedback_size_layout_errors_moot.md.
+  let effective_kind = if kind == "error" && is_typesetting_only_message(&message) {
+    "info"
+  } else {
+    kind
+  };
   //   return ('latex', $cmd, $stomach, $message);
-  match kind {
+  match effective_kind {
     "error" => {
       Error!("latex", cmd, message);
     },
@@ -2141,6 +2152,45 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };
   Ok(())
+}
+
+/// Heuristic classifier for vendor `\PackageError`/`\GenericError`
+/// messages whose only concern is PDF typesetting (size, layout,
+/// position, page-fit). These have no signal in XML/HTML output and
+/// are downgraded to `Info:` per WISDOM #50.
+fn is_typesetting_only_message(message: &str) -> bool {
+  let lower = message.to_ascii_lowercase();
+  // Phrase set tuned against the stage-1 sweep of the 100k warning
+  // corpus. Conservative — every phrase here is purely about visual
+  // layout, never about semantic correctness. Examples:
+  //   "Running heading author exceeds size limitations" (AISTATS)
+  //   "Running heading title exceeds size limitations" (AISTATS)
+  //   "Caption too wide for page" (various)
+  //   "Heading breaks the line" (revtex, IEEEtran)
+  const PHRASES: &[&str] = &[
+    "exceeds size limitations",
+    "exceeds size limitation",
+    "running heading",
+    "running title",
+    "running author",
+    "breaks the line",
+    "too wide for",
+    "too tall for",
+    "too long for",
+    "too narrow for",
+    "doesn't fit",
+    "does not fit",
+    "page overflow",
+    "column overflow",
+    "exceeds the page",
+    "exceeds the column",
+    "exceeds the line",
+    "exceeds the textwidth",
+    "exceeds \\textwidth",
+    "exceeds \\columnwidth",
+    "exceeds \\linewidth",
+  ];
+  PHRASES.iter().any(|p| lower.contains(p))
 }
 
 /// Convert a vertical positioning, optional argument.

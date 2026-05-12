@@ -1450,3 +1450,67 @@ compete for the same child (e.g. `ltx:text` vs `ltx:picture`,
 model returns the *maximum*-scoring intermediate, not the
 first-inserted one. Add a sorted tag iteration if determinism is
 needed beyond desirability ranking.
+
+## #50 Vendor-class size/layout `\PackageError` / `\GenericError` is moot in XML→HTML output — silence them
+
+**Meta-principle.** LaTeXML and our Rust port produce *structured XML
+and derivative formats* (HTML, MathML, ePub, JATS). We never produce
+PDF — we don't run line-breaking, page assembly, justification, or
+typesetter-grade dimension reconciliation.
+
+Class / package files vendored by publishers (revtex, IEEEtran,
+AISTATS, ACM, Springer Nature, etc.) routinely include defensive
+`\PackageError{X}{...exceeds size limitations...}` / `\GenericError`
+calls that fire when the typeset PDF would overflow a column,
+header, or page region. These guards exist to alert the AUTHOR that
+their PDF will look wrong. In our paradigm, the guards are
+load-bearing on dimension semantics we cannot — and should not —
+faithfully reproduce. We compute box dimensions heuristically (font
+metric × char count, paragraph wrap at `\hsize`), and the heuristic
+is necessarily off from real TeX. So:
+
+* If we COMPUTE the dimension to match real TeX exactly, the guard
+  fires when the PDF would overflow — and we emit an `Error:` that
+  the conversion is otherwise fine on.
+* If we compute it differently (we always do), the guard fires
+  spuriously in cases where real TeX would have been silent — also
+  an `Error:`.
+
+Either way, errors emitted by these guards are signal-free
+diagnostics about a typesetting outcome that never happens in our
+pipeline.
+
+**Rule:** when a vendor class fires `\PackageError`/`\GenericError`
+whose message is *purely about size, layout, position, or page-fit*
+("exceeds size", "too long", "too wide", "too tall", "breaks the
+line", "doesn't fit", "running heading", "overflows", etc.),
+**silence or downgrade the error**. Match Perl LaTeXML's behaviour
+when we know it: Perl often gets the dimension different too and
+also silently passes the guard. The signal we care about is
+*semantic* (missing macros, malformed structures, undefined refs),
+not *typographic*.
+
+**How to apply:** classify the message text in our `\GenericError` /
+`\PackageError` handlers. A regex over the message body (case-
+insensitive, matching the size/layout phrases above) routes the
+emission to `Info:` or `Warn:` instead of `Error:`. Do not gate on
+the calling class — every publisher class has its own variants of
+the same guard.
+
+**Why not "fix" the dimension computation instead?** Each
+publisher's guard tests a different combination of `\wd`, `\ht`,
+`\dp`, `\baselineskip`, `\hsize`, `\textwidth`. Matching real-TeX
+output for every one of them would require porting line-breaking and
+page assembly. That's a multi-year undertaking with no semantic
+output value.
+
+**Witnesses:**
+* aistats2026.sty `\ifdim\ht\autrun>10pt` → `\PackageError{Document}
+  {Running heading author exceeds size limitations}` (12 papers in
+  stage-1 of the 100k warning corpus, including arXiv:2602.11863).
+* aistats2026.sty's analogous `\ifdim\wd\titrun>\textwidth` running
+  title check.
+* Springer Nature `sn-jnl.cls` `RunningHead` length checks.
+* IEEEtran.cls `\ifclassoptioncomsoc` runninghead asserts.
+* revtex4_* `\altaffiliation` width checks (related).
+
