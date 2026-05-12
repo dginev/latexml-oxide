@@ -11,6 +11,24 @@ Stage 41 hit **100.00% OK**. Aggregate ~99.85%. Next focus: retire
 hand-stub bindings via raw-load (xfor → mfirstuc → datatool-base →
 glossaries — see "Planned" below).
 
+**Round-25 graphics + perf re-sweep (2026-05-12 afternoon)**: after
+the graphics correctness fixes (`apply_graphicx_transforms`
+width-only, PGPLOT `%%Orientation: Landscape` route) and the perf
+pass (kpathsea prewarm, mouth UTF-8 fast path, XSLT skip-roundtrip,
+worker_cap 8→32, PDF box byte fast-fail), re-ran stages 1-3 against
+baselines:
+
+| Stage | Baseline OK | Re-sweep OK | Δ | ok→fail | fail→ok |
+|---|---:|---:|---:|---:|---:|
+| 1 | 9966/10000 | **9984/10000** | **+18** | 0 | 18 |
+| 2 | 9991/10000 | 9989/10000 | -2 | 2 (load flake) | 0 |
+| 3 | 9984/10000 | **9985/10000** | **+1** | 0 | 1 |
+| **total** | 29941/30000 | **29958/30000** | **+17** | 0 real | 19 |
+
+Stage 2's 2 "regressions" (cond-mat0205476 segfault, astro-ph0206056
+conversion_error) reproduce clean standalone in <1 s — they are
+sweep-load flakes under 16-worker CPU pressure, not real regressions.
+
 ### Round-25 active worklist
 
 `cargo test --tests` = **1185/0/0** (post-rebase onto master commit
@@ -31,6 +49,11 @@ glossaries — see "Planned" below).
 | `43e75591dd`+`c6067ca6f5`+`22bf0619cf` | perf | arena + meaning + char-keyed HashMaps pre-allocated to skip startup growth |
 | `228471f5e1` | perf | dump_reader: drop per-line Vec alloc (~800 ms debug / ~30 ms release per conversion) |
 | `48fd96ac75` | 2402.01336 (LHCb 1067-author) | graphics: content-hash dedup (Plan::Copy + Plan::Convert key on SipHash(content) instead of source path; 1083-node paper → 17 output files) + direct gs EPS path (1.7× faster than IM convert, matches IM antialiasing flags) |
+| `71b3b1d390` | xslt perf | skip XSLT serialize/reparse roundtrip (`Document::dup()`) + cache LazyLock regexes in `extract_svg_fragments` + `finalize_html5` |
+| `10e1117709` | kpathsea + PDF box | background-thread kpathsea prewarm (saves ~38 ms wall on 1910.01256 by overlapping with bootstrap); `read_pdf_page_box` byte-level fast-fail (skips Utf8Chunks on matplotlib PDFs); `find_graphics_paths` regex cache |
+| `e8b49a3233` | mouth perf | `decode_bytes` fast path: `str::from_utf8` (SIMD-validated) instead of `from_utf8_lossy`; skip `\u{FFFD}` replace when no FFFD present |
+| `d8ee016f8e` | graphics + LHCb | worker_cap 8 → 32 (helps tail papers like 17-PDF LHCb dedup); `extract_svg_fragments` picture-fast-fail (skip backtracking regex when no `<picture>` substring) |
+| `eb916edff5` | astro-ph0005397 + astro-ph0103041 | `apply_graphicx_transforms` width-only / height-only path: auto-scale unset dimension per graphicx semantics (Fig 11 sfh_burst 230×958 → 230×230); `postscript_is_landscape()` + ps2pdf route for `%%Orientation: Landscape` PS (PGPLOT, NickMorgan.fig2 992×1403 portrait-upside-down → 1404×992 landscape correct); cortex_worker kpathsea prewarm |
 
 **Format dump enabled 2026-05-08** (`resources/dumps/latex.dump.txt`,
 25,439 entries, 3.9 MB, 389 expl3 markers). Dump path 5 in
