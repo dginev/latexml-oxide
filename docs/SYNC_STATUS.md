@@ -247,15 +247,35 @@ mode internal_vertical in internal_vertical`. Perl: 0 errors.
   `restricted_horizontal`) instead of the live MODE value. That fixed
   a related drift but did not resolve this cascade.
 
-**Likely root cause:** frame-counting mismatch when the body-reader
-(`predigest_box_contents_in_mode`) digests tokens inside an inner
-`\vtop\bgroup` from `\@startpbox`, while the surrounding alignment
-also opened a frame. `\gls`'s constructor with `enter_horizontal =>
-true` mutates MODE in place (no new frame) but the subsequent group
-closes may misalign frame BOUND_MODE bindings with the outer `\vtop`'s
-mode bookkeeping. Trace-with `LXML_TRACE_BOUND_MODE` and a careful
-look at the inner/outer `\vtop` interaction inside `\@startpbox` /
-`\@endpbox` are likely the entry points.
+**Likely root cause (updated 2026-05-11):** etoolbox's `&`-catcode-3
+trick is not surviving in our raw-loaded `\edef\ifdefparam#1{...&}`
+body. Pattern reduces beyond the `\vtop` mode-mismatch surface error:
+trace shows the underlying trigger is `\let \testempty \@empty
+\ifdefempty \testempty {X}{Y}` inside a `p{}` cell — the `\gls`
+chain only matters because it routes through `\ifdefempty`.
+`\ifdefempty` calls `\ifdefparam` which uses `&` as a delimited-param
+delimiter (etoolbox.sty L42 sets `\catcode\&=3` to make this safe
+inside alignments; etoolbox restores via `\AtEndOfPackage`). The macro
+bodies tokenized while `&` is catcode 3 should keep the `&` tokens at
+catcode 3 forever. Our raw_tex DOES apply `\catcode\&=3` (verified by
+`LXML_TRACE_RAWTEX_CC=1` — `cc(&)` flips ALIGN→MATH after that line
+runs) but at invocation time inside a tabular the macro acts as
+though its `&` is catcode 4 — so the `&` delimiter is interpreted by
+the alignment, the macro's delimited-param parser fails to match, and
+the cascade propagates `\vtop`/`\lx@begin@alignment`/`\@@tabular`
+mode-mismatch errors.
+Workaround verified: writing `{\catcode\&=12 \let\testempty\@empty
+\ifdefempty\testempty{X}{Y}}` inside the cell fixes the cascade — so
+the upstream `\edef` did NOT freeze the catcode-3 tokens correctly,
+and the runtime catcode dominates. Further: investigation needs to
+check how `\edef`'s `DefExpanded` parameter (gullet::read_balanced
+in `base_parameter_types.rs:404`) interacts with the live catcode
+state — specifically whether the body's character→token catcode
+mapping happens AT edef invocation (correct, would freeze cc=3) or
+deferred to expansion time (incorrect, picks up cc=4 from the
+tabular). The `predigest_box_contents_in_mode` (commit `f709810b18`)
+fix is downstream of this and reduces the cascade from 7→3 errors
+on the minimal repro by routing the body through the correct mode.
 
 **Stage 1 mini-sandbox completion (2026-05-10)**: 34 failure-set
 papers verified Rust-vs-Perl with `--path=~/git/ar5iv-bindings
