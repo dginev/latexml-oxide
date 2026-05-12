@@ -22,6 +22,13 @@ regex = "1.7.1"
 unicode-normalization = "0.1.25"
 imagesize = "0.14"
 rustc-hash = "2.0.0"
+# In-process PDF rasterizer + SVG vectorizer. Benchmark 2026-05-12:
+# beats subprocess mutool by 21ms on PNG and 61ms on SVG of the
+# matplotlib slow-tail PDF; eliminates per-PDF fork overhead
+# (~5ms × N) on tiny figures. License caveat: mupdf-rs is AGPL-3.0
+# — the project owner has opted to treat the crate as a runtime
+# linking boundary for now. See README and graphics.rs comments.
+mupdf = "0.6"
 # Telemetry-only — used in process_chain to attribute time to the
 # correct Phase based on each processor's get_name(). See docs/TELEMETRY.md.
 latexml_core = {path = "../latexml_core"}

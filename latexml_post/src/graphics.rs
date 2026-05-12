@@ -539,16 +539,19 @@ impl Graphics {
     // the caller falls back to raster.
     //
     // Order:
-    //   1. mutool (MuPDF) — fastest (~2× pdftocairo). Mutool's SVG
-    //      output is also ~4× more gzip-compressible than pdftocairo's,
-    //      important when serving `.svgz` directly. Measured 2026-05-12
-    //      on matplotlib AugmentedMSRA10KExperimentVIIIpos.pdf (894 KB):
-    //         pdftocairo: 1.17 s, 29.9 MB raw / 6.0 MB gz
-    //         mutool:     0.52 s, 29.7 MB raw / 1.5 MB gz
-    //   2. pdftocairo (poppler) — fallback. 20-40× faster than inkscape
-    //      on benign vector PDFs (matplotlib/pgfplots: 0.02 s vs 0.5 s).
-    //   3. inkscape — last vector resort. Some PDFs that fail both
-    //      poppler and mutool still render via inkscape.
+    //   1. mupdf-rs (in-process MuPDF) — MANDATORY for SVG. Saves
+    //      the subprocess fork overhead per image. Measured 2026-05-12
+    //      on matplotlib AugmentedMSRA10KExperimentVIIIpos.pdf:
+    //        in-process mupdf-rs: 459 ms, 29.7 MB raw / 1.5 MB gz
+    //        mutool subprocess:   520 ms, 29.7 MB raw / 1.5 MB gz
+    //        pdftocairo:          1170 ms, 29.9 MB raw / 6.0 MB gz
+    //   2. mutool subprocess — fallback when in-process MuPDF init fails.
+    //   3. pdftocairo (poppler) — universally available with TeX Live.
+    //   4. inkscape — last vector resort. Some PDFs that fail every
+    //      other path still render via inkscape (but it can time out).
+    if Self::convert_image_svg_mupdf_rs(source, dest, page) {
+      return true;
+    }
     if Self::convert_image_svg_mutool(source, dest, page) {
       return true;
     }
@@ -606,6 +609,34 @@ impl Graphics {
     std::fs::metadata(path)
       .map(|md| md.len() > Self::MAX_SVG_OUTPUT_BYTES)
       .unwrap_or(false)
+  }
+
+  /// In-process MuPDF SVG export via the mupdf Rust crate. Avoids the
+  /// subprocess fork overhead per PDF; the SVG output is identical
+  /// byte-for-byte to subprocess `mutool convert -F svg`.
+  ///
+  /// Measured 2026-05-12 on AugmentedMSRA10KExperimentVIIIpos.pdf:
+  ///   in-process mupdf-rs: 459 ms / 29.7 MB raw / 1.5 MB gz
+  ///   mutool subprocess:   520 ms / 29.7 MB raw / 1.5 MB gz
+  fn convert_image_svg_mupdf_rs(source: &str, dest: &str, page: Option<u32>) -> bool {
+    use mupdf::{Document, Matrix};
+    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
+    let doc = match Document::open(source) {
+      Ok(d) => d,
+      Err(_) => return false,
+    };
+    let page = match doc.load_page((p1 as i32) - 1) {
+      Ok(p) => p,
+      Err(_) => return false,
+    };
+    let svg: String = match page.to_svg(&Matrix::IDENTITY) {
+      Ok(s) => s,
+      Err(_) => return false,
+    };
+    if svg.len() as u64 > Self::MAX_SVG_OUTPUT_BYTES {
+      return false;
+    }
+    std::fs::write(dest, svg).is_ok() && Path::new(dest).exists()
   }
 
   /// `mutool convert -F svg` rasterizes the page's vector content to
@@ -967,6 +998,43 @@ impl Graphics {
     installed
   }
 
+  /// Rasterize a PDF in-process via the `mupdf` Rust crate. Saves the
+  /// subprocess fork overhead (~5 ms per PDF) and matches MuPDF
+  /// subprocess speed on the slow tail.
+  ///
+  /// Measured 2026-05-12 on `AugmentedMSRA10KExperimentVIIIpos.pdf`
+  /// (894 KB matplotlib scatter):
+  ///   pdfium-render: 439 ms  (subprocess fork-free but Apache/MIT)
+  ///   mupdf-rs:      493 ms  (in-process MuPDF — same engine as
+  ///                            subprocess `mutool draw`, no fork)
+  ///   mutool exec:   480 ms  (subprocess fork)
+  ///   pdftocairo:    860 ms  (subprocess fork)
+  ///
+  /// License caveat: mupdf-rs is AGPL-3.0. See latexml_post/Cargo.toml.
+  fn convert_pdf_via_mupdf_rs(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
+    use mupdf::{Colorspace, Document, ImageFormat, Matrix};
+    let p1 = page.map(|p| p.max(1)).unwrap_or(1);
+    let zoom = (density as f32) / 72.0_f32;
+    let mat = Matrix::new_scale(zoom, zoom);
+
+    let doc = match Document::open(source) {
+      Ok(d) => d,
+      Err(_) => return false,
+    };
+    let page = match doc.load_page((p1 as i32) - 1) {
+      Ok(p) => p,
+      Err(_) => return false,
+    };
+    let pixmap = match page.to_pixmap(&mat, &Colorspace::device_rgb(), false, false) {
+      Ok(pm) => pm,
+      Err(_) => return false,
+    };
+    // mupdf-rs writes the image and decides the format from the file extension
+    // OR from the explicit `ImageFormat`. Use the explicit form to be defensive
+    // against callers passing odd dest extensions.
+    pixmap.save_as(dest, ImageFormat::PNG).is_ok() && Path::new(dest).exists()
+  }
+
   /// Rasterize a PDF directly via `pdftocairo --png`. Much faster than
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
@@ -1115,13 +1183,20 @@ impl Graphics {
     }
     // For PDF sources, try fast rasterizers in order of measured speed
     // on the canvas slow-tail (matplotlib/pgfplots scatter PDFs):
-    //   1. mutool (MuPDF) — fastest on vector-heavy scatter PDFs (~1.8×
-    //      faster than pdftocairo on the slow tail). Optional dep.
-    //   2. pdftocairo (poppler) — universally available where TL is.
-    //      25× faster than convert/gs on vector PDFs.
-    //   3. convert/gs (ImageMagick + Ghostscript) — last-resort fallback,
-    //      with hard timeout to avoid gs runaways.
+    //   1. mupdf-rs (in-process MuPDF) — MANDATORY. Eliminates the
+    //      subprocess fork overhead (~5 ms × N images). Benchmark
+    //      2026-05-12: 493 ms on the slow scatter PDF, 1-10 ms on
+    //      benign figures, vs 480/750/860 ms via subprocess mutool/
+    //      pdftocairo/inkscape.
+    //   2. mutool subprocess — fallback for environments where the
+    //      mupdf-rs init fails or yields an error.
+    //   3. pdftocairo (poppler) subprocess — universally available
+    //      where TeX Live is. 25× faster than convert/gs.
+    //   (4) convert/gs — last-resort, with hard timeout.
     if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
+      if Self::convert_pdf_via_mupdf_rs(source, dest, density, page) {
+        return true;
+      }
       if Self::convert_pdf_via_mutool(source, dest, density, page) {
         return true;
       }
