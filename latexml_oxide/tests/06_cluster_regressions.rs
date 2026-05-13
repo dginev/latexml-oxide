@@ -56,3 +56,12 @@ fn cluster_setdec_dec() { convert_clean("tests/cluster_regressions/setdec_dec.te
 
 #[test]
 fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppercase.tex"); }
+
+/// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
+/// and `\textquoteright` apostrophe — must produce 0 errors after the
+/// csname-stream soft-substitute fixes for `\lx@applyaccent`, the canonical
+/// `\text…` primitives, and the NFSS `\<encoding>\i`/`\j` glyphs.
+/// Pinned by stage-1..3 of the 100k warning corpus (arXiv:2603.22193,
+/// 2603.23433, 2604.20621 — twemoji St. Barthélemy / Côte d'Ivoire / São Tomé).
+#[test]
+fn cluster_csname_accent() { convert_clean("tests/cluster_regressions/csname_accent.tex"); }
