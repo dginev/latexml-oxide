@@ -154,6 +154,154 @@ hep-th9703142, stage-6). Other Pair-error papers in the corpus
 (hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
 malformed pairs that are paper-level errors SHARED with Perl.
 
+**Round-27 cluster work plan (opened 2026-05-13, official)**:
+
+The 220-paper classified-cluster cohort below is being worked
+from kernel-and-core-quality outward to individual macro
+bindings, per user directive. Each cluster gets a root-cause
+analysis and a principled fix path. The first
+surpass-Perl improvement on the cohort landed in `f54df88c22`
+(`\lx@notetext` optional `[id]` → `OptionalSemiverbatim`)
+which fixes the `\fntext[footnote_label2]` family.
+
+### Cluster A — Catcode-leak through optional-arg digestion (math-mode-as-symptom)
+
+**Status:** OPEN, in progress 2026-05-13. First fix landed
+(`f54df88c22`). ~78 remaining first-error candidates.
+
+**Root cause.** Constructors (and macros) that declare an
+optional `[]` slot read with the *default* catcode regime —
+`_`, `^`, `~`, `&`, `$`, `#`, `'` all keep their special TeX
+catcodes. When a paper writes `_` literally in a slot that's
+semantically an identifier (xml:id, label, URL, file path,
+keyword), the SUB-catcode token bleeds into the digester via
+`Parameter::digest → Tokens::be_digested → stomach::digest`,
+runs through `invoke_token` on `T_SUB!`, hits the text-mode
+branch of `script_handler`, and errors.
+
+Perl LaTeXML has the same `[]`-default-catcodes behaviour and
+fires the same error at the same source line on the same
+papers, so this cluster is currently **SHARED-FAILURE**. The
+surpass-Perl path is to change those parameter slots to
+`OptionalSemiverbatim` (or `Semiverbatim` for the mandatory
+`{}` variant) which sets `_`/`^`/`~`/`&`/`$`/`#`/`'` to OTHER
+catcode at read time, making the identifier read as plain text.
+
+**Principled approach.** Audit constructors whose optional /
+mandatory slots are semantically identifiers (`xml:id`,
+`label`, `href`, `key`, `bib-key`, `filename`, `\ref` target).
+Change those slots to `OptionalSemiverbatim` /
+`Semiverbatim`. Constructors whose slots are semantically
+*content* (caption text, note body, figure body) stay as
+default-catcoded — those slots SHOULD allow `_`/`^` inside
+inline math `$x_1$` correctly.
+
+**Already fixed:**
+- `\lx@notetext OptionalSemiverbatim {} [] {}`
+  (commit `f54df88c22`) — fixes `\fntext`, `\tnotetext`,
+  `\footnotetext`. Witness: 2604.00193.
+
+**Audit candidates (next sprint):**
+- `\ref`, `\pageref`, `\eqref` — already partially handled, audit
+- `\label` — already `Semiverbatim` (verify)
+- `\cite`, `\citep`, `\citet`, `\citealp` — `key` arg
+- `\href`, `\url`, `\hyperref` — URL slot
+- `\bibitem[opt]{key}` — key arg
+- `\caption`/`\subcaption` — `[short]` is identifier-shape
+- `\thanks[opt]` — same pattern as `\fntext`
+- `\index` — entry key
+
+Each fix gets a witness recovery count noted here.
+
+**Acceptance:** Re-sample the 79 math-mode-first papers after
+each binding change; track recovery delta in this section.
+
+### Cluster B — `\@math@daccent` / `\@math@baccent` paper-side `\def\d`
+
+**Status:** SHARED-FAILURE confirmed. CANDIDATE FOR
+"surpass-Perl" if a kernel-side fix can detect paper-local
+`\def\<one-letter-CS>` before docclass and protect the user's
+intent.
+
+**Root cause.** Standard plain-TeX kernel re-defines `\d` /
+`\th` / `\b` to text accents on load. Papers that
+`\def\d{...}` before `\documentclass` get over-written.
+Witnesses: hep-th0005159, hep-th0010165, hep-ph0001306,
+cond-mat0102064, cond-mat0103632, hep-th0005268 (plus 14
+math-cascade papers).
+
+**Principled approach.** The kernel SHOULDN'T re-define
+already-`\def`-ed one-letter CSes. Option (a): in latex.ltx
+processing, check `IsDefinable` before `\let`-ing the text
+accent. Option (b): record paper-local `\def\d` defs in a
+"user-redefined" set and skip the kernel override for those.
+
+**Acceptance:** the witness cluster errors go to 0; Perl
+should be informed of the same surpass-opportunity.
+
+### Cluster C — `\begin{abstract}` mode-switch on plain-TeX-style abstract
+
+**Status:** SHARED-FAILURE confirmed (5/6 sampled). CANDIDATE
+FOR surpass-Perl. ~46 first-error papers.
+
+**Root cause.** Pre-2000 papers use `{\abstract \ni …}` as a
+font-switch group (`\font\abstract=cmr8`), then `}` closes the
+group but the abstract environment is still open and in
+internal_vertical mode. `\abstract` in our binding is
+"locked" — the user's `\font\abstract=cmr8` can't override it.
+
+**Principled approach.** Make our `\font` primitive recognise
+"redefining a locked CS to a font" as a USER OVERRIDE
+indicator and bypass the lock for that CS. This is a kernel
+quality improvement: `\font` is supposed to fully replace the
+CS's meaning per TeX semantics.
+
+### Cluster D — babel "Unknown option" languages on TL2025
+
+**Status:** SHARED-FAILURE confirmed. ~58 first-error papers.
+
+**Root cause.** TL2025 babel dropped `italian.ldf`,
+`spanish.ldf`, etc. in favour of `locale/<lang>/babel-<lang>.tex`
+(ini-file system). Both engines fail `Package babel Error:
+Unknown option 'italian'` on `\usepackage[italian]{babel}`.
+
+**Principled approach.** Patch our `babel.sty` binding to
+recognise the new ini-file system: if `<lang>.ldf` not found,
+look up `locale/<lang2>/babel-<lang>.tex` (where `<lang2>` is
+the ISO code from `babel_support_sty::babel_language_to_iso`)
+and load it. Surpass-Perl until upstream catches up.
+
+### Cluster E — expl3 csname-protocol cluster (deferred Task #22)
+
+**Status:** OPEN. Same root cause as the mhchem retirement gap.
+~13 first-error papers + the 77-error mhchem residual.
+
+**Root cause and approach** already documented in the
+"mhchem retirement" section above. No change.
+
+### Cluster F — `\endgroup`-`\figure` RevTeX 3.x short-form
+
+**Status:** Rust SUPERSEDES Perl on 9/10. ~10 papers.
+
+**Root cause.** RevTeX 3.x's `\figure{N} caption…` short-form
+has no binding in either engine. Rust recovers further from
+the resulting mode-mismatch than Perl, so the cluster is
+Rust-better. Witness counts: cond-mat9607130 (Rust 1, Perl 7),
+hep-th9410220 (Rust 93, Perl 102), …
+
+**Principled approach.** Provide a `\figure{N} caption` short-
+form in `revtex_cls.rs` / `revtex3_support_sty.rs` to
+recover ALL the way to 0 errors. Driver counts witness recovery
+per fix.
+
+### Cluster G — long-tail single-witnesses (~274 papers)
+
+**Status:** UNCLASSIFIED. Will be sampled in passes; expected
+to split between SHARED-FAILURE, paper-side bugs, and
+single-witness regressions.
+
+---
+
 **Round-26 follow-on resume queue (open as of 2026-05-13)**:
 
 * **`\lx@`-CS round-trip via `\write`/`\input` — RESOLVED 2026-05-13.**
