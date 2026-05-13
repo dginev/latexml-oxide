@@ -308,6 +308,40 @@ single-witness regressions.
 
 ---
 
+**Round-27 hunt-and-fix mini-pass (2026-05-13 evening)**.
+After clarifying the rule that bindings are per-`.sty.ltxml`/`.cls.ltxml`
+scope and that Perl-succeeds-without-binding cases are root-cause
+opportunities, ran `parity_check.sh` on a 20-paper random sample of
+the sweep_v3 failing set and chased the REAL REGRESSIONs back to
+their porting gaps. Four fixes landed:
+
+* `28f0e1cd53` engine: downgrade babel 'Unknown option' error to Info
+  (TL2025 ldf-removal cohort, see Cluster D).
+* `c899b074ae` omnibus: `\thechapter` autoload routes to `book.cls`
+  not `book.sty`. Perl's `OmniBus.cls.ltxml` L297 uses
+  `DefAutoload('thechapter', 'book.cls.ltxml')` — the `.cls.ltxml`
+  suffix is the binding *kind*, not a free string. Rust had been
+  routing every autoload through `require_package` (sty path), so
+  `\thechapter` fell into TL's obsolete `book.sty` shim which fires
+  `\LoadClass{book}` mid-body and errors. Witness: arXiv:2602.10407
+  Rust=1 → 0.
+* `7c02393727` parameter+pstricks: two parity fixes — tolerant `Pair`
+  reader matching Perl's `readUntil(',')`/`readUntil(')')` (witness:
+  physics/9709007 typoed `(3.2,3,8)`), and `\newpsobject{}{}{}`
+  ported from Perl `pstricks_support.sty.ltxml` L849-861 (was a
+  no-op stub; witness: physics/9710028).
+* `a3000c5cd7` jhep: `\href` redefinition (`Semiverbatim Semiverbatim`)
+  ported from Perl `JHEP.cls.ltxml` L133-136. Crucial for all
+  `\@spires`-style journal-citation macros (`\am`, `\ap`, `\np`, …)
+  that papers call in math mode — without the override, hyperref's
+  `HyperVerbatim {}` leaves `^`/`_` as SUPER/SUB in the body, firing
+  `script_handler` at the trailing position. Witness: arXiv:2602.22473
+  Rust=1 → 0.
+
+All four pinned by regression tests under
+`latexml_oxide/tests/cluster_regressions/`. Suite stayed clean from
+1192 → 1196.
+
 **Round-26 follow-on resume queue (open as of 2026-05-13)**:
 
 * **`\lx@`-CS round-trip via `\write`/`\input` — RESOLVED 2026-05-13.**
