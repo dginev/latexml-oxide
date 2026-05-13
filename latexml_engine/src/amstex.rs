@@ -36,18 +36,35 @@ LoadDefinitions!({
 
   // \documentstyle{<style>} — pretend the style is a class for
   // RequirePackage purposes; fall back to amsppt (Perl L65-73).
+  //
+  // Perl uses `RequirePackage($style, ...) || RequirePackage('amsppt')`,
+  // where `||` checks the BOOLEAN success of InputDefinitions. The
+  // Rust port previously used `is_ok()` on `require_package`, but
+  // `require_package` returns `Ok(())` even when nothing loaded
+  // (the miss-handler fires `Warn:missing_file` and returns OK), so
+  // the fallback to `amsppt` never ran. Mirror Perl's semantics by
+  // probing the `<style>.sty_loaded` flag (or the raw equivalent)
+  // AFTER the call. Witness: arXiv:gr-qc/9507042 — paper has
+  // `\documentstyle{fic}` (fic.sty is a paper-local AmSTeX style
+  // derived from amsppt). Without the fallback, `\leftheadtext` and
+  // 23 other amsppt CSes stayed undefined.
   DefConstructor!("\\documentstyle Semiverbatim",
     "<?latexml class='#1' amstex='true'?>",
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
       let style = style.trim().to_string();
-      let ok = !style.is_empty() && require_package(&style, RequireOptions {
-        extension: Some(Cow::Borrowed("sty")),
-        notex: Some(true),
-        as_class: true,
-        ..RequireOptions::default()
-      }).is_ok();
-      if !ok {
+      let primary_ok = if style.is_empty() { false } else {
+        require_package(&style, RequireOptions {
+          extension: Some(Cow::Borrowed("sty")),
+          notex: Some(true),
+          as_class: true,
+          ..RequireOptions::default()
+        })?;
+        let filename = s!("{}.sty", style);
+        state::lookup_bool(&s!("{}_loaded", filename))
+          || state::lookup_bool(&s!("{}_raw_loaded", filename))
+      };
+      if !primary_ok {
         require_package("amsppt", RequireOptions::default())?;
       }
     });
