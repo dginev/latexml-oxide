@@ -27,13 +27,23 @@ LoadDefinitions!({
 
   // LaTeX2e typesetting commands users sometimes mix into AmS-TeX
   // sources (the AmSTeX.pool path doesn't load latex_constructs). Stub
-  // as no-ops — vertical/horizontal spacing has no XML meaning.
-  // Witnesses: arXiv:funct-an9211012, funct-an9211013 — both have
-  //   \vspace{1\jot} inside multi-line equation arrays.
-  // Perl LaTeXML Fatals on the undefined CS; we go further and emit a
-  // clean document by absorbing the dimen argument.
+  // as no-ops — vertical/horizontal spacing and font-size selection
+  // have no XML meaning. Perl LaTeXML Fatals on these undefined CSes;
+  // we emit a clean document by absorbing the argument (where one
+  // exists) or treating the CS as a benign no-op.
+  // Witnesses (stage-4 of 100k warning corpus):
+  //   arXiv:funct-an9211012/13 — \\vspace{1\\jot} inside aligned equations
+  //   arXiv:funct-an9312004    — \\scriptsize font-size
   DefMacro!("\\vspace OptionalMatch:* {}", None);
   DefMacro!("\\hspace OptionalMatch:* {}", None);
+  // LaTeX2e font-size commands (no-op in AMSTeX mode).
+  for sz in ["\\tiny", "\\scriptsize", "\\footnotesize", "\\small",
+             "\\normalsize", "\\large", "\\Large", "\\LARGE",
+             "\\huge", "\\Huge"] {
+    if !state::has_meaning(&T_CS!(sz)) {
+      def_macro(T_CS!(sz), None, None, None)?;
+    }
+  }
   DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
   Let!("\\endtitle", "\\relax");
   DefMacro!("\\author Until:\\endauthor",
