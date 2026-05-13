@@ -919,6 +919,28 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
+    // Split a binding extension off the request so input_definitions sees
+    // (name, extension) — matches Perl Package.pm `FindFile` / `Input`
+    // semantics. Without the split, `find_file_fallback` runs with
+    // `ext_type=""` and reconstructs `"<base>."` (no extension), which
+    // never matches a registered binding. Witness: hep-ph9911514 — the
+    // raw-loaded `elsartwb.sty` issues `\input elsart12\@ptsize.sty` →
+    // `\input{elsart12.sty}`; the version-strip fallback (elsart12 →
+    // elsart) needs `ext_type="sty"` to reconstruct `"elsart.sty"` for
+    // the binding lookup. Perl recovers `\ack` cleanly via this path; the
+    // earlier Rust port dropped the extension and the fallback never
+    // resolved.
+    let has_dir = clean_req.contains('/') || clean_req.contains('\\');
+    if !has_dir {
+      if let Some((stem, ext)) = clean_req.rsplit_once('.') {
+        if crate::state::is_binding_extension(ext) {
+          return input_definitions(stem, InputDefinitionOptions {
+            extension: Some(Cow::Owned(ext.to_string())),
+            ..InputDefinitionOptions::default()
+          });
+        }
+      }
+    }
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   // Perl Package.pm L2109-2113: FindFile_aux checks for `"$file.ltxml"` in
