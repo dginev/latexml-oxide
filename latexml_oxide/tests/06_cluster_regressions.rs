@@ -87,3 +87,15 @@ fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vsp
 /// hep-th9703142.
 #[test]
 fn cluster_multiput_braced_pair() { convert_clean("tests/cluster_regressions/multiput_braced_pair.tex"); }
+
+/// `\thechapter` autoload from `omnibus_cls.rs` must autoload the
+/// `book.cls` BINDING, not `book.sty`. The obsolete `book.sty` shim
+/// in TeXLive fires `\LoadClass{book}` immediately — by the time
+/// `\thechapter` triggers (inside the document body), we're past
+/// the preamble and `\LoadClass`'s preamble guard errors. Perl
+/// avoids this by using `DefAutoload('thechapter', 'book.cls.ltxml')`
+/// (cls extension, not sty). Witness: arXiv:2602.10407.
+#[test]
+fn cluster_omnibus_chapter_book_autoload() {
+  convert_clean("tests/cluster_regressions/omnibus_chapter_book_autoload.tex");
+}

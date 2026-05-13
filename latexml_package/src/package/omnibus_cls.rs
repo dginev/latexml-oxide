@@ -412,32 +412,46 @@ LoadDefinitions!({
   DefMacro!("\\firstsection", None);
 
   // Perl L286-297: math/package autoloads — when a trigger CS is used and
-  // not yet defined, require the specified package and re-trigger. The Perl
-  // `DefAutoload` macro registers this semantic; we implement it inline.
-  for (trigger, pkg) in [
+  // not yet defined, require the specified package/class and re-trigger.
+  // The Perl `DefAutoload` macro registers this semantic; we implement it
+  // inline. Perl encodes the target via the `.sty.ltxml` / `.cls.ltxml`
+  // suffix; we mirror that by carrying an explicit "sty" / "cls" kind
+  // alongside the bare name.
+  //
+  // Why the kind matters: `\thechapter` autoloads `book.cls.ltxml` in Perl,
+  // not `book.sty`. Routing through `require_package("book")` instead
+  // finds the obsolete `book.sty` shim (TL's 2.09-compat file) which
+  // immediately fires `\LoadClass{book}` from inside the body — past the
+  // preamble — and errors with "\LoadClass can only appear in the preamble".
+  // Witness: arXiv:2602.10407 (`\documentclass{saunders}` + `\chapter` in
+  // an `\include`'d chapter; saunders.cls is unbound so OmniBus takes over,
+  // and the chapter trigger hits `\thechapter`). Perl handles it cleanly
+  // by autoloading the class binding instead of the obsolete sty.
+  for (trigger, name, ext) in [
     // env triggers: `\begin{align}` etc. In Rust, we only dispatch on the
     // bare CS name of the trigger — works for control sequences like
     // `\multline`, `\numberwithin`, `\mathfrak`, `\mathbb`, `\deluxetable`,
     // `\curraddr`, `\subjclass`, `\thechapter`. For envs, autoload key is
     // `\begin{env}` which is a CS token.
-    ("\\begin{align}",         "amsmath"),
-    ("\\begin{subequations}",  "amsmath"),
-    ("\\begin{split}",         "amsmath"),
-    ("\\multline",             "amsmath"),
-    ("\\csname multline*\\endcsname", "amsmath"),
-    ("\\numberwithin",         "amsmath"),
-    ("\\mathfrak",             "amsfonts"),
-    ("\\mathbb",               "amsfonts"),
-    ("\\begin{deluxetable}",   "deluxetable"),
-    ("\\curraddr",             "ams_support"),
-    ("\\subjclass",            "ams_support"),
-    ("\\thechapter",           "book"),
+    ("\\begin{align}",                "amsmath",      "sty"),
+    ("\\begin{subequations}",         "amsmath",      "sty"),
+    ("\\begin{split}",                "amsmath",      "sty"),
+    ("\\multline",                    "amsmath",      "sty"),
+    ("\\csname multline*\\endcsname", "amsmath",      "sty"),
+    ("\\numberwithin",                "amsmath",      "sty"),
+    ("\\mathfrak",                    "amsfonts",     "sty"),
+    ("\\mathbb",                      "amsfonts",     "sty"),
+    ("\\begin{deluxetable}",          "deluxetable",  "sty"),
+    ("\\curraddr",                    "ams_support",  "sty"),
+    ("\\subjclass",                   "ams_support",  "sty"),
+    ("\\thechapter",                  "book",         "cls"),
   ] {
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
       let cs_clone = cs;
-      let pkg_str = pkg.to_string();
+      let name_str = name.to_string();
       let trigger_str = trigger.to_string();
+      let is_cls = ext == "cls";
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
@@ -449,7 +463,12 @@ LoadDefinitions!({
           latexml_core::state::assign_meaning(
             &cs_clone, latexml_core::common::store::Stored::None,
             Some(Scope::Global));
-          require_package(&pkg_str, RequireOptions::default())?;
+          if is_cls {
+            latexml_core::binding::content::load_class(
+              &name_str, Vec::new(), Tokens::default())?;
+          } else {
+            require_package(&name_str, RequireOptions::default())?;
+          }
           Ok(mouth::tokenize_internal(&trigger_str))
         })), None)?;
     }
