@@ -118,6 +118,14 @@ Stage-8 sweep (papers 70001-80000): **9938/10000 OK = 99.38%**.
 
 Combined stages 1-8: **79,550 / 80,000 OK = 99.44%**.
 
+Stage-9 sweep (papers 80001-90000): **9929/10000 OK = 99.29%**.
+Lowest stage rate so far due to a dense `malformed:label` cluster
+(10 papers — "Node document has labels but no xml:id", SHARED with
+Perl) and the usual mix of `\msgencoding` recursion (e-french/msg.sty,
+SHARED), math syntax issues, and expl3 csname-protocol.
+
+Combined stages 1-9: **89,479 / 90,000 OK = 99.42%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
