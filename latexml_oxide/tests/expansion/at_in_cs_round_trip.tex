@@ -40,7 +40,12 @@
   \input refs.tmp
 }
 \begin{document}
-\refn\Barnes{E.W.~Barnes Trans.~Camb.~Phil.~Soc.~(1903) 376}
+% Exercise every dispatch macro now marked protected: the active `~`
+% (→ `\lx@NBSP`), plus `\&` / `\#` / `\$` / `\%` / `\_` (→ `\lx@text@*`).
+% A regression in any of their `protected` flags would re-bake the
+% `\lx@<…>` form into the aux file and re-fire `Error:undefined:\lx`
+% on `\input`.
+\refn\Barnes{E.W.~Barnes \& A.~Test, see \%~p.\,376, item \#3, item\_a, \$5}
 
 See [\Barnes] for details.
 
