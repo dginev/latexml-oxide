@@ -1367,21 +1367,20 @@ fn lst_process_internal(
         ctx.listing = ctx.listing[m.end()..].to_string();
         ctx.colnum += open.len() as i64;
 
-        // Look up delimiter info
+        // Look up delimiter info. The `invisible` flag is already applied
+        // at delimiter-registration time (lst_add_delimiter sets empty
+        // open_tex / close_tex when invisible, so lst_class_begin /
+        // lst_class_end never emit the delim chars). No runtime check
+        // needed here — Perl lstProcess_internal also has no separate
+        // gate at this point.
         let class_key = s!("LST_DELIM@{open}@class");
         let close_key = s!("LST_DELIM@{open}@close");
-        let invisible_key = s!("LST_DELIM@{open}@invisible");
         let classname = state::lookup_value(&class_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
         let close_re_str = state::lookup_value(&close_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
-        // Perl: invisible flag controls whether delimiters are shown (TODO: use in output)
-        let _invisible = matches!(
-          state::lookup_value(&invisible_key),
-          Some(Stored::Bool(true))
-        );
 
         // Perl: lstProcessPush(lstClassBegin($classname))
         // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
