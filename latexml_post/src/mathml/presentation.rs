@@ -638,29 +638,47 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
 
 /// Convert an XMArray to an mtable.
 ///
-/// Port of `pmml_internal` XMArray branch.
+/// Port of `pmml_internal` XMArray branch (`MathML.pm` L432-486).
 fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
+  let width = node.get_attribute("width");
   let vattach = node
     .get_attribute("vattach")
     .unwrap_or_else(|| "middle".to_string());
   let align = match vattach.as_str() {
     "top" => "bottom1",
-    "middle" => "axis",
-    _ => &vattach,
+    "middle" | "" => "axis",
+    _ => vattach.as_str(),
   };
+  let rowsep = node
+    .get_attribute("rowsep")
+    .unwrap_or_else(|| "0pt".to_string());
+  let colsep = node
+    .get_attribute("colsep")
+    .unwrap_or_else(|| "5pt".to_string());
 
+  let mut nrows = 0;
+  let mut ncols = 0;
   for row_node in element_children(node) {
     let mut cols = Vec::new();
+    let mut nc = 0;
     for cell_node in element_children(&row_node) {
+      nc += 1;
       let cell_align = cell_node.get_attribute("align");
       let colspan = cell_node.get_attribute("colspan");
+      let rowspan = cell_node.get_attribute("rowspan");
       let mut td_attrs = HashMap::default();
-      if let Some(a) = cell_align {
-        td_attrs.insert("columnalign".to_string(), a);
+      if let Some(a) = &cell_align {
+        if a != "center" {
+          td_attrs.insert("columnalign".to_string(), a.clone());
+          td_attrs.insert("class".to_string(), format!("ltx_align_{}", a));
+        }
       }
       if let Some(cs) = colspan {
         td_attrs.insert("columnspan".to_string(), cs);
+      }
+      if let Some(rs) = rowspan {
+        td_attrs.insert("rowspan".to_string(), rs);
       }
 
       let cell_children = element_children(&cell_node);
@@ -680,6 +698,10 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
         children:   cell_content,
       });
     }
+    if nc > ncols {
+      ncols = nc;
+    }
+    nrows += 1;
     rows.push(NodeData::Element {
       tag:        "m:mtr".to_string(),
       attributes: None,
@@ -687,9 +709,22 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
     });
   }
 
+  // Perl L478-479: drop separators if there's only one row/column.
+  let emit_rowsep = nrows >= 2;
+  let emit_colsep = ncols >= 2;
+
   let mut table_attrs = HashMap::default();
   if align != "axis" {
     table_attrs.insert("align".to_string(), align.to_string());
+  }
+  if emit_rowsep {
+    table_attrs.insert("rowspacing".to_string(), rowsep);
+  }
+  if emit_colsep {
+    table_attrs.insert("columnspacing".to_string(), colsep);
+  }
+  if let Some(w) = width {
+    table_attrs.insert("width".to_string(), w);
   }
 
   NodeData::Element {
