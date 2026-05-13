@@ -606,12 +606,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       def_macro(
         T_CS!("\\@currname"),
         None,
-        Tokens!(Explode!(prevname)),
+        Tokens!(ExplodeText!(prevname)),
         None,
       )?;
     }
     if !prevext.is_empty() {
-      def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(prevext)), None)?;
+      def_macro(T_CS!("\\@currext"), None, Tokens!(ExplodeText!(prevext)), None)?;
     }
     // Perl-faithful: Package.pm:2637 —
     //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
@@ -638,7 +638,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       def_macro(
         T_CS!("\\@currname"),
         None,
-        Tokens!(Explode!(prevname)),
+        Tokens!(ExplodeText!(prevname)),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -655,7 +655,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         def_macro(
           T_CS!("\\@currext"),
           None,
-          Tokens!(Explode!(prevext)),
+          Tokens!(ExplodeText!(prevext)),
           Some(ExpandableOptions {
             scope: Some(Scope::Global),
             ..ExpandableOptions::default()
@@ -800,8 +800,19 @@ fn before_input_handle_options(
       }
     }
   }
-  def_macro(T_CS!("\\@currname"), None, Tokens!(Explode!(name)), None)?;
-  def_macro(T_CS!("\\@currext"), None, Tokens!(Explode!(as_type)), None)?;
+  // Use letter-catcode (`ExplodeText`) for `\@currext` / `\@currname` so
+  // they match `\@pkgextension`-style build-time-tokenized macros under
+  // `\ifx`. Without this the catcodes diverge — `\@pkgextension` from a
+  // compile-time `DefMacro!("\\@pkgextension", "sty")` tokenizes "sty"
+  // as letters (default LaTeX catcode 11), but the previous `Explode!`
+  // used here produces OTHER catcode tokens, so kvoptions's
+  // `\ifx\@currext\@pkgextension` always returned false — vendor
+  // `\PackageError{kvoptions}{\ProcessLocalKeyvalOptions is intended
+  // for packages only}` then fired on every package that uses kvoptions
+  // (rerunfilecheck reaches this via the hyperref backend `.def` chain).
+  // Witnesses: arXiv:cond-mat/9611206, math/9904040, math/9904041.
+  def_macro(T_CS!("\\@currname"), None, Tokens!(ExplodeText!(name)), None)?;
+  def_macro(T_CS!("\\@currext"),  None, Tokens!(ExplodeText!(as_type)), None)?;
   // reset options (Note reset & pass were in opposite order in LoadClass ????)
   reset_options()?;
   pass_options(name, as_type, options.options.clone())?;
