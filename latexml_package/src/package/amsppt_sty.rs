@@ -36,10 +36,14 @@ LoadDefinitions!({
   //   arXiv:funct-an9312004    — \\scriptsize font-size
   DefMacro!("\\vspace OptionalMatch:* {}", None);
   DefMacro!("\\hspace OptionalMatch:* {}", None);
-  // LaTeX2e font-size commands (no-op in AMSTeX mode).
+  // LaTeX2e font-size and font-family CSes (no-op in AMSTeX mode).
   for sz in ["\\tiny", "\\scriptsize", "\\footnotesize", "\\small",
              "\\normalsize", "\\large", "\\Large", "\\LARGE",
-             "\\huge", "\\Huge"] {
+             "\\huge", "\\Huge",
+             // Font-family selectors (NFSS; absent in AmSTeX)
+             "\\normalfont", "\\rmfamily", "\\sffamily", "\\ttfamily",
+             "\\mdseries", "\\bfseries", "\\upshape", "\\itshape",
+             "\\slshape", "\\scshape"] {
     if !state::has_meaning(&T_CS!(sz)) {
       def_macro(T_CS!(sz), None, None, None)?;
     }
