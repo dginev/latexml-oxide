@@ -7941,8 +7941,41 @@ LoadDefinitions!({
   DefPrimitive!("\\makeglossary", None);
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
-  // Perl: \glossary{} — simplified glossary entry
-  DefConstructor!("\\glossary{}", "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
+  // Perl latex_constructs.pool.ltxml L4481-4493 — `\glossary{}` uses a
+  // closure constructor that guards on the current node: if we're inside
+  // `ltx:p` or `ltx:text`, emit a Warn and skip the element entirely
+  // (schema disallows `ltx:glossaryphrase` in those parents). Otherwise
+  // insert the element. The earlier Rust port used a static template that
+  // unconditionally produced `<ltx:glossaryphrase>`, which surfaced as
+  // `Error:malformed:ltx:glossaryphrase isn't allowed in <ltx:p>` on
+  // papers calling `\glossary{...}` in the body flow (where most papers
+  // actually use it). Witnesses: arXiv:cs/9809003, math/9608214,
+  // nucl-th/9311001.
+  DefConstructor!("\\glossary{}", sub[document, args, props] {
+    use latexml_core::document::get_node_qname;
+    let current = document.get_node().clone();
+    let current_name = arena::with(get_node_qname(&current), |s| s.to_string());
+    let parent_name = if current_name == "#PCDATA" {
+      if let Some(p) = current.get_parent() {
+        arena::with(get_node_qname(&p), |s| s.to_string())
+      } else { current_name.clone() }
+    } else { current_name };
+    let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
+    if in_flow {
+      Warn!("unexpected", "glossary",
+        "glossary support is not yet ready for use in the main text flow.");
+    } else {
+      let key = prop_string!(props, "key");
+      let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+      attrs.insert("role".to_string(), "glossary".to_string());
+      attrs.insert("key".to_string(), key);
+      let body: Vec<&latexml_core::digested::Digested> = match args.first().and_then(|a| a.as_ref()) {
+        Some(d) => vec![d],
+        None => Vec::new(),
+      };
+      document.insert_element("ltx:glossaryphrase", body, Some(attrs))?;
+    }
+  },
     properties => sub[args] {
       let key = args[0].as_ref()
         .map(|a| clean_index_key(&a.to_string()))
