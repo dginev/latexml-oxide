@@ -308,6 +308,32 @@ single-witness regressions.
 
 ---
 
+**Round-28 next-100k staging (opened 2026-05-13 evening)**.
+
+After Round-27's hunt-and-fix mini-pass landed 5 root-cause engine
+fixes on top of the 14 from Round-27 main, restarting the canvas
+stages on `~/data/next_warning_papers/` (49,884 zips, the next slice
+of the arxmliv warning corpus). Stage-11 (first 10k of the new
+batch) — baseline projection from carrying forward the Stage-10
+=99.55% result, expecting incremental improvement from this
+session's engine-level halo (source-dir push_front, AmSTeX-pool
+autoloads, @currext catcode, save/restore SEARCHPATHS).
+
+Plan:
+1. Release rebuild with all session fixes (currently in flight).
+2. `tools/benchmark_canvas.sh --input-dir ~/data/next_warning_papers
+   --stage 1 --stage-size 10000 --workers 8` (the stage_NN subdir
+   convention is preserved).
+3. Tally per-stage OK% and top first-error clusters.
+4. For each new cluster: apply the two-grep rule
+   (`feedback_hotfix_self_audit.md`) before any binding decision.
+5. Iterate stages 12, 13, 14, 15 until next_warning_papers is
+   exhausted (≈5 stages × 10k).
+
+Loop cadence is 5-minute scheduled (CronJob b22777ef). Each tick:
+verify Stage-N in flight, identify top error cluster, draft a
+root-cause fix, commit, schedule Stage-(N+1).
+
 **Round-27 hunt-and-fix mini-pass (2026-05-13 evening, full set)**.
 After clarifying the rule that bindings are per-`.sty.ltxml`/`.cls.ltxml`
 scope and that Perl-succeeds-without-binding cases are root-cause
