@@ -80,3 +80,10 @@ fn cluster_amstex_2_09_sb() { convert_clean("tests/cluster_regressions/amstex_2_
 /// funct-an9211013, funct-an9211011, funct-an9312004.
 #[test]
 fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vspace.tex"); }
+
+/// Picture-environment `\multiput(x,{y})` with the second coordinate
+/// braced. Pair parameter reader must look through BEGIN…END groups
+/// before reading the float. Witnesses: arXiv:hep-th9610147,
+/// hep-th9703142.
+#[test]
+fn cluster_multiput_braced_pair() { convert_clean("tests/cluster_regressions/multiput_braced_pair.tex"); }
