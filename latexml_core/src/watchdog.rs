@@ -37,6 +37,35 @@ use std::time::{Duration, Instant};
 /// `Watchdog::new(0)` is a no-op — produces a handle that does nothing. This
 /// lets call-sites set a watchdog conditionally without special-casing the
 /// "no timeout" branch.
+/// Optional hook to run from the watchdog thread immediately before
+/// `exit(124)`. Used by `cortex_worker --standalone` to write a
+/// structured `Status:conversion:3` placeholder to `--output` so the
+/// timeout produces a usable failure artifact instead of a missing
+/// file. Set once at startup via `set_pre_exit_hook`; the hook is
+/// invoked exactly once. Zero overhead on the happy path — only the
+/// watchdog firing reads it.
+type PreExitHook = Box<dyn FnOnce() + Send + 'static>;
+
+static PRE_EXIT_HOOK: std::sync::OnceLock<std::sync::Mutex<Option<PreExitHook>>> =
+  std::sync::OnceLock::new();
+
+pub fn set_pre_exit_hook(hook: PreExitHook) {
+  let cell = PRE_EXIT_HOOK.get_or_init(|| std::sync::Mutex::new(None));
+  if let Ok(mut guard) = cell.lock() {
+    *guard = Some(hook);
+  }
+}
+
+fn run_pre_exit_hook() {
+  if let Some(cell) = PRE_EXIT_HOOK.get() {
+    if let Ok(mut guard) = cell.lock() {
+      if let Some(hook) = guard.take() {
+        hook();
+      }
+    }
+  }
+}
+
 pub struct Watchdog {
   cancelled: Arc<AtomicBool>,
 }
@@ -73,10 +102,25 @@ impl Watchdog {
       return;
     }
     eprintln!(
-      "latexml-oxide: main-level wall-clock timeout after {}s — aborting process",
+      "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {}s — exiting process",
       timeout_secs
     );
-    std::process::abort();
+    // Run the optional pre-exit hook (e.g. cortex_worker writing a
+    // structured Status:conversion:3 placeholder to its --output path)
+    // BEFORE `exit(124)`. The hook is invoked at most once per process.
+    run_pre_exit_hook();
+    // `std::process::exit(124)` instead of `abort()`: the watchdog must
+    // terminate the whole process (the worker thread is presumed wedged
+    // in a tight loop that won't observe a cooperative cancel), but
+    // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
+    // the shell. `exit(124)` (standard timeout exit code) runs atexit
+    // handlers, flushes stderr, and leaves a clean exit signal the
+    // parent harness can interpret as "paper timed out" without
+    // conflating it with a Rust panic / memory corruption. Witnesses:
+    // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
+    // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
+    // 2026-05-13 588-paper sweep.
+    std::process::exit(124);
   }
 
   /// Explicitly cancel the watchdog. Idempotent.

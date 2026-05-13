@@ -815,6 +815,38 @@ fn parse_readme_json(dir: &Path) -> Option<String> {
   None
 }
 
+/// Minimal "we timed out" placeholder zip. Written only from the
+/// watchdog's pre-exit hook (`set_pre_exit_hook` in `latexml_core::
+/// watchdog`), so the happy-path overhead is zero. Contains just
+/// two members: `status` (`Status:conversion:3`) and `cortex.log`
+/// (a single `Fatal:timeout:wallclock …` line). The parent harness
+/// can stat the output file and parse `status` exactly as for any
+/// other failed conversion, instead of seeing a missing file plus
+/// an `Aborted (core dumped)` shell message.
+fn write_timeout_placeholder_zip(
+  output_path: &str,
+  input_path: &str,
+  timeout_secs: u64,
+) -> Result<(), Box<dyn Error>> {
+  let file = File::create(output_path)?;
+  let mut zip = zip::ZipWriter::new(file);
+  let options = zip::write::SimpleFileOptions::default()
+    .compression_method(zip::CompressionMethod::Stored);
+  zip.start_file("status", options)?;
+  zip.write_all(b"Status:conversion:3")?;
+  zip.start_file("cortex.log", options)?;
+  let log = format!(
+    "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
+     main-level wall-clock timeout converting {input_path}; the worker \
+     thread was presumed wedged in a tight native loop and the watchdog \
+     exited the process via exit(124). No output produced.\n\
+     Status:conversion:3\n"
+  );
+  zip.write_all(log.as_bytes())?;
+  zip.finish()?;
+  Ok(())
+}
+
 fn pack_output_zip_with_resources(
   output_path: &Path,
   html_filename: &str,
@@ -961,10 +993,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       process::exit(1);
     });
 
+    // Register a watchdog-firing callback so a timed-out conversion
+    // still leaves a structured failure artifact at `--output`
+    // (Status:conversion:3 + a fatal:timeout log line) instead of
+    // a missing file plus "Aborted (core dumped)" from the shell.
+    // Per-conversion overhead in the happy path is zero — the
+    // callback is only invoked from the watchdog thread immediately
+    // before `exit(124)`. Witnesses: 2602.11915, 2604.11500,
+    // 2604.13944, hep-ph9205242, q-alg9604005/9605003/9605028 — the
+    // 7 "Aborted" rows in the 2026-05-13 588-paper sweep.
+    if let Some(ref out) = cli.output {
+      let out_clone = out.clone();
+      let input_clone = input.clone();
+      let timeout_secs = worker.profile.timeout;
+      latexml_core::watchdog::set_pre_exit_hook(Box::new(move || {
+        let _ = write_timeout_placeholder_zip(&out_clone, &input_clone, timeout_secs);
+      }));
+    }
+
     eprintln!("Converting {} ...", input);
     let result_path = worker.convert_archive(Path::new(&input))?;
 
-    // Read result and write to output
+    // Read result and write to output (overwrites the placeholder).
     let mut result_data = Vec::new();
     File::open(&result_path)?.read_to_end(&mut result_data)?;
 
