@@ -308,12 +308,53 @@ single-witness regressions.
 
 ---
 
-**Round-27 hunt-and-fix mini-pass (2026-05-13 evening)**.
+**Round-27 hunt-and-fix mini-pass (2026-05-13 evening, full set)**.
 After clarifying the rule that bindings are per-`.sty.ltxml`/`.cls.ltxml`
 scope and that Perl-succeeds-without-binding cases are root-cause
-opportunities, ran `parity_check.sh` on a 20-paper random sample of
-the sweep_v3 failing set and chased the REAL REGRESSIONs back to
-their porting gaps. Four fixes landed:
+opportunities, ran `parity_check.sh` first on a 20-paper random
+sample, then on the full 494-paper failing set. 65 papers
+identified as REAL REGRESSION (Rust>0, Perl=0). Fourteen fixes
+landed across the session:
+
+**Engine / kernel:**
+* `c899b074ae` omnibus: `\thechapter` autoload → `book.cls` not
+  `book.sty` (obsolete 2.09 shim fires `\LoadClass` mid-body)
+* `7c02393727` Pair reader tolerance (`readUntil(',')`/`readUntil(')')`
+  per Perl) + `\newpsobject` proper port from
+  pstricks_support.sty.ltxml L849-861
+* `a3000c5cd7` JHEP `\href` override: 2-arg `Semiverbatim Semiverbatim`
+  so `^` / `_` in body are neutralized in math-mode-callsite contexts
+* `5de7637c53` sprocl_sty.rs removed — raw-load the bundled
+  sprocl.sty like Perl
+* `29bb203c0a` binding/content: `\input{X.ext}` under
+  INTERPRETING_DEFINITIONS splits the binding extension so
+  find_file_fallback's version-strip works
+* `f23bb77f04` amstex `\documentstyle{X}` falls back to amsppt
+  via load-flag check (not just `.is_ok()`)
+* `67181ef0d0` kvoptions `\ProcessLocalKeyvalOptions` stubbed
+  no-op (vendor PDF-backend keyval state is moot for XML output)
+* `76e1ee8cdc` `\glossary` guards on current node (skip-in-flow
+  per Perl) to avoid schema malformed:ltx:glossaryphrase
+* `da77ba067a` AmSTeX pool autoload triggers (BlackBoxes,
+  NoBlackBoxes, TagsAs*, loadbold, …) — `def_autoload_pool` helper
+* `a89d82bb76` smfart_cls.rs removed — Perl falls through to
+  OmniBus, not amsart
+* `d27901923f` maybe_require_dependencies checks filecontents-cache
+  before disk (for `\begin{filecontents}{X.cls}` cases)
+* `b7b67f6a6b` IEEEtran add `\ifCLASSOPTIONcomsoc` alias (TL2020+)
+* `fa75d41e2b` textgreek add `\straighttheta`/`\straightphi`/
+  `\straightepsilon` for physics typography
+
+**Witnesses recovered to BOTH CLEAN** (22 directly + larger
+engine-level halo unmeasured here): 2602.10407, 2602.22473,
+2603.04274, 2603.07560, 2604.09738, 2604.15081, hep-ph9607380,
+hep-ph9707538, hep-ph9911514, cond-mat9608045, cond-mat9611206,
+math9904040, math9904041, math9608214, math9610224, math9704213,
+math9809167, gr-qc9507042, cs9809003, nucl-th9311001,
+physics/9709007, physics/9710028.
+
+**Original 4-paper sample fixes (carried forward from earlier
+session note):**
 
 * `28f0e1cd53` engine: downgrade babel 'Unknown option' error to Info
   (TL2025 ldf-removal cohort, see Cluster D).
