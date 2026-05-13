@@ -356,6 +356,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("inputenc", "sty", package::inputenc_sty::load_definitions),
   ("textcomp", "sty", package::textcomp_sty::load_definitions),
   ("textgreek", "sty", package::textgreek_sty::load_definitions),
+  // textalpha (greek-fontenc) and alphabeta (greek-fontenc) both define the
+  // same `\text<greek>` family; route them through the same binding so a
+  // raw-load failure on LGR encoding doesn't surface as `\textsigma` undef.
+  ("textalpha", "sty", package::textgreek_sty::load_definitions),
+  ("alphabeta", "sty", package::textgreek_sty::load_definitions),
   ("texvc", "sty", package::texvc_sty::load_definitions),
   ("listings", "sty", package::listings_sty::load_definitions),
   (
