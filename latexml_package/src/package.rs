@@ -367,7 +367,7 @@ pub mod siunitx_sty;
 pub mod slashbox_sty;
 pub mod slashed_sty;
 pub mod slides_cls;
-pub mod smfart_cls;
+// smfart_cls: removed; Perl has no binding either, falls through to OmniBus.
 pub mod soul_sty;
 // sprocl_sty removed — papers bundle their own sprocl.sty; raw-load now.
 pub mod srcltx_sty;

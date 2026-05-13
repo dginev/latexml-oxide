@@ -75,7 +75,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsaddr", "sty", package::amsaddr_sty::load_definitions),
   ("amsart", "cls", package::amsart_cls::load_definitions),
   ("amsproc", "cls", package::amsproc_cls::load_definitions),
-  ("smfart", "cls", package::smfart_cls::load_definitions),
+  // smfart: no binding — Perl falls through to OmniBus, which provides
+  // \Subsection, \Paragraph, \institute, etc. The earlier Rust binding
+  // loaded amsart instead, which doesn't define those CSes; smfart-using
+  // papers (witness: arXiv:2603.04274) hit Error:undefined:\Subsection.
   ("acmart", "cls", package::acmart_cls::load_definitions),
   ("article", "cls", package::article_cls::load_definitions),
   ("OmniBus", "cls", package::omnibus_cls::load_definitions),
