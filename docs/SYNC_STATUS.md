@@ -27,6 +27,25 @@ OK = 99.45%** — 49 conversion_error, 3 oversized, 2 error (script-
 level), 1 abort. Marginally better than stage-1 v2 (+0.04%),
 confirming the fixes generalize across distinct paper sets.
 
+Stage-1 v3 (2026-05-12 late, after `5b8a4f9aca` listings XML tag /
+commentstyle parity + `a0a87a9f0a` language-switch keyword cleanup +
+nested flag): **9946/10000 OK = 99.46%** — 48 conversion_error, 6
+conversion_fatal. **+5 recovered** (all listings-XML-tag class:
+2602.15149 ForestGreen + 4 nearby papers using `\begin{lstlisting}
+[language=XML]`), 0 regressions.
+
+Stage-1 v3+ targeted re-run (2026-05-12 late, after `64390938db`
+`\lx@applyaccent` csname peek + `2ae0cd2f28` canonical `\text…` soft-
+substitute + `2233126611` NFSS `\<encoding>\i/\j` glyph extension):
+re-running the v3-failing 48 papers against the rebuilt release
+binary recovered **+1 more** (2603.08303 twemoji `\textquoteright`
+cluster). Effective stage-1 result: **9947/10000 OK = 99.47%**.
+Remaining 47 cluster into: babel/biblatex/citep (8), apacite chain
+`\citep`/`\citet`/`\citealp` (5), expl3 csname-protocol (8 — Task #22),
+math xml:id collision (6 — Task #10), pgfplots `\lx@text@ampX` `&`-leak
+(~3), `\LoadClass` in body (2), tikz-cd `decorations.pathmorphing`
+(1), mode-switch frontmatter (~3), various single-witnesses (~11).
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
@@ -37,7 +56,7 @@ sprint records live in [`archive/round19_iteration_log.md`].
 Remaining blocker is the **mhchem 77-error expl3 csname-protocol
 gap** — see "mhchem retirement" below.
 
-`cargo test --tests` = **1185/0/0**. `cargo clippy --workspace
+`cargo test --tests` = **1187/0/0**. `cargo clippy --workspace
 --all-targets` = **0 warnings**.
 
 ---
