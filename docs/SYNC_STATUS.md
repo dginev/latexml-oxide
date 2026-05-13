@@ -343,6 +343,48 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-11 mid-flight (2026-05-13 late evening)**.
+Stage-11 = first 10k of `~/data/next_warning_papers/` (arxmliv
+warning subset, 2025-04 cohort — newer than Round-26's 100k).
+
+Mid-stage snapshot at 72% done: 6956 OK + 227 errors + 14 fatals
+= 7197/10000 processed → **96.7% OK** so far (rough corpus; cf.
+Round-26 Stage-10 at 99.55% on older recent_warning_papers).
+Rate ~165 papers/min with 8 workers.
+
+Top first-error clusters in the failing 227:
+* `Error:unexpected:_` (20) — paper-side `_` in text mode, SHARED
+* `Error:latex:\GenericError` (17) — vendor errors (bmpsize/zref-
+  base/tikz-cd library/...) mostly SHARED
+* `\FamilyProcessOptions` (11) — KOMA-script (scrextend), no
+  binding either side
+* `\ProcessKeysPackageOptions` (9) — Rust < Perl, Rust wins
+* `\PatchFailed` (9) — `\xpatchcmd`/`\apptocmd` failure path
+  (tkz-euclide cluster), Rust < Perl, Rust wins
+* `\lst@NormedDef` (5) — listings.sty internal
+* `\globcount` (5) — etex.sty pool, NO Perl binding either,
+  Rust < Perl on tested case
+* misc (151) — long tail of single-witnesses
+
+Random parity_check sample (10 papers from the 227): **0 REAL
+REGRESSION, 3 PERL_REGRESSION (Rust wins), 7 OUT-OF-SCOPE
+(shared)**. The new-corpus error mix is dominated by SHARED-
+FAILURE / Rust-wins, not Rust-only regressions. New engine
+work on this stage should focus on shared-with-Perl issues
+that downgrade cleanly under Perl-parity (vendor errors that
+are layout-only).
+
+Two new root-cause engine fixes landed mid-Stage-11:
+* `97b5f0caa1` — preserve expl3-state across nested raw-load
+  (`\file_input:n` inside an `\ExplSyntaxOn` parent no longer
+  triggers the post-load `\ExplSyntaxOff` cleanup). Closed
+  Task #22 (~4 of 5 sampled expl3-cluster papers).
+* `d02cd37777` — graphicx pulls in keyval (real TL
+  `graphicx.sty:31` order). Recovers graphbox-cluster papers
+  that raw-load and call `\define@key` before keyval.
+
+These will take effect in Stage-12 (rebuilt binary).
+
 **Round-28 next-100k staging (opened 2026-05-13 evening)**.
 
 After Round-27's hunt-and-fix mini-pass landed 5 root-cause engine
