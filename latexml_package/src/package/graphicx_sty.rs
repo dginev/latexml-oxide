@@ -7,7 +7,18 @@ LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)
 
-  // Perl L22: RequirePackage('graphics');
+  // Real TL graphicx.sty L31: `\RequirePackage{keyval,graphics}` —
+  // keyval FIRST so `\define@key`, `\setkeys` are available before
+  // graphics.sty's body. Perl's `graphicx.sty.ltxml` L22 only requires
+  // `graphics` (relying on Perl's keyval binding being preloaded by
+  // some other path), but Rust's graphics_sty.rs doesn't require keyval
+  // either. Downstream `\RequirePackage{graphbox}` (which raw-loads and
+  // calls `\define@key`) then errors with `\define@key` undefined
+  // because keyval never loaded — graphics.sty's hand-port handles its
+  // own keyvals via `DefKeyVal!`/`DefParameterType!` Rust-side, but raw-
+  // loaded sibling sty files that call `\define@key` directly need the
+  // real CS. Witness: arXiv:2504.13697 (IEEEtran + graphbox).
+  RequirePackage!("keyval");
   RequirePackage!("graphics");
 
   // Perl L24-27: internal length / dimension macros.
