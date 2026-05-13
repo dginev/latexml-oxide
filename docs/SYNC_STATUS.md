@@ -220,28 +220,30 @@ malformed pairs that are paper-level errors SHARED with Perl.
   math-mode second-order, paper-specific malformed:ltx, and
   long-tail single-witnesses.
 
-* **Math-mode errors as second-order symptoms — STILL OPEN.**
-  Post-fix 588-paper sweep (commit `8f465f8948` binary) leaves 436
-  status:2 + 58 status:3 = 494 still failing. **Top first-error
-  fingerprint changed** with the dispatch-macro protection:
-    - `Error:unexpected:}` jumped from 13 → 77 — but the majority
-      (46/77) are still the SHARED-FAILURE `\begin{abstract}`
-      mode-switch cluster; the rest are paper-specific table /
-      mode-switch closures that were previously hidden behind an
-      earlier `\lx@`-cascade error.
-    - `Error:unexpected:_` math-mode-first: 50 → 49 (~unchanged).
-    - `Error:unexpected:^` math-mode-first: 30 → 30 (~unchanged).
-  The 79 `_`/`^` math-mode-first papers continue to surface
-  "Anonymous String" locations (= deep macro expansion) with no
-  obvious upstream Warn:missing_file trigger. Investigating one
-  representative (2604.00193, elsarticle paper with 1-error
-  cascade) showed the error fires from
-  `latexml_engine/src/base_utilities.rs:2147:7` —
-  `make_generic_message`'s `Warn!` emission path during a
-  `\PackageWarning`. That path goes through `Expand!` + `to_string`,
-  which shouldn't be feeding the digester, so something in the
-  message expansion is bleeding `_` tokens out of the egroup. Needs
-  a debug-trace session. The
+* **Math-mode errors as second-order symptoms — CLASSIFIED SHARED-FAILURE 2026-05-13.**
+  Per-paper Rust-vs-Perl on 5 math-mode-first witnesses
+  (2602.11111, 2602.17289, 2602.21827, 2603.08665, 2603.28872):
+  Rust ≤ Perl error count on every one (i.e. SHARED or
+  Rust-supersedes). Root cause traced via
+  `LATEXML_DEBUG_SCRIPT=1` instrumentation on 2604.00193: the
+  `_` SUB-catcode token reaches `script_handler` outside math
+  because the paper writes `_` literally in a non-math
+  argument — `\fntext[footnote_label2]{…}`'s `footnote_label2`
+  contains a literal `_`. The Constructor (`\lx@notetext`) reads
+  its `[id]` argument, the optional-arg digester digests it in
+  the current (text) mode, the `_` SUB token fires
+  `script_handler`'s text-mode branch and errors. Same bug fires
+  in Perl on the same paper at `paper.tex; line 32 col 1` — the
+  paper's `\fntext[footnote_label2]` is invalid TeX (the `_`
+  should be `\_`), and both engines correctly emit the
+  "Script _ can only appear in math mode" error.
+
+  The 79 `_`/`^` math-mode-first papers are essentially the
+  paper-side-`_`-in-text cluster (analogous to the established
+  SHARED `\def\<one-letter-CS>` cluster). The cluster is **closed
+  for engine work**; the only quality-of-life gap is that Rust's
+  error locator reports `Anonymous String` (digester's anonymous
+  mouth) instead of the source line. Polish item for later. The
   scan to extract per-paper triggers is in `/tmp/first_err_dev.txt`
   + `/tmp/all_fail_ids.txt`; reproduce with
   `cat /tmp/sweep_pairs.txt | xargs -I {} -P 8 bash -c
