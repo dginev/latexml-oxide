@@ -80,6 +80,18 @@ Stage-4 targeted re-run after fixes: **21/72 prior failures recovered**
 → effective stage-4 result: **9935/10000 OK = 99.35%**. Stages 1-4
 combined: **39,765 / 40,000 OK = 99.41%**.
 
+Stage-5 sweep (papers 40001-50000, 2026-05-13 morning) with the
+release binary that includes the begindocument/before hook fire,
+csname soft-substitutes, listings tag fix, amstex 2.09 auto-load,
+\new@internalmathalphabet stub, \xpt-class size stubs, and amsppt
+\vspace / \scriptsize stubs: **9943/10000 OK = 99.43%**. Targeted
+re-run of the 39 failures with the latest release recovered another
+4 papers (`9e4950e09c` amsppt \vspace + `66b504116e` amsppt
+font-size cluster: dg-ga9503002, alg-geom9503016, math9505209,
+hep-th9512150). Effective stage-5: **9947/10000 OK = 99.47%**.
+
+Combined stages 1-5: **49,712 / 50,000 OK = 99.42%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
