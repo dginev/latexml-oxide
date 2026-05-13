@@ -114,6 +114,10 @@ Same irreducible cluster as stage-6 (no extra recoveries on rerun).
 
 Combined stages 1-7: **69,612 / 70,000 OK = 99.45%**.
 
+Stage-8 sweep (papers 70001-80000): **9938/10000 OK = 99.38%**.
+
+Combined stages 1-8: **79,550 / 80,000 OK = 99.44%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
