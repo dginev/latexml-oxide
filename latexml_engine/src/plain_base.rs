@@ -565,7 +565,13 @@ LoadDefinitions!({
   // in latex_constructs.rs (Perl latex_constructs.pool.ltxml:48). Plain
   // format leaves it undefined, matching Perl.
   // Perl: DefMacro(T_ACTIVE("~"), T_CS('\lx@NBSP'));
-  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
+  // `protected => true`: keep active `~` UNEXPANDED in partial
+  // expansion (`\write`'s `XGeneralText`, …). Without it, the `~`
+  // baked into a written aux file becomes the literal CS name
+  // `\lx@NBSP`, which on re-read with `@`=OTHER splits to `\lx` +
+  // `@NBSP`. See `plain_constructs.rs` `\&` for the parallel
+  // dispatch-macro case.
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP", protected => true);
 
   DefMacro!("\\slash", "/");
   DefPrimitive!("\\filbreak", None);

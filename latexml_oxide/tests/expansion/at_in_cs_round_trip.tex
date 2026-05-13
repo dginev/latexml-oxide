@@ -1,34 +1,28 @@
-% PARTIAL-RED regression test for `\write`+`\input` round-trip of CS
-% names containing `@` (the `\lx@NBSP` cluster).
+% Regression test for the `\write`+`\input` round-trip of CS names
+% containing `@`. Distilled from hep-th9306154's harvmac-style
+% `\listrefs` machinery.
 %
-% Reproduction status:
-%   * `cortex_worker --standalone --input <this>.zip` → 1 Error:undefined:\lx
-%     (RED) — matches the witness papers hep-th9306154, hep-ph9803499,
-%     hep-th9203004, math9904104 (plain-TeX `\listrefs` cluster) plus
-%     1112.4846 (harvmac).
-%   * `latexml_oxide --preload=ar5iv.sty …` on the same file → 0 errors
-%     (GREEN), even with identical `Config` (HTML5 format, both
-%     dispatchers, same preload list). The harness divergence root
-%     cause is still unresolved as of 2026-05-13 — both binaries call
-%     `Converter::from_config(opts).prepare_session(&opts).convert()`
-%     with the same `Config` struct, yet only the cortex path errors.
+% Bug shape (before fix): `\write\reffile{ ... ~ ... \& ... }`'s
+% `XGeneralText` partial expansion fires our `~`'s active-char
+% macro (body `\lx@NBSP`) and our `\&` dispatch macro (body
+% `\ifmmode\lx@math@amp\else\lx@text@amp\fi`) — both eagerly enough
+% that `Tokens::untex` then serializes the *internal* CS names
+% `\lx@NBSP` / `\lx@text@amp` into the aux cache. When `\input`
+% re-tokenizes the cache with `@` in OTHER catcode, every
+% `\lx@<word>` splits into `\lx` + literal `@<word>` →
+% `Error:undefined:\lx` cascade. Witnesses: hep-th9306154,
+% hep-ph9803499, hep-th9203004, math9904104 (plain-TeX `\listrefs`
+% cluster) + 1112.4846 (harvmac).
 %
-% Until the harness divergence is bottomed out, this test is NOT
-% wired into the `tex_tests!` discovery; it lives here as the canon
-% minimal repro distilled from hep-th9306154's harvmac `\listrefs`.
-%
-% Bug shape: when `\write\reffile{… ~ …}` flushes partially-expanded
-% tokens through `untex` to the in-memory aux cache, our active-`~`
-% expansion `\lx@NBSP` is serialized literally as the string
-% `\lx@NBSP`. On `\input refs.tmp` with `@` in OTHER catcode, the
-% mouth re-tokenizes that as `\lx` + literal `@NBSP` →
-% `Error:undefined:\lx`.
-%
-% Hardening goal (per user direction): the mouth's `handle_escape`
-% should speculatively extend a CS name through `@` when the prefix
-% on its own is undefined but the extended name IS defined — turning
-% the unsafe `\lx` + `@NBSP` split into the safe single `\lx@NBSP`
-% CS regardless of `@`'s current catcode.
+% Fix: mark the user-level dispatch macros (`\&`, `\#`, `\$`, `\%`,
+% `\_`, and active `~`) `protected => true`. Protected macros are
+% NOT expanded under partial expansion (`XGeneralText`, `\edef`
+% without `\protected@edef`), so `\write` writes the *user-level*
+% CS name to the aux file and `\input` re-reads it cleanly. Mirrors
+% Perl LaTeXML's choice of keeping `\&` as a single `DefPrimitive`
+% (which gullet partial-expansion likewise never invokes); our
+% Rust port stays with the WISDOM #44 dispatch-macro design and
+% achieves the same round-trip via the `protected` flag instead.
 \documentclass{article}
 \global\newcount\refno
 \global\refno=1 \newwrite\reffile
@@ -47,6 +41,8 @@
 }
 \begin{document}
 \refn\Barnes{E.W.~Barnes Trans.~Camb.~Phil.~Soc.~(1903) 376}
+
 See [\Barnes] for details.
+
 \listrefs
 \end{document}

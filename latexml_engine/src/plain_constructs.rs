@@ -23,11 +23,23 @@ LoadDefinitions!({
   // documented divergence). Rusts the dispatch via `\ifmmode` and routes
   // math-mode through DefMath entries with proper role/meaning, text-
   // mode through DefPrimitive emitting the literal char.
-  DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi");
-  DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi");
-  DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi");
-  DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi");
-  DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi");
+  // `protected => true`: keep these dispatch macros UNEXPANDED under
+  // partial expansion (`\write`'s `XGeneralText`, `\edef`-without-
+  // `\protected@edef`, etc.). Without this, `\write {\&}` partial-
+  // expands `\&` → `\lx@text@amp` and `untex` serializes the
+  // internal CS literally — when `\input` re-reads with `@` in
+  // OTHER catcode, `\lx@text@amp` splits to `\lx` + `@text@amp`,
+  // i.e. `Error:undefined:\lx`. Perl avoids this because Perl's
+  // `\&` is a single `DefPrimitive`, not a dispatch macro; the
+  // WISDOM #44 documented Rust divergence makes us split at gullet
+  // time, so we need the protected flag to restore the round-trip
+  // semantics. Witness: hep-th9306154 / hep-ph9803499 /
+  // hep-th9203004 (harvmac `\listrefs` writing `\&` in references).
+  DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi", protected => true);
+  DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi", protected => true);
+  DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi", protected => true);
+  DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi", protected => true);
+  DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi", protected => true);
   DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
   DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
   DefPrimitive!(T_CS!("\\lx@text@percent"), None, "%",  alias => "\\%");
@@ -372,8 +384,11 @@ LoadDefinitions!({
   // `~` definition (`\penalty\@M\ ` or LaTeX kernel's
   // `\ifincsname...\nobreakspace`) — but plain_constructs runs AFTER
   // and re-establishes the LaTeXML semantic mapping to nbsp.
-  // Mirrors Perl's identical L220 def.
-  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
+  // Mirrors Perl's identical L220 def. `protected => true` keeps
+  // partial expansion (`\write`'s `XGeneralText`, …) from baking
+  // the internal `\lx@NBSP` CS into aux files; see the matching
+  // `\&` block above for the round-trip rationale.
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP", protected => true);
 
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L222-277 — matrix/cases
