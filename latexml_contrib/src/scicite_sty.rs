@@ -34,4 +34,7 @@ LoadDefinitions!({
   // No-op them so `\usepackage[option]{scicite}` doesn't error.
   DefMacro!("\\nocitepunct", "");
   DefMacro!("\\citen", "\\cite");
+  // scicite.sty exposes `\citenum{key}` (number-only citation, no
+  // brackets) — same as cite.sty. Witness: arXiv:2604.12884.
+  DefMacro!("\\citenum", "\\cite");
 });
