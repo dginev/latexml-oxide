@@ -1,0 +1,52 @@
+% PARTIAL-RED regression test for `\write`+`\input` round-trip of CS
+% names containing `@` (the `\lx@NBSP` cluster).
+%
+% Reproduction status:
+%   * `cortex_worker --standalone --input <this>.zip` → 1 Error:undefined:\lx
+%     (RED) — matches the witness papers hep-th9306154, hep-ph9803499,
+%     hep-th9203004, math9904104 (plain-TeX `\listrefs` cluster) plus
+%     1112.4846 (harvmac).
+%   * `latexml_oxide --preload=ar5iv.sty …` on the same file → 0 errors
+%     (GREEN), even with identical `Config` (HTML5 format, both
+%     dispatchers, same preload list). The harness divergence root
+%     cause is still unresolved as of 2026-05-13 — both binaries call
+%     `Converter::from_config(opts).prepare_session(&opts).convert()`
+%     with the same `Config` struct, yet only the cortex path errors.
+%
+% Until the harness divergence is bottomed out, this test is NOT
+% wired into the `tex_tests!` discovery; it lives here as the canon
+% minimal repro distilled from hep-th9306154's harvmac `\listrefs`.
+%
+% Bug shape: when `\write\reffile{… ~ …}` flushes partially-expanded
+% tokens through `untex` to the in-memory aux cache, our active-`~`
+% expansion `\lx@NBSP` is serialized literally as the string
+% `\lx@NBSP`. On `\input refs.tmp` with `@` in OTHER catcode, the
+% mouth re-tokenizes that as `\lx` + literal `@NBSP` →
+% `Error:undefined:\lx`.
+%
+% Hardening goal (per user direction): the mouth's `handle_escape`
+% should speculatively extend a CS name through `@` when the prefix
+% on its own is undefined but the extended name IS defined — turning
+% the unsafe `\lx` + `@NBSP` split into the safe single `\lx@NBSP`
+% CS regardless of `@`'s current catcode.
+\documentclass{article}
+\global\newcount\refno
+\global\refno=1 \newwrite\reffile
+\newwrite\refmac
+\def\ref#1#2{\the\refno\nref#1{#2}}
+\def\nref#1#2{\xdef#1{{\bf\the\refno}}%
+\ifnum\refno=1\immediate\openout\reffile=refs.tmp\fi
+\immediate\write\reffile{%
+     \noexpand\item{[{\noexpand#1}]\ }#2\noexpand\nobreak.}%
+     \immediate\write\refmac{\def\noexpand#1{\the\refno}}%
+   \global\advance\refno by1}
+\def\refn#1#2{\nref#1{#2}}
+\def\listrefs{%
+  \immediate\closeout\reffile
+  \input refs.tmp
+}
+\begin{document}
+\refn\Barnes{E.W.~Barnes Trans.~Camb.~Phil.~Soc.~(1903) 376}
+See [\Barnes] for details.
+\listrefs
+\end{document}
