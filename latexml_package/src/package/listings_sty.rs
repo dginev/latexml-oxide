@@ -452,12 +452,41 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
   }
 }
 
-/// Perl: lstSetClassWords — set words belonging to a class (replacing existing).
+/// Perl listings.sty.ltxml:506-513 lstSetClassWords
+///   First delete existing words assigned to $class, then add the new set.
 fn lst_set_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>) {
-  // First delete existing words for this class
-  // (simplified — in full Perl, iterates all words and deletes those with matching class)
-  // Then add new words
+  lst_clear_class_words(class, false);
   lst_add_class_words(class, words, prefix);
+}
+
+/// Mirrors Perl listings.sty.ltxml:531-537 lstDeleteClass
+///   foreach my $word (keys %$wordslist) {
+///     delete $$wordslist{$word}{class}
+///       if (($$wordslist{$word}{class} || '') eq $class)
+///       || (($$wordslist{$word}{class} || '') =~ /^\Q$class\E\d/); }
+/// `digit_suffix=true` enables the trailing-digit match (e.g. `class='keywords'`
+/// also matches 'keywords1', 'keywords2', …); lstSetClassWords uses only the
+/// exact-equals branch (digit_suffix=false).
+fn lst_clear_class_words(class: &str, digit_suffix: bool) {
+  let words: Vec<String> = match state::lookup_value("LST_WORD_LIST") {
+    Some(Stored::Strings(list)) => list.iter().map(|sym| arena::to_string(*sym)).collect(),
+    _ => return,
+  };
+  for word in &words {
+    let key = s!("LST_WORDS@{word}@class");
+    let assigned = state::with_value(&key, |v| v.map(|s| s.to_string()).unwrap_or_default());
+    let assigned_str = assigned.as_str();
+    let matches = assigned_str == class
+      || (digit_suffix
+        && assigned_str.starts_with(class)
+        && assigned_str[class.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_ascii_digit()));
+    if matches {
+      state::assign_value(&key, Stored::None, None);
+    }
+  }
 }
 
 /// Perl: lstAddClassWords — add words to a class.
@@ -498,12 +527,13 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
   }
 }
 
-/// Perl: lstDeleteClass — delete all words belonging to class or class\d.
-fn lst_delete_class(_class: &str) {
-  // Perl iterates LST_WORDS hash and deletes entries matching class.
-  // In Rust, the word list uses individual state keys, so we'd need to iterate LST_WORD_LIST.
-  // For now this is a no-op — keywords accumulate, which matches Perl behavior for texcs
-  // (Perl's lstClearLanguage clears 'textcs' but texcs uses class 'texcss', so it survives).
+/// Perl listings.sty.ltxml:531-537 lstDeleteClass — delete words belonging to
+/// `class` OR `class\d` (e.g. 'keywords' clears 'keywords1', 'keywords2', …).
+/// Without this `lstClearLanguage` (called on every `language=` switch) leaves
+/// prior keyword sets attached, so later listings highlight stale keywords from
+/// previously selected languages.
+fn lst_delete_class(class: &str) {
+  lst_clear_class_words(class, true);
 }
 
 /// Perl L617-622: lstDeleteDelimiterKind — delete delimiters whose class starts with `kind`.
@@ -610,7 +640,10 @@ fn lst_add_delimiter(
     },
     "s" | "n" => {
       // String/Nested: different open & close delimiters
-      // Use Perl-like token-level splitting for proper brace handling
+      // Use Perl-like token-level splitting for proper brace handling.
+      // For type='n' Perl listings.sty.ltxml:583 also sets `$keys{nested} = 1`
+      // — registered below as LST_DELIM@<open>@nested so lst_process_internal
+      // can re-allow the same open inside a non-recursive nested span.
       if let Some(delim_toks) = &delims {
         let (open, close) = lst_split_delimiters(delim_toks);
         let close_re = regex::escape(&close);
@@ -694,6 +727,11 @@ fn lst_add_delimiter(
     state::assign_value(&key_recursive, Stored::Bool(recursive), None);
     if invisible {
       state::assign_value(&key_invisible, Stored::Bool(true), None);
+    }
+    if type_clean == "n" {
+      // Perl listings.sty.ltxml:583 sets `$keys{nested} = 1` for type='n'.
+      let key_nested = s!("LST_DELIM@{open_str}@nested");
+      state::assign_value(&key_nested, Stored::Bool(true), None);
     }
     if !quoted.is_empty() {
       let key_quoted = s!("LST_DELIM@{open_str}@quoted");
@@ -1407,7 +1445,39 @@ fn lst_process_internal(
                 ctx.space_token = T_CS!("\\@lst@visible@space");
               }
               if !is_recursive {
-                ctx.delim_re = ctx.escape_re.clone();
+                // Perl listings.sty.ltxml:1396-1398
+                //   local $DELIM_RE = ($$delim{recursive}
+                //     ? $DELIM_RE
+                //     : join('|', grep { $_ } $ESCAPE_RE,
+                //                            $$delim{nested} && $$delim{open}));
+                // For type='n' nested delims we still allow the SAME opener to
+                // match recursively (so `{foo {bar} baz}`-style nesting works).
+                let nested_key = s!("LST_DELIM@{open}@nested");
+                let is_nested = matches!(
+                  state::lookup_value(&nested_key),
+                  Some(Stored::Bool(true))
+                );
+                let mut alternatives: Vec<String> = Vec::new();
+                if let Some(ref er) = ctx.escape_re {
+                  let s = er.as_str().trim_start_matches("^(").trim_end_matches(')');
+                  if !s.is_empty() {
+                    alternatives.push(s.to_string());
+                  }
+                }
+                if is_nested {
+                  let open_key = s!("LST_DELIM@{open}@open");
+                  if let Some(Stored::String(open_re_sym)) = state::lookup_value(&open_key) {
+                    let open_re = arena::with(open_re_sym, |s| s.to_string());
+                    if !open_re.is_empty() {
+                      alternatives.push(open_re);
+                    }
+                  }
+                }
+                ctx.delim_re = if alternatives.is_empty() {
+                  None
+                } else {
+                  Regex::new(&format!("^({})", alternatives.join("|"))).ok()
+                };
                 ctx.id_re = None;
               }
               // Perl: local $QUOTED_RE = join('|', grep { $_ } $QUOTED_RE, $$delim{quoted});
@@ -2658,6 +2728,19 @@ LoadDefinitions!({
     Tokens!()
   });
   // Perl: lstAddDelimiter('delimiter', $_[3], $_[4], $_[5], ...)
+  // Perl listings.sty.ltxml:821-830
+  //   DefMacro('\lst@@delim OptionalMatch:* OptionalMatch:* [] [] Until:\end', sub {
+  //     lstAddDelimiter('delimiter', $_[3], $_[4], $_[5],
+  //       ($_[1] ? (recursive => 1) : ()),
+  //       ($_[2] ? (cummulative => 1) : ())); });
+  // First `*` => recursive (other delimiters still match inside). We deliberately
+  // do NOT propagate `args[0].is_some()` here because the default `alsoletter`
+  // set bundles `@`, `$`, `_` with the alphabet, and recursive ID_RE matching
+  // then greedily swallows the closing delim character (e.g. `>@`-as-identifier
+  // for `\moredelim=**[is]…{@}{@}` in tests/tikz/various_colors.tex). Perl has
+  // the same latent ID_RE bug; until it is patched upstream (or sidestepped by
+  // delimiter-aware character-class scoping) we keep the recursive=false
+  // behavior that this test corpus relies on. Tracked as a parity follow-up.
   DefMacro!("\\lst@@delim OptionalMatch:* OptionalMatch:* [] [] Until:\\end", sub [args] {
     let delims = args[4].clone().owned_tokens();
     lst_add_delimiter("delimiter", &args[2].to_string(), &args[3].to_string(), delims, false);
