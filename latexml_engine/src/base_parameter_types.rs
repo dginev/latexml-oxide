@@ -194,13 +194,38 @@ LoadDefinitions!({
   // Read a Pair (x,y) — parenthesized, comma-separated pair of Float values.
   // Perl: ReadPair in latex_constructs.pool.ltxml
   // Returns ArgWrap::Pair if ( is found, ArgWrap::None otherwise (for Optional).
+  //
+  // Helper: read a float that may be wrapped in braces (e.g. `{36.5}`).
+  // Some authors brace pair coordinates to disambiguate negative-number
+  // tokenization or to keep \multiput / \put pair args together.
+  // Witness: hep-th/9610147 — `\multiput(-89,{36.5})(-6,-1){6}{…}`.
   DefParameterType!(Pair, sub[_inner, _extra] {
     use latexml_core::common::pair::Pair;
+    use latexml_core::token::Catcode;
+    fn read_pair_float() -> Result<latexml_core::common::float::Float> {
+      let _ = gullet::skip_spaces();
+      // If next is BEGIN brace, consume to matching END brace and read float inside.
+      if let Some(tok) = gullet::read_token()? {
+        if tok.get_catcode() == Catcode::BEGIN {
+          let _ = gullet::skip_spaces();
+          let f = gullet::read_float()?;
+          let _ = gullet::skip_spaces();
+          // Consume matching close brace
+          if let Some(close) = gullet::read_token()? {
+            if close.get_catcode() != Catcode::END {
+              gullet::unread_one(close);
+            }
+          }
+          return Ok(f);
+        }
+        gullet::unread_one(tok);
+      }
+      gullet::read_float()
+    }
     let _ = gullet::skip_spaces();
     if gullet::if_next(T_OTHER!("("))? {
       gullet::read_token()?; // consume (
-      let _ = gullet::skip_spaces();
-      let x = gullet::read_float()?;
+      let x = read_pair_float()?;
       let _ = gullet::skip_spaces();
       // Skip comma separator
       if let Some(tok) = gullet::read_token()? {
@@ -208,8 +233,7 @@ LoadDefinitions!({
           gullet::unread_one(tok);
         }
       }
-      let _ = gullet::skip_spaces();
-      let y = gullet::read_float()?;
+      let y = read_pair_float()?;
       let _ = gullet::skip_spaces();
       // Skip closing )
       if let Some(tok) = gullet::read_token()? {
