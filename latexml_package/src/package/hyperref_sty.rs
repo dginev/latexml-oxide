@@ -168,7 +168,16 @@ LoadDefinitions!({
     // this registration, every hyperref-using paper emits 3-10 Warn lines
     // per `\hypersetup`. Driver: 2304.12803 (4 Hyp warnings, all the
     // common color-link options).
-    DefKeyVal!("Hyp", option, "");
+    //
+    // `Semiverbatim` value type: identifier-shape values like
+    // `linkcolor=tab_blue` (with `_`) or pdf-string values with `^`
+    // are read with `_`/`^`/`~`/`&`/`$`/`#`/`'` neutralized to OTHER
+    // catcode so the value doesn't bleed SUB-tokens into the digester
+    // and trip `script_handler`'s text-mode error path. Surpass-Perl:
+    // Perl only declares `baseurl` Semiverbatim and errors on every
+    // other `_`-containing value. Witness: 2602.11111 `linkcolor=
+    // tab_blue` (4 errors → 0).
+    DefKeyVal!("Hyp", option, "Semiverbatim");
   }
 
   // \hypersetup{keyvals} configures various parameters,
@@ -188,7 +197,8 @@ LoadDefinitions!({
     "pdfescapeform", "psdextra",
     "pdfa", "pdfua", "pdfsuffix",
   ] {
-    DefKeyVal!("Hyp", key, "");
+    // Same surpass-Perl rationale as the main option loop above.
+    DefKeyVal!("Hyp", key, "Semiverbatim");
   }
 
   // Digest & store the options
@@ -200,7 +210,8 @@ LoadDefinitions!({
       if key == "colorlinks" && value_str == "true" {
         RequirePackage!("color");
       }
-      // Perl digests the value tokens to apply font conversions (e.g. ' → ')
+      // Perl digests the value tokens to apply font conversions
+      // (e.g. ' → curly quote in pdfauthor).
       let digested = stomach::digest(value.revert()?)?;
       let digested_str = digested.to_string();
       state::assign_mapping("Hyperref_options", key, Some(digested_str));
