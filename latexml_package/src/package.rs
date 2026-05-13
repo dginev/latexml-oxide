@@ -369,7 +369,7 @@ pub mod slashed_sty;
 pub mod slides_cls;
 pub mod smfart_cls;
 pub mod soul_sty;
-pub mod sprocl_sty;
+// sprocl_sty removed — papers bundle their own sprocl.sty; raw-load now.
 pub mod srcltx_sty;
 pub mod standalone_cls;
 pub mod standalone_sty;

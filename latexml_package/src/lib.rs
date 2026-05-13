@@ -719,7 +719,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("upquote", "sty", package::upquote_sty::load_definitions),
   ("minimal", "cls", package::minimal_cls::load_definitions),
-  ("sprocl", "sty", package::sprocl_sty::load_definitions),
+  // sprocl: no binding — papers bundle their own sprocl.sty (World Scientific
+  // proceedings style), which Perl raw-loads cleanly. The earlier stub
+  // intercepted the load and only stubbed \address/\abstracts, leaving
+  // \citelow / \citeup / \cite-with-* and the rest of sprocl undefined.
   ("srcltx", "sty", package::srcltx_sty::load_definitions),
   (
     "standalone",
