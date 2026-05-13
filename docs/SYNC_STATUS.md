@@ -154,6 +154,37 @@ hep-th9703142, stage-6). Other Pair-error papers in the corpus
 (hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
 malformed pairs that are paper-level errors SHARED with Perl.
 
+**Round-26 follow-on (2026-05-13)**:
+
+1. `0e11e83c5f` post/mathml: emit `columnspacing` / `rowspacing` on
+   `<m:mtable>` (default `5pt`/`0pt`, per Perl `MathML.pm` L432-486);
+   preserve `ltx:ref` and other LaTeXML elements inside `<m:mtext>`
+   by cloning the raw subtree (Perl `pmml_text_aux` L1063-1073) and
+   reverse-resolving namespace URI → prefix so `add_nodes` keeps
+   them. Fixes 2602.23527 Figure 1: refs in `\overset{\shortstack…}`
+   now render as `<a class="ltx_ref">` links and the array columns
+   stop collapsing.
+
+2. `e959fd5359` autoload: tag the bootstrap-installed trigger CSes
+   (`\Bbb`, `\mathbb`, `\mathfrak`, `\theoremstyle`, `\numberwithin`,
+   `\align`, `\subequations`, `\multline`, `\curraddr`,
+   `\subjclass`) with a `<cs>:autoload` state flag and make
+   `is_definable_latex` treat them as redefinable. Without this,
+   `\newcommand{\Bbb}{…}` in a paper that doesn't load amsfonts hit
+   `Info:ignore` and the trigger fired later, expanding `\Bbb $x$`
+   as `\mathbb{$}` and cascading. Perl avoids this because its
+   `DefAutoload` entries live in `OmniBus.cls.ltxml`, which only
+   loads on unknown `\documentstyle` options. Recovered (Rust=Perl=0
+   errors): `nucl-th9902037`, `nucl-th9805044`, `hep-ph9312226`.
+
+3. SHARED-FAILURE-confirmed cluster (Perl error count == Rust error
+   count): `\begin{abstract}` mode-switch on plain-TeX-style abstract
+   usage `{\abstract \ni …}` — 5/6 papers in the cluster, 1 error
+   each in both engines (witnesses: astro-ph9901386, astro-ph9812419,
+   math9706205, astro-ph9903013, astro-ph9901233). Sixth paper
+   (astro-ph9901164) has Rust=2, Perl=7 — Rust supersedes Perl. No
+   action needed; log under SHARED-FAILURE.
+
 **Late-session AmSTeX `\input amsppt.sty` recovery** — `a32bdbf5f2`:
 the `\documentstyle{amsppt}` path in tex_job.rs's documentstyle shim
 already triggers LoadPool('AmSTeX'), but the direct `\input amsppt.sty`
@@ -192,7 +223,7 @@ sprint records live in [`archive/round19_iteration_log.md`].
 Remaining blocker is the **mhchem 77-error expl3 csname-protocol
 gap** — see "mhchem retirement" below.
 
-`cargo test --tests` = **1187/0/0**. `cargo clippy --workspace
+`cargo test --tests` = **1190/0/0**. `cargo clippy --workspace
 --all-targets` = **0 warnings**.
 
 ---
