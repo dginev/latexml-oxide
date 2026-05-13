@@ -2963,11 +2963,19 @@ LoadDefinitions!({
     if let Some(ops) = state::lookup_tokens("@at@begin@document") {
       boxes.push(stomach::digest(ops)?);
     }
-    // Fire the L3 hook system for begindocument.
-    // Modern LaTeX (with expl3) uses \hook_use:n{begindocument} instead of
-    // \@begindocumenthook. This fires hooks registered via \AtBeginDocument
-    // when expl3 has redefined it to use \AddToHook{begindocument}{...}.
-    // Includes babel's \lx@babel@activate@mainlang.
+    // Fire the L3 hook system for begindocument/before, then begindocument.
+    // Modern LaTeX (with expl3) fires these in order at \begin{document}:
+    //   1. \hook_use:n {begindocument/before}  — pre-init hook
+    //   2. (selectfont, prepare counters, etc.)
+    //   3. \hook_use:n {begindocument}         — user-registered AtBeginDocument
+    // This fires hooks registered via \AtBeginDocument / \AddToHook{begindocument/before}{…}
+    // when expl3 has redefined them to use the modern hook system.
+    // Driver for begindocument/before: translations.sty L73-85 wraps its
+    //   `\def\@trnslt@current@language{\languagename}` initialiser in
+    //   `\AddToHook{begindocument/before}{…}`. Without this dispatch the
+    //   .trsl dictionary loads (queued via `\AtBeginDocument`) inside the
+    //   subsequent begindocument firing reference an undefined CS.
+    // Witnesses: stage-2/3 of 100k warning corpus (2603.25051, 2604.07448).
     //
     // NOTE: this is a Rust-only deviation from Perl (Perl does not fire a
     // begindocument hook dispatch), but it's load-bearing because our raw
@@ -2975,6 +2983,33 @@ LoadDefinitions!({
     // real hook code against it. Keep until the kernel-parity direction
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
+    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+      boxes.push(stomach::digest(Tokens!(
+        T_CS!("\\hook_use:n"),
+        T_BEGIN!(),
+        T_LETTER!("b"),
+        T_LETTER!("e"),
+        T_LETTER!("g"),
+        T_LETTER!("i"),
+        T_LETTER!("n"),
+        T_LETTER!("d"),
+        T_LETTER!("o"),
+        T_LETTER!("c"),
+        T_LETTER!("u"),
+        T_LETTER!("m"),
+        T_LETTER!("e"),
+        T_LETTER!("n"),
+        T_LETTER!("t"),
+        T_OTHER!("/"),
+        T_LETTER!("b"),
+        T_LETTER!("e"),
+        T_LETTER!("f"),
+        T_LETTER!("o"),
+        T_LETTER!("r"),
+        T_LETTER!("e"),
+        T_END!()
+      ))?);
+    }
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
       // catcode regime where `:` is OTHER (not LETTER), which would
