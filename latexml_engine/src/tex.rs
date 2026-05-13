@@ -72,6 +72,20 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     })),
     None,
   )?;
+  // Mark this CS as an autoload trigger so `isDefinableLaTeX` treats
+  // `\newcommand{\cs}{…}` as a redefinition of an undefined CS (matching
+  // Perl, where the equivalent `DefAutoload` entries live in
+  // `OmniBus.cls.ltxml` and only fire when OmniBus is actually loaded —
+  // i.e. they don't block user `\newcommand` in normal LaTeX papers).
+  // Witness: nucl-th9902037 redefines `\Bbb` via `\newcommand` to a
+  // paper-local symbol; without this flag the autoload trigger silently
+  // wins, then expands `\Bbb $arg…$` as `\mathbb{$}` and cascades into
+  // 62 mode-switch errors. Perl on the same input: 0 errors.
+  state::assign_value(
+    &s!("{cs_name}:autoload"),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
   Ok(())
 }
 

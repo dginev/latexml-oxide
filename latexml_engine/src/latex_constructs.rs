@@ -127,6 +127,16 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if is_definable(cs) {
     return Ok((true, false));
   }
+  // Autoload triggers (installed by `def_autoload` in tex.rs) appear
+  // defined but should not block `\newcommand` — Perl's analogous
+  // `DefAutoload` entries live in `OmniBus.cls.ltxml`, which isn't
+  // loaded for typical papers, so the user's `\newcommand` sees the
+  // CS as undefined and succeeds. Mirror that by treating the
+  // trigger as redefinable. (`plain_origin` stays false: there is
+  // no `<cs>:locked` guard to bypass for an autoload trigger.)
+  if has_value(&s!("{}:autoload", cs.to_string())) {
+    return Ok((true, false));
+  }
   let plain =
     lookup_definition(cs)?.is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
   Ok((plain, plain))
