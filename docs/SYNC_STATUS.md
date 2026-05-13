@@ -281,18 +281,24 @@ and load it. Surpass-Perl until upstream catches up.
 
 ### Cluster F — `\endgroup`-`\figure` RevTeX 3.x short-form
 
-**Status:** Rust SUPERSEDES Perl on 9/10. ~10 papers.
+**Status:** CLOSED. Rust SUPERSEDES Perl on 9/10. SHARED on
+the 10th. **No action.** ~10 papers.
 
 **Root cause.** RevTeX 3.x's `\figure{N} caption…` short-form
-has no binding in either engine. Rust recovers further from
-the resulting mode-mismatch than Perl, so the cluster is
-Rust-better. Witness counts: cond-mat9607130 (Rust 1, Perl 7),
-hep-th9410220 (Rust 93, Perl 102), …
+(aps.sty L616-628, non-`floats` mode) has no binding in either
+engine. Rust recovers further from the resulting unclosed-mode
+error than Perl. Witness counts: cond-mat9607130 (Rust 1,
+Perl 7), hep-th9410220 (Rust 93, Perl 102), …
 
-**Principled approach.** Provide a `\figure{N} caption` short-
-form in `revtex_cls.rs` / `revtex3_support_sty.rs` to
-recover ALL the way to 0 errors. Driver counts witness recovery
-per fix.
+**Why no Rust binding.** Verified 2026-05-13 against
+`~/LaTeXML/lib/LaTeXML/Package/revtex*.ltxml` — Perl has zero
+`\figure` definitions (only `\printfigures` in revtex4_support).
+A Rust-only `DefMacro!(r"\figure {}", "…")` would be a hotfix
+diverging from Perl. Per `feedback_perl_parity_bindings.md`
+the project rule is "match Perl, do not innovate" — the
+earlier "Principled approach" plan (provide a short-form
+binding) was retracted. The cluster's already-recorded
+"Rust SUPERSEDES" verdict stands.
 
 ### Cluster G — long-tail single-witnesses (~274 papers)
 
