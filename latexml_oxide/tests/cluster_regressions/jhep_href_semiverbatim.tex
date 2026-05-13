@@ -1,0 +1,22 @@
+% Witness: arXiv:2602.22473 (Pallis et al.) line 1019
+%   \beq … -2\ld\am\mgr
+%   M^2S, … \eeq
+%
+% JHEP defines `\am{}{}{}` as a 3-arg macro expanding to
+% `\@spires{...#3}{...#3}`, which itself expands to
+% `\href{URL}{BODY}`. The user's `\am\mgr M^2S` grabs `^` as the
+% third argument; it ends up at the tail of `\href`'s BODY arg.
+%
+% Perl's JHEP.cls.ltxml L133-136 *redefines* `\href` as a 2-arg
+% `Semiverbatim Semiverbatim` Constructor — neutralizing `^` to OTHER
+% in the BODY so script_handler doesn't fire when digested in math
+% mode. The Rust port had omitted this override, leaving `\href`
+% bound to hyperref's `HyperVerbatim {}` (BODY arg retains SUPER
+% catcode), and the trailing `^` errored in math mode.
+\documentclass{PoS}
+\newcommand{\ld}{\ensuremath{\lambda}}
+\newcommand{\mgr}{\ensuremath{m_{3/2}}}
+\begin{document}
+$ \ld\am\mgr
+M^2S, $
+\end{document}

@@ -119,3 +119,14 @@ fn cluster_pair_tolerant_trailing() {
 fn cluster_newpsobject_forward() {
   convert_clean("tests/cluster_regressions/newpsobject_forward.tex");
 }
+
+/// JHEP.cls override of `\href` must use `Semiverbatim Semiverbatim`
+/// (NOT hyperref's `HyperVerbatim {}`) so the BODY arg's `^`/`_`
+/// are neutralized to OTHER catcode and don't fire `script_handler`
+/// when digested in math mode. Affects all `\@spires`-style journal
+/// citation macros (`\am`, `\ap`, `\np`, `\pl`, …). Mirrors Perl
+/// `JHEP.cls.ltxml` L133-136. Witness: arXiv:2602.22473.
+#[test]
+fn cluster_jhep_href_semiverbatim() {
+  convert_clean("tests/cluster_regressions/jhep_href_semiverbatim.tex");
+}

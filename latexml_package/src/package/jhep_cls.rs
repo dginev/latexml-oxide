@@ -132,7 +132,37 @@ LoadDefinitions!({
     },
     mode => "internal_vertical");
 
-  // Perl L133-137: Hyperref stubs
+  // Perl JHEP.cls.ltxml L133-136 — JHEP redefines `\href` as a 2-arg
+  // `Semiverbatim Semiverbatim` Constructor. The crucial difference from
+  // hyperref.sty's `\href HyperVerbatim {}` is that the SECOND arg is
+  // also `Semiverbatim`: catcode-neutralized so `^` / `_` in the body
+  // become OTHER tokens and do NOT fire script_handler when digested in
+  // math mode.
+  //
+  // Why this matters: JHEP defines journal-citation macros like
+  //   \am{}{}{} → \@spires{ANMAA\%2C#1\%2C#3}{...#3}
+  // where `\@spires{URL}{BODY}` expands to `\href{URL}{BODY}`. Papers
+  // call them inside math (`\beq … \am\mgr M^2S …`), grabbing `^` as
+  // the third arg. The `^` then ends up at the end of `\href`'s body
+  // — and `\href`'s body MUST treat it as Semiverbatim text, not as
+  // a SUPER catcode token that would fire script_handler. The earlier
+  // Rust port omitted this override, so `\href` stayed bound to
+  // hyperref's `HyperVerbatim {}` form and the trailing `^` errored.
+  //
+  // Witness: arXiv:2602.22473 (Pallis et al.) line 1019
+  //   \beq … -2\ld\am\mgr
+  //   M^2S, … \eeq
+  // Rust=1, Perl=0 → 0/0 with this binding.
+  DefConstructor!("\\href Semiverbatim Semiverbatim",
+    "<ltx:ref href='#href'>#2</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
+      let href = compose_url(&state::lookup_string("BASE_URL"), &url, None);
+      Ok(stored_map!("href" => href))
+    });
+
+  // Perl L138-140: Stubs.
   DefMacro!("\\JHEPspecialurl Semiverbatim", "");
   DefMacro!("\\base Semiverbatim", "");
   DefMacro!("\\name Semiverbatim", "");
