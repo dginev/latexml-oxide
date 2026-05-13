@@ -65,4 +65,13 @@ LoadDefinitions!({
   DefPrimitive!("\\textChi",     "\u{03A7}");
   DefPrimitive!("\\textPsi",     "\u{03A8}");
   DefPrimitive!("\\textOmega",   "\u{03A9}");
+
+  // textgreek.sty L235-260 also exposes `\straight<letter>` variants
+  // (the "upright" forms used in physics typography where the default
+  // italic theta is unwanted). Map to Unicode glyphs that match the
+  // textgreek package's PU font encoding. Witness: arXiv:2604.15081
+  // uses `\straighttheta/2\straighttheta` in hafnia-thin-film prose.
+  DefPrimitive!("\\straighttheta",   "\u{03B8}"); // θ
+  DefPrimitive!("\\straightphi",     "\u{03D5}"); // ϕ (PHI SYMBOL)
+  DefPrimitive!("\\straightepsilon", "\u{03F5}"); // ϵ (LUNATE EPSILON SYMBOL)
 });
