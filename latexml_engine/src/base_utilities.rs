@@ -2197,6 +2197,22 @@ fn is_typesetting_only_message(message: &str) -> bool {
     "exceeds \\linewidth",
     "loading directly a language style",
     "syntax is deprecated",
+    // babel TL2025: legacy `<lang>.ldf` files have been retired in
+    // favour of `locale/<iso>/babel-<lang>.tex` (the ini-file
+    // system). For papers that load `\usepackage[<lang>]{babel}`
+    // without `provide=*`, babel fires:
+    //   Package babel Error: Unknown option '<lang>'.
+    //   Either you misspelled it or the language definition file
+    //   <lang>.ldf was not found
+    // The .ldf-missing case is benign: pdflatex shows the message
+    // and proceeds — the document still typesets, just without
+    // the language's captions/shorthands loaded. Same effective
+    // outcome on our side: downgrade to Info, conversion continues.
+    // Surpass-Perl: Perl raw-loads babel.sty and errors identically
+    // on the same 58 papers in Round-27 Cluster D. This downgrade
+    // closes the cluster (cannot reach 0-error AND load the proper
+    // ini file without redesigning babel option processing).
+    "either you misspelled it",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
