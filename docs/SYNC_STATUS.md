@@ -63,6 +63,23 @@ csname-protocol (9 — Task #22), `ltx:*` schema violation in malformed
 XML (8 — paper-specific), `\citep`/`\citet`/`\citealp` apacite chain
 (8 SHARED), various single-witness clusters.
 
+Stage-4 sweep (papers 30001-40000, 2026-05-12 night): **9914/10000
+OK = 99.14%** with same release binary. Stage-4 has higher density of
+1990s-era hep-th / alg-geom papers, exposing three new clusters:
+* `\new@internalmathalphabet` undefined (11 papers) — obsolete LaTeX
+  2.09 kernel macro, fixed by `d0dbcb6b01` (stub with 5-arg signature
+  in latex_constructs.rs).
+* `\xpt` / `\xipt` / `\xiipt` undefined (6 papers) — LaTeX 2.09 size
+  aliases that are defined in latex_base.rs but skipped under the
+  latex.ltx dump path. Fixed by `9bf2c801ae` (no-op stubs duplicated
+  into latex_constructs.rs).
+* `\begin{Sb}` undefined (2 papers, alg-geom legacy) — fixed earlier
+  by `1a90378618` ams_support auto-load of amstex under 2.09 compat.
+
+Stage-4 targeted re-run after fixes: **21/72 prior failures recovered**
+→ effective stage-4 result: **9935/10000 OK = 99.35%**. Stages 1-4
+combined: **39,765 / 40,000 OK = 99.41%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
