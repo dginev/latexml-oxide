@@ -21,6 +21,12 @@ gap; ~5), undefined-CS (algorithmicx-style `\Subsection`/`\textit`/
 `\qq`/`\polhk`/etc.; ~15), missing class files (~3), tikz parser
 giveup (~1), token-limit / Xy-pic fatals (~6), various (~8).
 
+Stage-2 sweep (next 10k, after `a4ea32f70a` siunitx auto-cancel +
+`8437520117` omnibus `\@ifundefined` theoremstyle): **9945/10000
+OK = 99.45%** — 49 conversion_error, 3 oversized, 2 error (script-
+level), 1 abort. Marginally better than stage-1 v2 (+0.04%),
+confirming the fixes generalize across distinct paper sets.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
