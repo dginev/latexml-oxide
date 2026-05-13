@@ -89,6 +89,42 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   Ok(())
 }
 
+/// Variant of `def_autoload` that loads a `.pool` (engine-level
+/// definitions file) instead of a `.sty` package. Mirrors Perl's
+/// `DefAutoload($trigger, '<Pool>.pool.ltxml')` form used by TeX.pool
+/// to lazy-load AmSTeX.pool on amstex-style triggers.
+fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
+  use latexml_core::common::store::Stored;
+  use latexml_core::definition::ExpansionBody;
+  let cs_tok = T_CS!(cs_name);
+  if IsDefined!(&cs_tok) {
+    return Ok(());
+  }
+  let pool_name = pool.to_string();
+  let cs_for_closure = cs_tok;
+  def_macro(
+    cs_tok,
+    None,
+    ExpansionBody::Closure(Rc::new(move |_args| {
+      state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+      let pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
+      input_definitions(&pool_name, InputDefinitionOptions {
+        extension: Some(Cow::Borrowed("pool")),
+        ..InputDefinitionOptions::default()
+      })?;
+      latexml_core::state::hoist_top_frame_meaning_delta(&pre_keys);
+      Ok(Tokens::new(vec![cs_for_closure]))
+    })),
+    None,
+  )?;
+  state::assign_value(
+    &s!("{cs_name}:autoload"),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
 /// Perl `FindFile($format._dump, ...)` parity for the plain dump.
 /// Returns `true` if `plain.dump.txt` is reachable through any of the
 /// runtime resolution paths (env overrides, exe-relative install layout,
@@ -207,6 +243,29 @@ LoadDefinitions!({
   def_autoload("\\multline", "amsmath")?;
   def_autoload("\\curraddr", "ams_support")?;
   def_autoload("\\subjclass", "ams_support")?;
+
+  // Perl TeX.pool.ltxml L50-56: AmSTeX-pool autoload triggers. When any
+  // of these CSes is invoked in plain-TeX-with-AmSTeX style (or before
+  // `\documentstyle{amsppt}` arrives — see e.g. math/9610224's
+  // `\NoBlackBoxes\documentstyle{amsppt}` ordering), Perl auto-loads
+  // `AmSTeX.pool.ltxml` first. Without this, our Rust port emitted
+  // `Error:undefined:\NoBlackBoxes` because the AmSTeX pool hadn't
+  // been loaded yet.
+  for amstrigger in [
+    "\\BlackBoxes",     "\\NoBlackBoxes",
+    "\\TagsAsMath",     "\\TagsAsText",
+    "\\TagsOnLeft",     "\\TagsOnRight",
+    "\\CenteredTagsOnSplits", "\\TopOrBottomTagsOnSplits",
+    "\\LimitsOnInts",   "\\NoLimitsOnInts",
+    "\\LimitsOnNames",  "\\NoLimitsOnNames",
+    "\\LimitsOnSums",   "\\NoLimitsOnSums",
+    "\\loadbold",       "\\loadeufb", "\\loadeufm",
+    "\\loadeurb",       "\\loadeurm",
+    "\\loadeusb",       "\\loadeusm",
+    "\\loadmathfont",   "\\loadmsam", "\\loadmsbm",
+  ] {
+    def_autoload_pool(amstrigger, "AmSTeX")?;
+  }
 
   // File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
   DefMacro!(
