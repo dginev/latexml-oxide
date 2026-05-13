@@ -24,6 +24,16 @@ LoadDefinitions!({
   // form the Perl port uses, with the `\endX` `Let`-ed to `\relax`.
   DefMacro!("\\makeheadline", "");
   DefMacro!("\\makefootline", "");
+
+  // LaTeX2e typesetting commands users sometimes mix into AmS-TeX
+  // sources (the AmSTeX.pool path doesn't load latex_constructs). Stub
+  // as no-ops — vertical/horizontal spacing has no XML meaning.
+  // Witnesses: arXiv:funct-an9211012, funct-an9211013 — both have
+  //   \vspace{1\jot} inside multi-line equation arrays.
+  // Perl LaTeXML Fatals on the undefined CS; we go further and emit a
+  // clean document by absorbing the dimen argument.
+  DefMacro!("\\vspace OptionalMatch:* {}", None);
+  DefMacro!("\\hspace OptionalMatch:* {}", None);
   DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
   Let!("\\endtitle", "\\relax");
   DefMacro!("\\author Until:\\endauthor",
