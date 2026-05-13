@@ -1082,6 +1082,19 @@ fn load_tex_definitions(
   // matches Perl's pre-load state hygiene.
   crate::stomach::leave_horizontal_internal();
 
+  // Snapshot expl3-state at load entry. The cleanup hook below should
+  // only restore catcodes if THIS load activated expl3; if the calling
+  // context was already in expl3 mode (e.g. tasks.sty has run
+  // `\ExplSyntaxOn` and is now `\file_input:n` ing a child file like
+  // tasks.cfg), we must preserve the active state for the caller.
+  // Without this guard, the nested cleanup would reset `_` and `:` to
+  // OTHER/SUB inside the parent's processing, breaking everything past
+  // the nested load (e.g. tasks.sty line 817's `\file_input_stop:`).
+  // Witness for this exact failure: arXiv:2602.21210, 2604.21347,
+  // 2604.22630, 2604.23234, 2604.22528 (tasks.sty + expl3 cluster,
+  // Task #20).
+  let entered_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
+
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -1158,6 +1171,7 @@ fn load_tex_definitions(
       "expl3" | "xparse" | "l3keys2e" | "expl3-code"
     );
     if !is_expl3_core
+      && !entered_expl3                            // <-- new guard
       && lookup_catcode('_') == Some(Catcode::LETTER)
       && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
     {
