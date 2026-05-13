@@ -144,9 +144,15 @@ the highest stage rate in the sweep. Per-stage first-pass tallies:
 
 Combined stages 1-10 first-pass: **99,390 / 100,000 OK = 99.39%**.
 With the targeted per-stage re-runs that recovered an additional
-**+48** papers against the iteratively rebuilt release binary
-(stage-1: +6, stage-2: +4, stage-3: +9, stage-4: +25, stage-5: +4):
-**~99,438 / 100,000 = 99.44%**.
+**+51** papers against the iteratively rebuilt release binary
+(stage-1: +6, stage-2: +4, stage-3: +9, stage-4: +25, stage-5: +5,
+stage-6: +2): **~99,441 / 100,000 = 99.44%**.
+
+Final fix this session — `8880cd8c85` Pair parameter reader brace
+skip — recovers the `\\multiput(x,{y})` cluster (hep-th9610147 +
+hep-th9703142, stage-6). Other Pair-error papers in the corpus
+(hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
+malformed pairs that are paper-level errors SHARED with Perl.
 
 **Round-26 mission summary (2026-05-12 → 2026-05-13)**: the 100,000-
 paper "warning" subset of arxmliv (papers where Perl LaTeXML emits
