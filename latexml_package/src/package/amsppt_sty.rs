@@ -6,7 +6,20 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // amsppt loads the AmSTeX pool — Perl L27
+  // amsppt loads the AmSTeX pool — Perl L27.
+  // The `\documentstyle{amsppt}` path in tex_job.rs already takes care
+  // of LoadPool('AmSTeX'). The `\input amsppt.sty` direct-load path
+  // does NOT — papers like arXiv:hep-th9312119 start with `\input
+  // amsppt.sty` and hit undefined `\document`, `\newline`, `\flushpar`
+  // etc. that the AmSTeX pool would have provided. Load the pool
+  // explicitly here so both entry paths produce the same definition
+  // set.
+  if !lookup_bool("AmSTeX.pool_loaded") {
+    let _ = input_definitions("AmSTeX", InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    });
+  }
   // AmSTeX pool is partially ported (~30%); residual undefined-CS
   // errors on amsppt papers (\text, \proof, \theorem env, \endmatrix,
   // \foldedtext, \eightbf, \AmSTeX, \DN@, \frills@, etc — see
