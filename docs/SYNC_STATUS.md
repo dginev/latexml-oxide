@@ -46,6 +46,23 @@ math xml:id collision (6 — Task #10), pgfplots `\lx@text@ampX` `&`-leak
 (~3), `\LoadClass` in body (2), tikz-cd `decorations.pathmorphing`
 (1), mode-switch frontmatter (~3), various single-witnesses (~11).
 
+Stage-2/3 targeted re-runs (2026-05-12 night) against the same
+csname-protocol + listings binary, plus `3772d41b9e` engine fix to
+fire `\hook_use:n{begindocument/before}` before `begindocument` at
+`\begin{document}`:
+* Stage-2: **9949/10000 OK = 99.49%** (+4 vs 9945: 2603.22193 /
+  2603.23433 twemoji + 2603.25051 / 2604.07448 translations.sty
+  `\@trnslt@current@language`).
+* Stage-3: **9934/10000 OK = 99.34%** (+4 vs 9930: 2604.13899 /
+  2604.17338 / 2604.20621 twemoji + 2604.19192 translations.sty).
+
+Combined stages 1-3: **29,830 / 30,000 OK = 99.43%**. Top remaining
+clusters across the three stages: babel/vendor `\GenericError` (28
+SHARED with Perl), math xml:id collision (14 — Task #10), expl3
+csname-protocol (9 — Task #22), `ltx:*` schema violation in malformed
+XML (8 — paper-specific), `\citep`/`\citet`/`\citealp` apacite chain
+(8 SHARED), various single-witness clusters.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
