@@ -1,0 +1,27 @@
+% Witness: arXiv:physics/9710028 lines 500-509
+%   \newpsobject{PST@Border}{psline}{linewidth=.0015,linestyle=solid}
+%   ...
+%   \PST@Border(0,0)(1,1)
+%
+% Perl's `pstricks_support.sty.ltxml` L849-861 implements
+% `\newpsobject{name}{old}{keyval}` to dynamically define `\<name>`
+% as a forwarder to `\<old>` with the saved `<keyval>` baked in.
+% The earlier Rust port stubbed `\newpsobject` as a no-op, leaving
+% `\PST@Border` (and 9 siblings on this paper) undefined. Match Perl
+% by porting the actual forwarder logic.
+\documentclass{article}
+\usepackage{pstricks}
+\makeatletter
+\newpsobject{PST@Border}{psline}{linewidth=.0015,linestyle=solid}
+\newpsobject{PST@Axes}{psline}{linewidth=.0015,linestyle=dotted}
+\newpsobject{PST@Solid}{psline}{linewidth=.0015,linestyle=solid}
+\makeatother
+\begin{document}
+\makeatletter
+\begin{pspicture}(0,0)(2,2)
+\PST@Border(0,0)(1,1)
+\PST@Axes(0,0)(2,2)
+\PST@Solid(0,1)(1,2)
+\end{pspicture}
+\makeatother
+\end{document}

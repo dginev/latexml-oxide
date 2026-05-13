@@ -225,22 +225,25 @@ LoadDefinitions!({
     let _ = gullet::skip_spaces();
     if gullet::if_next(T_OTHER!("("))? {
       gullet::read_token()?; // consume (
-      let x = read_pair_float()?;
       let _ = gullet::skip_spaces();
-      // Skip comma separator
-      if let Some(tok) = gullet::read_token()? {
-        if !tok.with_str(|s| s == ",") {
-          gullet::unread_one(tok);
-        }
-      }
+      let x = read_pair_float()?;
+      // Perl latex_constructs.pool.ltxml:ReadPair L4910-4912 uses
+      //   $gullet->skipSpaces; $gullet->readUntil(T_OTHER(',')); $gullet->skipSpaces;
+      //   my $y = ...;
+      //   $gullet->skipSpaces; $gullet->readUntil(T_OTHER(')')); $gullet->skipSpaces;
+      // — `readUntil` is tolerant of extra junk between the float and the
+      // separator. Witness: physics/9709007 line 1594
+      //   \multiput(3.2,3,8)(.3,0){2}{\circle*{.1}}
+      // The user typoed `3,8` for `3.8`; Perl reads x=3.2, swallows nothing
+      // up to the comma, reads y=3, then `readUntil(')')` consumes the
+      // extra `,8` silently. The earlier Rust port read one token after y
+      // and only consumed it if literally `)` — bailing the second pair.
+      let _ = gullet::skip_spaces();
+      let _ = gullet::read_until(&Tokens!(T_OTHER!(",")));
+      let _ = gullet::skip_spaces();
       let y = read_pair_float()?;
       let _ = gullet::skip_spaces();
-      // Skip closing )
-      if let Some(tok) = gullet::read_token()? {
-        if !tok.with_str(|s| s == ")") {
-          gullet::unread_one(tok);
-        }
-      }
+      let _ = gullet::read_until(&Tokens!(T_OTHER!(")")));
       let _ = gullet::skip_spaces();
       Ok(ArgWrap::Pair(Pair::new(x, y)))
     } else {

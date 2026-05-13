@@ -99,3 +99,23 @@ fn cluster_multiput_braced_pair() { convert_clean("tests/cluster_regressions/mul
 fn cluster_omnibus_chapter_book_autoload() {
   convert_clean("tests/cluster_regressions/omnibus_chapter_book_autoload.tex");
 }
+
+/// Tolerant `Pair` parameter reader: malformed `(3.2,3,8)` (three
+/// comma-separated values where Pair expects two) must consume the
+/// trailing `,8` silently so the next Pair argument can read its `(`.
+/// Mirrors Perl `ReadPair`'s `readUntil(',')`/`readUntil(')')`.
+/// Witness: arXiv:physics/9709007.
+#[test]
+fn cluster_pair_tolerant_trailing() {
+  convert_clean("tests/cluster_regressions/pair_tolerant_trailing.tex");
+}
+
+/// `\newpsobject{name}{old}{keyval}` must dynamically define
+/// `\<name>` as a forwarder to `\<old>[<keyval>]`. Earlier stub
+/// no-op'd, leaving the defined CS undefined. Mirrors Perl
+/// `pstricks_support.sty.ltxml` L849-861. Witness:
+/// arXiv:physics/9710028 (10 errors → 0 with this fix).
+#[test]
+fn cluster_newpsobject_forward() {
+  convert_clean("tests/cluster_regressions/newpsobject_forward.tex");
+}
