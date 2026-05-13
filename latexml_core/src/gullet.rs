@@ -1216,6 +1216,45 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         };
         if let Some(c) = soft_char {
           cs.push(c);
+        } else if cs_str == "\\lx@applyaccent" {
+          // Accent macros like `\'`, `\\\"`, `\\^`, … all expand to
+          //   \lx@applyaccent <accent-token> <combining-char> <standalone-char> { <letter> }
+          // via tex_character.rs::accent_def. Real pdflatex's `\csname`
+          // skips through the resulting accented char because the accent
+          // primitive is performed in the gullet; our `\lx@applyaccent`
+          // is a `DefPrimitive` (stomach-level), so a literal CS token
+          // surfaces in the csname stream and aborts the read with
+          //   `\lx@applyaccent should not appear between \\csname and \\endcsname`.
+          // (Witnesses: twemoji.sty `\twemoji flag: St. Barthélemy` —
+          // arXiv:2603.22193, 2603.23433.)
+          //
+          // Faithful resolution: peek the 4 args, append the standalone
+          // char (arg 3, T_OTHER!) to the constructed csname, discard
+          // the rest. Mirrors the implicit-character substitution above
+          // for `\let`-to-char CSes.
+          let _accent = read_x_token(Some(true), false, None)?;
+          let _combiner = read_x_token(Some(true), false, None)?;
+          let standalone = read_x_token(Some(true), false, None)?;
+          // The 4th arg is a brace group `{<letter>}` — consume the
+          // T_BEGIN, then read tokens until matching T_END.
+          if let Some(t) = read_x_token(Some(true), false, None)? {
+            if t.get_catcode() == Catcode::BEGIN {
+              let mut depth: i32 = 1;
+              while depth > 0 {
+                match read_x_token(Some(true), false, None)? {
+                  Some(t2) => match t2.get_catcode() {
+                    Catcode::BEGIN => depth += 1,
+                    Catcode::END => depth -= 1,
+                    _ => {},
+                  },
+                  None => break,
+                }
+              }
+            }
+          }
+          if let Some(c) = standalone {
+            c.with_str(|s| cs.push_str(s));
+          }
         } else if let Some(Stored::Token(letted)) = crate::state::lookup_meaning(&token) {
           // CS is \let-equivalent to a single token. If that token is
           // a character (LETTER/OTHER/SPACE), append its string repr
