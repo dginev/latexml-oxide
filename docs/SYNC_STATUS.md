@@ -154,6 +154,84 @@ hep-th9703142, stage-6). Other Pair-error papers in the corpus
 (hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
 malformed pairs that are paper-level errors SHARED with Perl.
 
+**Round-26 follow-on resume queue (open as of 2026-05-13)**:
+
+* **`\lx@`-CS round-trip via `\write`/`\input` — RED test still owed.**
+  Witness cluster: hep-th9306154, hep-ph9803499, hep-th9203004,
+  math9904104 (4 papers; first-error `Error:undefined:\lx`). Root
+  shape: `\write`'s partial expansion bakes our `\lx@NBSP` (the
+  active `~` expansion) into the in-memory aux cache via
+  `Tokens::untex`. `\input` re-tokenizes the resulting `\lx@NBSP`
+  string with `@` in OTHER catcode → splits into `\lx` + literal
+  `@NBSP` → undefined CS. Parked repro at
+  `latexml_oxide/tests/expansion/at_in_cs_round_trip.tex` is RED
+  under `cortex_worker --standalone` (1 error) but GREEN under
+  direct `latexml_oxide` invocation with the same `Config` (HTML5
+  format + both dispatchers + same preload list). **First task on
+  resume**: bottom out the cortex_worker-vs-latexml_oxide harness
+  divergence so the test can be wired into `cargo test` as a true
+  RED. Then implement the hardening per user direction: in
+  `mouth.rs::handle_escape`, when the catcode-respecting CS name is
+  undefined AND extending it through `@` plus following letters
+  yields a defined CS, prefer the extended form (speculative
+  tokenization on `@`). User-stated constraints: keep `\lx@NBSP`
+  with the `@` (no rename, for Perl-naming parity); the fix
+  belongs in the tokenizer, NOT in `tokens.rs::untex` (special-
+  casing CS names there is a code smell) and NOT as a Rust-only
+  `_sty.rs` stub.
+
+* **Math-mode errors as second-order symptoms.** Stage-1..10 sweep
+  with the latest dev binary leaves 513 papers still failing in the
+  588-paper "originally-fail" cohort. Of those, 152 first-error
+  rows are math-mode cascades (`_`/`^` outside math, missing
+  sub/sup arg, `\lx@end@inline@math`-end-in-math). These are
+  downstream of an earlier unhandled macro or environment. The
+  scan to extract per-paper triggers is in `/tmp/first_err_dev.txt`
+  + `/tmp/all_fail_ids.txt`; reproduce with
+  `cat /tmp/sweep_pairs.txt | xargs -I {} -P 8 bash -c
+  '~/git/latexml-oxide/target/debug/cortex_worker --standalone
+  --input "$(echo {} | cut -d"|" -f2)" --output
+  /tmp/sweep_out/<id>.zip --timeout 60'`. Two leads:
+    - `\csdef`/`\csedef`/`\csgdef`/`\csxdef` "Ignoring redefinition"
+      Info noise in ~42 papers (etoolbox.sty raw-load re-attempting
+      the Rust binding's CS-name defs). Confirmed cosmetic on the
+      papers I sampled, but might mask real shadowing.
+    - First-error AST-level mode errors at "Anonymous String"
+      location (no source position) — strong sign of macro
+      expansion-time mode failure inside a binding closure.
+  Pull a small handful (3-5) of math-mode-first papers, isolate
+  the FIRST defined-but-misbehaving macro, and port the Perl
+  definition. Per user: math-mode errors are second-order, so
+  always trace upstream.
+
+* **Pending parity-comparison data refresh.** `/tmp/sweep2_results.txt`
+  contains the 588-paper sweep with the latest engine fixes:
+  status:2=441, status:3=58, status:0=59, status:1=23 (the +7
+  status:? rows are unzip artifacts on already-removed outputs).
+  Combined with the unchanged ~99,400 papers from the first
+  Stage-1..10 sweep, projected pass rate is ~99.50% on the 100k
+  warning subset. Verify by re-running the full ~/data canvas via
+  `tools/benchmark_canvas.sh` once the `\lx@` cluster has a real
+  fix (the dev-binary sweep above doesn't include canvas-runtime
+  artifacts like graphics conversion).
+
+* **Cluster verdicts (re-confirmed 2026-05-13)**:
+  - **SHARED-FAILURE — `\@math@daccent`/`\@math@baccent` cluster**
+    (14 first-error papers). Paper `\def\d`/`\def\b` before
+    `\documentclass`; kernel re-overrides. Documented in earlier
+    SHARED-FAILURE log; no action.
+  - **SHARED-FAILURE — `\begin{abstract}` mode-switch** (46
+    first-error papers). Sampled 6, 5 of them Rust=Perl=1 error.
+    1 paper (astro-ph9901164) is Rust=2, Perl=7 → Rust supersedes.
+  - **expl3 csname-protocol** (~13 first-error papers: 6 `\file`,
+    5 `\group`, 4 `\bool`, 4 `\cs`, 2 `\pdfmanagement`). Same root
+    as the mhchem retirement gap (Task #22). Not a recoverable
+    cluster until that engine work lands.
+  - **`\@add@frontmatter@now`** (4 papers) — neurips_2024.sty
+    mode-switch. Already SYNC_STATUS-deferred.
+
+---
+
 **Round-26 follow-on (2026-05-13)**:
 
 1. `0e11e83c5f` post/mathml: emit `columnspacing` / `rowspacing` on
