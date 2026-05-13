@@ -154,6 +154,19 @@ hep-th9703142, stage-6). Other Pair-error papers in the corpus
 (hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
 malformed pairs that are paper-level errors SHARED with Perl.
 
+**Late-session AmSTeX `\input amsppt.sty` recovery** — `a32bdbf5f2`:
+the `\documentstyle{amsppt}` path in tex_job.rs's documentstyle shim
+already triggers LoadPool('AmSTeX'), but the direct `\input amsppt.sty`
+path used by early-90s arXiv papers did NOT, so \\document /
+\\flushpar / \\Cal / \\newline stayed undefined. Loading the AmSTeX
+pool explicitly inside amsppt_sty.rs's LoadDefinitions fully recovers
+**9 papers** across stages 4-8:
+  stage-4: chao-dyn9406001, hep-th9312119, hep-th9402126, math9303201
+  stage-5: math9509203
+  stage-6: alg-geom9703018, math9608201
+  stage-7: dg-ga9712002
+  stage-8: math9809193
+
 **Round-26 mission summary (2026-05-12 → 2026-05-13)**: the 100,000-
 paper "warning" subset of arxmliv (papers where Perl LaTeXML emits
 warnings under TL2025) converted under latexml-oxide at **99.39%-
