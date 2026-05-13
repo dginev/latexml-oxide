@@ -188,6 +188,38 @@ malformed pairs that are paper-level errors SHARED with Perl.
   `Fatal:timeout:wallclock` placeholder zip — zero overhead on
   the happy path, structured failure artifact on timeout.
 
+* **Cluster verdicts (588-paper post-fix sweep, 2026-05-13)**.
+  Of the 494 still-failing papers, the following clusters are
+  classified and require **no further work**:
+    - **babel "Unknown option" cluster (58 first-error papers)** —
+      SHARED-FAILURE. TL2025 babel no longer ships
+      `italian.ldf`/`spanish.ldf`/etc.; the babel ini-file system
+      (`locale/<lang>/babel-<lang>.tex`) supersedes them. Both
+      engines fail with `Package babel Error: Unknown option` on
+      `\usepackage[italian]{babel}` etc. Verified on
+      `babel_italian.tex` minimal repro (Rust=1, Perl=1).
+    - **`\endgroup`-`\figure` cluster (10 first-error papers)** —
+      Rust SUPERSEDES Perl on 9/10 and SHARED on the 10th. RevTeX
+      3.x's `\figure{N} caption` short-form has no binding in
+      either engine; Rust errors fewer because of better recovery.
+      Witnesses (Rust=N, Perl=M): cond-mat9607130 (1,7),
+      cond-mat9607185 (1,6), cond-mat9610164 (1,6), cond-mat9612017
+      (1,5), patt-sol9505001 (1,7), quant-ph9604034 (1,1),
+      plus 3 multi-hundred-error pairs where Rust is also better.
+    - **`\@math@daccent`/`\@math@baccent` cluster (14 first-error)** —
+      SHARED. Paper `\def\d`/`\def\b` before docclass; kernel
+      re-overrides.
+    - **`\begin{abstract}` mode-switch cluster (46 first-error)** —
+      SHARED on the 5/6 sampled; one Rust-supersedes.
+    - **expl3 csname-protocol cluster (~13 first-error,
+      `\file`/`\group`/`\bool`/`\cs`/`\pdfmanagement`)** — same
+      deferred root as mhchem retirement Task #22.
+
+  Total cluster-classified: ~141 papers (40% of remaining 494),
+  all SHARED or Rust-supersedes. The remaining ~353 split between
+  math-mode second-order, paper-specific malformed:ltx, and
+  long-tail single-witnesses.
+
 * **Math-mode errors as second-order symptoms — STILL OPEN.**
   Post-fix 588-paper sweep (commit `8f465f8948` binary) leaves 436
   status:2 + 58 status:3 = 494 still failing. **Top first-error
