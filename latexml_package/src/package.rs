@@ -403,6 +403,7 @@ pub mod tcilatex_tex;
 pub mod tcolorbox_sty;
 pub mod textcase_sty;
 pub mod textcomp_sty;
+pub mod textgreek_sty;
 pub mod texvc_sty;
 pub mod theorem_sty;
 pub mod thm_restate_sty;

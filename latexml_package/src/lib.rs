@@ -355,6 +355,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fontspec", "sty", package::fontspec_sty::load_definitions),
   ("inputenc", "sty", package::inputenc_sty::load_definitions),
   ("textcomp", "sty", package::textcomp_sty::load_definitions),
+  ("textgreek", "sty", package::textgreek_sty::load_definitions),
   ("texvc", "sty", package::texvc_sty::load_definitions),
   ("listings", "sty", package::listings_sty::load_definitions),
   (
