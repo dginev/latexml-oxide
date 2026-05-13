@@ -47,7 +47,15 @@ LoadDefinitions!({
   // amsfonts (unless noamsfonts)
 
   RequirePackage!("amsmath");
-  // RequirePackage!("amstex") if LookupValue('2.09_COMPATIBILITY');
+  // Perl ams_support.sty.ltxml:23 — `RequirePackage('amstex') if LookupValue('2.09_COMPATIBILITY')`.
+  // 2.09_COMPATIBILITY is set by `\documentstyle` in tex_job.rs's compat
+  // shim. Legacy AMS papers (e.g. alg-geom/9208004, alg-geom/9202004)
+  // use `\documentstyle[12pt,verbatim]{amsart}` and rely on the AmS-TeX
+  // `\Sb` / `\Sp` substack environments which are only defined by the
+  // amstex binding.
+  if state::lookup_bool("2.09_COMPATIBILITY") {
+    RequirePackage!("amstex");
+  }
   RequirePackage!("amsthm");
   RequirePackage!("amsfonts");
   RequirePackage!("makeidx");
