@@ -2,27 +2,37 @@
 //!
 //! `scicite.sty` is a slightly-modified `cite.sty` (D. Arseneau, 1989-2003)
 //! tailored for the journal Science. The raw file is 513 lines of
-//! `\edef`/`\catcode` manipulation; without a Rust binding we attempt to
-//! tokenize the whole thing and hang on its catcode dance.
+//! `\edef`/`\catcode` manipulation that Rust's tokenizer chokes on (the
+//! 7-paper hang cluster in the 10k_errors v4 sandbox: 1010.2781, 1011.5494,
+//! 1102.0562, 1210.1294, 1303.2601, 1704.07345, 1706.03851 + similarly-named
+//! files).
 //!
-//! Like `cite.sty.ltxml` / `cite_sty.rs` (Perl + Rust), we short-circuit
-//! the raw load by defining only the public-API macros that downstream
-//! documents actually invoke (`\citeleft`, `\citeright`, `\citepunct`,
-//! …). Citation list compression / sorting / styling has no equivalent
-//! in XML output anyway — formatting is handled at the post-XSLT layer.
+//! Perl LaTeXML has no `scicite.sty.ltxml` and instead inherits cite.sty's
+//! Perl binding via the raw scicite.sty load picking up cite.sty's
+//! `\citen` / `\citenum` / `\citeonline` closures. Our stub bypasses
+//! the raw load (to avoid the tokenizer hang) but we restore the
+//! citation-CS chain by requiring the `cite` package's binding, which
+//! defines `\citen` as a full closure and Lets `\citenum` / `\citeonline`
+//! to it. Then we layer the Science-specific punctuation overrides.
 //!
-//! Recovers the 7-paper hang cluster in the 10k_errors v4 sandbox
-//! (1010.2781, 1011.5494, 1102.0562, 1210.1294, 1303.2601, 1704.07345,
-//! 1706.03851 + similarly-named files) seen in v4 partial logs.
+//! TODO (root cause): make Rust's tokenizer survive scicite.sty's catcode
+//! dance so this stub can be removed entirely (a `feedback_prefer_raw_load`
+//! pattern — Perl raw-loads scicite.sty and inherits cite.sty's closures
+//! through the chain).
 
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  // Mirror `cite_sty.rs` — defaults for citation formatting macros.
-  // scicite.sty has slightly different defaults (Science-journal
-  // bracketing/punctuation) but the XML-side semantics are the same:
-  // emit a parenthesized comma-separated list. Override at the post
-  // layer if a per-journal style is desired.
+  // Inherit cite.sty's full citation-CS chain: `\citen` is a closure
+  // (natbib-style multi-args), `\citenum` and `\citeonline` are Let to
+  // `\citen`. Loading the binding pre-empts the raw scicite.sty load
+  // that would otherwise hang our tokenizer.
+  RequirePackage!("cite");
+
+  // Science-journal punctuation overrides. cite.sty's defaults are
+  // `[`/`]` (matching scicite) and `, ` (matching scicite) — keep these
+  // explicit to make scicite-specific tuning at the post-XSLT layer
+  // (per-journal style) discoverable here.
   DefMacro!("\\citeleft",  "[");
   DefMacro!("\\citeright", "]");
   DefMacro!("\\citedash",  "--");
@@ -30,11 +40,7 @@ LoadDefinitions!({
   DefMacro!("\\citepunct", ", ");
   DefMacro!("\\citeform{}", "#1");
 
-  // scicite-specific options that papers often set in the preamble.
-  // No-op them so `\usepackage[option]{scicite}` doesn't error.
+  // scicite-specific option no-op (papers often write
+  // `\usepackage[<opt>]{scicite}` — option processing without us).
   DefMacro!("\\nocitepunct", "");
-  DefMacro!("\\citen", "\\cite");
-  // scicite.sty exposes `\citenum{key}` (number-only citation, no
-  // brackets) — same as cite.sty. Witness: arXiv:2604.12884.
-  DefMacro!("\\citenum", "\\cite");
 });

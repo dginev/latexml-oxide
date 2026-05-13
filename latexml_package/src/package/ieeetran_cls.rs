@@ -19,25 +19,33 @@ LoadDefinitions!({
   DeclareOption!("technote", { Let!("\\ifCLASSOPTIONtechnote", "\\iftrue"); });
   DeclareOption!("nofonttune", {});
   DeclareOption!("captionsoff", {});
-  DeclareOption!("compsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
-  // Perl `IEEEtran.cls.ltxml:103` (TL2025) for the `comsoc` option:
-  //   \DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse
-  //                         \CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}
-  // Mirror Perl exactly. newtxmath transitively brings in txfonts (which
-  // defines `\coloneqq`, `\bigstar`, and a wide TX-math symbol family
-  // used by IEEEtran/comsoc papers). An earlier divergence loaded only
-  // `amssymb` here to "minimize font drift" — but Perl ground truth
-  // says newtxmath, so re-match.
-  // Witnesses: 1902.10910 (`\bigstar`), 2201.11831 (`\coloneqq` —
-  // comsoc + amsmath only; Perl renders \coloneqq because txfonts.sty
-  // is transitively loaded, Rust pre-fix returned `Error:undefined:
-  // \coloneqq` because only amssymb was loaded).
+  // TL `IEEEtran.cls` L254-255 and L364-366: `comsoc`, `compsoc`,
+  // `transmag` are THREE distinct mutually-exclusive options. Each
+  // setter flips one to true and clears the other two:
+  //   \DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue \CLASSOPTIONcompsocfalse \CLASSOPTIONtransmagfalse}
+  //   \DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse \CLASSOPTIONcompsoctrue \CLASSOPTIONtransmagfalse}
+  //   \DeclareOption{transmag}{\CLASSOPTIONcomsocfalse \CLASSOPTIONcompsocfalse \CLASSOPTIONtransmagtrue}
+  // Perl `IEEEtran.cls.ltxml:103` for `comsoc` additionally
+  // `\RequirePackage{newtxmath}` so `\coloneqq` / `\bigstar` / TX-math
+  // symbol family used by comsoc papers resolves cleanly (Perl-faithful;
+  // earlier Rust loaded only amssymb here, missing `\coloneqq` —
+  // witnesses 1902.10910, 2201.11831).
   DeclareOption!("comsoc", {
-    Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
     Let!("\\ifCLASSOPTIONcomsoc",  "\\iftrue");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+    Let!("\\ifCLASSOPTIONtransmag","\\iffalse");
     RequirePackage!("newtxmath");
   });
-  DeclareOption!("transmag", {});
+  DeclareOption!("compsoc", {
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
+    Let!("\\ifCLASSOPTIONtransmag","\\iffalse");
+  });
+  DeclareOption!("transmag", {
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+    Let!("\\ifCLASSOPTIONtransmag","\\iftrue");
+  });
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
   DeclareOption!("onecolumn", {});
   DeclareOption!("twocolumn", {});
@@ -51,13 +59,15 @@ LoadDefinitions!({
   // 2308.01854 `\documentclass[10pt,journal,compsoc]{IEEEtran}` had
   // \ifCLASSOPTIONcompsoc unexpectedly false → user's
   // `\ifCLASSOPTIONcompsoc \usepackage{url} \fi` skipped → \url undefined).
-  Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
-  // Some 2020+ IEEEtran versions also expose `\ifCLASSOPTIONcomsoc`
-  // (no `p`) alongside `\ifCLASSOPTIONcompsoc`. Both flag the same
-  // option (`comsoc`); papers may probe either. Add the alias so
-  // paper-side `\ifCLASSOPTIONcomsoc … \fi` doesn't see undefined.
-  // Witness: arXiv:2603.07560.
-  Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
+  // TL `IEEEtran.cls` L254-256: three separate `\newif` flags for the
+  // mutually-exclusive comsoc/compsoc/transmag options. Pre-bind all
+  // three to false so paper-side `\ifCLASSOPTION* … \fi` doesn't see
+  // undefined when none of the options is passed. Witnesses:
+  // arXiv:2603.07560 (`comsoc`-style probe), 2308.01854 (`compsoc`),
+  // older IEEEtran/transmag papers.
+  Let!("\\ifCLASSOPTIONcomsoc",   "\\iffalse");
+  Let!("\\ifCLASSOPTIONcompsoc",  "\\iffalse");
+  Let!("\\ifCLASSOPTIONtransmag", "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
   Let!("\\ifCLASSOPTIONtechnote", "\\iffalse");
