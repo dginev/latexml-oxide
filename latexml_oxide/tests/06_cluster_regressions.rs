@@ -65,3 +65,10 @@ fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppe
 /// 2603.23433, 2604.20621 — twemoji St. Barthélemy / Côte d'Ivoire / São Tomé).
 #[test]
 fn cluster_csname_accent() { convert_clean("tests/cluster_regressions/csname_accent.tex"); }
+
+/// Legacy `\documentstyle[…]{amsart}` (LaTeX 2.09 compat) must auto-load
+/// the AmS-TeX `\Sb` / `\Sp` substack environments via
+/// `RequirePackage('amstex') if LookupValue('2.09_COMPATIBILITY')`.
+/// Witnesses: arXiv:alg-geom9208004, arXiv:alg-geom9202004.
+#[test]
+fn cluster_amstex_2_09_sb() { convert_clean("tests/cluster_regressions/amstex_2_09_sb.tex"); }
