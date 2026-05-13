@@ -100,6 +100,15 @@ old AmS-TeX cluster): alg-geom9208004 / alg-geom9202004 / hep-th9111005
 
 Combined stages 1-5 updated: **49,717 / 50,000 OK = 99.43%**.
 
+Stage-6 sweep (papers 50001-60000, 2026-05-13 morning) with the
+release binary including all the session's commits: **9946/10000
+OK = 99.46%**. No additional papers recovered from the 48 failures
+on targeted re-run — they cluster in the irreducible categories
+(13 math-syntax / 9 paper-specific malformed XML / 4 mode-switch /
+2 expl3 / 2 \\citelow from `sprocl.sty` proceedings style / various).
+
+Combined stages 1-6: **59,663 / 60,000 OK = 99.44%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
