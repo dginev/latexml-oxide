@@ -6111,7 +6111,11 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareFontFamily{}{}{}", None);
   DefPrimitive!("\\DeclareSizeFunction{}{}", None);
   DefPrimitive!("\\DeclareMathSizes{}{}{}{}", None);
-  DefMacro!("\\newmathalphabet{}{}{}", None, None);
+  // \newmathalphabet — pre-LaTeX2e (NFSS 1.0) math-alphabet declarator.
+  // Effectively a no-op for XML output. NOTE the `, None)` arm is the
+  // "discard everything" mock — `, None, None)` (3 args) would not
+  // match any DefMacro arm and silently fail to register the CS.
+  DefMacro!("\\newmathalphabet{}{}{}", None);
   // \new@internalmathalphabet — obsolete LaTeX 2.09 kernel macro for
   // defining math alphabets, superseded by \DeclareSymbolFontAlphabet.
   // Used by old (1992-93) hep-th papers (~11 papers in stage-4 of the
