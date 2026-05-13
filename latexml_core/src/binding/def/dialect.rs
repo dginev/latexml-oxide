@@ -96,6 +96,18 @@ pub fn is_defined_token(cs: &Token) -> bool {
 
 /// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token) -> bool {
+  // Non-CS / non-ACTIVE tokens (letters, digits, punctuation, etc.) have
+  // a trivial "self" meaning from `lookup_meaning` (= `Stored::Token(self)`).
+  // That's not a real `\def`/`\let` definition — kernel `\@ifdefinable`
+  // would treat them as not-yet-defined. Without this check, calls like
+  // `\@ifdefinable{Z@L@\foo}{…}` (zref-base.sty:118) get our DefToken
+  // reader's first-token-from-brace-group (the letter `Z`) and fail with
+  // "Command \Z already defined" because letter Z's lookup_meaning is
+  // non-None. Witness: arXiv:2504.18121 / 2504.17729 / 2504.17871 et al
+  // (Task #23 zref-base \Z collision cluster).
+  if !token.get_catcode().is_active_or_cs() {
+    return true;
+  }
   let meaning = lookup_meaning(token);
   token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
     && (meaning.is_none()
