@@ -1514,3 +1514,55 @@ output value.
 * IEEEtran.cls `\ifclassoptioncomsoc` runninghead asserts.
 * revtex4_* `\altaffiliation` width checks (related).
 
+## #51 `listings.sty.ltxml` binding flattens upstream `\lst@tagmode` machinery — leaves three latent gaps
+
+**The rule.** The Perl LaTeXML `listings.sty.ltxml` binding is a deep
+simplification of the actual `lstmisc.sty` `tag=` / `usekeywordsintag` /
+`markfirstintag` mechanism: it never models `\lst@tagmode`,
+`\lst@gkeywords@sty`, `\lst@ifusekeysintag`, or `\lst@iffirstintag`. The
+binding flattens "tag mode" into a flat regex-driven delimiter walk.
+
+**How to apply.** When a listings issue surfaces on a real paper, do
+not assume the Perl binding is authoritative; cross-check
+`/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty` first.
+Three concrete divergences worth knowing:
+
+1. `tag=**[s]<>` registration. Upstream enters `\lst@tagmode` so the
+   inner content is processed with `\lst@ifkeywords\iftrue` and (when
+   `usekeywordsintag=true`) restyled. The Perl binding instead emits
+   one `\@listingGroup` span and lets the recursive `lstProcess_internal`
+   keep ID matching active. The lex-sort of delim keys in
+   `lstProcess_internal` (Perl `sort keys %$delimiters`) makes `<`
+   shadow `<!--` in the regex alternation, which is the only reason the
+   commentstyle never fires for inline XML comments — preserve this
+   sort order in the Rust port (see `listings_sty.rs::lst_process_internal`).
+
+2. `usekeywordsintag` / `markfirstintag` are `DefKeyVal('LST', …)` only.
+   The Perl source comment is explicit: `NOT YET HANDLED; I don't even
+   understand it`. Don't try to model them from the binding; if needed,
+   port the upstream `\lst@AddToHook{Output}{…}` machinery directly.
+
+3. `\@onefilewithoptions` re-option-processing (latex.ltx:15512). Both
+   Perl LaTeXML and the Rust port short-circuit on `_loaded` flags, so
+   `\usepackage{xcolor}` followed by `\usepackage[dvipsnames]{xcolor}`
+   does not load `dvipsnam.def`. pdflatex DOES load it via the modern
+   `opt@handler@xcolor.sty` mechanism (DeclareKeys-based). This is a
+   deeper parity gap than listings — track separately if a paper-class
+   of "late option" bugs grows beyond the listings shadow workaround.
+
+**Why this layout.** Faithfully porting `\lst@tagmode` would require
+modeling TeX modes inside Listings, which the Perl binding deliberately
+sidestepped — every node in the listings tree would need a mode
+stack. For now, mirror the Perl binding's simplifications and only
+upgrade when a corpus paper actually exercises one of the gaps.
+
+**Witnesses.**
+* `arXiv:2602.15149` — `\lstdefinestyle{xmlstyle}{...commentstyle=\color{ForestGreen}...}`
+  with `\usepackage{xcolor}` + later `\usepackage[dvipsnames]{xcolor}`.
+  Fixed in the Rust port by faithfully matching Perl's delim-sort
+  ordering and registering `tag=<>` as a 2-token split (commit
+  `5b8a4f9aca` listings: faithful XML tag / commentstyle parity from Perl).
+* `tests/tikz/various_colors.tex` — `moredelim=**[is]…{@}{@}` exposes
+  the latent `alsoletter` default (`@$_` bundled with the alphabet)
+  ID_RE greedy-eat bug that prevents propagating the `**` recursive
+  flag through to `\lst@@delim` / `\lst@@moredelim`. Tracked.
