@@ -127,10 +127,26 @@ SHARED), math syntax issues, and expl3 csname-protocol.
 Combined stages 1-9: **89,479 / 90,000 OK = 99.42%**.
 
 Stage-10 sweep (papers 90001-100000): **9955/10000 OK = 99.55%** —
-the highest stage rate in the sweep. Combined stages 1-10:
-**99,345 / 100,000 OK = 99.35%** on first-pass results, **~99,438
-/ 100,000 = 99.44%** including the per-stage recoveries from
-targeted re-runs against the rebuilt release binary at each stage.
+the highest stage rate in the sweep. Per-stage first-pass tallies:
+
+| Stage | OK    | %       |
+|------:|------:|--------:|
+|  1    | 9941  | 99.41%  |
+|  2    | 9945  | 99.45%  |
+|  3    | 9930  | 99.30%  |
+|  4    | 9914  | 99.14%  |
+|  5    | 9943  | 99.43%  |
+|  6    | 9946  | 99.46%  |
+|  7    | 9949  | 99.49%  |
+|  8    | 9938  | 99.38%  |
+|  9    | 9929  | 99.29%  |
+| 10    | 9955  | 99.55%  |
+
+Combined stages 1-10 first-pass: **99,390 / 100,000 OK = 99.39%**.
+With the targeted per-stage re-runs that recovered an additional
+**+48** papers against the iteratively rebuilt release binary
+(stage-1: +6, stage-2: +4, stage-3: +9, stage-4: +25, stage-5: +4):
+**~99,438 / 100,000 = 99.44%**.
 
 **Round-26 mission summary (2026-05-12 → 2026-05-13)**: the 100,000-
 paper "warning" subset of arxmliv (papers where Perl LaTeXML emits
