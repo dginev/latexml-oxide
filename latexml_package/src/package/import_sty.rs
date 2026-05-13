@@ -3,7 +3,31 @@ use latexml_core::util::pathname;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: import.sty.ltxml
+  // Perl: import.sty.ltxml — uses `AssignValue(SEARCHPATHS => …)` which
+  // auto-scopes via the frame stack. Rust's `state::set_search_paths`
+  // mutates the global VecDeque without frame scoping. To recover the
+  // "local-by-default" semantic, save/restore search_paths around each
+  // `\import` / `\subimport` body via a state-stored stack. Witnesses:
+  // arXiv:2604.09744, 2603.04457 (papers with multiple sibling
+  // `\subimport{Chapter/}{File}` calls — second call would otherwise
+  // concat Chapter/ onto Chapter/ from the first call).
+
+  DefPrimitive!("\\lx@save@paths", {
+    let paths = state::get_search_paths();
+    state::push_value("lx@searchpaths@stack",
+      latexml_core::common::store::Stored::Strings(
+        std::rc::Rc::from(paths.iter().map(|s| latexml_core::common::arena::pin(s)).collect::<Vec<_>>())))?;
+  });
+
+  DefPrimitive!("\\lx@restore@paths", {
+    if let Ok(Some(latexml_core::common::store::Stored::Strings(syms))) =
+      state::pop_value("lx@searchpaths@stack") {
+      let paths: Vec<String> = syms.iter()
+        .map(|s| latexml_core::common::arena::with(*s, |t| t.to_string()))
+        .collect();
+      state::set_search_paths(paths);
+    }
+  });
 
   // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {}
   //   path = ToString(Expand(#2)); if relative, resolve vs SOURCEDIRECTORY.
@@ -50,10 +74,20 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\import OptionalMatch:* {}{}", "{\\lx@set@path #1{#2} \\input{#3}}");
-  DefMacro!("\\includefrom OptionalMatch:* {}", "{\\lx@set@path #1{#2} \\include{#3}}");
-  DefMacro!("\\subimport OptionalMatch:* {}{}", "{\\lx@append@path #1{#2} \\input{#3}}");
-  DefMacro!("\\subincludefrom OptionalMatch:* {}", "{\\lx@append@path #1{#2} \\include{#3}}");
+  // Wrap the input call in `\lx@save@paths … \lx@restore@paths` so each
+  // \import / \subimport starts from the BASE search_paths (matching
+  // Perl's AssignValue local-scoping). Without this, two consecutive
+  // sibling `\subimport{Chapter/}{Abstract}` + `\subimport{Chapter/}{Poster}`
+  // would concat Chapter/ onto the still-mutated lead from the first
+  // call, producing "Chapter/Chapter/Poster" as the search target.
+  DefMacro!("\\import OptionalMatch:* {}{}",
+    "{\\lx@save@paths\\lx@set@path #1{#2} \\input{#3}\\lx@restore@paths}");
+  DefMacro!("\\includefrom OptionalMatch:* {}",
+    "{\\lx@save@paths\\lx@set@path #1{#2} \\include{#3}\\lx@restore@paths}");
+  DefMacro!("\\subimport OptionalMatch:* {}{}",
+    "{\\lx@save@paths\\lx@append@path #1{#2} \\input{#3}\\lx@restore@paths}");
+  DefMacro!("\\subincludefrom OptionalMatch:* {}",
+    "{\\lx@save@paths\\lx@append@path #1{#2} \\include{#3}\\lx@restore@paths}");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");
 });
