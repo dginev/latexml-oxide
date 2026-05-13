@@ -1210,8 +1210,34 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // historical clarity; the general `Stored::Token` case
         // below handles other PA-aliased CSes uniformly.
         let cs_str = token.with_str(|s| s.to_string());
+        // Well-known `\text…` primitives that map to a single char in real
+        // pdflatex's csname-stream interpretation. The `DefPrimitive!(name,
+        // "char")` body is a closure that wraps a Tbox — not statically
+        // inspectable from here — so we maintain an explicit table for the
+        // canonical set. Witnesses (stage-1..3 of 100k warning corpus):
+        //   \\textquoteright surfacing in `\twemoji flag: Côte d` cluster
+        //   (≥4 papers across 2603.08303, 2604.13899, 2604.17338, 2604.20621).
         let soft_char: Option<char> = match cs_str.as_str() {
           "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
+          "\\textquoteright" => Some('\u{2019}'),
+          "\\textquoteleft" => Some('\u{2018}'),
+          "\\textquotedblright" => Some('\u{201D}'),
+          "\\textquotedblleft" => Some('\u{201C}'),
+          "\\textquotedbl" => Some('"'),
+          "\\textemdash" => Some('\u{2014}'),
+          "\\textendash" => Some('\u{2013}'),
+          "\\textbackslash" => Some('\u{005C}'),
+          "\\textbar" => Some('|'),
+          "\\textbraceleft" => Some('{'),
+          "\\textbraceright" => Some('}'),
+          "\\textless" => Some('<'),
+          "\\textgreater" => Some('>'),
+          "\\textdollar" => Some('$'),
+          "\\textasciigrave" => Some('`'),
+          "\\textasciicircum" => Some('^'),
+          "\\textasciitilde" => Some('~'),
+          "\\textunderscore" => Some('_'),
+          "\\textasteriskcentered" => Some('*'),
           _ => None,
         };
         if let Some(c) = soft_char {
