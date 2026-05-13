@@ -6112,6 +6112,15 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareSizeFunction{}{}", None);
   DefPrimitive!("\\DeclareMathSizes{}{}{}{}", None);
   DefMacro!("\\newmathalphabet{}{}{}", None, None);
+  // \new@internalmathalphabet — obsolete LaTeX 2.09 kernel macro for
+  // defining math alphabets, superseded by \DeclareSymbolFontAlphabet.
+  // Used by old (1992-93) hep-th papers (~11 papers in stage-4 of the
+  // 100k warning corpus, witness: arXiv:hep-th9211047 — \new@internalmathalphabet
+  // \mathsf\sffam{cmss}{m}{n}). Stub with the same 5-arg signature as
+  // \DeclareMathAlphabet so the args are consumed cleanly instead of
+  // leaking into the document body via the auto-undefined-as-ERROR path.
+  // SHARED-FAILURE with Perl (both fatal on this macro without a stub).
+  DefMacro!("\\new@internalmathalphabet{}{}{}{}{}", None);
   // DeclareMathAlphabet: define math font command if not already defined
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
     let cs_tok = T_CS!(cs.to_string());
