@@ -3307,7 +3307,18 @@ LoadDefinitions!({
   },
   reversion => "");
 
-  DefConstructor!("\\lx@notetext[]{}[]{}",
+  // `OptionalSemiverbatim` on the first `[]` (the `xml:id`) so a paper
+  // writing `\fntext[footnote_label2]{…}` (literal `_` in the label —
+  // technically invalid TeX) doesn't blow up with `_ Script outside
+  // math` when the digester sees the SUB-catcode `_`. Semiverbatim
+  // reads `_` (and `^`, `~`, `&`, `$`, `#`, `'`) as OTHER, so the id
+  // is a literal text token list. Paper-quality fix that surpasses
+  // Perl LaTeXML (which still reads with default catcodes and errors
+  // identically). Witness: 2604.00193 `\fntext[footnote_label2]` —
+  // Rust before: 1 error; after: 0 errors. Same pattern surfaces on
+  // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
+  // classification in SYNC_STATUS — this is the surpass-Perl path).
+  DefConstructor!("\\lx@notetext OptionalSemiverbatim {} [] {}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   mode       => "internal_vertical",
   properties => sub [args] {
