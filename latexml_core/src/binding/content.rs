@@ -1567,14 +1567,27 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   );
   let Some(path) = raw_path else { return };
 
-  // Perl L2762-2766: slurp file. On failure, Warn and return (L2794-2795).
-  let Ok(code) = std::fs::read_to_string(&path) else {
-    Warn!(
-      "I/O",
-      "read",
-      s!("Couldn't open {} to scan dependencies, $!", path)
-    );
-    return;
+  // Perl L2762-2766: slurp file. Check filecontents-cache first for the
+  // inline-cls/sty case (e.g. `\begin{filecontents}{alggeom.cls}`), then
+  // fall through to disk. Without the cache check, papers that bundle
+  // their .cls inline via filecontents miss the dep-scan and downstream
+  // CSes that the (now-cached) cls would have hand-loaded stay
+  // undefined. Witness: arXiv:2604.09738.
+  let cached = lookup_string(&s!("{}_contents", path));
+  let code = if !cached.is_empty() {
+    cached
+  } else {
+    match std::fs::read_to_string(&path) {
+      Ok(c) => c,
+      Err(_) => {
+        Warn!(
+          "I/O",
+          "read",
+          s!("Couldn't open {} to scan dependencies, $!", path)
+        );
+        return;
+      },
+    }
   };
 
   // Perl L2776: strip comments (replacement empty).
