@@ -343,6 +343,23 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-11 final + Stage-12 mid-flight (2026-05-13 late evening)**.
+
+* **Stage-11 final**: 9676 OK / 10010 = **96.7% OK** (papers
+  10001-20000... wait, papers 1-10000 of next_warning_papers). 295
+  conversion_errors + 15 fatals + 15 errors + 8 aborts + 1 timeout.
+* **20-paper random parity sample of Stage-11's 310 errors**:
+  **0 REAL REGRESSION, 10 PERL_WIN (Rust ≤ Perl), 10 SHARED-FAILURE
+  (Rust = Perl)**. Including arXiv:2504.20057 where Rust=7 vs
+  Perl=101+ (capped). The new corpus's 96.7% reflects rougher
+  input, not Rust engine deficiency — Rust is at or above Perl
+  parity on every single sampled failure.
+* **Stage-12 in flight** (papers 10001-20000), rebuilt binary
+  including expl3 nested-load preservation (97b5f0caa1) and
+  graphicx-keyval (d02cd37777). Mid-stage 27%: **97.5% OK**
+  (+0.8 vs Stage-11). 2504.13697 (graphbox) recovered: Rust=0,
+  Perl=6 — fix halo confirmed.
+
 **Round-28 Stage-11 mid-flight (2026-05-13 late evening)**.
 Stage-11 = first 10k of `~/data/next_warning_papers/` (arxmliv
 warning subset, 2025-04 cohort — newer than Round-26's 100k).
