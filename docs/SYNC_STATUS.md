@@ -156,36 +156,60 @@ malformed pairs that are paper-level errors SHARED with Perl.
 
 **Round-26 follow-on resume queue (open as of 2026-05-13)**:
 
-* **`\lx@`-CS round-trip via `\write`/`\input` — RED test still owed.**
-  Witness cluster: hep-th9306154, hep-ph9803499, hep-th9203004,
-  math9904104 (4 papers; first-error `Error:undefined:\lx`). Root
-  shape: `\write`'s partial expansion bakes our `\lx@NBSP` (the
-  active `~` expansion) into the in-memory aux cache via
-  `Tokens::untex`. `\input` re-tokenizes the resulting `\lx@NBSP`
-  string with `@` in OTHER catcode → splits into `\lx` + literal
-  `@NBSP` → undefined CS. Parked repro at
-  `latexml_oxide/tests/expansion/at_in_cs_round_trip.tex` is RED
-  under `cortex_worker --standalone` (1 error) but GREEN under
-  direct `latexml_oxide` invocation with the same `Config` (HTML5
-  format + both dispatchers + same preload list). **First task on
-  resume**: bottom out the cortex_worker-vs-latexml_oxide harness
-  divergence so the test can be wired into `cargo test` as a true
-  RED. Then implement the hardening per user direction: in
-  `mouth.rs::handle_escape`, when the catcode-respecting CS name is
-  undefined AND extending it through `@` plus following letters
-  yields a defined CS, prefer the extended form (speculative
-  tokenization on `@`). User-stated constraints: keep `\lx@NBSP`
-  with the `@` (no rename, for Perl-naming parity); the fix
-  belongs in the tokenizer, NOT in `tokens.rs::untex` (special-
-  casing CS names there is a code smell) and NOT as a Rust-only
-  `_sty.rs` stub.
+* **`\lx@`-CS round-trip via `\write`/`\input` — RESOLVED 2026-05-13.**
+  Commits `7ec1850fd0` + `1359e60920`. Root cause was deeper than
+  the mouth tokenizer: our `\&` / `\#` / `\$` / `\%` / `\_` and
+  active `~` are *dispatch macros* (WISDOM #44), so partial
+  expansion in `\write`'s `XGeneralText` fired them and baked
+  `\lx@NBSP` / `\lx@text@amp` into the in-memory aux cache —
+  `\input` then split each `\lx@<word>` to `\lx` + literal
+  `@<word>` under the default `@`=OTHER catcode. Perl LaTeXML
+  avoids it by keeping `\&` as a single `DefPrimitive`
+  (gullet partial expansion never invokes primitives). We mirror
+  the effective behaviour by marking those dispatch macros
+  `protected => true` so partial expansion leaves them as their
+  user-level form. Under FULL expansion the math/text dispatch
+  still resolves correctly. Witnesses recovered to 0 errors:
+  hep-th9306154, hep-ph9803499, hep-th9203004. math9904104 still
+  has 1 residual from a separate `\lx@ldots` leak (xy-pic), but
+  Perl is worse on that paper (53+ errors / timeout) — Rust
+  supersedes; no action. Regression test:
+  `latexml_oxide/tests/expansion/at_in_cs_round_trip.tex`
+  exercises all 6 protected CSes through `\write`/`\input`.
 
-* **Math-mode errors as second-order symptoms.** Stage-1..10 sweep
-  with the latest dev binary leaves 513 papers still failing in the
-  588-paper "originally-fail" cohort. Of those, 152 first-error
-  rows are math-mode cascades (`_`/`^` outside math, missing
-  sub/sup arg, `\lx@end@inline@math`-end-in-math). These are
-  downstream of an earlier unhandled macro or environment. The
+* **Watchdog stabilization — RESOLVED 2026-05-13.** Commit
+  `8f465f8948`. The wall-clock watchdog previously called
+  `std::process::abort()`, producing "Aborted (core dumped)" and
+  no output zip for the 7 hanging papers (2602.11915, 2604.11500,
+  2604.13944, hep-ph9205242, q-alg9604005, q-alg9605003,
+  q-alg9605028). Now uses `exit(124)` (clean) and exposes a
+  `set_pre_exit_hook` slot. cortex_worker --standalone registers a
+  hook that writes a 556-byte `Status:conversion:3` +
+  `Fatal:timeout:wallclock` placeholder zip — zero overhead on
+  the happy path, structured failure artifact on timeout.
+
+* **Math-mode errors as second-order symptoms — STILL OPEN.**
+  Post-fix 588-paper sweep (commit `8f465f8948` binary) leaves 436
+  status:2 + 58 status:3 = 494 still failing. **Top first-error
+  fingerprint changed** with the dispatch-macro protection:
+    - `Error:unexpected:}` jumped from 13 → 77 — but the majority
+      (46/77) are still the SHARED-FAILURE `\begin{abstract}`
+      mode-switch cluster; the rest are paper-specific table /
+      mode-switch closures that were previously hidden behind an
+      earlier `\lx@`-cascade error.
+    - `Error:unexpected:_` math-mode-first: 50 → 49 (~unchanged).
+    - `Error:unexpected:^` math-mode-first: 30 → 30 (~unchanged).
+  The 79 `_`/`^` math-mode-first papers continue to surface
+  "Anonymous String" locations (= deep macro expansion) with no
+  obvious upstream Warn:missing_file trigger. Investigating one
+  representative (2604.00193, elsarticle paper with 1-error
+  cascade) showed the error fires from
+  `latexml_engine/src/base_utilities.rs:2147:7` —
+  `make_generic_message`'s `Warn!` emission path during a
+  `\PackageWarning`. That path goes through `Expand!` + `to_string`,
+  which shouldn't be feeding the digester, so something in the
+  message expansion is bleeding `_` tokens out of the egroup. Needs
+  a debug-trace session. The
   scan to extract per-paper triggers is in `/tmp/first_err_dev.txt`
   + `/tmp/all_fail_ids.txt`; reproduce with
   `cat /tmp/sweep_pairs.txt | xargs -I {} -P 8 bash -c
