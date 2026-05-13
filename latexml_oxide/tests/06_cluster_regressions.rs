@@ -72,3 +72,11 @@ fn cluster_csname_accent() { convert_clean("tests/cluster_regressions/csname_acc
 /// Witnesses: arXiv:alg-geom9208004, arXiv:alg-geom9202004.
 #[test]
 fn cluster_amstex_2_09_sb() { convert_clean("tests/cluster_regressions/amstex_2_09_sb.tex"); }
+
+/// AmSTeX `\input amstex` + `\documentstyle{amsppt}` papers must
+/// stub `\vspace` / `\hspace` / `\scriptsize` / other LaTeX2e
+/// typesetting CSes as no-ops (the AmSTeX pool path doesn't load
+/// latex_constructs.rs). Witnesses: arXiv:funct-an9211012,
+/// funct-an9211013, funct-an9211011, funct-an9312004.
+#[test]
+fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vspace.tex"); }
