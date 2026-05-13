@@ -2807,12 +2807,38 @@ impl Document {
   }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
+  ///
+  /// When `record_id_with_node` detects a duplicate it renames the id (e.g.
+  /// `X.1.mf` → `X.1.mfa`). Any sibling `<ltx:XMRef idref="X.1.mf"/>` in the
+  /// same subtree would otherwise become a dangling reference for the post-
+  /// processor. After re-recording IDs, sweep the subtree once and update any
+  /// XMRef whose `idref` matches an entry in the rename map.
+  ///
+  /// Perl `Core::Document::recordNodeIDs` (Document.pm L1466-1472) has the
+  /// same latent bug — recording renames but XMRefs aren't touched. The bug
+  /// surfaces in our port because the math-parser path
+  /// (`parser.rs::install_replacements`-style `unrecord+record` round-trips)
+  /// is denser than Perl's; both end up needing this remap to keep XMRef
+  /// chains intact. Intentional surpass-Perl divergence; tracked in
+  /// SYNC_STATUS Task #10.
   pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
+    use rustc_hash::FxHashMap;
+    let mut rename: FxHashMap<String, String> = FxHashMap::default();
     for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         let newid = self.record_id_with_node(&id, &idnode);
         if newid != id {
           idnode.set_attribute("xml:id", &newid)?;
+          rename.insert(id, newid);
+        }
+      }
+    }
+    if !rename.is_empty() {
+      for mut xmref in self.findnodes("descendant-or-self::*[@idref]", Some(node)) {
+        if let Some(idref) = xmref.get_attribute("idref") {
+          if let Some(new) = rename.get(&idref) {
+            xmref.set_attribute("idref", new)?;
+          }
         }
       }
     }
