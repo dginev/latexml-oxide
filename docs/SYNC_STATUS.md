@@ -308,6 +308,41 @@ single-witness regressions.
 
 ---
 
+**Round-27 final tally (2026-05-13 evening, all 19 commits applied)**.
+
+Final verify on the 65-paper REAL REGRESSION cohort from the
+494-paper failing-set audit: **25 BOTH CLEAN / 65 = 38.5%**
+direct recovery. Up from 18 (28%) before the 5 root-cause
+follow-up commits (kvoptions-stub → `\@currext`/`\@currname`
+catcode, hotfix→root-cause conversions for scicite/IEEEtran,
+import save/restore + source-dir push_front).
+
+Witnesses now BOTH CLEAN (25 papers):
+2603.04274, 2603.04457, 2603.07560, 2603.18026, 2604.07823,
+2604.09738, 2604.09744, 2604.12884, 2604.15081, 2604.23351,
+cond-mat/9608045, cond-mat/9611206, cs/9809003, gr-qc/9507042,
+hep-ph/9607380, hep-ph/9707538, hep-ph/9911514, math/9608214,
+math/9610224, math/9704213, math/9809167, math/9904040,
+math/9904041, nucl-th/9311001, nucl-th/9806012.
+
+Remaining 40 split into:
+* expl3 csname-protocol (~12) — Task #22 deferred (tasks.sty
+  line 817 \file_input_stop:; catcode state during nested input)
+* `\hbox`/`\halign` mode-stacking cascades (~5) — amsppt, xy-pic
+* Schema `malformed:ltx:*` (~10) — XMWrap, section, title,
+  logical-block, glossaryphrase in unexpected parents
+* Single-witness paper-specific (~10) — `\NoBlackBoxes` placement,
+  bundled-file-missing, raw-load reset edges
+* Perl-timeout-false-positives (~3) — Perl times out at 60s with
+  partial-0-errors, classifier reads Perl=0
+
+Engine-level halo on the ~99,400 originally-OK papers is the
+hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
+@currext catcode, save/restore SEARCHPATHS, omnibus
+\thechapter→book.cls, filecontents cache, scicite cite-inheritance,
+JHEP \href Semiverbatim×2, glossary node-guard each plausibly
+clean a portion of the larger corpus silently.
+
 **Round-28 next-100k staging (opened 2026-05-13 evening)**.
 
 After Round-27's hunt-and-fix mini-pass landed 5 root-cause engine
