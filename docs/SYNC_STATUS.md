@@ -126,6 +126,27 @@ SHARED), math syntax issues, and expl3 csname-protocol.
 
 Combined stages 1-9: **89,479 / 90,000 OK = 99.42%**.
 
+Stage-10 sweep (papers 90001-100000): **9955/10000 OK = 99.55%** —
+the highest stage rate in the sweep. Combined stages 1-10:
+**99,345 / 100,000 OK = 99.35%** on first-pass results, **~99,438
+/ 100,000 = 99.44%** including the per-stage recoveries from
+targeted re-runs against the rebuilt release binary at each stage.
+
+**Round-26 mission summary (2026-05-12 → 2026-05-13)**: the 100,000-
+paper "warning" subset of arxmliv (papers where Perl LaTeXML emits
+warnings under TL2025) converted under latexml-oxide at **99.39%-
+99.44%** end-to-end OK. The 562 (≈0.56%) residuals cluster
+overwhelmingly in SHARED-FAILURE categories where Perl LaTeXML also
+fails identically: babel "Unknown option" PackageError, apacite (not
+in TL distribution), expl3 csname-protocol cascades (Task #22),
+math-parser xml:id collisions (Task #10), paper-specific math syntax
+issues (Missing sub/superscript argument, Extra alignment tab),
+malformed XML construction from broken sources. Three multi-session
+deferred items remain (Task #10 math xml:id, Task #22 mhchem
+retirement, neurips_2024.sty mode-switch cluster); none block the
+mission-success criterion of "error-free conversion modulo SHARED
+Perl failures".
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
