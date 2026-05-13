@@ -92,6 +92,14 @@ hep-th9512150). Effective stage-5: **9947/10000 OK = 99.47%**.
 
 Combined stages 1-5: **49,712 / 50,000 OK = 99.42%**.
 
+Stage-1..3 second-round targeted re-run (2026-05-13 morning) with the
+latest release that includes the amsppt \\vspace / font-size stubs +
+amstex 2.09 auto-load recovered another 5 papers (all in stage-3,
+old AmS-TeX cluster): alg-geom9208004 / alg-geom9202004 / hep-th9111005
+/ hep-th9203017 / math9201247. Stage-3 effective: 9939/10000 = 99.39%.
+
+Combined stages 1-5 updated: **49,717 / 50,000 OK = 99.43%**.
+
 **Closed mission (2026-05-12)**: 100k "no-problem" sandbox parity on
 the 426,555-paper arxmliv corpus. Round-25 stages 1-43 closed at
 ~99.85% aggregate OK, stage 41 = 100.00%, 30 RUST-REGRESSIONs fixed;
