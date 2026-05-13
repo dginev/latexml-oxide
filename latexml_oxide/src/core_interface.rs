@@ -241,11 +241,36 @@ impl DigestionAPI for Core {
       state::assign_value("SOURCEFILE", arena::pin(&request), None);
     }
     if let Some(dir) = dir_opt {
-      let dir = dir.to_str().unwrap_or(".");
-      {
-        state::assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
-        state::add_search_path(dir.to_string());
-      }
+      let dir_str = dir.to_str().unwrap_or(".");
+      // Perl Core.pm L195-200 unshifts the SOURCE file's directory onto
+      // SEARCHPATHS so subsequent `\input`-style lookups resolve relative
+      // to the main file. When `canonicalize` succeeded `dir_str` is the
+      // absolute parent; if it failed (e.g. file not on disk yet at the
+      // time we resolved — unusual for normal latexml CLI invocations
+      // but possible for `literal:` etc.) `dir_str` may be empty and an
+      // empty entry on SEARCHPATHS is useless. Fall back to CWD in that
+      // case so paper-local files (`\input{Chapter/Abstract}` etc.) are
+      // discoverable. Witness: arXiv:2604.09744, 2603.04457 (papers
+      // bundling subdirectory `\subimport` chains).
+      let resolved_dir = if dir_str.is_empty() {
+        std::env::current_dir()
+          .ok()
+          .and_then(|cwd| cwd.to_str().map(String::from))
+          .unwrap_or_else(|| ".".to_string())
+      } else {
+        dir_str.to_string()
+      };
+      state::assign_value("SOURCEDIRECTORY", arena::pin(&resolved_dir), None);
+      // Perl Core.pm L195-200: `$state->unshiftValue(SEARCHPATHS => $dir)`.
+      // `unshift` puts the source dir at the FRONT so it's the new "lead"
+      // — the same lead `\lx@append@path` reads as the basis for
+      // appended subdir paths. Pushing to BACK (`add_search_path`) left
+      // the lead as whatever the CLI's `--path` provided (typically
+      // `ar5iv-bindings/bindings`); `\subimport{Chapter/}{Abstract}`
+      // then appended Chapter/ to ar5iv-bindings/bindings instead of to
+      // the paper's directory, and `\input{Abstract}` couldn't resolve.
+      // Witness: arXiv:2604.09744, 2603.04457.
+      state::search_paths_push_front(resolved_dir);
     }
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
     // $state->unshiftValue(GRAPHICSPATHS => $dir)
@@ -522,6 +547,19 @@ impl DigestionAPI for Core {
         request = pathname;
         dir = pathname::directory(&request);
         name = pathname::file_stem(&request);
+        // Perl Core.pm L195-200 unshifts the SOURCE file's directory onto
+        // SEARCHPATHS so subsequent `\input`-style lookups resolve relative
+        // to the main file. When the user invokes with a bare filename
+        // (e.g. `latexml_oxide neurips_2025.tex` from the paper's cwd),
+        // `pathname::find` returns the relative match and `pathname::
+        // directory` returns an empty string — which then gets pushed
+        // onto SEARCHPATHS as a useless entry. Resolve to CWD in that
+        // case so the paper-local Chapter/ etc. are reachable.
+        if dir.is_empty() {
+          if let Ok(cwd) = std::env::current_dir() {
+            dir = cwd.to_string_lossy().to_string();
+          }
+        }
       // ext = pathname::extension(&request);
       } else {
         let message = s!("Can't find {} file {} ", mode, request_base);
