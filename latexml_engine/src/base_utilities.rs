@@ -2162,11 +2162,17 @@ fn is_typesetting_only_message(message: &str) -> bool {
   let lower = message.to_ascii_lowercase();
   // Phrase set tuned against the stage-1 sweep of the 100k warning
   // corpus. Conservative — every phrase here is purely about visual
-  // layout, never about semantic correctness. Examples:
+  // layout or vendor-deprecation chatter, never about semantic
+  // correctness. Examples:
   //   "Running heading author exceeds size limitations" (AISTATS)
   //   "Running heading title exceeds size limitations" (AISTATS)
   //   "Caption too wide for page" (various)
   //   "Heading breaks the line" (revtex, IEEEtran)
+  //   "You are loading directly a language style" (babel: czech.sty,
+  //     francais.sty, etc. unconditionally fire `\PackageError` to nag
+  //     the user toward `\usepackage[<lang>]{babel}`; pdflatex shows
+  //     the message but continues, and the document typesets normally
+  //     — the message is informational, not a real failure)
   const PHRASES: &[&str] = &[
     "exceeds size limitations",
     "exceeds size limitation",
@@ -2189,6 +2195,8 @@ fn is_typesetting_only_message(message: &str) -> bool {
     "exceeds \\textwidth",
     "exceeds \\columnwidth",
     "exceeds \\linewidth",
+    "loading directly a language style",
+    "syntax is deprecated",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
