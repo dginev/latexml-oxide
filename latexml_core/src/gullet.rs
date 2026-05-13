@@ -1238,6 +1238,17 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
           "\\textasciitilde" => Some('~'),
           "\\textunderscore" => Some('_'),
           "\\textasteriskcentered" => Some('*'),
+          // NFSS encoding-specific glyph CS names (`\<encoding>\<glyph>`)
+          // built by \DeclareTextSymbol for the i/j dotless letters. These
+          // surface when a paper composes `\'\i` style accented chars
+          // that travel through `\lx@applyaccent` and a downstream
+          // encoding-specific dispatcher. Substitute the dotless glyph
+          // (U+0131 / U+0237) so the constructed csname carries the
+          // character the author meant.
+          // Witnesses: arXiv:2603.22193, 2603.23433, 2604.20621 (twemoji
+          // São Tomé & Príncipe / St. Barthélemy / Côte d'Ivoire cluster).
+          "\\T1\\i" | "\\OT1\\i" | "\\LY1\\i" => Some('\u{0131}'),
+          "\\T1\\j" | "\\OT1\\j" | "\\LY1\\j" => Some('\u{0237}'),
           _ => None,
         };
         if let Some(c) = soft_char {
