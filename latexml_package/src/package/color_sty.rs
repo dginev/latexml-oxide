@@ -37,23 +37,28 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
-      // Perl color.sty.ltxml L50-53:
-      //   AssignValue('color_'.$spec => Black);
-      //   Error('unexpected', $spec, $STATE->getStomach,
-      //     "Can't find color named '$spec'; assuming Black");
-      // Persist Black under this name so subsequent lookups resolve it
-      // without repeating the diagnostic, then surface an Error-status
-      // diagnostic. We inline the bookkeeping from the `Error!` macro
-      // because that macro is return-based (`Fatal!` at threshold) and
-      // `lookup_color_obj` returns `Color`, not `Result<Color>`.
+      // Perl color.sty.ltxml L50-53 fires Error('unexpected', ...) for
+      // "Can't find color named X; assuming Black". In our XML/HTML
+      // paradigm this is a moot diagnostic — the output is still
+      // emitted, just in the inherited default color. Per WISDOM #50
+      // (vendor size/layout/positioning errors are moot for non-PDF
+      // pipelines), the same principle extends to typographic-only
+      // fallbacks like color lookup: the document content is intact,
+      // only the visual styling is wrong. Downgrade Error → Warn so
+      // papers that use dvipsnames colors (ForestGreen, RoyalBlue, …)
+      // without `\usepackage[dvipsnames]{xcolor}` still convert with
+      // Status:conversion:1. Witness: arXiv:2602.15149 (lstset
+      // `commentstyle=\color{ForestGreen}` with non-dvipsnames load).
+      // Persist Black under this name so subsequent lookups resolve
+      // without repeating the diagnostic.
       assign_value(
         &s!("color_{name}"),
         Stored::String(arena::pin(color::BLACK.to_stored())),
         None,
       );
-      latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Error, None);
+      latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Warning, None);
       if !latexml_core::common::error::is_log_output_suppressed() {
-        log::error!(
+        log::warn!(
           target: &format!("unexpected:{}", name),
           "Can't find color named '{}'; assuming Black",
           name
