@@ -34,6 +34,7 @@ LoadDefinitions!({
   // \coloneqq` because only amssymb was loaded).
   DeclareOption!("comsoc", {
     Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iftrue");
     RequirePackage!("newtxmath");
   });
   DeclareOption!("transmag", {});
@@ -51,6 +52,12 @@ LoadDefinitions!({
   // \ifCLASSOPTIONcompsoc unexpectedly false → user's
   // `\ifCLASSOPTIONcompsoc \usepackage{url} \fi` skipped → \url undefined).
   Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+  // Some 2020+ IEEEtran versions also expose `\ifCLASSOPTIONcomsoc`
+  // (no `p`) alongside `\ifCLASSOPTIONcompsoc`. Both flag the same
+  // option (`comsoc`); papers may probe either. Add the alias so
+  // paper-side `\ifCLASSOPTIONcomsoc … \fi` doesn't see undefined.
+  // Witness: arXiv:2603.07560.
+  Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
   Let!("\\ifCLASSOPTIONtechnote", "\\iffalse");
