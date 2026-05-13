@@ -264,6 +264,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("gen-m-l", "cls", package::gen_m_l_cls::load_definitions),
   ("gen-p-l", "cls", package::gen_p_l_cls::load_definitions),
   ("french", "ldf", package::french_ldf::load_definitions),
+  ("french", "sty", package::french_sty::load_definitions),
   ("frenchb", "ldf", package::french_ldf::load_definitions),
   ("nil", "ldf", package::nil_ldf::load_definitions),
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
