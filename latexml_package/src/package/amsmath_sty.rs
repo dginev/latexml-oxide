@@ -1299,8 +1299,19 @@ LoadDefinitions!({
     } else {
       format.unwrap().to_string()
     };
-    let counter_str = counter.unwrap().to_string();
-    let within_str = within.unwrap().to_string();
+    // Perl amsmath.sty.ltxml L744:
+    //   $counter = ToString(Expand($counter));
+    //   $within  = ToString(Expand($within));
+    // Both args are EXPANDED before NewCounter. Witnesses: arXiv:2508.12971
+    // — paper passes `\numberwithin{lemma}{\DefaultNumberTheoremWithin}`
+    // where `\DefaultNumberTheoremWithin` is defined to expand to `section`.
+    // Without expansion, `within_str = "\DefaultNumberTheoremWithin"` is fed
+    // into `\csname the\DefaultNumberTheoremWithin@ID\endcsname`, which —
+    // with `@` LETTER catcode at internal-tokenization time — becomes ONE
+    // CS `\DefaultNumberTheoremWithin@ID` (undefined) rather than the
+    // expected `\thesection@ID` (43-error cascade).
+    let counter_str = Expand!(counter.unwrap().clone()).to_string();
+    let within_str = Expand!(within.unwrap().clone()).to_string();
     new_counter(&counter_str, &within_str, None)?;
     let the_body = s!("\\csname the{within_str}\\endcsname.{format_str}{{{counter_str}}}");
     let expansion_tokens = latexml_core::mouth::tokenize(&the_body);
