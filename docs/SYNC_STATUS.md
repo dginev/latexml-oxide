@@ -343,6 +343,31 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-13 final (2026-05-13 late evening, ~07:48 PM)**.
+
+* **Stage-13 final**: 9715 OK / 10013 = **97.0% OK** (papers
+  20001-30000 of next_warning_papers). 246 conversion_errors +
+  25 conversion_fatals + 21 aborts + 4 errors + 1 timeout +
+  1 oversized. Holds steady at ~97% in line with Stages 11-12
+  (rough corpus).
+* **15-paper random parity sample of Stage-13 errors**: 1 REAL
+  REGRESSION (2506.19291 Rust=30 vs Perl=2 — floatrow raw-loads
+  caption3.sty, missing `\caption@iflabelseparatorwithnewline`),
+  9 PERL_REGRESSION (Rust < Perl), 5 OUT-OF-SCOPE (shared).
+  Includes 2506.24048 where Rust=1 vs Perl=101+ (capped).
+  Real-regression rate ~1/15 sample ≈ 6.7%, all from a single
+  caption3.sty raw-load cluster. Engine quality remains at-or-
+  above Perl in 14/15 sampled papers.
+* `\IncludeInRelease` semantics: both Perl and Rust drop the
+  entire block (latexml_engine `\IncludeInRelease{}{}{} Until:`
+  `\EndIncludeInRelease` returns nothing), so KOMA `scrbase.sty`
+  raw-load can't define `\FamilyProcessOptions`. **Shared
+  parity gap, not a Rust regression** — confirmed OUT-OF-SCOPE
+  on 2506.12162 (Rust=1=Perl=1).
+* Stage-13 ran the `9c93e36c96` `is_definable` fix (zref \Z
+  collision). Cluster regression visible in earlier stages:
+  2504.18121 went Rust=6→4 with the fix.
+
 **Round-28 Stage-11 final + Stage-12 mid-flight (2026-05-13 late evening)**.
 
 * **Stage-11 final**: 9676 OK / 10010 = **96.7% OK** (papers

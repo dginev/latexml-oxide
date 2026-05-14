@@ -427,7 +427,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // page-margin checks) that produce spurious warnings.
     let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
 
-    // Step 2: If we're already interpreting raw TeX definitions, look for the file directly
+    // Step 2: If we're already interpreting raw TeX definitions, look for the file directly.
+    // Perl Package.pm L2117-2119: `pathname_find($file, paths => $paths)` —
+    // LOCAL PATHS ONLY, no kpsewhich. Rust must mirror this: kpsewhich
+    // here would short-circuit Step 3 (fallback ltxml) for any TeX-Live-
+    // shipped raw file. Witness: `\RequirePackage{caption3}` from raw
+    // floatrow.sty — Perl finds caption3.sty NOT in user paths, falls
+    // through to Step 3 → caption.sty.ltxml. Rust with kpsewhich here
+    // returned the real caption3.sty from TL, raw-loading it and
+    // triggering the `\DeclareCaptionFormat{hang}[#1#2#3\par]{...}`
+    // PARAM-leak cascade (arXiv:2506.19291: Rust=30 vs Perl=2).
     let found_raw = if interpreting && !options.notex {
       find_file(
         &filename,
@@ -435,7 +444,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
           forbid_ltxml:      options.noltxml,
           notex:             false,
           ext_type:          options.extension.as_ref().cloned(),
-          search_paths_only: options.searchpaths_only,
+          search_paths_only: true,
         }),
       )
     } else {
@@ -524,9 +533,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // Fallback ltxml binding already loaded — don't double-load the raw.
       None
     } else if !options.notex
-      && !interpreting
       && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded")))
     {
+      // Perl Package.pm L2121-2125 + L2131-2136: combined raw-search
+      // step. Tries local paths first, then kpsewhich. Mirrors Perl's
+      // Step 4 (`!interpreting` local raw) PLUS Step 5 (kpsewhich
+      // unconditionally — note Perl's kpsewhich block lacks the
+      // interpreting gate). The previous `!interpreting` guard here
+      // was wrong: Step 2 now uses `search_paths_only=true`, so
+      // under interpreting=true we still need kpsewhich for raw
+      // files that have no fallback ltxml binding.
       find_file(
         &filename,
         Some(FindFileOptions {
