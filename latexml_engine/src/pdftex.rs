@@ -218,8 +218,17 @@ LoadDefinitions!({
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
   DefPrimitive!("\\pdfnoligatures Token", None);
-  // \pdfsavepos — mark current position; no-op stub
-  DefPrimitive!("\\pdfsavepos", None);
+  // \pdfsavepos — Perl pdfTeX.pool.ltxml does NOT define this (only a
+  // bare comment at L184), so `\ifdefined\pdfsavepos` returns false in
+  // Perl. Packages like linegoal.sty (L33-37) and zref-savepos.sty
+  // (L57-63) use this test to gate their pdfTeX-only code paths and
+  // `\endinput` when pdfTeX isn't present. Defining it as a no-op
+  // primitive in Rust made `\ifdefined` return true → those packages
+  // skip the early-exit → reach later `\globcount\LNGL@unique`/
+  // `\globdimen` lines (neither Perl nor Rust binds `\globcount`) →
+  // undefined cascade. Witness: arXiv:2506.18578 (Rust=4 vs Perl=0).
+  // Leave it undefined to match Perl.
+  // DefPrimitive!("\\pdfsavepos", None);  // kept for grep-discoverability
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
   DefPrimitive!("\\pdfstartthread", None);
   DefPrimitive!("\\pdfendthread", None);
