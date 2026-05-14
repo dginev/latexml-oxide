@@ -343,6 +343,33 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-16 final (2026-05-13 late evening, ~11:01 PM)**.
+
+* **Stage-16 final** (papers 50001-60000): 9906 OK / 10000 = **99.06%
+  OK**. 90 conversion_errors + 2 fatals + 2 aborts + 2 errors. Matches
+  Stage-15's 99.07% — consistent on the corpus with all four session
+  fixes active.
+* **expl3 status-stack regression cluster** (~3+ papers per stage):
+  * 2509.05997, 2509.07893 (Stage-15): ocgx2 + ocgbase + pdfbase +
+    l3backend-dvips.def chain → `\group_begin:` at ocgx2 L1328
+    tokenizes as `\group`+`_`+`begin:` (Rust=26 each vs Perl=0).
+  * 2509.02344 (Stage-15): expl3-heavy paper, Rust=101 (cap) vs Perl=0.
+  * Trace confirms `_` catcode flips to SUB during sub-package load,
+    apparently before the `\@popfilename` restoration could fire — likely
+    a stack-mismatch in `\l__expl_status_stack_tl` handling.
+  * Two attempted Rust-side patches (symmetric `\ExplSyntaxOn` re-fire
+    in `load_tex_definitions` post-hook; catcode snapshot+restore at
+    load entry/exit) did NOT recover the cluster — they fire when
+    parent state at sub-load entry is already non-expl3, so they don't
+    address the upstream catcode loss. The actual flip happens INSIDE
+    ocgx2's body between L3 (`\ExplSyntaxOn`) and L172
+    (`\RequirePackage{ocgbase}`); something there (likely a
+    `\ProvidesExplPackage` autoload chain re-firing) inadvertently
+    re-runs the post-expl3-load `\char_set_catcode_subscript:n {95}`
+    cleanup, dropping the caller out of expl3.
+  * **Deferred** pending deeper instrumentation of the autoload +
+    catcode interaction.
+
 **Round-28 Stage-15 final (2026-05-13 late evening, ~09:57 PM)**.
 
 * **Stage-15 final** (papers 40001-50000, last batch): 9908 OK /
