@@ -18,7 +18,16 @@ LoadDefinitions!({
   // own keyvals via `DefKeyVal!`/`DefParameterType!` Rust-side, but raw-
   // loaded sibling sty files that call `\define@key` directly need the
   // real CS. Witness: arXiv:2504.13697 (IEEEtran + graphbox).
-  RequirePackage!("keyval");
+  //
+  // GUARD: only do this when the LaTeX kernel is already initialized
+  // (proxy: `\@onefilewithoptions` defined). Without the guard, old
+  // LaTeX 2.09 papers (e.g. astro-ph9501095 with `\input psfig` BEFORE
+  // `\documentstyle`) trigger graphicx via ar5iv preload BEFORE LaTeX.pool
+  // loads, and the keyval raw-load tries to use kernel hooks that aren't
+  // ready yet (`Extra \PopDefaultHookLabel` + `\@nil` undefined errors).
+  if lookup_definition(&T_CS!("\\@onefilewithoptions"))?.is_some() {
+    RequirePackage!("keyval");
+  }
   RequirePackage!("graphics");
 
   // Perl L24-27: internal length / dimension macros.
