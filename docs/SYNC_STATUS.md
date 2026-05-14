@@ -349,7 +349,8 @@ clean a portion of the larger corpus silently.
   active). Round-26 originally hit ~99.55% on this corpus.
 * **Stage-1 v2** (papers 1-10000): 9978 OK / 10000 = **99.78% OK**
 * **Stage-2 v2** (papers 10001-20000): 9976 OK / 9998 = **99.78% OK**
-* Stable +0.23 vs Round-26 baseline — fixes hold on the older corpus.
+* **Stage-3 v2** (papers 20001-30000): 9959 OK / 10002 = **99.57% OK**
+* Stable ~99.7% across the older corpus — fixes hold.
 
 **Round-28 Stage-20 final / next_warning_papers corpus COMPLETE
 (2026-05-14 03:02 AM)**.
