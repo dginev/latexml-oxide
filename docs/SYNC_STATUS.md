@@ -343,6 +343,27 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-19 final (2026-05-14 01:56 AM)**.
+
+* **Stage-19 final** (papers 80001-90000): 9975 OK / 10000 = **99.75%
+  OK**. 23 conversion_errors + 2 fatals. **BEST STAGE EVER** —
+  first stage with the `ccea00bb17` expl3-grandparent-state fix.
+* Rate trajectory (Round-28):
+  * Stage-11: 96.7% (old binary)
+  * Stage-12: 97.2% (+ expl3 nested-load preserve, graphicx-keyval)
+  * Stage-13: 97.0% (+ is_definable fix)
+  * Stage-14: 97.61% (variance, same binary)
+  * Stage-15: 99.07% (+ caption3 paths-only, \pdfsavepos drop, mhchem \equiv, \numberwithin expand-args)
+  * Stage-16: 99.06% (same binary as Stage-15)
+  * Stage-17: 99.02% (expl3 cluster grew in 2510+ corpus)
+  * Stage-18: 99.65% (variance — fewer expl3 victims in [70001,80000))
+  * **Stage-19: 99.75% (with expl3 fix)**
+* All error patterns in Stage-19 are single-witness (no clusters):
+  `\newcites` (2), `arabic` option, `\@ne`, double-subscript,
+  `\citet`, `\citeasnoun`, `\belowcaptionskip`, readBalanced runaway.
+* Estimated cumulative recovery this session: **8 engine fixes**
+  total, ~200-250 papers recovered across the 90k-paper corpus.
+
 **Round-28 Stage-18 final (2026-05-14 01:00 AM)**.
 
 * **Stage-18 final** (papers 70001-80000): 9964 OK / 9999 = **99.65%
