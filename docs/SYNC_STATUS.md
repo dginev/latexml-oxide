@@ -361,7 +361,14 @@ clean a portion of the larger corpus silently.
   +0.29 vs v2 (99.21%), +0.12 vs Round-26 (99.38%).
 * **Stage-9 v3** (papers 80001-90000): 9940/10000 = **99.40% OK** —
   +0.29 vs v2 (99.11%), +0.11 vs Round-26 (99.29%).
-* 9th fix consistently recovers ~25-30 papers per old-corpus stage.
+* **Stage-10 v3** (papers 90001-100000): 9959/9999 = **99.60% OK** —
+  +0.19 vs v2 (99.41%), +0.05 vs Round-26 (99.55%).
+* **Round-29.1 v3 COMPLETE** (Stages 5-10 re-run with 9th fix).
+  Stages 5-10 v3 cumulative: ~99.54% (vs v2's ~99.27% on the same
+  stages = +0.27 net). Stages 1-4 left as v2 (newer papers; 9th fix
+  is targeted at old-paper edge cases).
+* **All 9 engine fixes in this session** have produced net wins on
+  both corpora.
 
 **Round-29 recent_warning Stage-1/2 v2 final (2026-05-14)**.
 
