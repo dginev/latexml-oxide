@@ -343,6 +343,33 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-18 final (2026-05-14 01:00 AM)**.
+
+* **Stage-18 final** (papers 70001-80000): 9964 OK / 9999 = **99.65%
+  OK**. 33 conversion_errors + 2 fatals. **Best run yet** (+0.58 vs
+  Stage-17's 99.02%). The [70001-80000) slice happens to have fewer
+  expl3-cluster victims; even without the fresh fix, the rate jumped.
+* **Major engine fix landed mid-stage** (`ccea00bb17`):
+  load_tex_definitions cleanup hook now uses `grandparent_in_expl3`
+  (snapshotted in input_definitions BEFORE `\@pushfilename` runs)
+  instead of the post-push `entered_expl3`. Recovers 5/6 papers in
+  the expl3-cluster:
+  * 2509.05997 (Rust 26 → 0)
+  * 2509.07893 (Rust 26 → 0)
+  * 2509.02344 (Rust 101 → 0)
+  * 2510.13206 (Rust 448 → 0)
+  * 2510.13942 (Rust 580 → 0)
+  * 2510.17317 unchanged at 992 (different cluster — paper-side
+    `_/^` in text mode, not expl3 tokenization)
+* **Minimal repro confirmed**: `\usepackage{xsavebox}` alone
+  reproduces the bug, since xsavebox.sty L53 calls
+  `\sys_load_backend:n{}` which transitively loads
+  `l3backend-dvips.def` via `\@onefilewithoptions` → `\@pushfilename`.
+  Tests: 1196/0/0 unchanged.
+* Stage-19 will be the first stage to run with this fix. Expected
+  pickup: ~5-10 additional papers recovered per 10000 from the
+  expl3 cluster.
+
 **Round-28 Stage-17 final (2026-05-14 12:03 AM)**.
 
 * **Stage-17 final** (papers 60001-70000): 9901 OK / 9999 = **99.02%
