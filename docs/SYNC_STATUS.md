@@ -343,6 +343,15 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-29 recent_warning Stage-1 v2 final (2026-05-14 04:06 AM)**.
+
+* recent_warning_papers re-run on fresh binary (all 8 Round-28 fixes
+  active). Round-26 originally hit ~99.55% on this corpus.
+* **Stage-1 v2 final** (papers 1-10000 of recent_warning_papers):
+  9978 OK / 10000 = **99.78% OK**. 17 conversion_errors + 5 fatals.
+  +0.23 vs Round-26 baseline — fixes are stable on the older corpus
+  too.
+
 **Round-28 Stage-20 final / next_warning_papers corpus COMPLETE
 (2026-05-14 03:02 AM)**.
 
