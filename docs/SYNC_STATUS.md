@@ -350,6 +350,9 @@ clean a portion of the larger corpus silently.
   identical to Round-28 (96.7%); fixes mostly target newer corpus.
 * **Stage-12 v2** (papers 10001-20000): 9736/10010 = **97.26% OK** —
   +0.26 vs Round-28 baseline (~97.0%). Modest improvement.
+* **Stage-13 v2** (papers 20001-30000): 9689/10007 = **96.83% OK** —
+  -0.17 vs Round-28 baseline (97.0%). Statistical noise in 10k-paper
+  sample.
 
 **Round-29.2 next_warning Stage-11 v2 (2026-05-14 03:56 PM)**.
 
