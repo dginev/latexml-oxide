@@ -1566,3 +1566,46 @@ upgrade when a corpus paper actually exercises one of the gaps.
   the latent `alsoletter` default (`@$_` bundled with the alphabet)
   ID_RE greedy-eat bug that prevents propagating the `**` recursive
   flag through to `\lst@@delim` / `\lst@@moredelim`. Tracked.
+
+## #52 `FindFile` interpret-mode raw-search is paths-only (NO kpsewhich)
+
+**The rule.** When `INTERPRETING_DEFINITIONS=1` (we're inside a raw-load
+context, e.g. one `.sty` file's body invokes `\RequirePackage{foo}`),
+the Perl `FindFile` raw-search step (Package.pm L2117-2119) calls
+`pathname_find($file, paths => $paths)` — **local paths only**, no
+kpsewhich. The ltxml-fallback step (L2120-2123, `FindFile_fallback`)
+fires next, BEFORE the unconditional kpsewhich at L2131-2136.
+
+Practical effect: when a raw `.sty` calls `\RequirePackage{<name>}` and
+`<name>.sty` ships in TeX Live (but not the user's search paths), the
+Perl flow tries the local-paths search (fails), then the ltxml fallback
+(which strips trailing version suffixes — `caption3` → `caption`,
+`svjour3` → `svjour`, `mn2e` → `mn`, etc.), succeeds with the binding,
+and never reaches kpsewhich. The fallback ALWAYS wins over the TL raw
+file when the unsuffixed binding exists.
+
+The Rust port previously called `find_file(..., search_paths_only:
+options.searchpaths_only)` for the interpret-mode step in
+`binding/content.rs::input_definitions`. `searchpaths_only` defaults
+to false, so kpsewhich fired and returned the TL raw — short-circuiting
+the fallback. Symptom on `caption3`: floatrow.sty raw-loaded caption3.sty
+directly, and the hand-port stub `\DeclareCaptionFormat{}{}` missed its
+optional `[#1#2#3\par]` bracket → 3+ PARAM-token leaks per
+`\DeclareCaptionFormat` call plus a cascade of `\caption@*` undefineds.
+
+**Why this matters beyond `caption3`.** Stage-13 sample showed five
+distinct papers hitting `Error:misdefined:#` (6 PARAM each, identical
+shape — caption3 cluster). Every "version-suffixed package that has a
+binding for its unsuffixed name" follows the same code path; the rule
+governs whether the Rust binding or the TL raw file wins.
+
+**Implementation guard.** Step-2 must use `search_paths_only: true`.
+Step-4 (the second raw-search, after fallback didn't catch it) must
+drop the `!interpreting` gate — Perl's kpsewhich block (L2131-2136)
+has no interpreting gate either, and dropping it preserves the
+"interpret-mode + no fallback → kpsewhich the raw" path.
+
+**Witness.** arXiv:2506.13435 (caption-package paper, Rust=28→2 after
+fix); arXiv:2506.19291 (floatrow → caption3, Rust=30→2). Commit
+`feb8832a2b binding/content: Step-2 raw-search paths-only, drop
+interpreting gate in Step-4`.
