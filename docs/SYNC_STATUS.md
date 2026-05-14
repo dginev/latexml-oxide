@@ -343,6 +343,23 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-17 final (2026-05-14 12:03 AM)**.
+
+* **Stage-17 final** (papers 60001-70000): 9901 OK / 9999 = **99.02%
+  OK**. 94 conversion_errors + 4 fatals. Slight decline vs Stage-15/16
+  (99.07/99.06%) because 2510+ papers have higher density of expl3-
+  heavy packages (hyperref + todonotes + tikz chains), and the expl3
+  status-stack regression cluster fires more often.
+* **8-paper Stage-17 parity sample**: 6 PERL_REGRESSION (Rust wins),
+  1 OUT-OF-SCOPE? (Perl timeout), 1 REAL REGRESSION (2510.17317
+  Rust=992 vs Perl=0). All real regressions are expl3-cluster.
+* **expl3 cluster size growing**: Stage-13 had ~3-4 papers; Stage-15
+  has 2509.05997/.07893/.02344; Stage-17 has 2510.13206 (Rust=448),
+  2510.13942 (Rust=580), 2510.17317 (Rust=992), 2510.26673, etc.
+  Real-regression rate per Stage-17 random-8 sample: 12.5%, up from
+  Stage-13's 6.7%. Cluster fix urgency growing as corpus moves to
+  modern expl3-heavy papers.
+
 **Round-28 Stage-16 final (2026-05-13 late evening, ~11:01 PM)**.
 
 * **Stage-16 final** (papers 50001-60000): 9906 OK / 10000 = **99.06%
