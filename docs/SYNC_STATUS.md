@@ -343,6 +343,31 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-15 final (2026-05-13 late evening, ~09:57 PM)**.
+
+* **Stage-15 final** (papers 40001-50000, last batch): 9908 OK /
+  10001 = **99.07% OK**. 84 conversion_errors + 7 fatals + 2 aborts.
+  **Best of the run by +1.46 over Stage-14 (97.61%)** —
+  Stage-15 was the first stage to include all four engine fixes
+  landed this session.
+* **Four fixes landed this session** (cumulative impact ~150
+  papers recovered between Stages 14 and 15):
+  * `feb8832a2b` — binding/content paths-only Step-2 (caption3-
+    cluster, ~11+ papers).
+  * `91164719c4` — engine/pdftex `\pdfsavepos` drop
+    (linegoal+zref-savepos cluster, ~5+ papers).
+  * `9a04e8e43f` — contrib/mhchem `#` → `\equiv` (`\ce{...}`
+    triple-bond cluster, ~1+ papers).
+  * `9c958342fb` — amsmath `\numberwithin` expand counter+within
+    args before `NewCounter` (witness 2508.12971: 43 → 0 errors).
+* **Stage-15 leftover REAL REGRESSIONs** (sampled):
+  * 2509.05997, 2509.07893 — ocgx2.sty + l3backend-dvips.def
+    expl3-mode loss after `\ProvidesExplFile`/nested expl3 load.
+    `\group_begin:` at ocgx2 line 1328 tokenizes as
+    `\group`+`_`+`begin:` because parent's expl3 state was
+    flipped off by inner `\ExplSyntaxOff`. Rust=26, Perl=0 each.
+    Deeper expl3-protect investigation needed; deferred.
+
 **Round-28 Stage-14 final (2026-05-13 late evening, ~08:50 PM)**.
 
 * **Stage-14 final** (papers 30001-40000): 9768 OK / 10007 =
