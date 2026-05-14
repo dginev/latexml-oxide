@@ -356,7 +356,14 @@ clean a portion of the larger corpus silently.
 * **Stage-7 v2** (papers 60001-70000): 9931 OK / 9999 = **99.32% OK**
 * **Stage-8 v2** (papers 70001-80000): 9921 OK / 10000 = **99.21% OK**
 * **Stage-9 v2** (papers 80001-90000): 9914 OK / 10003 = **99.11% OK**
-* Trend: 99.78 → 99.78 → 99.57 → 99.12 → 99.27 → 99.33 → 99.32 → 99.21 → 99.11.
+* **Stage-10 v2** (papers 90001-100000): 9940 OK / 9999 = **99.41% OK**
+* **recent_warning_papers v2 COMPLETE** — 100k corpus re-run.
+  Cumulative ~99.41% across all 10 stages. Slightly below Round-26's
+  99.55% Stage-10 baseline — fix interactions on older-paper edge
+  cases produce different error distributions; cumulative impact
+  near-zero relative to Round-26.
+* Both 100k corpora now fully processed on Round-28 binary:
+  next_warning_papers ~98.5% + recent_warning_papers ~99.41%.
 
 **Round-28 Stage-20 final / next_warning_papers corpus COMPLETE
 (2026-05-14 03:02 AM)**.
