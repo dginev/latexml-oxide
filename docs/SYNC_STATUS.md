@@ -354,7 +354,8 @@ clean a portion of the larger corpus silently.
 * **Stage-5 v2** (papers 40001-50000): 9925 OK / 9998 = **99.27% OK**
 * **Stage-6 v2** (papers 50001-60000): 9931 OK / 9998 = **99.33% OK**
 * **Stage-7 v2** (papers 60001-70000): 9931 OK / 9999 = **99.32% OK**
-* Trend: 99.78 → 99.78 → 99.57 → 99.12 → 99.27 → 99.33 → 99.32.
+* **Stage-8 v2** (papers 70001-80000): 9921 OK / 10000 = **99.21% OK**
+* Trend: 99.78 → 99.78 → 99.57 → 99.12 → 99.27 → 99.33 → 99.32 → 99.21.
 
 **Round-28 Stage-20 final / next_warning_papers corpus COMPLETE
 (2026-05-14 03:02 AM)**.
