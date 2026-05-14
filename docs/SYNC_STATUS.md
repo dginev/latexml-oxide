@@ -343,6 +343,38 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-14 final (2026-05-13 late evening, ~08:50 PM)**.
+
+* **Stage-14 final** (papers 30001-40000): 9768 OK / 10007 =
+  **97.61% OK**. 215 conversion_errors + 10 fatals + 14 aborts.
+  Best stage yet on the rough corpus (+0.6 over Stage-13's 97.0%).
+  Ran with the OLD binary — caption3 fix (`feb8832a2b`) and
+  `\pdfsavepos` removal (`91164719c4`) had not yet landed when
+  cortex_worker started rebuilding.
+* **Two new root-cause engine fixes landed between stages**:
+  * `feb8832a2b` (binding/content) — Step-2 raw-search uses
+    `search_paths_only=true`, mirroring Perl's `pathname_find`
+    (NO kpsewhich). Recovered caption3.sty cluster (arXiv:
+    2506.13435 28→2, plus 2506.12520/14429/13967/16261/19291
+    all now match Perl). See WISDOM #52.
+  * `91164719c4` (engine/pdftex) — dropped `\pdfsavepos`
+    stub. Perl pdfTeX.pool only has a comment, no def. With
+    Rust defining it, `\ifdefined\pdfsavepos` returned true,
+    breaking linegoal.sty's early-exit + zref-savepos.sty's
+    pdfTeX-gate. Witness 2506.18578: Rust 4 → 0 (Perl=0,
+    BOTH CLEAN). Tests 1196/0/0.
+* **5-paper PatchFailed cluster** (Stage-13 first-errors):
+  ALL 5 (2506.12126, 2506.13547, 2506.18675, 2506.18826,
+  2506.19357) are PERL_REGRESSION (Rust=1 vs Perl=3-33). Rust
+  wins; not a regression cluster.
+* **5-paper float@endH cluster** (Stage-13 first-errors): ALL
+  5 (2506.12112, 2506.15928, 2506.19294, 2506.23514, 2507.00279)
+  OUT-OF-SCOPE (Rust=Perl=3). Shared parity gap.
+* **5-paper unexpected:_ cluster** (Stage-13 first-errors):
+  ALL 5 (2506.13624/789/939/964, 2506.14579) PERL_REGRESSION
+  (Rust=1-2 vs Perl=22-75). The 60× cluster is a "Rust wins"
+  pattern, not a regression target.
+
 **Round-28 Stage-13 final (2026-05-13 late evening, ~07:48 PM)**.
 
 * **Stage-13 final**: 9715 OK / 10013 = **97.0% OK** (papers
