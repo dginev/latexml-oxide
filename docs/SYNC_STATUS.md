@@ -343,6 +343,16 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-29.2 next_warning Stage-11 v2 (2026-05-14 03:56 PM)**.
+
+* Re-ran next_warning_papers Stage-11 (papers 1-10000) with all 9
+  session fixes active. Original Round-28 Stage-11: 9676/10010 = 96.7%.
+* **Stage-11 v2**: 9681/10013 = **96.68% OK**. Essentially identical
+  to original — the 9 session fixes target patterns more prevalent in
+  newer (2509+) papers; older papers in this slice are unaffected.
+* Confirms fix targeting was correct: improvements concentrated where
+  they apply, no regressions on already-OK papers in older stages.
+
 **Round-29.1 recent_warning Stage-5 v3 (2026-05-14 11:21 AM)**.
 
 * **9th engine fix** landed (`3e2ce71ba6`): graphicx_sty.rs guards
