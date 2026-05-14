@@ -282,6 +282,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // astro-ph0002213 root cause).
   let original_after = options.after.clone();
   let original_options = options.options.clone();
+  // Snapshot the GRANDPARENT's expl3 state BEFORE `\@pushfilename`'s
+  // `\ExplSyntaxOff` flips `_` to SUB. The post-load cleanup hook in
+  // load_tex_definitions uses this to know whether the calling context
+  // was in expl3 mode (so it can skip the `\ExplSyntaxOff` cleanup that
+  // would otherwise stick post-`\@popfilename`). Witness cluster:
+  // arXiv:2509.05997 / .07893 / .02344, 2510.13206/.13942/.17317
+  // (xsavebox + sys_load_backend + l3backend-dvips.def chain — minimal
+  // repro: \usepackage{xsavebox}).
+  let grandparent_in_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
   // Strict-LaTeX-kernel order (latex.ltx `\@onefilewithoptions`, L15518-L15519):
   //   \@pushfilename                        % capture OLD \@currname / \@currext
   //   \xdef\@currname{ <new name> }         % then update to NEW
@@ -561,7 +570,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // The raw load itself sets `<filename>_raw_loaded` via
       // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
       // check `_loaded || _raw_loaded` to detect "any load happened".
-      load_tex_definitions(&filename, &file, options.reloadable, options.at_letter)?;
+      load_tex_definitions(&filename, &file, options.reloadable, options.at_letter, grandparent_in_expl3)?;
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
@@ -1090,6 +1099,7 @@ fn load_tex_definitions(
   pathname: &str,
   reloadable: bool,
   at_letter: bool,
+  grandparent_in_expl3: bool,
 ) -> Result<()> {
   // Perl Package.pm L2334: $STATE->getStomach->leaveHorizontal_internal;
   // Defensive cleanup before reading definitions — if we're somehow in
@@ -1186,13 +1196,24 @@ fn load_tex_definitions(
       base.as_str(),
       "expl3" | "xparse" | "l3keys2e" | "expl3-code"
     );
+    // Use grandparent_in_expl3 (snapshotted before `\@pushfilename`)
+    // rather than entered_expl3 (snapshotted after the push flipped `_`
+    // to SUB). Without this, sub-loads inside an active expl3 frame
+    // saw entered_expl3=false (because of the push's `\ExplSyntaxOff`)
+    // and over-fired `\ExplSyntaxOff` at exit, which then leaks SUB
+    // into the grandparent's continued reading once `\@popfilename`
+    // pops the status stack and would otherwise restore `\ExplSyntaxOn`.
+    // Witness: `\usepackage{xsavebox}` minimal repro (xsavebox →
+    // sys_load_backend → l3backend-dvips.def); arXiv:2509.05997/.07893/
+    // .02344, 2510.13206/.13942/.17317.
     if !is_expl3_core
-      && !entered_expl3                            // <-- new guard
+      && !grandparent_in_expl3
       && lookup_catcode('_') == Some(Catcode::LETTER)
       && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
     {
       let _ = invoke_token(&T_CS!("\\ExplSyntaxOff"));
     }
+    let _ = entered_expl3; // kept for historical context
   }
 
   assign_value_sym(
