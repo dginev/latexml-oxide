@@ -352,8 +352,10 @@ clean a portion of the larger corpus silently.
   ar5iv preload → graphicx → keyval raw-load BEFORE LaTeX.pool,
   cascading `Extra \PopDefaultHookLabel` + `\@nil` undefined.
 * **Stage-5 v3** (papers 40001-50000): 9954/9999 = **99.55% OK** —
-  +0.28 vs v2 (99.27%), +0.12 vs Round-26 (99.43%). The 9th fix
-  recovered ~29 papers in this stage alone.
+  +0.28 vs v2 (99.27%), +0.12 vs Round-26 (99.43%).
+* **Stage-6 v3** (papers 50001-60000): 9958/9999 = **99.59% OK** —
+  +0.26 vs v2 (99.33%), +0.13 vs Round-26 (99.46%).
+* 9th fix recovers ~25-30 papers per old-corpus stage.
 
 **Round-29 recent_warning Stage-1/2 v2 final (2026-05-14)**.
 
