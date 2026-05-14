@@ -65,11 +65,22 @@ LoadDefinitions!({
   // out of math at the first `$`, leaving `_x` in text mode — which
   // errors with "Script _ can only appear in math mode".
   // Witnesses: 1908.05236 (\ce{MAPb(I_{1-x}Br_x)3}), 0907.1390 (\ce{N_2}).
+  //
+  // Also convert `#` (PARAM-catcode) tokens to `\equiv` CS: mhchem v3
+  // uses `#` for triple bond (e.g. `\ce{-C#C-}` renders as `-C≡C-`).
+  // Without conversion, the bare `#` reaches the Stomach as a PARAM
+  // token and triggers "should never reach Stomach!". Witness:
+  // arXiv:2508.11040 (`\ce{-C#C-}`).
   fn strip_math_toggles(arg: &Tokens) -> Tokens {
-    let stripped: Vec<Token> = arg.unlist_ref().iter().copied()
-      .filter(|t| t.get_catcode() != Catcode::MATH)
-      .collect();
-    Tokens::new(stripped)
+    let mut out: Vec<Token> = Vec::with_capacity(arg.unlist_ref().len());
+    for tok in arg.unlist_ref().iter().copied() {
+      match tok.get_catcode() {
+        Catcode::MATH => continue,
+        Catcode::PARAM => out.push(T_CS!("\\equiv")),
+        _ => out.push(tok),
+      }
+    }
+    Tokens::new(out)
   }
   DefMacro!("\\ce{}", sub[(body)] {
     let stripped = strip_math_toggles(&body);
