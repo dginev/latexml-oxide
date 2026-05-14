@@ -343,6 +343,33 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-28 Stage-20 final / next_warning_papers corpus COMPLETE
+(2026-05-14 03:02 AM)**.
+
+* **Stage-20 final** (papers 90001-100000): 9948 OK / 10000 = **99.48%
+  OK**. 50 conversion_errors + 2 timeouts. Wraps the 100k-paper
+  `~/data/next_warning_papers/` corpus across Stages 11-20.
+* **Round-28 corpus cumulative**: ~98,500 papers OK / 100,000 =
+  **~98.5%** across all 10 stages.
+* Per-stage breakdown:
+  | Stage | OK rate | Notes |
+  |-------|---------|-------|
+  | 11    | 96.7%   | Old binary |
+  | 12    | 97.2%   | + expl3-nested-preserve, graphicx-keyval |
+  | 13    | 97.0%   | + is_definable |
+  | 14    | 97.61%  | (variance) |
+  | 15    | 99.07%  | + caption3 paths-only, \pdfsavepos, mhchem, \numberwithin |
+  | 16    | 99.06%  | (steady) |
+  | 17    | 99.02%  | expl3 cluster grew |
+  | 18    | 99.65%  | variance |
+  | 19    | 99.75%  | + expl3-grandparent fix (BEST) |
+  | 20    | 99.48%  | (variance) |
+* **8 engine fixes** landed this session, cumulative recovery ~200-300
+  papers across the 100k corpus.
+* Next: switch to `~/data/recent_warning_papers/` (also 100k) for
+  Round-29, OR run Stage-21+ on `~/data/next_warning_papers/` again
+  to verify fix stability.
+
 **Round-28 Stage-19 final (2026-05-14 01:56 AM)**.
 
 * **Stage-19 final** (papers 80001-90000): 9975 OK / 10000 = **99.75%
