@@ -359,7 +359,9 @@ clean a portion of the larger corpus silently.
   +0.25 vs v2 (99.32%), +0.08 vs Round-26 (99.49%).
 * **Stage-8 v3** (papers 70001-80000): 9950/10000 = **99.50% OK** —
   +0.29 vs v2 (99.21%), +0.12 vs Round-26 (99.38%).
-* 9th fix recovers ~25-30 papers per old-corpus stage.
+* **Stage-9 v3** (papers 80001-90000): 9940/10000 = **99.40% OK** —
+  +0.29 vs v2 (99.11%), +0.11 vs Round-26 (99.29%).
+* 9th fix consistently recovers ~25-30 papers per old-corpus stage.
 
 **Round-29 recent_warning Stage-1/2 v2 final (2026-05-14)**.
 
