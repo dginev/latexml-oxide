@@ -343,6 +343,18 @@ hidden multiplier: source-dir push_front, AmSTeX-pool autoloads,
 JHEP \href Semiverbatim×2, glossary node-guard each plausibly
 clean a portion of the larger corpus silently.
 
+**Round-29.1 recent_warning Stage-5 v3 (2026-05-14 11:21 AM)**.
+
+* **9th engine fix** landed (`3e2ce71ba6`): graphicx_sty.rs guards
+  the `RequirePackage!("keyval")` call on `\@onefilewithoptions`
+  being defined (LaTeX kernel ready). Without this, old LaTeX-2.09
+  papers (e.g. `\input psfig` before `\documentstyle`) triggered
+  ar5iv preload → graphicx → keyval raw-load BEFORE LaTeX.pool,
+  cascading `Extra \PopDefaultHookLabel` + `\@nil` undefined.
+* **Stage-5 v3** (papers 40001-50000): 9954/9999 = **99.55% OK** —
+  +0.28 vs v2 (99.27%), +0.12 vs Round-26 (99.43%). The 9th fix
+  recovered ~29 papers in this stage alone.
+
 **Round-29 recent_warning Stage-1/2 v2 final (2026-05-14)**.
 
 * recent_warning_papers re-run on fresh binary (all 8 Round-28 fixes
