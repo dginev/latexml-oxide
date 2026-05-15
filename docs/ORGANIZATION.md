@@ -3,7 +3,13 @@
 This document describes how the Rust files in `latexml_engine/src/`
 relate to the Perl files in `LaTeXML/lib/LaTeXML/Engine/`.
 
-**All 36 ported Perl engine files have 1:1 matching Rust files.**
+**Counts (2026-05-15):** 40 Perl `.pool.ltxml` files, 47 Rust `.rs`
+files. 38 of the 40 Perl pools have direct 1:1 Rust counterparts;
+2 are partial ports (AmSTeX skeleton, BibTeX skeleton — see
+[`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md)). The Rust side has
+8 additional files for Rust-specific concerns (module
+infrastructure, dump-path/embedded-dump support, the dump-runtime
+loader pair, and a Rust-only constructs supplement) — listed below.
 
 ## Loading hierarchy
 
@@ -164,17 +170,24 @@ definitions organized by Lamport chapter with section comment headers.
 | C.15 | Font Selection and Special Symbols | 4414–5366 |
 | (auxiliary) | Auxiliary file stubs, language declarations | 5366–6014 |
 
-### Unported Perl engine files
+### Partially-ported Perl engine files
 
-| Perl file | Status | Notes |
+| Perl file | Rust file | Status |
 |---|---|---|
-| `AmSTeX.pool.ltxml` | ~30% ported | Plain TeX format, rare |
-| `BibTeX.pool.ltxml` | Not ported | Skipped via `--nobibtex` in production |
+| `AmSTeX.pool.ltxml` | `amstex.rs` | Skeleton + a few definitions ported; plain-TeX-style format, rare in arxiv corpora |
+| `BibTeX.pool.ltxml` | `bibtex.rs` | 37-line skeleton; full port (956 lines) plan in `docs/BIBTEX_PORT_PLAN.md`. Skip via `--nobibtex` in production |
 
-### Rust-only files (no Perl .pool.ltxml equivalent)
+### Rust-only files (no Perl `.pool.ltxml` equivalent)
 
 | Rust file | Purpose |
 |---|---|
-| `engine.rs` | Module declarations (Rust boilerplate) |
-| `plain_dump.rs` | Runtime loader for `resources/dumps/plain.dump.txt` (delegates to `dump_reader`) |
-| `latex_dump.rs` | Runtime loader for `resources/dumps/latex.dump.txt` (delegates to `dump_reader`) |
+| `lib.rs` | Crate root + module declarations |
+| `prelude.rs` | Rust prelude bringing common imports into scope |
+| `macros.rs` | Engine-internal Rust macros (`InnerPool!`, etc.) |
+| `base.rs` | Shared base module loaded by both `tex.rs` and `latex.rs` |
+| `setup_binding_language.rs` | DSL setup for `DefMacro!`/`DefConstructor!`-style call sites |
+| `plain_dump.rs` | Runtime loader for `resources/dumps/plain.YYYY.dump.txt` (delegates to `dump_reader`) |
+| `latex_dump.rs` | Runtime loader for `resources/dumps/latex.YYYY.dump.txt` (delegates to `dump_reader`) |
+| `dump_paths.rs` | Versioned-dump filename conventions + ambient TL year detection (kpsewhich SELFAUTOPARENT + pdflatex --version fallback) |
+| `embedded_dumps.rs` | Build-script-generated manifest of `include_str!`'d dumps; runtime year-aware accessors with fallback to most-recent embedded year |
+| `latex_constructs_rust_only.rs` | LaTeXML-specific constructs with no upstream Perl counterpart |
