@@ -42,6 +42,10 @@ MEMORY_INDEX = MEMORY_DIR / "MEMORY.md"
 LINE_BUDGET = 200  # MEMORY.md truncates beyond this
 
 LINK_RE = re.compile(r"\[\[([a-zA-Z0-9_]+)\]\]")
+# CLAUDE.md's MEMORY.md format is `- [Title](file.md) — hook` (markdown
+# link, not wikilink). Recognize both styles so the linter reflects the
+# documented index format. Capture the stem (drop trailing `.md`).
+MD_LINK_RE = re.compile(r"\(([a-zA-Z0-9_]+)\.md\)")
 CS_RE = re.compile(r"\\([a-zA-Z@]+)")  # \foo, \lx@frontmatterhere, etc.
 
 
@@ -73,7 +77,8 @@ def all_refs() -> dict[str, set[str]]:
 def index_refs() -> set[str]:
   if not MEMORY_INDEX.exists():
     return set()
-  return set(LINK_RE.findall(_strip_code(MEMORY_INDEX.read_text())))
+  text = _strip_code(MEMORY_INDEX.read_text())
+  return set(LINK_RE.findall(text)) | set(MD_LINK_RE.findall(text))
 
 
 def check_broken_links(verbose: bool = True) -> int:
