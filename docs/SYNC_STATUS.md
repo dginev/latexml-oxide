@@ -358,6 +358,9 @@ clean a portion of the larger corpus silently.
   fixes (caption@setkeys, calc@shift@gather, float@endH, xspace,
   globcount, thanksref, pdfrefobj, datetime, natbib) recovered ~53
   papers in this stage alone.
+* **Stage-14 v3** (papers 30001-40000, all 18 fixes): 9794/10007 =
+  **97.87% OK** — +0.33 vs v2, +0.26 vs Round-28. ~33 papers
+  recovered from v2 baseline.
 * **Stage-14 v2** (papers 30001-40000): 9761/10007 = **97.54% OK** —
   -0.07 vs Round-28 baseline (97.61%). Same noise pattern.
 * **Stage-15 v2** (papers 40001-50000): 9914/10001 = **99.13% OK** —
