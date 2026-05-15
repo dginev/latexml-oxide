@@ -413,10 +413,10 @@ to `rparts[0]` (the register's internal cs name) when omitted — Perl
 145+ `\tex_*:D` register-alias entries wrote to a separate slot
 instead of the underlying register.
 
-**Open**: see "Closure round-trip" (line 197+) — Stored::Primitive
-self-aliases (where the dump entry's CS equals the primitive's
-.cs) are no-op at load time and need a `dump_writer` marker that
-`dump_reader` recognizes as "engine has primary; nothing to install".
+**Closed** (re-verified 2026-05-15): the closure round-trip
+Stored::Primitive self-alias concern doesn't manifest — current
+TL2025 dump has zero self-aliases (target == key) among 602
+PA/MPA records. See "Closure round-trip" below for details.
 
 **Fontdimen/intarray storage consolidation — RESOLVED 2026-05-15.**
 
@@ -481,24 +481,23 @@ moved from `Status:conversion:1/2` (errors) to `Status:conversion:3`
 continues; tests / sandbox are re-validated after dumps are
 complete.
 
-### Closure round-trip
+### Closure round-trip — RESOLVED (re-verified 2026-05-15)
 
-**Historical note pending re-audit.** The paragraph below was written
-for an older add-only/transitional loader mode. `dump_reader.rs` now
-routes meaning/value entries through Perl-style global assignment
-semantics, with narrow runtime-state filters and deferred alias
-handling. Re-test any self-alias failure before reviving this TODO.
+**Empirical re-verification (2026-05-15):** the TL2025 latex dump
+has **zero self-aliases** (`M\t<cs>\tPA\t<cs>` with key == target)
+among its 602 PA/MPA aliases. Mechanism: self-aliases would only
+arise for primitives that already exist in the bootstrap snapshot,
+so the post-init *diff* never emits them. The original concern
+(self-aliases producing undefined-CS errors after a strict
+LoadFormat split) doesn't manifest in the current dump pipeline.
 
-Rust closure bodies (`Stored::Primitive`, `Stored::Conditional`)
-serialize as `PA\t<target_cs>`. If the entry's CS equals the
-primitive's `.cs`, it's a self-alias and effectively a no-op at
-load time. Workaround for now is the `add-only` policy at engine
-init: `_base.rs` runs first, then dump entries that would self-alias
-get rejected. With strict split, `_base` doesn't run, so these
-self-aliases produce undefined-CS errors at runtime.
-
-**TODO:** dump_writer should emit self-aliases as a marker that
-dump_reader recognizes as "engine has primary; nothing to install".
+Historical context (kept for archaeology): under an older
+add-only/transitional loader mode, self-aliases were filtered at
+load time by skipping entries whose key was already defined. The
+current `dump_reader.rs` uses Perl-style global assignment with
+narrow runtime-state filters and deferred-alias handling
+(`early_aliases` / `late_aliases` partitioning in dump_writer). No
+TODO remains.
 
 ## Distribution follow-up (multi-version dumps)
 
