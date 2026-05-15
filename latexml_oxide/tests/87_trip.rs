@@ -71,6 +71,47 @@ fn sb_in_amsppt_refs() {
 }
 
 #[test]
+fn halign_body_implicit_cr() {
+  // `\let\rowEnd=\cr` followed by `\halign{...\rowEnd ... \rowEnd}`.
+  // Before the fix in `is_implicit_cr` (tex_tables.rs), the preamble
+  // parser only recognised implicit \cr when its meaning was
+  // Stored::Token(\cr). But `\let \rowEnd \cr` against a Constructor
+  // `\cr` produces Stored::Constructor — the parser missed it, ate
+  // the entire body as template, and emitted no tabular silently
+  // (code == 0, empty <document/>). So a plain "no errors" assertion
+  // is insufficient; we also assert the output XML contains tabular
+  // rows by converting through the lower-level API and inspecting
+  // the produced document.
+  LOGGER_INIT.call_once(|| {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  });
+  let config = Config {
+    format: OutputFormat::XML,
+    ..Config::default()
+  };
+  let mut converter = Converter::from_config(config);
+  converter
+    .initialize_session()
+    .expect("can initialize session");
+  let response = converter.convert("tests/trip/halign_body_implicit_cr.tex".to_string());
+  assert_eq!(
+    response.status_code, 0,
+    "halign_body_implicit_cr expected clean conversion, got status={:?}",
+    response.status
+  );
+  let xml = response.result.as_deref().unwrap_or("");
+  // Two rows: one for `a&b\rowEnd`, one for `c&d\rowEnd`.
+  // (The trailing `\rowEnd` ends the alignment; no third row.)
+  // `<tr>` may carry attributes (`<tr xml:id=...>`) or none (`<tr>`),
+  // so accept both forms.
+  let tr_count = xml.matches("<tr>").count() + xml.matches("<tr ").count();
+  assert_eq!(
+    tr_count, 2,
+    "expected 2 <tr> rows from `\\let\\rowEnd=\\cr` halign body, got {tr_count}; xml = {xml}"
+  );
+}
+
+#[test]
 fn psfig_via_compat_loadpackages() {
   // Baseline regression test for the `\compat@loadpackages` option
   // forwarding path: `\documentstyle[epsfig]{article}` → article.cls

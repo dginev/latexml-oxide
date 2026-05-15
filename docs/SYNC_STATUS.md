@@ -1200,11 +1200,20 @@ Knuth TeX's "implicit characters" (texbook p.277) — CSes
 | Math `$\X b$` (X let to `+`) | renders as operator | ✓ |
 | `\halign` preamble `\amp` (let to `&`) | column separator | ✓ (`6a7d8fee7d`) |
 | `\halign` preamble `\rowEnd` (let to `\cr`) | row separator | ✓ (`6a7d8fee7d`) |
-| `\halign` body `\rowEnd` | row separator at digest time | ✗ niche gap |
+| `\halign` body `\rowEnd` | row separator at digest time | ✓ (2026-05-15) |
 | `\csname` consumption | Knuth: error; we: soft-substitute | divergence (`f8e20b648e`) |
 
-The body-side implicit-`\cr` gap is rare in real papers; open if
-witnesses emerge.
+The body-side implicit-`\cr` gap was closed 2026-05-15 by fixing
+`is_implicit_cr` (`latexml_engine/src/tex_tables.rs`) to do meaning-
+equality against `lookup_meaning(\cr)` / `lookup_meaning(\crcr)`,
+mirroring `gullet::is_column_end`'s body-side approach. The original
+preamble-side fix in `6a7d8fee7d` only matched `Stored::Token(\cr)`
+shape, but `\let \rowEnd \cr` against the LaTeXML Constructor `\cr`
+produces `Stored::Constructor` — so the preamble parser was missing
+implicit-CR for the common case, eating the entire halign body as
+template and silently producing no tabular. Regression test:
+`tests/trip/halign_body_implicit_cr.tex` with content-shape
+assertion (not just code == 0; the bug had code == 0).
 
 ---
 

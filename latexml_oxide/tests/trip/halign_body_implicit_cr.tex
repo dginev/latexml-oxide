@@ -1,0 +1,17 @@
+% Regression test for the \halign body-side implicit-\cr gap.
+% \let\rowEnd=\cr makes \rowEnd let-equivalent to \cr. Before the
+% fix in `is_implicit_cr` (latexml_engine/src/tex_tables.rs), the
+% preamble parser only recognised implicit \cr when its meaning was
+% Stored::Token(\cr) — but `\let\rowEnd=\cr` against the LaTeXML
+% Constructor `\cr` produces Stored::Constructor, NOT Stored::Token.
+% The preamble parser would miss \rowEnd, eat the entire body as
+% template, and silently produce no tabular. Verified before fix:
+% empty <document/> output; after fix: 2-row tabular matching the
+% literal-\cr version.
+%
+% See WISDOM.md and audit `Implicit-character semantics` table.
+\documentclass{article}
+\begin{document}
+\let\rowEnd=\cr
+\halign{#\hfil&\hfil#\rowEnd a&b\rowEnd c&d\rowEnd}
+\end{document}
