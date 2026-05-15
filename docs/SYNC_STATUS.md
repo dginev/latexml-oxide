@@ -355,6 +355,8 @@ clean a portion of the larger corpus silently.
   sample.
 * **Stage-14 v2** (papers 30001-40000): 9761/10007 = **97.54% OK** —
   -0.07 vs Round-28 baseline (97.61%). Same noise pattern.
+* **Stage-15 v2** (papers 40001-50000): 9914/10001 = **99.13% OK** —
+  +0.06 vs Round-28 baseline (99.07%). Modest improvement from 8th+9th fixes.
 
 **Round-29.2 next_warning Stage-11 v2 (2026-05-14 03:56 PM)**.
 
