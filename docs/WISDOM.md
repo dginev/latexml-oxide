@@ -1632,3 +1632,89 @@ We keep the full 5-step order for strict Perl parity per CLAUDE.md
 ("Perl code is the ground truth"). If a future failure looks like
 "Step 2 fired and we lost the fallback binding we wanted," tighten
 Step 2 (as `feb8832a2b` did) — do not delete it.
+
+## #53 expl3 intarrays ride `\fontdimen` of `cmr10 at <Nsp>` — consolidate the dump
+
+**The trick.** expl3's `\int_array_new:Nn` allocates an integer
+array of N slots by abusing `\font`: it instantiates `cmr10` at a
+unique-per-intarray tiny `at <N>sp` size (~1/65k pt — the size is
+just a fingerprint), then stores each slot in the new font instance's
+`\fontdimen<idx>` register. A fully-initialized expl3 + LaTeX kernel
+writes **~89,000 such slots** across ~22 intarrays
+(`\c__fp_*_intarray`, `\c__codepoint_*_intarray`, `\g__regex_*_intarray`,
+`\c_initex_cctab*`, etc.). They surface in our state Value table
+under composite keys like `fontdimen_fontinfo_cmr10 at 15sp_<idx>`.
+
+**The dump-size hit.** Before consolidation, `dump_writer` emitted
+one `V\tfontdimen_fontinfo_cmr10 at <Nsp>_<idx>\tD\t<val>` record per
+slot — **~4 MB / ~40% of `latex.YYYY.dump.txt`**. The PERL_LOADFORMAT
+audit had originally measured 3094 such records; the actual count had
+grown ~30× by 2026-05-15 (one paragraph in the audit was stale).
+
+**The fix (commit `81176ba689`, 2026-05-15).** `dump_writer` now
+groups V entries by `(font, size)` prefix and emits a single `IA`
+record per dense intarray: `IA\t<prefix>\t<len>\t<rle>` where
+`<rle>` is a comma-list of `v` or `vxn` runs. `dump_reader` parses
+`IA`, RLE-decodes, and emits the same per-slot V assignments at
+indices 1..=len — runtime state post-replay is identical.
+**Backward compatible**: dump_reader still loads existing
+V-record-only dumps via the unchanged `V` arm. Non-dense intarrays
+fall back to individual V records (the dump-build log warns).
+
+**Measured TL2025 impact:** 89,294 V → 15 IA + 63 V fallbacks. Dump
+size 7.4 MB → 3.7 MB (-49%). Entry count 110,691 → 21,475 (-81%).
+`cargo test --tests`: 1196/0/0 → 1220/0/0 (after 25 new unit tests
+covering RLE round-trip, IA load semantics, and V-record backward
+compat).
+
+**Perl's framing.** Perl LaTeXML's `latex_dump.pool.ltxml` uses
+`Im(<cs>, FD(<real_cs>, 'fontinfo_cmr10 at 0.0003pt'))` + an
+RLE-array Hash inside a `V('fontinfo_...', {'data'=>[(15)x32,...]})`
+record. Same compactness, different syntax. Our `IA` schema is the
+adaptation to our tab-separated text format.
+
+**When the IA path doesn't apply.** Non-dense intarrays (indices not
+1..N) skip the IA emit and fall back to individual V records. We saw
+exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
+sparse slots. If a future expl3 release adds more sparse intarrays,
+the fallback handles it; the only cost is a few extra V records.
+
+## #54 TeXLive year detection uses `kpsewhich -var-value=SELFAUTOPARENT`, NOT `--version`
+
+**The gotcha.** The naive way to detect the installed TeXLive year
+is `kpsewhich --version`. **Don't.** That command returns the
+`kpathsea` library version string ("kpathsea version 6.4.1, Copyright
+2023…"), which is shipped IDENTICALLY across TL2023, TL2024, and
+TL2025. Using it as a discriminator silently picks the wrong dump.
+
+**The right way.** `kpsewhich -var-value=SELFAUTOPARENT` returns the
+TeXLive install root, e.g. `/usr/local/texlive/2025`. The last path
+segment is the year. Code:
+
+```text
+TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null \
+  | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+```
+
+**Distro-package fallback.** Debian/Ubuntu's `texlive` package puts
+TL into `/usr/share/texlive` (no year subdirectory), so
+SELFAUTOPARENT returns `/` and the year-extracting `sed` matches
+nothing. Fallback: `pdflatex --version` prints "(TeX Live YYYY)" in
+its first three lines — parseable. Sibling commit `395615c0d4`
+landed this two-step strategy in both `tools/make_formats.sh` (the
+dump-build path) and `latexml_engine::dump_paths::detect_ambient_texlive_year`
+(the runtime path).
+
+**Why it matters.** The whole versioned-dump infrastructure
+(commit `946ff9b7d0`, branch `distribution-include-bytes-bundling`)
+selects which `resources/dumps/{plain,latex}.YYYY.dump.txt` to embed
+at build time and which to prefer at runtime. If the year detection
+is wrong, an embedded TL2025 dump might be replayed against a TL2023
+binary or vice versa — silent semantic divergence in raw-loaded
+package state. The bug class is exactly what the original audit
+("Distribution follow-up") warned about: "different raw-load
+semantics" across years.
+
+**Reference.** `latexml_engine/src/dump_paths.rs::detect_ambient_texlive_year`,
+`tools/make_formats.sh:60`, `resources/dumps/texlive.YYYY.version`
+(the stamp file lets us record which TL produced each dump).
