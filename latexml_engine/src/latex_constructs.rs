@@ -4285,6 +4285,16 @@ LoadDefinitions!({
   //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
     alias => "\\thanks", mode => "text", enter_horizontal => true);
+
+  // `\thanksref{key}` — common in author-block / affiliation styles
+  // (revtex, ifacconf, elsart, etc.). Each class typically defines a
+  // version that emits a footnote-style mark. For LaTeXML's purposes
+  // it's a marker we don't render; stub as no-op universally so
+  // papers using class files without a bound class can still convert.
+  // Witnesses: arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
+  // Perl LaTeXML also lacks a universal def but its OmniBus.cls.ltxml
+  // fires for unknown classes; our chain doesn't here.
+  DefMacro!("\\thanksref{}", "");
   // Perl L1065-1067: DefConstructor('\@personname{}', ...,
   //   beforeDigest => { Let('\thanks', '\person@thanks') },
   //   mode => 'restricted_horizontal', enterHorizontal => 1).
