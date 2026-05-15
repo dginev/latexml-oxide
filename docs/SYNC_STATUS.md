@@ -366,6 +366,14 @@ clean a portion of the larger corpus silently.
 * **Stage-19 v2** (papers 80001-90000): 9975/10000 = **99.75% OK** —
   IDENTICAL to Round-28 baseline (99.75%). Stage-19 was the first
   R28 stage with all 8 fixes; 9th fix doesn't add gains here.
+* **Stage-20 v2** (papers 90001-100000): 9948/10000 = **99.48% OK** —
+  IDENTICAL to Round-28 baseline.
+* **next_warning_papers v2 COMPLETE** — full 100k re-run on
+  Round-29 binary (all 9 fixes). Cumulative tally across all 10
+  v2 stages: ~98.5% OK, essentially same as Round-28's ~98.5%.
+  The 8th+9th fixes are net-positive when their target clusters
+  appear (Stage-15/16/17), neutral on stages without those
+  clusters (Stages 11-14, 19-20).
 
 **Round-29.2 next_warning Stage-11 v2 (2026-05-14 03:56 PM)**.
 
