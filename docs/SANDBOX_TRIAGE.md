@@ -10,12 +10,10 @@ The older per-cluster sandbox triage worksheet is archived at
 
 That file tracked the focused 181-paper failure subset under
 `~/data/sandbox_failures` (post-AR-flip, 2026-04-26 baseline) by
-cluster, with a per-cluster fix-log. Workflow:
-
-```
-edit code → rebuild → ./tools/rerun_failures.sh → diff against
-docs/sandbox_failure_181_triage.tsv → mark recovered papers [x]
-```
+cluster, with a per-cluster fix-log. The original workflow used a
+now-removed `tools/rerun_failures.sh` wrapper; the modern
+equivalent is `tools/benchmark_canvas.sh --input-dir <focused>` or
+piping ids to `tools/parity_check.sh -`.
 
 This file ([`SANDBOX_TRIAGE.md`](SANDBOX_TRIAGE.md)) previously
 held a session-by-session per-paper narrative through round 17.
