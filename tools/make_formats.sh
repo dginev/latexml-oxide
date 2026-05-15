@@ -59,8 +59,15 @@ fi
 # at runtime. The binary writes each to resources/dumps/<basename>.dump.txt
 # relative to CWD.
 TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+# Fallback: Debian/Ubuntu's texlive package puts TL into /usr/share/texlive
+# with no year-versioned hierarchy, so SELFAUTOPARENT returns `/`. Pick up
+# the year from `pdflatex --version` instead — mirrors the runtime
+# `dump_paths::detect_ambient_texlive_year` two-step strategy.
 if [ -z "$TL_YEAR" ]; then
-  echo "[make_formats] could not detect TeXLive year via kpsewhich SELFAUTOPARENT" >&2
+  TL_YEAR="$(pdflatex --version 2>/dev/null | head -3 | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)"
+fi
+if [ -z "$TL_YEAR" ]; then
+  echo "[make_formats] could not detect TeXLive year via kpsewhich SELFAUTOPARENT or pdflatex --version" >&2
   exit 3
 fi
 
