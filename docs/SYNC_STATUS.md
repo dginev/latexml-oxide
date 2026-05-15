@@ -1202,8 +1202,12 @@ witnesses emerge.
 
 ## Engine file open gaps (MINOR)
 
-- `base_parameter_types.rs` — `CommaList:Type` parameterised form
-  unported (no Perl users).
+- ~~`base_parameter_types.rs` — `CommaList:Type` parameterised
+  form unported.~~ **CLOSED 2026-05-15** (commit `bb17c1adb0`).
+  Reads each item through the inner-type Parameter via
+  `Parameters::reparse_argument`, mirroring Perl
+  `$typedef->reparseArgument`. Tests 1220/0/0 (no Perl users
+  in current corpora; pure parity infrastructure).
 - `tex_box.rs` — box dimension edge cases.
 - `tex_fonts.rs` — `\fontdimen` array semantics; per-font `\hyphenchar`.
 - `tex_tables.rs` — padding CSS classes (XSLT concern).
