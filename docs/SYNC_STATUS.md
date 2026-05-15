@@ -363,6 +363,14 @@ clean a portion of the larger corpus silently.
   recovered from v2 baseline.
 * **Stage-14 v2** (papers 30001-40000): 9761/10007 = **97.54% OK** —
   -0.07 vs Round-28 baseline (97.61%). Same noise pattern.
+* **Stage-15 v5** (papers 40001-50000, post-Round-30 fix wave +
+  TL2023 dumps + apt texlive-bibtex-extra/publishers): 9970/10000 =
+  **99.70% OK** — +0.56 vs v3 / +0.57 vs v2. The cumulative wave
+  recovered ~56 papers in this slice. Key contributors:
+  bbl-math catcode sanitize, clone xml:id namespace fix, mathscinet/
+  ascmac/multibib vendored or apt-installed, MnSymbol \checkmark,
+  forest \useforestlibrary, tikz-cd decorations.pathmorphing,
+  \IncludeInRelease body, xfrac transitive l3keys2e.
 * **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
   **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
   cap at the long-tail bbl-math regression cluster of ~29 papers
