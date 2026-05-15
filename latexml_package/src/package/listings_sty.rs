@@ -1873,6 +1873,30 @@ LoadDefinitions!({
   RequireResource!("ltx-listings.css");
   RequirePackage!("textcomp");
 
+  // Stubs for listings.sty internal CSes that language-pack .sty files
+  // (lstlang0.sty .. lstlang3.sty) reference when they raw-load. Our
+  // hand-port implements the public API but skips the listings.sty
+  // body that defines these, so the lang packs' raw-load fires
+  // "undefined" cascades.
+  //
+  // \lst@Key{name}{default}{body} — register a Listings option key. We
+  // don't materialize key registration (lst_activate has its own keyval
+  // parser); stub as no-op.
+  //
+  // \lst@NormedDef takes `\cs` (no braces) + `{val}` and `\def`s \cs
+  // to a normalized form of val. Implementing this faithfully needs a
+  // DefToken parameter type — we use a closure to consume both args
+  // and emit a `\def`. Witness: lstlang3.sty raw-load (3 papers in
+  // Stage-13 v3) → cascade unblocks past these CSes.
+  DefMacro!("\\lst@Key{}{}{}", "");
+  DefMacro!("\\lst@NormedDef DefToken {}", sub[(cs, val)] {
+    let mut out = vec![T_CS!("\\def"), cs];
+    out.push(T_BEGIN!());
+    out.extend(val.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
   state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
