@@ -9329,6 +9329,14 @@ LoadDefinitions!({
 
   Let!("\\reset@font", "\\normalfont");
 
+  // Perl: latex_constructs.pool.ltxml:5251
+  // \@fontswitch — LaTeX 2.09 compat helper used by article/book/letter
+  // classes to define \cal and \mit (math-mode font switches). Perl's
+  // override drops the kernel body's \math@bgroup/\math@egroup
+  // machinery (irrelevant outside real TeX boxing); the simpler form
+  // is functionally equivalent for LaTeXML's XML output.
+  DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
+
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
     let series = Expand!(T_CS!("\\f@series")).to_string();

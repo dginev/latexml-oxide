@@ -92,18 +92,19 @@ parity refactoring backlog. Multi-iteration scope; not blocking.
 **2026-05-02 follow-up: dump-path resolution check**: spot-checked
 3 of the 45 violations against `resources/dumps/latex.dump.txt`:
 
-| CS | Dump-path? | Match Perl? |
-|---|---|---|
-| `\hexnumber@` | ✓ M-entry present | ✓ exact body |
-| `\on@line` | ✓ M-entry present | ✓ exact body |
-| `\stop` | ✓ M-entry present | ✗ kernel body, NOT Perl's `closeMouth(1)` override |
+| CS | Dump-path? | Match Perl? | Runtime fix? |
+|---|---|---|---|
+| `\hexnumber@` | ✓ M-entry present | ✓ exact body | n/a (dump = Perl) |
+| `\on@line` | ✓ M-entry present | ✓ exact body | n/a (dump = Perl) |
+| `\stop` | ✓ M-entry present | ✗ kernel body, NOT Perl's `closeMouth(1)` | ✓ `Let!("\\stop","\\endinput")` at `latex_constructs.rs:9220` (commit `c0a3f298563`, 2026-04-17) — runs after dump replay and overrides the kernel body |
 
 Implication: the dump path provides most "missing source" CSes at
 runtime, so the violations are mostly **source-organization only**,
-not runtime failures. The exception is `\stop` (and likely a few
-others) where Perl's `latex_constructs.pool.ltxml` body is a
-deliberate runtime override of the kernel — those need careful
-Rust-side translation for full Perl parity.
+not runtime failures. For deliberate Perl overrides like `\stop`,
+the post-dump phase in `latex_constructs.rs` already restores Perl's
+intent; the audit "✗" describes the dump content, not the runtime
+state. Verified 2026-05-15: a paper with `\stop` converts with 0
+errors.
 
 Per-CS strict-parity work should:
 1. Check if Perl's body in `latex_constructs.pool.ltxml` matches
@@ -127,12 +128,38 @@ at runtime, not static `Def*` calls). The runtime infrastructure
 generates them when needed — Rust's `\newcounter`/`\newlabel` may
 already do this correctly.
 
+**14-list refresh (2026-05-15)**: of the 14 "dump-resolved
+source-org" candidates above, all but one are already present in
+`latexml_engine/src/`, most in `latex_constructs.rs`:
+
+| CS | Current Rust location | Notes |
+|---|---|---|
+| `\hexnumber@` | `latex_constructs.rs` | exact-body relocation done |
+| `\on@line` | `latex_constructs.rs` | exact-body relocation done |
+| `\stop` | `latex_constructs.rs:9220` (Let → `\endinput`) | Perl override applied |
+| `\@@cite` | `latex_constructs.rs` | the audit's `\@cite` typo for `\@@cite` |
+| `\@font@warning` | `latex_constructs.rs` | done |
+| `\G@refundefinedtrue` | `latex_constructs.rs` | done |
+| `\@nomath` | `latex_constructs.rs` | done |
+| `\@trivlist` | `latex_constructs.rs` | done |
+| `\@settopoint` | `latex_constructs.rs:8169` (DefMacro) | done |
+| `\newsavebox` | `latex_base.rs:441` + `latex_constructs.rs:8398` (TeX! block) | already in both via raw TeX |
+| `\@savepicbox` | `latex_base.rs:444` + `latex_constructs.rs:8401,8408` (TeX! block) | already in both via raw TeX |
+| `\documentstyle` | `tex_job.rs` (intentional — see docstring there) + `latex_constructs.rs` Let | architectural; do NOT relocate |
+| `\mathring` | `math_common.rs` (math accent file) | semantically correct location |
+| `\showoutput` | `plain_base.rs` (TeX plain primitive) | semantically correct location |
+| `\tracingfonts` | `plain_base.rs` (TeX plain primitive) | semantically correct location |
+| `\@fontswitch` | `latex_constructs.rs:9332` **(added 2026-05-15)** | Perl override of dump's kernel body |
+
 So the real strict-parity gap is:
-- 14 cosmetic source-org relocations (fix when convenient)
+- ~0 remaining cosmetic source-org relocations from the 14-list
+  (most were already done; the few defined elsewhere are
+  semantically correctly placed or architecturally locked)
 - A handful (likely 5-10) of genuinely missing static definitions
   that need careful per-CS investigation
-- 1 confirmed deliberate override: `\stop` (Perl's `closeMouth(1)`
-  vs kernel's clearpage cascade)
+- Deliberate overrides applied: `\stop` (Perl's `closeMouth(1)` →
+  `Let "\endinput"`) and `\@fontswitch` (Perl's simpler
+  `\ifmmode/\else` → DefMacro)
 
 **Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
 note).** A per-file diff of `latex_constructs.pool.ltxml` vs
