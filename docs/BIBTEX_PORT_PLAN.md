@@ -42,17 +42,34 @@ These are the Perl support routines that every binding eventually
 hits. They live as `sub` definitions inside the pool but are
 top-level helpers in spirit.
 
-| Perl helper | Purpose | Rust target |
-|---|---|---|
-| `currentBibEntry` | Look up the entry currently being processed | `latexml_engine::bibtex::current_entry()` — reads `BIBENTRY@<normkey>` from State Value table |
-| `currentBibEntryField(field)` | Get a field's *processed* token value | `current_entry().get_field(field)` |
-| `currentBibEntryRawField(field)` | Get a field's *raw* string value | `current_entry().get_raw_field(field)` |
-| `copyCrossrefFields(@fields)` | Pull listed fields from the crossref'd parent entry | `copy_crossref_fields(&[&str])` |
-| `bibAddToContainer(doc, tag, data, %attr)` | Insert into a `<ltx:bib-related>` container, deduplicating by tag+attrs | function on `Document` (or a free fn) |
-| `processBibNameList(string)` | Parse "Smith, John and Doe, Jane" into a list of name tokens | new module `latexml_engine::bibtex::names` |
-| `NormalizeBibKey` | Already in `latexml_core::common::cleaners::cleaners.rs:125` | reuse |
-| `CleanBibKey` | Currently TODO | sibling of `NormalizeBibKey` |
-| `ProcessBibTeXEntry` | Currently TODO; orchestrates the per-entry pipeline | new top-level function |
+**Status (2026-05-15): partial — 5/9 helpers shipped** in
+commit `977426ea81`. Remaining items (`bibAddToContainer`,
+`processBibNameList`, `ProcessBibTeXEntry`) defer to later phases
+because they need infrastructure that isn't yet in place
+(Document API integration, name-list parser).
+
+| Perl helper | Purpose | Rust target | Status |
+|---|---|---|---|
+| `currentBibEntry` | Look up the entry currently being processed | `latexml_engine::bibtex::current_entry()` | ✓ shipped |
+| `currentBibEntryField(field)` | Get a field's *processed* token value | `current_entry_field(name)` | ✓ shipped |
+| `currentBibEntryRawField(field)` | Get a field's *raw* string value | `current_entry_raw_field(name)` | ✓ shipped |
+| `copyCrossrefFields(@fields)` | Pull listed fields from the crossref'd parent entry | `copy_crossref_fields(&[&str])` | ✓ shipped (handles missing crossref + self-loop) |
+| `bibAddToContainer(doc, tag, data, %attr)` | Insert into a `<ltx:bib-related>` container, deduplicating by tag+attrs | function on `Document` (or a free fn) | ⚠ deferred — needs Document API |
+| `processBibNameList(string)` | Parse "Smith, John and Doe, Jane" into a list of name tokens | new module `latexml_engine::bibtex::names` | ⚠ deferred — needs the name parser |
+| `NormalizeBibKey` | Already in `latexml_core::common::cleaners.rs:125` | reused | ✓ existed |
+| `CleanBibKey` | Already in `latexml_core::common::cleaners.rs:119` | reused | ✓ existed |
+| `ProcessBibTeXEntry` | Orchestrates the per-entry pipeline | top-level function | ⚠ deferred — depends on Phase 2 |
+
+**BibEntry storage strategy chosen**: thread-local registry
+(`HashMap<NormalizeBibKey(key), Rc<RefCell<BibEntry>>>`) + separate
+`Option<String>` "current entry" pointer. Avoids threading a
+custom `Stored::BibEntry` variant through the dump pipeline, since
+BibEntries don't round-trip dumps (created and consumed within
+one conversion).
+
+7 unit tests cover round-trips, case-insensitive key lookup,
+crossref copy with missing/self-loop edges, and outside-block
+None behaviour.
 
 The **BibEntry** itself needs a Rust representation. Sketch:
 
