@@ -81,7 +81,6 @@ pub mod l3draw_sty;
 pub mod lanlmac_tex;
 pub mod latexmlman_sty;
 pub mod letltxmacro_sty;
-pub mod mathscinet_sty;
 pub mod lettrine_sty;
 pub mod libertine_sty;
 pub mod ltablex_sty;
@@ -179,7 +178,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lanlmac", "tex", lanlmac_tex::load_definitions),
   ("latexmlman", "sty", latexmlman_sty::load_definitions),
   ("letltxmacro", "sty", letltxmacro_sty::load_definitions),
-  ("mathscinet", "sty", mathscinet_sty::load_definitions),
   ("ltluatex", "tex", ltluatex_tex::load_definitions),
   ("luatexbase", "sty", luatexbase_sty::load_definitions),
   ("needspace", "sty", needspace_sty::load_definitions),
