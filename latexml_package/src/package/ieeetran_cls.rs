@@ -78,6 +78,20 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");
   Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
   Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
+  // TL `IEEEtran.cls` L238-244: the `draft`/`final`, `oneside`/`twoside`,
+  // `peerreviewca`, `nofonttune`, `draftclsnofoot` `\newif` flags. User
+  // code in IEEEtran papers freely reads `\ifCLASSOPTIONdraft` /
+  // `\ifCLASSOPTIONoneside` without first checking they're defined —
+  // e.g. arXiv:2509.12142 has a sectionhead probe
+  // `\ifCLASSOPTIONdraft Draft\fi`. Pre-bind to the same defaults as
+  // the real class so undefined-cond auto-define doesn't spam an Error.
+  Let!("\\ifCLASSOPTIONdraft", "\\iffalse");
+  Let!("\\ifCLASSOPTIONdraftclsnofoot", "\\iffalse");
+  Let!("\\ifCLASSOPTIONfinal", "\\iftrue");
+  Let!("\\ifCLASSOPTIONoneside", "\\iftrue");
+  Let!("\\ifCLASSOPTIONtwoside", "\\iffalse");
+  Let!("\\ifCLASSOPTIONpeerreviewca", "\\iffalse");
+  Let!("\\ifCLASSOPTIONnofonttune", "\\iffalse");
 
   ProcessOptions!();
 
