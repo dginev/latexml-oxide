@@ -150,6 +150,12 @@ LoadDefinitions!({
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
   DefPrimitive!("\\pdfrefximage Number", None);
+  // \pdfrefobj object_number / \pdfrefxform xform_number — discard the
+  // number; no PDF output. pdfTeX-only primitives invoked by some
+  // packages that declare-then-reference pdf objects (e.g. zref-savepos
+  // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
+  DefPrimitive!("\\pdfrefobj Number", None);
+  DefPrimitive!("\\pdfrefxform Number", None);
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
   DefPrimitive!("\\pdfstartlink", None);
