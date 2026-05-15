@@ -4295,6 +4295,27 @@ LoadDefinitions!({
   // Perl LaTeXML also lacks a universal def but its OmniBus.cls.ltxml
   // fires for unknown classes; our chain doesn't here.
   DefMacro!("\\thanksref{}", "");
+
+  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — Cyrillic
+  // transliteration markers used in BibTeX-generated bibliographies
+  // (cyracc.def L53-55 defines them as math-mode prime/dprime). They
+  // appear in Russian-authored references at the BBL stage where no
+  // Cyrillic encoding is otherwise loaded. Stub each as the Unicode
+  // modifier-letter-prime so the BBL renders cleanly. Witnesses:
+  // arXiv:2508.13753 / .20226 / 2509.07628 — 1 undefined-CS error
+  // each, Perl LaTeXML also lacks a universal def. Two-grep audit:
+  // not in Perl `*.ltxml`, defined in TL `cyracc.def` for math
+  // context only. Per WISDOM #50 the visual intent (apostrophe-like
+  // mark) is what survives the XML→HTML pipeline.
+  DefMacro!("\\cprime",   "\u{02B9}");
+  DefMacro!("\\Cprime",   "\u{02B9}");
+  DefMacro!("\\cdprime",  "\u{02BA}");
+  DefMacro!("\\Cdprime",  "\u{02BA}");
+  // `\polhk{char}` — Polish hook (ogonek) accent. Defined in tipa.sty
+  // for TS1-encoded composite output. Bibliographies use it directly
+  // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
+  // Witnesses: 2 papers in Stage-15 v3.
+  DefMacro!("\\polhk{}", "#1");
   // Perl L1065-1067: DefConstructor('\@personname{}', ...,
   //   beforeDigest => { Let('\thanks', '\person@thanks') },
   //   mode => 'restricted_horizontal', enterHorizontal => 1).
