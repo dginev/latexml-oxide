@@ -1020,13 +1020,22 @@ LoadDefinitions!({
   // `{balanced}` groups or plain token runs. Perl returns a
   // `LaTeXML::Core::Array`; Rust has no Array type and follows the
   // `DirectoryList` convention — emit a token stream where each item
-  // is wrapped in its own `{...}`. Callers that need typed parsing
-  // (Perl's `$typedef->reparseArgument`) must reparse each item;
-  // this port does not yet handle the parameterized `CommaList:Type`
-  // form.
-  DefParameterType!(CommaList, sub[_inner, _extra] {
+  // is wrapped in its own `{...}`.
+  //
+  // Perl supports a parameterised form `CommaList:Type` (e.g.
+  // `CommaList:Number`) where each item is re-parsed through `Type`'s
+  // own reader (`$typedef->reparseArgument`). When the parameter is
+  // declared as `CommaList:Number`, `inner` carries the parsed
+  // `Number` Parameter; we route each item through
+  // `inner.reparse_argument(...)` and emit the reverted form so the
+  // result is canonical-shape tokens of the typed value. Untyped
+  // `CommaList` (no `inner`) keeps the original brace-delimit form.
+  DefParameterType!(CommaList, sub[inner, _extra] {
     gullet::skip_spaces()?;
-    let mut collected: Vec<Token> = Vec::new();
+    // Phase 1: gather items as raw Tokens (one Tokens per comma-
+    // separated piece). Done in a single pass to mirror the Perl
+    // gullet-reader logic; the typed-reparse step happens after.
+    let mut items: Vec<Tokens> = Vec::new();
     if gullet::if_next(T_BEGIN!())? {
       gullet::read_token()?; // consume outer `{`
       let mut current: Vec<Token> = Vec::new();
@@ -1034,15 +1043,10 @@ LoadDefinitions!({
       while let Some(token) = gullet::read_token()? {
         let cc = token.get_catcode();
         if cc == Catcode::END {
-          collected.push(T_BEGIN!());
-          collected.extend(current);
-          collected.push(T_END!());
+          items.push(Tokens::new(std::mem::take(&mut current)));
           break;
         } else if token == comma {
-          collected.push(T_BEGIN!());
-          collected.extend(current);
-          collected.push(T_END!());
-          current = Vec::new();
+          items.push(Tokens::new(std::mem::take(&mut current)));
         } else if cc == Catcode::BEGIN {
           // Nested `{balanced}` — preserve brace wrapping.
           current.push(token);
@@ -1055,9 +1059,28 @@ LoadDefinitions!({
       }
     } else if let Some(token) = gullet::read_token()? {
       // No outer brace — read a single token as the sole item.
-      collected.push(T_BEGIN!());
-      collected.push(token);
-      collected.push(T_END!());
+      items.push(Tokens::new(vec![token]));
+    }
+    // Phase 2: if a typed form was declared, reparse each item via
+    // the inner type's reader (`Perl reparseArgument` parity). The
+    // reverted form is emitted so the downstream callsite sees
+    // canonical tokens of the typed value.
+    let mut collected: Vec<Token> = Vec::new();
+    if let Some(inner_ps) = inner {
+      for item in items {
+        let reparsed = inner_ps.reparse_argument(ArgWrap::Tokens(item))?;
+        collected.push(T_BEGIN!());
+        for wrap in reparsed {
+          collected.extend(wrap.revert()?.unlist());
+        }
+        collected.push(T_END!());
+      }
+    } else {
+      for item in items {
+        collected.push(T_BEGIN!());
+        collected.extend(item.unlist());
+        collected.push(T_END!());
+      }
     }
     Tokens::new(collected)
   });
