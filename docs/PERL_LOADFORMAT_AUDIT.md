@@ -177,6 +177,44 @@ union. Engine-wide measurement (`Engine/*.pool.ltxml` ∪ all
 | Rust-only | — | 65 |
 | Perl-only | — | 363 |
 
+**Refresh 2026-05-15.** Re-ran the diff after 16 days of binding
+work (port-from-Perl + sibling-machine kernel additions). Same
+methodology (Def\* and Let regex over both sources), adding a Rust-
+side scan of raw `\def`/`\let` inside `RawTeX!`/`TeX!` blocks:
+
+| Side | Unique CS names | Diff |
+|------|---:|---:|
+| Perl engine union | 2616 | — |
+| Rust engine union (incl raw) | 2642 | — |
+| Rust-only | — | 214 |
+| Perl-only | — | 188 |
+
+The Perl-only gap narrowed from 363 → 188 (~48% reduction). Bucket
+breakdown of the 188:
+
+| Bucket | Count | Status |
+|---|---:|---|
+| `\bib@*` family | 116 | `latexml_engine/src/bibtex.rs` is a 37-line skeleton; full port from Perl `BibTeX.pool.ltxml` (956 lines) is a known TODO. Not random drift. |
+| Misc `\<other>` | 58 | Diverse atomics: `\@charlb`, `\@filef@und`, point-size CSes, `\batchmode`, etc. Per-CS investigation needed. |
+| `\@<lowercase>` | 12 | Mostly already handled via raw `TeX!`/`RawTeX!` blocks (e.g. `\@cite`, `\@captype`); regex doesn't catch the raw-block path uniformly. |
+| `\@<at-name>` | 2 | Architecturally OK. |
+
+The 214 Rust-only set is dominated by intentional Rust-side
+additions: 13 `\lx@*` (LaTeXML internals) + 5 `\ltx@*` + 6
+`\@list*` safety stubs + 2 `\@hidden@*` math helpers + 60 misc
+(xparse-2018 / LaTeX-2020 helpers like `\IfClassAtLeastTF`,
+`\NewCommandCopy`, the new `\Cdprime`/`\Cprime` BibTeX-Cyrillic
+stubs, `\UTF@<n>@octets@noexpand` family). Two genuinely-Rust-
+only patterns flagged earlier (`\@@appendix`, `\@begin@lrbox`)
+remain false positives (regex matched a commented-out line or a
+diff in trailing args).
+
+**Conclusion.** The strict-Perl drift surface is shrinking but
+not yet zero. The largest remaining cluster (BibTeX 116 CSes) is
+a deferred port, not parity drift. Outside BibTeX, the gap is
+~72 CSes worth investigating per-symbol, with the expectation
+that many are raw-block-defined and undercounted by the regex.
+
 The 65-name Rust-only set, after inspection, is mostly
 intentional internals — `\lx@*` / `\ltx@*` plumbing, picture-env
 helpers (`\lx@pic@line`, `\lx@pic@oval`, `\lx@pic@qbezier`,
