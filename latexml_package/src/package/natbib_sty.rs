@@ -744,6 +744,16 @@ LoadDefinitions!({
   DefMacro!("\\citeindexfalse", "");
   DefMacro!("\\citeindextype", "");
 
+  // natbib boolean flags consulted by raw-loaded sibling packages
+  // and some user macros. Predefine the standard `\if<name>` triple
+  // via `\newif` (creates `\NAT@superfalse`/`\NAT@supertrue` too).
+  // Witness cluster: arXiv:2506.21088 / .21438 (papers calling
+  // `\bibpunct` or similar that consult `\ifNAT@super`).
+  RawTeX!("\\newif\\ifNAT@super");
+  RawTeX!("\\newif\\ifNAT@numbers");
+  RawTeX!("\\newif\\ifNAT@longnamesfirst");
+  RawTeX!("\\newif\\ifNAT@swa");
+
   // 2.17 Long Author List on First Citation
   DefMacro!("\\shortcites Semiverbatim", "");
 
