@@ -27,4 +27,12 @@ LoadDefinitions!({
   DefMacro!("\\foresteoption{}", "\\relax");
   DefMacro!("\\forestregister{}", "\\relax");
   DefMacro!("\\foresteregister{}", "\\relax");
+  // `\useforestlibrary[opts]{name}` loads a forest-lib-<name>.code.tex
+  // file (e.g. `edges`, `linguistics`). Since we already discard the
+  // `forest` env body and stub the CSes, the library content has no
+  // surface effect — no-op the call so papers that load libraries
+  // before any `\begin{forest}` reach the env-discard path cleanly.
+  // Witness: arXiv:2508.19011 — `\useforestlibrary{edges}` was the
+  // only blocking error.
+  DefMacro!("\\useforestlibrary[]{}", "\\relax");
 });
