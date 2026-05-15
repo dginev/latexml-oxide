@@ -361,6 +361,8 @@ clean a portion of the larger corpus silently.
   +0.04 vs Round-28 baseline (99.06%).
 * **Stage-17 v2** (papers 60001-70000): 9903/9999 = **99.04% OK** —
   +0.02 vs Round-28 baseline (99.02%).
+* **Stage-18 v2** (papers 70001-80000): 9965/9999 = **99.66% OK** —
+  +0.01 vs Round-28 baseline (99.65%).
 
 **Round-29.2 next_warning Stage-11 v2 (2026-05-14 03:56 PM)**.
 
