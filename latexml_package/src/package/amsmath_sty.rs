@@ -1290,6 +1290,18 @@ LoadDefinitions!({
     Ok(stored_map!("scriptlevel" => stomach::get_script_level()))
   });
 
+  // \calc@shift@gather — amsmath.sty L1632 layout calculation for
+  // gather environment's tag positioning (dimen manipulation:
+  // mintagsep, tagwidth, eqnshift). Purely about visual layout in
+  // PDF output; HTML/XML rendering doesn't use these dimensions.
+  // Real def isn't loaded under our amsmath hand-port path; raw-
+  // loaded sibling packages that call it (or amsmath via gather
+  // with custom tags) hit undefined. Stub to no-op per WISDOM #50
+  // (vendor layout errors are moot in XML→HTML output). Witness
+  // cluster: arXiv:2506.12791/.14355/.14372 (gather + tag layout,
+  // Rust 1 → 0, vs Perl=1 — beats shared baseline).
+  DefMacro!("\\calc@shift@gather", "");
+
   //======================================================================
   // Section 3.11.1 \numberwithin
   // Perl: amsmath.sty.ltxml line 741
