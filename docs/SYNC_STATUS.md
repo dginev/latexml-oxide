@@ -353,6 +353,11 @@ clean a portion of the larger corpus silently.
 * **Stage-13 v2** (papers 20001-30000): 9689/10007 = **96.83% OK** —
   -0.17 vs Round-28 baseline (97.0%). Statistical noise in 10k-paper
   sample.
+* **Stage-13 v3** (papers 20001-30000, all 18 fixes): 9742/10007 =
+  **97.36% OK** — +0.53 vs v2, +0.36 vs Round-28. The 9 new cluster
+  fixes (caption@setkeys, calc@shift@gather, float@endH, xspace,
+  globcount, thanksref, pdfrefobj, datetime, natbib) recovered ~53
+  papers in this stage alone.
 * **Stage-14 v2** (papers 30001-40000): 9761/10007 = **97.54% OK** —
   -0.07 vs Round-28 baseline (97.61%). Same noise pattern.
 * **Stage-15 v2** (papers 40001-50000): 9914/10001 = **99.13% OK** —
