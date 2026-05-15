@@ -1296,4 +1296,117 @@ mod tests {
     let count = load_from_str(content).unwrap();
     assert!(count > 0, "Expected lccode entry loaded");
   }
+
+  // --- RLE decoder tests (intarray consolidation) ---
+
+  #[test]
+  fn rle_decode_empty() {
+    assert_eq!(rle_decode_i64("").unwrap(), Vec::<i64>::new());
+  }
+
+  #[test]
+  fn rle_decode_single() {
+    assert_eq!(rle_decode_i64("5").unwrap(), vec![5]);
+  }
+
+  #[test]
+  fn rle_decode_single_run() {
+    assert_eq!(rle_decode_i64("5x3").unwrap(), vec![5, 5, 5]);
+  }
+
+  #[test]
+  fn rle_decode_mixed() {
+    assert_eq!(
+      rle_decode_i64("1,2x2,3x3,1").unwrap(),
+      vec![1, 2, 2, 3, 3, 3, 1]
+    );
+  }
+
+  #[test]
+  fn rle_decode_negative() {
+    assert_eq!(rle_decode_i64("-5").unwrap(), vec![-5]);
+    assert_eq!(rle_decode_i64("-5x3").unwrap(), vec![-5, -5, -5]);
+  }
+
+  #[test]
+  fn rle_decode_long_run() {
+    let v = rle_decode_i64("218x10000").unwrap();
+    assert_eq!(v.len(), 10000);
+    assert!(v.iter().all(|&x| x == 218));
+  }
+
+  #[test]
+  fn rle_decode_malformed_returns_err() {
+    assert!(rle_decode_i64("abc").is_err());
+    assert!(rle_decode_i64("5xabc").is_err());
+    assert!(rle_decode_i64("5x").is_err());
+  }
+
+  // --- IA load → state assignment tests ---
+
+  #[test]
+  fn ia_load_writes_per_slot_values() {
+    // Use a unique prefix so the test doesn't collide with the engine's
+    // ambient state (other tests may have populated fontdimen_* keys).
+    let prefix = "ia_test_prefix";
+    let content = format!("IA\t{}\t3\t10,20x2\n", prefix);
+    load_from_str(&content).unwrap();
+
+    use crate::common::dimension::Dimension;
+    use crate::common::store::Stored;
+    use crate::state;
+
+    assert_eq!(
+      state::lookup_value(&format!("{}_1", prefix)),
+      Some(Stored::Dimension(Dimension(10)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_2", prefix)),
+      Some(Stored::Dimension(Dimension(20)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_3", prefix)),
+      Some(Stored::Dimension(Dimension(20)))
+    );
+    // One past the end should NOT be set by the IA record.
+    assert_eq!(state::lookup_value(&format!("{}_4", prefix)), None);
+  }
+
+  #[test]
+  fn ia_load_length_mismatch_errors() {
+    // Declared len 5 but RLE only decodes to 3 → error
+    let content = "IA\tia_mismatch_prefix\t5\t10,20,30\n";
+    // load_from_str collects per-line errors; verify the malformed IA
+    // line did NOT successfully load anything.
+    let count = load_from_str(content).unwrap_or(0);
+    assert_eq!(count, 0, "Length-mismatch IA should not load");
+  }
+
+  // --- Backward-compat: V-records-only dumps (pre-IA format) ---
+
+  #[test]
+  fn v_record_dimension_still_loads() {
+    // This is the pre-IA storage format: one V record per slot.
+    // dump_reader must still accept these so older / partner-machine
+    // dumps load correctly.
+    let prefix = "v_backcompat_prefix";
+    let content = format!(
+      "V\t{}_1\tD\t111\nV\t{}_2\tD\t222\n",
+      prefix, prefix
+    );
+    load_from_str(&content).unwrap();
+
+    use crate::common::dimension::Dimension;
+    use crate::common::store::Stored;
+    use crate::state;
+
+    assert_eq!(
+      state::lookup_value(&format!("{}_1", prefix)),
+      Some(Stored::Dimension(Dimension(111)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_2", prefix)),
+      Some(Stored::Dimension(Dimension(222)))
+    );
+  }
 }

@@ -948,4 +948,91 @@ mod tests {
     // Expected extras field: "11:a<GS>11:b"
     assert_eq!(s, "Match\x1fMatch:ab\x1f\x1f11:a\x1d11:b");
   }
+
+  // --- RLE encoder tests (intarray consolidation) ---
+
+  #[test]
+  fn rle_empty_slice() {
+    assert_eq!(rle_encode_i64(&[]), "");
+  }
+
+  #[test]
+  fn rle_single_value() {
+    assert_eq!(rle_encode_i64(&[5]), "5");
+  }
+
+  #[test]
+  fn rle_two_distinct() {
+    assert_eq!(rle_encode_i64(&[1, 2]), "1,2");
+  }
+
+  #[test]
+  fn rle_run_of_two() {
+    assert_eq!(rle_encode_i64(&[5, 5]), "5x2");
+  }
+
+  #[test]
+  fn rle_long_run() {
+    assert_eq!(rle_encode_i64(&[218; 10000]), "218x10000");
+  }
+
+  #[test]
+  fn rle_mixed_runs() {
+    assert_eq!(rle_encode_i64(&[1, 2, 2, 3, 3, 3, 1]), "1,2x2,3x3,1");
+  }
+
+  #[test]
+  fn rle_negative() {
+    assert_eq!(rle_encode_i64(&[-5]), "-5");
+    assert_eq!(rle_encode_i64(&[-5, -5, -5]), "-5x3");
+  }
+
+  #[test]
+  fn rle_extreme_values() {
+    assert_eq!(rle_encode_i64(&[i64::MIN]), i64::MIN.to_string());
+    assert_eq!(rle_encode_i64(&[i64::MAX]), i64::MAX.to_string());
+    assert_eq!(rle_encode_i64(&[0; 3]), "0x3");
+  }
+
+  // --- parse_fontdimen_key tests ---
+
+  #[test]
+  fn fontdimen_key_standard() {
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_12737"),
+      Some(("fontdimen_fontinfo_cmr10 at 15sp", 12737))
+    );
+  }
+
+  #[test]
+  fn fontdimen_key_index_one() {
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 5sp_1"),
+      Some(("fontdimen_fontinfo_cmr10 at 5sp", 1))
+    );
+  }
+
+  #[test]
+  fn fontdimen_key_non_fontdimen() {
+    assert_eq!(parse_fontdimen_key("count@"), None);
+    assert_eq!(parse_fontdimen_key("\\@oddpage"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_wrong_prefix() {
+    // Missing the `_fontinfo_` segment — must not match.
+    assert_eq!(parse_fontdimen_key("fontdimen_cmr10_15"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_non_numeric_tail() {
+    // No trailing digits after last `_` ⇒ no index ⇒ no match.
+    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_abc"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_empty_tail() {
+    // Trailing underscore with no digits ⇒ no match.
+    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_"), None);
+  }
 }
