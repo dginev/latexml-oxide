@@ -40,6 +40,10 @@ USER_OK.md
 .claude/
 html/
 
+# Python bytecode (e.g. tools/check_memory.py emits __pycache__/)
+__pycache__/
+*.pyc
+
 # Reference / read-only mirror trees (Perl LaTeXML upstream sources,
 # community ar5iv-bindings .ltxml, TeXbook + tex.web). These live
 # alongside the repo for cross-reference during the Perl→Rust port
