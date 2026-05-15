@@ -2,15 +2,18 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
-## Active priority (refreshed 2026-04-30): strict-Perl parity
+## Active priority (refreshed 2026-05-15): strict-Perl parity
 
 Strict Perl parity at the format/dump and package-loading boundary is
 the current top priority, followed by sandbox long-tail cleanup.
 Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1109/0/0**, and the latest-row 7898-paper sandbox result
-is **7731 OK = 97.89%**. Working docs:
+--tests` is **1220/0/0** and `cargo clippy --workspace --all-targets`
+is **0 warnings**. The latest sandbox result for the 100k
+`next_warning_papers` corpus is ~98.5% OK; the latest 10k stage v3
+ranges 97.4–99.5%. Working docs:
 [`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
-[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
+[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md).
 
 Concretely:
 
@@ -42,9 +45,18 @@ tackle latex. Historical test regressions during the dump pivot are
 recorded in `SYNC_STATUS.md`; do not assume they are current without
 re-running the relevant test or dump-generation command.
 
-**Distribution follow-up** (after TL2025 dumps are robust): bundle
-multiple TL versions' dumps (TL2022 … TL2026) into the binary via
-`include_bytes!` + runtime selection by `kpsewhich --version`.
+**Distribution follow-up — LANDED 2026-05-15.** Per-TL-year dump
+files (`resources/dumps/{plain,latex}.YYYY.dump.txt` +
+`texlive.YYYY.version`) are committed to the repo and embedded into
+the binary at build time via `include_str!`. Runtime resolves the
+ambient year via `kpsewhich -var-value=SELFAUTOPARENT` with
+`pdflatex --version` fallback (`kpsewhich --version` returns the
+same kpathsea-library string on TL2023 and TL2025, so it's NOT a
+reliable discriminator). TL2023 + TL2025 are bundled currently; add
+new years via `tools/make_formats.sh`. Follow-up IA-record
+consolidation (`81176ba689`) halved `latex.YYYY.dump.txt` size by
+collapsing per-slot fontdimen V-records into per-(font,size) `IA`
+records with RLE-encoded data.
 
 ## Project Overview
 

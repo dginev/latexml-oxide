@@ -1233,17 +1233,31 @@ witnesses emerge.
 
 ## Acceptance gates
 
-| Gate | Current | Target |
+| Gate | Current (2026-05-15) | Target |
 |---|---|---|
-| `cargo test --tests` | **1185/0/0** | unchanged |
+| `cargo test --tests` | **1220/0/0** | unchanged |
+| `cargo clippy --workspace --all-targets` | **0 warnings** | unchanged |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | Round-25 cumulative regressions | 31 fixed, ~14 deferred | drive deferred to zero |
 | 1910.01256 mini-benchmark vs pdflatex×2 | **1.18s** vs **1.11s** idle (tied within noise) | beat 2× pdflatex (currently met at 0.4× the stretch goal) |
 
-Distribution follow-up: once TL2025 dumps stay robust through a CI
-cycle, `include_bytes!` `{plain,latex}.dump.txt` for TL2022…TL2026 and
-select at runtime via `kpsewhich --version`.
+Distribution follow-up — **LANDED 2026-05-15** (branch
+`distribution-include-bytes-bundling`, merged into the testing
+branch). Versioned dump filenames + compile-time embedded fallback
+via `include_bytes!` ship multiple TL years (TL2023 + TL2025 currently
+committed). Runtime year detection uses
+`kpsewhich -var-value=SELFAUTOPARENT` with `pdflatex --version`
+fallback (note: `kpsewhich --version` returns the same kpathsea
+string across TL releases, so it's NOT a reliable discriminator —
+the as-built doc was misleading). Resolution chain:
+`$LATEXML_NODUMP` → `$LATEXML_DUMP_PATH` → `$LATEXML_DUMP_DIR/<kind>.YYYY.dump.txt`
+→ exe-relative → dev-tree → embedded fallback.
+
+Follow-up IA consolidation (`81176ba689`): the latex dump shrank from
+~7.4 MB → ~3.7 MB by collapsing per-slot fontdimen V-records into
+per-(font, size) `IA` records with RLE-encoded data. 25 new unit
+tests pin the round-trip + RLE edge cases + V-record backward compat.
 
 ---
 
