@@ -1609,3 +1609,26 @@ has no interpreting gate either, and dropping it preserves the
 fix); arXiv:2506.19291 (floatrow → caption3, Rust=30→2). Commit
 `feb8832a2b binding/content: Step-2 raw-search paths-only, drop
 interpreting gate in Step-4`.
+
+**Why this is more elaborate than it needs to be (parity tax).** The
+simpler model — `direct binding → fallback binding → paths (local +
+kpsewhich)` — would resolve every realistic arXiv input correctly,
+including the caption3 case above. Perl's 5-step ladder only diverges
+from the simple model in one scenario: `interpreting=1` AND the raw
+`<file>.sty` is present on local paths AND a fallback binding exists.
+Perl picks the local raw (Step 2); the simple model would pick the
+fallback binding. That divergence exists so a user can drop a custom
+raw `<file>.sty` on `--path` and override our fallback binding — an
+override pattern we have never observed in arXmliv corpora.
+
+A second latent reason: Perl's `$interpretable =
+LookupMapping('INTERPRETABLE_SOURCES', $file)` lets specific files
+force-interpret raw even when global `interpreting=0`, AND it
+explicitly suppresses Step 3 fallback (`!$interpretable` on L2120).
+The Rust port doesn't honor `INTERPRETABLE_SOURCES` today; collapsing
+Step 2 would silently violate this gate if we ever wire it up.
+
+We keep the full 5-step order for strict Perl parity per CLAUDE.md
+("Perl code is the ground truth"). If a future failure looks like
+"Step 2 fired and we lost the fallback binding we wanted," tighten
+Step 2 (as `feb8832a2b` did) — do not delete it.
