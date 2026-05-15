@@ -664,7 +664,25 @@ LoadDefinitions!({
       if cc == Catcode::SPACE || cc == Catcode::EOL { end -= 1; continue; }
       break;
     }
-    let value = Tokens::new(body_toks[start..end].to_vec());
+    // Sanitize: biblatex `\verb` is a verbatim primitive — its body is a
+    // literal string. The mouth tokenized chars with their normal catcodes
+    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). When `\endentry`
+    // later splices these tokens into `\href{URL}{text}` the SUB chars
+    // trigger `Script _ can only appear in math mode` during horizontal
+    // digestion. Reset structural catcodes to OTHER so the captured string
+    // round-trips through the bibitem variant safely.
+    // Witness cluster: ~29 papers/stage in next_warning_papers (Stages
+    // 15-20 v3) hit this on biblatex bbl `\verb 10.1162/EVCO_a_00133`.
+    let value_vec: Vec<Token> = body_toks[start..end].iter().map(|tok| {
+      match tok.code {
+        Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
+        Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
+          Token { text: tok.text, code: Catcode::OTHER }
+        },
+        _ => *tok,
+      }
+    }).collect();
+    let value = Tokens::new(value_vec);
     bib_entry_set_tokens(key_str.trim(), value);
     Ok(Tokens::default())
   }, locked => true);

@@ -400,6 +400,20 @@ recovered). Concentrated gains in Stages 13/14 (newer 2509+ slices
 where the 9 newest cluster fixes apply); Stages 15-20 at noise
 floor with bbl-math biblatex regression cluster (~29 papers/stage)
 dominating remaining failures. Stages 11/12 v3 pending re-run.
+
+**Round-30 19th fix landed (2026-05-15 ~11:30 AM)**:
+biblatex_sty.rs `\biblatex@verb` now normalizes structural catcodes
+(SUB/SUPER/PARAM/ALIGN/MATH/ACTIVE → OTHER) on the captured body
+before stashing it under the entry key. Root cause: biblatex bbl
+`\verb 10.1162/EVCO_a_00133` tokenizes `_` as Catcode::SUB; the
+mouth-captured tokens were stored verbatim, then `\endentry`
+spliced them into `\href{URL}{text}` (twice — once as URL, once
+as link text), and the SUB chars triggered `Script _ can only
+appear in math mode` during horizontal digestion of the bibitem.
+Expected recovery: ~29 papers/stage on Stages 15-20 (the high-OK
+stages where bbl-math was the only remaining cluster), and
+proportionally fewer on Stages 11-14 where bbl-math contributes
+alongside other failures. v4 re-run pending.
 * **next_warning_papers v2 COMPLETE** — full 100k re-run on
   Round-29 binary (all 9 fixes). Cumulative tally across all 10
   v2 stages: ~98.5% OK, essentially same as Round-28's ~98.5%.
