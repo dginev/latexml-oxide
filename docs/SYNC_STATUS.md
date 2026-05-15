@@ -363,19 +363,43 @@ clean a portion of the larger corpus silently.
   recovered from v2 baseline.
 * **Stage-14 v2** (papers 30001-40000): 9761/10007 = **97.54% OK** —
   -0.07 vs Round-28 baseline (97.61%). Same noise pattern.
+* **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
+  **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
+  cap at the long-tail bbl-math regression cluster of ~29 papers
+  + singleton env-close/halign cases).
 * **Stage-15 v2** (papers 40001-50000): 9914/10001 = **99.13% OK** —
   +0.06 vs Round-28 baseline (99.07%). Modest improvement from 8th+9th fixes.
+* **Stage-16 v3** (papers 50001-60000, all 18 fixes): 9908/10000 =
+  **99.08% OK** — -0.02 vs v2 (within run noise). Long-tail
+  bbl-math regressions dominate; 9 new cluster fixes haven't
+  recovered any net papers in this slice.
 * **Stage-16 v2** (papers 50001-60000): 9908/9998 = **99.10% OK** —
   +0.04 vs Round-28 baseline (99.06%).
+* **Stage-17 v3** (papers 60001-70000, all 18 fixes): 9903/10000 =
+  **99.03% OK** — -0.01 vs v2 (noise). Long-tail dominated.
 * **Stage-17 v2** (papers 60001-70000): 9903/9999 = **99.04% OK** —
   +0.02 vs Round-28 baseline (99.02%).
+* **Stage-18 v3** (papers 70001-80000, all 18 fixes): 9965/10000 =
+  **99.65% OK** — -0.01 vs v2 (noise).
 * **Stage-18 v2** (papers 70001-80000): 9965/9999 = **99.66% OK** —
   +0.01 vs Round-28 baseline (99.65%).
+* **Stage-19 v3** (papers 80001-90000, all 18 fixes): 9975/10000 =
+  **99.75% OK** — IDENTICAL to v2. Long-tail dominated.
 * **Stage-19 v2** (papers 80001-90000): 9975/10000 = **99.75% OK** —
   IDENTICAL to Round-28 baseline (99.75%). Stage-19 was the first
   R28 stage with all 8 fixes; 9th fix doesn't add gains here.
+* **Stage-20 v3** (papers 90001-100000, all 18 fixes): 9948/10000 =
+  **99.48% OK** — IDENTICAL to v2. Long-tail dominated.
 * **Stage-20 v2** (papers 90001-100000): 9948/10000 = **99.48% OK** —
   IDENTICAL to Round-28 baseline.
+
+**Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
+13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
+v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
+recovered). Concentrated gains in Stages 13/14 (newer 2509+ slices
+where the 9 newest cluster fixes apply); Stages 15-20 at noise
+floor with bbl-math biblatex regression cluster (~29 papers/stage)
+dominating remaining failures. Stages 11/12 v3 pending re-run.
 * **next_warning_papers v2 COMPLETE** — full 100k re-run on
   Round-29 binary (all 9 fixes). Cumulative tally across all 10
   v2 stages: ~98.5% OK, essentially same as Round-28's ~98.5%.
