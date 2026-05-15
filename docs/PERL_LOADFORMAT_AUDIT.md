@@ -7,12 +7,16 @@ Tracks the Rust→Perl translation gap exposed by the strict
 in commit `9909ba51d`), flagging divergences that break the
 strict-Perl pipeline.
 
-**Refresh status (2026-04-30):** current local verification:
-`cargo test --tests` is **1109/0/0**; dump resources present locally
-are `plain.dump.txt` at 959 lines and `latex.dump.txt` at 25,792
-lines. The detailed call-count table below is from the 2026-04-28
-audit and should be re-run before using exact counts as acceptance
-criteria.
+**Refresh status (2026-05-15):** current local verification:
+`cargo test --tests` is **1220/0/0**;
+`cargo clippy --workspace --all-targets` is **0 warnings**. Dump
+resources on disk are versioned per TL year: `plain.YYYY.dump.txt`
+~958 lines, `latex.YYYY.dump.txt` ~21,475 lines after the IA
+intarray consolidation (commit `81176ba689`) — was ~110,713 lines
+before. Both TL2023 and TL2025 dumps are committed. The detailed
+call-count table below is from the 2026-04-28 audit; engine-wide
+CS-name diff refresh appears in the "Engine-wide CS-name diff
+refresh" section.
 
 **Zero-error target verification (2026-04-30 iter 40):** ran
 `latexml_oxide --init=plain.tex empty.tex` and

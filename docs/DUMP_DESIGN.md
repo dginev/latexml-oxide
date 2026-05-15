@@ -25,16 +25,26 @@ This writes:
 
 ```
 resources/dumps/
-  plain.dump.txt      # current local: 959 lines
-  latex.dump.txt      # current local: 25,792 lines
-  texlive.version     # kpsewhich --version, for staleness detection
+  plain.YYYY.dump.txt      # per-TL-year triple, e.g. plain.2025.dump.txt
+  latex.YYYY.dump.txt      # current local TL2025: ~21,475 lines (after IA
+                           # consolidation; pre-IA was ~110,713)
+  texlive.YYYY.version     # kpathsea stamp captured at dump time. NOTE:
+                           # `kpsewhich --version` is NOT a reliable year
+                           # discriminator (same string on TL2023+TL2025);
+                           # `kpsewhich -var-value=SELFAUTOPARENT` is the
+                           # right source. See `docs/WISDOM.md` #54.
 ```
 
 `build.rs` cannot invoke `cargo run` (nested cargo is forbidden), so
 **the dumps cannot be regenerated from `cargo build` alone** — they
-are generated explicitly by the developer/tooling and loaded from disk
-at runtime. `resources/dumps/` is ignored in git in this checkout; CI
-or local runs must provide/generate dumps as needed.
+are generated explicitly by `tools/make_formats.sh` (which builds
+the binary, detects the TL year, and writes the versioned files).
+Versioned dump files matching `plain.*.dump.txt`, `latex.*.dump.txt`,
+and `texlive.*.version` ARE tracked in git (the rest of
+`resources/dumps/` is gitignored). `build.rs` embeds each tracked
+year via `include_str!` so a binary built without a co-located
+`resources/dumps/` directory still has every shipped year's dump
+available at runtime via the embedded fallback.
 
 ## Architecture
 
@@ -72,6 +82,7 @@ M\t<key>\tPA\t<target>                   # Primitive alias / \let-style entry
 M\t<key>\tR\t…                           # Register / CharDef meaning
 M\t<key>\tN                              # Undefined/None meaning
 M\t<key>\tT\t<catcode>:<text>            # Token meaning
+IA\t<prefix>\t<len>\t<rle>               # expl3 intarray consolidation
 LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 …
 ```
@@ -81,6 +92,15 @@ delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
 [`DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md) for
 the v3 design and Perl correspondence.
+
+`IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
+per-slot `\fontdimen<idx>\<font>` intarray storage into one record
+per `(font, size)` group. `<rle>` is a comma-list of `v` (one entry)
+or `vxn` (n consecutive copies of v). `dump_reader` expands each IA
+record into per-slot V Dimension assignments at load time, so the
+in-memory state post-replay is identical to a pre-IA, V-record-only
+dump. Backward compatible: existing V-record dumps still load via
+the unchanged V arm. See WISDOM #53 for the mechanism.
 
 ## LoadFormat split (strict-Perl semantics)
 
@@ -245,6 +265,17 @@ versioned dump + stamp file for cargo rerun. Bundled dump content
 above) — `LATEXML_NO_EMBEDDED_DUMP=1` opts out of the embedded
 fallback when iterating locally and you want "no dump" to be
 visible rather than silently using the bundled snapshot.
+
+**Caveat (WISDOM #54).** This stamp check uses `kpsewhich --version`,
+which returns the kpathsea library version string — *identical*
+across TL2023, TL2024, TL2025 (e.g. "kpathsea version 6.4.1,
+Copyright 2023" on all three). Therefore the stamp check CANNOT
+detect a cross-TL-year mismatch: a TL2023-era dump read on a TL2025
+host still passes the stamp check. The cross-TL discriminator is the
+**year-in-filename**: `dump_paths::detect_ambient_texlive_year` (via
+`kpsewhich -var-value=SELFAUTOPARENT`) picks the right dump by
+filename match. The stamp check remains useful for the in-year case
+(e.g. a kpathsea upgrade within TL2025).
 
 ## See also
 
