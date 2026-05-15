@@ -3921,8 +3921,29 @@ LoadDefinitions!({
   DefMacro!("\\DeclareRelease{}{}{}", None);
   //\DeclareCurrentRelease{v4.49}{2021-11-01}
   DefMacro!("\\DeclareCurrentRelease{}{}", None);
-  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", None);
-  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", None);
+  // `\IncludeInRelease{date}{cs}{descr}…body…\EndIncludeInRelease`
+  // (LaTeX kernel `latexrelease.sty`). The kernel decides at run-time
+  // whether `date` matches the current release; if yes, body runs; if
+  // no, body is skipped. Packages like koma-script emit pairs of
+  // blocks — one dated for the modern release, one with `0000/00/00`
+  // as the always-fallback — wrapping `\newcommand*{\FOO}…`
+  // definitions. With our prior `None`-body stub the entire body was
+  // dropped on the floor, leaving `\FOO` undefined (witnesses:
+  // arXiv:2506.12162 / .15311 — `\FamilyProcessOptions` undefined
+  // cascade from scrbase.sty L611). Emit the captured body so the
+  // first matching block defines its CSes. The second block in a
+  // pair would then redefine via `\newcommand` and erroneously fire
+  // "already defined" — but our `\newcommand` ignores redefinitions
+  // with an `Info:ignore` (etoolbox_sty.rs:31), so the cascade lands
+  // correctly with the most-recent definition still in effect.
+  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease",
+    sub[(_date, _cs, _descr, body)] {
+      Ok(body)
+    });
+  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease",
+    sub[(_date, _cs, _descr, body)] {
+      Ok(body)
+    });
 
   DefPrimitive!("\\DeclareOption{}{}", sub[(option, code)] {
     let option_str = option.to_string();
