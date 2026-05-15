@@ -418,19 +418,33 @@ self-aliases (where the dump entry's CS equals the primitive's
 .cs) are no-op at load time and need a `dump_writer` marker that
 `dump_reader` recognizes as "engine has primary; nothing to install".
 
-**New (audit 2026-04-28): fontdimen/intarray storage divergence.**
-Rust dumps 3094 V-records of form `V \fontdimen<N>\<font-cs>`
-(one per slot per font), where Perl dumps 0 such records and
-encodes the same data inside `fontinfo_<name>_at_<size>pt`
-V-records (one record per font with embedded `data` array).
-Affected fonts: `\c__fp_exp_intarray` (216 slots),
-`\c__fp_trig_intarray` (1264), `\c_initex_cctab`/`_other`/`_str`/
-`_document` (257 each), `\g_tmpa_cctab`/`_tmpb` (257 each),
-`\g__regex_*_intarray` (9 each). Total 3094 records bloating the
-dump (~80KB). Same runtime semantics but different storage layout.
-Project doc:
-[`memory/project_fontdimen_intarray_storage.md`]
-— deferred until tests fail or dump becomes a bottleneck.
+**Fontdimen/intarray storage consolidation — RESOLVED 2026-05-15.**
+
+expl3 implements intarrays by stashing values in
+`\fontdimen<idx>\<font>` slots, picking `cmr10` at various tiny
+`at <N>sp` instantiations to get one font instance per intarray.
+Before this resolution the dump emitted one V-record per slot —
+~89k records, ≈40% of the latex.YYYY.dump.txt size.
+
+Resolution: `dump_writer` now groups V entries matching
+`fontdimen_fontinfo_<font> at <size>_<idx>` by (font, size) and
+emits a single `IA` record per intarray with the values RLE-encoded.
+Format: `IA\t<prefix>\t<len>\t<rle>`, where `<rle>` is a comma-list
+of `v` (one entry) or `vxn` (n consecutive copies). `dump_reader`
+parses `IA`, decodes the RLE, and emits the same per-slot V
+assignments — runtime state post-replay is identical.
+
+Measured TL2025 impact:
+- 89,294 V-records → **15 IA records + 63 V fallbacks** for
+  non-dense intarrays (one cluster, `at 14sp` with 9 sparse slots)
+- Dump size: **7.4 MB → 3.7 MB (-49%)**, line count 110,691 → 21,475
+- `cargo test --tests` = 1196/0/0 (unchanged)
+- Backward compatible: dump_reader still loads existing TL2023 dumps
+  with un-consolidated V records; sibling regenerates that file
+  when convenient.
+
+Code: `latexml_core/src/dump_writer.rs` (RLE encoder + grouping),
+`latexml_core/src/dump_reader.rs` (`IA` arm + RLE decoder).
 
 **Suspected stale narrative below** (kept for archaeological
 context — predates `01a8ee8b1`/`ab76be20f`):

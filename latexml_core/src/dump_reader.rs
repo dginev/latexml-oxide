@@ -200,6 +200,12 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // default cap. Filter at read time so existing dumps are clean.
     "V" if key == "MAX_ERRORS" => Ok(false),
     "V" => load_value(key, data),
+    // IA: consolidated expl3 intarray (one record per (font, size); dump_writer
+    // collapses ~17k V-records into one IA). Body is `<len>\t<rle>` where rle
+    // is a comma-list of `v` or `v*n` runs. Expansion assigns the same V
+    // entries that the per-slot records would have, so the runtime state
+    // post-replay is identical.
+    "IA" => load_intarray(key, data),
     // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //
     // Perl-faithful: `plain_dump.pool.ltxml` and `latex_dump.pool.ltxml`
@@ -419,6 +425,69 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
     Some(Scope::Global),
   );
   Ok(true)
+}
+
+/// Expand an `IA` (intarray) record into the per-slot Dimension V entries
+/// that the runtime expects. Format: key = `<prefix>` (e.g.
+/// `fontdimen_fontinfo_cmr10 at 15sp`), data = `<len>\t<rle>`. RLE tokens
+/// are comma-separated; each is either `<v>` (one entry) or `<v>x<n>`
+/// (n consecutive entries of value v). Slots are written at indices
+/// 1..=len. Mismatched RLE-length vs declared len is an error.
+fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
+  let mut it = data.splitn(2, '\t');
+  let len_s = it.next().unwrap_or("");
+  let rle = it.next().unwrap_or("");
+  let len: usize = len_s
+    .parse()
+    .map_err(|e| format!("Bad IA length: {}", e))?;
+  let values = rle_decode_i64(rle)?;
+  if values.len() != len {
+    return Err(format!(
+      "IA length mismatch for {:?}: declared {} but RLE decoded to {}",
+      key,
+      len,
+      values.len()
+    ));
+  }
+  for (i, val) in values.into_iter().enumerate() {
+    let slot_key = format!("{}_{}", key, i + 1);
+    state::assign_internal(
+      TableName::Value,
+      arena::pin(&slot_key),
+      Stored::Dimension(crate::common::dimension::Dimension(val)),
+      Some(Scope::Global),
+    );
+  }
+  Ok(true)
+}
+
+/// Inverse of `dump_writer::rle_encode_i64`. Parses a comma-separated
+/// list of tokens, each `v` (single) or `vxn` (n copies of v). Empty
+/// input decodes to an empty vector.
+fn rle_decode_i64(s: &str) -> Result<Vec<i64>, String> {
+  let mut out = Vec::new();
+  if s.is_empty() {
+    return Ok(out);
+  }
+  for tok in s.split(',') {
+    if let Some(xi) = tok.find('x') {
+      let val: i64 = tok[..xi]
+        .parse()
+        .map_err(|e| format!("Bad RLE value in {:?}: {}", tok, e))?;
+      let cnt: usize = tok[xi + 1..]
+        .parse()
+        .map_err(|e| format!("Bad RLE count in {:?}: {}", tok, e))?;
+      for _ in 0..cnt {
+        out.push(val);
+      }
+    } else {
+      let val: i64 = tok
+        .parse()
+        .map_err(|e| format!("Bad RLE value {:?}: {}", tok, e))?;
+      out.push(val);
+    }
+  }
+  Ok(out)
 }
 
 /// Load a meaning entry: M\tKEY\tTYPE\t...
