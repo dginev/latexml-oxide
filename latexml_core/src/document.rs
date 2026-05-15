@@ -3744,7 +3744,22 @@ impl Document {
                   },
                 };
                 let newid = self.record_id_with_node(mapped_id, &new);
-                new.set_attribute(&key, &newid)?;
+                // Write the literal "xml:id" key (not the bare "id" local-
+                // name returned by libxml's get_attributes). Otherwise the
+                // cloned node only gets a plain `id` attribute, and the
+                // subsequent `after_open` chain's `has_attribute_ns("id",
+                // XML_NS)` check returns false, causing `generate_id` to
+                // mint a fresh `.<parent>.N` xml:id that doesn't match the
+                // sibling XMRef idrefs (which were rewritten from id_map).
+                // Witness: arXiv:2509.07628 — MathFork mainfork emitted
+                // 154 XMRefs with `.mf` idrefs while the cloned target
+                // nodes received parent-scoped `.m2.N` xml:ids, leaving
+                // every XMRef dangling and triggering 4
+                // `Error:expected:id` per equation during post-processing
+                // visibility marking. Same shape applies anywhere a
+                // cloned subtree carries xml:id attributes — MathFork,
+                // tabular-cell clone, _Capture_ flush.
+                new.set_attribute("xml:id", &newid)?;
                 // Update id_map so subsequent idref lookups use the ACTUAL recorded id.
                 // record_id_with_node may change the id (e.g., if there are conflicts),
                 // so the mapped_id and newid may differ.
