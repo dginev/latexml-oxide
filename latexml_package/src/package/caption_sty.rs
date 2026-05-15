@@ -76,6 +76,23 @@ LoadDefinitions!({
   DefMacro!("\\DeclareCaptionOption{}[]{}", "");
   DefMacro!("\\DeclareCaptionPackage{}", "");
 
+  // caption3 internals used by raw-loaded sibling packages like
+  // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
+  // `\setkeys{family}{kvs}` with caption-specific error handling
+  // (caption3_2020-10-26.sty L337-360). Stub to a plain `\setkeys`
+  // — drops the optional error-handler context but preserves
+  // keyval-processing semantics. Witness cluster: papers using
+  // `\usepackage{floatrow}` which raw-loads its body containing
+  // `\caption@setkeys{...}{...}` calls.
+  DefMacro!("\\caption@setkeys[]{}{}", "\\setkeys{#2}{#3}");
+  // `\undefine@key` removes a keyval. Real keyval.sty defines it
+  // post-2018; xkeyval too. Both Perl LaTeXML's keyval.sty.ltxml
+  // hand-port and our Rust binding pre-date that and don't include
+  // it. Stub as a no-op — keyval removal is mostly an authoring
+  // hygiene issue; missing it means stale keys linger but no
+  // tokenization breakage. Witness: same floatrow chain.
+  DefMacro!("\\undefine@key{}{}", "");
+
   DefMacro!("\\bothIfFirst{}{}", sub[(first, second)] {
     if first.is_empty() { Ok(Tokens!()) } else {
       let mut result = first.unlist();
