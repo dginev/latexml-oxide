@@ -14,6 +14,18 @@ LoadDefinitions!({
   // \floatname{type}{name}
   DefMacro!("\\floatname{}{}", "\\@namedef{lx@name@#1}{#2}");
 
+  // \float@endH — close marker for `[H]` placement floats (float.sty
+  // L103). Real def does box-placement layout (`\@endfloatbox\vskip
+  // \intextsep \box\@currbox \vskip\intextsep`); purely visual for
+  // PDF output. In XML/HTML the figure/table just closes via its
+  // environment-end. Stub as no-op so unrendered raw-loads don't
+  // emit "undefined". Witness: arXiv:2506.12112 / .15928 / .19294
+  // (`\begin{figure}[H] ... \end{figure}` chain). Companion stubs
+  // `\float@end`, `\float@dblend` follow the same pattern.
+  DefMacro!("\\float@endH", "");
+  DefMacro!("\\float@end", "");
+  DefMacro!("\\float@dblend", "");
+
   // Perl: DefPrimitive('\newfloat{}{}{}[]', sub { ... })
   // Creates a new float environment with counter, title format, etc.
   DefPrimitive!("\\newfloat{}{}{}[]", sub[(ftype, _placement, auxext, within)] {
