@@ -414,6 +414,31 @@ Expected recovery: ~29 papers/stage on Stages 15-20 (the high-OK
 stages where bbl-math was the only remaining cluster), and
 proportionally fewer on Stages 11-14 where bbl-math contributes
 alongside other failures. v4 re-run pending.
+
+**Round-30 20th/21st fixes landed (2026-05-15 ~12:00 PM)**.
+* `latex_constructs.rs` stubs for `\cprime` / `\Cprime` /
+  `\cdprime` / `\Cdprime` (Cyrillic BBL transliteration markers) +
+  `\polhk{}` (Polish ogonek). 5+ papers gained a clean conversion
+  phase (post-processing may surface other issues).
+* `core/document.rs::append_clone_aux` — write the literal
+  `"xml:id"` key when copying cloned ids rather than the bare
+  `"id"` local-name returned by libxml's `get_attributes()`.
+  Previously the cloned node received a plain `id` attribute,
+  the follow-on `after_open` `has_attribute_ns("id", XML_NS)`
+  check returned false, `generate_id` minted a fresh parent-
+  scoped xml:id, and the sibling XMRef idrefs (correctly
+  remapped via id_map) ended up dangling. Root-cause witness:
+  arXiv:2509.07628 — 154 XMRefs with `.mf` idrefs vs 0 `.mf`
+  xml:ids in the pre-fix dump. Cluster scope on Stage-15 v3:
+  2101 papers logged `Error:expected:id` from this dangling
+  chain (21 of them blocked at conversion_error; the rest
+  leaked through as cosmetic post-processing errors).
+
+**Round-30 next_warning Stage-11 v3 (2026-05-15 ~11:00 AM)**.
+* **Stage-11 v3** (papers 1-10000, 18 fixes — pre-bbl-math/cprime/
+  cloned-id binary): 9741/10000 = **97.41% OK** — +0.73 vs v2
+  (96.68%). Confirms the per-stage gain from the 9 newest cluster
+  fixes is preserved on the older (2504-2509) papers.
 * **next_warning_papers v2 COMPLETE** — full 100k re-run on
   Round-29 binary (all 9 fixes). Cumulative tally across all 10
   v2 stages: ~98.5% OK, essentially same as Round-28's ~98.5%.
