@@ -16,7 +16,7 @@ LoadDefinitions!({
     let paths = state::get_search_paths();
     state::push_value("lx@searchpaths@stack",
       latexml_core::common::store::Stored::Strings(
-        std::rc::Rc::from(paths.iter().map(|s| latexml_core::common::arena::pin(s)).collect::<Vec<_>>())))?;
+        std::rc::Rc::from(paths.iter().map(latexml_core::common::arena::pin).collect::<Vec<_>>())))?;
   });
 
   DefPrimitive!("\\lx@restore@paths", {

@@ -8,7 +8,6 @@ use crate::common::object::Object;
 use crate::state::*;
 
 use crate::Digested;
-use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 
 /// Returns true when `\protect` currently has no meaning, or is
@@ -18,7 +17,6 @@ use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, Expan
 /// vs. unsafe (`\relax`/undefined) `\protect` regimes. Only the
 /// unsafe regime actually runaways at full expansion.
 pub(crate) fn protect_is_relax_or_undefined() -> bool {
-  use crate::T_CS;
   let protect = T_CS!("\\protect");
   match lookup_meaning(&protect) {
     None => true,
