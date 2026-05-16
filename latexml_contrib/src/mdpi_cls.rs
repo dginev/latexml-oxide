@@ -23,8 +23,12 @@ LoadDefinitions!({
   // MDPI frontmatter — preserve author content as ltx:note frontmatter.
   DefMacro!("\\corresref[]{}", "\\textsuperscript{*#1}");
   DefMacro!("\\externalbibliography{}", "");
+  // \firstpage{N} also defines \@firstpage in the real mdpi.cls;
+  // some papers reference it via `\setcounter{page}{\@firstpage}`.
+  // Witness 2503.04598 — bytedance_seed paper using the mdpi pattern.
   DefMacro!("\\firstpage{}",
-    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+    "\\def\\@firstpage{#1}\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\@firstpage", "1");
   DefMacro!("\\firstpagenote{}",
     "\\@add@frontmatter{ltx:note}[role=firstpagenote]{#1}");
   DefMacro!("\\corres[]{}",
