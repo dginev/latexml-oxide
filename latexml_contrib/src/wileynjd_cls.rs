@@ -39,4 +39,12 @@ LoadDefinitions!({
   DefMacro!("\\receiveddate{}", "");
   DefMacro!("\\reviseddate{}", "");
   DefMacro!("\\accepteddate{}", "");
+  // wileyNJDv5.cls (newer template) adds these. Witness 2407.00139.
+  DefMacro!("\\copyyear{}", "");
+  DefMacro!("\\titlemark{}", "");
+  DefMacro!("\\startpage{}", "");
+  DefMacro!("\\bmsection{}", "\\section{#1}");
+  DefMacro!("\\bmsubsection{}", "\\subsection{#1}");
+  // 'corres' (without trailing 's' from real wileynjd) — alternative
+  // \corres macro signature in v5 templates.
 });

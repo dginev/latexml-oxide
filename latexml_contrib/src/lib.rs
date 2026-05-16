@@ -344,6 +344,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
   ("WileyMSP-template", "cls", wileymsp_template_cls::load_definitions),
   ("WileyNJD-v1", "cls", wileynjd_cls::load_definitions),
+  ("wileyNJDv5", "cls", wileynjd_cls::load_definitions),
   ("wlpeerj", "cls", wlpeerj_cls::load_definitions),
   ("wlscirep", "cls", wlscirep_cls::load_definitions),
   ("svn-multi", "sty", svn_multi_sty::load_definitions),
