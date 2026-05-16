@@ -271,4 +271,11 @@ LoadDefinitions!({
   // Commons license. Frontmatter-only; gobble cleanly.
   // Witnesses 2406.04861, 2406.09266.
   DefMacro!("\\setcctype[]{}", "");
+
+  // acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
+  // Footnote helper used by acmart at L587/L600 in some path our
+  // stub doesn't replicate; some templates probe it before our
+  // explicit definition. Stub as a no-op so footnote processing
+  // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
+  DefMacro!("\\@makefntext", "");
 });
