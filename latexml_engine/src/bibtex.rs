@@ -95,6 +95,40 @@ impl BibEntry {
   pub fn field_names(&self) -> impl Iterator<Item = &str> {
     self.fields.iter().map(|(k, _)| k.as_str())
   }
+
+  /// Render the entry in BibTeX source format. Perl
+  /// `LaTeXML::Util::BibTeX::Entry::prettyPrint`. Output shape:
+  /// ```text
+  /// @article{Smith2020,
+  ///   author = {John Smith},
+  ///   title = {On Examples},
+  ///   year = {2020}
+  /// }
+  /// ```
+  /// Uses raw fields (not digested), since the goal is to capture
+  /// the original BibTeX-flavoured source for the
+  /// `\bib@@origbibentry` round-trip.
+  pub fn pretty_print(&self) -> String {
+    let mut out = format!("@{}{{{}", self.entry_type, self.key);
+    if self.raw_fields.is_empty() {
+      out.push('}');
+      return out;
+    }
+    for (k, v) in &self.raw_fields {
+      // Skip internal `_*` raw fields (e.g. `_raw_keyvals` added by
+      // the amsrefs Phase-2 stub).
+      if k.starts_with('_') {
+        continue;
+      }
+      out.push_str(",\n  ");
+      out.push_str(k);
+      out.push_str(" = {");
+      out.push_str(v);
+      out.push('}');
+    }
+    out.push_str("\n}");
+    out
+  }
 }
 
 thread_local! {
@@ -1344,9 +1378,113 @@ LoadDefinitions!({
   DefConstructor!("\\bib@field@default@review Digested",
     "<ltx:bib-review>Review #1</ltx:bib-review>");
 
-  // TODO: Phase 5 — port `\bib@synthesize@mr`, `\bib@@mr`,
-  // `\bib@synthesize@zbl`, `\bib@@zbl`, `\bib@@origbibentry`,
-  // `\bib@field@default@links` from Perl L803-870.
+  // -------- Phase 5: MR / Zbl synthesis + origbibentry --------
+  // Perl L803-860. Emits `<ltx:bib-review>` / `<ltx:bib-identifier>`
+  // nodes for AMS MathSciNet (mrnumber, mrreviewer) and
+  // Zentralblatt (zblno, zblreviewer) fields; embeds a verbatim
+  // BibTeX-source roundtrip of the entry as a `<ltx:bib-data role='self'>`.
+
+  // \bib@synthesize@mr — Perl L803-810. Emit \bib@@mr if either
+  // mrnumber or mrreviewer is set, else nothing.
+  DefMacro!("\\bib@synthesize@mr", sub[_args] {
+    let mrnumber = current_entry_field("mrnumber").map(|t| t.to_string());
+    let mrreviewer = current_entry_field("mrreviewer").map(|t| t.to_string());
+    if mrnumber.is_none() && mrreviewer.is_none() {
+      return Ok(Tokens!());
+    }
+    let mr_tks = Tokens::new(Explode!(mrnumber.unwrap_or_default().as_str()));
+    let rev_tks = match mrreviewer {
+      Some(r) => Tokens::new(Explode!(r.as_str())),
+      None => Tokens!(),
+    };
+    let inv = Invocation!(T_CS!("\\bib@@mr"), vec![mr_tks, rev_tks]);
+    Ok(inv)
+  });
+
+  // \bib@@mr {}{} — Perl L812-826. Conditional template:
+  //   isreview=true, reviewer set → bib-review (MR with reviewer)
+  //   isreview=true, no reviewer → bib-review (plain MR)
+  //   isreview=false → bib-identifier (just the MR id)
+  // Id may arrive as "MR12345" or "12345" or "12345 (foo)"; strip
+  // any MR prefix and a trailing parenthesised note, and flag
+  // isreview if a note appears.
+  DefConstructor!("\\bib@@mr {}{}",
+    "?#isreview\
+     (?#reviewer\
+       (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview (#reviewer)</ltx:bib-review>)\
+       (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview</ltx:bib-review>))\
+     (<ltx:bib-identifier scheme='mr' id='#id' href='#href'>MathReview Entry</ltx:bib-identifier>)",
+    properties => sub[args] {
+      let raw_id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let mut id = raw_id.trim().to_string();
+      let mut isreview = !reviewer.is_empty();
+      // Perl regex: /^\s*(?:MR)?(\d+)\s+\(.*\)\s*$/ — strip optional
+      // MR prefix; if a trailing `(...)` note exists, flag isreview.
+      static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+      let re = RE.get_or_init(|| {
+        regex::Regex::new(r"^(?:MR)?(\d+)\s+\(.*\)$").unwrap()
+      });
+      if let Some(caps) = re.captures(&id) {
+        id = caps[1].to_string();
+        isreview = true;
+      }
+      let href = format!("https://www.ams.org/mathscinet-getitem?mr={}", id);
+      Ok(stored_map!(
+        "isreview" => isreview,
+        "id" => id,
+        "href" => href,
+        "reviewer" => reviewer))
+    });
+
+  // \bib@synthesize@zbl — Perl L828-835. Same shape as mr but
+  // unconditional `isreview` (no MR-style id stripping).
+  DefMacro!("\\bib@synthesize@zbl", sub[_args] {
+    let zblno = current_entry_field("zblno").map(|t| t.to_string());
+    let zblreviewer = current_entry_field("zblreviewer").map(|t| t.to_string());
+    if zblno.is_none() && zblreviewer.is_none() {
+      return Ok(Tokens!());
+    }
+    let zbl_tks = Tokens::new(Explode!(zblno.unwrap_or_default().as_str()));
+    let rev_tks = match zblreviewer {
+      Some(r) => Tokens::new(Explode!(r.as_str())),
+      None => Tokens!(),
+    };
+    let inv = Invocation!(T_CS!("\\bib@@zbl"), vec![zbl_tks, rev_tks]);
+    Ok(inv)
+  });
+
+  // \bib@@zbl {}{} — Perl L837-845. Simpler than MR; always emits
+  // bib-review, but the suffix `(reviewer)` is conditional.
+  DefConstructor!("\\bib@@zbl {}{}",
+    "?#reviewer\
+     (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt (#reviewer)</ltx:bib-review>)\
+     (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt</ltx:bib-review>)",
+    properties => sub[args] {
+      let id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let href = format!("https://zbmath.org/{}", id);
+      Ok(stored_map!(
+        "id" => id,
+        "href" => href,
+        "reviewer" => reviewer))
+    });
+
+  // \bib@field@default@links — Perl L850-851.
+  DefConstructor!("\\bib@field@default@links Digested",
+    "<ltx:bib-links>#1</ltx:bib-links>");
+
+  // \bib@@origbibentry — Perl L856-860. Embed the BibTeX-source
+  // form of the current entry into the XML as `<ltx:bib-data
+  // role='self' type='BibTeX'>`. Uses `BibEntry::pretty_print`.
+  DefConstructor!("\\bib@@origbibentry",
+    "<ltx:bib-data role='self' type='BibTeX'>#bibentry</ltx:bib-data>",
+    after_digest => sub[whatsit] {
+      let pp = current_entry()
+        .map(|e| e.borrow().pretty_print())
+        .unwrap_or_default();
+      whatsit.set_property("bibentry", Stored::Tokens(Tokens::new(Explode!(&pp))));
+    });
 });
 
 #[cfg(test)]
@@ -1718,5 +1856,48 @@ mod tests {
     // misbehavior; matches the documented default per L286.
     assert_eq!(TitleCaseMode::parse(""), TitleCaseMode::Capitalize1);
     assert_eq!(TitleCaseMode::parse("nonsense"), TitleCaseMode::Capitalize1);
+  }
+
+  // --- BibEntry::pretty_print (Perl `prettyPrint` for `\bib@@origbibentry`) ---
+
+  #[test]
+  fn pretty_print_no_fields_is_empty_braced() {
+    let e = BibEntry::new("Solo", "misc");
+    assert_eq!(e.pretty_print(), "@misc{Solo}");
+  }
+
+  #[test]
+  fn pretty_print_emits_bibtex_source_shape() {
+    let mut e = BibEntry::new("Smith2020", "article");
+    e.add_raw_field("author", "John Smith");
+    e.add_raw_field("title", "On Examples");
+    e.add_raw_field("year", "2020");
+    let out = e.pretty_print();
+    // The order matches insertion order (Vec<(String,String)>).
+    assert_eq!(out,
+      "@article{Smith2020,\n  author = {John Smith},\n  title = {On Examples},\n  year = {2020}\n}");
+  }
+
+  #[test]
+  fn pretty_print_skips_underscore_internal_fields() {
+    // `_raw_keyvals` is a Phase-2-stub-internal field added by the
+    // amsrefs `\bib{}{}{}` closure; it shouldn't surface in
+    // `\bib@@origbibentry`'s BibTeX-source output.
+    let mut e = BibEntry::new("X", "misc");
+    e.add_raw_field("_raw_keyvals", "author=John");
+    e.add_raw_field("title", "T");
+    let out = e.pretty_print();
+    assert!(!out.contains("_raw_keyvals"));
+    assert!(out.contains("title = {T}"));
+  }
+
+  // --- process_identifier (Perl L784) ---
+
+  #[test]
+  fn process_identifier_trims_whitespace() {
+    assert_eq!(process_identifier("  10.1234/foo  "), "10.1234/foo");
+    assert_eq!(process_identifier("\tabc\n"), "abc");
+    assert_eq!(process_identifier("no-whitespace"), "no-whitespace");
+    assert_eq!(process_identifier(""), "");
   }
 }
