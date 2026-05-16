@@ -6,6 +6,51 @@ LoadDefinitions!({
   // Load raw TeX first
   InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
+  // Override `\makecell[align]{multi-line content}` to use `\shortstack`
+  // instead of the raw makecell.sty's internal nested-tabular machinery.
+  // The raw `\makecell@` calls `\mcell@tabular` which expands to
+  // `\begin{tabular}{...}\end{tabular}` — a NESTED tabular inside a
+  // tabular cell. Our alignment engine doesn't model tabular-in-cell
+  // cleanly: digestion enters `restricted_horizontal` mode for the
+  // outer `\@@tabular`, then the inner `\begin{tabular}` hits
+  // `\lx@begin@alignment` while the outer mode-switch frame is still
+  // open, producing the `Attempt to close a group that switched to
+  // mode restricted_horizontal` cascade.
+  //
+  // `\shortstack[align]{a\\b\\c}` produces vertically-stacked content
+  // via the LaTeX core picture-stack mechanism, which our engine
+  // handles without nested-tabular issues. Acceptable since makecell's
+  // primary consumer is just multi-line cell content, and the visual
+  // layout difference is negligible for HTML output.
+  //
+  // Witness cluster: 2503.09172 (warning_papers_3 batch) — table with
+  // `\makecell[c]{$\gcd(a,L)=1$,\\$r=...$}` produced 18+ alignment
+  // errors per call.
+  DefMacro!("\\makecell[]{}", "\\shortstack[#1]{#2}", locked => true);
+  state::let_i(&T_CS!("\\makecell*"), &T_CS!("\\makecell"), None);
+  DefMacro!("\\thead[]{}", "{\\theadfont\\shortstack[#1]{#2}}", locked => true);
+  state::let_i(&T_CS!("\\thead*"), &T_CS!("\\thead"), None);
+
+  // `\Xhline{<dim>}` is makecell's variable-width horizontal rule. The
+  // raw definition (TL makecell.sty L365) uses
+  // `\noalign{\ifnum0=`}\fi ...}` — a brace-escape trick to enter
+  // noalign mode from inside a tabular row. Our alignment engine
+  // doesn't replay this trick correctly: the `\noalign` slot is
+  // recognised, but the embedded `\arrayrulewidth#1\hrule\@height
+  // \arrayrulewidth\futurelet\reserved@a\@xhline` runs in the wrong
+  // mode, opening a phantom `\@@tabular` group that the real
+  // `\end{tabular}` then can't close, producing the
+  // `\lx@begin@alignment ... mode-switch to restricted_horizontal due
+  // to \@@tabular` cascade.
+  //
+  // Override `\Xhline{w}` to plain `\hline` (drop the width argument).
+  // For HTML/XML output the rule-width distinction is moot — all
+  // table rules render as a single CSS border. Same for `\Xcline{a-b}`.
+  // Witness: 2503.09172 (warning_papers_3) — 18 errors, all rooted
+  // here.
+  DefMacro!("\\Xhline{}", "\\hline", locked => true);
+  DefMacro!("\\Xcline{}", "\\cline{#1}", locked => true);
+
   // Mark thead et.al as headers (row & column).
   // Perl is DefMacroI with an imperative sub body (no token return);
   // Rust DefPrimitive runs at stomach time. WISDOM #44: the two kinds
