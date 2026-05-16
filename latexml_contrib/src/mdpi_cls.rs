@@ -33,4 +33,19 @@ LoadDefinitions!({
   DefMacro!("\\AuthorCitation{}", "");
   DefMacro!("\\dates{}{}{}", "");
   DefMacro!("\\authorinitials{}", "");
+  // Additional MDPI frontmatter macros (mdpi.cls L530+). Witness 2412.13512.
+  DefMacro!("\\Title{}", "\\title{#1}");
+  DefMacro!("\\TitleCitation{}", "");
+  DefMacro!("\\pubvolume{}", "");
+  DefMacro!("\\pubyear{}", "");
+  DefMacro!("\\issuenum{}", "");
+  DefMacro!("\\reftitle{}", "");
+  DefMacro!("\\PublishersNote", "");
+  DefMacro!("\\articlenumber{}", "");
+  DefMacro!("\\copyrightyear{}", "");
+  DefMacro!("\\histreceived{}", "");
+  DefMacro!("\\histrevised{}", "");
+  DefMacro!("\\histaccepted{}", "");
+  DefMacro!("\\historypublished{}", "");
+  DefMacro!("\\SetCaptionDefault", "");
 });
