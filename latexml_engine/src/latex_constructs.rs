@@ -6269,9 +6269,19 @@ LoadDefinitions!({
     // never loads `ts1enc.dfu` and `\DeclareUnicodeCharacter` mappings
     // from the .dfu are missing — surfacing as bogus undefineds when
     // user input contains TS1 glyphs that should resolve via the .dfu.
+    //
+    // BUT: skip the .dfu load when `\DeclareUnicodeCharacter` has been
+    // `\let` to `\@undefined` (the signal `\UseRawInputEncoding` uses
+    // to disable inputenc-style mappings — latex.ltx L18271). The .dfu
+    // body is nothing but `\DeclareUnicodeCharacter{...}` calls, and
+    // each one would emit "undefined CS" if we proceeded. Real pdflatex
+    // tolerates this because `\DeclareFontEncoding` does not auto-load
+    // the .dfu — only inputenc.sty does. Witness: arXiv:2509.22585
+    // (revtex4-2 + `\UseRawInputEncoding` + `\usepackage[T1]{fontenc}`).
     use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
+    let duc_defined = state::lookup_meaning(&T_CS!("\\DeclareUnicodeCharacter")).is_some();
     let enc_str = e.to_string();
-    if !enc_str.is_empty() {
+    if duc_defined && !enc_str.is_empty() {
       let dfu_name = format!("{}enc", enc_str.to_lowercase());
       if find_file(&dfu_name, Some(FindFileOptions {
         forbid_ltxml: true,
