@@ -100,6 +100,12 @@ LoadDefinitions!({
 
   InnerPool!(latex_constructs);
 
+  // Rust-only overrides — loaded LAST so they can patch CSes set up by
+  // any earlier pool (dump, bootstrap, base, constructs). Without this
+  // call, definitions in `latex_constructs_rust_only.rs` (e.g.
+  // `\UseRawInputEncoding`, `\ltx@hard@MessageBreak`) never register.
+  InnerPool!(latex_constructs_rust_only);
+
   // Retry any PA/MPA let-aliases whose target wasn't defined at
   // dump-load time (they were queued rather than silently dropped).
   // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`
