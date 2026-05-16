@@ -452,6 +452,31 @@ clean a portion of the larger corpus silently.
 * **Stage-20 v2** (papers 90001-100000): 9948/10000 = **99.48% OK** —
   IDENTICAL to Round-28 baseline.
 
+**Round-31 warning_papers_3 v1 (2026-05-16)** — full 100k corpus
+on next-batch papers (downloaded by `warning_papers_3` rsync, ~Mar-
+Apr 2025 timeframe). Cumulative across 10 stages: **97354/100489 =
+96.88% OK**. Per-stage range 94.93% (Stage-1) → 98.01% (Stage-9).
+Stage-9 used a binary including the early-session ceurart / pdfx /
+chemmacros / mathastext / fdsymbol no-op fixes; Stage-10 (97.29%)
+ran the older release binary that predated most of this session's
+work.
+
+Round-31 session-end fix list (committed but binary-rebuild pending
+for canvas pickup): pdfsavepos enabled, hyperref eager color,
+@makefntext kernel default, ceurart/SCIS2024 bindings, cvpr2025/
+elsarticle/aastex 6.2/6.3/7.0 routing, spectralsequences no-op,
+jmlr theoremstyle stubs, icml senior author, ptephy v2, siamart
+cleveref order, wlscirep amssymb, colm preprint, plus content-
+preservation pass across ~20 class bindings (ceurart, scis2024,
+icml, jmlr2e, mcom_l, achemso, egpubl, informs, agujournal2019,
+sn-jnl, ecai, ieeeaccess, autart, birkjour, aomart, IEEEtaes,
+cimart, ejpecp, gretsi, bmvc2k, lipics, spie, sigma, optica,
+wileynjd, IEEEojcsys, asme2ej, wlpeerj, svproc, scipost,
+interspeech, sagej, nature-pre, WileyMSP-template, mdpi, interact,
+wlscirep) — author-supplied frontmatter (DOI, year, vol, address,
+email, affiliation, editor, ORCID, ...) now reaches the XML output
+as `<ltx:note role="...">` rather than being silently gobbled.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
