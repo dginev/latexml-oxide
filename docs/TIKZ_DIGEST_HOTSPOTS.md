@@ -102,20 +102,37 @@ operations. Each operation allocates a fresh `Vec<Token>`.
   cleared rather than dropped between expansions would amortise
   the alloc.
 
-### 3. Tokens fmt (2.78%)
+### 3. Tokens fmt — **retracted** (addr2line under thin-LTO mis-attribution)
 
-Both `Display` and `Debug` `fmt` impls fire hot. **Display** is
-expected — token streams routinely get rendered for `tex=` attrs,
-error messages, etc. **Debug** firing is suspicious — there's no
-obvious `{:?}` interpolation of `Tokens` in the core engine. The
-likely culprit is a log macro that takes `impl Debug` argument and
-formats unconditionally even when the log level is filtered out.
+The initial bucketing attributed ~2.78% of instructions to
+`<Tokens as fmt::{Debug,Display}>::fmt`. A follow-up audit
+(2026-05-16) instrumented `Tokens::Debug::fmt` with a per-call
+counter and a sampling backtrace, then re-ran on four heavy papers
+(2208.10851, 2112.10748, 2103.00971, 2406.11624). **The counter
+reported zero calls on every paper.**
 
-**Proposed investigation**:
+What the original 2.78% actually was: `addr2line` sometimes
+labels an instruction address with the *nearest preceding* symbol,
+and under `lto = "thin"` the release binary inlines aggressively
+enough that the byte ranges originally owned by `Tokens::*::fmt`
+end up filled with unrelated code (state-lookup `Option<Cow<str>>`
+plumbing, `Vec<Token>` builds, raw-TeX macro bodies). The bucketer's
+substring match `'Tokens' in sym and 'fmt' in sym` happily collected
+those phantom hits.
 
-* Grep for `Debug` on `Tokens` in `log!`/`log_post_*!` /
-  `Info!`/`Warn!`/`Error!` macros to find lazy-eval gaps. Wrap
-  expensive `Debug` formatting in `if log_enabled!(Level::Debug)`.
+**Lesson learned (worth recording in the audit playbook):** when
+callgrind+addr2line surfaces a fmt::{Debug,Display} symbol as hot
+under thin-LTO, **always verify with a runtime call counter
+before designing fixes around it**. Phantom symbols are most likely
+when the suspected hot function is small, the surrounding code is
+heavily monomorphised, and the LTO mode is `thin` (the boundary
+between codegen units is preserved but inlining still moves code
+across symbol ranges).
+
+**No action item from this bucket.** The 2.78% is genuine hot code,
+but it's attributed to the wrong function — the actual costs land
+in the other buckets above (state lookups, token-vec alloc, raw-TeX
+closures).
 
 ### 4. `latex_constructs` closures (7.28%)
 
@@ -154,20 +171,21 @@ inadvertently trigger.
 
 ## Aggregate
 
-Estimated wins from chasing the four leaf-level patterns (Cow→SymStr,
-SmallVec for tokens, Tokens::Debug lazy, smallvec for state-chain):
+Estimated wins from chasing the three remaining leaf-level patterns
+(Cow→SymStr, SmallVec for tokens, smallvec for state-chain). The
+"Tokens fmt" bucket has been retracted (see §3 above — phantom
+symbol from thin-LTO inlining):
 
 | Bucket | Current | After plausible fix | Δ |
 |---|---:|---:|---:|
 | Option<Cow<str>>::as_ref | 4.95% | ~2.5% | –2.4% |
 | Vec<Token> from_iter | 3.41% | ~1.8% | –1.6% |
 | State map alloc | 3.20% | ~1.6% | –1.6% |
-| Tokens fmt | 2.78% | ~1.0% | –1.8% |
-| **Total** | **14.34%** | **~6.9%** | **–7.4%** |
+| **Total** | **11.56%** | **~5.9%** | **–5.6%** |
 
-A ~7% reduction in macro-engine instruction count would shave
+A ~6% reduction in macro-engine instruction count would shave
 roughly the same fraction off digest wall on macro-heavy papers
-(~7% × 8.8s ≈ **0.6s** off `2103.00971`'s digest). That's worth a
+(~6% × 8.8s ≈ **0.5s** off `2103.00971`'s digest). That's worth a
 sprint but won't change the dominant story: matlab2tikz output is
 *genuinely large* (12 000 numeric rows × per-row macro expansion);
 the only way to halve digest on it is to bypass the pgfplots `table
