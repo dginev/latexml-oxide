@@ -118,6 +118,7 @@ pub mod birkjour_cls;
 pub mod bmvc2k_cls;
 pub mod cas_dc_cls;
 pub mod chemformula_sty;
+pub mod doclicense_sty;
 pub mod cimart_cls;
 pub mod colm2025_conference_sty;
 pub mod cvpr_sty;
@@ -299,6 +300,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
   ("chemformula", "sty", chemformula_sty::load_definitions),
+  ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
   ("colm2025_conference", "sty", colm2025_conference_sty::load_definitions),
   ("cvpr", "sty", cvpr_sty::load_definitions),
