@@ -158,4 +158,25 @@ LoadDefinitions!({
   DefMacro!("\\clearcaptionsetup", "");
   DefMacro!("\\rotcaption", "");
   DefMacro!("\\showcaptionsetup[]{}", "");
+
+  // \caption@ifinlist{val}{csv-list}{then}{else} — caption3.sty L87.
+  // Returns `then` if val matches one of the comma-separated list items,
+  // else `else`. Used by floatrow (`\caption@ifinlist{#1}{0,false,no,off}{...}{...}`)
+  // and by caption-key parsing. Witness 2405.18938.
+  DefMacro!("\\caption@ifinlist{}{}", sub[(val, list)] {
+    let v_str = val.to_string();
+    let v = v_str.trim();
+    let l_str = list.to_string();
+    let found = l_str.split(',').any(|item| item.trim() == v);
+    Ok(if found {
+      Tokens!(T_CS!("\\@firstoftwo"))
+    } else {
+      Tokens!(T_CS!("\\@secondoftwo"))
+    })
+  });
+
+  // \caption@setposition{value} — caption3.sty L1007. Sets the caption
+  // position. We don't materialize caption-position logic; stub as
+  // no-op so floatrow-style position setters don't crash.
+  DefMacro!("\\caption@setposition{}", "");
 });
