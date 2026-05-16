@@ -1720,6 +1720,26 @@ LoadDefinitions!({
       let id_props = RefStepCounter!("@bibitem")?;
       whatsit.set_properties(id_props);
     });
+
+  // `{bibtex@bibliography}` environment — Perl
+  // `BibTeX.pool.ltxml:175-183`. The outer wrapper for the entries
+  // emitted by `Pre::BibTeX::toTeX`. Delegates the heavy lifting
+  // (id allocation, title resolution, bibstyle/citestyle lookup,
+  // pseudo-bibitem fixup) to `before_digest_bibliography` /
+  // `begin_bibliography` in `latex_constructs.rs`, which already
+  // port the Perl helpers used by `\thebibliography`.
+  DefEnvironment!("{bibtex@bibliography}",
+    "<ltx:bibliography xml:id='#id' \
+       bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+       <ltx:title font='#titlefont' _force_font='1'>#title</ltx:title>\
+       <ltx:biblist>#body</ltx:biblist>\
+     </ltx:bibliography>",
+    before_digest => sub {
+      crate::latex_constructs::before_digest_bibliography()?;
+    },
+    after_digest_begin => sub[whatsit] {
+      crate::latex_constructs::begin_bibliography(whatsit)?;
+    });
 });
 
 #[cfg(test)]

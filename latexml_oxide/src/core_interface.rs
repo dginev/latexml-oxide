@@ -23,7 +23,9 @@ use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
 use latexml_codegen::LoadModel;
-use latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
+use latexml_core::{
+  CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
+};
 use latexml_math_parser::MathParser;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
@@ -194,7 +196,7 @@ impl DigestionAPI for Core {
     mode: Option<DigestionMode>,
     _no_init: bool,
   ) -> Result<Digested> {
-    let mut _ext = match mode {
+    let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
     };
@@ -277,7 +279,7 @@ impl DigestionAPI for Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    let name_copy = name;
+    let name_copy = name.clone();
     state::install_definition(
       Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
@@ -298,10 +300,28 @@ impl DigestionAPI for Core {
       self.load_preamble(preamble);
     }
 
-    // // Now for the Hacky part for BibTeX!!!
-    // if ($mode eq 'BibTeX') {
-    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
-    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
+    // Now for the Hacky part for BibTeX!!!
+    // Perl `Core.pm` L160-162: drain the .bib mouth via the Pre::BibTeX
+    // parser, register each entry in the bibtex.rs thread-local
+    // registry, and push back a `literal:` wrapper that produces a
+    // `\begin{bibtex@bibliography}...\end{bibtex@bibliography}` block
+    // for the digester to process.
+    if matches!(mode, Some(DigestionMode::BibTeX)) {
+      use latexml_engine::pre_bibtex::PreBibTeX;
+      let mut bib = PreBibTeX::new_from_gullet(&name);
+      match bib.to_tex() {
+        Ok(tex) => {
+          input_content(&s!("literal:{tex}"), InputOptions::default())?;
+        },
+        Err(parse_err) => {
+          Error!(
+            "bibtex",
+            "parse_failed",
+            s!("Failed to parse BibTeX file {}: {:?}", name, parse_err)
+          );
+        },
+      }
+    }
 
     let list = self.digest_internal()?;
     note_end(&digestion_note);
@@ -614,10 +634,30 @@ impl DigestionAPI for Core {
     }
 
     // Now for the Hacky part for BibTeX!!!
-    // if mode == DigestionMode::BibTeX {
-    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
-    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
-    // }
+    // Perl `Core.pm` L160-162: drain the mouth(s) just opened on the
+    // .bib file, run the low-level parser to build a registry of
+    // BibEntry objects, then push a literal wrapper TeX block that
+    // the LaTeX-side digester reads back as
+    //   \begin{bibtex@bibliography}
+    //     \ProcessBibTeXEntry{<key1>}
+    //     ...
+    //   \end{bibtex@bibliography}
+    if matches!(mode, DigestionMode::BibTeX) {
+      use latexml_engine::pre_bibtex::PreBibTeX;
+      let mut bib = PreBibTeX::new_from_gullet(&name);
+      match bib.to_tex() {
+        Ok(tex) => {
+          input_content(&s!("literal:{tex}"), InputOptions::default())?;
+        },
+        Err(parse_err) => {
+          Error!(
+            "bibtex",
+            "parse_failed",
+            s!("Failed to parse BibTeX file {}: {:?}", name, parse_err)
+          );
+        },
+      }
+    }
 
     let list = self.digest_internal()?;
     note_end(&s!("Digesting {} {}", mode, name));

@@ -96,3 +96,4 @@ pub mod amstex; // Perl: AmSTeX.pool.ltxml
 // or via `LoadPool('BibTeX')` from amsrefs.sty.ltxml.
 // Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
 pub mod bibtex; // Perl: BibTeX.pool.ltxml
+pub mod pre_bibtex; // Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser

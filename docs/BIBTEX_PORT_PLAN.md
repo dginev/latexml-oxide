@@ -1,12 +1,15 @@
 # BibTeX.pool.ltxml — Rust port plan
 
-**Status (2026-05-15):** Phases 1, 2, 3 shipped; Phases 4-5 pending.
-`latexml_engine/src/bibtex.rs` is ~1230 lines (BibEntry + name parser +
-title-case + 15 bindings + 30 unit tests); the Perl pool is 956
-lines. The remaining gap is ~100 entry-type/field-handler CSes
-(Phase 4) plus MR/Zbl synthesis (Phase 5). This document scopes the
-port into discrete phases so future sessions can pick up a phase
-without re-deriving the dependency graph.
+**Status (2026-05-16):** Phases 1-7 shipped; Phase 8 (Pre::BibTeX
+parser + `--bibtex` CLI mode) shipped. End-to-end `.bib → .xml`
+flow lands the bibentries inside a `<ltx:bibliography>` element
+with macro expansion (`@string`/`@preamble`) and faithful field
+dispatch. `latexml_engine/src/pre_bibtex.rs` is ~700 lines (17
+parser unit tests); `bibtex.rs` is ~1750 lines (BibEntry + name
+parser + title-case + 16 bindings including `{bibtex@bibliography}`
++ 31 unit tests); the Perl pool is 956 lines, the Pre::BibTeX
+module is 439 lines. The remaining gap is the long tail of Phase
+4-5 field handlers/MR-Zbl synthesis polish.
 
 ## Coverage audit (2026-05-15)
 
@@ -43,11 +46,26 @@ implementation does not downcase. Rust matches Perl-actual:
 
 **Missing entirely (Phase 4+ work):**
 
-- Public `current_bib_key()` helper (Perl `currentBibKey`, L192).
-- Orchestration: `\ProcessBibTeXEntry` (L111), `\bibentry@prepare`
-  DefPrimitive (L114), `\bibentry@create` DefPrimitive (L135),
-  `\the@lx@xmarg@ID` (L173).
-- Environments: `{bibtex@bibliography}` (L175), `{bib@entry}` (L185).
+- ~~Public `current_bib_key()` helper (Perl `currentBibKey`, L192).~~ Landed.
+- ~~Orchestration: `\ProcessBibTeXEntry` (L111), `\bibentry@prepare`
+  DefPrimitive (L114), `\bibentry@create` DefPrimitive (L135).~~ Landed.
+- `\the@lx@xmarg@ID` (L173) — still missing.
+- ~~Environments: `{bibtex@bibliography}` (L175), `{bib@entry}` (L185).~~
+  Both landed in Phase 7 + Phase 8.
+
+**Phase 8 — Pre::BibTeX parser (landed 2026-05-16):**
+The low-level `.bib` file parser
+(`LaTeXML::Pre::BibTeX` + `LaTeXML::Pre::BibTeX::Entry`, total 506
+Perl lines) is now ported to `latexml_engine/src/pre_bibtex.rs`
+(~700 Rust lines, 17 unit tests + 1 e2e test). The CLI binary
+auto-detects `.bib` extensions and `literal:@` sources and routes
+them through `DigestionMode::BibTeX`; converter preloads
+`BibTeX.pool` instead of `TeX.pool`; `core_interface.rs::digest`
+drains the gullet mouth via `PreBibTeX::new_from_gullet`, registers
+entries in the thread-local `BIB_ENTRIES` map, and pushes back a
+`literal:\begin{bibtex@bibliography}…\end{bibtex@bibliography}`
+wrapper. See `latexml_oxide/tests/55_bibtex.rs` for the end-to-end
+fixture.
 - Default entry handlers: `\bib@entry@default@prepare` (L207),
   `\bib@entry@default@complete` (L210).
 - 12 per-entry `@prepare` + 4 `@complete` + 9 `@alias` (article,

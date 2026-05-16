@@ -1,6 +1,6 @@
 use clap::Parser;
 use latexml::converter::Converter;
-use latexml_core::common::{Config, DataSize, OutputFormat};
+use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -74,6 +74,12 @@ struct Cli {
   /// Use .bbl file instead of running BibTeX (for arXiv-like builds)
   #[arg(long)]
   nobibtex: bool,
+
+  /// Treat the input as a BibTeX `.bib` file. Equivalent to Perl
+  /// `--bibtex`; auto-detected when SOURCE ends in `.bib` or starts
+  /// with `literal:@`.
+  #[arg(long)]
+  bibtex: bool,
 
   /// Disable math parsing
   #[arg(long, alias = "noparse")]
@@ -392,6 +398,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     Some(path_flags)
   };
 
+  // Perl `Common/Config.pm:24,216`: `$is_bibtex = qr/(^literal:\s*@)|(\.bib$)/`.
+  // `--bibtex` forces the type; otherwise auto-detect when the
+  // source ends in `.bib` or begins with `literal:@`.
+  let is_literal_bib = {
+    let trimmed = source.trim_start_matches("literal:");
+    trimmed.trim_start().starts_with('@') && trimmed.len() < source.len()
+  };
+  let mode = if cli.bibtex || source.ends_with(".bib") || is_literal_bib {
+    Some(DigestionMode::BibTeX)
+  } else {
+    None
+  };
+
   let opts = Config {
     verbosity,
     format: OutputFormat::HTML5,
@@ -399,7 +418,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     whatsout: DataSize::Document,
     preamble: cli.preamble.clone(),
     postamble: cli.postamble.clone(),
-    mode: None,
+    mode,
     bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,

@@ -1,7 +1,7 @@
 use latexml_core::common::arena;
 use latexml_core::common::error::*;
 use latexml_core::common::object::Object;
-use latexml_core::common::{Config, DataSize, OutputFormat};
+use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
@@ -72,9 +72,17 @@ impl Converter {
     // embedders that replace the dispatchers can register their own
     // (name, ext) slice the same way via `add_binding_names`.
     add_binding_names(latexml_contrib::binding_names());
-    // Prepare LaTeXML object — load TeX pool + user preloads
+    // Prepare LaTeXML object — load mode-specific pool + user preloads.
     // Perl: $self->initializeState($mode.".pool", @{$$self{preload} || []})
-    let mut preloads = vec![s!("TeX.pool")];
+    // For `--bibtex` (mode = BibTeX), Perl `Common/Config.pm:406`
+    // unshifts ['TeX.pool', 'LaTeX.pool', 'BibTeX.pool'] into the preload
+    // list. `BibTeX.pool` already begins with `LoadPool('LaTeX')` (and
+    // LaTeX with TeX), so we only need the BibTeX entry — the transitive
+    // chain handles the rest, and pool loads are idempotent.
+    let mut preloads = match self.opts.mode {
+      Some(DigestionMode::BibTeX) => vec![s!("TeX.pool"), s!("BibTeX.pool")],
+      _ => vec![s!("TeX.pool")],
+    };
     preloads.extend(self.core.preload.iter().cloned());
     self.core.initialize_singletons(preloads)?;
     self.ready = true;
