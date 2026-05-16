@@ -1897,6 +1897,29 @@ LoadDefinitions!({
     Ok(Tokens::new(out))
   });
 
+  // \lstKV@SetIf{val}\ifFlag — listings' boolean key setter (TL
+  // listings.sty L390): `\let \ifFlag \iftrue` if val starts with `t`,
+  // else `\let \ifFlag \iffalse`. Used by `\lst@Key{name}{default}[t]
+  // {\lstKV@SetIf{#1}\ifFlag}`. Note: this does NOT require a prior
+  // `\newif\ifFlag` — it `\let`s the bare CS directly.
+  // Witness: 2405.18399 (matlab-prettifier).
+  DefMacro!("\\lstKV@SetIf{} DefToken", sub[(val, cs)] {
+    let val_s = val.to_string();
+    let target = if val_s.trim_start().chars().next().map(|c| c.to_ascii_lowercase()) == Some('t') {
+      T_CS!("\\iftrue")
+    } else {
+      T_CS!("\\iffalse")
+    };
+    Ok(Tokens!(T_CS!("\\let"), cs, target))
+  });
+
+  // \lst@InstallFamily{...} / @{...} — from lstmisc.sty (L543, L558),
+  // registers a "family" of style keys. We don't materialize this
+  // machinery; stub both forms as no-ops so packages extending
+  // listings (e.g. matlab-prettifier) don't crash on undefined CS.
+  DefMacro!("\\lst@InstallFamily{}{}{}{}{}", "");
+  DefMacro!("\\lst@InstallFamily@{}{}{}{}{}{}{}{}", "");
+
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
   state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
