@@ -477,6 +477,27 @@ wlscirep) — author-supplied frontmatter (DOI, year, vol, address,
 email, affiliation, editor, ORCID, ...) now reaches the XML output
 as `<ltx:note role="...">` rather than being silently gobbled.
 
+Round-31 late-evening additions (5 commits after the 15:20 binary,
+also pending rebuild):
+* `pdftexcmds_sty`: `\pdf@shellescape` returns "0" plus pass-through
+  stubs for `\pdf@unescapehex` / `\pdf@escapestring|name|hex` and
+  gobble for `\pdf@primitive`. Closes 5+ papers where probing
+  `\ifcase \pdf@shellescape ...` hit the undefined cascade.
+* `amsmath_sty`: `\@mathmargin` newskip (0pt default). User styles
+  set/probe directly. Witness 2502.18185.
+* `binding/content.rs`: `load_class` now defines `\@classoptionslist`
+  even when the options list is empty. Without this, the kernel's
+  `\let \@classoptionslist \relax` default broke csname-reads like
+  babel.sty L4287's `\csname \ds@\@classoptionslist\endcsname`.
+  Witness 2504.00009 (`\documentclass{...}` no options, then
+  `\usepackage{babel}` → csname runaway).
+* `ieeetran_cls`: default `\thetitle` / `\theauthor` / `\thedate` to
+  empty so .bbl files that reference them before `\maketitle` don't
+  crash. Witness 2501.15830 (~17 papers across stages).
+* `colm2025_conference_sty`: eager `RequirePackage{color,xcolor}`
+  for author-edited COLM templates that inline `\definecolor` calls
+  before users load color/xcolor. Witness 2503.21480.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
