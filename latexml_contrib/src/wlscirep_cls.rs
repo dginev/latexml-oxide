@@ -4,6 +4,7 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
+  RequirePackage!("amssymb");
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");

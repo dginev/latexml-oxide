@@ -178,6 +178,9 @@ LoadDefinitions!({
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
   Let!("\\acknowledgments", "\\acknowledgements");
+  // AASTeX 6.3+ shortcut: `\ack{...}` (with mandatory arg, distinct from
+  // ptephy's argument-less form).
+  DefMacro!("\\ack{}", "\\begin{acknowledgements}#1\\end{acknowledgements}");
 
   // 2.10 Facilities
   DefConstructor!("\\facility{}", "<ltx:text class='ltx_ast_facility'>#1</ltx:text>",

@@ -117,6 +117,7 @@ pub mod autart_cls;
 pub mod birkjour_cls;
 pub mod bmvc2k_cls;
 pub mod cas_dc_cls;
+pub mod ceurart_cls;
 pub mod chemformula_sty;
 pub mod doclicense_sty;
 pub mod cimart_cls;
@@ -302,6 +303,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("bmvc2k", "cls", bmvc2k_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
+  ("ceurart", "cls", ceurart_cls::load_definitions),
   ("chemformula", "sty", chemformula_sty::load_definitions),
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
@@ -339,6 +341,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
   ("optica-article", "cls", optica_article_cls::load_definitions),
   ("ptephy_v1", "cls", ptephy_cls::load_definitions),
+  ("ptephy_v2", "cls", ptephy_cls::load_definitions),
   ("ptephy", "cls", ptephy_cls::load_definitions),
   ("siamart", "cls", siamart_cls::load_definitions),
   ("siamonline", "cls", siamart_cls::load_definitions),
