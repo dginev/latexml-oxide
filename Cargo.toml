@@ -34,6 +34,18 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 
+# Profiling-friendly variant of release: same optimizer pipeline but full
+# debuginfo and unstripped symbols, so `perf record` / `cargo flamegraph`
+# get function-level samples. Use:
+#   cargo build --profile bench --bin cortex_worker --features cortex
+#   perf record -F 99 -g --call-graph dwarf -o /tmp/perf.data \
+#     ./target/bench/cortex_worker --standalone …
+#   perf report -i /tmp/perf.data
+[profile.bench]
+inherits = "release"
+debug = "full"
+strip = "none"
+
 # Test profile — local `cargo test`. Optimised for *diagnosability*,
 # not for build speed or RAM economy. Devs typically have 32-64 GB
 # RAM, fast SSDs, and want the richest debugger experience when a
