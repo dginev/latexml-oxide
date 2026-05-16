@@ -62,45 +62,92 @@ the script in `/tmp/bucket_hot.py` (also archived inline below).
 
 ## What the buckets mean
 
-### 1. State lookups (4.95% + 3.20% = 8.15%)
+### 1. State lookups — **partially retracted** (`Option<Cow<str>>` not the leaf)
 
-`Option<Cow<str>>::as_ref` dominates the leaf hot path. Every macro
-expansion fans out into many `lookup_value` / `lookup_string` /
-`lookup_int` calls; each returns an `Option<Cow<str>>` (or
-similar). The borrow-check `.as_ref()` runs ~once per lookup, so
-its share scales linearly with macro density.
+The initial bucket attributed 4.95% to `Option<Cow<str>>::as_ref`
+and proposed converting `lookup_value`/`lookup_string`/`lookup_int`
+to return `Option<SymStr>` directly. Runtime verification (a counter
+on `Font::merge_ref`, the largest single consumer of those
+`Option<Cow<str>>` fields) shows:
 
-The companion bucket is `RawVecInner::non_null` for the state map's
-`(TableName, SymbolU32, Stored)` triple: every `assign_value`
-allocates a new entry into the hashmap chain.
+| Paper | Wall | `Font::merge_ref` calls |
+|---|---:|---:|
+| 2208.10851 | 2.13 s | **6,013** |
+| 2112.10748 | 17.73 s | **108,917** |
+| 2103.00971 | 9.73 s | **6,889** |
 
-**Proposed ideas**:
+For 2112.10748 (the only paper where Font::merge fires often)
+that's 109k calls × ~6 `Option<Cow<str>>::as_ref` internal calls
+≈ 650k `.as_ref()` invocations. At ~2 ns each that's ~1.3 ms
+total, **NOT 4.95% of 18 seconds**. Same thin-LTO phantom as
+the Tokens::fmt bucket (§3 below).
 
-* **Cow → SymStr direct return**: many lookup sites just compare or
-  format the result; an `Option<SymStr>` (interned, copyable) would
-  skip the `Cow::Borrowed` wrapper entirely.
-* **Stack-allocated state writes**: most assign_value writes are
-  single-Stored values; using a small-vec backing for the chain
-  bucket (size ≤4) would skip the heap allocation for ~80% of
-  writes.
+**No action item from this sub-bucket.** State lookups still take
+real time — but the cost is in the lookup body, not in the
+`Cow::Borrowed` wrapper. A Cow→SymStr refactor would not move
+the needle.
 
-### 2. Token-stream allocation (3.41%)
+The companion bucket — `RawVecInner::non_null` for the state map's
+`(TableName, SymbolU32, Stored)` triple at 3.20% — is **real**.
+Counter on `State::assign_internal` (the actual map mutation entry
+point):
+
+| Paper | Wall | `assign_internal` calls | Calls/s |
+|---|---:|---:|---:|
+| 2208.10851 | 2.13 s | 1,417,498 | ~665 k/s |
+| 2112.10748 | 17.73 s | 555,308 | ~31 k/s |
+| 2103.00971 | 9.73 s | **8,802,754** | **~905 k/s** |
+
+The TikZ paper (`2103.00971`) writes **8.8 million** state entries
+in 9.7 s. Even at 50 ns per entry (HashMap insert + alloc) that's
+~440 ms / 4.5% of wall — credible.
+
+**Action item**: A small-vec backing for the per-key chain (the
+`VecDeque<Stored>` stored as the map value) would skip the heap
+allocation when a key has ≤4 generations of stacked values, which
+is the overwhelming common case (counter values, font frames,
+keyword toggles). The HashMap itself is fine; the per-entry inner
+collection is the hot allocator.
+
+### 2. Token-stream allocation — **REAL** (verified at 26.3M calls on TikZ)
 
 `<Vec<Token> as SpecFromIterNested<…>>::from_iter` — building new
-token vectors from iterators. Hot during macro expansion, which
-sees many "tokenize this expansion body and prepend to gullet"
-operations. Each operation allocates a fresh `Vec<Token>`.
+token vectors from iterators. Counter on `Tokens::new` (the
+wrapper that every `.collect::<Tokens>()` and every direct Vec
+construction passes through), plus a per-call size histogram:
 
-**Proposed ideas**:
+| Paper | Wall | `Tokens::new` calls | Calls/s |
+|---|---:|---:|---:|
+| 2208.10851 | 2.13 s | 3,911,588 | ~1.8 M/s |
+| 2112.10748 | 17.73 s | 1,055,520 | ~60 k/s |
+| 2103.00971 | 9.73 s | **26,314,781** | **~2.7 M/s** |
 
-* **SmallVec for short bodies**: `Tokens::new` typically holds
-  ≤8 tokens for stub macros and ≤32 for raw-TeX `\def` bodies.
-  A `SmallVec<[Token; 8]>` backing would skip the heap on ~70% of
-  expansions.
-* **Reusable scratch buffer in the gullet**: the gullet already
-  has a per-thread state. Adding a `Vec<Token>` scratch that's
-  cleared rather than dropped between expansions would amortise
-  the alloc.
+Per-call size distribution on the TikZ paper `2103.00971`
+(percentages of 26.3 M total):
+
+| Size | Count | Share |
+|---:|---:|---:|
+| 0 (empty) | 1,469,918 | 6 % |
+| 1 token | **14,495,920** | **55 %** |
+| 2–4 tokens | 2,762,931 | 10 % |
+| 5–8 tokens | 945,272 | 4 % |
+| 9–16 tokens | 2,364,592 | 9 % |
+| 17–32 tokens | 2,270,439 | 9 % |
+| 33+ tokens | 2,005,709 | 8 % |
+
+**~70 % of all Tokens are ≤4 tokens long.** A `SmallVec<[Token;
+4]>` backing would skip the heap on ~70 % of allocations
+(empty + 1-token + 2-4 buckets); a `SmallVec<[Token; 8]>` would
+cover ~75 %.
+
+**Action item**: change `pub struct Tokens(Vec<Token>);` to
+`pub struct Tokens(SmallVec<[Token; 4]>);` (or `[Token; 8]`). The
+public API of `Tokens` already abstracts over the inner storage;
+the change is contained behind the existing `.unlist*()` methods.
+Risk: `Token` is `Copy` and small (16 bytes per current inspection,
+let me confirm), so `SmallVec<[Token; 4]>` is 64 + tag bytes inline
+— acceptable footprint. The 33+ bucket (8 % of allocs, 2 M calls
+on this paper) still pays for a heap alloc, which is correct.
 
 ### 3. Tokens fmt — **retracted** (addr2line under thin-LTO mis-attribution)
 
@@ -169,27 +216,31 @@ fires on `\roman{ctr}` invocations. Likely called via list-counter
 secondary forms ("page i, ii, iii") that pgfplots' axis labels
 inadvertently trigger.
 
-## Aggregate
+## Aggregate (verified 2026-05-16)
 
-Estimated wins from chasing the three remaining leaf-level patterns
-(Cow→SymStr, SmallVec for tokens, smallvec for state-chain). The
-"Tokens fmt" bucket has been retracted (see §3 above — phantom
-symbol from thin-LTO inlining):
+Two of the original four leaf-level buckets were thin-LTO phantoms
+(Tokens fmt, Option<Cow<str>>::as_ref — see §3 and §1 above). The
+remaining two are real and concentrated on TikZ-style papers:
 
-| Bucket | Current | After plausible fix | Δ |
-|---|---:|---:|---:|
-| Option<Cow<str>>::as_ref | 4.95% | ~2.5% | –2.4% |
-| Vec<Token> from_iter | 3.41% | ~1.8% | –1.6% |
-| State map alloc | 3.20% | ~1.6% | –1.6% |
-| **Total** | **11.56%** | **~5.9%** | **–5.6%** |
+| Bucket | Verification | Hottest paper | Calls (s⁻¹) | Plausible fix |
+|---|---|---|---:|---|
+| Tokens::new (Vec<Token> alloc) | 26.3 M counted | 2103.00971 | ~2.7 M/s | `SmallVec<[Token; 4]>` |
+| assign_internal (state-map entry) | 8.8 M counted | 2103.00971 | ~905 k/s | small-vec backing on per-key chain |
 
-A ~6% reduction in macro-engine instruction count would shave
-roughly the same fraction off digest wall on macro-heavy papers
-(~6% × 8.8s ≈ **0.5s** off `2103.00971`'s digest). That's worth a
-sprint but won't change the dominant story: matlab2tikz output is
-*genuinely large* (12 000 numeric rows × per-row macro expansion);
-the only way to halve digest on it is to bypass the pgfplots `table
-{...}` expansion in Rust, which is a much larger project.
+SmallVec backing for `Tokens` is the highest-confidence win: ~70 %
+of `Tokens::new` calls allocate ≤4 tokens; making the inline path
+heap-free would eliminate ~18 M of the 26 M heap allocations on
+2103.00971. At ~50 ns per alloc that's ~0.9 s — roughly **10 % of
+digest wall on the matlab2tikz paper**, and proportional smaller
+gains on other macro-heavy papers.
+
+Both fixes are real refactors (touch `Tokens` field type or
+`State` per-key VecDeque), not one-liners. They are worth a sprint
+but won't change the dominant story for TikZ papers: matlab2tikz
+output is *genuinely large* (12 000 numeric rows × per-row macro
+expansion); the only way to halve digest on it is to bypass the
+pgfplots `\addplot table {...}` expansion in Rust, which is a much
+larger project.
 
 ## Nuclear option: pgfplots `\addplot table {...}` Rust bypass
 
