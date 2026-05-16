@@ -125,6 +125,7 @@ pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
+pub mod interact_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod lipics_cls;
@@ -289,6 +290,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
+  ("interact", "cls", interact_cls::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jmlr", "cls", jmlr_cls::load_definitions),
   ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
