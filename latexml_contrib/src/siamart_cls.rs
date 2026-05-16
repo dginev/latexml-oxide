@@ -18,6 +18,7 @@ LoadDefinitions!({
   RequirePackage!("cleveref");
   // siamart220329 L1361: \RequirePackage{algorithm}.
   RequirePackage!("algorithm");
+  RequirePackage!("url");
   // ifpdf is auto-loaded inside epstopdf; our binding triggers
   // \ifpdf usage during epstopdf raw-load, so preload it here.
   RequirePackage!("ifpdf");
@@ -39,6 +40,10 @@ LoadDefinitions!({
   DefMacro!("\\headers{}{}", "");
   DefMacro!("\\dedicatory{}", "");
   DefMacro!("\\fundingsource{}", "");
+  // siamart papers often \externaldocument supplement/article before
+  // loading xr — pre-stub.
+  DefMacro!("\\externaldocument[]{}", "");
+  DefMacro!("\\externalcitedocument[]{}", "");
   // siamart220329 L1130: \funding{...} writes a marked line in the
   // titlepage. Stub as gobble; the text appears in acknowledgements
   // section of the paper typically.
