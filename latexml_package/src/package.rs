@@ -327,6 +327,7 @@ pub mod pgfrcs_sty;
 pub mod pgfsys_latexml_def;
 pub mod pgfutil_common_tex;
 pub mod physics_sty;
+pub mod pict2e_sty;
 pub mod pifont_sty;
 pub mod placeins_sty;
 pub mod pos_cls;
