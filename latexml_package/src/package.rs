@@ -288,6 +288,7 @@ pub mod nameref_sty;
 pub mod natbib_sty;
 pub mod neurips_sty;
 pub mod newcent_sty;
+pub mod newclude_sty;
 pub mod newfloat_sty;
 pub mod newlfont_sty;
 pub mod newtxmath_sty;

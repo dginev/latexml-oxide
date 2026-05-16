@@ -450,6 +450,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("multicol", "sty", package::multicol_sty::load_definitions),
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),
+  ("newclude", "sty", package::newclude_sty::load_definitions),
   ("newfloat", "sty", package::newfloat_sty::load_definitions),
   ("applemac", "def", package::applemac_def::load_definitions),
   ("cp852", "def", package::cp852_def::load_definitions),
