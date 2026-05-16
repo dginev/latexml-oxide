@@ -3970,14 +3970,31 @@ LoadDefinitions!({
     state::push_value(&s!("opt@{}.cls", name_str), opts)?;
   });
 
+  // Perl `latex_constructs.pool.ltxml`:
+  //   DefConstructor('\RequirePackageWithOptions Semiverbatim []',
+  //     "<?latexml package='#1'?>",
+  //     beforeDigest => onlyPreamble,
+  //     afterDigest => sub {
+  //       my $package = ToString($whatsit->getArg(1));
+  //       $package =~ s/\s+//g;
+  //       RequirePackage($package, withoptions => 1);
+  //       return; });
+  //
+  // Rust used to NO-OP the `\RequirePackage` step (afterDigest was a
+  // commented-out reference). That left `\citep`/`\citet` undefined
+  // when a paper used a wrapper package that did
+  // `\RequirePackageWithOptions{natbib}` (e.g. usbib.sty in
+  // arXiv:2512.13468). Port the call to `require_package_with_options`,
+  // which already handles the option-list lookup from
+  // `opt@<currname>.<currext>`.
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
   before_digest => { only_preamble("\\RequirePackage") }
-  // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-  //   my $package = ToString($whatsit->getArg(1));
-  //   $package =~ s/\s+//g;
-  //   RequirePackage($package, withoptions => 1);
-  //   return; }
+  after_digest => sub[whatsit] {
+    let pkg_arg: Option<&Digested> = whatsit.get_arg(1);
+    let pkg = pkg_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+    latexml_core::binding::content::require_package_with_options(&pkg)?;
+  }
   );
 
   // Perl `latex_constructs.pool.ltxml`:
