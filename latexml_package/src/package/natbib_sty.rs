@@ -1018,8 +1018,21 @@ LoadDefinitions!({
     Let!("\\citename", "\\natbib@citename");
   });
 
-  // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
-  DefMacro!("\\@lbibitem[]{}",
+  // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd.
+  //
+  // Read the {key} arg as `Semiverbatim` (catcodes neutralized to OTHER)
+  // not plain `{}`. Bibitem keys can contain `_`, `^`, `&` — DBLP-style
+  // keys like `DBLP:conf/nips/incontext_AgarwalSZBRCZAA24` are common in
+  // arXiv `.bbl` files (witnesses: 2509.20805 / 2510.00068 / 2510.00632).
+  // Without semiverbatim, the `_` retains catcode SUB, and after macro
+  // substitution the SUB token leaks into the post-`\@@lbibitem`
+  // `\newblock` text stream — Stomach then errors with
+  // `Error:unexpected:_ Script _ can only appear in math mode`.
+  // Perl's natbib.sty.ltxml:638 uses `[]{}` and gets away with it because
+  // its parameter reader's brace-group capture neutralizes catcodes by
+  // default; Rust's `{}` arg type preserves the source catcodes faithfully.
+  // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
+  DefMacro!("\\@lbibitem[] Semiverbatim",
     "\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
 
