@@ -153,6 +153,7 @@ pub mod euler_sty;
 pub mod eulervm_sty;
 pub mod eurosym_sty;
 pub mod euscript_sty;
+pub mod everyshi_sty;
 pub mod expl3_ltx;
 pub mod expl3_lua;
 pub mod expl3_sty;

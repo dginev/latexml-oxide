@@ -857,6 +857,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("calrsfs", "sty", package::calrsfs_sty::load_definitions),
   ("cmbright", "sty", package::cmbright_sty::load_definitions),
   ("euscript", "sty", package::euscript_sty::load_definitions),
+  ("everyshi", "sty", package::everyshi_sty::load_definitions),
   ("expl3", "lua", package::expl3_lua::load_definitions),
   ("expl3", "sty", package::expl3_sty::load_definitions),
   ("expl3", "ltx", package::expl3_ltx::load_definitions),
