@@ -24,7 +24,11 @@ LoadDefinitions!({
   // Witness: 2503.09172 (warning_papers_3) — 18 errors, all rooted
   // here.
   DefMacro!("\\Xhline{}", "\\hline", locked => true);
-  DefMacro!("\\Xcline{}", "\\cline{#1}", locked => true);
+  // `\Xcline{a-b}{w}` — second arg is rule width, ignored for HTML/XML.
+  // Without consuming `{w}`, the leftover `{0.5pt}` slipped into the next
+  // tabular cell and triggered `\omit cannot be used here` cascades
+  // (witness 2512.08643).
+  DefMacro!("\\Xcline{}{}", "\\cline{#1}", locked => true);
 
   // Mark thead et.al as headers (row & column).
   // Perl is DefMacroI with an imperative sub body (no token return);
