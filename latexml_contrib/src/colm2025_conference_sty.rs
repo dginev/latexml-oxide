@@ -3,6 +3,12 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   RequirePackage!("natbib");
+  // Some COLM 2025 templates author-edit the .sty to add `\definecolor`
+  // calls before users `\usepackage{color}`. Eager-load color/xcolor so
+  // the templates' early color definitions don't trip "\\definecolor
+  // undefined". Witness 2503.21480 (definecolor at colm2025 L11).
+  RequirePackage!("color");
+  RequirePackage!("xcolor");
 
   // Author-list separators (colm L107-153).
   DefMacro!("\\And", " ");
