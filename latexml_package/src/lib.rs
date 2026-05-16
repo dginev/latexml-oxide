@@ -41,6 +41,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("eTeX", "pool", engine::etex::load_definitions),
   ("pdfTeX", "pool", engine::pdftex::load_definitions),
   ("AmSTeX", "pool", engine::amstex::load_definitions),
+  ("BibTeX", "pool", engine::bibtex::load_definitions),
   ("latexml", "sty", package::latexml_sty::load_definitions),
   ("lxRDFa", "sty", package::lxrdfa_sty::load_definitions),
   ("marvosym", "sty", package::marvosym_sty::load_definitions),

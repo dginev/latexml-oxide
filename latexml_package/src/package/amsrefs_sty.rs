@@ -5,7 +5,7 @@ LoadDefinitions!({
   // Perl: amsrefs.sty.ltxml — Leverage the BibTeX implementation
 
   // Perl: LoadPool('BibTeX');
-  // TODO: BibTeX pool not yet ported to Rust
+  LoadPool!("BibTeX");
 
   // Perl: DefParameterType('BibURL', ...) — semiverbatim URL reading
   // Perl: DefKeyVal('amsrefs', 'url', 'BibURL');
