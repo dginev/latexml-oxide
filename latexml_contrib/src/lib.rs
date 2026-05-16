@@ -107,6 +107,7 @@ pub mod scicite_sty;
 pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
+pub mod siamart_cls;
 pub mod siamltex_cls;
 pub mod stix2_sty;
 pub mod stix_sty;
@@ -238,6 +239,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("minted", "sty", minted_sty::load_definitions),
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
+  ("siamart", "cls", siamart_cls::load_definitions),
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("svn-multi", "sty", svn_multi_sty::load_definitions),
   ("svninfo", "sty", svninfo_sty::load_definitions),
