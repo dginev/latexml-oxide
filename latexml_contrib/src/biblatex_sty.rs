@@ -244,6 +244,15 @@ LoadDefinitions!({
   DefMacro!("\\blx@bbl@boolfalse{}", "", locked => true);
   Let!("\\true", "\\blx@bbl@booltrue");
   Let!("\\false", "\\blx@bbl@boolfalse");
+
+  // biblatex `\keyalias{alias}{target}` (TL biblatex.sty L8519-8521 +
+  // L8858 `\let\keyalias\blx@bbl@keyalias`) maps a cite-key alias to
+  // the canonical entry key. We don't track these mappings (our \cite
+  // resolves directly), so the stub can be a no-op. Witness:
+  // arXiv:2510.00068 — biblatex .bbl with 49 `\keyalias{...}{...}`
+  // entries, each generating an undefined-CS error.
+  DefMacro!("\\blx@bbl@keyalias{}{}", "", locked => true);
+  Let!("\\keyalias", "\\blx@bbl@keyalias");
   // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
   // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
   // emitted by repeated \endentry calls in `\thebibliography{count}…
