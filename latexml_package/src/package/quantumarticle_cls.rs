@@ -37,6 +37,9 @@ LoadDefinitions!({
   // Witness 2406.00091: `\onecolumngrid \section*{APPENDIX}`.
   DefMacro!("\\onecolumngrid", "");
   DefMacro!("\\twocolumngrid", "");
+  // quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
+  // Render as classification block to preserve the metadata.
+  DefMacro!("\\keywords{}", "");
 
   DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
