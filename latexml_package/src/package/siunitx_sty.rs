@@ -2573,6 +2573,10 @@ LoadDefinitions!({
   // Witnesses 2406.02765, 2406.18417.
   Let!("\\unit", "\\si");
 
+  // siunitx v3 \qty[options]{number}{units} — equivalent to v2 \SI.
+  // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
+  // \SI's own DefMacro registration.
+
   // \SI[options]{number}{units}
   DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
     let number = number_arg.clone();
@@ -2638,6 +2642,13 @@ LoadDefinitions!({
   });
 
   Let!("\\tablenum", "\\num");
+
+  // siunitx v3 \qty[options]{number}{units} — v3 spelling of v2 \SI.
+  // Witness 2406.20067, 2407.03167.
+  Let!("\\qty", "\\SI");
+  Let!("\\qtylist", "\\SIlist");
+  Let!("\\qtyrange", "\\SIrange");
+  Let!("\\qtyproduct", "\\SIlist");
 
   //======================================================================
   // Table column types S and s — Perl: DefColumnType('S Optional', ...) and
