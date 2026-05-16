@@ -1928,14 +1928,31 @@ impl Processor for Graphics {
                   raw_dims: Self::read_image_dimensions(abs_dest_str),
                 }
               } else {
-                // Final-failure: every conversion path exhausted. Promoted
-                // from warn → Error 2026-05-08 because we want all
-                // images to convert successfully, and a silent warning
-                // hides regressions in the rasterizer chain.
-                // Error class/object mirror Perl Graphics.pm:274
-                // `Error('imageprocessing', $source, …)` so the
-                // harness aggregates with engine/package emissions.
-                log_post_error!(
+                // Final-failure: every conversion path exhausted.
+                //
+                // Cycle: Promoted from warn → Error 2026-05-08 to surface
+                // rasterizer regressions, then DOWNGRADED back to warn
+                // 2026-05-15 after observing that >95% of failures in
+                // arxmliv corpus are paper-bug EPS files (gnuplot
+                // `\sqrt(-x)` rangecheck, fonts not embedded, malformed
+                // %%BoundingBox, etc.). Witness: arXiv:2511.16872 — 13
+                // gnuplot EPS files all hit `Ghostscript: /rangecheck in
+                // --sqrt--`, and pdflatex on the same EPS skips the
+                // image with a warning rather than failing.
+                //
+                // Content is preserved either way — the fallback
+                // `copy_to_destination` below copies the original EPS
+                // into the output directory, so the `<ltx:graphics src=>`
+                // attribute still points to a real file. Browsers can't
+                // render EPS natively, but neither can pdflatex render
+                // a broken EPS — the structure is intact.
+                //
+                // Pipeline regressions in the rasterizer chain still
+                // surface via the upstream `Warn:` calls in the
+                // per-tool `ImageMagick` / `pdftoppm` / `mutool` paths
+                // below, plus the post-processing `Info:` cumulative
+                // tally per paper.
+                log_post_warn!(
                   "imageprocessing", source,
                   "Graphics: Failed to convert {} to {}", source, abs_dest_str
                 );
