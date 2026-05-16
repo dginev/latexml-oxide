@@ -9,8 +9,11 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
 
-  // Birkhauser frontmatter
-  DefMacro!("\\subjclass{}", "");
-  DefMacro!("\\keywords{}", "");
-  DefMacro!("\\dedicatory{}", "");
+  // Birkhauser frontmatter — preserve author content.
+  DefMacro!("\\subjclass{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\dedicatory{}",
+    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
 });

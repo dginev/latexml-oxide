@@ -19,12 +19,18 @@ LoadDefinitions!({
   DefMacro!("\\theHfigure{}", "");
   DefMacro!("\\theHtable{}", "");
 
-  // Author-block
+  // Author-block — preserve author-supplied affiliation / equalcont /
+  // presentaddress content as ltx:note frontmatter.
   DefMacro!("\\author*[]{}", "\\author{#2}");
-  DefMacro!("\\affil[]{}", "");
-  DefMacro!("\\affil*[]{}", "");
-  DefMacro!("\\equalcont{}", "");
-  DefMacro!("\\presentaddress{}", "");
+  DefMacro!("\\affil[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\affil*[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\equalcont{}",
+    "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}");
+  DefMacro!("\\presentaddress{}",
+    "\\@add@frontmatter{ltx:note}[role=present-address]{#1}");
+  // Name part helpers (first-name, surname) — emit inline.
   DefMacro!("\\fnm{}", "#1");
   DefMacro!("\\sur{}", "#1");
 

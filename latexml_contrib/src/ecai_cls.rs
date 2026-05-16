@@ -8,8 +8,9 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
 
-  // ECAI frontmatter (ecai.cls L1290).
-  DefMacro!("\\paperid{}", "");
+  // ECAI frontmatter (ecai.cls L1290) — preserve paper ID as note.
+  DefMacro!("\\paperid{}",
+    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
   DefMacro!("\\makepaperid", "");
   // {ack} environment — acknowledgments block. Render content
   // inline (matches our neurips_sty pattern). Witness 2408.16081.

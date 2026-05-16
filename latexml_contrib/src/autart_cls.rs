@@ -17,10 +17,14 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\begin{ack*}"), None, "");
   DefMacro!(T_CS!("\\end{ack*}"), None, "");
 
-  // Common elsart frontmatter macros (autart inherits elsart style).
-  DefMacro!("\\address[]{}", "");
-  DefMacro!("\\thanksref{}", "");
-  DefMacro!("\\corauthref{}", "");
-  DefMacro!("\\corauth{}", "");
-  DefMacro!("\\thanks{}", "");
+  // Common elsart frontmatter macros (autart inherits elsart style) —
+  // preserve author-supplied content as ltx:note frontmatter.
+  DefMacro!("\\address[]{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#2}");
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
+  DefMacro!("\\corauthref{}", "\\textsuperscript{*#1}");
+  DefMacro!("\\corauth{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
+  DefMacro!("\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
 });

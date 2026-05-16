@@ -12,11 +12,15 @@ LoadDefinitions!({
   RequirePackage!("apacite");
 
   // AGU frontmatter (agujournal2019.cls L389+, L573-587).
+  // Internal toggles — no content.
   DefMacro!("\\draftfalse", "");
   DefMacro!("\\drafttrue", "");
-  DefMacro!("\\journalname{}", "");
-  DefMacro!("\\correspondingauthor{}{}", "");
   DefConditional!("\\ifdraft");
+  // Author-supplied metadata — preserve as ltx:note frontmatter.
+  DefMacro!("\\journalname{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\correspondingauthor{}{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1, #2}");
 
   // {keypoints} env — AGU title-page key-points list.
   DefEnvironment!(
