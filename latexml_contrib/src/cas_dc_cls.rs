@@ -36,4 +36,10 @@ LoadDefinitions!({
 
   // \sep — author/affil separator that cas-common defines.
   DefMacro!("\\sep", ",");
+
+  // cas-common credit-tagging macros (CRediT taxonomy). \credit{role}
+  // attaches an author contribution; \printcredits emits the credit list.
+  // Both are pure metadata; gobble cleanly. Witness 2405.20972.
+  DefMacro!("\\credit{}", "");
+  DefMacro!("\\printcredits", "");
 });

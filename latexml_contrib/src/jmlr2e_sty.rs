@@ -9,6 +9,12 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   RequirePackage!("natbib");
   RequirePackage!("amsthm");
+  // jmlr2e.sty L57-63 pulls in epsfig, amssymb, graphicx, hyperref.
+  // Mirror that so user code that calls \hypersetup / \href / \blacklozenge
+  // (from amssymb) at preamble time doesn't error. Witness 2406.03260.
+  RequirePackage!("amssymb");
+  RequirePackage!("graphicx");
+  RequirePackage!("hyperref");
 
   // Author-block font switches: no-op (identity).
   DefMacro!("\\name", "");
@@ -22,6 +28,10 @@ LoadDefinitions!({
   DefMacro!("\\firstpageno{}", "");
   DefMacro!("\\editor{}", "");
   DefMacro!("\\editors{}", "");
+
+  // jmlr2e.sty L372: \acks{text} — acknowledgments section. Render as a
+  // section heading so the text body still appears.
+  DefMacro!("\\acks{}", "\\section*{Acknowledgments and Disclosure of Funding}#1");
 
   // {keywords} env — frontmatter list, render as classification block.
   DefEnvironment!(
