@@ -226,6 +226,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("moderncv", "cls", package::moderncv_cls::load_definitions),
   ("slides", "cls", package::slides_cls::load_definitions),
   ("amsmath", "sty", package::amsmath_sty::load_definitions),
+  ("mathastext", "sty", package::mathastext_sty::load_definitions),
   ("mathtools", "sty", package::mathtools_sty::load_definitions),
   ("microtype", "sty", package::microtype_sty::load_definitions),
   ("amsrefs", "sty", package::amsrefs_sty::load_definitions),

@@ -265,6 +265,7 @@ pub mod makeidx_sty;
 pub mod marginnote_sty;
 pub mod marvosym_sty;
 pub mod mathabx_sty;
+pub mod mathastext_sty;
 pub mod mathbbol_sty;
 pub mod mathdots_sty;
 pub mod mathpazo_sty;
