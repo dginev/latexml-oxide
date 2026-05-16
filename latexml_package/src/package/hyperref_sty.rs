@@ -993,6 +993,11 @@ LoadDefinitions!({
   // Witness 2406.02150.
   DefMacro!(T_CS!("\\begin{NoHyper}"), None, "");
   DefMacro!(T_CS!("\\end{NoHyper}"), None, "");
+
+  // hyperref \let\ltx@label\label when loaded. Make available as
+  // alias for downstream packages (smartref, nccmath) that check.
+  // Witness 2406.01269.
+  Let!("\\ltx@label", "\\label");
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });
 
