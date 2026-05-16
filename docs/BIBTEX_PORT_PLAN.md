@@ -147,15 +147,42 @@ in isolation as a Rust `char_replacements` table.
 Per phase:
 - **Phase 1:** Unit tests covering `current_entry` lookup,
   crossref-copy, NormalizeBibKey↔CleanBibKey round-trip,
-  bibAddToContainer deduplication. No bindings ship yet.
+  process_bib_name_list parsing edges. No bindings ship yet.
+  **Status (2026-05-15)**: 19 unit tests in
+  `latexml_engine::bibtex::tests`, including the
+  Perl-faithful `et al.` (multi-word ≠ etal marker) edge.
+  `bibAddToContainer` unit tests defer to Phase 2 (needs the
+  Document-API helper to be in place).
 - **Phase 2-3:** A minimal amsrefs paper with one `\bib{key}{article}{
   author={X}, title={Y}, journal={Z}, year={2020}}` produces the
   same `<ltx:bibentry>` XML as Perl LaTeXML (up to known XML
   divergences in `docs/OXIDIZED_DESIGN.md`).
 - **Phase 4-5:** All 16 entry types + MR/Zbl synthesis produce
-  Perl-equivalent XML.
+  Perl-equivalent XML. Port the Perl end-to-end tests
+  `LaTeXML/t/structure/{bibsect,natbib,crazybib}.tex+.xml`
+  (+ `lit.bib` data fixture) into `latexml_oxide/tests/structure/`
+  and let the existing `tex_tests!` macro auto-discover them. These
+  are the canonical integration tests for the whole BibTeX
+  pipeline (TeX → XML); failures at Phase 4-5 will surface
+  through those.
 - **Phase 6:** BibTeX-format `@author={Š{m}́{i}th, J.}` accented
   inputs decode to the same Unicode as Perl.
+
+## Testing strategy
+
+Two layers run in parallel:
+
+1. **Rust unit tests** (`#[cfg(test)] mod tests` in
+   `latexml_engine::bibtex`) directly probe each helper. Perl
+   LaTeXML has no equivalent unit-level coverage — Perl tests
+   the helpers transitively through end-to-end TeX→XML runs. The
+   unit tests catch helper regressions before they propagate up.
+2. **End-to-end TeX→XML tests** (port Perl's bibsect/natbib/
+   crazybib pairs to `latexml_oxide/tests/structure/`, Phase 4+).
+   These are the binding-layer integration check; they validate
+   the whole pipeline against Perl's reference output.
+
+Phase 1 ships #1 only. #2 comes online when Def\* bindings exist.
 
 Overall: when the engine-wide CS-name diff (audit § Engine-wide
 CS-name diff refresh) shows the `\bib@*` family count dropping

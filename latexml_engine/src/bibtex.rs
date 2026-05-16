@@ -214,6 +214,244 @@ pub fn reset() {
   CURRENT_ENTRY_KEY.with(|k| *k.borrow_mut() = None);
 }
 
+/// A single parsed BibTeX-style author/editor name.
+///
+/// Perl returns this implicitly inside `Invocation(T_CS('\bib@surname'),
+/// Tokenize($surname))` etc. We expose the parsed triple so later
+/// phases can wrap it however they need (Tokens, XML, post-processed
+/// metadata) — splitting concerns at the parser/output boundary.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct BibName {
+  pub given:   String,
+  pub surname: String,
+  /// "Jr.", "Sr.", "III" — Perl `$jr`, `\bib@lineage` in TeX output.
+  pub lineage: String,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct BibNameList {
+  pub names: Vec<BibName>,
+  /// True if the input ended with `and others` / `and et al.` —
+  /// Perl's `$etal` flag, post-processed to append a final
+  /// `\bib@surname{others}` invocation.
+  pub etal:  bool,
+}
+
+/// Perl `splitWords` (`BibTeX.pool.ltxml` L921-949). Split a name
+/// string into words on whitespace / comma / tilde, but treat
+/// `{balanced}` groups as a single word. Commas survive as their
+/// own tokens. `\~` is preserved (Perl protects it via the
+/// `####` placeholder trick — we use a sentinel `\x00` byte
+/// which can't appear in TeX source).
+fn split_words(input: &str) -> Vec<String> {
+  // 1. Protect `\~`, normalise leading whitespace + `%\n` line continuations.
+  const PLACEHOLDER: &str = "\x00";
+  let s = input.replace("\\~", PLACEHOLDER);
+  let s = s.trim_start_matches(|c: char| c.is_whitespace() || c == '~');
+  let s = s.replace("%\n", "");
+
+  let mut words: Vec<String> = Vec::new();
+  let mut word = String::new();
+  let bytes = s.as_bytes();
+  let mut i = 0;
+  while i < bytes.len() {
+    let b = bytes[i];
+    // Check for `(comma?) whitespace+` separators. Perl regex:
+    // s/^(,?)[\s~]+//
+    if b == b',' || b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' || b == b'~' {
+      let had_comma = b == b',';
+      let mut j = i + 1;
+      // Either a leading comma we just consumed, or the whole run is
+      // pure whitespace/tilde — collect the trailing whitespace.
+      if had_comma {
+        while j < bytes.len()
+          && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~')
+        {
+          j += 1;
+        }
+      } else {
+        // Pure whitespace run; skip them.
+        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
+          j += 1;
+        }
+        // If we didn't actually see any whitespace beyond this one
+        // char, we still advance (the `[\s~]+` pattern matches `+`
+        // which requires ≥1; we have 1 = the current char).
+      }
+      // Flush accumulated word
+      if !word.is_empty() {
+        words.push(std::mem::take(&mut word));
+      }
+      if had_comma {
+        words.push(",".to_string());
+      }
+      i = j;
+    } else if b == b'{' {
+      // Extract balanced group; include the braces.
+      let start = i;
+      let mut depth = 0i32;
+      while i < bytes.len() {
+        match bytes[i] {
+          b'{' => depth += 1,
+          b'}' => {
+            depth -= 1;
+            if depth == 0 {
+              i += 1;
+              break;
+            }
+          },
+          _ => {},
+        }
+        i += 1;
+      }
+      // Append the entire braced chunk (including the braces) to the
+      // current word so it stays atomic across word splits — matches
+      // Perl `$word .= $t`.
+      word.push_str(&s[start..i]);
+    } else {
+      // Greedily accumulate until the next separator / `{`.
+      let start = i;
+      while i < bytes.len()
+        && !matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b'~' | b',' | b'{')
+      {
+        i += 1;
+      }
+      word.push_str(&s[start..i]);
+    }
+  }
+  if !word.is_empty() {
+    words.push(word);
+  }
+  // 6. Restore `\~`.
+  for w in words.iter_mut() {
+    if w.contains(PLACEHOLDER) {
+      *w = w.replace(PLACEHOLDER, "\\~");
+    }
+  }
+  words
+}
+
+/// Perl `processBibNameList` (`BibTeX.pool.ltxml` L872-918): parse a
+/// BibTeX-style author/editor list into structured names. The input
+/// is a raw string (Perl uses `UnTeX($names, 1)` to flatten Tokens
+/// first). Returns the parsed names plus an `etal` flag.
+///
+/// Name shapes recognised (BibTeX `bibtex.web` convention):
+///   - `First Last` — given before surname; the surname starts at
+///     the first lowercase word (e.g. `von`, `de la`) or, in the
+///     no-lowercase case, at the LAST word.
+///   - `Last, First` — surname first; one comma.
+///   - `Last, Jr., First` — surname + lineage + given; two commas.
+///
+/// Multiple names separated by ` and ` (case-insensitive). A
+/// trailing `and others` / `and et al.` sets `etal = true`.
+pub fn process_bib_name_list(input: &str) -> BibNameList {
+  let mut words = split_words(input);
+  let mut etal = false;
+  // Detect trailing `and others` / `and et al(.)?` and strip the
+  // last two words if present. Perl L878.
+  if words.len() >= 2 {
+    let last = &words[words.len() - 1];
+    let prev = &words[words.len() - 2];
+    if prev.eq_ignore_ascii_case("and") {
+      let last_lc = last.to_ascii_lowercase();
+      let last_lc = last_lc.trim_end_matches('.');
+      if matches!(last_lc, "others" | "et al" | "etal") {
+        words.pop();
+        words.pop();
+        etal = true;
+      }
+    }
+  }
+  let mut names: Vec<BibName> = Vec::new();
+  while !words.is_empty() {
+    // Collect words for one name, splitting comma-delimited phrases.
+    let mut phrases: Vec<Vec<String>> = Vec::new();
+    let mut phrase: Vec<String> = Vec::new();
+    while !words.is_empty() {
+      let word = words.remove(0);
+      if word.eq_ignore_ascii_case("and") {
+        break;
+      }
+      if word == "," {
+        phrases.push(std::mem::take(&mut phrase));
+      } else {
+        phrase.push(word);
+      }
+    }
+    if phrase.is_empty() && phrases.is_empty() {
+      // Empty name (consecutive `and`s, or stray comma+and). Perl
+      // emits Warn; we silently skip — the caller's Tokens output
+      // would be a no-op anyway.
+      continue;
+    }
+    if !phrase.is_empty() {
+      phrases.push(phrase);
+    }
+
+    let (given, surname, lineage) = match phrases.len() {
+      3 => {
+        // "von Last, Jr, First"
+        let surname = phrases[0].join(" ");
+        let lineage = phrases[1].join(" ");
+        let given = phrases[2].join(" ");
+        (given, surname, lineage)
+      },
+      2 => {
+        // "von Last, First"
+        let surname = phrases[0].join(" ");
+        let given = phrases[1].join(" ");
+        (given, surname, String::new())
+      },
+      _ => {
+        // "First [von] Last" — words before the FIRST lowercase
+        // word are given; the rest are surname. If no lowercase
+        // word, the LAST word is surname and the rest are given.
+        let pwords = &phrases[0];
+        let mut first: Vec<String> = Vec::new();
+        let mut rest: Vec<String> = pwords.clone();
+        while !rest.is_empty() && !starts_lowercase(&rest[0]) {
+          first.push(rest.remove(0));
+        }
+        if rest.is_empty() && !first.is_empty() {
+          // No lowercase word — move the last `first` word into rest.
+          rest.push(first.pop().unwrap());
+        }
+        let given = first.join(" ");
+        let surname = rest.join(" ");
+        (given, surname, String::new())
+      },
+    };
+    names.push(BibName { given, surname, lineage });
+  }
+  BibNameList { names, etal }
+}
+
+/// Helper for `process_bib_name_list`: does a word start with a
+/// lowercase letter? Perl test: `$word !~ /^[a-z]/` (NOT lowercase).
+/// We invert that. Word may have a leading `{...}` group — peek past
+/// it to find the first actual letter. Words starting with a control
+/// sequence like `\von` are treated as lowercase by inspecting the
+/// CS name's first letter (matches Perl behaviour for `\von Last`
+/// where the regex sees `\` which IS lowercase via the
+/// `[a-z]` heuristic — Perl's comment "This case test is not
+/// correct!!!" acknowledges this is approximate).
+fn starts_lowercase(word: &str) -> bool {
+  // Strip a single leading `{...}` envelope (BibTeX convention for
+  // forcing capitalisation: `{Smith}` should be opaque).
+  let stripped = if let Some(rest) = word.strip_prefix('{') {
+    rest.trim_end_matches('}')
+  } else {
+    word
+  };
+  // Skip a leading `\` (control sequence) — peek at the next char.
+  let stripped = stripped.strip_prefix('\\').unwrap_or(stripped);
+  stripped
+    .chars()
+    .next()
+    .is_some_and(|c| c.is_lowercase())
+}
+
 LoadDefinitions!({
   // Perl BibTeX.pool.ltxml L19: `LoadPool('LaTeX')` — BibTeX
   // pool is built on top of the full LaTeX format, since bib
@@ -334,5 +572,129 @@ mod tests {
     assert!(current_entry().is_none());
     assert!(current_entry_field("title").is_none());
     assert!(current_entry_raw_field("title").is_none());
+  }
+
+  // --- process_bib_name_list tests (Perl `processBibNameList`) ---
+
+  #[test]
+  fn name_first_last() {
+    let r = process_bib_name_list("Jane Smith");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "Jane");
+    assert_eq!(r.names[0].surname, "Smith");
+    assert_eq!(r.names[0].lineage, "");
+    assert!(!r.etal);
+  }
+
+  #[test]
+  fn name_last_comma_first() {
+    let r = process_bib_name_list("Smith, Jane");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "Jane");
+    assert_eq!(r.names[0].surname, "Smith");
+    assert_eq!(r.names[0].lineage, "");
+  }
+
+  #[test]
+  fn name_with_lineage() {
+    let r = process_bib_name_list("Smith, Jr., Bob");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].surname, "Smith");
+    assert_eq!(r.names[0].lineage, "Jr.");
+    assert_eq!(r.names[0].given, "Bob");
+  }
+
+  #[test]
+  fn name_with_von_particle() {
+    // "First von Last" — lowercase `von` triggers the split:
+    // first = ["Ludwig"], rest = ["von", "Beethoven"] → surname.
+    let r = process_bib_name_list("Ludwig von Beethoven");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "Ludwig");
+    assert_eq!(r.names[0].surname, "von Beethoven");
+  }
+
+  #[test]
+  fn name_all_capital_falls_back_to_last_word() {
+    // No lowercase word — last word becomes surname per Perl
+    // L909 `push(@pwords, pop(@first)) unless @pwords;`.
+    let r = process_bib_name_list("John Q Public");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "John Q");
+    assert_eq!(r.names[0].surname, "Public");
+  }
+
+  #[test]
+  fn multiple_names_separated_by_and() {
+    let r = process_bib_name_list("Jane Smith and John Doe and Alice Brown");
+    assert_eq!(r.names.len(), 3);
+    assert_eq!(r.names[0].surname, "Smith");
+    assert_eq!(r.names[1].surname, "Doe");
+    assert_eq!(r.names[2].surname, "Brown");
+    assert!(!r.etal);
+  }
+
+  #[test]
+  fn etal_others_marker() {
+    let r = process_bib_name_list("Jane Smith and others");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].surname, "Smith");
+    assert!(r.etal);
+  }
+
+  #[test]
+  fn etal_etal_single_word_marker() {
+    // Perl's etal regex (`^(others|et\s*al\.?)$/i`) requires the
+    // whole "et al" token to be ONE word — splitWords splits on
+    // whitespace so "et al." becomes two words and the regex
+    // doesn't fire. Match Perl-faithful: only `etal` / `etal.` as
+    // a single word triggers etal detection. The multi-word
+    // "et al." case becomes a second author with surname="et al."
+    // — same as Perl LaTeXML.
+    let r = process_bib_name_list("Smith and etal.");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].surname, "Smith");
+    assert!(r.etal);
+  }
+
+  #[test]
+  fn et_al_multi_word_is_not_etal_per_perl() {
+    // Perl-faithful: split words case stays as a second "author".
+    let r = process_bib_name_list("Smith and et al.");
+    assert_eq!(r.names.len(), 2);
+    assert_eq!(r.names[0].surname, "Smith");
+    assert_eq!(r.names[1].surname, "et al.");
+    assert!(!r.etal);
+  }
+
+  #[test]
+  fn braced_group_stays_atomic() {
+    // BibTeX convention: `{De Long}` is a single surname token, the
+    // braces protect "De" from being treated as a separate (capital)
+    // word. After unwrapping for the lowercase check, it starts with
+    // 'D' which is uppercase, so it falls into the "First Last"
+    // branch and our heuristic puts the whole `{De Long}` as
+    // surname.
+    let r = process_bib_name_list("John {De Long}");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "John");
+    assert_eq!(r.names[0].surname, "{De Long}");
+  }
+
+  #[test]
+  fn tilde_treated_as_space() {
+    // `~` is the LaTeX non-breaking space; BibTeX names use it for
+    // initials. Perl's splitWords treats it as a hard space.
+    let r = process_bib_name_list("J.~K. Rowling");
+    assert_eq!(r.names.len(), 1);
+    assert_eq!(r.names[0].given, "J. K.");
+    assert_eq!(r.names[0].surname, "Rowling");
+  }
+
+  #[test]
+  fn empty_input_returns_empty_list() {
+    let r = process_bib_name_list("");
+    assert!(r.names.is_empty());
+    assert!(!r.etal);
   }
 }
