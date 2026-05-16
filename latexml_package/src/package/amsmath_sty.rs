@@ -479,6 +479,27 @@ LoadDefinitions!({
     "\\xleftarrow",
     "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
   );
+  // extarrows.sty defines \xlongrightarrow/\xlongleftarrow with the
+  // same look-and-feel as amsmath's \xrightarrow/\xleftarrow but using
+  // a longer arrow base. We don't have a separate stretched-long
+  // variant in our font set; reuse the standard arrow rendering.
+  // Witnesses 2405.19992, 2406.05043.
+  DefMacro!(
+    "\\xlongrightarrow",
+    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}"
+  );
+  DefMacro!(
+    "\\xlongleftarrow",
+    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}"
+  );
+  DefMacro!(
+    "\\xlongLeftarrow",
+    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}"
+  );
+  DefMacro!(
+    "\\xlongRightarrow",
+    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}"
+  );
   DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
     role => "ARROW", stretchy => true, alias => "\\leftarrow");
   DefMath!("\\lx@stretchy@rightarrow", "\u{2192}",
