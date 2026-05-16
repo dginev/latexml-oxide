@@ -1136,6 +1136,18 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   let input: String = raw_input.split_whitespace().collect::<Vec<_>>().join(" ");
   let input = input.trim();
 
+  // 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped
+  //    scalars so the `?:` operator and `ifthenelse(...)` can return
+  //    string values like `"black"` or `"pgreen!50"` for color names.
+  //    Our parser is f64-only, so detect the pattern
+  //      <test> ? "a" : "b"     OR     ifthenelse(<test>, "a", "b")
+  //    early, evaluate the test as a number, and return the chosen
+  //    string literal. Drivers: 2601.14798 (color jitter heatmap),
+  //    Stage-20 v6 ~1579 errors from \pgfmathsetmacro{\clr}{...}.
+  if let Some(result) = try_string_ternary(input) {
+    return (result, false);
+  }
+
   // 1. Simple number check (Perl L332-345)
   if let Some(result) = try_simple_number(input) {
     return (result, false);
@@ -1161,6 +1173,100 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
 
 /// Convenience wrapper that returns only the result string
 pub fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
+
+/// Detect string-valued pgfmath ternaries `<test> ? "a" : "b"` or
+/// `ifthenelse(<test>, "a", "b")` and return the chosen literal.
+/// Returns None if the pattern doesn't match or contains no string args.
+fn try_string_ternary(input: &str) -> Option<String> {
+  // Strip ifthenelse(...) wrapper if present
+  let inner = if let Some(rest) = input.strip_prefix("ifthenelse(") {
+    let body = rest.strip_suffix(')')?;
+    // Re-shape as ternary: split on top-level commas (depth 0 of nested parens/quotes)
+    let parts = split_top_commas(body)?;
+    if parts.len() != 3 { return None; }
+    format!("{} ? {} : {}", parts[0].trim(), parts[1].trim(), parts[2].trim())
+  } else {
+    input.to_string()
+  };
+  // Find top-level `?` and `:` (skipping inside quotes and parens)
+  let (cond, then_part, else_part) = split_ternary(&inner)?;
+  // Branches must include at least one quoted string for this path to make sense
+  let then_is_str = then_part.trim().starts_with('"');
+  let else_is_str = else_part.trim().starts_with('"');
+  if !then_is_str && !else_is_str {
+    return None;
+  }
+  // Evaluate the test as a number via the regular f64 parser
+  let mut p = PgfMathParser::new(cond.trim());
+  let test_val = p.formula()?;
+  let chosen = if test_val != 0.0 { then_part } else { else_part };
+  // Strip outer quotes if present; otherwise return as-is
+  let trimmed = chosen.trim();
+  let unq = if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
+    &trimmed[1..trimmed.len()-1]
+  } else {
+    trimmed
+  };
+  Some(unq.to_string())
+}
+
+/// Split a string on commas at the top level (depth 0), skipping
+/// nested parens/brackets and quoted substrings.
+fn split_top_commas(s: &str) -> Option<Vec<&str>> {
+  let bytes = s.as_bytes();
+  let mut parts = Vec::new();
+  let mut start = 0usize;
+  let mut depth: i32 = 0;
+  let mut in_quote = false;
+  for (i, &b) in bytes.iter().enumerate() {
+    match b {
+      b'"' => in_quote = !in_quote,
+      b'(' | b'[' | b'{' if !in_quote => depth += 1,
+      b')' | b']' | b'}' if !in_quote => depth -= 1,
+      b',' if !in_quote && depth == 0 => {
+        parts.push(&s[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  parts.push(&s[start..]);
+  Some(parts)
+}
+
+/// Split `cond ? then : else` at the top-level `?` and `:`.
+/// Skips inside quotes and parens. Returns (cond, then, else).
+fn split_ternary(s: &str) -> Option<(&str, &str, &str)> {
+  let bytes = s.as_bytes();
+  let mut depth: i32 = 0;
+  let mut in_quote = false;
+  let mut q_pos: Option<usize> = None;
+  for (i, &b) in bytes.iter().enumerate() {
+    match b {
+      b'"' => in_quote = !in_quote,
+      b'(' | b'[' | b'{' if !in_quote => depth += 1,
+      b')' | b']' | b'}' if !in_quote => depth -= 1,
+      b'?' if !in_quote && depth == 0 => { q_pos = Some(i); break; },
+      _ => {},
+    }
+  }
+  let qp = q_pos?;
+  // Now find the matching `:` after qp at depth 0
+  let mut depth: i32 = 0;
+  let mut in_quote = false;
+  for (j, &b) in bytes.iter().enumerate().skip(qp + 1) {
+    match b {
+      b'"' => in_quote = !in_quote,
+      b'(' | b'[' | b'{' if !in_quote => depth += 1,
+      b')' | b']' | b'}' if !in_quote => depth -= 1,
+      b':' if !in_quote && depth == 0 => {
+        return Some((&s[..qp], &s[qp+1..j], &s[j+1..]));
+      },
+      _ => {},
+    }
+  }
+  None
+}
 
 // ==================== Macro Definitions ====================
 
