@@ -234,17 +234,17 @@ LoadDefinitions!({
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
   DefPrimitive!("\\pdfnoligatures Token", None);
-  // \pdfsavepos — Perl pdfTeX.pool.ltxml does NOT define this (only a
-  // bare comment at L184), so `\ifdefined\pdfsavepos` returns false in
-  // Perl. Packages like linegoal.sty (L33-37) and zref-savepos.sty
-  // (L57-63) use this test to gate their pdfTeX-only code paths and
-  // `\endinput` when pdfTeX isn't present. Defining it as a no-op
-  // primitive in Rust made `\ifdefined` return true → those packages
-  // skip the early-exit → reach later `\globcount\LNGL@unique`/
-  // `\globdimen` lines (neither Perl nor Rust binds `\globcount`) →
-  // undefined cascade. Witness: arXiv:2506.18578 (Rust=4 vs Perl=0).
-  // Leave it undefined to match Perl.
-  // DefPrimitive!("\\pdfsavepos", None);  // kept for grep-discoverability
+  // \pdfsavepos — saves current (x, y) page position into
+  // \pdflastxpos / \pdflastypos. Stub as no-op; the position is never
+  // actually computed in our XML output so the saved values stay 0.
+  // zref-savepos.sty L57-63 PackageErrors out if \pdfsavepos is
+  // undefined ("not supported"); making it defined lets zref-savepos
+  // proceed normally. linegoal.sty's gated code uses \globcount /
+  // \globdimen — both of which are now defined in etex.rs (L545/547)
+  // so the linegoal cascade is no longer a concern.
+  // Witnesses (zref-savepos): 2503.15628, 2503.18497, 2504.03449,
+  // 2504.03565, 2504.05447, 2504.05890.
+  DefPrimitive!("\\pdfsavepos", None);
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
   DefPrimitive!("\\pdfstartthread", None);
   DefPrimitive!("\\pdfendthread", None);
