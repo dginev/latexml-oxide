@@ -117,6 +117,7 @@ pub mod ieeeaccess_cls;
 pub mod ieeecolor_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
+pub mod jmlr2e_sty;
 pub mod lipics_cls;
 pub mod scipost_cls;
 pub mod siamart_cls;
@@ -265,6 +266,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
+  ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
+  ("jmlr2e_preprint", "sty", jmlr2e_sty::load_definitions),
   ("lipics", "cls", lipics_cls::load_definitions),
   ("siamart", "cls", siamart_cls::load_definitions),
   ("SciPost", "cls", scipost_cls::load_definitions),
