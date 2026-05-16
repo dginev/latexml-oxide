@@ -388,6 +388,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("svjour1", "cls", package::svjour3_cls::load_definitions),
   ("svjour2", "cls", package::svjour3_cls::load_definitions),
   ("svjour3", "cls", package::svjour3_cls::load_definitions),
+  ("svmono", "cls", package::svjour3_cls::load_definitions),
   (
     "inst_support",
     "sty",
