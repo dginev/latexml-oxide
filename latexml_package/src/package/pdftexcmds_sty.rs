@@ -17,4 +17,14 @@ LoadDefinitions!({
   DefMacro!("\\pdf@filesize{}", "0");
   DefMacro!("\\pdf@filemoddate{}", "");
   DefMacro!("\\pdf@strcmp{}{}", "0");
+  // \pdf@shellescape returns the shell-escape level (0 = disabled).
+  // Used by packages probing whether \write18 is available. We don't
+  // execute shell commands; return 0.
+  DefMacro!("\\pdf@shellescape", "0");
+  // Other common pdftexcmds wrappers — return safe defaults.
+  DefMacro!("\\pdf@unescapehex{}", "");
+  DefMacro!("\\pdf@escapestring{}", "#1");
+  DefMacro!("\\pdf@escapename{}", "#1");
+  DefMacro!("\\pdf@escapehex{}", "#1");
+  DefMacro!("\\pdf@primitive{}", "");
 });

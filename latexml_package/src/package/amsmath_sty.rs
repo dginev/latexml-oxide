@@ -1503,6 +1503,9 @@ LoadDefinitions!({
   // Perl: amsmath.sty.ltxml L1313-1314
   DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
   DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
+  // amsmath.sty L62 declares \@mathmargin as a \newskip; some user
+  // styles probe / set it directly. Witness 2502.18185.
+  DefRegister!("\\@mathmargin" => Glue::new(Dimension!("0pt").0));
 
   //======================================================================
   // Additions from Perl amsmath audit (session 38)
