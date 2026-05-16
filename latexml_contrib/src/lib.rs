@@ -110,6 +110,7 @@ pub mod scrpage_sty;
 pub mod aamas_cls;
 pub mod achemso_cls;
 pub mod aomart_cls;
+pub mod asme2ej_cls;
 pub mod autart_cls;
 pub mod cas_dc_cls;
 pub mod chemformula_sty;
@@ -279,6 +280,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aamas", "cls", aamas_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
+  ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
