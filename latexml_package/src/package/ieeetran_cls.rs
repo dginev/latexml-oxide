@@ -119,6 +119,14 @@ LoadDefinitions!({
 
   // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
+
+  // \thetitle / \theauthor / \thedate — titling.sty-style accessors that some
+  // IEEEtran preambles or .bbl files reference. IEEEtran doesn't natively
+  // export them, but users assume they exist. Provide empty defaults so
+  // bibliographies that include `\thetitle` don't crash. Witness 2501.15830.
+  DefMacro!("\\thetitle",  "");
+  DefMacro!("\\theauthor", "");
+  DefMacro!("\\thedate",   "");
   DefMacro!("\\IEEEdisplaynontitleabstractindextext", "");
   DefMacro!("\\IEEEdisplaynotcompsoctitleabstractindextext", "");
   DefMacro!("\\IEEEcompsoctitleabstractindextext", "");
