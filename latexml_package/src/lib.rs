@@ -756,6 +756,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ellipsis", "sty", package::ellipsis_sty::load_definitions),
   ("epstopdf", "sty", package::epstopdf_sty::load_definitions),
   ("fancyvrb", "sty", package::fancyvrb_sty::load_definitions),
+  ("fdsymbol", "sty", package::fdsymbol_sty::load_definitions),
   ("flafter", "sty", package::flafter_sty::load_definitions),
   ("here", "sty", package::here_sty::load_definitions),
   (

@@ -162,6 +162,7 @@ pub mod fancybox_sty;
 pub mod fancyhdr_sty;
 pub mod fancyheadings_sty;
 pub mod fancyvrb_sty;
+pub mod fdsymbol_sty;
 pub mod feynmf_sty;
 pub mod filehook_sty;
 pub mod fix_cm_sty;
