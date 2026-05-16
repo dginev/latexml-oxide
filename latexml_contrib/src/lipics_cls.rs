@@ -38,6 +38,8 @@ LoadDefinitions!({
   DefMacro!("\\EventLogo{}", "");
   DefMacro!("\\SeriesVolume{}", "");
   DefMacro!("\\ArticleNo{}", "");
+  // LIPIcs L739: \EventNoEds{N} sets editor count.
+  DefMacro!("\\EventNoEds{}", "");
 
   // LIPIcs L1158-1234: theorem-like environments.
   RawTeX!(
