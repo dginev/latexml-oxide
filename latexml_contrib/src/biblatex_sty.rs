@@ -229,6 +229,21 @@ LoadDefinitions!({
   // Perl L107-108: \lossort / \refsection — empty stubs.
   DefMacro!("\\lossort", "", locked => true);
   DefMacro!("\\refsection{}", "", locked => true);
+
+  // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
+  // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
+  // Perl `ar5iv-bindings/bindings/biblatex.sty.ltxml:641-645` defines
+  // `\blx@bbl@booltrue{}` / `\blx@bbl@boolfalse{}` as `\relax` stubs and
+  // `\let\true\blx@bbl@booltrue` if `\true` is undefined.
+  //
+  // Rust never sets either, so the .bbl raw-load hits
+  // `Error:undefined:\true` on every multi-author bibitem (witness:
+  // arXiv:2509.15629 / 2509.21728 — biblatex `.bbl` v3.3 format with
+  // multi-author entries).
+  DefMacro!("\\blx@bbl@booltrue{}", "", locked => true);
+  DefMacro!("\\blx@bbl@boolfalse{}", "", locked => true);
+  Let!("\\true", "\\blx@bbl@booltrue");
+  Let!("\\false", "\\blx@bbl@boolfalse");
   // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
   // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
   // emitted by repeated \endentry calls in `\thebibliography{count}…
