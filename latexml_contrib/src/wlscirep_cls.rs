@@ -11,6 +11,9 @@ LoadDefinitions!({
   // Witness 2408.07161 (\toprule/\midrule/\bottomrule used without
   // explicit \usepackage{booktabs}).
   RequirePackage!("booktabs");
+  // wlscirep also configures caption layout — pull caption.sty so
+  // \captionsetup is available. Witness 2411.06447, 2411.10607.
+  RequirePackage!("caption");
 
   // wlscirep frontmatter / bibliography helpers.
   DefMacro!("\\JournalTitle{}", "\\emph{#1}");
