@@ -230,4 +230,13 @@ LoadDefinitions!({
   DefConstructor!("\\@@orcid{}", "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);
   DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
+
+  // LLNCS v2.22+ introduced the {credits} environment for author
+  // credits / disclosure-of-interests at the end of the paper. It just
+  // switches to \small inside a group; treat as transparent.
+  // Witnesses 2406.00947, 2406.05596, 2406.13788.
+  DefMacro!(T_CS!("\\begin{credits}"), None, "");
+  DefMacro!(T_CS!("\\end{credits}"), None, "");
+  // \discintname is the localised "Disclosure of Interests." header.
+  DefMacro!("\\discintname", "Disclosure of Interests.");
 });
