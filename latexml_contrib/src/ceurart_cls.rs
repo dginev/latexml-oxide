@@ -6,8 +6,9 @@
 //! frontmatter macros (`\ead`, `\fnmark`, etc.) use `\NewDocumentCommand`
 //! with expl3 bodies that don't fully unfurl either.
 //!
-//! Provide gobble stubs for the frontmatter helpers and a plain `\sep`
-//! so author/affiliation/keyword lists render in document text.
+//! Provide content-preserving stubs that route the author-supplied text
+//! into either frontmatter notes (\tnotetext, \fntext, \cortext) or
+//! contact entries (\ead, \orcidauthor), so no body material is dropped.
 //!
 //! Witness: 2501.13802, 2501.14238, 2501.16855, 2501.17381, 2502.01404,
 //! 2502.02753, 2502.06743 — all `Error:undefined:\sep`.
@@ -32,46 +33,79 @@ LoadDefinitions!({
   // The core separator — used in author/affiliation/keyword lists.
   DefMacro!("\\sep", ",");
 
-  // Frontmatter helpers (CEUR-WS / Elsevier conventions).
-  DefMacro!("\\tnotetext[]{}", "");
-  DefMacro!("\\tnotemark[]", "");
-  DefMacro!("\\tnoteref[]{}", "");
-  DefMacro!("\\fnmark[]", "");
-  DefMacro!("\\fnref[]{}", "");
-  DefMacro!("\\fntext[]{}", "");
-  DefMacro!("\\cortext[]{}", "");
-  DefMacro!("\\cormark[]", "");
-  DefMacro!("\\corref[]", "");
-  DefMacro!("\\affiliation[]{}", "");
-  DefMacro!("\\address[]{}[]", "");
-  DefMacro!("\\ead[]{}", "");
+  // Title notes / footnotes / corresp marks: route the user-supplied
+  // text into ltx:note frontmatter so it's preserved in the XML output.
+  // The optional [label] is ignored (LaTeXML auto-numbers notes).
+  DefMacro!("\\tnotetext[]{}", "\\@add@frontmatter{ltx:note}[role=titlenote]{#2}");
+  DefMacro!("\\fntext[]{}", "\\@add@frontmatter{ltx:note}[role=footnote]{#2}");
+  DefMacro!("\\cortext[]{}", "\\@add@frontmatter{ltx:note}[role=corresp]{#2}");
+  DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}{#1}");
+  DefMacro!("\\nonumtnotetext{}", "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
+
+  // Mark macros: emit a footnote-like superscript with the optional
+  // label preserved (defaults to empty if none provided).
+  DefMacro!("\\tnotemark[]", "\\textsuperscript{#1}");
+  DefMacro!("\\tnoteref[]{}", "\\textsuperscript{#2}");
+  DefMacro!("\\fnmark[]", "\\textsuperscript{#1}");
+  DefMacro!("\\fnref[]{}", "\\textsuperscript{#2}");
+  DefMacro!("\\cormark[]", "\\textsuperscript{*#1}");
+  DefMacro!("\\corref[]", "\\textsuperscript{*#1}");
+
+  // Affiliation / address — emit as frontmatter ltx:contact.
+  DefMacro!("\\affiliation[]{}", "\\@add@frontmatter{ltx:contact}[role=affiliation]{#2}");
+  DefMacro!("\\address[]{}[]", "\\@add@frontmatter{ltx:contact}[role=address]{#2}");
+
+  // Email-address-of-author. Render as a ltx:contact entry so the
+  // visible email is preserved.
+  DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:contact}[role=email]{#2}");
   DefMacro!("\\eadsep", "");
   DefMacro!("\\eadauthor", "");
-  DefMacro!("\\orcidauthor{}{}", "");
-  DefMacro!("\\urlauthor{}{}", "");
-  DefMacro!("\\emailauthor{}{}", "");
-  DefMacro!("\\creditauthor{}{}", "");
+
+  // ORCID/URL/email per-author; emit as contacts. #1 is the author tag,
+  // #2 is the actual value.
+  DefMacro!("\\orcidauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=orcid]{#2}");
+  DefMacro!("\\urlauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=url]{#2}");
+  DefMacro!("\\emailauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=email]{#2}");
+  DefMacro!("\\creditauthor{}{}", "\\@add@frontmatter{ltx:note}[role=credit]{#2}");
+
+  // "print*" commands typically emit a list of previously stashed
+  // entries. Since our \ead/\orcidauthor/etc. already produce
+  // frontmatter entries, these are now redundant — gobble cleanly.
   DefMacro!("\\printcredits", "");
   DefMacro!("\\printemails", "");
   DefMacro!("\\printurls", "");
   DefMacro!("\\printorcid", "");
   DefMacro!("\\printtnotes", "");
-  DefMacro!("\\copyrightyear{}", "");
 
-  // Subtitle just becomes a textual addition.
-  DefMacro!("\\subtitle{}", "");
+  // Copyright year metadata. Author-supplied year goes to ltx:note.
+  DefMacro!("\\copyrightyear{}",
+    "\\@add@frontmatter{ltx:note}[role=copyrightyear]{#1}");
 
-  // CEUR-WS conference metadata.
-  DefMacro!("\\conference{}", "");
-  DefMacro!("\\copyrightclause{}", "");
-  DefMacro!("\\ceurConference[]{}{}{}{}", "");
-  DefMacro!("\\ceurEditors{}", "");
-  DefMacro!("\\ceurVolumeNr{}", "");
-  DefMacro!("\\ceurAuthors{}", "");
-  DefMacro!("\\ceurTitle{}", "");
-  DefMacro!("\\ceurLabel{}", "");
-  DefMacro!("\\ceurRef{}", "");
-  DefMacro!("\\ceurpubyear{}", "");
-  DefMacro!("\\ceurwsurl{}", "");
-  DefMacro!("\\ceurvolnr{}", "");
+  // Subtitle — emit as a creator / extra-title fragment.
+  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+
+  // CEUR-WS conference metadata. These DO carry author content (event
+  // name, date, location, etc.) — preserve as ltx:note frontmatter.
+  DefMacro!("\\conference{}",
+    "\\@add@frontmatter{ltx:note}[role=venue]{#1}");
+  DefMacro!("\\copyrightclause{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
+  DefMacro!("\\ceurConference[]{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=venue]{#2 #3 #4 #5}");
+  DefMacro!("\\ceurEditors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
+  DefMacro!("\\ceurAuthors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
+  DefMacro!("\\ceurTitle{}",
+    "\\@add@frontmatter{ltx:note}[role=ceur-title]{#1}");
+  DefMacro!("\\ceurVolumeNr{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\ceurLabel{}", "\\label{#1}");
+  DefMacro!("\\ceurRef{}", "\\ref{#1}");
+  DefMacro!("\\ceurpubyear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!("\\ceurwsurl{}",
+    "\\@add@frontmatter{ltx:note}[role=url]{#1}");
+  DefMacro!("\\ceurvolnr{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
 });

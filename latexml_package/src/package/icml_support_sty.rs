@@ -30,10 +30,16 @@ LoadDefinitions!({
   DefMacro!("\\icmlaffiliation{}{}", None);
   DefMacro!("\\icmlcorrespondingauthor{}{}", None);
 
-  DefMacro!("\\printAffiliationsAndNotice{}", None);
-  // ICML 2025 renamed to include "Work" — keep both for back-compat.
+  // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
+  // a re-iteration of the affiliation list + a free-form notice. Since
+  // \icmladdress already feeds frontmatter, the affiliation list is
+  // captured separately; preserve the notice arg as a ltx:note so the
+  // author-supplied "Work done while at X" string survives.
   // Witness: 2502.18679 (icml2025.sty L564).
-  DefMacro!("\\printAffiliationsAndWorkNotice{}", None);
+  DefMacro!("\\printAffiliationsAndNotice{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+  DefMacro!("\\printAffiliationsAndWorkNotice{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
