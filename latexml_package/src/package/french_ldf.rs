@@ -182,6 +182,33 @@ LoadDefinitions!({
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
+  // french.ldf user-facing typesetting knobs that some papers call
+  // directly (rather than via `\frenchsetup{key=value}`). All are
+  // typographical no-ops in our XML/HTML pipeline since we don't
+  // render French punctuation spacing or footnote-style switches.
+  // Witness 2503.17701 (`\FrenchFootnotes` in frenchPhi-n.tex).
+  DefMacro!("\\FrenchFootnotes",          "");
+  DefMacro!("\\StandardFootnotes",        "");
+  DefMacro!("\\FrenchPunctuation",        "");
+  DefMacro!("\\StandardPunctuation",      "");
+  DefMacro!("\\FrenchLayout",             "");
+  DefMacro!("\\StandardLayout",           "");
+  DefMacro!("\\AutoSpaceFootnotes",       "");
+  DefMacro!("\\NoAutoSpaceFootnotes",     "");
+  DefMacro!("\\FrenchSuperscripts",       "");
+  DefMacro!("\\NoFrenchSuperscripts",     "");
+  DefMacro!("\\GOfrench",                 "");
+  DefMacro!("\\StandardLists",            "");
+  DefMacro!("\\FrenchLists",              "");
+  DefMacro!("\\StandardItemLabels",       "");
+  DefMacro!("\\StandardItemizeEnv",       "");
+  DefMacro!("\\StandardEnumerateEnv",     "");
+  DefMacro!("\\StandardListSpacing",      "");
+  DefMacro!("\\InTitleNumber",            "");
+  DefMacro!("\\AutoSpacePunctuation",     "");
+  DefMacro!("\\NoAutoSpacePunctuation",   "");
+  DefMacro!("\\ThinSpaceInFrenchNumbers", "");
+
   // Babel-level `frenchb` language aliases — TL2025 babel-french 3.7e
   // turned `frenchb.ldf` into a deprecation shim that only `\chardef`s
   // `\l@frenchb=\l@french` and sets `\CurrentOption{french}`. It does
