@@ -139,6 +139,7 @@ pub mod scipost_cls;
 pub mod siamart_cls;
 pub mod sigma_cls;
 pub mod smc_ieeeconf_cls;
+pub mod svproc_cls;
 pub mod uai2025_cls;
 pub mod wlscirep_cls;
 pub mod wileynjd_cls;
@@ -315,6 +316,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("sigma", "cls", sigma_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
+  ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
   ("WileyNJD-v1", "cls", wileynjd_cls::load_definitions),
