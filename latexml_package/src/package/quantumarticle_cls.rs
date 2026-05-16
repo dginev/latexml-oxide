@@ -39,11 +39,13 @@ LoadDefinitions!({
   DefMacro!("\\twocolumngrid", "");
   // quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
   // Render as classification block to preserve the metadata.
-  DefMacro!("\\keywords{}", "");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
   // \ead is the elsart-style email-address macro often inherited by
-  // quantumarticle users from journal templates. Gobble.
+  // quantumarticle users from journal templates. Preserve as note.
   // Witness 2406.10832.
-  DefMacro!("\\ead[]{}", "");
+  DefMacro!("\\ead[]{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#2}");
 
   DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
