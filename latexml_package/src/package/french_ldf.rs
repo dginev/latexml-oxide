@@ -112,6 +112,19 @@ LoadDefinitions!({
   DefMacro!("\\at", "@");
   DefMacro!("\\boi", "\\textbackslash");
 
+  // `\NoAutoSpaceBeforeFDP` / `\AutoSpaceBeforeFDP` — French double-
+  // punctuation auto-spacing controls. Defined inside raw french.ldf
+  // (TL `babel-french/french.ldf` L500-510) inside `\ifLaTeXe`. We
+  // skip raw-load entirely, so stub them as `\relax`. The visual
+  // effect (thin space before `;`, `!`, `?`, `:`) is already handled
+  // by our `\lx@french@punct@*` primitives above, which can't be
+  // toggled per-paper anyway. Witnesses: arXiv:2511.22710 (frenchb
+  // paper with `\NoAutoSpaceBeforeFDP{}` call).
+  DefMacro!("\\NoAutoSpaceBeforeFDP", "");
+  DefMacro!("\\AutoSpaceBeforeFDP", "");
+  // `\FBautospacing` toggle (legacy) — same family.
+  DefMacro!("\\FBautospacing", "");
+
   // \frenchsetup — babel-french 3.x configuration command. Takes a
   // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
   // `ItemLabelsspaceitem=true`). Per babel-french/french.ldf L712-713,
