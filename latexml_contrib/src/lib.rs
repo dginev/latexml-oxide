@@ -148,6 +148,7 @@ pub mod optica_article_cls;
 pub mod ptephy_cls;
 pub mod sagej_cls;
 pub mod scipost_cls;
+pub mod scis2024_cls;
 pub mod siamart_cls;
 pub mod sigma_cls;
 pub mod smc_ieeeconf_cls;
@@ -347,6 +348,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamonline", "cls", siamart_cls::load_definitions),
   ("sagej", "cls", sagej_cls::load_definitions),
   ("SciPost", "cls", scipost_cls::load_definitions),
+  ("SCIS2024", "cls", scis2024_cls::load_definitions),
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("sigma", "cls", sigma_cls::load_definitions),
   ("smc_ieeeconf", "cls", smc_ieeeconf_cls::load_definitions),
