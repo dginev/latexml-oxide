@@ -204,4 +204,15 @@ LoadDefinitions!({
     "\\expandafter\\caption@set@bool\\csname caption@if#1\\endcsname{#2}");
   // \caption@ifbool{name} — \@nameuse{caption@if<name>} dispatch helper.
   DefMacro!("\\caption@ifbool{}", "\\@nameuse{caption@if#1}");
+
+  // \caption@setoptions{name} (caption3.sty L325-333) — apply the
+  // named option setup if defined, else do nothing. Used by floatrow
+  // (line 473) and various caption-extension packages. Stub as no-op
+  // since the actual option dictionary `\caption@opt@<name>` isn't
+  // populated under our digestion model. Witness 2412.15378 (floatrow).
+  DefMacro!("\\caption@setoptions{}", "");
+  // \caption@@make — internal caption-rendering hook used by float
+  // wrappers. No-op for our XML pipeline (caption text is emitted via
+  // ltx:caption regardless of formatting). Witness 2412.15378.
+  DefMacro!("\\caption@@make{}{}", "#2");
 });
