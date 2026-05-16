@@ -411,6 +411,17 @@ clean a portion of the larger corpus silently.
   removed, thanks to the new
   \LoadClassWithOptions/\RequirePackageWithOptions root-cause
   fixes that recover the same papers honestly.
+* **Stage-20 v6** (papers 90001-100000, FINAL stage of
+  next_warning corpus): 9968/10000 = **99.68% OK**. 31
+  conversion_error, 1 conversion_fatal, 3 timeout. Lower than
+  18/19 v6 due to a higher concentration of pgfplots / tikz
+  papers (1579 errors from a single root cause:
+  `pgfmathsetmacro{\clr}{ifthenelse(...,"pgreen!\clrg",...)}`
+  produces `0.0` instead of `pgreen!0.0` — pgfmath string-
+  expression parser truncates to numeric prefix). Also includes
+  the `benchmark_canvas REPO_ROOT export` bug fix that was
+  landed AFTER this stage launched; vendored stubs (ascmac,
+  mathscinet, devanagari) were still inaccessible to this run.
 * **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
   **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
   cap at the long-tail bbl-math regression cluster of ~29 papers
