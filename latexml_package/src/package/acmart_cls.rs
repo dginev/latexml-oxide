@@ -14,7 +14,12 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");
-  RequirePackage!("xcolor");
+  // Real acmart.cls passes [prologue,table]{xcolor} but doesn't pass
+  // dvipsnames; many user papers nevertheless use Cerulean / ForestGreen
+  // etc. without an explicit \\usepackage[dvipsnames]{xcolor}. Pre-load
+  // the extended palette eagerly so the named colors resolve. Witness
+  // 2 acmart papers/100k cluster with `Error:unexpected:ForestGreen`.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string()]);
   // RequirePackage('totpages');
   RequirePackage!("microtype");
   RequirePackage!("hyperref");
@@ -268,9 +273,20 @@ LoadDefinitions!({
   Let!("\\endproof", "\\end@proof");
 
   // acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
-  // Commons license. Frontmatter-only; gobble cleanly.
+  // Commons license. Preserve the license spec as ltx:note.
   // Witnesses 2406.04861, 2406.09266.
-  DefMacro!("\\setcctype[]{}", "");
+  DefMacro!("\\setcctype[]{}",
+    "\\@add@frontmatter{ltx:note}[role=cc-license]{#2}");
+
+  // acmart conditional toggles — declare as conditionals so user
+  // paper's \\@printpermissiontrue / \\@printccstrue / \\@printcopyrighttrue
+  // etc. don't error.
+  DefConditional!("\\if@printpermission");
+  DefConditional!("\\if@printccs");
+  DefConditional!("\\if@printcopyright");
+  DefConditional!("\\if@printcopyrightbox");
+  DefConditional!("\\if@printfolios");
+  DefConditional!("\\if@acmReview");
 
   // acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
   // Footnote helper used by acmart at L587/L600 in some path our
