@@ -6,17 +6,27 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("authblk");
 
-  // IEEEtaes-specific frontmatter.
-  DefMacro!("\\doiinfo{}", "");
-  DefMacro!("\\receiveddate{}", "");
-  DefMacro!("\\authoraddress{}", "");
-  DefMacro!("\\jvol{}", "");
-  DefMacro!("\\jnum{}", "");
-  DefMacro!("\\jmonth{}", "");
-  DefMacro!("\\jyear{}", "");
-  DefMacro!("\\pubyear{}", "");
-  DefMacro!("\\paper{}", "");
-  DefMacro!("\\corresp{}", "");
+  // IEEEtaes-specific frontmatter — preserve author content.
+  DefMacro!("\\doiinfo{}",
+    "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
+  DefMacro!("\\receiveddate{}",
+    "\\@add@frontmatter{ltx:note}[role=received]{#1}");
+  DefMacro!("\\authoraddress{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+  DefMacro!("\\jvol{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\jnum{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
+  DefMacro!("\\jmonth{}",
+    "\\@add@frontmatter{ltx:note}[role=month]{#1}");
+  DefMacro!("\\jyear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!("\\pubyear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!("\\paper{}",
+    "\\@add@frontmatter{ltx:note}[role=paper-type]{#1}");
+  DefMacro!("\\corresp{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 
   // IEEE-style keywords env.
   DefEnvironment!(
