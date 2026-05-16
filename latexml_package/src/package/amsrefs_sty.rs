@@ -13,8 +13,30 @@ LoadDefinitions!({
 
   // \bib{key}{type}{keyval-pairs}
   // Perl: DefMacro('\bib{}{} RequiredKeyVals:amsrefs', sub { ... });
-  // TODO: \bib requires BibTeX pool (CleanBibKey, NormalizeBibKey, ProcessBibTeXEntry)
-  DefMacro!("\\bib{}{}{}", "");
+  //
+  // Phase 2 transition stub (2026-05-15): wires the TeX-level
+  // \bib invocation to the Phase 1 BibEntry registry. We read the
+  // key + entry-type as strings and call `register_entry`, which
+  // sets it as the current entry. Field extraction from the
+  // keyval-pairs slot still needs a `RequiredKeyVals:amsrefs`
+  // parameter type port (TODO Phase 2-3), so the keyvals are
+  // captured raw via `add_raw_field("_raw_keyvals", ...)` for now.
+  // Returning empty Tokens — no XML emit until Phase 3 lands the
+  // bibAddToContainer / `\bib@@field` constructors.
+  DefMacro!("\\bib{}{}{}", sub[args] {
+    // ArgWrap::None's Display impl writes the literal "None", so
+    // guard each slot with is_some() before calling to_string().
+    let key = if args[0].is_some() { args[0].to_string() } else { String::new() };
+    let entry_type = if args[1].is_some() { args[1].to_string() } else { String::new() };
+    let raw_kv = if args[2].is_some() { args[2].to_string() } else { String::new() };
+    let mut entry = latexml_engine::bibtex::BibEntry::new(
+      key.clone(), entry_type);
+    if !raw_kv.is_empty() {
+      entry.add_raw_field("_raw_keyvals", raw_kv);
+    }
+    latexml_engine::bibtex::register_entry(&key, entry);
+    Ok(Tokens!())
+  });
 
   // \BibSpec — ignore
   DefMacro!("\\BibSpec{}{}", "");
