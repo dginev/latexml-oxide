@@ -6,15 +6,22 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("authblk");
 
-  // Frontmatter — gobble.
-  DefMacro!("\\paper{}", "");
-  DefMacro!("\\jvol{}", "");
-  DefMacro!("\\jnum{}", "");
-  DefMacro!("\\jmonth{}", "");
-  DefMacro!("\\corresp{}", "");
-  DefMacro!("\\authornote{}", "");
-  DefMacro!("\\receiveddate{}", "");
-  DefMacro!("\\affilmark[]{}", "");
+  // Frontmatter — preserve author content.
+  DefMacro!("\\paper{}",
+    "\\@add@frontmatter{ltx:note}[role=paper-type]{#1}");
+  DefMacro!("\\jvol{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\jnum{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
+  DefMacro!("\\jmonth{}",
+    "\\@add@frontmatter{ltx:note}[role=month]{#1}");
+  DefMacro!("\\corresp{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
+  DefMacro!("\\authornote{}",
+    "\\@add@frontmatter{ltx:note}[role=authornote]{#1}");
+  DefMacro!("\\receiveddate{}",
+    "\\@add@frontmatter{ltx:note}[role=received]{#1}");
+  DefMacro!("\\affilmark[]{}", "\\textsuperscript{#2}");
 
   // \appendices is an IEEE-style appendix env.
   DefMacro!("\\appendices", "\\appendix");
