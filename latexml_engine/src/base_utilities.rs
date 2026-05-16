@@ -2233,22 +2233,6 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // Stage-17 v6) doesn't bury real errors. Pattern also covers
     // `\newif`/`\newtoggle`/`\newcounter`/`\NewDocumentCommand` redefs.
     "already defined",
-    // LaTeX kernel `\@nopar` fires `\PackageError{LaTeX}{Not in outer
-    // par mode}` when a command requiring outer-paragraph context is
-    // used inside a box/group. This is a typesetting-flow concern
-    // for PDF layout; in our XML/HTML pipeline the content still
-    // flows into the parent paragraph. Witness: 2 papers in
-    // Stage-17 v6 with `\section` inside a `\begin{tabular}` or
-    // similar.
-    "not in outer par mode",
-    // xpatch / etoolbox fire `\PackageError{xpatch}{Patching '<cmd>'
-    // failed}` when the macro body to patch doesn't match the
-    // expected pattern. In our pipeline the patch attempt is mostly
-    // for PDF-layout tweaks (longtable's `\LT@end@hd@hd`, etc.) that
-    // we don't model — the unpatched original CS runs and renders
-    // correctly. Downgrade so package raw-loads with failed-but-
-    // tolerable patches don't bury real errors.
-    "patching `",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
