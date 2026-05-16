@@ -111,6 +111,7 @@ pub mod aamas_cls;
 pub mod autart_cls;
 pub mod ieeecolor_cls;
 pub mod imsart_cls;
+pub mod informs_cls;
 pub mod siamart_cls;
 pub mod wileynjd_cls;
 pub mod siamltex_cls;
@@ -248,6 +249,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("autart", "cls", autart_cls::load_definitions),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
+  ("informs", "cls", informs_cls::load_definitions),
   ("siamart", "cls", siamart_cls::load_definitions),
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
