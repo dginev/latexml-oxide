@@ -75,6 +75,10 @@ LoadDefinitions!({
   DefRegister!("\\@bls"          => Dimension!("12pt"));
   DefRegister!("\\@maxlistdepth" => Number::new(6));
 
+  // \tracingstacklevels / \@nil / \@expl@str@if@eq@@nnTF moved to
+  // latex_bootstrap.rs — must be defined BEFORE the dump loads (the
+  // dump's latexrelease replay probes them).
+
   // List formatting macros from article.cls / report.cls / book.cls.
   // No-ops because LaTeXML handles list formatting via CSS.
   DefMacro!("\\@listi",   "");
