@@ -401,6 +401,16 @@ clean a portion of the larger corpus silently.
   OK** vs v3 99.65% (+0.17%). 16 conversion_error, 1
   conversion_fatal, 1 segfault, 1 oversized. Trending upward
   as the wave addresses the long-tail.
+* **Stage-19 v6** (papers 80001-90000, post-downgrade-revert +
+  Perl-parity ports of \LoadClassWithOptions /
+  \RequirePackageWithOptions): 9981/10000 = **99.81% OK**. 18
+  conversion_error, 1 conversion_fatal, 3 timeout. NOTE: 6
+  Error-downgrade phrases were REVERTED before this stage per
+  user directive (downgrading is cheating); the absolute %
+  matches Stage-18 v6 within run noise even with downgrades
+  removed, thanks to the new
+  \LoadClassWithOptions/\RequirePackageWithOptions root-cause
+  fixes that recover the same papers honestly.
 * **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
   **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
   cap at the long-tail bbl-math regression cluster of ~29 papers
