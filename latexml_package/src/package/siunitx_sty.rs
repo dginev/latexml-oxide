@@ -2569,6 +2569,10 @@ LoadDefinitions!({
     Ok(funits)
   });
 
+  // siunitx v3 \unit[options]{units} — equivalent to v2 \si.
+  // Witnesses 2406.02765, 2406.18417.
+  Let!("\\unit", "\\si");
+
   // \SI[options]{number}{units}
   DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
     let number = number_arg.clone();
