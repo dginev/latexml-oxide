@@ -30,5 +30,13 @@ LoadDefinitions!({
   RawTeX!("\\newenvironment{acknowledgements}{\\section*{Acknowledgements}}{}");
   RawTeX!("\\newenvironment{widetext}{}{}");
 
+  // \onecolumngrid / \twocolumngrid — REVTeX column-switching primitives
+  // that quantumarticle.cls L348-349 wraps. Defined via raw cls L4448 in
+  // REVTeX but our quantumarticle binding skips that load. No visual
+  // effect in HTML/XML; stub as no-op.
+  // Witness 2406.00091: `\onecolumngrid \section*{APPENDIX}`.
+  DefMacro!("\\onecolumngrid", "");
+  DefMacro!("\\twocolumngrid", "");
+
   DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
