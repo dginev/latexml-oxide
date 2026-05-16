@@ -14,6 +14,13 @@ LoadDefinitions!({
   // their own `\usepackage{xcolor}`. Defensive xcolor load matches Perl
   // behaviour. Witness 2405.17955 (EPCID).
   RequirePackage!("xcolor");
+  // siamart220329 L1371: \RequirePackage[capitalize,nameinlink]{cleveref}.
+  RequirePackage!("cleveref");
+  // siamart220329 L1361: \RequirePackage{algorithm}.
+  RequirePackage!("algorithm");
+  // ifpdf is auto-loaded inside epstopdf; our binding triggers
+  // \ifpdf usage during epstopdf raw-load, so preload it here.
+  RequirePackage!("ifpdf");
   RawTeX!(
     r"\newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -43,11 +50,4 @@ LoadDefinitions!({
     "<ltx:classification scheme='MSC'>#body</ltx:classification>"
   );
 
-  // siamart220329 L1361 \RequirePackages{algorithm}. Our package set
-  // doesn't ship algorithm binding; provide a minimal env stub so
-  // siamart-using papers don't crash on \begin{algorithm}.
-  DefEnvironment!(
-    "{algorithm}",
-    "<ltx:float class='ltx_algorithm'>#body</ltx:float>"
-  );
 });
