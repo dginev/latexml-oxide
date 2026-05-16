@@ -1084,4 +1084,13 @@ LoadDefinitions!({
 \newtoggle{blx@uniquetitle}
 \newtoggle{blx@uniquework}
 "#);
+
+  // biblatex internals commonly invoked by user preamble. Witnesses
+  // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
+  DefMacro!("\\newrefsection[]", "");
+  DefMacro!("\\newrefcontext[]", "");
+  DefMacro!("\\endrefcontext", "");
+  DefMacro!("\\refsection[]{}", "");
+  DefMacro!("\\endrefsection", "");
+  DefMacro!("\\refcontext[]{}", "");
 });
