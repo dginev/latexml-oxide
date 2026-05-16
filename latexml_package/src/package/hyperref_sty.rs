@@ -987,6 +987,12 @@ LoadDefinitions!({
 \HyLang@english
 "#
   );
+
+  // hyperref.sty L6132: \NoHyper/\endNoHyper temporarily disables
+  // hyperlinking. In our XML output it's a no-op group.
+  // Witness 2406.02150.
+  DefMacro!(T_CS!("\\begin{NoHyper}"), None, "");
+  DefMacro!(T_CS!("\\end{NoHyper}"), None, "");
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });
 
