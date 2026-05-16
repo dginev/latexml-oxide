@@ -1093,4 +1093,10 @@ LoadDefinitions!({
   DefMacro!("\\refsection[]{}", "");
   DefMacro!("\\endrefsection", "");
   DefMacro!("\\refcontext[]{}", "");
+
+  // biblatex L3408+ bibliography range separators. Define defensively.
+  DefMacro!("\\bibrangessep", "");
+  DefMacro!("\\bibrangedash", "-");
+  DefMacro!("\\bibdaterangesep", "/");
+  DefMacro!("\\bibtimerangesep", "-");
 });
