@@ -3344,6 +3344,16 @@ LoadDefinitions!({
   // we don't implement the internals directly, so lock them to the latexml variant
   Let!("\\@thefnmark", "\\lx@notemark{footnote}");
 
+  // \@makefntext: article.cls L207/609 wraps the footnote body content
+  // (mark + text) for emission inside the footnote area. Packages like
+  // babel hyphenrules and class-conditional code reference it before
+  // the class loads its definition. Provide a content-preserving stub
+  // so the body (#1) is emitted as plain text rather than triggering
+  // an undefined-CS error. Witness: 2503.15258 (elsarticle via babel)
+  // and 2503.16849 (ieeeconf via babel).
+  DefMacro!("\\@makefntext{}", "#1");
+  DefMacro!("\\@makefnmark", "\\@thefnmark");
+
   Tag!("ltx:emph", auto_close => true);
   Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
