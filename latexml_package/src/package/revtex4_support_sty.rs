@@ -105,6 +105,10 @@ LoadDefinitions!({
   DefMacro!("\\onecolumngrid", "");
   DefMacro!("\\twocolumngrid", "");
   DefMacro!("\\restorecolumngrid", "");
+  // revtex4-1.cls L4388: \do@columngrid{layout}{N}. Layout-only.
+  // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
+  // before our stub binding loads).
+  DefMacro!("\\do@columngrid{}{}", "");
   DefPrimitive!("\\twocolumn", None);
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   DefMacro!("\\pagesofar", "");
