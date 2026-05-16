@@ -502,6 +502,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::pdftexcmds_sty::load_definitions,
   ),
+  ("pdfx", "sty", package::pdfx_sty::load_definitions),
   ("ngerman", "sty", package::ngerman_sty::load_definitions),
   ("orcidlink", "sty", package::orcidlink_sty::load_definitions),
   ("newtxmath", "sty", package::newtxmath_sty::load_definitions),

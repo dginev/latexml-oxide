@@ -314,6 +314,7 @@ pub mod pdflscape_sty;
 pub mod pdfpages_sty;
 pub mod pdfsync_sty;
 pub mod pdftexcmds_sty;
+pub mod pdfx_sty;
 pub mod pgf_sty;
 pub mod pgfcircutils_tex;
 pub mod pgfkeys_sty;
