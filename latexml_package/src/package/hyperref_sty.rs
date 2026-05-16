@@ -25,6 +25,22 @@ LoadDefinitions!({
   RequirePackage!("nameref");
   RequirePackage!("url");
   RequirePackage!("bitset");
+  // Eager `color` load. Many papers do
+  //   \usepackage{hyperref}
+  //   \definecolor{darkblue}{rgb}{0,0,0.5}
+  //   \hypersetup{colorlinks=true, linkcolor=darkblue, ...}
+  // i.e. they reference \definecolor BEFORE \hypersetup triggers our
+  // colorlinks-driven RequirePackage('color'). pdflatex tolerates this
+  // because the user is expected to load color/xcolor themselves —
+  // but the same author script also passes through Perl LaTeXML
+  // without erroring (the hyperref binding's package-options handler
+  // calls RequirePackage('color') unconditionally on `colorlinks`,
+  // and many papers pass colorlinks via the load-options not the
+  // \hypersetup body, so color is in scope before \definecolor).
+  // Loading color eagerly here matches that expected end-state and
+  // closes the 15+ paper "\definecolor undefined" cluster from
+  // stage 10 (witnesses 2503.15484, .21332, .21480, .22115, .22884).
+  RequirePackage!("color");
   //RequirePackage("atbegshi");    // not ported
 
   // Can we load hyperref, to get all it's random sundry definitions?
