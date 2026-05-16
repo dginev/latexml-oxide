@@ -285,6 +285,12 @@ LoadDefinitions!({
     "\\lx@hyper@url@\\href{}{}{#1}{#2}"
   );
 
+  // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in
+  // a XeTeX hyperlink target box. We don't model XeTeX-specific link
+  // boxes — pass content through. Used by orcidlink.sty, newpax.sty.
+  // Witness 2408.00362 (orcidlink-using paper).
+  DefMacro!("\\XeTeXLinkBox{}", "#1");
+
   // Redefine \url{url} from url.sty...
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
