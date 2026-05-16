@@ -507,6 +507,24 @@ LoadDefinitions!({
     "\\xrightarrow",
     "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
   );
+
+  // amsmath.sty L1013: \ext@arrow #1#2#3#4#5#6#7 — the internal extension-arrow
+  // builder. Args: #1..#4 are mkern digit-tokens, #5 is the arrow renderer
+  // CS (e.g. \rightarrowfill@), #6 is below-label, #7 is above-label.
+  // User code occasionally calls \ext@arrow directly when defining custom
+  // arrows. Pass-through to plain \to^{above}_{below} so the math renders.
+  // amsmath.sty L972: \arrowfill@ #1#2#3#4 — 4 CS tokens; we don't model
+  // stretchy arrow rendering, stub as \to.
+  // Witness 2411.17873, 2412.00464.
+  DefMacro!("\\ext@arrow Token Token Token Token Token {}{}",
+    "{\\mathrel{\\to}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}");
+  DefMacro!("\\arrowfill@ Token Token Token Token", "\\to");
+  DefMacro!("\\rightarrowfill@", "\\rightarrow");
+  DefMacro!("\\leftarrowfill@", "\\leftarrow");
+  DefMacro!("\\leftrightarrowfill@", "\\leftrightarrow");
+  DefMacro!("\\Rightarrowfill@", "\\Rightarrow");
+  DefMacro!("\\Leftarrowfill@", "\\Leftarrow");
+  DefMacro!("\\Leftrightarrowfill@", "\\Leftrightarrow");
   DefMacro!(
     "\\xleftarrow",
     "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
