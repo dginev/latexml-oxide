@@ -297,6 +297,46 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::icml_support_sty::load_definitions,
   ),
   (
+    "icml2018",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2019",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2020",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2021",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2022",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2023",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2024",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2025",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
     "icml_support",
     "sty",
     package::icml_support_sty::load_definitions,

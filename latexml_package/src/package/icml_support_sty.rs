@@ -6,6 +6,9 @@ LoadDefinitions!({
   RequirePackage!("times");
   RequirePackage!("fancyhdr");
   RequirePackage!("color");
+  // ICML 2024/2025 templates use xcolor's \colorlet for callout colors;
+  // load xcolor eagerly. Witness 2405.18180 (icml2025).
+  RequirePackage!("xcolor");
   RequirePackage!("algorithm");
   RequirePackage!("algorithmic");
   RequirePackage!("natbib");
