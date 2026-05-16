@@ -309,6 +309,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
+  ("IEEEoj", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEojcsys", "cls", ieeeojcsys_cls::load_definitions),
   ("IEEEtaes", "cls", ieeetaes_cls::load_definitions),
   ("iccv", "sty", iccv_sty::load_definitions),
