@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsrefs"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <bibliography citestyle="numbers" xml:id="bib">
+    <title>References</title>
+    <biblist>
+      <bibentry key="Smith2020" type="article" xml:id="bib.bib1">
+        <bib-name role="author">
+          <surname>Smith</surname>
+          <givenname>John</givenname>
+        </bib-name>
+        <bib-title>On examples</bib-title>
+        <bib-related role="host" type="journal">
+          <bib-title>JMP</bib-title>
+        </bib-related>
+        <bib-date role="publication">2020</bib-date>
+        <bib-data role="self" type="BibTeX"/>
+      </bibentry>
+      <bibentry key="Doe1999" type="book" xml:id="bib.bib2">
+        <bib-name role="author">
+          <surname>Doe</surname>
+          <givenname>Jane</givenname>
+        </bib-name>
+        <bib-title>A book</bib-title>
+        <bib-publisher>Pub</bib-publisher>
+        <bib-date role="publication">1999</bib-date>
+        <bib-data role="self" type="BibTeX"/>
+      </bibentry>
+    </biblist>
+  </bibliography>
+</document>
