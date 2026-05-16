@@ -512,7 +512,7 @@ convert_one() {
 }
 
 export -f convert_one
-export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL
+export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL REPO_ROOT
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
