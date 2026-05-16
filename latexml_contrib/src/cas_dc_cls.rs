@@ -21,6 +21,7 @@ LoadDefinitions!({
 
   // cas-common frontmatter — gobble cleanly.
   DefMacro!("\\tnotetext[]{}", "");
+  DefMacro!("\\tnotemark[]", "");
   DefMacro!("\\tnoteref[]{}", "");
   DefMacro!("\\fnmark[]", "");
   DefMacro!("\\fnref[]{}", "");
