@@ -214,6 +214,66 @@ pub fn reset() {
   CURRENT_ENTRY_KEY.with(|k| *k.borrow_mut() = None);
 }
 
+/// FxHashMap alias used by `bib_add_to_container` — matches
+/// `latexml_core::document::Document::insert_element`'s expected
+/// attribute-map type. Distinct from the `HashMap` (std) used by
+/// the thread-local BibEntry registry above.
+type FxAttrMap = rustc_hash::FxHashMap<String, String>;
+
+/// Build the find-or-create XPath used by `bib_add_to_container`.
+/// Perl `BibTeX.pool.ltxml:248-250`: `$tag[@k1='v1' and @k2='v2']`
+/// with the attribute keys sorted so identical attr sets always
+/// produce identical xpaths (cache hit on the second call).
+fn bib_container_xpath(tag: &str, attrs: &FxAttrMap) -> String {
+  if attrs.is_empty() {
+    return tag.to_string();
+  }
+  let mut keys: Vec<&String> = attrs.keys().collect();
+  keys.sort();
+  let preds: Vec<String> = keys
+    .iter()
+    .map(|k| format!("@{}='{}'", k, attrs.get(*k).unwrap()))
+    .collect();
+  format!("{tag}[{}]", preds.join(" and "))
+}
+
+/// Perl `bibAddToContainer($document, $tag, $data, %attr)` —
+/// `BibTeX.pool.ltxml:242-257`. Find-or-create a child of the
+/// current `<ltx:bibentry>` / `<ltx:bib-related>` ancestor with
+/// matching tag+attrs. If found, absorb `data` into it; if not,
+/// insert a fresh element with `data` as content.
+///
+/// Used by `\bib@addto@related` (deduplicates same-(type,role)
+/// bib-related groups, e.g. all authors collected in one
+/// `<ltx:bib-related role='authors'>`).
+pub fn bib_add_to_container(
+  doc: &mut latexml_core::document::Document,
+  tag: &str,
+  data: Option<&latexml_core::digested::Digested>,
+  attrs: FxAttrMap,
+) -> latexml_core::common::error::Result<()> {
+  let current = doc.get_node().clone();
+  let entry = doc.findnode(
+    "ancestor-or-self::ltx:bibentry | ancestor-or-self::ltx:bib-related",
+    Some(&current),
+  );
+  let xpath = bib_container_xpath(tag, &attrs);
+  if let Some(rel) = doc.findnode(&xpath, entry.as_ref()) {
+    doc.set_node(&rel);
+    if let Some(d) = data {
+      doc.absorb(d, None)?;
+    }
+    doc.set_node(&current);
+  } else {
+    let content: Vec<&latexml_core::digested::Digested> = match data {
+      Some(d) => vec![d],
+      None => vec![],
+    };
+    doc.insert_element(tag, content, Some(attrs))?;
+  }
+  Ok(())
+}
+
 /// A single parsed BibTeX-style author/editor name.
 ///
 /// Perl returns this implicitly inside `Invocation(T_CS('\bib@surname'),
@@ -696,5 +756,35 @@ mod tests {
     let r = process_bib_name_list("");
     assert!(r.names.is_empty());
     assert!(!r.etal);
+  }
+
+  // --- bib_container_xpath (find-or-create xpath construction) ---
+
+  #[test]
+  fn xpath_bare_tag_when_no_attrs() {
+    let attrs = FxAttrMap::default();
+    assert_eq!(bib_container_xpath("ltx:bib-name", &attrs), "ltx:bib-name");
+  }
+
+  #[test]
+  fn xpath_single_attr() {
+    let mut attrs = FxAttrMap::default();
+    attrs.insert("role".to_string(), "authors".to_string());
+    assert_eq!(
+      bib_container_xpath("ltx:bib-related", &attrs),
+      "ltx:bib-related[@role='authors']"
+    );
+  }
+
+  #[test]
+  fn xpath_sorts_attr_keys_for_cache_stability() {
+    // Perl's `sort keys %attr` ensures the same (type,role) pair
+    // always produces the same xpath, regardless of hash iteration
+    // order. We mirror that — alphabetic order by attribute name.
+    let mut attrs = FxAttrMap::default();
+    attrs.insert("type".to_string(), "book".to_string());
+    attrs.insert("role".to_string(), "host".to_string());
+    let xpath = bib_container_xpath("ltx:bib-related", &attrs);
+    assert_eq!(xpath, "ltx:bib-related[@role='host' and @type='book']");
   }
 }
