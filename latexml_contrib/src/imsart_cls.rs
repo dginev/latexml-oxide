@@ -18,4 +18,7 @@ LoadDefinitions!({
   // these are belt-and-suspenders in case the raw load is short-circuited.
   DefMacro!("\\startlocaldefs", "\\makeatletter");
   DefMacro!("\\endlocaldefs", "\\makeatother");
+  // imsart.sty L2268, L2360: \let\kwd@sep\relax inside conditionals
+  // we may not fully replay. Define defensively. Witness 2406.17390.
+  Let!("\\kwd@sep", "\\relax");
 });
