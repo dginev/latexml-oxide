@@ -1,5 +1,16 @@
 # Engine Sync Status — Active Worklist
 
+> **DO NOT downgrade Errors to cheat the task.** If Perl LaTeXML
+> converts a paper without a downgrade, the Rust translation must
+> match by improving the core engine — never by silencing
+> diagnostics. Acceptable pre-existing exception:
+> `is_typesetting_only_message` entries that match Perl's behavior
+> on the SAME paper (e.g. "Running heading author exceeds size
+> limitations" per WISDOM #50). Any NEW downgrade requires explicit
+> proof Perl emits the same severity, otherwise it's hiding a real
+> engine gap. User directive (2026-05-15): "downgrading errors is
+> generally cheating at the task and must not be attempted."
+
 **Active mission (Round-26, opened 2026-05-12)**: be **error-free on
 the 100,000-paper "warning" subset** of the arxmliv corpus — papers
 where Perl LaTeXML on TL2025 emits at least one warning (i.e. not
