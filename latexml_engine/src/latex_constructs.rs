@@ -8101,20 +8101,15 @@ LoadDefinitions!({
     sizer => 0
   );
 
-  // Standard LaTeX2e kernel caption strings (latex.ltx). These are
-  // normally set per-language by babel. \providecommand-style defaults
-  // so user code that probes them before babel/language selection runs
-  // (typical from .aux file \@input chains during \begin{document})
-  // doesn't error. Witness 2406.02840 (imsart + cleveref).
-  // Perl LaTeXML doesn't define these but its preamble processing
-  // doesn't reach the `bbl@beforestart` path that triggers their use.
-  DefMacro!("\\pagename", "Page");
-  DefMacro!("\\seename", "see");
-  DefMacro!("\\alsoname", "see also");
-  DefMacro!("\\enclname", "encl");
-  DefMacro!("\\ccname", "cc");
-  DefMacro!("\\headtoname", "To");
-  DefMacro!("\\glossaryname", "Glossary");
+  // \glossaryname, \printglossary removed — not in Perl engine
+  // (Perl: glossaries.sty.ltxml defines \printglossary)
+  // \seename, \alsoname removed — not in Perl engine
+  // (Perl: makeidx.sty.ltxml defines these; also babel captions)
+  // Captions live in their natural homes (letter.cls, makeidx, babel/ldf
+  // language files). Do NOT stub them here — that would override
+  // legitimate raw-loaded kernel definitions and mask real load-order
+  // bugs. If a paper hits an undefined caption, fix the package binding
+  // that should have provided it, or fix what's triggering the use.
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
