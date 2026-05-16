@@ -32,4 +32,12 @@ LoadDefinitions!({
   // arXiv:astro-ph/0203101. Without this reset the re-RequirePackage
   // is a no-op and {cases} stays as the plain-TeX version above.
   AssignValue!("amsmath.sty_loaded" => Stored::None, Some(Scope::Global));
+
+  // aa.cls L1651-1664: \tablebib{...} / \tablefoot{...} emit a labeled
+  // tablefootnote block. Render as paragraphs prefixed by their names.
+  // Witnesses 2406.05044, 2406.14661.
+  DefMacro!("\\tablebib{}", "\\par\\textbf{References.} #1");
+  DefMacro!("\\tablefoot{}", "\\par\\textbf{Notes.} #1");
+  DefMacro!("\\tablebibname", "References");
+  DefMacro!("\\tablefootname", "Notes");
 });
