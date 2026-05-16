@@ -84,6 +84,16 @@ LoadDefinitions!({
   // \tracingstacklevels / \@nil / \@expl@str@if@eq@@nnTF moved to
   // latex_bootstrap.rs — must be defined BEFORE the dump loads (the
   // dump's latexrelease replay probes them).
+  //
+  // KNOWN ISSUE — papers that pin latexrelease to an older release
+  // via \RequirePackage[YYYY-MM-DD]{latexrelease} (e.g. 2503.21471)
+  // trip a cascade of undefined helpers (\@expl@str@if@eq@@nnTF,
+  // \@expl@cs@to@str@@N, \robust@command@act, \ExpandArgs, ...)
+  // because our \IncludeInRelease always runs the body. The proper
+  // fix is date-aware IncludeInRelease (skip rollback blocks unless
+  // release_date < block_date). Stubbing individual helpers gets us
+  // partway but the cascade has many tendrils — defer to a focused
+  // IncludeInRelease refactor.
 
   // List formatting macros from article.cls / report.cls / book.cls.
   // No-ops because LaTeXML handles list formatting via CSS.
