@@ -55,6 +55,17 @@ LoadDefinitions!({
   DefMacro!("\\APACmetaprenote", "");
   DefMacro!("\\APACrefauthstyle{}", "");
   DefMacro!("\\APACbibcite{}", "");
+
+  // apacite citation forms (apacite.sty L328+). Delegate to natbib's
+  // \cite which we wrapped in natbib_sty.rs. Forms:
+  //   \citeA[pre][post]{key} — author-only ("Smith")
+  //   \citeauthor[pre][post]{key} — author-only (alternate spelling)
+  //   \citeNP[pre][post]{key} — citation without parens
+  //   \citeyearNP[pre][post]{key} — year-only without parens
+  // Witness 2407.14158, 2407.18402, 2407.16770 (apacite-using papers).
+  DefMacro!("\\citeA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
+  DefMacro!("\\citeNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
+  DefMacro!("\\citeyearNP[][] Semiverbatim", "\\citeyear[#1][#2]{#3}");
   DefMacro!("\\APACrestorebibitem", "");
   DefMacro!("\\APACemindex{}", "");
   DefMacro!("\\APACltxemindex{}", "");
