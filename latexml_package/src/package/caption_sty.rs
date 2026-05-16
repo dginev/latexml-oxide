@@ -179,4 +179,23 @@ LoadDefinitions!({
   // position. We don't materialize caption-position logic; stub as
   // no-op so floatrow-style position setters don't crash.
   DefMacro!("\\caption@setposition{}", "");
+
+  // \caption@set@bool{cs}{value} — caption3.sty L131. Defines `cs` as
+  // `\@firstoftwo` if value is in {1,true,yes,on}, `\@secondoftwo` for
+  // {0,false,no,off}, else error. We don't model caption boolean state
+  // (caption settings don't affect XML output), so stub the dispatch
+  // — \let the CS to \@secondoftwo by default. Witness 2408.09623,
+  // 2408.12461, 2409.01528.
+  DefMacro!("\\caption@set@bool DefToken {}", sub[(cs, value)] {
+    let val = value.to_string();
+    let truthy = matches!(val.trim(), "1" | "true" | "yes" | "on");
+    let target_name = if truthy { "\\@firstoftwo" } else { "\\@secondoftwo" };
+    state::let_i(&cs, &T_CS!(target_name), None);
+    Ok(Tokens!())
+  });
+  // \caption@setbool{name} — wraps caption@set@bool by building \caption@if<name>.
+  DefMacro!("\\caption@setbool{}{}",
+    "\\expandafter\\caption@set@bool\\csname caption@if#1\\endcsname{#2}");
+  // \caption@ifbool{name} — \@nameuse{caption@if<name>} dispatch helper.
+  DefMacro!("\\caption@ifbool{}", "\\@nameuse{caption@if#1}");
 });
