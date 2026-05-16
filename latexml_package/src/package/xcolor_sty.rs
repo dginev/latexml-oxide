@@ -562,6 +562,14 @@ LoadDefinitions!({
 
   RequirePackage!("color");
 
+  // xcolor.sty L1035: \def\@ifundefinedcolor#1{\@ifundefined{\@backslashchar color@#1}}
+  // Used by menukeys and other downstream packages to test if a color
+  // name is already defined. We don't materialize color@<name> CSes;
+  // always take the "undefined" branch (allows downstream packages to
+  // (re)define their own color themes without "already defined" errors).
+  // Witnesses 2405.19976, 2406.12553.
+  DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
+
   // Ignorable options
   for option in &[
     "natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray",
