@@ -27,6 +27,12 @@ LoadDefinitions!({
 
   DefMacro!("\\normalem", None, "");
 
+  // ulem L343: \newdimen\ULdepth (initialized to \maxdimen for auto-mode).
+  // Witnesses 2406.02021, 2406.18999.
+  DefRegister!("\\ULdepth" => Dimension!("0pt"));
+  DefRegister!("\\ULthickness" => Dimension!("0.4pt"));
+  DefRegister!("\\UL@height" => Dimension!("0pt"));
+
   // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and
   // `argcmd` to forms that apply `ucmd{...}` to content. We \let both
   // straight to `ucmd` so `\ul{foo}` -> `\uline{foo}` works. Empty
