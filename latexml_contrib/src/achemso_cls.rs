@@ -14,19 +14,32 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
 
-  // ACS authorship primitives.
-  DefMacro!("\\affiliation[]{}", "");
-  DefMacro!("\\alsoaffiliation[]{}", "");
-  DefMacro!("\\altaffiliation[]{}", "");
-  DefMacro!("\\email{}", "");
-  DefMacro!("\\phone{}", "");
-  DefMacro!("\\fax{}", "");
-  DefMacro!("\\suppinfo{}", "");
-  DefMacro!("\\manuscript{}", "");
-  DefMacro!("\\abbreviations{}", "");
-  DefMacro!("\\acsAuthorList{}", "");
-  DefMacro!("\\notetext{}", "");
-  DefMacro!("\\acsSection{}", "");
+  // ACS authorship primitives — preserve author content as ltx:note
+  // frontmatter entries.
+  DefMacro!("\\affiliation[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\alsoaffiliation[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\altaffiliation[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\email{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!("\\phone{}",
+    "\\@add@frontmatter{ltx:note}[role=phone]{#1}");
+  DefMacro!("\\fax{}",
+    "\\@add@frontmatter{ltx:note}[role=fax]{#1}");
+  DefMacro!("\\suppinfo{}",
+    "\\@add@frontmatter{ltx:note}[role=suppinfo]{#1}");
+  DefMacro!("\\manuscript{}",
+    "\\@add@frontmatter{ltx:note}[role=manuscript]{#1}");
+  DefMacro!("\\abbreviations{}",
+    "\\@add@frontmatter{ltx:note}[role=abbreviations]{#1}");
+  // \acsAuthorList — emit the author-list text inline (no frontmatter slot).
+  DefMacro!("\\acsAuthorList{}", "#1");
+  DefMacro!("\\notetext{}",
+    "\\@add@frontmatter{ltx:note}[role=notetext]{#1}");
+  // \acsSection — section opener with text becoming heading.
+  DefMacro!("\\acsSection{}", "\\section*{#1}");
 
   // {tocentry} environment — table of contents image, suppress.
   DefMacro!(T_CS!("\\begin{tocentry}"), None, "\\iffalse");

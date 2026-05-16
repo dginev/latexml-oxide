@@ -11,13 +11,23 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("url");
 
-  // AMS journal frontmatter.
-  DefMacro!("\\subjclass[]{}", "");
-  DefMacro!("\\keywords{}", "");
-  DefMacro!("\\thanks{}", "");
-  DefMacro!("\\address{}", "");
-  DefMacro!("\\curraddr{}", "");
-  DefMacro!("\\email{}", "");
-  DefMacro!("\\urladdr{}", "");
-  DefMacro!("\\dedicatory{}", "");
+  // AMS journal frontmatter — preserve author content as ltx:note
+  // frontmatter entries with role markers (per content-preservation
+  // directive).
+  DefMacro!("\\subjclass[]{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#2}");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  DefMacro!("\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+  DefMacro!("\\curraddr{}",
+    "\\@add@frontmatter{ltx:note}[role=current-address]{#1}");
+  DefMacro!("\\email{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!("\\urladdr{}",
+    "\\@add@frontmatter{ltx:note}[role=url]{#1}");
+  DefMacro!("\\dedicatory{}",
+    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
 });
