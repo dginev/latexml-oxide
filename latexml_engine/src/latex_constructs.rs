@@ -3980,13 +3980,35 @@ LoadDefinitions!({
   //   return; }
   );
 
+  // Perl `latex_constructs.pool.ltxml`:
+  //   DefConstructor('\LoadClassWithOptions Semiverbatim []',
+  //     "<?latexml class='#1'?>",
+  //     beforeDigest => onlyPreamble,
+  //     afterDigest  => sub {
+  //       my $class = ToString($whatsit->getArg(1));
+  //       $class =~ s/\s+//g;
+  //       LoadClass($class, withoptions => 1);
+  //       $stomach->leaveHorizontal_internal;
+  //       return; });
+  //
+  // Rust used to NO-OP the `\LoadClass` step — just emitted the PI.
+  // That left `\abovecaptionskip`, `\belowcaptionskip`,
+  // `\thesubsection`, `\Large`/`\small`/`\footnotesize`, etc. all
+  // undefined when a paper used a custom class that did
+  // `\LoadClassWithOptions{article}` (e.g. applemlr.cls in
+  // arXiv:2512.10685). Port the `LoadClass` call.
+  //
+  // We pass empty options here (Perl's `withoptions => 1` would
+  // inherit calling-class options from `\@classoptionslist`, but
+  // for the no-options-on-\documentclass cases that dominate the
+  // arxmliv warning corpus this is a no-op anyway).
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
     before_digest => { only_preamble("\\LoadClassWithOptions") }
-    // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-    //   my $class = ToString($whatsit->getArg(1));
-    //   $class =~ s/\s+//g;
-    //   LoadClass($class, withoptions => 1);
-    //   return; });
+    after_digest => sub[whatsit] {
+      let class_arg: Option<&Digested> = whatsit.get_arg(1);
+      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      load_class(&class, Vec::new(), Tokens!())?;
+    }
   );
   // Perl: latex_constructs.pool.ltxml L900-903
   DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[(name, option1, _option2, ext)] {
