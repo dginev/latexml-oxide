@@ -7,6 +7,10 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
+  // wlscirep.cls L29: \RequirePackage{booktabs} unconditionally.
+  // Witness 2408.07161 (\toprule/\midrule/\bottomrule used without
+  // explicit \usepackage{booktabs}).
+  RequirePackage!("booktabs");
 
   // wlscirep frontmatter / bibliography helpers.
   DefMacro!("\\JournalTitle{}", "\\emph{#1}");
