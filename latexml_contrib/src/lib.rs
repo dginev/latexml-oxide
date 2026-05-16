@@ -108,6 +108,7 @@ pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod aamas_cls;
+pub mod achemso_cls;
 pub mod autart_cls;
 pub mod cas_dc_cls;
 pub mod cimart_cls;
@@ -253,6 +254,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
+  ("achemso", "cls", achemso_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
