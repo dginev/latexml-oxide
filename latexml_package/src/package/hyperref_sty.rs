@@ -63,6 +63,11 @@ LoadDefinitions!({
     "debug",
     "verbose",
     "implicit",
+    // \\hypersetup{hidelinks} disables visible borders + colors. We
+    // don't render PDF borders anyway so it's effectively a no-op,
+    // but accept the key so papers passing it don't trip the
+    // unknown-Hyp-key warning. Witness 2502.17260.
+    "hidelinks",
     "hypertexnames",
     "naturalnames",
     "a4paper",
