@@ -1299,9 +1299,18 @@ LoadDefinitions!({
         date.push_str(&dpad);
       }
     }
-    let inv = Invocation!(T_CS!("\\bib@field@default@date"),
-      vec![Tokens::new(Explode!(&date))]);
-    Ok(inv)
+    // Emit `\bib@field@default@date{<date>}` literally — `Invocation!`
+    // would strip the arg here since `\bib@field@default@date` is a
+    // parameter-less DefMacro whose expansion expects the value to be
+    // sitting in the input stream (so `\bib@@field`'s Digested arg
+    // picks it up post-expansion). Mirrors Perl L638:
+    // `(T_CS('\bib@field@default@date'), T_BEGIN, Tokenize($date)->unlist, T_END)`.
+    let mut out_toks: Vec<Token> = Vec::new();
+    out_toks.push(T_CS!("\\bib@field@default@date"));
+    out_toks.push(T_BEGIN!());
+    out_toks.extend(Explode!(&date));
+    out_toks.push(T_END!());
+    Ok(Tokens::new(out_toks))
   });
 
   DefMacro!("\\bib@field@default@howpublished",
