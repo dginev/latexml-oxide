@@ -73,4 +73,36 @@ LoadDefinitions!({
   DefMacro!("\\historypublished{}",
     "\\@add@frontmatter{ltx:note}[role=published]{#1}");
   DefMacro!("\\SetCaptionDefault", "");
+
+  // Newer mdpi.cls L668-685 — additional date/metadata setters.
+  // Witness 2503.11347, 2503.13839 (\daterevised, \datereceived,
+  // \dateaccepted).
+  DefMacro!("\\datereceived{}",
+    "\\@add@frontmatter{ltx:note}[role=received]{#1}");
+  DefMacro!("\\daterevised{}",
+    "\\@add@frontmatter{ltx:note}[role=revised]{#1}");
+  DefMacro!("\\dateaccepted{}",
+    "\\@add@frontmatter{ltx:note}[role=accepted]{#1}");
+  DefMacro!("\\datepublished{}",
+    "\\@add@frontmatter{ltx:note}[role=published]{#1}");
+  DefMacro!("\\datecorrected{}",
+    "\\@add@frontmatter{ltx:note}[role=corrected]{#1}");
+  DefMacro!("\\dateretracted{}",
+    "\\@add@frontmatter{ltx:note}[role=retracted]{#1}");
+  DefMacro!("\\externaleditor{}",
+    "\\@add@frontmatter{ltx:note}[role=external-editor]{#1}");
+  DefMacro!("\\LSID{}",
+    "\\@add@frontmatter{ltx:note}[role=lsid]{#1}");
+  DefMacro!("\\PACS{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  DefMacro!("\\MSC{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
+  DefMacro!("\\JEL{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
+  DefMacro!("\\keyword{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\dataset{}",
+    "\\@add@frontmatter{ltx:note}[role=dataset]{#1}");
+  DefMacro!("\\datasetlicense{}",
+    "\\@add@frontmatter{ltx:note}[role=dataset-license]{#1}");
 });
