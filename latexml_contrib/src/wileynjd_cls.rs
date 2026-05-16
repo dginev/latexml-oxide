@@ -9,8 +9,14 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
+  // amssymb pulls in \gtrsim/\lesssim and other relation symbols Wiley
+  // journal papers commonly use without an explicit \usepackage{amssymb}.
+  // Witness 2406.06228 (WileyASNA-v1 paper).
+  RequirePackage!("amssymb");
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
+  // Wiley journals frequently load hyperref; mirror so cross-refs work.
+  RequirePackage!("hyperref");
 
   // Wiley frontmatter — gobbled.
   DefMacro!("\\authormark{}", "");
