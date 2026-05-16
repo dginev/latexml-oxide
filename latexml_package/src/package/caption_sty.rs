@@ -75,6 +75,12 @@ LoadDefinitions!({
   DefMacro!("\\DeclareCaptionJustification{}{}", "");
   DefMacro!("\\DeclareCaptionOption{}[]{}", "");
   DefMacro!("\\DeclareCaptionPackage{}", "");
+  // caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
+  // "caption@box@<name>" macro via \@namedef. We don't render caption
+  // box layouts; gobble both args.
+  DefMacro!("\\DeclareCaptionBox{}{}", "");
+  // caption3.sty L573: \DeclareCaptionListFormat{name}{body}
+  DefMacro!("\\DeclareCaptionListFormat{}{}", "");
 
   // caption3 internals used by raw-loaded sibling packages like
   // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
