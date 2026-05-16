@@ -284,6 +284,15 @@ LoadDefinitions!({
   Let!("\\ams@renewcommand", "\\renewcommand");
   Let!("\\ams@def", "\\def");
   Let!("\\ams@DeclareRobustCommand", "\\DeclareRobustCommand");
+
+  // newpxmath / fourier-extended \varmathbb / \vmathbb — provide as
+  // \mathbb fallback so papers that \renewcommand{\mathbb}{\varmathbb}
+  // (a common pattern when wanting an alt-shape blackboard) still work.
+  // Witness 2406.06884.
+  Let!("\\varmathbb", "\\mathbb");
+  Let!("\\vmathbb", "\\mathbb");
+  Let!("\\vvmathbb", "\\mathbb");
+  Let!("\\vvarmathbb", "\\mathbb");
   // sub-packages:
   RequirePackage!("amsbsy");
   RequirePackage!("amstext");
