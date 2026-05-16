@@ -128,6 +128,7 @@ pub mod ejpecp_cls;
 pub mod gretsi_cls;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
+pub mod ieeeaerospace_cls;
 pub mod ieeecolor_cls;
 pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
@@ -313,6 +314,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("iccv", "sty", iccv_sty::load_definitions),
   ("iccvw", "sty", iccv_sty::load_definitions),
   ("ieeeaccess", "cls", ieeeaccess_cls::load_definitions),
+  ("IEEEAerospaceCLS", "cls", ieeeaerospace_cls::load_definitions),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
