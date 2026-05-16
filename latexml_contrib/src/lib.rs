@@ -131,6 +131,7 @@ pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod lipics_cls;
 pub mod mcom_l_cls;
+pub mod nature_pre_cls;
 pub mod optica_article_cls;
 pub mod ptephy_cls;
 pub mod sagej_cls;
@@ -303,6 +304,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mcom-l", "cls", mcom_l_cls::load_definitions),
   ("proc-l", "cls", mcom_l_cls::load_definitions),
   ("tran-l", "cls", mcom_l_cls::load_definitions),
+  ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("optica-article", "cls", optica_article_cls::load_definitions),
   ("ptephy_v1", "cls", ptephy_cls::load_definitions),
   ("ptephy", "cls", ptephy_cls::load_definitions),
