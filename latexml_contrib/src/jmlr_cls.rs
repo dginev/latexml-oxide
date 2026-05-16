@@ -42,6 +42,18 @@ LoadDefinitions!({
   DefMacro!("\\tableref{}", "#1");
   DefMacro!("\\figureref{}", "#1");
   DefMacro!("\\algorithmref{}", "#1");
+  // jmlrutils.sty L86-140: reference helpers. Stub as the LaTeX
+  // \ref expansion so cross-refs still resolve. Witness 2409.07012.
+  DefMacro!("\\sectionref{}", "\\ref{#1}");
+  DefMacro!("\\appendixref{}", "\\ref{#1}");
+  DefMacro!("\\equationref{}", "(\\ref{#1})");
+  DefMacro!("\\theoremref{}", "\\ref{#1}");
+  DefMacro!("\\lemmaref{}", "\\ref{#1}");
+  DefMacro!("\\corollaryref{}", "\\ref{#1}");
+  DefMacro!("\\propositionref{}", "\\ref{#1}");
+  DefMacro!("\\definitionref{}", "\\ref{#1}");
+  DefMacro!("\\exampleref{}", "\\ref{#1}");
+  DefMacro!("\\remarkref{}", "\\ref{#1}");
 
   // Theorem-likes.
   RawTeX!(
