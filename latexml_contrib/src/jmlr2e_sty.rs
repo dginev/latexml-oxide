@@ -22,12 +22,17 @@ LoadDefinitions!({
   DefMacro!("\\email", "");
   DefMacro!("\\And", " ");
 
-  // Frontmatter / pagination ceremony — gobble cleanly.
+  // Frontmatter / pagination ceremony.
   DefMacro!("\\jmlrheading{}{}{}{}{}{}", "");
   DefMacro!("\\ShortHeadings{}{}", "");
   DefMacro!("\\firstpageno{}", "");
-  DefMacro!("\\editor{}", "");
-  DefMacro!("\\editors{}", "");
+  // \editor / \editors carry author-supplied editor names — preserve as
+  // ltx:note rather than dropping. JMLR papers cite the editor in the
+  // header; this keeps the credit visible.
+  DefMacro!("\\editor{}",
+    "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
+  DefMacro!("\\editors{}",
+    "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
 
   // jmlr2e.sty L372: \acks{text} — acknowledgments section. Render as a
   // section heading so the text body still appears.
