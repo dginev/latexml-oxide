@@ -473,6 +473,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("substr", "sty", package::substr_sty::load_definitions),
   ("shellesc", "sty", package::shellesc_sty::load_definitions),
   ("tracklang", "sty", package::tracklang_sty::load_definitions),
+  ("translations", "sty", package::translations_sty::load_definitions),
   ("translator", "sty", package::translator_sty::load_definitions),
   ("xspace", "sty", package::xspace_sty::load_definitions),
   ("xurl", "sty", package::xurl_sty::load_definitions),
