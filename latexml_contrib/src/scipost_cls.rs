@@ -8,6 +8,9 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("fancyhdr");
+  // SciPost ships review-mode line numbering via lineno; many papers
+  // disable it with \nolinenumbers in the preamble. Witness 2407.00516.
+  RequirePackage!("lineno");
 
   // SciPost.cls L52-53: deepblue / blue colours.
   RawTeX!(r"\definecolor{scipostdeepblue}{HTML}{002B49}");
