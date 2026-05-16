@@ -112,6 +112,7 @@ pub mod achemso_cls;
 pub mod aomart_cls;
 pub mod asme2ej_cls;
 pub mod autart_cls;
+pub mod birkjour_cls;
 pub mod cas_dc_cls;
 pub mod chemformula_sty;
 pub mod cimart_cls;
@@ -148,6 +149,7 @@ pub mod svproc_cls;
 pub mod uai2025_cls;
 pub mod wlscirep_cls;
 pub mod wileynjd_cls;
+pub mod wlpeerj_cls;
 pub mod siamltex_cls;
 pub mod stix2_sty;
 pub mod stix_sty;
@@ -285,6 +287,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("aomart", "cls", aomart_cls::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
+  ("birkjour", "cls", birkjour_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
   ("chemformula", "sty", chemformula_sty::load_definitions),
@@ -330,6 +333,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("uai2025", "cls", uai2025_cls::load_definitions),
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
   ("WileyNJD-v1", "cls", wileynjd_cls::load_definitions),
+  ("wlpeerj", "cls", wlpeerj_cls::load_definitions),
   ("wlscirep", "cls", wlscirep_cls::load_definitions),
   ("svn-multi", "sty", svn_multi_sty::load_definitions),
   ("svninfo", "sty", svninfo_sty::load_definitions),
