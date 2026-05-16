@@ -526,6 +526,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("subfiles", "cls", package::subfiles_cls::load_definitions),
   ("subfiles", "sty", package::subfiles_sty::load_definitions),
   ("soul", "sty", package::soul_sty::load_definitions),
+  (
+    "spectralsequences",
+    "sty",
+    package::spectralsequences_sty::load_definitions,
+  ),
   ("stfloats", "sty", package::stfloats_sty::load_definitions),
   ("stmaryrd", "sty", package::stmaryrd_sty::load_definitions),
   ("mathabx", "sty", package::mathabx_sty::load_definitions),
