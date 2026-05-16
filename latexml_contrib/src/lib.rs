@@ -109,7 +109,9 @@ pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod aamas_cls;
 pub mod achemso_cls;
+pub mod agujournal2019_cls;
 pub mod aomart_cls;
+pub mod apacite_sty;
 pub mod asme2ej_cls;
 pub mod autart_cls;
 pub mod birkjour_cls;
@@ -286,7 +288,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
+  ("agujournal2019", "cls", agujournal2019_cls::load_definitions),
+  ("agutexSI2019", "cls", agujournal2019_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
+  ("apacite", "sty", apacite_sty::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("birkjour", "cls", birkjour_cls::load_definitions),
