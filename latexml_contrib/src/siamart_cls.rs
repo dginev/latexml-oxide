@@ -19,6 +19,8 @@ LoadDefinitions!({
   // siamart220329 L1361: \RequirePackage{algorithm}.
   RequirePackage!("algorithm");
   RequirePackage!("url");
+  // siamonline220329 L1676: \RequirePackage[mathlines]{lineno}.
+  RequirePackage!("lineno");
   // ifpdf is auto-loaded inside epstopdf; our binding triggers
   // \ifpdf usage during epstopdf raw-load, so preload it here.
   RequirePackage!("ifpdf");
