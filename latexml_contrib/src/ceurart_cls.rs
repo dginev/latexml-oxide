@@ -51,21 +51,23 @@ LoadDefinitions!({
   DefMacro!("\\cormark[]", "\\textsuperscript{*#1}");
   DefMacro!("\\corref[]", "\\textsuperscript{*#1}");
 
-  // Affiliation / address — emit as frontmatter ltx:contact.
-  DefMacro!("\\affiliation[]{}", "\\@add@frontmatter{ltx:contact}[role=affiliation]{#2}");
-  DefMacro!("\\address[]{}[]", "\\@add@frontmatter{ltx:contact}[role=address]{#2}");
+  // Affiliation / address — route the user-visible text to a
+  // ltx:note (allowed at document/frontmatter level; ltx:contact is
+  // not). The semantic role is captured in the role attribute so a
+  // downstream processor can still recognize an affiliation/address.
+  DefMacro!("\\affiliation[]{}", "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!("\\address[]{}[]", "\\@add@frontmatter{ltx:note}[role=address]{#2}");
 
-  // Email-address-of-author. Render as a ltx:contact entry so the
-  // visible email is preserved.
-  DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:contact}[role=email]{#2}");
+  // Email-address-of-author. Preserved as a ltx:note.
+  DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:note}[role=email]{#2}");
   DefMacro!("\\eadsep", "");
   DefMacro!("\\eadauthor", "");
 
-  // ORCID/URL/email per-author; emit as contacts. #1 is the author tag,
-  // #2 is the actual value.
-  DefMacro!("\\orcidauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=orcid]{#2}");
-  DefMacro!("\\urlauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=url]{#2}");
-  DefMacro!("\\emailauthor{}{}", "\\@add@frontmatter{ltx:contact}[role=email]{#2}");
+  // ORCID/URL/email per-author; preserve user-visible value (#2) as
+  // ltx:note. #1 is the author tag (used for cross-ref; ignored here).
+  DefMacro!("\\orcidauthor{}{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#2}");
+  DefMacro!("\\urlauthor{}{}", "\\@add@frontmatter{ltx:note}[role=url]{#2}");
+  DefMacro!("\\emailauthor{}{}", "\\@add@frontmatter{ltx:note}[role=email]{#2}");
   DefMacro!("\\creditauthor{}{}", "\\@add@frontmatter{ltx:note}[role=credit]{#2}");
 
   // "print*" commands typically emit a list of previously stashed
