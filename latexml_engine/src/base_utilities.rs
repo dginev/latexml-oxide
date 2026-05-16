@@ -2213,6 +2213,15 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // closes the cluster (cannot reach 0-error AND load the proper
     // ini file without redesigning babel option processing).
     "either you misspelled it",
+    // tikz fires `\PackageError{tikz}{You need to say
+    // \usetikzlibrary{<libname>} for <feature>}` when a paper uses
+    // tikz syntax that requires a library not loaded in the preamble.
+    // E.g. `($A!0.5!B$)` coordinate-calc syntax needs `calc`. Real
+    // pdflatex shows the message and skips the affected expression;
+    // the rest of the document typesets normally. Witness:
+    // arXiv:2510.12536 (3 errors all from `\usetikzlibrary{calc}`
+    // missing for midpoint coordinates in tikz subfile).
+    "you need to say \\usetikzlibrary",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
