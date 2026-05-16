@@ -55,6 +55,19 @@ LoadDefinitions!({
   DefMacro!("\\exampleref{}", "\\ref{#1}");
   DefMacro!("\\remarkref{}", "\\ref{#1}");
 
+  // jmlrutils theorem-style configuration helpers (gobble silently —
+  // we don't replicate the punctuation/spacing). Witness: 2502.19625
+  // (\theorempostheader{:}).
+  DefMacro!("\\theorempostheader{}", "");
+  DefMacro!("\\theoremheader{}", "");
+  DefMacro!("\\theoremsep{}", "");
+  DefMacro!("\\theoremprework{}", "");
+  DefMacro!("\\theorempostwork{}", "");
+  DefMacro!("\\theorembodyfont{}", "");
+  DefMacro!("\\theoremheaderfont{}", "");
+  DefMacro!("\\definetheoremstyle{}{}", "");
+  DefMacro!("\\settheoremtag{}", "");
+
   // Theorem-likes.
   RawTeX!(
     r"\newtheorem{theorem}{Theorem}
