@@ -4,6 +4,14 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("lineno");
+  // neurips_2025.sty L39 defines \newif\if@preprint. Our binding
+  // intercepts \DeclareOption{preprint} and never actually creates
+  // the conditional. Provide it defensively so user code that does
+  // \if@preprint ... \fi outside the preamble works.
+  // Witness 2406.00153 (neurips_2025).
+  DefConditional!("\\if@preprint");
+  DefConditional!("\\if@submission");
+  DefConditional!("\\if@final");
   DeclareOption!("final", {
     state::assign_value("neurips_final", Stored::from(1), Some(Scope::Global));
   });

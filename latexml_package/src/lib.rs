@@ -151,6 +151,26 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::neurips_sty::load_definitions,
   ),
   (
+    "neurips_2022",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2023",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2024",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2025",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
     "algorithm2e",
     "sty",
     package::algorithm2e_sty::load_definitions,
