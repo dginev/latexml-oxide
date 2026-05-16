@@ -14,28 +14,29 @@ LoadDefinitions!({
   // \bib{key}{type}{keyval-pairs}
   // Perl: DefMacro('\bib{}{} RequiredKeyVals:amsrefs', sub { ... });
   //
-  // Phase 2 transition stub (2026-05-15): wires the TeX-level
-  // \bib invocation to the Phase 1 BibEntry registry. We read the
-  // key + entry-type as strings and call `register_entry`, which
-  // sets it as the current entry. Field extraction from the
-  // keyval-pairs slot still needs a `RequiredKeyVals:amsrefs`
-  // parameter type port (TODO Phase 2-3), so the keyvals are
-  // captured raw via `add_raw_field("_raw_keyvals", ...)` for now.
-  // Returning empty Tokens — no XML emit until Phase 3 lands the
-  // bibAddToContainer / `\bib@@field` constructors.
+  // Reads the key + entry-type as strings and parses the keyval slot
+  // via `parse_amsrefs_keyvals` into individual `BibEntry::add_raw_field`
+  // calls. Mirrors Perl `amsrefs.sty.ltxml:42-51`: `lc()` on each key,
+  // `UnTeX()` on each value (we use the raw source — close enough for
+  // the downstream `\bib@field@<type>@<field>` dispatch since the
+  // handlers themselves do the digestion).
+  //
+  // Emits `\ProcessBibTeXEntry{<key>}` (Perl L51) so the bibtex.rs
+  // orchestration drives field dispatch + entry-type prepare/complete
+  // and builds the `<ltx:bibentry>` XML.
   DefMacro!("\\bib{}{}{}", sub[args] {
-    // ArgWrap::None's Display impl writes the literal "None", so
-    // guard each slot with is_some() before calling to_string().
+    use latexml_engine::bibtex::{BibEntry, register_entry, parse_amsrefs_keyvals};
     let key = if args[0].is_some() { args[0].to_string() } else { String::new() };
     let entry_type = if args[1].is_some() { args[1].to_string() } else { String::new() };
     let raw_kv = if args[2].is_some() { args[2].to_string() } else { String::new() };
-    let mut entry = latexml_engine::bibtex::BibEntry::new(
-      key.clone(), entry_type);
-    if !raw_kv.is_empty() {
-      entry.add_raw_field("_raw_keyvals", raw_kv);
+    let mut entry = BibEntry::new(key.clone(), entry_type);
+    for (field, value) in parse_amsrefs_keyvals(&raw_kv) {
+      entry.add_raw_field(field, value);
     }
-    latexml_engine::bibtex::register_entry(&key, entry);
-    Ok(Tokens!())
+    register_entry(&key, entry);
+    // Emit `\ProcessBibTeXEntry{<key>}` to drive bibtex.rs orchestration.
+    Ok(Invocation!(T_CS!("\\ProcessBibTeXEntry"),
+      vec![Tokens::new(Explode!(&key))]))
   });
 
   // \BibSpec — ignore

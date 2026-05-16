@@ -741,6 +741,77 @@ pub fn process_identifier(s: &str) -> String {
   s.trim().to_string()
 }
 
+/// Parse an amsrefs-style keyval string `"key = {value}, key = value, ..."`
+/// into a list of `(name, value)` pairs. Names are lowercased; values
+/// have their outer `{...}` envelope stripped (if any) and surrounding
+/// whitespace trimmed.
+///
+/// Used by the amsrefs `\bib{key}{type}{keyvals}` stub to populate
+/// `BibEntry::raw_fields` for downstream `\ProcessBibTeXEntry`
+/// dispatch. Mirrors Perl `$keyvals->getPairs` + `lc()` + `UnTeX()`
+/// from `amsrefs.sty.ltxml:42-50`.
+pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
+  let bytes = s.as_bytes();
+  let mut out: Vec<(String, String)> = Vec::new();
+  let mut i = 0;
+  while i < bytes.len() {
+    // Skip whitespace + commas.
+    while i < bytes.len()
+      && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b',')
+    {
+      i += 1;
+    }
+    if i >= bytes.len() { break; }
+    // Read key up to `=` (or end / `,`).
+    let key_start = i;
+    while i < bytes.len() && !matches!(bytes[i], b'=' | b',') {
+      i += 1;
+    }
+    let key = s[key_start..i].trim().to_ascii_lowercase();
+    if key.is_empty() {
+      // Stray comma or trailing garbage; skip the separator and continue.
+      if i < bytes.len() { i += 1; }
+      continue;
+    }
+    if i >= bytes.len() || bytes[i] != b'=' {
+      // No `=` — key without value; record empty value.
+      out.push((key, String::new()));
+      continue;
+    }
+    i += 1; // skip `=`
+    // Skip whitespace before value.
+    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
+      i += 1;
+    }
+    // Value: balanced `{...}` group OR until next top-level `,`.
+    let value: String;
+    if i < bytes.len() && bytes[i] == b'{' {
+      let start = i + 1;
+      let mut depth = 1i32;
+      i += 1;
+      while i < bytes.len() && depth > 0 {
+        match bytes[i] {
+          b'{' => depth += 1,
+          b'}' => depth -= 1,
+          _ => {},
+        }
+        if depth == 0 { break; }
+        i += 1;
+      }
+      value = s[start..i].to_string();
+      if i < bytes.len() { i += 1; } // skip closing `}`
+    } else {
+      let start = i;
+      while i < bytes.len() && bytes[i] != b',' {
+        i += 1;
+      }
+      value = s[start..i].trim().to_string();
+    }
+    out.push((key, value));
+  }
+  out
+}
+
 /// Perl `ucfirst($s)` — uppercase the first char, leave the rest.
 fn ucfirst(s: &str) -> String {
   let mut chars = s.chars();
@@ -2054,5 +2125,63 @@ mod tests {
     assert_eq!(process_identifier("\tabc\n"), "abc");
     assert_eq!(process_identifier("no-whitespace"), "no-whitespace");
     assert_eq!(process_identifier(""), "");
+  }
+
+  // --- parse_amsrefs_keyvals ---
+
+  #[test]
+  fn parse_kv_simple_pairs() {
+    let r = parse_amsrefs_keyvals("author = {Smith}, year = 2020");
+    assert_eq!(r, vec![
+      ("author".to_string(), "Smith".to_string()),
+      ("year".to_string(), "2020".to_string()),
+    ]);
+  }
+
+  #[test]
+  fn parse_kv_lowercases_keys() {
+    let r = parse_amsrefs_keyvals("Author={S}, TITLE={T}");
+    assert_eq!(r[0].0, "author");
+    assert_eq!(r[1].0, "title");
+  }
+
+  #[test]
+  fn parse_kv_preserves_braced_commas() {
+    // Internal commas in `{...}` shouldn't split the value.
+    let r = parse_amsrefs_keyvals("author = {Smith, John and Doe, Jane}, year=2020");
+    assert_eq!(r.len(), 2);
+    assert_eq!(r[0].1, "Smith, John and Doe, Jane");
+    assert_eq!(r[1].1, "2020");
+  }
+
+  #[test]
+  fn parse_kv_nested_braces() {
+    let r = parse_amsrefs_keyvals("title = {On {Foo} bar}");
+    assert_eq!(r, vec![("title".to_string(), "On {Foo} bar".to_string())]);
+  }
+
+  #[test]
+  fn parse_kv_unbraced_value() {
+    let r = parse_amsrefs_keyvals("year = 1999, volume = 12");
+    assert_eq!(r, vec![
+      ("year".to_string(), "1999".to_string()),
+      ("volume".to_string(), "12".to_string()),
+    ]);
+  }
+
+  #[test]
+  fn parse_kv_empty_input() {
+    assert!(parse_amsrefs_keyvals("").is_empty());
+    assert!(parse_amsrefs_keyvals("   ").is_empty());
+    assert!(parse_amsrefs_keyvals(",,, ,").is_empty());
+  }
+
+  #[test]
+  fn parse_kv_key_without_value() {
+    let r = parse_amsrefs_keyvals("draft, year=2020");
+    assert_eq!(r, vec![
+      ("draft".to_string(), String::new()),
+      ("year".to_string(), "2020".to_string()),
+    ]);
   }
 }
