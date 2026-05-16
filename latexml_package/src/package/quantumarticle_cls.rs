@@ -40,6 +40,10 @@ LoadDefinitions!({
   // quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
   // Render as classification block to preserve the metadata.
   DefMacro!("\\keywords{}", "");
+  // \ead is the elsart-style email-address macro often inherited by
+  // quantumarticle users from journal templates. Gobble.
+  // Witness 2406.10832.
+  DefMacro!("\\ead[]{}", "");
 
   DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
