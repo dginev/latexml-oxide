@@ -6337,11 +6337,26 @@ LoadDefinitions!({
   // LaTeX3 ltcmd: \NewCommandCopy and \DeclareCommandCopy
   // These are semantic \let equivalents from the 2023+ LaTeX kernel.
   // Not in Perl LaTeXML (too new), but needed for modern packages (tcolorbox, etc.).
-  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  //
+  // ltcmd defines them as `\NewDocumentCommand \NewCommandCopy { m m }` —
+  // both args are mandatory, accepting either `\foo` (bare token) or
+  // `{\foo}` (brace-wrapped token). Real arxmliv usage is the brace
+  // form: `\NewCommandCopy{\origsum}{\sum}` (witness:
+  // arXiv:2510.20194 various.sty L296). Earlier `Token Token` spec
+  // consumed `{` as the first token and `\origsum` as the second,
+  // producing `\let { = \origsum` (no-op), leaving `\origsum`
+  // undefined and yielding `Error:undefined:\origsum` on first use.
+  //
+  // Use `{}{}` (brace-mandatory) and unwrap to the contained Token.
+  DefPrimitive!("\\NewCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
-  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
   DefMacro!("\\ShowCommand Token", "");
 
