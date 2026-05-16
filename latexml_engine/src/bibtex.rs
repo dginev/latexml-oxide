@@ -30,8 +30,14 @@
 use crate::prelude::*;
 use latexml_core::tokens::Tokens;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
+
+// Note: do NOT add `use std::collections::HashMap` here. The
+// `DefConstructor!(... literal-template)` proc-macro expansion
+// references an unqualified `HashMap` and expects the
+// `rustc_hash::FxHashMap as HashMap` re-export from `crate::prelude::*`
+// — bringing std's HashMap into scope shadows it and breaks the
+// literal-template flavor of constructors.
 
 /// One BibTeX-style bibliography entry. Mirrors Perl's per-entry hash
 /// object (`LaTeXML/Engine/BibTeX.pool.ltxml` uses
@@ -96,7 +102,7 @@ thread_local! {
   /// to the registered entry. Populated by `\bib`'s entry-create
   /// path (Phase 4); read by `current_entry`-based field helpers.
   static BIB_ENTRIES: RefCell<HashMap<String, Rc<RefCell<BibEntry>>>> =
-    RefCell::new(HashMap::new());
+    RefCell::new(HashMap::default());
 
   /// The normalized key of the entry currently being processed.
   /// Set by the per-entry pipeline at `\bib@entry@<type>@prepare`
@@ -518,11 +524,145 @@ LoadDefinitions!({
   // entries digest LaTeX-flavored markup in titles/authors/etc.
   LoadPool!("LaTeX");
 
-  // TODO: port the remaining 936+ lines of BibTeX entry-type
-  // constructors, field handlers, key normalization, and
-  // special-character handling from `BibTeX.pool.ltxml`
-  // L20-955. See module docstring above and
-  // `docs/BIBTEX_PORT_PLAN.md` for the phase plan.
+  // -------- Phase 2: core supporters (Perl L230-278, L951-953) --------
+
+  // \bib@@field {} OptionalKeyVals Digested
+  // Perl L230-232: insert element with tag, attrs, and content.
+  // Tag comes in as digested tokens (e.g. "ltx:bib-title"); attrs is
+  // an OptionalKeyVals digested arg (or absent); content is the
+  // already-digested body to absorb under the new element.
+  DefConstructor!("\\bib@@field {} OptionalKeyVals Digested",
+    sub [document, args] {
+      let tag = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let attrs = if let Some(kv_d) = &args[1] {
+        if let latexml_core::digested::DigestedData::KeyVals(ref kv) = kv_d.data() {
+          kv.get_hash()
+        } else {
+          FxAttrMap::default()
+        }
+      } else {
+        FxAttrMap::default()
+      };
+      let content: Vec<&latexml_core::digested::Digested> = match &args[2] {
+        Some(d) => vec![d],
+        None => vec![],
+      };
+      document.insert_element(&tag, content, Some(attrs))?;
+    });
+
+  // \bib@addtype{}
+  // Perl L235-240: emit `\bib@field@default@type{<type>}` only if
+  // the current entry has no `type` field set yet. Used by
+  // entry-type prepare macros to add a default type after copying
+  // crossref fields. Returning an empty Tokens stream is the
+  // Perl "do nothing" branch.
+  DefMacro!("\\bib@addtype{}", sub[args] {
+    if current_entry_field("type").is_some() {
+      Ok(Tokens!())
+    } else {
+      Ok(Invocation!(T_CS!("\\bib@field@default@type"),
+        vec![args[0].clone().owned_tokens().unwrap_or_default()]))
+    }
+  });
+
+  // \bib@addto@related {}{} Digested
+  // Perl L261-263: find-or-create `<ltx:bib-related type='#1' role='#2'>`
+  // and absorb the digested body into it. Uses bib_add_to_container's
+  // sorted-xpath dedup so two `\bib@addto@related{book}{host}{...}`
+  // calls accumulate into one bib-related node.
+  DefConstructor!("\\bib@addto@related {}{} Digested",
+    sub [document, args] {
+      let type_s = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let role_s = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let mut attrs = FxAttrMap::default();
+      attrs.insert("type".to_string(), type_s);
+      attrs.insert("role".to_string(), role_s);
+      let data = args[2].as_ref();
+      bib_add_to_container(document, "ltx:bib-related", data, attrs)?;
+    });
+
+  // \bib@@@name{}{} → emit `<ltx:bib-name role='#1'>#2</ltx:bib-name>`.
+  // Perl L266-267.
+  DefConstructor!("\\bib@@@name{}{}",
+    "<ltx:bib-name role='#1'>#2</ltx:bib-name>");
+
+  // \bib@@@names{} — wrapper that turns multi-name tokens into one
+  // Whatsit. Perl L270.
+  DefConstructor!("\\bib@@@names{}", "#1");
+
+  // \bib@@names{}{} — DefMacro that processes a names string and
+  // emits a `\bib@@@names{ <name-invocations> }` group. Perl L271-278.
+  //
+  // The Perl version processes names via `processBibNameList(UnTeX($names))`
+  // which returns a list of name Tokens (each Tokens being the
+  // surname/given/lineage invocations for one name). We mirror that:
+  // parse the names string with `process_bib_name_list`, then for each
+  // name emit `Invocation(\bib@@@name, field, name_tokens)`.
+  DefMacro!("\\bib@@names{}{}", sub[args] {
+    let field_tokens = args[0].clone().owned_tokens().unwrap_or_default();
+    let names_str = if args[1].is_some() { args[1].to_string() } else { String::new() };
+    let parsed = process_bib_name_list(&names_str);
+
+    // Build the `\bib@@@names{ <name-invocations> }` Tokens stream.
+    // Each name expands into invocations of `\bib@surname`,
+    // `\bib@given`, `\bib@lineage` over `\bib@@@name{field}{...}`.
+    //
+    // Note: `Invocation!()` internally uses `?` (it calls `build_invocation(...)?`),
+    // so the enclosing closure body must propagate Result. The outer
+    // `sub[args] { ... }` closure does (via `.into_tokens_result()`),
+    // so we can use `?` at this level. We inline name-construction
+    // here (rather than a nested `|name| -> Tokens` helper) because
+    // `?` only propagates one level up — from a nested closure it
+    // would try to early-return from that closure.
+    // Using `Explode!()` for surname/given/lineage strings keeps
+    // tokenization synchronous (no Result), matching Perl's behaviour
+    // of pre-tokenized verbatim characters.
+    let mut body: Vec<Token> = Vec::new();
+    body.push(T_CS!("\\bib@@@names"));
+    body.push(T_BEGIN!());
+    for name in &parsed.names {
+      let mut name_tks: Vec<Token> = Vec::new();
+      if !name.surname.is_empty() {
+        let inv = Invocation!(T_CS!("\\bib@surname"),
+          vec![Tokens::new(Explode!(&name.surname))]);
+        name_tks.extend(inv.unlist());
+      }
+      if !name.given.is_empty() {
+        let inv = Invocation!(T_CS!("\\bib@given"),
+          vec![Tokens::new(Explode!(&name.given))]);
+        name_tks.extend(inv.unlist());
+      }
+      if !name.lineage.is_empty() {
+        let inv = Invocation!(T_CS!("\\bib@lineage"),
+          vec![Tokens::new(Explode!(&name.lineage))]);
+        name_tks.extend(inv.unlist());
+      }
+      let inv = Invocation!(T_CS!("\\bib@@@name"),
+        vec![field_tokens.clone(), Tokens::new(name_tks)]);
+      body.extend(inv.unlist());
+    }
+    if parsed.etal {
+      // Perl L917: trailing `\bib@surname{others}` as etal marker.
+      let others = Invocation!(T_CS!("\\bib@surname"),
+        vec![Tokens::new(Explode!("others"))]);
+      let inv = Invocation!(T_CS!("\\bib@@@name"),
+        vec![field_tokens.clone(), others]);
+      body.extend(inv.unlist());
+    }
+    body.push(T_END!());
+    Ok(Tokens::new(body))
+  });
+
+  // Name-component constructors. Perl L951-953. Schema nodes:
+  // <ltx:surname>, <ltx:givenname>, <ltx:lineage>.
+  DefConstructor!("\\bib@surname{}", "<ltx:surname>#1</ltx:surname>");
+  DefConstructor!("\\bib@given{}",   "<ltx:givenname>#1</ltx:givenname>");
+  DefConstructor!("\\bib@lineage{}", "<ltx:lineage>#1</ltx:lineage>");
+
+  // TODO: port the remaining ~850 lines of BibTeX entry-type
+  // constructors, field handlers, title-case logic, MR/Zbl synthesis,
+  // and special-character handling from `BibTeX.pool.ltxml` L280-955.
+  // See `docs/BIBTEX_PORT_PLAN.md` Phases 3-6.
 });
 
 #[cfg(test)]
