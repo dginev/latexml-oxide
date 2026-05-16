@@ -9,6 +9,10 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
+  // Real sn-jnl.cls loads geometry for page setup — papers commonly
+  // call \\geometry{margin=2cm} without an explicit usepackage.
+  // Witness 2503.06846.
+  RequirePackage!("geometry");
 
   // sn-jnl frontmatter — gobble.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");

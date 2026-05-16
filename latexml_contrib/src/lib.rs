@@ -172,6 +172,7 @@ pub mod tipa_sty;
 pub mod tlp_cls;
 pub mod ucs_sty;
 pub mod ut_thesis_cls;
+pub mod widetext_sty;
 pub mod ws_p8_50x6_00_cls;
 pub mod xltabular_sty;
 pub mod xr_sty;
@@ -272,6 +273,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("scicite", "sty", scicite_sty::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
+  ("widetext", "sty", widetext_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),
