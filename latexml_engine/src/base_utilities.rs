@@ -2213,6 +2213,16 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // closes the cluster (cannot reach 0-error AND load the proper
     // ini file without redesigning babel option processing).
     "either you misspelled it",
+    // babel-fragmented sibling to "either you misspelled it": when a
+    // user `\usepackage[<lang>]{babel}` requests a language whose
+    // legacy `<lang>.ldf` was retired in TL2025 (only the new
+    // `babel-<lang>.tex` ini-file remains), babel emits BOTH:
+    //   Package babel Error: Unknown option '<lang>'. Either you ...
+    //   Package babel Error: You haven't defined the language '<lang>' yet.
+    // We already downgrade the first (above); cover the second so the
+    // cluster is fully Info-graded. Witness: arXiv:2511.05114 (babel
+    // [brazil] without the new ini-file system).
+    "you haven't defined the language",
     // tikz fires `\PackageError{tikz}{You need to say
     // \usetikzlibrary{<libname>} for <feature>}` when a paper uses
     // tikz syntax that requires a library not loaded in the preamble.
