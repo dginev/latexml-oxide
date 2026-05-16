@@ -113,6 +113,7 @@ pub mod aomart_cls;
 pub mod autart_cls;
 pub mod cas_dc_cls;
 pub mod cimart_cls;
+pub mod colm2025_conference_sty;
 pub mod cvpr_sty;
 pub mod ecai_cls;
 pub mod egpubl_cls;
@@ -272,6 +273,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
+  ("colm2025_conference", "sty", colm2025_conference_sty::load_definitions),
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
   ("egpubl", "cls", egpubl_cls::load_definitions),
