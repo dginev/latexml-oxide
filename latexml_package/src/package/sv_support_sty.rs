@@ -314,4 +314,10 @@ LoadDefinitions!({
     Some(Tokenize!("Proof")),     // display title
     None,                         // no 'within' counter
   )?;
+
+  // \thankstext{label}{text} — sn-jnl / EPJ-style title-page footnote
+  // (svjour3 derivatives). Render as a regular footnote.
+  // Witnesses 2406.12029, 2406.12545.
+  DefMacro!("\\thankstext{}{}", "\\footnote{#2}");
+  DefMacro!("\\thanksref{}", "");
 });
