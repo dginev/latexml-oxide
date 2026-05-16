@@ -5,6 +5,14 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: pifont.sty.ltxml — uses pzd fontmap
 
+  // \Pifont{font-name} — switch to the named Pi font. Used by packages
+  // like adforn.sty which redeclares \pzd via `\Pifont{paadr}`. For
+  // XML/HTML output the font-family change has no semantic effect; the
+  // resulting `\char N` produces a literal codepoint regardless of the
+  // declared font. Stub as no-op so downstream `\char` / `\Pisymbol`
+  // calls still resolve correctly. Witness: 2502.16764 (adforn.sty).
+  DefMacro!("\\Pifont{}", "");
+
   // \Pisymbol{font}{code} — decode a codepoint from a Pi font
   DefPrimitive!("\\Pisymbol{}{Number}", sub[(pifont, code)] {
     let font_name = pifont.unwrap().to_string();

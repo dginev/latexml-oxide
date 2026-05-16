@@ -31,6 +31,9 @@ LoadDefinitions!({
   DefMacro!("\\icmlcorrespondingauthor{}{}", None);
 
   DefMacro!("\\printAffiliationsAndNotice{}", None);
+  // ICML 2025 renamed to include "Work" — keep both for back-compat.
+  // Witness: 2502.18679 (icml2025.sty L564).
+  DefMacro!("\\printAffiliationsAndWorkNotice{}", None);
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
