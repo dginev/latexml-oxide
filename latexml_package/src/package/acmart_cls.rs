@@ -266,4 +266,9 @@ LoadDefinitions!({
 
   Let!("\\proof", "\\@proof");
   Let!("\\endproof", "\\end@proof");
+
+  // acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
+  // Commons license. Frontmatter-only; gobble cleanly.
+  // Witnesses 2406.04861, 2406.09266.
+  DefMacro!("\\setcctype[]{}", "");
 });
