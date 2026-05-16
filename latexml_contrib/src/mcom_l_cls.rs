@@ -11,6 +11,12 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("url");
 
+  // \copyrightinfo{year}{holder} — AMS \copyrightinfo from ams_support.
+  // Some mcom-l/proc-l papers call it directly without `\usepackage
+  // {ams_support}`. Preserve as ltx:note. Witness 2503.09526.
+  DefMacro!("\\copyrightinfo{}{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #1: #2}");
+
   // AMS journal frontmatter — preserve author content as ltx:note
   // frontmatter entries with role markers (per content-preservation
   // directive).
