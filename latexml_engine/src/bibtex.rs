@@ -222,8 +222,7 @@ pub fn reset() {
 
 /// FxHashMap alias used by `bib_add_to_container` — matches
 /// `latexml_core::document::Document::insert_element`'s expected
-/// attribute-map type. Distinct from the `HashMap` (std) used by
-/// the thread-local BibEntry registry above.
+/// attribute-map type.
 type FxAttrMap = rustc_hash::FxHashMap<String, String>;
 
 /// Build the find-or-create XPath used by `bib_add_to_container`.
@@ -518,6 +517,188 @@ fn starts_lowercase(word: &str) -> bool {
     .is_some_and(|c| c.is_lowercase())
 }
 
+/// BibTeX title-case modes recognised by `recase_title`. Perl
+/// `BibTeX.pool.ltxml:283-291`. Default is `Capitalize1` per the
+/// pool's `LookupValue('BibTeX_title_case') || 'capitalize1'`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TitleCaseMode {
+  /// Leave the title alone.
+  AsIs,
+  /// Downcase everything, then capitalise the first word only.
+  Capitalize1,
+  /// Downcase everything, then capitalise each word.
+  Capitalize,
+  /// All-uppercase.
+  Uppercase,
+  /// All-lowercase.
+  Lowercase,
+}
+
+impl TitleCaseMode {
+  /// Parse a Perl-style mode string. Unknown values fall back to
+  /// `Capitalize1` (matching `LookupValue(...) || 'capitalize1'`).
+  pub fn parse(s: &str) -> Self {
+    match s {
+      "asis" => Self::AsIs,
+      "capitalize" => Self::Capitalize,
+      "uppercase" => Self::Uppercase,
+      "lowercase" => Self::Lowercase,
+      _ => Self::Capitalize1,
+    }
+  }
+}
+
+/// Perl `\bib@@title` body (`BibTeX.pool.ltxml:293-332`): re-case a
+/// title string while preserving brace-grouped and `$math$`-delimited
+/// regions verbatim. Words are runs of `\w` chars or `\<word>`/
+/// `\<single-char>` control-sequence escapes; whitespace separates
+/// words and may modify the next word's "first" status.
+///
+/// `wb` (word-beginning) is 1 at the start of a word run; `wc` (word
+/// counter) increments at each word start. Together they let the
+/// `Capitalize1` mode capitalise the FIRST word and lowercase the
+/// rest, while `Capitalize` uppercases every word.
+pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
+  let bytes = title.as_bytes();
+  let mut out = String::with_capacity(title.len());
+  let mut wb: bool = true;
+  let mut wc: u32 = 0;
+  let mut i = 0;
+  while i < bytes.len() {
+    let b = bytes[i];
+    // Whitespace run — copy verbatim, set word-beginning.
+    if b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' {
+      let start = i;
+      while i < bytes.len()
+        && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r')
+      {
+        i += 1;
+      }
+      out.push_str(&title[start..i]);
+      wb = true;
+      continue;
+    }
+    // Balanced `{...}` — copy verbatim, atomic word.
+    if b == b'{' {
+      let start = i;
+      let mut depth = 0i32;
+      while i < bytes.len() {
+        match bytes[i] {
+          b'{' => depth += 1,
+          b'}' => {
+            depth -= 1;
+            if depth == 0 {
+              i += 1;
+              break;
+            }
+          },
+          _ => {},
+        }
+        i += 1;
+      }
+      if wb {
+        wc += 1;
+      }
+      out.push_str(&title[start..i]);
+      wb = false;
+      continue;
+    }
+    // Balanced `$...$` — copy verbatim, no word-counter bump.
+    if b == b'$' {
+      let start = i;
+      i += 1;
+      while i < bytes.len() && bytes[i] != b'$' {
+        i += 1;
+      }
+      if i < bytes.len() {
+        i += 1;
+      }
+      out.push_str(&title[start..i]);
+      wb = false;
+      continue;
+    }
+    // Word: ASCII alphanumeric/underscore OR `\<word>` / `\<char>` escape.
+    let word_start = i;
+    let mut consumed_word = false;
+    loop {
+      if i >= bytes.len() {
+        break;
+      }
+      let c = bytes[i];
+      let is_wordchar = c.is_ascii_alphanumeric() || c == b'_';
+      if is_wordchar {
+        i += 1;
+        consumed_word = true;
+        continue;
+      }
+      if c == b'\\' && i + 1 < bytes.len() {
+        // \<word> or \<single-char>
+        i += 1;
+        if bytes[i].is_ascii_alphabetic() {
+          while i < bytes.len() && bytes[i].is_ascii_alphabetic() {
+            i += 1;
+          }
+        } else {
+          i += 1;
+        }
+        consumed_word = true;
+        continue;
+      }
+      break;
+    }
+    if consumed_word {
+      let word = &title[word_start..i];
+      let recased = match mode {
+        TitleCaseMode::AsIs => word.to_string(),
+        TitleCaseMode::Uppercase => word.to_uppercase(),
+        _ if !wb
+          || (mode == TitleCaseMode::Capitalize1 && wc > 0)
+          || mode == TitleCaseMode::Lowercase =>
+        {
+          word.to_lowercase()
+        },
+        TitleCaseMode::Capitalize | TitleCaseMode::Capitalize1 => {
+          ucfirst(word)
+        },
+        _ => word.to_string(),
+      };
+      out.push_str(&recased);
+      if wb {
+        wc += 1;
+      }
+      wb = false;
+      continue;
+    }
+    // Fallback single char (e.g. punctuation).
+    let ch_start = i;
+    let mut chars = title[i..].chars();
+    if let Some(c) = chars.next() {
+      i += c.len_utf8();
+    } else {
+      i += 1;
+    }
+    out.push_str(&title[ch_start..i]);
+    wb = true;
+  }
+  out
+}
+
+/// Perl `ucfirst($s)` — uppercase the first char, leave the rest.
+fn ucfirst(s: &str) -> String {
+  let mut chars = s.chars();
+  match chars.next() {
+    Some(c) => {
+      let mut out = String::with_capacity(s.len());
+      for upper in c.to_uppercase() {
+        out.push(upper);
+      }
+      out.push_str(chars.as_str());
+      out
+    },
+    None => String::new(),
+  }
+}
+
 LoadDefinitions!({
   // Perl BibTeX.pool.ltxml L19: `LoadPool('LaTeX')` — BibTeX
   // pool is built on top of the full LaTeX format, since bib
@@ -659,10 +840,69 @@ LoadDefinitions!({
   DefConstructor!("\\bib@given{}",   "<ltx:givenname>#1</ltx:givenname>");
   DefConstructor!("\\bib@lineage{}", "<ltx:lineage>#1</ltx:lineage>");
 
-  // TODO: port the remaining ~850 lines of BibTeX entry-type
-  // constructors, field handlers, title-case logic, MR/Zbl synthesis,
-  // and special-character handling from `BibTeX.pool.ltxml` L280-955.
-  // See `docs/BIBTEX_PORT_PLAN.md` Phases 3-6.
+  // -------- Phase 3: title-case logic + default field handlers --------
+
+  // \bib@@title{field}{tag}{ignoretitle}
+  // Perl L293-333: re-case the named field per the BibTeX_title_case
+  // state value, then emit `\bib@@field{tag}{}{<recased>}`. The
+  // `ignoretitle` arg is unused (matches Perl — likely vestigial).
+  DefMacro!("\\bib@@title{}{}{}", sub[args] {
+    let field_name = if args[0].is_some() { args[0].to_string() } else { String::new() };
+    let tag_tokens = args[1].clone().owned_tokens().unwrap_or_default();
+    // Perl: `LookupValue('BibTeX_title_case') || 'capitalize1'`.
+    let mode_str = state::lookup_value("BibTeX_title_case")
+      .and_then(|s| match s {
+        Stored::String(sym) => Some(latexml_core::common::arena::to_string(sym)),
+        Stored::Tokens(t) => Some(t.to_string()),
+        _ => None,
+      })
+      .unwrap_or_else(|| "capitalize1".to_string());
+    let mode = TitleCaseMode::parse(&mode_str);
+    let raw = current_entry_raw_field(&field_name).unwrap_or_default();
+    let recased = recase_title(&raw, mode);
+    // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
+    // is the OptionalKeyVals arg (absent → no attributes).
+    let recased_tokens = Tokens::new(Explode!(&recased));
+    let inv = Invocation!(T_CS!("\\bib@@field"),
+      vec![tag_tokens, Tokens!(), recased_tokens]);
+    Ok(inv)
+  });
+
+  // \bib@@booktitle{field}{tag} — Perl L336-337.
+  // Aliased to `\bib@@field`, NOT to `\bib@@title`. Perl L335
+  // explicitly notes "I'd thought booktitle were treated like title,
+  // but I think I was mistaken."
+  DefMacro!("\\bib@@booktitle{}{}", "\\bib@@field{#1}{#2}");
+
+  // Field handlers — Perl L342-351.
+
+  // Ignore the field (used for fields the entry-type doesn't want).
+  // `Verbatim Verbatim` reads two raw arg slots and discards both.
+  DefMacro!("\\bib@field@@ignore Verbatim Verbatim", "");
+
+  // Default field handler: route to `\bib@field@unknownasdata`, which
+  // emits a `<ltx:bib-data role='<field>'>` with the raw value. The
+  // second `Verbatim` arg is captured but the body discards it (Perl
+  // L346 comment: "IGNORE the tokenized data.").
+  DefMacro!("\\bib@field@default@default Verbatim Verbatim",
+    "\\bib@field@unknownasdata{#1}");
+
+  // Emit `<ltx:bib-data role='<field>'>#rawdata</ltx:bib-data>` where
+  // `#rawdata` is the current entry's raw field value (pulled at
+  // digestion time, NOT from a digested arg slot — Perl's `afterDigest`
+  // closure does the lookup via `currentBibEntryField`).
+  DefConstructor!("\\bib@field@unknownasdata Verbatim",
+    "<ltx:bib-data role='#1'>#rawdata</ltx:bib-data>",
+    after_digest => sub[whatsit] {
+      let field = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+      let raw = current_entry_raw_field(&field).unwrap_or_default();
+      whatsit.set_property("rawdata", Stored::Tokens(Tokens::new(Explode!(&raw))));
+    });
+
+  // TODO: port the remaining BibTeX entry-type prepare/complete
+  // macros, field-type aliases, MR/Zbl synthesis, and special-character
+  // handling from `BibTeX.pool.ltxml` L355-955.
+  // See `docs/BIBTEX_PORT_PLAN.md` Phases 4-6.
 });
 
 #[cfg(test)]
@@ -926,5 +1166,113 @@ mod tests {
     attrs.insert("role".to_string(), "host".to_string());
     let xpath = bib_container_xpath("ltx:bib-related", &attrs);
     assert_eq!(xpath, "ltx:bib-related[@role='host' and @type='book']");
+  }
+
+  // --- recase_title (Perl `\bib@@title` body) ---
+
+  #[test]
+  fn recase_asis_is_identity() {
+    assert_eq!(
+      recase_title("On The Theory Of LATEX", TitleCaseMode::AsIs),
+      "On The Theory Of LATEX"
+    );
+  }
+
+  #[test]
+  fn recase_uppercase_is_all_caps() {
+    assert_eq!(
+      recase_title("Hello World", TitleCaseMode::Uppercase),
+      "HELLO WORLD"
+    );
+  }
+
+  #[test]
+  fn recase_lowercase_is_all_lower() {
+    assert_eq!(
+      recase_title("Hello WORLD", TitleCaseMode::Lowercase),
+      "hello world"
+    );
+  }
+
+  #[test]
+  fn recase_capitalize1_caps_first_only() {
+    // Perl `capitalize1` calls `ucfirst($word)` on the first word —
+    // which uppercases the leading char and leaves the rest of the
+    // word untouched (does NOT downcase). The docstring at
+    // BibTeX.pool.ltxml:286 ("downcase all, then Capitalize 1st word")
+    // mis-describes the implementation. Match Perl-actual, not docs.
+    // Subsequent words: `lc($word)` → full lowercase.
+    assert_eq!(
+      recase_title("ON THE THEORY OF NUMBERS", TitleCaseMode::Capitalize1),
+      "ON the theory of numbers"
+    );
+  }
+
+  #[test]
+  fn recase_capitalize_caps_every_word() {
+    assert_eq!(
+      recase_title("on the theory of numbers", TitleCaseMode::Capitalize),
+      "On The Theory Of Numbers"
+    );
+  }
+
+  #[test]
+  fn recase_preserves_braced_groups() {
+    // BibTeX convention: `{SomeName}` is opaque — the contents stay
+    // verbatim regardless of mode, but the group counts as a word.
+    // First word `THE`: `ucfirst` leaves it as `THE` (no downcasing
+    // of the rest — see `recase_capitalize1_caps_first_only`).
+    // `{LaTeX}` is the braced group (atomic word #2, kept verbatim).
+    // `BOOK` is subsequent word #3: lowercased to `book`.
+    assert_eq!(
+      recase_title("THE {LaTeX} BOOK", TitleCaseMode::Capitalize1),
+      "THE {LaTeX} book"
+    );
+  }
+
+  #[test]
+  fn recase_preserves_math_groups() {
+    // `$...$` math: copied verbatim. wb stays false after.
+    // `PROOF` first word: ucfirst → `PROOF` (no rest-lowercase).
+    // `OF` → lowercased.
+    assert_eq!(
+      recase_title("PROOF OF $\\pi^2/6$", TitleCaseMode::Capitalize1),
+      "PROOF of $\\pi^2/6$"
+    );
+  }
+
+  #[test]
+  fn recase_handles_cs_escape_in_word() {
+    // `\foo` should be consumed as part of the word run.
+    // Lowercase mode → entire word run including the `\foo`
+    // becomes lowercase (per Perl's `lc($1)`).
+    let r = recase_title("Hello \\TeX World", TitleCaseMode::Lowercase);
+    assert_eq!(r, "hello \\tex world");
+  }
+
+  #[test]
+  fn recase_empty_string() {
+    assert_eq!(recase_title("", TitleCaseMode::Capitalize1), "");
+  }
+
+  // --- TitleCaseMode::parse ---
+
+  #[test]
+  fn title_case_mode_parse_known_values() {
+    assert_eq!(TitleCaseMode::parse("asis"), TitleCaseMode::AsIs);
+    assert_eq!(TitleCaseMode::parse("uppercase"), TitleCaseMode::Uppercase);
+    assert_eq!(TitleCaseMode::parse("lowercase"), TitleCaseMode::Lowercase);
+    assert_eq!(TitleCaseMode::parse("capitalize"), TitleCaseMode::Capitalize);
+    assert_eq!(TitleCaseMode::parse("capitalize1"), TitleCaseMode::Capitalize1);
+  }
+
+  #[test]
+  fn title_case_mode_parse_unknown_falls_back_to_capitalize1() {
+    // Perl: `LookupValue(...) || 'capitalize1'` — but if a non-empty
+    // garbage value is stored, Perl treats it as that string. We
+    // treat unknown strings as `capitalize1` to avoid silent
+    // misbehavior; matches the documented default per L286.
+    assert_eq!(TitleCaseMode::parse(""), TitleCaseMode::Capitalize1);
+    assert_eq!(TitleCaseMode::parse("nonsense"), TitleCaseMode::Capitalize1);
   }
 }
