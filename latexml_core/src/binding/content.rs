@@ -176,8 +176,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       .unwrap_or(Cow::Borrowed(""))
   };
 
-  // If loading a class, store class options (Perl Package.pm lines 2561-2564)
-  if as_type == "cls" && !options.options.is_empty() {
+  // If loading a class, store class options (Perl Package.pm lines 2561-2564).
+  // Also set `\@classoptionslist` even when options is empty: the kernel
+  // default (`\let \@classoptionslist \relax`) breaks csname-reads like
+  // babel's `\csname \ds@\@classoptionslist\endcsname` (babel.sty L4287).
+  // Real LaTeX defines `\@classoptionslist` to the comma-list (possibly
+  // empty) at every `\@fileswith@pti@ns` call; Perl only does so when
+  // non-empty. Witness 2504.00009 (`\documentclass{...}` with no options
+  // → babel csname runaway "should not appear between csname and endcsname").
+  if as_type == "cls" {
     for opt in &options.options {
       push_value("class_options", arena::pin(opt))?;
     }
