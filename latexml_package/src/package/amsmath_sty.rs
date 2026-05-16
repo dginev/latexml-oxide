@@ -252,6 +252,29 @@ LoadDefinitions!({
   Let!("\\ilimits@", "\\nolimits");
   Let!("\\slimits@", "\\displaylimits");
 
+  // amsmath L341-348: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
+  // then \gdef the original to use the @-suffix variant for limits
+  // placement. We don't materialize that two-step; alias the @ form
+  // straight to the user-visible CS so dump-replay of expansions like
+  // `\DOTSB \bigotimes@ \slimits@ _...` resolves.
+  // Witnesses 2406.03357, 2406.10662.
+  Let!("\\bigotimes@", "\\bigotimes");
+  Let!("\\bigoplus@",  "\\bigoplus");
+  Let!("\\bigodot@",   "\\bigodot");
+  Let!("\\bigsqcup@",  "\\bigsqcup");
+  Let!("\\biguplus@",  "\\biguplus");
+  Let!("\\bigvee@",    "\\bigvee");
+  Let!("\\bigwedge@",  "\\bigwedge");
+  Let!("\\bigcap@",    "\\bigcap");
+  Let!("\\bigcup@",    "\\bigcup");
+  Let!("\\coprod@",    "\\coprod");
+  Let!("\\prod@",      "\\prod");
+  Let!("\\sum@",       "\\sum");
+  Let!("\\intop@",     "\\intop");
+  Let!("\\iintop@",    "\\iintop");
+  Let!("\\iiintop@",   "\\iiintop");
+  Let!("\\ointop@",    "\\ointop");
+
   // amsmath L131-138: define-or-provide wrappers conditioned on stix.
   // Default branch (stix not loaded) maps each to its plain counterpart.
   // old-arrows.sty and other amsmath-extending packages call these
