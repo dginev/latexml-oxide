@@ -270,6 +270,87 @@ Regression coverage:
 `latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
 asserts <5s on this fixture (silently skipped without inkscape).
 
+### Vector-PDF auto-detection (2026-05-16)
+
+The cortex_worker `ar5iv` profile now passes
+`graphics_svg_threshold_kb: 0` — the special value that **enables
+auto-detect**. Auto-detect scans the PDF header (up to 256 KB) for
+`/Subtype /Image` / `/Subtype/Image` markers; if absent AND the file
+is at most 500 KB, the SVG path fires. If markers ARE found, the
+gs/convert raster path runs unchanged.
+
+Empirically (1904.01426 fixture, 33 vector pgfplots-style PDFs): with
+auto-detect ON every figure renders to `<name>.svg`; with auto-detect
+OFF every figure renders to `<name>.png`. Wall time is comparable
+either way for this paper because pdftocairo and gs are both fast for
+small PDFs — but the SVG output is vector (zoomable, no
+rasterization), and on `fig8.pdf`-class pathological-convert papers
+the speedup matches the original `--graphics-svg-threshold-kb 200`
+opt-in (~130×).
+
+Override:
+* `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` — disable auto-detect.
+* `--graphics-svg-threshold-kb N` (N > 0) — force legacy size-only
+  gate (used for canvases where the auto-detector misclassifies).
+
+Regression coverage:
+`latexml_post::graphics::tests::should_try_svg_path_auto_detect` —
+positive on `cifar10_vector.pdf` and `pathological_vector.pdf`,
+negative on `raster_with_image.pdf` (a 3-pixel ImageMagick raster
+PDF with an explicit Image XObject).
+
+### Graphics content cache (2026-05-16)
+
+Content-keyed disk cache between `latexml_post::graphics` and the
+`gs`/`convert`/`inkscape`/`mutool`/`pdftocairo` subprocess spawns.
+Key = SHA-256 of `source bytes ‖ page ‖ density ‖ target-ext`;
+storage at `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>`
+with a `.dims` sidecar storing `width\nheight\n` (so cache hits skip
+`read_image_dimensions` too — Perl-LaTeXML.cache parity).
+
+Multi-process safe:
+
+* Writes go through `<final>.tmp.<pid>.<nanos>` then atomic `rename(2)`
+  — concurrent writers all converge to one final file.
+* Reads hardlink the cache file into the destination; the hardlink
+  survives any concurrent prune that unlinks the cache entry
+  afterwards (POSIX `link(2)` semantics).
+* LRU prune holds `flock(LOCK_EX | LOCK_NB)` on a `.prune.lock`
+  sentinel — only one process prunes at a time, others skip.
+* `ENOENT` mid-prune is tolerated (a writer raced this entry).
+
+Measured impact on `1909.03909` (8 MB paper, 21 graphics jobs) single
+threaded, release binary:
+
+| State | Wall |
+|---|---:|
+| cold (cache empty) | 9.55s |
+| warm (cache hot) | 5.07s |
+| `LATEXML_GRAPHICS_CACHE_OFF=1` | 9.40s |
+| 4× concurrent (cold, shared cache) | 11.45s total (0 leftover tmp files) |
+
+Override:
+
+* `LATEXML_GRAPHICS_CACHE_OFF=1` — bypass entirely.
+* `LATEXML_GRAPHICS_CACHE_DIR=/path` — override cache root.
+* `LATEXML_GRAPHICS_CACHE_MAX_MB=N` — size cap (default 2048).
+
+The cache is robust to externally-deleted entries — `lookup` checks
+`exists()` AND tolerates `link/copy` failures mid-operation, falling
+through to a fresh conversion + `store()` silently. Regression
+coverage: `graphics_cache::tests::missing_disk_file_triggers_quiet_regeneration`
++ `concurrent_writers_converge_to_one_cache_entry`.
+
+### Sandbox worker default (2026-05-16)
+
+`tools/benchmark_canvas.sh` default `WORKERS` lowered from 20 → 8.
+Re-timing the round22 slow tail showed graphics-bound papers ran 5–10×
+slower at 20 workers than single-threaded because each
+gs/convert/inkscape fork-exec stack competes for CPU+I/O. At 8 workers
+the per-paper overhead is ≤30% vs single-threaded; corpus throughput
+goes up. Override with `--workers N` only when the canvas is known to
+be compute-bound (math/digest-heavy) rather than graphics-bound.
+
 ---
 
 ## Mini-benchmark: beat 2× pdflatex on `1910.01256`

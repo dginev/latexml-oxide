@@ -46,6 +46,7 @@ pub mod radix;
 pub mod collector;
 pub mod crossref;
 pub mod graphics;
+pub mod graphics_cache; // Content-addressed cache for graphics phase subprocs.
 pub mod latex_images;
 pub mod lex_math;
 pub mod make_bibliography;

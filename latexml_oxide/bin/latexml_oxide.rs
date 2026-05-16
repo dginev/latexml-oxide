@@ -89,12 +89,20 @@ struct Cli {
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
 
-  /// For PDF graphics under N kilobytes, try `inkscape` first to preserve
-  /// vector content; fall back to ImageMagick `convert` on failure/timeout.
-  /// 0 disables (default). Suggested value: 200.
-  /// See SYNC_STATUS.md for the file-size heuristic rationale
-  /// (matplotlib/pgfplots vector PDFs are ~30 KB; raster-embedded PDFs
-  /// are usually 500 KB+ and take >10s to vectorise).
+  /// Vector-SVG fast path control for PDF graphics.
+  ///
+  /// `0` (default) → **auto-detect**: scan the PDF header for
+  /// `/Subtype /Image`; if absent AND the file is at most 500 KB, route
+  /// through inkscape→SVG for vector-clean output. Raster-bearing PDFs
+  /// stay on the gs/convert path.
+  ///
+  /// `N > 0` → explicit size threshold (legacy): try SVG for PDFs at
+  /// most `N` KB regardless of content. Use this when the auto-detector
+  /// misclassifies a canvas you're benchmarking; otherwise prefer the
+  /// default.
+  ///
+  /// Set `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
+  /// entirely (forces gs/convert for every PDF in 0-mode).
   #[arg(
     long = "graphics-svg-threshold-kb",
     value_name = "N",

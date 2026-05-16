@@ -256,15 +256,19 @@ impl LatexmlWorker {
       split_naming:              None,
       xslt_parameters:           &[],
       schemadocs:                false,
-      // Enable vector-SVG path for PDFs <= 200 KB. Vector-authored PDFs
-      // (matplotlib, pgfplots, TikZ-export) are typically <100 KB; raster-
-      // embedded PDFs are usually >500 KB. The 200 KB cutoff favors
-      // inkscape (clean vector SVG) for the vector class while leaving
-      // raster PDFs on the ImageMagick `convert` (gs) path. The
-      // convert path now has a 60 s wall-clock timeout (see
-      // graphics.rs `convert_timeout_secs`), so neither path can stall
-      // post-processing indefinitely.
-      graphics_svg_threshold_kb: 200,
+      // Vector-SVG fast path. 0 = auto-detect: scan the PDF header for
+      // `/Subtype /Image` markers; if absent (and the file is at most
+      // 500 KB), route through inkscape→SVG for vector-clean output
+      // and the documented 100×+ speedup over ImageMagick rasterisation
+      // on pgfplots/matplotlib PDFs (PERFORMANCE.md §"Vector-SVG fast
+      // path"). Raster-bearing PDFs detect their image XObject and
+      // stay on the gs/convert path. Override with a positive integer
+      // (KB threshold) to force the legacy size-only gate, or set
+      // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
+      // entirely. Replaces the prior hard-coded 200 KB cutoff (which
+      // was strictly looser — would attempt SVG on 200 KB raster PDFs
+      // even when their image XObject was visible in the header).
+      graphics_svg_threshold_kb: 0,
     });
 
     // 6. Get log and status (Perl: status line is last line of log)

@@ -51,8 +51,15 @@ TSV summary, never a backtrace. So we use `--release`:
 
 ```
 cargo build --release --bin cortex_worker --features cortex --jobs 20
-tools/benchmark_canvas.sh --workers 16 --timeout 120
+tools/benchmark_canvas.sh --workers 8 --timeout 120
 ```
+
+(Worker count default lowered from 20 → 8 on 2026-05-16: re-timing the
+round22 slow tail showed graphics-bound papers were 5–10× slower at 20
+workers because each gs/convert/inkscape fork-exec stack competes for
+CPU+I/O. At 8 workers the per-paper overhead is ≤30% vs single-threaded
+and **corpus throughput goes up**. Override with `--workers N` only when
+the canvas is known to be compute-bound, not graphics-bound.)
 
 The release profile gives `lto = "thin"` + `codegen-units = 20`
 + `strip = "symbols"` + `opt-level = 3`. For the local 32 GB /
