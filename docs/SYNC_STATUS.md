@@ -371,6 +371,19 @@ clean a portion of the larger corpus silently.
   ascmac/multibib vendored or apt-installed, MnSymbol \checkmark,
   forest \useforestlibrary, tikz-cd decorations.pathmorphing,
   \IncludeInRelease body, xfrac transitive l3keys2e.
+* **Stage-17 v6** (papers 60001-70000, post-Round-30 + listings
+  language-pack stubs + IEEEtran 7 missing flags + DUC
+  \UseRawInputEncoding skip + siunitx mantissa-less exponent +
+  natbib bibitem-key Semiverbatim + biblatex \true/\false/\keyalias
+  stubs + stix 13 black-triangle/mdblksquare + tikz \usetikzlibrary
+  needed downgrade + GenericError "already defined" downgrade +
+  GenericError "not in outer par mode" / "Patching `*' failed"
+  downgrades + \NewCommandCopy/{}{} brace-form): 9964/10000 =
+  **99.64% OK** vs v3 99.03% (+0.61% / +61 papers recovered).
+  Failures break: 31 conversion_error, 4 conversion_fatal, 2
+  abort, 1 timeout. Most remaining are deep cascades (acl.sty
+  \hbox mode-switch in \@maketitle, expl3-only papers, tikz
+  paper-source dimension errors).
 * **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
   **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
   cap at the long-tail bbl-math regression cluster of ~29 papers
