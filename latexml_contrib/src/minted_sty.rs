@@ -19,6 +19,17 @@ LoadDefinitions!({
   DefMacro!("\\ProvideDirectory{}", "");
   DefMacro!("\\TestAppExists{}", "");
   DefConditional!("\\ifAppExists");
+
+  // `\minted@def@optcl[default]{name}{cmdline}{value}` — minted's
+  // internal option-class registry (TL minted.sty L260+). Used by
+  // tcolorbox's tcbminted.code.tex to register tcb's minted-options
+  // — drives the cascade for arXiv:2602.00513 (paper using
+  // `\usepackage{tcolorbox}` with the `minted` library).
+  // No-op stub: tcolorbox just calls these to register options that
+  // would otherwise be picked up by our \mint/\inputminted stubs.
+  DefMacro!("\\minted@def@optcl[]{}{}{}", "");
+  DefMacro!("\\minted@def@optcl@e[]{}{}{}", "");
+  DefMacro!("\\minted@def@optcl@switch{}{}", "");
   // \inputminted[opts]{language}{filename} — Perl L43-53 reads the
   // referenced file via FindFile + Mouth->readRawLine, then wraps the
   // contents in \begin{minted}{language}...\end{minted}, relying on
