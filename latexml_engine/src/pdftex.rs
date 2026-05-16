@@ -95,9 +95,19 @@ LoadDefinitions!({
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
   DefMacro!("\\pdfuniformdeviate Number Token", None);
   DefMacro!("\\pdfnormaldeviate Token", None);
-  DefMacro!("\\pdfmdfivesum Number {}", None);
-  DefMacro!("\\pdf@mdfivesum Number {}", None);
-  DefMacro!("\\pdf@filemdfivesum Number {}", None);
+  // pdfTeX \pdfmdfivesum syntax:
+  //   \pdfmdfivesum <general text>      (MD5 of literal string)
+  //   \pdfmdfivesum file <general text> (MD5 of file contents)
+  // The Perl port's `Number {}` signature was wrong — there is NO
+  // leading number argument. Use `OptionalMatch:file` instead so the
+  // optional `file` keyword is consumed properly and the brace arg
+  // works in both forms. We are not producing PDF/X output, so the
+  // gobbled-and-discarded behaviour is acceptable downstream.
+  // Witness 2407.02288 (pdfx.sty's `\edef\xmp@docid{\pdfx@mdfivesum
+  // {\jobname}}` raw-load cascade).
+  DefMacro!("\\pdfmdfivesum OptionalMatch:file {}", None);
+  DefMacro!("\\pdf@mdfivesum OptionalMatch:file {}", None);
+  DefMacro!("\\pdf@filemdfivesum {}", None);
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
