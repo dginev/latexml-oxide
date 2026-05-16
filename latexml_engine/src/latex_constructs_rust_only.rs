@@ -38,7 +38,13 @@ LoadDefinitions!({
   Let!("\\IfClassLoadedTF",    r"\@ifclassloaded");
   Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
   Let!("\\IfClassAtLeastTF",   r"\@ifclasslater");
-  Let!("\\IfFormatAtLeastTF",  r"\@ifl@t@r@released");
+  // \IfFormatAtLeastTF{<date>}{<true>}{<false>}: alias to
+  // `\@ifl@t@r@released` — but that name isn't captured by the dump,
+  // so the Let creates a dangling alias and downstream usage errors
+  // (witness 2408.03197 — greek-fontenc.def probes the macro).
+  // Define directly as a 3-arg gobble that always takes the "true"
+  // branch (we don't model format dates). Witness 2408.03197, 2408.04893.
+  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
   Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
 
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
