@@ -715,6 +715,12 @@ LoadDefinitions!({
 
     \newcount\@eqcnt
     \newcount\@eqpen
+    % LaTeX 2021+: stack-trace verbosity counter for debug output.
+    % Defined in TL `latex.ltx` (`\newcount\tracingstacklevels`). Papers
+    % from arXiv occasionally tweak it directly (witness:
+    % arXiv:2501.11294). Pre-bind here so paper-side
+    % `\tracingstacklevels=...` doesn't surface as undefined-CS.
+    \newcount\tracingstacklevels
     \newif\if@eqnsw\@eqnswtrue
     \newskip\@centering
     \@centering = 0pt plus 1000pt
