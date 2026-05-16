@@ -129,6 +129,7 @@ pub mod gretsi_cls;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
 pub mod ieeeaerospace_cls;
+pub mod interspeech_cls;
 pub mod ieeecolor_cls;
 pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
@@ -320,6 +321,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
+  ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jmlr", "cls", jmlr_cls::load_definitions),
   ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
