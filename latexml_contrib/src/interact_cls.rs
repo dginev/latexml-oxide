@@ -11,9 +11,10 @@ LoadDefinitions!({
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
 
-  // Author-block macros.
+  // Author-block macros — preserve author content.
   DefMacro!("\\name{}", "#1");
-  DefMacro!("\\affil{}", "");
+  DefMacro!("\\affil{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
   DefMacro!("\\affilskip", "");
 
   // {amscode} env — interact L507.
@@ -22,10 +23,14 @@ LoadDefinitions!({
     "<ltx:classification scheme='AMS'>#body</ltx:classification>"
   );
 
-  // Frontmatter metadata.
-  DefMacro!("\\articletype{}", "");
-  DefMacro!("\\authormark{}", "");
-  DefMacro!("\\corres{}", "");
-  DefMacro!("\\thanks{}", "");
-  DefMacro!("\\journalname{}", "");
+  // Frontmatter metadata — preserve author content.
+  DefMacro!("\\articletype{}",
+    "\\@add@frontmatter{ltx:note}[role=articletype]{#1}");
+  DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
+  DefMacro!("\\corres{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
+  DefMacro!("\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  DefMacro!("\\journalname{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
 });

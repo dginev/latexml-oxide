@@ -9,9 +9,12 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // Nature pre L67 \newenvironment{affiliations} — list of author
-  // affiliations. Treat as transparent (no semantic XML wrapper).
+  // affiliations. Render body so the affiliation text reaches XML.
   DefMacro!(T_CS!("\\begin{affiliations}"), None, "");
   DefMacro!(T_CS!("\\end{affiliations}"), None, "");
-  DefMacro!("\\correspondingauthor[]{}", "");
-  DefMacro!("\\thanks{}", "");
+  // Preserve author content.
+  DefMacro!("\\correspondingauthor[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
+  DefMacro!("\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
 });

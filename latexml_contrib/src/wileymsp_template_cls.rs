@@ -12,6 +12,9 @@ LoadDefinitions!({
 
   DefMacro!(T_CS!("\\begin{affiliations}"), None, "");
   DefMacro!(T_CS!("\\end{affiliations}"), None, "");
-  DefMacro!("\\correspondingauthor[]{}", "");
-  DefMacro!("\\corres{}", "");
+  // Preserve author content as ltx:note frontmatter.
+  DefMacro!("\\correspondingauthor[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
+  DefMacro!("\\corres{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 });

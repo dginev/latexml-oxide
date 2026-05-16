@@ -16,9 +16,12 @@ LoadDefinitions!({
   // \captionsetup is available. Witness 2411.06447, 2411.10607.
   RequirePackage!("caption");
 
-  // wlscirep frontmatter / bibliography helpers.
+  // wlscirep frontmatter / bibliography helpers — preserve author content.
   DefMacro!("\\JournalTitle{}", "\\emph{#1}");
-  DefMacro!("\\affiliation{}", "");
-  DefMacro!("\\corres{}", "");
-  DefMacro!("\\presentadd[]{}", "");
+  DefMacro!("\\affiliation{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
+  DefMacro!("\\corres{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
+  DefMacro!("\\presentadd[]{}",
+    "\\@add@frontmatter{ltx:note}[role=present-address]{#2}");
 });
