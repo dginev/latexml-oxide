@@ -149,12 +149,3 @@ lto = false
 incremental = false
 debug = false
 strip = "symbols"
-
-# We maintain rust-libxslt at https://github.com/KWARC/rust-libxslt /
-# `~/git/rust-libxslt`. The 0.1.4 release relaxes `Stylesheet::transform`
-# from `&mut self` to `&self` and adds Send + Sync so a single parsed
-# stylesheet can be cached process-wide and shared across worker
-# threads (see `latexml_post::xslt`'s STYLESHEET_CACHE). Until 0.1.4
-# is published, point at the local clone.
-[patch.crates-io]
-libxslt = { path = "../rust-libxslt" }
