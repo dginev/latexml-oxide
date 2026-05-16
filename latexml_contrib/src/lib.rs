@@ -113,6 +113,7 @@ pub mod aomart_cls;
 pub mod asme2ej_cls;
 pub mod autart_cls;
 pub mod birkjour_cls;
+pub mod bmvc2k_cls;
 pub mod cas_dc_cls;
 pub mod chemformula_sty;
 pub mod cimart_cls;
@@ -148,6 +149,7 @@ pub mod spie_cls;
 pub mod svproc_cls;
 pub mod uai2025_cls;
 pub mod wlscirep_cls;
+pub mod wileymsp_template_cls;
 pub mod wileynjd_cls;
 pub mod wlpeerj_cls;
 pub mod siamltex_cls;
@@ -288,6 +290,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("birkjour", "cls", birkjour_cls::load_definitions),
+  ("bmvc2k", "cls", bmvc2k_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
   ("chemformula", "sty", chemformula_sty::load_definitions),
@@ -332,6 +335,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
+  ("WileyMSP-template", "cls", wileymsp_template_cls::load_definitions),
   ("WileyNJD-v1", "cls", wileynjd_cls::load_definitions),
   ("wlpeerj", "cls", wlpeerj_cls::load_definitions),
   ("wlscirep", "cls", wlscirep_cls::load_definitions),
