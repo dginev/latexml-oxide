@@ -251,6 +251,16 @@ LoadDefinitions!({
   // 2409.04565: undefined \ilimits@ + \slimits@ via newpxmath).
   Let!("\\ilimits@", "\\nolimits");
   Let!("\\slimits@", "\\displaylimits");
+
+  // amsmath L131-138: define-or-provide wrappers conditioned on stix.
+  // Default branch (stix not loaded) maps each to its plain counterpart.
+  // old-arrows.sty and other amsmath-extending packages call these
+  // directly; without the let-aliases they're undefined.
+  // Witness: 2405.18268, 2406.00395 (old-arrows).
+  Let!("\\ams@newcommand", "\\newcommand");
+  Let!("\\ams@renewcommand", "\\renewcommand");
+  Let!("\\ams@def", "\\def");
+  Let!("\\ams@DeclareRobustCommand", "\\DeclareRobustCommand");
   // sub-packages:
   RequirePackage!("amsbsy");
   RequirePackage!("amstext");
