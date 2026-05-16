@@ -57,4 +57,25 @@ LoadDefinitions!({
 
   // {hide} environment — Perl L59
   DefEnvironment!("{hide}", "");
+
+  // Theorem-likes — neurips_2024.sty L451-460 (and similar in 2022-2025).
+  // Real templates define a `theorem` counter and a small set of named
+  // envs sharing/cascading it. Mirror that defensively so neurips papers
+  // that use `\begin{theorem}…\end{theorem}` without a manual
+  // `\newtheorem` block render cleanly. Witness 2406.18814.
+  RawTeX!(
+    r"\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{propo}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{result}[theorem]{Result}"
+  );
 });
