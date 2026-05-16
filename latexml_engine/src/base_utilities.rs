@@ -2222,17 +2222,6 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // arXiv:2510.12536 (3 errors all from `\usetikzlibrary{calc}`
     // missing for midpoint coordinates in tikz subfile).
     "you need to say \\usetikzlibrary",
-    // `\newcommand`, `\newif`, `\newtoggle`, etc. fire
-    // `\PackageError{LaTeX}{Command \X already defined}` when a CS is
-    // re-defined via the `\new*` family. Real pdflatex errors but
-    // proceeds with the FIRST definition intact — the document
-    // typesets with the user-intended semantics. In our case the
-    // already-defined CS continues to dispatch correctly. Downgrade
-    // to Info so the cascade (60+ etoolbox toggle redefs from a
-    // biblatex.sty raw-load wrapping at section endpoints in
-    // Stage-17 v6) doesn't bury real errors. Pattern also covers
-    // `\newif`/`\newtoggle`/`\newcounter`/`\NewDocumentCommand` redefs.
-    "already defined",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
