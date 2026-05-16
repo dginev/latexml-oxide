@@ -118,6 +118,7 @@ pub mod colm2025_conference_sty;
 pub mod cvpr_sty;
 pub mod ecai_cls;
 pub mod egpubl_cls;
+pub mod ejpecp_cls;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
 pub mod ieeecolor_cls;
@@ -283,6 +284,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
   ("egpubl", "cls", egpubl_cls::load_definitions),
+  ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("IEEEojcsys", "cls", ieeeojcsys_cls::load_definitions),
   ("IEEEtaes", "cls", ieeetaes_cls::load_definitions),
   ("iccv", "sty", iccv_sty::load_definitions),
