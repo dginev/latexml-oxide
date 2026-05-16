@@ -14,15 +14,18 @@ LoadDefinitions!({
   // their own `\usepackage{xcolor}`. Defensive xcolor load matches Perl
   // behaviour. Witness 2405.17955 (EPCID).
   RequirePackage!("xcolor");
-  // siamart220329 L1371: \RequirePackage[capitalize,nameinlink]{cleveref}.
-  RequirePackage!("cleveref");
   // siamart220329 L1361: \RequirePackage{algorithm}.
   RequirePackage!("algorithm");
   RequirePackage!("url");
   // siamart220329 L1285: \RequirePackage{hyperref}[6.83] (unconditional).
   // Mirror so papers using \hidelinks/\href/\hypersetup don't error.
+  // hyperref MUST come before cleveref (cleveref errors out otherwise).
   // Witness 2407.00765 (siamart220329 with `[hidelinks,…]` class option).
   RequirePackage!("hyperref");
+  // siamart220329 L1371: \RequirePackage[capitalize,nameinlink]{cleveref}.
+  // Loaded AFTER hyperref to satisfy cleveref's ordering check.
+  // Witness 2501.11060 (Error:latex:cleveref must be loaded after hyperref!).
+  RequirePackage!("cleveref");
   // siamonline220329 L1676: \RequirePackage[mathlines]{lineno}.
   RequirePackage!("lineno");
   // ifpdf is auto-loaded inside epstopdf; our binding triggers
