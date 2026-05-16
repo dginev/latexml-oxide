@@ -9,9 +9,13 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
 
-  // bmvc2k frontmatter (L167+).
+  // bmvc2k frontmatter (L167+) — preserve author content.
   DefMacro!("\\bmvaOneDot", "");
   DefMacro!("\\bmvaHangBox{}", "#1");
-  DefMacro!("\\addauthor{}{}{}", "");
-  DefMacro!("\\addinstitution{}", "");
+  // \addauthor{name}{email}{institution-id} — emit name as author,
+  // email as ltx:note for preservation.
+  DefMacro!("\\addauthor{}{}{}",
+    "\\author{#1}\\@add@frontmatter{ltx:note}[role=email]{#2}");
+  DefMacro!("\\addinstitution{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
 });

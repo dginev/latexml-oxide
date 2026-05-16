@@ -8,8 +8,9 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
 
-  // spie.cls L107: \authorinfo{...} for author footnote.
-  DefMacro!("\\authorinfo{}", "");
+  // spie.cls L107: \authorinfo{...} for author footnote — preserve.
+  DefMacro!("\\authorinfo{}",
+    "\\@add@frontmatter{ltx:note}[role=authorinfo]{#1}");
   DefMacro!("\\skiplinehalf", "");
   DefMacro!("\\supit{}", "\\textsuperscript{#1}");
 });

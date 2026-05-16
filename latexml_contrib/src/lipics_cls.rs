@@ -9,35 +9,62 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
 
-  // LIPIcs frontmatter — gobble cleanly.
-  DefMacro!("\\Copyright{}", "");
+  // LIPIcs frontmatter — preserve author content as ltx:note
+  // frontmatter entries with role markers.
+  DefMacro!("\\Copyright{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
   DefMacro!("\\CopyrightDetails", "");
-  DefMacro!("\\authorrunning{}", "");
-  DefMacro!("\\titlerunning{}", "");
-  DefMacro!("\\funding{}", "");
-  DefMacro!("\\fundingAgency{}", "");
-  DefMacro!("\\authorcredit{}", "");
+  DefMacro!("\\authorrunning{}",
+    "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
+  DefMacro!("\\titlerunning{}",
+    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}");
+  DefMacro!("\\funding{}",
+    "\\@add@frontmatter{ltx:note}[role=funding]{#1}");
+  DefMacro!("\\fundingAgency{}",
+    "\\@add@frontmatter{ltx:note}[role=funding-agency]{#1}");
+  DefMacro!("\\authorcredit{}",
+    "\\@add@frontmatter{ltx:note}[role=authorcredit]{#1}");
   DefMacro!("\\nolinenumbers", "");
-  DefMacro!("\\category{}", "");
-  DefMacro!("\\related{}", "");
-  DefMacro!("\\relatedversion{}", "");
-  DefMacro!("\\supplement{}", "");
-  DefMacro!("\\supplementdetails[]{}{}", "");
-  DefMacro!("\\acknowledgements{}", "");
-  DefMacro!("\\ccsdesc[]{}", "");
-  DefMacro!("\\subjclass[]{}", "");
-  DefMacro!("\\keywords{}", "");
-  DefMacro!("\\event{}", "");
-  DefMacro!("\\EventEditors{}", "");
-  DefMacro!("\\EventLongTitle{}", "");
-  DefMacro!("\\EventShortTitle{}", "");
-  DefMacro!("\\EventAcronym{}", "");
-  DefMacro!("\\EventYear{}", "");
-  DefMacro!("\\EventDate{}", "");
-  DefMacro!("\\EventLocation{}", "");
+  DefMacro!("\\category{}",
+    "\\@add@frontmatter{ltx:note}[role=category]{#1}");
+  DefMacro!("\\related{}",
+    "\\@add@frontmatter{ltx:note}[role=related]{#1}");
+  DefMacro!("\\relatedversion{}",
+    "\\@add@frontmatter{ltx:note}[role=relatedversion]{#1}");
+  DefMacro!("\\supplement{}",
+    "\\@add@frontmatter{ltx:note}[role=supplement]{#1}");
+  DefMacro!("\\supplementdetails[]{}{}",
+    "\\@add@frontmatter{ltx:note}[role=supplement]{#2: #3}");
+  // \acknowledgements{text} — render as acknowledgements section.
+  DefMacro!("\\acknowledgements{}",
+    "\\section*{Acknowledgements}#1");
+  DefMacro!("\\ccsdesc[]{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=ccs]{#2}");
+  DefMacro!("\\subjclass[]{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#2}");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\event{}",
+    "\\@add@frontmatter{ltx:note}[role=event]{#1}");
+  DefMacro!("\\EventEditors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
+  DefMacro!("\\EventLongTitle{}",
+    "\\@add@frontmatter{ltx:note}[role=event-title]{#1}");
+  DefMacro!("\\EventShortTitle{}",
+    "\\@add@frontmatter{ltx:note}[role=event-shorttitle]{#1}");
+  DefMacro!("\\EventAcronym{}",
+    "\\@add@frontmatter{ltx:note}[role=event-acronym]{#1}");
+  DefMacro!("\\EventYear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!("\\EventDate{}",
+    "\\@add@frontmatter{ltx:note}[role=event-date]{#1}");
+  DefMacro!("\\EventLocation{}",
+    "\\@add@frontmatter{ltx:note}[role=event-location]{#1}");
   DefMacro!("\\EventLogo{}", "");
-  DefMacro!("\\SeriesVolume{}", "");
-  DefMacro!("\\ArticleNo{}", "");
+  DefMacro!("\\SeriesVolume{}",
+    "\\@add@frontmatter{ltx:note}[role=series-volume]{#1}");
+  DefMacro!("\\ArticleNo{}",
+    "\\@add@frontmatter{ltx:note}[role=articleno]{#1}");
   // LIPIcs L739: \EventNoEds{N} sets editor count.
   DefMacro!("\\EventNoEds{}", "");
 
