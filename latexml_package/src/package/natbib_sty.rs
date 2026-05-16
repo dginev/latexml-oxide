@@ -201,6 +201,15 @@ LoadDefinitions!({
   // CITE_AY_SEPARATOR default
   AssignValue!("CITE_AY_SEPARATOR", T_OTHER!(","));
 
+  // natbib internals consulted by other packages (multibib, etc.) even
+  // though our \cite is hand-bound and doesn't go through these.
+  // Define as no-ops + a real counter so `\@ifpackageloaded{natbib}{...}`
+  // bodies that touch them don't crash.
+  // Witness 2405.19536: multibib's \AtBeginDocument fires \NAT@set@cites.
+  NewCounter!("NAT@ctr");
+  DefMacro!("\\NAT@set@cites", "");
+  DefMacro!("\\NAT@@setcites", "");
+
   //======================================================================
   // 2.3 Basic Citation Commands
   // Override \cite from LaTeX.pool with natbib version
