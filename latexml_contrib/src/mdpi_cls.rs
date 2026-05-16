@@ -105,4 +105,37 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=dataset]{#1}");
   DefMacro!("\\datasetlicense{}",
     "\\@add@frontmatter{ltx:note}[role=dataset-license]{#1}");
+
+  // Additional newer mdpi.cls macros — preserve content.
+  // \Author{name} (capital) is the MDPI variant; route to LaTeX \author.
+  DefMacro!("\\Author{}", "\\author{#1}");
+  DefMacro!("\\hreflink{}",
+    "\\@add@frontmatter{ltx:note}[role=hreflink]{#1}");
+  DefMacro!("\\orcidA", "");
+  DefMacro!("\\orcidB", "");
+  DefMacro!("\\orcidC", "");
+  DefMacro!("\\orcidD", "");
+  DefMacro!("\\orcidE", "");
+  DefMacro!("\\orcidF", "");
+  // \extralength is a length register — define as 0pt.
+  DefRegister!("\\extralength" => Dimension::new(0));
+  // \authorcontributions, \funding, \conflictsofinterest,
+  // \abbreviations — substantive author-supplied text; render as
+  // a named section.
+  DefMacro!("\\authorcontributions{}",
+    "\\section*{Author Contributions}#1");
+  DefMacro!("\\funding{}",
+    "\\section*{Funding}#1");
+  DefMacro!("\\conflictsofinterest{}",
+    "\\section*{Conflicts of Interest}#1");
+  DefMacro!("\\abbreviations{}{}",
+    "\\section*{#1}#2");
+  // \address[id]{text} — preserve as ltx:note.
+  DefMacro!("\\address[]{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#2}");
+  // \natexlab from natbib — emit arg inline (used in \bibitem to mark
+  // companion years like (1999a)/(1999b)).
+  DefMacro!("\\natexlab{}", "#1");
+  // \textls (microtype letterspacing) — emit as-is.
+  DefMacro!("\\textls[]{}", "#2");
 });
