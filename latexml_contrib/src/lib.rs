@@ -109,6 +109,7 @@ pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod aamas_cls;
 pub mod autart_cls;
+pub mod ieeeaccess_cls;
 pub mod ieeecolor_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
@@ -247,6 +248,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
+  ("ieeeaccess", "cls", ieeeaccess_cls::load_definitions),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
