@@ -506,7 +506,14 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  let number = six_match_complexnumber(tokens)?;
+  // Perl siunitx.sty.ltxml:270-279 — `$number` may be undef and the
+  // exponent-marker still matches. `\SI{e12}{G}` is a valid no-mantissa
+  // form that defaults to `10^12`. Without this branch our `?` short-
+  // circuited on a missing mantissa and the exponent-marker leaked into
+  // the leftover-tokens "Not matched in \num" error path. Witnesses:
+  // arXiv:2509.14043 / 2509.16675 — `\SIrange{e12}{e15}{G}` and
+  // `\SI{4e13}{G}` astro-physics magnetic-field strings.
+  let number = six_match_complexnumber(tokens);
 
   if six_match_keys(tokens, &[six_pin!("input-exponent-markers")]).is_some() {
     let sign = six_match_sign(tokens);
@@ -517,7 +524,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     let exp_number = SixNumber::simple(sign, exp, None, None);
     return Some(SixNumber::Operator {
       operator:   "exponent".to_string(),
-      arg1:       Some(Box::new(number)),
+      arg1:       number.map(Box::new),
       arg2:       Some(Box::new(exp_number)),
       sign:       None,
       symbol:     None,
@@ -525,7 +532,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     });
   }
 
-  Some(number)
+  number
 }
 
 fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
