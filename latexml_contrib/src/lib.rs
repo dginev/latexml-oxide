@@ -115,6 +115,7 @@ pub mod cas_dc_cls;
 pub mod cimart_cls;
 pub mod cvpr_sty;
 pub mod ecai_cls;
+pub mod egpubl_cls;
 pub mod ieeeaccess_cls;
 pub mod ieeecolor_cls;
 pub mod ieeetaes_cls;
@@ -271,6 +272,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cimart", "cls", cimart_cls::load_definitions),
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
+  ("egpubl", "cls", egpubl_cls::load_definitions),
   ("IEEEtaes", "cls", ieeetaes_cls::load_definitions),
   ("ieeeaccess", "cls", ieeeaccess_cls::load_definitions),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
