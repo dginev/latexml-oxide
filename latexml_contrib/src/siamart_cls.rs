@@ -19,6 +19,10 @@ LoadDefinitions!({
   // siamart220329 L1361: \RequirePackage{algorithm}.
   RequirePackage!("algorithm");
   RequirePackage!("url");
+  // siamart220329 L1285: \RequirePackage{hyperref}[6.83] (unconditional).
+  // Mirror so papers using \hidelinks/\href/\hypersetup don't error.
+  // Witness 2407.00765 (siamart220329 with `[hidelinks,…]` class option).
+  RequirePackage!("hyperref");
   // siamonline220329 L1676: \RequirePackage[mathlines]{lineno}.
   RequirePackage!("lineno");
   // ifpdf is auto-loaded inside epstopdf; our binding triggers
