@@ -16,12 +16,18 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("booktabs");
 
-  // Interspeech frontmatter — gobble cleanly.
+  // Interspeech frontmatter — preserve author content.
   DefMacro!("\\interspeechcameraready", "");
-  DefMacro!("\\name{}", "");
-  DefMacro!("\\address{}", "");
-  DefMacro!("\\email{}", "");
-  DefMacro!("\\thanks{}", "");
-  DefMacro!("\\keywords{}", "");
-  DefMacro!("\\copyrightnotice{}", "");
+  // \name carries the author name in Interspeech templates.
+  DefMacro!("\\name{}", "\\author{#1}");
+  DefMacro!("\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+  DefMacro!("\\email{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!("\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!("\\copyrightnotice{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
 });
