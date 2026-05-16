@@ -26,4 +26,15 @@ LoadDefinitions!({
   DefRegister!("\\RaggedLeftParindent",    Dimension(0));
   DefRegister!("\\RaggedRightParindent",   Dimension(0));
   DefRegister!("\\JustifyingParindent",    Dimension(0));
+
+  // ragged2e L292: \newenvironment{justify}{...}{...}
+  // Witness 2406.15288.
+  DefMacro!(T_CS!("\\begin{justify}"), None, "");
+  DefMacro!(T_CS!("\\end{justify}"),   None, "");
+  DefMacro!(T_CS!("\\begin{Center}"),  None, "\\center");
+  DefMacro!(T_CS!("\\end{Center}"),    None, "\\endcenter");
+  DefMacro!(T_CS!("\\begin{FlushLeft}"),  None, "\\flushleft");
+  DefMacro!(T_CS!("\\end{FlushLeft}"),    None, "\\endflushleft");
+  DefMacro!(T_CS!("\\begin{FlushRight}"), None, "\\flushright");
+  DefMacro!(T_CS!("\\end{FlushRight}"),   None, "\\endflushright");
 });
