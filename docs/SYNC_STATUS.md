@@ -384,6 +384,12 @@ clean a portion of the larger corpus silently.
   abort, 1 timeout. Most remaining are deep cascades (acl.sty
   \hbox mode-switch in \@maketitle, expl3-only papers, tikz
   paper-source dimension errors).
+* **Stage-18 v6** (papers 70001-80000, post-Round-31 wave —
+  same fixes as Stage-17 v6 + makecell \Xhline→\hline override
+  + graphics imageprocessing Error→Warn): 9982/10001 = **99.82%
+  OK** vs v3 99.65% (+0.17%). 16 conversion_error, 1
+  conversion_fatal, 1 segfault, 1 oversized. Trending upward
+  as the wave addresses the long-tail.
 * **Stage-15 v3** (papers 40001-50000, all 18 fixes): 9914/10000 =
   **99.14% OK** — +0.01 vs v2 (already a high-OK stage; v3 gains
   cap at the long-tail bbl-math regression cluster of ~29 papers
