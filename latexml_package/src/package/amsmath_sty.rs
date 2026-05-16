@@ -242,6 +242,15 @@ LoadDefinitions!({
 
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
+
+  // amsmath internals \ilimits@ / \slimits@ — set by amsmath's
+  // ExecuteOptions{nointlimits,sumlimits,...} (TL amsmath.sty L46-49,
+  // L93-94). We bind amsmath instead of raw-loading, so emulate the
+  // default-option assignments here. Used by newpxmath's \int/\sum
+  // redefinitions and bare amsmath \int/\sum from the dump (witness
+  // 2409.04565: undefined \ilimits@ + \slimits@ via newpxmath).
+  Let!("\\ilimits@", "\\nolimits");
+  Let!("\\slimits@", "\\displaylimits");
   // sub-packages:
   RequirePackage!("amsbsy");
   RequirePackage!("amstext");
