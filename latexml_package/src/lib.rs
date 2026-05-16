@@ -50,6 +50,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("a4wide", "sty", package::a4wide_sty::load_definitions),
   ("aastex", "cls", package::aastex_cls::load_definitions),
   ("aastex631", "cls", package::aastex_cls::load_definitions), // version fallback
+  ("aastex62", "cls", package::aastex_cls::load_definitions),
+  ("aastex63", "cls", package::aastex_cls::load_definitions),
+  ("aastex7", "cls", package::aastex_cls::load_definitions),
+  ("aastex70", "cls", package::aastex_cls::load_definitions),
   ("aastex", "sty", package::aastex_sty::load_definitions),
   ("aasms", "sty", package::aasms_sty::load_definitions),
   ("aaspp", "sty", package::aaspp_sty::load_definitions),

@@ -182,6 +182,11 @@ LoadDefinitions!({
   // ptephy's argument-less form).
   DefMacro!("\\ack{}", "\\begin{acknowledgements}#1\\end{acknowledgements}");
 
+  // \uat{name}{id} — Unified Astronomy Thesaurus term link. Used in
+  // \keywords by AASTeX 6.3+. We render just the name as plain text
+  // and drop the numeric id. Witness 2502.17661 (aastex7).
+  DefMacro!("\\uat{}{}", "#1");
+
   // 2.10 Facilities
   DefConstructor!("\\facility{}", "<ltx:text class='ltx_ast_facility'>#1</ltx:text>",
     enter_horizontal => true);
