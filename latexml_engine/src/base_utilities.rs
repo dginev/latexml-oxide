@@ -2222,6 +2222,15 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // arXiv:2510.12536 (3 errors all from `\usetikzlibrary{calc}`
     // missing for midpoint coordinates in tikz subfile).
     "you need to say \\usetikzlibrary",
+    // pgf fires `\PackageError{pgf}{No shape named '<X>' is known}`
+    // when a tikz node references a shape that isn't defined in the
+    // loaded shape libraries. Real pdflatex draws a placeholder
+    // (often nothing) and proceeds; the rest of the picture/document
+    // typesets normally. Witness: arXiv:2503.12190 (warning_papers_3
+    // batch — `tikz@f@2-1-2` referenced from forest tree without the
+    // shape's parent library loaded). Same downgrade rationale as
+    // "you need to say \usetikzlibrary".
+    "no shape named",
     // `\newcommand`, `\newif`, `\newtoggle`, etc. fire
     // `\PackageError{LaTeX}{Command \X already defined}` when a CS is
     // re-defined via the `\new*` family. Real pdflatex errors but
