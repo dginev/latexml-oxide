@@ -13,4 +13,8 @@ LoadDefinitions!({
   DefMacro!("\\thanksauthor", "");
   DefConditional!("\\ifcolmsubmission");
   DefConditional!("\\ifcolmfinal");
+  // colm2025_conference.sty L16-17 also declares \ifcolmpreprint.
+  // Witnesses: 2504.03048, 2504.05625, 2504.09394 (papers passing
+  // [preprint] class option which calls \colmpreprinttrue).
+  DefConditional!("\\ifcolmpreprint");
 });

@@ -8,6 +8,24 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // Eager dependency loads — cvpr2025.sty L30-37 lists these as
+  // RequirePackage. The raw-load of cvpr*.sty doesn't always execute
+  // them via our system, so load them here so user macros like
+  // \toprule/\midrule/\bottomrule (booktabs), \includegraphics
+  // (graphicx) resolve. Witness 2503.24026 (cvpr2025, \toprule
+  // undefined).
+  RequirePackage!("xcolor");
+  RequirePackage!("graphicx");
+  RequirePackage!("amsmath");
+  RequirePackage!("amssymb");
+  RequirePackage!("booktabs");
+  RequirePackage!("natbib");
+  RequirePackage!("etoolbox");
+  RequirePackage!("hyperref");
+  // caption.sty for \captionof — many CVPR templates use this for
+  // figure/table sub-captions. Witness 2503.24026 (cvpr2025).
+  RequirePackage!("caption");
+
   // \thetitle: default-empty, gets overridden when user calls \title{...}.
   DefMacro!("\\thetitle", "");
   DefMacro!("\\maketitlesupplementary", "");
