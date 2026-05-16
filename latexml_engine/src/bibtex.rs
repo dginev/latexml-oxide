@@ -1485,6 +1485,161 @@ LoadDefinitions!({
         .unwrap_or_default();
       whatsit.set_property("bibentry", Stored::Tokens(Tokens::new(Explode!(&pp))));
     });
+
+  // -------- Phase 6: orchestration (Perl L111-190) --------
+  // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline:
+  //   1. resolve type alias chain
+  //   2. dispatch prepare macros (type → alias → default)
+  //   3. open `<ltx:bibentry>` (via the `{bib@entry}` environment)
+  //   4. dispatch each field via the most specific handler
+  //   5. dispatch complete macros (type → alias → default)
+  //   6. close `<ltx:bibentry>`
+  //
+  // The Perl pool splits this across two DefPrimitives
+  // (`\bibentry@prepare` + `\bibentry@create`) with a `\stomach->bgroup;
+  // AssignValue('CURRENT@BIBKEY' => $key); ...; egroup` dance that
+  // gives the per-entry state automatic group-scope restore. The
+  // Rust port does it all in one DefMacro returning a Tokens stream,
+  // since our gullet handles the tokens-back path natively (no
+  // openMouth needed). Divergence is documented under audit B1
+  // (`current_bib_key` rustdoc + `docs/BIBTEX_PORT_PLAN.md`).
+  DefMacro!("\\ProcessBibTeXEntry Semiverbatim", sub[args] {
+    let key = if args[0].is_some() { args[0].to_string() } else {
+      return Ok(Tokens!());
+    };
+    let entry_rc = match lookup_entry(&key) {
+      Some(e) => e,
+      None => return Ok(Tokens!()),
+    };
+    let entry = entry_rc.borrow();
+    let origtype = entry.entry_type.clone();
+
+    // Alias resolution: if `\bib@entry@<origtype>@alias` is defined,
+    // its expansion is the resolved type. Otherwise resolved == orig.
+    let alias_cs_name = format!("\\bib@entry@{}@alias", origtype);
+    let alias_tok = T_CS!(alias_cs_name.as_str());
+    let resolved_type = match latexml_core::state::lookup_definition(&alias_tok)? {
+      Some(_) => {
+        // Expand the alias CS via the gullet to get the target type
+        // name. Most aliases are pure-text DefMacros (e.g. "thesis"),
+        // so a single do_expand is enough.
+        match latexml_core::gullet::do_expand(alias_tok) {
+          Ok(toks) => toks.to_string(),
+          Err(_) => origtype.clone(),
+        }
+      },
+      None => origtype.clone(),
+    };
+
+    // Set the current bib key so the per-field handlers (which call
+    // `current_entry_field` etc.) see the right entry.
+    set_current_entry(&key);
+
+    let mut out: Vec<Token> = Vec::new();
+    // `\begin{bib@entry}{<type>}{<key>}`
+    out.push(T_CS!("\\begin"));
+    out.push(T_BEGIN!());
+    out.extend(Explode!("bib@entry"));
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(Explode!(resolved_type.as_str()));
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(Explode!(&key));
+    out.push(T_END!());
+
+    // Dispatch prepare macros. Perl L128-131: prepare for the
+    // resolved type, then the orig type if different, then default.
+    let prepare_csnames = [
+      format!("\\bib@entry@{}@prepare", resolved_type),
+      if origtype != resolved_type { format!("\\bib@entry@{}@prepare", origtype) } else { String::new() },
+      "\\bib@entry@default@prepare".to_string(),
+    ];
+    for cs_name in &prepare_csnames {
+      if cs_name.is_empty() { continue; }
+      let tok = T_CS!(cs_name.as_str());
+      if latexml_core::state::lookup_definition(&tok)?.is_some() {
+        out.push(tok);
+      }
+    }
+
+    // Dispatch each field via the most specific handler. Perl L147-157.
+    for (field, value) in entry.raw_fields.iter() {
+      if field.starts_with('_') { continue; }  // internal fields
+      let candidates = [
+        format!("\\bib@field@{}@{}", resolved_type, field),
+        if origtype != resolved_type { format!("\\bib@field@{}@{}", origtype, field) } else { String::new() },
+        format!("\\bib@field@default@{}", field),
+      ];
+      let mut handler: Option<&str> = None;
+      for c in candidates.iter() {
+        if c.is_empty() { continue; }
+        let tok = T_CS!(c.as_str());
+        if latexml_core::state::lookup_definition(&tok)?.is_some() {
+          handler = Some(c.as_str());
+          break;
+        }
+      }
+      match handler {
+        Some(h) => {
+          // `\csname <h>\endcsname{value}`
+          out.push(T_CS!(h));
+          out.push(T_BEGIN!());
+          out.extend(Explode!(value));
+          out.push(T_END!());
+        },
+        None => {
+          // Fallback per Perl L157: `\bib@field@default@default{field}{value}`.
+          out.push(T_CS!("\\bib@field@default@default"));
+          out.push(T_BEGIN!());
+          out.extend(Explode!(field));
+          out.push(T_END!());
+          out.push(T_BEGIN!());
+          out.extend(Explode!(value));
+          out.push(T_END!());
+        },
+      }
+    }
+
+    // Dispatch complete macros (Perl L158-164).
+    let complete_csnames = [
+      format!("\\bib@entry@{}@complete", resolved_type),
+      if origtype != resolved_type { format!("\\bib@entry@{}@complete", origtype) } else { String::new() },
+      "\\bib@entry@default@complete".to_string(),
+    ];
+    for cs_name in &complete_csnames {
+      if cs_name.is_empty() { continue; }
+      let tok = T_CS!(cs_name.as_str());
+      if latexml_core::state::lookup_definition(&tok)?.is_some() {
+        out.push(tok);
+      }
+    }
+
+    // `\end{bib@entry}`
+    out.push(T_CS!("\\end"));
+    out.push(T_BEGIN!());
+    out.extend(Explode!("bib@entry"));
+    out.push(T_END!());
+
+    Ok(Tokens::new(out))
+  });
+
+  // `{bib@entry}` environment — Perl L185-190. Wraps an entry's
+  // dispatched contents in `<ltx:bibentry>`, sets the auto-id via
+  // `RefStepCounter('@bibitem')`, and snapshots the key on the
+  // Whatsit. The CURRENT@BIBKEY state-value is NOT mirrored here —
+  // see audit divergence B1 (Rust uses a thread-local already set by
+  // `\ProcessBibTeXEntry`).
+  DefEnvironment!("{bib@entry} Semiverbatim Semiverbatim",
+    "<ltx:bibentry type='#1' key='#key' xml:id='#id'>#body</ltx:bibentry>",
+    after_digest_begin => sub[whatsit] {
+      let key_arg = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
+      set_current_entry(&key_arg);
+      whatsit.set_property("key", Stored::String(latexml_core::common::arena::pin(&key_arg)));
+      // Merge in the {id, refnum, ...} from the @bibitem counter step.
+      let id_props = RefStepCounter!("@bibitem")?;
+      whatsit.set_properties(id_props);
+    });
 });
 
 #[cfg(test)]
