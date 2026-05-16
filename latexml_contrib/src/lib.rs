@@ -148,6 +148,7 @@ pub mod mdpi_cls;
 pub mod nature_pre_cls;
 pub mod newpxmath_sty;
 pub mod optica_article_cls;
+pub mod oup_authoring_template_cls;
 pub mod ptephy_cls;
 pub mod sagej_cls;
 pub mod scipost_cls;
@@ -352,6 +353,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
   ("optica-article", "cls", optica_article_cls::load_definitions),
+  ("oup-authoring-template", "cls",
+   oup_authoring_template_cls::load_definitions),
   ("ptephy_v1", "cls", ptephy_cls::load_definitions),
   ("ptephy_v2", "cls", ptephy_cls::load_definitions),
   ("ptephy", "cls", ptephy_cls::load_definitions),
