@@ -200,6 +200,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("elsart1p", "cls", package::elsart_cls::load_definitions),
   ("elsart3p", "cls", package::elsart_cls::load_definitions),
   ("elsart5p", "cls", package::elsart_cls::load_definitions),
+  ("elsarticle", "cls", package::elsart_cls::load_definitions),
   ("elsart", "sty", package::elsart_sty::load_definitions),
   (
     "elsart_support_core",

@@ -41,6 +41,11 @@ LoadDefinitions!({
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
     "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
+  // ICML 2025: extended marker for joint first + senior authorship.
+  // Witness: 2503.15703 (icml2025.sty L534).
+  DefMacro!("\\icmlEqualContributionAndSenior",
+    "\\textsuperscript{*}Equal contribution, \
+     \\textsuperscript{\\char`\u{2020}}Equal senior authorship");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
