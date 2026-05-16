@@ -2545,19 +2545,6 @@ LoadDefinitions!({
   Let!("\\magnification", "\\@undefined");
   Let!("\\@empty", "\\lx@empty");
   Let!("\\@ifundefined", "\\lx@ifundefined");
-  // `\@nil` is a kernel sentinel CS used as a parameter delimiter
-  // (e.g. `\def\@car#1#2\@nil{#1}` — `\@nil` matches the end of the
-  // input). It's never `\def`-ed in real LaTeX kernel because it's
-  // never invoked — the parameter-pattern reader consumes it.
-  // BUT: when a paper's macro body partially-matches and `\@nil`
-  // ends up as a leftover token in the input, our engine
-  // auto-defines it as `<ltx:ERROR>` and emits an undefined-CS
-  // error. Pre-bind to `\relax` (no-op) so downstream digestion
-  // silently swallows the leftover sentinel. Same pattern for
-  // `\@nnil`/`\@nbreak` (latex.ltx common sentinels).
-  // Witness: 2511.01315 (NeurIPS 2025 + textcomp dump issue).
-  Let!("\\@nil", "\\relax");
-  Let!("\\@nnil", "\\relax");
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
