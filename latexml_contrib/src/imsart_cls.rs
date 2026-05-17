@@ -57,4 +57,25 @@ LoadDefinitions!({
   DefEnvironment!("{bphdthesis}",    "#body");
   DefEnvironment!("{bmastersthesis}", "#body");
   DefEnvironment!("{btechreport}",   "#body");
+
+  // IMS bibliography field-tagging macros — imsart.sty defines these
+  // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:
+  // \bauthor{name}, \binits{initials}, \bfnm{first}, \bsnm{surname},
+  // \byear{2024}, \bvolume{42}, \bissue{3}, \bpages{1-20},
+  // \bjournal{Annals}, \bpublisher{Springer}, \bseries{Lecture Notes},
+  // \btitle{...}, \bmrnumber{...}, etc. Raw imsart.sty defines them,
+  // but its preamble has complex catcode/group state that sometimes
+  // fails mid-load, leaving these undefined. Provide content-
+  // preserving stubs that emit args inline so the substantive
+  // bibliography text survives. Witness 2305.13037, 2306.02821.
+  for cs in &[
+    "\\bauthor", "\\binits", "\\bfnm", "\\bsnm",
+    "\\byear", "\\bvolume", "\\bissue", "\\bpages",
+    "\\bjournal", "\\bpublisher", "\\bseries", "\\btitle",
+    "\\bmrnumber", "\\bedition", "\\beditor", "\\beditortype",
+    "\\baddress", "\\borganization", "\\bcollaboration",
+    "\\bdoi", "\\burl", "\\bothertype",
+  ] {
+    DefMacro!(s!("{}{{}}", cs), "#1");
+  }
 });
