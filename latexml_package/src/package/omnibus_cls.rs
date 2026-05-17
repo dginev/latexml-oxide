@@ -107,13 +107,15 @@ LoadDefinitions!({
   DefMacro!("\\inits{}",           "#1");
   DefMacro!("\\printaddresses{}",  "#1");
   DefMacro!("\\printead{}",        None);
-  DefMacro!("\\firstpage{}",       None);
-  DefMacro!("\\lastpage{}",        None);
-  DefMacro!("\\runauthor{}",       None);
-  DefMacro!("\\runtitle{}",        None);
-  DefMacro!("\\corref{}",          None);
-  DefMacro!("\\listofauthors{}",   None);
-  DefMacro!("\\indexauthor{}",     None);
+  // Page numbers — author metadata; preserve as ltx:note.
+  DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
+  DefMacro!("\\runauthor{}",       "\\@add@frontmatter{ltx:note}[role=runauthor]{#1}");
+  DefMacro!("\\runtitle{}",        "\\@add@frontmatter{ltx:toctitle}{#1}");
+  // \corref{label} — marker for corresponding author. Preserve as note.
+  DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
+  DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
+  DefMacro!("\\indexauthor{}",     "\\@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
   DefMacro!("\\preface",           None);
   DefMacro!("\\thankstext",        None);
   DefMacro!("\\numberofauthors{}", None);
