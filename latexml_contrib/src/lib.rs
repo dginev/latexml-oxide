@@ -37,6 +37,7 @@ pub mod aliascnt_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
 pub mod arydshln_sty;
+pub mod ascmac_sty;
 pub mod atableau_sty;
 pub mod axessibility_sty;
 pub mod biblatex_sty;
@@ -214,6 +215,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // ar5iv-bindings ports
   ("aistats2026", "sty", aistats2026_sty::load_definitions),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
+  ("ascmac", "sty", ascmac_sty::load_definitions),
   ("atableau", "sty", atableau_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
   ("capt-of", "sty", capt_of_sty::load_definitions),
