@@ -1877,9 +1877,21 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
         .filter(|n| *n != "OmniBus" && *n != name)
         .collect();
       sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
+      // Strict-case prefix first (Perl-faithful), then case-insensitive
+      // as a fallback so e.g. `WileyNJDv5` matches a `wileyNJDv5`
+      // binding entry that differs only in capitalization. Witness
+      // 2406.08163 (+~10 papers across WileyNJDv5 / similar).
       sorted
-        .into_iter()
+        .iter()
+        .copied()
         .find(|candidate| name.starts_with(candidate))
+        .or_else(|| {
+          let name_lc = name.to_ascii_lowercase();
+          sorted
+            .iter()
+            .copied()
+            .find(|candidate| name_lc.starts_with(&candidate.to_ascii_lowercase()))
+        })
     };
 
     let target = alternate.unwrap_or("OmniBus");
