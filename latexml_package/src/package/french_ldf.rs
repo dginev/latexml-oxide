@@ -208,6 +208,10 @@ LoadDefinitions!({
   DefMacro!("\\AutoSpacePunctuation",     "");
   DefMacro!("\\NoAutoSpacePunctuation",   "");
   DefMacro!("\\ThinSpaceInFrenchNumbers", "");
+  // french.ldf L?? — AutoSpace switches for the period (point) before
+  // a footnote number marker. Typesetting-only — no-op in XML.
+  DefMacro!("\\AutoSpaceBeforeFDP",       "");
+  DefMacro!("\\NoAutoSpaceBeforeFDP",     "");
 
   // Babel-level `frenchb` language aliases — TL2025 babel-french 3.7e
   // turned `frenchb.ldf` into a deprecation shim that only `\chardef`s
