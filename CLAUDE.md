@@ -105,19 +105,22 @@ Three key documents track porting progress and known issues:
 
 Requires **Rust nightly**.
 
-We follow Rust best practice with three named profiles in `Cargo.toml`:
+We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
 | `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
 | `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
-| `release` | `cargo build --release` / `cargo run --release` | Distribution / publishing only. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slow build (multi-minute), fastest runtime. **Reserved for publishing a stable state** — local iteration cannot afford it. |
+| `release` | `cargo build --release` / `cargo run --release` | Strong-optimized binary tuned for our 32 GB / 20-thread laptop. `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Used for **sandbox sweeps and Perl-parity measurements**, NOT distribution. |
+| `maxperf` | `cargo build --profile maxperf` | **Distribution / publish-grade artifact**. Inherits release, plus `lto = "fat"`, `codegen-units = 1`. Slowest build, smallest + fastest binary. **Reserved for shipping a stable state.** |
 
 **Day-to-day development**: use the default `test` profile via `cargo test` / `cargo run` / `cargo build` (no flag). Full debug info, line-table backtraces, debug-assertions, overflow-checks. Best diagnosability when something fails. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
 
 **Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_canvas.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
 
-**Distribution / publish-grade measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release` once when shipping a stable state. The CI profile is for the GitHub runner only.
+**Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
+
+**Distribution build** (shipping the binary to users): use `--profile maxperf` for the smallest, fastest artifact. Example: `cargo build --profile maxperf --bin latexml_oxide`.
 
 ```bash
 # Run all tests (default test profile)
@@ -132,8 +135,11 @@ cargo run --bin latexml_oxide -- latexml_oxide/tests/hello/hello.tex
 # Triage a sandbox failure (test profile, full backtraces)
 tools/triage_failure.sh <arxiv_id>
 
-# Publish-grade build — reserved for shipping a stable state
+# Publish-grade measurement build (sandbox sweeps, Perl-parity)
 cargo build --release --bin latexml_oxide
+
+# Distribution build — smallest, fastest artifact (slow build, fat LTO)
+cargo build --profile maxperf --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open

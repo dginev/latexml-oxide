@@ -3,7 +3,7 @@ use regex::{Captures, Regex};
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Lit, Meta};
+use syn::DeriveInput;
 
 use latexml_core::util::text::*;
 
@@ -67,17 +67,7 @@ static PROP_HOLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\#([\w_-]+)").unwr
 static ESCAPED_OP: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\[#\?(&,<>\\%]").unwrap());
 
 pub fn compile_replacement(input: DeriveInput) -> TokenStream {
-  let replacement: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => {
-        panic!("only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (Lit)")
-      },
-    },
-    _ => panic!(
-      "only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let replacement = crate::attr_name_value_str(&input.attrs[0], "replacement");
 
   let compiled_replacement_closure: proc_macro2::TokenStream = if replacement.is_empty() {
     quote!(None)

@@ -16,13 +16,14 @@ regex = "1.7.1"
 log = "0.4"
 quote = "1.0"
 proc-macro2 = "1.0"
-ansi_term = "0.12"
 libxml = "0.3.10"
-dirs = "6.0"
+# (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
+# which on Linux is exactly `std::env::var_os("HOME")`. On Windows
+# dirs falls back to `SHGetKnownFolderPath`; not relevant for us.)
 kpathsea = "0.2.3"
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
-string-interner = {version = "0.20.0", default-features = false, features = ["std", "backends","inline-more"]}
+string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
 unicode-normalization = "0.1.25"
 stacker = "0.1.24"

@@ -24,8 +24,8 @@ pub struct PathnameFindOptions {
 
 static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
-static HOME_PATH: Lazy<String> = Lazy::new(|| match dirs::home_dir() {
-  Some(val) => val.to_string_lossy().to_string(),
+static HOME_PATH: Lazy<String> = Lazy::new(|| match std::env::var_os("HOME") {
+  Some(val) => val.to_string_lossy().into_owned(),
   _ => s!("~"),
 });
 static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());

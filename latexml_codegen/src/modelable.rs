@@ -7,7 +7,7 @@ use regex::Regex;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Lit, Meta};
+use syn::DeriveInput;
 
 use latexml_core::common::error::*;
 use latexml_core::util::pathname;
@@ -23,17 +23,7 @@ static CLASS_MODEL_LINE: Lazy<Regex> =
 static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
-  let name: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => panic!(
-        "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"
-      ),
-    },
-    _ => panic!(
-      "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let name = crate::attr_name_value_str(&input.attrs[0], "name");
 
   let pathname_opt = pathname::find(&name, pathname::PathnameFindOptions {
     paths:               Some(vec![s!(".")]),
