@@ -103,6 +103,13 @@ static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT
 // it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
 static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
+// Experimental: route `parse_marpa` through ASF traversal instead of
+// the legacy Tree-iteration loop. See docs/MATH_PARSER_AND_ASF.md.
+// Off by default; set to `1` to opt in. Currently scaffolding-only —
+// the ASF code path is not yet wired here, just exposed for the
+// next session's parity validation work.
+#[allow(dead_code)]
+static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_ASF").is_ok());
 
 pub struct MathParser {
   grammar:                   ThinGrammar,

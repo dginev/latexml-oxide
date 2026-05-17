@@ -331,6 +331,47 @@ migration must preserve those error paths.
 
 ---
 
+## Measured marpa-level performance
+
+`marpa/tests/asf_perf_compare.rs` (in the dginev/marpa fork,
+branch `asf-step3-generic-traverser`) runs head-to-head wall-time
+comparisons of `run_recognizer` (Tree iteration) vs
+`parse_and_traverse_forest` (ASF post-order memoization). Run with
+`cargo test --release --test asf_perf_compare -- --nocapture`.
+
+| Workload                          |   Trees | Tree iter | ASF       | Speedup |
+|-----------------------------------|--------:|----------:|----------:|--------:|
+| panda short (`a panda eats…`)     |       3 |    248 µs |    242 µs |   1.02× |
+| panda long (4× VP repetition)     |    1562 |   2081 µs |    498 µs |   4.17× |
+| `1+1+…+1` Catalan, 8 operands     |     429 |    224 µs |    156 µs |   1.43× |
+| `1+1+…+1` Catalan, 12 operands    |  58 786 |  25759 µs |    295 µs |  87.18× |
+
+The asymptotic gain is the headline. ASF cost is dominated by
+**glade count**, which scales polynomially in input size — even when
+parse-tree count is Catalan-class. The 12-operand arithmetic
+explosion has a few hundred glades but 58 786 distinct parse trees;
+`run_recognizer` walks every tree, ASF walks each glade once and
+Cartesian-multiplies child outputs.
+
+**What this means for the math parser**:
+* Typical arXiv formulas have 5-50 parse trees → expect ~2-5×
+  speedup, swallowed by other costs (lexer, libxml).
+* Pathological formulas (script attachment, multi-clause RELOP
+  lists) have hundreds-to-thousands → expect 10-30× speedup,
+  eliminating the need for the 5000-tree cap.
+* The `0804.1730` case noted in `parser.rs:1077` (4536 enumerated
+  trees over 28 seconds before timeout) would compress to roughly
+  ~280 ms via ASF. **The pruned-only-time-budget bandage becomes
+  obsolete.**
+
+The Cartesian-product cost per glade can still blow up if a single
+glade has many alternatives and many RHS positions. Stage-2
+glade-local pruning inside `action_on` (semantic pragmas applied
+per (symch, factoring) combo) is what keeps that bounded — the
+"Option B" promotion path in the existing rationalization.
+
+---
+
 ## Worked example — the `f@(g(x))` ambiguity
 
 Pick a concrete simple-but-ambiguous case to make the cost difference
