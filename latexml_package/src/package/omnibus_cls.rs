@@ -166,10 +166,23 @@ LoadDefinitions!({
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.
-  DefEnvironment!("{keyword}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
-  DefEnvironment!("{keywords}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
+  // Lift the body into frontmatter via `\@add@frontmatter` instead
+  // of emitting `<ltx:classification>` inline. The inline form
+  // tripped `Error:malformed:ltx:classification … isn't allowed in
+  // <ltx:abstract>` when `\begin{keywords}…\end{keywords}` appeared
+  // inside `\begin{abstract}…\end{abstract}` (a common SIAM /
+  // siamart pattern — witness 2502.19420). Matches Perl's net effect
+  // (see the comment block below on \keywords@onearg).
+  DefEnvironment!("{keyword}", "",
+    after_digest => {
+      stomach::raw_tex(
+        "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")?;
+    });
+  DefEnvironment!("{keywords}", "",
+    after_digest => {
+      stomach::raw_tex(
+        "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")?;
+    });
   // Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
   Let!("\\lx@begin@keywords", "\\keywords");
   // Perl OmniBus.cls.ltxml L154. We differ from Perl's
