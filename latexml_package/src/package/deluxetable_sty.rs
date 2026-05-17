@@ -73,7 +73,12 @@ LoadDefinitions!({
 
   DefMacro!("\\tabletypesize{}", "");
   DefMacro!("\\rotate", "");
-  DefMacro!("\\tabletail{}", "");
+  // \tabletail{text} — text shown at the bottom of every table page
+  // (e.g. "Continued on next page"). HTML output is single-page so
+  // we preserve the text as ltx:note role='tabletail' rather than
+  // gobbling — author body, not config.
+  DefMacro!("\\tabletail{}",
+    "\\@add@frontmatter{ltx:note}[role=tabletail]{#1}");
   DefMacro!("\\tablewidth{Dimension}", "\\pt@width=#1\\relax");
   DefMacro!("\\tableheadfrac{}", "");
   DefMacro!("\\tablenum{}", "\\def\\thetable{#1}");
