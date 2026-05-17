@@ -72,11 +72,22 @@ LoadDefinitions!({
   // Sec. 4. Top Matter
   // FrontMatter:
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\shortauthor{}", "");   // Not useful?
-  DefMacro!("\\authors{}", "");
-  DefMacro!("\\shortauthors{}", "");
-  DefMacro!("\\addresses{}", "");
-  DefMacro!("\\publname{}", "");
+  // Author / address fields — preserve as ltx:note so the strings
+  // reach the XML output instead of being gobbled (content-
+  // preserving). These are typically the short-form variants
+  // already covered by \author / \address from the main flow, but
+  // when authors set them explicitly the values are still real
+  // metadata.
+  DefMacro!("\\shortauthor{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthor]{#1}");
+  DefMacro!("\\authors{}",
+    "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
+  DefMacro!("\\shortauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  DefMacro!("\\addresses{}",
+    "\\@add@frontmatter{ltx:note}[role=addresses]{#1}");
+  DefMacro!("\\publname{}",
+    "\\@add@frontmatter{ltx:note}[role=publication]{#1}");
 
   DefMacro!("\\title[]{}",
     "\\if.#1.\\else\\def\\shorttitle{#1}\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}");

@@ -22,13 +22,24 @@ LoadDefinitions!({
   // Frontmatter / pagination ceremony.
   DefMacro!("\\jmlrheading{}{}{}{}{}{}", "");
   DefMacro!("\\jmlrvolume{}", "");
-  DefMacro!("\\jmlryear{}", "");
-  DefMacro!("\\jmlrworkshop{}", "");
-  DefMacro!("\\jmlrsubmitted{}", "");
-  DefMacro!("\\jmlrpublished{}", "");
-  DefMacro!("\\jmlrproceedings{}{}", "");
-  DefMacro!("\\editor{}", "");
-  DefMacro!("\\editors{}", "");
+  // JMLR frontmatter — preserve author-typed metadata as ltx:note so
+  // it reaches the XML (content-preserving). Year/page/workshop/dates
+  // are short scalars but the editor list is real prose authors care
+  // about; gobbling drops attribution.
+  DefMacro!("\\jmlryear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!("\\jmlrworkshop{}",
+    "\\@add@frontmatter{ltx:note}[role=workshop]{#1}");
+  DefMacro!("\\jmlrsubmitted{}",
+    "\\@add@frontmatter{ltx:note}[role=submitted]{#1}");
+  DefMacro!("\\jmlrpublished{}",
+    "\\@add@frontmatter{ltx:note}[role=published]{#1}");
+  DefMacro!("\\jmlrproceedings{}{}",
+    "\\@add@frontmatter{ltx:note}[role=proceedings]{#1: #2}");
+  DefMacro!("\\editor{}",
+    "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
+  DefMacro!("\\editors{}",
+    "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
   DefMacro!("\\firstpageno{}", "");
 
   // {keywords} env.
