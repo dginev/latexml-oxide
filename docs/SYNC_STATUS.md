@@ -1935,17 +1935,35 @@ A multi-session effort to swap the math parser's Tree-iteration
     task.
 
 **Remaining sequence**:
-1. ⏳ Wire `MathTraverser` into `parse_marpa` behind
-   `LATEXML_MARPA_ASF=1`. Run side-by-side with the legacy
-   tree-iteration path for parity validation on the test suite.
-2. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
+1. ✅ **LANDED**: `MathTraverser` wired behind `LATEXML_MARPA_ASF=1`.
+   Side-by-side runs validated.
+2. ✅ **MOSTLY LANDED**: pragma/action prunes for ambiguity classes
+   (1272 → 1292 ASF; LEGACY 1301/0 preserved).
+3. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
    measurable perf gain on ambiguous formulas.
-3. ⏳ Audit `pragmatics.rs`: promote glade-local pragmas into Stage
-   2, keep cross-tree ones on the (now-small) ASF shortlist.
-4. ⏳ Delete 5 of the 6 convergence caps in `parser.rs` (only
+4. ⏳ **Open**: 9 remaining ASF failures — ambiguous_relations,
+   count_parses, mathtools, metarelation_elision, physics,
+   plainfonts, qm, standalone_modifiers, vertbars. See research
+   notes in `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
+5. ⏳ **Open principled refinement**: `modified_term` grammar
+   category (proposed 2026-05-17; user-articulated). Expected to
+   subsume 5-6 of the remaining 9 by structural change at the
+   grammar level. Deferred to its own session.
+6. ⏳ Delete 5 of the 6 convergence caps in `parser.rs` (only
    `max_time` stays). Delete online `parses.contains(&tree)` dedup.
-5. ⏳ Once stable, ask user to merge the marpa PR into dginev/marpa
+7. ⏳ Once stable, ask user to merge the marpa PR into dginev/marpa
    master, then switch latexml-oxide's marpa dep back to master.
+
+**Session progress (2026-05-17, second push)**: ASF parity
+**1272/29 → 1292/9** (20 tests fixed) via:
+* `FencedLettersAreFunctionArguments` Dual-aware + tier move (12)
+* `prefer_named_interval_at_root` for `(a,b)`, `[a,b]` (2)
+* `prefer_non_self_wrapping_root` for `set@(set@(...))` (2)
+* `prefer_combined_relop_over_multirelation_with_absent` (subcase fix)
+* Early-action prune for `Apply(OPERATOR, [single]) * simple_RHS` (1)
+* Compose left-associativity in `infix_apply` (1)
+* `bare_conditional` reject in `list_apply` (1)
+* `prefer_zero_absent_when_available` + ncases.xml bless (1)
 
 **The win**: eliminates the 5000-tree cap. Per-formula action cost
 drops from O(trees × occurrences) to O(glades). Removes the five
