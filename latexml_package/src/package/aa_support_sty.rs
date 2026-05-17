@@ -114,8 +114,10 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
   DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
 
-  DefMacro!("\\idline{}{}", "");
-  DefMacro!("\\msnr{}", "");
+  // \idline{vol}{page} — issue identification line; preserve as note.
+  DefMacro!("\\idline{}{}", "\\@add@frontmatter{ltx:note}[role=idline]{#1, #2}");
+  // \msnr{number} — manuscript number; preserve as note (author metadata).
+  DefMacro!("\\msnr{}", "\\@add@frontmatter{ltx:note}[role=msnr]{#1}");
   DefMacro!("\\institutename", "");
   DefMacro!("\\hugehead", "");
   DefMacro!("\\AALogo", "Astronomy and Astrophysics");

@@ -70,8 +70,11 @@ LoadDefinitions!({
   Let!("\\textref", "\\ref");
   DefMacro!("\\tocsecs", "");
   DefMacro!("\\logo", "JHEP");
-  DefMacro!("\\JHEP{}", "");
-  DefMacro!("\\PrHEP{}", "");
+  // \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
+  // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
+  // by preserving as ltx:note for downstream JATS metadata.
+  DefMacro!("\\JHEP{}", "\\@add@frontmatter{ltx:note}[role=jhep-issue]{#1}");
+  DefMacro!("\\PrHEP{}", "\\@add@frontmatter{ltx:note}[role=prhep-issue]{#1}");
   DefMacro!("\\Proof", "\\emph{Proof.}\\ ");
 
   // Perl L80-83: Figure/table macros (map to environments)
