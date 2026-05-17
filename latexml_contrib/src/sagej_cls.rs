@@ -7,6 +7,10 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
+  // sagej templates use \toprule / \midrule / \bottomrule from booktabs.
+  // The raw cls relies on the user `\usepackage{booktabs}` but many
+  // papers don't load it explicitly. Eager-load. Witness 2309.01813.
+  RequirePackage!("booktabs");
 
   // sagej frontmatter — preserve author content.
   DefMacro!("\\corrauth{}",
