@@ -17,6 +17,7 @@
 
 use latexml::converter::Converter;
 use latexml_core::common::{Config, OutputFormat};
+use std::rc::Rc;
 use std::sync::Once;
 
 static LOGGER_INIT: Once = Once::new();
@@ -30,6 +31,11 @@ fn run_trip(stem: &str) -> (usize, String) {
   let source = format!("tests/trip/{stem}.tex");
   let config = Config {
     format: OutputFormat::HTML5,
+    // Mirror the CLI binaries: register latexml_contrib's dispatch
+    // so contrib bindings (ascmac, jmlr, etc.) resolve in tests.
+    // Otherwise tests using a contrib package would error with
+    // "Can't find binding or file for 'X.sty'".
+    extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     ..Config::default()
   };
   let mut converter = Converter::from_config(config);
@@ -143,6 +149,18 @@ fn ieeetran_newlineauthors() {
   assert_eq!(
     code, 0,
     "ieeetran_newlineauthors expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn ascmac_itembox() {
+  // Round-33 fix (commit f5fa292f89). ascmac.sty {itembox}/{screen}/
+  // {shadebox} stub bindings — papers using these Japanese boxed envs
+  // must convert cleanly (driver 2601.09339).
+  let (code, status) = run_trip("ascmac_itembox");
+  assert_eq!(
+    code, 0,
+    "ascmac_itembox expected clean conversion, got status={status:?}"
   );
 }
 
