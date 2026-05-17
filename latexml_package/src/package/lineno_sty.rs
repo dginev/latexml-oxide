@@ -8,6 +8,14 @@ LoadDefinitions!({
   DefEnvironment!("{pagewiselinenumbers*}[Number]", "#body");
   DefEnvironment!("{linenomath}",                   "#body");
   DefEnvironment!("{linenomath*}",                  "#body");
+  // \internallinenumbers (lineno.sty) — adds line numbers inside the
+  // environment body. Also gets a starred form auto-defined via
+  // `\@namedef{internallinenumbers*}{\internallinenumbers*}` at lineno
+  // L?? (cf. iclr2025_conference.sty L230 which calls it). Stub as
+  // body-passthrough since line numbers are irrelevant in XML output.
+  // Witness 52 papers with iclr2025_conference using this env.
+  DefEnvironment!("{internallinenumbers}[Number]",  "#body");
+  DefEnvironment!("{internallinenumbers*}[Number]", "#body");
 
   DefMacro!("\\linenumbers OptionalMatch:* [Number]",        None);
   DefMacro!("\\nolinenumbers",                               None);
