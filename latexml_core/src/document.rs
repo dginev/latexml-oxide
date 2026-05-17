@@ -263,6 +263,17 @@ impl Document {
     // D3b [~] entry. A fresh DOM walk drops any surviving dangling
     // entries; duplicates in DOM get modify_id via record_node_ids.
     self.rebuild_idstore_from_dom()?;
+    // Sweep dangling XMRefs that were specifically created by
+    // amsmath::rearrange_ams_split (tagged with `_split_ref="1"`).
+    // The math parser later absorbs some XMArray cells (inserted
+    // MULOPs, etc.) and the parallel XMWrap refs end up pointing
+    // at vanished targets, cascading through Warn:expected:node
+    // (here) and Error:expected:id (post-process) for ~1500 wp3
+    // canvas papers. Restricting the sweep to `_split_ref` avoids
+    // breaking declare_test's renamed-id case (XMRefs pointing to
+    // `S1.Ex1.m1.1`-style ids that resolve through Perl-faithful
+    // idstore staleness; those don't carry the marker).
+    self.prune_dangling_split_xmrefs()?;
     self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
@@ -3016,6 +3027,42 @@ impl Document {
     } else {
       for child in xml::element_nodes(&node) {
         self.mark_xmnode_visibility_aux(child, cvis, pvis)?;
+      }
+    }
+    Ok(())
+  }
+
+  /// Remove `ltx:XMRef[@_split_ref="1"]` whose `idref` no longer
+  /// resolves. These are the XMRefs minted by
+  /// `amsmath::rearrange_ams_split` to mirror the flattened cell
+  /// sequence inside an `XMDual(XMWrap(refs), XMArray(cells))`. The
+  /// math parser can later absorb some cells (typically inserted
+  /// MULOP times-ops on `\mathcal{L}\rho` chains) into wrapping
+  /// XMApps, dropping their xml:id from the live DOM and leaving
+  /// the sibling XMRefs dangling. Left in place, each dangling
+  /// XMRef trips three separate diagnostics later — math parser's
+  /// read_xmref Warn, finalize's mark_xmnode_visibility Warn, and
+  /// post-process's mark_xm_node_visibility Error.
+  ///
+  /// We restrict the sweep to the `_split_ref` marker so refs from
+  /// other provenance (base_xmath `\lx@dual`, renamed-id cases like
+  /// declare_test's `S1.Ex1.m1.1` → `.1a` rename) stay untouched.
+  ///
+  /// Content-preserving: XMRefs are structural cross-references,
+  /// not author body, and the math parser has already absorbed the
+  /// referenced cell into the visible XMArray branch — no glyph or
+  /// formula material is lost.
+  fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
+    let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref]", None);
+    for xmref in xmrefs {
+      let idref = match xmref.get_attribute("idref") {
+        Some(id) => id,
+        None => continue,
+      };
+      if self.lookup_id(&idref).is_none() {
+        if xmref.get_parent().is_some() {
+          self.remove_node(xmref);
+        }
       }
     }
     Ok(())

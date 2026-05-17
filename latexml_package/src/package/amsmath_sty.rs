@@ -1932,10 +1932,17 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     wrap_attrs.insert("rule".to_string(), "Anything,".to_string());
     let mut xm_wrap =
       document.open_element_at(&mut xm_dual, "ltx:XMWrap", Some(wrap_attrs), None)?;
-    // Add XMRef children
+    // Add XMRef children. Tag each with `_split_ref="1"` so a later
+    // sweep (Document::prune_dangling_split_xmrefs in finalize) can
+    // remove THIS set of refs if their targets vanished after the
+    // math parser absorbed the corresponding cells — without
+    // touching XMRefs from other provenance (e.g. base_xmath
+    // \lx@dual or renamed-id `S<N>.E<M>.m1.Xa`-style cases the
+    // declare_test fixture exercises).
     for id in &ref_ids {
       let mut ref_attrs: HashMap<String, String> = HashMap::default();
       ref_attrs.insert("idref".to_string(), id.clone());
+      ref_attrs.insert("_split_ref".to_string(), "1".to_string());
       let mut xm_ref =
         document.open_element_at(&mut xm_wrap, "ltx:XMRef", Some(ref_attrs), None)?;
       document.close_element_at(&mut xm_ref)?;
