@@ -100,7 +100,10 @@ LoadDefinitions!({
   DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
   DefMacro!("\\mail Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
 
-  DefMacro!("\\journalname{}", "");
+  // aa_support: Perl L? gobbles \journalname; surpass with content
+  // preservation — A&A papers set \journalname{Astronomy & Astrophysics}
+  // and the value is genuine author metadata for the JATS pipeline.
+  DefMacro!("\\journalname{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\rnotename", "(Research Note)");
   DefMacro!("\\rnotname", "(RN)");
   DefMacro!("\\headnote{}", "\\@add@frontmatter{ltx:note}{#1}");

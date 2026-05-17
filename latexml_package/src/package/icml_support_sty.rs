@@ -19,7 +19,10 @@ LoadDefinitions!({
 
   // Frontmatter
   Let!("\\icmltitle", "\\title");
-  DefMacro!("\\icmltitlerunning{}", None);
+  // Perl gobbles \icmltitlerunning; surpass: it's the running-head
+  // variant of the title, genuine author metadata.
+  DefMacro!("\\icmltitlerunning{}",
+    "\\@add@frontmatter{ltx:toctitle}{#1}");
   DefMacro!("\\icmlsetsymbol{}{}", None);
 
   DefEnvironment!("{icmlauthorlist}", "#body");
@@ -27,8 +30,13 @@ LoadDefinitions!({
   DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
-  DefMacro!("\\icmlaffiliation{}{}", None);
-  DefMacro!("\\icmlcorrespondingauthor{}{}", None);
+  // ICML: \icmlaffiliation{shortname}{full text} maps a short id to
+  // an affiliation string used in author list. Preserve as ltx:note.
+  DefMacro!("\\icmlaffiliation{}{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1: #2}");
+  // \icmlcorrespondingauthor{email}{name} — preserve as ltx:note.
+  DefMacro!("\\icmlcorrespondingauthor{}{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
   // a re-iteration of the affiliation list + a free-form notice. Since
