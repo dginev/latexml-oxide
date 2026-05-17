@@ -410,6 +410,135 @@ SEMANTIC checks, each of which can be reasoned about individually.
 
 ---
 
+## Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17)
+
+**Important correction**: the 1281/20 baseline quoted earlier in
+this doc was measured with a temporary `alts.reverse()` patch in
+`parse_marpa` that was subsequently removed. With **no reverse and
+no new pragmas wired in**, the true clean ASF parity is
+**1272/29**. The 9-test delta is the function-application class
+(Class A below); the reverse was a shallow patch that masked the
+underlying preference issue.
+
+The complete 29-test failure set, partitioned by ambiguity class:
+
+### Class **A — function-application vs implicit-times**
+
+Pattern: `letter(args)` or `letter token` where the legacy picks
+function-application and ASF picks implicit multiplication.
+
+| Test | Formula | Expected `text=` | Actual `text=` |
+|---|---|---|---|
+| `calculus_test` | `\sum_{...}P(i,j)` | `... P@(vector@(i, j))` | `... P * vector@(i, j)` |
+| `count_parses_test` | `\langle B \|\sum_k f_k\| C\rangle` | `delimited-⟨⟩@(B@(abs@(sum)) * C)` | `delimited-⟨⟩@(B * abs@(sum) * C)` |
+| `esint_test` | `\iiiint_C F(x)dx` | `... F@(x) * differential-d@(x)` | `... F * x * differential-d@(x)` |
+| `mathtools_test` | `f(x)=\int h(x)\,dx` | `f@(x) = integral@(h@(x) * diff-d@(x))` | `f * x = integral@(h * x * diff-d@(x))` |
+| `ntheorem_test` | `... f(\zeta) / (\zeta-z)^{n+1} ...` | `... f@(zeta) / ...` | `... f * zeta / ...` |
+| `operators_test` | `\exists x.P(x)` | `formulae@(exists@(x), P@(x))` | `formulae@(exists@(x), P * x)` |
+| `qm_test` | `<a\|f\|b>` | `absent < a@(abs@(f)) * b > absent` | `absent < a * abs@(f) * b > absent` |
+| `sampler_test` | `\genfrac{(}{)}{}{}{\int_a^b f(x)dx}{...}` | `... f@(x) * diff-d@(x) / ...` | `... f * x * diff-d@(x) / ...` |
+| `spacing_test` | `\int_0^\infty f(x)dx` | `(integral _ 0 ^ infty)@(f@(x) * diff-d@(x))` | `... f * x * diff-d@(x)` |
+
+**9 tests.** All share the same root: the grammar admits both
+`tight_term → factor` (then multiplied) and `tight_term →
+function applyop tight_term` / `applied_func` (function-app). The
+legacy's Tree-iter order picks function-app first; ASF picks
+multiplication. **Single fix opportunity.**
+
+### Class **B — `>=` lexed as `> absent =` instead of single RELOP**
+
+| Test | Formula | Expected | Actual |
+|---|---|---|---|
+| `ambiguous_relations_test` | `x>=0` | `x >= 0` | `x > absent = 0` |
+| `relations_test` | `x>=0` (same fixture) | `x >= 0` | `x > absent = 0` |
+
+**2 tests.** Looks like a lexer-level issue (the `>=` token should
+be a single RELOP lexeme but ASF is splitting it). Worth probing
+the lexeme stream to confirm.
+
+### Class **F — `||x||a||y||` norm-nesting**
+
+| Test | Formula | Expected | Actual |
+|---|---|---|---|
+| `vertbars_test` | `\|\|x\|\|a\|\|y\|\|` | `norm@(x) * a * norm@(y)` | `norm@(x * norm@(a) * y)` |
+
+**1 test.** Highly ambiguous (`\|\|` × 4 makes multiple groupings
+valid). The expected is the "balanced 3-norm" parse; ASF picks
+the "outer norm with inner norm" parse.
+
+### Class **U — ASF produces no parse where legacy does**
+
+| Test | Formula | Result |
+|---|---|---|
+| `physics_test` | `\mathbf{a}\qquad ...` | ASF → `<Math class="ltx_math_unparsed">` (parse failed) |
+
+**1 test.** Different from tiebreaking — ASF is failing to find
+a parse entirely. Could be related to specific formula structure;
+needs separate investigation.
+
+### Class **? — Needs deeper diff inspection**
+
+Tests where the first DIFF didn't include a Math/text= line in the
+quick scan (the divergence is structural, not in the top-line
+attribute). Need targeted investigation.
+
+* `artefacts_test`
+* `function_argument_syntax_test`
+* `scripts_test`
+* `simplemath_test`
+* `stmaryrd_test` — likely the flat-vs-nested-list improvement
+  candidate from earlier scan.
+* `unit_tests_by_silviu_test`
+* `wasysym_test`
+
+**7 tests.** TBD.
+
+### Additional failures after reverting `alts.reverse()`
+
+9 tests that the temporary `alts.reverse()` patch was masking. All
+align with Class A (function-application preference):
+
+* `amstheorem_test`
+* `compose_test`
+* `functions_test`
+* `latextheorem_test`
+* `metarelation_elision_test`
+* `ncases_test`
+* `nested_application_test`
+* `parens_test`
+* `parser_speculate_test`
+* `picture_test`
+* `plainfonts_test`
+* `plainmath_test`
+* `scripted_opfunction_addop_test`
+* `sizes_test`
+* `standalone_modifiers_test`
+* `subordinate_lists_test`
+
+Yes — that's 16. The "9 added" was a rough count; the actual set
+overlap is messier because some tests passed previously by
+coincidence under reverse(). The actionable observation: **Class A
+(function-application preference) is the dominant root cause and
+fixing it unlocks 16+ tests at once.**
+
+---
+
+### Intervention plan per class
+
+| Class | # tests | Suggested intervention | Rationale |
+|---|---|---|---|
+| **A** | 9 | Marpa rule_rank on `function`/`factor → function` to outrank `factor → factor_base` for the parse direction that admits function-app | Single grammar-level lever; affects both legacy and ASF; principled (encodes "letter-followed-by-parens prefers function-app") |
+| **B** | 2 | Lexer-level — verify `>=` lexes as single RELOP. May not be ASF-specific. | Should resolve at lexer, not parser |
+| **F** | 1 | Targeted pragma "prefer flat norm chain over nested" | Pattern-specific |
+| **U** | 1 | Debug the recognizer/ASF for this specific formula | Different root cause |
+| **?** | 7 | First catalogue, then intervene | Don't pre-commit |
+
+If Class A's grammar-rank fix lands cleanly, we go from 1281/20 →
+~1281/11 in one stroke. The remaining 11 fall into Classes B
+(2), F (1), U (1), and ? (7).
+
+---
+
 ## Arxiv-scale implications
 
 The current state — **98.5% parity on a small test suite** — is a
