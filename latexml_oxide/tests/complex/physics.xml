@@ -1211,11 +1211,11 @@
                       <XMDual>
                         <XMApp>
                           <XMTok meaning="delimited-[]"/>
-                          <XMRef idref="S1.Ex14.m1.14"/>
+                          <XMRef idref="S1.Ex14.m1.15"/>
                         </XMApp>
                         <XMWrap>
                           <XMTok role="OPEN" stretchy="false">[</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex14.m1.14">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex14.m1.15">x</XMTok>
                           <XMTok role="CLOSE" stretchy="false">]</XMTok>
                         </XMWrap>
                       </XMDual>
@@ -1223,11 +1223,11 @@
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="set"/>
-                        <XMRef idref="S1.Ex14.m1.15"/>
+                        <XMRef idref="S1.Ex14.m1.16"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">{</XMTok>
-                        <XMApp xml:id="S1.Ex14.m1.15">
+                        <XMApp xml:id="S1.Ex14.m1.16">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
@@ -1875,17 +1875,17 @@
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="delimited-[]"/>
-                        <XMRef idref="S1.Ex16.m1.11"/>
+                        <XMRef idref="S1.Ex16.m1.12"/>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">[</XMTok>
-                        <XMApp xml:id="S1.Ex16.m1.11">
+                        <XMApp xml:id="S1.Ex16.m1.12">
                           <XMTok font="italic" role="UNKNOWN">f</XMTok>
                           <XMDual>
-                            <XMRef idref="S1.Ex16.m1.12"/>
+                            <XMRef idref="S1.Ex16.m1.13"/>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="false">(</XMTok>
-                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.12">z</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex16.m1.13">z</XMTok>
                               <XMTok role="CLOSE" stretchy="false">)</XMTok>
                             </XMWrap>
                           </XMDual>
