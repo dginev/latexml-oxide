@@ -778,6 +778,23 @@ warning-papers-3 and historical corpora; remaining work shifts
 exclusively to non-pass-rate concerns (Perl-parity output
 refinements, performance, polish).
 
+**Full known-failures retest (2026-05-17 05:30+).** Extracted every
+distinct paper ID that ever returned `conversion_error` or
+`conversion_fatal` across the 32 archived stage tallies
+(`next_warning_html_stage*`, `recent_warning_stage*`,
+`wp3_html_stage*`) — total **3,687 unique IDs** (preserved at
+`~/data/_meta/known_failures_2026-05-17.txt`). Cumulative stage
+historical tally: 315,744 OK / 3,446 ERR / 392 FATAL = 98.80%.
+Re-running every one of those 3,687 papers through the current
+binary — running at ~44 papers/min, **0 failures so far on the
+first 631 retested**. Final tally expected within ~1h.
+
+The HTML output dirs of all 32 stage runs were deleted in the
+same 2026-05-17 cleanup pass, recovering 471 GB of disk space.
+`~/data/_meta/{known_failures, failure_zip_paths,
+stage_results}` preserves the per-stage tsvs and the failure IDs
+for traceability.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
