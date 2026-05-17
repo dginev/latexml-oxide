@@ -893,8 +893,9 @@ impl XM {
   }
 
   /// Does the root match `Apply(multirelation, [..., absent, ...])`
-  /// where `absent` appears in the **interior** of the args list
-  /// (NOT at the first or last positions)?
+  /// or `Apply(formulae, [..., absent, ...])` where `absent`
+  /// appears in the **interior** of the args list (NOT at the
+  /// first or last positions)?
   ///
   /// The distinction matters: an `absent` at the boundary is
   /// legitimate (e.g. `<a|f|b>` parses as
@@ -919,7 +920,9 @@ impl XM {
       XM::Lexeme(name, _) => Some(name.as_str()),
       _ => None,
     };
-    if meaning != Some("multirelation") {
+    // Both `multirelation` (explicit relation chain) and `formulae`
+    // (comma-separated relational chain) can fall into this pattern.
+    if !matches!(meaning, Some("multirelation") | Some("formulae")) {
       return false;
     }
     let trees = args.trees();
