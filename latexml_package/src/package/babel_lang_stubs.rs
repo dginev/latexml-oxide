@@ -69,3 +69,6 @@ pub fn load_icelandic() -> Result<()>  { install_lang_stub("icelandic") }
 pub fn load_arabic() -> Result<()>     { install_lang_stub("arabic") }
 pub fn load_dutch() -> Result<()>      { install_lang_stub("dutch") }
 pub fn load_farsi() -> Result<()>      { install_lang_stub("farsi") }
+pub fn load_hindi() -> Result<()>      { install_lang_stub("hindi") }
+pub fn load_latin() -> Result<()>      { install_lang_stub("latin") }
+pub fn load_croatian() -> Result<()>   { install_lang_stub("croatian") }
