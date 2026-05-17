@@ -68,8 +68,12 @@ LoadDefinitions!({
   DefMacro!("\\shortauthors{}",
     "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
-  DefMacro!("\\lefthead{}", "");
-  DefMacro!("\\righthead{}", "");
+  // \lefthead{author} / \righthead{title} — running-header text;
+  // preserve as ltx:note (was gobbled).
+  DefMacro!("\\lefthead{}",
+    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+  DefMacro!("\\righthead{}",
+    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
 
   // 2.3 Title and Author Information
   AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
