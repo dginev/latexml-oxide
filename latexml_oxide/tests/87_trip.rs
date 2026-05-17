@@ -140,6 +140,17 @@ fn psfig_via_compat_loadpackages() {
 }
 
 #[test]
+fn cas_dc_credit() {
+  // Round-34 fix (commit 79b899cb83). cas-dc \credit{role} (CRediT
+  // taxonomy) preserved as ltx:note role=credit (was gobbled).
+  let (code, status) = run_trip("cas_dc_credit");
+  assert_eq!(
+    code, 0,
+    "cas_dc_credit expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
 fn ieeetran_newlineauthors() {
   // Round-33 fix (commit 6be8b2e01e). User \newcommand{\newlineauthors}
   // installing the IEEE halign unbalanced-pair recipe must be silently

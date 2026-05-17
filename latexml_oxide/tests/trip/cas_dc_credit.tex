@@ -1,0 +1,19 @@
+% Regression test for Round-34 fix (commit 79b899cb83).
+% cas-dc \credit{role} (CRediT taxonomy) was gobbled by Perl AND by
+% our prior binding. Now preserved as ltx:note role=credit per the
+% content-preservation directive. This test verifies clean conversion
+% with several \credit calls (typical author CRediT block).
+\documentclass{cas-dc}
+\begin{document}
+\author{First Author}
+\credit{Conceptualization}
+\credit{Investigation}
+\credit{Writing - original draft}
+
+\author{Second Author}
+\credit{Methodology}
+\credit{Writing - review \& editing}
+
+\maketitle
+Body of paper.
+\end{document}
