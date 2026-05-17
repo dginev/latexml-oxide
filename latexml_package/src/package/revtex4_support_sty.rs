@@ -184,6 +184,16 @@ LoadDefinitions!({
   // Citations
   DefMacro!("\\onlinecite", "\\citealp");
   Let!("\\textcite", "\\citet");
+  // revtex4-1/4-2 substyle bbls reference internal cite helpers
+  // (`\rev@citealp`, `\rev@citealpnum`, `\rev@citet`, `\rev@citemark`)
+  // that are normally let-aliased from natbib. Map them to natbib
+  // equivalents so .bbl files referencing them resolve cleanly.
+  // Witness 2412.13042 (revtex4-2 + main.bbl using \rev@citealp).
+  Let!("\\rev@citealp",     "\\citealp");
+  Let!("\\rev@citealpnum",  "\\citealpnum");
+  Let!("\\rev@citet",       "\\citet");
+  Let!("\\rev@citenum",     "\\citenum");
+  Let!("\\rev@citemark",    "\\citenum");
 
   // 8. Citations and References — Perl revtex4_support.sty.ltxml L190-204
   // RevTeX3; obsolete for RevTeX4 (but semi-implemented there). Should be a
