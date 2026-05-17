@@ -72,4 +72,11 @@ LoadDefinitions!({
     "<ltx:classification scheme='MSC'>#body</ltx:classification>"
   );
 
+  // {AMS} env — siamart190516 L742 same pattern (AMS subject
+  // classification). Some older SIAM templates use {AMS} instead of
+  // {MSCcodes}. Witness 2306.11286, 2306.13351 (siamart190516).
+  DefEnvironment!(
+    "{AMS}",
+    "<ltx:classification scheme='AMS'>#body</ltx:classification>"
+  );
 });
