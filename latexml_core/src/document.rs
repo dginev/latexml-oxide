@@ -3053,7 +3053,7 @@ impl Document {
   /// referenced cell into the visible XMArray branch — no glyph or
   /// formula material is lost.
   fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
-    let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref]", None);
+    let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref or @_mf_ref]", None);
     for xmref in xmrefs {
       let idref = match xmref.get_attribute("idref") {
         Some(id) => id,
