@@ -22,4 +22,11 @@ LoadDefinitions!({
   // Date-component stubs (some packages call directly).
   DefMacro!("\\monthname[]", "");
   DefMacro!("\\shortmonthname[]", "");
+
+  // datetime.sty L260+ `\newdate{name}{day}{month}{year}` declares a
+  // named date that `\displaydate{name}` later prints. Real package
+  // stores components in `\<name>@day`/`\<name>@month`/`\<name>@year`.
+  // Stub each as no-op.
+  DefMacro!("\\newdate{}{}{}{}", "");
+  DefMacro!("\\displaydate{}", "");
 });
