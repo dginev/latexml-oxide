@@ -1901,27 +1901,51 @@ A multi-session effort to swap the math parser's Tree-iteration
   scaffolding vs functional on the marpa side, with a 7-step
   completion plan and the target Rust API sketch.
 
-**Status snapshot**:
-* Marpa fork's master now has the ASF scaffolding (PRs #1+#2 merged
-  2026-05-17). `asf-completion` branch adds: pin-down test for the
-  current scaffolding, `Parser::ambiguity_metric` pre-flight oracle,
-  reference PDFs in `background/`.
-* Math parser still on Tree iteration. No code change yet.
+**Status snapshot 2026-05-17 (end of session)**:
+* Marpa fork `asf-step3-generic-traverser` branch — **Steps 2-6
+  LANDED**:
+  * `compute_symches` ported (Perl `ASF.pm`-faithful: contiguous
+    same-predecessor and-nodes unify into multi-source glades).
+  * `Glade` query API: `rule_id`, `symch_count`, `factor_count`,
+    `is_factored`, `rh_length`, `rh_glade_id`, `next`, `rewind`,
+    `is_token`, `cursor`, `symches()`. (`literal()` deferred —
+    needs SLR; math parser is a token-stream consumer, doesn't
+    need text spans.)
+  * `ASF::traverse` is now a post-order recursive driver with
+    per-glade `HashMap<usize, PT>` memoization. Cycle-safe via
+    `visited` flag.
+  * `Traverser` trait: generic + `&mut TR` (no `Box<dyn>`). Allows
+    borrowing traversers like `MathTraverser<'a>` that hold
+    `&'a mut Document` + `&'a Actions`. Single-threaded by design.
+  * `asf_three_parses_via_exhaustive_traverser` substantive test:
+    panda grammar produces exactly 3 distinct Penn-tagged strings
+    via post-order memoized traversal — the substantive end-to-end
+    validation.
+  * 17 marpa tests pass (was 13 before this session).
+* latexml-oxide:
+  * Cargo.toml marpa dep switched to
+    `branch = "asf-step3-generic-traverser"`.
+  * Full test suite (1301/0/0) passes against the new marpa branch.
+  * `latexml_math_parser/src/asf_traverser.rs` — **scaffolding
+    landed**: `MathTraverser` struct implementing
+    `marpa::asf::Traverser`. Handles byte glades, lexeme-rule glades
+    (matches `TreeBuilder::rollup_token` semantics), standard rule
+    glades (Cartesian product + `Actions::action_on`).
+    **Not yet wired into `parse_marpa`** — that's the next-session
+    task.
 
-**Sequencing** (also captured in MATH_PARSER_AND_ASF.md § Sequencing):
-1. Marpa side — ASF_STATUS Step 2: port `compute_symches` factoring
-   loop from `Marpa::R2::ASF.pm`.
-2. Marpa side — Steps 3-5: flesh out Glade query API
-   (`alternatives()`, `rh_glade_id()`), make `ASF::traverse`
-   recursive.
-3. Math-parser side — refactor `Actions::action_on` signature, swap
-   `parse_string`'s Tree-iteration loop for
-   `parse_and_traverse_forest`. Delete 5 of the 6 convergence caps.
-   Validate on full test suite + 10k canvas stage. Expect 0 test
-   regressions, measurable perf gain on ambiguous formulas.
-4. Math-parser side — audit `pragmatics.rs`: promote glade-local
-   pragmas into Stage 2, keep cross-tree ones on the (now-small)
-   ASF shortlist.
+**Remaining sequence**:
+1. ⏳ Wire `MathTraverser` into `parse_marpa` behind
+   `LATEXML_MARPA_ASF=1`. Run side-by-side with the legacy
+   tree-iteration path for parity validation on the test suite.
+2. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
+   measurable perf gain on ambiguous formulas.
+3. ⏳ Audit `pragmatics.rs`: promote glade-local pragmas into Stage
+   2, keep cross-tree ones on the (now-small) ASF shortlist.
+4. ⏳ Delete 5 of the 6 convergence caps in `parser.rs` (only
+   `max_time` stays). Delete online `parses.contains(&tree)` dedup.
+5. ⏳ Once stable, ask user to merge the marpa PR into dginev/marpa
+   master, then switch latexml-oxide's marpa dep back to master.
 
 **The win**: eliminates the 5000-tree cap. Per-formula action cost
 drops from O(trees × occurrences) to O(glades). Removes the five

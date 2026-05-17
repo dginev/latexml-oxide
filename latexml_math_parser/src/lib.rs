@@ -10,6 +10,7 @@ mod diag;
 
 #[macro_use]
 mod grammar;
+mod asf_traverser;
 mod data;
 mod parser;
 mod pragmatics;
