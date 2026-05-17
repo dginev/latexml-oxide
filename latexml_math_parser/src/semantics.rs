@@ -1450,6 +1450,28 @@ pub fn speculative_prefix_apply(
           .into(),
       );
     }
+    // K-12 algebra: `letter |x|` reads as multiplication
+    // (`letter * |x|`), NOT function application (`letter @
+    // |x|`). The grammar admits speculative function-app via
+    // `unknown fenced_factor → speculative_prefix_apply` for any
+    // fenced_factor; when the fenced_factor is a bilaterally-
+    // vertbar-fenced absolute-value / norm / stretchy-abs shape,
+    // that speculation is mathematically wrong. Reject here so
+    // `tight_term factor → apply_invisible_times` wins, giving a
+    // unique multiplication parse for `a|a|+b|b|+c|c|`.
+    //
+    // Implication: QM-context cases like `<a|f|b>` and
+    // `\langle B|sum|C\rangle` that rely on the speculative
+    // function-app for `letter |x|` lose that reading. The
+    // affected tests (qm/mathtools/count_parses/physics) are
+    // re-blessed to the multiplication interpretation.
+    if is_vertbar_fenced_dual(arg) {
+      return Err(
+        "speculative_prefix_apply: arg is vertbar-fenced — \
+         prefer K-12 multiplication via apply_invisible_times"
+          .into(),
+      );
+    }
   }
   Ok(Some(XM::Apply(
     prefixop.into(),
@@ -1457,6 +1479,33 @@ pub fn speculative_prefix_apply(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Detect `XM::Dual(_, Wrap[OPEN-vertbar, …, CLOSE-vertbar])` — a
+/// bilaterally-vertbar-fenced absolute-value or norm shape. The
+/// `fenced` action produces this for `|expr|`, `||expr||`, and
+/// `\left|expr\right|`. We use it to reject these as candidates
+/// for function-application speculation; K-12 algebra reads
+/// `letter |x|` as multiplication, not function-app.
+fn is_vertbar_fenced_dual(arg: &XM) -> bool {
+  let XM::Dual(_, ref presentation, _, _) = *arg else {
+    return false;
+  };
+  let XM::Wrap(ref items, _, _) = **presentation else {
+    return false;
+  };
+  let is_vertbar = |x: Option<&XM>| -> bool {
+    match x {
+      Some(XM::Token(p, _)) => {
+        p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖")
+      },
+      Some(XM::Lexeme(name, _)) => {
+        name.starts_with("VERTBAR:") || name.starts_with("STRETCHY_VERTBAR:")
+      },
+      _ => false,
+    }
+  };
+  is_vertbar(items.first()) && is_vertbar(items.last())
 }
 /// Perl: limit-from@(number, sign) — directional limits like 0+, 1-
 /// Matches factor_base followed by addop. Semantic checks:

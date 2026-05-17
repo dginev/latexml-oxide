@@ -1106,6 +1106,65 @@ impl XM {
     }
   }
 
+  /// Count Apply nodes whose meaning is a *specific* QM-bracket
+  /// semantic (`quantum-operator-product`, `inner-product`) — the
+  /// dedicated semantics for Dirac `⟨a|f|b⟩` and `⟨a|b⟩`. These are
+  /// MORE specific than the generic `delimited-⟨⟩` wrapper around
+  /// the same input. The forest pragma below prefers candidates
+  /// with more such specific Applies.
+  pub fn count_qm_specific_semantics(&self) -> usize {
+    let is_qm_op = |op: &XM| -> bool {
+      match op {
+        XM::Token(props, _) => matches!(
+          props.meaning.as_deref(),
+          Some("quantum-operator-product") | Some("inner-product")
+        ),
+        _ => false,
+      }
+    };
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Apply(op, args, ..) => {
+        let here = usize::from(is_qm_op(&op.0));
+        here + args.trees().iter().map(|a| a.count_qm_specific_semantics()).sum::<usize>()
+      },
+      XM::Dual(c, p, ..) => c.count_qm_specific_semantics() + p.count_qm_specific_semantics(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_qm_specific_semantics()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_qm_specific_semantics()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_qm_specific_semantics()).sum(),
+    }
+  }
+
+  /// Forest pragma: prefer candidates with more `quantum-operator-product`
+  /// / `inner-product` Apply nodes over the generic `delimited-⟨⟩`
+  /// reading of the same input. Principle: a *specific* semantic
+  /// recognition is closer to author intent than a generic structural
+  /// wrapper. For `⟨a|f|b⟩` the dedicated qm_bracket grammar rule
+  /// produces `quantum-operator-product@(a, f, b)` AND the generic
+  /// `langle_open formula rangle_close → fenced` rule produces
+  /// `delimited-⟨⟩@(a * |f| * b)` — both are admissible, and this
+  /// pragma collapses the choice.
+  pub fn prefer_qm_specific_semantics(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max = trees.iter().map(|t| t.count_qm_specific_semantics()).max().unwrap_or(0);
+        if max == 0 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_qm_specific_semantics() == max)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// Count "letter applies to vertbar-fenced argument" patterns
   /// that occur **inside** a `delimited-⟨⟩` (angle-fenced) Apply.
   /// Outside the QM/bra-ket context, the K-12 convention prevails
@@ -1352,6 +1411,70 @@ impl XM {
       XM::Apply(op, _, _, _) => inspect(&op.0),
       XM::Dual(c, _, _, _) => c.root_is_addition(),
       _ => false,
+    }
+  }
+
+  /// Forest pragma: among candidates with an addition root,
+  /// prefer the one with the **most arguments** — i.e. the widest
+  /// n-ary `+` chain. K-12 algebra reads `a + b + c` as a 3-arg
+  /// chain, not as `a + (b + c)` (2-arg with nesting). The grammar
+  /// admits both via `infix_apply_nary`; this pragma collapses
+  /// the choice.
+  ///
+  /// **Resolves the inner bar-pairing of `a|a|+b|b|+c|c|`**: the
+  /// 3-arg `+@(a*|a|, b*|b|, c*|c|)` candidate beats the 2-arg
+  /// `+@(a*|a|, b*|b*|+c|*c|)` candidate where the outer bars get
+  /// claimed as one big absolute-value enclosing the rest.
+  pub fn prefer_wider_addition_root(self) -> Self {
+    fn args_count_if_addition_root(t: &XM) -> Option<usize> {
+      match t {
+        XM::Apply(op, args, _, _) => match &*op.0 {
+          XM::Token(p, _) => match p.meaning.as_deref() {
+            Some("plus") | Some("minus") | Some("plus-or-minus") | Some("minus-or-plus") => {
+              Some(args.trees().len())
+            },
+            _ => None,
+          },
+          XM::Lexeme(lex, _) => {
+            let head = lex.split(':').next().unwrap_or("");
+            if head == "ADDOP" {
+              Some(args.trees().len())
+            } else {
+              None
+            }
+          },
+          _ => None,
+        },
+        XM::Dual(c, _, _, _) => args_count_if_addition_root(c),
+        _ => None,
+      }
+    }
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max = trees
+          .iter()
+          .filter_map(args_count_if_addition_root)
+          .max();
+        let Some(max) = max else {
+          return XM::Choices(trees);
+        };
+        if max <= 2 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| {
+            args_count_if_addition_root(t).map(|n| n == max).unwrap_or(false)
+              || args_count_if_addition_root(t).is_none()
+          })
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
     }
   }
 

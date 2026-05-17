@@ -1322,6 +1322,16 @@ impl MathParser {
         // absent"); we'll investigate any regression case-by-case.
         reduced_forest = reduced_forest.prefer_zero_absent_when_available();
 
+        // Multi-tree pragma: a *specific* QM semantic
+        // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
+        // beats a generic `delimited-⟨⟩` wrapper for the same input.
+        // Specific semantic recognition reflects author intent more
+        // closely than a structural fence wrapper. Must run BEFORE
+        // `prefer_more_delimited_wrappers`, because the latter would
+        // otherwise filter out the qm_bracket candidate (which has
+        // zero `delimited-` wrappers).
+        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
+
         // Multi-tree pragma: prefer candidates that recognized
         // fenced sub-expressions as `delimited-X@(…)` (angle, paren,
         // bracket, vertbar) over flat `formulae@(…)` / multirelation
@@ -1354,6 +1364,14 @@ impl MathParser {
         // with multiplicative root. K-12 reading: `a*|a|+b*|b|+c*|c|`
         // has `+` outermost, not `a * (one giant absolute-value)`.
         reduced_forest = reduced_forest.prefer_root_addition_over_outer_multiplication();
+
+        // Multi-tree pragma: among addition-rooted candidates,
+        // prefer the widest n-ary `+` chain (`+@(a, b, c)` over
+        // `+@(a, b+c)`). Resolves the inner bar-pairing of
+        // `a|a|+b|b|+c|c|` — the 3-arg chain has every `|.|`
+        // as a sibling absolute-value.
+        reduced_forest = reduced_forest.prefer_wider_addition_root();
+
 
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are

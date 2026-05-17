@@ -233,6 +233,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Composed functions can be applied like regular functions
       tight_term += composed_term tight_term => prefix_apply;
 
+
       term = tight_term
       | term mulop tight_term => infix_apply_nary
       | term mulop tight_term elideop => infix_apply_and_elide
@@ -467,6 +468,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | langle_open expression singlevertbar expression rangle_close => qm_braket
              // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
              | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
+             // Same Dirac shapes with plain ASCII `<` `>` (langle_rel/rangle_rel
+             // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
+             // outside `\langle/\rangle` macros. Semantics match the
+             // `\langle…\rangle` forms above so downstream MathML sees a single
+             // inner-product / quantum-operator-product Apply.
+             | langle_rel expression singlevertbar expression rangle_rel => qm_braket
+             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
              // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
              | lbrace term punct term rbrace => fence
              | lbrace term punct term punct term rbrace => fence
