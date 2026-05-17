@@ -809,6 +809,12 @@ rsync reached 28k papers, a 2000-paper random sample produced
 **1999/1999 pass with 0 errors** (1 zip-extract issue).
 Cumulative validation across wp4: **3597/3597 papers, 0 errors**.
 
+**warning_papers_4 3000-paper sample (2026-05-17 08:50).** After
+rsync reached 55k papers, a 3000-paper random sample produced
+**2996/2996 pass with 0 errors** (4 zip-extract issues).
+Cumulative validation across wp4 (multiple samples): **7593/7593
+papers, 0 errors** on the 2305-2404 month slice.
+
 **Round-34 surpass-Perl content-preservation wave (2026-05-17 06-08:00).**
 With 0 errors remaining, focus shifted to author content that Perl
 silently gobbles. Bindings touched (in batches per user guidance):
