@@ -59,10 +59,16 @@ LoadDefinitions!({
   DefRegister!("\\authorrunning", Tokens!());
   Let!("\\runningauthor", "\\authorrunning");
   Let!("\\runauthor",     "\\authorrunning");
-  DefMacro!("\\runningtitle{}", None);
+  // Running title / short authors — author metadata; preserve.
+  DefMacro!("\\runningtitle{}",
+    "\\@add@frontmatter{ltx:toctitle}{#1}");
   Let!("\\runninghead", "\\runningtitle");
-  DefMacro!("\\shortauthors{}", None);
-  DefMacro!("\\authors{}",      None);
+  DefMacro!("\\shortauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // \authors{author list} — alternative to \author; preserve as
+  // author list note.
+  DefMacro!("\\authors{}",
+    "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
   DefMacro!("\\alignauthor",    None);
 
   // Perl L78-83: email / speaker
