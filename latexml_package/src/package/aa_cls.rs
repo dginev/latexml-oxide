@@ -40,4 +40,7 @@ LoadDefinitions!({
   DefMacro!("\\tablefoot{}", "\\par\\textbf{Notes.} #1");
   DefMacro!("\\tablebibname", "References");
   DefMacro!("\\tablefootname", "Notes");
+  // A&A authors use \orcid for ORCID identifier. Preserve as ltx:note.
+  DefMacro!("\\orcid{}",
+    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
 });
