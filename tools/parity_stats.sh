@@ -60,11 +60,13 @@ for log in "$DIR"/*.log; do
   [[ "$paper" == canvas* ]] && continue
   count=$((count + 1))
 
-  # Rust error count + top category (non-cascade).
+  # Rust error count + top category (non-cascade). Fatals count as
+  # errors — "error-free" means no `Error:` lines AND no `Fatal:`
+  # lines AND no crashes (which would show as missing log too).
   CASCADE='\\@startsection|\\lx@begin@alignment|\\end\{equation\}|\\endgroup'
   rust_err=$(sed -E 's/\x1b\[[0-9]+m//g' "$log" | awk '/Error:[a-z_]+:|Fatal:[a-z_]+:/{c++} END{print c+0}')
   top=$(sed -E 's/\x1b\[[0-9]+m//g' "$log" \
-        | grep -oE 'Error:[a-z_]+:[^ ]+' \
+        | grep -oE 'Error:[a-z_]+:[^ ]+|Fatal:[a-z_]+:[^ ]+' \
         | grep -vE "$CASCADE" \
         | sort | uniq -c | sort -rn | head -1 \
         | awk '{print $2}' || echo "-")

@@ -667,8 +667,19 @@ echo ""
 RUN_TOTAL=$(wc -l < "$RUN_RESULTS")
 RUN_OK=$(awk -F'\t' '$7 == "ok"' "$RUN_RESULTS" | wc -l)
 RUN_FAIL=$((RUN_TOTAL - RUN_OK))
+# Errors-and-crashes — anything that's not `ok` counts as a failure.
+# "Error-free" means: no Error: log lines AND no Fatal: log lines AND
+# no out-of-process crash (timeout / SIGKILL / SIGSEGV / SIGABRT).
+# All those collapse into the same failure bucket below.
+RUN_CONV_ERR=$(awk -F'\t' '$7 == "conversion_error"' "$RUN_RESULTS" | wc -l)
+RUN_CONV_FAT=$(awk -F'\t' '$7 == "conversion_fatal"' "$RUN_RESULTS" | wc -l)
+RUN_CRASH=$(awk -F'\t' '$7 == "timeout" || $7 == "oom_or_kill" || $7 == "segfault" || $7 == "abort" || $7 == "error"' \
+  "$RUN_RESULTS" | wc -l)
 
 echo "This run: ${RUN_OK}/${RUN_TOTAL} OK (${RUN_FAIL} failures)"
+echo "  errors:        ${RUN_CONV_ERR}  (Error: lines in log)"
+echo "  fatals:        ${RUN_CONV_FAT}  (Fatal: status)"
+echo "  crashes:       ${RUN_CRASH}  (timeout/OOM/segfault/abort)"
 echo ""
 
 # Category breakdown (this run)
@@ -702,5 +713,13 @@ fi
 
 CUM_TOTAL=$(awk -F'\t' 'NR>1' "$RESULTS_TSV" | wc -l)
 CUM_OK=$(awk -F'\t' 'NR>1 && $7 == "ok"' "$RESULTS_TSV" | wc -l)
+CUM_FAIL=$((CUM_TOTAL - CUM_OK))
+CUM_CONV_ERR=$(awk -F'\t' 'NR>1 && $7 == "conversion_error"' "$RESULTS_TSV" | wc -l)
+CUM_CONV_FAT=$(awk -F'\t' 'NR>1 && $7 == "conversion_fatal"' "$RESULTS_TSV" | wc -l)
+CUM_CRASH=$(awk -F'\t' 'NR>1 && ($7 == "timeout" || $7 == "oom_or_kill" || $7 == "segfault" || $7 == "abort" || $7 == "error")' \
+  "$RESULTS_TSV" | wc -l)
 echo ""
-echo "Cumulative: ${CUM_OK}/${CUM_TOTAL} OK across all runs"
+echo "Cumulative: ${CUM_OK}/${CUM_TOTAL} OK across all runs (${CUM_FAIL} failures)"
+echo "  errors:        ${CUM_CONV_ERR}  (Error: lines in log)"
+echo "  fatals:        ${CUM_CONV_FAT}  (Fatal: status)"
+echo "  crashes:       ${CUM_CRASH}  (timeout/OOM/segfault/abort)"
