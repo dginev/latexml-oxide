@@ -9,7 +9,9 @@ LoadDefinitions!({
   RequirePackage!("aas_macros");
   RequirePackage!("url");
   RequirePackage!("longtable");
-  RequirePackage!("xcolor");
+  // Pre-load with [dvipsnames, table] so AAS-style papers using
+  // `\usepackage[table]{xcolor}` get colortbl loaded too.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("hyperref");
   RequirePackage!("array");
   RequirePackage!("lineno");

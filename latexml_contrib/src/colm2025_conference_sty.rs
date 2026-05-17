@@ -8,7 +8,9 @@ LoadDefinitions!({
   // the templates' early color definitions don't trip "\\definecolor
   // undefined". Witness 2503.21480 (definecolor at colm2025 L11).
   RequirePackage!("color");
-  RequirePackage!("xcolor");
+  // Pre-load xcolor with [dvipsnames, table] so user xcolor calls
+  // don't silently option-clash and miss dvipsnam.def/colortbl.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
 
   // Author-list separators (colm L107-153).
   DefMacro!("\\And", " ");

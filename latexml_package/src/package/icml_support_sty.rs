@@ -7,8 +7,11 @@ LoadDefinitions!({
   RequirePackage!("fancyhdr");
   RequirePackage!("color");
   // ICML 2024/2025 templates use xcolor's \colorlet for callout colors;
-  // load xcolor eagerly. Witness 2405.18180 (icml2025).
-  RequirePackage!("xcolor");
+  // load xcolor eagerly. Pre-load with [dvipsnames, table] so that
+  // user `\usepackage[dvipsnames, table]{xcolor}` doesn't silently
+  // option-clash and leave colortbl/dvipsnam.def unloaded. Witness
+  // 2405.18180 (icml2025).
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("algorithm");
   RequirePackage!("algorithmic");
   RequirePackage!("natbib");

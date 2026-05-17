@@ -7,10 +7,13 @@ LoadDefinitions!({
   LoadClass!("mn");
   RequirePackage!("hyperref");
   // MNRAS papers often use \color{ForestGreen} / \color{NavyBlue}
-  // from the dvipsnames palette but never explicitly load xcolor.
-  // Eager-load xcolor[dvipsnames] so these named colors resolve.
-  // Witness 2509.13010 ("Can't find color named 'ForestGreen'").
-  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string()]);
+  // from the dvipsnames palette AND \cellcolor (colortbl, loaded via
+  // the `table` option). Pre-load with both options so the user's
+  // later `\usepackage[table, xcdraw]{xcolor}` doesn't silently
+  // option-clash and leave colortbl unloaded.
+  // Witness 2509.13010 ("Can't find color named 'ForestGreen'") and
+  // 2305.08788 ("undefined:\\cellcolor").
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
 
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut

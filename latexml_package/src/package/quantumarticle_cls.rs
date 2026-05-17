@@ -10,7 +10,9 @@ LoadDefinitions!({
 
   RequirePackage!("bbm");
   RequirePackage!("inst_support");
-  RequirePackage!("xcolor");
+  // Pre-load with [dvipsnames, table] so user xcolor calls don't
+  // silently option-clash. Quantum papers commonly use \cellcolor.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
 
   DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
   DefMacro!("\\email{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{email}}");

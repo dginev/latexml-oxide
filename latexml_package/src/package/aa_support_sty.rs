@@ -43,7 +43,10 @@ LoadDefinitions!({
   RequirePackage!("fancyhdr");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
-  RequirePackage!("xcolor");
+  // Pre-load xcolor with [dvipsnames, table] so user xcolor calls
+  // don't silently option-clash and miss the colortbl / dvipsnam.def
+  // loads.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("url");
   RequirePackage!("enumerate");
   RequirePackage!("longtable");

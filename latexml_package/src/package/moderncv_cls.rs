@@ -10,7 +10,9 @@ LoadDefinitions!({
   RequirePackage!("calc");
   RequirePackage!("ifthen");
   RequirePackage!("url");
-  RequirePackage!("xcolor");
+  // Pre-load xcolor with [dvipsnames, table] options so user xcolor
+  // calls don't silently option-clash and miss dvipsnam.def/colortbl.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("fancyhdr");
   RequirePackage!("hyperref");
 
