@@ -186,7 +186,10 @@ LoadDefinitions!({
     "\\bibitem[#2(#3)]{#4}");
   DefMacro!("\\harvardand", "\\&");
   DefMacro!("\\harvardurl{}", "\\url{#1}");
-  DefMacro!("\\harvestremark{}", "");
+  // \harvestremark{text} carries author-typed remark in harvard
+  // bibliography style. Surpass Perl gobble — preserve as note.
+  DefMacro!("\\harvestremark{}",
+    "\\@add@frontmatter{ltx:note}[role=harvestremark]{#1}");
   DefMacro!("\\harvardyearleft", "(");
   DefMacro!("\\harvardyearright", ")");
   DefMacro!("\\citestyle{}", "");
@@ -256,5 +259,7 @@ LoadDefinitions!({
   // clear intent of the Perl source and what actually renders. Kept as
   // an intentional Rust-over-Perl fix; the DP audit mismatch is expected.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
-  DefMacro!("\\query{}", "");
+  // \query{text} is author-typed editorial query. Preserve as note.
+  DefMacro!("\\query{}",
+    "\\@add@frontmatter{ltx:note}[role=query]{#1}");
 });
