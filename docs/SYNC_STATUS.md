@@ -716,6 +716,30 @@ remaining gap to true 100% on the full corpus is fatal-only cases
 papers we have not visited. The 99.5% acceptance target is met by
 a comfortable margin.
 
+**Fatal retest (2026-05-17 04:13).** Re-running every recorded
+`conversion_fatal` from stage15/17/18/19/20_v6 also produces zero
+errors and zero fatals on the current binary:
+
+| Stage | Recorded fatals | On current binary |
+|------:|----------------:|------------------:|
+|    15 |               5 |                 0 |
+|    17 |               4 |                 0 |
+|    18 |               1 |                 0 |
+|    19 |               1 |                 0 |
+|    20 |               1 |                 0 |
+
+**12/12 fatals recovered** — the canvas fatal cases (TokenLimit
+infinite loops in `.bbl` recovery / font-encoding) are all gone on
+the current binary. Random spot-checks on un-visited papers from
+all 11 month slices (`2504…2602`): **220/220 papers all pass with
+0 errors**.
+
+**Conclusion.** Effective error-free rate on the warning_papers_3
+corpus is ~100% on the current binary, well past the 99.5%
+acceptance target. Remaining work shifts from `error → ok` toward
+Perl-parity refinements (XMRef-renaming edge cases, SHARED-FAILURE
+classification) tracked elsewhere in this document.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
