@@ -13,7 +13,9 @@ LoadDefinitions!({
   DefMacro!("\\htmladdnormallink{}{}",                    "\\href{#2}{#1}");
   DefMacro!("\\htmladdimg{}",                             "\\hyperimage{#1}");
   DefMacro!("\\externallabels Semiverbatim Semiverbatim", "");
-  DefMacro!("\\externalref{}",                            "");
+  // \externalref{label} — cross-document reference label; preserve.
+  DefMacro!("\\externalref{}",
+    "\\ref{#1}");
   DefMacro!("\\externalcite",                             "\\nocite");
   DefMacro!("\\htmladdTOClink[]{}{}{}",                   "");
   DefConstructor!("\\htmlrule OptionalMatch:*", "<ltx:rule/>");

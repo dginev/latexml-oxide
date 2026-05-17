@@ -142,7 +142,10 @@ LoadDefinitions!({
   DefMacro!("\\stripauthor", "");
   DefRegister!("\\instindent", Dimension::new(0));
   DefMacro!("\\combirun", "");
-  DefMacro!("\\combirunning{}", "");
+  // \combirunning{text} — Springer running-head combination text.
+  // Surpass Perl gobble: preserve as ltx:note.
+  DefMacro!("\\combirunning{}",
+    "\\@add@frontmatter{ltx:note}[role=combirunning]{#1}");
 
   DefMacro!("\\validfor", "");
   DefMacro!("\\ClassInfoNoLine{}{}", "");

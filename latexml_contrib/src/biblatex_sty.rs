@@ -979,9 +979,12 @@ LoadDefinitions!({
   DefMacro!("\\blx@postpunct", "\\relax");
   DefMacro!("\\midsentence", "\\relax");
 
-  // Perl L707-708
-  DefMacro!("\\pagenote{}", "");
-  DefMacro!("\\pagenotetext{}", "");
+  // Perl L707-708 gobble; surpass by preserving as endnote-style.
+  // \pagenote{text} is author-typed marginal note.
+  DefMacro!("\\pagenote{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}");
+  DefMacro!("\\pagenotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}");
 
   // Perl L710-721
   DefMacro!("\\blx@uniquename", "false");
