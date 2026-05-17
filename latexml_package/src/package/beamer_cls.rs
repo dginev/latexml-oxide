@@ -120,8 +120,13 @@ LoadDefinitions!({
 
   // Title page macros — Perl L1010-1035
   DefMacro!("\\institute OptionalMatch:<> []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
-  DefMacro!("\\logo{}", "");
-  DefMacro!("\\titlegraphic{}", "");
+  // \logo{content} and \titlegraphic{content} typically wrap
+  // \includegraphics or similar visual content. Surpass Perl
+  // (which doesn't define them) by routing to ltx:note so any
+  // \includegraphics inside resolves and the graphic is preserved.
+  DefMacro!("\\logo{}", "\\@add@frontmatter{ltx:note}[role=logo]{#1}");
+  DefMacro!("\\titlegraphic{}",
+    "\\@add@frontmatter{ltx:note}[role=titlegraphic]{#1}");
   DefMacro!("\\titlepage", "\\maketitle");
   DefMacro!("\\insertauthor", "");
   DefMacro!("\\inserttitle", "");
