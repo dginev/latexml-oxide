@@ -91,6 +91,28 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
+  // subcaption v1.3+ added `{subcaptionblock}` as a sibling of `{subfigure}`
+  // — same signature and semantics, just a more-generic name. Witness
+  // 2306.17516 + 2 stage-2 papers (`undefined:{subcaptionblock}`).
+  DefEnvironment!("{subcaptionblock}[]{Dimension}",
+    "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+      #tags\
+      #body\
+    </ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => { before_float("subfigure", Some("figure")); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
+  );
+  DefEnvironment!("{subcaptionblock*}[]{Dimension}",
+    "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+      #tags\
+      #body\
+    </ltx:figure>",
+    mode => "internal_vertical",
+    before_digest => { before_float_ex("subfigure", Some("figure"), true); },
+    after_digest => sub[whatsit] { after_float(whatsit); }
+  );
+
   DefEnvironment!("{subtable}[]{Dimension}",
     "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\

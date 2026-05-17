@@ -22,6 +22,10 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=address]{#1}");
   DefMacro!("\\EmailD{}",
     "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // \Email{addr} — alternate variant in newer sigma.cls templates.
+  // Witness 2306.12539, 2307.06355 (both fail with undefined:\\Email).
+  DefMacro!("\\Email{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   DefMacro!("\\URLaddressD{}",
     "\\@add@frontmatter{ltx:note}[role=url]{#1}");
   DefMacro!("\\ArticleDates{}",
