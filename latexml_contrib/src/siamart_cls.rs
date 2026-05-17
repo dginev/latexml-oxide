@@ -45,18 +45,26 @@ LoadDefinitions!({
   DefMacro!("\\newsiamthm{}{}", r"\newtheorem{#1}[theorem]{#2}");
   DefMacro!("\\newsiamremark{}{}", r"\newtheorem{#1}[theorem]{#2}");
 
-  // siamart frontmatter primitives — no-op to suppress undefined errors.
-  DefMacro!("\\headers{}{}", "");
-  DefMacro!("\\dedicatory{}", "");
-  DefMacro!("\\fundingsource{}", "");
+  // siamart frontmatter primitives. Round-34 surpass-Perl: preserve
+  // \dedicatory, \fundingsource, and \funding as author-typed
+  // frontmatter notes (the funding text is often a real funding
+  // statement worth keeping). \headers{left}{right} → running-head
+  // text, preserve as ltx:note.
+  DefMacro!("\\headers{}{}",
+    "\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}");
+  DefMacro!("\\dedicatory{}",
+    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
+  DefMacro!("\\fundingsource{}",
+    "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}");
   // siamart papers often \externaldocument supplement/article before
   // loading xr — pre-stub.
   DefMacro!("\\externaldocument[]{}", "");
   DefMacro!("\\externalcitedocument[]{}", "");
   // siamart220329 L1130: \funding{...} writes a marked line in the
-  // titlepage. Stub as gobble; the text appears in acknowledgements
-  // section of the paper typically.
-  DefMacro!("\\funding{}", "");
+  // titlepage. Preserve as ltx:acknowledgements (matching the user's
+  // memory: prefer ltx:acknowledgements over a section).
+  DefConstructor!("\\funding{}",
+    "<ltx:acknowledgements name='Funding'>#1</ltx:acknowledgements>");
   // {MSCcodes} env — siamart220329 L743 wraps content in an "@abssec"
   // (frontmatter section). Mirror as keywords-like classification block.
   DefEnvironment!(
