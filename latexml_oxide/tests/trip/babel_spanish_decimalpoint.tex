@@ -1,0 +1,12 @@
+% Regression test for Round-33 fix (commit dbeb154bf7).
+% babel-spanish provides \decimalpoint / \decimalcomma to switch the
+% decimal separator. Driver 2511.19353 used
+% \usepackage[spanish]{babel}\decimalpoint to force '.' as decimal.
+% Without our \providecommand no-op in load_spanish, the call raised
+% "Error:undefined:\decimalpoint".
+\documentclass{article}
+\usepackage[spanish]{babel}
+\decimalpoint
+\begin{document}
+Number: 3.14.
+\end{document}

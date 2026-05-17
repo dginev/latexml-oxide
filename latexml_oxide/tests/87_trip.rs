@@ -153,6 +153,20 @@ fn ieeetran_newlineauthors() {
 }
 
 #[test]
+fn babel_spanish_decimalpoint() {
+  // Round-33 fix (commit dbeb154bf7). babel-spanish provides
+  // \decimalpoint / \decimalcomma to switch decimal separator.
+  // Our load_spanish lang stub now installs \providecommand no-ops
+  // so user `\decimalpoint` after `\usepackage[spanish]{babel}` doesn't
+  // raise Error:undefined. Driver 2511.19353.
+  let (code, status) = run_trip("babel_spanish_decimalpoint");
+  assert_eq!(
+    code, 0,
+    "babel_spanish_decimalpoint expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
 fn chemformula_raw_l3keys() {
   // Round-33 fix (commit 1afa4dc8ca). chemformula 4.x is expl3-based;
   // the INCLUDE_STYLES post-binding raw load triggers
