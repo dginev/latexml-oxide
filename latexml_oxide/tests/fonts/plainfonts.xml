@@ -114,13 +114,13 @@ but compare meanings:</p>
       </Math></p>
   </para>
   <para>
-    <p>“cal:  abc123 and <Math mode="inline" tex="{\cal abc123}" text="absent does-not-prove list@() * infinity element-of contains">
+    <p>“cal:  abc123 and <Math mode="inline" tex="{\cal abc123}" text="absent does-not-prove list@() * infinity element-of absent contains absent">
         <XMath>
           <XMApp>
             <XMTok meaning="does-not-prove" role="METARELOP">⊣</XMTok>
             <XMTok meaning="absent"/>
             <XMApp>
-              <XMTok meaning="element-of" role="RELOP">∈</XMTok>
+              <XMTok meaning="multirelation"/>
               <XMApp>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMDual>
@@ -134,7 +134,10 @@ but compare meanings:</p>
                 </XMDual>
                 <XMTok meaning="infinity" role="ID">∞</XMTok>
               </XMApp>
+              <XMTok meaning="element-of" role="RELOP">∈</XMTok>
+              <XMTok meaning="absent"/>
               <XMTok meaning="contains" role="RELOP">∋</XMTok>
+              <XMTok meaning="absent"/>
             </XMApp>
           </XMApp>
         </XMath>

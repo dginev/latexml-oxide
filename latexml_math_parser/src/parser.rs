@@ -103,11 +103,18 @@ static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT
 // it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
 static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
-// Experimental: route `parse_marpa` through ASF traversal instead of
+// Route `parse_marpa` through ASF traversal (the default path) or
 // the legacy Tree-iteration loop. See docs/MATH_PARSER_AND_ASF.md.
-// Off by default; set `LATEXML_MARPA_ASF=1` to opt in. Used for
-// side-by-side parity validation against the legacy path.
-static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_ASF").is_ok());
+// **ASF is now the default**. The legacy Tree-iter is preserved as
+// an escape hatch behind `LATEXML_MARPA_LEGACY=1` for debugging
+// engine-divergence cases and historical comparison.
+//
+// Why ASF is default: it evaluates per-rule actions once per glade
+// (memoized) instead of once per tree, removing the 5000-tree cap
+// and 5 of the 6 convergence bandages required by the legacy path.
+// As of 2026-05-17 ASF reaches 1301/0 on the test suite; the
+// legacy path 1299/2 (two tests blessed to ASF-canonical output).
+static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_err());
 
 pub struct MathParser {
   grammar:                   ThinGrammar,
