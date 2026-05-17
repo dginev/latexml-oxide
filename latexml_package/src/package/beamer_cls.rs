@@ -276,10 +276,18 @@ LoadDefinitions!({
   DefMacro!("\\AtBeginSection[]{}", "");
   DefMacro!("\\AtBeginSubsection[]{}", "");
   DefMacro!("\\AtBeginPart[]{}", "");
-  DefMacro!("\\lecture{}{}", "");
+  // \lecture{title}{shortname} — beamer lecture frontmatter; both
+  // args are author-typed. Preserve as ltx:note frontmatter so the
+  // title text survives in the XML (content-preserving).
+  DefMacro!("\\lecture{}{}",
+    "\\@add@frontmatter{ltx:note}[role=lecture]{#1}");
   DefMacro!("\\againframe OptionalMatch:<> []{}", "");
   DefMacro!("\\appendix", "");
-  DefMacro!("\\note OptionalMatch:<> []{}", "");
+  // \note[overlay][placement]{text} — beamer presenter notes; the
+  // text arg is often substantive author prose (talking points).
+  // Preserve as ltx:note role='presenter-note' rather than gobbling.
+  DefConstructor!("\\note OptionalMatch:<> []{}",
+    "<ltx:note role='presenter-note'>#3</ltx:note>");
   DefMacro!("\\beamerdefaultoverlayspecification{}", "");
 
   // Translation stubs
