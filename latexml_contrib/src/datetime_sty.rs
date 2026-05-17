@@ -15,8 +15,10 @@ LoadDefinitions!({
   DefMacro!("\\newdateformat{}{}", "");
   // Companion format setters as no-ops.
   DefMacro!("\\settimeformat{}", "");
-  DefMacro!("\\formatdate{}{}{}", "");
-  DefMacro!("\\formattime{}{}{}", "");
+  // \formatdate{day}{month}{year} — emit as plain numeric date.
+  // Round-34 surpass-Perl: was gobbled; preserve content inline.
+  DefMacro!("\\formatdate{}{}{}", "#1/#2/#3");
+  DefMacro!("\\formattime{}{}{}", "#1:#2:#3");
   // Date-component stubs (some packages call directly).
   DefMacro!("\\monthname[]", "");
   DefMacro!("\\shortmonthname[]", "");
