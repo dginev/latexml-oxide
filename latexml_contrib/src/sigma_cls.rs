@@ -28,6 +28,9 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   DefMacro!("\\URLaddressD{}",
     "\\@add@frontmatter{ltx:note}[role=url]{#1}");
+  // \URLaddress{url} — newer sigma.cls variant (without trailing D).
+  DefMacro!("\\URLaddress{}",
+    "\\@add@frontmatter{ltx:note}[role=url]{#1}");
   DefMacro!("\\ArticleDates{}",
     "\\@add@frontmatter{ltx:note}[role=dates]{#1}");
   // sigma.cls custom frontmatter macros for abstract / keywords /
