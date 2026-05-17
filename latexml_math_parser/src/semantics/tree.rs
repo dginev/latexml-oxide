@@ -1106,6 +1106,110 @@ impl XM {
     }
   }
 
+  /// Count Apply nodes whose meaning is a **fence operator**
+  /// (`norm`, `absolute-value`, `floor`, `ceiling`, etc.) AND that
+  /// have an ancestor Apply with the **same** fence meaning. This
+  /// is the "nested same-fence" count: e.g. `‖x · ‖a‖ · y‖` has one
+  /// `norm` inside another `norm`, while `‖x‖ · a · ‖y‖` has none.
+  ///
+  /// Mathematicians read consecutive bar fences with left-to-right
+  /// greedy pairing: `||x||a||y||` → `‖x‖ · a · ‖y‖`, not
+  /// `‖x · ‖a‖ · y‖`. Nested same-meaning fences are unusual without
+  /// explicit size cues (`\bigl\|`, parens). The forest pragma below
+  /// prefers candidates with FEWER such nested same-fences.
+  pub fn count_nested_same_fence(&self) -> usize {
+    fn is_fence_meaning(m: &str) -> bool {
+      matches!(
+        m,
+        "absolute-value"
+          | "norm"
+          | "floor"
+          | "ceiling"
+          | "inner-product"
+          | "quantum-operator-product"
+      )
+    }
+    fn walk(node: &XM, ancestor_fence: Option<String>) -> usize {
+      let meaning_of = |op: &XM| -> Option<String> {
+        match op {
+          XM::Token(p, _) => p.meaning.as_deref().map(String::from),
+          _ => None,
+        }
+      };
+      match node {
+        XM::Apply(op, args, _, _) => {
+          let my_meaning = meaning_of(&op.0);
+          let here = match (&my_meaning, &ancestor_fence) {
+            (Some(m), Some(a)) if m == a && is_fence_meaning(m) => 1,
+            _ => 0,
+          };
+          // Pass current meaning as ancestor if it's a fence; otherwise
+          // keep the existing ancestor (so we detect nesting across
+          // intermediate non-fence Applies like `times`).
+          let new_anc = match &my_meaning {
+            Some(m) if is_fence_meaning(m) => Some(m.clone()),
+            _ => ancestor_fence.clone(),
+          };
+          here + args.trees().iter().map(|a| walk(a, new_anc.clone())).sum::<usize>()
+        },
+        XM::Dual(c, p, _, _) => {
+          // If the Dual's content is a fence-Apply, propagate that
+          // meaning when walking the presentation Wrap — because the
+          // actual nested expression lives inside the Wrap, not
+          // inside the Ref-pointing content.
+          let dual_fence = match &**c {
+            XM::Apply(op_inner, _, _, _) => match &*op_inner.0 {
+              XM::Token(p_inner, _) => p_inner
+                .meaning
+                .as_deref()
+                .filter(|m| is_fence_meaning(m))
+                .map(String::from),
+              _ => None,
+            },
+            _ => None,
+          };
+          let pres_anc = dual_fence.clone().or_else(|| ancestor_fence.clone());
+          walk(c, ancestor_fence.clone()) + walk(p, pres_anc)
+        },
+        XM::Wrap(items, _, _) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Choices(trees) => trees.iter().map(|t| walk(t, ancestor_fence.clone())).sum(),
+        XM::Arg(items) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      }
+    }
+    walk(self, None)
+  }
+
+  /// Forest pragma: prefer candidates with FEWER nested
+  /// same-meaning fences (`norm` inside `norm`, `absolute-value`
+  /// inside `absolute-value`, etc.). Encodes the mathematician's
+  /// "greedy left-to-right pairing" instinct for consecutive bar
+  /// fences. For `||x||a||y||`: sibling parse `norm@(x) * a *
+  /// norm@(y)` has 0 nested fences; outer-wrap parse
+  /// `norm@(x * norm@(a) * y)` has 1. Prefer the sibling.
+  ///
+  /// Fires when at least one candidate has zero nested same-fences
+  /// AND another has more — otherwise inert.
+  pub fn prefer_fewer_nested_same_fences(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_nested_same_fence()).min().unwrap_or(0);
+        let max = trees.iter().map(|t| t.count_nested_same_fence()).max().unwrap_or(0);
+        if min == max {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> =
+          trees.into_iter().filter(|t| t.count_nested_same_fence() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// Count Apply nodes whose meaning is a *specific* QM-bracket
   /// semantic (`quantum-operator-product`, `inner-product`) — the
   /// dedicated semantics for Dirac `⟨a|f|b⟩` and `⟨a|b⟩`. These are

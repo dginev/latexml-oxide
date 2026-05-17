@@ -1332,6 +1332,13 @@ impl MathParser {
         // zero `delimited-` wrappers).
         reduced_forest = reduced_forest.prefer_qm_specific_semantics();
 
+        // Multi-tree pragma: prefer candidates with FEWER nested
+        // same-meaning fences (`norm` inside `norm`, etc.). Encodes
+        // the mathematician's greedy left-to-right bar-pairing
+        // instinct. Resolves `||x||a||y||` → `‖x‖ · a · ‖y‖`
+        // (siblings) over `‖x · ‖a‖ · y‖` (nested).
+        reduced_forest = reduced_forest.prefer_fewer_nested_same_fences();
+
         // Multi-tree pragma: prefer candidates that recognized
         // fenced sub-expressions as `delimited-X@(…)` (angle, paren,
         // bracket, vertbar) over flat `formulae@(…)` / multirelation
