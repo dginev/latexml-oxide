@@ -792,6 +792,12 @@ ever errored OR fatal'd across 320k historical runs is now fixed.
 The corpus is functionally **100% pass** on the current binary
 across every paper we've ever observed failing.
 
+**warning_papers_4 (new 100k batch) early validation
+(2026-05-17 06:10).** While rsync continues downloading the 2305..2404
+batch, the first 9k+ papers were sampled (500-paper random subset):
+**500/500 pass with 0 errors**. The newest unfetched month slice
+also converts uniformly on the current binary.
+
 The HTML output dirs of all 32 stage runs were deleted in the
 same 2026-05-17 cleanup pass, recovering 471 GB of disk space.
 `~/data/_meta/{known_failures, failure_zip_paths,
