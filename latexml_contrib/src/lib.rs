@@ -32,6 +32,7 @@ pub mod xkvdop6_cls;
 pub mod xkvview_sty;
 
 // ar5iv-bindings ports
+pub mod aistats2026_sty;
 pub mod aliascnt_sty;
 pub mod ar5iv_sty;
 pub mod arxbj_cls;
@@ -209,6 +210,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("xkvdop6", "cls", xkvdop6_cls::load_definitions),
   ("xkvview", "sty", xkvview_sty::load_definitions),
   // ar5iv-bindings ports
+  ("aistats2026", "sty", aistats2026_sty::load_definitions),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
   ("atableau", "sty", atableau_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
