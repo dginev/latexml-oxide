@@ -52,6 +52,11 @@ pub struct Actions {
 
 impl Actions {
   pub fn register(&mut self, id: i32, closure: ActionClosure) { self.dispatch.insert(id, closure); }
+  /// Whether a rule has a registered semantic action. Used by the
+  /// ASF traverser to discriminate "structural/literal" rules (treat
+  /// as transparent byte-passthrough — match legacy `rollup_token_rec`)
+  /// from "semantic" rules (call `action_on`).
+  pub fn has_action(&self, id: i32) -> bool { self.dispatch.contains_key(&id) }
   pub fn action_on(
     &self,
     id: i32,

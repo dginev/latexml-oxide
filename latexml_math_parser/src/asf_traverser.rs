@@ -53,12 +53,10 @@ use crate::semantics::{ActionContext, Actions, XM};
 /// it can drive the same semantic-action dispatch as the legacy
 /// `translate_node` path.
 ///
-/// **Scaffolding** — not yet wired into `parse_marpa`. The follow-up
-/// session will (a) add an env-gated alternative code path that
-/// drives this traverser via `engine.parse_and_traverse_forest(...)`,
-/// (b) run it side-by-side with the legacy path for parity
-/// validation, (c) switch the default once validated.
-#[allow(dead_code)]
+/// Wired into `parse_marpa` behind the `LATEXML_MARPA_ASF=1` env
+/// flag (off by default). Runs side-by-side with the legacy path
+/// for parity validation. The cap-deletion + pragmatics audit
+/// follow once parity is confirmed.
 pub struct MathTraverser<'a> {
   pub actions:      &'a Actions,
   pub pragmas:      &'a [ValidationPragmatics],
@@ -105,29 +103,71 @@ impl Traverser for MathTraverser<'_> {
       let rule_id = glade.rule_id();
       let rh_len = glade.rh_length();
 
-      // 2. Lexeme-rule glade (e.g. RELOP, ADDOP, NUMBER). Aggregate
-      // child byte-strings into a single Lexeme; matches Perl-side
-      // `TreeBuilder::rollup_token` semantics.
+      // 2. Outer lexeme/token rule (e.g. RELOP:less-than:3 ).
+      // Aggregate child byte-strings into a single Lexeme AND call
+      // `.specialize(...)` — mirrors the legacy `Node::Token` arm in
+      // `translate_node`, which calls `XM::Lexeme(s, ...).specialize(
+      // Meta::default(), pragmas)?` after `TreeBuilder::rollup_token`
+      // already concatenated the bytes.
       if self.builder.is_token(rule_id) {
-        let mut bytes: Vec<u8> = Vec::with_capacity(rh_len);
-        for ix in 0..rh_len {
-          let child_id = glade.rh_glade_id(ix).expect("rh position has a child glade");
-          let child_alts = children.get(&child_id).expect("child precomputed in post-order");
-          // Pick the first (= only) alternative; lexeme rules don't
-          // produce branching alternatives at their byte children.
-          if let Some(Some(XM::Lexeme(s, _))) = child_alts.first() {
-            bytes.extend_from_slice(s.as_bytes());
+        let bytes = collect_lexeme_bytes(glade, rh_len, children);
+        if bytes.is_empty() {
+          all_alts.push(None);
+        } else {
+          let lexeme_str = String::from_utf8(bytes).unwrap_or_default();
+          let lexeme = XM::Lexeme(lexeme_str, Meta::default());
+          match lexeme.specialize(Meta::default(), self.pragmas) {
+            Ok(specialized) => all_alts.push(Some(specialized)),
+            Err(_) => self.pruned_count += 1,
           }
         }
-        let lexeme = String::from_utf8(bytes).unwrap_or_default();
-        all_alts.push(Some(XM::Lexeme(lexeme, Meta::default())));
-      // 3. Discarded rule (whitespace, comments). Emit a single
-      // None — parents handle that gracefully via `Vec<Option<XM>>`.
+      // 3. Discarded rule (whitespace separators). Emit a single
+      // None — parents handle gracefully via `Vec<Option<XM>>`.
       } else if self.builder.is_discard(rule_id) {
         all_alts.push(None);
+      // 4. Rule with no registered semantic action.
+      //
+      // Two flavors:
+      //
+      // (4a) `builder.is_rule(rule_id) == true` — a grammar-level
+      // rule (e.g. `factor = factor_base | function | …`) without
+      // a custom action. Legacy fallback in `Actions::action_on`
+      // returns `args[0]` unchanged for 1-arg cases and `args[0]`
+      // with a stderr warning for n>1. In ASF we mirror this by
+      // passing through the first child's alternatives.
+      //
+      // (4b) Not a builder rule — a literal_string wrapper or an
+      // internal Aycock-Horspool scaffolding piece (subrule of
+      // `grammar!().rule(None, ...)` that wasn't passed through
+      // `builder!().rule(...)`). These are byte-passthroughs:
+      // aggregate child Lexemes, matching legacy
+      // `rollup_token_rec` semantics.
+      } else if !self.actions.has_action(rule_id) {
+        if rh_len == 0 {
+          all_alts.push(None);
+        } else if self.builder.is_rule(rule_id) {
+          // (4a) Passthrough grammar rule. Mirror Legacy:
+          // `Ok(args.remove(0))` — return the first RHS position's
+          // alternatives unchanged.
+          let first_child_id = glade.rh_glade_id(0).expect("rh 0");
+          let first_child_alts = children.get(&first_child_id).expect("child precomputed");
+          for alt in first_child_alts {
+            all_alts.push(alt.clone());
+          }
+        } else {
+          // (4b) Byte passthrough.
+          let bytes = collect_lexeme_bytes(glade, rh_len, children);
+          if bytes.is_empty() {
+            all_alts.push(None);
+          } else {
+            let lexeme = String::from_utf8(bytes).unwrap_or_default();
+            all_alts.push(Some(XM::Lexeme(lexeme, Meta::default())));
+          }
+        }
       } else {
-        // 4. Standard rule. Cartesian-product child alternatives
-        // across RHS positions, apply `Actions::action_on` per combo.
+        // 5. Standard rule with semantic action. Cartesian-product
+        // child alternatives across RHS positions, apply
+        // `Actions::action_on` per combo.
         let mut per_pos: Vec<&Self::ParseTree> = Vec::with_capacity(rh_len);
         for ix in 0..rh_len {
           let child_id = glade.rh_glade_id(ix).expect("rh position has a child glade");
@@ -145,7 +185,6 @@ impl Traverser for MathTraverser<'_> {
           }
           combos = next_combos;
         }
-        // Apply action_on per combo.
         for combo in combos {
           let ctxt = ActionContext {
             nodes:    self.nodes,
@@ -164,4 +203,21 @@ impl Traverser for MathTraverser<'_> {
     }
     Ok(all_alts)
   }
+}
+
+/// Collect bytes from every child glade's first Lexeme alternative.
+/// Mirrors legacy `TreeBuilder::rollup_token_rec`: intermediate non-
+/// action rules are byte-passthrough, so the child's first
+/// `XM::Lexeme(s, _)` already contains the full concatenation for
+/// its subtree, and we just chain them at the outer level.
+fn collect_lexeme_bytes(glade: &Glade, rh_len: usize, children: &HashMap<usize, Vec<Option<XM>>>) -> Vec<u8> {
+  let mut bytes: Vec<u8> = Vec::with_capacity(rh_len * 2);
+  for ix in 0..rh_len {
+    let child_id = glade.rh_glade_id(ix).expect("rh position has a child glade");
+    let child_alts = children.get(&child_id).expect("child precomputed in post-order");
+    if let Some(Some(XM::Lexeme(s, _))) = child_alts.first() {
+      bytes.extend_from_slice(s.as_bytes());
+    }
+  }
+  bytes
 }

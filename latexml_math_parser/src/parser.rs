@@ -105,10 +105,8 @@ static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
 // Experimental: route `parse_marpa` through ASF traversal instead of
 // the legacy Tree-iteration loop. See docs/MATH_PARSER_AND_ASF.md.
-// Off by default; set to `1` to opt in. Currently scaffolding-only —
-// the ASF code path is not yet wired here, just exposed for the
-// next session's parity validation work.
-#[allow(dead_code)]
+// Off by default; set `LATEXML_MARPA_ASF=1` to opt in. Used for
+// side-by-side parity validation against the legacy path.
 static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_ASF").is_ok());
 
 pub struct MathParser {
@@ -1041,12 +1039,6 @@ impl MathParser {
     if *PARSE_LEXEMES_DBG {
       eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
     }
-    let parse_result = self
-      .engine
-      .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
-    if *PARSE_LEXEMES_DBG {
-      eprintln!("PARSE_LEXEMES_RECOGNIZED");
-    }
     let mut parses: Vec<XM> = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
@@ -1057,114 +1049,200 @@ impl MathParser {
     // Bounded HashMap keyed by error-message string; on a zero-OK failure
     // we print the top-3 reasons + counts. Cheap when the env var is unset.
     let mut prune_reasons: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
-    // ⚠️ The six caps below (max_trees, max_time, max_consecutive_dupes,
-    // converge_budget, pruned_only_time_budget+_count_threshold,
-    // max_unique) exist because Tree-iteration evaluates per-tree
-    // actions O(trees × occurrences) times — defensive bandages against
-    // a paradigm cost we're planning to eliminate. Five of the six become
-    // unnecessary under Marpa ASF traversal (one callback per glade,
-    // memoized), with only `max_time` staying as a safety net. See
-    // docs/MATH_PARSER_AND_ASF.md for the migration plan.
-    let max_trees = 5000; // Hard limit on parse tree enumeration
-    let max_time = std::time::Duration::from_secs(30); // 30 second timeout
-    // Convergence: if we've seen enough consecutive duplicates without
-    // a new unique tree, the grammar ambiguity is purely structural
-    // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 16;
-    // Time-budget convergence: once we have unique parses, stop after
-    // this budget. For formulas where all trees are pruned (no unique
-    // parse yet), use a longer budget before giving up.
-    let converge_budget = std::time::Duration::from_millis(200);
-    // Pruned-only fast-fail: if we've spent significant time and seen
-    // many trees without finding a single semantic-acceptable parse,
-    // the grammar is exploring a combinatorial dead end. Bail before
-    // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
-    // pruned trees over 28s before timeout. After 2s with >200 prunes
-    // the marginal probability of finding a unique drops sharply.
-    let pruned_only_time_budget = std::time::Duration::from_secs(2);
-    let pruned_only_count_threshold: usize = 200;
-    // Unique-tree cap: the pragmatics/selection step only needs a handful
-    // of distinct parses. Beyond this, additional unique trees are almost
-    // always script-attachment ordering variants that don't improve the
-    // final selected parse. Avoids enumerating 60+ trees for expressions
-    // like `{}^4{}_{12}C^{5+}` where the grammar produces 27+ unique
-    // trees from different pre/post script nesting orders.
-    let max_unique = 10;
-    for val in parse_result {
-      // Truncate if too many trees or too much time
-      if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
-        break;
+
+    if *PARSE_VIA_ASF {
+      // ASF path: one post-order memoized callback per glade.
+      // `MathTraverser` accumulates all alternative XM parse trees
+      // (including any pragmas-pruned ones counted as `pruned_count`)
+      // in a single sweep; no Tree-iteration loop, no convergence
+      // bandages. See `latexml_math_parser/src/asf_traverser.rs` and
+      // docs/MATH_PARSER_AND_ASF.md.
+      let mut traverser = crate::asf_traverser::MathTraverser {
+        actions:      &self.actions,
+        pragmas:      self.expert_pragmatics.as_slice(),
+        builder:      &self.builder,
+        nodes,
+        document,
+        pruned_count: 0,
+      };
+      let asf_result = self
+        .engine
+        .parse_and_traverse_forest(ByteScanner::new(Cursor::new(input)), (), &mut traverser);
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
-      // Early convergence: stop if we keep seeing only duplicates.
-      // The grammar produces 2^N duplicates from script attachment ordering.
-      // Once we've found all unique parses, every new tree is a duplicate.
-      if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
-        break;
-      }
-      // Unique-tree cap: stop once we have enough distinct parses.
-      if parses.len() >= max_unique {
-        break;
-      }
-      // Time-budget convergence: if we have unique parses and have spent
-      // >200ms, stop — the remaining trees are overwhelmingly duplicates.
-      if !parses.is_empty() && start.elapsed() > converge_budget {
-        break;
-      }
-      // Pruned-only fast-fail: bail when we have NO unique parses, have
-      // already enumerated many trees, and have burned through the
-      // pruned-only budget. Without this, the loop runs to `max_time`
-      // (30s) on pathological multi-clause RELOP-list formulae where
-      // every grammar derivation is semantically pruned (e.g.
-      // 0804.1730 had 4536 enumerated → 0 unique → 28.29s).
-      if parses.is_empty()
-        && pruned_trees > pruned_only_count_threshold
-        && start.elapsed() > pruned_only_time_budget
-      {
-        break;
-      }
-      // Note: we intentionally do NOT abort when no parse has been found
-      // even after extended time — valid parses can appear late in the
-      // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
-      match self.actions.get_tree(
-        self.builder.clone(),
-        val,
-        self.expert_pragmatics.as_slice(),
-        ActionContext { nodes, document },
-      ) {
-        Ok(tree_opt) => {
-          if let Some(tree) = tree_opt {
-            ok_trees += 1;
-            // Online deduplication: check if this tree is already in our unique set
-            if parses.contains(&tree) {
-              deduped += 1;
-              consecutive_dupes += 1;
-            } else {
-              parses.push(tree);
-              // Half-decay (not full reset) on new unique. This lets us bail
-              // on cases where uniques are sparse among a sea of dupes/prunes —
-              // e.g. sin[XY] produces 10 unique parses among 1022 grammar
-              // derivations; without decay the unique trees keep resetting the
-              // dupe counter and we never converge. Half-decay means each new
-              // unique halves the accumulated dupe budget instead of clearing it.
-              consecutive_dupes /= 2;
+      match asf_result {
+        Ok((mut alts, _state)) => {
+          pruned_trees = traverser.pruned_count;
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "ASF_AUDIT: peak returned {} alternatives ({} Some, {} None), pruned={}",
+              alts.len(),
+              alts.iter().filter(|a| a.is_some()).count(),
+              alts.iter().filter(|a| a.is_none()).count(),
+              pruned_trees,
+            );
+          }
+          // **Tiebreak ordering**: legacy `Tree`-iteration emits
+          // parses in libmarpa's natural depth-first /
+          // first-alternative-first order, which the math parser
+          // implicitly relies on as a tiebreaker — when both
+          // `f(x) → f@(x)` (function application) and
+          // `f(x) → f*x` (implicit multiplication) survive
+          // pragmatics, the legacy's choices.remove(0) picks
+          // the first-enumerated one, which is the function-app
+          // interpretation. The ASF Cartesian product happens to
+          // visit those alternatives in the reverse order
+          // (multiplication first, function-app last) because
+          // grammar-rule ordering and bocage and-node ordering
+          // diverge. Reverse here to match legacy tiebreaking.
+          //
+          // TODO (principled fix): introduce an explicit
+          // ranking/tiebreaker in pragmatics so the choice is
+          // independent of enumeration order. See
+          // docs/MATH_PARSER_AND_ASF.md § "Open question".
+          alts.reverse();
+          for opt in alts {
+            if let Some(tree) = opt {
+              if parses.contains(&tree) {
+                deduped += 1;
+              } else {
+                ok_trees += 1;
+                parses.push(tree);
+              }
             }
           }
         },
-        Err(prune_err) => {
-          pruned_trees += 1;
-          if *PARSE_PRUNE_REASONS {
-            let msg = prune_err.to_string();
-            let trimmed = msg.chars().take(140).collect::<String>();
-            *prune_reasons.entry(trimmed).or_insert(0) += 1;
-          }
-          // Pruned trees also count toward convergence if we have unique parses
-          if !parses.is_empty() {
-            consecutive_dupes += 1;
+        Err(e) => {
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!("ASF_AUDIT: traverse_forest Err: {e}");
           }
         },
       }
+    } else {
+      // Legacy path: Tree iteration with the 6 convergence caps.
+      let parse_result = self
+        .engine
+        .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      // ⚠️ The six caps below (max_trees, max_time, max_consecutive_dupes,
+      // converge_budget, pruned_only_time_budget+_count_threshold,
+      // max_unique) exist because Tree-iteration evaluates per-tree
+      // actions O(trees × occurrences) times — defensive bandages against
+      // a paradigm cost we're planning to eliminate. Five of the six become
+      // unnecessary under Marpa ASF traversal (one callback per glade,
+      // memoized), with only `max_time` staying as a safety net. See
+      // docs/MATH_PARSER_AND_ASF.md for the migration plan.
+      let max_trees = 5000; // Hard limit on parse tree enumeration
+      let max_time = std::time::Duration::from_secs(30); // 30 second timeout
+      // Convergence: if we've seen enough consecutive duplicates without
+      // a new unique tree, the grammar ambiguity is purely structural
+      // (script attachment ordering). Stop early.
+      let max_consecutive_dupes = 16;
+      // Time-budget convergence: once we have unique parses, stop after
+      // this budget. For formulas where all trees are pruned (no unique
+      // parse yet), use a longer budget before giving up.
+      let converge_budget = std::time::Duration::from_millis(200);
+      // Pruned-only fast-fail: if we've spent significant time and seen
+      // many trees without finding a single semantic-acceptable parse,
+      // the grammar is exploring a combinatorial dead end. Bail before
+      // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
+      // pruned trees over 28s before timeout. After 2s with >200 prunes
+      // the marginal probability of finding a unique drops sharply.
+      let pruned_only_time_budget = std::time::Duration::from_secs(2);
+      let pruned_only_count_threshold: usize = 200;
+      // Unique-tree cap: the pragmatics/selection step only needs a handful
+      // of distinct parses. Beyond this, additional unique trees are almost
+      // always script-attachment ordering variants that don't improve the
+      // final selected parse. Avoids enumerating 60+ trees for expressions
+      // like `{}^4{}_{12}C^{5+}` where the grammar produces 27+ unique
+      // trees from different pre/post script nesting orders.
+      let max_unique = 10;
+      for val in parse_result {
+        // Truncate if too many trees or too much time
+        if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+          break;
+        }
+        // Early convergence: stop if we keep seeing only duplicates.
+        // The grammar produces 2^N duplicates from script attachment ordering.
+        // Once we've found all unique parses, every new tree is a duplicate.
+        if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
+          break;
+        }
+        // Unique-tree cap: stop once we have enough distinct parses.
+        if parses.len() >= max_unique {
+          break;
+        }
+        // Time-budget convergence: if we have unique parses and have spent
+        // >200ms, stop — the remaining trees are overwhelmingly duplicates.
+        if !parses.is_empty() && start.elapsed() > converge_budget {
+          break;
+        }
+        // Pruned-only fast-fail: bail when we have NO unique parses, have
+        // already enumerated many trees, and have burned through the
+        // pruned-only budget. Without this, the loop runs to `max_time`
+        // (30s) on pathological multi-clause RELOP-list formulae where
+        // every grammar derivation is semantically pruned (e.g.
+        // 0804.1730 had 4536 enumerated → 0 unique → 28.29s).
+        if parses.is_empty()
+          && pruned_trees > pruned_only_count_threshold
+          && start.elapsed() > pruned_only_time_budget
+        {
+          break;
+        }
+        // Note: we intentionally do NOT abort when no parse has been found
+        // even after extended time — valid parses can appear late in the
+        // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
+        match self.actions.get_tree(
+          self.builder.clone(),
+          val,
+          self.expert_pragmatics.as_slice(),
+          ActionContext { nodes, document },
+        ) {
+          Ok(tree_opt) => {
+            if let Some(tree) = tree_opt {
+              ok_trees += 1;
+              // Online deduplication: check if this tree is already in our unique set
+              if parses.contains(&tree) {
+                deduped += 1;
+                consecutive_dupes += 1;
+              } else {
+                parses.push(tree);
+                // Half-decay (not full reset) on new unique. This lets us bail
+                // on cases where uniques are sparse among a sea of dupes/prunes —
+                // e.g. sin[XY] produces 10 unique parses among 1022 grammar
+                // derivations; without decay the unique trees keep resetting the
+                // dupe counter and we never converge. Half-decay means each new
+                // unique halves the accumulated dupe budget instead of clearing it.
+                consecutive_dupes /= 2;
+              }
+            }
+          },
+          Err(prune_err) => {
+            pruned_trees += 1;
+            if *PARSE_PRUNE_REASONS {
+              let msg = prune_err.to_string();
+              let trimmed = msg.chars().take(140).collect::<String>();
+              *prune_reasons.entry(trimmed).or_insert(0) += 1;
+            }
+            // Pruned trees also count toward convergence if we have unique parses
+            if !parses.is_empty() {
+              consecutive_dupes += 1;
+            }
+          },
+        }
+      }
     }
 
+    // Diagnostic: dump parse ORDER when LATEXML_PARSE_DUMP_ORDER=1.
+    if std::env::var("LATEXML_PARSE_DUMP_ORDER").is_ok() && parses.len() > 1 {
+      eprintln!("PARSE_ORDER: {} unique for {}", parses.len(), input.trim());
+      for (i, p) in parses.iter().enumerate() {
+        eprintln!("  [{}] {}", i, p.text_summary());
+      }
+    }
     // Store count for \ltx@count@parses diagnostic macro
     // Use post-dedup count (distinct semantic trees), not raw grammar count
     self.last_parsetrees_count = parses.len();
