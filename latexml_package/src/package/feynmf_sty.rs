@@ -18,4 +18,13 @@ LoadDefinitions!({
   DefEnvironment!("{fmfgraph*}{}{}",
     "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
     mode => "internal_vertical");
+  // {fmffile}{name} - wraps a Feynman-diagram session. Render as no-op
+  // env (the diagrams inside are rendered by {fmfgraph}/{fmfgraph*}).
+  DefEnvironment!("{fmffile}{}", "#body", mode => "internal_vertical");
+  // \fmf, \fmfv, \fmfset, \fmflabel — diagram-content macros used
+  // inside {fmfgraph}. We don't render diagrams so absorb their args.
+  DefMacro!("\\fmf{}{}", "");
+  DefMacro!("\\fmfv{}{}", "");
+  DefMacro!("\\fmfset{}{}", "");
+  DefMacro!("\\fmflabel{}{}", "");
 });
