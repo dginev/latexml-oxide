@@ -34,9 +34,11 @@ LoadDefinitions!({
   DefMacro!("\\editors{}",
     "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
 
-  // jmlr2e.sty L372: \acks{text} — acknowledgments section. Render as a
-  // section heading so the text body still appears.
-  DefMacro!("\\acks{}", "\\section*{Acknowledgments and Disclosure of Funding}#1");
+  // jmlr2e.sty L372: \acks{text} — acknowledgments section. Emit as
+  // structural ltx:acknowledgements with the funding-disclosure label
+  // (post-processors map to canonical role/styling).
+  DefConstructor!("\\acks{}",
+    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>");
 
   // {keywords} env — frontmatter list, render as classification block.
   DefEnvironment!(

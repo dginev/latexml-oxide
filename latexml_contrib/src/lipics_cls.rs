@@ -35,9 +35,10 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=supplement]{#1}");
   DefMacro!("\\supplementdetails[]{}{}",
     "\\@add@frontmatter{ltx:note}[role=supplement]{#2: #3}");
-  // \acknowledgements{text} — render as acknowledgements section.
-  DefMacro!("\\acknowledgements{}",
-    "\\section*{Acknowledgements}#1");
+  // \acknowledgements{text} — render as structural ltx:acknowledgements
+  // (post-processors map to canonical role/styling).
+  DefConstructor!("\\acknowledgements{}",
+    "<ltx:acknowledgements>#1</ltx:acknowledgements>");
   DefMacro!("\\ccsdesc[]{}",
     "\\@add@frontmatter{ltx:classification}[scheme=ccs]{#2}");
   DefMacro!("\\subjclass[]{}",

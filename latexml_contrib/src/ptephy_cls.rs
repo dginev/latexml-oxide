@@ -15,7 +15,11 @@ LoadDefinitions!({
   DefMacro!("\\subjectindex{}", "");
 
   // \ack — Acknowledgements section opener (used in OUP / PTEP class).
-  // Render as a starred section to drop a heading without numbering.
+  // Used as `\ack <paragraph>` (no body) — keep as starred section to
+  // open a heading; the following paragraph is the natural body.
   DefMacro!("\\ack", "\\section*{Acknowledgements}");
-  DefMacro!("\\acknow{}", "\\section*{Acknowledgements}#1");
+  // \acknow{body} — bracketed form. Emit as structural
+  // ltx:acknowledgements (post-processors map to canonical role/styling).
+  DefConstructor!("\\acknow{}",
+    "<ltx:acknowledgements>#1</ltx:acknowledgements>");
 });

@@ -140,4 +140,22 @@ LoadDefinitions!({
   DefMacro!("\\natexlab{}", "#1");
   // \textls (microtype letterspacing) — emit as-is.
   DefMacro!("\\textls[]{}", "#2");
+
+  // \isAPAStyle / \isChicagoStyle — branchers in mdpi.cls L450+ that
+  // pick references style based on \@journal. The cls defines them as
+  // `\newcommand{\isAPAStyle}{\ifthenelse{...}}` and uses them as
+  // `\isAPAStyle{...}{...}`. Stub as content-discarder so the
+  // bibliography block doesn't emit an undefined error for every paper
+  // shipping a local Definitions/mdpi.cls. Witness 2412.13512, 2503.13839.
+  DefMacro!("\\isAPAStyle{}{}", "#2");
+  DefMacro!("\\isChicagoStyle{}{}", "#2");
+  // \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
+  // Render as structural ltx:acknowledgements so post-processors map it
+  // to the canonical role/styling (vs flattening to a generic section).
+  DefConstructor!("\\acknowledgments{}",
+    "<ltx:acknowledgements>#1</ltx:acknowledgements>");
+  // \appendixtitles{Yes|No} / \appendixstart — appendix-numbering
+  // toggle. No-op (we don't replay mdpi's appendix counter dance).
+  DefMacro!("\\appendixtitles{}", "");
+  DefMacro!("\\appendixstart", "");
 });

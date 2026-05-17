@@ -11,11 +11,11 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
 
   // autart.cls L317-323: \def\ack{\section*{Acknowledgements}}
-  // with \let\endack\par. Translate to a proper environment.
-  DefMacro!(T_CS!("\\begin{ack}"), None, "\\section*{Acknowledgements}");
-  DefMacro!(T_CS!("\\end{ack}"), None, "");
-  DefMacro!(T_CS!("\\begin{ack*}"), None, "");
-  DefMacro!(T_CS!("\\end{ack*}"), None, "");
+  // with \let\endack\par. Bind {ack}/{ack*} as structural
+  // ltx:acknowledgements (post-processors map to canonical
+  // role/styling).
+  DefEnvironment!("{ack}",  "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  DefEnvironment!("{ack*}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.

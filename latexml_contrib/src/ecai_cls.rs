@@ -16,8 +16,8 @@ LoadDefinitions!({
   // Witness 2501.02040 + 3 ecai papers.
   DefMacro!("\\orcid{}",
     "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
-  // {ack} environment — acknowledgments block. Render content
-  // inline (matches our neurips_sty pattern). Witness 2408.16081.
-  DefEnvironment!("{ack}", "#body",
-    before_digest => { gullet::unread_one(T_CS!("\\section*{Acknowledgments}")); });
+  // {ack} environment — acknowledgments block. Emit as structural
+  // ltx:acknowledgements (vs flattening into a generic section).
+  // Witness 2408.16081.
+  DefEnvironment!("{ack}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
