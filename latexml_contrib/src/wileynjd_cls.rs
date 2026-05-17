@@ -17,6 +17,14 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   // Wiley journals frequently load hyperref; mirror so cross-refs work.
   RequirePackage!("hyperref");
+  // Wiley templates assume booktabs / graphicx are available —
+  // eager-load so docs that use \toprule/\midrule/\bottomrule and
+  // \includegraphics without explicit \usepackage don't error.
+  // Witness 2504.02281. (Did NOT preload algorithm/algorithmic
+  // here — they conflict with algpseudocode and trigger schema
+  // violations in listing-mode body.)
+  RequirePackage!("booktabs");
+  RequirePackage!("graphicx");
 
   // Wiley frontmatter — preserve author content as ltx:note.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
@@ -42,6 +50,15 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1 #2}");
   DefMacro!("\\cyear{}",
     "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  // \cjournal{name} / \cvol{N} / \ctitle{text} — citation-line fields
+  // also in WileyNJDv5 frontmatter (alongside \cname / \cyear). Witness
+  // 2504.02281 — preserve as ltx:note.
+  DefMacro!("\\cjournal{}",
+    "\\@add@frontmatter{ltx:note}[role=cjournal]{#1}");
+  DefMacro!("\\cvol{}",
+    "\\@add@frontmatter{ltx:note}[role=cvolume]{#1}");
+  DefMacro!("\\ctitle{}",
+    "\\@add@frontmatter{ltx:note}[role=ctitle]{#1}");
   DefMacro!("\\Copyrightline{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
   DefMacro!("\\artmonth{}",
