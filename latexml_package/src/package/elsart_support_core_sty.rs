@@ -131,10 +131,13 @@ LoadDefinitions!({
   DefConstructor!("\\person@thanks[]{}",
     "^ <ltx:contact role='thanks'>#2</ltx:contact>",
     alias => "\\thanks", mode => "restricted_horizontal");
-  DefMacro!("\\thanksref{}", "");
+  // \thanksref / \corref / \corauthref carry footnote labels. Round-34
+  // surpass-Perl: emit as superscript so the labels reach the author
+  // block (matches IEEE \IEEEauthorrefmark behavior).
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
   DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
-  DefMacro!("\\corref{}", "");
-  DefMacro!("\\corauthref{}", "");
+  DefMacro!("\\corref{}", "\\textsuperscript{#1}");
+  DefMacro!("\\corauthref{}", "\\textsuperscript{#1}");
   // \cortext[id]{text} carries author-typed corresponding-author text.
   // Preserve as ltx:note frontmatter so the prose ("Corresponding
   // author. Email: …") reaches the XML rather than being silently
@@ -209,15 +212,20 @@ LoadDefinitions!({
   DefMacro!("\\RUNART", "");
   DefMacro!("\\RUNDATE", "");
   DefMacro!("\\RUNJNL", "");
-  DefMacro!("\\company{}", "");
-  DefMacro!("\\aid{}", "");
+  // Round-34 surpass-Perl: company/article-id are author metadata.
+  DefMacro!("\\company{}",
+    "\\@add@frontmatter{ltx:note}[role=company]{#1}");
+  DefMacro!("\\aid{}",
+    "\\@add@frontmatter{ltx:note}[role=article-id]{#1}");
   DefMacro!("\\ssdi{}{}", "");
   DefMacro!("\\readRCS Until:$ Until:$", "");
   DefMacro!("\\RCSdate", "");
   DefMacro!("\\RCSfile", "");
   DefMacro!("\\RCSversion", "");
-  DefMacro!("\\firstpage{}", "");
-  DefMacro!("\\lastpage{}", "");
+  DefMacro!("\\firstpage{}",
+    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\lastpage{}",
+    "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
   DefMacro!("\\preface", "");
   DefMacro!("\\theHaddress", "");
   DefMacro!("\\theaddress", "");
