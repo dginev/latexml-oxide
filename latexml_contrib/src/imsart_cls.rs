@@ -34,4 +34,7 @@ LoadDefinitions!({
   // Witness 2406.15844, 2406.04191, 2406.02840 (3 imsart papers).
   DefEnvironment!("{acks}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  // IMS authors use \orcid for ORCID identifier. Preserve as ltx:note.
+  DefMacro!("\\orcid{}",
+    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
 });

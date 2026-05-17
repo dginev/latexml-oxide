@@ -34,4 +34,7 @@ LoadDefinitions!({
   DefMacro!("\\Classification{}",
     "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}");
   DefMacro!("\\LastPageEnding", "");
+  // SIGMA authors use \orcid for ORCID identifier. Preserve as ltx:note.
+  DefMacro!("\\orcid{}",
+    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
 });
