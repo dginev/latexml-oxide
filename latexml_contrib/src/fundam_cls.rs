@@ -31,4 +31,21 @@ LoadDefinitions!({
   // cls; HTML rendering ignores layout switches.
   DefMacro!("\\finalVersionForARXIV", "");
   DefConditional!("\\iffinalarxiv");
+
+  // fundam.cls L146-155 pre-declares standard theorem-like envs via
+  // `\newtheorem{X}[definition]{X-display-name}`. Raw cls runs `\theorem
+  // package` machinery that fails earlier, leaving these undefined.
+  // Defensively register them via raw-TeX so amsmath/amsthm-style
+  // `\begin{theorem}` / `\begin{lemma}` / etc. work. Witness 2307.02180,
+  // 2308.08842.
+  RawTeX!(r"\newtheorem{definition}{Definition}[section]");
+  RawTeX!(r"\newtheorem{theorem}[definition]{Theorem}");
+  RawTeX!(r"\newtheorem{fact}[definition]{Fact}");
+  RawTeX!(r"\newtheorem{lemma}[definition]{Lemma}");
+  RawTeX!(r"\newtheorem{example}[definition]{Example}");
+  RawTeX!(r"\newtheorem{assumption}[definition]{Assumption}");
+  RawTeX!(r"\newtheorem{proposition}[definition]{Proposition}");
+  RawTeX!(r"\newtheorem{remark}[definition]{Remark}");
+  RawTeX!(r"\newtheorem{corollary}[definition]{Corollary}");
+  RawTeX!(r"\newtheorem{claim}[definition]{Claim}");
 });
