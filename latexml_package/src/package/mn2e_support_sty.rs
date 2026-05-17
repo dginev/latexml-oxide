@@ -45,7 +45,8 @@ LoadDefinitions!({
   DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>");
   DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>");
   DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>");
+  DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>",
+    mode => "internal_vertical");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
   // Keywords — Perl mn2e_support.sty.ltxml L48-54:

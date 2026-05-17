@@ -158,7 +158,10 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}[theorem]{Solution}}{}");
 
   DefMacro!("\\noteaddname", "Note added in proof");
-  DefEnvironment!("{noteadd}", "<ltx:note>#body</ltx:note>");
+  // internal_vertical mode so the "note added in proof" body
+  // (typically multi-paragraph prose) doesn't trip mode mismatch.
+  DefEnvironment!("{noteadd}", "<ltx:note>#body</ltx:note>",
+    mode => "internal_vertical");
 
   // \thesaurus — undocumented, ignorable — Perl L161
   DefMacro!("\\thesaurus{}", "");
