@@ -1293,27 +1293,30 @@ impl MathParser {
             _ => {},
           };
         }
-        // Multi-tree shape pragma P1 — `prefer_fewer_absent`: drop
-        // parses that rely on the grammar's `absent` filler when an
-        // `absent`-free alternative exists. Safe and strict.
+        // Multi-tree shape pragmas (`prefer_fewer_absent`,
+        // `prefer_smaller_tree`) exist on `XM` but are
+        // **deliberately not wired in by default**. Both proved
+        // too coarse to apply universally — see
+        // docs/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
         //
-        // P2 (`prefer_smaller_tree`) was tried with Ref-resolving
-        // node counts and produced a **net negative** on the ground-
-        // truth tests: 3 likely-improvements (`count_parses` /
-        // `mathtools` quantum-operator-product, `stmaryrd` flat
-        // 7-list) vs 6 regressions (`function_argument_syntax`
-        // wider-absorption, `standalone_modifiers` annotated wrapper,
-        // `physics` delimited-[], `ambiguous_relations`,
-        // `ncases`, `qm`). The heuristic is too coarse — smaller
-        // trees aren't always semantically richer.
+        // * `prefer_fewer_absent`: on the legacy path it is
+        //   essentially neutral (1300/1 vs 1301 baseline), but on
+        //   the ASF path it costs 9 tests because ASF surfaces
+        //   absent-free parses that are semantically WRONG (e.g.
+        //   `<a|f|b>` parsed as a multiplication chain without the
+        //   bra-ket interpretation). The deeper issue: `absent` has
+        //   two valid uses (structural filler vs missing-operand
+        //   fallback) and the pragma can't tell them apart.
         //
-        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "Open
-        // experiments". Future work: encode the case-specific
-        // preferences (QM bracket notation > absolute-value
-        // interpretation; flat lists > nested lists; ...) as
-        // domain-specific pragmas, not a universal tree-size
-        // criterion.
-        reduced_forest = reduced_forest.prefer_fewer_absent();
+        // * `prefer_smaller_tree`: 3 improvements vs 6 regressions
+        //   on legacy. "Smaller is better" works for `norm@(a)` vs
+        //   `abs(abs(a))` but not for `annotated@(x, expr)` vs
+        //   `x@(expr)` where the larger tree is the intended one.
+        //
+        // The correct path forward is case-by-case semantic
+        // pragmas (named-operator recognition, domain-typed
+        // wrappers), not universal shape ranking. See the
+        // research-notes doc for the design discussion.
         Ok(reduced_forest)
       },
     }
