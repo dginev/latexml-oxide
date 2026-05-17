@@ -6,6 +6,11 @@ LoadDefinitions!({
 
   LoadClass!("mn");
   RequirePackage!("hyperref");
+  // MNRAS papers often use \color{ForestGreen} / \color{NavyBlue}
+  // from the dvipsnames palette but never explicitly load xcolor.
+  // Eager-load xcolor[dvipsnames] so these named colors resolve.
+  // Witness 2509.13010 ("Can't find color named 'ForestGreen'").
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string()]);
 
   RawTeX!(r"\newcommand\aap{A\&A}");                // Astronomy and Astrophysics
   RawTeX!(r"\let\astap=\aap");                       // alternative shortcut
