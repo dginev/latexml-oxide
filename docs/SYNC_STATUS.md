@@ -1882,3 +1882,50 @@ Real dups in `cargo tree --duplicates`:
   package) — splitting into smaller `register_chunk_N` helpers
   could improve inlining decisions and reduce per-fn size.
   Profile-guided; not a quick win.
+
+---
+
+## Math parser ↔ Marpa ASF migration (planned 2026-05-17)
+
+A multi-session effort to swap the math parser's Tree-iteration
++ per-tree-pruning loop for ASF-driven traversal.
+
+**Working docs**:
+* [`docs/MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md) — full
+  rationalization: where the existing three stages (grammar
+  categories, early semantic pruning in actions, late semantic
+  pruning in pragmas) map onto ASF, a worked example, pseudocode
+  for the new driver, and a four-gate test plan. **Read first.**
+* [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md)
+  on the `asf-completion` branch of dginev/marpa — what's
+  scaffolding vs functional on the marpa side, with a 7-step
+  completion plan and the target Rust API sketch.
+
+**Status snapshot**:
+* Marpa fork's master now has the ASF scaffolding (PRs #1+#2 merged
+  2026-05-17). `asf-completion` branch adds: pin-down test for the
+  current scaffolding, `Parser::ambiguity_metric` pre-flight oracle,
+  reference PDFs in `background/`.
+* Math parser still on Tree iteration. No code change yet.
+
+**Sequencing** (also captured in MATH_PARSER_AND_ASF.md § Sequencing):
+1. Marpa side — ASF_STATUS Step 2: port `compute_symches` factoring
+   loop from `Marpa::R2::ASF.pm`.
+2. Marpa side — Steps 3-5: flesh out Glade query API
+   (`alternatives()`, `rh_glade_id()`), make `ASF::traverse`
+   recursive.
+3. Math-parser side — refactor `Actions::action_on` signature, swap
+   `parse_string`'s Tree-iteration loop for
+   `parse_and_traverse_forest`. Delete 5 of the 6 convergence caps.
+   Validate on full test suite + 10k canvas stage. Expect 0 test
+   regressions, measurable perf gain on ambiguous formulas.
+4. Math-parser side — audit `pragmatics.rs`: promote glade-local
+   pragmas into Stage 2, keep cross-tree ones on the (now-small)
+   ASF shortlist.
+
+**The win**: eliminates the 5000-tree cap. Per-formula action cost
+drops from O(trees × occurrences) to O(glades). Removes the five
+convergence bandages (`max_trees`, `max_consecutive_dupes`,
+`pruned_only_time_budget`, `converge_budget`, `max_unique`) that
+exist purely to dodge the wrong-paradigm cost. `max_time` is the
+only cap that needs to stay.

@@ -1050,6 +1050,14 @@ impl MathParser {
     // Bounded HashMap keyed by error-message string; on a zero-OK failure
     // we print the top-3 reasons + counts. Cheap when the env var is unset.
     let mut prune_reasons: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
+    // ⚠️ The six caps below (max_trees, max_time, max_consecutive_dupes,
+    // converge_budget, pruned_only_time_budget+_count_threshold,
+    // max_unique) exist because Tree-iteration evaluates per-tree
+    // actions O(trees × occurrences) times — defensive bandages against
+    // a paradigm cost we're planning to eliminate. Five of the six become
+    // unnecessary under Marpa ASF traversal (one callback per glade,
+    // memoized), with only `max_time` staying as a safety net. See
+    // docs/MATH_PARSER_AND_ASF.md for the migration plan.
     let max_trees = 5000; // Hard limit on parse tree enumeration
     let max_time = std::time::Duration::from_secs(30); // 30 second timeout
     // Convergence: if we've seen enough consecutive duplicates without

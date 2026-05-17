@@ -313,3 +313,186 @@ This is mechanical, not novel. Mention only because the existing
 math parser's `reset_engine` ladder (3-clone-attempts then full
 `init_grammar` rebuild) is load-bearing for cleanup; the ASF
 migration must preserve those error paths.
+
+---
+
+## Worked example — the `f@(g(x))` ambiguity
+
+Pick a concrete simple-but-ambiguous case to make the cost difference
+concrete. Input: `f g (x)`. Grammar reading:
+
+* As "`f` times `g(x)`": one infix-`*` between two factor terms.
+* As "`f(g(x))`": curried application, `f` applied to the result of `g(x)`.
+* As "`f g (x)`" with `(x)` parenthesized factor: ground term, three factors multiplied.
+* (For sufficiently rich grammars, also "`f`-of-`g` applied to `x`",
+  invisible-times variations, etc.)
+
+### Today (Tree iteration)
+
+`parse_string` materializes each derivation tree, walks it
+post-order calling actions. For 3 surface readings × ~2 invisible-
+times variants × ~2 script-attachment orderings ≈ **12 trees
+enumerated**, each visited completely. Actions in `infix_apply`,
+`apply_invisible_times`, and `prefix_apply` fire 12 × ~5 = **60
+times**. Dedup folds the 12 into 3 unique XM trees, Stage 3
+`soft_prune_choices` picks one. Total wall: dominated by the 60
+action calls and 12 dedup `contains` scans.
+
+### Under ASF
+
+The bocage has roughly the same shape but the OR-/AND-node graph
+deduplicates shared sub-positions. The `(x)` factor is **one glade
+shared by all 3 readings**. So:
+
+* `(x)` factor glade — 1 callback.
+* `g` factor glade — 1 callback.
+* `f` factor glade — 1 callback.
+* `g(x)` application glade — 1 callback (uses cached `(x)` and `g`).
+* `f*g(x)` infix glade — 1 callback (uses cached `f`, `g(x)`).
+* `f(g(x))` apply glade — 1 callback (uses cached `f`, `g(x)`).
+* Top-level glade with 3 alternatives — 1 callback that picks.
+
+**Total: 7 callbacks vs 60.** The win grows super-linearly with
+formula depth × per-position ambiguity.
+
+This is also where Stage 3 collapses: today's `XM::Choices(3) →
+soft_prune_choices` becomes "the top-level glade returns the
+prefered single alternative" — the alternatives never materialize
+as a `Choices(N)` in the first place if the picker is glade-local.
+
+---
+
+## Pseudocode sketch of the new driver
+
+The current loop (heavily reduced):
+
+```rust
+let parse_result = self.engine.run_recognizer(...)?;
+for val in parse_result {
+  if caps_exceeded() { break }
+  match self.actions.get_tree(builder, val, pragmas, ctx) {
+    Ok(Some(tree)) => { dedup_and_collect(tree) }
+    Err(_) => pruned_trees += 1,
+    Ok(None) => {}
+  }
+}
+match parses.len() {
+  0 => Err(...), 1 => Ok(parses.pop()),
+  _ => Ok(soft_prune_choices(Choices(parses), pragmas)),
+}
+```
+
+becomes:
+
+```rust
+struct MathTraverser<'a> {
+  actions:  &'a Actions,
+  pragmas:  &'a [ValidationPragmatics],
+  context:  ActionContext<'a>,
+}
+
+impl Traverser for MathTraverser<'_> {
+  type Output = XM;
+  fn traverse_glade(
+    &mut self,
+    glade_id: usize,
+    alternatives: &[GladeKind],
+    children: &HashMap<usize, XM>,
+  ) -> Result<XM> {
+    // For each alternative (already a single rule_id + child-id list),
+    // try the corresponding action with children resolved from cache.
+    // Collect the survivors; ask the glade-local scoring to pick.
+    let mut candidates = Vec::with_capacity(alternatives.len());
+    for alt in alternatives {
+      let xm_args = collect_args(alt, children);
+      match self.actions.action_on(alt.rule_id(), xm_args, self.pragmas, ...) {
+        Ok(Some(xm)) => candidates.push(xm),
+        Ok(None) | Err(_) => {}  // pruned at this glade only — siblings live
+      }
+    }
+    match candidates.len() {
+      0 => Err("no surviving action at this glade".into()),
+      1 => Ok(candidates.pop().unwrap()),
+      _ => Ok(glade_local_pick(candidates, self.pragmas)),
+    }
+  }
+}
+
+let traverser = MathTraverser { actions: &self.actions, pragmas: &self.expert_pragmatics, context: ... };
+let final_tree = self.engine.parse_and_traverse_forest(tokens, traverser)?;
+```
+
+Where `glade_local_pick` is either:
+
+* Option A — just `XM::Choices(candidates)`, deferring to top-level Stage 3.
+* Option B — `self.student_pragmatics.iter().fold(...)` applied locally.
+
+The bocage memoization is the ASF layer's responsibility — actions
+need not check whether a sibling glade has already been visited.
+
+### What `parser.rs::parse_string` looks like after the cut
+
+Reduced from ~200 lines to roughly:
+
+```rust
+fn parse_string(&mut self, input: &str, nodes: &[Node], doc: &mut Document) -> Result<XM> {
+  let traverser = MathTraverser { actions: &self.actions, pragmas: &self.expert_pragmatics,
+                                  context: ActionContext { nodes, document: doc } };
+  match self.engine.parse_and_traverse_forest_with_timeout(
+    ByteScanner::new(Cursor::new(input)),
+    traverser,
+    Duration::from_secs(30),  // only surviving cap
+  ) {
+    Ok(xm) => Ok(self.student_pragmatics.iter().fold(xm, XM::soft_prune_choices)),
+    Err(e) if e.is_timeout() => { self.reset_engine(); Err("math parse: timeout".into()) }
+    Err(e)                   => { self.reset_engine(); Err(e) }
+  }
+}
+```
+
+Six caps → one (`max_time`). The `reset_engine` ladder stays.
+
+---
+
+## Test plan for the migration
+
+The migration is invariant-preserving by design. The test gates:
+
+1. **Existing unit tests** (`tests/700_unit_parse.rs`,
+   `tests/701_unit_footnote.rs`) must stay 100 % green at every
+   step — these are the math-parser regression fixtures.
+2. **Full test suite** `cargo test --tests` must stay at **1301/0/0**
+   (current baseline as of 2026-05-17).
+3. **Sandbox 10k stage** (`tools/staged_canvas_sweep.sh` or
+   equivalent) — current baseline 97.4–99.5 % OK per
+   [`docs/SYNC_STATUS.md`](SYNC_STATUS.md). ASF should match or
+   exceed this. Any drop is a regression and must be root-caused.
+4. **Per-formula wall time** — `LATEXML_PARSE_AUDIT=1` on the
+   astro-ph corpus (5 formulas listed in `docs/SYNC_STATUS.md` §
+   Performance follow-ups). Expect ~order-of-magnitude reduction
+   on highly-ambiguous formulas.
+
+Pin-down tests to add **before** the migration:
+
+* Snapshot the current `_parsetrees` count on a small handful of
+  pathological formulas (e.g. `{}^4{}_{12}C^{5+}`,
+  `\displaystyle\frac{1}{2\pi i}\int...`). After migration the count
+  semantics changes — capture the pre-migration values as ASF-era
+  expected upper bounds.
+* Add a `LATEXML_PARSE_PARADIGM=tree|asf` env var so we can A/B test
+  on the same input.
+
+---
+
+## Quick reference for the next session
+
+| Want to know… | Look at… |
+|---|---|
+| The full audit of where the math parser is today | This doc + [`docs/MATH_AMBIGUITY_AUDIT.md`](MATH_AMBIGUITY_AUDIT.md) |
+| What ASF traversal looks like target-side | [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md), § Target Rust API |
+| Background on Marpa's algorithms | [`marpa/background/`](https://github.com/dginev/marpa/tree/asf-completion/background) — Kegler 2023 papers |
+| What's left to build on the marpa side | [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md), § Completion plan Steps 2-5 |
+| Current caps in the math parser driver | [`latexml_math_parser/src/parser.rs::parse_string`](../latexml_math_parser/src/parser.rs#L1037-L1220), lines 1053-1077 |
+| Action closures (Stage 2 today) | [`latexml_math_parser/src/semantics.rs`](../latexml_math_parser/src/semantics.rs) |
+| Pragma definitions (Stage 3 today) | [`latexml_math_parser/src/pragmatics.rs`](../latexml_math_parser/src/pragmatics.rs) |
+| Pre-flight ambiguity oracle (already landed) | [`marpa Parser::ambiguity_metric`](https://github.com/dginev/marpa/commit/5a3441b) — usable today via the standard marpa API |
