@@ -756,9 +756,10 @@ LoadDefinitions!({
     ))
   }, locked => true);
 
-  // Perl L420-424
+  // Perl L420-424. Round-34 surpass: \xref{key} is a cross-reference,
+  // route to \ref so it resolves. \warn / \fakeset are internal.
   DefMacro!("\\warn{}", "");
-  DefMacro!("\\xref{}", "");
+  DefMacro!("\\xref{}", "\\ref{#1}");
   DefMacro!("\\fakeset{}", "");
 
   // Perl L429-434: language API (no-ops)
