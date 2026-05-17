@@ -105,6 +105,8 @@ pub mod program_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scicite_sty;
+pub mod extarticle_cls;
+pub mod scrartcl_cls;
 pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
@@ -277,6 +279,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
+  ("extarticle", "cls", extarticle_cls::load_definitions),
+  // extbook / extreport / extletter / extproc share the same idea —
+  // route them all to plain article for our XML/HTML purposes.
+  ("extbook",   "cls", extarticle_cls::load_definitions),
+  ("extreport", "cls", extarticle_cls::load_definitions),
+  ("extletter", "cls", extarticle_cls::load_definitions),
+  ("extproc",   "cls", extarticle_cls::load_definitions),
+  ("scrartcl", "cls", scrartcl_cls::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
   ("widetext", "sty", widetext_sty::load_definitions),
