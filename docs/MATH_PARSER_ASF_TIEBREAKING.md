@@ -1069,3 +1069,108 @@ The pragmatic tiebreaking is the long-tail polish on top of it.
 * 10k canvas validation under ASF.
 * Removal of 5 convergence caps in `parse_marpa` (only safe
   once ASF parity is 100%).
+
+---
+
+## Long-term direction: type-aware pruning
+
+The pragmas in this doc are *shape-based* — they count node
+patterns and pick by tree topology. That works as far as it goes,
+but it misses the deepest mathematical signal: **operand types**.
+
+When a mathematician reads `‖x‖ · a · ‖y‖` vs `‖x · ‖a‖ · y‖`, they
+don't count nesting depth — they recognize that:
+
+* `‖·‖` is a function `Vector → Scalar`.
+* `·` (multiplication) usually requires compatible types.
+* `‖x‖ · a · ‖y‖` is `Scalar · Vector · Scalar = Vector` —
+  clean.
+* `‖x · ‖a‖ · y‖` requires `Vector · Scalar · Vector` inside the
+  norm — a mixed-type product whose result then gets normed.
+  Unusual without explicit grouping.
+
+The shape pragma `prefer_fewer_nested_same_fences` happens to
+arrive at the right answer here, but the *reason* is type-driven.
+
+### Why this matters
+
+Many of our hardest disambiguation cases share the pattern:
+"the grammar admits two readings; pick the one whose operator
+arities, operand types, and result types form a coherent
+algebraic expression". Examples encountered so far:
+
+* `letter |x|` — K-12: `letter · |x|` (scalar/vector ·
+  scalar). QM bra-ket: `letter @ |x|` (operator applied to ket).
+  Distinguished by whether surrounding context establishes QM
+  conventions (which provide a type framework).
+* `<a|f|b>` vs `<a, f, b>` — bra-ket
+  `quantum-operator-product` (scalar) vs relation chain (boolean).
+  The presence of the `|` operator inside angle delimiters
+  signals the QM type framework.
+* `a|a|+b|b|+c|c|` — multiplication (`Vector ·
+  AbsScalar`) summed, vs nested-conditional (set-builder, which
+  is a *set type*, not a scalar). The `+` separator forbids the
+  set-type reading because sets don't sum.
+* `(a, b)` — open-interval (`Interval[Scalar, Scalar]`)
+  vs pair / tuple (`Tuple[T, T]`) vs cartesian point
+  (`Point[Scalar, Scalar]`). The surrounding context (function
+  application, set notation, geometry) determines the type.
+* Function application vs implicit multiplication for `f(x)` —
+  function-app requires `f : Domain → Range`; multiplication
+  treats `f` as a scalar/element.
+
+### What "type-aware pruning" looks like
+
+A future direction: assign each `XM::Apply` operator a **type
+signature** (input arities + types, output type), and check
+candidate parses for type coherence:
+
+1. **Type tags on known operators**. E.g. `norm` is `Vector →
+   Scalar`; `absolute-value` is `Real → NonNegReal` (or
+   `Complex → Real`); `inner-product` is `(Vector, Vector) →
+   Scalar`; `quantum-operator-product` is `(Bra, Operator, Ket)
+   → Scalar`.
+2. **Type-propagation rules** for compound operators: `times`,
+   `plus`, etc. propagate operand types according to standard
+   algebraic rules (scalar · vector → vector, etc.).
+3. **Forest pragma**: for each candidate parse, attempt
+   type-propagation from leaves to root. Candidates whose types
+   fail to unify (or require improbable type coercions like
+   "vector squared = scalar") are pruned. Among surviving
+   candidates, prefer the one whose root type is simplest /
+   most canonical for the surrounding context.
+4. **Context-derived type frames**: a `delimited-⟨⟩` ancestor
+   activates the QM type frame (bras/kets/operators); a
+   `set-builder` ancestor activates set semantics; an
+   `integral` ancestor activates measure-theoretic types.
+
+This is a substantial undertaking — it pushes the math parser
+from a pure syntactic disambiguator toward a *lightweight
+semantic checker*. But many of our current pragmas (and known
+remaining failures) are *proxies* for type checks. Replacing
+them with a real type system would be more principled, more
+extensible, and would naturally handle composite ambiguities
+that don't fit any individual shape pragma.
+
+### Practical sequencing
+
+* **Short term**: continue with shape-based pragmas where they
+  cleanly capture a single principle. The `count_*` /
+  `prefer_*` family in `semantics/tree.rs` is reusable.
+* **Medium term**: as more shape pragmas accumulate, factor out
+  recurring sub-questions — e.g. "is this Apply a scalar?" —
+  into a `Type::infer(&XM)` helper that returns a coarse type
+  category. Convert individual shape pragmas to type-driven
+  checks one at a time.
+* **Long term**: a full type-propagation pass over the candidate
+  tree that returns a type-coherence score. The forest pragma
+  selects the candidate with the highest coherence score.
+  Replaces most of the shape pragmas accumulated here, with
+  one principled mechanism.
+
+The arXiv-scale parsing goal in particular benefits from type
+awareness: papers in different sub-disciplines (quantum
+mechanics, statistics, category theory, differential geometry)
+have very different type conventions, and a type-aware parser
+can adapt to the surrounding context rather than relying on
+shape heuristics that work for some domains but not others.
