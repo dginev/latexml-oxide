@@ -20,11 +20,15 @@ LoadDefinitions!({
   RequirePackage!("makecell");
 
   // cas-common frontmatter — gobble cleanly.
-  DefMacro!("\\tnotetext[]{}", "");
-  DefMacro!("\\tnotemark[]", "");
-  DefMacro!("\\tnoteref[]{}", "");
+  // Title-note text — author prose. Preserve as ltx:note frontmatter.
+  DefMacro!("\\tnotetext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=titlenote]{#2}");
+  DefMacro!("\\tnotemark[]", "");  // mark only, no body
+  DefMacro!("\\tnoteref[]{}",
+    "\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}");
   DefMacro!("\\fnmark[]", "");
-  DefMacro!("\\fnref[]{}", "");
+  DefMacro!("\\fnref[]{}",
+    "\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}");
   // Footnote / author-note text — preserve as ltx:note rather than
   // gobble (content-preserving). `\fntext` / `\nonumnote` carry the
   // actual note prose, `\cortext` is the corresponding-author byline.
