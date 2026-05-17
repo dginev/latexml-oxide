@@ -649,6 +649,90 @@ If Class A's grammar-rank fix lands cleanly, we go from 1281/20 →
 
 ---
 
+## Grammar evolution — `modified_term` proposal (2026-05-17)
+
+The pragma path closes individual ambiguity-class failures
+one-at-a-time. A more principled refinement is to **evolve the
+grammar categories** to express how mathematicians actually parse
+expressions: definitions and constraints attached to a term.
+
+### Proposed category
+
+```
+modifier      = relop expression
+modified_term = tight_term modifier+        // 1+ modifiers attached
+statement     = modified_term | formula | ...
+```
+
+A `modified_term` is:
+* a base `tight_term` followed by one or more `modifier`s,
+* the modifiers chain only with each other (no other operations
+  intervene),
+* the result lifts to top-level / `statement`.
+
+### Why this matches the math reading
+
+For `w ≡ √|c| · √((1+√(1+(d/c)²))/2) · |c| ≥ |d|` (the ncases
+case):
+
+* `tight_term = w`
+* `modifier 1 = ≡ √|c| · √(…) · |c|` (definition)
+* `modifier 2 = ≥ |d|` (constraint clarifying the definition)
+* → `modified_term(w, [mod1, mod2])`
+
+This is the only valid parse under the refinement. The vertical
+bars inside `mod1` are unambiguously absolute-value because they
+appear inside a `tight_term` context, NOT at a level where the
+conditional-separator rule competes for them.
+
+### Generalization
+
+The pattern `IDENT ≡ EXPR (≥ | ≤ | < | > | =) BOUND` is one of the
+most common idioms in mathematical writing — every Bourbaki-style
+"define X as Y, which is bounded by Z" follows this shape. The
+current grammar handles this via the loose `formula relop
+expression` rule that admits any number of relops to interleave,
+producing many parse trees per chain. `modified_term` constrains
+the chaining to legitimate modifier sequences.
+
+### Expected coverage
+
+This refinement would directly resolve the following classes
+(currently held together by pragma):
+
+* **ncases-type definition-constraint chains** — handled today
+  by `prefer_zero_absent_when_available`.
+* **`<x, y> = 0` shape** (ambiguous_relations) — the `<x,y>`
+  becomes an unambiguous tight_term and `= 0` is a modifier.
+* **`<a|f|b>` QM bra-ket inside angle-delim** — the bra-ket
+  becomes a tight_term; modifiers around it parse cleanly.
+* **metarelation_elision** — likely (need to verify the failure
+  shape).
+
+That's ~5-6 of the remaining 9 ASF failures, addressed at the
+grammar level rather than per-pattern pragmas.
+
+### Implementation cost
+
+Medium. Requires:
+1. Adding the `modifier` and `modified_term` rules to
+   `latexml_math_parser/src/grammar/builder.rs`.
+2. Writing actions (`apply_modified_term`, `chain_modifier`) in
+   `semantics.rs` to construct the right XM shape.
+3. Possibly demoting some existing `formula relop expression`
+   rules to avoid double-coverage with `modified_term`.
+
+### Sequencing
+
+* **Short term (this session)**: pragma path — already at 1292/9
+  with the zero-absent pragma. Continue with targeted pragmas for
+  the bra-ket and `<x,y>` cases.
+* **Medium term (separate session)**: implement `modified_term`
+  refinement. Verify it subsumes the pragmas it supersedes; keep
+  any pragmas that handle orthogonal cases.
+
+---
+
 ## Arxiv-scale implications
 
 The current state — **98.5% parity on a small test suite** — is a
