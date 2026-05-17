@@ -26,7 +26,14 @@ LoadDefinitions!({
   // variant of the title, genuine author metadata.
   DefMacro!("\\icmltitlerunning{}",
     "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\icmlsetsymbol{}{}", None);
+  // \icmlsetsymbol{name}{symbol} — creates `\<name>` macro expanding
+  // to <symbol> for use in author lists. Real icml2024.sty L100-ish:
+  //   `\def\icmlsetsymbol#1#2{\expandafter\def\csname #1\endcsname{#2}}`
+  // Previous stub gobbled both args without defining the CS, breaking
+  // `\icmlauthor{...}{equal,affil,icmlWorkDone}` which later references
+  // `\icmlWorkDone` in `\printAffiliationsAndNotice`. Witness 2310.06430.
+  DefMacro!("\\icmlsetsymbol{}{}",
+    "\\expandafter\\def\\csname #1\\endcsname{#2}");
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 
