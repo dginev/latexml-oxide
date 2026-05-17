@@ -50,5 +50,6 @@ LoadDefinitions!({
   DefMacro!("\\ead[]{}",
     "\\@add@frontmatter{ltx:note}[role=email]{#2}");
 
-  DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
 });

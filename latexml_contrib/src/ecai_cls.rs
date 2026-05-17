@@ -19,5 +19,6 @@ LoadDefinitions!({
   // {ack} environment — acknowledgments block. Emit as structural
   // ltx:acknowledgements (vs flattening into a generic section).
   // Witness 2408.16081.
-  DefEnvironment!("{ack}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  DefEnvironment!("{ack}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
 });

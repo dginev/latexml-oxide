@@ -28,9 +28,11 @@ LoadDefinitions!({
   DefMacro!("\\fcssetup{}",
     "\\@add@frontmatter{ltx:note}[role=fcssetup]{#1}");
 
-  // {acknowledgement} env — render as acknowledgements.
+  // {acknowledgement} env — render as acknowledgements with
+  // internal_vertical mode so multi-paragraph body is accepted.
   DefEnvironment!("{acknowledgement}",
-    "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
 
   // {compactenum} env — like enumerate but compact.
   DefEnvironment!("{compactenum}", "<ltx:enumerate>#body</ltx:enumerate>");

@@ -37,7 +37,8 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=support]{#1}");
 
   // Standard envs commonly used in probability papers.
-  DefEnvironment!("{acks}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  DefEnvironment!("{acks}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
   RawTeX!(r"\newtheorem{theorem}{Theorem}");
   RawTeX!(r"\newtheorem{lemma}[theorem]{Lemma}");
   RawTeX!(r"\newtheorem{proposition}[theorem]{Proposition}");

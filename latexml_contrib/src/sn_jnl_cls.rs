@@ -44,8 +44,14 @@ LoadDefinitions!({
   DefMacro!("\\fnm{}", "#1");
   DefMacro!("\\sur{}", "#1");
 
-  // Frontmatter envs
-  DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>");
-  DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>");
-  DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>");
+  // Frontmatter envs — internal_vertical mode for multi-paragraph
+  // bodies (declarations especially carries author prose with \par
+  // separators). Without explicit mode, restricted_horizontal default
+  // trips Endgroup mismatch on \par-containing bodies.
+  DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
+    mode => "internal_vertical");
+  DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
+  DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>",
+    mode => "internal_vertical");
 });

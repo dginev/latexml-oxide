@@ -24,16 +24,21 @@ LoadDefinitions!({
 
   // {funding} env — IMS journal funding-statement frontmatter.
   // Preserve as ltx:note (content-preservation directive). Witness
-  // 2406.15844 (+5 imsart papers).
+  // 2406.15844 (+5 imsart papers). Use internal_vertical mode so the
+  // body can contain paragraphs / lists without tripping
+  // mode-mismatch errors.
   DefEnvironment!("{funding}",
-    "<ltx:note role='funding'>#body</ltx:note>");
+    "<ltx:note role='funding'>#body</ltx:note>",
+    mode => "internal_vertical");
   // {acknowledgement} / {acknowledgements} aliases for spelling variants.
   DefEnvironment!("{acknowledgement}",
-    "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
   // {acks} env — IMS-specific acknowledgements ("acks" shorthand).
   // Witness 2406.15844, 2406.04191, 2406.02840 (3 imsart papers).
   DefEnvironment!("{acks}",
-    "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
   // IMS authors use \orcid for ORCID identifier. Preserve as ltx:note.
   DefMacro!("\\orcid{}",
     "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");

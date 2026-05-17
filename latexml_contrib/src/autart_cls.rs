@@ -14,8 +14,10 @@ LoadDefinitions!({
   // with \let\endack\par. Bind {ack}/{ack*} as structural
   // ltx:acknowledgements (post-processors map to canonical
   // role/styling).
-  DefEnvironment!("{ack}",  "<ltx:acknowledgements>#body</ltx:acknowledgements>");
-  DefEnvironment!("{ack*}", "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  DefEnvironment!("{ack}",  "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
+  DefEnvironment!("{ack*}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.
