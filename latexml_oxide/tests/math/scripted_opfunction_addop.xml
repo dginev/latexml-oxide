@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="\log^{+}x" text="(logarithm ^ +)@(x)" xml:id="S0.Ex1.m1">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex2">
+      <Math mode="display" tex="\log^{+}M(r,A)" text="(logarithm ^ +)@(M@(vector@(r, A)))" xml:id="S0.Ex2.m1">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="vector"/>
+                  <XMRef idref="S0.Ex2.m1.1"/>
+                  <XMRef idref="S0.Ex2.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">r</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.2">A</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex3">
+      <Math mode="display" tex="\log^{-}y" text="(logarithm ^ -)@(y)" xml:id="S0.Ex3.m1">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+              <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex4">
+      <Math mode="display" tex="x^{+}" text="x ^ +" xml:id="S0.Ex4.m1">
+        <XMath>
+          <XMApp>
+            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+            <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex5">
+      <Math mode="display" tex="\sin^{+}y" text="(sine ^ +)@(y)" xml:id="S0.Ex5.m1">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMTok meaning="sine" role="TRIGFUNCTION">sin</XMTok>
+              <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+            </XMApp>
+            <XMTok font="italic" role="UNKNOWN">y</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex6">
+      <Math mode="display" tex="\log^{+}a+\log^{-}b" text="(logarithm ^ +)@(a) + (logarithm ^ -)@(b)" xml:id="S0.Ex6.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMTok fontsize="70%" meaning="plus" role="ADDOP">+</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMApp>
+                <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                <XMTok meaning="logarithm" role="OPFUNCTION">log</XMTok>
+                <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
+              </XMApp>
+              <XMTok font="italic" role="UNKNOWN">b</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+  </para>
+</document>

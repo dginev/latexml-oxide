@@ -116,10 +116,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | lbrace array rbrace => fenced
         | lbrace array => open_fenced
         | array rbrace => close_fenced;
-      // FUNCTION and OPFUNCTION are both factors (participate in implicit multiplication).
-      // The distinction is in argument absorption: OPFUNCTION absorbs bare args,
-      // FUNCTION only absorbs fenced (parenthesized) args.
-      factor = factor_base | function | opfunction | fenced_array;
+      // FUNCTION is a factor (participates in implicit multiplication).
+      // OPFUNCTION is intentionally NOT here. Including OPFUNCTION in
+      // `factor` would let `tight_term factor → apply_invisible_times`
+      // admit a bare OPFUNCTION as its LEFT operand — a reading the
+      // pragma `apply_invisible_times: left is OPFUNCTION/.../FUNCTION,
+      // prefer prefix_apply` correctly rejects, but only after the
+      // grammar has enumerated thousands of such derivations
+      // (~52% of trees on complex math-heavy equations such as
+      // 1911.09517 eq.993). Excluding OPFUNCTION from `factor`
+      // pushes the constraint upstream into the grammar: bare
+      // OPFUNCTION cannot anchor an invisible-times chain on the LEFT.
+      // To keep legitimate trailing-OPFUNCTION cases (`c \not`,
+      // `a b \not`, ...), the `tight_term += tight_term opfunction =>
+      // apply_invisible_times` rule below admits OPFUNCTION as a
+      // chain-terminating RIGHT operand. OPFUNCTION as the head of an
+      // applied form (`\log x`, `\sin x`) enters via `applied_func`
+      // (prefix_apply) and via the `tight_term += opfunction tight_term`
+      // and `tight_term += opfunction factor` rules further below.
+      factor = factor_base | function | fenced_array;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
       // on the right terminates at the addop (like expression-level postfix).
@@ -499,11 +514,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       applied_func = function fenced_factor => prefix_apply
         | trigfunction trig_arg => prefix_apply
         | opfunction tight_term => prefix_apply
-        // Perf: removed `| opfunction opfunction => prefix_apply`. Adjacent
-        // opfunctions (FG) already match via `opfunction tight_term` since
-        // opfunction is a term (`term += opfunction`, line 217). The short
-        // rule competed with cascade-via-tight_term in FGHa and doubled
-        // enumeration for every OPFUNCTION+OPFUNCTION pair.
+        // Cascading OPFUNCTION pair: `GH` parses as `G@(H)`. Required
+        // because OPFUNCTION is no longer in `factor` (see comment at
+        // the `factor` definition), so bare H cannot be a tight_term
+        // via the `factor → tight_term` base case — the cascade path
+        // `tight_term += opfunction tight_term` below would otherwise
+        // dead-end on the tail. Earlier this rule was removed
+        // (commit ffcafc33e) because it doubled enumeration when bare
+        // OPFUNCTION was admitted as a factor; with that admission gone,
+        // this is the sole path and no longer competes.
+        | opfunction opfunction => prefix_apply
         // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
         // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
         //        presentation=Apply(f, XMWrap(open, args, close))).
@@ -555,6 +575,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // rule is required.
       tight_term += opfunction tight_term => prefix_apply;
       tight_term += opfunction factor => prefix_apply;
+      // OPFUNCTION as the RIGHT operand of an implicit-times chain
+      // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
+      // tests/math/not.tex and the recognizer_trailing_opfunction
+      // unit test). Replaces the `tight_term factor` path that used
+      // to admit OPFUNCTION via `factor → opfunction` — the LEFT
+      // restriction was the whole point of dropping OPFUNCTION from
+      // `factor` (see comment at the `factor` definition above).
+      // LEFT is `tight_term`, which can no longer derive a bare
+      // OPFUNCTION via the base case, so the pragma's
+      // "left-is-OPFUNCTION" case is unreachable through this rule.
+      tight_term += tight_term opfunction => apply_invisible_times;
       // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
       // includes fenced_factor, so this rule was a duplicate that caused Marpa to
       // enumerate the same tree twice for every `\sin(x)` (OPFUNCTION) form.

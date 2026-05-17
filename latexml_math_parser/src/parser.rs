@@ -97,6 +97,12 @@ static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap(
 // thread loads.
 static PARSE_LEXEMES_DBG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_LEXEMES").is_ok());
 static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT").is_ok());
+// When set, the parser dumps a histogram of semantic-pragma rejection
+// reasons for any formula where 0 trees survive pruning. Used to find
+// over-aggressive pragmas that admit a formula standalone but reject
+// it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
+static PARSE_PRUNE_REASONS: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
 
 pub struct MathParser {
   grammar:                   ThinGrammar,
@@ -1040,6 +1046,10 @@ impl MathParser {
     let mut deduped = 0usize;
     let mut consecutive_dupes = 0usize;
     let start = std::time::Instant::now();
+    // Capture pragma-rejection reasons when LATEXML_PARSE_PRUNE_REASONS=1.
+    // Bounded HashMap keyed by error-message string; on a zero-OK failure
+    // we print the top-3 reasons + counts. Cheap when the env var is unset.
+    let mut prune_reasons: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
     let max_trees = 5000; // Hard limit on parse tree enumeration
     let max_time = std::time::Duration::from_secs(30); // 30 second timeout
     // Convergence: if we've seen enough consecutive duplicates without
@@ -1125,8 +1135,13 @@ impl MathParser {
             }
           }
         },
-        Err(_prune_err) => {
+        Err(prune_err) => {
           pruned_trees += 1;
+          if *PARSE_PRUNE_REASONS {
+            let msg = prune_err.to_string();
+            let trimmed = msg.chars().take(140).collect::<String>();
+            *prune_reasons.entry(trimmed).or_insert(0) += 1;
+          }
           // Pruned trees also count toward convergence if we have unique parses
           if !parses.is_empty() {
             consecutive_dupes += 1;
@@ -1168,6 +1183,22 @@ impl MathParser {
         start.elapsed(),
         input.trim().chars().take(200).collect::<String>()
       );
+    }
+    // Dump top pragma-rejection reasons when no parse survived and the
+    // diagnostic env var is set. Helps locate over-aggressive pragmas
+    // that reject all candidates in document context.
+    if *PARSE_PRUNE_REASONS && parses.is_empty() && pruned_trees > 0 {
+      let mut top: Vec<(&String, &usize)> = prune_reasons.iter().collect();
+      top.sort_by(|a, b| b.1.cmp(a.1));
+      eprintln!(
+        "PARSE_PRUNE_REASONS: {} pruned, {} distinct, top-5: | input: {}",
+        pruned_trees,
+        prune_reasons.len(),
+        input.trim().chars().take(120).collect::<String>()
+      );
+      for (msg, count) in top.iter().take(5) {
+        eprintln!("  {count:>5}× {msg}");
+      }
     }
 
     match parses.len() {

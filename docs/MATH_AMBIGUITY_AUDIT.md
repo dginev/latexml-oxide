@@ -1,5 +1,49 @@
 # Math-parser ambiguity audit — 2026-05-16
 
+> **Update 2026-05-16 (evening)** — two further fixes following
+> the morning's `factor / opfunction` split:
+>
+> 1. **`formulae_apply` pragma loosening** (`semantics.rs:389`):
+>    rejection of "fragment LEFT + complete RIGHT" pairs (e.g.
+>    `\lesssim X, r \notin E_3` — common arXiv `&\lesssim ...`
+>    align-line + side-condition idiom) was too strict. Now requires
+>    BOTH operands to be fragments before rejecting. Line 1160 of
+>    1911.09517 (the `\lesssim R\log\frac{e(R-r')}{R-r}(...), 0 \le r'
+>    < r < R` case) and 5 sibling equations now parse.
+>
+> Cumulative result on 1911.09517:
+>
+> | Stage | failures | 5000-caps | math_parse |
+> |---|---|---|---|
+> | Master | ~13 | 5 | ~7.7 s |
+> | + `opfunction` ∉ `factor` | 11 | 3 | 7.28 s |
+> | + `formulae_apply` loosening | **5** | 3 | 7.24 s |
+>
+> Remaining 5 failures: 3 × `\log^+ ∫_D |…|^…` (VERTBAR-modulus,
+> pattern #2 below), 1 × `= O(\sum ... |f|^+ + 1)` (VERTBAR inside
+> fenced O()), 1 × `\sum_{j} \log M(r, A_j)` (paren-comma inside
+> fence). All five share **delimiter-pairing ambiguity** as root
+> cause — pattern #2 territory.
+>
+> **Update 2026-05-16 (afternoon)** — pattern #1's variant
+> `\log M(r,A_p) ≤ Σ ... + O(...) , \quad r ∉ (...)` family was
+> traced not to the `\log^+` idiom but to **OPFUNCTION admitted as a
+> factor**, letting `tight_term factor → apply_invisible_times`
+> enumerate ~52% of trees with OPFUNCTION on the LEFT (e.g.
+> `\log * M(r,A_p)`). The pragma rejected those post-hoc but only
+> after enumeration. Fixed by removing OPFUNCTION from `factor` in
+> `latexml_math_parser/src/grammar/builder.rs`, paired with a new
+> `tight_term opfunction → apply_invisible_times` rule (for
+> trailing-OPFUNCTION cases like `c \not`) and re-instating
+> `applied_func += opfunction opfunction → prefix_apply` (so `FGH`
+> still cascades). Result on 1911.09517: math_parse phase
+> 7.71 s → 7.28 s, 5 → 3 remaining 5000-cap failures (the 3 are
+> all the `\log^+ ∫_D |…|^…` VERTBAR-modulus shape — see §2 below).
+> Pattern #1 line-993-family is now **closed**; lines 672 and
+> 1167/1186/1191/1220/1224/1266 (VERTBAR-modulus + script chains)
+> remain.
+
+
 Diagnostic study of where the Marpa grammar produces excessive parses
 on math-heavy papers. Driven by Win #4 of the 2026-05-16 performance
 sprint (see `docs/PERFORMANCE.md`). **This document is research-only**;

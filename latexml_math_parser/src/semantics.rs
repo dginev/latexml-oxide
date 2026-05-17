@@ -382,12 +382,20 @@ pub fn formulae_apply(
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
 
-  // Reject when any item has `absent` as a relop operand.
-  // `absent` means "equation fragment" — fragments are single formulas,
-  // not part of a formulae collection. A formulae is a collection of
-  // COMPLETE relational statements.
-  if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
-    return Err("formulae_apply: absent operand (fragment, not complete formula)".into());
+  // Reject when BOTH items are fragments (have `absent` as a relop operand).
+  // A fragment + a complete formula is a common arXiv pattern: align'd
+  // equation continuations followed by a side-condition, e.g.
+  //   `\lesssim T(r,f) + \log r, \quad r \notin E_3`
+  // where the LEFT (`\lesssim ...`) has an absent LHS because the
+  // original LHS is on a previous line of an align block, and the RIGHT
+  // (`r \notin E_3`) is the trailing condition annotation. The earlier
+  // strict rule (reject if EITHER is a fragment) was correct only for
+  // inner contexts (fenced lists, function args); at the top level
+  // these pairings are well-formed and need to survive pragmatic prune.
+  // True inner-context fragment cases are still pruned because BOTH
+  // sides are typically fragments (or one is a single bare token).
+  if left.as_ref().is_some_and(has_absent_relop_operand) && has_absent_relop_operand(&right) {
+    return Err("formulae_apply: both operands are fragments (not complete formulae)".into());
   }
   // Also check inside an existing formulae Dual being extended
   if let Some(XM::Dual(ref content, ..)) = left {
