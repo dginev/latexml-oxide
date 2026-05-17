@@ -599,6 +599,24 @@ regex (`[._-][vV]?[-_.\d]+$`) handles `cvpr_2025` / `cvpr2028` →
 {aligned} in 2410.13571) re-test as clean conversions with the
 current binary. v2 canvas re-run will pick these up.
 
+**Round-32 followup — targeted XMRef sweep (2026-05-17 early morning)**:
+* `amsmath::rearrange_ams_split` tags every minted XMRef with
+  `_split_ref="1"`; `Document::finalize` runs
+  `prune_dangling_split_xmrefs` before `prune_xmduals` to remove
+  ONLY those tagged refs whose `idref` no longer resolves. Closes
+  the post-process `Error:expected:id` cascade affecting **~1527
+  papers / 49,582 errors** in wp3 stage10 (the largest single
+  cluster after pdfx/libertinust1math). Root cause: the math
+  parser later absorbs cell tokens (especially inserted
+  MULOP `\times` ops on `\mathcal{L}\rho` chains) into wrapping
+  XMApps without preserving the inner xml:id, leaving the parallel
+  XMWrap refs pointing at vanished targets. The marker-restricted
+  sweep avoids breaking declare_test's Perl-faithful renamed-id
+  case (XMRefs to `S<x>.E<y>.m1.{1,2}` that resolve through
+  idstore staleness). Updated `tests/ams/mathtools.xml` to drop 4
+  now-removed dangling refs. Witness 2502.03413: 3 errors → 0.
+  Tests 1295/0/0.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
