@@ -62,12 +62,24 @@ pub enum ValidationPragmatics {
 }
 
 impl ValidationPragmatics {
-  /// Pragmatic rules that are *always* strictly enforced
+  /// Pragmatic rules that are *always* strictly enforced.
+  ///
+  /// Architectural note (2026-05-17): these are intended to fire
+  /// inside `XM::Apply.specialize(...)` during tree construction,
+  /// but in practice `apply_*` actions in `semantics.rs` build their
+  /// `XM::Apply` results WITHOUT calling `.specialize()` — so most
+  /// expert pragmas that target Apply shapes (e.g.
+  /// `FencedLettersAreFunctionArguments`) never get a chance to
+  /// fire during action_on. The pragmas listed here that DO run
+  /// reliably are those that match `XM::Lexeme` directly (the
+  /// translate_node leaf calls `Lexeme.specialize` per line 125
+  /// in semantics.rs). Apply-shape pragmas have been moved into
+  /// `student_defaults` below where `validate_recursive` actually
+  /// invokes them.
   pub fn expert_defaults() -> Vec<Self> {
     use ValidationPragmatics::*;
     vec![
       FencedAtomsAreNotFunctions,
-      FencedLettersAreFunctionArguments,
       UnfencedLetterArgumentsRequireVisualCues,
       OpfunctionsAreRarelyArguments,
       AdjacentNumbersDontMultiply,
@@ -88,6 +100,13 @@ impl ValidationPragmatics {
     // parses
     use ValidationPragmatics::*;
     vec![
+      // First the Apply-shape pragmas that should be expert (always
+      // strictly enforced) but in practice need to run here because
+      // `apply_*` actions don't call `.specialize()` on their result.
+      // Their soft fallback ("skip if all pruned") is harmless: if
+      // all surviving trees fail the pragma, the original forest is
+      // restored.
+      FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
       HigherOrderInvisibleOpsAreExceptions,
       AdjacentUnfencedScriptsDontApply,
@@ -474,9 +493,91 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
           }
         }
       }
+    } else if let Some(prune_reason) = is_dual_parens_rhs(top_rhs, trees.first().copied()) {
+      return Err(prune_reason.into());
     }
   }
   Ok(())
+}
+
+/// Detect a parens-fenced `XM::Dual` on the RHS of invisible-times and
+/// classify whether it should be pruned in favor of function-application.
+///
+/// The `fenced` grammar action wraps a parenthesized expression as
+/// `Dual(content_ref, Wrap[OPEN, expr, CLOSE])` without setting the
+/// `Meta::fenced` field on the Dual itself. The `Lexeme`-based check
+/// above misses these. This helper inspects the presentation Wrap
+/// directly:
+///
+/// 1. First and last items of the Wrap are `XM::Token` with role
+///    OPEN/CLOSE and content `(` / `)`.
+/// 2. Inner content (between the parens) is either a non-NUMBER
+///    `Lexeme`, a structured `Apply` (list/vector/formulae), or a
+///    `Dual` whose own content is non-numeric.
+/// 3. Special-case: if the inner content IS a `NUMBER`, fall through
+///    to the legacy "number with non-fenced LHS" exception so the
+///    cycle-notation case `(a,b)(c,d)` doesn't double-prune.
+///
+/// Returns `Some(error_msg)` if the parse should be pruned, `None`
+/// otherwise.
+fn is_dual_parens_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str> {
+  let XM::Dual(_, ref presentation, ..) = top_rhs else {
+    return None;
+  };
+  let XM::Wrap(ref items, ..) = **presentation else {
+    return None;
+  };
+  // Wrap items are lexer-emitted leaves: either `XM::Lexeme("OPEN:(:N")`
+  // / `XM::Lexeme("CLOSE:):N")` directly, or `XM::Token` with
+  // role+content set. Accept both forms.
+  let is_open_lexeme = |x: Option<&XM>| match x {
+    Some(XM::Token(p, _)) => p.role.as_deref() == Some("OPEN") && p.content.as_deref() == Some("("),
+    Some(XM::Lexeme(name, _)) => name.starts_with("OPEN:(:"),
+    _ => false,
+  };
+  let is_close_lexeme = |x: Option<&XM>| match x {
+    Some(XM::Token(p, _)) => p.role.as_deref() == Some("CLOSE") && p.content.as_deref() == Some(")"),
+    Some(XM::Lexeme(name, _)) => name.starts_with("CLOSE:):"),
+    _ => false,
+  };
+  if !(is_open_lexeme(items.first()) && is_close_lexeme(items.last())) {
+    return None;
+  }
+  // Inner content is items[1] (the single-arg case) or the structured
+  // Apply that the multi-arg `interpret_delimited` path produces.
+  // Look at the Dual's content branch — that's the semantic shape.
+  let content = match top_rhs {
+    XM::Dual(c, _, _, _) => &**c,
+    _ => return None,
+  };
+  // Skip the NUMBER case to defer to the legacy NUMBER-exception code.
+  // The content is either a Ref-to-NUMBER or directly an Apply with
+  // numeric structure; treat anything that resolves to a baseline NUMBER
+  // as "let upstream handle it".
+  if let XM::Lexeme(inner_name, _) = content.get_baseline() {
+    if inner_name.starts_with("NUMBER") {
+      // Legacy NUMBER-exception path: prune if LHS is non-fenced
+      // Lexeme/Apply, otherwise let it through.
+      match top_lhs {
+        Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
+          return Some(
+            "pruning non-argument parenthetical NUMBER (Dual-wrapped), used as RHS of \
+             invisible times",
+          );
+        },
+        Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
+          return Some(
+            "pruning non-argument parenthetical NUMBER (Dual-wrapped), used as RHS of \
+             invisible times",
+          );
+        },
+        _ => return None,
+      }
+    }
+  }
+  Some(
+    "pruning non-argument parenthetical Dual atom, used as RHS of invisible times",
+  )
 }
 
 /// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
