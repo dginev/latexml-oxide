@@ -756,6 +756,14 @@ sample size we can confidently claim the warning_papers_3 corpus
 is at ≥99.94% pass on the current binary, with no genuine remaining
 single-error patterns surfacing in the random sample.
 
+**wp3 (warning_papers_3) corpus random spot-check (2026-05-17 05:10).**
+The earlier-month slice 2405..2504 (100 random papers per month,
+1200 total) tested in parallel — **1200/1200 pass with 0 errors**.
+Combined with the 3298-paper next_warning sample (2504..2602),
+this gives **4498/4498 random samples passing** across both corpora
+on the current binary. Effective corpus pass-rate is statistically
+indistinguishable from 100%.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
