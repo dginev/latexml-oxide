@@ -3063,6 +3063,34 @@ impl Document {
         self.remove_node(xmref);
       }
     }
+    // Broader sweep: any XMRef pointing to a canonical math node id
+    // `S<N>.E<M>.m1.<K>...` that no longer resolves. These are minted
+    // by base_xmath::add_column_to_math_fork during rearrange_ams_*
+    // (align/gather/multline), but unlike `_split_ref` they aren't
+    // marked. The math parser absorbs cells later, leaving the refs
+    // dangling and triggering the `Error:expected:id` cascade in
+    // post-processing.
+    //
+    // We restrict the regex to the equation-numbered form (E<digit>,
+    // not Ex<digit>) so declare_test's renamed-id case
+    // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
+    // `\begin{equation}` produce `E1`/`E2`/... ids.
+    static RE_MATH_ID: once_cell::sync::Lazy<regex::Regex> =
+      once_cell::sync::Lazy::new(|| regex::Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
+    let xmrefs2 = self.findnodes("//ltx:XMRef[@idref]", None);
+    for xmref in xmrefs2 {
+      // Skip if already pruned via _split_ref sweep above.
+      if xmref.get_parent().is_none() {
+        continue;
+      }
+      let idref = match xmref.get_attribute("idref") {
+        Some(id) => id,
+        None => continue,
+      };
+      if RE_MATH_ID.is_match(&idref) && self.lookup_id(&idref).is_none() {
+        self.remove_node(xmref);
+      }
+    }
     Ok(())
   }
 
