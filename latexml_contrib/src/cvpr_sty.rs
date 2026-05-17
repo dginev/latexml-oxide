@@ -14,7 +14,15 @@ LoadDefinitions!({
   // \toprule/\midrule/\bottomrule (booktabs), \includegraphics
   // (graphicx) resolve. Witness 2503.24026 (cvpr2025, \toprule
   // undefined).
-  RequirePackage!("xcolor");
+  //
+  // Pre-load xcolor WITH [dvipsnames, table] options: CVPR papers
+  // overwhelmingly use \color{Maroon}/{ForestGreen}/{MidnightBlue}
+  // (dvipsnames named palette) AND \cellcolor (colortbl, via the
+  // `table` option). If we pre-load xcolor WITHOUT options, the
+  // user's later `\usepackage[dvipsnames, table]{xcolor}` becomes
+  // an option-clash no-op and dvipsnam.def never gets loaded →
+  // 60+ undefined-color errors per CVPR-style paper. Witness 2305.13500.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("graphicx");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
