@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
+use std::rc::Rc;
 
 use super::ActionContext;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
@@ -162,7 +163,21 @@ impl XProps {
 /// a "parsing state::, via an attached `Meta` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XM {
-  Lexeme(String, Meta),
+  /// Token-name lexeme (e.g. "RELOP:less-than:3", "letter:a",
+  /// "delimited-open-paren"). The name is stored as `Rc<str>` so:
+  ///
+  /// 1. **Byte-glade hot path** (asf_traverser case 1): each ASCII
+  ///    byte resolves to a cached `Rc<str>` via `byte_lexeme_rc(b)`.
+  ///    Clones are refcount bumps — no allocation per byte glade.
+  /// 2. **Marpa ASF cache clones** (`asf.rs:156, 208`): cloning a
+  ///    `ParseTree = Vec<Option<XM>>` no longer deep-clones the
+  ///    lexeme name. Refcount-bump per Lexeme in the Vec.
+  /// 3. **Read sites** (`name.starts_with(...)`, `name == "..."`,
+  ///    `name.split(...)`, `name.contains(...)`): unchanged — `Rc<str>`
+  ///    derefs to `&str`.
+  ///
+  /// Construction at runtime: `Rc::from(string)` / `Rc::from("…")`.
+  Lexeme(Rc<str>, Meta),
   Token(XProps, Meta), // does this need Meta?
   Apply(Operator, Args, XProps, Meta),
   Dual(Box<XM>, Box<XM>, XProps, Meta),
@@ -237,7 +252,7 @@ impl Args {
         maybe_arg
           .as_ref()
           .unwrap_or(&XM::Lexeme(
-            String::from("missing_argument"),
+            Rc::from("missing_argument"),
             Meta::default(),
           ))
           .fmt_indented(level, f)?;
@@ -250,7 +265,7 @@ impl Args {
         maybe_arg
           .as_ref()
           .unwrap_or(&XM::Lexeme(
-            String::from("missing_argument"),
+            Rc::from("missing_argument"),
             Meta::default(),
           ))
           .fmt_indented(&last_level, f)?;
@@ -730,7 +745,7 @@ impl XM {
       }
       match &**op {
         XM::Token(props, _) => props.meaning.as_deref() == Some(expected),
-        XM::Lexeme(name, _) => name == expected || name.starts_with(&format!("{expected}:")),
+        XM::Lexeme(name, _) => &**name == expected || name.starts_with(&format!("{expected}:")),
         _ => false,
       }
     } else {
@@ -769,7 +784,7 @@ impl XM {
       }
       let meaning = match &**op {
         XM::Token(props, _) => props.meaning.as_deref(),
-        XM::Lexeme(name, _) => Some(name.as_str()),
+        XM::Lexeme(name, _) => Some(&**name),
         _ => None,
       };
       meaning.is_some_and(|m| NAMED_INTERVALS.contains(&m))
@@ -791,7 +806,7 @@ impl XM {
     let outer_meaning = match &**content {
       XM::Apply(Operator(op), _, ..) => match &**op {
         XM::Token(props, _) => props.meaning.as_deref().map(String::from),
-        XM::Lexeme(name, _) => Some(name.clone()),
+        XM::Lexeme(name, _) => Some(name.to_string()),
         _ => None,
       },
       _ => return false,
@@ -819,7 +834,7 @@ impl XM {
     if let XM::Apply(Operator(inner_op), _, ..) = &**inner_content {
       let inner_meaning = match &**inner_op {
         XM::Token(props, _) => props.meaning.as_deref(),
-        XM::Lexeme(name, _) => Some(name.as_str()),
+        XM::Lexeme(name, _) => Some(&**name),
         _ => None,
       };
       // Outer-set wrapping inner-{set/list/vector/formulae} is the
@@ -848,7 +863,7 @@ impl XM {
       XM::Apply(Operator(op), args, ..) if args.trees().len() == 1 => {
         let m = match &**op {
           XM::Token(props, _) => props.meaning.as_deref().map(String::from),
-          XM::Lexeme(name, _) => Some(name.clone()),
+          XM::Lexeme(name, _) => Some(name.to_string()),
           _ => None,
         };
         m
@@ -879,7 +894,7 @@ impl XM {
       if let Some(XM::Apply(Operator(inner_op), _, _, _)) = resolved {
         let inner_meaning = match &**inner_op {
           XM::Token(props, _) => props.meaning.as_deref(),
-          XM::Lexeme(name, _) => Some(name.as_str()),
+          XM::Lexeme(name, _) => Some(&**name),
           _ => None,
         };
         return inner_meaning == Some(outer_m.as_str());
@@ -943,7 +958,7 @@ impl XM {
     };
     let meaning = match &**op {
       XM::Token(props, _) => props.meaning.as_deref(),
-      XM::Lexeme(name, _) => Some(name.as_str()),
+      XM::Lexeme(name, _) => Some(&**name),
       _ => None,
     };
     // Both `multirelation` (explicit relation chain) and `formulae`
@@ -1303,7 +1318,7 @@ impl XM {
           Some(XM::Token(p, _)) => p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖"),
           Some(XM::Lexeme(name, _)) => name.starts_with("OPEN:|:") || name.starts_with("CLOSE:|:")
             || name.starts_with("OPEN:‖:") || name.starts_with("CLOSE:‖:")
-            || name == "VERTBAR" || name.starts_with("VERTBAR:"),
+            || &**name == "VERTBAR" || name.starts_with("VERTBAR:"),
           _ => false,
         }
       };
@@ -1653,11 +1668,11 @@ impl XM {
       XM::Lexeme(ref name, _) => name.to_string(),
       XM::Apply(ref op, ref args, ..) => {
         match &*op.0 {
-          XM::Lexeme(ref name, _) if name == "unknown.subscript" => {
+          XM::Lexeme(ref name, _) if &**name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
             format!("sub__{}", arg_base.base_operator_name())
           },
-          XM::Lexeme(ref name, _) if name == "unknown.superscript" => {
+          XM::Lexeme(ref name, _) if &**name == "unknown.superscript" => {
             // TODO: Too much datastructure boilerplate with the unwrap incantation
             //       might be better to create some getter methods to explain the intent better
             //       this is meant to do "give me a clone of the first argument to this XM::Apply"
@@ -1681,7 +1696,7 @@ impl XM {
       XM::Ref(_) => self,
       XM::Apply(ref op, ref args, ..) => {
         if let XM::Lexeme(name, _) = &*op.0 {
-          if name == "unknown.subscript" || name == "unknown.superscript" {
+          if &**name == "unknown.subscript" || &**name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
           } else {
             self

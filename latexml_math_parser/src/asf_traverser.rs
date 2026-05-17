@@ -8,10 +8,10 @@
 //!
 //! ## Design summary
 //!
-//! Each glade produces `Vec<Option<XM>>` — the set of alternative
-//! XM trees that can terminate at that parse position. The marpa
-//! ASF driver memoizes one Vec per glade, then composes parents by
-//! Cartesian-multiplying children at each (symch, factoring) pair.
+//! Each glade produces `Rc<Vec<Option<XM>>>` — the set of alternative
+//! XM trees that can terminate at that parse position, wrapped in a
+//! reference-counted pointer so the marpa ASF driver's cache.clone()
+//! at every glade is a refcount bump instead of a deep tree copy.
 //!
 //! Three kinds of glades are handled:
 //!
@@ -36,6 +36,7 @@
 //! up naturally.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use libxml::tree::Node;
 use marpa::asf::{Glade, Traverser};
@@ -47,6 +48,45 @@ use latexml_core::document::Document;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::metadata::Meta;
 use crate::semantics::{ActionContext, Actions, XM};
+
+// Thread-local cache of `Rc<str>` for each ASCII byte. The byte-glade
+// hot path emits a single-character `XM::Lexeme` per byte; with this
+// cache, repeated bytes share the same `Rc<str>` instance and the
+// emit path is a refcount bump instead of a `String` allocation.
+// `Rc<str>` is single-threaded; the math parser runs single-threaded
+// per document, matching the existing `with_arena_mut` model in
+// `latexml_core::common::arena`.
+thread_local! {
+  static ASCII_BYTE_RC: [std::cell::OnceCell<Rc<str>>; 128] = const {
+    [const { std::cell::OnceCell::new() }; 128]
+  };
+}
+
+#[inline]
+fn byte_lexeme_rc(byte: u8) -> Rc<str> {
+  if byte < 128 {
+    ASCII_BYTE_RC.with(|cache| {
+      cache[byte as usize]
+        .get_or_init(|| {
+          // SAFETY: byte < 128 → valid 1-byte UTF-8.
+          let s = unsafe { std::str::from_utf8_unchecked(std::slice::from_ref(&byte)) };
+          Rc::from(s)
+        })
+        .clone()
+    })
+  } else {
+    // Non-ASCII byte: ByteScanner doesn't emit these in practice, but
+    // be defensive — produce an empty Rc<str> instead of panicking.
+    Rc::from("")
+  }
+}
+
+/// Alternatives at a single glade. Wrapped in `Rc` so that the marpa
+/// ASF driver's per-glade `cache.insert(_, output.clone())` and
+/// `cache.get(&id).clone()` paths are refcount bumps instead of deep
+/// tree copies — on math-heavy papers this eliminates the dominant
+/// per-glade allocation cost.
+pub type GladeAlts = Rc<Vec<Option<XM>>>;
 
 /// Per-glade traversal callback for the math parser's ASF migration.
 /// Borrows the math parser's actions, pragmas, builder, document so
@@ -74,7 +114,7 @@ impl Traverser for MathTraverser<'_> {
   /// can terminate at this parse position. `Some(xm)` is a successful
   /// translation; `None` is a no-op position (e.g. discard rule);
   /// `Err` inside `action_on` is recorded as a prune and dropped.
-  type ParseTree = Vec<Option<XM>>;
+  type ParseTree = GladeAlts;
   type ParseState = ();
 
   fn traverse_glade(
@@ -91,11 +131,10 @@ impl Traverser for MathTraverser<'_> {
       let sym = glade.symbol_id();
       if (0..=255).contains(&sym) {
         let byte = sym as u8;
-        let s = String::from_utf8(vec![byte]).unwrap_or_default();
-        return Ok(vec![Some(XM::Lexeme(s, Meta::default()))]);
+        return Ok(Rc::new(vec![Some(XM::Lexeme(byte_lexeme_rc(byte), Meta::default()))]));
       }
       // Out-of-range symbol id (shouldn't happen for ByteScanner).
-      return Ok(vec![]);
+      return Ok(Rc::new(vec![]));
     }
 
     let mut all_alts: Vec<Option<XM>> = Vec::new();
@@ -114,7 +153,11 @@ impl Traverser for MathTraverser<'_> {
         if bytes.is_empty() {
           all_alts.push(None);
         } else {
-          let lexeme_str = String::from_utf8(bytes).unwrap_or_default();
+          // SAFETY: bytes were already valid UTF-8 in the child Lexemes
+          // (`Rc<str>` is utf-8 by construction). `extend_from_slice`
+          // appends valid UTF-8 segments, preserving validity overall.
+          let lexeme_str: Rc<str> =
+            unsafe { Rc::from(std::str::from_utf8_unchecked(&bytes)) };
           let lexeme = XM::Lexeme(lexeme_str, Meta::default());
           match lexeme.specialize(Meta::default(), self.pragmas) {
             Ok(specialized) => all_alts.push(Some(specialized)),
@@ -151,7 +194,7 @@ impl Traverser for MathTraverser<'_> {
           // alternatives unchanged.
           let first_child_id = glade.rh_glade_id(0).expect("rh 0");
           let first_child_alts = children.get(&first_child_id).expect("child precomputed");
-          for alt in first_child_alts {
+          for alt in first_child_alts.iter() {
             all_alts.push(alt.clone());
           }
         } else {
@@ -160,7 +203,10 @@ impl Traverser for MathTraverser<'_> {
           if bytes.is_empty() {
             all_alts.push(None);
           } else {
-            let lexeme = String::from_utf8(bytes).unwrap_or_default();
+            // SAFETY: bytes were already valid UTF-8 in the child Lexemes
+            // (`Rc<str>` is utf-8 by construction).
+            let lexeme: Rc<str> =
+              unsafe { Rc::from(std::str::from_utf8_unchecked(&bytes)) };
             all_alts.push(Some(XM::Lexeme(lexeme, Meta::default())));
           }
         }
@@ -168,10 +214,10 @@ impl Traverser for MathTraverser<'_> {
         // 5. Standard rule with semantic action. Cartesian-product
         // child alternatives across RHS positions, apply
         // `Actions::action_on` per combo.
-        let mut per_pos: Vec<&Self::ParseTree> = Vec::with_capacity(rh_len);
+        let mut per_pos: Vec<&Vec<Option<XM>>> = Vec::with_capacity(rh_len);
         for ix in 0..rh_len {
           let child_id = glade.rh_glade_id(ix).expect("rh position has a child glade");
-          per_pos.push(children.get(&child_id).expect("child precomputed in post-order"));
+          per_pos.push(children.get(&child_id).expect("child precomputed in post-order").as_ref());
         }
         // Fast path: when every RHS position has exactly one
         // alternative (the common case for unambiguous math), the
@@ -204,7 +250,7 @@ impl Traverser for MathTraverser<'_> {
             let mut next_combos: Vec<Vec<Option<XM>>> =
               Vec::with_capacity(combos.len() * child_alts.len());
             for prefix in &combos {
-              for alt in *child_alts {
+              for alt in child_alts.iter() {
                 let mut new_combo = Vec::with_capacity(prefix.len() + 1);
                 new_combo.extend(prefix.iter().cloned());
                 new_combo.push(alt.clone());
@@ -230,7 +276,7 @@ impl Traverser for MathTraverser<'_> {
         break;
       }
     }
-    Ok(all_alts)
+    Ok(Rc::new(all_alts))
   }
 }
 
@@ -239,7 +285,7 @@ impl Traverser for MathTraverser<'_> {
 /// action rules are byte-passthrough, so the child's first
 /// `XM::Lexeme(s, _)` already contains the full concatenation for
 /// its subtree, and we just chain them at the outer level.
-fn collect_lexeme_bytes(glade: &Glade, rh_len: usize, children: &HashMap<usize, Vec<Option<XM>>>) -> Vec<u8> {
+fn collect_lexeme_bytes(glade: &Glade, rh_len: usize, children: &HashMap<usize, GladeAlts>) -> Vec<u8> {
   let mut bytes: Vec<u8> = Vec::with_capacity(rh_len * 2);
   for ix in 0..rh_len {
     let child_id = glade.rh_glade_id(ix).expect("rh position has a child glade");

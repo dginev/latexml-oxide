@@ -1,6 +1,8 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::error::Error;
+#[cfg(test)]
+use std::rc::Rc;
 
 use crate::semantics::{Operator, XM};
 use crate::util::distill_lexeme;
@@ -1113,7 +1115,7 @@ fn is_unary_addop_prefix(tree: &XM) -> bool {
 fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme == "arith1.divide" => {
+      XM::Lexeme(ref oplexeme, _) if &**oplexeme == "arith1.divide" => {
         let arg_trees = args.trees();
         if arg_trees.len() == 2 {
           if let XM::Lexeme(arg1_name, arg1_meta) = arg_trees[0] {
@@ -1359,7 +1361,7 @@ fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), 
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     if let XM::Lexeme(ref name, _) = **op {
       let is_addop = name.starts_with("ADDOP");
-      let is_mulop = name.starts_with("MULOP") || name == "x.invisible_operator";
+      let is_mulop = name.starts_with("MULOP") || &**name == "x.invisible_operator";
       let is_relop = name.starts_with("RELOP");
 
       // If we're inside an addop/mulop and this node is a relop, reject
@@ -1577,7 +1579,7 @@ mod tests {
   #[test]
   fn consistent_pragmas_accept_empty_tree() {
     use crate::semantics::metadata::Meta;
-    let leaf = XM::Lexeme("UNKNOWN:italic-x".to_string(), Meta::default());
+    let leaf = XM::Lexeme(Rc::from("UNKNOWN:italic-x"), Meta::default());
     assert!(
       ValidationPragmatics::ConsistentLetterBlocks
         .validate(&leaf)
@@ -1613,7 +1615,7 @@ mod tests {
     let args = Args(
       letter_names
         .iter()
-        .map(|n| Some(XM::Lexeme((*n).to_string(), Meta::default())))
+        .map(|n| Some(XM::Lexeme(Rc::from(*n), Meta::default())))
         .collect(),
     );
     XM::Apply(op, args, XProps::default(), Meta::default())
@@ -1703,7 +1705,7 @@ mod tests {
     use crate::semantics::metadata::Meta;
     let mut meta = Meta::default();
     meta.fenced = fenced.map(|s| s.to_string());
-    XM::Lexeme(name.to_string(), meta)
+    XM::Lexeme(Rc::from(name), meta)
   }
 
   #[test]
@@ -1837,7 +1839,7 @@ mod tests {
 
   fn lexeme(name: &str) -> XM {
     use crate::semantics::metadata::Meta;
-    XM::Lexeme(name.to_string(), Meta::default())
+    XM::Lexeme(Rc::from(name), Meta::default())
   }
 
   #[test]
@@ -1973,7 +1975,7 @@ mod tests {
   #[test]
   fn is_invisible_times_op_accepts_lexeme_form() {
     use crate::semantics::metadata::Meta;
-    let op = XM::Lexeme("x.invisible_operator".to_string(), Meta::default());
+    let op = XM::Lexeme(Rc::from("x.invisible_operator"), Meta::default());
     assert!(is_invisible_times_op(&op));
   }
 
@@ -2008,7 +2010,7 @@ mod tests {
   #[test]
   fn is_invisible_times_op_rejects_unrelated_lexeme() {
     use crate::semantics::metadata::Meta;
-    let op = XM::Lexeme("MULOP:plus".to_string(), Meta::default());
+    let op = XM::Lexeme(Rc::from("MULOP:plus"), Meta::default());
     assert!(!is_invisible_times_op(&op));
   }
 
@@ -2027,7 +2029,7 @@ mod tests {
     use std::borrow::Cow;
 
     assert!(letter_names.len() >= 2, "need at least 2 operands");
-    let mut acc = XM::Lexeme((*letter_names.last().unwrap()).to_string(), Meta::default());
+    let mut acc = XM::Lexeme(Rc::from(*letter_names.last().unwrap()), Meta::default());
     for name in letter_names.iter().rev().skip(1) {
       let op_props = XProps {
         role: Some(Cow::Borrowed("MULOP")),
@@ -2037,7 +2039,7 @@ mod tests {
       };
       let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
       let args = Args(vec![
-        Some(XM::Lexeme((*name).to_string(), Meta::default())),
+        Some(XM::Lexeme(Rc::from(*name), Meta::default())),
         Some(acc),
       ]);
       acc = XM::Apply(op, args, XProps::default(), Meta::default());

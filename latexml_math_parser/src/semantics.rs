@@ -122,10 +122,10 @@ impl Actions {
       Node::Token(_ty, ref val) => {
         let token_str = ::std::str::from_utf8(val).unwrap_or("malformed-utf8");
         Ok(Some(
-          XM::Lexeme(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
+          XM::Lexeme(Rc::from(token_str), Meta::default()).specialize(Meta::default(), pragmas)?,
         ))
       },
-      Node::Leaf(ref tok) => Ok(Some(XM::Lexeme(tok.to_string(), Meta::default()))),
+      Node::Leaf(ref tok) => Ok(Some(XM::Lexeme(Rc::from(tok.to_string().as_str()), Meta::default()))),
       Node::Null(_) => {
         // e.g.* argument failed nothing, just skip.
         Ok(None)
@@ -273,7 +273,7 @@ pub fn list_apply(
       XM::Apply(Operator(op), ..) => {
         let meaning = match &**op {
           XM::Token(p, _) => p.meaning.as_deref(),
-          XM::Lexeme(name, _) => Some(name.as_str()),
+          XM::Lexeme(name, _) => Some(&**name),
           _ => None,
         };
         meaning == Some("conditional")
@@ -284,7 +284,7 @@ pub fn list_apply(
         let inner_is_conditional = if let XM::Apply(Operator(ref op), ..) = **content {
           let meaning = match &**op {
             XM::Token(p, _) => p.meaning.as_deref(),
-            XM::Lexeme(name, _) => Some(name.as_str()),
+            XM::Lexeme(name, _) => Some(&**name),
             _ => None,
           };
           meaning == Some("conditional")
@@ -1522,7 +1522,7 @@ pub fn limit_from_apply(
   // Check the addop is + or -
   let is_plus_minus = args.get(1).and_then(|a| a.as_ref()).is_some_and(|xm| {
     let val = match xm {
-      XM::Lexeme(lex, _) => lookup_lex_node(lex.as_str(), ctxt.nodes)
+      XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
         .ok()
         .and_then(|n| n.get_attribute("meaning")),
       XM::Token(props, _) => props.meaning.as_ref().map(|c| c.to_string()),
@@ -1836,7 +1836,7 @@ pub fn two_part_relop_combine(
   unp!(args => op1, op2);
   // Extract meanings from the lexeme nodes
   let (m1, content1) = if let Some(XM::Lexeme(ref lex, _)) = op1 {
-    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let node = lookup_lex_node(lex, ctxt.nodes)?;
     let m = node.get_attribute("meaning").unwrap_or_default();
     let c = node.get_content();
     (m, c)
@@ -1844,7 +1844,7 @@ pub fn two_part_relop_combine(
     (String::new(), String::new())
   };
   let (m2, content2) = if let Some(XM::Lexeme(ref lex, _)) = op2 {
-    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let node = lookup_lex_node(lex, ctxt.nodes)?;
     let m = node.get_attribute("meaning").unwrap_or_default();
     let c = node.get_content();
     (m, c)
@@ -2428,7 +2428,7 @@ fn new_script_inner(
   };
 
   if let XM::Lexeme(ref lex, _) = script_lex {
-    let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let script_wrap = lookup_lex_node(lex, ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = !force_pre && node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
@@ -3792,10 +3792,10 @@ pub fn eval_at(
     // faux_wrap returns Wrap([lexeme, content]) — extract the lexeme first.
     let s1_is_sub = s1.as_ref().is_none_or(|xm| {
       let lex = match xm {
-        XM::Lexeme(ref l, _) => Some(l.as_str()),
+        XM::Lexeme(ref l, _) => Some(&**l),
         XM::Wrap(ref items, ..) if !items.is_empty() => {
           if let XM::Lexeme(ref l, _) = items[0] {
-            Some(l.as_str())
+            Some(&**l)
           } else {
             None
           }
@@ -3907,12 +3907,12 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
   }
   // Old format: bare Lexeme — look up from DOM
   if let XM::Lexeme(ref lex, _) = script {
-    let node = lookup_lex_node(lex.as_str(), nodes).ok()?;
+    let node = lookup_lex_node(lex, nodes).ok()?;
     let children = node.get_child_elements();
     if let Some(first_child) = children.first() {
       for (i, n) in nodes.iter().enumerate() {
         if n == first_child {
-          return Some(XM::Lexeme(format!("{}", i + 1), Meta::default()));
+          return Some(XM::Lexeme(Rc::from(format!("{}", i + 1).as_str()), Meta::default()));
         }
       }
       return Some(XM::from(first_child));
@@ -4072,7 +4072,7 @@ pub fn norm_fenced(
 fn merge_vertbar_pair(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   let mut props = match xm {
     XM::Lexeme(ref lex, _) => {
-      if let Ok(node) = lookup_lex_node(lex.as_str(), nodes) {
+      if let Ok(node) = lookup_lex_node(lex, nodes) {
         XProps::from(node)
       } else {
         XProps::default()

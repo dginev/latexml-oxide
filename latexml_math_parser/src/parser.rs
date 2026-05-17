@@ -1095,7 +1095,14 @@ impl MathParser {
           // the wrong-direction parses at validation time, and adding
           // `alts.reverse()` measured WORSE on the test suite
           // (1281 vs 1284). Leave the bocage-natural order.
-          for opt in alts {
+          // End-of-traversal: take ownership of the peak Vec.
+          // `Rc::try_unwrap` succeeds unless the marpa driver still
+          // holds a copy in its cache (it returned its own clone via
+          // `cache.insert(peak, output.clone())`), so fall back to
+          // deep clone on the cold path.
+          let alts_vec =
+            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          for opt in alts_vec {
             if let Some(tree) = opt {
               if parses.contains(&tree) {
                 deduped += 1;
