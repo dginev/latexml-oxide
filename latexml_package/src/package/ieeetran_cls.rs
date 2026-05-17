@@ -650,4 +650,12 @@ LoadDefinitions!({
   // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
   // multi-author papers using the linebreakand recipe).
   DefMacro!("\\linebreakand", "\\par");
+  // \newlineauthors — sibling-recipe of \linebreakand commonly defined
+  // in IEEE conference-template papers (driver cluster: 2601.15292,
+  // 2601.16670, 2602.05977). User \newcommand body is the same
+  // \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}
+  // pattern that breaks our frontmatter digest. Pre-define so the
+  // \newcommand is silently ignored (Perl-parity: already-defined →
+  // dropped on the floor).
+  DefMacro!("\\newlineauthors", "\\par");
 });
