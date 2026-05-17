@@ -220,4 +220,9 @@ LoadDefinitions!({
   // Font formatting is irrelevant in our XML output; gobble args.
   // Witness 2504.00326.
   DefMacro!("\\caption@setfont{}{}", "");
+  // \phantomcaption (caption package, originally subcaption) — adds an
+  // invisible caption for layout reasons; we don't need spacing in XML
+  // output, so stub as no-op. Witness 2503.21681.
+  DefMacro!("\\phantomcaption", "");
+  DefMacro!("\\phantomsubcaption", "");
 });
