@@ -137,13 +137,18 @@ LoadDefinitions!({
     mode => "restricted_horizontal", enter_horizontal => true);
 
   //======================================================================
-  // Ignorable stuff
-  DefMacro!("\\shortauthors{}", None);
-  DefMacro!("\\titlenote{}", None);
-  DefMacro!("\\subtitlenote{}", None);
-  DefMacro!("\\authornote{}", None);
+  // Author-content notes. Perl L128-132 gobbles these silently; we
+  // surpass with content preservation per the user's "content-preserving
+  // AND error-free" directive — ACM authors regularly put real prose
+  // here (invited-paper credit, supplementary URLs, corresponding
+  // author email). Route to `<ltx:note>` with semantic role.
+  DefMacro!("\\shortauthors{}", "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  DefMacro!("\\titlenote{}",    "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\@add@frontmatter{ltx:note}[role=subtitlenote]{#1}");
+  DefMacro!("\\authornote{}",   "\\@add@frontmatter{ltx:note}[role=authornote]{#1}");
   DefMacro!("\\authornotemark[]", None);
-  DefMacro!("\\authorsaddresses{}", None);
+  DefMacro!("\\authorsaddresses{}",
+    "\\@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
   DefMacro!("\\startPage", None);
   DefMacro!("\\settopmatter{}", None);
   DefMacro!("\\copyrightpermissionfootnoterule", None);
