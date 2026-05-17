@@ -1293,6 +1293,19 @@ impl MathParser {
             _ => {},
           };
         }
+        // Multi-tree pragma: `(a, b)` and `[a, b]` (and half-open
+        // variants) standalone should default to the named-interval
+        // interpretation (`open-interval`, `closed-interval`, etc.)
+        // rather than the generic `vector@(2)` or `delimited-XY@(...)`
+        // wrapper. The math-parser grammar admits both; legacy
+        // tree-iter happens to pick the named interval, ASF
+        // Cartesian-product happens to pick the wrapper. This pragma
+        // drops the wrapper parses from the forest root iff a named-
+        // interval alternative also exists. Narrow scope: only the
+        // math root, only 2-element, only when both alternatives are
+        // present.
+        reduced_forest = reduced_forest.prefer_named_interval_at_root();
+
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are
         // **deliberately not wired in by default**. Both proved

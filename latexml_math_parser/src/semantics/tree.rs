@@ -683,6 +683,122 @@ impl XM {
     }
   }
 
+  /// Does the root of this parse tree match `Dual(Apply(op_meaning,
+  /// [_, _]), …)` — i.e. a Dual-wrapped 2-argument Apply with the
+  /// given operator meaning? Used by the math-root operator-preference
+  /// pragma.
+  fn root_dual_apply_meaning_is(&self, expected: &str, expected_arg_count: usize) -> bool {
+    match self {
+      XM::Dual(content, _, _, _) => content.root_apply_meaning_is(expected, expected_arg_count),
+      _ => false,
+    }
+  }
+
+  /// Inner helper: matches `Apply` with an operator whose meaning
+  /// equals `expected` and whose Args has exactly `expected_arg_count`
+  /// trees.
+  fn root_apply_meaning_is(&self, expected: &str, expected_arg_count: usize) -> bool {
+    if let XM::Apply(Operator(op), args, ..) = self {
+      if args.trees().len() != expected_arg_count {
+        return false;
+      }
+      match &**op {
+        XM::Token(props, _) => props.meaning.as_deref() == Some(expected),
+        XM::Lexeme(name, _) => name == expected || name.starts_with(&format!("{expected}:")),
+        _ => false,
+      }
+    } else {
+      false
+    }
+  }
+
+  /// Does the root of this parse match `Dual(?, Apply(op_meaning,
+  /// [...]))` where the op meaning starts with `delimited-`?
+  fn root_dual_apply_is_delimited_wrapper(&self) -> bool {
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    let XM::Apply(Operator(op), _, _, _) = &**content else {
+      return false;
+    };
+    match &**op {
+      XM::Token(props, _) => props.meaning.as_deref().is_some_and(|m| m.starts_with("delimited-")),
+      XM::Lexeme(name, _) => name.starts_with("delimited-"),
+      _ => false,
+    }
+  }
+
+  /// Does the root of this parse match `Dual(?, Apply(op_meaning,
+  /// [...]))` where the op meaning is one of the named-interval
+  /// operators (open/closed/half-open intervals)?
+  fn root_dual_apply_is_named_interval(&self) -> bool {
+    static NAMED_INTERVALS: &[&str] =
+      &["open-interval", "closed-interval", "open-closed-interval", "closed-open-interval"];
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    if let XM::Apply(Operator(op), args, ..) = &**content {
+      if args.trees().len() != 2 {
+        return false;
+      }
+      let meaning = match &**op {
+        XM::Token(props, _) => props.meaning.as_deref(),
+        XM::Lexeme(name, _) => Some(name.as_str()),
+        _ => None,
+      };
+      meaning.is_some_and(|m| NAMED_INTERVALS.contains(&m))
+    } else {
+      false
+    }
+  }
+
+  /// Multi-tree pragma: when the forest contains parses whose root
+  /// is a named 2-arg interval (`open-interval`, `closed-interval`,
+  /// or half-open variants) AND parses whose root is either
+  /// `vector@(2)` or `delimited-XY@(...)` wrapping the same span,
+  /// drop the non-interval parses.
+  ///
+  /// Rationale: for `(a, b)`, `[a, b]`, `(a, b]`, `[a, b)` — the
+  /// math-parser grammar admits both:
+  ///   - `interval_term → open-interval@(_, _)` / `closed-interval@(_, _)` (the named-interval interpretation)
+  ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket interpretation)
+  /// Math convention reads these as intervals. Tree-iteration order in
+  /// legacy picks the interval; under ASF the Cartesian-product
+  /// order goes the other way.
+  ///
+  /// Scope is **deliberately narrow**: only applied at the root of
+  /// the parse forest. Vectors / wrappers inside function arguments
+  /// (like `f(a, b)` parsed as `Apply(f, [vector(a, b)])`) are
+  /// unaffected because they're nested under an `Apply`, not at
+  /// the root. 3+ element parens-fenced lists also unaffected —
+  /// only `interval_term`'s 2-element shape matches.
+  pub fn prefer_named_interval_at_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_interval = trees.iter().any(|t| t.root_dual_apply_is_named_interval());
+        if !has_interval {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| {
+            // Keep the named-interval parses; drop generic
+            // `vector@(2)` and `delimited-XX@(...)` alternatives at
+            // the root.
+            t.root_dual_apply_is_named_interval()
+              || !(t.root_dual_apply_meaning_is("vector", 2) || t.root_dual_apply_is_delimited_wrapper())
+          })
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// given a tree, return the base operator name, if any
   /// Simple text summary for debug logging (no DOM access needed)
   pub fn text_summary(&self) -> String {
