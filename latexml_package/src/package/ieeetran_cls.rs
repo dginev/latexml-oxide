@@ -133,9 +133,18 @@ LoadDefinitions!({
   Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
   DefMacro!("\\IEEEoverridecommandlockouts", "");
   DefMacro!("\\overrideIEEEmargins", "");
-  DefMacro!("\\IEEEaftertitletext{}", "");
-  DefMacro!("\\IEEEspecialpapernotice{}", "");
-  DefMacro!("\\IEEEmembership{}", "");
+  // \IEEEaftertitletext{text} — after-title note (often invited-
+  // paper credit, conference name). Author content; preserve as
+  // ltx:note frontmatter rather than gobble.
+  DefMacro!("\\IEEEaftertitletext{}",
+    "\\@add@frontmatter{ltx:note}[role=aftertitle]{#1}");
+  // \IEEEspecialpapernotice{text} — e.g. "Invited Paper". Author
+  // content; preserve.
+  DefMacro!("\\IEEEspecialpapernotice{}",
+    "\\@add@frontmatter{ltx:note}[role=papernotice]{#1}");
+  // \IEEEmembership{text} — membership label after author name
+  // (e.g. "Member, IEEE"). Render inline in italic; do NOT drop.
+  DefMacro!("\\IEEEmembership{}", ",\\space\\textit{#1}");
   DefMacro!("\\IEEEauthorblockN{}", "#1");
   DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
   DefMacro!("\\IEEEauthorblockA{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
