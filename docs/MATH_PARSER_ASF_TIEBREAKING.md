@@ -410,7 +410,117 @@ SEMANTIC checks, each of which can be reasoned about individually.
 
 ---
 
-## Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17)
+## Phase 1 catalog — clean ASF baseline 1284/17 (after pragma fix)
+
+After landing the Dual-aware `FencedLettersAreFunctionArguments`
+pragma and moving it from expert to student tier (commit `d6c56`),
+the Class A function-app cases are resolved at the pragmatics
+layer. **1284/17** is the ASF parity now, with the legacy still at
+**1301/0**.
+
+The remaining 17 break down by pattern:
+
+### Class G — `(a, b)` as `vector` vs `open-interval` (3 tests)
+
+* `amstheorem_test`, `parens_test`, `picture_test` — input `(a, b)`
+  with 2 elements. Legacy → `open-interval@(a, b)`; ASF → `vector@(a, b)`.
+* Both the `interval_term` and `fenced_factor` grammar rules match;
+  Marpa tree-iter picks `interval`, ASF Cartesian picks `fenced`.
+
+### Class H — Function-app inside angle-delimiter (2 tests)
+
+* `count_parses_test`, `mathtools_test`:
+  `\langle B|\sum f|C\rangle` → expected
+  `delimited-⟨⟩@(B@(abs(sum)) * C)`; actual
+  `delimited-⟨⟩@(B * abs(sum) * C)`. The `B(...)` inside the
+  delimiters didn't get function-app'd. Same root as Class A but
+  the Dual structure differs because the parent is a delimited
+  wrapper.
+
+### Class B — `>=` lexed as `> absent =` (1 test)
+
+* `ambiguous_relations_test`: `x>=0` → expected `x >= 0`; actual
+  `x > absent = 0`. Lexer-level issue.
+
+### Class I — Function-app onto bare token, wider absorption (1 test)
+
+* `nested_application_test`: `Dx \times y \times z` → expected
+  `D@(x*y*z)`; actual `D@(x) * y * z`. `FunctionsPreferWiderAbsorption`
+  should be widening but isn't for this shape.
+
+### Class P — Compose left/right associativity (1 test)
+
+* `compose_test`: `(f*g*h)(x)` → expected `compose(compose(f,g), h) * x`
+  (left-assoc); actual `compose(f, compose(g, h)) * x` (right-assoc).
+
+### Class J — Set double-wrapping (1 test)
+
+* `latextheorem_test`: `{ds_1^2, …}` → expected `set@(item, …)`;
+  actual `set@(set@(item, …))`. Outer set wraps inner set
+  redundantly.
+
+### Class K — Standalone modifier (1 test)
+
+* `standalone_modifiers_test`: `(<0)` → expected `absent < 0`
+  (modifier-only); actual produces an unexpected XMath shape.
+
+### Class L — List/conditional precedence (1 test)
+
+* `subordinate_lists_test`: `x|y,z,t` → expected
+  `conditional@(x, list@(y, z, t))`; actual
+  `list@(conditional@(x, y), z, t)`. The `|` should bind looser
+  than `,`.
+
+### Class F — `||x||a||y||` norm-nesting (1 test)
+
+* `vertbars_test`: expected `norm@(x) * a * norm@(y)`; actual
+  `norm@(x * norm@(a) * y)`. Highly ambiguous bar-pairing.
+
+### Class M — Multirelation (1 test)
+
+* `ncases_test`: complex multi-relation expected; actual flat chain.
+
+### Class C — QM bra-ket `<a|f|b>` (1 test)
+
+* `qm_test`: expected `absent < a@(abs(f)) * b > absent`; actual
+  `absent < a * abs(f) * b > absent`. Same `B(...)` not function-
+  app'd, similar to Class H but inside angle-bracket context.
+
+### Class U — ASF fails to parse (1 test)
+
+* `physics_test`: ASF emits `<Math class="ltx_math_unparsed">`
+  for some sub-formula where legacy parses cleanly.
+
+### Class N, O, etc. — single tests (3)
+
+* `metarelation_elision_test`, `plainfonts_test`,
+  `compose_test` — case-by-case investigations needed.
+
+---
+
+### Strategic observation
+
+The Class A fix (Dual-aware pragma) was a single-source, one-pragma
+change that unlocked **12 tests** at once. The remaining 17 are
+spread across **~10 distinct patterns**, each likely needing its
+own targeted intervention. Estimated cost: 1-2 patterns per
+session, ~5-10 sessions to close.
+
+Alternative high-leverage moves that might fix multiple classes:
+
+* **Marpa `rule_rank` + `Order::rank()`**: rank `interval_term`
+  higher than `fenced_factor` to fix Class G in one stroke. Would
+  also need similar ranking for other ambiguous rule pairs.
+  Requires adding `.rank()` call in the marpa wrapper's ASF path.
+* **Multi-tree forest pragma for "specific operator > generic"**:
+  curate a list of `(generic, specific)` operator pairs (e.g.
+  `(vector, open-interval)`, `(times, function-app)`, etc.) and
+  prune trees with generic operators when specific alternatives
+  exist. Tricky to get right; risk of breaking edge cases.
+
+---
+
+## Original Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17)
 
 **Important correction**: the 1281/20 baseline quoted earlier in
 this doc was measured with a temporary `alts.reverse()` patch in
