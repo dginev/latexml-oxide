@@ -30,7 +30,6 @@ LoadDefinitions!({
   RawTeX!("\\definecolor{quantumgray}{HTML}{555555}");
   RawTeX!("\\DeclareRobustCommand{\\Quantum}{Quantum}");
 
-  RawTeX!("\\newenvironment{acknowledgements}{\\section*{Acknowledgements}}{}");
   RawTeX!("\\newenvironment{widetext}{}{}");
 
   // \onecolumngrid / \twocolumngrid — REVTeX column-switching primitives
@@ -50,6 +49,27 @@ LoadDefinitions!({
   DefMacro!("\\ead[]{}",
     "\\@add@frontmatter{ltx:note}[role=email]{#2}");
 
-  DefEnvironment!("{acknowledgments}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
-    mode => "internal_vertical");
+  // quantumarticle is REVTeX-based and inherits the REVTeX
+  // \acknowledgments / \acknowledgements bare-command pattern
+  // (NO \begin/\end). Driver: 2512.01858 (`\acknowledgments` on its
+  // own line with no explicit close, body followed by
+  // `\bibliography{...}`). Mirror revtex4_support_sty.rs:79-98 so
+  // the bare form opens <ltx:acknowledgements> and the bibliography
+  // / end of document auto-closes it. The tolerant \endacknowledgments
+  // closes only if the element is still open (covers cases where
+  // user did write \begin{acknowledgments}...\end{acknowledgments}
+  // and our opener+auto-close already wrapped the body).
+  Tag!("ltx:acknowledgements", auto_close => true);
+  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
+    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?)) });
+  DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
+    let cur = document.get_node().clone();
+    let has_open = document.findnode("ancestor-or-self::ltx:acknowledgements", Some(&cur)).is_some();
+    if has_open {
+      document.close_element("ltx:acknowledgements")?;
+    }
+  });
+  DefMacro!("\\acknowledgmentsname", "Acknowledgements");
+  Let!("\\acknowledgements", "\\acknowledgments");
+  Let!("\\endacknowledgements", "\\endacknowledgments");
 });
