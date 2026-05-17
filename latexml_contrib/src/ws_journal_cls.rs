@@ -31,4 +31,13 @@ LoadDefinitions!({
   DefMacro!("\\copyrightheading{}", "");
   DefMacro!("\\paperBack", "");
   DefMacro!("\\catchlinefont", "\\footnotesize");
+
+  // \ccode{...} — WS classification-codes block (PACS-style codes in
+  // ws-ijmpe and friends). Real def is styled paragraph; preserve as
+  // a classification note. Witness 2307.12748, 2307.16467.
+  DefMacro!("\\ccode{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  // \category{code}{name} — ws classification 2-arg variant.
+  DefMacro!("\\category{}{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#2}");
 });
