@@ -809,6 +809,43 @@ rsync reached 28k papers, a 2000-paper random sample produced
 **1999/1999 pass with 0 errors** (1 zip-extract issue).
 Cumulative validation across wp4: **3597/3597 papers, 0 errors**.
 
+**Round-34 surpass-Perl content-preservation wave (2026-05-17 06-08:00).**
+With 0 errors remaining, focus shifted to author content that Perl
+silently gobbles. Bindings touched (in batches per user guidance):
+
+| Binding | Macros preserved |
+|---|---|
+| acmart.cls | `\titlenote / \subtitlenote / \authornote / \authorsaddresses / \shortauthors` |
+| aa_support | `\journalname / \msnr / \idline / \lefthead / \righthead` |
+| icml_support | `\icmltitlerunning / \icmlaffiliation / \icmlcorrespondingauthor` |
+| JHEP | `\JHEP / \PrHEP` |
+| jheppub | `\subheader / \correctionref` |
+| omnibus.cls | `\firstpage / \lastpage / \runauthor / \runtitle / \corref / \listofauthors / \indexauthor / \shortauthors / \authors / \runningtitle / \printead / \numberofauthors / \thanksref` |
+| beamer.cls | `\logo / \titlegraphic` |
+| siamart.cls | `\dedicatory / \fundingsource / \headers / \funding → ltx:acknowledgements` |
+| cas-dc.cls | `\credit` (CRediT taxonomy) |
+| jmlr2e | `\jmlrheading / \ShortHeadings / \firstpageno` |
+| pos.cls | `\FullConference` |
+| lipics.cls | `\headers / \EventLogo` |
+| elsart_support_core | `\thanksref / \corref / \corauthref / \company / \aid / \firstpage / \lastpage` |
+| elsart_support | `\harvestremark / \query` |
+| latex_constructs (kernel) | `\thanksref → \textsuperscript` |
+| sv_support | `\thanksref / \combirunning` |
+| amsppt | `\leftheadtext / \rightheadtext / \cvolyear / \issueinfo` |
+| ams_support | `\URLhref / \MRhref` |
+| agujournal2019 | `\xexplain / \yexplain` (pass-through) |
+| biblatex | `\pagenote / \pagenotetext` |
+| html_sty | `\externalref → \ref` |
+
+Each preserved as `<ltx:note>` with semantic `role=` attribute, or
+inlined as `\textsuperscript` / `\href` / pass-through where the
+text is contextual. Tests 1301/0/0 throughout, clippy clean.
+
+These are output-quality improvements (no error/pass-rate change),
+matching the user feedback "we want to be content preserving AND
+error-free. Do not lose any article material deposited by authors
+when creating bindings."
+
 The HTML output dirs of all 32 stage runs were deleted in the
 same 2026-05-17 cleanup pass, recovering 471 GB of disk space.
 `~/data/_meta/{known_failures, failure_zip_paths,
