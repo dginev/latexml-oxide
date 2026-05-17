@@ -132,6 +132,32 @@ LoadDefinitions!({
     "\\section*{Conflicts of Interest}#1");
   DefMacro!("\\abbreviations{}{}",
     "\\section*{#1}#2");
+  // Additional MDPI back-matter macros (mdpi.cls L1199-1240). These are
+  // simple `\newcommand` stubs in the raw cls but in practice the cls
+  // raw-load stops or truncates partway through, leaving these undefined.
+  // Defining here ensures the back-matter content is preserved.
+  DefMacro!("\\supplementary{}",
+    "\\section*{Supplementary Materials}#1");
+  DefMacro!("\\institutionalreview{}",
+    "\\section*{Institutional Review Board Statement}#1");
+  DefMacro!("\\informedconsent{}",
+    "\\section*{Informed Consent Statement}#1");
+  DefMacro!("\\dataavailability{}",
+    "\\section*{Data Availability Statement}#1");
+  DefMacro!("\\publicinvolvement{}",
+    "\\section*{Public Involvement Statement}#1");
+  DefMacro!("\\guidelinesstandards{}",
+    "\\section*{Guidelines and Standards Statement}#1");
+  DefMacro!("\\entrylink{}",
+    "\\@add@frontmatter{ltx:note}[role=entrylink]{#1}");
+  DefMacro!("\\reviewreports{}",
+    "\\@add@frontmatter{ltx:note}[role=reviewreports]{#1}");
+  // \sampleavailability (older mdpi) — sister of \dataavailability.
+  DefMacro!("\\sampleavailability{}",
+    "\\section*{Sample Availability}#1");
+  // \patents — research patents declaration.
+  DefMacro!("\\patents{}",
+    "\\section*{Patents}#1");
   // \address[id]{text} — preserve as ltx:note.
   DefMacro!("\\address[]{}",
     "\\@add@frontmatter{ltx:note}[role=address]{#2}");

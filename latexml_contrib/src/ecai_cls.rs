@@ -21,4 +21,10 @@ LoadDefinitions!({
   // Witness 2408.16081.
   DefEnvironment!("{ack}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
+  // \ecaisubmission — page-numbering toggle for submission mode. No-op
+  // (ecai.cls L1100-ish flips internal `\if@ecai@subm` then issues
+  // `\pagenumbering{arabic}\setcounter{page}{1}`). The visible effect
+  // is page numbers in print; in HTML the page concept is meaningless.
+  // Witness 2305.13804.
+  DefMacro!("\\ecaisubmission", "");
 });

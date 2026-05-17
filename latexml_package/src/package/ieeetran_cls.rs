@@ -164,6 +164,14 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
   DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\@endIEEEkeywords");
 
+  // IEEEtai (IEEE Trans. AI) IEEEImpStatement environment — author
+  // content is the journal-mandated "Impact Statement" preceding the
+  // main body. Render as a labeled section so the substantive prose
+  // is preserved instead of bouncing as undefined. Witness 2305.09145.
+  DefEnvironment!("{IEEEImpStatement}",
+    "<ltx:note role='impactstatement' name='Impact Statement'>#body</ltx:note>",
+    mode => "internal_vertical");
+
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
   DefMacro!("\\IEEEcompsocitemizethanks{}", "\\thanks{#1}");

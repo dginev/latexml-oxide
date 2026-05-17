@@ -50,6 +50,10 @@ LoadDefinitions!({
   DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
   DefMacro!("\\collaborationImg[]{}", "");
+  // \@@@collaborator internal — mirror aas_support's definition so the
+  // expansion above resolves to actual XML markup instead of being
+  // reported as undefined. Witness 2305.10497.
+  DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
 
   // Acknowledgements — Perl L56-60 emits `name='#name'` on
   // <ltx:acknowledgements> with the name digested from
