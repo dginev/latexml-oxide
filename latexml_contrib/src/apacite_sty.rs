@@ -20,7 +20,8 @@ LoadDefinitions!({
   DefMacro!("\\APACaddressPublisher{}{}", "#1: #2");
   DefMacro!("\\APACaddressInstitution{}{}", "#1: #2");
   DefMacro!("\\APACexlab{}{}", "#2");
-  DefMacro!("\\APACmonth{}", "");
+  // \APACmonth{name} — month text (was gobbled). Pass through inline.
+  DefMacro!("\\APACmonth{}", "#1");
   DefMacro!("\\APACrefnote{}", "#1");
   DefMacro!("\\APAhyperref{}{}", "#2");
   DefMacro!("\\PrintBackRefs{}", "");

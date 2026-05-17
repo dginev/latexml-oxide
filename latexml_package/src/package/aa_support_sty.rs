@@ -374,7 +374,9 @@ LoadDefinitions!({
   DefMacro!("\\setitemitemindent{}", "");
   DefMacro!("\\andname", "and");
   DefMacro!("\\lastandname", ", and");
-  DefMacro!("\\AASection{}", "");
+  // \AASection{title} — A&A old-style section header. Surpass Perl
+  // gobble: route to standard \section{} so the title is rendered.
+  DefMacro!("\\AASection{}", "\\section{#1}");
   DefMacro!("\\Online", "");
 
   DefRegister!("\\aftertext" => Dimension::new(5 * 65536));
