@@ -90,4 +90,7 @@ LoadDefinitions!({
   DefMacro!("\\bdoi{}", "#1");
   DefMacro!("\\burl{}", "#1");
   DefMacro!("\\bothertype{}", "#1");
+  DefMacro!("\\bparticle{}", "#1");
+  DefMacro!("\\bnote{}", "#1");
+  DefMacro!("\\btype{}", "#1");
 });
