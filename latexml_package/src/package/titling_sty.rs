@@ -42,8 +42,11 @@ LoadDefinitions!({
   RawTeX!("\\predate{\\begin{center}\\large}");
   RawTeX!("\\postdate{\\par\\end{center}}");
 
-  // Titling page environment — Perl L88
-  DefEnvironment!("{titlingpage}", "");
+  // Titling page environment — Perl L88. Preserve body so author-
+  // typed alternate-title-page content (institution, abstract,
+  // dedication, etc.) reaches the XML (content-preserving). The
+  // previous empty replacement silently dropped the entire page.
+  DefEnvironment!("{titlingpage}", "#body");
 
   DefMacro!("\\killtitle",         "");
   DefMacro!("\\keepthetitle",      "");
