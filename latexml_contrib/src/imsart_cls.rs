@@ -21,4 +21,13 @@ LoadDefinitions!({
   // imsart.sty L2268, L2360: \let\kwd@sep\relax inside conditionals
   // we may not fully replay. Define defensively. Witness 2406.17390.
   Let!("\\kwd@sep", "\\relax");
+
+  // {funding} env — IMS journal funding-statement frontmatter.
+  // Preserve as ltx:note (content-preservation directive). Witness
+  // 2406.15844 (+5 imsart papers).
+  DefEnvironment!("{funding}",
+    "<ltx:note role='funding'>#body</ltx:note>");
+  // {acknowledgement} / {acknowledgements} aliases for spelling variants.
+  DefEnvironment!("{acknowledgement}",
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });
