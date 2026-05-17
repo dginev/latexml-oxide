@@ -546,6 +546,15 @@ binary, also pending rebuild):
   layout helpers, no-op in XML.
 * `achemso`: eager-load `setspace` for `\singlespacing/\doublespacing`
   in preambles. Witness 2503.21357.
+* `lineno`: `{internallinenumbers}` / `{internallinenumbers*}` env
+  stubs — lineno.sty defines them via `\newcommand`+`\@namedef`
+  rather than `\newenvironment` so our env tracker misses them.
+  Witness 52 papers (iclr2025_conference templates).
+* `ams_support`: unconditional `{pf}` / `{pf*}` = proof aliases —
+  amsart.cls L1922 defines them globally, not only under 2.09 mode.
+  Witness 14 papers (cas-sc, amsart, AMS-derived classes).
+* `imsart`: `{funding}` + `{acknowledgement}` env stubs.
+  Witness 2406.15844.
 
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
