@@ -40,4 +40,21 @@ LoadDefinitions!({
   // \category{code}{name} — ws classification 2-arg variant.
   DefMacro!("\\category{}{}",
     "\\@add@frontmatter{ltx:classification}[scheme=#1]{#2}");
+
+  // {history} env — publication-history wrapper (received/revised/
+  // accepted dates). Preserve as a frontmatter note. Witness
+  // 2307.12748, 2307.16467 + 2 stage-3/4 ws papers.
+  DefEnvironment!("{history}",
+    "<ltx:note role='history'>#body</ltx:note>",
+    mode => "internal_vertical");
+  // \received{date}, \revised{date}, \accepted{date}, \comby{name}
+  // — used inside {history}. Preserve as inline notes.
+  DefMacro!("\\received{}", "Received #1\\par");
+  DefMacro!("\\revised{}", "Revised #1\\par");
+  DefMacro!("\\accepted{}", "Accepted #1\\par");
+  DefMacro!("\\comby{}", "Communicated by #1\\par");
+  // \email / \http / \uurl — render contact info inline.
+  DefMacro!("\\email{}", "\\textit{#1}\\par");
+  DefMacro!("\\http{}", "\\textit{http://#1}\\par");
+  DefMacro!("\\uurl{}", "\\textit{#1}\\par");
 });

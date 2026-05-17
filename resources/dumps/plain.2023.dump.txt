@@ -17,19 +17,20 @@
 #   All keys and proto are url-encoded (%09 for tab etc.); token body
 #   tokens use the form <catcode_int>:<url_encoded_text> joined by commas.
 # Section 0: early let-aliases (12) — target in bootstrap
+M	\repeat	PA	\fi
+M	%0D	PA	\lx@normal@par
+M	\ifp@ge	PA	\iffalse
+M	\ifus@	PA	\iffalse
+M	\ifv@	PA	\iffalse
 M	\ifdt@p	PA	\iffalse
 M	\if@mid	PA	\iffalse
-M	%0D	PA	\lx@normal@par
 M	\if@cr	PA	\iffalse
 M	\ifh@	PA	\iffalse
 M	\endline	PA	\cr
 M	\endgraf	PA	\lx@normal@par
 M	\ifr@ggedbottom	PA	\iffalse
-M	\repeat	PA	\fi
-M	\ifp@ge	PA	\iffalse
-M	\ifus@	PA	\iffalse
-M	\ifv@	PA	\iffalse
 # Section 1: regular entries (924)
+V	\count253	Nm	1000
 V	\count20	Nm	253
 V	\toks0	TK	
 V	font_shared_key_\fivebf	S	fontinfo_cmbx5 at 327680sp
@@ -39,16 +40,16 @@ V	font_shared_key_\tenit	S	fontinfo_cmti10 at 655360sp
 V	fontinfo_\tenbf	F	name=cmbx10size=10family=serifseries=boldshape=uprightencoding=OT1flags=0
 V	\count17	Nm	-1
 V	\dimen13	D	0
+V	\skewchar\sevensy	Nm	48
 V	skewchar_fontinfo_cmssi10 at 655360sp	Nm	-1
 V	font_shared_key_\fivesy	S	fontinfo_cmsy5 at 327680sp
-V	\skewchar\sevensy	Nm	48
 V	scriptfont_6	T	16:\sevenbf
 V	skewchar_fontinfo_cmsl10 at 655360sp	Nm	-1
 V	hyphenchar_fontinfo_cmti10 at 655360sp	Nm	45
 V	\count14	Nm	15
 V	\skip17	G	65536
-V	skewchar_fontinfo_cmsltt10 at 655360sp	Nm	-1
 V	fontinfo_\tensy	F	name=cmsy10size=10series=mediumshape=uprightencoding=OMSflags=0
+V	skewchar_fontinfo_cmsltt10 at 655360sp	Nm	-1
 V	\count11	Nm	15
 V	skewchar_fontinfo_cmbx8 at 524288sp	Nm	-1
 V	hyphenchar_fontinfo_cmr5 at 327680sp	Nm	45
@@ -64,39 +65,39 @@ V	skewchar_fontinfo_cmr6 at 393216sp	Nm	-1
 V	skewchar_fontinfo_cmssq8 at 524288sp	Nm	-1
 V	font_shared_key_\tenrm	S	fontinfo_cmr10 at 655360sp
 V	font_shared_key_\tenbf	S	fontinfo_cmbx10 at 655360sp
-V	skewchar_fontinfo_cmsy8 at 524288sp	Nm	-1
 V	fontinfo_\tensl	F	name=cmsl10size=10family=serifseries=mediumshape=slantedencoding=OT1flags=0
-V	hyphenchar_fontinfo_cmmi8 at 524288sp	Nm	45
+V	skewchar_fontinfo_cmsy8 at 524288sp	Nm	-1
 V	\dimen11	D	65536
+V	hyphenchar_fontinfo_cmmi8 at 524288sp	Nm	45
 V	hyphenchar_fontinfo_cmmib10 at 655360sp	Nm	45
 V	textfont_2	T	16:\tensy
 V	\dimen15	D	573441
 V	current_FontDef	T	16:\tenrm
 V	\dimen2	D	0
-V	hyphenchar_fontinfo_cmmi7 at 458752sp	Nm	45
 V	\dimen10	D	1073741823
-V	\dimen14	D	196608
 V	fontinfo_\preloaded	F	name=manfntsize=1family=graphicseries=mediumshape=uprightencoding=manfntflags=0
+V	\dimen14	D	196608
+V	hyphenchar_fontinfo_cmmi7 at 458752sp	Nm	45
 V	font_shared_key_\tensy	S	fontinfo_cmsy10 at 655360sp
 V	hyphenchar_fontinfo_cmbx10 at 655360sp	Nm	45
 V	skewchar_fontinfo_cmtt9 at 589824sp	Nm	-1
 V	textfont_5	T	16:\tensl
 V	hyphenchar_fontinfo_cmssqi8 at 524288sp	Nm	45
-V	__loading_banner__plain.tex	N
 V	skewchar_fontinfo_cmss10 at 655360sp	Nm	-1
 V	hyphenchar_fontinfo_cmti7 at 458752sp	Nm	45
+V	__loading_banner__plain.tex	N
 V	hyphenchar_fontinfo_cmtt10 at 943718sp	Nm	45
 V	scriptscriptfont_3	T	16:\tenex
 V	hyphenchar_fontinfo_cmti9 at 589824sp	Nm	45
 V	skewchar_fontinfo_cmsl8 at 524288sp	Nm	-1
-V	hyphenchar_fontinfo_cmsy10 at 655360sp	Nm	45
 V	hyphenchar_fontinfo_cmr9 at 589824sp	Nm	45
+V	hyphenchar_fontinfo_cmsy10 at 655360sp	Nm	45
 V	skewchar_fontinfo_cmdunh10 at 655360sp	Nm	-1
+V	\count23	Nm	100
 V	font_shared_key_\preloaded	S	fontinfo_manfnt at 65536sp
 V	font_shared_key_\tensl	S	fontinfo_cmsl10 at 655360sp
-V	\count23	Nm	100
-V	parshape	N
 V	scriptscriptfont_6	T	16:\fivebf
+V	parshape	N
 V	\skewchar\teni	Nm	127
 V	\toks10	TK	16:\hfil
 V	font_shared_key_\sevenbf	S	fontinfo_cmbx7 at 458752sp
@@ -108,76 +109,76 @@ V	\skewchar\tensy	Nm	48
 V	scriptscriptfont_0	T	16:\fiverm
 V	hyphenchar_fontinfo_cmbx9 at 589824sp	Nm	45
 V	font_shared_key_\sevensy	S	fontinfo_cmsy7 at 458752sp
-V	skewchar_fontinfo_cmmib10 at 655360sp	Nm	-1
 V	hyphenchar_fontinfo_cmsy7 at 458752sp	Nm	45
 V	hyphenchar_fontinfo_cmr6 at 393216sp	Nm	45
+V	skewchar_fontinfo_cmmib10 at 655360sp	Nm	-1
 V	hyphenchar_fontinfo_cmsltt10 at 655360sp	Nm	45
 V	\count15	Nm	11
 V	\skip13	G	196608,p65536,m65536
-V	SUPPRESS_UNDEFINED_ERRORS	B	0
 V	skewchar_fontinfo_cmr7 at 458752sp	Nm	-1
+V	SUPPRESS_UNDEFINED_ERRORS	B	0
 V	skewchar_fontinfo_cmmi8 at 524288sp	Nm	-1
 V	font_shared_key_\teni	S	fontinfo_cmmi10 at 655360sp
+V	skewchar_fontinfo_cmssqi8 at 524288sp	Nm	-1
 V	font_shared_key_\fivei	S	fontinfo_cmmi5 at 327680sp
 V	hyphenchar_fontinfo_cmsy9 at 589824sp	Nm	45
-V	skewchar_fontinfo_cmssqi8 at 524288sp	Nm	-1
 V	\count12	Nm	17
 V	hyphenchar_fontinfo_cmssq8 at 524288sp	Nm	45
-V	skewchar_fontinfo_cmmi7 at 458752sp	Nm	-1
 V	\output	TK	16:\plainoutput
+V	skewchar_fontinfo_cmmi7 at 458752sp	Nm	-1
 V	hyphenchar_fontinfo_cmtt8 at 524288sp	Nm	45
 V	\count24	Nm	100
 V	skewchar_fontinfo_cmssbx10 at 655360sp	Nm	-1
-V	scriptfont_2	T	16:\sevensy
 V	hyphenchar_fontinfo_cmmi5 at 327680sp	Nm	45
 V	skewchar_fontinfo_cmti7 at 458752sp	Nm	-1
+V	scriptfont_2	T	16:\sevensy
 V	fontinfo_\tenrm	F	name=cmr10size=10family=serifseries=mediumshape=uprightencoding=OT1flags=0
 V	\count0	Nm	1
-V	skewchar_fontinfo_cmti9 at 589824sp	Nm	-1
 V	\skip10	G	-65536000,p65536,pf2
+V	skewchar_fontinfo_cmti9 at 589824sp	Nm	-1
 V	hyphenchar_fontinfo_cmss10 at 655360sp	Nm	45
 V	hyphenchar_fontinfo_manfnt at 65536sp	Nm	45
 V	\dimen0	D	0
 V	hyphenchar_fontinfo_cmbx6 at 393216sp	Nm	45
 V	hyphenchar_fontinfo_cmsl9 at 589824sp	Nm	45
+V	skewchar_fontinfo_cmtt10 at 655360sp	Nm	-1
 V	\skewchar\seveni	Nm	127
 V	fontinfo_\sevenrm	F	name=cmr7size=7family=serifseries=mediumshape=uprightencoding=OT1flags=0
-V	skewchar_fontinfo_cmtt10 at 655360sp	Nm	-1
 V	hyphenchar_fontinfo_cmbx5 at 327680sp	Nm	45
 V	fontinfo_\seveni	F	name=cmmi7size=7family=mathseries=mediumshape=italicencoding=OMLflags=0
-V	hyphenchar_fontinfo_cmbsy10 at 655360sp	Nm	45
 V	\skip0	G	0
 V	\count10	Nm	25
-V	\skip15	G	786432,p262144,m262144
-V	\skip16	G	786432
 V	hyphenchar_fontinfo_cmsy6 at 393216sp	Nm	45
 V	hyphenchar_fontinfo_cmsy5 at 327680sp	Nm	45
+V	\skip15	G	786432,p262144,m262144
 V	skewchar_fontinfo_cmex10 at 655360sp	Nm	-1
+V	\skip16	G	786432
 V	skewchar_fontinfo_cmbx7 at 458752sp	Nm	-1
 V	hyphenchar_fontinfo_cmdunh10 at 655360sp	Nm	45
-V	font_shared_key_\fiverm	S	fontinfo_cmr5 at 327680sp
+V	hyphenchar_fontinfo_cmbsy10 at 655360sp	Nm	45
 V	\delimiterfactor	Nm	901
+V	font_shared_key_\fiverm	S	fontinfo_cmr5 at 327680sp
 V	interlinepenalties	N
+V	\righthyphenmin	Nm	3
 V	skewchar_fontinfo_cmbx9 at 589824sp	Nm	-1
 V	fontinfo_\tentt	F	name=cmtt10size=10family=typewriterseries=mediumshape=uprightencoding=OT1flags=0
-V	\righthyphenmin	Nm	3
-V	skewchar_fontinfo_cmsy7 at 458752sp	Nm	-1
 V	skewchar_fontinfo_cmr7 at 951452sp	Nm	-1
-V	\skip254	G	786432,p262144,m262144
 V	font_shared_key_\sevenrm	S	fontinfo_cmr7 at 458752sp
 V	hyphenchar_fontinfo_cmr7 at 458752sp	Nm	45
+V	skewchar_fontinfo_cmsy7 at 458752sp	Nm	-1
 V	\count255	Nm	0
 V	textfont_4	T	16:\tenit
+V	\skip254	G	786432,p262144,m262144
 V	hyphen_raw_loaded	B	1
 V	font_shared_key_\seveni	S	fontinfo_cmmi7 at 458752sp
 V	fontinfo_\tenex	F	name=cmex10size=10series=mediumshape=uprightencoding=OMXflags=0
 V	INTERPRETING_DEFINITIONS	B	0
-V	skewchar_fontinfo_cmsy9 at 589824sp	Nm	-1
-V	\skewchar\fivei	Nm	127
-V	\skip253	G	0,p0,m0
 V	\count19	Nm	0
 V	hyphenchar_fontinfo_cmmi9 at 589824sp	Nm	45
+V	skewchar_fontinfo_cmsy9 at 589824sp	Nm	-1
+V	\skewchar\fivei	Nm	127
 V	\skewchar\fivesy	Nm	48
+V	\skip253	G	0,p0,m0
 V	scriptfont_1	T	16:\seveni
 V	\dimen12	D	0
 V	skewchar_fontinfo_cmtt8 at 524288sp	Nm	-1
@@ -186,14 +187,14 @@ V	skewchar_fontinfo_cmmi10 at 655360sp	Nm	-1
 V	\count16	Nm	-1
 V	skewchar_fontinfo_cmr8 at 524288sp	Nm	-1
 V	skewchar_fontinfo_cmmi5 at 327680sp	Nm	-1
-V	fontinfo_\sevenbf	F	name=cmbx7size=7family=serifseries=boldshape=uprightencoding=OT1flags=0
 V	hyphenchar_fontinfo_cmu10 at 655360sp	Nm	45
 V	\belowdisplayshortskip	G	458752,p196608,m262144
+V	fontinfo_\sevenbf	F	name=cmbx7size=7family=serifseries=boldshape=uprightencoding=OT1flags=0
 V	hyphenchar_fontinfo_cmti8 at 524288sp	Nm	45
 V	skewchar_fontinfo_manfnt at 65536sp	Nm	-1
-V	font_shared_key_\tentt	S	fontinfo_cmtt10 at 655360sp
 V	\count13	Nm	9
 V	skewchar_fontinfo_cmbx6 at 393216sp	Nm	-1
+V	font_shared_key_\tentt	S	fontinfo_cmtt10 at 655360sp
 V	skewchar_fontinfo_cmsl9 at 589824sp	Nm	-1
 V	skewchar_fontinfo_cmbsy10 at 655360sp	Nm	-1
 V	\dimen254	D	37890293
@@ -220,8 +221,8 @@ V	hyphenchar_fontinfo_cmssi10 at 655360sp	Nm	45
 V	__loading_banner__hyphen	N
 V	fontfamily	I	0
 V	hyphenchar_fontinfo_cmr7 at 951452sp	Nm	45
-V	textfont_3	T	16:\tenex
 V	\lefthyphenmin	Nm	2
+V	textfont_3	T	16:\tenex
 V	\dimen1	D	0
 V	hyphenchar_fontinfo_cmbx8 at 524288sp	Nm	45
 V	fontinfo_\fivebf	F	name=cmbx5size=5family=serifseries=boldshape=uprightencoding=OT1flags=0
@@ -233,22 +234,275 @@ V	hyphenchar_fontinfo_cmsy8 at 524288sp	Nm	45
 V	hyphenchar_fontinfo_cmcsc10 at 655360sp	Nm	45
 V	skewchar_fontinfo_cmmi9 at 589824sp	Nm	-1
 V	\count21	Nm	253
-V	skewchar_fontinfo_cmbx10 at 655360sp	Nm	-1
 V	fontinfo_\fivesy	F	name=cmsy5size=5series=mediumshape=uprightencoding=OMSflags=0
+V	skewchar_fontinfo_cmbx10 at 655360sp	Nm	-1
 V	scriptscriptfont_1	T	16:\fivei
 V	hyphenchar_fontinfo_cmr8 at 524288sp	Nm	45
 V	fontinfo_\fiverm	F	name=cmr5size=5family=serifseries=mediumshape=uprightencoding=OT1flags=0
-V	skewchar_fontinfo_cmtt10 at 943718sp	Nm	-1
-V	\count254	Nm	1000
 V	INCLUDE_STYLES	B	0
 V	hyphenchar_fontinfo_cmtt9 at 589824sp	Nm	45
 V	skewchar_fontinfo_cmu10 at 655360sp	Nm	-1
+V	skewchar_fontinfo_cmtt10 at 943718sp	Nm	-1
+V	\count254	Nm	1000
 V	\skip14	G	393216,p131072,m131072
 V	skewchar_fontinfo_cmsy10 at 655360sp	Nm	-1
 V	skewchar_fontinfo_cmti8 at 524288sp	Nm	-1
 V	hyphenchar_fontinfo_cmmi10 at 655360sp	Nm	45
 V	scriptfont_3	T	16:\tenex
-V	\count253	Nm	1000
+M	\Longrightarrow	E	\Longrightarrow	0		16:\Relbar,16:\joinrel,16:\Rightarrow		
+M	\ge	R	\geq	CD	12821	8805	Register
+M	\arg	E	\arg	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:g,2:},16:\nolimits		
+M	\bigbreak	E	\bigbreak	0		16:\par,16:\ifdim,16:\lastskip,12:<,16:\bigskipamount,16:\removelastskip,16:\penalty,12:-,12:2,12:0,12:0,16:\bigskip,16:\fi		
+M	\}	E	\rbrace	0		16:\delimiter,12:",12:5,12:2,12:6,12:7,12:3,12:0,12:9,10: 		
+M	\xi	R	\xi	CD	280	958	Register
+M	\sharp	R	\sharp	CD	349	9839	Register
+M	\mapsto	E	\mapsto	0		16:\mapstochar,16:\rightarrow		
+M	\mid	R	\mid	CD	12906	124	Register
+M	\Sigma	R	\Sigma	CD	28678	931	Register
+M	\oldstyle	E	\oldstyle	0		16:\fam,16:\@ne,16:\teni		
+M	\ttfam	R	\ttfam	CD	7		Register
+M	\Longleftarrow	E	\Longleftarrow	0		16:\Leftarrow,16:\joinrel,16:\Relbar		
+M	\tw@	R	\tw@	CD	2		Register
+M	\propto	R	\propto	CD	12847	8733	Register
+M	\nearrow	R	\nearrow	CD	12837	8599	Register
+M	\Updownarrow	E	\Updownarrow	0		16:\delimiter,12:",12:3,12:2,12:6,11:D,12:3,12:7,12:7,10: 		
+M	\varepsilon	R	\varepsilon	CD	290	949	Register
+M	\lim	E	\lim	0		16:\mathop,1:{,16:\rm,11:l,11:i,11:m,2:}		
+M	\newhelp	E	\newhelp	2		16:\newtoks,18:1,18:1,16:\expandafter,1:{,16:\csname,18:2,16:\endcsname,2:}	{}{}	Plain{}Plain{}
+M	\diamondsuit	R	\diamondsuit	CD	637	9826	Register
+M	\ph@nt	E	\ph@nt	0		16:\ifmmode,16:\def,16:\next,1:{,16:\mathpalette,16:\mathph@nt,2:},16:\else,16:\let,16:\next,16:\makeph@nt,16:\fi,16:\next		
+M	\narrower	E	\narrower	0		16:\advance,16:\leftskip,16:\parindent,16:\advance,16:\rightskip,16:\parindent		
+M	\Longleftrightarrow	E	\Longleftrightarrow	0		16:\Leftarrow,16:\joinrel,16:\Rightarrow		
+M	\OE	R	\OE	CD	30		Register
+M	\centering	R	\centering	G	0		\skip11
+M	\coprod	R	\coprod	CD	4960	8720	Register
+M	\oplus	R	\oplus	CD	8712	8853	Register
+M	\cup	R	\cup	CD	8795	8746	Register
+M	\newskip	E	\newskip	0		16:\alloc@,12:2,16:\skip,16:\skipdef,16:\insc@unt		
+M	\star	R	\star	CD	8511	8902	Register
+M	\hphantom	E	\hphantom	0		16:\v@false,16:\h@true,16:\ph@nt		
+M	\delta	R	\delta	CD	270	948	Register
+M	\oe	R	\oe	CD	27		Register
+M	\braceru	R	\braceru	CD	893		Register
+M	\rbrack	E	\rbrack	0		12:]		
+M	\arccos	E	\arccos	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:c,11:c,11:o,11:s,2:},16:\nolimits		
+M	\bigwedge	R	\bigwedge	CD	4950	8896	Register
+M	\@m	R	\@m	CD	1000	232	Register
+M	\leq	R	\leq	CD	12820	8804	Register
+M	\showhyphens	E	\showhyphens	1		16:\setbox,12:0,16:\vbox,1:{,16:\parfillskip,16:\z@skip,16:\hsize,16:\maxdimen,16:\tenrm,16:\pretolerance,16:\m@ne,16:\tolerance,16:\m@ne,16:\hbadness,12:0,16:\showboxdepth,12:0,16:\ ,18:1,2:}	{}	Plain{}
+M	\t@bb@x	E	\t@bb@x	0		16:\if@cr,16:\egroup,16:\else,16:\hss,16:\egroup,16:\global,16:\setbox,16:\tabsyet,16:\hbox,1:{,16:\unhbox,16:\tabsyet,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\ifvoid,16:\@ne,16:\global,16:\setbox,16:\@ne,16:\hbox,11:t,11:o,16:\wd,16:\z@,1:{,2:},16:\else,16:\setbox,16:\z@,16:\hbox,11:t,11:o,16:\wd,16:\@ne,1:{,16:\unhbox,16:\z@,2:},16:\fi,16:\global,16:\setbox,16:\tabsdone,16:\hbox,1:{,16:\box,16:\@ne,16:\unhbox,16:\tabsdone,2:},16:\fi,16:\box,16:\z@		
+M	\sl	E	\sl	0		16:\fam,16:\slfam,16:\tensl		
+M	\thinspace	E	\thinspace	0		16:\kern,12:.,12:1,12:6,12:6,12:6,12:7,11:e,11:m,10: 		
+M	\@crtrue	E	\@crtrue	0		16:\let,16:\if@cr,16:\iftrue		
+M	%1A	E	%1A	0		16:\not,12:=		
+M	\magstephalf	E	\magstephalf	0		12:1,12:0,12:9,12:5,10: 		
+M	\psi	R	\psi	CD	288	968	Register
+M	\frown	R	\frown	CD	12639	8994	Register
+M	\interdisplaylinepenalty	R	\interdisplaylinepenalty	N	0		\count23
+M	\insc@unt	R	\insc@unt	N	0		\count20
+M	\bigcup	R	\bigcup	CD	4947	8899	Register
+M	\dim	E	\dim	0		16:\mathop,1:{,16:\rm,11:d,11:i,11:m,2:},16:\nolimits		
+M	\tabalign	E	\tabalign	0		16:\us@true,16:\m@ketabbox		
+M	\%2C	E	\%2C	0		16:\mskip,16:\thinmuskip		
+M	\aleph	R	\aleph	CD	576	8501	Register
+M	\notin	E	\notin	0		16:\mathrel,1:{,16:\mathpalette,16:\c@ncel,16:\in,2:}		
+M	\ast	R	\ast	CD	8707	8727	Register
+M	\bigskip	E	\bigskip	0		16:\vskip,16:\bigskipamount		
+M	\hookrightarrow	E	\hookrightarrow	0		16:\lhook,16:\joinrel,16:\rightarrow		
+M	\tenbf	FD	fontinfo_\tenbf
+M	\acute	E	\acute	0		16:\mathaccent,12:",12:7,12:0,12:1,12:3,10: 		
+M	\ll	R	\ll	CD	12828	8810	Register
+M	\pagebody	E	\pagebody	0		16:\vbox,11:t,11:o,16:\vsize,1:{,16:\boxmaxdepth,16:\maxdepth,16:\pagecontents,2:}		
+M	\relbar	E	\relbar	0		16:\mathrel,1:{,16:\smash,12:-,2:}		
+M	\loggingall	E	\loggingall	0		16:\tracingcommands,16:\tw@,16:\tracingstats,16:\tw@,16:\tracingpages,16:\@ne,16:\tracingoutput,16:\@ne,16:\tracinglostchars,16:\@ne,16:\tracingmacros,16:\tw@,16:\tracingparagraphs,16:\@ne,16:\tracingrestores,16:\@ne,16:\showboxbreadth,16:\maxdimen,16:\showboxdepth,16:\maxdimen		
+M	\biggm	E	\biggm	0		16:\mathrel,16:\bigg		
+M	\rq	E	\rq	0		12:'		
+M	\l	E	\l	0		16:\char,12:3,12:2,11:l		
+M	\vec	E	\vec	0		16:\mathaccent,12:",12:0,12:1,12:7,11:E,10: 		
+M	\@lign	E	\@lign	0		16:\tabskip,16:\z@skip,16:\everycr,1:{,2:}		
+M	\dosupereject	E	\dosupereject	0		16:\ifnum,16:\insertpenalties,12:>,16:\z@,16:\line,1:{,2:},16:\kern,12:-,16:\topskip,16:\nobreak,16:\vfill,16:\supereject,16:\fi		
+M	\tabsdone	R	\tabsdone	CD	14		Register
+M	\bot	R	\bot	CD	575	8869	Register
+M	\pi	R	\pi	CD	281	960	Register
+M	\negthinspace	E	\negthinspace	0		16:\kern,12:-,12:.,12:1,12:6,12:6,12:6,12:7,11:e,11:m,10: 		
+M	\longrightarrow	E	\longrightarrow	0		16:\relbar,16:\joinrel,16:\rightarrow		
+M	\varpi	R	\varpi	CD	292	982	Register
+M	\cdot	R	\cdot	CD	8705	8901	Register
+M	\Leftarrow	R	\Leftarrow	CD	12840	8656	Register
+M	\Re	R	\Re	CD	572	8476	Register
+M	\footline	R	\footline	TK	0		\toks11
+M	\angle	E	\angle	0		1:{,16:\vbox,1:{,16:\ialign,1:{,3:$,16:\m@th,16:\scriptstyle,6:#,3:$,16:\crcr,16:\not,16:\mathrel,1:{,16:\mkern,12:1,12:4,11:m,11:u,2:},16:\crcr,16:\noalign,1:{,16:\nointerlineskip,2:},10:%0A,16:\mkern,12:2,12:.,12:5,11:m,11:u,16:\leaders,16:\hrule,11:h,11:e,11:i,11:g,11:h,11:t,12:.,12:3,12:4,11:p,11:t,16:\hfill,16:\mkern,12:2,12:.,12:5,11:m,11:u,16:\crcr,2:},2:},2:}		
+M	\intop	R	\intop	CD	4946	8747	Register
+M	\newinsert	E	\newinsert	1		16:\global,16:\advance,16:\insc@unt,11:b,11:y,16:\m@ne,16:\ch@ck,12:0,16:\insc@unt,16:\count,16:\ch@ck,12:1,16:\insc@unt,16:\dimen,16:\ch@ck,12:2,16:\insc@unt,16:\skip,16:\ch@ck,12:4,16:\insc@unt,16:\box,16:\allocationnumber,12:=,16:\insc@unt,16:\global,16:\chardef,18:1,12:=,16:\allocationnumber,16:\wlog,1:{,16:\string,18:1,12:=,16:\string,16:\insert,16:\the,16:\allocationnumber,2:}	{}	Plain{}
+M	\bye	E	\bye	0		16:\par,16:\vfill,16:\supereject,16:\end		
+M	\mscount	R	\mscount	N	0		\count25
+M	\hrulefill	E	\hrulefill	0		16:\leaders,16:\hrule,16:\hfill		
+M	\seveni	FD	fontinfo_\seveni
+M	\cot	E	\cot	0		16:\mathop,1:{,16:\rm,11:c,11:o,11:t,2:},16:\nolimits		
+M	\Delta	R	\Delta	CD	28673	916	Register
+M	\Leftrightarrow	R	\Leftrightarrow	CD	12844	8660	Register
+M	\bracelu	R	\bracelu	CD	892		Register
+M	\brace	E	\brace	0		16:\atopwithdelims,16:\{,16:\}		
+M	\vdash	R	\vdash	CD	12896	8866	Register
+M	\Psi	R	\Psi	CD	28681	936	Register
+M	\filbreak	E	\filbreak	0		16:\par,16:\vfil,16:\penalty,12:-,12:2,12:0,12:0,16:\vfilneg		
+M	\neg	R	\neg	CD	570	172	Register
+M	\O	R	\O	CD	31		Register
+M	\finsm@sh	E	\finsm@sh	0		16:\ht,16:\z@,16:\z@,16:\dp,16:\z@,16:\z@,16:\box,16:\z@		
+M	\forall	R	\forall	CD	568	8704	Register
+M	\@cclv	R	\@cclv	CD	255		Register
+M	\_	E	\_	0		16:\leavevmode,16:\kern,12:.,12:0,12:6,11:e,11:m,10: ,16:\vbox,1:{,16:\hrule,11:w,11:i,11:d,11:t,11:h,12:.,12:3,11:e,11:m,2:}		
+M	\@MM	R	\@MM	CD	20000	32	Register
+M	\models	E	\models	0		16:\mathrel,12:|,16:\joinrel,12:=		
+M	\sin	E	\sin	0		16:\mathop,1:{,16:\rm,11:s,11:i,11:n,2:},16:\nolimits		
+M	\f@t	E	\f@t	1		18:1,16:\@foot	{}	Plain{}
+M	\theta	R	\theta	CD	274	952	Register
+M	\check	E	\check	0		16:\mathaccent,12:",12:7,12:0,12:1,12:4,10: 		
+M	\%13	E	\u	1		1:{,16:\accent,12:2,12:1,10: ,18:1,2:}	{}	Plain{}
+M	\o	R	\o	CD	28		Register
+M	\bigcirc	R	\bigcirc	CD	8717	9675	Register
+M	\rceil	E	\rceil	0		16:\delimiter,12:",12:5,12:2,12:6,12:5,12:3,12:0,12:7,10: 		
+M	\sqcup	R	\sqcup	CD	8820	8852	Register
+M	\tanh	E	\tanh	0		16:\mathop,1:{,16:\rm,11:t,11:a,11:n,11:h,2:},16:\nolimits		
+M	\smallskipamount	R	\smallskipamount	G	0		\skip13
+M	\makeheadline	E	\makeheadline	0		16:\vbox,11:t,11:o,16:\z@,1:{,16:\vskip,12:-,12:2,12:2,12:.,12:5,16:\p@,16:\line,1:{,16:\vbox,11:t,11:o,12:8,12:.,12:5,16:\p@,1:{,2:},16:\the,16:\headline,2:},16:\vss,2:},16:\nointerlineskip		
+M	\nopagenumbers	E	\nopagenumbers	0		16:\footline,1:{,16:\hfil,2:}		
+M	\det	E	\det	0		16:\mathop,1:{,16:\rm,11:d,11:e,11:t,2:}		
+M	\leftharpoondown	R	\leftharpoondown	CD	12585	8637	Register
+M	\pmatrix	E	\pmatrix	1		16:\left,12:(,16:\matrix,1:{,18:1,2:},16:\right,12:)	{}	Plain{}
+M	\dt@ptrue	E	\dt@ptrue	0		16:\let,16:\ifdt@p,16:\iftrue		
+M	\Rightarrow	R	\Rightarrow	CD	12841	8658	Register
+M	\log	E	\log	0		16:\mathop,1:{,16:\rm,11:l,11:o,11:g,2:},16:\nolimits		
+M	\tau	R	\tau	CD	284	964	Register
+M	\Orb	E	\Orb	0		16:\mathhexbox,12:2,12:0,11:D		
+M	\makefootline	E	\makefootline	0		16:\baselineskip,12:2,12:4,16:\p@,16:\lineskiplimit,16:\z@,16:\line,1:{,16:\the,16:\footline,2:}		
+M	\newmuskip	E	\newmuskip	0		16:\alloc@,12:3,16:\muskip,16:\muskipdef,16:\@cclv		
+M	\maxdimen	R	\maxdimen	D	0		\dimen10
+M	\makeph@nt	E	\makeph@nt	1		16:\setbox,16:\z@,16:\hbox,1:{,18:1,2:},16:\finph@nt	{}	Plain{}
+M	\@ins	E	\@ins	0		16:\par,16:\begingroup,16:\setbox,16:\z@,16:\vbox,16:\bgroup		
+M	\dotfill	E	\dotfill	0		16:\cleaders,16:\hbox,1:{,3:$,16:\m@th,16:\mkern,12:1,12:.,12:5,11:m,11:u,12:.,16:\mkern,12:1,12:.,12:5,11:m,11:u,3:$,2:},16:\hfill		
+M	\longleftrightarrow	E	\longleftrightarrow	0		16:\leftarrow,16:\joinrel,16:\rightarrow		
+M	\@midtrue	E	\@midtrue	0		16:\let,16:\if@mid,16:\iftrue		
+M	\prod	R	\prod	CD	4945	8719	Register
+M	\gg	R	\gg	CD	12829	8811	Register
+M	\v	E	\v	1		1:{,16:\accent,12:2,12:0,10: ,18:1,2:}	{}	Plain{}
+M	\widetilde	E	\widetilde	0		16:\mathaccent,12:",12:0,12:3,12:6,12:5,10: 		
+M	\fivesy	FD	fontinfo_\fivesy
+M	\midinsert	E	\midinsert	0		16:\@midtrue,16:\@ins		
+M	\normalbaselineskip	R	\normalbaselineskip	G	0		\skip16
+M	\ne	E	\neq	0		16:\not,12:=		
+M	\csc	E	\csc	0		16:\mathop,1:{,16:\rm,11:c,11:s,11:c,2:},16:\nolimits		
+M	\pagecontents	E	\pagecontents	0		16:\ifvoid,16:\topins,16:\else,16:\unvbox,16:\topins,16:\fi,16:\dimen@,12:=,16:\dp,16:\@cclv,16:\unvbox,16:\@cclv,16:\ifvoid,16:\footins,16:\else,16:\vskip,16:\skip,16:\footins,16:\footnoterule,16:\unvbox,16:\footins,16:\fi,16:\ifr@ggedbottom,16:\kern,12:-,16:\dimen@,16:\vfil,16:\fi		
+M	\triangleright	R	\triangleright	CD	8494	9655	Register
+M	~	E	~	0		16:\penalty,16:\@M,16:\ 		
+M	\ell	R	\ell	CD	352	8467	Register
+M	\ominus	R	\ominus	CD	8713	8854	Register
+M	\=	E	\=	1		1:{,16:\accent,12:2,12:2,10: ,18:1,2:}	{}	Plain{}
+M	\normalbaselines	E	\normalbaselines	0		16:\lineskip,16:\normallineskip,16:\baselineskip,16:\normalbaselineskip,16:\lineskiplimit,16:\normallineskiplimit		
+M	\d	E	\d	1		1:{,16:\o@lign,1:{,16:\relax,18:1,16:\crcr,16:\hidewidth,16:\sh@ft,1:{,12:-,12:1,11:e,11:x,2:},12:.,16:\hidewidth,2:},2:}	{}	Plain{}
+M	\rightarrow	R	\rightarrow	CD	12833	8594	Register
+M	\r@ggedbottomfalse	E	\r@ggedbottomfalse	0		16:\let,16:\ifr@ggedbottom,16:\iffalse		
+M	\rightline	E	\rightline	1		16:\line,1:{,16:\hss,18:1,2:}	{}	Plain{}
+M	\bar	E	\bar	0		16:\mathaccent,12:",12:7,12:0,12:1,12:6,10: 		
+M	\obeylines	E	\obeylines	0		16:\catcode,12:`,16:\%0D,16:\active,16:\let,13:%0D,16:\par		
+M	\bigotimes	R	\bigotimes	CD	4942	10754	Register
+M	\lbrack	E	\lbrack	0		12:[		
+M	\&	R	\&	CD	38		Register
+M	\dag	E	\dag	0		16:\mathhexbox,12:2,12:7,12:9		
+M	\supereject	E	\supereject	0		16:\par,16:\penalty,12:-,16:\@MM		
+M	\it	E	\it	0		16:\fam,16:\itfam,16:\tenit		
+M	\cdotp	R	\cdotp	CD	25089	8901	Register
+M	\newlanguage	E	\newlanguage	0		16:\alloc@,12:9,16:\language,16:\chardef,16:\@cclvi		
+M	\wedge	R	\wedge	CD	8798	8743	Register
+M	\nonfrenchspacing	E	\nonfrenchspacing	0		16:\sfcode,12:`,16:\.,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\?,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\!,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\:,12:2,12:0,12:0,12:0,16:\sfcode,12:`,16:\;,12:1,12:5,12:0,12:0,16:\sfcode,12:`,16:\%2C,12:1,12:2,12:5,12:0,10: 		
+M	\multispan	E	\multispan	1		16:\omit,16:\mscount,18:1,16:\relax,16:\loop,16:\ifnum,16:\mscount,12:>,16:\@ne,16:\sp@n,16:\repeat	{}	Plain{}
+M	\rhook	R	\rhook	CD	12589	11815	Register
+M	\r@ggedbottomtrue	E	\r@ggedbottomtrue	0		16:\let,16:\ifr@ggedbottom,16:\iftrue		
+M	\upbracefill	E	\upbracefill	0		3:$,16:\m@th,16:\setbox,16:\z@,16:\hbox,1:{,3:$,16:\braceld,3:$,2:},16:\bracelu,16:\leaders,16:\vrule,11:h,11:e,11:i,11:g,11:h,11:t,16:\ht,16:\z@,11:d,11:e,11:p,11:t,11:h,16:\z@,16:\hfill,16:\bracerd,16:\braceld,16:\leaders,16:\vrule,11:h,11:e,11:i,11:g,11:h,11:t,16:\ht,16:\z@,11:d,11:e,11:p,11:t,11:h,16:\z@,16:\hfill,16:\braceru,3:$		
+M	\supset	R	\supset	CD	12827	8835	Register
+M	\rho	R	\rho	CD	282	961	Register
+M	\rlh@	E	\rlh@	1		16:\vcenter,1:{,16:\m@th,16:\hbox,1:{,16:\ooalign,1:{,16:\raise,12:2,11:p,11:t,10:%0A,16:\hbox,1:{,3:$,18:1,16:\rightharpoonup,3:$,2:},16:\crcr,3:$,18:1,16:\leftharpoondown,3:$,2:},2:},2:}	{}	Plain{}
+M	\preloaded	N
+M	\voidb@x	R	\voidb@x	CD	10		Register
+M	\~	E	\~	1		1:{,16:\accent,12:",12:7,11:E,10: ,18:1,2:}	{}	Plain{}
+M	\smallint	R	\smallint	CD	4723	8747	Register
+M	\longleftarrow	E	\longleftarrow	0		16:\leftarrow,16:\joinrel,16:\relbar		
+M	\widehat	E	\widehat	0		16:\mathaccent,12:",12:0,12:3,12:6,12:2,10: 		
+M	\proclaim	E	\proclaim	2		16:\medbreak,16:\noindent,1:{,16:\bf,18:1,12:.,16:\enspace,2:},1:{,16:\sl,18:2,16:\par,2:},16:\ifdim,16:\lastskip,12:<,16:\medskipamount,16:\removelastskip,16:\penalty,12:5,12:5,16:\medskip,16:\fi	Until:. Until:\par	UntilUntil:. 12:.,10: UntilUntil:\par16:\par
+M	\pageinsert	E	\pageinsert	0		16:\@midfalse,16:\p@getrue,16:\@ins		
+M	\hidewidth	E	\hidewidth	0		16:\hskip,16:\hideskip		
+M	\Pr	E	\Pr	0		16:\mathop,1:{,16:\rm,11:P,11:r,2:}		
+M	\rootbox	R	\rootbox	CD	15		Register
+M	\@crfalse	E	\@crfalse	0		16:\let,16:\if@cr,16:\iffalse		
+M	\rightleftharpoons	E	\rightleftharpoons	0		16:\mathrel,1:{,16:\mathpalette,16:\rlh@,1:{,2:},2:}		
+M	\dimen@	R	\dimen@	D	0		\dimen0
+M	\centerline	E	\centerline	1		16:\line,1:{,16:\hss,18:1,16:\hss,2:}	{}	Plain{}
+M	\obeyspaces	E	\obeyspaces	0		16:\catcode,12:`,16:\ ,16:\active		
+M	\n@space	E	\n@space	0		16:\nulldelimiterspace,16:\z@,16:\m@th		
+M	\eqalign	E	\eqalign	1		16:\null,16:\%2C,16:\vcenter,1:{,16:\openup,16:\jot,16:\m@th,16:\ialign,1:{,16:\strut,16:\hfil,3:$,16:\displaystyle,1:{,6:#,2:},3:$,4:&,3:$,16:\displaystyle,1:{,1:{,2:},6:#,2:},3:$,16:\hfil,16:\crcr,18:1,16:\crcr,2:},2:},16:\%2C	{}	Plain{}
+M	 	E	\space	0		10: 		
+M	\alpha	R	\alpha	CD	267	945	Register
+M	\pr@@@t	E	\pr@@@t	2		18:2,16:\egroup	{}{}	Plain{}Plain{}
+M	\aa	E	\aa	0		16:\accent,12:2,12:3,11:a		
+M	\newtoks	E	\newtoks	0		16:\alloc@,12:5,16:\toks,16:\toksdef,16:\@cclv		
+M	\sqsupseteq	R	\sqsupseteq	CD	12919	8850	Register
+M	\strutbox	R	\strutbox	CD	11		Register
+M	\varsigma	R	\varsigma	CD	294	962	Register
+M	\fmtversion	E	\fmtversion	0		12:3,12:.,12:1,12:4,12:1,12:5,12:9,12:2,12:6,12:5,12:3,12:5		
+M	\nointerlineskip	E	\nointerlineskip	0		16:\prevdepth,12:-,12:1,12:0,12:0,12:0,16:\p@		
+M	\cong	E	\cong	0		16:\mathrel,1:{,16:\mathpalette,16:\@vereq,16:\sim,2:}		
+M	\min	E	\min	0		16:\mathop,1:{,16:\rm,11:m,11:i,11:n,2:}		
+M	\hglue	E	\hglue	0		16:\afterassignment,16:\hgl@,16:\skip@,12:=		
+M	\vdots	E	\vdots	0		16:\vbox,1:{,16:\baselineskip,12:4,16:\p@,16:\lineskiplimit,16:\z@,16:\kern,12:6,16:\p@,16:\hbox,1:{,12:.,2:},16:\hbox,1:{,12:.,2:},16:\hbox,1:{,12:.,2:},2:}		
+M	\!	E	\!	0		16:\mskip,12:-,16:\thinmuskip		
+M	\tenit	FD	fontinfo_\tenit
+M	\diamond	R	\diamond	CD	8709	8900	Register
+M	\ialign	E	\ialign	0		16:\everycr,1:{,2:},16:\tabskip,16:\z@skip,16:\halign		
+M	\medbreak	E	\medbreak	0		16:\par,16:\ifdim,16:\lastskip,12:<,16:\medskipamount,16:\removelastskip,16:\penalty,12:-,12:1,12:0,12:0,16:\medskip,16:\fi		
+M	\Bigg	E	\Bigg	1		1:{,16:\hbox,1:{,3:$,16:\left,18:1,16:\vbox,11:t,11:o,12:1,12:7,12:.,12:5,16:\p@,1:{,2:},16:\right,12:.,16:\n@space,3:$,2:},2:}	{}	Plain{}
+M	\pageno	R	\pageno	N	0		\count0
+M	\tensy	FD	fontinfo_\tensy
+M	\rmoustache	E	\rmoustache	0		16:\delimiter,12:",12:5,12:3,12:7,11:B,12:3,12:4,12:1,10: 		
+M	\ooalign	E	\ooalign	0		16:\lineskiplimit,12:-,16:\maxdimen,16:\oalign		
+M	\Im	R	\Im	CD	573	8465	Register
+M	\@penup	E	\@penup	0		16:\advance,16:\lineskip,16:\dimen@,16:\advance,16:\baselineskip,16:\dimen@,16:\advance,16:\lineskiplimit,16:\dimen@		
+M	\{	E	\lbrace	0		16:\delimiter,12:",12:4,12:2,12:6,12:6,12:3,12:0,12:8,10: 		
+M	\topins	R	\topins	CD	253		Register
+M	\sevenrm	FD	fontinfo_\sevenrm
+M	\prime	R	\prime	CD	560	8242	Register
+M	\bigodot	R	\bigodot	CD	4938	10752	Register
+M	\bowtie	E	\bowtie	0		16:\mathrel,16:\triangleright,16:\joinrel,16:\mathrel,16:\triangleleft		
+M	\liminf	E	\liminf	0		16:\mathop,1:{,16:\rm,11:l,11:i,11:m,16:\%2C,11:i,11:n,11:f,2:}		
+M	\wr	R	\wr	CD	8815	8768	Register
+M	\overbrace	E	\overbrace	1		16:\mathop,1:{,16:\vbox,1:{,16:\m@th,16:\ialign,1:{,6:#,16:\crcr,16:\noalign,1:{,16:\kern,12:3,16:\p@,2:},10:%0A,16:\downbracefill,16:\crcr,16:\noalign,1:{,16:\kern,12:3,16:\p@,16:\nointerlineskip,2:},10:%0A,3:$,16:\hfil,16:\displaystyle,1:{,18:1,2:},16:\hfil,3:$,16:\crcr,2:},2:},2:},16:\limits	{}	Plain{}
+M	\lbrace	E	\lbrace	0		16:\delimiter,12:",12:4,12:2,12:6,12:6,12:3,12:0,12:8,10: 		
+M	\not	R	\not	CD	12854	47	Register
+M	\arctan	E	\arctan	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:c,11:t,11:a,11:n,2:},16:\nolimits		
+M	\bordermatrix	E	\bordermatrix	1		16:\begingroup,16:\m@th,16:\setbox,16:\z@,16:\vbox,1:{,16:\def,16:\cr,1:{,16:\crcr,16:\noalign,1:{,16:\kern,12:2,16:\p@,16:\global,16:\let,16:\cr,16:\endline,2:},2:},16:\ialign,1:{,3:$,6:#,3:$,16:\hfil,16:\kern,12:2,16:\p@,16:\kern,16:\p@renwd,4:&,16:\thinspace,16:\hfil,3:$,6:#,3:$,16:\hfil,4:&,4:&,16:\quad,16:\hfil,3:$,6:#,3:$,16:\hfil,16:\crcr,16:\omit,16:\strut,16:\hfil,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},18:1,16:\crcr,16:\omit,16:\strut,16:\cr,2:},2:},16:\setbox,16:\tw@,16:\vbox,1:{,16:\unvcopy,16:\z@,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\setbox,16:\tw@,16:\hbox,1:{,16:\unhbox,16:\@ne,16:\unskip,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\setbox,16:\tw@,16:\hbox,1:{,3:$,16:\kern,16:\wd,16:\@ne,16:\kern,12:-,16:\p@renwd,16:\left,12:(,16:\kern,12:-,16:\wd,16:\@ne,16:\global,16:\setbox,16:\@ne,16:\vbox,1:{,16:\box,16:\@ne,16:\kern,12:2,16:\p@,2:},16:\vcenter,1:{,16:\kern,12:-,16:\ht,16:\@ne,16:\unvbox,16:\z@,16:\kern,12:-,16:\baselineskip,2:},16:\%2C,16:\right,12:),3:$,2:},16:\null,16:\;,16:\vbox,1:{,16:\kern,16:\ht,16:\@ne,16:\box,16:\tw@,2:},16:\endgroup	{}	Plain{}
+M	\clubsuit	R	\clubsuit	CD	636	9827	Register
+M	\copyright	E	\copyright	0		1:{,16:\ooalign,1:{,16:\hfil,16:\raise,12:.,12:0,12:7,11:e,11:x,16:\hbox,1:{,11:c,2:},16:\hfil,16:\crcr,16:\Orb,2:},2:}		
+M	\Upsilon	R	\Upsilon	CD	28679	933	Register
+M	\itemitem	E	\itemitem	0		16:\par,16:\indent,16:\hangindent,12:2,16:\parindent,16:\textindent		
+M	\tt	E	\tt	0		16:\fam,16:\ttfam,16:\tentt		
+M	\matrix	E	\matrix	1		16:\null,16:\%2C,16:\vcenter,1:{,16:\normalbaselines,16:\m@th,16:\ialign,1:{,16:\hfil,3:$,6:#,3:$,16:\hfil,4:&,4:&,16:\quad,16:\hfil,3:$,6:#,3:$,16:\hfil,16:\crcr,16:\mathstrut,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},10:%0A,18:1,16:\crcr,16:\mathstrut,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},2:},2:},16:\%2C	{}	Plain{}
+M	\equiv	R	\equiv	CD	12817	8801	Register
+M	\t@bbox	E	\t@bbox	0		16:\setbox,16:\z@,16:\hbox,16:\bgroup		
+M	\mathpalette	E	\mathpalette	2		16:\mathchoice,1:{,18:1,16:\displaystyle,1:{,18:2,2:},2:},1:{,18:1,16:\textstyle,1:{,18:2,2:},2:},1:{,18:1,16:\scriptstyle,1:{,18:2,2:},2:},1:{,18:1,16:\scriptscriptstyle,1:{,18:2,2:},2:}	{}{}	Plain{}Plain{}
+M	\ldotp	R	\ldotp	CD	24890	46	Register
+M	\cases	E	\cases	1		16:\left,16:\{,16:\%2C,16:\vcenter,1:{,16:\normalbaselines,16:\m@th,16:\ialign,1:{,3:$,6:#,16:\hfil,3:$,4:&,16:\quad,6:#,16:\hfil,16:\crcr,18:1,16:\crcr,2:},2:},16:\right,12:.	{}	Plain{}
+M	\count@	R	\count@	N	0		\count255
+M	\setminus	R	\setminus	CD	8814	92	Register
+M	\newbox	E	\newbox	0		16:\alloc@,12:4,16:\box,16:\chardef,16:\insc@unt		
+M	\dospecials	E	\dospecials	0		16:\do,16:\ ,16:\do,16:\\,16:\do,16:\{,16:\do,16:\},16:\do,16:\$,16:\do,16:\&,16:\do,16:\#,16:\do,16:\^,16:\do,16:\%0B,16:\do,16:\_,16:\do,16:\%01,16:\do,16:\%25,16:\do,16:\~		
+M	\sqsubseteq	R	\sqsubseteq	CD	12918	8849	Register
+M	\`	E	\`	1		1:{,16:\accent,12:1,12:8,10: ,18:1,2:}	{}	Plain{}
+M	\p@renwd	R	\p@renwd	D	0		\dimen15
+M	\item	E	\item	0		16:\par,16:\hang,16:\textindent		
+M	\medskipamount	R	\medskipamount	G	0		\skip14
+M	\mp	R	\mp	CD	8711	8723	Register
+M	\gcd	E	\gcd	0		16:\mathop,1:{,16:\rm,11:g,11:c,11:d,2:}		
+M	\perp	R	\perp	CD	12863	8869	Register
+M	\finph@nt	E	\finph@nt	0		16:\setbox,16:\tw@,16:\null,16:\ifv@,16:\ht,16:\tw@,16:\ht,16:\z@,16:\dp,16:\tw@,16:\dp,16:\z@,16:\fi,16:\ifh@,16:\wd,16:\tw@,16:\wd,16:\z@,16:\fi,16:\box,16:\tw@		
 M	\otimes	R	\otimes	CD	8714	8855	Register
 M	\inf	E	\inf	0		16:\mathop,1:{,16:\rm,11:i,11:n,11:f,2:}		
 M	\bigoplus	R	\bigoplus	CD	4940	10753	Register
@@ -271,6 +525,7 @@ M	\mit	E	\mit	0		16:\fam,16:\@ne
 M	\folio	E	\folio	0		16:\ifnum,16:\pageno,12:<,16:\z@,16:\romannumeral,12:-,16:\pageno,16:\else,16:\number,16:\pageno,16:\fi		
 M	\@ne	R	\@ne	CD	1		Register
 M	\imath	R	\imath	CD	379	305	Register
+M	\newdimen	E	\newdimen	0		16:\alloc@,12:1,16:\dimen,16:\dimendef,16:\insc@unt		
 M	\supseteq	R	\supseteq	CD	12819	8839	Register
 M	\leftharpoonup	R	\leftharpoonup	CD	12584	8636	Register
 M	\quad	E	\quad	0		16:\hskip,12:1,11:e,11:m,16:\relax		
@@ -282,7 +537,7 @@ M	\preceq	R	\preceq	CD	12822	10927	Register
 M	\pm	R	\pm	CD	8710	177	Register
 M	\p@gefalse	E	\p@gefalse	0		16:\let,16:\ifp@ge,16:\iffalse		
 M	\P	E	\P	0		16:\mathhexbox,12:2,12:7,11:B		
-M	\newskip	E	\newskip	0		16:\alloc@,12:2,16:\skip,16:\skipdef,16:\insc@unt		
+M	\space	E	\space	0		10: 		
 M	\searrow	R	\searrow	CD	12838	8600	Register
 M	\hbar	E	\hbar	0		1:{,16:\mathchar,12:',12:2,12:6,16:\mkern,12:-,12:9,11:m,11:u,11:h,2:}		
 M	\cap	R	\cap	CD	8796	8745	Register
@@ -353,6 +608,7 @@ M	\lceil	E	\lceil	0		16:\delimiter,12:",12:4,12:2,12:6,12:4,12:3,12:0,12:6,10:
 M	\uplus	R	\uplus	CD	8797	8844	Register
 M	\rbrace	E	\rbrace	0		16:\delimiter,12:",12:5,12:2,12:6,12:7,12:3,12:0,12:9,10: 		
 M	\braceld	R	\braceld	CD	890		Register
+M	%0C	E	%0C	0		16:\par		
 M	\@vereq	E	\@vereq	2		16:\lower,12:.,12:5,16:\p@,16:\vbox,1:{,16:\lineskiplimit,16:\maxdimen,16:\lineskip,12:-,12:.,12:5,16:\p@,16:\ialign,1:{,3:$,16:\m@th,18:1,16:\hfil,6:#,16:\hfil,3:$,16:\crcr,18:2,16:\crcr,12:=,16:\crcr,2:},2:}	{}{}	Plain{}Plain{}
 M	\bigm	E	\bigm	0		16:\mathrel,16:\big		
 M	\newread	E	\newread	0		16:\alloc@,12:6,16:\read,16:\chardef,16:\sixt@@n		
@@ -392,7 +648,6 @@ M	\raggedbottom	E	\raggedbottom	0		16:\topskip,12:1,12:0,16:\p@,11:p,11:l,11:u,1
 M	\hookleftarrow	E	\hookleftarrow	0		16:\leftarrow,16:\joinrel,16:\rhook		
 M	\mathsm@sh	E	\mathsm@sh	2		16:\setbox,16:\z@,16:\hbox,1:{,3:$,16:\m@th,18:1,1:{,18:2,2:},3:$,2:},16:\finsm@sh	{}{}	Plain{}Plain{}
 M	\footins	R	\footins	CD	254		Register
-M	\newmuskip	E	\newmuskip	0		16:\alloc@,12:3,16:\muskip,16:\muskipdef,16:\@cclv		
 M	\overleftarrow	E	\overleftarrow	1		16:\vbox,1:{,16:\m@th,16:\ialign,1:{,6:#,16:\crcr,16:\leftarrowfill,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\p@,16:\nointerlineskip,2:},10:%0A,3:$,16:\hfil,16:\displaystyle,1:{,18:1,2:},16:\hfil,3:$,16:\crcr,2:},2:}	{}	Plain{}
 M	\jot	R	\jot	D	0		\dimen14
 M	\simeq	R	\simeq	CD	12839	8771	Register
@@ -408,7 +663,7 @@ M	\dot	E	\dot	0		16:\mathaccent,12:",12:7,12:0,12:5,11:F,10:
 M	\c	E	\c	1		1:{,16:\setbox,16:\z@,16:\hbox,1:{,18:1,2:},16:\ifdim,16:\ht,16:\z@,12:=,12:1,11:e,11:x,16:\accent,12:2,12:4,10: ,18:1,16:\else,16:\ooalign,1:{,16:\unhbox,16:\z@,16:\crcr,16:\hidewidth,16:\char,12:2,12:4,16:\hidewidth,2:},16:\fi,2:}	{}	Plain{}
 M	\beginsection	E	\beginsection	1		16:\vskip,16:\z@,11:p,11:l,11:u,11:s,12:.,12:3,16:\vsize,16:\penalty,12:-,12:2,12:5,12:0,10:%0A,16:\vskip,16:\z@,11:p,11:l,11:u,11:s,12:-,12:.,12:3,16:\vsize,16:\bigskip,16:\vskip,16:\parskip,16:\message,1:{,18:1,2:},16:\leftline,1:{,16:\bf,18:1,2:},16:\nobreak,16:\smallskip,16:\noindent	Until:\par	UntilUntil:\par16:\par
 M	\neq	E	\neq	0		16:\not,12:=		
-M	~	E	~	0		16:\penalty,16:\@M,16:\ 		
+M	\newcount	E	\newcount	0		16:\alloc@,12:0,16:\count,16:\countdef,16:\insc@unt		
 M	\sec	E	\sec	0		16:\mathop,1:{,16:\rm,11:s,11:e,11:c,2:},16:\nolimits		
 M	\slfam	R	\slfam	CD	5		Register
 M	\underbar	E	\underbar	1		3:$,16:\setbox,16:\z@,16:\hbox,1:{,18:1,2:},16:\dp,16:\z@,16:\z@,16:\m@th,16:\underline,1:{,16:\box,16:\z@,2:},3:$	{}	Plain{}
@@ -447,6 +702,7 @@ M	\.	E	\.	1		1:{,16:\accent,12:9,12:5,10: ,18:1,2:}	{}	Plain{}
 M	\arcsin	E	\arcsin	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:c,11:s,11:i,11:n,2:},16:\nolimits		
 M	\Uparrow	E	\Uparrow	0		16:\delimiter,12:",12:3,12:2,12:2,11:A,12:3,12:7,11:E,10: 		
 M	\leavevmode	E	\leavevmode	0		16:\unhbox,16:\voidb@x		
+M	\\	E	\\	1		18:1	Until:pt	UntilUntil:pt12:p,12:t
 M	\Xi	R	\Xi	CD	28676	926	Register
 M	\longmapsto	E	\longmapsto	0		16:\mapstochar,16:\longrightarrow		
 M	\nobreak	E	\nobreak	0		16:\penalty,16:\@M		
@@ -455,13 +711,11 @@ M	\exp	E	\exp	0		16:\mathop,1:{,16:\rm,11:e,11:x,11:p,2:},16:\nolimits
 M	\llap	E	\llap	1		16:\hbox,11:t,11:o,16:\z@,1:{,16:\hss,18:1,2:}	{}	Plain{}
 M	\us@true	E	\us@true	0		16:\let,16:\ifus@,16:\iftrue		
 M	\lg	E	\lg	0		16:\mathop,1:{,16:\rm,11:l,11:g,2:},16:\nolimits		
-M	 	E	\space	0		10: 		
 M	\%25	R	\%25	CD	37		Register
 M	\upsilon	R	\upsilon	CD	285	965	Register
 M	\oalign	E	\oalign	1		16:\leavevmode,16:\vtop,1:{,16:\baselineskip,16:\z@skip,16:\lineskip,12:.,12:2,12:5,11:e,11:x,16:\ialign,1:{,6:#,16:\crcr,18:1,16:\crcr,2:},2:}	{}	Plain{}
 M	\vglue	E	\vglue	0		16:\afterassignment,16:\vgl@,16:\skip@,12:=		
 M	\rightharpoonup	R	\rightharpoonup	CD	12586	8640	Register
-M	\newtoks	E	\newtoks	0		16:\alloc@,12:5,16:\toks,16:\toksdef,16:\@cclv		
 M	\s@tt@b	E	\s@tt@b	0		16:\let,16:\nxt,16:\relax,16:\us@false,16:\m@ketabbox		
 M	\lfloor	E	\lfloor	0		16:\delimiter,12:",12:4,12:2,12:6,12:2,12:3,12:0,12:4,10: 		
 M	\vfootnote	E	\vfootnote	1		16:\insert,16:\footins,16:\bgroup,16:\interlinepenalty,16:\interfootnotelinepenalty,16:\splittopskip,16:\ht,16:\strutbox,16:\splitmaxdepth,16:\dp,16:\strutbox,16:\floatingpenalty,16:\@MM,16:\leftskip,16:\z@skip,16:\rightskip,16:\z@skip,16:\spaceskip,16:\z@skip,16:\xspaceskip,16:\z@skip,16:\textindent,1:{,18:1,2:},16:\footstrut,16:\futurelet,16:\next,16:\fo@t	{}	Plain{}
@@ -486,6 +740,7 @@ M	\downarrow	E	\downarrow	0		16:\delimiter,12:",12:3,12:2,12:2,12:3,12:3,12:7,12
 M	\ss	R	\ss	CD	25		Register
 M	\wp	R	\wp	CD	381	8472	Register
 M	\|	E	\Vert	0		16:\delimiter,12:",12:2,12:6,11:B,12:3,12:0,11:D,10: 		
+M	\ldots	E	\ldots	0		16:\mathinner,1:{,16:\ldotp,16:\ldotp,16:\ldotp,2:}		
 M	\le	R	\leq	CD	12820	8804	Register
 M	\breve	E	\breve	0		16:\mathaccent,12:",12:7,12:0,12:1,12:5,10: 		
 M	\z@skip	R	\z@skip	G	0		\skip12
@@ -500,7 +755,6 @@ M	\newwrite	E	\newwrite	0		16:\alloc@,12:7,16:\write,16:\chardef,16:\sixt@@n
 M	\flat	R	\flat	CD	347	9837	Register
 M	\doteq	E	\doteq	0		16:\buildrel,16:\textstyle,12:.,16:\over,12:=		
 M	\sigma	R	\sigma	CD	283	963	Register
-M	\sevenrm	FD	fontinfo_\sevenrm
 M	\dagger	R	\dagger	CD	8825	8224	Register
 M	\sevensy	FD	fontinfo_\sevensy
 M	\eqalignno	E	\eqalignno	1		16:\displ@y,16:\tabskip,16:\centering,16:\halign,11:t,11:o,16:\displaywidth,1:{,16:\hfil,3:$,16:\@lign,16:\displaystyle,1:{,6:#,2:},3:$,16:\tabskip,16:\z@skip,4:&,3:$,16:\@lign,16:\displaystyle,1:{,1:{,2:},6:#,2:},3:$,16:\hfil,16:\tabskip,16:\centering,4:&,16:\llap,1:{,3:$,16:\@lign,6:#,3:$,2:},16:\tabskip,16:\z@skip,16:\crcr,18:1,16:\crcr,2:}	{}	Plain{}
@@ -523,11 +777,10 @@ M	\%09	E	\%09	0		16:\
 M	\p@getrue	E	\p@getrue	0		16:\let,16:\ifp@ge,16:\iftrue		
 M	\jmath	R	\jmath	CD	380	106	Register
 M	\*	E	\*	0		16:\discretionary,1:{,16:\thinspace,16:\the,16:\textfont,12:2,16:\char,12:2,2:},1:{,2:},1:{,2:}		
-M	\cases	E	\cases	1		16:\left,16:\{,16:\%2C,16:\vcenter,1:{,16:\normalbaselines,16:\m@th,16:\ialign,1:{,3:$,6:#,16:\hfil,3:$,4:&,16:\quad,6:#,16:\hfil,16:\crcr,18:1,16:\crcr,2:},2:},16:\right,12:.	{}	Plain{}
+M	\tenrm	FD	fontinfo_\tenrm
 M	\iff	E	\iff	0		16:\;,16:\Longleftrightarrow,16:\;		
 M	\mapstochar	R	\mapstochar	CD	12855	8614	Register
 M	\sh@ft	E	\sh@ft	1		16:\dimen@,18:1,16:\kern,16:\expandafter,16:\getf@ctor,16:\the,16:\fontdimen,12:1,16:\font,16:\dimen@	{}	Plain{}
-M	\newbox	E	\newbox	0		16:\alloc@,12:4,16:\box,16:\chardef,16:\insc@unt		
 M	\tilde	E	\tilde	0		16:\mathaccent,12:",12:7,12:0,12:7,11:E,10: 		
 M	\@midfalse	E	\@midfalse	0		16:\let,16:\if@mid,16:\iffalse		
 M	\parallel	R	\parallel	CD	12907	8741	Register
@@ -552,6 +805,7 @@ M	\ln	E	\ln	0		16:\mathop,1:{,16:\rm,11:l,11:n,2:},16:\nolimits
 M	\tensl	FD	fontinfo_\tensl
 M	\ddot	E	\ddot	0		16:\mathaccent,12:",12:7,12:0,12:7,11:F,10: 		
 M	\leftrightarrow	R	\leftrightarrow	CD	12836	8596	Register
+M	_	E	\_	0		16:\leavevmode,16:\kern,12:.,12:0,12:6,11:e,11:m,10: ,16:\vbox,1:{,16:\hrule,11:w,11:i,11:d,11:t,11:h,12:.,12:3,11:e,11:m,2:}		
 M	\bf	E	\bf	0		16:\fam,16:\bffam,16:\tenbf		
 M	\Biggl	E	\Biggl	0		16:\mathopen,16:\Bigg		
 M	\joinrel	E	\joinrel	0		16:\mathrel,1:{,16:\mkern,12:-,12:3,11:m,11:u,2:}		
@@ -566,7 +820,6 @@ M	\tabsyet	R	\tabsyet	CD	13		Register
 M	\mathph@nt	E	\mathph@nt	2		16:\setbox,16:\z@,16:\hbox,1:{,3:$,16:\m@th,18:1,1:{,18:2,2:},3:$,2:},16:\finph@nt	{}{}	Plain{}Plain{}
 M	\rightharpoondown	R	\rightharpoondown	CD	12587	8641	Register
 M	\backslash	E	\backslash	0		16:\delimiter,12:",12:2,12:6,11:E,12:3,12:0,11:F,10: 		
-M	\newdimen	E	\newdimen	0		16:\alloc@,12:1,16:\dimen,16:\dimendef,16:\insc@unt		
 M	\fo@t	E	\fo@t	0		16:\ifcat,16:\bgroup,16:\noexpand,16:\next,16:\let,16:\next,16:\f@@t,16:\else,16:\let,16:\next,16:\f@t,16:\fi,16:\next		
 M	\%0D	E	\%0D	0		16:\ 		
 M	\topinsert	E	\topinsert	0		16:\@midfalse,16:\p@gefalse,16:\@ins		
@@ -584,7 +837,6 @@ M	\lambda	R	\lambda	CD	277	955	Register
 M	\f@@t	E	\f@@t	0		16:\bgroup,16:\aftergroup,16:\@foot,16:\let,16:\next		
 M	\null	E	\null	0		16:\hbox,1:{,2:}		
 M	\Lambda	R	\Lambda	CD	28675	923	Register
-M	\space	E	\space	0		10: 		
 M	\u	E	\u	1		1:{,16:\accent,12:2,12:1,10: ,18:1,2:}	{}	Plain{}
 M	\tabs	R	\tabs	CD	12		Register
 M	\swarrow	R	\swarrow	CD	12846	8601	Register
@@ -620,279 +872,28 @@ M	\fivebf	FD	fontinfo_\fivebf
 M	\hang	E	\hang	0		16:\hangindent,16:\parindent		
 M	\spadesuit	R	\spadesuit	CD	639	9824	Register
 M	\deg	E	\deg	0		16:\mathop,1:{,16:\rm,11:d,11:e,11:g,2:},16:\nolimits		
+M	\fiverm	FD	fontinfo_\fiverm
 M	\skip@	R	\skip@	G	0		\skip0
 M	\lq	E	\lq	0		12:`		
 M	\;	E	\;	0		16:\mskip,16:\thickmuskip		
-M	\Longrightarrow	E	\Longrightarrow	0		16:\Relbar,16:\joinrel,16:\Rightarrow		
-M	\ge	R	\geq	CD	12821	8805	Register
-M	\arg	E	\arg	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:g,2:},16:\nolimits		
-M	\bigbreak	E	\bigbreak	0		16:\par,16:\ifdim,16:\lastskip,12:<,16:\bigskipamount,16:\removelastskip,16:\penalty,12:-,12:2,12:0,12:0,16:\bigskip,16:\fi		
-M	\}	E	\rbrace	0		16:\delimiter,12:",12:5,12:2,12:6,12:7,12:3,12:0,12:9,10: 		
-M	\xi	R	\xi	CD	280	958	Register
-M	\sharp	R	\sharp	CD	349	9839	Register
-M	\mapsto	E	\mapsto	0		16:\mapstochar,16:\rightarrow		
-M	\mid	R	\mid	CD	12906	124	Register
-M	\Sigma	R	\Sigma	CD	28678	931	Register
-M	\oldstyle	E	\oldstyle	0		16:\fam,16:\@ne,16:\teni		
-M	\ttfam	R	\ttfam	CD	7		Register
-M	\Longleftarrow	E	\Longleftarrow	0		16:\Leftarrow,16:\joinrel,16:\Relbar		
-M	\tw@	R	\tw@	CD	2		Register
-M	\propto	R	\propto	CD	12847	8733	Register
-M	\nearrow	R	\nearrow	CD	12837	8599	Register
-M	\Updownarrow	E	\Updownarrow	0		16:\delimiter,12:",12:3,12:2,12:6,11:D,12:3,12:7,12:7,10: 		
-M	\varepsilon	R	\varepsilon	CD	290	949	Register
-M	\lim	E	\lim	0		16:\mathop,1:{,16:\rm,11:l,11:i,11:m,2:}		
-M	\newhelp	E	\newhelp	2		16:\newtoks,18:1,18:1,16:\expandafter,1:{,16:\csname,18:2,16:\endcsname,2:}	{}{}	Plain{}Plain{}
-M	%0C	E	%0C	0		16:\par		
-M	\diamondsuit	R	\diamondsuit	CD	637	9826	Register
-M	\ph@nt	E	\ph@nt	0		16:\ifmmode,16:\def,16:\next,1:{,16:\mathpalette,16:\mathph@nt,2:},16:\else,16:\let,16:\next,16:\makeph@nt,16:\fi,16:\next		
-M	\narrower	E	\narrower	0		16:\advance,16:\leftskip,16:\parindent,16:\advance,16:\rightskip,16:\parindent		
-M	\Longleftrightarrow	E	\Longleftrightarrow	0		16:\Leftarrow,16:\joinrel,16:\Rightarrow		
-M	\OE	R	\OE	CD	30		Register
-M	\centering	R	\centering	G	0		\skip11
-M	\coprod	R	\coprod	CD	4960	8720	Register
-M	\oplus	R	\oplus	CD	8712	8853	Register
-M	\cup	R	\cup	CD	8795	8746	Register
-M	\star	R	\star	CD	8511	8902	Register
-M	\hphantom	E	\hphantom	0		16:\v@false,16:\h@true,16:\ph@nt		
-M	\delta	R	\delta	CD	270	948	Register
-M	\oe	R	\oe	CD	27		Register
-M	\braceru	R	\braceru	CD	893		Register
-M	\rbrack	E	\rbrack	0		12:]		
-M	\arccos	E	\arccos	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:c,11:c,11:o,11:s,2:},16:\nolimits		
-M	\bigwedge	R	\bigwedge	CD	4950	8896	Register
-M	\@m	R	\@m	CD	1000	232	Register
-M	\leq	R	\leq	CD	12820	8804	Register
-M	\showhyphens	E	\showhyphens	1		16:\setbox,12:0,16:\vbox,1:{,16:\parfillskip,16:\z@skip,16:\hsize,16:\maxdimen,16:\tenrm,16:\pretolerance,16:\m@ne,16:\tolerance,16:\m@ne,16:\hbadness,12:0,16:\showboxdepth,12:0,16:\ ,18:1,2:}	{}	Plain{}
-M	\t@bb@x	E	\t@bb@x	0		16:\if@cr,16:\egroup,16:\else,16:\hss,16:\egroup,16:\global,16:\setbox,16:\tabsyet,16:\hbox,1:{,16:\unhbox,16:\tabsyet,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\ifvoid,16:\@ne,16:\global,16:\setbox,16:\@ne,16:\hbox,11:t,11:o,16:\wd,16:\z@,1:{,2:},16:\else,16:\setbox,16:\z@,16:\hbox,11:t,11:o,16:\wd,16:\@ne,1:{,16:\unhbox,16:\z@,2:},16:\fi,16:\global,16:\setbox,16:\tabsdone,16:\hbox,1:{,16:\box,16:\@ne,16:\unhbox,16:\tabsdone,2:},16:\fi,16:\box,16:\z@		
-M	\sl	E	\sl	0		16:\fam,16:\slfam,16:\tensl		
-M	\thinspace	E	\thinspace	0		16:\kern,12:.,12:1,12:6,12:6,12:6,12:7,11:e,11:m,10: 		
-M	\@crtrue	E	\@crtrue	0		16:\let,16:\if@cr,16:\iftrue		
-M	%1A	E	%1A	0		16:\not,12:=		
-M	\magstephalf	E	\magstephalf	0		12:1,12:0,12:9,12:5,10: 		
-M	\psi	R	\psi	CD	288	968	Register
-M	\frown	R	\frown	CD	12639	8994	Register
-M	\interdisplaylinepenalty	R	\interdisplaylinepenalty	N	0		\count23
-M	\insc@unt	R	\insc@unt	N	0		\count20
-M	\bigcup	R	\bigcup	CD	4947	8899	Register
-M	\dim	E	\dim	0		16:\mathop,1:{,16:\rm,11:d,11:i,11:m,2:},16:\nolimits		
-M	\tabalign	E	\tabalign	0		16:\us@true,16:\m@ketabbox		
-M	\%2C	E	\%2C	0		16:\mskip,16:\thinmuskip		
-M	\aleph	R	\aleph	CD	576	8501	Register
-M	\notin	E	\notin	0		16:\mathrel,1:{,16:\mathpalette,16:\c@ncel,16:\in,2:}		
-M	\ast	R	\ast	CD	8707	8727	Register
-M	\bigskip	E	\bigskip	0		16:\vskip,16:\bigskipamount		
-M	\hookrightarrow	E	\hookrightarrow	0		16:\lhook,16:\joinrel,16:\rightarrow		
-M	\tenbf	FD	fontinfo_\tenbf
-M	\acute	E	\acute	0		16:\mathaccent,12:",12:7,12:0,12:1,12:3,10: 		
-M	\ll	R	\ll	CD	12828	8810	Register
-M	\pagebody	E	\pagebody	0		16:\vbox,11:t,11:o,16:\vsize,1:{,16:\boxmaxdepth,16:\maxdepth,16:\pagecontents,2:}		
-M	\relbar	E	\relbar	0		16:\mathrel,1:{,16:\smash,12:-,2:}		
-M	\loggingall	E	\loggingall	0		16:\tracingcommands,16:\tw@,16:\tracingstats,16:\tw@,16:\tracingpages,16:\@ne,16:\tracingoutput,16:\@ne,16:\tracinglostchars,16:\@ne,16:\tracingmacros,16:\tw@,16:\tracingparagraphs,16:\@ne,16:\tracingrestores,16:\@ne,16:\showboxbreadth,16:\maxdimen,16:\showboxdepth,16:\maxdimen		
-M	\biggm	E	\biggm	0		16:\mathrel,16:\bigg		
-M	\rq	E	\rq	0		12:'		
-M	\l	E	\l	0		16:\char,12:3,12:2,11:l		
-M	\vec	E	\vec	0		16:\mathaccent,12:",12:0,12:1,12:7,11:E,10: 		
-M	\@lign	E	\@lign	0		16:\tabskip,16:\z@skip,16:\everycr,1:{,2:}		
-M	\newcount	E	\newcount	0		16:\alloc@,12:0,16:\count,16:\countdef,16:\insc@unt		
-M	\dosupereject	E	\dosupereject	0		16:\ifnum,16:\insertpenalties,12:>,16:\z@,16:\line,1:{,2:},16:\kern,12:-,16:\topskip,16:\nobreak,16:\vfill,16:\supereject,16:\fi		
-M	\tabsdone	R	\tabsdone	CD	14		Register
-M	\bot	R	\bot	CD	575	8869	Register
-M	\pi	R	\pi	CD	281	960	Register
-M	\negthinspace	E	\negthinspace	0		16:\kern,12:-,12:.,12:1,12:6,12:6,12:6,12:7,11:e,11:m,10: 		
-M	\longrightarrow	E	\longrightarrow	0		16:\relbar,16:\joinrel,16:\rightarrow		
-M	\varpi	R	\varpi	CD	292	982	Register
-M	\cdot	R	\cdot	CD	8705	8901	Register
-M	\Leftarrow	R	\Leftarrow	CD	12840	8656	Register
-M	\Re	R	\Re	CD	572	8476	Register
-M	\footline	R	\footline	TK	0		\toks11
-M	\angle	E	\angle	0		1:{,16:\vbox,1:{,16:\ialign,1:{,3:$,16:\m@th,16:\scriptstyle,6:#,3:$,16:\crcr,16:\not,16:\mathrel,1:{,16:\mkern,12:1,12:4,11:m,11:u,2:},16:\crcr,16:\noalign,1:{,16:\nointerlineskip,2:},10:%0A,16:\mkern,12:2,12:.,12:5,11:m,11:u,16:\leaders,16:\hrule,11:h,11:e,11:i,11:g,11:h,11:t,12:.,12:3,12:4,11:p,11:t,16:\hfill,16:\mkern,12:2,12:.,12:5,11:m,11:u,16:\crcr,2:},2:},2:}		
-M	\intop	R	\intop	CD	4946	8747	Register
-M	\newinsert	E	\newinsert	1		16:\global,16:\advance,16:\insc@unt,11:b,11:y,16:\m@ne,16:\ch@ck,12:0,16:\insc@unt,16:\count,16:\ch@ck,12:1,16:\insc@unt,16:\dimen,16:\ch@ck,12:2,16:\insc@unt,16:\skip,16:\ch@ck,12:4,16:\insc@unt,16:\box,16:\allocationnumber,12:=,16:\insc@unt,16:\global,16:\chardef,18:1,12:=,16:\allocationnumber,16:\wlog,1:{,16:\string,18:1,12:=,16:\string,16:\insert,16:\the,16:\allocationnumber,2:}	{}	Plain{}
-M	\bye	E	\bye	0		16:\par,16:\vfill,16:\supereject,16:\end		
-M	\mscount	R	\mscount	N	0		\count25
-M	\hrulefill	E	\hrulefill	0		16:\leaders,16:\hrule,16:\hfill		
-M	\seveni	FD	fontinfo_\seveni
-M	\cot	E	\cot	0		16:\mathop,1:{,16:\rm,11:c,11:o,11:t,2:},16:\nolimits		
-M	\Delta	R	\Delta	CD	28673	916	Register
-M	\Leftrightarrow	R	\Leftrightarrow	CD	12844	8660	Register
-M	\bracelu	R	\bracelu	CD	892		Register
-M	\brace	E	\brace	0		16:\atopwithdelims,16:\{,16:\}		
-M	\vdash	R	\vdash	CD	12896	8866	Register
-M	\Psi	R	\Psi	CD	28681	936	Register
-M	\filbreak	E	\filbreak	0		16:\par,16:\vfil,16:\penalty,12:-,12:2,12:0,12:0,16:\vfilneg		
-M	\neg	R	\neg	CD	570	172	Register
-M	\O	R	\O	CD	31		Register
-M	\finsm@sh	E	\finsm@sh	0		16:\ht,16:\z@,16:\z@,16:\dp,16:\z@,16:\z@,16:\box,16:\z@		
-M	\forall	R	\forall	CD	568	8704	Register
-M	\@cclv	R	\@cclv	CD	255		Register
-M	\_	E	\_	0		16:\leavevmode,16:\kern,12:.,12:0,12:6,11:e,11:m,10: ,16:\vbox,1:{,16:\hrule,11:w,11:i,11:d,11:t,11:h,12:.,12:3,11:e,11:m,2:}		
-M	\@MM	R	\@MM	CD	20000	32	Register
-M	\models	E	\models	0		16:\mathrel,12:|,16:\joinrel,12:=		
-M	\sin	E	\sin	0		16:\mathop,1:{,16:\rm,11:s,11:i,11:n,2:},16:\nolimits		
-M	\f@t	E	\f@t	1		18:1,16:\@foot	{}	Plain{}
-M	\theta	R	\theta	CD	274	952	Register
-M	\check	E	\check	0		16:\mathaccent,12:",12:7,12:0,12:1,12:4,10: 		
-M	\%13	E	\u	1		1:{,16:\accent,12:2,12:1,10: ,18:1,2:}	{}	Plain{}
-M	\\	E	\\	1		18:1	Until:pt	UntilUntil:pt12:p,12:t
-M	\o	R	\o	CD	28		Register
-M	\bigcirc	R	\bigcirc	CD	8717	9675	Register
-M	\rceil	E	\rceil	0		16:\delimiter,12:",12:5,12:2,12:6,12:5,12:3,12:0,12:7,10: 		
-M	\sqcup	R	\sqcup	CD	8820	8852	Register
-M	\tanh	E	\tanh	0		16:\mathop,1:{,16:\rm,11:t,11:a,11:n,11:h,2:},16:\nolimits		
-M	\smallskipamount	R	\smallskipamount	G	0		\skip13
-M	\makeheadline	E	\makeheadline	0		16:\vbox,11:t,11:o,16:\z@,1:{,16:\vskip,12:-,12:2,12:2,12:.,12:5,16:\p@,16:\line,1:{,16:\vbox,11:t,11:o,12:8,12:.,12:5,16:\p@,1:{,2:},16:\the,16:\headline,2:},16:\vss,2:},16:\nointerlineskip		
-M	\nopagenumbers	E	\nopagenumbers	0		16:\footline,1:{,16:\hfil,2:}		
-M	\det	E	\det	0		16:\mathop,1:{,16:\rm,11:d,11:e,11:t,2:}		
-M	\leftharpoondown	R	\leftharpoondown	CD	12585	8637	Register
-M	\pmatrix	E	\pmatrix	1		16:\left,12:(,16:\matrix,1:{,18:1,2:},16:\right,12:)	{}	Plain{}
-M	\dt@ptrue	E	\dt@ptrue	0		16:\let,16:\ifdt@p,16:\iftrue		
-M	\Rightarrow	R	\Rightarrow	CD	12841	8658	Register
-M	\log	E	\log	0		16:\mathop,1:{,16:\rm,11:l,11:o,11:g,2:},16:\nolimits		
-M	\tau	R	\tau	CD	284	964	Register
-M	\Orb	E	\Orb	0		16:\mathhexbox,12:2,12:0,11:D		
-M	\makefootline	E	\makefootline	0		16:\baselineskip,12:2,12:4,16:\p@,16:\lineskiplimit,16:\z@,16:\line,1:{,16:\the,16:\footline,2:}		
-M	\maxdimen	R	\maxdimen	D	0		\dimen10
-M	\makeph@nt	E	\makeph@nt	1		16:\setbox,16:\z@,16:\hbox,1:{,18:1,2:},16:\finph@nt	{}	Plain{}
-M	\@ins	E	\@ins	0		16:\par,16:\begingroup,16:\setbox,16:\z@,16:\vbox,16:\bgroup		
-M	\dotfill	E	\dotfill	0		16:\cleaders,16:\hbox,1:{,3:$,16:\m@th,16:\mkern,12:1,12:.,12:5,11:m,11:u,12:.,16:\mkern,12:1,12:.,12:5,11:m,11:u,3:$,2:},16:\hfill		
-M	\longleftrightarrow	E	\longleftrightarrow	0		16:\leftarrow,16:\joinrel,16:\rightarrow		
-M	\@midtrue	E	\@midtrue	0		16:\let,16:\if@mid,16:\iftrue		
-M	\prod	R	\prod	CD	4945	8719	Register
-M	\gg	R	\gg	CD	12829	8811	Register
-M	\v	E	\v	1		1:{,16:\accent,12:2,12:0,10: ,18:1,2:}	{}	Plain{}
-M	\widetilde	E	\widetilde	0		16:\mathaccent,12:",12:0,12:3,12:6,12:5,10: 		
-M	\fivesy	FD	fontinfo_\fivesy
-M	\midinsert	E	\midinsert	0		16:\@midtrue,16:\@ins		
-M	\normalbaselineskip	R	\normalbaselineskip	G	0		\skip16
-M	\ne	E	\neq	0		16:\not,12:=		
-M	\csc	E	\csc	0		16:\mathop,1:{,16:\rm,11:c,11:s,11:c,2:},16:\nolimits		
-M	\pagecontents	E	\pagecontents	0		16:\ifvoid,16:\topins,16:\else,16:\unvbox,16:\topins,16:\fi,16:\dimen@,12:=,16:\dp,16:\@cclv,16:\unvbox,16:\@cclv,16:\ifvoid,16:\footins,16:\else,16:\vskip,16:\skip,16:\footins,16:\footnoterule,16:\unvbox,16:\footins,16:\fi,16:\ifr@ggedbottom,16:\kern,12:-,16:\dimen@,16:\vfil,16:\fi		
-M	\triangleright	R	\triangleright	CD	8494	9655	Register
-M	\ell	R	\ell	CD	352	8467	Register
-M	\ominus	R	\ominus	CD	8713	8854	Register
-M	\=	E	\=	1		1:{,16:\accent,12:2,12:2,10: ,18:1,2:}	{}	Plain{}
-M	\ldots	E	\ldots	0		16:\mathinner,1:{,16:\ldotp,16:\ldotp,16:\ldotp,2:}		
-M	\normalbaselines	E	\normalbaselines	0		16:\lineskip,16:\normallineskip,16:\baselineskip,16:\normalbaselineskip,16:\lineskiplimit,16:\normallineskiplimit		
-M	\d	E	\d	1		1:{,16:\o@lign,1:{,16:\relax,18:1,16:\crcr,16:\hidewidth,16:\sh@ft,1:{,12:-,12:1,11:e,11:x,2:},12:.,16:\hidewidth,2:},2:}	{}	Plain{}
-M	\rightarrow	R	\rightarrow	CD	12833	8594	Register
-M	\r@ggedbottomfalse	E	\r@ggedbottomfalse	0		16:\let,16:\ifr@ggedbottom,16:\iffalse		
-M	\rightline	E	\rightline	1		16:\line,1:{,16:\hss,18:1,2:}	{}	Plain{}
-M	\bar	E	\bar	0		16:\mathaccent,12:",12:7,12:0,12:1,12:6,10: 		
-M	\obeylines	E	\obeylines	0		16:\catcode,12:`,16:\%0D,16:\active,16:\let,13:%0D,16:\par		
-M	\bigotimes	R	\bigotimes	CD	4942	10754	Register
-M	\lbrack	E	\lbrack	0		12:[		
-M	\&	R	\&	CD	38		Register
-M	\dag	E	\dag	0		16:\mathhexbox,12:2,12:7,12:9		
-M	\supereject	E	\supereject	0		16:\par,16:\penalty,12:-,16:\@MM		
-M	\it	E	\it	0		16:\fam,16:\itfam,16:\tenit		
-M	\cdotp	R	\cdotp	CD	25089	8901	Register
-M	\newlanguage	E	\newlanguage	0		16:\alloc@,12:9,16:\language,16:\chardef,16:\@cclvi		
-M	\wedge	R	\wedge	CD	8798	8743	Register
-M	\nonfrenchspacing	E	\nonfrenchspacing	0		16:\sfcode,12:`,16:\.,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\?,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\!,12:3,12:0,12:0,12:0,16:\sfcode,12:`,16:\:,12:2,12:0,12:0,12:0,16:\sfcode,12:`,16:\;,12:1,12:5,12:0,12:0,16:\sfcode,12:`,16:\%2C,12:1,12:2,12:5,12:0,10: 		
-M	\multispan	E	\multispan	1		16:\omit,16:\mscount,18:1,16:\relax,16:\loop,16:\ifnum,16:\mscount,12:>,16:\@ne,16:\sp@n,16:\repeat	{}	Plain{}
-M	\rhook	R	\rhook	CD	12589	11815	Register
-M	\r@ggedbottomtrue	E	\r@ggedbottomtrue	0		16:\let,16:\ifr@ggedbottom,16:\iftrue		
-M	\upbracefill	E	\upbracefill	0		3:$,16:\m@th,16:\setbox,16:\z@,16:\hbox,1:{,3:$,16:\braceld,3:$,2:},16:\bracelu,16:\leaders,16:\vrule,11:h,11:e,11:i,11:g,11:h,11:t,16:\ht,16:\z@,11:d,11:e,11:p,11:t,11:h,16:\z@,16:\hfill,16:\bracerd,16:\braceld,16:\leaders,16:\vrule,11:h,11:e,11:i,11:g,11:h,11:t,16:\ht,16:\z@,11:d,11:e,11:p,11:t,11:h,16:\z@,16:\hfill,16:\braceru,3:$		
-M	\supset	R	\supset	CD	12827	8835	Register
-M	\rho	R	\rho	CD	282	961	Register
-M	\rlh@	E	\rlh@	1		16:\vcenter,1:{,16:\m@th,16:\hbox,1:{,16:\ooalign,1:{,16:\raise,12:2,11:p,11:t,10:%0A,16:\hbox,1:{,3:$,18:1,16:\rightharpoonup,3:$,2:},16:\crcr,3:$,18:1,16:\leftharpoondown,3:$,2:},2:},2:}	{}	Plain{}
-M	\preloaded	N
-M	\voidb@x	R	\voidb@x	CD	10		Register
-M	\~	E	\~	1		1:{,16:\accent,12:",12:7,11:E,10: ,18:1,2:}	{}	Plain{}
-M	\smallint	R	\smallint	CD	4723	8747	Register
-M	\longleftarrow	E	\longleftarrow	0		16:\leftarrow,16:\joinrel,16:\relbar		
-M	\widehat	E	\widehat	0		16:\mathaccent,12:",12:0,12:3,12:6,12:2,10: 		
-M	\proclaim	E	\proclaim	2		16:\medbreak,16:\noindent,1:{,16:\bf,18:1,12:.,16:\enspace,2:},1:{,16:\sl,18:2,16:\par,2:},16:\ifdim,16:\lastskip,12:<,16:\medskipamount,16:\removelastskip,16:\penalty,12:5,12:5,16:\medskip,16:\fi	Until:. Until:\par	UntilUntil:. 12:.,10: UntilUntil:\par16:\par
-M	\pageinsert	E	\pageinsert	0		16:\@midfalse,16:\p@getrue,16:\@ins		
-M	\hidewidth	E	\hidewidth	0		16:\hskip,16:\hideskip		
-M	\Pr	E	\Pr	0		16:\mathop,1:{,16:\rm,11:P,11:r,2:}		
-M	\rootbox	R	\rootbox	CD	15		Register
-M	\@crfalse	E	\@crfalse	0		16:\let,16:\if@cr,16:\iffalse		
-M	\rightleftharpoons	E	\rightleftharpoons	0		16:\mathrel,1:{,16:\mathpalette,16:\rlh@,1:{,2:},2:}		
-M	\tenrm	FD	fontinfo_\tenrm
-M	\dimen@	R	\dimen@	D	0		\dimen0
-M	\centerline	E	\centerline	1		16:\line,1:{,16:\hss,18:1,16:\hss,2:}	{}	Plain{}
-M	\obeyspaces	E	\obeyspaces	0		16:\catcode,12:`,16:\ ,16:\active		
-M	\n@space	E	\n@space	0		16:\nulldelimiterspace,16:\z@,16:\m@th		
-M	\eqalign	E	\eqalign	1		16:\null,16:\%2C,16:\vcenter,1:{,16:\openup,16:\jot,16:\m@th,16:\ialign,1:{,16:\strut,16:\hfil,3:$,16:\displaystyle,1:{,6:#,2:},3:$,4:&,3:$,16:\displaystyle,1:{,1:{,2:},6:#,2:},3:$,16:\hfil,16:\crcr,18:1,16:\crcr,2:},2:},16:\%2C	{}	Plain{}
-M	\alpha	R	\alpha	CD	267	945	Register
-M	\pr@@@t	E	\pr@@@t	2		18:2,16:\egroup	{}{}	Plain{}Plain{}
-M	\aa	E	\aa	0		16:\accent,12:2,12:3,11:a		
-M	\sqsupseteq	R	\sqsupseteq	CD	12919	8850	Register
-M	\strutbox	R	\strutbox	CD	11		Register
-M	\varsigma	R	\varsigma	CD	294	962	Register
-M	\fmtversion	E	\fmtversion	0		12:3,12:.,12:1,12:4,12:1,12:5,12:9,12:2,12:6,12:5,12:3,12:5		
-M	\nointerlineskip	E	\nointerlineskip	0		16:\prevdepth,12:-,12:1,12:0,12:0,12:0,16:\p@		
-M	\cong	E	\cong	0		16:\mathrel,1:{,16:\mathpalette,16:\@vereq,16:\sim,2:}		
-M	\min	E	\min	0		16:\mathop,1:{,16:\rm,11:m,11:i,11:n,2:}		
-M	_	E	\_	0		16:\leavevmode,16:\kern,12:.,12:0,12:6,11:e,11:m,10: ,16:\vbox,1:{,16:\hrule,11:w,11:i,11:d,11:t,11:h,12:.,12:3,11:e,11:m,2:}		
-M	\hglue	E	\hglue	0		16:\afterassignment,16:\hgl@,16:\skip@,12:=		
-M	\vdots	E	\vdots	0		16:\vbox,1:{,16:\baselineskip,12:4,16:\p@,16:\lineskiplimit,16:\z@,16:\kern,12:6,16:\p@,16:\hbox,1:{,12:.,2:},16:\hbox,1:{,12:.,2:},16:\hbox,1:{,12:.,2:},2:}		
-M	\!	E	\!	0		16:\mskip,12:-,16:\thinmuskip		
-M	\tenit	FD	fontinfo_\tenit
-M	\diamond	R	\diamond	CD	8709	8900	Register
-M	\ialign	E	\ialign	0		16:\everycr,1:{,2:},16:\tabskip,16:\z@skip,16:\halign		
-M	\medbreak	E	\medbreak	0		16:\par,16:\ifdim,16:\lastskip,12:<,16:\medskipamount,16:\removelastskip,16:\penalty,12:-,12:1,12:0,12:0,16:\medskip,16:\fi		
-M	\Bigg	E	\Bigg	1		1:{,16:\hbox,1:{,3:$,16:\left,18:1,16:\vbox,11:t,11:o,12:1,12:7,12:.,12:5,16:\p@,1:{,2:},16:\right,12:.,16:\n@space,3:$,2:},2:}	{}	Plain{}
-M	\pageno	R	\pageno	N	0		\count0
-M	\tensy	FD	fontinfo_\tensy
-M	\rmoustache	E	\rmoustache	0		16:\delimiter,12:",12:5,12:3,12:7,11:B,12:3,12:4,12:1,10: 		
-M	\ooalign	E	\ooalign	0		16:\lineskiplimit,12:-,16:\maxdimen,16:\oalign		
-M	\Im	R	\Im	CD	573	8465	Register
-M	\@penup	E	\@penup	0		16:\advance,16:\lineskip,16:\dimen@,16:\advance,16:\baselineskip,16:\dimen@,16:\advance,16:\lineskiplimit,16:\dimen@		
-M	\{	E	\lbrace	0		16:\delimiter,12:",12:4,12:2,12:6,12:6,12:3,12:0,12:8,10: 		
-M	\topins	R	\topins	CD	253		Register
-M	\prime	R	\prime	CD	560	8242	Register
-M	\bigodot	R	\bigodot	CD	4938	10752	Register
-M	\bowtie	E	\bowtie	0		16:\mathrel,16:\triangleright,16:\joinrel,16:\mathrel,16:\triangleleft		
-M	\liminf	E	\liminf	0		16:\mathop,1:{,16:\rm,11:l,11:i,11:m,16:\%2C,11:i,11:n,11:f,2:}		
-M	\wr	R	\wr	CD	8815	8768	Register
-M	\overbrace	E	\overbrace	1		16:\mathop,1:{,16:\vbox,1:{,16:\m@th,16:\ialign,1:{,6:#,16:\crcr,16:\noalign,1:{,16:\kern,12:3,16:\p@,2:},10:%0A,16:\downbracefill,16:\crcr,16:\noalign,1:{,16:\kern,12:3,16:\p@,16:\nointerlineskip,2:},10:%0A,3:$,16:\hfil,16:\displaystyle,1:{,18:1,2:},16:\hfil,3:$,16:\crcr,2:},2:},2:},16:\limits	{}	Plain{}
-M	\lbrace	E	\lbrace	0		16:\delimiter,12:",12:4,12:2,12:6,12:6,12:3,12:0,12:8,10: 		
-M	\not	R	\not	CD	12854	47	Register
-M	\arctan	E	\arctan	0		16:\mathop,1:{,16:\rm,11:a,11:r,11:c,11:t,11:a,11:n,2:},16:\nolimits		
-M	\bordermatrix	E	\bordermatrix	1		16:\begingroup,16:\m@th,16:\setbox,16:\z@,16:\vbox,1:{,16:\def,16:\cr,1:{,16:\crcr,16:\noalign,1:{,16:\kern,12:2,16:\p@,16:\global,16:\let,16:\cr,16:\endline,2:},2:},16:\ialign,1:{,3:$,6:#,3:$,16:\hfil,16:\kern,12:2,16:\p@,16:\kern,16:\p@renwd,4:&,16:\thinspace,16:\hfil,3:$,6:#,3:$,16:\hfil,4:&,4:&,16:\quad,16:\hfil,3:$,6:#,3:$,16:\hfil,16:\crcr,16:\omit,16:\strut,16:\hfil,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},18:1,16:\crcr,16:\omit,16:\strut,16:\cr,2:},2:},16:\setbox,16:\tw@,16:\vbox,1:{,16:\unvcopy,16:\z@,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\setbox,16:\tw@,16:\hbox,1:{,16:\unhbox,16:\@ne,16:\unskip,16:\global,16:\setbox,16:\@ne,16:\lastbox,2:},16:\setbox,16:\tw@,16:\hbox,1:{,3:$,16:\kern,16:\wd,16:\@ne,16:\kern,12:-,16:\p@renwd,16:\left,12:(,16:\kern,12:-,16:\wd,16:\@ne,16:\global,16:\setbox,16:\@ne,16:\vbox,1:{,16:\box,16:\@ne,16:\kern,12:2,16:\p@,2:},16:\vcenter,1:{,16:\kern,12:-,16:\ht,16:\@ne,16:\unvbox,16:\z@,16:\kern,12:-,16:\baselineskip,2:},16:\%2C,16:\right,12:),3:$,2:},16:\null,16:\;,16:\vbox,1:{,16:\kern,16:\ht,16:\@ne,16:\box,16:\tw@,2:},16:\endgroup	{}	Plain{}
-M	\clubsuit	R	\clubsuit	CD	636	9827	Register
-M	\copyright	E	\copyright	0		1:{,16:\ooalign,1:{,16:\hfil,16:\raise,12:.,12:0,12:7,11:e,11:x,16:\hbox,1:{,11:c,2:},16:\hfil,16:\crcr,16:\Orb,2:},2:}		
-M	\Upsilon	R	\Upsilon	CD	28679	933	Register
-M	\itemitem	E	\itemitem	0		16:\par,16:\indent,16:\hangindent,12:2,16:\parindent,16:\textindent		
-M	\tt	E	\tt	0		16:\fam,16:\ttfam,16:\tentt		
-M	\matrix	E	\matrix	1		16:\null,16:\%2C,16:\vcenter,1:{,16:\normalbaselines,16:\m@th,16:\ialign,1:{,16:\hfil,3:$,6:#,3:$,16:\hfil,4:&,4:&,16:\quad,16:\hfil,3:$,6:#,3:$,16:\hfil,16:\crcr,16:\mathstrut,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},10:%0A,18:1,16:\crcr,16:\mathstrut,16:\crcr,16:\noalign,1:{,16:\kern,12:-,16:\baselineskip,2:},2:},2:},16:\%2C	{}	Plain{}
-M	\equiv	R	\equiv	CD	12817	8801	Register
-M	\t@bbox	E	\t@bbox	0		16:\setbox,16:\z@,16:\hbox,16:\bgroup		
-M	\mathpalette	E	\mathpalette	2		16:\mathchoice,1:{,18:1,16:\displaystyle,1:{,18:2,2:},2:},1:{,18:1,16:\textstyle,1:{,18:2,2:},2:},1:{,18:1,16:\scriptstyle,1:{,18:2,2:},2:},1:{,18:1,16:\scriptscriptstyle,1:{,18:2,2:},2:}	{}{}	Plain{}Plain{}
-M	\ldotp	R	\ldotp	CD	24890	46	Register
-M	\count@	R	\count@	N	0		\count255
-M	\setminus	R	\setminus	CD	8814	92	Register
-M	\dospecials	E	\dospecials	0		16:\do,16:\ ,16:\do,16:\\,16:\do,16:\{,16:\do,16:\},16:\do,16:\$,16:\do,16:\&,16:\do,16:\#,16:\do,16:\^,16:\do,16:\%0B,16:\do,16:\_,16:\do,16:\%01,16:\do,16:\%25,16:\do,16:\~		
-M	\sqsubseteq	R	\sqsubseteq	CD	12918	8849	Register
-M	\`	E	\`	1		1:{,16:\accent,12:1,12:8,10: ,18:1,2:}	{}	Plain{}
-M	\p@renwd	R	\p@renwd	D	0		\dimen15
-M	\item	E	\item	0		16:\par,16:\hang,16:\textindent		
-M	\medskipamount	R	\medskipamount	G	0		\skip14
-M	\fiverm	FD	fontinfo_\fiverm
-M	\mp	R	\mp	CD	8711	8723	Register
-M	\gcd	E	\gcd	0		16:\mathop,1:{,16:\rm,11:g,11:c,11:d,2:}		
-M	\perp	R	\perp	CD	12863	8869	Register
-M	\finph@nt	E	\finph@nt	0		16:\setbox,16:\tw@,16:\null,16:\ifv@,16:\ht,16:\tw@,16:\ht,16:\z@,16:\dp,16:\tw@,16:\dp,16:\z@,16:\fi,16:\ifh@,16:\wd,16:\tw@,16:\wd,16:\z@,16:\fi,16:\box,16:\tw@		
+C	%01	CC	8
 C	%0B	CC	7
 C	@	CC	12
-C	%01	CC	8
+MC	%01	CH	12835
 MC	%0A	CH	270
 MC	%12	CH	8796
 MC	%17	CH	12836
 MC	%1C	CH	12820
 MC	<	CH	12604
-MC	%7F	CH	4723
 MC	(	CH	16424
+MC	%7F	CH	4723
 MC	|	CH	618
 MC	!	CH	20513
 MC	%0B	CH	12834
 MC	+	CH	8235
+MC	*	CH	8707
 MC	%03	CH	268
 MC	%08	CH	277
-MC	*	CH	8707
 MC	=	CH	12349
 MC	%10	CH	12826
 MC	%15	CH	569
@@ -921,8 +922,8 @@ MC	)	CH	20521
 MC	:	CH	12346
 MC	%2C	CH	24891
 MC	;	CH	24635
-MC	%11	CH	12827
 MC	/	CH	317
+MC	%11	CH	12827
 MC	%16	CH	8714
 MC	%1B	CH	8709
 MC	%02	CH	267
@@ -935,7 +936,6 @@ MC	%19	CH	12833
 MC	%1E	CH	12817
 MC	-	CH	8704
 MC	%05	CH	570
-MC	%01	CH	12835
 SC	!	CH	3000
 SC	]	CH	0
 SC	.	CH	3000
