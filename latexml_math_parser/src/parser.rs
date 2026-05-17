@@ -1306,6 +1306,16 @@ impl MathParser {
         // present.
         reduced_forest = reduced_forest.prefer_named_interval_at_root();
 
+        // Multi-tree pragma: prune `set@(set@(…))`, `vector@(vector@(…))`
+        // etc. — redundant self-wrapping at the math root — when a
+        // non-self-wrapping alternative exists in the forest.
+        reduced_forest = reduced_forest.prefer_non_self_wrapping_root();
+
+        // Multi-tree pragma: drop `multirelation@(..., absent, ...)`
+        // chains when a non-multirelation alternative exists.
+        // Handles `x>=0` parsed as `(x > absent = 0)` vs `>=@(x, 0)`.
+        reduced_forest = reduced_forest.prefer_combined_relop_over_multirelation_with_absent();
+
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are
         // **deliberately not wired in by default**. Both proved

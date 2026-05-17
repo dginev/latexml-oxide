@@ -892,6 +892,76 @@ impl XM {
     }
   }
 
+  /// Does the root match `Apply(multirelation, [..., absent, ...])`
+  /// where `absent` appears in the **interior** of the args list
+  /// (NOT at the first or last positions)?
+  ///
+  /// The distinction matters: an `absent` at the boundary is
+  /// legitimate (e.g. `<a|f|b>` parses as
+  /// `multirelation(absent, <, a, |, f, |, b, >, absent)` — the
+  /// outer `<` and `>` need left/right operands, which are absent
+  /// because the expression IS the whole math). An `absent` in the
+  /// middle (e.g. `x >= 0` parsed as `multirelation(x, >, absent,
+  /// =, 0)`) signals a failed `two_part_relop` combination — the
+  /// alternative parse using a combined `>=` operator is strictly
+  /// better.
+  fn root_is_multirelation_with_interior_absent(&self) -> bool {
+    let apply = match self {
+      XM::Apply(..) => self,
+      XM::Dual(content, _, _, _) => &**content,
+      _ => return false,
+    };
+    let XM::Apply(Operator(op), args, ..) = apply else {
+      return false;
+    };
+    let meaning = match &**op {
+      XM::Token(props, _) => props.meaning.as_deref(),
+      XM::Lexeme(name, _) => Some(name.as_str()),
+      _ => None,
+    };
+    if meaning != Some("multirelation") {
+      return false;
+    }
+    let trees = args.trees();
+    if trees.len() < 3 {
+      return false;
+    }
+    let is_absent = |a: &&XM| matches!(a, XM::Token(p, _) if p.meaning.as_deref() == Some("absent"));
+    // Skip the first and last positions; only inspect interior.
+    trees[1..trees.len() - 1].iter().any(is_absent)
+  }
+
+  /// Multi-tree pragma: drop `multirelation@(..., absent, ...)`
+  /// parses when the forest contains a non-multirelation alternative.
+  ///
+  /// The legacy grammar admits chains like `x > absent = 0` as a
+  /// fallback when `> =` doesn't combine via `two_part_relop`.
+  /// Both parses survive in the ambiguous forest. Marpa tree-iter
+  /// picks the combined form first; ASF Cartesian picks the chain
+  /// with `absent` first. Since `absent` is structurally a
+  /// placeholder for a missing operand, a parse without it is
+  /// strictly preferable when both interpretations exist.
+  pub fn prefer_combined_relop_over_multirelation_with_absent(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_alternative = trees.iter().any(|t| !t.root_is_multirelation_with_interior_absent());
+        if !has_alternative {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| !t.root_is_multirelation_with_interior_absent())
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// Multi-tree pragma: when the forest contains parses whose root
   /// is a named 2-arg interval (`open-interval`, `closed-interval`,
   /// or half-open variants) AND parses whose root is either
