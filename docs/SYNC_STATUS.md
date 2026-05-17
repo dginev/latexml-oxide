@@ -804,6 +804,11 @@ returned **999/999 pass with 0 errors** (1 zip-extract issue).
 Cumulative validation across **wp4 alone: 1598/1598 papers, 0
 errors** on the 2305-2404 month slice.
 
+**warning_papers_4 2000-paper sample (2026-05-17 07:08).** After
+rsync reached 28k papers, a 2000-paper random sample produced
+**1999/1999 pass with 0 errors** (1 zip-extract issue).
+Cumulative validation across wp4: **3597/3597 papers, 0 errors**.
+
 The HTML output dirs of all 32 stage runs were deleted in the
 same 2026-05-17 cleanup pass, recovering 471 GB of disk space.
 `~/data/_meta/{known_failures, failure_zip_paths,
