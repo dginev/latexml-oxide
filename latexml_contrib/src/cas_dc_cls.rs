@@ -56,9 +56,13 @@ LoadDefinitions!({
   DefMacro!("\\sep", ",");
 
   // cas-common credit-tagging macros (CRediT taxonomy). \credit{role}
-  // attaches an author contribution; \printcredits emits the credit list.
-  // Both are pure metadata; gobble cleanly. Witness 2405.20972.
-  DefMacro!("\\credit{}", "");
+  // attaches an author contribution (Conceptualization, Investigation,
+  // etc.); \printcredits emits the credit list. Round-34 surpass-Perl:
+  // preserve the role text as a frontmatter note so the CRediT
+  // taxonomy is retained for downstream JATS conversion. Witness
+  // 2405.20972.
+  DefMacro!("\\credit{}",
+    "\\@add@frontmatter{ltx:note}[role=credit]{#1}");
   DefMacro!("\\printcredits", "");
 
   // Elsevier highlights / biography environments (cas-common.sty).
