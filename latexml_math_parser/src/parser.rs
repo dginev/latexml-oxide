@@ -1083,11 +1083,11 @@ impl MathParser {
               pruned_trees,
             );
           }
-          // Note: the order-alignment with legacy tree-iteration
-          // happens at every glade inside `MathTraverser` (see
-          // `latexml_math_parser/src/asf_traverser.rs`) via a
-          // per-glade reverse. The top-level reverse is no longer
-          // needed here.
+          // The order-alignment with legacy tree-iteration is no
+          // longer needed: the FencedLetters Dual pragma now prunes
+          // the wrong-direction parses at validation time, and adding
+          // `alts.reverse()` measured WORSE on the test suite
+          // (1281 vs 1284). Leave the bocage-natural order.
           for opt in alts {
             if let Some(tree) = opt {
               if parses.contains(&tree) {
