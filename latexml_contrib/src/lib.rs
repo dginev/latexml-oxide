@@ -185,6 +185,7 @@ pub mod tlp_cls;
 pub mod ucs_sty;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
+pub mod ws_journal_cls;
 pub mod ws_p8_50x6_00_cls;
 pub mod xltabular_sty;
 pub mod xr_sty;
@@ -408,6 +409,17 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ucs", "sty", ucs_sty::load_definitions),
   ("ut-thesis", "cls", ut_thesis_cls::load_definitions),
   ("ws-p8-50x6-00", "cls", ws_p8_50x6_00_cls::load_definitions),
+  ("ws-ijgmmp", "cls", ws_journal_cls::load_definitions),
+  ("ws-ijmpd", "cls", ws_journal_cls::load_definitions),
+  ("ws-ijmpa", "cls", ws_journal_cls::load_definitions),
+  ("ws-ijmpb", "cls", ws_journal_cls::load_definitions),
+  ("ws-ijmpc", "cls", ws_journal_cls::load_definitions),
+  ("ws-ijmpe", "cls", ws_journal_cls::load_definitions),
+  ("ws-mplb", "cls", ws_journal_cls::load_definitions),
+  ("ws-mpla", "cls", ws_journal_cls::load_definitions),
+  ("ws-rv9x6", "cls", ws_journal_cls::load_definitions),
+  ("ws-procs9x6", "cls", ws_journal_cls::load_definitions),
+  ("ws-procs961x669", "cls", ws_journal_cls::load_definitions),
 ];
 
 /// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`,
