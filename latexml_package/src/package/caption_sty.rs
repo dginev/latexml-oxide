@@ -72,6 +72,9 @@ LoadDefinitions!({
   DefMacro!("\\DeclareCaptionLabelSeparator{}{}", "");
   DefMacro!("\\DeclareCaptionFont{}{}", "");
   DefMacro!("\\DeclareCaptionFormat{}{}", "");
+  // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
+  // of `\DeclareCaptionFormat` for text-only caption-format definers.
+  DefMacro!("\\DeclareCaptionTextFormat{}{}", "");
   DefMacro!("\\DeclareCaptionJustification{}{}", "");
   DefMacro!("\\DeclareCaptionOption{}[]{}", "");
   DefMacro!("\\DeclareCaptionPackage{}", "");
