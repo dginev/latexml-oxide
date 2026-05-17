@@ -556,6 +556,49 @@ binary, also pending rebuild):
 * `imsart`: `{funding}` + `{acknowledgement}` env stubs.
   Witness 2406.15844.
 
+**Round-32 wp3-mining additions (2026-05-16 evening, post-Round-31)**:
+* `pdfx_sty`: load `hyperref` + `xcolor` (mirror real pdfx side-
+  effects). pdfx's expl3-heavy raw-load remains stubbed out, but
+  docs that load pdfx commonly use `\hypersetup` / `\href` /
+  `\Hy@pdfatrue` without explicit `\usepackage{hyperref}`. Witness
+  ~22 papers with Hy@pdfatrue/Hy@DisableOption cascade — 2407.01809
+  re-converts cleanly with 0 errors / 0 warnings.
+* `libertinust1math_sty`: new no-op binding (Perl-parity). The
+  package's `\libus@MathSymbol` first `\let\X\@undefined`'s then
+  re-`\DeclareMathSymbol{\X}`'s. Our kernel chars are `:locked` at
+  `DefMath!` time, so the re-declaration is silently blocked and
+  the prior `\let \@undefined` wins, cascading undefined `\prime`
+  for every formula. ~28 papers cumulative, up to 501 `\prime` per
+  paper (2406.04389). Same pattern as fdsymbol / mathastext /
+  chemmacros no-op stubs.
+* `mdpi_cls`: stubbed `\isAPAStyle` / `\isChicagoStyle` (no-op
+  branchers in mdpi.cls L450+), `\acknowledgments` → ltx:
+  acknowledgements DefConstructor, `\appendixtitles` / `\appendixstart`
+  no-op. ~5 papers (2412.13512, 2503.13839, …).
+* `\acknowledgments` → `<ltx:acknowledgements>` everywhere (per-user
+  feedback): updated mdpi, lipics, ecai, jmlr2e, ptephy (\acknow),
+  autart ({ack}/{ack*}) to emit the canonical structural element
+  instead of `\section*{Acknowledgments}#1`. Post-processors
+  (HTML/JATS/ePub) map ltx:acknowledgements to the right role
+  attribute; section* expansions lose semantic role. Same pattern
+  as existing imsart / sagej / fcs / sn_jnl bindings.
+* `binding/content.rs:load_class` — **case-insensitive prefix-match
+  fallback**. When the strict-case prefix match misses, fall back
+  to `to_ascii_lowercase()` comparison so e.g. `WileyNJDv5` matches
+  the `wileyNJDv5` binding (differs only in capitalization). Strict-
+  case stays Perl-faithful for the typical lowercase path; the
+  relaxed pass only fires on a miss. Witness 2406.08163 + ~10 papers
+  using WileyNJDv5 / similar case-variant class names — without
+  this they fell through to OmniBus, losing `\authormark` / `\corres`
+  / `\bmsection`.
+
+Also during the same session: verified the existing `find_file_fallback`
+regex (`[._-][vV]?[-_.\d]+$`) handles `cvpr_2025` / `cvpr2028` →
+`cvpr` correctly; multiple stale-binary log clusters
+(definecolor cascade in colm2025, unexpected:Red in 2412.15035,
+{aligned} in 2410.13571) re-test as clean conversions with the
+current binary. v2 canvas re-run will pick these up.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
