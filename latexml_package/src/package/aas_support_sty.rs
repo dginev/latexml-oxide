@@ -21,20 +21,39 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received,name=Received]{#1}");
   DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised,name=Revised]{#1}");
   DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted,name=Accepted]{#1}");
-  DefMacro!("\\journalid{}{}", "");
-  DefMacro!("\\articleid{}{}", "");
-  DefMacro!("\\paperid{}", "");
-  DefMacro!("\\msid{}", "");
-  DefMacro!("\\added{}", "");
-  DefMacro!("\\replaced{}", "");
-  DefMacro!("\\deleted{}", "");
-  DefMacro!("\\explain{}", "");
-  DefMacro!("\\edit{}{}", "");
+  // Journal metadata — preserve as ltx:note frontmatter (the values
+  // are real article identifiers that downstream tools may want).
+  DefMacro!("\\journalid{}{}",
+    "\\@add@frontmatter{ltx:note}[role=journalid]{#1: #2}");
+  DefMacro!("\\articleid{}{}",
+    "\\@add@frontmatter{ltx:note}[role=articleid]{#1: #2}");
+  DefMacro!("\\paperid{}",
+    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
+  DefMacro!("\\msid{}",
+    "\\@add@frontmatter{ltx:note}[role=msid]{#1}");
+  // Review markup — preserve author body as ltx:text with class
+  // (changes-style edit tracking). See changes_sty for the rationale.
+  DefConstructor!("\\added{}",
+    "<ltx:text class='ltx_changes_added'>#1</ltx:text>");
+  DefConstructor!("\\replaced{}",
+    "<ltx:text class='ltx_changes_replaced'>#1</ltx:text>");
+  DefConstructor!("\\deleted{}",
+    "<ltx:text class='ltx_changes_deleted ltx_strike'>#1</ltx:text>");
+  DefConstructor!("\\explain{}",
+    "<ltx:text class='ltx_changes_explanation'>#1</ltx:text>");
+  // \edit{old}{new} — show the new text inline; preserve the old as
+  // strikethrough so both are visible (changes-style).
+  DefConstructor!("\\edit{}{}",
+    "<ltx:text class='ltx_changes_deleted ltx_strike'>#1</ltx:text>\
+     <ltx:text class='ltx_changes_added'>#2</ltx:text>");
   DefMacro!("\\ccc{}", "");
   DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
-  DefMacro!("\\journal{}", "");
-  DefMacro!("\\volume{}", "");
-  DefMacro!("\\issue{}", "");
+  DefMacro!("\\journal{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\volume{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\issue{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
   DefMacro!("\\SGMLbi{}", "#1");
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
@@ -46,7 +65,8 @@ LoadDefinitions!({
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\shortauthors{}", "");
+  DefMacro!("\\shortauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
   DefMacro!("\\lefthead{}", "");
   DefMacro!("\\righthead{}", "");
@@ -105,8 +125,11 @@ LoadDefinitions!({
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
-  // 2.6 Comments to Editors
-  DefMacro!("\\notetoeditor{}", "");
+  // 2.6 Comments to Editors — preserve the note text as ltx:note
+  // (review content, not metadata). Content-preserving per
+  // [[feedback-content-preserving]].
+  DefConstructor!("\\notetoeditor{}",
+    "<ltx:note role='editor-note'>#1</ltx:note>");
   NewCounter!("editornote");
   DefMacro!("\\theeditornote", "E\\arabic{editornote}");
 
