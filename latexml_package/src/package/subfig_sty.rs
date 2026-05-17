@@ -41,6 +41,10 @@ LoadDefinitions!({
     "\\ifx\\@captype\\@undefined\\expandafter\\@gobble\\else\\expandafter\\@firstofone\\fi{\\sf@subfloat}");
   DefMacro!("\\sf@subfloat",
     "\\csname lx@subfloat@\\@captype\\endcsname");
+  // subfig L73: \sidesubfloat — side-by-side subfloat variant. Real def
+  // wraps \subfloat with a minipage and lineup arg. Stub as plain
+  // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.
+  DefMacro!("\\sidesubfloat", "\\subfloat");
 
   // \subref — Perl L82-84
   DefMacro!("\\subref",       "\\@ifstar\\sf@@subref\\sf@subref");
