@@ -13,6 +13,9 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // achemso uses setspace internally; user papers also call
+  // \singlespacing / \doublespacing in preambles. Witness 2503.21357.
+  RequirePackage!("setspace");
 
   // ACS authorship primitives — preserve author content as ltx:note
   // frontmatter entries.
