@@ -148,6 +148,7 @@ pub mod informs_cls;
 pub mod interact_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
+pub mod latexrelease_sty;
 pub mod lipics_cls;
 pub mod lmcs_cls;
 pub mod mcom_l_cls;
@@ -363,6 +364,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("jmlr", "cls", jmlr_cls::load_definitions),
   ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
   ("jmlr2e_preprint", "sty", jmlr2e_sty::load_definitions),
+  ("latexrelease", "sty", latexrelease_sty::load_definitions),
   ("lipics", "cls", lipics_cls::load_definitions),
   ("lipics-v2019", "cls", lipics_cls::load_definitions),
   ("lipics-v2021", "cls", lipics_cls::load_definitions),
