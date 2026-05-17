@@ -43,7 +43,18 @@ fn install_lang_stub(lang: &str) -> Result<()> {
 }
 
 pub fn load_italian() -> Result<()>    { install_lang_stub("italian") }
-pub fn load_spanish() -> Result<()>    { install_lang_stub("spanish") }
+pub fn load_spanish() -> Result<()>    {
+  install_lang_stub("spanish")?;
+  // babel-spanish-specific `\decimalpoint` — switches decimal separator
+  // from `,` (Spanish default) to `.`. We don't render locale-aware
+  // numerics; HTML uses `.` by default. No-op preserves intent.
+  // Driver 2511.19353 (`\usepackage[spanish]{babel}\decimalpoint`).
+  // Also `\decimalcomma` for the reverse direction.
+  latexml_core::stomach::raw_tex(
+    r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}"
+  )?;
+  Ok(())
+}
 pub fn load_portuges() -> Result<()>   { install_lang_stub("portuges") }
 pub fn load_portuguese() -> Result<()> { install_lang_stub("portuguese") }
 pub fn load_brazil() -> Result<()>     { install_lang_stub("brazil") }
