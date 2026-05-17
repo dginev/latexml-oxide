@@ -1,0 +1,33 @@
+% Regression test for Round-33 fix (commit 6be8b2e01e).
+% IEEE conference-template papers (driver cluster 2601.15292,
+% 2601.16670, 2602.05977) redefine \newlineauthors using the
+% \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}
+% recipe (same as \linebreakand). Without a pre-defined
+% \newlineauthors in ieeetran_cls.rs, the user \newcommand
+% installs and triggers \@personname mode-switch break inside the
+% frontmatter digest. With the pre-definition, user \newcommand is
+% silently dropped (Perl-parity: already-defined → ignored).
+\documentclass[conference]{IEEEtran}
+\makeatletter
+\newcommand{\newlineauthors}{%
+  \end{@IEEEauthorhalign}\hfill\mbox{}\par
+  \mbox{}\hfill\begin{@IEEEauthorhalign}
+}
+\makeatother
+
+\title{Test}
+\author{
+\IEEEauthorblockN{Author One}
+\IEEEauthorblockA{Affiliation A}
+\and
+\IEEEauthorblockN{Author Two}
+\IEEEauthorblockA{Affiliation B}
+\newlineauthors
+\IEEEauthorblockN{Author Three}
+\IEEEauthorblockA{Affiliation C}
+}
+
+\begin{document}
+\maketitle
+Body text.
+\end{document}

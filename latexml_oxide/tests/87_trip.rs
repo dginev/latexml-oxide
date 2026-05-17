@@ -132,3 +132,29 @@ fn psfig_via_compat_loadpackages() {
     "psfig_via_compat_loadpackages expected clean conversion, got status={status:?}"
   );
 }
+
+#[test]
+fn ieeetran_newlineauthors() {
+  // Round-33 fix (commit 6be8b2e01e). User \newcommand{\newlineauthors}
+  // installing the IEEE halign unbalanced-pair recipe must be silently
+  // dropped on the floor — same as \linebreakand — so the surrounding
+  // \author body doesn't break the frontmatter digest.
+  let (code, status) = run_trip("ieeetran_newlineauthors");
+  assert_eq!(
+    code, 0,
+    "ieeetran_newlineauthors expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn quantumarticle_bare_acknowledgments() {
+  // Round-33 fix (commit d3e220f40c). REVTeX-style bare \acknowledgments
+  // (no \begin/\end, just on its own line followed by body + \bibliography)
+  // must open <ltx:acknowledgements> with auto_close handling the implicit
+  // close — no phantom-close errors at \end{document}.
+  let (code, status) = run_trip("quantumarticle_bare_acknowledgments");
+  assert_eq!(
+    code, 0,
+    "quantumarticle_bare_acknowledgments expected clean conversion, got status={status:?}"
+  );
+}
