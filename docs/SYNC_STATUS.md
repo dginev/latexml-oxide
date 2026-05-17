@@ -798,6 +798,12 @@ batch, the first 9k+ papers were sampled (500-paper random subset):
 **500/500 pass with 0 errors**. The newest unfetched month slice
 also converts uniformly on the current binary.
 
+**warning_papers_4 1000-paper sample (2026-05-17 06:55).** After
+the rsync reached 25k papers downloaded, a 1000-paper random sample
+returned **999/999 pass with 0 errors** (1 zip-extract issue).
+Cumulative validation across **wp4 alone: 1598/1598 papers, 0
+errors** on the 2305-2404 month slice.
+
 The HTML output dirs of all 32 stage runs were deleted in the
 same 2026-05-17 cleanup pass, recovering 471 GB of disk space.
 `~/data/_meta/{known_failures, failure_zip_paths,
