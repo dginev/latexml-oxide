@@ -61,7 +61,9 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=event-date]{#1}");
   DefMacro!("\\EventLocation{}",
     "\\@add@frontmatter{ltx:note}[role=event-location]{#1}");
-  DefMacro!("\\EventLogo{}", "");
+  // EventLogo wraps \includegraphics or visual content; preserve.
+  DefMacro!("\\EventLogo{}",
+    "\\@add@frontmatter{ltx:note}[role=event-logo]{#1}");
   DefMacro!("\\SeriesVolume{}",
     "\\@add@frontmatter{ltx:note}[role=series-volume]{#1}");
   DefMacro!("\\ArticleNo{}",
@@ -71,8 +73,11 @@ LoadDefinitions!({
   // LIPIcs L860: \hideLIPIcs sets \@hideLIPIcs to suppress the
   // article-number/page header. No-op in XML. Witness 2502.11299 +6.
   DefMacro!("\\hideLIPIcs", "");
-  // \headers — LIPIcs running-header alias used by some templates.
-  DefMacro!("\\headers{}{}", "");
+  // \headers{left}{right} — LIPIcs running-header alias used by
+  // some templates. Round-34 surpass-Perl: preserve as ltx:note so
+  // the author-typed text isn't dropped.
+  DefMacro!("\\headers{}{}",
+    "\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}");
 
   // LIPIcs L1158-1234: theorem-like environments.
   RawTeX!(
