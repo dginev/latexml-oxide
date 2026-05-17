@@ -25,6 +25,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(number ~ "NUMBER");
   token!(punct ~ "PUNCT");
   token!(period ~ "PERIOD");
+  // PUNCT with `\quad`-class spacing (rpadding ≥ 5pt). The lexer
+  // (util.rs::punct_followed_by_wide_space) emits these as
+  // `WIDE_PUNCT:,:idx` so the grammar can prefer formulae_apply
+  // for the `formula , \quad condition` arXiv idiom without
+  // enumerating the `list_apply` alternatives that the pragma
+  // would only reject post-hoc. See docs/MATH_AMBIGUITY_AUDIT.md §2.
+  token!(wide_punct ~ "WIDE_PUNCT");
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
   token!(relop ~ "RELOP");
@@ -37,6 +44,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rangle =[rangle_rel rangle_close]);
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
+  // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`;
+  // the lexer (util.rs) re-emits these as `STRETCHY_VERTBAR:|:idx`
+  // specifically so the grammar can pair them unambiguously without
+  // competing with the bare-`|x|` bidirectional interpretation.
+  // See docs/MATH_AMBIGUITY_AUDIT.md §2 (delimiter-pairing).
+  token!(stretchy_vertbar ~ "STRETCHY_VERTBAR");
   token!(close_pipe = "CLOSE:|");
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
@@ -341,6 +354,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | statement end_punct => postfix_embellished
         | statements end_punct => postfix_embellished
         | statements punct statement => list_apply
+        // `\quad`/`\qquad`-spaced PUNCT (WIDE_PUNCT) admits as a
+        // list-separator for non-relational items — e.g.
+        // `\ring{x},\qquad\accentset{\star}{d},\qquad...` is a list
+        // of decorated atoms, not separate formulae. PUNCT and
+        // WIDE_PUNCT are distinct lexemes (a given input comma is
+        // exactly one), so this rule doesn't compete with the bare
+        // PUNCT rule above on the same input position — the pragmas
+        // (list_apply: both items relational / formulae_apply: no
+        // relational items) decide which interpretation survives.
+        | statements wide_punct statement => list_apply
         // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
         | statements period statement => formulae_apply
         // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
@@ -354,7 +377,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | formulae punct statement => formulae_apply
         // Period also separates formulae
         | statement period statement => formulae_apply
-        | formulae period statement => formulae_apply;
+        | formulae period statement => formulae_apply
+        // `\quad`/`\qquad`-spaced PUNCT (lexer-tagged WIDE_PUNCT) also
+        // separates formulae. The token-level distinction from generic
+        // PUNCT means the grammar enumerates a DIFFERENT input alternative
+        // (a comma in the input is either PUNCT or WIDE_PUNCT, never
+        // both), avoiding the cross-contamination of treating one comma
+        // both ways simultaneously. Combined with `statements
+        // wide_punct statement → list_apply` below, the pragma decides
+        // which interpretation survives based on item-relationality.
+        | statement wide_punct statement => formulae_apply
+        | formulae wide_punct statement => formulae_apply;
 
       // Extensions, now that we have more category variables defined
       fenced_factor = lbrace expression rbrace    => fenced
@@ -403,6 +436,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
              | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
              | singlevertbar expression singlevertbar => fenced
+             // Balanced modulus: `\left| expr \right|` (stretchy bars).
+             // The lexer (util.rs) tags `\left/\right`-paired bars as
+             // STRETCHY_VERTBAR so we don't enumerate every alternative
+             // pairing of bare `|`s. With this rule, `\left|f\right|^k`
+             // unambiguously pairs the two stretchy bars regardless of
+             // surrounding parens / scripts.
+             | stretchy_vertbar expression stretchy_vertbar => fenced
              // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
@@ -817,7 +857,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // CLOSE:| from \right| also triggers eval-at
         | tight_term close_pipe postsubarg => eval_at
         | tight_term close_pipe postsubarg postsuperarg => eval_at
-        | tight_term close_pipe postsuperarg postsubarg => eval_at;
+        | tight_term close_pipe postsuperarg postsubarg => eval_at
+        // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
+        // tagged STRETCHY_VERTBAR by the lexer (util.rs). The `\left.`
+        // null-delimiter doesn't appear in the lexeme stream, so the
+        // resulting shape is `tight_term STRETCHY_VERTBAR postsubarg`.
+        | tight_term stretchy_vertbar postsubarg => eval_at
+        | tight_term stretchy_vertbar postsubarg postsuperarg => eval_at
+        | tight_term stretchy_vertbar postsuperarg postsubarg => eval_at;
 
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop

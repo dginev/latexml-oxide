@@ -1,5 +1,48 @@
 # Math-parser ambiguity audit — 2026-05-16
 
+> **Update 2026-05-17** — lexer-layer delimiter-pairing hints
+> (audit pattern #2). Two new token classes emitted by `util.rs`
+> based on DOM attributes that carry `\left/\right` and `\quad`
+> spacing signals through digestion:
+>
+> 1. **`STRETCHY_VERTBAR`**: a `\left|...\right|` pair produces
+>    VERTBAR tokens tagged `stretchy="true"` (vs bare `|x|`'s
+>    `stretchy="false"`). The lexer re-emits these as
+>    `STRETCHY_VERTBAR:|:idx`. Grammar rule
+>    `stretchy_vertbar expression stretchy_vertbar → fenced`
+>    pairs them unambiguously, eliminating the VERTBAR-pairing
+>    combinatorial explosion. A companion admission in `eval_at`
+>    handles the `\left.expr\right|_…` evaluated-at idiom.
+> 2. **`WIDE_PUNCT`**: PUNCT with `rpadding ≥ 5pt` (from
+>    `\quad`/`\qquad` spacing) is the arXiv idiom for "main
+>    formula, side condition". Tagged `WIDE_PUNCT:,:idx` so the
+>    grammar can admit it in BOTH the `formulae` and `statements`
+>    alternations. Since WIDE_PUNCT and PUNCT are distinct
+>    lexemes (a given input comma is exactly one of them), this
+>    doesn't cross-contaminate at a given input position — the
+>    pragmas (`list_apply: both relational` / `formulae_apply:
+>    no relational`) decide which interpretation survives based
+>    on the items.
+>
+> Cumulative result on 1911.09517:
+>
+> | Stage | failures | 5000-caps | math_parse |
+> |---|---|---|---|
+> | Master | ~13 | 5 | ~7.7 s |
+> | + `opfunction` ∉ `factor` | 11 | 3 | 7.28 s |
+> | + `formulae_apply` loosening | 5 | 3 | 7.24 s |
+> | + `WIDE_PUNCT` + `STRETCHY_VERTBAR` | **4** | **2** | **5.15 s** |
+>
+> The 4 remaining failures all reproduce **standalone** with `1
+> ok` parses, but fail in the full-paper context. The standalone
+> vs paper-context divergence is consistent with Marpa
+> recognizer-state persistence across formulae — see parser.rs
+> note around `Avoiding reset_engine` for the perf-vs-determinism
+> tradeoff. Plausible next moves: (a) force-reset before each
+> parse (~8% CPU cost) for determinism, (b) further reduce
+> grammar ambiguity around bare `|x|` modulus that the
+> stretchy-bar hint can't help with.
+>
 > **Update 2026-05-16 (evening)** — two further fixes following
 > the morning's `factor / opfunction` split:
 >

@@ -161,6 +161,25 @@ fn node_to_grammar_lexemes_ctx(
         format!("XDIFFUNK:{text}:{idx}")
       } else if role == "ID" && text == "d" {
         format!("XDIFFID:{text}:{idx}")
+      } else if role == "VERTBAR" && text == "|"
+        && node.get_attribute("stretchy").as_deref() == Some("true")
+      {
+        // `\left|...\right|` produces a balanced pair of VERTBAR tokens
+        // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
+        // Tag these as a separate token kind so the grammar can pair them
+        // unambiguously via `stretchy_vertbar formula stretchy_vertbar →
+        // fenced_modulus`. Eliminates the VERTBAR-pairing combinatorial
+        // explosion in patterns like `\log^+ ∫ \left| f \right|^k dm(z) ≲
+        // ...` (docs/MATH_AMBIGUITY_AUDIT.md §2).
+        format!("STRETCHY_VERTBAR:|:{idx}")
+      } else if role == "PUNCT" && punct_followed_by_wide_space(&node) {
+        // PUNCT followed by `\quad` / `\qquad` etc. carries an `rpadding`
+        // attribute. This wide spacing is a strong arXiv idiom for
+        // "formula separator (with side-condition)" rather than
+        // "list-element separator". Tag as WIDE_PUNCT so the grammar
+        // can prefer `formulae_apply` over `list_apply` for this
+        // separator unambiguously. See docs/MATH_AMBIGUITY_AUDIT.md §2.
+        format!("WIDE_PUNCT:,:{idx}")
       } else {
         format!("{role}:{text}:{idx}").replace(' ', "")
       };
@@ -227,6 +246,20 @@ fn get_xmhint_spacing(width: &str) -> f64 {
     "pt" => number,
     "em" => number * 10.0, // assume 10pt font size
     _ => 0.0,
+  }
+}
+
+/// True iff the given PUNCT-like XMTok carries an `rpadding` attribute
+/// large enough to indicate a `\quad`-class spacing — TeX's idiom for
+/// separating a main formula from a side-condition (e.g.
+/// `A = B, \quad r \notin E`). Threshold of ≥5pt ignores `\,`/`\;`
+/// thin-space touch-ups while catching `\quad` (10pt) and `\qquad`.
+/// Used by `node_to_grammar_lexemes_ctx` to emit a `WIDE_PUNCT` token
+/// the grammar can route through `formulae_apply` unambiguously.
+fn punct_followed_by_wide_space(node: &Node) -> bool {
+  match node.get_attribute("rpadding") {
+    Some(s) => get_xmhint_spacing(&s) >= 5.0,
+    None => false,
   }
 }
 
