@@ -752,6 +752,146 @@ impl XM {
     }
   }
 
+  /// Does the root Dual's **presentation** Wrap contain exactly one
+  /// non-delimiter child that is itself a `Dual` whose content
+  /// shares the same operator meaning as the outer? This is the
+  /// shape that produces `set@(set@(…))` / `vector@(vector@(…))`
+  /// when rendered — the outer content's Ref resolves to the inner
+  /// Dual instead of to flat items.
+  fn root_dual_has_redundant_inner_wrap(&self) -> bool {
+    let XM::Dual(content, presentation, _, _) = self else {
+      return false;
+    };
+    let outer_meaning = match &**content {
+      XM::Apply(Operator(op), _, ..) => match &**op {
+        XM::Token(props, _) => props.meaning.as_deref().map(String::from),
+        XM::Lexeme(name, _) => Some(name.clone()),
+        _ => None,
+      },
+      _ => return false,
+    };
+    let Some(outer_m) = outer_meaning else { return false };
+    let XM::Wrap(items, _, _) = &**presentation else {
+      return false;
+    };
+    let is_delim = |x: &XM| match x {
+      XM::Token(p, _) => matches!(p.role.as_deref(), Some("OPEN") | Some("CLOSE")),
+      XM::Lexeme(n, _) => n.starts_with("OPEN:") || n.starts_with("CLOSE:"),
+      _ => false,
+    };
+    let inner: Vec<&XM> = items.iter().filter(|x| !is_delim(x)).collect();
+    if inner.len() != 1 {
+      return false;
+    }
+    let XM::Dual(inner_content, ..) = inner[0] else {
+      return false;
+    };
+    // Inner Dual's content should be an Apply whose meaning matches
+    // outer (or is a closely-related "list"/"vector"/"formulae"
+    // meaning — common when `interpret_delimited` lifts the list
+    // wrapper above an inner Dual).
+    if let XM::Apply(Operator(inner_op), _, ..) = &**inner_content {
+      let inner_meaning = match &**inner_op {
+        XM::Token(props, _) => props.meaning.as_deref(),
+        XM::Lexeme(name, _) => Some(name.as_str()),
+        _ => None,
+      };
+      // Outer-set wrapping inner-{set/list/vector/formulae} is the
+      // shape we want to prune. The legacy never picks this.
+      let inner_str = inner_meaning.unwrap_or("");
+      if outer_m == inner_str
+        || (matches!(outer_m.as_str(), "set" | "vector")
+          && matches!(inner_str, "set" | "vector" | "list" | "formulae"))
+      {
+        return true;
+      }
+    }
+    false
+  }
+
+  /// Does the root match `Dual(?, Apply(op_meaning, [...]))` where
+  /// the Apply's first child (after following any `XM::Ref` through
+  /// the presentation branch's idref index) is ALSO an `Apply` with
+  /// the same `op_meaning`? Used to detect redundant
+  /// `set@(set@(...))` and similar self-wrapping shapes.
+  fn root_dual_is_redundant_self_wrap(&self) -> bool {
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    let outer_meaning = match &**content {
+      XM::Apply(Operator(op), args, ..) if args.trees().len() == 1 => {
+        let m = match &**op {
+          XM::Token(props, _) => props.meaning.as_deref().map(String::from),
+          XM::Lexeme(name, _) => Some(name.clone()),
+          _ => None,
+        };
+        m
+      },
+      _ => return false,
+    };
+    let Some(outer_m) = outer_meaning else {
+      return false;
+    };
+    // Resolve the inner: dereference Apply's single child. If it's
+    // a Ref, follow it through the idref index built across the
+    // whole Dual.
+    let mut index: HashMap<String, &XM> = HashMap::default();
+    self.build_ref_index(&mut index);
+    if let XM::Apply(_, args, _, _) = &**content {
+      let first_arg = args.trees().first().copied();
+      let resolved = match first_arg {
+        Some(XM::Ref(props)) => {
+          let key = props
+            .idref
+            .as_ref()
+            .map(|c| c.to_string())
+            .or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
+          key.and_then(|k| index.get(&k).copied())
+        },
+        other => other,
+      };
+      if let Some(XM::Apply(Operator(inner_op), _, _, _)) = resolved {
+        let inner_meaning = match &**inner_op {
+          XM::Token(props, _) => props.meaning.as_deref(),
+          XM::Lexeme(name, _) => Some(name.as_str()),
+          _ => None,
+        };
+        return inner_meaning == Some(outer_m.as_str());
+      }
+    }
+    false
+  }
+
+  /// Multi-tree pragma: prune parses whose math root has a
+  /// "self-wrapping" Apply — `Apply(op, [Apply(op, ...)])` — when
+  /// the forest also contains a non-self-wrapping alternative.
+  ///
+  /// Triggering shapes: `set@(set@(a, b, c))`, `vector@(vector@(...))`,
+  /// etc. These arise from grammar ambiguity where both a direct
+  /// rule (`fenced` producing the inner Apply) and an outer
+  /// wrapping path (which then takes the inner Apply as a single
+  /// argument) match. The legacy never selects the wrapping form
+  /// — it's always the direct form. This pragma encodes that
+  /// preference.
+  pub fn prefer_non_self_wrapping_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let is_redundant = |t: &XM| t.root_dual_is_redundant_self_wrap() || t.root_dual_has_redundant_inner_wrap();
+        let has_non_wrapping = trees.iter().any(|t| !is_redundant(t));
+        if !has_non_wrapping {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees.into_iter().filter(|t| !is_redundant(t)).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// Multi-tree pragma: when the forest contains parses whose root
   /// is a named 2-arg interval (`open-interval`, `closed-interval`,
   /// or half-open variants) AND parses whose root is either
