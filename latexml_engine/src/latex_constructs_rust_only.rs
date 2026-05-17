@@ -67,6 +67,18 @@ LoadDefinitions!({
   // so define here post-dump as well.
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
 
+  // Kernel argument-gobbling macros — defensive re-declaration. These
+  // are defined in latex_base.rs L65 (and Perl's latex_dump.pool.ltxml
+  // L2063 has them) but our current Rust latex.dump.txt is missing
+  // M-records for them (dump-build coverage gap). When dump load is the
+  // active LoadFormat branch, latex_base is NOT loaded — so \@gobble
+  // stays undefined. Re-declare here so they're always available
+  // regardless of dump completeness. Witness: 2512.06027 (and ~2 v6
+  // papers) — textcomp.sty raw-load calls \@gobble at L74 and crashes.
+  DefMacro!("\\@gobble{}",          None);
+  DefMacro!("\\@gobbletwo{}{}",     None);
+  DefMacro!("\\@gobblefour{}{}{}{}", None);
+
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   Let!("\\ltx@ifclassloaded",   r"\@ifclassloaded");
