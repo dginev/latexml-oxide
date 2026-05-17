@@ -11,6 +11,11 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // Intentionally empty: skip pdfx's expl3-heavy raw-load. The output
-  // is XML/HTML; PDF/X color-profile compliance is irrelevant.
+  // Skip pdfx's expl3-heavy raw-load: PDF/X color-profile compliance is
+  // moot for XML/HTML output. But mirror the side-effect of loading
+  // hyperref + xcolor so documents which use \hypersetup / \href without
+  // their own \usepackage{hyperref} still resolve. Witness ~22 papers
+  // with cascading Hy@pdfatrue/Hy@DisableOption/hypersetup undefined.
+  RequirePackage!("hyperref");
+  RequirePackage!("xcolor");
 });
