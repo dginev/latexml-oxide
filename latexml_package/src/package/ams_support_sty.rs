@@ -206,10 +206,15 @@ LoadDefinitions!({
   if lookup_bool("2.09_COMPATIBILITY") {
     DefMacro!("\\defaultfont", "\\normalfont");
     DefMacro!("\\rom", "\\textup");
-    // `\newenvironment` is a primitive — needs digestion, not just expansion.
-    stomach::raw_tex("\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}")?;
-    stomach::raw_tex("\\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}")?;
   }
+  // amsart.cls L1922 (modern), amsproc/amsbook also: `\newenvironment{pf}
+  // {\@newpf[\proofname]}{\popQED\endtrivlist}` — same as {proof} but
+  // shorter name. Provide unconditionally as a proof alias so any
+  // amsart/amsproc/amsbook user calling \begin{pf}...\end{pf} resolves
+  // cleanly. Witness 14 papers with cas-sc, amsart, AMS-derived classes.
+  // `\newenvironment` is a primitive — needs digestion, not just expansion.
+  stomach::raw_tex("\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}")?;
+  stomach::raw_tex("\\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}")?;
 
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}", "\\lx@tag[][. ]{\\lx@fnum@@{table}}#1");
