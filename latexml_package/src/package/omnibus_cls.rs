@@ -112,7 +112,9 @@ LoadDefinitions!({
   DefMacro!("\\snm{}",             "#1");
   DefMacro!("\\inits{}",           "#1");
   DefMacro!("\\printaddresses{}",  "#1");
-  DefMacro!("\\printead{}",        None);
+  // \printead{email} — printed email address; preserve as contact.
+  DefMacro!("\\printead{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   // Page numbers — author metadata; preserve as ltx:note.
   DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
@@ -124,7 +126,8 @@ LoadDefinitions!({
   DefMacro!("\\indexauthor{}",     "\\@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
   DefMacro!("\\preface",           None);
   DefMacro!("\\thankstext",        None);
-  DefMacro!("\\numberofauthors{}", None);
+  DefMacro!("\\numberofauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=numberofauthors]{#1}");
   // \equalcontrib / \equalcont are defined kernel-level in
   // latex_constructs.rs — needed for ALL classes (not only OmniBus
   // fallback) because aaai22.sty etc. ride on \documentclass{article}.

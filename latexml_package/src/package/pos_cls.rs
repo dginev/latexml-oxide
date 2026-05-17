@@ -14,7 +14,10 @@ LoadDefinitions!({
   DefMacro!("\\PoScopydate{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
   DefMacro!("\\PACSname",      "\\textbf{PACS}");
   DefMacro!("\\PACS{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs,name={\\PACSname}]{#1}");
-  DefMacro!("\\FullConference{}", "");    // Where to put this?
+  // \FullConference{name} — conference identification text. Round-34
+  // surpass-Perl: preserve as ltx:note frontmatter.
+  DefMacro!("\\FullConference{}",
+    "\\@add@frontmatter{ltx:note}[role=conference]{#1}");
 
   DefMacro!("\\Jmath", "J");
 });
