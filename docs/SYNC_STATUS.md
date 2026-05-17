@@ -477,8 +477,8 @@ wlscirep) — author-supplied frontmatter (DOI, year, vol, address,
 email, affiliation, editor, ORCID, ...) now reaches the XML output
 as `<ltx:note role="...">` rather than being silently gobbled.
 
-Round-31 late-evening additions (5 commits after the 15:20 binary,
-also pending rebuild):
+Round-31 late-evening / night additions (17 commits after the 15:20
+binary, also pending rebuild):
 * `pdftexcmds_sty`: `\pdf@shellescape` returns "0" plus pass-through
   stubs for `\pdf@unescapehex` / `\pdf@escapestring|name|hex` and
   gobble for `\pdf@primitive`. Closes 5+ papers where probing
@@ -497,6 +497,41 @@ also pending rebuild):
 * `colm2025_conference_sty`: eager `RequirePackage{color,xcolor}`
   for author-edited COLM templates that inline `\definecolor` calls
   before users load color/xcolor. Witness 2503.21480.
+* `french_ldf`: stub `\FrenchFootnotes`, `\StandardPunctuation`,
+  `\AutoSpaceFootnotes`, +20 typesetting knobs that users sometimes
+  call directly (rather than via `\frenchsetup`). Witness 2503.17701.
+* `pict2e_sty`: no-op binding — skip the p2e-pdftex.def driver
+  detection that errors with "No suitable driver specified". Picture
+  output is driver-independent in our XML pipeline. Witness 2503.14673.
+* `mcom_l_cls`: local `\copyrightinfo{year}{holder}` + `\commby{person}`
+  for AMS journal classes that don't pull in ams_support. Witnesses
+  2503.09526, 2409.14512.
+* `caption_sty`: stub `\caption@setoptions{name}` + `\caption@@make`
+  (floatrow uses) + `\caption@setfont{kind}{val}` (gobble for our
+  no-font-formatting pipeline). Witnesses 2412.15378, 2504.00326.
+* `revtex4_support`: alias `\rev@citealp/\rev@citealpnum/\rev@citet/
+  \rev@citenum/\rev@citemark` to natbib equivalents so revtex4-1/4-2
+  substyle .bbl files resolve cleanly. Witness 2412.13042.
+* `algorithmicx_sty`: defensive `\algdef/\algnewcommand/\algnewlanguage
+  /\alglanguage` stubs in the bail path when algorithmic.sty is
+  already loaded. Witness 2410.03000 (+3).
+* `t1enc_def`: `\providecommand\DeclareUnicodeCharacter` defensively
+  so t1enc.dfu's calls don't crash when latex.ltx's @onlypreamble
+  cascade has undefined it pre-fontenc. Witness 2509.22212 (+3).
+* **`aistats2026_sty`** (BIG): silence the AISTATS 2026 running-head
+  size PackageError by pre-initializing `\runningauthor` / `\@runningauthor`
+  to short-circuit the page-width measurement loop. PDF-layout
+  aesthetic check (WISDOM #50 — moot in XML). **76 papers** across
+  next_warning v5/v6 (65) + wp3_v1 (11).
+* **`InputIfFileExists` + `babel_lang_stubs`** (BIG): added notex=true
+  find_file fallback to `\InputIfFileExists` (mirrors `\IfFileExists`)
+  so compiled-binding .ldf files become discoverable to babel's
+  `\bbl@load@language` probe. Then bound italian/spanish/portuges/
+  portuguese/brazil/brazilian/czech/polish/romanian/slovene/turkish/
+  vietnamese/icelandic/arabic/dutch/farsi as `.ldf` stubs (allocate
+  `\l@<lang>` + empty `\captions/\extras/\noextras/\date<lang>` hooks).
+  ISO mapping at `\selectlanguage` time via `babel_language_to_iso`.
+  **~38 papers** with missing-on-disk babel-language packages.
 
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
