@@ -5,4 +5,17 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("feynmf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
+  // feynmf {fmfgraph}/{fmfgraph*} environments: 2-arg-on-begin
+  // `(width,height)` followed by Feynman diagram body. Real package
+  // emits a Metafont diagram. For HTML rendering we drop the graphics
+  // body (no Metafont in our pipeline) but preserve the env so the
+  // surrounding equation/figure context still parses cleanly. Witness
+  // 2309.07343 (15 errors all from {fmfgraph*} undefined).
+  DefEnvironment!("{fmfgraph}{}{}",
+    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
+    mode => "internal_vertical");
+  DefEnvironment!("{fmfgraph*}{}{}",
+    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
+    mode => "internal_vertical");
 });
