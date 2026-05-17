@@ -532,6 +532,20 @@ binary, also pending rebuild):
   `\l@<lang>` + empty `\captions/\extras/\noextras/\date<lang>` hooks).
   ISO mapping at `\selectlanguage` time via `babel_language_to_iso`.
   **~38 papers** with missing-on-disk babel-language packages.
+* `french_ldf`: stub `\AutoSpaceBeforeFDP/\NoAutoSpaceBeforeFDP`
+  (footnote-point spacing toggles). Witness ~2 papers.
+* `latex_constructs_rust_only`: re-declare `\@gobble{}/\@gobbletwo/
+  \@gobblefour` post-dump (dump-build coverage gap — dump M-records
+  missing for these kernel argument-gobblers). Witness 2512.06027 +2.
+* `mnras_cls`: eager-load `xcolor[dvipsnames]` for ForestGreen/NavyBlue.
+  Witness 2509.13010 (3 mnras papers).
+* `cas-dc`: `\bio/\endbio` biography env, `{highlights}` env, `\newproof`
+  factory — all cas-common.sty author-content (preserved as ltx:note).
+  Witness 2503.16816, 2502.18516.
+* `caption`: `\phantomcaption/\phantomsubcaption` — invisible-caption
+  layout helpers, no-op in XML.
+* `achemso`: eager-load `setspace` for `\singlespacing/\doublespacing`
+  in preambles. Witness 2503.21357.
 
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
