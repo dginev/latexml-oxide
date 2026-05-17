@@ -257,6 +257,68 @@ pub fn list_apply(
   if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
     return Err("list_apply: absent relop operand (should be single formula, not list)".into());
   }
+  // Rule 4: Reject when an item is a BARE `conditional@(...)` Apply
+  // — `|` (conditional / MODIFIEROP) binds LOOSER than `,` (list
+  // separator) when unfenced, so the conditional should wrap the
+  // list. For `x|y, z, t`, prefer `conditional@(x, list@(y, z, t))`.
+  //
+  // **Exception**: when the conditional IS inside a parens-fenced
+  // group (e.g. `(a|b), (a|b)`), each `(a|b)` is a complete
+  // `Dual(conditional(a,b), Wrap[(, a, |, b, )])` unit, which CAN
+  // legitimately be a list item. Detect this by checking whether
+  // the Dual's presentation Wrap starts with OPEN paren.
+  let bare_conditional = |item: &XM| -> bool {
+    match item {
+      // Naked Apply(conditional, ...): always bare.
+      XM::Apply(Operator(op), ..) => {
+        let meaning = match &**op {
+          XM::Token(p, _) => p.meaning.as_deref(),
+          XM::Lexeme(name, _) => Some(name.as_str()),
+          _ => None,
+        };
+        meaning == Some("conditional")
+      },
+      // Dual wrapping conditional: bare only if presentation is NOT
+      // parens-fenced.
+      XM::Dual(content, pres, _, _) => {
+        let inner_is_conditional = if let XM::Apply(Operator(ref op), ..) = **content {
+          let meaning = match &**op {
+            XM::Token(p, _) => p.meaning.as_deref(),
+            XM::Lexeme(name, _) => Some(name.as_str()),
+            _ => None,
+          };
+          meaning == Some("conditional")
+        } else {
+          false
+        };
+        if !inner_is_conditional {
+          return false;
+        }
+        // Check presentation for parens fence.
+        let presentation_is_parens_fenced = if let XM::Wrap(ref items, ..) = **pres {
+          let first_is_open_paren = matches!(items.first(),
+            Some(XM::Token(p, _))
+              if p.role.as_deref() == Some("OPEN")
+                && p.content.as_deref() == Some("("))
+            || matches!(items.first(),
+              Some(XM::Lexeme(name, _)) if name.starts_with("OPEN:(:"));
+          first_is_open_paren
+        } else {
+          false
+        };
+        !presentation_is_parens_fenced
+      },
+      _ => false,
+    }
+  };
+  if left.as_ref().is_some_and(bare_conditional) || bare_conditional(&right) {
+    return Err(
+      "list_apply: child is BARE `conditional@` at root — conditional/MODIFIEROP binds \
+       looser than comma, so the bare conditional should wrap the list (the parens-fenced \
+       case is allowed)."
+        .into(),
+    );
+  }
   let meaning = "list";
 
   // If left is already a list/formulae Dual, extend it (flat accumulation).
