@@ -56,6 +56,7 @@ pub mod crckapb_sty;
 pub mod currfile_sty;
 pub mod czjphys_cls;
 pub mod daj_cls;
+pub mod dmtcs_episciences_cls;
 pub mod fundam_cls;
 pub mod datetime2_sty;
 pub mod datetime_sty;
@@ -231,6 +232,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("crckapb", "sty", crckapb_sty::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("daj", "cls", daj_cls::load_definitions),
+  ("dmtcs-episciences", "cls", dmtcs_episciences_cls::load_definitions),
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
