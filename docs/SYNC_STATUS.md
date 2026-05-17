@@ -740,6 +740,15 @@ acceptance target. Remaining work shifts from `error → ok` toward
 Perl-parity refinements (XMRef-renaming edge cases, SHARED-FAILURE
 classification) tracked elsewhere in this document.
 
+**Larger random spot-check (2026-05-17 04:21).** 1100 random papers
+(100 from each of the 11 month slices 2504..2602) tested in
+parallel — **1099/1099 pass with 0 errors** (one paper failed to
+extract a .tex from its zip and was skipped, not a conversion
+failure). Combined with the wp3_html_stage10_v1 sample(30/30
+recovered) on the alternative wp3 download path, the corpus is in
+a **uniformly error-free state** on the current binary across
+every month slice we have locally.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
