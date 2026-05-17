@@ -22,4 +22,19 @@ LoadDefinitions!({
   DefMacro!("\\And", " \\hskip 2em ");
   // \AND — same in caps (some templates).
   DefMacro!("\\AND", " \\hskip 2em ");
+
+  // jair.sty L244: \jairheading{vol}{year}{pages}{submitted}{published}
+  // 5-arg metadata setter for running header. Preserve as frontmatter note.
+  DefMacro!("\\jairheading{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=jair-heading]{Vol. #1 (#2), #3 — sub: #4, pub: #5}");
+  // jair.sty L260: \ShortHeadings{title}{authors} — running-page short forms.
+  DefMacro!("\\ShortHeadings{}{}", "");
+  // jair.sty L256: \firstpageno{N} — page counter setter; no-op for HTML.
+  DefMacro!("\\firstpageno{}", "");
+  // {acks} env — JAIR acknowledgements wrapper. Mirror sagej's pattern.
+  DefEnvironment!("{acks}",
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>",
+    mode => "internal_vertical");
+  // \@BBN — internal bibliography helper used by JAIR's bbl. No-op.
+  DefMacro!("\\@BBN", "");
 });
