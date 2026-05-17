@@ -68,14 +68,26 @@ LoadDefinitions!({
   // fails mid-load, leaving these undefined. Provide content-
   // preserving stubs that emit args inline so the substantive
   // bibliography text survives. Witness 2305.13037, 2306.02821.
-  for cs in &[
-    "\\bauthor", "\\binits", "\\bfnm", "\\bsnm",
-    "\\byear", "\\bvolume", "\\bissue", "\\bpages",
-    "\\bjournal", "\\bpublisher", "\\bseries", "\\btitle",
-    "\\bmrnumber", "\\bedition", "\\beditor", "\\beditortype",
-    "\\baddress", "\\borganization", "\\bcollaboration",
-    "\\bdoi", "\\burl", "\\bothertype",
-  ] {
-    DefMacro!(s!("{}{{}}", cs), "#1");
-  }
+  DefMacro!("\\bauthor{}", "#1");
+  DefMacro!("\\binits{}", "#1");
+  DefMacro!("\\bfnm{}", "#1");
+  DefMacro!("\\bsnm{}", "#1");
+  DefMacro!("\\byear{}", "#1");
+  DefMacro!("\\bvolume{}", "#1");
+  DefMacro!("\\bissue{}", "#1");
+  DefMacro!("\\bpages{}", "#1");
+  DefMacro!("\\bjournal{}", "#1");
+  DefMacro!("\\bpublisher{}", "#1");
+  DefMacro!("\\bseries{}", "#1");
+  DefMacro!("\\btitle{}", "#1");
+  DefMacro!("\\bmrnumber{}", "#1");
+  DefMacro!("\\bedition{}", "#1");
+  DefMacro!("\\beditor{}", "#1");
+  DefMacro!("\\beditortype{}", "#1");
+  DefMacro!("\\baddress{}", "#1");
+  DefMacro!("\\borganization{}", "#1");
+  DefMacro!("\\bcollaboration{}", "#1");
+  DefMacro!("\\bdoi{}", "#1");
+  DefMacro!("\\burl{}", "#1");
+  DefMacro!("\\bothertype{}", "#1");
 });

@@ -180,6 +180,11 @@ LoadDefinitions!({
   DefMacro!("\\IEEEtriggeratref{}", "");
   DefMacro!("\\IEEEpubid{}", "\\@add@frontmatter{ltx:note}[role=publicationid]{pubid: #1}");
   DefMacro!("\\IEEEpubidadjcol", "");
+  // \corresp{name} — IEEE Open Journal class IEEEoj.cls L4875 marks
+  // a corresponding-author note (later rendered in titlepage). Preserve
+  // as frontmatter note. Witness 2307.02076 (IEEEoj).
+  DefMacro!("\\corresp{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 
   // Section numbering — default journal mode uses Roman numerals
   DefMacro!("\\thesection", "\\Roman{section}");
