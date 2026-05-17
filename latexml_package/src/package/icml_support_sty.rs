@@ -54,6 +54,11 @@ LoadDefinitions!({
   DefMacro!("\\icmlEqualContributionAndSenior",
     "\\textsuperscript{*}Equal contribution, \
      \\textsuperscript{\\char`\u{2020}}Equal senior authorship");
+  // ICML 2024 introduced `\icmlEqualSeniorContribution` — senior-only
+  // joint authorship marker (no joint-first). Witness 2305.xxxxx in
+  // wp4 (2 papers in stage 1).
+  DefMacro!("\\icmlEqualSeniorContribution",
+    "\\textsuperscript{\\char`\u{2020}}Equal senior contribution");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits

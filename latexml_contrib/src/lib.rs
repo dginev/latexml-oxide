@@ -56,6 +56,7 @@ pub mod crckapb_sty;
 pub mod currfile_sty;
 pub mod czjphys_cls;
 pub mod daj_cls;
+pub mod fundam_cls;
 pub mod datetime2_sty;
 pub mod datetime_sty;
 pub mod dblfloatfix_sty;
@@ -148,6 +149,7 @@ pub mod interact_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod lipics_cls;
+pub mod lmcs_cls;
 pub mod mcom_l_cls;
 pub mod mdpi_cls;
 pub mod nature_pre_cls;
@@ -340,6 +342,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
+  ("fundam", "cls", fundam_cls::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
   ("IEEEapm", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEoj", "cls", ieeeaerospace_cls::load_definitions),
@@ -364,6 +367,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lipics-v2019", "cls", lipics_cls::load_definitions),
   ("lipics-v2021", "cls", lipics_cls::load_definitions),
   ("lipics-v2024", "cls", lipics_cls::load_definitions),
+  ("lmcs", "cls", lmcs_cls::load_definitions),
   ("mcom-l", "cls", mcom_l_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
