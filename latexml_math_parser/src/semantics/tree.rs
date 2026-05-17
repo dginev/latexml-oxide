@@ -662,6 +662,32 @@ impl XM {
     }
   }
 
+  /// Narrow variant of `prefer_fewer_absent`: only fires when AT
+  /// LEAST ONE parse in the forest has ZERO `absent` markers. In
+  /// that case, drop every parse with one-or-more `absent`. This
+  /// preserves parses like the qm bra-ket form where ALL parses
+  /// have boundary absents (no `absent`-free alternative exists),
+  /// while still pruning shapes like `<x,y>=0` where a clean
+  /// `Apply(=, [Dual(delim-<>, …), 0])` parse exists alongside
+  /// a `formulae@(…absent…)` chain.
+  pub fn prefer_zero_absent_when_available(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_zero_absent = trees.iter().any(|t| t.count_absent() == 0);
+        if !has_zero_absent {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_absent() == 0).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// Multi-tree pragma: keep only the surviving trees with the
   /// smallest node count. Helps select compact semantic
   /// interpretations over deeply nested literal ones — e.g.

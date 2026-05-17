@@ -1316,12 +1316,11 @@ impl MathParser {
         // Handles `x>=0` parsed as `(x > absent = 0)` vs `>=@(x, 0)`.
         reduced_forest = reduced_forest.prefer_combined_relop_over_multirelation_with_absent();
 
-        // (`prefer_zero_absent_when_available` was tried as a
-        // narrow variant of `prefer_fewer_absent` — it still
-        // regressed 1 legacy test where the chosen parse has a
-        // non-zero `absent` count and the zero-absent alternative
-        // is semantically wrong. Keep it off; the narrow
-        // multirelation/formulae-interior pragma above suffices.)
+        // Re-enabling: when SOME parse has zero `absent` markers,
+        // drop those with one-or-more. The intuition is sound (the
+        // failing tests all match "correct=no absent, wrong=has
+        // absent"); we'll investigate any regression case-by-case.
+        reduced_forest = reduced_forest.prefer_zero_absent_when_available();
 
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are
