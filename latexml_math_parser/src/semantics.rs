@@ -965,10 +965,68 @@ pub fn infix_apply_nary(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
+  // Early prune: `Apply(OPERATOR, [single_unfenced_arg]) * simple_rhs`
+  // — narrow form of the wider-absorption rule. E.g. `D@(x) * y * z`
+  // should be `D@(x*y*z)`. Reject here so the grammar's
+  // `prefix_apply_applyop` path wins. (Mirrors the OPERATOR check
+  // in `apply_invisible_times` below.)
+  let infixop_is_mulop = match infixop {
+    Some(XM::Lexeme(ref lex, _)) => {
+      let role = lex.split(':').next().unwrap_or("");
+      role == "MULOP"
+    },
+    Some(XM::Token(ref p, _)) => p.role.as_deref() == Some("MULOP"),
+    _ => false,
+  };
+  if infixop_is_mulop {
+    if let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left {
+      let op_role = match &**left_op {
+        XM::Token(p, _) => p.role.as_deref().map(String::from),
+        XM::Lexeme(lex_id, _) => {
+          if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
+            if id > 0 && id <= ctxt.nodes.len() {
+              ctxt.nodes[id - 1].get_attribute("role")
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        },
+        _ => None,
+      };
+      if op_role.as_deref() == Some("OPERATOR")
+        && left_meta.fenced.is_none()
+        && left_args.trees().len() == 1
+      {
+        let arg_unfenced = left_args.trees().first().map(|a| a.get_meta().fenced.is_none()).unwrap_or(true);
+        let rhs_unfenced = right.as_ref().map(|r| r.get_meta().fenced.is_none()).unwrap_or(false);
+        let rhs_is_simple = match right.as_ref() {
+          Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
+          Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+            let r = match &**rhs_op {
+              XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
+              XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
+              _ => "",
+            };
+            r == "SUPERSCRIPTOP" || r == "SUBSCRIPTOP"
+          },
+          _ => false,
+        };
+        if arg_unfenced && rhs_is_simple && rhs_unfenced {
+          return Err(
+            "infix_apply_nary: left is applied OPERATOR — prefer wider absorption via \
+             prefix_apply_applyop"
+              .into(),
+          );
+        }
+      }
+    }
+  }
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
@@ -2468,6 +2526,68 @@ pub fn apply_invisible_times(
       if !rhs_is_function {
         return Err(
           "apply_invisible_times: left is OPFUNCTION/TRIGFUNCTION/FUNCTION, prefer prefix_apply"
+            .into(),
+        );
+      }
+    }
+  }
+  // Wider-absorption variant for **applied** OPERATOR Applies:
+  // `Apply(OPERATOR, [single_unfenced_arg]) * simple_RHS` should
+  // prefer the parse where the operator absorbs more — i.e., `D x y z`
+  // means `D@(x*y*z)`, not `D@(x) * y * z`. The block above prunes
+  // BARE OPERATOR tokens on the LHS but the "applied" case
+  // (compound-operator's first arg is regular content, not another
+  // function/operator) was deliberately left alone. Pruning HERE
+  // forces the absorption path via `prefix_apply_applyop`.
+  if let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left {
+    // Resolve the role of LHS's operator. For Tokens it's a direct
+    // field; for Lexemes the lexeme's last `:N` field indexes into
+    // `ctxt.nodes` to get the DOM node's `role` attribute (same
+    // lookup mechanism the OPFUNCTION block above uses).
+    let op_role = match &**left_op {
+      XM::Token(p, _) => p.role.as_deref().map(String::from),
+      XM::Lexeme(lex_id, _) => {
+        if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
+          if id > 0 && id <= ctxt.nodes.len() {
+            ctxt.nodes[id - 1].get_attribute("role")
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      },
+      _ => None,
+    };
+    if op_role.as_deref() == Some("OPERATOR")
+      && left_meta.fenced.is_none()
+      && left_args.trees().len() == 1
+    {
+      // Only prune if the SINGLE arg is non-fenced (e.g. `D x` not `D(a)`)
+      // and the RHS is a simple unfenced factor or scripted factor.
+      let arg_is_unfenced = left_args
+        .trees()
+        .first()
+        .map(|a| a.get_meta().fenced.is_none())
+        .unwrap_or(true);
+      let rhs_is_simple = match right.as_ref() {
+        Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
+        Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+          let rhs_role = match &**rhs_op {
+            XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
+            XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
+            _ => "",
+          };
+          rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
+        },
+        _ => false,
+      };
+      let rhs_unfenced =
+        right.as_ref().map(|r| r.get_meta().fenced.is_none()).unwrap_or(false);
+      if arg_is_unfenced && rhs_is_simple && rhs_unfenced {
+        return Err(
+          "apply_invisible_times: left is applied OPERATOR — \
+           prefer wider absorption via prefix_apply_applyop"
             .into(),
         );
       }
