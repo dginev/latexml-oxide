@@ -66,10 +66,18 @@ LoadDefinitions!({
   // section; `{bio}` / `\bio` defines an author biography. Render as
   // ltx:note (frontmatter) so author content is preserved.
   // Witness 2503.16816, 2502.18516 (cas-dc).
+  // Use internal_vertical mode so the body can contain paragraphs,
+  // lists, and other block-level content. Without the explicit mode,
+  // the env infers restricted_horizontal and trips
+  // `Error:unexpected:\endbio Attempt to end mode restricted_horizontal
+  // in internal_vertical` when the bio contains \par-separated prose.
+  // Witness 2503.16816.
   DefEnvironment!("{highlights}",
-    "<ltx:note role='highlights'>#body</ltx:note>");
+    "<ltx:note role='highlights'>#body</ltx:note>",
+    mode => "internal_vertical");
   DefEnvironment!("{bio}{}",
-    "<ltx:note role='biography' name='#1'>#body</ltx:note>");
+    "<ltx:note role='biography' name='#1'>#body</ltx:note>",
+    mode => "internal_vertical");
   // \newproof{env}{display-name} — cas-common's environment factory
   // for proof-like environments. Define a basic environment that
   // wraps content in ltx:proof.
