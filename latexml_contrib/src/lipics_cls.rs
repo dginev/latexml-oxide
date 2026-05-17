@@ -67,6 +67,11 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=articleno]{#1}");
   // LIPIcs L739: \EventNoEds{N} sets editor count.
   DefMacro!("\\EventNoEds{}", "");
+  // LIPIcs L860: \hideLIPIcs sets \@hideLIPIcs to suppress the
+  // article-number/page header. No-op in XML. Witness 2502.11299 +6.
+  DefMacro!("\\hideLIPIcs", "");
+  // \headers — LIPIcs running-header alias used by some templates.
+  DefMacro!("\\headers{}{}", "");
 
   // LIPIcs L1158-1234: theorem-like environments.
   RawTeX!(
