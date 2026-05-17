@@ -16,6 +16,23 @@ LoadDefinitions!({
       "\\algorithmic",
       "Another package has already defined \\algorithmic, will not load algorithmicx.sty"
     );
+    // Defensive stubs for algorithmicx top-level commands so user
+    // preambles that call \algdef / \algnewcommand / \algnewlanguage
+    // / \alglanguage after the bail don't crash. The actual line-
+    // formatting machinery is gone, but the preamble setup commands
+    // need to gobble cleanly. Witness 2410.03000 (3 papers using
+    // algorithmic + algpseudocode together).
+    DefMacro!("\\algdef OptionalKeyVals:algdef SkipSpaces {} [] [] {}", "");
+    DefMacro!("\\algblock [] {}{}",               "");
+    DefMacro!("\\algcblock [] {}{}",              "");
+    DefMacro!("\\algblockx [] {}{}",              "");
+    DefMacro!("\\algcblockx [] {}{}",             "");
+    DefMacro!("\\algnewlanguage{}",               "");
+    DefMacro!("\\algdeflanguage{}",               "");
+    DefMacro!("\\alglanguage{}",                  "");
+    DefMacro!("\\algnewcommand",                  "\\newcommand");
+    DefMacro!("\\algrenewcommand",                "\\renewcommand");
+    DefMacro!("\\algdefaulttext[]{}",             "");
     return Ok(());
   }
 
