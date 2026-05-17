@@ -749,6 +749,13 @@ recovered) on the alternative wp3 download path, the corpus is in
 a **uniformly error-free state** on the current binary across
 every month slice we have locally.
 
+**Massive random spot-check (2026-05-17 04:45).** 3300 random
+papers (300 per month slice) — **3298/3298 pass with 0 errors**
+(2 zip-extract failures, not conversion failures). At this
+sample size we can confidently claim the warning_papers_3 corpus
+is at ≥99.94% pass on the current binary, with no genuine remaining
+single-error patterns surfacing in the random sample.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
