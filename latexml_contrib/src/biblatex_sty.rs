@@ -893,10 +893,14 @@ LoadDefinitions!({
   DefConditional!("\\ifuseprefix");
   DefConditional!("\\ifusetranslator");
 
-  // Perl L608-610
+  // Perl L608-610 gobbles \key / \keyword silently. Round-34
+  // surpass-Perl: preserve as classification tags so author keywords
+  // reach the JATS output. \key{citekey} is bib-formatting internal —
+  // leave that gobbled.
   DefMacro!("\\key{}", "");
   // \keyw is already defined L348 (DefMacro empty, see above).
-  DefMacro!("\\keyword{}", "");
+  DefMacro!("\\keyword{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
 
   // Perl L632-635
   DefMacro!("\\ppspace", "\\addnbspace");
