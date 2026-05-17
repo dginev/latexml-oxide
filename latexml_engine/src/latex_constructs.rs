@@ -9931,7 +9931,20 @@ LoadDefinitions!({
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
     let file_string = file_tks.to_string();
-    if find_file(&file_string, None).is_some() {
+    // Disk-search first (matches Perl FindFile default), then
+    // binding-only fallback (notex=true) so registered .ldf / .def
+    // bindings shipped via latexml_package are discoverable. Without
+    // the fallback, babel.sty L4175 `\InputIfFileExists{italian.ldf}`
+    // returns "not found" even though we ship `italian.ldf` as a
+    // compile-time binding — and babel errors with "Unknown option
+    // 'italian'". Witness: 38 papers across recent stages with
+    // missing-on-disk babel-language packages (italian/spanish/
+    // portuges/brazil/...).
+    let found = find_file(&file_string, None).is_some()
+      || find_file(&file_string, Some(latexml_core::binding::content::FindFileOptions {
+          notex: true, ..Default::default()
+        })).is_some();
+    if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
       Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),

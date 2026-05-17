@@ -69,6 +69,7 @@ pub mod authblk_sty;
 pub mod auxhook_sty;
 pub mod avant_sty;
 pub mod babel_def;
+pub mod babel_lang_stubs;
 pub mod babel_sty;
 pub mod babel_support_sty;
 pub mod balance_sty;

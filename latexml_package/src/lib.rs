@@ -294,6 +294,26 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("gen-m-l", "cls", package::gen_m_l_cls::load_definitions),
   ("gen-p-l", "cls", package::gen_p_l_cls::load_definitions),
   ("french", "ldf", package::french_ldf::load_definitions),
+  // Babel-language stubs for .ldf files missing from minimal TeXLive
+  // installs. Each just allocates `\l@<lang>` + empty hooks so babel's
+  // \InputIfFileExists{<lang>.ldf} resolves cleanly. See
+  // package/babel_lang_stubs.rs for details.
+  ("italian",    "ldf", package::babel_lang_stubs::load_italian),
+  ("spanish",    "ldf", package::babel_lang_stubs::load_spanish),
+  ("portuges",   "ldf", package::babel_lang_stubs::load_portuges),
+  ("portuguese", "ldf", package::babel_lang_stubs::load_portuguese),
+  ("brazil",     "ldf", package::babel_lang_stubs::load_brazil),
+  ("brazilian",  "ldf", package::babel_lang_stubs::load_brazilian),
+  ("czech",      "ldf", package::babel_lang_stubs::load_czech),
+  ("polish",     "ldf", package::babel_lang_stubs::load_polish),
+  ("romanian",   "ldf", package::babel_lang_stubs::load_romanian),
+  ("slovene",    "ldf", package::babel_lang_stubs::load_slovene),
+  ("turkish",    "ldf", package::babel_lang_stubs::load_turkish),
+  ("vietnamese", "ldf", package::babel_lang_stubs::load_vietnamese),
+  ("icelandic",  "ldf", package::babel_lang_stubs::load_icelandic),
+  ("arabic",     "ldf", package::babel_lang_stubs::load_arabic),
+  ("dutch",      "ldf", package::babel_lang_stubs::load_dutch),
+  ("farsi",      "ldf", package::babel_lang_stubs::load_farsi),
   ("frenchb", "ldf", package::french_ldf::load_definitions),
   ("nil", "ldf", package::nil_ldf::load_definitions),
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
