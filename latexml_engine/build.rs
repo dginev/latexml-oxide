@@ -101,7 +101,7 @@ fn main() {
     }
   }
   // Sort descending so manifest[0] is the most-recent year.
-  manifest_entries.sort_by(|a, b| b.0.cmp(&a.0));
+  manifest_entries.sort_by_key(|entry| std::cmp::Reverse(entry.0));
 
   // Emit the manifest. We write absolute paths so include_str!() resolves
   // unambiguously regardless of where the consumer lives in the source tree.

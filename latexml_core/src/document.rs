@@ -3059,10 +3059,8 @@ impl Document {
         Some(id) => id,
         None => continue,
       };
-      if self.lookup_id(&idref).is_none() {
-        if xmref.get_parent().is_some() {
-          self.remove_node(xmref);
-        }
+      if self.lookup_id(&idref).is_none() && xmref.get_parent().is_some() {
+        self.remove_node(xmref);
       }
     }
     Ok(())
