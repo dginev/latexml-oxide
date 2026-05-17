@@ -507,6 +507,182 @@ impl XM {
     }
   }
 
+  /// Count the number of `absent` markers in this tree.
+  ///
+  /// `absent` appears as a sentinel `XM::Token` (with
+  /// `meaning="absent"`) when a parse has to fill in a missing
+  /// operand position — e.g. `< x >` parsed as the relational
+  /// chain `absent < x > absent`. Fewer `absent` markers signals
+  /// a parse that satisfies the grammar without needing fillers.
+  pub fn count_absent(&self) -> usize {
+    match self {
+      XM::Token(props, _) => {
+        if props.meaning.as_deref() == Some("absent") {
+          1
+        } else {
+          0
+        }
+      },
+      XM::Apply(op, args, ..) => op.0.count_absent() + args.trees().iter().map(|a| a.count_absent()).sum::<usize>(),
+      XM::Dual(c, p, ..) => c.count_absent() + p.count_absent(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_absent()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_absent()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_absent()).sum(),
+      XM::Lexeme(_, _) | XM::Ref(_) => 0,
+    }
+  }
+
+  /// Semantic-node count used by parse-ranking pragmas to prefer
+  /// compact interpretations over verbose ones. Not a general
+  /// "tree size" function — it deliberately ignores presentation
+  /// duplication so structurally-equivalent parses get a fair
+  /// comparison.
+  ///
+  /// Smaller wins: `norm@(a)` (2 nodes) beats
+  /// `absolute-value@(absolute-value@(a))` (3 nodes);
+  /// `differential-d@(x)` (2 nodes) beats `d*x` (3 nodes).
+  ///
+  /// **Counting conventions**:
+  /// * Each `XM::Apply` contributes ONE node — the operator is part
+  ///   of the Apply's identity, not a separate child. So `f@(x)`
+  ///   is 2 nodes (the Apply + x), not 3.
+  /// * `XM::Dual(content, presentation)` counts **only the content
+  ///   tree** — the presentation branch is a parallel rendering of
+  ///   the same semantics and contributes the same count, so
+  ///   double-counting would inflate purely-cosmetic siblings.
+  /// * `XM::Ref(props)` is resolved to its target via the
+  ///   presentation-branch index built at the Dual boundary —
+  ///   so a Ref pointing to a deep sub-tree contributes its full
+  ///   target's node count, not just 1. This keeps the ranking
+  ///   honest when one parse uses a single Ref to a complex node
+  ///   versus another that lays out multiple Refs to leaves.
+  pub fn count_nodes_for_parse_ranking(&self) -> usize {
+    let mut index: HashMap<String, &XM> = HashMap::default();
+    self.build_ref_index(&mut index);
+    self.count_nodes_with_index(&index, &mut Vec::new())
+  }
+
+  /// Walk this tree and register every `(id, &XM)` pair that a
+  /// `Ref` might lookup. Refs key on `props.id` or `props.xmkey`.
+  fn build_ref_index<'a>(&'a self, out: &mut HashMap<String, &'a XM>) {
+    let take = |p: &'a XProps| -> Option<String> {
+      p.id.as_ref().map(|c| c.to_string()).or_else(|| p.xmkey.as_ref().map(|c| c.to_string()))
+    };
+    match self {
+      XM::Token(props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+      },
+      XM::Apply(_op, args, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        for arg in args.trees() {
+          arg.build_ref_index(out);
+        }
+      },
+      XM::Dual(c, p, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        c.build_ref_index(out);
+        p.build_ref_index(out);
+      },
+      XM::Wrap(items, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        for it in items {
+          it.build_ref_index(out);
+        }
+      },
+      XM::Arg(items) | XM::Choices(items) => {
+        for it in items {
+          it.build_ref_index(out);
+        }
+      },
+      XM::Lexeme(_, _) | XM::Ref(_) => {},
+    }
+  }
+
+  /// Counting worker with the Ref index. `visited` is a stack of
+  /// idref/xmkey strings currently being resolved — guards against
+  /// cyclic references (defensive; idref graphs in valid XMath
+  /// are acyclic).
+  fn count_nodes_with_index(&self, index: &HashMap<String, &XM>, visited: &mut Vec<String>) -> usize {
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) => 1,
+      XM::Apply(_op, args, ..) => 1 + args.trees().iter().map(|a| a.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Dual(c, _p, ..) => c.count_nodes_with_index(index, visited),
+      XM::Wrap(items, ..) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_nodes_with_index(index, visited)).sum(),
+      XM::Arg(items) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Ref(props) => {
+        let key = props.idref.as_ref().map(|c| c.to_string()).or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
+        match key {
+          Some(k) if !visited.contains(&k) => match index.get(&k) {
+            Some(target) => {
+              visited.push(k);
+              let n = target.count_nodes_with_index(index, visited);
+              visited.pop();
+              n
+            },
+            None => 1,
+          },
+          // Already visiting this ref (cycle) or no key at all —
+          // count as 1 so we don't double-count or infinite-loop.
+          _ => 1,
+        }
+      },
+    }
+  }
+
+  /// Multi-tree pragma: keep only the surviving trees with the
+  /// fewest `absent` markers. If a single tree wins, unwrap from
+  /// `XM::Choices`. If many tie at the minimum, leave them all in
+  /// `XM::Choices` for downstream pragmas. If the forest is empty
+  /// or unambiguous, pass through unchanged.
+  ///
+  /// Rationale: P1 from the 2026-05-17 tiebreaking research notes
+  /// — parses that use the `absent` filler are structurally weaker
+  /// than parses that don't.
+  pub fn prefer_fewer_absent(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_absent()).min().unwrap_or(0);
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_absent() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Multi-tree pragma: keep only the surviving trees with the
+  /// smallest node count. Helps select compact semantic
+  /// interpretations over deeply nested literal ones — e.g.
+  /// `norm@(x)` over `absolute-value@(absolute-value@(x))`.
+  ///
+  /// Rationale: P2 from the 2026-05-17 tiebreaking research notes.
+  pub fn prefer_smaller_tree(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_nodes_for_parse_ranking()).min().unwrap_or(0);
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_nodes_for_parse_ranking() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// given a tree, return the base operator name, if any
   /// Simple text summary for debug logging (no DOM access needed)
   pub fn text_summary(&self) -> String {

@@ -1072,7 +1072,7 @@ impl MathParser {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
       match asf_result {
-        Ok((mut alts, _state)) => {
+        Ok((alts, _state)) => {
           pruned_trees = traverser.pruned_count;
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
             eprintln!(
@@ -1083,25 +1083,11 @@ impl MathParser {
               pruned_trees,
             );
           }
-          // **Tiebreak ordering**: legacy `Tree`-iteration emits
-          // parses in libmarpa's natural depth-first /
-          // first-alternative-first order, which the math parser
-          // implicitly relies on as a tiebreaker — when both
-          // `f(x) → f@(x)` (function application) and
-          // `f(x) → f*x` (implicit multiplication) survive
-          // pragmatics, the legacy's choices.remove(0) picks
-          // the first-enumerated one, which is the function-app
-          // interpretation. The ASF Cartesian product happens to
-          // visit those alternatives in the reverse order
-          // (multiplication first, function-app last) because
-          // grammar-rule ordering and bocage and-node ordering
-          // diverge. Reverse here to match legacy tiebreaking.
-          //
-          // TODO (principled fix): introduce an explicit
-          // ranking/tiebreaker in pragmatics so the choice is
-          // independent of enumeration order. See
-          // docs/MATH_PARSER_AND_ASF.md § "Open question".
-          alts.reverse();
+          // Note: the order-alignment with legacy tree-iteration
+          // happens at every glade inside `MathTraverser` (see
+          // `latexml_math_parser/src/asf_traverser.rs`) via a
+          // per-glade reverse. The top-level reverse is no longer
+          // needed here.
           for opt in alts {
             if let Some(tree) = opt {
               if parses.contains(&tree) {
@@ -1307,6 +1293,27 @@ impl MathParser {
             _ => {},
           };
         }
+        // Multi-tree shape pragma P1 — `prefer_fewer_absent`: drop
+        // parses that rely on the grammar's `absent` filler when an
+        // `absent`-free alternative exists. Safe and strict.
+        //
+        // P2 (`prefer_smaller_tree`) was tried with Ref-resolving
+        // node counts and produced a **net negative** on the ground-
+        // truth tests: 3 likely-improvements (`count_parses` /
+        // `mathtools` quantum-operator-product, `stmaryrd` flat
+        // 7-list) vs 6 regressions (`function_argument_syntax`
+        // wider-absorption, `standalone_modifiers` annotated wrapper,
+        // `physics` delimited-[], `ambiguous_relations`,
+        // `ncases`, `qm`). The heuristic is too coarse — smaller
+        // trees aren't always semantically richer.
+        //
+        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "Open
+        // experiments". Future work: encode the case-specific
+        // preferences (QM bracket notation > absolute-value
+        // interpretation; flat lists > nested lists; ...) as
+        // domain-specific pragmas, not a universal tree-size
+        // criterion.
+        reduced_forest = reduced_forest.prefer_fewer_absent();
         Ok(reduced_forest)
       },
     }
