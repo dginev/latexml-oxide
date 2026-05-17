@@ -426,3 +426,50 @@ including in `marpa::tests::panda::*`.
 
 Estimated effort: byte-glade arena fix ≈ 1-2 sessions; marpa-rs
 cache fixes ≈ 1 session. Tracked as future perf work.
+
+---
+
+## ASF traversal — measured results (2026-05-17 follow-up)
+
+Validation of the perf opportunities above on a math-heavy fixture
+(`Article-2025.tex`, 579 `$`-delimited formulas, release build):
+
+| Stage | ASF wall | LEGACY wall | Notes |
+|---|---:|---:|---|
+| Pre-optimization (initial measure) | 18.05s | 12.0s | baseline gap ≈ 50% |
+| + `XM::Lexeme(Rc<str>, _)` + thread-local ASCII byte cache (`1a32531ce2`) | 18.0s | 12.0s | ~0% delta — byte-glade Lexeme String alloc was **not** the bottleneck |
+| + `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>` (same commit) | 18.0s | 12.0s | ~0% — the marpa cache `.clone()` was already cheap relative to compute_symches work |
+| + marpa cache `HashMap<usize, PT>` → `Vec<Option<PT>>` + slice children API (marpa `7875bc8`) | 17.4s | 12.0s | ~3% — measurable but not load-bearing |
+| + marpa `glades` and `nidset_by_id` → `Vec<Option<_>>` (marpa `325f615`) | 16.85s | 12.0s | another ~3% — cumulative ~6% reduction |
+
+**Conclusion**: the residual ASF→Step-iteration overhead is
+**structural**, not allocation-bound. ASF's `compute_symches` walks
+every and-node in the bocage to enumerate factorings; for
+unambiguous parses (the bulk case in real-world math), this is
+purely a cost not amortized by any subtree sharing. The Step-
+iteration path inside libmarpa skips that enumeration entirely.
+
+The remaining ~40% gap on math-heavy unambiguous papers is not
+recoverable via Rust-side micro-optimization. Two paths:
+
+1. **Hybrid dispatch**: pre-flight `ambiguity_metric()`; route
+   unambiguous parses through legacy Step iteration, ambiguous
+   through ASF. Closes the gap on the common case but keeps two
+   code paths alive.
+2. **Continue ASF-only**: future wins live in libmarpa C-side
+   bocage walking or a Rust-side fast-path inside `compute_symches`
+   that detects single-and-node or-nodes and short-circuits the
+   factoring enumeration. Larger refactor with diminishing returns.
+
+The `Rc<str>` Lexeme + `Rc<Vec>` ParseTree + slice-API children
+changes stayed in even though their direct impact was minimal —
+they remove deep-clone hazards from the marpa cache hit/insert
+paths (future-proofing) and are architecturally cleaner.
+
+### Cargo.toml dev-time patch
+
+The `[patch."https://github.com/dginev/marpa"]` in workspace
+`Cargo.toml` routes the dep at the local marpa checkout. Once
+the `asf-step3-generic-traverser` branch is pushed with the new
+commits, update `latexml_math_parser/Cargo.toml`'s `marpa = { git
+= "...", branch = "..." }` SHA and remove the `[patch]` block.
