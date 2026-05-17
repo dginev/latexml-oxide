@@ -42,4 +42,19 @@ LoadDefinitions!({
   // Both are pure metadata; gobble cleanly. Witness 2405.20972.
   DefMacro!("\\credit{}", "");
   DefMacro!("\\printcredits", "");
+
+  // Elsevier highlights / biography environments (cas-common.sty).
+  // `{highlights}` collects bullet points for the dedicated highlights
+  // section; `{bio}` / `\bio` defines an author biography. Render as
+  // ltx:note (frontmatter) so author content is preserved.
+  // Witness 2503.16816, 2502.18516 (cas-dc).
+  DefEnvironment!("{highlights}",
+    "<ltx:note role='highlights'>#body</ltx:note>");
+  DefEnvironment!("{bio}{}",
+    "<ltx:note role='biography' name='#1'>#body</ltx:note>");
+  // \newproof{env}{display-name} — cas-common's environment factory
+  // for proof-like environments. Define a basic environment that
+  // wraps content in ltx:proof.
+  DefMacro!("\\newproof{}{}",
+    "\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}");
 });
