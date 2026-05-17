@@ -154,6 +154,23 @@ pub fn infix_apply(
           "infix_apply: compose requires function-level operands, not applied functions".into(),
         );
       }
+      // Compose left-associativity: reject right-nested form `f ∘ (g ∘ h)`.
+      // The grammar admits both `(f ∘ g) ∘ h` and `f ∘ (g ∘ h)` for chains
+      // like `f * g * h`. Math convention is to left-associate composition,
+      // so canonicalize by dropping the right-nested form here; Marpa's
+      // alternative parse with the left-nested form survives.
+      if let Some(XM::Apply(Operator(ref rhs_op), ..)) = arg2 {
+        let rhs_is_compose = match &**rhs_op {
+          XM::Lexeme(rl, _) => rl.contains(":compose:"),
+          XM::Token(p, _) => p.meaning.as_deref() == Some("compose"),
+          _ => false,
+        };
+        if rhs_is_compose {
+          return Err(
+            "infix_apply: compose is left-associative — reject right-nested f ∘ (g ∘ h)".into(),
+          );
+        }
+      }
     }
   }
   let apply_tree = XM::Apply(
