@@ -574,6 +574,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("xspace", "sty", package::xspace_sty::load_definitions),
   ("xurl", "sty", package::xurl_sty::load_definitions),
   ("lineno", "sty", package::lineno_sty::load_definitions),
+  ("libertinust1math", "sty", package::libertinust1math_sty::load_definitions),
   ("preview", "sty", package::preview_sty::load_definitions),
   ("proof", "sty", package::proof_sty::load_definitions),
   ("proofwiki", "sty", package::proofwiki_sty::load_definitions),

@@ -249,6 +249,7 @@ pub mod latexml_sty;
 pub mod latexsym_sty;
 pub mod latin10_def;
 pub mod lgr_fontmap;
+pub mod libertinust1math_sty;
 pub mod lineno_sty;
 pub mod lipsum_sty;
 pub mod listings_sty;
