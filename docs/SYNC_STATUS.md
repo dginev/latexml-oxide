@@ -666,6 +666,35 @@ All 30+ commits Perl-aware and content-preserving per
 throughout. Release `cortex_worker` rebuilt repeatedly to propagate
 to canvas; canvas v1 data persistently stale until next sweep.
 
+**Round-33 stage-20 long-tail mining (2026-05-17)**: pass-rate is
+already above the 99.5% acceptance target on every stage in the
+`next_warning_html_stage*_v6` series (15: 99.71%, 17: 99.65%, 18:
+99.83%, 19: 99.81%, 20: 99.68%). Cumulative ~50k papers: 99.74%
+OK. Three Round-33 fixes landed against the residual failures:
+
+- `ieeetran.cls`: predefine `\newlineauthors` so user `\newcommand`
+  variants of the unbalanced
+  `\end{@IEEEauthorhalign}…\begin{@IEEEauthorhalign}` recipe are
+  silently dropped on the floor (Perl-parity: already-defined →
+  ignored). Same fix as `\linebreakand` from Round-30. Driver
+  cluster 2601.15292, 2601.16670, 2602.05977 — IEEE conference
+  template papers that triggered
+  `Error:unexpected:\@personname` / `\@add@frontmatter@now` after
+  the halign frame mismatch.
+- `ieeetran.cls`: `\IEEEaftertitletext` / `\IEEEspecialpapernotice`
+  preserved as `<ltx:note role='aftertitle' / 'papernotice'>`
+  (Perl-stub upgraded). `\IEEEmembership{text}` renders inline
+  italic ", *#1*" so credentials ("Member, IEEE") are not dropped.
+- `ascmac.sty`: stub binding for the `jsclasses`-family Japanese
+  add-on providing `{itembox}[align]{title}`, `{screen}`,
+  `{boxnote}`, `{shadebox}` — transparent `internal_vertical`
+  paras with title preserved as `<ltx:note>`. Driver 2601.09339.
+
+Several residual stage-20 single-witnesses (e.g., 2508.18574 with
+`sn-jnl.cls` + `.bbl` infinite loop, 2602.00513 with
+`tcbminted.code.tex`) re-test as 0 errors on the current binary —
+canvas data is stale, not regressed.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
