@@ -13,15 +13,27 @@ LoadDefinitions!({
   // Author-block primitives (jmlr.cls L335-342, L374-445).
   DefMacro!("\\addr", "");
   DefMacro!("\\Name[]{}", "#2");
-  DefMacro!("\\Email{}", "");
-  DefMacro!("\\IncludeName{}{}", "");
+  // \Email{addr} — author email; preserve as ltx:creator/ltx:contact.
+  DefMacro!("\\Email{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{email}{#1}}");
+  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
+  // \IncludeName{firstname}{lastname} — author name parts in JMLR
+  // bibliography. Preserve as ltx:note (rare in main paper body).
+  DefMacro!("\\IncludeName{}{}",
+    "\\@add@frontmatter{ltx:note}[role=name]{#1 #2}");
   DefMacro!("\\And", " ");
-  DefMacro!("\\acks{}", "");
+  // \acks{text} — JMLR Acknowledgments-and-Disclosure-of-Funding
+  // section. Author body; emit as structural ltx:acknowledgements
+  // (matches jmlr2e \acks treatment from commit 78bd49f1e2).
+  DefConstructor!("\\acks{}",
+    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>");
   DefMacro!("\\clearauthor{}", "\\author{#1}");
 
-  // Frontmatter / pagination ceremony.
-  DefMacro!("\\jmlrheading{}{}{}{}{}{}", "");
-  DefMacro!("\\jmlrvolume{}", "");
+  // Frontmatter / pagination ceremony — preserve as ltx:note.
+  DefMacro!("\\jmlrheading{}{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4 #5 #6}");
+  DefMacro!("\\jmlrvolume{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
   // JMLR frontmatter — preserve author-typed metadata as ltx:note so
   // it reaches the XML (content-preserving). Year/page/workshop/dates
   // are short scalars but the editor list is real prose authors care
