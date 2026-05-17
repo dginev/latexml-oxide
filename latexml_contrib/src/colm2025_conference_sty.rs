@@ -15,7 +15,9 @@ LoadDefinitions!({
   DefMacro!("\\AND", " ");
   DefMacro!("\\Ands", " ");
   // ICLR/NeurIPS-style author email-aside.
-  DefMacro!("\\affilmark{}", "");
+  // \affilmark{N,M,...} — affiliation superscript markers on the
+  // author line. Author content; emit as superscript inline.
+  DefMacro!("\\affilmark{}", "\\textsuperscript{#1}");
   DefMacro!("\\thanksauthor", "");
   DefConditional!("\\ifcolmsubmission");
   DefConditional!("\\ifcolmfinal");

@@ -25,14 +25,28 @@ LoadDefinitions!({
   DefMacro!("\\tnoteref[]{}", "");
   DefMacro!("\\fnmark[]", "");
   DefMacro!("\\fnref[]{}", "");
-  DefMacro!("\\fntext[]{}", "");
-  DefMacro!("\\nonumnote{}", "");
-  DefMacro!("\\nonumtnotetext{}", "");
-  DefMacro!("\\cortext[]{}", "");
-  DefMacro!("\\cormark[]", "");
+  // Footnote / author-note text — preserve as ltx:note rather than
+  // gobble (content-preserving). `\fntext` / `\nonumnote` carry the
+  // actual note prose, `\cortext` is the corresponding-author byline.
+  DefMacro!("\\fntext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=footnote]{#2}");
+  DefMacro!("\\nonumnote{}",
+    "\\@add@frontmatter{ltx:note}[role=note]{#1}");
+  DefMacro!("\\nonumtnotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=note]{#1}");
+  DefMacro!("\\cortext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
+  DefMacro!("\\cormark[]", "");  // mark only, no body
   DefMacro!("\\corref[]", "");
-  DefMacro!("\\affiliation[]{}", "");
-  DefMacro!("\\ead[]{}", "");
+  // \affiliation[id]{text} — affiliation string author typed.
+  DefMacro!("\\affiliation[]{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
+  // \ead[type]{address} — author email/url, preserve as contact.
+  DefMacro!("\\ead[]{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
+  // ltx:contact stubs (mirror elsart_support_core@@@affiliation form)
+  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
 
   // \sep — author/affil separator that cas-common defines.
   DefMacro!("\\sep", ",");

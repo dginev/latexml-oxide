@@ -20,7 +20,10 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#2}}");
   DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
   DefMacro!("\\homepage{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{#1}}");
-  DefMacro!("\\orcid{}", "");
+  // Preserve ORCID as ltx:note frontmatter (content: the iD string
+  // identifies the author and downstream JATS/HTML may surface it).
+  DefMacro!("\\orcid{}",
+    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
 
   RawTeX!("\\DeclareRobustCommand\\openone{\\mathbbm{1}}");
   RawTeX!("\\definecolor{quantumviolet}{HTML}{53257F}");
