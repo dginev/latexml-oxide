@@ -200,7 +200,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("elsart1p", "cls", package::elsart_cls::load_definitions),
   ("elsart3p", "cls", package::elsart_cls::load_definitions),
   ("elsart5p", "cls", package::elsart_cls::load_definitions),
-  ("elsarticle", "cls", package::elsart_cls::load_definitions),
+  // Note: elsarticle.cls is routed to package::elsarticle_cls (NOT elsart_cls)
+  // further down; elsarticle is a distinct modern class that pulls in
+  // graphicx/fleqn/pifont/natbib/hyperref which the legacy elsart binding
+  // does not. Adding a second entry here for "elsarticle" would shadow the
+  // correct loader because `dispatch` returns the FIRST match in BINDINGS.
   ("elsart", "sty", package::elsart_sty::load_definitions),
   (
     "elsart_support_core",
