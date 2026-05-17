@@ -11,6 +11,13 @@ members = [
 ]
 resolver = "2"
 
+# Dev-time patch: route the `marpa` dependency at the local
+# `/home/deyan/git/marpa` checkout so in-progress changes are picked
+# up without committing + pushing the fork. Remove (or leave, if
+# upstreamed) once landed on the `asf-step3-generic-traverser` branch.
+[patch."https://github.com/dginev/marpa"]
+marpa = { path = "/home/deyan/git/marpa/marpa" }
+
 [profile.release]
 # Local benchmark/deployment profile. This is tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
