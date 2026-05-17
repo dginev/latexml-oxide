@@ -1,0 +1,12 @@
+% Regression test for Round-33 fix (commit 1afa4dc8ca).
+% chemformula 4.x is expl3-based; INCLUDE_STYLES post-binding raw
+% load triggers \ProcessKeysPackageOptions at chemformula.sty L481,
+% which is undefined unless l3keys2e is loaded first. Driver
+% cluster: stage11_v3 2504.13749 (chemformula raw-load cascade).
+% Our chemformula stub preloads l3keys2e + xparse so the post-binding
+% raw load succeeds.
+\documentclass{article}
+\usepackage{chemformula}
+\begin{document}
+Test paper using \ch{H2O} chemical notation.
+\end{document}
