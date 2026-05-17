@@ -3064,22 +3064,19 @@ impl Document {
       }
     }
     // Broader sweep: any XMRef pointing to a canonical math node id
-    // `S<N>.E[a-z]*<M>.m<K>.*` that no longer resolves. These are minted
+    // `S<N>.E<M>.m1.<K>...` that no longer resolves. These are minted
     // by base_xmath::add_column_to_math_fork during rearrange_ams_*
-    // (align/gather/multline) AND by various math contexts inside
-    // pictures / starred-equations, but unlike `_split_ref` they aren't
+    // (align/gather/multline), but unlike `_split_ref` they aren't
     // marked. The math parser absorbs cells later, leaving the refs
     // dangling and triggering the `Error:expected:id` cascade in
     // post-processing.
     //
-    // The regex accepts both `E<digits>` (numbered equation: `S1.E2.m1.3`)
-    // and `Ex<digits>` (starred / example: `S3.Ex19.m1.pic1.m2b.1`). The
-    // `lookup_id().is_none()` gate ensures we never touch XMRefs whose
-    // target DOES exist — so declare_test's renamed-id case
-    // (`S1.Ex1.m1.1` → `.1a` rename) stays safe; the renamed target
-    // still lives in the DOM and the XMRef resolves.
+    // We restrict the regex to the equation-numbered form (E<digit>,
+    // not Ex<digit>) so declare_test's renamed-id case
+    // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
+    // `\begin{equation}` produce `E1`/`E2`/... ids.
     static RE_MATH_ID: once_cell::sync::Lazy<regex::Regex> =
-      once_cell::sync::Lazy::new(|| regex::Regex::new(r"^S\d+\.E[a-zA-Z]*\d+\.m\d+\.").unwrap());
+      once_cell::sync::Lazy::new(|| regex::Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
     let xmrefs2 = self.findnodes("//ltx:XMRef[@idref]", None);
     for xmref in xmrefs2 {
       // Skip if already pruned via _split_ref sweep above.
