@@ -296,7 +296,9 @@ LoadDefinitions!({
 
   //======================================================================
 
-  DefMacro!("\\URLhref{}", "");
+  // \URLhref{url} — hyperref-style URL reference (Round-34 surpass-
+  // Perl: was gobbled). Route through our \URL → \@ams@url chain.
+  DefMacro!("\\URLhref{}", "\\URL{#1}");
   // \URL — complex catcode manipulation, stubbed as simple macro
   // that delegates to \@ams@url to get the href attribute set (Perl L282-294).
   DefMacro!("\\URL{}", "\\@ams@url{#1}");
@@ -308,5 +310,7 @@ LoadDefinitions!({
     });
 
   DefMacro!("\\MR{}", "MR #1");
-  DefMacro!("\\MRhref{}", "");
+  // \MRhref{label} — Math Reviews link; preserve as note (the link
+  // target encodes the MR id which is genuine reference metadata).
+  DefMacro!("\\MRhref{}", "\\@add@frontmatter{ltx:note}[role=mr-ref]{#1}");
 });

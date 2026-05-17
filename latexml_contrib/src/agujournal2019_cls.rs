@@ -27,6 +27,8 @@ LoadDefinitions!({
     "{keypoints}",
     "<ltx:classification scheme='keypoints'>#body</ltx:classification>"
   );
-  DefMacro!("\\xexplain[]{}", "");
-  DefMacro!("\\yexplain{}", "");
+  // AGU plot-axis explanation macros — pass through #2 / #1 so
+  // the explanatory text appears in the output.
+  DefMacro!("\\xexplain[]{}", "#2");
+  DefMacro!("\\yexplain{}", "#1");
 });

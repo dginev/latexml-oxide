@@ -787,14 +787,20 @@ LoadDefinitions!({
   // args.
   DefMacro!("\\leftheadline", "");
   DefMacro!("\\rightheadline", "");
-  DefMacro!("\\leftheadtext{}", "");
-  DefMacro!("\\rightheadtext{}", "");
+  // Round-34 surpass-Perl: \leftheadtext/\rightheadtext carry author
+  // text for running heads; \cvolyear/\issueinfo are journal metadata.
+  DefMacro!("\\leftheadtext{}",
+    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+  DefMacro!("\\rightheadtext{}",
+    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
   Let!("\\flheadline", "\\hfil");
   Let!("\\frheadline", "\\hfil");
   DefMacro!("\\headmark{}", "");
   DefMacro!("\\pagecontents", "");
-  DefMacro!("\\cvolyear{}", "");
-  DefMacro!("\\issueinfo{}{}{}{}", "");
+  DefMacro!("\\cvolyear{}",
+    "\\@add@frontmatter{ltx:note}[role=cvolyear]{#1}");
+  DefMacro!("\\issueinfo{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=issueinfo]{#1 #2 #3 #4}");
   DefMacro!("\\NoRunningHeads", "");
   DefMacro!("\\Monograph", "");
 

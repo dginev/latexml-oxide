@@ -319,5 +319,6 @@ LoadDefinitions!({
   // (svjour3 derivatives). Render as a regular footnote.
   // Witnesses 2406.12029, 2406.12545.
   DefMacro!("\\thankstext{}{}", "\\footnote{#2}");
-  DefMacro!("\\thanksref{}", "");
+  // \thanksref{label} — footnote-style marker; render as superscript.
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 });

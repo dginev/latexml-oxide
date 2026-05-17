@@ -408,8 +408,10 @@ LoadDefinitions!({
   DefMacro!("\\terms{}",            "\\@add@frontmatter{ltx:note}[role=terms]{#1}");
   DefMacro!("\\conferenceinfo{}{}", "\\@add@frontmatter{ltx:note}[role=conference]{#1 #2}");
 
-  // Perl L257
-  DefMacro!("\\thanksref{}", None);
+  // Perl L257 gobbles to Tokens(); we surpass by rendering as
+  // superscript (matches latex_constructs kernel-level treatment
+  // and IEEE \IEEEauthorrefmark).
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 
   // Perl L260-264: ACM variants
   Let!("\\CopyrightYear", "\\copyrightyear");
