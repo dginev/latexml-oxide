@@ -22,10 +22,16 @@ LoadDefinitions!({
   DefMacro!("\\email", "");
   DefMacro!("\\And", " ");
 
-  // Frontmatter / pagination ceremony.
-  DefMacro!("\\jmlrheading{}{}{}{}{}{}", "");
-  DefMacro!("\\ShortHeadings{}{}", "");
-  DefMacro!("\\firstpageno{}", "");
+  // Frontmatter / pagination ceremony. Round-34 surpass-Perl:
+  // preserve the author-typed text content (volume/page/etc. tuples
+  // and running-head author+title pair) as ltx:note rather than
+  // dropping silently.
+  DefMacro!("\\jmlrheading{}{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4 #5 #6}");
+  DefMacro!("\\ShortHeadings{}{}",
+    "\\@add@frontmatter{ltx:note}[role=shortheadings]{#1 / #2}");
+  DefMacro!("\\firstpageno{}",
+    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   // \editor / \editors carry author-supplied editor names — preserve as
   // ltx:note rather than dropping. JMLR papers cite the editor in the
   // header; this keeps the credit visible.
