@@ -58,6 +58,10 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
     "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+  // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
+  // emits the affiliation list inline without trailing notice). Witness
+  // 2310.18127.
+  DefMacro!("\\printAffiliations", "");
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
   // ICML 2025: extended marker for joint first + senior authorship.
   // Witness: 2503.15703 (icml2025.sty L534).
