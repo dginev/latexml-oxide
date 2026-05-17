@@ -2555,6 +2555,17 @@ LoadDefinitions!({
   Let!("\\@currentlabel", "\\@empty");
   DefMacro!("\\@currdir", "./");
 
+  // Defensive `\let \@halignto \@empty` for the kernel macro that's
+  // initialized inline inside \tabular / \tabular* / \array setup
+  // (`\let\@halignto\@empty` at the top of each), but referenced
+  // unprotected inside \edef expansions. If the inline init doesn't
+  // fire before the edef-referencing macro runs (e.g. `\@array`
+  // called outside a tabular context), the reference becomes
+  // undefined and trips `Error:undefined:\\@halignto` cascade.
+  // Witness: 2306.10481 (4 errors), 2307.05820 (22 errors), plus
+  // 2 other stage-2 papers using \begin{array} outside standard wrapping.
+  Let!("\\@halignto", "\\@empty");
+
   // Let's try just starting with this set (since we've loaded LaTeX)
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
