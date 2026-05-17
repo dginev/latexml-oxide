@@ -4358,13 +4358,11 @@ LoadDefinitions!({
 
   // `\thanksref{key}` — common in author-block / affiliation styles
   // (revtex, ifacconf, elsart, etc.). Each class typically defines a
-  // version that emits a footnote-style mark. For LaTeXML's purposes
-  // it's a marker we don't render; stub as no-op universally so
-  // papers using class files without a bound class can still convert.
-  // Witnesses: arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
-  // Perl LaTeXML also lacks a universal def but its OmniBus.cls.ltxml
-  // fires for unknown classes; our chain doesn't here.
-  DefMacro!("\\thanksref{}", "");
+  // version that emits a footnote-style mark. Round-34 surpass-Perl:
+  // render as superscript so the marker reaches the author block
+  // (Perl OmniBus L257 also gobbles to Tokens()). Witnesses:
+  // arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 
   // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — Cyrillic
   // transliteration markers used in BibTeX-generated bibliographies
