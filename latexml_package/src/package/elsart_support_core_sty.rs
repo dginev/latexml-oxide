@@ -135,7 +135,12 @@ LoadDefinitions!({
   DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
   DefMacro!("\\corref{}", "");
   DefMacro!("\\corauthref{}", "");
-  DefMacro!("\\cortext[]{}", "");
+  // \cortext[id]{text} carries author-typed corresponding-author text.
+  // Preserve as ltx:note frontmatter so the prose ("Corresponding
+  // author. Email: …") reaches the XML rather than being silently
+  // dropped. Content-preserving.
+  DefMacro!("\\cortext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
   // Perl elsart_support_core.sty.ltxml L47: body is `\author{#1}` but in
   // the `OptionalMatch:* {}` signature `#1` is the star flag and `#2` is
   // the content — the author name is silently dropped. Documented as a
@@ -175,8 +180,12 @@ LoadDefinitions!({
   DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
   // Title/metadata — Perl L60-106
-  DefMacro!("\\runauthor{}", "");
-  DefMacro!("\\runtitle{}", "");
+  // \runauthor / \runtitle carry author-typed short forms for the
+  // running header. Preserve as ltx:note (content-preserving).
+  DefMacro!("\\runauthor{}",
+    "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
+  DefMacro!("\\runtitle{}",
+    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}");
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
   DefMacro!("\\ead Optional:email Semiverbatim",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");

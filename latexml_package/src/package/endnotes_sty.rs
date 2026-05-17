@@ -24,8 +24,13 @@ LoadDefinitions!({
   DefMacro!("\\endnotemark", "\\lx@notemark{endnote}");
   DefMacro!("\\endnotetext", "\\lx@notetext{endnote}");
 
-  // \addtoendnotes{text}
-  DefMacro!("\\addtoendnotes{}", "");
+  // \addtoendnotes{text} — appends author-typed text to the endnotes
+  // list. Render as a `\\par` followed by the body so the prose
+  // shows up in the output (content-preserving). The endnotes.sty
+  // implementation writes the text out to the endnotes auxiliary
+  // file; we don't replay that aux-file pipeline, but the text
+  // belongs in the final document somehow.
+  DefMacro!("\\addtoendnotes{}", "\\par #1");
 
   DefMacro!("\\notesname", "Notes");
 
