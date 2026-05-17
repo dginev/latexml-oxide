@@ -30,4 +30,8 @@ LoadDefinitions!({
   // {acknowledgement} / {acknowledgements} aliases for spelling variants.
   DefEnvironment!("{acknowledgement}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>");
+  // {acks} env — IMS-specific acknowledgements ("acks" shorthand).
+  // Witness 2406.15844, 2406.04191, 2406.02840 (3 imsart papers).
+  DefEnvironment!("{acks}",
+    "<ltx:acknowledgements>#body</ltx:acknowledgements>");
 });

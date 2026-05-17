@@ -19,6 +19,8 @@ LoadDefinitions!({
   RequirePackage!("cleveref");
   RequirePackage!("etoolbox");
   RequirePackage!("lineno");
+  // MDPI papers use {adjustwidth} from changepage. Witness 2503.13839 +5.
+  RequirePackage!("changepage");
 
   // MDPI frontmatter — preserve author content as ltx:note frontmatter.
   DefMacro!("\\corresref[]{}", "\\textsuperscript{*#1}");
