@@ -617,6 +617,55 @@ current binary. v2 canvas re-run will pick these up.
   now-removed dangling refs. Witness 2502.03413: 3 errors → 0.
   Tests 1295/0/0.
 
+**Round-32 content-preservation audit pass (2026-05-17 early morning)**:
+A systematic sweep through ~25 contrib/package files looking for
+`DefMacro!(..., "")` and `DefEnvironment!(..., "")` stubs that
+silently dropped author body. Each fix routes the content via
+`<ltx:note>` / `<ltx:acknowledgements>` / `<ltx:creator>` /
+`<ltx:contact>` with a semantic `role=` attribute so the HTML / JATS
+post-processors can surface or hide as appropriate. Modules touched:
+
+- **Review markup**: `changes.sty` + `aas_support.sty` `\added /
+  \deleted / \replaced / \explain / \edit / \notetoeditor` — now emit
+  `<ltx:text class='ltx_changes_*'>` (struck-through for deleted)
+  and `<ltx:note role='editor-note'>`. Mirrors changes.sty's PDF
+  intent rather than vanishing the review prose.
+- **Journal metadata**: aas_support `\journalid / \articleid /
+  \paperid / \msid / \journal / \volume / \issue / \shortauthors`,
+  jmlr.cls `\jmlryear / \jmlrworkshop / \jmlrsubmitted /
+  \jmlrpublished / \jmlrproceedings / \jmlrvolume / \jmlrheading /
+  \editor / \editors / \Email / \IncludeName / \acks`, ams_support
+  `\shortauthor / \authors / \shortauthors / \addresses / \publname`,
+  ptephy `\preprintnumber / \subjectindex`, sn-jnl `\sectiontitle`,
+  ed.sty `\ednote`, elsart_support_core `\cortext / \runauthor /
+  \runtitle`, endnotes `\addtoendnotes`, cas-dc `\fntext /
+  \nonumnote / \cortext / \tnotetext / \tnoteref / \fnref /
+  \affiliation / \ead`, colm2025 `\affilmark`, quantumarticle
+  `\orcid`, deluxetable `\tabletail`, beamer `\lecture`, mdpi
+  `\acknowledgments`, titling `{titlingpage}` env body.
+- **Schema/structural fixes**: omnibus `{keyword}/{keywords}` env
+  now `\@add@frontmatter` the body (lifts ltx:classification OUT
+  of `<ltx:abstract>`, closes the SIAM `{abstract}{keywords}` schema
+  cascade — witness 2502.19420).
+- **Env-mode**: cas-dc `{bio}/{highlights}`, ecai `{ack}`, sagej
+  `{acks}/{funding}/{dci}`, sn-jnl `{abstract}/{declarations}/
+  {appendices}`, autart `{ack}/{ack*}`, ejpecp `{acks}`, imsart
+  `{funding}/{acknowledgement}/{acks}`, fcs `{acknowledgement}`,
+  quantumarticle `{acknowledgments}`, aa_support `{noteadd}`,
+  mn2e `{query}` — all now `mode => "internal_vertical"` so
+  multi-paragraph body parses without
+  `Attempt to end mode restricted_horizontal in internal_vertical`.
+- **Bindings**: svg-extract.sty → `RequirePackage("svg")` so
+  `\includesvg` resolves; scrartcl.cls + extarticle.cls bindings
+  added (KOMA-Script article and extsizes article variants);
+  `load_class` case-insensitive prefix-match fallback so
+  `WileyNJDv5` resolves to the `wileyNJDv5` binding.
+
+All 30+ commits Perl-aware and content-preserving per
+[[feedback-content-preserving]] memory. Tests stay at 1295/0/0
+throughout. Release `cortex_worker` rebuilt repeatedly to propagate
+to canvas; canvas v1 data persistently stale until next sweep.
+
 **Round-30 next_warning v3 partial summary (2026-05-15)**. Stages
 13-20 re-run on the 18-fix binary. Cumulative across 80k papers:
 v2 = 98.94%, v3 = 99.05% → net **+0.11%** (~88 additional papers
