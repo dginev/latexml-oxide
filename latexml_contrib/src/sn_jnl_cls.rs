@@ -14,12 +14,18 @@ LoadDefinitions!({
   // Witness 2503.06846.
   RequirePackage!("geometry");
 
-  // sn-jnl frontmatter — gobble.
+  // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");
   DefMacro!("\\bmsection{}", "\\section*{#1}");
-  DefMacro!("\\sectiontitle{}", "");
+  // \sectiontitle{text} carries an author-typed section title used in
+  // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
+  // than silently dropping the words. Content-preserving.
+  DefMacro!("\\sectiontitle{}",
+    "\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}");
+  // \headtype{...} / \extralength{...} are layout knobs (no author body).
   DefMacro!("\\headtype{}", "");
   DefMacro!("\\extralength{}", "");
+  // \theHfigure / \theHtable are hyperref H-counter overrides (no body).
   DefMacro!("\\theHfigure{}", "");
   DefMacro!("\\theHtable{}", "");
 
