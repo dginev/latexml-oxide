@@ -357,3 +357,72 @@ be compute-bound (math/digest-heavy) rather than graphics-bound.
 
 See SYNC_STATUS.md "Acceptance gates" — tied within noise as of
 2026-05-12 (1.18s latexml_oxide vs 1.11s pdflatex×2 idle).
+
+---
+
+## ASF traversal — perf opportunities (2026-05-17)
+
+ASF became default in commit `312cb33bdd`. Measurement on
+`1912.03329` (386 formulas, geometric topology, release build):
+
+* **LEGACY**: 0.89s avg
+* **ASF**: 1.16s avg → 1.13s after cartesian fast path
+
+ASF carries ~20% overhead on unambiguous math. Hot spots
+identified in `asf_traverser.rs` and `marpa/src/asf.rs`:
+
+### Latexml_math_parser side
+
+1. **Per-byte `String` allocation** (asf_traverser line 95):
+   every byte-token glade allocates a 1-char `String` via
+   `String::from_utf8(vec![byte])`. A typical paper has tens of
+   thousands of byte glades — tens of thousands of 1-char
+   allocations.
+
+   Fix: change `XM::Lexeme(String, Meta)` to
+   `XM::Lexeme(SymStr, Meta)` (interned via `latexml_core::arena`).
+   SymStr is a `u32`; the 128 ASCII byte values get interned once
+   and shared. Invasive — touches ~170 sites.
+
+2. **`Meta::default()` allocation per byte**: every byte glade
+   passes `Meta::default()` which constructs `Vec::new()` and
+   `CurryConstraints::default()`. Even though empty, the struct
+   moves are non-trivial. Sharing a single `Meta::EMPTY` reference
+   via `Cow` would save the copies.
+
+3. **Cartesian product cloning** (done): fast path for
+   single-combo case landed in commit `7314e19599`. Saves N+1
+   Vec allocations per rule reduction in the common case.
+
+### Marpa-rs side (separate repo `~/git/marpa`)
+
+1. **`HashMap<usize, Glade>` for glades** (`asf.rs:50`): glade
+   IDs are sequential — a `Vec<Option<Glade>>` indexed by id
+   would replace hash probes with array index loads.
+
+2. **`HashMap<usize, ParseTree>` for traversal cache**
+   (`asf.rs:138`): same as above, plus the cache hit `.clone()`
+   on line 156 deep-clones the entire `ParseTree`. For ASF user
+   types like `Vec<Option<XM>>`, this clones every `XM` tree —
+   significant. Wrapping in `Rc<PT>` (single-threaded) or `Arc<PT>`
+   would reduce clone to a refcount bump.
+
+3. **`children: &HashMap<usize, ParseTree>`** passed to user
+   callback (`asf.rs:207`): the user accesses children by
+   `rh_glade_id(ix)` + `children.get(&id)` — a hash probe per
+   position. A better API would pre-resolve children into a
+   `&[&ParseTree]` indexed by RHS position.
+
+4. **`compute_symches` allocations**: per-glade allocates
+   `source_data`, `raw_factorings`, `factorings`, etc. Vecs.
+   Reusable scratch buffers would reduce allocation traffic.
+
+### Estimated impact
+
+The byte-glade fix alone (item 1 of latexml_math_parser side) likely
+closes the gap to LEGACY parity on unambiguous math. The marpa-rs
+cache fixes would help all uses of `parse_and_traverse_forest`,
+including in `marpa::tests::panda::*`.
+
+Estimated effort: byte-glade arena fix ≈ 1-2 sessions; marpa-rs
+cache fixes ≈ 1 session. Tracked as future perf work.
