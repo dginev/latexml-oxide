@@ -6,9 +6,18 @@
 > harder-than-expected ambiguity-tiebreaking problem we hit during
 > the wire-in.
 >
-> Status 2026-05-17: **new paradigm, open research problem**. We are
-> not committing to a single tiebreaking discipline yet — this doc
-> accumulates evidence and lever options as we triage cases.
+> Status 2026-05-17 (end of second push): **ASF 1292/9**, LEGACY
+> 1301/0. Eight pragma + early-action interventions landed (catalog
+> below). Remaining 9 failures are concentrated in patterns the
+> proposed `modified_term` grammar refinement should subsume.
+>
+> Status pre-push (start 2026-05-17): 1272/29.
+>
+> This doc accumulates evidence and lever options as we triage
+> cases. We are **not** committing to a single tiebreaking
+> discipline; we instead build a layered ladder (grammar > action >
+> pragma) and pick the lowest viable layer per case (see "Lever
+> selection discipline" below).
 
 ---
 
@@ -151,6 +160,127 @@ since it preserves the implicit legacy tiebreaker.
   `reverse()` is the opposite. **There is no single fixed
   reversal that matches both** — Marpa's natural order is not
   simply "first" or "last" of our Cartesian product.
+
+---
+
+## Lever selection discipline (durable rule, 2026-05-17)
+
+When a parse-disambiguation case lands on the desk, work bottom-up
+through the ladder and stop at the first viable layer:
+
+```
+1. grammar refinement       — narrowest, hardest, most principled
+2. early action prune       — moderate cost, per-rule scope
+3. tree-level pragma        — cheapest, broadest, latest
+```
+
+### When to use **early action pruning** (inside `semantics.rs`)
+
+Use when the rejection is **purely local** to the reduction —
+detectable from the rule's RHS components alone, without looking
+elsewhere in the parse forest.
+
+Examples (all landed 2026-05-17):
+* `compose` left-associativity reject in `infix_apply` — peek at
+  the RHS; if it's another `compose` Apply, reject right-nesting.
+* `OPERATOR` wider-absorption in `apply_invisible_times` and
+  `infix_apply_nary` — when LHS Apply has `role="OPERATOR"`, absorb
+  the chain into its args rather than emitting `OP * rest`.
+* `bare_conditional` reject inside `list_apply` — if a list item is
+  a bare `conditional@(…)` without parens-fence, reject it.
+
+**Why prefer this layer**: Per-rule actions fire **once per glade**
+in ASF (memoized), versus per-tree in `soft_prune_choices`. Cheap,
+local, and fails fast.
+
+User feedback verbatim (2026-05-17): *"not a pragma — you can detect
+this during the action (early semantic pruning). Pragmas happen
+late and are less efficient — we only need them for rules that
+require more global analysis of an expression."*
+
+### When to use **tree-level pragmas** (`pragmatics.rs`)
+
+Use when the rejection criterion requires looking at the **whole
+tree** (root shape, multi-tree comparison, or forest-wide count).
+
+Examples (landed 2026-05-17):
+* `prefer_named_interval_at_root` — checks the root's Apply meaning.
+* `prefer_non_self_wrapping_root` — checks `Apply@(Apply@(...))`
+  redundancy at the root.
+* `prefer_combined_relop_over_multirelation_with_absent` — root is
+  a multirelation AND has interior `absent`.
+* `prefer_zero_absent_when_available` — multi-tree count comparison.
+
+**Why this layer exists**: some signals are only legible at the
+forest level (e.g. "this candidate has 0 absent, that one has 2").
+Per-rule actions can't see siblings.
+
+### When to use **grammar refinement** (most principled)
+
+Use when the ambiguity is **structural** — when the grammar admits
+parses that mathematicians would never consider, regardless of
+context. The `modified_term` proposal (below) is the canonical
+example: `tight_term ≡ EXPR ≥ BOUND` should ALWAYS parse as
+"define-then-bound", never as a flat multi-relation chain that
+needs `absent` markers.
+
+**Why this layer is last**: most expensive (changes the grammar
+and every action that produces XM for the affected rule); hard to
+roll back; risk of regressions on the well-behaved cases.
+
+### Levers we DIDN'T pick this session, and why
+
+* **Lever 1 — Marpa `rule_rank`**: explored conceptually; deferred
+  in favor of action/pragma layers because rule-rank ordering is
+  hard to debug from XM output alone (the rank choice happens
+  inside libmarpa, far from where we observe its effect).
+* **Lever 2 — Per-rule score return type**: invasive trait change;
+  deferred until clear evidence that early-action prunes are
+  insufficient.
+* **Lever 5 — Match Marpa tree-iter order in ASF**: proven not to
+  be a uniform inversion. Two cases (function-app vs implicit-times,
+  and DIFFOP vs letter-d) prefer **opposite** Cartesian-product
+  orders. There is no single reversal that satisfies both.
+
+---
+
+## What landed in the 2026-05-17 push (1272/29 → 1292/9)
+
+Eight interventions, in chronological landing order. Each cites
+the file + function where the change lives.
+
+| # | Layer | Mechanism | File / function | Tests gained |
+|---|---|---|---|---|
+| 1 | Pragma (student tier) | Dual-aware `FencedLettersAreFunctionArguments` recognising both `XM::Token` and `XM::Lexeme` OPEN/CLOSE inside a Dual's presentation | `pragmatics.rs::is_dual_fenced_rhs` | 12 |
+| 2 | Pragma (forest) | `prefer_named_interval_at_root` — if root is `open-interval@(a,b)` in one candidate and `vector@(a,b)` in another, drop the vector | `semantics/tree.rs::prefer_named_interval_at_root` | 2 |
+| 3 | Pragma (forest) | `prefer_non_self_wrapping_root` — drop `set@(set@(…))` when `set@(…)` exists | `semantics/tree.rs::prefer_non_self_wrapping_root` | 2 |
+| 4 | Pragma (forest) | `prefer_combined_relop_over_multirelation_with_absent` — `x >= 0` over `x > absent = 0` when the multirelation has *interior* absent | `semantics/tree.rs::root_is_multirelation_with_interior_absent` | 1 |
+| 5 | Early action | OPERATOR wider-absorption in `apply_invisible_times` and `infix_apply_nary` — `D x*y*z` → `D@(x*y*z)` | `semantics.rs::apply_invisible_times`, `infix_apply_nary` | 1 |
+| 6 | Early action | Compose left-associativity prune | `semantics.rs::infix_apply` | 1 |
+| 7 | Early action | Bare-conditional reject in list items, with parens-fence carve-out | `semantics.rs::list_apply` | 1 |
+| 8 | Pragma (forest) | `prefer_zero_absent_when_available` — multi-tree count comparison, with `count_nodes_for_parse_ranking` following `XM::Ref` through `build_ref_index` | `semantics/tree.rs::prefer_zero_absent_when_available` | 1 (ncases, **blessed** — accepted ASF reading as new ground truth) |
+
+### Key invariants captured along the way
+
+* `count_nodes_for_parse_ranking`: Apply = `1 + sum(args)` (operator
+  is intrinsic to the Apply, not a separate node). Dual = content
+  count only (presentation is decoration). Ref = follow through
+  idref into the resolved node. Established via user direct
+  feedback after I double-counted Apply on first attempt.
+* Forest pragma compares the **roots** of each candidate; for
+  per-glade decisions use the action layer.
+* Expert pragmas (e.g. `FencedLettersAreFunctionArguments` before
+  it was demoted) only fire via `Lexeme::specialize` callsites.
+  Actions don't call `.specialize()` on Apply nodes, so an expert
+  pragma on a Dual-shaped Apply is a **no-op**. The fix was to
+  move the pragma to the student tier (which fires via
+  `validate_recursive` inside `soft_prune_choices`).
+* The ncases test bless was the only "ASF ground-truth wins"
+  decision this push. The original Perl XML and legacy ASF
+  produced `cases @ (((w...|...)... ≥ |d|))` — a conditional
+  inside a conditional. The new ASF reading is
+  `w ≡ √|c| · √(…) · |c| ≥ |d|` (define-then-bound chain), which
+  is the obvious mathematical reading. User sign-off recorded.
 
 ---
 
@@ -410,7 +540,53 @@ SEMANTIC checks, each of which can be reasoned about individually.
 
 ---
 
-## Phase 1 catalog — clean ASF baseline 1284/17 (after pragma fix)
+## Current 9 failures — canonical catalog (end of 2026-05-17 push)
+
+**ASF parity: 1292/9. LEGACY: 1301/0.**
+
+Each row links to (a) the dominant ambiguity class from earlier
+sections, (b) the next lever we'd try, and (c) whether it falls
+under the proposed `modified_term` umbrella (✅) or needs its own
+intervention (─).
+
+| # | Test | Pattern (compressed) | Class | Next lever | `modified_term`? |
+|---|---|---|---|---|---|
+| 1 | `ambiguous_relations_test` | `(<x,y>, …)` family | C / B | Either modified_term, or extending P4 to `formulae@(2 < x, y >= z)`-shape | ✅ |
+| 2 | `count_parses_test` | `\langle B\|\sum f\|C\rangle` (function-app inside angle-delim Dual) | H | Either modified_term, or extending the Dual-aware pragma to recognise this shape | ✅ |
+| 3 | `mathtools_test` | Same as #2 in a slightly different fixture | H | Same as #2 | ✅ |
+| 4 | `metarelation_elision_test` | Multi-relation with elision marker | M | Probable modified_term beneficiary | ✅ (probably) |
+| 5 | `physics_test` | ASF produces `<Math class="ltx_math_unparsed">` for some sub-formula | U | Separate — grammar coverage issue, NOT tiebreaking | ─ |
+| 6 | `plainfonts_test` | TBD — needs case-by-case diff | ? | Catalog first | ? |
+| 7 | `qm_test` | `<a\|f\|b>` bra-ket inside angle-delim | C | Either modified_term, or QM-bracket-specific pragma | ✅ |
+| 8 | `standalone_modifiers_test` | `(<0)` — modifier-only term | K | **Direct fit for modified_term** | ✅ |
+| 9 | `vertbars_test` | `\|\|x\|\|a\|\|y\|\|` — ambiguous bar pairing | F | Pragma + likely also helped by modified_term | ✅ (partly) |
+
+### Read of the table
+
+* **5-6 of 9** failures align with the `modified_term` grammar
+  refinement. If that refinement is implemented and verifies as
+  expected, ASF parity would jump to **1297-1298 / 3-4**.
+* **`physics_test`** is the one true outlier — it's not a
+  tiebreaking issue at all but a parse-coverage gap (ASF produces
+  no parse). Different investigation track.
+* **`plainfonts_test`** needs first-pass diff inspection before
+  classifying.
+
+### Next-session entry point (priority order)
+
+1. **`modified_term` grammar refinement** — single principled change
+   that should close 5-6 failures simultaneously. See proposal
+   section.
+2. **`physics_test`** — diagnose the parse-coverage gap. Likely a
+   missing rule or a specific lexeme handling.
+3. **`plainfonts_test`** — catalogue, then per-pattern intervention
+   if not subsumed by modified_term.
+4. **`vertbars_test`** — pattern-specific pragma if modified_term
+   doesn't suffice.
+
+---
+
+## Historical: Phase 1 catalog — clean ASF baseline 1284/17 (after pragma fix)
 
 After landing the Dual-aware `FencedLettersAreFunctionArguments`
 pragma and moving it from expert to student tier (commit `d6c56`),
@@ -520,7 +696,7 @@ Alternative high-leverage moves that might fix multiple classes:
 
 ---
 
-## Original Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17)
+## Historical: Original Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17 start)
 
 **Important correction**: the 1281/20 baseline quoted earlier in
 this doc was measured with a temporary `alts.reverse()` patch in
@@ -712,15 +888,106 @@ This refinement would directly resolve the following classes
 That's ~5-6 of the remaining 9 ASF failures, addressed at the
 grammar level rather than per-pattern pragmas.
 
+### Per-failure coverage hypothesis
+
+Walk through the 9 remaining ASF failures and predict which the
+refinement subsumes:
+
+| Test | Current ambiguity | Why modified_term resolves |
+|---|---|---|
+| `standalone_modifiers_test` | `(<0)` — bare `<0` parsed as `absent < 0` versus as a parenthesized modifier expression | `modified_term` legitimizes `<0` as a free-standing modifier inside parens — no `absent` introduced. **Direct fit.** |
+| `ambiguous_relations_test` | `<x, y> = 0` — vector inside angle-bracket vs `absent < x, y > absent = 0` chain | `<x,y>` becomes an unambiguous `tight_term` (vector or delimited-pair). `= 0` attaches as a single `modifier`. No `absent` markers needed. |
+| `qm_test` | `<a|f|b>` — bra-ket interpretation | The Dirac bracket `<…|…|…>` is recognised as a `tight_term` at the lexical level; surrounding context attaches `modifier`s rather than competing for the bars. |
+| `count_parses_test`, `mathtools_test` | `\langle B|\sum f|C\rangle` — function-app `B(…)` not happening because Dual-aware pragma doesn't see it | When the angle-delim is at the `tight_term` level, the function-app pragma already fires correctly. The current failure is the Dual structure prevents the pragma from reaching inside. Modified_term moves the angle-delim to a category where the Dual is built differently. |
+| `metarelation_elision_test` | Multi-relation with elision marker | The elision marker fits naturally as a non-relop modifier between relop modifiers. Need to verify. |
+| `vertbars_test` | `\|\|x\|\|a\|\|y\|\|` | The bars don't directly map onto modifier syntax, but `modified_term` confines the `tight_term`'s internal ambiguity — bars inside tight_term unambiguously absolute-value. May not fully resolve, but reduces forest size. |
+| `physics_test` | ASF produces no parse | NOT subsumed — separate parse-coverage gap. |
+| `plainfonts_test` | TBD | TBD — catalog first. |
+
+**Estimated subsumption: 5-6 of 9 failures.** Definitely:
+standalone_modifiers, ambiguous_relations, qm. Likely:
+count_parses, mathtools, metarelation_elision. Partial:
+vertbars. Not: physics, plainfonts (TBD).
+
+### Concrete BNF placement
+
+In `latexml_math_parser/src/grammar/builder.rs` the current
+relevant rules are roughly (see file for exact form):
+
+```
+statement      → formulae | formula
+formulae       → formula (",", formula)+
+formula        → expression (relop expression)+
+              |  expression
+expression     → tight_term (addop tight_term)*
+tight_term     → factor (mulop factor)*
+factor         → factor_base ("^" | "_" factor_base)*
+factor_base    → number | letter | OPEN expression CLOSE | …
+```
+
+The refinement adds:
+
+```
+modifier       → relop expression                                      // NEW
+modified_term  → tight_term modifier+                                  // NEW
+statement      → formulae | formula | modified_term                   // ADD modified_term arm
+```
+
+Note the **ordering** matters: `modified_term` must be visible at
+the `statement` level (top of the grammar), so a single tight_term
++ modifier chain doesn't fall through to `formula` and pick up the
+flat multi-relation interpretation. With Marpa's left-to-right
+SLIF semantics, both `formula` and `modified_term` may match for
+chains of relops; the action layer should disambiguate by checking
+whether the result is a "lifting" modifier sequence vs a true
+relation chain.
+
+### Edge cases and risks
+
+* **`a < b < c` chain** — under the new grammar this could parse
+  as `modified_term(a, [< b, < c])` OR as `formula(a < b < c)`. The
+  flat form is what we want for true relation chains. The
+  refinement needs an action-layer disambiguator: if all modifiers
+  share the same relop AND there's no `=` or `≡`, prefer the
+  formula reading.
+* **`a = b = c = d`** — equality chains are usually relation chains
+  ("all four are equal"), not "define a, then constrain b, then
+  constrain c". Same disambiguator: chain of identical relops →
+  formula; mixed (`≡` + `≥`) → modified_term.
+* **Already-pragma'd cases** — `prefer_zero_absent_when_available`
+  currently rescues ncases. If modified_term subsumes ncases the
+  pragma becomes dead code; either delete it or keep it as a
+  belt-and-suspenders for other patterns.
+
 ### Implementation cost
 
-Medium. Requires:
-1. Adding the `modifier` and `modified_term` rules to
+Medium-high. Requires:
+1. Adding the `modifier`, `modified_term` rules and a
+   `statement → modified_term` arm to
    `latexml_math_parser/src/grammar/builder.rs`.
 2. Writing actions (`apply_modified_term`, `chain_modifier`) in
-   `semantics.rs` to construct the right XM shape.
-3. Possibly demoting some existing `formula relop expression`
-   rules to avoid double-coverage with `modified_term`.
+   `semantics.rs` to construct the right XM shape — likely
+   `XM::Apply` with `meaning="modified-term"` or similar.
+3. **Disambiguator at the action layer** to distinguish "true
+   relation chain" from "definition+modifier" — see edge cases.
+4. Validate that `prefer_zero_absent_when_available` and the other
+   landed pragmas don't fight the new grammar — they likely become
+   no-ops on modified_term roots but should still help in other
+   contexts.
+5. Test that all 1301 LEGACY tests still pass (the new rules
+   should be ADDITIVE; demoting an existing rule risks regressions).
+
+### Validation plan
+
+1. Implement grammar + actions; run full `cargo test --tests` to
+   measure both LEGACY and ASF impact.
+2. If LEGACY regresses, the new rules are competing with existing
+   ones. Either restrict the modified_term firing condition or
+   add an action-layer disambiguator.
+3. Once both paths green or improved, run 10k canvas to validate
+   on real arXiv math.
+4. Delete pragmas that have become dead code (verify by removing
+   one at a time and checking neither path regresses).
 
 ### Sequencing
 
@@ -765,17 +1032,40 @@ The pragmatic tiebreaking is the long-tail polish on top of it.
 
 ## What we have committed so far
 
-* ASF infrastructure on the marpa fork (branches
-  `asf-step2-symches`, `asf-step3-generic-traverser`) — all
-  panda tests pass; substantive 3-parse validation.
-* `ASF::peak` multi-source fix (real correctness bug).
-* `MathTraverser` scaffolding + wire-in behind
+### Marpa fork (`~/git/marpa`)
+* Branch `asf-step3-generic-traverser` — Steps 2-6 of
+  `ASF_STATUS.md` landed: `compute_symches` factoring loop,
+  Glade query API, recursive memoized `ASF::traverse`, generic
+  `&mut TR Traverser` trait, substantive 3-parse panda test. 17
+  marpa tests pass.
+* `ASF::peak` multi-source fix (real correctness bug discovered
+  during wire-in).
+
+### latexml-oxide (this branch)
+* `MathTraverser` wired into `parse_marpa` behind
   `LATEXML_MARPA_ASF=1`.
 * Discriminator handling 5 glade classes (byte / outer-token /
   passthrough-rule / scaffolding / action-rule).
-* Per-glade `reverse()` of the alternatives vec inside the
-  traverser — partial fix; helps Case A but hurts Case B. **Under
-  active reconsideration.**
+* **8 pragma + early-action interventions** (see "What landed in
+  the 2026-05-17 push" section above) — 1272/29 → **1292/9**.
+* `count_nodes_for_parse_ranking` with Ref-following via
+  `build_ref_index` in `semantics/tree.rs`.
+* Per-glade `reverse()` of the alternatives vec — **removed** this
+  push (proved not to be a uniform inversion; replaced with the
+  pragma/action ladder).
+* `ncases_test` XML reblessed — accepted ASF reading as new
+  ground truth with user sign-off (define-then-bound chain is
+  the obvious mathematical reading).
 
-98.5% parity (1281/1301) with ASF enabled. The remaining 1.5%
-is the tiebreaking problem documented above.
+### Numbers
+* **LEGACY**: 1301/0
+* **ASF**: 1292/9
+* Parity gap: 9 tests (0.69%).
+
+### What's NOT yet committed
+* `modified_term` grammar refinement (next-session priority).
+* Marpa PR merge to dginev/marpa master + dep switch back to
+  master branch.
+* 10k canvas validation under ASF.
+* Removal of 5 convergence caps in `parse_marpa` (only safe
+  once ASF parity is 100%).

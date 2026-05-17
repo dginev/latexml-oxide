@@ -1439,6 +1439,18 @@ pub fn speculative_prefix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
+  // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
+  // modifier expression (`(>0)`, `(\in C)`), reject — the
+  // legitimate parse goes through `annotated_fenced_modifier`.
+  if let Some(ref arg) = arg1 {
+    if is_fenced_modifier_dual(arg) {
+      return Err(
+        "speculative_prefix_apply: arg is a fenced modifier expression — \
+         prefer annotated_fenced_modifier"
+          .into(),
+      );
+    }
+  }
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
@@ -1558,12 +1570,69 @@ pub fn prefix_apply_applyop(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, _applyop, arg1);
+  // Early-action prune: when arg1 is a fenced modifier expression
+  // — i.e. a Dual whose content is a relop/metarelop Apply with
+  // `absent` as the FIRST argument (the `prefix_relop_apply`
+  // shape) — we must NOT treat it as a function argument. The
+  // grammar's `expression lparen relop expression rparen →
+  // annotated_fenced_modifier` already builds the correct
+  // `annotated@(x, fenced-modifier)` tree. Function-application
+  // here corrupts to `x@(absent > 0)` which is meaningless.
+  if let Some(ref arg) = arg1 {
+    if is_fenced_modifier_dual(arg) {
+      return Err(
+        "prefix_apply_applyop: arg is a fenced modifier expression — \
+         prefer annotated_fenced_modifier over function application"
+          .into(),
+      );
+    }
+  }
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Detect the "fenced modifier" shape: an `XM::Dual` whose
+/// fenced content is a RELOP/METARELOP Apply with `absent` as the
+/// first argument (the `prefix_relop_apply` shape produced by
+/// `relop expression → prefix_relop_apply`).
+///
+/// The Dual produced by `fenced` / `annotated_fenced_modifier` has
+/// shape `Dual(Ref(id), Wrap[OPEN, Apply(op, absent, expr), CLOSE])`
+/// — the semantic Apply lives inside the **presentation Wrap**,
+/// referenced by Ref from the content. So we look there for the
+/// absent-prefixed Apply.
+///
+/// Used in `prefix_apply_applyop` and `apply_invisible_times` to
+/// reject treating `(>0)` / `(\in C)` as a function argument when
+/// the legitimate parse is `annotated@(x, fenced-modifier)`.
+fn is_fenced_modifier_dual(arg: &XM) -> bool {
+  let XM::Dual(ref content, ref presentation, _, _) = *arg else {
+    return false;
+  };
+  let has_absent_prefix = |args: &Args| -> bool {
+    let first = args.trees().first().copied().cloned();
+    matches!(first,
+      Some(XM::Token(p, _)) if p.meaning.as_deref() == Some("absent"))
+  };
+  // Path A — content is an Apply directly:
+  if let XM::Apply(_, args, _, _) = &**content {
+    return has_absent_prefix(args);
+  }
+  // Path B — content is a Ref; find the Apply in the presentation Wrap.
+  if let XM::Wrap(items, _, _) = &**presentation {
+    for item in items {
+      if let XM::Apply(_, args, _, _) = item {
+        if has_absent_prefix(args) {
+          return true;
+        }
+      }
+    }
+  }
+  false
 }
 
 /// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
@@ -2672,6 +2741,19 @@ pub fn apply_invisible_times(
       }
     }
   }
+  // Early-action prune for the fenced-modifier shape on the RHS:
+  // `x (>0)` / `x (\in C)` — the legitimate parse is
+  // `annotated_fenced_modifier`, NOT `x * (>0)` (implicit-times)
+  // and NOT `x@(>0)` (function-app, handled in `prefix_apply_applyop`).
+  if let Some(ref r) = right {
+    if is_fenced_modifier_dual(r) {
+      return Err(
+        "apply_invisible_times: right is a fenced modifier expression — \
+         prefer annotated_fenced_modifier"
+          .into(),
+      );
+    }
+  }
   // Bigop application results should not participate in invisible-times on their right.
   // When ∫_0^∞ x^2 dx is parsed, both `∫_0^∞(x^2 dx)` (absorption) and
   // `∫_0^∞(x^2) * dx` (flat) exist. Prune the flat parse by rejecting
@@ -3405,6 +3487,27 @@ pub fn prefix_relop_apply(
   _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => relop, right);
+  // Early-action prune: when the operator is METARELOP (e.g.
+  // `\vdash`, `:`, `\models`), the formula-level
+  // `metarelop expression → prefix_relop_apply` rule competes with
+  // the statement-level `metarelop formula → prefix_metarelop_apply`
+  // rule. Legacy prefers the statement-level grouping
+  // (`Apply(vdash, formula)`) over the formula-level chain
+  // (`multirelation(vdash, ..., =, 0)`). Reject the formula-level
+  // METARELOP prefix here so the parse goes through the
+  // statement-level rule.
+  let is_metarelop = relop.as_ref().is_some_and(|op| match op {
+    XM::Lexeme(l, _) => l.split(':').next() == Some("METARELOP"),
+    XM::Token(p, _) => p.role.as_deref() == Some("METARELOP"),
+    _ => false,
+  });
+  if is_metarelop {
+    return Err(
+      "prefix_relop_apply: METARELOP prefix at formula-level — \
+       prefer statement-level prefix_metarelop_apply"
+        .into(),
+    );
+  }
   // For BINOP prefix usage (e.g. \mathbin{|}x), Perl produces op@(x) without absent.
   // For RELOP prefix (e.g. = b, < c), keep absent as first arg.
   let is_binop = relop.as_ref().is_some_and(|op| match op {

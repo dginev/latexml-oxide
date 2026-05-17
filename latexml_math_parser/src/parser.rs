@@ -1322,6 +1322,39 @@ impl MathParser {
         // absent"); we'll investigate any regression case-by-case.
         reduced_forest = reduced_forest.prefer_zero_absent_when_available();
 
+        // Multi-tree pragma: prefer candidates that recognized
+        // fenced sub-expressions as `delimited-X@(…)` (angle, paren,
+        // bracket, vertbar) over flat `formulae@(…)` / multirelation
+        // chains. Fires only when at least one candidate has a
+        // `delimited-X` Apply AND another has fewer/zero. Resolves
+        // `2<x,y>=z`, `0<<a,b>>1`, and bra-ket-style angle fences.
+        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
+        reduced_forest = reduced_forest.prefer_more_delimited_wrappers();
+
+        // Multi-tree pragma: prefer candidates with MORE
+        // `Apply(letter, [vertbar-fenced])` patterns — captures the
+        // QM-style bra-ket reading `<a|f|b>` → `a@(|f|) * b` over
+        // the multiplicative `a * |f| * b`. No-op outside QM/angle
+        // contexts because K-12 readings don't admit the pattern.
+        reduced_forest = reduced_forest.prefer_more_letter_at_vertbar();
+
+        // Multi-tree pragma: when at least one candidate has zero
+        // `MODIFIEROP:conditional` Applies, drop those with more.
+        // The conditional reading of `vertbar_modifier` recurses
+        // through itself in the grammar, producing
+        // `conditional@(a, conditional@(a, …))` for inputs like
+        // `a|a|+b|b|+c|c|`. The K-12 algebra reading
+        // `a*|a|+b*|b|+c*|c|` has no conditionals; this pragma
+        // gives it preference. Set-builder / probability cases
+        // where no algebraic alternative exists are unaffected.
+        reduced_forest = reduced_forest.prefer_fewer_conditionals();
+
+        // Multi-tree pragma: when at least one candidate roots at
+        // an additive operator (`+`/`-`), prefer it over candidates
+        // with multiplicative root. K-12 reading: `a*|a|+b*|b|+c*|c|`
+        // has `+` outermost, not `a * (one giant absolute-value)`.
+        reduced_forest = reduced_forest.prefer_root_addition_over_outer_multiplication();
+
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are
         // **deliberately not wired in by default**. Both proved
