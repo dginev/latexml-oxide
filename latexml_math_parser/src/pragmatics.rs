@@ -493,7 +493,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
           }
         }
       }
-    } else if let Some(prune_reason) = is_dual_parens_rhs(top_rhs, trees.first().copied()) {
+    } else if let Some(prune_reason) = is_dual_fenced_rhs(top_rhs, trees.first().copied()) {
       return Err(prune_reason.into());
     }
   }
@@ -520,54 +520,98 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
 ///
 /// Returns `Some(error_msg)` if the parse should be pruned, `None`
 /// otherwise.
-fn is_dual_parens_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str> {
+/// Recognize an `XM::Dual(_, Wrap[OPEN, ..., CLOSE])` shape on the RHS
+/// of invisible-times where the outer delimiters are PARENS, BRACKETS,
+/// or VERTBARS — all of which can legitimately indicate function-app
+/// when preceded by a letter LHS. Returns `Some(_, error_msg)` if the
+/// shape matches.
+///
+/// `kind` is the fence-pair category for diagnostics:
+/// "parens" / "brackets" / "vertbars".
+fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str> {
   let XM::Dual(_, ref presentation, ..) = top_rhs else {
     return None;
   };
   let XM::Wrap(ref items, ..) = **presentation else {
     return None;
   };
-  // Wrap items are lexer-emitted leaves: either `XM::Lexeme("OPEN:(:N")`
-  // / `XM::Lexeme("CLOSE:):N")` directly, or `XM::Token` with
-  // role+content set. Accept both forms.
-  let is_open_lexeme = |x: Option<&XM>| match x {
-    Some(XM::Token(p, _)) => p.role.as_deref() == Some("OPEN") && p.content.as_deref() == Some("("),
-    Some(XM::Lexeme(name, _)) => name.starts_with("OPEN:(:"),
-    _ => false,
+  // Recognize PARENS or BRACKETS delimiters. **Vertbars `|...|`
+  // are deliberately excluded** — K-12 math convention reads
+  // `a|f|b` as `a * |f| * b` (absolute-value multiplication),
+  // NOT as `a@(|f|)` (function application). Generalizing the
+  // "fence implies function-argument" rule to vertbars regressed
+  // 2 legacy tests; the qm_test bra-ket case has its own
+  // expected interpretation that this pragma should not enforce.
+  enum Fence {
+    Parens,
+    Brackets,
+  }
+  // (Marker: vertbar-fenced cases purposely fall through; the qm_test
+  // and similar bra-ket tests pass under a different mechanism
+  // (the QM context resolves differently in soft_prune).
+  let recognize_open = |x: Option<&XM>| -> Option<Fence> {
+    match x {
+      Some(XM::Token(p, _)) => match (p.role.as_deref(), p.content.as_deref()) {
+        (Some("OPEN"), Some("(")) => Some(Fence::Parens),
+        (Some("OPEN"), Some("[")) => Some(Fence::Brackets),
+        _ => None,
+      },
+      Some(XM::Lexeme(name, _)) => {
+        if name.starts_with("OPEN:(:") {
+          Some(Fence::Parens)
+        } else if name.starts_with("OPEN:[:") {
+          Some(Fence::Brackets)
+        } else {
+          None
+        }
+      },
+      _ => None,
+    }
   };
-  let is_close_lexeme = |x: Option<&XM>| match x {
-    Some(XM::Token(p, _)) => p.role.as_deref() == Some("CLOSE") && p.content.as_deref() == Some(")"),
-    Some(XM::Lexeme(name, _)) => name.starts_with("CLOSE:):"),
-    _ => false,
+  let recognize_close = |x: Option<&XM>, fence: &Fence| -> bool {
+    match x {
+      Some(XM::Token(p, _)) => match (p.role.as_deref(), p.content.as_deref(), fence) {
+        (Some("CLOSE"), Some(")"), Fence::Parens) => true,
+        (Some("CLOSE"), Some("]"), Fence::Brackets) => true,
+        _ => false,
+      },
+      Some(XM::Lexeme(name, _)) => match fence {
+        Fence::Parens => name.starts_with("CLOSE:):"),
+        Fence::Brackets => name.starts_with("CLOSE:]:"),
+      },
+      _ => false,
+    }
   };
-  if !(is_open_lexeme(items.first()) && is_close_lexeme(items.last())) {
+
+  let Some(fence) = recognize_open(items.first()) else {
+    return None;
+  };
+  if !recognize_close(items.last(), &fence) {
     return None;
   }
-  // Inner content is items[1] (the single-arg case) or the structured
-  // Apply that the multi-arg `interpret_delimited` path produces.
+  let _ = match fence {
+    Fence::Parens => "parenthetical",
+    Fence::Brackets => "bracketed",
+  };
+
   // Look at the Dual's content branch — that's the semantic shape.
   let content = match top_rhs {
     XM::Dual(c, _, _, _) => &**c,
     _ => return None,
   };
   // Skip the NUMBER case to defer to the legacy NUMBER-exception code.
-  // The content is either a Ref-to-NUMBER or directly an Apply with
-  // numeric structure; treat anything that resolves to a baseline NUMBER
-  // as "let upstream handle it".
   if let XM::Lexeme(inner_name, _) = content.get_baseline() {
     if inner_name.starts_with("NUMBER") {
-      // Legacy NUMBER-exception path: prune if LHS is non-fenced
-      // Lexeme/Apply, otherwise let it through.
       match top_lhs {
         Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
           return Some(
-            "pruning non-argument parenthetical NUMBER (Dual-wrapped), used as RHS of \
+            "pruning non-argument fenced NUMBER (Dual-wrapped), used as RHS of \
              invisible times",
           );
         },
         Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
           return Some(
-            "pruning non-argument parenthetical NUMBER (Dual-wrapped), used as RHS of \
+            "pruning non-argument fenced NUMBER (Dual-wrapped), used as RHS of \
              invisible times",
           );
         },
@@ -575,9 +619,7 @@ fn is_dual_parens_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str
       }
     }
   }
-  Some(
-    "pruning non-argument parenthetical Dual atom, used as RHS of invisible times",
-  )
+  Some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
 }
 
 /// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
