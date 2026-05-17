@@ -215,4 +215,9 @@ LoadDefinitions!({
   // wrappers. No-op for our XML pipeline (caption text is emitted via
   // ltx:caption regardless of formatting). Witness 2412.15378.
   DefMacro!("\\caption@@make{}{}", "#2");
+  // caption3.sty L850 defines \caption@setfont{kind}{value} — used
+  // internally to apply font options (font/labelfont/textfont/size).
+  // Font formatting is irrelevant in our XML output; gobble args.
+  // Witness 2504.00326.
+  DefMacro!("\\caption@setfont{}{}", "");
 });
