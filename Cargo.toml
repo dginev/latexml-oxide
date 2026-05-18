@@ -27,6 +27,15 @@ resolver = "2"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
+# Active dev-time patch (2026-05-18): point libxml at the local
+# `~/git/rust-libxml` checkout so the unreleased
+# `Document::remove_internal_subset` (KWARC/rust-libxml PR
+# `feat/document-remove-internal-subset`) is available to
+# `latexml_post::writer`. Re-comment + bump the crates.io `libxml`
+# dep version once 0.3.11 ships.
+[patch.crates-io]
+libxml = { path = "/home/deyan/git/rust-libxml" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries

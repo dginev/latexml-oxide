@@ -92,11 +92,19 @@ impl Processor for Writer {
     }
   }
 
-  fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
+  fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     let mut root = match nodes.into_iter().next() {
       Some(r) => r,
       None => return Ok(vec![doc]),
     };
+
+    // Remove the internal DTD subset if requested (Perl Writer.pm L38:
+    // `$doc->getDocument->removeInternalSubset if $$self{omit_doctype}`).
+    // Backed by `libxml::tree::Document::remove_internal_subset`, added
+    // in rust-libxml 0.3.11 specifically to close this gap.
+    if self.omit_doctype {
+      doc.get_document_mut().remove_internal_subset();
+    }
 
     // Remove TEMPORARY_DOCUMENT_ID if present (Perl Writer.pm L41-42)
     if let Some(id) = root.get_attribute("xml:id") {
@@ -191,5 +199,62 @@ mod tests {
   fn writer_get_name_is_writer() {
     let w = Writer::new(None, false, false);
     assert_eq!(w.get_name(), "Writer");
+  }
+
+  #[test]
+  /// `Writer::process` with `omit_doctype = true` drops the
+  /// `<!DOCTYPE …>` preamble from the output, mirroring Perl
+  /// `Post::Writer` L38 behaviour.
+  fn writer_omit_doctype_strips_doctype_preamble() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+
+    let xml = r#"<?xml version="1.0"?>
+<!DOCTYPE root SYSTEM "example.dtd">
+<root><child>hi</child></root>"#;
+    let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default())
+      .expect("parse test fixture");
+
+    // omit_doctype=true → DOCTYPE stripped after Writer::process.
+    let mut writer = Writer::new(None, /*omit_doctype=*/ true, /*is_html=*/ false);
+    let to_process = writer.to_process(&doc);
+    let result = writer.process(doc, to_process).expect("process");
+    let after = result
+      .into_iter()
+      .next()
+      .expect("at least one doc")
+      .get_document()
+      .to_string();
+    assert!(
+      !after.contains("<!DOCTYPE"),
+      "expected DOCTYPE stripped, got: {after}"
+    );
+    assert!(after.contains("<root>"));
+  }
+
+  #[test]
+  /// `Writer::process` with `omit_doctype = false` (the default)
+  /// preserves the `<!DOCTYPE …>` preamble — opt-in behaviour.
+  fn writer_default_preserves_doctype() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+
+    let xml = r#"<?xml version="1.0"?>
+<!DOCTYPE root SYSTEM "example.dtd">
+<root><child>hi</child></root>"#;
+    let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default())
+      .expect("parse test fixture");
+
+    let mut writer = Writer::new(None, /*omit_doctype=*/ false, /*is_html=*/ false);
+    let to_process = writer.to_process(&doc);
+    let result = writer.process(doc, to_process).expect("process");
+    let after = result
+      .into_iter()
+      .next()
+      .expect("at least one doc")
+      .get_document()
+      .to_string();
+    assert!(
+      after.contains("<!DOCTYPE"),
+      "expected DOCTYPE preserved, got: {after}"
+    );
   }
 }
