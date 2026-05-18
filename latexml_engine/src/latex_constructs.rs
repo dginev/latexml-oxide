@@ -5975,6 +5975,20 @@ LoadDefinitions!({
   // It may be that we've already defined it to expand into the above conditional.
   // But more importantly, we don't want to override a hand-written definition (if any).
   //------------------------------------------------------------
+  // `locked => true` on the `\Declare...`/`\Provide...` text primitives
+  // below: a raw-loaded package may `\def\DeclareTextSymbol{...}` to
+  // route through its own TeX-level dispatch (e.g. mathtext.sty's
+  // `\DeclareTextMathSymbol` chain). When the package's chain depends
+  // on LaTeX kernel internals we don't fully implement
+  // (`\@changed@tmcmd`, `\@tmchar@`, `\csname\cf@encoding\string<cs>
+  // \endcsname → \chardef` resolution), the override produces an
+  // unbounded macro-expansion loop. Perl LaTeXML has no binding for
+  // mathtext.sty and skips it entirely (`Warning:missing_file`); we
+  // raw-load instead (default `INCLUDE_STYLES=true` + ar5iv
+  // parity), so the override fires and breaks. Locking keeps our
+  // primitive in place even under raw-load; the package's `\def` is
+  // logged as Info:ignore and skipped. Witness: paper 2305.16331 +
+  // `\u\i` under `mathtext + T2A`.
   DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}",
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
@@ -5987,7 +6001,7 @@ LoadDefinitions!({
       let cs_args = convert_latex_args(nargs, opts)?;
       DefMacro!(cs, cs_args, expansion);
     }
-  });
+  }, locked => true);
 
   DefMacro!(
     "\\DeclareTextCommandDefault DefToken",
@@ -6009,7 +6023,7 @@ LoadDefinitions!({
       let cs_args = convert_latex_args(nargs, opts)?;
       DefMacro!(cs, cs_args, expansion);
     }
-  });
+  }, locked => true);
 
   DefMacro!(
     "\\ProvideTextCommandDefault DefToken",
@@ -6019,38 +6033,54 @@ LoadDefinitions!({
   // #------------------------------------------------------------
 
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
+    // Perl `latex_constructs.pool.ltxml:2671-2682`:
+    //   if (isDefinableLaTeX($cs)) {
+    //     DefMacroI($cs, undef,
+    //       '\expandafter\ifx\csname\cf@encoding\string'.$css.'\endcsname\relax
+    //          \csname?\string'.$css.'\endcsname
+    //        \else\csname\cf@encoding\string'.$css.'\endcsname\fi');
+    //   }
+    //   my $ecs = T_CS('\\'.$encoding.$css);
+    //   $STATE->installDefinition(CharDef->new($ecs, 'restricted_horizontal', $code, $encoding));
+    //
+    // The bare `\cs` is ALWAYS defined as a dispatch-chain macro that
+    // resolves to `\<encoding>\cs` via `\csname`. The encoding-specific
+    // `\<encoding>\cs` carries the actual glyph (as a CharDef in Perl;
+    // as a `PrimitiveBody::String` primitive here — both produce a
+    // single char on invocation).
+    //
+    // Witness for why this matters: paper 2305.16331 + mathtext.sty +
+    // `\u\i` under T2A. mathtext.sty raw-loads and `\def\DeclareTextSymbol`
+    // redefines our handler. T2A's `\DeclareTextSymbol{\i}{T2A}{25}` then
+    // runs mathtext's chain (`\DeclareTextMathSymbol`), which redefines
+    // `\i` to `\T2A-tmcmd \i \T2A\i \T2Amath\i`. That chain bottoms out
+    // at `\csname\cf@encoding\string\i\endcsname = \T2A\i` — but only if
+    // `\T2A\i` is a real definition. The prior happy-path bypassed both
+    // the macro chain AND assumed `\i` would never be re-routed; under
+    // mathtext's override `\i`'s chain looped, growing pushback past
+    // the 4 GiB OOM boundary. With this Perl-faithful chain in place,
+    // mathtext's override produces an equivalent chain that terminates
+    // at the same `\T2A\i` primitive.
     let code_value = code.value_of() as u8;
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
-      // Define the encoding-specific command
+      // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::from(replacement_value)),
         PrimitiveOptions::default())?;
-      // Also define the base command directly if not already defined
-      if IsDefinable!(&cs) {
-        def_primitive(cs, None, Some(PrimitiveBody::from(replacement_value)),
-          PrimitiveOptions::default())?;
-      }
-    } else {
-      // Can't decode: ensure both `\<encoding><cs>` and the bare `<cs>`
-      // have safe fallbacks. Without binding the encoding-specific form,
-      // any T3-using paper (e.g. tipa with arXiv:1802.05444's
-      // `\textrhookrevepsilon`) chains through `\?<cs>` to
-      // `\<encoding><cs>` and errors as undefined. Define the
-      // encoding-specific as a no-op silent macro — graceful degrade
-      // rather than ltx:ERROR insertion.
-      if IsDefinable!(&ecs) {
-        DefMacro!(ecs, None, Tokens!());
-      }
-      if IsDefinable!(&cs) {
-        // Conditional fallback: prefer `\<cf@encoding><cs>` if it exists,
-        // else the alias `\?<cs>` set up by `\DeclareTextSymbolDefault`.
-        DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
-        \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
-      }
+    } else if IsDefinable!(&ecs) {
+      // Can't decode: install no-op fallback so downstream chains find
+      // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
+      DefMacro!(ecs, None, Tokens!());
     }
-  });
+    // Bare `\cs` always becomes a dispatch chain (matches Perl).
+    if IsDefinable!(&cs) {
+      DefMacro!(cs, None, Some(s!(
+        r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"
+      ).into()));
+    }
+  }, locked => true);
 
   // Perl `latex_constructs.pool.ltxml:2684-2688`:
   //   DefPrimitive('\DeclareTextSymbolDefault DefToken {}', sub {
@@ -6070,11 +6100,11 @@ LoadDefinitions!({
     let alias_cs = T_CS!(s!("\\?{cs_str}"));
     let target_cs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     DefMacro!(alias_cs, None, Some(target_cs.into()));
-  });
+  }, locked => true);
 
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
+  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None, locked => true);
+  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
 
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
   // Perl `latex_constructs.pool.ltxml:27-28`:
@@ -6101,9 +6131,9 @@ LoadDefinitions!({
   });
 
   // #------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
+  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None, locked => true);
   // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
+  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None, locked => true);
   // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
   DefPrimitive!("\\UndeclareTextCommand{}{}", None);

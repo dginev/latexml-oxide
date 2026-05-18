@@ -905,6 +905,14 @@ fn custom_alloc_error_hook(layout: Layout) {
     layout.size(),
     layout.align()
   );
+  // When `RUST_BACKTRACE=1` is set, print the captured backtrace too.
+  // Helps localise the call site of the failing allocation. The
+  // backtrace API allocates internally; if that re-trips the OOM the
+  // worker still exits cleanly via the exit() below.
+  if std::env::var_os("RUST_BACKTRACE").is_some() {
+    let bt = std::backtrace::Backtrace::force_capture();
+    eprintln!("{bt}");
+  }
   std::process::exit(137);
 }
 
