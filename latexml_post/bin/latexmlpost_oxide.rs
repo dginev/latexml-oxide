@@ -1,10 +1,11 @@
 //! latexmlpost_oxide — Post-process LaTeXML XML output.
 //!
 //! Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--noscan] [--nocrossref]
-//!        [--stylesheet path.xsl] [--dest output.xml] input.xml
+//!        [--stylesheet path.xsl] [--whatsout TYPE] [--dest output.xml] input.xml
 
 use latexml_post::Post;
 use latexml_post::document::{PostDocument, PostDocumentOptions};
+use latexml_post::extract::{Whatsout, serialize_whatsout};
 use latexml_post::mathml::MathML;
 use latexml_post::processor::Processor;
 use latexml_post::xslt::XSLT;
@@ -18,6 +19,7 @@ fn main() {
   let mut pmml = false;
   let mut keep_xmath = false;
   let mut stylesheet = None;
+  let mut whatsout: Whatsout = Whatsout::default();
 
   let mut i = 1;
   while i < args.len() {
@@ -37,6 +39,15 @@ fn main() {
           dest_path = Some(args[i].clone());
         }
       },
+      "--whatsout" => {
+        i += 1;
+        if i < args.len() {
+          match Whatsout::from_cli(&args[i]) {
+            Some(w) => whatsout = w,
+            None => eprintln!("Warning: unknown --whatsout '{}', falling back to 'document'", args[i]),
+          }
+        }
+      },
       arg if !arg.starts_with('-') => input_path = Some(arg.to_string()),
       other => eprintln!("Warning: unknown option '{}'", other),
     }
@@ -44,7 +55,10 @@ fn main() {
   }
 
   let input_path = input_path.unwrap_or_else(|| {
-    eprintln!("Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--stylesheet path.xsl] [--dest output] input.xml");
+    eprintln!(
+      "Usage: latexmlpost_oxide [--pmml] [--keepXMath] [--stylesheet path.xsl] \
+       [--whatsout document|fragment|math] [--dest output] input.xml"
+    );
     std::process::exit(1);
   });
 
@@ -88,7 +102,10 @@ fn main() {
       std::process::exit(1);
     });
 
-  let output = results[0].to_xml_string();
+  // Apply --whatsout (Perl `LaTeXML::Util::Pack::whatsout`). `Document`
+  // (default) is a no-op passthrough; `Fragment` / `Math` extract the
+  // matching subtree via `latexml_post::extract::serialize_whatsout`.
+  let output = serialize_whatsout(&results[0], whatsout);
 
   // Route through the shared `latexml_post::writer::write_output`
   // (Perl `LaTeXML::Post::Writer` analog) so all post-processing
