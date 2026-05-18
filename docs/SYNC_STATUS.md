@@ -804,9 +804,15 @@ Re-audit 2026-05-18 (`cargo tree --duplicates`):
   those symbols. The audit's "~93 KiB" claim was overstated. The
   win is architectural (compile-time clarity, smaller per-build
   `latexml_core` graph), not binary size.
-- **DEP-15 — Investigate the per-`load_definitions` size
-  bloat**. ⏳ Open — see post-audit notes below for the concrete
-  data and a proposed approach.
+- **DEP-15 — fontawesome `load_definitions` size bloat** ✅
+  Closed 2026-05-18. Data-drove the 1373 trivial FA5 + 719 trivial
+  FA4 `DefMacro!("\\faXxx...", "...")` calls through `def_fa5_icon`
+  / `def_fa4_icon` runtime helpers. Release binary went **57.12 MiB
+  → 54.58 MiB (−2.54 MiB / −4.45%)**, matching the upper-bound
+  estimate. 24 + 2 non-trivial variants (Match:N / OptionalMatch:* /
+  Number[]) kept as full `DefMacro!`. Tests 1328/0/0; engine
+  bootstrap costs ~7 ms of extra `parse_prototype` + `tokenize_internal`
+  work, paid once at load.
 
 ### DEP-15 follow-up — cargo-bloat data + approach (2026-05-18)
 
