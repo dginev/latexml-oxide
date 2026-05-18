@@ -510,10 +510,20 @@ context — predates `01a8ee8b1`/`ab76be20f`):
   with `\meaning`), suggesting it's wrapped in robust-protection
   layer instead of being installed as a direct primitive alias.
 
-* **Plain dump pollution**: running `\bye` plain-TeX test shows
-  `\par` defined as `\para_end:`-style expl3 chain, which means
-  plain.dump.txt OR plain_dump.rs is loading latex content. Need
-  to verify plain.dump.txt is clean (just plain.tex bindings).
+* **Plain dump pollution** — RESOLVED (empirical re-scan 2026-05-18).
+  Both shipped plain dumps are clean of expl3 / latex content:
+  * `resources/dumps/plain.2023.dump.txt` — 958 lines: 0 expl3-name
+    matches (`\l_…`, `\g_…`, `\c_…`, `\__…`, `…_end:`, `cs_set`,
+    `tl_new`), 0 latex-only CSes (`\@documentclass`,
+    `\@addtoreset`, `\NeedsTeXFormat`, `\ProvidesClass/Package`).
+  * `resources/dumps/plain.2025.dump.txt` (embedded; primed via
+    `/tmp/latexml-oxide-dumps-*/plain.2025.dump.txt`) — 958 lines,
+    639 M-keys, 12 PA aliases, 0 MPA. Same zero-match counts as
+    2023. No `\par` M-record (correct — `\par` is a primitive,
+    never set by plain.tex). The historical `\bye`-test
+    observation predates the move of autoload triggers to before
+    the snapshot (`1e04a96c8`) and was not reproduced on the
+    current dumps.
 
 ### Sandbox regression
 
