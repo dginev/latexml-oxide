@@ -554,6 +554,45 @@ tests pin the round-trip + RLE edge cases + V-record backward compat.
 
 ---
 
+## Long-term: retire `latexmlpost_oxide` binary (2026-05-18)
+
+User note: rather than maintain a separate `latexmlpost_oxide`
+binary, give `latexml_oxide` an **XML-input mode** that runs only
+the post-processing chain on an already-converted LaTeXML XML
+file. Detection is mechanical: if the input filename ends in
+`.xml` (or sniff for a leading `<?xml`/`<document xmlns="…">`),
+skip the converter front-end and start the pipeline at
+`PostDocument::new_from_string`.
+
+Why retire:
+* `latexmlpost_oxide` has its own argument parser, its own
+  pipeline assembly, its own `--whatsout` plumbing. Every
+  Writer/Pack/extract enhancement has to be wired into both
+  binaries (gap caught 2026-05-18 — `--whatsout` was initially
+  missed in `latexmlpost_oxide`).
+* Current `latexmlpost_oxide` is incomplete vs Perl `latexmlpost`:
+  no Graphics processor, no Bibliography/CrossRef/Scan, no
+  archive output, no split. Fleshing it out duplicates
+  `latexml_oxide::post::run_post_processing`.
+* Perl's `bin/latexmlpost` is a tiny wrapper that loads the same
+  Post pipeline as `bin/latexml`. The two-binary split is a
+  historical convention, not a load-bearing design choice.
+
+Migration sketch:
+1. Add `latexml_oxide --xml-only` (or auto-detect by extension)
+   to skip core + run post-only.
+2. Reuse the full `PostOptions { whatsout, ... }` struct that
+   `latexml_oxide` already builds.
+3. Mark `latexmlpost_oxide` deprecated for one release cycle, then
+   delete `latexml_post/bin/latexmlpost_oxide.rs` and its
+   `[[bin]]` entry in `latexml_post/Cargo.toml`. Update CLAUDE.md
+   build recipes and tools/* references.
+
+Not blocking any current work; flagged here so future contributors
+don't pour effort into the separate-binary trajectory.
+
+---
+
 ## Post-processing graphics renderer chain (decided 2026-05-12)
 
 Subprocess-only, no library linking — AGPL/GPL on the underlying C
