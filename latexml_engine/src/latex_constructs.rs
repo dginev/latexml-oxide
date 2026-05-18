@@ -4317,23 +4317,9 @@ LoadDefinitions!({
   DefRegister!("\\columnseprule"   => Dimension::new(0));
   DefRegister!("\\mathindent"      => Dimension::new(0));
 
-  TeX!(
-    r"\def\@ifl@t@r#1#2{%
-  \ifnum\expandafter\@parse@version@#1//00\@nil<%
-        \expandafter\@parse@version@#2//00\@nil
-    \expandafter\@secondoftwo
-  \else
-    \expandafter\@firstoftwo
-  \fi}
-\def\@parse@version@#1{\@parse@version0#1}
-\def\@parse@version#1/#2/#3#4#5\@nil{%
-\@parse@version@dash#1-#2-#3#4\@nil
-}
-\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
-  \if\relax#2\relax\else#1\fi#2#3#4 }
-"
-  );
-
+  // \@ifl@t@r and the \@parse@version chain are defined earlier in this
+  // file (above L4181); the previous duplicate TeX!() block here was dead
+  // code overriding identical bodies.
 
   //======================================================================
   // C.5.4 The Title Page and Abstract
