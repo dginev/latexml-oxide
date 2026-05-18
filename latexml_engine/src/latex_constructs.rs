@@ -7440,7 +7440,9 @@ LoadDefinitions!({
   // Note that it's called \refname in LaTeX's article, but \bibname in report & book.
   // And likewise, mixed up in various other classes!
 
-  DefMacro!("\\thebibliography@ID", "");
+  // \thebibliography@ID empty default lives in `latex_constructs_rust_only.rs`
+  // section 4 (per-bibliography runtime value is reassigned inside the
+  // \bibliography constructor body at L2085).
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
   DefMacro!("\\the@lx@bibliography@ID", "");
 
