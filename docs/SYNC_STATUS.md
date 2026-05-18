@@ -1796,92 +1796,144 @@ Tasks below ordered by ratio of payoff to risk.
 
 ### Tier 1 — Cargo.toml hygiene (no runtime change, no risk)
 
-- **DEP-01 — Remove unused direct deps from Cargo.toml**
-  - `base64` in `latexml_engine/Cargo.toml`: only used in
-    `latexml_package::package::listings_sty`. **Remove from
-    engine.**
-  - `chrono` in `latexml_package/Cargo.toml`: only used in
-    `latexml_engine::tex_job`. **Remove from package.**
-  - `string-interner` in `latexml_engine`, `latexml_package`,
-    `latexml_math_parser`: not directly imported in any of those
-    crates — the type is reached via `latexml_core` re-exports.
-    **Remove from all three Cargo.toml files** (cargo's dedup
-    keeps the workspace single-version).
-- **DEP-02 — Move test-only deps out of the runtime tree**
-  - `phf` and `glob` in `latexml_oxide/Cargo.toml` are only used
-    by `latexml_oxide/src/util/test.rs` (a test harness module).
-    Either (a) `#[cfg(test)] pub mod test;` and move both to
-    `[dev-dependencies]`, or (b) put `util::test` behind a
-    `test-utils` feature.
+- **DEP-01 — Remove unused direct deps from Cargo.toml** ✅
+  Re-audit on 2026-05-18 found the original three items already
+  resolved before the audit was filed: `base64` already lived in
+  `latexml_package` (where it's actually used), `chrono` already
+  in `latexml_engine`, `string-interner` no longer present in
+  engine/package/math_parser. **Plus newly-found unused dep
+  removed** in commit `c57bcf8760`: `unicode-normalization` was
+  in `latexml_package/Cargo.toml` with zero use sites.
+- **DEP-02 — Move test-only deps out of the runtime tree** ✅
+  Landed 2026-05-18 (commit `c57bcf8760`): split `util/test.rs`
+  → `util/preset.rs` + feature-gated `util::test` behind
+  `test-utils` (default on). `latexmlmath_oxide` now imports
+  from `util::preset` so the production binary builds cleanly
+  with `--no-default-features`. Drops 5 transitive crates
+  (`phf` + `phf_generator` + `phf_macros` + `phf_shared` +
+  `siphasher`) from the runtime dep graph.
 
 ### Tier 2 — Eliminate duplicate-version pairs
 
-Real dups in `cargo tree --duplicates`:
+Re-audit 2026-05-18 (`cargo tree --duplicates`):
 
-| Crate | Versions | Carrier we control | Action |
-|---|---|---|---|
-| `syn` | 1.0.109 + 2.0.117 | `latexml_codegen` pins `syn = "1.0"` | **DEP-03**: bump `latexml_codegen` Cargo.toml to `syn = "2"` and adjust the proc-macros for the syn 2 API. Kills `syn 1.0.109` from the runtime tree (the bindgen build-dep at 1.0 is unaffected). |
-| `regex-syntax` | 0.6.29 + 0.8.10 | Our **`marpa` fork** (branch `abstract_syntax_forests`) pins 0.6 | **DEP-04**: bump `regex-syntax` to 0.8 in the marpa fork. Submit/merge on the fork repo, then re-tag and update `latexml_core` + `latexml_math_parser` git URLs. |
-| `rustix` | 0.38.44 + 1.1.4 | `which v4.4` (transitive via `kpathsea v0.2.3`) | **DEP-05** (medium): kpathsea is an external crate. Options: (a) PR to kpathsea-rs to bump `which`, (b) replace kpathsea's `which`-dependent helper with our own `std::env::var("PATH")` scan, (c) accept the dup until kpathsea moves. Costs `linux-raw-sys 0.4.15` alongside. |
-| `hashbrown` | 0.16.1 + 0.17.1 | `string-interner 0.20` → 0.16; `indexmap 2.14` (via `zip 8`) → 0.17 | **DEP-06** (upstream): track string-interner 0.21+ that bumps hashbrown to 0.17. Pin via `[patch.crates-io]` only if it materially blocks compile time. |
+| Crate | Status as of 2026-05-18 |
+|---|---|
+| `syn` 1.0 vs 2.0 | ✅ **DEP-03 resolved**: no longer duped; only `syn 2.x` in the workspace. |
+| `regex-syntax` 0.6 vs 0.8 | ✅ **DEP-04 resolved**: marpa fork bumped to 0.8. |
+| `rustix` 0.38 vs 1.1 | ✅ **DEP-05 resolved upstream**: `kpathsea v0.2.5` now pulls `which v8` → libc only. The 0.38 path is gone. |
+| `hashbrown` 0.16 vs 0.17 | ⏳ **DEP-06 still open**: `string-interner 0.20` pins 0.16, `indexmap 2.14` (via `zip 8`) pulls 0.17. Upstream-blocked. |
+| `tar` v0.4.45 (×2) | ℹ️ Same version, different features: runtime build (no `xattr` after `3e7c039eb1`) vs `libmarpa-sys` build-dep (default). Build-dep doesn't link into runtime binary — benign. |
 
 ### Tier 3 — Slim feature sets / drop unmaintained crates
 
-- **DEP-07 — Replace `ansi_term v0.12` with `anstyle`** (or
-  drop colorization entirely from `util/logger.rs`). `ansi_term`
-  is unmaintained (last release 2020). `anstyle` is already in
-  the tree via clap. Surface: 2-line change in
-  `latexml_core/src/util/logger.rs`.
-- **DEP-08 — Drop `dirs v6.0` in favor of
-  `std::env::var_os("HOME")`**. Only use is one `dirs::home_dir()`
-  call in `latexml_core/src/util/pathname.rs`. Saves `dirs`,
-  `dirs-sys`, `option-ext` from the tree.
-- **DEP-09 — Slim `chrono` to `default-features = false,
-  features = ["clock", "std"]`**. Surface used is `Local::now()`
-  + `DateTime::from_timestamp(...)`. Saves `iana-time-zone` and
-  related transitive deps.
-- **DEP-10 — Audit `regex` feature flags**. Defaults include
-  `unicode-*` (case-folding/segmentation tables, hundreds of KB).
-  Verify no patterns rely on Unicode classes before slimming.
+- **DEP-07 — Replace `ansi_term v0.12` with `anstyle`** ✅ Done:
+  `latexml_core/src/util/logger.rs` now uses raw ANSI SGR escape
+  sequences (no external crate). `ansi_term` no longer in tree.
+- **DEP-08 — Drop `dirs v6.0` for `std::env::var_os("HOME")`** ✅
+  Done: `latexml_core/src/util/pathname.rs` uses `var_os` (with
+  inline comment documenting the replacement).
+- **DEP-09 — Slim `chrono`** ✅ Done: `latexml_engine/Cargo.toml`
+  has `chrono = { version = "0.4", default-features = false,
+  features = ["clock", "std"] }`.
+- **DEP-10 — Audit `regex` feature flags** ⏳ Partially blocked:
+  audit found we use `\p{Latin}`, `\p{Greek}`, `\p{Lu}`, `\p{N}`,
+  and `\w` patterns. Fully disabling `unicode` would break those.
+  Selective disable of `unicode-age`, `unicode-bool`, `unicode-case`,
+  `unicode-segment` may be safe — not yet attempted.
+- **DEP-NEW: slim `sha2`** ✅ Done (commit `c57bcf8760`):
+  `default-features = false` drops the `oid` feature (DER object-id
+  tables) which we never touch.
+- **DEP-NEW: slim `tar`** ✅ Done (commit `3e7c039eb1`):
+  `default-features = false` drops the `xattr` crate; we only need
+  basic `tar::Archive::new(...).unpack(dest)` for arxiv zips.
 
 ### Tier 4 — Profile / packaging for distribution
 
-- **DEP-11 — Add `panic = "abort"` to `[profile.release]`
-  (and `maxperf`)**. Drops `.eh_frame` (~1.5 MiB) and
-  `.gcc_except_table` (~1.8 MiB). Risk: panics no longer unwind
-  destructors before abort; ok for a CLI converter that doesn't
-  rely on Drop-in-panic for correctness.
-- **DEP-12 — Decide TL-dump distribution model**. The ~13 MiB
-  `.rodata` is `include_str!`'d `resources/dumps/*.dump.txt` for
-  TL2023 + TL2025. Options: (a) keep embedded (simplest), (b)
-  ship dumps as a side-asset downloaded on first run, (c) embed
-  only the most-common year and download the rest lazily. Big
-  design call — flag, don't implement without owner input.
-- **DEP-13 — Document ship-build recipe**. Add to `CLAUDE.md`:
-  "for distribution use `cargo build --profile maxperf --bin
-  latexml_oxide`" (fat LTO, codegen-units=1, strip=symbols
-  already configured). The current "release" profile is tuned
-  for our 32 GB / 20-thread laptop and is **not** the smallest
-  possible artifact.
+- **DEP-11 — `panic = "abort"`** ✅ **Refined** and landed on
+  `maxperf` only (commit `c57bcf8760`), **NOT on `release`**. The
+  user's canvas sweeps via `cortex_worker` use `release` and rely
+  on `thread::spawn().join()` for per-paper panic isolation — that
+  pattern silently breaks under `panic = "abort"` (the whole worker
+  process aborts instead of recording the failure). `maxperf` is
+  the public-distribution profile (no debugging requirement); it
+  gets `panic = "abort"` for the 1.9 MiB size saving + slightly
+  better optimization. Comments in `Cargo.toml` document the
+  distinction explicitly.
+- **DEP-12 — TL-dump distribution model**. Unchanged — design
+  call, owner input required.
+- **DEP-13 — Document ship-build recipe**. ⏳ Partially: `Cargo.toml`
+  comments now explain the release-vs-maxperf distinction. `CLAUDE.md`
+  already documents `cargo build --profile maxperf --bin
+  latexml_oxide` for distribution. Open: add `--no-default-features`
+  to that line so phf/glob are also dropped.
 
 ### Tier 5 — Code-architecture wins worth flagging
 
 - **DEP-14 — Feature-gate `proc-macro2` + `quote` in
-  `latexml_core`** behind a `codegen` feature. Currently
-  `tokens.rs`, `parameter.rs`, `document.rs` impl `ToTokens` so
-  `latexml_codegen` can serialize state at compile time — but
-  this drags `proc_macro2` (~93 KiB) into the runtime binary
-  even for consumers that don't run the codegen path. Defensive
-  cleanup; not on the critical path.
+  `latexml_core`** ✅ Landed 2026-05-18 (commit `1365989630`):
+  added `codegen` feature, made `proc-macro2` + `quote` optional,
+  wrapped the 5 `impl ToTokens for X` blocks (in `tokens.rs` and
+  `parameter.rs`) with `#[cfg(feature = "codegen")]`.
+  `latexml_codegen` activates the feature on its dep edge;
+  resolver v2 keeps proc-macro feature unification isolated so
+  the runtime `latexml_core` doesn't compile those impls.
+  **Reality check**: binary size delta was essentially zero
+  (+448 bytes on release) — LTO had already been dead-stripping
+  those symbols. The audit's "~93 KiB" claim was overstated. The
+  win is architectural (compile-time clarity, smaller per-build
+  `latexml_core` graph), not binary size.
 - **DEP-15 — Investigate the per-`load_definitions` size
-  bloat**. `fontawesome5_sty::load_definitions = 2.0 MiB`,
-  `latex_constructs::load_definitions = 1.1 MiB`, `jhep_cls =
-  510 KiB`, etc. The top 10 `load_definitions` functions alone
-  account for ~6 MiB of `.text`. Likely a code-generation pattern
-  (one `define_*!` macro emitting a huge unrolled function per
-  package) — splitting into smaller `register_chunk_N` helpers
-  could improve inlining decisions and reduce per-fn size.
-  Profile-guided; not a quick win.
+  bloat**. ⏳ Open — see post-audit notes below for the concrete
+  data and a proposed approach.
+
+### DEP-15 follow-up — cargo-bloat data + approach (2026-05-18)
+
+Top `.text` consumers on `target/release/latexml_oxide`:
+
+| Function | Size | % of `.text` |
+|---|---:|---:|
+| `latexml_contrib::fontawesome5_sty::load_definitions` | 2.0 MiB | 5.3% |
+| `latexml_engine::latex_constructs::load_definitions`  | 1.1 MiB | 3.0% |
+| `latexml_core::common::font::standard_metrics::STDMETRICS::{closure#0}` | 811 KiB | 2.1% |
+| `latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2 | 1.2 MiB | 3.2% |
+| `latexml_package::package::jhep_cls::load_definitions` | 511 KiB | 1.3% |
+| `latexml_contrib::fontawesome_sty::load_definitions` | 480 KiB | 1.3% |
+| `latexml_package::package::mathabx_sty::load_definitions` | 438 KiB | 1.1% |
+| (10 more in the 200–340 KiB range) | ~2.3 MiB | ~6% |
+
+Top 16 functions account for ~22% of `.text` (~9 MiB on a
+40-MiB code section). Universally they're `LoadDefinitions!`
+bodies with hundreds of repeated `DefMacro!` / `DefConstructor!`
+invocations.
+
+Concrete approach for `fontawesome5_sty` (1373 trivial calls,
+all pattern `DefMacro!("\\faXxx[]", "\\faIcon[#1]{kebab-name}")`):
+
+1. Add a runtime helper `def_fa5_icon(suffix: &'static str,
+   kebab: &'static str)` in `fontawesome5_sty.rs`. Internally
+   constructs the CS via `T_CS!`, parses the parameter spec
+   `[]` once, and constructs the expansion `Tokens` at runtime
+   instead of compile-time inlining.
+2. Replace the 1373 trivial `DefMacro!` lines with single-line
+   `def_fa5_icon(b"AccessibleIcon", b"accessible-icon");` calls.
+3. Keep the ~20 non-trivial `Match:N` / `OptionalMatch:*` /
+   `Number[]` variants as full `DefMacro!` calls (low count, no
+   benefit to data-driving).
+
+Expected impact: 2.0 MiB → ~50–100 KiB on `fontawesome5_sty`
+alone. Similar mechanical refactor on `fontawesome_sty` (~480
+KiB → ~30 KiB).
+
+Risk: each `DefMacro!` arm runs through `parse_prototype!` +
+`compile_expansion!` at compile time; building the same `Tokens`
+structure at runtime requires the helper to mirror the exact
+shape. Validation: byte-for-byte XML output equality on the
+`fontawesome*` test fixtures.
+
+Profile-guided, not a quick win — but the upper bound (2.5
+MiB combined fontawesome saving) is the biggest single binary-
+size lever remaining after DEP-1 through DEP-14.
 
 ---
 
