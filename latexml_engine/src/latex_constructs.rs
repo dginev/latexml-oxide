@@ -3278,11 +3278,10 @@ LoadDefinitions!({
   // C.3.3 Footnotes
   //======================================================================
 
-  NewCounter!("footnote");
-  DefMacro!("\\thefootnote", "\\arabic{footnote}");
-  NewCounter!("mpfootnote");
-  DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // Footnote counters + \thefootnote / \thempfn / \thempfootnote +
+  // \footnotesep register all defined in `latex_constructs_rust_only.rs`
+  // section 8 (Perl `latex_base.pool.ltxml` L268-273; dump-path coverage
+  // there is the authoritative copy).
   DefMacro!("\\footnotetyperefname", "footnote");
 
   DefMacro!("\\ext@footnote", None);
@@ -3369,7 +3368,7 @@ LoadDefinitions!({
   Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
   // Style parameters
-  DefRegister!("\\footnotesep" => Dimension::new(0));
+  // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
   DefPrimitive!("\\footnoterule", None);
 
 
@@ -3743,16 +3742,15 @@ LoadDefinitions!({
   // C.4.2 The Appendix
   //======================================================================
   // Handled in article,report or book.
-  DefMacro!("\\appendixname", "Appendix");
-  DefMacro!("\\appendixesname", "Appendixes");
-  // TODO: add the rest...
-  // \@@appendix lives in `latex_constructs_rust_only.rs` (not in Perl).
+  // \appendixname / \appendixesname / \@@appendix all live in
+  // `latex_constructs_rust_only.rs` section 8 / 7a (Perl
+  // `latex_base.pool.ltxml` L287 + sandbox-derived helpers).
 
   //======================================================================
   // C.4.3 Table of Contents
   //======================================================================
   // Insert stubs that will be filled in during post processing.
-  DefMacro!("\\contentsname", "Contents");
+  // \contentsname lives in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
@@ -3773,12 +3771,11 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\listfigurename", "List of Figures");
+  // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listfigurename"))?)) });
 
-  DefMacro!("\\listtablename", "List of Tables");
   DefConstructor!("\\listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });
@@ -4307,10 +4304,9 @@ LoadDefinitions!({
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
-  // Perl: latex_base.pool.ltxml lines 309-311
-  DefRegister!("\\columnsep"       => Dimension::new(0));
-  DefRegister!("\\columnseprule"   => Dimension::new(0));
-  DefRegister!("\\mathindent"      => Dimension::new(0));
+  // \columnsep / \columnseprule / \mathindent registers live in
+  // `latex_constructs_rust_only.rs` section 8 (Perl
+  // `latex_base.pool.ltxml` L309-311).
 
   // \@ifl@t@r and the \@parse@version chain are defined earlier in this
   // file (above L4181); the previous duplicate TeX!() block here was dead
