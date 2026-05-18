@@ -786,40 +786,63 @@ collapsed or dropped anyway.
 ### Measurement on the math-bound 100-paper sample
 
 Same input set as the prior section. Build = release+native+cortex,
-8 workers, 180 s timeout, 8 GB ulimit. Both runs are fresh against
-marpa commit `5f6a19e`.
+8 workers, 180 s timeout, 8 GB ulimit.
+
+Two passes are recorded below. **The first pass overstated the
+gain** because the host had the `warning_papers_4` canvas running
+in the background, so the LEGACY column was inflated by CPU
+contention. The second pass is on an idle host against the merged
+marpa master and is the load-bearing comparison.
+
+#### Initial pass (2026-05-18, perf branch `5f6a19e`, contended host)
 
 | Metric | LEGACY | HYBRID (cap=500) | Δ |
 |---|---:|---:|---:|
 | Success rate | 98/100 | **98/100** | **+19 vs HYBRID no-cap** |
 | OOM aborts | 0 | **0** | **−19 vs HYBRID no-cap** |
-| Wall (both-OK, n=98) | 3188.6 s | **2274.3 s** | **−28.7 %** |
-| Worst paper Δwall | — | +2.0 % | (was +242 %) |
+| Wall (both-OK, n=98) | 3188.6 s | 2274.3 s | −28.7 % (contended) |
 
-Per-paper distribution on the n=98 both-OK subset:
+#### Quiet-host re-measurement (2026-05-18, marpa master `0bf24111`)
 
-- **No paper regresses by more than +2 %.** Only 2 of 98 are
-  slower at all (+2.0 % and +1.8 %).
-- 10 top improvements run −41 % to −51 % (e.g. `2308.06104`:
-  64.0 s → 31.1 s).
-- The 19 previously OOM-aborting papers all complete cleanly;
-  the worst (`2310.07954`, 5867 formulae) shaved a further
-  −23.7 % vs LEGACY despite running through the fallback.
+| Metric | LEGACY | HYBRID (cap=500) | Δ |
+|---|---:|---:|---:|
+| Success rate | 98/100 | **98/100** | unchanged |
+| OOM aborts | 0 | **0** | unchanged |
+| Wall (both-OK, n=98) | 2227.1 s | 2238.6 s | **+0.5 %** |
+| Worst paper Δwall | — | +19.5 % (`2307.03365`, 7.7 s → 9.2 s) | |
+| Best paper Δwall | — | −14.6 % (`2310.10742`) | |
 
-### Why HYBRID-with-fallback beats LEGACY (and ASF-only)
+Per-paper distribution (n=98): median +0.0 %, mean +1.0 %. 14
+papers regress >+5 %, 76 neutral (±5 %), 8 improve >−5 %.
+
+#### What this means
+
+- **HYBRID itself did not regress**: 2238.6 s now vs 2274.3 s on
+  the perf branch contended pass = −1.6 % absolute. The drop in
+  the headline gap came almost entirely from LEGACY getting
+  faster on an idle host (3188.6 s → 2227.1 s, −30 %).
+- **The acceptance bar held**: HYBRID is at parity with LEGACY
+  (+0.5 % median 0) on a math-heavy corpus. The 19-OOM
+  protection (which is what the cap+fallback was actually built
+  for) survives unchanged.
+- The original `−28.7 %` figure should not be used as a forward
+  claim — it was a snapshot of a single contended host. The
+  quiet-host number (+0.5 %) is the comparable measurement.
+
+### Why HYBRID-with-fallback meets LEGACY
 
 Two effects compound on this corpus:
 
 1. The cheap unambiguous Tree path (~60–87 % of formulae per
    `LATEXML_MATH_AMBIGUITY_AUDIT=1`) bypasses ASF
-   construction entirely, recovering the 12 % saving the
-   hybrid acceptance gate was originally measuring.
+   construction entirely, matching what the hybrid acceptance
+   gate was originally measuring on Article-2025.tex.
 2. The genuinely ambiguous formulae split into two populations:
-   small-bocage ones go through ASF (codex's singleton + clone
-   trims keep this path cheap), large-bocage ones go through
-   the same Tree path LEGACY uses *but with libmarpa's
-   already-computed bocage shared* (no second recognizer pass)
-   — strictly cheaper than LEGACY itself.
+   small-bocage ones go through ASF (singleton + clone trims
+   keep this path cheap), large-bocage ones (>500 and-nodes)
+   go through the same Tree path LEGACY uses *but with
+   libmarpa's already-computed bocage shared* (no second
+   recognizer pass).
 
 Pure ASF-only on this corpus loses to LEGACY because the
 exploded forests force `compute_symches` to enumerate
