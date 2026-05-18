@@ -194,36 +194,32 @@ if [[ ! -x "$WORKER_BIN" ]]; then
   exit 1
 fi
 
-# ─── Format dumps (plain.dump.txt + latex.dump.txt) — generate if missing ───
-# Without the latex dump, every paper that loads expl3 (tikz, siunitx, spath3,
-# csquotes, etc.) raw-loads the 36k-line expl3-code.tex (~25-30s/paper).
-# With the dump in place, expl3.sty's `\ifx\csname tex_let:D\endcsname\relax`
-# guard short-circuits the raw load → 1-3s/paper. ~10× canvas-wide speedup.
-# The plain dump is smaller but symmetric — needed for the `LoadFormat('plain')`
-# strict-Perl path in tex.rs (see CLAUDE.md priority #1).
-PLAIN_DUMP_PATH="$REPO_ROOT/resources/dumps/plain.dump.txt"
-if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
-  echo "Generating $PLAIN_DUMP_PATH (one-time, <1min)…"
-  (
-    cd "$REPO_ROOT"
-    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=plain.tex
-  )
-  if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
-    echo "WARNING: plain.dump.txt did not get generated."
-  fi
+# ─── Format dumps (plain.YYYY.dump.txt + latex.YYYY.dump.txt) — present? ───
+# Without the latex dump, every paper that loads expl3 (tikz, siunitx,
+# spath3, csquotes, etc.) raw-loads the 36k-line expl3-code.tex
+# (~25-30s/paper). With the dump in place, expl3.sty's `\ifx\csname
+# tex_let:D\endcsname\relax` guard short-circuits the raw load →
+# 1-3s/paper. ~10× canvas-wide speedup. The plain dump is smaller but
+# symmetric — needed for the `LoadFormat('plain')` strict-Perl path in
+# `tex.rs` (CLAUDE.md priority #1).
+#
+# Dumps are year-versioned (`plain.YYYY.dump.txt`, `latex.YYYY.dump.txt`)
+# and bundled via `tools/make_formats.sh`. The canvas script just
+# detects whether ANY year-tagged dump is on disk; the runtime resolves
+# the ambient-TL year. Re-run `tools/make_formats.sh` after a TexLive
+# upgrade. The plain-dump path (`plain.dump.txt`) of the old layout is
+# also accepted for in-flight migrations.
+shopt -s nullglob
+PLAIN_DUMPS=("$REPO_ROOT"/resources/dumps/plain.*.dump.txt "$REPO_ROOT"/resources/dumps/plain.dump.txt)
+LATEX_DUMPS=("$REPO_ROOT"/resources/dumps/latex.*.dump.txt "$REPO_ROOT"/resources/dumps/latex.dump.txt)
+shopt -u nullglob
+if (( ${#PLAIN_DUMPS[@]} == 0 )); then
+  echo "WARNING: no resources/dumps/plain.*.dump.txt found."
+  echo "  Run: tools/make_formats.sh"
 fi
-
-DUMP_PATH="$REPO_ROOT/resources/dumps/latex.dump.txt"
-if [[ ! -f "$DUMP_PATH" ]]; then
-  echo "Generating $DUMP_PATH (one-time, ~5min)…"
-  (
-    cd "$REPO_ROOT"
-    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=latex.ltx
-  )
-  if [[ ! -f "$DUMP_PATH" ]]; then
-    echo "WARNING: latex.dump.txt did not get generated. Canvas will run with"
-    echo "  raw expl3 load (slow). Investigate ini-mode failures separately."
-  fi
+if (( ${#LATEX_DUMPS[@]} == 0 )); then
+  echo "WARNING: no resources/dumps/latex.*.dump.txt found. Canvas will run"
+  echo "  with raw expl3 load (slow). Run: tools/make_formats.sh"
 fi
 
 # ─── Disk space check ────────────────────────────────────────────────────────
