@@ -1972,10 +1972,8 @@ impl Processor for Graphics {
     let dest_dir_ref = dest_dir.as_str();
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
-      use std::sync::Mutex;
       use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
       let next = AtomicUsize::new(0);
-      let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
       // Subprocess tally: telemetry's thread_local! STATE is per-thread,
       // and worker threads exit before `phase_us[graphics]` aggregation,
       // so worker increments would be lost. Accumulate in a shared
@@ -1988,10 +1986,17 @@ impl Processor for Graphics {
       // source/page/options share one subprocess result, while distinct
       // options keep separate outputs.
       let jobs: Vec<&ConvertJob> = convert_jobs.iter().collect();
-      std::thread::scope(|s| {
-        for _ in 0..n_workers {
-          s.spawn(|| {
-            loop {
+      // Each worker accumulates into a thread-local Vec returned from
+      // its closure; the main thread merges them after scope join. No
+      // shared mutable state during the parallel phase — replaces the
+      // previous `Mutex<Vec<…>>` per project policy (thread_local-only
+      // for in-memory state, no `Mutex`).
+      let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..n_workers)
+          .map(|_| {
+            s.spawn(|| {
+              let mut local = Vec::<ConvertOutcome>::new();
+              loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
               if i >= jobs.len() {
                 break;
@@ -2101,12 +2106,17 @@ impl Processor for Graphics {
                   }
                 }
               };
-              out.lock().unwrap().push(outcome);
+              local.push(outcome);
             }
-          });
-        }
+              local
+            })
+          })
+          .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
       });
-      outcomes = out.into_inner().unwrap();
+      for v in worker_outcomes {
+        outcomes.extend(v);
+      }
       outcomes.sort_by_key(|o| o.job_id);
       latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
     }

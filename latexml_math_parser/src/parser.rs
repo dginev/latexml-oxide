@@ -3,8 +3,8 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::io::Cursor;
-use std::sync::Mutex;
 
 use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
@@ -182,8 +182,10 @@ struct AmbiguityAuditCounts {
   ambiguous:   usize,
 }
 
-static AMBIGUITY_AUDIT_COUNTS: Lazy<Mutex<AmbiguityAuditCounts>> =
-  Lazy::new(|| Mutex::new(AmbiguityAuditCounts::default()));
+thread_local! {
+  static AMBIGUITY_AUDIT_COUNTS: RefCell<AmbiguityAuditCounts> =
+    RefCell::new(AmbiguityAuditCounts::default());
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ParseOutcome {
@@ -311,20 +313,22 @@ fn record_ambiguity_metric(metric: i32, input: &str) {
   if !*PARSE_AMBIGUITY_AUDIT {
     return;
   }
-  let mut counts = AMBIGUITY_AUDIT_COUNTS.lock().expect("ambiguity audit mutex poisoned");
-  counts.total += 1;
-  if metric == 1 {
-    counts.unambiguous += 1;
-  } else {
-    counts.ambiguous += 1;
-  }
-  eprintln!(
-    "LATEXML_MATH_AMBIGUITY_AUDIT: metric={metric} totals: unambiguous={} ambiguous={} total={} | {}",
-    counts.unambiguous,
-    counts.ambiguous,
-    counts.total,
-    input.trim().chars().take(160).collect::<String>()
-  );
+  AMBIGUITY_AUDIT_COUNTS.with(|cell| {
+    let mut counts = cell.borrow_mut();
+    counts.total += 1;
+    if metric == 1 {
+      counts.unambiguous += 1;
+    } else {
+      counts.ambiguous += 1;
+    }
+    eprintln!(
+      "LATEXML_MATH_AMBIGUITY_AUDIT: metric={metric} totals: unambiguous={} ambiguous={} total={} | {}",
+      counts.unambiguous,
+      counts.ambiguous,
+      counts.total,
+      input.trim().chars().take(160).collect::<String>()
+    );
+  });
 }
 
 pub struct MathParser {

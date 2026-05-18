@@ -11,9 +11,10 @@
 //!   4. write_dump() — serialize the diff
 //!   5. At runtime: load_dump() restores the state
 
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
+
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::common::arena;
 use crate::common::numeric_ops::NumericOps;
@@ -132,7 +133,7 @@ pub fn write_dump(
   // emit a single `IA` record per intarray with the values RLE-encoded
   // — same in-memory state after replay, ~10× smaller on disk.
   // See `docs/PERL_LOADFORMAT_AUDIT.md` ("Fontdimen/intarray storage").
-  let mut fontdimen_groups: HashMap<String, Vec<(u32, i64)>> = HashMap::new();
+  let mut fontdimen_groups: HashMap<String, Vec<(u32, i64)>> = HashMap::default();
 
   for (table, key, value) in entries {
     let table_code = table_to_code(*table);

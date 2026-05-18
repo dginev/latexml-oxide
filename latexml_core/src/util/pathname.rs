@@ -41,6 +41,22 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
+/// Process-global kpathsea handle (cross-thread shared, NOT
+/// `thread_local!`).
+///
+/// **Why an exception to the project's no-`Mutex` rule:**
+/// `kpathsea-rs` wraps a C library that maintains process-wide global
+/// state. Calling `Kpaths::new()` more than once per process (as the
+/// per-thread `thread_local!` pattern would do) re-runs the C-side
+/// init and can corrupt internal tables / leak file descriptors;
+/// concretely on systems without TeXLive installed, the second init
+/// fails with "Can't get directory of program name" and previously
+/// crashed `06_cluster_regressions`. The Mutex here is necessary to
+/// guarantee single-init AND single-active-call semantics for the
+/// underlying non-thread-safe C API. Same class of carve-out as
+/// `latexml_core::watchdog::PRE_EXIT_HOOK`. See
+/// `feedback_no_mutex_use_thread_local` in user memory for the
+/// general rule.
 static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
 
 /// Force-initialize the kpathsea global state and warm up the per-
@@ -52,30 +68,26 @@ static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new()
 /// `find_file → guess_format_from_filename → kpathsea_init_format →
 /// kpathsea_init_db → kpathsea_cnf_get → hash_insert_normalized`,
 /// taking ~30-40 ms total across the first dozen lookups. Profile
-/// data on 1910.01256 (2026-05-12, perf at 4 kHz) attributes 3.5 %
-/// of wall to that chain.
+/// data on 1910.01256 attributes ~3.5% of wall to that chain.
 ///
 /// **What this does:** acquires the `KPSE` mutex once and runs a
 /// single `find_file` probe per common file format. Each probe
 /// guarantees `kpathsea_init_format` runs for that format type, so
 /// every subsequent real lookup hits the post-init fast path.
 ///
-/// **Concurrency:** invoke this on a background thread spawned at
-/// process start, *before* digest begins. The mutex serialises with
-/// future kpathsea consumers — main thread blocks briefly if it
-/// races into `kpsewhich(...)` while we still hold the lock, but
-/// usually digest takes 100+ ms to reach its first package load by
-/// which point this routine has finished. Idempotent: re-entry
-/// while in flight is a no-op (lock contention only).
+/// **Concurrency:** safe to invoke on a background thread spawned at
+/// process start. `KPSE` is process-global (`Lazy<Mutex<…>>`), so the
+/// init done on a background thread is visible to the main thread.
+/// The Mutex briefly serializes the prewarm against the main thread's
+/// first real lookup, but dump load + arg parsing take >50 ms before
+/// digest reaches its first package resolution, by which point the
+/// prewarm is usually finished. Idempotent: re-entry while in flight
+/// is a no-op (lock contention only).
 pub fn prewarm_kpathsea() {
   let kpse_guard = KPSE.lock().unwrap();
   let Some(ref kpse) = *kpse_guard else {
     return;
   };
-  // One probe per common format. Filenames need not exist; the
-  // suffix-table init runs regardless. The first probe (".tex")
-  // bears the bulk of the cost because it triggers
-  // `kpathsea_init_db` itself; the rest are sub-millisecond.
   for sentinel in &[
     "warmup_lxoxide.tex",
     "warmup_lxoxide.sty",
@@ -89,8 +101,8 @@ pub fn prewarm_kpathsea() {
     "warmup_lxoxide.enc",
     "warmup_lxoxide.map",
   ] {
-    // catch_unwind defends against the same kpathsea-0.2.3 overflow
-    // bug that kpsewhich() guards against (see kpsewhich docs).
+    // catch_unwind defends against kpathsea-0.2.3 overflow bug (see
+    // kpsewhich docs).
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(sentinel)));
   }
 }

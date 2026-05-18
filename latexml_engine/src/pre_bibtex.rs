@@ -38,7 +38,7 @@
 //!   discarded (Perl L335-346: "anything until @ as an implied
 //!   comment").
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 
 use latexml_core::s;
 
