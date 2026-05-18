@@ -340,6 +340,12 @@ impl Converter {
     if self.opts.verbosity >= 0 {
       Info!("arena", "strings_allocated", arena::len());
     }
+    // MARPA_ASF_STATS=1: emit ASF instrumentation counters once
+    // per converted document. Codex instrumentation plan, see
+    // marpa/docs/ASF_PERFORMANCE_FINDINGS.md. The thread-local
+    // accumulator is reset after the snapshot so per-document
+    // figures are independent.
+    latexml_math_parser::report_and_reset_asf_stats();
     // Perl: Note("Conversion complete: " . $$runtime{status});
     Info!("Conversion complete: {}", self.runtime.status);
     let log = self.flush_log();

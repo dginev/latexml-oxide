@@ -1454,14 +1454,26 @@ impl MathParser {
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
-      // ⚠️ The six caps below (max_trees, max_time, max_consecutive_dupes,
+      // The six caps below (max_trees, max_time, max_consecutive_dupes,
       // converge_budget, pruned_only_time_budget+_count_threshold,
       // max_unique) exist because Tree-iteration evaluates per-tree
-      // actions O(trees × occurrences) times — defensive bandages against
-      // a paradigm cost we're planning to eliminate. Five of the six become
-      // unnecessary under Marpa ASF traversal (one callback per glade,
-      // memoized), with only `max_time` staying as a safety net. See
-      // docs/MATH_PARSER_AND_ASF.md for the migration plan.
+      // actions O(trees × occurrences) times — defensive bandages
+      // against the paradigm cost.
+      //
+      // 2026-05-18: With HYBRID as the default
+      // (`PARSE_VIA_HYBRID`), this branch is reached only when the
+      // user explicitly sets `LATEXML_MARPA_LEGACY=1` — an
+      // engine-divergence debugging escape hatch. The caps stay
+      // because their *original* protective role is exactly what
+      // makes the escape hatch usable on real ambiguous inputs
+      // (without them legacy would hang on grammars like the
+      // `27-trees-from-scriptpos` family in math). Removing them
+      // would silently break the debug path.
+      //
+      // For the production-path concern (long-time tree-iteration
+      // cost), HYBRID's `metric == 2 → ASF` routing already
+      // sidesteps these caps via per-glade memoization. See
+      // docs/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
       let max_time = std::time::Duration::from_secs(30); // 30 second timeout
       // Convergence: if we've seen enough consecutive duplicates without
