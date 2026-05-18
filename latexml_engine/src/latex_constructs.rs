@@ -4109,9 +4109,9 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
-  Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
-  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
+  // \ltx@ifpackageloaded / \ltx@ifclassloaded — LaTeXML-internal aliases
+  // for the file-loaded predicates; live in `latex_constructs_rust_only.rs`.
   // Latex.ltx L15252-15256: LaTeX3-style aliases for the file-load
   // tracking commands. The `\If*LoadedTF/AtLeastTF` family is a
   // modern-LaTeX addition not in Perl LaTeXML; it lives in
@@ -5209,18 +5209,9 @@ LoadDefinitions!({
   DefRegister!("\\labelwidthvi"       => Dimension::new(0));
 
   DefRegister!("\\@itemdepth" => Number::new(0));
-  DefRegister!("\\@maxlistdepth" => Number::new(6));
-
-  // List formatting macros from article.cls / report.cls / book.cls
-  // These set list parameters at various nesting levels.
-  // In raw TeX classes, \@listi etc. are defined by the class file.
-  // We stub them as no-ops since LaTeXML handles list formatting via CSS.
-  DefMacro!("\\@listi", "");
-  DefMacro!("\\@listii", "");
-  DefMacro!("\\@listiii", "");
-  DefMacro!("\\@listiv", "");
-  DefMacro!("\\@listv", "");
-  DefMacro!("\\@listvi", "");
+  // \@maxlistdepth and the \@listi..vi family are not in Perl
+  // latex_*.pool.ltxml — they live in `latex_constructs_rust_only.rs`
+  // (loads last). Identical-body duplicates removed from here.
 
   //======================================================================
   // C.6.4 Verbatim
@@ -10146,10 +10137,9 @@ LoadDefinitions!({
   // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
   // becomes Stored::None → `\MessageBreak` becomes undefined for the
   // remainder of the digestion. The next babel info message
-  // ("Importing font data...") then errors with "MessageBreak
-  // undefined". Re-define here in latex_constructs (post-dump) so
-  // both paths converge.
-  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+  // \ltx@hard@MessageBreak lives in `latex_constructs_rust_only.rs`
+  // (not in any Perl latex_*.pool.ltxml; covers both dump and NODUMP
+  // paths since rust_only.rs runs last).
 
   // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
   // Defensive parity with Perl's exact placement.
