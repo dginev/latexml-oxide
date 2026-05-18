@@ -2,12 +2,19 @@
 
 > How the three-stage ambiguity-handling pipeline in
 > `latexml_math_parser` maps onto Marpa's abstract syntax forest
-> (ASF) traversal model, and what would change on each side if we
-> switch to ASF-driven pruning.
+> (ASF) traversal model.
 >
-> Written 2026-05-17 in dialog with the [`asf-completion` branch
-> of dginev/marpa](https://github.com/dginev/marpa/tree/asf-completion)
-> and its [`ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md).
+> Written 2026-05-17 to plan the integration.
+>
+> **Status (2026-05-18): integration complete.** ASF traversal is
+> the default via the HYBRID dispatch path; LEGACY remains as an
+> opt-in escape hatch (`LATEXML_MARPA_LEGACY=1`). Tests at 1309/0.
+> The doc remains useful as design rationale for the three-stage
+> pipeline and the ASF mapping; the "pseudocode sketch" sections
+> reflect what was actually implemented in
+> `latexml_math_parser/src/asf_traverser.rs`.
+>
+> Marpa upstream landed in `dginev/marpa` master (PR #3, 2026-05-18).
 
 ---
 
