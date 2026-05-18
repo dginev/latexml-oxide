@@ -5507,18 +5507,9 @@ LoadDefinitions!({
     None,
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
-  // protected => true prevents read_x_token(fully_expand=false) from expanding this
-  // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      let mut result = vec![T_MATH!()];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  // \@ensuremath inner helper lives in `latex_constructs_rust_only.rs`
+  // (Rust split of Perl's unified \ensuremath; not separately defined in
+  // any Perl latex_*.pool.ltxml).
 
   // Perl: latex_constructs.pool.ltxml lines 2237-2239
   // \@equationgroup@numbering{numbered=1,postset=1,...}
@@ -5817,7 +5808,9 @@ LoadDefinitions!({
   // C.8.1 Defining Commands
   //======================================================================
 
-  DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+  // \@tabacckludge body lives in `latex_constructs_rust_only.rs` (Perl
+  // has it in latex_base.pool.ltxml L357; the rust_only.rs copy is the
+  // dump-path override per its docstring section 7).
   // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries
   // `\a` as an E record (the serializer captured
   // `\@tabacckludge`'s body with a `\@changed@cmd` wrapper, not a
@@ -8139,20 +8132,8 @@ LoadDefinitions!({
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
-    match lookup_definition(&cs)? {
-      None => {
-        let message = s!("'{}' is not a length; defining it now", cs.stringify());
-        Warn!("undefined", cs, message);
-        DefRegister!(cs, None, Dimension::new(0));
-      },
-      Some(defn) => if !defn.is_register() {
-        let message = s!("'{}' length was expected, got {:?} instead of register.",
-          cs.to_string(), defn.register_type());
-        Error!("misdefined", cs, message);
-      }
-    };
-  });
+  // \@check@length helper (used by \newlength below) lives in
+  // `latex_constructs_rust_only.rs` (Rust-only addition).
 
   DefPrimitive!("\\newlength DefToken", sub[(cs)] {
     DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
@@ -9532,7 +9513,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textdaggerdbl", "\u{2021}"); // DOUBLE DAGGER
   DefPrimitive!("\\textdagger", "\u{2020}"); // DAGGER
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
-  DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
+  // \textperiodcentered defined in `latex_constructs_rust_only.rs` (Perl
+  // uses it but never defines it — Perl-side gap noted in rust_only.rs).
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   // Perl: DefPrimitive('\textcircled {}', sub { ... })
   // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
