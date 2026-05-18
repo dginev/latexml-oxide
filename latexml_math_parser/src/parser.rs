@@ -4,6 +4,7 @@ use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::io::Cursor;
+use std::sync::Mutex;
 
 use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
@@ -103,18 +104,167 @@ static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT
 // it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
 static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
-// Route `parse_marpa` through ASF traversal (the default path) or
-// the legacy Tree-iteration loop. See docs/MATH_PARSER_AND_ASF.md.
-// **ASF is now the default**. The legacy Tree-iter is preserved as
-// an escape hatch behind `LATEXML_MARPA_LEGACY=1` for debugging
-// engine-divergence cases and historical comparison.
+static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_MATH_AMBIGUITY_AUDIT").is_ok());
+static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_MARPA_HYBRID_AUDIT_PARITY").is_ok());
+// Route `parse_marpa` through one of three paths. See
+// docs/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 //
-// Why ASF is default: it evaluates per-rule actions once per glade
-// (memoized) instead of once per tree, removing the 5000-tree cap
-// and 5 of the 6 convergence bandages required by the legacy path.
-// As of 2026-05-17 ASF reaches 1301/0 on the test suite; the
-// legacy path 1299/2 (two tests blessed to ASF-canonical output).
-static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_err());
+// **HYBRID is now the default** (2026-05-17). Hybrid reads the tokens
+// once, builds the bocage once, then checks Marpa's raw
+// `ambiguity_metric()`:
+//   * metric == 1 (unambiguous) → cheap Tree-iteration via
+//     `Actions::get_tree`, same machinery the legacy path uses.
+//   * metric >= 2 (ambiguous)   → ASF traversal via `MathTraverser`,
+//     same machinery the ASF-only default used.
+//
+// Measured: Article-2025.tex (579 math-heavy formulae) wall is
+// 12.40s under HYBRID vs 17.00s under pure ASF and 12.21s under
+// pure LEGACY. Hybrid is within 1.05x LEGACY on the math-heavy
+// fixture while preserving ASF's algorithmic advantage on the
+// raw-ambiguous fraction (12.7%–40% across corpus papers).
+//
+// Escape hatches:
+//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6
+//     convergence caps. Useful for engine-divergence debugging.
+//   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch).
+//     Useful for measuring ASF-only cost or debugging ASF behaviour
+//     in isolation.
+static PARSE_VIA_LEGACY: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_ok());
+static PARSE_VIA_ASF_ONLY: Lazy<bool> = Lazy::new(|| {
+  !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok()
+});
+// Default = hybrid unless LEGACY or ASF_ONLY is requested.
+static PARSE_VIA_HYBRID: Lazy<bool> =
+  Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
+// Compatibility alias: `PARSE_VIA_ASF` is true when we're NOT taking
+// the legacy path — both hybrid and ASF-only flavours go through the
+// ASF traverser at least some of the time. The downstream branch
+// inside `parse_marpa` distinguishes hybrid vs ASF-only further.
+static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
+
+#[derive(Default)]
+struct AmbiguityAuditCounts {
+  total:        usize,
+  unambiguous: usize,
+  ambiguous:   usize,
+}
+
+static AMBIGUITY_AUDIT_COUNTS: Lazy<Mutex<AmbiguityAuditCounts>> =
+  Lazy::new(|| Mutex::new(AmbiguityAuditCounts::default()));
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ParseOutcome {
+  Accepted(XM),
+  Empty,
+  Rejected(String),
+  Multiple(Vec<XM>),
+}
+
+fn canonicalize_parse_outcome_ids(outcome: &mut ParseOutcome) {
+  match outcome {
+    ParseOutcome::Accepted(tree) => canonicalize_xm_ids(tree),
+    ParseOutcome::Multiple(trees) => {
+      for tree in trees {
+        canonicalize_xm_ids(tree);
+      }
+    },
+    ParseOutcome::Empty | ParseOutcome::Rejected(_) => {},
+  }
+}
+
+fn canonicalize_xm_ids(tree: &mut XM) {
+  let mut ids = HashMap::default();
+  let mut next_id = 0;
+  canonicalize_xm_ids_inner(tree, &mut ids, &mut next_id);
+}
+
+fn canonicalize_xm_ids_inner(
+  tree: &mut XM,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  match tree {
+    XM::Lexeme(..) => {},
+    XM::Token(props, _) | XM::Ref(props) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+    },
+    XM::Apply(operator, args, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      canonicalize_xm_ids_inner(&mut operator.0, ids, next_id);
+      for arg in &mut args.0 {
+        if let Some(arg) = arg {
+          canonicalize_xm_ids_inner(arg, ids, next_id);
+        }
+      }
+    },
+    XM::Dual(content, presentation, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      canonicalize_xm_ids_inner(content, ids, next_id);
+      canonicalize_xm_ids_inner(presentation, ids, next_id);
+    },
+    XM::Wrap(items, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      for item in items {
+        canonicalize_xm_ids_inner(item, ids, next_id);
+      }
+    },
+    XM::Arg(items) | XM::Choices(items) => {
+      for item in items {
+        canonicalize_xm_ids_inner(item, ids, next_id);
+      }
+    },
+  }
+}
+
+fn canonicalize_xprops_ids(
+  props: &mut XProps,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  canonicalize_id_value(&mut props.id, ids, next_id);
+  canonicalize_id_value(&mut props.idref, ids, next_id);
+  canonicalize_id_value(&mut props.xmkey, ids, next_id);
+}
+
+fn canonicalize_id_value(
+  value: &mut Option<Cow<'static, str>>,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  let Some(original) = value.as_ref() else {
+    return;
+  };
+  let canonical = ids
+    .entry(original.to_string())
+    .or_insert_with(|| {
+      *next_id += 1;
+      Cow::Owned(format!("#{next_id}"))
+    })
+    .clone();
+  *value = Some(canonical);
+}
+
+fn record_ambiguity_metric(metric: i32, input: &str) {
+  if !*PARSE_AMBIGUITY_AUDIT {
+    return;
+  }
+  let mut counts = AMBIGUITY_AUDIT_COUNTS.lock().expect("ambiguity audit mutex poisoned");
+  counts.total += 1;
+  if metric == 1 {
+    counts.unambiguous += 1;
+  } else {
+    counts.ambiguous += 1;
+  }
+  eprintln!(
+    "LATEXML_MATH_AMBIGUITY_AUDIT: metric={metric} totals: unambiguous={} ambiguous={} total={} | {}",
+    counts.unambiguous,
+    counts.ambiguous,
+    counts.total,
+    input.trim().chars().take(160).collect::<String>()
+  );
+}
 
 pub struct MathParser {
   grammar:                   ThinGrammar,
@@ -181,6 +331,78 @@ impl Default for MathParser {
 // ================================================================================
 
 impl MathParser {
+  fn audit_hybrid_unambiguous_parity(
+    &self,
+    input: &str,
+    nodes: &[Node],
+    document: &mut Document,
+    tree_outcome: &ParseOutcome,
+  ) {
+    if !*PARSE_HYBRID_AUDIT_PARITY {
+      return;
+    }
+
+    // Explicit audit-only mode. Math actions may annotate XML nodes as
+    // they run, so this intentionally stays behind an env var and should
+    // be used on disposable benchmark/test runs, not normal conversion.
+    let mut parser = Parser::with_precomputed_grammar(self.grammar.clone());
+    let mut traverser = crate::asf_traverser::MathTraverser {
+      actions:      &self.actions,
+      pragmas:      self.expert_pragmatics.as_slice(),
+      builder:      &self.builder,
+      nodes,
+      document,
+      pruned_count: 0,
+    };
+    let mut asf_outcome = match parser.parse_and_traverse_forest(
+      ByteScanner::new(Cursor::new(input)),
+      (),
+      &mut traverser,
+    ) {
+      Ok((alts, _state)) => {
+        let mut trees: Vec<XM> = alts.iter().filter_map(|o| o.clone()).collect();
+        trees.sort_by_key(|t| t.text_summary());
+        trees.dedup();
+        match trees.len() {
+          0 => ParseOutcome::Empty,
+          1 => ParseOutcome::Accepted(trees.remove(0)),
+          _ => ParseOutcome::Multiple(trees),
+        }
+      },
+      Err(e) => ParseOutcome::Rejected(e.to_string()),
+    };
+    let mut tree_outcome = tree_outcome.clone();
+    canonicalize_parse_outcome_ids(&mut asf_outcome);
+    canonicalize_parse_outcome_ids(&mut tree_outcome);
+
+    // Audit semantics: the question the parity check answers is
+    // "if BOTH paths accept, do they produce the same XM?" An
+    // `Accepted` vs `Empty/Rejected` mismatch IS a real divergence
+    // (one path returned a tree, the other didn't); but a
+    // `Rejected("…")` vs `Empty` mismatch on a formula both paths
+    // failed is shallow — both paths return "no parse survived",
+    // they just disagree on how to label the failure. The user-
+    // facing HTML output is identical in that case, so don't treat
+    // it as an assertion failure.
+    let compatible = match (&asf_outcome, &tree_outcome) {
+      (ParseOutcome::Accepted(_), _) | (ParseOutcome::Multiple(_), _) |
+      (_, ParseOutcome::Accepted(_)) | (_, ParseOutcome::Multiple(_)) => {
+        asf_outcome == tree_outcome
+      },
+      // Both are some flavour of "no parse survived" (Empty or
+      // Rejected, in either order) — equivalent from the user's
+      // perspective.
+      _ => true,
+    };
+    assert!(
+      compatible,
+      "LATEXML_MARPA_HYBRID_AUDIT_PARITY mismatch for {}\n  asf:  {:?}\n  tree: {:?}",
+      input.trim(),
+      asf_outcome,
+      tree_outcome
+    );
+  }
+
   /// Reset the marpa engine after a failed parse.
   /// Creates a new engine and runs a trivial parse to advance past the
   /// precompute step (grammar is already precomputed, can't do it again).
@@ -1057,7 +1279,101 @@ impl MathParser {
     // we print the top-3 reasons + counts. Cheap when the env var is unset.
     let mut prune_reasons: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
 
-    if *PARSE_VIA_ASF {
+    if *PARSE_VIA_HYBRID {
+      // Hybrid path: one recognizer pass, one bocage, then route by
+      // raw Marpa ambiguity. Unambiguous formulae use the cheaper
+      // legacy Step/value action path; ambiguous formulae use ASF.
+      //
+      // `pruned_trees` remains a diagnostic counter here: the
+      // unambiguous branch counts whole-tree semantic rejection, while
+      // the ambiguous branch reports per-combo ASF action rejections.
+      // Do not compare this number across routing modes as a semantic
+      // invariant.
+      let mut traverser = crate::asf_traverser::MathTraverser {
+        actions:      &self.actions,
+        pragmas:      self.expert_pragmatics.as_slice(),
+        builder:      &self.builder,
+        nodes,
+        document,
+        pruned_count: 0,
+      };
+      let hybrid_result = self
+        .engine
+        .parse_hybrid(ByteScanner::new(Cursor::new(input)), (), &mut traverser);
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      match hybrid_result {
+        Ok(HybridParseResult::Unambiguous(mut tree_iter)) => {
+          drop(traverser);
+          record_ambiguity_metric(1, input);
+          let tree_outcome = if let Some(val) = tree_iter.next() {
+            match self.actions.get_tree(
+              self.builder.clone(),
+              val,
+              self.expert_pragmatics.as_slice(),
+              ActionContext { nodes, document },
+            ) {
+              Ok(Some(tree)) => ParseOutcome::Accepted(tree),
+              Ok(None) => ParseOutcome::Empty,
+              Err(prune_err) => ParseOutcome::Rejected(prune_err.to_string()),
+            }
+          } else {
+            ParseOutcome::Empty
+          };
+          debug_assert!(
+            tree_iter.next().is_none(),
+            "hybrid unambiguous branch should expose exactly one raw tree"
+          );
+          self.audit_hybrid_unambiguous_parity(input, nodes, document, &tree_outcome);
+          match tree_outcome {
+            ParseOutcome::Accepted(tree) => {
+              ok_trees += 1;
+              parses.push(tree);
+            },
+            ParseOutcome::Empty => {},
+            ParseOutcome::Rejected(msg) => {
+              pruned_trees += 1;
+              if *PARSE_PRUNE_REASONS {
+                let trimmed = msg.chars().take(140).collect::<String>();
+                *prune_reasons.entry(trimmed).or_insert(0) += 1;
+              }
+            },
+            ParseOutcome::Multiple(_) => unreachable!("tree path cannot produce multiple outcomes"),
+          }
+        },
+        Ok(HybridParseResult::Ambiguous(alts, _state)) => {
+          record_ambiguity_metric(2, input);
+          pruned_trees = traverser.pruned_count;
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "ASF_AUDIT: peak returned {} alternatives ({} Some, {} None), pruned={}",
+              alts.len(),
+              alts.iter().filter(|a| a.is_some()).count(),
+              alts.iter().filter(|a| a.is_none()).count(),
+              pruned_trees,
+            );
+          }
+          let alts_vec =
+            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          for opt in alts_vec {
+            if let Some(tree) = opt {
+              if parses.contains(&tree) {
+                deduped += 1;
+              } else {
+                ok_trees += 1;
+                parses.push(tree);
+              }
+            }
+          }
+        },
+        Err(e) => {
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!("HYBRID_AUDIT: parse_hybrid Err: {e}");
+          }
+        },
+      }
+    } else if *PARSE_VIA_ASF {
       // ASF path: one post-order memoized callback per glade.
       // `MathTraverser` accumulates all alternative XM parse trees
       // (including any pragmas-pruned ones counted as `pruned_count`)
