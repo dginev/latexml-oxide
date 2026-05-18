@@ -628,3 +628,128 @@ that's now the default.
   - TheDiskComplex.tex (681 parse calls)
 - sin[XY] regression fixture (`physics.tex`): bit-identical HTML
   output across all three modes.
+
+---
+
+## HYBRID at scale — math-bound regression on 100-paper sample (2026-05-18)
+
+Validation on a larger, math-heavier corpus than the development
+fixtures (Article-2025.tex, TheDiskComplex.tex). Selected the
+**top-100 arXiv papers by `phase_math_parse_us`** from the existing
+wp4 stage telemetry (49,164 papers, baseline ran pre-flip under
+LEGACY). Each sample paper has math-phase share 31–79 % of total
+wall and 700–8,400 `<ltx:Math>` formulae.
+
+Method: ran the same 100 papers twice with the fresh
+`cortex_worker` (release+native+cortex, marpa branch
+`asf-step3-generic-traverser`), 16 workers, 180 s timeout, 8 GB
+ulimit per task. HYBRID = current default (no env var); LEGACY =
+`LATEXML_MARPA_LEGACY=1`.
+
+### Outcome parity
+
+| Outcome | LEGACY | HYBRID |
+|---|---:|---:|
+| ok | **98** | **79** |
+| conversion_error | 2 | 2 |
+| abort (SIGABRT, OOM) | **0** | **19** |
+
+19 papers OOM-abort under HYBRID that LEGACY completes cleanly.
+All 19 panics are `memory allocation of N bytes failed` and fire
+4–20 s into the run, well before the 180 s timeout — structural
+allocator pressure, not a CPU runaway. The 19 papers span
+732–5,867 formulae and 9.8–75.8 s legacy wall:
+
+| paper | formulae | l_wall | h_wall (aborted) |
+|---|---:|---:|---:|
+| 2310.07954 | 5867 | 75.8 s | 17.1 s |
+| 2310.18047 | 3932 | 42.0 s | 10.7 s |
+| 2310.08575 | 2540 | 39.4 s | 12.2 s |
+| 2311.03145 | 4198 | 39.0 s | 16.1 s |
+| 2307.15809 | 3432 | 35.9 s | 18.5 s |
+| 2309.13020 | 5384 | 35.4 s |  9.9 s |
+| 2310.06146 | 4506 | 34.7 s |  8.2 s |
+| 2306.16983 | 5184 | 30.2 s | 11.0 s |
+| 2310.11745 | 2632 | 28.4 s | 10.3 s |
+| 2307.05407 | 2259 | 28.2 s | 10.9 s |
+| 2310.04665 | 1427 | 27.4 s | 13.2 s |
+| 2306.14604 | 5106 | 25.9 s |  8.7 s |
+| 2310.16583 |  732 | 23.7 s |  5.4 s |
+| 2306.04320 | 4976 | 23.6 s | 11.7 s |
+| 2305.12239 | 1339 | 21.7 s |  8.1 s |
+| 2305.12643 | 2559 | 21.3 s | 15.1 s |
+| 2310.10742 |  890 | 18.3 s | 19.9 s |
+| 2308.04208 |  834 | 16.2 s |  4.7 s |
+| 2306.03692 | 1474 |  9.8 s |  4.6 s |
+
+### Wall + math-phase on the both-OK subset (n=79)
+
+| Metric | LEGACY | HYBRID | Δ |
+|---|---:|---:|---:|
+| Wall (sum) | 2611.7 s | 2955.4 s | **+13.2 %** |
+| math_parse (sum) | 1183.7 s | 1439.8 s | **+21.6 %** |
+
+Per-paper wall-delta distribution: median +14.1 %, mean +17.2 %,
+σ 42.4. **50 regressions (>+5 %), 23 improvements (<−5 %), 6
+neutral.** Variance is huge — the same flag is +242 % on one
+paper and −52 % on another.
+
+Worst regressions (both-OK):
+
+| paper | formulae | l_wall | h_wall | Δwall | Δmath |
+|---|---:|---:|---:|---:|---:|
+| 2306.05026 | 4093 | 26.5 s | 90.7 s | **+242 %** | +679 % |
+| 2307.03365 | 2533 | 10.6 s | 24.5 s | +131 % | +199 % |
+| 2306.03687 | 1262 |  8.6 s | 17.9 s | +108 % | +112 % |
+| 2308.01418 | 4382 | 31.8 s | 62.2 s |  +96 % |  +84 % |
+| 2306.04637 | 4151 | 37.3 s | 70.7 s |  +90 % |  +78 % |
+
+Best improvements (both-OK):
+
+| paper | formulae | l_wall | h_wall | Δwall |
+|---|---:|---:|---:|---:|
+| 2307.05952 | 1770 | 22.1 s | 10.5 s | **−52 %** |
+| 2308.04253 | 1483 | 36.2 s | 21.9 s | −40 % |
+| 2305.19222 | 2415 | 31.2 s | 19.0 s | −39 % |
+| 2306.07378 | 2333 | 48.1 s | 32.7 s | −32 % |
+| 2308.06104 | 8392 | 64.0 s | 44.6 s | −30 % |
+
+### Reconciliation with the development fixtures
+
+The Article-2025.tex acceptance result (1.018× LEGACY, 87 %
+raw-unambiguous formulae) does not generalise to the wp4
+math-heavy tail. On this 100-paper sample, HYBRID is **1.13×
+LEGACY** on the same-success subset and produces **19 net
+failures** that LEGACY does not. The acceptance gate
+(≤1.05× LEGACY, set on the development fixture) does not hold
+at corpus scale on the math-bound tail.
+
+### Likely root cause
+
+The OOM-aborting papers consistently spend 12–40 s in
+`phase_math_parse_us` under LEGACY — they have many formulae
+and at least some highly ambiguous ones. HYBRID routes
+`ambiguity_metric() >= 2` formulae through `compute_symches`,
+which allocates `Nidset` + `Glade` per glade and `Vec<Factoring>`
+per and-node. On the worst formulae the factoring count appears
+to explode past 8 GB. LEGACY's `Tree::next()` Step iteration
+streams the same forest without holding the whole bocage view
+in memory.
+
+### Actionable next steps (catalogue, not commitments)
+
+1. **Triage one OOM** (e.g. `2310.07954`, `2310.04665`) with
+   `LATEXML_MARPA_ASF_AUDIT=1` + `LATEXML_MATH_AMBIGUITY_AUDIT=1`
+   to identify which glade explodes the factoring count.
+2. **Widen the HYBRID router**: today the router branches on
+   `ambiguity_metric >= 2`. Add a second predicate — total
+   bocage and-node count or a peak-factoring estimate — and
+   route past a size threshold back to LEGACY Step iteration.
+3. **Revisit `compute_symches` allocation** for high-cardinality
+   factorings: at minimum, cap factoring enumeration with an
+   early bail-out + LEGACY fallback when the cap trips.
+
+Artifacts from this run (not in-repo; under `/tmp/asf_math100/`):
+- `compare.tsv` — per-paper wall + math + outcome side-by-side
+- `out_hybrid/results.tsv` + `telemetry.jsonl` — HYBRID run
+- `out_legacy/results.tsv` + `telemetry.jsonl` — LEGACY run
