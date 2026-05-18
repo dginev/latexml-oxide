@@ -1,6 +1,9 @@
+#![feature(alloc_error_hook)]
+
 use clap::Parser;
 use latexml::converter::Converter;
 use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
+use std::alloc::{Layout, set_alloc_error_hook};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -256,7 +259,25 @@ struct Cli {
   telemetry_out: Option<String>,
 }
 
+/// Allocation-failure hook: detects the runaway-macro-expansion
+/// pathology at the moment it manifests. See cortex_worker.rs for
+/// full rationale.
+fn custom_alloc_error_hook(layout: Layout) {
+  eprintln!(
+    "\n==> latexml-oxide: allocation of {} bytes (align {}) failed.\n\
+     ==> Likely cause: runaway macro expansion (the gullet's pushback Vec\n\
+     ==>   grew unbounded across many unread cycles, triggering Vec's\n\
+     ==>   capacity-doubling past the worker memory budget).\n\
+     ==> Exiting cleanly with code 137.",
+    layout.size(),
+    layout.align()
+  );
+  std::process::exit(137);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+  set_alloc_error_hook(custom_alloc_error_hook);
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for

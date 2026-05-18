@@ -7,6 +7,9 @@
 //! - Worker mode (default): connects to CorTeX dispatcher via ZMQ
 //! - Standalone mode (--standalone): single ZIP-to-ZIP conversion
 
+#![feature(alloc_error_hook)]
+
+use std::alloc::{Layout, set_alloc_error_hook};
 use std::borrow::Cow;
 use std::error::Error;
 use std::ffi::OsString;
@@ -870,7 +873,35 @@ fn write_timeout_placeholder_zip(
 
 // --- Main ---
 
+/// Custom allocation-failure hook: detects the runaway-macro-expansion
+/// pathology at the moment it manifests (Rust's `alloc::handle_alloc_error`),
+/// prints a clean stderr diagnostic with the requested layout, and exits
+/// the worker with code 137 so `tools/benchmark_canvas.sh` categorises
+/// it as `oom_or_kill` rather than `abort`. No overhead on the normal
+/// digestion path — the hook fires only when the allocator returns null.
+///
+/// Witness pathology: paper 2305.16331 + `\u\i` under `mathtext + T2A`
+/// drives `gullet::pushback` into runaway growth via repeated unread of
+/// growing-each-cycle invoked-Tokens; the next `Vec::reserve` doubles
+/// capacity past the 4 GiB / 8 GB ulimit boundary and fails. With this
+/// hook installed, that failure becomes a per-document fatal rather
+/// than a process abort.
+fn custom_alloc_error_hook(layout: Layout) {
+  eprintln!(
+    "\n==> latexml-oxide: allocation of {} bytes (align {}) failed.\n\
+     ==> Likely cause: runaway macro expansion (the gullet's pushback Vec\n\
+     ==>   grew unbounded across many unread cycles, triggering Vec's\n\
+     ==>   capacity-doubling past the worker memory budget).\n\
+     ==> Exiting cleanly with code 137 (canvas categorises as oom_or_kill).",
+    layout.size(),
+    layout.align()
+  );
+  std::process::exit(137);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+  set_alloc_error_hook(custom_alloc_error_hook);
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
   // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
