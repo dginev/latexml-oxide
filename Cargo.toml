@@ -11,11 +11,13 @@ members = [
 ]
 resolver = "2"
 
-# Note: marpa-rs is hosted at `https://github.com/dginev/marpa`. We
-# now track the default `master` branch (PR #3 landed 2026-05-18,
-# bringing the ASF + hybrid-dispatch work + codex polish). The
-# previous dev-time `[patch]` pointing at the local checkout has
-# been removed.
+# Note: marpa-rs is hosted at `https://github.com/dginev/marpa`. The
+# previous dev-time `[patch]` pointing at the local checkout has been
+# removed (master branch now carries the ASF + hybrid-dispatch work
+# from PR #3, landed 2026-05-18). Crates currently track
+# `branch = "perf/asf-allocation-trim"` for in-flight allocation-trim
+# experiments; flip back to default master once the perf branch
+# merges.
 
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
