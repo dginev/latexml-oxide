@@ -523,7 +523,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
 
     let source_for_post = source.clone();
-    let response = converter.convert(source);
+    // XML-input mode: when the source is already-converted LaTeXML XML
+    // (file extension `.xml`/`.xhtml` or content starts with `<?xml`
+    // / `<document xmlns="…">`), skip the TeX → XML converter and feed
+    // the file straight to post-processing. Mirrors what
+    // `latexmlpost_oxide` did as a separate binary (per the
+    // retirement plan in `docs/SYNC_STATUS.md`).
+    let response = if is_xml_input(&source) {
+      match std::fs::read_to_string(&source) {
+        Ok(xml) => latexml::converter::ConversionResponse {
+          result:      Some(xml),
+          log:         String::new(),
+          status:      String::from("Status:conversion:0"),
+          status_code: 0,
+        },
+        Err(e) => {
+          eprintln!("Failed to read XML source '{}': {}", source, e);
+          process::exit(1);
+        },
+      }
+    } else {
+      converter.convert(source)
+    };
     let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
       // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
@@ -564,13 +585,20 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         inferred_format.as_deref(),
         Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3")
       );
+      // XML-input mode implies post-processing — there's nothing to
+      // convert (the file is already converted XML), so the only
+      // meaningful action is to run the post-pipeline on it.
+      // Matches the always-on post-processing behaviour of the now-
+      // retired `latexmlpost_oxide` binary.
+      let xml_input_mode = is_xml_input(&source_for_post);
       let do_post = cli.post
         || cli.pmml
         || cli.cmml
         || effective_stylesheet.is_some()
         || is_html_format
         || cli.split
-        || cli.splitat.is_some();
+        || cli.splitat.is_some()
+        || xml_input_mode;
 
       // Build split XPath from --splitat
       let split_enabled =
@@ -627,8 +655,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           .and_then(latexml_post::extract::Whatsout::from_cli)
           .unwrap_or_default();
 
+        // latexmlpost_oxide's default was "if no --pmml AND no
+        // --stylesheet, default pmml = true". Apply the same rule for
+        // XML-input mode so `latexml_oxide foo.xml --dest out.html`
+        // does something useful out of the box.
+        let default_pmml_for_xml_input =
+          xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
         let output = run_post_processing(&xml, &PostOptions {
-          pmml: cli.pmml || cli.post || is_html_format,
+          pmml: cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
@@ -854,6 +888,18 @@ fn make_splitpaths(splitat: &str) -> String {
 /// Returns (TempDir, main_tex_path).
 ///
 /// Port of Perl LaTeXML::Util::Pack::unpack_source.
+/// Detect whether `source` is already-converted LaTeXML XML — i.e. a
+/// `.xml` file — so the TeX → XML converter front-end can be skipped
+/// and the file fed straight to post-processing. Matches what Perl
+/// `latexmlpost` accepts and replaces the separate (now retired)
+/// `latexmlpost_oxide` binary.
+fn is_xml_input(source: &str) -> bool {
+  Path::new(source)
+    .extension()
+    .and_then(|e| e.to_str())
+    .is_some_and(|ext| ext.eq_ignore_ascii_case("xml"))
+}
+
 fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
   let tempdir = tempfile::tempdir()?;
   let dest = tempdir.path();

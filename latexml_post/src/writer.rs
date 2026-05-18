@@ -11,7 +11,8 @@
 //!    in hand (post-processing returns a `String`) and need to route
 //!    it to a destination path or stdout. Replaces the duplicated
 //!    `File::create + write! + ensure_parent_dir` boilerplate that
-//!    used to live in `latexml_oxide.rs` and `latexmlpost_oxide.rs`.
+//!    used to live in `latexml_oxide.rs` (and the now-retired
+//!    `latexmlpost_oxide.rs`).
 //!
 //! Companion module: [`crate::pack`] (the `LaTeXML::Post::Pack` analog)
 //! handles archive bundling when the destination is a zip.
@@ -27,7 +28,7 @@ use crate::processor::{PostError, ProcessResult, Processor};
 /// Write the serialized output `content` to `dest` if `Some`, else to
 /// stdout. Creates parent directories as needed.
 ///
-/// Used by `latexml_oxide.rs` and `latexmlpost_oxide.rs` main()s for
+/// Used by `latexml_oxide.rs`'s main() (XML-input mode included) for
 /// the "write a single HTML/XML file" exit path. For the zip-archive
 /// exit path, use [`crate::pack::pack_archive`].
 pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {

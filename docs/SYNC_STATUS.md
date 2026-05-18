@@ -554,7 +554,80 @@ tests pin the round-trip + RLE edge cases + V-record backward compat.
 
 ---
 
-## Long-term: retire `latexmlpost_oxide` binary (2026-05-18)
+## Post-processing pipeline parity — milestone (2026-05-18)
+
+The Perl `LaTeXML::Post::Writer` / `LaTeXML::Util::Pack` / `pack_collection`
+trinity is now structurally mirrored in Rust. All three downstream
+binaries route through one shared implementation:
+
+| binary             | writer (file/stdout) | pack (zip+resources) | extract (whatsout) | omit_doctype |
+|--------------------|----------------------|----------------------|--------------------|--------------|
+| `latexml_oxide`    | ✓ `writer::write_output` | ✓ `pack::pack_archive` | ✓ `extract::serialize_whatsout` | ✓ libxml 0.3.11 |
+| `cortex_worker`    | n/a (always packs)   | ✓ same               | always `Document`  | n/a          |
+| `latexmlpost_oxide`| ✓ same               | n/a (no zip mode yet)| ✓ same             | not exposed  |
+
+Modules (all in `latexml_post/src/`):
+* `writer.rs` — `Writer` processor + `write_output` / `ensure_parent_dir`
+  helpers. Honors `omit_doctype` via libxml 0.3.11's new
+  `Document::remove_internal_subset` (KWARC/rust-libxml PR #198).
+* `pack.rs` — `pack_archive` + `PackOptions` + buffered (64 KiB)
+  zip writer / reader to bundle HTML + log + status +
+  resource-dir + optional telemetry into one archive.
+* `extract.rs` — `Whatsout` enum + `serialize_whatsout` + the
+  `get_math` / `get_embeddable` extractors (Pack.pm L247-313 port).
+
+Closing milestones along the way:
+* `3ad142fd70` — fix: latexml_oxide --post wasn't bundling
+  Graphics-converted PNG/SVG into the output zip.
+* `faaabd71a6` — extract pack logic from binaries into
+  `latexml_post::pack`.
+* `c3bcb988fe` — wire writer + pack into all post-processing
+  executables, with 64 KiB BufWriter/BufReader on zip IO.
+* `f026aee6e5` — `--whatsout fragment|math` CLI wired through
+  `latexml_oxide` and `cortex_worker`.
+* `9622b8c4ef` — `--whatsout` wired through `latexmlpost_oxide`
+  (3rd post binary; gap caught at audit).
+* `aee6ffbc8d` — `00README.XXX:ignore` directive ported in
+  `find_main_tex`.
+* KWARC/rust-libxml #198 + `f56bbd5afc` — `Writer::omit_doctype`
+  is no longer a dead field; wired to the new
+  `Document::remove_internal_subset` upstream API.
+* `2498e6f0f2` — workspace deps bumped to libxml 0.3.11 (path
+  override dropped).
+
+Tests went 1309/0/0 → **1328/0/0** across this milestone (+19
+covering extract, pack, writer, main_tex 00README directives, the
+omit_doctype path, and the post-pipeline integration).
+
+Still open: `latexmlpost_oxide` retirement (next; see below).
+
+---
+
+## Retired `latexmlpost_oxide` (2026-05-18) ✓ done
+
+`latexmlpost_oxide` no longer exists as a separate binary.
+`latexml_oxide` auto-detects `.xml` input via `is_xml_input`
+(extension match — Perl `latexmlpost` accepts the same), skips the
+TeX → XML converter, and feeds the file straight to the
+post-processing pipeline. Auto-enables `--post` and defaults
+`--pmml = true` when input is XML and the user hasn't passed
+`--stylesheet` (matches the retired binary's UX).
+
+All `latexmlpost_oxide` flags map cleanly:
+
+| latexmlpost_oxide | latexml_oxide |
+|---|---|
+| `foo.xml` | `latexml_oxide foo.xml --dest out.html` (auto-post, auto-pmml) |
+| `--pmml`, `--cmml`, `--keepXMath`, `--xmath`, `--stylesheet`, `--dest`, `--whatsout` | same names, identical semantics |
+| `--noscan`, `--nocrossref` | (were no-ops in latexmlpost_oxide; latexml_oxide always runs Scan + CrossRef — closer to Perl `latexmlpost`'s default behaviour) |
+
+Migration: any script that ran `latexmlpost_oxide INPUT.xml --pmml --dest OUT.html`
+now runs `latexml_oxide INPUT.xml --pmml --dest OUT.html` with no
+other changes.
+
+Files removed: `latexml_post/bin/latexmlpost_oxide.rs`, the
+`[[bin]]` entry in `latexml_post/Cargo.toml`, and the `bin/`
+directory itself (was a single-file dir).
 
 User note: rather than maintain a separate `latexmlpost_oxide`
 binary, give `latexml_oxide` an **XML-input mode** that runs only

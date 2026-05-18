@@ -10,10 +10,6 @@ description = "Post-processing pipeline for latexml_oxide (Rust port of LaTeXML:
 name = "latexml_post"
 crate-type = ["lib"]
 
-[[bin]]
-name = "latexmlpost_oxide"
-path = "bin/latexmlpost_oxide.rs"
-
 [dependencies]
 libxml = "0.3.11"
 libxslt = "0.1.3"
