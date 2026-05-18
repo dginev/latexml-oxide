@@ -155,11 +155,41 @@ static AMBIGUITY_AUDIT_COUNTS: Lazy<Mutex<AmbiguityAuditCounts>> =
   Lazy::new(|| Mutex::new(AmbiguityAuditCounts::default()));
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum ParseOutcome {
+pub(crate) enum ParseOutcome {
   Accepted(XM),
   Empty,
   Rejected(String),
   Multiple(Vec<XM>),
+}
+
+/// Audit semantics for `LATEXML_MARPA_HYBRID_AUDIT_PARITY`.
+///
+/// The parity check answers one load-bearing question:
+/// *"If both paths accept, do they produce the same XM?"* — and
+/// only that one. An `Accepted` vs `Empty/Rejected` mismatch IS a
+/// real divergence (one path returned a tree, the other didn't),
+/// but a `Rejected("…")` vs `Empty` outcome on a formula both
+/// paths failed is shallow: both report "no parse survived",
+/// they just disagree on the failure label. The user-facing HTML
+/// is bit-identical in that case (verified empirically on
+/// Article-2025.tex's set-builder formulae — see commit
+/// 9318960974 and marpa/docs/ASF_PERFORMANCE_FINDINGS.md), so
+/// we treat any pair of non-Accepted/non-Multiple outcomes as
+/// compatible.
+pub(crate) fn parity_outcomes_compatible(
+  asf_outcome: &ParseOutcome,
+  tree_outcome: &ParseOutcome,
+) -> bool {
+  match (asf_outcome, tree_outcome) {
+    (ParseOutcome::Accepted(_), _)
+    | (ParseOutcome::Multiple(_), _)
+    | (_, ParseOutcome::Accepted(_))
+    | (_, ParseOutcome::Multiple(_)) => asf_outcome == tree_outcome,
+    // Both are some flavour of "no parse survived" (Empty or
+    // Rejected, in either order) — equivalent from the user's
+    // perspective.
+    _ => true,
+  }
 }
 
 fn canonicalize_parse_outcome_ids(outcome: &mut ParseOutcome) {
@@ -375,27 +405,8 @@ impl MathParser {
     canonicalize_parse_outcome_ids(&mut asf_outcome);
     canonicalize_parse_outcome_ids(&mut tree_outcome);
 
-    // Audit semantics: the question the parity check answers is
-    // "if BOTH paths accept, do they produce the same XM?" An
-    // `Accepted` vs `Empty/Rejected` mismatch IS a real divergence
-    // (one path returned a tree, the other didn't); but a
-    // `Rejected("…")` vs `Empty` mismatch on a formula both paths
-    // failed is shallow — both paths return "no parse survived",
-    // they just disagree on how to label the failure. The user-
-    // facing HTML output is identical in that case, so don't treat
-    // it as an assertion failure.
-    let compatible = match (&asf_outcome, &tree_outcome) {
-      (ParseOutcome::Accepted(_), _) | (ParseOutcome::Multiple(_), _) |
-      (_, ParseOutcome::Accepted(_)) | (_, ParseOutcome::Multiple(_)) => {
-        asf_outcome == tree_outcome
-      },
-      // Both are some flavour of "no parse survived" (Empty or
-      // Rejected, in either order) — equivalent from the user's
-      // perspective.
-      _ => true,
-    };
     assert!(
-      compatible,
+      parity_outcomes_compatible(&asf_outcome, &tree_outcome),
       "LATEXML_MARPA_HYBRID_AUDIT_PARITY mismatch for {}\n  asf:  {:?}\n  tree: {:?}",
       input.trim(),
       asf_outcome,
@@ -2447,6 +2458,78 @@ mod tests {
   #[test]
   fn parse_scriptpos_empty_defaults_to_post_zero() {
     assert_eq!(parse_scriptpos_str(""), ("post", 0));
+  }
+
+  // ---- LATEXML_MARPA_HYBRID_AUDIT_PARITY relaxed-comparison tests ----
+  //
+  // The audit's load-bearing question is "if both paths accept, do
+  // they produce the same XM?". Non-Accepted/Non-Multiple outcome
+  // pairs (Empty vs Rejected etc.) are compatible. The minimal
+  // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
+  // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+
+  fn lex(name: &str) -> XM {
+    XM::Lexeme(std::rc::Rc::from(name), crate::semantics::metadata::Meta::default())
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_both_empty_is_ok() {
+    assert!(parity_outcomes_compatible(&ParseOutcome::Empty, &ParseOutcome::Empty));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_both_rejected_is_ok_even_with_different_messages() {
+    let a = ParseOutcome::Rejected("infix_relation: …".to_string());
+    let b = ParseOutcome::Rejected("some other pragma rejected".to_string());
+    assert!(parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_empty_vs_rejected_is_ok_in_either_order() {
+    let empty = ParseOutcome::Empty;
+    let rej = ParseOutcome::Rejected("…".to_string());
+    assert!(parity_outcomes_compatible(&empty, &rej));
+    assert!(parity_outcomes_compatible(&rej, &empty));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_vs_empty_is_a_real_mismatch() {
+    let acc = ParseOutcome::Accepted(lex("x"));
+    let empty = ParseOutcome::Empty;
+    assert!(!parity_outcomes_compatible(&acc, &empty));
+    assert!(!parity_outcomes_compatible(&empty, &acc));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_vs_rejected_is_a_real_mismatch() {
+    let acc = ParseOutcome::Accepted(lex("x"));
+    let rej = ParseOutcome::Rejected("…".to_string());
+    assert!(!parity_outcomes_compatible(&acc, &rej));
+    assert!(!parity_outcomes_compatible(&rej, &acc));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_equal_xm_is_ok() {
+    let a = ParseOutcome::Accepted(lex("foo"));
+    let b = ParseOutcome::Accepted(lex("foo"));
+    assert!(parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_different_xm_is_a_real_mismatch() {
+    let a = ParseOutcome::Accepted(lex("foo"));
+    let b = ParseOutcome::Accepted(lex("bar"));
+    assert!(!parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_multiple_treated_as_accepted_kind() {
+    let m = ParseOutcome::Multiple(vec![lex("x"), lex("y")]);
+    let empty = ParseOutcome::Empty;
+    // Multiple-vs-Empty is a real mismatch (one path returned trees,
+    // the other didn't) — same semantics as Accepted-vs-Empty.
+    assert!(!parity_outcomes_compatible(&m, &empty));
+    assert!(!parity_outcomes_compatible(&empty, &m));
   }
 
   #[test]
