@@ -54,6 +54,7 @@ pub mod make_index;
 pub mod manifest;
 pub mod math_images;
 pub mod mathml;
+pub mod extract;
 pub mod open_math;
 pub mod pack;
 pub mod picture_images;
