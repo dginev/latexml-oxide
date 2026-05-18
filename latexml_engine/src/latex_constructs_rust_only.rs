@@ -142,12 +142,25 @@ LoadDefinitions!({
   //
   // Not in Perl LaTeXML (too new), but needed for modern packages
   // (tcolorbox, etc.).
+  //
+  // ltcmd defines these as `\NewDocumentCommand … { m m }` — both args
+  // are mandatory and accept either a bare token (`\foo`) or a
+  // brace-wrapped token (`{\foo}`). Real arxmliv usage is the brace form:
+  // `\NewCommandCopy{\origsum}{\sum}` (witness: arXiv:2510.20194
+  // various.sty L296). Earlier `Token Token` spec consumed `{` as the
+  // first token and `\origsum` as the second, producing `\let { = \origsum`
+  // (no-op), leaving `\origsum` undefined and yielding 100+ cascade errors.
+  // Use `{}{}` (brace-mandatory) and unwrap to the contained Token.
   //======================================================================
-  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  DefPrimitive!("\\NewCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
-  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
   DefMacro!("\\ShowCommand Token", "");
 

@@ -6407,24 +6407,11 @@ LoadDefinitions!({
   // ltcmd defines them as `\NewDocumentCommand \NewCommandCopy { m m }` —
   // both args are mandatory, accepting either `\foo` (bare token) or
   // `{\foo}` (brace-wrapped token). Real arxmliv usage is the brace
-  // form: `\NewCommandCopy{\origsum}{\sum}` (witness:
-  // arXiv:2510.20194 various.sty L296). Earlier `Token Token` spec
-  // consumed `{` as the first token and `\origsum` as the second,
-  // producing `\let { = \origsum` (no-op), leaving `\origsum`
-  // undefined and yielding `Error:undefined:\origsum` on first use.
-  //
-  // Use `{}{}` (brace-mandatory) and unwrap to the contained Token.
-  DefPrimitive!("\\NewCommandCopy{}{}", sub[(new_arg, old_arg)] {
-    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty new arg")?;
-    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty old arg")?;
-    state::let_i(&new_tok, &old_tok, None);
-  });
-  DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
-    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
-    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
-    state::let_i(&new_tok, &old_tok, None);
-  });
-  DefMacro!("\\ShowCommand Token", "");
+  // \NewCommandCopy / \DeclareCommandCopy / \ShowCommand defined in
+  // `latex_constructs_rust_only.rs` (modern LaTeX 2023+ kernel CSes;
+  // not in Perl). Moved there for single-source-of-truth and to keep
+  // bug fix (brace-wrapped token unwrap; arXiv:2510.20194 witness) from
+  // being overridden by an older copy.
 
   TeX!(
     r#"""
@@ -9935,14 +9922,8 @@ LoadDefinitions!({
     }
   });
 
-  // LaTeX3 format-version guard (ltcmd.dtx 2020/10/01 kernel). Source that
-  // checks for format features writes
-  //   \IfFormatAtLeastTF{YYYY/MM/DD}{then}{else}
-  // expecting the `then` branch on modern LaTeX. LaTeXML simulates a
-  // current-enough format, so always take `#2`. This is how babel's
-  // greek.ldf probes for LaTeX3 catcode primitives; without the stub it
-  // emits Error:undefined and bails out of the language setup.
-  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
+  // \IfFormatAtLeastTF stub lives in `latex_constructs_rust_only.rs` (loads
+  // last). Removed duplicate identical-body DefMacro here.
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
