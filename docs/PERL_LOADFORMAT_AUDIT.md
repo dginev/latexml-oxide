@@ -321,18 +321,32 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
   ~12 closure-backed defs (`\wlog`, `\newinsert`, `\hglue`,
   `\vglue`, `\openup`, `\raggedbottom`, `\normalbottom`,
   `\@@oalign`, `\@@ooalign`, `\buildrel`, `\@`, `\@break`).
-* Rust 786 lines, ~55 closure-backed defs.
+* Rust 756 lines, ~55 closure-backed defs.
 * **Resolved (commit `0c4d609ad`):** `\newcount`, `\newdimen`,
   `\newskip`, `\newmuskip`, `\newbox`, `\newhelp`, `\newtoks`,
   `\newread`, `\newwrite`, `\newfam`, `\newlanguage` switched from
   Rust closures to raw `\outer\def` Token bodies, matching Perl
   `RawTeX` block at L207-218.
-* **Open:** spacing macros (`\enskip`, `\enspace`, `\quad`,
+* **Resolved:** spacing macros (`\enskip`, `\enspace`, `\quad`,
   `\qquad`, `\thinspace`, `\negthinspace`, etc.) ARE closure-defined
   in Perl too — parity, no action.
-* **Open:** Rust has additional CSes not in Perl plain_base
-  (~150 lines extra). Need line-by-line audit to determine if
-  they belong here or in plain_constructs.
+* **CS-set audit — RESOLVED 2026-05-18 (this session).** Both sides
+  define **132 CSes** by Def\*-family extraction (comment-skipping
+  regex). Diff:
+  * In Perl only (4): `\#`, `\$`, `\%`, `\&` — char-dispatch
+    family. Relocated to `plain_constructs.rs:38-49` as
+    `\ifmmode\lx@math@*\else\lx@text@*\fi` dispatchers with
+    separate math/text targets. Documented WISDOM #44 divergence.
+  * In Rust only (4): `\showoverfull`, `\loggingoutput`,
+    `\tracingfonts`, `\showoutput` — co-located to plain_base.rs
+    L54-57 from `latex_constructs.pool.ltxml` L5677-5679 so plain.tex
+    users also get them (`\tracingall` references them).
+    Comment in source at `plain_base.rs:43-52`.
+  * Net: zero accidental drift. The ~134 line-count delta is
+    entirely from verbose Rust comments with Perl-line citations,
+    multi-line macro body formatting, and the `LoadDefinitions!`
+    wrapper boilerplate.
+* Status: **PARITY** — line-count gap is cosmetic; no action.
 
 ### `plain_constructs.pool.ltxml` ↔ `plain_constructs.rs`
 
