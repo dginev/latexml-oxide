@@ -28,12 +28,20 @@ path = "bin/cortex_worker.rs"
 required-features = ["cortex"]
 
 [features]
-default = []
+default = ["test-utils"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
 # for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
 cortex = ["dep:pericortex", "dep:hostname"]
+# Compile the integration-test harness in `src/util/test.rs`. On by default
+# so `cargo test` and `cargo build` (no flags) work as expected. Distribution
+# builds should pass `--no-default-features` (or `--no-default-features
+# --features cortex` for the worker) to drop `glob` and `phf` from the
+# binary's dependency graph (audit DEP-02, 2026-05-18). Saves the compile
+# cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
+# `phf_shared` build-deps, plus a small `.text` footprint.
+test-utils = ["dep:glob", "dep:phf"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -51,8 +59,8 @@ log = "0.4"
 libxml = "0.3.10"
 once_cell = "1.17.0"
 regex = "1.7.1"
-glob = "0.3"
-phf = { version = "0.13.1", features = ["macros"] }
+glob = { version = "0.3", optional = true }
+phf = { version = "0.13.1", features = ["macros"], optional = true }
 rustc-hash = "2.0.0"
 latexml_codegen = {path = "../latexml_codegen"}
 latexml_core = {path = "../latexml_core"}
