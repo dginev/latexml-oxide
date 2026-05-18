@@ -98,6 +98,7 @@ pub mod caption_sty;
 pub mod cases_sty;
 pub mod ccfonts_sty;
 pub mod chancery_sty;
+pub mod changepage_sty;
 pub mod chapterbib_sty;
 pub mod charter_sty;
 pub mod chngcntr_sty;

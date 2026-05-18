@@ -8,6 +8,23 @@ LoadDefinitions!({
   DefEnvironment!("{pagewiselinenumbers*}[Number]", "#body");
   DefEnvironment!("{linenomath}",                   "#body");
   DefEnvironment!("{linenomath*}",                  "#body");
+  // Real lineno.sty also defines control sequences `\linenomath`,
+  // `\linenomathWithnumbers`, `\linenomathNonumbers` (raw-load
+  // sees these as macros). Other packages — eccv.sty, journal templates —
+  // test them with `\ifx\linenomath\linenomathWithnumbers` to switch
+  // between AMS-math styles. Without explicit defs here, all three resolve
+  // to `\relax` and the `\ifx` test is TRUE — the then-branch fires
+  // `\patchcmd\linenomathAMS{...}` which is undefined → cascade of
+  // `\else` / `\fi` mismatch (27 of 44 wp4 \else-error papers use eccv).
+  // Make them three *distinct* no-op macros so the `\ifx` test picks the
+  // else-branch reliably, matching the no-linenumbers default.
+  // Don't redefine `\linenomath` / `\endlinenomath` — those are the
+  // env-begin/env-end macros set up by DefEnvironment above. We DO
+  // define the two "style switch" macros that real lineno provides,
+  // with distinct bodies so journal-template `\ifx\linenomath\linenomathWithnumbers`
+  // tests reliably pick the no-linenumbers branch.
+  DefMacro!("\\linenomathWithnumbers", "\\relax");
+  DefMacro!("\\linenomathNonumbers",   "\\@empty");
   // \internallinenumbers (lineno.sty) — adds line numbers inside the
   // environment body. Also gets a starred form auto-defined via
   // `\@namedef{internallinenumbers*}{\internallinenumbers*}` at lineno
