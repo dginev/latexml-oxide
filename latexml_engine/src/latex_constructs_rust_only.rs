@@ -190,14 +190,60 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   //======================================================================
-  // Sections 8-10 (label-macros, page registers, footnote counters,
-  // tocdepth/secnumdepth counters, version-parsing \@ifl@t@r body) were
-  // previously defined here for dump-path coverage. As of 2026-05-18,
-  // `latex_constructs.rs` covers all of them and runs in BOTH dump and
-  // NODUMP paths, so these defensive overrides were redundant. Removed
-  // to eliminate triple-definition (latex_base.rs + latex_constructs.rs
-  // + rust_only.rs).
+  // 8. C.4 label-macros — dump-path coverage
+  //
+  // Perl latex_base L287-288, L294-296 defines these label macros.
+  // Under the dump path (LoadFormat mutual exclusivity) latex_base.rs
+  // is SKIPPED, and the dump (resources/dumps/latex.dump.txt) does
+  // NOT capture these CSes (raw latex.ltx doesn't define them).
+  // Pre-define here so dump-path runs find them too. NODUMP path
+  // already gets them from latex_base.rs. Either way, definitions
+  // are Perl-faithful values.
   //======================================================================
+  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixesname", "Appendixes");
+  DefMacro!("\\contentsname",   "Contents");
+  DefMacro!("\\listfigurename", "List of Figures");
+  DefMacro!("\\listtablename",  "List of Tables");
+
+  // C.5.1 page registers (Perl latex_base L309-311) — same dump-path
+  // coverage rationale.
+  DefRegister!("\\columnsep"     => Dimension::new(0));
+  DefRegister!("\\columnseprule" => Dimension::new(0));
+  DefRegister!("\\mathindent"    => Dimension::new(0));
+
+  // C.3.3 footnote counters (Perl latex_base L268-273) — same dump-path
+  // coverage rationale. NewCounter is idempotent under dump path so
+  // counter-creation is safe.
+  NewCounter!("footnote");
+  DefMacro!("\\thefootnote", "\\arabic{footnote}");
+  NewCounter!("mpfootnote");
+  DefMacro!("\\thempfn", "\\thefootnote");
+  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  DefRegister!("\\footnotesep" => Dimension::new(0));
+
+  // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path
+  // coverage. \@startsection's SetCounter to 3 (in latex_constructs.rs)
+  // requires the counter to exist beforehand.
+  NewCounter!("tocdepth");
+  NewCounter!("secnumdepth");
+
+  // C.5.2 version parsing (Perl latex_base L317-331) — dump-path coverage.
+  TeX!(
+    r"\def\@ifl@t@r#1#2{%
+  \ifnum\expandafter\@parse@version@#1//00\@nil<%
+        \expandafter\@parse@version@#2//00\@nil
+    \expandafter\@secondoftwo
+  \else
+    \expandafter\@firstoftwo
+  \fi}
+\def\@parse@version@#1{\@parse@version0#1}
+\def\@parse@version#1/#2/#3#4#5\@nil{%
+\@parse@version@dash#1-#2-#3#4\@nil
+}
+\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
+  \if\relax#2\relax\else#1\fi#2#3#4 }"
+  );
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //
   // Perl gets these from raw `latex.ltx` load (dump captures them).

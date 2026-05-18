@@ -9969,8 +9969,8 @@ LoadDefinitions!({
     }
   });
 
-  // Perl L5825: \extrafloats — modern LaTeX (2015+) for extra float slots (no-op)
-  DefPrimitive!("\\extrafloats{}", None);
+  // \extrafloats (modern LaTeX 2015+; no Perl pool source) lives in
+  // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
 
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
