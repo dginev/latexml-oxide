@@ -757,11 +757,16 @@ Re-audit 2026-05-18 (`cargo tree --duplicates`):
 - **DEP-09 — Slim `chrono`** ✅ Done: `latexml_engine/Cargo.toml`
   has `chrono = { version = "0.4", default-features = false,
   features = ["clock", "std"] }`.
-- **DEP-10 — Audit `regex` feature flags** ⏳ Partially blocked:
-  audit found we use `\p{Latin}`, `\p{Greek}`, `\p{Lu}`, `\p{N}`,
-  and `\w` patterns. Fully disabling `unicode` would break those.
-  Selective disable of `unicode-age`, `unicode-bool`, `unicode-case`,
-  `unicode-segment` may be safe — not yet attempted.
+- **DEP-10 — Audit `regex` feature flags** ✅ Closed 2026-05-18.
+  All 7 workspace crates now declare `regex` with
+  `default-features = false, features = ["std", "perf",
+  "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"]`.
+  Dropped: `unicode-age`, `unicode-bool`, `unicode-segment`
+  (confirmed unused — only `\p{Latin}`/`\p{Greek}` (script),
+  `\p{Lu}`/`\p{N}` (gencat), `\w` (perl), and `(?i)` (case)
+  appear in the workspace). Release binary: 48,604,992 →
+  48,437,952 bytes (−163 KiB). Tests: 1328/0/0. Wall-time on
+  1910.01256: 0.78 s (unchanged).
 - **DEP-NEW: slim `sha2`** ✅ Done (commit `c57bcf8760`):
   `default-features = false` drops the `oid` feature (DER object-id
   tables) which we never touch.
@@ -781,13 +786,31 @@ Re-audit 2026-05-18 (`cargo tree --duplicates`):
   gets `panic = "abort"` for the 1.9 MiB size saving + slightly
   better optimization. Comments in `Cargo.toml` document the
   distinction explicitly.
-- **DEP-12 — TL-dump distribution model**. Unchanged — design
-  call, owner input required.
-- **DEP-13 — Document ship-build recipe**. ⏳ Partially: `Cargo.toml`
-  comments now explain the release-vs-maxperf distinction. `CLAUDE.md`
-  already documents `cargo build --profile maxperf --bin
-  latexml_oxide` for distribution. Open: add `--no-default-features`
-  to that line so phf/glob are also dropped.
+- **DEP-12 — TL-dump distribution model** ✅ Closed 2026-05-18
+  (commits `ebdffbd12e` + `4f19565616`). The two embedded
+  `*.dump.txt` blobs (~7.6 MiB of `.rodata`) are now gzip-compressed
+  at build time (`flate2`, ~4.7× ratio → ~870 KiB combined) and
+  decompressed lazily on first access via a three-tier cache:
+  (i) per-thread `FxHashMap<(year, kind), &'static str>`,
+  (ii) cross-process disk cache at
+  `std::env::temp_dir()/latexml-oxide-dumps-<hash>/` keyed by a
+  build-time FNV-1a hash over the gzip bytes (atomic
+  pid-tempfile + `std::fs::rename` — POSIX rename / Windows
+  MoveFileExW), (iii) gunzip the embedded blob and persist for the
+  next process. Binary size: 54.58 MiB → 48.60 MiB
+  (−5.98 MiB / −11.0%). Wall-time parity preserved on
+  1910.01256 (0.76 s on-disk-dump path, 0.79 s embedded-cold).
+  Tests: 1328/0/0. Cross-platform out of the box.
+- **DEP-13 — Document ship-build recipe** ✅ Closed. `CLAUDE.md`
+  documents the full distribution recipe as
+  `cargo build --no-default-features --profile maxperf --bin
+  latexml_oxide`, with inline explanation that `--no-default-features`
+  drops the `test-utils` feature (removing `phf` + `glob` and 4
+  transitive crates) and that `maxperf` enables `panic = "abort"`
+  for the size + perf win (production-only since canvas sweeps via
+  `cortex_worker` use `release` and rely on `catch_unwind` for
+  per-paper panic isolation). `Cargo.toml` comments mirror the
+  release-vs-maxperf distinction.
 
 ### Tier 5 — Code-architecture wins worth flagging
 

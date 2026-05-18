@@ -10,7 +10,7 @@ description = "Bindings and related infrastructure for core processing"
 crate-type = ["lib"]
 
 [dependencies]
-regex = "1.7.1"
+regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 log = "0.4"
 libxml = "0.3.11"
 rustc-hash = "2.0.0"
