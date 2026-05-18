@@ -473,3 +473,84 @@ The `[patch."https://github.com/dginev/marpa"]` in workspace
 the `asf-step3-generic-traverser` branch is pushed with the new
 commits, update `latexml_math_parser/Cargo.toml`'s `marpa = { git
 = "...", branch = "..." }` SHA and remove the `[patch]` block.
+
+---
+
+## HYBRID dispatch becomes default (2026-05-17, landed)
+
+Path 1 from the previous section — hybrid dispatch — landed in
+latexml-oxide commit `9318960974` and marpa commit `60b320b`. The
+default `parse_marpa` now branches on `Marpa::Bocage::
+ambiguity_metric()` after a single recognizer pass:
+
+* metric == 1 → cheap `Tree::next()` + `Actions::get_tree` (the
+  legacy code path's machinery)
+* metric ≥ 2 → ASF traversal via `MathTraverser` (the ASF default
+  from the previous round)
+
+Final measurement on `Article-2025.tex` (579 math-heavy formulas,
+bench profile, single-thread, 3-run avg):
+
+| Mode | Wall | vs LEGACY |
+|---|---:|---:|
+| **HYBRID (default)** | **12.41s** | **1.018×** |
+| `LATEXML_MARPA_LEGACY=1` | 12.21s | 1.00× |
+| `LATEXML_MARPA_ASF_ONLY=1` | 16.67s | 1.37× |
+
+The HYBRID:LEGACY ratio sits inside the 1.05× acceptance gate.
+Hybrid recovers the ~4.5s ASF-only overhead on this fixture (87%
+raw-unambiguous formulae per `LATEXML_MATH_AMBIGUITY_AUDIT=1`)
+while preserving ASF's algorithmic advantage on the 13%
+raw-ambiguous fraction.
+
+### Why this works (and why ASF-only doesn't)
+
+The ASF traverser visits every glade in the bocage and runs
+`compute_symches` per glade — fixed per-glade overhead that
+doesn't pay off for unambiguous input where subtree sharing
+yields no amortization. Step-iteration via libmarpa's built-in
+`Tree::next()` produces a single linear tree without that
+overhead. The hybrid keeps the cheaper path for the common case
+and routes only the truly ambiguous formulae (where ASF's
+glade-once invariant amortizes work) through the heavier
+machinery.
+
+### Audit tooling
+
+Two opt-in env vars verify the design holds at scale:
+
+* `LATEXML_MATH_AMBIGUITY_AUDIT=1` — per-formula ambiguity-metric
+  counter, used to confirm the per-corpus unambiguous fraction.
+  Measured on:
+
+  | Paper | Total parses | Unamb% |
+  |---|---:|---:|
+  | Article-2025 (algebraic topology) | 3902 | 87.3% |
+  | TheDiskComplex (geometric topology) | 681 | 77.4% |
+  | arxiv 2602.06085 (mixed STEM) | 130 | 60.0% |
+
+* `LATEXML_MARPA_HYBRID_AUDIT_PARITY=1` — runs both paths on every
+  raw-unambiguous formula and asserts they produce equivalent
+  `ParseOutcome`. The assertion treats `Empty` and `Rejected(_)`
+  as the same "no parse survived" outcome (the user-facing HTML
+  is bit-identical in either case) and only fails on real
+  `Accepted` vs anything-else mismatches. Runs clean on both
+  Article-2025 (3902 calls) and TheDiskComplex (681 calls).
+
+### What did NOT move the needle (cumulative ~6%)
+
+Documented for future-session triage:
+
+* `XM::Lexeme(String, _)` → `XM::Lexeme(Rc<str>, _)` and the ASCII
+  byte-cache — ~0% delta. Action allocation isn't the bottleneck.
+* `MathTraverser::ParseTree` → `Rc<Vec<Option<XM>>>` — ~0% delta.
+  The marpa cache `.clone()` was cheap relative to `compute_symches`
+  work.
+* marpa `HashMap<usize, _>` caches → `Vec<Option<_>>` indexed by
+  sequential id, plus `&[Option<PT>]` slice children API — ~3%.
+* marpa `glades` + `nidset_by_id` → `Vec<Option<_>>` — another ~3%.
+
+Total Rust-side allocation cleanup: ~6%. The hybrid routing
+delivered the remaining ~37% reduction needed to reach LEGACY
+parity. **Lesson**: structural algorithmic choices dominate
+allocation micro-optimization for this workload.
