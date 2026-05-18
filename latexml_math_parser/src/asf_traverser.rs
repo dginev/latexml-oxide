@@ -181,29 +181,39 @@ impl MathTraverser<'_> {
     }
     if total == 1 {
       // Common case: every RHS position has one alternative. Build
-      // one combo without the Vec<Vec<>> chain.
+      // one combo without the odometer machinery.
       let combo: Vec<Option<XM>> =
         per_pos.iter().map(|p| p[0].clone()).collect();
       self.run_action(rule_id, combo, out);
       return;
     }
-    // General case: enumerate combinations.
-    let mut combos: Vec<Vec<Option<XM>>> = vec![Vec::with_capacity(rh_len)];
-    for child_alts in &per_pos {
-      let mut next: Vec<Vec<Option<XM>>> =
-        Vec::with_capacity(combos.len() * child_alts.len());
-      for prefix in &combos {
-        for alt in child_alts.iter() {
-          let mut new = Vec::with_capacity(prefix.len() + 1);
-          new.extend(prefix.iter().cloned());
-          new.push(alt.clone());
-          next.push(new);
-        }
-      }
-      combos = next;
-    }
-    for combo in combos {
+    // General case: stream combinations via an odometer over per-
+    // position indices instead of materialising the full
+    // `Vec<Vec<Option<XM>>>` accumulator. The accumulator approach
+    // re-cloned every prefix as it grew (O(total × rh_len) extra
+    // clones on top of the inevitable per-combo clones); the
+    // odometer pays only the unavoidable `total × rh_len` clones
+    // and a single fixed-size `indices` buffer. Memory drops from
+    // O(total × rh_len) to O(rh_len).
+    let mut indices = vec![0usize; rh_len];
+    'odometer: loop {
+      let combo: Vec<Option<XM>> = indices
+        .iter()
+        .enumerate()
+        .map(|(pos, &ix)| per_pos[pos][ix].clone())
+        .collect();
       self.run_action(rule_id, combo, out);
+      // Advance: increment the rightmost position; on wrap, carry
+      // left. If the leftmost wraps too, we've enumerated every
+      // combination.
+      for pos in (0..rh_len).rev() {
+        indices[pos] += 1;
+        if indices[pos] < per_pos[pos].len() {
+          continue 'odometer;
+        }
+        indices[pos] = 0;
+      }
+      break;
     }
   }
 
