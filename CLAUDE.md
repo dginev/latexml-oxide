@@ -121,7 +121,7 @@ We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 **Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
 
-**Distribution build** (shipping the binary to users): use `--profile maxperf` for the smallest, fastest artifact. Example: `cargo build --profile maxperf --bin latexml_oxide`.
+**Distribution build** (shipping the binary to users): use `--profile maxperf --no-default-features` for the smallest, fastest artifact. Example: `cargo build --no-default-features --profile maxperf --bin latexml_oxide`. The `--no-default-features` flag drops the `test-utils` feature, removing `phf` + `glob` (and 4 transitive crates) from the binary. The `maxperf` profile uses `panic = "abort"` — production-only since canvas sweeps depend on `catch_unwind` for per-paper panic isolation.
 
 ```bash
 # Run all tests (default test profile)
@@ -139,8 +139,9 @@ tools/triage_failure.sh <arxiv_id>
 # Publish-grade measurement build (sandbox sweeps, Perl-parity)
 cargo build --release --bin latexml_oxide
 
-# Distribution build — smallest, fastest artifact (slow build, fat LTO)
-cargo build --profile maxperf --bin latexml_oxide
+# Distribution build — smallest, fastest artifact (slow build, fat LTO,
+# panic=abort, no test-utils feature)
+cargo build --no-default-features --profile maxperf --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open
