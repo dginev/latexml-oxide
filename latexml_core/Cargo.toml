@@ -10,12 +10,21 @@ description = "Core conversion capabilities of latexml_oxide"
 name = "latexml_core"
 crate-type = ["lib"]
 
+[features]
+# Activated by `latexml_codegen` (host-side proc-macro) to enable the
+# `impl ToTokens for Tokens / Catcode / Token / Parameters / Parameter`
+# blocks. Resolver v2 isolates proc-macro feature unification, so the
+# runtime `latexml_core` (linked into `latexml_oxide` and friends) does
+# NOT get this feature — dropping `proc-macro2` (~93 KiB) and `quote`
+# from the runtime binary's dependency graph. Audit DEP-14 (2026-05-18).
+codegen = ["dep:proc-macro2", "dep:quote"]
+
 [dependencies]
 once_cell = "1.17.0"
 regex = "1.7.1"
 log = "0.4"
-quote = "1.0"
-proc-macro2 = "1.0"
+quote = { version = "1.0", optional = true }
+proc-macro2 = { version = "1.0", optional = true }
 libxml = "0.3.10"
 # (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
 # which on Linux is exactly `std::env::var_os("HOME")`. On Windows
