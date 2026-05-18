@@ -49,7 +49,11 @@ flate2 = "1"
 # Used by latexml_oxide / cortex_worker binaries for `getrusage(RUSAGE_CHILDREN)`
 # child-process CPU/memory accounting in telemetry (see *.rs `peak_rss_kb`).
 libc = "0.2"
-tar = "0.4"
+# `default-features = false` drops tar's optional `xattr` extended-attribute
+# support — we only use `tar::Archive::new(...).unpack(dest)` for arxiv
+# .tar.gz extraction; extended-attribute round-tripping on .tex sources
+# is not needed. Removes the `xattr` crate from the dep tree.
+tar = { version = "0.4", default-features = false }
 # Only deflate is actually used (CompressionMethod::Deflated). Disabling the
 # default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
 # sha1, sha2, hmac, cipher, password-hash — a big CI compile-time win.
