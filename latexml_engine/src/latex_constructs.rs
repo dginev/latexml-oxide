@@ -4679,11 +4679,8 @@ LoadDefinitions!({
 
   Tag!("ltx:titlepage", auto_close => true);
 
-  DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
-    if document.is_closeable("ltx:titlepage").is_some() {
-      document.close_element("ltx:titlepage")?;
-    }
-  });
+  // `\maybe@end@title` is a Rust-only addition (not in Perl); defined in
+  // `latex_constructs_rust_only.rs` (which loads last, after this file).
 
   DefConstructor!("\\maybe@end@titlepage", sub[document,_args,_props] {
     document.maybe_close_element("ltx:titlepage")?;
