@@ -1,15 +1,58 @@
-//! XML file output processor.
+//! XML/HTML output sink — port of `LaTeXML::Post::Writer`.
 //!
-//! Port of `LaTeXML::Post::Writer`.
-//! Serializes the XML document to a file or stdout,
-//! handling DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup,
-//! and HTML vs XML serialization.
+//! Two related concerns live here:
+//!
+//! 1. The [`Writer`] post-processor (last in the chain) that
+//!    serializes a `PostDocument` to its `destination`, handling
+//!    DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup, and HTML vs
+//!    XML serialization.
+//! 2. Free-standing helpers ([`write_output`], [`ensure_parent_dir`])
+//!    used by binary main()s that already have the serialized string
+//!    in hand (post-processing returns a `String`) and need to route
+//!    it to a destination path or stdout. Replaces the duplicated
+//!    `File::create + write! + ensure_parent_dir` boilerplate that
+//!    used to live in `latexml_oxide.rs` and `latexmlpost_oxide.rs`.
+//!
+//! Companion module: [`crate::pack`] (the `LaTeXML::Post::Pack` analog)
+//! handles archive bundling when the destination is a zip.
 
 use libxml::tree::{Node, SaveOptions};
 use std::fs;
+use std::io::{self, Write};
+use std::path::Path;
 
 use crate::document::PostDocument;
 use crate::processor::{PostError, ProcessResult, Processor};
+
+/// Write the serialized output `content` to `dest` if `Some`, else to
+/// stdout. Creates parent directories as needed.
+///
+/// Used by `latexml_oxide.rs` and `latexmlpost_oxide.rs` main()s for
+/// the "write a single HTML/XML file" exit path. For the zip-archive
+/// exit path, use [`crate::pack::pack_archive`].
+pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {
+  match dest {
+    Some(path) => {
+      ensure_parent_dir(path)?;
+      fs::write(path, content)?;
+      log::info!("Wrote '{}' ({} bytes)", path, content.len());
+      Ok(())
+    },
+    None => io::stdout().write_all(content.as_bytes()),
+  }
+}
+
+/// Ensure the parent directory of `path` exists, creating it (and any
+/// missing ancestors) as needed. No-op when `path` has no parent or
+/// the parent is the current directory.
+pub fn ensure_parent_dir(path: &str) -> io::Result<()> {
+  if let Some(parent) = Path::new(path).parent() {
+    if !parent.as_os_str().is_empty() {
+      fs::create_dir_all(parent)?;
+    }
+  }
+  Ok(())
+}
 
 /// Output format for the writer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

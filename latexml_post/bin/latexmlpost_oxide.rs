@@ -90,13 +90,18 @@ fn main() {
 
   let output = results[0].to_xml_string();
 
-  if let Some(dest) = dest_path {
-    std::fs::write(&dest, &output).unwrap_or_else(|e| {
-      eprintln!("Failed to write {}: {}", dest, e);
-      std::process::exit(1);
-    });
+  // Route through the shared `latexml_post::writer::write_output`
+  // (Perl `LaTeXML::Post::Writer` analog) so all post-processing
+  // binaries share one destination-handling implementation.
+  if let Err(e) = latexml_post::writer::write_output(&output, dest_path.as_deref()) {
+    eprintln!(
+      "Failed to write {}: {}",
+      dest_path.as_deref().unwrap_or("<stdout>"),
+      e
+    );
+    std::process::exit(1);
+  }
+  if let Some(dest) = dest_path.as_deref() {
     eprintln!("Wrote {}", dest);
-  } else {
-    print!("{}", output);
   }
 }

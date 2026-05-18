@@ -637,7 +637,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
                   .trim_end_matches(".xml")
               )
             };
-            ensure_parent_dir(&zip_dest);
+            latexml_post::writer::ensure_parent_dir(&zip_dest)?;
             let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
             let stem = Path::new(&zip_dest)
               .file_stem()
@@ -657,25 +657,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             })?;
             eprintln!("Output written to {}", zip_dest);
           } else {
-            print!("{output}");
+            latexml_post::writer::write_output(&output, None)?;
           }
-        } else if let Some(ref target_path) = target {
-          ensure_parent_dir(target_path);
-          let mut out_fh = File::create(target_path)?;
-          write!(out_fh, "{output}")?;
         } else {
-          print!("{output}");
+          latexml_post::writer::write_output(&output, target.as_deref())?;
         }
-        // resource_tempdir is dropped here (after pack_output_zip has copied
+        // resource_tempdir is dropped here (after pack_archive has copied
         // every file in), cleaning up the converted-PNG staging directory.
       } else {
-        if let Some(ref target_path) = target {
-          ensure_parent_dir(target_path);
-          let mut out_fh = File::create(target_path)?;
-          write!(out_fh, "{xml}")?;
-        } else {
-          print!("{xml}");
-        }
+        latexml_post::writer::write_output(&xml, target.as_deref())?;
       }
     }
 
@@ -684,11 +674,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       || cli.whatsin.as_deref() == Some("archive");
     if let Some(ref log_path) = cli.log {
       if !is_zip_output {
-        ensure_parent_dir(log_path);
-        if let Ok(mut log_fh) = File::create(log_path) {
-          let _ = write!(log_fh, "{}", response.log);
-          eprintln!("Log written to {}", log_path);
-        }
+        latexml_post::writer::write_output(&response.log, Some(log_path))?;
+        eprintln!("Log written to {}", log_path);
       }
     }
   }
@@ -800,15 +787,9 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   latexml::post::run_post_processing(xml, opts)
 }
 
-/// Build the XPath expression for splitting at a given level.
-/// Ensure the parent directory of a file path exists, creating it recursively if needed.
-fn ensure_parent_dir(path: &str) {
-  if let Some(parent) = Path::new(path).parent() {
-    if !parent.as_os_str().is_empty() {
-      let _ = std::fs::create_dir_all(parent);
-    }
-  }
-}
+// `ensure_parent_dir` now lives in `latexml_post::writer` so all
+// post-processing binaries share one implementation. Perl analog:
+// `LaTeXML::Post::Writer`.
 
 fn make_splitpaths(splitat: &str) -> String {
   let ancestors: &[&str] = match splitat {
