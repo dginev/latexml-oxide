@@ -242,9 +242,30 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
 
     if candidates.is_empty() {
         if had_auto_ignore {
-            return Err(s(
-                "Fatal:invalid:auto-ignore: directory contains only %auto-ignore sentinel files",
-            ));
+            // Perl-faithful: process %auto-ignore sources as normal (the
+            // `%` is a comment, the rest is empty → empty XML output, no
+            // Fatal). Witness: 2307.10758 (12-byte `%auto-ignore` source) —
+            // Perl reports "Conversion complete: No obvious problems"; the
+            // old Rust path turned 90 wp4 corpus entries into hard
+            // failures. Cortex_worker has a sibling fix; both must stay in
+            // sync. Prefer the dirname-matching .tex (arxiv convention
+            // `<id>/<id>.tex`), else the first available.
+            let dir_name = dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            let auto_ignore_main = tex_files
+                .iter()
+                .find(|p| {
+                    p.file_stem()
+                        .and_then(|s| s.to_str())
+                        .is_some_and(|stem| stem == dir_name)
+                })
+                .cloned()
+                .or_else(|| tex_files.first().cloned());
+            if let Some(p) = auto_ignore_main {
+                return Ok(p);
+            }
         }
         return Err(s("No viable .tex files found in directory"));
     }

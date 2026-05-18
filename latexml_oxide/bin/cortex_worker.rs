@@ -686,13 +686,33 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   if candidates.is_empty() {
     if had_auto_ignore {
-      // Phase D pre-screen: arxiv archives with only `%auto-ignore`
-      // sentinel are deliberately-replaced/withdrawn submissions.
-      // Surface as `Fatal:invalid:auto-ignore` so the canvas
-      // log-grep (lax `Error:[a-z]+:`) doesn't count it as an error.
-      return Err(
-        "Fatal:invalid:auto-ignore: archive contains only %auto-ignore sentinel files".into(),
-      );
+      // Perl-faithful: an arxiv `%auto-ignore` source still gets opened
+      // — the `%` line is a comment, the rest is empty, and Perl
+      // happily reports "Conversion complete: No obvious problems" with
+      // an empty XML body. Witness: 2307.10758 (a 12-byte `%auto-ignore`
+      // .tex). We were emitting `Fatal:invalid:auto-ignore` here, but
+      // that turned 90 wp4 corpus entries into hard failures vs Perl's
+      // OK. Fall through to pick the auto-ignore file and let the
+      // normal pipeline produce an empty document.
+      //
+      // File-pick: prefer the dirname-matching file (arxiv convention is
+      // `<id>/<id>.tex`); else the first listed file.
+      let dir_name = dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+      let auto_ignore_main = tex_files
+        .iter()
+        .find(|p| {
+          p.file_stem()
+            .and_then(|s| s.to_str())
+            .is_some_and(|stem| stem == dir_name)
+        })
+        .cloned()
+        .or_else(|| tex_files.first().cloned());
+      if let Some(p) = auto_ignore_main {
+        return Ok(p.to_string_lossy().to_string());
+      }
     }
     return Err("No viable .tex files found in archive".into());
   }
