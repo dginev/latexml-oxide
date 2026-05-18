@@ -7020,10 +7020,9 @@ LoadDefinitions!({
   Let!("\\botfigrule", "\\relax");
   Let!("\\dblfigrule", "\\relax");
 
-  DefMacro!("\\figurename",  "Figure");
-  DefMacro!("\\figuresname", "Figures");    // Never used?
-  DefMacro!("\\tablename",   "Table");
-  DefMacro!("\\tablesname",  "Tables");
+  // \figurename / \figuresname / \tablename / \tablesname already defined
+  // earlier in this file (figure/table caption block); avoid identical
+  // re-definitions here.
 
   Let!("\\outer@nobreak", "\\@empty");
   DefMacro!("\\@dbflt{}",           "#1");
@@ -10033,7 +10032,8 @@ LoadDefinitions!({
   DefMacro!("\\filedate", "");
   DefMacro!("\\chaptername", "Chapter");
   DefMacro!("\\partname", "Part");
-  DefMacro!("\\appendixname", "Appendix");
+  // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
+  // C.4.4 appendix block); avoid duplicate identical re-definition.
   DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
