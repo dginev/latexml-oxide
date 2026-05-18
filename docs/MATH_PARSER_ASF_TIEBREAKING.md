@@ -2,22 +2,30 @@
 
 > Companion to [`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md). That
 > doc explains *how* the math parser maps onto Marpa's ASF traversal.
-> This one collects *open questions and design levers* for the
-> harder-than-expected ambiguity-tiebreaking problem we hit during
-> the wire-in.
+> This one collected *open questions and design levers* during the
+> ASF wire-in.
 >
-> Status 2026-05-17 (end of second push): **ASF 1292/9**, LEGACY
-> 1301/0. Eight pragma + early-action interventions landed (catalog
-> below). Remaining 9 failures are concentrated in patterns the
-> proposed `modified_term` grammar refinement should subsume.
+> **Status (2026-05-18, ASF integration closed):** all 29 → 0 ASF
+> failures resolved via per-pattern pragmas + early-action
+> interventions; current test suite is **1309/0**. The
+> `modified_term` grammar refinement proposal below was NOT needed
+> in the end — its motivating failures were all closed by pragma
+> work. It remains documented as a future refactor opportunity
+> (consolidate per-pattern pragmas under one principled grammar
+> rule) but is not actively pursued.
 >
-> Status pre-push (start 2026-05-17): 1272/29.
+> What's still load-bearing in this doc:
+> * "Lever selection discipline" — durable rule for choosing the
+>   right layer (grammar / action / pragma) for new ambiguity
+>   classes if they surface.
+> * The pragma proposals catalog — useful reference if similar
+>   patterns appear.
+> * "Long-term direction: type-aware pruning" — forward-looking
+>   architectural sketch.
 >
-> This doc accumulates evidence and lever options as we triage
-> cases. We are **not** committing to a single tiebreaking
-> discipline; we instead build a layered ladder (grammar > action >
-> pragma) and pick the lowest viable layer per case (see "Lever
-> selection discipline" below).
+> Doc was compacted on 2026-05-18: the two "Historical: Phase 1
+> catalog" sections (~240 lines of superseded per-failure tables)
+> were removed; full version recoverable from git history.
 
 ---
 
@@ -583,245 +591,6 @@ intervention (─).
    if not subsumed by modified_term.
 4. **`vertbars_test`** — pattern-specific pragma if modified_term
    doesn't suffice.
-
----
-
-## Historical: Phase 1 catalog — clean ASF baseline 1284/17 (after pragma fix)
-
-After landing the Dual-aware `FencedLettersAreFunctionArguments`
-pragma and moving it from expert to student tier (commit `d6c56`),
-the Class A function-app cases are resolved at the pragmatics
-layer. **1284/17** is the ASF parity now, with the legacy still at
-**1301/0**.
-
-The remaining 17 break down by pattern:
-
-### Class G — `(a, b)` as `vector` vs `open-interval` (3 tests)
-
-* `amstheorem_test`, `parens_test`, `picture_test` — input `(a, b)`
-  with 2 elements. Legacy → `open-interval@(a, b)`; ASF → `vector@(a, b)`.
-* Both the `interval_term` and `fenced_factor` grammar rules match;
-  Marpa tree-iter picks `interval`, ASF Cartesian picks `fenced`.
-
-### Class H — Function-app inside angle-delimiter (2 tests)
-
-* `count_parses_test`, `mathtools_test`:
-  `\langle B|\sum f|C\rangle` → expected
-  `delimited-⟨⟩@(B@(abs(sum)) * C)`; actual
-  `delimited-⟨⟩@(B * abs(sum) * C)`. The `B(...)` inside the
-  delimiters didn't get function-app'd. Same root as Class A but
-  the Dual structure differs because the parent is a delimited
-  wrapper.
-
-### Class B — `>=` lexed as `> absent =` (1 test)
-
-* `ambiguous_relations_test`: `x>=0` → expected `x >= 0`; actual
-  `x > absent = 0`. Lexer-level issue.
-
-### Class I — Function-app onto bare token, wider absorption (1 test)
-
-* `nested_application_test`: `Dx \times y \times z` → expected
-  `D@(x*y*z)`; actual `D@(x) * y * z`. `FunctionsPreferWiderAbsorption`
-  should be widening but isn't for this shape.
-
-### Class P — Compose left/right associativity (1 test)
-
-* `compose_test`: `(f*g*h)(x)` → expected `compose(compose(f,g), h) * x`
-  (left-assoc); actual `compose(f, compose(g, h)) * x` (right-assoc).
-
-### Class J — Set double-wrapping (1 test)
-
-* `latextheorem_test`: `{ds_1^2, …}` → expected `set@(item, …)`;
-  actual `set@(set@(item, …))`. Outer set wraps inner set
-  redundantly.
-
-### Class K — Standalone modifier (1 test)
-
-* `standalone_modifiers_test`: `(<0)` → expected `absent < 0`
-  (modifier-only); actual produces an unexpected XMath shape.
-
-### Class L — List/conditional precedence (1 test)
-
-* `subordinate_lists_test`: `x|y,z,t` → expected
-  `conditional@(x, list@(y, z, t))`; actual
-  `list@(conditional@(x, y), z, t)`. The `|` should bind looser
-  than `,`.
-
-### Class F — `||x||a||y||` norm-nesting (1 test)
-
-* `vertbars_test`: expected `norm@(x) * a * norm@(y)`; actual
-  `norm@(x * norm@(a) * y)`. Highly ambiguous bar-pairing.
-
-### Class M — Multirelation (1 test)
-
-* `ncases_test`: complex multi-relation expected; actual flat chain.
-
-### Class C — QM bra-ket `<a|f|b>` (1 test)
-
-* `qm_test`: expected `absent < a@(abs(f)) * b > absent`; actual
-  `absent < a * abs(f) * b > absent`. Same `B(...)` not function-
-  app'd, similar to Class H but inside angle-bracket context.
-
-### Class U — ASF fails to parse (1 test)
-
-* `physics_test`: ASF emits `<Math class="ltx_math_unparsed">`
-  for some sub-formula where legacy parses cleanly.
-
-### Class N, O, etc. — single tests (3)
-
-* `metarelation_elision_test`, `plainfonts_test`,
-  `compose_test` — case-by-case investigations needed.
-
----
-
-### Strategic observation
-
-The Class A fix (Dual-aware pragma) was a single-source, one-pragma
-change that unlocked **12 tests** at once. The remaining 17 are
-spread across **~10 distinct patterns**, each likely needing its
-own targeted intervention. Estimated cost: 1-2 patterns per
-session, ~5-10 sessions to close.
-
-Alternative high-leverage moves that might fix multiple classes:
-
-* **Marpa `rule_rank` + `Order::rank()`**: rank `interval_term`
-  higher than `fenced_factor` to fix Class G in one stroke. Would
-  also need similar ranking for other ambiguous rule pairs.
-  Requires adding `.rank()` call in the marpa wrapper's ASF path.
-* **Multi-tree forest pragma for "specific operator > generic"**:
-  curate a list of `(generic, specific)` operator pairs (e.g.
-  `(vector, open-interval)`, `(times, function-app)`, etc.) and
-  prune trees with generic operators when specific alternatives
-  exist. Tricky to get right; risk of breaking edge cases.
-
----
-
-## Historical: Original Phase 1 catalog — clean ASF baseline 1272/29 (2026-05-17 start)
-
-**Important correction**: the 1281/20 baseline quoted earlier in
-this doc was measured with a temporary `alts.reverse()` patch in
-`parse_marpa` that was subsequently removed. With **no reverse and
-no new pragmas wired in**, the true clean ASF parity is
-**1272/29**. The 9-test delta is the function-application class
-(Class A below); the reverse was a shallow patch that masked the
-underlying preference issue.
-
-The complete 29-test failure set, partitioned by ambiguity class:
-
-### Class **A — function-application vs implicit-times**
-
-Pattern: `letter(args)` or `letter token` where the legacy picks
-function-application and ASF picks implicit multiplication.
-
-| Test | Formula | Expected `text=` | Actual `text=` |
-|---|---|---|---|
-| `calculus_test` | `\sum_{...}P(i,j)` | `... P@(vector@(i, j))` | `... P * vector@(i, j)` |
-| `count_parses_test` | `\langle B \|\sum_k f_k\| C\rangle` | `delimited-⟨⟩@(B@(abs@(sum)) * C)` | `delimited-⟨⟩@(B * abs@(sum) * C)` |
-| `esint_test` | `\iiiint_C F(x)dx` | `... F@(x) * differential-d@(x)` | `... F * x * differential-d@(x)` |
-| `mathtools_test` | `f(x)=\int h(x)\,dx` | `f@(x) = integral@(h@(x) * diff-d@(x))` | `f * x = integral@(h * x * diff-d@(x))` |
-| `ntheorem_test` | `... f(\zeta) / (\zeta-z)^{n+1} ...` | `... f@(zeta) / ...` | `... f * zeta / ...` |
-| `operators_test` | `\exists x.P(x)` | `formulae@(exists@(x), P@(x))` | `formulae@(exists@(x), P * x)` |
-| `qm_test` | `<a\|f\|b>` | `absent < a@(abs@(f)) * b > absent` | `absent < a * abs@(f) * b > absent` |
-| `sampler_test` | `\genfrac{(}{)}{}{}{\int_a^b f(x)dx}{...}` | `... f@(x) * diff-d@(x) / ...` | `... f * x * diff-d@(x) / ...` |
-| `spacing_test` | `\int_0^\infty f(x)dx` | `(integral _ 0 ^ infty)@(f@(x) * diff-d@(x))` | `... f * x * diff-d@(x)` |
-
-**9 tests.** All share the same root: the grammar admits both
-`tight_term → factor` (then multiplied) and `tight_term →
-function applyop tight_term` / `applied_func` (function-app). The
-legacy's Tree-iter order picks function-app first; ASF picks
-multiplication. **Single fix opportunity.**
-
-### Class **B — `>=` lexed as `> absent =` instead of single RELOP**
-
-| Test | Formula | Expected | Actual |
-|---|---|---|---|
-| `ambiguous_relations_test` | `x>=0` | `x >= 0` | `x > absent = 0` |
-| `relations_test` | `x>=0` (same fixture) | `x >= 0` | `x > absent = 0` |
-
-**2 tests.** Looks like a lexer-level issue (the `>=` token should
-be a single RELOP lexeme but ASF is splitting it). Worth probing
-the lexeme stream to confirm.
-
-### Class **F — `||x||a||y||` norm-nesting**
-
-| Test | Formula | Expected | Actual |
-|---|---|---|---|
-| `vertbars_test` | `\|\|x\|\|a\|\|y\|\|` | `norm@(x) * a * norm@(y)` | `norm@(x * norm@(a) * y)` |
-
-**1 test.** Highly ambiguous (`\|\|` × 4 makes multiple groupings
-valid). The expected is the "balanced 3-norm" parse; ASF picks
-the "outer norm with inner norm" parse.
-
-### Class **U — ASF produces no parse where legacy does**
-
-| Test | Formula | Result |
-|---|---|---|
-| `physics_test` | `\mathbf{a}\qquad ...` | ASF → `<Math class="ltx_math_unparsed">` (parse failed) |
-
-**1 test.** Different from tiebreaking — ASF is failing to find
-a parse entirely. Could be related to specific formula structure;
-needs separate investigation.
-
-### Class **? — Needs deeper diff inspection**
-
-Tests where the first DIFF didn't include a Math/text= line in the
-quick scan (the divergence is structural, not in the top-line
-attribute). Need targeted investigation.
-
-* `artefacts_test`
-* `function_argument_syntax_test`
-* `scripts_test`
-* `simplemath_test`
-* `stmaryrd_test` — likely the flat-vs-nested-list improvement
-  candidate from earlier scan.
-* `unit_tests_by_silviu_test`
-* `wasysym_test`
-
-**7 tests.** TBD.
-
-### Additional failures after reverting `alts.reverse()`
-
-9 tests that the temporary `alts.reverse()` patch was masking. All
-align with Class A (function-application preference):
-
-* `amstheorem_test`
-* `compose_test`
-* `functions_test`
-* `latextheorem_test`
-* `metarelation_elision_test`
-* `ncases_test`
-* `nested_application_test`
-* `parens_test`
-* `parser_speculate_test`
-* `picture_test`
-* `plainfonts_test`
-* `plainmath_test`
-* `scripted_opfunction_addop_test`
-* `sizes_test`
-* `standalone_modifiers_test`
-* `subordinate_lists_test`
-
-Yes — that's 16. The "9 added" was a rough count; the actual set
-overlap is messier because some tests passed previously by
-coincidence under reverse(). The actionable observation: **Class A
-(function-application preference) is the dominant root cause and
-fixing it unlocks 16+ tests at once.**
-
----
-
-### Intervention plan per class
-
-| Class | # tests | Suggested intervention | Rationale |
-|---|---|---|---|
-| **A** | 9 | Marpa rule_rank on `function`/`factor → function` to outrank `factor → factor_base` for the parse direction that admits function-app | Single grammar-level lever; affects both legacy and ASF; principled (encodes "letter-followed-by-parens prefers function-app") |
-| **B** | 2 | Lexer-level — verify `>=` lexes as single RELOP. May not be ASF-specific. | Should resolve at lexer, not parser |
-| **F** | 1 | Targeted pragma "prefer flat norm chain over nested" | Pattern-specific |
-| **U** | 1 | Debug the recognizer/ASF for this specific formula | Different root cause |
-| **?** | 7 | First catalogue, then intervene | Don't pre-commit |
-
-If Class A's grammar-rank fix lands cleanly, we go from 1281/20 →
-~1281/11 in one stroke. The remaining 11 fall into Classes B
-(2), F (1), U (1), and ? (7).
 
 ---
 
