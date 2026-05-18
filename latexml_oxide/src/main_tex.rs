@@ -10,6 +10,10 @@
 //!  1. `00README.json` "sources" entry with `usage == "toplevel"`
 //!     (modern arXiv format).
 //!  2. `00README.XXX` line tagged `toplevelfile` (legacy arXiv).
+//!     Lines tagged `ignore` exclude the named file from later
+//!     heuristic scanning (Perl `Pack.pm::detect_source` `unlink`s
+//!     them; we filter the candidate list instead — safer if the
+//!     directory isn't a sandbox).
 //!  3. Pack.pm-derived likelihood scoring across every `.tex` / `.txt`
 //!     / `.ltx` (and, as a fallback, every long-extensioned or
 //!     extension-less file). Files vetoed by `\input` / `\include`
@@ -41,17 +45,34 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
         }
     }
 
-    // Phase I.1.2: Check 00README.XXX (legacy arXiv format)
+    // Phase I.1.2: Check 00README.XXX (legacy arXiv format).
+    // Two directive kinds supported (Perl Pack.pm L82-97):
+    //   `<name> toplevelfile` → shortcut, return directly.
+    //   `<name> ignore`       → exclude `<name>` from heuristic
+    //                            candidate scanning below.
+    // Perl additionally `unlink`s the ignored path; we instead carry
+    // the names through as a Phase-I.2 filter set — safer (no
+    // filesystem mutation in case the directory isn't a sandbox).
+    let mut ignored_names: rustc_hash::FxHashSet<PathBuf> = rustc_hash::FxHashSet::default();
     let readme_xxx = dir.join("00README.XXX");
     if readme_xxx.exists() {
         if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
             for line in content.lines() {
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 && parts[1] == "toplevelfile" {
-                    let main_path = dir.join(parts[0]);
-                    if main_path.exists() {
-                        return Ok(main_path);
-                    }
+                if parts.len() < 2 {
+                    continue;
+                }
+                match parts[1] {
+                    "toplevelfile" => {
+                        let main_path = dir.join(parts[0]);
+                        if main_path.exists() {
+                            return Ok(main_path);
+                        }
+                    },
+                    "ignore" => {
+                        ignored_names.insert(dir.join(parts[0]));
+                    },
+                    _ => {},
                 }
             }
         }
@@ -60,6 +81,9 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     // Phase I.2: Heuristic detection (ported from arXiv::FileGuess via Pack.pm)
     let mut tex_files: Vec<PathBuf> = Vec::new();
     collect_tex_files(dir, &mut tex_files, false);
+    if !ignored_names.is_empty() {
+        tex_files.retain(|p| !ignored_names.contains(p));
+    }
     let candidates_before_pdf_filter = tex_files.len();
     tex_files.retain(|p| !is_pdf_magic(p));
     if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
@@ -70,6 +94,9 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     if tex_files.is_empty() {
         collect_tex_files(dir, &mut tex_files, true);
         tex_files.retain(|p| !is_pdf_magic(p));
+        if !ignored_names.is_empty() {
+            tex_files.retain(|p| !ignored_names.contains(p));
+        }
     }
     if tex_files.is_empty() {
         return Err(s("No .tex files found in directory"));
@@ -438,5 +465,49 @@ mod tests {
         write(d.path(), "main.tex", "\\documentclass{article}\n");
         let pick = find_main_tex(d.path()).unwrap();
         assert_eq!(pick.file_name().unwrap(), "main.tex");
+    }
+
+    #[test]
+    fn readme_xxx_toplevelfile_directive_short_circuits() {
+        let d = tempdir().unwrap();
+        // Two candidate documents — main.tex would normally win,
+        // but the 00README directive points at draft.tex.
+        write(d.path(), "draft.tex", "\\documentclass{article}\n");
+        write(d.path(), "main.tex", "\\documentclass{article}\n");
+        write(d.path(), "00README.XXX", "draft.tex toplevelfile\n");
+        let pick = find_main_tex(d.path()).unwrap();
+        assert_eq!(pick.file_name().unwrap(), "draft.tex");
+    }
+
+    #[test]
+    fn readme_xxx_ignore_directive_excludes_candidate() {
+        let d = tempdir().unwrap();
+        // Without a directive, `main.tex` would tie with `old.tex`
+        // and the "common name" heuristic prefers `main.tex`. With
+        // an `ignore` directive on main.tex, the heuristic falls back
+        // to `old.tex`.
+        write(d.path(), "old.tex", "\\documentclass{article}\n");
+        write(d.path(), "main.tex", "\\documentclass{article}\n");
+        write(d.path(), "00README.XXX", "main.tex ignore\n");
+        let pick = find_main_tex(d.path()).unwrap();
+        assert_eq!(pick.file_name().unwrap(), "old.tex");
+    }
+
+    #[test]
+    fn readme_xxx_mixed_directives() {
+        let d = tempdir().unwrap();
+        write(d.path(), "intro.tex", "\\documentclass{article}\n");
+        write(d.path(), "paper.tex", "\\documentclass{article}\n");
+        write(d.path(), "junk.tex", "\\documentclass{article}\n");
+        // `paper.tex toplevelfile` short-circuits the heuristic; the
+        // ignore line is unreachable in this test but exercises the
+        // parser's multi-line/multi-kind handling.
+        write(
+            d.path(),
+            "00README.XXX",
+            "junk.tex ignore\npaper.tex toplevelfile\n",
+        );
+        let pick = find_main_tex(d.path()).unwrap();
+        assert_eq!(pick.file_name().unwrap(), "paper.tex");
     }
 }
