@@ -577,12 +577,39 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           .parent()
           .map(|p| p.to_string_lossy().to_string())
           .unwrap_or_else(|| ".".to_string());
+        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
+          || cli.whatsin.as_deref() == Some("archive");
+
+        // For zip output, route graphics conversions through a TempDir so
+        // the converted PNG/SVG files can be collected and bundled into
+        // the output zip (mirroring `cortex_worker::pack_output_zip_with_resources`).
+        // Without this, the Graphics post-processor wrote PNGs next to
+        // `target` on the filesystem but the zip only carried HTML+log+status —
+        // confirmed-bug 2026-05-18 on 1910.01256.
+        let resource_tempdir: Option<tempfile::TempDir> = if is_zip_output {
+          Some(tempfile::tempdir()?)
+        } else {
+          None
+        };
+        let dest_for_post: Option<String> = if let Some(tmp) = resource_tempdir.as_ref() {
+          // Use a stable HTML filename derived from the target stem so
+          // the Graphics processor's relative paths resolve naturally.
+          let stem = target
+            .as_ref()
+            .and_then(|t| Path::new(t).file_stem())
+            .and_then(|s| s.to_str())
+            .unwrap_or("document");
+          Some(tmp.path().join(format!("{stem}.html")).to_string_lossy().to_string())
+        } else {
+          target.clone()
+        };
+
         let output = run_post_processing(&xml, &PostOptions {
           pmml: cli.pmml || cli.post || is_html_format,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
-          destination: target.as_deref(),
+          destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
           nodefaultresources: cli.nodefaultresources,
           css_files: &cli.css_files,
@@ -597,8 +624,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
         });
-        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
-          || cli.whatsin.as_deref() == Some("archive");
         if is_zip_output {
           // whatsout=archive: pack output into ZIP
           if let Some(ref target_path) = target {
@@ -613,7 +638,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               )
             };
             ensure_parent_dir(&zip_dest);
-            pack_output_zip(&zip_dest, &output, &response.log, &response.status)?;
+            let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
+            pack_output_zip(
+              &zip_dest,
+              &output,
+              &response.log,
+              &response.status,
+              resource_dir,
+            )?;
           } else {
             print!("{output}");
           }
@@ -624,6 +656,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         } else {
           print!("{output}");
         }
+        // resource_tempdir is dropped here (after pack_output_zip has copied
+        // every file in), cleaning up the converted-PNG staging directory.
       } else {
         if let Some(ref target_path) = target {
           ensure_parent_dir(target_path);
@@ -847,12 +881,17 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 }
 
 /// Pack the conversion output into a ZIP archive (whatsout=archive).
-/// Includes the HTML/XML output, log, and status.
+/// Includes the HTML/XML output, log, status, and (optionally) every
+/// file in `resource_dir` — typically the converted PNG/SVG output of
+/// the Graphics post-processing phase. `resource_dir` should be a
+/// short-lived staging area; its `.html` files are skipped because
+/// the post-processed output is already written separately.
 fn pack_output_zip(
   zip_path: &str,
   output: &str,
   log: &str,
   status: &str,
+  resource_dir: Option<&Path>,
 ) -> Result<(), Box<dyn Error>> {
   use zip::write::SimpleFileOptions;
   let file = File::create(zip_path)?;
@@ -881,7 +920,43 @@ fn pack_output_zip(
   zip.start_file("status", options)?;
   zip.write_all(status.as_bytes())?;
 
+  // Bundle Graphics-post-processor output (PNG/SVG/etc.) from the
+  // resource staging directory. Skip the `.html` files in the dir —
+  // we already wrote our post-processed `output` above.
+  if let Some(dir) = resource_dir {
+    if dir.exists() {
+      add_dir_to_zip(&mut zip, dir, dir, &options)?;
+    }
+  }
+
   zip.finish()?;
   eprintln!("Output written to {}", zip_path);
+  Ok(())
+}
+
+/// Recursively add files from `dir` to a ZIP archive, preserving
+/// the directory structure relative to `base`. Skips `.html` files
+/// because the post-processed HTML is added separately by the caller.
+/// Mirrors `cortex_worker.rs::add_dir_to_zip`.
+fn add_dir_to_zip(
+  zip: &mut zip::ZipWriter<File>,
+  dir: &Path,
+  base: &Path,
+  options: &zip::write::SimpleFileOptions,
+) -> Result<(), Box<dyn Error>> {
+  for entry in std::fs::read_dir(dir)? {
+    let entry = entry?;
+    let path = entry.path();
+    let rel = path.strip_prefix(base).unwrap_or(&path);
+    let name = rel.to_string_lossy().to_string();
+
+    if path.is_dir() {
+      add_dir_to_zip(zip, &path, base, options)?;
+    } else if !name.ends_with(".html") {
+      zip.start_file(&name, *options)?;
+      let mut f = File::open(&path)?;
+      std::io::copy(&mut f, zip)?;
+    }
+  }
   Ok(())
 }
