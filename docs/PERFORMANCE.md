@@ -753,3 +753,88 @@ Artifacts from this run (not in-repo; under `/tmp/asf_math100/`):
 - `compare.tsv` — per-paper wall + math + outcome side-by-side
 - `out_hybrid/results.tsv` + `telemetry.jsonl` — HYBRID run
 - `out_legacy/results.tsv` + `telemetry.jsonl` — LEGACY run
+
+---
+
+## Large-bocage fallback resolves the 100-paper regressions (2026-05-18, landed)
+
+Action 2 from the previous section landed as marpa commit `5f6a19e`
+(`parser: allow hybrid fallback for large bocages`) on the
+`perf/asf-allocation-trim` branch, plus the latexml-oxide-side wire-in
+in `latexml_math_parser/src/parser.rs::parse_marpa` (`HYBRID_AND_NODE_LIMIT`).
+
+### How it works
+
+`parse_hybrid_with_and_node_limit(..., max_and_nodes)` inspects the
+post-recognizer bocage's total and-node count via the new
+`Order::or_node_and_node_count_opt(...)` thin API. If the count
+exceeds the cap, the call returns `HybridParseResult::AmbiguousTree(Tree, BocageStats)`
+— a regular `Tree` iterator with the legacy six convergence caps
+(max_unique=10, max_consecutive_dupes=16, etc.) — instead of
+constructing the ASF's Rust-side glade/factoring view.
+
+The math parser wires the cap with **default `500` and-nodes**,
+overridable via `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT=N`
+(`=0`/`=none` disables the cap and forces pure ASF on every
+ambiguous formula, matching the prior behaviour). 500 was chosen
+because downstream consumers (pragmatics selection + XMath
+builders) cannot usefully process more than a handful of distinct
+parses per formula — beyond a few hundred and-nodes the
+`dispatch_action` Cartesian product produces alternatives that get
+collapsed or dropped anyway.
+
+### Measurement on the math-bound 100-paper sample
+
+Same input set as the prior section. Build = release+native+cortex,
+8 workers, 180 s timeout, 8 GB ulimit. Both runs are fresh against
+marpa commit `5f6a19e`.
+
+| Metric | LEGACY | HYBRID (cap=500) | Δ |
+|---|---:|---:|---:|
+| Success rate | 98/100 | **98/100** | **+19 vs HYBRID no-cap** |
+| OOM aborts | 0 | **0** | **−19 vs HYBRID no-cap** |
+| Wall (both-OK, n=98) | 3188.6 s | **2274.3 s** | **−28.7 %** |
+| Worst paper Δwall | — | +2.0 % | (was +242 %) |
+
+Per-paper distribution on the n=98 both-OK subset:
+
+- **No paper regresses by more than +2 %.** Only 2 of 98 are
+  slower at all (+2.0 % and +1.8 %).
+- 10 top improvements run −41 % to −51 % (e.g. `2308.06104`:
+  64.0 s → 31.1 s).
+- The 19 previously OOM-aborting papers all complete cleanly;
+  the worst (`2310.07954`, 5867 formulae) shaved a further
+  −23.7 % vs LEGACY despite running through the fallback.
+
+### Why HYBRID-with-fallback beats LEGACY (and ASF-only)
+
+Two effects compound on this corpus:
+
+1. The cheap unambiguous Tree path (~60–87 % of formulae per
+   `LATEXML_MATH_AMBIGUITY_AUDIT=1`) bypasses ASF
+   construction entirely, recovering the 12 % saving the
+   hybrid acceptance gate was originally measuring.
+2. The genuinely ambiguous formulae split into two populations:
+   small-bocage ones go through ASF (codex's singleton + clone
+   trims keep this path cheap), large-bocage ones go through
+   the same Tree path LEGACY uses *but with libmarpa's
+   already-computed bocage shared* (no second recognizer pass)
+   — strictly cheaper than LEGACY itself.
+
+Pure ASF-only on this corpus loses to LEGACY because the
+exploded forests force `compute_symches` to enumerate
+factorings the consumer drops anyway. The fallback restores
+the layering: ASF handles the cases that benefit from it, Tree
+iteration handles the rest, and neither path holds the whole
+bocage view in Rust memory.
+
+### Recorded principle
+
+Massive bocage explosions are themselves a pipeline flaw —
+documented as `feedback_ambiguity_explosion_is_a_flaw` in
+session memory. The fallback is a safety net, not a strategy:
+each formula that fires it is a candidate for grammar-level
+category tightening or earlier action-time pruning. Witness:
+`2310.16583` ("Pi^N(p,q,…)") formulae produce 2762–3555
+and-nodes each — a stable explosion pattern that should be
+collapsible at the recognizer or action layer.

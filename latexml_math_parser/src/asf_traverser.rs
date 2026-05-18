@@ -37,6 +37,7 @@
 //! a glade is rejected, the glade's Vec becomes empty and the
 //! parent's cartesian product yields zero combos — pruning cascades.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use libxml::tree::Node;
@@ -49,6 +50,22 @@ use latexml_core::document::Document;
 use crate::pragmatics::ValidationPragmatics;
 use crate::semantics::metadata::Meta;
 use crate::semantics::{ActionContext, Actions, XM};
+
+thread_local! {
+  static ASCII_LEXEMES: RefCell<Vec<Rc<str>>> = RefCell::new(
+    (0u8..=127)
+      .map(|b| Rc::<str>::from(std::str::from_utf8(std::slice::from_ref(&b)).unwrap()))
+      .collect()
+  );
+}
+
+#[inline]
+fn ascii_lexeme(byte: u8) -> Option<Rc<str>> {
+  if byte > 127 {
+    return None;
+  }
+  Some(ASCII_LEXEMES.with(|cache| cache.borrow()[byte as usize].clone()))
+}
 
 /// Alternatives at a single glade. Wrapped in `Rc` so the marpa ASF
 /// driver's per-glade `cache.insert(_, output.clone())` and `cache
@@ -84,15 +101,7 @@ impl Traverser for MathTraverser<'_> {
     if glade.is_token() {
       let sym = glade.symbol_id();
       let alt = if (0..=255).contains(&sym) {
-        let byte = sym as u8;
-        // SAFETY: a single byte < 256 represents valid UTF-8 only
-        // for byte < 128; for higher bytes we still produce a 1-byte
-        // string but it won't ever match downstream patterns. The
-        // unchecked path avoids per-byte UTF-8 validation overhead.
-        let s: Rc<str> = unsafe {
-          Rc::from(std::str::from_utf8_unchecked(std::slice::from_ref(&byte)))
-        };
-        Some(XM::Lexeme(s, Meta::default()))
+        ascii_lexeme(sym as u8).map(|s| XM::Lexeme(s, Meta::default()))
       } else {
         None
       };
@@ -115,14 +124,7 @@ impl Traverser for MathTraverser<'_> {
         // Cases 2 + 4b: byte-rollup. The lexeme-rule branch (2) also
         // calls `.specialize` on the result; the bare byte-passthrough
         // (4b) doesn't.
-        let bytes = collect_lexeme_bytes(glade, rh_len, children);
-        if bytes.is_empty() {
-          alts.push(None);
-        } else {
-          // SAFETY: child Lexemes carry valid-UTF-8 `Rc<str>` values
-          // by construction; concatenation preserves UTF-8 validity.
-          let lex: Rc<str> =
-            unsafe { Rc::from(std::str::from_utf8_unchecked(&bytes)) };
+        if let Some(lex) = collect_lexeme(glade, rh_len, children) {
           let lexeme = XM::Lexeme(lex, Meta::default());
           if is_lex_rule {
             match lexeme.specialize(Meta::default(), self.pragmas) {
@@ -132,12 +134,17 @@ impl Traverser for MathTraverser<'_> {
           } else {
             alts.push(Some(lexeme));
           }
+        } else {
+          alts.push(None);
         }
       } else if !has_action {
         // Case 4a: grammar passthrough — forward the first child's
         // alts unchanged. Mirrors legacy `args.remove(0)`.
         let first_id = glade.rh_glade_id(0).expect("rh 0");
-        let first = children.get(first_id).and_then(|o| o.as_ref()).expect("child precomputed");
+        let first = children
+          .get(first_id)
+          .and_then(|o| o.as_ref())
+          .expect("child precomputed");
         for alt in first.iter() {
           alts.push(alt.clone());
         }
@@ -172,7 +179,10 @@ impl MathTraverser<'_> {
     let mut per_pos: Vec<&Vec<Option<XM>>> = Vec::with_capacity(rh_len);
     for ix in 0..rh_len {
       let cid = glade.rh_glade_id(ix).expect("rh position has child glade");
-      let child = children.get(cid).and_then(|o| o.as_ref()).expect("child precomputed");
+      let child = children
+        .get(cid)
+        .and_then(|o| o.as_ref())
+        .expect("child precomputed");
       per_pos.push(child.as_ref());
     }
     let total: usize = per_pos.iter().map(|p| p.len()).product();
@@ -182,8 +192,7 @@ impl MathTraverser<'_> {
     if total == 1 {
       // Common case: every RHS position has one alternative. Build
       // one combo without the odometer machinery.
-      let combo: Vec<Option<XM>> =
-        per_pos.iter().map(|p| p[0].clone()).collect();
+      let combo: Vec<Option<XM>> = per_pos.iter().map(|p| p[0].clone()).collect();
       self.run_action(rule_id, combo, out);
       return;
     }
@@ -219,7 +228,10 @@ impl MathTraverser<'_> {
 
   #[inline]
   fn run_action(&mut self, rule_id: i32, combo: Vec<Option<XM>>, out: &mut Vec<Option<XM>>) {
-    let ctxt = ActionContext { nodes: self.nodes, document: &mut *self.document };
+    let ctxt = ActionContext {
+      nodes:    self.nodes,
+      document: &mut *self.document,
+    };
     match self.actions.action_on(rule_id, combo, self.pragmas, ctxt) {
       Ok(opt_xm) => out.push(opt_xm),
       Err(_) => self.pruned_count += 1,
@@ -227,19 +239,42 @@ impl MathTraverser<'_> {
   }
 }
 
+/// Build a lexeme from the first alternative of each child glade.
+/// The one-child case is common for byte-passthrough scaffolding, so
+/// return the child's existing `Rc<str>` rather than allocating a
+/// temporary byte buffer and a second `Rc<str>`.
+fn collect_lexeme(glade: &Glade, rh_len: usize, children: &[Option<GladeAlts>]) -> Option<Rc<str>> {
+  if rh_len == 1 {
+    let cid = glade.rh_glade_id(0).expect("rh position has child glade");
+    let alts = children
+      .get(cid)
+      .and_then(|o| o.as_ref())
+      .expect("child precomputed");
+    if let Some(Some(XM::Lexeme(s, _))) = alts.first() {
+      return Some(s.clone());
+    }
+    return None;
+  }
+
+  let bytes = collect_lexeme_bytes(glade, rh_len, children);
+  if bytes.is_empty() {
+    return None;
+  }
+  std::str::from_utf8(&bytes).ok().map(Rc::<str>::from)
+}
+
 /// Concatenate the `s.as_bytes()` of each child glade's first
 /// `Some(XM::Lexeme(s, _))` alternative. Mirrors `TreeBuilder::
 /// rollup_token_rec`: byte-passthrough intermediate rules pre-roll
 /// their subtree into one Lexeme, so the outer rule just chains.
-fn collect_lexeme_bytes(
-  glade: &Glade,
-  rh_len: usize,
-  children: &[Option<GladeAlts>],
-) -> Vec<u8> {
+fn collect_lexeme_bytes(glade: &Glade, rh_len: usize, children: &[Option<GladeAlts>]) -> Vec<u8> {
   let mut bytes: Vec<u8> = Vec::with_capacity(rh_len * 2);
   for ix in 0..rh_len {
     let cid = glade.rh_glade_id(ix).expect("rh position has child glade");
-    let alts = children.get(cid).and_then(|o| o.as_ref()).expect("child precomputed");
+    let alts = children
+      .get(cid)
+      .and_then(|o| o.as_ref())
+      .expect("child precomputed");
     if let Some(Some(XM::Lexeme(s, _))) = alts.first() {
       bytes.extend_from_slice(s.as_bytes());
     }

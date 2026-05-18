@@ -138,6 +138,37 @@ static PARSE_VIA_ASF_ONLY: Lazy<bool> = Lazy::new(|| {
 // Default = hybrid unless LEGACY or ASF_ONLY is requested.
 static PARSE_VIA_HYBRID: Lazy<bool> =
   Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
+// Large-bocage fallback cap (marpa commit 5f6a19e + perf branch).
+// When the post-recognizer bocage exceeds this many total and-nodes,
+// `parse_hybrid_with_and_node_limit` routes us back through Tree
+// iteration (legacy caps) instead of ASF construction. ASF must
+// allocate the entire Rust-side glade/factoring view up front; on
+// math-bound papers with high-cardinality ambiguous forests this
+// blew through the 8 GB ulimit (19/100 OOMs on the math-bound
+// sample — see docs/PERFORMANCE.md "HYBRID at scale" addendum).
+//
+// Default 500: downstream consumers (pragmatics selection, XMath
+// builders) can't usefully process more than a handful of distinct
+// parses per formula — beyond a few hundred and-nodes the
+// `dispatch_action` Cartesian product produces alternatives that
+// will be dropped or collapsed anyway. Bigger bocages route through
+// the Tree iterator's 6 convergence caps (max_unique=10, etc.)
+// which already match what semantic selection can use. Override via
+// `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
+// disable the cap and force pure ASF on every ambiguous formula.
+static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> = Lazy::new(|| {
+  match std::env::var("LATEXML_MARPA_HYBRID_AND_NODE_LIMIT") {
+    Ok(v) => {
+      let trimmed = v.trim();
+      if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
+        None
+      } else {
+        trimmed.parse::<usize>().ok().or(Some(500))
+      }
+    },
+    Err(_) => Some(500),
+  }
+});
 // Compatibility alias: `PARSE_VIA_ASF` is true when we're NOT taking
 // the legacy path — both hybrid and ASF-only flavours go through the
 // ASF traverser at least some of the time. The downstream branch
@@ -1308,9 +1339,12 @@ impl MathParser {
         document,
         pruned_count: 0,
       };
-      let hybrid_result = self
-        .engine
-        .parse_hybrid(ByteScanner::new(Cursor::new(input)), (), &mut traverser);
+      let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
+        ByteScanner::new(Cursor::new(input)),
+        (),
+        &mut traverser,
+        *HYBRID_AND_NODE_LIMIT,
+      );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
@@ -1375,6 +1409,81 @@ impl MathParser {
                 ok_trees += 1;
                 parses.push(tree);
               }
+            }
+          }
+        },
+        Ok(HybridParseResult::AmbiguousTree(tree_iter, stats)) => {
+          // Large-bocage fallback: codex's marpa commit 5f6a19e routes
+          // bocages whose `and_node_count` exceeds `*HYBRID_AND_NODE_LIMIT`
+          // through the ordinary `Tree` iterator instead of constructing
+          // the ASF. Walk it with the same 6 convergence caps that the
+          // legacy path uses — those caps are exactly what makes
+          // Tree-iteration tractable on highly-ambiguous forests.
+          drop(traverser);
+          record_ambiguity_metric(2, input);
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "HYBRID_AUDIT: large-bocage fallback fired (or_nodes={}, and_nodes={}, max_per_or={}) for: {}",
+              stats.or_node_count,
+              stats.and_node_count,
+              stats.max_and_nodes_per_or_node,
+              input.chars().take(120).collect::<String>(),
+            );
+          }
+          let max_trees = 5000;
+          let max_time = std::time::Duration::from_secs(30);
+          let max_consecutive_dupes = 16;
+          let converge_budget = std::time::Duration::from_millis(200);
+          let pruned_only_time_budget = std::time::Duration::from_secs(2);
+          let pruned_only_count_threshold: usize = 200;
+          let max_unique = 10;
+          for val in tree_iter {
+            if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+              break;
+            }
+            if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
+              break;
+            }
+            if parses.len() >= max_unique {
+              break;
+            }
+            if !parses.is_empty() && start.elapsed() > converge_budget {
+              break;
+            }
+            if parses.is_empty()
+              && pruned_trees > pruned_only_count_threshold
+              && start.elapsed() > pruned_only_time_budget
+            {
+              break;
+            }
+            match self.actions.get_tree(
+              self.builder.clone(),
+              val,
+              self.expert_pragmatics.as_slice(),
+              ActionContext { nodes, document },
+            ) {
+              Ok(Some(tree)) => {
+                ok_trees += 1;
+                if parses.contains(&tree) {
+                  deduped += 1;
+                  consecutive_dupes += 1;
+                } else {
+                  parses.push(tree);
+                  consecutive_dupes /= 2;
+                }
+              },
+              Ok(None) => {},
+              Err(prune_err) => {
+                pruned_trees += 1;
+                if *PARSE_PRUNE_REASONS {
+                  let msg = prune_err.to_string();
+                  let trimmed = msg.chars().take(140).collect::<String>();
+                  *prune_reasons.entry(trimmed).or_insert(0) += 1;
+                }
+                if !parses.is_empty() {
+                  consecutive_dupes += 1;
+                }
+              },
             }
           }
         },
