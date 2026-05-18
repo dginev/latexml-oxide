@@ -639,13 +639,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             };
             ensure_parent_dir(&zip_dest);
             let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
-            pack_output_zip(
-              &zip_dest,
-              &output,
-              &response.log,
-              &response.status,
+            let stem = Path::new(&zip_dest)
+              .file_stem()
+              .and_then(|s| s.to_str())
+              .unwrap_or("document");
+            let html_name = format!("{stem}.html");
+            let log_name = format!("{stem}.log");
+            latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
+              zip_path:       &zip_dest,
+              html_filename:  &html_name,
+              html:           &output,
+              log_filename:   Some(&log_name),
+              log:            &response.log,
+              status:         &response.status,
               resource_dir,
-            )?;
+              telemetry_json: None,
+            })?;
+            eprintln!("Output written to {}", zip_dest);
           } else {
             print!("{output}");
           }
@@ -880,83 +890,9 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
   Ok((tempdir, main_tex.to_string_lossy().to_string()))
 }
 
-/// Pack the conversion output into a ZIP archive (whatsout=archive).
-/// Includes the HTML/XML output, log, status, and (optionally) every
-/// file in `resource_dir` — typically the converted PNG/SVG output of
-/// the Graphics post-processing phase. `resource_dir` should be a
-/// short-lived staging area; its `.html` files are skipped because
-/// the post-processed output is already written separately.
-fn pack_output_zip(
-  zip_path: &str,
-  output: &str,
-  log: &str,
-  status: &str,
-  resource_dir: Option<&Path>,
-) -> Result<(), Box<dyn Error>> {
-  use zip::write::SimpleFileOptions;
-  let file = File::create(zip_path)?;
-  let mut zip = zip::ZipWriter::new(file);
-  let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-
-  // Derive output filename from zip name: paper.zip → paper.html
-  let stem = Path::new(zip_path)
-    .file_stem()
-    .and_then(|s| s.to_str())
-    .unwrap_or("document");
-
-  // Write the main output file
-  let output_name = format!("{}.html", stem);
-  zip.start_file(&output_name, options)?;
-  zip.write_all(output.as_bytes())?;
-
-  // Write the log
-  if !log.is_empty() {
-    let log_name = format!("{}.log", stem);
-    zip.start_file(&log_name, options)?;
-    zip.write_all(log.as_bytes())?;
-  }
-
-  // Write status
-  zip.start_file("status", options)?;
-  zip.write_all(status.as_bytes())?;
-
-  // Bundle Graphics-post-processor output (PNG/SVG/etc.) from the
-  // resource staging directory. Skip the `.html` files in the dir —
-  // we already wrote our post-processed `output` above.
-  if let Some(dir) = resource_dir {
-    if dir.exists() {
-      add_dir_to_zip(&mut zip, dir, dir, &options)?;
-    }
-  }
-
-  zip.finish()?;
-  eprintln!("Output written to {}", zip_path);
-  Ok(())
-}
-
-/// Recursively add files from `dir` to a ZIP archive, preserving
-/// the directory structure relative to `base`. Skips `.html` files
-/// because the post-processed HTML is added separately by the caller.
-/// Mirrors `cortex_worker.rs::add_dir_to_zip`.
-fn add_dir_to_zip(
-  zip: &mut zip::ZipWriter<File>,
-  dir: &Path,
-  base: &Path,
-  options: &zip::write::SimpleFileOptions,
-) -> Result<(), Box<dyn Error>> {
-  for entry in std::fs::read_dir(dir)? {
-    let entry = entry?;
-    let path = entry.path();
-    let rel = path.strip_prefix(base).unwrap_or(&path);
-    let name = rel.to_string_lossy().to_string();
-
-    if path.is_dir() {
-      add_dir_to_zip(zip, &path, base, options)?;
-    } else if !name.ends_with(".html") {
-      zip.start_file(&name, *options)?;
-      let mut f = File::open(&path)?;
-      std::io::copy(&mut f, zip)?;
-    }
-  }
-  Ok(())
-}
+// Output-zip packing moved to `latexml_post::pack::pack_archive`
+// (2026-05-18, audit follow-up for the latexml_oxide --post image-
+// bundling fix). The previous inline `pack_output_zip` +
+// `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
+// have been replaced by a single shared implementation — mirrors
+// Perl `LaTeXML::Post::Pack`.

@@ -308,15 +308,16 @@ impl LatexmlWorker {
     // 8. Pack output ZIP: HTML (named after source) + images + log + status + telemetry
     let output_path =
       std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
-    pack_output_zip_with_resources(
-      &output_path,
-      &html_filename,
-      &html,
-      &log,
-      &status_str,
-      dest_dir.path(),
-      &telemetry_json,
-    )?;
+    latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
+      zip_path:       &output_path.to_string_lossy(),
+      html_filename:  &html_filename,
+      html:           &html,
+      log_filename:   Some("cortex.log"),
+      log:            &log,
+      status:         &status_str,
+      resource_dir:   Some(dest_dir.path()),
+      telemetry_json: Some(&telemetry_json),
+    })?;
 
     Ok(output_path)
   }
@@ -860,70 +861,9 @@ fn write_timeout_placeholder_zip(
   Ok(())
 }
 
-fn pack_output_zip_with_resources(
-  output_path: &Path,
-  html_filename: &str,
-  html: &str,
-  log: &str,
-  status: &str,
-  resource_dir: &Path,
-  telemetry_json: &str,
-) -> Result<(), Box<dyn Error>> {
-  let file = File::create(output_path)?;
-  let mut zip = zip::ZipWriter::new(file);
-  let options =
-    zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-
-  // HTML file named after the source TeX (Perl LaTeXML.pm L200-205)
-  zip.start_file(html_filename, options)?;
-  zip.write_all(html.as_bytes())?;
-
-  // Add all resource files (images, etc.) from the destination directory
-  if resource_dir.exists() {
-    add_dir_to_zip(&mut zip, resource_dir, resource_dir, &options)?;
-  }
-
-  zip.start_file("cortex.log", options)?;
-  zip.write_all(log.as_bytes())?;
-
-  zip.start_file("status", options)?;
-  zip.write_all(status.as_bytes())?;
-
-  // Per-job telemetry record (single-line JSON). benchmark_canvas.sh
-  // extracts this member and appends to <output_dir>/telemetry.jsonl.
-  // See docs/TELEMETRY.md.
-  zip.start_file("telemetry.json", options)?;
-  zip.write_all(telemetry_json.as_bytes())?;
-
-  zip.finish()?;
-  Ok(())
-}
-
-/// Recursively add files from a directory to a ZIP archive.
-/// Skips the output.html (already added separately).
-fn add_dir_to_zip(
-  zip: &mut zip::ZipWriter<File>,
-  dir: &Path,
-  base: &Path,
-  options: &zip::write::SimpleFileOptions,
-) -> Result<(), Box<dyn Error>> {
-  for entry in fs::read_dir(dir)? {
-    let entry = entry?;
-    let path = entry.path();
-    let rel = path.strip_prefix(base).unwrap_or(&path);
-    let name = rel.to_string_lossy().to_string();
-
-    if path.is_dir() {
-      add_dir_to_zip(zip, &path, base, options)?;
-    } else if !name.ends_with(".html") {
-      // Skip the HTML file — it's already added separately
-      zip.start_file(&name, *options)?;
-      let mut f = File::open(&path)?;
-      std::io::copy(&mut f, zip)?;
-    }
-  }
-  Ok(())
-}
+// `pack_output_zip_with_resources` + `add_dir_to_zip` moved into
+// `latexml_post::pack::pack_archive` (2026-05-18) — single source of
+// truth shared with `latexml_oxide --post`. Perl analog: `LaTeXML::Post::Pack`.
 
 // --- Main ---
 
