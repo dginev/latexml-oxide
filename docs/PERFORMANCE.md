@@ -360,504 +360,156 @@ See SYNC_STATUS.md "Acceptance gates" — tied within noise as of
 
 ---
 
-## ASF traversal — perf opportunities (2026-05-17)
+## Math-parser routing — current state (2026-05-18)
 
-ASF became default in commit `312cb33bdd`. Measurement on
-`1912.03329` (386 formulas, geometric topology, release build):
+The math parser uses **HYBRID routing** by default
+(`latexml_math_parser/src/parser.rs::parse_marpa`). One recognizer
+pass produces one bocage; routing then branches on Marpa's
+`Bocage::ambiguity_metric()`:
 
-* **LEGACY**: 0.89s avg
-* **ASF**: 1.16s avg → 1.13s after cartesian fast path
+- `metric == 1` (unambiguous, 60–87 % of formulae in the
+  corpora we've measured) → ordinary `Tree::next()` +
+  `Actions::get_tree`. Skips ASF construction entirely.
+- `metric >= 2`, bocage and-node count ≤ `HYBRID_AND_NODE_LIMIT`
+  (default 500) → ASF traversal (`MathTraverser`). One post-order
+  pass; subtree sharing amortizes work.
+- `metric >= 2`, bocage exceeds the cap → libmarpa Tree iterator
+  on the same already-built bocage with the same six legacy
+  convergence caps (`max_unique=10`, `max_consecutive_dupes=16`,
+  `max_time=30s`, etc.). Sidesteps the ASF allocation cliff.
 
-ASF carries ~20% overhead on unambiguous math. Hot spots
-identified in `asf_traverser.rs` and `marpa/src/asf.rs`:
+Escape hatches: `LATEXML_MARPA_LEGACY=1` forces pure Tree
+iteration; `LATEXML_MARPA_ASF_ONLY=1` forces pure ASF (no
+hybrid routing, no large-bocage fallback). Both are intended
+for divergence debugging only.
 
-### Latexml_math_parser side
+The 500-and-node cap exists because downstream consumers
+(pragmatics selection, XMath builders) cannot usefully process
+more than a handful of distinct parses per formula. Bigger
+bocages are treated as a **pipeline-flaw signal**, not a
+load-bearing case — candidates for grammar-level category
+tightening or earlier action-time pruning. Override with
+`LATEXML_MARPA_HYBRID_AND_NODE_LIMIT=N` (`0`/`none` disables).
 
-1. **Per-byte `String` allocation** (asf_traverser line 95):
-   every byte-token glade allocates a 1-char `String` via
-   `String::from_utf8(vec![byte])`. A typical paper has tens of
-   thousands of byte glades — tens of thousands of 1-char
-   allocations.
+### Measurements
 
-   Fix: change `XM::Lexeme(String, Meta)` to
-   `XM::Lexeme(SymStr, Meta)` (interned via `latexml_core::arena`).
-   SymStr is a `u32`; the 128 ASCII byte values get interned once
-   and shared. Invasive — touches ~170 sites.
+**Article-2025.tex** (579 formulae, 87.3 % raw-unambiguous,
+release+bench, single-thread):
 
-2. **`Meta::default()` allocation per byte**: every byte glade
-   passes `Meta::default()` which constructs `Vec::new()` and
-   `CurryConstraints::default()`. Even though empty, the struct
-   moves are non-trivial. Sharing a single `Meta::EMPTY` reference
-   via `Cow` would save the copies.
-
-3. **Cartesian product cloning** (done): fast path for
-   single-combo case landed in commit `7314e19599`. Saves N+1
-   Vec allocations per rule reduction in the common case.
-
-### Marpa-rs side (separate repo `~/git/marpa`)
-
-1. **`HashMap<usize, Glade>` for glades** (`asf.rs:50`): glade
-   IDs are sequential — a `Vec<Option<Glade>>` indexed by id
-   would replace hash probes with array index loads.
-
-2. **`HashMap<usize, ParseTree>` for traversal cache**
-   (`asf.rs:138`): same as above, plus the cache hit `.clone()`
-   on line 156 deep-clones the entire `ParseTree`. For ASF user
-   types like `Vec<Option<XM>>`, this clones every `XM` tree —
-   significant. Wrapping in `Rc<PT>` (single-threaded) or `Arc<PT>`
-   would reduce clone to a refcount bump.
-
-3. **`children: &HashMap<usize, ParseTree>`** passed to user
-   callback (`asf.rs:207`): the user accesses children by
-   `rh_glade_id(ix)` + `children.get(&id)` — a hash probe per
-   position. A better API would pre-resolve children into a
-   `&[&ParseTree]` indexed by RHS position.
-
-4. **`compute_symches` allocations**: per-glade allocates
-   `source_data`, `raw_factorings`, `factorings`, etc. Vecs.
-   Reusable scratch buffers would reduce allocation traffic.
-
-### Estimated impact
-
-The byte-glade fix alone (item 1 of latexml_math_parser side) likely
-closes the gap to LEGACY parity on unambiguous math. The marpa-rs
-cache fixes would help all uses of `parse_and_traverse_forest`,
-including in `marpa::tests::panda::*`.
-
-Estimated effort: byte-glade arena fix ≈ 1-2 sessions; marpa-rs
-cache fixes ≈ 1 session. Tracked as future perf work.
-
----
-
-## ASF traversal — measured results (2026-05-17 follow-up)
-
-Validation of the perf opportunities above on a math-heavy fixture
-(`Article-2025.tex`, 579 `$`-delimited formulas, release build):
-
-| Stage | ASF wall | LEGACY wall | Notes |
-|---|---:|---:|---|
-| Pre-optimization (initial measure) | 18.05s | 12.0s | baseline gap ≈ 50% |
-| + `XM::Lexeme(Rc<str>, _)` + thread-local ASCII byte cache (`1a32531ce2`) | 18.0s | 12.0s | ~0% delta — byte-glade Lexeme String alloc was **not** the bottleneck |
-| + `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>` (same commit) | 18.0s | 12.0s | ~0% — the marpa cache `.clone()` was already cheap relative to compute_symches work |
-| + marpa cache `HashMap<usize, PT>` → `Vec<Option<PT>>` + slice children API (marpa `7875bc8`) | 17.4s | 12.0s | ~3% — measurable but not load-bearing |
-| + marpa `glades` and `nidset_by_id` → `Vec<Option<_>>` (marpa `325f615`) | 16.85s | 12.0s | another ~3% — cumulative ~6% reduction |
-
-**Conclusion**: the residual ASF→Step-iteration overhead is
-**structural**, not allocation-bound. ASF's `compute_symches` walks
-every and-node in the bocage to enumerate factorings; for
-unambiguous parses (the bulk case in real-world math), this is
-purely a cost not amortized by any subtree sharing. The Step-
-iteration path inside libmarpa skips that enumeration entirely.
-
-The remaining ~40% gap on math-heavy unambiguous papers is not
-recoverable via Rust-side micro-optimization. Two paths:
-
-1. **Hybrid dispatch**: pre-flight `ambiguity_metric()`; route
-   unambiguous parses through legacy Step iteration, ambiguous
-   through ASF. Closes the gap on the common case but keeps two
-   code paths alive.
-2. **Continue ASF-only**: future wins live in libmarpa C-side
-   bocage walking or a Rust-side fast-path inside `compute_symches`
-   that detects single-and-node or-nodes and short-circuits the
-   factoring enumeration. Larger refactor with diminishing returns.
-
-The `Rc<str>` Lexeme + `Rc<Vec>` ParseTree + slice-API children
-changes stayed in even though their direct impact was minimal —
-they remove deep-clone hazards from the marpa cache hit/insert
-paths (future-proofing) and are architecturally cleaner.
-
-### Cargo.toml dev-time patch
-
-The `[patch."https://github.com/dginev/marpa"]` in workspace
-`Cargo.toml` routes the dep at the local marpa checkout. Once
-the `asf-step3-generic-traverser` branch is pushed with the new
-commits, update `latexml_math_parser/Cargo.toml`'s `marpa = { git
-= "...", branch = "..." }` SHA and remove the `[patch]` block.
-
----
-
-## HYBRID dispatch becomes default (2026-05-17, landed)
-
-Path 1 from the previous section — hybrid dispatch — landed in
-latexml-oxide commit `9318960974` and marpa commit `60b320b`. The
-default `parse_marpa` now branches on `Marpa::Bocage::
-ambiguity_metric()` after a single recognizer pass:
-
-* metric == 1 → cheap `Tree::next()` + `Actions::get_tree` (the
-  legacy code path's machinery)
-* metric ≥ 2 → ASF traversal via `MathTraverser` (the ASF default
-  from the previous round)
-
-Final measurement on `Article-2025.tex` (579 math-heavy formulas,
-bench profile, single-thread, 3-run avg):
-
-| Mode | Wall | vs LEGACY |
+| Mode | Wall (3-run avg) | vs LEGACY |
 |---|---:|---:|
-| **HYBRID (default)** | **12.41s** | **1.018×** |
-| `LATEXML_MARPA_LEGACY=1` | 12.21s | 1.00× |
-| `LATEXML_MARPA_ASF_ONLY=1` | 16.67s | 1.37× |
+| **HYBRID default** | **12.45 s** | **1.01×** |
+| `LATEXML_MARPA_LEGACY=1` | 12.32 s | 1.00× |
+| `LATEXML_MARPA_ASF_ONLY=1` | 16.80 s | 1.36× |
 
-The HYBRID:LEGACY ratio sits inside the 1.05× acceptance gate.
-Hybrid recovers the ~4.5s ASF-only overhead on this fixture (87%
-raw-unambiguous formulae per `LATEXML_MATH_AMBIGUITY_AUDIT=1`)
-while preserving ASF's algorithmic advantage on the 13%
-raw-ambiguous fraction.
+**100-paper math-bound sample** (top-100 by `phase_math_parse_us`
+in wp4 telemetry; release+native+cortex, 8 workers, 180 s timeout,
+8 GB ulimit, quiet host, marpa master `0bf24111`):
 
-### Why this works (and why ASF-only doesn't)
-
-The ASF traverser visits every glade in the bocage and runs
-`compute_symches` per glade — fixed per-glade overhead that
-doesn't pay off for unambiguous input where subtree sharing
-yields no amortization. Step-iteration via libmarpa's built-in
-`Tree::next()` produces a single linear tree without that
-overhead. The hybrid keeps the cheaper path for the common case
-and routes only the truly ambiguous formulae (where ASF's
-glade-once invariant amortizes work) through the heavier
-machinery.
-
-### Audit tooling
-
-Two opt-in env vars verify the design holds at scale:
-
-* `LATEXML_MATH_AMBIGUITY_AUDIT=1` — per-formula ambiguity-metric
-  counter, used to confirm the per-corpus unambiguous fraction.
-  Measured on:
-
-  | Paper | Total parses | Unamb% |
-  |---|---:|---:|
-  | Article-2025 (algebraic topology) | 3902 | 87.3% |
-  | TheDiskComplex (geometric topology) | 681 | 77.4% |
-  | arxiv 2602.06085 (mixed STEM) | 130 | 60.0% |
-
-* `LATEXML_MARPA_HYBRID_AUDIT_PARITY=1` — runs both paths on every
-  raw-unambiguous formula and asserts they produce equivalent
-  `ParseOutcome`. The assertion treats `Empty` and `Rejected(_)`
-  as the same "no parse survived" outcome (the user-facing HTML
-  is bit-identical in either case) and only fails on real
-  `Accepted` vs anything-else mismatches. Runs clean on both
-  Article-2025 (3902 calls) and TheDiskComplex (681 calls).
-
-### What did NOT move the needle (cumulative ~6%)
-
-Documented for future-session triage:
-
-* `XM::Lexeme(String, _)` → `XM::Lexeme(Rc<str>, _)` and the ASCII
-  byte-cache — ~0% delta. Action allocation isn't the bottleneck.
-* `MathTraverser::ParseTree` → `Rc<Vec<Option<XM>>>` — ~0% delta.
-  The marpa cache `.clone()` was cheap relative to `compute_symches`
-  work.
-* marpa `HashMap<usize, _>` caches → `Vec<Option<_>>` indexed by
-  sequential id, plus `&[Option<PT>]` slice children API — ~3%.
-* marpa `glades` + `nidset_by_id` → `Vec<Option<_>>` — another ~3%.
-
-Total Rust-side allocation cleanup: ~6%. The hybrid routing
-delivered the remaining ~37% reduction needed to reach LEGACY
-parity. **Lesson**: structural algorithmic choices dominate
-allocation micro-optimization for this workload.
-
----
-
-## Codex senior-engineer optimization list — completed
-
-Beyond the hybrid landing, the full optimization list from
-`marpa/docs/ASF_PERFORMANCE_FINDINGS.md` was exhausted. Each
-item, its outcome on `Article-2025.tex`, and the commit:
-
-| # | Item | Commit | Impact |
-|---|---|---|---|
-| 1 | Hybrid routing | latexml `9318960974` / marpa `60b320b` | ASF→HYBRID: 17.0s → 12.4s |
-| 2 | Singleton fast path in `compute_symches` | marpa (codex implementation, embedded in `60b320b`) | embedded in hybrid baseline |
-| 3 | Bocage metadata caches (`AndNodeInfo`/`OrNodeInfo`) | marpa `a045778` | perf-flat (RefCell≈FFI), architectural encapsulation |
-| 4 | Flatten factoring storage | DEFERRED per codex's "do not start here" caution | — |
-| 5 | Clean traversal internals | marpa `a045778` (+ codex `60b320b` for generic recursion / VisitState) | quality + correctness |
-| 6 | Odometer Cartesian product | latexml `109390fe92` | ~1.5% on HYBRID (only ambiguous-glade reduction) |
-
-### Quality / correctness items added beyond the list
-
-- **`collect_factorings` propagates `Result`** (marpa `96fd092`)
-  — prior `.unwrap_or(AndNodeInfo{cause:-1,...})` silently
-  mapped FFI errors to a bogus token-and-node default.
-- **`parity_outcomes_compatible` helper + 8 unit tests**
-  (latexml `0a8a171859`) — the audit's `Empty`-vs-`Rejected`
-  false-positive on shallow pragma rejections is now guarded
-  by regression tests.
-- **`Glade.visited` field + `glade_is_visited` helper removed**
-  — dead defensive code post-`VisitState`.
-- **`Rc<str>` Lexeme + `Rc<Vec<Option<XM>>>` ParseTree** kept
-  even though direct perf was 0% — removes deep-clone hazards
-  from the marpa cache hit/insert paths.
-
-### Final 3-way wall (closing state)
-
-`Article-2025.tex`, bench profile, 3-run avg:
-
-| Mode | Wall | vs LEGACY |
-|---|---:|---:|
-| **HYBRID default** | **12.45s** | **1.01×** |
-| `LATEXML_MARPA_LEGACY=1` | 12.32s | 1.00× |
-| `LATEXML_MARPA_ASF_ONLY=1` | 16.80s | 1.36× |
-
-### Residual ASF_ONLY structural gap
-
-ASF_ONLY remains ~37% slower than LEGACY. After all Rust-side
-micro-optimization, the gap is **structural**: ASF builds a
-Rust-side glade representation (Nidset + Glade allocations
-plus the bocage walk in `compute_symches`) that Step-iteration
-skips entirely. The singleton fast path eliminates the
-factoring chain for 87% of glades, but the per-glade
-bookkeeping fixed overhead persists.
-
-Further wins require either libmarpa C-side surgery (out of
-scope — we don't own libmarpa) or restructuring ASF to skip
-Nidset/Glade allocation for wholly-unambiguous forests (large
-refactor; hybrid already achieves this from the user
-perspective by skipping ASF entirely for that case).
-
-Both yield diminishing returns vs the hybrid escape hatch
-that's now the default.
-
-### Tests at session close
-
-- marpa: **23/0** (including 2 new hybrid-routing tests:
-  `hybrid_parse_returns_tree_for_unambiguous_input` with a
-  `PanicTraverser` and `hybrid_parse_traverses_asf_for_ambiguous_input`)
-- latexml-oxide: **1309/0** (1301 prior + 8 new
-  `parity_outcomes_compatible_*` parity-helper unit tests)
-- Parity audit (`LATEXML_MARPA_HYBRID_AUDIT_PARITY=1`) clean on:
-  - Article-2025.tex (3902 parse calls)
-  - TheDiskComplex.tex (681 parse calls)
-- sin[XY] regression fixture (`physics.tex`): bit-identical HTML
-  output across all three modes.
-
----
-
-## HYBRID at scale — math-bound regression on 100-paper sample (2026-05-18)
-
-Validation on a larger, math-heavier corpus than the development
-fixtures (Article-2025.tex, TheDiskComplex.tex). Selected the
-**top-100 arXiv papers by `phase_math_parse_us`** from the existing
-wp4 stage telemetry (49,164 papers, baseline ran pre-flip under
-LEGACY). Each sample paper has math-phase share 31–79 % of total
-wall and 700–8,400 `<ltx:Math>` formulae.
-
-Method: ran the same 100 papers twice with the fresh
-`cortex_worker` (release+native+cortex, marpa branch
-`asf-step3-generic-traverser`), 16 workers, 180 s timeout, 8 GB
-ulimit per task. HYBRID = current default (no env var); LEGACY =
-`LATEXML_MARPA_LEGACY=1`.
-
-### Outcome parity
-
-| Outcome | LEGACY | HYBRID |
-|---|---:|---:|
-| ok | **98** | **79** |
-| conversion_error | 2 | 2 |
-| abort (SIGABRT, OOM) | **0** | **19** |
-
-19 papers OOM-abort under HYBRID that LEGACY completes cleanly.
-All 19 panics are `memory allocation of N bytes failed` and fire
-4–20 s into the run, well before the 180 s timeout — structural
-allocator pressure, not a CPU runaway. The 19 papers span
-732–5,867 formulae and 9.8–75.8 s legacy wall:
-
-| paper | formulae | l_wall | h_wall (aborted) |
-|---|---:|---:|---:|
-| 2310.07954 | 5867 | 75.8 s | 17.1 s |
-| 2310.18047 | 3932 | 42.0 s | 10.7 s |
-| 2310.08575 | 2540 | 39.4 s | 12.2 s |
-| 2311.03145 | 4198 | 39.0 s | 16.1 s |
-| 2307.15809 | 3432 | 35.9 s | 18.5 s |
-| 2309.13020 | 5384 | 35.4 s |  9.9 s |
-| 2310.06146 | 4506 | 34.7 s |  8.2 s |
-| 2306.16983 | 5184 | 30.2 s | 11.0 s |
-| 2310.11745 | 2632 | 28.4 s | 10.3 s |
-| 2307.05407 | 2259 | 28.2 s | 10.9 s |
-| 2310.04665 | 1427 | 27.4 s | 13.2 s |
-| 2306.14604 | 5106 | 25.9 s |  8.7 s |
-| 2310.16583 |  732 | 23.7 s |  5.4 s |
-| 2306.04320 | 4976 | 23.6 s | 11.7 s |
-| 2305.12239 | 1339 | 21.7 s |  8.1 s |
-| 2305.12643 | 2559 | 21.3 s | 15.1 s |
-| 2310.10742 |  890 | 18.3 s | 19.9 s |
-| 2308.04208 |  834 | 16.2 s |  4.7 s |
-| 2306.03692 | 1474 |  9.8 s |  4.6 s |
-
-### Wall + math-phase on the both-OK subset (n=79)
-
-| Metric | LEGACY | HYBRID | Δ |
-|---|---:|---:|---:|
-| Wall (sum) | 2611.7 s | 2955.4 s | **+13.2 %** |
-| math_parse (sum) | 1183.7 s | 1439.8 s | **+21.6 %** |
-
-Per-paper wall-delta distribution: median +14.1 %, mean +17.2 %,
-σ 42.4. **50 regressions (>+5 %), 23 improvements (<−5 %), 6
-neutral.** Variance is huge — the same flag is +242 % on one
-paper and −52 % on another.
-
-Worst regressions (both-OK):
-
-| paper | formulae | l_wall | h_wall | Δwall | Δmath |
-|---|---:|---:|---:|---:|---:|
-| 2306.05026 | 4093 | 26.5 s | 90.7 s | **+242 %** | +679 % |
-| 2307.03365 | 2533 | 10.6 s | 24.5 s | +131 % | +199 % |
-| 2306.03687 | 1262 |  8.6 s | 17.9 s | +108 % | +112 % |
-| 2308.01418 | 4382 | 31.8 s | 62.2 s |  +96 % |  +84 % |
-| 2306.04637 | 4151 | 37.3 s | 70.7 s |  +90 % |  +78 % |
-
-Best improvements (both-OK):
-
-| paper | formulae | l_wall | h_wall | Δwall |
+| Mode | OK / 100 | OOM aborts | Wall (n=98) | Δ vs LEGACY |
 |---|---:|---:|---:|---:|
-| 2307.05952 | 1770 | 22.1 s | 10.5 s | **−52 %** |
-| 2308.04253 | 1483 | 36.2 s | 21.9 s | −40 % |
-| 2305.19222 | 2415 | 31.2 s | 19.0 s | −39 % |
-| 2306.07378 | 2333 | 48.1 s | 32.7 s | −32 % |
-| 2308.06104 | 8392 | 64.0 s | 44.6 s | −30 % |
+| LEGACY | 98 | 0 | 2227.1 s | — |
+| HYBRID (cap = 500) | 98 | 0 | 2238.6 s | **+0.5 %** |
+| HYBRID, no cap (historical) | 79 | 19 | 2955.4 s on n=79 | — |
 
-### Reconciliation with the development fixtures
+Per-paper distribution on the cap=500 / n=98 subset: median
+0.0 %, mean +1.0 %, 76 of 98 within ±5 %. The cap+fallback fixed
+the 19 OOMs the no-cap hybrid produced on this fixture.
 
-The Article-2025.tex acceptance result (1.018× LEGACY, 87 %
-raw-unambiguous formulae) does not generalise to the wp4
-math-heavy tail. On this 100-paper sample, HYBRID is **1.13×
-LEGACY** on the same-success subset and produces **19 net
-failures** that LEGACY does not. The acceptance gate
-(≤1.05× LEGACY, set on the development fixture) does not hold
-at corpus scale on the math-bound tail.
+### What we tried that didn't move the needle
 
-### Likely root cause
+Documented for triage when similar ideas resurface:
 
-The OOM-aborting papers consistently spend 12–40 s in
-`phase_math_parse_us` under LEGACY — they have many formulae
-and at least some highly ambiguous ones. HYBRID routes
-`ambiguity_metric() >= 2` formulae through `compute_symches`,
-which allocates `Nidset` + `Glade` per glade and `Vec<Factoring>`
-per and-node. On the worst formulae the factoring count appears
-to explode past 8 GB. LEGACY's `Tree::next()` Step iteration
-streams the same forest without holding the whole bocage view
-in memory.
+- `XM::Lexeme(String, _)` → `XM::Lexeme(Rc<str>, _)` and a
+  thread-local ASCII byte cache — ~0 % on Article-2025. Kept
+  because it removes deep-clone hazards from the marpa cache
+  hit/insert paths.
+- `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>` — ~0 %. The
+  marpa cache `.clone()` was already cheap relative to
+  `compute_symches` work.
+- marpa `HashMap<usize, _>` caches → `Vec<Option<_>>` indexed
+  by sequential id + slice-children API — ~3 %.
+- marpa `glades` + `nidset_by_id` → `Vec<Option<_>>` — another
+  ~3 %.
+- `SmallVec` for `Symch.factorings` — counter data
+  (`max_factorings_per_symch=4`, 99.98 % singletons) shows this
+  would *increase* memory by ~72 MB on a 3M-symch workload
+  for ~zero runtime gain. **Closed without implementation.**
 
-### Actionable next steps (catalogue, not commitments)
+Total Rust-side micro-optimization: ~6 % cumulative. The
+hybrid-routing decision delivered the ~37 % saving needed for
+parity with LEGACY.
 
-1. **Triage one OOM** (e.g. `2310.07954`, `2310.04665`) with
-   `LATEXML_MARPA_ASF_AUDIT=1` + `LATEXML_MATH_AMBIGUITY_AUDIT=1`
-   to identify which glade explodes the factoring count.
-2. **Widen the HYBRID router**: today the router branches on
-   `ambiguity_metric >= 2`. Add a second predicate — total
-   bocage and-node count or a peak-factoring estimate — and
-   route past a size threshold back to LEGACY Step iteration.
-3. **Revisit `compute_symches` allocation** for high-cardinality
-   factorings: at minimum, cap factoring enumeration with an
-   early bail-out + LEGACY fallback when the cap trips.
+### Audit env vars
 
-Artifacts from this run (not in-repo; under `/tmp/asf_math100/`):
-- `compare.tsv` — per-paper wall + math + outcome side-by-side
-- `out_hybrid/results.tsv` + `telemetry.jsonl` — HYBRID run
-- `out_legacy/results.tsv` + `telemetry.jsonl` — LEGACY run
+- `LATEXML_MATH_AMBIGUITY_AUDIT=1` — per-formula ambiguity-metric
+  counter (raw-unambiguous fraction across the corpus).
+- `LATEXML_MARPA_HYBRID_AUDIT_PARITY=1` — runs both ASF and
+  Tree-iter on every raw-unambiguous formula; asserts they
+  produce equivalent `ParseOutcome` (treats `Empty`/`Rejected`
+  as "no parse survived" per `parity_outcomes_compatible`).
+- `LATEXML_MARPA_ASF_AUDIT=1` — emits per-formula ASF traversal
+  detail (peak alternative count, pruning counter, large-bocage
+  fallback fire events with bocage stats).
+- `MARPA_ASF_STATS=1` — opt-in marpa-side instrumentation
+  (singleton fast path hit rate, glade count, factoring count,
+  cache hit/miss). Prints one snapshot per converted document.
 
----
+### Recorded principles
 
-## Large-bocage fallback resolves the 100-paper regressions (2026-05-18, landed)
+- **Massive bocage explosions are a pipeline flaw**, not a load
+  to absorb. Documented as
+  `feedback_ambiguity_explosion_is_a_flaw` in session memory.
+  When the cap fires, fix the underlying grammar/action
+  ambiguity; do not raise the cap.
+- **The residual ASF_ONLY → LEGACY gap is structural.** ASF
+  builds a Rust-side glade/Nidset representation that
+  Step-iteration skips; the singleton fast path eliminates
+  the factoring chain for 99.98 % of glades but the
+  glade-bookkeeping fixed overhead persists. Further wins live
+  in libmarpa C-side bocage walking (out of scope) or in
+  restructuring ASF to skip Nidset/Glade for wholly-unambiguous
+  forests (large refactor — HYBRID already achieves this from
+  the user's perspective).
 
-Action 2 from the previous section landed as marpa commit `5f6a19e`
-(`parser: allow hybrid fallback for large bocages`) on the
-`perf/asf-allocation-trim` branch, plus the latexml-oxide-side wire-in
-in `latexml_math_parser/src/parser.rs::parse_marpa` (`HYBRID_AND_NODE_LIMIT`).
+### Open items
 
-### How it works
+- **`Pi^N(p,q,…)` ambiguity explosion** (witness 2310.16583):
+  formulae produce 2762–3555 and-nodes each. UNKNOWN-as-function
+  + paren-comma-list — grammar cannot distinguish `Pi^N(p,q)` as
+  function-application vs `Pi^N · (p · q)`. Needs lexer-level
+  recognition of capital-Greek-letter-as-function in math
+  context, or a semantic pragma that prunes the multiplication
+  reading when a comma-separated arg list is present.
+- **4 GiB amsthm.sty load OOM**: several wp4 abort papers OOM
+  with `memory allocation of 4294967296 bytes failed` (exactly
+  2³² bytes) during `amsthm.sty` load. Smells like a signed
+  underflow producing `usize::MAX + 1` in a Vec presize. Unrelated
+  to the math-parser bocage path.
+- **Standing regression watch**: HYBRID vs LEGACY wall on the
+  100-paper math-bound sample. Quiet-host baseline: +0.5 %
+  delta on n=98 both-OK subset. Re-run on every meaningful
+  marpa or math-parser change; flag if HYBRID climbs back
+  toward LEGACY parity.
 
-`parse_hybrid_with_and_node_limit(..., max_and_nodes)` inspects the
-post-recognizer bocage's total and-node count via the new
-`Order::or_node_and_node_count_opt(...)` thin API. If the count
-exceeds the cap, the call returns `HybridParseResult::AmbiguousTree(Tree, BocageStats)`
-— a regular `Tree` iterator with the legacy six convergence caps
-(max_unique=10, max_consecutive_dupes=16, etc.) — instead of
-constructing the ASF's Rust-side glade/factoring view.
+### Reproducing the corpus measurements
 
-The math parser wires the cap with **default `500` and-nodes**,
-overridable via `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT=N`
-(`=0`/`=none` disables the cap and forces pure ASF on every
-ambiguous formula, matching the prior behaviour). 500 was chosen
-because downstream consumers (pragmatics selection + XMath
-builders) cannot usefully process more than a handful of distinct
-parses per formula — beyond a few hundred and-nodes the
-`dispatch_action` Cartesian product produces alternatives that get
-collapsed or dropped anyway.
+```bash
+# Build release+native+cortex once:
+cargo build --release --bin cortex_worker --features cortex
 
-### Measurement on the math-bound 100-paper sample
+# HYBRID (default):
+tools/benchmark_canvas.sh \
+  --input-dir <math-bound-100-zips>/in \
+  --output-dir /tmp/out_hybrid \
+  --workers 8 --timeout 180
 
-Same input set as the prior section. Build = release+native+cortex,
-8 workers, 180 s timeout, 8 GB ulimit.
+# LEGACY control:
+env LATEXML_MARPA_LEGACY=1 tools/benchmark_canvas.sh \
+  --input-dir <same input> --output-dir /tmp/out_legacy \
+  --workers 8 --timeout 180
+```
 
-Two passes are recorded below. **The first pass overstated the
-gain** because the host had the `warning_papers_4` canvas running
-in the background, so the LEGACY column was inflated by CPU
-contention. The second pass is on an idle host against the merged
-marpa master and is the load-bearing comparison.
-
-#### Initial pass (2026-05-18, perf branch `5f6a19e`, contended host)
-
-| Metric | LEGACY | HYBRID (cap=500) | Δ |
-|---|---:|---:|---:|
-| Success rate | 98/100 | **98/100** | **+19 vs HYBRID no-cap** |
-| OOM aborts | 0 | **0** | **−19 vs HYBRID no-cap** |
-| Wall (both-OK, n=98) | 3188.6 s | 2274.3 s | −28.7 % (contended) |
-
-#### Quiet-host re-measurement (2026-05-18, marpa master `0bf24111`)
-
-| Metric | LEGACY | HYBRID (cap=500) | Δ |
-|---|---:|---:|---:|
-| Success rate | 98/100 | **98/100** | unchanged |
-| OOM aborts | 0 | **0** | unchanged |
-| Wall (both-OK, n=98) | 2227.1 s | 2238.6 s | **+0.5 %** |
-| Worst paper Δwall | — | +19.5 % (`2307.03365`, 7.7 s → 9.2 s) | |
-| Best paper Δwall | — | −14.6 % (`2310.10742`) | |
-
-Per-paper distribution (n=98): median +0.0 %, mean +1.0 %. 14
-papers regress >+5 %, 76 neutral (±5 %), 8 improve >−5 %.
-
-#### What this means
-
-- **HYBRID itself did not regress**: 2238.6 s now vs 2274.3 s on
-  the perf branch contended pass = −1.6 % absolute. The drop in
-  the headline gap came almost entirely from LEGACY getting
-  faster on an idle host (3188.6 s → 2227.1 s, −30 %).
-- **The acceptance bar held**: HYBRID is at parity with LEGACY
-  (+0.5 % median 0) on a math-heavy corpus. The 19-OOM
-  protection (which is what the cap+fallback was actually built
-  for) survives unchanged.
-- The original `−28.7 %` figure should not be used as a forward
-  claim — it was a snapshot of a single contended host. The
-  quiet-host number (+0.5 %) is the comparable measurement.
-
-### Why HYBRID-with-fallback meets LEGACY
-
-Two effects compound on this corpus:
-
-1. The cheap unambiguous Tree path (~60–87 % of formulae per
-   `LATEXML_MATH_AMBIGUITY_AUDIT=1`) bypasses ASF
-   construction entirely, matching what the hybrid acceptance
-   gate was originally measuring on Article-2025.tex.
-2. The genuinely ambiguous formulae split into two populations:
-   small-bocage ones go through ASF (singleton + clone trims
-   keep this path cheap), large-bocage ones (>500 and-nodes)
-   go through the same Tree path LEGACY uses *but with
-   libmarpa's already-computed bocage shared* (no second
-   recognizer pass).
-
-Pure ASF-only on this corpus loses to LEGACY because the
-exploded forests force `compute_symches` to enumerate
-factorings the consumer drops anyway. The fallback restores
-the layering: ASF handles the cases that benefit from it, Tree
-iteration handles the rest, and neither path holds the whole
-bocage view in Rust memory.
-
-### Recorded principle
-
-Massive bocage explosions are themselves a pipeline flaw —
-documented as `feedback_ambiguity_explosion_is_a_flaw` in
-session memory. The fallback is a safety net, not a strategy:
-each formula that fires it is a candidate for grammar-level
-category tightening or earlier action-time pruning. Witness:
-`2310.16583` ("Pi^N(p,q,…)") formulae produce 2762–3555
-and-nodes each — a stable explosion pattern that should be
-collapsible at the recognizer or action layer.
+Capture `results.tsv` (per-paper wall, status, category) and
+`telemetry.jsonl` (phase breakdown). Compare on the both-OK
+subset.
