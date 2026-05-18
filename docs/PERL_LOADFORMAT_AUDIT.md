@@ -432,8 +432,35 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
   latex_constructs.rs always runs in BOTH the dump-skip and
   dump-load paths.
 * Status: **NEAR-PARITY** — no immediate action required.
-* TODO: spot-check whether any of the 144 extras are
-  documented intentional divergences vs accidental drift.
+* **CS-set spot-check — RESOLVED 2026-05-18 (this session).** Diff
+  by normalized CS name (1035 Perl vs 1094 Rust; comment-skipping
+  regex, param-spec stripped):
+  * In Perl but not Rust (43): mostly the 45-CS "same-file
+    relocation" backlog already listed above (L80-89). Stable;
+    not blocking.
+  * In Rust but not Perl (102): of these, 54 are reverse-migrations
+    from Perl `latex_base.pool.ltxml` / `latex_bootstrap.pool.ltxml`
+    consolidated into latex_constructs.rs (Apr 26-27 commits, see
+    above). The other 48 are either:
+    * Modern LaTeX2e kernel CSes post-2020 (`\IfPackageLoadedTF`,
+      `\NewCommandCopy`, etc. — documented in
+      `latex_constructs_rust_only.rs:30-60`),
+    * LaTeXML-internal helpers (`\ltx@hard@MessageBreak`,
+      `\ltx@ifpackageloaded`),
+    * Defensive dump-path coverage for `latex_base.rs` CSes
+      (`\appendixname`, `\thefootnote`, `\columnsep`, …) per the
+      design pattern in `latex_constructs_rust_only.rs:179-209`.
+  * **Side finding**: 43 CSes are defined in BOTH
+    `latex_constructs.rs` AND `latex_constructs_rust_only.rs` with
+    identical bodies. Since rust_only loads last, the
+    latex_constructs.rs defs for these are dead-code overrides.
+    Also: 37 CSes have multiple definitions WITHIN
+    `latex_constructs.rs` itself (most context-scoped re-bindings,
+    but a few like `\appendixname` L3746+L10036, `\figurename`
+    L6796+L7023, `\thebibliography@ID` L2085+L7499 look like
+    drift). Deduplication is a separate (multi-iter) refactor —
+    needs verification each removal doesn't break a context-scoped
+    binding. Not blocking strict-Perl parity.
 
 ## Dump-completeness gaps
 
