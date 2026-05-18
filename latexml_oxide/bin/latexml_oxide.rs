@@ -110,7 +110,19 @@ struct Cli {
   )]
   graphics_svg_threshold_kb: u32,
 
-  /// Output type (currently only "document" supported; "archive" auto-detected from --dest)
+  /// Output extraction mode (Perl Pack.pm `whatsout`):
+  ///   `document` (default) → full post-processed HTML;
+  ///   `fragment`           → embeddable inline snippet
+  ///                          (`<div class="ltx_document">` unwrapped,
+  ///                          inline-content `<p>` promoted to
+  ///                          `<span class="text">`, RDFa copied from
+  ///                          the document root);
+  ///   `math`               → math subtree (least common ancestor of all
+  ///                          `<math>` nodes, or math-image fallback,
+  ///                          or `fragment` if no math present).
+  ///
+  /// `archive` is accepted for backward-compat and treated as `document` —
+  /// the zip output mode is decided independently by `--dest *.zip`.
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
 
@@ -604,6 +616,17 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           target.clone()
         };
 
+        // Resolve `--whatsout <mode>` (Perl Pack.pm whatsout option).
+        // Unknown values silently fall back to Document — same as Perl
+        // `pack_collection`. `archive` is accepted for backward compat
+        // but maps to Document (the zip wrap is decided by --dest *.zip,
+        // not by whatsout extraction).
+        let whatsout_mode = cli
+          .whatsout
+          .as_deref()
+          .and_then(latexml_post::extract::Whatsout::from_cli)
+          .unwrap_or_default();
+
         let output = run_post_processing(&xml, &PostOptions {
           pmml: cli.pmml || cli.post || is_html_format,
           cmml: cli.cmml,
@@ -623,6 +646,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
+          whatsout: whatsout_mode,
         });
         if is_zip_output {
           // whatsout=archive: pack output into ZIP

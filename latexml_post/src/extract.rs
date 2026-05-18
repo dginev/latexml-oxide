@@ -29,6 +29,57 @@ use libxml::tree::Node;
 
 use crate::document::PostDocument;
 
+/// Output extraction mode — port of Perl `LaTeXML::Util::Pack`'s
+/// `whatsout` option (Pack.pm L323-345). Selects which subtree of the
+/// post-processed document to serialize and ship to the user.
+///
+/// * [`Whatsout::Document`] — full document, no extraction (default).
+/// * [`Whatsout::Fragment`] — embeddable HTML snippet via
+///   [`get_embeddable`].
+/// * [`Whatsout::Math`] — math subtree (or fallback) via [`get_math`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Whatsout {
+  #[default]
+  Document,
+  Fragment,
+  Math,
+}
+
+impl Whatsout {
+  /// Parse a CLI string into the matching variant. Returns `None` for
+  /// unrecognized values; callers typically fall back to `Document`.
+  /// Mirrors Perl `pack_collection`'s string-tag dispatch — accepts
+  /// `archive` for backward-compat but maps it to `Document` (archive
+  /// bundling is the `pack::pack_archive` concern, not extraction).
+  pub fn from_cli(s: &str) -> Option<Self> {
+    match s {
+      "document" | "archive" => Some(Whatsout::Document),
+      "fragment" => Some(Whatsout::Fragment),
+      "math" => Some(Whatsout::Math),
+      _ => None,
+    }
+  }
+}
+
+/// Apply the requested [`Whatsout`] extraction to `doc` and return the
+/// serialized subtree. Returns the full document for
+/// [`Whatsout::Document`] (the default no-op) or when extraction finds
+/// no candidate node.
+///
+/// Wraps the two `get_*` helpers + libxml `node_to_string` so callers
+/// don't have to thread the inner [`libxml::tree::Document`] through.
+pub fn serialize_whatsout(doc: &PostDocument, mode: Whatsout) -> String {
+  match mode {
+    Whatsout::Document => doc.to_xml_string(),
+    Whatsout::Fragment => get_embeddable(doc)
+      .map(|n| doc.get_document().node_to_string(&n))
+      .unwrap_or_else(|| doc.to_xml_string()),
+    Whatsout::Math => get_math(doc)
+      .map(|n| doc.get_document().node_to_string(&n))
+      .unwrap_or_else(|| doc.to_xml_string()),
+  }
+}
+
 /// XPath that matches the `<math>` (HTML5 / MathML) and `<Math>`
 /// (legacy LaTeXML pre-MathML) elements anywhere in the document,
 /// regardless of namespace prefix.
@@ -288,6 +339,54 @@ mod tests {
     let d = doc(xml);
     let node = get_math(&d).expect("some node");
     assert_eq!(node.get_name(), "span");
+  }
+
+  #[test]
+  fn whatsout_from_cli_recognized() {
+    assert_eq!(Whatsout::from_cli("document"), Some(Whatsout::Document));
+    assert_eq!(Whatsout::from_cli("fragment"), Some(Whatsout::Fragment));
+    assert_eq!(Whatsout::from_cli("math"), Some(Whatsout::Math));
+    // Backward-compat: `--whatsout archive` was historically how the
+    // zip output mode was selected; now archive bundling is
+    // controlled separately (by `--dest *.zip`) so the extraction
+    // step is a no-op.
+    assert_eq!(Whatsout::from_cli("archive"), Some(Whatsout::Document));
+    assert_eq!(Whatsout::from_cli("nonsense"), None);
+  }
+
+  #[test]
+  fn whatsout_default_is_document() {
+    assert_eq!(Whatsout::default(), Whatsout::Document);
+  }
+
+  #[test]
+  fn serialize_whatsout_document_matches_full_xml() {
+    let xml = r#"<html><body><div class="ltx_document"><p>hi</p></div></body></html>"#;
+    let d = doc(xml);
+    let full = serialize_whatsout(&d, Whatsout::Document);
+    assert!(full.contains("<html>") && full.contains("</html>"));
+  }
+
+  #[test]
+  fn serialize_whatsout_fragment_strips_html_wrapper() {
+    let xml = r#"<html><body><div class="ltx_document"><p>hi</p></div></body></html>"#;
+    let d = doc(xml);
+    let frag = serialize_whatsout(&d, Whatsout::Fragment);
+    // Fragment unwraps ltx_document and promotes the lone-text <p>
+    // to <span class="text"> — the result should NOT carry the
+    // <html>/<body> wrapper.
+    assert!(!frag.contains("<html>"), "frag contains html wrapper: {frag}");
+    assert!(frag.contains("hi"));
+  }
+
+  #[test]
+  fn serialize_whatsout_math_returns_math_subtree() {
+    let xml = r#"<html><body><p>txt</p><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>z</mi></math></body></html>"#;
+    let d = doc(xml);
+    let m = serialize_whatsout(&d, Whatsout::Math);
+    assert!(m.contains("<mi>z</mi>"));
+    assert!(!m.contains("<html>"), "math contains html wrapper: {m}");
+    assert!(!m.contains("<p>txt</p>"), "math contains unrelated text: {m}");
   }
 
   #[test]
