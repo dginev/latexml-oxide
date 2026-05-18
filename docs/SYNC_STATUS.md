@@ -525,14 +525,15 @@ assertion (not just code == 0; the bug had code == 0).
 
 ## Acceptance gates
 
-| Gate | Current (2026-05-15) | Target |
+| Gate | Current (2026-05-18) | Target |
 |---|---|---|
-| `cargo test --tests` | **1220/0/0** | unchanged |
+| `cargo test --tests` | **1309/0/0** | unchanged |
 | `cargo clippy --workspace --all-targets` | **0 warnings** | unchanged |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | Round-25 cumulative regressions | 31 fixed, ~14 deferred | drive deferred to zero |
-| 1910.01256 mini-benchmark vs pdflatex×2 | **1.18s** vs **1.11s** idle (tied within noise) | beat 2× pdflatex (currently met at 0.4× the stretch goal) |
+| 1910.01256 mini-benchmark vs pdflatex×2 | release ~0.73s; maxperf ~0.69s (vs ~1.11s pdflatex idle) | beat 2× pdflatex (met) |
+| Distribution build | `cargo build --no-default-features --profile maxperf` | maxperf binary ~55 MB |
 
 Distribution follow-up — **LANDED 2026-05-15** (branch
 `distribution-include-bytes-bundling`, merged into the testing
