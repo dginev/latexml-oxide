@@ -259,16 +259,15 @@ struct Cli {
   telemetry_out: Option<String>,
 }
 
-/// Allocation-failure hook: detects the runaway-macro-expansion
-/// pathology at the moment it manifests. See cortex_worker.rs for
-/// full rationale.
+/// Allocation-failure hook — emits a `Fatal:` line in the project's
+/// logging convention so aggregation tooling records the failure, then
+/// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
+/// for full rationale + witness paper.
 fn custom_alloc_error_hook(layout: Layout) {
   eprintln!(
-    "\n==> latexml-oxide: allocation of {} bytes (align {}) failed.\n\
-     ==> Likely cause: runaway macro expansion (the gullet's pushback Vec\n\
-     ==>   grew unbounded across many unread cycles, triggering Vec's\n\
-     ==>   capacity-doubling past the worker memory budget).\n\
-     ==> Exiting cleanly with code 137.",
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
+     likely runaway macro expansion (gullet pushback Vec growth past \
+     worker memory budget). Exiting with code 137.",
     layout.size(),
     layout.align()
   );

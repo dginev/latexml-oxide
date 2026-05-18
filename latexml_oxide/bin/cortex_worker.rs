@@ -874,25 +874,34 @@ fn write_timeout_placeholder_zip(
 // --- Main ---
 
 /// Custom allocation-failure hook: detects the runaway-macro-expansion
-/// pathology at the moment it manifests (Rust's `alloc::handle_alloc_error`),
-/// prints a clean stderr diagnostic with the requested layout, and exits
-/// the worker with code 137 so `tools/benchmark_canvas.sh` categorises
-/// it as `oom_or_kill` rather than `abort`. No overhead on the normal
-/// digestion path — the hook fires only when the allocator returns null.
+/// pathology at the moment it manifests (Rust's `alloc::handle_alloc_error`)
+/// and emits a `Fatal:` line matching the project's logging convention so
+/// aggregation tooling (`grep Fatal:`, `tools/parity_stats.sh`,
+/// `tools/benchmark_canvas.sh`, telemetry's `fatal_errors` field) records
+/// it. Exits with code 137 → canvas categorises as `oom_or_kill` rather
+/// than `abort`.
 ///
 /// Witness pathology: paper 2305.16331 + `\u\i` under `mathtext + T2A`
 /// drives `gullet::pushback` into runaway growth via repeated unread of
 /// growing-each-cycle invoked-Tokens; the next `Vec::reserve` doubles
-/// capacity past the 4 GiB / 8 GB ulimit boundary and fails. With this
-/// hook installed, that failure becomes a per-document fatal rather
-/// than a process abort.
+/// capacity past the 4 GiB / 8 GB ulimit boundary and fails.
+///
+/// No overhead on the normal digestion path — fires only when the
+/// allocator returns null. The hook avoids any heap allocation in its
+/// body (no `format!`, no string concat) because the global allocator
+/// has just failed: `eprintln!` writes via a stack-allocated formatter.
 fn custom_alloc_error_hook(layout: Layout) {
+  // Single Fatal: line on its own — matches `log_fatal` output shape
+  // (`Fatal:<Target>:<Category> <message>`) so aggregation grep keys
+  // on it cleanly. `oom`/`alloc_failed` are not enum variants of
+  // `ErrorTarget`/`ErrorCategory` because we can't construct those
+  // here without an `arena`/allocator round-trip; using the same shape
+  // string is enough for the harness.
   eprintln!(
-    "\n==> latexml-oxide: allocation of {} bytes (align {}) failed.\n\
-     ==> Likely cause: runaway macro expansion (the gullet's pushback Vec\n\
-     ==>   grew unbounded across many unread cycles, triggering Vec's\n\
-     ==>   capacity-doubling past the worker memory budget).\n\
-     ==> Exiting cleanly with code 137 (canvas categorises as oom_or_kill).",
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
+     likely runaway macro expansion (gullet pushback Vec growth past \
+     worker memory budget). Witness: paper 2305.16331 + `\\u\\i` under \
+     `mathtext + T2A`. Exiting with code 137.",
     layout.size(),
     layout.align()
   );
