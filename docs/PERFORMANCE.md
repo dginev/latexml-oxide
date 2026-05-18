@@ -554,3 +554,77 @@ Total Rust-side allocation cleanup: ~6%. The hybrid routing
 delivered the remaining ~37% reduction needed to reach LEGACY
 parity. **Lesson**: structural algorithmic choices dominate
 allocation micro-optimization for this workload.
+
+---
+
+## Codex senior-engineer optimization list — completed
+
+Beyond the hybrid landing, the full optimization list from
+`marpa/docs/ASF_PERFORMANCE_FINDINGS.md` was exhausted. Each
+item, its outcome on `Article-2025.tex`, and the commit:
+
+| # | Item | Commit | Impact |
+|---|---|---|---|
+| 1 | Hybrid routing | latexml `9318960974` / marpa `60b320b` | ASF→HYBRID: 17.0s → 12.4s |
+| 2 | Singleton fast path in `compute_symches` | marpa (codex implementation, embedded in `60b320b`) | embedded in hybrid baseline |
+| 3 | Bocage metadata caches (`AndNodeInfo`/`OrNodeInfo`) | marpa `a045778` | perf-flat (RefCell≈FFI), architectural encapsulation |
+| 4 | Flatten factoring storage | DEFERRED per codex's "do not start here" caution | — |
+| 5 | Clean traversal internals | marpa `a045778` (+ codex `60b320b` for generic recursion / VisitState) | quality + correctness |
+| 6 | Odometer Cartesian product | latexml `109390fe92` | ~1.5% on HYBRID (only ambiguous-glade reduction) |
+
+### Quality / correctness items added beyond the list
+
+- **`collect_factorings` propagates `Result`** (marpa `96fd092`)
+  — prior `.unwrap_or(AndNodeInfo{cause:-1,...})` silently
+  mapped FFI errors to a bogus token-and-node default.
+- **`parity_outcomes_compatible` helper + 8 unit tests**
+  (latexml `0a8a171859`) — the audit's `Empty`-vs-`Rejected`
+  false-positive on shallow pragma rejections is now guarded
+  by regression tests.
+- **`Glade.visited` field + `glade_is_visited` helper removed**
+  — dead defensive code post-`VisitState`.
+- **`Rc<str>` Lexeme + `Rc<Vec<Option<XM>>>` ParseTree** kept
+  even though direct perf was 0% — removes deep-clone hazards
+  from the marpa cache hit/insert paths.
+
+### Final 3-way wall (closing state)
+
+`Article-2025.tex`, bench profile, 3-run avg:
+
+| Mode | Wall | vs LEGACY |
+|---|---:|---:|
+| **HYBRID default** | **12.45s** | **1.01×** |
+| `LATEXML_MARPA_LEGACY=1` | 12.32s | 1.00× |
+| `LATEXML_MARPA_ASF_ONLY=1` | 16.80s | 1.36× |
+
+### Residual ASF_ONLY structural gap
+
+ASF_ONLY remains ~37% slower than LEGACY. After all Rust-side
+micro-optimization, the gap is **structural**: ASF builds a
+Rust-side glade representation (Nidset + Glade allocations
+plus the bocage walk in `compute_symches`) that Step-iteration
+skips entirely. The singleton fast path eliminates the
+factoring chain for 87% of glades, but the per-glade
+bookkeeping fixed overhead persists.
+
+Further wins require either libmarpa C-side surgery (out of
+scope — we don't own libmarpa) or restructuring ASF to skip
+Nidset/Glade allocation for wholly-unambiguous forests (large
+refactor; hybrid already achieves this from the user
+perspective by skipping ASF entirely for that case).
+
+Both yield diminishing returns vs the hybrid escape hatch
+that's now the default.
+
+### Tests at session close
+
+- marpa: **23/0** (including 2 new hybrid-routing tests:
+  `hybrid_parse_returns_tree_for_unambiguous_input` with a
+  `PanicTraverser` and `hybrid_parse_traverses_asf_for_ambiguous_input`)
+- latexml-oxide: **1309/0** (1301 prior + 8 new
+  `parity_outcomes_compatible_*` parity-helper unit tests)
+- Parity audit (`LATEXML_MARPA_HYBRID_AUDIT_PARITY=1`) clean on:
+  - Article-2025.tex (3902 parse calls)
+  - TheDiskComplex.tex (681 parse calls)
+- sin[XY] regression fixture (`physics.tex`): bit-identical HTML
+  output across all three modes.
