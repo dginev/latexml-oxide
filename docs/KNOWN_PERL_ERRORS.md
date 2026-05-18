@@ -702,3 +702,29 @@ change correcting the font scaling to match LaTeX defaults; safe
 because the `Common/Font.pm` semantic value already encodes 24.88.
 Open for future round if visual quality matters more than Perl-test
 parity.
+
+## 24. `latex_constructs.pool.ltxml` `\@evenfoot` defined twice (typo for `\@evenhed`)
+
+**Perl source (`Engine/latex_constructs.pool.ltxml` L1254-1257):**
+```perl
+DefMacroI('\@oddfoot',  undef, Tokens());
+DefMacroI('\@oddhed',   undef, Tokens());
+DefMacroI('\@evenfoot', undef, Tokens());
+DefMacroI('\@evenfoot', undef, Tokens());
+```
+
+L1255 is `\@oddhed` (abbreviated from kernel `\@oddhead`). By the
+oddfoot/oddhed pattern, L1257 was clearly intended to be `\@evenhed`
+— defining the matching abbreviated stub. Instead it's a verbatim
+duplicate of L1256, leaving `\@evenhed` undefined while `\@evenfoot`
+is redundantly defined twice.
+
+**Impact:** Functionally zero — `\@oddhed` / `\@evenhed` are
+LaTeXML-internal stubs that nothing references (the kernel uses
+`\@oddhead` / `\@evenhead`). The duplicate `\@evenfoot` Def just
+overwrites itself identically.
+
+**Rust resolution:** kept the duplicate to match Perl exactly,
+including in dump output (Perl emits `\@evenfoot` 3× in
+`latex_dump.pool.ltxml`). No fix because no observable behavior
+diverges. Documented here in case future Perl-side audit fixes it.
