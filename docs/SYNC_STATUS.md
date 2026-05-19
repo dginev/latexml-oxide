@@ -1114,10 +1114,42 @@ A multi-session effort to swap the math parser's Tree-iteration
    (1272 → 1292 ASF; LEGACY 1301/0 preserved).
 3. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
    measurable perf gain on ambiguous formulas.
-4. ⏳ **Open**: 9 remaining ASF failures — ambiguous_relations,
-   count_parses, mathtools, metarelation_elision, physics,
-   plainfonts, qm, standalone_modifiers, vertbars. See research
-   notes in `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
+4. ⏳ **Open** (refreshed 2026-05-19): the 9-test list below was
+   stale. A fresh `LATEXML_MARPA_ASF_ONLY=1 cargo test --tests
+   --no-fail-fast` run yields **1327/1/0** — only one residual
+   failure: `physics_test` (in `latexml_oxide/tests/80_complex.rs`).
+   Root cause **identified** but not yet fixed:
+   `latexml_math_parser/src/util.rs::create_xmrefs`'s XM::Lexeme
+   branch eagerly calls `document.generate_id` on lexeme XMTok
+   nodes at action-evaluation time. Under ASF Cartesian product
+   the action runs across more combos than HYBRID's Tree
+   iterator (108 enumerated for HYBRID vs 84 for ASF on this
+   formula — but ASF's 6-unique vs HYBRID's 2-unique means ASF
+   touches one more lexeme node via `create_xmrefs`). The extra
+   `generate_id` consumes an `_ID_counter_` slot on the math
+   ancestor that never appears in the rendered XMRefs — surviving
+   lexemes end up renumbered +1 (witness: `S1.Ex14.m1.15` vs
+   expected `S1.Ex14.m1.14`).
+   Failed fix attempt (2026-05-19): tried setting `_pxmkey` on
+   lexeme nodes and deferring `generate_id` to `resolve_xmkeys`
+   time. Breaks **both** HYBRID and ASF because the deferred
+   resolution flow doesn't compose with the digest-time XMDual
+   `after_close_late` handler in
+   `latexml_engine/src/base_xmath.rs` (which walks
+   `descendant::*[@_xmkey]` and generates IDs as a side-effect).
+   The proper fix needs to either (a) make `after_close_late`
+   skip parser-side `_xmkey` namespaces, (b) reorder the math
+   parser's install + resolve_xmkeys so that the XMDual handler
+   sees only the surviving subset, or (c) eliminate
+   `create_xmrefs`'s eager `generate_id` on lexemes some other
+   way. Deferred to a focused session.
+   Historical context: the old 9-test list was
+   `ambiguous_relations, count_parses, mathtools,
+   metarelation_elision, physics, plainfonts, qm,
+   standalone_modifiers, vertbars` — those were the ASF failures
+   as of 2026-05-17 / 2026-05-18; subsequent landings (pragma
+   refinements documented in `MATH_PARSER_ASF_TIEBREAKING.md`)
+   closed all but `physics`.
 5. ⏳ **Open principled refinement**: `modified_term` grammar
    category (proposed 2026-05-17; user-articulated). Expected to
    subsume 5-6 of the remaining 9 by structural change at the
