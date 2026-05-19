@@ -28,6 +28,15 @@ fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   .or_else(lookup_font)
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -386,11 +395,11 @@ LoadDefinitions!({
   //======================================================================
   // 3.6 Additional Registers and Marks — Perl L221-226
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", None);
-  DefMacro!("\\firstmarks Number", None);
-  DefMacro!("\\botmarks Number", None);
-  DefMacro!("\\splitfirstmarks Number", None);
-  DefMacro!("\\splitbotmarks Number", None);
+  def_macro_noop("\\topmarks Number")?;
+  def_macro_noop("\\firstmarks Number")?;
+  def_macro_noop("\\botmarks Number")?;
+  def_macro_noop("\\splitfirstmarks Number")?;
+  def_macro_noop("\\splitbotmarks Number")?;
 
   //======================================================================
   // 3.7 Input Handling — Perl L233-258
@@ -508,10 +517,10 @@ LoadDefinitions!({
   // 4.1 Mixed-Direction Typesetting — Perl L367-386
   DefRegister!("\\TeXXeTstate" => Number::new(0));
 
-  DefMacro!("\\beginL", None);
-  DefMacro!("\\beginR", None);
-  DefMacro!("\\endL", None);
-  DefMacro!("\\endR", None);
+  def_macro_noop("\\beginL")?;
+  def_macro_noop("\\beginR")?;
+  def_macro_noop("\\endL")?;
+  def_macro_noop("\\endR")?;
 
   DefRegister!("\\predisplaydirection" => Number::new(0));
 
@@ -527,7 +536,7 @@ LoadDefinitions!({
   // X.X Orphans / pdfTeX-leftover entries — Perl L399-407
   DefPrimitive!("\\pdftexcmds@directlua{}", None);
   DefRegister!("\\synctex", Number::new(0));
-  DefMacro!("\\reserveinserts{}", None);
+  def_macro_noop("\\reserveinserts{}")?;
 
   //======================================================================
   // etex.sty register-allocator macros (etex.sty L332-348). Real defs

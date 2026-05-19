@@ -44,6 +44,15 @@ fn def_macro_identity(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
@@ -108,7 +117,7 @@ LoadDefinitions!({
   // author list note.
   DefMacro!("\\authors{}",
     "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
-  DefMacro!("\\alignauthor",    None);
+  def_macro_noop("\\alignauthor")?;
 
   // Perl L78-83: email / speaker
   DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
@@ -163,8 +172,8 @@ LoadDefinitions!({
   DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
   DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
   DefMacro!("\\indexauthor{}",     "\\@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
-  DefMacro!("\\preface",           None);
-  DefMacro!("\\thankstext",        None);
+  def_macro_noop("\\preface")?;
+  def_macro_noop("\\thankstext")?;
   DefMacro!("\\numberofauthors{}",
     "\\@add@frontmatter{ltx:note}[role=numberofauthors]{#1}");
   // \equalcontrib / \equalcont are defined kernel-level in
@@ -201,8 +210,8 @@ LoadDefinitions!({
   // address components will keep that error; all the OTHER fields above
   // are non-conflicting. Same caution for `\affil` — already overloaded
   // by amsart and other classes; leaving it to specific class bindings.
-  DefMacro!("\\bibcommenthead", None);
-  DefMacro!("\\jyear[]",        None);
+  def_macro_noop("\\bibcommenthead")?;
+  def_macro_noop("\\jyear[]")?;
   DefMacro!("\\resumen{}",         "\\@add@frontmatter{ltx:abstract}{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
@@ -477,9 +486,9 @@ LoadDefinitions!({
   Let!("\\reference", "\\bibitem");
 
   // Perl L282-284
-  DefMacro!("\\comment{}",    None);
+  def_macro_noop("\\comment{}")?;
   DefMacro!("\\etal",         "\\textit{et al.}");
-  DefMacro!("\\firstsection", None);
+  def_macro_noop("\\firstsection")?;
 
   // Perl L286-297: math/package autoloads — when a trigger CS is used and
   // not yet defined, require the specified package/class and re-trigger.

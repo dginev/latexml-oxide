@@ -21,6 +21,15 @@ use crate::prelude::*;
 // another sodef CS (e.g. `\so` -> `\textso`): since both names resolve to the
 // same `\lx@soul@letterspaced`, the state must also be keyed under the alias.
 // In Perl `Let` naturally preserves closure identity, so this step is implicit.
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl: soul.sty.ltxml
   // Space-Out and UnderLine package
@@ -89,10 +98,10 @@ LoadDefinitions!({
   RawTeX!("\\sodef\\textcaps{\\capsfont}{0.28em}{0.37em}{.37em}");
 
   // Ignorable caps customization
-  DefMacro!("\\capsdef {} {Dimension}{Dimension}{Dimension}", None);
-  DefMacro!("\\capssave{}", None);
-  DefMacro!("\\capsselect{}", None);
-  DefMacro!("\\capsreset", None);
+  def_macro_noop("\\capsdef {} {Dimension}{Dimension}{Dimension}")?;
+  def_macro_noop("\\capssave{}")?;
+  def_macro_noop("\\capsselect{}")?;
+  def_macro_noop("\\capsreset")?;
 
   // Underline (with optional frame color from \setulcolor)
   // Perl L69-72: framecolor property is getSOULcolor('soul_ul_color'), which
@@ -118,10 +127,10 @@ LoadDefinitions!({
     assign_value("soul_ul_color", color_str, Some(Scope::Global));
     Ok(())
   });
-  DefMacro!("\\setul{Dimension}{Dimension}", None);
-  DefMacro!("\\resetul", None);
-  DefMacro!("\\setuldepth{}", None);
-  DefMacro!("\\setuloverlap{Dimension}", None);
+  def_macro_noop("\\setul{Dimension}{Dimension}")?;
+  def_macro_noop("\\resetul")?;
+  def_macro_noop("\\setuldepth{}")?;
+  def_macro_noop("\\setuloverlap{Dimension}")?;
 
   // Strike-out (with optional strike color from \setstcolor)
   // Perl L86-91: framecolor property is a sub that calls getSOULcolor (L61-65
@@ -220,7 +229,7 @@ LoadDefinitions!({
 
   // Ignorable commands
   DefMacro!("\\soulomit{}", "#1");
-  DefMacro!("\\soulaccent{}", None);
-  DefMacro!("\\soulregister{}{}", None);
+  def_macro_noop("\\soulaccent{}")?;
+  def_macro_noop("\\soulregister{}{}")?;
   Let!("\\soulfont", "\\soulregister");
 });

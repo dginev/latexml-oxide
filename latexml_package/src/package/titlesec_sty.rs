@@ -13,13 +13,22 @@ fn titlesec_shape_class(shape: &str) -> Option<&'static str> {
   }
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: titlesec.sty.ltxml — stubbed since no styling was implemented,
   // but the star + non-star forms actually DO dynamic-macro work in Perl.
   // This cycle brings those to parity.
 
-  DefMacro!("\\titlelabel{}", None);
+  def_macro_noop("\\titlelabel{}")?;
   // \titleformat: star and normal forms
   DefMacro!("\\titleformat", "\\@ifstar{\\lx@titleformat@star}{\\lx@titleformat}");
 
@@ -86,28 +95,28 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\chaptertitlename",                        "\\chaptername");
-  DefMacro!("\\titlespacing OptionalMatch:* {}{}{}{}[]", None);
+  def_macro_noop("\\titlespacing OptionalMatch:* {}{}{}{}[]")?;
 
   DefMacro!("\\filright",  "\\raggedright");
   DefMacro!("\\filcenter", "\\centering");
   DefMacro!("\\filleft",   "\\raggedleft");
-  DefMacro!("\\fillast",   None);
+  def_macro_noop("\\fillast")?;
   DefMacro!("\\filinner",  "\\filleft");
   DefMacro!("\\filouter",  "\\filright");
   DefRegister!("\\wordsep", Dimension(0));
 
-  DefMacro!("\\titleline[]{}", None);
+  def_macro_noop("\\titleline[]{}")?;
   DefMacro!("\\titlerule", "\\@ifstar{\\lx@titlerule@star}{\\lx@titlerule}");
-  DefMacro!("\\lx@titlerule@star []{}", None);
-  DefMacro!("\\lx@titlerule []", None);
+  def_macro_noop("\\lx@titlerule@star []{}")?;
+  def_macro_noop("\\lx@titlerule []")?;
 
   DefConditional!("\\iftitlemeasuring");
-  DefMacro!("\\assignpagestyle{}{}", None);
-  DefMacro!("\\sectionbreak",       None);
-  DefMacro!("\\subsectionbreak",    None);
-  DefMacro!("\\subsubsectionbreak", None);
-  DefMacro!("\\paragraphbreak",     None);
-  DefMacro!("\\subparagraphbreak",  None);
+  def_macro_noop("\\assignpagestyle{}{}")?;
+  def_macro_noop("\\sectionbreak")?;
+  def_macro_noop("\\subsectionbreak")?;
+  def_macro_noop("\\subsubsectionbreak")?;
+  def_macro_noop("\\paragraphbreak")?;
+  def_macro_noop("\\subparagraphbreak")?;
 
-  DefMacro!("\\titleclass{}[]{} []", None);
+  def_macro_noop("\\titleclass{}[]{} []")?;
 });

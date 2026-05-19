@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: preview.sty.ltxml — stub to avoid errors
@@ -32,11 +41,11 @@ LoadDefinitions!({
     Digest!("\\Previewtrue")?;
   });
 
-  DefMacro!("\\PreviewMacro OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewEnvironment OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewSnarfEnvironment OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewOpen OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewClose OptionalMatch:* []{}", None);
+  def_macro_noop("\\PreviewMacro OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewEnvironment OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewSnarfEnvironment OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewOpen OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewClose OptionalMatch:* []{}")?;
 
   DefEnvironment!("{preview}", "#body");
   DefEnvironment!("{nopreview}", "#body");

@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: varioref.sty.ltxml
@@ -20,29 +29,29 @@ LoadDefinitions!({
     locked => true);
 
   // Should use this, but....
-  DefMacro!("\\labelformat{}{}", None);
+  def_macro_noop("\\labelformat{}{}")?;
 
   Let!("\\Ref", "\\ref");
   Let!("\\Vref", "\\vref");
 
-  DefMacro!("\\refpagename", None);
-  DefMacro!("\\thevpagerefnum", None);
+  def_macro_noop("\\refpagename")?;
+  def_macro_noop("\\thevpagerefnum")?;
 
   // Ignorable?
-  DefMacro!("\\reftextafter", None);
-  DefMacro!("\\reftextbefore", None);
-  DefMacro!("\\reftextcurrent", None);
-  DefMacro!("\\reftextfaceafter", None);
-  DefMacro!("\\reftextfacebefore", None);
-  DefMacro!("\\reftextfaraway", None);
+  def_macro_noop("\\reftextafter")?;
+  def_macro_noop("\\reftextbefore")?;
+  def_macro_noop("\\reftextcurrent")?;
+  def_macro_noop("\\reftextfaceafter")?;
+  def_macro_noop("\\reftextfacebefore")?;
+  def_macro_noop("\\reftextfaraway")?;
 
   DefMacro!("\\reftextpagerange Semiverbatim Semiverbatim", "\\vref{#2}--\\vref{#3}");
   DefMacro!("\\reftextlabelrange Semiverbatim Semiverbatim", "\\vref{#2}--\\vref{#3}");
 
-  DefMacro!("\\reftextvario{}{}", None);
+  def_macro_noop("\\reftextvario{}{}")?;
 
   // Ignorable warnings stuff
-  DefMacro!("\\fullref", None);
-  DefMacro!("\\vrefshowerrors", None);
-  DefMacro!("\\vrefwarning", None);
+  def_macro_noop("\\fullref")?;
+  def_macro_noop("\\vrefshowerrors")?;
+  def_macro_noop("\\vrefwarning")?;
 });

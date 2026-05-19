@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: fontspec.sty.ltxml
@@ -10,18 +19,18 @@ LoadDefinitions!({
   // And when not ignorable, may need some font re-thinking...
 
   // General Font selection
-  DefMacro!("\\fontspec[]{}", None);
-  DefMacro!("\\setmainfont[]{}", None);
-  DefMacro!("\\setsansfont[]{}", None);
-  DefMacro!("\\setmonofont[]{}", None);
-  DefMacro!("\\newfontfamily DefToken []{}", None);
-  DefMacro!("\\newfontface DefToken []{}", None);
+  def_macro_noop("\\fontspec[]{}")?;
+  def_macro_noop("\\setmainfont[]{}")?;
+  def_macro_noop("\\setsansfont[]{}")?;
+  def_macro_noop("\\setmonofont[]{}")?;
+  def_macro_noop("\\newfontfamily DefToken []{}")?;
+  def_macro_noop("\\newfontface DefToken []{}")?;
 
-  DefMacro!("\\setmathrm[]{}", None);
-  DefMacro!("\\setmathsf[]{}", None);
-  DefMacro!("\\setmathtt[]{}", None);
-  DefMacro!("\\setboldmathrm[]{}", None);
+  def_macro_noop("\\setmathrm[]{}")?;
+  def_macro_noop("\\setmathsf[]{}")?;
+  def_macro_noop("\\setmathtt[]{}")?;
+  def_macro_noop("\\setboldmathrm[]{}")?;
 
-  DefMacro!("\\defaultfontfeatures[]{}", None);
-  DefMacro!("\\addfontfeatures[]{}", None);
+  def_macro_noop("\\defaultfontfeatures[]{}")?;
+  def_macro_noop("\\addfontfeatures[]{}")?;
 });

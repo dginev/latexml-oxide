@@ -71,9 +71,9 @@ LoadDefinitions!({
   DefMacro!("\\@ehc", "I can't help");
 
   // Perl L40-47: gobble/firstof/secondof macros
-  DefMacro!("\\@gobble{}", None);
-  DefMacro!("\\@gobbletwo{}{}", None);
-  DefMacro!("\\@gobblefour{}{}{}{}", None);
+  def_macro_noop("\\@gobble{}")?;
+  def_macro_noop("\\@gobbletwo{}{}")?;
+  def_macro_noop("\\@gobblefour{}{}{}{}")?;
   // Perl latex.ltx uses `\long\def\@firstofone#1{#1}` etc., overriding the
   // closure-version defined in latex_base.pool.ltxml L46-48. The dump
   // therefore captures these as token-list bodies (see latex_dump.pool.ltxml
@@ -597,10 +597,10 @@ LoadDefinitions!({
   );
 
   // Perl L622-628: temp macros and script ratios
-  DefMacro!("\\@tempa", None);
-  DefMacro!("\\@tempb", None);
-  DefMacro!("\\@tempc", None);
-  DefMacro!("\\@gtempa", None);
+  def_macro_noop("\\@tempa")?;
+  def_macro_noop("\\@tempb")?;
+  def_macro_noop("\\@tempc")?;
+  def_macro_noop("\\@gtempa")?;
 
   DefMacro!("\\defaultscriptratio", None, ".7");
   DefMacro!("\\defaultscriptscriptratio", None, ".5");
@@ -787,7 +787,7 @@ LoadDefinitions!({
   // `\loggingoutput`, `\tracingfonts`, `\showoverfull`, `\showoutput`
   // moved to latex_constructs.rs (Perl L5676-5679); only `\loggingall`
   // belongs here per Perl L809.
-  DefMacro!("\\loggingall", None);
+  def_macro_noop("\\loggingall")?;
   // `\wlog` moved to `latex_constructs_rust_only.rs`.
 
   //======================================================================
@@ -810,27 +810,27 @@ LoadDefinitions!({
   // would otherwise split on `_` (SUB) and `:` (OTHER) under default
   // catcodes.
   DefMacro!(T_CS!("\\hook_gput_code:nnn"), "{}{}{}", "");
-  DefMacro!("\\NewHook{}", None);
-  DefMacro!("\\NewReversedHook{}", None);
-  DefMacro!("\\NewMirroredHookPair{}{}", None);
-  DefMacro!("\\ActivateGenericHook{}", None);
-  DefMacro!("\\DisableGenericHook{}", None);
-  DefMacro!("\\AddToHook{}[]{}", None);
-  DefMacro!("\\AddToHookNext{}{}", None);
-  DefMacro!("\\ClearHookNext{}", None);
-  DefMacro!("\\RemoveFromHook{}[]", None);
-  DefMacro!("\\SetDefaultHookLabel{}", None);
-  DefMacro!("\\PushDefaultHookLabel{}", None);
-  DefMacro!("\\PopDefaultHookLabel", None);
-  DefMacro!("\\UseHook{}", None);
-  DefMacro!("\\UseOneTimeHook{}", None);
-  DefMacro!("\\ShowHook{}", None);
-  DefMacro!("\\LogHook{}", None);
-  DefMacro!("\\DebugHooksOn", None);
-  DefMacro!("\\DebugHooksOff", None);
-  DefMacro!("\\DeclareHookRule{}{}{}{}", None);
-  DefMacro!("\\DeclareDefaultHookRule{}{}{}", None);
-  DefMacro!("\\ClearHookRule{}{}{}", None);
+  def_macro_noop("\\NewHook{}")?;
+  def_macro_noop("\\NewReversedHook{}")?;
+  def_macro_noop("\\NewMirroredHookPair{}{}")?;
+  def_macro_noop("\\ActivateGenericHook{}")?;
+  def_macro_noop("\\DisableGenericHook{}")?;
+  def_macro_noop("\\AddToHook{}[]{}")?;
+  def_macro_noop("\\AddToHookNext{}{}")?;
+  def_macro_noop("\\ClearHookNext{}")?;
+  def_macro_noop("\\RemoveFromHook{}[]")?;
+  def_macro_noop("\\SetDefaultHookLabel{}")?;
+  def_macro_noop("\\PushDefaultHookLabel{}")?;
+  def_macro_noop("\\PopDefaultHookLabel")?;
+  def_macro_noop("\\UseHook{}")?;
+  def_macro_noop("\\UseOneTimeHook{}")?;
+  def_macro_noop("\\ShowHook{}")?;
+  def_macro_noop("\\LogHook{}")?;
+  def_macro_noop("\\DebugHooksOn")?;
+  def_macro_noop("\\DebugHooksOff")?;
+  def_macro_noop("\\DeclareHookRule{}{}{}{}")?;
+  def_macro_noop("\\DeclareDefaultHookRule{}{}{}")?;
+  def_macro_noop("\\ClearHookRule{}{}{}")?;
   DefMacro!("\\IfHookEmptyTF{}{}{}", "#3");
   DefMacro!("\\IfHookExistsTF{}{}{}", "#3");
   DefMacro!("\\MakeTextLowercase", "\\lowercase");

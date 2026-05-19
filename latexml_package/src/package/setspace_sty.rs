@@ -2,14 +2,23 @@
 //! Perl: setspace.sty.ltxml
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
-  DefMacro!("\\singlespacing", None);
-  DefMacro!("\\onehalfspacing", None);
-  DefMacro!("\\doublespacing", None);
-  DefMacro!("\\setstretch{}", None);
-  DefMacro!("\\SetSinglespace{}", None);
-  DefMacro!("\\setdisplayskipstretch{}", None);
-  DefMacro!("\\restore@spacing", None);
+  def_macro_noop("\\singlespacing")?;
+  def_macro_noop("\\onehalfspacing")?;
+  def_macro_noop("\\doublespacing")?;
+  def_macro_noop("\\setstretch{}")?;
+  def_macro_noop("\\SetSinglespace{}")?;
+  def_macro_noop("\\setdisplayskipstretch{}")?;
+  def_macro_noop("\\restore@spacing")?;
 
   // Paragraph-container envs: keep BOUND_MODE vertical so `$$` inside them
   // still enters display math. Witness 2305.08368: `\begin{spacing}{1.25}`

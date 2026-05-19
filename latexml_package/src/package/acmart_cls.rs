@@ -3,6 +3,15 @@
 use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('amsart', withoptions => 1)
@@ -146,13 +155,13 @@ LoadDefinitions!({
   DefMacro!("\\titlenote{}",    "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
   DefMacro!("\\subtitlenote{}", "\\@add@frontmatter{ltx:note}[role=subtitlenote]{#1}");
   DefMacro!("\\authornote{}",   "\\@add@frontmatter{ltx:note}[role=authornote]{#1}");
-  DefMacro!("\\authornotemark[]", None);
+  def_macro_noop("\\authornotemark[]")?;
   DefMacro!("\\authorsaddresses{}",
     "\\@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
-  DefMacro!("\\startPage", None);
-  DefMacro!("\\settopmatter{}", None);
-  DefMacro!("\\copyrightpermissionfootnoterule", None);
-  DefMacro!("\\acmBadgeL", None);
+  def_macro_noop("\\startPage")?;
+  def_macro_noop("\\settopmatter{}")?;
+  def_macro_noop("\\copyrightpermissionfootnoterule")?;
+  def_macro_noop("\\acmBadgeL")?;
 
   //======================================================================
   // Natbib cite aliases

@@ -548,6 +548,15 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
   }
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Conditionals — Perl uses undef (newif-style), creating \...true/\...false macros
@@ -604,7 +613,7 @@ LoadDefinitions!({
   });
   DeclareOption!("hyperref", None);
 
-  DefMacro!("\\GetGinDriver", None);
+  def_macro_noop("\\GetGinDriver")?;
   DefMacro!("\\GinDriver", "LaTeXML");
 
   DefRegister!("\\tracingcolors", Number!(0));
@@ -626,9 +635,9 @@ LoadDefinitions!({
   DefMacro!("\\paperquality", "1");
 
   // Selecting color model (stubs)
-  DefMacro!("\\selectcolormodel{}", None);
+  def_macro_noop("\\selectcolormodel{}")?;
   DefMacro!("\\XC@tgt@mod {}", "#1");
-  DefMacro!("\\substitutecolormodel{}{}", None);
+  def_macro_noop("\\substitutecolormodel{}{}")?;
 
   // \xglobal@list and \xglobal mechanism
   // Perl: DefMacroI('\xglobal@list', undef, '\definecolor\definecolors\definecolorset\colorlet...')
@@ -930,13 +939,13 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefMacro!("\\colorblend", None); // stub
+  def_macro_noop("\\colorblend")?; // stub
 
   // \maskcolors (ignored per Perl)
   DefPrimitive!("\\maskcolors[]{}", sub[(_model, _color)] {
     Ok(Vec::new())
   });
-  DefMacro!("\\colormask", None);
+  def_macro_noop("\\colormask")?;
 
   // Color series — full 7-arg form, mirroring Perl xcolor.sty.ltxml L651:
   //   DefPrimitive('\definecolorseries{}{}{}[]{}[]{}', sub { ... });
@@ -1227,8 +1236,8 @@ LoadDefinitions!({
   RawTeX!("\\@rowcolorstrue");
 
   // Perl L723-726: hook xcolor row commands into tabular lifecycle
-  DefMacro!("\\@xcolor@tabular@before", None);
-  DefMacro!("\\@xcolor@row@after", None);
+  def_macro_noop("\\@xcolor@tabular@before")?;
+  def_macro_noop("\\@xcolor@row@after")?;
   {
     let cs = T_CS!("\\@tabular@row@after");
     let tokens = Tokens!(T_CS!("\\@xcolor@row@after"));

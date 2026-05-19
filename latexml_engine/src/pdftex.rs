@@ -85,25 +85,25 @@ LoadDefinitions!({
 
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
-  DefMacro!("\\pdftexbanner", None);
-  DefMacro!("\\pdfcreationdate", None);
-  DefMacro!("\\pdfpageref Number", None);
-  DefMacro!("\\pdfxformname Number", None);
-  DefMacro!("\\pdffontname Token", None);
-  DefMacro!("\\pdffontobjnum Token", None);
-  DefMacro!("\\pdffontsize Token", None);
-  DefMacro!("\\pdfincludechars Token {}", None);
-  DefMacro!("\\leftmarginkern Number", None);
-  DefMacro!("\\rightmarginkern Number", None);
-  DefMacro!("\\pdfescapestring {}", None);
-  DefMacro!("\\pdfescapename {}", None);
-  DefMacro!("\\pdfescapehex {}", None);
-  DefMacro!("\\pdfunescapehex {}", None);
+  def_macro_noop("\\pdftexbanner")?;
+  def_macro_noop("\\pdfcreationdate")?;
+  def_macro_noop("\\pdfpageref Number")?;
+  def_macro_noop("\\pdfxformname Number")?;
+  def_macro_noop("\\pdffontname Token")?;
+  def_macro_noop("\\pdffontobjnum Token")?;
+  def_macro_noop("\\pdffontsize Token")?;
+  def_macro_noop("\\pdfincludechars Token {}")?;
+  def_macro_noop("\\leftmarginkern Number")?;
+  def_macro_noop("\\rightmarginkern Number")?;
+  def_macro_noop("\\pdfescapestring {}")?;
+  def_macro_noop("\\pdfescapename {}")?;
+  def_macro_noop("\\pdfescapehex {}")?;
+  def_macro_noop("\\pdfunescapehex {}")?;
   // DefMacro!("\\ifpdfprimitive {}",None);
   // DefMacro!("\\ifpdfabsnum Number"",None);
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
-  DefMacro!("\\pdfuniformdeviate Number Token", None);
-  DefMacro!("\\pdfnormaldeviate Token", None);
+  def_macro_noop("\\pdfuniformdeviate Number Token")?;
+  def_macro_noop("\\pdfnormaldeviate Token")?;
   // pdfTeX \pdfmdfivesum syntax:
   //   \pdfmdfivesum <general text>      (MD5 of literal string)
   //   \pdfmdfivesum file <general text> (MD5 of file contents)
@@ -114,9 +114,9 @@ LoadDefinitions!({
   // gobbled-and-discarded behaviour is acceptable downstream.
   // Witness 2407.02288 (pdfx.sty's `\edef\xmp@docid{\pdfx@mdfivesum
   // {\jobname}}` raw-load cascade).
-  DefMacro!("\\pdfmdfivesum OptionalMatch:file {}", None);
-  DefMacro!("\\pdf@mdfivesum OptionalMatch:file {}", None);
-  DefMacro!("\\pdf@filemdfivesum {}", None);
+  def_macro_noop("\\pdfmdfivesum OptionalMatch:file {}")?;
+  def_macro_noop("\\pdf@mdfivesum OptionalMatch:file {}")?;
+  def_macro_noop("\\pdf@filemdfivesum {}")?;
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
@@ -127,8 +127,8 @@ LoadDefinitions!({
       }
     } else {
       Vec::new() } });
-  DefMacro!("\\pdffilemoddate {}", None);
-  DefMacro!("\\pdffiledump {}", None);
+  def_macro_noop("\\pdffilemoddate {}")?;
+  def_macro_noop("\\pdffiledump {}")?;
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -188,7 +188,7 @@ LoadDefinitions!({
   // \pdfsavepos (h, v, m)
 
   // See lxRDFa for ideas how this info might be used!
-  DefMacro!("\\pdfinfo{}", None);
+  def_macro_noop("\\pdfinfo{}")?;
 
   // Ugh, what a mess of ugly syntax....
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {

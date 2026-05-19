@@ -8,6 +8,15 @@ use latexml_core::alignment::template::TemplateConfig;
 use std::cell::{RefCell, RefMut};
 use std::collections::VecDeque;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Tables Family of primitive control sequences
@@ -290,10 +299,10 @@ LoadDefinitions!({
     decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
   });
 
-  DefMacro!("\\lx@alignment@row@before", None);
-  DefMacro!("\\lx@alignment@row@after", None);
-  DefMacro!("\\lx@alignment@column@before", None);
-  DefMacro!("\\lx@alignment@column@after", None);
+  def_macro_noop("\\lx@alignment@row@before")?;
+  def_macro_noop("\\lx@alignment@row@after")?;
+  def_macro_noop("\\lx@alignment@column@before")?;
+  def_macro_noop("\\lx@alignment@column@after")?;
 
   //======================================================================
   // Vertical alignments
@@ -303,7 +312,7 @@ LoadDefinitions!({
 
   // Implement ???
   // DefMacro('\vrule','\relax');
-  DefMacro!("\\valign", None);
+  def_macro_noop("\\valign")?;
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],

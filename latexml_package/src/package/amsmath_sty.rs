@@ -217,6 +217,15 @@ fn ams_aligned_bindings() -> Result<()> {
   Ok(())
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Package options (Perl L44-57)
   DeclareOption!("centertags", None);
@@ -365,7 +374,7 @@ LoadDefinitions!({
     "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}"
   );
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\matrix@check{}", None);
+  def_macro_noop("\\matrix@check{}")?;
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
@@ -414,9 +423,9 @@ LoadDefinitions!({
   DefMath!("\\dotsi", "\u{22EF}", role => "ID", alias => "\\dotsi");
   DefMath!("\\dotso", "\u{2026}", role => "ID", alias => "\\dotso");
 
-  DefMacro!("\\DOTSB", None);
-  DefMacro!("\\DOTSI", None);
-  DefMacro!("\\DOTSX", None);
+  def_macro_noop("\\DOTSB")?;
+  def_macro_noop("\\DOTSI")?;
+  def_macro_noop("\\DOTSX")?;
   Let!("\\hdots", "\\lx@ldots");
 
   // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
@@ -1366,9 +1375,9 @@ LoadDefinitions!({
   DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin", locked => true);
   DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end", locked => true);
 
-  DefMacro!("\\DOTSB", None);
-  DefMacro!("\\DOTSI", None);
-  DefMacro!("\\DOTSX", None);
+  def_macro_noop("\\DOTSB")?;
+  def_macro_noop("\\DOTSI")?;
+  def_macro_noop("\\DOTSX")?;
 
   //======================================================================
   // Section 7.2 \sideset command
@@ -1495,9 +1504,9 @@ LoadDefinitions!({
   DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
 
   // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
-  DefMacro!("\\mintagsep", None);
+  def_macro_noop("\\mintagsep")?;
   DefMacro!("\\minalignsep", "10pt");
-  DefMacro!("\\primfrac{}", None);
+  def_macro_noop("\\primfrac{}")?;
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
   // Perl: amsmath.sty.ltxml L1313-1314
@@ -1518,20 +1527,20 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
 
   // Section 4.6: Root adjustment (no-ops — cosmetic only)
-  DefMacro!("\\leftroot{}", None);
-  DefMacro!("\\uproot{}", None);
+  def_macro_noop("\\leftroot{}")?;
+  def_macro_noop("\\uproot{}")?;
 
   // Section 4.13: Smash with optional direction (pass through body)
   DefConstructor!("\\smash[]{}", "#2");
 
   // Section 4.4: Nonbreaking dashes (no-op)
-  DefMacro!("\\nobreakdash", None);
+  def_macro_noop("\\nobreakdash")?;
 
   // Section 3.8: Tag placement adjustment (no-op)
-  DefMacro!("\\raisetag{}", None);
+  def_macro_noop("\\raisetag{}")?;
 
   // Section 3.9: Page breaks (no-op)
-  DefMacro!("\\displaybreak[]", None);
+  def_macro_noop("\\displaybreak[]")?;
 
   // Section 4.11: Inline fraction (\ifrac)
   DefConstructor!(
@@ -1608,7 +1617,7 @@ LoadDefinitions!({
   Let!("\\Vec", "\\vec");
 
   // Preamble: trivial macros
-  DefMacro!("\\AmSfont", None);
+  def_macro_noop("\\AmSfont")?;
   DefMacro!("\\AmS", "AmS");
 
   // Miscellaneous no-ops

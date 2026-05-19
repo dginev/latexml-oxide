@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML)
@@ -34,41 +43,41 @@ LoadDefinitions!({
   DefEnvironment!("{internallinenumbers}[Number]",  "#body");
   DefEnvironment!("{internallinenumbers*}[Number]", "#body");
 
-  DefMacro!("\\linenumbers OptionalMatch:* [Number]",        None);
-  DefMacro!("\\nolinenumbers",                               None);
-  DefMacro!("\\runninglinenumbers OptionalMatch:* [Number]", None);
-  DefMacro!("\\pagewiselinenumbers",                         None);
-  DefMacro!("\\realpagewiselinenumbers",                     None);
-  DefMacro!("\\runningpagewiselinenumbers",                  None);
+  def_macro_noop("\\linenumbers OptionalMatch:* [Number]")?;
+  def_macro_noop("\\nolinenumbers")?;
+  def_macro_noop("\\runninglinenumbers OptionalMatch:* [Number]")?;
+  def_macro_noop("\\pagewiselinenumbers")?;
+  def_macro_noop("\\realpagewiselinenumbers")?;
+  def_macro_noop("\\runningpagewiselinenumbers")?;
 
-  DefMacro!("\\leftlinenumbers  OptionalMatch:*",  None);
-  DefMacro!("\\rightlinenumbers OptionalMatch:*",  None);
-  DefMacro!("\\switchlinenumbers OptionalMatch:*", None);
+  def_macro_noop("\\leftlinenumbers  OptionalMatch:*")?;
+  def_macro_noop("\\rightlinenumbers OptionalMatch:*")?;
+  def_macro_noop("\\switchlinenumbers OptionalMatch:*")?;
 
-  DefMacro!("\\setrunninglinenumbers",  None);
-  DefMacro!("\\setpagewiselinenumbers", None);
+  def_macro_noop("\\setrunninglinenumbers")?;
+  def_macro_noop("\\setpagewiselinenumbers")?;
 
-  DefMacro!("\\resetlinenumber [Number]",   None);
-  DefMacro!("\\modulolinenumbers [Number]", None);
+  def_macro_noop("\\resetlinenumber [Number]")?;
+  def_macro_noop("\\modulolinenumbers [Number]")?;
 
-  DefMacro!("\\linenumberfont", None);
+  def_macro_noop("\\linenumberfont")?;
   DefRegister!("\\linenumbersep", Number(0));
 
-  DefMacro!("\\thelinenumber", None);
+  def_macro_noop("\\thelinenumber")?;
 
-  DefMacro!("\\makeLineNumber",        None);
-  DefMacro!("\\makeLineNumberRunning", None);
-  DefMacro!("\\makeLineNumberOdd",     None);
-  DefMacro!("\\makeLineNumberEven",    None);
-  DefMacro!("\\makeLineNumberRight",   None);
-  DefMacro!("\\makeLineNumberLeft",    None);
-  DefMacro!("\\LineNumber",            None);
+  def_macro_noop("\\makeLineNumber")?;
+  def_macro_noop("\\makeLineNumberRunning")?;
+  def_macro_noop("\\makeLineNumberOdd")?;
+  def_macro_noop("\\makeLineNumberEven")?;
+  def_macro_noop("\\makeLineNumberRight")?;
+  def_macro_noop("\\makeLineNumberLeft")?;
+  def_macro_noop("\\LineNumber")?;
 
   DefMacro!("\\numquote",        "\\quote");
   DefMacro!("\\endnumquote",     "\\endquote");
   DefMacro!("\\numquotation",    "\\quote");
   DefMacro!("\\endnumquotation", "\\endquote");
 
-  DefMacro!("\\quotelinenumberfont", None);
+  def_macro_noop("\\quotelinenumberfont")?;
   DefRegister!("\\quotelinenumbersep", Number(0));
 });

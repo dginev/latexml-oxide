@@ -3,6 +3,15 @@
 //! Core plain TeX definitions (Appendix B of The TeXbook)
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl: plain_base.pool.ltxml — definitions only (no LoadPool calls)
   // bootstrap/dump/constructs are loaded by tex.rs (= LoadFormat('plain'))
@@ -50,11 +59,11 @@ LoadDefinitions!({
   // \tracingfonts and \showoutput are also ignored debug primitives —
   // Perl declares them in latex_constructs.pool.ltxml L5677-5679 alongside
   // the others. Co-locating here so plain.tex users also get them.
-  DefMacro!("\\hideoutput", None);
-  DefMacro!("\\showoverfull", None);
-  DefMacro!("\\loggingoutput", None);
-  DefMacro!("\\tracingfonts", None);
-  DefMacro!("\\showoutput", None);
+  def_macro_noop("\\hideoutput")?;
+  def_macro_noop("\\showoverfull")?;
+  def_macro_noop("\\loggingoutput")?;
+  def_macro_noop("\\tracingfonts")?;
+  def_macro_noop("\\showoutput")?;
   DefMacro!(
     "\\loggingall",
     r"\tracingstats\tw@
@@ -207,7 +216,7 @@ LoadDefinitions!({
     // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
     properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
   );
-  DefMacro!("\\hidewidth", None);
+  def_macro_noop("\\hidewidth")?;
 
   //======================================================================
   // TeX Book, Appendix B, p. 344
@@ -588,14 +597,14 @@ LoadDefinitions!({
   DefMacro!("\\m@th", "\\mathsurround=0pt ");
 
   // \strutbox
-  DefMacro!("\\strut", None);
+  def_macro_noop("\\strut")?;
   TeX!("\\newbox\\strutbox");
   //======================================================================
   // TeX Book, Appendix B. p. 354
 
   // Plain TeX tabbing — \settabs stub (no structured tabbing in plain)
 
-  DefMacro!("\\settabs", None);
+  def_macro_noop("\\settabs")?;
   //======================================================================
   // TeX Book, Appendix B. p. 355
 

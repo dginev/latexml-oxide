@@ -1,6 +1,15 @@
 /// Perl: icml_support.sty.ltxml — Support for ICML conference styles
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("times");
@@ -79,10 +88,10 @@ LoadDefinitions!({
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
-  DefMacro!("\\abovestrut{}", None);
-  DefMacro!("\\belowstrut{}", None);
-  DefMacro!("\\abovespace", None);
-  DefMacro!("\\aroundspace", None);
-  DefMacro!("\\belowspace", None);
-  DefMacro!("\\icmlruler{}", None);
+  def_macro_noop("\\abovestrut{}")?;
+  def_macro_noop("\\belowstrut{}")?;
+  def_macro_noop("\\abovespace")?;
+  def_macro_noop("\\aroundspace")?;
+  def_macro_noop("\\belowspace")?;
+  def_macro_noop("\\icmlruler{}")?;
 });

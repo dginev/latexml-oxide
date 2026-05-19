@@ -2560,7 +2560,7 @@ LoadDefinitions!({
   // Just to pass test t/alignment/halignatt
   // Perl latex_constructs.pool.ltxml L51 — redundant with plain_base.rs
   // (Perl plain_base.pool.ltxml L147), but Perl-faithful.
-  DefMacro!("\\hidewidth", None);
+  def_macro_noop("\\hidewidth")?;
 
   // Perl-faithful: LaTeX does NOT define `\magnification`, and babel
   // uses this to detect whether it's running under LaTeX (vs plain
@@ -3311,8 +3311,8 @@ LoadDefinitions!({
   // `Error:undefined:\geometry`. Our geometry_sty.rs binding redefines
   // these as no-ops too — both paths reach the same outcome.
   // Witness: 2306.02129 (Wiley template).
-  DefMacro!("\\geometry{}",    None);
-  DefMacro!("\\newgeometry{}", None);
+  def_macro_noop("\\geometry{}")?;
+  def_macro_noop("\\newgeometry{}")?;
 
   // ?
   def_macro_noop("\\@noligs")?;
@@ -3332,7 +3332,7 @@ LoadDefinitions!({
   // there is the authoritative copy).
   DefMacro!("\\footnotetyperefname", "footnote");
 
-  DefMacro!("\\ext@footnote", None);
+  def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   mode         => "internal_vertical",
@@ -3884,9 +3884,9 @@ LoadDefinitions!({
   Let!("\\@currname", "\\@empty");
   Let!("\\@classoptionslist", "\\relax");
   Let!("\\@raw@classoptionslist", "\\relax");
-  DefMacro!("\\@declaredoptions", None);
-  DefMacro!("\\@curroptions", None);
-  DefMacro!("\\@unusedoptionlist", None);
+  def_macro_noop("\\@declaredoptions")?;
+  def_macro_noop("\\@curroptions")?;
+  def_macro_noop("\\@unusedoptionlist")?;
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
@@ -3961,7 +3961,7 @@ LoadDefinitions!({
 
   // Related internal macros for package definition
   // Internals used in Packages
-  DefMacro!("\\NeedsTeXFormat{}[]", None);
+  def_macro_noop("\\NeedsTeXFormat{}[]")?;
 
   DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
@@ -3984,9 +3984,9 @@ LoadDefinitions!({
 
   // anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  DefMacro!("\\DeclareRelease{}{}{}", None);
+  def_macro_noop("\\DeclareRelease{}{}{}")?;
   //\DeclareCurrentRelease{v4.49}{2021-11-01}
-  DefMacro!("\\DeclareCurrentRelease{}{}", None);
+  def_macro_noop("\\DeclareCurrentRelease{}{}")?;
   // `\IncludeInRelease{date}{cs}{descr}…body…\EndIncludeInRelease`
   // (LaTeX kernel `latexrelease.sty`). The kernel decides at run-time
   // whether `date` matches the current release; if yes, body runs; if
@@ -4112,7 +4112,7 @@ LoadDefinitions!({
     ));
   });
 
-  DefMacro!("\\CurrentOption", None);
+  def_macro_noop("\\CurrentOption")?;
 
   // Perl: latex_constructs.pool.ltxml lines 907-919
   DefPrimitive!("\\OptionNotUsed", {
@@ -4216,7 +4216,7 @@ LoadDefinitions!({
   DefMacro!("\\@ifclasslater{}{}{}{}", "#3");
   Let!("\\AtEndOfClass", "\\AtEndOfPackage");
 
-  DefMacro!("\\AtBeginDvi {}", None);
+  def_macro_noop("\\AtBeginDvi {}")?;
 
   TeX!(
     r###"
@@ -4271,16 +4271,16 @@ LoadDefinitions!({
     r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi");
   TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
   Let!("\\@elt", "\\relax");
-  DefMacro!("\\@freelist", None);
-  DefMacro!("\\@currbox", None);
-  DefMacro!("\\@toplist", None);
-  DefMacro!("\\@botlist", None);
-  DefMacro!("\\@midlist", None);
-  DefMacro!("\\@currlist", None);
-  DefMacro!("\\@deferlist", None);
-  DefMacro!("\\@dbltoplist", None);
-  DefMacro!("\\@dbldeferlist", None);
-  DefMacro!("\\@startcolumn", None);
+  def_macro_noop("\\@freelist")?;
+  def_macro_noop("\\@currbox")?;
+  def_macro_noop("\\@toplist")?;
+  def_macro_noop("\\@botlist")?;
+  def_macro_noop("\\@midlist")?;
+  def_macro_noop("\\@currlist")?;
+  def_macro_noop("\\@deferlist")?;
+  def_macro_noop("\\@dbltoplist")?;
+  def_macro_noop("\\@dbldeferlist")?;
+  def_macro_noop("\\@startcolumn")?;
 
   // Perl: latex_constructs.pool.ltxml L5510 — `Let('\@begindocumenthook', '\@empty');`
   // \@begindocumenthook is fired by `\document` (latex.ltx); we install it as
@@ -4290,7 +4290,7 @@ LoadDefinitions!({
   Let!("\\@begindocumenthook", "\\@empty");
 
   // Perl L5511: \@preamblecmds collects \@onlypreamble entries; empty by default
-  DefMacro!("\\@preamblecmds", None);
+  def_macro_noop("\\@preamblecmds")?;
 
   // Perl L5536-5539: q-tokens used by \@notdefinable error formatting and by
   // various pattern-quoting expansion paths (e.g. \GenericWarning padding).
@@ -4385,8 +4385,8 @@ LoadDefinitions!({
   // omnibus_cls.rs (commit 3f40bf8211) but OmniBus only loads as a
   // class-binding fallback for unknown documentclasses; papers using
   // \documentclass{article} with \usepackage{aaai22} don't trigger it.
-  DefMacro!("\\equalcontrib", None);
-  DefMacro!("\\equalcont",    None);
+  def_macro_noop("\\equalcontrib")?;
+  def_macro_noop("\\equalcont")?;
   // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
   //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
@@ -4773,7 +4773,7 @@ LoadDefinitions!({
   }, mode => "internal_vertical");
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
-  DefMacro!("\\endcenter", None);
+  def_macro_noop("\\endcenter")?;
   DefEnvironment!("{flushleft}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_left", document, props)?;
@@ -6288,7 +6288,7 @@ LoadDefinitions!({
   // Effectively a no-op for XML output. NOTE the `, None)` arm is the
   // "discard everything" mock — `, None, None)` (3 args) would not
   // match any DefMacro arm and silently fail to register the CS.
-  DefMacro!("\\newmathalphabet{}{}{}", None);
+  def_macro_noop("\\newmathalphabet{}{}{}")?;
   // \new@internalmathalphabet — obsolete LaTeX 2.09 kernel macro for
   // defining math alphabets, superseded by \DeclareSymbolFontAlphabet.
   // Used by old (1992-93) hep-th papers (~11 papers in stage-4 of the
@@ -6297,7 +6297,7 @@ LoadDefinitions!({
   // \DeclareMathAlphabet so the args are consumed cleanly instead of
   // leaking into the document body via the auto-undefined-as-ERROR path.
   // SHARED-FAILURE with Perl (both fatal on this macro without a stub).
-  DefMacro!("\\new@internalmathalphabet{}{}{}{}{}", None);
+  def_macro_noop("\\new@internalmathalphabet{}{}{}{}{}")?;
 
   // LaTeX 2.09 size aliases. Defined in latex_base.rs but that pool is
   // SKIPPED when the latex.ltx dump is loaded (latex.rs:83-89). Old
@@ -7208,12 +7208,12 @@ LoadDefinitions!({
     tabular_bindings(template, SymHashMap::default(), attrs)?;
   });
 
-  DefMacro!("\\@tabular@before", None);
-  DefMacro!("\\@tabular@after", None);
-  DefMacro!("\\@tabular@row@before", None);
-  DefMacro!("\\@tabular@row@after", None);
-  DefMacro!("\\@tabular@column@before", None);
-  DefMacro!("\\@tabular@column@after", None);
+  def_macro_noop("\\@tabular@before")?;
+  def_macro_noop("\\@tabular@after")?;
+  def_macro_noop("\\@tabular@row@before")?;
+  def_macro_noop("\\@tabular@row@after")?;
+  def_macro_noop("\\@tabular@column@before")?;
+  def_macro_noop("\\@tabular@column@after")?;
 
   // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
   DefMacro!("\\tabular[]{}",
@@ -7330,7 +7330,7 @@ LoadDefinitions!({
   DefRegister!("\\arraycolsep", Dimension!("5pt"));
   DefRegister!("\\arrayrulewidth", Dimension!("0.4pt"));
   DefRegister!("\\doublerulesep", Dimension!("2pt"));
-  DefMacro!("\\extracolsep{}", None);
+  def_macro_noop("\\extracolsep{}")?;
 
   // Array and similar environments
   // Perl: latex_constructs.pool.ltxml lines 3792-3809
@@ -7654,7 +7654,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
     }
   });
-  DefMacro!("\\vskip@in@bibliography Glue", None);
+  def_macro_noop("\\vskip@in@bibliography Glue")?;
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
@@ -9311,7 +9311,7 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml line 5802
   // \stop — closes the current input mouth (Plain TeX command)
   Let!("\\stop", "\\endinput");
-  DefMacro!("\\ignorespacesafterend", None);
+  def_macro_noop("\\ignorespacesafterend")?;
 
   // \Gin@driver lives in `latex_constructs_rust_only.rs` (pure Rust
   // hotfix, not in any Perl latex_*.pool.ltxml).
@@ -9360,7 +9360,7 @@ LoadDefinitions!({
   // message in math mode, no-op otherwise. Rust keeps the no-op stub but
   // matches the Perl kind (DefMacro — expansion-time, same as the
   // invocation sites `\mdseries`/`\bfseries` which expand it inline).
-  DefMacro!("\\not@math@alphabet{}{}", None);
+  def_macro_noop("\\not@math@alphabet{}{}")?;
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
     if state::lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
@@ -9992,11 +9992,11 @@ LoadDefinitions!({
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
   //======================================================================
-  DefMacro!("\\bibdata{}", None);
-  DefMacro!("\\bibcite{}{}", None);
-  DefMacro!("\\citation{}", None);
-  DefMacro!("\\contentsline{}{}{}", None);
-  DefMacro!("\\newlabel{}{}", None);
+  def_macro_noop("\\bibdata{}")?;
+  def_macro_noop("\\bibcite{}{}")?;
+  def_macro_noop("\\citation{}")?;
+  def_macro_noop("\\contentsline{}{}{}")?;
+  def_macro_noop("\\newlabel{}{}")?;
 
   // Perl L5804-5806
   Let!("\\mathgroup", "\\fam");
@@ -10178,8 +10178,8 @@ LoadDefinitions!({
   // @-internal safety filter rejects public-CS macros, so public
   // kernel CSes like `\fontsize` must live in always-loaded
   // `_constructs.rs`).
-  DefMacro!("\\check@mathfonts", None);
-  DefMacro!("\\fontsize{}{}", None);
+  def_macro_noop("\\check@mathfonts")?;
+  def_macro_noop("\\fontsize{}{}")?;
   DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).

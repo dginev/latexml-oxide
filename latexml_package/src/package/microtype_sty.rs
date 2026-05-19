@@ -2,6 +2,15 @@
 //! Perl: microtype.sty.ltxml
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("etoolbox");
 
@@ -11,28 +20,28 @@ LoadDefinitions!({
   // which consumes a leading `*` not an optional bracket group. Fix to
   // match Perl signatures so user-side `\SetProtrusion[ctx]{set}{list}`
   // parses correctly instead of stranding the `[ctx]` as literal text.
-  DefMacro!("\\microtypesetup{}", None);
-  DefMacro!("\\DeclareMicrotypeSet OptionalMatch:* []{}{}", None);
-  DefMacro!("\\DeclareMicrotypeSetDefault[]{}", None);
-  DefMacro!("\\DeclareMicrotypeAlias{}{}", None);
-  DefMacro!("\\SetProtrusion[]{}{}", None);
-  DefMacro!("\\SetTracking[]{}{}", None);
-  DefMacro!("\\SetExpansion[]{}{}", None);
-  DefMacro!("\\DisableLigatures[]{}", None);
-  DefMacro!("\\SetExtraKerning[]{}{}", None);
-  DefMacro!("\\SetExtraSpacing[]{}{}", None);
+  def_macro_noop("\\microtypesetup{}")?;
+  def_macro_noop("\\DeclareMicrotypeSet OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareMicrotypeSetDefault[]{}")?;
+  def_macro_noop("\\DeclareMicrotypeAlias{}{}")?;
+  def_macro_noop("\\SetProtrusion[]{}{}")?;
+  def_macro_noop("\\SetTracking[]{}{}")?;
+  def_macro_noop("\\SetExpansion[]{}{}")?;
+  def_macro_noop("\\DisableLigatures[]{}")?;
+  def_macro_noop("\\SetExtraKerning[]{}{}")?;
+  def_macro_noop("\\SetExtraSpacing[]{}{}")?;
   // \textls passes through #3 (the body)
   DefMacro!("\\textls OptionalMatch:* []{}", "#3");
-  DefMacro!("\\lsstyle", None);
+  def_macro_noop("\\lsstyle")?;
   DefMacro!("\\lslig{}", "#1");
 
   // Perl L32-46 — additional no-op microtype commands
-  DefMacro!("\\UseMicrotypeSet[]{}", None);
-  DefMacro!("\\DeclareCharacterInheritance[]{}{}", None);
-  DefMacro!("\\DeclareMicrotypeVariants OptionalMatch:* {}", None);
-  DefMacro!("\\LoadMicrotypeFile{}", None);
-  DefMacro!("\\microtypecontext{}", None);
+  def_macro_noop("\\UseMicrotypeSet[]{}")?;
+  def_macro_noop("\\DeclareCharacterInheritance[]{}{}")?;
+  def_macro_noop("\\DeclareMicrotypeVariants OptionalMatch:* {}")?;
+  def_macro_noop("\\LoadMicrotypeFile{}")?;
+  def_macro_noop("\\microtypecontext{}")?;
   DefEnvironment!("{microtypecontext}", "#body");
   DefMacro!("\\textmicrotypecontext{}{}", "#2");
-  DefMacro!("\\DeclareMicrotypeBabelHook{}{}", None);
+  def_macro_noop("\\DeclareMicrotypeBabelHook{}{}")?;
 });
