@@ -11,6 +11,11 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
+  // amssymb supplies \lesssim, \gtrsim, \nleq, \ngeq, \square, \blacksquare
+  // and other binary-relation/blackboard-bold symbols that CAS authors
+  // routinely use without explicit \usepackage{amssymb}. Witness
+  // 2312.12523 (\lesssim undefined).
+  RequirePackage!("amssymb");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   // cas-dc.cls L63: \RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}.

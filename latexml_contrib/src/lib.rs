@@ -167,6 +167,7 @@ pub mod ptephy_cls;
 pub mod sagej_cls;
 pub mod scipost_cls;
 pub mod scis2024_cls;
+pub mod pnas_new_cls;
 pub mod siamart_cls;
 pub mod sigma_cls;
 pub mod smc_ieeeconf_cls;
@@ -396,6 +397,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ptephy_v1", "cls", ptephy_cls::load_definitions),
   ("ptephy_v2", "cls", ptephy_cls::load_definitions),
   ("ptephy", "cls", ptephy_cls::load_definitions),
+  ("pnas-new", "cls", pnas_new_cls::load_definitions),
   ("siamart", "cls", siamart_cls::load_definitions),
   ("siamonline", "cls", siamart_cls::load_definitions),
   ("sagej", "cls", sagej_cls::load_definitions),
