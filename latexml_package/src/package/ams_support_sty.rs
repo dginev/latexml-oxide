@@ -236,9 +236,20 @@ LoadDefinitions!({
   // `\newenvironment` is a primitive — needs digestion, not just expansion.
   // We package the deferred raw_tex into `\AtBeginDocument` so it fires
   // after the entire user preamble has run.
+  // Witness 2308.01739 (amsart): paper defines `\def\endpf{\hfill $\Box$
+  // \vskip0.5cm}` as a manual proof terminator macro. The original
+  // `\@ifundefined{pf}` guard ONLY checked for `\pf` (env-begin); if the
+  // user had defined ONLY `\endpf` (env-end-shaped CS), our guard still
+  // passed and `\newenvironment{pf}` OVERWROTE the user's `\endpf` with
+  // env-end machinery (`\end{@proof}`), then standalone `\endpf` calls
+  // tried to pop a `{@proof}` env that was never opened → "Attempt to
+  // close a group that switched to mode internal_vertical" cascades.
+  // Add a symmetric `\@ifundefined{endpf}` guard so a pre-defined
+  // user `\endpf` blocks our redefinition.
   stomach::raw_tex(
-    "\\AtBeginDocument{\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}}{}\
-     \\@ifundefined{pf*}{\\newenvironment{pf*}[1]{\\begin{@proof}[##1]}{\\end{@proof}}}{}}"
+    "\\AtBeginDocument{\
+       \\@ifundefined{pf}{\\@ifundefined{endpf}{\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}}{}}{}\
+       \\@ifundefined{pf*}{\\@ifundefined{endpf*}{\\newenvironment{pf*}[1]{\\begin{@proof}[##1]}{\\end{@proof}}}{}}{}}"
   )?;
 
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
