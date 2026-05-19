@@ -757,7 +757,7 @@ Re-audit 2026-05-18 (`cargo tree --duplicates`):
 | `syn` 1.0 vs 2.0 | ✅ **DEP-03 resolved**: no longer duped; only `syn 2.x` in the workspace. |
 | `regex-syntax` 0.6 vs 0.8 | ✅ **DEP-04 resolved**: marpa fork bumped to 0.8. |
 | `rustix` 0.38 vs 1.1 | ✅ **DEP-05 resolved upstream**: `kpathsea v0.2.5` now pulls `which v8` → libc only. The 0.38 path is gone. |
-| `hashbrown` 0.16 vs 0.17 | ⏳ **DEP-06 still open**: `string-interner 0.20` pins 0.16, `indexmap 2.14` (via `zip 8`) pulls 0.17. Upstream-blocked. |
+| `hashbrown` 0.16 vs 0.17 | ✅ **DEP-06 resolved 2026-05-18** via indexmap pin in `latexml_oxide/Cargo.toml`. zip 8.6.0 accepts `indexmap ^2` so explicitly pinning `indexmap = "=2.13.1"` (last release that uses hashbrown 0.16) makes the resolver unify on a single hashbrown 0.16.x. Revisit when string-interner releases 0.21+ with hashbrown 0.17 support — at which point bump string-interner AND drop the indexmap pin. |
 | `tar` v0.4.45 (×2) | ℹ️ Same version, different features: runtime build (no `xattr` after `3e7c039eb1`) vs `libmarpa-sys` build-dep (default). Build-dep doesn't link into runtime binary — benign. |
 
 ### Tier 3 — Slim feature sets / drop unmaintained crates
