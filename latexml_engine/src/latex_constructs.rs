@@ -3282,6 +3282,16 @@ LoadDefinitions!({
 
   DefPrimitive!("\\linespread{}", None);
 
+  // Some papers (e.g. WileyMSP-template) use `\geometry{…}` in the
+  // preamble without explicitly `\usepackage{geometry}`. Real LaTeX
+  // would complain but the convention is widely tolerated. Provide
+  // no-op stubs at the kernel level so we don't fire
+  // `Error:undefined:\geometry`. Our geometry_sty.rs binding redefines
+  // these as no-ops too — both paths reach the same outcome.
+  // Witness: 2306.02129 (Wiley template).
+  DefMacro!("\\geometry{}",    None);
+  DefMacro!("\\newgeometry{}", None);
+
   // ?
   DefMacro!("\\@noligs", "");
   DefConditional!("\\if@endpe");
