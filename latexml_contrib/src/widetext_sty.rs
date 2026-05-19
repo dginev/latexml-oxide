@@ -10,4 +10,11 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   DefEnvironment!("{widetext}", "#body");
+  // widetext.sty L56-57: `\IfFileExists{cuted.sty}{\RequirePackage{cuted}}`.
+  // cuted.sty L176/189 defines `\strip`/`\endstrip` as a `{strip}` env
+  // for full-page-width blocks at top/bottom in two-column mode. Our
+  // widetext binding bypasses raw load, so cuted's strip env doesn't
+  // register. Render body transparently (no column distinction in
+  // HTML/XML). Witness 2403.05215 (SAJ paper using widetext + saj.sty).
+  DefEnvironment!("{strip}", "#body");
 });
