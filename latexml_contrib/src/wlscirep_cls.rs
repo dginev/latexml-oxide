@@ -8,6 +8,10 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
+  // wlscirep.cls L53: `\RequirePackage[superscript,biblabel,nomove]{cite}`.
+  // Our cite binding Lets `\citeonline` -> `\cite`, so authors writing
+  // `\citeonline{key}` (witness 2306.04599) need cite loaded.
+  RequirePackage!("cite");
   // wlscirep.cls L29: \RequirePackage{booktabs} unconditionally.
   // Witness 2408.07161 (\toprule/\midrule/\bottomrule used without
   // explicit \usepackage{booktabs}).
