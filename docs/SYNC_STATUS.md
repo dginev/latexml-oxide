@@ -1038,23 +1038,44 @@ dead-code dedupe (task #90 cleanup landing in commits
 `69945b78d4` … `1fa0728bb1` + `39f5d5ba45` + `1f59f0e780`).
 Further reduction would require breaking it into sub-modules.
 
-Next concrete data-drive candidates (same approach as DEP-15):
-* `jhep_cls` (511 KiB) — high-affordance journal-class macros
-  with a small set of repeating `\jhep@*` patterns.
-* `mathabx_sty` (438 KiB) — math symbol tables; each entry is
-  a `DefMath!` line. Data-drive: `(suffix, codepoint, role)` tuples.
-* `amssymb_sty` / `aas_support_sty` / `iopart_support_sty` —
-  similar symbol-table / repeated-binding shape.
+### DEP-NEW session results (2026-05-19) — diminishing-returns stop
 
-Upper-bound savings: ~1.5 MiB if the three biggest of these get
-the fontawesome treatment.
+* **jhep_cls** ✅ −250 KiB (commit `c31921b878` / `3433924cda`).
+  93 of 94 `\<cs>{}{}{}` → `\@spires{<CODE>\%2C…}{{\it <Name>}…}`
+  journal-abbrev macros migrated to runtime helper
+  `def_jhep_journal(cs, body)`.
+* **iopart_support_sty** ✅ −42 KiB (commit `ef8ad6b706` /
+  `f9dea926f8`). 74 `\<cs>` → `\textit{<name>}` IOP physics
+  journal abbrev macros migrated to runtime helper
+  `def_iop_journal(cs, name)`. The DEP-15 table estimated 216
+  KiB; actual saving ~5× smaller because LTO had already been
+  dead-stripping cold paths.
 
-Approach (mirror DEP-15): write a small runtime helper that
-takes the per-entry data, constructs the Tokens body once at
-runtime, and registers. Validate via byte-for-byte XML output
-equality on the existing test fixtures. The user-visible
-trade-off is per-engine-bootstrap cost (a few ms aggregate)
-vs binary size.
+**Stopped here on objective diminishing returns.** Pattern-density
+audit of remaining top consumers showed no file with a single
+dominant pattern carrying ≥50 sites:
+
+| Candidate | Dominant pattern | Site count | Predicted win |
+|---|---|---:|---:|
+| `aas_support_sty`  | varied (`@add@frontmatter`, identity-1)        |  ≤11 | ~30 KiB |
+| `mathtools_sty`    | varied                                         |  varied | ~30 KiB |
+| `biblatex_sty`     | varied short-bodies                            |  ≤24 | ~30 KiB |
+| `pgfsys_latexml_def` | structural Constructors                      |  varied | ~50 KiB |
+| `mathabx_sty`      | already covered by DEP-17b                     |   —  |   — |
+| `txfonts_sty`      | already covered by DEP-17                      |   —  |   — |
+| `amssymb_sty`      | already covered by DEP-17c                     |   —  |   — |
+
+Below ~50 KiB per candidate the maintenance overhead of a
+file-local helper isn't worth it (extra `fn` + helper-pattern
+discipline) — closer to the threshold where DEP-21 hit
+`[[wisdom_helper_monomorphization_trap]]`. If future profiling
+identifies a previously-hidden 50+ site dominant pattern, the
+DEP-NEW template (see jhep_cls / iopart_support_sty) reapplies
+cleanly.
+
+Final release binary (post-jhep + iopart): **44.83 MiB** (down
+from 45.12 MiB this session, ~44.38 MiB pre-DEP-22, ~47.6 MiB
+pre-DEP-15 fontawesome).
 
 ---
 
