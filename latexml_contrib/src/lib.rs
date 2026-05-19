@@ -152,6 +152,7 @@ pub mod informs_cls;
 pub mod interact_cls;
 pub mod jair_sty;
 pub mod jgcc_cls;
+pub mod jfm_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod latexrelease_sty;
@@ -375,6 +376,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),
+  ("jfm", "cls", jfm_cls::load_definitions),
   ("jmlr", "cls", jmlr_cls::load_definitions),
   ("jmlr2e", "sty", jmlr2e_sty::load_definitions),
   ("jmlr2e_preprint", "sty", jmlr2e_sty::load_definitions),
