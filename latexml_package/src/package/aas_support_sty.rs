@@ -33,21 +33,27 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
   DefMacro!("\\msid{}",
     "\\@add@frontmatter{ltx:note}[role=msid]{#1}");
-  // Review markup — preserve author body as ltx:text with class
-  // (changes-style edit tracking). See changes_sty for the rationale.
+  // Review markup — wrap in <ltx:inline-block class='ltx_changes_*'>
+  // rather than <ltx:text>. ltx:text is inline-only and auto-closed
+  // when block-level content like \section opens inside, then the
+  // closing }-token of \added tried to close an already-closed ltx:text.
+  // ltx:inline-block can hold both inline and block content, so the
+  // semantic "added by review" class is preserved while supporting
+  // appendix-wide `\added{\section{...}}` blocks. Witness 2110.12098
+  // (aastex63 with multi-paragraph \added wrapping a whole section).
   DefConstructor!("\\added{}",
-    "<ltx:text class='ltx_changes_added'>#1</ltx:text>");
+    "<ltx:inline-block class='ltx_changes_added'>#1</ltx:inline-block>");
   DefConstructor!("\\replaced{}",
-    "<ltx:text class='ltx_changes_replaced'>#1</ltx:text>");
+    "<ltx:inline-block class='ltx_changes_replaced'>#1</ltx:inline-block>");
   DefConstructor!("\\deleted{}",
-    "<ltx:text class='ltx_changes_deleted ltx_strike'>#1</ltx:text>");
+    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#1</ltx:inline-block>");
   DefConstructor!("\\explain{}",
-    "<ltx:text class='ltx_changes_explanation'>#1</ltx:text>");
+    "<ltx:inline-block class='ltx_changes_explanation'>#1</ltx:inline-block>");
   // \edit{old}{new} — show the new text inline; preserve the old as
   // strikethrough so both are visible (changes-style).
   DefConstructor!("\\edit{}{}",
-    "<ltx:text class='ltx_changes_deleted ltx_strike'>#1</ltx:text>\
-     <ltx:text class='ltx_changes_added'>#2</ltx:text>");
+    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#1</ltx:inline-block>\
+     <ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
   def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
   DefMacro!("\\journal{}",

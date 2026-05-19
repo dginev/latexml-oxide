@@ -15,24 +15,28 @@ LoadDefinitions!({
   RequirePackage!("ulem");
   RequirePackage!("todonotes");
   RequirePackage!("xstring");
-  // \added[author]{text} — pass-through. Match Perl ar5iv-bindings
-  // changes.sty.ltxml (DefMacro pass-through). A prior DefConstructor
-  // wrapped #2 in `<ltx:text class='ltx_changes_added'>` which is an
-  // inline-only element; papers commonly use `\added{multi-paragraph
-  // block with \begin{equation}...}` in appendices to mark a whole
-  // section, which auto-opened `<ltx:p>` inside `<ltx:text>` and then
-  // produced `Error:malformed:ltx:text Attempt to close </ltx:text>,
-  // which isn't open`. Witness 2404.13783 (appendix wraps several
-  // paragraphs+equations in one `\added{...}`).
-  DefMacro!("\\added[]{}", "#2");
-  // \deleted[author]{text} — pass-through too. Earlier the body was
-  // displayed via strike-through; switch to plain pass-through for
-  // parity with Perl and to allow block content.
-  DefMacro!("\\deleted[]{}", "#2");
-  // \replaced[author]{new}{old} — show new (drop old), pass-through.
-  DefMacro!("\\replaced[]{}{}", "#2");
-  DefMacro!("\\highlight[]{}", "#2");
-  DefMacro!("\\comment[]{}", "#2");
+  // \added[author]{text} — wrap in <ltx:inline-block class='ltx_changes_*'>
+  // to delineate review-marked content as metadata. The prior
+  // <ltx:text>-wrap variant blew up on `\added{\section{...}}` blocks
+  // because ltx:text is inline-only; <ltx:inline-block> can hold both
+  // inline and block content, preserving the semantic class while
+  // allowing appendix-wide `\added{...multi-paragraph...}` patterns.
+  // Witness 2404.13783, 2110.12098 (aastex63 multi-paragraph \added).
+  DefConstructor!("\\added[]{}",
+    "<ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
+  // \deleted[author]{text} — strike-through so the omitted text remains
+  // visible inline (review-mode rendering).
+  DefConstructor!("\\deleted[]{}",
+    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#2</ltx:inline-block>");
+  // \replaced[author]{new}{old} — render new with added class, old with
+  // strike-through deleted class. Both bodies preserved.
+  DefConstructor!("\\replaced[]{}{}",
+    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#3</ltx:inline-block>\
+     <ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
+  DefConstructor!("\\highlight[]{}",
+    "<ltx:inline-block class='ltx_changes_highlight'>#2</ltx:inline-block>");
+  DefConstructor!("\\comment[]{}",
+    "<ltx:inline-block class='ltx_changes_comment'>#2</ltx:inline-block>");
   def_macro_noop("\\ChangesListline{}{}{}{}")?;
   DefMacro!("\\listofchangesname", "List of changes");
   DefMacro!("\\summaryofchangesname", "Changes");
