@@ -468,17 +468,19 @@ triggers in `tex.rs` matching Perl `TeX.pool.ltxml:33-39`.
     * Defensive dump-path coverage for `latex_base.rs` CSes
       (`\appendixname`, `\thefootnote`, `\columnsep`, …) per the
       design pattern in `latex_constructs_rust_only.rs:179-209`.
-  * **Side finding**: 43 CSes are defined in BOTH
-    `latex_constructs.rs` AND `latex_constructs_rust_only.rs` with
-    identical bodies. Since rust_only loads last, the
-    latex_constructs.rs defs for these are dead-code overrides.
-    Also: 37 CSes have multiple definitions WITHIN
-    `latex_constructs.rs` itself (most context-scoped re-bindings,
-    but a few like `\appendixname` L3746+L10036, `\figurename`
-    L6796+L7023, `\thebibliography@ID` L2085+L7499 look like
-    drift). Deduplication is a separate (multi-iter) refactor —
-    needs verification each removal doesn't break a context-scoped
-    binding. Not blocking strict-Perl parity.
+  * **Side finding — RE-VERIFIED 2026-05-19**: the original
+    "43 dead-code overrides" between `latex_constructs.rs` and
+    `latex_constructs_rust_only.rs` are now **zero** when checked
+    by strict `Def(Macro|Primitive|Constructor|Register|Math|
+    Environment)!` definition-site grep — the cleanup completed
+    across the intervening sessions. The remaining ~14 string-match
+    overlaps are bodies-of-other-defs (`\arabic` referenced inside
+    `\thefootnote`, `\@startsection` referenced inside `\chapter`,
+    etc.), not redundant definitions. Within-file multi-defs likewise
+    reduced: `\appendixname` / `\thebibliography@ID` drift entries
+    are gone; `\f@shape`/`\f@family`/`\f@series` font-shape sites
+    (still 4-6 each) are legitimately contextual per-shape
+    declarations. **No actionable dedupe remains.**
 
 ## Dump-completeness gaps
 
