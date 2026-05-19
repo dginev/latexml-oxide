@@ -120,8 +120,17 @@ LoadDefinitions!({
   // `\usepackage[all,tips]{xy}` whose `\DeclareOption*` chain doesn't
   // reliably reach `\xyoption{all}` in our binding's option pipeline.
   // Witness 2311.05789.
+  //
+  // BUT only load if the user hasn't already defined `\graph`
+  // themselves — xygraph.tex L29 defines `\graph` as xy's diagram-
+  // node macro and would OVERWRITE a user's
+  // `\newcommand{\graph}{\mathcal{G}}` for graph-theory notation,
+  // turning subsequent `$\graph(A)$` math into xy-diagram parsing
+  // which trips text-mode `_` cascades. Witness 2308.07722
+  // (paper uses `\newcommand{\graph}{\mathcal{G}}` after
+  // `\usepackage{xy}` without graph option).
   at_begin_document(TokenizeInternal!(
-    r"\@ifundefined{xygraph}{\xyoption{graph}}{}"
+    r"\@ifundefined{xygraph}{\@ifundefined{graph}{\xyoption{graph}}{}}{}"
   ))?;
 
   // \xywarning@, \xyerror@ (Perl L53-54)
