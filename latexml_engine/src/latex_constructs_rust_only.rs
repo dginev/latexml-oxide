@@ -58,6 +58,14 @@ LoadDefinitions!({
   // is irrelevant for our XML pipeline.
   Let!("\\UseRawInputEncoding", r"\relax");
 
+  // \DocumentMetadata{<keyval>} — LaTeX 2024 kernel command for PDF
+  // accessibility metadata. Author calls it BEFORE `\documentclass`
+  // (the autoload trigger in tex.rs ensures the LaTeX pool is loaded
+  // by the time it's expanded). The kvopts inside are PDF-only and
+  // semantically irrelevant for XML output — gobble the brace group.
+  // Witness 2305.08034.
+  def_macro_noop("\\DocumentMetadata{}")?;
+
   //======================================================================
   // 2. LaTeXML-internal helpers
   //======================================================================

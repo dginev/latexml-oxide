@@ -198,6 +198,11 @@ LoadDefinitions!({
     // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
     // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
     "\\UseRawInputEncoding",
+    // \DocumentMetadata{...} is the LaTeX 2024 kernel command for PDF
+    // accessibility metadata; LaTeX expects it BEFORE \documentclass.
+    // Same pre-documentclass autoload pattern as \UseRawInputEncoding.
+    // Witness 2305.08034.
+    "\\DocumentMetadata",
   ]
   .iter()
   {
