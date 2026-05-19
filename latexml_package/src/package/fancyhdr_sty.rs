@@ -6,26 +6,37 @@
 
 use crate::prelude::*;
 
-LoadDefinitions!({
-  DefMacro!("\\fancyhead[]{}", "");
-  DefMacro!("\\fancyfoot[]{}", "");
-  DefMacro!("\\fancyhf[]{}", "");
 
-  DefMacro!("\\fancyheadoffset[]{}", "");
-  DefMacro!("\\fancyfootoffset[]{}", "");
-  DefMacro!("\\fancyhfoffset[]{}", "");
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+LoadDefinitions!({
+  def_macro_noop("\\fancyhead[]{}")?;
+  def_macro_noop("\\fancyfoot[]{}")?;
+  def_macro_noop("\\fancyhf[]{}")?;
+
+  def_macro_noop("\\fancyheadoffset[]{}")?;
+  def_macro_noop("\\fancyfootoffset[]{}")?;
+  def_macro_noop("\\fancyhfoffset[]{}")?;
 
   DefMacro!("\\headrulewidth", "0.4pt");
   DefMacro!("\\footrulewidth", "0pt");
   DefMacro!("\\headruleskip", "0pt"); // since 4.0
   DefMacro!("\\footruleskip", ".3\\normalbaselineskip");
-  DefMacro!("\\headrule", "");
-  DefMacro!("\\footrule", "");
+  def_macro_noop("\\headrule")?;
+  def_macro_noop("\\footrule")?;
   DefRegister!("\\headwidth" => Dimension(0)); // maybe need some other value here?
 
-  DefMacro!("\\fancyheadinit{}", ""); // since 4.0
-  DefMacro!("\\fancyfootinit{}", ""); // since 4.0
-  DefMacro!("\\fancyhfinit{}", ""); // since 4.0
+  def_macro_noop("\\fancyheadinit{}")?; // since 4.0
+  def_macro_noop("\\fancyfootinit{}")?; // since 4.0
+  def_macro_noop("\\fancyhfinit{}")?; // since 4.0
 
   // not implemented yet: \fancycenter[][]{}{}{}, since 4.0
 
@@ -35,23 +46,23 @@ LoadDefinitions!({
   DefMacro!("\\ifbotfloat{}{}", "#2");
   DefMacro!("\\iffootnote{}{}", "#2"); // since 3.8
 
-  DefMacro!("\\fancypagestyle{}[]{}", "");
+  def_macro_noop("\\fancypagestyle{}[]{}")?;
 
   // extramarks.sty not implemented, as its commands can only be used in headers and footers
 
   // not defined outside of headers and footers
-  // DefMacro!("\\nouppercase", "");
+  // def_macro_noop("\\nouppercase")?;
 
   // deprecated commands
-  DefMacro!("\\lhead[]{}", "");
-  DefMacro!("\\chead[]{}", "");
-  DefMacro!("\\rhead[]{}", "");
+  def_macro_noop("\\lhead[]{}")?;
+  def_macro_noop("\\chead[]{}")?;
+  def_macro_noop("\\rhead[]{}")?;
 
-  DefMacro!("\\lfoot[]{}", "");
-  DefMacro!("\\cfoot[]{}", "");
-  DefMacro!("\\rfoot[]{}", "");
+  def_macro_noop("\\lfoot[]{}")?;
+  def_macro_noop("\\cfoot[]{}")?;
+  def_macro_noop("\\rfoot[]{}")?;
 
-  DefMacro!("\\fancyplain{}{}", "");
+  def_macro_noop("\\fancyplain{}{}")?;
 
   DefMacro!("\\plainheadrulewidth", "0pt");
   DefMacro!("\\plainfootrulewidth", "0pt");

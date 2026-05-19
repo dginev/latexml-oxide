@@ -2,6 +2,17 @@
 //! Perl: moderncv.cls.ltxml (115 lines)
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('article');
@@ -23,13 +34,13 @@ LoadDefinitions!({
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\address{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1\\newline #2}}");
 
-  DefMacro!("\\addressfont",   "");
-  DefMacro!("\\addressstyle",  "");
-  DefMacro!("\\addresssymbol", "");
+  def_macro_noop("\\addressfont")?;
+  def_macro_noop("\\addressstyle")?;
+  def_macro_noop("\\addresssymbol")?;
 
-  DefMacro!("\\cvcolumn",     "");
-  DefMacro!("\\cvcolumncell", "");
-  DefMacro!("\\cvdoubleitem", "");
+  def_macro_noop("\\cvcolumn")?;
+  def_macro_noop("\\cvcolumncell")?;
+  def_macro_noop("\\cvdoubleitem")?;
 
   // Perl L43, L49: enterHorizontal => 1 on both.
   DefConstructor!("\\cventry{}{}{}{}{}{}",
@@ -44,7 +55,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='homepage'>#1</ltx:contact>");
   DefMacro!("\\homepage{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{\\url{#1}}}");
-  DefMacro!("\\homepagesymbol", "");
+  def_macro_noop("\\homepagesymbol")?;
 
   DefConstructor!("\\@@@mobile{}", "^ <ltx:contact role='mobile'>#1</ltx:contact>");
   DefMacro!("\\mobile{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@mobile{#1}}");
@@ -119,7 +130,7 @@ LoadDefinitions!({
   DefMacro!("\\email Semiverbatim",      "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
   DefMacro!("\\firstname Semiverbatim",  "\\@add@to@frontmatter{ltx:creator}{\\@@@firstname{#1}}");
   DefMacro!("\\familyname Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@familyname{#1}}");
-  DefMacro!("\\photo[]{}", ""); // TODO
+  def_macro_noop("\\photo[]{}")?; // TODO
 
   DefConstructor!("\\@@@position{}",   "^ <ltx:contact role='position'>#1</ltx:contact>");
   DefConstructor!("\\@@@email{}",      "^ <ltx:contact role='email'>#1</ltx:contact>");
@@ -127,20 +138,20 @@ LoadDefinitions!({
   DefConstructor!("\\@@@familyname{}", "^ <ltx:contact role='familyname'>#1</ltx:contact>");
 
   // Style-dependent
-  DefMacro!("\\moderncvtheme[]{}", "");
-  DefMacro!("\\moderncvcolor",     "");
-  DefMacro!("\\moderncvicons",     "");
-  DefMacro!("\\moderncvstyle",     "");
+  def_macro_noop("\\moderncvtheme[]{}")?;
+  def_macro_noop("\\moderncvcolor")?;
+  def_macro_noop("\\moderncvicons")?;
+  def_macro_noop("\\moderncvstyle")?;
 
   // Classic theme icon macros
-  DefMacro!("\\marvosymbol {}",       "");
-  DefMacro!("\\addresssymbol",        "");
+  def_macro_noop("\\marvosymbol {}")?;
+  def_macro_noop("\\addresssymbol")?;
   DefMacro!("\\mobilephonesymbol",    "\u{1F4F1}"); // 📱
   DefMacro!("\\fixedphonesymbol",     "\u{260E}");  // ☎
   DefMacro!("\\faxphonesymbol",       "\u{1F4E0}"); // 📠
   DefMacro!("\\emailsymbol",          "\u{2709}");  // ✉
   DefMacro!("\\homepagesymbol",       "\u{1F5B0}"); // 🖰
-  DefMacro!("\\linkedinsocialsymbol", "");
-  DefMacro!("\\twittersocialsymbol",  "");
-  DefMacro!("\\githubsocialsymbol",   "");
+  def_macro_noop("\\linkedinsocialsymbol")?;
+  def_macro_noop("\\twittersocialsymbol")?;
+  def_macro_noop("\\githubsocialsymbol")?;
 });

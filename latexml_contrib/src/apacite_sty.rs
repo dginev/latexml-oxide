@@ -5,12 +5,23 @@
 //! content-bearing args (authors, titles) and gobble the rest.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("natbib");
 
   // Core APAref* set (apacite.sty L1257-2243). Render as the
   // content-bearing argument so titles / authors survive in the XML.
-  DefMacro!("\\APACinsertmetastar{}", "");
+  def_macro_noop("\\APACinsertmetastar{}")?;
   DefMacro!("\\APACrefatitle{}{}", "#2");
   DefMacro!("\\APACrefbtitle{}{}", "#2");
   DefMacro!("\\APACrefYear{}", "(#1)");
@@ -24,9 +35,9 @@ LoadDefinitions!({
   DefMacro!("\\APACmonth{}", "#1");
   DefMacro!("\\APACrefnote{}", "#1");
   DefMacro!("\\APAhyperref{}{}", "#2");
-  DefMacro!("\\PrintBackRefs{}", "");
-  DefMacro!("\\CurrentBib", "");
-  DefMacro!("\\bibcomputersoftwaremanual{}{}{}", "");
+  def_macro_noop("\\PrintBackRefs{}")?;
+  def_macro_noop("\\CurrentBib")?;
+  def_macro_noop("\\bibcomputersoftwaremanual{}{}{}")?;
 
   // APAref* environments
   DefEnvironment!("{APACrefauthors}", "#body");
@@ -45,17 +56,17 @@ LoadDefinitions!({
   DefMacro!("\\APACaddressPublisherEqAuth{}{}", "#1: #2");
   DefMacro!("\\APACaddressSchool{}{}", "#1: #2");
   DefMacro!("\\APACtypeAddressSchool{}{}{}", "#3");
-  DefMacro!("\\APACmetastar", "");
+  def_macro_noop("\\APACmetastar")?;
   DefMacro!("\\APACorigyearnote{}", "(#1)");
   DefMacro!("\\APACorigjournalnote{}", "#1");
   DefMacro!("\\APACorigbooknote{}", "#1");
   DefMacro!("\\APACorigED", "Ed.");
   DefMacro!("\\APACorigEDS", "Eds.");
   DefMacro!("\\APACstd{}", "#1");
-  DefMacro!("\\APACSortNoop{}", "");
-  DefMacro!("\\APACmetaprenote", "");
-  DefMacro!("\\APACrefauthstyle{}", "");
-  DefMacro!("\\APACbibcite{}", "");
+  def_macro_noop("\\APACSortNoop{}")?;
+  def_macro_noop("\\APACmetaprenote")?;
+  def_macro_noop("\\APACrefauthstyle{}")?;
+  def_macro_noop("\\APACbibcite{}")?;
 
   // apacite citation forms (apacite.sty L328+). Delegate to natbib's
   // \cite which we wrapped in natbib_sty.rs. Forms:
@@ -67,22 +78,22 @@ LoadDefinitions!({
   DefMacro!("\\citeA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
   DefMacro!("\\citeNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
   DefMacro!("\\citeyearNP[][] Semiverbatim", "\\citeyear[#1][#2]{#3}");
-  DefMacro!("\\APACrestorebibitem", "");
-  DefMacro!("\\APACemindex{}", "");
-  DefMacro!("\\APACltxemindex{}", "");
-  DefMacro!("\\APACtocindex{}", "");
-  DefMacro!("\\APACstdindex{}", "");
-  DefMacro!("\\APACurlBreaks", "");
+  def_macro_noop("\\APACrestorebibitem")?;
+  def_macro_noop("\\APACemindex{}")?;
+  def_macro_noop("\\APACltxemindex{}")?;
+  def_macro_noop("\\APACtocindex{}")?;
+  def_macro_noop("\\APACstdindex{}")?;
+  def_macro_noop("\\APACurlBreaks")?;
 
   // Short-form helpers (apacite L1300+: \BBA, \BCnt, \BPGS, etc.)
   DefMacro!("\\BBA", "&");
-  DefMacro!("\\BBCQ", "");
-  DefMacro!("\\BBOQ", "");
+  def_macro_noop("\\BBCQ")?;
+  def_macro_noop("\\BBOQ")?;
   DefMacro!("\\BPBI", ".");
   DefMacro!("\\BHBI", "-");
-  DefMacro!("\\BDBL", "");
-  DefMacro!("\\BCBT", "");
-  DefMacro!("\\BCBL", "");
+  def_macro_noop("\\BDBL")?;
+  def_macro_noop("\\BCBT")?;
+  def_macro_noop("\\BCBL")?;
   DefMacro!("\\BCnt{}", "#1");
   DefMacro!("\\BPGS{}", "#1");
   DefMacro!("\\BVOL{}", "#1");

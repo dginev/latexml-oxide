@@ -5,6 +5,17 @@
 //! degree symbol, number formatting delegation.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: InputDefinitions('french', type => 'ldf', noltxml => 1)
@@ -120,10 +131,10 @@ LoadDefinitions!({
   // by our `\lx@french@punct@*` primitives above, which can't be
   // toggled per-paper anyway. Witnesses: arXiv:2511.22710 (frenchb
   // paper with `\NoAutoSpaceBeforeFDP{}` call).
-  DefMacro!("\\NoAutoSpaceBeforeFDP", "");
-  DefMacro!("\\AutoSpaceBeforeFDP", "");
+  def_macro_noop("\\NoAutoSpaceBeforeFDP")?;
+  def_macro_noop("\\AutoSpaceBeforeFDP")?;
   // `\FBautospacing` toggle (legacy) — same family.
-  DefMacro!("\\FBautospacing", "");
+  def_macro_noop("\\FBautospacing")?;
 
   // \frenchsetup — babel-french 3.x configuration command. Takes a
   // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
@@ -131,7 +142,7 @@ LoadDefinitions!({
   // `\frenchbsetup` is `\let`'d to `\frenchsetup` (legacy alias).
   // Configurations affect formatting subtleties that don't translate
   // meaningfully to HTML — read-and-discard the keyval arg.
-  DefMacro!("\\frenchsetup RequiredKeyVals", "");
+  def_macro_noop("\\frenchsetup RequiredKeyVals")?;
   Let!("\\frenchbsetup", "\\frenchsetup");
 
   // \nombre — delegates to numprint if loaded (Perl french.ldf.ltxml
@@ -187,31 +198,31 @@ LoadDefinitions!({
   // typographical no-ops in our XML/HTML pipeline since we don't
   // render French punctuation spacing or footnote-style switches.
   // Witness 2503.17701 (`\FrenchFootnotes` in frenchPhi-n.tex).
-  DefMacro!("\\FrenchFootnotes",          "");
-  DefMacro!("\\StandardFootnotes",        "");
-  DefMacro!("\\FrenchPunctuation",        "");
-  DefMacro!("\\StandardPunctuation",      "");
-  DefMacro!("\\FrenchLayout",             "");
-  DefMacro!("\\StandardLayout",           "");
-  DefMacro!("\\AutoSpaceFootnotes",       "");
-  DefMacro!("\\NoAutoSpaceFootnotes",     "");
-  DefMacro!("\\FrenchSuperscripts",       "");
-  DefMacro!("\\NoFrenchSuperscripts",     "");
-  DefMacro!("\\GOfrench",                 "");
-  DefMacro!("\\StandardLists",            "");
-  DefMacro!("\\FrenchLists",              "");
-  DefMacro!("\\StandardItemLabels",       "");
-  DefMacro!("\\StandardItemizeEnv",       "");
-  DefMacro!("\\StandardEnumerateEnv",     "");
-  DefMacro!("\\StandardListSpacing",      "");
-  DefMacro!("\\InTitleNumber",            "");
-  DefMacro!("\\AutoSpacePunctuation",     "");
-  DefMacro!("\\NoAutoSpacePunctuation",   "");
-  DefMacro!("\\ThinSpaceInFrenchNumbers", "");
+  def_macro_noop("\\FrenchFootnotes")?;
+  def_macro_noop("\\StandardFootnotes")?;
+  def_macro_noop("\\FrenchPunctuation")?;
+  def_macro_noop("\\StandardPunctuation")?;
+  def_macro_noop("\\FrenchLayout")?;
+  def_macro_noop("\\StandardLayout")?;
+  def_macro_noop("\\AutoSpaceFootnotes")?;
+  def_macro_noop("\\NoAutoSpaceFootnotes")?;
+  def_macro_noop("\\FrenchSuperscripts")?;
+  def_macro_noop("\\NoFrenchSuperscripts")?;
+  def_macro_noop("\\GOfrench")?;
+  def_macro_noop("\\StandardLists")?;
+  def_macro_noop("\\FrenchLists")?;
+  def_macro_noop("\\StandardItemLabels")?;
+  def_macro_noop("\\StandardItemizeEnv")?;
+  def_macro_noop("\\StandardEnumerateEnv")?;
+  def_macro_noop("\\StandardListSpacing")?;
+  def_macro_noop("\\InTitleNumber")?;
+  def_macro_noop("\\AutoSpacePunctuation")?;
+  def_macro_noop("\\NoAutoSpacePunctuation")?;
+  def_macro_noop("\\ThinSpaceInFrenchNumbers")?;
   // french.ldf L?? — AutoSpace switches for the period (point) before
   // a footnote number marker. Typesetting-only — no-op in XML.
-  DefMacro!("\\AutoSpaceBeforeFDP",       "");
-  DefMacro!("\\NoAutoSpaceBeforeFDP",     "");
+  def_macro_noop("\\AutoSpaceBeforeFDP")?;
+  def_macro_noop("\\NoAutoSpaceBeforeFDP")?;
 
   // Babel-level `frenchb` language aliases — TL2025 babel-french 3.7e
   // turned `frenchb.ldf` into a deprecation shim that only `\chardef`s

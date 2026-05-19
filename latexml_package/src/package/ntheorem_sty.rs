@@ -1,5 +1,16 @@
 use crate::engine::latex_constructs::*;
 use crate::prelude::*;
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Basically, this package is similar to amsthm.sty (or theorem.sty)
@@ -55,12 +66,12 @@ LoadDefinitions!({
   DefRegister!("\\theoremframepostskipamount"   => Dimension::new(0));
   DefRegister!("\\theoreminframepreskipamount"  => Dimension::new(0));
   DefRegister!("\\theoreminframepostskipamount" => Dimension::new(0));
-  DefMacro!("\\theorempreskip{}",         "");
-  DefMacro!("\\theorempostskip{}",        "");
-  DefMacro!("\\theoremframepreskip{}",    "");
-  DefMacro!("\\theoremframepostskip{}",   "");
-  DefMacro!("\\theoreminframepreskip{}",  "");
-  DefMacro!("\\theoreminframepostskip{}", "");
+  def_macro_noop("\\theorempreskip{}")?;
+  def_macro_noop("\\theorempostskip{}")?;
+  def_macro_noop("\\theoremframepreskip{}")?;
+  def_macro_noop("\\theoremframepostskip{}")?;
+  def_macro_noop("\\theoreminframepreskip{}")?;
+  def_macro_noop("\\theoreminframepostskip{}")?;
   DefMacro!("\\None",                     "None");
   DefMacro!("\\NoneSymbol",               "None");
   DefMacro!("\\NoneKeyword",              "None");
@@ -309,12 +320,12 @@ LoadDefinitions!({
 
   //======================================================================
   // Lists of Theorems
-  DefMacro!("\\addtheoremline OptionalMatch:* {}{}", "");
-  DefMacro!("\\addtotheoremfile[]{}",                "");
+  def_macro_noop("\\addtheoremline OptionalMatch:* {}{}")?;
+  def_macro_noop("\\addtotheoremfile[]{}")?;
 
-  DefMacro!("\\theoremlisttype{}",            "");
-  DefMacro!("\\newtheoremlisttype{}{}{}{}",   "");
-  DefMacro!("\\renewtheoremlisttype{}{}{}{}", "");
+  def_macro_noop("\\theoremlisttype{}")?;
+  def_macro_noop("\\newtheoremlisttype{}{}{}{}")?;
+  def_macro_noop("\\renewtheoremlisttype{}{}{}{}")?;
 
   DefConstructor!("\\listtheorems{}",
     "<ltx:TOC lists='#lists'/>",
@@ -332,10 +343,10 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\theoremlistall",         "");
-  DefMacro!("\\theoremlistallname",     "");
-  DefMacro!("\\theoremlistalloptional", "");
-  DefMacro!("\\theoremlistalloptname",  "");
+  def_macro_noop("\\theoremlistall")?;
+  def_macro_noop("\\theoremlistallname")?;
+  def_macro_noop("\\theoremlistalloptional")?;
+  def_macro_noop("\\theoremlistalloptname")?;
 
   //======================================================================
   // Greek numbering

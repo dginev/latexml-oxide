@@ -5,6 +5,17 @@
 //! DVI-only: all graphics commands produce no output in LaTeXML.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // PSTricks is DVI-only. The raw pstricks.sty is loaded by pstricks_sty.rs.
@@ -31,10 +42,10 @@ LoadDefinitions!({
   // no-op arg-consumers whose observable behavior under an
   // HTML/MathML backend is identical to a constructor body of "".
   DefMacro!("\\pst@object{}", "#1");
-  DefMacro!("\\use@par", "");
-  DefMacro!("\\addto@par{}", "");
-  DefMacro!("\\psset{}", "");
-  DefMacro!("\\psset@special{}", "");
+  def_macro_noop("\\use@par")?;
+  def_macro_noop("\\addto@par{}")?;
+  def_macro_noop("\\psset{}")?;
+  def_macro_noop("\\psset@special{}")?;
 
   // Perl pstricks_support.sty.ltxml L580-606: register 22 pstricks keyvals
   // covering dot/arrow sizes, line styling, frame/arc/label spacing, and
@@ -67,31 +78,31 @@ LoadDefinitions!({
 
   // Line/shape constructors — Perl L500-700
   // All drawing commands are no-ops (DVI-only)
-  DefMacro!("\\psline[]", "");
-  DefMacro!("\\pspolygon[]", "");
-  DefMacro!("\\psframe[]", "");
-  DefMacro!("\\pscircle[]", "");
-  DefMacro!("\\psellipse[]", "");
-  DefMacro!("\\psarc[]", "");
-  DefMacro!("\\psarcn[]", "");
-  DefMacro!("\\pswedge[]", "");
-  DefMacro!("\\psbezier[]", "");
-  DefMacro!("\\pscurve[]", "");
-  DefMacro!("\\psecurve[]", "");
-  DefMacro!("\\psccurve[]", "");
-  DefMacro!("\\parabola[]", "");
+  def_macro_noop("\\psline[]")?;
+  def_macro_noop("\\pspolygon[]")?;
+  def_macro_noop("\\psframe[]")?;
+  def_macro_noop("\\pscircle[]")?;
+  def_macro_noop("\\psellipse[]")?;
+  def_macro_noop("\\psarc[]")?;
+  def_macro_noop("\\psarcn[]")?;
+  def_macro_noop("\\pswedge[]")?;
+  def_macro_noop("\\psbezier[]")?;
+  def_macro_noop("\\pscurve[]")?;
+  def_macro_noop("\\psecurve[]")?;
+  def_macro_noop("\\psccurve[]")?;
+  def_macro_noop("\\parabola[]")?;
 
   // Placement — Perl L700-900
   DefMacro!("\\rput OptionalMatch:* [][]{}{}",  "#4");
   DefMacro!("\\uput[]{}{}",  "#3");
-  DefMacro!("\\multirput[]{}{}{}{}",  "");
+  def_macro_noop("\\multirput[]{}{}{}{}")?;
 
   // Grid and axes — Perl L900-1000
-  DefMacro!("\\psgrid[]", "");
-  DefMacro!("\\psaxes[]", "");
+  def_macro_noop("\\psgrid[]")?;
+  def_macro_noop("\\psaxes[]")?;
 
   // Custom object and clip — Perl L1000-1057
-  DefMacro!("\\pscustom[]", "");
+  def_macro_noop("\\pscustom[]")?;
   // Perl pstricks_support.sty.ltxml L996:
   //   DefEnvironment('{psclip} {}',
   //     '<ltx:clip> <ltx:clippath> #1 </ltx:clippath> #body </ltx:clip>');
@@ -115,10 +126,10 @@ LoadDefinitions!({
   DefConstructor!("\\clipbox[]{}", "<ltx:g bclip='#1'>#2</ltx:g>");
 
   // Arrow tips
-  DefMacro!("\\psoverlay{}", "");
-  DefMacro!("\\pst@getangle{}", "");
-  DefMacro!("\\pst@number{}", "");
-  DefMacro!("\\pst@coor", "");
+  def_macro_noop("\\psoverlay{}")?;
+  def_macro_noop("\\pst@getangle{}")?;
+  def_macro_noop("\\pst@number{}")?;
+  def_macro_noop("\\pst@coor")?;
 
   // Perl pstricks_support.sty.ltxml L1042-1055: color shorthands. pstricks
   // re-binds these CSes (usually provided by color.sty / xcolor.sty as the
@@ -160,9 +171,9 @@ LoadDefinitions!({
   });
 
   // Coordinate-mode no-ops — Perl L1037-1039. No effect in LaTeXML.
-  DefMacro!("\\SpecialCoor", "");
-  DefMacro!("\\NormalCoor",  "");
-  DefMacro!("\\PSTricksOff", "");
+  def_macro_noop("\\SpecialCoor")?;
+  def_macro_noop("\\NormalCoor")?;
+  def_macro_noop("\\PSTricksOff")?;
 
   // Rotation constructors — Perl pstricks_support.sty.ltxml L1002-1006.
   // Produce <ltx:g> SVG-rotate wrappers. `bounded => 1` matches Perl —
@@ -201,7 +212,7 @@ LoadDefinitions!({
   // not overriding it here keeps the tested scalebox golden intact.
   // Intentional DefPrimitive → DefMacro (WISDOM #44, same DVI-only
   // blocker as L18-31 umbrella).
-  DefMacro!("\\@@@ackscale{}", "");
+  def_macro_noop("\\@@@ackscale{}")?;
 
   DefMacro!("\\black", "\\color{black}");
   DefMacro!("\\darkgray", "\\color{darkgray}");

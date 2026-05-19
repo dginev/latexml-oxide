@@ -2,6 +2,17 @@
 //! Perl: IEEEtran.cls.ltxml — 458 lines
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // DeclareOption stubs — Perl L18-108
@@ -124,15 +135,15 @@ LoadDefinitions!({
   // IEEEtran preambles or .bbl files reference. IEEEtran doesn't natively
   // export them, but users assume they exist. Provide empty defaults so
   // bibliographies that include `\thetitle` don't crash. Witness 2501.15830.
-  DefMacro!("\\thetitle",  "");
-  DefMacro!("\\theauthor", "");
-  DefMacro!("\\thedate",   "");
-  DefMacro!("\\IEEEdisplaynontitleabstractindextext", "");
-  DefMacro!("\\IEEEdisplaynotcompsoctitleabstractindextext", "");
-  DefMacro!("\\IEEEcompsoctitleabstractindextext", "");
+  def_macro_noop("\\thetitle")?;
+  def_macro_noop("\\theauthor")?;
+  def_macro_noop("\\thedate")?;
+  def_macro_noop("\\IEEEdisplaynontitleabstractindextext")?;
+  def_macro_noop("\\IEEEdisplaynotcompsoctitleabstractindextext")?;
+  def_macro_noop("\\IEEEcompsoctitleabstractindextext")?;
   Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
-  DefMacro!("\\IEEEoverridecommandlockouts", "");
-  DefMacro!("\\overrideIEEEmargins", "");
+  def_macro_noop("\\IEEEoverridecommandlockouts")?;
+  def_macro_noop("\\overrideIEEEmargins")?;
   // \IEEEaftertitletext{text} — after-title note (often invited-
   // paper credit, conference name). Author content; preserve as
   // ltx:note frontmatter rather than gobble.
@@ -175,11 +186,11 @@ LoadDefinitions!({
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
   DefMacro!("\\IEEEcompsocitemizethanks{}", "\\thanks{#1}");
-  DefMacro!("\\IEEEcompsocthanksitem[]", "");
-  DefMacro!("\\IEEEauthorrefmark", "");
-  DefMacro!("\\IEEEtriggeratref{}", "");
+  def_macro_noop("\\IEEEcompsocthanksitem[]")?;
+  def_macro_noop("\\IEEEauthorrefmark")?;
+  def_macro_noop("\\IEEEtriggeratref{}")?;
   DefMacro!("\\IEEEpubid{}", "\\@add@frontmatter{ltx:note}[role=publicationid]{pubid: #1}");
-  DefMacro!("\\IEEEpubidadjcol", "");
+  def_macro_noop("\\IEEEpubidadjcol")?;
   // \corresp{name} — IEEE Open Journal class IEEEoj.cls L4875 marks
   // a corresponding-author note (later rendered in titlepage). Preserve
   // as frontmatter note. Witness 2307.02076 (IEEEoj).
@@ -357,7 +368,7 @@ LoadDefinitions!({
   // IEEE.xml reference under TL2025.
   DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
-  DefMacro!("\\IEEEeqnarraynumspace", "");
+  def_macro_noop("\\IEEEeqnarraynumspace")?;
   // IEEEeqnarraybox — faithful port of Perl IEEEtran.cls.ltxml L315-332.
   // Perl dispatches \ifmmode into \IEEEeqnarrayboxm (math-mode) or
   // \IEEEeqnarrayboxt (text-mode, with \lx@begin@inline@math wrapper),
@@ -377,8 +388,8 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     reversion => "\\begin{IEEEeqnarraybox}[#1]{#2}#3\\end{IEEEeqnarraybox}");
   DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
-  DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
-  DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
+  def_macro_noop("\\IEEEeqnarraydefcol{}{}{}")?;
+  def_macro_noop("\\IEEEeqnarraydefcolsep{}{}")?;
 
   // IEEEnonumber/yesnumber/sub-numbering — Perl L252-294.
   // Flip EQUATION_NUMBERING (starred form) or EQUATIONROW_TAGS (unstarred)
@@ -494,13 +505,13 @@ LoadDefinitions!({
 
   // IED list stubs (Perl L340-347)
   DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
-  DefMacro!("\\IEEEusemathlabelsep", "");
-  DefMacro!("\\IEEEtriggercmd{}", "");
-  DefMacro!("\\IEEElabelindent", "");
-  DefMacro!("\\IEEEcalcleftmargin{}", "");
-  DefMacro!("\\IEEEiedlabeljustifyc", "");
-  DefMacro!("\\IEEEiedlabeljustifyl", "");
-  DefMacro!("\\IEEEiedlabeljustifyr", "");
+  def_macro_noop("\\IEEEusemathlabelsep")?;
+  def_macro_noop("\\IEEEtriggercmd{}")?;
+  def_macro_noop("\\IEEElabelindent")?;
+  def_macro_noop("\\IEEEcalcleftmargin{}")?;
+  def_macro_noop("\\IEEEiedlabeljustifyc")?;
+  def_macro_noop("\\IEEEiedlabeljustifyl")?;
+  def_macro_noop("\\IEEEiedlabeljustifyr")?;
 
   // IEEEitemize/enumerate/description (Perl IEEEtran.cls.ltxml L351-366).
   // Each env:
@@ -639,7 +650,7 @@ LoadDefinitions!({
   Let!("\\endbiographynophoto", "\\endIEEEbiographynophoto");
 
   // bstctlcite stub (Perl L445)
-  DefMacro!("\\bstctlcite[]{}", "");
+  def_macro_noop("\\bstctlcite[]{}")?;
 
   // Disable internal alignment env (Perl L453-454)
   DefMacro!("\\@IEEEauthorhalign", "\\relax");

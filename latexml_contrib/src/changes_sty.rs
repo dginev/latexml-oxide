@@ -1,5 +1,16 @@
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Preserve change-marked content (author body) as ltx:text with a
   // semantic class. The pre-content-preserving stub gobbled `\deleted`
@@ -30,7 +41,7 @@ LoadDefinitions!({
     "<ltx:text class='ltx_changes_highlight'>#2</ltx:text>");
   DefConstructor!("\\comment[]{}",
     "<ltx:text class='ltx_changes_comment'>#2</ltx:text>");
-  DefMacro!("\\ChangesListline{}{}{}{}", "");
+  def_macro_noop("\\ChangesListline{}{}{}{}")?;
   DefMacro!("\\listofchangesname", "List of changes");
   DefMacro!("\\summaryofchangesname", "Changes");
   DefMacro!("\\compactsummaryofchangesname", "Changes (compact)");
@@ -51,20 +62,20 @@ LoadDefinitions!({
     "Summary of changes is available after the next \\LaTeX\\ run."
   );
   Let!("\\cleaders", "\\leaders");
-  DefMacro!("\\definechangesauthor[]{}", "");
-  DefMacro!("\\listofchanges[]", "");
-  DefMacro!("\\origcontentsline", "");
-  DefMacro!("\\setaddedmarkup{}", "");
-  DefMacro!("\\setauthormarkup{}", "");
-  DefMacro!("\\setauthormarkupposition{}", "");
-  DefMacro!("\\setanonymousname{}", "");
-  DefMacro!("\\setauthormarkuptext{}", "");
-  DefMacro!("\\setcommentmarkup{}", "");
-  DefMacro!("\\setdeletedmarkup{}", "");
-  DefMacro!("\\sethighlightmarkup{}", "");
-  DefMacro!("\\setlocextension{}", "");
-  DefMacro!("\\setsocextension{}", "");
-  DefMacro!("\\setsummarytowidth{}", "");
-  DefMacro!("\\setsummarywidth{}", "");
-  DefMacro!("\\settruncatewidth{}", "");
+  def_macro_noop("\\definechangesauthor[]{}")?;
+  def_macro_noop("\\listofchanges[]")?;
+  def_macro_noop("\\origcontentsline")?;
+  def_macro_noop("\\setaddedmarkup{}")?;
+  def_macro_noop("\\setauthormarkup{}")?;
+  def_macro_noop("\\setauthormarkupposition{}")?;
+  def_macro_noop("\\setanonymousname{}")?;
+  def_macro_noop("\\setauthormarkuptext{}")?;
+  def_macro_noop("\\setcommentmarkup{}")?;
+  def_macro_noop("\\setdeletedmarkup{}")?;
+  def_macro_noop("\\sethighlightmarkup{}")?;
+  def_macro_noop("\\setlocextension{}")?;
+  def_macro_noop("\\setsocextension{}")?;
+  def_macro_noop("\\setsummarytowidth{}")?;
+  def_macro_noop("\\setsummarywidth{}")?;
+  def_macro_noop("\\settruncatewidth{}")?;
 });

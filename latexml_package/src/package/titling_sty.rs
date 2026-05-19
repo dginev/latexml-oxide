@@ -1,5 +1,16 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   DefMacro!("\\pretitle{}",   "\\def\\@bspretitle{#1}");
@@ -8,26 +19,26 @@ LoadDefinitions!({
   DefMacro!("\\postauthor{}", "\\def\\@bspostauthor{#1}");
   DefMacro!("\\predate{}",    "\\def\\@bspredate{#1}");
   DefMacro!("\\postdate{}",   "\\def\\@bspostdate{#1}");
-  DefMacro!("\\maketitlehooka",   "");
-  DefMacro!("\\maketitlehookb",   "");
-  DefMacro!("\\maketitlehookc",   "");
-  DefMacro!("\\maketitlehookd",   "");
-  DefMacro!("\\thanksmarkseries{}",  "");
-  DefMacro!("\\symbolthanksmark",    "");
-  DefMacro!("\\@bscontmark",         "");
-  DefMacro!("\\continuousmarks",     "");
-  DefMacro!("\\thanksheadextra{}{}", "");
-  DefMacro!("\\thanksfootextra{}{}", "");
+  def_macro_noop("\\maketitlehooka")?;
+  def_macro_noop("\\maketitlehookb")?;
+  def_macro_noop("\\maketitlehookc")?;
+  def_macro_noop("\\maketitlehookd")?;
+  def_macro_noop("\\thanksmarkseries{}")?;
+  def_macro_noop("\\symbolthanksmark")?;
+  def_macro_noop("\\@bscontmark")?;
+  def_macro_noop("\\continuousmarks")?;
+  def_macro_noop("\\thanksheadextra{}{}")?;
+  def_macro_noop("\\thanksfootextra{}{}")?;
   DefMacro!("\\thanksmark{}",        "\\footnotemark[#1]");
   DefMacro!("\\thanksgap{}",         "\\hspace{#1}");
   DefMacro!("\\tamark",              "\\footnotemark");
   DefMacro!("\\thanksscript{}",      "\\textsuperscript{#1}");
-  DefMacro!("\\makethanksmarkhook",  "");
+  def_macro_noop("\\makethanksmarkhook")?;
   DefMacro!("\\thanksfootmark",      "\\tamark");
   DefMacro!("\\makethanksmark",      "\\thanksfootmark");
-  DefMacro!("\\usethanksrule",       "");
-  DefMacro!("\\cancelthanksrule",    "");
-  DefMacro!("\\calccentering{}{}",   "");
+  def_macro_noop("\\usethanksrule")?;
+  def_macro_noop("\\cancelthanksrule")?;
+  def_macro_noop("\\calccentering{}{}")?;
   DefRegister!("\\droptitle" =>       Dimension::new(0));
   DefRegister!("\\thanksmarkwidth" => Dimension::from_str("1.8em")?);
   DefRegister!("\\thanksmargin" =>    Dimension::from_str("-1.8em")?);
@@ -48,9 +59,9 @@ LoadDefinitions!({
   // previous empty replacement silently dropped the entire page.
   DefEnvironment!("{titlingpage}", "#body");
 
-  DefMacro!("\\killtitle",         "");
-  DefMacro!("\\keepthetitle",      "");
-  DefMacro!("\\emptythanks",       "");
-  DefMacro!("\\@bsmtitlempty",     "");
-  DefMacro!("\\appendiargdef{}{}", "");
+  def_macro_noop("\\killtitle")?;
+  def_macro_noop("\\keepthetitle")?;
+  def_macro_noop("\\emptythanks")?;
+  def_macro_noop("\\@bsmtitlempty")?;
+  def_macro_noop("\\appendiargdef{}{}")?;
 });

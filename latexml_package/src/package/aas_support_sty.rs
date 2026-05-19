@@ -1,6 +1,17 @@
 use crate::engine::latex_constructs::{after_float, before_float_ex};
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aas_support.sty.ltxml — support macros for AAS styles
@@ -48,7 +59,7 @@ LoadDefinitions!({
   DefConstructor!("\\edit{}{}",
     "<ltx:text class='ltx_changes_deleted ltx_strike'>#1</ltx:text>\
      <ltx:text class='ltx_changes_added'>#2</ltx:text>");
-  DefMacro!("\\ccc{}", "");
+  def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
   DefMacro!("\\journal{}",
     "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
@@ -60,7 +71,7 @@ LoadDefinitions!({
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
   DefMacro!("\\SGMLentity{}", "#1");
-  DefMacro!("\\SGML{}", "");
+  def_macro_noop("\\SGML{}")?;
 
   // 2.1.4 Short Comment
   DefMacro!("\\slugcomment{}", "\\@add@frontmatter{ltx:note}[role=slugcomment]{#1}");
@@ -125,7 +136,7 @@ LoadDefinitions!({
   // Collaboration — Perl L139-141
   DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
-  DefMacro!("\\nocollaboration{}", "");
+  def_macro_noop("\\nocollaboration{}")?;
 
   // 2.5 Keywords
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
@@ -140,14 +151,14 @@ LoadDefinitions!({
   DefMacro!("\\theeditornote", "E\\arabic{editornote}");
 
   // 2.8 Figure and Table Placement
-  DefMacro!("\\placetable{}", "");
-  DefMacro!("\\placefigure{}", "");
-  DefMacro!("\\placeplate{}", "");
+  def_macro_noop("\\placetable{}")?;
+  def_macro_noop("\\placefigure{}")?;
+  def_macro_noop("\\placeplate{}")?;
   NewCounter!("plate");
   DefMacro!("\\platename", "Plate");
-  DefMacro!("\\platewidth{Dimension}", "");
+  def_macro_noop("\\platewidth{Dimension}")?;
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
-  DefMacro!("\\gridline{}", "");
+  def_macro_noop("\\gridline{}")?;
 
   // Plate environments — Perl aas_support.sty.ltxml L179-201.
   // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
@@ -260,7 +271,7 @@ LoadDefinitions!({
     "\\lx@equation@settag{\\edef\\theequation{#1}\\lx@make@tags{equation}}");
 
   // 2.13 Citations — Perl L264-293
-  DefMacro!("\\markcite{}", "");
+  def_macro_noop("\\markcite{}")?;
   RequirePackage!("natbib");
 
   // Perl aas_support.sty.ltxml:283-291:
@@ -303,7 +314,7 @@ LoadDefinitions!({
 
   // 2.14 Electronic Art
   DefMacro!("\\figurenum{}", "\\def\\thefigure{#1}");
-  DefMacro!("\\epsscale{}", "");
+  def_macro_noop("\\epsscale{}")?;
   DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\textwidth]{#1}");
   DefMacro!("\\plottwo Semiverbatim Semiverbatim",
     "\\hbox{\\includegraphics[width=\\textwidth]{#1}\\includegraphics[width=\\textwidth]{#2}}");
@@ -351,7 +362,7 @@ LoadDefinitions!({
   // We treat as a no-op marker — our deluxetable / longtable handling
   // doesn't need the conditional flag. Driver: 2209.01632 (aastex631)
   // emitted "\startlongtable not defined" + alignment-tab cascade.
-  DefMacro!("\\startlongtable", "");
+  def_macro_noop("\\startlongtable")?;
 
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so
@@ -365,7 +376,7 @@ LoadDefinitions!({
   DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
   RawTeX!("\\global\\deluxedecimalsfalse");
   Let!("\\decimals", "\\deluxedecimals");
-  DefMacro!("\\colnumbers", "");
+  def_macro_noop("\\colnumbers")?;
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
 
@@ -622,26 +633,26 @@ LoadDefinitions!({
   DefMacro!("\\eqsecnum",
     "\\@addtoreset{equation}{section}\\def\\theequation{\\arabic{section}-\\arabic{equation}}");
 
-  DefMacro!("\\singlespace", "");
-  DefMacro!("\\doublespace", "");
-  DefMacro!("\\tighten", "");
-  DefMacro!("\\tightenlines", "");
-  DefMacro!("\\nohyphenation", "");
-  DefMacro!("\\offhyphenation", "");
-  DefMacro!("\\ptlandscape", "");
-  DefMacro!("\\refpar", "");
-  DefMacro!("\\traceoutput", "");
-  DefMacro!("\\tracingplain", "");
+  def_macro_noop("\\singlespace")?;
+  def_macro_noop("\\doublespace")?;
+  def_macro_noop("\\tighten")?;
+  def_macro_noop("\\tightenlines")?;
+  def_macro_noop("\\nohyphenation")?;
+  def_macro_noop("\\offhyphenation")?;
+  def_macro_noop("\\ptlandscape")?;
+  def_macro_noop("\\refpar")?;
+  def_macro_noop("\\traceoutput")?;
+  def_macro_noop("\\tracingplain")?;
 
-  DefMacro!("\\noprint {}", "");
+  def_macro_noop("\\noprint {}")?;
   DefMacro!("\\figsetstart", "{\\bf Fig. Set}");
-  DefMacro!("\\figsetend", "");
-  DefMacro!("\\figsetgrpstart", "");
-  DefMacro!("\\figsetgrpend", "");
+  def_macro_noop("\\figsetend")?;
+  def_macro_noop("\\figsetgrpstart")?;
+  def_macro_noop("\\figsetgrpend")?;
   DefMacro!("\\figsetnum {}", "{\\bf #1.}");
   DefMacro!("\\figsettitle {}", "{\\bf #1}");
-  DefMacro!("\\figsetgrpnum {}", "");
-  DefMacro!("\\figsetgrptitle {}", "");
-  DefMacro!("\\figsetplot {}", "");
-  DefMacro!("\\figsetgrpnote {}", "");
+  def_macro_noop("\\figsetgrpnum {}")?;
+  def_macro_noop("\\figsetgrptitle {}")?;
+  def_macro_noop("\\figsetplot {}")?;
+  def_macro_noop("\\figsetgrpnote {}")?;
 });

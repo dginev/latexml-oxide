@@ -3,6 +3,17 @@
 //! Shared by elsart.cls and elsarticle.cls
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Frontmatter environment
@@ -205,30 +216,30 @@ LoadDefinitions!({
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
   DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:date}[role=publication]{#1}");
-  DefMacro!("\\FullCopyrightText", "");
+  def_macro_noop("\\FullCopyrightText")?;
   DefMacro!("\\copyear{}", "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
   DefMacro!("\\copyrightholder{}", "\\@add@frontmatter{ltx:note}[role=copyrightholder]{#1}");
   Let!("\\copyrightyear", "\\copyear");
-  DefMacro!("\\RUNART", "");
-  DefMacro!("\\RUNDATE", "");
-  DefMacro!("\\RUNJNL", "");
+  def_macro_noop("\\RUNART")?;
+  def_macro_noop("\\RUNDATE")?;
+  def_macro_noop("\\RUNJNL")?;
   // Round-34 surpass-Perl: company/article-id are author metadata.
   DefMacro!("\\company{}",
     "\\@add@frontmatter{ltx:note}[role=company]{#1}");
   DefMacro!("\\aid{}",
     "\\@add@frontmatter{ltx:note}[role=article-id]{#1}");
-  DefMacro!("\\ssdi{}{}", "");
-  DefMacro!("\\readRCS Until:$ Until:$", "");
-  DefMacro!("\\RCSdate", "");
-  DefMacro!("\\RCSfile", "");
-  DefMacro!("\\RCSversion", "");
+  def_macro_noop("\\ssdi{}{}")?;
+  def_macro_noop("\\readRCS Until:$ Until:$")?;
+  def_macro_noop("\\RCSdate")?;
+  def_macro_noop("\\RCSfile")?;
+  def_macro_noop("\\RCSversion")?;
   DefMacro!("\\firstpage{}",
     "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   DefMacro!("\\lastpage{}",
     "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
-  DefMacro!("\\preface", "");
-  DefMacro!("\\theHaddress", "");
-  DefMacro!("\\theaddress", "");
+  def_macro_noop("\\preface")?;
+  def_macro_noop("\\theHaddress")?;
+  def_macro_noop("\\theaddress")?;
   Let!("\\ESpagenumber", "\\arabic");
 
   // Acknowledgements — Perl L123-125
@@ -329,18 +340,18 @@ LoadDefinitions!({
   DefRegister!("\\eqntopsep" => Glue!("12pt"));
 
   // Figures — Perl L186-191
-  DefMacro!("\\printfigures{}", "");
-  DefMacro!("\\printtables{}", "");
-  DefMacro!("\\MARK{}", "");
-  DefMacro!("\\mpfootnotemark", "");
+  def_macro_noop("\\printfigures{}")?;
+  def_macro_noop("\\printtables{}")?;
+  def_macro_noop("\\MARK{}")?;
+  def_macro_noop("\\mpfootnotemark")?;
 
   // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
 
   // Float environment
   DefEnvironment!("{esmark}",  "#body");
-  DefMacro!("\\figmark{}{}", "");
-  DefMacro!("\\tabmark{}{}", "");
+  def_macro_noop("\\figmark{}{}")?;
+  def_macro_noop("\\tabmark{}{}")?;
 
   // \qed (proof end-of-proof marker). Previously only in elsart_support
   // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain

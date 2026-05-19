@@ -206,6 +206,17 @@ fn fmt2(v: f64) -> String {
   }
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("color");
@@ -401,7 +412,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@xy@fill@off", { state::assign_value("xy_fill", false, None); });
 
   // Color support (Perl L101-109)
-  DefMacro!("\\xycolor@ {}", "");
+  def_macro_noop("\\xycolor@ {}")?;
   DefMacro!("\\xylocalColor@ {}{}", "\\def\\preStyle@@{\\addtostyletoks@{\\bgroup\\lx@xy@usecolor{#1}{#2}}}\\def\\postStyle@@{\\addtostyletoks@{\\egroup}}\\modXYstyle@");
   DefPrimitive!("\\lx@xy@usecolor {}{}", sub[(spec, model)] {
     // Perl L101-109: MergeFont(color => ParseColor($model, $spec))
@@ -1482,36 +1493,36 @@ LoadDefinitions!({
 
   // Enable features — messages (Perl L55-70)
   // Most are no-ops; \coloron and \crayonon trigger their setup macros (Perl L61-62)
-  DefMacro!("\\lx@xy@latexmlon", "");
-  DefMacro!("\\lx@xy@curveon", "");
-  DefMacro!("\\lx@xy@frameon", "");
-  DefMacro!("\\lx@xy@tipson", "");
-  DefMacro!("\\lx@xy@lineon", "");
+  def_macro_noop("\\lx@xy@latexmlon")?;
+  def_macro_noop("\\lx@xy@curveon")?;
+  def_macro_noop("\\lx@xy@frameon")?;
+  def_macro_noop("\\lx@xy@tipson")?;
+  def_macro_noop("\\lx@xy@lineon")?;
 
   // Perl L950-957: line styles extension stubs
   // Use our definitions, NOT the raw TeX stubs
   Let!("\\xy@polystyle@@", "\\xy@polystyle@");
   // Perl L952: Use our definitions, NOT the raw TeX stubs
   // These contain @ in CS names — use DefMacro!/Let! which bypass catcode issues
-  DefMacro!("\\xylinewidth@{}", "");
-  DefMacro!("\\xylinewidth@i{}", "");
-  DefMacro!("\\xyshape@thicker@", "");
-  DefMacro!("\\xyshape@thinner@", "");
+  def_macro_noop("\\xylinewidth@{}")?;
+  def_macro_noop("\\xylinewidth@i{}")?;
+  def_macro_noop("\\xyshape@thicker@")?;
+  def_macro_noop("\\xyshape@thinner@")?;
   Let!("\\xylinewidth@@", "\\xylinewidth@");
   DefMacro!("\\xypolyline@Special", "\\lx@xy@stroke@on\\lx@xy@fill@off\\lx@xy@poly");
   DefMacro!("\\xypolyfill@Special", "\\lx@xy@stroke@off\\lx@xy@fill@on\\lx@xy@poly");
   DefMacro!("\\xypolyeofill@Special", "\\lx@xy@stroke@off\\lx@xy@fill@on\\lx@xy@poly");
   DefMacro!("\\xypolydot@Special", "\\lx@xy@stroke@on\\lx@xy@dotpat\\lx@xy@fill@off\\lx@xy@poly");
   DefMacro!("\\xypolydash@Special", "\\lx@xy@stroke@on\\lx@xy@dashpat\\lx@xy@fill@off\\lx@xy@poly");
-  DefMacro!("\\lx@xy@rotateon", "");
+  def_macro_noop("\\lx@xy@rotateon")?;
   DefMacro!("\\lx@xy@coloron", "\\xystandardcolors@");
   DefMacro!("\\lx@xy@crayonon", "\\installCrayolaColors@");
-  DefMacro!("\\lx@xy@matrixon", "");
-  DefMacro!("\\lx@xy@arrowon", "");
-  DefMacro!("\\lx@xy@graphon", "");
-  DefMacro!("\\lx@xy@arcon", "");
-  DefMacro!("\\lx@xy@polyon", "");
-  DefMacro!("\\lx@xy@knoton", "");
-  DefMacro!("\\lx@xy@tileon", "");
-  DefMacro!("\\lx@xy@webon", "");
+  def_macro_noop("\\lx@xy@matrixon")?;
+  def_macro_noop("\\lx@xy@arrowon")?;
+  def_macro_noop("\\lx@xy@graphon")?;
+  def_macro_noop("\\lx@xy@arcon")?;
+  def_macro_noop("\\lx@xy@polyon")?;
+  def_macro_noop("\\lx@xy@knoton")?;
+  def_macro_noop("\\lx@xy@tileon")?;
+  def_macro_noop("\\lx@xy@webon")?;
 });
