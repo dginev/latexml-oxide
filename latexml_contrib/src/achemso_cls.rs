@@ -53,4 +53,13 @@ LoadDefinitions!({
     "{acknowledgement}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>"
   );
+
+  // achemso.cls extras commonly hit in ACS papers. The class L1087 sets
+  // a section-numbering policy via `\SectionNumbersOn` (preamble only);
+  // HTML rendering inherits LaTeX's default numbering so the toggle is
+  // a no-op. L294 `\providecommand{\latin}[1]{#1}` is an identity
+  // wrapper for italicized Latin abbreviations. Witness 2312.12737.
+  DefMacro!("\\SectionNumbersOn", None);
+  DefMacro!("\\SectionNumbersOff", None);
+  DefMacro!("\\latin{}", "#1");
 });
