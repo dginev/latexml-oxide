@@ -373,6 +373,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
   ("Interspeech", "cls", interspeech_cls::load_definitions),
+  ("INTERSPEECH", "cls", interspeech_cls::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),

@@ -19,6 +19,11 @@ LoadDefinitions!({
 
   // Interspeech frontmatter — preserve author content.
   def_macro_noop("\\interspeechcameraready")?;
+  // INTERSPEECH2023.cls L160: `\def\ninept{\def\baselinestretch{0.95}
+  // \let\normalsize\small\normalsize}` — 9-point text mode. Layout
+  // adjustment, semantically irrelevant for our XML output. Witness
+  // 2312.05730.
+  def_macro_noop("\\ninept")?;
   // \name carries the author name in Interspeech templates.
   DefMacro!("\\name{}", "\\author{#1}");
   DefMacro!("\\address{}",
