@@ -32,6 +32,16 @@ LoadDefinitions!({
   DefMacro!("\\finalVersionForARXIV", "");
   DefConditional!("\\iffinalarxiv");
 
+  // fundam.cls L42: `\newcommand{\runninghead}[2]{...}` — running-head
+  // setter; preserved as toctitle / shortauthor frontmatter notes.
+  // Witness 2307.02180.
+  DefMacro!("\\runninghead{}{}",
+    "\\@add@frontmatter{ltx:note}[role=runninghead]{#1: #2}");
+  // fundam.cls L271: `\def\address#1{...\footnotetext{Address for ...}}`.
+  // Surface as a note (ltx:contact would require a creator wrapper).
+  DefMacro!("\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+
   // fundam.cls L146-155 pre-declares standard theorem-like envs via
   // `\newtheorem{X}[definition]{X-display-name}`. Raw cls runs `\theorem
   // package` machinery that fails earlier, leaving these undefined.
