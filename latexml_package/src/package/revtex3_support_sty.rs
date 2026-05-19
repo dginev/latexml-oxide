@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex3_support.sty.ltxml
@@ -32,9 +41,9 @@ LoadDefinitions!({
   DefConditional!("\\iffirstfig");
   DefConditional!("\\iffirsttab");
 
-  DefMacro!("\\eqsecnum",     "");
-  DefMacro!("\\tightenlines", "");
-  DefMacro!("\\wideabs",      ""); // wide abstract — takes an arg, but avoid reading it
+  def_macro_noop("\\eqsecnum")?;
+  def_macro_noop("\\tightenlines")?;
+  def_macro_noop("\\wideabs")?; // wide abstract — takes an arg, but avoid reading it
 
   // RevTeX's subequation numbering environment
   DefMacro!("\\mathletters",    "\\lx@equationgroup@subnumbering@begin");

@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: jheppub.sty.ltxml — 112 lines
@@ -49,7 +58,7 @@ LoadDefinitions!({
   DefMacro!("\\proceeding{}", "\\@add@frontmatter{ltx:note}[role=proceeding]{#1}");
   DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
-  DefMacro!("\\collaborationImg[]{}", "");
+  def_macro_noop("\\collaborationImg[]{}")?;
   // \@@@collaborator internal — mirror aas_support's definition so the
   // expansion above resolves to actual XML markup instead of being
   // reported as undefined. Witness 2305.10497.
@@ -107,9 +116,9 @@ LoadDefinitions!({
   DefMacro!("\\afterTocRuleSpace", "\\bigskip\\bigskip");
 
   // Misc — Perl L99-109
-  DefMacro!("\\beforetochook", "");
-  DefMacro!("\\notoc", "");
-  DefMacro!("\\compress", "");
+  def_macro_noop("\\beforetochook")?;
+  def_macro_noop("\\notoc")?;
+  def_macro_noop("\\compress")?;
   // \correctionref{label}{url}{text} — link to a corrigendum.
   // Perl gobbles (raw \gdef binding hard to translate); we surpass
   // by emitting the text as a link via hyperref's \href.

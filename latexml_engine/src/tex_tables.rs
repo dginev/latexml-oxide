@@ -381,7 +381,7 @@ LoadDefinitions!({
   });
 
   // Perl: \lx@intercol is our replacement for LaTeX's \@acol for intercolumn space
-  DefMacro!("\\lx@intercol", "");
+  def_macro_noop("\\lx@intercol")?;
   // Perl: Candidates for binding \lx@intercol for LaTeX tabular or math arrays
   DefConstructor!("\\lx@text@intercol", sub[document, _args, props] {
     if let Some(width) = props.get("width") {

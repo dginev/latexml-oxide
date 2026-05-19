@@ -307,5 +307,5 @@ LoadDefinitions!({
   // stub doesn't replicate; some templates probe it before our
   // explicit definition. Stub as a no-op so footnote processing
   // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
-  DefMacro!("\\@makefntext", "");
+  def_macro_noop("\\@makefntext")?;
 });

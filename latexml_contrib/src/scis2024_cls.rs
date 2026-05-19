@@ -13,6 +13,15 @@
 //! Witness: 2503.01116, 2503.03904 (14 frontmatter undefined cascade).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -63,8 +72,8 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=onlinedate]{#1}");
   DefMacro!("\\contributions{}",
     "\\@add@frontmatter{ltx:note}[role=contributions]{#1}");
-  DefMacro!("\\luntan", "");
-  DefMacro!("\\oa", "");
+  def_macro_noop("\\luntan")?;
+  def_macro_noop("\\oa")?;
   // \Acknowledgements opens an acknowledgements section. Content
   // following it is the body, which is preserved naturally.
   DefMacro!("\\Acknowledgements", "\\section*{Acknowledgements}");

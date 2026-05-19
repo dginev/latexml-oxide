@@ -70,7 +70,7 @@ LoadDefinitions!({
   // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
   // emits the affiliation list inline without trailing notice). Witness
   // 2310.18127.
-  DefMacro!("\\printAffiliations", "");
+  def_macro_noop("\\printAffiliations")?;
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
   // ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
   // Witness 2306.01153.

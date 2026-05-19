@@ -3,17 +3,26 @@
 //! Same \thetitle pattern as cvpr.sty.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
-  DefMacro!("\\thetitle", "");
-  DefMacro!("\\maketitlesupplementary", "");
+  def_macro_noop("\\thetitle")?;
+  def_macro_noop("\\maketitlesupplementary")?;
   DefConditional!("\\ificcvfinal");
   DefConditional!("\\ificcvrebuttal");
   DefConditional!("\\ificcvpagenumbers");
   // \iccvfinalcopy / \iccvPaperID — page-numbering toggles in ICCV
   // templates. Affect print layout only; HTML rendering is invariant.
   // Witness 2 stage-2 papers.
-  DefMacro!("\\iccvfinalcopy", "");
-  DefMacro!("\\iccvPaperID{}", "");
+  def_macro_noop("\\iccvfinalcopy")?;
+  def_macro_noop("\\iccvPaperID{}")?;
 
   // CV-conference convention abbreviations (iccv.sty L254+). Same
   // rationale as in contrib/cvpr_sty.rs — when the path-stripping

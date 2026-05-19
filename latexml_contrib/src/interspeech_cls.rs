@@ -7,6 +7,15 @@
 //! Witness 2409.08589, 2409.08711.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -17,7 +26,7 @@ LoadDefinitions!({
   RequirePackage!("booktabs");
 
   // Interspeech frontmatter — preserve author content.
-  DefMacro!("\\interspeechcameraready", "");
+  def_macro_noop("\\interspeechcameraready")?;
   // \name carries the author name in Interspeech templates.
   DefMacro!("\\name{}", "\\author{#1}");
   DefMacro!("\\address{}",

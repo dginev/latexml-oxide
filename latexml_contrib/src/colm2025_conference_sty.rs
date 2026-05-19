@@ -1,6 +1,15 @@
 //! Stub for colm2025_conference.sty (COLM 2025 conference template).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("natbib");
   // Some COLM 2025 templates author-edit the .sty to add `\definecolor`
@@ -20,7 +29,7 @@ LoadDefinitions!({
   // \affilmark{N,M,...} — affiliation superscript markers on the
   // author line. Author content; emit as superscript inline.
   DefMacro!("\\affilmark{}", "\\textsuperscript{#1}");
-  DefMacro!("\\thanksauthor", "");
+  def_macro_noop("\\thanksauthor")?;
   DefConditional!("\\ifcolmsubmission");
   DefConditional!("\\ifcolmfinal");
   // colm2025_conference.sty L16-17 also declares \ifcolmpreprint.

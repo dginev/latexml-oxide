@@ -1,11 +1,20 @@
 use crate::engine::latex_constructs::*;
 use crate::prelude::*;
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsgen");
 
   Let!("\\nonslanted", "\\upshape");
-  DefMacro!("\\nopunct", "");
+  def_macro_noop("\\nopunct")?;
 
   // Redefine from LaTeX; notes go in normal font, not headfont
   DefRegister!("\\thm@notefont" => Tokens!(
@@ -116,9 +125,9 @@ LoadDefinitions!({
   DefMacro!("\\thmnumber{}", "#1");
   DefMacro!("\\thmnote{}", "#1");
 
-  DefMacro!("\\thmhead{}{}{}", "");
-  DefMacro!("\\swappedhead{}{}{}", "");
-  DefMacro!("\\thmheadnl", "");
+  def_macro_noop("\\thmhead{}{}{}")?;
+  def_macro_noop("\\swappedhead{}{}{}")?;
+  def_macro_noop("\\thmheadnl")?;
 
   //======================================================================
   // Proofs

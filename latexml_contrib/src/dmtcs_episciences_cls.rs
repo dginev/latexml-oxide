@@ -8,6 +8,15 @@
 //! `\accepted` undefined. Witness 2309.05874, 2309.12265.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("article");
   RequirePackage!("amsmath");
@@ -30,7 +39,7 @@ LoadDefinitions!({
   DefMacro!("\\accepted{}",
     "\\@add@frontmatter{ltx:note}[role=accepted]{Accepted: #1}");
   // \processdates / \endprocessdates — internal parser hooks; no-op.
-  DefMacro!("\\processdates", "");
-  DefMacro!("\\endprocessdates", "");
-  DefMacro!("\\getinfo", "");
+  def_macro_noop("\\processdates")?;
+  def_macro_noop("\\endprocessdates")?;
+  def_macro_noop("\\getinfo")?;
 });

@@ -17,6 +17,15 @@
 
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // hyperref provides \hypertarget / \hyperlink / \hyperref used below.
   RequirePackage!("hyperref");
@@ -45,7 +54,7 @@ LoadDefinitions!({
   // with the module preamble paragraphs.
   DefMacro!("\\schemamodule{}",
     "\\section{Module \\texttt{#1}}\\label{schema.#1}");
-  DefMacro!("\\endschemamodule", "");
+  def_macro_noop("\\endschemamodule")?;
 
   //--- Schema-doc list environments -----------------------------------
   // Each kind bucket (`\subsection{Patterns}` / `\subsection{Elements}`)

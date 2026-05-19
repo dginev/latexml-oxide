@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aipproc.cls.ltxml
@@ -61,7 +70,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
-  DefMacro!("\\layoutstyle{}", "");
+  def_macro_noop("\\layoutstyle{}")?;
 
   // Perl aipproc.cls.ltxml L74-84: \author{name} RequiredKeyVals — the
   // keyvals carry address / altaddress / email, and the Perl sub wraps
@@ -109,7 +118,7 @@ LoadDefinitions!({
 
   //======================================================================
   DefMacro!("\\source{}", "\\lx@note{source}{#1}");
-  DefMacro!("\\spaceforfigure{}{}", "");
+  def_macro_noop("\\spaceforfigure{}{}")?;
 
   DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\parbox{#3}{#4}}");
   // Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*

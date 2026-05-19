@@ -1,6 +1,15 @@
 //! Stub for svproc.cls (Springer Proceedings template, sister of svjour).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -18,5 +27,5 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=institute]{#1}");
   // \inst{N} is a superscript marker keyed to numbered affiliations.
   DefMacro!("\\inst{}", "\\textsuperscript{#1}");
-  DefMacro!("\\mainmatter", "");
+  def_macro_noop("\\mainmatter")?;
 });

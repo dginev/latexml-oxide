@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: \xspace reads the next token. If it's NOT in a set of
@@ -47,6 +56,6 @@ LoadDefinitions!({
   // emit undefined-CS errors. Author's added exceptions silently
   // won't take effect (cosmetic — potential extra space, never
   // missing-space). Companion `\xspaceremoveexception` too.
-  DefMacro!("\\xspaceaddexceptions{}", "");
-  DefMacro!("\\xspaceremoveexception{}", "");
+  def_macro_noop("\\xspaceaddexceptions{}")?;
+  def_macro_noop("\\xspaceremoveexception{}")?;
 });

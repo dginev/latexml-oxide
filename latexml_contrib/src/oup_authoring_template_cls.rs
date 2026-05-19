@@ -7,6 +7,15 @@
 //! Witness: 2503.21884 (\\journaltitle, \\DOI, \\access, ...).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -52,7 +61,7 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}",
     "\\@add@frontmatter{ltx:note}[role=address]{#2}");
   // SetCrop/SetTrim/SetBleed are layout configs — gobble.
-  DefMacro!("\\SetCrop{}{}", "");
-  DefMacro!("\\SetTrim{}{}", "");
-  DefMacro!("\\SetBleed{}{}", "");
+  def_macro_noop("\\SetCrop{}{}")?;
+  def_macro_noop("\\SetTrim{}{}")?;
+  def_macro_noop("\\SetBleed{}{}")?;
 });

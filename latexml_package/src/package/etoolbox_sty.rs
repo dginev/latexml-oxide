@@ -1,4 +1,13 @@
 use crate::prelude::*;
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -1790,5 +1799,5 @@ LoadDefinitions!({
   // it's typically a TeX-level signal not relevant to our pipeline;
   // stub as a no-op so callers don't crash on undefined CS.
   // Witnesses: 2405.19979, 2405.19935 (both tkz-euclide).
-  DefMacro!("\\PatchFailed", "");
+  def_macro_noop("\\PatchFailed")?;
 });

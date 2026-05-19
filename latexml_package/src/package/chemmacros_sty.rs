@@ -14,6 +14,15 @@
 //! Witness 2407.06385, 2408.16742, 2408.16711 — and similar.
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Intentionally empty: chemmacros' expl3 chain doesn't survive
   // our raw-load. Skipping matches Perl LaTeXML's INCLUDE_STYLES=false
@@ -24,7 +33,7 @@ LoadDefinitions!({
   DefMacro!("\\ch{}", "\\ensuremath{\\mathrm{#1}}");
   DefMacro!("\\Ch{}", "\\ensuremath{\\mathrm{#1}}");
   DefMacro!("\\state{}", "#1");
-  DefMacro!("\\transitionstatesymbol", "");
-  DefMacro!("\\changestate", "");
-  DefMacro!("\\setchemnum{}", "");
+  def_macro_noop("\\transitionstatesymbol")?;
+  def_macro_noop("\\changestate")?;
+  def_macro_noop("\\setchemnum{}")?;
 });

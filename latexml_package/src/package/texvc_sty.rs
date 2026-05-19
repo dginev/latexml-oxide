@@ -3,6 +3,15 @@
 //! Covers the custom math commands used by Wikipedia/MediaWiki's texvc filter.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsmath");
@@ -152,6 +161,6 @@ LoadDefinitions!({
   DefMacro!("\\bold{}", "\\mathbf{#1}");
 
   // Color — Perl L155-183
-  DefMacro!("\\pagecolor{}", "");
-  DefMacro!("\\definecolor{}{}{}", "");
+  def_macro_noop("\\pagecolor{}")?;
+  def_macro_noop("\\definecolor{}{}{}")?;
 });

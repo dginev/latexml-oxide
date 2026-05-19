@@ -130,6 +130,15 @@ fn plain_dump_available() -> bool {
   crate::plain_dump::plain_dump_available()
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // port of TeX.pool.ltxml
   // commit 4cd73e7584c5f0422293ba38f9b757332584afec
@@ -267,10 +276,10 @@ LoadDefinitions!({
     DefPrimitive!("\\OptionNotUsed", {});
   }
   if !IsDefined!(&T_CS!("\\AtBeginDocument")) {
-    DefMacro!("\\AtBeginDocument{}", "");
+    def_macro_noop("\\AtBeginDocument{}")?;
   }
   if !IsDefined!(&T_CS!("\\@addtofilelist")) {
-    DefMacro!("\\@addtofilelist{}", "");
+    def_macro_noop("\\@addtofilelist{}")?;
   }
 
   // Perl: LoadFormat('plain') — Package.pm L2734-2752. Mutually

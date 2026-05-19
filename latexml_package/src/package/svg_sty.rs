@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svg.sty.ltxml
@@ -51,7 +60,7 @@ LoadDefinitions!({
     }
   }
 
-  DefMacro!("\\lx@svg@options", "");
+  def_macro_noop("\\lx@svg@options")?;
   DefMacro!("\\setsvg{}", "\\gdef\\lx@svg@options{#1}");
 
   // Note that various sizing & rescaling are not yet supported by Post::Graphics

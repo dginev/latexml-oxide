@@ -9,6 +9,15 @@
 //! Witness: 2306.12455 (ws-ijgmmp.cls), 2306.15982 (ws-ijmpd.cls).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -28,8 +37,8 @@ LoadDefinitions!({
   DefMacro!("\\Journal{}{}{}{}", "{#1} {\\bf #2}, #3 (#4)");
 
   // No-op layout helpers.
-  DefMacro!("\\copyrightheading{}", "");
-  DefMacro!("\\paperBack", "");
+  def_macro_noop("\\copyrightheading{}")?;
+  def_macro_noop("\\paperBack")?;
   DefMacro!("\\catchlinefont", "\\footnotesize");
 
   // \ccode{...} — WS classification-codes block (PACS-style codes in

@@ -13,6 +13,15 @@
 //! Witness 2503.14673 (pict2e error blocking 1 paper conversion).
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Intentionally empty: skip pict2e's raw load. LaTeX picture
   // environment is handled by latex_constructs.rs regardless of
@@ -21,7 +30,7 @@ LoadDefinitions!({
   //
   // Define a few defensive stubs for pict2e-specific user-facing
   // CSes that some packages probe.
-  DefMacro!("\\OriginalPictureCmds",          "");
-  DefMacro!("\\pIIe@vector@ltx",              "");
-  DefMacro!("\\pIIe@vector@pst",              "");
+  def_macro_noop("\\OriginalPictureCmds")?;
+  def_macro_noop("\\pIIe@vector@ltx")?;
+  def_macro_noop("\\pIIe@vector@pst")?;
 });

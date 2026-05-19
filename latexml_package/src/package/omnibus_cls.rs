@@ -102,7 +102,7 @@ LoadDefinitions!({
   DefMacro!("\\subtitle{}",   "\\@add@frontmatter{ltx:subtitle}{#1}");
 
   // Perl L65-76: ignored/running title/author variants
-  DefMacro!("\\shortauthor{}", "");
+  def_macro_noop("\\shortauthor{}")?;
   DefRegister!("\\titlerunning",  Tokens!());
   DefRegister!("\\authorrunning", Tokens!());
   Let!("\\runningauthor", "\\authorrunning");

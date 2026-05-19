@@ -8,6 +8,15 @@
 //! Witness 2305.14448, 2305.19985.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("amsart");
   RequirePackage!("amsmath");
@@ -27,7 +36,7 @@ LoadDefinitions!({
   // The raw cls signature is 7-args but with optional/positional variations.
   // We don't reproduce the running-header layout — just discard, since the
   // metadata is already captured by \lmcsdoi.
-  DefMacro!("\\lmcsheading{}{}{}{}", "");
+  def_macro_noop("\\lmcsheading{}{}{}{}")?;
   // \lmcsorcid{orcid-id} — render as a plain link rather than the
   // tikz/XeTeXLinkBox logo construction.
   DefMacro!("\\lmcsorcid{}",
@@ -35,10 +44,10 @@ LoadDefinitions!({
 
   // Section-numbering and shortauthors/shorttitle helpers used by raw
   // cls header layout. Stub as no-op or pass-through.
-  DefMacro!("\\shorttitle{}", "");
-  DefMacro!("\\shortauthors{}", "");
+  def_macro_noop("\\shorttitle{}")?;
+  def_macro_noop("\\shortauthors{}")?;
 
   // `\dOi` placeholder produced by the raw cls when no \lmcsdoi was
   // declared. Stub to empty so it doesn't appear as red error text.
-  DefMacro!("\\dOi", "");
+  def_macro_noop("\\dOi")?;
 });

@@ -2,6 +2,15 @@
 //! Perl: algorithm2e.sty.ltxml — complex package with custom line management
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("float");
@@ -68,8 +77,8 @@ LoadDefinitions!({
   state::let_i(&T_CS!("\\endalgorithm2e*"), &T_CS!("\\endalgorithm"), None);
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
-  DefMacro!("\\lx@algo@strut SkipMatch:\\par", "");
-  DefMacro!("\\@marker{}", "");
+  def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
+  def_macro_noop("\\@marker{}")?;
 
   // Par dedup — Perl L109-116
   // Conditional that prevents double-\par from producing blank lines.
@@ -86,7 +95,7 @@ LoadDefinitions!({
   // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
   // flags the single L82 entry.
   DefConditional!("\\if@lx@algo@par SkipSpaces");
-  DefMacro!("\\lx@algo@setpar", "");
+  def_macro_noop("\\lx@algo@setpar")?;
   DefMacro!("\\lx@algo@newpar{}{}", "#2");
 
   // Par management — Perl L113-116

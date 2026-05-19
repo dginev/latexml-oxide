@@ -11,6 +11,14 @@ fn def_primitive_noop(proto: &str) -> Result<()> {
   Ok(())
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -22,7 +30,7 @@ LoadDefinitions!({
   // resulting `\char N` produces a literal codepoint regardless of the
   // declared font. Stub as no-op so downstream `\char` / `\Pisymbol`
   // calls still resolve correctly. Witness: 2502.16764 (adforn.sty).
-  DefMacro!("\\Pifont{}", "");
+  def_macro_noop("\\Pifont{}")?;
 
   // \Pisymbol{font}{code} — decode a codepoint from a Pi font
   DefPrimitive!("\\Pisymbol{}{Number}", sub[(pifont, code)] {

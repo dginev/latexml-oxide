@@ -32,6 +32,15 @@
 
 use latexml_package::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl LaTeXML auto-scans mhchem.sty for `\RequirePackage` calls
@@ -49,7 +58,7 @@ LoadDefinitions!({
 
   // Accept both v3 and v4: the package option is `version=N` — handled
   // at \usepackage time but irrelevant to our stub.
-  DefMacro!("\\mhchemoptions RequiredKeyVals", "");
+  def_macro_noop("\\mhchemoptions RequiredKeyVals")?;
 
   // \ce{<formula>} — chemistry mode. Real mhchem renders subscripts,
   // charges, arrows, etc. Papers invoke \ce{H_2O} / \ce{N_2} both in

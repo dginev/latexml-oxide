@@ -13,6 +13,15 @@ use crate::prelude::*;
 use latexml_core::definition::argument::ArgWrap;
 use latexml_core::digested::DigestedData;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L18-19.
@@ -20,7 +29,7 @@ LoadDefinitions!({
   RequirePackage!("xspace");
 
   // Perl L21: Silence pointless warnings.
-  DefMacro!("\\glsnoidxstripaccents", "");
+  def_macro_noop("\\glsnoidxstripaccents")?;
 
   //======================================================================
   // Perl L26-37: wrap `\@gls@link` in `<ltx:glossaryref>`.

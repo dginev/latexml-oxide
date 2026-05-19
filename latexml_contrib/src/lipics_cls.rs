@@ -1,6 +1,15 @@
 //! Stub for LIPIcs class (Dagstuhl Leibniz International Proceedings).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -13,7 +22,7 @@ LoadDefinitions!({
   // frontmatter entries with role markers.
   DefMacro!("\\Copyright{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
-  DefMacro!("\\CopyrightDetails", "");
+  def_macro_noop("\\CopyrightDetails")?;
   DefMacro!("\\authorrunning{}",
     "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
   DefMacro!("\\titlerunning{}",
@@ -24,7 +33,7 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=funding-agency]{#1}");
   DefMacro!("\\authorcredit{}",
     "\\@add@frontmatter{ltx:note}[role=authorcredit]{#1}");
-  DefMacro!("\\nolinenumbers", "");
+  def_macro_noop("\\nolinenumbers")?;
   DefMacro!("\\category{}",
     "\\@add@frontmatter{ltx:note}[role=category]{#1}");
   DefMacro!("\\related{}",
@@ -69,10 +78,10 @@ LoadDefinitions!({
   DefMacro!("\\ArticleNo{}",
     "\\@add@frontmatter{ltx:note}[role=articleno]{#1}");
   // LIPIcs L739: \EventNoEds{N} sets editor count.
-  DefMacro!("\\EventNoEds{}", "");
+  def_macro_noop("\\EventNoEds{}")?;
   // LIPIcs L860: \hideLIPIcs sets \@hideLIPIcs to suppress the
   // article-number/page header. No-op in XML. Witness 2502.11299 +6.
-  DefMacro!("\\hideLIPIcs", "");
+  def_macro_noop("\\hideLIPIcs")?;
   // \headers{left}{right} — LIPIcs running-header alias used by
   // some templates. Round-34 surpass-Perl: preserve as ltx:note so
   // the author-typed text isn't dropped.

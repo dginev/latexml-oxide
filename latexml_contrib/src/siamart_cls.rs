@@ -5,6 +5,15 @@
 //! \headers, \dedicatory) on top of OmniBus's article-like behaviour.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // siamart220329.cls L58: \RequirePackage[leqno]{amsmath}.
@@ -58,8 +67,8 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}");
   // siamart papers often \externaldocument supplement/article before
   // loading xr — pre-stub.
-  DefMacro!("\\externaldocument[]{}", "");
-  DefMacro!("\\externalcitedocument[]{}", "");
+  def_macro_noop("\\externaldocument[]{}")?;
+  def_macro_noop("\\externalcitedocument[]{}")?;
   // siamart220329 L1130: \funding{...} writes a marked line in the
   // titlepage. Preserve as ltx:acknowledgements (matching the user's
   // memory: prefer ltx:acknowledgements over a section).

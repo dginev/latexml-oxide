@@ -1,10 +1,19 @@
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   DefRegister!("\\@bibunitauxcnt", Number::new(0));
   DefMacro!("\\bu@unitname", None, "bu\\the\\@bibunitauxcnt");
-  DefMacro!("\\bu@bibdata", "");
-  DefMacro!("\\bu@bibstyle", "");
+  def_macro_noop("\\bu@bibdata")?;
+  def_macro_noop("\\bu@bibstyle")?;
 
   DeclareOption!("globalcitecopy", {
     AssignValue!("CITE_UNIT_GLOBAL" => true);

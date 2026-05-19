@@ -6,6 +6,15 @@
 //! `\author{\name Foo \email a@b.c \\ \addr Place}` parses cleanly.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("natbib");
   RequirePackage!("amsthm");
@@ -17,9 +26,9 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // Author-block font switches: no-op (identity).
-  DefMacro!("\\name", "");
-  DefMacro!("\\addr", "");
-  DefMacro!("\\email", "");
+  def_macro_noop("\\name")?;
+  def_macro_noop("\\addr")?;
+  def_macro_noop("\\email")?;
   DefMacro!("\\And", " ");
 
   // Frontmatter / pagination ceremony. Round-34 surpass-Perl:

@@ -7,6 +7,15 @@
 //! 2308.02610, 2309.06144.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("article");
   RequirePackage!("amsmath");
@@ -19,12 +28,12 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=jgcc-doi]{Volume #1, Issue #2, Paper #3 (#4)}");
   // \jgccheading uses 7-9 args depending on variant; capture the
   // common 7 explicitly (vol/issue/year/pages/subm/publ/rev).
-  DefMacro!("\\jgccheading{}{}{}{}{}{}{}", "");
+  def_macro_noop("\\jgccheading{}{}{}{}{}{}{}")?;
 
   DefMacro!("\\jgccorcid{}",
     "\\href{https://orcid.org/#1}{ORCID:#1}");
 
   DefConditional!("\\ifjgccheadingcalled");
-  DefMacro!("\\jgccheadingcalledtrue", "");
-  DefMacro!("\\jgccheadingcalledfalse", "");
+  def_macro_noop("\\jgccheadingcalledtrue")?;
+  def_macro_noop("\\jgccheadingcalledfalse")?;
 });

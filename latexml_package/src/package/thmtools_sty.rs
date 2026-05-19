@@ -1,6 +1,15 @@
 use crate::engine::latex_constructs::*;
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: thmtools.sty.ltxml
@@ -15,8 +24,8 @@ LoadDefinitions!({
   // which load as raw TeX and expect these from thmtools internals.
   DefRegister!("\\thmt@toks" => RegisterValue::Tokens(Tokens!()));
   DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
-  DefMacro!("\\thmt@mkignoringkeyhandler{}", "");
-  DefMacro!("\\thmt@thmuse@iskvtrue", "");
+  def_macro_noop("\\thmt@mkignoringkeyhandler{}")?;
+  def_macro_noop("\\thmt@thmuse@iskvtrue")?;
 
   // Set savable theorem parameters
   set_savable_theorem_parameters(vec![

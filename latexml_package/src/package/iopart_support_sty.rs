@@ -3,6 +3,15 @@
 //! Used by Journal of Physics, Classical and Quantum Gravity, etc.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Conditionals — Perl L22-26
@@ -17,7 +26,7 @@ LoadDefinitions!({
   DefMacro!("\\title[]{}",
     "\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}");
   Let!("\\paper", "\\title");
-  DefMacro!("\\@articletype", "");
+  def_macro_noop("\\@articletype")?;
   DefMacro!("\\article[]{}{}",
     "\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\ifx.#2.\\else\\@add@frontmatter{ltx:classification}[scheme=type]{#2}\\fi\\@add@frontmatter{ltx:title}{#3}");
   DefMacro!("\\letter{}", "\\article[Letter to the Editor]{Letter to the Editor}{#1}\\lettertrue");
@@ -103,7 +112,7 @@ LoadDefinitions!({
   });
 
   // Abstract/Keywords — Perl L95-120
-  DefMacro!("\\nosections", "");
+  def_macro_noop("\\nosections")?;
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Acknowledgements — Perl L249-251 (DefConstructor, defined below)
@@ -112,7 +121,7 @@ LoadDefinitions!({
   // Note: \eqalign/\eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
   // \ft, \query, \bbox, \overmark are not in Perl iopart_support.sty.ltxml.
   // Perl L121: \fl expands to nothing
-  DefMacro!("\\fl", "");
+  def_macro_noop("\\fl")?;
   // Perl L136: \buildrel{} \over{} — uses literal \over delimiter between args
   // Use RawTeX \def because the Rust DefMacro parser doesn't support CS delimiters
   RawTeX!("\\def\\buildrel#1\\over#2{\\mathrel{\\mathop{#2}\\limits^{#1}}}");
@@ -339,7 +348,7 @@ LoadDefinitions!({
 
   // Mystery items — Perl L335-343
   DefMacro!("\\tqs", "\\hspace*{25pt}");
-  DefMacro!("\\nosections", "");
+  def_macro_noop("\\nosections")?;
   DefMacro!("\\indented", "\\itemize");
   DefMacro!("\\endindented", "\\enditemize");
   DefMacro!("\\varindent", "\\itemize");

@@ -12,6 +12,15 @@ fn def_macro_identity(proto: &str) -> Result<()> {
   Ok(())
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //======================================================================
   // Font wrappers — identity by default
@@ -29,7 +38,7 @@ LoadDefinitions!({
   DefConditional!("\\ifAC@nolist");
   DefConditional!("\\ifAC@starred");
 
-  DefMacro!("\\AC@placelabel{}", "");
+  def_macro_noop("\\AC@placelabel{}")?;
 
   //======================================================================
   // Whether an acronym is used or not
@@ -42,7 +51,7 @@ LoadDefinitions!({
 
   DefMacro!("\\acused{}", "\\AC@logged{#1}");
   DefMacro!("\\acronymused{}", "\\AC@logged{#1}");
-  DefMacro!("\\acresetall", "");
+  def_macro_noop("\\acresetall")?;
 
   DefMacro!("\\lx@AC@if{}{}{}", sub[(id, short, long)] {
     let id_str = id.to_string();

@@ -8,6 +8,15 @@
 //! Witness: 2503.04598 (Seed-1.5 thinking paper).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -19,10 +28,10 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
 
   // Author/affiliation/contribution lists — preserve as ltx:note.
-  DefMacro!("\\authorlist", "");
-  DefMacro!("\\affiliationlist", "");
-  DefMacro!("\\contributionlist", "");
-  DefMacro!("\\checkdatalist", "");
+  def_macro_noop("\\authorlist")?;
+  def_macro_noop("\\affiliationlist")?;
+  def_macro_noop("\\contributionlist")?;
+  def_macro_noop("\\checkdatalist")?;
   // \author[mark]{name} — emit name as author.
   DefMacro!("\\author[]{}", "\\author{#2}");
   // \affiliation[mark]{text} — emit affiliation note.

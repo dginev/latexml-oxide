@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: booktabs.sty.ltxml
@@ -21,9 +30,9 @@ LoadDefinitions!({
   DefMacro!("\\ltx@cmidrule[Dimension]{}", "\\cline{#2}");
 
   // add vspace
-  DefMacro!("\\addlinespace[Dimension]", "");
+  def_macro_noop("\\addlinespace[Dimension]")?;
   // adjust spacing to make double line
-  DefMacro!("\\morecmidrules", "");
+  def_macro_noop("\\morecmidrules")?;
   // \specialrule{thickness}{above}{below}
   DefMacro!("\\specialrule{Dimension}{Dimension}{Dimension}", "\\hline");
 

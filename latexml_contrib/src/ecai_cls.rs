@@ -1,6 +1,15 @@
 //! Stub for ecai.cls (ECAI conference class).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -11,7 +20,7 @@ LoadDefinitions!({
   // ECAI frontmatter (ecai.cls L1290) — preserve paper ID as note.
   DefMacro!("\\paperid{}",
     "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
-  DefMacro!("\\makepaperid", "");
+  def_macro_noop("\\makepaperid")?;
   // ECAI authors use \orcid for ORCID identifier; preserve as note.
   // Witness 2501.02040 + 3 ecai papers.
   DefMacro!("\\orcid{}",
@@ -26,5 +35,5 @@ LoadDefinitions!({
   // `\pagenumbering{arabic}\setcounter{page}{1}`). The visible effect
   // is page numbers in print; in HTML the page concept is meaningless.
   // Witness 2305.13804.
-  DefMacro!("\\ecaisubmission", "");
+  def_macro_noop("\\ecaisubmission")?;
 });

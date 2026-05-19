@@ -3,6 +3,15 @@ use crate::prelude::*;
 // image_candidates / image_graphicx_sizer now live in latexml_core::util::image.
 pub use latexml_core::util::image::{image_candidates, image_graphicx_sizer};
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)
@@ -31,10 +40,10 @@ LoadDefinitions!({
   RequirePackage!("graphics");
 
   // Perl L24-27: internal length / dimension macros.
-  DefMacro!("\\Gin@ewidth", "");
-  DefMacro!("\\Gin@eheight", "");
-  DefMacro!("\\Gin@eresize", "");
-  DefMacro!("\\Gin@esetsize", "");
+  def_macro_noop("\\Gin@ewidth")?;
+  def_macro_noop("\\Gin@eheight")?;
+  def_macro_noop("\\Gin@eresize")?;
+  def_macro_noop("\\Gin@esetsize")?;
 
   // Perl L29-38 uses `GraphixDimension` / `GraphixDimensions` custom parameter
   // types (graphics.sty.ltxml L26-57, ported in graphics_sty.rs). The Rust

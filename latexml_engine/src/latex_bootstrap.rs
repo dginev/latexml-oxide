@@ -5,6 +5,15 @@
 // own mechanisms with LaTeXML's versions, plus CSS-based logos.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: latex_bootstrap.pool.ltxml L18
@@ -86,6 +95,6 @@ LoadDefinitions!({
   //   rollback (4-arg gobble matches \str_if_eq:nnTF semantics).
   // Witness 2408.00879, 2408.02823, 2406.00475.
   DefRegister!("\\tracingstacklevels" => Number::new(0));
-  DefMacro!("\\@nil", "");
-  DefMacro!("\\@expl@str@if@eq@@nnTF{}{}{}{}", "");
+  def_macro_noop("\\@nil")?;
+  def_macro_noop("\\@expl@str@if@eq@@nnTF{}{}{}{}")?;
 });

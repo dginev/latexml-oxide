@@ -1,6 +1,15 @@
 use crate::prelude::*;
 use latexml_core::common::color::Color;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: pgf.sty.ltxml (54 lines)
@@ -35,8 +44,8 @@ LoadDefinitions!({
 
   // Stub for tikz externalize library: \beginpgfgraphicnamed{name}...\endpgfgraphicnamed
   // In LaTeX, this checks if the graphic should be externalized. We just process inline.
-  DefMacro!("\\beginpgfgraphicnamed{}", "");
-  DefMacro!("\\endpgfgraphicnamed", "");
+  def_macro_noop("\\beginpgfgraphicnamed{}")?;
+  def_macro_noop("\\endpgfgraphicnamed")?;
 
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   at_begin_document(TokenizeInternal!(

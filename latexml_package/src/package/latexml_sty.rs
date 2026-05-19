@@ -239,6 +239,15 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
   Some((base, sub.to_string()))
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys
@@ -967,7 +976,7 @@ LoadDefinitions!({
   // \LaTeXMLfullversion collapse to just the version string via the
   // `\ifx\expandafter.\LaTeXMLrevision.` guard.
   DefMacro!("\\LaTeXMLversion", "0.4.0");
-  DefMacro!("\\LaTeXMLrevision", "");
+  def_macro_noop("\\LaTeXMLrevision")?;
   DefMacro!(
     "\\LaTeXMLfullversion",
     "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)"
@@ -996,7 +1005,7 @@ LoadDefinitions!({
   // \lxAddAnnotation{key=val,...} or \lxWithAnnotation{…}{body} don't
   // hit undefined-CS. The {body} arg passes through for \lxWithAnnotation
   // so the visible content is preserved; the annotation itself is dropped.
-  DefMacro!("\\lxAddAnnotation RequiredKeyVals", "");
+  def_macro_noop("\\lxAddAnnotation RequiredKeyVals")?;
   DefMacro!("\\lxWithAnnotation RequiredKeyVals {}", "#2");
 
   // Perl latexml.sty.ltxml L514-528: \lxRefDeclaration OptionalKeyVals:Declare {}
@@ -1005,7 +1014,7 @@ LoadDefinitions!({
   // registry. Neither helper is ported. Stub as arg-consuming no-op so
   // documents don't hit undefined-CS; annotations won't actually rewrite
   // but the prose renders cleanly.
-  DefMacro!("\\lxRefDeclaration OptionalKeyVals:Declare {}", "");
+  def_macro_noop("\\lxRefDeclaration OptionalKeyVals:Declare {}")?;
 
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal

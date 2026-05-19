@@ -7,15 +7,24 @@
 //! frankenstein-aware bibstyles probe it.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // \IncludeName — expands to current \include argument name. We don't
   // track it; expand to empty string. Witness 2409.14290, 2409.17764,
   // 2410.01942, 2409.19473 (newclude/frankenstein users).
-  DefMacro!("\\IncludeName", "");
+  def_macro_noop("\\IncludeName")?;
   // \input is handled at the kernel level — newclude doesn't redefine.
   // \include hooks: defensively gobbled.
-  DefMacro!("\\IncludeOnly{}", "");
-  DefMacro!("\\NotInMain{}", "");
-  DefMacro!("\\MainName", "");
+  def_macro_noop("\\IncludeOnly{}")?;
+  def_macro_noop("\\NotInMain{}")?;
+  def_macro_noop("\\MainName")?;
 });

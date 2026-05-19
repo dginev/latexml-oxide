@@ -1,13 +1,22 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("revtex3_support");
   state::assign_value("\\text:locked", Stored::None, Some(Scope::Global));
   RequirePackage!("longtable");
   RequirePackage!("psfig");
-  DefMacro!("\\lefthead{}",  "");
-  DefMacro!("\\righthead{}", "");
+  def_macro_noop("\\lefthead{}")?;
+  def_macro_noop("\\righthead{}")?;
 
   // Perl aipproc.sty.ltxml does NOT define \references — Perl behaves
   // lossy-silent when papers use `\begin{references}…\bibitem` under

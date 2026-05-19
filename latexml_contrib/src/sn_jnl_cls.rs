@@ -1,6 +1,15 @@
 //! Stub for sn-jnl.cls (Springer Nature journal class).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -23,11 +32,11 @@ LoadDefinitions!({
   DefMacro!("\\sectiontitle{}",
     "\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}");
   // \headtype{...} / \extralength{...} are layout knobs (no author body).
-  DefMacro!("\\headtype{}", "");
-  DefMacro!("\\extralength{}", "");
+  def_macro_noop("\\headtype{}")?;
+  def_macro_noop("\\extralength{}")?;
   // \theHfigure / \theHtable are hyperref H-counter overrides (no body).
-  DefMacro!("\\theHfigure{}", "");
-  DefMacro!("\\theHtable{}", "");
+  def_macro_noop("\\theHfigure{}")?;
+  def_macro_noop("\\theHtable{}")?;
 
   // Author-block — preserve author-supplied affiliation / equalcont /
   // presentaddress content as ltx:note frontmatter.

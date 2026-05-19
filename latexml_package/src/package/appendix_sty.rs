@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: appendix.sty.ltxml — 103 lines; Rust mirrors the macro set
@@ -14,8 +23,8 @@ LoadDefinitions!({
   DefMacro!("\\appendixpagename", "Appendices");
 
   // Whether the entry in toc gets page number; Ignorable
-  DefMacro!("\\appendicestocpagenum",   "");
-  DefMacro!("\\noappendicestocpagenum", "");
+  def_macro_noop("\\appendicestocpagenum")?;
+  def_macro_noop("\\noappendicestocpagenum")?;
 
   // Switches, mostly ignorable(?)
   DefConditional!("\\if@dotoc@pp");
@@ -43,8 +52,8 @@ LoadDefinitions!({
   // analog; no-op stubs. (Perl L28-30 leaves them commented out;
   // matching by stubbing keeps the diagnostics quiet.)
   // Witnesses 2406.01767, 2406.13839.
-  DefMacro!("\\appendixpage", "");
-  DefMacro!("\\addappheadtotoc", "");
+  def_macro_noop("\\appendixpage")?;
+  def_macro_noop("\\addappheadtotoc")?;
 
   DefPrimitive!("\\lx@pp@appendix@begin", {
     if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {

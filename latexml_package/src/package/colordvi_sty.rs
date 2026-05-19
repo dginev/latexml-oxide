@@ -1,6 +1,15 @@
 use crate::prelude::*;
 use latexml_core::common::color::from_model_components;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L20-30: \DefineNamedColor — defines a named color + \text<name> + \<name>.
@@ -74,7 +83,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefMacro!("\\subdef{}", "");
+  def_macro_noop("\\subdef{}")?;
 
   // Perl L42-53: \textColor — set color from CMYK spec
   DefPrimitive!("\\textColor{}", sub[(cmyk_arg)] {

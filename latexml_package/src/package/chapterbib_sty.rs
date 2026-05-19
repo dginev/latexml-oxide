@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   DeclareOption!("rootbib", {
@@ -16,7 +25,7 @@ LoadDefinitions!({
   ProcessOptions!();
   // Perl L28 comment: "SHOULD adjust BACKMATTER_ELEMENT!" — left as
   // no-op in Perl too.
-  DefMacro!("\\sectionbib{}{}", "");
+  def_macro_noop("\\sectionbib{}{}")?;
 
   // Perl L30-33: reset internal unit state between included chapters.
   DefPrimitive!("\\lx@cb@reset", {

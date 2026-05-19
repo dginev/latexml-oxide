@@ -1,6 +1,15 @@
 use crate::engine::latex_constructs::{after_float, before_float, before_float_ex};
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: subcaption.sty.ltxml
@@ -176,5 +185,5 @@ LoadDefinitions!({
 
   //======================================================================
   // \DeclareCaptionSubType — stub (should be in caption/caption3)
-  DefMacro!("\\DeclareCaptionSubType OptionalMatch:* [] {}", "");
+  def_macro_noop("\\DeclareCaptionSubType OptionalMatch:* [] {}")?;
 });

@@ -7,6 +7,15 @@
 //! supplementary frontmatter.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Eager dependency loads — cvpr2025.sty L30-37 lists these as
   // RequirePackage. The raw-load of cvpr*.sty doesn't always execute
@@ -35,8 +44,8 @@ LoadDefinitions!({
   RequirePackage!("caption");
 
   // \thetitle: default-empty, gets overridden when user calls \title{...}.
-  DefMacro!("\\thetitle", "");
-  DefMacro!("\\maketitlesupplementary", "");
+  def_macro_noop("\\thetitle")?;
+  def_macro_noop("\\maketitlesupplementary")?;
 
   // cvpr.sty supplies these toggles via etoolbox — provide as fallback.
   DefConditional!("\\ifcvprfinal");

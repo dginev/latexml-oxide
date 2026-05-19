@@ -413,7 +413,7 @@ LoadDefinitions!({
   // directly. We model it as a no-op consumer of its three arguments —
   // the visual spacing is lost, but we avoid a cascade of
   // Error:undefined that trips `_` into subscript-in-text-mode chaos.
-  DefMacro!("\\tmspace{}{}{}", "");
+  def_macro_noop("\\tmspace{}{}{}")?;
 
   //======================================================================
   // Section 4.3 Dots
@@ -1399,7 +1399,7 @@ LoadDefinitions!({
   // (vendor layout errors are moot in XML→HTML output). Witness
   // cluster: arXiv:2506.12791/.14355/.14372 (gather + tag layout,
   // Rust 1 → 0, vs Perl=1 — beats shared baseline).
-  DefMacro!("\\calc@shift@gather", "");
+  def_macro_noop("\\calc@shift@gather")?;
 
   //======================================================================
   // Section 3.11.1 \numberwithin

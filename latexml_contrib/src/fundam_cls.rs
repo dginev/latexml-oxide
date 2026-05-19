@@ -7,6 +7,15 @@
 //! macros undefined. Witness 2305.16882.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("article");
   RequirePackage!("amsmath");
@@ -29,7 +38,7 @@ LoadDefinitions!({
 
   // \finalVersionForARXIV — toggles a `\finalarxivtrue` switch in raw
   // cls; HTML rendering ignores layout switches.
-  DefMacro!("\\finalVersionForARXIV", "");
+  def_macro_noop("\\finalVersionForARXIV")?;
   DefConditional!("\\iffinalarxiv");
 
   // fundam.cls L42: `\newcommand{\runninghead}[2]{...}` — running-head

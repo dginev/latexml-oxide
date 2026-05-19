@@ -6,6 +6,15 @@
 //! frontmatter macros.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -23,10 +32,10 @@ LoadDefinitions!({
   // Title-note text — author prose. Preserve as ltx:note frontmatter.
   DefMacro!("\\tnotetext[]{}",
     "\\@add@frontmatter{ltx:note}[role=titlenote]{#2}");
-  DefMacro!("\\tnotemark[]", "");  // mark only, no body
+  def_macro_noop("\\tnotemark[]")?;  // mark only, no body
   DefMacro!("\\tnoteref[]{}",
     "\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}");
-  DefMacro!("\\fnmark[]", "");
+  def_macro_noop("\\fnmark[]")?;
   DefMacro!("\\fnref[]{}",
     "\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}");
   // Footnote / author-note text — preserve as ltx:note rather than
@@ -40,8 +49,8 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=note]{#1}");
   DefMacro!("\\cortext[]{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
-  DefMacro!("\\cormark[]", "");  // mark only, no body
-  DefMacro!("\\corref[]", "");
+  def_macro_noop("\\cormark[]")?;  // mark only, no body
+  def_macro_noop("\\corref[]")?;
   // \affiliation[id]{text} — affiliation string author typed.
   DefMacro!("\\affiliation[]{}",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
@@ -63,7 +72,7 @@ LoadDefinitions!({
   // 2405.20972.
   DefMacro!("\\credit{}",
     "\\@add@frontmatter{ltx:note}[role=credit]{#1}");
-  DefMacro!("\\printcredits", "");
+  def_macro_noop("\\printcredits")?;
 
   // Elsevier highlights / biography environments (cas-common.sty).
   // `{highlights}` collects bullet points for the dedicated highlights

@@ -297,6 +297,15 @@ fn tikz_alignment_bindings(
   );
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
@@ -550,8 +559,8 @@ LoadDefinitions!({
   // Perl L178-192: \pgfsys@typesetpicturebox
   RawTeX!(r"\def\pgfsys@typesetpicturebox#1{\pgf@ya=\pgf@shift@baseline\relax\advance\pgf@ya by-\pgf@picminy\relax\advance\pgf@picmaxy by-\pgf@picminy\relax\advance\pgf@picmaxx by-\pgf@picminx\relax\setbox#1=\hbox{\hskip-\pgf@picminx\lower\pgf@picminy\box#1}\ht#1=\pgf@picmaxy\wd#1=\pgf@picmaxx\dp#1=0pt\leavevmode\lxSVG@insertpicture{\box#1\lxSVG@closescope}}");
 
-  DefMacro!("\\pgfsys@beginpicture", "");
-  DefMacro!("\\pgfsys@endpicture", "");
+  def_macro_noop("\\pgfsys@beginpicture")?;
+  def_macro_noop("\\pgfsys@endpicture")?;
 
 
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context
@@ -1461,7 +1470,7 @@ LoadDefinitions!({
   // single L1448 entry.
   DefMacro!("\\pgfsys@invoke{}", "#1", locked => true);
 
-  DefMacro!("\\pgfsys@markposition{}", "");
+  def_macro_noop("\\pgfsys@markposition{}")?;
 
   //===================================================================
   // 13. Invisibility

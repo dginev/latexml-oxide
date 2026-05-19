@@ -4,6 +4,15 @@
 //! HTML/XML output where the chemistry notation isn't fully styled.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("mhchem");
   // chemformula 4.x is an expl3 LaTeX3 package; the INCLUDE_STYLES
@@ -15,6 +24,6 @@ LoadDefinitions!({
   RequirePackage!("xparse");
   Let!("\\ch", "\\ce");
   Let!("\\chcpd", "\\ce");
-  DefMacro!("\\chsetup{}", "");
-  DefMacro!("\\setchemformula{}", "");
+  def_macro_noop("\\chsetup{}")?;
+  def_macro_noop("\\setchemformula{}")?;
 });

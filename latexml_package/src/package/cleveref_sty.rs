@@ -2,6 +2,15 @@ use crate::prelude::*;
 
 // Perl: cleveref.sty.ltxml — cleveref cross-referencing
 // Provides \cref, \Cref, \crefrange, etc. with type-aware formatting
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Save original \label
@@ -30,9 +39,9 @@ LoadDefinitions!({
   // \toksdef that cause token consumption bugs with many calls + blank lines.
   // These stubs store the names for reference formatting without the risky
   // raw TeX expansion chains.
-  DefMacro!("\\crefname{}{}{}", "");
-  DefMacro!("\\Crefname{}{}{}", "");
-  DefMacro!("\\crefalias{}{}", "");
+  def_macro_noop("\\crefname{}{}{}")?;
+  def_macro_noop("\\Crefname{}{}{}")?;
+  def_macro_noop("\\crefalias{}{}")?;
 
   // Helper: produces literal ~ (tilde) as catcode OTHER text.
   // Needed because {} parameter expands ACTIVE ~ to space.

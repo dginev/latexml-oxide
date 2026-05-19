@@ -828,6 +828,15 @@ fn ucfirst(s: &str) -> String {
   }
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl BibTeX.pool.ltxml L19: `LoadPool('LaTeX')` — BibTeX
   // pool is built on top of the full LaTeX format, since bib
@@ -1007,7 +1016,7 @@ LoadDefinitions!({
 
   // Ignore the field (used for fields the entry-type doesn't want).
   // `Verbatim Verbatim` reads two raw arg slots and discards both.
-  DefMacro!("\\bib@field@@ignore Verbatim Verbatim", "");
+  def_macro_noop("\\bib@field@@ignore Verbatim Verbatim")?;
 
   // Default field handler: route to `\bib@field@unknownasdata`, which
   // emits a `<ltx:bib-data role='<field>'>` with the raw value. The

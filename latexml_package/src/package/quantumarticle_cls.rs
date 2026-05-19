@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: quantumarticle.cls.ltxml — Quantum Journal
@@ -39,8 +48,8 @@ LoadDefinitions!({
   // REVTeX but our quantumarticle binding skips that load. No visual
   // effect in HTML/XML; stub as no-op.
   // Witness 2406.00091: `\onecolumngrid \section*{APPENDIX}`.
-  DefMacro!("\\onecolumngrid", "");
-  DefMacro!("\\twocolumngrid", "");
+  def_macro_noop("\\onecolumngrid")?;
+  def_macro_noop("\\twocolumngrid")?;
   // quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
   // Render as classification block to preserve the metadata.
   DefMacro!("\\keywords{}",
