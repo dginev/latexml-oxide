@@ -2,15 +2,16 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
-## Active priority (refreshed 2026-05-15): strict-Perl parity
+## Active priority (refreshed 2026-05-19): strict-Perl parity
 
 Strict Perl parity at the format/dump and package-loading boundary is
 the current top priority, followed by sandbox long-tail cleanup.
 Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1220/0/0** and `cargo clippy --workspace --all-targets`
-is **0 warnings**. The latest sandbox result for the 100k
-`next_warning_papers` corpus is ~98.5% OK; the latest 10k stage v3
-ranges 97.4–99.5%. Working docs:
+--tests` is **1328/0/0** and `cargo clippy --workspace --all-targets`
+is **14 warnings (all in `latexml_math_parser` from the in-flight
+ASF migration — collaborator's lane)**. The latest sandbox result for
+the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k
+stage v3 ranges 97.4–99.5%. Working docs:
 [`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
 [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
 [`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md).
