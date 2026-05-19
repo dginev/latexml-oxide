@@ -18,6 +18,61 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   }
 }
 
+/// Parse xcolor's color-algebra `!` operator. Supports:
+///   * `<color>!<pct>`            → mix(<color>, pct%, white)
+///   * `<color>!<pct>!<color2>`   → mix(<color>, pct%, <color2>)
+///   * chained `c1!p1!c2!p2!c3`   → left-to-right reduction
+/// Returns Some(Color) if `name` contains `!` and parses cleanly,
+/// else None (caller treats `name` as a plain named color).
+fn try_color_algebra(name: &str) -> Option<Color> {
+  if !name.contains('!') {
+    return None;
+  }
+  let parts: Vec<&str> = name.split('!').map(str::trim).collect();
+  if parts.len() < 2 || parts[0].is_empty() {
+    return None;
+  }
+  let mut current = lookup_color_obj_no_algebra(parts[0]);
+  let mut i = 1;
+  while i < parts.len() {
+    let pct_str = parts[i];
+    let pct: f64 = pct_str.parse().ok()?;
+    let pct_frac = (pct / 100.0).clamp(0.0, 1.0);
+    let other = if i + 1 < parts.len() && !parts[i + 1].is_empty()
+      && parts[i + 1].parse::<f64>().is_err() {
+      let o = lookup_color_obj_no_algebra(parts[i + 1]);
+      i += 2;
+      o
+    } else {
+      i += 1;
+      color::WHITE
+    };
+    // xcolor `c!p!c2`: mix c at p% with c2. mix(self, other, fraction)
+    // expects fraction = weight of `other`; xcolor's `p` is weight of `self`.
+    current = current.mix(&other, 1.0 - pct_frac);
+  }
+  Some(current)
+}
+
+/// Look up a named color from state WITHOUT trying xcolor's `!` algebra.
+/// Used as the recursive base case from `try_color_algebra` to avoid
+/// infinite descent when neither half of a `!` expression is a base
+/// named color.
+fn lookup_color_obj_no_algebra(name: &str) -> Color {
+  let name = name.trim();
+  if name.is_empty() {
+    return color::BLACK;
+  }
+  let key = s!("color_{name}");
+  match state::lookup_value(&key) {
+    Some(Stored::String(sym)) => {
+      let stored_str = arena::with(sym, |s| s.to_string());
+      Color::from_stored(&stored_str).unwrap_or(color::BLACK)
+    },
+    _ => color::BLACK,
+  }
+}
+
 /// Look up a named color from state, returning a Color object.
 /// Perl: LookupColor($name) in Package.pm
 pub fn lookup_color_obj(name: &str) -> Color {
@@ -26,6 +81,12 @@ pub fn lookup_color_obj(name: &str) -> Color {
   // error needed here because the decoder already surfaces its own).
   if name.trim().is_empty() {
     return color::BLACK;
+  }
+  // xcolor color algebra: `red!20`, `red!20!blue`, etc. Try this first
+  // before falling through to the named-color table. Witness 2311.09262
+  // (\sethlcolor{red!20}\hl{...} pattern in tables).
+  if let Some(mixed) = try_color_algebra(name) {
+    return mixed;
   }
   let key = s!("color_{name}");
   match state::lookup_value(&key) {
