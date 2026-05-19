@@ -86,19 +86,20 @@ struct Cli {
   #[arg(long = "path")]
   search_paths: Vec<String>,
 
-  /// Per-document timeout in seconds. Default 180s — empirically
-  /// chosen from successive wp4 canvas passes:
-  ///   * Most papers complete in <30s standalone.
-  ///   * Under 8-way+ parallel load the 30-80s long-tail can stretch
-  ///     past a 60s budget despite not being stuck (witnesses:
-  ///     2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,
-  ///     2307.10800 — all complete in 21-48s standalone but spuriously
-  ///     timed out at 60s under contention).
-  ///   * xy-pic / pgfplots-heavy papers (witness 2308.16841: 3 large
-  ///     xymatrix diagrams, ~61s standalone debug build) still tipped
-  ///     past 120s under 8-way contention. 180s recovers them while
-  ///     keeping infinite-loop detection within a sensible bound.
-  #[arg(long, default_value = "180")]
+  /// Per-document timeout in seconds. Default 120s.
+  ///
+  /// **Canvas/benchmark runs MUST use a `--release` (or `maxperf`) build.**
+  /// In release, even the xy-pic / pgfplots-heavy long-tail (witness
+  /// 2308.16841: 3 large xymatrix diagrams) completes in <10s; the
+  /// 120s budget then catches genuine infinite loops promptly.
+  /// Debug builds are ~12× slower (61s for the same paper) and will
+  /// approach this budget — that is a tooling/profile issue, not a
+  /// reason to widen the timeout.
+  ///
+  /// Witnesses for prior 60s→120s bump (8-way contention slowdown
+  /// pushed 21-48s standalone runs past 60s): 2306.16591, 2307.05570,
+  /// 2312.13092, 2404.17751, 2311.03376, 2307.10800.
+  #[arg(long, default_value = "120")]
   timeout: u64,
 
   /// Disable Presentation MathML
