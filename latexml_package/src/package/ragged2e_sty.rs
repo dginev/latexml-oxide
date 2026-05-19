@@ -31,10 +31,17 @@ LoadDefinitions!({
   // Witness 2406.15288.
   DefMacro!(T_CS!("\\begin{justify}"), None, "");
   DefMacro!(T_CS!("\\end{justify}"),   None, "");
-  DefMacro!(T_CS!("\\begin{Center}"),  None, "\\center");
-  DefMacro!(T_CS!("\\end{Center}"),    None, "\\endcenter");
-  DefMacro!(T_CS!("\\begin{FlushLeft}"),  None, "\\flushleft");
-  DefMacro!(T_CS!("\\end{FlushLeft}"),    None, "\\endflushleft");
-  DefMacro!(T_CS!("\\begin{FlushRight}"), None, "\\flushright");
-  DefMacro!(T_CS!("\\end{FlushRight}"),   None, "\\endflushright");
+  // ragged2e's CapitalCase env variants must alias the lowercase
+  // LaTeX *envs* (which carry the correct `internal_vertical` mode
+  // via DefEnvironment), NOT the bare command forms. Mapping to the
+  // command (`\center`/`\flushright`) skips the env-mode push, so
+  // `\end{FlushRight}` finds an unmatched mode and emits
+  // "Attempt to end mode `internal_vertical` in `restricted_horizontal`".
+  // Witness 2305.12077.
+  DefMacro!(T_CS!("\\begin{Center}"),     None, "\\begin{center}");
+  DefMacro!(T_CS!("\\end{Center}"),       None, "\\end{center}");
+  DefMacro!(T_CS!("\\begin{FlushLeft}"),  None, "\\begin{flushleft}");
+  DefMacro!(T_CS!("\\end{FlushLeft}"),    None, "\\end{flushleft}");
+  DefMacro!(T_CS!("\\begin{FlushRight}"), None, "\\begin{flushright}");
+  DefMacro!(T_CS!("\\end{FlushRight}"),   None, "\\end{flushright}");
 });
