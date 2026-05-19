@@ -20,4 +20,11 @@ LoadDefinitions!({
   // uses; not visually relevant in XML output. Define as 0pt.
   DefRegister!("\\firstpagerule" => Dimension!("0pt"));
   DefRegister!("\\logowidth" => Dimension!("0pt"));
+
+  // ieeecolor.cls L4311-4312: `\prooff` / `\endprooff` (note the
+  // double-f spelling) is a journal-specific proof env distinct
+  // from amsthm's `\proof`. Used as `\begin{prooff}` ... `\end{prooff}`
+  // in IEEE-LCSYS papers. Witness 2403.10384.
+  DefEnvironment!("{prooff}",
+    "<ltx:proof>#body</ltx:proof>");
 });
