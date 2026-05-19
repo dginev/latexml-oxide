@@ -300,4 +300,20 @@ LoadDefinitions!({
     \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
     \def\lx@xy@stub@xymatrix@body#1{}%
   }{}");
+
+  // Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
+  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
+  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
+  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
+  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
+  // loads. The morphism semantics (definesupermorphism for twocell,
+  // halftwocell, compositemap) need the full xy machinery — but at
+  // least preventing the undefined-CS error lets the paper render
+  // (sans 2cell-specific diagrams). Witness 2305.08678.
+  RawTeX!(r"\@ifundefined{UseAllTwocells}{%
+    \def\UseTwocells{}%
+    \def\UseHalfTwocells{}%
+    \def\UseCompositeMaps{}%
+    \def\UseAllTwocells{}%
+  }{}");
 });
