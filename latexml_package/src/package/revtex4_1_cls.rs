@@ -82,7 +82,10 @@ LoadDefinitions!({
   // revtex4-1.cls L?: \providecommand\doi[0]{...} — used in bibliography
   // entries (e.g. `\doi{10.1103/PhysRevLett.123.210602}`). Real cls wraps
   // the doi in \@doi href but for XML we just emit the DOI as a hyperlink.
-  // Witness 2403.08476.
-  DefMacro!("\\doi{}",     "doi:\\href{https://doi.org/#1}{#1}");
+  // Witness 2403.08476. Use Semiverbatim so `_`, `&`, `#` in DOIs (e.g.
+  // `\doi{10.1007/978-3-662-43948-7_26}` from 2112.03925) don't trigger
+  // catcode errors (`Error:unexpected:_ Script _ can only appear in math
+  // mode`) when emitted into the href text.
+  DefMacro!("\\doi Semiverbatim", "doi:\\href{https://doi.org/#1}{#1}");
   DefMacro!("\\doibase",   "https://doi.org/");
 });
