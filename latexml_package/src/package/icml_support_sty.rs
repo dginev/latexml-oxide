@@ -97,6 +97,10 @@ LoadDefinitions!({
   // L525). Witness 2402.02526.
   DefMacro!("\\icmlEqualLast",
     "\\textsuperscript{*}Co last authors");
+  // \icmlIntern — paper-bundled internship-affiliation marker.
+  // Witness 2312.05253 (icml2024.sty L534).
+  DefMacro!("\\icmlIntern",
+    "\\textsuperscript{*}Work done while interning");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
