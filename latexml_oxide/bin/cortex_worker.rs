@@ -86,16 +86,19 @@ struct Cli {
   #[arg(long = "path")]
   search_paths: Vec<String>,
 
-  /// Per-document timeout in seconds. Default 120s — empirically
-  /// chosen from a wp4 canvas pass: most papers complete in <30s
-  /// standalone, but under 8-way+ parallel load the long-tail of 30-80s
-  /// papers exceed a 60s budget despite not being stuck (witnesses:
-  /// 2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,
-  /// 2307.10800 — all complete in 21-48s standalone but spuriously
-  /// timed out at 60s under contention). Doubling the budget recovers
-  /// ~3-6% of papers per canvas without noticeably extending wall time
-  /// since other workers fill in.
-  #[arg(long, default_value = "120")]
+  /// Per-document timeout in seconds. Default 180s — empirically
+  /// chosen from successive wp4 canvas passes:
+  ///   * Most papers complete in <30s standalone.
+  ///   * Under 8-way+ parallel load the 30-80s long-tail can stretch
+  ///     past a 60s budget despite not being stuck (witnesses:
+  ///     2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,
+  ///     2307.10800 — all complete in 21-48s standalone but spuriously
+  ///     timed out at 60s under contention).
+  ///   * xy-pic / pgfplots-heavy papers (witness 2308.16841: 3 large
+  ///     xymatrix diagrams, ~61s standalone debug build) still tipped
+  ///     past 120s under 8-way contention. 180s recovers them while
+  ///     keeping infinite-loop detection within a sensible bound.
+  #[arg(long, default_value = "180")]
   timeout: u64,
 
   /// Disable Presentation MathML
