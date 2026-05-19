@@ -220,12 +220,26 @@ LoadDefinitions!({
   }
   // amsart.cls L1922 (modern), amsproc/amsbook also: `\newenvironment{pf}
   // {\@newpf[\proofname]}{\popQED\endtrivlist}` — same as {proof} but
-  // shorter name. Provide unconditionally as a proof alias so any
+  // shorter name. Provide as a proof alias so any
   // amsart/amsproc/amsbook user calling \begin{pf}...\end{pf} resolves
   // cleanly. Witness 14 papers with cas-sc, amsart, AMS-derived classes.
+  //
+  // CRUCIAL: defer to AtBeginDocument, and guard with `\@ifundefined{pf}`.
+  // Without the deferral, our `\newenvironment{pf}` runs at
+  // `\documentclass{amsart}` time — BEFORE the user's preamble macro
+  // `\newcommand{\pf}{\operatorname{pf}}` (Pfaffian). Our engine then
+  // refuses the user's redefinition, and downstream `\pf(U)` in display
+  // math expands to `\begin{@proof}` instead of `\operatorname{pf}` →
+  // cascading XMath-in-title / equation-in-XMath malformedness. Witness:
+  // 2306.17599 (Pfaffian paper, amsart class — was 622 errors, now 0).
+  //
   // `\newenvironment` is a primitive — needs digestion, not just expansion.
-  stomach::raw_tex("\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}")?;
-  stomach::raw_tex("\\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}")?;
+  // We package the deferred raw_tex into `\AtBeginDocument` so it fires
+  // after the entire user preamble has run.
+  stomach::raw_tex(
+    "\\AtBeginDocument{\\@ifundefined{pf}{\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}}{}\
+     \\@ifundefined{pf*}{\\newenvironment{pf*}[1]{\\begin{@proof}[##1]}{\\end{@proof}}}{}}"
+  )?;
 
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}", "\\lx@tag[][. ]{\\lx@fnum@@{table}}#1");
