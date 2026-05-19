@@ -860,16 +860,28 @@ helpers (`def_fa5_icon(suffix, kebab)` etc.) instead of inlining
 .text consumers entirely. Release binary 47.6 MB (was ~50 MB
 pre-DEP-15).
 
+### DEP-16 — single-instance `_ModelLoader::build_model` ✅ Closed 2026-05-18
+
+The `load_model!("LaTeXML")` macro generated a fresh
+`_ModelLoader::build_model` (~600 KiB) at each call site. Three sites
+inlined it (`lib.rs::dump_compiled_latexml_model`,
+`core_interface.rs::convert_document`, `util/preset.rs::*`); after
+LTO the bloat report showed two copies surviving (~1.2 MiB combined).
+Funnelled through `latexml::load_latexml_default_model()` (single
+home for the macro expansion); LTO collapses to one copy.
+Release binary 47,592,000 → 46,958,336 bytes (−633 KiB). Commit
+`d332b69138`. Tests 1328/0/0.
+
 ### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
 
 Top `.text` consumers on `target/release/latexml_oxide`
-(`.text` total 35.2 MiB):
+(`.text` total 35.2 MiB before DEP-16, slightly lower after):
 
 | Function | Size | % of `.text` |
 |---|---:|---:|
 | `latexml_engine::latex_constructs::load_definitions`  | 1.1 MiB | 3.1% |
 | `latexml_core::common::font::standard_metrics::STDMETRICS::{closure#0}` | 811 KiB | 2.3% |
-| `latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2 | 1.2 MiB | 3.4% |
+| ~~`latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2~~ | ~~1.2 MiB~~ | DEP-16 closed |
 | `latexml_package::package::jhep_cls::load_definitions` | 511 KiB | 1.4% |
 | `latexml_package::package::mathabx_sty::load_definitions` | 438 KiB | 1.2% |
 | `latexml_engine::math_common::load_definitions` | 339 KiB | 0.9% |
