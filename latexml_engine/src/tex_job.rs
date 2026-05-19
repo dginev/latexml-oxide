@@ -174,6 +174,17 @@ LoadDefinitions!({
     state::assign_value("\\@maxsep", zero_dim.clone(), Some(Scope::Global));
     state::assign_value("\\@dblmaxsep", zero_dim, Some(Scope::Global));
 
+    // Now that LaTeX pool is loaded, undefine `\magnification` so babel
+    // detects "running under LaTeX" correctly. The latex_constructs
+    // pool-load no longer does this unconditionally; deferring to
+    // \documentclass/\documentstyle keeps plain TeX papers (whose first
+    // line is often `\magnification=\magstep1`) functional under the
+    // cortex_worker's eager LaTeX.pool preload. See sibling change in
+    // latex_constructs.rs `\documentclass` after_digest.
+    if let Some(undef_meaning) = state::lookup_meaning(&T_CS!("\\@undefined")) {
+      state::assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
+    }
+
     // Comma-list to Vec<String>. Whitespace-strip per Perl
     // TrimmedCommaList. Empty entries dropped.
     let opts_vec: Vec<String> = options_opt.as_ref()

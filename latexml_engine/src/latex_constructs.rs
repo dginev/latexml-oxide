@@ -2540,9 +2540,18 @@ LoadDefinitions!({
   // (Perl plain_base.pool.ltxml L147), but Perl-faithful.
   DefMacro!("\\hidewidth", None);
 
-  // Apparently LaTeX does NOT define \magnification,
-  // and babel uses that to determine whether we're runing LaTeX!!!
-  Let!("\\magnification", "\\@undefined");
+  // Perl-faithful: LaTeX does NOT define `\magnification`, and babel
+  // uses this to detect whether it's running under LaTeX (vs plain
+  // TeX). The unconditional Let here would also kill plain-TeX papers
+  // whose first line is `\magnification=\magstep1` — fine in Perl
+  // because the Perl driver doesn't pre-load latex_constructs for plain
+  // TeX sources, but the Rust cortex_worker eagerly preloads
+  // `LaTeX.pool` for the `\UseRawInputEncoding`-before-`\documentclass`
+  // case (2407.00348). To keep both working, defer the Let until
+  // `\documentclass` actually fires (see `\documentclass`
+  // after_digest below). Witness: 15 wp4 papers like 2305.09030 ship
+  // `\magnification=\magstep1` and previously failed with
+  // `Error:undefined:\magnification` under the worker.
   Let!("\\@empty", "\\lx@empty");
   Let!("\\@ifundefined", "\\lx@ifundefined");
   //**********************************************************************
@@ -2572,6 +2581,13 @@ LoadDefinitions!({
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
     after_digest => sub[whatsit] {
+      // Now that we know we're a LaTeX document, undefine `\magnification`
+      // (babel's plain-TeX vs LaTeX discriminator). Deferred from the
+      // pool-load site above so plain-TeX papers that never run
+      // `\documentclass` keep `\magnification` as a usable register.
+      if let Some(undef_meaning) = lookup_meaning(&T_CS!("\\@undefined")) {
+        assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
+      }
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => split_trim_options(&opts.to_string()),
