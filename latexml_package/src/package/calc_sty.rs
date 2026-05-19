@@ -373,6 +373,8 @@ LoadDefinitions!({
   def_primitive_noop("\\maxof")?;
   def_primitive_noop("\\widthof")?;
   def_primitive_noop("\\heightof")?;
+  def_primitive_noop("\\depthof")?;
+  def_primitive_noop("\\totalheightof")?;
   def_primitive_noop("\\ratio")?;
   def_primitive_noop("\\real")?;
 
