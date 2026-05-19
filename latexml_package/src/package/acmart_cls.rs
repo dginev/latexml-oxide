@@ -284,14 +284,35 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=cc-license]{#2}");
 
   // acmart conditional toggles — declare as conditionals so user
-  // paper's \\@printpermissiontrue / \\@printccstrue / \\@printcopyrighttrue
-  // etc. don't error.
+  // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue
+  // etc. don't error. The list mirrors `\newif` declarations in
+  // acmart.cls (TL2025 L181-L200); paper-local extension styles such
+  // as `popets.sty` (acmart-derived) flip these without re-declaring,
+  // so we must predeclare all of them. Driver: arXiv-2503.08256v1
+  // (popets/acmart) where `\@acmownedfalse`, `\@acmownedtrue`, and
+  // `\@ACM@journal@bibstripfalse` came up undefined.
   DefConditional!("\\if@printpermission");
   DefConditional!("\\if@printccs");
   DefConditional!("\\if@printcopyright");
   DefConditional!("\\if@printcopyrightbox");
   DefConditional!("\\if@printfolios");
   DefConditional!("\\if@acmReview");
+  DefConditional!("\\if@ACM@manuscript");
+  DefConditional!("\\if@ACM@journal");
+  DefConditional!("\\if@ACM@journal@bibstrip");
+  DefConditional!("\\if@ACM@journal@bibstrip@or@tog");
+  DefConditional!("\\if@ACM@sigchiamode");
+  DefConditional!("\\if@ACM@engage");
+  DefConditional!("\\if@ACM@acmcp");
+  DefConditional!("\\if@ACM@newfonts");
+  DefConditional!("\\if@Description@present");
+  DefConditional!("\\if@undescribed@images");
+  DefConditional!("\\if@ACM@maketitle@typeset");
+  DefConditional!("\\if@insideauthorgroup");
+  DefConditional!("\\if@acmowned");
+  DefConditional!("\\if@ACM@instpresent");
+  DefConditional!("\\if@ACM@citypresent");
+  DefConditional!("\\if@ACM@countrypresent");
 
   // acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
   // Footnote helper used by acmart at L587/L600 in some path our

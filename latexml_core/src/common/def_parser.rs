@@ -13,7 +13,17 @@ use crate::tokens::Tokens;
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
-static CS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@]+)").unwrap());
+// Includes `_` (expl3 private/word-internal) and an optional `:<letters>`
+// suffix (expl3 parameter-type sigil) so prototype strings like
+// "\\draw_path_arc:nnn{}{}{}" parse with the entire `\draw_path_arc:nnn`
+// as the control-sequence name. Under normal LaTeX catcodes `_` is SUB
+// and `:` is OTHER, so these names only round-trip through the
+// tokenizer under expl3 catcode regime — but compile-time prototype
+// strings bypass the tokenizer, so this is purely a string-parsing
+// concern. Witness: l3draw_sty stubs would previously fail with
+// "Unrecognized parameter type with name '_begin', spec '_begin:'".
+static CS_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
 static SINGLE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\.)").unwrap());
 static ACTIVE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.)").unwrap());
 static DEFAULT_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Default:(.*)$").unwrap());
