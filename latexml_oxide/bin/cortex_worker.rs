@@ -538,7 +538,13 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> = rustc_hash::FxHashMap::default();
-  let mut vetoed: Vec<PathBuf> = Vec::new();
+  // Each entry is (vetoed_path, vetoer_path). A veto from a low-score
+  // wrapper file (e.g. a 2-line `\input{main}` shim) MUST NOT remove a
+  // high-score documentclass-bearing file from the candidate pool. The
+  // vetoer's score is known only after the scoring loop completes, so
+  // we record the vetoer and apply the veto post-loop with the score
+  // comparison. Witness 2307.13586.
+  let mut vetoed: Vec<(PathBuf, PathBuf)> = Vec::new();
   // Phase D pre-screen: track sentinel reasons so the empty-candidates
   // branch can return a categorized `Fatal:invalid:<reason>` (per
   // SYNC_STATUS.md "Phase E asymptote: convert intractable papers to
@@ -613,7 +619,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
         }
         let base_dir = tex_file.parent().unwrap_or(dir);
-        vetoed.push(base_dir.join(&vetoed_name));
+        // Tag veto with vetoer's path; we'll only honor the veto when
+        // the vetoer's eventual score >= vetee's score. Prevents a tiny
+        // wrapper file (`\input{main}`) from removing a documentclass-
+        // bearing main.tex from the candidate set. Witness 2307.13586.
+        vetoed.push((base_dir.join(&vetoed_name), tex_file.clone()));
       }
       if RE_END_BYE.is_match(line) {
         maybe_tex_priority = true;
@@ -667,9 +677,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
-  // Remove vetoed files
-  for v in &vetoed {
-    likelihood.remove(v);
+  // Apply each veto only if the vetoer's score >= vetee's score.
+  // Honors the wrapper-vs-main-doc case (see `vetoed` declaration).
+  for (vetee, vetoer) in &vetoed {
+    let vetee_score = likelihood.get(vetee).copied().unwrap_or(0.0);
+    let vetoer_score = likelihood.get(vetoer).copied().unwrap_or(0.0);
+    if vetoer_score >= vetee_score {
+      likelihood.remove(vetee);
+    }
   }
 
   // Filter to score > 0, sort by score descending
@@ -679,7 +694,6 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     .cloned()
     .collect();
   candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
-
   if candidates.is_empty() {
     if had_auto_ignore {
       // Perl-faithful: an arxiv `%auto-ignore` source still gets opened

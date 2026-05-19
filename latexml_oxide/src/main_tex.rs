@@ -105,7 +105,11 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
     // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
     let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> =
         rustc_hash::FxHashMap::default();
-    let mut vetoed: Vec<PathBuf> = Vec::new();
+    // (vetoed_path, vetoer_path) — the veto is honored at filtering
+    // time only when the vetoer's score >= the vetee's. Prevents a
+    // 2-line wrapper file (e.g. `\input{main}`) from removing the
+    // documentclass-bearing main.tex. Witness 2307.13586.
+    let mut vetoed: Vec<(PathBuf, PathBuf)> = Vec::new();
     let mut had_auto_ignore = false;
 
     for tex_file in &tex_files {
@@ -175,7 +179,7 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
                     vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
                 }
                 let base_dir = tex_file.parent().unwrap_or(dir);
-                vetoed.push(base_dir.join(&vetoed_name));
+                vetoed.push((base_dir.join(&vetoed_name), tex_file.clone()));
             }
             if RE_END_BYE.is_match(line) {
                 maybe_tex_priority = true;
@@ -229,8 +233,12 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
         }
     }
 
-    for v in &vetoed {
-        likelihood.remove(v);
+    for (vetee, vetoer) in &vetoed {
+        let vetee_score = likelihood.get(vetee).copied().unwrap_or(0.0);
+        let vetoer_score = likelihood.get(vetoer).copied().unwrap_or(0.0);
+        if vetoer_score >= vetee_score {
+            likelihood.remove(vetee);
+        }
     }
 
     let mut candidates: Vec<PathBuf> = likelihood
