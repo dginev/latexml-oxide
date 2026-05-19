@@ -5677,6 +5677,14 @@ LoadDefinitions!({
       }
       // Reset equation counter to 0
       reset_counter(&T_OTHER!("equation"))?;
+      // amsmath.sty L1134: `\protected@edef\theparentequation{\theequation}`
+      // — fixates the parent equation's expansion before the local
+      // \theequation is redefined. Papers commonly do
+      // `\renewcommand{\theequation}{\theparentequation\alph{equation}}`
+      // inside subequations, expecting \theparentequation to resolve.
+      // Witness 2402.03202.
+      def_macro(T_CS!("\\theparentequation"), None,
+        mouth::tokenize_internal(&eqnum_str), None)?;
       // Redefine \theequation to parent_number + \alph{equation}
       let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
       def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
