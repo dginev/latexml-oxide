@@ -76,6 +76,13 @@ LoadDefinitions!({
   // wp4 (2 papers in stage 1).
   DefMacro!("\\icmlEqualSeniorContribution",
     "\\textsuperscript{\\char`\u{2020}}Equal senior contribution");
+  // Some paper-bundled icml*.sty templates add author-status markers
+  // beyond the kernel `\icmlEqualContribution`. The most common is
+  // `\icmlIntershipWork`, an internship-affiliation annotation passed
+  // to `\printAffiliationsAndNotice{...}` in icml2024 papers.
+  // Witness 2401.00604.
+  DefMacro!("\\icmlIntershipWork",
+    "\\textsuperscript{*}Work done during an internship");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
