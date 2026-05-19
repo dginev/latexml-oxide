@@ -596,14 +596,14 @@ LoadDefinitions!({
     if let Some(kv_arg) = whatsit.get_arg(2) {
       if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
-        if let Some(v) = hash.get("role") { role = v.to_string(); }
-        if let Some(v) = hash.get("name") { name_val = v.to_string(); }
-        if let Some(v) = hash.get("meaning") { meaning = v.to_string(); }
-        if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.to_string(); }
-        if let Some(v) = hash.get("description") { has_description = true; description_text = v.to_string(); }
+        if let Some(v) = hash.get("role") { role = v.clone(); }
+        if let Some(v) = hash.get("name") { name_val = v.clone(); }
+        if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
+        if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.clone(); }
+        if let Some(v) = hash.get("description") { has_description = true; description_text = v.clone(); }
         // Store scope option for rewrite rule creation in afterConstruct
         if let Some(v) = hash.get("scope") {
-          whatsit.set_property("scope_opt", Stored::from(v.to_string()));
+          whatsit.set_property("scope_opt", Stored::from(v.clone()));
         }
       }
     }

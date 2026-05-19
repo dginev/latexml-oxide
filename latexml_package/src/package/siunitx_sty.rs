@@ -193,7 +193,7 @@ fn six_get_op_sym(kv: &[(&str, Tokens)], key: SymStr) -> Tokens {
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
-    let key_str = key.to_string();
+    let key_str = key.clone();
     match value {
       ArgWrap::Tokens(t) => {
         if t.is_empty() {

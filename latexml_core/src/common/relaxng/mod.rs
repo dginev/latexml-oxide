@@ -274,7 +274,7 @@ impl Relaxng {
       .map(|(p, _)| p)
       .collect();
     candidates.sort();
-    if let Some(p) = candidates.first().map(|s| s.to_string()) {
+    if let Some(p) = candidates.first().map(|s| (*s).clone()) {
       self.register_display_prefix_strip(p);
     }
   }

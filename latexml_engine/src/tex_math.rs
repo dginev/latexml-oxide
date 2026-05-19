@@ -965,7 +965,7 @@ LoadDefinitions!({
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
           if let Some(Stored::HashString(ref attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.to_string());
+              whatsit.set_property("meaning", meaning.clone());
             }
           }
         });
@@ -1012,7 +1012,7 @@ LoadDefinitions!({
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
           if let Some(Stored::HashString(ref attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.to_string());
+              whatsit.set_property("meaning", meaning.clone());
             }
           }
         });

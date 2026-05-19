@@ -59,7 +59,7 @@ LoadDefinitions!({
             if k == "file" || k == "figure" { continue; }
             if k == "clip" { saw_clip = true; }
             let v_str = v.to_string();
-            if v_str.is_empty() { opts.push(k.to_string()); }
+            if v_str.is_empty() { opts.push(k.clone()); }
             else { opts.push(format!("{}={}", k, v_str)); }
           }
           if clip_on && !saw_clip { opts.push("clip=true".into()); }

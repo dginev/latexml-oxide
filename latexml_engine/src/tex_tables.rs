@@ -517,14 +517,14 @@ LoadDefinitions!({
     // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
     if let Some(col) = column {
       if let Some(before) = &col.before {
-        tks.extend(before_cell_unlist(before.unlist_ref().to_vec()));
+        tks.extend(before_cell_unlist(before.unlist_ref().clone()));
       }
     }
     tks.extend(body.unlist_ref().iter().copied());
     // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
     if let Some(col) = column {
       if let Some(after) = &col.after {
-        tks.extend(after_cell_unlist(after.unlist_ref().to_vec()));
+        tks.extend(after_cell_unlist(after.unlist_ref().clone()));
       }
     }
     Ok(Tokens::new(tks))

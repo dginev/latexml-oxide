@@ -520,7 +520,7 @@ impl Document {
               let mut text_keys_to_remove = Vec::new();
               for key in pending_declaration.keys() {
                 if !can_have_attribute(FONT_ELEMENT_NAME, key) {
-                  text_keys_to_remove.push(key.to_string());
+                  text_keys_to_remove.push(key.clone());
                 }
               }
               for key in text_keys_to_remove {
@@ -3758,7 +3758,7 @@ impl Document {
         Self::collect_xml_ids_from(child, &mut xpath_ids);
       }
       for id in xpath_ids {
-        id_map.insert(id.to_string(), self.modify_id(id));
+        id_map.insert(id.clone(), self.modify_id(id));
       }
     }
     // Now do the cloning (actually copying) and insertion.
@@ -4202,7 +4202,7 @@ impl Document {
           for label in labels.split_whitespace() {
             self
               .rewrite_labels
-              .insert(label.to_string(), id.to_string());
+              .insert(label.to_string(), id.clone());
           }
         } else {
           Error!(

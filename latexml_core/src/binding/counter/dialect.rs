@@ -185,7 +185,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   if !prefix.is_empty() {
     state::assign_value(
       &s!("@ID@prefix@{}", ctr),
-      prefix.to_string(),
+      prefix.clone(),
       Some(Scope::Global),
     );
   } else {
@@ -404,7 +404,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   deactivate_counter_scope(arena::pin(&ctr));
 
   // And install the scope (if any) for this reference number.
-  state::assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
+  state::assign_value("current_counter", ctr.clone(), Some(Scope::Local));
 
   let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();

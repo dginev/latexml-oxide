@@ -212,7 +212,7 @@ fn decode_color(expression: &str) -> Color {
       if !blend.is_empty() {
         format!("{}{}", mix_part, blend)
       } else {
-        mix_part.to_string()
+        mix_part.clone()
       }
     })
   } else {

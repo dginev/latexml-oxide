@@ -250,7 +250,7 @@ fn merged_enumitem_keyvals(
             Stored::String(s) => ArgWrap::Tokens(arena::with(s, mouth::tokenize_internal)),
             _ => ArgWrap::None,
           };
-          hash.insert(key.to_string(), aw);
+          hash.insert(key.clone(), aw);
         }
       }
     }

@@ -2547,13 +2547,13 @@ pub fn compute_indirect_model() -> IndirectModel {
         if tag != kid && tag != start {
           let start_entry = {
             let kid_entry = desc.entry_sym(kid).or_default();
-            *kid_entry.entry_sym(start.to_owned()).or_insert(0)
+            *kid_entry.entry_sym(start).or_insert(0)
           };
           if start_entry > best {
             imodel
               .entry_sym(tag)
               .or_default()
-              .insert_sym(kid, start.to_owned());
+              .insert_sym(kid, start);
             {
               best = start_entry;
             }

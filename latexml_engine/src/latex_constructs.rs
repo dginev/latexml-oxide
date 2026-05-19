@@ -631,7 +631,7 @@ fn before_digest_verbatim() -> Result<Vec<Digested>> {
 
 fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
-  let font: Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
+  let font: Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).clone()));
   let loc = whatsit.get_locator();
   let (end, space) = if starred {
     ("\\end{verbatim*}", '\u{2423}')
