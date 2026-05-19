@@ -579,27 +579,39 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
         //
         // Targeted Task #10 mitigation (2026-05-19): the `opfunction
-        // lbracket formula rbracket` rule was ambiguous with
-        // `opfunction tight_term => prefix_apply` (since `[formula]` is
-        // a `fenced_factor` → `tight_term` via the `lbracket formula
-        // rbracket => fenced` reduction). HYBRID's Tree-iter picks
-        // `prefix_apply` (the surviving parse for `\sin[x]\{…\}` in
-        // physics.tex). ASF's Cartesian-product enumeration ALSO fires
-        // `apply_delimited` for `(sin, [, x, ])`, which eagerly XMRefs
-        // the OPFUNCTION operand via `create_xmrefs` →
-        // `Document::generate_id` → bumps `_ID_counter_` on the math
-        // ancestor for a tree that's then pruned in favor of
-        // `prefix_apply`'s output. The "wasted" xml:id slot leaves a
-        // gap that shifts the surviving lexemes' IDs by +1 (witness:
-        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`). Removing
-        // the rule converges both parsers on `prefix_apply` for
-        // OPFUNCTION+`[…]` and eliminates the spurious id allocation.
-        // `\sin(x)` (paren form) keeps `apply_delimited` because that
-        // is the canonical function-call notation; the bracket form is
-        // a physics-package idiosyncrasy adequately handled by
-        // `prefix_apply`.
+        // lbracket formula rbracket` and (sibling cleanup) `function
+        // lbracket formula rbracket` rules were ambiguous with
+        // `applied_func = (op|)function (tight_term|fenced_factor) =>
+        // prefix_apply`. `[formula]` reduces to `fenced_factor` via
+        // `lbracket expression rbracket => fenced`, and any expression
+        // is also a formula, so the same input matched two rules.
+        // HYBRID's Tree-iter (capped) lands on `prefix_apply`. ASF's
+        // Cartesian-product enumeration ALSO fires `apply_delimited`
+        // — and that body eagerly XMRefs its `func` operand via
+        // `create_xmrefs` → `Document::generate_id`, bumping
+        // `_ID_counter_` for a tree that's then pruned. The wasted
+        // xml:id slot shifts surviving lexemes' IDs by +1 (witness:
+        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`).
+        //
+        // Removed:
+        // - `opfunction lbracket formula rbracket => apply_delimited`
+        // - `function lbracket formula rbracket => apply_delimited`
+        //
+        // Both convergent on `prefix_apply` (via `function
+        // fenced_factor`, `opfunction tight_term`).
+        //
+        // KEPT:
+        // - `function lparen formula rparen => apply_delimited`
+        //   `opfunction lparen formula rparen => apply_delimited` —
+        //   `f(x)` / `\sin(x)` is the canonical function-call notation;
+        //   the XMDual cross-reference shape is the intended semantic.
+        // - `trigfunction lbracket formula rbracket => apply_delimited`
+        //   `trigfunction lparen formula rparen => apply_delimited` —
+        //   `trig_arg` deliberately EXCLUDES `fenced_factor` (see the
+        //   `trig_arg` comment), so there's no `prefix_apply` path for
+        //   trig+`[…]` / trig+`(…)` — `apply_delimited` is the only
+        //   rule covering these cases.
         | function lparen formula rparen => apply_delimited
-        | function lbracket formula rbracket => apply_delimited
         | opfunction lparen formula rparen => apply_delimited
         | trigfunction lparen formula rparen => apply_delimited
         | trigfunction lbracket formula rbracket => apply_delimited;
