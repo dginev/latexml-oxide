@@ -14,6 +14,15 @@
 //! Witness: 2503.01123, 2503.08789, 2503.01690, 2503.08930.
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Skip the expl3 raw-load entirely. Stub user-facing macros below.
 
@@ -25,22 +34,22 @@ LoadDefinitions!({
 
   // Spectral-sequence drawing primitives — emit only their text
   // labels (#last arg typically) when reasonable; otherwise gobble.
-  DefMacro!("\\class[]{}", "");
-  DefMacro!("\\classoptions{}", "");
-  DefMacro!("\\d{}{}", "");
-  DefMacro!("\\structline[]", "");
-  DefMacro!("\\structlineoptions{}", "");
-  DefMacro!("\\tagclass{}{}", "");
-  DefMacro!("\\replaceclass[]{}", "");
-  DefMacro!("\\replacetagclass[]{}", "");
-  DefMacro!("\\printpage[]", "");
-  DefMacro!("\\differential{}{}{}{}", "");
-  DefMacro!("\\quivermod{}{}{}", "");
+  def_macro_noop("\\class[]{}")?;
+  def_macro_noop("\\classoptions{}")?;
+  def_macro_noop("\\d{}{}")?;
+  def_macro_noop("\\structline[]")?;
+  def_macro_noop("\\structlineoptions{}")?;
+  def_macro_noop("\\tagclass{}{}")?;
+  def_macro_noop("\\replaceclass[]{}")?;
+  def_macro_noop("\\replacetagclass[]{}")?;
+  def_macro_noop("\\printpage[]")?;
+  def_macro_noop("\\differential{}{}{}{}")?;
+  def_macro_noop("\\quivermod{}{}{}")?;
 
   // Internal sseq@* helpers that surface in error logs — define as
   // gobble-anything so they don't trip our error stub installer.
-  DefMacro!("\\sseq@DeclareDocumentCommand{}{}{}", "");
+  def_macro_noop("\\sseq@DeclareDocumentCommand{}{}{}")?;
   DefMacro!("\\sseq@xycoord", "0,0");
-  DefMacro!("\\sseq@thename", "");
-  DefMacro!("\\sseq@classstyle", "");
+  def_macro_noop("\\sseq@thename")?;
+  def_macro_noop("\\sseq@classstyle")?;
 });

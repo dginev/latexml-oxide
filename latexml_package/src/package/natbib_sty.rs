@@ -117,6 +117,15 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
   }
 }
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //======================================================================
   // 5. Package Options
@@ -207,8 +216,8 @@ LoadDefinitions!({
   // bodies that touch them don't crash.
   // Witness 2405.19536: multibib's \AtBeginDocument fires \NAT@set@cites.
   NewCounter!("NAT@ctr");
-  DefMacro!("\\NAT@set@cites", "");
-  DefMacro!("\\NAT@@setcites", "");
+  def_macro_noop("\\NAT@set@cites")?;
+  def_macro_noop("\\NAT@@setcites")?;
 
   //======================================================================
   // 2.3 Basic Citation Commands
@@ -738,10 +747,10 @@ LoadDefinitions!({
   // 2.12 Other Formatting Options
   DefMacro!("\\bibname", "Bibliography");
   DefMacro!("\\refname", "References");
-  DefMacro!("\\bibsection", "");
-  DefMacro!("\\bibpreamble", "");
-  DefMacro!("\\bibfont", "");
-  DefMacro!("\\citenumfont", "");
+  def_macro_noop("\\bibsection")?;
+  def_macro_noop("\\bibpreamble")?;
+  def_macro_noop("\\bibfont")?;
+  def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");
   DefRegister!("\\bibhang", Dimension::new(0));
   DefRegister!("\\bibsep", Glue::new(0));
@@ -749,9 +758,9 @@ LoadDefinitions!({
   //======================================================================
   // 2.13 Automatic Indexing of Citations
   RawTeX!("\\newif\\ifciteindex");
-  DefMacro!("\\citeindextrue", "");
-  DefMacro!("\\citeindexfalse", "");
-  DefMacro!("\\citeindextype", "");
+  def_macro_noop("\\citeindextrue")?;
+  def_macro_noop("\\citeindexfalse")?;
+  def_macro_noop("\\citeindextype")?;
 
   // natbib boolean flags consulted by raw-loaded sibling packages
   // and some user macros. Predefine the standard `\if<name>` triple
@@ -764,7 +773,7 @@ LoadDefinitions!({
   RawTeX!("\\newif\\ifNAT@swa");
 
   // 2.17 Long Author List on First Citation
-  DefMacro!("\\shortcites Semiverbatim", "");
+  def_macro_noop("\\shortcites Semiverbatim")?;
 
   //======================================================================
   // Bibliography item handling

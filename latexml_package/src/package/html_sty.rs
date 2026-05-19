@@ -11,6 +11,15 @@ fn def_macro_identity(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: html.sty.ltxml — 111 lines
@@ -23,17 +32,17 @@ LoadDefinitions!({
   DefMacro!("\\htmladdnormallinkfoot{}{}",                "\\href{#2}{#1}");
   DefMacro!("\\htmladdnormallink{}{}",                    "\\href{#2}{#1}");
   DefMacro!("\\htmladdimg{}",                             "\\hyperimage{#1}");
-  DefMacro!("\\externallabels Semiverbatim Semiverbatim", "");
+  def_macro_noop("\\externallabels Semiverbatim Semiverbatim")?;
   // \externalref{label} — cross-document reference label; preserve.
   DefMacro!("\\externalref{}",
     "\\ref{#1}");
   DefMacro!("\\externalcite",                             "\\nocite");
-  DefMacro!("\\htmladdTOClink[]{}{}{}",                   "");
+  def_macro_noop("\\htmladdTOClink[]{}{}{}")?;
   DefConstructor!("\\htmlrule OptionalMatch:*", "<ltx:rule/>");
   DefConstructor!("\\HTMLrule OptionalMatch:*", "<ltx:rule/>");
   DefConstructor!("\\htmlclear",                "<ltx:br/>");
-  DefMacro!("\\bodytext{}", "");
-  DefMacro!("\\htmlbody",   "");
+  def_macro_noop("\\bodytext{}")?;
+  def_macro_noop("\\htmlbody")?;
 
   // Hyperref variants — Perl L45-51
   // Perl emits labelref='#label' on ltx:ref and pulls label from arg 4
@@ -60,11 +69,11 @@ LoadDefinitions!({
   DefMacro!("\\htmlcite{}{}", "\\hypercite{#1}{}{#2}");
 
   // Image/border — Perl L57-61
-  DefMacro!("\\htmlimage{}", "");
-  DefMacro!("\\htmlborder{}", "");
+  def_macro_noop("\\htmlimage{}")?;
+  def_macro_noop("\\htmlborder{}")?;
   DefEnvironment!("{makeimage}", "#body");
   DefEnvironment!("{tex2html_deferred}", "#body");
-  DefMacro!("\\htmladdtonavigation{}", "");
+  def_macro_noop("\\htmladdtonavigation{}")?;
 
   // rawhtml/htmlonly — Perl L66-88. These envs wrap raw HTML that should
   // bypass TeX tokenization entirely (angle brackets, ampersands, etc.
@@ -86,7 +95,7 @@ LoadDefinitions!({
       }
       let _ = nlines;
     });
-  DefMacro!("\\endrawhtml", "");
+  def_macro_noop("\\endrawhtml")?;
   DefConstructor!(T_CS!("\\begin{htmlonly}"), None, "",
     reversion => "",
     after_digest => sub[_whatsit] {
@@ -99,7 +108,7 @@ LoadDefinitions!({
       }
       let _ = nlines;
     });
-  DefMacro!("\\endhtmlonly", "");
+  def_macro_noop("\\endhtmlonly")?;
 
   // latexonly — Perl L92-98
   DefEnvironment!("{latexonly}", "#body");
@@ -121,11 +130,11 @@ LoadDefinitions!({
   });
 
   // Misc — Perl L100-107
-  DefMacro!("\\html{}", "");
+  def_macro_noop("\\html{}")?;
   def_macro_identity("\\latex{}")?;
   def_macro_identity("\\latexhtml{}{}")?;
   def_macro_identity("\\strikeout{}")?;
   DefMacro!("\\htmlurl Semiverbatim", "\\url{#1}");
-  DefMacro!("\\HTMLset{}{}",              "");
-  DefMacro!("\\htmlinfo OptionalMatch:*", "");
+  def_macro_noop("\\HTMLset{}{}")?;
+  def_macro_noop("\\htmlinfo OptionalMatch:*")?;
 });

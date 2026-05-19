@@ -1,5 +1,14 @@
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("ifplatform");
   RequirePackage!("xcolor");
@@ -14,10 +23,10 @@ LoadDefinitions!({
   RequirePackage!("listings");
   DeclareOption!("chapter", "");
   // INCOMPLETE IMPLEMENTATION — mostly stubs that allow content-preservation
-  DefMacro!("\\DeleteFile[]{}", "");
+  def_macro_noop("\\DeleteFile[]{}")?;
   DefMacro!("\\MintedPygmentize", "pygmentize");
-  DefMacro!("\\ProvideDirectory{}", "");
-  DefMacro!("\\TestAppExists{}", "");
+  def_macro_noop("\\ProvideDirectory{}")?;
+  def_macro_noop("\\TestAppExists{}")?;
   DefConditional!("\\ifAppExists");
 
   // `\minted@def@optcl[default]{name}{cmdline}{value}` — minted's
@@ -27,9 +36,9 @@ LoadDefinitions!({
   // `\usepackage{tcolorbox}` with the `minted` library).
   // No-op stub: tcolorbox just calls these to register options that
   // would otherwise be picked up by our \mint/\inputminted stubs.
-  DefMacro!("\\minted@def@optcl[]{}{}{}", "");
-  DefMacro!("\\minted@def@optcl@e[]{}{}{}", "");
-  DefMacro!("\\minted@def@optcl@switch{}{}", "");
+  def_macro_noop("\\minted@def@optcl[]{}{}{}")?;
+  def_macro_noop("\\minted@def@optcl@e[]{}{}{}")?;
+  def_macro_noop("\\minted@def@optcl@switch{}{}")?;
   // \inputminted[opts]{language}{filename} — Perl L43-53 reads the
   // referenced file via FindFile + Mouth->readRawLine, then wraps the
   // contents in \begin{minted}{language}...\end{minted}, relying on
@@ -76,7 +85,7 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(result))
   });
-  DefMacro!("\\listoflistings", "");
+  def_macro_noop("\\listoflistings")?;
   DefMacro!("\\listingscaption", "Listing");
   DefMacro!("\\listoflistingscaption", "List of listings");
   // Perl minted.sty.ltxml L58-99 dynamically defined new CSes via runtime
@@ -100,10 +109,10 @@ LoadDefinitions!({
 \def\lx@minted@nmf@noopt#1{\expandafter\let\csname #1file\endcsname\inputminted}
 "#
   );
-  DefMacro!("\\setminted[]{}", "");
-  DefMacro!("\\setmintedinline[]{}", "");
-  DefMacro!("\\usemintedstyle[]{}", "");
-  DefMacro!("\\SetupFloatingEnvironment{}{}", "");
+  def_macro_noop("\\setminted[]{}")?;
+  def_macro_noop("\\setmintedinline[]{}")?;
+  def_macro_noop("\\usemintedstyle[]{}")?;
+  def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
   DefMacro!("\\mint[]{}", "\\verb");
   DefMacro!("\\mintinline[]{}", "\\verb");
   // \begin{minted}[opts]{language} — port of Perl mintedEnvBody

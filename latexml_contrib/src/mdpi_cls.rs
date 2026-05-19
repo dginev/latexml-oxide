@@ -6,6 +6,15 @@
 //! don't error out. Witness 2410.21443.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("article");
   RequirePackage!("amsmath");
@@ -24,7 +33,7 @@ LoadDefinitions!({
 
   // MDPI frontmatter — preserve author content as ltx:note frontmatter.
   DefMacro!("\\corresref[]{}", "\\textsuperscript{*#1}");
-  DefMacro!("\\externalbibliography{}", "");
+  def_macro_noop("\\externalbibliography{}")?;
   // \firstpage{N} also defines \@firstpage in the real mdpi.cls;
   // some papers reference it via `\setcounter{page}{\@firstpage}`.
   // Witness 2503.04598 — bytedance_seed paper using the mdpi pattern.
@@ -61,7 +70,7 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
   DefMacro!("\\reftitle{}",
     "\\@add@frontmatter{ltx:note}[role=reftitle]{#1}");
-  DefMacro!("\\PublishersNote", "");
+  def_macro_noop("\\PublishersNote")?;
   DefMacro!("\\articlenumber{}",
     "\\@add@frontmatter{ltx:note}[role=articlenumber]{#1}");
   DefMacro!("\\copyrightyear{}",
@@ -74,7 +83,7 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=accepted]{#1}");
   DefMacro!("\\historypublished{}",
     "\\@add@frontmatter{ltx:note}[role=published]{#1}");
-  DefMacro!("\\SetCaptionDefault", "");
+  def_macro_noop("\\SetCaptionDefault")?;
 
   // Newer mdpi.cls L668-685 — additional date/metadata setters.
   // Witness 2503.11347, 2503.13839 (\daterevised, \datereceived,
@@ -113,12 +122,12 @@ LoadDefinitions!({
   DefMacro!("\\Author{}", "\\author{#1}");
   DefMacro!("\\hreflink{}",
     "\\@add@frontmatter{ltx:note}[role=hreflink]{#1}");
-  DefMacro!("\\orcidA", "");
-  DefMacro!("\\orcidB", "");
-  DefMacro!("\\orcidC", "");
-  DefMacro!("\\orcidD", "");
-  DefMacro!("\\orcidE", "");
-  DefMacro!("\\orcidF", "");
+  def_macro_noop("\\orcidA")?;
+  def_macro_noop("\\orcidB")?;
+  def_macro_noop("\\orcidC")?;
+  def_macro_noop("\\orcidD")?;
+  def_macro_noop("\\orcidE")?;
+  def_macro_noop("\\orcidF")?;
   // \extralength is a length register — define as 0pt.
   DefRegister!("\\extralength" => Dimension::new(0));
   // \authorcontributions, \funding, \conflictsofinterest,
@@ -182,6 +191,6 @@ LoadDefinitions!({
     "<ltx:acknowledgements>#1</ltx:acknowledgements>");
   // \appendixtitles{Yes|No} / \appendixstart — appendix-numbering
   // toggle. No-op (we don't replay mdpi's appendix counter dance).
-  DefMacro!("\\appendixtitles{}", "");
-  DefMacro!("\\appendixstart", "");
+  def_macro_noop("\\appendixtitles{}")?;
+  def_macro_noop("\\appendixstart")?;
 });

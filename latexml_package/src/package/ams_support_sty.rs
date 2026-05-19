@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: ams_support.sty.ltxml — common support for AMS document classes
@@ -167,7 +176,7 @@ LoadDefinitions!({
   DefMacro!("\\copyrightinfo{}{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #1: #2}");
 
-  DefMacro!("\\pagespan{}{}", ""); // ?
+  def_macro_noop("\\pagespan{}{}")?; // ?
   DefMacro!("\\PII{}",
     "\\@add@frontmatter{ltx:classification}[scheme=PII]{#1}");
   DefMacro!("\\ISSN{}",
@@ -261,14 +270,14 @@ LoadDefinitions!({
   // Sec 8 Monograph Formatting:
 
   // TOC's should be built by latexml... ?
-  DefMacro!("\\tocpart{}{}{}", "");
-  DefMacro!("\\tocchapter{}{}{}", "");
-  DefMacro!("\\tocsection{}{}{}", "");
-  DefMacro!("\\tocsubsection{}{}{}", "");
-  DefMacro!("\\tocsubsubsection{}{}{}", "");
-  DefMacro!("\\tocparagraph{}{}{}", "");
-  DefMacro!("\\tocsubparagraph{}{}{}", "");
-  DefMacro!("\\tocappendix{}{}{}", "");
+  def_macro_noop("\\tocpart{}{}{}")?;
+  def_macro_noop("\\tocchapter{}{}{}")?;
+  def_macro_noop("\\tocsection{}{}{}")?;
+  def_macro_noop("\\tocsubsection{}{}{}")?;
+  def_macro_noop("\\tocsubsubsection{}{}{}")?;
+  def_macro_noop("\\tocparagraph{}{}{}")?;
+  def_macro_noop("\\tocsubparagraph{}{}{}")?;
+  def_macro_noop("\\tocappendix{}{}{}")?;
   DefMacro!("\\contentsnamefont", None, "\\scshape");
 
   DefMacro!("\\labelenumi", None, "(\\theenumi)");
@@ -294,9 +303,9 @@ LoadDefinitions!({
   DefMacro!("\\@False", None, "01");
 
   // \newswitch, \setFalse, \setTrue — complex sub closures, stubbed as no-ops
-  DefMacro!("\\newswitch[]{}", "");
-  DefMacro!("\\setFalse{}", "");
-  DefMacro!("\\setTrue{}", "");
+  def_macro_noop("\\newswitch[]{}")?;
+  def_macro_noop("\\setFalse{}")?;
+  def_macro_noop("\\setTrue{}")?;
 
   // funny control structures, using above switches
   // \except

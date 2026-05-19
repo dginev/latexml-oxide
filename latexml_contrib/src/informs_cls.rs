@@ -7,6 +7,15 @@
 //! class convert without "undefined" cascades.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -45,19 +54,19 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
   DefMacro!("\\authorinfo{}",
     "\\@add@frontmatter{ltx:note}[role=authorinfo]{#1}");
-  DefMacro!("\\thetitle", "");
+  def_macro_noop("\\thetitle")?;
 
   // Layout / structure switches — no visual effect in XML.
-  DefMacro!("\\TheoremsNumberedThrough", "");
-  DefMacro!("\\TheoremsNumberedBySection", "");
-  DefMacro!("\\EquationsNumberedThrough", "");
-  DefMacro!("\\EquationsNumberedBySection", "");
-  DefMacro!("\\ECRepeatTheorems", "");
-  DefMacro!("\\OneAndAHalfSpacedXI", "");
-  DefMacro!("\\OneAndAHalfSpacedXII", "");
-  DefMacro!("\\DoubleSpacedXI", "");
-  DefMacro!("\\DoubleSpacedXII", "");
-  DefMacro!("\\SingleSpacedXI", "");
+  def_macro_noop("\\TheoremsNumberedThrough")?;
+  def_macro_noop("\\TheoremsNumberedBySection")?;
+  def_macro_noop("\\EquationsNumberedThrough")?;
+  def_macro_noop("\\EquationsNumberedBySection")?;
+  def_macro_noop("\\ECRepeatTheorems")?;
+  def_macro_noop("\\OneAndAHalfSpacedXI")?;
+  def_macro_noop("\\OneAndAHalfSpacedXII")?;
+  def_macro_noop("\\DoubleSpacedXI")?;
+  def_macro_noop("\\DoubleSpacedXII")?;
+  def_macro_noop("\\SingleSpacedXI")?;
 
   // {APPENDICES} env — render contents as appendix section.
   DefMacro!(T_CS!("\\begin{APPENDICES}"), None, "\\appendix");

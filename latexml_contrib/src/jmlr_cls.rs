@@ -1,6 +1,15 @@
 //! Stub for jmlr.cls and clear2025.cls family.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -11,7 +20,7 @@ LoadDefinitions!({
   RequirePackage!("natbib");
 
   // Author-block primitives (jmlr.cls L335-342, L374-445).
-  DefMacro!("\\addr", "");
+  def_macro_noop("\\addr")?;
   DefMacro!("\\Name[]{}", "#2");
   // \Email{addr} — author email; preserve as ltx:creator/ltx:contact.
   DefMacro!("\\Email{}",
@@ -52,7 +61,7 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
   DefMacro!("\\editors{}",
     "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
-  DefMacro!("\\firstpageno{}", "");
+  def_macro_noop("\\firstpageno{}")?;
 
   // {keywords} env.
   DefEnvironment!(
@@ -81,15 +90,15 @@ LoadDefinitions!({
   // jmlrutils theorem-style configuration helpers (gobble silently —
   // we don't replicate the punctuation/spacing). Witness: 2502.19625
   // (\theorempostheader{:}).
-  DefMacro!("\\theorempostheader{}", "");
-  DefMacro!("\\theoremheader{}", "");
-  DefMacro!("\\theoremsep{}", "");
-  DefMacro!("\\theoremprework{}", "");
-  DefMacro!("\\theorempostwork{}", "");
-  DefMacro!("\\theorembodyfont{}", "");
-  DefMacro!("\\theoremheaderfont{}", "");
-  DefMacro!("\\definetheoremstyle{}{}", "");
-  DefMacro!("\\settheoremtag{}", "");
+  def_macro_noop("\\theorempostheader{}")?;
+  def_macro_noop("\\theoremheader{}")?;
+  def_macro_noop("\\theoremsep{}")?;
+  def_macro_noop("\\theoremprework{}")?;
+  def_macro_noop("\\theorempostwork{}")?;
+  def_macro_noop("\\theorembodyfont{}")?;
+  def_macro_noop("\\theoremheaderfont{}")?;
+  def_macro_noop("\\definetheoremstyle{}{}")?;
+  def_macro_noop("\\settheoremtag{}")?;
 
   // Theorem-likes.
   RawTeX!(

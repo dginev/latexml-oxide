@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: llncs.cls.ltxml — Lecture Notes in Computer Science (Springer)
@@ -20,7 +29,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
-  DefMacro!("\\frontmatter", "");
+  def_macro_noop("\\frontmatter")?;
 
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
 
@@ -80,7 +89,7 @@ LoadDefinitions!({
   // `{TOC text}` as a balanced group that gets digested as empty
   // text in the surrounding context — same observable output as the
   // discarding-macro path.
-  DefMacro!("\\toctitle", "");
+  def_macro_noop("\\toctitle")?;
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
   DefRegister!("\\tocsecnum" => Dimension!("15pt"));
@@ -93,17 +102,17 @@ LoadDefinitions!({
   DefRegister!("\\tocsubsubsectotal" => Dimension::new(0));
   DefRegister!("\\tocparatotal" => Dimension::new(0));
 
-  DefMacro!("\\addcontentsmark{}{}{}", "");
-  DefMacro!("\\addcontentsmarkwop{}{}{}", "");
-  DefMacro!("\\addnumcontentsmark{}{}{}", "");
-  DefMacro!("\\addtocmark[]{}{}{}", "");
+  def_macro_noop("\\addcontentsmark{}{}{}")?;
+  def_macro_noop("\\addcontentsmarkwop{}{}{}")?;
+  def_macro_noop("\\addnumcontentsmark{}{}{}")?;
+  def_macro_noop("\\addtocmark[]{}{}{}")?;
 
   //======================================================================
-  DefMacro!("\\mainmatter", "");
+  def_macro_noop("\\mainmatter")?;
 
   NewCounter!("chapter", "document", idprefix => "Pt", nested => vec!["section"]);
   DefMacro!("\\thechapter", "\\arabic{chapter}");
-  DefMacro!("\\chaptermark{}", "");
+  def_macro_noop("\\chaptermark{}")?;
 
   // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
   // is ported further below (L133+) via define_new_theorem; capfont/bodyfont
@@ -201,7 +210,7 @@ LoadDefinitions!({
   DefMacro!("\\qed", "\\squareforqed");
 
   //======================================================================
-  DefMacro!("\\backmatter", "");
+  def_macro_noop("\\backmatter")?;
 
   DefMacro!("\\andname", "and");
   DefMacro!("\\chaptername", "Chapter");
@@ -215,10 +224,10 @@ LoadDefinitions!({
   DefMacro!("\\fnmsep", "${}^{,}$");
   DefMacro!("\\fnnstart", "0");
 
-  DefMacro!("\\calctocindent", "");
-  DefMacro!("\\clearheadinfo", "");
+  def_macro_noop("\\calctocindent")?;
+  def_macro_noop("\\clearheadinfo")?;
   DefRegister!("\\headlineindent" => Dimension::new(0));
-  DefMacro!("\\thisbottomragged", "");
+  def_macro_noop("\\thisbottomragged")?;
   Let!("\\ts", "\\,");
   DefEnvironment!("{theopargself}", "#body");
   DefMacro!("\\homedir", "\\~{ }");

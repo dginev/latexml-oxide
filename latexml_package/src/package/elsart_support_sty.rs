@@ -3,6 +3,15 @@
 //! Loads elsart_support_core and adds theorem/proof/section formatting
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("elsart_support_core");
@@ -17,7 +26,7 @@ LoadDefinitions!({
   }
 
   // Theorem stubs (if amsthm not loaded)
-  DefMacro!("\\theoremstyle{}", "");
+  def_macro_noop("\\theoremstyle{}")?;
   // \qed and \ltx@qed now live in elsart_support_core_sty.rs (so plain
   // elsarticle papers get them without loading elsart_support).
 
@@ -78,11 +87,11 @@ LoadDefinitions!({
 
   // Section formatting — Perl L63-120
   // These customize section numbering and font for Elsevier style
-  DefMacro!("\\elsartstyle", "");
-  DefMacro!("\\semark{}",    "");
-  DefMacro!("\\ssmark{}",    "");
-  DefMacro!("\\sssmark{}",   "");
-  DefMacro!("\\elsmarks",    "");
+  def_macro_noop("\\elsartstyle")?;
+  def_macro_noop("\\semark{}")?;
+  def_macro_noop("\\ssmark{}")?;
+  def_macro_noop("\\sssmark{}")?;
+  def_macro_noop("\\elsmarks")?;
 
   // Abstract keywords with continuation
   DefMacro!("\\KWD{}", "\\@add@frontmatter{ltx:keywords}{#1}");
@@ -173,9 +182,9 @@ LoadDefinitions!({
   DefEnvironment!("{cv*}",
     "<ltx:section class='ltx_cv'><ltx:title>Curriculum Vitae</ltx:title>#body</ltx:section>");
 
-  DefMacro!("\\cv", "");
-  DefMacro!("\\biboptions{}", "");
-  DefMacro!("\\bibliographystyle{}", "");
+  def_macro_noop("\\cv")?;
+  def_macro_noop("\\biboptions{}")?;
+  def_macro_noop("\\bibliographystyle{}")?;
   DefMacro!("\\harvarditem[]{}{}{}",
     "\\bibitem[#2(#3)]{#4}");
   DefMacro!("\\harvardand", "\\&");
@@ -186,7 +195,7 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=harvestremark]{#1}");
   DefMacro!("\\harvardyearleft", "(");
   DefMacro!("\\harvardyearright", ")");
-  DefMacro!("\\citestyle{}", "");
+  def_macro_noop("\\citestyle{}")?;
 
   // Shorthands — Perl L124-128
   DefMacro!("\\AND", "\\&");
@@ -200,11 +209,11 @@ LoadDefinitions!({
   DefMacro!("\\cropleft", "0mm");
   DefMacro!("\\croptop", "0mm");
   DefRegister!("\\rulepreskip" => Dimension!("4pt"));
-  DefMacro!("\\setleftmargin{}{}", "");
+  def_macro_noop("\\setleftmargin{}{}")?;
 
   // Misc — Perl L143-175
   Let!("\\realpageref", "\\pageref");
-  DefMacro!("\\snm", "");
+  def_macro_noop("\\snm")?;
 
   // Perl L146-156: \xalph / \xarabic / \xfnsymbol — emit * for negative counter, else
   // delegate to \alph / \arabic / \fnsymbol.
@@ -234,7 +243,7 @@ LoadDefinitions!({
   });
 
   DefEnvironment!("{NoHyper}", "#body");
-  DefMacro!("\\mpfootnotemark", "");
+  def_macro_noop("\\mpfootnotemark")?;
   // Perl L162-167: \FMSlash/\FMslash overstrike / through content
   DefMacro!("\\FMSlash", "\\protect\\pFMSlash");
   DefMacro!("\\FMslash", "\\protect\\pFMslash");

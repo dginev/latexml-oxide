@@ -24,6 +24,15 @@
 //!
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
@@ -109,19 +118,19 @@ LoadDefinitions!({
 
   // List formatting macros from article.cls / report.cls / book.cls.
   // No-ops because LaTeXML handles list formatting via CSS.
-  DefMacro!("\\@listi",   "");
-  DefMacro!("\\@listii",  "");
-  DefMacro!("\\@listiii", "");
-  DefMacro!("\\@listiv",  "");
-  DefMacro!("\\@listv",   "");
-  DefMacro!("\\@listvi",  "");
+  def_macro_noop("\\@listi")?;
+  def_macro_noop("\\@listii")?;
+  def_macro_noop("\\@listiii")?;
+  def_macro_noop("\\@listiv")?;
+  def_macro_noop("\\@listv")?;
+  def_macro_noop("\\@listvi")?;
 
   //======================================================================
   // 4. Misc Rust-side stubs
   //======================================================================
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
-  DefMacro!("\\@latexbug", "");
+  def_macro_noop("\\@latexbug")?;
 
   // `\maybe@end@title` — Constructor that closes ltx:titlepage if open.
   // Used by Rust's titling pipeline; not directly mirrored in Perl.
@@ -134,7 +143,7 @@ LoadDefinitions!({
   // `\thebibliography@ID` — initial empty default. Per-bibliography
   // value is reassigned at \begin{thebibliography} time (see
   // latex_constructs.rs `\bibliography` constructor).
-  DefMacro!("\\thebibliography@ID", "");
+  def_macro_noop("\\thebibliography@ID")?;
 
   //======================================================================
   // 5. Modern LaTeX kernel (2023+) — `\NewCommandCopy`/`\DeclareCommandCopy`/
@@ -162,7 +171,7 @@ LoadDefinitions!({
     let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
     state::let_i(&new_tok, &old_tok, None);
   });
-  DefMacro!("\\ShowCommand Token", "");
+  def_macro_noop("\\ShowCommand Token")?;
 
   //======================================================================
   // 6. Modern LaTeX (2015+) extras
@@ -171,12 +180,12 @@ LoadDefinitions!({
   DefPrimitive!("\\extrafloats{}", None);
 
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
-  DefMacro!("\\wlog{}", "");
+  def_macro_noop("\\wlog{}")?;
 
   // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
   // when loaded from disk (LaTeXML doesn't run a Backend driver).
   // Not in Perl source; pure Rust hotfix.
-  DefMacro!("\\Gin@driver", "");
+  def_macro_noop("\\Gin@driver")?;
 
   // `\@tabacckludge` simplified body — Perl-faithful body lives in
   // latex_base.rs (Perl L357: `\csname\string#1\endcsname`). Under
@@ -362,7 +371,7 @@ LoadDefinitions!({
     state::lookup_meaning(&T_CS!("\\lx@filecontents@star")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
-  DefMacro!("\\endfilecontents", "");
+  def_macro_noop("\\endfilecontents")?;
   state::assign_meaning(
     &T_CS!("\\endfilecontents*"),
     state::lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),

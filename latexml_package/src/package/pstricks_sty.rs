@@ -5,6 +5,15 @@
 //! Perl: pstricks.sty.ltxml (44L) + pstricks_support.sty.ltxml (1057L)
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("xcolor");
@@ -26,7 +35,7 @@ LoadDefinitions!({
   RequirePackage!("pstricks_support");
 
   // Core PSTricks parameter setting
-  DefMacro!("\\psset{}", "");
+  def_macro_noop("\\psset{}")?;
 
   // Perl pstricks_support.sty.ltxml L849-861: `\newpsobject{name}{oldname}{keyval}`
   // dynamically defines `\<name>` to forward to `\<oldname>` with the saved
@@ -77,7 +86,7 @@ LoadDefinitions!({
     def_macro(new_tok, params, Some(body_closure), None)?;
   });
 
-  DefMacro!("\\newpsstyle{}{}", "");
+  def_macro_noop("\\newpsstyle{}{}")?;
 
   // PSCoordList-emulator. Perl's pstricks_support.sty.ltxml uses parameter
   // type `PSCoordList` (variable-arity `(x,y)(x,y)...`) to absorb the paren
@@ -103,7 +112,7 @@ LoadDefinitions!({
   DefMacro!("\\pspolygon OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\psdots OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\psdot OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\qline{}{}", "");
+  def_macro_noop("\\qline{}{}")?;
 
   // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
   // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by
@@ -114,7 +123,7 @@ LoadDefinitions!({
   DefMacro!("\\Rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\uput OptionalMatch:* {} [] Pair {}", "#5");
-  DefMacro!("\\qdisk{}{}", "");
+  def_macro_noop("\\qdisk{}{}")?;
 
   // Text placement — drop both coords AND the text body. Perl's
   // `DefPSConstructor` would wrap the labelled text inside a
@@ -153,16 +162,16 @@ LoadDefinitions!({
   DefEnvironment!("{pspicture*} OptionalMatch:* []{}", "#body");
 
   // Grid
-  DefMacro!("\\psgrid OptionalMatch:* []{}", "");
+  def_macro_noop("\\psgrid OptionalMatch:* []{}")?;
 
   // Misc
-  DefMacro!("\\pscustom OptionalMatch:* []{}", "");
-  DefMacro!("\\psclip{}", "");
-  DefMacro!("\\endpsclip", "");
-  DefMacro!("\\SpecialCoor", "");
-  DefMacro!("\\NormalCoor", "");
-  DefMacro!("\\degrees[]", "");
-  DefMacro!("\\radians", "");
+  def_macro_noop("\\pscustom OptionalMatch:* []{}")?;
+  def_macro_noop("\\psclip{}")?;
+  def_macro_noop("\\endpsclip")?;
+  def_macro_noop("\\SpecialCoor")?;
+  def_macro_noop("\\NormalCoor")?;
+  def_macro_noop("\\degrees[]")?;
+  def_macro_noop("\\radians")?;
 
   // \multips(rotation)(translation){n}{stuff} — pstricks "multiple put"
   // for drawing N copies of an object along a translated step. Rust port

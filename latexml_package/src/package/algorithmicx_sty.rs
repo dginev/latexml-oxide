@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl: algorithmicx.sty.ltxml
   // Was algorithmic.sty loaded? If so: BAIL immediately. (deeply incompatible)
@@ -22,17 +31,17 @@ LoadDefinitions!({
     // formatting machinery is gone, but the preamble setup commands
     // need to gobble cleanly. Witness 2410.03000 (3 papers using
     // algorithmic + algpseudocode together).
-    DefMacro!("\\algdef OptionalKeyVals:algdef SkipSpaces {} [] [] {}", "");
-    DefMacro!("\\algblock [] {}{}",               "");
-    DefMacro!("\\algcblock [] {}{}",              "");
-    DefMacro!("\\algblockx [] {}{}",              "");
-    DefMacro!("\\algcblockx [] {}{}",             "");
-    DefMacro!("\\algnewlanguage{}",               "");
-    DefMacro!("\\algdeflanguage{}",               "");
-    DefMacro!("\\alglanguage{}",                  "");
+    def_macro_noop("\\algdef OptionalKeyVals:algdef SkipSpaces {} [] [] {}")?;
+    def_macro_noop("\\algblock [] {}{}")?;
+    def_macro_noop("\\algcblock [] {}{}")?;
+    def_macro_noop("\\algblockx [] {}{}")?;
+    def_macro_noop("\\algcblockx [] {}{}")?;
+    def_macro_noop("\\algnewlanguage{}")?;
+    def_macro_noop("\\algdeflanguage{}")?;
+    def_macro_noop("\\alglanguage{}")?;
     DefMacro!("\\algnewcommand",                  "\\newcommand");
     DefMacro!("\\algrenewcommand",                "\\renewcommand");
-    DefMacro!("\\algdefaulttext[]{}",             "");
+    def_macro_noop("\\algdefaulttext[]{}")?;
     return Ok(());
   }
 
@@ -128,6 +137,6 @@ LoadDefinitions!({
   );
 
   // Protect against obsolete versions of algorithmicx source
-  DefMacro!("\\ALG@g{}", "");
-  DefMacro!("\\endALG@g", "");
+  def_macro_noop("\\ALG@g{}")?;
+  def_macro_noop("\\endALG@g")?;
 });

@@ -1,6 +1,15 @@
 use crate::prelude::*;
 use std::cmp::Ordering;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
 
@@ -211,15 +220,15 @@ LoadDefinitions!({
   // \pdfobj — same shape. Perl pdfTeX.pool L219.
   DefPrimitive!("\\pdfobj OpenAnnotSpecification", None);
 
-  DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
-  DefMacro!("\\pdfnames{}", "");
-  DefMacro!("\\pdftrailer{}", "");
-  DefMacro!("\\pdfmapfile{}", "");
-  DefMacro!("\\pdfmapline{}", "");
+  def_macro_noop("\\pdfcatalog{} OpenActionSpecification")?;
+  def_macro_noop("\\pdfnames{}")?;
+  def_macro_noop("\\pdftrailer{}")?;
+  def_macro_noop("\\pdfmapfile{}")?;
+  def_macro_noop("\\pdfmapline{}")?;
   // \pdffontattr font general text
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
-  DefMacro!("\\quitvmode", "");
+  def_macro_noop("\\quitvmode")?;
   // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
   DefPrimitive!(
     "\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText",
@@ -276,9 +285,9 @@ LoadDefinitions!({
       }
     }
   );
-  DefMacro!("\\pdfsetmatrix", "");
-  DefMacro!("\\pdfsave", "");
-  DefMacro!("\\pdfrestore", "");
+  def_macro_noop("\\pdfsetmatrix")?;
+  def_macro_noop("\\pdfsave")?;
+  def_macro_noop("\\pdfrestore")?;
 
   // general text → { balanced text }
   // attr spec → attr general text
@@ -337,5 +346,5 @@ LoadDefinitions!({
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
     }
   });
-  DefMacro!("\\pdfglyphtounicode{}{}", "");
+  def_macro_noop("\\pdfglyphtounicode{}{}")?;
 });

@@ -2,6 +2,15 @@
 //! Perl: filehook.sty.ltxml
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl filehook.sty.ltxml L18-20: this comparison can't reliably work
@@ -20,18 +29,18 @@ LoadDefinitions!({
   // filehook.sty itself — leaving the hooks undefined. Pre-define them
   // as no-ops so downstream packages (pbalance, etc.) don't crash.
   // Witnesses: 2405.18977, 2406.01136, 2406.01832 (all use pbalance).
-  DefMacro!("\\AtEndOfPackageFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtBeginOfPackageFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtEndOfClassFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtBeginOfClassFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtBeginOfEveryFile{}", "");
-  DefMacro!("\\AtEndOfEveryFile{}", "");
-  DefMacro!("\\AtBeginOfFiles{}", "");
-  DefMacro!("\\AtEndOfFiles{}", "");
-  DefMacro!("\\AtBeginOfInputFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtEndOfInputFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtBeginOfIncludeFile OptionalMatch:* {}{}", "");
-  DefMacro!("\\AtEndOfIncludeFile OptionalMatch:* {}{}", "");
+  def_macro_noop("\\AtEndOfPackageFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtBeginOfPackageFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtEndOfClassFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtBeginOfClassFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtBeginOfEveryFile{}")?;
+  def_macro_noop("\\AtEndOfEveryFile{}")?;
+  def_macro_noop("\\AtBeginOfFiles{}")?;
+  def_macro_noop("\\AtEndOfFiles{}")?;
+  def_macro_noop("\\AtBeginOfInputFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtEndOfInputFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtBeginOfIncludeFile OptionalMatch:* {}{}")?;
+  def_macro_noop("\\AtEndOfIncludeFile OptionalMatch:* {}{}")?;
 
   InputDefinitions!("filehook", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
