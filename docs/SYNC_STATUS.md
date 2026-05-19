@@ -717,9 +717,19 @@ out the in-process benefit; measured 1.33s vs 1.21s pdftocairo on
 
 ---
 
-## Distribution-readiness dependency cleanup (audit 2026-05-17)
+## Distribution-readiness dependency cleanup (audit 2026-05-17, refreshed 2026-05-18 post-DEP-19)
 
-Snapshot of release binary: **57 MiB stripped / 72.5 MiB before
+Refreshed release-binary snapshot (post-DEP-19 anti-bloat batch):
+**45.0 MiB stripped / 60.3 MiB before strip**; .text = 34.3 MiB
+(was 37.1 MiB pre-DEP), .rodata = 2.2 MiB (down from ~13 MiB —
+the embedded TL2023+TL2025 dumps are now gzip-compressed in
+.rodata at ~870 KiB combined per DEP-12), .eh_frame +
+.gcc_except_table = ~3.3 MiB (release `panic = unwind` retains
+unwind tables; maxperf with `panic = abort` is comparable since
+LTO had already dead-stripped the dominant paths).
+
+Original audit (2026-05-17) snapshot — pre-DEP-15-through-19,
+kept for historical comparison: 57 MiB stripped / 72.5 MiB before
 strip**; .text = 37.1 MiB, .rodata = ~13 MiB (embedded TL2023+TL2025
 dumps via `include_str!`), `.eh_frame + .gcc_except_table` = ~3.5
 MiB. **Bulk of .text is OUR code** (latexml_package 41%, engine 16%,
