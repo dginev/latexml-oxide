@@ -8877,7 +8877,25 @@ LoadDefinitions!({
   // individual entries don't re-carry the tag.
 
   // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
-  DefMacro!("\\line Match:( Until:, Until:) {Float}", "\\lx@pic@line{#2}{#3}{#4}");
+  //
+  // Some papers (witness 2306.13101) use `\line` in non-picture context as a
+  // length unit, e.g. `\diagbox[height=2.5\line]{…}{…}`. There the
+  // following token is NOT `(` and the strict `Match:(` reader emits
+  // `Error:expected:Match Missing argument Match:(`. Dispatch by peeking
+  // the next non-space token: if `(`, run the picture chain; otherwise
+  // fall back to plain TeX's `\line` (an `\hbox to \hsize` length builder
+  // from plain_base.rs) so a surrounding dimension reader can consume
+  // `\line` as a length without errors.
+  DefMacro!("\\line", sub[_args] {
+    if gullet::if_next(T_OTHER!("("))? {
+      Ok(Tokens!(T_CS!("\\lx@pic@line@dispatch")))
+    } else {
+      Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
+    }
+  });
+  // The actual picture-mode \line dispatched from the peek above.
+  DefMacro!("\\lx@pic@line@dispatch Match:( Until:, Until:) {Float}",
+    "\\lx@pic@line{#2}{#3}{#4}");
   DefConstructor!("\\lx@pic@line{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
