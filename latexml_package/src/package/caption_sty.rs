@@ -69,7 +69,29 @@ LoadDefinitions!({
   });
   def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
   def_macro_noop("\\DeclareCaptionLabelFormat{}{}")?;
-  def_macro_noop("\\DeclareCaptionLabelSeparator{}{}")?;
+  // `\DeclareCaptionLabelSeparator{name}{body}` — caption3.sty L289 stores
+  // body in `\caption@lsep@<name>`. floatrow.sty L1185 lets its
+  // `\DeclareFloatSeparators` to this, and its option `capbesidesep=<name>`
+  // looks up `\caption@lsep@<name>` via `\@ifundefined`. A no-op stub
+  // makes every floatrow separator option fire
+  // `Error:latex:\GenericError Package floatrow Error: Undefined float
+  // separator '<name>'`. Witness 2403.03161 (capbesidesep=quad).
+  // The `*` form (caption3 L780 `\DeclareCaptionLabelSeparator*{quad}{\quad}`)
+  // sets a "no autobreak" flag; HTML rendering ignores autobreaks so
+  // accepting the same body for both forms is fine.
+  DefMacro!("\\DeclareCaptionLabelSeparator OptionalMatch:* {}{}",
+    "\\expandafter\\def\\csname caption@lsep@#2\\endcsname{#3}");
+  // Standard caption3.sty separators (L304-307 + L780). Pre-register
+  // so floatrow's `capbesidesep=<std-name>` resolves without needing
+  // the raw caption3.sty to load. Witness 2403.03161.
+  RawTeX!(
+    r"\DeclareCaptionLabelSeparator{none}{}%
+\DeclareCaptionLabelSeparator{colon}{: }%
+\DeclareCaptionLabelSeparator{period}{. }%
+\DeclareCaptionLabelSeparator{space}{ }%
+\DeclareCaptionLabelSeparator{quad}{\quad}%
+\DeclareCaptionLabelSeparator{newline}{\\}%
+\DeclareCaptionLabelSeparator{endash}{ -- }");
   def_macro_noop("\\DeclareCaptionFont{}{}")?;
   def_macro_noop("\\DeclareCaptionFormat{}{}")?;
   // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
