@@ -266,35 +266,61 @@ should be informed of the same surpass-opportunity.
 
 ### Cluster C — `\begin{abstract}` mode-switch on plain-TeX-style abstract
 
-**Status:** SHARED-FAILURE confirmed (5/6 sampled). CANDIDATE
-FOR surpass-Perl. ~46 first-error papers.
+**Status:** SHARED-FAILURE confirmed (5/6 sampled). **WONT-FIX**
+(user directive 2026-05-19): "`\font` on a locked primitive
+shouldn't work." Accept the SHARED-FAILURE. ~46 first-error
+papers.
 
 **Root cause.** Pre-2000 papers use `{\abstract \ni …}` as a
 font-switch group (`\font\abstract=cmr8`), then `}` closes the
 group but the abstract environment is still open and in
 internal_vertical mode. `\abstract` in our binding is
-"locked" — the user's `\font\abstract=cmr8` can't override it.
+"locked" — the user's `\font\abstract=cmr8` is correctly a no-op
+(Info!("ignore", "\\abstract:locked", ...)). The downstream
+cascade Error from `{\abstract …}` opening the env unexpectedly
+is left as-is.
 
-**Principled approach.** Make our `\font` primitive recognise
-"redefining a locked CS to a font" as a USER OVERRIDE
-indicator and bypass the lock for that CS. This is a kernel
-quality improvement: `\font` is supposed to fully replace the
-CS's meaning per TeX semantics.
+**Why not surpass-Perl.** The author's source violates LaTeX
+convention by shadowing a class-provided macro (`\abstract` is
+reserved by `article.cls`). They should have used `\newfont` (which
+does `\@ifundefined` and errors loudly on the collision) or chosen
+a non-clashing CS name. Bypassing the lock specifically for `\font`
+would accommodate the anti-pattern; we instead match Perl
+LaTeXML's defensive behaviour. An earlier attempt to bypass the
+lock (commit reverted same session) ran cleanly on the minimal
+repro but was retracted to preserve the lock invariant.
 
 ### Cluster D — babel "Unknown option" languages on TL2025
 
-**Status:** SHARED-FAILURE confirmed. ~58 first-error papers.
+**Status:** ✅ Effectively resolved 2026-05-19 (re-verified). The
+witness cluster behaviour has been closed by `babel_lang_stubs.rs`
+(commits `6249382abb` 2026-05-16 + `8acb8135cf` 2026-05-17), which
+landed AFTER the sweeps that produced the ~58-paper count.
 
-**Root cause.** TL2025 babel dropped `italian.ldf`,
-`spanish.ldf`, etc. in favour of `locale/<lang>/babel-<lang>.tex`
-(ini-file system). Both engines fail `Package babel Error:
-Unknown option 'italian'` on `\usepackage[italian]{babel}`.
+**Verification 2026-05-19.** Minimal-repro
+`\usepackage[<lang>]{babel}` for italian/spanish/portuges/brazil/
+czech/polish/romanian/slovene/turkish/vietnamese/icelandic/arabic/
+dutch/farsi/hindi/latin/croatian + bulgarian/catalan/danish/
+estonian/finnish/galician/greek/hebrew/hungarian/magyar/norsk/
+nynorsk/russian/serbian/slovak/swedish/ukrainian/welsh/irish/
+afrikaans/esperanto/interlingua/serbianc/slovenian/swissgerman/
+friulan/basque/welshb/bahasa — **all 0 errors**. The TL2025
+ini-file fallback (`locale/<lang2>/babel-<lang>.tex`) loads cleanly
+once `italian.ldf` etc. resolve via our `<lang>.ldf`→stub binding,
+which is the on-disk fallback our `find_file` routes to.
 
-**Principled approach.** Patch our `babel.sty` binding to
-recognise the new ini-file system: if `<lang>.ldf` not found,
-look up `locale/<lang2>/babel-<lang>.tex` (where `<lang2>` is
-the ISO code from `babel_support_sty::babel_language_to_iso`)
-and load it. Surpass-Perl until upstream catches up.
+Single SHARED-FAILURE outlier: `azerbaijani` errors `Package
+azerbaijani Error: No font containing the schwa has been
+detected. Please, load a Cyrillic encoding (T2A, T2B, T2C, X2)`.
+That is a real package-side requirement, not a babel-options gap.
+
+**Principled approach (HISTORIC).** Patch our `babel.sty` binding
+to recognise the new ini-file system: if `<lang>.ldf` not found,
+look up `locale/<lang2>/babel-<lang>.tex` (where `<lang2>` is the
+ISO code from `babel_support_sty::babel_language_to_iso`) and load
+it. Already implemented via the stubs above + `find_file`'s notex
+fallback to `locale/<iso>/babel-<lang>.tex` — surpass-Perl is in
+effect.
 
 ### Cluster E — expl3 csname-protocol cluster (deferred Task #22)
 
