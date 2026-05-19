@@ -355,8 +355,12 @@ be compute-bound (math/digest-heavy) rather than graphics-bound.
 
 ## Mini-benchmark: beat 2× pdflatex on `1910.01256`
 
-See SYNC_STATUS.md "Acceptance gates" — tied within noise as of
-2026-05-12 (1.18s latexml_oxide vs 1.11s pdflatex×2 idle).
+See SYNC_STATUS.md "Acceptance gates". Post-DEP-19 anti-bloat
+batch (2026-05-19) wall time is **0.71s** (release, --dest=.html,
+full post-processing) vs pdflatex idle ~1.11s — meeting the 2×
+gate (2.22s) with a 3.13× margin. Was 1.18s on 2026-05-12 (and
+0.73s pre-DEP-15); the .text shrink (~3 MiB) from DEP-15/17/18/19
+helped icache locality slightly.
 
 ---
 
