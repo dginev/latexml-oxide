@@ -23,8 +23,10 @@ fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&st
 /// entries in txfonts (the lowercase + uppercase Greek `*up` family).
 fn def_math_upright_greek(cs: &str, present: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
-  let mut opts = MathPrimitiveOptions::default();
-  opts.font = Some(FontDirective::from(fontmap!(shape => "upright", forceshape => true)));
+  let opts = MathPrimitiveOptions {
+    font: Some(FontDirective::from(fontmap!(shape => "upright", forceshape => true))),
+    ..MathPrimitiveOptions::default()
+  };
   def_math(cs_tok, params, present.to_string(), opts)?;
   Ok(())
 }

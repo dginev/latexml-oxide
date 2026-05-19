@@ -875,7 +875,7 @@ mod tests {
     // leave behind to test that orphan-sidecar tolerance also works.
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(&root, &hash, key.ext);
+    let cached = cache_path(root, &hash, key.ext);
     assert!(cached.exists(), "step-1 should have written the cache file");
     fs::remove_file(&cached).unwrap();
     assert!(!cached.exists(), "cache file should now be gone");
@@ -931,7 +931,7 @@ mod tests {
     };
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(&root, &hash, key.ext);
+    let cached = cache_path(root, &hash, key.ext);
     // Manually plant a stale .dims sidecar without the main file.
     let sidecar = dims_sidecar(&cached);
     if let Some(parent) = sidecar.parent() {
@@ -1000,7 +1000,7 @@ mod tests {
     // Verify exactly one cache file for this hash, no leftover tmp.
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(&root, &hash, key.ext);
+    let cached = cache_path(root, &hash, key.ext);
     assert!(cached.exists(), "cache entry must exist after concurrent writes");
     let shard_dir = cached.parent().unwrap();
     let tmp_count = fs::read_dir(shard_dir)
