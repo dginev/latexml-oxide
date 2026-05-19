@@ -70,8 +70,59 @@ LoadDefinitions!({
       crate::package::xylatexml_tex::load_definitions()?;
       return Ok(Tokens!());
     }
+    // Special case: "all" — xyall.tex `\xyrequire`s every xy feature
+    // (curve, frame, cmtip, line, rotate, color, matrix, arrow, graph).
+    // Forwarding through `\lx@xy@xyoption@orig` does NOT actually
+    // \input the per-feature xy<name>.tex file in our pipeline
+    // (the `\xyinputorelse@` chain in xy.tex evaluates strangely
+    // without raw-TeX `\openin`), leaving things like `\xygraph`
+    // undefined. Directly load the per-feature files via
+    // `InputDefinitions` here. Witness 2311.05789
+    // (`\usepackage[all,tips]{xy}` + `\xygraph` → Error:undefined:\xygraph).
+    // Special case: known xy feature names — directly `\input` the
+    // feature file via input_definitions. `\lx@xy@xyoption@orig`'s
+    // `\xyinputorelse@` chain in xy.tex evaluates strangely in our
+    // pipeline (it relies on raw-TeX `\openin`/`\closein` to
+    // probe and \input, which the binding's input path doesn't fully
+    // honor), so features like `\xygraph` end up undefined despite
+    // `\usepackage[all,tips]{xy}`. Witness 2311.05789.
+    let feature_files: &[&str] = match option_s.as_str() {
+      "all" => &["curve","frame","cmtip","line","rotate","color","matrix","arrow","graph"],
+      "graph" | "matrix" | "arrow" | "curve" | "frame" | "cmtip"
+        | "line" | "rotate" | "color" | "tips" => {
+        let single = option_s.as_str();
+        let n = s!("xy{}", single);
+        let _ = input_definitions(&n, InputDefinitionOptions {
+          extension: Some(::std::borrow::Cow::Borrowed("tex")),
+          noltxml: true,
+          ..Default::default()
+        });
+        return Ok(Tokens!());
+      },
+      _ => &[][..],
+    };
+    if !feature_files.is_empty() {
+      for name in feature_files {
+        let n = s!("xy{}", name);
+        let _ = input_definitions(&n, InputDefinitionOptions {
+          extension: Some(::std::borrow::Cow::Borrowed("tex")),
+          noltxml: true,
+          ..Default::default()
+        });
+      }
+      return Ok(Tokens!());
+    }
     Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
   });
+
+  // At BeginDocument, also load xygraph.tex defensively if not already
+  // loaded — papers that use `\xygraph{...}` may have come in via
+  // `\usepackage[all,tips]{xy}` whose `\DeclareOption*` chain doesn't
+  // reliably reach `\xyoption{all}` in our binding's option pipeline.
+  // Witness 2311.05789.
+  at_begin_document(TokenizeInternal!(
+    r"\@ifundefined{xygraph}{\xyoption{graph}}{}"
+  ))?;
 
   // \xywarning@, \xyerror@ (Perl L53-54)
   DefPrimitive!("\\xywarning@ {}", sub[(msg)] {
