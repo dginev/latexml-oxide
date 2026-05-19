@@ -2432,6 +2432,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
 
@@ -3398,7 +3409,7 @@ LoadDefinitions!({
   // so the body (#1) is emitted as plain text rather than triggering
   // an undefined-CS error. Witness: 2503.15258 (elsarticle via babel)
   // and 2503.16849 (ieeeconf via babel).
-  DefMacro!("\\@makefntext{}", "#1");
+  def_macro_identity("\\@makefntext{}")?;
   DefMacro!("\\@makefnmark", "\\@thefnmark");
 
   Tag!("ltx:emph", auto_close => true);
@@ -4255,7 +4266,7 @@ LoadDefinitions!({
   // \@toplist/\@botlist/etc. are ignored (LaTeXML doesn't track float-page
   // placement), but they need to be defined so latex.ltx-driven code paths
   // that consult them (e.g. via `\@cons`) don't error on `\@empty` lookups.
-  DefMacro!("\\@topnewpage{}", "#1");
+  def_macro_identity("\\@topnewpage{}")?;
   DefMacro!("\\@next{}{}{}{}",
     r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi");
   TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
@@ -4408,7 +4419,7 @@ LoadDefinitions!({
   // for TS1-encoded composite output. Bibliographies use it directly
   // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
   // Witnesses: 2 papers in Stage-15 v3.
-  DefMacro!("\\polhk{}", "#1");
+  def_macro_identity("\\polhk{}")?;
   // Perl L1065-1067: DefConstructor('\@personname{}', ...,
   //   beforeDigest => { Let('\thanks', '\person@thanks') },
   //   mode => 'restricted_horizontal', enterHorizontal => 1).
@@ -4656,7 +4667,7 @@ LoadDefinitions!({
   DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax");
   DefMacro!("\\maybe@end@abstract", "\\endabstract");
   DefMacro!("\\abstractname", "Abstract");
-  DefMacro!("\\format@title@abstract{}", "#1");
+  def_macro_identity("\\format@title@abstract{}")?;
 
   // Hmm, titlepage is likely to be hairy, low-level markup,
   // without even title, author, etc, specified as such!
@@ -4970,7 +4981,7 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
-  DefMacro!("\\makelabel{}", "#1");
+  def_macro_identity("\\makelabel{}")?;
   //----------------------------------------------------------------------
   // Basic itemize bits
   // Fake counter for itemize to give id's to ltx:item.
@@ -7013,7 +7024,7 @@ LoadDefinitions!({
   // re-definitions here.
 
   Let!("\\outer@nobreak", "\\@empty");
-  DefMacro!("\\@dbflt{}",           "#1");
+  def_macro_identity("\\@dbflt{}")?;
   DefMacro!("\\@xdblfloat{}[]",     "\\@xfloat{#1}[#2]");
   def_macro_noop("\\@floatplacement")?;
   def_macro_noop("\\@dblfloatplacement")?;
@@ -8151,7 +8162,7 @@ LoadDefinitions!({
   DefMacro!("\\sloppypar", "\\par\\sloppy");
   DefMacro!("\\endsloppypar", "\\par");
   DefMacro!("\\nobreakdashes", "-");
-  DefMacro!("\\showhyphens{}", "#1");
+  def_macro_identity("\\showhyphens{}")?;
   //======================================================================
   // C.12.2 Page Breaking
   //======================================================================

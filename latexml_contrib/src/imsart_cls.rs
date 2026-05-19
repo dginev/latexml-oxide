@@ -5,6 +5,17 @@
 //! load imsart.sty so most user macros become available.
 use latexml_package::prelude::*;
 
+
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -68,29 +79,29 @@ LoadDefinitions!({
   // fails mid-load, leaving these undefined. Provide content-
   // preserving stubs that emit args inline so the substantive
   // bibliography text survives. Witness 2305.13037, 2306.02821.
-  DefMacro!("\\bauthor{}", "#1");
-  DefMacro!("\\binits{}", "#1");
-  DefMacro!("\\bfnm{}", "#1");
-  DefMacro!("\\bsnm{}", "#1");
-  DefMacro!("\\byear{}", "#1");
-  DefMacro!("\\bvolume{}", "#1");
-  DefMacro!("\\bissue{}", "#1");
-  DefMacro!("\\bpages{}", "#1");
-  DefMacro!("\\bjournal{}", "#1");
-  DefMacro!("\\bpublisher{}", "#1");
-  DefMacro!("\\bseries{}", "#1");
-  DefMacro!("\\btitle{}", "#1");
-  DefMacro!("\\bmrnumber{}", "#1");
-  DefMacro!("\\bedition{}", "#1");
-  DefMacro!("\\beditor{}", "#1");
-  DefMacro!("\\beditortype{}", "#1");
-  DefMacro!("\\baddress{}", "#1");
-  DefMacro!("\\borganization{}", "#1");
-  DefMacro!("\\bcollaboration{}", "#1");
-  DefMacro!("\\bdoi{}", "#1");
-  DefMacro!("\\burl{}", "#1");
-  DefMacro!("\\bothertype{}", "#1");
-  DefMacro!("\\bparticle{}", "#1");
-  DefMacro!("\\bnote{}", "#1");
-  DefMacro!("\\btype{}", "#1");
+  def_macro_identity("\\bauthor{}")?;
+  def_macro_identity("\\binits{}")?;
+  def_macro_identity("\\bfnm{}")?;
+  def_macro_identity("\\bsnm{}")?;
+  def_macro_identity("\\byear{}")?;
+  def_macro_identity("\\bvolume{}")?;
+  def_macro_identity("\\bissue{}")?;
+  def_macro_identity("\\bpages{}")?;
+  def_macro_identity("\\bjournal{}")?;
+  def_macro_identity("\\bpublisher{}")?;
+  def_macro_identity("\\bseries{}")?;
+  def_macro_identity("\\btitle{}")?;
+  def_macro_identity("\\bmrnumber{}")?;
+  def_macro_identity("\\bedition{}")?;
+  def_macro_identity("\\beditor{}")?;
+  def_macro_identity("\\beditortype{}")?;
+  def_macro_identity("\\baddress{}")?;
+  def_macro_identity("\\borganization{}")?;
+  def_macro_identity("\\bcollaboration{}")?;
+  def_macro_identity("\\bdoi{}")?;
+  def_macro_identity("\\burl{}")?;
+  def_macro_identity("\\bothertype{}")?;
+  def_macro_identity("\\bparticle{}")?;
+  def_macro_identity("\\bnote{}")?;
+  def_macro_identity("\\btype{}")?;
 });

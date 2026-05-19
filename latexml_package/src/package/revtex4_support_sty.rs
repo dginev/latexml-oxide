@@ -11,6 +11,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex4_support.sty.ltxml — 433 lines
@@ -301,12 +312,12 @@ LoadDefinitions!({
   DefMacro!("\\volumename", "volume");
 
   // Document info — Perl L309-316
-  DefMacro!("\\volumenumber{}", "#1");
-  DefMacro!("\\volumeyear{}", "#1");
-  DefMacro!("\\issuenumber{}", "#1");
+  def_macro_identity("\\volumenumber{}")?;
+  def_macro_identity("\\volumeyear{}")?;
+  def_macro_identity("\\issuenumber{}")?;
   DefMacro!("\\bibinfo{}{}", "#2");
   DefMacro!("\\eprint{}", "eprint #1");
-  DefMacro!("\\eid{}", "#1");
+  def_macro_identity("\\eid{}")?;
   DefMacro!("\\startpage{}", "\\pageref{FirstPage}{#1}");
   DefMacro!("\\endpage", "\\pageref{LastPage}{#1}");
 

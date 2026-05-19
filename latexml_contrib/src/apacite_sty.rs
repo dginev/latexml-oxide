@@ -16,6 +16,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
   Ok(())
 }
 
+
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("natbib");
 
@@ -27,13 +38,13 @@ LoadDefinitions!({
   DefMacro!("\\APACrefYear{}", "(#1)");
   DefMacro!("\\APACrefYearMonthDay{}{}{}", "(#1)");
   DefMacro!("\\APACjournalVolNumPages{}{}{}{}", "#1 #2 #3 #4");
-  DefMacro!("\\APAChowpublished{}", "#1");
+  def_macro_identity("\\APAChowpublished{}")?;
   DefMacro!("\\APACaddressPublisher{}{}", "#1: #2");
   DefMacro!("\\APACaddressInstitution{}{}", "#1: #2");
   DefMacro!("\\APACexlab{}{}", "#2");
   // \APACmonth{name} — month text (was gobbled). Pass through inline.
-  DefMacro!("\\APACmonth{}", "#1");
-  DefMacro!("\\APACrefnote{}", "#1");
+  def_macro_identity("\\APACmonth{}")?;
+  def_macro_identity("\\APACrefnote{}")?;
   DefMacro!("\\APAhyperref{}{}", "#2");
   def_macro_noop("\\PrintBackRefs{}")?;
   def_macro_noop("\\CurrentBib")?;
@@ -58,11 +69,11 @@ LoadDefinitions!({
   DefMacro!("\\APACtypeAddressSchool{}{}{}", "#3");
   def_macro_noop("\\APACmetastar")?;
   DefMacro!("\\APACorigyearnote{}", "(#1)");
-  DefMacro!("\\APACorigjournalnote{}", "#1");
-  DefMacro!("\\APACorigbooknote{}", "#1");
+  def_macro_identity("\\APACorigjournalnote{}")?;
+  def_macro_identity("\\APACorigbooknote{}")?;
   DefMacro!("\\APACorigED", "Ed.");
   DefMacro!("\\APACorigEDS", "Eds.");
-  DefMacro!("\\APACstd{}", "#1");
+  def_macro_identity("\\APACstd{}")?;
   def_macro_noop("\\APACSortNoop{}")?;
   def_macro_noop("\\APACmetaprenote")?;
   def_macro_noop("\\APACrefauthstyle{}")?;
@@ -94,9 +105,9 @@ LoadDefinitions!({
   def_macro_noop("\\BDBL")?;
   def_macro_noop("\\BCBT")?;
   def_macro_noop("\\BCBL")?;
-  DefMacro!("\\BCnt{}", "#1");
-  DefMacro!("\\BPGS{}", "#1");
-  DefMacro!("\\BVOL{}", "#1");
+  def_macro_identity("\\BCnt{}")?;
+  def_macro_identity("\\BPGS{}")?;
+  def_macro_identity("\\BVOL{}")?;
   DefMacro!("\\BOthers{}", "et al.");
   DefMacro!("\\BEDS", "Eds.");
   DefMacro!("\\BIn", "In");

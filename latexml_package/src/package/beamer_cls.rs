@@ -17,6 +17,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Load article.cls as the base class (beamer builds on article).
@@ -41,11 +52,11 @@ LoadDefinitions!({
   // "always-true" branch (first arg, or body) — faithful to what a
   // reader expects from beamer slides printed as a continuous
   // document. See Perl L793-834 for the full overlay/pause machinery.
-  DefMacro!("\\only{}", "#1");
+  def_macro_identity("\\only{}")?;
   def_macro_noop("\\onslide")?;
   DefMacro!("\\temporal{}{}{}", "#2");
   def_macro_noop("\\pause")?;
-  DefMacro!("\\alt{}{}", "#1");
+  def_macro_identity("\\alt{}{}")?;
 
   // Perl beamer.cls.ltxml L796-798 dispatches \visible/\uncover/
   // \invisible via \alt to the \beamer@{visible,uncovered,…}
@@ -54,9 +65,9 @@ LoadDefinitions!({
   // hasn't ported. Keep the body-passthrough stubs for now — the
   // markers below are still defined and usable directly by advanced
   // beamer styles that invoke them without angle-spec preprocessing.
-  DefMacro!("\\visible{}",   "#1");
-  DefMacro!("\\uncover{}",   "#1");
-  DefMacro!("\\invisible{}", "#1");
+  def_macro_identity("\\visible{}")?;
+  def_macro_identity("\\uncover{}")?;
+  def_macro_identity("\\invisible{}")?;
 
   DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
   DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
@@ -302,7 +313,7 @@ LoadDefinitions!({
   def_macro_noop("\\beamerdefaultoverlayspecification{}")?;
 
   // Translation stubs
-  DefMacro!("\\translate{}", "#1");
+  def_macro_identity("\\translate{}")?;
 
   // Color-related
   def_macro_noop("\\usebeamercolor OptionalMatch:* {}")?;

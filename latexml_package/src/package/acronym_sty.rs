@@ -1,12 +1,23 @@
 use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
 use crate::prelude::*;
 
+
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //======================================================================
   // Font wrappers — identity by default
-  DefMacro!("\\acsfont{}", "#1");
-  DefMacro!("\\acffont{}", "#1");
-  DefMacro!("\\acfsfont{}", "#1");
+  def_macro_identity("\\acsfont{}")?;
+  def_macro_identity("\\acffont{}")?;
+  def_macro_identity("\\acfsfont{}")?;
 
   // Package flags
   DefConditional!("\\ifAC@footnote");
@@ -220,7 +231,7 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\acroextra{}", "#1");
+  def_macro_identity("\\acroextra{}")?;
 
   // \lx@acro@item{key}{short}{long}
   DefMacro!(

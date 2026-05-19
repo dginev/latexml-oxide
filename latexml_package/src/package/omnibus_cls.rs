@@ -33,6 +33,17 @@ fn push_keyword_body_to_frontmatter(
   Ok(Vec::new())
 }
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
@@ -134,12 +145,12 @@ LoadDefinitions!({
   DefRegister!("\\affilskip" => Dimension::new(0));
 
   // Perl L104-123: misc name macros, mostly no-ops
-  DefMacro!("\\prefix{}",          "#1");
-  DefMacro!("\\suffix{}",          "#1");
-  DefMacro!("\\fnms{}",            "#1");
-  DefMacro!("\\snm{}",             "#1");
-  DefMacro!("\\inits{}",           "#1");
-  DefMacro!("\\printaddresses{}",  "#1");
+  def_macro_identity("\\prefix{}")?;
+  def_macro_identity("\\suffix{}")?;
+  def_macro_identity("\\fnms{}")?;
+  def_macro_identity("\\snm{}")?;
+  def_macro_identity("\\inits{}")?;
+  def_macro_identity("\\printaddresses{}")?;
   // \printead{email} — printed email address; preserve as contact.
   DefMacro!("\\printead{}",
     "\\@add@frontmatter{ltx:note}[role=email]{#1}");
@@ -169,20 +180,20 @@ LoadDefinitions!({
   // renders as plain text in <ltx:personname>. Doesn't affect papers
   // where the cls binding IS loaded (those override). Driver: 2403.18604,
   // 2110.04544, ~40 sn-jnl papers in canvas pool.
-  DefMacro!("\\fnm{}",   "#1");      // first name
+  def_macro_identity("\\fnm{}")?;      // first name
   DefMacro!("\\sur{}",   " #1");     // surname (cls inserts ~)
-  DefMacro!("\\spfx{}",  "#1");      // surname prefix (e.g. "van")
-  DefMacro!("\\pfx{}",   "#1");      // name prefix (e.g. "Dr.")
-  DefMacro!("\\sfx{}",   "#1");      // name suffix
-  DefMacro!("\\tanm{}",  "#1");      // title-as-name
-  DefMacro!("\\dgr{}",   "#1");      // degree
-  DefMacro!("\\orgdiv{}",     "#1");
-  DefMacro!("\\orgname{}",    "#1");
-  DefMacro!("\\orgaddress{}", "#1");
-  DefMacro!("\\street{}",     "#1");
-  DefMacro!("\\postcode{}",   "#1");
-  DefMacro!("\\city{}",       "#1");
-  DefMacro!("\\country{}",    "#1");
+  def_macro_identity("\\spfx{}")?;      // surname prefix (e.g. "van")
+  def_macro_identity("\\pfx{}")?;      // name prefix (e.g. "Dr.")
+  def_macro_identity("\\sfx{}")?;      // name suffix
+  def_macro_identity("\\tanm{}")?;      // title-as-name
+  def_macro_identity("\\dgr{}")?;      // degree
+  def_macro_identity("\\orgdiv{}")?;
+  def_macro_identity("\\orgname{}")?;
+  def_macro_identity("\\orgaddress{}")?;
+  def_macro_identity("\\street{}")?;
+  def_macro_identity("\\postcode{}")?;
+  def_macro_identity("\\city{}")?;
+  def_macro_identity("\\country{}")?;
   // `\state` is a TeX 4-token `\count` register inside many classes (article
   // declares it as `\newcount` for some configurations). We do NOT stub it
   // here — overlapping with the kernel register would break papers that

@@ -15,6 +15,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // amsppt loads the AmSTeX pool — Perl L27.
@@ -714,9 +725,9 @@ LoadDefinitions!({
   // DefConstructor with `bounded => 1, requireMath => 1` to scope
   // the font change; Rust simplifies to the identity DefMacro since
   // the body already carries the math-mode context.
-  DefMacro!("\\Cal{}", "#1");
-  DefMacro!("\\italic{}", "#1");
-  DefMacro!("\\boldkey{}", "#1");
+  def_macro_identity("\\Cal{}")?;
+  def_macro_identity("\\italic{}")?;
+  def_macro_identity("\\boldkey{}")?;
   // Perl L395: \botaligned = \aligned[b] (bottom-vertically-aligned).
   DefMacro!("\\botaligned", "\\aligned[b]");
 
@@ -731,14 +742,14 @@ LoadDefinitions!({
   // Perl L350-358: top/bot shave and smash — pass-through text wrappers
   // (Perl DefConstructor with enterHorizontal, flattened to DefMacro
   // identity since the wrapper is decorative).
-  DefMacro!("\\botshave{}", "#1");
-  DefMacro!("\\topshave{}", "#1");
-  DefMacro!("\\topsmash{}", "#1");
-  DefMacro!("\\botsmash{}", "#1");
+  def_macro_identity("\\botshave{}")?;
+  def_macro_identity("\\topshave{}")?;
+  def_macro_identity("\\topsmash{}")?;
+  def_macro_identity("\\botsmash{}")?;
 
   // Perl L354: \pretend Until:\haswidth {body} — body is #1 up through
   // \haswidth, then {width} follows. Drop the width spec, keep body.
-  DefMacro!("\\pretend Until:\\haswidth {}", "#1");
+  def_macro_identity("\\pretend Until:\\haswidth {}")?;
 
   // Perl L303-308: spdddot / spddddot / spbar / spvec / spbreve —
   // math superscript accents (siblings of existing \spcheck/\sptilde/
@@ -764,10 +775,10 @@ LoadDefinitions!({
 
   // Perl L281-282: \slanted{#1} — math-font wrapper flattened to
   // identity (same rationale as \Cal/\italic/\boldkey).
-  DefMacro!("\\slanted{}", "#1");
+  def_macro_identity("\\slanted{}")?;
 
   // Perl L349: \shave{#1} → #1 (sibling of \botshave/\topshave).
-  DefMacro!("\\shave{}", "#1");
+  def_macro_identity("\\shave{}")?;
 
   // (Perl amsppt.sty.ltxml L460-495 \@bibfield/\@end@bibfield/\key/\no/
   // \inbook/\procinfo/\MR/\AMSPPS/\CMP are now defined above in the
@@ -854,7 +865,7 @@ LoadDefinitions!({
   DefMacro!("\\Refsname", "References");
   DefRegister!("\\refindentwd" => Dimension::new(0));
   def_macro_noop("\\refstyle{}")?;
-  DefMacro!("\\keyformat{}", "#1");
+  def_macro_identity("\\keyformat{}")?;
   def_macro_noop("\\refbreaks")?;
   def_macro_noop("\\defaultreftexts")?;
 

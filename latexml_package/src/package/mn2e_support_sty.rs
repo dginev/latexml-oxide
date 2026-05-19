@@ -2,6 +2,17 @@
 //! Perl: mn2e_support.sty.ltxml — 252 lines
 use crate::prelude::*;
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
@@ -255,10 +266,10 @@ LoadDefinitions!({
   DefMacro!("\\nokeywords", "");
   DefMacro!("\\bibtitle", "References");
   DefMacro!("\\bibheadtitle", "REFERENCES");
-  DefMacro!("\\makeRLlabel{}", "#1");
-  DefMacro!("\\makeRRlabel{}", "#1");
-  DefMacro!("\\makenewlabel{}", "#1");
-  DefMacro!("\\boxit{}", "#1");
+  def_macro_identity("\\makeRLlabel{}")?;
+  def_macro_identity("\\makeRRlabel{}")?;
+  def_macro_identity("\\makenewlabel{}")?;
+  def_macro_identity("\\boxit{}")?;
   DefRegister!("\\smallindent" => Glue!("1.5em"));
   Let!("\\fullhline", "\\hline");
   DefMacro!("\\sevensize", "\\small");
@@ -279,7 +290,7 @@ LoadDefinitions!({
 
   Let!("\\@internalcite", "\\cite");
   DefMacro!("\\shortcite", "\\cite");
-  DefMacro!("\\citename{}", "#1");
+  def_macro_identity("\\citename{}")?;
 
   // Perl mn2e_support.sty.ltxml L212-245: "Redefine equations (bizarrely)
   // to allow $ within" — rebind T_MATH inside display math so a literal

@@ -1,5 +1,16 @@
 use crate::prelude::*;
 
+/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
+/// CS takes one mandatory arg and expands to it unchanged. Routes
+/// inline macro expansion through a single runtime call.
+fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: html.sty.ltxml — 111 lines
@@ -92,7 +103,7 @@ LoadDefinitions!({
 
   // latexonly — Perl L92-98
   DefEnvironment!("{latexonly}", "#body");
-  DefMacro!("\\latexonly@onearg{}", "#1");
+  def_macro_identity("\\latexonly@onearg{}")?;
   // Plain \latexonly — dispatch on next token. Perl uses ifNext T_BEGIN:
   //   if `{` → \latexonly@onearg{...} ; else → \begin{latexonly}...\end{latexonly}
   DefMacro!("\\latexonly", sub[_args] {
@@ -111,9 +122,9 @@ LoadDefinitions!({
 
   // Misc — Perl L100-107
   DefMacro!("\\html{}", "");
-  DefMacro!("\\latex{}",          "#1");
-  DefMacro!("\\latexhtml{}{}",    "#1");
-  DefMacro!("\\strikeout{}",      "#1");
+  def_macro_identity("\\latex{}")?;
+  def_macro_identity("\\latexhtml{}{}")?;
+  def_macro_identity("\\strikeout{}")?;
   DefMacro!("\\htmlurl Semiverbatim", "\\url{#1}");
   DefMacro!("\\HTMLset{}{}",              "");
   DefMacro!("\\htmlinfo OptionalMatch:*", "");
