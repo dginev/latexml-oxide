@@ -5,6 +5,34 @@
 //! and various compatibility macros encountered in real-world arxiv submissions.
 use crate::prelude::*;
 
+/// Push the digested body of a `{keyword}`/`{keywords}` env directly into
+/// the `frontmatter` map under `ltx:classification[scheme=keywords]`, the
+/// way Perl LaTeXML's after_digest_keywords does it
+/// (OmniBus.cls.ltxml `sub after_digest_keywords`). Avoids the
+/// raw_tex(`#body`) workaround that mistakenly tokenized `#` as PARAM
+/// and dumped the literal text "#body" into the output element.
+fn push_keyword_body_to_frontmatter(
+  whatsit: &mut latexml_core::whatsit::Whatsit,
+) -> latexml_core::Result<Vec<latexml_core::digested::Digested>> {
+  use latexml_core::BoxOps;
+  use latexml_core::common::store::Stored;
+  if let Some(body) = whatsit.get_body()? {
+    let mut attrs: rustc_hash::FxHashMap<String, String> =
+      rustc_hash::FxHashMap::default();
+    attrs.insert("scheme".to_string(), "keywords".to_string());
+    let entry = ("ltx:classification".to_string(), Some(attrs), body);
+    latexml_core::state::with_value_mut("frontmatter", |val_opt| {
+      if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
+        frnt
+          .entry("ltx:classification".to_string())
+          .or_insert_with(Vec::new)
+          .push(entry);
+      }
+    });
+  }
+  Ok(Vec::new())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
@@ -177,22 +205,27 @@ LoadDefinitions!({
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.
-  // Lift the body into frontmatter via `\@add@frontmatter` instead
-  // of emitting `<ltx:classification>` inline. The inline form
-  // tripped `Error:malformed:ltx:classification … isn't allowed in
-  // <ltx:abstract>` when `\begin{keywords}…\end{keywords}` appeared
-  // inside `\begin{abstract}…\end{abstract}` (a common SIAM /
-  // siamart pattern — witness 2502.19420). Matches Perl's net effect
-  // (see the comment block below on \keywords@onearg).
+  // Push the digested body directly into the frontmatter map under
+  // `ltx:classification[scheme=keywords]`, matching Perl's
+  // after_digest_keywords (OmniBus.cls.ltxml:after_digest_keywords)
+  // which does `push(@{ $$frontmatter{'ltx:classification'} }, [tag, attrs, @LaTeXML::LIST])`.
+  //
+  // History: the previous Rust binding called
+  //   stomach::raw_tex("\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
+  // which silently misused `#body` (a Constructor template placeholder
+  // only valid inside a DefConstructor template string) inside a
+  // raw_tex literal. The `#` was tokenized as PARAM and reached the
+  // stomach — emitting `Error:misdefined:#` and dumping the literal
+  // string `#body` as the classification element's text content.
+  // Witness: ifacconf-class papers (2305.08080, 2305.09991 — 84 wp4
+  // entries with `Error:misdefined:#` first-errors).
   DefEnvironment!("{keyword}", "",
-    after_digest => {
-      stomach::raw_tex(
-        "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")?;
+    after_digest_body => sub[whatsit] {
+      push_keyword_body_to_frontmatter(whatsit)
     });
   DefEnvironment!("{keywords}", "",
-    after_digest => {
-      stomach::raw_tex(
-        "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")?;
+    after_digest_body => sub[whatsit] {
+      push_keyword_body_to_frontmatter(whatsit)
     });
   // Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
   Let!("\\lx@begin@keywords", "\\keywords");
