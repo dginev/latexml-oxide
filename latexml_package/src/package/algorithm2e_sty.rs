@@ -148,7 +148,16 @@ LoadDefinitions!({
   // Line start/end — Perl L170-178, L180-190
   // Perl uses \lx@prepend@indentation at endline to prepend indentation via DOM manipulation.
   // Rust emits indentation at startline instead (same visual effect, avoids DOM manipulation).
-  DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>");
+  // Auto-close any currently-open listingline before opening a new one. Witness
+  // 2310.15766 (wacv+algorithm2e): the env template wraps `#body` in an outer
+  // `<ltx:listingline>`, and the body's first `\lx@algo@@startline` then tried
+  // to open a NESTED listingline → "ltx:listingline isn't allowed in
+  // <ltx:listingline>" error cascade. algorithmicx_sty does the same close at
+  // its endlist; this is the symmetric guard for algorithm2e.
+  DefConstructor!("\\lx@algo@@startline", "<ltx:listingline xml:id='#id'>",
+    before_construct => sub[document] {
+      document.maybe_close_element("ltx:listingline")?;
+    });
   DefConstructor!("\\lx@algo@@endline", "</ltx:listingline>");
   DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
   DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
