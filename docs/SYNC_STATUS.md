@@ -1050,32 +1050,38 @@ Further reduction would require breaking it into sub-modules.
   `def_iop_journal(cs, name)`. The DEP-15 table estimated 216
   KiB; actual saving ~5× smaller because LTO had already been
   dead-stripping cold paths.
+* **marvosym_sty** ✅ −225 KiB (commit `0a7a6f7cea`). 107 of 113
+  `DefPrimitive!("\\<cs>", "\u{XXXX}…")` icon glyphs migrated to
+  runtime helper `def_marvosym_icon(cs, codepoint)`. Found via
+  fresh `cargo bloat` data after iopart — marvosym wasn't
+  flagged in the older DEP-15 table.
 
-**Stopped here on objective diminishing returns.** Pattern-density
-audit of remaining top consumers showed no file with a single
-dominant pattern carrying ≥50 sites:
+**Stopped here on objective diminishing returns.** Fresh
+`cargo bloat -n 20` (post-marvosym) shows no remaining file with
+a clean 50+ site dominant pattern that fits the simple
+data-drive template:
 
-| Candidate | Dominant pattern | Site count | Predicted win |
-|---|---|---:|---:|
-| `aas_support_sty`  | varied (`@add@frontmatter`, identity-1)        |  ≤11 | ~30 KiB |
-| `mathtools_sty`    | varied                                         |  varied | ~30 KiB |
-| `biblatex_sty`     | varied short-bodies                            |  ≤24 | ~30 KiB |
-| `pgfsys_latexml_def` | structural Constructors                      |  varied | ~50 KiB |
-| `mathabx_sty`      | already covered by DEP-17b                     |   —  |   — |
-| `txfonts_sty`      | already covered by DEP-17                      |   —  |   — |
-| `amssymb_sty`      | already covered by DEP-17c                     |   —  |   — |
+| Candidate | .text | Notes |
+|---|---:|---|
+| `latex_constructs::load_definitions` | 1004 KiB | varied; sub-module split would be next lever |
+| `STDMETRICS::{closure#0}`             |  810 KiB | font-metric data tables, not a macro-arm pattern |
+| `_ModelLoader::build_model`           |  602 KiB | RelaxNG schema; DEP-16 closed earlier |
+| `amsmath_sty`        | 275 KiB | varied DefConstructor + DefMath, no simple repeat |
+| `pgfsys_latexml_def` | 254 KiB | structural DefConstructor; varied |
+| `mathtools_sty`      | 248 KiB | varied; DefMath mostly covered by DEP-17 |
+| `aas_support_sty`    | 221 KiB | ≤11 frontmatter sites, varied short literals |
+| `proofwiki_sty`      | 201 KiB | 254 DefMacro all distinct bodies; only 15 unicode-pattern |
+| `textcomp_sty`       | 137 KiB | 89 DefPrimitive with `bounded => true, font => { encoding => "TS1" }` options — helper would need a full `PrimitiveOptions+FontDirective` constructor, complexity-vs-savings is below the line |
 
-Below ~50 KiB per candidate the maintenance overhead of a
-file-local helper isn't worth it (extra `fn` + helper-pattern
-discipline) — closer to the threshold where DEP-21 hit
-`[[wisdom_helper_monomorphization_trap]]`. If future profiling
-identifies a previously-hidden 50+ site dominant pattern, the
-DEP-NEW template (see jhep_cls / iopart_support_sty) reapplies
-cleanly.
+Below ~50 KiB-per-file or when the helper needs complex option
+structures (textcomp's font directive), the helper-pattern
+overhead crosses the line where DEP-21 hit
+`[[wisdom_helper_monomorphization_trap]]`. Future cargo-bloat
+re-audits may surface new patterns as the codebase grows.
 
-Final release binary (post-jhep + iopart): **44.83 MiB** (down
-from 45.12 MiB this session, ~44.38 MiB pre-DEP-22, ~47.6 MiB
-pre-DEP-15 fontawesome).
+Final release binary (post-marvosym): **44.60 MiB** (down from
+45.12 MiB this session, ~47.6 MiB pre-DEP-15 fontawesome —
+~3 MiB cumulative DEP-NEW wins since 2026-05-18).
 
 ---
 
