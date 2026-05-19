@@ -542,7 +542,7 @@ assertion (not just code == 0; the bug had code == 0).
 | Gate | Current (2026-05-18) | Target |
 |---|---|---|
 | `cargo test --tests` | **1328/0/0** | unchanged |
-| `cargo clippy --workspace --all-targets` | 16 warnings (all in `latexml_math_parser` from in-flight ASF migration) | 0 warnings (post-ASF migration) |
+| `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser` from in-flight ASF migration; 2 self-introduced warnings outside math_parser cleared 2026-05-19) | 0 warnings (post-ASF migration) |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | Round-25 cumulative regressions | 31 fixed, ~14 deferred | drive deferred to zero |
