@@ -15,22 +15,24 @@ LoadDefinitions!({
   RequirePackage!("ulem");
   RequirePackage!("todonotes");
   RequirePackage!("xstring");
-  // \added[author]{text} — render as <ltx:text class="ltx_changes_added">…</ltx:text>.
-  DefConstructor!("\\added[]{}",
-    "<ltx:text class='ltx_changes_added'>#2</ltx:text>");
-  // \deleted[author]{text} — render struck-through. The text MUST
-  // survive (content-preservation).
-  DefConstructor!("\\deleted[]{}",
-    "<ltx:text class='ltx_changes_deleted ltx_strike'>#2</ltx:text>");
-  // \replaced[author]{new}{old} — show new with class hint; the old
-  // text is content too, but Perl/HTML convention is to show only
-  // the replacement in the rendered output.
-  DefConstructor!("\\replaced[]{}{}",
-    "<ltx:text class='ltx_changes_replaced'>#2</ltx:text>");
-  DefConstructor!("\\highlight[]{}",
-    "<ltx:text class='ltx_changes_highlight'>#2</ltx:text>");
-  DefConstructor!("\\comment[]{}",
-    "<ltx:text class='ltx_changes_comment'>#2</ltx:text>");
+  // \added[author]{text} — pass-through. Match Perl ar5iv-bindings
+  // changes.sty.ltxml (DefMacro pass-through). A prior DefConstructor
+  // wrapped #2 in `<ltx:text class='ltx_changes_added'>` which is an
+  // inline-only element; papers commonly use `\added{multi-paragraph
+  // block with \begin{equation}...}` in appendices to mark a whole
+  // section, which auto-opened `<ltx:p>` inside `<ltx:text>` and then
+  // produced `Error:malformed:ltx:text Attempt to close </ltx:text>,
+  // which isn't open`. Witness 2404.13783 (appendix wraps several
+  // paragraphs+equations in one `\added{...}`).
+  DefMacro!("\\added[]{}", "#2");
+  // \deleted[author]{text} — pass-through too. Earlier the body was
+  // displayed via strike-through; switch to plain pass-through for
+  // parity with Perl and to allow block content.
+  DefMacro!("\\deleted[]{}", "#2");
+  // \replaced[author]{new}{old} — show new (drop old), pass-through.
+  DefMacro!("\\replaced[]{}{}", "#2");
+  DefMacro!("\\highlight[]{}", "#2");
+  DefMacro!("\\comment[]{}", "#2");
   def_macro_noop("\\ChangesListline{}{}{}{}")?;
   DefMacro!("\\listofchangesname", "List of changes");
   DefMacro!("\\summaryofchangesname", "Changes");
