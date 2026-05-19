@@ -239,9 +239,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -253,9 +253,9 @@ LoadDefinitions!({
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(sup_arg.unlist());
-      if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
       Ok(Invocation!(T_CS!("\\@@cite"),
         vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
     } else {
@@ -270,9 +270,9 @@ LoadDefinitions!({
         let bibref = Invocation!(T_CS!("\\@@bibref"),
           vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
         let mut body = open.unlist();
-        if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+        if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
         body.extend(bibref.unlist());
-        if let Some(p) = post.clone() {
+        if let Some(p) = post {
           body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
         }
         body.extend(close.unlist());
@@ -312,10 +312,10 @@ LoadDefinitions!({
     if style == "numbers" {
       let show = s!("{author} Phrase1NumberPhrase2");
       let mut p1_toks = open.unlist();
-      if let Some(p) = pre.clone() { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
+      if let Some(p) = pre { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
       let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1_toks)]);
       let mut p2_toks = Vec::new();
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         p2_toks.extend(ns.unlist()); p2_toks.push(T_SPACE!()); p2_toks.extend(p.unlist());
       }
       p2_toks.extend(close.unlist());
@@ -329,9 +329,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, Tokens!(), Tokens!()]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       Ok(Invocation!(T_CS!("\\@@cite"),
@@ -340,10 +340,10 @@ LoadDefinitions!({
       // authoryear
       let show = s!("{author} Phrase1YearPhrase2");
       let mut p1_toks = open.unlist();
-      if let Some(p) = pre.clone() { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
+      if let Some(p) = pre { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
       let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1_toks)]);
       let mut p2_toks = Vec::new();
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         p2_toks.extend(ns.unlist()); p2_toks.push(T_SPACE!()); p2_toks.extend(p.unlist());
       }
       p2_toks.extend(close.unlist());
@@ -378,9 +378,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -390,9 +390,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Super")), keys, Tokens!(), Tokens!()]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
       Ok(Invocation!(T_CS!("\\@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else {
@@ -405,9 +405,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -483,7 +483,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!(author)), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -503,7 +503,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("FullAuthors")), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -523,7 +523,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -545,9 +545,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
     let mut body = open.unlist();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
@@ -588,9 +588,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Phrase1")), key, phrase1, Tokens!()]);
     let mut body = Vec::new();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+    if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("citealias")), Tokens::new(body)]))
   });
@@ -613,9 +613,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Phrase1")), key, phrase1, Tokens!()]);
     let mut body = open.unlist();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
@@ -920,9 +920,9 @@ LoadDefinitions!({
         )
       });
       let expanded = if has_complex_cs {
-        label.clone()
+        label
       } else {
-        Expand!(label.clone())
+        Expand!(label)
       };
       let exp_tokens = expanded.unlist();
       let mut author_toks = Vec::new();

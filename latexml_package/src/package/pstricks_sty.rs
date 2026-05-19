@@ -44,7 +44,7 @@ LoadDefinitions!({
     let newcs    = s!("\\{}", newname.to_string());
     let oldcs    = s!("\\{}", oldname.to_string());
     let keystr   = keyval.to_string();
-    let new_tok  = T_CS!(newcs.clone());
+    let new_tok  = T_CS!(newcs);
     let params   = parse_parameters("OptionalMatch:* []", &new_tok, true)?;
     // Generated forwarder closure: read OptionalMatch:* and []; emit
     //   \<old>(*)([combined-key])
@@ -66,7 +66,7 @@ LoadDefinitions!({
       if star { out.push(T_OTHER!("*")); }
       if !combined.is_empty() {
         out.push(T_OTHER!("["));
-        out.extend(Explode!(combined.clone()));
+        out.extend(Explode!(combined));
         out.push(T_OTHER!("]"));
       }
       // Perl L856 — emit the suffix only; the paren-coords tuple is

@@ -27,9 +27,9 @@ LoadDefinitions!({
       }
     };
     if is_accent {
-      Ok(true_branch.clone())
+      Ok(true_branch)
     } else {
-      Ok(false_branch.clone())
+      Ok(false_branch)
     }
   });
 

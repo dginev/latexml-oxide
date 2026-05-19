@@ -135,12 +135,12 @@ LoadDefinitions!({
       };
       let pxwidth = get_s("pxwidth");
       let pxheight = get_s("pxheight");
-      let pic_attrs = string_map!("width" => pxwidth.clone(), "height" => pxheight.clone());
+      let pic_attrs = string_map!("width" => pxwidth, "height" => pxheight);
       document.open_element("ltx:picture", Some(pic_attrs), None)?;
 
       let mut svg_attrs = string_map!(
         "version" => "1.1", "overflow" => "visible",
-        "width" => pxwidth.clone(), "height" => pxheight.clone(),
+        "width" => pxwidth, "height" => pxheight,
         "viewBox" => get_s("viewBox")
       );
       let style = get_s("style");

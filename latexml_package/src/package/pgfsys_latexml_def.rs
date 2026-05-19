@@ -786,7 +786,7 @@ LoadDefinitions!({
       )), None)?;
       document.insert_element("svg:path", Vec::new(), Some(string_map!(
         "id" => format!("pgfpath{}", obj),
-        "d" => d.clone()
+        "d" => d
       )))?;
       document.close_element("svg:clipPath")?;
       let mut use_attrs = string_map!(
@@ -1320,7 +1320,7 @@ LoadDefinitions!({
       )), None)?;
       // <svg:g stroke="{color}" fill="{color}">
       document.open_element("svg:g", Some(string_map!(
-        "stroke" => color.clone(),
+        "stroke" => color,
         "fill" => color
       )), None)?;
       // <svg:use xlink:href="#pgfsym{name}"/>
@@ -1654,8 +1654,8 @@ LoadDefinitions!({
     let fy = floatformat(pgfy * 8.0 / (endpos * 16.0) + 0.5);
 
     let shading_cs = T_CS!(format!("\\@pgfshading{}!", name));
-    let fx_clone = fx.clone();
-    let fy_clone = fy.clone();
+    let fx_clone = fx;
+    let fy_clone = fy;
     let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| {
       let objcount = svg_next_object();
       let fx_c = fx_clone.clone();

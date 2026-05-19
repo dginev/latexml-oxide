@@ -133,8 +133,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let is_double = name.ends_with('*');
   let style_str = style.to_string();
 
-  let replacement: ReplacementClosure = Rc::new({
-    let class_val = class_val.clone();
+  let replacement: ReplacementClosure = Rc::new(
     move |document: &mut Document,
           args: &Vec<Option<Digested>>,
           props: &arena::SymHashMap<Stored>| {
@@ -173,8 +172,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
       }
       document.close_element("ltx:float")?;
       Ok(())
-    }
-  });
+    });
 
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
@@ -185,7 +183,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   };
 
   // before_digest: beforeFloat($type [, double => 1])
-  let bt = base_type.clone();
+  let bt = base_type;
   let before_closure: BeforeDigestClosure = Rc::new(move || {
     before_float_ex(&bt, None, is_double);
     Ok(Vec::new())
@@ -200,7 +198,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   options.after_digest.push(after_closure);
 
   // after_construct: addFloatFrames
-  let style_for_construct = style_str.clone();
+  let style_for_construct = style_str;
   let after_construct_closure: ConstructionClosure =
     Rc::new(move |document: &mut Document, _whatsit: &Whatsit| {
       add_float_frames(document, &style_for_construct)?;

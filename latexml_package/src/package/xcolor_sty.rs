@@ -216,7 +216,7 @@ fn decode_color(expression: &str) -> Color {
       }
     })
   } else {
-    mix_part.to_string()
+    mix_part
   };
 
   // Apply mix expressions: !pct!name...

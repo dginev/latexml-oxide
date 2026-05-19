@@ -606,13 +606,13 @@ fn lst_add_delimiter(
     .any(|bt| type_str == format!("{bt}i") || type_str == format!("i{bt}"));
   let type_clean = if invisible {
     // Remove first 'i' occurrence
-    let mut s = type_str.clone();
+    let mut s = type_str;
     if let Some(pos) = s.find('i') {
       s.remove(pos);
     }
     s
   } else {
-    type_str.clone()
+    type_str
   };
 
   let delim_str = delims
@@ -651,7 +651,7 @@ fn lst_add_delimiter(
       } else {
         let open = lst_deslash(&delim_str);
         let close_re = regex::escape(&open);
-        (open.clone(), open.clone(), close_re, String::new())
+        (open.clone(), open, close_re, String::new())
       }
     },
     "b" => {

@@ -1651,7 +1651,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
     }
     xmath_children[0].clone()
   } else if children.is_empty() {
-    math_first.clone()
+    math_first
   } else {
     return Ok(());
   };

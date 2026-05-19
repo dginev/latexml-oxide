@@ -22,6 +22,7 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
 ///   * `<color>!<pct>`            → mix(<color>, pct%, white)
 ///   * `<color>!<pct>!<color2>`   → mix(<color>, pct%, <color2>)
 ///   * chained `c1!p1!c2!p2!c3`   → left-to-right reduction
+///
 /// Returns Some(Color) if `name` contains `!` and parses cleanly,
 /// else None (caller treats `name` as a plain named color).
 fn try_color_algebra(name: &str) -> Option<Color> {

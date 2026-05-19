@@ -20,7 +20,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@standalone@documentclass[]{}", sub[(_opts, packages_tks)] {
     bgroup();
     state::assign_value("inPreamble", true, None);
-    let packages_str = packages_tks.clone().to_string();
+    let packages_str = packages_tks.to_string();
     for pkg in packages_str.split(',') {
       let pkg = pkg.trim();
       if !pkg.is_empty() {

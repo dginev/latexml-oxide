@@ -39,7 +39,7 @@ LoadDefinitions!({
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
     let target = s!("\\format@title@{sec}");
-    let mut body: Vec<Token> = format.clone().unlist();
+    let mut body: Vec<Token> = format.unlist();
     body.push(T_SPACE!());
     body.push(T_PARAM!());
     body.push(T_OTHER!("1"));
@@ -63,7 +63,7 @@ LoadDefinitions!({
 
     // \format@title@font@<sec>
     let font_target = s!("\\format@title@font@{sec}");
-    let mut font_body: Vec<Token> = format.clone().unlist();
+    let mut font_body: Vec<Token> = format.unlist();
     if let Some(cls) = class {
       font_body.push(T_CS!("\\@ADDCLASS"));
       font_body.push(T_OTHER!(cls));
@@ -74,10 +74,10 @@ LoadDefinitions!({
     let body_target = s!("\\format@title@{sec}");
     let mut body: Vec<Token> = Vec::new();
     body.push(T_CS!(&font_target));
-    body.extend(label.clone().unlist());
+    body.extend(label.unlist());
     body.push(T_CS!("\\hspace"));
     body.push(T_BEGIN!());
-    body.extend(sep.clone().unlist());
+    body.extend(sep.unlist());
     body.push(T_END!());
     body.push(T_PARAM!());
     body.push(T_OTHER!("1"));

@@ -81,7 +81,7 @@ longplural=\\@glo@longpl\
       let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
       document.open_element("ltx:glossarydefinition",
-        Some(string_map!("key" => key.clone(), "inlist" => list)), None)?;
+        Some(string_map!("key" => key, "inlist" => list)), None)?;
       if let Some(kv_digested) = args[2].as_ref() {
         if let DigestedData::KeyVals(ref kvs) = *kv_digested.data() {
           // Sort by role (Perl: `sort keys %$hash`).

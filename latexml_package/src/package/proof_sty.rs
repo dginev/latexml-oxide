@@ -75,7 +75,7 @@ LoadDefinitions!({
       } else {
         // Invocation(\lx@proof@bars, double, I_arg(1))
         let bars = Invocation!(T_CS!("\\lx@proof@bars"), vec![
-          double.clone().unwrap_or_default(),
+          double.unwrap_or_default(),
           Tokens!(i_arg("1")),
         ]);
         // Invocation(\lx@proof@stack, I_arg(2), undef, bars, I_arg(3))
@@ -87,11 +87,11 @@ LoadDefinitions!({
         ])
       };
       let uppers_split =
-        Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers.clone()]);
+        Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers]);
       let cmd = i_dual(&[], content, presentation, vec![
-        lower.clone(),
+        lower,
         uppers_split,
-        label.clone().unwrap_or_default(),
+        label.unwrap_or_default(),
       ])?;
       let mut out: Vec<Token> = Vec::with_capacity(3 + cmd.len());
       out.push(T_CS!("\\ensuremath"));
@@ -115,14 +115,14 @@ LoadDefinitions!({
     // defaults to empty.
     let presentation = Invocation!(T_CS!("\\lx@proof@stack"), vec![
       Tokens!(i_arg("2")),
-      label.clone().unwrap_or_default(),
+      label.unwrap_or_default(),
       Tokens!(i_arg("1")),
       Tokens!(),
     ]);
     let uppers_split =
-      Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers.clone()]);
+      Invocation!(T_CS!("\\lx@proof@split@and"), vec![uppers]);
     let cmd = i_dual(&[], content, presentation, vec![
-      lower.clone(),
+      lower,
       uppers_split,
     ])?;
     let mut out: Vec<Token> = Vec::with_capacity(3 + cmd.len());

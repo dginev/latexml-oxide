@@ -1328,7 +1328,7 @@ LoadDefinitions!({
         alignment.borrow_mut().set_property("preserve_structure", Stored::Bool(true));
       }
       // Save globally so we can access it in \xymatrix@measureit
-      state::assign_value("xymatrix_alignment", Stored::Digested(alignment_d.clone()), Some(Scope::Global));
+      state::assign_value("xymatrix_alignment", Stored::Digested(alignment_d), Some(Scope::Global));
     }
   });
 
@@ -1338,7 +1338,7 @@ LoadDefinitions!({
   // and define \Hrow@N, \Wcol@N, \H@max, \W@max macros for xy-pic.
   DefPrimitive!("\\xymatrix@measureit", {
     let alignment_d = state::lookup_value("xymatrix_alignment")
-      .and_then(|v| if let Stored::Digested(d) = v { Some(d.clone()) } else { None });
+      .and_then(|v| if let Stored::Digested(d) = v { Some(d) } else { None });
     if let Some(ref alignment_d) = alignment_d {
       if let Some(alignment) = alignment_d.alignment_cell() {
         // Normalize to compute row/column dimensions

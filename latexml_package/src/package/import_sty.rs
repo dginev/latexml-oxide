@@ -34,11 +34,11 @@ LoadDefinitions!({
   //   If * → replace SEARCHPATHS with [canonical(path)]
   //   else → prepend canonical(path) to existing SEARCHPATHS.
   DefPrimitive!("\\lx@set@path OptionalMatch:* {}", sub[(star, path_tks)] {
-    let raw = Expand!(path_tks.clone()).to_string();
+    let raw = Expand!(path_tks).to_string();
     let mut path = raw.trim().to_string();
     if path.is_empty() { return Ok(Vec::new()); }
     if !pathname::is_absolute(&path) {
-      let source_dir = state::lookup_string("SOURCEDIRECTORY").to_string();
+      let source_dir = state::lookup_string("SOURCEDIRECTORY");
       if !source_dir.is_empty() {
         path = pathname::concat(&source_dir, &path);
       }
@@ -58,7 +58,7 @@ LoadDefinitions!({
   //   new_lead = concat(lead_path, path); star → [new_lead], else → [new_lead, ...rest].
   //   If SEARCHPATHS is empty, this is a no-op (matches Perl's early-return).
   DefPrimitive!("\\lx@append@path OptionalMatch:* {}", sub[(star, path_tks)] {
-    let raw = Expand!(path_tks.clone()).to_string();
+    let raw = Expand!(path_tks).to_string();
     let path = raw.trim().to_string();
     if path.is_empty() { return Ok(Vec::new()); }
     let mut paths = state::get_search_paths();

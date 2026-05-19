@@ -2467,7 +2467,7 @@ LoadDefinitions!({
 
   // \num[options]{number}
   DefMacro!("\\num OptionalKeyVals:SIX {}", sub[(kv, number_arg)] {
-    let number_tokens = number_arg.clone();
+    let number_tokens = number_arg;
     six_begin_processing(kv.as_ref());
     let parsed = six_parse_number(&number_tokens);
     let formatted = six_format_number(&parsed, 0);
@@ -2478,7 +2478,7 @@ LoadDefinitions!({
 
   // \numlist[options]{number;...}
   DefMacro!("\\numlist OptionalKeyVals:SIX {}", sub[(kv, numbers_arg)] {
-    let numbers = numbers_arg.clone();
+    let numbers = numbers_arg;
     six_begin_processing(kv.as_ref());
     let parsed = six_parse_numbers(&numbers);
     let formatted: Vec<Tokens> = parsed.iter().map(|p| six_format_number(p, 0)).collect();
@@ -2490,8 +2490,8 @@ LoadDefinitions!({
 
   // \numrange[options]{first}{last}
   DefMacro!("\\numrange OptionalKeyVals:SIX {}{}", sub[(kv, first_arg, last_arg)] {
-    let first = first_arg.clone();
-    let last = last_arg.clone();
+    let first = first_arg;
+    let last = last_arg;
     six_begin_processing(kv.as_ref());
     let f = six_format_number(&six_parse_number(&first), 0);
     let l = six_format_number(&six_parse_number(&last), 0);
@@ -2502,7 +2502,7 @@ LoadDefinitions!({
 
   // \ang[options]{degrees;minutes;seconds}
   DefMacro!("\\ang OptionalKeyVals:SIX {}", sub[(kv, expr_arg)] {
-    let expr = expr_arg.clone();
+    let expr = expr_arg;
     six_begin_processing(kv.as_ref());
 
     let items = six_parse_numbers(&expr);
@@ -2526,7 +2526,7 @@ LoadDefinitions!({
     if let Some(s) = items.get(2) {
       let fs = six_format_number(s, 0);
       parts.push(six_format_infix(
-        mulop.clone(), None, None,
+        mulop, None, None,
         vec![fs, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcsecond")])],
       ));
     }
@@ -2561,7 +2561,7 @@ LoadDefinitions!({
 
   // \si[options]{units}
   DefMacro!("\\si OptionalKeyVals:SIX {}", sub[(kv, units_arg)] {
-    let units = units_arg.clone();
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     six_enable_unit_macros(true);
     let funits = six_wrap(six_process_units(&units));
@@ -2579,8 +2579,8 @@ LoadDefinitions!({
 
   // \SI[options]{number}{units}
   DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
-    let number = number_arg.clone();
-    let units = units_arg.clone();
+    let number = number_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
@@ -2593,8 +2593,8 @@ LoadDefinitions!({
 
   // \SIlist[options]{number;...}{units}
   DefMacro!("\\SIlist OptionalKeyVals:SIX {}{}", sub[(kv, numbers_arg, units_arg)] {
-    let numbers = numbers_arg.clone();
-    let units = units_arg.clone();
+    let numbers = numbers_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("list-units"));
@@ -2618,9 +2618,9 @@ LoadDefinitions!({
 
   // \SIrange[options]{first}{last}{units}
   DefMacro!("\\SIrange OptionalKeyVals:SIX {}{}{}", sub[(kv, first_arg, last_arg, units_arg)] {
-    let first = first_arg.clone();
-    let last = last_arg.clone();
-    let units = units_arg.clone();
+    let first = first_arg;
+    let last = last_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("range-units"));

@@ -238,7 +238,7 @@ LoadDefinitions!({
       }
       if let Some(css) = frame.get_attribute("cssstyle") {
         let existing = theorem.get_attribute("cssstyle").unwrap_or_default();
-        let combined = if existing.is_empty() { css.clone() } else { s!("{};{}", existing, css) };
+        let combined = if existing.is_empty() { css } else { s!("{};{}", existing, css) };
         document.set_attribute(&mut theorem, "cssstyle", &combined)?;
       }
       if let Some(framed) = frame.get_attribute("framed") {

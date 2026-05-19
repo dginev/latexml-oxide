@@ -187,7 +187,7 @@ LoadDefinitions!({
     // Push order is reversed for stack semantics: last unread is first read.
     gullet::unread_one(test);
     gullet::unread_one(T_END!());
-    gullet::unread_vec(arg.clone().unlist());
+    gullet::unread_vec(arg.unlist());
     gullet::unread_one(T_BEGIN!());
     if test.get_catcode() == Catcode::BEGIN {
       Ok(Tokens!(T_CS!("\\aas@fig")))

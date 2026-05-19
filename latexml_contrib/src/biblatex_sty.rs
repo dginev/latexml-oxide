@@ -11,7 +11,7 @@ use latexml_package::prelude::*;
 
 fn bib_entry_get() -> SymHashMap<Stored> {
   match state::lookup_value("biblatex_entry") {
-    Some(Stored::HashStored(map)) => map.clone(),
+    Some(Stored::HashStored(map)) => map,
     _ => SymHashMap::default(),
   }
 }
@@ -50,7 +50,7 @@ fn bib_state_set_int(key: &str, value: i64) {
 
 fn bib_variant_push(toks: Vec<Token>) {
   let mut acc: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
   acc.extend(toks);
@@ -63,7 +63,7 @@ fn bib_variant_push(toks: Vec<Token>) {
 
 fn bib_as_thebibliography() -> Tokens {
   let variant: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => return Tokens::default(),
   };
   if variant.is_empty() {
@@ -79,7 +79,7 @@ fn bib_as_thebibliography() -> Tokens {
   let count = bib_state_int("biblatex_entry_count");
   bib_state_set_int("biblatex_entry_count", 0);
   let preamble: Vec<Token> = match state::lookup_value("biblatex_preamble") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
   let mut result: Vec<Token> = Vec::with_capacity(variant.len() + 16);
@@ -655,7 +655,7 @@ LoadDefinitions!({
   DefMacro!("\\preamble{}", sub[(arg)] {
     state::assign_value("biblatex_preamble",
       Stored::Tokens(arg.clone()), Some(Scope::Global));
-    Ok(arg.clone())
+    Ok(arg)
   });
 
   // Perl L371-397: \biblatex@verb{key}…\endverb captures a verbatim field

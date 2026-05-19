@@ -57,7 +57,7 @@ fn begin_enum_itemize(
       llabel
     };
     def_macro(T_CS!(s!("\\the{usecounter}")), None, llabel.clone(), None)?;
-    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel.clone(), None)?;
+    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel, None)?;
     def_macro(
       T_CS!(s!("\\fnum@{usecounter}")),
       None,
