@@ -76,6 +76,12 @@ LoadDefinitions!({
   DefMacro!("\\city{}",       "#1");
   DefMacro!("\\state{}",      "#1");
   DefMacro!("\\country{}",    "#1");
+  // sn-jnl.cls defines \botrule as a bottom-rule table separator
+  // (similar shape to \toprule / \midrule from booktabs). Authors use
+  // it inside \begin{tabular}...\end{tabular} for Springer-Nature
+  // bottom rules. Map to \hline so the table still renders.
+  // Witness 2402.17342.
+  Let!("\\botrule", "\\hline");
 
   // Frontmatter envs — internal_vertical mode for multi-paragraph
   // bodies (declarations especially carries author prose with \par
