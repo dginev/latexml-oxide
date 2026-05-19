@@ -30,10 +30,29 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L23-31
   DefMacro!("\\lx@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
-    if IsDefined!(&cs) {
+    // Autoload triggers (declared via `def_autoload` at tex.rs:238-247)
+    // install a closure under the trigger CS so the package auto-loads on
+    // first invocation. Perl scopes the equivalent `DefAutoload` entries
+    // to `OmniBus.cls.ltxml`, so for non-OmniBus papers Perl sees these
+    // CSes as truly undefined. Mirror Perl by treating an unfired
+    // autoload trigger as "undefined" in `\@ifundefined`. We must NOT
+    // overwrite the trigger CS with `\relax` in this case (the kernel
+    // `\csname X\endcsname \ifx \relax` idiom DOES overwrite, but doing
+    // so here would destroy the autoload — subsequent use of the trigger
+    // CS would no-op instead of loading its package). Driver:
+    // arXiv:2507.23241v1 (smfart.cls) — line 373's
+    // `\@ifundefined{numberwithin}` branches wrong when our preloaded
+    // `\numberwithin` autoload makes the CS "look" defined, then the
+    // `\@gobbletwo` branch eats `\ifx \relax` and orphans `\else` / `\fi`.
+    let is_autoload = cs.with_cs_name(|cs_name| {
+      state::lookup_bool(&s!("{cs_name}:autoload"))
+    });
+    if IsDefined!(&cs) && !is_autoload {
       Ok(else_token)
     } else {
-      state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+      if !is_autoload {
+        state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+      }
       Ok(if_token)
     }
   }, locked=>true);
