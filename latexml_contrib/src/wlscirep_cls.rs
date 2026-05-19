@@ -26,6 +26,11 @@ LoadDefinitions!({
   // wlscirep also configures caption layout — pull caption.sty so
   // \captionsetup is available. Witness 2411.06447, 2411.10607.
   RequirePackage!("caption");
+  // wlscirep.cls L60: \RequirePackage{fancyhdr} for custom headers/footers.
+  // Without it, \fancyhf / \fancyfoot used in the cls body (and in user
+  // documents that override the page style) stay undefined. Witness
+  // 2310.16477.
+  RequirePackage!("fancyhdr");
 
   // wlscirep frontmatter / bibliography helpers — preserve author content.
   DefMacro!("\\JournalTitle{}", "\\emph{#1}");
