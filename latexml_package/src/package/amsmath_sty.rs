@@ -124,7 +124,12 @@ fn ams_rearrangeable_bindings(
   // so such cells are skippable and the constructor is never invoked.
   // By routing \label through \lx@hidden@noalign, the label is processed at the
   // row level (equation element), ensuring labels= is always set.
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
+  // Save \label globally so the noalign-deferred `\lx@eqnarray@save@label{#1}`
+  // expansion still resolves cleanly if it fires AFTER the alignment's group
+  // has popped (witness 2404.19499: align body's deferred noalign-label fires
+  // post-group → undefined). The \label override itself stays local — the
+  // user-visible \label semantics revert when align ends.
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   Ok(())
 }

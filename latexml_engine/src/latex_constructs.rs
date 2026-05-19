@@ -1030,8 +1030,11 @@ pub fn eqnarray_bindings() -> Result<()> {
     None,
   );
   // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
-  // Save the original \label as \lx@eqnarray@save@label
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
+  // Save the original \label as \lx@eqnarray@save@label — global so the
+  // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
+  // if it fires AFTER the eqnarray group pops (witness 2404.19499 align
+  // case).
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
   // Perl: Let('\label', '\lx@eqnarray@label');
   // Redirect \label to the noalign version so it runs at the equation (row) level
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
