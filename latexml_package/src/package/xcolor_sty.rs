@@ -570,6 +570,14 @@ LoadDefinitions!({
   // Witnesses 2405.19976, 2406.12553.
   DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
 
+  // xcolor.sty L815: `\InputIfFileExists{mathcolor.ltx}` — pulls in
+  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap.
+  // The raw .ltx isn't on Rust's load path, so authors writing
+  // `\mathcolor{red}{x+y}` hit Error:undefined. Stub directly as the
+  // group form `{\color{<color>} <expr>}` (semantically identical in
+  // math). Witness 2402.00349.
+  DefMacro!("\\mathcolor[]{}{}", "{\\color[#1]{#2}#3}");
+
   // Ignorable options
   for option in &[
     "natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray",
