@@ -546,7 +546,7 @@ assertion (not just code == 0; the bug had code == 0).
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | Round-25 cumulative regressions | 31 fixed, ~14 deferred | drive deferred to zero |
-| 1910.01256 mini-benchmark vs pdflatex×2 | release (--dest=.xml) **0.60s**; release (--dest=.html, full post-processing) **0.71s** (was 0.73s pre-DEP-15-through-19). Anti-bloat refactors didn't regress wall time; .text shrink (~3 MiB) actually improved icache locality slightly. | beat 2× pdflatex (met) |
+| 1910.01256 mini-benchmark vs pdflatex×2 | release (--dest=.html, full post-processing — the apples-to-apples comparison vs pdflatex): **0.71s** post-DEP-19 (was 0.73s); pdflatex idle ~1.11s. .xml-only is **0.60s** but not a fair comparison since pdflatex always runs graphics + bibliography. | beat 2× pdflatex (met: 0.71s ≪ 2.22s) |
 | Distribution build | `cargo build --no-default-features --profile maxperf` | maxperf binary ~55 MB |
 
 Distribution follow-up — **LANDED 2026-05-15** (branch
