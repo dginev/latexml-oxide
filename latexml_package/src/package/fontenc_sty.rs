@@ -244,6 +244,17 @@ LoadDefinitions!({
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(enc_sym) = encoding_stored {
           let encoding = arena::to_string(enc_sym);
+          // Skip the synthetic "ASCII" encoding leaked by Semiverbatim scope
+          // (state.rs::begin_semiverbatim sets local font encoding to "ASCII"
+          // "to stay as ASCII as possible"). If a Semiverbatim-scoped option
+          // expansion of `\@defaultenc → \f@encoding` runs while that scope
+          // is live, the option vector picks up "ASCII", and the load loop
+          // tries `\InputDefinitions{asciienc}` — no such file exists in TL,
+          // and the runaway recovery branch then trips the 100M-token limit
+          // (witness 2402.02591: `\usepackage{tipa}` whose tipa.sty L55
+          // `\RequirePackage[T3,\@defaultenc]{fontenc}` is what triggers it).
+          // ASCII is not a real LaTeX font encoding — silently skip.
+          if encoding == "ASCII" { continue; }
           DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)),
             scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
