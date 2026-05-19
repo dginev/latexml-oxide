@@ -277,7 +277,15 @@ LoadDefinitions!({
     // machinery — tracked as a known minor divergence; no test
     // exercises \IEEEQEDhere against Perl ground truth, so accepting
     // the simplification.
-    );
+    //
+    // mode => internal_vertical so authors can use `$$..$$` display
+    // math inside `\begin{proof}` — `$$` is only recognized as display
+    // math when BOUND_MODE ends with "vertical" (tex_math.rs L467).
+    // The DefEnvironment default bound mode is restricted_horizontal,
+    // which makes a `$$..$$` block fail with cascading
+    // "Script _ can only appear in math mode" on each subscript inside.
+    // Witness 2303.10133 (ieeeconf paper).
+    mode => "internal_vertical");
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body
