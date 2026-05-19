@@ -141,7 +141,8 @@ source-org" candidates above, all but one are already present in
 | `\hexnumber@` | `latex_constructs.rs` | exact-body relocation done |
 | `\on@line` | `latex_constructs.rs` | exact-body relocation done |
 | `\stop` | `latex_constructs.rs:9220` (Let → `\endinput`) | Perl override applied |
-| `\@@cite` | `latex_constructs.rs` | the audit's `\@cite` typo for `\@@cite` |
+| `\@cite` | `latex_constructs.rs:7796` | ported 2026-05-18 (Perl L4238 kernel default formatter `[{#1\if@tempswa , #2\fi}]`); was missing under NODUMP path |
+| `\@@cite` | `latex_constructs.rs:7803` | DefConstructor at parity |
 | `\@font@warning` | `latex_constructs.rs` | done |
 | `\G@refundefinedtrue` | `latex_constructs.rs` | done |
 | `\@nomath` | `latex_constructs.rs` | done |

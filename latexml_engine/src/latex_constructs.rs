@@ -7787,6 +7787,13 @@ LoadDefinitions!({
   AssignValue!("CITE_YY_SEPARATOR", T_OTHER!(","));
   AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
+  // Perl latex_constructs.pool.ltxml L4238: `\@cite{#1}{#2}` — kernel default
+  // citation formatter, wraps `#1` (citation list) + optional `#2` (note) in
+  // brackets via `\if@tempswa`. Used by `\@citex` (latex_dump.pool.ltxml).
+  // The dump path captures this body, but the NODUMP path lacks it — port
+  // here for source-org parity (CLAUDE.md priority 3).
+  DefMacro!("\\@cite{}{}", "[{#1\\if@tempswa , #2\\fi}]");
+
   // Perl latex_constructs.pool.ltxml L4239-4241: DefConstructor('\@@cite []{}', ...,
   //   alias => '\cite', mode => 'restricted_horizontal', enterHorizontal => 1)
   DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
