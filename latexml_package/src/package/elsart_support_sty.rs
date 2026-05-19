@@ -18,14 +18,8 @@ LoadDefinitions!({
 
   // Theorem stubs (if amsthm not loaded)
   DefMacro!("\\theoremstyle{}", "");
-  DefMacro!("\\qed", "\\ltx@qed");
-  DefConstructor!("\\ltx@qed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true,
-    // Perl L31: reversion => '\qed'. The `\ltx@qed` internal dispatcher
-    // should serialize back to `\qed` in `tex=` attributes so round-tripping
-    // through post-processors doesn't surface the internal CS name.
-    reversion => "\\qed");
+  // \qed and \ltx@qed now live in elsart_support_core_sty.rs (so plain
+  // elsarticle papers get them without loading elsart_support).
 
   // Math symbols — Perl L37-42 (double-struck set notation)
   DefMath!("\\Cset", "\u{2102}", role => "ID", meaning => "complexes");

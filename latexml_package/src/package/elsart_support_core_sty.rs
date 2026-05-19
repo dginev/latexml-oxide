@@ -341,4 +341,15 @@ LoadDefinitions!({
   DefEnvironment!("{esmark}",  "#body");
   DefMacro!("\\figmark{}{}", "");
   DefMacro!("\\tabmark{}{}", "");
+
+  // \qed (proof end-of-proof marker). Previously only in elsart_support
+  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
+  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
+  // def here so all elsart_*-loading classes (elsarticle + elsart)
+  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
+  DefMacro!("\\qed", "\\ltx@qed");
+  DefConstructor!("\\ltx@qed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
+    reversion => "\\qed");
 });
