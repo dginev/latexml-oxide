@@ -1,15 +1,5 @@
 use crate::prelude::*;
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-/// Routes inline macro expansion (each ~960 B of .text) through one
-/// runtime call. Engine bootstrap pays parse_prototype once per entry.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
 LoadDefinitions!({
   // Perl: sv_support.sty.ltxml
   // Support package for svjour class variants

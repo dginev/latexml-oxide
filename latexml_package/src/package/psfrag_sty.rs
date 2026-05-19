@@ -4,15 +4,6 @@
 //! The actual overlay is done by LaTeX (we just preserve the fragments).
 use crate::prelude::*;
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L25-27 — initial state: psfrag_scan_all defaults to the

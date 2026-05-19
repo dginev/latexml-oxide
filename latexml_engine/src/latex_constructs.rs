@@ -2421,39 +2421,6 @@ fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
   Some(ch.to_string())
 }
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-/// Routes inline macro expansion (each ~960 B of .text) through one
-/// runtime call. Engine bootstrap pays parse_prototype once per entry.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
-/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
-/// CS takes one mandatory arg and expands to it unchanged. Routes
-/// inline macro expansion through a single runtime call.
-fn def_macro_identity(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("#1");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
-/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
-/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
-/// is registered as a digestion-time primitive rather than an expandable
-/// macro. Body=None is treated as a no-op primitive (no Box emitted).
-fn def_primitive_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
-  Ok(())
-}
-
-
 #[rustfmt::skip]
 LoadDefinitions!({
 

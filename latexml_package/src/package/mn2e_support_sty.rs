@@ -2,26 +2,6 @@
 //! Perl: mn2e_support.sty.ltxml — 252 lines
 use crate::prelude::*;
 
-/// DEP-19 helper for identity-1 `DefMacro!("\\cs{}", "#1")` macros — the
-/// CS takes one mandatory arg and expands to it unchanged. Routes
-/// inline macro expansion through a single runtime call.
-fn def_macro_identity(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("#1");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
 #[rustfmt::skip]
 LoadDefinitions!({
   // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads

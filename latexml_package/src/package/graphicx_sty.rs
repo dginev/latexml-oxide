@@ -4,14 +4,6 @@ use crate::prelude::*;
 pub use latexml_core::util::image::{image_candidates, image_graphicx_sizer};
 
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)

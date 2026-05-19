@@ -93,17 +93,6 @@ fn bib_as_thebibliography() -> Tokens {
   Tokens::new(result)
 }
 
-/// DEP-18 helper for the 118 empty-body `DefMacro!("\\cs[opt-spec]", "")`
-/// stubs in biblatex (most are no-op LaTeX3-style declarations whose
-/// content doesn't affect XML output). Routing through one runtime
-/// helper keeps `load_definitions` lean.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml

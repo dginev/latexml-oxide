@@ -240,14 +240,6 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
 }
 
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys

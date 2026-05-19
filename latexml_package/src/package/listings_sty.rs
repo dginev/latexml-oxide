@@ -1865,26 +1865,6 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
 // Region 10: Main LoadDefinitions block
 //======================================================================
 
-/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-
-
-/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
-/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
-/// is registered as a digestion-time primitive rather than an expandable
-/// macro. Body=None is treated as a no-op primitive (no Box emitted).
-fn def_primitive_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
-  Ok(())
-}
-
-
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
