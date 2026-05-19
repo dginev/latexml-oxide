@@ -93,6 +93,10 @@ LoadDefinitions!({
   // Witness 2310.14751.
   DefMacro!("\\icmlOutsideContribution",
     "\\textsuperscript{*}Work done outside of primary affiliation");
+  // \icmlEqualLast — paper-bundled co-last-authors marker (icml2024.sty
+  // L525). Witness 2402.02526.
+  DefMacro!("\\icmlEqualLast",
+    "\\textsuperscript{*}Co last authors");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
