@@ -153,6 +153,49 @@ LoadDefinitions!({
     save_theorem_style(&name_str, saved);
   });
 
+  // \begin{restatable}[opt]{thmname}{storename} ... \end{restatable}
+  // — thm-restate.sty's env that lets authors define a theorem-like
+  // body and ALSO save it under a CS name for later restating via
+  // `\storename`. Render as a generic ltx:theorem; the "restate later"
+  // feature is approximated by defining `\storename` as a no-op so
+  // subsequent `\storename` calls (to re-render the theorem) don't
+  // cascade as undefined CS. The body appears once, where first
+  // declared — content is preserved. Witness 2403.07095
+  // (\begin{restatable}{theorem}{glsinfdiff}).
+  DefEnvironment!("{restatable}[]{}{}",
+    "<ltx:theorem>#body</ltx:theorem>",
+    mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] {
+      // get_arg(3) is the store-name token (3rd arg, 1-based). Define
+      // `\storename` GLOBALLY as a no-op so later restate calls in the
+      // doc (which happen outside this env scope) don't cascade undefined.
+      // (get_arg is 1-indexed per whatsit.rs warning.)
+      if let Some(storename_arg) = whatsit.get_arg(3) {
+        let s = storename_arg.to_string();
+        let cs = s!("\\{}", s.trim());
+        if !cs.is_empty() && cs.len() > 1 {
+          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
+            Some(ExpandableOptions { scope: Some(Scope::Global),
+              ..ExpandableOptions::default() }));
+        }
+      }
+    });
+  DefEnvironment!("{restatable*}[]{}{}",
+    "<ltx:theorem>#body</ltx:theorem>",
+    mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] {
+      let args = whatsit.get_args();
+      if args.len() >= 3 {
+        if let Some(storename_tokens) = args[2].as_ref() {
+          let s = storename_tokens.to_string();
+          let cs = s!("\\{}", s.trim());
+          if !cs.is_empty() {
+            let _ = def_macro(T_CS!(cs), None, Tokens::default(), None);
+          }
+        }
+      }
+    });
+
   // \listtheoremname
   DefMacro!("\\listtheoremname", "List of Theorems");
 
