@@ -1,4 +1,15 @@
 use crate::prelude::*;
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl: sv_support.sty.ltxml
   // Support package for svjour class variants
@@ -10,11 +21,11 @@ LoadDefinitions!({
   //======================================================================
   // Frontmatter
   DefRegister!("\\titlerunning", Tokens!());
-  DefMacro!("\\titrun", "");
+  def_macro_noop("\\titrun")?;
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
 
   DefRegister!("\\authorrunning", Tokens!());
-  DefMacro!("\\authrun", "");
+  def_macro_noop("\\authrun")?;
 
   DefMacro!("\\emailname", "E-mail");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email' name='#name'>#1</ltx:contact>",
@@ -88,7 +99,7 @@ LoadDefinitions!({
   // Redefine \abstract to handle both command and environment form.
   Let!("\\@orig@abstract", "\\abstract");
   // \abstract* — ignore
-  DefMacro!("\\lx@ignore@sv@abstract{}", "");
+  def_macro_noop("\\lx@ignore@sv@abstract{}")?;
   DefMacro!(
     "\\@abstract@with@arg{}",
     "\\@add@frontmatter{ltx:abstract}[name={\\abstractname}]{#1}"
@@ -104,7 +115,7 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\makereferee", "");
+  def_macro_noop("\\makereferee")?;
 
   DefMacro!("\\ackname", "Acknowledgements");
   DefConstructor!("\\acknowledgements",
@@ -134,30 +145,30 @@ LoadDefinitions!({
   );
 
   Let!("\\orithanks", "\\thanks");
-  DefMacro!("\\runheadhook", "");
-  DefMacro!("\\svlanginfo", "");
-  DefMacro!("\\makeheadbox", "");
+  def_macro_noop("\\runheadhook")?;
+  def_macro_noop("\\svlanginfo")?;
+  def_macro_noop("\\makeheadbox")?;
   DefMacro!("\\authdepth", "2");
   DefMacro!("\\authorfont", "\\bfseries");
-  DefMacro!("\\stripauthor", "");
+  def_macro_noop("\\stripauthor")?;
   DefRegister!("\\instindent", Dimension::new(0));
-  DefMacro!("\\combirun", "");
+  def_macro_noop("\\combirun")?;
   // \combirunning{text} — Springer running-head combination text.
   // Surpass Perl gobble: preserve as ltx:note.
   DefMacro!("\\combirunning{}",
     "\\@add@frontmatter{ltx:note}[role=combirunning]{#1}");
 
-  DefMacro!("\\validfor", "");
-  DefMacro!("\\ClassInfoNoLine{}{}", "");
-  DefMacro!("\\ProcessRunnHead", "");
-  DefMacro!("\\fnmsep", "");
-  DefMacro!("\\institutename", "");
+  def_macro_noop("\\validfor")?;
+  def_macro_noop("\\ClassInfoNoLine{}{}")?;
+  def_macro_noop("\\ProcessRunnHead")?;
+  def_macro_noop("\\fnmsep")?;
+  def_macro_noop("\\institutename")?;
 
   //======================================================================
-  DefMacro!("\\nocaption{}", "");
-  DefMacro!("\\sidecaption {}", "");
+  def_macro_noop("\\nocaption{}")?;
+  def_macro_noop("\\sidecaption {}")?;
 
-  DefMacro!("\\capstrut", "");
+  def_macro_noop("\\capstrut")?;
   DefMacro!("\\captionstyle", "\\normalfont\\small");
   DefRegister!("\\figcapgap", Dimension!("3pt"));
   DefRegister!("\\tabcapgap", Dimension!("5.5pt"));
@@ -165,7 +176,7 @@ LoadDefinitions!({
 
   DefMacro!("\\tableheadseprule", "\\hrule");
   DefMacro!("\\floatlegendstyle", "\\bfseries");
-  DefMacro!("\\leftlegendglue", "");
+  def_macro_noop("\\leftlegendglue")?;
 
   // Perl L122-123: theorem head swap toggles
   DefPrimitive!("\\normalthmheadings", {
@@ -265,31 +276,31 @@ LoadDefinitions!({
   DefRegister!("\\headerboxheight", Dimension!("180pt"));
   DefRegister!("\\headlineindent", Dimension!("33pt")); // ~1.166cm
 
-  DefMacro!("\\runinend", "");
-  DefMacro!("\\floatcounterend", "");
-  DefMacro!("\\sectcounterend", "");
+  def_macro_noop("\\runinend")?;
+  def_macro_noop("\\floatcounterend")?;
+  def_macro_noop("\\sectcounterend")?;
 
   DefMacro!("\\columncase", "\\makeatletter\\twocolteset");
   DefMacro!("\\twocoltest{}{}", "#1\\makeatother");
 
   NewCounter!("lastpage");
-  DefMacro!("\\getlastpagenumber", "");
-  DefMacro!("\\islastpageeven", "");
+  def_macro_noop("\\getlastpagenumber")?;
+  def_macro_noop("\\islastpageeven")?;
 
-  DefMacro!("\\makesectrule", "");
-  DefMacro!("\\makesectruleori", "");
-  DefMacro!("\\nosectrule", "");
-  DefMacro!("\\restoresectrule", "");
-  DefMacro!("\\nothanksmarks", "");
-  DefMacro!("\\setitemindent{}", "");
-  DefMacro!("\\setitemitemindent{}", "");
-  DefMacro!("\\thisbottomragged", "");
+  def_macro_noop("\\makesectrule")?;
+  def_macro_noop("\\makesectruleori")?;
+  def_macro_noop("\\nosectrule")?;
+  def_macro_noop("\\restoresectrule")?;
+  def_macro_noop("\\nothanksmarks")?;
+  def_macro_noop("\\setitemindent{}")?;
+  def_macro_noop("\\setitemitemindent{}")?;
+  def_macro_noop("\\thisbottomragged")?;
 
-  DefMacro!("\\rubric", "");
+  def_macro_noop("\\rubric")?;
   DefRegister!("\\rubricwidth", Dimension::new(0));
-  DefMacro!("\\strich", "");
+  def_macro_noop("\\strich")?;
   DefRegister!("\\logodepth", Dimension!("36pt")); // ~1.2cm
-  DefMacro!("\\lastevenhead", "");
+  def_macro_noop("\\lastevenhead")?;
 
   //======================================================================
   // description environment with optional arg.

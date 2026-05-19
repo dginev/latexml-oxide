@@ -8,6 +8,17 @@
 //! pile of style-toggle no-ops.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // ltx-amsart.css — close enough for AmSTeX too (Perl L32).
@@ -69,42 +80,42 @@ LoadDefinitions!({
       }
     });
 
-  DefMacro!("\\NoPageNumbers", "");
+  def_macro_noop("\\NoPageNumbers")?;
 
   // Overfull-box visualization toggles — ignorable (Perl L77-78).
-  DefMacro!("\\BlackBoxes",   "");
-  DefMacro!("\\NoBlackBoxes", "");
+  def_macro_noop("\\BlackBoxes")?;
+  def_macro_noop("\\NoBlackBoxes")?;
 
-  DefMacro!("\\TagsAsMath", "");
-  DefMacro!("\\TagsAsText", "");
-  DefMacro!("\\TagsOnLeft",  "");
-  DefMacro!("\\TagsOnRight", "");
-  DefMacro!("\\CenteredTagsOnSplits",    "");
-  DefMacro!("\\TopOrBottomTagsOnSplits", "");
+  def_macro_noop("\\TagsAsMath")?;
+  def_macro_noop("\\TagsAsText")?;
+  def_macro_noop("\\TagsOnLeft")?;
+  def_macro_noop("\\TagsOnRight")?;
+  def_macro_noop("\\CenteredTagsOnSplits")?;
+  def_macro_noop("\\TopOrBottomTagsOnSplits")?;
 
-  DefMacro!("\\LimitsOnInts",    "");
-  DefMacro!("\\NoLimitsOnInts",  "");
-  DefMacro!("\\LimitsOnNames",   "");
-  DefMacro!("\\NoLimitsOnNames", "");
-  DefMacro!("\\LimitsOnSums",    "");
-  DefMacro!("\\NoLimitsOnSums",  "");
+  def_macro_noop("\\LimitsOnInts")?;
+  def_macro_noop("\\NoLimitsOnInts")?;
+  def_macro_noop("\\LimitsOnNames")?;
+  def_macro_noop("\\NoLimitsOnNames")?;
+  def_macro_noop("\\LimitsOnSums")?;
+  def_macro_noop("\\NoLimitsOnSums")?;
 
   // Font-loading nominals — assumed loaded (Perl L97-107).
-  DefMacro!("\\UseAMSsymbols", "");
-  DefMacro!("\\loadbold",      "");
-  DefMacro!("\\loadeufb",      "");
-  DefMacro!("\\loadeufm",      "");
-  DefMacro!("\\loadeurb",      "");
-  DefMacro!("\\loadeurm",      "");
-  DefMacro!("\\loadeusb",      "");
-  DefMacro!("\\loadeusm",      "");
-  DefMacro!("\\loadmathfont",  "");
-  DefMacro!("\\loadmsam",      "");
-  DefMacro!("\\loadmsbm",      "");
+  def_macro_noop("\\UseAMSsymbols")?;
+  def_macro_noop("\\loadbold")?;
+  def_macro_noop("\\loadeufb")?;
+  def_macro_noop("\\loadeufm")?;
+  def_macro_noop("\\loadeurb")?;
+  def_macro_noop("\\loadeurm")?;
+  def_macro_noop("\\loadeusb")?;
+  def_macro_noop("\\loadeusm")?;
+  def_macro_noop("\\loadmathfont")?;
+  def_macro_noop("\\loadmsam")?;
+  def_macro_noop("\\loadmsbm")?;
   Let!("\\font@", "\\font");        // Close enough? (Perl L108)
-  DefMacro!("\\normalfont", "");    // Close enough? (Perl L109)
+  def_macro_noop("\\normalfont")?;    // Close enough? (Perl L109)
 
-  DefMacro!("\\boldnotloaded{}", "");
+  def_macro_noop("\\boldnotloaded{}")?;
 
   // amstex.tex L165: `\edef\@{\string @}` — `\@` expands to the literal
   // `@` character. Pattern: AmSTeX papers write email addresses as
@@ -118,13 +129,13 @@ LoadDefinitions!({
   // translation of the canonical amstex.tex behavior.)
   DefMacro!("\\@", "@");
 
-  DefMacro!("\\galleys",  "");
+  def_macro_noop("\\galleys")?;
   DefMacro!("\\flushpar", "\\par\\noindent");
 
-  DefMacro!("\\pagewidth Dimension",   "");
-  DefMacro!("\\pageheight Dimension",  "");
-  DefMacro!("\\hcorrection Dimension", "");
-  DefMacro!("\\vcorrection Dimension", "");
+  def_macro_noop("\\pagewidth Dimension")?;
+  def_macro_noop("\\pageheight Dimension")?;
+  def_macro_noop("\\hcorrection Dimension")?;
+  def_macro_noop("\\vcorrection Dimension")?;
 
   //======================================================================
   // The Document (Perl L122-128)
@@ -140,8 +151,8 @@ LoadDefinitions!({
 
   //======================================================================
   // Front Matter (Perl L131-141)
-  DefMacro!("\\topmatter",             "");
-  DefMacro!("\\endtopmatter",          "");
+  def_macro_noop("\\topmatter")?;
+  def_macro_noop("\\endtopmatter")?;
   DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
     mode => "restricted_horizontal");
@@ -157,7 +168,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Document structure (Perl L144-158)
-  DefMacro!("\\nofrills", "");
+  def_macro_noop("\\nofrills")?;
 
   // \comment ... \endcomment — Perl L148-154. Reads raw lines (no
   // catcode interpretation) until a line equals `\endcomment`.
@@ -251,7 +262,7 @@ LoadDefinitions!({
     reversion => "\\\\\n");
 
   // \format Until:\\\\ — analog to \align's template; we ignore it.
-  DefMacro!("\\format Until:\\\\", "");
+  def_macro_noop("\\format Until:\\\\")?;
 
   DefConstructor!("\\text {}",
     "<ltx:text _noautoclose='1'>#1</ltx:text>",
@@ -435,19 +446,19 @@ LoadDefinitions!({
   // Ignore-class (Perl L346-364)
   DefRegister!("\\buffer" => Dimension::new(0));
   DefMacro!("\\ChangeBuffer Dimension", "\\buffer#2\\relax");
-  DefMacro!("\\ResetBuffer",            "");
+  def_macro_noop("\\ResetBuffer")?;
   DefMacro!("\\shave{}",                "#1");
   DefMacro!("\\botshave{}",             "#1");
   DefMacro!("\\topshave{}",             "#1");
-  DefMacro!("\\minCDarrowwidth Dimension",  "");
+  def_macro_noop("\\minCDarrowwidth Dimension")?;
   DefMacro!("\\pretend Until:\\haswidth {}", "#1");
-  DefMacro!("\\snug", "");
+  def_macro_noop("\\snug")?;
   DefConstructor!("\\topsmash{}", "#1",   enter_horizontal => true);
   DefConstructor!("\\botsmash{}", "#1",   enter_horizontal => true);
   DefConstructor!("\\spreadmatrixlines Dimension", "");
-  DefMacro!("\\MultlineGap Dimension", "");
-  DefMacro!("\\multlinegap Dimension", "");
-  DefMacro!("\\nomultlinegap",         "");
+  def_macro_noop("\\MultlineGap Dimension")?;
+  def_macro_noop("\\multlinegap Dimension")?;
+  def_macro_noop("\\nomultlinegap")?;
 
   // \innerhdotsfor / \spacehdots / \spaceinnerhdots — emit n copies
   // of \hdots (Perl L366-371). Uses sub-callback closures.
@@ -549,7 +560,7 @@ LoadDefinitions!({
     r"\newtoks\hashtoks@",
   ))?;
 
-  DefMacro!("\\printoptions",    "");
-  DefMacro!("\\showallocations", "");
-  DefMacro!("\\syntax",          "");
+  def_macro_noop("\\printoptions")?;
+  def_macro_noop("\\showallocations")?;
+  def_macro_noop("\\syntax")?;
 });

@@ -1990,8 +1990,8 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
 pub fn before_digest_bibliography() -> Result<()> {
   AssignValue!("inPreamble" => false);
   Digest!("\\@lx@inbibliographytrue")?;
-  DefMacro!("\\bibliographystyle{}", "");
-  DefMacro!("\\bibliography {}", "");
+  def_macro_noop("\\bibliographystyle{}")?;
+  def_macro_noop("\\bibliography {}")?;
   // avoid \let-based redefinitions of the ending.
   Let!("\\endthebibliography", "\\saved@endthebibliography");
   ResetCounter!("@bibitem");
@@ -2421,6 +2421,17 @@ fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
   Some(ch.to_string())
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+/// Routes inline macro expansion (each ~960 B of .text) through one
+/// runtime call. Engine bootstrap pays parse_prototype once per entry.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
 
@@ -2558,8 +2569,8 @@ LoadDefinitions!({
   // Basic \documentclass & \documentstyle
 
   DefConditional!("\\if@compatibility", { lookup_bool("2.09_COMPATIBILITY") });
-  DefMacro!("\\@compatibilitytrue", "");
-  DefMacro!("\\@compatibilityfalse", "");
+  def_macro_noop("\\@compatibilitytrue")?;
+  def_macro_noop("\\@compatibilityfalse")?;
 
   Let!("\\@currentlabel", "\\@empty");
   DefMacro!("\\@currdir", "./");
@@ -2714,7 +2725,7 @@ LoadDefinitions!({
 
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
-  DefMacro!("\\@currenvir", "");
+  def_macro_noop("\\@currenvir")?;
   // Note: LaTeX kernel defines \def\f#1{\def\@currenvir{#1}} but this is just
   // a kernel internal that gets overridden by user \newcommand{\f}{...}.
   // We do NOT define \f here — use \lx@setcurrenvir instead (matching Perl).
@@ -2926,7 +2937,7 @@ LoadDefinitions!({
   //       so it may be best left disabled.
   // PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));
 
-  DefMacro!("\\@nolnerr", "");
+  def_macro_noop("\\@nolnerr")?;
   DefMacro!(
     "\\@centercr",
     r"\ifhmode\unskip\else\@nolnerr\fi\par\@ifstar{\nobreak\@xcentercr}\@xcentercr"
@@ -3293,9 +3304,9 @@ LoadDefinitions!({
   DefMacro!("\\newgeometry{}", None);
 
   // ?
-  DefMacro!("\\@noligs", "");
+  def_macro_noop("\\@noligs")?;
   DefConditional!("\\if@endpe");
-  DefMacro!("\\@doendpe", "");
+  def_macro_noop("\\@doendpe")?;
   DefMacro!("\\@bsphack", "\\relax"); // what else?
   DefMacro!("\\@esphack", "\\relax");
   DefMacro!("\\@Esphack", "\\relax");
@@ -3466,7 +3477,7 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\@startsection@hook", "");
+  def_macro_noop("\\@startsection@hook")?;
 
   NewCounter!("secnumdepth");
   SetCounter!("secnumdepth", Number::new(3));
@@ -4714,15 +4725,15 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\sectionmark{}", "");
-  DefMacro!("\\subsectionmark{}", "");
-  DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}", "");
-  DefMacro!("\\subparagraphmark{}", "");
-  DefMacro!("\\@oddfoot", "");
-  DefMacro!("\\@oddhed", "");
-  DefMacro!("\\@evenfoot", "");
-  DefMacro!("\\@evenfoot", "");
+  def_macro_noop("\\sectionmark{}")?;
+  def_macro_noop("\\subsectionmark{}")?;
+  def_macro_noop("\\subsubsectionmark{}")?;
+  def_macro_noop("\\paragraphmark{}")?;
+  def_macro_noop("\\subparagraphmark{}")?;
+  def_macro_noop("\\@oddfoot")?;
+  def_macro_noop("\\@oddhed")?;
+  def_macro_noop("\\@evenfoot")?;
+  def_macro_noop("\\@evenfoot")?;
 
 
   // ======================================================================
@@ -4881,7 +4892,7 @@ LoadDefinitions!({
   // protection against lower-level code...
   DefConditional!("\\if@noitemarg");
   DefMacro!("\\@item", "\\item"); // Hopefully no circles...
-  DefMacro!("\\@itemlabel", ""); // Maybe needs to be same as \item will be using?
+  def_macro_noop("\\@itemlabel")?; // Maybe needs to be same as \item will be using?
 
   // These counters are ONLY used for id's of ALL the various itemize, enumerate, etc elements
   // Only create the 1st level (so that binding style can start numbering 'within' appropriately)
@@ -4970,12 +4981,12 @@ LoadDefinitions!({
   NewCounter!("@itemv",   "", idwithin => "@itemiv",   idprefix => "i");
   NewCounter!("@itemvi",  "", idwithin => "@itemv",    idprefix => "i");
   // These are empty to make the "refnum" go away.
-  DefMacro!("\\the@itemi", "");
-  DefMacro!("\\the@itemii", "");
-  DefMacro!("\\the@itemiii", "");
-  DefMacro!("\\the@itemiv", "");
-  DefMacro!("\\the@itemv", "");
-  DefMacro!("\\the@itemvi", "");
+  def_macro_noop("\\the@itemi")?;
+  def_macro_noop("\\the@itemii")?;
+  def_macro_noop("\\the@itemiii")?;
+  def_macro_noop("\\the@itemiv")?;
+  def_macro_noop("\\the@itemv")?;
+  def_macro_noop("\\the@itemvi")?;
 
   // Formatted item tags.
   // Really should be in the class file, but already was here.
@@ -5006,7 +5017,7 @@ LoadDefinitions!({
   });
   DefMacro!("\\itemtyperefname", "item");
   DefMacro!("\\itemcontext", "\\space in \\@listcontext");
-  DefMacro!("\\itemcontext", "");
+  def_macro_noop("\\itemcontext")?;
   // Probably would help to give a bit more context for the ii & higher?
   DefMacro!(
     "\\typerefnum@@itemi",
@@ -5083,12 +5094,12 @@ LoadDefinitions!({
   NewCounter!("@descv",   "", idwithin => "@desciv",   idprefix => "i");
   NewCounter!("@descvi",  "", idwithin => "@descv",    idprefix => "i");
   // No refnum"s here, either
-  DefMacro!("\\the@desci", "");
-  DefMacro!("\\the@descii", "");
-  DefMacro!("\\the@desciii", "");
-  DefMacro!("\\the@desciv", "");
-  DefMacro!("\\the@descv", "");
-  DefMacro!("\\the@descvi", "");
+  def_macro_noop("\\the@desci")?;
+  def_macro_noop("\\the@descii")?;
+  def_macro_noop("\\the@desciii")?;
+  def_macro_noop("\\the@desciv")?;
+  def_macro_noop("\\the@descv")?;
+  def_macro_noop("\\the@descvi")?;
   // These hookup latexml"s numbering to normal latex"s
   // Umm.... but they"re not normally used, since \item usually gets an argument!
   DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1");
@@ -5122,7 +5133,7 @@ LoadDefinitions!({
   // a counter.
 
   DefConditional!("\\if@nmbrlist");
-  DefMacro!("\\@listctr", "");
+  def_macro_noop("\\@listctr")?;
   DefPrimitive!("\\usecounter{}", sub[(counter)] {
     let counter = Expand!(counter).to_string();
     let counter_opt = if counter.is_empty() { None } else { Some(counter.as_str()) };
@@ -5714,8 +5725,8 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
   // Simplified: \ensuremathfollows checks if next content is already math,
   // if not wraps with \( ... \). Used by equation labels / alt text.
-  DefMacro!("\\ensuremathfollows", "");  // stub — automath needs gullet lookahead
-  DefMacro!("\\ensuremathpreceeds", ""); // stub — pairs with ensuremathfollows
+  def_macro_noop("\\ensuremathfollows")?;  // stub — automath needs gullet lookahead
+  def_macro_noop("\\ensuremathpreceeds")?; // stub — pairs with ensuremathfollows
 
   // Perl: latex_constructs.pool.ltxml L2166
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
@@ -5817,7 +5828,7 @@ LoadDefinitions!({
     font => {family => "math", shape => "italic", series => "medium"});
 
   DefMacro!("\\fontsubfuzz", ".4pt");
-  DefMacro!("\\oldstylenums", "");
+  def_macro_noop("\\oldstylenums")?;
 
   DefPrimitive!("\\operator@font", None,
     font => {family => "serif", series => "medium", shape => "upright"});
@@ -6533,7 +6544,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@makeoutdent", "\\@ADDCLASS{ltx_outdent}");
 
   DefMacro!("\\@thmcountersep", ".");
-  DefMacro!("\\thm@doendmark",  "");
+  def_macro_noop("\\thm@doendmark")?;
 
   init_savable_theorem_parameters(vec![
     "\\thm@bodyfont", "\\thm@headpunct",
@@ -7004,8 +7015,8 @@ LoadDefinitions!({
   Let!("\\outer@nobreak", "\\@empty");
   DefMacro!("\\@dbflt{}",           "#1");
   DefMacro!("\\@xdblfloat{}[]",     "\\@xfloat{#1}[#2]");
-  DefMacro!("\\@floatplacement",    "");
-  DefMacro!("\\@dblfloatplacement", "");
+  def_macro_noop("\\@floatplacement")?;
+  def_macro_noop("\\@dblfloatplacement")?;
 
 
 
@@ -7138,9 +7149,9 @@ LoadDefinitions!({
   });
 
   // Default definitions for \pushtabs/\poptabs/\kill (outside tabbing)
-  DefMacro!("\\pushtabs", "");
-  DefMacro!("\\poptabs", "");
-  DefMacro!("\\kill", "");
+  def_macro_noop("\\pushtabs")?;
+  def_macro_noop("\\poptabs")?;
+  def_macro_noop("\\kill")?;
 
   // The binding primitive that sets up the alignment
   DefPrimitive!("\\@tabbing@bindings", sub [_args] {
@@ -7476,7 +7487,7 @@ LoadDefinitions!({
   // section 4 (per-bibliography runtime value is reassigned inside the
   // \bibliography constructor body at L2085).
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
-  DefMacro!("\\the@lx@bibliography@ID", "");
+  def_macro_noop("\\the@lx@bibliography@ID")?;
 
   DefMacro!(
     "\\bibliography Semiverbatim",
@@ -8582,10 +8593,10 @@ LoadDefinitions!({
       Let!("\\\\", "\\lx@newline");
     }
   );
-  DefMacro!("\\@parboxrestore", "");
+  def_macro_noop("\\@parboxrestore")?;
 
   DefConditional!("\\if@minipage");
-  DefMacro!("\\@setminipage", "");
+  def_macro_noop("\\@setminipage")?;
   // Perl: latex_constructs.pool.ltxml lines 4822-4846
   DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
     sub[document, args, props] {
@@ -9955,8 +9966,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
-  DefMacro!("\\fileversion", "");
-  DefMacro!("\\filedate", "");
+  def_macro_noop("\\fileversion")?;
+  def_macro_noop("\\filedate")?;
   DefMacro!("\\chaptername", "Chapter");
   DefMacro!("\\partname", "Part");
   // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
@@ -9985,8 +9996,8 @@ LoadDefinitions!({
   Let!("\\check@icl", "\\@empty");
   Let!("\\check@icr", "\\@empty");
   Let!("\\curr@math@size", "\\@empty");
-  DefMacro!("\\text@command{}", "");
-  DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
+  def_macro_noop("\\text@command{}")?;
+  def_macro_noop("\\check@nocorr@ Until:\\nocorr Until:\\@nil")?;
   TeX!("\\newif\\ifmaybe@ic");
   DefMacro!("\\maybe@ic", None, None);
   DefMacro!("\\maybe@ic@", None, None);
@@ -10123,7 +10134,7 @@ LoadDefinitions!({
   Let!("\\MessageBreak", "\\relax");
 
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
-  DefMacro!("\\@setsize{}{}{}{}", "");
+  def_macro_noop("\\@setsize{}{}{}{}")?;
 
   // Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
   // promised would live here. Without these, `\on@line` (used by
@@ -10135,7 +10146,7 @@ LoadDefinitions!({
   DefMacro!("\\on@line", r" on input line \the\inputlineno");
   Let!("\\@warning",  "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
-  DefMacro!("\\G@refundefinedtrue", "");
+  def_macro_noop("\\G@refundefinedtrue")?;
   DefMacro!("\\@nomath{}",
     r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
   DefMacro!("\\@font@warning{}",
