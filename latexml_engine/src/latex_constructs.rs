@@ -5884,7 +5884,7 @@ LoadDefinitions!({
   // Guard: only Let `\a` if it's not already user-defined. The
   // dump E record was rejected, so `\a` would be undefined here
   // unless the user defined it.
-  if state::lookup_meaning(&T_CS!("\\a")).is_none() {
+  if !state::has_meaning(&T_CS!("\\a")) {
     Let!("\\a", "\\@tabacckludge");
   }
 
@@ -6374,7 +6374,7 @@ LoadDefinitions!({
     // the .dfu — only inputenc.sty does. Witness: arXiv:2509.22585
     // (revtex4-2 + `\UseRawInputEncoding` + `\usepackage[T1]{fontenc}`).
     use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
-    let duc_defined = state::lookup_meaning(&T_CS!("\\DeclareUnicodeCharacter")).is_some();
+    let duc_defined = state::has_meaning(&T_CS!("\\DeclareUnicodeCharacter"));
     let enc_str = e.to_string();
     if duc_defined && !enc_str.is_empty() {
       let dfu_name = format!("{}enc", enc_str.to_lowercase());

@@ -467,14 +467,14 @@ LoadDefinitions!({
   //======================================================================
   // 3.12 Expandable Commands — Perl L330-357
   DefConditional!("\\ifdefined Token", sub[(t)] {
-    lookup_meaning(&t).is_some()
+    has_meaning(&t)
   });
 
   // \ifcsname stuff \endcsname.
   // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors
   // for non-expandable CS tokens encountered during expansion (TeX §506-507).
   DefConditional!("\\ifcsname CSNameQuiet", sub[(t)] {
-    lookup_meaning(&t).is_some()
+    has_meaning(&t)
   });
 
   // \ifincsname — eTeX (TeX §506-507): true when expansion is happening

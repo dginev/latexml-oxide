@@ -439,7 +439,7 @@ impl KeyVals {
     // Read existing tokens from rmmacro (if defined and has meaning)
     let mut rmtokens: Vec<Token> = Vec::new();
     if let Some(rm) = rmmacro {
-      if state::lookup_meaning(&rm).is_some() {
+      if state::has_meaning(&rm) {
         if let Ok(expanded) = gullet::do_expand(Tokens!(rm)) {
           rmtokens = expanded.unlist();
         }
