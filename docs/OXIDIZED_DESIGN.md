@@ -1067,11 +1067,12 @@ mutual-exclusivity".
 After mutual-exclusivity lands, `SKIP_VALUE_CONTAINS` should
 become empty/removable.
 
-### 26. `mdframed` Uses `logical-block`, Not `inline-block`
+### 26. `mdframed` Uses `inline-logical-block`, Not `inline-block`
 
 **Decision:** `\begin{mdframed}…\end{mdframed}` wraps body in
-`<ltx:logical-block>` (Para.model — accepts theorem/proof/para),
-not `<ltx:inline-block>` (Block.model only — rejects theorem).
+`<ltx:inline-logical-block>` (Misc.class container that accepts
+Para.model body — theorem / proof / para), not `<ltx:inline-block>`
+(Misc.class but accepts Block.model only — rejects theorem).
 
 **Perl behavior:** `ar5iv-bindings/mdframed.sty.ltxml` uses
 `<ltx:inline-block framed="rectangle" …>`. A paper that wraps a
@@ -1080,18 +1081,22 @@ key results) hits a schema-rejection cascade:
 `"ltx:theorem" isn't allowed in <ltx:inline-block>`.
 
 **Rust behavior:** `latexml_contrib/src/mdframed_sty.rs` emits
-`<ltx:logical-block framed='rectangle' …>`. Attribute surface is
-identical (both elements expose Backgroundable.attributes — `framed`,
-`framecolor`, `backgroundcolor`). HTML rendering is also block-level
-in both cases (logical-block renders as `<div>` per
-`LaTeXML-para-xhtml.xsl`).
+`<ltx:inline-logical-block framed='rectangle' …>`. Choosing
+`inline-logical-block` over the also-valid `logical-block` is
+deliberate:
 
-**Rationale:** mdframed's visual intent is a block-level framed
-container; the body routinely holds theorems, multi-paragraph
-proofs, and displayed equations. `inline-block` is the wrong
-semantic carrier for that content. Switching to `logical-block`
-fixes the schema error without any user-visible HTML difference.
+* `inline-logical-block` ∈ Misc.class (same membership as Perl's
+  `inline-block`) — accepted in every parent context where Perl's
+  choice fits, including inline contexts.
+* `logical-block` ∈ Para.class — REJECTED in inline contexts; would
+  break papers using `\fbox{\begin{mdframed}…}` or similar inline
+  wrappers.
+* Both candidates expose the same `Backgroundable.attributes`
+  surface (`framed`, `framecolor`, `backgroundcolor`).
+* `LaTeXML.css` sets `.ltx_inline-logical-block { display:
+  inline-block }` — identical CSS to `.ltx_inline-block`, so the
+  visual output is unchanged.
 
 **Witness:** arXiv:2506.03074v1 (ICML 2025 — multiple
 `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
-blocks). 3 errors → 0.
+blocks). 3 errors → 0. Tests 1328/0/0.

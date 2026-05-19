@@ -20,21 +20,31 @@ LoadDefinitions!({
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Wrap body in a `logical-block` (block-level Para.model container).
+  // Wrap body in `inline-logical-block` (Misc.class container that
+  // accepts Para.model body).
+  //
   // Rust-only surpass-Perl divergence: Perl ar5iv-bindings/mdframed.sty.ltxml
   // L31-34 uses `inline-block` (Block.model only), which the schema rejects
   // when an `mdframed` body contains a `\begin{theorem}` (theorem lives in
-  // Para.class, not Block.class). `logical-block` is the semantic
-  // equivalent that ACCEPTS Para.model — same Backgroundable.attributes
-  // (`framed`, `framecolor`, `backgroundcolor`), same `<div>` HTML
-  // rendering. The template emits `framecolor=` only when the
-  // #framecolor property is set (via the `?#framecolor(...)` guard), so
-  // an unset color correctly omits the attribute rather than emitting
-  // `framecolor=''`. Driver: arXiv:2506.03074v1 (ICML 2025 paper with
+  // Para.class, not Block.class). `inline-logical-block` is the strictly
+  // safer swap:
+  //   * Same `Misc.class` membership as `inline-block` — accepted in every
+  //     parent context where Perl's choice fits (inline AND block). The
+  //     alternative `logical-block` is in `Para.class` and would BREAK
+  //     inline-context uses of mdframed (`\fbox{\begin{mdframed}…}` etc.).
+  //   * Same Backgroundable.attributes surface (`framed`, `framecolor`,
+  //     `backgroundcolor`).
+  //   * Same `display: inline-block` CSS in LaTeXML.css (no visual change).
+  //   * `Para.model` body — accepts theorem/proof/para inside.
+  //
+  // The template emits `framecolor=` only when the #framecolor property is
+  // set (via the `?#framecolor(...)` guard), so an unset color correctly
+  // omits the attribute rather than emitting `framecolor=''`. Driver:
+  // arXiv:2506.03074v1 (ICML 2025 paper with
   // `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`).
   DefEnvironment!(
     "{mdframed}[]",
-    "<ltx:logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:logical-block>",
+    "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
     properties => sub[_args] {
       let mut props = arena::SymHashMap::default();
       if let Some(font) = latexml_core::state::lookup_font() {
