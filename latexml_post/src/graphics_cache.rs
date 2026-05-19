@@ -133,22 +133,31 @@ fn disabled() -> bool {
   })
 }
 
-/// Cache root, computed once.
-fn cache_root() -> Option<&'static Path> {
-  static CELL: OnceLock<Option<PathBuf>> = OnceLock::new();
-  CELL
-    .get_or_init(|| {
-      if let Ok(p) = std::env::var("LATEXML_GRAPHICS_CACHE_DIR") {
-        if !p.is_empty() {
-          return Some(PathBuf::from(p));
-        }
-      }
-      let base = std::env::var_os("XDG_CACHE_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))?;
-      Some(base.join("latexml-oxide").join("graphics"))
-    })
-    .as_deref()
+/// Cache root, recomputed on each call.
+///
+/// Originally OnceLock-cached, but that bakes in whatever value the
+/// env-var has at first call and locks out any later setter. In tests
+/// (where one test binary contains both `graphics::*` and
+/// `graphics_cache::*` tests), an earlier `graphics::*` test that
+/// invokes `Graphics::process` triggers `cache_root()` with no
+/// `LATEXML_GRAPHICS_CACHE_DIR` set — pinning the cache to
+/// `~/.cache/latexml-oxide/graphics`. Subsequent `graphics_cache::*`
+/// tests then set the env var via `shared_cache_dir()` but the
+/// OnceLock ignores it, causing cache files to land outside the test
+/// dir and the assertions to fail. Re-reading the env var on each
+/// call costs ~one syscall in production (LATEXML_GRAPHICS_CACHE_DIR
+/// never changes there) — negligible compared to the disk I/O the
+/// cache layer drives.
+fn cache_root() -> Option<PathBuf> {
+  if let Ok(p) = std::env::var("LATEXML_GRAPHICS_CACHE_DIR") {
+    if !p.is_empty() {
+      return Some(PathBuf::from(p));
+    }
+  }
+  let base = std::env::var_os("XDG_CACHE_HOME")
+    .map(PathBuf::from)
+    .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))?;
+  Some(base.join("latexml-oxide").join("graphics"))
 }
 
 /// Cache size cap in bytes, read once from env.
@@ -317,7 +326,7 @@ pub fn lookup(source: &str, dest: &str, key: RenderKey) -> Option<CacheHit> {
   }
   let root = cache_root()?;
   let hash = hash_key(Path::new(source), key)?;
-  let cached = cache_path(root, &hash, key.ext);
+  let cached = cache_path(&root, &hash, key.ext);
   if !cached.exists() {
     MISSES.fetch_add(1, Ordering::Relaxed);
     return None;
@@ -343,7 +352,7 @@ pub fn store(source: &str, dest: &str, key: RenderKey, dims: Option<CachedDims>)
   }
   let Some(root) = cache_root() else { return };
   let Some(hash) = hash_key(Path::new(source), key) else { return };
-  let cached = cache_path(root, &hash, key.ext);
+  let cached = cache_path(&root, &hash, key.ext);
   // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
   // Concurrent writers each get a private tmp and race the rename —
   // last rename wins, both sources are byte-equivalent.
@@ -374,7 +383,7 @@ pub fn store(source: &str, dest: &str, key: RenderKey, dims: Option<CachedDims>)
     write_dims_sidecar(&dims_sidecar(&cached), d);
   }
   // Best-effort LRU prune after insert (process-locked).
-  prune_if_over_cap(root);
+  prune_if_over_cap(&root);
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {
@@ -540,7 +549,7 @@ where
     let m = measure();
     if let Some(d) = m {
       if let (Some(root), Some(hash)) = (cache_root(), hash_key(Path::new(source), key)) {
-        let cached = cache_path(root, &hash, key.ext);
+        let cached = cache_path(&root, &hash, key.ext);
         if cached.exists() {
           write_dims_sidecar(&dims_sidecar(&cached), d);
         }
@@ -866,7 +875,7 @@ mod tests {
     // leave behind to test that orphan-sidecar tolerance also works.
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(root, &hash, key.ext);
+    let cached = cache_path(&root, &hash, key.ext);
     assert!(cached.exists(), "step-1 should have written the cache file");
     fs::remove_file(&cached).unwrap();
     assert!(!cached.exists(), "cache file should now be gone");
@@ -922,7 +931,7 @@ mod tests {
     };
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(root, &hash, key.ext);
+    let cached = cache_path(&root, &hash, key.ext);
     // Manually plant a stale .dims sidecar without the main file.
     let sidecar = dims_sidecar(&cached);
     if let Some(parent) = sidecar.parent() {
@@ -991,7 +1000,7 @@ mod tests {
     // Verify exactly one cache file for this hash, no leftover tmp.
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
-    let cached = cache_path(root, &hash, key.ext);
+    let cached = cache_path(&root, &hash, key.ext);
     assert!(cached.exists(), "cache entry must exist after concurrent writes");
     let shard_dir = cached.parent().unwrap();
     let tmp_count = fs::read_dir(shard_dir)
