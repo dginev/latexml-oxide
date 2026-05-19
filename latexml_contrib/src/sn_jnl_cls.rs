@@ -32,11 +32,27 @@ LoadDefinitions!({
 
   // Author-block — preserve author-supplied affiliation / equalcont /
   // presentaddress content as ltx:note frontmatter.
-  DefMacro!("\\author*[]{}", "\\author{#2}");
-  DefMacro!("\\affil[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
-  DefMacro!("\\affil*[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  //
+  // sn-jnl.cls defines `\author` to dispatch on `\@ifstar` to either
+  // `\@@corrauthor` (corresponding author) or `\@@author` (regular).
+  // We collapse both to the core `\author{#name}` semantics — we don't
+  // distinguish corresponding from regular in the output.
+  //
+  // CAVEAT (root-cause for 2306.11901): our DefMacro prototype parser
+  // treats the `*` immediately after `\author` as a Token parameter
+  // (literal star), NOT as a CS suffix. So a naive
+  //   `DefMacro!("\\author*[]{}", "\\author{#2}")`
+  // overrides `\author` to *require* a literal star and then the body
+  // `\author{#2}` calls itself with the empty optional `#2`, recursing
+  // forever on `\author{X}` (which has no star and no [opt]). Use
+  // `OptionalMatch:*` so the star is optional, save the core `\author`
+  // first, and forward to it with the full `[opt]{name}` shape so the
+  // body never re-enters this stub.
+  state::let_i(&T_CS!("\\lx@sn@core@author"), &T_CS!("\\author"), None);
+  DefMacro!("\\author OptionalMatch:* []{}",
+    "\\lx@sn@core@author[#2]{#3}");
+  DefMacro!("\\affil OptionalMatch:* []{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#3}");
   DefMacro!("\\equalcont{}",
     "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}");
   DefMacro!("\\presentaddress{}",
