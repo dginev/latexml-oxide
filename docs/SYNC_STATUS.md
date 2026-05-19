@@ -372,14 +372,26 @@ doc on 2026-05-18 (kept the corpus state, dropped the play-by-play).
 ## mhchem retirement (Round-26 candidate)
 
 `latexml_contrib/src/mhchem_sty.rs` intercepts TL `mhchem.sty`
-(~640 lines). The raw chain is `chemgreek` → `xparse` → expl3 (group
-machinery, `\__file_tmp:w`, l3regex, l3tl-analysis). Driver:
-arXiv:1806.06448.
+(~110 lines as of 2026-05-19). The raw chain is `chemgreek` →
+`xparse` → expl3 (group machinery, `\__file_tmp:w`, l3regex,
+l3tl-analysis). Driver: arXiv:1806.06448.
 
-Gap probe (2026-05-12): stub replaced with
-`InputDefinitions("mhchem", noltxml=>1)` on a `\ce{H2O}` paper —
-**92 errors initially**, **77 after commit `f8e20b648e`** (gullet
-csname-reader: substitute any `\let`-to-char CS, not just `\lx@NBSP`).
+**Minimal repro (2026-05-19)**: set `LATEXML_MHCHEM_NOLTXML=1` to
+bypass the stub (env-var probe in `mhchem_sty.rs`). With:
+```
+\documentclass{article}
+\usepackage[version=3]{mhchem}
+\begin{document}
+\ce{H}
+\end{document}
+```
+HYBRID + release binary yields **77 errors** (matches the
+SYNC_STATUS-recorded baseline exactly). Just `\usepackage{mhchem}`
+without any `\ce{...}` invocation produces **0 errors** — the
+77-error cascade is triggered specifically by the first `\ce{...}`
+invocation, which forces the (lazy) chemgreek load chain to
+execute inside the `\ce{...}` argument-handling code path.
+
 Perl LaTeXML on the same input: 0 errors (1 warning).
 
 Residual 77-error categories:

@@ -34,6 +34,17 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // [mhchem retirement probe, 2026-05-19] When env var
+  // LATEXML_MHCHEM_NOLTXML is set, bypass this stub and force a
+  // raw load of the actual TL mhchem.sty (mirroring Perl
+  // LaTeXML's behaviour — Perl has no mhchem.sty.ltxml). Lets us
+  // measure the engine gap (expected:<relationaltoken>,
+  // unexpected:\fi, etc. — see SYNC_STATUS Cluster E / Task #22).
+  // No-op when unset — production users keep the stub.
+  if std::env::var("LATEXML_MHCHEM_NOLTXML").is_ok() {
+    InputDefinitions!("mhchem", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    return Ok(());
+  }
   // Perl LaTeXML auto-scans mhchem.sty for `\RequirePackage` calls
   // and brings in ifthen, calc, twoopt, amsmath, keyval, graphics, pgf,
   // tikz as transitive deps. Since this Rust stub intercepts the load
