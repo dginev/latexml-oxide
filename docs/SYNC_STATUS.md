@@ -872,6 +872,33 @@ home for the macro expansion); LTO collapses to one copy.
 Release binary 47,592,000 → 46,958,336 bytes (−633 KiB). Commit
 `d332b69138`. Tests 1328/0/0.
 
+### DEP-17 series — data-drive math-symbol DefMath! arms ✅ Closed 2026-05-18
+
+Apply the DEP-15 fontawesome template (runtime helper instead of
+compile-time-inlined macro arms) to the math-symbol bindings:
+
+| Sub | Crate | Migrated / Total | Δ binary |
+|---|---|---:|---:|
+| DEP-17  | `txfonts_sty.rs`  | 128 / 202 | −77 KiB |
+| DEP-17b | `mathabx_sty.rs`  | 279 / 358 | −365 KiB |
+| DEP-17c | `amssymb_sty.rs`  | 202 / 203 | −188 KiB |
+| **DEP-17 family total** |  | **609** | **−630 KiB** |
+
+Helpers added per file: `def_math_sym(cs, present, role, meaning)`
+for the dominant `DefMath!("\\cs", "char"[, role => "X"[, meaning => "Y"]])`
+shape, plus `def_math_upright_greek(cs, present)` in txfonts for the
+29 `*up` Greek aliases that pass `font => { shape => "upright",
+forceshape => true }`.
+
+Remaining non-migrated entries (txfonts 74, mathabx 79, amssymb 1)
+all use shapes that need additional helper signatures (multi-line
+integrals with `dynamic_mathstyle` / `scriptpos`; the `None,
+"char"` 3-arg form used by `math_common.rs`; `meaning =>`-only
+form). Future DEP-17d… as needed.
+
+Tests 1328/0/0 throughout. Commits: `d33911ea48`, `da39166a1e`,
+`eeb9047700`, `7be68c3cb2`.
+
 ### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
 
 Top `.text` consumers on `target/release/latexml_oxide`
