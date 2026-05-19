@@ -1157,8 +1157,37 @@ A multi-session effort to swap the math parser's Tree-iteration
    closed all but `physics`, which this fix addresses.
 5. ⏳ **Open principled refinement**: `modified_term` grammar
    category (proposed 2026-05-17; user-articulated). Expected to
-   subsume 5-6 of the remaining 9 by structural change at the
+   subsume 5-6 of the (former) 9 by structural change at the
    grammar level. Deferred to its own session.
+   **Prototype outcome (2026-05-19):** an additive prototype
+   adding `modified_term = tight_term relop expression`
+   (recursive) at the `statement` level, with action shape
+   `Apply(List, Apply(=, x, y), Apply(=, y, z), …)` per user
+   directive, broke 8 tests under HYBRID:
+   `ambiguous_relations_test`, `eqnarray_test`,
+   `functions_test`, `mathtools_test`, `multirelations_test`,
+   `ncases_test`, `ntheorem_test`, `parse_tree_count_limits`.
+   The breakage isn't structurally "wrong" — these are exactly
+   the tests the proposal targeted, and getting different XML
+   for them is expected. But the new path produced unexpected
+   shapes for surrounding contexts: e.g. `1<x<10,2<y<20,3<z<30`
+   was parsed as `formulae@(list@(<(1), <(x,10)), 2<y<20,
+   3<z<30)` — the first item gained a spurious unary `<(1)`
+   sub-Apply that didn't come from modified_term_apply. This
+   suggests grammar interactions (likely with `formula relop`
+   `=> postfix_relop` and the `formula` → `statement` lifting)
+   that an additive change can't isolate.
+   Reverted. The proper implementation needs:
+   * **A concrete witness** to validate the structural change
+     (e.g. an arxiv paper whose multirelation parses are
+     semantically wrong under the current pragma path).
+   * **A demotion plan** for the existing `formula relop
+     expression` chain rules so `modified_term` is the sole
+     path — additive co-existence multiplies ambiguity.
+   * **Action shape clarity** for edge cases — what happens for
+     `< 0` (prefix), `0 <` (postfix), `< x <` (mid-stream),
+     when modifiers wrap an existing relation, etc.
+   Deferred to a witness-driven session.
 6. ⏳ Delete 5 of the 6 convergence caps in `parser.rs` (only
    `max_time` stays). Delete online `parses.contains(&tree)` dedup.
    **Note (refreshed 2026-05-19):** the code comment at
