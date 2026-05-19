@@ -539,7 +539,7 @@ assertion (not just code == 0; the bug had code == 0).
 
 ## Acceptance gates
 
-| Gate | Current (2026-05-18) | Target |
+| Gate | Current (2026-05-19) | Target |
 |---|---|---|
 | `cargo test --tests` | **1328/0/0** | unchanged |
 | `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser` from in-flight ASF migration; 2 self-introduced warnings outside math_parser cleared 2026-05-19) | 0 warnings (post-ASF migration) |
@@ -547,7 +547,7 @@ assertion (not just code == 0; the bug had code == 0).
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | Round-25 cumulative regressions | 31 fixed, ~14 deferred | drive deferred to zero |
 | 1910.01256 mini-benchmark vs pdflatex×2 | release (--dest=.html, full post-processing — the apples-to-apples comparison vs pdflatex): **0.71s** post-DEP-19 (was 0.73s); pdflatex idle ~1.11s. .xml-only is **0.60s** but not a fair comparison since pdflatex always runs graphics + bibliography. | beat 2× pdflatex (met: 0.71s ≪ 2.22s) |
-| Distribution build | `cargo build --no-default-features --profile maxperf` → **44.98 MB** (post-DEP-19, 2026-05-18). Release profile: **44.95 MB**. | maxperf binary ~55 MB (overshot — gate met) |
+| Distribution build | Release profile (post-DEP-22, 2026-05-19): **44.38 MB**. `cargo build --no-default-features --profile maxperf` previously measured **44.98 MB** (pre-DEP-18h + pre-DEP-22, 2026-05-18); current maxperf is expected slightly lower after the helper consolidation. | maxperf binary ~55 MB (overshot — gate met) |
 
 Distribution follow-up — **LANDED 2026-05-15** (branch
 `distribution-include-bytes-bundling`, merged into the testing
