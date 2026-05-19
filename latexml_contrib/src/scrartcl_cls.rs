@@ -6,6 +6,15 @@
 //! trip undefined-macro errors. Same pattern as scrbook_cls.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -14,13 +23,13 @@ LoadDefinitions!({
   );
   LoadClass!("OmniBus");
   // KOMA configuration knobs — layout/typography only, no body content.
-  DefMacro!("\\setkomafont{}{}",   "");
-  DefMacro!("\\addtokomafont{}{}", "");
-  DefMacro!("\\setcapindent{}",    "");
-  DefMacro!("\\deffootnote[]{}{}{}", "");
-  DefMacro!("\\deffootnotemark{}", "");
+  def_macro_noop("\\setkomafont{}{}")?;
+  def_macro_noop("\\addtokomafont{}{}")?;
+  def_macro_noop("\\setcapindent{}")?;
+  def_macro_noop("\\deffootnote[]{}{}{}")?;
+  def_macro_noop("\\deffootnotemark{}")?;
   // \KOMAoptions{key=val,...} — runtime option setter, no body content.
-  DefMacro!("\\KOMAoptions{}", "");
+  def_macro_noop("\\KOMAoptions{}")?;
   // \subject{}, \dictum{}, \uppertitleback{}, \lowertitleback{},
   // \publishers{} — KOMA frontmatter pieces that DO carry author
   // content. Preserve as ltx:note frontmatter so the text reaches the

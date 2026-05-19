@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: mn.cls.ltxml
@@ -31,13 +40,13 @@ LoadDefinitions!({
   RequirePackage!("mn2e_support");
 
   // And some stuff not in the later version...
-  DefMacro!("\\NewSymbolFont{}{}", "");
-  DefMacro!("\\NewMathSymbol{}{}{}{}", "");
-  DefMacro!("\\NewMathDelimiter{}{}{}{}{}{}", "");
-  DefMacro!("\\NewMathAlphabet{}{}{}", "");
-  DefMacro!("\\NewTextAlphabet{}{}{}", "");
-  DefMacro!("\\UseAMStwoboldmath", "");
+  def_macro_noop("\\NewSymbolFont{}{}")?;
+  def_macro_noop("\\NewMathSymbol{}{}{}{}")?;
+  def_macro_noop("\\NewMathDelimiter{}{}{}{}{}{}")?;
+  def_macro_noop("\\NewMathAlphabet{}{}{}")?;
+  def_macro_noop("\\NewTextAlphabet{}{}{}")?;
+  def_macro_noop("\\UseAMStwoboldmath")?;
   RawTeX!("\\newif\\ifnfssone\\newif\\ifnfsstwo\\newif\\ifoldfss");
   DefRegister!("\\realparindent" => Dimension!("18pt"));
-  DefMacro!("\\resetsizehook{}{}{}{}", "");
+  def_macro_noop("\\resetsizehook{}{}{}{}")?;
 });

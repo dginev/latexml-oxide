@@ -14,6 +14,15 @@
 //! 2502.02753, 2502.06743 — all `Error:undefined:\sep`.
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -60,8 +69,8 @@ LoadDefinitions!({
 
   // Email-address-of-author. Preserved as a ltx:note.
   DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:note}[role=email]{#2}");
-  DefMacro!("\\eadsep", "");
-  DefMacro!("\\eadauthor", "");
+  def_macro_noop("\\eadsep")?;
+  def_macro_noop("\\eadauthor")?;
 
   // ORCID/URL/email per-author; preserve user-visible value (#2) as
   // ltx:note. #1 is the author tag (used for cross-ref; ignored here).
@@ -73,11 +82,11 @@ LoadDefinitions!({
   // "print*" commands typically emit a list of previously stashed
   // entries. Since our \ead/\orcidauthor/etc. already produce
   // frontmatter entries, these are now redundant — gobble cleanly.
-  DefMacro!("\\printcredits", "");
-  DefMacro!("\\printemails", "");
-  DefMacro!("\\printurls", "");
-  DefMacro!("\\printorcid", "");
-  DefMacro!("\\printtnotes", "");
+  def_macro_noop("\\printcredits")?;
+  def_macro_noop("\\printemails")?;
+  def_macro_noop("\\printurls")?;
+  def_macro_noop("\\printorcid")?;
+  def_macro_noop("\\printtnotes")?;
 
   // Copyright year metadata. Author-supplied year goes to ltx:note.
   DefMacro!("\\copyrightyear{}",

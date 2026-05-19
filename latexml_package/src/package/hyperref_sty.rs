@@ -4,6 +4,15 @@ use latexml_core::document::{can_contain_qsym, get_node_qname, Document};
 use latexml_core::common::error::Result as CoreResult;
 use libxml::tree::NodeType;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
   RequirePackage!("iftex");
@@ -697,11 +706,11 @@ LoadDefinitions!({
   // \pdfstringdef{macroname}{texstring}
   DefMacro!("\\pdfstringdef{Token}{}", "\\def#1{#2}");
   // Hopefully noop is sufficient for PDF-specific uses?
-  DefMacro!("\\pdfstringdefDisableCommands", "");
-  DefMacro!("\\pdfbookmark[]{}{}", "");
-  DefMacro!("\\currentpdfbookmark{}{}", "");
-  DefMacro!("\\subpdfbookmark{}{}", "");
-  DefMacro!("\\belowpdfbookmark{}{}", "");
+  def_macro_noop("\\pdfstringdefDisableCommands")?;
+  def_macro_noop("\\pdfbookmark[]{}{}")?;
+  def_macro_noop("\\currentpdfbookmark{}{}")?;
+  def_macro_noop("\\subpdfbookmark{}{}")?;
+  def_macro_noop("\\belowpdfbookmark{}{}")?;
 
   //======================================================================
   // 4.1 Replacement macros

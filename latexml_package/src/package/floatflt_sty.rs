@@ -46,6 +46,15 @@ fn floatflt_pct_width(whatsit: &Whatsit) -> String {
   s!("{pct}%")
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   state::assign_value("floatfltpos", Stored::from("v"), None);
@@ -81,15 +90,15 @@ LoadDefinitions!({
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");
-  DefMacro!("\\initfloatingfigs", "");
-  DefMacro!("\\dofigtest", "");
-  DefMacro!("\\dotabtest", "");
-  DefMacro!("\\tryfig",    "");
-  DefMacro!("\\trytab",    "");
-  DefMacro!("\\figinsert", "");
-  DefMacro!("\\tabinsert", "");
-  DefMacro!("\\dohang",    "");
-  DefMacro!("\\dohangt",   "");
+  def_macro_noop("\\initfloatingfigs")?;
+  def_macro_noop("\\dofigtest")?;
+  def_macro_noop("\\dotabtest")?;
+  def_macro_noop("\\tryfig")?;
+  def_macro_noop("\\trytab")?;
+  def_macro_noop("\\figinsert")?;
+  def_macro_noop("\\tabinsert")?;
+  def_macro_noop("\\dohang")?;
+  def_macro_noop("\\dohangt")?;
   DefRegister!("\\ffigcount" => Number(0));
   DefRegister!("\\ftabcount" => Number(0));
   DefRegister!("\\fftest" =>    Number(0));

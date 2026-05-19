@@ -1865,6 +1865,15 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
 // Region 10: Main LoadDefinitions block
 //======================================================================
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
@@ -1888,7 +1897,7 @@ LoadDefinitions!({
   // DefToken parameter type — we use a closure to consume both args
   // and emit a `\def`. Witness: lstlang3.sty raw-load (3 papers in
   // Stage-13 v3) → cascade unblocks past these CSes.
-  DefMacro!("\\lst@Key{}{}{}", "");
+  def_macro_noop("\\lst@Key{}{}{}")?;
   DefMacro!("\\lst@NormedDef DefToken {}", sub[(cs, val)] {
     let mut out = vec![T_CS!("\\def"), cs];
     out.push(T_BEGIN!());
@@ -1917,8 +1926,8 @@ LoadDefinitions!({
   // registers a "family" of style keys. We don't materialize this
   // machinery; stub both forms as no-ops so packages extending
   // listings (e.g. matlab-prettifier) don't crash on undefined CS.
-  DefMacro!("\\lst@InstallFamily{}{}{}{}{}", "");
-  DefMacro!("\\lst@InstallFamily@{}{}{}{}{}{}{}{}", "");
+  def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
+  def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
 
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
@@ -2181,15 +2190,15 @@ LoadDefinitions!({
   DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{#1}");
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
-  DefMacro!("\\thename", "");
+  def_macro_noop("\\thename")?;
   DefMacro!("\\lstnumbertyperefname", "line");
-  DefMacro!("\\lst@HRefStepCounter{}", "");
+  def_macro_noop("\\lst@HRefStepCounter{}")?;
   // \lstname — placeholder for the current listing's filename (set inside
   // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
   // around L1708-L1717). Pre-define as empty at top level so users can
   // reference it inside \lstset{title=\lstname,...} or other lazy-expansion
   // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
-  DefMacro!("\\lstname", "");
+  def_macro_noop("\\lstname")?;
 
   // Inline listing constructor
   DefConstructor!("\\@listings@inline {}",
@@ -3101,8 +3110,8 @@ LoadDefinitions!({
   // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
   // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
   DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  DefMacro!("\\lst@AddToHook{}{}", "");
-  DefMacro!("\\lst@AddToHookExe{}{}", "");
+  def_macro_noop("\\lst@AddToHook{}{}")?;
+  def_macro_noop("\\lst@AddToHookExe{}{}")?;
   DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
   DefMacro!("\\@lst", "lst");
 

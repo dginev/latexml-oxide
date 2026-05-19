@@ -1,4 +1,13 @@
 use crate::prelude::*;
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!( {
   LoadPool!("LaTeX");
@@ -69,16 +78,16 @@ LoadDefinitions!( {
   DefPrimitive!("\\showfont", None);
 
   RequirePackage!("color");
-  DefMacro!("\\blackandwhite", "");
-  DefMacro!("\\colors{}", "");
-  DefMacro!("\\colorslides{}", "");
+  def_macro_noop("\\blackandwhite")?;
+  def_macro_noop("\\colors{}")?;
+  def_macro_noop("\\colorslides{}")?;
 
-  DefMacro!("\\setupcounters", "");
+  def_macro_noop("\\setupcounters")?;
 
-  DefMacro!("\\ps@headings", "");
-  DefMacro!("\\ps@note",     "");
-  DefMacro!("\\ps@overlay",  "");
-  DefMacro!("\\ps@slide",    "");
+  def_macro_noop("\\ps@headings")?;
+  def_macro_noop("\\ps@note")?;
+  def_macro_noop("\\ps@overlay")?;
+  def_macro_noop("\\ps@slide")?;
 
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm

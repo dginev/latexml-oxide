@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: multicol.sty.ltxml
@@ -23,12 +32,12 @@ LoadDefinitions!({
     r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
 
-  DefMacro!("\\botmark", "");
-  DefMacro!("\\topmark", "");
+  def_macro_noop("\\botmark")?;
+  def_macro_noop("\\topmark")?;
 
-  DefMacro!("\\flushcolumns", "");
-  DefMacro!("\\raggedcolumns", "");
-  DefMacro!("\\setemergencystretch", "");
+  def_macro_noop("\\flushcolumns")?;
+  def_macro_noop("\\raggedcolumns")?;
+  def_macro_noop("\\setemergencystretch")?;
 
   DefRegister!("\\premulticols"         => Dimension!("50pt"));
   DefRegister!("\\postmulticols"        => Dimension!("20pt"));

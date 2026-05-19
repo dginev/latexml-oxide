@@ -2,14 +2,23 @@
 //! Perl: flushend.sty.ltxml
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Nothing to do, really.
-  DefMacro!("\\flushend",        "");
-  DefMacro!("\\flushcolsend",    "");
-  DefMacro!("\\raggedend",       "");
-  DefMacro!("\\raggedcolsend",   "");
-  DefMacro!("\\atColsEnd{}",     "");
-  DefMacro!("\\atColsBreak{}",   "");
-  DefMacro!("\\showcolsendrule", "");
+  def_macro_noop("\\flushend")?;
+  def_macro_noop("\\flushcolsend")?;
+  def_macro_noop("\\raggedend")?;
+  def_macro_noop("\\raggedcolsend")?;
+  def_macro_noop("\\atColsEnd{}")?;
+  def_macro_noop("\\atColsBreak{}")?;
+  def_macro_noop("\\showcolsendrule")?;
 });

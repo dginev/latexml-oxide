@@ -2,15 +2,24 @@ use crate::prelude::*;
 
 pub static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   AssignValue!("BASE_URL", "");
 
   // Ignorable stuff, since we're not doing linebreaks.
-  DefMacro!("\\UrlBreaks", "");
-  DefMacro!("\\UrlBigBreaks", "");
-  DefMacro!("\\UrlNoBreaks", "");
-  DefMacro!("\\UrlOrds", "");
-  DefMacro!("\\UrlSpecials", "");
+  def_macro_noop("\\UrlBreaks")?;
+  def_macro_noop("\\UrlBigBreaks")?;
+  def_macro_noop("\\UrlNoBreaks")?;
+  def_macro_noop("\\UrlOrds")?;
+  def_macro_noop("\\UrlSpecials")?;
 
   // Font style definitions.
   DefMacro!(
@@ -20,7 +29,7 @@ LoadDefinitions!({
   DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
   DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
   DefMacro!("\\url@sfstyle", "\\def\\UrlFont{\\sffamily}");
-  DefMacro!("\\url@samestyle", "");
+  def_macro_noop("\\url@samestyle")?;
   DefMacro!("\\UrlFont", "\\ttfamily");
 
   // Bracketting.

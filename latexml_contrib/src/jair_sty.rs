@@ -11,13 +11,22 @@
 //! visually even without explicit role markup).
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // \name <text> — author-name marker (no arg in JAIR).
-  DefMacro!("\\name", "");
+  def_macro_noop("\\name")?;
   // \addr <text> — affiliation marker.
-  DefMacro!("\\addr", "");
+  def_macro_noop("\\addr")?;
   // \email <text> — email marker.
-  DefMacro!("\\email", "");
+  def_macro_noop("\\email")?;
   // \And — author separator (JMLR/JAIR convention).
   DefMacro!("\\And", " \\hskip 2em ");
   // \AND — same in caps (some templates).
@@ -28,13 +37,13 @@ LoadDefinitions!({
   DefMacro!("\\jairheading{}{}{}{}{}",
     "\\@add@frontmatter{ltx:note}[role=jair-heading]{Vol. #1 (#2), #3 — sub: #4, pub: #5}");
   // jair.sty L260: \ShortHeadings{title}{authors} — running-page short forms.
-  DefMacro!("\\ShortHeadings{}{}", "");
+  def_macro_noop("\\ShortHeadings{}{}")?;
   // jair.sty L256: \firstpageno{N} — page counter setter; no-op for HTML.
-  DefMacro!("\\firstpageno{}", "");
+  def_macro_noop("\\firstpageno{}")?;
   // {acks} env — JAIR acknowledgements wrapper. Mirror sagej's pattern.
   DefEnvironment!("{acks}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
   // \@BBN — internal bibliography helper used by JAIR's bbl. No-op.
-  DefMacro!("\\@BBN", "");
+  def_macro_noop("\\@BBN")?;
 });

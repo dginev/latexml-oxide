@@ -1,10 +1,19 @@
 use latexml_package::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
-  DefMacro!("\\SetUnicodeOption{}", "");
+  def_macro_noop("\\SetUnicodeOption{}")?;
   DefMacro!("\\unicodevirtual{}", "#1");
-  DefMacro!("\\unicodecombine", "");
+  def_macro_noop("\\unicodecombine")?;
 
   // Perl ucs.sty.ltxml L17-29: hex code → UTF-8 char. Emits a single
   // T_OTHER token carrying the decoded character. Previously stubbed
@@ -51,8 +60,8 @@ LoadDefinitions!({
     Ok(Tokens::new(out))
   });
 
-  DefMacro!("\\DeclareUnicodeOption[]{}", "");
-  DefMacro!("\\LinkUnicodeOptionToPkg{}{}", "");
-  DefMacro!("\\PreloadUnicodePage{}", "");
-  DefMacro!("\\PrerenderUnicode{}", "");
+  def_macro_noop("\\DeclareUnicodeOption[]{}")?;
+  def_macro_noop("\\LinkUnicodeOptionToPkg{}{}")?;
+  def_macro_noop("\\PreloadUnicodePage{}")?;
+  def_macro_noop("\\PrerenderUnicode{}")?;
 });

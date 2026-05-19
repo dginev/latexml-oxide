@@ -1,5 +1,14 @@
 use latexml_package::prelude::*;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -10,14 +19,14 @@ LoadDefinitions!({
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
   RequirePackage!("xcolor");
-  DefMacro!("\\newmdtheoremenv[]{}{}[]", "");
-  DefMacro!("\\newmdenv[]{}", "");
-  DefMacro!("\\renewmdenv[]{}", "");
-  DefMacro!("\\surroundwithmdframed[]{}", "");
-  DefMacro!("\\mdfsubtitle[]{}", "");
-  DefMacro!("\\mdfapptodefinestyle{}{}", "");
-  DefMacro!("\\mdfsetup{}", "");
-  DefMacro!("\\mdfdefinestyle{}{}", "");
+  def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
+  def_macro_noop("\\newmdenv[]{}")?;
+  def_macro_noop("\\renewmdenv[]{}")?;
+  def_macro_noop("\\surroundwithmdframed[]{}")?;
+  def_macro_noop("\\mdfsubtitle[]{}")?;
+  def_macro_noop("\\mdfapptodefinestyle{}{}")?;
+  def_macro_noop("\\mdfsetup{}")?;
+  def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
   // Perl ar5iv-bindings/mdframed.sty.ltxml L31-34: wrap body in an
   // inline-block with framed="rectangle" and framecolor from the current

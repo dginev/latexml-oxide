@@ -4,6 +4,15 @@
 //! The actual overlay is done by LaTeX (we just preserve the fragments).
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L25-27 — initial state: psfrag_scan_all defaults to the
@@ -61,11 +70,11 @@ LoadDefinitions!({
 
   // Rescan macros — Perl L78-85
   DefMacro!("\\tex Semiverbatim", "#1");
-  DefMacro!("\\psfragrescan", "");
-  DefMacro!("\\psfragrescanoff", "");
-  DefMacro!("\\psfragrescanon", "");
-  DefMacro!("\\psfragdebugon", "");
-  DefMacro!("\\psfragdebugoff", "");
+  def_macro_noop("\\psfragrescan")?;
+  def_macro_noop("\\psfragrescanoff")?;
+  def_macro_noop("\\psfragrescanon")?;
+  def_macro_noop("\\psfragdebugon")?;
+  def_macro_noop("\\psfragdebugoff")?;
 
   // Perl psfrag.sty.ltxml L149: DefEnvironment('{psfrags}', '#body').
   // Pure grouping, no content transform. Previously unported.

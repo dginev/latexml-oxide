@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl emulateapj.sty.ltxml L25-39: capture `\fig` before loading aastex
@@ -15,25 +24,25 @@ LoadDefinitions!({
     state::install_definition(def, Some(Scope::Global));
     AssignValue!("\\fig:locked" => 1i64, Some(Scope::Global));
   }
-  DefMacro!("\\LongTables", "");
+  def_macro_noop("\\LongTables")?;
   Let!("\\BeginEnvironment", "\\begin");
   Let!("\\EndEnvironment",   "\\end");
-  DefMacro!("\\BeforeBegin{}{}", "");
-  DefMacro!("\\BeforeEnd{}{}",   "");
-  DefMacro!("\\AfterBegin{}{}",  "");
-  DefMacro!("\\AfterEnd{}{}",    "");
+  def_macro_noop("\\BeforeBegin{}{}")?;
+  def_macro_noop("\\BeforeEnd{}{}")?;
+  def_macro_noop("\\AfterBegin{}{}")?;
+  def_macro_noop("\\AfterEnd{}{}")?;
   DefMacro!("\\ApjSectionMarkInTitle{}",         "{#1.\\ }");
   DefMacro!("\\ApjSectionpenalty",               "0");
   DefMacro!("\\AppendixApjSectionMarkInTitle{}", "{#1.\\ }");
-  DefMacro!("\\NullCom{}", "");
+  def_macro_noop("\\NullCom{}")?;
   DefMacro!("\\apjsecfont",        "\\small");
   DefMacro!("\\lastfootnote",      "\\small");
   DefMacro!("\\lastpagefootnote",  "\\small");
   DefMacro!("\\lastpagefootnotes", "\\small");
-  DefMacro!("\\tableheadfrac{}", "");
-  DefMacro!("\\tabletypesize{}", "");
+  def_macro_noop("\\tableheadfrac{}")?;
+  def_macro_noop("\\tabletypesize{}")?;
   Let!("\\tablefontsize", "\\tabletypesize");
-  DefMacro!("\\subtitle", "");
+  def_macro_noop("\\subtitle")?;
   DefMacro!("\\submitted{}",   "\\@add@frontmatter{ltx:date}[role=submitted]{#1}");
   DefMacro!("\\journalinfo{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\keywordsname", "Subject headings");

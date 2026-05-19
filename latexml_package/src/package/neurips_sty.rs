@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("geometry");
@@ -25,19 +34,19 @@ LoadDefinitions!({
   if state::with_value("neurips_nonatbib", |v| v.is_none()) {
     RequirePackage!("natbib");
   }
-  DefMacro!("\\AND",                                   "");
-  DefMacro!("\\And",                                   "");
-  DefMacro!("\\bottomfraction",                        "");
-  DefMacro!("\\patchAmsMathEnvironmentForLineno",      "");
-  DefMacro!("\\patchBothAmsMathEnvironmentsForLineno", "");
+  def_macro_noop("\\AND")?;
+  def_macro_noop("\\And")?;
+  def_macro_noop("\\bottomfraction")?;
+  def_macro_noop("\\patchAmsMathEnvironmentForLineno")?;
+  def_macro_noop("\\patchBothAmsMathEnvironmentsForLineno")?;
   // Perl L37: DefMacroI('\subsubsubsection', …, locked => 1). The lock
   // prevents well-meaning user-level \renewcommand{\subsubsubsection}{…}
   // from clobbering the @startsection trampoline.
   DefMacro!("\\subsubsubsection",
     "\\@startsection{subsubsubsection}{4}{}{}{}{}",
     locked => true);
-  DefMacro!("\\textfraction", "");
-  DefMacro!("\\topfraction",  "");
+  def_macro_noop("\\textfraction")?;
+  def_macro_noop("\\topfraction")?;
   DefMacro!("\\@neuripsordinal",  "36th");
   DefMacro!("\\@neuripsyear",     "2022");
   DefMacro!("\\@neuripslocation", "New Orleans");

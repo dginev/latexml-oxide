@@ -368,6 +368,15 @@ fn extract_keyvals(args: &[Option<Digested>]) -> Option<KeyVals> {
   })
 }
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Package Options
@@ -550,11 +559,11 @@ LoadDefinitions!({
   });
 
   // Not-yet-handled bits
-  DefMacro!("\\SetLabelAlign{}{}", "");
-  DefMacro!("\\EnumitemId", "");
-  DefMacro!("\\SetEnumitemKey{}{}", "");
-  DefMacro!("\\SetEnumerateShortLabel{}{}", "");
-  DefMacro!("\\SetEnumitemValue{}{}{}", "");
-  DefMacro!("\\SetEnumitemSize{}{}", "");
-  DefMacro!("\\AddEnumerateCounter{}{}{}", "");
+  def_macro_noop("\\SetLabelAlign{}{}")?;
+  def_macro_noop("\\EnumitemId")?;
+  def_macro_noop("\\SetEnumitemKey{}{}")?;
+  def_macro_noop("\\SetEnumerateShortLabel{}{}")?;
+  def_macro_noop("\\SetEnumitemValue{}{}{}")?;
+  def_macro_noop("\\SetEnumitemSize{}{}")?;
+  def_macro_noop("\\AddEnumerateCounter{}{}{}")?;
 });

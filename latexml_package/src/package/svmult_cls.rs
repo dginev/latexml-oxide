@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svmult.cls.ltxml
@@ -102,9 +111,9 @@ LoadDefinitions!({
   DefMacro!("\\subsecsize",  "\\normalsize");
   DefMacro!("\\subsecstyle", "\\bfseries\\boldmath");
 
-  DefMacro!("\\chaptermark{}",    "");
-  DefMacro!("\\sectionmark{}",    "");
-  DefMacro!("\\subsectionmark{}", "");
+  def_macro_noop("\\chaptermark{}")?;
+  def_macro_noop("\\sectionmark{}")?;
+  def_macro_noop("\\subsectionmark{}")?;
   DefMacro!("\\tocauthorstyle",   "\\itshape");
   DefMacro!("\\toctitlestyle",    "\\bfseries");
   DefMacro!("\\tocaftauthskip",   "\\z@");
@@ -126,11 +135,11 @@ LoadDefinitions!({
   DefRegister!("\\tocparatotal"      => Dimension::new(0));
   DefRegister!("\\tocsubparanum"     => Dimension::new(0));
 
-  DefMacro!("\\dominitoc",     "");
-  DefMacro!("\\calctocindent", "");
+  def_macro_noop("\\dominitoc")?;
+  def_macro_noop("\\calctocindent")?;
 
-  DefMacro!("\\clearheadinfo",        "");
-  DefMacro!("\\clearemptydoublepage", "");
+  def_macro_noop("\\clearheadinfo")?;
+  def_macro_noop("\\clearemptydoublepage")?;
   // Springer Multi-author authors use \orcid for ORCID identifier.
   // Witness 2408.17087, 2411.17645 (2 svmult papers).
   DefMacro!("\\orcid{}",

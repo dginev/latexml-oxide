@@ -3,6 +3,15 @@
 use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L26-35: Class options
@@ -68,7 +77,7 @@ LoadDefinitions!({
   DefMacro!("\\secstyle", "\\bfseries");
   DefMacro!("\\militarytime", "\\time");
   Let!("\\textref", "\\ref");
-  DefMacro!("\\tocsecs", "");
+  def_macro_noop("\\tocsecs")?;
   DefMacro!("\\logo", "JHEP");
   // \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
   // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
@@ -166,9 +175,9 @@ LoadDefinitions!({
     });
 
   // Perl L138-140: Stubs.
-  DefMacro!("\\JHEPspecialurl Semiverbatim", "");
-  DefMacro!("\\base Semiverbatim", "");
-  DefMacro!("\\name Semiverbatim", "");
+  def_macro_noop("\\JHEPspecialurl Semiverbatim")?;
+  def_macro_noop("\\base Semiverbatim")?;
+  def_macro_noop("\\name Semiverbatim")?;
 
   // Perl L143: SPIRES URL generator
   DefMacro!("\\@spires{}", "\\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=#1}");
@@ -318,7 +327,7 @@ LoadDefinitions!({
   DefMacro!("\\acceptedname", "Accepted:");
   DefMacro!("\\keywordsname", "Keywords:");
   DefMacro!("\\abstractname", "Abstract:");
-  DefMacro!("\\JHEP@todaysname", "");
+  def_macro_noop("\\JHEP@todaysname")?;
   DefMacro!("\\preprintname", "PREPRINT");
   DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\contentsname", "Contents");

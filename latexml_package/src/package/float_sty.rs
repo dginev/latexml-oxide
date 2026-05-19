@@ -1,16 +1,25 @@
 use crate::prelude::*;
 use latexml_core::document::Document;
 
+
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Choose the current float style (plain, plaintop, boxed, ruled)
   DefMacro!("\\float@style", None, "plain");
   DefMacro!("\\floatstyle{}", "\\def\\float@style{#1}");
   // \restylefloat{style} — ignore
-  DefMacro!("\\restylefloat OptionalMatch:* {}", "");
+  def_macro_noop("\\restylefloat OptionalMatch:* {}")?;
   // \floatplacement{style}{placement} — ignore
-  DefMacro!("\\floatplacement{}{}", "");
+  def_macro_noop("\\floatplacement{}{}")?;
   // \listof{type}{title} — ignore
-  DefMacro!("\\listof{}{}", "");
+  def_macro_noop("\\listof{}{}")?;
   // \floatname{type}{name}
   DefMacro!("\\floatname{}{}", "\\@namedef{lx@name@#1}{#2}");
 
@@ -22,9 +31,9 @@ LoadDefinitions!({
   // emit "undefined". Witness: arXiv:2506.12112 / .15928 / .19294
   // (`\begin{figure}[H] ... \end{figure}` chain). Companion stubs
   // `\float@end`, `\float@dblend` follow the same pattern.
-  DefMacro!("\\float@endH", "");
-  DefMacro!("\\float@end", "");
-  DefMacro!("\\float@dblend", "");
+  def_macro_noop("\\float@endH")?;
+  def_macro_noop("\\float@end")?;
+  def_macro_noop("\\float@dblend")?;
 
   // Perl: DefPrimitive('\newfloat{}{}{}[]', sub { ... })
   // Creates a new float environment with counter, title format, etc.

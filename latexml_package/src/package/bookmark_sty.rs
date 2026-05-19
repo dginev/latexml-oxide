@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // bookmark.sty stub. Perl previously raw-loaded the package, but its
@@ -23,13 +32,13 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // Public macros — all become no-ops.
-  DefMacro!("\\bookmarksetup{}", "");
-  DefMacro!("\\bookmark[]{}", "");
-  DefMacro!("\\bookmarkdefinestyle{}{}", "");
-  DefMacro!("\\bookmarkget{}", "");
-  DefMacro!("\\BookmarkAtEnd{}", "");
-  DefMacro!("\\pdfbookmark[]{}{}", "");
-  DefMacro!("\\subpdfbookmark{}{}", "");
-  DefMacro!("\\belowpdfbookmark{}{}", "");
-  DefMacro!("\\currentpdfbookmark{}{}", "");
+  def_macro_noop("\\bookmarksetup{}")?;
+  def_macro_noop("\\bookmark[]{}")?;
+  def_macro_noop("\\bookmarkdefinestyle{}{}")?;
+  def_macro_noop("\\bookmarkget{}")?;
+  def_macro_noop("\\BookmarkAtEnd{}")?;
+  def_macro_noop("\\pdfbookmark[]{}{}")?;
+  def_macro_noop("\\subpdfbookmark{}{}")?;
+  def_macro_noop("\\belowpdfbookmark{}{}")?;
+  def_macro_noop("\\currentpdfbookmark{}{}")?;
 });

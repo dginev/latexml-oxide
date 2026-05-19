@@ -1,6 +1,15 @@
 use crate::engine::latex_constructs::{after_float, before_float};
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: subfig.sty.ltxml — 118 lines
@@ -34,7 +43,7 @@ LoadDefinitions!({
   // but not constructor-with-template environments). Documented as a
   // known missing-API task rather than masked as a stub: no paper in
   // the 7898-arxiv 2026-04-24 sandbox exercises this path.
-  DefMacro!("\\newsubfloat[]{}", "");
+  def_macro_noop("\\newsubfloat[]{}")?;
 
   // \subfloat — Perl L69-79
   DefMacro!("\\subfloat",
@@ -52,11 +61,11 @@ LoadDefinitions!({
   DefMacro!("\\sf@@subref{}", "\\pageref{sub@#1}");
 
   // Caption setup stubs — Perl L86-90
-  DefMacro!("\\DeclareCaptionListOfFormat{}{}", "");
-  DefMacro!("\\DeclareSubrefFormat{}{}", "");
-  DefMacro!("\\listsubcaptions", "");
-  DefMacro!("\\captionsetup[]{}", "");
-  DefMacro!("\\clearcaptionsetup{}", "");
+  def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;
+  def_macro_noop("\\DeclareSubrefFormat{}{}")?;
+  def_macro_noop("\\listsubcaptions")?;
+  def_macro_noop("\\captionsetup[]{}")?;
+  def_macro_noop("\\clearcaptionsetup{}")?;
   DefConditional!("\\ifmaincaptiontop");
   DefConditional!("\\iflx@donecaption");
 

@@ -10,6 +10,15 @@
 //! Definitions are ordered to match the Perl file's section structure.
 use crate::prelude::*;
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
@@ -366,11 +375,11 @@ LoadDefinitions!({
   // NewCounter('secnumdepth') — still in latex_constructs.rs (C.5)
 
   // C.5.4 Title Page mark stubs (Perl L343-347)
-  DefMacro!("\\sectionmark{}", "");
-  DefMacro!("\\subsectionmark{}", "");
-  DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}", "");
-  DefMacro!("\\subparagraphmark{}", "");
+  def_macro_noop("\\sectionmark{}")?;
+  def_macro_noop("\\subsectionmark{}")?;
+  def_macro_noop("\\subsubsectionmark{}")?;
+  def_macro_noop("\\paragraphmark{}")?;
+  def_macro_noop("\\subparagraphmark{}")?;
 
   //======================================================================
   // C.8.1 Defining Commands

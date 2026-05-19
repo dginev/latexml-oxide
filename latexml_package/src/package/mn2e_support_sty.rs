@@ -13,6 +13,15 @@ fn def_macro_identity(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-18 helper for empty-body `DefMacro!("\\cs[opt-spec]", "")` stubs.
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
@@ -45,7 +54,7 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", sub[(_short, authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
-  DefMacro!("\\newauthor", "");
+  def_macro_noop("\\newauthor")?;
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
   DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:note}[role=pubyear]{#1}");
@@ -107,7 +116,7 @@ LoadDefinitions!({
     });
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
-  DefMacro!("\\bsp", "");
+  def_macro_noop("\\bsp")?;
 
   // Math shortcuts — Perl mn2e_support.sty.ltxml L131-145.
   // Perl binds these directly via DefMath, NOT by aliasing to amssymb
@@ -260,10 +269,10 @@ LoadDefinitions!({
   );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
-  DefMacro!("\\loadboldmathitalic", "");
-  DefMacro!("\\loadboldgreek", "");
-  DefMacro!("\\fixfootnotes", "");
-  DefMacro!("\\nokeywords", "");
+  def_macro_noop("\\loadboldmathitalic")?;
+  def_macro_noop("\\loadboldgreek")?;
+  def_macro_noop("\\fixfootnotes")?;
+  def_macro_noop("\\nokeywords")?;
   DefMacro!("\\bibtitle", "References");
   DefMacro!("\\bibheadtitle", "REFERENCES");
   def_macro_identity("\\makeRLlabel{}")?;
@@ -273,7 +282,7 @@ LoadDefinitions!({
   DefRegister!("\\smallindent" => Glue!("1.5em"));
   Let!("\\fullhline", "\\hline");
   DefMacro!("\\sevensize", "\\small");
-  DefMacro!("\\plate", "");
+  def_macro_noop("\\plate")?;
 
   // Perl L57-62: equation numbering schemes
   DefMacro!("\\eqsecnum",
