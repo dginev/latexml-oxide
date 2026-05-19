@@ -2645,7 +2645,16 @@ LoadDefinitions!({
 
   // siunitx v3 \qty[options]{number}{units} — v3 spelling of v2 \SI.
   // Witness 2406.20067, 2407.03167.
-  Let!("\\qty", "\\SI");
+  //
+  // Only define `\qty` if not already defined. The physics package's
+  // `\qty` ([opt]{expr} that wraps expr in delimiters) commonly
+  // pre-occupies the name in papers that load both `physics` and
+  // `siunitx`. siunitx-after-physics with unconditional Let blindly
+  // shadows the physics shape, which causes papers writing
+  // `\qty[ 1 + ... ] \rho` to mis-parse as
+  // `\SI[opt-list]{value-only}` and fire siunitx number-parse errors.
+  // Witness 2305.09755.
+  RawTeX!("\\@ifundefined{qty}{\\let\\qty\\SI}{}");
   Let!("\\qtylist", "\\SIlist");
   Let!("\\qtyrange", "\\SIrange");
   Let!("\\qtyproduct", "\\SIlist");
