@@ -246,6 +246,23 @@ LoadDefinitions!({
   def_autoload("\\curraddr", "ams_support")?;
   def_autoload("\\subjclass", "ams_support")?;
 
+  // LaTeX2HTML-era papers use the html.sty CSes without an explicit
+  // `\usepackage{html}` because in the original LaTeX2HTML toolchain
+  // those CSes were part of the implicit "html-on-load" expectation.
+  // Auto-load `html.sty` (our binding maps these to hyperref equivalents)
+  // when any of these triggers is referenced. Driver:
+  // arxiv-examples/2108.04969 (uses `\htmladdnormallink{...}{...}` without
+  // loading html.sty).
+  def_autoload("\\htmladdnormallink", "html")?;
+  def_autoload("\\htmladdnormallinkfoot", "html")?;
+  def_autoload("\\htmladdimg", "html")?;
+  def_autoload("\\latextohtml", "html")?;
+  def_autoload("\\externalref", "html")?;
+  def_autoload("\\externalcite", "html")?;
+  def_autoload("\\htmlref", "html")?;
+  def_autoload("\\htmlurl", "html")?;
+  def_autoload("\\latexonly", "html")?;
+
   // Perl TeX.pool.ltxml L50-56: AmSTeX-pool autoload triggers. When any
   // of these CSes is invoked in plain-TeX-with-AmSTeX style (or before
   // `\documentstyle{amsppt}` arrives — see e.g. math/9610224's
