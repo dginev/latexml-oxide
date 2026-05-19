@@ -211,16 +211,30 @@ inline math `$x_1$` correctly.
 - `\lx@notetext OptionalSemiverbatim {} [] {}`
   (commit `f54df88c22`) — fixes `\fntext`, `\tnotetext`,
   `\footnotetext`. Witness: 2604.00193.
+- `\thanks OptionalSemiverbatim {}` (2026-05-18 session) — `[opt]`
+  is identifier-shape (label tag, often discarded by the constructor
+  anyway). Per cluster-A principled approach, switch to
+  OptionalSemiverbatim to neutralize `_`/`^`/`~`/`&`/`$`/`#`/`'`
+  catcodes in the optional label arg.
 
-**Audit candidates (next sprint):**
-- `\ref`, `\pageref`, `\eqref` — already partially handled, audit
-- `\label` — already `Semiverbatim` (verify)
-- `\cite`, `\citep`, `\citet`, `\citealp` — `key` arg
-- `\href`, `\url`, `\hyperref` — URL slot
-- `\bibitem[opt]{key}` — key arg
-- `\caption`/`\subcaption` — `[short]` is identifier-shape
-- `\thanks[opt]` — same pattern as `\fntext`
-- `\index` — entry key
+**Audit candidates — verified 2026-05-18:**
+- `\ref`/`\pageref`/`\eqref` — ✅ `OptionalMatch:* Semiverbatim`
+  (latex_constructs.rs:7421; pageref Let-aliased to ref).
+- `\label` — ✅ `Semiverbatim` (latex_constructs.rs:7358).
+- `\cite[]Semiverbatim` — ✅ key arg Semiverbatim
+  (latex_constructs.rs:7816). `\citep`/`\citet`/`\citealp` forward
+  via `Semiverbatim` in biblatex_sty.rs.
+- `\href HyperVerbatim {}` — ✅ HyperVerbatim neutralizes catcodes
+  (hyperref_sty.rs:305 + base_parameter_types.rs:553).
+- `\url` — ✅ url_sty.rs reads via begin_semiverbatim internally.
+- `\hyperref` — ✅ dispatches to `OptionalSemiverbatim {}` or
+  `Semiverbatim×4` (hyperref_sty.rs:386-396).
+- `\bibitem` — ✅ delegates to `\lx@bibitem[] Semiverbatim`
+  (latex_constructs.rs:7629).
+- `\caption`/`\subcaption` `[short]` — content-shape after
+  re-evaluation; the optional short caption is real text content
+  (allows `$x^2$`), not identifier-shape. NO change.
+- `\index` — ✅ `SanitizedVerbatim` (base_parameter_types.rs:526).
 
 Each fix gets a witness recovery count noted here.
 

@@ -4536,7 +4536,13 @@ LoadDefinitions!({
   DefMacro!("\\@thanks", "\\@empty");
   // Perl latex_constructs.pool.ltxml L1154: `\thanks[]{}` — optional arg for
   // OmniBus use (thrown away). #2 is the required body.
-  DefMacro!("\\thanks[]{}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
+  //
+  // SURPASS-PERL (Cluster A, docs/SYNC_STATUS.md L201-208): `[opt]` is
+  // identifier-shape (a label tag, e.g. `\thanks[funding-1]{…}`). Switch
+  // to `OptionalSemiverbatim` so a literal `_` in the label doesn't bleed
+  // through as `T_SUB` and trip the script-handler text-mode error.
+  // Perl uses default catcodes for `[opt]` and SHARES the failure mode.
+  DefMacro!("\\thanks OptionalSemiverbatim {}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
   DefConstructor!(
     "\\lx@make@thanks{}",
     "<ltx:note role='thanks'>#1</ltx:note>"
