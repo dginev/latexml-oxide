@@ -577,10 +577,30 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         //        presentation=Apply(f, XMWrap(open, args, close))).
         // These are in applied_func so delimited calls participate in chaining:
         // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
+        //
+        // Targeted Task #10 mitigation (2026-05-19): the `opfunction
+        // lbracket formula rbracket` rule was ambiguous with
+        // `opfunction tight_term => prefix_apply` (since `[formula]` is
+        // a `fenced_factor` → `tight_term` via the `lbracket formula
+        // rbracket => fenced` reduction). HYBRID's Tree-iter picks
+        // `prefix_apply` (the surviving parse for `\sin[x]\{…\}` in
+        // physics.tex). ASF's Cartesian-product enumeration ALSO fires
+        // `apply_delimited` for `(sin, [, x, ])`, which eagerly XMRefs
+        // the OPFUNCTION operand via `create_xmrefs` →
+        // `Document::generate_id` → bumps `_ID_counter_` on the math
+        // ancestor for a tree that's then pruned in favor of
+        // `prefix_apply`'s output. The "wasted" xml:id slot leaves a
+        // gap that shifts the surviving lexemes' IDs by +1 (witness:
+        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`). Removing
+        // the rule converges both parsers on `prefix_apply` for
+        // OPFUNCTION+`[…]` and eliminates the spurious id allocation.
+        // `\sin(x)` (paren form) keeps `apply_delimited` because that
+        // is the canonical function-call notation; the bracket form is
+        // a physics-package idiosyncrasy adequately handled by
+        // `prefix_apply`.
         | function lparen formula rparen => apply_delimited
         | function lbracket formula rbracket => apply_delimited
         | opfunction lparen formula rparen => apply_delimited
-        | opfunction lbracket formula rbracket => apply_delimited
         | trigfunction lparen formula rparen => apply_delimited
         | trigfunction lbracket formula rbracket => apply_delimited;
       // Standalone applied functions are also tight_terms

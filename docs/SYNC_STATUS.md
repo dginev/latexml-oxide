@@ -1114,42 +1114,47 @@ A multi-session effort to swap the math parser's Tree-iteration
    (1272 → 1292 ASF; LEGACY 1301/0 preserved).
 3. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
    measurable perf gain on ambiguous formulas.
-4. ⏳ **Open** (refreshed 2026-05-19): the 9-test list below was
-   stale. A fresh `LATEXML_MARPA_ASF_ONLY=1 cargo test --tests
-   --no-fail-fast` run yields **1327/1/0** — only one residual
-   failure: `physics_test` (in `latexml_oxide/tests/80_complex.rs`).
-   Root cause **identified** but not yet fixed:
-   `latexml_math_parser/src/util.rs::create_xmrefs`'s XM::Lexeme
-   branch eagerly calls `document.generate_id` on lexeme XMTok
-   nodes at action-evaluation time. Under ASF Cartesian product
-   the action runs across more combos than HYBRID's Tree
-   iterator (108 enumerated for HYBRID vs 84 for ASF on this
-   formula — but ASF's 6-unique vs HYBRID's 2-unique means ASF
-   touches one more lexeme node via `create_xmrefs`). The extra
-   `generate_id` consumes an `_ID_counter_` slot on the math
-   ancestor that never appears in the rendered XMRefs — surviving
-   lexemes end up renumbered +1 (witness: `S1.Ex14.m1.15` vs
-   expected `S1.Ex14.m1.14`).
-   Failed fix attempt (2026-05-19): tried setting `_pxmkey` on
-   lexeme nodes and deferring `generate_id` to `resolve_xmkeys`
-   time. Breaks **both** HYBRID and ASF because the deferred
-   resolution flow doesn't compose with the digest-time XMDual
-   `after_close_late` handler in
-   `latexml_engine/src/base_xmath.rs` (which walks
-   `descendant::*[@_xmkey]` and generates IDs as a side-effect).
-   The proper fix needs to either (a) make `after_close_late`
-   skip parser-side `_xmkey` namespaces, (b) reorder the math
-   parser's install + resolve_xmkeys so that the XMDual handler
-   sees only the surviving subset, or (c) eliminate
-   `create_xmrefs`'s eager `generate_id` on lexemes some other
-   way. Deferred to a focused session.
+4. ✅ **CLOSED 2026-05-19**: the 9-test list referenced below
+   was already obsolete (down to 1 — `physics_test`); the residual
+   `physics_test` failure under `LATEXML_MARPA_ASF_ONLY=1` is now
+   resolved. Both `cargo test --tests` (HYBRID, default) and
+   `LATEXML_MARPA_ASF_ONLY=1 cargo test --tests` report
+   **1328/0/0** on this branch.
+   Root cause: the grammar had two rules matching `\sin[arg]` in
+   `applied_func` — `opfunction tight_term => prefix_apply` AND
+   `opfunction lbracket formula rbracket => apply_delimited`
+   (`[arg]` is also a `fenced_factor` → `tight_term` via
+   `lbracket formula rbracket => fenced`). HYBRID's Tree-iter
+   landed on `prefix_apply` and capped via `max_unique`; ASF's
+   Cartesian-product enumeration ran BOTH rules. `apply_delimited`
+   eagerly XMRefs its `func` operand through `create_xmrefs` →
+   `Document::generate_id`, bumping `_ID_counter_` on the math
+   ancestor for a tree that's then pruned in favor of
+   `prefix_apply`'s output. The wasted xml:id slot shifted
+   surviving lexemes' IDs by +1 (`S1.Ex14.m1.15` vs expected
+   `S1.Ex14.m1.14`).
+   Fix: removed the redundant `opfunction lbracket formula
+   rbracket => apply_delimited` rule in
+   `latexml_math_parser/src/grammar/builder.rs`. Both modes now
+   converge on `prefix_apply` for `OPFUNCTION+[…]`, eliminating
+   the spurious action call. The paren variant
+   (`opfunction lparen formula rparen => apply_delimited`)
+   remains — `\sin(x)` is the canonical function-call notation
+   that warrants the XMDual structure. `function lbracket`
+   and `trigfunction lbracket` rules left intact for now (their
+   rule-id signatures didn't fire on the failing case; revisit
+   if a future witness emerges). Test fixture
+   `tests/complex/physics.xml` re-blessed (23 xml:id
+   renumberings; tighter contiguous numbering — closer to
+   Perl's `t/complex/physics.xml` ID pattern, no structural
+   changes).
    Historical context: the old 9-test list was
    `ambiguous_relations, count_parses, mathtools,
    metarelation_elision, physics, plainfonts, qm,
    standalone_modifiers, vertbars` — those were the ASF failures
    as of 2026-05-17 / 2026-05-18; subsequent landings (pragma
    refinements documented in `MATH_PARSER_ASF_TIEBREAKING.md`)
-   closed all but `physics`.
+   closed all but `physics`, which this fix addresses.
 5. ⏳ **Open principled refinement**: `modified_term` grammar
    category (proposed 2026-05-17; user-articulated). Expected to
    subsume 5-6 of the remaining 9 by structural change at the
