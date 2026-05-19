@@ -43,6 +43,24 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
+      // If the target package is *already* loaded, this closure is firing
+      // because a separate CS was \let to the autoload trigger BEFORE the
+      // package later loaded under a different name (e.g. `\let\varmathbb
+      // =\mathbb` while \mathbb is still the autoload trigger; then
+      // amssymb → amsfonts loads and \mathbb gets a real def, but
+      // \varmathbb still holds the closure). In that case, clearing
+      // cs_for_closure (\mathbb) would erase its real definition, and
+      // re-emitting \mathbb would land on an undefined CS — producing the
+      // spurious `Error:undefined:\mathbb` reported during `\varmathbb{D}`
+      // expansion. Witness 2310.13684. Skip the clear+load and just
+      // re-emit cs_for_closure, which by now has the real meaning the
+      // already-loaded package installed.
+      let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
+      let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
+      if latexml_core::state::lookup_bool(&pkg_loaded_key)
+        || latexml_core::state::lookup_bool(&pkg_raw_key) {
+        return Ok(Tokens::new(vec![cs_for_closure]));
+      }
       // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
       // 'global'). Removes the autoload trigger globally.
       state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
