@@ -530,8 +530,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("colortbl", "sty", package::colortbl_sty::load_definitions),
   ("crop", "sty", package::crop_sty::load_definitions),
   ("chngcntr", "sty", package::chngcntr_sty::load_definitions),
-  ("changepage", "sty", package::changepage_sty::load_definitions),
-  ("chngpage",   "sty", package::changepage_sty::load_definitions),
   ("natbib", "sty", package::natbib_sty::load_definitions),
   (
     "pdftexcmds",
