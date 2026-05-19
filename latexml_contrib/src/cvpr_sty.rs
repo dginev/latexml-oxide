@@ -34,6 +34,12 @@ LoadDefinitions!({
   // caption.sty for \captionof — many CVPR templates use this for
   // figure/table sub-captions. Witness 2503.24026 (cvpr2025).
   RequirePackage!("caption");
+  // subcaption — many CVPR papers use \begin{subfigure}{...} for
+  // multi-panel figures without explicit \usepackage{subcaption}.
+  // cvpr2025.sty L30-37 doesn't \RequirePackage{subcaption}, but the
+  // template's example file does — so authors copy the example and
+  // omit the use-package. Witness 2312.03526.
+  RequirePackage!("subcaption");
 
   // \thetitle: default-empty, gets overridden when user calls \title{...}.
   def_macro_noop("\\thetitle")?;

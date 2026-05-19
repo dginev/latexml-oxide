@@ -83,6 +83,11 @@ LoadDefinitions!({
   // Witness 2401.00604.
   DefMacro!("\\icmlIntershipWork",
     "\\textsuperscript{*}Work done during an internship");
+  // \icmlOutsideContribution — paper-bundled marker noting that the
+  // contribution was made outside the author's primary affiliation.
+  // Witness 2310.14751.
+  DefMacro!("\\icmlOutsideContribution",
+    "\\textsuperscript{*}Work done outside of primary affiliation");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
