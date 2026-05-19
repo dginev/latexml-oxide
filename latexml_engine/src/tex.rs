@@ -192,6 +192,12 @@ LoadDefinitions!({
     "\\nofiles",
     "\\typeout",
     "\\PassOptionsToPackage",
+    // \UseRawInputEncoding is a LaTeX kernel command defined by latex.ltx
+    // (L18268-18324). Some papers invoke it on line 1 col 1, BEFORE
+    // \documentclass — e.g. as a UTF-8 / fontenc shield. Treat it as a
+    // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
+    // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
+    "\\UseRawInputEncoding",
   ]
   .iter()
   {
