@@ -97,7 +97,7 @@ pub fn scan_external(
 
   let modname = strip_rng_ext(name);
   let mut new_paths: Vec<&Path> = Vec::with_capacity(search_paths.len() + 1);
-  let dir = path.parent().unwrap_or(Path::new("."));
+  let dir = path.parent().unwrap_or_else(|| Path::new("."));
   new_paths.push(dir);
   new_paths.extend(search_paths);
 
@@ -398,7 +398,7 @@ fn scan_grammar_item(
       collect_namespaces(rng, inner_root);
       // Push the included file's directory to the search path so its
       // own includes resolve correctly.
-      let dir = path.parent().unwrap_or(Path::new("."));
+      let dir = path.parent().unwrap_or_else(|| Path::new("."));
       let mut nested_paths: Vec<&Path> = Vec::with_capacity(ctx.search_paths.len() + 1);
       nested_paths.push(dir);
       nested_paths.extend(&ctx.search_paths);

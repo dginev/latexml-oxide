@@ -256,7 +256,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     let width = box_result
       .get_width(None)?
-      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+      .unwrap_or_else(|| RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(width));
   }
   // \heightof{...} — Perl calc.sty.ltxml L144-148
@@ -272,7 +272,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     let height = box_result
       .get_height()
-      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+      .unwrap_or_else(|| RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height));
   }
   // \depthof{...} — Perl calc.sty.ltxml L149-153
@@ -288,7 +288,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     let depth = box_result
       .get_depth()
-      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+      .unwrap_or_else(|| RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(depth));
   }
   // \totalheightof{...} — Perl calc.sty.ltxml L154-158
@@ -304,10 +304,10 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     }
     let height = box_result
       .get_height()
-      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+      .unwrap_or_else(|| RegisterValue::Dimension(Dimension::new(0)));
     let depth = box_result
       .get_depth()
-      .unwrap_or(RegisterValue::Dimension(Dimension::new(0)));
+      .unwrap_or_else(|| RegisterValue::Dimension(Dimension::new(0)));
     return Ok(CalcValue::Reg(height.add(depth)));
   }
   // \real{<decimal>} — returns a Float factor for multiplication

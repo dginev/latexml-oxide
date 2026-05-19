@@ -1289,7 +1289,7 @@ impl Font {
     let family = self.family.as_deref().unwrap_or("serif");
     let series = self.series.as_deref().unwrap_or("medium");
     let shape = self.shape.as_deref().unwrap_or("upright");
-    let size = self.size.unwrap_or(defsize()) as i64;
+    let size = self.size.unwrap_or_else(defsize) as i64;
     // Stack buffer for char→&str lookup key, reused across paths. Avoids
     // one String allocation per character per get_metric call (which is
     // called per-character inside compute_string_size).
@@ -1324,17 +1324,17 @@ impl Font {
   }
 
   pub fn get_em_width(&self) -> i64 {
-    let size = self.get_size().unwrap_or(defsize());
+    let size = self.get_size().unwrap_or_else(defsize);
     let m = self.get_metric(None);
     (size * m.emwidth).trunc() as i64
   }
   pub fn get_ex_height(&self) -> i64 {
-    let size = self.get_size().unwrap_or(defsize());
+    let size = self.get_size().unwrap_or_else(defsize);
     let m = self.get_metric(None);
     (size * m.exheight).trunc() as i64
   }
   pub fn get_mu_width(&self) -> i64 {
-    let size = self.get_size().unwrap_or(defsize());
+    let size = self.get_size().unwrap_or_else(defsize);
     let m = self.get_metric(None);
     (size * m.emwidth / 18.0).trunc() as i64
   }
@@ -1356,7 +1356,7 @@ impl Font {
         Dimension::default(),
       );
     }
-    let size = self.get_size().unwrap_or(defsize());
+    let size = self.get_size().unwrap_or_else(defsize);
     let ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
     let (mut w, mut h, mut d) = (0, 0, 0);
     // Iterate via Peekable — no intermediate Vec<char> allocation,
@@ -1405,7 +1405,7 @@ impl Font {
   /// Get nominal width, height base ?
   /// Probably should be using data from FontMetric ???
   pub fn get_nominal_size(&self) -> (Dimension, Dimension, Dimension) {
-    let size = self.get_size().unwrap_or(defsize());
+    let size = self.get_size().unwrap_or_else(defsize);
     let u = size * UNITY_F64;
     (
       Dimension::new_f64(0.75 * u),
@@ -1541,7 +1541,7 @@ impl Font {
     let mut prevbox: Option<&Digested> = None;
     let mut prevspace: f64 = 0.0;
     // Perl L711: my $size = int($self->getSize || DEFSIZE() || 10);
-    let size = self.get_size().unwrap_or(defsize()) as i64;
+    let size = self.get_size().unwrap_or_else(defsize) as i64;
     let (mut wd, mut ht, mut dp): (f64, i64, i64) = (0.0, 0, 0);
     for bx in boxes {
       let (w, h, d) = self.compute_boxes_size_box(bx)?;
@@ -1677,7 +1677,7 @@ impl Font {
       (lines[0][0], lines[0][1], lines[0][2])
     } else {
       // Perl L779-780: baseline adjustment
-      let size = self.get_size().unwrap_or(defsize()) as i64;
+      let size = self.get_size().unwrap_or_else(defsize) as i64;
       let baseline = {
         let bl_pt = BASELINE_MAP
           .get(&size)
@@ -2061,7 +2061,7 @@ pub fn rationalize_font_size(size: &str) -> f64 {
     *symbolic * defsize()
   } else {
     // Perl: return $size — if not a symbolic name, return the numeric value as-is
-    size.parse::<f64>().unwrap_or(defsize())
+    size.parse::<f64>().unwrap_or_else(|_| defsize())
   }
 }
 

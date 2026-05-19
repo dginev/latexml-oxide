@@ -2615,7 +2615,7 @@ pub fn font_decode(
     Some(enc) => enc.to_string(),
     None => font
       .get_encoding()
-      .map_or("OT1".to_string(), |c| c.to_string()),
+      .map_or_else(|| "OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
   // Check for family-specific map. Use with_value to avoid cloning the
@@ -2647,7 +2647,7 @@ pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bo
     Some(enc) => enc.to_string(),
     None => font
       .get_encoding()
-      .map_or("OT1".to_string(), |c| c.to_string()),
+      .map_or_else(|| "OT1".to_string(), |c| c.to_string()),
   };
   let map = load_font_map(&encoding);
   // Check for family-specific map — same with_value motivation as above.

@@ -140,7 +140,7 @@ LoadDefinitions!({
     // <one optional space>
     gullet::skip_one_space(false)?;
     // <token>
-    let token2 = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let token2 = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     Let!(token1, token2);
   });
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {

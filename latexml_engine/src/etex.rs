@@ -116,7 +116,7 @@ LoadDefinitions!({
             }
           })
           .map(RegisterValue::Number)
-          .or(Some(RegisterValue::Number(Number::new(0))))
+          .or_else(|| Some(RegisterValue::Number(Number::new(0))))
       } else {
         Some(RegisterValue::Number(Number::new(0)))
       }
@@ -178,7 +178,7 @@ LoadDefinitions!({
 
   // \fontcharht / \fontcharwd / \fontchardp / \fontcharic — Perl L86-113
   DefParameterType!(FontDef, sub[_inner, _extra] {
-    gullet::read_token()?.unwrap_or(T_CS!("\\relax"))
+    gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
   });
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
   readonly => true,
@@ -258,7 +258,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }
@@ -284,7 +284,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }
@@ -315,7 +315,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }

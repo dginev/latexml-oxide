@@ -1881,7 +1881,7 @@ impl Processor for Graphics {
         .as_ref()
         .and_then(|p| p.destination_type.as_ref())
         .cloned()
-        .unwrap_or(src_ext.clone());
+        .unwrap_or_else(|| src_ext.clone());
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
       if needs_conversion || has_page {
@@ -2173,7 +2173,7 @@ impl Processor for Graphics {
             let rel = rel_opt.unwrap_or_else(|| {
               Path::new(source)
                 .strip_prefix(&source_dir)
-                .unwrap_or(Path::new(source))
+                .unwrap_or_else(|_| Path::new(source))
                 .to_string_lossy()
                 .to_string()
             });

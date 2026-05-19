@@ -362,8 +362,8 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
     let content = i_apply(&[],
       i_symbol(&[("meaning", Tokenize!("evaluated-at"))], None), content_args);
-    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!("."));
-    let close_tks = close.map(|_| Tokenize!("|")).unwrap_or(Tokenize!("|"));
+    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("."));
+    let close_tks = close.map(|_| Tokenize!("|")).unwrap_or_else(|| Tokenize!("|"));
     let mut pres = Vec::new();
     pres.extend(
       i_wrap(None, Tokens::new([
@@ -572,8 +572,8 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
       let content = i_apply(&[], content_op, vec![a1]);
 
-      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!("("));
-      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!(")"));
+      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("("));
+      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!(")"));
       let mut pres = Vec::new();
       pres.extend(pres_func.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());

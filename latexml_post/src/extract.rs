@@ -200,7 +200,7 @@ pub fn get_math(doc: &PostDocument) -> Option<Node> {
 /// matching Perl's `return $embeddable || $doc`.
 pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
   let root = doc.get_document_element()?;
-  let mut embeddable = doc.findnodes(EMBEDDABLE_XPATH).into_iter().next().unwrap_or(root.clone());
+  let mut embeddable = doc.findnodes(EMBEDDABLE_XPATH).into_iter().next().unwrap_or_else(|| root.clone());
 
   // Unwrap nested single-child div wrappers.
   loop {

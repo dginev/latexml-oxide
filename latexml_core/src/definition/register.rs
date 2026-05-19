@@ -656,7 +656,7 @@ impl Definition for Register {
         } else {
           Tbox::new(
             font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or(pin!("")),
+              .unwrap_or_else(|| pin!("")),
             None,
             None,
             Tokens!(

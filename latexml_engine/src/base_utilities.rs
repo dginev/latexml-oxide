@@ -1544,7 +1544,7 @@ pub fn insert_block(
     .collect::<Vec<_>>();
   if let Some(final_tag) = allowed_candidates
     .first()
-    .map_or(filtered_candidates.first(), Some)
+    .map_or_else(|| filtered_candidates.first(), Some)
   {
     // Rename the capture to the correct container
     // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free

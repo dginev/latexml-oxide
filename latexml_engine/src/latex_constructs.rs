@@ -8547,7 +8547,7 @@ LoadDefinitions!({
             let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
             // Use \baselineskip (typically 12pt = 786432 sp) for line height
             let baseline_skip = state::lookup_dimension("\\baselineskip")
-              .unwrap_or(Dimension::new(786432)); // 12pt default
+              .unwrap_or_else(|| Dimension::new(786432)); // 12pt default
             let line_h = baseline_skip.value_of();
             let total_h = num_lines * line_h;
             // Default: top alignment (first line as height)

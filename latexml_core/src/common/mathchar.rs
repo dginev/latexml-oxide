@@ -973,7 +973,7 @@ pub fn decode_math_char_for_stomach(mathcode: u16, meaning: Token) -> Result<Opt
     glyph_sym,
     font,
     None,
-    props.reversion.unwrap_or(crate::Tokens!(meaning)),
+    props.reversion.unwrap_or_else(|| crate::Tokens!(meaning)),
     properties,
   ))))
 }

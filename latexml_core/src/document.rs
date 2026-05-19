@@ -4323,7 +4323,7 @@ impl Document {
           if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
             attributes
               .entry("xml:id".to_string())
-              .or_insert(xmlid.clone());
+              .or_insert_with(|| xmlid.clone());
             // Unrecord before re-creation (Perl: $child->removeAttribute('xml:id') + unRecordID)
             self.unrecord_id(&xmlid);
           }

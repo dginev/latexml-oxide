@@ -65,7 +65,7 @@ LoadDefinitions!({
         s!("0")
       }
     } else {
-      let xnext = state::lookup_number(&tracker_str).unwrap_or(Number::new(0));
+      let xnext = state::lookup_number(&tracker_str).unwrap_or_else(|| Number::new(0));
       let next = xnext.value_of() + 1;
       next.to_string()
     };

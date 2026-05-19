@@ -262,7 +262,7 @@ LoadDefinitions!({
             line1 = s!("{wm},{h} {w},0"); line2 = s!("0,{hm} {w},0"); },
         }
       } else {
-        w = roundto(kv_w.unwrap_or(2.0 * max_f(aw, bw)));
+        w = roundto(kv_w.unwrap_or_else(|| 2.0 * max_f(aw, bw)));
         h = roundto(kv_h.unwrap_or(ah + bh));
         bx = w - bw;
         match dir.as_str() {

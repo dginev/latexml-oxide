@@ -873,7 +873,7 @@ fn pmml_script_decipher(
       current_base
         .get_attribute("idref")
         .and_then(|id| doc.find_node_by_id(&id).cloned())
-        .unwrap_or(current_base.clone())
+        .unwrap_or_else(|| current_base.clone())
     } else {
       current_base.clone()
     };

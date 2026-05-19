@@ -12,7 +12,7 @@ LoadDefinitions!({
     let mut it = args.into_iter();
     let label_toks: Tokens = it.next().unwrap().into();
     let content: Tokens = it.next().unwrap().into();
-    let label_cs = label_toks.unlist().into_iter().next().unwrap_or(T_CS!("\\relax"));
+    let label_cs = label_toks.unlist().into_iter().next().unwrap_or_else(|| T_CS!("\\relax"));
     let expanded = gullet::do_expand(Tokenize!(r"(\secsym\the\meqno)"))?;
     def_macro(label_cs, None, expanded, None)?;
     if state::lookup_bool_sym(pin!("IN_MATH")) {

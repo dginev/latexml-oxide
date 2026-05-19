@@ -64,7 +64,7 @@ pub fn image_candidates(path: &str) -> String {
       }
     } else {
       // Search for path with any extension
-      let parent = base.parent().unwrap_or(Path::new("."));
+      let parent = base.parent().unwrap_or_else(|| Path::new("."));
       let stem = base
         .file_name()
         .map(|s| s.to_string_lossy().to_string())

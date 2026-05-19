@@ -439,9 +439,9 @@ LoadDefinitions!({
   DefConstructor!("\\lx@xy@move@to {Dimension}{Dimension}{}",
     sub[document, args, _props] {
       let x = args.first().and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let y = args.get(1).and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let xpx = dim_to_px(x);
       let ypx = dim_to_px(y);
       let transform = s!("translate({},{})", fmt2(xpx), fmt2(ypx));
@@ -981,7 +981,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r = args.first().and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
       let l = xy_reg_dim("\\L@c"); let u = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let d = xy_reg_dim("\\D@c");
@@ -1014,7 +1014,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r_arg = args.first().and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
       let l = xy_reg_dim("\\L@c"); let u = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let d = xy_reg_dim("\\D@c");
@@ -1050,9 +1050,9 @@ LoadDefinitions!({
     properties => sub[args] {
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let rx = args.first().and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let ry = args.get(1).and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
       Ok(stored_map!(
         "xy_cx" => fmt2(dim_to_px(x)), "xy_cy" => fmt2(dim_to_px(y)),
@@ -1068,7 +1068,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let r = args.first().and_then(|a| a.as_ref())
-        .and_then(|t| t.get_dimension()).unwrap_or(Dimension::new(0));
+        .and_then(|t| t.get_dimension()).unwrap_or_else(|| Dimension::new(0));
       let x = xy_reg_dim("\\X@c"); let y = xy_reg_dim("\\Y@c");
       let l = xy_reg_dim("\\L@c"); let u = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let d = xy_reg_dim("\\D@c");

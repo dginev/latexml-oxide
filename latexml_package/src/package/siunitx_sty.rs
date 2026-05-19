@@ -2336,7 +2336,7 @@ LoadDefinitions!({
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareSIPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2358,7 +2358,7 @@ LoadDefinitions!({
   // \DeclareSIPrePower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPrePower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2377,7 +2377,7 @@ LoadDefinitions!({
   // \DeclareSIPostPower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPostPower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2397,7 +2397,7 @@ LoadDefinitions!({
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let qualifier = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2416,7 +2416,7 @@ LoadDefinitions!({
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareBinaryPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
