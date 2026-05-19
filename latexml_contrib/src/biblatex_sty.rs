@@ -632,6 +632,14 @@ LoadDefinitions!({
   def_macro_noop("\\AtEveryCitekey{}")?;
   def_macro_noop("\\keyw{}")?;
   def_macro_noop("\\bibinitdelim")?;
+  // biblatex.def L219 defines `\bibsetup` as a no-arg user-overridable
+  // hook for low-level bibliography layout (interlinepenalty,
+  // raggedbottom, frenchspacing, etc.). Layout-only for HTML/XML.
+  // Stub as no-op so its call site in `\blx@bibinit` doesn't fire
+  // Error:undefined; downstream `\biburlsetup` also no-op.
+  // Witness 2310.07484.
+  def_macro_noop("\\bibsetup")?;
+  def_macro_noop("\\biburlsetup")?;
   // Note: \bibinithyphendelim re-defined here as just "-" per Perl L352
   // (overrides the L94 definition; Perl runs them in order).
   DefMacro!("\\bibinithyphendelim", "-");
