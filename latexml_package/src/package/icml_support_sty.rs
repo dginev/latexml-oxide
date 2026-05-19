@@ -41,9 +41,14 @@ LoadDefinitions!({
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
   // ICML: \icmlaffiliation{shortname}{full text} maps a short id to
-  // an affiliation string used in author list. Preserve as ltx:note.
+  // an affiliation string used in author list. Preserve only the
+  // full-text — the shortname (#1) is an internal identifier that
+  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
+  // which our frontmatter pipeline tokenizes as math-mode subscript
+  // and errors with "Script _ can only appear in math mode" when
+  // rendered into ltx:note text. Witness 2404.08592.
   DefMacro!("\\icmlaffiliation{}{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1: #2}");
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
   // \icmlcorrespondingauthor{email}{name} — preserve as ltx:note.
   DefMacro!("\\icmlcorrespondingauthor{}{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
