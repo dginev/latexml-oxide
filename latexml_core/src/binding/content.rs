@@ -1496,7 +1496,7 @@ impl Default for RequireOptions {
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
-  // EXCEPTION: a name with a directory prefix (`assets/equations`,
+  // EXCEPTION 1: a name with a directory prefix (`assets/equations`,
   // `./sty/foo`) is a strong signal of a user-local style file that
   // ships with the paper. INCLUDE_STYLES=false is meant to gate
   // arbitrary system-wide raw .sty loads; it shouldn't suppress files
@@ -1504,11 +1504,44 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // 2405.18387 — `\usepackage{assets/equations}` was silently dropped
   // (notex=true skipped raw load) and \averageprecision came up
   // undefined, even though `assets/equations.sty` was right there.
+  //
+  // EXCEPTION 2 (2026-05-19): the bare `\usepackage{<name>}` form is
+  // ALSO user-bundled if `<name>.<ext>` resolves in the paper's local
+  // searchpaths (NOT in TL via kpsewhich). Authors routinely ship a
+  // paper-local `.sty` (e.g. `jinstpub.sty`, `myjournal.sty`) next to
+  // `main.tex` without a directory prefix. Pre-probe with
+  // `search_paths_only=true` (skips kpsewhich, so TL-installed packages
+  // are NOT mis-classified as paper-local). Driver: arXiv-2509.05948v1
+  // — bundled `jinstpub.sty` was silently dropped, leaving
+  // \affiliation/\emailAdd/\keywords/\acknowledgments undefined.
   let has_path_prefix = name.contains('/') || name.contains('\\');
+  let is_paper_local = !has_path_prefix
+    && options.notex.is_none()
+    && !lookup_bool("INCLUDE_STYLES")
+    && {
+      let ext: Cow<'static, str> = options
+        .extension
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| Cow::Borrowed(if options.as_class { "cls" } else { "sty" }));
+      let filename = if name.ends_with(ext.as_ref()) {
+        name.to_string()
+      } else {
+        s!("{}.{}", name, ext)
+      };
+      find_file(&filename, Some(FindFileOptions {
+        forbid_ltxml:      true,
+        notex:             false,
+        ext_type:          Some(ext),
+        search_paths_only: true,
+      }))
+      .is_some()
+    };
   if options.notex.is_none()
     && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
     && !has_path_prefix
+    && !is_paper_local
   {
     options.notex = Some(true);
   }
