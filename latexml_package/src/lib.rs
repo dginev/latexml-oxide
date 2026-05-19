@@ -898,6 +898,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::bigintcalc_sty::load_definitions,
   ),
+  ("bigstrut", "sty", package::bigstrut_sty::load_definitions),
   ("bitset", "sty", package::bitset_sty::load_definitions),
   ("calrsfs", "sty", package::calrsfs_sty::load_definitions),
   ("cmbright", "sty", package::cmbright_sty::load_definitions),
