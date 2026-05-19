@@ -34,4 +34,18 @@ LoadDefinitions!({
   def_macro_noop("\\processdates")?;
   def_macro_noop("\\endprocessdates")?;
   def_macro_noop("\\getinfo")?;
+
+  // \affiliation{text} — dmtcs-episciences.cls L251: stores affil text
+  // (`\gdef\@affil{#1}`). Preserve as ltx:contact frontmatter.
+  // Witness 2403.03614.
+  DefMacro!("\\affiliation{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
+  DefConstructor!("\\@@@affiliation{}",
+    "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+  // \affiliationmark{tag} — L229: superscript marker on author/affil.
+  def_macro_noop("\\affiliationmark{}")?;
+  // \keywords{text} — L311: stores keywords (`\gdef\@keywords{#1}`).
+  // Preserve as frontmatter keywords.
+  DefMacro!("\\keywords{}",
+    "\\@add@frontmatter{ltx:keywords}{#1}");
 });
