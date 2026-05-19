@@ -67,6 +67,16 @@ LoadDefinitions!({
   // trips Endgroup mismatch on \par-containing bodies.
   DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
     mode => "internal_vertical");
+  // Real sn-jnl.cls defines `\abstract{...}` as a *macro* form (not the
+  // standard env). Without this stub, our environment binding's
+  // auto-created `\abstract` token (which expects a matching
+  // `\endabstract`) eats every subsequent `\title`/`\author`/`\maketitle`
+  // /`\section` into the still-open `<ltx:abstract>`, producing a
+  // cascade of `Error:malformed:ltx:* isn't allowed in <ltx:abstract>`.
+  // Forward to the env so the body is wrapped *and* properly closed.
+  // Witness 2306.11901.
+  DefMacro!("\\abstract{}",
+    "\\begin{abstract}#1\\end{abstract}");
   DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
   DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>",
