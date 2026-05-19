@@ -10,7 +10,6 @@ use libxml::tree::Node;
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
-use latexml_codegen::LoadModel;
 use latexml_core::document::Document;
 use latexml_core::{Core, CoreOptions, state};
 use latexml_math_parser::node_to_grammar_lexemes;
@@ -30,7 +29,8 @@ pub fn new_test_engine() -> Core {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  load_model!("LaTeXML");
+  // Shared model loader — see crate::load_latexml_default_model.
+  crate::load_latexml_default_model();
   state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
   state::add_binding_names(latexml_package::binding_names());
   core_engine

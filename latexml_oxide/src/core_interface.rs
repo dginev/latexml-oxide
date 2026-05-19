@@ -22,7 +22,6 @@ use latexml_core::tokens::Tokens;
 use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use latexml_codegen::LoadModel;
 use latexml_core::{
   CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
 };
@@ -352,8 +351,11 @@ impl DigestionAPI for Core {
         Some(v) => v.last() == Some(&arena::pin_static("LaTeXML")),
       });
       if default_model_load {
-        // Compile-time load of model AND indirect model
-        load_model!("LaTeXML");
+        // Compile-time load of model AND indirect model. Single
+        // shared instantiation lives at `crate::load_latexml_default_model`
+        // so LTO can keep exactly one `_ModelLoader::build_model` in
+        // the final binary (~600 KiB per copy otherwise).
+        crate::load_latexml_default_model();
       } else {
         // Eager-load at runtime
         model::load_schema(schema_paths.as_slice())?; // If needed?
