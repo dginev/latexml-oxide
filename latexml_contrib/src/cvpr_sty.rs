@@ -43,5 +43,24 @@ LoadDefinitions!({
   DefConditional!("\\ifcvprrebuttal");
   DefConditional!("\\ifcvprpagenumbers");
 
+  // CV-conference convention abbreviations (cvpr.sty L640-645, iccv.sty
+  // similar). Real cvpr.sty defines these via `\def\etal{\emph{et al}\onedot}`
+  // and friends. Our path-stripping fallback (`iccv_template/cvpr.sty` →
+  // `cvpr.sty.ltxml` registry → our binding) means the InputDefinitions
+  // raw-load below is asked to find plain `cvpr.sty` on disk — which is
+  // NOT there (the paper bundles it under `iccv_template/`). So \etal etc
+  // stay undefined unless we stub them here. Witness 2305.13460: was 5
+  // errors (\etal/\ie/\etc/\wrt/\vs), now 0.
+  DefMacro!("\\onedot",  "\\@onedot");
+  DefMacro!("\\@onedot", ".\\@");  // approximates the spacing trick
+  DefMacro!("\\etal",    "\\emph{et al}\\onedot");
+  DefMacro!("\\ie",      "\\emph{i.e}\\onedot");
+  DefMacro!("\\eg",      "\\emph{e.g}\\onedot");
+  DefMacro!("\\cf",      "\\emph{c.f}\\onedot");
+  DefMacro!("\\etc",     "\\emph{etc}\\onedot");
+  DefMacro!("\\vs",      "\\emph{vs}\\onedot");
+  DefMacro!("\\wrt",     "\\emph{w.r.t}\\onedot");
+  DefMacro!("\\dof",     "d.o.f\\onedot");
+
   InputDefinitions!("cvpr", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
