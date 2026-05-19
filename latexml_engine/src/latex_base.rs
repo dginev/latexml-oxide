@@ -19,6 +19,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
@@ -389,18 +400,18 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   // Perl L359-368: DeclareTextAccent family (no-op stubs)
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
+  def_primitive_noop("\\DeclareTextAccent DefToken {}{}")?;
+  def_primitive_noop("\\DeclareTextAccentDefault{}{}")?;
+  def_primitive_noop("\\DeclareTextComposite{}{}{}{}")?;
+  def_primitive_noop("\\DeclareTextCompositeCommand{}{}{}{}")?;
 
   //======================================================================
   // C.9.1 Figures and Tables — float parameters
   // Perl: latex_base.pool.ltxml lines 384-417
   //======================================================================
   // Perl L391-392
-  DefPrimitive!("\\flushbottom",      None);
-  DefPrimitive!("\\suppressfloats[]", None);
+  def_primitive_noop("\\flushbottom")?;
+  def_primitive_noop("\\suppressfloats[]")?;
 
   // Perl L394-403: float counters and fractions
   NewCounter!("topnumber");

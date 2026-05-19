@@ -1,5 +1,16 @@
 use crate::prelude::*;
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("graphicx");
@@ -71,12 +82,12 @@ LoadDefinitions!({
   Let!("\\epsfig", "\\psfig");
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
   DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
-  DefPrimitive!("\\psdraft",       None);
-  DefPrimitive!("\\psfull",        None);
-  DefPrimitive!("\\pssilent",      None);
-  DefPrimitive!("\\psnoisy",       None);
-  DefPrimitive!("\\psfigdriver{}", None);
-  DefPrimitive!("\\epsfbox[]{}", None);
+  def_primitive_noop("\\psdraft")?;
+  def_primitive_noop("\\psfull")?;
+  def_primitive_noop("\\pssilent")?;
+  def_primitive_noop("\\psnoisy")?;
+  def_primitive_noop("\\psfigdriver{}")?;
+  def_primitive_noop("\\epsfbox[]{}")?;
   Let!("\\epsffile", "\\epsfbox");
   DefPrimitive!("\\epsfclipon", {
     state::assign_value("epsfclip", Stored::from(1), None);
@@ -84,9 +95,9 @@ LoadDefinitions!({
   DefPrimitive!("\\epsfclipoff", {
     state::assign_value("epsfclip", Stored::from(0), None);
   });
-  DefPrimitive!("\\epsfverbosetrue",  None);
-  DefPrimitive!("\\epsfverbosefalse", None);
+  def_primitive_noop("\\epsfverbosetrue")?;
+  def_primitive_noop("\\epsfverbosefalse")?;
   DefRegister!("\\epsfxsize" => Dimension::new(0));
   DefRegister!("\\epsfysize" => Dimension::new(0));
-  DefPrimitive!("\\epsfsize{}{}", None);
+  def_primitive_noop("\\epsfsize{}{}")?;
 });

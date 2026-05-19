@@ -1,6 +1,17 @@
 //! pifont.sty binding — Pi font symbols (dingbats)
 use crate::prelude::*;
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: pifont.sty.ltxml — uses pzd fontmap
@@ -81,8 +92,8 @@ LoadDefinitions!({
   DefMacro!("\\endPiautolist", "\\endenumerate");
 
   // Don't know what to do with these.
-  DefPrimitive!("\\Piline{}{Number}", None);
-  DefPrimitive!("\\Pifill{}{Number}", None);
+  def_primitive_noop("\\Piline{}{Number}")?;
+  def_primitive_noop("\\Pifill{}{Number}")?;
 
   // Dingbats shortcuts using pzd encoding
   DefMacro!("\\ding{}", "\\Pisymbol{pzd}{#1}");
@@ -93,6 +104,6 @@ LoadDefinitions!({
   DefMacro!("\\enddingautolist", "\\endPiautolist");
 
   // Don't know what to do with these.
-  DefPrimitive!("\\dingline{Number}", None);
-  DefPrimitive!("\\dingfill{Number}", None);
+  def_primitive_noop("\\dingline{Number}")?;
+  def_primitive_noop("\\dingfill{Number}")?;
 });

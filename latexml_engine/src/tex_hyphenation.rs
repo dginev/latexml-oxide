@@ -2,6 +2,17 @@
 //!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
+
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Hyphenation Family of primitive control sequences
@@ -12,7 +23,7 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // - (discretionary hyphen)        d       inserts a discretionary hyphen.
   // \discretionary    c  specifies a discretionary break in a paragraph.
-  DefPrimitive!("\\-", None);
+  def_primitive_noop("\\-")?;
   DefMacro!("\\discretionary{}{}{}", "#3"); // No hyphenation here!
 
   //======================================================================
@@ -30,7 +41,7 @@ LoadDefinitions!({
   // \setlanguage      c  inserts a language whatsit in restricted horizontal mode.
   // \language         pi selects a language to use with hyphenation and \patterns.
   DefRegister!("\\language", Number!(0));
-  DefPrimitive!("\\setlanguage Number", None);
+  def_primitive_noop("\\setlanguage Number")?;
 
   // \languagename — current language name (text). Perl's latex.dump captures
   // `\def\languagename{nohyphenation}` as the format-time default

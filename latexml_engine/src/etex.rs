@@ -37,6 +37,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
   Ok(())
 }
 
+
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -159,7 +170,7 @@ LoadDefinitions!({
   DefRegister!("\\tracingnesting"    => Number::new(0));
 
   // Perl L46: \showgroups
-  DefPrimitive!("\\showgroups", None);
+  def_primitive_noop("\\showgroups")?;
 
   // Perl L49-52: \showtokens — logs the token text (no document output)
   DefPrimitive!("\\showtokens GeneralText", sub[(tokens)] {
@@ -394,7 +405,7 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.6 Additional Registers and Marks — Perl L221-226
-  DefPrimitive!("\\marks Number GeneralText", None);
+  def_primitive_noop("\\marks Number GeneralText")?;
   def_macro_noop("\\topmarks Number")?;
   def_macro_noop("\\firstmarks Number")?;
   def_macro_noop("\\botmarks Number")?;
@@ -469,8 +480,8 @@ LoadDefinitions!({
   //======================================================================
   // 3.11 Discarded Items — Perl L322-324
   DefRegister!("\\savingvdiscards" => Number::new(0));
-  DefPrimitive!("\\pagediscards", None);
-  DefPrimitive!("\\splitdiscards", None);
+  def_primitive_noop("\\pagediscards")?;
+  def_primitive_noop("\\splitdiscards")?;
 
   //======================================================================
   // 3.12 Expandable Commands — Perl L330-357
@@ -534,7 +545,7 @@ LoadDefinitions!({
 
   //======================================================================
   // X.X Orphans / pdfTeX-leftover entries — Perl L399-407
-  DefPrimitive!("\\pdftexcmds@directlua{}", None);
+  def_primitive_noop("\\pdftexcmds@directlua{}")?;
   DefRegister!("\\synctex", Number::new(0));
   def_macro_noop("\\reserveinserts{}")?;
 

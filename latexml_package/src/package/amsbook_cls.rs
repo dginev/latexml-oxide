@@ -1,5 +1,16 @@
 use crate::prelude::*;
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
@@ -30,9 +41,9 @@ LoadDefinitions!({
   RequirePackage!("ams_support");
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56
-  DefPrimitive!("\\frontmatter", None);
-  DefPrimitive!("\\mainmatter", None);
-  DefPrimitive!("\\backmatter", None);
+  def_primitive_noop("\\frontmatter")?;
+  def_primitive_noop("\\mainmatter")?;
+  def_primitive_noop("\\backmatter")?;
 
   // List formatting — Perl L58-72
   DefMacro!("\\@listI", "\\leftmargin\\leftmargini\\parsep 4.5\\p@ plus2\\p@ minus\\p@\\topsep 8.5\\p@ plus3\\p@ minus4\\p@\\itemsep4.5\\p@ plus2\\p@ minus\\p@");

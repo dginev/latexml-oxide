@@ -364,16 +364,27 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
 }
 
+
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Stub primitives so they're defined but NOT expandable.
   // The expression parser recognizes these tokens and handles them.
   // (Perl calc.sty.ltxml lines 23-28)
-  DefPrimitive!("\\minof", None);
-  DefPrimitive!("\\maxof", None);
-  DefPrimitive!("\\widthof", None);
-  DefPrimitive!("\\heightof", None);
-  DefPrimitive!("\\ratio", None);
-  DefPrimitive!("\\real", None);
+  def_primitive_noop("\\minof")?;
+  def_primitive_noop("\\maxof")?;
+  def_primitive_noop("\\widthof")?;
+  def_primitive_noop("\\heightof")?;
+  def_primitive_noop("\\ratio")?;
+  def_primitive_noop("\\real")?;
 
   // \setcounter{<ctr>}{<integer expression>}
   DefPrimitive!("\\setcounter{}{}", sub[(ctr, arg)] {

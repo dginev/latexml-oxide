@@ -32,6 +32,17 @@ pub fn align_line(
   Ok(())
 }
 
+
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Paragraph Family of primitive control sequences
@@ -44,8 +55,8 @@ LoadDefinitions!({
   // token is reached. \noboundary             c  if present, breaks ligatures and kerns.
   // \vadjust                c  inserts a vertical list between two lines in a paragraph.
 
-  DefPrimitive!("\\ignorespaces SkipSpaces", None);
-  DefPrimitive!("\\noboundary", None);
+  def_primitive_noop("\\ignorespaces SkipSpaces")?;
+  def_primitive_noop("\\noboundary")?;
   // \vadjust<filler>{<vertical mode material>}
   // Note: \vadjust ignores in vertical mode...
   DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });

@@ -10,6 +10,17 @@ fn def_macro_noop(proto: &str) -> Result<()> {
   Ok(())
 }
 
+
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
 
@@ -168,18 +179,18 @@ LoadDefinitions!({
     Ok(vec![])
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
-  DefPrimitive!("\\pdfrefximage Number", None);
+  def_primitive_noop("\\pdfrefximage Number")?;
   // \pdfrefobj object_number / \pdfrefxform xform_number — discard the
   // number; no PDF output. pdfTeX-only primitives invoked by some
   // packages that declare-then-reference pdf objects (e.g. zref-savepos
   // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
-  DefPrimitive!("\\pdfrefobj Number", None);
-  DefPrimitive!("\\pdfrefxform Number", None);
+  def_primitive_noop("\\pdfrefobj Number")?;
+  def_primitive_noop("\\pdfrefxform Number")?;
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-  DefPrimitive!("\\pdfstartlink", None);
+  def_primitive_noop("\\pdfstartlink")?;
   // \pdfendlink (h, m)
-  DefPrimitive!("\\pdfendlink", None);
+  def_primitive_noop("\\pdfendlink")?;
   // \pdfoutline outline spec (h, v, m)
   // \pdfdest dest spec (h, v, m)
   // \pdfthread thread spec (h, v, m)
@@ -216,9 +227,9 @@ LoadDefinitions!({
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
-  DefPrimitive!("\\pdfannot OpenAnnotSpecification", None);
+  def_primitive_noop("\\pdfannot OpenAnnotSpecification")?;
   // \pdfobj — same shape. Perl pdfTeX.pool L219.
-  DefPrimitive!("\\pdfobj OpenAnnotSpecification", None);
+  def_primitive_noop("\\pdfobj OpenAnnotSpecification")?;
 
   def_macro_noop("\\pdfcatalog{} OpenActionSpecification")?;
   def_macro_noop("\\pdfnames{}")?;
@@ -236,13 +247,13 @@ LoadDefinitions!({
   );
   // \special pdfspecial spec
   // \pdfresettimer
-  DefPrimitive!("\\pdfresettimer", None);
-  DefPrimitive!("\\pdfresettimerresettimer", None);
+  def_primitive_noop("\\pdfresettimer")?;
+  def_primitive_noop("\\pdfresettimerresettimer")?;
   // \pdfsetrandomseed number
-  DefPrimitive!("\\pdfsetrandomseed Number", None);
+  def_primitive_noop("\\pdfsetrandomseed Number")?;
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
-  DefPrimitive!("\\pdfnoligatures Token", None);
+  def_primitive_noop("\\pdfnoligatures Token")?;
   // \pdfsavepos — saves current (x, y) page position into
   // \pdflastxpos / \pdflastypos. Stub as no-op; the position is never
   // actually computed in our XML output so the saved values stay 0.
@@ -253,10 +264,10 @@ LoadDefinitions!({
   // so the linegoal cascade is no longer a concern.
   // Witnesses (zref-savepos): 2503.15628, 2503.18497, 2504.03449,
   // 2504.03565, 2504.05447, 2504.05890.
-  DefPrimitive!("\\pdfsavepos", None);
+  def_primitive_noop("\\pdfsavepos")?;
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
-  DefPrimitive!("\\pdfstartthread", None);
-  DefPrimitive!("\\pdfendthread", None);
+  def_primitive_noop("\\pdfstartthread")?;
+  def_primitive_noop("\\pdfendthread")?;
   // Per-font extension codes (match \lpcode / \rpcode pattern)
   DefRegister!("\\lpfcode Token Number", Number::new(0));
   DefRegister!("\\rpfcode Token Number", Number::new(0));

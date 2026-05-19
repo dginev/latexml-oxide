@@ -2443,6 +2443,17 @@ fn def_macro_identity(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
 
@@ -3302,7 +3313,7 @@ LoadDefinitions!({
   // Style parameters
   // \parindent, \baselineskip, \parskip alreadin in TeX.pool.ltxml
 
-  DefPrimitive!("\\linespread{}", None);
+  def_primitive_noop("\\linespread{}")?;
 
   // Some papers (e.g. WileyMSP-template) use `\geometry{…}` in the
   // preamble without explicitly `\usepackage{geometry}`. Real LaTeX
@@ -3417,7 +3428,7 @@ LoadDefinitions!({
 
   // Style parameters
   // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
-  DefPrimitive!("\\footnoterule", None);
+  def_primitive_noop("\\footnoterule")?;
 
 
   // ======================================================================
@@ -3828,8 +3839,8 @@ LoadDefinitions!({
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });
 
-  DefPrimitive!("\\numberline{}{}", None);
-  DefPrimitive!("\\addtocontents{}{}", None);
+  def_primitive_noop("\\numberline{}{}")?;
+  def_primitive_noop("\\addtocontents{}{}")?;
 
   DefConstructor!("\\addcontentsline{}{}{}", sub[document,args] {
       if let [inlist,_vtype,_title @ ..] = args.as_slice() {
@@ -4321,13 +4332,13 @@ LoadDefinitions!({
   Let!("\\@leftmark", "\\@firstoftwo");
   Let!("\\@rightmark", "\\@secondoftwo");
 
-  DefPrimitive!("\\pagestyle{}", None);
-  DefPrimitive!("\\thispagestyle{}", None);
-  DefPrimitive!("\\markright{}", None);
-  DefPrimitive!("\\markboth{}{}", None);
-  DefPrimitive!("\\leftmark", None);
-  DefPrimitive!("\\rightmark", None);
-  DefPrimitive!("\\pagenumbering{}", None);
+  def_primitive_noop("\\pagestyle{}")?;
+  def_primitive_noop("\\thispagestyle{}")?;
+  def_primitive_noop("\\markright{}")?;
+  def_primitive_noop("\\markboth{}{}")?;
+  def_primitive_noop("\\leftmark")?;
+  def_primitive_noop("\\rightmark")?;
+  def_primitive_noop("\\pagenumbering{}")?;
   // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par');
   DefMacro!("\\twocolumn[]", "\\ifx.#1.\\else\\par\\noindent#1\\fi\\par");
   // Perl: DefMacro('\onecolumn', '\par');
@@ -5975,9 +5986,9 @@ LoadDefinitions!({
   });
 
   // \CheckCommand validates but doesn't define — absorb and ignore args
-  DefPrimitive!("\\CheckCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}", None);
+  def_primitive_noop("\\CheckCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}")?;
   // Font encoding subset declaration — ignored in our context
-  DefPrimitive!("\\DeclareEncodingSubset{}{}{}", None);
+  def_primitive_noop("\\DeclareEncodingSubset{}{}{}")?;
 
   //------------------------------------------------------------
   // The following commands define encoding-specific expansions
@@ -6148,7 +6159,7 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None, locked => true);
   // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
-  DefPrimitive!("\\UndeclareTextCommand{}{}", None);
+  def_primitive_noop("\\UndeclareTextCommand{}{}")?;
   DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
@@ -6231,10 +6242,10 @@ LoadDefinitions!({
     def_math(cs, None, presentation, opts)?;
   });
 
-  DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
-  DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);
-  DefPrimitive!("\\DeclareMathVersion{}", None);
-  DefPrimitive!("\\DeclarePreloadSizes{}{}{}{}{}", None);
+  def_primitive_noop("\\DeclareMathDelimiter{}{}{}{}")?;
+  def_primitive_noop("\\DeclareMathRadical{}{}{}{}{}")?;
+  def_primitive_noop("\\DeclareMathVersion{}")?;
+  def_primitive_noop("\\DeclarePreloadSizes{}{}{}{}{}")?;
 
   // The next font declaration commands are based on
   // http://tex.loria.fr/general/new/fntguide.html
@@ -6278,12 +6289,12 @@ LoadDefinitions!({
     let cs_tok = T_CS!(cs.to_string());
     def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
   });
-  DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
+  def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
   // Font declaration stubs (Perl latex_constructs.pool.ltxml)
-  DefPrimitive!("\\DeclareFontShape{}{}{}{}{}{}", None);
-  DefPrimitive!("\\DeclareFontFamily{}{}{}", None);
-  DefPrimitive!("\\DeclareSizeFunction{}{}", None);
-  DefPrimitive!("\\DeclareMathSizes{}{}{}{}", None);
+  def_primitive_noop("\\DeclareFontShape{}{}{}{}{}{}")?;
+  def_primitive_noop("\\DeclareFontFamily{}{}{}")?;
+  def_primitive_noop("\\DeclareSizeFunction{}{}")?;
+  def_primitive_noop("\\DeclareMathSizes{}{}{}{}")?;
   // \newmathalphabet — pre-LaTeX2e (NFSS 1.0) math-alphabet declarator.
   // Effectively a no-op for XML output. NOTE the `, None)` arm is the
   // "discard everything" mock — `, None, None)` (3 args) would not
@@ -6425,14 +6436,14 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
-  DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
+  def_primitive_noop("\\DeclareFontSubstitution{}{}{}{}")?;
+  def_primitive_noop("\\DeclareFontEncodingDefaults{}{}")?;
   DefMacro!("\\LastDeclaredEncoding", None, None);
 
-  DefPrimitive!("\\SetSymbolFont{}{}{}{}{}{}", None);
-  DefPrimitive!("\\SetMathAlphabet{}{}{}{}{}{}", None);
-  DefPrimitive!("\\addtoversion{}{}", None);
-  DefPrimitive!("\\TextSymbolUnavailable{}", None);
+  def_primitive_noop("\\SetSymbolFont{}{}{}{}{}{}")?;
+  def_primitive_noop("\\SetMathAlphabet{}{}{}{}{}{}")?;
+  def_primitive_noop("\\addtoversion{}{}")?;
+  def_primitive_noop("\\TextSymbolUnavailable{}")?;
 
   // LaTeX3 ltcmd: \NewCommandCopy and \DeclareCommandCopy
   // These are semantic \let equivalents from the 2023+ LaTeX kernel.
@@ -6987,8 +6998,8 @@ LoadDefinitions!({
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
-  DefPrimitive!("\\flushbottom",      None);
-  DefPrimitive!("\\suppressfloats[]", None);
+  def_primitive_noop("\\flushbottom")?;
+  def_primitive_noop("\\suppressfloats[]")?;
 
   NewCounter!("topnumber");
   DefMacro!("\\topfraction", "0.25");
@@ -7393,14 +7404,14 @@ LoadDefinitions!({
   //======================================================================
   // C.11.1 Files
   //======================================================================
-  DefPrimitive!("\\nofiles", None);
+  def_primitive_noop("\\nofiles")?;
 
   // Perl: DefPrimitive('\listfiles', undef) — no-op. Required so the
   // autoload trigger for `\listfiles` (engine/tex.rs) gets overridden
   // after LaTeX.pool loads; otherwise the trigger re-expands itself
   // after each pool load, creating a unique mouth-source per iteration
   // that eventually trips the 50M arena::pin sentinel (arxiv 1311.6082).
-  DefPrimitive!("\\listfiles", None);
+  def_primitive_noop("\\listfiles")?;
 
   //======================================================================
   // C.11.2 Cross-References
@@ -8049,9 +8060,9 @@ LoadDefinitions!({
   DefEnvironment!("{theindex}",
     "<ltx:index xml:id='#id'>#body</ltx:index>");
 
-  DefPrimitive!("\\indexspace", None);
-  DefPrimitive!("\\makeindex", None);
-  DefPrimitive!("\\makeglossary", None);
+  def_primitive_noop("\\indexspace")?;
+  def_primitive_noop("\\makeindex")?;
+  def_primitive_noop("\\makeglossary")?;
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
   // Perl latex_constructs.pool.ltxml L4481-4493 — `\glossary{}` uses a
@@ -8141,7 +8152,7 @@ LoadDefinitions!({
       Note!(s!("{content}"));
     }
   });
-  DefPrimitive!("\\typein[]{}", None);
+  def_primitive_noop("\\typein[]{}")?;
 
 
   // ======================================================================
@@ -8275,9 +8286,9 @@ LoadDefinitions!({
   // ntheorem_test, plus the simpler `bigskip_test`, both confirm the
   // Perl-faithful expansion produces the expected sibling layout.
   DefMacro!("\\vspace OptionalMatch:* {}", "\\vskip #2\\relax");
-  DefPrimitive!("\\addvspace {}", None);
-  DefPrimitive!("\\addpenalty {}", None);
-  DefPrimitive!("\\@endparenv", None);
+  def_primitive_noop("\\addvspace {}")?;
+  def_primitive_noop("\\addpenalty {}")?;
+  def_primitive_noop("\\@endparenv")?;
 
   //======================================================================
   // C.13.3 Boxes

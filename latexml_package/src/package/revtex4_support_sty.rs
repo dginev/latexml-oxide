@@ -22,6 +22,17 @@ fn def_macro_identity(proto: &str) -> Result<()> {
 }
 
 
+/// DEP-20 helper for empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stubs.
+/// Mirrors `def_macro_noop` but routes through `def_primitive` so the CS
+/// is registered as a digestion-time primitive rather than an expandable
+/// macro. Body=None is treated as a no-op primitive (no Box emitted).
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex4_support.sty.ltxml — 433 lines
@@ -131,7 +142,7 @@ LoadDefinitions!({
   // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
   // before our stub binding loads).
   def_macro_noop("\\do@columngrid{}{}")?;
-  DefPrimitive!("\\twocolumn", None);
+  def_primitive_noop("\\twocolumn")?;
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   def_macro_noop("\\pagesofar")?;
 
@@ -270,8 +281,8 @@ LoadDefinitions!({
   RawTeX!("\\newcolumntype{d}{D{.}{.}{-1}}");
 
   // Floats
-  DefPrimitive!("\\printfigures", None);
-  DefPrimitive!("\\printtables", None);
+  def_primitive_noop("\\printfigures")?;
+  def_primitive_noop("\\printtables")?;
   def_macro_noop("\\oneapage")?;
   def_macro_noop("\\printendnotes")?;
 
