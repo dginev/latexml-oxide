@@ -131,6 +131,12 @@ LoadDefinitions!({
     "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}"
   );
 
+  // Capital-first auto form. `\Ac` is officially from `acro`, but
+  // papers commonly mix the two and use \Ac while loading `acronym`.
+  // Degrade to \ac (lower form) — losing the capitalize-first
+  // semantic but preserving content. Witness 2402.03202.
+  Let!("\\Ac", "\\ac");
+
   // Indefinite article form
   DefMacro!(
     "\\iac OptionalMatch:*",
