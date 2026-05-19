@@ -82,6 +82,19 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
   }
 }
 
+/// True if the script body is a space-like TBox (or a list containing
+/// such a TBox at the top level). Mirrors Perl's behavior where a math
+/// space such as `\,` / `\ ` inside `^{...}` / `_{...}` is treated as
+/// a valid script body (not an empty argument).
+fn script_has_space_content(d: &Digested) -> bool {
+  use latexml_core::digested::DigestedData;
+  match d.data() {
+    DigestedData::TBox(b) => b.borrow().get_property_bool("isSpace"),
+    DigestedData::List(l) => l.borrow().boxes.iter().any(script_has_space_content),
+    _ => false,
+  }
+}
+
 fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
   let font = lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
@@ -165,7 +178,15 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     }
     let script = stuff.remove(0);
 
-    if !script.is_empty()? {
+    // Perl L416: `unless IsEmpty($script)`. Our `Digested::is_empty()`
+    // considers any TBox with `isSpace=true` empty — but in math mode
+    // `\,` / `\ ` etc. produce isSpace TBoxes that ARE meaningful
+    // script bodies (visible width, valid placeholder). Skipping the
+    // whatsit there lets a subsequent `^{...}_x` or `_x` re-attack the
+    // base and fire a spurious double-script error. Treat isSpace=true
+    // scripts as non-empty so they consume the script slot.
+    let script_is_truly_empty = script.is_empty()? && !script_has_space_content(&script);
+    if !script_is_truly_empty {
       let mut properties = {
         stored_map!(
           "isMath" => true,
