@@ -72,19 +72,27 @@ LoadDefinitions!({
   // envs sharing/cascading it. Mirror that defensively so neurips papers
   // that use `\begin{theorem}…\end{theorem}` without a manual
   // `\newtheorem` block render cleanly. Witness 2406.18814.
+  //
+  // \AtBeginDocument-defer + \@ifundefined-guard: defer until after the
+  // user preamble runs, so a user-provided helper (e.g. mymath.sty doing
+  // `\ifx\lemma\undefined \newtheorem{lemma} \newtheorem*{lemma*} \fi`)
+  // wins. Without deferral our unconditional defs run at .sty-load time,
+  // pre-define `\lemma`, and silently suppress the user's `\newtheorem*
+  // {lemma*}` branch. Witness 2305.11788 (neurips paper + mymath.sty).
   RawTeX!(
-    r"\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{propo}[theorem]{Proposition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{claim}[theorem]{Claim}
-\newtheorem{assumption}[theorem]{Assumption}
-\newtheorem{question}[theorem]{Question}
-\newtheorem{problem}[theorem]{Problem}
-\newtheorem{result}[theorem]{Result}"
+    r"\AtBeginDocument{%
+\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}%
+\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}%
+\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}%
+\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}%
+\@ifundefined{propo}{\newtheorem{propo}[theorem]{Proposition}}{}%
+\@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}%
+\@ifundefined{remark}{\newtheorem{remark}[theorem]{Remark}}{}%
+\@ifundefined{example}{\newtheorem{example}[theorem]{Example}}{}%
+\@ifundefined{claim}{\newtheorem{claim}[theorem]{Claim}}{}%
+\@ifundefined{assumption}{\newtheorem{assumption}[theorem]{Assumption}}{}%
+\@ifundefined{question}{\newtheorem{question}[theorem]{Question}}{}%
+\@ifundefined{problem}{\newtheorem{problem}[theorem]{Problem}}{}%
+\@ifundefined{result}{\newtheorem{result}[theorem]{Result}}{}}"
   );
 });
