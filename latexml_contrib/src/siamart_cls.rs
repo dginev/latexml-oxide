@@ -62,10 +62,15 @@ LoadDefinitions!({
   def_macro_noop("\\externaldocument[]{}")?;
   def_macro_noop("\\externalcitedocument[]{}")?;
   // siamart220329 L1130: \funding{...} writes a marked line in the
-  // titlepage. Preserve as ltx:acknowledgements (matching the user's
-  // memory: prefer ltx:acknowledgements over a section).
-  DefConstructor!("\\funding{}",
-    "<ltx:acknowledgements name='Funding'>#1</ltx:acknowledgements>");
+  // titlepage. Preserve as a frontmatter ltx:acknowledgements via
+  // \@add@frontmatter so the element lands at top-level no matter
+  // where the macro is invoked. Papers commonly nest \funding{...}
+  // inside \thanks{...} (which is rendered as ltx:note); an inline
+  // DefConstructor of ltx:acknowledgements there fires
+  // Error:malformed:ltx:acknowledgements isn't allowed in <ltx:note>.
+  // Witness 2311.08549.
+  DefMacro!("\\funding{}",
+    "\\@add@frontmatter{ltx:acknowledgements}[name=Funding]{#1}");
   // {MSCcodes} env — siamart220329 L743 wraps content in an "@abssec"
   // (frontmatter section). Mirror as keywords-like classification block.
   DefEnvironment!(
