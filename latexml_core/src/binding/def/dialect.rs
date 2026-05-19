@@ -115,10 +115,6 @@ pub fn is_definable(token: &Token) -> bool {
       || lookup_bool("2.09_COMPATIBILITY"))
 }
 
-/// unconditionally wraps a CS token around a string
-// TODO: this was more useful in Perl, maybe we should remove?
-pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
-
 //======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
