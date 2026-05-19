@@ -5577,8 +5577,17 @@ LoadDefinitions!({
   // absorbed during beAbsorbed), so the \label constructor would never run.
   // By routing through noalign, the \label constructor runs at the equation level
   // where float_to_label can find the ltx:equation parent.
-  DefMacro!("\\lx@eqnarray@label Semiverbatim",
-    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#1}}");
+  //
+  // Accept an optional `[type]` arg to mirror cleveref's `\label[type]{key}` form
+  // inside `amsmath` align/eqnarray environments. cleveref's own
+  // `\label@in@display@optarg` discards the type and just forwards `{key}` to
+  // `\cref@old@label@in@display`, so we do the same: read & drop the optional
+  // type token, then process the mandatory Semiverbatim key. Without this the
+  // un-consumed `[type]{key}` reaches math digestion as text/subscript tokens
+  // and an `eq:foo_bar_baz`-style key fires "double subscript" errors.
+  // Witness 2311.02006.
+  DefMacro!("\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}}");
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments
