@@ -445,6 +445,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// `latexml_package::dispatch`.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
+  // Strip directory prefix: `\documentclass{Definitions/mdpi}` →
+  // basename `mdpi`. Perl Package.pm L2167-2170 (FindFile_fallback)
+  // does the same. Without this, paper-bundled classes like
+  // `Definitions/mdpi.cls` miss the registered binding and cascade.
+  // See latexml_package::dispatch.
+  let base_only = base.rsplit_once(['/', '\\']).map_or(base, |(_, b)| b);
   // Perl pathname_find L383-389: strict-case first, case-insensitive fallback
   // (matches `\documentclass{jhep}` against `JHEP.cls.ltxml`-style entries).
   // See latexml_package::dispatch for the parallel comment.
@@ -452,8 +458,18 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
     .or_else(|| {
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| *name == base_only && *extension == ext)
+    })
+    .or_else(|| {
       BINDINGS.iter().find(|(name, extension, _)| {
         name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
+      })
+    })
+    .or_else(|| {
+      BINDINGS.iter().find(|(name, extension, _)| {
+        name.eq_ignore_ascii_case(base_only) && extension.eq_ignore_ascii_case(ext)
       })
     })
     .map(|(_, _, loader)| loader())

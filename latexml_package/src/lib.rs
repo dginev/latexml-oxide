@@ -942,6 +942,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
+  // Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
+  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
+  // (FindFile_fallback) does the same. Without this, paper-bundled
+  // class files like `Definitions/mdpi.cls` miss the registered
+  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
+  // producing 50+ cascading undefined errors. Witness 2403.18716.
+  let base_only = base.rsplit_once(['/', '\\']).map_or(base, |(_, b)| b);
   // Perl pathname_find L383-389: try strict-case match first, then fall back
   // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
   // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
@@ -951,8 +958,18 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
     .or_else(|| {
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| *name == base_only && *extension == ext)
+    })
+    .or_else(|| {
       BINDINGS.iter().find(|(name, extension, _)| {
         name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
+      })
+    })
+    .or_else(|| {
+      BINDINGS.iter().find(|(name, extension, _)| {
+        name.eq_ignore_ascii_case(base_only) && extension.eq_ignore_ascii_case(ext)
       })
     })
     .map(|(_, _, loader)| loader())
