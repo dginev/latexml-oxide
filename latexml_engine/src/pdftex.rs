@@ -215,6 +215,11 @@ LoadDefinitions!({
   def_macro_noop("\\pdfcatalog{} OpenActionSpecification")?;
   def_macro_noop("\\pdfnames{}")?;
   def_macro_noop("\\pdftrailer{}")?;
+  // \pdftrailerid{<id>} — pdfTeX primitive that overrides the PDF
+  // trailer ID. Used by `anonymous-review` style preamble redaction
+  // (e.g. `\pdftrailerid{redacted}`). No-op for HTML/XML output.
+  // Witness 2403.06807.
+  def_macro_noop("\\pdftrailerid{}")?;
   def_macro_noop("\\pdfmapfile{}")?;
   def_macro_noop("\\pdfmapline{}")?;
   // \pdffontattr font general text

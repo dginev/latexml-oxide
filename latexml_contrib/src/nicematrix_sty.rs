@@ -96,4 +96,15 @@ LoadDefinitions!({
     bounded => true, mode => "text", locked => true,
     before_digest => { discard_env_body("VNiceMatrix", "nicematrix.sty.ltxml")?; });
   DefMacro!("\\endVNiceMatrix", "\\relax", locked => true);
+  // Configuration entry-points — `\NiceMatrixOptions{...}` / paper-level
+  // `\NewCollectionOfColumnsType{...}` etc. Their bodies set internal
+  // keys controlling visual styling of NiceMatrix's diagrams (rules,
+  // spacing, colors). Since we render NiceMatrix envs as placeholder
+  // notes, these options are visually irrelevant. No-op stubs prevent
+  // Error:undefined for papers that call them in their preamble.
+  // Witness 2312.01047.
+  def_macro_noop("\\NiceMatrixOptions{}")?;
+  def_macro_noop("\\NewCollectionOfColumnsType{}{}")?;
+  def_macro_noop("\\RenewCollectionOfColumnsType{}{}")?;
+  def_macro_noop("\\nicematrixoptions{}")?;
 });
