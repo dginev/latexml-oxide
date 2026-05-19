@@ -18,6 +18,17 @@ fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&st
   Ok(())
 }
 
+/// DEP-17 helper for the upright-Greek `DefMath!("\\xxxup", "char",
+/// font => { shape => "upright", forceshape => true })` shape — 29
+/// entries in txfonts (the lowercase + uppercase Greek `*up` family).
+fn def_math_upright_greek(cs: &str, present: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let mut opts = MathPrimitiveOptions::default();
+  opts.font = Some(FontDirective::from(fontmap!(shape => "upright", forceshape => true)));
+  def_math(cs_tok, params, present.to_string(), opts)?;
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amssymb");
@@ -285,35 +296,35 @@ LoadDefinitions!({
 
   //======================================================================
   // Table 43 — Upright Greek
-  DefMath!("\\alphaup", "\u{03B1}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\betaup", "\u{03B2}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\gammaup", "\u{03B3}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\deltaup", "\u{03B4}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\epsilonup", "\u{03F5}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varepsilonup", "\u{03B5}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\zetaup", "\u{03B6}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\etaup", "\u{03B7}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\thetaup", "\u{03B8}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varthetaup", "\u{03D1}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\iotaup", "\u{03B9}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\kappaup", "\u{03BA}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\lambdaup", "\u{03BB}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\muup", "\u{03BC}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\nuup", "\u{03BD}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\xiup", "\u{03BE}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\piup", "\u{03C0}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varpiup", "\u{03D6}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\rhoup", "\u{03C1}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varrhoup", "\u{03F1}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\sigmaup", "\u{03C3}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varsigmaup", "\u{03C2}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\tauup", "\u{03C4}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\upsilonup", "\u{03C5}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\phiup", "\u{03D5}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\varphiup", "\u{03C6}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\chiup", "\u{03C7}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\psiup", "\u{03C8}", font => { shape => "upright", forceshape => true });
-  DefMath!("\\omegaup", "\u{03C9}", font => { shape => "upright", forceshape => true });
+  def_math_upright_greek("\\alphaup", "\u{03B1}")?;
+  def_math_upright_greek("\\betaup", "\u{03B2}")?;
+  def_math_upright_greek("\\gammaup", "\u{03B3}")?;
+  def_math_upright_greek("\\deltaup", "\u{03B4}")?;
+  def_math_upright_greek("\\epsilonup", "\u{03F5}")?;
+  def_math_upright_greek("\\varepsilonup", "\u{03B5}")?;
+  def_math_upright_greek("\\zetaup", "\u{03B6}")?;
+  def_math_upright_greek("\\etaup", "\u{03B7}")?;
+  def_math_upright_greek("\\thetaup", "\u{03B8}")?;
+  def_math_upright_greek("\\varthetaup", "\u{03D1}")?;
+  def_math_upright_greek("\\iotaup", "\u{03B9}")?;
+  def_math_upright_greek("\\kappaup", "\u{03BA}")?;
+  def_math_upright_greek("\\lambdaup", "\u{03BB}")?;
+  def_math_upright_greek("\\muup", "\u{03BC}")?;
+  def_math_upright_greek("\\nuup", "\u{03BD}")?;
+  def_math_upright_greek("\\xiup", "\u{03BE}")?;
+  def_math_upright_greek("\\piup", "\u{03C0}")?;
+  def_math_upright_greek("\\varpiup", "\u{03D6}")?;
+  def_math_upright_greek("\\rhoup", "\u{03C1}")?;
+  def_math_upright_greek("\\varrhoup", "\u{03F1}")?;
+  def_math_upright_greek("\\sigmaup", "\u{03C3}")?;
+  def_math_upright_greek("\\varsigmaup", "\u{03C2}")?;
+  def_math_upright_greek("\\tauup", "\u{03C4}")?;
+  def_math_upright_greek("\\upsilonup", "\u{03C5}")?;
+  def_math_upright_greek("\\phiup", "\u{03D5}")?;
+  def_math_upright_greek("\\varphiup", "\u{03C6}")?;
+  def_math_upright_greek("\\chiup", "\u{03C7}")?;
+  def_math_upright_greek("\\psiup", "\u{03C8}")?;
+  def_math_upright_greek("\\omegaup", "\u{03C9}")?;
 
   //======================================================================
   // Table 44 — Variant letterforms
