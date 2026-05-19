@@ -33,27 +33,21 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
   DefMacro!("\\msid{}",
     "\\@add@frontmatter{ltx:note}[role=msid]{#1}");
-  // Review markup — wrap in <ltx:inline-block class='ltx_changes_*'>
-  // rather than <ltx:text>. ltx:text is inline-only and auto-closed
-  // when block-level content like \section opens inside, then the
-  // closing }-token of \added tried to close an already-closed ltx:text.
-  // ltx:inline-block can hold both inline and block content, so the
-  // semantic "added by review" class is preserved while supporting
-  // appendix-wide `\added{\section{...}}` blocks. Witness 2110.12098
-  // (aastex63 with multi-paragraph \added wrapping a whole section).
-  DefConstructor!("\\added{}",
-    "<ltx:inline-block class='ltx_changes_added'>#1</ltx:inline-block>");
-  DefConstructor!("\\replaced{}",
-    "<ltx:inline-block class='ltx_changes_replaced'>#1</ltx:inline-block>");
-  DefConstructor!("\\deleted{}",
-    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#1</ltx:inline-block>");
-  DefConstructor!("\\explain{}",
-    "<ltx:inline-block class='ltx_changes_explanation'>#1</ltx:inline-block>");
-  // \edit{old}{new} — show the new text inline; preserve the old as
-  // strikethrough so both are visible (changes-style).
-  DefConstructor!("\\edit{}{}",
-    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#1</ltx:inline-block>\
-     <ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
+  // Review markup — pass-through (#1) for now, since no LaTeXML container
+  // element accepts ltx:section. ltx:text is inline-only, ltx:inline-block
+  // takes Block.model (paragraphs/equations but no sections), ltx:note
+  // takes Flow.model (still no sections). When authors use
+  // `\added{\section{...}...multi-paragraph...}` to annotate a whole
+  // revised section (common in aastex appendices), any wrapper auto-
+  // closes when \section opens, then the }-token tries to close an
+  // already-closed wrapper → `Error:malformed:ltx:text/inline-block`.
+  // Witness 2110.12098. Pass-through preserves content; the review
+  // semantic class is lost in HTML output but the body survives.
+  DefMacro!("\\added{}",    "#1");
+  DefMacro!("\\replaced{}", "#1");
+  DefMacro!("\\deleted{}",  "#1");
+  DefMacro!("\\explain{}",  "#1");
+  DefMacro!("\\edit{}{}",   "#2");
   def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
   DefMacro!("\\journal{}",

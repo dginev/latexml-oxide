@@ -15,28 +15,18 @@ LoadDefinitions!({
   RequirePackage!("ulem");
   RequirePackage!("todonotes");
   RequirePackage!("xstring");
-  // \added[author]{text} — wrap in <ltx:inline-block class='ltx_changes_*'>
-  // to delineate review-marked content as metadata. The prior
-  // <ltx:text>-wrap variant blew up on `\added{\section{...}}` blocks
-  // because ltx:text is inline-only; <ltx:inline-block> can hold both
-  // inline and block content, preserving the semantic class while
-  // allowing appendix-wide `\added{...multi-paragraph...}` patterns.
-  // Witness 2404.13783, 2110.12098 (aastex63 multi-paragraph \added).
-  DefConstructor!("\\added[]{}",
-    "<ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
-  // \deleted[author]{text} — strike-through so the omitted text remains
-  // visible inline (review-mode rendering).
-  DefConstructor!("\\deleted[]{}",
-    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#2</ltx:inline-block>");
-  // \replaced[author]{new}{old} — render new with added class, old with
-  // strike-through deleted class. Both bodies preserved.
-  DefConstructor!("\\replaced[]{}{}",
-    "<ltx:inline-block class='ltx_changes_deleted ltx_strike'>#3</ltx:inline-block>\
-     <ltx:inline-block class='ltx_changes_added'>#2</ltx:inline-block>");
-  DefConstructor!("\\highlight[]{}",
-    "<ltx:inline-block class='ltx_changes_highlight'>#2</ltx:inline-block>");
-  DefConstructor!("\\comment[]{}",
-    "<ltx:inline-block class='ltx_changes_comment'>#2</ltx:inline-block>");
+  // \added[author]{text} — pass-through (#2). No container element in
+  // the LaTeXML schema accepts ltx:section, so wrapping in <ltx:text>,
+  // <ltx:inline-block>, or <ltx:note> all break on appendix-wide
+  // `\added{\section{...}...}` patterns when the wrapper auto-closes
+  // and the }-token tries to close it. Pass-through preserves content;
+  // semantic class is lost in HTML output. Witness 2404.13783,
+  // 2110.12098 (aastex63 with `\added{\section{Model Limitations}...}`).
+  DefMacro!("\\added[]{}",    "#2");
+  DefMacro!("\\deleted[]{}",  "#2");
+  DefMacro!("\\replaced[]{}{}", "#2");
+  DefMacro!("\\highlight[]{}", "#2");
+  DefMacro!("\\comment[]{}",   "#2");
   def_macro_noop("\\ChangesListline{}{}{}{}")?;
   DefMacro!("\\listofchangesname", "List of changes");
   DefMacro!("\\summaryofchangesname", "Changes");
