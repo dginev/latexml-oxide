@@ -1782,11 +1782,16 @@ impl MathParser {
         // Handles `x>=0` parsed as `(x > absent = 0)` vs `>=@(x, 0)`.
         reduced_forest = reduced_forest.prefer_combined_relop_over_multirelation_with_absent();
 
-        // Re-enabling: when SOME parse has zero `absent` markers,
-        // drop those with one-or-more. The intuition is sound (the
-        // failing tests all match "correct=no absent, wrong=has
-        // absent"); we'll investigate any regression case-by-case.
-        reduced_forest = reduced_forest.prefer_zero_absent_when_available();
+        // `prefer_zero_absent_when_available` retired 2026-05-19
+        // (ASF item 5 Phase 2): the pragma had no dedicated test
+        // witness. Its conceptual target (`<x|y>` inner-product
+        // bra-ket) is already produced as `inner-product@(x, y)`
+        // by the qm-specific pragmas + the angle-bracket grammar
+        // rules. After the modified_term Phase 1 landing, disabling
+        // the pragma left `cargo test --tests` = 1328/0/0 on both
+        // HYBRID and ASF — the pragma is structurally redundant.
+        // See commit history (the new commit) and
+        // `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
 
         // Multi-tree pragma: a *specific* QM semantic
         // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
