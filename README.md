@@ -1,20 +1,22 @@
 # A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.5.0-orange.svg) 
-[![ported tests 100%](https://img.shields.io/badge/ported%20tests%20-%20100%25%20(391%2F391)-%20%2332a852?style=flat)
+[![ported tests](https://img.shields.io/badge/ported%20tests%20-%201328%2F0%2F0-%20%2332a852?style=flat)
 ](https://github.com/dginev/latexml-oxide/issues/30)
 
 This project is in an **early beta** stage. Please avoid using it in any real world setting before mainline LaTeXML parity is reached.
 
-**Current status (2026-04-30):** active strict-Perl parity work at
+**Current status (2026-05-19):** active strict-Perl parity work at
 the format/dump and package-loading boundary, followed by sandbox
 long-tail cleanup (see [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)).
-Current local verification is `cargo test --tests` **1109/0/0** and
-the latest-row 7898-paper sandbox result is **7731 OK = 97.89%**.
+Current local verification is `cargo test --tests` **1328/0/0** and
+the latest 100k-paper warning-subset sandbox result is **~99.4% OK**.
 Full post-processing pipeline:
 `latexml_oxide --format=html5 --dest=paper.html paper.tex`
 produces complete HTML with cross-references, citations, MathML,
-and XSLT.
+and XSLT. Release-profile wall time on the
+[1910.01256](https://arxiv.org/abs/1910.01256) mini-benchmark is
+**0.71 s** (vs ~1.11 s pdflatex idle).
 
 ### Why?
 
