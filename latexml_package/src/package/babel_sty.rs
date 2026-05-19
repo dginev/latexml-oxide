@@ -43,6 +43,15 @@ LoadDefinitions!({
   // some redefinition paths (verified: triggers token_limit:Timeout 100M).
   RawTeX!(r"\let\bbl@opt@safe\@empty");
 
+  // Pre-define `\bbl@main@language` as `english` so papers that load babel
+  // transitively (e.g. via aastex62 → revtex4 → bibstyles → babel chain
+  // without any explicit `\usepackage[<lang>]{babel}`) don't error with
+  // "Token \bbl@main@language is not defined" when `\selectlanguage` or
+  // `\lx@babel@activate@mainlang` later expands it. The real `\ldf@finish`
+  // overrides this when a language .ldf actually runs. Witness 2301.13322
+  // (aastex62 + lipsum + blindtext, no explicit babel options).
+  RawTeX!(r"\providecommand\bbl@main@language{english}");
+
   InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Sets DOCUMENT_LANGUAGE and force-sets \bbl@main@language from
