@@ -18,127 +18,7 @@ the prior "no-problem" subset). Source list: `~/data/all_warnings.txt`
 (1,551,849 rows); the chosen 100k is the *last* 100,000 entries by
 date, rsync'd to `~/data/recent_warning_papers/`.
 
-Stage-1 baseline (first 10k, 2026-05-12 with worker 16, timeout 120s):
-**9929/10000 OK = 99.29%** — 65 conversion_error, 6 conversion_fatal.
-
-Stage-1 re-sweep (2026-05-12 evening, after `42d87de4fe` size-error
-silencing + `868aec6794` algorithmicx `is_defined` fix): **9941/10000
-OK = 99.41%** — 53 conversion_error, 6 conversion_fatal. **+12
-recovered (all AISTATS "Running heading author" cluster), 0
-regressions.** Remaining 59 failures cluster as: babel "Unknown
-option" SHARED with Perl (~14), pgfplots `\lx@text@ampR` `&`-leak
-(~7), expl3 csname-protocol cluster (same root as mhchem retirement
-gap; ~5), undefined-CS (algorithmicx-style `\Subsection`/`\textit`/
-`\qq`/`\polhk`/etc.; ~15), missing class files (~3), tikz parser
-giveup (~1), token-limit / Xy-pic fatals (~6), various (~8).
-
-Stage-2 sweep (next 10k, after `a4ea32f70a` siunitx auto-cancel +
-`8437520117` omnibus `\@ifundefined` theoremstyle): **9945/10000
-OK = 99.45%** — 49 conversion_error, 3 oversized, 2 error (script-
-level), 1 abort. Marginally better than stage-1 v2 (+0.04%),
-confirming the fixes generalize across distinct paper sets.
-
-Stage-1 v3 (2026-05-12 late, after `5b8a4f9aca` listings XML tag /
-commentstyle parity + `a0a87a9f0a` language-switch keyword cleanup +
-nested flag): **9946/10000 OK = 99.46%** — 48 conversion_error, 6
-conversion_fatal. **+5 recovered** (all listings-XML-tag class:
-2602.15149 ForestGreen + 4 nearby papers using `\begin{lstlisting}
-[language=XML]`), 0 regressions.
-
-Stage-1 v3+ targeted re-run (2026-05-12 late, after `64390938db`
-`\lx@applyaccent` csname peek + `2ae0cd2f28` canonical `\text…` soft-
-substitute + `2233126611` NFSS `\<encoding>\i/\j` glyph extension):
-re-running the v3-failing 48 papers against the rebuilt release
-binary recovered **+1 more** (2603.08303 twemoji `\textquoteright`
-cluster). Effective stage-1 result: **9947/10000 OK = 99.47%**.
-Remaining 47 cluster into: babel/biblatex/citep (8), apacite chain
-`\citep`/`\citet`/`\citealp` (5), expl3 csname-protocol (8 — Task #22),
-math xml:id collision (6 — Task #10), pgfplots `\lx@text@ampX` `&`-leak
-(~3), `\LoadClass` in body (2), tikz-cd `decorations.pathmorphing`
-(1), mode-switch frontmatter (~3), various single-witnesses (~11).
-
-Stage-2/3 targeted re-runs (2026-05-12 night) against the same
-csname-protocol + listings binary, plus `3772d41b9e` engine fix to
-fire `\hook_use:n{begindocument/before}` before `begindocument` at
-`\begin{document}`:
-* Stage-2: **9949/10000 OK = 99.49%** (+4 vs 9945: 2603.22193 /
-  2603.23433 twemoji + 2603.25051 / 2604.07448 translations.sty
-  `\@trnslt@current@language`).
-* Stage-3: **9934/10000 OK = 99.34%** (+4 vs 9930: 2604.13899 /
-  2604.17338 / 2604.20621 twemoji + 2604.19192 translations.sty).
-
-Combined stages 1-3: **29,830 / 30,000 OK = 99.43%**. Top remaining
-clusters across the three stages: babel/vendor `\GenericError` (28
-SHARED with Perl), math xml:id collision (14 — Task #10), expl3
-csname-protocol (9 — Task #22), `ltx:*` schema violation in malformed
-XML (8 — paper-specific), `\citep`/`\citet`/`\citealp` apacite chain
-(8 SHARED), various single-witness clusters.
-
-Stage-4 sweep (papers 30001-40000, 2026-05-12 night): **9914/10000
-OK = 99.14%** with same release binary. Stage-4 has higher density of
-1990s-era hep-th / alg-geom papers, exposing three new clusters:
-* `\new@internalmathalphabet` undefined (11 papers) — obsolete LaTeX
-  2.09 kernel macro, fixed by `d0dbcb6b01` (stub with 5-arg signature
-  in latex_constructs.rs).
-* `\xpt` / `\xipt` / `\xiipt` undefined (6 papers) — LaTeX 2.09 size
-  aliases that are defined in latex_base.rs but skipped under the
-  latex.ltx dump path. Fixed by `9bf2c801ae` (no-op stubs duplicated
-  into latex_constructs.rs).
-* `\begin{Sb}` undefined (2 papers, alg-geom legacy) — fixed earlier
-  by `1a90378618` ams_support auto-load of amstex under 2.09 compat.
-
-Stage-4 targeted re-run after fixes: **21/72 prior failures recovered**
-→ effective stage-4 result: **9935/10000 OK = 99.35%**. Stages 1-4
-combined: **39,765 / 40,000 OK = 99.41%**.
-
-Stage-5 sweep (papers 40001-50000, 2026-05-13 morning) with the
-release binary that includes the begindocument/before hook fire,
-csname soft-substitutes, listings tag fix, amstex 2.09 auto-load,
-\new@internalmathalphabet stub, \xpt-class size stubs, and amsppt
-\vspace / \scriptsize stubs: **9943/10000 OK = 99.43%**. Targeted
-re-run of the 39 failures with the latest release recovered another
-4 papers (`9e4950e09c` amsppt \vspace + `66b504116e` amsppt
-font-size cluster: dg-ga9503002, alg-geom9503016, math9505209,
-hep-th9512150). Effective stage-5: **9947/10000 OK = 99.47%**.
-
-Combined stages 1-5: **49,712 / 50,000 OK = 99.42%**.
-
-Stage-1..3 second-round targeted re-run (2026-05-13 morning) with the
-latest release that includes the amsppt \\vspace / font-size stubs +
-amstex 2.09 auto-load recovered another 5 papers (all in stage-3,
-old AmS-TeX cluster): alg-geom9208004 / alg-geom9202004 / hep-th9111005
-/ hep-th9203017 / math9201247. Stage-3 effective: 9939/10000 = 99.39%.
-
-Combined stages 1-5 updated: **49,717 / 50,000 OK = 99.43%**.
-
-Stage-6 sweep (papers 50001-60000, 2026-05-13 morning) with the
-release binary including all the session's commits: **9946/10000
-OK = 99.46%**. No additional papers recovered from the 48 failures
-on targeted re-run — they cluster in the irreducible categories
-(13 math-syntax / 9 paper-specific malformed XML / 4 mode-switch /
-2 expl3 / 2 \\citelow from `sprocl.sty` proceedings style / various).
-
-Combined stages 1-6: **59,663 / 60,000 OK = 99.44%**.
-
-Stage-7 sweep (papers 60001-70000): **9949/10000 OK = 99.49%**.
-Same irreducible cluster as stage-6 (no extra recoveries on rerun).
-
-Combined stages 1-7: **69,612 / 70,000 OK = 99.45%**.
-
-Stage-8 sweep (papers 70001-80000): **9938/10000 OK = 99.38%**.
-
-Combined stages 1-8: **79,550 / 80,000 OK = 99.44%**.
-
-Stage-9 sweep (papers 80001-90000): **9929/10000 OK = 99.29%**.
-Lowest stage rate so far due to a dense `malformed:label` cluster
-(10 papers — "Node document has labels but no xml:id", SHARED with
-Perl) and the usual mix of `\msgencoding` recursion (e-french/msg.sty,
-SHARED), math syntax issues, and expl3 csname-protocol.
-
-Combined stages 1-9: **89,479 / 90,000 OK = 99.42%**.
-
-Stage-10 sweep (papers 90001-100000): **9955/10000 OK = 99.55%** —
-the highest stage rate in the sweep. Per-stage first-pass tallies:
+Per-stage first-pass tallies (each row = 10k papers):
 
 | Stage | OK    | %       |
 |------:|------:|--------:|
@@ -153,27 +33,15 @@ the highest stage rate in the sweep. Per-stage first-pass tallies:
 |  9    | 9929  | 99.29%  |
 | 10    | 9955  | 99.55%  |
 
-Combined stages 1-10 first-pass: **99,390 / 100,000 OK = 99.39%**.
-With the targeted per-stage re-runs that recovered an additional
-**+51** papers against the iteratively rebuilt release binary
-(stage-1: +6, stage-2: +4, stage-3: +9, stage-4: +25, stage-5: +5,
-stage-6: +2): **~99,441 / 100,000 = 99.44%**.
+Combined first-pass: **99,390 / 100,000 OK = 99.39%**. With targeted
+per-stage re-runs against the iteratively rebuilt release binary
+(+51 recovered): **~99,441 / 100,000 = 99.44%**. Round-26 close.
 
-Final fix this session — `8880cd8c85` Pair parameter reader brace
-skip — recovers the `\\multiput(x,{y})` cluster (hep-th9610147 +
-hep-th9703142, stage-6). Other Pair-error papers in the corpus
-(hep-ph9503267, gr-qc9711041, physics9709007) have `(x,y,z)` 3-value
-malformed pairs that are paper-level errors SHARED with Perl.
-
-**Round-27 cluster work plan (opened 2026-05-13, official)**:
-
-The 220-paper classified-cluster cohort below is being worked
-from kernel-and-core-quality outward to individual macro
-bindings, per user directive. Each cluster gets a root-cause
-analysis and a principled fix path. The first
-surpass-Perl improvement on the cohort landed in `f54df88c22`
-(`\lx@notetext` optional `[id]` → `OptionalSemiverbatim`)
-which fixes the `\fntext[footnote_label2]` family.
+**Round-27 cluster work plan (opened 2026-05-13)**: the 220-paper
+classified-cluster cohort is worked from kernel-and-core quality
+outward to individual bindings. Open clusters are described below;
+closed clusters are dropped from this doc once their fix lands and
+generalizes.
 
 ### Cluster A — Catcode-leak through optional-arg digestion (math-mode-as-symptom)
 
@@ -332,66 +200,23 @@ effect.
 
 ### Cluster F — `\endgroup`-`\figure` RevTeX 3.x short-form
 
-**Status:** CLOSED. Rust SUPERSEDES Perl on 9/10. SHARED on
-the 10th. **No action.** ~10 papers.
-
-**Root cause.** RevTeX 3.x's `\figure{N} caption…` short-form
-(aps.sty L616-628, non-`floats` mode) has no binding in either
-engine. Rust recovers further from the resulting unclosed-mode
-error than Perl. Witness counts: cond-mat9607130 (Rust 1,
-Perl 7), hep-th9410220 (Rust 93, Perl 102), …
-
-**Why no Rust binding.** Verified 2026-05-13 against
-`~/LaTeXML/lib/LaTeXML/Package/revtex*.ltxml` — Perl has zero
-`\figure` definitions (only `\printfigures` in revtex4_support).
-A Rust-only `DefMacro!(r"\figure {}", "…")` would be a hotfix
-diverging from Perl. Per `feedback_perl_parity_bindings.md`
-the project rule is "match Perl, do not innovate" — the
-earlier "Principled approach" plan (provide a short-form
-binding) was retracted. The cluster's already-recorded
-"Rust SUPERSEDES" verdict stands.
+**Status:** CLOSED. Rust SUPERSEDES Perl on 9/10. SHARED on the
+10th. Verified 2026-05-13 against Perl revtex*.ltxml — no
+`\figure` short-form binding in either engine; Rust just recovers
+further from the unclosed-mode error.
 
 ### Cluster G — long-tail single-witnesses (~274 papers)
 
-**Status (current, post-Round-34):** Cluster G is effectively
-**closed**. The 274-paper sample was progressively triaged across
-Rounds 26–34 (2026-05-12 → 2026-05-17). Most papers split into
-the SHARED-FAILURE log below or were fixed by engine work
-documented elsewhere; remaining single-witness regressions roll
-up into the broader corpus pass-rate.
+**Status:** effectively CLOSED post-Round-34 (2026-05-17). Most
+papers split into the SHARED-FAILURE log; remaining single-witness
+regressions roll up into the corpus pass-rate. Cross-corpus check:
+4736/4736 random arxiv samples pass with 0 errors.
 
-**Cross-corpus validation (2026-05-17):** **4736 / 4736** random
-arxiv samples across `next_warning_papers`, `warning_papers_3`,
-and historical pre-2000 corpora pass with **0 errors** on the
-current binary. Effective pass-rate is statistically
-indistinguishable from 100%.
-
-**Remaining deferred work** (none block the mission-success
-criterion):
+**Remaining deferred work** (none block the mission):
 * **Task #10**: math-parser xml:id collision cases.
-* **Task #22**: mhchem retirement gap (expl3 csname-protocol
-  cascade). See "mhchem retirement" section below.
+* **Task #22**: mhchem retirement gap. See "mhchem retirement"
+  below.
 * `neurips_2024.sty` mode-switch cluster (~4 papers).
-
-**SHARED-FAILURE clusters confirmed** (Perl and Rust both fail
-identically; no engine action required):
-* `\@math@daccent`/`\@math@baccent` paper-side `\def\d` (~14
-  papers).
-* `\begin{abstract}` mode-switch on plain-TeX-style abstracts
-  (~46 papers).
-* babel "Unknown option" PackageError on TL2025.
-* apacite/`\citep`/`\citet`/`\citealp` chain (not in TL).
-
-Round-26 mission summary (compact): the 100,000-paper "warning"
-subset converted at **99.39–99.44%** end-to-end OK; residuals
-(~0.56%) overwhelmingly SHARED-FAILURE. Per-round iteration
-logs from this period are archived at
-[`archive/round19_iteration_log.md`] and were pruned from this
-doc on 2026-05-18 (kept the corpus state, dropped the play-by-play).
-
-`cargo test --tests` was **1190/0/0** at Round-26 close
-(commit visibility); current local verification is in
-[`docs/SYNC_STATUS.md`](.) header.
 
 ---
 
@@ -630,21 +455,6 @@ tests pin the round-trip + RLE edge cases + V-record backward compat.
 
 ---
 
-## Post-processing pipeline parity ✅ Closed 2026-05-18
-
-The Perl `LaTeXML::Post::Writer` / `LaTeXML::Util::Pack` /
-`pack_collection` trinity is now mirrored in
-`latexml_post/src/{writer,pack,extract}.rs`. `latexml_oxide` and
-`cortex_worker` route through the same three modules; `omit_doctype`
-goes through libxml 0.3.11's `Document::remove_internal_subset`
-(KWARC/rust-libxml PR #198). Tests went 1309/0/0 → 1328/0/0 (+19).
-`latexmlpost_oxide` retired as a separate binary —
-`latexml_oxide` auto-detects `.xml` input and skips the TeX
-front-end. See `git log --grep="latexmlpost\|post::writer\|post::pack"`
-for landing commits.
-
----
-
 ## Post-processing graphics renderer chain (decided 2026-05-12)
 
 Subprocess-only, no library linking — AGPL/GPL on the underlying C
@@ -707,140 +517,38 @@ out the in-process benefit; measured 1.33s vs 1.21s pdftocairo on
 
 ## Distribution-readiness dependency cleanup — closed audit
 
-Original audit 2026-05-17, all tiers closed by 2026-05-19. Live
-release-binary snapshot: **44.60 MiB stripped** (down from 57.12
-MiB pre-audit), .text ≈ 34.3 MiB, .rodata = 2.2 MiB (TL2023+TL2025
-dumps gzipped via DEP-12). Bulk of .text is OUR macro-arm bindings
-(latexml_package 41%, engine 16%, contrib 13%, core 10%); dep
-cleanup is mostly compile-time hygiene + dup-version elimination.
+Closed 2026-05-19. Release binary **44.60 MiB stripped** (down
+from 57.12 MiB pre-audit); .text ≈ 34.3 MiB, .rodata = 2.2 MiB
+(TL2023+TL2025 dumps gzipped). The remaining .text is OUR
+macro-arm bindings (latexml_package 41%, engine 16%, contrib 13%,
+core 10%) — i.e. payload, not dependencies.
 
-**DEP-01..06 — Cargo.toml hygiene + dup-version elimination ✅**
-unused deps dropped (`unicode-normalization`); test-only deps
-gated behind `test-utils` feature (`c57bcf8760`); `syn` /
-`regex-syntax` / `rustix` / `hashbrown` duplicate pairs unified
-(indexmap pinned to `=2.13.1` so hashbrown stays at 0.16; revisit
-when string-interner ships 0.21+).
+**Settled lessons (do not retry):**
+* Generic `T: Into<X>` helpers GROW the binary via
+  per-call-site monomorphization
+  ([[wisdom_helper_monomorphization_trap]]). Only concrete-value
+  helpers shrink.
+* Data-drive helpers need ≥5 dominant call-sites per file to
+  net-shrink ([[wisdom_data_drive_min_call_sites]]).
+* Helpers needing complex option structures (e.g. textcomp's
+  `bounded => true, font => { encoding => "TS1" }`) cross the
+  ergonomics-vs-savings line.
 
-**DEP-07..10 + sha2/tar slimming — feature trims ✅** `ansi_term`
-→ raw ANSI SGR (logger.rs); `dirs` → `std::env::var_os("HOME")`;
-`chrono` no-default-features; `regex` no-default-features +
-`std,perf,unicode-{case,gencat,perl,script}` only (−163 KiB);
-`sha2` drops `oid`; `tar` drops `xattr`.
-
-**DEP-11..13 — Profile/packaging ✅** `panic = "abort"` on
-`maxperf` only (NOT release — `cortex_worker` per-paper isolation
-needs unwinding). DEP-12 ships TL-dump blobs gzip-compressed
-(`flate2`, 4.7× ratio) with a three-tier cache (thread-local,
-disk, embedded-fallback) — saved 5.98 MiB. Ship recipe documented
-in `CLAUDE.md` (`--no-default-features --profile maxperf`).
-
-**DEP-14 — feature-gate `proc-macro2`+`quote` in latexml_core ✅**
-(`1365989630`) — architectural win only (LTO had already been
-dead-stripping). Binary delta ≈ 0.
-
-**DEP-15..20 — data-drive macro-arm consolidation ✅** Pattern:
-replace `1000+` repeated `DefMacro!/DefPrimitive!/DefMath!` arms
-with single-arg helper-fn calls (parse prototype at runtime, one
-copy of construction code instead of N inlined). Outcomes:
-
-| Series | Helper(s) | Migrated | Δ binary |
-|---|---|---:|---:|
-| DEP-15  | `def_fa{4,5}_icon` (fontawesome) | 1373+706 | −2.54 MiB |
-| DEP-16  | `latexml::load_latexml_default_model()` (RelaxNG schema funnel) | 3 sites → 1 | −633 KiB |
-| DEP-17  | `def_math_sym`, `def_math_atom`, `def_math_upright_greek` (txfonts/mathabx/amssymb/math_common) | 781 / 1031 | −720 KiB |
-| DEP-18  | `def_macro_noop` (empty-body stubs) | 1673 | −1162 KiB |
-| DEP-19  | `def_macro_identity` (`{}` → `#1`) | 94 | −96 KiB |
-| DEP-20  | `def_primitive_noop` | 132 | −249 KiB |
-
-**DEP-22 — promote helpers into `latexml_engine::prelude` ✅**
-(`9aab482d32`) — 231 per-file duplicates collapsed to 5 canonical
-`pub fn` definitions. 209 files / −2029 lines / −100 KiB. Source
-hygiene + symbol-table cleanup; LTO already deduplicating.
-
-**DEP-21 — DefRegister generic data-drive ❌ REVERTED** Generic
-`fn def_register_value<T: Into<RegisterValue>>(...)` GREW binary
-+139 KiB due to per-call-site monomorphization. Lesson recorded
-in `[[wisdom_helper_monomorphization_trap]]` — generic
-`T: Into<X>` helpers are a binary-size ANTI-pattern; only
-concrete-value helpers shrink.
-
-### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
-
-Top `.text` consumers on `target/release/latexml_oxide`
-(`.text` total 35.2 MiB before DEP-16, slightly lower after):
-
-| Function | Size | % of `.text` |
-|---|---:|---:|
-| `latexml_engine::latex_constructs::load_definitions`  | 1.1 MiB | 3.1% |
-| `latexml_core::common::font::standard_metrics::STDMETRICS::{closure#0}` | 811 KiB | 2.3% |
-| ~~`latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2~~ | ~~1.2 MiB~~ | DEP-16 closed |
-| `latexml_package::package::jhep_cls::load_definitions` | 511 KiB | 1.4% |
-| `latexml_package::package::mathabx_sty::load_definitions` | 438 KiB | 1.2% |
-| `latexml_engine::math_common::load_definitions` | 339 KiB | 0.9% |
-| `latexml_package::package::amsmath_sty::load_definitions` | 286 KiB | 0.8% |
-| `latexml_package::package::aas_support_sty::load_definitions` | 262 KiB | 0.7% |
-| `latexml_package::package::pgfsys_latexml_def::load_definitions` | 256 KiB | 0.7% |
-| `latexml_package::package::mathtools_sty::load_definitions` | 248 KiB | 0.7% |
-| `latexml_package::package::txfonts_sty::load_definitions` | 234 KiB | 0.6% |
-| `latexml_contrib::biblatex_sty::load_definitions` | 227 KiB | 0.6% |
-| `latexml_package::package::amssymb_sty::load_definitions` | 216 KiB | 0.6% |
-| `latexml_package::package::iopart_support_sty::load_definitions` | 216 KiB | 0.6% |
-
-Top 15 functions account for ~17% of `.text` (~6 MiB on the
-35-MiB code section). Universally they're `LoadDefinitions!`
-bodies with hundreds of repeated `DefMacro!` / `DefConstructor!`
-invocations.
-
-`latex_constructs::load_definitions` shrank from 1.1 MiB →
-~1.05 MiB this session (2026-05-18) after ~320 lines of
-dead-code dedupe (task #90 cleanup landing in commits
-`69945b78d4` … `1fa0728bb1` + `39f5d5ba45` + `1f59f0e780`).
-Further reduction would require breaking it into sub-modules.
-
-### DEP-NEW session results (2026-05-19) — diminishing-returns stop
-
-* **jhep_cls** ✅ −250 KiB (commit `c31921b878` / `3433924cda`).
-  93 of 94 `\<cs>{}{}{}` → `\@spires{<CODE>\%2C…}{{\it <Name>}…}`
-  journal-abbrev macros migrated to runtime helper
-  `def_jhep_journal(cs, body)`.
-* **iopart_support_sty** ✅ −42 KiB (commit `ef8ad6b706` /
-  `f9dea926f8`). 74 `\<cs>` → `\textit{<name>}` IOP physics
-  journal abbrev macros migrated to runtime helper
-  `def_iop_journal(cs, name)`. The DEP-15 table estimated 216
-  KiB; actual saving ~5× smaller because LTO had already been
-  dead-stripping cold paths.
-* **marvosym_sty** ✅ −225 KiB (commit `0a7a6f7cea`). 107 of 113
-  `DefPrimitive!("\\<cs>", "\u{XXXX}…")` icon glyphs migrated to
-  runtime helper `def_marvosym_icon(cs, codepoint)`. Found via
-  fresh `cargo bloat` data after iopart — marvosym wasn't
-  flagged in the older DEP-15 table.
-
-**Stopped here on objective diminishing returns.** Fresh
-`cargo bloat -n 20` (post-marvosym) shows no remaining file with
-a clean 50+ site dominant pattern that fits the simple
-data-drive template:
+**Remaining unconsolidated text-section consumers** (per fresh
+`cargo bloat`, future re-audit input):
 
 | Candidate | .text | Notes |
 |---|---:|---|
-| `latex_constructs::load_definitions` | 1004 KiB | varied; sub-module split would be next lever |
-| `STDMETRICS::{closure#0}`             |  810 KiB | font-metric data tables, not a macro-arm pattern |
-| `_ModelLoader::build_model`           |  602 KiB | RelaxNG schema; DEP-16 closed earlier |
-| `amsmath_sty`        | 275 KiB | varied DefConstructor + DefMath, no simple repeat |
-| `pgfsys_latexml_def` | 254 KiB | structural DefConstructor; varied |
-| `mathtools_sty`      | 248 KiB | varied; DefMath mostly covered by DEP-17 |
-| `aas_support_sty`    | 221 KiB | ≤11 frontmatter sites, varied short literals |
-| `proofwiki_sty`      | 201 KiB | 254 DefMacro all distinct bodies; only 15 unicode-pattern |
-| `textcomp_sty`       | 137 KiB | 89 DefPrimitive with `bounded => true, font => { encoding => "TS1" }` options — helper would need a full `PrimitiveOptions+FontDirective` constructor, complexity-vs-savings is below the line |
+| `latex_constructs::load_definitions` | ~1.0 MiB | varied; sub-module split would be next lever |
+| `STDMETRICS::{closure#0}` | 810 KiB | font-metric data tables, not a macro-arm pattern |
+| `_ModelLoader::build_model` | 602 KiB | RelaxNG schema (DEP-16 already collapsed 2 sites to 1) |
+| `proofwiki_sty` | 201 KiB | 254 distinct-body DefMacros |
+| `textcomp_sty` | 137 KiB | 89 DefPrimitive with font directive |
 
-Below ~50 KiB-per-file or when the helper needs complex option
-structures (textcomp's font directive), the helper-pattern
-overhead crosses the line where DEP-21 hit
-`[[wisdom_helper_monomorphization_trap]]`. Future cargo-bloat
-re-audits may surface new patterns as the codebase grows.
-
-Final release binary (post-marvosym): **44.60 MiB** (down from
-45.12 MiB this session, ~47.6 MiB pre-DEP-15 fontawesome —
-~3 MiB cumulative DEP-NEW wins since 2026-05-18).
+`panic = "abort"` is `maxperf`-only (NOT release —
+`cortex_worker` per-paper isolation needs unwinding). Distribution
+build recipe is in `CLAUDE.md`
+(`--no-default-features --profile maxperf`).
 
 ---
 

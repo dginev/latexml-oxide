@@ -45,235 +45,45 @@ line diff — only the `texsys.aux_contents` build timestamp). Target
 | `latex_constructs` | 1055 | 1199 | ⚠ 13.5% extra in Rust |
 | `latex_dump` | n/a | 25770 entries | ✅ NEAR-PARITY |
 
-**Audit table refresh (2026-05-02, post-Round-18, methodology:
-`grep -cE 'Def(Macro|Primitive|Constructor|Register|Math|Environment|KeyVal|ParameterType)I?[[:space:]]*\(' for Perl /
-`!\\(` for Rust)**:
+**Audit table (current, 2026-05-02 methodology — uniform
+`Def*`+`Let` regex across both sides):**
 
-| File | Perl calls | Rust calls | Δ | Status |
-|------|-----------:|-----------:|---:|--------|
+| File | Perl | Rust | Δ | Status |
+|------|-----:|-----:|---:|--------|
 | `plain_bootstrap` | 5 | 5 | 0 | ✅ PARITY |
 | `plain_base` | 129 | 127 | -2 | ✅ PARITY |
 | `plain_constructs` | 62 | 79 | +17 | ✅ NEAR-PARITY (cosmetic — Rust split for clarity) |
 | `latex_bootstrap` | 8 | 7 | -1 | ✅ PARITY |
 | `latex_base` | 138 | 127 | -11 | ✅ NEAR-PARITY |
-| `latex_constructs` | 1071 | 1097 | **+26** | ✅ NEAR-PARITY (was +144 on 2026-04-28; **81% reduction**) |
+| `latex_constructs` | 1071 | 1097 | +26 | ✅ NEAR-PARITY (<3% drift) |
 
-Note: the 2026-04-28 numbers used a different counting methodology
-(possibly including different macro families); not directly
-comparable per-row. The 2026-05-02 refresh uses a uniform regex
-across both Perl and Rust. Most importantly, `latex_constructs`
-gap is now within cosmetic-drift territory (under 3%), down from
-the prior 13.5% drift cited as ⚠ above.
+Per-file gap is **closed for action** — the residual differences
+are cosmetic source organization (latex_constructs Rust-only set
+is mostly intentional internals: `\lx@*` / `\ltx@*` plumbing,
+picture-env helpers, math active-char primitives, xparse-2018
+public APIs, pdfTeX primitives). Zero-error inits hold for both
+`--init=plain.tex` and `--init=latex.ltx`.
 
-Active: ✅ — gap is no longer actionable. Per-CS spot-checks (the
-26 "extra" Rust calls in `latex_constructs`) would be useful for
-strict-parity acceptance criteria but not blocking. Tests 1112/0/0,
-zero-error inits hold.
-
-**Same-file CS-name diff (2026-05-02 follow-up)**: 45 CSes are
-defined in Perl `latex_constructs.pool.ltxml` but not in Rust
-`latex_constructs.rs` (often defined in another Rust file). Per
-CLAUDE.md priority 3 ("Every `\foo` defined in `Engine/<file>` MUST
-be defined in `latexml_engine/src/<file>.rs`"), these are
-candidates for future same-file relocation:
-
-```
-\ASCII, \@caption@, \@caption@postlabel, \@captype, \@cite,
-\documentstyle, \ensuremath, \@filef@und, \fnum@, \@fontswitch,
-\@font@warning, \format@title@, \G@refundefinedtrue,
-\@@@hack@caption@, \@hack@caption@, \hexnumber@, \labelenum,
-\labelitem, \ldots, \list, \loggingoutput, \lx@end@verbatim,
-\lx@label, \lx@latex@input, \M@, \mathring, \newsavebox,
-\@nomath, \normalsfcodes, \on@line, \pic@@savebox, \pic@savebox,
-\reserved@a, \@savepicbox, \@settopoint, \showoutput,
-\showoverfull, \stop, \T@, \the, \theenum, \theequation,
-\theequation@ID, \tracingfonts, \@trivlist
-```
-
-These don't affect runtime correctness (zero-error inits still
-pass), but moving them to `latex_constructs.rs` is the strict-Perl
-parity refactoring backlog. Multi-iteration scope; not blocking.
-
-**45-list status refresh (2026-05-18)**: spot-verified the L80-89
-list against the current Rust tree. Most entries are *not* genuine
-gaps but regex artifacts in the original audit:
-
-| Bucket | CSes | Status |
-|---|---|---|
-| Dynamic (defined inside Perl closure body, not top-level) | `\@captype`, `\@filef@und`, `\format@title@`, `\labelenum`, `\labelitem`, `\theenum`, `\theequation`, `\theequation@ID` | Audit false positive — Perl regex matched the inner `DefMacroI` line inside a `sub { … }` body that runs only at runtime. Rust generates equivalents dynamically too. |
-| Already in latex_constructs.rs but regex missed (multi-line / nested parameter spec) | `\@hack@caption@` (L6797), `\@@@hack@caption@` (L6801), `\lx@end@verbatim` (L5238), `\reserved@a`, `\normalsfcodes`, `\@trivlist`, `\@nomath`, `\@font@warning`, `\G@refundefinedtrue`, `\@settopoint` (L8169), `\@fontswitch` (L9332) | Audit false positive. |
-| Already in another file but semantically correctly placed | `\mathring`, `\ldots` (math_common.rs), `\showoutput`/`\tracingfonts` (plain_base.rs), `\@@cite` constructor (separate from `\@cite` formatter), `\documentstyle` (tex_job.rs architectural) | No action — file split matches semantic intent. |
-| Genuine port — done this session | `\@cite{}{}` (commit landed 2026-05-18, L7796) | Real fix: kernel default citation formatter wrapping `[{#1\if@tempswa , #2\fi}]`. |
-| Intentional Rust-side different implementation | `\pic@savebox`, `\pic@@savebox`, `\@savepicbox` (Rust uses raw `\def\@savepicbox#1(#2,#3){…}` chain at latex_constructs.rs L8435 instead of Perl's `\pic@savebox` delegation) | Documented divergence. |
-| Truly missing / dynamic-from-Perl-runtime | very small residue | Per-CS investigation only if user-witnessed failure. |
-
-The "45 candidates" backlog is effectively closed — only `\@cite`
-needed a real port, the rest were classification artifacts.
-
-**2026-05-02 follow-up: dump-path resolution check**: spot-checked
-3 of the 45 violations against `resources/dumps/latex.dump.txt`:
-
-| CS | Dump-path? | Match Perl? | Runtime fix? |
-|---|---|---|---|
-| `\hexnumber@` | ✓ M-entry present | ✓ exact body | n/a (dump = Perl) |
-| `\on@line` | ✓ M-entry present | ✓ exact body | n/a (dump = Perl) |
-| `\stop` | ✓ M-entry present | ✗ kernel body, NOT Perl's `closeMouth(1)` | ✓ `Let!("\\stop","\\endinput")` at `latex_constructs.rs:9220` (commit `c0a3f298563`, 2026-04-17) — runs after dump replay and overrides the kernel body |
-
-Implication: the dump path provides most "missing source" CSes at
-runtime, so the violations are mostly **source-organization only**,
-not runtime failures. For deliberate Perl overrides like `\stop`,
-the post-dump phase in `latex_constructs.rs` already restores Perl's
-intent; the audit "✗" describes the dump content, not the runtime
-state. Verified 2026-05-15: a paper with `\stop` converts with 0
-errors.
-
-Per-CS strict-parity work should:
-1. Check if Perl's body in `latex_constructs.pool.ltxml` matches
-   the kernel/dump body — if YES, add to `latex_constructs.rs`
-   redundantly (cosmetic source-organization fix).
-2. If Perl's body is a **deliberate override** (different from
-   dump), translate carefully — these are the runtime-significant
-   cases.
-
-**Full classification of 27 truly-missing-in-Rust violations
-(2026-05-02)**:
-
-| Category | Count | CSes |
-|---|---|---|
-| Dump-resolved (likely OK at runtime, source-org only) | 14 | `\documentstyle`, `\@cite`, `\@fontswitch`, `\@font@warning`, `\G@refundefinedtrue`, `\hexnumber@`, `\mathring`, `\newsavebox`, `\@nomath`, `\on@line`, `\@savepicbox`, `\@settopoint`, `\showoutput`, `\stop`, `\tracingfonts`, `\@trivlist` |
-| NOT in dump (genuine missing, but mostly dynamic) | 13 | `\ASCII`, `\@captype`, `\fnum@`, `\labelenum`, `\labelitem`, `\lx@end@verbatim`, `\lx@label`, `\pic@@savebox`, `\pic@savebox`, `\theenum`, `\theequation@ID`, … |
-
-Most of the "NOT in dump" cases are *dynamically-defined* CSes
-(counter/label print macros generated by `\newcounter`/`\newlabel`
-at runtime, not static `Def*` calls). The runtime infrastructure
-generates them when needed — Rust's `\newcounter`/`\newlabel` may
-already do this correctly.
-
-**14-list refresh (2026-05-15)**: of the 14 "dump-resolved
-source-org" candidates above, all but one are already present in
-`latexml_engine/src/`, most in `latex_constructs.rs`:
-
-| CS | Current Rust location | Notes |
-|---|---|---|
-| `\hexnumber@` | `latex_constructs.rs` | exact-body relocation done |
-| `\on@line` | `latex_constructs.rs` | exact-body relocation done |
-| `\stop` | `latex_constructs.rs:9220` (Let → `\endinput`) | Perl override applied |
-| `\@cite` | `latex_constructs.rs:7796` | ported 2026-05-18 (Perl L4238 kernel default formatter `[{#1\if@tempswa , #2\fi}]`); was missing under NODUMP path |
-| `\@@cite` | `latex_constructs.rs:7803` | DefConstructor at parity |
-| `\@font@warning` | `latex_constructs.rs` | done |
-| `\G@refundefinedtrue` | `latex_constructs.rs` | done |
-| `\@nomath` | `latex_constructs.rs` | done |
-| `\@trivlist` | `latex_constructs.rs` | done |
-| `\@settopoint` | `latex_constructs.rs:8169` (DefMacro) | done |
-| `\newsavebox` | `latex_base.rs:441` + `latex_constructs.rs:8398` (TeX! block) | already in both via raw TeX |
-| `\@savepicbox` | `latex_base.rs:444` + `latex_constructs.rs:8401,8408` (TeX! block) | already in both via raw TeX |
-| `\documentstyle` | `tex_job.rs` (intentional — see docstring there) + `latex_constructs.rs` Let | architectural; do NOT relocate |
-| `\mathring` | `math_common.rs` (math accent file) | semantically correct location |
-| `\showoutput` | `plain_base.rs` (TeX plain primitive) | semantically correct location |
-| `\tracingfonts` | `plain_base.rs` (TeX plain primitive) | semantically correct location |
-| `\@fontswitch` | `latex_constructs.rs:9332` **(added 2026-05-15)** | Perl override of dump's kernel body |
-
-So the real strict-parity gap is:
-- ~0 remaining cosmetic source-org relocations from the 14-list
-  (most were already done; the few defined elsewhere are
-  semantically correctly placed or architecturally locked)
-- A handful (likely 5-10) of genuinely missing static definitions
-  that need careful per-CS investigation
-- Deliberate overrides applied: `\stop` (Perl's `closeMouth(1)` →
-  `Let "\endinput"`) and `\@fontswitch` (Perl's simpler
-  `\ifmmode/\else` → DefMacro)
-
-**Engine-wide CS-name diff refresh (2026-04-29 evening, methodology
-note).** A per-file diff of `latex_constructs.pool.ltxml` vs
-`latex_constructs.rs` (the source of the "1055 / 1199 → 13.5%
-extra" number above) overcounts drift because Perl and Rust split
-kernel-vs-construct CSes across files differently — most of the
-160-name surface vanishes once the diff is taken across the engine
-union. Engine-wide measurement (`Engine/*.pool.ltxml` ∪ all
-`latexml_engine/src/*.rs`):
-
-| Side | Unique CS names | Diff |
-|------|---:|---:|
-| Perl engine union | 2662 | — |
-| Rust engine union | 2364 | — |
-| Rust-only | — | 65 |
-| Perl-only | — | 363 |
-
-**Refresh 2026-05-15.** Re-ran the diff after 16 days of binding
-work (port-from-Perl + sibling-machine kernel additions). Same
-methodology (Def\* and Let regex over both sources), adding a Rust-
-side scan of raw `\def`/`\let` inside `RawTeX!`/`TeX!` blocks:
+**Engine-wide CS-name diff (most recent refresh 2026-05-15)**:
 
 | Side | Unique CS names | Diff |
 |------|---:|---:|
 | Perl engine union | 2616 | — |
-| Rust engine union (incl raw) | 2642 | — |
-| Rust-only | — | 214 |
+| Rust engine union (incl raw blocks) | 2642 | — |
+| Rust-only | — | 214 (mostly intentional internals) |
 | Perl-only | — | 188 |
 
-The Perl-only gap narrowed from 363 → 188 (~48% reduction). Bucket
-breakdown of the 188:
+Bucket breakdown of the 188 Perl-only:
 
 | Bucket | Count | Status |
 |---|---:|---|
-| `\bib@*` family | 116 | `latexml_engine/src/bibtex.rs` is a 37-line skeleton; full port from Perl `BibTeX.pool.ltxml` (956 lines) is a known TODO. Not random drift. |
-| Misc `\<other>` | 58 | Diverse atomics: `\@charlb`, `\@filef@und`, point-size CSes, `\batchmode`, etc. Per-CS investigation needed. |
-| `\@<lowercase>` | 12 | Mostly already handled via raw `TeX!`/`RawTeX!` blocks (e.g. `\@cite`, `\@captype`); regex doesn't catch the raw-block path uniformly. |
+| `\bib@*` family | 116 | `latexml_engine/src/bibtex.rs` is a 37-line skeleton; full port from `BibTeX.pool.ltxml` (956 lines) is a known TODO. |
+| Misc atomics | 58 | `\@charlb`, point-size CSes, `\batchmode`, etc. Per-CS investigation if user-witnessed. |
+| `\@<lowercase>` | 12 | Mostly handled via raw `TeX!`/`RawTeX!` blocks; regex undercounts. |
 | `\@<at-name>` | 2 | Architecturally OK. |
 
-The 214 Rust-only set is dominated by intentional Rust-side
-additions: 13 `\lx@*` (LaTeXML internals) + 5 `\ltx@*` + 6
-`\@list*` safety stubs + 2 `\@hidden@*` math helpers + 60 misc
-(xparse-2018 / LaTeX-2020 helpers like `\IfClassAtLeastTF`,
-`\NewCommandCopy`, the new `\Cdprime`/`\Cprime` BibTeX-Cyrillic
-stubs, `\UTF@<n>@octets@noexpand` family). Two genuinely-Rust-
-only patterns flagged earlier (`\@@appendix`, `\@begin@lrbox`)
-remain false positives (regex matched a commented-out line or a
-diff in trailing args).
-
-**Conclusion.** The strict-Perl drift surface is shrinking but
-not yet zero. The largest remaining cluster (BibTeX 116 CSes) is
-a deferred port, not parity drift. Outside BibTeX, the gap is
-~72 CSes worth investigating per-symbol, with the expectation
-that many are raw-block-defined and undercounted by the regex.
-
-The 65-name Rust-only set, after inspection, is mostly
-intentional internals — `\lx@*` / `\ltx@*` plumbing, picture-env
-helpers (`\lx@pic@line`, `\lx@pic@oval`, `\lx@pic@qbezier`,
-`\lx@pic@vector`), math active-char primitives
-(`\lx@math@amp/dollar/hash/percent/underscore`), xparse-2018
-public API names (`\IfClassLoadedTF`, `\IfPackageAtLeastTF`,
-`\NewCommandCopy`, `\DeclareCommandCopy`), and pdfTeX primitives
-eagerly defined where Perl raw-loads them
-(`\pdfendthread`, `\pdfsavepos`, `\pdfsetrandomseed`,
-`\pdfstartthread`, `\pdfnoligatures`).
-
-**2026-04-30 spot-check on the previously-flagged "real drift"
-candidates** confirms the surface is much smaller than the 65 number
-suggests — most are false positives or intentional stubs:
-
-| Candidate | Verdict |
-|---|---|
-| `\@@appendix` | **NOT drift** — Perl `latex_constructs.pool.ltxml:707` defines the identical body `\@startsection{appendix}{0}{}{}{}{}`. Iteration-3 regex missed it (false positive). |
-| `\@begin@lrbox` | **NOT drift** — Rust definition is commented out at `latex_constructs.rs:7890`. Regex matched the comment. |
-| `\@listi…\@listvi` | **Intentional safety stub** at `latex_constructs.rs:4831`-4838 with explicit comment: "stub them as no-ops since LaTeXML handles list formatting via CSS". |
-| `\@leftmark` / `\@rightmark` | Simple `Let!("\\@leftmark", "\\@firstoftwo")` at `latex_constructs.rs:3969`-3970. Redundant with latex.ltx raw-load but harmless; stays. |
-| `\@maxlistdepth` | `DefRegister!` initializing to 6 at `latex_constructs.rs:4827`. Standard kernel value; redundant with raw latex.ltx but harmless. |
-
-**Conclusion:** the actual strict-Perl drift surface in
-`latex_constructs` is essentially empty — a handful of redundant
-kernel-default initializations, none acute. The "13.5% extra in
-Rust" framing in the table above should be read as
-**organizational + safety-stub overhead**, not parity drift.
-
-The 363-name Perl-only set is dominated by `bib@entry@*`
-biblatex-style entries that Rust handles in `latexml_contrib`
-rather than the engine, plus pattern-misses (the regex doesn't
-catch `DefMath`/`DefRegister`/several variants on the Perl side).
-Not actionable as-is; a refined regex pass would shrink it.
-
-Diff lists for the next iteration: `/tmp/audit/rust_only_engine.txt`,
-`/tmp/audit/perl_only_engine.txt`.
+Outside BibTeX (deferred port), the gap is ~72 CSes worth per-CS
+investigation. Diff lists for next iteration in `/tmp/audit/`.
 
 ## The strict split
 
@@ -549,68 +359,20 @@ Measured TL2025 impact:
 Code: `latexml_core/src/dump_writer.rs` (RLE encoder + grouping),
 `latexml_core/src/dump_reader.rs` (`IA` arm + RLE decoder).
 
-**Suspected stale narrative below** (kept for archaeological
-context — predates `01a8ee8b1`/`ab76be20f`):
-  
-  **Narrowed (this iteration):** manual `\global\let\tex_par:D\par`
-  AT RUNTIME (in a `.tex` document with explicit `\catcode`\_=11`) works
-  perfectly — produces the long-body Expandable. So `\let` correctly
-  handles `\par`. The bug is specifically in raw-loading expl3-code.tex
-  via `ini_tex`. ~302 of 752 `\tex_*:D` aliases are missing. Many are
-  legitimately engine-specific (LuaTeX/XeTeX), but core ones like
-  `\tex_par:D`, `\tex_dimexpr:D`, `\tex_catcode:D`, `\tex_cr:D`,
-  `\tex_dp:D` are also missing.
-
-  **Suspected cause:** catcode regime during `ini_tex`'s raw expl3
-  load may not have `_` / `:` as LETTER everywhere expl3-code.tex
-  expects, OR `\__kernel_primitive:NN` defined in the loop's
-  `\begingroup` doesn't expand consistently for all tokens (`\par`,
-  `\dimexpr`, etc. may be tokenized differently than `\space`).
-
-* **`\__int_eval:w` runtime meaning is `\x@protect …`** (per probe
-  with `\meaning`), suggesting it's wrapped in robust-protection
-  layer instead of being installed as a direct primitive alias.
-
-* **Plain dump pollution** — RESOLVED (empirical re-scan 2026-05-18).
-  Both shipped plain dumps are clean of expl3 / latex content:
-  * `resources/dumps/plain.2023.dump.txt` — 958 lines: 0 expl3-name
-    matches (`\l_…`, `\g_…`, `\c_…`, `\__…`, `…_end:`, `cs_set`,
-    `tl_new`), 0 latex-only CSes (`\@documentclass`,
-    `\@addtoreset`, `\NeedsTeXFormat`, `\ProvidesClass/Package`).
-  * `resources/dumps/plain.2025.dump.txt` (embedded; primed via
-    `/tmp/latexml-oxide-dumps-*/plain.2025.dump.txt`) — 958 lines,
-    639 M-keys, 12 PA aliases, 0 MPA. Same zero-match counts as
-    2023. No `\par` M-record (correct — `\par` is a primitive,
-    never set by plain.tex). The historical `\bye`-test
-    observation predates the move of autoload triggers to before
-    the snapshot (`1e04a96c8`) and was not reproduced on the
-    current dumps.
-
-### Sandbox regression
-
-181-paper failure subset: post-strict-Perl-translation, 166 papers
-moved from `Status:conversion:1/2` (errors) to `Status:conversion:3`
-(fatal in ~0.2s). Acceptable per user directive — parity work
-continues; tests / sandbox are re-validated after dumps are
-complete.
+**Plain dump pollution** — RESOLVED (empirical re-scan 2026-05-18).
+Both shipped plain dumps are clean of expl3 / latex content
+(0 `\l_…`/`\g_…`/`\c_…`/`\__…`/`…_end:`/`cs_set`/`tl_new`/
+`\@documentclass`/`\@addtoreset`/`\NeedsTeXFormat`/`\ProvidesClass`).
+The historical `\bye`-test observation predates the move of
+autoload triggers to before the snapshot (`1e04a96c8`).
 
 ### Closure round-trip — RESOLVED (re-verified 2026-05-15)
 
-**Empirical re-verification (2026-05-15):** the TL2025 latex dump
-has **zero self-aliases** (`M\t<cs>\tPA\t<cs>` with key == target)
-among its 602 PA/MPA aliases. Mechanism: self-aliases would only
-arise for primitives that already exist in the bootstrap snapshot,
-so the post-init *diff* never emits them. The original concern
-(self-aliases producing undefined-CS errors after a strict
-LoadFormat split) doesn't manifest in the current dump pipeline.
-
-Historical context (kept for archaeology): under an older
-add-only/transitional loader mode, self-aliases were filtered at
-load time by skipping entries whose key was already defined. The
-current `dump_reader.rs` uses Perl-style global assignment with
-narrow runtime-state filters and deferred-alias handling
-(`early_aliases` / `late_aliases` partitioning in dump_writer). No
-TODO remains.
+TL2025 latex dump has **zero self-aliases** (`M\t<cs>\tPA\t<cs>`
+with key == target) among its 602 PA/MPA aliases. Mechanism:
+self-aliases would only arise for primitives that already exist
+in the bootstrap snapshot, so the post-init *diff* never emits
+them. No TODO remains.
 
 ## Distribution follow-up (multi-version dumps)
 
