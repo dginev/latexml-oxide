@@ -1882,7 +1882,7 @@ pub fn equationgroup_join_rows(
 }
 
 /// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
-pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Result<()> {
+pub fn add_meaning_rec(document: &mut Document, mut node: Node, meaning: &str) -> Result<()> {
   if node.get_type() != Some(NodeType::ElementNode) {
     return Ok(());
   }
@@ -1892,7 +1892,7 @@ pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Re
   } else if qname == arena::pin_static("ltx:XMTok") {
     let role = node.get_attribute("role").unwrap_or_default();
     if (role.is_empty() || role == "UNKNOWN") && !node.has_attribute("meaning") {
-      document.set_attribute(&mut node.clone(), "meaning", meaning)?;
+      document.set_attribute(&mut node, "meaning", meaning)?;
     }
   } else {
     for child in node.get_child_nodes() {

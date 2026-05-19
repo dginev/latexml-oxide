@@ -957,7 +957,7 @@ LoadDefinitions!({
       let others = Invocation!(T_CS!("\\bib@surname"),
         vec![Tokens::new(Explode!("others"))]);
       let inv = Invocation!(T_CS!("\\bib@@@name"),
-        vec![field_tokens.clone(), others]);
+        vec![field_tokens, others]);
       body.extend(inv.unlist());
     }
     body.push(T_END!());

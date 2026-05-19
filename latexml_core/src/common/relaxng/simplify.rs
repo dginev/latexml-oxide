@@ -176,7 +176,7 @@ fn simplify_def(
       rng.elementdefs.insert(qname.clone(), el_name.clone());
       rng
         .element_reverse_defs
-        .insert(el_name.clone(), qname.clone());
+        .insert(el_name.clone(), qname);
       return args;
     }
   }

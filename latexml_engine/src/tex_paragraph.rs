@@ -144,13 +144,13 @@ LoadDefinitions!({
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();
-        assign_value_inplace_sym(pin!("MODE"), bound.to_string()); // Resume vertical/internal_vertical
+        assign_value_inplace_sym(pin!("MODE"), bound); // Resume vertical/internal_vertical
       }
       state::assign_value("parshape", Stored::None, None);
       state::assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      whatsit.set_property("mode", state::lookup_string_from_sym(pin!("MODE")).to_string());
+      whatsit.set_property("mode", state::lookup_string_from_sym(pin!("MODE")));
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);

@@ -1431,7 +1431,7 @@ pub fn define_new_theorem(
     fmt_toks.extend(headformatter_tokens.unlist());
     fmt_toks.push(T_BEGIN!());
     if has_type {
-      fmt_toks.extend(typ.clone().unwrap().unlist());
+      fmt_toks.extend(typ.unwrap().unlist());
     }
     fmt_toks.push(T_END!());
     fmt_toks.push(T_CS!(s!("\\the{counter}")));
@@ -2749,7 +2749,7 @@ LoadDefinitions!({
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
         let message = s!("The environment {} is not defined.", undef);
-        Error!("undefined", undef.clone(), message);
+        Error!("undefined", &undef, message);
         note_status(LogStatus::Undefined, Some(&undef));
         // Perl latex_constructs.pool.ltxml L207-208: install a dummy
         // constructor for `\<name>` so the env-trigger token has SOME
@@ -6650,7 +6650,7 @@ LoadDefinitions!({
       let prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr_str));
       let clean_prefix = if prefix.is_empty() { ctr_str.clone() } else { prefix };
       let ctr_for_id = ctr_str.clone();
-      let within_for_id = within_str.clone();
+      let within_for_id = within_str;
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
@@ -8057,7 +8057,7 @@ LoadDefinitions!({
     let parent_name = if current_name == "#PCDATA" {
       if let Some(p) = current.get_parent() {
         arena::with(get_node_qname(&p), |s| s.to_string())
-      } else { current_name.clone() }
+      } else { current_name }
     } else { current_name };
     let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
     if in_flow {

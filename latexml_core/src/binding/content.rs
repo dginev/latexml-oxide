@@ -508,8 +508,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // → `\psfig` undefined. Witness: astro-ph0002213.
         let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
           extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
-          options: original_options.clone(),
-          after: original_after.clone(),
+          options: original_options,
+          after: original_after,
           handleoptions: options.handleoptions,
           noerror: true,
           reloadable: true,
@@ -1903,8 +1903,8 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     );
     let loaded = input_definitions(target, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("cls")),
-      options: options.clone(),
-      after: after.clone(),
+      options,
+      after,
       notex: true,
       handleoptions: true,
       noerror: true,
@@ -2239,7 +2239,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     //  acknowledged in the audit.)
     if !options.notex {
       if let Some(path) = pathname::find(file, PathnameFindOptions {
-        paths: Some(paths.clone()),
+        paths: Some(paths),
         ..PathnameFindOptions::default()
       }) {
         return Some(path);

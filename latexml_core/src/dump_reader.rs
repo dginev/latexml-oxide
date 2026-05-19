@@ -693,7 +693,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       use crate::definition::primitive::Primitive;
       let font_id_raw = url_decode(rest);
       let font_id_pin = arena::pin(&font_id_raw);
-      let font_id_str = font_id_raw.clone();
+      let font_id_str = font_id_raw;
       let cs_for_fontdef = cs_tok;
       let merge_closure: BeforeDigestClosure = std::rc::Rc::new(move || {
         crate::state::assign_value("current_FontDef", Stored::Token(cs_for_fontdef), None);

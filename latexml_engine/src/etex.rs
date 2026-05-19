@@ -65,7 +65,7 @@ LoadDefinitions!({
       let close = gullet::read_x_token(None, false, None)?;
       if close.is_none() || close != Some(T_OTHER!(")")) {
         let got = close
-          .map(|t| t.stringify().to_string())
+          .map(|t| t.stringify())
           .unwrap_or_else(|| "EOF".to_string());
         let message = format!("Missing close parenthesis in {:?} expr. Got {}", rtype, got);
         Error!("expected", ")", message);

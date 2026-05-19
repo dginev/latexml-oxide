@@ -52,7 +52,7 @@ LoadDefinitions!({
   // [This could be a $tokens->unpackParameters, but for the curious space treatment]
   DefPrimitive!("\\message{}", sub [(message)] {
     if state::current_verbosity() > -1 {
-      Note!(writable_tokens(&do_expand(message)?).to_string());
+      Note!(writable_tokens(&do_expand(message)?));
     }
   });
 
