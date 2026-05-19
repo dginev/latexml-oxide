@@ -69,5 +69,25 @@ LoadDefinitions!({
   DefMacro!("\\wrt",     "\\emph{w.r.t}\\onedot");
   DefMacro!("\\dof",     "d.o.f\\onedot");
 
-  InputDefinitions!("cvpr", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Raw-load whichever cvpr*.sty the user actually `\usepackage`d. The
+  // binding registry routes cvpr / cvpr2023 / cvpr2024 / cvpr2025 ALL to
+  // this same load_definitions; each paper's bundled .sty file differs in
+  // small ways (e.g. cvpr2024_conference.sty configures cleveref via
+  // \AtEndPreamble — which our stub doesn't reproduce). Falling back to a
+  // hard-coded "cvpr" name means the paper-bundled `cvpr2024_conference.sty`
+  // is never raw-loaded — its `\AtEndPreamble{\usepackage{cleveref}...}` is
+  // skipped, leaving `\cref` undefined and triggering "_ in math mode"
+  // cascades on every `\cref{fig:foo_bar}`. Witness 2312.06720.
+  //
+  // \@currname expands to the actual package name being processed (e.g.
+  // "cvpr2024_conference"). Use it so the raw-load targets the user's
+  // own file. Fall back to "cvpr" if \@currname is somehow empty.
+  let currname = gullet::do_expand(T_CS!("\\@currname"))?.to_string();
+  let raw_name = if currname.is_empty() { "cvpr".to_string() } else { currname };
+  let _ = input_definitions(&raw_name, InputDefinitionOptions {
+    extension: Some(Cow::Borrowed("sty")),
+    noltxml: true,
+    noerror: true,
+    ..Default::default()
+  });
 });
