@@ -580,115 +580,18 @@ tests pin the round-trip + RLE edge cases + V-record backward compat.
 
 ---
 
-## Post-processing pipeline parity — milestone (2026-05-18)
+## Post-processing pipeline parity ✅ Closed 2026-05-18
 
-The Perl `LaTeXML::Post::Writer` / `LaTeXML::Util::Pack` / `pack_collection`
-trinity is now structurally mirrored in Rust. All three downstream
-binaries route through one shared implementation:
-
-| binary             | writer (file/stdout) | pack (zip+resources) | extract (whatsout) | omit_doctype |
-|--------------------|----------------------|----------------------|--------------------|--------------|
-| `latexml_oxide`    | ✓ `writer::write_output` | ✓ `pack::pack_archive` | ✓ `extract::serialize_whatsout` | ✓ libxml 0.3.11 |
-| `cortex_worker`    | n/a (always packs)   | ✓ same               | always `Document`  | n/a          |
-| `latexmlpost_oxide`| ✓ same               | n/a (no zip mode yet)| ✓ same             | not exposed  |
-
-Modules (all in `latexml_post/src/`):
-* `writer.rs` — `Writer` processor + `write_output` / `ensure_parent_dir`
-  helpers. Honors `omit_doctype` via libxml 0.3.11's new
-  `Document::remove_internal_subset` (KWARC/rust-libxml PR #198).
-* `pack.rs` — `pack_archive` + `PackOptions` + buffered (64 KiB)
-  zip writer / reader to bundle HTML + log + status +
-  resource-dir + optional telemetry into one archive.
-* `extract.rs` — `Whatsout` enum + `serialize_whatsout` + the
-  `get_math` / `get_embeddable` extractors (Pack.pm L247-313 port).
-
-Closing milestones along the way:
-* `3ad142fd70` — fix: latexml_oxide --post wasn't bundling
-  Graphics-converted PNG/SVG into the output zip.
-* `faaabd71a6` — extract pack logic from binaries into
-  `latexml_post::pack`.
-* `c3bcb988fe` — wire writer + pack into all post-processing
-  executables, with 64 KiB BufWriter/BufReader on zip IO.
-* `f026aee6e5` — `--whatsout fragment|math` CLI wired through
-  `latexml_oxide` and `cortex_worker`.
-* `9622b8c4ef` — `--whatsout` wired through `latexmlpost_oxide`
-  (3rd post binary; gap caught at audit).
-* `aee6ffbc8d` — `00README.XXX:ignore` directive ported in
-  `find_main_tex`.
-* KWARC/rust-libxml #198 + `f56bbd5afc` — `Writer::omit_doctype`
-  is no longer a dead field; wired to the new
-  `Document::remove_internal_subset` upstream API.
-* `2498e6f0f2` — workspace deps bumped to libxml 0.3.11 (path
-  override dropped).
-
-Tests went 1309/0/0 → **1328/0/0** across this milestone (+19
-covering extract, pack, writer, main_tex 00README directives, the
-omit_doctype path, and the post-pipeline integration).
-
-~~Still open~~ ✅ Closed: `latexmlpost_oxide` retirement (see next section).
-
----
-
-## Retired `latexmlpost_oxide` (2026-05-18) ✓ done
-
-`latexmlpost_oxide` no longer exists as a separate binary.
-`latexml_oxide` auto-detects `.xml` input via `is_xml_input`
-(extension match — Perl `latexmlpost` accepts the same), skips the
-TeX → XML converter, and feeds the file straight to the
-post-processing pipeline. Auto-enables `--post` and defaults
-`--pmml = true` when input is XML and the user hasn't passed
-`--stylesheet` (matches the retired binary's UX).
-
-All `latexmlpost_oxide` flags map cleanly:
-
-| latexmlpost_oxide | latexml_oxide |
-|---|---|
-| `foo.xml` | `latexml_oxide foo.xml --dest out.html` (auto-post, auto-pmml) |
-| `--pmml`, `--cmml`, `--keepXMath`, `--xmath`, `--stylesheet`, `--dest`, `--whatsout` | same names, identical semantics |
-| `--noscan`, `--nocrossref` | (were no-ops in latexmlpost_oxide; latexml_oxide always runs Scan + CrossRef — closer to Perl `latexmlpost`'s default behaviour) |
-
-Migration: any script that ran `latexmlpost_oxide INPUT.xml --pmml --dest OUT.html`
-now runs `latexml_oxide INPUT.xml --pmml --dest OUT.html` with no
-other changes.
-
-Files removed: `latexml_post/bin/latexmlpost_oxide.rs`, the
-`[[bin]]` entry in `latexml_post/Cargo.toml`, and the `bin/`
-directory itself (was a single-file dir).
-
-User note: rather than maintain a separate `latexmlpost_oxide`
-binary, give `latexml_oxide` an **XML-input mode** that runs only
-the post-processing chain on an already-converted LaTeXML XML
-file. Detection is mechanical: if the input filename ends in
-`.xml` (or sniff for a leading `<?xml`/`<document xmlns="…">`),
-skip the converter front-end and start the pipeline at
-`PostDocument::new_from_string`.
-
-Why retire:
-* `latexmlpost_oxide` has its own argument parser, its own
-  pipeline assembly, its own `--whatsout` plumbing. Every
-  Writer/Pack/extract enhancement has to be wired into both
-  binaries (gap caught 2026-05-18 — `--whatsout` was initially
-  missed in `latexmlpost_oxide`).
-* Current `latexmlpost_oxide` is incomplete vs Perl `latexmlpost`:
-  no Graphics processor, no Bibliography/CrossRef/Scan, no
-  archive output, no split. Fleshing it out duplicates
-  `latexml_oxide::post::run_post_processing`.
-* Perl's `bin/latexmlpost` is a tiny wrapper that loads the same
-  Post pipeline as `bin/latexml`. The two-binary split is a
-  historical convention, not a load-bearing design choice.
-
-Migration sketch:
-1. Add `latexml_oxide --xml-only` (or auto-detect by extension)
-   to skip core + run post-only.
-2. Reuse the full `PostOptions { whatsout, ... }` struct that
-   `latexml_oxide` already builds.
-3. Mark `latexmlpost_oxide` deprecated for one release cycle, then
-   delete `latexml_post/bin/latexmlpost_oxide.rs` and its
-   `[[bin]]` entry in `latexml_post/Cargo.toml`. Update CLAUDE.md
-   build recipes and tools/* references.
-
-Not blocking any current work; flagged here so future contributors
-don't pour effort into the separate-binary trajectory.
+The Perl `LaTeXML::Post::Writer` / `LaTeXML::Util::Pack` /
+`pack_collection` trinity is now mirrored in
+`latexml_post/src/{writer,pack,extract}.rs`. `latexml_oxide` and
+`cortex_worker` route through the same three modules; `omit_doctype`
+goes through libxml 0.3.11's `Document::remove_internal_subset`
+(KWARC/rust-libxml PR #198). Tests went 1309/0/0 → 1328/0/0 (+19).
+`latexmlpost_oxide` retired as a separate binary —
+`latexml_oxide` auto-detects `.xml` input and skips the TeX
+front-end. See `git log --grep="latexmlpost\|post::writer\|post::pack"`
+for landing commits.
 
 ---
 
@@ -752,270 +655,64 @@ out the in-process benefit; measured 1.33s vs 1.21s pdftocairo on
 
 ---
 
-## Distribution-readiness dependency cleanup (audit 2026-05-17, refreshed 2026-05-18 post-DEP-19)
+## Distribution-readiness dependency cleanup — closed audit
 
-Refreshed release-binary snapshot (post-DEP-19 anti-bloat batch):
-**45.0 MiB stripped / 60.3 MiB before strip**; .text = 34.3 MiB
-(was 37.1 MiB pre-DEP), .rodata = 2.2 MiB (down from ~13 MiB —
-the embedded TL2023+TL2025 dumps are now gzip-compressed in
-.rodata at ~870 KiB combined per DEP-12), .eh_frame +
-.gcc_except_table = ~3.3 MiB (release `panic = unwind` retains
-unwind tables; maxperf with `panic = abort` is comparable since
-LTO had already dead-stripped the dominant paths).
+Original audit 2026-05-17, all tiers closed by 2026-05-19. Live
+release-binary snapshot: **44.60 MiB stripped** (down from 57.12
+MiB pre-audit), .text ≈ 34.3 MiB, .rodata = 2.2 MiB (TL2023+TL2025
+dumps gzipped via DEP-12). Bulk of .text is OUR macro-arm bindings
+(latexml_package 41%, engine 16%, contrib 13%, core 10%); dep
+cleanup is mostly compile-time hygiene + dup-version elimination.
 
-Original audit (2026-05-17) snapshot — pre-DEP-15-through-19,
-kept for historical comparison: 57 MiB stripped / 72.5 MiB before
-strip**; .text = 37.1 MiB, .rodata = ~13 MiB (embedded TL2023+TL2025
-dumps via `include_str!`), `.eh_frame + .gcc_except_table` = ~3.5
-MiB. **Bulk of .text is OUR code** (latexml_package 41%, engine 16%,
-contrib 13%, core 10%); third-party deps combined ≈ 8%. So dep
-cleanup is **compile-time hygiene** more than binary-size, but
-duplicate-version pairs are still painful for cache / build time.
+**DEP-01..06 — Cargo.toml hygiene + dup-version elimination ✅**
+unused deps dropped (`unicode-normalization`); test-only deps
+gated behind `test-utils` feature (`c57bcf8760`); `syn` /
+`regex-syntax` / `rustix` / `hashbrown` duplicate pairs unified
+(indexmap pinned to `=2.13.1` so hashbrown stays at 0.16; revisit
+when string-interner ships 0.21+).
 
-Tasks below ordered by ratio of payoff to risk.
+**DEP-07..10 + sha2/tar slimming — feature trims ✅** `ansi_term`
+→ raw ANSI SGR (logger.rs); `dirs` → `std::env::var_os("HOME")`;
+`chrono` no-default-features; `regex` no-default-features +
+`std,perf,unicode-{case,gencat,perl,script}` only (−163 KiB);
+`sha2` drops `oid`; `tar` drops `xattr`.
 
-### Tier 1 — Cargo.toml hygiene (no runtime change, no risk)
+**DEP-11..13 — Profile/packaging ✅** `panic = "abort"` on
+`maxperf` only (NOT release — `cortex_worker` per-paper isolation
+needs unwinding). DEP-12 ships TL-dump blobs gzip-compressed
+(`flate2`, 4.7× ratio) with a three-tier cache (thread-local,
+disk, embedded-fallback) — saved 5.98 MiB. Ship recipe documented
+in `CLAUDE.md` (`--no-default-features --profile maxperf`).
 
-- **DEP-01 — Remove unused direct deps from Cargo.toml** ✅
-  Re-audit on 2026-05-18 found the original three items already
-  resolved before the audit was filed: `base64` already lived in
-  `latexml_package` (where it's actually used), `chrono` already
-  in `latexml_engine`, `string-interner` no longer present in
-  engine/package/math_parser. **Plus newly-found unused dep
-  removed** in commit `c57bcf8760`: `unicode-normalization` was
-  in `latexml_package/Cargo.toml` with zero use sites.
-- **DEP-02 — Move test-only deps out of the runtime tree** ✅
-  Landed 2026-05-18 (commit `c57bcf8760`): split `util/test.rs`
-  → `util/preset.rs` + feature-gated `util::test` behind
-  `test-utils` (default on). `latexmlmath_oxide` now imports
-  from `util::preset` so the production binary builds cleanly
-  with `--no-default-features`. Drops 5 transitive crates
-  (`phf` + `phf_generator` + `phf_macros` + `phf_shared` +
-  `siphasher`) from the runtime dep graph.
+**DEP-14 — feature-gate `proc-macro2`+`quote` in latexml_core ✅**
+(`1365989630`) — architectural win only (LTO had already been
+dead-stripping). Binary delta ≈ 0.
 
-### Tier 2 — Eliminate duplicate-version pairs
+**DEP-15..20 — data-drive macro-arm consolidation ✅** Pattern:
+replace `1000+` repeated `DefMacro!/DefPrimitive!/DefMath!` arms
+with single-arg helper-fn calls (parse prototype at runtime, one
+copy of construction code instead of N inlined). Outcomes:
 
-Re-audit 2026-05-18 (`cargo tree --duplicates`):
+| Series | Helper(s) | Migrated | Δ binary |
+|---|---|---:|---:|
+| DEP-15  | `def_fa{4,5}_icon` (fontawesome) | 1373+706 | −2.54 MiB |
+| DEP-16  | `latexml::load_latexml_default_model()` (RelaxNG schema funnel) | 3 sites → 1 | −633 KiB |
+| DEP-17  | `def_math_sym`, `def_math_atom`, `def_math_upright_greek` (txfonts/mathabx/amssymb/math_common) | 781 / 1031 | −720 KiB |
+| DEP-18  | `def_macro_noop` (empty-body stubs) | 1673 | −1162 KiB |
+| DEP-19  | `def_macro_identity` (`{}` → `#1`) | 94 | −96 KiB |
+| DEP-20  | `def_primitive_noop` | 132 | −249 KiB |
 
-| Crate | Status as of 2026-05-18 |
-|---|---|
-| `syn` 1.0 vs 2.0 | ✅ **DEP-03 resolved**: no longer duped; only `syn 2.x` in the workspace. |
-| `regex-syntax` 0.6 vs 0.8 | ✅ **DEP-04 resolved**: marpa fork bumped to 0.8. |
-| `rustix` 0.38 vs 1.1 | ✅ **DEP-05 resolved upstream**: `kpathsea v0.2.5` now pulls `which v8` → libc only. The 0.38 path is gone. |
-| `hashbrown` 0.16 vs 0.17 | ✅ **DEP-06 resolved 2026-05-18** via indexmap pin in `latexml_oxide/Cargo.toml`. zip 8.6.0 accepts `indexmap ^2` so explicitly pinning `indexmap = "=2.13.1"` (last release that uses hashbrown 0.16) makes the resolver unify on a single hashbrown 0.16.x. Revisit when string-interner releases 0.21+ with hashbrown 0.17 support — at which point bump string-interner AND drop the indexmap pin. |
-| `tar` v0.4.45 (×2) | ℹ️ Same version, different features: runtime build (no `xattr` after `3e7c039eb1`) vs `libmarpa-sys` build-dep (default). Build-dep doesn't link into runtime binary — benign. |
+**DEP-22 — promote helpers into `latexml_engine::prelude` ✅**
+(`9aab482d32`) — 231 per-file duplicates collapsed to 5 canonical
+`pub fn` definitions. 209 files / −2029 lines / −100 KiB. Source
+hygiene + symbol-table cleanup; LTO already deduplicating.
 
-### Tier 3 — Slim feature sets / drop unmaintained crates
-
-- **DEP-07 — Replace `ansi_term v0.12` with `anstyle`** ✅ Done:
-  `latexml_core/src/util/logger.rs` now uses raw ANSI SGR escape
-  sequences (no external crate). `ansi_term` no longer in tree.
-- **DEP-08 — Drop `dirs v6.0` for `std::env::var_os("HOME")`** ✅
-  Done: `latexml_core/src/util/pathname.rs` uses `var_os` (with
-  inline comment documenting the replacement).
-- **DEP-09 — Slim `chrono`** ✅ Done: `latexml_engine/Cargo.toml`
-  has `chrono = { version = "0.4", default-features = false,
-  features = ["clock", "std"] }`.
-- **DEP-10 — Audit `regex` feature flags** ✅ Closed 2026-05-18.
-  All 7 workspace crates now declare `regex` with
-  `default-features = false, features = ["std", "perf",
-  "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"]`.
-  Dropped: `unicode-age`, `unicode-bool`, `unicode-segment`
-  (confirmed unused — only `\p{Latin}`/`\p{Greek}` (script),
-  `\p{Lu}`/`\p{N}` (gencat), `\w` (perl), and `(?i)` (case)
-  appear in the workspace). Release binary: 48,604,992 →
-  48,437,952 bytes (−163 KiB). Tests: 1328/0/0. Wall-time on
-  1910.01256: 0.78 s (unchanged).
-- **DEP-NEW: slim `sha2`** ✅ Done (commit `c57bcf8760`):
-  `default-features = false` drops the `oid` feature (DER object-id
-  tables) which we never touch.
-- **DEP-NEW: slim `tar`** ✅ Done (commit `3e7c039eb1`):
-  `default-features = false` drops the `xattr` crate; we only need
-  basic `tar::Archive::new(...).unpack(dest)` for arxiv zips.
-
-### Tier 4 — Profile / packaging for distribution
-
-- **DEP-11 — `panic = "abort"`** ✅ **Refined** and landed on
-  `maxperf` only (commit `c57bcf8760`), **NOT on `release`**. The
-  user's canvas sweeps via `cortex_worker` use `release` and rely
-  on `thread::spawn().join()` for per-paper panic isolation — that
-  pattern silently breaks under `panic = "abort"` (the whole worker
-  process aborts instead of recording the failure). `maxperf` is
-  the public-distribution profile (no debugging requirement); it
-  gets `panic = "abort"` for the 1.9 MiB size saving + slightly
-  better optimization. Comments in `Cargo.toml` document the
-  distinction explicitly.
-- **DEP-12 — TL-dump distribution model** ✅ Closed 2026-05-18
-  (commits `ebdffbd12e` + `4f19565616`). The two embedded
-  `*.dump.txt` blobs (~7.6 MiB of `.rodata`) are now gzip-compressed
-  at build time (`flate2`, ~4.7× ratio → ~870 KiB combined) and
-  decompressed lazily on first access via a three-tier cache:
-  (i) per-thread `FxHashMap<(year, kind), &'static str>`,
-  (ii) cross-process disk cache at
-  `std::env::temp_dir()/latexml-oxide-dumps-<hash>/` keyed by a
-  build-time FNV-1a hash over the gzip bytes (atomic
-  pid-tempfile + `std::fs::rename` — POSIX rename / Windows
-  MoveFileExW), (iii) gunzip the embedded blob and persist for the
-  next process. Binary size: 54.58 MiB → 48.60 MiB
-  (−5.98 MiB / −11.0%). Wall-time parity preserved on
-  1910.01256 (0.76 s on-disk-dump path, 0.79 s embedded-cold).
-  Tests: 1328/0/0. Cross-platform out of the box.
-- **DEP-13 — Document ship-build recipe** ✅ Closed. `CLAUDE.md`
-  documents the full distribution recipe as
-  `cargo build --no-default-features --profile maxperf --bin
-  latexml_oxide`, with inline explanation that `--no-default-features`
-  drops the `test-utils` feature (removing `phf` + `glob` and 4
-  transitive crates) and that `maxperf` enables `panic = "abort"`
-  for the size + perf win (production-only since canvas sweeps via
-  `cortex_worker` use `release` and rely on `catch_unwind` for
-  per-paper panic isolation). `Cargo.toml` comments mirror the
-  release-vs-maxperf distinction.
-
-### Tier 5 — Code-architecture wins worth flagging
-
-- **DEP-14 — Feature-gate `proc-macro2` + `quote` in
-  `latexml_core`** ✅ Landed 2026-05-18 (commit `1365989630`):
-  added `codegen` feature, made `proc-macro2` + `quote` optional,
-  wrapped the 5 `impl ToTokens for X` blocks (in `tokens.rs` and
-  `parameter.rs`) with `#[cfg(feature = "codegen")]`.
-  `latexml_codegen` activates the feature on its dep edge;
-  resolver v2 keeps proc-macro feature unification isolated so
-  the runtime `latexml_core` doesn't compile those impls.
-  **Reality check**: binary size delta was essentially zero
-  (+448 bytes on release) — LTO had already been dead-stripping
-  those symbols. The audit's "~93 KiB" claim was overstated. The
-  win is architectural (compile-time clarity, smaller per-build
-  `latexml_core` graph), not binary size.
-- **DEP-15 — fontawesome `load_definitions` size bloat** ✅
-  Closed 2026-05-18. Data-drove the 1373 trivial FA5 + 719 trivial
-  FA4 `DefMacro!("\\faXxx...", "...")` calls through `def_fa5_icon`
-  / `def_fa4_icon` runtime helpers. Release binary went **57.12 MiB
-  → 54.58 MiB (−2.54 MiB / −4.45%)**, matching the upper-bound
-  estimate. 24 + 2 non-trivial variants (Match:N / OptionalMatch:* /
-  Number[]) kept as full `DefMacro!`. Tests 1328/0/0; engine
-  bootstrap costs ~7 ms of extra `parse_prototype` + `tokenize_internal`
-  work, paid once at load.
-
-### DEP-15 — data-drive fontawesome ✅ Closed 2026-05-18
-
-`fontawesome_sty` + `fontawesome5_sty` collapsed via runtime
-helpers (`def_fa5_icon(suffix, kebab)` etc.) instead of inlining
-1373 + 706 trivial `DefMacro!` arms at compile time. Commit
-`4f01c78ceb` shipped −2.54 MiB; both crates fell off the top-16
-.text consumers entirely. Release binary 47.6 MB (was ~50 MB
-pre-DEP-15).
-
-### DEP-16 — single-instance `_ModelLoader::build_model` ✅ Closed 2026-05-18
-
-The `load_model!("LaTeXML")` macro generated a fresh
-`_ModelLoader::build_model` (~600 KiB) at each call site. Three sites
-inlined it (`lib.rs::dump_compiled_latexml_model`,
-`core_interface.rs::convert_document`, `util/preset.rs::*`); after
-LTO the bloat report showed two copies surviving (~1.2 MiB combined).
-Funnelled through `latexml::load_latexml_default_model()` (single
-home for the macro expansion); LTO collapses to one copy.
-Release binary 47,592,000 → 46,958,336 bytes (−633 KiB). Commit
-`d332b69138`. Tests 1328/0/0.
-
-### DEP-17 series — data-drive math-symbol DefMath! arms ✅ Closed 2026-05-18
-
-Apply the DEP-15 fontawesome template (runtime helper instead of
-compile-time-inlined macro arms) to the math-symbol bindings:
-
-| Sub | Crate | Migrated / Total | Δ binary | Helper used |
-|---|---|---:|---:|---|
-| DEP-17  | `txfonts_sty.rs`  | 128 / 202 | −77 KiB | `def_math_sym`, `def_math_upright_greek` |
-| DEP-17b | `mathabx_sty.rs`  | 279 / 358 | −365 KiB | `def_math_sym` |
-| DEP-17c | `amssymb_sty.rs`  | 202 / 203 | −188 KiB | `def_math_sym` |
-| DEP-17d | `math_common.rs`  | 172 / 268 | −90 KiB | `def_math_atom` (3-arg None-paramlist form) |
-| **DEP-17 family total** |  | **781 / 1031** | **−720 KiB** | |
-
-Helpers:
-* `def_math_sym(cs, present, role, meaning)` — 2-arg `DefMath!(proto,
-  present[, role=>X[, meaning=>Y]])` shape. Uses `parse_prototype` to
-  build params as `Some(empty)`.
-* `def_math_atom(cs, present, role, meaning)` — 3-arg
-  `DefMath!(text, None, present[, ...])` shape. Builds Token via
-  `T_CS!(cs)` directly; params stays `None`.
-* `def_math_upright_greek(cs, present)` — txfonts-only `*up` Greek
-  variants with `font => { shape => "upright", forceshape => true }`.
-
-Remaining non-migrated entries (txfonts 74, mathabx 79, amssymb 1,
-math_common 96) need additional helper signatures: multi-line
-integrals with `dynamic_mathstyle` / `scriptpos`, `meaning=>`-only,
-`alias=>`-bearing forms, `{}`-prototyped entries with `before_digest`
-closures. Future DEP-17e… as needed.
-
-Tests 1328/0/0 throughout. Commits: `d33911ea48`, `da39166a1e`,
-`eeb9047700`, `7be68c3cb2`, `20eca56c9a`.
-
-### DEP-18/19/20 series — data-drive empty/identity stubs ✅ Closed 2026-05-19
-
-Same template as DEP-15/17: convert compile-time-inlined macro arms
-to runtime helper calls. Three sub-families covered:
-
-| Sub | Helper | Shape | Migrated | Δ binary |
-|---|---|---|---:|---:|
-| DEP-18 family (a-g) | `def_macro_noop(proto)` | `DefMacro!("\\cs", "")` and `DefMacro!("\\cs", None)` empty-body stubs | 1673 entries across 100 files | −1162 KiB combined |
-| DEP-19 | `def_macro_identity(proto)` | `DefMacro!("\\cs{}", "#1")` identity-1 wrappers | 94 entries across 10 files | −96 KiB |
-| DEP-20 | `def_primitive_noop(proto)` | `DefPrimitive!("\\cs", None)` empty primitives | 132 entries across 19 files | −249 KiB |
-| **DEP-18+19+20 total** | | | **1899 entries** | **−1507 KiB** |
-
-Helpers (all in per-file scope, LTO collapses to one inlined body
-per call site):
-
-```rust
-fn def_macro_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  let body = mouth::tokenize_internal("");
-  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
-  Ok(())
-}
-fn def_macro_identity(proto: &str) -> Result<()> { /* body: "#1" */ }
-fn def_primitive_noop(proto: &str) -> Result<()> {
-  let (cs_tok, params) = parse_prototype(proto, true)?;
-  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
-  Ok(())
-}
-```
-
-### DEP-22 — consolidate helpers into latexml_engine::prelude ✅ Closed 2026-05-19
-
-Promote the 5 data-drive helpers from per-file duplicates to a
-single canonical location in `latexml_engine/src/prelude.rs`:
-
-| Helper | Was in |
-|---|---:|
-| `def_macro_noop`     | 197 files |
-| `def_macro_identity` | 11 files |
-| `def_primitive_noop` | 19 files |
-| `def_math_sym`       | 3 files |
-| `def_math_atom`      | 1 file |
-| **Total duplicates removed** | **231 → 5** |
-
-All binding files (`latexml_package/contrib/engine/*`) `use
-crate::prelude::*` which re-exports `latexml_engine::prelude::*`,
-so call sites resolve to the shared `pub fn` without source-level
-changes at the call site.
-
-209 files touched, 2029 lines deleted, 77 added. Release binary
-44,483,264 → 44,378,560 bytes (−100 KiB) — LTO had already been
-deduplicating at link time; this is mostly source hygiene +
-symbol-table cleanup. Tests 1328/0/0. HTML wall time 0.71s flat.
-Commit `9aab482d32`.
-
-### DEP-21 — DefRegister data-drive ❌ REVERTED 2026-05-19
-
-Attempted to apply the same approach to
-`DefRegister!("\\cs" => Number/Dimension/Glue::new(0))` via a
-generic helper `fn def_register_value<T: Into<RegisterValue>>(...)`.
-Result: binary **GREW** by +139 KiB instead of shrinking. Cause:
-rustc monomorphizes the generic for each concrete `T` at each
-call site, defeating the macro-arm consolidation. Reverted same
-iteration; documented in
-[[wisdom_helper_monomorphization_trap]] memory. The lesson is
-generic data-drive helpers (`T: Into<X>`) are a binary-size
-ANTI-pattern; concrete-value helpers are required.
+**DEP-21 — DefRegister generic data-drive ❌ REVERTED** Generic
+`fn def_register_value<T: Into<RegisterValue>>(...)` GREW binary
++139 KiB due to per-call-site monomorphization. Lesson recorded
+in `[[wisdom_helper_monomorphization_trap]]` — generic
+`T: Into<X>` helpers are a binary-size ANTI-pattern; only
+concrete-value helpers shrink.
 
 ### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
 
