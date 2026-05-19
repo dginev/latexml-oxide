@@ -60,6 +60,22 @@ LoadDefinitions!({
   // Name part helpers (first-name, surname) — emit inline.
   DefMacro!("\\fnm{}", "#1");
   DefMacro!("\\sur{}", "#1");
+  // sn-jnl.cls L599-606: \orgdiv / \orgname / \orgaddress / \street /
+  // \postcode / \city / \state / \country — affiliation-element helpers
+  // that pass through their argument as inline text. The paper-bundled
+  // class file defines all of them as `\newcommand{\foo}[1]{#1}` (plain
+  // pass-through). Our raw-load path doesn't always invoke them, so
+  // bind explicitly. Without these stubs, papers using the standard
+  // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
+  // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
+  DefMacro!("\\orgdiv{}",     "#1");
+  DefMacro!("\\orgname{}",    "#1");
+  DefMacro!("\\orgaddress{}", "#1");
+  DefMacro!("\\street{}",     "#1");
+  DefMacro!("\\postcode{}",   "#1");
+  DefMacro!("\\city{}",       "#1");
+  DefMacro!("\\state{}",      "#1");
+  DefMacro!("\\country{}",    "#1");
 
   // Frontmatter envs — internal_vertical mode for multi-paragraph
   // bodies (declarations especially carries author prose with \par
