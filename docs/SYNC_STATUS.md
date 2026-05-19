@@ -426,6 +426,30 @@ accumulation (text appended literally hints at a non-expansion
 path); fix the relational-token numeric scanner; verify PA-aliasing
 to `\fi`/`\else` routes through the conditional tracker.
 
+**First diagnostic anomaly (2026-05-19)**: the cascade begins with
+`Warn:expected:<number> Missing number, treated as zero while
+processing "\int_value:w", next token is Some(";")` at line 6 col 1
+(the `\ce{H}` line). That is, `\int_value:w` (PA→`\number`) is
+called and sees `;` directly with no leading digit — so the
+expected preceding digit-producing expansion produced **no digits**.
+Once the `;` is consumed mid-`\int_value:w` read, every following
+expl3 token (`\__int_eval_end:`, `\fi:`, `\else:`, `\s__tl`,
+`\tex_skip:D`, etc.) shifts left by one slot, surfacing in
+`\csname...\endcsname` reads where it shouldn't — the 77-error
+cascade is purely downstream from this single mis-evaluation.
+
+Isolated `\int_value:w \int_eval:n {2+3}` outside mhchem works
+fine (`= 5`, 0 errors), so the basic PA-aliased numexpr chain is
+correct (`\__int_eval_end:` PA→`\relax` is correctly recognized
+by `latexml_engine/src/etex.rs::is_relax_meaning` via
+`Stored::Primitive(p) if *p.get_cs() == *TOKEN_RELAX`). The mhchem
+mis-expansion is a more elaborate pattern — likely a deeper
+`\__mhchem_*` or chemgreek `\use:c { ... }` chain where one of
+the intermediate macros isn't expanding. **Next debugging step**:
+instrument `read_x_token` to log token + meaning class around
+line 6 col 1 in the minimal repro, narrow to the first non-empty
+return that doesn't match the expected expansion.
+
 `latexml_package/src/package/glossaries_sty.rs` was the last
 retirement (commit `3883d4d14d`, 1140→129 lines), DONE 2026-05-12;
 mfirstuc/datatool-base/chemgreek/substr/tracklang shims closed the
