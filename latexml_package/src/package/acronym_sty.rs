@@ -136,6 +136,14 @@ LoadDefinitions!({
   // Degrade to \ac (lower form) — losing the capitalize-first
   // semantic but preserving content. Witness 2402.03202.
   Let!("\\Ac", "\\ac");
+  // Same degrade-to-lower for the other acro capital-first forms.
+  // Witness arXiv:2509.12083 (uses `\Acf{AOD}` alongside `\acf{SLM}`,
+  // mixing acronym + acro conventions). Same content-preservation
+  // rationale as `\Ac` above.
+  Let!("\\Acf", "\\acf");
+  Let!("\\Acl", "\\acl");
+  Let!("\\Acs", "\\acs");
+  Let!("\\Acfi", "\\acfi");
 
   // Indefinite article form
   DefMacro!(
