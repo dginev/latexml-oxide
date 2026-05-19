@@ -613,7 +613,7 @@ Tests went 1309/0/0 → **1328/0/0** across this milestone (+19
 covering extract, pack, writer, main_tex 00README directives, the
 omit_doctype path, and the post-pipeline integration).
 
-Still open: `latexmlpost_oxide` retirement (next; see below).
+~~Still open~~ ✅ Closed: `latexmlpost_oxide` retirement (see next section).
 
 ---
 
@@ -704,10 +704,13 @@ out the in-process benefit; measured 1.33s vs 1.21s pdftocairo on
 
 ## Performance follow-ups (separate track — see `PERFORMANCE.md`)
 
-- **P1 graphics**: primary rasterizer optimization done 2026-05-12
+- **P1 graphics** ✅: primary rasterizer optimization done 2026-05-12
   (`5244a5a4e2` → `feaf8bcd16`); graphics phase 1031 ms → ~480 ms
-  on 1910.01256. Still-open: content-identity conversion cache +
-  cross-document duplicate coalescing.
+  on 1910.01256. Follow-ups ALSO done: content-identity conversion
+  cache (`latexml_post/src/graphics_cache.rs`, `bba00c0c83` 2026-05-16);
+  cross-document duplicate coalescing
+  (`graphics.rs::process_coalesces_only_matching_conversion_options`
+  test verifies it).
 - **P1 math/large-doc**: `LATEXML_PARSE_AUDIT=1` on astro-ph0204009,
   0911.0884, astro-ph0401354, 0809.5174, astro-ph0507615.
 - **P2 allocation/startup**: partial landings 2026-05-12 (arena
