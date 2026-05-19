@@ -131,6 +131,7 @@ pub mod doclicense_sty;
 pub mod cimart_cls;
 pub mod colm2025_conference_sty;
 pub mod combine_cls;
+pub mod tac_cls;
 pub mod cvpr_sty;
 pub mod ecai_cls;
 pub mod egpubl_cls;
@@ -347,6 +348,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cvpr2024", "sty", cvpr_sty::load_definitions),
   ("cvpr2025", "sty", cvpr_sty::load_definitions),
   ("combine", "cls", combine_cls::load_definitions),
+  ("tac", "cls", tac_cls::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
