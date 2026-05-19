@@ -1137,7 +1137,7 @@ impl PostDocument {
       node.set_attribute(key, &all.join(" ")).ok();
     } else {
       let mut sorted: Vec<&str> = new_values;
-      sorted.sort();
+      sorted.sort_unstable();
       node.set_attribute(key, &sorted.join(" ")).ok();
     }
   }

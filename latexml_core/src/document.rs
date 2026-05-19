@@ -456,7 +456,7 @@ impl Document {
                       .split_whitespace()
                       .chain(ovalue.split_whitespace())
                       .collect();
-                    classes.sort();
+                    classes.sort_unstable();
                     classes.dedup();
                     value = arena::pin(classes.join(" "));
                   }
@@ -2661,7 +2661,7 @@ impl Document {
         let _ = node.remove_attribute(key);
       } else {
         let mut sorted = updated;
-        sorted.sort();
+        sorted.sort_unstable();
         node
           .set_attribute(key, &sorted.join(" "))
           .unwrap_or_default();
@@ -3542,7 +3542,7 @@ impl Document {
 
     if let Some(attrs) = attributes {
       let mut sorted_keys = attrs.keys().map(String::as_str).collect::<Vec<_>>();
-      sorted_keys.sort();
+      sorted_keys.sort_unstable();
       for key in sorted_keys {
         if key == "font" || key == "locator" {
           continue;
