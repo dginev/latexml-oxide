@@ -711,12 +711,32 @@ out the in-process benefit; measured 1.33s vs 1.21s pdftocairo on
   cross-document duplicate coalescing
   (`graphics.rs::process_coalesces_only_matching_conversion_options`
   test verifies it).
+- **P1 digest+build** ✅ CLOSED 2026-05-19: profile-driven sweep on
+  `2305.06773` confirmed the residual cost is structural to the TeX
+  read-then-invoke pattern (the same meaning is probed in
+  `read_x_token` to decide expansion, then again in `invoke_token` to
+  decide invocation). Combining the two probes would require an API
+  change on the gullet — explicitly out of scope, the gullet API
+  mirrors TeX by design (user directive 2026-05-19). Internal wins
+  landed: `Catcode::name_sym` in `lookup_digestable_definition`
+  (`f2e23d9570`), `has_meaning` migration for 8 sites doing
+  `lookup_meaning(t).is_some()/.is_none()` (`3f06ecebd6`),
+  `Token::pin_cs_name` in `lookup_conditional` (`2b63a1a0a1`), plus
+  6 companion clippy-driven function-body sweeps (redundant_clone /
+  or_fun_call / needless_collect / stable_sort_primitive /
+  implicit_clone / manual_string_new). Full close-out in
+  `docs/PERFORMANCE.md` under "P1 digest + build … CLOSED 2026-05-19".
+  Do not reopen without new digest-bound witnesses that diverge from
+  the recorded SwissTable-probe-floor pattern.
 - **P1 math/large-doc**: `LATEXML_PARSE_AUDIT=1` on astro-ph0204009,
   0911.0884, astro-ph0401354, 0809.5174, astro-ph0507615.
 - **P2 allocation/startup**: partial landings 2026-05-12 (arena
-  pre-alloc, `State::meaning` pre-alloc, dump_reader Vec elimination).
-  Remaining open: `*_sym` accessors, `Tokens` conversions, `Stored`
-  deep copies, package lookup caching.
+  pre-alloc, `State::meaning` pre-alloc, dump_reader Vec elimination)
+  + 2026-05-19 (`*_sym` accessors converted at the two hot sites
+  identified by perf — `lookup_digestable_definition` /
+  `lookup_conditional`). Remaining open: `Tokens` conversions,
+  `Stored` deep copies, package lookup caching — land only when a
+  fresh profile shows them above the SwissTable-probe floor.
 
 ---
 

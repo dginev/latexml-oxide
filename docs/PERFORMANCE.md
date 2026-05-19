@@ -121,15 +121,85 @@ decision recorded in SYNC_STATUS.md (2026-05-12). Output-size
 validation set retained as regression fixtures: `0809.3849`,
 `0908.3201`, `1003.0368`, `0803.4343`, `0907.4282`.
 
-### P1 digest + build (31.8% of wall, pure-Rust hot path)
+### P1 digest + build (31.8% of wall, pure-Rust hot path) — CLOSED 2026-05-19
 
-No external slack to recover; wins come from Principles 1–3.
+Investigation closed: the residual digest cost is structural to the TeX
+semantics, not a Rust-translation accident. **Do not reopen without
+new evidence** (e.g. a paper whose digest-time profile diverges from
+the pattern recorded below).
 
-- Profile a digest-heavy outlier under release `perf`: `0911.3024`
-  (76% of paper wall in digest), `0909.4601` (66%). Look for `arena::*`,
-  `Tokens::*`, HashMap rehashes.
-- Audit `.clone()` sites on Token / Tokens / Vec<Token> per Principle 2.
-- Don't over-index — large papers are inherently expensive in digest.
+**Findings under `cargo build --profile bench` + `perf record
+-F 999 -e cycles:u` on `2305.06773` (digest-heavy ACM-class fixture,
+4.5s of 4.8s wall in digest, witness available under
+`/home/deyan/data/430k_noproblem_sandbox/data/arxmliv/2305/2305.06773`).**
+
+Top leaf-frame distribution (~4.7k samples):
+* `__mm_movemask_epi8` 363 + `find_inner` 47 + `probe_seq` 47 +
+  `get_offset_len_noubcheck` 111 — **all SwissTable hashbrown probe
+  code, total ~10% of wall**. Inherent to `state.meaning.get(&token)`
+  running once per CS/ACTIVE token in `read_x_token` AND once more in
+  `invoke_token` / `lookup_digestable_definition`.
+* `state::lookup_meaning` 121 + `with_meaning` 114 — the two state
+  accessors. `with_meaning` is borrow-only; `lookup_meaning` clones.
+* mimalloc traffic 79 + Token push/write/read 200 — per-token Vec
+  growth in the digester output stream.
+
+**Landed this round (all signatures unchanged — function-body wins
+only):**
+* `Catcode::name_sym` in `lookup_digestable_definition`
+  (`f2e23d9570`) — replaces a per-call `arena::pin(cc.name())` (RefCell
+  mut on the interner + hashmap probe) with the cached per-call-site
+  `pin!()` SymStr. Fires on every non-active-or-cs token.
+* 8-site migration `lookup_meaning(t).is_some()` / `.is_none()` →
+  `has_meaning(t)` (`3f06ecebd6`). `has_meaning` already existed as a
+  clone-free shadow ("keep this in sync with `lookup_meaning`, it is
+  copied over for optimization purposes"). Affected `\csname`,
+  `\ifdefined`, `\ifcsname`, KeyVal `qname` checks, etc. Wall
+  4.81s → 4.68s median on quiet 2305.06773 (≈2.7%).
+* `lookup_conditional` (`2b63a1a0a1`) — replaced
+  `arena::pin(token.get_executable_name())` (String allocation +
+  interner probe) with `Token::pin_cs_name()` (free SymStr access).
+  Within noise on this paper, but removes one String + one probe per
+  `\if…` dispatch.
+
+**Why we stop here.** The remaining cost is the **TeX-shape
+read-then-invoke double probe**: `gullet::read_x_token` looks up a
+meaning to decide whether to expand; `stomach::invoke_token` looks it
+up again to decide how to invoke. Combining them into one probe would
+require restructuring `read_x_token`'s return type to surface the
+already-resolved `Stored`. That is an API change driven by perf,
+without an ergonomics win, on a gullet API that mirrors the TeX
+original by design — **explicitly out of scope**
+(user directive, 2026-05-19: "we will not change the API for perf
+reasons unless it has a big ergonomics win. The gullet API is coming
+from the TeX original to a degree and is mostly fixed, we live with
+it"). Caching meanings with invalidation has the same blast radius
+(every `assign_meaning` would need to dirty the cache) — also out of
+scope.
+
+**Companion lint sweeps this round** (function-body cleanups, also
+closed):
+* `clippy::redundant_clone` lib targets — 18 sites in core/engine/post
+  (`2150d149f9`) + 156 sites in package/contrib (`a66b61e32e`).
+* `clippy::or_fun_call` — 57 sites across non-math crates
+  (`2544dbf47d`). Concentrated in `Font::get_size().unwrap_or(defsize())`
+  and `Dimension::new(0)` / `T_CS!(\\relax)` fallbacks.
+* `clippy::needless_collect` — 13 sites (`4b60784177`). Mostly
+  `tks.extend(...collect::<Vec<_>>())` patterns in
+  `base_parameter_types`.
+* `clippy::stable_sort_primitive` — 5 sites (`6f8a412cc8`).
+* `clippy::implicit_clone` — 38 sites (`9d181ad95f`).
+* `clippy::manual_string_new` + `single_char_pattern` — 10 sites
+  (`ae192d3c6c`).
+
+After all of the above, `cargo clippy --workspace --all-targets` is
+back to its 14-warning baseline (all in `latexml_math_parser` ASF
+lane, collaborator's track). Tests 1328/0/0 throughout.
+
+**Witnesses retained** for any future digest-perf re-examination:
+`2305.06773` (ACM-class), `2103.00971` (tikz-heavy, 8.8s digest),
+`2208.10851` (mystery digest-heavy 1.5s), `2307.10256` (4.5s digest),
+all under `~/data/430k_noproblem_sandbox/data/arxmliv/<yymm>/<id>/`.
 
 ### P1 math (17.0% of wall)
 
@@ -153,10 +223,15 @@ separately from the hot-path work.
 
 ### P2 allocation/startup cleanup
 
-Profile-driven only. Candidates: `*_sym` state accessors, `Tokens`
-conversions, `Stored`/`Tokens` deep copies, package lookup caching,
-dump/package loading. Land only after a slow-tail or sentinel profile
-shows them on the hot path.
+Profile-driven only. The `*_sym` accessor sweep landed in the
+P1 close-out (`Catcode::name_sym` in `lookup_digestable_definition`,
+`Token::pin_cs_name` in `lookup_conditional`, etc.). Remaining
+candidates — `Stored`/`Tokens` deep copies, package lookup caching,
+dump/package loading — land **only after** a slow-tail or sentinel
+profile shows them on the hot path. The 2026-05-19 perf sweep
+confirmed the current state.meaning HashMap traffic is the floor;
+do not chase further internal allocations without evidence they're
+above the SwissTable probe band.
 
 ---
 
