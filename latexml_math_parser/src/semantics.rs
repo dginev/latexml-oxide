@@ -346,6 +346,52 @@ pub fn list_apply(
   list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
 }
 
+/// ASF migration item 5 (Option A): build a comma-list of
+/// `modified_term` items. Mirrors `list_apply` but explicitly
+/// ACCEPTS relational items — that's the whole point. Used for
+/// function argument lists where each argument carries its own
+/// single-relop expression, e.g. `P(x=0, y<0)`.
+///
+/// Rejects the same non-relop pathologies `list_apply` rejects
+/// (bare conditional, etc.) but does NOT force formulae_apply on
+/// relations. The grammar rules that route to this action
+/// (`formula_list += modified_term punct …`) only fire when at
+/// least one side is a `modified_term`, so the relation case is
+/// the expected one.
+pub fn modified_list_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+  let meaning = "list";
+
+  // If left is already a list/formulae Dual, extend it (mirrors the
+  // flat-accumulation behaviour at the end of `list_apply`).
+  if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left {
+    if let XM::Apply(ref op, ref mut op_args, ..) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") || props.meaning.as_deref() == Some("formulae")
+        {
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
+          if let XM::Wrap(ref mut items, ..) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
 /// Perl: within a Formula, comma-separated expressions after a relop form a list RHS.
 /// Like list_apply but rejects items that contain relations (those should go to statement level).
 /// This prevents `1<x<10,2<y<20` from being parsed as `1 < x < list(10,2) < y < ...`.
@@ -932,6 +978,78 @@ pub fn infix_relation(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
+  // Reject `relop` applied to a comma-list whose items include a
+  // relation (single-relop modified_term). For `P(x = 0, y < 0)`
+  // both grammar paths reach the action:
+  //   * Path A (current): `formula = formula relop formula_list`
+  //                       → `x = list(0, y<0)` (this branch)
+  //   * Path B (new): `formula_list = modified_term punct modified_term`
+  //                   → `list(x=0, y<0)` wrapped by fenced+function-app
+  //
+  // Path B is the surpass-Perl interpretation (math convention: a
+  // comma-list of relations inside a function-arg group). Rejecting
+  // Path A here forces Marpa to commit to Path B. ASF migration
+  // item 5 (Option A), 2026-05-19.
+  fn list_has_relation(xm: &XM) -> bool {
+    // Returns true when `xm` is a `list@(...)` (XMApp directly, or
+    // XMDual wrapping one) and any presentation item is a relation
+    // Apply. We check the presentation wrap (not the content args)
+    // because list-Apply args are XMRefs after `create_xmrefs`; the
+    // actual relation Applies live in the presentation branch.
+    let (content_args, pres_items) = match xm {
+      XM::Apply(ref op, ref args, ..) => {
+        if let XM::Token(ref props, _) = *op.0 {
+          if props.meaning.as_deref() == Some("list") {
+            (Some(args), None)
+          } else {
+            (None, None)
+          }
+        } else {
+          (None, None)
+        }
+      },
+      XM::Dual(ref content, ref pres, ..) => {
+        if let XM::Apply(ref op, ref args, ..) = **content {
+          if let XM::Token(ref props, _) = *op.0 {
+            if props.meaning.as_deref() == Some("list") {
+              let pres_items = if let XM::Wrap(ref items, ..) = **pres {
+                Some(items)
+              } else {
+                None
+              };
+              (Some(args), pres_items)
+            } else {
+              (None, None)
+            }
+          } else {
+            (None, None)
+          }
+        } else {
+          (None, None)
+        }
+      },
+      _ => (None, None),
+    };
+    if let Some(args) = content_args {
+      if args.0.iter().any(|a| a.as_ref().is_some_and(is_relational_item)) {
+        return true;
+      }
+    }
+    if let Some(items) = pres_items {
+      if items.iter().any(is_relational_item) {
+        return true;
+      }
+    }
+    false
+  }
+  if let Some(ref right_xm) = right {
+    if list_has_relation(right_xm) {
+      return Err(
+        "infix_relation: right is list@ containing relations — prefer list-of-modified_terms path"
+          .into(),
+      );
+    }
+  }
   // Reject multirelation when the left formula's last operand is a list Dual.
   // For `a = b, c = d`: the wrong parse creates `a = list(b,c)` then tries
   // to extend with `= d`. If the left formula has a list as its last arg,

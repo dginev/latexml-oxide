@@ -302,6 +302,42 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
       formula_list = expression punct expression => formula_list_apply
         | formula_list punct expression => formula_list_apply;
+
+      // ASF migration item 5 (Option A semantics, 2026-05-19, user-
+      // articulated): `modified_term` is a `tight_term` carrying ONE
+      // relop modifier. Single-relop only — multi-relop chains
+      // (`x < y < 0`) stay at the formula level via the existing
+      // multirelation flattening.
+      //
+      // Action: reuse `infix_relation`. For a single relop call it
+      // produces `Apply(relop, [tight_term, expression])` — the same
+      // shape as `formula relop expression` reduces to for the base
+      // case. So `x = 0` parses identically via either route, ASF /
+      // tree-iter dedup eliminates the duplicate.
+      //
+      // Why this category exists: it enables comma-list contexts
+      // where each item carries its own relop — most notably
+      // function arguments like `P(x = 0, y < 0)`. Today such
+      // input is `ltx_math_unparsed` because `formula_list_apply`
+      // rejects relational items (a comma-list-of-relations is
+      // semantically a different beast from a relop chain RHS).
+      // Modified_term threaded through `list_apply` (not
+      // `formula_list_apply`) gives the desired list-of-relations
+      // shape. Surpass-Perl improvement — the corresponding Perl
+      // grammar via `addEasyArgs` handles this through a different
+      // path with the same effect; here we keep Perl's semantic
+      // outcome.
+      //
+      // See `docs/MATH_PARSER_ASF_TIEBREAKING.md` (commit
+      // 5cde377610) for the proposal context.
+      modified_term = tight_term relop expression => infix_relation;
+      // Phase 1: only the all-modified-terms variants. Mixed-content
+      // variants (`modified_term punct expression`, etc.) deferred
+      // until a witness shows them needed, to keep ambiguity growth
+      // tight (the `parse_tree_count_limits` regression test is the
+      // canary).
+      formula_list += modified_term punct modified_term => modified_list_apply
+        | formula_list punct modified_term => modified_list_apply;
       // Comma-separated term lists: term, term, term, ...
       // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
       // Also includes limit_from_term for patterns like (1+, 0+, 1-, 0-).

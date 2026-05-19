@@ -240,4 +240,35 @@
         </XMath>
       </Math></p>
   </para>
+  <para xml:id="p14">
+    <p><Math mode="inline" tex="P(x=0,y&lt;0)" text="P@(vector@(x = 0, y &lt; 0))" xml:id="p14.m1">
+        <XMath>
+          <XMApp>
+            <XMTok font="italic" role="UNKNOWN">P</XMTok>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="vector"/>
+                <XMRef idref="p14.m1.1"/>
+                <XMRef idref="p14.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">(</XMTok>
+                <XMApp xml:id="p14.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="PUNCT">,</XMTok>
+                <XMApp xml:id="p14.m1.2">
+                  <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">y</XMTok>
+                  <XMTok meaning="0" role="NUMBER">0</XMTok>
+                </XMApp>
+                <XMTok role="CLOSE" stretchy="false">)</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
 </document>
