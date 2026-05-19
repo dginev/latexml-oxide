@@ -17,6 +17,12 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
   DefMacro!("\\AMSSUBJ{}",
     "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}");
+  // ejpecp.cls L137: optional secondary AMS subject classification.
+  // Witness 2312.17406.
+  DefMacro!("\\AMSSUBJSECONDARY{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS-secondary]{#1}");
+  DefMacro!("\\AMSSUBJPRIMARY{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}");
   DefMacro!("\\ABSTRACT{}", "\\begin{abstract}#1\\end{abstract}");
   DefMacro!("\\AUTHORS{}", "\\author{#1}");
   DefMacro!("\\VOLUME{}",
