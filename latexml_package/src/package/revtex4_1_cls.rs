@@ -78,4 +78,11 @@ LoadDefinitions!({
   if state::lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
+
+  // revtex4-1.cls L?: \providecommand\doi[0]{...} — used in bibliography
+  // entries (e.g. `\doi{10.1103/PhysRevLett.123.210602}`). Real cls wraps
+  // the doi in \@doi href but for XML we just emit the DOI as a hyperlink.
+  // Witness 2403.08476.
+  DefMacro!("\\doi{}",     "doi:\\href{https://doi.org/#1}{#1}");
+  DefMacro!("\\doibase",   "https://doi.org/");
 });
