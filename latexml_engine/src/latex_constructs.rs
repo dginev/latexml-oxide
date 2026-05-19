@@ -5922,7 +5922,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
     let nargs_str = nargs_toks.to_string();
     let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
-    let has_optional = type_tok.with_str(|s| s.contains("2"))
+    let has_optional = type_tok.with_str(|s| s.contains('2'))
       || state::x_equals(&type_tok, &T_CS!("\\tw@"));
     let opt = if has_optional { Some(Tokens!()) } else { None };
     let macro_args = convert_latex_args(nargs, opt)?;
