@@ -944,6 +944,31 @@ fn def_primitive_noop(proto: &str) -> Result<()> {
 }
 ```
 
+### DEP-22 — consolidate helpers into latexml_engine::prelude ✅ Closed 2026-05-19
+
+Promote the 5 data-drive helpers from per-file duplicates to a
+single canonical location in `latexml_engine/src/prelude.rs`:
+
+| Helper | Was in |
+|---|---:|
+| `def_macro_noop`     | 197 files |
+| `def_macro_identity` | 11 files |
+| `def_primitive_noop` | 19 files |
+| `def_math_sym`       | 3 files |
+| `def_math_atom`      | 1 file |
+| **Total duplicates removed** | **231 → 5** |
+
+All binding files (`latexml_package/contrib/engine/*`) `use
+crate::prelude::*` which re-exports `latexml_engine::prelude::*`,
+so call sites resolve to the shared `pub fn` without source-level
+changes at the call site.
+
+209 files touched, 2029 lines deleted, 77 added. Release binary
+44,483,264 → 44,378,560 bytes (−100 KiB) — LTO had already been
+deduplicating at link time; this is mostly source hygiene +
+symbol-table cleanup. Tests 1328/0/0. HTML wall time 0.71s flat.
+Commit `9aab482d32`.
+
 ### DEP-21 — DefRegister data-drive ❌ REVERTED 2026-05-19
 
 Attempted to apply the same approach to
