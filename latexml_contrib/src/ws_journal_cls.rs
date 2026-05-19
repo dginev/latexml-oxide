@@ -58,4 +58,14 @@ LoadDefinitions!({
   DefMacro!("\\email{}", "\\textit{#1}\\par");
   DefMacro!("\\http{}", "\\textit{http://#1}\\par");
   DefMacro!("\\uurl{}", "\\textit{#1}\\par");
+
+  // ws-mpla.cls and other ws classes: \tbl{caption}{body} — table
+  // caption + tabular body wrapper. Real def is essentially
+  // \caption{#1}<body #2 in tabular>. Bridge to \caption{caption}
+  // followed by the body content. Witness 2404.18954 (ws-mpla).
+  DefMacro!("\\tbl{}{}", "\\caption{#1}#2");
+  // \ttbl{label}{caption}{body} — 3-arg variant with explicit label.
+  DefMacro!("\\ttbl{}{}{}", "\\caption{#2}\\label{#1}#3");
+  // \tcaption{caption} — single-arg variant in some ws families.
+  DefMacro!("\\tcaption{}", "\\caption{#1}");
 });
