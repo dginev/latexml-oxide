@@ -15,12 +15,36 @@ use latexml_core::digested::DigestedData;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
+  // Real glossaries.sty L688 defines it via \newcommand and calls
+  // \PackageError on the obsolete acronym-style options (footnote /
+  // description / smallcaps / smaller / dua) — but this fires during
+  // package option processing, which happens DURING the raw-load. So
+  // a post-load override is too late.
+  //
+  // Pre-defining means \newcommand's check (\ifx\foo\relax-style)
+  // sees a non-relax definition and skips redefining. Use \def so
+  // our override is in place when option processing fires.
+  //
+  // The "error" is a PDF-rendering hint, not a structural failure.
+  // For XML output these options are moot. Downgrade to a warning.
+  // Witness 2110.10804 (\usepackage[smallcaps]{glossaries}).
+  // Perl emits 0 errors on the same input.
+  DefMacro!("\\@gls@removedoption{}",
+    "\\PackageWarning{glossaries}{obsolete package option #1 ignored}");
+
   // Perl L18-19.
   InputDefinitions!("glossaries", extension => Some(Cow::Borrowed("sty")), noltxml => true);
   RequirePackage!("xspace");
 
   // Perl L21: Silence pointless warnings.
   def_macro_noop("\\glsnoidxstripaccents")?;
+
+  // Post-load: re-apply override in case raw-load's \newcommand
+  // overrode our pre-def. \newcommand errors if already defined, but
+  // \def silently overrides — but to be safe, reapply after load.
+  DefMacro!("\\@gls@removedoption{}",
+    "\\PackageWarning{glossaries}{obsolete package option #1 ignored}");
 
   //======================================================================
   // Perl L26-37: wrap `\@gls@link` in `<ltx:glossaryref>`.
