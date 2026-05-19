@@ -814,7 +814,7 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     _ => VecDeque::new(),
   };
   if let Some(Stored::VecDequeStored(ref vdq)) = text_bindings {
-    bindings.extend(vdq.iter().collect::<Vec<_>>());
+    bindings.extend(vdq.iter());
   }
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {

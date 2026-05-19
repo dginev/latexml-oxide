@@ -405,7 +405,7 @@ LoadDefinitions!({
     // TODO: Consider a briefer syntax, maybe flat_vec ?
     // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
     let mut tks = vec![T_BEGIN!()];
-    tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+    tks.extend(arg.into_iter().map(Token::revert));
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
@@ -419,7 +419,7 @@ LoadDefinitions!({
     // TODO: Consider a briefer syntax, maybe flat_vec ?
     // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
     let mut tks = vec![T_BEGIN!()];
-    tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+    tks.extend(arg.into_iter().map(Token::revert));
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
@@ -488,7 +488,7 @@ LoadDefinitions!({
     reversion => sub[arg, _inner, _extra] {
     if !arg.is_empty() {
       let mut read_tokens = vec![T_OTHER!(s!("["))];
-      read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      read_tokens.extend(arg.into_iter().map(Token::revert));
       read_tokens.push(T_OTHER!(s!("]")));
       Ok(Tokens::new(read_tokens))
     } else {
@@ -515,7 +515,7 @@ LoadDefinitions!({
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -543,7 +543,7 @@ LoadDefinitions!({
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -574,7 +574,7 @@ LoadDefinitions!({
       egroup()?; },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -587,7 +587,7 @@ LoadDefinitions!({
       Ok(Tokens!())
     } else {
       let mut read_tokens = vec!(T_BEGIN!());
-      read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      read_tokens.extend(arg.into_iter().map(Token::revert));
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }
@@ -603,7 +603,7 @@ LoadDefinitions!({
         Ok(Tokens!())
       } else {
         let mut read_tokens = vec!(T_OTHER!("["));
-        read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+        read_tokens.extend(arg.into_iter().map(Token::revert));
         read_tokens.push(T_OTHER!("]"));
         Ok(Tokens::new(read_tokens))
       }

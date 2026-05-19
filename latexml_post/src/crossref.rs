@@ -601,12 +601,12 @@ impl CrossRef {
     sibs.retain(|s| self.is_primary_page(s));
     let mut current = sibs.pop()?;
     loop {
-      let kids: Vec<String> = self
+      let deepest = self
         .get_child_page_ids(&current)
         .into_iter()
-        .filter(|s| self.is_primary_page(s))
-        .collect();
-      match kids.into_iter().last() {
+        .rev()
+        .find(|s| self.is_primary_page(s));
+      match deepest {
         Some(deepest) => current = deepest,
         None => break,
       }
@@ -618,12 +618,11 @@ impl CrossRef {
   /// `primary` pages. Port of Perl `CrossRef::findNextPage`: first child,
   /// else walk up to find next sibling at progressively higher levels.
   fn find_next_page_id(&self, page_id: &str) -> Option<String> {
-    let kids: Vec<String> = self
+    if let Some(first) = self
       .get_child_page_ids(page_id)
       .into_iter()
-      .filter(|s| self.is_primary_page(s))
-      .collect();
-    if let Some(first) = kids.into_iter().next() {
+      .find(|s| self.is_primary_page(s))
+    {
       return Some(first);
     }
     let mut current = page_id.to_string();
@@ -637,8 +636,7 @@ impl CrossRef {
         sibs.remove(0);
       }
       sibs.remove(0); // drop ourselves
-      let next: Vec<String> = sibs.into_iter().filter(|s| self.is_primary_page(s)).collect();
-      if let Some(first) = next.into_iter().next() {
+      if let Some(first) = sibs.into_iter().find(|s| self.is_primary_page(s)) {
         return Some(first);
       }
       current = parent;
