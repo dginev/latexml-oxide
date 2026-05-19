@@ -75,28 +75,12 @@ Telemetry across 190k arxiv documents shows the `graphics` phase at
 rate on a content-keyed cache (~30%) translates to ~10% off corpus
 wall.
 
-```rust
-// Persistent on-disk cache, keyed by content + render options
-let key = blake3::hash(&[source_bytes, page.to_le_bytes(),
-                          dpi.to_le_bytes(), dest_kind.as_bytes(),
-                          opts.canonical()].concat());
-if let Some(cached) = cache.get(&key) { return Ok(cached); }
-let fresh = run_convert(...)?;
-cache.put(&key, &fresh);
-```
-
-**In-document coalescing landed 2026-05-12** (`48fd96ac75`):
-`Plan::Copy` and `Plan::Convert` key on `(SipHash(content),
-graphicx_options)`. Witness arXiv:2402.01336 (LHCb 1067-author paper)
-— 1083 `<ltx:graphics>` nodes → **17 output files**. Persistent
-on-disk cache is the next concrete win.
-
-Cache-key correctness checklist:
-- Include: source-bytes hash, page index, target DPI, format, flags
-  that influence rendering.
-- Exclude: timestamps, tmpdir paths.
-- Bump a `cache_namespace` constant when fixing a rendering bug; don't
-  rely on hash invalidation.
+**Landed**: in-doc coalescing (`48fd96ac75`, 2026-05-12) +
+persistent on-disk cache (2026-05-16) — see "Graphics phase —
+completed work" below. Cache-key contract: include source-bytes
+hash + page + DPI + format + render-affecting flags; exclude
+timestamps/tmpdir paths; bump a `cache_namespace` constant when
+fixing a rendering bug rather than relying on hash invalidation.
 
 ---
 
@@ -128,21 +112,14 @@ Principle 4). Max RSS: 1,692 MB.
 
 ## Active improvement plan
 
-### P1 graphics phase (36.5% of wall, largest lever)
+### P1 graphics phase (36.5% of wall) — CLOSED
 
-- **In-document dedup** — done (`latexml_post/src/graphics.rs` via
-  `convert_job_ids` HashMap keyed `(source, page, options)`, mirroring
-  Perl `$doc->cacheLookup`).
-- **Persistent on-disk cache** — next concrete win. Key on
-  `(blake3(source), page, dest_type, density, options_canonical)`
-  under `$LATEXML_OXIDE_CACHE_DIR`
-  (default `$XDG_CACHE_HOME/latexml-oxide/graphics/`). Bump
-  `cache_namespace` when convert/inkscape version changes. Add
-  `graphics_cache_hits`/`_misses` to telemetry before landing.
-- **Output-size validation set**: `0809.3849`, `0908.3201`,
-  `1003.0368`, `0803.4343`, `0907.4282`. Compare output bytes, image
-  count, missing-image count, wall before/after.
-- **Subprocess-only chain** decided 2026-05-12 — see SYNC_STATUS.md.
+In-doc dedup (`Plan::Copy`/`Plan::Convert`), persistent on-disk cache,
+vector-SVG fast path, vector-PDF auto-detect all landed. Detail moved
+to "Graphics phase — completed work" below. Subprocess-only chain
+decision recorded in SYNC_STATUS.md (2026-05-12). Output-size
+validation set retained as regression fixtures: `0809.3849`,
+`0908.3201`, `1003.0368`, `0803.4343`, `0907.4282`.
 
 ### P1 digest + build (31.8% of wall, pure-Rust hot path)
 
@@ -252,115 +229,57 @@ Any corpus entry drifting **> +15%** wall vs last recorded baseline
 between commits is a regression signal. Record a new row in a dated
 sub-heading; do not overwrite history.
 
-### Vector-SVG fast path (issue #902 validation)
+### Graphics phase — completed work
 
-The `--graphics-svg-threshold-kb N` opt-in (round 17) bypasses
-ImageMagick `convert` for vector-authored PDFs that `convert`
-rasterises absurdly slowly. Fixture: `fig8.pdf` from
-[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
-(41 KB, arxiv:1807.01606).
+One-line summaries of landed wins; detail lives in code + commit
+messages. Keep here as breadcrumbs for regression triage.
 
-| Path | Graphics phase | Total wall |
-|---|---:|---:|
-| default (ImageMagick `convert`) | 32.4s | 32.4s |
-| `--graphics-svg-threshold-kb 200` | 0.25s | 0.3s |
-| **speedup** | **130×** | **111×** |
-
-Regression coverage:
-`latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
-asserts <5s on this fixture (silently skipped without inkscape).
-
-### Vector-PDF auto-detection (2026-05-16)
-
-The cortex_worker `ar5iv` profile now passes
-`graphics_svg_threshold_kb: 0` — the special value that **enables
-auto-detect**. Auto-detect scans the PDF header (up to 256 KB) for
-`/Subtype /Image` / `/Subtype/Image` markers; if absent AND the file
-is at most 500 KB, the SVG path fires. If markers ARE found, the
-gs/convert raster path runs unchanged.
-
-Empirically (1904.01426 fixture, 33 vector pgfplots-style PDFs): with
-auto-detect ON every figure renders to `<name>.svg`; with auto-detect
-OFF every figure renders to `<name>.png`. Wall time is comparable
-either way for this paper because pdftocairo and gs are both fast for
-small PDFs — but the SVG output is vector (zoomable, no
-rasterization), and on `fig8.pdf`-class pathological-convert papers
-the speedup matches the original `--graphics-svg-threshold-kb 200`
-opt-in (~130×).
-
-Override:
-* `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` — disable auto-detect.
-* `--graphics-svg-threshold-kb N` (N > 0) — force legacy size-only
-  gate (used for canvases where the auto-detector misclassifies).
-
-Regression coverage:
-`latexml_post::graphics::tests::should_try_svg_path_auto_detect` —
-positive on `cifar10_vector.pdf` and `pathological_vector.pdf`,
-negative on `raster_with_image.pdf` (a 3-pixel ImageMagick raster
-PDF with an explicit Image XObject).
-
-### Graphics content cache (2026-05-16)
-
-Content-keyed disk cache between `latexml_post::graphics` and the
-`gs`/`convert`/`inkscape`/`mutool`/`pdftocairo` subprocess spawns.
-Key = SHA-256 of `source bytes ‖ page ‖ density ‖ target-ext`;
-storage at `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>`
-with a `.dims` sidecar storing `width\nheight\n` (so cache hits skip
-`read_image_dimensions` too — Perl-LaTeXML.cache parity).
-
-Multi-process safe:
-
-* Writes go through `<final>.tmp.<pid>.<nanos>` then atomic `rename(2)`
-  — concurrent writers all converge to one final file.
-* Reads hardlink the cache file into the destination; the hardlink
-  survives any concurrent prune that unlinks the cache entry
-  afterwards (POSIX `link(2)` semantics).
-* LRU prune holds `flock(LOCK_EX | LOCK_NB)` on a `.prune.lock`
-  sentinel — only one process prunes at a time, others skip.
-* `ENOENT` mid-prune is tolerated (a writer raced this entry).
-
-Measured impact on `1909.03909` (8 MB paper, 21 graphics jobs) single
-threaded, release binary:
-
-| State | Wall |
-|---|---:|
-| cold (cache empty) | 9.55s |
-| warm (cache hot) | 5.07s |
-| `LATEXML_GRAPHICS_CACHE_OFF=1` | 9.40s |
-| 4× concurrent (cold, shared cache) | 11.45s total (0 leftover tmp files) |
-
-Override:
-
-* `LATEXML_GRAPHICS_CACHE_OFF=1` — bypass entirely.
-* `LATEXML_GRAPHICS_CACHE_DIR=/path` — override cache root.
-* `LATEXML_GRAPHICS_CACHE_MAX_MB=N` — size cap (default 2048).
-
-The cache is robust to externally-deleted entries — `lookup` checks
-`exists()` AND tolerates `link/copy` failures mid-operation, falling
-through to a fresh conversion + `store()` silently. Regression
-coverage: `graphics_cache::tests::missing_disk_file_triggers_quiet_regeneration`
-+ `concurrent_writers_converge_to_one_cache_entry`.
-
-### Sandbox worker default (2026-05-16)
-
-`tools/benchmark_canvas.sh` default `WORKERS` lowered from 20 → 8.
-Re-timing the round22 slow tail showed graphics-bound papers ran 5–10×
-slower at 20 workers than single-threaded because each
-gs/convert/inkscape fork-exec stack competes for CPU+I/O. At 8 workers
-the per-paper overhead is ≤30% vs single-threaded; corpus throughput
-goes up. Override with `--workers N` only when the canvas is known to
-be compute-bound (math/digest-heavy) rather than graphics-bound.
+- **In-doc coalescing** (2026-05-12, `48fd96ac75`) —
+  `Plan::Copy`/`Plan::Convert` key on `(SipHash(content),
+  graphicx_options)`. Witness: arXiv:2402.01336 1083 nodes → 17 files.
+- **Persistent on-disk cache** (2026-05-16, content-keyed disk cache
+  in `latexml_post::graphics`). SHA-256 of
+  `source‖page‖density‖target-ext`; storage at
+  `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>` plus
+  `.dims` sidecar (skips `read_image_dimensions` on hit — Perl
+  `LaTeXML.cache` parity). Multi-process safe via
+  `<final>.tmp.<pid>.<nanos>` + atomic rename, hardlink-on-read,
+  `flock(LOCK_EX|LOCK_NB)` on `.prune.lock` for LRU. Measured: warm
+  9.55s → 5.07s on 1909.03909 (21 graphics jobs). Overrides:
+  `LATEXML_GRAPHICS_CACHE_OFF=1`, `LATEXML_GRAPHICS_CACHE_DIR=...`,
+  `LATEXML_GRAPHICS_CACHE_MAX_MB=N` (default 2048). Tests:
+  `graphics_cache::tests::missing_disk_file_triggers_quiet_regeneration`,
+  `concurrent_writers_converge_to_one_cache_entry`.
+- **Vector-SVG fast path** (round 17, issue #902) — opt-in
+  `--graphics-svg-threshold-kb N` bypasses ImageMagick for vector PDFs.
+  Witness: `fig8.pdf` (41 KB) 32.4s → 0.3s (~130× / ~111×). Test:
+  `latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
+  (<5s assertion, skipped without inkscape).
+- **Vector-PDF auto-detection** (2026-05-16) — `cortex_worker` `ar5iv`
+  profile passes `graphics_svg_threshold_kb: 0`; auto-detect scans PDF
+  header (≤256 KB) for `/Subtype /Image` markers and routes to SVG
+  when absent and file is ≤500 KB. Overrides:
+  `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1`, or
+  `--graphics-svg-threshold-kb N>0` to force the legacy size-only
+  gate. Test:
+  `latexml_post::graphics::tests::should_try_svg_path_auto_detect`.
+- **Sandbox worker default 20 → 8** (2026-05-16,
+  `tools/benchmark_canvas.sh`) — graphics-bound papers ran 5–10×
+  slower at 20 workers vs single-threaded due to gs/convert/inkscape
+  fork-exec contention; at 8 workers per-paper overhead is ≤30% and
+  corpus throughput is higher. Override `--workers N` only when the
+  canvas is known compute-bound (math/digest-heavy) rather than
+  graphics-bound.
 
 ---
 
-## Mini-benchmark: beat 2× pdflatex on `1910.01256`
+## Mini-benchmark: beat 2× pdflatex on `1910.01256` — MET
 
-See SYNC_STATUS.md "Acceptance gates". Post-DEP-19 anti-bloat
-batch (2026-05-19) wall time is **0.71s** (release, --dest=.html,
-full post-processing) vs pdflatex idle ~1.11s — meeting the 2×
-gate (2.22s) with a 3.13× margin. Was 1.18s on 2026-05-12 (and
-0.73s pre-DEP-15); the .text shrink (~3 MiB) from DEP-15/17/18/19
-helped icache locality slightly.
+2026-05-19: 0.71s release (full post-processing) vs pdflatex idle
+~1.11s — 3.13× margin on the 2.22s gate. .text shrink (~3 MiB) from
+DEP-15/17/18/19 helped icache locality. Re-measure under the
+SYNC_STATUS.md "Acceptance gates" recipe after any large workspace
+landing; flag a regression if margin shrinks below 1.5×.
 
 ---
 
@@ -422,27 +341,20 @@ the 19 OOMs the no-cap hybrid produced on this fixture.
 
 ### What we tried that didn't move the needle
 
-Documented for triage when similar ideas resurface:
+Settled negative results. Re-litigate only on new evidence.
 
-- `XM::Lexeme(String, _)` → `XM::Lexeme(Rc<str>, _)` and a
-  thread-local ASCII byte cache — ~0 % on Article-2025. Kept
-  because it removes deep-clone hazards from the marpa cache
-  hit/insert paths.
-- `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>` — ~0 %. The
-  marpa cache `.clone()` was already cheap relative to
-  `compute_symches` work.
-- marpa `HashMap<usize, _>` caches → `Vec<Option<_>>` indexed
-  by sequential id + slice-children API — ~3 %.
-- marpa `glades` + `nidset_by_id` → `Vec<Option<_>>` — another
-  ~3 %.
-- `SmallVec` for `Symch.factorings` — counter data
-  (`max_factorings_per_symch=4`, 99.98 % singletons) shows this
-  would *increase* memory by ~72 MB on a 3M-symch workload
-  for ~zero runtime gain. **Closed without implementation.**
+- `XM::Lexeme(String,_)` → `Rc<str>` + thread-local ASCII cache: ~0 %
+  on Article-2025 (kept anyway, removes deep-clone hazards).
+- `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>`: ~0 %.
+- marpa `HashMap<usize,_>` caches → `Vec<Option<_>>` + slice-children
+  API: ~3 %.
+- marpa `glades` + `nidset_by_id` → `Vec<Option<_>>`: ~3 %.
+- `SmallVec` for `Symch.factorings`: counter data
+  (`max_factorings_per_symch=4`, 99.98 % singletons) projected +72 MB
+  RAM at 3M-symch workload for ~0 runtime gain — **closed**.
 
-Total Rust-side micro-optimization: ~6 % cumulative. The
-hybrid-routing decision delivered the ~37 % saving needed for
-parity with LEGACY.
+Total Rust-side micro-opt: ~6 % cumulative. HYBRID-routing decision
+delivered the ~37 % needed for LEGACY parity.
 
 ### Audit env vars
 
