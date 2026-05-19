@@ -1593,19 +1593,22 @@ pub fn is_dont_expandable(token: &Token) -> bool {
 }
 
 pub fn lookup_conditional(token: &Token) -> Option<ConditionalType> {
-  let lookupname = token.get_executable_name();
-  if lookupname.is_empty() {
-    None
-  } else if let Some(entry) = state!().meaning.get(&arena::pin(lookupname)) {
+  // `get_executable_name` previously built a fresh `String` + `arena::pin`
+  // probe per call; `pin_cs_name` already returns a cached `SymStr`
+  // (primitive → `Catcode::name_sym`, otherwise `self.text`). Saves a
+  // RefCell mut-borrow on the interner + a hashmap probe per token in
+  // the gullet's conditional dispatch.
+  if !token.code.is_executable() {
+    return None;
+  }
+  let lookup_sym = token.pin_cs_name();
+  state!().meaning.get(&lookup_sym).and_then(|entry| {
     if let Some(Stored::Conditional(defn)) = entry.front() {
-      // Can only be a token or definition; we only want defns that have conditional_type
       Some(defn.conditional_type)
     } else {
       None
     }
-  } else {
-    None
-  }
+  })
 }
 
 pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
