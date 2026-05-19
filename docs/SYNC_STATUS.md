@@ -851,53 +851,65 @@ Re-audit 2026-05-18 (`cargo tree --duplicates`):
   bootstrap costs ~7 ms of extra `parse_prototype` + `tokenize_internal`
   work, paid once at load.
 
-### DEP-15 follow-up — cargo-bloat data + approach (2026-05-18)
+### DEP-15 — data-drive fontawesome ✅ Closed 2026-05-18
 
-Top `.text` consumers on `target/release/latexml_oxide`:
+`fontawesome_sty` + `fontawesome5_sty` collapsed via runtime
+helpers (`def_fa5_icon(suffix, kebab)` etc.) instead of inlining
+1373 + 706 trivial `DefMacro!` arms at compile time. Commit
+`4f01c78ceb` shipped −2.54 MiB; both crates fell off the top-16
+.text consumers entirely. Release binary 47.6 MB (was ~50 MB
+pre-DEP-15).
+
+### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
+
+Top `.text` consumers on `target/release/latexml_oxide`
+(`.text` total 35.2 MiB):
 
 | Function | Size | % of `.text` |
 |---|---:|---:|
-| `latexml_contrib::fontawesome5_sty::load_definitions` | 2.0 MiB | 5.3% |
-| `latexml_engine::latex_constructs::load_definitions`  | 1.1 MiB | 3.0% |
-| `latexml_core::common::font::standard_metrics::STDMETRICS::{closure#0}` | 811 KiB | 2.1% |
-| `latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2 | 1.2 MiB | 3.2% |
-| `latexml_package::package::jhep_cls::load_definitions` | 511 KiB | 1.3% |
-| `latexml_contrib::fontawesome_sty::load_definitions` | 480 KiB | 1.3% |
-| `latexml_package::package::mathabx_sty::load_definitions` | 438 KiB | 1.1% |
-| (10 more in the 200–340 KiB range) | ~2.3 MiB | ~6% |
+| `latexml_engine::latex_constructs::load_definitions`  | 1.1 MiB | 3.1% |
+| `latexml_core::common::font::standard_metrics::STDMETRICS::{closure#0}` | 811 KiB | 2.3% |
+| `latexml::dump_compiled_latexml_model::_ModelLoader::build_model` × 2 | 1.2 MiB | 3.4% |
+| `latexml_package::package::jhep_cls::load_definitions` | 511 KiB | 1.4% |
+| `latexml_package::package::mathabx_sty::load_definitions` | 438 KiB | 1.2% |
+| `latexml_engine::math_common::load_definitions` | 339 KiB | 0.9% |
+| `latexml_package::package::amsmath_sty::load_definitions` | 286 KiB | 0.8% |
+| `latexml_package::package::aas_support_sty::load_definitions` | 262 KiB | 0.7% |
+| `latexml_package::package::pgfsys_latexml_def::load_definitions` | 256 KiB | 0.7% |
+| `latexml_package::package::mathtools_sty::load_definitions` | 248 KiB | 0.7% |
+| `latexml_package::package::txfonts_sty::load_definitions` | 234 KiB | 0.6% |
+| `latexml_contrib::biblatex_sty::load_definitions` | 227 KiB | 0.6% |
+| `latexml_package::package::amssymb_sty::load_definitions` | 216 KiB | 0.6% |
+| `latexml_package::package::iopart_support_sty::load_definitions` | 216 KiB | 0.6% |
 
-Top 16 functions account for ~22% of `.text` (~9 MiB on a
-40-MiB code section). Universally they're `LoadDefinitions!`
+Top 15 functions account for ~17% of `.text` (~6 MiB on the
+35-MiB code section). Universally they're `LoadDefinitions!`
 bodies with hundreds of repeated `DefMacro!` / `DefConstructor!`
 invocations.
 
-Concrete approach for `fontawesome5_sty` (1373 trivial calls,
-all pattern `DefMacro!("\\faXxx[]", "\\faIcon[#1]{kebab-name}")`):
+`latex_constructs::load_definitions` shrank from 1.1 MiB →
+~1.05 MiB this session (2026-05-18) after ~320 lines of
+dead-code dedupe (task #90 cleanup landing in commits
+`69945b78d4` … `1fa0728bb1` + `39f5d5ba45` + `1f59f0e780`).
+Further reduction would require breaking it into sub-modules.
 
-1. Add a runtime helper `def_fa5_icon(suffix: &'static str,
-   kebab: &'static str)` in `fontawesome5_sty.rs`. Internally
-   constructs the CS via `T_CS!`, parses the parameter spec
-   `[]` once, and constructs the expansion `Tokens` at runtime
-   instead of compile-time inlining.
-2. Replace the 1373 trivial `DefMacro!` lines with single-line
-   `def_fa5_icon(b"AccessibleIcon", b"accessible-icon");` calls.
-3. Keep the ~20 non-trivial `Match:N` / `OptionalMatch:*` /
-   `Number[]` variants as full `DefMacro!` calls (low count, no
-   benefit to data-driving).
+Next concrete data-drive candidates (same approach as DEP-15):
+* `jhep_cls` (511 KiB) — high-affordance journal-class macros
+  with a small set of repeating `\jhep@*` patterns.
+* `mathabx_sty` (438 KiB) — math symbol tables; each entry is
+  a `DefMath!` line. Data-drive: `(suffix, codepoint, role)` tuples.
+* `amssymb_sty` / `aas_support_sty` / `iopart_support_sty` —
+  similar symbol-table / repeated-binding shape.
 
-Expected impact: 2.0 MiB → ~50–100 KiB on `fontawesome5_sty`
-alone. Similar mechanical refactor on `fontawesome_sty` (~480
-KiB → ~30 KiB).
+Upper-bound savings: ~1.5 MiB if the three biggest of these get
+the fontawesome treatment.
 
-Risk: each `DefMacro!` arm runs through `parse_prototype!` +
-`compile_expansion!` at compile time; building the same `Tokens`
-structure at runtime requires the helper to mirror the exact
-shape. Validation: byte-for-byte XML output equality on the
-`fontawesome*` test fixtures.
-
-Profile-guided, not a quick win — but the upper bound (2.5
-MiB combined fontawesome saving) is the biggest single binary-
-size lever remaining after DEP-1 through DEP-14.
+Approach (mirror DEP-15): write a small runtime helper that
+takes the per-entry data, constructs the Tokens body once at
+runtime, and registers. Validate via byte-for-byte XML output
+equality on the existing test fixtures. The user-visible
+trade-off is per-engine-bootstrap cost (a few ms aggregate)
+vs binary size.
 
 ---
 
