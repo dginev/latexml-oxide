@@ -877,27 +877,32 @@ Release binary 47,592,000 → 46,958,336 bytes (−633 KiB). Commit
 Apply the DEP-15 fontawesome template (runtime helper instead of
 compile-time-inlined macro arms) to the math-symbol bindings:
 
-| Sub | Crate | Migrated / Total | Δ binary |
-|---|---|---:|---:|
-| DEP-17  | `txfonts_sty.rs`  | 128 / 202 | −77 KiB |
-| DEP-17b | `mathabx_sty.rs`  | 279 / 358 | −365 KiB |
-| DEP-17c | `amssymb_sty.rs`  | 202 / 203 | −188 KiB |
-| **DEP-17 family total** |  | **609** | **−630 KiB** |
+| Sub | Crate | Migrated / Total | Δ binary | Helper used |
+|---|---|---:|---:|---|
+| DEP-17  | `txfonts_sty.rs`  | 128 / 202 | −77 KiB | `def_math_sym`, `def_math_upright_greek` |
+| DEP-17b | `mathabx_sty.rs`  | 279 / 358 | −365 KiB | `def_math_sym` |
+| DEP-17c | `amssymb_sty.rs`  | 202 / 203 | −188 KiB | `def_math_sym` |
+| DEP-17d | `math_common.rs`  | 172 / 268 | −90 KiB | `def_math_atom` (3-arg None-paramlist form) |
+| **DEP-17 family total** |  | **781 / 1031** | **−720 KiB** | |
 
-Helpers added per file: `def_math_sym(cs, present, role, meaning)`
-for the dominant `DefMath!("\\cs", "char"[, role => "X"[, meaning => "Y"]])`
-shape, plus `def_math_upright_greek(cs, present)` in txfonts for the
-29 `*up` Greek aliases that pass `font => { shape => "upright",
-forceshape => true }`.
+Helpers:
+* `def_math_sym(cs, present, role, meaning)` — 2-arg `DefMath!(proto,
+  present[, role=>X[, meaning=>Y]])` shape. Uses `parse_prototype` to
+  build params as `Some(empty)`.
+* `def_math_atom(cs, present, role, meaning)` — 3-arg
+  `DefMath!(text, None, present[, ...])` shape. Builds Token via
+  `T_CS!(cs)` directly; params stays `None`.
+* `def_math_upright_greek(cs, present)` — txfonts-only `*up` Greek
+  variants with `font => { shape => "upright", forceshape => true }`.
 
-Remaining non-migrated entries (txfonts 74, mathabx 79, amssymb 1)
-all use shapes that need additional helper signatures (multi-line
-integrals with `dynamic_mathstyle` / `scriptpos`; the `None,
-"char"` 3-arg form used by `math_common.rs`; `meaning =>`-only
-form). Future DEP-17d… as needed.
+Remaining non-migrated entries (txfonts 74, mathabx 79, amssymb 1,
+math_common 96) need additional helper signatures: multi-line
+integrals with `dynamic_mathstyle` / `scriptpos`, `meaning=>`-only,
+`alias=>`-bearing forms, `{}`-prototyped entries with `before_digest`
+closures. Future DEP-17e… as needed.
 
 Tests 1328/0/0 throughout. Commits: `d33911ea48`, `da39166a1e`,
-`eeb9047700`, `7be68c3cb2`.
+`eeb9047700`, `7be68c3cb2`, `20eca56c9a`.
 
 ### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
 
