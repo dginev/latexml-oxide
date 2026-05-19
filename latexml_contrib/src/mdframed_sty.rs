@@ -37,6 +37,14 @@ LoadDefinitions!({
         }
       }
       Ok(props)
-    }
-  );
+    },
+    // mdframed bodies routinely contain multi-paragraph content
+    // (theorems, displayed equations, multiple `$$..$$` blocks). The
+    // DefEnvironment default of restricted_horizontal makes
+    // BOUND_MODE never end with "vertical", so tex_math.rs:467's
+    // `$$` → display-math check stays false: each `$$` is parsed as
+    // open + immediate close, leaving body content in text mode and
+    // cascading "Script _/^ can only appear in math mode" on subscripts.
+    // Witness 2402.07712 (eqnarray + multiple `$$..$$` in mdframed).
+    mode => "internal_vertical");
 });
