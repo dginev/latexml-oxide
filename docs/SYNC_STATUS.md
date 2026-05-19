@@ -914,6 +914,49 @@ closures. Future DEP-17e… as needed.
 Tests 1328/0/0 throughout. Commits: `d33911ea48`, `da39166a1e`,
 `eeb9047700`, `7be68c3cb2`, `20eca56c9a`.
 
+### DEP-18/19/20 series — data-drive empty/identity stubs ✅ Closed 2026-05-19
+
+Same template as DEP-15/17: convert compile-time-inlined macro arms
+to runtime helper calls. Three sub-families covered:
+
+| Sub | Helper | Shape | Migrated | Δ binary |
+|---|---|---|---:|---:|
+| DEP-18 family (a-g) | `def_macro_noop(proto)` | `DefMacro!("\\cs", "")` and `DefMacro!("\\cs", None)` empty-body stubs | 1673 entries across 100 files | −1162 KiB combined |
+| DEP-19 | `def_macro_identity(proto)` | `DefMacro!("\\cs{}", "#1")` identity-1 wrappers | 94 entries across 10 files | −96 KiB |
+| DEP-20 | `def_primitive_noop(proto)` | `DefPrimitive!("\\cs", None)` empty primitives | 132 entries across 19 files | −249 KiB |
+| **DEP-18+19+20 total** | | | **1899 entries** | **−1507 KiB** |
+
+Helpers (all in per-file scope, LTO collapses to one inlined body
+per call site):
+
+```rust
+fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+fn def_macro_identity(proto: &str) -> Result<()> { /* body: "#1" */ }
+fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+```
+
+### DEP-21 — DefRegister data-drive ❌ REVERTED 2026-05-19
+
+Attempted to apply the same approach to
+`DefRegister!("\\cs" => Number/Dimension/Glue::new(0))` via a
+generic helper `fn def_register_value<T: Into<RegisterValue>>(...)`.
+Result: binary **GREW** by +139 KiB instead of shrinking. Cause:
+rustc monomorphizes the generic for each concrete `T` at each
+call site, defeating the macro-arm consolidation. Reverted same
+iteration; documented in
+[[wisdom_helper_monomorphization_trap]] memory. The lesson is
+generic data-drive helpers (`T: Into<X>`) are a binary-size
+ANTI-pattern; concrete-value helpers are required.
+
 ### DEP-15 follow-up — cargo-bloat data + next levers (refreshed 2026-05-18)
 
 Top `.text` consumers on `target/release/latexml_oxide`
