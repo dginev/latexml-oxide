@@ -63,6 +63,9 @@ LoadDefinitions!({
   // 2310.18127.
   DefMacro!("\\printAffiliations", "");
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
+  // ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
+  // Witness 2306.01153.
+  DefMacro!("\\icmlEqualAdvising", "Equal advising");
   // ICML 2025: extended marker for joint first + senior authorship.
   // Witness: 2503.15703 (icml2025.sty L534).
   DefMacro!("\\icmlEqualContributionAndSenior",
