@@ -2052,7 +2052,10 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   {
     t_sym
   } else {
-    arena::pin(cc.name())
+    // Use cached SymStr from `Catcode::name_sym` instead of re-interning
+    // `cc.name()` (a &'static str) on every non-active-or-cs token —
+    // saves a hashmap probe per token on the digest hot path.
+    cc.name_sym()
   };
   // Debug!("Looking up digestable {:?}", lookupname);
   let state = state!();
