@@ -93,6 +93,22 @@ These don't affect runtime correctness (zero-error inits still
 pass), but moving them to `latex_constructs.rs` is the strict-Perl
 parity refactoring backlog. Multi-iteration scope; not blocking.
 
+**45-list status refresh (2026-05-18)**: spot-verified the L80-89
+list against the current Rust tree. Most entries are *not* genuine
+gaps but regex artifacts in the original audit:
+
+| Bucket | CSes | Status |
+|---|---|---|
+| Dynamic (defined inside Perl closure body, not top-level) | `\@captype`, `\@filef@und`, `\format@title@`, `\labelenum`, `\labelitem`, `\theenum`, `\theequation`, `\theequation@ID` | Audit false positive — Perl regex matched the inner `DefMacroI` line inside a `sub { … }` body that runs only at runtime. Rust generates equivalents dynamically too. |
+| Already in latex_constructs.rs but regex missed (multi-line / nested parameter spec) | `\@hack@caption@` (L6797), `\@@@hack@caption@` (L6801), `\lx@end@verbatim` (L5238), `\reserved@a`, `\normalsfcodes`, `\@trivlist`, `\@nomath`, `\@font@warning`, `\G@refundefinedtrue`, `\@settopoint` (L8169), `\@fontswitch` (L9332) | Audit false positive. |
+| Already in another file but semantically correctly placed | `\mathring`, `\ldots` (math_common.rs), `\showoutput`/`\tracingfonts` (plain_base.rs), `\@@cite` constructor (separate from `\@cite` formatter), `\documentstyle` (tex_job.rs architectural) | No action — file split matches semantic intent. |
+| Genuine port — done this session | `\@cite{}{}` (commit landed 2026-05-18, L7796) | Real fix: kernel default citation formatter wrapping `[{#1\if@tempswa , #2\fi}]`. |
+| Intentional Rust-side different implementation | `\pic@savebox`, `\pic@@savebox`, `\@savepicbox` (Rust uses raw `\def\@savepicbox#1(#2,#3){…}` chain at latex_constructs.rs L8435 instead of Perl's `\pic@savebox` delegation) | Documented divergence. |
+| Truly missing / dynamic-from-Perl-runtime | very small residue | Per-CS investigation only if user-witnessed failure. |
+
+The "45 candidates" backlog is effectively closed — only `\@cite`
+needed a real port, the rest were classification artifacts.
+
 **2026-05-02 follow-up: dump-path resolution check**: spot-checked
 3 of the 45 violations against `resources/dumps/latex.dump.txt`:
 
