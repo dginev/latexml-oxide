@@ -3,6 +3,19 @@
 //! Used by Journal of Physics, Classical and Quantum Gravity, etc.
 use crate::prelude::*;
 
+/// DEP-NEW (2026-05-19): data-drive helper for the 74 IOP-physics
+/// journal abbreviation macros that all expand to
+/// `\textit{<name>}` (some with trailing italic-correction `\/`).
+/// Replacing the per-call `DefMacro!` macro arms with this runtime
+/// helper collapses the repeated macro expansion to one inlined fn.
+/// Per [[wisdom_data_drive_min_call_sites]]: 74 ≫ 5 threshold.
+fn def_iop_journal(cs: &str, name: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let body_toks = mouth::tokenize_internal(&format!("\\textit{{{name}}}"));
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body_toks), None)?;
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Conditionals — Perl L22-26
@@ -260,82 +273,82 @@ LoadDefinitions!({
   Tag!("ltx:acknowledgements", auto_close => true);
 
   // Journal abbreviations — Perl L258-343
-  DefMacro!("\\etal", "\\textit{et al\\/}");
+  def_iop_journal("\\etal", "et al\\/")?;
   DefMacro!("\\dash", "-----");
   // Journal abbreviations — ALL from Perl L258-331
-  DefMacro!("\\CQG",   "\\textit{Class. Quantum Grav.}");
-  DefMacro!("\\CTM",   "\\textit{Combust. Theory Modelling\\/}");
-  DefMacro!("\\DSE",   "\\textit{Distrib. Syst. Engng\\/}");
-  DefMacro!("\\EJP",   "\\textit{Eur. J. Phys.}");
-  DefMacro!("\\HPP",   "\\textit{High Perform. Polym.}");
-  DefMacro!("\\IP",    "\\textit{Inverse Problems\\/}");
-  DefMacro!("\\JHM",   "\\textit{J. Hard Mater.}");
-  DefMacro!("\\JO",    "\\textit{J. Opt.}");
-  DefMacro!("\\JOA",   "\\textit{J. Opt. A: Pure Appl. Opt.}");
-  DefMacro!("\\JOB",   "\\textit{J. Opt. B: Quantum Semiclass. Opt.}");
-  DefMacro!("\\JPA",   "\\textit{J. Phys. A: Math. Gen.}");
-  DefMacro!("\\JPB",   "\\textit{J. Phys. B: At. Mol. Phys.}");
-  DefMacro!("\\jpb",   "\\textit{J. Phys. B: At. Mol. Opt. Phys.}");
-  DefMacro!("\\JPC",   "\\textit{J. Phys. C: Solid State Phys.}");
-  DefMacro!("\\JPCM",  "\\textit{J. Phys.: Condens. Matter\\/}");
-  DefMacro!("\\JPD",   "\\textit{J. Phys. D: Appl. Phys.}");
-  DefMacro!("\\JPE",   "\\textit{J. Phys. E: Sci. Instrum.}");
-  DefMacro!("\\JPF",   "\\textit{J. Phys. F: Met. Phys.}");
-  DefMacro!("\\JPG",   "\\textit{J. Phys. G: Nucl. Phys.}");
-  DefMacro!("\\jpg",   "\\textit{J. Phys. G: Nucl. Part. Phys.}");
-  DefMacro!("\\MSMSE", "\\textit{Modelling Simulation Mater. Sci. Eng.}");
-  DefMacro!("\\MST",   "\\textit{Meas. Sci. Technol.}");
-  DefMacro!("\\NET",   "\\textit{Network: Comput. Neural Syst.}");
-  DefMacro!("\\NJP",   "\\textit{New J. Phys.}");
-  DefMacro!("\\NL",    "\\textit{Nonlinearity\\/}");
-  DefMacro!("\\NT",    "\\textit{Nanotechnology}");
-  DefMacro!("\\PAO",   "\\textit{Pure Appl. Optics\\/}");
-  DefMacro!("\\PM",    "\\textit{Physiol. Meas.}");
-  DefMacro!("\\PMB",   "\\textit{Phys. Med. Biol.}");
-  DefMacro!("\\PPCF",  "\\textit{Plasma Phys. Control. Fusion\\/}");
-  DefMacro!("\\PSST",  "\\textit{Plasma Sources Sci. Technol.}");
-  DefMacro!("\\PUS",   "\\textit{Public Understand. Sci.}");
-  DefMacro!("\\QO",    "\\textit{Quantum Opt.}");
-  DefMacro!("\\QSO",   "\\textit{Quantum Semiclass. Opt.}");
-  DefMacro!("\\RPP",   "\\textit{Rep. Prog. Phys.}");
-  DefMacro!("\\SLC",   "\\textit{Sov. Lightwave Commun.}");
-  DefMacro!("\\SST",   "\\textit{Semicond. Sci. Technol.}");
-  DefMacro!("\\SUST",  "\\textit{Supercond. Sci. Technol.}");
-  DefMacro!("\\WRM",   "\\textit{Waves Random Media\\/}");
-  DefMacro!("\\JMM",   "\\textit{J. of Michromech. and Microeng.\\/}");
-  DefMacro!("\\AC",    "\\textit{Acta Crystallogr.}");
-  DefMacro!("\\AM",    "\\textit{Acta Metall.}");
-  DefMacro!("\\AP",    "\\textit{Ann. Phys., Lpz.}");
-  DefMacro!("\\APNY",  "\\textit{Ann. Phys., NY\\/}");
-  DefMacro!("\\APP",   "\\textit{Ann. Phys., Paris\\/}");
-  DefMacro!("\\CJP",   "\\textit{Can. J. Phys.}");
-  DefMacro!("\\JAP",   "\\textit{J. Appl. Phys.}");
-  DefMacro!("\\JCP",   "\\textit{J. Chem. Phys.}");
-  DefMacro!("\\JJAP",  "\\textit{Japan. J. Appl. Phys.}");
-  DefMacro!("\\JP",    "\\textit{J. Physique\\/}");
-  DefMacro!("\\JPhCh", "\\textit{J. Phys. Chem.}");
-  DefMacro!("\\JMMM",  "\\textit{J. Magn. Magn. Mater.}");
-  DefMacro!("\\JMP",   "\\textit{J. Math. Phys.}");
-  DefMacro!("\\JOSA",  "\\textit{J. Opt. Soc. Am.}");
-  DefMacro!("\\JPSJ",  "\\textit{J. Phys. Soc. Japan\\/}");
-  DefMacro!("\\JQSRT", "\\textit{J. Quant. Spectrosc. Radiat. Transfer\\/}");
-  DefMacro!("\\NC",    "\\textit{Nuovo Cimento\\/}");
-  DefMacro!("\\NIM",   "\\textit{Nucl. Instrum. Methods\\/}");
-  DefMacro!("\\NP",    "\\textit{Nucl. Phys.}");
-  DefMacro!("\\PL",    "\\textit{Phys. Lett.}");
-  DefMacro!("\\PR",    "\\textit{Phys. Rev.}");
-  DefMacro!("\\PRL",   "\\textit{Phys. Rev. Lett.}");
-  DefMacro!("\\PRS",   "\\textit{Proc. R. Soc.}");
-  DefMacro!("\\PS",    "\\textit{Phys. Scr.}");
-  DefMacro!("\\PSS",   "\\textit{Phys. Status Solidi\\/}");
-  DefMacro!("\\PTRS",  "\\textit{Phil. Trans. R. Soc.}");
-  DefMacro!("\\RMP",   "\\textit{Rev. Mod. Phys.}");
-  DefMacro!("\\RSI",   "\\textit{Rev. Sci. Instrum.}");
-  DefMacro!("\\SSC",   "\\textit{Solid State Commun.}");
-  DefMacro!("\\ZP",    "\\textit{ Z. Phys.}");
-  DefMacro!("\\JNE",   "\\textit{J. Neural Eng.}");
-  DefMacro!("\\PB",    "\\textit{Phys. Biol.}");
-  DefMacro!("\\SMS",   "\\textit{Smart Mater. Struct.}");
+  def_iop_journal("\\CQG", "Class. Quantum Grav.")?;
+  def_iop_journal("\\CTM", "Combust. Theory Modelling\\/")?;
+  def_iop_journal("\\DSE", "Distrib. Syst. Engng\\/")?;
+  def_iop_journal("\\EJP", "Eur. J. Phys.")?;
+  def_iop_journal("\\HPP", "High Perform. Polym.")?;
+  def_iop_journal("\\IP", "Inverse Problems\\/")?;
+  def_iop_journal("\\JHM", "J. Hard Mater.")?;
+  def_iop_journal("\\JO", "J. Opt.")?;
+  def_iop_journal("\\JOA", "J. Opt. A: Pure Appl. Opt.")?;
+  def_iop_journal("\\JOB", "J. Opt. B: Quantum Semiclass. Opt.")?;
+  def_iop_journal("\\JPA", "J. Phys. A: Math. Gen.")?;
+  def_iop_journal("\\JPB", "J. Phys. B: At. Mol. Phys.")?;
+  def_iop_journal("\\jpb", "J. Phys. B: At. Mol. Opt. Phys.")?;
+  def_iop_journal("\\JPC", "J. Phys. C: Solid State Phys.")?;
+  def_iop_journal("\\JPCM", "J. Phys.: Condens. Matter\\/")?;
+  def_iop_journal("\\JPD", "J. Phys. D: Appl. Phys.")?;
+  def_iop_journal("\\JPE", "J. Phys. E: Sci. Instrum.")?;
+  def_iop_journal("\\JPF", "J. Phys. F: Met. Phys.")?;
+  def_iop_journal("\\JPG", "J. Phys. G: Nucl. Phys.")?;
+  def_iop_journal("\\jpg", "J. Phys. G: Nucl. Part. Phys.")?;
+  def_iop_journal("\\MSMSE", "Modelling Simulation Mater. Sci. Eng.")?;
+  def_iop_journal("\\MST", "Meas. Sci. Technol.")?;
+  def_iop_journal("\\NET", "Network: Comput. Neural Syst.")?;
+  def_iop_journal("\\NJP", "New J. Phys.")?;
+  def_iop_journal("\\NL", "Nonlinearity\\/")?;
+  def_iop_journal("\\NT", "Nanotechnology")?;
+  def_iop_journal("\\PAO", "Pure Appl. Optics\\/")?;
+  def_iop_journal("\\PM", "Physiol. Meas.")?;
+  def_iop_journal("\\PMB", "Phys. Med. Biol.")?;
+  def_iop_journal("\\PPCF", "Plasma Phys. Control. Fusion\\/")?;
+  def_iop_journal("\\PSST", "Plasma Sources Sci. Technol.")?;
+  def_iop_journal("\\PUS", "Public Understand. Sci.")?;
+  def_iop_journal("\\QO", "Quantum Opt.")?;
+  def_iop_journal("\\QSO", "Quantum Semiclass. Opt.")?;
+  def_iop_journal("\\RPP", "Rep. Prog. Phys.")?;
+  def_iop_journal("\\SLC", "Sov. Lightwave Commun.")?;
+  def_iop_journal("\\SST", "Semicond. Sci. Technol.")?;
+  def_iop_journal("\\SUST", "Supercond. Sci. Technol.")?;
+  def_iop_journal("\\WRM", "Waves Random Media\\/")?;
+  def_iop_journal("\\JMM", "J. of Michromech. and Microeng.\\/")?;
+  def_iop_journal("\\AC", "Acta Crystallogr.")?;
+  def_iop_journal("\\AM", "Acta Metall.")?;
+  def_iop_journal("\\AP", "Ann. Phys., Lpz.")?;
+  def_iop_journal("\\APNY", "Ann. Phys., NY\\/")?;
+  def_iop_journal("\\APP", "Ann. Phys., Paris\\/")?;
+  def_iop_journal("\\CJP", "Can. J. Phys.")?;
+  def_iop_journal("\\JAP", "J. Appl. Phys.")?;
+  def_iop_journal("\\JCP", "J. Chem. Phys.")?;
+  def_iop_journal("\\JJAP", "Japan. J. Appl. Phys.")?;
+  def_iop_journal("\\JP", "J. Physique\\/")?;
+  def_iop_journal("\\JPhCh", "J. Phys. Chem.")?;
+  def_iop_journal("\\JMMM", "J. Magn. Magn. Mater.")?;
+  def_iop_journal("\\JMP", "J. Math. Phys.")?;
+  def_iop_journal("\\JOSA", "J. Opt. Soc. Am.")?;
+  def_iop_journal("\\JPSJ", "J. Phys. Soc. Japan\\/")?;
+  def_iop_journal("\\JQSRT", "J. Quant. Spectrosc. Radiat. Transfer\\/")?;
+  def_iop_journal("\\NC", "Nuovo Cimento\\/")?;
+  def_iop_journal("\\NIM", "Nucl. Instrum. Methods\\/")?;
+  def_iop_journal("\\NP", "Nucl. Phys.")?;
+  def_iop_journal("\\PL", "Phys. Lett.")?;
+  def_iop_journal("\\PR", "Phys. Rev.")?;
+  def_iop_journal("\\PRL", "Phys. Rev. Lett.")?;
+  def_iop_journal("\\PRS", "Proc. R. Soc.")?;
+  def_iop_journal("\\PS", "Phys. Scr.")?;
+  def_iop_journal("\\PSS", "Phys. Status Solidi\\/")?;
+  def_iop_journal("\\PTRS", "Phil. Trans. R. Soc.")?;
+  def_iop_journal("\\RMP", "Rev. Mod. Phys.")?;
+  def_iop_journal("\\RSI", "Rev. Sci. Instrum.")?;
+  def_iop_journal("\\SSC", "Solid State Commun.")?;
+  def_iop_journal("\\ZP", " Z. Phys.")?;
+  def_iop_journal("\\JNE", "J. Neural Eng.")?;
+  def_iop_journal("\\PB", "Phys. Biol.")?;
+  def_iop_journal("\\SMS", "Smart Mater. Struct.")?;
 
   // Mystery items — Perl L335-343
   DefMacro!("\\tqs", "\\hspace*{25pt}");
