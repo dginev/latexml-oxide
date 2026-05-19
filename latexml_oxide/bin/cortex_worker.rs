@@ -121,16 +121,12 @@ struct ConversionProfile {
 
 impl ConversionProfile {
   fn ar5iv(extra_preloads: &[String], timeout: u64, no_pmml: bool, no_mathtex: bool) -> Self {
-    // Eagerly pre-load LaTeX.pool BEFORE ar5iv.sty so the LaTeX kernel
-    // (article.cls, hyperref-related stubs, \UseRawInputEncoding,
-    // \documentclass itself) is available from the very first token of
-    // the user .tex. Without this, papers whose .tex begins with a
-    // LaTeX-kernel CS BEFORE \documentclass (e.g. 2407.00348 with
-    // `\UseRawInputEncoding\n\documentclass...`) hit
-    // `Error:undefined:\UseRawInputEncoding` because LaTeX.pool is
-    // only auto-loaded by \documentclass digestion. Mirrors pdflatex's
-    // pre-loaded-format model.
-    let mut preloads = vec!["LaTeX.pool".to_string(), "ar5iv.sty".to_string()];
+    // Preload only ar5iv.sty (which RequirePackages latexml.sty). LaTeX.pool
+    // is loaded lazily by \documentclass / \documentstyle digestion. Eagerly
+    // preloading LaTeX.pool here previously clobbered plain-TeX papers'
+    // primitives (`\magnification`, `\end`, `\bye`) — Perl LaTeXML matches
+    // this lazy-load policy.
+    let mut preloads = vec!["ar5iv.sty".to_string()];
     preloads.extend(extra_preloads.iter().cloned());
     ConversionProfile {
       preloads,
