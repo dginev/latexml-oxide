@@ -49,8 +49,14 @@ LoadDefinitions!({
   // rendered into ltx:note text. Witness 2404.08592.
   DefMacro!("\\icmlaffiliation{}{}",
     "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
-  // \icmlcorrespondingauthor{email}{name} — preserve as ltx:note.
-  DefMacro!("\\icmlcorrespondingauthor{}{}",
+  // \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
+  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
+  // otherwise be tokenized as subscript-mode at digest time, triggering
+  // "Script _ can only appear in math mode" cascades. Semiverbatim
+  // neutralizes `_`/`#`/`&`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
+  // Perl's icml_support binding gobbles both args (empty body); we surpass
+  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
+  DefMacro!("\\icmlcorrespondingauthor{} Semiverbatim",
     "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
