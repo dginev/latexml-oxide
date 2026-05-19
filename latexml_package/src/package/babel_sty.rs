@@ -79,10 +79,40 @@ LoadDefinitions!({
       !s.is_empty() && s != "nil" && !s.contains('=')
         && !s.starts_with("es-")
     };
-    let pkg_last = main_kv.unwrap_or_else(|| {
+    let pkg_last = main_kv.clone().unwrap_or_else(|| {
       opt_babel.split(',').map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
     });
-    let lang = if !pkg_last.is_empty() {
+    // Pick the active main-lang. The non-trivial case is when the user's
+    // OPTION NAME differs from the .ldf's CANONICAL language name —
+    // e.g. `\usepackage[russianb]{babel}` loads russianb.ldf which calls
+    // `\ldf@finish{russian}`. babel's `\select@language` later needs
+    // `\l@<canonical>` (russian), so we must use the canonical name
+    // when an alias is in play. But when our Rust binding for a `.ldf`
+    // (e.g. french_ldf) bypasses raw load, no `\main@language` runs,
+    // and `\bbl@main@language` retains whatever the FIRST option's
+    // raw-loaded .ldf set — which is wrong (user wants the LAST option).
+    //
+    // Heuristic: trust `main` (the `\bbl@main@language` value) only
+    // when it maps to the same ISO code as `pkg_last`. That captures
+    // the canonical-alias case (russianb → russian, ukrainianb →
+    // ukrainian, brazilian → brazil) while still falling through to
+    // `pkg_last` for the no-Rust-ldf-binding case (where `main`
+    // points at the first option, not the user's intended last one).
+    //
+    // Witnesses: 2312.08012 (russianb → russian alias, needed canonical),
+    // tests/babel/elsart_keyword_brace_form (`[english,french]` →
+    // french_ldf binding doesn't update main, but user wants french).
+    let same_alias_class = !main.is_empty() && !pkg_last.is_empty()
+      && main != pkg_last
+      && crate::package::babel_support_sty::babel_language_to_iso(&main)
+         == crate::package::babel_support_sty::babel_language_to_iso(&pkg_last)
+      && crate::package::babel_support_sty::babel_language_to_iso(&main).is_some();
+    let lang = if let Some(m) = main_kv {
+      m
+    } else if same_alias_class {
+      // canonical aliases — use the canonical name from \ldf@finish
+      main
+    } else if !pkg_last.is_empty() {
       pkg_last
     } else if main != "nil" && !main.is_empty() {
       main
@@ -95,11 +125,8 @@ LoadDefinitions!({
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
-    // Force-set \bbl@main@language globally so babel's AtBeginDocument
-    // \selectlanguage{\bbl@main@language} picks up the user's intended
-    // main language (the LAST option), not whichever .ldf's \ldf@finish
-    // ran last. Babel's own chain then handles captions activation,
-    // active-char shorthands, and per-language port dispatching.
+    // Set \bbl@main@language so babel's AtBeginDocument
+    // \selectlanguage{\bbl@main@language} picks up the canonical name.
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
