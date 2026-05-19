@@ -101,6 +101,10 @@ LoadDefinitions!({
   // Witness 2312.05253 (icml2024.sty L534).
   DefMacro!("\\icmlIntern",
     "\\textsuperscript{*}Work done while interning");
+  // \icmlProjectLead — paper-bundled project-lead marker.
+  // Witness 2402.04924 (icml2024.sty L535).
+  DefMacro!("\\icmlProjectLead",
+    "\\textsuperscript{\\char`\u{2020}}Project lead");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 
   // Random extra bits
