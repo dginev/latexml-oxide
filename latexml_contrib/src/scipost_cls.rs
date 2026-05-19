@@ -11,6 +11,11 @@ LoadDefinitions!({
   // SciPost ships review-mode line numbering via lineno; many papers
   // disable it with \nolinenumbers in the preamble. Witness 2407.00516.
   RequirePackage!("lineno");
+  // SciPost.cls preloads caption (see `RequirePackage[width=...]{caption}`
+  // at L13 of the bundled .cls). Authors use \captionsetup{...} without
+  // explicit \usepackage{caption}. Witness 2308.16304.
+  RequirePackage!("caption");
+  RequirePackage!("cite");
 
   // SciPost.cls L52-53: deepblue / blue colours.
   RawTeX!(r"\definecolor{scipostdeepblue}{HTML}{002B49}");
