@@ -21,7 +21,8 @@ use latexml_core::token::{Catcode, Token};
 use latexml_core::tokens::Tokens;
 use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
-// TODO: Clean up these imports -- what belongs where?
+// Top-level re-exports + the `Token!` macro (distinct from
+// `latexml_core::token::Token` type imported above).
 use latexml_core::{
   CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
 };
