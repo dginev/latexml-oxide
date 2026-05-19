@@ -44,6 +44,11 @@ LoadDefinitions!({
 
   // \cites = \cite
   Let!("\\cites", "\\cite");
+  // amsrefs.sty L1467: `\citelist{ \cite{key1} \cite{key2} ... }` —
+  // grouped multi-citation where each `\cite` may carry `*{prenote}`.
+  // Degrade to passing the body through; each inner `\cite` renders
+  // independently. Witness 2404.11319.
+  DefMacro!("\\citelist{}", "#1");
 
   // {bibdiv} environment — amsrefs.sty.ltxml L60-68.
   // beforeDigest: beforeDigestBibliography (preamble/counter/guard setup).

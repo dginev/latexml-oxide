@@ -168,6 +168,11 @@ LoadDefinitions!({
   DefMacro!("\\smartcites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
   DefMacro!("\\footcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
   DefMacro!("\\supercites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  // \citelist{ \cite{key1}*{pre} \cite{key2}*{pre} } — biblatex
+  // multi-citation grouped under parens, where each `\cite{...}*{...}`
+  // is a postnote-bearing entry. Degrade to passing the body through;
+  // each inner `\cite` renders independently. Witness 2404.11319.
+  DefMacro!("\\citelist{}", "#1");
 
   // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
   def_macro_noop("\\DeclareLabeldate {}")?;
