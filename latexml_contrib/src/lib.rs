@@ -390,6 +390,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("proc-l", "cls", mcom_l_cls::load_definitions),
   ("tran-l", "cls", mcom_l_cls::load_definitions),
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
+  ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
   ("optica-article", "cls", optica_article_cls::load_definitions),
   ("oup-authoring-template", "cls",
