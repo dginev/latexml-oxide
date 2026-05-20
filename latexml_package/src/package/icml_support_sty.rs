@@ -107,6 +107,13 @@ LoadDefinitions!({
   // Witness 2312.05253 (icml2024.sty L534).
   DefMacro!("\\icmlIntern",
     "\\textsuperscript{*}Work done while interning");
+  // \icmlEqualwork — paper-bundled joint-work marker (icml2021 papers
+  // routinely redefine this in their bundled icml2021.sty to a custom
+  // institutional note). Provide a generic fallback so the canonical
+  // binding fires when the paper's bundled .sty is masked by ours.
+  // Witness 2111.13293.
+  DefMacro!("\\icmlEqualwork",
+    "\\textsuperscript{*}Joint work");
   // \icmlProjectLead — paper-bundled project-lead marker.
   // Witness 2402.04924 (icml2024.sty L535).
   DefMacro!("\\icmlProjectLead",
