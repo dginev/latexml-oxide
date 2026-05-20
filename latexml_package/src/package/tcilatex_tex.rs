@@ -299,6 +299,18 @@ freely copied and distributed.}
  }%
 %
 %
+% Per tcilatex.tex.ltxml L376-389: \activesoff suppresses babel-active
+% punctuation inside \FRAME/\GRAPHIC processing. We don't process
+% catcode-active punctuation specially, but \FRAME's
+% \@ifundefined{bbl@deactivate}{}{\activesoff} dispatches via
+% \activesoff when babel is loaded, so the CS must exist.
+\gdef\activesoff{%
+  \def"{\string"}%
+  \def;{\string;}%
+  \def:{\string:}%
+  \def'{\string'}%
+  \def~{\string~}%
+}
 \def\FRAME#1#2#3#4#5#6#7#8{%
  \bgroup
  \@ifundefined{bbl@deactivate}{}{\activesoff}
