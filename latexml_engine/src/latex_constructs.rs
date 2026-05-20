@@ -8096,15 +8096,24 @@ LoadDefinitions!({
     sizer => 0
   );
 
-  // \glossaryname, \printglossary removed — not in Perl engine
-  // (Perl: glossaries.sty.ltxml defines \printglossary)
-  // \seename, \alsoname removed — not in Perl engine
-  // (Perl: makeidx.sty.ltxml defines these; also babel captions)
-  // Captions live in their natural homes (letter.cls, makeidx, babel/ldf
-  // language files). Do NOT stub them here — that would override
-  // legitimate raw-loaded kernel definitions and mask real load-order
-  // bugs. If a paper hits an undefined caption, fix the package binding
-  // that should have provided it, or fix what's triggering the use.
+  // Standard English caption names set by babel-english.ldf's
+  // \captionsenglish hook (and by letter.cls for the letter-specific
+  // ones). Documents that pull in `babel` indirectly via blindtext /
+  // tocbibind / sectsty without reaching the \selectlanguage path leave
+  // these as undefined. Perl LaTeXML's babel.def.ltxml shim quietly
+  // absorbs these CSes, but our raw-load of babel.sty surfaces
+  // \setlocalecaption stubs without their \captionsenglish backings.
+  // Provide English defaults here (NOT in latex_base.rs — that file
+  // is skipped on the dump path so defs there don't survive). Witness
+  // 2110.05865 (article + blindtext pulls babel; 8 undefined captions).
+  DefMacro!("\\bibname",       "Bibliography");
+  DefMacro!("\\seename",       "see");
+  DefMacro!("\\alsoname",      "see also");
+  DefMacro!("\\glossaryname",  "Glossary");
+  DefMacro!("\\enclname",      "encl");
+  DefMacro!("\\ccname",        "cc");
+  DefMacro!("\\headtoname",    "To");
+  DefMacro!("\\pagename",      "Page");
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors

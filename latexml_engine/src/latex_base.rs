@@ -331,6 +331,7 @@ LoadDefinitions!({
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename", "List of Tables");
 
+
   // C.4.4 Style registers (Perl L300)
   NewCounter!("tocdepth");
 
