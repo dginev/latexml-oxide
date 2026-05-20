@@ -6,10 +6,14 @@
 > handling ambiguity, the **pragma catalog** for reference, and the
 > **type-aware pruning** direction we eventually want to grow into.
 >
-> Status (2026-05-18): ASF integration closed, test suite at 1309/0.
-> The historical per-failure-case catalogs and the `modified_term`
-> grammar refinement proposal are removed; full versions recoverable
-> from git history if needed.
+> Status (2026-05-20): ASF integration closed; test suite at
+> **1328/0/0** (both HYBRID default and `LATEXML_MARPA_ASF_ONLY=1`).
+> The `modified_term` grammar refinement landed 2026-05-19 in Phase
+> 1+2 (commits `a16cce3ddc` + `994cbcfa1a`) — see
+> [`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md) for the
+> implementation summary. The historical per-failure-case catalogs
+> are removed; full versions recoverable from git history if
+> needed.
 
 ---
 
@@ -98,7 +102,14 @@ Examples that landed:
   redundancy at the root.
 * `prefer_combined_relop_over_multirelation_with_absent` — root is
   a multirelation AND has interior `absent`.
-* `prefer_zero_absent_when_available` — multi-tree count comparison.
+
+Retired 2026-05-19 (commit `994cbcfa1a`):
+* ~~`prefer_zero_absent_when_available`~~ — multi-tree count comparison.
+  Its conceptual target (`<x|y>` bra-ket → `inner-product`) is now
+  covered by qm-specific pragmas + the angle-bracket grammar rules
+  after the `modified_term` Phase 1 grammar landing. Function body
+  removed from `semantics/tree.rs`; tests stayed 1328/0/0 on both
+  HYBRID and ASF.
 
 **Why this layer exists**: some signals are only legible at the
 forest level (e.g. "this candidate has 0 absent, that one has 2").

@@ -285,6 +285,13 @@ A reusable copy of the bucketing script lives at
 2. Convert `lookup_value` / `lookup_string` /  `lookup_int` to
    return `Option<SymStr>` where the caller permits, eliminating
    the `Cow::Borrowed` wrapper.
-3. SmallVec-back `Tokens` for the ≤16-token-body majority case
-   (instrument first to confirm the distribution).
+3. ~~SmallVec-back `Tokens` for the ≤16-token-body majority case~~
+   — **attempted 2026-05-16, measured regression at every N (see
+   `wisdom_smallvec_tokens_failed` in agent memory)**. The struct
+   bloat (`SmallVec<[Token; 4]>` is 3× `Vec`) dwarfs alloc-elision
+   wins because `Tokens` are persistently stored in millions of
+   state-map / macro-body slots. Do not retry without first shrinking
+   `Token` below 8 bytes. If `Tokens::new` allocations resurface as
+   hot, prefer `Rc<Tokens>` interning for repeated literal bodies
+   or pre-allocated Vec capacity at known-large constructors.
 4. Scope-design the pgfplots `\addplot table` Rust bypass.
