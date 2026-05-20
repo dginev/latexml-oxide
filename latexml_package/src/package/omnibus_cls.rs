@@ -98,6 +98,13 @@ LoadDefinitions!({
   DefMacro!("\\authors{}",
     "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
   def_macro_noop("\\alignauthor")?;
+  // \correspondingauthor{name/email} — common journal-class CS used
+  // inside author lists (AAS / AGU / AMS / many journals). aas_support
+  // routes it to ltx:contact[role=correspondent]. Provide the same in
+  // OmniBus so unbound classes (e.g. ametsocV5) which use the CS
+  // directly inside `\authors{...}` don't trip Error:undefined.
+  // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
+  DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
 
   // Perl L78-83: email / speaker
   DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
