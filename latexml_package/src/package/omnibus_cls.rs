@@ -105,6 +105,10 @@ LoadDefinitions!({
   // directly inside `\authors{...}` don't trip Error:undefined.
   // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
+  // \datastatement — ametsocV5.cls L992:
+  // `\def\datastatement{\paragraph*{Data availability statement.}}`.
+  // Used as a no-arg standalone heading marker. Witness 2203.02657.
+  DefMacro!("\\datastatement", "\\paragraph*{Data availability statement.}");
 
   // Perl L78-83: email / speaker
   DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
