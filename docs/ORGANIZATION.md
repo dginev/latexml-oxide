@@ -175,7 +175,7 @@ definitions organized by Lamport chapter with section comment headers.
 | Perl file | Rust file | Status |
 |---|---|---|
 | `AmSTeX.pool.ltxml` | `amstex.rs` | Skeleton + a few definitions ported; plain-TeX-style format, rare in arxiv corpora |
-| `BibTeX.pool.ltxml` | `bibtex.rs` | 37-line skeleton; full port (956 lines) plan in `docs/BIBTEX_PORT_PLAN.md`. Skip via `--nobibtex` in production |
+| `BibTeX.pool.ltxml` | `bibtex.rs` (2217 lines) + `pre_bibtex.rs` (935 lines) | Phases 1-8 of `docs/BIBTEX_PORT_PLAN.md` shipped (end-to-end `.bib → .xml`); long-tail of MR-Zbl field synthesis polish remains. Skip via `--nobibtex` in production |
 
 ### Rust-only files (no Perl `.pool.ltxml` equivalent)
 

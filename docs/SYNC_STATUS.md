@@ -444,7 +444,7 @@ assertion (not just code == 0; the bug had code == 0).
 | Gate | Current (2026-05-20) | Target |
 |---|---|---|
 | `cargo test --tests` | **1328/0/0** | unchanged |
-| `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser` from in-flight ASF migration — collaborator's lane) | 0 warnings (post-ASF migration) |
+| `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, residual clippy cleanup of post-ASF-migration code — collaborator's lane) | 0 warnings (clippy cleanup landed) |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | 1910.01256 mini-benchmark vs pdflatex×2 | release (`--dest=.html`, full post-processing): **0.71s** post-DEP-19 (was 0.73s); pdflatex idle ~1.11s. `.xml`-only is **0.60s** but not a fair comparison since pdflatex always runs graphics + bibliography. | beat 2× pdflatex (met: 0.71s ≪ 2.22s) |

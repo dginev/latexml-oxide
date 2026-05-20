@@ -10,8 +10,8 @@ strict-Perl pipeline.
 **Refresh status (2026-05-20):** current local verification:
 `cargo test --tests` is **1328/0/0**;
 `cargo clippy --workspace --all-targets` is **14 warnings (all in
-`latexml_math_parser` from the in-flight ASF migration — collaborator's
-lane)**. Dump resources on disk are versioned per TL year:
+`latexml_math_parser`, residual clippy cleanup of post-ASF-migration
+code — collaborator's lane)**. Dump resources on disk are versioned per TL year:
 `plain.YYYY.dump.txt` ~958 lines, `latex.YYYY.dump.txt` ~21,475 lines
 after the IA intarray consolidation (commit `81176ba689`) — was
 ~110,713 lines before. Both TL2023 and TL2025 dumps are committed
@@ -57,12 +57,12 @@ Bucket breakdown of the 188 Perl-only:
 
 | Bucket | Count | Status |
 |---|---:|---|
-| `\bib@*` family | 116 | `latexml_engine/src/bibtex.rs` is a 37-line skeleton; full port from `BibTeX.pool.ltxml` (956 lines) is a known TODO. |
+| `\bib@*` family | 116 (pre-port count) | Outdated: bibtex.rs now defines 129 `\bib@*` CSes (Phases 1-8 of `docs/BIBTEX_PORT_PLAN.md` shipped; `bibtex.rs` 2217 lines + `pre_bibtex.rs` 935 lines). Engine-wide CS-name diff needs a fresh refresh to reflect the post-port state. |
 | Misc atomics | 58 | `\@charlb`, point-size CSes, `\batchmode`, etc. Per-CS investigation if user-witnessed. |
 | `\@<lowercase>` | 12 | Mostly handled via raw `TeX!`/`RawTeX!` blocks; regex undercounts. |
 | `\@<at-name>` | 2 | Architecturally OK. |
 
-Outside BibTeX (deferred port), the gap is ~72 CSes worth per-CS
+Outside the `\bib@*` cluster, the gap is ~72 CSes worth per-CS
 investigation. Diff lists for next iteration in `/tmp/audit/`.
 
 ## The strict split

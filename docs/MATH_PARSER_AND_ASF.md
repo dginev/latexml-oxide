@@ -287,41 +287,43 @@ selectively promote pragmas to glade-local where they fit cleanly.
 
 ---
 
-## Sequencing
+## Sequencing — closed
 
-Updated 2026-05-17 after ASF_STATUS Steps 2-6 landed on marpa branch
-`asf-step3-generic-traverser`.
+Originally drafted 2026-05-17; closed in successive commits through
+2026-05-19. The detailed step list is preserved in git history
+(`git log -p docs/MATH_PARSER_AND_ASF.md`); current state below.
 
-1. **Marpa side (ASF_STATUS Steps 2-6)** — ✅ **LANDED.** Branch
-   `asf-step3-generic-traverser` on dginev/marpa carries:
-   * Ported `compute_symches` with Perl-faithful glade unification.
-   * Full Glade query API (`rule_id`, `rh_length`, `rh_glade_id`,
-     `next`, `cursor`, `symch_count`, `factor_count`, `is_factored`,
-     `is_token`).
-   * Recursive `ASF::traverse` with post-order memoization.
-   * Generic `&mut TR` Traverser API (no `Box<dyn>` — allows
-     borrowing).
-   * Substantive 3-parse test on the panda grammar.
-   * 17 marpa tests pass.
-2. **latexml-oxide Cargo.toml** — ✅ **LANDED.** marpa dep switched
-   to the new branch; full test suite 1301/0/0 against it.
-3. **`MathTraverser` scaffolding** — ✅ **LANDED**, file
-   `latexml_math_parser/src/asf_traverser.rs`. Compiles, handles
-   byte/lexeme-rule/standard glades, but **not yet wired into
-   `parse_marpa`**.
-4. **⏳ Wire `MathTraverser` behind `LATEXML_MARPA_ASF=1`.** Side-by-
-   side parity check against the legacy tree-iteration path on the
-   full test suite. Expect 0 regressions. Iterate on edge cases.
-5. **⏳ Validate on the 10k canvas stage.** Sandbox parity should
-   stay above the current 97.4-99.5% baseline.
-6. **⏳ Delete 5 of the 6 convergence caps** in `parser.rs::parse_marpa`.
-   Only `max_time` stays. Delete online `parses.contains(&tree)`
-   dedup (memoization renders it pointless).
-7. **⏳ Audit `pragmatics.rs`** — classify each pragma as glade-local
-   (promote into Stage 2 inside `action_on`) or cross-tree (keep on
-   the now-small ASF shortlist).
-8. **⏳ Merge marpa PR to dginev/marpa master**, switch
-   latexml-oxide's marpa dep back to default-branch.
+1. ✅ **Marpa side (ASF_STATUS Steps 2-6)** — `compute_symches`,
+   Glade query API, recursive `ASF::traverse` with memoization, and
+   generic `&mut TR` Traverser API all landed on the
+   `asf-step3-generic-traverser` branch, then merged to dginev/marpa
+   master via PRs #3 + #4.
+2. ✅ **latexml-oxide marpa dep** — pinned at dginev/marpa master,
+   no branch override.
+3. ✅ **`MathTraverser` wiring** — `LATEXML_MARPA_ASF=1` was the
+   opt-in feature flag during the side-by-side parity push (1272/29
+   → 1292/9 → 1298/3 → 1328/0/0). HYBRID dispatch (commit
+   `703637bf95`) then made ASF the default; LEGACY kept behind
+   `LATEXML_MARPA_LEGACY=1` (`ff51b50c18`).
+4. ✅ **Canvas validation** — 10k stages run cleanly under HYBRID;
+   the Round-26+ corpus tallies in `SYNC_STATUS.md`'s top section
+   confirm parity stayed in the 99.3-99.6% band.
+5. ⚠️ **Convergence caps** — the 5/6 caps are *kept* in
+   `parser.rs::parse_marpa` to protect the LEGACY escape-hatch path
+   from real-world ambiguity hangs. They never fire on the
+   ASF/HYBRID hot path; treating this as a doc cleanup item rather
+   than a code change. See `SYNC_STATUS.md` "Math parser ↔ Marpa
+   ASF migration" item 6.
+6. ✅ **modified_term grammar refinement** (item 5 in the
+   `SYNC_STATUS.md` list, deferred-then-landed 2026-05-19) —
+   commits `a16cce3ddc` (Phase 1, narrow `modified_term = tight_term
+   relop expression` rule + `modified_list_apply`) and `994cbcfa1a`
+   (Phase 2, retired the now-redundant
+   `prefer_zero_absent_when_available` pragma). Witness `P(x=0, y<0)`
+   now parses as `P @ vector(x=0, y<0)`.
+7. ⏳ **Pragmatics audit** — not yet classified as glade-local vs.
+   cross-tree. Low priority since both run cleanly on the small ASF
+   shortlist.
 
 ---
 
