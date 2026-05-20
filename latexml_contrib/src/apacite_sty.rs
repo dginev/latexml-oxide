@@ -8,6 +8,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   RequirePackage!("natbib");
+  // apacite-generated .bbl entries routinely contain `\url{...}` and
+  // `\doi{10.x/...}` even when the user's main .tex doesn't load url /
+  // doi. Pre-load url (defines \url) and stub \doi as a no-op-wrapped
+  // href so the bbl pass doesn't error out. Witness 2205.09172 (cogsci
+  // article with apacite-formatted main.bbl).
+  RequirePackage!("url");
+  DefMacro!("\\doi Semiverbatim", "doi:#1");
 
   // Core APAref* set (apacite.sty L1257-2243). Render as the
   // content-bearing argument so titles / authors survive in the XML.
@@ -76,7 +83,13 @@ LoadDefinitions!({
   def_macro_noop("\\APACurlBreaks")?;
 
   // Short-form helpers (apacite L1300+: \BBA, \BCnt, \BPGS, etc.)
-  DefMacro!("\\BBA", "&");
+  // \BBA = `\BBAA` = `\&` (escaped ampersand, NOT alignment `&`).
+  // apacite.sty L2123: `\newcommand{\BBAA}{\&}`. Using plain `&` would
+  // emit a catcode-ALIGN cell separator inside the .bbl, triggering
+  // 19+ "Stray alignment \"&\"" errors (witness 2205.09172).
+  DefMacro!("\\BBA", "\\&");
+  // \BBAA: same as \BBA — the underlying glyph macro.
+  DefMacro!("\\BBAA", "\\&");
   def_macro_noop("\\BBCQ")?;
   def_macro_noop("\\BBOQ")?;
   DefMacro!("\\BPBI", ".");
@@ -89,5 +102,18 @@ LoadDefinitions!({
   def_macro_identity("\\BVOL{}")?;
   DefMacro!("\\BOthers{}", "et al.");
   DefMacro!("\\BEDS", "Eds.");
+  DefMacro!("\\BED", "Ed.");
   DefMacro!("\\BIn", "In");
+  // \BPG = singular page (vs \BPGS = pages). Witness 2205.09172 (cogsci
+  // article + apacite .bbl): "\BPGS\ 1173--1182" plural already worked,
+  // but single-page entries use "\BPG\ N". apacite.sty L1336.
+  DefMacro!("\\BPG{}", "p.\\ #1");
+  // \shortciteA[pre][post]{key} — author-only short cite (apacite
+  // citation form). Delegate to natbib's \citet (author-name cite).
+  DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
+  // \shortciteauthor[pre][post]{key} — short form of \citeauthor.
+  DefMacro!("\\shortciteauthor[][] Semiverbatim", "\\citeauthor[#1][#2]{#3}");
+  // \bibleftmargin — apacite-set bibliography indent register; safe
+  // to ignore in our XML output.
+  def_macro_noop("\\bibleftmargin")?;
 });
