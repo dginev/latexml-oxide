@@ -8114,6 +8114,11 @@ LoadDefinitions!({
   DefMacro!("\\ccname",        "cc");
   DefMacro!("\\headtoname",    "To");
   DefMacro!("\\pagename",      "Page");
+  // Additional babel-english.ldf captions (\captionsenglish hook).
+  DefMacro!("\\prefacename",   "Preface");
+  DefMacro!("\\proofname",     "Proof");
+  DefMacro!("\\abstractname",  "Abstract");
+  DefMacro!("\\indexname",     "Index");
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
