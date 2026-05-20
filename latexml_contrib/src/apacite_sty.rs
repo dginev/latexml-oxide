@@ -113,7 +113,15 @@ LoadDefinitions!({
   DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
   // \shortciteauthor[pre][post]{key} — short form of \citeauthor.
   DefMacro!("\\shortciteauthor[][] Semiverbatim", "\\citeauthor[#1][#2]{#3}");
-  // \bibleftmargin — apacite-set bibliography indent register; safe
-  // to ignore in our XML output.
-  def_macro_noop("\\bibleftmargin")?;
+  // apacite.sty L1448-1452 allocates \bibleftmargin et al via
+  // `\newskip{\bibleftmargin}` and friends, then main.tex bodies use
+  // `\setlength{\bibleftmargin}{...}` and `\setlength{\bibindent}{-\bibleftmargin}`.
+  // We don't raw-load apacite.sty, so these must be defined as glue
+  // registers here so \setlength's Variable parameter resolves.
+  // Witness 2205.09172 (cogsci paper, "Error:expected:<variable>").
+  DefRegister!("\\bibleftmargin" => Glue!("2.5em"));
+  DefRegister!("\\bibindent"     => Glue::new(0));
+  DefRegister!("\\bibparsep"     => Glue::new(0));
+  DefRegister!("\\bibitemsep"    => Glue::new(0));
+  DefRegister!("\\biblabelsep"   => Glue::new(0));
 });
