@@ -104,6 +104,13 @@ LoadDefinitions!({
   DefMacro!("\\BEDS", "Eds.");
   DefMacro!("\\BED", "Ed.");
   DefMacro!("\\BIn", "In");
+  // apacite.sty technical-report citation short forms. Witness 2205.05718.
+  DefMacro!("\\BTR",     "Tech.\\ Rep.");
+  DefMacro!("\\BNUM",    "No.");
+  DefMacro!("\\BNUMS",   "Nos.");
+  DefMacro!("\\BTRANS",  "Trans.");
+  DefMacro!("\\BTRANSS", "Trans.");
+  DefMacro!("\\BTRANSL", "trans.");
   // \BPG = singular page (vs \BPGS = pages). Witness 2205.09172 (cogsci
   // article + apacite .bbl): "\BPGS\ 1173--1182" plural already worked,
   // but single-page entries use "\BPG\ N". apacite.sty L1336.
