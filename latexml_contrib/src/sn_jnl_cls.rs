@@ -14,6 +14,13 @@ LoadDefinitions!({
   // call \\geometry{margin=2cm} without an explicit usepackage.
   // Witness 2503.06846.
   RequirePackage!("geometry");
+  // sn-jnl.cls L615-618 raw-loads algorithm + algorithmicx +
+  // algpseudocode so papers can use `\begin{algorithm}` and
+  // `\begin{algorithmic}` (along with `\State`/`\If`/`\For`/`\While`)
+  // without an explicit `\usepackage{...}`. Witness 2201.08889.
+  RequirePackage!("algorithm");
+  RequirePackage!("algorithmicx");
+  RequirePackage!("algpseudocode");
 
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");
