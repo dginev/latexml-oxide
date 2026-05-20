@@ -1638,8 +1638,13 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let code = if !cached.is_empty() {
     cached
   } else {
-    match std::fs::read_to_string(&path) {
-      Ok(c) => c,
+    // Use read (bytes) + lossy UTF-8 conversion so non-UTF-8 cls/sty
+    // files (ISO-8859 with vendor copyright headers, e.g. cpc-hepnp.cls
+    // with Chinese comments) still get scanned. read_to_string strict
+    // UTF-8 validation would error out, leaving \RequirePackage{fancyhdr}
+    // and friends silently undiscovered. Witness 2203.16500.
+    match std::fs::read(&path) {
+      Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
       Err(_) => {
         Warn!(
           "I/O",
