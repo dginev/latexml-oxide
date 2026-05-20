@@ -184,14 +184,17 @@ LoadDefinitions!({
     "<ltx:theorem>#body</ltx:theorem>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
-      let args = whatsit.get_args();
-      if args.len() >= 3 {
-        if let Some(storename_tokens) = args[2].as_ref() {
-          let s = storename_tokens.to_string();
-          let cs = s!("\\{}", s.trim());
-          if !cs.is_empty() {
-            let _ = def_macro(T_CS!(cs), None, Tokens::default(), None);
-          }
+      // Mirror {restatable}: define `\storename` GLOBALLY as a no-op
+      // so later restate calls outside this env's scope don't cascade
+      // undefined. (Previously this branch omitted Scope::Global, so
+      // the def was env-local — defeating the restate-later guard.)
+      if let Some(storename_arg) = whatsit.get_arg(3) {
+        let s = storename_arg.to_string();
+        let cs = s!("\\{}", s.trim());
+        if cs.len() > 1 {
+          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
+            Some(ExpandableOptions { scope: Some(Scope::Global),
+              ..ExpandableOptions::default() }));
         }
       }
     });
