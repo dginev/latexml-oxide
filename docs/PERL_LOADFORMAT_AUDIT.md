@@ -7,17 +7,15 @@ Tracks the Rust→Perl translation gap exposed by the strict
 in commit `9909ba51d`), flagging divergences that break the
 strict-Perl pipeline.
 
-**Refresh status (2026-05-19):** current local verification:
+**Refresh status (2026-05-20):** current local verification:
 `cargo test --tests` is **1328/0/0**;
 `cargo clippy --workspace --all-targets` is **14 warnings (all in
 `latexml_math_parser` from the in-flight ASF migration — collaborator's
 lane)**. Dump resources on disk are versioned per TL year:
 `plain.YYYY.dump.txt` ~958 lines, `latex.YYYY.dump.txt` ~21,475 lines
 after the IA intarray consolidation (commit `81176ba689`) — was
-~110,713 lines before. Both TL2023 and TL2025 dumps are committed.
-The detailed call-count table below is from the 2026-04-28 audit;
-engine-wide CS-name diff refresh appears in the "Engine-wide CS-name
-diff refresh" section.
+~110,713 lines before. Both TL2023 and TL2025 dumps are committed
+and `include_str!`-embedded into the binary.
 
 **Zero-error target verification (2026-04-30 iter 40):** ran
 `latexml_oxide --init=plain.tex empty.tex` and
@@ -27,26 +25,8 @@ matches on-disk dumps line-for-line (plain: 0 diff lines; latex: 1
 line diff — only the `texsys.aux_contents` build timestamp). Target
 #4 from CLAUDE.md is met.
 
-**Re-verified post-Round-18 (2026-05-02)**: same release binary
-(rebuilt at commit `a3e44454c`, with all 7 Round-18 fixes including
-`\object` `_noautoclose` `317655f01`) — both inits still emit
-**0 errors**. Target #4 holds. Tests 1112/0/0.
-
-**Audit table (2026-04-28):**
-
-| File | Perl calls | Rust calls | Status |
-|------|-----------:|-----------:|--------|
-| `plain_bootstrap` | 9 | 9 | ✅ PARITY |
-| `plain_base` | n/a | n/a | ✅ NEAR-PARITY (audit doc) |
-| `plain_constructs` | 77 | 81 | ✅ PARITY (cosmetic gap) |
-| `plain_dump` | n/a | 641 M-keys | ✅ NEAR-PARITY (17 cosmetic) |
-| `latex_bootstrap` | 9 | 9 | ✅ PARITY |
-| `latex_base` | 160 | 152 | ✅ PARITY |
-| `latex_constructs` | 1055 | 1199 | ⚠ 13.5% extra in Rust |
-| `latex_dump` | n/a | 25770 entries | ✅ NEAR-PARITY |
-
-**Audit table (current, 2026-05-02 methodology — uniform
-`Def*`+`Let` regex across both sides):**
+**Audit table (2026-05-02 methodology — uniform `Def*`+`Let` regex
+across both sides):**
 
 | File | Perl | Rust | Δ | Status |
 |------|-----:|-----:|---:|--------|
@@ -376,8 +356,16 @@ them. No TODO remains.
 
 ## Distribution follow-up (multi-version dumps)
 
-User's plan (2026-04-26): Rust binary should `include_bytes!` of
-several TL versions' dumps (TL2022 … TL2026) and runtime-select via
-`kpsewhich --version`. Currently dumps are runtime-loaded from disk
-which works for development but doesn't fit single-binary
-distribution. Plan: do this AFTER TL2025 dumps are robust + tested.
+**LANDED 2026-05-15.** Per-TL-year dumps
+(`resources/dumps/{plain,latex}.YYYY.dump.txt` +
+`texlive.YYYY.version`) committed and embedded into the binary at
+build time via `include_str!`. Runtime resolves the ambient year
+via `kpsewhich -var-value=SELFAUTOPARENT` with `pdflatex --version`
+fallback (`kpsewhich --version` returns the same kpathsea library
+string across TL releases — NOT a reliable discriminator). TL2023
++ TL2025 bundled currently; add years via
+`tools/make_formats.sh`. Follow-up IA consolidation
+(`81176ba689`, 2026-05-15) halved `latex.YYYY.dump.txt` by
+collapsing per-slot fontdimen V-records into per-(font,size) `IA`
+records with RLE-encoded data. See `CLAUDE.md` and
+`docs/SYNC_STATUS.md` for the canonical record.

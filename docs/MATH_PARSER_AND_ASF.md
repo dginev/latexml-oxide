@@ -6,13 +6,18 @@
 >
 > Written 2026-05-17 to plan the integration.
 >
-> **Status (2026-05-18): integration complete.** ASF traversal is
-> the default via the HYBRID dispatch path; LEGACY remains as an
-> opt-in escape hatch (`LATEXML_MARPA_LEGACY=1`). Tests at 1309/0.
+> **Status (2026-05-19): integration complete, modified_term Phase 1+2
+> landed.** ASF traversal is the default via the HYBRID dispatch path;
+> LEGACY remains as an opt-in escape hatch (`LATEXML_MARPA_LEGACY=1`).
+> Tests at **1328/0/0** (both HYBRID and `LATEXML_MARPA_ASF_ONLY=1`).
 > The doc remains useful as design rationale for the three-stage
 > pipeline and the ASF mapping; the "pseudocode sketch" sections
 > reflect what was actually implemented in
-> `latexml_math_parser/src/asf_traverser.rs`.
+> `latexml_math_parser/src/asf_traverser.rs`. The narrow `modified_term`
+> grammar category and `modified_list_apply` action (commits
+> `a16cce3ddc` + `994cbcfa1a`) handle the `P(x=0, y<0)` comma-list-of-
+> relations case and retired the `prefer_zero_absent_when_available`
+> pragma.
 >
 > Marpa upstream landed in `dginev/marpa` master (PR #3, 2026-05-18).
 
