@@ -134,10 +134,15 @@ LoadDefinitions!({
   // \thanksref / \corref / \corauthref carry footnote labels. Round-34
   // surpass-Perl: emit as superscript so the labels reach the author
   // block (matches IEEE \IEEEauthorrefmark behavior).
-  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
-  DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
-  DefMacro!("\\corref{}", "\\textsuperscript{#1}");
-  DefMacro!("\\corauthref{}", "\\textsuperscript{#1}");
+  // \thanksref / \corref / \corauthref take label-style args that may contain
+  // `_` (and other key-style chars). Read as Semiverbatim so `_` doesn't
+  // trigger "Script _ can only appear in math mode" when the label flows
+  // into \textsuperscript's body. Witness 2304.14608 (elsarticle):
+  // `\author[..]{Xu\corref{corresponding_author}}` triggered the cascade.
+  DefMacro!("\\thanksref Semiverbatim", "\\textsuperscript{#1}");
+  DefMacro!("\\corauth[] Semiverbatim", "\\lx@contact{correspondent}{#2}");
+  DefMacro!("\\corref Semiverbatim", "\\textsuperscript{#1}");
+  DefMacro!("\\corauthref Semiverbatim", "\\textsuperscript{#1}");
   // \cortext[id]{text} carries author-typed corresponding-author text.
   // Preserve as ltx:note frontmatter so the prose ("Corresponding
   // author. Email: …") reaches the XML rather than being silently
