@@ -71,6 +71,39 @@ fn prototype_single_char_cs() {
 }
 
 #[test]
+fn prototype_expl3_underscore_in_csname() {
+  setup();
+  // expl3 word-internal `_` — `\draw_begin:` is a single CS, not
+  // `\draw` + `_begin:` parameter spec. See `a8010f606a`.
+  let (cs, params) = parse_prototype("\\draw_begin:", false).unwrap();
+  assert_eq!(cs, T_CS!("\\draw_begin:"));
+  assert!(params.is_none());
+}
+
+#[test]
+fn prototype_expl3_colon_sigil_with_letters() {
+  setup();
+  // expl3 parameter-type sigil `:nnn` is part of the CS name.
+  let (cs, params) = parse_prototype("\\draw_path_arc:nnn", false).unwrap();
+  assert_eq!(cs, T_CS!("\\draw_path_arc:nnn"));
+  assert!(params.is_none());
+}
+
+#[test]
+fn prototype_expl3_colon_sigil_with_trailing_braces() {
+  setup();
+  // expl3 CS name + 3 mandatory args. The CS name must absorb the
+  // `:nnn` sigil; the trailing `{}{}{}` is the parameter spec.
+  let (cs, params) = parse_prototype("\\draw_path_arc:nnn{}{}{}", false).unwrap();
+  assert_eq!(cs, T_CS!("\\draw_path_arc:nnn"));
+  let ps = params.expect("three mandatory args");
+  assert_eq!(ps.get_parameters().len(), 3);
+  for p in ps.get_parameters() {
+    assert_eq!(sym_str(p.name), "Plain");
+  }
+}
+
+#[test]
 fn prototype_empty_is_error() {
   setup();
   // Empty proto triggers the `fatal!` error path (returns Err, not panic).
