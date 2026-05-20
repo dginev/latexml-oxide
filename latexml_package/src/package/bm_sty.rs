@@ -14,4 +14,15 @@ LoadDefinitions!({
   Let!("\\heavysymbol", "\\boldsymbol");
   Let!("\\hmdefine",    "\\bmdefine");
   Let!("\\heavymath",   "\\boldmath");
+
+  // bm.sty L222-227: `\DeclareBoldMathCommand[<bold|heavy>]\<name>{<body>}`
+  // declares `\name` as a bold-math wrapper around `body`. We collapse
+  // both bold and heavy variants into our single `\bm` wrapper (we don't
+  // distinguish bold vs heavy in the XML output anyway, mirroring the
+  // \heavysymbol → \boldsymbol Let above). Surpass-Perl: Perl bm.sty.ltxml
+  // doesn't carry `\DeclareBoldMathCommand` either, so this is a Rust-only
+  // addition. Witness: arxiv-examples/1205.4484 (macros.tex defines
+  // \boldlangle / \boldrangle / \boldlvert / \boldrvert via
+  // \DeclareBoldMathCommand).
+  DefMacro!("\\DeclareBoldMathCommand[]{}{}", "\\newcommand{#2}{\\bm{#3}}");
 });
