@@ -7328,6 +7328,14 @@ LoadDefinitions!({
   DefRegister!("\\arraycolsep", Dimension!("5pt"));
   DefRegister!("\\arrayrulewidth", Dimension!("0.4pt"));
   DefRegister!("\\doublerulesep", Dimension!("2pt"));
+  // array.sty L184 allocates `\extrarowheight` as a dimension register
+  // that controls per-row vertical pad-extra. Papers commonly use
+  // `\setlength\extrarowheight{3pt}` without explicit
+  // `\usepackage{array}`. Perl LaTeXML's array.sty.ltxml L18 defines
+  // it too; our binding does as well, but only when array.sty itself
+  // is required. Define here at engine level so it's always available.
+  // Witness 2205.01473 (ifacconf.cls + \setlength\extrarowheight).
+  DefRegister!("\\extrarowheight", Dimension!("0pt"));
   def_macro_noop("\\extracolsep{}")?;
 
   // Array and similar environments
