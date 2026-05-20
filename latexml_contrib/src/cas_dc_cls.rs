@@ -24,6 +24,11 @@ LoadDefinitions!({
   RequirePackage!("array");
   RequirePackage!("colortbl");
   RequirePackage!("makecell");
+  // cas-dc.cls L: `\RequirePackage{etoolbox,balance}` — pulls in the
+  // balance package which defines `\balance` (column-balancing in
+  // 2-col docs). Without it, papers using `\balance` near the end
+  // trip Error:undefined. Witness 2303.04712.
+  RequirePackage!("balance");
 
   // cas-common.sty dynamically defines `\tblwidth` via
   // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its
