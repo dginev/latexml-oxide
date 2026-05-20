@@ -25,6 +25,21 @@ LoadDefinitions!({
   RequirePackage!("colortbl");
   RequirePackage!("makecell");
 
+  // cas-common.sty dynamically defines `\tblwidth` via
+  // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its
+  // own table-float wrapper. Authors use `\tblwidth` directly as the
+  // width argument of `\begin{tabular*}{\tblwidth}{...}` even outside
+  // that wrapper. Provide a \linewidth fallback so the tabular still
+  // renders with reasonable width. Witness 2209.06932 (cas-dc table
+  // cascade — 136 errors).
+  DefMacro!("\\tblwidth", "\\linewidth");
+  // cas-common.sty L2070-2072: \newcolumntype{L|R|C}{...}. Authors use
+  // L/R/C column types in `\begin{tabular*}{...}{@{} LLLLLL @{}}`.
+  // Without these, the unrecognized column letters trigger one
+  // "Extra alignment tab '&'" per & cell. Define matching short-hand
+  // raggedright/etc. column types.
+  RawTeX!(r"\newcolumntype{L}{@{\extracolsep{\fill}}l}\newcolumntype{R}{@{\extracolsep{\fill}}r}\newcolumntype{C}{@{\extracolsep{\fill}}c}");
+
   // cas-common frontmatter — gobble cleanly.
   // Title-note text — author prose. Preserve as ltx:note frontmatter.
   DefMacro!("\\tnotetext[]{}",
