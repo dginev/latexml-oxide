@@ -703,6 +703,14 @@ LoadDefinitions!({
   def_macro_noop("\\currentpdfbookmark{}{}")?;
   def_macro_noop("\\subpdfbookmark{}{}")?;
   def_macro_noop("\\belowpdfbookmark{}{}")?;
+  // \Hy@raisedlink — hyperref-internal PDF-anchor positioning helper.
+  // TL hyperref ships this as `\let \Hy@raisedlink \@empty` in every
+  // non-PDF driver (htex4ht.def, hvtexmrk.def, hdvips.def, …), so it's
+  // a no-op anywhere our XML/HTML pipeline cares about. Both our and
+  // Perl's hyperref bindings were missing it. Witness:
+  // arXiv:2308.06254v1 (`\Hy@raisedlink{...}` from an inputted
+  // package's anchor-positioning machinery).
+  def_macro_noop("\\Hy@raisedlink{}")?;
 
   //======================================================================
   // 4.1 Replacement macros
