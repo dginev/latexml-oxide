@@ -1538,6 +1538,19 @@ LoadDefinitions!({
 
   //========================
   ProcessOptions!();
+
+  // Always pre-load all named color sets (dvipsnames, svgnames, x11names).
+  // Without this, papers that load xcolor twice (once without options
+  // by a paper-local .cls, then with `[svgnames,x11names]` by the
+  // user's preamble) suffer an Option clash that silently drops the
+  // second load's color definitions — leading to Error:unexpected for
+  // every \color{Gainsboro}/\color{Green4}/etc. The defs are
+  // additive: re-loading a `.def` overlays existing colors with the
+  // same names rather than erroring. Witness 2204.01429 (24 errors),
+  // 2204.01753 (1 error).
+  InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+  InputDefinitions!("svgnam",   extension => Some(Cow::Borrowed("def")));
+  InputDefinitions!("x11nam",   extension => Some(Cow::Borrowed("def")));
 });
 
 /// Perl: sub defineColors — define colors from "name=from,name=from,..." pairs
