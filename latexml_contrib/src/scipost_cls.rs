@@ -4,6 +4,9 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
+  // SciPost.cls L7: `\RequirePackage{amsmath,amssymb}` — pull amssymb
+  // for \gtrsim, \lesssim, \nleq, \square, etc. Witness 2212.07113.
+  RequirePackage!("amssymb");
   RequirePackage!("amsthm");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
