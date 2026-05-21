@@ -169,7 +169,7 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   let prefer = crate::dump_paths::detect_ambient_texlive_year();
   let resolved = resolve_dump_path(prefer);
   let (content, source_label, stamp_for_check): (String, String, Option<String>) =
-    if let Some((path, _year)) = resolved {{
+    if let Some((path, year)) = resolved {{
       let content = match std::fs::read_to_string(&path) {{
         Ok(c) => c,
         Err(e) => {{
@@ -179,14 +179,15 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       }};
       let label = path.display().to_string();
       // Sibling stamp file: texlive.YYYY.version next to latex.YYYY.dump.txt.
-      let stamp = path.parent().and_then(|d| {{
-        let years = crate::dump_paths::available_years_in_dir(d, "latex");
-        years.first().copied()
-      }});
-      let stamp_str = stamp.and_then(|y| {{
-        let p = path.parent()?.join(crate::dump_paths::version_filename(y));
-        std::fs::read_to_string(&p).ok().and_then(|s| s.lines().next().map(|l| l.to_string()))
-      }});
+      // Use the year of the dump we actually loaded (not the most-recent
+      // year in the directory) so the staleness check compares apples to
+      // apples on machines with multiple bundled dumps.
+      let stamp_str = if year > 0 {{
+        path.parent().and_then(|d| {{
+          let p = d.join(crate::dump_paths::version_filename(year));
+          std::fs::read_to_string(&p).ok().and_then(|s| s.lines().next().map(|l| l.to_string()))
+        }})
+      }} else {{ None }};
       (content, label, stamp_str)
     }} else if let Some(latex_str) = crate::embedded_dumps::embedded_latex_dump(prefer) {{
       // Embedded fallback. `embedded_latex_dump` gunzips on first
