@@ -413,6 +413,14 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // dropped — read sites check `_loaded || _raw_loaded` instead.
     let loaded_flag = format!("{filename}_loaded");
     assign_value(&loaded_flag, true, Some(Scope::Global));
+    // Also set the Perl-equivalent `<filename>.ltxml_loaded` flag —
+    // some callers (e.g. require_package's deps-scan gate) need to
+    // distinguish binding-loaded from raw-loaded. Without this,
+    // paper-bundled .sty files that load natbib (which has a
+    // binding) re-trigger deps-scan on natbib.sty, which re-finds
+    // \usepackage{natbib} in natbib.sty's own warning text, looping
+    // infinitely. Witness 2111.01269 (TIMEOUT from natbib deps loop).
+    assign_value(&s!("{filename}.ltxml_loaded"), true, Some(Scope::Global));
     // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
@@ -517,6 +525,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         });
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+          assign_value(&s!("{filename}.ltxml_loaded"), true, Some(Scope::Global));
         }
         None // fallback handled the loading; no raw file to load
       } else {
