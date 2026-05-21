@@ -25,6 +25,10 @@ LoadDefinitions!({
   // violations in listing-mode body.)
   RequirePackage!("booktabs");
   RequirePackage!("graphicx");
+  // wrapfig: WileyNJD-v2 authors routinely use \begin{wrapfigure} for
+  // figure-with-side-text layouts. The Wiley cls itself doesn't load
+  // wrapfig; mirror by eager-loading. Witness 2203.16535.
+  RequirePackage!("wrapfig");
 
   // Wiley frontmatter — preserve author content as ltx:note.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");

@@ -17,6 +17,13 @@ LoadDefinitions!({
 
   RequirePackage!("multicol");
   RequirePackage!("inst_support");
+  // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak
+  // (amssymb) in math without explicit \usepackage. The real Springer
+  // llncs.cls quietly tolerates these because most authors run pdflatex
+  // with amssymb/amsbsy pulled in by transitive paper deps; mirror by
+  // eager-loading here. Witness 2211.16852.
+  RequirePackage!("amsbsy");
+  RequirePackage!("amssymb");
 
   //======================================================================
   // Frontmatter

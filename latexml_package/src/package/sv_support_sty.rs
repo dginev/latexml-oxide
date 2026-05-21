@@ -227,6 +227,11 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{question}{\\newtheorem{question}{Question}}{}");
   RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}{Solution}}{}");
   RawTeX!("\\@ifundefined{remark}{\\newtheorem{remark}{Remark}}{}");
+  // Perl sv_support L196: `\spnewtheorem{case}{Case}{\itshape}{\rmfamily}`
+  // ships {case} as a preloaded theorem. Mirror so svjour3 authors who
+  // use \begin{case} without declaring it (or comment out the declaration)
+  // don't trip Error:undefined. Witness 2112.14105.
+  RawTeX!("\\@ifundefined{case}{\\newtheorem{case}{Case}}{}");
 
   // Theorem environments — Perl L225-228
   DefEnvironment!("{theopargself*}", "#body");

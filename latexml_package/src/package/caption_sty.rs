@@ -143,6 +143,10 @@ LoadDefinitions!({
   def_macro_noop("\\AtBeginCaption{}")?;
   def_macro_noop("\\AtEndCaption{}")?;
   def_macro_noop("\\ContinuedFloat")?;
+  // caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
+  // sub-caption float continuation. Gobble safely (visual-only).
+  // Witness 2202.03356.
+  def_macro_noop("\\nextfloat")?;
   def_macro_noop("\\ProcessOptionsWithKV{}")?;
 
   def_macro_noop("\\captionfont")?;

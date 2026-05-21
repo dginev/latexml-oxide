@@ -9,6 +9,12 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("fancyhdr");
   RequirePackage!("ragged2e");
+  // WileyMSP-template.cls L: `\RequirePackage{framed}` — needed for
+  // {snugshade} environment used by template's editorial callout boxes.
+  // Witness 2208.03623.
+  RequirePackage!("framed");
+  RequirePackage!("authblk");
+  RequirePackage!("caption");
 
   DefMacro!(T_CS!("\\begin{affiliations}"), None, "");
   DefMacro!(T_CS!("\\end{affiliations}"), None, "");
