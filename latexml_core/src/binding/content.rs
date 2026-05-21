@@ -1843,7 +1843,27 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
   // undefined and the `_` characters then reach the stomach as subscript
   // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
-  if !lookup_bool(&s!("{name}.cls_loaded")) && !lookup_bool(&s!("{name}.cls_raw_loaded")) {
+  // Skip deps-scan only when a real `.cls.ltxml` binding has been
+  // loaded — that binding is responsible for its own
+  // `\RequirePackage` calls. When `cls_raw_loaded` is true but
+  // `cls_loaded` is false (paper-bundled .cls with no binding), we
+  // STILL need the deps-scan: raw-load tokenizes the file but does
+  // not invoke our `require_package` for each `\RequirePackage`
+  // because the .sty bindings for those packages haven't been wired
+  // in yet at raw-tokenization time. Witness 2202.11535
+  // (myclass.cls bundles caption + many others; without this scan,
+  // \captionsetup stays undefined and triggers Error:undefined).
+  // Skip deps-scan only when a real `.cls.ltxml` binding has been
+  // loaded — that binding is responsible for its own
+  // `\RequirePackage` calls. The `cls_loaded` flag is set even for
+  // a successful raw .cls load (no binding), so we MUST check the
+  // binding-specific `cls.ltxml_loaded` flag instead. Without
+  // this, paper-bundled .cls files (e.g. myclass.cls bundling
+  // caption + many others, witness 2202.11535) raw-load
+  // successfully but their `\RequirePackage` calls do NOT trigger
+  // our binding loaders, leaving \captionsetup / \href / \affil
+  // undefined.
+  if !lookup_bool(&s!("{name}.cls.ltxml_loaded")) {
     maybe_require_dependencies(name, "cls");
   }
   // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.

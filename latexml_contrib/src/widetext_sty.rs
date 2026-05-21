@@ -17,4 +17,9 @@ LoadDefinitions!({
   // register. Render body transparently (no column distinction in
   // HTML/XML). Witness 2403.05215 (SAJ paper using widetext + saj.sty).
   DefEnvironment!("{strip}", "#body");
+  // Paper-bundled widetext.sty variants (e.g. Liam Huang's article-cls
+  // adaptation, witness 2205.00850) define `\wttlinewidth` as a
+  // separator-rule thickness via `\newlength\wttlinewidth`. Our binding
+  // intercepts the raw `\newlength` call, so register the length here.
+  DefRegister!("\\wttlinewidth" => Dimension!("0.4pt"));
 });

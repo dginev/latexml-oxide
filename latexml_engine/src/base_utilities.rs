@@ -2245,6 +2245,22 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // message ("\@latex@error" generic-error template).
     "already defined. or name",
     "command \\end... illegal",
+    // amsfonts-not-installed: aims-class L: `\@latex@error{Package
+    // `amsfonts' not installed, or version too old?}`. The class ships
+    // its own font tables and only loads amsfonts as an enhancement;
+    // pdflatex/Perl LaTeXML both proceed to typeset successfully when
+    // amsfonts is missing. Our raw-load reports the message verbatim
+    // but conversion is fine without the AMS msam/msbm fonts. Witness
+    // 2202.13120.
+    "amsfonts package will not be loaded",
+    "package `amsfonts'",
+    "package 'amsfonts'",
+    // hrefhide-format-too-old: hrefhide.sty requires LaTeX format
+    // 2022-11-01+; older formats trigger an error. The package is
+    // strictly visual (hides hyperref colors on print), so the error
+    // is moot for XML/HTML output. Witness 2202.03936.
+    "newer latex format needed",
+    "older hrefhide package",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }
