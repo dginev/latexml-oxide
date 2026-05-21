@@ -197,6 +197,7 @@ pub mod widetext_sty;
 pub mod ws_journal_cls;
 pub mod xwatermark_sty;
 pub mod catoptions_sty;
+pub mod scrlayer_scrpage_sty;
 pub mod ws_p8_50x6_00_cls;
 pub mod xltabular_sty;
 pub mod xr_sty;
@@ -312,6 +313,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("widetext", "sty", widetext_sty::load_definitions),
   ("xwatermark", "sty", xwatermark_sty::load_definitions),
   ("catoptions", "sty", catoptions_sty::load_definitions),
+  ("scrlayer-scrpage", "sty", scrlayer_scrpage_sty::load_definitions),
+  ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),
