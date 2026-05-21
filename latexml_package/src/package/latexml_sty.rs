@@ -239,6 +239,7 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
   Some((base, sub.to_string()))
 }
 
+
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys
@@ -595,14 +596,14 @@ LoadDefinitions!({
     if let Some(kv_arg) = whatsit.get_arg(2) {
       if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
-        if let Some(v) = hash.get("role") { role = v.to_string(); }
-        if let Some(v) = hash.get("name") { name_val = v.to_string(); }
-        if let Some(v) = hash.get("meaning") { meaning = v.to_string(); }
-        if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.to_string(); }
-        if let Some(v) = hash.get("description") { has_description = true; description_text = v.to_string(); }
+        if let Some(v) = hash.get("role") { role = v.clone(); }
+        if let Some(v) = hash.get("name") { name_val = v.clone(); }
+        if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
+        if let Some(v) = hash.get("tag") { has_tag = true; tag_text = v.clone(); }
+        if let Some(v) = hash.get("description") { has_description = true; description_text = v.clone(); }
         // Store scope option for rewrite rule creation in afterConstruct
         if let Some(v) = hash.get("scope") {
-          whatsit.set_property("scope_opt", Stored::from(v.to_string()));
+          whatsit.set_property("scope_opt", Stored::from(v.clone()));
         }
       }
     }
@@ -967,7 +968,7 @@ LoadDefinitions!({
   // \LaTeXMLfullversion collapse to just the version string via the
   // `\ifx\expandafter.\LaTeXMLrevision.` guard.
   DefMacro!("\\LaTeXMLversion", "0.4.0");
-  DefMacro!("\\LaTeXMLrevision", "");
+  def_macro_noop("\\LaTeXMLrevision")?;
   DefMacro!(
     "\\LaTeXMLfullversion",
     "\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)"
@@ -996,7 +997,7 @@ LoadDefinitions!({
   // \lxAddAnnotation{key=val,...} or \lxWithAnnotation{…}{body} don't
   // hit undefined-CS. The {body} arg passes through for \lxWithAnnotation
   // so the visible content is preserved; the annotation itself is dropped.
-  DefMacro!("\\lxAddAnnotation RequiredKeyVals", "");
+  def_macro_noop("\\lxAddAnnotation RequiredKeyVals")?;
   DefMacro!("\\lxWithAnnotation RequiredKeyVals {}", "#2");
 
   // Perl latexml.sty.ltxml L514-528: \lxRefDeclaration OptionalKeyVals:Declare {}
@@ -1005,7 +1006,7 @@ LoadDefinitions!({
   // registry. Neither helper is ported. Stub as arg-consuming no-op so
   // documents don't hit undefined-CS; annotations won't actually rewrite
   // but the prose renders cleanly.
-  DefMacro!("\\lxRefDeclaration OptionalKeyVals:Declare {}", "");
+  def_macro_noop("\\lxRefDeclaration OptionalKeyVals:Declare {}")?;
 
   // Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
   // document's xml:id via a plain TeX `\def` of the internal

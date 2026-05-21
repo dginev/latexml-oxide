@@ -175,7 +175,7 @@ impl Model {
         let classname = caps.get(1).map_or("", |m| m.as_str());
         let elements = caps.get(2).map_or("", |m| m.as_str());
         let mut class_set = HashSet::default();
-        for set_element in elements.split(',').collect::<Vec<&str>>() {
+        for set_element in elements.split(',') {
           class_set.insert(arena::pin(set_element));
         }
         self.set_schema_class(classname, class_set);

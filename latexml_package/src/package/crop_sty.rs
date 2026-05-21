@@ -3,6 +3,6 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: crop.sty.ltxml
-  DefPrimitive!("\\crop []", None);
-  DefPrimitive!("\\cropdef [] DefToken DefToken DefToken DefToken {}", None);
+  def_primitive_noop("\\crop []")?;
+  def_primitive_noop("\\cropdef [] DefToken DefToken DefToken DefToken {}")?;
 });

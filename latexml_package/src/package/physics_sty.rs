@@ -217,7 +217,7 @@ LoadDefinitions!({
     // Build reversion
     let mut rev_tks: Vec<Token> = vec![T_CS!("\\quantity")];
     rev_tks.extend(phys_rev_size(no_stretch, &size_tok));
-    rev_tks.extend(phys_rev_arg(arg1.clone(), &open, &close).unlist());
+    rev_tks.extend(phys_rev_arg(arg1, &open, &close).unlist());
     let reversion = Tokens::new(rev_tks);
 
     // Content: just the argument (no apparent semantics)
@@ -244,12 +244,12 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@fenced — fenced stuff with optional semantics
   DefPrimitive!("\\lx@physics@fenced{}{}{}{}{}", sub[(cs, semantic, function, open, close)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
-    let function_tks = function.clone();
-    let open_tks = open.clone();
-    let close_tks = close.clone();
+    let function_tks = function;
+    let open_tks = open;
+    let close_tks = close;
     let (no_stretch, size_tok) = phys_read_size()?;
     let arg = gullet::read_arg(ExpansionLevel::Off)?;
     let arg1 = Tokens::new(vec![i_arg("1")]);
@@ -263,9 +263,9 @@ LoadDefinitions!({
 
     // Content
     let content = if let Some(sem) = semantic_opt {
-      i_apply(&[], i_symbol(&[("meaning", Tokenize!(sem))], None), vec![arg1.clone()])
+      i_apply(&[], i_symbol(&[("meaning", Tokenize!(sem))], None), vec![arg1])
     } else {
-      arg1.clone()
+      arg1
     };
 
     // Presentation: [function] open #1 close
@@ -334,7 +334,7 @@ LoadDefinitions!({
     let mut content_args = vec![a1.clone()];
     let mut rev = vec![T_CS!("\\evaluated")];
     rev.extend(phys_rev_size(no_stretch, &size_tok));
-    rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+    rev.extend(phys_rev_arg(a1, &open, &close).unlist());
 
     let mut pres_suffix = Vec::new();
     if let Some(lo) = lower {
@@ -342,7 +342,7 @@ LoadDefinitions!({
       all_args.push(lo);
       content_args.push(a2.clone());
       rev.push(T_SUB!());
-      rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
+      rev.extend(phys_rev_arg(a2, &None, &None).unlist());
       pres_suffix.push(T_SUB!());
       pres_suffix.push(T_BEGIN!());
       pres_suffix.push(i_arg("2"));
@@ -353,7 +353,7 @@ LoadDefinitions!({
       all_args.push(up);
       content_args.push(an.clone());
       rev.push(T_SUPER!());
-      rev.extend(phys_rev_arg(an.clone(), &None, &None).unlist());
+      rev.extend(phys_rev_arg(an, &None, &None).unlist());
       pres_suffix.push(T_SUPER!());
       pres_suffix.push(T_BEGIN!());
       pres_suffix.push(i_arg(&all_args.len().to_string()));
@@ -362,8 +362,8 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
     let content = i_apply(&[],
       i_symbol(&[("meaning", Tokenize!("evaluated-at"))], None), content_args);
-    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!("."));
-    let close_tks = close.map(|_| Tokenize!("|")).unwrap_or(Tokenize!("|"));
+    let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("."));
+    let close_tks = close.map(|_| Tokenize!("|")).unwrap_or_else(|| Tokenize!("|"));
     let mut pres = Vec::new();
     pres.extend(
       i_wrap(None, Tokens::new([
@@ -386,10 +386,10 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@fencedII — 2-argument fenced
   DefPrimitive!("\\lx@physics@fencedII{}{}{}{}{}", sub[(cs, semantic, _function, open, close)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let open_tks = open.clone();
-    let close_tks = close.clone();
+    let open_tks = open;
+    let close_tks = close;
     let (no_stretch, size_tok) = phys_read_size()?;
     let arg1_tok = gullet::read_arg(ExpansionLevel::Off)?;
     let arg2_tok = gullet::read_arg(ExpansionLevel::Off)?;
@@ -406,7 +406,7 @@ LoadDefinitions!({
 
     // Content: apply(symbol(meaning), arg1, arg2)
     let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!(&semantic_str))], None),
-      vec![a1.clone(), a2.clone()]);
+      vec![a1, a2]);
 
     // Presentation: open arg1 , arg2 close
     let mut pres = Vec::new();
@@ -462,9 +462,9 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@operator — operator with optional delimited arg
   DefPrimitive!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let function_tks = function.clone();
+    let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(false, physics_delimiters)?;
@@ -478,7 +478,7 @@ LoadDefinitions!({
       rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
       let reversion = Tokens::new(rev);
 
-      let content = i_apply(&[], cfunc.clone(), vec![a1.clone()]);
+      let content = i_apply(&[], cfunc, vec![a1]);
       let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default();
       let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default();
       let mut pres = Vec::new();
@@ -496,7 +496,7 @@ LoadDefinitions!({
     } else {
       // No argument: just the operator symbol
       let result = i_dual(
-        &[("role", Tokenize!("OPERATOR")), ("reversion", cs_tks.clone())],
+        &[("role", Tokenize!("OPERATOR")), ("reversion", cs_tks)],
         cfunc, function_tks, vec![],
       )?;
       gullet::unread(result);
@@ -517,9 +517,9 @@ LoadDefinitions!({
   // Perl: \lx@physics@operatorP — operator with optional power and paren-delimited arg
 
   DefPrimitive!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let function_tks = function.clone();
+    let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let pfunc = function_tks;
     let (no_stretch, size_tok) = phys_read_size()?;
@@ -539,7 +539,7 @@ LoadDefinitions!({
         gullet::unread(Tokens::new(bracketed));
       }
       let result = i_dual(
-        &[("reversion", cs_tks.clone())],
+        &[("reversion", cs_tks)],
         cfunc, pfunc, vec![],
       )?;
       gullet::unread(result);
@@ -561,7 +561,7 @@ LoadDefinitions!({
           vec![cfunc, a2.clone()]);
         pres_func = i_superscript(
           &[("role", Tokenize!("OPFUNCTION"))],
-          pfunc, a2.clone());
+          pfunc, a2);
         rev.push(T_OTHER!("["));
         rev.push(i_arg("2"));
         rev.push(T_OTHER!("]"));
@@ -570,10 +570,10 @@ LoadDefinitions!({
 
       rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
       let reversion = Tokens::new(rev);
-      let content = i_apply(&[], content_op, vec![a1.clone()]);
+      let content = i_apply(&[], content_op, vec![a1]);
 
-      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!("("));
-      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or(Tokenize!(")"));
+      let open_tks = open.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!("("));
+      let close_tks = close.map(|t| Tokenize!(&t.to_string())).unwrap_or_else(|| Tokenize!(")"));
       let mut pres = Vec::new();
       pres.extend(pres_func.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -668,10 +668,10 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@ReIm — Re/Im with optional braced arg
   DefPrimitive!("\\lx@physics@ReIm{}{}{}{}", sub[(cs, semantic, raw, function)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let raw_tks = raw.clone();
-    let function_tks = function.clone();
+    let raw_tks = raw;
+    let function_tks = function;
     let (no_stretch, size_tok) = phys_read_size()?;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let arg = phys_read_arg_tex()?;
@@ -684,7 +684,7 @@ LoadDefinitions!({
       rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
       let reversion = Tokens::new(rev);
 
-      let content = i_apply(&[], cfunc, vec![a1.clone()]);
+      let content = i_apply(&[], cfunc, vec![a1]);
       let mut pres = Vec::new();
       pres.extend(function_tks.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, Tokenize!("\\lbrace")).unlist());
@@ -770,11 +770,11 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@diff — differential operator
   DefPrimitive!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let diff_tks = diff.clone();
+    let diff_tks = diff;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
-    let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks.clone());
+    let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
     let degree = gullet::read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, |s| {
       if s == "(" { Some(")") } else { None }
@@ -804,7 +804,7 @@ LoadDefinitions!({
       if let Some(deg) = degree {
         let a2 = Tokens::new(vec![i_arg("2")]);
         all_args.push(deg);
-        content = i_apply(&[], cfunc, vec![a1.clone(), a2.clone()]);
+        content = i_apply(&[], cfunc, vec![a1, a2.clone()]);
         presentation = Tokens::new([
           i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc, a2).unlist(),
           phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
@@ -812,7 +812,7 @@ LoadDefinitions!({
           phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
         ].concat());
       } else {
-        content = i_apply(&[], cfunc, vec![a1.clone()]);
+        content = i_apply(&[], cfunc, vec![a1]);
         presentation = Tokens::new([
           pfunc.unlist(),
           phys_open(false, &None, open.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist(),
@@ -853,11 +853,11 @@ LoadDefinitions!({
   // Handles: \dv{var}, \dv{f}{x}, \dv[n]{f}{x}, \dv{var}(expr), \dv*{f}{x}
   // For partial: \pdv{f}{x}{y} (double derivative)
   DefPrimitive!("\\lx@physics@deriv{}{}{}", sub[(cs, semantic, diff)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let diff_tks = diff.clone();
+    let diff_tks = diff;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
-    let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks.clone());
+    let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
 
     let inline = gullet::read_match(&[&Tokenize!("*")])?.is_some();
     let degree = gullet::read_optional(None)?;
@@ -884,7 +884,7 @@ LoadDefinitions!({
 
     // Determine expr, var, var2
     let (expr, var, var2) = if tmp3.is_some() {
-      (Some(tmp1.clone()), tmp2.unwrap(), tmp3)
+      (Some(tmp1), tmp2.unwrap(), tmp3)
     } else if let Some(t2) = tmp2 {
       if open.is_some() {
         (Some(t2), tmp1, None) // \dv{var}(expr)
@@ -914,9 +914,9 @@ LoadDefinitions!({
       rev.extend(phys_rev_arg(a3.clone(), &None, &None).unlist());
       let reversion = Tokens::new(rev);
 
-      let op = i_apply(&[], cfunc.clone(), vec![a2.clone(), Tokenize!("1"), a3.clone(), Tokenize!("1")]);
+      let op = i_apply(&[], cfunc, vec![a2.clone(), Tokenize!("1"), a3.clone(), Tokenize!("1")]);
       let content = if expr.is_some() {
-        i_apply(&[], op, vec![a1.clone()])
+        i_apply(&[], op, vec![a1])
       } else { op };
 
       // Presentation: \frac{d^2 expr}{dx dy}
@@ -925,7 +925,7 @@ LoadDefinitions!({
       if expr.is_some() { numer.push(i_arg("1")); }
       let mut denom = Vec::new();
       denom.extend(i_apply(&[], pfunc.clone(), vec![a2]).unlist());
-      denom.extend(i_apply(&[], pfunc.clone(), vec![a3]).unlist());
+      denom.extend(i_apply(&[], pfunc, vec![a3]).unlist());
       let pres = Tokens::new([
         vec![frac_cs, T_BEGIN!()],
         numer,
@@ -979,7 +979,7 @@ LoadDefinitions!({
         if degree.is_some() { Tokens::new(vec![i_arg("3")]) } else { Tokens::default() }]);
 
       let content = if expr.is_some() {
-        i_apply(&[], op, vec![a1.clone()])
+        i_apply(&[], op, vec![a1])
       } else { op };
 
       let has_expr = expr.is_some();
@@ -989,7 +989,7 @@ LoadDefinitions!({
       let mut numer = Vec::new();
       if degree.is_some() {
         let a3 = Tokens::new(vec![i_arg("3")]);
-        numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), a3.clone()).unlist());
+        numer.extend(i_superscript(&[("role", Tokenize!("DIFFOP"))], pfunc.clone(), a3).unlist());
       } else {
         numer.extend_from_slice(pfunc.unlist_ref());
       }
@@ -1054,7 +1054,7 @@ LoadDefinitions!({
     rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
     let reversion = Tokens::new(rev);
 
-    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!("ket"))], None), vec![a1.clone()]);
+    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!("ket"))], None), vec![a1]);
     let mut pres = Vec::new();
     pres.extend(phys_open(no_stretch, &size_tok, Tokenize!("\\vert")).unlist());
     pres.push(i_arg("1"));
@@ -1089,7 +1089,7 @@ LoadDefinitions!({
 
       let content = i_apply(&[],
         i_symbol(&[("meaning", Tokenize!("inner-product"))], None),
-        vec![a1.clone(), a2.clone()]);
+        vec![a1, a2]);
       let mut pres = Vec::new();
       pres.extend(phys_open(!final_stretch, &None, Tokenize!("\\langle")).unlist());
       pres.push(i_arg("1"));
@@ -1108,7 +1108,7 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
 
       let content = i_apply(&[],
-        i_symbol(&[("meaning", Tokenize!("bra"))], None), vec![a1.clone()]);
+        i_symbol(&[("meaning", Tokenize!("bra"))], None), vec![a1]);
       let mut pres = Vec::new();
       pres.extend(phys_open(!no_stretch, &None, Tokenize!("\\langle")).unlist());
       pres.push(i_arg("1"));
@@ -1123,11 +1123,11 @@ LoadDefinitions!({
 
   // Perl: \innerproduct — ⟨arg1|arg2⟩
   DefPrimitive!("\\lx@physics@qm@product{}{}{}{}{}", sub[(cs, semantic, open, middle, close)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
-    let open_tks = open.clone();
-    let middle_tks = middle.clone();
-    let close_tks = close.clone();
+    let open_tks = open;
+    let middle_tks = middle;
+    let close_tks = close;
     let no_stretch = gullet::read_match(&[&Tokenize!("*")])?.is_some();
     let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
     let argx = phys_read_arg_tex()?;
@@ -1144,7 +1144,7 @@ LoadDefinitions!({
 
     let content = i_apply(&[],
       i_symbol(&[("meaning", Tokenize!(&semantic_str))], None),
-      vec![a1.clone(), a2.clone()]);
+      vec![a1, a2]);
     let mut pres = Vec::new();
     pres.extend(phys_open(!no_stretch, &None, open_tks).unlist());
     pres.push(i_arg("1"));
@@ -1187,7 +1187,7 @@ LoadDefinitions!({
       rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
       rev.extend(phys_rev_arg(a2.clone(), &None, &None).unlist());
       let reversion = Tokens::new(rev);
-      let content = i_apply(&[], cfunc, vec![a1.clone(), a2.clone(), a3.clone()]);
+      let content = i_apply(&[], cfunc, vec![a1, a2, a3]);
       let mut pres = Vec::new();
       pres.extend(open_tks.unlist());
       pres.push(i_arg("2"));
@@ -1206,7 +1206,7 @@ LoadDefinitions!({
       if no_stretch { rev.push(T_OTHER!("*")); }
       rev.extend(phys_rev_arg(a1.clone(), &None, &None).unlist());
       let reversion = Tokens::new(rev);
-      let content = i_apply(&[], cfunc, vec![a1.clone()]);
+      let content = i_apply(&[], cfunc, vec![a1]);
       let mut pres = Vec::new();
       pres.extend(open_tks.unlist());
       pres.push(i_arg("1"));
@@ -1241,7 +1241,7 @@ LoadDefinitions!({
     rev.extend(phys_rev_arg(a3.clone(), &None, &None).unlist());
     let reversion = Tokens::new(rev);
 
-    let content = i_apply(&[], cfunc, vec![a2.clone(), a1.clone(), a3.clone()]);
+    let content = i_apply(&[], cfunc, vec![a2, a1, a3]);
     let mut pres = Vec::new();
     pres.extend(open_tks.unlist());
     pres.push(i_arg("1"));
@@ -1287,7 +1287,7 @@ LoadDefinitions!({
 
   // Perl: \xmatrix *{item}{n}{m}
   DefPrimitive!("\\xmatrix{}{}{}", sub[(_item, n, m)] {
-    let item_tks = _item.clone();
+    let item_tks = _item;
     let n_val: usize = n.to_string().parse().unwrap_or(2);
     let m_val: usize = m.to_string().parse().unwrap_or(2);
     let mut tks = Vec::new();
@@ -1383,12 +1383,12 @@ LoadDefinitions!({
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)
   DefPrimitive!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
-    let cs_tks = cs.clone();
+    let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
     let env_str = env.to_string();
-    let defopen_tks = defopen.clone();
-    let defclose_tks = defclose.clone();
+    let defopen_tks = defopen;
+    let defclose_tks = defclose;
     let _alt = gullet::read_match(&[&Tokenize!("*")])?.is_some();
 
     let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
@@ -1410,9 +1410,9 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
 
     let content = if let Some(cf) = cfunc {
-      i_apply(&[], cf, vec![a1.clone()])
+      i_apply(&[], cf, vec![a1])
     } else {
-      a1.clone()
+      a1
     };
 
     // Presentation: open + matrix + close (using default fences if no explicit ones)

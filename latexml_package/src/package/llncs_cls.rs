@@ -17,10 +17,17 @@ LoadDefinitions!({
 
   RequirePackage!("multicol");
   RequirePackage!("inst_support");
+  // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak
+  // (amssymb) in math without explicit \usepackage. The real Springer
+  // llncs.cls quietly tolerates these because most authors run pdflatex
+  // with amssymb/amsbsy pulled in by transitive paper deps; mirror by
+  // eager-loading here. Witness 2211.16852.
+  RequirePackage!("amsbsy");
+  RequirePackage!("amssymb");
 
   //======================================================================
   // Frontmatter
-  DefMacro!("\\frontmatter", "");
+  def_macro_noop("\\frontmatter")?;
 
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
 
@@ -80,7 +87,7 @@ LoadDefinitions!({
   // `{TOC text}` as a balanced group that gets digested as empty
   // text in the surrounding context — same observable output as the
   // discarding-macro path.
-  DefMacro!("\\toctitle", "");
+  def_macro_noop("\\toctitle")?;
 
   DefRegister!("\\tocchpnum" => Dimension::new(0));
   DefRegister!("\\tocsecnum" => Dimension!("15pt"));
@@ -93,17 +100,17 @@ LoadDefinitions!({
   DefRegister!("\\tocsubsubsectotal" => Dimension::new(0));
   DefRegister!("\\tocparatotal" => Dimension::new(0));
 
-  DefMacro!("\\addcontentsmark{}{}{}", "");
-  DefMacro!("\\addcontentsmarkwop{}{}{}", "");
-  DefMacro!("\\addnumcontentsmark{}{}{}", "");
-  DefMacro!("\\addtocmark[]{}{}{}", "");
+  def_macro_noop("\\addcontentsmark{}{}{}")?;
+  def_macro_noop("\\addcontentsmarkwop{}{}{}")?;
+  def_macro_noop("\\addnumcontentsmark{}{}{}")?;
+  def_macro_noop("\\addtocmark[]{}{}{}")?;
 
   //======================================================================
-  DefMacro!("\\mainmatter", "");
+  def_macro_noop("\\mainmatter")?;
 
   NewCounter!("chapter", "document", idprefix => "Pt", nested => vec!["section"]);
   DefMacro!("\\thechapter", "\\arabic{chapter}");
-  DefMacro!("\\chaptermark{}", "");
+  def_macro_noop("\\chaptermark{}")?;
 
   // Theorem-family \xxxname definitions. The \spnewtheorem primitive itself
   // is ported further below (L133+) via define_new_theorem; capfont/bodyfont
@@ -201,7 +208,7 @@ LoadDefinitions!({
   DefMacro!("\\qed", "\\squareforqed");
 
   //======================================================================
-  DefMacro!("\\backmatter", "");
+  def_macro_noop("\\backmatter")?;
 
   DefMacro!("\\andname", "and");
   DefMacro!("\\chaptername", "Chapter");
@@ -215,10 +222,10 @@ LoadDefinitions!({
   DefMacro!("\\fnmsep", "${}^{,}$");
   DefMacro!("\\fnnstart", "0");
 
-  DefMacro!("\\calctocindent", "");
-  DefMacro!("\\clearheadinfo", "");
+  def_macro_noop("\\calctocindent")?;
+  def_macro_noop("\\clearheadinfo")?;
   DefRegister!("\\headlineindent" => Dimension::new(0));
-  DefMacro!("\\thisbottomragged", "");
+  def_macro_noop("\\thisbottomragged")?;
   Let!("\\ts", "\\,");
   DefEnvironment!("{theopargself}", "#body");
   DefMacro!("\\homedir", "\\~{ }");
@@ -230,4 +237,13 @@ LoadDefinitions!({
   DefConstructor!("\\@@orcid{}", "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);
   DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
+
+  // LLNCS v2.22+ introduced the {credits} environment for author
+  // credits / disclosure-of-interests at the end of the paper. It just
+  // switches to \small inside a group; treat as transparent.
+  // Witnesses 2406.00947, 2406.05596, 2406.13788.
+  DefMacro!(T_CS!("\\begin{credits}"), None, "");
+  DefMacro!(T_CS!("\\end{credits}"), None, "");
+  // \discintname is the localised "Disclosure of Interests." header.
+  DefMacro!("\\discintname", "Disclosure of Interests.");
 });

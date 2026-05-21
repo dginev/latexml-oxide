@@ -2084,21 +2084,21 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
+          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
       </listing>
       <listing class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx341"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
+          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
       </listing>
       <listing class="ltx_lst_language_XML ltx_lst_numbers_left ltx_lstlisting" data="PGVsZW1lbnQgYXR0cj0ndmFsdWUnPmNvbnRlbnQ8L2VsZW1lbnQ+" dataencoding="base64" datamimetype="text/plain">
         <listingline xml:id="lstnumberx342"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">line 1</tag>
-          </tags>&lt;<text class="ltx_lst_keyword" font="bold">element</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">attr</text>=<text class="ltx_lst_string">’value’</text>&gt;<text class="ltx_lst_identifier">content</text>&lt;/<text class="ltx_lst_keyword" font="bold">element</text>&gt;</listingline>
+          </tags><text class="ltx_lst_tag" font="bold">&lt;element<text class="ltx_lst_space"> </text>attr=<text class="ltx_lst_string">’value’</text>&gt;</text><text class="ltx_lst_identifier">content</text><text class="ltx_lst_tag" font="bold">&lt;/element&gt;</text></listingline>
       </listing>
     </para>
   </section>

@@ -263,6 +263,17 @@ impl Document {
     // D3b [~] entry. A fresh DOM walk drops any surviving dangling
     // entries; duplicates in DOM get modify_id via record_node_ids.
     self.rebuild_idstore_from_dom()?;
+    // Sweep dangling XMRefs that were specifically created by
+    // amsmath::rearrange_ams_split (tagged with `_split_ref="1"`).
+    // The math parser later absorbs some XMArray cells (inserted
+    // MULOPs, etc.) and the parallel XMWrap refs end up pointing
+    // at vanished targets, cascading through Warn:expected:node
+    // (here) and Error:expected:id (post-process) for ~1500 wp3
+    // canvas papers. Restricting the sweep to `_split_ref` avoids
+    // breaking declare_test's renamed-id case (XMRefs pointing to
+    // `S1.Ex1.m1.1`-style ids that resolve through Perl-faithful
+    // idstore staleness; those don't carry the marker).
+    self.prune_dangling_split_xmrefs()?;
     self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
@@ -445,7 +456,7 @@ impl Document {
                       .split_whitespace()
                       .chain(ovalue.split_whitespace())
                       .collect();
-                    classes.sort();
+                    classes.sort_unstable();
                     classes.dedup();
                     value = arena::pin(classes.join(" "));
                   }
@@ -509,7 +520,7 @@ impl Document {
               let mut text_keys_to_remove = Vec::new();
               for key in pending_declaration.keys() {
                 if !can_have_attribute(FONT_ELEMENT_NAME, key) {
-                  text_keys_to_remove.push(key.to_string());
+                  text_keys_to_remove.push(key.clone());
                 }
               }
               for key in text_keys_to_remove {
@@ -2650,7 +2661,7 @@ impl Document {
         let _ = node.remove_attribute(key);
       } else {
         let mut sorted = updated;
-        sorted.sort();
+        sorted.sort_unstable();
         node
           .set_attribute(key, &sorted.join(" "))
           .unwrap_or_default();
@@ -2807,12 +2818,38 @@ impl Document {
   }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
+  ///
+  /// When `record_id_with_node` detects a duplicate it renames the id (e.g.
+  /// `X.1.mf` → `X.1.mfa`). Any sibling `<ltx:XMRef idref="X.1.mf"/>` in the
+  /// same subtree would otherwise become a dangling reference for the post-
+  /// processor. After re-recording IDs, sweep the subtree once and update any
+  /// XMRef whose `idref` matches an entry in the rename map.
+  ///
+  /// Perl `Core::Document::recordNodeIDs` (Document.pm L1466-1472) has the
+  /// same latent bug — recording renames but XMRefs aren't touched. The bug
+  /// surfaces in our port because the math-parser path
+  /// (`parser.rs::install_replacements`-style `unrecord+record` round-trips)
+  /// is denser than Perl's; both end up needing this remap to keep XMRef
+  /// chains intact. Intentional surpass-Perl divergence; tracked in
+  /// SYNC_STATUS Task #10.
   pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
+    use rustc_hash::FxHashMap;
+    let mut rename: FxHashMap<String, String> = FxHashMap::default();
     for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         let newid = self.record_id_with_node(&id, &idnode);
         if newid != id {
           idnode.set_attribute("xml:id", &newid)?;
+          rename.insert(id, newid);
+        }
+      }
+    }
+    if !rename.is_empty() {
+      for mut xmref in self.findnodes("descendant-or-self::*[@idref]", Some(node)) {
+        if let Some(idref) = xmref.get_attribute("idref") {
+          if let Some(new) = rename.get(&idref) {
+            xmref.set_attribute("idref", new)?;
+          }
         }
       }
     }
@@ -2955,13 +2992,20 @@ impl Document {
     }
     if qname == pin!("ltx:XMDual") {
       let mut children = xml::element_nodes(&node);
-      let c = children.remove(0);
-      let p = children.remove(0);
-      if cvis {
-        self.mark_xmnode_visibility_aux(c, true, false)?;
-      }
-      if pvis {
-        self.mark_xmnode_visibility_aux(p, false, true)?;
+      // XMDual should have exactly 2 element children (content + presentation),
+      // but a malformed math parse (e.g. semantic action producing empty pair
+      // during deep ambiguity collapse) can leave an empty XMDual. Skip
+      // visibility-marking rather than panicking on `children.remove(0)` —
+      // see wp5 sandbox 2110.10033 and 4 sibling papers.
+      if children.len() >= 2 {
+        let c = children.remove(0);
+        let p = children.remove(0);
+        if cvis {
+          self.mark_xmnode_visibility_aux(c, true, false)?;
+        }
+        if pvis {
+          self.mark_xmnode_visibility_aux(p, false, true)?;
+        }
       }
     } else if qname == pin!("ltx:XMRef") {
       match node.get_attribute("idref") {
@@ -2995,6 +3039,68 @@ impl Document {
     Ok(())
   }
 
+  /// Remove `ltx:XMRef[@_split_ref="1"]` whose `idref` no longer
+  /// resolves. These are the XMRefs minted by
+  /// `amsmath::rearrange_ams_split` to mirror the flattened cell
+  /// sequence inside an `XMDual(XMWrap(refs), XMArray(cells))`. The
+  /// math parser can later absorb some cells (typically inserted
+  /// MULOP times-ops on `\mathcal{L}\rho` chains) into wrapping
+  /// XMApps, dropping their xml:id from the live DOM and leaving
+  /// the sibling XMRefs dangling. Left in place, each dangling
+  /// XMRef trips three separate diagnostics later — math parser's
+  /// read_xmref Warn, finalize's mark_xmnode_visibility Warn, and
+  /// post-process's mark_xm_node_visibility Error.
+  ///
+  /// We restrict the sweep to the `_split_ref` marker so refs from
+  /// other provenance (base_xmath `\lx@dual`, renamed-id cases like
+  /// declare_test's `S1.Ex1.m1.1` → `.1a` rename) stay untouched.
+  ///
+  /// Content-preserving: XMRefs are structural cross-references,
+  /// not author body, and the math parser has already absorbed the
+  /// referenced cell into the visible XMArray branch — no glyph or
+  /// formula material is lost.
+  fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
+    let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref or @_mf_ref]", None);
+    for xmref in xmrefs {
+      let idref = match xmref.get_attribute("idref") {
+        Some(id) => id,
+        None => continue,
+      };
+      if self.lookup_id(&idref).is_none() && xmref.get_parent().is_some() {
+        self.remove_node(xmref);
+      }
+    }
+    // Broader sweep: any XMRef pointing to a canonical math node id
+    // `S<N>.E<M>.m1.<K>...` that no longer resolves. These are minted
+    // by base_xmath::add_column_to_math_fork during rearrange_ams_*
+    // (align/gather/multline), but unlike `_split_ref` they aren't
+    // marked. The math parser absorbs cells later, leaving the refs
+    // dangling and triggering the `Error:expected:id` cascade in
+    // post-processing.
+    //
+    // We restrict the regex to the equation-numbered form (E<digit>,
+    // not Ex<digit>) so declare_test's renamed-id case
+    // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
+    // `\begin{equation}` produce `E1`/`E2`/... ids.
+    static RE_MATH_ID: once_cell::sync::Lazy<regex::Regex> =
+      once_cell::sync::Lazy::new(|| regex::Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
+    let xmrefs2 = self.findnodes("//ltx:XMRef[@idref]", None);
+    for xmref in xmrefs2 {
+      // Skip if already pruned via _split_ref sweep above.
+      if xmref.get_parent().is_none() {
+        continue;
+      }
+      let idref = match xmref.get_attribute("idref") {
+        Some(id) => id,
+        None => continue,
+      };
+      if RE_MATH_ID.is_match(&idref) && self.lookup_id(&idref).is_none() {
+        self.remove_node(xmref);
+      }
+    }
+    Ok(())
+  }
+
   /// Reduce any ltx:XMDual's to just the visible branch, if the other is not visible
   /// (according to markXMNodeVisibility)
   /// If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
@@ -3010,8 +3116,13 @@ impl Document {
     {
       self.document.node_to_string(&dual);
       let mut dual_children = xml::element_nodes(&dual);
-      let presentation = dual_children.pop().unwrap();
-      let content = dual_children.pop().unwrap();
+      // Defensive: an XMDual should always have presentation +
+      // content children, but a malformed math parse (post-ambiguity
+      // collapse) can yield <2. Skip rather than panic.
+      // Witness 2110.10033 (panicked at document.rs:3120, post-fix
+      // continuation of earlier guard at document.rs:2993).
+      let Some(presentation) = dual_children.pop() else { continue };
+      let Some(content) = dual_children.pop() else { continue };
       if self
         .findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&content))
         .is_none()
@@ -3443,7 +3554,7 @@ impl Document {
 
     if let Some(attrs) = attributes {
       let mut sorted_keys = attrs.keys().map(String::as_str).collect::<Vec<_>>();
-      sorted_keys.sort();
+      sorted_keys.sort_unstable();
       for key in sorted_keys {
         if key == "font" || key == "locator" {
           continue;
@@ -3659,7 +3770,7 @@ impl Document {
         Self::collect_xml_ids_from(child, &mut xpath_ids);
       }
       for id in xpath_ids {
-        id_map.insert(id.to_string(), self.modify_id(id));
+        id_map.insert(id.clone(), self.modify_id(id));
       }
     }
     // Now do the cloning (actually copying) and insertion.
@@ -3718,7 +3829,22 @@ impl Document {
                   },
                 };
                 let newid = self.record_id_with_node(mapped_id, &new);
-                new.set_attribute(&key, &newid)?;
+                // Write the literal "xml:id" key (not the bare "id" local-
+                // name returned by libxml's get_attributes). Otherwise the
+                // cloned node only gets a plain `id` attribute, and the
+                // subsequent `after_open` chain's `has_attribute_ns("id",
+                // XML_NS)` check returns false, causing `generate_id` to
+                // mint a fresh `.<parent>.N` xml:id that doesn't match the
+                // sibling XMRef idrefs (which were rewritten from id_map).
+                // Witness: arXiv:2509.07628 — MathFork mainfork emitted
+                // 154 XMRefs with `.mf` idrefs while the cloned target
+                // nodes received parent-scoped `.m2.N` xml:ids, leaving
+                // every XMRef dangling and triggering 4
+                // `Error:expected:id` per equation during post-processing
+                // visibility marking. Same shape applies anywhere a
+                // cloned subtree carries xml:id attributes — MathFork,
+                // tabular-cell clone, _Capture_ flush.
+                new.set_attribute("xml:id", &newid)?;
                 // Update id_map so subsequent idref lookups use the ACTUAL recorded id.
                 // record_id_with_node may change the id (e.g., if there are conflicts),
                 // so the mapped_id and newid may differ.
@@ -4088,7 +4214,7 @@ impl Document {
           for label in labels.split_whitespace() {
             self
               .rewrite_labels
-              .insert(label.to_string(), id.to_string());
+              .insert(label.to_string(), id.clone());
           }
         } else {
           Error!(
@@ -4209,7 +4335,7 @@ impl Document {
           if let Some(xmlid) = child.get_attribute_ns("id", XML_NS) {
             attributes
               .entry("xml:id".to_string())
-              .or_insert(xmlid.clone());
+              .or_insert_with(|| xmlid.clone());
             // Unrecord before re-creation (Perl: $child->removeAttribute('xml:id') + unRecordID)
             self.unrecord_id(&xmlid);
           }

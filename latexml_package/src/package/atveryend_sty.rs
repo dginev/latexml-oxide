@@ -4,9 +4,9 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  DefMacro!("\\AfterLastShipout{}",    "");
-  DefMacro!("\\AtVeryEndDocument{}",   "");
-  DefMacro!("\\BeforeClearDocument{}", "");
-  DefMacro!("\\AtEndAfterFileList{}",  "");
-  DefMacro!("\\AtVeryVeryEnd{}",       "");
+  def_macro_noop("\\AfterLastShipout{}")?;
+  def_macro_noop("\\AtVeryEndDocument{}")?;
+  def_macro_noop("\\BeforeClearDocument{}")?;
+  def_macro_noop("\\AtEndAfterFileList{}")?;
+  def_macro_noop("\\AtVeryVeryEnd{}")?;
 });

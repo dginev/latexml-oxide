@@ -35,8 +35,8 @@ LoadDefinitions!({
 
   // Stub for tikz externalize library: \beginpgfgraphicnamed{name}...\endpgfgraphicnamed
   // In LaTeX, this checks if the graphic should be externalized. We just process inline.
-  DefMacro!("\\beginpgfgraphicnamed{}", "");
-  DefMacro!("\\endpgfgraphicnamed", "");
+  def_macro_noop("\\beginpgfgraphicnamed{}")?;
+  def_macro_noop("\\endpgfgraphicnamed")?;
 
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   at_begin_document(TokenizeInternal!(

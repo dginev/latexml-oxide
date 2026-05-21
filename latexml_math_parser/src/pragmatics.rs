@@ -1,6 +1,8 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::error::Error;
+#[cfg(test)]
+use std::rc::Rc;
 
 use crate::semantics::{Operator, XM};
 use crate::util::distill_lexeme;
@@ -62,12 +64,24 @@ pub enum ValidationPragmatics {
 }
 
 impl ValidationPragmatics {
-  /// Pragmatic rules that are *always* strictly enforced
+  /// Pragmatic rules that are *always* strictly enforced.
+  ///
+  /// Architectural note (2026-05-17): these are intended to fire
+  /// inside `XM::Apply.specialize(...)` during tree construction,
+  /// but in practice `apply_*` actions in `semantics.rs` build their
+  /// `XM::Apply` results WITHOUT calling `.specialize()` — so most
+  /// expert pragmas that target Apply shapes (e.g.
+  /// `FencedLettersAreFunctionArguments`) never get a chance to
+  /// fire during action_on. The pragmas listed here that DO run
+  /// reliably are those that match `XM::Lexeme` directly (the
+  /// translate_node leaf calls `Lexeme.specialize` per line 125
+  /// in semantics.rs). Apply-shape pragmas have been moved into
+  /// `student_defaults` below where `validate_recursive` actually
+  /// invokes them.
   pub fn expert_defaults() -> Vec<Self> {
     use ValidationPragmatics::*;
     vec![
       FencedAtomsAreNotFunctions,
-      FencedLettersAreFunctionArguments,
       UnfencedLetterArgumentsRequireVisualCues,
       OpfunctionsAreRarelyArguments,
       AdjacentNumbersDontMultiply,
@@ -88,6 +102,13 @@ impl ValidationPragmatics {
     // parses
     use ValidationPragmatics::*;
     vec![
+      // First the Apply-shape pragmas that should be expert (always
+      // strictly enforced) but in practice need to run here because
+      // `apply_*` actions don't call `.specialize()` on their result.
+      // Their soft fallback ("skip if all pruned") is harmless: if
+      // all surviving trees fail the pragma, the original forest is
+      // restored.
+      FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
       HigherOrderInvisibleOpsAreExceptions,
       AdjacentUnfencedScriptsDontApply,
@@ -474,9 +495,133 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
           }
         }
       }
+    } else if let Some(prune_reason) = is_dual_fenced_rhs(top_rhs, trees.first().copied()) {
+      return Err(prune_reason.into());
     }
   }
   Ok(())
+}
+
+/// Detect a parens-fenced `XM::Dual` on the RHS of invisible-times and
+/// classify whether it should be pruned in favor of function-application.
+///
+/// The `fenced` grammar action wraps a parenthesized expression as
+/// `Dual(content_ref, Wrap[OPEN, expr, CLOSE])` without setting the
+/// `Meta::fenced` field on the Dual itself. The `Lexeme`-based check
+/// above misses these. This helper inspects the presentation Wrap
+/// directly:
+///
+/// 1. First and last items of the Wrap are `XM::Token` with role
+///    OPEN/CLOSE and content `(` / `)`.
+/// 2. Inner content (between the parens) is either a non-NUMBER
+///    `Lexeme`, a structured `Apply` (list/vector/formulae), or a
+///    `Dual` whose own content is non-numeric.
+/// 3. Special-case: if the inner content IS a `NUMBER`, fall through
+///    to the legacy "number with non-fenced LHS" exception so the
+///    cycle-notation case `(a,b)(c,d)` doesn't double-prune.
+///
+/// Returns `Some(error_msg)` if the parse should be pruned, `None`
+/// otherwise.
+/// Recognize an `XM::Dual(_, Wrap[OPEN, ..., CLOSE])` shape on the RHS
+/// of invisible-times where the outer delimiters are PARENS, BRACKETS,
+/// or VERTBARS — all of which can legitimately indicate function-app
+/// when preceded by a letter LHS. Returns `Some(_, error_msg)` if the
+/// shape matches.
+///
+/// `kind` is the fence-pair category for diagnostics:
+/// "parens" / "brackets" / "vertbars".
+fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str> {
+  let XM::Dual(_, ref presentation, ..) = top_rhs else {
+    return None;
+  };
+  let XM::Wrap(ref items, ..) = **presentation else {
+    return None;
+  };
+  // Recognize PARENS or BRACKETS delimiters. **Vertbars `|...|`
+  // are deliberately excluded** — K-12 math convention reads
+  // `a|f|b` as `a * |f| * b` (absolute-value multiplication),
+  // NOT as `a@(|f|)` (function application). Generalizing the
+  // "fence implies function-argument" rule to vertbars regressed
+  // 2 legacy tests; the qm_test bra-ket case has its own
+  // expected interpretation that this pragma should not enforce.
+  enum Fence {
+    Parens,
+    Brackets,
+  }
+  // (Marker: vertbar-fenced cases purposely fall through; the qm_test
+  // and similar bra-ket tests pass under a different mechanism
+  // (the QM context resolves differently in soft_prune).
+  let recognize_open = |x: Option<&XM>| -> Option<Fence> {
+    match x {
+      Some(XM::Token(p, _)) => match (p.role.as_deref(), p.content.as_deref()) {
+        (Some("OPEN"), Some("(")) => Some(Fence::Parens),
+        (Some("OPEN"), Some("[")) => Some(Fence::Brackets),
+        _ => None,
+      },
+      Some(XM::Lexeme(name, _)) => {
+        if name.starts_with("OPEN:(:") {
+          Some(Fence::Parens)
+        } else if name.starts_with("OPEN:[:") {
+          Some(Fence::Brackets)
+        } else {
+          None
+        }
+      },
+      _ => None,
+    }
+  };
+  let recognize_close = |x: Option<&XM>, fence: &Fence| -> bool {
+    match x {
+      Some(XM::Token(p, _)) => match (p.role.as_deref(), p.content.as_deref(), fence) {
+        (Some("CLOSE"), Some(")"), Fence::Parens) => true,
+        (Some("CLOSE"), Some("]"), Fence::Brackets) => true,
+        _ => false,
+      },
+      Some(XM::Lexeme(name, _)) => match fence {
+        Fence::Parens => name.starts_with("CLOSE:):"),
+        Fence::Brackets => name.starts_with("CLOSE:]:"),
+      },
+      _ => false,
+    }
+  };
+
+  let Some(fence) = recognize_open(items.first()) else {
+    return None;
+  };
+  if !recognize_close(items.last(), &fence) {
+    return None;
+  }
+  let _ = match fence {
+    Fence::Parens => "parenthetical",
+    Fence::Brackets => "bracketed",
+  };
+
+  // Look at the Dual's content branch — that's the semantic shape.
+  let content = match top_rhs {
+    XM::Dual(c, _, _, _) => &**c,
+    _ => return None,
+  };
+  // Skip the NUMBER case to defer to the legacy NUMBER-exception code.
+  if let XM::Lexeme(inner_name, _) = content.get_baseline() {
+    if inner_name.starts_with("NUMBER") {
+      match top_lhs {
+        Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
+          return Some(
+            "pruning non-argument fenced NUMBER (Dual-wrapped), used as RHS of \
+             invisible times",
+          );
+        },
+        Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
+          return Some(
+            "pruning non-argument fenced NUMBER (Dual-wrapped), used as RHS of \
+             invisible times",
+          );
+        },
+        _ => return None,
+      }
+    }
+  }
+  Some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
 }
 
 /// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
@@ -970,7 +1115,7 @@ fn is_unary_addop_prefix(tree: &XM) -> bool {
 fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     match **op {
-      XM::Lexeme(ref oplexeme, _) if oplexeme == "arith1.divide" => {
+      XM::Lexeme(ref oplexeme, _) if &**oplexeme == "arith1.divide" => {
         let arg_trees = args.trees();
         if arg_trees.len() == 2 {
           if let XM::Lexeme(arg1_name, arg1_meta) = arg_trees[0] {
@@ -1216,7 +1361,7 @@ fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), 
   if let XM::Apply(Operator(op), ref args, ..) = tree {
     if let XM::Lexeme(ref name, _) = **op {
       let is_addop = name.starts_with("ADDOP");
-      let is_mulop = name.starts_with("MULOP") || name == "x.invisible_operator";
+      let is_mulop = name.starts_with("MULOP") || &**name == "x.invisible_operator";
       let is_relop = name.starts_with("RELOP");
 
       // If we're inside an addop/mulop and this node is a relop, reject
@@ -1434,7 +1579,7 @@ mod tests {
   #[test]
   fn consistent_pragmas_accept_empty_tree() {
     use crate::semantics::metadata::Meta;
-    let leaf = XM::Lexeme("UNKNOWN:italic-x".to_string(), Meta::default());
+    let leaf = XM::Lexeme(Rc::from("UNKNOWN:italic-x"), Meta::default());
     assert!(
       ValidationPragmatics::ConsistentLetterBlocks
         .validate(&leaf)
@@ -1470,7 +1615,7 @@ mod tests {
     let args = Args(
       letter_names
         .iter()
-        .map(|n| Some(XM::Lexeme((*n).to_string(), Meta::default())))
+        .map(|n| Some(XM::Lexeme(Rc::from(*n), Meta::default())))
         .collect(),
     );
     XM::Apply(op, args, XProps::default(), Meta::default())
@@ -1560,7 +1705,7 @@ mod tests {
     use crate::semantics::metadata::Meta;
     let mut meta = Meta::default();
     meta.fenced = fenced.map(|s| s.to_string());
-    XM::Lexeme(name.to_string(), meta)
+    XM::Lexeme(Rc::from(name), meta)
   }
 
   #[test]
@@ -1694,7 +1839,7 @@ mod tests {
 
   fn lexeme(name: &str) -> XM {
     use crate::semantics::metadata::Meta;
-    XM::Lexeme(name.to_string(), Meta::default())
+    XM::Lexeme(Rc::from(name), Meta::default())
   }
 
   #[test]
@@ -1830,7 +1975,7 @@ mod tests {
   #[test]
   fn is_invisible_times_op_accepts_lexeme_form() {
     use crate::semantics::metadata::Meta;
-    let op = XM::Lexeme("x.invisible_operator".to_string(), Meta::default());
+    let op = XM::Lexeme(Rc::from("x.invisible_operator"), Meta::default());
     assert!(is_invisible_times_op(&op));
   }
 
@@ -1865,7 +2010,7 @@ mod tests {
   #[test]
   fn is_invisible_times_op_rejects_unrelated_lexeme() {
     use crate::semantics::metadata::Meta;
-    let op = XM::Lexeme("MULOP:plus".to_string(), Meta::default());
+    let op = XM::Lexeme(Rc::from("MULOP:plus"), Meta::default());
     assert!(!is_invisible_times_op(&op));
   }
 
@@ -1884,7 +2029,7 @@ mod tests {
     use std::borrow::Cow;
 
     assert!(letter_names.len() >= 2, "need at least 2 operands");
-    let mut acc = XM::Lexeme((*letter_names.last().unwrap()).to_string(), Meta::default());
+    let mut acc = XM::Lexeme(Rc::from(*letter_names.last().unwrap()), Meta::default());
     for name in letter_names.iter().rev().skip(1) {
       let op_props = XProps {
         role: Some(Cow::Borrowed("MULOP")),
@@ -1894,7 +2039,7 @@ mod tests {
       };
       let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
       let args = Args(vec![
-        Some(XM::Lexeme((*name).to_string(), Meta::default())),
+        Some(XM::Lexeme(Rc::from(*name), Meta::default())),
         Some(acc),
       ]);
       acc = XM::Apply(op, args, XProps::default(), Meta::default());

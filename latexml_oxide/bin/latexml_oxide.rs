@@ -1,6 +1,9 @@
+#![feature(alloc_error_hook)]
+
 use clap::Parser;
 use latexml::converter::Converter;
-use latexml_core::common::{Config, DataSize, OutputFormat};
+use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
+use std::alloc::{Layout, set_alloc_error_hook};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -75,6 +78,12 @@ struct Cli {
   #[arg(long)]
   nobibtex: bool,
 
+  /// Treat the input as a BibTeX `.bib` file. Equivalent to Perl
+  /// `--bibtex`; auto-detected when SOURCE ends in `.bib` or starts
+  /// with `literal:@`.
+  #[arg(long)]
+  bibtex: bool,
+
   /// Disable math parsing
   #[arg(long, alias = "noparse")]
   nomathparse: bool,
@@ -83,12 +92,20 @@ struct Cli {
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
 
-  /// For PDF graphics under N kilobytes, try `inkscape` first to preserve
-  /// vector content; fall back to ImageMagick `convert` on failure/timeout.
-  /// 0 disables (default). Suggested value: 200.
-  /// See SYNC_STATUS.md for the file-size heuristic rationale
-  /// (matplotlib/pgfplots vector PDFs are ~30 KB; raster-embedded PDFs
-  /// are usually 500 KB+ and take >10s to vectorise).
+  /// Vector-SVG fast path control for PDF graphics.
+  ///
+  /// `0` (default) → **auto-detect**: scan the PDF header for
+  /// `/Subtype /Image`; if absent AND the file is at most 500 KB, route
+  /// through inkscape→SVG for vector-clean output. Raster-bearing PDFs
+  /// stay on the gs/convert path.
+  ///
+  /// `N > 0` → explicit size threshold (legacy): try SVG for PDFs at
+  /// most `N` KB regardless of content. Use this when the auto-detector
+  /// misclassifies a canvas you're benchmarking; otherwise prefer the
+  /// default.
+  ///
+  /// Set `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
+  /// entirely (forces gs/convert for every PDF in 0-mode).
   #[arg(
     long = "graphics-svg-threshold-kb",
     value_name = "N",
@@ -96,7 +113,19 @@ struct Cli {
   )]
   graphics_svg_threshold_kb: u32,
 
-  /// Output type (currently only "document" supported; "archive" auto-detected from --dest)
+  /// Output extraction mode (Perl Pack.pm `whatsout`):
+  ///   `document` (default) → full post-processed HTML;
+  ///   `fragment`           → embeddable inline snippet
+  ///                          (`<div class="ltx_document">` unwrapped,
+  ///                          inline-content `<p>` promoted to
+  ///                          `<span class="text">`, RDFa copied from
+  ///                          the document root);
+  ///   `math`               → math subtree (least common ancestor of all
+  ///                          `<math>` nodes, or math-image fallback,
+  ///                          or `fragment` if no math present).
+  ///
+  /// `archive` is accepted for backward-compat and treated as `document` —
+  /// the zip output mode is decided independently by `--dest *.zip`.
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
 
@@ -230,7 +259,24 @@ struct Cli {
   telemetry_out: Option<String>,
 }
 
+/// Allocation-failure hook — emits a `Fatal:` line in the project's
+/// logging convention so aggregation tooling records the failure, then
+/// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
+/// for full rationale + witness paper.
+fn custom_alloc_error_hook(layout: Layout) {
+  eprintln!(
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
+     likely runaway macro expansion (gullet pushback Vec growth past \
+     worker memory budget). Exiting with code 137.",
+    layout.size(),
+    layout.align()
+  );
+  std::process::exit(137);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+  set_alloc_error_hook(custom_alloc_error_hook);
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for
@@ -252,14 +298,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
   // first real `find_file` from digest sees the fast post-init path
   // instead of paying ~30-40 ms of setup on its first lookup. The
-  // worker holds the global KPSE mutex while it probes, so a main-
-  // thread `kpsewhich(...)` racing in early would block briefly —
-  // but in practice dump load + arg parsing run for >50 ms before
-  // any digest-time package resolution, so the warm-up usually
-  // completes before its first real consumer arrives.
-  // Disabled by `LATEXML_NO_KPATHSEA_PREWARM=1` for A/B benchmarking.
-  let kpse_prewarm_enabled = std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err();
-  let _kpse_warmup_handle = if kpse_prewarm_enabled {
+  // worker briefly holds the `KPSE` Mutex while it probes — a main-
+  // thread `kpsewhich(...)` racing in early would block briefly, but
+  // dump load + arg parsing run for >50 ms before any digest-time
+  // package resolution, so the warm-up usually completes before its
+  // first real consumer arrives. Disable with
+  // `LATEXML_NO_KPATHSEA_PREWARM=1` for A/B benchmarking.
+  let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
     Some(std::thread::spawn(latexml_core::util::pathname::prewarm_kpathsea))
   } else {
     None
@@ -392,6 +437,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     Some(path_flags)
   };
 
+  // Perl `Common/Config.pm:24,216`: `$is_bibtex = qr/(^literal:\s*@)|(\.bib$)/`.
+  // `--bibtex` forces the type; otherwise auto-detect when the
+  // source ends in `.bib` or begins with `literal:@`.
+  let is_literal_bib = {
+    let trimmed = source.trim_start_matches("literal:");
+    trimmed.trim_start().starts_with('@') && trimmed.len() < source.len()
+  };
+  let mode = if cli.bibtex || source.ends_with(".bib") || is_literal_bib {
+    Some(DigestionMode::BibTeX)
+  } else {
+    None
+  };
+
   let opts = Config {
     verbosity,
     format: OutputFormat::HTML5,
@@ -399,7 +457,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     whatsout: DataSize::Document,
     preamble: cli.preamble.clone(),
     postamble: cli.postamble.clone(),
-    mode: None,
+    mode,
     bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     preload,
@@ -484,7 +542,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
 
     let source_for_post = source.clone();
-    let response = converter.convert(source);
+    // XML-input mode: when the source is already-converted LaTeXML XML
+    // (file extension `.xml`/`.xhtml` or content starts with `<?xml`
+    // / `<document xmlns="…">`), skip the TeX → XML converter and feed
+    // the file straight to post-processing. Mirrors what
+    // `latexmlpost_oxide` did as a separate binary (per the
+    // retirement plan in `docs/SYNC_STATUS.md`).
+    let response = if is_xml_input(&source) {
+      match std::fs::read_to_string(&source) {
+        Ok(xml) => latexml::converter::ConversionResponse {
+          result:      Some(xml),
+          log:         String::new(),
+          status:      String::from("Status:conversion:0"),
+          status_code: 0,
+        },
+        Err(e) => {
+          eprintln!("Failed to read XML source '{}': {}", source, e);
+          process::exit(1);
+        },
+      }
+    } else {
+      converter.convert(source)
+    };
     let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
       // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
@@ -525,13 +604,20 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         inferred_format.as_deref(),
         Some("html5") | Some("html") | Some("xhtml") | Some("epub") | Some("epub3")
       );
+      // XML-input mode implies post-processing — there's nothing to
+      // convert (the file is already converted XML), so the only
+      // meaningful action is to run the post-pipeline on it.
+      // Matches the always-on post-processing behaviour of the now-
+      // retired `latexmlpost_oxide` binary.
+      let xml_input_mode = is_xml_input(&source_for_post);
       let do_post = cli.post
         || cli.pmml
         || cli.cmml
         || effective_stylesheet.is_some()
         || is_html_format
         || cli.split
-        || cli.splitat.is_some();
+        || cli.splitat.is_some()
+        || xml_input_mode;
 
       // Build split XPath from --splitat
       let split_enabled =
@@ -550,12 +636,56 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           .parent()
           .map(|p| p.to_string_lossy().to_string())
           .unwrap_or_else(|| ".".to_string());
+        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
+          || cli.whatsin.as_deref() == Some("archive");
+
+        // For zip output, route graphics conversions through a TempDir so
+        // the converted PNG/SVG files can be collected and bundled into
+        // the output zip (mirroring `cortex_worker::pack_output_zip_with_resources`).
+        // Without this, the Graphics post-processor wrote PNGs next to
+        // `target` on the filesystem but the zip only carried HTML+log+status —
+        // confirmed-bug 2026-05-18 on 1910.01256.
+        let resource_tempdir: Option<tempfile::TempDir> = if is_zip_output {
+          Some(tempfile::tempdir()?)
+        } else {
+          None
+        };
+        let dest_for_post: Option<String> = if let Some(tmp) = resource_tempdir.as_ref() {
+          // Use a stable HTML filename derived from the target stem so
+          // the Graphics processor's relative paths resolve naturally.
+          let stem = target
+            .as_ref()
+            .and_then(|t| Path::new(t).file_stem())
+            .and_then(|s| s.to_str())
+            .unwrap_or("document");
+          Some(tmp.path().join(format!("{stem}.html")).to_string_lossy().to_string())
+        } else {
+          target.clone()
+        };
+
+        // Resolve `--whatsout <mode>` (Perl Pack.pm whatsout option).
+        // Unknown values silently fall back to Document — same as Perl
+        // `pack_collection`. `archive` is accepted for backward compat
+        // but maps to Document (the zip wrap is decided by --dest *.zip,
+        // not by whatsout extraction).
+        let whatsout_mode = cli
+          .whatsout
+          .as_deref()
+          .and_then(latexml_post::extract::Whatsout::from_cli)
+          .unwrap_or_default();
+
+        // latexmlpost_oxide's default was "if no --pmml AND no
+        // --stylesheet, default pmml = true". Apply the same rule for
+        // XML-input mode so `latexml_oxide foo.xml --dest out.html`
+        // does something useful out of the box.
+        let default_pmml_for_xml_input =
+          xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
         let output = run_post_processing(&xml, &PostOptions {
-          pmml: cli.pmml || cli.post || is_html_format,
+          pmml: cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
           stylesheet: effective_stylesheet.as_deref(),
-          destination: target.as_deref(),
+          destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
           nodefaultresources: cli.nodefaultresources,
           css_files: &cli.css_files,
@@ -569,9 +699,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           split_naming: cli.splitnaming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
+          whatsout: whatsout_mode,
         });
-        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
-          || cli.whatsin.as_deref() == Some("archive");
         if is_zip_output {
           // whatsout=archive: pack output into ZIP
           if let Some(ref target_path) = target {
@@ -585,26 +714,35 @@ fn real_main() -> Result<(), Box<dyn Error>> {
                   .trim_end_matches(".xml")
               )
             };
-            ensure_parent_dir(&zip_dest);
-            pack_output_zip(&zip_dest, &output, &response.log, &response.status)?;
+            latexml_post::writer::ensure_parent_dir(&zip_dest)?;
+            let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
+            let stem = Path::new(&zip_dest)
+              .file_stem()
+              .and_then(|s| s.to_str())
+              .unwrap_or("document");
+            let html_name = format!("{stem}.html");
+            let log_name = format!("{stem}.log");
+            latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
+              zip_path:       &zip_dest,
+              html_filename:  &html_name,
+              html:           &output,
+              log_filename:   Some(&log_name),
+              log:            &response.log,
+              status:         &response.status,
+              resource_dir,
+              telemetry_json: None,
+            })?;
+            eprintln!("Output written to {}", zip_dest);
           } else {
-            print!("{output}");
+            latexml_post::writer::write_output(&output, None)?;
           }
-        } else if let Some(ref target_path) = target {
-          ensure_parent_dir(target_path);
-          let mut out_fh = File::create(target_path)?;
-          write!(out_fh, "{output}")?;
         } else {
-          print!("{output}");
+          latexml_post::writer::write_output(&output, target.as_deref())?;
         }
+        // resource_tempdir is dropped here (after pack_archive has copied
+        // every file in), cleaning up the converted-PNG staging directory.
       } else {
-        if let Some(ref target_path) = target {
-          ensure_parent_dir(target_path);
-          let mut out_fh = File::create(target_path)?;
-          write!(out_fh, "{xml}")?;
-        } else {
-          print!("{xml}");
-        }
+        latexml_post::writer::write_output(&xml, target.as_deref())?;
       }
     }
 
@@ -613,11 +751,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       || cli.whatsin.as_deref() == Some("archive");
     if let Some(ref log_path) = cli.log {
       if !is_zip_output {
-        ensure_parent_dir(log_path);
-        if let Ok(mut log_fh) = File::create(log_path) {
-          let _ = write!(log_fh, "{}", response.log);
-          eprintln!("Log written to {}", log_path);
-        }
+        latexml_post::writer::write_output(&response.log, Some(log_path))?;
+        eprintln!("Log written to {}", log_path);
       }
     }
   }
@@ -729,15 +864,9 @@ fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   latexml::post::run_post_processing(xml, opts)
 }
 
-/// Build the XPath expression for splitting at a given level.
-/// Ensure the parent directory of a file path exists, creating it recursively if needed.
-fn ensure_parent_dir(path: &str) {
-  if let Some(parent) = Path::new(path).parent() {
-    if !parent.as_os_str().is_empty() {
-      let _ = std::fs::create_dir_all(parent);
-    }
-  }
-}
+// `ensure_parent_dir` now lives in `latexml_post::writer` so all
+// post-processing binaries share one implementation. Perl analog:
+// `LaTeXML::Post::Writer`.
 
 fn make_splitpaths(splitat: &str) -> String {
   let ancestors: &[&str] = match splitat {
@@ -778,6 +907,18 @@ fn make_splitpaths(splitat: &str) -> String {
 /// Returns (TempDir, main_tex_path).
 ///
 /// Port of Perl LaTeXML::Util::Pack::unpack_source.
+/// Detect whether `source` is already-converted LaTeXML XML — i.e. a
+/// `.xml` file — so the TeX → XML converter front-end can be skipped
+/// and the file fed straight to post-processing. Matches what Perl
+/// `latexmlpost` accepts and replaces the separate (now retired)
+/// `latexmlpost_oxide` binary.
+fn is_xml_input(source: &str) -> bool {
+  Path::new(source)
+    .extension()
+    .and_then(|e| e.to_str())
+    .is_some_and(|ext| ext.eq_ignore_ascii_case("xml"))
+}
+
 fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
   let tempdir = tempfile::tempdir()?;
   let dest = tempdir.path();
@@ -819,42 +960,9 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
   Ok((tempdir, main_tex.to_string_lossy().to_string()))
 }
 
-/// Pack the conversion output into a ZIP archive (whatsout=archive).
-/// Includes the HTML/XML output, log, and status.
-fn pack_output_zip(
-  zip_path: &str,
-  output: &str,
-  log: &str,
-  status: &str,
-) -> Result<(), Box<dyn Error>> {
-  use zip::write::SimpleFileOptions;
-  let file = File::create(zip_path)?;
-  let mut zip = zip::ZipWriter::new(file);
-  let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-
-  // Derive output filename from zip name: paper.zip → paper.html
-  let stem = Path::new(zip_path)
-    .file_stem()
-    .and_then(|s| s.to_str())
-    .unwrap_or("document");
-
-  // Write the main output file
-  let output_name = format!("{}.html", stem);
-  zip.start_file(&output_name, options)?;
-  zip.write_all(output.as_bytes())?;
-
-  // Write the log
-  if !log.is_empty() {
-    let log_name = format!("{}.log", stem);
-    zip.start_file(&log_name, options)?;
-    zip.write_all(log.as_bytes())?;
-  }
-
-  // Write status
-  zip.start_file("status", options)?;
-  zip.write_all(status.as_bytes())?;
-
-  zip.finish()?;
-  eprintln!("Output written to {}", zip_path);
-  Ok(())
-}
+// Output-zip packing moved to `latexml_post::pack::pack_archive`
+// (2026-05-18, audit follow-up for the latexml_oxide --post image-
+// bundling fix). The previous inline `pack_output_zip` +
+// `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
+// have been replaced by a single shared implementation — mirrors
+// Perl `LaTeXML::Post::Pack`.

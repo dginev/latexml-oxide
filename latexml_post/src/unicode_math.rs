@@ -249,7 +249,7 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
           if !args.is_empty() {
             (unimath_nested(doc, &args[0], PREC_SYMBOL), PREC_SYMBOL)
           } else {
-            ("".to_string(), PREC_SYMBOL)
+            (String::new(), PREC_SYMBOL)
           }
         },
         _ => {
@@ -266,12 +266,12 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
     "ltx:XMTok" => {
       let meaning = node.get_attribute("meaning").unwrap_or_default();
       if meaning == "absent" {
-        return ("".to_string(), PREC_SYMBOL);
+        return (String::new(), PREC_SYMBOL);
       }
       let text = stylize_content(node);
       (text, PREC_SYMBOL)
     },
-    "ltx:XMHint" => ("".to_string(), 0),
+    "ltx:XMHint" => (String::new(), 0),
     "ltx:XMArray" => {
       let rows: Vec<String> = element_children(node)
         .iter()
@@ -338,7 +338,7 @@ fn unimath_map(doc: &PostDocument, args: &[Node]) -> (String, i32) {
 /// Port of `unimath_prefix`.
 fn unimath_prefix(doc: &PostDocument, op: &Node, args: &[Node]) -> (String, i32) {
   if args.is_empty() {
-    return ("".to_string(), PREC_SYMBOL);
+    return (String::new(), PREC_SYMBOL);
   }
   let op_str = unimath_nested(doc, op, 0);
   let args_str: String = args
@@ -358,7 +358,7 @@ fn unimath_infix_with_prec(
   prec: i32,
 ) -> (String, i32) {
   if args.is_empty() {
-    return ("".to_string(), PREC_SYMBOL);
+    return (String::new(), PREC_SYMBOL);
   }
   let opuni = unimath_nested(doc, op, prec);
   if args.len() == 1 {

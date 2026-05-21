@@ -62,9 +62,9 @@ LoadDefinitions!({
   DefMacro!("\\@ehc", "I can't help");
 
   // Perl L40-47: gobble/firstof/secondof macros
-  DefMacro!("\\@gobble{}", None);
-  DefMacro!("\\@gobbletwo{}{}", None);
-  DefMacro!("\\@gobblefour{}{}{}{}", None);
+  def_macro_noop("\\@gobble{}")?;
+  def_macro_noop("\\@gobbletwo{}{}")?;
+  def_macro_noop("\\@gobblefour{}{}{}{}")?;
   // Perl latex.ltx uses `\long\def\@firstofone#1{#1}` etc., overriding the
   // closure-version defined in latex_base.pool.ltxml L46-48. The dump
   // therefore captures these as token-list bodies (see latex_dump.pool.ltxml
@@ -331,6 +331,7 @@ LoadDefinitions!({
   DefMacro!("\\listfigurename", "List of Figures");
   DefMacro!("\\listtablename", "List of Tables");
 
+
   // C.4.4 Style registers (Perl L300)
   NewCounter!("tocdepth");
 
@@ -366,11 +367,11 @@ LoadDefinitions!({
   // NewCounter('secnumdepth') — still in latex_constructs.rs (C.5)
 
   // C.5.4 Title Page mark stubs (Perl L343-347)
-  DefMacro!("\\sectionmark{}", "");
-  DefMacro!("\\subsectionmark{}", "");
-  DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}", "");
-  DefMacro!("\\subparagraphmark{}", "");
+  def_macro_noop("\\sectionmark{}")?;
+  def_macro_noop("\\subsectionmark{}")?;
+  def_macro_noop("\\subsubsectionmark{}")?;
+  def_macro_noop("\\paragraphmark{}")?;
+  def_macro_noop("\\subparagraphmark{}")?;
 
   //======================================================================
   // C.8.1 Defining Commands
@@ -380,18 +381,18 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   // Perl L359-368: DeclareTextAccent family (no-op stubs)
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
+  def_primitive_noop("\\DeclareTextAccent DefToken {}{}")?;
+  def_primitive_noop("\\DeclareTextAccentDefault{}{}")?;
+  def_primitive_noop("\\DeclareTextComposite{}{}{}{}")?;
+  def_primitive_noop("\\DeclareTextCompositeCommand{}{}{}{}")?;
 
   //======================================================================
   // C.9.1 Figures and Tables — float parameters
   // Perl: latex_base.pool.ltxml lines 384-417
   //======================================================================
   // Perl L391-392
-  DefPrimitive!("\\flushbottom",      None);
-  DefPrimitive!("\\suppressfloats[]", None);
+  def_primitive_noop("\\flushbottom")?;
+  def_primitive_noop("\\suppressfloats[]")?;
 
   // Perl L394-403: float counters and fractions
   NewCounter!("topnumber");
@@ -588,10 +589,10 @@ LoadDefinitions!({
   );
 
   // Perl L622-628: temp macros and script ratios
-  DefMacro!("\\@tempa", None);
-  DefMacro!("\\@tempb", None);
-  DefMacro!("\\@tempc", None);
-  DefMacro!("\\@gtempa", None);
+  def_macro_noop("\\@tempa")?;
+  def_macro_noop("\\@tempb")?;
+  def_macro_noop("\\@tempc")?;
+  def_macro_noop("\\@gtempa")?;
 
   DefMacro!("\\defaultscriptratio", None, ".7");
   DefMacro!("\\defaultscriptscriptratio", None, ".5");
@@ -715,6 +716,12 @@ LoadDefinitions!({
 
     \newcount\@eqcnt
     \newcount\@eqpen
+    % LaTeX 2021+: stack-trace verbosity counter for debug output.
+    % Defined in TL `latex.ltx` (`\newcount\tracingstacklevels`). Papers
+    % from arXiv occasionally tweak it directly (witness:
+    % arXiv:2501.11294). Pre-bind here so paper-side
+    % `\tracingstacklevels=...` doesn't surface as undefined-CS.
+    \newcount\tracingstacklevels
     \newif\if@eqnsw\@eqnswtrue
     \newskip\@centering
     \@centering = 0pt plus 1000pt
@@ -772,7 +779,7 @@ LoadDefinitions!({
   // `\loggingoutput`, `\tracingfonts`, `\showoverfull`, `\showoutput`
   // moved to latex_constructs.rs (Perl L5676-5679); only `\loggingall`
   // belongs here per Perl L809.
-  DefMacro!("\\loggingall", None);
+  def_macro_noop("\\loggingall")?;
   // `\wlog` moved to `latex_constructs_rust_only.rs`.
 
   //======================================================================
@@ -795,27 +802,27 @@ LoadDefinitions!({
   // would otherwise split on `_` (SUB) and `:` (OTHER) under default
   // catcodes.
   DefMacro!(T_CS!("\\hook_gput_code:nnn"), "{}{}{}", "");
-  DefMacro!("\\NewHook{}", None);
-  DefMacro!("\\NewReversedHook{}", None);
-  DefMacro!("\\NewMirroredHookPair{}{}", None);
-  DefMacro!("\\ActivateGenericHook{}", None);
-  DefMacro!("\\DisableGenericHook{}", None);
-  DefMacro!("\\AddToHook{}[]{}", None);
-  DefMacro!("\\AddToHookNext{}{}", None);
-  DefMacro!("\\ClearHookNext{}", None);
-  DefMacro!("\\RemoveFromHook{}[]", None);
-  DefMacro!("\\SetDefaultHookLabel{}", None);
-  DefMacro!("\\PushDefaultHookLabel{}", None);
-  DefMacro!("\\PopDefaultHookLabel", None);
-  DefMacro!("\\UseHook{}", None);
-  DefMacro!("\\UseOneTimeHook{}", None);
-  DefMacro!("\\ShowHook{}", None);
-  DefMacro!("\\LogHook{}", None);
-  DefMacro!("\\DebugHooksOn", None);
-  DefMacro!("\\DebugHooksOff", None);
-  DefMacro!("\\DeclareHookRule{}{}{}{}", None);
-  DefMacro!("\\DeclareDefaultHookRule{}{}{}", None);
-  DefMacro!("\\ClearHookRule{}{}{}", None);
+  def_macro_noop("\\NewHook{}")?;
+  def_macro_noop("\\NewReversedHook{}")?;
+  def_macro_noop("\\NewMirroredHookPair{}{}")?;
+  def_macro_noop("\\ActivateGenericHook{}")?;
+  def_macro_noop("\\DisableGenericHook{}")?;
+  def_macro_noop("\\AddToHook{}[]{}")?;
+  def_macro_noop("\\AddToHookNext{}{}")?;
+  def_macro_noop("\\ClearHookNext{}")?;
+  def_macro_noop("\\RemoveFromHook{}[]")?;
+  def_macro_noop("\\SetDefaultHookLabel{}")?;
+  def_macro_noop("\\PushDefaultHookLabel{}")?;
+  def_macro_noop("\\PopDefaultHookLabel")?;
+  def_macro_noop("\\UseHook{}")?;
+  def_macro_noop("\\UseOneTimeHook{}")?;
+  def_macro_noop("\\ShowHook{}")?;
+  def_macro_noop("\\LogHook{}")?;
+  def_macro_noop("\\DebugHooksOn")?;
+  def_macro_noop("\\DebugHooksOff")?;
+  def_macro_noop("\\DeclareHookRule{}{}{}{}")?;
+  def_macro_noop("\\DeclareDefaultHookRule{}{}{}")?;
+  def_macro_noop("\\ClearHookRule{}{}{}")?;
   DefMacro!("\\IfHookEmptyTF{}{}{}", "#3");
   DefMacro!("\\IfHookExistsTF{}{}{}", "#3");
   DefMacro!("\\MakeTextLowercase", "\\lowercase");

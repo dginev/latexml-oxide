@@ -82,6 +82,19 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
   }
 }
 
+/// True if the script body is a space-like TBox (or a list containing
+/// such a TBox at the top level). Mirrors Perl's behavior where a math
+/// space such as `\,` / `\ ` inside `^{...}` / `_{...}` is treated as
+/// a valid script body (not an empty argument).
+fn script_has_space_content(d: &Digested) -> bool {
+  use latexml_core::digested::DigestedData;
+  match d.data() {
+    DigestedData::TBox(b) => b.borrow().get_property_bool("isSpace"),
+    DigestedData::List(l) => l.borrow().boxes.iter().any(script_has_space_content),
+    _ => false,
+  }
+}
+
 fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
   let font = lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
@@ -165,7 +178,15 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     }
     let script = stuff.remove(0);
 
-    if !script.is_empty()? {
+    // Perl L416: `unless IsEmpty($script)`. Our `Digested::is_empty()`
+    // considers any TBox with `isSpace=true` empty — but in math mode
+    // `\,` / `\ ` etc. produce isSpace TBoxes that ARE meaningful
+    // script bodies (visible width, valid placeholder). Skipping the
+    // whatsit there lets a subsequent `^{...}_x` or `_x` re-attack the
+    // base and fire a spurious double-script error. Treat isSpace=true
+    // scripts as non-empty so they consume the script slot.
+    let script_is_truly_empty = script.is_empty()? && !script_has_space_content(&script);
+    if !script_is_truly_empty {
       let mut properties = {
         stored_map!(
           "isMath" => true,
@@ -926,7 +947,7 @@ LoadDefinitions!({
     reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -935,6 +956,18 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.left_role);
         whatsit.set_property("char", entry.char);
+        // Tag the bar with the side that emitted it. Used by the
+        // math parser's lexer (util.rs) to distinguish LEFT_STRETCHY_VERTBAR
+        // from RIGHT_STRETCHY_VERTBAR — eliminates the combinatorial
+        // pairing of identical stretchy bars in the kerned-stack norm
+        // idioms (\vertii, \vertiii, …). VERTBAR is the only role
+        // where left and right are textually-identical fence
+        // delimiters; OPEN/CLOSE already discriminate by their
+        // role, and MULOP delimiters (`/`, `\backslash`) are not
+        // fence-paired. Task #263.
+        if entry.left_role == "VERTBAR" {
+          whatsit.set_property("role_side", "left");
+        }
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }
@@ -944,7 +977,7 @@ LoadDefinitions!({
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
           if let Some(Stored::HashString(ref attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.to_string());
+              whatsit.set_property("meaning", meaning.clone());
             }
           }
         });
@@ -974,7 +1007,7 @@ LoadDefinitions!({
     },
     alias => "\\left");
   DefConstructor!("\\@right Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -983,6 +1016,10 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.right_role);
         whatsit.set_property("char", entry.char);
+        // See `\@left` for the side-tagging rationale. Task #263.
+        if entry.right_role == "VERTBAR" {
+          whatsit.set_property("role_side", "right");
+        }
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }
@@ -991,7 +1028,7 @@ LoadDefinitions!({
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
           if let Some(Stored::HashString(ref attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
-              whatsit.set_property("meaning", meaning.to_string());
+              whatsit.set_property("meaning", meaning.clone());
             }
           }
         });

@@ -3,6 +3,6 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: pdfsync.sty.ltxml
-  DefMacro!("\\pdfsyncstart", "");
-  DefMacro!("\\pdfsyncstop",  "");
+  def_macro_noop("\\pdfsyncstart")?;
+  def_macro_noop("\\pdfsyncstop")?;
 });

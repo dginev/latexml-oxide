@@ -21,9 +21,11 @@ use latexml_core::token::{Catcode, Token};
 use latexml_core::tokens::Tokens;
 use latexml_core::util::pathname;
 use latexml_core::util::pathname::PathnameFindOptions;
-// TODO: Clean up these imports -- what belongs where?
-use latexml_codegen::LoadModel;
-use latexml_core::{CharToken, Core, Debug, Explode, T_CS, T_SPACE, Token, fatal, map, s};
+// Top-level re-exports + the `Token!` macro (distinct from
+// `latexml_core::token::Token` type imported above).
+use latexml_core::{
+  CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
+};
 use latexml_math_parser::MathParser;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
@@ -194,7 +196,7 @@ impl DigestionAPI for Core {
     mode: Option<DigestionMode>,
     _no_init: bool,
   ) -> Result<Digested> {
-    let mut _ext = match mode {
+    let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
     };
@@ -241,18 +243,43 @@ impl DigestionAPI for Core {
       state::assign_value("SOURCEFILE", arena::pin(&request), None);
     }
     if let Some(dir) = dir_opt {
-      let dir = dir.to_str().unwrap_or(".");
-      {
-        state::assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
-        state::add_search_path(dir.to_string());
-      }
+      let dir_str = dir.to_str().unwrap_or(".");
+      // Perl Core.pm L195-200 unshifts the SOURCE file's directory onto
+      // SEARCHPATHS so subsequent `\input`-style lookups resolve relative
+      // to the main file. When `canonicalize` succeeded `dir_str` is the
+      // absolute parent; if it failed (e.g. file not on disk yet at the
+      // time we resolved — unusual for normal latexml CLI invocations
+      // but possible for `literal:` etc.) `dir_str` may be empty and an
+      // empty entry on SEARCHPATHS is useless. Fall back to CWD in that
+      // case so paper-local files (`\input{Chapter/Abstract}` etc.) are
+      // discoverable. Witness: arXiv:2604.09744, 2603.04457 (papers
+      // bundling subdirectory `\subimport` chains).
+      let resolved_dir = if dir_str.is_empty() {
+        std::env::current_dir()
+          .ok()
+          .and_then(|cwd| cwd.to_str().map(String::from))
+          .unwrap_or_else(|| ".".to_string())
+      } else {
+        dir_str.to_string()
+      };
+      state::assign_value("SOURCEDIRECTORY", arena::pin(&resolved_dir), None);
+      // Perl Core.pm L195-200: `$state->unshiftValue(SEARCHPATHS => $dir)`.
+      // `unshift` puts the source dir at the FRONT so it's the new "lead"
+      // — the same lead `\lx@append@path` reads as the basis for
+      // appended subdir paths. Pushing to BACK (`add_search_path`) left
+      // the lead as whatever the CLI's `--path` provided (typically
+      // `ar5iv-bindings/bindings`); `\subimport{Chapter/}{Abstract}`
+      // then appended Chapter/ to ar5iv-bindings/bindings instead of to
+      // the paper's directory, and `\input{Abstract}` couldn't resolve.
+      // Witness: arXiv:2604.09744, 2603.04457.
+      state::search_paths_push_front(resolved_dir);
     }
     //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
     // $state->unshiftValue(GRAPHICSPATHS => $dir)
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    let name_copy = name;
+    let name_copy = name.clone();
     state::install_definition(
       Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
@@ -273,10 +300,28 @@ impl DigestionAPI for Core {
       self.load_preamble(preamble);
     }
 
-    // // Now for the Hacky part for BibTeX!!!
-    // if ($mode eq 'BibTeX') {
-    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
-    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
+    // Now for the Hacky part for BibTeX!!!
+    // Perl `Core.pm` L160-162: drain the .bib mouth via the Pre::BibTeX
+    // parser, register each entry in the bibtex.rs thread-local
+    // registry, and push back a `literal:` wrapper that produces a
+    // `\begin{bibtex@bibliography}...\end{bibtex@bibliography}` block
+    // for the digester to process.
+    if matches!(mode, Some(DigestionMode::BibTeX)) {
+      use latexml_engine::pre_bibtex::PreBibTeX;
+      let mut bib = PreBibTeX::new_from_gullet(&name);
+      match bib.to_tex() {
+        Ok(tex) => {
+          input_content(&s!("literal:{tex}"), InputOptions::default())?;
+        },
+        Err(parse_err) => {
+          Error!(
+            "bibtex",
+            "parse_failed",
+            s!("Failed to parse BibTeX file {}: {:?}", name, parse_err)
+          );
+        },
+      }
+    }
 
     let list = self.digest_internal()?;
     note_end(&digestion_note);
@@ -307,8 +352,11 @@ impl DigestionAPI for Core {
         Some(v) => v.last() == Some(&arena::pin_static("LaTeXML")),
       });
       if default_model_load {
-        // Compile-time load of model AND indirect model
-        load_model!("LaTeXML");
+        // Compile-time load of model AND indirect model. Single
+        // shared instantiation lives at `crate::load_latexml_default_model`
+        // so LTO can keep exactly one `_ModelLoader::build_model` in
+        // the final binary (~600 KiB per copy otherwise).
+        crate::load_latexml_default_model();
       } else {
         // Eager-load at runtime
         model::load_schema(schema_paths.as_slice())?; // If needed?
@@ -522,6 +570,19 @@ impl DigestionAPI for Core {
         request = pathname;
         dir = pathname::directory(&request);
         name = pathname::file_stem(&request);
+        // Perl Core.pm L195-200 unshifts the SOURCE file's directory onto
+        // SEARCHPATHS so subsequent `\input`-style lookups resolve relative
+        // to the main file. When the user invokes with a bare filename
+        // (e.g. `latexml_oxide neurips_2025.tex` from the paper's cwd),
+        // `pathname::find` returns the relative match and `pathname::
+        // directory` returns an empty string — which then gets pushed
+        // onto SEARCHPATHS as a useless entry. Resolve to CWD in that
+        // case so the paper-local Chapter/ etc. are reachable.
+        if dir.is_empty() {
+          if let Ok(cwd) = std::env::current_dir() {
+            dir = cwd.to_string_lossy().to_string();
+          }
+        }
       // ext = pathname::extension(&request);
       } else {
         let message = s!("Can't find {} file {} ", mode, request_base);
@@ -576,10 +637,30 @@ impl DigestionAPI for Core {
     }
 
     // Now for the Hacky part for BibTeX!!!
-    // if mode == DigestionMode::BibTeX {
-    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
-    //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
-    // }
+    // Perl `Core.pm` L160-162: drain the mouth(s) just opened on the
+    // .bib file, run the low-level parser to build a registry of
+    // BibEntry objects, then push a literal wrapper TeX block that
+    // the LaTeX-side digester reads back as
+    //   \begin{bibtex@bibliography}
+    //     \ProcessBibTeXEntry{<key1>}
+    //     ...
+    //   \end{bibtex@bibliography}
+    if matches!(mode, DigestionMode::BibTeX) {
+      use latexml_engine::pre_bibtex::PreBibTeX;
+      let mut bib = PreBibTeX::new_from_gullet(&name);
+      match bib.to_tex() {
+        Ok(tex) => {
+          input_content(&s!("literal:{tex}"), InputOptions::default())?;
+        },
+        Err(parse_err) => {
+          Error!(
+            "bibtex",
+            "parse_failed",
+            s!("Failed to parse BibTeX file {}: {:?}", name, parse_err)
+          );
+        },
+      }
+    }
 
     let list = self.digest_internal()?;
     note_end(&s!("Digesting {} {}", mode, name));

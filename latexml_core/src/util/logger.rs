@@ -1,8 +1,16 @@
-use ansi_term::Colour::{Green, Red, White, Yellow};
-use ansi_term::Style;
 use log::max_level;
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 use std::cell::RefCell;
+
+// ANSI SGR escape sequences (drop-in replacement for the
+// unmaintained `ansi_term` crate; bytes match `ansi_term::Colour::*.paint(...)`).
+const ANSI_RESET: &str = "\x1b[0m";
+const ANSI_GREEN: &str = "\x1b[32m";
+const ANSI_YELLOW: &str = "\x1b[33m";
+const ANSI_RED: &str = "\x1b[31m";
+const ANSI_WHITE: &str = "\x1b[37m";
+
+fn paint(color: &str, text: &str) -> String { format!("{color}{text}{ANSI_RESET}") }
 
 struct LatexmlLogger;
 static LOGGER: LatexmlLogger = LatexmlLogger;
@@ -97,14 +105,12 @@ impl log::Log for LatexmlLogger {
         s!("{}:{} ", severity, category_object)
       };
       let painted_message = match record.level() {
-        Level::Info => Style::default().paint(message),
-        Level::Warn => Yellow.paint(message),
-        Level::Error => Red.paint(message),
-        Level::Debug => Green.paint(message),
-        _ => White.paint(message),
-      }
-      .to_string()
-        + &details.to_string();
+        Level::Info => message,
+        Level::Warn => paint(ANSI_YELLOW, &message),
+        Level::Error => paint(ANSI_RED, &message),
+        Level::Debug => paint(ANSI_GREEN, &message),
+        _ => paint(ANSI_WHITE, &message),
+      } + &details.to_string();
 
       // Capture to log buffer if active (strip ANSI for clean log text)
       if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut() {

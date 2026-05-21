@@ -1,0 +1,26 @@
+% Regression test for the `\def\cs{\protect\cs}` idiom (e.g. msg.sty's
+% `\def\msgheader{\protect\msgheader}`). The recursion guard in
+% Expandable::invoke must NOT fire when `\protect` is currently
+% `\let`-equivalent to `\@unexpandable@protect` (the regime
+% `\protected@edef` installs) — under that regime `\protect\cs`
+% expands to `\noexpand\protect\noexpand\cs`, both tokens become
+% un-expandable, and the loop terminates after one expansion.
+%
+% Before the fix the static body-pattern check in
+% `Expandable::invoke` flagged `\protect\cs` as runaway-recursive
+% irrespective of `\protect`'s current meaning, so every
+% `\protected@edef` evaluation that reached such a CS fired
+% `Error:recursion: Token \cs expands into itself!`. msg.sty (loaded
+% transitively by french.sty / czech.sty / francais.sty under
+% `INCLUDE_STYLES=true`) defines `\msgheader`, `\msgtrailer`, and
+% `\msgencoding` exactly this way, so an 8-paper cluster
+% (math9903002, gr-qc9511021, alg-geom9611022, math9807030,
+% math9807060, math9803069, math9810103, math9810088) error-cascaded.
+\documentclass{article}
+\makeatletter
+\def\msgheader{\protect\msgheader}
+\protected@edef\captured{\msgheader-end}
+\makeatother
+\begin{document}
+\captured
+\end{document}

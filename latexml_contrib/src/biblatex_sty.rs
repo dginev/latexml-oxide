@@ -11,7 +11,7 @@ use latexml_package::prelude::*;
 
 fn bib_entry_get() -> SymHashMap<Stored> {
   match state::lookup_value("biblatex_entry") {
-    Some(Stored::HashStored(map)) => map.clone(),
+    Some(Stored::HashStored(map)) => map,
     _ => SymHashMap::default(),
   }
 }
@@ -50,7 +50,7 @@ fn bib_state_set_int(key: &str, value: i64) {
 
 fn bib_variant_push(toks: Vec<Token>) {
   let mut acc: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
   acc.extend(toks);
@@ -63,7 +63,7 @@ fn bib_variant_push(toks: Vec<Token>) {
 
 fn bib_as_thebibliography() -> Tokens {
   let variant: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => return Tokens::default(),
   };
   if variant.is_empty() {
@@ -79,7 +79,7 @@ fn bib_as_thebibliography() -> Tokens {
   let count = bib_state_int("biblatex_entry_count");
   bib_state_set_int("biblatex_entry_count", 0);
   let preamble: Vec<Token> = match state::lookup_value("biblatex_preamble") {
-    Some(Stored::Tokens(t)) => t.clone().unlist(),
+    Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
   let mut result: Vec<Token> = Vec::with_capacity(variant.len() + 16);
@@ -168,9 +168,14 @@ LoadDefinitions!({
   DefMacro!("\\smartcites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
   DefMacro!("\\footcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
   DefMacro!("\\supercites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  // \citelist{ \cite{key1}*{pre} \cite{key2}*{pre} } — biblatex
+  // multi-citation grouped under parens, where each `\cite{...}*{...}`
+  // is a postnote-bearing entry. Degrade to passing the body through;
+  // each inner `\cite` renders independently. Witness 2404.11319.
+  DefMacro!("\\citelist{}", "#1");
 
   // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
-  DefMacro!("\\DeclareLabeldate {}", "");
+  def_macro_noop("\\DeclareLabeldate {}")?;
 
   // Perl L64-67: passthroughs
   DefMacro!("\\unspace", "\\relax");
@@ -229,6 +234,30 @@ LoadDefinitions!({
   // Perl L107-108: \lossort / \refsection — empty stubs.
   DefMacro!("\\lossort", "", locked => true);
   DefMacro!("\\refsection{}", "", locked => true);
+
+  // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
+  // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
+  // Perl `ar5iv-bindings/bindings/biblatex.sty.ltxml:641-645` defines
+  // `\blx@bbl@booltrue{}` / `\blx@bbl@boolfalse{}` as `\relax` stubs and
+  // `\let\true\blx@bbl@booltrue` if `\true` is undefined.
+  //
+  // Rust never sets either, so the .bbl raw-load hits
+  // `Error:undefined:\true` on every multi-author bibitem (witness:
+  // arXiv:2509.15629 / 2509.21728 — biblatex `.bbl` v3.3 format with
+  // multi-author entries).
+  DefMacro!("\\blx@bbl@booltrue{}", "", locked => true);
+  DefMacro!("\\blx@bbl@boolfalse{}", "", locked => true);
+  Let!("\\true", "\\blx@bbl@booltrue");
+  Let!("\\false", "\\blx@bbl@boolfalse");
+
+  // biblatex `\keyalias{alias}{target}` (TL biblatex.sty L8519-8521 +
+  // L8858 `\let\keyalias\blx@bbl@keyalias`) maps a cite-key alias to
+  // the canonical entry key. We don't track these mappings (our \cite
+  // resolves directly), so the stub can be a no-op. Witness:
+  // arXiv:2510.00068 — biblatex .bbl with 49 `\keyalias{...}{...}`
+  // entries, each generating an undefined-CS error.
+  DefMacro!("\\blx@bbl@keyalias{}{}", "", locked => true);
+  Let!("\\keyalias", "\\blx@bbl@keyalias");
   // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
   // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
   // emitted by repeated \endentry calls in `\thebibliography{count}…
@@ -599,10 +628,18 @@ LoadDefinitions!({
   }, locked => true);
 
   // Perl L348-354
-  DefMacro!("\\AtEveryBibitem{}",   "");
-  DefMacro!("\\AtEveryCitekey{}",   "");
-  DefMacro!("\\keyw{}",             "");
-  DefMacro!("\\bibinitdelim",       "");
+  def_macro_noop("\\AtEveryBibitem{}")?;
+  def_macro_noop("\\AtEveryCitekey{}")?;
+  def_macro_noop("\\keyw{}")?;
+  def_macro_noop("\\bibinitdelim")?;
+  // biblatex.def L219 defines `\bibsetup` as a no-arg user-overridable
+  // hook for low-level bibliography layout (interlinepenalty,
+  // raggedbottom, frenchspacing, etc.). Layout-only for HTML/XML.
+  // Stub as no-op so its call site in `\blx@bibinit` doesn't fire
+  // Error:undefined; downstream `\biburlsetup` also no-op.
+  // Witness 2310.07484.
+  def_macro_noop("\\bibsetup")?;
+  def_macro_noop("\\biburlsetup")?;
   // Note: \bibinithyphendelim re-defined here as just "-" per Perl L352
   // (overrides the L94 definition; Perl runs them in order).
   DefMacro!("\\bibinithyphendelim", "-");
@@ -610,7 +647,7 @@ LoadDefinitions!({
   DefMacro!("\\bibnamedelimi", " ");
 
   // Perl L364
-  DefMacro!("\\range{}{}", "");
+  def_macro_noop("\\range{}{}")?;
 
   // Perl L367-369: \preamble{...} stashes the arg into biblatex_preamble
   // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
@@ -618,7 +655,7 @@ LoadDefinitions!({
   DefMacro!("\\preamble{}", sub[(arg)] {
     state::assign_value("biblatex_preamble",
       Stored::Tokens(arg.clone()), Some(Scope::Global));
-    Ok(arg.clone())
+    Ok(arg)
   });
 
   // Perl L371-397: \biblatex@verb{key}…\endverb captures a verbatim field
@@ -664,7 +701,25 @@ LoadDefinitions!({
       if cc == Catcode::SPACE || cc == Catcode::EOL { end -= 1; continue; }
       break;
     }
-    let value = Tokens::new(body_toks[start..end].to_vec());
+    // Sanitize: biblatex `\verb` is a verbatim primitive — its body is a
+    // literal string. The mouth tokenized chars with their normal catcodes
+    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). When `\endentry`
+    // later splices these tokens into `\href{URL}{text}` the SUB chars
+    // trigger `Script _ can only appear in math mode` during horizontal
+    // digestion. Reset structural catcodes to OTHER so the captured string
+    // round-trips through the bibitem variant safely.
+    // Witness cluster: ~29 papers/stage in next_warning_papers (Stages
+    // 15-20 v3) hit this on biblatex bbl `\verb 10.1162/EVCO_a_00133`.
+    let value_vec: Vec<Token> = body_toks[start..end].iter().map(|tok| {
+      match tok.code {
+        Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
+        Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
+          Token { text: tok.text, code: Catcode::OTHER }
+        },
+        _ => *tok,
+      }
+    }).collect();
+    let value = Tokens::new(value_vec);
     bib_entry_set_tokens(key_str.trim(), value);
     Ok(Tokens::default())
   }, locked => true);
@@ -714,78 +769,79 @@ LoadDefinitions!({
     ))
   }, locked => true);
 
-  // Perl L420-424
-  DefMacro!("\\warn{}", "");
-  DefMacro!("\\xref{}", "");
-  DefMacro!("\\fakeset{}", "");
+  // Perl L420-424. Round-34 surpass: \xref{key} is a cross-reference,
+  // route to \ref so it resolves. \warn / \fakeset are internal.
+  def_macro_noop("\\warn{}")?;
+  DefMacro!("\\xref{}", "\\ref{#1}");
+  def_macro_noop("\\fakeset{}")?;
 
   // Perl L429-434: language API (no-ops)
-  DefMacro!("\\DeclareLanguageMapping{}{}", "");
-  DefMacro!("\\DeclareLanguageMappingSuffix{}", "");
-  DefMacro!("\\DefineHyphenationExceptions{}{}", "");
-  DefMacro!("\\DefineBibliographyExtras{}{}", "");
-  DefMacro!("\\UndefineBibliographyExtras{}{}", "");
-  DefMacro!("\\DefineBibliographyStrings{}{}", "");
+  def_macro_noop("\\DeclareLanguageMapping{}{}")?;
+  def_macro_noop("\\DeclareLanguageMappingSuffix{}")?;
+  def_macro_noop("\\DefineHyphenationExceptions{}{}")?;
+  def_macro_noop("\\DefineBibliographyExtras{}{}")?;
+  def_macro_noop("\\UndefineBibliographyExtras{}{}")?;
+  def_macro_noop("\\DefineBibliographyStrings{}{}")?;
 
   // Perl L436-438
-  DefMacro!("\\DeclareNameFormat OptionalMatch:* []{}{}",  "");
-  DefMacro!("\\DeclareListFormat OptionalMatch:* []{}{}",  "");
-  DefMacro!("\\DeclareFieldFormat OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\DeclareNameFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareListFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareFieldFormat OptionalMatch:* []{}{}")?;
 
   // Perl L440-458
-  DefMacro!("\\DeclareNameInputHandler{}{}", "");
-  DefMacro!("\\DeclareListInputHandler{}{}", "");
-  DefMacro!("\\DeclareFieldInputHandler{}{}", "");
-  DefMacro!("\\DeclareSortingScheme[]{}", "");
-  DefMacro!("\\DeclareSortingTemplate[]{}", "");
-  DefMacro!("\\DeclareSortingNamekeyScheme[]{}", "");
-  DefMacro!("\\namepart[]{}", "");
-  DefMacro!("\\DeclareLabelalphaNameTemplate[]{}", "");
-  DefMacro!("\\DeclareNameAlias{}{}", "");
-  DefMacro!("\\DeclareIndexNameAlias{}{}", "");
-  DefMacro!("\\DeclareListAlias{}{}", "");
-  DefMacro!("\\DeclareIndexListAlias{}{}", "");
-  DefMacro!("\\DeclareFieldAlias{}{}", "");
-  DefMacro!("\\DeclareIndexFieldAlias{}{}", "");
-  DefMacro!("\\DeclareNameWrapperAlias{}{}", "");
-  DefMacro!("\\DeclareListWrapperAlias{}{}", "");
-  DefMacro!("\\DeclareDelimcontextAlias{}{}", "");
-  DefMacro!("\\UndeclareDelimcontextAlias{}", "");
-  DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}", "");
+  def_macro_noop("\\DeclareNameInputHandler{}{}")?;
+  def_macro_noop("\\DeclareListInputHandler{}{}")?;
+  def_macro_noop("\\DeclareFieldInputHandler{}{}")?;
+  def_macro_noop("\\DeclareSortingScheme[]{}")?;
+  def_macro_noop("\\DeclareSortingTemplate[]{}")?;
+  def_macro_noop("\\DeclareSortingNamekeyScheme[]{}")?;
+  def_macro_noop("\\namepart[]{}")?;
+  def_macro_noop("\\DeclareLabelalphaNameTemplate[]{}")?;
+  def_macro_noop("\\DeclareNameAlias{}{}")?;
+  def_macro_noop("\\DeclareIndexNameAlias{}{}")?;
+  def_macro_noop("\\DeclareListAlias{}{}")?;
+  def_macro_noop("\\DeclareIndexListAlias{}{}")?;
+  def_macro_noop("\\DeclareFieldAlias{}{}")?;
+  def_macro_noop("\\DeclareIndexFieldAlias{}{}")?;
+  def_macro_noop("\\DeclareNameWrapperAlias{}{}")?;
+  def_macro_noop("\\DeclareListWrapperAlias{}{}")?;
+  def_macro_noop("\\DeclareDelimcontextAlias{}{}")?;
+  def_macro_noop("\\UndeclareDelimcontextAlias{}")?;
+  def_macro_noop("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}")?;
 
   // Perl L460-481
-  DefMacro!("\\DeclareBibliographyExtras{}", "");
-  DefMacro!("\\DeclareBibliographyStrings{}", "");
-  DefMacro!("\\DeclareBibliographyDriver{}{}", "");
-  DefMacro!("\\DeclareHyphenationExceptions{}", "");
-  DefMacro!("\\InheritBibliographyExtras{}", "");
-  DefMacro!("\\InheritBibliographyStrings{}", "");
-  DefMacro!("\\UndeclareBibliographyExtras{}", "");
+  def_macro_noop("\\DeclareBibliographyExtras{}")?;
+  def_macro_noop("\\DeclareBibliographyStrings{}")?;
+  def_macro_noop("\\DeclareBibliographyDriver{}{}")?;
+  def_macro_noop("\\DeclareHyphenationExceptions{}")?;
+  def_macro_noop("\\InheritBibliographyExtras{}")?;
+  def_macro_noop("\\InheritBibliographyStrings{}")?;
+  def_macro_noop("\\UndeclareBibliographyExtras{}")?;
   DefMacro!("\\NewCount", "\\newcount");
-  DefMacro!("\\ExecuteBibliographyOptions[]{}", "");
-  DefMacro!("\\AtBeginBibliography{}", "");
-  DefMacro!("\\AtEveryEntrykey{}{}{}", "");
-  DefMacro!("\\UseBibitemHook", "");
-  DefMacro!("\\UseUsedriverHook", "");
-  DefMacro!("\\UseEveryCiteHook", "");
-  DefMacro!("\\UseEveryCitekeyHook", "");
-  DefMacro!("\\UseEveryMultiCiteHook", "");
-  DefMacro!("\\UseNextCiteHook", "");
-  DefMacro!("\\UseNextCitekeyHook", "");
-  DefMacro!("\\UseNextMultiCiteHook", "");
-  DefMacro!("\\UseVolciteHook", "");
-  DefMacro!("\\DeferNextCitekeyHook", "");
+  def_macro_noop("\\ExecuteBibliographyOptions[]{}")?;
+  def_macro_noop("\\AtBeginBibliography{}")?;
+  def_macro_noop("\\AtEveryEntrykey{}{}{}")?;
+  def_macro_noop("\\UseBibitemHook")?;
+  def_macro_noop("\\UseUsedriverHook")?;
+  def_macro_noop("\\UseEveryCiteHook")?;
+  def_macro_noop("\\UseEveryCitekeyHook")?;
+  def_macro_noop("\\UseEveryMultiCiteHook")?;
+  def_macro_noop("\\UseNextCiteHook")?;
+  def_macro_noop("\\UseNextCitekeyHook")?;
+  def_macro_noop("\\UseNextMultiCiteHook")?;
+  def_macro_noop("\\UseVolciteHook")?;
+  def_macro_noop("\\DeferNextCitekeyHook")?;
 
   // Perl L483-491: bibmacro/heading/environment helpers
-  DefMacro!("\\providebibmacro OptionalMatch:* {}[][]{}", "");
-  DefMacro!("\\renewbibmacro OptionalMatch:* {}[][]{}", "");
-  DefMacro!("\\newbibmacro OptionalMatch:* {}[][]{}", "");
-  DefMacro!("\\restorebibmacro OptionalMatch:* {}", "");
-  DefMacro!("\\savebibmacro OptionalMatch:* {}", "");
-  DefMacro!("\\defbibheading OptionalMatch:* {}[]{}", "");
-  DefMacro!("\\defbibenvironment OptionalMatch:* {}{}{}{}", "");
-  DefMacro!("\\restorecommand OptionalMatch:* {}", "");
-  DefMacro!("\\savecommand OptionalMatch:* {}", "");
+  def_macro_noop("\\providebibmacro OptionalMatch:* {}[][]{}")?;
+  def_macro_noop("\\renewbibmacro OptionalMatch:* {}[][]{}")?;
+  def_macro_noop("\\newbibmacro OptionalMatch:* {}[][]{}")?;
+  def_macro_noop("\\restorebibmacro OptionalMatch:* {}")?;
+  def_macro_noop("\\savebibmacro OptionalMatch:* {}")?;
+  def_macro_noop("\\defbibheading OptionalMatch:* {}[]{}")?;
+  def_macro_noop("\\defbibenvironment OptionalMatch:* {}{}{}{}")?;
+  def_macro_noop("\\restorecommand OptionalMatch:* {}")?;
+  def_macro_noop("\\savecommand OptionalMatch:* {}")?;
 
   // Perl L493-500
   DefRegister!("\\labelnumberwidth" => Glue!("0pt"));
@@ -851,10 +907,14 @@ LoadDefinitions!({
   DefConditional!("\\ifuseprefix");
   DefConditional!("\\ifusetranslator");
 
-  // Perl L608-610
-  DefMacro!("\\key{}", "");
+  // Perl L608-610 gobbles \key / \keyword silently. Round-34
+  // surpass-Perl: preserve as classification tags so author keywords
+  // reach the JATS output. \key{citekey} is bib-formatting internal —
+  // leave that gobbled.
+  def_macro_noop("\\key{}")?;
   // \keyw is already defined L348 (DefMacro empty, see above).
-  DefMacro!("\\keyword{}", "");
+  DefMacro!("\\keyword{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
 
   // Perl L632-635
   DefMacro!("\\ppspace", "\\addnbspace");
@@ -863,7 +923,7 @@ LoadDefinitions!({
   DefMacro!("\\sortalphaothers", "\\labelalphaothers");
 
   // Perl L638
-  DefMacro!("\\sort[]{}", "");
+  def_macro_noop("\\sort[]{}")?;
 
   // Perl L641-645: bool stubs + AtBeginDocument-guarded \true/\false bind.
   // documents such as 1811.01740 conflict with unconditional binding.
@@ -874,54 +934,54 @@ LoadDefinitions!({
   ))?;
 
   // Perl L646-671: \the* counter-readouts (all empty)
-  DefMacro!("\\type{}", "");
-  DefMacro!("\\subtype{}", "");
-  DefMacro!("\\theparenlevel", "");
-  DefMacro!("\\therefsection", "");
-  DefMacro!("\\therefsegment", "");
-  DefMacro!("\\theuniquelist", "");
-  DefMacro!("\\theuniquename", "");
-  DefMacro!("\\themulticitecount", "");
-  DefMacro!("\\themulticitetotal", "");
-  DefMacro!("\\thelownamepenalty", "");
-  DefMacro!("\\themaxextraalpha", "");
-  DefMacro!("\\themaxextrayear", "");
-  DefMacro!("\\themaxitems", "");
-  DefMacro!("\\themaxnames", "");
-  DefMacro!("\\themaxparens", "");
-  DefMacro!("\\theminitems", "");
-  DefMacro!("\\theminnames", "");
-  DefMacro!("\\theabbrvpenalty", "");
-  DefMacro!("\\thecitecount", "");
-  DefMacro!("\\thecitetotal", "");
-  DefMacro!("\\thehighnamepenalty", "");
-  DefMacro!("\\theinstcount", "");
-  DefMacro!("\\thelistcount", "");
-  DefMacro!("\\theliststart", "");
-  DefMacro!("\\theliststop", "");
-  DefMacro!("\\thelisttotal", "");
+  def_macro_noop("\\type{}")?;
+  def_macro_noop("\\subtype{}")?;
+  def_macro_noop("\\theparenlevel")?;
+  def_macro_noop("\\therefsection")?;
+  def_macro_noop("\\therefsegment")?;
+  def_macro_noop("\\theuniquelist")?;
+  def_macro_noop("\\theuniquename")?;
+  def_macro_noop("\\themulticitecount")?;
+  def_macro_noop("\\themulticitetotal")?;
+  def_macro_noop("\\thelownamepenalty")?;
+  def_macro_noop("\\themaxextraalpha")?;
+  def_macro_noop("\\themaxextrayear")?;
+  def_macro_noop("\\themaxitems")?;
+  def_macro_noop("\\themaxnames")?;
+  def_macro_noop("\\themaxparens")?;
+  def_macro_noop("\\theminitems")?;
+  def_macro_noop("\\theminnames")?;
+  def_macro_noop("\\theabbrvpenalty")?;
+  def_macro_noop("\\thecitecount")?;
+  def_macro_noop("\\thecitetotal")?;
+  def_macro_noop("\\thehighnamepenalty")?;
+  def_macro_noop("\\theinstcount")?;
+  def_macro_noop("\\thelistcount")?;
+  def_macro_noop("\\theliststart")?;
+  def_macro_noop("\\theliststop")?;
+  def_macro_noop("\\thelisttotal")?;
 
   // Perl L673-688: print*/index*/entry* (all empty)
-  DefMacro!("\\printtext[]{}", "");
-  DefMacro!("\\printfield[]{}", "");
-  DefMacro!("\\printlist[][]{}", "");
-  DefMacro!("\\printnames[][]{}", "");
-  DefMacro!("\\printtime", "");
-  DefMacro!("\\printdate", "");
-  DefMacro!("\\printdateextra", "");
-  DefMacro!("\\printlabeldate", "");
-  DefMacro!("\\printlabeldateextra", "");
-  DefMacro!("\\printfile[]{}", "");
-  DefMacro!("\\indexfield[]{}", "");
-  DefMacro!("\\indexlist[][]{}", "");
-  DefMacro!("\\indexnames[][]{}", "");
-  DefMacro!("\\entrydata OptionalMatch:* {}{}", "");
-  DefMacro!("\\entryset{}{}", "");
-  DefMacro!("\\setunit OptionalMatch:* {}", "");
+  def_macro_noop("\\printtext[]{}")?;
+  def_macro_noop("\\printfield[]{}")?;
+  def_macro_noop("\\printlist[][]{}")?;
+  def_macro_noop("\\printnames[][]{}")?;
+  def_macro_noop("\\printtime")?;
+  def_macro_noop("\\printdate")?;
+  def_macro_noop("\\printdateextra")?;
+  def_macro_noop("\\printlabeldate")?;
+  def_macro_noop("\\printlabeldateextra")?;
+  def_macro_noop("\\printfile[]{}")?;
+  def_macro_noop("\\indexfield[]{}")?;
+  def_macro_noop("\\indexlist[][]{}")?;
+  def_macro_noop("\\indexnames[][]{}")?;
+  def_macro_noop("\\entrydata OptionalMatch:* {}{}")?;
+  def_macro_noop("\\entryset{}{}")?;
+  def_macro_noop("\\setunit OptionalMatch:* {}")?;
 
   // Perl L690-705
-  DefMacro!("\\mkbibendnote{}", "");
-  DefMacro!("\\mkbibendnotetext{}", "");
+  def_macro_noop("\\mkbibendnote{}")?;
+  def_macro_noop("\\mkbibendnotetext{}")?;
   DefMacro!("\\mkbibfootnote", "\\footnote");
   DefMacro!("\\mkbibfootnotetext", "\\footnotetext");
   DefMacro!("\\mkbibbrackets{}", "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup");
@@ -937,9 +997,12 @@ LoadDefinitions!({
   DefMacro!("\\blx@postpunct", "\\relax");
   DefMacro!("\\midsentence", "\\relax");
 
-  // Perl L707-708
-  DefMacro!("\\pagenote{}", "");
-  DefMacro!("\\pagenotetext{}", "");
+  // Perl L707-708 gobble; surpass by preserving as endnote-style.
+  // \pagenote{text} is author-typed marginal note.
+  DefMacro!("\\pagenote{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}");
+  DefMacro!("\\pagenotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}");
 
   // Perl L710-721
   DefMacro!("\\blx@uniquename", "false");
@@ -1042,4 +1105,19 @@ LoadDefinitions!({
 \newtoggle{blx@uniquetitle}
 \newtoggle{blx@uniquework}
 "#);
+
+  // biblatex internals commonly invoked by user preamble. Witnesses
+  // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
+  def_macro_noop("\\newrefsection[]")?;
+  def_macro_noop("\\newrefcontext[]")?;
+  def_macro_noop("\\endrefcontext")?;
+  def_macro_noop("\\refsection[]{}")?;
+  def_macro_noop("\\endrefsection")?;
+  def_macro_noop("\\refcontext[]{}")?;
+
+  // biblatex L3408+ bibliography range separators. Define defensively.
+  def_macro_noop("\\bibrangessep")?;
+  DefMacro!("\\bibrangedash", "-");
+  DefMacro!("\\bibdaterangesep", "/");
+  DefMacro!("\\bibtimerangesep", "-");
 });

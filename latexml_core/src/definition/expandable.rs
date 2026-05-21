@@ -9,6 +9,24 @@ use crate::state::*;
 
 use crate::Digested;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
+
+/// Returns true when `\protect` currently has no meaning, or is
+/// `\let`-equivalent to `\relax`. Used by the recursion guard in
+/// `Expandable::invoke` to distinguish `\def\foo{\protect\foo}`
+/// definitions under safe (`\@unexpandable@protect`/`\string`/…)
+/// vs. unsafe (`\relax`/undefined) `\protect` regimes. Only the
+/// unsafe regime actually runaways at full expansion.
+pub(crate) fn protect_is_relax_or_undefined() -> bool {
+  let protect = T_CS!("\\protect");
+  match lookup_meaning(&protect) {
+    None => true,
+    // Meaning equal to \relax's meaning ⇒ unsafe.
+    Some(stored) => match lookup_meaning(&T_CS!("\\relax")) {
+      None => false,
+      Some(relax) => stored == relax,
+    },
+  }
+}
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::token::*;
@@ -172,7 +190,22 @@ impl Definition for Expandable {
               if t0 == &self.cs {
                 true
               } else if let Some(t1) = t1_opt {
-                t1 == &self.cs && t0 == &T_CS!("\\protect")
+                // `\protect\foo` is only an actual runaway when
+                // `\protect` currently expands to `\relax` (or is
+                // undefined). Under `\protected@edef` it is `\let`
+                // to `\@unexpandable@protect`, which turns the body
+                // into `\noexpand\protect\noexpand\foo` — both tokens
+                // become un-expandable and the loop terminates after
+                // one expansion. msg.sty (loaded transitively from
+                // french.sty, czech.sty, … under INCLUDE_STYLES=true)
+                // uses exactly this idiom for `\msgheader`, so the
+                // earlier blanket `\protect\foo`-is-runaway check
+                // fired ~3 errors per language-style paper. Witness:
+                // math9903002, gr-qc9511021, alg-geom9611022,
+                // math9807030/.../math9810088 (8 papers).
+                t1 == &self.cs
+                  && t0 == &T_CS!("\\protect")
+                  && crate::definition::expandable::protect_is_relax_or_undefined()
               } else {
                 false
               }

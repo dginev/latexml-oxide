@@ -4,6 +4,7 @@ use latexml_core::document::{can_contain_qsym, get_node_qname, Document};
 use latexml_core::common::error::Result as CoreResult;
 use libxml::tree::NodeType;
 
+
 LoadDefinitions!({
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
   RequirePackage!("iftex");
@@ -25,6 +26,22 @@ LoadDefinitions!({
   RequirePackage!("nameref");
   RequirePackage!("url");
   RequirePackage!("bitset");
+  // Eager `color` load. Many papers do
+  //   \usepackage{hyperref}
+  //   \definecolor{darkblue}{rgb}{0,0,0.5}
+  //   \hypersetup{colorlinks=true, linkcolor=darkblue, ...}
+  // i.e. they reference \definecolor BEFORE \hypersetup triggers our
+  // colorlinks-driven RequirePackage('color'). pdflatex tolerates this
+  // because the user is expected to load color/xcolor themselves —
+  // but the same author script also passes through Perl LaTeXML
+  // without erroring (the hyperref binding's package-options handler
+  // calls RequirePackage('color') unconditionally on `colorlinks`,
+  // and many papers pass colorlinks via the load-options not the
+  // \hypersetup body, so color is in scope before \definecolor).
+  // Loading color eagerly here matches that expected end-state and
+  // closes the 15+ paper "\definecolor undefined" cluster from
+  // stage 10 (witnesses 2503.15484, .21332, .21480, .22115, .22884).
+  RequirePackage!("color");
   //RequirePackage("atbegshi");    // not ported
 
   // Can we load hyperref, to get all it's random sundry definitions?
@@ -47,6 +64,11 @@ LoadDefinitions!({
     "debug",
     "verbose",
     "implicit",
+    // \\hypersetup{hidelinks} disables visible borders + colors. We
+    // don't render PDF borders anyway so it's effectively a no-op,
+    // but accept the key so papers passing it don't trip the
+    // unknown-Hyp-key warning. Witness 2502.17260.
+    "hidelinks",
     "hypertexnames",
     "naturalnames",
     "a4paper",
@@ -168,7 +190,16 @@ LoadDefinitions!({
     // this registration, every hyperref-using paper emits 3-10 Warn lines
     // per `\hypersetup`. Driver: 2304.12803 (4 Hyp warnings, all the
     // common color-link options).
-    DefKeyVal!("Hyp", option, "");
+    //
+    // `Semiverbatim` value type: identifier-shape values like
+    // `linkcolor=tab_blue` (with `_`) or pdf-string values with `^`
+    // are read with `_`/`^`/`~`/`&`/`$`/`#`/`'` neutralized to OTHER
+    // catcode so the value doesn't bleed SUB-tokens into the digester
+    // and trip `script_handler`'s text-mode error path. Surpass-Perl:
+    // Perl only declares `baseurl` Semiverbatim and errors on every
+    // other `_`-containing value. Witness: 2602.11111 `linkcolor=
+    // tab_blue` (4 errors → 0).
+    DefKeyVal!("Hyp", option, "Semiverbatim");
   }
 
   // \hypersetup{keyvals} configures various parameters,
@@ -188,7 +219,8 @@ LoadDefinitions!({
     "pdfescapeform", "psdextra",
     "pdfa", "pdfua", "pdfsuffix",
   ] {
-    DefKeyVal!("Hyp", key, "");
+    // Same surpass-Perl rationale as the main option loop above.
+    DefKeyVal!("Hyp", key, "Semiverbatim");
   }
 
   // Digest & store the options
@@ -200,7 +232,8 @@ LoadDefinitions!({
       if key == "colorlinks" && value_str == "true" {
         RequirePackage!("color");
       }
-      // Perl digests the value tokens to apply font conversions (e.g. ' → ')
+      // Perl digests the value tokens to apply font conversions
+      // (e.g. ' → curly quote in pdfauthor).
       let digested = stomach::digest(value.revert()?)?;
       let digested_str = digested.to_string();
       state::assign_mapping("Hyperref_options", key, Some(digested_str));
@@ -273,6 +306,12 @@ LoadDefinitions!({
     "\\href HyperVerbatim {}",
     "\\lx@hyper@url@\\href{}{}{#1}{#2}"
   );
+
+  // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in
+  // a XeTeX hyperlink target box. We don't model XeTeX-specific link
+  // boxes — pass content through. Used by orcidlink.sty, newpax.sty.
+  // Witness 2408.00362 (orcidlink-using paper).
+  DefMacro!("\\XeTeXLinkBox{}", "#1");
 
   // Redefine \url{url} from url.sty...
   // It's slightly different in that it expands the argument
@@ -659,11 +698,19 @@ LoadDefinitions!({
   // \pdfstringdef{macroname}{texstring}
   DefMacro!("\\pdfstringdef{Token}{}", "\\def#1{#2}");
   // Hopefully noop is sufficient for PDF-specific uses?
-  DefMacro!("\\pdfstringdefDisableCommands", "");
-  DefMacro!("\\pdfbookmark[]{}{}", "");
-  DefMacro!("\\currentpdfbookmark{}{}", "");
-  DefMacro!("\\subpdfbookmark{}{}", "");
-  DefMacro!("\\belowpdfbookmark{}{}", "");
+  def_macro_noop("\\pdfstringdefDisableCommands")?;
+  def_macro_noop("\\pdfbookmark[]{}{}")?;
+  def_macro_noop("\\currentpdfbookmark{}{}")?;
+  def_macro_noop("\\subpdfbookmark{}{}")?;
+  def_macro_noop("\\belowpdfbookmark{}{}")?;
+  // \Hy@raisedlink — hyperref-internal PDF-anchor positioning helper.
+  // TL hyperref ships this as `\let \Hy@raisedlink \@empty` in every
+  // non-PDF driver (htex4ht.def, hvtexmrk.def, hdvips.def, …), so it's
+  // a no-op anywhere our XML/HTML pipeline cares about. Both our and
+  // Perl's hyperref bindings were missing it. Witness:
+  // arXiv:2308.06254v1 (`\Hy@raisedlink{...}` from an inputted
+  // package's anchor-positioning machinery).
+  def_macro_noop("\\Hy@raisedlink{}")?;
 
   //======================================================================
   // 4.1 Replacement macros
@@ -976,6 +1023,17 @@ LoadDefinitions!({
 \HyLang@english
 "#
   );
+
+  // hyperref.sty L6132: \NoHyper/\endNoHyper temporarily disables
+  // hyperlinking. In our XML output it's a no-op group.
+  // Witness 2406.02150.
+  DefMacro!(T_CS!("\\begin{NoHyper}"), None, "");
+  DefMacro!(T_CS!("\\end{NoHyper}"), None, "");
+
+  // hyperref \let\ltx@label\label when loaded. Make available as
+  // alias for downstream packages (smartref, nccmath) that check.
+  // Witness 2406.01269.
+  Let!("\\ltx@label", "\\label");
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });
 

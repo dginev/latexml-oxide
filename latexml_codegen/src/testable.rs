@@ -1,24 +1,14 @@
 use glob::glob;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{DeriveInput, Lit, Meta};
+use syn::DeriveInput;
 
 /// The only purpose of doing the glob for "*.tex" tests at compile-time is to
 /// make sure each TeX entry gets a dedicated #[test] header, and respectively
 /// increments the counter for the number of tests which have been run.
 /// In addition, this allows running more tests in parallel.
 pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
-  let directory: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => {
-        panic!("only accepts #[directory = \"value\"] attribute, mandatory double-quotes (Lit)")
-      },
-    },
-    _ => panic!(
-      "only accepts #[directory = \"value\"] attribute, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let directory = crate::attr_name_value_str(&input.attrs[0], "directory");
   // TODO: How do we best manage the relative directories changing from compile-time to test-time?
   let test_functions: Vec<_> = glob(&format!("latexml_oxide/{directory}/*.tex"))
     .unwrap()

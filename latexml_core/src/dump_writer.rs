@@ -14,6 +14,8 @@
 use std::io::Write;
 use std::path::Path;
 
+use rustc_hash::FxHashMap as HashMap;
+
 use crate::common::arena;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
@@ -122,6 +124,17 @@ pub fn write_dump(
   let mut late_aliases: Vec<(String, String, String)> = Vec::new();
   let mut skipped = 0usize;
 
+  // expl3 implements intarrays by stashing values in `\fontdimen<idx>\<font>`
+  // slots, picking `cmr10` at various tiny `at <N>sp` instantiations to
+  // get one font instance per intarray. Each slot is normally written as
+  // an individual `V\tfontdimen_fontinfo_<font> at <Nsp>_<idx>\tD\t<val>`
+  // record; that produces ~89k V-records (≈40% of the dump) for an
+  // initialized expl3 + LaTeX kernel. We group them by (font,size) and
+  // emit a single `IA` record per intarray with the values RLE-encoded
+  // — same in-memory state after replay, ~10× smaller on disk.
+  // See `docs/PERL_LOADFORMAT_AUDIT.md` ("Fontdimen/intarray storage").
+  let mut fontdimen_groups: HashMap<String, Vec<(u32, i64)>> = HashMap::default();
+
   for (table, key, value) in entries {
     let table_code = table_to_code(*table);
     let key_str = arena::with(*key, |s| s.to_string());
@@ -188,7 +201,7 @@ pub fn write_dump(
       // valid hook contributions on engines with sound aliasing).
       if let Stored::Tokens(ref tks) = value {
         let body = tks.unlist_ref();
-        let needle_cs = key_str.to_string();
+        let needle_cs = key_str.clone();
         let has_self_the = body.iter().any(|t| t.with_str(|s| s == "\\the"))
           && body.iter().any(|t| t.with_str(|s| s == needle_cs));
         if has_self_the {
@@ -229,6 +242,19 @@ pub fn write_dump(
       continue;
     }
 
+    // Intarray slot consolidation — see fontdimen_groups comment above.
+    if matches!(*table, TableName::Value) {
+      if let Some((prefix, idx)) = parse_fontdimen_key(&key_str) {
+        if let Stored::Dimension(d) = value {
+          fontdimen_groups
+            .entry(prefix.to_string())
+            .or_default()
+            .push((idx, d.0));
+          continue;
+        }
+      }
+    }
+
     let Some(serialized) = serialize_stored(value) else {
       skipped += 1;
       continue;
@@ -259,6 +285,43 @@ pub fn write_dump(
     } else {
       regular.push(row);
     }
+  }
+
+  // Emit one IA record per intarray group. Fall back to individual V
+  // records for any non-dense group (defensive: dump_reader only knows
+  // how to expand contiguous 1..N runs).
+  let mut ia_count = 0usize;
+  let mut ia_fallback_v = 0usize;
+  for (prefix, mut slots) in fontdimen_groups.into_iter() {
+    slots.sort_by_key(|s| s.0);
+    let dense = slots
+      .iter()
+      .enumerate()
+      .all(|(i, (idx, _))| *idx == (i as u32 + 1));
+    if !dense {
+      eprintln!(
+        "[dump_writer] non-dense intarray {:?} ({} slots) — emitting as individual V records",
+        prefix,
+        slots.len()
+      );
+      for (idx, val) in &slots {
+        let key = format!("{}_{}", prefix, idx);
+        regular.push(("V".to_string(), url_encode(&key), format!("D\t{}", val)));
+        ia_fallback_v += 1;
+      }
+      continue;
+    }
+    let values: Vec<i64> = slots.into_iter().map(|(_, v)| v).collect();
+    let rle = rle_encode_i64(&values);
+    let body = format!("{}\t{}", values.len(), rle);
+    regular.push(("IA".to_string(), url_encode(&prefix), body));
+    ia_count += 1;
+  }
+  if ia_count > 0 || ia_fallback_v > 0 {
+    eprintln!(
+      "[dump_writer] intarray consolidation: {} IA records, {} V fallbacks",
+      ia_count, ia_fallback_v
+    );
   }
 
   writeln!(
@@ -734,6 +797,48 @@ fn url_encode(s: &str) -> String {
   result
 }
 
+/// Recognize expl3's intarray-as-fontdimen storage keys, e.g.
+/// `fontdimen_fontinfo_cmr10 at 15sp_12737` → ("fontdimen_fontinfo_cmr10 at 15sp", 12737).
+/// Returns None for other Value keys (so the regular V-record path applies).
+fn parse_fontdimen_key(key: &str) -> Option<(&str, u32)> {
+  // Cheap gate first to keep the hot path fast on non-fontdimen keys.
+  if !key.starts_with("fontdimen_fontinfo_") {
+    return None;
+  }
+  // The last `_<digits>` tail is the slot index; everything before is the
+  // per-intarray prefix. Be defensive: an all-letter tail (e.g. a future
+  // non-indexed `fontdimen_fontinfo_*` key) should not match.
+  let last_us = key.rfind('_')?;
+  let (prefix, tail) = (&key[..last_us], &key[last_us + 1..]);
+  let index: u32 = tail.parse().ok()?;
+  Some((prefix, index))
+}
+
+/// Run-length encode a slice of i64 values as a comma-separated list:
+/// each run is either `<v>` (single) or `<v>x<n>` (count ≥ 2). Decoder
+/// in `dump_reader::rle_decode_i64` is the inverse.
+fn rle_encode_i64(values: &[i64]) -> String {
+  let mut out = String::new();
+  let mut i = 0;
+  while i < values.len() {
+    let v = values[i];
+    let mut count = 1usize;
+    while i + count < values.len() && values[i + count] == v {
+      count += 1;
+    }
+    if !out.is_empty() {
+      out.push(',');
+    }
+    if count == 1 {
+      out.push_str(&v.to_string());
+    } else {
+      out.push_str(&format!("{}x{}", v, count));
+    }
+    i += count;
+  }
+  out
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -843,5 +948,92 @@ mod tests {
     let s = serialize_parameters_v3(&ps);
     // Expected extras field: "11:a<GS>11:b"
     assert_eq!(s, "Match\x1fMatch:ab\x1f\x1f11:a\x1d11:b");
+  }
+
+  // --- RLE encoder tests (intarray consolidation) ---
+
+  #[test]
+  fn rle_empty_slice() {
+    assert_eq!(rle_encode_i64(&[]), "");
+  }
+
+  #[test]
+  fn rle_single_value() {
+    assert_eq!(rle_encode_i64(&[5]), "5");
+  }
+
+  #[test]
+  fn rle_two_distinct() {
+    assert_eq!(rle_encode_i64(&[1, 2]), "1,2");
+  }
+
+  #[test]
+  fn rle_run_of_two() {
+    assert_eq!(rle_encode_i64(&[5, 5]), "5x2");
+  }
+
+  #[test]
+  fn rle_long_run() {
+    assert_eq!(rle_encode_i64(&[218; 10000]), "218x10000");
+  }
+
+  #[test]
+  fn rle_mixed_runs() {
+    assert_eq!(rle_encode_i64(&[1, 2, 2, 3, 3, 3, 1]), "1,2x2,3x3,1");
+  }
+
+  #[test]
+  fn rle_negative() {
+    assert_eq!(rle_encode_i64(&[-5]), "-5");
+    assert_eq!(rle_encode_i64(&[-5, -5, -5]), "-5x3");
+  }
+
+  #[test]
+  fn rle_extreme_values() {
+    assert_eq!(rle_encode_i64(&[i64::MIN]), i64::MIN.to_string());
+    assert_eq!(rle_encode_i64(&[i64::MAX]), i64::MAX.to_string());
+    assert_eq!(rle_encode_i64(&[0; 3]), "0x3");
+  }
+
+  // --- parse_fontdimen_key tests ---
+
+  #[test]
+  fn fontdimen_key_standard() {
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_12737"),
+      Some(("fontdimen_fontinfo_cmr10 at 15sp", 12737))
+    );
+  }
+
+  #[test]
+  fn fontdimen_key_index_one() {
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 5sp_1"),
+      Some(("fontdimen_fontinfo_cmr10 at 5sp", 1))
+    );
+  }
+
+  #[test]
+  fn fontdimen_key_non_fontdimen() {
+    assert_eq!(parse_fontdimen_key("count@"), None);
+    assert_eq!(parse_fontdimen_key("\\@oddpage"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_wrong_prefix() {
+    // Missing the `_fontinfo_` segment — must not match.
+    assert_eq!(parse_fontdimen_key("fontdimen_cmr10_15"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_non_numeric_tail() {
+    // No trailing digits after last `_` ⇒ no index ⇒ no match.
+    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_abc"), None);
+  }
+
+  #[test]
+  fn fontdimen_key_empty_tail() {
+    // Trailing underscore with no digits ⇒ no match.
+    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_"), None);
   }
 }

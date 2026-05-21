@@ -30,10 +30,29 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L23-31
   DefMacro!("\\lx@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
-    if IsDefined!(&cs) {
+    // Autoload triggers (declared via `def_autoload` at tex.rs:238-247)
+    // install a closure under the trigger CS so the package auto-loads on
+    // first invocation. Perl scopes the equivalent `DefAutoload` entries
+    // to `OmniBus.cls.ltxml`, so for non-OmniBus papers Perl sees these
+    // CSes as truly undefined. Mirror Perl by treating an unfired
+    // autoload trigger as "undefined" in `\@ifundefined`. We must NOT
+    // overwrite the trigger CS with `\relax` in this case (the kernel
+    // `\csname X\endcsname \ifx \relax` idiom DOES overwrite, but doing
+    // so here would destroy the autoload — subsequent use of the trigger
+    // CS would no-op instead of loading its package). Driver:
+    // arXiv:2507.23241v1 (smfart.cls) — line 373's
+    // `\@ifundefined{numberwithin}` branches wrong when our preloaded
+    // `\numberwithin` autoload makes the CS "look" defined, then the
+    // `\@gobbletwo` branch eats `\ifx \relax` and orphans `\else` / `\fi`.
+    let is_autoload = cs.with_cs_name(|cs_name| {
+      state::lookup_bool(&s!("{cs_name}:autoload"))
+    });
+    if IsDefined!(&cs) && !is_autoload {
       Ok(else_token)
     } else {
-      state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+      if !is_autoload {
+        state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+      }
       Ok(if_token)
     }
   }, locked=>true);
@@ -814,7 +833,7 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     _ => VecDeque::new(),
   };
   if let Some(Stored::VecDequeStored(ref vdq)) = text_bindings {
-    bindings.extend(vdq.iter().collect::<Vec<_>>());
+    bindings.extend(vdq.iter());
   }
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
@@ -1116,24 +1135,52 @@ pub fn predigest_box_contents_in_mode(
   }
 }
 
-/// Check if a List contains only simple horizontal content (TBoxes/Comments),
-/// not structured content like Whatsits or sub-Lists. This guards against
-/// repack being triggered for cases like `\vtop{\begin{tabular}...}` where
-/// the tabular processing leaks MODE='horizontal' but the content should
-/// NOT be paragraph-wrapped.
+/// Check if a List contains only simple horizontal content (TBoxes,
+/// Comments, or sub-Lists whose mode is horizontal/restricted_horizontal/
+/// math). This guards against repack being triggered for cases like
+/// `\vtop{\begin{tabular}...}` where the tabular processing leaks
+/// MODE='horizontal' but the content (an Alignment/Whatsit) should NOT
+/// be paragraph-wrapped.
+///
+/// Inline brace-groups `{...}` inside running text produce sub-Lists
+/// (one per group) whose mode is `restricted_horizontal`. Without
+/// accepting those, e.g. `\vbox{\small\bfseries hello {,} world}` would
+/// fail the repack gate and be measured as 3 separate vertical lines.
+/// Witness: aistats2026.sty's `\def\And{\unskip{,}\enspace}` in the
+/// `\@runningauthor` body — every author separator emits a `{,}` group
+/// that fragments the vbox into many short rows, making `\ht\autrun`
+/// far exceed 10pt and triggering the class's `\PackageError{Document}
+/// {Running heading author exceeds size limitations}` (driver paper:
+/// arXiv:2602.11863).
 fn has_only_simple_horizontal_content(item: &Digested) -> bool {
   if let DigestedData::List(l) = item.data() {
     let list = l.borrow();
-    // Filter out empty items
     let non_empty: Vec<_> = list
       .boxes
       .iter()
       .filter(|b| !b.get_property_bool("isEmpty"))
       .collect();
-    // If all non-empty items are TBoxes or Comments, it's simple horizontal content
-    non_empty
-      .iter()
-      .all(|b| matches!(b.data(), DigestedData::TBox(_) | DigestedData::Comment(_)))
+    non_empty.iter().all(|b| match b.data() {
+      DigestedData::TBox(_) | DigestedData::Comment(_) => true,
+      DigestedData::List(sub) => {
+        // Inline brace-groups `{...}` in horizontal context digest to
+        // a sub-List with no `mode` property (implicit hbox). Accept
+        // those plus sub-Lists explicitly tagged as horizontal-flavour.
+        // Reject `mode=vertical|internal_vertical` (structural
+        // sub-vboxes) and any other tagged mode.
+        let sub_mode = sub
+          .borrow()
+          .properties
+          .get("mode")
+          .map(|v| v.to_string())
+          .unwrap_or_default();
+        matches!(
+          sub_mode.as_str(),
+          "" | "horizontal" | "restricted_horizontal" | "math"
+        )
+      },
+      _ => false,
+    })
   } else {
     false
   }
@@ -1161,10 +1208,14 @@ fn repack_horizontal_in_list(item: &mut Digested) {
         .get_property("mode")
         .map(|v| v.to_string())
         .unwrap_or_else(|| "horizontal".to_string());
-      if child_mode == "horizontal" || child_mode == "restricted_horizontal" || child_mode == "math"
+      // Empty-string mode means "implicit hbox" — produced by inline
+      // brace-groups `{...}` in horizontal context. Treat as horizontal
+      // so the surrounding running text doesn't get fragmented.
+      let effective_mode = if child_mode.is_empty() { "horizontal" } else { child_mode.as_str() };
+      if effective_mode == "horizontal" || effective_mode == "restricted_horizontal" || effective_mode == "math"
       {
         // Perl: $keep = 1 if ($mode ne 'horizontal') || !$item->getProperty('isSpace');
-        if child_mode != "horizontal" || !child.get_property_bool("isSpace") {
+        if effective_mode != "horizontal" || !child.get_property_bool("isSpace") {
           keep = true;
         }
         para.push(child);
@@ -1512,7 +1563,7 @@ pub fn insert_block(
     .collect::<Vec<_>>();
   if let Some(final_tag) = allowed_candidates
     .first()
-    .map_or(filtered_candidates.first(), Some)
+    .map_or_else(|| filtered_candidates.first(), Some)
   {
     // Rename the capture to the correct container
     // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
@@ -2095,8 +2146,19 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   }
 
   egroup()?;
+  // Downgrade vendor-class typesetting-only errors to Info. Publisher
+  // classes routinely guard line widths, header heights, and other
+  // PDF-layout concerns with `\PackageError`/`\GenericError`. We
+  // produce XML/HTML, not PDF — these guards have no semantic value
+  // in our output. See WISDOM #50 and
+  // memory/feedback_size_layout_errors_moot.md.
+  let effective_kind = if kind == "error" && is_typesetting_only_message(&message) {
+    "info"
+  } else {
+    kind
+  };
   //   return ('latex', $cmd, $stomach, $message);
-  match kind {
+  match effective_kind {
     "error" => {
       Error!("latex", cmd, message);
     },
@@ -2109,6 +2171,98 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };
   Ok(())
+}
+
+/// Heuristic classifier for vendor `\PackageError`/`\GenericError`
+/// messages whose only concern is PDF typesetting (size, layout,
+/// position, page-fit). These have no signal in XML/HTML output and
+/// are downgraded to `Info:` per WISDOM #50.
+fn is_typesetting_only_message(message: &str) -> bool {
+  let lower = message.to_ascii_lowercase();
+  // Phrase set tuned against the stage-1 sweep of the 100k warning
+  // corpus. Conservative — every phrase here is purely about visual
+  // layout or vendor-deprecation chatter, never about semantic
+  // correctness. Examples:
+  //   "Running heading author exceeds size limitations" (AISTATS)
+  //   "Running heading title exceeds size limitations" (AISTATS)
+  //   "Caption too wide for page" (various)
+  //   "Heading breaks the line" (revtex, IEEEtran)
+  //   "You are loading directly a language style" (babel: czech.sty,
+  //     francais.sty, etc. unconditionally fire `\PackageError` to nag
+  //     the user toward `\usepackage[<lang>]{babel}`; pdflatex shows
+  //     the message but continues, and the document typesets normally
+  //     — the message is informational, not a real failure)
+  const PHRASES: &[&str] = &[
+    "exceeds size limitations",
+    "exceeds size limitation",
+    "running heading",
+    "running title",
+    "running author",
+    "breaks the line",
+    "too wide for",
+    "too tall for",
+    "too long for",
+    "too narrow for",
+    "doesn't fit",
+    "does not fit",
+    "page overflow",
+    "column overflow",
+    "exceeds the page",
+    "exceeds the column",
+    "exceeds the line",
+    "exceeds the textwidth",
+    "exceeds \\textwidth",
+    "exceeds \\columnwidth",
+    "exceeds \\linewidth",
+    "loading directly a language style",
+    "syntax is deprecated",
+    // babel TL2025: legacy `<lang>.ldf` files have been retired in
+    // favour of `locale/<iso>/babel-<lang>.tex` (the ini-file
+    // system). For papers that load `\usepackage[<lang>]{babel}`
+    // without `provide=*`, babel fires:
+    //   Package babel Error: Unknown option '<lang>'.
+    //   Either you misspelled it or the language definition file
+    //   <lang>.ldf was not found
+    // The .ldf-missing case is benign: pdflatex shows the message
+    // and proceeds — the document still typesets, just without
+    // the language's captions/shorthands loaded. Same effective
+    // outcome on our side: downgrade to Info, conversion continues.
+    // Surpass-Perl: Perl raw-loads babel.sty and errors identically
+    // on the same 58 papers in Round-27 Cluster D. This downgrade
+    // closes the cluster (cannot reach 0-error AND load the proper
+    // ini file without redesigning babel option processing).
+    "either you misspelled it",
+    // catoptions.sty (loaded transitively by many class/sty bundles)
+    // calls `\@latex@error{Command \protect\\special_relax already
+    // defined...}` because it `\def\special_relax{...}` and our engine
+    // pre-registers `\special_relax` as an internal Gullet helper.
+    // pdflatex shows the message and proceeds (cat's def takes over);
+    // surpass-Perl: Perl also raw-loads catoptions and errors. The
+    // resulting "Command ... already defined" cascade currently
+    // produces 100+ errors per paper on 14 wp5 papers. Downgrade so
+    // conversion continues. Same applies to "Command \end... illegal,
+    // see p.192 of the manual" tail that LaTeX appends to the same
+    // message ("\@latex@error" generic-error template).
+    "already defined. or name",
+    "command \\end... illegal",
+    // amsfonts-not-installed: aims-class L: `\@latex@error{Package
+    // `amsfonts' not installed, or version too old?}`. The class ships
+    // its own font tables and only loads amsfonts as an enhancement;
+    // pdflatex/Perl LaTeXML both proceed to typeset successfully when
+    // amsfonts is missing. Our raw-load reports the message verbatim
+    // but conversion is fine without the AMS msam/msbm fonts. Witness
+    // 2202.13120.
+    "amsfonts package will not be loaded",
+    "package `amsfonts'",
+    "package 'amsfonts'",
+    // hrefhide-format-too-old: hrefhide.sty requires LaTeX format
+    // 2022-11-01+; older formats trigger an error. The package is
+    // strictly visual (hides hyperref colors on print), so the error
+    // is moot for XML/HTML output. Witness 2202.03936.
+    "newer latex format needed",
+    "older hrefhide package",
+  ];
+  PHRASES.iter().any(|p| lower.contains(p))
 }
 
 /// Convert a vertical positioning, optional argument.

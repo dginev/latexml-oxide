@@ -2,9 +2,6 @@ use crate::prelude::*;
 use once_cell::sync::Lazy;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
-static PLAIN_DUMP_PATH: Lazy<Option<String>> =
-  Lazy::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
-static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
 static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
@@ -46,6 +43,24 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
+      // If the target package is *already* loaded, this closure is firing
+      // because a separate CS was \let to the autoload trigger BEFORE the
+      // package later loaded under a different name (e.g. `\let\varmathbb
+      // =\mathbb` while \mathbb is still the autoload trigger; then
+      // amssymb → amsfonts loads and \mathbb gets a real def, but
+      // \varmathbb still holds the closure). In that case, clearing
+      // cs_for_closure (\mathbb) would erase its real definition, and
+      // re-emitting \mathbb would land on an undefined CS — producing the
+      // spurious `Error:undefined:\mathbb` reported during `\varmathbb{D}`
+      // expansion. Witness 2310.13684. Skip the clear+load and just
+      // re-emit cs_for_closure, which by now has the real meaning the
+      // already-loaded package installed.
+      let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
+      let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
+      if latexml_core::state::lookup_bool(&pkg_loaded_key)
+        || latexml_core::state::lookup_bool(&pkg_raw_key) {
+        return Ok(Tokens::new(vec![cs_for_closure]));
+      }
       // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
       // 'global'). Removes the autoload trigger globally.
       state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
@@ -72,41 +87,67 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     })),
     None,
   )?;
+  // Mark this CS as an autoload trigger so `isDefinableLaTeX` treats
+  // `\newcommand{\cs}{…}` as a redefinition of an undefined CS (matching
+  // Perl, where the equivalent `DefAutoload` entries live in
+  // `OmniBus.cls.ltxml` and only fire when OmniBus is actually loaded —
+  // i.e. they don't block user `\newcommand` in normal LaTeX papers).
+  // Witness: nucl-th9902037 redefines `\Bbb` via `\newcommand` to a
+  // paper-local symbol; without this flag the autoload trigger silently
+  // wins, then expands `\Bbb $arg…$` as `\mathbb{$}` and cascades into
+  // 62 mode-switch errors. Perl on the same input: 0 errors.
+  state::assign_value(
+    &s!("{cs_name}:autoload"),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
+
+/// Variant of `def_autoload` that loads a `.pool` (engine-level
+/// definitions file) instead of a `.sty` package. Mirrors Perl's
+/// `DefAutoload($trigger, '<Pool>.pool.ltxml')` form used by TeX.pool
+/// to lazy-load AmSTeX.pool on amstex-style triggers.
+fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
+  use latexml_core::common::store::Stored;
+  use latexml_core::definition::ExpansionBody;
+  let cs_tok = T_CS!(cs_name);
+  if IsDefined!(&cs_tok) {
+    return Ok(());
+  }
+  let pool_name = pool.to_string();
+  let cs_for_closure = cs_tok;
+  def_macro(
+    cs_tok,
+    None,
+    ExpansionBody::Closure(Rc::new(move |_args| {
+      state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+      let pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
+      input_definitions(&pool_name, InputDefinitionOptions {
+        extension: Some(Cow::Borrowed("pool")),
+        ..InputDefinitionOptions::default()
+      })?;
+      latexml_core::state::hoist_top_frame_meaning_delta(&pre_keys);
+      Ok(Tokens::new(vec![cs_for_closure]))
+    })),
+    None,
+  )?;
+  state::assign_value(
+    &s!("{cs_name}:autoload"),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
   Ok(())
 }
 
 /// Perl `FindFile($format._dump, ...)` parity for the plain dump.
-/// Returns `true` if `plain.dump.txt` is reachable through any of the
-/// runtime resolution paths (env overrides, exe-relative install layout,
-/// dev-tree). Mirrors `plain_dump::resolve_dump_path` exactly so the
-/// branch decision in `LoadFormat('plain')` doesn't drift.
+/// Delegates to [`crate::plain_dump::plain_dump_available`], which
+/// consults env overrides, the exe-relative install layout, the
+/// dev-tree path, and the embedded fallback.
 fn plain_dump_available() -> bool {
-  if let Some(p) = PLAIN_DUMP_PATH.as_deref() {
-    if std::path::Path::new(p).is_file() {
-      return true;
-    }
-  }
-  if let Some(dir) = DUMP_DIR.as_deref() {
-    if std::path::Path::new(dir).join("plain.dump.txt").is_file() {
-      return true;
-    }
-  }
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(exe_dir) = exe.parent() {
-      if exe_dir.join("../resources/dumps/plain.dump.txt").is_file() {
-        return true;
-      }
-      if exe_dir.join("plain.dump.txt").is_file() {
-        return true;
-      }
-    }
-  }
-  let dev = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../resources/dumps/plain.dump.txt"
-  );
-  std::path::Path::new(dev).is_file()
+  crate::plain_dump::plain_dump_available()
 }
+
 
 LoadDefinitions!({
   // port of TeX.pool.ltxml
@@ -151,6 +192,17 @@ LoadDefinitions!({
     "\\nofiles",
     "\\typeout",
     "\\PassOptionsToPackage",
+    // \UseRawInputEncoding is a LaTeX kernel command defined by latex.ltx
+    // (L18268-18324). Some papers invoke it on line 1 col 1, BEFORE
+    // \documentclass — e.g. as a UTF-8 / fontenc shield. Treat it as a
+    // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
+    // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
+    "\\UseRawInputEncoding",
+    // \DocumentMetadata{...} is the LaTeX 2024 kernel command for PDF
+    // accessibility metadata; LaTeX expects it BEFORE \documentclass.
+    // Same pre-documentclass autoload pattern as \UseRawInputEncoding.
+    // Witness 2305.08034.
+    "\\DocumentMetadata",
   ]
   .iter()
   {
@@ -194,6 +246,46 @@ LoadDefinitions!({
   def_autoload("\\curraddr", "ams_support")?;
   def_autoload("\\subjclass", "ams_support")?;
 
+  // LaTeX2HTML-era papers use the html.sty CSes without an explicit
+  // `\usepackage{html}` because in the original LaTeX2HTML toolchain
+  // those CSes were part of the implicit "html-on-load" expectation.
+  // Auto-load `html.sty` (our binding maps these to hyperref equivalents)
+  // when any of these triggers is referenced. Driver:
+  // arxiv-examples/2108.04969 (uses `\htmladdnormallink{...}{...}` without
+  // loading html.sty).
+  def_autoload("\\htmladdnormallink", "html")?;
+  def_autoload("\\htmladdnormallinkfoot", "html")?;
+  def_autoload("\\htmladdimg", "html")?;
+  def_autoload("\\latextohtml", "html")?;
+  def_autoload("\\externalref", "html")?;
+  def_autoload("\\externalcite", "html")?;
+  def_autoload("\\htmlref", "html")?;
+  def_autoload("\\htmlurl", "html")?;
+  def_autoload("\\latexonly", "html")?;
+
+  // Perl TeX.pool.ltxml L50-56: AmSTeX-pool autoload triggers. When any
+  // of these CSes is invoked in plain-TeX-with-AmSTeX style (or before
+  // `\documentstyle{amsppt}` arrives — see e.g. math/9610224's
+  // `\NoBlackBoxes\documentstyle{amsppt}` ordering), Perl auto-loads
+  // `AmSTeX.pool.ltxml` first. Without this, our Rust port emitted
+  // `Error:undefined:\NoBlackBoxes` because the AmSTeX pool hadn't
+  // been loaded yet.
+  for amstrigger in [
+    "\\BlackBoxes",     "\\NoBlackBoxes",
+    "\\TagsAsMath",     "\\TagsAsText",
+    "\\TagsOnLeft",     "\\TagsOnRight",
+    "\\CenteredTagsOnSplits", "\\TopOrBottomTagsOnSplits",
+    "\\LimitsOnInts",   "\\NoLimitsOnInts",
+    "\\LimitsOnNames",  "\\NoLimitsOnNames",
+    "\\LimitsOnSums",   "\\NoLimitsOnSums",
+    "\\loadbold",       "\\loadeufb", "\\loadeufm",
+    "\\loadeurb",       "\\loadeurm",
+    "\\loadeusb",       "\\loadeusm",
+    "\\loadmathfont",   "\\loadmsam", "\\loadmsbm",
+  ] {
+    def_autoload_pool(amstrigger, "AmSTeX")?;
+  }
+
   // File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
   DefMacro!(
     "\\@pushfilename",
@@ -222,10 +314,10 @@ LoadDefinitions!({
     DefPrimitive!("\\OptionNotUsed", {});
   }
   if !IsDefined!(&T_CS!("\\AtBeginDocument")) {
-    DefMacro!("\\AtBeginDocument{}", "");
+    def_macro_noop("\\AtBeginDocument{}")?;
   }
   if !IsDefined!(&T_CS!("\\@addtofilelist")) {
-    DefMacro!("\\@addtofilelist{}", "");
+    def_macro_noop("\\@addtofilelist{}")?;
   }
 
   // Perl: LoadFormat('plain') — Package.pm L2734-2752. Mutually

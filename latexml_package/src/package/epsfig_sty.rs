@@ -59,7 +59,7 @@ LoadDefinitions!({
             if k == "file" || k == "figure" { continue; }
             if k == "clip" { saw_clip = true; }
             let v_str = v.to_string();
-            if v_str.is_empty() { opts.push(k.to_string()); }
+            if v_str.is_empty() { opts.push(k.clone()); }
             else { opts.push(format!("{}={}", k, v_str)); }
           }
           if clip_on && !saw_clip { opts.push("clip=true".into()); }
@@ -71,12 +71,12 @@ LoadDefinitions!({
   Let!("\\epsfig", "\\psfig");
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
   DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
-  DefPrimitive!("\\psdraft",       None);
-  DefPrimitive!("\\psfull",        None);
-  DefPrimitive!("\\pssilent",      None);
-  DefPrimitive!("\\psnoisy",       None);
-  DefPrimitive!("\\psfigdriver{}", None);
-  DefPrimitive!("\\epsfbox[]{}", None);
+  def_primitive_noop("\\psdraft")?;
+  def_primitive_noop("\\psfull")?;
+  def_primitive_noop("\\pssilent")?;
+  def_primitive_noop("\\psnoisy")?;
+  def_primitive_noop("\\psfigdriver{}")?;
+  def_primitive_noop("\\epsfbox[]{}")?;
   Let!("\\epsffile", "\\epsfbox");
   DefPrimitive!("\\epsfclipon", {
     state::assign_value("epsfclip", Stored::from(1), None);
@@ -84,9 +84,9 @@ LoadDefinitions!({
   DefPrimitive!("\\epsfclipoff", {
     state::assign_value("epsfclip", Stored::from(0), None);
   });
-  DefPrimitive!("\\epsfverbosetrue",  None);
-  DefPrimitive!("\\epsfverbosefalse", None);
+  def_primitive_noop("\\epsfverbosetrue")?;
+  def_primitive_noop("\\epsfverbosefalse")?;
   DefRegister!("\\epsfxsize" => Dimension::new(0));
   DefRegister!("\\epsfysize" => Dimension::new(0));
-  DefPrimitive!("\\epsfsize{}{}", None);
+  def_primitive_noop("\\epsfsize{}{}")?;
 });

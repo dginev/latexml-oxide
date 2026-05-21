@@ -61,7 +61,7 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
-  DefMacro!("\\layoutstyle{}", "");
+  def_macro_noop("\\layoutstyle{}")?;
 
   // Perl aipproc.cls.ltxml L74-84: \author{name} RequiredKeyVals — the
   // keyvals carry address / altaddress / email, and the Perl sub wraps
@@ -109,7 +109,7 @@ LoadDefinitions!({
 
   //======================================================================
   DefMacro!("\\source{}", "\\lx@note{source}{#1}");
-  DefMacro!("\\spaceforfigure{}{}", "");
+  def_macro_noop("\\spaceforfigure{}{}")?;
 
   DefMacro!("\\tablehead{}{}{}{}", "\\multicolumn{#1}{#2}{\\parbox{#3}{#4}}");
   // Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*

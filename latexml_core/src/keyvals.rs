@@ -391,7 +391,7 @@ impl KeyVals {
     let mut hashed = HashMap::default();
     for (k, v) in &self.cached_hash {
       hashed.insert(
-        k.to_string(),
+        k.clone(),
         v.iter()
           .map(ToString::to_string)
           .collect::<Vec<String>>()
@@ -405,7 +405,7 @@ impl KeyVals {
     let mut hashed = HashMap::default();
     for (k, v) in &self.cached_hash_digested {
       hashed.insert(
-        k.to_string(),
+        k.clone(),
         v.iter()
           .map(ToString::to_string)
           .collect::<Vec<String>>()
@@ -439,7 +439,7 @@ impl KeyVals {
     // Read existing tokens from rmmacro (if defined and has meaning)
     let mut rmtokens: Vec<Token> = Vec::new();
     if let Some(rm) = rmmacro {
-      if state::lookup_meaning(&rm).is_some() {
+      if state::has_meaning(&rm) {
         if let Ok(expanded) = gullet::do_expand(Tokens!(rm)) {
           rmtokens = expanded.unlist();
         }
@@ -761,22 +761,22 @@ impl KeyVals {
       }
       if let Some(v) = value.as_ref() {
         // push key / value into the pair
-        pairs.push((key.to_string(), v.clone()));
+        pairs.push((key.clone(), v.clone()));
 
         // we always use Vec<ArgWrap> storage, just push the new value in
-        let entry = hash.entry(key.to_string()).or_default();
+        let entry = hash.entry(key.clone()).or_default();
         entry.push(v.clone());
       } else if let Some(ref dv) = digested_value {
         // After digestion, value is taken but digested_value is set.
         // Populate cached_pairs from the digested value (matching Perl's rebuild behavior).
         let fallback = ArgWrap::Tokens(dv.revert().unwrap_or_default());
-        pairs.push((key.to_string(), fallback.clone()));
-        let entry = hash.entry(key.to_string()).or_default();
+        pairs.push((key.clone(), fallback.clone()));
+        let entry = hash.entry(key.clone()).or_default();
         entry.push(fallback);
       }
       // if we have a digested value, push that in the Vec<Digested> hash storage
       if let Some(ref dvalue) = digested_value {
-        let entry = hash_digested.entry(key.to_string()).or_default();
+        let entry = hash_digested.entry(key.clone()).or_default();
         entry.push(dvalue.clone());
       }
 

@@ -205,7 +205,14 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
 
   let role = node.get_attribute("role").unwrap_or_default();
 
-  // Handle floating/post scripts
+  // Handle floating/post scripts.
+  //
+  // `<msub>` / `<msup>` require a base; for "floating" scripts (e.g.
+  // `{}^c`, `_d`) the base is structurally absent. We materialize
+  // the missing base as `<m:mrow></m:mrow>` — not `<m:mi></m:mi>`.
+  // Same rationale as the `absent` case below: `<mi>` is a semantic
+  // claim ("here is an identifier") that's false when empty; `<mrow>`
+  // is presentational scaffolding with no semantic content. Task #264.
   if role.contains("SUBSCRIPT") || role.contains("SUPERSCRIPT") {
     let is_sub = role.contains("SUB");
     let tag = if is_sub { "m:msub" } else { "m:msup" };
@@ -214,7 +221,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       attributes: None,
       children:   vec![
         NodeData::Element {
-          tag:        "m:mi".to_string(),
+          tag:        "m:mrow".to_string(),
           attributes: None,
           children:   vec![],
         },
@@ -407,10 +414,21 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
 
   // Handle special meanings
   if meaning.as_deref() == Some("absent") {
-    // "absent" means an empty placeholder (e.g., missing LHS in aligned equations).
-    // Perl renders this as an empty <m:mi/>.
+    // "absent" is an XMath placeholder for a structurally-missing operand
+    // (e.g. the LHS of a continuation row `& = ...` in `align*` whose
+    // LHS is inherited from the previous row, or a prefix operator
+    // applied with no left argument). At the MathML Presentation
+    // layer we materialize this as an EMPTY `<m:mrow></m:mrow>` —
+    // not `<m:mi></m:mi>`. `<m:mi>` is a semantic assertion ("here
+    // is a mathematical identifier") with no defined meaning when
+    // empty; renderers vary, screen readers announce "blank" or
+    // skip awkwardly, and search/indexing tools pollute their
+    // index with content-free identifier tokens. `<m:mrow>` is
+    // presentational grouping without a semantic claim — well-
+    // defined for empty content (zero-width, no announcement).
+    // Task #264.
     return NodeData::Element {
-      tag:        "m:mi".to_string(),
+      tag:        "m:mrow".to_string(),
       attributes: None,
       children:   vec![],
     };
@@ -638,29 +656,47 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
 
 /// Convert an XMArray to an mtable.
 ///
-/// Port of `pmml_internal` XMArray branch.
+/// Port of `pmml_internal` XMArray branch (`MathML.pm` L432-486).
 fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
+  let width = node.get_attribute("width");
   let vattach = node
     .get_attribute("vattach")
     .unwrap_or_else(|| "middle".to_string());
   let align = match vattach.as_str() {
     "top" => "bottom1",
-    "middle" => "axis",
-    _ => &vattach,
+    "middle" | "" => "axis",
+    _ => vattach.as_str(),
   };
+  let rowsep = node
+    .get_attribute("rowsep")
+    .unwrap_or_else(|| "0pt".to_string());
+  let colsep = node
+    .get_attribute("colsep")
+    .unwrap_or_else(|| "5pt".to_string());
 
+  let mut nrows = 0;
+  let mut ncols = 0;
   for row_node in element_children(node) {
     let mut cols = Vec::new();
+    let mut nc = 0;
     for cell_node in element_children(&row_node) {
+      nc += 1;
       let cell_align = cell_node.get_attribute("align");
       let colspan = cell_node.get_attribute("colspan");
+      let rowspan = cell_node.get_attribute("rowspan");
       let mut td_attrs = HashMap::default();
-      if let Some(a) = cell_align {
-        td_attrs.insert("columnalign".to_string(), a);
+      if let Some(a) = &cell_align {
+        if a != "center" {
+          td_attrs.insert("columnalign".to_string(), a.clone());
+          td_attrs.insert("class".to_string(), format!("ltx_align_{}", a));
+        }
       }
       if let Some(cs) = colspan {
         td_attrs.insert("columnspan".to_string(), cs);
+      }
+      if let Some(rs) = rowspan {
+        td_attrs.insert("rowspan".to_string(), rs);
       }
 
       let cell_children = element_children(&cell_node);
@@ -680,6 +716,10 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
         children:   cell_content,
       });
     }
+    if nc > ncols {
+      ncols = nc;
+    }
+    nrows += 1;
     rows.push(NodeData::Element {
       tag:        "m:mtr".to_string(),
       attributes: None,
@@ -687,9 +727,22 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
     });
   }
 
+  // Perl L478-479: drop separators if there's only one row/column.
+  let emit_rowsep = nrows >= 2;
+  let emit_colsep = ncols >= 2;
+
   let mut table_attrs = HashMap::default();
   if align != "axis" {
     table_attrs.insert("align".to_string(), align.to_string());
+  }
+  if emit_rowsep {
+    table_attrs.insert("rowspacing".to_string(), rowsep);
+  }
+  if emit_colsep {
+    table_attrs.insert("columnspacing".to_string(), colsep);
+  }
+  if let Some(w) = width {
+    table_attrs.insert("width".to_string(), w);
   }
 
   NodeData::Element {
@@ -729,16 +782,67 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   if args.is_empty() {
     return op_mml;
   }
-  if args.len() == 1 {
-    // Single arg: prefix
-    return pmml_row(vec![op_mml, pmml(doc, &args[0])]);
+  // For Presentation MathML we suppress XMath's `absent` placeholders
+  // entirely — they exist to satisfy the content-arm structural
+  // contract (every binary application has 2 operands), but materializing
+  // them as visible MathML degrades accessibility (screen readers
+  // announce a blank/empty group, indexers see a spurious atom).
+  //
+  // The shape decision depends on WHICH operand is absent:
+  //   - absent left, real right (`Apply(=, absent, RHS)`) → prefix:
+  //         <mrow><mo>=</mo><RHS></mrow>
+  //         (continuation row `& = RHS` whose LHS is inherited from
+  //         the previous row — see prefix_relop_apply in semantics.rs)
+  //   - real left, absent right (`Apply(=, LHS, absent)`) → postfix:
+  //         <mrow><LHS><mo>=</mo></mrow>
+  //         (trailing relop — see postfix_relop in semantics.rs)
+  //   - real left, real right (normal case) → infix:
+  //         <mrow><LHS><mo>=</mo><RHS></mrow>
+  //   - both absent → just the operator.
+  //
+  // For the chained case (n≥3 args), drop only absents that are
+  // strictly at the boundary (leading or trailing). Interior absents
+  // — if any — keep their slot since omitting would change the
+  // operand-count interpretation of the chain.
+  // Task #264 step 2.
+  let leading_absent = is_absent_operand(&args[0]);
+  let trailing_absent = args.len() >= 2 && is_absent_operand(&args[args.len() - 1]);
+  let slice_start = if leading_absent { 1 } else { 0 };
+  let slice_end = if trailing_absent { args.len() - 1 } else { args.len() };
+  let live_args = &args[slice_start..slice_end];
+
+  if live_args.is_empty() {
+    return op_mml;
   }
-  let mut items = vec![pmml(doc, &args[0])];
-  for arg in &args[1..] {
+  if live_args.len() == 1 {
+    let arg_mml = pmml(doc, &live_args[0]);
+    return if leading_absent {
+      // Continuation-row prefix: `<mo>op</mo> <arg>`
+      pmml_row(vec![op_mml, arg_mml])
+    } else {
+      // Trailing-relop postfix: `<arg> <mo>op</mo>`
+      pmml_row(vec![arg_mml, op_mml])
+    };
+  }
+  let mut items = vec![pmml(doc, &live_args[0])];
+  for arg in &live_args[1..] {
     items.push(op_mml.clone());
     items.push(pmml(doc, arg));
   }
   pmml_row(items)
+}
+
+/// True iff `node` is the XMath placeholder for a structurally-absent
+/// operand — an `<ltx:XMTok>` with `meaning="absent"`. The math
+/// parser inserts these as the left operand for prefix-relop rules
+/// (`Apply(=, absent, RHS)` for `& = ...` continuation rows) and as
+/// the right operand for postfix-relop rules. Used by `pmml_infix`
+/// to suppress materialization in Presentation MathML. Task #264.
+fn is_absent_operand(node: &Node) -> bool {
+  if node.get_name() != "XMTok" {
+    return false;
+  }
+  node.get_attribute("meaning").as_deref() == Some("absent")
 }
 
 /// Big operator with possible limits.
@@ -838,7 +942,7 @@ fn pmml_script_decipher(
       current_base
         .get_attribute("idref")
         .and_then(|id| doc.find_node_by_id(&id).cloned())
-        .unwrap_or(current_base.clone())
+        .unwrap_or_else(|| current_base.clone())
     } else {
       current_base.clone()
     };

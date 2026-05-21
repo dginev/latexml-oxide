@@ -34,13 +34,17 @@ LoadDefinitions!({
   // but not constructor-with-template environments). Documented as a
   // known missing-API task rather than masked as a stub: no paper in
   // the 7898-arxiv 2026-04-24 sandbox exercises this path.
-  DefMacro!("\\newsubfloat[]{}", "");
+  def_macro_noop("\\newsubfloat[]{}")?;
 
   // \subfloat — Perl L69-79
   DefMacro!("\\subfloat",
     "\\ifx\\@captype\\@undefined\\expandafter\\@gobble\\else\\expandafter\\@firstofone\\fi{\\sf@subfloat}");
   DefMacro!("\\sf@subfloat",
     "\\csname lx@subfloat@\\@captype\\endcsname");
+  // subfig L73: \sidesubfloat — side-by-side subfloat variant. Real def
+  // wraps \subfloat with a minipage and lineup arg. Stub as plain
+  // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.
+  DefMacro!("\\sidesubfloat", "\\subfloat");
 
   // \subref — Perl L82-84
   DefMacro!("\\subref",       "\\@ifstar\\sf@@subref\\sf@subref");
@@ -48,11 +52,11 @@ LoadDefinitions!({
   DefMacro!("\\sf@@subref{}", "\\pageref{sub@#1}");
 
   // Caption setup stubs — Perl L86-90
-  DefMacro!("\\DeclareCaptionListOfFormat{}{}", "");
-  DefMacro!("\\DeclareSubrefFormat{}{}", "");
-  DefMacro!("\\listsubcaptions", "");
-  DefMacro!("\\captionsetup[]{}", "");
-  DefMacro!("\\clearcaptionsetup{}", "");
+  def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;
+  def_macro_noop("\\DeclareSubrefFormat{}{}")?;
+  def_macro_noop("\\listsubcaptions")?;
+  def_macro_noop("\\captionsetup[]{}")?;
+  def_macro_noop("\\clearcaptionsetup{}")?;
   DefConditional!("\\ifmaincaptiontop");
   DefConditional!("\\iflx@donecaption");
 

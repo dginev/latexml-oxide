@@ -23,13 +23,13 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // Public macros — all become no-ops.
-  DefMacro!("\\bookmarksetup{}", "");
-  DefMacro!("\\bookmark[]{}", "");
-  DefMacro!("\\bookmarkdefinestyle{}{}", "");
-  DefMacro!("\\bookmarkget{}", "");
-  DefMacro!("\\BookmarkAtEnd{}", "");
-  DefMacro!("\\pdfbookmark[]{}{}", "");
-  DefMacro!("\\subpdfbookmark{}{}", "");
-  DefMacro!("\\belowpdfbookmark{}{}", "");
-  DefMacro!("\\currentpdfbookmark{}{}", "");
+  def_macro_noop("\\bookmarksetup{}")?;
+  def_macro_noop("\\bookmark[]{}")?;
+  def_macro_noop("\\bookmarkdefinestyle{}{}")?;
+  def_macro_noop("\\bookmarkget{}")?;
+  def_macro_noop("\\BookmarkAtEnd{}")?;
+  def_macro_noop("\\pdfbookmark[]{}{}")?;
+  def_macro_noop("\\subpdfbookmark{}{}")?;
+  def_macro_noop("\\belowpdfbookmark{}{}")?;
+  def_macro_noop("\\currentpdfbookmark{}{}")?;
 });

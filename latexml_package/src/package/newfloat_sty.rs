@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   // Perl: DefPrimitive('\SetupFloatingEnvironment OptionalKeyVals {}', sub { ... })
   DefPrimitive!("\\SetupFloatingEnvironment OptionalKeyVals {}", sub[(options, ftype)] {
@@ -68,6 +69,6 @@ LoadDefinitions!({
     )?;
   });
 
-  DefMacro!("\\ForEachFloatingEnvironment{}", "");
-  DefMacro!("\\PrepareListOf{}{}", "");
+  def_macro_noop("\\ForEachFloatingEnvironment{}")?;
+  def_macro_noop("\\PrepareListOf{}{}")?;
 });

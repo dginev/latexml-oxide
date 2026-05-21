@@ -13,6 +13,7 @@ static _TRACE_ALL: u8 = 0x3; // MACROS | COMMANDS
 static _TRACE_PROFILE: u8 = 0x4;
 
 use crate::prelude::*;
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Debugging Family of primitive control sequences
@@ -51,7 +52,7 @@ LoadDefinitions!({
   // [This could be a $tokens->unpackParameters, but for the curious space treatment]
   DefPrimitive!("\\message{}", sub [(message)] {
     if state::current_verbosity() > -1 {
-      Note!(writable_tokens(&do_expand(message)?).to_string());
+      Note!(writable_tokens(&do_expand(message)?));
     }
   });
 
@@ -260,8 +261,8 @@ LoadDefinitions!({
     let n     = arg.value_of();
     Debug!("Box {n} = {:?}", lookup_value(&s!("box{n}")));
   });
-  DefPrimitive!("\\showlists", None);
-  DefPrimitive!("\\showthe Token", None);
+  def_primitive_noop("\\showlists")?;
+  def_primitive_noop("\\showthe Token")?;
   DefRegister!("\\showboxbreadth", Number!(5));
   DefRegister!("\\showboxdepth", Number!(3));
 

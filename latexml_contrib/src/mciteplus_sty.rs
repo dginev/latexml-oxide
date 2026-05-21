@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -27,19 +28,19 @@ LoadDefinitions!({
 \def\@mciteMacrobibitem{bibitem}
 \def\@mciteMacrosubitem{subitem}"
   );
-  DefMacro!("\\mciteSetBstMidEndSepPunct{}{}{}", "");
-  DefMacro!("\\mciteSetMidEndSepPunct{}{}{}", "");
-  DefMacro!("\\mciteSetBstSublistLabelBeginEnd{}{}{}", "");
-  DefMacro!("\\mcitebstsublistbegin", "");
-  DefMacro!("\\mcitebstsublistend", "");
-  DefMacro!("\\mciteSetBstSublistMode{}", "");
-  DefMacro!("\\mciteSetSublistMode{}", "");
-  DefMacro!("\\mciteSetBstMaxWidthForm[]{}{}", "");
-  DefMacro!("\\mciteSetMaxWidthForm[]{}{}", "");
-  DefMacro!("\\mciteheadlist", "");
-  DefMacro!("\\mciteCitePrehandlerArg", "");
-  DefMacro!("\\mciteDoList{}{}{}", "");
-  DefMacro!("\\mciteExtraDoLists", "");
+  def_macro_noop("\\mciteSetBstMidEndSepPunct{}{}{}")?;
+  def_macro_noop("\\mciteSetMidEndSepPunct{}{}{}")?;
+  def_macro_noop("\\mciteSetBstSublistLabelBeginEnd{}{}{}")?;
+  def_macro_noop("\\mcitebstsublistbegin")?;
+  def_macro_noop("\\mcitebstsublistend")?;
+  def_macro_noop("\\mciteSetBstSublistMode{}")?;
+  def_macro_noop("\\mciteSetSublistMode{}")?;
+  def_macro_noop("\\mciteSetBstMaxWidthForm[]{}{}")?;
+  def_macro_noop("\\mciteSetMaxWidthForm[]{}{}")?;
+  def_macro_noop("\\mciteheadlist")?;
+  def_macro_noop("\\mciteCitePrehandlerArg")?;
+  def_macro_noop("\\mciteDoList{}{}{}")?;
+  def_macro_noop("\\mciteExtraDoLists")?;
   DefMacro!("\\EndOfBibitem", "\\relax");
   DefMacro!("\\mciteEndOfBibGroupPresubcloseHook", "\\relax");
   DefMacro!("\\mciteEndOfBibGroupPostsubcloseHook", "\\relax");

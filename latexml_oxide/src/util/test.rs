@@ -1,16 +1,13 @@
 use glob::glob;
-use libxml::tree::Node;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Once;
 
 use crate::core_interface::DigestionAPI;
-use latexml_codegen::LoadModel;
 use latexml_core::common::BindingDispatcher;
 use latexml_core::document::Document;
 use latexml_core::{Core, CoreOptions, s, state};
-use latexml_math_parser::node_to_grammar_lexemes;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // Sampled at static init; subsequent reads are atomic loads.
@@ -306,46 +303,14 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
   lines
 }
 
-/// Provide a default test `Core` engine for simple operations
-pub fn new_test_engine() -> Core {
-  let core_engine = Core::new(CoreOptions {
-    preload: Some(
-      ["article.cls", "amsmath.sty"]
-        .map(|x| x.to_string())
-        .to_vec(),
-    ),
-    verbosity: Some(-2),
-    search_paths: None,
-    nomathparse: Some(true),
-    include_comments: Some(false),
-    ..CoreOptions::default()
-  });
-  load_model!("LaTeXML");
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
-  state::add_binding_names(latexml_package::binding_names());
-  core_engine
-}
-
-/// Simple tokenization of a single formula, without any custom preloads
-/// beyond latex and amsmath
-pub fn lex_single_tex_formula(
-  tex: &str,
-  latexml: &mut Core,
-) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
-  let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
-  assert!(xml_result.is_ok(), "{:?}", xml_result.err());
-  let mut doc = xml_result.unwrap();
-
-  // grab the first formula
-  match doc.findnode("//*[local-name()='XMath']", None) {
-    Some(math) => {
-      let mut idx = 0;
-      let (lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);
-      (lexemes, nodes, Some(math), doc)
-    },
-    None => (Vec::new(), Vec::new(), None, doc),
-  }
-}
+// `new_test_engine` and `lex_single_tex_formula` moved to
+// `crate::util::preset` (audit DEP-02, 2026-05-18). They have no
+// dependency on `glob`/`phf` and need to be callable from the
+// `latexmlmath_oxide` production binary, which builds without the
+// `test-utils` feature. Re-exported here so the dominant
+// `use latexml::util::test::*;` pattern in integration tests
+// continues to work unchanged.
+pub use super::preset::{lex_single_tex_formula, new_test_engine};
 
 /// Build a test function for each "*.tex" source found in a given directory path.
 /// The path should be absolute, or relative to the root latexml-oxide checkout.

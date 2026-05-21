@@ -114,3 +114,80 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
     _ => None,
   }
 }
+
+// ============================================================
+// DEP-18/19/20 data-drive helpers — shared across all binding files
+// (txfonts, mathabx, amssymb, math_common, biblatex, beamer, …).
+// Each replaces a compile-time-inlined macro arm with a runtime call.
+// LTO inlines the helper at each call site, so the binary impact is
+// the same as a per-file copy; defining once here removes ~200
+// source-level duplicates of the same body. See memory:
+//   - wisdom_data_drive_min_call_sites (≥5 sites per file threshold)
+//   - wisdom_helper_monomorphization_trap (no generic T: Into<X>)
+// ============================================================
+
+/// Empty-body `DefMacro!("\\cs[opt-spec]", "")` stub via runtime call.
+pub fn def_macro_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+/// Identity `DefMacro!("\\cs{}", "#1")` — CS takes one mandatory arg
+/// and expands to it unchanged.
+pub fn def_macro_identity(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  let body = mouth::tokenize_internal("#1");
+  def_macro(cs_tok, params, ExpansionBody::Tokens(body), None)?;
+  Ok(())
+}
+
+/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub —
+/// digestion-time no-op primitive (no Box emitted).
+pub fn def_primitive_noop(proto: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(proto, true)?;
+  def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;
+  Ok(())
+}
+
+/// DEP-17 `DefMath!("\\cs", "char"[, role => "X"[, meaning => "Y"]])`
+/// shape. 2-arg form: prototype includes the CS; params come from
+/// `parse_prototype` (Some(empty)).
+pub fn def_math_sym(
+  cs: &str,
+  present: &str,
+  role: Option<&str>,
+  meaning: Option<&str>,
+) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let mut opts = MathPrimitiveOptions::default();
+  if let Some(r) = role {
+    opts.role = Some(r.to_string());
+  }
+  if let Some(m) = meaning {
+    opts.meaning = Some(m.to_string());
+  }
+  def_math(cs_tok, params, present.to_string(), opts)?;
+  Ok(())
+}
+
+/// DEP-17d `DefMath!("\\cs", None, "char"[, ...])` 3-arg form —
+/// Token built directly via `T_CS!`, params stays None.
+pub fn def_math_atom(
+  cs: &str,
+  present: &str,
+  role: Option<&str>,
+  meaning: Option<&str>,
+) -> Result<()> {
+  let cs_tok = T_CS!(cs);
+  let mut opts = MathPrimitiveOptions::default();
+  if let Some(r) = role {
+    opts.role = Some(r.to_string());
+  }
+  if let Some(m) = meaning {
+    opts.meaning = Some(m.to_string());
+  }
+  def_math(cs_tok, None, present.to_string(), opts)?;
+  Ok(())
+}

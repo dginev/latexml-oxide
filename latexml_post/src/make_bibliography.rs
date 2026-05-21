@@ -784,7 +784,7 @@ impl MakeBibliography {
       citedby.push(NodeData::Element {
         tag:        "ltx:ref".to_string(),
         attributes: Some(HashMap::from_iter([
-          ("idref".to_string(), ref_id.to_string()),
+          ("idref".to_string(), (*ref_id).clone()),
           ("show".to_string(), "typerefnum".to_string()),
         ])),
         children:   vec![],

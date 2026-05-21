@@ -5,7 +5,7 @@ LoadDefinitions!({
   // Perl: amsrefs.sty.ltxml — Leverage the BibTeX implementation
 
   // Perl: LoadPool('BibTeX');
-  // TODO: BibTeX pool not yet ported to Rust
+  LoadPool!("BibTeX");
 
   // Perl: DefParameterType('BibURL', ...) — semiverbatim URL reading
   // Perl: DefKeyVal('amsrefs', 'url', 'BibURL');
@@ -13,14 +13,42 @@ LoadDefinitions!({
 
   // \bib{key}{type}{keyval-pairs}
   // Perl: DefMacro('\bib{}{} RequiredKeyVals:amsrefs', sub { ... });
-  // TODO: \bib requires BibTeX pool (CleanBibKey, NormalizeBibKey, ProcessBibTeXEntry)
-  DefMacro!("\\bib{}{}{}", "");
+  //
+  // Reads the key + entry-type as strings and parses the keyval slot
+  // via `parse_amsrefs_keyvals` into individual `BibEntry::add_raw_field`
+  // calls. Mirrors Perl `amsrefs.sty.ltxml:42-51`: `lc()` on each key,
+  // `UnTeX()` on each value (we use the raw source — close enough for
+  // the downstream `\bib@field@<type>@<field>` dispatch since the
+  // handlers themselves do the digestion).
+  //
+  // Emits `\ProcessBibTeXEntry{<key>}` (Perl L51) so the bibtex.rs
+  // orchestration drives field dispatch + entry-type prepare/complete
+  // and builds the `<ltx:bibentry>` XML.
+  DefMacro!("\\bib{}{}{}", sub[args] {
+    use latexml_engine::bibtex::{BibEntry, register_entry, parse_amsrefs_keyvals};
+    let key = if args[0].is_some() { args[0].to_string() } else { String::new() };
+    let entry_type = if args[1].is_some() { args[1].to_string() } else { String::new() };
+    let raw_kv = if args[2].is_some() { args[2].to_string() } else { String::new() };
+    let mut entry = BibEntry::new(key.clone(), entry_type);
+    for (field, value) in parse_amsrefs_keyvals(&raw_kv) {
+      entry.add_raw_field(field, value);
+    }
+    register_entry(&key, entry);
+    // Emit `\ProcessBibTeXEntry{<key>}` to drive bibtex.rs orchestration.
+    Ok(Invocation!(T_CS!("\\ProcessBibTeXEntry"),
+      vec![Tokens::new(Explode!(&key))]))
+  });
 
   // \BibSpec — ignore
-  DefMacro!("\\BibSpec{}{}", "");
+  def_macro_noop("\\BibSpec{}{}")?;
 
   // \cites = \cite
   Let!("\\cites", "\\cite");
+  // amsrefs.sty L1467: `\citelist{ \cite{key1} \cite{key2} ... }` —
+  // grouped multi-citation where each `\cite` may carry `*{prenote}`.
+  // Degrade to passing the body through; each inner `\cite` renders
+  // independently. Witness 2404.11319.
+  DefMacro!("\\citelist{}", "#1");
 
   // {bibdiv} environment — amsrefs.sty.ltxml L60-68.
   // beforeDigest: beforeDigestBibliography (preamble/counter/guard setup).

@@ -1,12 +1,13 @@
 use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   //======================================================================
   // Font wrappers — identity by default
-  DefMacro!("\\acsfont{}", "#1");
-  DefMacro!("\\acffont{}", "#1");
-  DefMacro!("\\acfsfont{}", "#1");
+  def_macro_identity("\\acsfont{}")?;
+  def_macro_identity("\\acffont{}")?;
+  def_macro_identity("\\acfsfont{}")?;
 
   // Package flags
   DefConditional!("\\ifAC@footnote");
@@ -18,7 +19,7 @@ LoadDefinitions!({
   DefConditional!("\\ifAC@nolist");
   DefConditional!("\\ifAC@starred");
 
-  DefMacro!("\\AC@placelabel{}", "");
+  def_macro_noop("\\AC@placelabel{}")?;
 
   //======================================================================
   // Whether an acronym is used or not
@@ -31,7 +32,7 @@ LoadDefinitions!({
 
   DefMacro!("\\acused{}", "\\AC@logged{#1}");
   DefMacro!("\\acronymused{}", "\\AC@logged{#1}");
-  DefMacro!("\\acresetall", "");
+  def_macro_noop("\\acresetall")?;
 
   DefMacro!("\\lx@AC@if{}{}{}", sub[(id, short, long)] {
     let id_str = id.to_string();
@@ -130,6 +131,20 @@ LoadDefinitions!({
     "\\lx@AC@if{#1}{\\ifAC@starred\\acs*{#1}\\else\\acs{#1}\\fi}{\\ifAC@starred\\acf*{#1}\\else\\acf{#1}\\fi}"
   );
 
+  // Capital-first auto form. `\Ac` is officially from `acro`, but
+  // papers commonly mix the two and use \Ac while loading `acronym`.
+  // Degrade to \ac (lower form) — losing the capitalize-first
+  // semantic but preserving content. Witness 2402.03202.
+  Let!("\\Ac", "\\ac");
+  // Same degrade-to-lower for the other acro capital-first forms.
+  // Witness arXiv:2509.12083 (uses `\Acf{AOD}` alongside `\acf{SLM}`,
+  // mixing acronym + acro conventions). Same content-preservation
+  // rationale as `\Ac` above.
+  Let!("\\Acf", "\\acf");
+  Let!("\\Acl", "\\acl");
+  Let!("\\Acs", "\\acs");
+  Let!("\\Acfi", "\\acfi");
+
   // Indefinite article form
   DefMacro!(
     "\\iac OptionalMatch:*",
@@ -220,7 +235,7 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\acroextra{}", "#1");
+  def_macro_identity("\\acroextra{}")?;
 
   // \lx@acro@item{key}{short}{long}
   DefMacro!(

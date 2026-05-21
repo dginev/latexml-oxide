@@ -88,7 +88,7 @@ pub(crate) fn keyval_set(qname: &str, prop: &str, value: Stored) {
 pub fn has_keyval(prefix: &str, keyset: &str, key: &str) -> bool {
   let qname = keyval_qname(prefix, keyset, key);
   state::with_value(&s!("KEYVAL@defined@{}", qname), |v| v.is_some())
-    || state::lookup_meaning(&T_CS!(s!("\\{qname}"))).is_some()
+    || state::has_meaning(&T_CS!(s!("\\{qname}")))
 }
 
 /// disable a given key-val

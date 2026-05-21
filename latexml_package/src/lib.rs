@@ -41,6 +41,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("eTeX", "pool", engine::etex::load_definitions),
   ("pdfTeX", "pool", engine::pdftex::load_definitions),
   ("AmSTeX", "pool", engine::amstex::load_definitions),
+  ("BibTeX", "pool", engine::bibtex::load_definitions),
   ("latexml", "sty", package::latexml_sty::load_definitions),
   ("lxRDFa", "sty", package::lxrdfa_sty::load_definitions),
   ("marvosym", "sty", package::marvosym_sty::load_definitions),
@@ -49,6 +50,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("a4wide", "sty", package::a4wide_sty::load_definitions),
   ("aastex", "cls", package::aastex_cls::load_definitions),
   ("aastex631", "cls", package::aastex_cls::load_definitions), // version fallback
+  ("aastex62", "cls", package::aastex_cls::load_definitions),
+  ("aastex63", "cls", package::aastex_cls::load_definitions),
+  ("aastex7", "cls", package::aastex_cls::load_definitions),
+  ("aastex70", "cls", package::aastex_cls::load_definitions),
   ("aastex", "sty", package::aastex_sty::load_definitions),
   ("aasms", "sty", package::aasms_sty::load_definitions),
   ("aaspp", "sty", package::aaspp_sty::load_definitions),
@@ -75,7 +80,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsaddr", "sty", package::amsaddr_sty::load_definitions),
   ("amsart", "cls", package::amsart_cls::load_definitions),
   ("amsproc", "cls", package::amsproc_cls::load_definitions),
-  ("smfart", "cls", package::smfart_cls::load_definitions),
+  // smfart: no binding — Perl falls through to OmniBus, which provides
+  // \Subsection, \Paragraph, \institute, etc. The earlier Rust binding
+  // loaded amsart instead, which doesn't define those CSes; smfart-using
+  // papers (witness: arXiv:2603.04274) hit Error:undefined:\Subsection.
   ("acmart", "cls", package::acmart_cls::load_definitions),
   ("article", "cls", package::article_cls::load_definitions),
   ("OmniBus", "cls", package::omnibus_cls::load_definitions),
@@ -147,6 +155,26 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::neurips_sty::load_definitions,
   ),
   (
+    "neurips_2022",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2023",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2024",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
+    "neurips_2025",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
     "algorithm2e",
     "sty",
     package::algorithm2e_sty::load_definitions,
@@ -172,6 +200,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("elsart1p", "cls", package::elsart_cls::load_definitions),
   ("elsart3p", "cls", package::elsart_cls::load_definitions),
   ("elsart5p", "cls", package::elsart_cls::load_definitions),
+  // Note: elsarticle.cls is routed to package::elsarticle_cls (NOT elsart_cls)
+  // further down; elsarticle is a distinct modern class that pulls in
+  // graphicx/fleqn/pifont/natbib/hyperref which the legacy elsart binding
+  // does not. Adding a second entry here for "elsarticle" would shadow the
+  // correct loader because `dispatch` returns the FIRST match in BINDINGS.
   ("elsart", "sty", package::elsart_sty::load_definitions),
   (
     "elsart_support_core",
@@ -202,6 +235,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("moderncv", "cls", package::moderncv_cls::load_definitions),
   ("slides", "cls", package::slides_cls::load_definitions),
   ("amsmath", "sty", package::amsmath_sty::load_definitions),
+  ("mathastext", "sty", package::mathastext_sty::load_definitions),
   ("mathtools", "sty", package::mathtools_sty::load_definitions),
   ("microtype", "sty", package::microtype_sty::load_definitions),
   ("amsrefs", "sty", package::amsrefs_sty::load_definitions),
@@ -264,6 +298,29 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("gen-m-l", "cls", package::gen_m_l_cls::load_definitions),
   ("gen-p-l", "cls", package::gen_p_l_cls::load_definitions),
   ("french", "ldf", package::french_ldf::load_definitions),
+  // Babel-language stubs for .ldf files missing from minimal TeXLive
+  // installs. Each just allocates `\l@<lang>` + empty hooks so babel's
+  // \InputIfFileExists{<lang>.ldf} resolves cleanly. See
+  // package/babel_lang_stubs.rs for details.
+  ("italian",    "ldf", package::babel_lang_stubs::load_italian),
+  ("spanish",    "ldf", package::babel_lang_stubs::load_spanish),
+  ("portuges",   "ldf", package::babel_lang_stubs::load_portuges),
+  ("portuguese", "ldf", package::babel_lang_stubs::load_portuguese),
+  ("brazil",     "ldf", package::babel_lang_stubs::load_brazil),
+  ("brazilian",  "ldf", package::babel_lang_stubs::load_brazilian),
+  ("czech",      "ldf", package::babel_lang_stubs::load_czech),
+  ("polish",     "ldf", package::babel_lang_stubs::load_polish),
+  ("romanian",   "ldf", package::babel_lang_stubs::load_romanian),
+  ("slovene",    "ldf", package::babel_lang_stubs::load_slovene),
+  ("turkish",    "ldf", package::babel_lang_stubs::load_turkish),
+  ("vietnamese", "ldf", package::babel_lang_stubs::load_vietnamese),
+  ("icelandic",  "ldf", package::babel_lang_stubs::load_icelandic),
+  ("arabic",     "ldf", package::babel_lang_stubs::load_arabic),
+  ("dutch",      "ldf", package::babel_lang_stubs::load_dutch),
+  ("farsi",      "ldf", package::babel_lang_stubs::load_farsi),
+  ("hindi",      "ldf", package::babel_lang_stubs::load_hindi),
+  ("latin",      "ldf", package::babel_lang_stubs::load_latin),
+  ("croatian",   "ldf", package::babel_lang_stubs::load_croatian),
   ("frenchb", "ldf", package::french_ldf::load_definitions),
   ("nil", "ldf", package::nil_ldf::load_definitions),
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
@@ -293,6 +350,46 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::icml_support_sty::load_definitions,
   ),
   (
+    "icml2018",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2019",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2020",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2021",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2022",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2023",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2024",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
+    "icml2025",
+    "sty",
+    package::icml_support_sty::load_definitions,
+  ),
+  (
     "icml_support",
     "sty",
     package::icml_support_sty::load_definitions,
@@ -318,6 +415,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("svjour1", "cls", package::svjour3_cls::load_definitions),
   ("svjour2", "cls", package::svjour3_cls::load_definitions),
   ("svjour3", "cls", package::svjour3_cls::load_definitions),
+  ("svmono", "cls", package::svjour3_cls::load_definitions),
   (
     "inst_support",
     "sty",
@@ -355,6 +453,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fontspec", "sty", package::fontspec_sty::load_definitions),
   ("inputenc", "sty", package::inputenc_sty::load_definitions),
   ("textcomp", "sty", package::textcomp_sty::load_definitions),
+  ("textgreek", "sty", package::textgreek_sty::load_definitions),
+  // textalpha (greek-fontenc) and alphabeta (greek-fontenc) both define the
+  // same `\text<greek>` family; route them through the same binding so a
+  // raw-load failure on LGR encoding doesn't surface as `\textsigma` undef.
+  ("textalpha", "sty", package::textgreek_sty::load_definitions),
+  ("alphabeta", "sty", package::textgreek_sty::load_definitions),
   ("texvc", "sty", package::texvc_sty::load_definitions),
   ("listings", "sty", package::listings_sty::load_definitions),
   (
@@ -380,6 +484,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("multicol", "sty", package::multicol_sty::load_definitions),
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),
+  ("newclude", "sty", package::newclude_sty::load_definitions),
   ("newfloat", "sty", package::newfloat_sty::load_definitions),
   ("applemac", "def", package::applemac_def::load_definitions),
   ("cp852", "def", package::cp852_def::load_definitions),
@@ -406,6 +511,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ts1", "fontmap", package::ts1_fontmap::load_definitions),
   ("pzd", "fontmap", package::pzd_fontmap::load_definitions),
   ("pifont", "sty", package::pifont_sty::load_definitions),
+  ("pict2e", "sty", package::pict2e_sty::load_definitions),
   ("utf8", "def", package::utf8_def::load_definitions),
   // Perl utf8x.def.ltxml L18: "Note: this is a copy of utf8.def.ltxml
   // for now" — dispatch utf8x to the same loader.
@@ -430,6 +536,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::pdftexcmds_sty::load_definitions,
   ),
+  ("pdfx", "sty", package::pdfx_sty::load_definitions),
   ("ngerman", "sty", package::ngerman_sty::load_definitions),
   ("orcidlink", "sty", package::orcidlink_sty::load_definitions),
   ("newtxmath", "sty", package::newtxmath_sty::load_definitions),
@@ -449,6 +556,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("subfiles", "cls", package::subfiles_cls::load_definitions),
   ("subfiles", "sty", package::subfiles_sty::load_definitions),
   ("soul", "sty", package::soul_sty::load_definitions),
+  (
+    "spectralsequences",
+    "sty",
+    package::spectralsequences_sty::load_definitions,
+  ),
   ("stfloats", "sty", package::stfloats_sty::load_definitions),
   ("stmaryrd", "sty", package::stmaryrd_sty::load_definitions),
   ("mathabx", "sty", package::mathabx_sty::load_definitions),
@@ -460,13 +572,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mfirstuc", "sty", package::mfirstuc_sty::load_definitions),
   ("datatool-base", "sty", package::datatool_base_sty::load_definitions),
   ("chemgreek", "sty", package::chemgreek_sty::load_definitions),
+  ("chemmacros", "sty", package::chemmacros_sty::load_definitions),
   ("substr", "sty", package::substr_sty::load_definitions),
   ("shellesc", "sty", package::shellesc_sty::load_definitions),
   ("tracklang", "sty", package::tracklang_sty::load_definitions),
+  ("translations", "sty", package::translations_sty::load_definitions),
   ("translator", "sty", package::translator_sty::load_definitions),
   ("xspace", "sty", package::xspace_sty::load_definitions),
   ("xurl", "sty", package::xurl_sty::load_definitions),
   ("lineno", "sty", package::lineno_sty::load_definitions),
+  ("libertinust1math", "sty", package::libertinust1math_sty::load_definitions),
   ("preview", "sty", package::preview_sty::load_definitions),
   ("proof", "sty", package::proof_sty::load_definitions),
   ("proofwiki", "sty", package::proofwiki_sty::load_definitions),
@@ -684,6 +799,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ellipsis", "sty", package::ellipsis_sty::load_definitions),
   ("epstopdf", "sty", package::epstopdf_sty::load_definitions),
   ("fancyvrb", "sty", package::fancyvrb_sty::load_definitions),
+  ("fdsymbol", "sty", package::fdsymbol_sty::load_definitions),
   ("flafter", "sty", package::flafter_sty::load_definitions),
   ("here", "sty", package::here_sty::load_definitions),
   (
@@ -713,7 +829,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("upquote", "sty", package::upquote_sty::load_definitions),
   ("minimal", "cls", package::minimal_cls::load_definitions),
-  ("sprocl", "sty", package::sprocl_sty::load_definitions),
+  // sprocl: no binding — papers bundle their own sprocl.sty (World Scientific
+  // proceedings style), which Perl raw-loads cleanly. The earlier stub
+  // intercepted the load and only stubbed \address/\abstracts, leaving
+  // \citelow / \citeup / \cite-with-* and the rest of sprocl undefined.
   ("srcltx", "sty", package::srcltx_sty::load_definitions),
   (
     "standalone",
@@ -779,10 +898,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::bigintcalc_sty::load_definitions,
   ),
+  ("bigstrut", "sty", package::bigstrut_sty::load_definitions),
   ("bitset", "sty", package::bitset_sty::load_definitions),
   ("calrsfs", "sty", package::calrsfs_sty::load_definitions),
   ("cmbright", "sty", package::cmbright_sty::load_definitions),
   ("euscript", "sty", package::euscript_sty::load_definitions),
+  ("everyshi", "sty", package::everyshi_sty::load_definitions),
   ("expl3", "lua", package::expl3_lua::load_definitions),
   ("expl3", "sty", package::expl3_sty::load_definitions),
   ("expl3", "ltx", package::expl3_ltx::load_definitions),
@@ -822,6 +943,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
+  // Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
+  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
+  // (FindFile_fallback) does the same. Without this, paper-bundled
+  // class files like `Definitions/mdpi.cls` miss the registered
+  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
+  // producing 50+ cascading undefined errors. Witness 2403.18716.
+  let base_only = base.rsplit_once(['/', '\\']).map_or(base, |(_, b)| b);
   // Perl pathname_find L383-389: try strict-case match first, then fall back
   // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
   // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
@@ -831,8 +959,18 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
     .or_else(|| {
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| *name == base_only && *extension == ext)
+    })
+    .or_else(|| {
       BINDINGS.iter().find(|(name, extension, _)| {
         name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
+      })
+    })
+    .or_else(|| {
+      BINDINGS.iter().find(|(name, extension, _)| {
+        name.eq_ignore_ascii_case(base_only) && extension.eq_ignore_ascii_case(ext)
       })
     })
     .map(|(_, _, loader)| loader())

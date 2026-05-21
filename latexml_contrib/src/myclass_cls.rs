@@ -1,8 +1,9 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   // Perl: myclass.cls.ltxml
-  DefMacro!("\\my@class@stuff", "");
+  def_macro_noop("\\my@class@stuff")?;
   DeclareOption!(
     "acommonoption",
     "\\xdef\\my@class@stuff{\\my@class@stuff, acommonoption}"

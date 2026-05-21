@@ -19,7 +19,7 @@ LoadDefinitions!({
   // but the star + non-star forms actually DO dynamic-macro work in Perl.
   // This cycle brings those to parity.
 
-  DefMacro!("\\titlelabel{}", None);
+  def_macro_noop("\\titlelabel{}")?;
   // \titleformat: star and normal forms
   DefMacro!("\\titleformat", "\\@ifstar{\\lx@titleformat@star}{\\lx@titleformat}");
 
@@ -39,7 +39,7 @@ LoadDefinitions!({
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
     let target = s!("\\format@title@{sec}");
-    let mut body: Vec<Token> = format.clone().unlist();
+    let mut body: Vec<Token> = format.unlist();
     body.push(T_SPACE!());
     body.push(T_PARAM!());
     body.push(T_OTHER!("1"));
@@ -63,7 +63,7 @@ LoadDefinitions!({
 
     // \format@title@font@<sec>
     let font_target = s!("\\format@title@font@{sec}");
-    let mut font_body: Vec<Token> = format.clone().unlist();
+    let mut font_body: Vec<Token> = format.unlist();
     if let Some(cls) = class {
       font_body.push(T_CS!("\\@ADDCLASS"));
       font_body.push(T_OTHER!(cls));
@@ -74,10 +74,10 @@ LoadDefinitions!({
     let body_target = s!("\\format@title@{sec}");
     let mut body: Vec<Token> = Vec::new();
     body.push(T_CS!(&font_target));
-    body.extend(label.clone().unlist());
+    body.extend(label.unlist());
     body.push(T_CS!("\\hspace"));
     body.push(T_BEGIN!());
-    body.extend(sep.clone().unlist());
+    body.extend(sep.unlist());
     body.push(T_END!());
     body.push(T_PARAM!());
     body.push(T_OTHER!("1"));
@@ -86,28 +86,28 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\chaptertitlename",                        "\\chaptername");
-  DefMacro!("\\titlespacing OptionalMatch:* {}{}{}{}[]", None);
+  def_macro_noop("\\titlespacing OptionalMatch:* {}{}{}{}[]")?;
 
   DefMacro!("\\filright",  "\\raggedright");
   DefMacro!("\\filcenter", "\\centering");
   DefMacro!("\\filleft",   "\\raggedleft");
-  DefMacro!("\\fillast",   None);
+  def_macro_noop("\\fillast")?;
   DefMacro!("\\filinner",  "\\filleft");
   DefMacro!("\\filouter",  "\\filright");
   DefRegister!("\\wordsep", Dimension(0));
 
-  DefMacro!("\\titleline[]{}", None);
+  def_macro_noop("\\titleline[]{}")?;
   DefMacro!("\\titlerule", "\\@ifstar{\\lx@titlerule@star}{\\lx@titlerule}");
-  DefMacro!("\\lx@titlerule@star []{}", None);
-  DefMacro!("\\lx@titlerule []", None);
+  def_macro_noop("\\lx@titlerule@star []{}")?;
+  def_macro_noop("\\lx@titlerule []")?;
 
   DefConditional!("\\iftitlemeasuring");
-  DefMacro!("\\assignpagestyle{}{}", None);
-  DefMacro!("\\sectionbreak",       None);
-  DefMacro!("\\subsectionbreak",    None);
-  DefMacro!("\\subsubsectionbreak", None);
-  DefMacro!("\\paragraphbreak",     None);
-  DefMacro!("\\subparagraphbreak",  None);
+  def_macro_noop("\\assignpagestyle{}{}")?;
+  def_macro_noop("\\sectionbreak")?;
+  def_macro_noop("\\subsectionbreak")?;
+  def_macro_noop("\\subsubsectionbreak")?;
+  def_macro_noop("\\paragraphbreak")?;
+  def_macro_noop("\\subparagraphbreak")?;
 
-  DefMacro!("\\titleclass{}[]{} []", None);
+  def_macro_noop("\\titleclass{}[]{} []")?;
 });

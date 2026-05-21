@@ -28,6 +28,7 @@ fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   .or_else(lookup_font)
 }
 
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -64,7 +65,7 @@ LoadDefinitions!({
       let close = gullet::read_x_token(None, false, None)?;
       if close.is_none() || close != Some(T_OTHER!(")")) {
         let got = close
-          .map(|t| t.stringify().to_string())
+          .map(|t| t.stringify())
           .unwrap_or_else(|| "EOF".to_string());
         let message = format!("Missing close parenthesis in {:?} expr. Got {}", rtype, got);
         Error!("expected", ")", message);
@@ -115,7 +116,7 @@ LoadDefinitions!({
             }
           })
           .map(RegisterValue::Number)
-          .or(Some(RegisterValue::Number(Number::new(0))))
+          .or_else(|| Some(RegisterValue::Number(Number::new(0))))
       } else {
         Some(RegisterValue::Number(Number::new(0)))
       }
@@ -150,7 +151,7 @@ LoadDefinitions!({
   DefRegister!("\\tracingnesting"    => Number::new(0));
 
   // Perl L46: \showgroups
-  DefPrimitive!("\\showgroups", None);
+  def_primitive_noop("\\showgroups")?;
 
   // Perl L49-52: \showtokens — logs the token text (no document output)
   DefPrimitive!("\\showtokens GeneralText", sub[(tokens)] {
@@ -177,7 +178,7 @@ LoadDefinitions!({
 
   // \fontcharht / \fontcharwd / \fontchardp / \fontcharic — Perl L86-113
   DefParameterType!(FontDef, sub[_inner, _extra] {
-    gullet::read_token()?.unwrap_or(T_CS!("\\relax"))
+    gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
   });
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
   readonly => true,
@@ -257,7 +258,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }
@@ -283,7 +284,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }
@@ -314,7 +315,7 @@ LoadDefinitions!({
         };
         d.and_then(|s| if let Stored::Dimension(dim) = s { Some(*dim) } else { None })
           .map(RegisterValue::Dimension)
-          .or(Some(RegisterValue::Dimension(Dimension::new(0))))
+          .or_else(|| Some(RegisterValue::Dimension(Dimension::new(0))))
       } else {
         Some(RegisterValue::Dimension(Dimension::new(0)))
       }
@@ -385,12 +386,12 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.6 Additional Registers and Marks — Perl L221-226
-  DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", None);
-  DefMacro!("\\firstmarks Number", None);
-  DefMacro!("\\botmarks Number", None);
-  DefMacro!("\\splitfirstmarks Number", None);
-  DefMacro!("\\splitbotmarks Number", None);
+  def_primitive_noop("\\marks Number GeneralText")?;
+  def_macro_noop("\\topmarks Number")?;
+  def_macro_noop("\\firstmarks Number")?;
+  def_macro_noop("\\botmarks Number")?;
+  def_macro_noop("\\splitfirstmarks Number")?;
+  def_macro_noop("\\splitbotmarks Number")?;
 
   //======================================================================
   // 3.7 Input Handling — Perl L233-258
@@ -441,6 +442,15 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.9 Math Formulas — Perl L306
+  // `\middle` (eTeX) emits a separator delimiter inside a balanced
+  // `\left/\right` pair, e.g. `\left\{ x \middle| x<0 \right\}` for a
+  // set-comprehension. The delimiter inherits the role MIDDLE
+  // (already distinct from VERTBAR), so the math grammar's middle_bar
+  // / middle rules can pair it without ambiguity. We also stamp
+  // `role_side="middle"` on the emitted XMTok — symmetry with
+  // \left's `role_side="left"` and \right's `role_side="right"` set
+  // in tex_math.rs:\@left and :\@right, giving a uniform 3-way side
+  // discriminator on side-aware fence-pair delimiters. Task #263.
   DefConstructor!("\\middle Token", "#1",
   after_construct => sub[document, _whatsit] {
     let current = document.get_node().clone();
@@ -451,6 +461,7 @@ LoadDefinitions!({
     let mut delim = delim_opt.unwrap_or_else(|| current.clone());
     document.set_attribute(&mut delim, "role", "MIDDLE")?;
     document.set_attribute(&mut delim, "stretchy", "true")?;
+    document.set_attribute(&mut delim, "role_side", "middle")?;
   });
 
   //======================================================================
@@ -460,20 +471,20 @@ LoadDefinitions!({
   //======================================================================
   // 3.11 Discarded Items — Perl L322-324
   DefRegister!("\\savingvdiscards" => Number::new(0));
-  DefPrimitive!("\\pagediscards", None);
-  DefPrimitive!("\\splitdiscards", None);
+  def_primitive_noop("\\pagediscards")?;
+  def_primitive_noop("\\splitdiscards")?;
 
   //======================================================================
   // 3.12 Expandable Commands — Perl L330-357
   DefConditional!("\\ifdefined Token", sub[(t)] {
-    lookup_meaning(&t).is_some()
+    has_meaning(&t)
   });
 
   // \ifcsname stuff \endcsname.
   // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors
   // for non-expandable CS tokens encountered during expansion (TeX §506-507).
   DefConditional!("\\ifcsname CSNameQuiet", sub[(t)] {
-    lookup_meaning(&t).is_some()
+    has_meaning(&t)
   });
 
   // \ifincsname — eTeX (TeX §506-507): true when expansion is happening
@@ -508,10 +519,10 @@ LoadDefinitions!({
   // 4.1 Mixed-Direction Typesetting — Perl L367-386
   DefRegister!("\\TeXXeTstate" => Number::new(0));
 
-  DefMacro!("\\beginL", None);
-  DefMacro!("\\beginR", None);
-  DefMacro!("\\endL", None);
-  DefMacro!("\\endR", None);
+  def_macro_noop("\\beginL")?;
+  def_macro_noop("\\beginR")?;
+  def_macro_noop("\\endL")?;
+  def_macro_noop("\\endR")?;
 
   DefRegister!("\\predisplaydirection" => Number::new(0));
 
@@ -525,7 +536,35 @@ LoadDefinitions!({
 
   //======================================================================
   // X.X Orphans / pdfTeX-leftover entries — Perl L399-407
-  DefPrimitive!("\\pdftexcmds@directlua{}", None);
+  def_primitive_noop("\\pdftexcmds@directlua{}")?;
   DefRegister!("\\synctex", Number::new(0));
-  DefMacro!("\\reserveinserts{}", None);
+  def_macro_noop("\\reserveinserts{}")?;
+
+  //======================================================================
+  // etex.sty register-allocator macros (etex.sty L332-348). Real defs
+  // use `\et@xglob`/`\et@xloc` to allocate from extended register
+  // pools (Numbers 256+ for count/dimen/etc.). For our purposes the
+  // semantic is "allocate a new register"; forward to LaTeX's
+  // `\newcount`/`\newdimen`/etc. which already exist.
+  //
+  // Glob* variants allocate globally; loc* variants locally.
+  // In LaTeXML's flat-state model these are effectively equivalent.
+  //
+  // Witness: arXiv:2506.16610 / .16657 / .20642 (papers via etex.sty
+  // raw-load + linegoal.sty / etextools / similar). Rust 2 → 0
+  // expected, beating Perl=3.
+  DefMacro!("\\globcount",  "\\newcount");
+  DefMacro!("\\loccount",   "\\newcount");
+  DefMacro!("\\globdimen",  "\\newdimen");
+  DefMacro!("\\locdimen",   "\\newdimen");
+  DefMacro!("\\globskip",   "\\newskip");
+  DefMacro!("\\locskip",    "\\newskip");
+  DefMacro!("\\globmuskip", "\\newmuskip");
+  DefMacro!("\\locmuskip",  "\\newmuskip");
+  DefMacro!("\\globbox",    "\\newbox");
+  DefMacro!("\\locbox",     "\\newbox");
+  DefMacro!("\\globtoks",   "\\newtoks");
+  DefMacro!("\\loctoks",    "\\newtoks");
+  DefMacro!("\\globmarks",  "\\newmarks");
+  DefMacro!("\\locmarks",   "\\newmarks");
 });

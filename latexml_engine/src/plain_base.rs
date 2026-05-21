@@ -3,6 +3,7 @@
 //! Core plain TeX definitions (Appendix B of The TeXbook)
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   // Perl: plain_base.pool.ltxml — definitions only (no LoadPool calls)
   // bootstrap/dump/constructs are loaded by tex.rs (= LoadFormat('plain'))
@@ -50,11 +51,11 @@ LoadDefinitions!({
   // \tracingfonts and \showoutput are also ignored debug primitives —
   // Perl declares them in latex_constructs.pool.ltxml L5677-5679 alongside
   // the others. Co-locating here so plain.tex users also get them.
-  DefMacro!("\\hideoutput", None);
-  DefMacro!("\\showoverfull", None);
-  DefMacro!("\\loggingoutput", None);
-  DefMacro!("\\tracingfonts", None);
-  DefMacro!("\\showoutput", None);
+  def_macro_noop("\\hideoutput")?;
+  def_macro_noop("\\showoverfull")?;
+  def_macro_noop("\\loggingoutput")?;
+  def_macro_noop("\\tracingfonts")?;
+  def_macro_noop("\\showoutput")?;
   DefMacro!(
     "\\loggingall",
     r"\tracingstats\tw@
@@ -207,7 +208,7 @@ LoadDefinitions!({
     // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
     properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
   );
-  DefMacro!("\\hidewidth", None);
+  def_macro_noop("\\hidewidth")?;
 
   //======================================================================
   // TeX Book, Appendix B, p. 344
@@ -409,8 +410,8 @@ LoadDefinitions!({
     }
   }, require_math => true);
 
-  DefPrimitive!("\\frenchspacing", None);
-  DefPrimitive!("\\nonfrenchspacing", None);
+  def_primitive_noop("\\frenchspacing")?;
+  def_primitive_noop("\\nonfrenchspacing")?;
   DefMacro!(
     "\\normalbaselines",
     r"\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit"
@@ -425,7 +426,7 @@ LoadDefinitions!({
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
 
-  DefPrimitive!("\\endline", None);
+  def_primitive_noop("\\endline")?;
 
   // Use \r for the newline from TeX!!!
   DefMacro!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
@@ -540,8 +541,8 @@ LoadDefinitions!({
       Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
       stored_map!("name" => "hglue", "width" => length, "isSpace" => true))
   });
-  DefPrimitive!("\\vglue Glue", None);
-  DefPrimitive!("\\topglue", None);
+  def_primitive_noop("\\vglue Glue")?;
+  def_primitive_noop("\\topglue")?;
   // Perl: DefMacroI('\nointerlineskip',undef,'\prevdepth-1000\p@');
   DefMacro!("\\nointerlineskip", r"\prevdepth-1000\p@");
   // Perl: DefMacroI('\offinterlineskip',undef, '\baselineskip-1000\p@\lineskip\z@
@@ -558,19 +559,25 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 353
 
-  DefPrimitive!("\\break", None);
-  DefPrimitive!("\\nobreak", None);
+  def_primitive_noop("\\break")?;
+  def_primitive_noop("\\nobreak")?;
   // \nobreakspace not in Perl plain_base — defined as `\lx@nobreakspace`
   // in base_utilities.rs (Perl Base_Utility.pool.ltxml:53), then Let'd
   // in latex_constructs.rs (Perl latex_constructs.pool.ltxml:48). Plain
   // format leaves it undefined, matching Perl.
   // Perl: DefMacro(T_ACTIVE("~"), T_CS('\lx@NBSP'));
-  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP");
+  // `protected => true`: keep active `~` UNEXPANDED in partial
+  // expansion (`\write`'s `XGeneralText`, …). Without it, the `~`
+  // baked into a written aux file becomes the literal CS name
+  // `\lx@NBSP`, which on re-read with `@`=OTHER splits to `\lx` +
+  // `@NBSP`. See `plain_constructs.rs` `\&` for the parallel
+  // dispatch-macro case.
+  DefMacro!(T_ACTIVE!('~'), None, "\\lx@NBSP", protected => true);
 
   DefMacro!("\\slash", "/");
-  DefPrimitive!("\\filbreak", None);
+  def_primitive_noop("\\filbreak")?;
   DefMacro!("\\goodbreak", "\\par");
-  DefPrimitive!("\\removelastskip", None);
+  def_primitive_noop("\\removelastskip")?;
   DefMacro!("\\smallbreak", "\\par");
   DefMacro!("\\medbreak", "\\par");
   DefMacro!("\\bigbreak", "\\par");
@@ -582,18 +589,18 @@ LoadDefinitions!({
   DefMacro!("\\m@th", "\\mathsurround=0pt ");
 
   // \strutbox
-  DefMacro!("\\strut", None);
+  def_macro_noop("\\strut")?;
   TeX!("\\newbox\\strutbox");
   //======================================================================
   // TeX Book, Appendix B. p. 354
 
   // Plain TeX tabbing — \settabs stub (no structured tabbing in plain)
 
-  DefMacro!("\\settabs", None);
+  def_macro_noop("\\settabs")?;
   //======================================================================
   // TeX Book, Appendix B. p. 355
 
-  DefPrimitive!("\\hang", None);
+  def_primitive_noop("\\hang")?;
 
   // Plain TeX \item/\itemitem — simple hanging indent with \textindent.
   // No auto-opening <itemize> — plain TeX doesn't have structured lists.
@@ -627,9 +634,9 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B. p. 356
 
-  DefPrimitive!("\\raggedright", None);
-  DefPrimitive!("\\raggedleft", None); // this is actually LaTeX
-  DefPrimitive!("\\ttraggedright", None);
+  def_primitive_noop("\\raggedright")?;
+  def_primitive_noop("\\raggedleft")?; // this is actually LaTeX
+  def_primitive_noop("\\ttraggedright")?;
   // \leavevmode moved to plain_bootstrap.rs (Perl plain_bootstrap.pool.ltxml L43)
   DefMacro!(
     "\\mathhexbox{}{}{}",
@@ -657,7 +664,7 @@ LoadDefinitions!({
   });
 
   //----------------------------------------------------------------------
-  DefPrimitive!("\\openup Dimension", None);
+  def_primitive_noop("\\openup Dimension")?;
 
   // What should this do? (needs to work with alignments..)
   // see https://www.tug.org/TUGboat/tb07-1/tb14beet.pdf
@@ -672,13 +679,13 @@ LoadDefinitions!({
   DefRegister!("\\footline" => Tokens!());
   DefMacro!("\\folio", "1"); // What else?
 
-  DefPrimitive!("\\nopagenumbers", None);
+  def_primitive_noop("\\nopagenumbers")?;
   DefMacro!("\\advancepageno", "\\advance\\pageno1\\relax");
 
   //======================================================================
   // TeX Book, Appendix B. p. 363
-  DefPrimitive!("\\raggedbottom", None);
-  DefPrimitive!("\\normalbottom", None);
+  def_primitive_noop("\\raggedbottom")?;
+  def_primitive_noop("\\normalbottom")?;
 
   // Until we can do the "v" properly:
   DefMacro!("\\vfootnote", "\\footnote");
@@ -690,20 +697,20 @@ LoadDefinitions!({
   DefMacro!("\\f@t{}", r"#1\@foot");
   DefMacro!("\\@foot", r"\strut\egroup");
 
-  DefPrimitive!("\\footstrut", None);
+  def_primitive_noop("\\footstrut")?;
   DefRegister!("\\footins" => Number::new(0));
 
-  DefPrimitive!("\\topinsert", None);
-  DefPrimitive!("\\midinsert", None);
-  DefPrimitive!("\\pageinsert", None);
-  DefPrimitive!("\\endinsert", None);
+  def_primitive_noop("\\topinsert")?;
+  def_primitive_noop("\\midinsert")?;
+  def_primitive_noop("\\pageinsert")?;
+  def_primitive_noop("\\endinsert")?;
   // \topins ?
 
   //======================================================================
   // TeX Book, Appendix B. p. 364
 
   // Let's hope nobody is messing with the output routine...
-  DefPrimitive!("\\footnoterule", None);
+  def_primitive_noop("\\footnoterule")?;
 
   //======================================================================
   // End of TeX Book definitions.

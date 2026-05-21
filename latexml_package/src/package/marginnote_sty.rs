@@ -17,7 +17,7 @@ LoadDefinitions!({
     DefMacro!("\\mn@parboxrestore", "\\@parboxrestore");
   });
   DeclareOption!("noparboxrestore", {
-    DefMacro!("\\mn@parboxrestore", None);
+    def_macro_noop("\\mn@parboxrestore")?;
   });
 
   for option in ["fulladjust", "heightadjust", "depthadjust", "noadjust"] {
@@ -80,16 +80,16 @@ LoadDefinitions!({
   Let!("\\mn@vadjust", "\\vadjust");
 
   // stubs that do nothing
-  DefMacro!("\\@mn@marginnote []{}",     None);
-  DefMacro!("\\@mn@@marginnote []{}[]",  None);
-  DefMacro!("\\@mn@@@marginnote []{}[]", None);
-  DefMacro!("\\@mn@margintest",          None);
-  DefMacro!("\\@mn@thispage",            None);
-  DefMacro!("\\@mn@atthispage",          None);
-  DefMacro!("\\@mn@currpage",            None);
-  DefMacro!("\\@mn@currxpos",            None);
-  DefMacro!("\\mn@vlap {}",              None);
-  DefMacro!("\\mn@zbox {}",              None);
+  def_macro_noop("\\@mn@marginnote []{}")?;
+  def_macro_noop("\\@mn@@marginnote []{}[]")?;
+  def_macro_noop("\\@mn@@@marginnote []{}[]")?;
+  def_macro_noop("\\@mn@margintest")?;
+  def_macro_noop("\\@mn@thispage")?;
+  def_macro_noop("\\@mn@atthispage")?;
+  def_macro_noop("\\@mn@currpage")?;
+  def_macro_noop("\\@mn@currxpos")?;
+  def_macro_noop("\\mn@vlap {}")?;
+  def_macro_noop("\\mn@zbox {}")?;
 
   NewCounter!("mn@abspage");
 });

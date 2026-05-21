@@ -23,12 +23,12 @@ LoadDefinitions!({
     r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
 
-  DefMacro!("\\botmark", "");
-  DefMacro!("\\topmark", "");
+  def_macro_noop("\\botmark")?;
+  def_macro_noop("\\topmark")?;
 
-  DefMacro!("\\flushcolumns", "");
-  DefMacro!("\\raggedcolumns", "");
-  DefMacro!("\\setemergencystretch", "");
+  def_macro_noop("\\flushcolumns")?;
+  def_macro_noop("\\raggedcolumns")?;
+  def_macro_noop("\\setemergencystretch")?;
 
   DefRegister!("\\premulticols"         => Dimension!("50pt"));
   DefRegister!("\\postmulticols"        => Dimension!("20pt"));

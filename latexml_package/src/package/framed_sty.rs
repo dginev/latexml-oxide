@@ -23,6 +23,7 @@ fn lookup_color_hex(name: &str) -> String {
   })
 }
 
+
 LoadDefinitions!({
   // Intentional divergence (WISDOM #44 class: structural-adaptation, applies
   // to the {shaded}/{shaded*}/{snugshade}/{snugshade*}/{titled-frame} envs
@@ -302,4 +303,14 @@ LoadDefinitions!({
   DefRegister!("\\FrameRule", Dimension!(".4pt"));
   DefRegister!("\\FrameSep", Dimension!("9pt"));
   DefRegister!("\\OuterFrameSep", Dimension!("0pt"));
+
+  // \MakeFramed{settings}...\endMakeFramed — framed.sty primitives that
+  // user-defined frame environments wrap (TL framed.sty L86, L114-115).
+  // We don't materialize the framing typeset machinery; stub as no-op
+  // pass-through. \FrameRestore is invoked inside the settings group
+  // and also a no-op.
+  // Witness 2405.19660.
+  def_macro_noop("\\MakeFramed{}")?;
+  def_macro_noop("\\endMakeFramed")?;
+  def_macro_noop("\\FrameRestore")?;
 });

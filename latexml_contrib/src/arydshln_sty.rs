@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -31,18 +32,18 @@ LoadDefinitions!({
   DefRegister!("\\dashlinegap" => Dimension!("4pt"));
   Let!("\\hdashlinewidth", "\\dashlinedash");
   Let!("\\hdashlinegap", "\\dashlinegap");
-  DefMacro!("\\ADLactivate", "");
-  DefMacro!("\\ADLdrawingmode", "");
-  DefMacro!("\\ADLinactivate", "");
-  DefMacro!("\\ADLnoshorthanded", "");
-  DefMacro!("\\ADLnullwide", "");
-  DefMacro!("\\ADLnullwidehline", "");
-  DefMacro!("\\ADLsomewide", "");
-  DefMacro!("\\ADLsomewidehline", "");
-  DefMacro!("\\arrayrulecolor", "");
-  DefMacro!("\\dashgapcolor{}", "");
-  DefMacro!("\\doublerulesepcolor", "");
-  DefMacro!("\\endlongtable", "");
-  DefMacro!("\\nodashgapcolor", "");
-  DefMacro!("\\xleaders", "");
+  def_macro_noop("\\ADLactivate")?;
+  def_macro_noop("\\ADLdrawingmode")?;
+  def_macro_noop("\\ADLinactivate")?;
+  def_macro_noop("\\ADLnoshorthanded")?;
+  def_macro_noop("\\ADLnullwide")?;
+  def_macro_noop("\\ADLnullwidehline")?;
+  def_macro_noop("\\ADLsomewide")?;
+  def_macro_noop("\\ADLsomewidehline")?;
+  def_macro_noop("\\arrayrulecolor")?;
+  def_macro_noop("\\dashgapcolor{}")?;
+  def_macro_noop("\\doublerulesepcolor")?;
+  def_macro_noop("\\endlongtable")?;
+  def_macro_noop("\\nodashgapcolor")?;
+  def_macro_noop("\\xleaders")?;
 });

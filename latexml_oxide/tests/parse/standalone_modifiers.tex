@@ -33,8 +33,14 @@ $ 5\equiv 8 \pmod 3 $
 
 % Modifiers in factors
 
-$ P(x=0) $ 
+$ P(x=0) $
 
 $ P ( a < b < c) $
+
+% Comma-list of single-relop modifiers as function arguments
+% (ASF migration item 5 / modified_term refinement, 2026-05-19).
+% Previously ltx_math_unparsed; now parses as
+% `P @ vector(x=0, y<0)` via the modified_term path.
+$ P(x = 0, y < 0) $
 
 \end{document}

@@ -28,7 +28,15 @@ latexml_package/src/engine/*_dump.rs
 
 # Post-processing test actual output
 *-post-actual.xml
-resources/dumps/
+
+# Kernel dumps: versioned files (plain.YYYY.dump.txt etc.) are committed
+# so the binary can find them at runtime / embed them at build time.
+# Local-only un-versioned variants and other debris in this dir stay
+# ignored.
+resources/dumps/*
+!resources/dumps/plain.*.dump.txt
+!resources/dumps/latex.*.dump.txt
+!resources/dumps/texlive.*.version
 
 # Local-dev scratch: arxiv-examples conversion fixtures, sandbox
 # conversion logs, ad-hoc notes. None belong in the repo.
@@ -39,6 +47,10 @@ USER_OK.md
 # Local Claude Code settings and ad-hoc HTML conversion outputs
 .claude/
 html/
+
+# Python bytecode (e.g. tools/check_memory.py emits __pycache__/)
+__pycache__/
+*.pyc
 
 # Reference / read-only mirror trees (Perl LaTeXML upstream sources,
 # community ar5iv-bindings .ltxml, TeXbook + tex.web). These live

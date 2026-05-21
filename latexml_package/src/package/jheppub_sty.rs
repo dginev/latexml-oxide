@@ -49,7 +49,11 @@ LoadDefinitions!({
   DefMacro!("\\proceeding{}", "\\@add@frontmatter{ltx:note}[role=proceeding]{#1}");
   DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
-  DefMacro!("\\collaborationImg[]{}", "");
+  def_macro_noop("\\collaborationImg[]{}")?;
+  // \@@@collaborator internal — mirror aas_support's definition so the
+  // expansion above resolves to actual XML markup instead of being
+  // reported as undefined. Witness 2305.10497.
+  DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
 
   // Acknowledgements — Perl L56-60 emits `name='#name'` on
   // <ltx:acknowledgements> with the name digested from
@@ -103,12 +107,18 @@ LoadDefinitions!({
   DefMacro!("\\afterTocRuleSpace", "\\bigskip\\bigskip");
 
   // Misc — Perl L99-109
-  DefMacro!("\\beforetochook", "");
-  DefMacro!("\\notoc", "");
-  DefMacro!("\\compress", "");
-  DefMacro!("\\correctionref{}{}{}", "");
+  def_macro_noop("\\beforetochook")?;
+  def_macro_noop("\\notoc")?;
+  def_macro_noop("\\compress")?;
+  // \correctionref{label}{url}{text} — link to a corrigendum.
+  // Perl gobbles (raw \gdef binding hard to translate); we surpass
+  // by emitting the text as a link via hyperref's \href.
+  DefMacro!("\\correctionref{}{}{}", "\\href{#2}{#3}");
   DefMacro!("\\jname", "JHEP");
-  DefMacro!("\\subheader{}", "");
+  // \subheader{text} — author-typed subheader prose; preserve as
+  // ltx:note. Perl L? gobbles.
+  DefMacro!("\\subheader{}",
+    "\\@add@frontmatter{ltx:note}[role=subheader]{#1}");
   DefMacro!("\\xtumfont{}", "\\textsc{#1}");
   Let!("\\oldthebibliography", "\\thebibliography");
   Let!("\\endoldthebibliography", "\\endthebibliography");

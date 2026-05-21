@@ -1,14 +1,39 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   // Perl: algorithmicx.sty.ltxml
   // Was algorithmic.sty loaded? If so: BAIL immediately. (deeply incompatible)
-  if state::has_meaning(&T_CS!("\\algorithmic")) {
+  // NOTE: must use `is_defined_token` (Perl `IsDefined`) — not `has_meaning` —
+  // because users routinely do `\let\algorithmic\relax` before loading
+  // algpseudocode (which loads us via the algorithmicx chain) to opt out
+  // of algorithmic.sty. `\let X \relax` is *defined* in the state machine
+  // but is "LaTeX-y undefined" — Perl's `IsDefined` treats it as undefined,
+  // so the bail does not fire and the algorithmicx setup proceeds.
+  // Witness: arXiv:2603.09221 (`\let\algorithmic\relax` + algpseudocode).
+  if is_defined_token(&T_CS!("\\algorithmic")) {
     Warn!(
       "unexpected",
       "\\algorithmic",
       "Another package has already defined \\algorithmic, will not load algorithmicx.sty"
     );
+    // Defensive stubs for algorithmicx top-level commands so user
+    // preambles that call \algdef / \algnewcommand / \algnewlanguage
+    // / \alglanguage after the bail don't crash. The actual line-
+    // formatting machinery is gone, but the preamble setup commands
+    // need to gobble cleanly. Witness 2410.03000 (3 papers using
+    // algorithmic + algpseudocode together).
+    def_macro_noop("\\algdef OptionalKeyVals:algdef SkipSpaces {} [] [] {}")?;
+    def_macro_noop("\\algblock [] {}{}")?;
+    def_macro_noop("\\algcblock [] {}{}")?;
+    def_macro_noop("\\algblockx [] {}{}")?;
+    def_macro_noop("\\algcblockx [] {}{}")?;
+    def_macro_noop("\\algnewlanguage{}")?;
+    def_macro_noop("\\algdeflanguage{}")?;
+    def_macro_noop("\\alglanguage{}")?;
+    DefMacro!("\\algnewcommand",                  "\\newcommand");
+    DefMacro!("\\algrenewcommand",                "\\renewcommand");
+    def_macro_noop("\\algdefaulttext[]{}")?;
     return Ok(());
   }
 
@@ -104,6 +129,6 @@ LoadDefinitions!({
   );
 
   // Protect against obsolete versions of algorithmicx source
-  DefMacro!("\\ALG@g{}", "");
-  DefMacro!("\\endALG@g", "");
+  def_macro_noop("\\ALG@g{}")?;
+  def_macro_noop("\\endALG@g")?;
 });

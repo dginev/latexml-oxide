@@ -25,6 +25,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(number ~ "NUMBER");
   token!(punct ~ "PUNCT");
   token!(period ~ "PERIOD");
+  // PUNCT with `\quad`-class spacing (rpadding ≥ 5pt). The lexer
+  // (util.rs::punct_followed_by_wide_space) emits these as
+  // `WIDE_PUNCT:,:idx` so the grammar can prefer formulae_apply
+  // for the `formula , \quad condition` arXiv idiom without
+  // enumerating the `list_apply` alternatives that the pragma
+  // would only reject post-hoc. See docs/MATH_AMBIGUITY_AUDIT.md §2.
+  token!(wide_punct ~ "WIDE_PUNCT");
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
   token!(relop ~ "RELOP");
@@ -37,6 +44,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rangle =[rangle_rel rangle_close]);
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
+  // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`.
+  // The lexer (util.rs) further distinguishes those emitted by `\@left`
+  // from those emitted by `\@right` via the `lx@side` property set in
+  // the respective constructors (tex_math.rs). Side-distinct lexemes
+  // (LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR) eliminate
+  // combinatorial pairing ambiguity for the kerned-stack norm idioms
+  // (\vertii, \vertiii, …) where multiple identical bars appear in
+  // sequence. `stretchy_vertbar` is the union — used by legacy rules
+  // (e.g. eval_at) that don't care which side a stretchy bar came from.
+  // See docs/MATH_AMBIGUITY_AUDIT.md §2 (delimiter-pairing) and Task #263.
+  token!(left_stretchy_vertbar ~ "LEFT_STRETCHY_VERTBAR");
+  token!(right_stretchy_vertbar ~ "RIGHT_STRETCHY_VERTBAR");
+  // Fallback for stretchy bars that arrived without a side tag
+  // (legacy DOM input, or a code path that bypassed `\@left`/`\@right`).
+  // The lexer in util.rs emits this when `role_side` is absent.
+  // Rules that legitimately accept any side (eval_at) enumerate both
+  // alternatives explicitly rather than relying on a union token —
+  // the Marpa tree builder doesn't roll up alternation-of-tokens cleanly.
+  token!(undirected_stretchy_vertbar ~ "STRETCHY_VERTBAR");
   token!(close_pipe = "CLOSE:|");
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
@@ -116,10 +142,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | lbrace array rbrace => fenced
         | lbrace array => open_fenced
         | array rbrace => close_fenced;
-      // FUNCTION and OPFUNCTION are both factors (participate in implicit multiplication).
-      // The distinction is in argument absorption: OPFUNCTION absorbs bare args,
-      // FUNCTION only absorbs fenced (parenthesized) args.
-      factor = factor_base | function | opfunction | fenced_array;
+      // FUNCTION is a factor (participates in implicit multiplication).
+      // OPFUNCTION is intentionally NOT here. Including OPFUNCTION in
+      // `factor` would let `tight_term factor → apply_invisible_times`
+      // admit a bare OPFUNCTION as its LEFT operand — a reading the
+      // pragma `apply_invisible_times: left is OPFUNCTION/.../FUNCTION,
+      // prefer prefix_apply` correctly rejects, but only after the
+      // grammar has enumerated thousands of such derivations
+      // (~52% of trees on complex math-heavy equations such as
+      // 1911.09517 eq.993). Excluding OPFUNCTION from `factor`
+      // pushes the constraint upstream into the grammar: bare
+      // OPFUNCTION cannot anchor an invisible-times chain on the LEFT.
+      // To keep legitimate trailing-OPFUNCTION cases (`c \not`,
+      // `a b \not`, ...), the `tight_term += tight_term opfunction =>
+      // apply_invisible_times` rule below admits OPFUNCTION as a
+      // chain-terminating RIGHT operand. OPFUNCTION as the head of an
+      // applied form (`\log x`, `\sin x`) enters via `applied_func`
+      // (prefix_apply) and via the `tight_term += opfunction tight_term`
+      // and `tight_term += opfunction factor` rules further below.
+      factor = factor_base | function | fenced_array;
       // Perl: limit-from@(number, sign) — directional limits: 0+, 1-
       // A "left-only term": on the left behaves as a term (for comma lists),
       // on the right terminates at the addop (like expression-level postfix).
@@ -205,6 +246,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Composed functions can be applied like regular functions
       tight_term += composed_term tight_term => prefix_apply;
 
+
       term = tight_term
       | term mulop tight_term => infix_apply_nary
       | term mulop tight_term elideop => infix_apply_and_elide
@@ -273,6 +315,42 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // Uses formula_list_apply which rejects items containing relops (those belong at statement level).
       formula_list = expression punct expression => formula_list_apply
         | formula_list punct expression => formula_list_apply;
+
+      // ASF migration item 5 (Option A semantics, 2026-05-19, user-
+      // articulated): `modified_term` is a `tight_term` carrying ONE
+      // relop modifier. Single-relop only — multi-relop chains
+      // (`x < y < 0`) stay at the formula level via the existing
+      // multirelation flattening.
+      //
+      // Action: reuse `infix_relation`. For a single relop call it
+      // produces `Apply(relop, [tight_term, expression])` — the same
+      // shape as `formula relop expression` reduces to for the base
+      // case. So `x = 0` parses identically via either route, ASF /
+      // tree-iter dedup eliminates the duplicate.
+      //
+      // Why this category exists: it enables comma-list contexts
+      // where each item carries its own relop — most notably
+      // function arguments like `P(x = 0, y < 0)`. Today such
+      // input is `ltx_math_unparsed` because `formula_list_apply`
+      // rejects relational items (a comma-list-of-relations is
+      // semantically a different beast from a relop chain RHS).
+      // Modified_term threaded through `list_apply` (not
+      // `formula_list_apply`) gives the desired list-of-relations
+      // shape. Surpass-Perl improvement — the corresponding Perl
+      // grammar via `addEasyArgs` handles this through a different
+      // path with the same effect; here we keep Perl's semantic
+      // outcome.
+      //
+      // See `docs/MATH_PARSER_ASF_TIEBREAKING.md` (commit
+      // 5cde377610) for the proposal context.
+      modified_term = tight_term relop expression => infix_relation;
+      // Phase 1: only the all-modified-terms variants. Mixed-content
+      // variants (`modified_term punct expression`, etc.) deferred
+      // until a witness shows them needed, to keep ambiguity growth
+      // tight (the `parse_tree_count_limits` regression test is the
+      // canary).
+      formula_list += modified_term punct modified_term => modified_list_apply
+        | formula_list punct modified_term => modified_list_apply;
       // Comma-separated term lists: term, term, term, ...
       // Used for angle-bracket inner products <x,y>, <a,b,c>, etc.
       // Also includes limit_from_term for patterns like (1+, 0+, 1-, 0-).
@@ -326,6 +404,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | statement end_punct => postfix_embellished
         | statements end_punct => postfix_embellished
         | statements punct statement => list_apply
+        // `\quad`/`\qquad`-spaced PUNCT (WIDE_PUNCT) admits as a
+        // list-separator for non-relational items — e.g.
+        // `\ring{x},\qquad\accentset{\star}{d},\qquad...` is a list
+        // of decorated atoms, not separate formulae. PUNCT and
+        // WIDE_PUNCT are distinct lexemes (a given input comma is
+        // exactly one), so this rule doesn't compete with the bare
+        // PUNCT rule above on the same input position — the pragmas
+        // (list_apply: both items relational / formulae_apply: no
+        // relational items) decide which interpretation survives.
+        | statements wide_punct statement => list_apply
         // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
         | statements period statement => formulae_apply
         // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
@@ -339,7 +427,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | formulae punct statement => formulae_apply
         // Period also separates formulae
         | statement period statement => formulae_apply
-        | formulae period statement => formulae_apply;
+        | formulae period statement => formulae_apply
+        // `\quad`/`\qquad`-spaced PUNCT (lexer-tagged WIDE_PUNCT) also
+        // separates formulae. The token-level distinction from generic
+        // PUNCT means the grammar enumerates a DIFFERENT input alternative
+        // (a comma in the input is either PUNCT or WIDE_PUNCT, never
+        // both), avoiding the cross-contamination of treating one comma
+        // both ways simultaneously. Combined with `statements
+        // wide_punct statement → list_apply` below, the pragma decides
+        // which interpretation survives based on item-relationality.
+        | statement wide_punct statement => formulae_apply
+        | formulae wide_punct statement => formulae_apply;
 
       // Extensions, now that we have more category variables defined
       fenced_factor = lbrace expression rbrace    => fenced
@@ -388,6 +486,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
              | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
              | singlevertbar expression singlevertbar => fenced
+             // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
+             // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
+             // The lexer in util.rs distinguishes bars emitted by `\@left`
+             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\@right`
+             // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
+             // those constructors (tex_math.rs:\@left and :\@right). This
+             // pre-distinction collapses what would be a combinatorial
+             // pairing of identical stretchy bars into a single ungrammatical
+             // shape — the parser never enumerates `right-...-left` invalid
+             // pairings. The actions still verify the negative-rpadding
+             // (\kern) signal as a side condition so that two intentionally
+             // separate `\left|...\right|\left|...\right|` fences aren't
+             // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+             | left_stretchy_vertbar left_stretchy_vertbar left_stretchy_vertbar expression
+                 right_stretchy_vertbar right_stretchy_vertbar right_stretchy_vertbar
+                 => stretchy_triple_norm_fenced
+             | left_stretchy_vertbar left_stretchy_vertbar expression
+                 right_stretchy_vertbar right_stretchy_vertbar
+                 => stretchy_norm_fenced
+             // Balanced modulus: `\left| expr \right|` (stretchy bars).
+             // The lexer (util.rs) tags `\left/\right`-paired bars as
+             // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
+             // enumerate every alternative pairing of bare `|`s. With this
+             // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
+             // bars regardless of surrounding parens / scripts.
+             | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
              // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
@@ -412,6 +536,13 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | langle_open expression singlevertbar expression rangle_close => qm_braket
              // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
              | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
+             // Same Dirac shapes with plain ASCII `<` `>` (langle_rel/rangle_rel
+             // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
+             // outside `\langle/\rangle` macros. Semantics match the
+             // `\langle…\rangle` forms above so downstream MathML sees a single
+             // inner-product / quantum-operator-product Apply.
+             | langle_rel expression singlevertbar expression rangle_rel => qm_braket
+             | langle_rel expression singlevertbar expression singlevertbar expression rangle_rel => qm_bracket
              // Perl's Fence for comma-separated items in braces: {a,b} and {a,b,c}
              | lbrace term punct term rbrace => fence
              | lbrace term punct term punct term rbrace => fence
@@ -499,20 +630,57 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       applied_func = function fenced_factor => prefix_apply
         | trigfunction trig_arg => prefix_apply
         | opfunction tight_term => prefix_apply
-        // Perf: removed `| opfunction opfunction => prefix_apply`. Adjacent
-        // opfunctions (FG) already match via `opfunction tight_term` since
-        // opfunction is a term (`term += opfunction`, line 217). The short
-        // rule competed with cascade-via-tight_term in FGHa and doubled
-        // enumeration for every OPFUNCTION+OPFUNCTION pair.
+        // Cascading OPFUNCTION pair: `GH` parses as `G@(H)`. Required
+        // because OPFUNCTION is no longer in `factor` (see comment at
+        // the `factor` definition), so bare H cannot be a tight_term
+        // via the `factor → tight_term` base case — the cascade path
+        // `tight_term += opfunction tight_term` below would otherwise
+        // dead-end on the tail. Earlier this rule was removed
+        // (commit ffcafc33e) because it doubled enumeration when bare
+        // OPFUNCTION was admitted as a factor; with that admission gone,
+        // this is the sole path and no longer competes.
+        | opfunction opfunction => prefix_apply
         // Delimited function application: f(x), f[x], F(x), \sin(x) etc.
         // Perl: ApplyDelimited creates XMDual(content=Apply(XMRef(f),XMRef(args)),
         //        presentation=Apply(f, XMWrap(open, args, close))).
         // These are in applied_func so delimited calls participate in chaining:
         // f(a) g(b) → f@(a) * g@(b) via tight_term applied_func => apply_invisible_times
+        //
+        // Targeted Task #10 mitigation (2026-05-19): the `opfunction
+        // lbracket formula rbracket` and (sibling cleanup) `function
+        // lbracket formula rbracket` rules were ambiguous with
+        // `applied_func = (op|)function (tight_term|fenced_factor) =>
+        // prefix_apply`. `[formula]` reduces to `fenced_factor` via
+        // `lbracket expression rbracket => fenced`, and any expression
+        // is also a formula, so the same input matched two rules.
+        // HYBRID's Tree-iter (capped) lands on `prefix_apply`. ASF's
+        // Cartesian-product enumeration ALSO fires `apply_delimited`
+        // — and that body eagerly XMRefs its `func` operand via
+        // `create_xmrefs` → `Document::generate_id`, bumping
+        // `_ID_counter_` for a tree that's then pruned. The wasted
+        // xml:id slot shifts surviving lexemes' IDs by +1 (witness:
+        // `physics_test` under `LATEXML_MARPA_ASF_ONLY=1`).
+        //
+        // Removed:
+        // - `opfunction lbracket formula rbracket => apply_delimited`
+        // - `function lbracket formula rbracket => apply_delimited`
+        //
+        // Both convergent on `prefix_apply` (via `function
+        // fenced_factor`, `opfunction tight_term`).
+        //
+        // KEPT:
+        // - `function lparen formula rparen => apply_delimited`
+        //   `opfunction lparen formula rparen => apply_delimited` —
+        //   `f(x)` / `\sin(x)` is the canonical function-call notation;
+        //   the XMDual cross-reference shape is the intended semantic.
+        // - `trigfunction lbracket formula rbracket => apply_delimited`
+        //   `trigfunction lparen formula rparen => apply_delimited` —
+        //   `trig_arg` deliberately EXCLUDES `fenced_factor` (see the
+        //   `trig_arg` comment), so there's no `prefix_apply` path for
+        //   trig+`[…]` / trig+`(…)` — `apply_delimited` is the only
+        //   rule covering these cases.
         | function lparen formula rparen => apply_delimited
-        | function lbracket formula rbracket => apply_delimited
         | opfunction lparen formula rparen => apply_delimited
-        | opfunction lbracket formula rbracket => apply_delimited
         | trigfunction lparen formula rparen => apply_delimited
         | trigfunction lbracket formula rbracket => apply_delimited;
       // Standalone applied functions are also tight_terms
@@ -555,6 +723,17 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // rule is required.
       tight_term += opfunction tight_term => prefix_apply;
       tight_term += opfunction factor => prefix_apply;
+      // OPFUNCTION as the RIGHT operand of an implicit-times chain
+      // (`c \not`, `a b \not`, the trailing-OPFUNCTION cases in
+      // tests/math/not.tex and the recognizer_trailing_opfunction
+      // unit test). Replaces the `tight_term factor` path that used
+      // to admit OPFUNCTION via `factor → opfunction` — the LEFT
+      // restriction was the whole point of dropping OPFUNCTION from
+      // `factor` (see comment at the `factor` definition above).
+      // LEFT is `tight_term`, which can no longer derive a bare
+      // OPFUNCTION via the base case, so the pragma's
+      // "left-is-OPFUNCTION" case is unreachable through this rule.
+      tight_term += tight_term opfunction => apply_invisible_times;
       // Perf: removed `opfunction fenced_factor => prefix_apply` — `factor` already
       // includes fenced_factor, so this rule was a duplicate that caused Marpa to
       // enumerate the same tree twice for every `\sin(x)` (OPFUNCTION) form.
@@ -786,7 +965,20 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // CLOSE:| from \right| also triggers eval-at
         | tight_term close_pipe postsubarg => eval_at
         | tight_term close_pipe postsubarg postsuperarg => eval_at
-        | tight_term close_pipe postsuperarg postsubarg => eval_at;
+        | tight_term close_pipe postsuperarg postsubarg => eval_at
+        // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
+        // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
+        // `role_side="right"` property set in `\@right` (tex_math.rs).
+        // The `\left.` null-delimiter doesn't appear in the lexeme
+        // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
+        // postsubarg`. The undirected variant covers legacy DOM input
+        // or code paths that bypassed `\@right`.
+        | tight_term right_stretchy_vertbar postsubarg => eval_at
+        | tight_term right_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | tight_term right_stretchy_vertbar postsuperarg postsubarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsubarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
 
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop

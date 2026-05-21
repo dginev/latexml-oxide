@@ -36,15 +36,15 @@ LoadDefinitions!({
   DefMacro!("\\altaddress[]{}",     "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
   DefMacro!("\\altaffiliation[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
   DefMacro!("\\andname", "and");
-  DefMacro!("\\collaboration", "");
-  DefMacro!("\\noaffiliation", "");
+  def_macro_noop("\\collaboration")?;
+  def_macro_noop("\\noaffiliation")?;
 
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
   DefMacro!("\\email [] Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
   DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='url'>#1</ltx:contact>");
   DefMacro!("\\homepage Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{#1}}");
 
-  DefMacro!("\\firstname", "");
+  def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);
 
   // 4.4 Abstract
@@ -60,7 +60,7 @@ LoadDefinitions!({
   DefMacro!("\\preprint{}", "\\@add@frontmatter{ltx:note}[role=preprint]{#1}");
 
   // Extra
-  DefMacro!("\\blankaffiliation", "");
+  def_macro_noop("\\blankaffiliation")?;
   DefMacro!("\\checkindate", "\\today");
 
   DefMacro!("\\received[]{}", "\\@add@frontmatter{ltx:date}[role=received]{#2}");
@@ -69,12 +69,12 @@ LoadDefinitions!({
   DefMacro!("\\published[]{}", "\\@add@frontmatter{ltx:date}[role=published]{#2}");
 
   // 5.3 Widetext
-  DefMacro!("\\widetext", "");
-  DefMacro!("\\endwidetext", "");
-  DefMacro!("\\narrowtext", "");
-  DefMacro!("\\endnarrowtext", "");
-  DefMacro!("\\mediumtext", "");
-  DefMacro!("\\endmediumtext", "");
+  def_macro_noop("\\widetext")?;
+  def_macro_noop("\\endwidetext")?;
+  def_macro_noop("\\narrowtext")?;
+  def_macro_noop("\\endnarrowtext")?;
+  def_macro_noop("\\mediumtext")?;
+  def_macro_noop("\\endmediumtext")?;
 
   // 5.5 Acknowledgements — Perl revtex4_support.sty.ltxml L100-106.
   // Perl: DefConstructor('\acknowledgments', "<ltx:acknowledgements name='#name'>",
@@ -102,12 +102,16 @@ LoadDefinitions!({
 
   // Grid / column macros
   DefMacro!("\\thepagegrid", "one");
-  DefMacro!("\\onecolumngrid", "");
-  DefMacro!("\\twocolumngrid", "");
-  DefMacro!("\\restorecolumngrid", "");
-  DefPrimitive!("\\twocolumn", None);
+  def_macro_noop("\\onecolumngrid")?;
+  def_macro_noop("\\twocolumngrid")?;
+  def_macro_noop("\\restorecolumngrid")?;
+  // revtex4-1.cls L4388: \do@columngrid{layout}{N}. Layout-only.
+  // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
+  // before our stub binding loads).
+  def_macro_noop("\\do@columngrid{}{}")?;
+  def_primitive_noop("\\twocolumn")?;
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
-  DefMacro!("\\pagesofar", "");
+  def_macro_noop("\\pagesofar")?;
 
   // Endnotes — Perl revtex4_support.sty.ltxml L120-149.
   // For each constructor: if optional arg #1 is present, mark = arg1;
@@ -174,12 +178,22 @@ LoadDefinitions!({
   // from `\renewcommand`-ing \eqnum into something that re-introduces a
   // tag-conflict. Match Perl on the lock.
   DefMacro!("\\eqnum{}", "", locked => true);
-  DefMacro!("\\mathletters", "");
-  DefMacro!("\\endmathletters", "");
+  def_macro_noop("\\mathletters")?;
+  def_macro_noop("\\endmathletters")?;
 
   // Citations
   DefMacro!("\\onlinecite", "\\citealp");
   Let!("\\textcite", "\\citet");
+  // revtex4-1/4-2 substyle bbls reference internal cite helpers
+  // (`\rev@citealp`, `\rev@citealpnum`, `\rev@citet`, `\rev@citemark`)
+  // that are normally let-aliased from natbib. Map them to natbib
+  // equivalents so .bbl files referencing them resolve cleanly.
+  // Witness 2412.13042 (revtex4-2 + main.bbl using \rev@citealp).
+  Let!("\\rev@citealp",     "\\citealp");
+  Let!("\\rev@citealpnum",  "\\citealpnum");
+  Let!("\\rev@citet",       "\\citet");
+  Let!("\\rev@citenum",     "\\citenum");
+  Let!("\\rev@citemark",    "\\citenum");
 
   // 8. Citations and References — Perl revtex4_support.sty.ltxml L190-204
   // RevTeX3; obsolete for RevTeX4 (but semi-implemented there). Should be a
@@ -218,12 +232,12 @@ LoadDefinitions!({
       Let!("\\tabular", "\\longtable");
       Let!("\\endtabular", "\\endlongtable");
     });
-  DefMacro!("\\squeezetable", "");
+  def_macro_noop("\\squeezetable")?;
   DefMacro!("\\toprule", "\\hline\\hline");
   DefMacro!("\\colrule", "\\hline");
   DefMacro!("\\botrule", "\\hline\\hline");
-  DefMacro!("\\frstrut", "");
-  DefMacro!("\\lrstrut", "");
+  def_macro_noop("\\frstrut")?;
+  def_macro_noop("\\lrstrut")?;
   Let!("\\tableftsep", "\\tabcolsep");
   Let!("\\tabmidsep", "\\tabcolsep");
   Let!("\\tabrightsep", "\\tabcolsep");
@@ -234,10 +248,10 @@ LoadDefinitions!({
   RawTeX!("\\newcolumntype{d}{D{.}{.}{-1}}");
 
   // Floats
-  DefPrimitive!("\\printfigures", None);
-  DefPrimitive!("\\printtables", None);
-  DefMacro!("\\oneapage", "");
-  DefMacro!("\\printendnotes", "");
+  def_primitive_noop("\\printfigures")?;
+  def_primitive_noop("\\printtables")?;
+  def_macro_noop("\\oneapage")?;
+  def_macro_noop("\\printendnotes")?;
 
   // Turnpage
   DefEnvironment!("{turnpage}", "#body");
@@ -245,24 +259,24 @@ LoadDefinitions!({
   // Extra
   DefMacro!("\\MakeTextLowercase", "\\lowercase");
   DefMacro!("\\MakeTextUppercase", "\\uppercase");
-  DefMacro!("\\NoCaseChange", "");
+  def_macro_noop("\\NoCaseChange")?;
 
   // Macro & control stubs — Perl L280-295
-  DefMacro!("\\absbox", "");
-  DefMacro!("\\addstuff{}{}", "");
-  DefMacro!("\\appdef{}{}", "");
-  DefMacro!("\\gappdef{}{}", "");
-  DefMacro!("\\prepdef{}{}", "");
-  DefMacro!("\\lineloop{}", "");
-  DefMacro!("\\loopuntil{}", "");
-  DefMacro!("\\loopwhile{}", "");
-  DefMacro!("\\traceoutput", "");
-  DefMacro!("\\tracingplain", "");
-  DefMacro!("\\removephantombox", "");
-  DefMacro!("\\removestuff", "");
-  DefMacro!("\\replacestuff{}{}", "");
-  DefMacro!("\\say[]", "");
-  DefMacro!("\\saythe[]", "");
+  def_macro_noop("\\absbox")?;
+  def_macro_noop("\\addstuff{}{}")?;
+  def_macro_noop("\\appdef{}{}")?;
+  def_macro_noop("\\gappdef{}{}")?;
+  def_macro_noop("\\prepdef{}{}")?;
+  def_macro_noop("\\lineloop{}")?;
+  def_macro_noop("\\loopuntil{}")?;
+  def_macro_noop("\\loopwhile{}")?;
+  def_macro_noop("\\traceoutput")?;
+  def_macro_noop("\\tracingplain")?;
+  def_macro_noop("\\removephantombox")?;
+  def_macro_noop("\\removestuff")?;
+  def_macro_noop("\\replacestuff{}{}")?;
+  def_macro_noop("\\say[]")?;
+  def_macro_noop("\\saythe[]")?;
 
   // i18n
   DefMacro!("\\copyrightname", "??");
@@ -276,27 +290,27 @@ LoadDefinitions!({
   DefMacro!("\\volumename", "volume");
 
   // Document info — Perl L309-316
-  DefMacro!("\\volumenumber{}", "#1");
-  DefMacro!("\\volumeyear{}", "#1");
-  DefMacro!("\\issuenumber{}", "#1");
+  def_macro_identity("\\volumenumber{}")?;
+  def_macro_identity("\\volumeyear{}")?;
+  def_macro_identity("\\issuenumber{}")?;
   DefMacro!("\\bibinfo{}{}", "#2");
   DefMacro!("\\eprint{}", "eprint #1");
-  DefMacro!("\\eid{}", "#1");
+  def_macro_identity("\\eid{}")?;
   DefMacro!("\\startpage{}", "\\pageref{FirstPage}{#1}");
   DefMacro!("\\endpage", "\\pageref{LastPage}{#1}");
 
   // Extra stubs — Perl L319-323
-  DefMacro!("\\flushing", "");
+  def_macro_noop("\\flushing")?;
   DefMacro!("\\triggerpar", "\\par");
-  DefMacro!("\\fullinterlineskip", "");
+  def_macro_noop("\\fullinterlineskip")?;
   // Perl L322: \footbox as box register (used by revtex footnote handling)
   RawTeX!("\\newbox\\footbox");
   DefRegister!("\\intertabularlinepenalty", Number(100));
 
-  DefMacro!("\\FL", "");
-  DefMacro!("\\FR", "");
-  DefMacro!("\\draft", "");
-  DefMacro!("\\tighten", "");
+  def_macro_noop("\\FL")?;
+  def_macro_noop("\\FR")?;
+  def_macro_noop("\\draft")?;
+  def_macro_noop("\\tighten")?;
 
   // Journal abbreviations — Perl L336-365
   DefMacro!("\\ao", "Appl.~Opt.~");
@@ -331,18 +345,18 @@ LoadDefinitions!({
   DefMacro!("\\vr", "Vision Res.~");
 
   // Internal macros — Perl L370-431
-  DefMacro!("\\@revmess{}{}", "");
+  def_macro_noop("\\@revmess{}{}")?;
   DefMacro!("\\@ptsize", "0");
   DefMacro!("\\@journal", "pra");
 
   // Document style options — Perl L372-393
   DefMacro!("\\ds@preprint", "\\global\\preprintstytrue \\def\\@ptsize{2}");
-  DefMacro!("\\ds@twoside", "");
-  DefMacro!("\\ds@draft", "");
+  def_macro_noop("\\ds@twoside")?;
+  def_macro_noop("\\ds@draft")?;
   DefMacro!("\\ds@amsfonts", "\\@amsfontstrue");
   DefMacro!("\\ds@amssymb", "\\@amssymbolstrue");
   DefMacro!("\\ds@titlepage", "\\@titlepagefalse");
-  DefMacro!("\\ds@twocolumn", "");
+  def_macro_noop("\\ds@twocolumn")?;
   DefMacro!("\\ds@tighten", "\\@tightenlinestrue");
   DefMacro!("\\ds@floats", "\\@floatstrue");
   DefMacro!("\\ds@eqsecnum", "\\global\\secnumberstrue");
@@ -374,6 +388,6 @@ LoadDefinitions!({
 
   // Environment manipulation — Perl L425-430
   DefMacro!("\\replace@command{}{}", "\\global\\let#1#2 #1");
-  DefMacro!("\\replace@environment{}{}", "");
-  DefMacro!("\\glet@environment{}{}", "");
+  def_macro_noop("\\replace@environment{}{}")?;
+  def_macro_noop("\\glet@environment{}{}")?;
 });

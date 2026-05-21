@@ -3,6 +3,7 @@
 //! Core TeX Implementation for LaTeXML
 
 use crate::prelude::*;
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Penalties Family of primitive control sequences
@@ -14,8 +15,8 @@ LoadDefinitions!({
   // \penalty          c  adds a penalty to the current list.
   // \unpenalty        c  removes a penalty from the current list.
   // \lastpenalty      iq is 0 or the last penalty on the current list.
-  DefPrimitive!("\\penalty Number", None);
-  DefPrimitive!("\\unpenalty", None);
+  def_primitive_noop("\\penalty Number")?;
+  def_primitive_noop("\\unpenalty")?;
   DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
 
   //======================================================================

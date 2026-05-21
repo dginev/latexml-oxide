@@ -8,9 +8,9 @@ LoadDefinitions!({
   DefRegister!("\\croppadtop" => Dimension::new(0));
   DefRegister!("\\croppadbot" => Dimension::new(0));
   DefRegister!("\\croppadlr" =>  Dimension::new(0));
-  DefMacro!("\\thispagecropped", "");
-  DefMacro!("\\allpagescropped", "");
-  DefMacro!("\\nopagecropped",   "");
+  def_macro_noop("\\thispagecropped")?;
+  def_macro_noop("\\allpagescropped")?;
+  def_macro_noop("\\nopagecropped")?;
   DefConditional!("\\ifbottomcrops", {
     true
   });

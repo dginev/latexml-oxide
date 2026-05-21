@@ -1,31 +1,59 @@
 use crate::prelude::*;
 
+/// DEP-NEW (2026-05-19): data-drive helper for the 113 marvosym
+/// icon primitives that all expand to `DefPrimitive!("\\<cs>",
+/// "<unicode-char(s)>")` — the same simple-literal-body shape the
+/// `DefPrimitive!` macro's first arm expands. Inlining the body of
+/// that arm into a runtime fn collapses 113 macro expansions to
+/// one. Per [[wisdom_data_drive_min_call_sites]]: 113 ≫ 5
+/// threshold. Matches the fontawesome DEP-15 / jhep_cls /
+/// iopart_support_sty pattern.
+fn def_marvosym_icon(cs: &str, codepoint: &str) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let body_sym = arena::pin(codepoint);
+  let cs_for_closure = cs_tok;
+  let closure: PrimitiveBody = PrimitiveBody::Closure(std::rc::Rc::new(
+    move |_args: Vec<ArgWrap>| {
+      Tbox::new(
+        body_sym,
+        None,
+        None,
+        Tokens!(cs_for_closure),
+        SymHashMap::default(),
+      )
+      .into_digested_result()
+    },
+  ));
+  def_primitive(cs_tok, params, Some(closure), PrimitiveOptions::default())?;
+  Ok(())
+}
+
 LoadDefinitions!({
   // Communication
-  DefPrimitive!("\\Pickup", "\u{26AA}\u{0327}");
-  DefPrimitive!("\\Letter", "\u{1F582}");
-  DefPrimitive!("\\Mobilefone", "\u{1F4F1}");
-  DefPrimitive!("\\Telefon", "\u{260E}");
+  def_marvosym_icon("\\Pickup", "\u{26AA}\u{0327}")?;
+  def_marvosym_icon("\\Letter", "\u{1F582}")?;
+  def_marvosym_icon("\\Mobilefone", "\u{1F4F1}")?;
+  def_marvosym_icon("\\Telefon", "\u{260E}")?;
   // Perl: DefMacro then DefPrimitive — the DefPrimitive overrides
   DefPrimitive!("\\fax", "FAX", bounded => true, font => {family => "sansserif", series => "bold"});
   DefMacro!("\\FAX", None, "\\lx@framed{\\fax}");
-  DefPrimitive!("\\Fax", "\u{1F4E0}");
-  DefPrimitive!("\\Faxmachine", "\u{1F4E0}");
-  DefPrimitive!("\\Email", "\u{1F584}");
-  DefPrimitive!("\\Lightning", "\u{21AF}");
-  DefPrimitive!("\\EmailCT", "\u{2607}");
+  def_marvosym_icon("\\Fax", "\u{1F4E0}")?;
+  def_marvosym_icon("\\Faxmachine", "\u{1F4E0}")?;
+  def_marvosym_icon("\\Email", "\u{1F584}")?;
+  def_marvosym_icon("\\Lightning", "\u{21AF}")?;
+  def_marvosym_icon("\\EmailCT", "\u{2607}")?;
   Let!("\\Emailct", "\\EmailCT");
 
   // Engineering
   DefMacro!("\\Beam", None, "\\lx@nounicode{\\Beam}");
-  DefPrimitive!("\\Bearing", "\u{25B5}\u{030A}");
-  DefPrimitive!("\\LooseBearing", "\u{25B5}\u{030A}\u{0332}");
+  def_marvosym_icon("\\Bearing", "\u{25B5}\u{030A}")?;
+  def_marvosym_icon("\\LooseBearing", "\u{25B5}\u{030A}\u{0332}")?;
   Let!("\\Loosebearing", "\\LooseBearing");
   DefMacro!("\\FixedBearing", None, "\\lx@nounicode{\\FixedBearing}");
   Let!("\\Fixedbearing", "\\FixedBearing");
-  DefPrimitive!("\\LeftTorque", "\u{2938}");
+  def_marvosym_icon("\\LeftTorque", "\u{2938}")?;
   Let!("\\Lefttorque", "\\LeftTorque");
-  DefPrimitive!("\\RightTorque", "\u{2939}");
+  def_marvosym_icon("\\RightTorque", "\u{2939}")?;
   Let!("\\Righttorque", "\\RightTorque");
   DefMacro!("\\Lineload", None, "\\lx@nounicode{\\Lineload}");
   DefPrimitive!("\\MVArrowDown", "\u{2193}",
@@ -34,19 +62,19 @@ LoadDefinitions!({
 
   DefMacro!("\\Octosteel", None, "\\lx@nounicode{\\Octosteel}");
   Let!("\\OktoSteel", "\\Octosteel");
-  DefPrimitive!("\\HexaSteel", "\u{2B23}");
+  def_marvosym_icon("\\HexaSteel", "\u{2B23}")?;
   Let!("\\Hexasteel", "\\HexaSteel");
-  DefPrimitive!("\\SquareSteel", "\u{25FC}");
+  def_marvosym_icon("\\SquareSteel", "\u{25FC}")?;
   Let!("\\Squaresteel", "\\SquareSteel");
-  DefPrimitive!("\\RectSteel", "\u{25AE}");
+  def_marvosym_icon("\\RectSteel", "\u{25AE}")?;
   Let!("\\Rectsteel", "\\RectSteel");
-  DefPrimitive!("\\Circsteel", "\u{26AB}");
+  def_marvosym_icon("\\Circsteel", "\u{26AB}")?;
   Let!("\\CircSteel", "\\Circsteel");
-  DefPrimitive!("\\SquarePipe", "\u{25FB}");
+  def_marvosym_icon("\\SquarePipe", "\u{25FB}")?;
   Let!("\\Squarepipe", "\\SquarePipe");
-  DefPrimitive!("\\RectPipe", "\u{25AF}");
+  def_marvosym_icon("\\RectPipe", "\u{25AF}")?;
   Let!("\\Rectpipe", "\\RectPipe");
-  DefPrimitive!("\\CircPipe", "\u{26AA}");
+  def_marvosym_icon("\\CircPipe", "\u{26AA}")?;
   Let!("\\Circpipe", "\\CircPipe");
 
   DefPrimitive!("\\lx@mvs@LSteel", "\u{2517}");
@@ -85,8 +113,8 @@ LoadDefinitions!({
     None,
     "\\lx@tweaked{yoffset=0.5ex}{\\lx@mvs@RoundedTSteel}\\lx@tweaked{xoffset=-0.6em,yoffset=-0.5ex}{\\lx@mvs@RoundedTTSteel@bottom}"
   );
-  DefPrimitive!("\\FlatSteel", "\u{2501}");
-  DefPrimitive!("\\Valve", "\u{25B6}\u{25C0}");
+  def_marvosym_icon("\\FlatSteel", "\u{2501}")?;
+  def_marvosym_icon("\\Valve", "\u{25B6}\u{25C0}")?;
   Let!("\\Lsteel", "\\LSteel");
   Let!("\\RoundedLsteel", "\\RoundedLSteel");
   Let!("\\Tsteel", "\\TSteel");
@@ -97,19 +125,19 @@ LoadDefinitions!({
 
   // Information
   DefMacro!("\\Industry", None, "\\lx@nounicode{\\Industry}");
-  DefPrimitive!("\\Coffeecup", "\u{2615}");
-  DefPrimitive!("\\LeftScissors", "\u{2702}");
-  DefPrimitive!("\\CuttingLine", "\u{2504}");
+  def_marvosym_icon("\\Coffeecup", "\u{2615}")?;
+  def_marvosym_icon("\\LeftScissors", "\u{2702}")?;
+  def_marvosym_icon("\\CuttingLine", "\u{2504}")?;
   DefMacro!("\\RightScissors", None, "\\lx@hflipped{\\LeftScissors}");
   // Bizarre — yes, they're switched!
   Let!("\\Rightscissors", "\\LeftScissors");
   Let!("\\Leftscissors", "\\RightScissors");
-  DefPrimitive!("\\Football", "\u{26BD}");
-  DefPrimitive!("\\Bicycle", "\u{1F6B2}");
+  def_marvosym_icon("\\Football", "\u{26BD}")?;
+  def_marvosym_icon("\\Bicycle", "\u{1F6B2}")?;
 
   DefPrimitive!("\\lx@mvs@Info", "\u{2139}");
   DefMacro!("\\Info", None, "\\lx@framed{\\lx@mvs@Info}");
-  DefPrimitive!("\\ClockLogo", "\u{23F2}");
+  def_marvosym_icon("\\ClockLogo", "\u{23F2}")?;
   Let!("\\Clocklogo", "\\ClockLogo");
   Let!("\\CutLine", "\\CuttingLine");
   Let!("\\Cutline", "\\CuttingLine");
@@ -126,20 +154,20 @@ LoadDefinitions!({
   Let!("\\Cutright", "\\CutLeft");
   Let!("\\Cutleft", "\\CutRight");
 
-  DefPrimitive!("\\Wheelchair", "\u{267F}");
-  DefPrimitive!("\\Gentsroom", "\u{1F6B9}");
-  DefPrimitive!("\\Ladiesroom", "\u{1F6BA}");
+  def_marvosym_icon("\\Wheelchair", "\u{267F}")?;
+  def_marvosym_icon("\\Gentsroom", "\u{1F6B9}")?;
+  def_marvosym_icon("\\Ladiesroom", "\u{1F6BA}")?;
 
-  DefPrimitive!("\\Checkedbox", "\u{2611}");
-  DefPrimitive!("\\CrossedBox", "\u{2612}");
+  def_marvosym_icon("\\Checkedbox", "\u{2611}")?;
+  def_marvosym_icon("\\CrossedBox", "\u{2612}")?;
   Let!("\\Crossedbox", "\\CrossedBox");
-  DefPrimitive!("\\HollowBox", "\u{2610}");
-  DefPrimitive!("\\PointingHand", "\u{261E}");
+  def_marvosym_icon("\\HollowBox", "\u{2610}")?;
+  def_marvosym_icon("\\PointingHand", "\u{261E}")?;
   Let!("\\Pointinghand", "\\PointingHand");
-  DefPrimitive!("\\WritingHand", "\u{270D}");
+  def_marvosym_icon("\\WritingHand", "\u{270D}")?;
   Let!("\\Writinghand", "\\WritingHand");
-  DefPrimitive!("\\MineSign", "\u{2692}");
-  DefPrimitive!("\\Recycling", "\u{2672}");
+  def_marvosym_icon("\\MineSign", "\u{2692}")?;
+  def_marvosym_icon("\\Recycling", "\u{2672}")?;
   DefMacro!("\\PackingWaste", None, "\\lx@nounicode{\\PackingWaste}");
 
   // Laundry
@@ -151,7 +179,7 @@ LoadDefinitions!({
   DefMacro!("\\Handwash", None, "\\lx@nounicode{\\Handwash}");
   DefMacro!("\\NoWash", None, "\\lx@nounicode{\\Handwash}");
   Let!("\\Dontwash", "\\NoWash");
-  DefPrimitive!("\\Tumbler", "\u{29C7}");
+  def_marvosym_icon("\\Tumbler", "\u{29C7}")?;
   DefMacro!(
     "\\NoTumbler",
     None,
@@ -163,16 +191,16 @@ LoadDefinitions!({
     None,
     "\\lx@mvs@ChemicalCleaning\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}"
   );
-  DefPrimitive!("\\Bleech", "\u{25B3}");
+  def_marvosym_icon("\\Bleech", "\u{25B3}")?;
   DefMacro!(
     "\\NoBleech",
     None,
     "\\Bleech\\lx@tweaked{xoffset=-0.8em}{\\lx@mvs@crossout}"
   );
-  DefPrimitive!("\\CleaningA", "\u{24B6}");
-  DefPrimitive!("\\CleaningP", "\u{24C5}");
+  def_marvosym_icon("\\CleaningA", "\u{24B6}")?;
+  def_marvosym_icon("\\CleaningP", "\u{24C5}")?;
   DefMacro!("\\CleaningPP", None, "\\underline{\\CleaningP}");
-  DefPrimitive!("\\CleaningF", "\u{24BB}");
+  def_marvosym_icon("\\CleaningF", "\u{24BB}")?;
   DefMacro!("\\CleaningFF", None, "\\underline{\\CleaningF}");
 
   DefMacro!("\\Ironing", None, "\\lx@nounicode{\\Ironing}");
@@ -204,21 +232,21 @@ LoadDefinitions!({
     bounded => true, font => {family => "sansserif"});
   DefPrimitive!("\\EURhv", "\u{20AC}",
     bounded => true, font => {family => "sansserif", series => "bold"});
-  DefPrimitive!("\\EURcr", "\u{20AC}");
+  def_marvosym_icon("\\EURcr", "\u{20AC}")?;
   DefPrimitive!("\\EURtm", "\u{20AC}",
     bounded => true, font => {series => "bold"});
   Let!("\\EurDig", "\\EURdig");
   Let!("\\EurHv", "\\EURhv");
   Let!("\\EurCr", "\\EURcr");
   Let!("\\EurTm", "\\EURtm");
-  DefPrimitive!("\\Ecommerce", "\u{212E}");
-  DefPrimitive!("\\EstimatedSign", "\u{212E}");
-  DefPrimitive!("\\Shilling", "\u{00DF}");
+  def_marvosym_icon("\\Ecommerce", "\u{212E}")?;
+  def_marvosym_icon("\\EstimatedSign", "\u{212E}")?;
+  def_marvosym_icon("\\Shilling", "\u{00DF}")?;
   DefMacro!("\\Denarius", None, "\\lx@nounicode{\\Denarius}");
   DefMacro!("\\Deleatur", None, "\\lx@nounicode{\\Deleatur}");
   DefMacro!("\\Pfund", None, "\\lx@nounicode{\\Pfund}");
-  DefPrimitive!("\\EyesDollar", "\u{1F4B2}");
-  DefPrimitive!("\\Florin", "\u{0192}");
+  def_marvosym_icon("\\EyesDollar", "\u{1F4B2}")?;
+  def_marvosym_icon("\\Florin", "\u{0192}")?;
 
   // Safety
   DefMacro!("\\Stopsign", None, "\\lx@nounicode{\\Stopsign}");
@@ -233,34 +261,34 @@ LoadDefinitions!({
     None,
     "\\lx@mvs@laser\\lx@tweaked{xoffset=-0.2em}{\\lx@emdash}"
   );
-  DefPrimitive!("\\Biohazard", "\u{2623}");
-  DefPrimitive!("\\Radioactivity", "\u{2622}");
+  def_marvosym_icon("\\Biohazard", "\u{2623}")?;
+  def_marvosym_icon("\\Radioactivity", "\u{2622}")?;
   DefMacro!("\\BSEFree", None, "\\lx@nounicode{\\BSEFree}");
   DefMacro!("\\BSEfree", None, "\\lx@nounicode{\\BSEfree}");
 
   // Navigation
   DefPrimitive!("\\RewindToIndex", "|\u{25C0}");
   DefPrimitive!("\\RewindToStart", "|\u{25C0}\u{25C0}");
-  DefPrimitive!("\\Rewind", "\u{25C0}");
-  DefPrimitive!("\\Forward", "\u{25B6}");
+  def_marvosym_icon("\\Rewind", "\u{25C0}")?;
+  def_marvosym_icon("\\Forward", "\u{25B6}")?;
   DefPrimitive!("\\ForwardToEnd", "\u{25B6}|");
   DefPrimitive!("\\ForwardToIndex", "\u{25B6}\u{25B6}|");
-  DefPrimitive!("\\MoveUp", "\u{25B2}");
-  DefPrimitive!("\\MoveDown", "\u{25BC}");
-  DefPrimitive!("\\ToTop", "\u{25B2}\u{0305}");
-  DefPrimitive!("\\ToBottom", "\u{25BC}\u{0332}");
+  def_marvosym_icon("\\MoveUp", "\u{25B2}")?;
+  def_marvosym_icon("\\MoveDown", "\u{25BC}")?;
+  def_marvosym_icon("\\ToTop", "\u{25B2}\u{0305}")?;
+  def_marvosym_icon("\\ToBottom", "\u{25BC}\u{0332}")?;
 
   // Computers
-  DefPrimitive!("\\ComputerMouse", "\u{1F5B0}");
+  def_marvosym_icon("\\ComputerMouse", "\u{1F5B0}")?;
   DefMacro!(
     "\\SerialInterface",
     None,
     "\\lx@nounicode{\\SerialInterface}"
   );
-  DefPrimitive!("\\Keyboard", "\u{2328}");
+  def_marvosym_icon("\\Keyboard", "\u{2328}")?;
   DefMacro!("\\SerialPort", None, "\\lx@nounicode{\\SerialPort}");
   DefMacro!("\\ParallelPort", None, "\\lx@nounicode{\\ParallelPort}");
-  DefPrimitive!("\\Printer", "\u{1F5A8}");
+  def_marvosym_icon("\\Printer", "\u{1F5A8}")?;
 
   // Numbers
   DefPrimitive!("\\MVZero",  "0",
@@ -334,7 +362,7 @@ LoadDefinitions!({
     bounded => true, font => {family => "sansserif", series => "bold"});
   DefPrimitive!("\\LargerOrEqual", "\u{2265}",
     bounded => true, font => {family => "sansserif", series => "bold"});
-  DefPrimitive!("\\AngleSign", "\u{2222}");
+  def_marvosym_icon("\\AngleSign", "\u{2222}")?;
   Let!("\\Anglesign", "\\AngleSign");
   DefPrimitive!("\\Corresponds", "\u{2259}",
     bounded => true, font => {family => "sansserif", series => "bold"});
@@ -348,43 +376,43 @@ LoadDefinitions!({
     bounded => true, font => {family => "sansserif", series => "bold"});
 
   // Biology
-  DefPrimitive!("\\Female", "\u{2640}");
-  DefPrimitive!("\\Male", "\u{2642}");
-  DefPrimitive!("\\Hermaphrodite", "\u{26A5}");
-  DefPrimitive!("\\Neutral", "\u{26AC}");
-  DefPrimitive!("\\FEMALE", "\u{2640}");
-  DefPrimitive!("\\MALE", "\u{2642}");
-  DefPrimitive!("\\HERMAPHRODITE", "\u{26A5}");
-  DefPrimitive!("\\FemaleFemale", "\u{26A2}");
-  DefPrimitive!("\\MaleMale", "\u{26A3}");
-  DefPrimitive!("\\FemaleMale", "\u{26A4}");
+  def_marvosym_icon("\\Female", "\u{2640}")?;
+  def_marvosym_icon("\\Male", "\u{2642}")?;
+  def_marvosym_icon("\\Hermaphrodite", "\u{26A5}")?;
+  def_marvosym_icon("\\Neutral", "\u{26AC}")?;
+  def_marvosym_icon("\\FEMALE", "\u{2640}")?;
+  def_marvosym_icon("\\MALE", "\u{2642}")?;
+  def_marvosym_icon("\\HERMAPHRODITE", "\u{26A5}")?;
+  def_marvosym_icon("\\FemaleFemale", "\u{26A2}")?;
+  def_marvosym_icon("\\MaleMale", "\u{26A3}")?;
+  def_marvosym_icon("\\FemaleMale", "\u{26A4}")?;
 
   // Astronomy
-  DefPrimitive!("\\Sun", "\u{2609}");
-  DefPrimitive!("\\Moon", "\u{263D}");
-  DefPrimitive!("\\Mercury", "\u{263F}");
-  DefPrimitive!("\\Venus", "\u{2640}");
-  DefPrimitive!("\\Mars", "\u{2642}");
-  DefPrimitive!("\\Jupiter", "\u{2643}");
-  DefPrimitive!("\\Saturn", "\u{2644}");
-  DefPrimitive!("\\Uranus", "\u{2645}");
-  DefPrimitive!("\\Neptune", "\u{2646}");
-  DefPrimitive!("\\Pluto", "\u{2647}");
-  DefPrimitive!("\\Earth", "\u{2641}");
+  def_marvosym_icon("\\Sun", "\u{2609}")?;
+  def_marvosym_icon("\\Moon", "\u{263D}")?;
+  def_marvosym_icon("\\Mercury", "\u{263F}")?;
+  def_marvosym_icon("\\Venus", "\u{2640}")?;
+  def_marvosym_icon("\\Mars", "\u{2642}")?;
+  def_marvosym_icon("\\Jupiter", "\u{2643}")?;
+  def_marvosym_icon("\\Saturn", "\u{2644}")?;
+  def_marvosym_icon("\\Uranus", "\u{2645}")?;
+  def_marvosym_icon("\\Neptune", "\u{2646}")?;
+  def_marvosym_icon("\\Pluto", "\u{2647}")?;
+  def_marvosym_icon("\\Earth", "\u{2641}")?;
 
   // Astrology
-  DefPrimitive!("\\Aries", "\u{2648}");
-  DefPrimitive!("\\Taurus", "\u{2649}");
-  DefPrimitive!("\\Gemini", "\u{264A}");
-  DefPrimitive!("\\Cancer", "\u{264B}");
-  DefPrimitive!("\\Leo", "\u{264C}");
-  DefPrimitive!("\\Virgo", "\u{264D}");
-  DefPrimitive!("\\Libra", "\u{264E}");
-  DefPrimitive!("\\Scorpio", "\u{264F}");
-  DefPrimitive!("\\Sagittarius", "\u{2650}");
-  DefPrimitive!("\\Capricorn", "\u{2651}");
-  DefPrimitive!("\\Aquarius", "\u{2652}");
-  DefPrimitive!("\\Pisces", "\u{2653}");
+  def_marvosym_icon("\\Aries", "\u{2648}")?;
+  def_marvosym_icon("\\Taurus", "\u{2649}")?;
+  def_marvosym_icon("\\Gemini", "\u{264A}")?;
+  def_marvosym_icon("\\Cancer", "\u{264B}")?;
+  def_marvosym_icon("\\Leo", "\u{264C}")?;
+  def_marvosym_icon("\\Virgo", "\u{264D}")?;
+  def_marvosym_icon("\\Libra", "\u{264E}")?;
+  def_marvosym_icon("\\Scorpio", "\u{264F}")?;
+  def_marvosym_icon("\\Sagittarius", "\u{2650}")?;
+  def_marvosym_icon("\\Capricorn", "\u{2651}")?;
+  def_marvosym_icon("\\Aquarius", "\u{2652}")?;
+  def_marvosym_icon("\\Pisces", "\u{2653}")?;
 
   DefMacro!(
     "\\Zodiac{}",
@@ -392,7 +420,7 @@ LoadDefinitions!({
   );
 
   // Others
-  DefPrimitive!("\\YinYang", "\u{262F}");
+  def_marvosym_icon("\\YinYang", "\u{262F}")?;
   Let!("\\Yinyang", "\\YinYang");
   Let!("\\Yingyang", "\\YinYang");
   DefPrimitive!("\\MVRightArrow", "\u{2192}",
@@ -405,22 +433,22 @@ LoadDefinitions!({
   Let!("\\BOLogoL", "\\BOLogo");
   Let!("\\BOLogoP", "\\BOLogo");
   Let!("\\FHBOlogo", "\\BOLogo");
-  DefPrimitive!("\\Mundus", "\u{1F30D}");
-  DefPrimitive!("\\Cross", "\u{2020}");
-  DefPrimitive!("\\CeltCross", "\u{1F548}");
+  def_marvosym_icon("\\Mundus", "\u{1F30D}")?;
+  def_marvosym_icon("\\Cross", "\u{2020}")?;
+  def_marvosym_icon("\\CeltCross", "\u{1F548}")?;
   Let!("\\Celtcross", "\\CeltCross");
-  DefPrimitive!("\\Ankh", "\u{2625}");
+  def_marvosym_icon("\\Ankh", "\u{2625}")?;
 
-  DefPrimitive!("\\Heart", "\u{2661}");
-  DefPrimitive!("\\CircledA", "\u{24B6}");
-  DefPrimitive!("\\Bouquet", "\u{1F395}");
-  DefPrimitive!("\\Frowny", "\u{2639}");
-  DefPrimitive!("\\Smiley", "\u{263A}");
-  DefPrimitive!("\\PeaceDove", "\u{1F54A}");
+  def_marvosym_icon("\\Heart", "\u{2661}")?;
+  def_marvosym_icon("\\CircledA", "\u{24B6}")?;
+  def_marvosym_icon("\\Bouquet", "\u{1F395}")?;
+  def_marvosym_icon("\\Frowny", "\u{2639}")?;
+  def_marvosym_icon("\\Smiley", "\u{263A}")?;
+  def_marvosym_icon("\\PeaceDove", "\u{1F54A}")?;
   DefMacro!("\\Bat", None, "\\lx@nounicode{\\Bat}");
-  DefPrimitive!("\\WomanFace", "\u{1F469}");
+  def_marvosym_icon("\\WomanFace", "\u{1F469}")?;
   Let!("\\Womanface", "\\WomanFace");
-  DefPrimitive!("\\ManFace", "\u{1F468}");
+  def_marvosym_icon("\\ManFace", "\u{1F468}")?;
   Let!("\\MartinVogel", "\\ManFace");
 
   // Low-level font accessors — stubs

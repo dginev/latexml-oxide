@@ -75,6 +75,6 @@ LoadDefinitions!({
   Let!("\\epsfgetlitbb", "\\epsfbox");
   Let!("\\epsfnormal",   "\\epsfbox");
   Let!("\\epsffile",     "\\epsfbox");
-  DefPrimitive!("\\epsfgetbb Semiverbatim", None);
-  DefPrimitive!("\\epsfframe",              None);
+  def_primitive_noop("\\epsfgetbb Semiverbatim")?;
+  def_primitive_noop("\\epsfframe")?;
 });

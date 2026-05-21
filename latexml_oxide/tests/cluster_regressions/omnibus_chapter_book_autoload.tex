@@ -1,0 +1,14 @@
+% Witness: arXiv:2602.10407 (Pallis et al., `\documentclass{saunders}`
+% with `\chapter` in an `\include`'d chapter file). The local
+% `saunders.cls` is bound nowhere, so OmniBus takes over. OmniBus
+% registers an autoload trigger for `\thechapter` that — in Perl —
+% routes to `book.cls.ltxml`. The earlier Rust port mis-routed to
+% `book` as a package, picking up the obsolete `book.sty` shim
+% (which fires `\LoadClass{book}` mid-body and errors with
+% "\LoadClass can only appear in the preamble"). After matching Perl
+% (autoload the .cls binding, not the .sty), zero errors.
+\documentclass{unknown@class@no@binding}
+\begin{document}
+\chapter{Sample chapter}
+Body text.
+\end{document}

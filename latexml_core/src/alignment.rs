@@ -581,7 +581,7 @@ impl BoxOps for Alignment {
         //       $border =~ s/(.) \1/$1$1/g;
         let mut border_chars: Vec<char> =
           cell.border.chars().filter(|c| !c.is_whitespace()).collect();
-        border_chars.sort();
+        border_chars.sort_unstable();
         let mut border = String::new();
         for (idx, &c) in border_chars.iter().enumerate() {
           border.push(c);

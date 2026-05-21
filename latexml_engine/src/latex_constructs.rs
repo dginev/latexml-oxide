@@ -127,6 +127,16 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if is_definable(cs) {
     return Ok((true, false));
   }
+  // Autoload triggers (installed by `def_autoload` in tex.rs) appear
+  // defined but should not block `\newcommand` — Perl's analogous
+  // `DefAutoload` entries live in `OmniBus.cls.ltxml`, which isn't
+  // loaded for typical papers, so the user's `\newcommand` sees the
+  // CS as undefined and succeeds. Mirror that by treating the
+  // trigger as redefinable. (`plain_origin` stays false: there is
+  // no `<cs>:locked` guard to bypass for an autoload trigger.)
+  if has_value(&s!("{}:autoload", cs.to_string())) {
+    return Ok((true, false));
+  }
   let plain =
     lookup_definition(cs)?.is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
   Ok((plain, plain))
@@ -621,7 +631,7 @@ fn before_digest_verbatim() -> Result<Vec<Digested>> {
 
 fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
-  let font: Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
+  let font: Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).clone()));
   let loc = whatsit.get_locator();
   let (end, space) = if starred {
     ("\\end{verbatim*}", '\u{2423}')
@@ -1020,8 +1030,11 @@ pub fn eqnarray_bindings() -> Result<()> {
     None,
   );
   // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
-  // Save the original \label as \lx@eqnarray@save@label
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
+  // Save the original \label as \lx@eqnarray@save@label — global so the
+  // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
+  // if it fires AFTER the eqnarray group pops (witness 2404.19499 align
+  // case).
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
   // Perl: Let('\label', '\lx@eqnarray@label');
   // Redirect \label to the noalign version so it runs at the equation (row) level
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
@@ -1421,7 +1434,7 @@ pub fn define_new_theorem(
     fmt_toks.extend(headformatter_tokens.unlist());
     fmt_toks.push(T_BEGIN!());
     if has_type {
-      fmt_toks.extend(typ.clone().unwrap().unlist());
+      fmt_toks.extend(typ.unwrap().unlist());
     }
     fmt_toks.push(T_END!());
     fmt_toks.push(T_CS!(s!("\\the{counter}")));
@@ -1980,8 +1993,8 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
 pub fn before_digest_bibliography() -> Result<()> {
   AssignValue!("inPreamble" => false);
   Digest!("\\@lx@inbibliographytrue")?;
-  DefMacro!("\\bibliographystyle{}", "");
-  DefMacro!("\\bibliography {}", "");
+  def_macro_noop("\\bibliographystyle{}")?;
+  def_macro_noop("\\bibliography {}")?;
   // avoid \let-based redefinitions of the ending.
   Let!("\\endthebibliography", "\\saved@endthebibliography");
   ResetCounter!("@bibitem");
@@ -2528,29 +2541,63 @@ LoadDefinitions!({
   // Just to pass test t/alignment/halignatt
   // Perl latex_constructs.pool.ltxml L51 — redundant with plain_base.rs
   // (Perl plain_base.pool.ltxml L147), but Perl-faithful.
-  DefMacro!("\\hidewidth", None);
+  def_macro_noop("\\hidewidth")?;
 
-  // Apparently LaTeX does NOT define \magnification,
-  // and babel uses that to determine whether we're runing LaTeX!!!
-  Let!("\\magnification", "\\@undefined");
+  // Perl-faithful: LaTeX does NOT define `\magnification`, and babel
+  // uses this to detect whether it's running under LaTeX (vs plain
+  // TeX). The unconditional Let here would also kill plain-TeX papers
+  // whose first line is `\magnification=\magstep1` — fine in Perl
+  // because the Perl driver doesn't pre-load latex_constructs for plain
+  // TeX sources, but the Rust cortex_worker eagerly preloads
+  // `LaTeX.pool` for the `\UseRawInputEncoding`-before-`\documentclass`
+  // case (2407.00348). To keep both working, defer the Let until
+  // `\documentclass` actually fires (see `\documentclass`
+  // after_digest below). Witness: 15 wp4 papers like 2305.09030 ship
+  // `\magnification=\magstep1` and previously failed with
+  // `Error:undefined:\magnification` under the worker.
   Let!("\\@empty", "\\lx@empty");
   Let!("\\@ifundefined", "\\lx@ifundefined");
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
   DefConditional!("\\if@compatibility", { lookup_bool("2.09_COMPATIBILITY") });
-  DefMacro!("\\@compatibilitytrue", "");
-  DefMacro!("\\@compatibilityfalse", "");
+  def_macro_noop("\\@compatibilitytrue")?;
+  def_macro_noop("\\@compatibilityfalse")?;
 
   Let!("\\@currentlabel", "\\@empty");
   DefMacro!("\\@currdir", "./");
 
-  // Let's try just starting with this set (since we've loaded LaTeX)
+  // Defensive `\let \@halignto \@empty` for the kernel macro that's
+  // initialized inline inside \tabular / \tabular* / \array setup
+  // (`\let\@halignto\@empty` at the top of each), but referenced
+  // unprotected inside \edef expansions. If the inline init doesn't
+  // fire before the edef-referencing macro runs (e.g. `\@array`
+  // called outside a tabular context), the reference becomes
+  // undefined and trips `Error:undefined:\\@halignto` cascade.
+  // Witness: 2306.10481 (4 errors), 2307.05820 (22 errors), plus
+  // 2 other stage-2 papers using \begin{array} outside standard wrapping.
+  Let!("\\@halignto", "\\@empty");
+
+  // Defensive `\let \@arrayright \@empty` for array.sty's macro
+  // (array.sty L: `\let\@arrayright\@empty`). Referenced by revtex's
+  // ltxutil.sty (`\def\endarray{...\@arrayright...}`) BEFORE array.sty
+  // has loaded. Without this default, raw-loading ltxutil while in
+  // revtex's class init reads \@arrayright as undefined, defines it
+  // as <ltx:ERROR/>, and the resulting bad <ltx:ERROR/> token propagates
+  // through `\endarray` causing 60GB+ OOM cascades. Witness 2305.18141.
+  Let!("\\@arrayright", "\\@empty");
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
     after_digest => sub[whatsit] {
+      // Now that we know we're a LaTeX document, undefine `\magnification`
+      // (babel's plain-TeX vs LaTeX discriminator). Deferred from the
+      // pool-load site above so plain-TeX papers that never run
+      // `\documentclass` keep `\magnification` as a usable register.
+      if let Some(undef_meaning) = lookup_meaning(&T_CS!("\\@undefined")) {
+        assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
+      }
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => split_trim_options(&opts.to_string()),
@@ -2677,7 +2724,7 @@ LoadDefinitions!({
 
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
-  DefMacro!("\\@currenvir", "");
+  def_macro_noop("\\@currenvir")?;
   // Note: LaTeX kernel defines \def\f#1{\def\@currenvir{#1}} but this is just
   // a kernel internal that gets overridden by user \newcommand{\f}{...}.
   // We do NOT define \f here — use \lx@setcurrenvir instead (matching Perl).
@@ -2712,7 +2759,7 @@ LoadDefinitions!({
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
         let message = s!("The environment {} is not defined.", undef);
-        Error!("undefined", undef.clone(), message);
+        Error!("undefined", &undef, message);
         note_status(LogStatus::Undefined, Some(&undef));
         // Perl latex_constructs.pool.ltxml L207-208: install a dummy
         // constructor for `\<name>` so the env-trigger token has SOME
@@ -2889,7 +2936,7 @@ LoadDefinitions!({
   //       so it may be best left disabled.
   // PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));
 
-  DefMacro!("\\@nolnerr", "");
+  def_macro_noop("\\@nolnerr")?;
   DefMacro!(
     "\\@centercr",
     r"\ifhmode\unskip\else\@nolnerr\fi\par\@ifstar{\nobreak\@xcentercr}\@xcentercr"
@@ -2963,11 +3010,19 @@ LoadDefinitions!({
     if let Some(ops) = state::lookup_tokens("@at@begin@document") {
       boxes.push(stomach::digest(ops)?);
     }
-    // Fire the L3 hook system for begindocument.
-    // Modern LaTeX (with expl3) uses \hook_use:n{begindocument} instead of
-    // \@begindocumenthook. This fires hooks registered via \AtBeginDocument
-    // when expl3 has redefined it to use \AddToHook{begindocument}{...}.
-    // Includes babel's \lx@babel@activate@mainlang.
+    // Fire the L3 hook system for begindocument/before, then begindocument.
+    // Modern LaTeX (with expl3) fires these in order at \begin{document}:
+    //   1. \hook_use:n {begindocument/before}  — pre-init hook
+    //   2. (selectfont, prepare counters, etc.)
+    //   3. \hook_use:n {begindocument}         — user-registered AtBeginDocument
+    // This fires hooks registered via \AtBeginDocument / \AddToHook{begindocument/before}{…}
+    // when expl3 has redefined them to use the modern hook system.
+    // Driver for begindocument/before: translations.sty L73-85 wraps its
+    //   `\def\@trnslt@current@language{\languagename}` initialiser in
+    //   `\AddToHook{begindocument/before}{…}`. Without this dispatch the
+    //   .trsl dictionary loads (queued via `\AtBeginDocument`) inside the
+    //   subsequent begindocument firing reference an undefined CS.
+    // Witnesses: stage-2/3 of 100k warning corpus (2603.25051, 2604.07448).
     //
     // NOTE: this is a Rust-only deviation from Perl (Perl does not fire a
     // begindocument hook dispatch), but it's load-bearing because our raw
@@ -2975,6 +3030,33 @@ LoadDefinitions!({
     // real hook code against it. Keep until the kernel-parity direction
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
+    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+      boxes.push(stomach::digest(Tokens!(
+        T_CS!("\\hook_use:n"),
+        T_BEGIN!(),
+        T_LETTER!("b"),
+        T_LETTER!("e"),
+        T_LETTER!("g"),
+        T_LETTER!("i"),
+        T_LETTER!("n"),
+        T_LETTER!("d"),
+        T_LETTER!("o"),
+        T_LETTER!("c"),
+        T_LETTER!("u"),
+        T_LETTER!("m"),
+        T_LETTER!("e"),
+        T_LETTER!("n"),
+        T_LETTER!("t"),
+        T_OTHER!("/"),
+        T_LETTER!("b"),
+        T_LETTER!("e"),
+        T_LETTER!("f"),
+        T_LETTER!("o"),
+        T_LETTER!("r"),
+        T_LETTER!("e"),
+        T_END!()
+      ))?);
+    }
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
       // catcode regime where `:` is OTHER (not LETTER), which would
@@ -3208,12 +3290,22 @@ LoadDefinitions!({
   // Style parameters
   // \parindent, \baselineskip, \parskip alreadin in TeX.pool.ltxml
 
-  DefPrimitive!("\\linespread{}", None);
+  def_primitive_noop("\\linespread{}")?;
+
+  // Some papers (e.g. WileyMSP-template) use `\geometry{…}` in the
+  // preamble without explicitly `\usepackage{geometry}`. Real LaTeX
+  // would complain but the convention is widely tolerated. Provide
+  // no-op stubs at the kernel level so we don't fire
+  // `Error:undefined:\geometry`. Our geometry_sty.rs binding redefines
+  // these as no-ops too — both paths reach the same outcome.
+  // Witness: 2306.02129 (Wiley template).
+  def_macro_noop("\\geometry{}")?;
+  def_macro_noop("\\newgeometry{}")?;
 
   // ?
-  DefMacro!("\\@noligs", "");
+  def_macro_noop("\\@noligs")?;
   DefConditional!("\\if@endpe");
-  DefMacro!("\\@doendpe", "");
+  def_macro_noop("\\@doendpe")?;
   DefMacro!("\\@bsphack", "\\relax"); // what else?
   DefMacro!("\\@esphack", "\\relax");
   DefMacro!("\\@Esphack", "\\relax");
@@ -3222,14 +3314,13 @@ LoadDefinitions!({
   // C.3.3 Footnotes
   //======================================================================
 
-  NewCounter!("footnote");
-  DefMacro!("\\thefootnote", "\\arabic{footnote}");
-  NewCounter!("mpfootnote");
-  DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // Footnote counters + \thefootnote / \thempfn / \thempfootnote +
+  // \footnotesep register all defined in `latex_constructs_rust_only.rs`
+  // section 8 (Perl `latex_base.pool.ltxml` L268-273; dump-path coverage
+  // there is the authoritative copy).
   DefMacro!("\\footnotetyperefname", "footnote");
 
-  DefMacro!("\\ext@footnote", None);
+  def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   mode         => "internal_vertical",
@@ -3262,7 +3353,18 @@ LoadDefinitions!({
   },
   reversion => "");
 
-  DefConstructor!("\\lx@notetext[]{}[]{}",
+  // `OptionalSemiverbatim` on the first `[]` (the `xml:id`) so a paper
+  // writing `\fntext[footnote_label2]{…}` (literal `_` in the label —
+  // technically invalid TeX) doesn't blow up with `_ Script outside
+  // math` when the digester sees the SUB-catcode `_`. Semiverbatim
+  // reads `_` (and `^`, `~`, `&`, `$`, `#`, `'`) as OTHER, so the id
+  // is a literal text token list. Paper-quality fix that surpasses
+  // Perl LaTeXML (which still reads with default catcodes and errors
+  // identically). Witness: 2604.00193 `\fntext[footnote_label2]` —
+  // Rust before: 1 error; after: 0 errors. Same pattern surfaces on
+  // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
+  // classification in SYNC_STATUS — this is the surpass-Perl path).
+  DefConstructor!("\\lx@notetext OptionalSemiverbatim {} [] {}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   mode       => "internal_vertical",
   properties => sub [args] {
@@ -3288,12 +3390,22 @@ LoadDefinitions!({
   // we don't implement the internals directly, so lock them to the latexml variant
   Let!("\\@thefnmark", "\\lx@notemark{footnote}");
 
+  // \@makefntext: article.cls L207/609 wraps the footnote body content
+  // (mark + text) for emission inside the footnote area. Packages like
+  // babel hyphenrules and class-conditional code reference it before
+  // the class loads its definition. Provide a content-preserving stub
+  // so the body (#1) is emitted as plain text rather than triggering
+  // an undefined-CS error. Witness: 2503.15258 (elsarticle via babel)
+  // and 2503.16849 (ieeeconf via babel).
+  def_macro_identity("\\@makefntext{}")?;
+  DefMacro!("\\@makefnmark", "\\@thefnmark");
+
   Tag!("ltx:emph", auto_close => true);
   Tag!("ltx:note", after_close => sub[doc, node] { relocate_footnote(doc, node)?; });
 
   // Style parameters
-  DefRegister!("\\footnotesep" => Dimension::new(0));
-  DefPrimitive!("\\footnoterule", None);
+  // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
+  def_primitive_noop("\\footnoterule")?;
 
 
   // ======================================================================
@@ -3364,7 +3476,7 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\@startsection@hook", "");
+  def_macro_noop("\\@startsection@hook")?;
 
   NewCounter!("secnumdepth");
   SetCounter!("secnumdepth", Number::new(3));
@@ -3666,16 +3778,15 @@ LoadDefinitions!({
   // C.4.2 The Appendix
   //======================================================================
   // Handled in article,report or book.
-  DefMacro!("\\appendixname", "Appendix");
-  DefMacro!("\\appendixesname", "Appendixes");
-  // TODO: add the rest...
-  DefMacro!("\\@@appendix", "\\@startsection{appendix}{0}{}{}{}{}");
+  // \appendixname / \appendixesname / \@@appendix all live in
+  // `latex_constructs_rust_only.rs` section 8 / 7a (Perl
+  // `latex_base.pool.ltxml` L287 + sandbox-derived helpers).
 
   //======================================================================
   // C.4.3 Table of Contents
   //======================================================================
   // Insert stubs that will be filled in during post processing.
-  DefMacro!("\\contentsname", "Contents");
+  // \contentsname lives in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
@@ -3696,18 +3807,17 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\listfigurename", "List of Figures");
+  // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listfigurename"))?)) });
 
-  DefMacro!("\\listtablename", "List of Tables");
   DefConstructor!("\\listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });
 
-  DefPrimitive!("\\numberline{}{}", None);
-  DefPrimitive!("\\addtocontents{}{}", None);
+  def_primitive_noop("\\numberline{}{}")?;
+  def_primitive_noop("\\addtocontents{}{}")?;
 
   DefConstructor!("\\addcontentsline{}{}{}", sub[document,args] {
       if let [inlist,_vtype,_title @ ..] = args.as_slice() {
@@ -3762,9 +3872,9 @@ LoadDefinitions!({
   Let!("\\@currname", "\\@empty");
   Let!("\\@classoptionslist", "\\relax");
   Let!("\\@raw@classoptionslist", "\\relax");
-  DefMacro!("\\@declaredoptions", None);
-  DefMacro!("\\@curroptions", None);
-  DefMacro!("\\@unusedoptionlist", None);
+  def_macro_noop("\\@declaredoptions")?;
+  def_macro_noop("\\@curroptions")?;
+  def_macro_noop("\\@unusedoptionlist")?;
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
@@ -3839,7 +3949,7 @@ LoadDefinitions!({
 
   // Related internal macros for package definition
   // Internals used in Packages
-  DefMacro!("\\NeedsTeXFormat{}[]", None);
+  def_macro_noop("\\NeedsTeXFormat{}[]")?;
 
   DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
@@ -3862,11 +3972,32 @@ LoadDefinitions!({
 
   // anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  DefMacro!("\\DeclareRelease{}{}{}", None);
+  def_macro_noop("\\DeclareRelease{}{}{}")?;
   //\DeclareCurrentRelease{v4.49}{2021-11-01}
-  DefMacro!("\\DeclareCurrentRelease{}{}", None);
-  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", None);
-  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", None);
+  def_macro_noop("\\DeclareCurrentRelease{}{}")?;
+  // `\IncludeInRelease{date}{cs}{descr}…body…\EndIncludeInRelease`
+  // (LaTeX kernel `latexrelease.sty`). The kernel decides at run-time
+  // whether `date` matches the current release; if yes, body runs; if
+  // no, body is skipped. Packages like koma-script emit pairs of
+  // blocks — one dated for the modern release, one with `0000/00/00`
+  // as the always-fallback — wrapping `\newcommand*{\FOO}…`
+  // definitions. With our prior `None`-body stub the entire body was
+  // dropped on the floor, leaving `\FOO` undefined (witnesses:
+  // arXiv:2506.12162 / .15311 — `\FamilyProcessOptions` undefined
+  // cascade from scrbase.sty L611). Emit the captured body so the
+  // first matching block defines its CSes. The second block in a
+  // pair would then redefine via `\newcommand` and erroneously fire
+  // "already defined" — but our `\newcommand` ignores redefinitions
+  // with an `Info:ignore` (etoolbox_sty.rs:31), so the cascade lands
+  // correctly with the most-recent definition still in effect.
+  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease",
+    sub[(_date, _cs, _descr, body)] {
+      Ok(body)
+    });
+  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease",
+    sub[(_date, _cs, _descr, body)] {
+      Ok(body)
+    });
 
   DefPrimitive!("\\DeclareOption{}{}", sub[(option, code)] {
     let option_str = option.to_string();
@@ -3893,23 +4024,62 @@ LoadDefinitions!({
     state::push_value(&s!("opt@{}.cls", name_str), opts)?;
   });
 
+  // Perl `latex_constructs.pool.ltxml`:
+  //   DefConstructor('\RequirePackageWithOptions Semiverbatim []',
+  //     "<?latexml package='#1'?>",
+  //     beforeDigest => onlyPreamble,
+  //     afterDigest => sub {
+  //       my $package = ToString($whatsit->getArg(1));
+  //       $package =~ s/\s+//g;
+  //       RequirePackage($package, withoptions => 1);
+  //       return; });
+  //
+  // Rust used to NO-OP the `\RequirePackage` step (afterDigest was a
+  // commented-out reference). That left `\citep`/`\citet` undefined
+  // when a paper used a wrapper package that did
+  // `\RequirePackageWithOptions{natbib}` (e.g. usbib.sty in
+  // arXiv:2512.13468). Port the call to `require_package_with_options`,
+  // which already handles the option-list lookup from
+  // `opt@<currname>.<currext>`.
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
   before_digest => { only_preamble("\\RequirePackage") }
-  // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-  //   my $package = ToString($whatsit->getArg(1));
-  //   $package =~ s/\s+//g;
-  //   RequirePackage($package, withoptions => 1);
-  //   return; }
+  after_digest => sub[whatsit] {
+    let pkg_arg: Option<&Digested> = whatsit.get_arg(1);
+    let pkg = pkg_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+    latexml_core::binding::content::require_package_with_options(&pkg)?;
+  }
   );
 
+  // Perl `latex_constructs.pool.ltxml`:
+  //   DefConstructor('\LoadClassWithOptions Semiverbatim []',
+  //     "<?latexml class='#1'?>",
+  //     beforeDigest => onlyPreamble,
+  //     afterDigest  => sub {
+  //       my $class = ToString($whatsit->getArg(1));
+  //       $class =~ s/\s+//g;
+  //       LoadClass($class, withoptions => 1);
+  //       $stomach->leaveHorizontal_internal;
+  //       return; });
+  //
+  // Rust used to NO-OP the `\LoadClass` step — just emitted the PI.
+  // That left `\abovecaptionskip`, `\belowcaptionskip`,
+  // `\thesubsection`, `\Large`/`\small`/`\footnotesize`, etc. all
+  // undefined when a paper used a custom class that did
+  // `\LoadClassWithOptions{article}` (e.g. applemlr.cls in
+  // arXiv:2512.10685). Port the `LoadClass` call.
+  //
+  // We pass empty options here (Perl's `withoptions => 1` would
+  // inherit calling-class options from `\@classoptionslist`, but
+  // for the no-options-on-\documentclass cases that dominate the
+  // arxmliv warning corpus this is a no-op anyway).
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
     before_digest => { only_preamble("\\LoadClassWithOptions") }
-    // afterDigest  => sub { my ($stomach, $whatsit) = @_;
-    //   my $class = ToString($whatsit->getArg(1));
-    //   $class =~ s/\s+//g;
-    //   LoadClass($class, withoptions => 1);
-    //   return; });
+    after_digest => sub[whatsit] {
+      let class_arg: Option<&Digested> = whatsit.get_arg(1);
+      let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
+      load_class(&class, Vec::new(), Tokens!())?;
+    }
   );
   // Perl: latex_constructs.pool.ltxml L900-903
   DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[(name, option1, _option2, ext)] {
@@ -3930,7 +4100,7 @@ LoadDefinitions!({
     ));
   });
 
-  DefMacro!("\\CurrentOption", None);
+  def_macro_noop("\\CurrentOption")?;
 
   // Perl: latex_constructs.pool.ltxml lines 907-919
   DefPrimitive!("\\OptionNotUsed", {
@@ -3972,19 +4142,14 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
-  Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
-  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
+  // \ltx@ifpackageloaded / \ltx@ifclassloaded — LaTeXML-internal aliases
+  // for the file-loaded predicates; live in `latex_constructs_rust_only.rs`.
   // Latex.ltx L15252-15256: LaTeX3-style aliases for the file-load
-  // tracking commands. The dump captures these as `Lt(...)` self-let
-  // entries that don't actually replay because we filter same-target
-  // aliases in `dump_writer`. Re-establish here post-dump.
-  Let!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
-  Let!("\\IfClassLoadedTF", r"\@ifclassloaded");
-  Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
-  Let!("\\IfClassAtLeastTF", r"\@ifclasslater");
-  Let!("\\IfFormatAtLeastTF", r"\@ifl@t@r@released");
-  Let!("\\IfFileAtLeastTF", r"\@ifl@t@r");
+  // tracking commands. The `\If*LoadedTF/AtLeastTF` family is a
+  // modern-LaTeX addition not in Perl LaTeXML; it lives in
+  // `latex_constructs_rust_only.rs` (which loads last after this file)
+  // — so we don't redefine the aliases here.
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
@@ -4039,7 +4204,7 @@ LoadDefinitions!({
   DefMacro!("\\@ifclasslater{}{}{}{}", "#3");
   Let!("\\AtEndOfClass", "\\AtEndOfPackage");
 
-  DefMacro!("\\AtBeginDvi {}", None);
+  def_macro_noop("\\AtBeginDvi {}")?;
 
   TeX!(
     r###"
@@ -4089,21 +4254,21 @@ LoadDefinitions!({
   // \@toplist/\@botlist/etc. are ignored (LaTeXML doesn't track float-page
   // placement), but they need to be defined so latex.ltx-driven code paths
   // that consult them (e.g. via `\@cons`) don't error on `\@empty` lookups.
-  DefMacro!("\\@topnewpage{}", "#1");
+  def_macro_identity("\\@topnewpage{}")?;
   DefMacro!("\\@next{}{}{}{}",
     r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi");
   TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
   Let!("\\@elt", "\\relax");
-  DefMacro!("\\@freelist", None);
-  DefMacro!("\\@currbox", None);
-  DefMacro!("\\@toplist", None);
-  DefMacro!("\\@botlist", None);
-  DefMacro!("\\@midlist", None);
-  DefMacro!("\\@currlist", None);
-  DefMacro!("\\@deferlist", None);
-  DefMacro!("\\@dbltoplist", None);
-  DefMacro!("\\@dbldeferlist", None);
-  DefMacro!("\\@startcolumn", None);
+  def_macro_noop("\\@freelist")?;
+  def_macro_noop("\\@currbox")?;
+  def_macro_noop("\\@toplist")?;
+  def_macro_noop("\\@botlist")?;
+  def_macro_noop("\\@midlist")?;
+  def_macro_noop("\\@currlist")?;
+  def_macro_noop("\\@deferlist")?;
+  def_macro_noop("\\@dbltoplist")?;
+  def_macro_noop("\\@dbldeferlist")?;
+  def_macro_noop("\\@startcolumn")?;
 
   // Perl: latex_constructs.pool.ltxml L5510 — `Let('\@begindocumenthook', '\@empty');`
   // \@begindocumenthook is fired by `\document` (latex.ltx); we install it as
@@ -4113,7 +4278,7 @@ LoadDefinitions!({
   Let!("\\@begindocumenthook", "\\@empty");
 
   // Perl L5511: \@preamblecmds collects \@onlypreamble entries; empty by default
-  DefMacro!("\\@preamblecmds", None);
+  def_macro_noop("\\@preamblecmds")?;
 
   // Perl L5536-5539: q-tokens used by \@notdefinable error formatting and by
   // various pattern-quoting expansion paths (e.g. \GenericWarning padding).
@@ -4144,13 +4309,13 @@ LoadDefinitions!({
   Let!("\\@leftmark", "\\@firstoftwo");
   Let!("\\@rightmark", "\\@secondoftwo");
 
-  DefPrimitive!("\\pagestyle{}", None);
-  DefPrimitive!("\\thispagestyle{}", None);
-  DefPrimitive!("\\markright{}", None);
-  DefPrimitive!("\\markboth{}{}", None);
-  DefPrimitive!("\\leftmark", None);
-  DefPrimitive!("\\rightmark", None);
-  DefPrimitive!("\\pagenumbering{}", None);
+  def_primitive_noop("\\pagestyle{}")?;
+  def_primitive_noop("\\thispagestyle{}")?;
+  def_primitive_noop("\\markright{}")?;
+  def_primitive_noop("\\markboth{}{}")?;
+  def_primitive_noop("\\leftmark")?;
+  def_primitive_noop("\\rightmark")?;
+  def_primitive_noop("\\pagenumbering{}")?;
   // Perl: DefMacro('\twocolumn[]', '\ifx.#1.\else\par\noindent#1\fi\par');
   DefMacro!("\\twocolumn[]", "\\ifx.#1.\\else\\par\\noindent#1\\fi\\par");
   // Perl: DefMacro('\onecolumn', '\par');
@@ -4175,28 +4340,13 @@ LoadDefinitions!({
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
   DefRegister!("\\baselinestretch" => Dimension::new(0));
-  // Perl: latex_base.pool.ltxml lines 309-311
-  DefRegister!("\\columnsep"       => Dimension::new(0));
-  DefRegister!("\\columnseprule"   => Dimension::new(0));
-  DefRegister!("\\mathindent"      => Dimension::new(0));
+  // \columnsep / \columnseprule / \mathindent registers live in
+  // `latex_constructs_rust_only.rs` section 8 (Perl
+  // `latex_base.pool.ltxml` L309-311).
 
-  TeX!(
-    r"\def\@ifl@t@r#1#2{%
-  \ifnum\expandafter\@parse@version@#1//00\@nil<%
-        \expandafter\@parse@version@#2//00\@nil
-    \expandafter\@secondoftwo
-  \else
-    \expandafter\@firstoftwo
-  \fi}
-\def\@parse@version@#1{\@parse@version0#1}
-\def\@parse@version#1/#2/#3#4#5\@nil{%
-\@parse@version@dash#1-#2-#3#4\@nil
-}
-\def\@parse@version@dash#1-#2-#3#4#5\@nil{%
-  \if\relax#2\relax\else#1\fi#2#3#4 }
-"
-  );
-
+  // \@ifl@t@r and the \@parse@version chain are defined earlier in this
+  // file (above L4181); the previous duplicate TeX!() block here was dead
+  // code overriding identical bodies.
 
   //======================================================================
   // C.5.4 The Title Page and Abstract
@@ -4223,12 +4373,41 @@ LoadDefinitions!({
   // omnibus_cls.rs (commit 3f40bf8211) but OmniBus only loads as a
   // class-binding fallback for unknown documentclasses; papers using
   // \documentclass{article} with \usepackage{aaai22} don't trigger it.
-  DefMacro!("\\equalcontrib", None);
-  DefMacro!("\\equalcont",    None);
+  def_macro_noop("\\equalcontrib")?;
+  def_macro_noop("\\equalcont")?;
   // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
   //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
     alias => "\\thanks", mode => "text", enter_horizontal => true);
+
+  // `\thanksref{key}` — common in author-block / affiliation styles
+  // (revtex, ifacconf, elsart, etc.). Each class typically defines a
+  // version that emits a footnote-style mark. Round-34 surpass-Perl:
+  // render as superscript so the marker reaches the author block
+  // (Perl OmniBus L257 also gobbles to Tokens()). Witnesses:
+  // arXiv:2507.06392 / .09311 (ifacconf.cls — no Rust binding).
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
+
+  // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — Cyrillic
+  // transliteration markers used in BibTeX-generated bibliographies
+  // (cyracc.def L53-55 defines them as math-mode prime/dprime). They
+  // appear in Russian-authored references at the BBL stage where no
+  // Cyrillic encoding is otherwise loaded. Stub each as the Unicode
+  // modifier-letter-prime so the BBL renders cleanly. Witnesses:
+  // arXiv:2508.13753 / .20226 / 2509.07628 — 1 undefined-CS error
+  // each, Perl LaTeXML also lacks a universal def. Two-grep audit:
+  // not in Perl `*.ltxml`, defined in TL `cyracc.def` for math
+  // context only. Per WISDOM #50 the visual intent (apostrophe-like
+  // mark) is what survives the XML→HTML pipeline.
+  DefMacro!("\\cprime",   "\u{02B9}");
+  DefMacro!("\\Cprime",   "\u{02B9}");
+  DefMacro!("\\cdprime",  "\u{02BA}");
+  DefMacro!("\\Cdprime",  "\u{02BA}");
+  // `\polhk{char}` — Polish hook (ogonek) accent. Defined in tipa.sty
+  // for TS1-encoded composite output. Bibliographies use it directly
+  // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
+  // Witnesses: 2 papers in Stage-15 v3.
+  def_macro_identity("\\polhk{}")?;
   // Perl L1065-1067: DefConstructor('\@personname{}', ...,
   //   beforeDigest => { Let('\thanks', '\person@thanks') },
   //   mode => 'restricted_horizontal', enterHorizontal => 1).
@@ -4393,7 +4572,13 @@ LoadDefinitions!({
   DefMacro!("\\@thanks", "\\@empty");
   // Perl latex_constructs.pool.ltxml L1154: `\thanks[]{}` — optional arg for
   // OmniBus use (thrown away). #2 is the required body.
-  DefMacro!("\\thanks[]{}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
+  //
+  // SURPASS-PERL (Cluster A, docs/SYNC_STATUS.md L201-208): `[opt]` is
+  // identifier-shape (a label tag, e.g. `\thanks[funding-1]{…}`). Switch
+  // to `OptionalSemiverbatim` so a literal `_` in the label doesn't bleed
+  // through as `T_SUB` and trip the script-handler text-mode error.
+  // Perl uses default catcodes for `[opt]` and SHARES the failure mode.
+  DefMacro!("\\thanks OptionalSemiverbatim {}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
   DefConstructor!(
     "\\lx@make@thanks{}",
     "<ltx:note role='thanks'>#1</ltx:note>"
@@ -4470,7 +4655,7 @@ LoadDefinitions!({
   DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax");
   DefMacro!("\\maybe@end@abstract", "\\endabstract");
   DefMacro!("\\abstractname", "Abstract");
-  DefMacro!("\\format@title@abstract{}", "#1");
+  def_macro_identity("\\format@title@abstract{}")?;
 
   // Hmm, titlepage is likely to be hairy, low-level markup,
   // without even title, author, etc, specified as such!
@@ -4527,11 +4712,8 @@ LoadDefinitions!({
 
   Tag!("ltx:titlepage", auto_close => true);
 
-  DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
-    if document.is_closeable("ltx:titlepage").is_some() {
-      document.close_element("ltx:titlepage")?;
-    }
-  });
+  // `\maybe@end@title` is a Rust-only addition (not in Perl); defined in
+  // `latex_constructs_rust_only.rs` (which loads last, after this file).
 
   DefConstructor!("\\maybe@end@titlepage", sub[document,_args,_props] {
     document.maybe_close_element("ltx:titlepage")?;
@@ -4542,15 +4724,15 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\sectionmark{}", "");
-  DefMacro!("\\subsectionmark{}", "");
-  DefMacro!("\\subsubsectionmark{}", "");
-  DefMacro!("\\paragraphmark{}", "");
-  DefMacro!("\\subparagraphmark{}", "");
-  DefMacro!("\\@oddfoot", "");
-  DefMacro!("\\@oddhed", "");
-  DefMacro!("\\@evenfoot", "");
-  DefMacro!("\\@evenfoot", "");
+  def_macro_noop("\\sectionmark{}")?;
+  def_macro_noop("\\subsectionmark{}")?;
+  def_macro_noop("\\subsubsectionmark{}")?;
+  def_macro_noop("\\paragraphmark{}")?;
+  def_macro_noop("\\subparagraphmark{}")?;
+  def_macro_noop("\\@oddfoot")?;
+  def_macro_noop("\\@oddhed")?;
+  def_macro_noop("\\@evenfoot")?;
+  def_macro_noop("\\@evenfoot")?;
 
 
   // ======================================================================
@@ -4579,7 +4761,7 @@ LoadDefinitions!({
   }, mode => "internal_vertical");
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
-  DefMacro!("\\endcenter", None);
+  def_macro_noop("\\endcenter")?;
   DefEnvironment!("{flushleft}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("center", "ltx_align_left", document, props)?;
@@ -4709,7 +4891,7 @@ LoadDefinitions!({
   // protection against lower-level code...
   DefConditional!("\\if@noitemarg");
   DefMacro!("\\@item", "\\item"); // Hopefully no circles...
-  DefMacro!("\\@itemlabel", ""); // Maybe needs to be same as \item will be using?
+  def_macro_noop("\\@itemlabel")?; // Maybe needs to be same as \item will be using?
 
   // These counters are ONLY used for id's of ALL the various itemize, enumerate, etc elements
   // Only create the 1st level (so that binding style can start numbering 'within' appropriately)
@@ -4787,7 +4969,7 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
 
-  DefMacro!("\\makelabel{}", "#1");
+  def_macro_identity("\\makelabel{}")?;
   //----------------------------------------------------------------------
   // Basic itemize bits
   // Fake counter for itemize to give id's to ltx:item.
@@ -4798,12 +4980,12 @@ LoadDefinitions!({
   NewCounter!("@itemv",   "", idwithin => "@itemiv",   idprefix => "i");
   NewCounter!("@itemvi",  "", idwithin => "@itemv",    idprefix => "i");
   // These are empty to make the "refnum" go away.
-  DefMacro!("\\the@itemi", "");
-  DefMacro!("\\the@itemii", "");
-  DefMacro!("\\the@itemiii", "");
-  DefMacro!("\\the@itemiv", "");
-  DefMacro!("\\the@itemv", "");
-  DefMacro!("\\the@itemvi", "");
+  def_macro_noop("\\the@itemi")?;
+  def_macro_noop("\\the@itemii")?;
+  def_macro_noop("\\the@itemiii")?;
+  def_macro_noop("\\the@itemiv")?;
+  def_macro_noop("\\the@itemv")?;
+  def_macro_noop("\\the@itemvi")?;
 
   // Formatted item tags.
   // Really should be in the class file, but already was here.
@@ -4834,7 +5016,7 @@ LoadDefinitions!({
   });
   DefMacro!("\\itemtyperefname", "item");
   DefMacro!("\\itemcontext", "\\space in \\@listcontext");
-  DefMacro!("\\itemcontext", "");
+  def_macro_noop("\\itemcontext")?;
   // Probably would help to give a bit more context for the ii & higher?
   DefMacro!(
     "\\typerefnum@@itemi",
@@ -4911,12 +5093,12 @@ LoadDefinitions!({
   NewCounter!("@descv",   "", idwithin => "@desciv",   idprefix => "i");
   NewCounter!("@descvi",  "", idwithin => "@descv",    idprefix => "i");
   // No refnum"s here, either
-  DefMacro!("\\the@desci", "");
-  DefMacro!("\\the@descii", "");
-  DefMacro!("\\the@desciii", "");
-  DefMacro!("\\the@desciv", "");
-  DefMacro!("\\the@descv", "");
-  DefMacro!("\\the@descvi", "");
+  def_macro_noop("\\the@desci")?;
+  def_macro_noop("\\the@descii")?;
+  def_macro_noop("\\the@desciii")?;
+  def_macro_noop("\\the@desciv")?;
+  def_macro_noop("\\the@descv")?;
+  def_macro_noop("\\the@descvi")?;
   // These hookup latexml"s numbering to normal latex"s
   // Umm.... but they"re not normally used, since \item usually gets an argument!
   DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1");
@@ -4950,7 +5132,7 @@ LoadDefinitions!({
   // a counter.
 
   DefConditional!("\\if@nmbrlist");
-  DefMacro!("\\@listctr", "");
+  def_macro_noop("\\@listctr")?;
   DefPrimitive!("\\usecounter{}", sub[(counter)] {
     let counter = Expand!(counter).to_string();
     let counter_opt = if counter.is_empty() { None } else { Some(counter.as_str()) };
@@ -5065,18 +5247,9 @@ LoadDefinitions!({
   DefRegister!("\\labelwidthvi"       => Dimension::new(0));
 
   DefRegister!("\\@itemdepth" => Number::new(0));
-  DefRegister!("\\@maxlistdepth" => Number::new(6));
-
-  // List formatting macros from article.cls / report.cls / book.cls
-  // These set list parameters at various nesting levels.
-  // In raw TeX classes, \@listi etc. are defined by the class file.
-  // We stub them as no-ops since LaTeXML handles list formatting via CSS.
-  DefMacro!("\\@listi", "");
-  DefMacro!("\\@listii", "");
-  DefMacro!("\\@listiii", "");
-  DefMacro!("\\@listiv", "");
-  DefMacro!("\\@listv", "");
-  DefMacro!("\\@listvi", "");
+  // \@maxlistdepth and the \@listi..vi family are not in Perl
+  // latex_*.pool.ltxml — they live in `latex_constructs_rust_only.rs`
+  // (loads last). Identical-body duplicates removed from here.
 
   //======================================================================
   // C.6.4 Verbatim
@@ -5372,18 +5545,9 @@ LoadDefinitions!({
     None,
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
-  // protected => true prevents read_x_token(fully_expand=false) from expanding this
-  // (needed for lx_change_case_tokens to preserve \ensuremath{} content unchanged)
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      let mut result = vec![T_MATH!()];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  // \@ensuremath inner helper lives in `latex_constructs_rust_only.rs`
+  // (Rust split of Perl's unified \ensuremath; not separately defined in
+  // any Perl latex_*.pool.ltxml).
 
   // Perl: latex_constructs.pool.ltxml lines 2237-2239
   // \@equationgroup@numbering{numbered=1,postset=1,...}
@@ -5423,8 +5587,17 @@ LoadDefinitions!({
   // absorbed during beAbsorbed), so the \label constructor would never run.
   // By routing through noalign, the \label constructor runs at the equation level
   // where float_to_label can find the ltx:equation parent.
-  DefMacro!("\\lx@eqnarray@label Semiverbatim",
-    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#1}}");
+  //
+  // Accept an optional `[type]` arg to mirror cleveref's `\label[type]{key}` form
+  // inside `amsmath` align/eqnarray environments. cleveref's own
+  // `\label@in@display@optarg` discards the type and just forwards `{key}` to
+  // `\cref@old@label@in@display`, so we do the same: read & drop the optional
+  // type token, then process the mandatory Semiverbatim key. Without this the
+  // un-consumed `[type]{key}` reaches math digestion as text/subscript tokens
+  // and an `eq:foo_bar_baz`-style key fires "double subscript" errors.
+  // Witness 2311.02006.
+  DefMacro!("\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}}");
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments
@@ -5523,6 +5696,14 @@ LoadDefinitions!({
       }
       // Reset equation counter to 0
       reset_counter(&T_OTHER!("equation"))?;
+      // amsmath.sty L1134: `\protected@edef\theparentequation{\theequation}`
+      // — fixates the parent equation's expansion before the local
+      // \theequation is redefined. Papers commonly do
+      // `\renewcommand{\theequation}{\theparentequation\alph{equation}}`
+      // inside subequations, expecting \theparentequation to resolve.
+      // Witness 2402.03202.
+      def_macro(T_CS!("\\theparentequation"), None,
+        mouth::tokenize_internal(&eqnum_str), None)?;
       // Redefine \theequation to parent_number + \alph{equation}
       let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
       def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
@@ -5560,8 +5741,8 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
   // Simplified: \ensuremathfollows checks if next content is already math,
   // if not wraps with \( ... \). Used by equation labels / alt text.
-  DefMacro!("\\ensuremathfollows", "");  // stub — automath needs gullet lookahead
-  DefMacro!("\\ensuremathpreceeds", ""); // stub — pairs with ensuremathfollows
+  def_macro_noop("\\ensuremathfollows")?;  // stub — automath needs gullet lookahead
+  def_macro_noop("\\ensuremathpreceeds")?; // stub — pairs with ensuremathfollows
 
   // Perl: latex_constructs.pool.ltxml L2166
   // Since the arXMLiv folks keep wanting ids on all math, let's try this!
@@ -5663,7 +5844,7 @@ LoadDefinitions!({
     font => {family => "math", shape => "italic", series => "medium"});
 
   DefMacro!("\\fontsubfuzz", ".4pt");
-  DefMacro!("\\oldstylenums", "");
+  def_macro_noop("\\oldstylenums")?;
 
   DefPrimitive!("\\operator@font", None,
     font => {family => "serif", series => "medium", shape => "upright"});
@@ -5682,7 +5863,9 @@ LoadDefinitions!({
   // C.8.1 Defining Commands
   //======================================================================
 
-  DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
+  // \@tabacckludge body lives in `latex_constructs_rust_only.rs` (Perl
+  // has it in latex_base.pool.ltxml L357; the rust_only.rs copy is the
+  // dump-path override per its docstring section 7).
   // latex.ltx L10007 — `\let\a=\@tabacckludge`. The dump carries
   // `\a` as an E record (the serializer captured
   // `\@tabacckludge`'s body with a `\@changed@cmd` wrapper, not a
@@ -5711,7 +5894,7 @@ LoadDefinitions!({
   // Guard: only Let `\a` if it's not already user-defined. The
   // dump E record was rejected, so `\a` would be undefined here
   // unless the user defined it.
-  if state::lookup_meaning(&T_CS!("\\a")).is_none() {
+  if !state::has_meaning(&T_CS!("\\a")) {
     Let!("\\a", "\\@tabacckludge");
   }
 
@@ -5758,7 +5941,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
     let nargs_str = nargs_toks.to_string();
     let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
-    let has_optional = type_tok.with_str(|s| s.contains("2"))
+    let has_optional = type_tok.with_str(|s| s.contains('2'))
       || state::x_equals(&type_tok, &T_CS!("\\tw@"));
     let opt = if has_optional { Some(Tokens!()) } else { None };
     let macro_args = convert_latex_args(nargs, opt)?;
@@ -5797,9 +5980,9 @@ LoadDefinitions!({
   });
 
   // \CheckCommand validates but doesn't define — absorb and ignore args
-  DefPrimitive!("\\CheckCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}", None);
+  def_primitive_noop("\\CheckCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}")?;
   // Font encoding subset declaration — ignored in our context
-  DefPrimitive!("\\DeclareEncodingSubset{}{}{}", None);
+  def_primitive_noop("\\DeclareEncodingSubset{}{}{}")?;
 
   //------------------------------------------------------------
   // The following commands define encoding-specific expansions
@@ -5809,6 +5992,20 @@ LoadDefinitions!({
   // It may be that we've already defined it to expand into the above conditional.
   // But more importantly, we don't want to override a hand-written definition (if any).
   //------------------------------------------------------------
+  // `locked => true` on the `\Declare...`/`\Provide...` text primitives
+  // below: a raw-loaded package may `\def\DeclareTextSymbol{...}` to
+  // route through its own TeX-level dispatch (e.g. mathtext.sty's
+  // `\DeclareTextMathSymbol` chain). When the package's chain depends
+  // on LaTeX kernel internals we don't fully implement
+  // (`\@changed@tmcmd`, `\@tmchar@`, `\csname\cf@encoding\string<cs>
+  // \endcsname → \chardef` resolution), the override produces an
+  // unbounded macro-expansion loop. Perl LaTeXML has no binding for
+  // mathtext.sty and skips it entirely (`Warning:missing_file`); we
+  // raw-load instead (default `INCLUDE_STYLES=true` + ar5iv
+  // parity), so the override fires and breaks. Locking keeps our
+  // primitive in place even under raw-load; the package's `\def` is
+  // logged as Info:ignore and skipped. Witness: paper 2305.16331 +
+  // `\u\i` under `mathtext + T2A`.
   DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}",
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
@@ -5821,7 +6018,7 @@ LoadDefinitions!({
       let cs_args = convert_latex_args(nargs, opts)?;
       DefMacro!(cs, cs_args, expansion);
     }
-  });
+  }, locked => true);
 
   DefMacro!(
     "\\DeclareTextCommandDefault DefToken",
@@ -5843,7 +6040,7 @@ LoadDefinitions!({
       let cs_args = convert_latex_args(nargs, opts)?;
       DefMacro!(cs, cs_args, expansion);
     }
-  });
+  }, locked => true);
 
   DefMacro!(
     "\\ProvideTextCommandDefault DefToken",
@@ -5853,38 +6050,54 @@ LoadDefinitions!({
   // #------------------------------------------------------------
 
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
+    // Perl `latex_constructs.pool.ltxml:2671-2682`:
+    //   if (isDefinableLaTeX($cs)) {
+    //     DefMacroI($cs, undef,
+    //       '\expandafter\ifx\csname\cf@encoding\string'.$css.'\endcsname\relax
+    //          \csname?\string'.$css.'\endcsname
+    //        \else\csname\cf@encoding\string'.$css.'\endcsname\fi');
+    //   }
+    //   my $ecs = T_CS('\\'.$encoding.$css);
+    //   $STATE->installDefinition(CharDef->new($ecs, 'restricted_horizontal', $code, $encoding));
+    //
+    // The bare `\cs` is ALWAYS defined as a dispatch-chain macro that
+    // resolves to `\<encoding>\cs` via `\csname`. The encoding-specific
+    // `\<encoding>\cs` carries the actual glyph (as a CharDef in Perl;
+    // as a `PrimitiveBody::String` primitive here — both produce a
+    // single char on invocation).
+    //
+    // Witness for why this matters: paper 2305.16331 + mathtext.sty +
+    // `\u\i` under T2A. mathtext.sty raw-loads and `\def\DeclareTextSymbol`
+    // redefines our handler. T2A's `\DeclareTextSymbol{\i}{T2A}{25}` then
+    // runs mathtext's chain (`\DeclareTextMathSymbol`), which redefines
+    // `\i` to `\T2A-tmcmd \i \T2A\i \T2Amath\i`. That chain bottoms out
+    // at `\csname\cf@encoding\string\i\endcsname = \T2A\i` — but only if
+    // `\T2A\i` is a real definition. The prior happy-path bypassed both
+    // the macro chain AND assumed `\i` would never be re-routed; under
+    // mathtext's override `\i`'s chain looped, growing pushback past
+    // the 4 GiB OOM boundary. With this Perl-faithful chain in place,
+    // mathtext's override produces an equivalent chain that terminates
+    // at the same `\T2A\i` primitive.
     let code_value = code.value_of() as u8;
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if let Some(replacement_value) = font::decode(code_value, Some(encoding_str), false) {
-      // Define the encoding-specific command
+      // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::from(replacement_value)),
         PrimitiveOptions::default())?;
-      // Also define the base command directly if not already defined
-      if IsDefinable!(&cs) {
-        def_primitive(cs, None, Some(PrimitiveBody::from(replacement_value)),
-          PrimitiveOptions::default())?;
-      }
-    } else {
-      // Can't decode: ensure both `\<encoding><cs>` and the bare `<cs>`
-      // have safe fallbacks. Without binding the encoding-specific form,
-      // any T3-using paper (e.g. tipa with arXiv:1802.05444's
-      // `\textrhookrevepsilon`) chains through `\?<cs>` to
-      // `\<encoding><cs>` and errors as undefined. Define the
-      // encoding-specific as a no-op silent macro — graceful degrade
-      // rather than ltx:ERROR insertion.
-      if IsDefinable!(&ecs) {
-        DefMacro!(ecs, None, Tokens!());
-      }
-      if IsDefinable!(&cs) {
-        // Conditional fallback: prefer `\<cf@encoding><cs>` if it exists,
-        // else the alias `\?<cs>` set up by `\DeclareTextSymbolDefault`.
-        DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
-        \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
-      }
+    } else if IsDefinable!(&ecs) {
+      // Can't decode: install no-op fallback so downstream chains find
+      // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
+      DefMacro!(ecs, None, Tokens!());
     }
-  });
+    // Bare `\cs` always becomes a dispatch chain (matches Perl).
+    if IsDefinable!(&cs) {
+      DefMacro!(cs, None, Some(s!(
+        r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"
+      ).into()));
+    }
+  }, locked => true);
 
   // Perl `latex_constructs.pool.ltxml:2684-2688`:
   //   DefPrimitive('\DeclareTextSymbolDefault DefToken {}', sub {
@@ -5904,11 +6117,11 @@ LoadDefinitions!({
     let alias_cs = T_CS!(s!("\\?{cs_str}"));
     let target_cs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     DefMacro!(alias_cs, None, Some(target_cs.into()));
-  });
+  }, locked => true);
 
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None);
+  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None, locked => true);
+  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
 
   DefMacro!("\\fontencoding{}", "\\lx@fontencoding{#1}");
   // Perl `latex_constructs.pool.ltxml:27-28`:
@@ -5935,12 +6148,12 @@ LoadDefinitions!({
   });
 
   // #------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None);
+  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None, locked => true);
   // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None);
+  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None, locked => true);
   // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
 
-  DefPrimitive!("\\UndeclareTextCommand{}{}", None);
+  def_primitive_noop("\\UndeclareTextCommand{}{}")?;
   DefMacro!("\\UseTextSymbol{}{}", "{\\fontencoding{#1}#2}");
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
@@ -6023,10 +6236,10 @@ LoadDefinitions!({
     def_math(cs, None, presentation, opts)?;
   });
 
-  DefPrimitive!("\\DeclareMathDelimiter{}{}{}{}", None);
-  DefPrimitive!("\\DeclareMathRadical{}{}{}{}{}", None);
-  DefPrimitive!("\\DeclareMathVersion{}", None);
-  DefPrimitive!("\\DeclarePreloadSizes{}{}{}{}{}", None);
+  def_primitive_noop("\\DeclareMathDelimiter{}{}{}{}")?;
+  def_primitive_noop("\\DeclareMathRadical{}{}{}{}{}")?;
+  def_primitive_noop("\\DeclareMathVersion{}")?;
+  def_primitive_noop("\\DeclarePreloadSizes{}{}{}{}{}")?;
 
   // The next font declaration commands are based on
   // http://tex.loria.fr/general/new/fntguide.html
@@ -6070,13 +6283,44 @@ LoadDefinitions!({
     let cs_tok = T_CS!(cs.to_string());
     def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
   });
-  DefPrimitive!("\\DeclareErrorFont{}{}{}{}{}", None);
+  def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
   // Font declaration stubs (Perl latex_constructs.pool.ltxml)
-  DefPrimitive!("\\DeclareFontShape{}{}{}{}{}{}", None);
-  DefPrimitive!("\\DeclareFontFamily{}{}{}", None);
-  DefPrimitive!("\\DeclareSizeFunction{}{}", None);
-  DefPrimitive!("\\DeclareMathSizes{}{}{}{}", None);
-  DefMacro!("\\newmathalphabet{}{}{}", None, None);
+  def_primitive_noop("\\DeclareFontShape{}{}{}{}{}{}")?;
+  def_primitive_noop("\\DeclareFontFamily{}{}{}")?;
+  def_primitive_noop("\\DeclareSizeFunction{}{}")?;
+  def_primitive_noop("\\DeclareMathSizes{}{}{}{}")?;
+  // \newmathalphabet — pre-LaTeX2e (NFSS 1.0) math-alphabet declarator.
+  // Effectively a no-op for XML output. NOTE the `, None)` arm is the
+  // "discard everything" mock — `, None, None)` (3 args) would not
+  // match any DefMacro arm and silently fail to register the CS.
+  def_macro_noop("\\newmathalphabet{}{}{}")?;
+  // \new@internalmathalphabet — obsolete LaTeX 2.09 kernel macro for
+  // defining math alphabets, superseded by \DeclareSymbolFontAlphabet.
+  // Used by old (1992-93) hep-th papers (~11 papers in stage-4 of the
+  // 100k warning corpus, witness: arXiv:hep-th9211047 — \new@internalmathalphabet
+  // \mathsf\sffam{cmss}{m}{n}). Stub with the same 5-arg signature as
+  // \DeclareMathAlphabet so the args are consumed cleanly instead of
+  // leaking into the document body via the auto-undefined-as-ERROR path.
+  // SHARED-FAILURE with Perl (both fatal on this macro without a stub).
+  def_macro_noop("\\new@internalmathalphabet{}{}{}{}{}")?;
+
+  // LaTeX 2.09 size aliases. Defined in latex_base.rs but that pool is
+  // SKIPPED when the latex.ltx dump is loaded (latex.rs:83-89). Old
+  // hep-th/hep-ph papers from the 1990s still use `\xpt` / `\xipt` /
+  // `\xiipt` directly to set the math/text font size; without these
+  // defines they error as undefined and we leak `\edef\f@size{…}\rm`
+  // expansion tokens. Stub them as no-ops since font-size selection in
+  // 2.09 mode is a typesetting concern that doesn't affect our XML
+  // output. Witnesses: arXiv:hep-ph9306327, hep-ph9307211,
+  // hep-th9409059 (~6 papers in stage-4 of the 100k warning corpus).
+  for cs_name in [
+    "\\vpt", "\\vipt", "\\viipt", "\\viiipt", "\\ixpt", "\\xpt",
+    "\\xipt", "\\xiipt", "\\xivpt", "\\xviipt", "\\xxpt", "\\xxvpt",
+  ].iter() {
+    if !state::has_meaning(&T_CS!(*cs_name)) {
+      def_macro(T_CS!(*cs_name), None, None, None)?;
+    }
+  }
   // DeclareMathAlphabet: define math font command if not already defined
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
     let cs_tok = T_CS!(cs.to_string());
@@ -6130,9 +6374,19 @@ LoadDefinitions!({
     // never loads `ts1enc.dfu` and `\DeclareUnicodeCharacter` mappings
     // from the .dfu are missing — surfacing as bogus undefineds when
     // user input contains TS1 glyphs that should resolve via the .dfu.
+    //
+    // BUT: skip the .dfu load when `\DeclareUnicodeCharacter` has been
+    // `\let` to `\@undefined` (the signal `\UseRawInputEncoding` uses
+    // to disable inputenc-style mappings — latex.ltx L18271). The .dfu
+    // body is nothing but `\DeclareUnicodeCharacter{...}` calls, and
+    // each one would emit "undefined CS" if we proceeded. Real pdflatex
+    // tolerates this because `\DeclareFontEncoding` does not auto-load
+    // the .dfu — only inputenc.sty does. Witness: arXiv:2509.22585
+    // (revtex4-2 + `\UseRawInputEncoding` + `\usepackage[T1]{fontenc}`).
     use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
+    let duc_defined = state::has_meaning(&T_CS!("\\DeclareUnicodeCharacter"));
     let enc_str = e.to_string();
-    if !enc_str.is_empty() {
+    if duc_defined && !enc_str.is_empty() {
       let dfu_name = format!("{}enc", enc_str.to_lowercase());
       if find_file(&dfu_name, Some(FindFileOptions {
         forbid_ltxml: true,
@@ -6176,25 +6430,27 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
-  DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
+  def_primitive_noop("\\DeclareFontSubstitution{}{}{}{}")?;
+  def_primitive_noop("\\DeclareFontEncodingDefaults{}{}")?;
   DefMacro!("\\LastDeclaredEncoding", None, None);
 
-  DefPrimitive!("\\SetSymbolFont{}{}{}{}{}{}", None);
-  DefPrimitive!("\\SetMathAlphabet{}{}{}{}{}{}", None);
-  DefPrimitive!("\\addtoversion{}{}", None);
-  DefPrimitive!("\\TextSymbolUnavailable{}", None);
+  def_primitive_noop("\\SetSymbolFont{}{}{}{}{}{}")?;
+  def_primitive_noop("\\SetMathAlphabet{}{}{}{}{}{}")?;
+  def_primitive_noop("\\addtoversion{}{}")?;
+  def_primitive_noop("\\TextSymbolUnavailable{}")?;
 
   // LaTeX3 ltcmd: \NewCommandCopy and \DeclareCommandCopy
   // These are semantic \let equivalents from the 2023+ LaTeX kernel.
   // Not in Perl LaTeXML (too new), but needed for modern packages (tcolorbox, etc.).
-  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
-  });
-  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
-  });
-  DefMacro!("\\ShowCommand Token", "");
+  //
+  // ltcmd defines them as `\NewDocumentCommand \NewCommandCopy { m m }` —
+  // both args are mandatory, accepting either `\foo` (bare token) or
+  // `{\foo}` (brace-wrapped token). Real arxmliv usage is the brace
+  // \NewCommandCopy / \DeclareCommandCopy / \ShowCommand defined in
+  // `latex_constructs_rust_only.rs` (modern LaTeX 2023+ kernel CSes;
+  // not in Perl). Moved there for single-source-of-truth and to keep
+  // bug fix (brace-wrapped token unwrap; arXiv:2510.20194 witness) from
+  // being overridden by an older copy.
 
   TeX!(
     r#"""
@@ -6304,7 +6560,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@makeoutdent", "\\@ADDCLASS{ltx_outdent}");
 
   DefMacro!("\\@thmcountersep", ".");
-  DefMacro!("\\thm@doendmark",  "");
+  def_macro_noop("\\thm@doendmark")?;
 
   init_savable_theorem_parameters(vec![
     "\\thm@bodyfont", "\\thm@headpunct",
@@ -6413,7 +6669,7 @@ LoadDefinitions!({
       let prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr_str));
       let clean_prefix = if prefix.is_empty() { ctr_str.clone() } else { prefix };
       let ctr_for_id = ctr_str.clone();
-      let within_for_id = within_str.clone();
+      let within_for_id = within_str;
       let thectrid = s!("\\the{}@ID", ctr_str);
       let _ = def_macro(T_CS!(thectrid), None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
@@ -6736,8 +6992,8 @@ LoadDefinitions!({
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
-  DefPrimitive!("\\flushbottom",      None);
-  DefPrimitive!("\\suppressfloats[]", None);
+  def_primitive_noop("\\flushbottom")?;
+  def_primitive_noop("\\suppressfloats[]")?;
 
   NewCounter!("topnumber");
   DefMacro!("\\topfraction", "0.25");
@@ -6768,16 +7024,15 @@ LoadDefinitions!({
   Let!("\\botfigrule", "\\relax");
   Let!("\\dblfigrule", "\\relax");
 
-  DefMacro!("\\figurename",  "Figure");
-  DefMacro!("\\figuresname", "Figures");    // Never used?
-  DefMacro!("\\tablename",   "Table");
-  DefMacro!("\\tablesname",  "Tables");
+  // \figurename / \figuresname / \tablename / \tablesname already defined
+  // earlier in this file (figure/table caption block); avoid identical
+  // re-definitions here.
 
   Let!("\\outer@nobreak", "\\@empty");
-  DefMacro!("\\@dbflt{}",           "#1");
+  def_macro_identity("\\@dbflt{}")?;
   DefMacro!("\\@xdblfloat{}[]",     "\\@xfloat{#1}[#2]");
-  DefMacro!("\\@floatplacement",    "");
-  DefMacro!("\\@dblfloatplacement", "");
+  def_macro_noop("\\@floatplacement")?;
+  def_macro_noop("\\@dblfloatplacement")?;
 
 
 
@@ -6910,9 +7165,9 @@ LoadDefinitions!({
   });
 
   // Default definitions for \pushtabs/\poptabs/\kill (outside tabbing)
-  DefMacro!("\\pushtabs", "");
-  DefMacro!("\\poptabs", "");
-  DefMacro!("\\kill", "");
+  def_macro_noop("\\pushtabs")?;
+  def_macro_noop("\\poptabs")?;
+  def_macro_noop("\\kill")?;
 
   // The binding primitive that sets up the alignment
   DefPrimitive!("\\@tabbing@bindings", sub [_args] {
@@ -6958,12 +7213,12 @@ LoadDefinitions!({
     tabular_bindings(template, SymHashMap::default(), attrs)?;
   });
 
-  DefMacro!("\\@tabular@before", None);
-  DefMacro!("\\@tabular@after", None);
-  DefMacro!("\\@tabular@row@before", None);
-  DefMacro!("\\@tabular@row@after", None);
-  DefMacro!("\\@tabular@column@before", None);
-  DefMacro!("\\@tabular@column@after", None);
+  def_macro_noop("\\@tabular@before")?;
+  def_macro_noop("\\@tabular@after")?;
+  def_macro_noop("\\@tabular@row@before")?;
+  def_macro_noop("\\@tabular@row@after")?;
+  def_macro_noop("\\@tabular@column@before")?;
+  def_macro_noop("\\@tabular@column@after")?;
 
   // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
   DefMacro!("\\tabular[]{}",
@@ -7080,7 +7335,15 @@ LoadDefinitions!({
   DefRegister!("\\arraycolsep", Dimension!("5pt"));
   DefRegister!("\\arrayrulewidth", Dimension!("0.4pt"));
   DefRegister!("\\doublerulesep", Dimension!("2pt"));
-  DefMacro!("\\extracolsep{}", None);
+  // array.sty L184 allocates `\extrarowheight` as a dimension register
+  // that controls per-row vertical pad-extra. Papers commonly use
+  // `\setlength\extrarowheight{3pt}` without explicit
+  // `\usepackage{array}`. Perl LaTeXML's array.sty.ltxml L18 defines
+  // it too; our binding does as well, but only when array.sty itself
+  // is required. Define here at engine level so it's always available.
+  // Witness 2205.01473 (ifacconf.cls + \setlength\extrarowheight).
+  DefRegister!("\\extrarowheight", Dimension!("0pt"));
+  def_macro_noop("\\extracolsep{}")?;
 
   // Array and similar environments
   // Perl: latex_constructs.pool.ltxml lines 3792-3809
@@ -7143,14 +7406,14 @@ LoadDefinitions!({
   //======================================================================
   // C.11.1 Files
   //======================================================================
-  DefPrimitive!("\\nofiles", None);
+  def_primitive_noop("\\nofiles")?;
 
   // Perl: DefPrimitive('\listfiles', undef) — no-op. Required so the
   // autoload trigger for `\listfiles` (engine/tex.rs) gets overridden
   // after LaTeX.pool loads; otherwise the trigger re-expands itself
   // after each pool load, creating a unique mouth-source per iteration
   // that eventually trips the 50M arena::pin sentinel (arxiv 1311.6082).
-  DefPrimitive!("\\listfiles", None);
+  def_primitive_noop("\\listfiles")?;
 
   //======================================================================
   // C.11.2 Cross-References
@@ -7244,9 +7507,11 @@ LoadDefinitions!({
   // Note that it's called \refname in LaTeX's article, but \bibname in report & book.
   // And likewise, mixed up in various other classes!
 
-  DefMacro!("\\thebibliography@ID", "");
+  // \thebibliography@ID empty default lives in `latex_constructs_rust_only.rs`
+  // section 4 (per-bibliography runtime value is reassigned inside the
+  // \bibliography constructor body at L2085).
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
-  DefMacro!("\\the@lx@bibliography@ID", "");
+  def_macro_noop("\\the@lx@bibliography@ID")?;
 
   DefMacro!(
     "\\bibliography Semiverbatim",
@@ -7402,7 +7667,7 @@ LoadDefinitions!({
       Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
     }
   });
-  DefMacro!("\\vskip@in@bibliography Glue", None);
+  def_macro_noop("\\vskip@in@bibliography Glue")?;
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
@@ -7583,6 +7848,13 @@ LoadDefinitions!({
   AssignValue!("CITE_YY_SEPARATOR", T_OTHER!(","));
   AssignValue!("CITE_NOTE_SEPARATOR", T_OTHER!(","));
 
+  // Perl latex_constructs.pool.ltxml L4238: `\@cite{#1}{#2}` — kernel default
+  // citation formatter, wraps `#1` (citation list) + optional `#2` (note) in
+  // brackets via `\if@tempswa`. Used by `\@citex` (latex_dump.pool.ltxml).
+  // The dump path captures this body, but the NODUMP path lacks it — port
+  // here for source-org parity (CLAUDE.md priority 3).
+  DefMacro!("\\@cite{}{}", "[{#1\\if@tempswa , #2\\fi}]");
+
   // Perl latex_constructs.pool.ltxml L4239-4241: DefConstructor('\@@cite []{}', ...,
   //   alias => '\cite', mode => 'restricted_horizontal', enterHorizontal => 1)
   DefConstructor!("\\@@cite[]{}", "<ltx:cite ?#1(class='ltx_citemacro_#1')>#2</ltx:cite>",
@@ -7725,69 +7997,10 @@ LoadDefinitions!({
     state::assign_value("including@only", Stored::HashString(map), Scope::Global);
   });
 
-  // Perl latex_constructs L4316-4353: {filecontents} and {filecontents*} environments
-  // Read raw lines until \end{filecontents}, cache content for later \input.
-  fn cache_filecontents(end_marker: &str, header_star: bool) -> Result<()> {
-    gullet::skip_spaces()?;
-    let filename_toks = gullet::read_arg(ExpansionLevel::Off)?;
-    let filename = filename_toks.to_string();
-    // Perl latex_constructs L4316-4353: header comments match Perl's
-    // three-line preamble. The \jobname line is synthesized as `\jobname`
-    // (unexpanded literal) rather than the digested jobname — our tests
-    // don't exercise a specific date and we don't want to leak
-    // compile-time state into the dump-like content cache.
-    let mut lines: Vec<String> = vec![
-      format!("%% LaTeX2e file `{filename}'"),
-      if header_star {
-        "%% generated by the `filecontents*' environment".to_string()
-      } else {
-        "%% generated by the `filecontents' environment".to_string()
-      },
-      "%% from source `\\jobname' on YYYY/MM/DD.".to_string(),
-    ];
-    if !header_star { lines.push("%%".to_string()); }
-    // Discard remainder of \begin{filecontents} line
-    gullet::read_raw_line();
-    // Read raw lines until end marker
-    loop {
-      match gullet::read_raw_line() {
-        Some(line) if !line.contains(end_marker) => lines.push(line),
-        _ => break,
-      }
-    }
-    let n = lines.len();
-    let content = lines.join("\n");
-    Info!("note", "filecontents", s!("Cached filecontents for {filename} ({n} lines)"));
-    state::assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
-    Ok(())
-  }
-  // Perl: DefConstructorI(T_CS("\\begin{filecontents}"), "Semiverbatim", '', afterDigest => ...)
-  // The \filecontents primitive reads filename + raw lines until \end{filecontents}.
-  // When called via \begin{filecontents}, \begin opens a group first.
-  // We manually close the group after caching, matching the \end that was consumed.
-  DefPrimitive!("\\filecontents", {
-    cache_filecontents("\\end{filecontents}", false)?;
-    // \begin{filecontents} opens a \begingroup; since we consumed \end{filecontents}
-    // as raw text, we must close the group that \begin opened.
-    stomach::endgroup()?;
-  });
-  DefPrimitive!("\\lx@filecontents@star", {
-    cache_filecontents("\\end{filecontents*}", true)?;
-    // Same: close the \begingroup from \begin{filecontents*}
-    stomach::endgroup()?;
-  });
-  state::assign_meaning(
-    &T_CS!("\\filecontents*"),
-    state::lookup_meaning(&T_CS!("\\lx@filecontents@star")).unwrap_or(Stored::None),
-    Some(Scope::Global),
-  );
-  DefMacro!("\\endfilecontents", "");
-  state::assign_meaning(
-    &T_CS!("\\endfilecontents*"),
-    state::lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),
-    Some(Scope::Global),
-  );
-
+  // {filecontents}/{filecontents*} environments + cache_filecontents
+  // helper live in `latex_constructs_rust_only.rs` (Rust-only impl, not
+  // a Perl latex_*.pool.ltxml export). Identical block previously
+  // duplicated here removed.
 
   Tag!("ltx:indexphrase", after_close => sub[_document, node] {
     add_index_phrase_key(node)?;
@@ -7849,13 +8062,46 @@ LoadDefinitions!({
   DefEnvironment!("{theindex}",
     "<ltx:index xml:id='#id'>#body</ltx:index>");
 
-  DefPrimitive!("\\indexspace", None);
-  DefPrimitive!("\\makeindex", None);
-  DefPrimitive!("\\makeglossary", None);
+  def_primitive_noop("\\indexspace")?;
+  def_primitive_noop("\\makeindex")?;
+  def_primitive_noop("\\makeglossary")?;
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
-  // Perl: \glossary{} — simplified glossary entry
-  DefConstructor!("\\glossary{}", "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
+  // Perl latex_constructs.pool.ltxml L4481-4493 — `\glossary{}` uses a
+  // closure constructor that guards on the current node: if we're inside
+  // `ltx:p` or `ltx:text`, emit a Warn and skip the element entirely
+  // (schema disallows `ltx:glossaryphrase` in those parents). Otherwise
+  // insert the element. The earlier Rust port used a static template that
+  // unconditionally produced `<ltx:glossaryphrase>`, which surfaced as
+  // `Error:malformed:ltx:glossaryphrase isn't allowed in <ltx:p>` on
+  // papers calling `\glossary{...}` in the body flow (where most papers
+  // actually use it). Witnesses: arXiv:cs/9809003, math/9608214,
+  // nucl-th/9311001.
+  DefConstructor!("\\glossary{}", sub[document, args, props] {
+    use latexml_core::document::get_node_qname;
+    let current = document.get_node().clone();
+    let current_name = arena::with(get_node_qname(&current), |s| s.to_string());
+    let parent_name = if current_name == "#PCDATA" {
+      if let Some(p) = current.get_parent() {
+        arena::with(get_node_qname(&p), |s| s.to_string())
+      } else { current_name }
+    } else { current_name };
+    let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
+    if in_flow {
+      Warn!("unexpected", "glossary",
+        "glossary support is not yet ready for use in the main text flow.");
+    } else {
+      let key = prop_string!(props, "key");
+      let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+      attrs.insert("role".to_string(), "glossary".to_string());
+      attrs.insert("key".to_string(), key);
+      let body: Vec<&latexml_core::digested::Digested> = match args.first().and_then(|a| a.as_ref()) {
+        Some(d) => vec![d],
+        None => Vec::new(),
+      };
+      document.insert_element("ltx:glossaryphrase", body, Some(attrs))?;
+    }
+  },
     properties => sub[args] {
       let key = args[0].as_ref()
         .map(|a| clean_index_key(&a.to_string()))
@@ -7865,10 +8111,29 @@ LoadDefinitions!({
     sizer => 0
   );
 
-  // \glossaryname, \printglossary removed — not in Perl engine
-  // (Perl: glossaries.sty.ltxml defines \printglossary)
-  // \seename, \alsoname removed — not in Perl engine
-  // (Perl: makeidx.sty.ltxml defines these; also babel captions)
+  // Standard English caption names set by babel-english.ldf's
+  // \captionsenglish hook (and by letter.cls for the letter-specific
+  // ones). Documents that pull in `babel` indirectly via blindtext /
+  // tocbibind / sectsty without reaching the \selectlanguage path leave
+  // these as undefined. Perl LaTeXML's babel.def.ltxml shim quietly
+  // absorbs these CSes, but our raw-load of babel.sty surfaces
+  // \setlocalecaption stubs without their \captionsenglish backings.
+  // Provide English defaults here (NOT in latex_base.rs — that file
+  // is skipped on the dump path so defs there don't survive). Witness
+  // 2110.05865 (article + blindtext pulls babel; 8 undefined captions).
+  DefMacro!("\\bibname",       "Bibliography");
+  DefMacro!("\\seename",       "see");
+  DefMacro!("\\alsoname",      "see also");
+  DefMacro!("\\glossaryname",  "Glossary");
+  DefMacro!("\\enclname",      "encl");
+  DefMacro!("\\ccname",        "cc");
+  DefMacro!("\\headtoname",    "To");
+  DefMacro!("\\pagename",      "Page");
+  // Additional babel-english.ldf captions (\captionsenglish hook).
+  DefMacro!("\\prefacename",   "Preface");
+  DefMacro!("\\proofname",     "Proof");
+  DefMacro!("\\abstractname",  "Abstract");
+  DefMacro!("\\indexname",     "Index");
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
@@ -7903,7 +8168,7 @@ LoadDefinitions!({
       Note!(s!("{content}"));
     }
   });
-  DefPrimitive!("\\typein[]{}", None);
+  def_primitive_noop("\\typein[]{}")?;
 
 
   // ======================================================================
@@ -7924,7 +8189,7 @@ LoadDefinitions!({
   DefMacro!("\\sloppypar", "\\par\\sloppy");
   DefMacro!("\\endsloppypar", "\\par");
   DefMacro!("\\nobreakdashes", "-");
-  DefMacro!("\\showhyphens{}", "#1");
+  def_macro_identity("\\showhyphens{}")?;
   //======================================================================
   // C.12.2 Page Breaking
   //======================================================================
@@ -7953,20 +8218,8 @@ LoadDefinitions!({
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
-    match lookup_definition(&cs)? {
-      None => {
-        let message = s!("'{}' is not a length; defining it now", cs.stringify());
-        Warn!("undefined", cs, message);
-        DefRegister!(cs, None, Dimension::new(0));
-      },
-      Some(defn) => if !defn.is_register() {
-        let message = s!("'{}' length was expected, got {:?} instead of register.",
-          cs.to_string(), defn.register_type());
-        Error!("misdefined", cs, message);
-      }
-    };
-  });
+  // \@check@length helper (used by \newlength below) lives in
+  // `latex_constructs_rust_only.rs` (Rust-only addition).
 
   DefPrimitive!("\\newlength DefToken", sub[(cs)] {
     DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
@@ -8049,9 +8302,9 @@ LoadDefinitions!({
   // ntheorem_test, plus the simpler `bigskip_test`, both confirm the
   // Perl-faithful expansion produces the expected sibling layout.
   DefMacro!("\\vspace OptionalMatch:* {}", "\\vskip #2\\relax");
-  DefPrimitive!("\\addvspace {}", None);
-  DefPrimitive!("\\addpenalty {}", None);
-  DefPrimitive!("\\@endparenv", None);
+  def_primitive_noop("\\addvspace {}")?;
+  def_primitive_noop("\\addpenalty {}")?;
+  def_primitive_noop("\\@endparenv")?;
 
   //======================================================================
   // C.13.3 Boxes
@@ -8335,7 +8588,7 @@ LoadDefinitions!({
             let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
             // Use \baselineskip (typically 12pt = 786432 sp) for line height
             let baseline_skip = state::lookup_dimension("\\baselineskip")
-              .unwrap_or(Dimension::new(786432)); // 12pt default
+              .unwrap_or_else(|| Dimension::new(786432)); // 12pt default
             let line_h = baseline_skip.value_of();
             let total_h = num_lines * line_h;
             // Default: top alignment (first line as height)
@@ -8378,10 +8631,10 @@ LoadDefinitions!({
       Let!("\\\\", "\\lx@newline");
     }
   );
-  DefMacro!("\\@parboxrestore", "");
+  def_macro_noop("\\@parboxrestore")?;
 
   DefConditional!("\\if@minipage");
-  DefMacro!("\\@setminipage", "");
+  def_macro_noop("\\@setminipage")?;
   // Perl: latex_constructs.pool.ltxml lines 4822-4846
   DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
     sub[document, args, props] {
@@ -8683,7 +8936,25 @@ LoadDefinitions!({
   // individual entries don't re-carry the tag.
 
   // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
-  DefMacro!("\\line Match:( Until:, Until:) {Float}", "\\lx@pic@line{#2}{#3}{#4}");
+  //
+  // Some papers (witness 2306.13101) use `\line` in non-picture context as a
+  // length unit, e.g. `\diagbox[height=2.5\line]{…}{…}`. There the
+  // following token is NOT `(` and the strict `Match:(` reader emits
+  // `Error:expected:Match Missing argument Match:(`. Dispatch by peeking
+  // the next non-space token: if `(`, run the picture chain; otherwise
+  // fall back to plain TeX's `\line` (an `\hbox to \hsize` length builder
+  // from plain_base.rs) so a surrounding dimension reader can consume
+  // `\line` as a length without errors.
+  DefMacro!("\\line", sub[_args] {
+    if gullet::if_next(T_OTHER!("("))? {
+      Ok(Tokens!(T_CS!("\\lx@pic@line@dispatch")))
+    } else {
+      Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
+    }
+  });
+  // The actual picture-mode \line dispatched from the peek above.
+  DefMacro!("\\lx@pic@line@dispatch Match:( Until:, Until:) {Float}",
+    "\\lx@pic@line{#2}{#3}{#4}");
   DefConstructor!("\\lx@pic@line{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
@@ -9067,11 +9338,10 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml line 5802
   // \stop — closes the current input mouth (Plain TeX command)
   Let!("\\stop", "\\endinput");
-  DefMacro!("\\ignorespacesafterend", None);
+  def_macro_noop("\\ignorespacesafterend")?;
 
-  // Perl: latex_constructs.pool.ltxml line 5027
-  // Pre-define \Gin@driver so graphics.sty doesn't error when loaded from disk
-  DefMacro!("\\Gin@driver", "");
+  // \Gin@driver lives in `latex_constructs_rust_only.rs` (pure Rust
+  // hotfix, not in any Perl latex_*.pool.ltxml).
 
 
   //**********************************************************************
@@ -9117,7 +9387,7 @@ LoadDefinitions!({
   // message in math mode, no-op otherwise. Rust keeps the no-op stub but
   // matches the Perl kind (DefMacro — expansion-time, same as the
   // invocation sites `\mdseries`/`\bfseries` which expand it inline).
-  DefMacro!("\\not@math@alphabet{}{}", None);
+  def_macro_noop("\\not@math@alphabet{}{}")?;
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
     if state::lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
@@ -9177,6 +9447,14 @@ LoadDefinitions!({
   );
 
   Let!("\\reset@font", "\\normalfont");
+
+  // Perl: latex_constructs.pool.ltxml:5251
+  // \@fontswitch — LaTeX 2.09 compat helper used by article/book/letter
+  // classes to define \cal and \mit (math-mode font switches). Perl's
+  // override drops the kernel body's \math@bgroup/\math@egroup
+  // machinery (irrelevant outside real TeX boxing); the simpler form
+  // is functionally equivalent for LaTeXML's XML output.
+  DefMacro!("\\@fontswitch{}{}", "\\ifmmode #2\\relax\\else #1 \\fi");
 
   DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
@@ -9339,7 +9617,8 @@ LoadDefinitions!({
   DefPrimitive!("\\textdaggerdbl", "\u{2021}"); // DOUBLE DAGGER
   DefPrimitive!("\\textdagger", "\u{2020}"); // DAGGER
   DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
-  DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
+  // \textperiodcentered defined in `latex_constructs_rust_only.rs` (Perl
+  // uses it but never defines it — Perl-side gap noted in rust_only.rs).
   DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
   // Perl: DefPrimitive('\textcircled {}', sub { ... })
   // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD
@@ -9660,19 +9939,26 @@ LoadDefinitions!({
     }
   });
 
-  // LaTeX3 format-version guard (ltcmd.dtx 2020/10/01 kernel). Source that
-  // checks for format features writes
-  //   \IfFormatAtLeastTF{YYYY/MM/DD}{then}{else}
-  // expecting the `then` branch on modern LaTeX. LaTeXML simulates a
-  // current-enough format, so always take `#2`. This is how babel's
-  // greek.ldf probes for LaTeX3 catcode primitives; without the stub it
-  // emits Error:undefined and bails out of the language setup.
-  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
+  // \IfFormatAtLeastTF stub lives in `latex_constructs_rust_only.rs` (loads
+  // last). Removed duplicate identical-body DefMacro here.
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
     let file_string = file_tks.to_string();
-    if find_file(&file_string, None).is_some() {
+    // Disk-search first (matches Perl FindFile default), then
+    // binding-only fallback (notex=true) so registered .ldf / .def
+    // bindings shipped via latexml_package are discoverable. Without
+    // the fallback, babel.sty L4175 `\InputIfFileExists{italian.ldf}`
+    // returns "not found" even though we ship `italian.ldf` as a
+    // compile-time binding — and babel errors with "Unknown option
+    // 'italian'". Witness: 38 papers across recent stages with
+    // missing-on-disk babel-language packages (italian/spanish/
+    // portuges/brazil/...).
+    let found = find_file(&file_string, None).is_some()
+      || find_file(&file_string, Some(latexml_core::binding::content::FindFileOptions {
+          notex: true, ..Default::default()
+        })).is_some();
+    if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
       Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
@@ -9718,11 +10004,12 @@ LoadDefinitions!({
   DefPrimitive!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
-  DefMacro!("\\fileversion", "");
-  DefMacro!("\\filedate", "");
+  def_macro_noop("\\fileversion")?;
+  def_macro_noop("\\filedate")?;
   DefMacro!("\\chaptername", "Chapter");
   DefMacro!("\\partname", "Part");
-  DefMacro!("\\appendixname", "Appendix");
+  // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
+  // C.4.4 appendix block); avoid duplicate identical re-definition.
   DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
   DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
@@ -9732,11 +10019,11 @@ LoadDefinitions!({
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
   //======================================================================
-  DefMacro!("\\bibdata{}", None);
-  DefMacro!("\\bibcite{}{}", None);
-  DefMacro!("\\citation{}", None);
-  DefMacro!("\\contentsline{}{}{}", None);
-  DefMacro!("\\newlabel{}{}", None);
+  def_macro_noop("\\bibdata{}")?;
+  def_macro_noop("\\bibcite{}{}")?;
+  def_macro_noop("\\citation{}")?;
+  def_macro_noop("\\contentsline{}{}{}")?;
+  def_macro_noop("\\newlabel{}{}")?;
 
   // Perl L5804-5806
   Let!("\\mathgroup", "\\fam");
@@ -9747,8 +10034,8 @@ LoadDefinitions!({
   Let!("\\check@icl", "\\@empty");
   Let!("\\check@icr", "\\@empty");
   Let!("\\curr@math@size", "\\@empty");
-  DefMacro!("\\text@command{}", "");
-  DefMacro!("\\check@nocorr@ Until:\\nocorr Until:\\@nil", "");
+  def_macro_noop("\\text@command{}")?;
+  def_macro_noop("\\check@nocorr@ Until:\\nocorr Until:\\@nil")?;
   TeX!("\\newif\\ifmaybe@ic");
   DefMacro!("\\maybe@ic", None, None);
   DefMacro!("\\maybe@ic@", None, None);
@@ -9768,8 +10055,8 @@ LoadDefinitions!({
     }
   });
 
-  // Perl L5825: \extrafloats — modern LaTeX (2015+) for extra float slots (no-op)
-  DefPrimitive!("\\extrafloats{}", None);
+  // \extrafloats (modern LaTeX 2015+; no Perl pool source) lives in
+  // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
 
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
@@ -9876,17 +10163,16 @@ LoadDefinitions!({
   // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
   // becomes Stored::None → `\MessageBreak` becomes undefined for the
   // remainder of the digestion. The next babel info message
-  // ("Importing font data...") then errors with "MessageBreak
-  // undefined". Re-define here in latex_constructs (post-dump) so
-  // both paths converge.
-  DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+  // \ltx@hard@MessageBreak lives in `latex_constructs_rust_only.rs`
+  // (not in any Perl latex_*.pool.ltxml; covers both dump and NODUMP
+  // paths since rust_only.rs runs last).
 
   // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
   // Defensive parity with Perl's exact placement.
   Let!("\\MessageBreak", "\\relax");
 
   // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
-  DefMacro!("\\@setsize{}{}{}{}", "");
+  def_macro_noop("\\@setsize{}{}{}{}")?;
 
   // Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
   // promised would live here. Without these, `\on@line` (used by
@@ -9898,7 +10184,7 @@ LoadDefinitions!({
   DefMacro!("\\on@line", r" on input line \the\inputlineno");
   Let!("\\@warning",  "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
-  DefMacro!("\\G@refundefinedtrue", "");
+  def_macro_noop("\\G@refundefinedtrue")?;
   DefMacro!("\\@nomath{}",
     r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
   DefMacro!("\\@font@warning{}",
@@ -9919,8 +10205,8 @@ LoadDefinitions!({
   // @-internal safety filter rejects public-CS macros, so public
   // kernel CSes like `\fontsize` must live in always-loaded
   // `_constructs.rs`).
-  DefMacro!("\\check@mathfonts", None);
-  DefMacro!("\\fontsize{}{}", None);
+  def_macro_noop("\\check@mathfonts")?;
+  def_macro_noop("\\fontsize{}{}")?;
   DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).

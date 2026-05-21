@@ -314,7 +314,7 @@ pub fn egroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     Error!(
       "unexpected",
-      get_current_token().unwrap_or(T_CS!("\\?")),
+      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
         crate::state::lookup_string_from_sym(crate::pin!("MODE")),
@@ -325,7 +325,7 @@ pub fn egroup() -> Result<()> {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
-      get_current_token().unwrap_or(T_CS!("\\?")),
+      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
       s!("Attempt to close boxing group; {}", current_frame_message())
     );
   } else {
@@ -351,7 +351,7 @@ pub fn endgroup() -> Result<()> {
     let depth = crate::state::get_frame_depth();
     let bound = is_value_bound("BOUND_MODE", Some(0));
     let loc = gullet::get_locator();
-    let tok = get_current_token().unwrap_or(T_CS!("\\?"));
+    let tok = get_current_token().unwrap_or_else(|| T_CS!("\\?"));
     if depth == 0 {
       eprintln!(
         "[trace] endgroup at locked frame: tok={} at {}\n{}",

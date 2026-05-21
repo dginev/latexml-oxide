@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use std::cmp::Ordering;
 
+
 LoadDefinitions!({
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
 
@@ -76,28 +77,38 @@ LoadDefinitions!({
 
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
-  DefMacro!("\\pdftexbanner", None);
-  DefMacro!("\\pdfcreationdate", None);
-  DefMacro!("\\pdfpageref Number", None);
-  DefMacro!("\\pdfxformname Number", None);
-  DefMacro!("\\pdffontname Token", None);
-  DefMacro!("\\pdffontobjnum Token", None);
-  DefMacro!("\\pdffontsize Token", None);
-  DefMacro!("\\pdfincludechars Token {}", None);
-  DefMacro!("\\leftmarginkern Number", None);
-  DefMacro!("\\rightmarginkern Number", None);
-  DefMacro!("\\pdfescapestring {}", None);
-  DefMacro!("\\pdfescapename {}", None);
-  DefMacro!("\\pdfescapehex {}", None);
-  DefMacro!("\\pdfunescapehex {}", None);
+  def_macro_noop("\\pdftexbanner")?;
+  def_macro_noop("\\pdfcreationdate")?;
+  def_macro_noop("\\pdfpageref Number")?;
+  def_macro_noop("\\pdfxformname Number")?;
+  def_macro_noop("\\pdffontname Token")?;
+  def_macro_noop("\\pdffontobjnum Token")?;
+  def_macro_noop("\\pdffontsize Token")?;
+  def_macro_noop("\\pdfincludechars Token {}")?;
+  def_macro_noop("\\leftmarginkern Number")?;
+  def_macro_noop("\\rightmarginkern Number")?;
+  def_macro_noop("\\pdfescapestring {}")?;
+  def_macro_noop("\\pdfescapename {}")?;
+  def_macro_noop("\\pdfescapehex {}")?;
+  def_macro_noop("\\pdfunescapehex {}")?;
   // DefMacro!("\\ifpdfprimitive {}",None);
   // DefMacro!("\\ifpdfabsnum Number"",None);
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
-  DefMacro!("\\pdfuniformdeviate Number Token", None);
-  DefMacro!("\\pdfnormaldeviate Token", None);
-  DefMacro!("\\pdfmdfivesum Number {}", None);
-  DefMacro!("\\pdf@mdfivesum Number {}", None);
-  DefMacro!("\\pdf@filemdfivesum Number {}", None);
+  def_macro_noop("\\pdfuniformdeviate Number Token")?;
+  def_macro_noop("\\pdfnormaldeviate Token")?;
+  // pdfTeX \pdfmdfivesum syntax:
+  //   \pdfmdfivesum <general text>      (MD5 of literal string)
+  //   \pdfmdfivesum file <general text> (MD5 of file contents)
+  // The Perl port's `Number {}` signature was wrong — there is NO
+  // leading number argument. Use `OptionalMatch:file` instead so the
+  // optional `file` keyword is consumed properly and the brace arg
+  // works in both forms. We are not producing PDF/X output, so the
+  // gobbled-and-discarded behaviour is acceptable downstream.
+  // Witness 2407.02288 (pdfx.sty's `\edef\xmp@docid{\pdfx@mdfivesum
+  // {\jobname}}` raw-load cascade).
+  def_macro_noop("\\pdfmdfivesum OptionalMatch:file {}")?;
+  def_macro_noop("\\pdf@mdfivesum OptionalMatch:file {}")?;
+  def_macro_noop("\\pdf@filemdfivesum {}")?;
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
@@ -108,8 +119,8 @@ LoadDefinitions!({
       }
     } else {
       Vec::new() } });
-  DefMacro!("\\pdffilemoddate {}", None);
-  DefMacro!("\\pdffiledump {}", None);
+  def_macro_noop("\\pdffilemoddate {}")?;
+  def_macro_noop("\\pdffiledump {}")?;
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -149,12 +160,18 @@ LoadDefinitions!({
     Ok(vec![])
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
-  DefPrimitive!("\\pdfrefximage Number", None);
+  def_primitive_noop("\\pdfrefximage Number")?;
+  // \pdfrefobj object_number / \pdfrefxform xform_number — discard the
+  // number; no PDF output. pdfTeX-only primitives invoked by some
+  // packages that declare-then-reference pdf objects (e.g. zref-savepos
+  // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
+  def_primitive_noop("\\pdfrefobj Number")?;
+  def_primitive_noop("\\pdfrefxform Number")?;
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
-  DefPrimitive!("\\pdfstartlink", None);
+  def_primitive_noop("\\pdfstartlink")?;
   // \pdfendlink (h, m)
-  DefPrimitive!("\\pdfendlink", None);
+  def_primitive_noop("\\pdfendlink")?;
   // \pdfoutline outline spec (h, v, m)
   // \pdfdest dest spec (h, v, m)
   // \pdfthread thread spec (h, v, m)
@@ -163,7 +180,7 @@ LoadDefinitions!({
   // \pdfsavepos (h, v, m)
 
   // See lxRDFa for ideas how this info might be used!
-  DefMacro!("\\pdfinfo{}", None);
+  def_macro_noop("\\pdfinfo{}")?;
 
   // Ugh, what a mess of ugly syntax....
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
@@ -191,19 +208,24 @@ LoadDefinitions!({
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
-  DefPrimitive!("\\pdfannot OpenAnnotSpecification", None);
+  def_primitive_noop("\\pdfannot OpenAnnotSpecification")?;
   // \pdfobj — same shape. Perl pdfTeX.pool L219.
-  DefPrimitive!("\\pdfobj OpenAnnotSpecification", None);
+  def_primitive_noop("\\pdfobj OpenAnnotSpecification")?;
 
-  DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
-  DefMacro!("\\pdfnames{}", "");
-  DefMacro!("\\pdftrailer{}", "");
-  DefMacro!("\\pdfmapfile{}", "");
-  DefMacro!("\\pdfmapline{}", "");
+  def_macro_noop("\\pdfcatalog{} OpenActionSpecification")?;
+  def_macro_noop("\\pdfnames{}")?;
+  def_macro_noop("\\pdftrailer{}")?;
+  // \pdftrailerid{<id>} — pdfTeX primitive that overrides the PDF
+  // trailer ID. Used by `anonymous-review` style preamble redaction
+  // (e.g. `\pdftrailerid{redacted}`). No-op for HTML/XML output.
+  // Witness 2403.06807.
+  def_macro_noop("\\pdftrailerid{}")?;
+  def_macro_noop("\\pdfmapfile{}")?;
+  def_macro_noop("\\pdfmapline{}")?;
   // \pdffontattr font general text
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
-  DefMacro!("\\quitvmode", "");
+  def_macro_noop("\\quitvmode")?;
   // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
   DefPrimitive!(
     "\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText",
@@ -211,18 +233,27 @@ LoadDefinitions!({
   );
   // \special pdfspecial spec
   // \pdfresettimer
-  DefPrimitive!("\\pdfresettimer", None);
-  DefPrimitive!("\\pdfresettimerresettimer", None);
+  def_primitive_noop("\\pdfresettimer")?;
+  def_primitive_noop("\\pdfresettimerresettimer")?;
   // \pdfsetrandomseed number
-  DefPrimitive!("\\pdfsetrandomseed Number", None);
+  def_primitive_noop("\\pdfsetrandomseed Number")?;
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
-  DefPrimitive!("\\pdfnoligatures Token", None);
-  // \pdfsavepos — mark current position; no-op stub
-  DefPrimitive!("\\pdfsavepos", None);
+  def_primitive_noop("\\pdfnoligatures Token")?;
+  // \pdfsavepos — saves current (x, y) page position into
+  // \pdflastxpos / \pdflastypos. Stub as no-op; the position is never
+  // actually computed in our XML output so the saved values stay 0.
+  // zref-savepos.sty L57-63 PackageErrors out if \pdfsavepos is
+  // undefined ("not supported"); making it defined lets zref-savepos
+  // proceed normally. linegoal.sty's gated code uses \globcount /
+  // \globdimen — both of which are now defined in etex.rs (L545/547)
+  // so the linegoal cascade is no longer a concern.
+  // Witnesses (zref-savepos): 2503.15628, 2503.18497, 2504.03449,
+  // 2504.03565, 2504.05447, 2504.05890.
+  def_primitive_noop("\\pdfsavepos")?;
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
-  DefPrimitive!("\\pdfstartthread", None);
-  DefPrimitive!("\\pdfendthread", None);
+  def_primitive_noop("\\pdfstartthread")?;
+  def_primitive_noop("\\pdfendthread")?;
   // Per-font extension codes (match \lpcode / \rpcode pattern)
   DefRegister!("\\lpfcode Token Number", Number::new(0));
   DefRegister!("\\rpfcode Token Number", Number::new(0));
@@ -251,9 +282,9 @@ LoadDefinitions!({
       }
     }
   );
-  DefMacro!("\\pdfsetmatrix", "");
-  DefMacro!("\\pdfsave", "");
-  DefMacro!("\\pdfrestore", "");
+  def_macro_noop("\\pdfsetmatrix")?;
+  def_macro_noop("\\pdfsave")?;
+  def_macro_noop("\\pdfrestore")?;
 
   // general text → { balanced text }
   // attr spec → attr general text
@@ -312,5 +343,5 @@ LoadDefinitions!({
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
     }
   });
-  DefMacro!("\\pdfglyphtounicode{}{}", "");
+  def_macro_noop("\\pdfglyphtounicode{}{}")?;
 });

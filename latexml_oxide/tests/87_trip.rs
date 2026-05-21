@@ -17,6 +17,7 @@
 
 use latexml::converter::Converter;
 use latexml_core::common::{Config, OutputFormat};
+use std::rc::Rc;
 use std::sync::Once;
 
 static LOGGER_INIT: Once = Once::new();
@@ -30,6 +31,11 @@ fn run_trip(stem: &str) -> (usize, String) {
   let source = format!("tests/trip/{stem}.tex");
   let config = Config {
     format: OutputFormat::HTML5,
+    // Mirror the CLI binaries: register latexml_contrib's dispatch
+    // so contrib bindings (ascmac, jmlr, etc.) resolve in tests.
+    // Otherwise tests using a contrib package would error with
+    // "Can't find binding or file for 'X.sty'".
+    extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     ..Config::default()
   };
   let mut converter = Converter::from_config(config);
@@ -71,6 +77,47 @@ fn sb_in_amsppt_refs() {
 }
 
 #[test]
+fn halign_body_implicit_cr() {
+  // `\let\rowEnd=\cr` followed by `\halign{...\rowEnd ... \rowEnd}`.
+  // Before the fix in `is_implicit_cr` (tex_tables.rs), the preamble
+  // parser only recognised implicit \cr when its meaning was
+  // Stored::Token(\cr). But `\let \rowEnd \cr` against a Constructor
+  // `\cr` produces Stored::Constructor — the parser missed it, ate
+  // the entire body as template, and emitted no tabular silently
+  // (code == 0, empty <document/>). So a plain "no errors" assertion
+  // is insufficient; we also assert the output XML contains tabular
+  // rows by converting through the lower-level API and inspecting
+  // the produced document.
+  LOGGER_INIT.call_once(|| {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  });
+  let config = Config {
+    format: OutputFormat::XML,
+    ..Config::default()
+  };
+  let mut converter = Converter::from_config(config);
+  converter
+    .initialize_session()
+    .expect("can initialize session");
+  let response = converter.convert("tests/trip/halign_body_implicit_cr.tex".to_string());
+  assert_eq!(
+    response.status_code, 0,
+    "halign_body_implicit_cr expected clean conversion, got status={:?}",
+    response.status
+  );
+  let xml = response.result.as_deref().unwrap_or("");
+  // Two rows: one for `a&b\rowEnd`, one for `c&d\rowEnd`.
+  // (The trailing `\rowEnd` ends the alignment; no third row.)
+  // `<tr>` may carry attributes (`<tr xml:id=...>`) or none (`<tr>`),
+  // so accept both forms.
+  let tr_count = xml.matches("<tr>").count() + xml.matches("<tr ").count();
+  assert_eq!(
+    tr_count, 2,
+    "expected 2 <tr> rows from `\\let\\rowEnd=\\cr` halign body, got {tr_count}; xml = {xml}"
+  );
+}
+
+#[test]
 fn psfig_via_compat_loadpackages() {
   // Baseline regression test for the `\compat@loadpackages` option
   // forwarding path: `\documentstyle[epsfig]{article}` → article.cls
@@ -89,5 +136,81 @@ fn psfig_via_compat_loadpackages() {
   assert_eq!(
     code, 0,
     "psfig_via_compat_loadpackages expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn cas_dc_credit() {
+  // Round-34 fix (commit 79b899cb83). cas-dc \credit{role} (CRediT
+  // taxonomy) preserved as ltx:note role=credit (was gobbled).
+  let (code, status) = run_trip("cas_dc_credit");
+  assert_eq!(
+    code, 0,
+    "cas_dc_credit expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn ieeetran_newlineauthors() {
+  // Round-33 fix (commit 6be8b2e01e). User \newcommand{\newlineauthors}
+  // installing the IEEE halign unbalanced-pair recipe must be silently
+  // dropped on the floor — same as \linebreakand — so the surrounding
+  // \author body doesn't break the frontmatter digest.
+  let (code, status) = run_trip("ieeetran_newlineauthors");
+  assert_eq!(
+    code, 0,
+    "ieeetran_newlineauthors expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn babel_spanish_decimalpoint() {
+  // Round-33 fix (commit dbeb154bf7). babel-spanish provides
+  // \decimalpoint / \decimalcomma to switch decimal separator.
+  // Our load_spanish lang stub now installs \providecommand no-ops
+  // so user `\decimalpoint` after `\usepackage[spanish]{babel}` doesn't
+  // raise Error:undefined. Driver 2511.19353.
+  let (code, status) = run_trip("babel_spanish_decimalpoint");
+  assert_eq!(
+    code, 0,
+    "babel_spanish_decimalpoint expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn chemformula_raw_l3keys() {
+  // Round-33 fix (commit 1afa4dc8ca). chemformula 4.x is expl3-based;
+  // the INCLUDE_STYLES post-binding raw load triggers
+  // \ProcessKeysPackageOptions at chemformula.sty L481, undefined
+  // unless l3keys2e is loaded first. Driver 2504.13749.
+  let (code, status) = run_trip("chemformula_raw_l3keys");
+  assert_eq!(
+    code, 0,
+    "chemformula_raw_l3keys expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn ascmac_itembox() {
+  // Round-33 fix (commit f5fa292f89). ascmac.sty {itembox}/{screen}/
+  // {shadebox} stub bindings — papers using these Japanese boxed envs
+  // must convert cleanly (driver 2601.09339).
+  let (code, status) = run_trip("ascmac_itembox");
+  assert_eq!(
+    code, 0,
+    "ascmac_itembox expected clean conversion, got status={status:?}"
+  );
+}
+
+#[test]
+fn quantumarticle_bare_acknowledgments() {
+  // Round-33 fix (commit d3e220f40c). REVTeX-style bare \acknowledgments
+  // (no \begin/\end, just on its own line followed by body + \bibliography)
+  // must open <ltx:acknowledgements> with auto_close handling the implicit
+  // close — no phantom-close errors at \end{document}.
+  let (code, status) = run_trip("quantumarticle_bare_acknowledgments");
+  assert_eq!(
+    code, 0,
+    "quantumarticle_bare_acknowledgments expected clean conversion, got status={status:?}"
   );
 }

@@ -29,6 +29,14 @@ LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
   });
+  // elsarticle.cls actually defines `\newif\ifpreprint` (and sets it based
+  // on the [preprint]/[final] options) — but our DeclareOption loop above
+  // only stubs the OPTIONS as gobblers, not the underlying conditional.
+  // Without it, journal-specific .sty files like ycviu.sty (L60, L298)
+  // that test `\ifpreprint ... \fi` see undefined CS and cascade.
+  // Witness 2311.04591 (1→0 error).
+  DefConditional!("\\ifpreprint");
+
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("elsart_support_core");

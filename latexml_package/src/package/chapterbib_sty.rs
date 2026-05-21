@@ -16,7 +16,7 @@ LoadDefinitions!({
   ProcessOptions!();
   // Perl L28 comment: "SHOULD adjust BACKMATTER_ELEMENT!" — left as
   // no-op in Perl too.
-  DefMacro!("\\sectionbib{}{}", "");
+  def_macro_noop("\\sectionbib{}{}")?;
 
   // Perl L30-33: reset internal unit state between included chapters.
   DefPrimitive!("\\lx@cb@reset", {

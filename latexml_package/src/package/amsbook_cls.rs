@@ -30,9 +30,9 @@ LoadDefinitions!({
   RequirePackage!("ams_support");
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56
-  DefPrimitive!("\\frontmatter", None);
-  DefPrimitive!("\\mainmatter", None);
-  DefPrimitive!("\\backmatter", None);
+  def_primitive_noop("\\frontmatter")?;
+  def_primitive_noop("\\mainmatter")?;
+  def_primitive_noop("\\backmatter")?;
 
   // List formatting — Perl L58-72
   DefMacro!("\\@listI", "\\leftmargin\\leftmargini\\parsep 4.5\\p@ plus2\\p@ minus\\p@\\topsep 8.5\\p@ plus3\\p@ minus4\\p@\\itemsep4.5\\p@ plus2\\p@ minus\\p@");

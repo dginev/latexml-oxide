@@ -90,6 +90,7 @@ pub fn rotated_properties(
   ])
 }
 
+
 LoadDefinitions!({
   // Perl: graphics.sty.ltxml — base graphics package
   // Package options: draft, final, hiderotate, hidescale, hiresbb
@@ -478,8 +479,8 @@ LoadDefinitions!({
   DefMacro!("\\Gin@scalex", "1");
   Let!("\\Gin@scaley", "\\Gin@exclamation");
   // These reference macros that may not exist yet, so define them
-  DefMacro!("\\Gin@nat@height", "");
-  DefMacro!("\\Gin@nat@width", "");
+  def_macro_noop("\\Gin@nat@height")?;
+  def_macro_noop("\\Gin@nat@width")?;
   Let!("\\Gin@req@height", "\\Gin@nat@height");
   Let!("\\Gin@req@width", "\\Gin@nat@width");
   Let!("\\Gin@viewport@code", "\\relax");
@@ -487,7 +488,7 @@ LoadDefinitions!({
   // Perl: DefConditional('\ifGin@clip');
   DefConditional!("\\ifGin@clip");
   // Perl: DefMacro('\Gin@i [][]{}', '');
-  DefMacro!("\\Gin@i[][]{}", "");
+  def_macro_noop("\\Gin@i[][]{}")?;
 
   // Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
   //   my $n = $num->valueOf; my $d = $denom->valueOf;
@@ -506,5 +507,5 @@ LoadDefinitions!({
 
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
-  DefMacro!("\\set@color", "");
+  def_macro_noop("\\set@color")?;
 });

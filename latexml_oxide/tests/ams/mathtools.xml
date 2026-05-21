@@ -3637,7 +3637,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p3">
       <equation xml:id="S7.Ex54">
-        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(delimited-⟨⟩@(list@(A, 1 / 2)), delimited-⟨⟩@(B@(absolute-value@((sum _ k)@(f _ k))) * C))" xml:id="S7.Ex54.m1">
+        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(delimited-⟨⟩@(list@(A, 1 / 2)), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -3675,40 +3675,29 @@ Then a switch of tag forms.</p>
                 <XMHint name="quad" role="PUNCT" width="10pt"/>
                 <XMDual xml:id="S7.Ex54.m1.5">
                   <XMApp>
-                    <XMTok meaning="delimited-⟨⟩"/>
+                    <XMTok meaning="quantum-operator-product"/>
                     <XMRef idref="S7.Ex54.m1.6"/>
+                    <XMRef idref="S7.Ex54.m1.7"/>
+                    <XMRef idref="S7.Ex54.m1.8"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                    <XMApp xml:id="S7.Ex54.m1.6">
-                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt" xml:id="S7.Ex54.m1.6">B</XMTok>
+                    <XMTok fontsize="160%" role="VERTBAR" rpadding="1.7pt" stretchy="false">|</XMTok>
+                    <XMApp xml:id="S7.Ex54.m1.7">
                       <XMApp>
-                        <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">B</XMTok>
-                        <XMDual>
-                          <XMApp>
-                            <XMTok meaning="absolute-value"/>
-                            <XMRef idref="S7.Ex54.m1.7"/>
-                          </XMApp>
-                          <XMWrap>
-                            <XMTok fontsize="160%" role="OPEN" rpadding="1.7pt" stretchy="false">|</XMTok>
-                            <XMApp xml:id="S7.Ex54.m1.7">
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
-                              </XMApp>
-                            </XMApp>
-                            <XMTok fontsize="160%" role="CLOSE" rpadding="1.7pt" stretchy="false">|</XMTok>
-                          </XMWrap>
-                        </XMDual>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                        <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
                       </XMApp>
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
+                      </XMApp>
                     </XMApp>
+                    <XMTok fontsize="160%" role="VERTBAR" rpadding="1.7pt" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S7.Ex54.m1.8">C</XMTok>
                     <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
                   </XMWrap>
                 </XMDual>
@@ -3735,7 +3724,7 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   <XMTok font="italic" role="UNKNOWN">X</XMTok>
                 </XMApp>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                 <XMApp xml:id="S7.Ex55.m1.2">
                   <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                   <XMApp>
@@ -3764,39 +3753,30 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S7.p5">
-      <p><Math mode="inline" tex="\langle 1\,|\,\frac{8}{\frac{4}{1}}\,|\,3\rangle" text="delimited-⟨⟩@(1 * absolute-value@(8 / 4 / 1) * 3)" xml:id="S7.p5.m1">
+      <p><Math mode="inline" tex="\langle 1\,|\,\frac{8}{\frac{4}{1}}\,|\,3\rangle" text="quantum-operator-product@(1, 8 / 4 / 1, 3)" xml:id="S7.p5.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="delimited-⟨⟩"/>
+                <XMTok meaning="quantum-operator-product"/>
                 <XMRef idref="S7.p5.m1.1"/>
+                <XMRef idref="S7.p5.m1.2"/>
+                <XMRef idref="S7.p5.m1.3"/>
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMApp xml:id="S7.p5.m1.1">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S7.p5.m1.2"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="OPEN" rpadding="1.7pt" stretchy="false">|</XMTok>
-                      <XMApp rpadding="1.7pt" xml:id="S7.p5.m1.2">
-                        <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                        <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
-                        <XMApp>
-                          <XMTok mathstyle="script" meaning="divide" role="FRACOP"/>
-                          <XMTok fontsize="50%" meaning="4" role="NUMBER">4</XMTok>
-                          <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                      </XMApp>
-                      <XMTok role="CLOSE" stretchy="false">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                  <XMTok meaning="3" role="NUMBER"> 3</XMTok>
+                <XMTok meaning="1" role="NUMBER" rpadding="1.7pt" xml:id="S7.p5.m1.1">1</XMTok>
+                <XMTok role="VERTBAR" rpadding="1.7pt" stretchy="false">|</XMTok>
+                <XMApp rpadding="1.7pt" xml:id="S7.p5.m1.2">
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
+                  <XMApp>
+                    <XMTok mathstyle="script" meaning="divide" role="FRACOP"/>
+                    <XMTok fontsize="50%" meaning="4" role="NUMBER">4</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
                 </XMApp>
+                <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                <XMTok meaning="3" role="NUMBER" xml:id="S7.p5.m1.3"> 3</XMTok>
                 <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
               </XMWrap>
             </XMDual>
@@ -3806,7 +3786,7 @@ Then a switch of tag forms.</p>
           <XMath>
             <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
             <XMTok meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
-            <XMTok role="MIDDLE" rpadding="1.7pt" stretchy="true">|</XMTok>
+            <XMTok role="MIDDLE" role_side="middle" rpadding="1.7pt" stretchy="true">|</XMTok>
             <XMApp rpadding="1.7pt">
               <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
               <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
@@ -3816,44 +3796,35 @@ Then a switch of tag forms.</p>
                 <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
             </XMApp>
-            <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+            <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
             <XMTok meaning="3" role="NUMBER"> 3</XMTok>
             <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
           </XMath>
         </Math>
-<Math mode="inline" tex="\big\langle 1\,\big|\,\frac{8}{\frac{4}{1}}\,\big|\,3\big\rangle" text="delimited-⟨⟩@(1 * absolute-value@(8 / 4 / 1) * 3)" xml:id="S7.p5.m3">
+<Math mode="inline" tex="\big\langle 1\,\big|\,\frac{8}{\frac{4}{1}}\,\big|\,3\big\rangle" text="quantum-operator-product@(1, 8 / 4 / 1, 3)" xml:id="S7.p5.m3">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="delimited-⟨⟩"/>
+                <XMTok meaning="quantum-operator-product"/>
                 <XMRef idref="S7.p5.m3.1"/>
+                <XMRef idref="S7.p5.m3.2"/>
+                <XMRef idref="S7.p5.m3.3"/>
               </XMApp>
               <XMWrap>
                 <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
-                <XMApp xml:id="S7.p5.m3.1">
-                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                  <XMTok meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
-                  <XMDual>
-                    <XMApp>
-                      <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S7.p5.m3.2"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok fontsize="120%" role="OPEN" rpadding="1.7pt" stretchy="false">|</XMTok>
-                      <XMApp rpadding="1.7pt" xml:id="S7.p5.m3.2">
-                        <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
-                        <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
-                        <XMApp>
-                          <XMTok mathstyle="script" meaning="divide" role="FRACOP"/>
-                          <XMTok fontsize="50%" meaning="4" role="NUMBER">4</XMTok>
-                          <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                      </XMApp>
-                      <XMTok fontsize="120%" role="CLOSE" stretchy="false">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                  <XMTok meaning="3" role="NUMBER"> 3</XMTok>
+                <XMTok meaning="1" role="NUMBER" rpadding="1.7pt" xml:id="S7.p5.m3.1">1</XMTok>
+                <XMTok fontsize="120%" role="VERTBAR" rpadding="1.7pt" stretchy="false">|</XMTok>
+                <XMApp rpadding="1.7pt" xml:id="S7.p5.m3.2">
+                  <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
+                  <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
+                  <XMApp>
+                    <XMTok mathstyle="script" meaning="divide" role="FRACOP"/>
+                    <XMTok fontsize="50%" meaning="4" role="NUMBER">4</XMTok>
+                    <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
+                  </XMApp>
                 </XMApp>
+                <XMTok fontsize="120%" role="VERTBAR" stretchy="false">|</XMTok>
+                <XMTok meaning="3" role="NUMBER" xml:id="S7.p5.m3.3"> 3</XMTok>
                 <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
               </XMWrap>
             </XMDual>
@@ -4545,16 +4516,12 @@ Then a switch of tag forms.</p>
                 <XMRef idref="S9.p1.m1.25"/>
                 <XMRef idref="S9.p1.m1.26"/>
                 <XMRef idref="S9.p1.m1.27"/>
-                <XMRef idref="S9.p1.m1.36"/>
                 <XMRef idref="S9.p1.m1.19"/>
                 <XMRef idref="S9.p1.m1.28"/>
                 <XMRef idref="S9.p1.m1.29"/>
-                <XMRef idref="S9.p1.m1.40"/>
                 <XMRef idref="S9.p1.m1.18"/>
                 <XMRef idref="S9.p1.m1.30"/>
-                <XMRef idref="S9.p1.m1.43"/>
                 <XMRef idref="S9.p1.m1.31"/>
-                <XMRef idref="S9.p1.m1.45"/>
               </XMWrap>
               <XMArray name="multline">
                 <XMRow>

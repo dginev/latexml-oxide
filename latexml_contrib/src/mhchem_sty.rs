@@ -34,6 +34,17 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // [mhchem retirement probe, 2026-05-19] When env var
+  // LATEXML_MHCHEM_NOLTXML is set, bypass this stub and force a
+  // raw load of the actual TL mhchem.sty (mirroring Perl
+  // LaTeXML's behaviour — Perl has no mhchem.sty.ltxml). Lets us
+  // measure the engine gap (expected:<relationaltoken>,
+  // unexpected:\fi, etc. — see SYNC_STATUS Cluster E / Task #22).
+  // No-op when unset — production users keep the stub.
+  if std::env::var("LATEXML_MHCHEM_NOLTXML").is_ok() {
+    InputDefinitions!("mhchem", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    return Ok(());
+  }
   // Perl LaTeXML auto-scans mhchem.sty for `\RequirePackage` calls
   // and brings in ifthen, calc, twoopt, amsmath, keyval, graphics, pgf,
   // tikz as transitive deps. Since this Rust stub intercepts the load
@@ -49,7 +60,7 @@ LoadDefinitions!({
 
   // Accept both v3 and v4: the package option is `version=N` — handled
   // at \usepackage time but irrelevant to our stub.
-  DefMacro!("\\mhchemoptions RequiredKeyVals", "");
+  def_macro_noop("\\mhchemoptions RequiredKeyVals")?;
 
   // \ce{<formula>} — chemistry mode. Real mhchem renders subscripts,
   // charges, arrows, etc. Papers invoke \ce{H_2O} / \ce{N_2} both in
@@ -65,11 +76,22 @@ LoadDefinitions!({
   // out of math at the first `$`, leaving `_x` in text mode — which
   // errors with "Script _ can only appear in math mode".
   // Witnesses: 1908.05236 (\ce{MAPb(I_{1-x}Br_x)3}), 0907.1390 (\ce{N_2}).
+  //
+  // Also convert `#` (PARAM-catcode) tokens to `\equiv` CS: mhchem v3
+  // uses `#` for triple bond (e.g. `\ce{-C#C-}` renders as `-C≡C-`).
+  // Without conversion, the bare `#` reaches the Stomach as a PARAM
+  // token and triggers "should never reach Stomach!". Witness:
+  // arXiv:2508.11040 (`\ce{-C#C-}`).
   fn strip_math_toggles(arg: &Tokens) -> Tokens {
-    let stripped: Vec<Token> = arg.unlist_ref().iter().copied()
-      .filter(|t| t.get_catcode() != Catcode::MATH)
-      .collect();
-    Tokens::new(stripped)
+    let mut out: Vec<Token> = Vec::with_capacity(arg.unlist_ref().len());
+    for tok in arg.unlist_ref().iter().copied() {
+      match tok.get_catcode() {
+        Catcode::MATH => continue,
+        Catcode::PARAM => out.push(T_CS!("\\equiv")),
+        _ => out.push(tok),
+      }
+    }
+    Tokens::new(out)
   }
   DefMacro!("\\ce{}", sub[(body)] {
     let stripped = strip_math_toggles(&body);

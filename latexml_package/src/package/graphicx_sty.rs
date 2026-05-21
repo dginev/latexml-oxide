@@ -3,18 +3,39 @@ use crate::prelude::*;
 // image_candidates / image_graphicx_sizer now live in latexml_core::util::image.
 pub use latexml_core::util::image::{image_candidates, image_graphicx_sizer};
 
+
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
   // (See LaTeXML::Post::Graphics for suggested postprocessing)
 
-  // Perl L22: RequirePackage('graphics');
+  // Real TL graphicx.sty L31: `\RequirePackage{keyval,graphics}` —
+  // keyval FIRST so `\define@key`, `\setkeys` are available before
+  // graphics.sty's body. Perl's `graphicx.sty.ltxml` L22 only requires
+  // `graphics` (relying on Perl's keyval binding being preloaded by
+  // some other path), but Rust's graphics_sty.rs doesn't require keyval
+  // either. Downstream `\RequirePackage{graphbox}` (which raw-loads and
+  // calls `\define@key`) then errors with `\define@key` undefined
+  // because keyval never loaded — graphics.sty's hand-port handles its
+  // own keyvals via `DefKeyVal!`/`DefParameterType!` Rust-side, but raw-
+  // loaded sibling sty files that call `\define@key` directly need the
+  // real CS. Witness: arXiv:2504.13697 (IEEEtran + graphbox).
+  //
+  // GUARD: only do this when the LaTeX kernel is already initialized
+  // (proxy: `\@onefilewithoptions` defined). Without the guard, old
+  // LaTeX 2.09 papers (e.g. astro-ph9501095 with `\input psfig` BEFORE
+  // `\documentstyle`) trigger graphicx via ar5iv preload BEFORE LaTeX.pool
+  // loads, and the keyval raw-load tries to use kernel hooks that aren't
+  // ready yet (`Extra \PopDefaultHookLabel` + `\@nil` undefined errors).
+  if lookup_definition(&T_CS!("\\@onefilewithoptions"))?.is_some() {
+    RequirePackage!("keyval");
+  }
   RequirePackage!("graphics");
 
   // Perl L24-27: internal length / dimension macros.
-  DefMacro!("\\Gin@ewidth", "");
-  DefMacro!("\\Gin@eheight", "");
-  DefMacro!("\\Gin@eresize", "");
-  DefMacro!("\\Gin@esetsize", "");
+  def_macro_noop("\\Gin@ewidth")?;
+  def_macro_noop("\\Gin@eheight")?;
+  def_macro_noop("\\Gin@eresize")?;
+  def_macro_noop("\\Gin@esetsize")?;
 
   // Perl L29-38 uses `GraphixDimension` / `GraphixDimensions` custom parameter
   // types (graphics.sty.ltxml L26-57, ported in graphics_sty.rs). The Rust

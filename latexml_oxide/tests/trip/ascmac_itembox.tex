@@ -1,0 +1,23 @@
+% Regression test for Round-33 fix (commit f5fa292f89).
+% ascmac.sty is a Japanese LaTeX2e add-on (jsclasses family) providing
+% {itembox}[align]{title} / {screen} / {boxnote} / {shadebox} boxed
+% envs. Driver 2601.09339 used `\usepackage{ascmac, fancybox}` and
+% `\begin{itembox}[l]{title} body \end{itembox}`. Without our stub,
+% {itembox} was undefined. Our stub binds it as an internal_vertical
+% para with the title preserved as ltx:note.
+\documentclass{article}
+\usepackage{ascmac}
+\begin{document}
+\begin{itembox}[l]{\bf Simple predictive game}
+A predictive game body with multiple sentences. This must not
+trigger Endgroup or mode-mismatch errors.
+\end{itembox}
+
+\begin{screen}
+Screen-boxed text.
+\end{screen}
+
+\begin{shadebox}
+Shaded-box text.
+\end{shadebox}
+\end{document}

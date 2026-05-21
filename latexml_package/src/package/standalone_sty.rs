@@ -20,7 +20,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@standalone@documentclass[]{}", sub[(_opts, packages_tks)] {
     bgroup();
     state::assign_value("inPreamble", true, None);
-    let packages_str = packages_tks.clone().to_string();
+    let packages_str = packages_tks.to_string();
     for pkg in packages_str.split(',') {
       let pkg = pkg.trim();
       if !pkg.is_empty() {
@@ -35,4 +35,9 @@ LoadDefinitions!({
   // Native push to @at@begin@document so the hook fires at the same
   // lifecycle point Perl uses.
   at_begin_document(TokenizeInternal!(r"\let\documentclass\@standalone@documentclass"))?;
+
+  // standalone.sty L1014: \includestandalone[opts]{file}. Treat as
+  // \includegraphics{file} so the figure surfaces in the XML output.
+  // Witness 2406.02722.
+  DefMacro!("\\includestandalone[]{}", "\\includegraphics{#2}");
 });

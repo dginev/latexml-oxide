@@ -1,5 +1,7 @@
 use once_cell::sync::Lazy;
+#[cfg(feature = "codegen")]
 use proc_macro2::TokenStream;
+#[cfg(feature = "codegen")]
 use quote::{ToTokens, quote};
 use regex::Regex;
 use std::fmt;
@@ -656,6 +658,9 @@ impl From<Parameters> for Vec<Parameter> {
   fn from(ps: Parameters) -> Vec<Parameter> { ps.0 }
 }
 
+// ToTokens impls gated by `codegen` feature — see comment in
+// `tokens.rs` for rationale (audit DEP-14, 2026-05-18).
+#[cfg(feature = "codegen")]
 impl ToTokens for Parameters {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let params = &self.0;
@@ -665,6 +670,7 @@ impl ToTokens for Parameters {
   }
 }
 
+#[cfg(feature = "codegen")]
 impl ToTokens for Parameter {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let name = arena::with(self.name, |name| quote!(arena::pin_static(#name)));

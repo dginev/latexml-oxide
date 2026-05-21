@@ -83,4 +83,12 @@ LoadDefinitions!({
     "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox}{}");
   DefMacro!("\\lx@multirow@hbox{}",
     "\\hbox{\\let\\\\\\lx@newline\\multirowsetup #1}");
+
+  // multirow.sty L120: \newlength\multirow@dima (+ dimb / cntb /
+  // prefixt). User code that touches these internals before our
+  // runtime uses them errors. Define defensively. Witness 2406.16171.
+  DefRegister!("\\multirow@dima" => Dimension!("0pt"));
+  DefRegister!("\\multirow@dimb" => Dimension!("0pt"));
+  DefRegister!("\\multirow@cntb" => Number(0));
+  DefConditional!("\\ifmultirow@prefixt");
 });

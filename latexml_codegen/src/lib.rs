@@ -10,6 +10,24 @@ mod parametrizeable;
 mod testable;
 mod tokenizeable;
 
+/// Extract the string value of a `#[name = "..."]` attribute (syn 2 idiom).
+///
+/// Replaces the syn-1 `attr.parse_meta()` + `Meta::NameValue { lit: Lit::Str(_), .. }`
+/// pattern, which was removed in syn 2 (the NameValue arm now stores `value: Expr`
+/// instead of `lit: Lit`).
+pub(crate) fn attr_name_value_str(attr: &syn::Attribute, expected: &str) -> String {
+  if let syn::Meta::NameValue(nv) = &attr.meta {
+    if let syn::Expr::Lit(syn::ExprLit {
+      lit: syn::Lit::Str(s),
+      ..
+    }) = &nv.value
+    {
+      return s.value();
+    }
+  }
+  panic!("only accepts #[{expected} = \"value\"] attribute syntax, mandatory double-quotes")
+}
+
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
   let item = parse_macro_input!(input as DeriveInput);

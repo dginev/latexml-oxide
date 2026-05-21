@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="listings"?>
+<?latexml package="xcolor"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <resource src="ltx-listings.css" type="text/css"/>
+  <para xml:id="p1">
+    <listing class="ltx_lst_language_XML ltx_lstlisting" data="PGdyYXZpdHkgY29tbWVudD0iZyIvPgo8IS0tIFBoYXNlLWZpZWxkIGxlbmd0aCBzY2FsZSAtLT4=" dataencoding="base64" datamimetype="text/plain">
+      <listingline xml:id="lstnumberx1"><text class="ltx_lst_tag">&lt;gravity<text class="ltx_lst_space"> </text>comment=<text class="ltx_lst_string">”g”</text>/&gt;</text></listingline>
+      <listingline xml:id="lstnumberx2"><text class="ltx_lst_tag">&lt;!–<text class="ltx_lst_space"> </text>Phase-field<text class="ltx_lst_space"> </text>length<text class="ltx_lst_space"> </text>scale<text class="ltx_lst_space"> </text>–&gt;</text></listingline>
+    </listing>
+  </para>
+</document>

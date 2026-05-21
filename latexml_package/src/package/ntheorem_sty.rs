@@ -55,12 +55,12 @@ LoadDefinitions!({
   DefRegister!("\\theoremframepostskipamount"   => Dimension::new(0));
   DefRegister!("\\theoreminframepreskipamount"  => Dimension::new(0));
   DefRegister!("\\theoreminframepostskipamount" => Dimension::new(0));
-  DefMacro!("\\theorempreskip{}",         "");
-  DefMacro!("\\theorempostskip{}",        "");
-  DefMacro!("\\theoremframepreskip{}",    "");
-  DefMacro!("\\theoremframepostskip{}",   "");
-  DefMacro!("\\theoreminframepreskip{}",  "");
-  DefMacro!("\\theoreminframepostskip{}", "");
+  def_macro_noop("\\theorempreskip{}")?;
+  def_macro_noop("\\theorempostskip{}")?;
+  def_macro_noop("\\theoremframepreskip{}")?;
+  def_macro_noop("\\theoremframepostskip{}")?;
+  def_macro_noop("\\theoreminframepreskip{}")?;
+  def_macro_noop("\\theoreminframepostskip{}")?;
   DefMacro!("\\None",                     "None");
   DefMacro!("\\NoneSymbol",               "None");
   DefMacro!("\\NoneKeyword",              "None");
@@ -238,7 +238,7 @@ LoadDefinitions!({
       }
       if let Some(css) = frame.get_attribute("cssstyle") {
         let existing = theorem.get_attribute("cssstyle").unwrap_or_default();
-        let combined = if existing.is_empty() { css.clone() } else { s!("{};{}", existing, css) };
+        let combined = if existing.is_empty() { css } else { s!("{};{}", existing, css) };
         document.set_attribute(&mut theorem, "cssstyle", &combined)?;
       }
       if let Some(framed) = frame.get_attribute("framed") {
@@ -309,12 +309,12 @@ LoadDefinitions!({
 
   //======================================================================
   // Lists of Theorems
-  DefMacro!("\\addtheoremline OptionalMatch:* {}{}", "");
-  DefMacro!("\\addtotheoremfile[]{}",                "");
+  def_macro_noop("\\addtheoremline OptionalMatch:* {}{}")?;
+  def_macro_noop("\\addtotheoremfile[]{}")?;
 
-  DefMacro!("\\theoremlisttype{}",            "");
-  DefMacro!("\\newtheoremlisttype{}{}{}{}",   "");
-  DefMacro!("\\renewtheoremlisttype{}{}{}{}", "");
+  def_macro_noop("\\theoremlisttype{}")?;
+  def_macro_noop("\\newtheoremlisttype{}{}{}{}")?;
+  def_macro_noop("\\renewtheoremlisttype{}{}{}{}")?;
 
   DefConstructor!("\\listtheorems{}",
     "<ltx:TOC lists='#lists'/>",
@@ -332,10 +332,10 @@ LoadDefinitions!({
     }
   );
 
-  DefMacro!("\\theoremlistall",         "");
-  DefMacro!("\\theoremlistallname",     "");
-  DefMacro!("\\theoremlistalloptional", "");
-  DefMacro!("\\theoremlistalloptname",  "");
+  def_macro_noop("\\theoremlistall")?;
+  def_macro_noop("\\theoremlistallname")?;
+  def_macro_noop("\\theoremlistalloptional")?;
+  def_macro_noop("\\theoremlistalloptname")?;
 
   //======================================================================
   // Greek numbering

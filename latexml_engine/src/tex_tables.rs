@@ -8,6 +8,7 @@ use latexml_core::alignment::template::TemplateConfig;
 use std::cell::{RefCell, RefMut};
 use std::collections::VecDeque;
 
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Tables Family of primitive control sequences
@@ -26,7 +27,19 @@ LoadDefinitions!({
     reversion => sub[whatsit,_args] {
       if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
         if let DigestedData::Alignment(data) = alignment.data() {
-          data.borrow().revert()
+          // Use try_borrow: nested array inside a delimited expression
+          // (e.g. `\left( \begin{array}{ccc} ... \end{array} \right)`)
+          // can call this reversion while the alignment data is still
+          // mutably borrowed by an enclosing handler. Panicking on a
+          // RefCell conflict crashes the whole paper (~32 wp5 papers).
+          // Fall back to empty tokens — reversion is only used for `tex=`
+          // attribute serialization, so a missing reversion just yields
+          // an empty tex attribute, not a broken document.
+          // Witness 2111.11149.
+          match data.try_borrow() {
+            Ok(d) => d.revert(),
+            Err(_) => Ok(Tokens!()),
+          }
         } else {
           Ok(Tokens!())
         }
@@ -237,7 +250,11 @@ LoadDefinitions!({
     tks.push(T_CS!("\\cr"));
     if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
       if let DigestedData::Alignment(data) = alignment_d.data() {
-        tks.extend(data.borrow().revert()?.unlist());
+        // Mirror line-30 fix: tolerate a re-entrant borrow during
+        // reversion rather than panic. See comment there.
+        if let Ok(d) = data.try_borrow() {
+          tks.extend(d.revert()?.unlist());
+        }
       }
     }
     tks.push(T_END!());
@@ -290,10 +307,10 @@ LoadDefinitions!({
     decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
   });
 
-  DefMacro!("\\lx@alignment@row@before", None);
-  DefMacro!("\\lx@alignment@row@after", None);
-  DefMacro!("\\lx@alignment@column@before", None);
-  DefMacro!("\\lx@alignment@column@after", None);
+  def_macro_noop("\\lx@alignment@row@before")?;
+  def_macro_noop("\\lx@alignment@row@after")?;
+  def_macro_noop("\\lx@alignment@column@before")?;
+  def_macro_noop("\\lx@alignment@column@after")?;
 
   //======================================================================
   // Vertical alignments
@@ -303,7 +320,7 @@ LoadDefinitions!({
 
   // Implement ???
   // DefMacro('\vrule','\relax');
-  DefMacro!("\\valign", None);
+  def_macro_noop("\\valign")?;
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],
@@ -372,7 +389,7 @@ LoadDefinitions!({
   });
 
   // Perl: \lx@intercol is our replacement for LaTeX's \@acol for intercolumn space
-  DefMacro!("\\lx@intercol", "");
+  def_macro_noop("\\lx@intercol")?;
   // Perl: Candidates for binding \lx@intercol for LaTeX tabular or math arrays
   DefConstructor!("\\lx@text@intercol", sub[document, _args, props] {
     if let Some(width) = props.get("width") {
@@ -516,14 +533,14 @@ LoadDefinitions!({
     // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
     if let Some(col) = column {
       if let Some(before) = &col.before {
-        tks.extend(before_cell_unlist(before.unlist_ref().to_vec()));
+        tks.extend(before_cell_unlist(before.unlist_ref().clone()));
       }
     }
     tks.extend(body.unlist_ref().iter().copied());
     // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
     if let Some(col) = column {
       if let Some(after) = &col.after {
-        tks.extend(after_cell_unlist(after.unlist_ref().to_vec()));
+        tks.extend(after_cell_unlist(after.unlist_ref().clone()));
       }
     }
     Ok(Tokens::new(tks))
@@ -1163,17 +1180,40 @@ fn is_implicit_align(t: &Token) -> bool {
 }
 
 // `\cr` / `\crcr` `\let`-equivalents. Less common in the wild than
-// implicit `&` but covered by the same Knuth-TeX semantics.
+// implicit `&` but covered by the same Knuth-TeX semantics. The body
+// path uses the analogous `gullet::is_column_end` which does meaning-
+// equality against the COLUMN_ENDS table — keep both code paths in
+// sync. Two shapes of implicit-CR are observed:
+//
+//   - `\let\rowEnd=\cr` while `\cr` is a Constructor (LaTeXML's normal
+//     state): meaning of `\rowEnd` becomes `Stored::Constructor` with
+//     the same `.cs` as `\cr`. Use meaning-equality against
+//     `lookup_meaning(\cr)`.
+//   - `\let\rowEnd=<token-CS>`: meaning is `Stored::Token(<\cr>)`. Use
+//     the by-name fallback (matches when no engine binding has shipped
+//     a proper `\cr` Constructor / Primitive yet).
 fn is_implicit_cr(t: &Token) -> bool {
   if t.get_catcode() != Catcode::CS {
     return false;
   }
-  match latexml_core::state::lookup_meaning(t) {
-    Some(Stored::Token(tt)) if tt.get_catcode() == Catcode::CS => {
-      tt.with_str(|s| s == "\\cr" || s == "\\crcr")
+  let defn = latexml_core::state::lookup_meaning(t);
+  let Some(defn) = defn else { return false; };
+  // Meaning-equality (handles `\let \rowEnd \cr` where `\cr` is a
+  // Constructor / Primitive — the LaTeXML-default state).
+  for cr_cs in &[T_CS!("\\cr"), T_CS!("\\crcr")] {
+    if let Some(cr_defn) = latexml_core::state::lookup_meaning(cr_cs) {
+      if defn == cr_defn {
+        return true;
+      }
     }
-    _ => false,
   }
+  // Fallback: meaning IS the CS token `\cr` / `\crcr` (raw alias form).
+  if let Stored::Token(tt) = defn {
+    if tt.get_catcode() == Catcode::CS {
+      return tt.with_str(|s| s == "\\cr" || s == "\\crcr");
+    }
+  }
+  false
 }
 
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet

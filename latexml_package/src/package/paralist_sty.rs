@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   // Package options via TeX conditionals
   TeX!(
@@ -41,7 +42,7 @@ LoadDefinitions!({
   DefRegister!("\\plitemsep", Dimension::new(0));
   DefRegister!("\\plpaarsep", Dimension::new(0));
 
-  DefMacro!("\\setdefaultleftmargin{}{}{}{}{}{}", "");
+  def_macro_noop("\\setdefaultleftmargin{}{}{}{}{}{}")?;
 
   // Enumerations
   DefMacro!("\\setdefaultenum{}{}{}{}", sub[(tag1, tag2, tag3, tag4)] {

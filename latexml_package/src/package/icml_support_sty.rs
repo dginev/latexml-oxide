@@ -6,6 +6,12 @@ LoadDefinitions!({
   RequirePackage!("times");
   RequirePackage!("fancyhdr");
   RequirePackage!("color");
+  // ICML 2024/2025 templates use xcolor's \colorlet for callout colors;
+  // load xcolor eagerly. Pre-load with [dvipsnames, table] so that
+  // user `\usepackage[dvipsnames, table]{xcolor}` doesn't silently
+  // option-clash and leave colortbl/dvipsnam.def unloaded. Witness
+  // 2405.18180 (icml2025).
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("algorithm");
   RequirePackage!("algorithmic");
   RequirePackage!("natbib");
@@ -16,26 +22,114 @@ LoadDefinitions!({
 
   // Frontmatter
   Let!("\\icmltitle", "\\title");
-  DefMacro!("\\icmltitlerunning{}", None);
-  DefMacro!("\\icmlsetsymbol{}{}", None);
+  // Perl gobbles \icmltitlerunning; surpass: it's the running-head
+  // variant of the title, genuine author metadata.
+  DefMacro!("\\icmltitlerunning{}",
+    "\\@add@frontmatter{ltx:toctitle}{#1}");
+  // \icmlsetsymbol{name}{symbol} — creates `\<name>` macro expanding
+  // to <symbol> for use in author lists. Real icml2024.sty L100-ish:
+  //   `\def\icmlsetsymbol#1#2{\expandafter\def\csname #1\endcsname{#2}}`
+  // Previous stub gobbled both args without defining the CS, breaking
+  // `\icmlauthor{...}{equal,affil,icmlWorkDone}` which later references
+  // `\icmlWorkDone` in `\printAffiliationsAndNotice`. Witness 2310.06430.
+  DefMacro!("\\icmlsetsymbol{}{}",
+    "\\expandafter\\def\\csname #1\\endcsname{#2}");
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 
   DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
-  DefMacro!("\\icmlaffiliation{}{}", None);
-  DefMacro!("\\icmlcorrespondingauthor{}{}", None);
+  // ICML: \icmlaffiliation{shortname}{full text} maps a short id to
+  // an affiliation string used in author list. Preserve only the
+  // full-text — the shortname (#1) is an internal identifier that
+  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
+  // which our frontmatter pipeline tokenizes as math-mode subscript
+  // and errors with "Script _ can only appear in math mode" when
+  // rendered into ltx:note text. Witness 2404.08592.
+  DefMacro!("\\icmlaffiliation{}{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  // \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
+  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
+  // otherwise be tokenized as subscript-mode at digest time, triggering
+  // "Script _ can only appear in math mode" cascades. Semiverbatim
+  // neutralizes `_`/`#`/`&`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
+  // Perl's icml_support binding gobbles both args (empty body); we surpass
+  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
+  DefMacro!("\\icmlcorrespondingauthor{} Semiverbatim",
+    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
 
-  DefMacro!("\\printAffiliationsAndNotice{}", None);
+  // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
+  // a re-iteration of the affiliation list + a free-form notice. Since
+  // \icmladdress already feeds frontmatter, the affiliation list is
+  // captured separately; preserve the notice arg as a ltx:note so the
+  // author-supplied "Work done while at X" string survives.
+  // Witness: 2502.18679 (icml2025.sty L564).
+  DefMacro!("\\printAffiliationsAndNotice{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+  DefMacro!("\\printAffiliationsAndWorkNotice{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+  // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
+  // emits the affiliation list inline without trailing notice). Witness
+  // 2310.18127.
+  def_macro_noop("\\printAffiliations")?;
   DefMacro!("\\icmlEqualContribution", "Equal contribution");
+  // ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
+  // Witness 2306.01153.
+  DefMacro!("\\icmlEqualAdvising", "Equal advising");
+  // ICML 2025: extended marker for joint first + senior authorship.
+  // Witness: 2503.15703 (icml2025.sty L534).
+  DefMacro!("\\icmlEqualContributionAndSenior",
+    "\\textsuperscript{*}Equal contribution, \
+     \\textsuperscript{\\char`\u{2020}}Equal senior authorship");
+  // ICML 2024 introduced `\icmlEqualSeniorContribution` — senior-only
+  // joint authorship marker (no joint-first). Witness 2305.xxxxx in
+  // wp4 (2 papers in stage 1).
+  DefMacro!("\\icmlEqualSeniorContribution",
+    "\\textsuperscript{\\char`\u{2020}}Equal senior contribution");
+  // Some paper-bundled icml*.sty templates add author-status markers
+  // beyond the kernel `\icmlEqualContribution`. The most common is
+  // `\icmlIntershipWork`, an internship-affiliation annotation passed
+  // to `\printAffiliationsAndNotice{...}` in icml2024 papers.
+  // Witness 2401.00604.
+  DefMacro!("\\icmlIntershipWork",
+    "\\textsuperscript{*}Work done during an internship");
+  // \icmlOutsideContribution — paper-bundled marker noting that the
+  // contribution was made outside the author's primary affiliation.
+  // Witness 2310.14751.
+  DefMacro!("\\icmlOutsideContribution",
+    "\\textsuperscript{*}Work done outside of primary affiliation");
+  // \icmlEqualLast — paper-bundled co-last-authors marker (icml2024.sty
+  // L525). Witness 2402.02526.
+  DefMacro!("\\icmlEqualLast",
+    "\\textsuperscript{*}Co last authors");
+  // \icmlIntern — paper-bundled internship-affiliation marker.
+  // Witness 2312.05253 (icml2024.sty L534).
+  DefMacro!("\\icmlIntern",
+    "\\textsuperscript{*}Work done while interning");
+  // \icmlEqualwork — paper-bundled joint-work marker (icml2021 papers
+  // routinely redefine this in their bundled icml2021.sty to a custom
+  // institutional note). Provide a generic fallback so the canonical
+  // binding fires when the paper's bundled .sty is masked by ours.
+  // Witness 2111.13293.
+  DefMacro!("\\icmlEqualwork",
+    "\\textsuperscript{*}Joint work");
+  // \icmlProjectLead — paper-bundled project-lead marker.
+  // Witness 2402.04924 (icml2024.sty L535).
+  DefMacro!("\\icmlProjectLead",
+    "\\textsuperscript{\\char`\u{2020}}Project lead");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  // \iclrfinalcopy — some icml*-bundled papers also use ICLR's
+  // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
+  // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
+  DefConditional!("\\ificlrfinal");
+  def_macro_noop("\\iclrfinalcopy")?;
 
   // Random extra bits
-  DefMacro!("\\abovestrut{}", None);
-  DefMacro!("\\belowstrut{}", None);
-  DefMacro!("\\abovespace", None);
-  DefMacro!("\\aroundspace", None);
-  DefMacro!("\\belowspace", None);
-  DefMacro!("\\icmlruler{}", None);
+  def_macro_noop("\\abovestrut{}")?;
+  def_macro_noop("\\belowstrut{}")?;
+  def_macro_noop("\\abovespace")?;
+  def_macro_noop("\\aroundspace")?;
+  def_macro_noop("\\belowspace")?;
+  def_macro_noop("\\icmlruler{}")?;
 });

@@ -335,7 +335,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                       <XMTok font="italic" role="UNKNOWN">a</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
                     </XMApp>
-                    <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                    <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                     <XMTok font="italic" role="UNKNOWN" xml:id="S1.E6.m1.3">x</XMTok>
                     <XMTok role="CLOSE" stretchy="true">)</XMTok>
                   </XMWrap>
@@ -358,7 +358,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                         <XMTok font="italic" fontsize="50%" role="UNKNOWN">c</XMTok>
                       </XMApp>
                     </XMApp>
-                    <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                    <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                     <XMTok font="italic" role="UNKNOWN" xml:id="S1.E6.m1.6">x</XMTok>
                     <XMTok role="CLOSE" stretchy="true">)</XMTok>
                   </XMWrap>
@@ -385,7 +385,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
                         </XMApp>
                       </XMApp>
                     </XMApp>
-                    <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                    <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                     <XMTok font="italic" role="UNKNOWN" xml:id="S1.E6.m1.9">x</XMTok>
                     <XMTok role="CLOSE" stretchy="true">)</XMTok>
                   </XMWrap>

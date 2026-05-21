@@ -194,29 +194,56 @@ LoadDefinitions!({
   // Read a Pair (x,y) — parenthesized, comma-separated pair of Float values.
   // Perl: ReadPair in latex_constructs.pool.ltxml
   // Returns ArgWrap::Pair if ( is found, ArgWrap::None otherwise (for Optional).
+  //
+  // Helper: read a float that may be wrapped in braces (e.g. `{36.5}`).
+  // Some authors brace pair coordinates to disambiguate negative-number
+  // tokenization or to keep \multiput / \put pair args together.
+  // Witness: hep-th/9610147 — `\multiput(-89,{36.5})(-6,-1){6}{…}`.
   DefParameterType!(Pair, sub[_inner, _extra] {
     use latexml_core::common::pair::Pair;
+    use latexml_core::token::Catcode;
+    fn read_pair_float() -> Result<latexml_core::common::float::Float> {
+      let _ = gullet::skip_spaces();
+      // If next is BEGIN brace, consume to matching END brace and read float inside.
+      if let Some(tok) = gullet::read_token()? {
+        if tok.get_catcode() == Catcode::BEGIN {
+          let _ = gullet::skip_spaces();
+          let f = gullet::read_float()?;
+          let _ = gullet::skip_spaces();
+          // Consume matching close brace
+          if let Some(close) = gullet::read_token()? {
+            if close.get_catcode() != Catcode::END {
+              gullet::unread_one(close);
+            }
+          }
+          return Ok(f);
+        }
+        gullet::unread_one(tok);
+      }
+      gullet::read_float()
+    }
     let _ = gullet::skip_spaces();
     if gullet::if_next(T_OTHER!("("))? {
       gullet::read_token()?; // consume (
       let _ = gullet::skip_spaces();
-      let x = gullet::read_float()?;
+      let x = read_pair_float()?;
+      // Perl latex_constructs.pool.ltxml:ReadPair L4910-4912 uses
+      //   $gullet->skipSpaces; $gullet->readUntil(T_OTHER(',')); $gullet->skipSpaces;
+      //   my $y = ...;
+      //   $gullet->skipSpaces; $gullet->readUntil(T_OTHER(')')); $gullet->skipSpaces;
+      // — `readUntil` is tolerant of extra junk between the float and the
+      // separator. Witness: physics/9709007 line 1594
+      //   \multiput(3.2,3,8)(.3,0){2}{\circle*{.1}}
+      // The user typoed `3,8` for `3.8`; Perl reads x=3.2, swallows nothing
+      // up to the comma, reads y=3, then `readUntil(')')` consumes the
+      // extra `,8` silently. The earlier Rust port read one token after y
+      // and only consumed it if literally `)` — bailing the second pair.
       let _ = gullet::skip_spaces();
-      // Skip comma separator
-      if let Some(tok) = gullet::read_token()? {
-        if !tok.with_str(|s| s == ",") {
-          gullet::unread_one(tok);
-        }
-      }
+      let _ = gullet::read_until(&Tokens!(T_OTHER!(",")));
       let _ = gullet::skip_spaces();
-      let y = gullet::read_float()?;
+      let y = read_pair_float()?;
       let _ = gullet::skip_spaces();
-      // Skip closing )
-      if let Some(tok) = gullet::read_token()? {
-        if !tok.with_str(|s| s == ")") {
-          gullet::unread_one(tok);
-        }
-      }
+      let _ = gullet::read_until(&Tokens!(T_OTHER!(")")));
       let _ = gullet::skip_spaces();
       Ok(ArgWrap::Pair(Pair::new(x, y)))
     } else {
@@ -378,7 +405,7 @@ LoadDefinitions!({
     // TODO: Consider a briefer syntax, maybe flat_vec ?
     // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
     let mut tks = vec![T_BEGIN!()];
-    tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+    tks.extend(arg.into_iter().map(Token::revert));
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
@@ -392,7 +419,7 @@ LoadDefinitions!({
     // TODO: Consider a briefer syntax, maybe flat_vec ?
     // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
     let mut tks = vec![T_BEGIN!()];
-    tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+    tks.extend(arg.into_iter().map(Token::revert));
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
@@ -461,7 +488,7 @@ LoadDefinitions!({
     reversion => sub[arg, _inner, _extra] {
     if !arg.is_empty() {
       let mut read_tokens = vec![T_OTHER!(s!("["))];
-      read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      read_tokens.extend(arg.into_iter().map(Token::revert));
       read_tokens.push(T_OTHER!(s!("]")));
       Ok(Tokens::new(read_tokens))
     } else {
@@ -488,7 +515,7 @@ LoadDefinitions!({
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -516,7 +543,7 @@ LoadDefinitions!({
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -547,7 +574,7 @@ LoadDefinitions!({
       egroup()?; },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
-      reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     }
@@ -560,7 +587,7 @@ LoadDefinitions!({
       Ok(Tokens!())
     } else {
       let mut read_tokens = vec!(T_BEGIN!());
-      read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+      read_tokens.extend(arg.into_iter().map(Token::revert));
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }
@@ -576,7 +603,7 @@ LoadDefinitions!({
         Ok(Tokens!())
       } else {
         let mut read_tokens = vec!(T_OTHER!("["));
-        read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
+        read_tokens.extend(arg.into_iter().map(Token::revert));
         read_tokens.push(T_OTHER!("]"));
         Ok(Tokens::new(read_tokens))
       }
@@ -993,13 +1020,22 @@ LoadDefinitions!({
   // `{balanced}` groups or plain token runs. Perl returns a
   // `LaTeXML::Core::Array`; Rust has no Array type and follows the
   // `DirectoryList` convention — emit a token stream where each item
-  // is wrapped in its own `{...}`. Callers that need typed parsing
-  // (Perl's `$typedef->reparseArgument`) must reparse each item;
-  // this port does not yet handle the parameterized `CommaList:Type`
-  // form.
-  DefParameterType!(CommaList, sub[_inner, _extra] {
+  // is wrapped in its own `{...}`.
+  //
+  // Perl supports a parameterised form `CommaList:Type` (e.g.
+  // `CommaList:Number`) where each item is re-parsed through `Type`'s
+  // own reader (`$typedef->reparseArgument`). When the parameter is
+  // declared as `CommaList:Number`, `inner` carries the parsed
+  // `Number` Parameter; we route each item through
+  // `inner.reparse_argument(...)` and emit the reverted form so the
+  // result is canonical-shape tokens of the typed value. Untyped
+  // `CommaList` (no `inner`) keeps the original brace-delimit form.
+  DefParameterType!(CommaList, sub[inner, _extra] {
     gullet::skip_spaces()?;
-    let mut collected: Vec<Token> = Vec::new();
+    // Phase 1: gather items as raw Tokens (one Tokens per comma-
+    // separated piece). Done in a single pass to mirror the Perl
+    // gullet-reader logic; the typed-reparse step happens after.
+    let mut items: Vec<Tokens> = Vec::new();
     if gullet::if_next(T_BEGIN!())? {
       gullet::read_token()?; // consume outer `{`
       let mut current: Vec<Token> = Vec::new();
@@ -1007,15 +1043,10 @@ LoadDefinitions!({
       while let Some(token) = gullet::read_token()? {
         let cc = token.get_catcode();
         if cc == Catcode::END {
-          collected.push(T_BEGIN!());
-          collected.extend(current);
-          collected.push(T_END!());
+          items.push(Tokens::new(std::mem::take(&mut current)));
           break;
         } else if token == comma {
-          collected.push(T_BEGIN!());
-          collected.extend(current);
-          collected.push(T_END!());
-          current = Vec::new();
+          items.push(Tokens::new(std::mem::take(&mut current)));
         } else if cc == Catcode::BEGIN {
           // Nested `{balanced}` — preserve brace wrapping.
           current.push(token);
@@ -1028,9 +1059,28 @@ LoadDefinitions!({
       }
     } else if let Some(token) = gullet::read_token()? {
       // No outer brace — read a single token as the sole item.
-      collected.push(T_BEGIN!());
-      collected.push(token);
-      collected.push(T_END!());
+      items.push(Tokens::new(vec![token]));
+    }
+    // Phase 2: if a typed form was declared, reparse each item via
+    // the inner type's reader (`Perl reparseArgument` parity). The
+    // reverted form is emitted so the downstream callsite sees
+    // canonical tokens of the typed value.
+    let mut collected: Vec<Token> = Vec::new();
+    if let Some(inner_ps) = inner {
+      for item in items {
+        let reparsed = inner_ps.reparse_argument(ArgWrap::Tokens(item))?;
+        collected.push(T_BEGIN!());
+        for wrap in reparsed {
+          collected.extend(wrap.revert()?.unlist());
+        }
+        collected.push(T_END!());
+      }
+    } else {
+      for item in items {
+        collected.push(T_BEGIN!());
+        collected.extend(item.unlist());
+        collected.push(T_END!());
+      }
     }
     Tokens::new(collected)
   });

@@ -69,4 +69,23 @@ LoadDefinitions!({
   //======================================================================
   // Perl: latex_bootstrap.pool.ltxml L58
   Let!("\\@@input", "\\input"); // Save TeX's version.
+
+  //======================================================================
+  // Dump-replay rollback shims — must be defined BEFORE the dump loads.
+  //
+  // The kernel dump replays latexrelease/IncludeInRelease blocks that
+  // reference TeX primitives the dump-time TeXLive didn't actually
+  // include. Predefine them so the dump replay's "Applying:" arm
+  // doesn't hit `Error:undefined:`. These need to live in
+  // latex_bootstrap (not latex_constructs_rust_only) because the dump
+  // load — which is what probes them — runs BEFORE constructs.
+  //
+  // \tracingstacklevels: TeX primitive added in TL 2021/06/01.
+  // \@nil: kernel pattern-boundary marker some shims dereference.
+  // \@expl@str@if@eq@@nnTF: expl3 internal predicate used in compat
+  //   rollback (4-arg gobble matches \str_if_eq:nnTF semantics).
+  // Witness 2408.00879, 2408.02823, 2406.00475.
+  DefRegister!("\\tracingstacklevels" => Number::new(0));
+  def_macro_noop("\\@nil")?;
+  def_macro_noop("\\@expl@str@if@eq@@nnTF{}{}{}{}")?;
 });

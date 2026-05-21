@@ -14,7 +14,12 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");
-  RequirePackage!("xcolor");
+  // Real acmart.cls passes [prologue,table]{xcolor} but doesn't pass
+  // dvipsnames; many user papers nevertheless use Cerulean / ForestGreen
+  // etc. without an explicit \\usepackage[dvipsnames]{xcolor}. Pre-load
+  // the extended palette eagerly so the named colors resolve. Witness
+  // 2 acmart papers/100k cluster with `Error:unexpected:ForestGreen`.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string()]);
   // RequirePackage('totpages');
   RequirePackage!("microtype");
   RequirePackage!("hyperref");
@@ -132,17 +137,22 @@ LoadDefinitions!({
     mode => "restricted_horizontal", enter_horizontal => true);
 
   //======================================================================
-  // Ignorable stuff
-  DefMacro!("\\shortauthors{}", None);
-  DefMacro!("\\titlenote{}", None);
-  DefMacro!("\\subtitlenote{}", None);
-  DefMacro!("\\authornote{}", None);
-  DefMacro!("\\authornotemark[]", None);
-  DefMacro!("\\authorsaddresses{}", None);
-  DefMacro!("\\startPage", None);
-  DefMacro!("\\settopmatter{}", None);
-  DefMacro!("\\copyrightpermissionfootnoterule", None);
-  DefMacro!("\\acmBadgeL", None);
+  // Author-content notes. Perl L128-132 gobbles these silently; we
+  // surpass with content preservation per the user's "content-preserving
+  // AND error-free" directive — ACM authors regularly put real prose
+  // here (invited-paper credit, supplementary URLs, corresponding
+  // author email). Route to `<ltx:note>` with semantic role.
+  DefMacro!("\\shortauthors{}", "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  DefMacro!("\\titlenote{}",    "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\@add@frontmatter{ltx:note}[role=subtitlenote]{#1}");
+  DefMacro!("\\authornote{}",   "\\@add@frontmatter{ltx:note}[role=authornote]{#1}");
+  def_macro_noop("\\authornotemark[]")?;
+  DefMacro!("\\authorsaddresses{}",
+    "\\@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
+  def_macro_noop("\\startPage")?;
+  def_macro_noop("\\settopmatter{}")?;
+  def_macro_noop("\\copyrightpermissionfootnoterule")?;
+  def_macro_noop("\\acmBadgeL")?;
 
   //======================================================================
   // Natbib cite aliases
@@ -266,4 +276,52 @@ LoadDefinitions!({
 
   Let!("\\proof", "\\@proof");
   Let!("\\endproof", "\\end@proof");
+
+  // acmart.cls L1902: \setcctype[version]{by-spec} sets the Creative
+  // Commons license. Preserve the license spec as ltx:note.
+  // Witnesses 2406.04861, 2406.09266.
+  DefMacro!("\\setcctype[]{}",
+    "\\@add@frontmatter{ltx:note}[role=cc-license]{#2}");
+
+  // acmart conditional toggles — declare as conditionals so user
+  // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue
+  // etc. don't error. The list mirrors `\newif` declarations in
+  // acmart.cls (TL2025 L181-L200); paper-local extension styles such
+  // as `popets.sty` (acmart-derived) flip these without re-declaring,
+  // so we must predeclare all of them. Driver: arXiv-2503.08256v1
+  // (popets/acmart) where `\@acmownedfalse`, `\@acmownedtrue`, and
+  // `\@ACM@journal@bibstripfalse` came up undefined.
+  DefConditional!("\\if@printpermission");
+  DefConditional!("\\if@printccs");
+  DefConditional!("\\if@printcopyright");
+  DefConditional!("\\if@printcopyrightbox");
+  DefConditional!("\\if@printfolios");
+  DefConditional!("\\if@acmReview");
+  DefConditional!("\\if@ACM@manuscript");
+  // \if@ACM@nonacm is NOT a newif in current acmart.cls, but some
+  // papers (or older acmart versions) call `\@ACM@nonacmtrue` in the
+  // preamble. Declare to avoid undefined errors. Witness 2211.10881.
+  DefConditional!("\\if@ACM@nonacm");
+  DefConditional!("\\if@ACM@journal");
+  DefConditional!("\\if@ACM@journal@bibstrip");
+  DefConditional!("\\if@ACM@journal@bibstrip@or@tog");
+  DefConditional!("\\if@ACM@sigchiamode");
+  DefConditional!("\\if@ACM@engage");
+  DefConditional!("\\if@ACM@acmcp");
+  DefConditional!("\\if@ACM@newfonts");
+  DefConditional!("\\if@Description@present");
+  DefConditional!("\\if@undescribed@images");
+  DefConditional!("\\if@ACM@maketitle@typeset");
+  DefConditional!("\\if@insideauthorgroup");
+  DefConditional!("\\if@acmowned");
+  DefConditional!("\\if@ACM@instpresent");
+  DefConditional!("\\if@ACM@citypresent");
+  DefConditional!("\\if@ACM@countrypresent");
+
+  // acmart.cls L578: \def\@makefntext{\noindent\@makefnmark}.
+  // Footnote helper used by acmart at L587/L600 in some path our
+  // stub doesn't replicate; some templates probe it before our
+  // explicit definition. Stub as a no-op so footnote processing
+  // continues. Witness 2408.09084, 2408.03532 (sigconf papers).
+  def_macro_noop("\\@makefntext")?;
 });

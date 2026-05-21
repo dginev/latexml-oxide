@@ -34,7 +34,7 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", sub[(_short, authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
-  DefMacro!("\\newauthor", "");
+  def_macro_noop("\\newauthor")?;
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
   DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:note}[role=pubyear]{#1}");
@@ -45,7 +45,8 @@ LoadDefinitions!({
   DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>");
   DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>");
   DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>");
+  DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>",
+    mode => "internal_vertical");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
   // Keywords — Perl mn2e_support.sty.ltxml L48-54:
@@ -95,7 +96,7 @@ LoadDefinitions!({
     });
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
-  DefMacro!("\\bsp", "");
+  def_macro_noop("\\bsp")?;
 
   // Math shortcuts — Perl mn2e_support.sty.ltxml L131-145.
   // Perl binds these directly via DefMath, NOT by aliasing to amssymb
@@ -248,20 +249,20 @@ LoadDefinitions!({
   );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
-  DefMacro!("\\loadboldmathitalic", "");
-  DefMacro!("\\loadboldgreek", "");
-  DefMacro!("\\fixfootnotes", "");
-  DefMacro!("\\nokeywords", "");
+  def_macro_noop("\\loadboldmathitalic")?;
+  def_macro_noop("\\loadboldgreek")?;
+  def_macro_noop("\\fixfootnotes")?;
+  def_macro_noop("\\nokeywords")?;
   DefMacro!("\\bibtitle", "References");
   DefMacro!("\\bibheadtitle", "REFERENCES");
-  DefMacro!("\\makeRLlabel{}", "#1");
-  DefMacro!("\\makeRRlabel{}", "#1");
-  DefMacro!("\\makenewlabel{}", "#1");
-  DefMacro!("\\boxit{}", "#1");
+  def_macro_identity("\\makeRLlabel{}")?;
+  def_macro_identity("\\makeRRlabel{}")?;
+  def_macro_identity("\\makenewlabel{}")?;
+  def_macro_identity("\\boxit{}")?;
   DefRegister!("\\smallindent" => Glue!("1.5em"));
   Let!("\\fullhline", "\\hline");
   DefMacro!("\\sevensize", "\\small");
-  DefMacro!("\\plate", "");
+  def_macro_noop("\\plate")?;
 
   // Perl L57-62: equation numbering schemes
   DefMacro!("\\eqsecnum",
@@ -278,7 +279,7 @@ LoadDefinitions!({
 
   Let!("\\@internalcite", "\\cite");
   DefMacro!("\\shortcite", "\\cite");
-  DefMacro!("\\citename{}", "#1");
+  def_macro_identity("\\citename{}")?;
 
   // Perl mn2e_support.sty.ltxml L212-245: "Redefine equations (bizarrely)
   // to allow $ within" — rebind T_MATH inside display math so a literal

@@ -57,7 +57,7 @@ fn begin_enum_itemize(
       llabel
     };
     def_macro(T_CS!(s!("\\the{usecounter}")), None, llabel.clone(), None)?;
-    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel.clone(), None)?;
+    def_macro(T_CS!(s!("\\label{usecounter}")), None, llabel, None)?;
     def_macro(
       T_CS!(s!("\\fnum@{usecounter}")),
       None,
@@ -250,7 +250,7 @@ fn merged_enumitem_keyvals(
             Stored::String(s) => ArgWrap::Tokens(arena::with(s, mouth::tokenize_internal)),
             _ => ArgWrap::None,
           };
-          hash.insert(key.to_string(), aw);
+          hash.insert(key.clone(), aw);
         }
       }
     }
@@ -550,11 +550,11 @@ LoadDefinitions!({
   });
 
   // Not-yet-handled bits
-  DefMacro!("\\SetLabelAlign{}{}", "");
-  DefMacro!("\\EnumitemId", "");
-  DefMacro!("\\SetEnumitemKey{}{}", "");
-  DefMacro!("\\SetEnumerateShortLabel{}{}", "");
-  DefMacro!("\\SetEnumitemValue{}{}{}", "");
-  DefMacro!("\\SetEnumitemSize{}{}", "");
-  DefMacro!("\\AddEnumerateCounter{}{}{}", "");
+  def_macro_noop("\\SetLabelAlign{}{}")?;
+  def_macro_noop("\\EnumitemId")?;
+  def_macro_noop("\\SetEnumitemKey{}{}")?;
+  def_macro_noop("\\SetEnumerateShortLabel{}{}")?;
+  def_macro_noop("\\SetEnumitemValue{}{}{}")?;
+  def_macro_noop("\\SetEnumitemSize{}{}")?;
+  def_macro_noop("\\AddEnumerateCounter{}{}{}")?;
 });

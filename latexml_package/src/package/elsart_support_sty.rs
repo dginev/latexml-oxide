@@ -17,15 +17,9 @@ LoadDefinitions!({
   }
 
   // Theorem stubs (if amsthm not loaded)
-  DefMacro!("\\theoremstyle{}", "");
-  DefMacro!("\\qed", "\\ltx@qed");
-  DefConstructor!("\\ltx@qed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
-    enter_horizontal => true,
-    // Perl L31: reversion => '\qed'. The `\ltx@qed` internal dispatcher
-    // should serialize back to `\qed` in `tex=` attributes so round-tripping
-    // through post-processors doesn't surface the internal CS name.
-    reversion => "\\qed");
+  def_macro_noop("\\theoremstyle{}")?;
+  // \qed and \ltx@qed now live in elsart_support_core_sty.rs (so plain
+  // elsarticle papers get them without loading elsart_support).
 
   // Math symbols — Perl L37-42 (double-struck set notation)
   DefMath!("\\Cset", "\u{2102}", role => "ID", meaning => "complexes");
@@ -84,11 +78,11 @@ LoadDefinitions!({
 
   // Section formatting — Perl L63-120
   // These customize section numbering and font for Elsevier style
-  DefMacro!("\\elsartstyle", "");
-  DefMacro!("\\semark{}",    "");
-  DefMacro!("\\ssmark{}",    "");
-  DefMacro!("\\sssmark{}",   "");
-  DefMacro!("\\elsmarks",    "");
+  def_macro_noop("\\elsartstyle")?;
+  def_macro_noop("\\semark{}")?;
+  def_macro_noop("\\ssmark{}")?;
+  def_macro_noop("\\sssmark{}")?;
+  def_macro_noop("\\elsmarks")?;
 
   // Abstract keywords with continuation
   DefMacro!("\\KWD{}", "\\@add@frontmatter{ltx:keywords}{#1}");
@@ -179,17 +173,20 @@ LoadDefinitions!({
   DefEnvironment!("{cv*}",
     "<ltx:section class='ltx_cv'><ltx:title>Curriculum Vitae</ltx:title>#body</ltx:section>");
 
-  DefMacro!("\\cv", "");
-  DefMacro!("\\biboptions{}", "");
-  DefMacro!("\\bibliographystyle{}", "");
+  def_macro_noop("\\cv")?;
+  def_macro_noop("\\biboptions{}")?;
+  def_macro_noop("\\bibliographystyle{}")?;
   DefMacro!("\\harvarditem[]{}{}{}",
     "\\bibitem[#2(#3)]{#4}");
   DefMacro!("\\harvardand", "\\&");
   DefMacro!("\\harvardurl{}", "\\url{#1}");
-  DefMacro!("\\harvestremark{}", "");
+  // \harvestremark{text} carries author-typed remark in harvard
+  // bibliography style. Surpass Perl gobble — preserve as note.
+  DefMacro!("\\harvestremark{}",
+    "\\@add@frontmatter{ltx:note}[role=harvestremark]{#1}");
   DefMacro!("\\harvardyearleft", "(");
   DefMacro!("\\harvardyearright", ")");
-  DefMacro!("\\citestyle{}", "");
+  def_macro_noop("\\citestyle{}")?;
 
   // Shorthands — Perl L124-128
   DefMacro!("\\AND", "\\&");
@@ -203,11 +200,11 @@ LoadDefinitions!({
   DefMacro!("\\cropleft", "0mm");
   DefMacro!("\\croptop", "0mm");
   DefRegister!("\\rulepreskip" => Dimension!("4pt"));
-  DefMacro!("\\setleftmargin{}{}", "");
+  def_macro_noop("\\setleftmargin{}{}")?;
 
   // Misc — Perl L143-175
   Let!("\\realpageref", "\\pageref");
-  DefMacro!("\\snm", "");
+  def_macro_noop("\\snm")?;
 
   // Perl L146-156: \xalph / \xarabic / \xfnsymbol — emit * for negative counter, else
   // delegate to \alph / \arabic / \fnsymbol.
@@ -237,7 +234,7 @@ LoadDefinitions!({
   });
 
   DefEnvironment!("{NoHyper}", "#body");
-  DefMacro!("\\mpfootnotemark", "");
+  def_macro_noop("\\mpfootnotemark")?;
   // Perl L162-167: \FMSlash/\FMslash overstrike / through content
   DefMacro!("\\FMSlash", "\\protect\\pFMSlash");
   DefMacro!("\\FMslash", "\\protect\\pFMslash");
@@ -256,5 +253,7 @@ LoadDefinitions!({
   // clear intent of the Perl source and what actually renders. Kept as
   // an intentional Rust-over-Perl fix; the DP audit mismatch is expected.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
-  DefMacro!("\\query{}", "");
+  // \query{text} is author-typed editorial query. Preserve as note.
+  DefMacro!("\\query{}",
+    "\\@add@frontmatter{ltx:note}[role=query]{#1}");
 });

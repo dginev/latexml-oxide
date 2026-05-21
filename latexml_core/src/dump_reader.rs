@@ -200,6 +200,12 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
     // default cap. Filter at read time so existing dumps are clean.
     "V" if key == "MAX_ERRORS" => Ok(false),
     "V" => load_value(key, data),
+    // IA: consolidated expl3 intarray (one record per (font, size); dump_writer
+    // collapses ~17k V-records into one IA). Body is `<len>\t<rle>` where rle
+    // is a comma-list of `v` or `v*n` runs. Expansion assigns the same V
+    // entries that the per-slot records would have, so the runtime state
+    // post-replay is identical.
+    "IA" => load_intarray(key, data),
     // M: Meaning entries (Expandable, Let-alias, Register, etc.).
     //
     // Perl-faithful: `plain_dump.pool.ltxml` and `latex_dump.pool.ltxml`
@@ -421,6 +427,69 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
   Ok(true)
 }
 
+/// Expand an `IA` (intarray) record into the per-slot Dimension V entries
+/// that the runtime expects. Format: key = `<prefix>` (e.g.
+/// `fontdimen_fontinfo_cmr10 at 15sp`), data = `<len>\t<rle>`. RLE tokens
+/// are comma-separated; each is either `<v>` (one entry) or `<v>x<n>`
+/// (n consecutive entries of value v). Slots are written at indices
+/// 1..=len. Mismatched RLE-length vs declared len is an error.
+fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
+  let mut it = data.splitn(2, '\t');
+  let len_s = it.next().unwrap_or("");
+  let rle = it.next().unwrap_or("");
+  let len: usize = len_s
+    .parse()
+    .map_err(|e| format!("Bad IA length: {}", e))?;
+  let values = rle_decode_i64(rle)?;
+  if values.len() != len {
+    return Err(format!(
+      "IA length mismatch for {:?}: declared {} but RLE decoded to {}",
+      key,
+      len,
+      values.len()
+    ));
+  }
+  for (i, val) in values.into_iter().enumerate() {
+    let slot_key = format!("{}_{}", key, i + 1);
+    state::assign_internal(
+      TableName::Value,
+      arena::pin(&slot_key),
+      Stored::Dimension(crate::common::dimension::Dimension(val)),
+      Some(Scope::Global),
+    );
+  }
+  Ok(true)
+}
+
+/// Inverse of `dump_writer::rle_encode_i64`. Parses a comma-separated
+/// list of tokens, each `v` (single) or `vxn` (n copies of v). Empty
+/// input decodes to an empty vector.
+fn rle_decode_i64(s: &str) -> Result<Vec<i64>, String> {
+  let mut out = Vec::new();
+  if s.is_empty() {
+    return Ok(out);
+  }
+  for tok in s.split(',') {
+    if let Some(xi) = tok.find('x') {
+      let val: i64 = tok[..xi]
+        .parse()
+        .map_err(|e| format!("Bad RLE value in {:?}: {}", tok, e))?;
+      let cnt: usize = tok[xi + 1..]
+        .parse()
+        .map_err(|e| format!("Bad RLE count in {:?}: {}", tok, e))?;
+      for _ in 0..cnt {
+        out.push(val);
+      }
+    } else {
+      let val: i64 = tok
+        .parse()
+        .map_err(|e| format!("Bad RLE value {:?}: {}", tok, e))?;
+      out.push(val);
+    }
+  }
+  Ok(out)
+}
+
 /// Load a meaning entry: M\tKEY\tTYPE\t...
 ///
 /// Uses add-only policy: skip if the CS already has a meaning.
@@ -624,7 +693,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       use crate::definition::primitive::Primitive;
       let font_id_raw = url_decode(rest);
       let font_id_pin = arena::pin(&font_id_raw);
-      let font_id_str = font_id_raw.clone();
+      let font_id_str = font_id_raw;
       let cs_for_fontdef = cs_tok;
       let merge_closure: BeforeDigestClosure = std::rc::Rc::new(move || {
         crate::state::assign_value("current_FontDef", Stored::Token(cs_for_fontdef), None);
@@ -1226,5 +1295,118 @@ mod tests {
     let content = "LC\t\u{00c8}\tCH\t232\n"; // È → lccode 232 (è)
     let count = load_from_str(content).unwrap();
     assert!(count > 0, "Expected lccode entry loaded");
+  }
+
+  // --- RLE decoder tests (intarray consolidation) ---
+
+  #[test]
+  fn rle_decode_empty() {
+    assert_eq!(rle_decode_i64("").unwrap(), Vec::<i64>::new());
+  }
+
+  #[test]
+  fn rle_decode_single() {
+    assert_eq!(rle_decode_i64("5").unwrap(), vec![5]);
+  }
+
+  #[test]
+  fn rle_decode_single_run() {
+    assert_eq!(rle_decode_i64("5x3").unwrap(), vec![5, 5, 5]);
+  }
+
+  #[test]
+  fn rle_decode_mixed() {
+    assert_eq!(
+      rle_decode_i64("1,2x2,3x3,1").unwrap(),
+      vec![1, 2, 2, 3, 3, 3, 1]
+    );
+  }
+
+  #[test]
+  fn rle_decode_negative() {
+    assert_eq!(rle_decode_i64("-5").unwrap(), vec![-5]);
+    assert_eq!(rle_decode_i64("-5x3").unwrap(), vec![-5, -5, -5]);
+  }
+
+  #[test]
+  fn rle_decode_long_run() {
+    let v = rle_decode_i64("218x10000").unwrap();
+    assert_eq!(v.len(), 10000);
+    assert!(v.iter().all(|&x| x == 218));
+  }
+
+  #[test]
+  fn rle_decode_malformed_returns_err() {
+    assert!(rle_decode_i64("abc").is_err());
+    assert!(rle_decode_i64("5xabc").is_err());
+    assert!(rle_decode_i64("5x").is_err());
+  }
+
+  // --- IA load → state assignment tests ---
+
+  #[test]
+  fn ia_load_writes_per_slot_values() {
+    // Use a unique prefix so the test doesn't collide with the engine's
+    // ambient state (other tests may have populated fontdimen_* keys).
+    let prefix = "ia_test_prefix";
+    let content = format!("IA\t{}\t3\t10,20x2\n", prefix);
+    load_from_str(&content).unwrap();
+
+    use crate::common::dimension::Dimension;
+    use crate::common::store::Stored;
+    use crate::state;
+
+    assert_eq!(
+      state::lookup_value(&format!("{}_1", prefix)),
+      Some(Stored::Dimension(Dimension(10)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_2", prefix)),
+      Some(Stored::Dimension(Dimension(20)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_3", prefix)),
+      Some(Stored::Dimension(Dimension(20)))
+    );
+    // One past the end should NOT be set by the IA record.
+    assert_eq!(state::lookup_value(&format!("{}_4", prefix)), None);
+  }
+
+  #[test]
+  fn ia_load_length_mismatch_errors() {
+    // Declared len 5 but RLE only decodes to 3 → error
+    let content = "IA\tia_mismatch_prefix\t5\t10,20,30\n";
+    // load_from_str collects per-line errors; verify the malformed IA
+    // line did NOT successfully load anything.
+    let count = load_from_str(content).unwrap_or(0);
+    assert_eq!(count, 0, "Length-mismatch IA should not load");
+  }
+
+  // --- Backward-compat: V-records-only dumps (pre-IA format) ---
+
+  #[test]
+  fn v_record_dimension_still_loads() {
+    // This is the pre-IA storage format: one V record per slot.
+    // dump_reader must still accept these so older / partner-machine
+    // dumps load correctly.
+    let prefix = "v_backcompat_prefix";
+    let content = format!(
+      "V\t{}_1\tD\t111\nV\t{}_2\tD\t222\n",
+      prefix, prefix
+    );
+    load_from_str(&content).unwrap();
+
+    use crate::common::dimension::Dimension;
+    use crate::common::store::Stored;
+    use crate::state;
+
+    assert_eq!(
+      state::lookup_value(&format!("{}_1", prefix)),
+      Some(Stored::Dimension(Dimension(111)))
+    );
+    assert_eq!(
+      state::lookup_value(&format!("{}_2", prefix)),
+      Some(Stored::Dimension(Dimension(222)))
+    );
   }
 }

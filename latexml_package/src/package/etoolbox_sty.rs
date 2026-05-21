@@ -1,4 +1,5 @@
 use crate::prelude::*;
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -1783,4 +1784,12 @@ LoadDefinitions!({
     push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
   DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
     push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+
+  // \PatchFailed — used as the failure-callback in
+  // `\apptocmd{cs}{add}{success}{\PatchFailed}` invocations
+  // (e.g. tkz-euclide.sty L71). When the patch couldn't be applied
+  // it's typically a TeX-level signal not relevant to our pipeline;
+  // stub as a no-op so callers don't crash on undefined CS.
+  // Witnesses: 2405.19979, 2405.19935 (both tkz-euclide).
+  def_macro_noop("\\PatchFailed")?;
 });

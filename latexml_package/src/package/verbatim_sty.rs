@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   //======================================================================
   // Note that we CAN process the verbatim.sty file and that works,
@@ -79,7 +80,7 @@ LoadDefinitions!({
 \let\verbatim@processline\relax
 \verbatim@"
   );
-  DefMacro!("\\endcomment", "");
+  def_macro_noop("\\endcomment")?;
 
   DefMacro!("\\verbatim@start", "\\lx@verbatim@\\verbatim@");
 

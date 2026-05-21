@@ -53,7 +53,7 @@ LoadDefinitions!({
   // Quiet version: used by \ifcsname — no errors for non-expandable CS tokens
   DefParameterType!(CSNameQuiet, reader => reader!( _inner, _extra, { read_cs_name_quiet() }));
   DefMacro!("\\csname CSName", sub[(token)] {
-    if lookup_meaning(&token).is_none() {
+    if !has_meaning(&token) {
       let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
       assign_meaning(&token, relax_meaning, None);
     }
@@ -140,7 +140,7 @@ LoadDefinitions!({
     // <one optional space>
     gullet::skip_one_space(false)?;
     // <token>
-    let token2 = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let token2 = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     Let!(token1, token2);
   });
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
@@ -175,7 +175,7 @@ LoadDefinitions!({
         skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
       }
       state::expire_current_token();
-    } else if lookup_meaning(&xtok).is_none() {
+    } else if !has_meaning(&xtok) {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.

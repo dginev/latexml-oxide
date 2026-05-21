@@ -22,7 +22,7 @@ LoadDefinitions!({
     egroup()?;
     let result_tokens = mouth::tokenize_internal(&result);
     def_macro(
-      cs.unlist().into_iter().next().unwrap_or(T_CS!("\\pgfmathresult")),
+      cs.unlist().into_iter().next().unwrap_or_else(|| T_CS!("\\pgfmathresult")),
       None,
       result_tokens,
       Some(ExpandableOptions { scope: Some(Scope::Local), ..Default::default() }))?;

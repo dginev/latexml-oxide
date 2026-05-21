@@ -26,4 +26,33 @@ LoadDefinitions!({
     enter_horizontal => true);
 
   DefMacro!("\\normalem", None, "");
+
+  // ulem L343: \newdimen\ULdepth (initialized to \maxdimen for auto-mode).
+  // Witnesses 2406.02021, 2406.18999.
+  DefRegister!("\\ULdepth" => Dimension!("0pt"));
+  DefRegister!("\\ULthickness" => Dimension!("0.4pt"));
+  DefRegister!("\\UL@height" => Dimension!("0pt"));
+
+  // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and
+  // `argcmd` to forms that apply `ucmd{...}` to content. We \let both
+  // straight to `ucmd` so `\ul{foo}` -> `\uline{foo}` works. Empty
+  // declaration/argument-command slots (papers write `\useunder{\uline}{\ul}{}`)
+  // produce no let.
+  // Witnesses 2405.20343, 2406.08270.
+  DefMacro!("\\useunder{}{}{}", sub[(ucmd, decl, argcmd)] {
+    let mut out: Vec<Token> = Vec::new();
+    let ucmd_v = ucmd.unlist();
+    if !ucmd_v.is_empty() {
+      let target = ucmd_v[0];
+      let decl_v = decl.unlist();
+      if !decl_v.is_empty() {
+        out.extend([T_CS!("\\let"), decl_v[0], target]);
+      }
+      let arg_v = argcmd.unlist();
+      if !arg_v.is_empty() {
+        out.extend([T_CS!("\\let"), arg_v[0], target]);
+      }
+    }
+    Ok(Tokens::new(out))
+  });
 });

@@ -43,7 +43,10 @@ LoadDefinitions!({
   RequirePackage!("fancyhdr");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
-  RequirePackage!("xcolor");
+  // Pre-load xcolor with [dvipsnames, table] so user xcolor calls
+  // don't silently option-clash and miss the colortbl / dvipsnam.def
+  // loads.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("url");
   RequirePackage!("enumerate");
   RequirePackage!("longtable");
@@ -90,8 +93,8 @@ LoadDefinitions!({
   // Running title — Perl L99-104
   DefRegister!("\\titlerunning" => Tokens!());
   DefRegister!("\\authorrunning" => Tokens!());
-  DefMacro!("\\authrun", "");
-  DefMacro!("\\titrun", "");
+  def_macro_noop("\\authrun")?;
+  def_macro_noop("\\titrun")?;
 
   // Correspondence — Perl L107-121
   DefMacro!("\\offprints{}", "\\@add@frontmatter{ltx:note}[role=offprints]{#1}");
@@ -100,7 +103,10 @@ LoadDefinitions!({
   DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
   DefMacro!("\\mail Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
 
-  DefMacro!("\\journalname{}", "");
+  // aa_support: Perl L? gobbles \journalname; surpass with content
+  // preservation — A&A papers set \journalname{Astronomy & Astrophysics}
+  // and the value is genuine author metadata for the JATS pipeline.
+  DefMacro!("\\journalname{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\rnotename", "(Research Note)");
   DefMacro!("\\rnotname", "(RN)");
   DefMacro!("\\headnote{}", "\\@add@frontmatter{ltx:note}{#1}");
@@ -111,10 +117,12 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
   DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
 
-  DefMacro!("\\idline{}{}", "");
-  DefMacro!("\\msnr{}", "");
-  DefMacro!("\\institutename", "");
-  DefMacro!("\\hugehead", "");
+  // \idline{vol}{page} — issue identification line; preserve as note.
+  DefMacro!("\\idline{}{}", "\\@add@frontmatter{ltx:note}[role=idline]{#1, #2}");
+  // \msnr{number} — manuscript number; preserve as note (author metadata).
+  DefMacro!("\\msnr{}", "\\@add@frontmatter{ltx:note}[role=msnr]{#1}");
+  def_macro_noop("\\institutename")?;
+  def_macro_noop("\\hugehead")?;
   DefMacro!("\\AALogo", "Astronomy and Astrophysics");
 
   //======================================================================
@@ -158,10 +166,13 @@ LoadDefinitions!({
   RawTeX!("\\@ifundefined{solution}{\\newtheorem{solution}[theorem]{Solution}}{}");
 
   DefMacro!("\\noteaddname", "Note added in proof");
-  DefEnvironment!("{noteadd}", "<ltx:note>#body</ltx:note>");
+  // internal_vertical mode so the "note added in proof" body
+  // (typically multi-paragraph prose) doesn't trip mode mismatch.
+  DefEnvironment!("{noteadd}", "<ltx:note>#body</ltx:note>",
+    mode => "internal_vertical");
 
   // \thesaurus — undocumented, ignorable — Perl L161
-  DefMacro!("\\thesaurus{}", "");
+  def_macro_noop("\\thesaurus{}")?;
 
   //======================================================================
   // Equations — allow $ within equation env — Perl L164-200
@@ -214,9 +225,9 @@ LoadDefinitions!({
   // Figures — Perl L202-218
   //======================================================================
 
-  DefMacro!("\\sidecaption", "");
-  DefMacro!("\\resetsubfig{}", "");
-  DefMacro!("\\subfigures", "");
+  def_macro_noop("\\sidecaption")?;
+  def_macro_noop("\\resetsubfig{}")?;
+  def_macro_noop("\\subfigures")?;
 
   //======================================================================
   // Tables — Perl L220-231
@@ -227,7 +238,7 @@ LoadDefinitions!({
   // consumed; the table-body block flows through as normal tokens. Perl does
   // NOT define a `{longtab}` environment, so we don't either; an extra
   // DefEnvironment trips the mode-switch on `\end{...}` matching.
-  DefMacro!("\\longtab{}", "");
+  def_macro_noop("\\longtab{}")?;
   Let!("\\tablefoot", "\\footnote");
   DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
   DefMacro!("\\tablefoottext{}{}", "\\footnotetext[$#1$]{#2}");
@@ -355,19 +366,21 @@ LoadDefinitions!({
 
   DefConstructor!("\\object Semiverbatim",
     "<ltx:text class='ltx_ast_objectname' _noautoclose='1'>#1</ltx:text>");
-  DefMacro!("\\listofobjects", "");
+  def_macro_noop("\\listofobjects")?;
   DefMacro!("\\listobjectname", "List of Objects");
 
   //======================================================================
   // Extra stuff — Perl L364-398
   //======================================================================
 
-  DefMacro!("\\setitemindent{}", "");
-  DefMacro!("\\setitemitemindent{}", "");
+  def_macro_noop("\\setitemindent{}")?;
+  def_macro_noop("\\setitemitemindent{}")?;
   DefMacro!("\\andname", "and");
   DefMacro!("\\lastandname", ", and");
-  DefMacro!("\\AASection{}", "");
-  DefMacro!("\\Online", "");
+  // \AASection{title} — A&A old-style section header. Surpass Perl
+  // gobble: route to standard \section{} so the title is rendered.
+  DefMacro!("\\AASection{}", "\\section{#1}");
+  def_macro_noop("\\Online")?;
 
   DefRegister!("\\aftertext" => Dimension::new(5 * 65536));
   DefRegister!("\\betweenumberspace" => Dimension::new(218453));  // 3.33pt
@@ -380,21 +393,21 @@ LoadDefinitions!({
   DefRegister!("\\headlineindent" => Dimension!("1.166cm"));
   DefRegister!("\\logodepth" => Dimension!("1.3cm"));
 
-  DefMacro!("\\leftlegendglue", "");
-  DefMacro!("\\capstrut", "");
-  DefMacro!("\\captionstyle", "");
-  DefMacro!("\\clearelargs", "");
-  DefMacro!("\\errorref", "");
+  def_macro_noop("\\leftlegendglue")?;
+  def_macro_noop("\\capstrut")?;
+  def_macro_noop("\\captionstyle")?;
+  def_macro_noop("\\clearelargs")?;
+  def_macro_noop("\\errorref")?;
   DefMacro!("\\floatcounterend", ".");
   DefMacro!("\\sectcounterend", ".");
   DefMacro!("\\floatlegendstyle", "\\bf");
-  DefMacro!("\\thisbottomragged", "");
+  def_macro_noop("\\thisbottomragged")?;
   DefMacro!("\\ts", "\\thinspace");
   DefMacro!("\\fnmsep", "\\unskip$^,$");
-  DefMacro!("\\makeheadbox", "");
+  def_macro_noop("\\makeheadbox")?;
   DefMacro!("\\tnote{}", "\\footnote{#1}");
   DefMacro!("\\at", "@");
-  DefMacro!("\\citeyearpar{}", "");
+  def_macro_noop("\\citeyearpar{}")?;
 
   // Perl L348-349: \bib@field@default@adsurl — ADS URL in bibitem.
   // Verbatim arg lets % survive (A&A adsurls often contain %26 = &).

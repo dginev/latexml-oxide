@@ -2,6 +2,7 @@
 //! Perl: geometry.sty.ltxml
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   // Dependencies — Perl L22-25
   RequirePackage!("keyval");
@@ -10,9 +11,9 @@ LoadDefinitions!({
   RequirePackage!("ifxetex");
 
   // All geometry macros are no-ops (page layout not meaningful for XML)
-  DefMacro!("\\geometry{}", None);
-  DefMacro!("\\newgeometry{}", None);
-  DefMacro!("\\restoregeometry", None);
-  DefMacro!("\\savegeometry{}", None);
-  DefMacro!("\\loadgeometry{}", None);
+  def_macro_noop("\\geometry{}")?;
+  def_macro_noop("\\newgeometry{}")?;
+  def_macro_noop("\\restoregeometry")?;
+  def_macro_noop("\\savegeometry{}")?;
+  def_macro_noop("\\loadgeometry{}")?;
 });

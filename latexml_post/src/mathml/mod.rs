@@ -1221,17 +1221,20 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
           }]
         },
         _ => {
-          // Other elements: include as mtext with clone
-          let text = node.get_content();
-          let text = text.replace(|c: char| c.is_whitespace(), "\u{00A0}");
+          // Unknown element (e.g. ltx:ref, ltx:bibref, ltx:inline-block,
+          // …): preserve the raw subtree inside the mtext so the XSLT
+          // can transform it (ltx:ref → HTML <a>, etc.). Perl
+          // `pmml_text_aux` (MathML.pm L1063-1073) clones the whole
+          // node into the returned mtext; we eagerly materialize an
+          // owned subtree, threading `doc` through so URI→prefix
+          // resolution recovers the canonical `ltx:` prefix on
+          // default-namespace elements.
+          let cloned = rebuild_text_subtree_with_doc(node, true, Some(doc))
+            .unwrap_or_else(|| NodeData::Text("\u{00A0}".to_string()));
           vec![NodeData::Element {
             tag:        "m:mtext".to_string(),
             attributes: None,
-            children:   vec![NodeData::Text(if text.is_empty() {
-              "\u{00A0}".to_string()
-            } else {
-              text
-            })],
+            children:   vec![cloned],
           }]
         },
       }
@@ -1258,73 +1261,109 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
 /// limitation as the enclosing pmml_text_aux path: nested math in
 /// mtext is uncommon, and the XSLT stage can still render it).
 pub fn convert_xm_text_content(
-  _doc: &PostDocument,
+  doc: &PostDocument,
   node: &Node,
   convert_spaces: bool,
 ) -> Vec<NodeData> {
-  use libxml::tree::NodeType;
-
-  fn rebuild(node: &Node, convert_spaces: bool) -> Option<NodeData> {
-    match node.get_type() {
-      Some(NodeType::TextNode) => {
-        let mut text = node.get_content();
-        if convert_spaces {
-          if text.starts_with(char::is_whitespace) {
-            text = format!("\u{00A0}{}", text.trim_start());
-          }
-          if text.ends_with(char::is_whitespace) {
-            text = format!("{}\u{00A0}", text.trim_end());
-          }
-        }
-        Some(NodeData::Text(text))
-      },
-      Some(NodeType::ElementNode) => {
-        let tag = {
-          let local = node.get_name();
-          match node.get_namespace() {
-            Some(ns) => {
-              let prefix = ns.get_prefix();
-              if prefix.is_empty() {
-                local
-              } else {
-                format!("{prefix}:{local}")
-              }
-            },
-            None => local,
-          }
-        };
-        // Copy attributes, skipping internal `_*`, `xml:id`, and `fragid`.
-        // Matches Perl convertXMTextContent (Post.pm L479-483); the
-        // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
-        // which this helper does not receive — drop both here rather
-        // than forge a wrong id.
-        let mut attrs: HashMap<String, String> = HashMap::default();
-        for (k, v) in node.get_attributes() {
-          if k.starts_with('_') || k == "xml:id" || k == "fragid" {
-            continue;
-          }
-          attrs.insert(k, v);
-        }
-        let children: Vec<NodeData> = node
-          .get_child_nodes()
-          .iter()
-          .filter_map(|c| rebuild(c, convert_spaces))
-          .collect();
-        Some(NodeData::Element {
-          tag,
-          attributes: if attrs.is_empty() { None } else { Some(attrs) },
-          children,
-        })
-      },
-      _ => None,
-    }
-  }
-
   node
     .get_child_nodes()
     .iter()
-    .filter_map(|c| rebuild(c, convert_spaces))
+    .filter_map(|c| rebuild_text_subtree_with_doc(c, convert_spaces, Some(doc)))
     .collect()
+}
+
+/// Rebuild a libxml2 subtree into owned `NodeData`, dropping internal
+/// `_*`, `xml:id`, and `fragid` attributes. Shared between
+/// `convert_xm_text_content` (Perl `convertXMTextContent`,
+/// Post.pm L456-489) and `pmml_text_aux` for cases where Perl
+/// calls `cloneNode($node, 'nest')` (MathML.pm L1073) — i.e. when an
+/// unhandled element like `ltx:ref` appears inside a text-mode
+/// fragment and must survive into the output so the XSLT can
+/// transform it (e.g. `ltx:ref` → `<a>`).
+pub fn rebuild_text_subtree(node: &Node, convert_spaces: bool) -> Option<NodeData> {
+  rebuild_text_subtree_with_doc(node, convert_spaces, None)
+}
+
+/// Same as `rebuild_text_subtree`, but consults the post-document's
+/// namespace map to resolve elements whose source `xmlns="…"` carries
+/// an empty prefix. `add_nodes` only emits elements whose tag is
+/// `prefix:local`; without a prefix the element is dropped with a
+/// `malformed:namespace` warning. libxml2 reports an empty
+/// `Namespace::get_prefix()` for the default-namespace branch even
+/// when the doc has a `ltx:` prefix declared elsewhere, so we
+/// reverse-lookup the URI in `PostDocument::namespaces` to recover
+/// the canonical prefix.
+pub fn rebuild_text_subtree_with_doc(
+  node: &Node,
+  convert_spaces: bool,
+  doc: Option<&PostDocument>,
+) -> Option<NodeData> {
+  use libxml::tree::NodeType;
+  match node.get_type() {
+    Some(NodeType::TextNode) => {
+      let mut text = node.get_content();
+      if convert_spaces {
+        if text.starts_with(char::is_whitespace) {
+          text = format!("\u{00A0}{}", text.trim_start());
+        }
+        if text.ends_with(char::is_whitespace) {
+          text = format!("{}\u{00A0}", text.trim_end());
+        }
+      }
+      Some(NodeData::Text(text))
+    },
+    Some(NodeType::ElementNode) => {
+      let tag = {
+        let local = node.get_name();
+        match node.get_namespace() {
+          Some(ns) => {
+            let prefix = ns.get_prefix();
+            if !prefix.is_empty() {
+              format!("{prefix}:{local}")
+            } else {
+              // Default-namespace element. add_nodes won't accept a
+              // tag without prefix — reverse-resolve URI → prefix
+              // via the post-document's namespace map.
+              let uri = ns.get_href();
+              match doc.and_then(|d| {
+                d.namespaces
+                  .iter()
+                  .find(|(p, u)| !p.is_empty() && **u == uri)
+                  .map(|(p, _)| p.clone())
+              }) {
+                Some(p) => format!("{p}:{local}"),
+                None => local,
+              }
+            }
+          },
+          None => local,
+        }
+      };
+      // Copy attributes, skipping internal `_*`, `xml:id`, and `fragid`.
+      // Matches Perl convertXMTextContent (Post.pm L479-483); the
+      // `fragid → xml:id` remap requires the MathProcessor's IDSuffix
+      // which this helper does not receive — drop both here rather
+      // than forge a wrong id.
+      let mut attrs: HashMap<String, String> = HashMap::default();
+      for (k, v) in node.get_attributes() {
+        if k.starts_with('_') || k == "xml:id" || k == "fragid" {
+          continue;
+        }
+        attrs.insert(k, v);
+      }
+      let children: Vec<NodeData> = node
+        .get_child_nodes()
+        .iter()
+        .filter_map(|c| rebuild_text_subtree_with_doc(c, convert_spaces, doc))
+        .collect();
+      Some(NodeData::Element {
+        tag,
+        attributes: if attrs.is_empty() { None } else { Some(attrs) },
+        children,
+      })
+    },
+    _ => None,
+  }
 }
 
 /// Unwrap an mrow if it has no attributes.

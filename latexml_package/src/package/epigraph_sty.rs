@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   TeX!(
     r#"""
@@ -78,7 +79,7 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\epigraphhead[]{}", "#1");
-  DefMacro!("\\dropchapter{}", "");
-  DefMacro!("\\undodrop", "");
-  DefMacro!("\\cleartoevenpage", "");
+  def_macro_noop("\\dropchapter{}")?;
+  def_macro_noop("\\undodrop")?;
+  def_macro_noop("\\cleartoevenpage")?;
 });

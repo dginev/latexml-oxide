@@ -212,11 +212,11 @@ fn decode_color(expression: &str) -> Color {
       if !blend.is_empty() {
         format!("{}{}", mix_part, blend)
       } else {
-        mix_part.to_string()
+        mix_part.clone()
       }
     })
   } else {
-    mix_part.to_string()
+    mix_part
   };
 
   // Apply mix expressions: !pct!name...
@@ -562,6 +562,22 @@ LoadDefinitions!({
 
   RequirePackage!("color");
 
+  // xcolor.sty L1035: \def\@ifundefinedcolor#1{\@ifundefined{\@backslashchar color@#1}}
+  // Used by menukeys and other downstream packages to test if a color
+  // name is already defined. We don't materialize color@<name> CSes;
+  // always take the "undefined" branch (allows downstream packages to
+  // (re)define their own color themes without "already defined" errors).
+  // Witnesses 2405.19976, 2406.12553.
+  DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
+
+  // xcolor.sty L815: `\InputIfFileExists{mathcolor.ltx}` — pulls in
+  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap.
+  // The raw .ltx isn't on Rust's load path, so authors writing
+  // `\mathcolor{red}{x+y}` hit Error:undefined. Stub directly as the
+  // group form `{\color{<color>} <expr>}` (semantically identical in
+  // math). Witness 2402.00349.
+  DefMacro!("\\mathcolor[]{}{}", "{\\color[#1]{#2}#3}");
+
   // Ignorable options
   for option in &[
     "natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray",
@@ -596,7 +612,7 @@ LoadDefinitions!({
   });
   DeclareOption!("hyperref", None);
 
-  DefMacro!("\\GetGinDriver", None);
+  def_macro_noop("\\GetGinDriver")?;
   DefMacro!("\\GinDriver", "LaTeXML");
 
   DefRegister!("\\tracingcolors", Number!(0));
@@ -618,9 +634,9 @@ LoadDefinitions!({
   DefMacro!("\\paperquality", "1");
 
   // Selecting color model (stubs)
-  DefMacro!("\\selectcolormodel{}", None);
+  def_macro_noop("\\selectcolormodel{}")?;
   DefMacro!("\\XC@tgt@mod {}", "#1");
-  DefMacro!("\\substitutecolormodel{}{}", None);
+  def_macro_noop("\\substitutecolormodel{}{}")?;
 
   // \xglobal@list and \xglobal mechanism
   // Perl: DefMacroI('\xglobal@list', undef, '\definecolor\definecolors\definecolorset\colorlet...')
@@ -922,13 +938,13 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefMacro!("\\colorblend", None); // stub
+  def_macro_noop("\\colorblend")?; // stub
 
   // \maskcolors (ignored per Perl)
   DefPrimitive!("\\maskcolors[]{}", sub[(_model, _color)] {
     Ok(Vec::new())
   });
-  DefMacro!("\\colormask", None);
+  def_macro_noop("\\colormask")?;
 
   // Color series — full 7-arg form, mirroring Perl xcolor.sty.ltxml L651:
   //   DefPrimitive('\definecolorseries{}{}{}[]{}[]{}', sub { ... });
@@ -1219,8 +1235,8 @@ LoadDefinitions!({
   RawTeX!("\\@rowcolorstrue");
 
   // Perl L723-726: hook xcolor row commands into tabular lifecycle
-  DefMacro!("\\@xcolor@tabular@before", None);
-  DefMacro!("\\@xcolor@row@after", None);
+  def_macro_noop("\\@xcolor@tabular@before")?;
+  def_macro_noop("\\@xcolor@row@after")?;
   {
     let cs = T_CS!("\\@tabular@row@after");
     let tokens = Tokens!(T_CS!("\\@xcolor@row@after"));

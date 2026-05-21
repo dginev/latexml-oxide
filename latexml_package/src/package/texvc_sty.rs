@@ -152,6 +152,6 @@ LoadDefinitions!({
   DefMacro!("\\bold{}", "\\mathbf{#1}");
 
   // Color — Perl L155-183
-  DefMacro!("\\pagecolor{}", "");
-  DefMacro!("\\definecolor{}{}{}", "");
+  def_macro_noop("\\pagecolor{}")?;
+  def_macro_noop("\\definecolor{}{}{}")?;
 });

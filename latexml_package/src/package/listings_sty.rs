@@ -308,41 +308,48 @@ fn lst_regexp(chars: &str) -> String { regex::escape(&lst_deslash(chars)) }
 /// The format is `{open}{close}` where the two TeX groups contain the delimiters.
 /// First group = open delimiter, second group = close delimiter.
 fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
-  let mut groups: Vec<Vec<Token>> = Vec::new();
-  let mut level: i32 = 0;
-  let mut current_group: Vec<Token> = Vec::new();
-  for tok in delims.unlist_ref() {
-    if *tok == T_BEGIN!() {
-      if level > 0 {
-        current_group.push(*tok);
+  // Perl listings.sty.ltxml:629 lst_splitDelimiters
+  //   my @t  = grep { !Equals($_, T_BEGIN) } $delims->unlist;
+  //   my @t1 = ();
+  //   if (scalar(@t) == 2) { @t1 = ($t[0]); @t = ($t[1]); }
+  //   else {
+  //     while (@t && !Equals($t[0], T_END)) { push(@t1, shift(@t)); }
+  //     @t = grep { !Equals($_, T_END) } @t; }
+  //   return (Tokens(@t1), Tokens(@t));
+  // Two-token short-circuit is what handles bare `<>` (open='<', close='>'),
+  // which is how the XML language registers its `tag=**[s]<>` delimiter.
+  let toks: Vec<Token> = delims
+    .unlist_ref()
+    .iter()
+    .filter(|t| **t != T_BEGIN!())
+    .copied()
+    .collect();
+  let (open_toks, close_toks): (Vec<Token>, Vec<Token>) = if toks.len() == 2 {
+    (vec![toks[0]], vec![toks[1]])
+  } else {
+    let mut it = toks.into_iter();
+    let mut open = Vec::new();
+    let mut close = Vec::new();
+    let mut saw_end = false;
+    for t in it.by_ref() {
+      if t == T_END!() {
+        saw_end = true;
+        break;
       }
-      level += 1;
-    } else if *tok == T_END!() {
-      level -= 1;
-      if level == 0 {
-        groups.push(std::mem::take(&mut current_group));
-      } else if level > 0 {
-        current_group.push(*tok);
-      }
-    } else if level > 0 {
-      current_group.push(*tok);
-    } else {
-      // Tokens outside groups go to a trailing group
-      current_group.push(*tok);
+      open.push(t);
     }
-  }
-  // If there are ungrouped tokens, add them as a final group
-  if !current_group.is_empty() {
-    groups.push(current_group);
-  }
-  let open_str = groups
-    .first()
-    .map(|toks| lst_deslash(&Tokens::new(toks.clone()).to_string()))
-    .unwrap_or_default();
-  let close_str = groups
-    .get(1)
-    .map(|toks| lst_deslash(&Tokens::new(toks.clone()).to_string()))
-    .unwrap_or_default();
+    if saw_end {
+      for t in it {
+        if t == T_END!() {
+          continue;
+        }
+        close.push(t);
+      }
+    }
+    (open, close)
+  };
+  let open_str = lst_deslash(&Tokens::new(open_toks).to_string());
+  let close_str = lst_deslash(&Tokens::new(close_toks).to_string());
   (open_str, close_str)
 }
 
@@ -445,12 +452,41 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
   }
 }
 
-/// Perl: lstSetClassWords — set words belonging to a class (replacing existing).
+/// Perl listings.sty.ltxml:506-513 lstSetClassWords
+///   First delete existing words assigned to $class, then add the new set.
 fn lst_set_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>) {
-  // First delete existing words for this class
-  // (simplified — in full Perl, iterates all words and deletes those with matching class)
-  // Then add new words
+  lst_clear_class_words(class, false);
   lst_add_class_words(class, words, prefix);
+}
+
+/// Mirrors Perl listings.sty.ltxml:531-537 lstDeleteClass
+///   foreach my $word (keys %$wordslist) {
+///     delete $$wordslist{$word}{class}
+///       if (($$wordslist{$word}{class} || '') eq $class)
+///       || (($$wordslist{$word}{class} || '') =~ /^\Q$class\E\d/); }
+/// `digit_suffix=true` enables the trailing-digit match (e.g. `class='keywords'`
+/// also matches 'keywords1', 'keywords2', …); lstSetClassWords uses only the
+/// exact-equals branch (digit_suffix=false).
+fn lst_clear_class_words(class: &str, digit_suffix: bool) {
+  let words: Vec<String> = match state::lookup_value("LST_WORD_LIST") {
+    Some(Stored::Strings(list)) => list.iter().map(|sym| arena::to_string(*sym)).collect(),
+    _ => return,
+  };
+  for word in &words {
+    let key = s!("LST_WORDS@{word}@class");
+    let assigned = state::with_value(&key, |v| v.map(|s| s.to_string()).unwrap_or_default());
+    let assigned_str = assigned.as_str();
+    let matches = assigned_str == class
+      || (digit_suffix
+        && assigned_str.starts_with(class)
+        && assigned_str[class.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_ascii_digit()));
+    if matches {
+      state::assign_value(&key, Stored::None, None);
+    }
+  }
 }
 
 /// Perl: lstAddClassWords — add words to a class.
@@ -491,12 +527,13 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
   }
 }
 
-/// Perl: lstDeleteClass — delete all words belonging to class or class\d.
-fn lst_delete_class(_class: &str) {
-  // Perl iterates LST_WORDS hash and deletes entries matching class.
-  // In Rust, the word list uses individual state keys, so we'd need to iterate LST_WORD_LIST.
-  // For now this is a no-op — keywords accumulate, which matches Perl behavior for texcs
-  // (Perl's lstClearLanguage clears 'textcs' but texcs uses class 'texcss', so it survives).
+/// Perl listings.sty.ltxml:531-537 lstDeleteClass — delete words belonging to
+/// `class` OR `class\d` (e.g. 'keywords' clears 'keywords1', 'keywords2', …).
+/// Without this `lstClearLanguage` (called on every `language=` switch) leaves
+/// prior keyword sets attached, so later listings highlight stale keywords from
+/// previously selected languages.
+fn lst_delete_class(class: &str) {
+  lst_clear_class_words(class, true);
 }
 
 /// Perl L617-622: lstDeleteDelimiterKind — delete delimiters whose class starts with `kind`.
@@ -569,13 +606,13 @@ fn lst_add_delimiter(
     .any(|bt| type_str == format!("{bt}i") || type_str == format!("i{bt}"));
   let type_clean = if invisible {
     // Remove first 'i' occurrence
-    let mut s = type_str.clone();
+    let mut s = type_str;
     if let Some(pos) = s.find('i') {
       s.remove(pos);
     }
     s
   } else {
-    type_str.clone()
+    type_str
   };
 
   let delim_str = delims
@@ -603,7 +640,10 @@ fn lst_add_delimiter(
     },
     "s" | "n" => {
       // String/Nested: different open & close delimiters
-      // Use Perl-like token-level splitting for proper brace handling
+      // Use Perl-like token-level splitting for proper brace handling.
+      // For type='n' Perl listings.sty.ltxml:583 also sets `$keys{nested} = 1`
+      // — registered below as LST_DELIM@<open>@nested so lst_process_internal
+      // can re-allow the same open inside a non-recursive nested span.
       if let Some(delim_toks) = &delims {
         let (open, close) = lst_split_delimiters(delim_toks);
         let close_re = regex::escape(&close);
@@ -611,7 +651,7 @@ fn lst_add_delimiter(
       } else {
         let open = lst_deslash(&delim_str);
         let close_re = regex::escape(&open);
-        (open.clone(), open.clone(), close_re, String::new())
+        (open.clone(), open, close_re, String::new())
       }
     },
     "b" => {
@@ -687,6 +727,11 @@ fn lst_add_delimiter(
     state::assign_value(&key_recursive, Stored::Bool(recursive), None);
     if invisible {
       state::assign_value(&key_invisible, Stored::Bool(true), None);
+    }
+    if type_clean == "n" {
+      // Perl listings.sty.ltxml:583 sets `$keys{nested} = 1` for type='n'.
+      let key_nested = s!("LST_DELIM@{open_str}@nested");
+      state::assign_value(&key_nested, Stored::Bool(true), None);
     }
     if !quoted.is_empty() {
       let key_quoted = s!("LST_DELIM@{open_str}@quoted");
@@ -1041,6 +1086,12 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
       all_delim_keys.push("$".to_string());
     }
   }
+  // Perl listings.sty.ltxml:1283
+  //   local $LaTeXML::DELIM_RE = join('|', map { $$delimiters{$_}{open} } sort keys %$delimiters);
+  // The lexical sort matters: leftmost-first regex alternation means short
+  // prefixes that sort before longer ones win, e.g. `<` (XML tag) is matched
+  // before `<!--` (XML comment) so a stray `<!--` is classified as a tag.
+  all_delim_keys.sort();
 
   let mut delim_opens: Vec<String> = Vec::new();
   let mut escape_opens: Vec<String> = Vec::new();
@@ -1143,7 +1194,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     lst_process_start_line(&mut ctx);
   }
 
-  lst_process_internal(&mut ctx, None);
+  lst_process_internal(&mut ctx, None, None);
 
   if mode != "inline" {
     lst_process_end_line(&mut ctx);
@@ -1220,7 +1271,17 @@ fn lst_do_number(ctx: &LstContext, is_empty: bool) -> Tokens {
 /// Perl: lstProcess_internal — the recursive descent parser.
 /// Order matches Perl: end_re, literate, delimiters, identifiers, newline, formfeed, whitespace,
 /// quoted, default
-fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
+fn lst_process_internal(
+  ctx: &mut LstContext,
+  end_re: Option<&Regex>,
+  outer_class: Option<&str>,
+) {
+  // Perl listings.sty.ltxml:1411
+  //   my $classname = ($outerclass ? undef : $$words{$lookup}{class} || 'identifiers');
+  // When recursing inside a delimited class (string, tag, comment, …) inner
+  // identifiers/keywords are emitted as plain tokens — only nested delimiters
+  // (e.g. strings inside tags) re-wrap.
+  let _ = outer_class;
   let mut prev_listing = String::new();
   // Precompile static regexes
   let newline_re = Regex::new(r"^\s*?\n").unwrap();
@@ -1306,21 +1367,20 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
         ctx.listing = ctx.listing[m.end()..].to_string();
         ctx.colnum += open.len() as i64;
 
-        // Look up delimiter info
+        // Look up delimiter info. The `invisible` flag is already applied
+        // at delimiter-registration time (lst_add_delimiter sets empty
+        // open_tex / close_tex when invisible, so lst_class_begin /
+        // lst_class_end never emit the delim chars). No runtime check
+        // needed here — Perl lstProcess_internal also has no separate
+        // gate at this point.
         let class_key = s!("LST_DELIM@{open}@class");
         let close_key = s!("LST_DELIM@{open}@close");
-        let invisible_key = s!("LST_DELIM@{open}@invisible");
         let classname = state::lookup_value(&class_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
         let close_re_str = state::lookup_value(&close_key)
           .map(|v| v.to_string())
           .unwrap_or_default();
-        // Perl: invisible flag controls whether delimiters are shown (TODO: use in output)
-        let _invisible = matches!(
-          state::lookup_value(&invisible_key),
-          Some(Stored::Bool(true))
-        );
 
         // Perl: lstProcessPush(lstClassBegin($classname))
         // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
@@ -1384,7 +1444,39 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
                 ctx.space_token = T_CS!("\\@lst@visible@space");
               }
               if !is_recursive {
-                ctx.delim_re = ctx.escape_re.clone();
+                // Perl listings.sty.ltxml:1396-1398
+                //   local $DELIM_RE = ($$delim{recursive}
+                //     ? $DELIM_RE
+                //     : join('|', grep { $_ } $ESCAPE_RE,
+                //                            $$delim{nested} && $$delim{open}));
+                // For type='n' nested delims we still allow the SAME opener to
+                // match recursively (so `{foo {bar} baz}`-style nesting works).
+                let nested_key = s!("LST_DELIM@{open}@nested");
+                let is_nested = matches!(
+                  state::lookup_value(&nested_key),
+                  Some(Stored::Bool(true))
+                );
+                let mut alternatives: Vec<String> = Vec::new();
+                if let Some(ref er) = ctx.escape_re {
+                  let s = er.as_str().trim_start_matches("^(").trim_end_matches(')');
+                  if !s.is_empty() {
+                    alternatives.push(s.to_string());
+                  }
+                }
+                if is_nested {
+                  let open_key = s!("LST_DELIM@{open}@open");
+                  if let Some(Stored::String(open_re_sym)) = state::lookup_value(&open_key) {
+                    let open_re = arena::with(open_re_sym, |s| s.to_string());
+                    if !open_re.is_empty() {
+                      alternatives.push(open_re);
+                    }
+                  }
+                }
+                ctx.delim_re = if alternatives.is_empty() {
+                  None
+                } else {
+                  Regex::new(&format!("^({})", alternatives.join("|"))).ok()
+                };
                 ctx.id_re = None;
               }
               // Perl: local $QUOTED_RE = join('|', grep { $_ } $QUOTED_RE, $$delim{quoted});
@@ -1406,7 +1498,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
                   }
                 }
               }
-              lst_process_internal(ctx, Some(&close_re));
+              lst_process_internal(ctx, Some(&close_re), Some(&classname));
               ctx.delim_re = saved_delim;
               ctx.id_re = saved_id;
               ctx.quoted_re = saved_quoted;
@@ -1439,12 +1531,22 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           };
 
           // Look up word class
+          // Perl listings.sty.ltxml:1411
+          //   my $classname = ($outerclass ? undef : $$words{$lookup}{class} || 'identifiers');
+          // Inside a recursive delim wrapper (e.g. the `tags<>` span), inner
+          // identifiers and keywords are emitted without their own class wrap.
           let word_class_key = s!("LST_WORDS@{lookup}@class");
           let raw_class = state::lookup_value(&word_class_key);
-          let classname = raw_class
-            .map(|v| v.to_string())
-            .filter(|s| !s.is_empty())
-            .unwrap_or_else(|| "identifiers".to_string());
+          let classname: Option<String> = if outer_class.is_some() {
+            None
+          } else {
+            Some(
+              raw_class
+                .map(|v| v.to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "identifiers".to_string()),
+            )
+          };
 
           // Rescan word characters
           let word_tokens: Vec<Token> = word
@@ -1468,20 +1570,28 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>) {
           // Perl: if excludeslash, move the "\" outside of the styling
           let mut pre_tokens: Vec<Token> = Vec::new();
           let mut styled_tokens = word_tokens;
-          let excludeslash_key = s!("LST_CLASSES@{classname}@excludeslash");
-          let has_excludeslash = match state::lookup_value(&excludeslash_key) {
-            Some(Stored::Bool(true)) => true,
-            Some(Stored::String(s)) => arena::with(s, |v| v == "true"),
-            _ => false,
-          };
-          if has_excludeslash && !styled_tokens.is_empty() {
-            pre_tokens.push(styled_tokens.remove(0));
+          if let Some(ref cname) = classname {
+            let excludeslash_key = s!("LST_CLASSES@{cname}@excludeslash");
+            let has_excludeslash = match state::lookup_value(&excludeslash_key) {
+              Some(Stored::Bool(true)) => true,
+              Some(Stored::String(s)) => arena::with(s, |v| v == "true"),
+              _ => false,
+            };
+            if has_excludeslash && !styled_tokens.is_empty() {
+              pre_tokens.push(styled_tokens.remove(0));
+            }
           }
 
           ctx.lsttokens.extend(pre_tokens);
-          ctx.lsttokens.extend(lst_class_begin(&classname));
-          ctx.lsttokens.extend(styled_tokens);
-          ctx.lsttokens.extend(lst_class_end(&classname));
+          if let Some(cname) = classname {
+            ctx.lsttokens.extend(lst_class_begin(&cname));
+            ctx.lsttokens.extend(styled_tokens);
+            ctx.lsttokens.extend(lst_class_end(&cname));
+          } else {
+            // Perl: outerclass branch — emit identifier tokens without their own
+            // class wrap; they live inside the enclosing delim's wrapper.
+            ctx.lsttokens.extend(styled_tokens);
+          }
           continue;
         }
       }
@@ -1763,6 +1873,53 @@ LoadDefinitions!({
   RequireResource!("ltx-listings.css");
   RequirePackage!("textcomp");
 
+  // Stubs for listings.sty internal CSes that language-pack .sty files
+  // (lstlang0.sty .. lstlang3.sty) reference when they raw-load. Our
+  // hand-port implements the public API but skips the listings.sty
+  // body that defines these, so the lang packs' raw-load fires
+  // "undefined" cascades.
+  //
+  // \lst@Key{name}{default}{body} — register a Listings option key. We
+  // don't materialize key registration (lst_activate has its own keyval
+  // parser); stub as no-op.
+  //
+  // \lst@NormedDef takes `\cs` (no braces) + `{val}` and `\def`s \cs
+  // to a normalized form of val. Implementing this faithfully needs a
+  // DefToken parameter type — we use a closure to consume both args
+  // and emit a `\def`. Witness: lstlang3.sty raw-load (3 papers in
+  // Stage-13 v3) → cascade unblocks past these CSes.
+  def_macro_noop("\\lst@Key{}{}{}")?;
+  DefMacro!("\\lst@NormedDef DefToken {}", sub[(cs, val)] {
+    let mut out = vec![T_CS!("\\def"), cs];
+    out.push(T_BEGIN!());
+    out.extend(val.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+
+  // \lstKV@SetIf{val}\ifFlag — listings' boolean key setter (TL
+  // listings.sty L390): `\let \ifFlag \iftrue` if val starts with `t`,
+  // else `\let \ifFlag \iffalse`. Used by `\lst@Key{name}{default}[t]
+  // {\lstKV@SetIf{#1}\ifFlag}`. Note: this does NOT require a prior
+  // `\newif\ifFlag` — it `\let`s the bare CS directly.
+  // Witness: 2405.18399 (matlab-prettifier).
+  DefMacro!("\\lstKV@SetIf{} DefToken", sub[(val, cs)] {
+    let val_s = val.to_string();
+    let target = if val_s.trim_start().chars().next().map(|c| c.to_ascii_lowercase()) == Some('t') {
+      T_CS!("\\iftrue")
+    } else {
+      T_CS!("\\iffalse")
+    };
+    Ok(Tokens!(T_CS!("\\let"), cs, target))
+  });
+
+  // \lst@InstallFamily{...} / @{...} — from lstmisc.sty (L543, L558),
+  // registers a "family" of style keys. We don't materialize this
+  // machinery; stub both forms as no-ops so packages extending
+  // listings (e.g. matlab-prettifier) don't crash on undefined CS.
+  def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
+  def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
+
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
   state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
@@ -2024,15 +2181,15 @@ LoadDefinitions!({
   DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{#1}");
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
-  DefMacro!("\\thename", "");
+  def_macro_noop("\\thename")?;
   DefMacro!("\\lstnumbertyperefname", "line");
-  DefMacro!("\\lst@HRefStepCounter{}", "");
+  def_macro_noop("\\lst@HRefStepCounter{}")?;
   // \lstname — placeholder for the current listing's filename (set inside
   // lstlisting/lstinputlisting bodies via the runtime \def\lstname{...}
   // around L1708-L1717). Pre-define as empty at top level so users can
   // reference it inside \lstset{title=\lstname,...} or other lazy-expansion
   // contexts before any listing has been opened. Driver: 1903.02915 R=1 → R=0.
-  DefMacro!("\\lstname", "");
+  def_macro_noop("\\lstname")?;
 
   // Inline listing constructor
   DefConstructor!("\\@listings@inline {}",
@@ -2336,8 +2493,8 @@ LoadDefinitions!({
     "\\@ifnextchar[{\\@lstdefinelanguage[#1]{#2}}{\\@lstdefinelanguage[#1]{#2}[]{}}");
   Let!(T_CS!("\\lst@definelanguage"), T_CS!("\\lstdefinelanguage"));
 
-  DefPrimitive!("\\lstalias []{} []{}", None);
-  DefPrimitive!("\\lstloadlanguages Semiverbatim", None);
+  def_primitive_noop("\\lstalias []{} []{}")?;
+  def_primitive_noop("\\lstloadlanguages Semiverbatim")?;
 
   //======================================================================
   // Region 9 constructors: Listing line structure
@@ -2617,6 +2774,19 @@ LoadDefinitions!({
     Tokens!()
   });
   // Perl: lstAddDelimiter('delimiter', $_[3], $_[4], $_[5], ...)
+  // Perl listings.sty.ltxml:821-830
+  //   DefMacro('\lst@@delim OptionalMatch:* OptionalMatch:* [] [] Until:\end', sub {
+  //     lstAddDelimiter('delimiter', $_[3], $_[4], $_[5],
+  //       ($_[1] ? (recursive => 1) : ()),
+  //       ($_[2] ? (cummulative => 1) : ())); });
+  // First `*` => recursive (other delimiters still match inside). We deliberately
+  // do NOT propagate `args[0].is_some()` here because the default `alsoletter`
+  // set bundles `@`, `$`, `_` with the alphabet, and recursive ID_RE matching
+  // then greedily swallows the closing delim character (e.g. `>@`-as-identifier
+  // for `\moredelim=**[is]…{@}{@}` in tests/tikz/various_colors.tex). Perl has
+  // the same latent ID_RE bug; until it is patched upstream (or sidestepped by
+  // delimiter-aware character-class scoping) we keep the recursive=false
+  // behavior that this test corpus relies on. Tracked as a parity follow-up.
   DefMacro!("\\lst@@delim OptionalMatch:* OptionalMatch:* [] [] Until:\\end", sub [args] {
     let delims = args[4].clone().owned_tokens();
     lst_add_delimiter("delimiter", &args[2].to_string(), &args[3].to_string(), delims, false);
@@ -2873,10 +3043,15 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // Perl: lstAddDelimiter('delimiter', $_[3], 'tagstyle', $_[4], ...)
+  // Perl: lstAddDelimiter('delimiter', $_[3], 'tagstyle', $_[4],
+  //         ($_[1] ? (recursive => 1) : ()),
+  //         ($_[2] ? (cummulative => 1) : ())); — listings.sty.ltxml:1201-1204.
+  // First `*` => recursive (inner delimiters such as strings still match);
+  // second `*` => cumulative (currently unmodelled).
   DefMacro!("\\lst@@tag OptionalMatch:* OptionalMatch:* [] Until:\\end", sub [args] {
     let delims = args[3].clone().owned_tokens();
-    lst_add_delimiter("delimiter", &args[2].to_string(), "tagstyle", delims, false);
+    let recursive = args[0].is_some();
+    lst_add_delimiter("delimiter", &args[2].to_string(), "tagstyle", delims, recursive);
     Tokens!()
   });
 
@@ -2926,8 +3101,8 @@ LoadDefinitions!({
   // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
   // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
   DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  DefMacro!("\\lst@AddToHook{}{}", "");
-  DefMacro!("\\lst@AddToHookExe{}{}", "");
+  def_macro_noop("\\lst@AddToHook{}{}")?;
+  def_macro_noop("\\lst@AddToHookExe{}{}")?;
   DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
   DefMacro!("\\@lst", "lst");
 

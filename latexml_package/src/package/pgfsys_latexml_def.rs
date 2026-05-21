@@ -550,8 +550,8 @@ LoadDefinitions!({
   // Perl L178-192: \pgfsys@typesetpicturebox
   RawTeX!(r"\def\pgfsys@typesetpicturebox#1{\pgf@ya=\pgf@shift@baseline\relax\advance\pgf@ya by-\pgf@picminy\relax\advance\pgf@picmaxy by-\pgf@picminy\relax\advance\pgf@picmaxx by-\pgf@picminx\relax\setbox#1=\hbox{\hskip-\pgf@picminx\lower\pgf@picminy\box#1}\ht#1=\pgf@picmaxy\wd#1=\pgf@picmaxx\dp#1=0pt\leavevmode\lxSVG@insertpicture{\box#1\lxSVG@closescope}}");
 
-  DefMacro!("\\pgfsys@beginpicture", "");
-  DefMacro!("\\pgfsys@endpicture", "");
+  def_macro_noop("\\pgfsys@beginpicture")?;
+  def_macro_noop("\\pgfsys@endpicture")?;
 
 
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context
@@ -786,7 +786,7 @@ LoadDefinitions!({
       )), None)?;
       document.insert_element("svg:path", Vec::new(), Some(string_map!(
         "id" => format!("pgfpath{}", obj),
-        "d" => d.clone()
+        "d" => d
       )))?;
       document.close_element("svg:clipPath")?;
       let mut use_attrs = string_map!(
@@ -1320,7 +1320,7 @@ LoadDefinitions!({
       )), None)?;
       // <svg:g stroke="{color}" fill="{color}">
       document.open_element("svg:g", Some(string_map!(
-        "stroke" => color.clone(),
+        "stroke" => color,
         "fill" => color
       )), None)?;
       // <svg:use xlink:href="#pgfsym{name}"/>
@@ -1461,7 +1461,7 @@ LoadDefinitions!({
   // single L1448 entry.
   DefMacro!("\\pgfsys@invoke{}", "#1", locked => true);
 
-  DefMacro!("\\pgfsys@markposition{}", "");
+  def_macro_noop("\\pgfsys@markposition{}")?;
 
   //===================================================================
   // 13. Invisibility
@@ -1654,8 +1654,8 @@ LoadDefinitions!({
     let fy = floatformat(pgfy * 8.0 / (endpos * 16.0) + 0.5);
 
     let shading_cs = T_CS!(format!("\\@pgfshading{}!", name));
-    let fx_clone = fx.clone();
-    let fy_clone = fy.clone();
+    let fx_clone = fx;
+    let fy_clone = fy;
     let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| {
       let objcount = svg_next_object();
       let fx_c = fx_clone.clone();

@@ -32,11 +32,11 @@ LoadDefinitions!({
     Digest!("\\Previewtrue")?;
   });
 
-  DefMacro!("\\PreviewMacro OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewEnvironment OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewSnarfEnvironment OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewOpen OptionalMatch:* []{}", None);
-  DefMacro!("\\PreviewClose OptionalMatch:* []{}", None);
+  def_macro_noop("\\PreviewMacro OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewEnvironment OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewSnarfEnvironment OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewOpen OptionalMatch:* []{}")?;
+  def_macro_noop("\\PreviewClose OptionalMatch:* []{}")?;
 
   DefEnvironment!("{preview}", "#body");
   DefEnvironment!("{nopreview}", "#body");

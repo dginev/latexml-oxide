@@ -1,10 +1,11 @@
 use crate::prelude::*;
 
+
 LoadDefinitions!({
   DefRegister!("\\@bibunitauxcnt", Number::new(0));
   DefMacro!("\\bu@unitname", None, "bu\\the\\@bibunitauxcnt");
-  DefMacro!("\\bu@bibdata", "");
-  DefMacro!("\\bu@bibstyle", "");
+  def_macro_noop("\\bu@bibdata")?;
+  def_macro_noop("\\bu@bibstyle")?;
 
   DeclareOption!("globalcitecopy", {
     AssignValue!("CITE_UNIT_GLOBAL" => true);

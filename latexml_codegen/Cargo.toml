@@ -11,10 +11,20 @@ name = "latexml_codegen"
 proc-macro = true
 
 [dependencies]
-syn = "1.0"
+syn = "2"
 proc-macro2 = "1.0.0"
 quote = "1.0"
 once_cell = "1.17.0"
-regex = "1.7.1"
+# Trimmed regex unicode features (DEP-10, 2026-05-18). Audit found we
+# use `\p{Latin}` / `\p{Greek}` (unicode-script), `\p{Lu}` / `\p{N}`
+# (unicode-gencat), `\w` (unicode-perl), `(?i)` (unicode-case). The
+# `unicode-age` / `unicode-bool` / `unicode-segment` subfeatures are
+# unused; dropping them shrinks regex-syntax + regex-automata tables.
+regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
 glob = "0.3"
-latexml_core= { path = "../latexml_core" }
+# Enable `codegen` feature so `latexml_core` exposes its
+# `impl ToTokens for ...` blocks (used by our `quote!` invocations to
+# splice runtime values into generated code). Audit DEP-14 (2026-05-18):
+# resolver v2 keeps proc-macro features isolated, so the runtime
+# `latexml_core` does NOT inherit this feature.
+latexml_core = { path = "../latexml_core", features = ["codegen"] }

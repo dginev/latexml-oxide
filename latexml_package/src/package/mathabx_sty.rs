@@ -1,13 +1,28 @@
 use crate::prelude::*;
 
+/// Runtime helper for the trivial `DefMath!` shape used 170+ times in
+/// mathabx (DEP-17b, mirrors DEP-15/DEP-17 approach). The macro arm
+/// expands at compile time into ~1.1 KiB of `.text` per invocation;
+/// routing through this helper drops `load_definitions` size at the
+/// cost of a runtime `parse_prototype` call per entry — paid once at
+/// engine bootstrap.
+fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>) -> Result<()> {
+  let (cs_tok, params) = parse_prototype(cs, true)?;
+  let mut opts = MathPrimitiveOptions::default();
+  if let Some(r) = role { opts.role = Some(r.to_string()); }
+  if let Some(m) = meaning { opts.meaning = Some(m.to_string()); }
+  def_math(cs_tok, params, present.to_string(), opts)?;
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //======================================================================
   // Specials  (matha/mathb)
   // These are intended to overlay to show negation,
   // but they're not going to work well for that.
-  DefMath!("\\notsign",    "|", role => "OPERATOR", meaning => "not");
-  DefMath!("\\varnotsign", "/", role => "OPERATOR", meaning => "not");
+  def_math_sym("\\notsign", "|", Some("OPERATOR"), Some("not"))?;
+  def_math_sym("\\varnotsign", "/", Some("OPERATOR"), Some("not"))?;
   // \changenotsign — Perl mathabx.sty.ltxml L24-26 is a DefPrimitive that
   // emits an Info('unexpected', '\changenotsign', ...,
   // "The \changenotsign operation of mathabx is not implemented.").
@@ -28,10 +43,10 @@ LoadDefinitions!({
   //   \times, \div
   //   \cdot, \circ
   //   *, \ast
-  DefMath!("\\asterisk", "\u{2217}", role => "MULOP");
+  def_math_sym("\\asterisk", "\u{2217}", Some("MULOP"), None)?;
   // DefMath('\coasterisk',Tokens());
-  DefMath!("\\ltimes", "\u{22C9}", role => "MULOP", meaning => "left-normal-factor-semidirect-product");
-  DefMath!("\\rtimes", "\u{22CA}", role => "MULOP", meaning => "right-normal-factor-semidirect-product");
+  def_math_sym("\\ltimes", "\u{22C9}", Some("MULOP"), Some("left-normal-factor-semidirect-product"))?;
+  def_math_sym("\\rtimes", "\u{22CA}", Some("MULOP"), Some("right-normal-factor-semidirect-product"))?;
   //   \diamond, \bullet
   //   \star
   DefMath!("\\varstar", None, "\u{2736}", role => "MULOP");
@@ -42,24 +57,24 @@ LoadDefinitions!({
 
   //======================================================================
   // Unusual binary operators (mathb)
-  DefMath!("\\dotplus",  "\u{2214}", role => "ADDOP");
-  DefMath!("\\dotdiv",   "\u{2238}", role => "MULOP");
-  DefMath!("\\dottimes", "\u{2A30}", role => "MULOP");
-  DefMath!("\\divdot",   "\u{2A2A}", role => "MULOP");
-  DefMath!("\\udot",     "\u{22C5}", role => "MULOP");    // Same as \cdot, but should shift to left
-  DefMath!("\\square",   "\u{25A1}", role => "MULOP");
-  DefMath!("\\Asterisk", "\u{273D}", role => "MULOP");
-  DefMath!("\\bigast",   "\u{273D}", role => "MULOP");
+  def_math_sym("\\dotplus", "\u{2214}", Some("ADDOP"), None)?;
+  def_math_sym("\\dotdiv", "\u{2238}", Some("MULOP"), None)?;
+  def_math_sym("\\dottimes", "\u{2A30}", Some("MULOP"), None)?;
+  def_math_sym("\\divdot", "\u{2A2A}", Some("MULOP"), None)?;
+  def_math_sym("\\udot", "\u{22C5}", Some("MULOP"), None)?;    // Same as \cdot, but should shift to left
+  def_math_sym("\\square", "\u{25A1}", Some("MULOP"), None)?;
+  def_math_sym("\\Asterisk", "\u{273D}", Some("MULOP"), None)?;
+  def_math_sym("\\bigast", "\u{273D}", Some("MULOP"), None)?;
   // DefMath('\coAsterisk',Tokens());
   // DefMath('\bigcoast',Tokens());
-  DefMath!("\\circplus",      "\u{2A22}", role => "MULOP");
-  DefMath!("\\pluscirc",      "\u{2295}", role => "MULOP");    // Not quite right glyph
-  DefMath!("\\convolution",   "\u{2733}", role => "MULOP");
-  DefMath!("\\divideontimes", "\u{22C7}", role => "MULOP");
-  DefMath!("\\blackdiamond",  "\u{25C6}", role => "MULOP");
-  DefMath!("\\sqbullet",      "\u{2BC0}", role => "MULOP");
-  DefMath!("\\bigstar",       "\u{1F7CA}", role => "MULOP");
-  DefMath!("\\bigvarstar",    "\u{1F7CC}", role => "MULOP");
+  def_math_sym("\\circplus", "\u{2A22}", Some("MULOP"), None)?;
+  def_math_sym("\\pluscirc", "\u{2295}", Some("MULOP"), None)?;    // Not quite right glyph
+  def_math_sym("\\convolution", "\u{2733}", Some("MULOP"), None)?;
+  def_math_sym("\\divideontimes", "\u{22C7}", Some("MULOP"), None)?;
+  def_math_sym("\\blackdiamond", "\u{25C6}", Some("MULOP"), None)?;
+  def_math_sym("\\sqbullet", "\u{2BC0}", Some("MULOP"), None)?;
+  def_math_sym("\\bigstar", "\u{1F7CA}", Some("MULOP"), None)?;
+  def_math_sym("\\bigvarstar", "\u{1F7CC}", Some("MULOP"), None)?;
 
   //======================================================================
   // Usual relations (matha)
@@ -67,59 +82,57 @@ LoadDefinitions!({
   //   \sim, \approx
   //   \simeq, \cong
   //   \asymp
-  DefMath!("\\divides", "\u{2223}", role => "RELOP");
+  def_math_sym("\\divides", "\u{2223}", Some("RELOP"), None)?;
   //   \neq, \ne,
-  DefMath!("\\nequiv", "\u{2262}", meaning => "not-equivalent-to", role => "RELOP");
+  def_math_sym("\\nequiv", "\u{2262}", Some("RELOP"), Some("not-equivalent-to"))?;
   Let!("\\notequiv", "\\nequiv");
-  DefMath!("\\nsim", "\u{2241}", role => "RELOP", meaning => "not-similar-to");
-  DefMath!("\\napprox", "\u{2249}", meaning => "not-approximately-equals", role => "RELOP");
-  DefMath!("\\nsimeq", "\u{2243}\u{0338}", role => "RELOP",
-    meaning => "not-equivalent-to-nor-equals");
-  DefMath!("\\ncong", "\u{2247}", role => "RELOP",
-    meaning => "not-approximately-equals");
-  DefMath!("\\notasymp",   "\u{226D}", meaning => "not-equivalent-to",   role => "RELOP");
-  DefMath!("\\notdivides", "\u{2224}", role    => "RELOP", meaning => "does-not-divide");
+  def_math_sym("\\nsim", "\u{2241}", Some("RELOP"), Some("not-similar-to"))?;
+  def_math_sym("\\napprox", "\u{2249}", Some("RELOP"), Some("not-approximately-equals"))?;
+  def_math_sym("\\nsimeq", "\u{2243}\u{0338}", Some("RELOP"), Some("not-equivalent-to-nor-equals"))?;
+  def_math_sym("\\ncong", "\u{2247}", Some("RELOP"), Some("not-approximately-equals"))?;
+  def_math_sym("\\notasymp", "\u{226D}", Some("RELOP"), Some("not-equivalent-to"))?;
+  def_math_sym("\\notdivides", "\u{2224}", Some("RELOP"), Some("does-not-divide"))?;
 
   //======================================================================
   // Unusual relations (mathb)
-  DefMath!("\\topdoteq", "=\u{0307}",  role => "RELOP");    // = combining dot
-  DefMath!("\\botdoteq", "\u{2A66}",   role => "RELOP");
-  DefMath!("\\doteqdot", "\u{2251}",   role => "RELOP", meaning => "geometrically-equals");
+  def_math_sym("\\topdoteq", "=\u{0307}", Some("RELOP"), None)?;    // = combining dot
+  def_math_sym("\\botdoteq", "\u{2A66}", Some("RELOP"), None)?;
+  def_math_sym("\\doteqdot", "\u{2251}", Some("RELOP"), Some("geometrically-equals"))?;
   Let!("\\dotseq", "\\doteqdot");
   Let!("\\Doteq",  "\\doteqdot");
-  DefMath!("\\risingdotseq",  "\u{2253}", role => "RELOP", meaning => "image-of-or-approximately-equals");
-  DefMath!("\\fallingdotseq", "\u{2252}", role => "RELOP", meaning => "approximately-equals-or-image-of");
-  DefMath!("\\coloneq",       "\u{2254}", role => "RELOP");
-  DefMath!("\\eqcolon",       "\u{2255}", role => "RELOP");
-  DefMath!("\\bumpedeq",      "\u{224F}", role => "RELOP", meaning => "difference-between");
+  def_math_sym("\\risingdotseq", "\u{2253}", Some("RELOP"), Some("image-of-or-approximately-equals"))?;
+  def_math_sym("\\fallingdotseq", "\u{2252}", Some("RELOP"), Some("approximately-equals-or-image-of"))?;
+  def_math_sym("\\coloneq", "\u{2254}", Some("RELOP"), None)?;
+  def_math_sym("\\eqcolon", "\u{2255}", Some("RELOP"), None)?;
+  def_math_sym("\\bumpedeq", "\u{224F}", Some("RELOP"), Some("difference-between"))?;
   // DefMath('\eqbumped',Tokens());
-  DefMath!("\\Bumpedeq",    "\u{224E}", role => "RELOP", meaning => "geometrically-equals");
-  DefMath!("\\circeq",      "\u{2257}", role => "RELOP");
-  DefMath!("\\eqcirc",      "\u{2256}", role => "RELOP");
-  DefMath!("\\triangleq",   "\u{225C}", role => "RELOP");
-  DefMath!("\\corresponds", "\u{2258}", role => "RELOP", meaning => "corresponds-to");
+  def_math_sym("\\Bumpedeq", "\u{224E}", Some("RELOP"), Some("geometrically-equals"))?;
+  def_math_sym("\\circeq", "\u{2257}", Some("RELOP"), None)?;
+  def_math_sym("\\eqcirc", "\u{2256}", Some("RELOP"), None)?;
+  def_math_sym("\\triangleq", "\u{225C}", Some("RELOP"), None)?;
+  def_math_sym("\\corresponds", "\u{2258}", Some("RELOP"), Some("corresponds-to"))?;
 
   //======================================================================
   // Miscellaneous (matha)
   //   \neq, \lnot, \ll
   //   \gg,
-  DefMath!("\\hash", "#", role => "RELOP");
+  def_math_sym("\\hash", "#", Some("RELOP"), None)?;
   //  \vdash, \dashv
-  DefMath!("\\nvdash", "\u{22AC}",         role => "RELOP");
-  DefMath!("\\ndashv", "\u{22A3}\u{0338}", role => "RELOP");
-  DefMath!("\\vDash",  "\u{22A8}",         role => "RELOP");
-  DefMath!("\\Dashv",  "\u{2AE4}",         role => "RELOP");
-  DefMath!("\\nvDash", "\u{22AD}",         role => "RELOP");
-  DefMath!("\\nDashv", "\u{2AE4}\u{0338}", role => "RELOP");
-  DefMath!("\\Vdash",  "\u{22A9}",         role => "RELOP", meaning => "forces");
-  DefMath!("\\dashV",  "\u{2AE3}",         role => "RELOP");
-  DefMath!("\\nVdash", "\u{22AE}",         role => "RELOP", meaning => "not-forces");
-  DefMath!("\\ndashV", "\u{2AE3}\u{0338}", role => "RELOP");
-  DefMath!("\\degree", "\u{00B0}",         role => "RELOP");
+  def_math_sym("\\nvdash", "\u{22AC}", Some("RELOP"), None)?;
+  def_math_sym("\\ndashv", "\u{22A3}\u{0338}", Some("RELOP"), None)?;
+  def_math_sym("\\vDash", "\u{22A8}", Some("RELOP"), None)?;
+  def_math_sym("\\Dashv", "\u{2AE4}", Some("RELOP"), None)?;
+  def_math_sym("\\nvDash", "\u{22AD}", Some("RELOP"), None)?;
+  def_math_sym("\\nDashv", "\u{2AE4}\u{0338}", Some("RELOP"), None)?;
+  def_math_sym("\\Vdash", "\u{22A9}", Some("RELOP"), Some("forces"))?;
+  def_math_sym("\\dashV", "\u{2AE3}", Some("RELOP"), None)?;
+  def_math_sym("\\nVdash", "\u{22AE}", Some("RELOP"), Some("not-forces"))?;
+  def_math_sym("\\ndashV", "\u{2AE3}\u{0338}", Some("RELOP"), None)?;
+  def_math_sym("\\degree", "\u{00B0}", Some("RELOP"), None)?;
   //   \prime
-  DefMath!("\\second", "\u{02BA}", role => "RELOP");
-  DefMath!("\\third",  "\u{2034}", role => "RELOP");
-  DefMath!("\\fourth", "\u{2057}", role => "RELOP");
+  def_math_sym("\\second", "\u{02BA}", Some("RELOP"), None)?;
+  def_math_sym("\\third", "\u{2034}", Some("RELOP"), None)?;
+  def_math_sym("\\fourth", "\u{2057}", Some("RELOP"), None)?;
   //   \flat
   //   \natural, \sharp
   //   \infty, \propto
@@ -127,24 +140,24 @@ LoadDefinitions!({
 
   //======================================================================
   // Miscellaneous (mathb)
-  DefMath!("\\between", "\u{226C}", role => "RELOP", meaning => "between");
+  def_math_sym("\\between", "\u{226C}", Some("RELOP"), Some("between"))?;
   //   \smile
   //   \frown
-  DefMath!("\\varhash",         "#",        role => "RELOP");
-  DefMath!("\\leftthreetimes",  "\u{22CB}", role => "MULOP", meaning => "left-semidirect-product");
-  DefMath!("\\rightthreetimes", "\u{22CC}", role => "MULOP", meaning => "right-semidirect-product");
-  DefMath!("\\pitchfork",       "\u{22D4}", role => "RELOP", meaning => "proper-intersection");
+  def_math_sym("\\varhash", "#", Some("RELOP"), None)?;
+  def_math_sym("\\leftthreetimes", "\u{22CB}", Some("MULOP"), Some("left-semidirect-product"))?;
+  def_math_sym("\\rightthreetimes", "\u{22CC}", Some("MULOP"), Some("right-semidirect-product"))?;
+  def_math_sym("\\pitchfork", "\u{22D4}", Some("RELOP"), Some("proper-intersection"))?;
   //  \bowtie, \Join
-  DefMath!("\\VDash",  "\u{22AB}",         role => "RELOP");
-  DefMath!("\\DashV",  "\u{2AE5}",         role => "RELOP");
-  DefMath!("\\nVDash", "\u{22AF}",         role => "RELOP");
-  DefMath!("\\nDashV", "\u{2AE5}\u{0338}", role => "RELOP");
-  DefMath!("\\Vvdash", "\u{22AA}",         role => "RELOP");
+  def_math_sym("\\VDash", "\u{22AB}", Some("RELOP"), None)?;
+  def_math_sym("\\DashV", "\u{2AE5}", Some("RELOP"), None)?;
+  def_math_sym("\\nVDash", "\u{22AF}", Some("RELOP"), None)?;
+  def_math_sym("\\nDashV", "\u{2AE5}\u{0338}", Some("RELOP"), None)?;
+  def_math_sym("\\Vvdash", "\u{22AA}", Some("RELOP"), None)?;
   // Note that the above can be mirrored, but that doesn't quite help \dashVv!
-  DefMath!("\\nVvash", "\u{22AA}\u{0338}", role => "RELOP");
+  def_math_sym("\\nVvash", "\u{22AA}\u{0338}", Some("RELOP"), None)?;
   // DefMath('\ndashVv',Tokens());
-  DefMath!("\\therefore", "\u{2234}", role => "METARELOP", meaning => "therefore");
-  DefMath!("\\because",   "\u{2235}", role => "METARELOP", meaning => "because");
+  def_math_sym("\\therefore", "\u{2234}", Some("METARELOP"), Some("therefore"))?;
+  def_math_sym("\\because", "\u{2235}", Some("METARELOP"), Some("because"))?;
   DefMath!("\\ring{}", "\u{030A}", operator_role => "OVERACCENT");
   //   \dot
   //   \ddot,
@@ -152,7 +165,7 @@ LoadDefinitions!({
   DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}", operator_role => "OVERACCENT");
   //   \angle
   DefMath!("\\measuredangle",  "\u{2221}");
-  DefMath!("\\sphericalangle", "\u{2222}");
+  def_math_sym("\\sphericalangle", "\u{2222}", None, None)?;
   DefMath!("\\rip",            "\u{26FC}");    // Not quite the right glyph
 
   //======================================================================
@@ -164,10 +177,10 @@ LoadDefinitions!({
 
   //======================================================================
   // Delimiters as symbols (mathb)
-  DefMath!("\\ulcorner", "\u{231C}");
-  DefMath!("\\urcorner", "\u{231D}");
-  DefMath!("\\llcorner", "\u{231E}");
-  DefMath!("\\lrcorner", "\u{231F}");
+  def_math_sym("\\ulcorner", "\u{231C}", None, None)?;
+  def_math_sym("\\urcorner", "\u{231D}", None, None)?;
+  def_math_sym("\\llcorner", "\u{231E}", None, None)?;
+  def_math_sym("\\lrcorner", "\u{231F}", None, None)?;
 
   //======================================================================
   // Astronomical Symbols (mathbb)
@@ -204,29 +217,29 @@ LoadDefinitions!({
   //  \forall,
   DefMath!("\\complement", "\u{2201}", meaning => "complement");
   //  \partial
-  DefMath!("\\partialslash", "\u{2202}\u{0338}", role => "OPERATOR");
+  def_math_sym("\\partialslash", "\u{2202}\u{0338}", Some("OPERATOR"), None)?;
   //  \exists,
-  DefMath!("\\nexists", "\u{2204}", role => "FUNCTION", meaning => "not-exists");
+  def_math_sym("\\nexists", "\u{2204}", Some("FUNCTION"), Some("not-exists"))?;
   DefMath!("\\Finv",    "\u{2132}");
   DefMath!("\\Game",    "\u{2141}");
   //   \emptyset,
-  DefMath!("\\diameter", "\u{2300}");
+  def_math_sym("\\diameter", "\u{2300}", None, None)?;
   //   \top, \bot
   //   \perp,
-  DefMath!("\\nottop",     "\u{22A4}\u{0338}", role => "ADDOP", meaning => "not-top");
-  DefMath!("\\notbot",     "\u{22A5}\u{0338}", role => "ADDOP", meaning => "not-bottom");
-  DefMath!("\\notperp",    "\u{27C2}\u{0338}", role => "RELOP", meaning => "not-perpendicular-to");
-  DefMath!("\\curlywedge", "\u{22CF}",         role => "ADDOP", meaning => "and");
-  DefMath!("\\curlyvee",   "\u{22CE}",         role => "ADDOP", meaning => "or");
+  def_math_sym("\\nottop", "\u{22A4}\u{0338}", Some("ADDOP"), Some("not-top"))?;
+  def_math_sym("\\notbot", "\u{22A5}\u{0338}", Some("ADDOP"), Some("not-bottom"))?;
+  def_math_sym("\\notperp", "\u{27C2}\u{0338}", Some("RELOP"), Some("not-perpendicular-to"))?;
+  def_math_sym("\\curlywedge", "\u{22CF}", Some("ADDOP"), Some("and"))?;
+  def_math_sym("\\curlyvee", "\u{22CE}", Some("ADDOP"), Some("or"))?;
   //   \in, \owns
   //   \notin
-  DefMath!("\\notowner", "\u{220C}", meaning => "not-contains", role => "RELOP");
+  def_math_sym("\\notowner", "\u{220C}", Some("RELOP"), Some("not-contains"))?;
   Let!("\\notni",       "\\notowner");
   Let!("\\notowns",     "\\notowner");
   Let!("\\varnotin",    "\\notin");
   Let!("\\varnotowner", "\\notowner");
-  DefMath!("\\barin",   "\u{22F6}", role => "ADDOP", meaning => "element-of-with-overbar");
-  DefMath!("\\ownsbar", "\u{22F8}", role => "ADDOP", meaning => "element-of-with-underbar");
+  def_math_sym("\\barin", "\u{22F6}", Some("ADDOP"), Some("element-of-with-overbar"))?;
+  def_math_sym("\\ownsbar", "\u{22F8}", Some("ADDOP"), Some("element-of-with-underbar"))?;
   //  \cap, \cup
   //  \uplus, \sqcap
   //  \sqcup, \squplus
@@ -234,166 +247,166 @@ LoadDefinitions!({
 
   //======================================================================
   // Letter-like symbols (mathb)
-  DefMath!("\\barwedge",       "\u{22BC}", role => "ADDOP", meaning => "not-and");
-  DefMath!("\\veebar",         "\u{22BB}", role => "ADDOP", meaning => "exclusive-or");
-  DefMath!("\\doublebarwedge", "\u{2A5E}", role => "ADDOP");
-  DefMath!("\\veedoublebar",   "\u{2A63}", role => "ADDOP");
-  DefMath!("\\doublecap",      "\u{22D2}", role => "ADDOP", meaning => "double-intersection");
-  DefMath!("\\doublecup",      "\u{22D3}", role => "ADDOP", meaning => "double-union");
-  DefMath!("\\sqdoublecap",    "\u{2A4E}", role => "ADDOP", meaning => "double-square-intersection");
-  DefMath!("\\sqdoublecup",    "\u{2A4F}", role => "ADDOP", meaning => "double-square-union");
+  def_math_sym("\\barwedge", "\u{22BC}", Some("ADDOP"), Some("not-and"))?;
+  def_math_sym("\\veebar", "\u{22BB}", Some("ADDOP"), Some("exclusive-or"))?;
+  def_math_sym("\\doublebarwedge", "\u{2A5E}", Some("ADDOP"), None)?;
+  def_math_sym("\\veedoublebar", "\u{2A63}", Some("ADDOP"), None)?;
+  def_math_sym("\\doublecap", "\u{22D2}", Some("ADDOP"), Some("double-intersection"))?;
+  def_math_sym("\\doublecup", "\u{22D3}", Some("ADDOP"), Some("double-union"))?;
+  def_math_sym("\\sqdoublecap", "\u{2A4E}", Some("ADDOP"), Some("double-square-intersection"))?;
+  def_math_sym("\\sqdoublecup", "\u{2A4F}", Some("ADDOP"), Some("double-square-union"))?;
 
   //======================================================================
   //  Subset's and superset's signs (matha)
   //  \subset, \supset
-  DefMath!("\\nsubset", "\u{2284}", meaning => "not-subset-of",   role => "RELOP");
-  DefMath!("\\nsupset", "\u{2285}", meaning => "not-superset-of", role => "RELOP");
+  def_math_sym("\\nsubset", "\u{2284}", Some("RELOP"), Some("not-subset-of"))?;
+  def_math_sym("\\nsupset", "\u{2285}", Some("RELOP"), Some("not-superset-of"))?;
   //  \subseteq, \supseteq
-  DefMath!("\\nsubseteq",    "\u{2288}", role => "RELOP", meaning => "not-subset-of-nor-equals");
-  DefMath!("\\nsupseteq",    "\u{2289}", role => "RELOP", meaning => "not-superset-of-nor-equals");
-  DefMath!("\\subsetneq",    "\u{228A}", role => "RELOP", meaning => "subset-of-and-not-equals");
-  DefMath!("\\supsetneq",    "\u{228B}", role => "RELOP", meaning => "superset-of-and-not-equals");
-  DefMath!("\\varsubsetneq", "\u{228A}", role => "RELOP", meaning => "subset-of-and-not-equals");
-  DefMath!("\\varsupsetneq", "\u{228B}", role => "RELOP", meaning => "subset-of-and-not-equals");
-  DefMath!("\\subseteqq",    "\u{2AC5}", role => "RELOP", meaning => "subset-of-or-equals");
-  DefMath!("\\supseteqq",    "\u{2AC6}", role => "RELOP", meaning => "superset-of-or-equals");
-  DefMath!("\\nsubseteqq", "\u{2AC5}\u{0338}", role => "RELOP", meaning => "not-subset-of-nor-equals");
-  DefMath!("\\nsupseteqq", "\u{2AC6}\u{0338}", role => "RELOP", meaning => "not-superset-of-nor-equals");
-  DefMath!("\\subsetneqq",    "\u{2ACB}", role => "RELOP", meaning => "subset-of-and-not-equals");
-  DefMath!("\\supsetneqq",    "\u{2ACC}", role => "RELOP", meaning => "superset-of-and-not-equals");
-  DefMath!("\\varsubsetneqq", "\u{2ACB}", role => "RELOP", meaning => "subset-of-and-not-equals");
-  DefMath!("\\varsupsetneqq", "\u{2ACC}", role => "RELOP", meaning => "superset-of-and-not-equals");
-  DefMath!("\\Subset",        "\u{22D0}", role => "RELOP", meaning => "double-subset-of");
-  DefMath!("\\Supset",        "\u{22D1}", role => "RELOP", meaning => "double-superset-of");
-  DefMath!("\\nSubset",  "\u{22D0}\u{0338}", role => "RELOP", meaning => "not-double-subset-of");
-  DefMath!("\\nSupset",  "\u{22D1}\u{0338}", role => "RELOP", meaning => "not-double-superset-of");
+  def_math_sym("\\nsubseteq", "\u{2288}", Some("RELOP"), Some("not-subset-of-nor-equals"))?;
+  def_math_sym("\\nsupseteq", "\u{2289}", Some("RELOP"), Some("not-superset-of-nor-equals"))?;
+  def_math_sym("\\subsetneq", "\u{228A}", Some("RELOP"), Some("subset-of-and-not-equals"))?;
+  def_math_sym("\\supsetneq", "\u{228B}", Some("RELOP"), Some("superset-of-and-not-equals"))?;
+  def_math_sym("\\varsubsetneq", "\u{228A}", Some("RELOP"), Some("subset-of-and-not-equals"))?;
+  def_math_sym("\\varsupsetneq", "\u{228B}", Some("RELOP"), Some("subset-of-and-not-equals"))?;
+  def_math_sym("\\subseteqq", "\u{2AC5}", Some("RELOP"), Some("subset-of-or-equals"))?;
+  def_math_sym("\\supseteqq", "\u{2AC6}", Some("RELOP"), Some("superset-of-or-equals"))?;
+  def_math_sym("\\nsubseteqq", "\u{2AC5}\u{0338}", Some("RELOP"), Some("not-subset-of-nor-equals"))?;
+  def_math_sym("\\nsupseteqq", "\u{2AC6}\u{0338}", Some("RELOP"), Some("not-superset-of-nor-equals"))?;
+  def_math_sym("\\subsetneqq", "\u{2ACB}", Some("RELOP"), Some("subset-of-and-not-equals"))?;
+  def_math_sym("\\supsetneqq", "\u{2ACC}", Some("RELOP"), Some("superset-of-and-not-equals"))?;
+  def_math_sym("\\varsubsetneqq", "\u{2ACB}", Some("RELOP"), Some("subset-of-and-not-equals"))?;
+  def_math_sym("\\varsupsetneqq", "\u{2ACC}", Some("RELOP"), Some("superset-of-and-not-equals"))?;
+  def_math_sym("\\Subset", "\u{22D0}", Some("RELOP"), Some("double-subset-of"))?;
+  def_math_sym("\\Supset", "\u{22D1}", Some("RELOP"), Some("double-superset-of"))?;
+  def_math_sym("\\nSubset", "\u{22D0}\u{0338}", Some("RELOP"), Some("not-double-subset-of"))?;
+  def_math_sym("\\nSupset", "\u{22D1}\u{0338}", Some("RELOP"), Some("not-double-superset-of"))?;
 
   //======================================================================
   // Square Subset's and superset's signs (mathb)
   //  \sqsubset, \sqsupset
-  DefMath!("\\nsqsubset", "\u{228F}\u{0338}", role => "RELOP", meaning => "not-square-image-of");
-  DefMath!("\\nsqsupset", "\u{2290}\u{0338}", role => "RELOP", meaning => "not-square-original-of");
+  def_math_sym("\\nsqsubset", "\u{228F}\u{0338}", Some("RELOP"), Some("not-square-image-of"))?;
+  def_math_sym("\\nsqsupset", "\u{2290}\u{0338}", Some("RELOP"), Some("not-square-original-of"))?;
   //  \sqsubseteq, \sqsupseteq
-  DefMath!("\\nsqsubseteq", "\u{22E2}", role => "RELOP", meaning => "not-square-image-of-nor-equals");
-  DefMath!("\\nsqsupseteq", "\u{22E3}", role => "RELOP", meaning => "not-square-original-of-nor-equals");
-  DefMath!("\\sqsubsetneq", "\u{22E4}", role => "RELOP", meaning => "square-image-of-or-not-equals");
-  DefMath!("\\sqsupsetneq", "\u{22E5}", role => "RELOP", meaning => "square-original-of-or-not-equals");
+  def_math_sym("\\nsqsubseteq", "\u{22E2}", Some("RELOP"), Some("not-square-image-of-nor-equals"))?;
+  def_math_sym("\\nsqsupseteq", "\u{22E3}", Some("RELOP"), Some("not-square-original-of-nor-equals"))?;
+  def_math_sym("\\sqsubsetneq", "\u{22E4}", Some("RELOP"), Some("square-image-of-or-not-equals"))?;
+  def_math_sym("\\sqsupsetneq", "\u{22E5}", Some("RELOP"), Some("square-original-of-or-not-equals"))?;
   Let!("\\varsqsubsetneq", "\\sqsubsetneq");
   Let!("\\varsqsupsetneq", "\\sqsupsetneq");
   // Pretty crummy, using underline
-  DefMath!("\\sqsubseteqq",  "\u{228F}\u{0333}", role => "RELOP", meaning => "square-image-of-or-equals");
-  DefMath!("\\sqsupseteqq",  "\u{2290}\u{0333}", role => "RELOP", meaning => "square-original-of-or-equals");
-  DefMath!("\\nsqsubseteqq", "\u{228F}\u{0333}\u{0338}", role => "RELOP", meaning => "not-square-image-of-nor-equals");
-  DefMath!("\\nsqsupseteqq", "\u{2290}\u{0333}\u{0338}", role => "RELOP", meaning => "not-square-original-of-nor-equals");
+  def_math_sym("\\sqsubseteqq", "\u{228F}\u{0333}", Some("RELOP"), Some("square-image-of-or-equals"))?;
+  def_math_sym("\\sqsupseteqq", "\u{2290}\u{0333}", Some("RELOP"), Some("square-original-of-or-equals"))?;
+  def_math_sym("\\nsqsubseteqq", "\u{228F}\u{0333}\u{0338}", Some("RELOP"), Some("not-square-image-of-nor-equals"))?;
+  def_math_sym("\\nsqsupseteqq", "\u{2290}\u{0333}\u{0338}", Some("RELOP"), Some("not-square-original-of-nor-equals"))?;
 
   //======================================================================
   // Triangles as relations (matha)
   //  \triangleleft,
   DefMath!("\\vartriangleleft",  "\u{22B2}");    // NORMAL SUBGROUP OF (\lhd)
   // \triangleright
-  DefMath!("\\vartriangleright", "\u{22B3}");    // CONTAINS AS NORMAL SUBGROUP (\rhd)
-  DefMath!("\\ntriangleleft",    "\u{22EA}", role => "RELOP", meaning => "not-subgroup-of");
-  DefMath!("\\ntriangleright",   "\u{22EB}", role => "RELOP", meaning => "not-contains");
+  def_math_sym("\\vartriangleright", "\u{22B3}", None, None)?;    // CONTAINS AS NORMAL SUBGROUP (\rhd)
+  def_math_sym("\\ntriangleleft", "\u{22EA}", Some("RELOP"), Some("not-subgroup-of"))?;
+  def_math_sym("\\ntriangleright", "\u{22EB}", Some("RELOP"), Some("not-contains"))?;
   DefMath!("\\trianglelefteq",   "\u{22B4}");    // NORMAL SUBGROUP OF OR EQUAL TO (\unlhd)
   DefMath!("\\trianglerighteq",  "\u{22B5}");    // CONTAINS AS NORMAL SUBGROUP OR EQUAL TO (\unrhd)
-  DefMath!("\\ntrianglelefteq",  "\u{22EC}", role => "RELOP", meaning => "not-subgroup-of-nor-equals");
-  DefMath!("\\ntrianglerighteq", "\u{22ED}", role => "RELOP", meaning => "not-contains-nor-equals");
+  def_math_sym("\\ntrianglelefteq", "\u{22EC}", Some("RELOP"), Some("not-subgroup-of-nor-equals"))?;
+  def_math_sym("\\ntrianglerighteq", "\u{22ED}", Some("RELOP"), Some("not-contains-nor-equals"))?;
 
   //======================================================================
   // Triangles as binary operators (mathb)
-  DefMath!("\\smalltriangleup",    "\u{25B5}", role => "RELOP");
-  DefMath!("\\smalltriangledown",  "\u{25BF}", role => "RELOP");
-  DefMath!("\\smalltriangleleft",  "\u{25C3}", role => "RELOP");
-  DefMath!("\\smalltriangleright", "\u{25B9}", role => "RELOP");
-  DefMath!("\\blacktriangleup",    "\u{25B4}", role => "RELOP");
-  DefMath!("\\blacktriangledown",  "\u{25BE}", role => "RELOP");
-  DefMath!("\\blacktriangleleft",  "\u{25C2}", role => "RELOP");
-  DefMath!("\\blacktriangleright", "\u{25B8}", role => "RELOP");
+  def_math_sym("\\smalltriangleup", "\u{25B5}", Some("RELOP"), None)?;
+  def_math_sym("\\smalltriangledown", "\u{25BF}", Some("RELOP"), None)?;
+  def_math_sym("\\smalltriangleleft", "\u{25C3}", Some("RELOP"), None)?;
+  def_math_sym("\\smalltriangleright", "\u{25B9}", Some("RELOP"), None)?;
+  def_math_sym("\\blacktriangleup", "\u{25B4}", Some("RELOP"), None)?;
+  def_math_sym("\\blacktriangledown", "\u{25BE}", Some("RELOP"), None)?;
+  def_math_sym("\\blacktriangleleft", "\u{25C2}", Some("RELOP"), None)?;
+  def_math_sym("\\blacktriangleright", "\u{25B8}", Some("RELOP"), None)?;
 
   //======================================================================
   // Inequalities (matha)
   //  <, >
-  DefMath!("\\nless", "\u{226E}", role => "RELOP", meaning => "not-less-than");
-  DefMath!("\\ngtr",  "\u{226F}", role => "RELOP", meaning => "not-greater-than");
+  def_math_sym("\\nless", "\u{226E}", Some("RELOP"), Some("not-less-than"))?;
+  def_math_sym("\\ngtr", "\u{226F}", Some("RELOP"), Some("not-greater-than"))?;
   //   \leq, \geq (\leqslant, \qeqslant)
-  DefMath!("\\nleq", "\u{2270}", role => "RELOP", meaning => "not-less-than-nor-greater-than");
-  DefMath!("\\ngeq", "\u{2271}", role => "RELOP", meaning => "not-greater-than-nor-equals");
+  def_math_sym("\\nleq", "\u{2270}", Some("RELOP"), Some("not-less-than-nor-greater-than"))?;
+  def_math_sym("\\ngeq", "\u{2271}", Some("RELOP"), Some("not-greater-than-nor-equals"))?;
   Let!("\\varleq",  "\\leq");
   Let!("\\vargeq",  "\\geq");
   Let!("\\nvarleq", "\\nleq");
   Let!("\\nvargeq", "\\ngeq");
-  DefMath!("\\lneq",  "\u{2A87}",         role => "RELOP", meaning => "less-than-and-not-equals");
-  DefMath!("\\gneq",  "\u{2A88}",         role => "RELOP", meaning => "greater-than-and-not-equals");
-  DefMath!("\\leqq",  "\u{2266}",         role => "RELOP", meaning => "less-than-or-equals");
-  DefMath!("\\geqq",  "\u{2267}",         role => "RELOP", meaning => "greater-than-or-equals");
-  DefMath!("\\nleqq", "\u{2266}\u{0338}", role => "RELOP", meaning => "not-less-than-nor-equals");
-  DefMath!("\\ngeqq", "\u{2267}\u{0338}", role => "RELOP", meaning => "not-greater-than-nor-equals");
-  DefMath!("\\lneqq", "\u{2268}",         role => "RELOP", meaning => "less-than-and-not-equals");
-  DefMath!("\\gneqq", "\u{2269}",         role => "RELOP", meaning => "greater-than-and-not-equals");
-  DefMath!("\\lvertneqq",    "\u{2268}",  role => "RELOP", meaning => "less-than-and-not-equals");
-  DefMath!("\\gvertneqq",    "\u{2269}",  role => "RELOP", meaning => "greater-than-and-not-equals");
-  DefMath!("\\eqslantless",  "\u{2A95}",  role => "RELOP", meaning => "less-than-or-equals");
-  DefMath!("\\eqslantgtr",   "\u{2A96}",  role => "RELOP", meaning => "greater-than-or-equals");
-  DefMath!("\\neqslantless", "\u{2A95}\u{0338}", role => "RELOP", meaning => "not-less-than-nor-equals");
-  DefMath!("\\neqslantgtr",  "\u{2A96}\u{0338}", role => "RELOP", meaning => "not-greater-than-nor-equals");
-  DefMath!("\\lessgtr",     "\u{2276}", role => "RELOP", meaning => "less-than-or-greater-than");
-  DefMath!("\\gtrless",     "\u{2277}", role => "RELOP", meaning => "greater-than-or-less-than");
-  DefMath!("\\lesseqgtr",   "\u{22DA}", role => "RELOP", meaning => "less-than-or-equals-or-greater-than");
-  DefMath!("\\gtreqless",   "\u{22DB}", role => "RELOP", meaning => "greater-than-or-equals-or-less-than");
-  DefMath!("\\lesseqqgtr",  "\u{2A8B}", role => "RELOP", meaning => "less-than-or-equals-or-greater-than");
-  DefMath!("\\gtreqqless",  "\u{2A8C}", role => "RELOP", meaning => "greater-than-or-equals-or-less-than");
-  DefMath!("\\lesssim",     "\u{2272}", role => "RELOP", meaning => "less-than-or-similar-to");
-  DefMath!("\\gtrsim",      "\u{2273}", role => "RELOP", meaning => "greater-than-or-equivalent-to");
-  DefMath!("\\nlesssim",  "\u{2272}\u{0338}", role => "RELOP", meaning => "not-less-than-nor-similar-to");
-  DefMath!("\\ngtrsim",   "\u{2273}\u{0338}", role => "RELOP", meaning => "not-greater-than-nor-equivalent-to");
-  DefMath!("\\lnsim",     "\u{22E6}", role => "RELOP", meaning => "less-than-and-not-equivalent-to");
-  DefMath!("\\gnsim",     "\u{22E7}", role => "RELOP", meaning => "greater-than-and-not-equivalent-to");
-  DefMath!("\\lessapprox", "\u{2A85}", role => "RELOP", meaning => "less-than-or-approximately-equals");
-  DefMath!("\\gtrapprox",  "\u{2A86}", role => "RELOP", meaning => "greater-than-or-approximately-equals");
-  DefMath!("\\nlessapprox", "\u{2A85}\u{0338}", role => "RELOP", meaning => "not-less-than-nor-approximately-equals");
-  DefMath!("\\ngtrapprox",  "\u{2A86}\u{0338}", role => "RELOP", meaning => "not-greater-than-nor-approximately-equals");
-  DefMath!("\\lnapprox", "\u{2A89}", role => "RELOP", meaning => "less-than-and-not-approximately-equals");
-  DefMath!("\\gnapprox", "\u{2A8A}", role => "RELOP", meaning => "greater-than-and-not-approximately-equals");
-  DefMath!("\\lessdot", "\u{22D6}", role => "RELOP");
-  DefMath!("\\gtrdot",  "\u{22D7}", role => "RELOP");
-  DefMath!("\\lll",     "\u{22D8}", role => "RELOP", meaning => "very-much-less-than");
-  DefMath!("\\ggg",     "\u{22D9}", role => "RELOP", meaning => "very-much-greater-than");
-  DefMath!("\\precdot", "\u{22D6}", role => "RELOP");    // glyph is for less with dot!
-  DefMath!("\\succdot", "\u{22D7}", role => "RELOP");    // gtr with dot!
+  def_math_sym("\\lneq", "\u{2A87}", Some("RELOP"), Some("less-than-and-not-equals"))?;
+  def_math_sym("\\gneq", "\u{2A88}", Some("RELOP"), Some("greater-than-and-not-equals"))?;
+  def_math_sym("\\leqq", "\u{2266}", Some("RELOP"), Some("less-than-or-equals"))?;
+  def_math_sym("\\geqq", "\u{2267}", Some("RELOP"), Some("greater-than-or-equals"))?;
+  def_math_sym("\\nleqq", "\u{2266}\u{0338}", Some("RELOP"), Some("not-less-than-nor-equals"))?;
+  def_math_sym("\\ngeqq", "\u{2267}\u{0338}", Some("RELOP"), Some("not-greater-than-nor-equals"))?;
+  def_math_sym("\\lneqq", "\u{2268}", Some("RELOP"), Some("less-than-and-not-equals"))?;
+  def_math_sym("\\gneqq", "\u{2269}", Some("RELOP"), Some("greater-than-and-not-equals"))?;
+  def_math_sym("\\lvertneqq", "\u{2268}", Some("RELOP"), Some("less-than-and-not-equals"))?;
+  def_math_sym("\\gvertneqq", "\u{2269}", Some("RELOP"), Some("greater-than-and-not-equals"))?;
+  def_math_sym("\\eqslantless", "\u{2A95}", Some("RELOP"), Some("less-than-or-equals"))?;
+  def_math_sym("\\eqslantgtr", "\u{2A96}", Some("RELOP"), Some("greater-than-or-equals"))?;
+  def_math_sym("\\neqslantless", "\u{2A95}\u{0338}", Some("RELOP"), Some("not-less-than-nor-equals"))?;
+  def_math_sym("\\neqslantgtr", "\u{2A96}\u{0338}", Some("RELOP"), Some("not-greater-than-nor-equals"))?;
+  def_math_sym("\\lessgtr", "\u{2276}", Some("RELOP"), Some("less-than-or-greater-than"))?;
+  def_math_sym("\\gtrless", "\u{2277}", Some("RELOP"), Some("greater-than-or-less-than"))?;
+  def_math_sym("\\lesseqgtr", "\u{22DA}", Some("RELOP"), Some("less-than-or-equals-or-greater-than"))?;
+  def_math_sym("\\gtreqless", "\u{22DB}", Some("RELOP"), Some("greater-than-or-equals-or-less-than"))?;
+  def_math_sym("\\lesseqqgtr", "\u{2A8B}", Some("RELOP"), Some("less-than-or-equals-or-greater-than"))?;
+  def_math_sym("\\gtreqqless", "\u{2A8C}", Some("RELOP"), Some("greater-than-or-equals-or-less-than"))?;
+  def_math_sym("\\lesssim", "\u{2272}", Some("RELOP"), Some("less-than-or-similar-to"))?;
+  def_math_sym("\\gtrsim", "\u{2273}", Some("RELOP"), Some("greater-than-or-equivalent-to"))?;
+  def_math_sym("\\nlesssim", "\u{2272}\u{0338}", Some("RELOP"), Some("not-less-than-nor-similar-to"))?;
+  def_math_sym("\\ngtrsim", "\u{2273}\u{0338}", Some("RELOP"), Some("not-greater-than-nor-equivalent-to"))?;
+  def_math_sym("\\lnsim", "\u{22E6}", Some("RELOP"), Some("less-than-and-not-equivalent-to"))?;
+  def_math_sym("\\gnsim", "\u{22E7}", Some("RELOP"), Some("greater-than-and-not-equivalent-to"))?;
+  def_math_sym("\\lessapprox", "\u{2A85}", Some("RELOP"), Some("less-than-or-approximately-equals"))?;
+  def_math_sym("\\gtrapprox", "\u{2A86}", Some("RELOP"), Some("greater-than-or-approximately-equals"))?;
+  def_math_sym("\\nlessapprox", "\u{2A85}\u{0338}", Some("RELOP"), Some("not-less-than-nor-approximately-equals"))?;
+  def_math_sym("\\ngtrapprox", "\u{2A86}\u{0338}", Some("RELOP"), Some("not-greater-than-nor-approximately-equals"))?;
+  def_math_sym("\\lnapprox", "\u{2A89}", Some("RELOP"), Some("less-than-and-not-approximately-equals"))?;
+  def_math_sym("\\gnapprox", "\u{2A8A}", Some("RELOP"), Some("greater-than-and-not-approximately-equals"))?;
+  def_math_sym("\\lessdot", "\u{22D6}", Some("RELOP"), None)?;
+  def_math_sym("\\gtrdot", "\u{22D7}", Some("RELOP"), None)?;
+  def_math_sym("\\lll", "\u{22D8}", Some("RELOP"), Some("very-much-less-than"))?;
+  def_math_sym("\\ggg", "\u{22D9}", Some("RELOP"), Some("very-much-greater-than"))?;
+  def_math_sym("\\precdot", "\u{22D6}", Some("RELOP"), None)?;    // glyph is for less with dot!
+  def_math_sym("\\succdot", "\u{22D7}", Some("RELOP"), None)?;    // gtr with dot!
 
   //======================================================================
   // Inequalities (mathb)
   // Sometimes using \x{0338} to negate (which is slash, but should use vertical?)
   //  \prec, \succ
-  DefMath!("\\nprec",        "\u{2280}",         role => "RELOP", meaning => "not-precedes");
-  DefMath!("\\nsucc",        "\u{2281}",         role => "RELOP", meaning => "not-succeeds");
-  DefMath!("\\preccurlyeq",  "\u{227C}",         role => "RELOP", meaning => "precedes-or-equals");
-  DefMath!("\\succcurlyeq",  "\u{227D}",         role => "RELOP", meaning => "succeeds-or-equals");
-  DefMath!("\\npreccurlyeq", "\u{227C}\u{0338}", role => "RELOP", meaning => "not-precedes-nor-equals");
-  DefMath!("\\nsucccurlyeq", "\u{227D}\u{0338}", role => "RELOP", meaning => "not-succeeds-nor-equals");
+  def_math_sym("\\nprec", "\u{2280}", Some("RELOP"), Some("not-precedes"))?;
+  def_math_sym("\\nsucc", "\u{2281}", Some("RELOP"), Some("not-succeeds"))?;
+  def_math_sym("\\preccurlyeq", "\u{227C}", Some("RELOP"), Some("precedes-or-equals"))?;
+  def_math_sym("\\succcurlyeq", "\u{227D}", Some("RELOP"), Some("succeeds-or-equals"))?;
+  def_math_sym("\\npreccurlyeq", "\u{227C}\u{0338}", Some("RELOP"), Some("not-precedes-nor-equals"))?;
+  def_math_sym("\\nsucccurlyeq", "\u{227D}\u{0338}", Some("RELOP"), Some("not-succeeds-nor-equals"))?;
   //  \preceq, succeq
-  DefMath!("\\npreceq",      "\u{22E0}",         role => "RELOP", meaning => "not-precedes-nor-equals");
-  DefMath!("\\nsucceq",      "\u{22E1}",         role => "RELOP", meaning => "not-succeeds-nor-equals");
-  DefMath!("\\precneq",      "\u{22E8}",         role => "RELOP", meaning => "precedes-not-equals");
-  DefMath!("\\succneq",      "\u{22E9}",         role => "RELOP", meaning => "succeeds-not-equals");
-  DefMath!("\\curlyeqprec",  "\u{22DE}",         role => "RELOP", meaning => "equals-or-preceeds");
-  DefMath!("\\curlyeqsucc",  "\u{22DF}",         role => "RELOP", meaning => "equals-or-succeeds");
-  DefMath!("\\ncurlyeqprec", "\u{22DE}\u{0338}", role => "RELOP", meaning => "not-equals-nor-preceeds");
-  DefMath!("\\ncurlyeqsucc", "\u{22DF}\u{0338}", role => "RELOP", meaning => "not-equals-nor-succeeds");
-  DefMath!("\\precsim",      "\u{227E}",         role => "RELOP", meaning => "precedes-or-equivalent-to");
-  DefMath!("\\succsim",      "\u{227F}",         role => "RELOP", meaning => "succeeds-or-equivalent-to");
-  DefMath!("\\nprecsim", "\u{227E}\u{0338}", role => "RELOP", meaning => "not-precedes-nor-equivalent-to");
-  DefMath!("\\nsuccsim", "\u{227F}\u{0338}", role => "RELOP", meaning => "not-succeeds-nor-equivalent-to");
-  DefMath!("\\precnsim",   "\u{22E8}", role => "RELOP", meaning => "precedes-and-not-equivalent-to");
-  DefMath!("\\succnsim",   "\u{22E9}", role => "RELOP", meaning => "succeeds-and-not-equivalent-to");
-  DefMath!("\\precapprox", "\u{2AB7}", role => "RELOP", meaning => "precedes-or-approximately-equals");
-  DefMath!("\\succapprox", "\u{2AB8}", role => "RELOP", meaning => "succeeds-or-approximately-equals");
-  DefMath!("\\nprecapprox", "\u{2AB7}\u{0338}", meaning => "not-precedes-nor-approximately-equals", role => "RELOP");
-  DefMath!("\\nsuccapprox", "\u{2AB8}\u{0338}", role => "RELOP", meaning => "not-succeeds-nor-approximately-equals");
-  DefMath!("\\precnapprox", "\u{2AB9}", role => "RELOP", meaning => "precedes-and-not-approximately-equals");
-  DefMath!("\\succnapprox", "\u{2ABA}", role => "RELOP", meaning => "succeeds-and-not-approximately-equals");
-  DefMath!("\\llcurly", "\u{2ABB}", role => "RELOP", meaning => "double-precedes");
-  DefMath!("\\ggcurly", "\u{2ABC}", role => "RELOP", meaning => "double-succeeds");
+  def_math_sym("\\npreceq", "\u{22E0}", Some("RELOP"), Some("not-precedes-nor-equals"))?;
+  def_math_sym("\\nsucceq", "\u{22E1}", Some("RELOP"), Some("not-succeeds-nor-equals"))?;
+  def_math_sym("\\precneq", "\u{22E8}", Some("RELOP"), Some("precedes-not-equals"))?;
+  def_math_sym("\\succneq", "\u{22E9}", Some("RELOP"), Some("succeeds-not-equals"))?;
+  def_math_sym("\\curlyeqprec", "\u{22DE}", Some("RELOP"), Some("equals-or-preceeds"))?;
+  def_math_sym("\\curlyeqsucc", "\u{22DF}", Some("RELOP"), Some("equals-or-succeeds"))?;
+  def_math_sym("\\ncurlyeqprec", "\u{22DE}\u{0338}", Some("RELOP"), Some("not-equals-nor-preceeds"))?;
+  def_math_sym("\\ncurlyeqsucc", "\u{22DF}\u{0338}", Some("RELOP"), Some("not-equals-nor-succeeds"))?;
+  def_math_sym("\\precsim", "\u{227E}", Some("RELOP"), Some("precedes-or-equivalent-to"))?;
+  def_math_sym("\\succsim", "\u{227F}", Some("RELOP"), Some("succeeds-or-equivalent-to"))?;
+  def_math_sym("\\nprecsim", "\u{227E}\u{0338}", Some("RELOP"), Some("not-precedes-nor-equivalent-to"))?;
+  def_math_sym("\\nsuccsim", "\u{227F}\u{0338}", Some("RELOP"), Some("not-succeeds-nor-equivalent-to"))?;
+  def_math_sym("\\precnsim", "\u{22E8}", Some("RELOP"), Some("precedes-and-not-equivalent-to"))?;
+  def_math_sym("\\succnsim", "\u{22E9}", Some("RELOP"), Some("succeeds-and-not-equivalent-to"))?;
+  def_math_sym("\\precapprox", "\u{2AB7}", Some("RELOP"), Some("precedes-or-approximately-equals"))?;
+  def_math_sym("\\succapprox", "\u{2AB8}", Some("RELOP"), Some("succeeds-or-approximately-equals"))?;
+  def_math_sym("\\nprecapprox", "\u{2AB7}\u{0338}", Some("RELOP"), Some("not-precedes-nor-approximately-equals"))?;
+  def_math_sym("\\nsuccapprox", "\u{2AB8}\u{0338}", Some("RELOP"), Some("not-succeeds-nor-approximately-equals"))?;
+  def_math_sym("\\precnapprox", "\u{2AB9}", Some("RELOP"), Some("precedes-and-not-approximately-equals"))?;
+  def_math_sym("\\succnapprox", "\u{2ABA}", Some("RELOP"), Some("succeeds-and-not-approximately-equals"))?;
+  def_math_sym("\\llcurly", "\u{2ABB}", Some("RELOP"), Some("double-precedes"))?;
+  def_math_sym("\\ggcurly", "\u{2ABC}", Some("RELOP"), Some("double-succeeds"))?;
 
   //======================================================================
   // Arrows and Harpoons (matha)
@@ -401,114 +414,114 @@ LoadDefinitions!({
   //  \nwarrow, \nearrow
   //  \swarrow, \searrow
   //  \leftrightarrow
-  DefMath!("\\nleftarrow",      "\u{219A}", role => "ARROW");
-  DefMath!("\\nrightarrow",     "\u{219B}", role => "ARROW");
-  DefMath!("\\nleftrightarrow", "\u{21AE}", role => "ARROW");    // LEFT RIGHT ARROW WITH STROKE
+  def_math_sym("\\nleftarrow", "\u{219A}", Some("ARROW"), None)?;
+  def_math_sym("\\nrightarrow", "\u{219B}", Some("ARROW"), None)?;
+  def_math_sym("\\nleftrightarrow", "\u{21AE}", Some("ARROW"), None)?;    // LEFT RIGHT ARROW WITH STROKE
   //  \relbar
   //  \mapstochar
-  DefMath!("\\mapsfromchar", "|", role => "RELOP");
+  def_math_sym("\\mapsfromchar", "|", Some("RELOP"), None)?;
   //  \leftharpoonup
   //  \rightharpoonup, \leftharpoondown
   //  \rightharpoondown,
-  DefMath!("\\upharpoonleft",     "\u{21BF}", role => "ARROW");
-  DefMath!("\\downharpoonleft",   "\u{21C3}", role => "ARROW");
-  DefMath!("\\upharpoonright",    "\u{21BE}", role => "ARROW");
-  DefMath!("\\restriction",       "\u{21BE}", role => "ARROW");
-  DefMath!("\\downharpoonright",  "\u{21C2}", role => "ARROW");
-  DefMath!("\\leftrightharpoons", "\u{21CB}", role => "ARROW");
+  def_math_sym("\\upharpoonleft", "\u{21BF}", Some("ARROW"), None)?;
+  def_math_sym("\\downharpoonleft", "\u{21C3}", Some("ARROW"), None)?;
+  def_math_sym("\\upharpoonright", "\u{21BE}", Some("ARROW"), None)?;
+  def_math_sym("\\restriction", "\u{21BE}", Some("ARROW"), None)?;
+  def_math_sym("\\downharpoonright", "\u{21C2}", Some("ARROW"), None)?;
+  def_math_sym("\\leftrightharpoons", "\u{21CB}", Some("ARROW"), None)?;
   //  \rightleftharpoons
-  DefMath!("\\updownharpoons", "\u{296E}", role => "ARROW");
-  DefMath!("\\downupharpoons", "\u{296F}", role => "ARROW");
+  def_math_sym("\\updownharpoons", "\u{296E}", Some("ARROW"), None)?;
+  def_math_sym("\\downupharpoons", "\u{296F}", Some("ARROW"), None)?;
   //  \Leftarrow, \Rightarrow
   //  \Leftrightarrow,
-  DefMath!("\\nLeftarrow",      "\u{21CD}", role => "ARROW");
-  DefMath!("\\nRightarrow",     "\u{21CF}", role => "ARROW");
-  DefMath!("\\nLeftrightarrow", "\u{21CE}", role => "ARROW");
+  def_math_sym("\\nLeftarrow", "\u{21CD}", Some("ARROW"), None)?;
+  def_math_sym("\\nRightarrow", "\u{21CF}", Some("ARROW"), None)?;
+  def_math_sym("\\nLeftrightarrow", "\u{21CE}", Some("ARROW"), None)?;
   //  \Relbar
-  DefMath!("\\Mapstochar",   "|", role => "RELOP");
-  DefMath!("\\Mapsfromchar", "|", role => "RELOP");
+  def_math_sym("\\Mapstochar", "|", Some("RELOP"), None)?;
+  def_math_sym("\\Mapsfromchar", "|", Some("RELOP"), None)?;
 
   //======================================================================
   // Arrows and Harpoons (mathb)
-  DefMath!("\\leftleftarrows",     "\u{21C7}", role => "ARROW");
-  DefMath!("\\rightrightarrows",   "\u{21C9}", role => "ARROW");
-  DefMath!("\\upuparrows",         "\u{21C8}", role => "ARROW");
-  DefMath!("\\downdownarrows",     "\u{21CA}", role => "ARROW");
-  DefMath!("\\leftrightarrows",    "\u{21C6}", role => "ARROW");
-  DefMath!("\\rightleftarrows",    "\u{21C4}", role => "ARROW");
-  DefMath!("\\updownarrows",       "\u{21C5}", role => "ARROW");
-  DefMath!("\\downuparrows",       "\u{21F5}", role => "ARROW");
-  DefMath!("\\leftleftharpoons",   "\u{2962}", role => "ARROW");
-  DefMath!("\\rightrightharpoons", "\u{2964}", role => "ARROW");
-  DefMath!("\\upupharpoons",       "\u{2963}", role => "ARROW");
-  DefMath!("\\downdownharpoons",   "\u{2965}", role => "ARROW");
-  DefMath!("\\leftbarharpoon",     "\u{296A}", role => "ARROW");
-  DefMath!("\\rightbarharpoon",    "\u{296C}", role => "ARROW");
-  DefMath!("\\barleftharpoon",     "\u{296B}", role => "ARROW");
-  DefMath!("\\barrightharpoon",    "\u{296D}", role => "ARROW");
-  DefMath!("\\leftrightharpoon",   "\u{294A}", role => "ARROW");
-  DefMath!("\\rightleftharpoon",   "\u{294B}", role => "ARROW");
+  def_math_sym("\\leftleftarrows", "\u{21C7}", Some("ARROW"), None)?;
+  def_math_sym("\\rightrightarrows", "\u{21C9}", Some("ARROW"), None)?;
+  def_math_sym("\\upuparrows", "\u{21C8}", Some("ARROW"), None)?;
+  def_math_sym("\\downdownarrows", "\u{21CA}", Some("ARROW"), None)?;
+  def_math_sym("\\leftrightarrows", "\u{21C6}", Some("ARROW"), None)?;
+  def_math_sym("\\rightleftarrows", "\u{21C4}", Some("ARROW"), None)?;
+  def_math_sym("\\updownarrows", "\u{21C5}", Some("ARROW"), None)?;
+  def_math_sym("\\downuparrows", "\u{21F5}", Some("ARROW"), None)?;
+  def_math_sym("\\leftleftharpoons", "\u{2962}", Some("ARROW"), None)?;
+  def_math_sym("\\rightrightharpoons", "\u{2964}", Some("ARROW"), None)?;
+  def_math_sym("\\upupharpoons", "\u{2963}", Some("ARROW"), None)?;
+  def_math_sym("\\downdownharpoons", "\u{2965}", Some("ARROW"), None)?;
+  def_math_sym("\\leftbarharpoon", "\u{296A}", Some("ARROW"), None)?;
+  def_math_sym("\\rightbarharpoon", "\u{296C}", Some("ARROW"), None)?;
+  def_math_sym("\\barleftharpoon", "\u{296B}", Some("ARROW"), None)?;
+  def_math_sym("\\barrightharpoon", "\u{296D}", Some("ARROW"), None)?;
+  def_math_sym("\\leftrightharpoon", "\u{294A}", Some("ARROW"), None)?;
+  def_math_sym("\\rightleftharpoon", "\u{294B}", Some("ARROW"), None)?;
   //  \rhook, \lhook
   DefMath!("\\diagup",         "\u{2571}");
   DefMath!("\\diagdown",       "\u{2572}");
-  DefMath!("\\Lsh",            "\u{21B0}", role => "ARROW");
-  DefMath!("\\Rsh",            "\u{21B1}", role => "ARROW");
-  DefMath!("\\dlsh",           "\u{21B2}", role => "ARROW");
-  DefMath!("\\drsh",           "\u{21B3}", role => "ARROW");
-  DefMath!("\\looparrowleft",  "\u{21AB}", role => "ARROW");
-  DefMath!("\\looparrowright", "\u{21AC}", role => "ARROW");
-  DefMath!("\\curvearrowleft",  "\u{21B6}", role => "ARROW");
-  DefMath!("\\curvearrowright", "\u{21B7}", role => "ARROW");
-  DefMath!("\\curvearrowbotright", "\u{293B}", role => "ARROW");
-  DefMath!("\\circlearrowleft",     "\u{21BA}", role => "ARROW");
-  DefMath!("\\circlearrowright",    "\u{21BB}", role => "ARROW");
-  DefMath!("\\leftsquigarrow",      "\u{21DC}", role => "RELOP");
-  DefMath!("\\rightsquigarrow",     "\u{219D}", role => "ARROW");
-  DefMath!("\\leftrightsquigarrow", "\u{21AD}", role => "ARROW");
-  DefMath!("\\lefttorightarrow",    "\u{2B8E}", role => "ARROW");
-  DefMath!("\\righttoleftarrow",    "\u{2B8C}", role => "ARROW");
-  DefMath!("\\uptodownarrow",       "\u{2B8F}", role => "ARROW");
-  DefMath!("\\downtouparrow",       "\u{2B8D}", role => "ARROW");
+  def_math_sym("\\Lsh", "\u{21B0}", Some("ARROW"), None)?;
+  def_math_sym("\\Rsh", "\u{21B1}", Some("ARROW"), None)?;
+  def_math_sym("\\dlsh", "\u{21B2}", Some("ARROW"), None)?;
+  def_math_sym("\\drsh", "\u{21B3}", Some("ARROW"), None)?;
+  def_math_sym("\\looparrowleft", "\u{21AB}", Some("ARROW"), None)?;
+  def_math_sym("\\looparrowright", "\u{21AC}", Some("ARROW"), None)?;
+  def_math_sym("\\curvearrowleft", "\u{21B6}", Some("ARROW"), None)?;
+  def_math_sym("\\curvearrowright", "\u{21B7}", Some("ARROW"), None)?;
+  def_math_sym("\\curvearrowbotright", "\u{293B}", Some("ARROW"), None)?;
+  def_math_sym("\\circlearrowleft", "\u{21BA}", Some("ARROW"), None)?;
+  def_math_sym("\\circlearrowright", "\u{21BB}", Some("ARROW"), None)?;
+  def_math_sym("\\leftsquigarrow", "\u{21DC}", Some("RELOP"), None)?;
+  def_math_sym("\\rightsquigarrow", "\u{219D}", Some("ARROW"), None)?;
+  def_math_sym("\\leftrightsquigarrow", "\u{21AD}", Some("ARROW"), None)?;
+  def_math_sym("\\lefttorightarrow", "\u{2B8E}", Some("ARROW"), None)?;
+  def_math_sym("\\righttoleftarrow", "\u{2B8C}", Some("ARROW"), None)?;
+  def_math_sym("\\uptodownarrow", "\u{2B8F}", Some("ARROW"), None)?;
+  def_math_sym("\\downtouparrow", "\u{2B8D}", Some("ARROW"), None)?;
 
   //======================================================================
   // Circles (matha)
   //   Using combining circle \x{20DD} for missing cases, but positioning is bad
   //  \oplus, \ominus (\circleddash)
   //  \otimes
-  DefMath!("\\odiv", "\u{00F7}\u{20DD}", role => "ADDOP");
+  def_math_sym("\\odiv", "\u{00F7}\u{20DD}", Some("ADDOP"), None)?;
   //  \odot
   DefMath!("\\ocirc",      "\u{229A}");
-  DefMath!("\\oasterisk",  "\u{229B}", role => "MULOP");
+  def_math_sym("\\oasterisk", "\u{229B}", Some("MULOP"), None)?;
   // DefMath('\ocoasterisk',Tokens());
-  DefMath!("\\oleft",  "\u{22A3}\u{20DD}", role => "ADDOP");
-  DefMath!("\\oright", "\u{22A2}\u{20DD}", role => "ADDOP");
-  DefMath!("\\otop",   "\u{22A4}\u{20DD}", role => "ADDOP");
+  def_math_sym("\\oleft", "\u{22A3}\u{20DD}", Some("ADDOP"), None)?;
+  def_math_sym("\\oright", "\u{22A2}\u{20DD}", Some("ADDOP"), None)?;
+  def_math_sym("\\otop", "\u{22A4}\u{20DD}", Some("ADDOP"), None)?;
   DefMath!("\\obot",   "\u{29BA}");
   DefMath!("\\ovoid",  "\u{25CB}");
   //  \oslash
   DefMath!("\\obackslash",  "\u{29B8}");
-  DefMath!("\\otriangleup", "\u{25B3}\u{20DD}", role => "ADDOP");
+  def_math_sym("\\otriangleup", "\u{25B3}\u{20DD}", Some("ADDOP"), None)?;
 
   //======================================================================
   // Boxes (mathb)
   //   Using combining square \x{20DE} for missing cases, but positioning is bad
-  DefMath!("\\boxplus",     "\u{229E}",             role => "ADDOP");
-  DefMath!("\\boxminus",    "\u{229F}",             role => "ADDOP");
-  DefMath!("\\boxtimes",    "\u{22A0}",             role => "MULOP");
-  DefMath!("\\boxdiv",      "\u{00F7}\u{20DE}",     role => "ADDOP");
-  DefMath!("\\boxdot",      "\u{22A1}",             role => "MULOP");
-  DefMath!("\\boxcirc",     "\u{2218}\u{20DE}",     role => "ADDOP");
-  DefMath!("\\boxasterisk", "\u{29C6}");
+  def_math_sym("\\boxplus", "\u{229E}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxminus", "\u{229F}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxtimes", "\u{22A0}", Some("MULOP"), None)?;
+  def_math_sym("\\boxdiv", "\u{00F7}\u{20DE}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxdot", "\u{22A1}", Some("MULOP"), None)?;
+  def_math_sym("\\boxcirc", "\u{2218}\u{20DE}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxasterisk", "\u{29C6}", None, None)?;
   // DefMath('\boxcoasterisk',Tokens());
-  DefMath!("\\boxleft",  "\u{22A3}\u{20DE}", role => "ADDOP");
-  DefMath!("\\boxright", "\u{22A2}\u{20DE}", role => "ADDOP");
-  DefMath!("\\boxtop",   "\u{22A4}\u{20DE}", role => "ADDOP");
-  DefMath!("\\boxbot",   "\u{22A5}\u{20DE}", role => "ADDOP");
+  def_math_sym("\\boxleft", "\u{22A3}\u{20DE}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxright", "\u{22A2}\u{20DE}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxtop", "\u{22A4}\u{20DE}", Some("ADDOP"), None)?;
+  def_math_sym("\\boxbot", "\u{22A5}\u{20DE}", Some("ADDOP"), None)?;
   DefMath!("\\boxvoid",  "\u{25A1}");
   //  \Box
   DefMath!("\\boxslash",      "\u{29C5}");
   DefMath!("\\boxbackslash",  "\u{29C4}");
-  DefMath!("\\boxtriangleup", "\u{25B3}\u{20DE}", role => "ADDOP");
+  def_math_sym("\\boxtriangleup", "\u{25B3}\u{20DE}", Some("ADDOP"), None)?;
 
   //======================================================================
   // Mayan numerals

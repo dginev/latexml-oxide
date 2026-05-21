@@ -21,13 +21,25 @@ LoadDefinitions!({
   // Makes sure libraries are loaded as definitions (InputDefinitions) rather than
   // content, with catcode management for | character.
   DefPrimitive!("\\use@@tikzlibrary{}", sub[(libs)] {
-    let libs_str = do_expand(libs)?.to_string();
+    let mut libs_str = do_expand(libs)?.to_string();
+    // tikzlibrarycd.code.tex checks for `decorations.pathmorphing`
+    // and `decorations.markings` @loaded flags at squiggly/markings
+    // arrow expansion time and emits a vendor PackageError if they're
+    // missing. arXiv's local pdflatex compiles these papers cleanly
+    // because the libraries are autoloaded by pdftex's TikZ; mirror
+    // by injecting both as deps whenever the cd library is requested.
+    // Papers commonly use `\usetikzlibrary{cd}` directly (without
+    // `\usepackage{tikz-cd}`), so the tikz_cd_sty binding never runs.
+    // Witness 2306.03232 (squiggly), 2308.06778 (markings).
+    if libs_str.split(',').any(|s| s.trim() == "cd") {
+      libs_str = s!("decorations.pathmorphing,decorations.markings,{libs_str}");
+    }
     for lib in libs_str.split(',') {
       let lib = lib.trim();
       if lib.is_empty() {
         continue;
       }
-      let loaded_cs = T_CS!(s!("\\\\tikz@library@{lib}@loaded"));
+      let loaded_cs = T_CS!(s!("\\tikz@library@{lib}@loaded"));
       if state::lookup_definition(&loaded_cs)?.is_some() {
         continue; // already loaded
       }

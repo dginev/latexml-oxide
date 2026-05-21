@@ -14,7 +14,7 @@ LoadDefinitions!({
   // And headpunct defaults to none.
   DefRegister!("\\thm@headpunct" => Tokens!());
 
-  DefMacro!("\\FMithmInfo", "");
+  def_macro_noop("\\FMithmInfo")?;
 
   DefMacro!("\\theoremheaderfont{}", sub[(font)] {
     state::assign_register("\\thm@headfont",

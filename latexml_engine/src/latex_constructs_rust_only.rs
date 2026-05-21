@@ -38,7 +38,13 @@ LoadDefinitions!({
   Let!("\\IfClassLoadedTF",    r"\@ifclassloaded");
   Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
   Let!("\\IfClassAtLeastTF",   r"\@ifclasslater");
-  Let!("\\IfFormatAtLeastTF",  r"\@ifl@t@r@released");
+  // \IfFormatAtLeastTF{<date>}{<true>}{<false>}: alias to
+  // `\@ifl@t@r@released` — but that name isn't captured by the dump,
+  // so the Let creates a dangling alias and downstream usage errors
+  // (witness 2408.03197 — greek-fontenc.def probes the macro).
+  // Define directly as a 3-arg gobble that always takes the "true"
+  // branch (we don't model format dates). Witness 2408.03197, 2408.04893.
+  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
   Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
 
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
@@ -52,6 +58,14 @@ LoadDefinitions!({
   // is irrelevant for our XML pipeline.
   Let!("\\UseRawInputEncoding", r"\relax");
 
+  // \DocumentMetadata{<keyval>} — LaTeX 2024 kernel command for PDF
+  // accessibility metadata. Author calls it BEFORE `\documentclass`
+  // (the autoload trigger in tex.rs ensures the LaTeX pool is loaded
+  // by the time it's expanded). The kvopts inside are PDF-only and
+  // semantically irrelevant for XML output — gobble the brace group.
+  // Witness 2305.08034.
+  def_macro_noop("\\DocumentMetadata{}")?;
+
   //======================================================================
   // 2. LaTeXML-internal helpers
   //======================================================================
@@ -60,6 +74,18 @@ LoadDefinitions!({
   // let-target safety filter can clobber it under certain orderings,
   // so define here post-dump as well.
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
+
+  // Kernel argument-gobbling macros — defensive re-declaration. These
+  // are defined in latex_base.rs L65 (and Perl's latex_dump.pool.ltxml
+  // L2063 has them) but our current Rust latex.dump.txt is missing
+  // M-records for them (dump-build coverage gap). When dump load is the
+  // active LoadFormat branch, latex_base is NOT loaded — so \@gobble
+  // stays undefined. Re-declare here so they're always available
+  // regardless of dump completeness. Witness: 2512.06027 (and ~2 v6
+  // papers) — textcomp.sty raw-load calls \@gobble at L74 and crashes.
+  DefMacro!("\\@gobble{}",          None);
+  DefMacro!("\\@gobbletwo{}{}",     None);
+  DefMacro!("\\@gobblefour{}{}{}{}", None);
 
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
@@ -75,21 +101,35 @@ LoadDefinitions!({
   DefRegister!("\\@bls"          => Dimension!("12pt"));
   DefRegister!("\\@maxlistdepth" => Number::new(6));
 
+  // \tracingstacklevels / \@nil / \@expl@str@if@eq@@nnTF moved to
+  // latex_bootstrap.rs — must be defined BEFORE the dump loads (the
+  // dump's latexrelease replay probes them).
+  //
+  // KNOWN ISSUE — papers that pin latexrelease to an older release
+  // via \RequirePackage[YYYY-MM-DD]{latexrelease} (e.g. 2503.21471)
+  // trip a cascade of undefined helpers (\@expl@str@if@eq@@nnTF,
+  // \@expl@cs@to@str@@N, \robust@command@act, \ExpandArgs, ...)
+  // because our \IncludeInRelease always runs the body. The proper
+  // fix is date-aware IncludeInRelease (skip rollback blocks unless
+  // release_date < block_date). Stubbing individual helpers gets us
+  // partway but the cascade has many tendrils — defer to a focused
+  // IncludeInRelease refactor.
+
   // List formatting macros from article.cls / report.cls / book.cls.
   // No-ops because LaTeXML handles list formatting via CSS.
-  DefMacro!("\\@listi",   "");
-  DefMacro!("\\@listii",  "");
-  DefMacro!("\\@listiii", "");
-  DefMacro!("\\@listiv",  "");
-  DefMacro!("\\@listv",   "");
-  DefMacro!("\\@listvi",  "");
+  def_macro_noop("\\@listi")?;
+  def_macro_noop("\\@listii")?;
+  def_macro_noop("\\@listiii")?;
+  def_macro_noop("\\@listiv")?;
+  def_macro_noop("\\@listv")?;
+  def_macro_noop("\\@listvi")?;
 
   //======================================================================
   // 4. Misc Rust-side stubs
   //======================================================================
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
-  DefMacro!("\\@latexbug", "");
+  def_macro_noop("\\@latexbug")?;
 
   // `\maybe@end@title` — Constructor that closes ltx:titlepage if open.
   // Used by Rust's titling pipeline; not directly mirrored in Perl.
@@ -102,7 +142,7 @@ LoadDefinitions!({
   // `\thebibliography@ID` — initial empty default. Per-bibliography
   // value is reassigned at \begin{thebibliography} time (see
   // latex_constructs.rs `\bibliography` constructor).
-  DefMacro!("\\thebibliography@ID", "");
+  def_macro_noop("\\thebibliography@ID")?;
 
   //======================================================================
   // 5. Modern LaTeX kernel (2023+) — `\NewCommandCopy`/`\DeclareCommandCopy`/
@@ -110,14 +150,27 @@ LoadDefinitions!({
   //
   // Not in Perl LaTeXML (too new), but needed for modern packages
   // (tcolorbox, etc.).
+  //
+  // ltcmd defines these as `\NewDocumentCommand … { m m }` — both args
+  // are mandatory and accept either a bare token (`\foo`) or a
+  // brace-wrapped token (`{\foo}`). Real arxmliv usage is the brace form:
+  // `\NewCommandCopy{\origsum}{\sum}` (witness: arXiv:2510.20194
+  // various.sty L296). Earlier `Token Token` spec consumed `{` as the
+  // first token and `\origsum` as the second, producing `\let { = \origsum`
+  // (no-op), leaving `\origsum` undefined and yielding 100+ cascade errors.
+  // Use `{}{}` (brace-mandatory) and unwrap to the contained Token.
   //======================================================================
-  DefPrimitive!("\\NewCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  DefPrimitive!("\\NewCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
-  DefPrimitive!("\\DeclareCommandCopy Token Token", sub[(new_cs, old_cs)] {
-    state::let_i(&new_cs, &old_cs, None);
+  DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
+    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
+    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
+    state::let_i(&new_tok, &old_tok, None);
   });
-  DefMacro!("\\ShowCommand Token", "");
+  def_macro_noop("\\ShowCommand Token")?;
 
   //======================================================================
   // 6. Modern LaTeX (2015+) extras
@@ -126,12 +179,12 @@ LoadDefinitions!({
   DefPrimitive!("\\extrafloats{}", None);
 
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
-  DefMacro!("\\wlog{}", "");
+  def_macro_noop("\\wlog{}")?;
 
   // `\Gin@driver` — pre-defined empty so graphics.sty doesn't error
   // when loaded from disk (LaTeXML doesn't run a Backend driver).
   // Not in Perl source; pure Rust hotfix.
-  DefMacro!("\\Gin@driver", "");
+  def_macro_noop("\\Gin@driver")?;
 
   // `\@tabacckludge` simplified body — Perl-faithful body lives in
   // latex_base.rs (Perl L357: `\csname\string#1\endcsname`). Under
@@ -199,8 +252,6 @@ LoadDefinitions!({
 \def\@parse@version@dash#1-#2-#3#4#5\@nil{%
   \if\relax#2\relax\else#1\fi#2#3#4 }"
   );
-
-  //======================================================================
   // 7a. Defensive NODUMP-path overrides for raw-LaTeX-kernel CSes
   //
   // Perl gets these from raw `latex.ltx` load (dump captures them).
@@ -319,7 +370,7 @@ LoadDefinitions!({
     state::lookup_meaning(&T_CS!("\\lx@filecontents@star")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
-  DefMacro!("\\endfilecontents", "");
+  def_macro_noop("\\endfilecontents")?;
   state::assign_meaning(
     &T_CS!("\\endfilecontents*"),
     state::lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),

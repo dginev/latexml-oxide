@@ -14,8 +14,8 @@ LoadDefinitions!({
   DefMacro!("\\appendixpagename", "Appendices");
 
   // Whether the entry in toc gets page number; Ignorable
-  DefMacro!("\\appendicestocpagenum",   "");
-  DefMacro!("\\noappendicestocpagenum", "");
+  def_macro_noop("\\appendicestocpagenum")?;
+  def_macro_noop("\\noappendicestocpagenum")?;
 
   // Switches, mostly ignorable(?)
   DefConditional!("\\if@dotoc@pp");
@@ -37,6 +37,14 @@ LoadDefinitions!({
 
   DefMacro!("\\setthesection",    "\\Alph{section}");
   DefMacro!("\\setthesubsection", "\\thesection.\\Alph{subsection}");
+
+  // \appendixpage and \addappheadtotoc are layout-only — they
+  // typeset a "page break" page-header in the printed paper. No XML
+  // analog; no-op stubs. (Perl L28-30 leaves them commented out;
+  // matching by stubbing keeps the diagnostics quiet.)
+  // Witnesses 2406.01767, 2406.13839.
+  def_macro_noop("\\appendixpage")?;
+  def_macro_noop("\\addappheadtotoc")?;
 
   DefPrimitive!("\\lx@pp@appendix@begin", {
     if lookup_definition(&T_CS!("\\c@chapter")).ok().flatten().is_some() {

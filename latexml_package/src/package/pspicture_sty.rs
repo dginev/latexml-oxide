@@ -23,7 +23,7 @@ LoadDefinitions!({
   // than Perl's undefined-macro-on-missing-helper cascade, but without
   // the <ltx:line> / <ltx:bezier> emission Perl does with full
   // helpers. Audit counts 3 DefConstructor → DefMacro flips here.
-  DefMacro!("\\Line Pair", "");
-  DefMacro!("\\Vector Pair", "");
-  DefMacro!("\\Curve Pair {}", "");
+  def_macro_noop("\\Line Pair")?;
+  def_macro_noop("\\Vector Pair")?;
+  def_macro_noop("\\Curve Pair {}")?;
 });

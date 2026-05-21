@@ -4,7 +4,9 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: doublespace.sty.ltxml
   // Mostly no-op for LaTeXML, except for two ignorable environments
-  DefEnvironment!("{singlespace}", "#body");
-  DefEnvironment!("{doublespace}", "#body");
-  DefEnvironment!("{spacing}{}", "#body");
+  // Same vertical-mode fix as setspace_sty.rs — paragraph-container envs
+  // must keep BOUND_MODE vertical so `$$` inside enters display math.
+  DefEnvironment!("{singlespace}",  "#body", mode => "internal_vertical");
+  DefEnvironment!("{doublespace}",  "#body", mode => "internal_vertical");
+  DefEnvironment!("{spacing}{}",    "#body", mode => "internal_vertical");
 });

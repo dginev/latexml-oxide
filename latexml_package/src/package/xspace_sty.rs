@@ -39,4 +39,14 @@ LoadDefinitions!({
       gullet::unread(Tokens!(T_SPACE!()));
     }
   });
+
+  // xspace.sty L57-60 `\xspaceaddexceptions{chars}` adds chars to the
+  // dynamic exception list. Our `\xspace` primitive above uses a
+  // hardcoded suppress-list; the dynamic list mechanism isn't modeled.
+  // Stub as no-op so raw-loaded sibling packages that call this don't
+  // emit undefined-CS errors. Author's added exceptions silently
+  // won't take effect (cosmetic — potential extra space, never
+  // missing-space). Companion `\xspaceremoveexception` too.
+  def_macro_noop("\\xspaceaddexceptions{}")?;
+  def_macro_noop("\\xspaceremoveexception{}")?;
 });

@@ -1593,19 +1593,22 @@ pub fn is_dont_expandable(token: &Token) -> bool {
 }
 
 pub fn lookup_conditional(token: &Token) -> Option<ConditionalType> {
-  let lookupname = token.get_executable_name();
-  if lookupname.is_empty() {
-    None
-  } else if let Some(entry) = state!().meaning.get(&arena::pin(lookupname)) {
+  // `get_executable_name` previously built a fresh `String` + `arena::pin`
+  // probe per call; `pin_cs_name` already returns a cached `SymStr`
+  // (primitive → `Catcode::name_sym`, otherwise `self.text`). Saves a
+  // RefCell mut-borrow on the interner + a hashmap probe per token in
+  // the gullet's conditional dispatch.
+  if !token.code.is_executable() {
+    return None;
+  }
+  let lookup_sym = token.pin_cs_name();
+  state!().meaning.get(&lookup_sym).and_then(|entry| {
     if let Some(Stored::Conditional(defn)) = entry.front() {
-      // Can only be a token or definition; we only want defns that have conditional_type
       Some(defn.conditional_type)
     } else {
       None
     }
-  } else {
-    None
-  }
+  })
 }
 
 pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
@@ -2052,7 +2055,10 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   {
     t_sym
   } else {
-    arena::pin(cc.name())
+    // Use cached SymStr from `Catcode::name_sym` instead of re-interning
+    // `cc.name()` (a &'static str) on every non-active-or-cs token —
+    // saves a hashmap probe per token on the digest hot path.
+    cc.name_sym()
   };
   // Debug!("Looking up digestable {:?}", lookupname);
   let state = state!();
@@ -2547,13 +2553,13 @@ pub fn compute_indirect_model() -> IndirectModel {
         if tag != kid && tag != start {
           let start_entry = {
             let kid_entry = desc.entry_sym(kid).or_default();
-            *kid_entry.entry_sym(start.to_owned()).or_insert(0)
+            *kid_entry.entry_sym(start).or_insert(0)
           };
           if start_entry > best {
             imodel
               .entry_sym(tag)
               .or_default()
-              .insert_sym(kid, start.to_owned());
+              .insert_sym(kid, start);
             {
               best = start_entry;
             }

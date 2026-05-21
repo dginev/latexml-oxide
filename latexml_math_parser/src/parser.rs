@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::io::Cursor;
 
 use latexml_core::common::arena::{self, SymHashMap};
@@ -97,6 +98,238 @@ static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap(
 // thread loads.
 static PARSE_LEXEMES_DBG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_LEXEMES").is_ok());
 static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT").is_ok());
+// When set, the parser dumps a histogram of semantic-pragma rejection
+// reasons for any formula where 0 trees survive pruning. Used to find
+// over-aggressive pragmas that admit a formula standalone but reject
+// it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
+static PARSE_PRUNE_REASONS: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
+static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_MATH_AMBIGUITY_AUDIT").is_ok());
+static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
+  Lazy::new(|| std::env::var("LATEXML_MARPA_HYBRID_AUDIT_PARITY").is_ok());
+// Route `parse_marpa` through one of three paths. See
+// docs/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+//
+// **HYBRID is now the default** (2026-05-17). Hybrid reads the tokens
+// once, builds the bocage once, then checks Marpa's raw
+// `ambiguity_metric()`:
+//   * metric == 1 (unambiguous) → cheap Tree-iteration via
+//     `Actions::get_tree`, same machinery the legacy path uses.
+//   * metric >= 2 (ambiguous)   → ASF traversal via `MathTraverser`,
+//     same machinery the ASF-only default used.
+//
+// Measured: Article-2025.tex (579 math-heavy formulae) wall is
+// 12.40s under HYBRID vs 17.00s under pure ASF and 12.21s under
+// pure LEGACY. Hybrid is within 1.05x LEGACY on the math-heavy
+// fixture while preserving ASF's algorithmic advantage on the
+// raw-ambiguous fraction (12.7%–40% across corpus papers).
+//
+// Escape hatches:
+//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6
+//     convergence caps. Useful for engine-divergence debugging.
+//   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch).
+//     Useful for measuring ASF-only cost or debugging ASF behaviour
+//     in isolation.
+static PARSE_VIA_LEGACY: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_ok());
+static PARSE_VIA_ASF_ONLY: Lazy<bool> = Lazy::new(|| {
+  !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok()
+});
+// Default = hybrid unless LEGACY or ASF_ONLY is requested.
+static PARSE_VIA_HYBRID: Lazy<bool> =
+  Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
+// Large-bocage fallback cap (marpa commit 5f6a19e + perf branch).
+// When the post-recognizer bocage exceeds this many total and-nodes,
+// `parse_hybrid_with_and_node_limit` routes us back through Tree
+// iteration (legacy caps) instead of ASF construction. ASF must
+// allocate the entire Rust-side glade/factoring view up front; on
+// math-bound papers with high-cardinality ambiguous forests this
+// blew through the 8 GB ulimit (19/100 OOMs on the math-bound
+// sample — see docs/PERFORMANCE.md "HYBRID at scale" addendum).
+//
+// Default 500: downstream consumers (pragmatics selection, XMath
+// builders) can't usefully process more than a handful of distinct
+// parses per formula — beyond a few hundred and-nodes the
+// `dispatch_action` Cartesian product produces alternatives that
+// will be dropped or collapsed anyway. Bigger bocages route through
+// the Tree iterator's 6 convergence caps (max_unique=10, etc.)
+// which already match what semantic selection can use. Override via
+// `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
+// disable the cap and force pure ASF on every ambiguous formula.
+static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> = Lazy::new(|| {
+  match std::env::var("LATEXML_MARPA_HYBRID_AND_NODE_LIMIT") {
+    Ok(v) => {
+      let trimmed = v.trim();
+      if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
+        None
+      } else {
+        trimmed.parse::<usize>().ok().or(Some(500))
+      }
+    },
+    Err(_) => Some(500),
+  }
+});
+// Compatibility alias: `PARSE_VIA_ASF` is true when we're NOT taking
+// the legacy path — both hybrid and ASF-only flavours go through the
+// ASF traverser at least some of the time. The downstream branch
+// inside `parse_marpa` distinguishes hybrid vs ASF-only further.
+static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
+
+#[derive(Default)]
+struct AmbiguityAuditCounts {
+  total:        usize,
+  unambiguous: usize,
+  ambiguous:   usize,
+}
+
+thread_local! {
+  static AMBIGUITY_AUDIT_COUNTS: RefCell<AmbiguityAuditCounts> =
+    RefCell::new(AmbiguityAuditCounts::default());
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ParseOutcome {
+  Accepted(XM),
+  Empty,
+  Rejected(String),
+  Multiple(Vec<XM>),
+}
+
+/// Audit semantics for `LATEXML_MARPA_HYBRID_AUDIT_PARITY`.
+///
+/// The parity check answers one load-bearing question:
+/// *"If both paths accept, do they produce the same XM?"* — and
+/// only that one. An `Accepted` vs `Empty/Rejected` mismatch IS a
+/// real divergence (one path returned a tree, the other didn't),
+/// but a `Rejected("…")` vs `Empty` outcome on a formula both
+/// paths failed is shallow: both report "no parse survived",
+/// they just disagree on the failure label. The user-facing HTML
+/// is bit-identical in that case (verified empirically on
+/// Article-2025.tex's set-builder formulae — see commit
+/// 9318960974 and marpa/docs/ASF_PERFORMANCE_FINDINGS.md), so
+/// we treat any pair of non-Accepted/non-Multiple outcomes as
+/// compatible.
+pub(crate) fn parity_outcomes_compatible(
+  asf_outcome: &ParseOutcome,
+  tree_outcome: &ParseOutcome,
+) -> bool {
+  match (asf_outcome, tree_outcome) {
+    (ParseOutcome::Accepted(_), _)
+    | (ParseOutcome::Multiple(_), _)
+    | (_, ParseOutcome::Accepted(_))
+    | (_, ParseOutcome::Multiple(_)) => asf_outcome == tree_outcome,
+    // Both are some flavour of "no parse survived" (Empty or
+    // Rejected, in either order) — equivalent from the user's
+    // perspective.
+    _ => true,
+  }
+}
+
+fn canonicalize_parse_outcome_ids(outcome: &mut ParseOutcome) {
+  match outcome {
+    ParseOutcome::Accepted(tree) => canonicalize_xm_ids(tree),
+    ParseOutcome::Multiple(trees) => {
+      for tree in trees {
+        canonicalize_xm_ids(tree);
+      }
+    },
+    ParseOutcome::Empty | ParseOutcome::Rejected(_) => {},
+  }
+}
+
+fn canonicalize_xm_ids(tree: &mut XM) {
+  let mut ids = HashMap::default();
+  let mut next_id = 0;
+  canonicalize_xm_ids_inner(tree, &mut ids, &mut next_id);
+}
+
+fn canonicalize_xm_ids_inner(
+  tree: &mut XM,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  match tree {
+    XM::Lexeme(..) => {},
+    XM::Token(props, _) | XM::Ref(props) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+    },
+    XM::Apply(operator, args, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      canonicalize_xm_ids_inner(&mut operator.0, ids, next_id);
+      for arg in &mut args.0 {
+        if let Some(arg) = arg {
+          canonicalize_xm_ids_inner(arg, ids, next_id);
+        }
+      }
+    },
+    XM::Dual(content, presentation, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      canonicalize_xm_ids_inner(content, ids, next_id);
+      canonicalize_xm_ids_inner(presentation, ids, next_id);
+    },
+    XM::Wrap(items, props, _) => {
+      canonicalize_xprops_ids(props, ids, next_id);
+      for item in items {
+        canonicalize_xm_ids_inner(item, ids, next_id);
+      }
+    },
+    XM::Arg(items) | XM::Choices(items) => {
+      for item in items {
+        canonicalize_xm_ids_inner(item, ids, next_id);
+      }
+    },
+  }
+}
+
+fn canonicalize_xprops_ids(
+  props: &mut XProps,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  canonicalize_id_value(&mut props.id, ids, next_id);
+  canonicalize_id_value(&mut props.idref, ids, next_id);
+  canonicalize_id_value(&mut props.xmkey, ids, next_id);
+}
+
+fn canonicalize_id_value(
+  value: &mut Option<Cow<'static, str>>,
+  ids: &mut HashMap<String, Cow<'static, str>>,
+  next_id: &mut usize,
+) {
+  let Some(original) = value.as_ref() else {
+    return;
+  };
+  let canonical = ids
+    .entry(original.to_string())
+    .or_insert_with(|| {
+      *next_id += 1;
+      Cow::Owned(format!("#{next_id}"))
+    })
+    .clone();
+  *value = Some(canonical);
+}
+
+fn record_ambiguity_metric(metric: i32, input: &str) {
+  if !*PARSE_AMBIGUITY_AUDIT {
+    return;
+  }
+  AMBIGUITY_AUDIT_COUNTS.with(|cell| {
+    let mut counts = cell.borrow_mut();
+    counts.total += 1;
+    if metric == 1 {
+      counts.unambiguous += 1;
+    } else {
+      counts.ambiguous += 1;
+    }
+    eprintln!(
+      "LATEXML_MATH_AMBIGUITY_AUDIT: metric={metric} totals: unambiguous={} ambiguous={} total={} | {}",
+      counts.unambiguous,
+      counts.ambiguous,
+      counts.total,
+      input.trim().chars().take(160).collect::<String>()
+    );
+  });
+}
 
 pub struct MathParser {
   grammar:                   ThinGrammar,
@@ -163,6 +396,59 @@ impl Default for MathParser {
 // ================================================================================
 
 impl MathParser {
+  fn audit_hybrid_unambiguous_parity(
+    &self,
+    input: &str,
+    nodes: &[Node],
+    document: &mut Document,
+    tree_outcome: &ParseOutcome,
+  ) {
+    if !*PARSE_HYBRID_AUDIT_PARITY {
+      return;
+    }
+
+    // Explicit audit-only mode. Math actions may annotate XML nodes as
+    // they run, so this intentionally stays behind an env var and should
+    // be used on disposable benchmark/test runs, not normal conversion.
+    let mut parser = Parser::with_precomputed_grammar(self.grammar.clone());
+    let mut traverser = crate::asf_traverser::MathTraverser {
+      actions:      &self.actions,
+      pragmas:      self.expert_pragmatics.as_slice(),
+      builder:      &self.builder,
+      nodes,
+      document,
+      pruned_count: 0,
+    };
+    let mut asf_outcome = match parser.parse_and_traverse_forest(
+      ByteScanner::new(Cursor::new(input)),
+      (),
+      &mut traverser,
+    ) {
+      Ok((alts, _state)) => {
+        let mut trees: Vec<XM> = alts.iter().filter_map(|o| o.clone()).collect();
+        trees.sort_by_key(|t| t.text_summary());
+        trees.dedup();
+        match trees.len() {
+          0 => ParseOutcome::Empty,
+          1 => ParseOutcome::Accepted(trees.remove(0)),
+          _ => ParseOutcome::Multiple(trees),
+        }
+      },
+      Err(e) => ParseOutcome::Rejected(e.to_string()),
+    };
+    let mut tree_outcome = tree_outcome.clone();
+    canonicalize_parse_outcome_ids(&mut asf_outcome);
+    canonicalize_parse_outcome_ids(&mut tree_outcome);
+
+    assert!(
+      parity_outcomes_compatible(&asf_outcome, &tree_outcome),
+      "LATEXML_MARPA_HYBRID_AUDIT_PARITY mismatch for {}\n  asf:  {:?}\n  tree: {:?}",
+      input.trim(),
+      asf_outcome,
+      tree_outcome
+    );
+  }
+
   /// Reset the marpa engine after a failed parse.
   /// Creates a new engine and runs a trivial parse to advance past the
   /// precompute step (grammar is already precomputed, can't do it again).
@@ -1028,113 +1314,387 @@ impl MathParser {
     if *PARSE_LEXEMES_DBG {
       eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
     }
-    let parse_result = self
-      .engine
-      .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
-    if *PARSE_LEXEMES_DBG {
-      eprintln!("PARSE_LEXEMES_RECOGNIZED");
-    }
     let mut parses: Vec<XM> = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
     let mut consecutive_dupes = 0usize;
     let start = std::time::Instant::now();
-    let max_trees = 5000; // Hard limit on parse tree enumeration
-    let max_time = std::time::Duration::from_secs(30); // 30 second timeout
-    // Convergence: if we've seen enough consecutive duplicates without
-    // a new unique tree, the grammar ambiguity is purely structural
-    // (script attachment ordering). Stop early.
-    let max_consecutive_dupes = 16;
-    // Time-budget convergence: once we have unique parses, stop after
-    // this budget. For formulas where all trees are pruned (no unique
-    // parse yet), use a longer budget before giving up.
-    let converge_budget = std::time::Duration::from_millis(200);
-    // Pruned-only fast-fail: if we've spent significant time and seen
-    // many trees without finding a single semantic-acceptable parse,
-    // the grammar is exploring a combinatorial dead end. Bail before
-    // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
-    // pruned trees over 28s before timeout. After 2s with >200 prunes
-    // the marginal probability of finding a unique drops sharply.
-    let pruned_only_time_budget = std::time::Duration::from_secs(2);
-    let pruned_only_count_threshold: usize = 200;
-    // Unique-tree cap: the pragmatics/selection step only needs a handful
-    // of distinct parses. Beyond this, additional unique trees are almost
-    // always script-attachment ordering variants that don't improve the
-    // final selected parse. Avoids enumerating 60+ trees for expressions
-    // like `{}^4{}_{12}C^{5+}` where the grammar produces 27+ unique
-    // trees from different pre/post script nesting orders.
-    let max_unique = 10;
-    for val in parse_result {
-      // Truncate if too many trees or too much time
-      if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
-        break;
+    // Capture pragma-rejection reasons when LATEXML_PARSE_PRUNE_REASONS=1.
+    // Bounded HashMap keyed by error-message string; on a zero-OK failure
+    // we print the top-3 reasons + counts. Cheap when the env var is unset.
+    let mut prune_reasons: rustc_hash::FxHashMap<String, usize> = rustc_hash::FxHashMap::default();
+
+    if *PARSE_VIA_HYBRID {
+      // Hybrid path: one recognizer pass, one bocage, then route by
+      // raw Marpa ambiguity. Unambiguous formulae use the cheaper
+      // legacy Step/value action path; ambiguous formulae use ASF.
+      //
+      // `pruned_trees` remains a diagnostic counter here: the
+      // unambiguous branch counts whole-tree semantic rejection, while
+      // the ambiguous branch reports per-combo ASF action rejections.
+      // Do not compare this number across routing modes as a semantic
+      // invariant.
+      let mut traverser = crate::asf_traverser::MathTraverser {
+        actions:      &self.actions,
+        pragmas:      self.expert_pragmatics.as_slice(),
+        builder:      &self.builder,
+        nodes,
+        document,
+        pruned_count: 0,
+      };
+      let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
+        ByteScanner::new(Cursor::new(input)),
+        (),
+        &mut traverser,
+        *HYBRID_AND_NODE_LIMIT,
+      );
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
-      // Early convergence: stop if we keep seeing only duplicates.
-      // The grammar produces 2^N duplicates from script attachment ordering.
-      // Once we've found all unique parses, every new tree is a duplicate.
-      if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
-        break;
-      }
-      // Unique-tree cap: stop once we have enough distinct parses.
-      if parses.len() >= max_unique {
-        break;
-      }
-      // Time-budget convergence: if we have unique parses and have spent
-      // >200ms, stop — the remaining trees are overwhelmingly duplicates.
-      if !parses.is_empty() && start.elapsed() > converge_budget {
-        break;
-      }
-      // Pruned-only fast-fail: bail when we have NO unique parses, have
-      // already enumerated many trees, and have burned through the
-      // pruned-only budget. Without this, the loop runs to `max_time`
-      // (30s) on pathological multi-clause RELOP-list formulae where
-      // every grammar derivation is semantically pruned (e.g.
-      // 0804.1730 had 4536 enumerated → 0 unique → 28.29s).
-      if parses.is_empty()
-        && pruned_trees > pruned_only_count_threshold
-        && start.elapsed() > pruned_only_time_budget
-      {
-        break;
-      }
-      // Note: we intentionally do NOT abort when no parse has been found
-      // even after extended time — valid parses can appear late in the
-      // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
-      match self.actions.get_tree(
-        self.builder.clone(),
-        val,
-        self.expert_pragmatics.as_slice(),
-        ActionContext { nodes, document },
-      ) {
-        Ok(tree_opt) => {
-          if let Some(tree) = tree_opt {
-            ok_trees += 1;
-            // Online deduplication: check if this tree is already in our unique set
-            if parses.contains(&tree) {
-              deduped += 1;
-              consecutive_dupes += 1;
-            } else {
+      match hybrid_result {
+        Ok(HybridParseResult::Unambiguous(mut tree_iter)) => {
+          drop(traverser);
+          record_ambiguity_metric(1, input);
+          let tree_outcome = if let Some(val) = tree_iter.next() {
+            match self.actions.get_tree(
+              self.builder.clone(),
+              val,
+              self.expert_pragmatics.as_slice(),
+              ActionContext { nodes, document },
+            ) {
+              Ok(Some(tree)) => ParseOutcome::Accepted(tree),
+              Ok(None) => ParseOutcome::Empty,
+              Err(prune_err) => ParseOutcome::Rejected(prune_err.to_string()),
+            }
+          } else {
+            ParseOutcome::Empty
+          };
+          debug_assert!(
+            tree_iter.next().is_none(),
+            "hybrid unambiguous branch should expose exactly one raw tree"
+          );
+          self.audit_hybrid_unambiguous_parity(input, nodes, document, &tree_outcome);
+          match tree_outcome {
+            ParseOutcome::Accepted(tree) => {
+              ok_trees += 1;
               parses.push(tree);
-              // Half-decay (not full reset) on new unique. This lets us bail
-              // on cases where uniques are sparse among a sea of dupes/prunes —
-              // e.g. sin[XY] produces 10 unique parses among 1022 grammar
-              // derivations; without decay the unique trees keep resetting the
-              // dupe counter and we never converge. Half-decay means each new
-              // unique halves the accumulated dupe budget instead of clearing it.
-              consecutive_dupes /= 2;
+            },
+            ParseOutcome::Empty => {},
+            ParseOutcome::Rejected(msg) => {
+              pruned_trees += 1;
+              if *PARSE_PRUNE_REASONS {
+                let trimmed = msg.chars().take(140).collect::<String>();
+                *prune_reasons.entry(trimmed).or_insert(0) += 1;
+              }
+            },
+            ParseOutcome::Multiple(_) => unreachable!("tree path cannot produce multiple outcomes"),
+          }
+        },
+        Ok(HybridParseResult::Ambiguous(alts, _state)) => {
+          record_ambiguity_metric(2, input);
+          pruned_trees = traverser.pruned_count;
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "ASF_AUDIT: peak returned {} alternatives ({} Some, {} None), pruned={}",
+              alts.len(),
+              alts.iter().filter(|a| a.is_some()).count(),
+              alts.iter().filter(|a| a.is_none()).count(),
+              pruned_trees,
+            );
+          }
+          let alts_vec =
+            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          for opt in alts_vec {
+            if let Some(tree) = opt {
+              if parses.contains(&tree) {
+                deduped += 1;
+              } else {
+                ok_trees += 1;
+                parses.push(tree);
+              }
             }
           }
         },
-        Err(_prune_err) => {
-          pruned_trees += 1;
-          // Pruned trees also count toward convergence if we have unique parses
-          if !parses.is_empty() {
-            consecutive_dupes += 1;
+        Ok(HybridParseResult::AmbiguousTree(tree_iter, stats)) => {
+          // Large-bocage fallback: codex's marpa commit 5f6a19e routes
+          // bocages whose `and_node_count` exceeds `*HYBRID_AND_NODE_LIMIT`
+          // through the ordinary `Tree` iterator instead of constructing
+          // the ASF. Walk it with the same 6 convergence caps that the
+          // legacy path uses — those caps are exactly what makes
+          // Tree-iteration tractable on highly-ambiguous forests.
+          drop(traverser);
+          record_ambiguity_metric(2, input);
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "HYBRID_AUDIT: large-bocage fallback fired (or_nodes={}, and_nodes={}, max_per_or={}) for: {}",
+              stats.or_node_count,
+              stats.and_node_count,
+              stats.max_and_nodes_per_or_node,
+              input.chars().take(120).collect::<String>(),
+            );
+          }
+          let max_trees = 5000;
+          let max_time = std::time::Duration::from_secs(30);
+          let max_consecutive_dupes = 16;
+          let converge_budget = std::time::Duration::from_millis(200);
+          let pruned_only_time_budget = std::time::Duration::from_secs(2);
+          let pruned_only_count_threshold: usize = 200;
+          let max_unique = 10;
+          for val in tree_iter {
+            if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+              break;
+            }
+            if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
+              break;
+            }
+            if parses.len() >= max_unique {
+              break;
+            }
+            if !parses.is_empty() && start.elapsed() > converge_budget {
+              break;
+            }
+            if parses.is_empty()
+              && pruned_trees > pruned_only_count_threshold
+              && start.elapsed() > pruned_only_time_budget
+            {
+              break;
+            }
+            match self.actions.get_tree(
+              self.builder.clone(),
+              val,
+              self.expert_pragmatics.as_slice(),
+              ActionContext { nodes, document },
+            ) {
+              Ok(Some(tree)) => {
+                ok_trees += 1;
+                if parses.contains(&tree) {
+                  deduped += 1;
+                  consecutive_dupes += 1;
+                } else {
+                  parses.push(tree);
+                  consecutive_dupes /= 2;
+                }
+              },
+              Ok(None) => {},
+              Err(prune_err) => {
+                pruned_trees += 1;
+                if *PARSE_PRUNE_REASONS {
+                  let msg = prune_err.to_string();
+                  let trimmed = msg.chars().take(140).collect::<String>();
+                  *prune_reasons.entry(trimmed).or_insert(0) += 1;
+                }
+                if !parses.is_empty() {
+                  consecutive_dupes += 1;
+                }
+              },
+            }
+          }
+        },
+        Err(e) => {
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!("HYBRID_AUDIT: parse_hybrid Err: {e}");
           }
         },
       }
+    } else if *PARSE_VIA_ASF {
+      // ASF path: one post-order memoized callback per glade.
+      // `MathTraverser` accumulates all alternative XM parse trees
+      // (including any pragmas-pruned ones counted as `pruned_count`)
+      // in a single sweep; no Tree-iteration loop, no convergence
+      // bandages. See `latexml_math_parser/src/asf_traverser.rs` and
+      // docs/MATH_PARSER_AND_ASF.md.
+      let mut traverser = crate::asf_traverser::MathTraverser {
+        actions:      &self.actions,
+        pragmas:      self.expert_pragmatics.as_slice(),
+        builder:      &self.builder,
+        nodes,
+        document,
+        pruned_count: 0,
+      };
+      let asf_result = self
+        .engine
+        .parse_and_traverse_forest(ByteScanner::new(Cursor::new(input)), (), &mut traverser);
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      match asf_result {
+        Ok((alts, _state)) => {
+          pruned_trees = traverser.pruned_count;
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!(
+              "ASF_AUDIT: peak returned {} alternatives ({} Some, {} None), pruned={}",
+              alts.len(),
+              alts.iter().filter(|a| a.is_some()).count(),
+              alts.iter().filter(|a| a.is_none()).count(),
+              pruned_trees,
+            );
+          }
+          // The order-alignment with legacy tree-iteration is no
+          // longer needed: the FencedLetters Dual pragma now prunes
+          // the wrong-direction parses at validation time, and adding
+          // `alts.reverse()` measured WORSE on the test suite
+          // (1281 vs 1284). Leave the bocage-natural order.
+          // End-of-traversal: take ownership of the peak Vec.
+          // `Rc::try_unwrap` succeeds unless the marpa driver still
+          // holds a copy in its cache (it returned its own clone via
+          // `cache.insert(peak, output.clone())`), so fall back to
+          // deep clone on the cold path.
+          let alts_vec =
+            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          for opt in alts_vec {
+            if let Some(tree) = opt {
+              if parses.contains(&tree) {
+                deduped += 1;
+              } else {
+                ok_trees += 1;
+                parses.push(tree);
+              }
+            }
+          }
+        },
+        Err(e) => {
+          if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+            eprintln!("ASF_AUDIT: traverse_forest Err: {e}");
+          }
+        },
+      }
+    } else {
+      // Legacy path: Tree iteration with the 6 convergence caps.
+      let parse_result = self
+        .engine
+        .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+      if *PARSE_LEXEMES_DBG {
+        eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      // The six caps below (max_trees, max_time, max_consecutive_dupes,
+      // converge_budget, pruned_only_time_budget+_count_threshold,
+      // max_unique) exist because Tree-iteration evaluates per-tree
+      // actions O(trees × occurrences) times — defensive bandages
+      // against the paradigm cost.
+      //
+      // 2026-05-18: With HYBRID as the default
+      // (`PARSE_VIA_HYBRID`), this branch is reached only when the
+      // user explicitly sets `LATEXML_MARPA_LEGACY=1` — an
+      // engine-divergence debugging escape hatch. The caps stay
+      // because their *original* protective role is exactly what
+      // makes the escape hatch usable on real ambiguous inputs
+      // (without them legacy would hang on grammars like the
+      // `27-trees-from-scriptpos` family in math). Removing them
+      // would silently break the debug path.
+      //
+      // For the production-path concern (long-time tree-iteration
+      // cost), HYBRID's `metric == 2 → ASF` routing already
+      // sidesteps these caps via per-glade memoization. See
+      // docs/MATH_PARSER_AND_ASF.md.
+      let max_trees = 5000; // Hard limit on parse tree enumeration
+      let max_time = std::time::Duration::from_secs(30); // 30 second timeout
+      // Convergence: if we've seen enough consecutive duplicates without
+      // a new unique tree, the grammar ambiguity is purely structural
+      // (script attachment ordering). Stop early.
+      let max_consecutive_dupes = 16;
+      // Time-budget convergence: once we have unique parses, stop after
+      // this budget. For formulas where all trees are pruned (no unique
+      // parse yet), use a longer budget before giving up.
+      let converge_budget = std::time::Duration::from_millis(200);
+      // Pruned-only fast-fail: if we've spent significant time and seen
+      // many trees without finding a single semantic-acceptable parse,
+      // the grammar is exploring a combinatorial dead end. Bail before
+      // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
+      // pruned trees over 28s before timeout. After 2s with >200 prunes
+      // the marginal probability of finding a unique drops sharply.
+      let pruned_only_time_budget = std::time::Duration::from_secs(2);
+      let pruned_only_count_threshold: usize = 200;
+      // Unique-tree cap: the pragmatics/selection step only needs a handful
+      // of distinct parses. Beyond this, additional unique trees are almost
+      // always script-attachment ordering variants that don't improve the
+      // final selected parse. Avoids enumerating 60+ trees for expressions
+      // like `{}^4{}_{12}C^{5+}` where the grammar produces 27+ unique
+      // trees from different pre/post script nesting orders.
+      let max_unique = 10;
+      for val in parse_result {
+        // Truncate if too many trees or too much time
+        if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
+          break;
+        }
+        // Early convergence: stop if we keep seeing only duplicates.
+        // The grammar produces 2^N duplicates from script attachment ordering.
+        // Once we've found all unique parses, every new tree is a duplicate.
+        if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
+          break;
+        }
+        // Unique-tree cap: stop once we have enough distinct parses.
+        if parses.len() >= max_unique {
+          break;
+        }
+        // Time-budget convergence: if we have unique parses and have spent
+        // >200ms, stop — the remaining trees are overwhelmingly duplicates.
+        if !parses.is_empty() && start.elapsed() > converge_budget {
+          break;
+        }
+        // Pruned-only fast-fail: bail when we have NO unique parses, have
+        // already enumerated many trees, and have burned through the
+        // pruned-only budget. Without this, the loop runs to `max_time`
+        // (30s) on pathological multi-clause RELOP-list formulae where
+        // every grammar derivation is semantically pruned (e.g.
+        // 0804.1730 had 4536 enumerated → 0 unique → 28.29s).
+        if parses.is_empty()
+          && pruned_trees > pruned_only_count_threshold
+          && start.elapsed() > pruned_only_time_budget
+        {
+          break;
+        }
+        // Note: we intentionally do NOT abort when no parse has been found
+        // even after extended time — valid parses can appear late in the
+        // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
+        match self.actions.get_tree(
+          self.builder.clone(),
+          val,
+          self.expert_pragmatics.as_slice(),
+          ActionContext { nodes, document },
+        ) {
+          Ok(tree_opt) => {
+            if let Some(tree) = tree_opt {
+              ok_trees += 1;
+              // Online deduplication: check if this tree is already in our unique set
+              if parses.contains(&tree) {
+                deduped += 1;
+                consecutive_dupes += 1;
+              } else {
+                parses.push(tree);
+                // Half-decay (not full reset) on new unique. This lets us bail
+                // on cases where uniques are sparse among a sea of dupes/prunes —
+                // e.g. sin[XY] produces 10 unique parses among 1022 grammar
+                // derivations; without decay the unique trees keep resetting the
+                // dupe counter and we never converge. Half-decay means each new
+                // unique halves the accumulated dupe budget instead of clearing it.
+                consecutive_dupes /= 2;
+              }
+            }
+          },
+          Err(prune_err) => {
+            pruned_trees += 1;
+            if *PARSE_PRUNE_REASONS {
+              let msg = prune_err.to_string();
+              let trimmed = msg.chars().take(140).collect::<String>();
+              *prune_reasons.entry(trimmed).or_insert(0) += 1;
+            }
+            // Pruned trees also count toward convergence if we have unique parses
+            if !parses.is_empty() {
+              consecutive_dupes += 1;
+            }
+          },
+        }
+      }
     }
 
+    // Diagnostic: dump parse ORDER when LATEXML_PARSE_DUMP_ORDER=1.
+    if std::env::var("LATEXML_PARSE_DUMP_ORDER").is_ok() && parses.len() > 1 {
+      eprintln!("PARSE_ORDER: {} unique for {}", parses.len(), input.trim());
+      for (i, p) in parses.iter().enumerate() {
+        eprintln!("  [{}] {}", i, p.text_summary());
+      }
+    }
     // Store count for \ltx@count@parses diagnostic macro
     // Use post-dedup count (distinct semantic trees), not raw grammar count
     self.last_parsetrees_count = parses.len();
@@ -1169,6 +1729,22 @@ impl MathParser {
         input.trim().chars().take(200).collect::<String>()
       );
     }
+    // Dump top pragma-rejection reasons when no parse survived and the
+    // diagnostic env var is set. Helps locate over-aggressive pragmas
+    // that reject all candidates in document context.
+    if *PARSE_PRUNE_REASONS && parses.is_empty() && pruned_trees > 0 {
+      let mut top: Vec<(&String, &usize)> = prune_reasons.iter().collect();
+      top.sort_by(|a, b| b.1.cmp(a.1));
+      eprintln!(
+        "PARSE_PRUNE_REASONS: {} pruned, {} distinct, top-5: | input: {}",
+        pruned_trees,
+        prune_reasons.len(),
+        input.trim().chars().take(120).collect::<String>()
+      );
+      for (msg, count) in top.iter().take(5) {
+        eprintln!("  {count:>5}× {msg}");
+      }
+    }
 
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
@@ -1183,6 +1759,122 @@ impl MathParser {
             _ => {},
           };
         }
+        // Multi-tree pragma: `(a, b)` and `[a, b]` (and half-open
+        // variants) standalone should default to the named-interval
+        // interpretation (`open-interval`, `closed-interval`, etc.)
+        // rather than the generic `vector@(2)` or `delimited-XY@(...)`
+        // wrapper. The math-parser grammar admits both; legacy
+        // tree-iter happens to pick the named interval, ASF
+        // Cartesian-product happens to pick the wrapper. This pragma
+        // drops the wrapper parses from the forest root iff a named-
+        // interval alternative also exists. Narrow scope: only the
+        // math root, only 2-element, only when both alternatives are
+        // present.
+        reduced_forest = reduced_forest.prefer_named_interval_at_root();
+
+        // Multi-tree pragma: prune `set@(set@(…))`, `vector@(vector@(…))`
+        // etc. — redundant self-wrapping at the math root — when a
+        // non-self-wrapping alternative exists in the forest.
+        reduced_forest = reduced_forest.prefer_non_self_wrapping_root();
+
+        // Multi-tree pragma: drop `multirelation@(..., absent, ...)`
+        // chains when a non-multirelation alternative exists.
+        // Handles `x>=0` parsed as `(x > absent = 0)` vs `>=@(x, 0)`.
+        reduced_forest = reduced_forest.prefer_combined_relop_over_multirelation_with_absent();
+
+        // `prefer_zero_absent_when_available` retired 2026-05-19
+        // (ASF item 5 Phase 2): the pragma had no dedicated test
+        // witness. Its conceptual target (`<x|y>` inner-product
+        // bra-ket) is already produced as `inner-product@(x, y)`
+        // by the qm-specific pragmas + the angle-bracket grammar
+        // rules. After the modified_term Phase 1 landing, disabling
+        // the pragma left `cargo test --tests` = 1328/0/0 on both
+        // HYBRID and ASF — the pragma is structurally redundant.
+        // See commit history (the new commit) and
+        // `docs/MATH_PARSER_ASF_TIEBREAKING.md`.
+
+        // Multi-tree pragma: a *specific* QM semantic
+        // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
+        // beats a generic `delimited-⟨⟩` wrapper for the same input.
+        // Specific semantic recognition reflects author intent more
+        // closely than a structural fence wrapper. Must run BEFORE
+        // `prefer_more_delimited_wrappers`, because the latter would
+        // otherwise filter out the qm_bracket candidate (which has
+        // zero `delimited-` wrappers).
+        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
+
+        // Multi-tree pragma: prefer candidates with FEWER nested
+        // same-meaning fences (`norm` inside `norm`, etc.). Encodes
+        // the mathematician's greedy left-to-right bar-pairing
+        // instinct. Resolves `||x||a||y||` → `‖x‖ · a · ‖y‖`
+        // (siblings) over `‖x · ‖a‖ · y‖` (nested).
+        reduced_forest = reduced_forest.prefer_fewer_nested_same_fences();
+
+        // Multi-tree pragma: prefer candidates that recognized
+        // fenced sub-expressions as `delimited-X@(…)` (angle, paren,
+        // bracket, vertbar) over flat `formulae@(…)` / multirelation
+        // chains. Fires only when at least one candidate has a
+        // `delimited-X` Apply AND another has fewer/zero. Resolves
+        // `2<x,y>=z`, `0<<a,b>>1`, and bra-ket-style angle fences.
+        // See docs/MATH_PARSER_ASF_TIEBREAKING.md § "What landed".
+        reduced_forest = reduced_forest.prefer_more_delimited_wrappers();
+
+        // Multi-tree pragma: prefer candidates with MORE
+        // `Apply(letter, [vertbar-fenced])` patterns — captures the
+        // QM-style bra-ket reading `<a|f|b>` → `a@(|f|) * b` over
+        // the multiplicative `a * |f| * b`. No-op outside QM/angle
+        // contexts because K-12 readings don't admit the pattern.
+        reduced_forest = reduced_forest.prefer_more_letter_at_vertbar();
+
+        // Multi-tree pragma: when at least one candidate has zero
+        // `MODIFIEROP:conditional` Applies, drop those with more.
+        // The conditional reading of `vertbar_modifier` recurses
+        // through itself in the grammar, producing
+        // `conditional@(a, conditional@(a, …))` for inputs like
+        // `a|a|+b|b|+c|c|`. The K-12 algebra reading
+        // `a*|a|+b*|b|+c*|c|` has no conditionals; this pragma
+        // gives it preference. Set-builder / probability cases
+        // where no algebraic alternative exists are unaffected.
+        reduced_forest = reduced_forest.prefer_fewer_conditionals();
+
+        // Multi-tree pragma: when at least one candidate roots at
+        // an additive operator (`+`/`-`), prefer it over candidates
+        // with multiplicative root. K-12 reading: `a*|a|+b*|b|+c*|c|`
+        // has `+` outermost, not `a * (one giant absolute-value)`.
+        reduced_forest = reduced_forest.prefer_root_addition_over_outer_multiplication();
+
+        // Multi-tree pragma: among addition-rooted candidates,
+        // prefer the widest n-ary `+` chain (`+@(a, b, c)` over
+        // `+@(a, b+c)`). Resolves the inner bar-pairing of
+        // `a|a|+b|b|+c|c|` — the 3-arg chain has every `|.|`
+        // as a sibling absolute-value.
+        reduced_forest = reduced_forest.prefer_wider_addition_root();
+
+
+        // Multi-tree shape pragmas (`prefer_fewer_absent`,
+        // `prefer_smaller_tree`) exist on `XM` but are
+        // **deliberately not wired in by default**. Both proved
+        // too coarse to apply universally — see
+        // docs/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
+        //
+        // * `prefer_fewer_absent`: on the legacy path it is
+        //   essentially neutral (1300/1 vs 1301 baseline), but on
+        //   the ASF path it costs 9 tests because ASF surfaces
+        //   absent-free parses that are semantically WRONG (e.g.
+        //   `<a|f|b>` parsed as a multiplication chain without the
+        //   bra-ket interpretation). The deeper issue: `absent` has
+        //   two valid uses (structural filler vs missing-operand
+        //   fallback) and the pragma can't tell them apart.
+        //
+        // * `prefer_smaller_tree`: 3 improvements vs 6 regressions
+        //   on legacy. "Smaller is better" works for `norm@(a)` vs
+        //   `abs(abs(a))` but not for `annotated@(x, expr)` vs
+        //   `x@(expr)` where the larger tree is the intended one.
+        //
+        // The correct path forward is case-by-case semantic
+        // pragmas (named-operator recognition, domain-typed
+        // wrappers), not universal shape ranking. See the
+        // research-notes doc for the design discussion.
         Ok(reduced_forest)
       },
     }
@@ -1896,6 +2588,78 @@ mod tests {
   #[test]
   fn parse_scriptpos_empty_defaults_to_post_zero() {
     assert_eq!(parse_scriptpos_str(""), ("post", 0));
+  }
+
+  // ---- LATEXML_MARPA_HYBRID_AUDIT_PARITY relaxed-comparison tests ----
+  //
+  // The audit's load-bearing question is "if both paths accept, do
+  // they produce the same XM?". Non-Accepted/Non-Multiple outcome
+  // pairs (Empty vs Rejected etc.) are compatible. The minimal
+  // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
+  // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+
+  fn lex(name: &str) -> XM {
+    XM::Lexeme(std::rc::Rc::from(name), crate::semantics::metadata::Meta::default())
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_both_empty_is_ok() {
+    assert!(parity_outcomes_compatible(&ParseOutcome::Empty, &ParseOutcome::Empty));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_both_rejected_is_ok_even_with_different_messages() {
+    let a = ParseOutcome::Rejected("infix_relation: …".to_string());
+    let b = ParseOutcome::Rejected("some other pragma rejected".to_string());
+    assert!(parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_empty_vs_rejected_is_ok_in_either_order() {
+    let empty = ParseOutcome::Empty;
+    let rej = ParseOutcome::Rejected("…".to_string());
+    assert!(parity_outcomes_compatible(&empty, &rej));
+    assert!(parity_outcomes_compatible(&rej, &empty));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_vs_empty_is_a_real_mismatch() {
+    let acc = ParseOutcome::Accepted(lex("x"));
+    let empty = ParseOutcome::Empty;
+    assert!(!parity_outcomes_compatible(&acc, &empty));
+    assert!(!parity_outcomes_compatible(&empty, &acc));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_vs_rejected_is_a_real_mismatch() {
+    let acc = ParseOutcome::Accepted(lex("x"));
+    let rej = ParseOutcome::Rejected("…".to_string());
+    assert!(!parity_outcomes_compatible(&acc, &rej));
+    assert!(!parity_outcomes_compatible(&rej, &acc));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_equal_xm_is_ok() {
+    let a = ParseOutcome::Accepted(lex("foo"));
+    let b = ParseOutcome::Accepted(lex("foo"));
+    assert!(parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_accepted_different_xm_is_a_real_mismatch() {
+    let a = ParseOutcome::Accepted(lex("foo"));
+    let b = ParseOutcome::Accepted(lex("bar"));
+    assert!(!parity_outcomes_compatible(&a, &b));
+  }
+
+  #[test]
+  fn parity_outcomes_compatible_multiple_treated_as_accepted_kind() {
+    let m = ParseOutcome::Multiple(vec![lex("x"), lex("y")]);
+    let empty = ParseOutcome::Empty;
+    // Multiple-vs-Empty is a real mismatch (one path returned trees,
+    // the other didn't) — same semantics as Accepted-vs-Empty.
+    assert!(!parity_outcomes_compatible(&m, &empty));
+    assert!(!parity_outcomes_compatible(&empty, &m));
   }
 
   #[test]

@@ -5,6 +5,34 @@
 //! and various compatibility macros encountered in real-world arxiv submissions.
 use crate::prelude::*;
 
+/// Push the digested body of a `{keyword}`/`{keywords}` env directly into
+/// the `frontmatter` map under `ltx:classification[scheme=keywords]`, the
+/// way Perl LaTeXML's after_digest_keywords does it
+/// (OmniBus.cls.ltxml `sub after_digest_keywords`). Avoids the
+/// raw_tex(`#body`) workaround that mistakenly tokenized `#` as PARAM
+/// and dumped the literal text "#body" into the output element.
+fn push_keyword_body_to_frontmatter(
+  whatsit: &mut latexml_core::whatsit::Whatsit,
+) -> latexml_core::Result<Vec<latexml_core::digested::Digested>> {
+  use latexml_core::BoxOps;
+  use latexml_core::common::store::Stored;
+  if let Some(body) = whatsit.get_body()? {
+    let mut attrs: rustc_hash::FxHashMap<String, String> =
+      rustc_hash::FxHashMap::default();
+    attrs.insert("scheme".to_string(), "keywords".to_string());
+    let entry = ("ltx:classification".to_string(), Some(attrs), body);
+    latexml_core::state::with_value_mut("frontmatter", |val_opt| {
+      if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
+        frnt
+          .entry("ltx:classification".to_string())
+          .or_insert_with(Vec::new)
+          .push(entry);
+      }
+    });
+  }
+  Ok(Vec::new())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
@@ -27,9 +55,27 @@ LoadDefinitions!({
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
       let cs_clone = cs;
+      // Lazy-load natbib on first use of any cite trigger. After
+      // require_package returns, natbib's own DefMacro for \citet etc.
+      // is in scope, but the closure persists at OmniBus's load
+      // frame so re-emitting cs_clone could fire THIS closure again
+      // (infinite loop on every \citet — witness 2207.14344 timeout
+      // with 8K+ require_package(natbib) calls). Clear the closure
+      // GLOBALLY before re-emitting so the next lookup of cs_clone
+      // finds natbib's binding-loaded def, not us. Task #260.
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
+          // Erase this lazy-load shim globally so re-expansion of
+          // cs_clone resolves to natbib's real \citet (which
+          // natbib_sty.rs's LoadDefinitions defined with the
+          // default local scope — that local frame has now closed
+          // but its global form persists via Perl-faithful Let).
+          latexml_core::state::assign_meaning(
+            &cs_clone,
+            latexml_core::common::store::Stored::None,
+            Some(latexml_core::state::Scope::Global),
+          );
           Ok(Tokens::new(vec![cs_clone]))
         })), None)?;
     }
@@ -54,16 +100,33 @@ LoadDefinitions!({
   DefMacro!("\\subtitle{}",   "\\@add@frontmatter{ltx:subtitle}{#1}");
 
   // Perl L65-76: ignored/running title/author variants
-  DefMacro!("\\shortauthor{}", "");
+  def_macro_noop("\\shortauthor{}")?;
   DefRegister!("\\titlerunning",  Tokens!());
   DefRegister!("\\authorrunning", Tokens!());
   Let!("\\runningauthor", "\\authorrunning");
   Let!("\\runauthor",     "\\authorrunning");
-  DefMacro!("\\runningtitle{}", None);
+  // Running title / short authors — author metadata; preserve.
+  DefMacro!("\\runningtitle{}",
+    "\\@add@frontmatter{ltx:toctitle}{#1}");
   Let!("\\runninghead", "\\runningtitle");
-  DefMacro!("\\shortauthors{}", None);
-  DefMacro!("\\authors{}",      None);
-  DefMacro!("\\alignauthor",    None);
+  DefMacro!("\\shortauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // \authors{author list} — alternative to \author; preserve as
+  // author list note.
+  DefMacro!("\\authors{}",
+    "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
+  def_macro_noop("\\alignauthor")?;
+  // \correspondingauthor{name/email} — common journal-class CS used
+  // inside author lists (AAS / AGU / AMS / many journals). aas_support
+  // routes it to ltx:contact[role=correspondent]. Provide the same in
+  // OmniBus so unbound classes (e.g. ametsocV5) which use the CS
+  // directly inside `\authors{...}` don't trip Error:undefined.
+  // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
+  DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
+  // \datastatement — ametsocV5.cls L992:
+  // `\def\datastatement{\paragraph*{Data availability statement.}}`.
+  // Used as a no-arg standalone heading marker. Witness 2203.02657.
+  DefMacro!("\\datastatement", "\\paragraph*{Data availability statement.}");
 
   // Perl L78-83: email / speaker
   DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
@@ -100,23 +163,28 @@ LoadDefinitions!({
   DefRegister!("\\affilskip" => Dimension::new(0));
 
   // Perl L104-123: misc name macros, mostly no-ops
-  DefMacro!("\\prefix{}",          "#1");
-  DefMacro!("\\suffix{}",          "#1");
-  DefMacro!("\\fnms{}",            "#1");
-  DefMacro!("\\snm{}",             "#1");
-  DefMacro!("\\inits{}",           "#1");
-  DefMacro!("\\printaddresses{}",  "#1");
-  DefMacro!("\\printead{}",        None);
-  DefMacro!("\\firstpage{}",       None);
-  DefMacro!("\\lastpage{}",        None);
-  DefMacro!("\\runauthor{}",       None);
-  DefMacro!("\\runtitle{}",        None);
-  DefMacro!("\\corref{}",          None);
-  DefMacro!("\\listofauthors{}",   None);
-  DefMacro!("\\indexauthor{}",     None);
-  DefMacro!("\\preface",           None);
-  DefMacro!("\\thankstext",        None);
-  DefMacro!("\\numberofauthors{}", None);
+  def_macro_identity("\\prefix{}")?;
+  def_macro_identity("\\suffix{}")?;
+  def_macro_identity("\\fnms{}")?;
+  def_macro_identity("\\snm{}")?;
+  def_macro_identity("\\inits{}")?;
+  def_macro_identity("\\printaddresses{}")?;
+  // \printead{email} — printed email address; preserve as contact.
+  DefMacro!("\\printead{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // Page numbers — author metadata; preserve as ltx:note.
+  DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
+  DefMacro!("\\runauthor{}",       "\\@add@frontmatter{ltx:note}[role=runauthor]{#1}");
+  DefMacro!("\\runtitle{}",        "\\@add@frontmatter{ltx:toctitle}{#1}");
+  // \corref{label} — marker for corresponding author. Preserve as note.
+  DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
+  DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
+  DefMacro!("\\indexauthor{}",     "\\@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
+  def_macro_noop("\\preface")?;
+  def_macro_noop("\\thankstext")?;
+  DefMacro!("\\numberofauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=numberofauthors]{#1}");
   // \equalcontrib / \equalcont are defined kernel-level in
   // latex_constructs.rs — needed for ALL classes (not only OmniBus
   // fallback) because aaai22.sty etc. ride on \documentclass{article}.
@@ -130,20 +198,20 @@ LoadDefinitions!({
   // renders as plain text in <ltx:personname>. Doesn't affect papers
   // where the cls binding IS loaded (those override). Driver: 2403.18604,
   // 2110.04544, ~40 sn-jnl papers in canvas pool.
-  DefMacro!("\\fnm{}",   "#1");      // first name
+  def_macro_identity("\\fnm{}")?;      // first name
   DefMacro!("\\sur{}",   " #1");     // surname (cls inserts ~)
-  DefMacro!("\\spfx{}",  "#1");      // surname prefix (e.g. "van")
-  DefMacro!("\\pfx{}",   "#1");      // name prefix (e.g. "Dr.")
-  DefMacro!("\\sfx{}",   "#1");      // name suffix
-  DefMacro!("\\tanm{}",  "#1");      // title-as-name
-  DefMacro!("\\dgr{}",   "#1");      // degree
-  DefMacro!("\\orgdiv{}",     "#1");
-  DefMacro!("\\orgname{}",    "#1");
-  DefMacro!("\\orgaddress{}", "#1");
-  DefMacro!("\\street{}",     "#1");
-  DefMacro!("\\postcode{}",   "#1");
-  DefMacro!("\\city{}",       "#1");
-  DefMacro!("\\country{}",    "#1");
+  def_macro_identity("\\spfx{}")?;      // surname prefix (e.g. "van")
+  def_macro_identity("\\pfx{}")?;      // name prefix (e.g. "Dr.")
+  def_macro_identity("\\sfx{}")?;      // name suffix
+  def_macro_identity("\\tanm{}")?;      // title-as-name
+  def_macro_identity("\\dgr{}")?;      // degree
+  def_macro_identity("\\orgdiv{}")?;
+  def_macro_identity("\\orgname{}")?;
+  def_macro_identity("\\orgaddress{}")?;
+  def_macro_identity("\\street{}")?;
+  def_macro_identity("\\postcode{}")?;
+  def_macro_identity("\\city{}")?;
+  def_macro_identity("\\country{}")?;
   // `\state` is a TeX 4-token `\count` register inside many classes (article
   // declares it as `\newcount` for some configurations). We do NOT stub it
   // here — overlapping with the kernel register would break papers that
@@ -151,8 +219,8 @@ LoadDefinitions!({
   // address components will keep that error; all the OTHER fields above
   // are non-conflicting. Same caution for `\affil` — already overloaded
   // by amsart and other classes; leaving it to specific class bindings.
-  DefMacro!("\\bibcommenthead", None);
-  DefMacro!("\\jyear[]",        None);
+  def_macro_noop("\\bibcommenthead")?;
+  def_macro_noop("\\jyear[]")?;
   DefMacro!("\\resumen{}",         "\\@add@frontmatter{ltx:abstract}{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
@@ -166,10 +234,28 @@ LoadDefinitions!({
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.
-  DefEnvironment!("{keyword}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
-  DefEnvironment!("{keywords}",
-    "<ltx:classification scheme='keywords'>#body</ltx:classification>");
+  // Push the digested body directly into the frontmatter map under
+  // `ltx:classification[scheme=keywords]`, matching Perl's
+  // after_digest_keywords (OmniBus.cls.ltxml:after_digest_keywords)
+  // which does `push(@{ $$frontmatter{'ltx:classification'} }, [tag, attrs, @LaTeXML::LIST])`.
+  //
+  // History: the previous Rust binding called
+  //   stomach::raw_tex("\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
+  // which silently misused `#body` (a Constructor template placeholder
+  // only valid inside a DefConstructor template string) inside a
+  // raw_tex literal. The `#` was tokenized as PARAM and reached the
+  // stomach — emitting `Error:misdefined:#` and dumping the literal
+  // string `#body` as the classification element's text content.
+  // Witness: ifacconf-class papers (2305.08080, 2305.09991 — 84 wp4
+  // entries with `Error:misdefined:#` first-errors).
+  DefEnvironment!("{keyword}", "",
+    after_digest_body => sub[whatsit] {
+      push_keyword_body_to_frontmatter(whatsit)
+    });
+  DefEnvironment!("{keywords}", "",
+    after_digest_body => sub[whatsit] {
+      push_keyword_body_to_frontmatter(whatsit)
+    });
   // Perl L143: Let('\lx@begin@keywords', '\keywords'); — saved before overload
   Let!("\\lx@begin@keywords", "\\keywords");
   // Perl OmniBus.cls.ltxml L154. We differ from Perl's
@@ -264,7 +350,16 @@ LoadDefinitions!({
     "\\newtheorem{assum}[thm]{Assumption}",
     "\\newtheorem{prop}[thm]{Proposition}",
     "\\newtheorem{crit}[thm]{Criterion}",
-    "\\theoremstyle{definition}",
+    // Guard `\theoremstyle{definition}` with `\@ifundefined` so the
+    // stub does NOT error when the document deliberately undefined
+    // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
+    // by `\usepackage{amsthm}`-as-no-op-because-already-loaded). The
+    // stub is a *fallback* for env auto-loading; if the document
+    // chose to disable `\theoremstyle`, respect that choice instead
+    // of resurrecting an undefined-error. Witness: arXiv:2603.11260,
+    // 2603.11265 (ifacconf.cls -> theorem.sty -> amsthm pre-loaded,
+    // then user `\let\theoremstyle\@undefined`).
+    "\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}",
     "\\newtheorem{defn}[thm]{Definition}",
     "\\newtheorem{exmp}[thm]{Example}",
     "\\newtheorem{rem}[thm]{Remark}",
@@ -375,8 +470,10 @@ LoadDefinitions!({
   DefMacro!("\\terms{}",            "\\@add@frontmatter{ltx:note}[role=terms]{#1}");
   DefMacro!("\\conferenceinfo{}{}", "\\@add@frontmatter{ltx:note}[role=conference]{#1 #2}");
 
-  // Perl L257
-  DefMacro!("\\thanksref{}", None);
+  // Perl L257 gobbles to Tokens(); we surpass by rendering as
+  // superscript (matches latex_constructs kernel-level treatment
+  // and IEEE \IEEEauthorrefmark).
+  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
 
   // Perl L260-264: ACM variants
   Let!("\\CopyrightYear", "\\copyrightyear");
@@ -398,37 +495,51 @@ LoadDefinitions!({
   Let!("\\reference", "\\bibitem");
 
   // Perl L282-284
-  DefMacro!("\\comment{}",    None);
+  def_macro_noop("\\comment{}")?;
   DefMacro!("\\etal",         "\\textit{et al.}");
-  DefMacro!("\\firstsection", None);
+  def_macro_noop("\\firstsection")?;
 
   // Perl L286-297: math/package autoloads — when a trigger CS is used and
-  // not yet defined, require the specified package and re-trigger. The Perl
-  // `DefAutoload` macro registers this semantic; we implement it inline.
-  for (trigger, pkg) in [
+  // not yet defined, require the specified package/class and re-trigger.
+  // The Perl `DefAutoload` macro registers this semantic; we implement it
+  // inline. Perl encodes the target via the `.sty.ltxml` / `.cls.ltxml`
+  // suffix; we mirror that by carrying an explicit "sty" / "cls" kind
+  // alongside the bare name.
+  //
+  // Why the kind matters: `\thechapter` autoloads `book.cls.ltxml` in Perl,
+  // not `book.sty`. Routing through `require_package("book")` instead
+  // finds the obsolete `book.sty` shim (TL's 2.09-compat file) which
+  // immediately fires `\LoadClass{book}` from inside the body — past the
+  // preamble — and errors with "\LoadClass can only appear in the preamble".
+  // Witness: arXiv:2602.10407 (`\documentclass{saunders}` + `\chapter` in
+  // an `\include`'d chapter; saunders.cls is unbound so OmniBus takes over,
+  // and the chapter trigger hits `\thechapter`). Perl handles it cleanly
+  // by autoloading the class binding instead of the obsolete sty.
+  for (trigger, name, ext) in [
     // env triggers: `\begin{align}` etc. In Rust, we only dispatch on the
     // bare CS name of the trigger — works for control sequences like
     // `\multline`, `\numberwithin`, `\mathfrak`, `\mathbb`, `\deluxetable`,
     // `\curraddr`, `\subjclass`, `\thechapter`. For envs, autoload key is
     // `\begin{env}` which is a CS token.
-    ("\\begin{align}",         "amsmath"),
-    ("\\begin{subequations}",  "amsmath"),
-    ("\\begin{split}",         "amsmath"),
-    ("\\multline",             "amsmath"),
-    ("\\csname multline*\\endcsname", "amsmath"),
-    ("\\numberwithin",         "amsmath"),
-    ("\\mathfrak",             "amsfonts"),
-    ("\\mathbb",               "amsfonts"),
-    ("\\begin{deluxetable}",   "deluxetable"),
-    ("\\curraddr",             "ams_support"),
-    ("\\subjclass",            "ams_support"),
-    ("\\thechapter",           "book"),
+    ("\\begin{align}",                "amsmath",      "sty"),
+    ("\\begin{subequations}",         "amsmath",      "sty"),
+    ("\\begin{split}",                "amsmath",      "sty"),
+    ("\\multline",                    "amsmath",      "sty"),
+    ("\\csname multline*\\endcsname", "amsmath",      "sty"),
+    ("\\numberwithin",                "amsmath",      "sty"),
+    ("\\mathfrak",                    "amsfonts",     "sty"),
+    ("\\mathbb",                      "amsfonts",     "sty"),
+    ("\\begin{deluxetable}",          "deluxetable",  "sty"),
+    ("\\curraddr",                    "ams_support",  "sty"),
+    ("\\subjclass",                   "ams_support",  "sty"),
+    ("\\thechapter",                  "book",         "cls"),
   ] {
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
       let cs_clone = cs;
-      let pkg_str = pkg.to_string();
+      let name_str = name.to_string();
       let trigger_str = trigger.to_string();
+      let is_cls = ext == "cls";
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
@@ -440,7 +551,12 @@ LoadDefinitions!({
           latexml_core::state::assign_meaning(
             &cs_clone, latexml_core::common::store::Stored::None,
             Some(Scope::Global));
-          require_package(&pkg_str, RequireOptions::default())?;
+          if is_cls {
+            latexml_core::binding::content::load_class(
+              &name_str, Vec::new(), Tokens::default())?;
+          } else {
+            require_package(&name_str, RequireOptions::default())?;
+          }
           Ok(mouth::tokenize_internal(&trigger_str))
         })), None)?;
     }

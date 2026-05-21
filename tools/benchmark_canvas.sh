@@ -40,7 +40,13 @@ fi
 OUTPUT_DIR="${OUTPUT_DIR:-$HOME/data/10k_sandbox_html}"
 WORKER_BIN="${WORKER_BIN:-$REPO_ROOT/target/release/cortex_worker}"
 RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
-WORKERS="${WORKERS:-20}"
+# WORKERS default tuned 2026-05-16 from 20 → 8 after re-timing the round22
+# slow tail. Each graphics-bound paper fork-execs gs/convert/inkscape per
+# figure with their own font-cache + dynamic-linker init; at 20 workers
+# the per-paper wall ballooned 5–10×, but at 8 workers the overhead is
+# ≤30% vs single-threaded. Override via `WORKERS=N` env or `--workers N`
+# CLI flag for explicit canvases.
+WORKERS="${WORKERS:-8}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
 MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
@@ -89,7 +95,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --output-dir DIR      Output directory (default: \$HOME/data/10k_sandbox_html)"
       echo "                        When --stage N (>0) is given without --output-dir,"
       echo "                        a /stage_NN/ subdirectory is appended automatically."
-      echo "  --workers N           Parallel workers (default: 20)"
+      echo "  --workers N           Parallel workers (default: 8)"
       echo "  --timeout SECS        Per-task wall-clock timeout (default: 120)"
       echo "  --limit N             Process only first N files of the (post-stage) task"
       echo "                        list (default: 0 = all)"
@@ -188,36 +194,32 @@ if [[ ! -x "$WORKER_BIN" ]]; then
   exit 1
 fi
 
-# ─── Format dumps (plain.dump.txt + latex.dump.txt) — generate if missing ───
-# Without the latex dump, every paper that loads expl3 (tikz, siunitx, spath3,
-# csquotes, etc.) raw-loads the 36k-line expl3-code.tex (~25-30s/paper).
-# With the dump in place, expl3.sty's `\ifx\csname tex_let:D\endcsname\relax`
-# guard short-circuits the raw load → 1-3s/paper. ~10× canvas-wide speedup.
-# The plain dump is smaller but symmetric — needed for the `LoadFormat('plain')`
-# strict-Perl path in tex.rs (see CLAUDE.md priority #1).
-PLAIN_DUMP_PATH="$REPO_ROOT/resources/dumps/plain.dump.txt"
-if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
-  echo "Generating $PLAIN_DUMP_PATH (one-time, <1min)…"
-  (
-    cd "$REPO_ROOT"
-    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=plain.tex
-  )
-  if [[ ! -f "$PLAIN_DUMP_PATH" ]]; then
-    echo "WARNING: plain.dump.txt did not get generated."
-  fi
+# ─── Format dumps (plain.YYYY.dump.txt + latex.YYYY.dump.txt) — present? ───
+# Without the latex dump, every paper that loads expl3 (tikz, siunitx,
+# spath3, csquotes, etc.) raw-loads the 36k-line expl3-code.tex
+# (~25-30s/paper). With the dump in place, expl3.sty's `\ifx\csname
+# tex_let:D\endcsname\relax` guard short-circuits the raw load →
+# 1-3s/paper. ~10× canvas-wide speedup. The plain dump is smaller but
+# symmetric — needed for the `LoadFormat('plain')` strict-Perl path in
+# `tex.rs` (CLAUDE.md priority #1).
+#
+# Dumps are year-versioned (`plain.YYYY.dump.txt`, `latex.YYYY.dump.txt`)
+# and bundled via `tools/make_formats.sh`. The canvas script just
+# detects whether ANY year-tagged dump is on disk; the runtime resolves
+# the ambient-TL year. Re-run `tools/make_formats.sh` after a TexLive
+# upgrade. The plain-dump path (`plain.dump.txt`) of the old layout is
+# also accepted for in-flight migrations.
+shopt -s nullglob
+PLAIN_DUMPS=("$REPO_ROOT"/resources/dumps/plain.*.dump.txt "$REPO_ROOT"/resources/dumps/plain.dump.txt)
+LATEX_DUMPS=("$REPO_ROOT"/resources/dumps/latex.*.dump.txt "$REPO_ROOT"/resources/dumps/latex.dump.txt)
+shopt -u nullglob
+if (( ${#PLAIN_DUMPS[@]} == 0 )); then
+  echo "WARNING: no resources/dumps/plain.*.dump.txt found."
+  echo "  Run: tools/make_formats.sh"
 fi
-
-DUMP_PATH="$REPO_ROOT/resources/dumps/latex.dump.txt"
-if [[ ! -f "$DUMP_PATH" ]]; then
-  echo "Generating $DUMP_PATH (one-time, ~5min)…"
-  (
-    cd "$REPO_ROOT"
-    LATEXML_NODUMP=1 "$REPO_ROOT/target/release/latexml_oxide" --init=latex.ltx
-  )
-  if [[ ! -f "$DUMP_PATH" ]]; then
-    echo "WARNING: latex.dump.txt did not get generated. Canvas will run with"
-    echo "  raw expl3 load (slow). Investigate ini-mode failures separately."
-  fi
+if (( ${#LATEX_DUMPS[@]} == 0 )); then
+  echo "WARNING: no resources/dumps/latex.*.dump.txt found. Canvas will run"
+  echo "  with raw expl3 load (slow). Run: tools/make_formats.sh"
 fi
 
 # ─── Disk space check ────────────────────────────────────────────────────────
@@ -512,7 +514,7 @@ convert_one() {
 }
 
 export -f convert_one
-export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL
+export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL REPO_ROOT
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
@@ -661,8 +663,19 @@ echo ""
 RUN_TOTAL=$(wc -l < "$RUN_RESULTS")
 RUN_OK=$(awk -F'\t' '$7 == "ok"' "$RUN_RESULTS" | wc -l)
 RUN_FAIL=$((RUN_TOTAL - RUN_OK))
+# Errors-and-crashes — anything that's not `ok` counts as a failure.
+# "Error-free" means: no Error: log lines AND no Fatal: log lines AND
+# no out-of-process crash (timeout / SIGKILL / SIGSEGV / SIGABRT).
+# All those collapse into the same failure bucket below.
+RUN_CONV_ERR=$(awk -F'\t' '$7 == "conversion_error"' "$RUN_RESULTS" | wc -l)
+RUN_CONV_FAT=$(awk -F'\t' '$7 == "conversion_fatal"' "$RUN_RESULTS" | wc -l)
+RUN_CRASH=$(awk -F'\t' '$7 == "timeout" || $7 == "oom_or_kill" || $7 == "segfault" || $7 == "abort" || $7 == "error"' \
+  "$RUN_RESULTS" | wc -l)
 
 echo "This run: ${RUN_OK}/${RUN_TOTAL} OK (${RUN_FAIL} failures)"
+echo "  errors:        ${RUN_CONV_ERR}  (Error: lines in log)"
+echo "  fatals:        ${RUN_CONV_FAT}  (Fatal: status)"
+echo "  crashes:       ${RUN_CRASH}  (timeout/OOM/segfault/abort)"
 echo ""
 
 # Category breakdown (this run)
@@ -696,5 +709,13 @@ fi
 
 CUM_TOTAL=$(awk -F'\t' 'NR>1' "$RESULTS_TSV" | wc -l)
 CUM_OK=$(awk -F'\t' 'NR>1 && $7 == "ok"' "$RESULTS_TSV" | wc -l)
+CUM_FAIL=$((CUM_TOTAL - CUM_OK))
+CUM_CONV_ERR=$(awk -F'\t' 'NR>1 && $7 == "conversion_error"' "$RESULTS_TSV" | wc -l)
+CUM_CONV_FAT=$(awk -F'\t' 'NR>1 && $7 == "conversion_fatal"' "$RESULTS_TSV" | wc -l)
+CUM_CRASH=$(awk -F'\t' 'NR>1 && ($7 == "timeout" || $7 == "oom_or_kill" || $7 == "segfault" || $7 == "abort" || $7 == "error")' \
+  "$RESULTS_TSV" | wc -l)
 echo ""
-echo "Cumulative: ${CUM_OK}/${CUM_TOTAL} OK across all runs"
+echo "Cumulative: ${CUM_OK}/${CUM_TOTAL} OK across all runs (${CUM_FAIL} failures)"
+echo "  errors:        ${CUM_CONV_ERR}  (Error: lines in log)"
+echo "  fatals:        ${CUM_CONV_FAT}  (Fatal: status)"
+echo "  crashes:       ${CUM_CRASH}  (timeout/OOM/segfault/abort)"

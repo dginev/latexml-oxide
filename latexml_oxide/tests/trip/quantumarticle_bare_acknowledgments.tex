@@ -1,0 +1,20 @@
+% Regression test for Round-33 fix (commit d3e220f40c).
+% quantumarticle is REVTeX-based; driver 2512.01858 used bare
+% \acknowledgments on its own line with no \end{acknowledgments}
+% and a \bibliography{...} immediately after. The old
+% {acknowledgments} DefEnvironment only handled \begin/\end form;
+% bare \acknowledgments opened the env but the env framework's
+% stale-state at \end{document} phantom-closed
+% <ltx:acknowledgements>, erroring with
+% "Attempt to close </ltx:acknowledgements>, which isn't open".
+\documentclass{quantumarticle}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+Main text.
+
+\acknowledgments
+This work was supported by ...
+
+\end{document}

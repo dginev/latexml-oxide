@@ -97,7 +97,7 @@ pub fn scan_external(
 
   let modname = strip_rng_ext(name);
   let mut new_paths: Vec<&Path> = Vec::with_capacity(search_paths.len() + 1);
-  let dir = path.parent().unwrap_or(Path::new("."));
+  let dir = path.parent().unwrap_or_else(|| Path::new("."));
   new_paths.push(dir);
   new_paths.extend(search_paths);
 
@@ -247,7 +247,7 @@ fn scan_pattern(
     "rng:data" => Ok(vec![Pattern::Data(node.get_attribute("type").unwrap_or_default())]),
     "rng:externalRef" => {
       let href = node.get_attribute("href").unwrap_or_default();
-      let paths: Vec<&Path> = ctx.search_paths.to_vec();
+      let paths: Vec<&Path> = ctx.search_paths.clone();
       scan_external(rng, &href, ns_ref, &paths)
     },
     "rng:grammar" => {
@@ -384,7 +384,7 @@ fn scan_grammar_item(
     "rng:div" => scan_grammar_content(rng, ns_ref, children, ctx),
     "rng:include" => {
       let href = node.get_attribute("href").unwrap_or_default();
-      let paths: Vec<&Path> = ctx.search_paths.to_vec();
+      let paths: Vec<&Path> = ctx.search_paths.clone();
       // Find + parse the included file.
       let path = find_file(&href, &paths)
         .ok_or_else(|| ScanError::FileNotFound(href.clone()))?;
@@ -398,7 +398,7 @@ fn scan_grammar_item(
       collect_namespaces(rng, inner_root);
       // Push the included file's directory to the search path so its
       // own includes resolve correctly.
-      let dir = path.parent().unwrap_or(Path::new("."));
+      let dir = path.parent().unwrap_or_else(|| Path::new("."));
       let mut nested_paths: Vec<&Path> = Vec::with_capacity(ctx.search_paths.len() + 1);
       nested_paths.push(dir);
       nested_paths.extend(&ctx.search_paths);

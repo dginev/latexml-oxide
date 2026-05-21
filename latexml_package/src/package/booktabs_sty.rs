@@ -21,9 +21,9 @@ LoadDefinitions!({
   DefMacro!("\\ltx@cmidrule[Dimension]{}", "\\cline{#2}");
 
   // add vspace
-  DefMacro!("\\addlinespace[Dimension]", "");
+  def_macro_noop("\\addlinespace[Dimension]")?;
   // adjust spacing to make double line
-  DefMacro!("\\morecmidrules", "");
+  def_macro_noop("\\morecmidrules")?;
   // \specialrule{thickness}{above}{below}
   DefMacro!("\\specialrule{Dimension}{Dimension}{Dimension}", "\\hline");
 

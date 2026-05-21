@@ -17,6 +17,7 @@
 
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   // hyperref provides \hypertarget / \hyperlink / \hyperref used below.
   RequirePackage!("hyperref");
@@ -45,7 +46,7 @@ LoadDefinitions!({
   // with the module preamble paragraphs.
   DefMacro!("\\schemamodule{}",
     "\\section{Module \\texttt{#1}}\\label{schema.#1}");
-  DefMacro!("\\endschemamodule", "");
+  def_macro_noop("\\endschemamodule")?;
 
   //--- Schema-doc list environments -----------------------------------
   // Each kind bucket (`\subsection{Patterns}` / `\subsection{Elements}`)

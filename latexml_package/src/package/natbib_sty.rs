@@ -117,6 +117,7 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
   }
 }
 
+
 LoadDefinitions!({
   //======================================================================
   // 5. Package Options
@@ -201,6 +202,15 @@ LoadDefinitions!({
   // CITE_AY_SEPARATOR default
   AssignValue!("CITE_AY_SEPARATOR", T_OTHER!(","));
 
+  // natbib internals consulted by other packages (multibib, etc.) even
+  // though our \cite is hand-bound and doesn't go through these.
+  // Define as no-ops + a real counter so `\@ifpackageloaded{natbib}{...}`
+  // bodies that touch them don't crash.
+  // Witness 2405.19536: multibib's \AtBeginDocument fires \NAT@set@cites.
+  NewCounter!("NAT@ctr");
+  def_macro_noop("\\NAT@set@cites")?;
+  def_macro_noop("\\NAT@@setcites")?;
+
   //======================================================================
   // 2.3 Basic Citation Commands
   // Override \cite from LaTeX.pool with natbib version
@@ -229,9 +239,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -243,9 +253,9 @@ LoadDefinitions!({
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let sup_arg = Invocation!(T_CS!("\\textsuperscript"), vec![bibref]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(sup_arg.unlist());
-      if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
       Ok(Invocation!(T_CS!("\\@@cite"),
         vec![Tokens::new(Explode!("cite")), Tokens::new(body)]))
     } else {
@@ -260,9 +270,9 @@ LoadDefinitions!({
         let bibref = Invocation!(T_CS!("\\@@bibref"),
           vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
         let mut body = open.unlist();
-        if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+        if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
         body.extend(bibref.unlist());
-        if let Some(p) = post.clone() {
+        if let Some(p) = post {
           body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
         }
         body.extend(close.unlist());
@@ -302,10 +312,10 @@ LoadDefinitions!({
     if style == "numbers" {
       let show = s!("{author} Phrase1NumberPhrase2");
       let mut p1_toks = open.unlist();
-      if let Some(p) = pre.clone() { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
+      if let Some(p) = pre { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
       let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1_toks)]);
       let mut p2_toks = Vec::new();
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         p2_toks.extend(ns.unlist()); p2_toks.push(T_SPACE!()); p2_toks.extend(p.unlist());
       }
       p2_toks.extend(close.unlist());
@@ -319,9 +329,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, Tokens!(), Tokens!()]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       Ok(Invocation!(T_CS!("\\@@cite"),
@@ -330,10 +340,10 @@ LoadDefinitions!({
       // authoryear
       let show = s!("{author} Phrase1YearPhrase2");
       let mut p1_toks = open.unlist();
-      if let Some(p) = pre.clone() { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
+      if let Some(p) = pre { p1_toks.extend(p.unlist()); p1_toks.push(T_SPACE!()); }
       let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1_toks)]);
       let mut p2_toks = Vec::new();
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         p2_toks.extend(ns.unlist()); p2_toks.push(T_SPACE!()); p2_toks.extend(p.unlist());
       }
       p2_toks.extend(close.unlist());
@@ -368,9 +378,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Number")), keys, Tokens!(), Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -380,9 +390,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!("Super")), keys, Tokens!(), Tokens!()]);
       let mut body = Vec::new();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+      if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
       Ok(Invocation!(T_CS!("\\@@cite"),
         vec![Tokens::new(Explode!("citep")), Tokens::new(body)]))
     } else {
@@ -395,9 +405,9 @@ LoadDefinitions!({
       let bibref = Invocation!(T_CS!("\\@@bibref"),
         vec![Tokens::new(Explode!(show)), keys, phrase1, Tokens!()]);
       let mut body = open.unlist();
-      if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
       body.extend(bibref.unlist());
-      if let Some(p) = post.clone() {
+      if let Some(p) = post {
         body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
       }
       body.extend(close.unlist());
@@ -473,7 +483,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!(author)), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -493,7 +503,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("FullAuthors")), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -513,7 +523,7 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
     let mut body = bibref.unlist();
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     Ok(Invocation!(T_CS!("\\@@cite"),
@@ -535,9 +545,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
     let mut body = open.unlist();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
@@ -578,9 +588,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Phrase1")), key, phrase1, Tokens!()]);
     let mut body = Vec::new();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() { body.push(T_SPACE!()); body.extend(p.unlist()); }
+    if let Some(p) = post { body.push(T_SPACE!()); body.extend(p.unlist()); }
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("citealias")), Tokens::new(body)]))
   });
@@ -603,9 +613,9 @@ LoadDefinitions!({
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!("Phrase1")), key, phrase1, Tokens!()]);
     let mut body = open.unlist();
-    if let Some(p) = pre.clone() { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
     body.extend(bibref.unlist());
-    if let Some(p) = post.clone() {
+    if let Some(p) = post {
       body.extend(ns.unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
     }
     body.extend(close.unlist());
@@ -729,10 +739,10 @@ LoadDefinitions!({
   // 2.12 Other Formatting Options
   DefMacro!("\\bibname", "Bibliography");
   DefMacro!("\\refname", "References");
-  DefMacro!("\\bibsection", "");
-  DefMacro!("\\bibpreamble", "");
-  DefMacro!("\\bibfont", "");
-  DefMacro!("\\citenumfont", "");
+  def_macro_noop("\\bibsection")?;
+  def_macro_noop("\\bibpreamble")?;
+  def_macro_noop("\\bibfont")?;
+  def_macro_noop("\\citenumfont")?;
   DefMacro!("\\bibnumfmt{}", "#1");
   DefRegister!("\\bibhang", Dimension::new(0));
   DefRegister!("\\bibsep", Glue::new(0));
@@ -740,12 +750,22 @@ LoadDefinitions!({
   //======================================================================
   // 2.13 Automatic Indexing of Citations
   RawTeX!("\\newif\\ifciteindex");
-  DefMacro!("\\citeindextrue", "");
-  DefMacro!("\\citeindexfalse", "");
-  DefMacro!("\\citeindextype", "");
+  def_macro_noop("\\citeindextrue")?;
+  def_macro_noop("\\citeindexfalse")?;
+  def_macro_noop("\\citeindextype")?;
+
+  // natbib boolean flags consulted by raw-loaded sibling packages
+  // and some user macros. Predefine the standard `\if<name>` triple
+  // via `\newif` (creates `\NAT@superfalse`/`\NAT@supertrue` too).
+  // Witness cluster: arXiv:2506.21088 / .21438 (papers calling
+  // `\bibpunct` or similar that consult `\ifNAT@super`).
+  RawTeX!("\\newif\\ifNAT@super");
+  RawTeX!("\\newif\\ifNAT@numbers");
+  RawTeX!("\\newif\\ifNAT@longnamesfirst");
+  RawTeX!("\\newif\\ifNAT@swa");
 
   // 2.17 Long Author List on First Citation
-  DefMacro!("\\shortcites Semiverbatim", "");
+  def_macro_noop("\\shortcites Semiverbatim")?;
 
   //======================================================================
   // Bibliography item handling
@@ -900,9 +920,9 @@ LoadDefinitions!({
         )
       });
       let expanded = if has_complex_cs {
-        label.clone()
+        label
       } else {
-        Expand!(label.clone())
+        Expand!(label)
       };
       let exp_tokens = expanded.unlist();
       let mut author_toks = Vec::new();
@@ -1008,8 +1028,21 @@ LoadDefinitions!({
     Let!("\\citename", "\\natbib@citename");
   });
 
-  // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd
-  DefMacro!("\\@lbibitem[]{}",
+  // \@lbibitem — use lx@NAT@parselabel instead of raw NAT@ifcmd.
+  //
+  // Read the {key} arg as `Semiverbatim` (catcodes neutralized to OTHER)
+  // not plain `{}`. Bibitem keys can contain `_`, `^`, `&` — DBLP-style
+  // keys like `DBLP:conf/nips/incontext_AgarwalSZBRCZAA24` are common in
+  // arXiv `.bbl` files (witnesses: 2509.20805 / 2510.00068 / 2510.00632).
+  // Without semiverbatim, the `_` retains catcode SUB, and after macro
+  // substitution the SUB token leaks into the post-`\@@lbibitem`
+  // `\newblock` text stream — Stomach then errors with
+  // `Error:unexpected:_ Script _ can only appear in math mode`.
+  // Perl's natbib.sty.ltxml:638 uses `[]{}` and gets away with it because
+  // its parameter reader's brace-group capture neutralizes catcodes by
+  // default; Rust's `{}` arg type preserves the source catcodes faithfully.
+  // 54 occurrences of `Error:unexpected:_` in Stage-16 v5 cluster here.
+  DefMacro!("\\@lbibitem[] Semiverbatim",
     "\\@@lbibitem{#2}\\lx@NAT@parselabel{#1}{#2}\\newblock",
     locked => true);
 

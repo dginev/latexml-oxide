@@ -51,6 +51,7 @@ jobs:
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             texlive texlive-latex-extra texlive-science \
+            texlive-bibtex-extra texlive-publishers \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
             texlive-lang-cyrillic
       - uses: actions/checkout@v6

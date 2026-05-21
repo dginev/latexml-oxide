@@ -6,7 +6,20 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // amsppt loads the AmSTeX pool — Perl L27
+  // amsppt loads the AmSTeX pool — Perl L27.
+  // The `\documentstyle{amsppt}` path in tex_job.rs already takes care
+  // of LoadPool('AmSTeX'). The `\input amsppt.sty` direct-load path
+  // does NOT — papers like arXiv:hep-th9312119 start with `\input
+  // amsppt.sty` and hit undefined `\document`, `\newline`, `\flushpar`
+  // etc. that the AmSTeX pool would have provided. Load the pool
+  // explicitly here so both entry paths produce the same definition
+  // set.
+  if !lookup_bool("AmSTeX.pool_loaded") {
+    let _ = input_definitions("AmSTeX", InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    });
+  }
   // AmSTeX pool is partially ported (~30%); residual undefined-CS
   // errors on amsppt papers (\text, \proof, \theorem env, \endmatrix,
   // \foldedtext, \eightbf, \AmSTeX, \DN@, \frills@, etc — see
@@ -22,8 +35,32 @@ LoadDefinitions!({
   // to `\@add@frontmatter{ltx:X}`, which only works when the user writes
   // `\title{Foo}` (LaTeX-ish form). Switch to the `Until:\endX` delimiter
   // form the Perl port uses, with the `\endX` `Let`-ed to `\relax`.
-  DefMacro!("\\makeheadline", "");
-  DefMacro!("\\makefootline", "");
+  def_macro_noop("\\makeheadline")?;
+  def_macro_noop("\\makefootline")?;
+
+  // LaTeX2e typesetting commands users sometimes mix into AmS-TeX
+  // sources (the AmSTeX.pool path doesn't load latex_constructs). Stub
+  // as no-ops — vertical/horizontal spacing and font-size selection
+  // have no XML meaning. Perl LaTeXML Fatals on these undefined CSes;
+  // we emit a clean document by absorbing the argument (where one
+  // exists) or treating the CS as a benign no-op.
+  // Witnesses (stage-4 of 100k warning corpus):
+  //   arXiv:funct-an9211012/13 — \\vspace{1\\jot} inside aligned equations
+  //   arXiv:funct-an9312004    — \\scriptsize font-size
+  DefMacro!("\\vspace OptionalMatch:* {}", None);
+  DefMacro!("\\hspace OptionalMatch:* {}", None);
+  // LaTeX2e font-size and font-family CSes (no-op in AMSTeX mode).
+  for sz in ["\\tiny", "\\scriptsize", "\\footnotesize", "\\small",
+             "\\normalsize", "\\large", "\\Large", "\\LARGE",
+             "\\huge", "\\Huge",
+             // Font-family selectors (NFSS; absent in AmSTeX)
+             "\\normalfont", "\\rmfamily", "\\sffamily", "\\ttfamily",
+             "\\mdseries", "\\bfseries", "\\upshape", "\\itshape",
+             "\\slshape", "\\scshape"] {
+    if !state::has_meaning(&T_CS!(sz)) {
+      def_macro(T_CS!(sz), None, None, None)?;
+    }
+  }
   DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
   Let!("\\endtitle", "\\relax");
   DefMacro!("\\author Until:\\endauthor",
@@ -109,7 +146,7 @@ LoadDefinitions!({
 
   DefMacro!("\\subheading@onearg{}", "\\subhead#1\\endsubhead");
   DefMacro!("\\subheading@env Until:\\endsubheading", "\\subhead#1\\endsubhead");
-  DefMacro!("\\endsubheading", "");
+  def_macro_noop("\\endsubheading")?;
 
   DefConstructor!("\\specialhead Until:\\endspecialhead",
     "<ltx:chapter inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:chapter>",
@@ -297,7 +334,7 @@ LoadDefinitions!({
   // the accumulation (stubbed), but both CSes must still resolve so
   // bibliographies using \holdover don't hit undefined-CS.
   DefRegister!("\\holdoverbox" => Tokens!());
-  DefMacro!("\\holdover{}", "");
+  def_macro_noop("\\holdover{}")?;
 
   // Bibliography — full Perl-faithful port of amsppt.sty.ltxml L340-495.
   //
@@ -577,8 +614,8 @@ LoadDefinitions!({
   DefMacro!("\\CMP",       "\\@end@bibfield\\@bibfield{CMP}CMP ");
 
   // Miscellaneous — Perl L480-500
-  DefMacro!("\\nologo", "");
-  DefMacro!("\\NoBlackBoxes", "");
+  def_macro_noop("\\nologo")?;
+  def_macro_noop("\\NoBlackBoxes")?;
 
   // AmSTeX pool compatibility stubs — Perl AmSTeX.pool.ltxml L75-114.
   // amsppt.sty (Perl) implicitly loads the AmSTeX pool, which provides
@@ -586,41 +623,41 @@ LoadDefinitions!({
   // (~30% ported per L10 comment), so documents using bare amsppt risk
   // undefined-CS on these formatting controls. Adding as empty stubs
   // keeps documents compile without altering XML output.
-  DefMacro!("\\NoPageNumbers", "");
-  DefMacro!("\\BlackBoxes", "");
-  DefMacro!("\\TagsAsMath", "");
-  DefMacro!("\\TagsAsText", "");
-  DefMacro!("\\TagsOnLeft", "");
-  DefMacro!("\\TagsOnRight", "");
-  DefMacro!("\\CenteredTagsOnSplits", "");
-  DefMacro!("\\TopOrBottomTagsOnSplits", "");
-  DefMacro!("\\LimitsOnInts", "");
-  DefMacro!("\\NoLimitsOnInts", "");
-  DefMacro!("\\LimitsOnNames", "");
-  DefMacro!("\\NoLimitsOnNames", "");
-  DefMacro!("\\LimitsOnSums", "");
-  DefMacro!("\\NoLimitsOnSums", "");
-  DefMacro!("\\UseAMSsymbols", "");
-  DefMacro!("\\loadbold", "");
-  DefMacro!("\\loadeufb", "");
-  DefMacro!("\\loadeufm", "");
-  DefMacro!("\\loadeurb", "");
-  DefMacro!("\\loadeurm", "");
-  DefMacro!("\\loadeusb", "");
-  DefMacro!("\\loadeusm", "");
-  DefMacro!("\\loadmathfont", "");
-  DefMacro!("\\loadmsam", "");
-  DefMacro!("\\loadmsbm", "");
-  DefMacro!("\\boldnotloaded{}", "");
-  DefMacro!("\\galleys", "");
+  def_macro_noop("\\NoPageNumbers")?;
+  def_macro_noop("\\BlackBoxes")?;
+  def_macro_noop("\\TagsAsMath")?;
+  def_macro_noop("\\TagsAsText")?;
+  def_macro_noop("\\TagsOnLeft")?;
+  def_macro_noop("\\TagsOnRight")?;
+  def_macro_noop("\\CenteredTagsOnSplits")?;
+  def_macro_noop("\\TopOrBottomTagsOnSplits")?;
+  def_macro_noop("\\LimitsOnInts")?;
+  def_macro_noop("\\NoLimitsOnInts")?;
+  def_macro_noop("\\LimitsOnNames")?;
+  def_macro_noop("\\NoLimitsOnNames")?;
+  def_macro_noop("\\LimitsOnSums")?;
+  def_macro_noop("\\NoLimitsOnSums")?;
+  def_macro_noop("\\UseAMSsymbols")?;
+  def_macro_noop("\\loadbold")?;
+  def_macro_noop("\\loadeufb")?;
+  def_macro_noop("\\loadeufm")?;
+  def_macro_noop("\\loadeurb")?;
+  def_macro_noop("\\loadeurm")?;
+  def_macro_noop("\\loadeusb")?;
+  def_macro_noop("\\loadeusm")?;
+  def_macro_noop("\\loadmathfont")?;
+  def_macro_noop("\\loadmsam")?;
+  def_macro_noop("\\loadmsbm")?;
+  def_macro_noop("\\boldnotloaded{}")?;
+  def_macro_noop("\\galleys")?;
   // Perl AmSTeX.pool L114: \flushpar = \par\noindent
   DefMacro!("\\flushpar", "\\par\\noindent");
 
   // Page-layout no-ops — Perl AmSTeX.pool L116-119.
-  DefMacro!("\\pagewidth{Dimension}", "");
-  DefMacro!("\\pageheight{Dimension}", "");
-  DefMacro!("\\hcorrection{Dimension}", "");
-  DefMacro!("\\vcorrection{Dimension}", "");
+  def_macro_noop("\\pagewidth{Dimension}")?;
+  def_macro_noop("\\pageheight{Dimension}")?;
+  def_macro_noop("\\hcorrection{Dimension}")?;
+  def_macro_noop("\\vcorrection{Dimension}")?;
 
   // Perl L186: \tie = \unskip\nobreak\␣ (non-breaking space with
   // preceding skip-absorption).
@@ -634,8 +671,8 @@ LoadDefinitions!({
   // Perl AmSTeX.pool L133-134: frontmatter bracket markers.
   // Rust amsppt handles frontmatter via \title/\author/\abstract
   // directly, so the outer bracket is a no-op.
-  DefMacro!("\\topmatter", "");
-  DefMacro!("\\endtopmatter", "");
+  def_macro_noop("\\topmatter")?;
+  def_macro_noop("\\endtopmatter")?;
 
   // Perl L256-257: set-braces via \overbrace/\underbrace with the
   // "label" part from before `\to` as superscript/subscript.
@@ -657,40 +694,40 @@ LoadDefinitions!({
   // Perl AmSTeX.pool L34: \AmSTeX — logo constructor; render as plain text.
   DefMacro!("\\AmSTeX", "AMSTeX");
   // Perl L175-184: page/line/math break hints — all empty (layout-only).
-  DefMacro!("\\bigpagebreak", "");
-  DefMacro!("\\allowlinebreak", "");
-  DefMacro!("\\allowmathbreak", "");
-  DefMacro!("\\allowdisplaybreak", "");
-  DefMacro!("\\allowdisplaybreaks", "");
+  def_macro_noop("\\bigpagebreak")?;
+  def_macro_noop("\\allowlinebreak")?;
+  def_macro_noop("\\allowmathbreak")?;
+  def_macro_noop("\\allowdisplaybreak")?;
+  def_macro_noop("\\allowdisplaybreaks")?;
   // Perl L270-284: pass-through math-font wrappers. Perl uses
   // DefConstructor with `bounded => 1, requireMath => 1` to scope
   // the font change; Rust simplifies to the identity DefMacro since
   // the body already carries the math-mode context.
-  DefMacro!("\\Cal{}", "#1");
-  DefMacro!("\\italic{}", "#1");
-  DefMacro!("\\boldkey{}", "#1");
+  def_macro_identity("\\Cal{}")?;
+  def_macro_identity("\\italic{}")?;
+  def_macro_identity("\\boldkey{}")?;
   // Perl L395: \botaligned = \aligned[b] (bottom-vertically-aligned).
   DefMacro!("\\botaligned", "\\aligned[b]");
 
   // Perl L173-182: more layout-hint empty stubs.
-  DefMacro!("\\smallpagebreak", "");
-  DefMacro!("\\medpagebreak", "");
-  DefMacro!("\\mathbreak", "");
-  DefMacro!("\\nomathbreak", "");
-  DefMacro!("\\nomultlinegap", "");
-  DefMacro!("\\MultlineGap Dimension", "");
+  def_macro_noop("\\smallpagebreak")?;
+  def_macro_noop("\\medpagebreak")?;
+  def_macro_noop("\\mathbreak")?;
+  def_macro_noop("\\nomathbreak")?;
+  def_macro_noop("\\nomultlinegap")?;
+  def_macro_noop("\\MultlineGap Dimension")?;
 
   // Perl L350-358: top/bot shave and smash — pass-through text wrappers
   // (Perl DefConstructor with enterHorizontal, flattened to DefMacro
   // identity since the wrapper is decorative).
-  DefMacro!("\\botshave{}", "#1");
-  DefMacro!("\\topshave{}", "#1");
-  DefMacro!("\\topsmash{}", "#1");
-  DefMacro!("\\botsmash{}", "#1");
+  def_macro_identity("\\botshave{}")?;
+  def_macro_identity("\\topshave{}")?;
+  def_macro_identity("\\topsmash{}")?;
+  def_macro_identity("\\botsmash{}")?;
 
   // Perl L354: \pretend Until:\haswidth {body} — body is #1 up through
   // \haswidth, then {width} follows. Drop the width spec, keep body.
-  DefMacro!("\\pretend Until:\\haswidth {}", "#1");
+  def_macro_identity("\\pretend Until:\\haswidth {}")?;
 
   // Perl L303-308: spdddot / spddddot / spbar / spvec / spbreve —
   // math superscript accents (siblings of existing \spcheck/\sptilde/
@@ -701,25 +738,25 @@ LoadDefinitions!({
   DefMacro!("\\spvec", "^{\\rightarrow}");
 
   // Perl L348, L356, L393, L456-458: more empty stubs and aliases.
-  DefMacro!("\\ResetBuffer", "");
-  DefMacro!("\\snug", "");
-  DefMacro!("\\printoptions", "");
-  DefMacro!("\\showallocations", "");
-  DefMacro!("\\syntax", "");
+  def_macro_noop("\\ResetBuffer")?;
+  def_macro_noop("\\snug")?;
+  def_macro_noop("\\printoptions")?;
+  def_macro_noop("\\showallocations")?;
+  def_macro_noop("\\syntax")?;
   // Perl L393: \topaligned = \aligned[t] (sibling of \botaligned).
   DefMacro!("\\topaligned", "\\aligned[t]");
 
   // Perl L164-166: \textfonti, \textfontii — plain-TeX font-switch
   // primitives, no LaTeXML-observable effect.
-  DefMacro!("\\textfonti", "");
-  DefMacro!("\\textfontii", "");
+  def_macro_noop("\\textfonti")?;
+  def_macro_noop("\\textfontii")?;
 
   // Perl L281-282: \slanted{#1} — math-font wrapper flattened to
   // identity (same rationale as \Cal/\italic/\boldkey).
-  DefMacro!("\\slanted{}", "#1");
+  def_macro_identity("\\slanted{}")?;
 
   // Perl L349: \shave{#1} → #1 (sibling of \botshave/\topshave).
-  DefMacro!("\\shave{}", "#1");
+  def_macro_identity("\\shave{}")?;
 
   // (Perl amsppt.sty.ltxml L460-495 \@bibfield/\@end@bibfield/\key/\no/
   // \inbook/\procinfo/\MR/\AMSPPS/\CMP are now defined above in the
@@ -727,10 +764,10 @@ LoadDefinitions!({
 
   // Perl L169: \spreadlines {Dimension} — line-spacing dimension
   // consumer, no output (DefConstructor with empty emission).
-  DefMacro!("\\spreadlines{}", "");
+  def_macro_noop("\\spreadlines{}")?;
   // Perl L360: \spreadmatrixlines Dimension — same shape, Dimension
   // param.
-  DefMacro!("\\spreadmatrixlines Dimension", "");
+  def_macro_noop("\\spreadmatrixlines Dimension")?;
 
 
   DefMacro!("\\redefine", "\\def");
@@ -748,18 +785,24 @@ LoadDefinitions!({
   // Page-layout no-ops — Perl L40-52. Running-head tokens + page-contents
   // are TeX plain-format hooks with no LaTeXML analogue; swallow their
   // args.
-  DefMacro!("\\leftheadline", "");
-  DefMacro!("\\rightheadline", "");
-  DefMacro!("\\leftheadtext{}", "");
-  DefMacro!("\\rightheadtext{}", "");
+  def_macro_noop("\\leftheadline")?;
+  def_macro_noop("\\rightheadline")?;
+  // Round-34 surpass-Perl: \leftheadtext/\rightheadtext carry author
+  // text for running heads; \cvolyear/\issueinfo are journal metadata.
+  DefMacro!("\\leftheadtext{}",
+    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+  DefMacro!("\\rightheadtext{}",
+    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
   Let!("\\flheadline", "\\hfil");
   Let!("\\frheadline", "\\hfil");
-  DefMacro!("\\headmark{}", "");
-  DefMacro!("\\pagecontents", "");
-  DefMacro!("\\cvolyear{}", "");
-  DefMacro!("\\issueinfo{}{}{}{}", "");
-  DefMacro!("\\NoRunningHeads", "");
-  DefMacro!("\\Monograph", "");
+  def_macro_noop("\\headmark{}")?;
+  def_macro_noop("\\pagecontents")?;
+  DefMacro!("\\cvolyear{}",
+    "\\@add@frontmatter{ltx:note}[role=cvolyear]{#1}");
+  DefMacro!("\\issueinfo{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=issueinfo]{#1 #2 #3 #4}");
+  def_macro_noop("\\NoRunningHeads")?;
+  def_macro_noop("\\Monograph")?;
 
   // Per-field "pre" hooks — Perl L90-95. No-ops; user can `\def` to override.
   Let!("\\pretitle", "\\relax");
@@ -774,7 +817,7 @@ LoadDefinitions!({
   // `\tildechar` is the amsppt literal `~` in typewriter (bibliography
   // key separator).
   DefMacro!("\\rom{}", "{\\rm #1}");
-  DefMacro!("\\PSAMSFonts", "");
+  def_macro_noop("\\PSAMSFonts")?;
   RawTeX!("\\newif\\ifPSAMSFonts\\PSAMSFontstrue");
   DefMacro!("\\qed", "\\ltx@qed");
   DefConstructor!(
@@ -790,7 +833,7 @@ LoadDefinitions!({
   // token structure (\texttt opens a bounded font scope; the literal `~` does
   // not). Restored to faithful primitive form.
   DefPrimitive!("\\tildechar", "~", font => { family => "typewriter" });
-  DefMacro!("\\breakcheck", "");
+  def_macro_noop("\\breakcheck")?;
   DefMacro!("\\usualspace", " ");
   // Perl L329: \normalparindent — zero-Dimension register. Without it,
   // `\the\normalparindent` fails on amsppt documents that probe it.
@@ -799,10 +842,10 @@ LoadDefinitions!({
   // References section — Perl L333, L361-365.
   DefMacro!("\\Refsname", "References");
   DefRegister!("\\refindentwd" => Dimension::new(0));
-  DefMacro!("\\refstyle{}", "");
-  DefMacro!("\\keyformat{}", "#1");
-  DefMacro!("\\refbreaks", "");
-  DefMacro!("\\defaultreftexts", "");
+  def_macro_noop("\\refstyle{}")?;
+  def_macro_identity("\\keyformat{}")?;
+  def_macro_noop("\\refbreaks")?;
+  def_macro_noop("\\defaultreftexts")?;
 
   // Perl L335: \cite for plain-AMSTeX documents.
   // amsppt is a plain-TeX style, so the latex cite machinery isn't
@@ -826,9 +869,9 @@ LoadDefinitions!({
   DefRegister!("\\headlineheight"      => Dimension::new(0));
   DefRegister!("\\headlinespace"       => Dimension::new(0));
   DefRegister!("\\dropfoliodepth"      => Dimension::new(0));
-  DefMacro!("\\widestnumber Token {}", "");
-  DefMacro!("\\nofrillscheck{}", "");
-  DefMacro!("\\toc Until:\\endtoc", "");
+  def_macro_noop("\\widestnumber Token {}")?;
+  def_macro_noop("\\nofrillscheck{}")?;
+  def_macro_noop("\\toc Until:\\endtoc")?;
   Let!("\\endtoc", "\\relax");
 
   // Theorem-env skip registers and name/font overrides — Perl L178-232.
@@ -863,8 +906,8 @@ LoadDefinitions!({
   DefRegister!("\\pagenumwd"           => Dimension::new(0));
   DefRegister!("\\indenti"             => Dimension::new(0));
   DefRegister!("\\indentii"            => Dimension::new(0));
-  DefMacro!("\\linespacing Number", "");
-  DefMacro!("\\endquotes", "");
+  def_macro_noop("\\linespacing Number")?;
+  def_macro_noop("\\endquotes")?;
 
   // Perl amsppt.sty.ltxml L497: \smc (smallcaps) — plain-TeX font
   // switch used in AMSTeX running heads and bib entries.

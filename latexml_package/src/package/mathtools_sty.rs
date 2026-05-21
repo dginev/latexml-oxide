@@ -185,8 +185,8 @@ LoadDefinitions!({
       Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
 
     // Define \@MTStag@{name} as a primitive that redefines \fnum@equation and \eqref
-    let fnum_cs_clone = fnum_cs_name.clone();
-    let ref_cs_clone = ref_cs_name.clone();
+    let fnum_cs_clone = fnum_cs_name;
+    let ref_cs_clone = ref_cs_name;
     def_primitive(
       T_CS!(&s!("\\@MTStag@{}", name)),
       None,
@@ -241,8 +241,8 @@ LoadDefinitions!({
     let ref_params = parse_parameters("Semiverbatim", &T_CS!(&ref_cs_name), true)?;
     def_macro(T_CS!(&ref_cs_name), ref_params, Tokens::new(ref_body),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }))?;
-    let fnum_cs_clone = fnum_cs_name.clone();
-    let ref_cs_clone = ref_cs_name.clone();
+    let fnum_cs_clone = fnum_cs_name;
+    let ref_cs_clone = ref_cs_name;
     def_primitive(T_CS!(&s!("\\@MTStag@{}", name)), None,
       Some(PrimitiveBody::Closure(Rc::new(move |_args| {
         def_macro(T_CS!("\\fnum@equation"), None, Tokens!(T_CS!(&fnum_cs_clone)),
@@ -749,7 +749,7 @@ LoadDefinitions!({
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks.clone();
+    let mut inner_body_toks = body_toks;
     inner_body_toks.push(T_CS!(&after_cs_name));
     def_macro(T_CS!(&inner_cs_name),
       parse_parameters(&param_spec, &T_CS!(&inner_cs_name), true)?,
@@ -815,7 +815,7 @@ LoadDefinitions!({
     let inner_cs_name = s!("{}@inner", cmd);
     let after_cs_name = s!("{}@after", cmd);
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
-    let mut inner_body_toks = body_toks.clone();
+    let mut inner_body_toks = body_toks;
     inner_body_toks.push(T_CS!(&after_cs_name));
     inner_body_toks.extend(post_toks.iter().cloned());
     def_macro(T_CS!(&inner_cs_name),

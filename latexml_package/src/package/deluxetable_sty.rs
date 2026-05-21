@@ -71,14 +71,19 @@ LoadDefinitions!({
   DefRegister!("\\pt@ncol", Dimension!("0pt"));
   DefRegister!("\\pt@page", Dimension!("0pt"));
 
-  DefMacro!("\\tabletypesize{}", "");
-  DefMacro!("\\rotate", "");
-  DefMacro!("\\tabletail{}", "");
+  def_macro_noop("\\tabletypesize{}")?;
+  def_macro_noop("\\rotate")?;
+  // \tabletail{text} — text shown at the bottom of every table page
+  // (e.g. "Continued on next page"). HTML output is single-page so
+  // we preserve the text as ltx:note role='tabletail' rather than
+  // gobbling — author body, not config.
+  DefMacro!("\\tabletail{}",
+    "\\@add@frontmatter{ltx:note}[role=tabletail]{#1}");
   DefMacro!("\\tablewidth{Dimension}", "\\pt@width=#1\\relax");
-  DefMacro!("\\tableheadfrac{}", "");
+  def_macro_noop("\\tableheadfrac{}")?;
   DefMacro!("\\tablenum{}", "\\def\\thetable{#1}");
 
-  DefMacro!("\\tablecolumns{Number}", "");
+  def_macro_noop("\\tablecolumns{Number}")?;
 
   Let!("\\tablecaption", "\\caption");
 
@@ -96,8 +101,8 @@ LoadDefinitions!({
   //======================================================================
   // 2.15.3 Content of deluxetable
 
-  DefMacro!("\\tablebreak", "");
-  DefMacro!("\\nodata", "");
+  def_macro_noop("\\tablebreak")?;
+  def_macro_noop("\\nodata")?;
 
   DefMacro!("\\cutinhead{}", "\\hline\\multicolumn{\\lx@alignment@ncolumns}{c}{#1}\\\\\\hline");
   DefMacro!("\\sidehead{}", "\\hline\\multicolumn{\\lx@alignment@ncolumns}{l}{#1}\\\\\\hline");

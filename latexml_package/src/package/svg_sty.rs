@@ -51,7 +51,7 @@ LoadDefinitions!({
     }
   }
 
-  DefMacro!("\\lx@svg@options", "");
+  def_macro_noop("\\lx@svg@options")?;
   DefMacro!("\\setsvg{}", "\\gdef\\lx@svg@options{#1}");
 
   // Note that various sizing & rescaling are not yet supported by Post::Graphics

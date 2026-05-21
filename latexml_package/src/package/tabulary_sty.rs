@@ -67,4 +67,12 @@ LoadDefinitions!({
 
   // stub in for macros that try to redefine it.
   DefMacro!("\\TY@tabular", "\\relax");
+
+  // tabulary.sty L57-58 documents \tymin / \tymax as the min/max
+  // column-width dimens used by the algorithm. Papers configure them
+  // before `\begin{tabulary}` (e.g. `\tymin=80pt`). Register as
+  // Dimensions so author `\tymin=...` assignments don't error.
+  // Witness 2311.07310.
+  DefRegister!("\\tymin" => Dimension::new(0));
+  DefRegister!("\\tymax" => Dimension::new(0));
 });

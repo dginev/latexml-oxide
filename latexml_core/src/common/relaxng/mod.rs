@@ -11,7 +11,7 @@
 //! * [`scan`]      — RNG XML → AST  (port of `scanPattern` etc., L100–390).
 //! * [`simplify`]  — AST normalization (port of `simplify*`, L438–525).
 //! * [`tex`]       — schema-doc TeX emission (port of `documentModules`,
-//!                   `toTeX*`, L550–815).
+//!   `toTeX*`, L550–815).
 //!
 //! The shared state — definition tables, element index, "Used by" graph —
 //! lives on [`Relaxng`] and is populated by `scan` + `simplify`, then
@@ -274,7 +274,7 @@ impl Relaxng {
       .map(|(p, _)| p)
       .collect();
     candidates.sort();
-    if let Some(p) = candidates.first().map(|s| s.to_string()) {
+    if let Some(p) = candidates.first().map(|s| (*s).clone()) {
       self.register_display_prefix_strip(p);
     }
   }

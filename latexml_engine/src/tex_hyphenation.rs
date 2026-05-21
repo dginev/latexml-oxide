@@ -2,6 +2,7 @@
 //!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Hyphenation Family of primitive control sequences
@@ -12,7 +13,7 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // - (discretionary hyphen)        d       inserts a discretionary hyphen.
   // \discretionary    c  specifies a discretionary break in a paragraph.
-  DefPrimitive!("\\-", None);
+  def_primitive_noop("\\-")?;
   DefMacro!("\\discretionary{}{}{}", "#3"); // No hyphenation here!
 
   //======================================================================
@@ -30,7 +31,7 @@ LoadDefinitions!({
   // \setlanguage      c  inserts a language whatsit in restricted horizontal mode.
   // \language         pi selects a language to use with hyphenation and \patterns.
   DefRegister!("\\language", Number!(0));
-  DefPrimitive!("\\setlanguage Number", None);
+  def_primitive_noop("\\setlanguage Number")?;
 
   // \languagename — current language name (text). Perl's latex.dump captures
   // `\def\languagename{nohyphenation}` as the format-time default

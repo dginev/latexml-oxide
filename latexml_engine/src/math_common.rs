@@ -8,6 +8,22 @@
 // by latex_constructs.pool.ltxml. These definitions are always available.
 use crate::prelude::*;
 
+/// DEP-17d helper for the dominant 3-arg `DefMath!("\\cs", None, "char"…)`
+/// shape (195+ entries here). `paramlist = None` matches the macro's
+/// `(text, paramlist, present)` arm exactly — distinct from
+/// `def_math_sym`'s 2-arg form which goes through `parse_prototype` and
+/// produces `Some(empty Parameters)`. Both yield the same `nargs = 0`
+/// downstream, but keeping the None form preserves struct-level parity
+/// for any consumer that distinguishes.
+fn def_math_atom(cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>) -> Result<()> {
+  let cs_tok = T_CS!(cs);
+  let mut opts = MathPrimitiveOptions::default();
+  if let Some(r) = role { opts.role = Some(r.to_string()); }
+  if let Some(m) = meaning { opts.meaning = Some(m.to_string()); }
+  def_math(cs_tok, None, present.to_string(), opts)?;
+  Ok(())
+}
+
 // Match negations of many operators
 // our %NOTS
 static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
@@ -156,46 +172,46 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   //  Actually from LaTeX; Table 3.3, Greek, p.41
   //----------------------------------------------------------------------
-  DefMath!("\\alpha", None, "\u{03B1}");
-  DefMath!("\\beta", None, "\u{03B2}");
-  DefMath!("\\gamma", None, "\u{03B3}");
-  DefMath!("\\delta", None, "\u{03B4}");
-  DefMath!("\\epsilon", None, "\u{03F5}");
-  DefMath!("\\varepsilon", None, "\u{03B5}");
-  DefMath!("\\zeta", None, "\u{03B6}");
-  DefMath!("\\eta", None, "\u{03B7}");
-  DefMath!("\\theta", None, "\u{03B8}");
-  DefMath!("\\vartheta", None, "\u{03D1}");
-  DefMath!("\\iota", None, "\u{03B9}");
-  DefMath!("\\kappa", None, "\u{03BA}");
-  DefMath!("\\lambda", None, "\u{03BB}");
-  DefMath!("\\mu", None, "\u{03BC}");
-  DefMath!("\\nu", None, "\u{03BD}");
-  DefMath!("\\xi", None, "\u{03BE}");
-  DefMath!("\\pi", None, "\u{03C0}");
-  DefMath!("\\varpi", None, "\u{03D6}");
-  DefMath!("\\rho", None, "\u{03C1}");
-  DefMath!("\\varrho", None, "\u{03F1}");
-  DefMath!("\\sigma", None, "\u{03C3}");
-  DefMath!("\\varsigma", None, "\u{03C2}");
-  DefMath!("\\tau", None, "\u{03C4}");
-  DefMath!("\\upsilon", None, "\u{03C5}");
-  DefMath!("\\phi", None, "\u{03D5}");
-  DefMath!("\\varphi", None, "\u{03C6}");
-  DefMath!("\\chi", None, "\u{03C7}");
-  DefMath!("\\psi", None, "\u{03C8}");
-  DefMath!("\\omega", None, "\u{03C9}");
-  DefMath!("\\Gamma", None, "\u{0393}");
-  DefMath!("\\Delta", None, "\u{0394}");
-  DefMath!("\\Theta", None, "\u{0398}");
-  DefMath!("\\Lambda", None, "\u{039B}");
-  DefMath!("\\Xi", None, "\u{039E}");
-  DefMath!("\\Pi", None, "\u{03A0}");
-  DefMath!("\\Sigma", None, "\u{03A3}");
-  DefMath!("\\Upsilon", None, "\u{03A5}");
-  DefMath!("\\Phi", None, "\u{03A6}");
-  DefMath!("\\Psi", None, "\u{03A8}");
-  DefMath!("\\Omega", None, "\u{03A9}");
+  def_math_atom("\\alpha", "\u{03B1}", None, None)?;
+  def_math_atom("\\beta", "\u{03B2}", None, None)?;
+  def_math_atom("\\gamma", "\u{03B3}", None, None)?;
+  def_math_atom("\\delta", "\u{03B4}", None, None)?;
+  def_math_atom("\\epsilon", "\u{03F5}", None, None)?;
+  def_math_atom("\\varepsilon", "\u{03B5}", None, None)?;
+  def_math_atom("\\zeta", "\u{03B6}", None, None)?;
+  def_math_atom("\\eta", "\u{03B7}", None, None)?;
+  def_math_atom("\\theta", "\u{03B8}", None, None)?;
+  def_math_atom("\\vartheta", "\u{03D1}", None, None)?;
+  def_math_atom("\\iota", "\u{03B9}", None, None)?;
+  def_math_atom("\\kappa", "\u{03BA}", None, None)?;
+  def_math_atom("\\lambda", "\u{03BB}", None, None)?;
+  def_math_atom("\\mu", "\u{03BC}", None, None)?;
+  def_math_atom("\\nu", "\u{03BD}", None, None)?;
+  def_math_atom("\\xi", "\u{03BE}", None, None)?;
+  def_math_atom("\\pi", "\u{03C0}", None, None)?;
+  def_math_atom("\\varpi", "\u{03D6}", None, None)?;
+  def_math_atom("\\rho", "\u{03C1}", None, None)?;
+  def_math_atom("\\varrho", "\u{03F1}", None, None)?;
+  def_math_atom("\\sigma", "\u{03C3}", None, None)?;
+  def_math_atom("\\varsigma", "\u{03C2}", None, None)?;
+  def_math_atom("\\tau", "\u{03C4}", None, None)?;
+  def_math_atom("\\upsilon", "\u{03C5}", None, None)?;
+  def_math_atom("\\phi", "\u{03D5}", None, None)?;
+  def_math_atom("\\varphi", "\u{03C6}", None, None)?;
+  def_math_atom("\\chi", "\u{03C7}", None, None)?;
+  def_math_atom("\\psi", "\u{03C8}", None, None)?;
+  def_math_atom("\\omega", "\u{03C9}", None, None)?;
+  def_math_atom("\\Gamma", "\u{0393}", None, None)?;
+  def_math_atom("\\Delta", "\u{0394}", None, None)?;
+  def_math_atom("\\Theta", "\u{0398}", None, None)?;
+  def_math_atom("\\Lambda", "\u{039B}", None, None)?;
+  def_math_atom("\\Xi", "\u{039E}", None, None)?;
+  def_math_atom("\\Pi", "\u{03A0}", None, None)?;
+  def_math_atom("\\Sigma", "\u{03A3}", None, None)?;
+  def_math_atom("\\Upsilon", "\u{03A5}", None, None)?;
+  def_math_atom("\\Phi", "\u{03A6}", None, None)?;
+  def_math_atom("\\Psi", "\u{03A8}", None, None)?;
+  def_math_atom("\\Omega", "\u{03A9}", None, None)?;
 
   //----------------------------------------------------------------------
   // Non-English Symbols ligatures (\OE/\oe/\AE/\ae/\AA/\aa/\O/\o/\ss)
@@ -325,7 +341,7 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B. p. 357
   // RIGHTWARDS ARROW??? a bit more explicitly
-  DefMath!("\\to", None, "\u{2192}", role => "ARROW");
+  def_math_atom("\\to", "\u{2192}", Some("ARROW"), None)?;
 
   // \sp, \sb, and the literal-tab Box moved to plain_base.rs (Perl
   // plain_base.pool.ltxml L537-543 — Perl-faithful location).
@@ -334,46 +350,46 @@ LoadDefinitions!({
   // Actually from LaTeX; Table 3.7. Miscellaneous Symbols, p.43
   //----------------------------------------------------------------------
   // Some should be differential operators, qualifiers, ...
-  DefMath!("\\aleph", None, "\u{2135}");
-  DefMath!("\\hbar",  None, "\u{210F}", role => "ID", meaning => "Planck-constant-over-2-pi");
-  DefMath!("\\imath", None, "\u{0131}");
-  DefMath!("\\jmath", None, "\u{0237}");
-  DefMath!("\\ell", None, "\u{2113}");
+  def_math_atom("\\aleph", "\u{2135}", None, None)?;
+  def_math_atom("\\hbar", "\u{210F}", Some("ID"), Some("Planck-constant-over-2-pi"))?;
+  def_math_atom("\\imath", "\u{0131}", None, None)?;
+  def_math_atom("\\jmath", "\u{0237}", None, None)?;
+  def_math_atom("\\ell", "\u{2113}", None, None)?;
   DefMath!("\\wp", None, "\u{2118}", meaning => "Weierstrass-p");
   DefMath!("\\Re", None, "\u{211C}", role    => "OPFUNCTION", meaning => "real-part");
   DefMath!("\\Im", None, "\u{2111}", role    => "OPFUNCTION", meaning => "imaginary-part");
-  DefMath!("\\mho", None, "\u{2127}");
+  def_math_atom("\\mho", "\u{2127}", None, None)?;
 
   DefMath!("\\prime",    None, "\u{2032}", role => "SUPOP",    locked  => true);
-  DefMath!("\\emptyset", None, "\u{2205}", role => "ID",       meaning => "empty-set");
-  DefMath!("\\nabla",    None, "\u{2207}", role => "OPERATOR");
-  DefMath!("\\surd",     None, "\u{221A}", role => "OPERATOR", meaning => "square-root");
-  DefMath!("\\top",      None, "\u{22A4}", role => "ADDOP",    meaning => "top");
-  DefMath!("\\bot",      None, "\u{22A5}", role => "ADDOP",    meaning => "bottom");
+  def_math_atom("\\emptyset", "\u{2205}", Some("ID"), Some("empty-set"))?;
+  def_math_atom("\\nabla", "\u{2207}", Some("OPERATOR"), None)?;
+  def_math_atom("\\surd", "\u{221A}", Some("OPERATOR"), Some("square-root"))?;
+  def_math_atom("\\top", "\u{22A4}", Some("ADDOP"), Some("top"))?;
+  def_math_atom("\\bot", "\u{22A5}", Some("ADDOP"), Some("bottom"))?;
   DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
   // should get meaning => "parallel"to' when used as infix, but NOT when for OPEN|CLOSE
-  DefMath!("\\angle", None, "\u{2220}");
+  def_math_atom("\\angle", "\u{2220}", None, None)?;
 
   // NOTE: This is probably the wrong role.
   // Also, should probably carry info about Binding for OpenMath
-  DefMath!("\\forall", None, "\u{2200}", role => "BIGOP",    meaning => "for-all");
-  DefMath!("\\exists", None, "\u{2203}", role => "BIGOP",    meaning => "exists");
-  DefMath!("\\neg",    None, "\u{00AC}",  role => "BIGOP", meaning => "not");
-  DefMath!("\\lnot",   None, "\u{00AC}",  role => "BIGOP", meaning => "not");
-  DefMath!("\\flat", None, "\u{266D}");
-  DefMath!("\\natural", None, "\u{266E}");
-  DefMath!("\\sharp", None, "\u{266F}");
-  DefMath!("\\backslash", None, "\u{005C}", role => "MULOP");
-  DefMath!("\\partial",   None, "\u{2202}", role => "DIFFOP", meaning => "partial-differential");
+  def_math_atom("\\forall", "\u{2200}", Some("BIGOP"), Some("for-all"))?;
+  def_math_atom("\\exists", "\u{2203}", Some("BIGOP"), Some("exists"))?;
+  def_math_atom("\\neg", "\u{00AC}", Some("BIGOP"), Some("not"))?;
+  def_math_atom("\\lnot", "\u{00AC}", Some("BIGOP"), Some("not"))?;
+  def_math_atom("\\flat", "\u{266D}", None, None)?;
+  def_math_atom("\\natural", "\u{266E}", None, None)?;
+  def_math_atom("\\sharp", "\u{266F}", None, None)?;
+  def_math_atom("\\backslash", "\u{005C}", Some("MULOP"), None)?;
+  def_math_atom("\\partial", "\u{2202}", Some("DIFFOP"), Some("partial-differential"))?;
 
-  DefMath!("\\infty", None, "\u{221E}", role => "ID", meaning => "infinity");
-  DefMath!("\\Box", None, "\u{25A1}");
-  DefMath!("\\Diamond", None, "\u{25C7}");
-  DefMath!("\\triangle", None, "\u{25B3}");
-  DefMath!("\\clubsuit", None, "\u{2663}");
-  DefMath!("\\diamondsuit", None, "\u{2662}");
-  DefMath!("\\heartsuit", None, "\u{2661}");
-  DefMath!("\\spadesuit", None, "\u{2660}");
+  def_math_atom("\\infty", "\u{221E}", Some("ID"), Some("infinity"))?;
+  def_math_atom("\\Box", "\u{25A1}", None, None)?;
+  def_math_atom("\\Diamond", "\u{25C7}", None, None)?;
+  def_math_atom("\\triangle", "\u{25B3}", None, None)?;
+  def_math_atom("\\clubsuit", "\u{2663}", None, None)?;
+  def_math_atom("\\diamondsuit", "\u{2662}", None, None)?;
+  def_math_atom("\\heartsuit", "\u{2661}", None, None)?;
+  def_math_atom("\\spadesuit", "\u{2660}", None, None)?;
 
   DefMacro!("\\active@math@prime", {
     let mut sup = vec![T_CS!("\\prime")];
@@ -471,101 +487,98 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.4. Binary Operation Symbols, p.42
   //----------------------------------------------------------------------
-  DefMath!("\\pm",    None, "\u{00B1}",  role => "ADDOP", meaning => "plus-or-minus");
-  DefMath!("\\mp",    None, "\u{2213}", role => "ADDOP", meaning => "minus-or-plus");
-  DefMath!("\\times", None, "\u{00D7}",  role => "MULOP", meaning => "times");
-  DefMath!("\\div",   None, "\u{00F7}",  role => "MULOP", meaning => "divide");
-  DefMath!("\\ast",   None, "\u{2217}", role => "MULOP");
-  DefMath!("\\star",  None, "\u{22C6}", role => "MULOP");
-  DefMath!("\\circ",  None, "\u{2218}", role => "MULOP", meaning => "compose");
-  DefMath!("\\bullet", None, "\u{2219}", role => "MULOP");
-  DefMath!("\\cdot",   None, "\u{22C5}", role => "MULOP");
+  def_math_atom("\\pm", "\u{00B1}", Some("ADDOP"), Some("plus-or-minus"))?;
+  def_math_atom("\\mp", "\u{2213}", Some("ADDOP"), Some("minus-or-plus"))?;
+  def_math_atom("\\times", "\u{00D7}", Some("MULOP"), Some("times"))?;
+  def_math_atom("\\div", "\u{00F7}", Some("MULOP"), Some("divide"))?;
+  def_math_atom("\\ast", "\u{2217}", Some("MULOP"), None)?;
+  def_math_atom("\\star", "\u{22C6}", Some("MULOP"), None)?;
+  def_math_atom("\\circ", "\u{2218}", Some("MULOP"), Some("compose"))?;
+  def_math_atom("\\bullet", "\u{2219}", Some("MULOP"), None)?;
+  def_math_atom("\\cdot", "\u{22C5}", Some("MULOP"), None)?;
   ////  , meaning=>"inner-product");  that"s pushing it a bit far...
 
   // Need to classify set operations more carefully....
-  DefMath!("\\cap", None, "\u{2229}", role => "ADDOP", meaning => "intersection");
-  DefMath!("\\cup", None, "\u{222A}", role => "ADDOP", meaning => "union");
-  DefMath!("\\uplus",    None, "\u{228E}", role => "ADDOP");
-  DefMath!("\\sqcap",    None, "\u{2293}", role => "ADDOP", meaning => "square-intersection");
-  DefMath!("\\sqcup",    None, "\u{2294}", role => "ADDOP", meaning => "square-union");
-  DefMath!("\\vee",      None, "\u{2228}", role => "ADDOP", meaning => "or");
-  DefMath!("\\lor",      None, "\u{2228}", role => "ADDOP", meaning => "or");
-  DefMath!("\\wedge",    None, "\u{2227}", role => "ADDOP", meaning => "and");
-  DefMath!("\\land",     None, "\u{2227}", role => "ADDOP", meaning => "and");
-  DefMath!("\\setminus", None, "\u{2216}", role => "ADDOP", meaning => "set-minus");
-  DefMath!("\\wr",       None, "\u{2240}", role => "MULOP");
+  def_math_atom("\\cap", "\u{2229}", Some("ADDOP"), Some("intersection"))?;
+  def_math_atom("\\cup", "\u{222A}", Some("ADDOP"), Some("union"))?;
+  def_math_atom("\\uplus", "\u{228E}", Some("ADDOP"), None)?;
+  def_math_atom("\\sqcap", "\u{2293}", Some("ADDOP"), Some("square-intersection"))?;
+  def_math_atom("\\sqcup", "\u{2294}", Some("ADDOP"), Some("square-union"))?;
+  def_math_atom("\\vee", "\u{2228}", Some("ADDOP"), Some("or"))?;
+  def_math_atom("\\lor", "\u{2228}", Some("ADDOP"), Some("or"))?;
+  def_math_atom("\\wedge", "\u{2227}", Some("ADDOP"), Some("and"))?;
+  def_math_atom("\\land", "\u{2227}", Some("ADDOP"), Some("and"))?;
+  def_math_atom("\\setminus", "\u{2216}", Some("ADDOP"), Some("set-minus"))?;
+  def_math_atom("\\wr", "\u{2240}", Some("MULOP"), None)?;
 
   // Should this block be ADDOP or something else?
-  DefMath!("\\diamond",         None, "\u{22C4}", role => "ADDOP");
-  DefMath!("\\bigtriangleup",   None, "\u{25B3}", role => "ADDOP");
-  DefMath!("\\bigtriangledown", None, "\u{25BD}", role => "ADDOP");
-  DefMath!("\\triangleleft",    None, "\u{22B2}", role => "ADDOP");
-  DefMath!("\\triangleright",   None, "\u{22B3}", role => "ADDOP");
-  DefMath!("\\lhd",           None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
-  DefMath!("\\rhd",           None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
-  DefMath!("\\unlhd", None, "\u{22B4}", role => "ADDOP", meaning => "subgroup-of-or-equals");
-  DefMath!("\\unrhd", None, "\u{22B5}", role => "ADDOP",
-    meaning => "contains-as-subgroup-or-equals");
+  def_math_atom("\\diamond", "\u{22C4}", Some("ADDOP"), None)?;
+  def_math_atom("\\bigtriangleup", "\u{25B3}", Some("ADDOP"), None)?;
+  def_math_atom("\\bigtriangledown", "\u{25BD}", Some("ADDOP"), None)?;
+  def_math_atom("\\triangleleft", "\u{22B2}", Some("ADDOP"), None)?;
+  def_math_atom("\\triangleright", "\u{22B3}", Some("ADDOP"), None)?;
+  def_math_atom("\\lhd", "\u{22B2}", Some("ADDOP"), Some("subgroup-of"))?;
+  def_math_atom("\\rhd", "\u{22B3}", Some("ADDOP"), Some("contains-as-subgroup"))?;
+  def_math_atom("\\unlhd", "\u{22B4}", Some("ADDOP"), Some("subgroup-of-or-equals"))?;
+  def_math_atom("\\unrhd", "\u{22B5}", Some("ADDOP"), Some("contains-as-subgroup-or-equals"))?;
 
-  DefMath!("\\oplus",  None, "\u{2295}", role => "ADDOP", meaning => "direct-sum");
-  DefMath!("\\ominus", None, "\u{2296}", role => "ADDOP", meaning => "symmetric-difference");
-  DefMath!("\\otimes", None, "\u{2297}", role => "MULOP", meaning => "tensor-product");
-  DefMath!("\\oslash", None, "\u{2298}", role => "MULOP");
-  DefMath!("\\odot",   None, "\u{2299}", role => "MULOP", meaning => "direct-product");
-  DefMath!("\\bigcirc", None, "\u{25CB}", role => "MULOP");
-  DefMath!("\\dagger",  None, "\u{2020}", role => "MULOP");
-  DefMath!("\\ddagger", None, "\u{2021}", role => "MULOP");
-  DefMath!("\\amalg",   None, "\u{2210}", role => "MULOP", meaning => "coproduct");
+  def_math_atom("\\oplus", "\u{2295}", Some("ADDOP"), Some("direct-sum"))?;
+  def_math_atom("\\ominus", "\u{2296}", Some("ADDOP"), Some("symmetric-difference"))?;
+  def_math_atom("\\otimes", "\u{2297}", Some("MULOP"), Some("tensor-product"))?;
+  def_math_atom("\\oslash", "\u{2298}", Some("MULOP"), None)?;
+  def_math_atom("\\odot", "\u{2299}", Some("MULOP"), Some("direct-product"))?;
+  def_math_atom("\\bigcirc", "\u{25CB}", Some("MULOP"), None)?;
+  def_math_atom("\\dagger", "\u{2020}", Some("MULOP"), None)?;
+  def_math_atom("\\ddagger", "\u{2021}", Some("MULOP"), None)?;
+  def_math_atom("\\amalg", "\u{2210}", Some("MULOP"), Some("coproduct"))?;
 
   //----------------------------------------------------------------------
   // LaTeX; Table 3.5. Relation Symbols, p.43
   //----------------------------------------------------------------------
-  DefMath!("\\leq",        None, "\u{2264}", role => "RELOP", meaning => "less-than-or-equals");
-  DefMath!("\\prec",       None, "\u{227A}", role => "RELOP", meaning => "precedes");
-  DefMath!("\\preceq",     None, "\u{2AAF}", role => "RELOP", meaning => "precedes-or-equals");
-  DefMath!("\\ll",         None, "\u{226A}", role => "RELOP", meaning => "much-less-than");
-  DefMath!("\\subset",     None, "\u{2282}", role => "RELOP", meaning => "subset-of");
-  DefMath!("\\subseteq",   None, "\u{2286}", role => "RELOP", meaning => "subset-of-or-equals");
-  DefMath!("\\sqsubset",   None, "\u{228F}", role => "RELOP", meaning => "square-image-of");
-  DefMath!("\\sqsubseteq", None, "\u{2291}", role => "RELOP",
-    meaning => "square-image-of-or-equals");
-  DefMath!("\\in",         None, "\u{2208}", role => "RELOP", meaning => "element-of");
-  DefMath!("\\vdash", None, "\u{22A2}", role => "METARELOP", meaning => "proves");
+  def_math_atom("\\leq", "\u{2264}", Some("RELOP"), Some("less-than-or-equals"))?;
+  def_math_atom("\\prec", "\u{227A}", Some("RELOP"), Some("precedes"))?;
+  def_math_atom("\\preceq", "\u{2AAF}", Some("RELOP"), Some("precedes-or-equals"))?;
+  def_math_atom("\\ll", "\u{226A}", Some("RELOP"), Some("much-less-than"))?;
+  def_math_atom("\\subset", "\u{2282}", Some("RELOP"), Some("subset-of"))?;
+  def_math_atom("\\subseteq", "\u{2286}", Some("RELOP"), Some("subset-of-or-equals"))?;
+  def_math_atom("\\sqsubset", "\u{228F}", Some("RELOP"), Some("square-image-of"))?;
+  def_math_atom("\\sqsubseteq", "\u{2291}", Some("RELOP"), Some("square-image-of-or-equals"))?;
+  def_math_atom("\\in", "\u{2208}", Some("RELOP"), Some("element-of"))?;
+  def_math_atom("\\vdash", "\u{22A2}", Some("METARELOP"), Some("proves"))?;
 
-  DefMath!("\\geq",      None, "\u{2265}", role => "RELOP", meaning => "greater-than-or-equals");
-  DefMath!("\\succ",     None, "\u{227B}", role => "RELOP", meaning => "succeeds");
-  DefMath!("\\succeq",   None, "\u{2AB0}", role => "RELOP", meaning => "succeeds-or-equals");
-  DefMath!("\\gg",       None, "\u{226B}", role => "RELOP", meaning => "much-greater-than");
-  DefMath!("\\supset",   None, "\u{2283}", role => "RELOP", meaning => "superset-of");
-  DefMath!("\\supseteq", None, "\u{2287}", role => "RELOP", meaning => "superset-of-or-equals");
-  DefMath!("\\sqsupset", None, "\u{2290}", role => "RELOP", meaning => "square-original-of");
-  DefMath!("\\sqsupseteq", None, "\u{2292}", role => "RELOP",
-    meaning => "square-original-of-or-equals");
-  DefMath!("\\ni",    None, "\u{220B}", role => "RELOP",     meaning => "contains");
-  DefMath!("\\dashv", None, "\u{22A3}", role => "METARELOP", meaning => "does-not-prove");
+  def_math_atom("\\geq", "\u{2265}", Some("RELOP"), Some("greater-than-or-equals"))?;
+  def_math_atom("\\succ", "\u{227B}", Some("RELOP"), Some("succeeds"))?;
+  def_math_atom("\\succeq", "\u{2AB0}", Some("RELOP"), Some("succeeds-or-equals"))?;
+  def_math_atom("\\gg", "\u{226B}", Some("RELOP"), Some("much-greater-than"))?;
+  def_math_atom("\\supset", "\u{2283}", Some("RELOP"), Some("superset-of"))?;
+  def_math_atom("\\supseteq", "\u{2287}", Some("RELOP"), Some("superset-of-or-equals"))?;
+  def_math_atom("\\sqsupset", "\u{2290}", Some("RELOP"), Some("square-original-of"))?;
+  def_math_atom("\\sqsupseteq", "\u{2292}", Some("RELOP"), Some("square-original-of-or-equals"))?;
+  def_math_atom("\\ni", "\u{220B}", Some("RELOP"), Some("contains"))?;
+  def_math_atom("\\dashv", "\u{22A3}", Some("METARELOP"), Some("does-not-prove"))?;
 
   // I have the impression think that "identical" is a stronger notion than "equivalence"
   // Note that the unicode here is called "Identical To",
   // and that the notion of "equivalent to" usually involves the tilde operator.
-  DefMath!("\\equiv",  None, "\u{2261}", role => "RELOP", meaning => "equivalent-to");
-  DefMath!("\\sim",    None, "\u{223C}", role => "RELOP", meaning => "similar-to");
-  DefMath!("\\simeq",  None, "\u{2243}", role => "RELOP", meaning => "similar-to-or-equals");
-  DefMath!("\\asymp",  None, "\u{224D}", role => "RELOP", meaning => "asymptotically-equals");
-  DefMath!("\\approx", None, "\u{2248}", role => "RELOP", meaning => "approximately-equals");
-  DefMath!("\\cong",   None, "\u{2245}", role => "RELOP", meaning => "approximately-equals");
-  DefMath!("\\neq",    None, "\u{2260}", role => "RELOP", meaning => "not-equals");
-  DefMath!("\\doteq",  None, "\u{2250}", role => "RELOP", meaning => "approaches-limit");
-  DefMath!("\\notin",  None, "\u{2209}", role => "RELOP", meaning => "not-element-of");
+  def_math_atom("\\equiv", "\u{2261}", Some("RELOP"), Some("equivalent-to"))?;
+  def_math_atom("\\sim", "\u{223C}", Some("RELOP"), Some("similar-to"))?;
+  def_math_atom("\\simeq", "\u{2243}", Some("RELOP"), Some("similar-to-or-equals"))?;
+  def_math_atom("\\asymp", "\u{224D}", Some("RELOP"), Some("asymptotically-equals"))?;
+  def_math_atom("\\approx", "\u{2248}", Some("RELOP"), Some("approximately-equals"))?;
+  def_math_atom("\\cong", "\u{2245}", Some("RELOP"), Some("approximately-equals"))?;
+  def_math_atom("\\neq", "\u{2260}", Some("RELOP"), Some("not-equals"))?;
+  def_math_atom("\\doteq", "\u{2250}", Some("RELOP"), Some("approaches-limit"))?;
+  def_math_atom("\\notin", "\u{2209}", Some("RELOP"), Some("not-element-of"))?;
 
-  DefMath!("\\models", None, "\u{22A7}", role => "RELOP", meaning => "models");
-  DefMath!("\\perp",   None, "\u{27C2}", role => "RELOP", meaning => "perpendicular-to");
-  DefMath!("\\mid", None, "\u{2223}", role => "VERTBAR"); // DIVIDES (RELOP?) ?? well, sometimes...
-  DefMath!("\\parallel", None, "\u{2225}", role => "VERTBAR", meaning => "parallel-to");
-  DefMath!("\\bowtie",   None, "\u{22C8}", role => "RELOP"); // BOWTIE
-  DefMath!("\\Join", None, "\u{2A1D}", role => "RELOP", meaning => "join");
-  DefMath!("\\smile",  None, "\u{2323}", role => "RELOP"); // SMILE
-  DefMath!("\\frown",  None, "\u{2322}", role => "RELOP"); // FROWN
-  DefMath!("\\propto", None, "\u{221D}", role => "RELOP", meaning => "proportional-to");
+  def_math_atom("\\models", "\u{22A7}", Some("RELOP"), Some("models"))?;
+  def_math_atom("\\perp", "\u{27C2}", Some("RELOP"), Some("perpendicular-to"))?;
+  def_math_atom("\\mid", "\u{2223}", Some("VERTBAR"), None)?; // DIVIDES (RELOP?) ?? well, sometimes...
+  def_math_atom("\\parallel", "\u{2225}", Some("VERTBAR"), Some("parallel-to"))?;
+  def_math_atom("\\bowtie", "\u{22C8}", Some("RELOP"), None)?; // BOWTIE
+  def_math_atom("\\Join", "\u{2A1D}", Some("RELOP"), Some("join"))?;
+  def_math_atom("\\smile", "\u{2323}", Some("RELOP"), None)?; // SMILE
+  def_math_atom("\\frown", "\u{2322}", Some("RELOP"), None)?; // FROWN
+  def_math_atom("\\propto", "\u{221D}", Some("RELOP"), Some("proportional-to"))?;
 
   // TeX defines these as alternate names...
   Let!("\\le", "\\leq");
@@ -576,7 +589,7 @@ LoadDefinitions!({
 
   //----------------------------------------------------------------------
   // Not;  (Is fullwidth solidus appropriate for when \not appears in isolation?)
-  DefMath!("\\not", None, "\u{FF0F}", role => "OPFUNCTION", meaning => "not");
+  def_math_atom("\\not", "\u{FF0F}", Some("OPFUNCTION"), Some("not"))?;
 
   // For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
   DefRewrite!(select =>
@@ -653,8 +666,8 @@ LoadDefinitions!({
 
   //----------------------------------------------------------------------
   // \joinrel
-  DefMath!("\\relbar", None, "-", role => "RELOP"); // ???
-  DefMath!("\\Relbar", None, "=", role => "RELOP"); // ???
+  def_math_atom("\\relbar", "-", Some("RELOP"), None)?; // ???
+  def_math_atom("\\Relbar", "=", Some("RELOP"), None)?; // ???
 
   // \joinrel is \mathrel{\mkern-3\mu} — but the effect is to join two
   // "relations" into one. Perl math_common L368-386.
@@ -805,9 +818,9 @@ LoadDefinitions!({
   // Design note: Perl LaTeXML uses role 'ID' for \cdots, but latexml-oxide intentionally uses
   // 'ELIDEOP' to enable dedicated grammar rules (e.g. `term mulop tight_term elideop`) that
   // produce better-structured math parse trees for elision patterns like a⋅b⋅c⋯.
-  DefMath!("\\cdots", None, "\u{22EF}", role => "ELIDEOP"); // MIDLINE HORIZONTAL ELLIPSIS
-  DefMath!("\\ddots", None, "\u{22F1}", role => "ID"); // DOWN RIGHT DIAGONAL ELLIPSIS
-  DefMath!("\\colon", None, ":",        role => "METARELOP"); // Seems like good default role
+  def_math_atom("\\cdots", "\u{22EF}", Some("ELIDEOP"), None)?; // MIDLINE HORIZONTAL ELLIPSIS
+  def_math_atom("\\ddots", "\u{22F1}", Some("ID"), None)?; // DOWN RIGHT DIAGONAL ELLIPSIS
+  def_math_atom("\\colon", ":", Some("METARELOP"), None)?; // Seems like good default role
   //         # Note that amsmath redefines \dots to be `smart'.
   //         # Aha, also can be in text...
   DefConstructor!(
@@ -1098,39 +1111,39 @@ LoadDefinitions!({
   // LaTeX; Table 3.9. Log-like Functions, p.44.
   //----------------------------------------------------------------------
   // NOTE: Classifying some as TRIGFUNCTION might clarify 'pi' ambiguities ?
-  DefMath!("\\arccos", None, "arccos", role => "OPFUNCTION", meaning => "inverse-cosine");
-  DefMath!("\\arcsin", None, "arcsin", role => "OPFUNCTION", meaning => "inverse-sine");
-  DefMath!("\\arctan", None, "arctan", role => "OPFUNCTION", meaning => "inverse-tangent");
-  DefMath!("\\arg",    None, "arg",    role => "OPFUNCTION", meaning => "argument");
+  def_math_atom("\\arccos", "arccos", Some("OPFUNCTION"), Some("inverse-cosine"))?;
+  def_math_atom("\\arcsin", "arcsin", Some("OPFUNCTION"), Some("inverse-sine"))?;
+  def_math_atom("\\arctan", "arctan", Some("OPFUNCTION"), Some("inverse-tangent"))?;
+  def_math_atom("\\arg", "arg", Some("OPFUNCTION"), Some("argument"))?;
 
-  DefMath!("\\cos",  None, "cos",  role => "TRIGFUNCTION", meaning => "cosine");
-  DefMath!("\\cosh", None, "cosh", role => "TRIGFUNCTION", meaning => "hyperbolic-cosine");
-  DefMath!("\\cot",  None, "cot",  role => "TRIGFUNCTION", meaning => "cotangent");
-  DefMath!("\\coth", None, "coth", role => "TRIGFUNCTION", meaning => "hyperbolic-cotangent");
+  def_math_atom("\\cos", "cos", Some("TRIGFUNCTION"), Some("cosine"))?;
+  def_math_atom("\\cosh", "cosh", Some("TRIGFUNCTION"), Some("hyperbolic-cosine"))?;
+  def_math_atom("\\cot", "cot", Some("TRIGFUNCTION"), Some("cotangent"))?;
+  def_math_atom("\\coth", "coth", Some("TRIGFUNCTION"), Some("hyperbolic-cotangent"))?;
 
-  DefMath!("\\csc", None, "csc", role => "TRIGFUNCTION", meaning => "cosecant");
-  DefMath!("\\deg", None, "deg", role => "OPFUNCTION",   meaning => "degree");
+  def_math_atom("\\csc", "csc", Some("TRIGFUNCTION"), Some("cosecant"))?;
+  def_math_atom("\\deg", "deg", Some("OPFUNCTION"), Some("degree"))?;
   DefMath!("\\det", None, "det", role => "LIMITOP", meaning => "determinant",
     dynamic_scriptpos => true);
-  DefMath!("\\dim", None, "dim", role => "LIMITOP", meaning => "dimension");
+  def_math_atom("\\dim", "dim", Some("LIMITOP"), Some("dimension"))?;
 
-  DefMath!("\\exp", None, "exp", role => "OPFUNCTION", meaning => "exponential");
+  def_math_atom("\\exp", "exp", Some("OPFUNCTION"), Some("exponential"))?;
   DefMath!("\\gcd", None, "gcd", role => "OPFUNCTION", meaning => "gcd",
     dynamic_scriptpos => true);
-  DefMath!("\\hom", None, "hom", role => "OPFUNCTION");
+  def_math_atom("\\hom", "hom", Some("OPFUNCTION"), None)?;
   DefMath!("\\inf", None, "inf", role => "LIMITOP", meaning => "infimum",
     dynamic_scriptpos => true);
 
-  DefMath!("\\ker", None, "ker", role => "OPFUNCTION", meaning => "kernel");
-  DefMath!("\\lg", None, "lg", role => "OPFUNCTION");
+  def_math_atom("\\ker", "ker", Some("OPFUNCTION"), Some("kernel"))?;
+  def_math_atom("\\lg", "lg", Some("OPFUNCTION"), None)?;
   DefMath!("\\lim", None, "lim", role => "LIMITOP", meaning => "limit",
     dynamic_scriptpos => true);
   DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
     dynamic_scriptpos => true);
   DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
     dynamic_scriptpos => true);
-  DefMath!("\\ln",  None, "ln",  role => "OPFUNCTION", meaning => "natural-logarithm");
-  DefMath!("\\log", None, "log", role => "OPFUNCTION", meaning => "logarithm");
+  def_math_atom("\\ln", "ln", Some("OPFUNCTION"), Some("natural-logarithm"))?;
+  def_math_atom("\\log", "log", Some("OPFUNCTION"), Some("logarithm"))?;
   DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
     dynamic_scriptpos => true);
   DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
@@ -1140,11 +1153,11 @@ LoadDefinitions!({
   DefMath!("\\sec", None, "sec", role => "TRIGFUNCTION", meaning   => "secant");
   DefMath!("\\sin", None, "sin", role => "TRIGFUNCTION", meaning   => "sine");
 
-  DefMath!("\\sinh", None, "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
+  def_math_atom("\\sinh", "sinh", Some("TRIGFUNCTION"), Some("hyperbolic-sine"))?;
   DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
     dynamic_scriptpos => true);
-  DefMath!("\\tan",  None, "tan",  role => "TRIGFUNCTION", meaning => "tangent");
-  DefMath!("\\tanh", None, "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
+  def_math_atom("\\tan", "tan", Some("TRIGFUNCTION"), Some("tangent"))?;
+  def_math_atom("\\tanh", "tanh", Some("TRIGFUNCTION"), Some("hyperbolic-tangent"))?;
 
   //----------------------------------------------------------------------
   // Modulo

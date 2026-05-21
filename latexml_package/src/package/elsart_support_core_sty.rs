@@ -131,11 +131,24 @@ LoadDefinitions!({
   DefConstructor!("\\person@thanks[]{}",
     "^ <ltx:contact role='thanks'>#2</ltx:contact>",
     alias => "\\thanks", mode => "restricted_horizontal");
-  DefMacro!("\\thanksref{}", "");
-  DefMacro!("\\corauth[]{}", "\\lx@contact{correspondent}{#2}");
-  DefMacro!("\\corref{}", "");
-  DefMacro!("\\corauthref{}", "");
-  DefMacro!("\\cortext[]{}", "");
+  // \thanksref / \corref / \corauthref carry footnote labels. Round-34
+  // surpass-Perl: emit as superscript so the labels reach the author
+  // block (matches IEEE \IEEEauthorrefmark behavior).
+  // \thanksref / \corref / \corauthref take label-style args that may contain
+  // `_` (and other key-style chars). Read as Semiverbatim so `_` doesn't
+  // trigger "Script _ can only appear in math mode" when the label flows
+  // into \textsuperscript's body. Witness 2304.14608 (elsarticle):
+  // `\author[..]{Xu\corref{corresponding_author}}` triggered the cascade.
+  DefMacro!("\\thanksref Semiverbatim", "\\textsuperscript{#1}");
+  DefMacro!("\\corauth[] Semiverbatim", "\\lx@contact{correspondent}{#2}");
+  DefMacro!("\\corref Semiverbatim", "\\textsuperscript{#1}");
+  DefMacro!("\\corauthref Semiverbatim", "\\textsuperscript{#1}");
+  // \cortext[id]{text} carries author-typed corresponding-author text.
+  // Preserve as ltx:note frontmatter so the prose ("Corresponding
+  // author. Email: …") reaches the XML rather than being silently
+  // dropped. Content-preserving.
+  DefMacro!("\\cortext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
   // Perl elsart_support_core.sty.ltxml L47: body is `\author{#1}` but in
   // the `OptionalMatch:* {}` signature `#1` is the star flag and `#2` is
   // the content — the author name is silently dropped. Documented as a
@@ -175,8 +188,12 @@ LoadDefinitions!({
   DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
   // Title/metadata — Perl L60-106
-  DefMacro!("\\runauthor{}", "");
-  DefMacro!("\\runtitle{}", "");
+  // \runauthor / \runtitle carry author-typed short forms for the
+  // running header. Preserve as ltx:note (content-preserving).
+  DefMacro!("\\runauthor{}",
+    "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
+  DefMacro!("\\runtitle{}",
+    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}");
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
   DefMacro!("\\ead Optional:email Semiverbatim",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
@@ -193,25 +210,30 @@ LoadDefinitions!({
   DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
   DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
   DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:date}[role=publication]{#1}");
-  DefMacro!("\\FullCopyrightText", "");
+  def_macro_noop("\\FullCopyrightText")?;
   DefMacro!("\\copyear{}", "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
   DefMacro!("\\copyrightholder{}", "\\@add@frontmatter{ltx:note}[role=copyrightholder]{#1}");
   Let!("\\copyrightyear", "\\copyear");
-  DefMacro!("\\RUNART", "");
-  DefMacro!("\\RUNDATE", "");
-  DefMacro!("\\RUNJNL", "");
-  DefMacro!("\\company{}", "");
-  DefMacro!("\\aid{}", "");
-  DefMacro!("\\ssdi{}{}", "");
-  DefMacro!("\\readRCS Until:$ Until:$", "");
-  DefMacro!("\\RCSdate", "");
-  DefMacro!("\\RCSfile", "");
-  DefMacro!("\\RCSversion", "");
-  DefMacro!("\\firstpage{}", "");
-  DefMacro!("\\lastpage{}", "");
-  DefMacro!("\\preface", "");
-  DefMacro!("\\theHaddress", "");
-  DefMacro!("\\theaddress", "");
+  def_macro_noop("\\RUNART")?;
+  def_macro_noop("\\RUNDATE")?;
+  def_macro_noop("\\RUNJNL")?;
+  // Round-34 surpass-Perl: company/article-id are author metadata.
+  DefMacro!("\\company{}",
+    "\\@add@frontmatter{ltx:note}[role=company]{#1}");
+  DefMacro!("\\aid{}",
+    "\\@add@frontmatter{ltx:note}[role=article-id]{#1}");
+  def_macro_noop("\\ssdi{}{}")?;
+  def_macro_noop("\\readRCS Until:$ Until:$")?;
+  def_macro_noop("\\RCSdate")?;
+  def_macro_noop("\\RCSfile")?;
+  def_macro_noop("\\RCSversion")?;
+  DefMacro!("\\firstpage{}",
+    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\lastpage{}",
+    "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
+  def_macro_noop("\\preface")?;
+  def_macro_noop("\\theHaddress")?;
+  def_macro_noop("\\theaddress")?;
   Let!("\\ESpagenumber", "\\arabic");
 
   // Acknowledgements — Perl L123-125
@@ -312,16 +334,27 @@ LoadDefinitions!({
   DefRegister!("\\eqntopsep" => Glue!("12pt"));
 
   // Figures — Perl L186-191
-  DefMacro!("\\printfigures{}", "");
-  DefMacro!("\\printtables{}", "");
-  DefMacro!("\\MARK{}", "");
-  DefMacro!("\\mpfootnotemark", "");
+  def_macro_noop("\\printfigures{}")?;
+  def_macro_noop("\\printtables{}")?;
+  def_macro_noop("\\MARK{}")?;
+  def_macro_noop("\\mpfootnotemark")?;
 
   // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
   DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
 
   // Float environment
   DefEnvironment!("{esmark}",  "#body");
-  DefMacro!("\\figmark{}{}", "");
-  DefMacro!("\\tabmark{}{}", "");
+  def_macro_noop("\\figmark{}{}")?;
+  def_macro_noop("\\tabmark{}{}")?;
+
+  // \qed (proof end-of-proof marker). Previously only in elsart_support
+  // (NOT loaded by elsarticle.cls — only by elsart.cls), so plain
+  // elsarticle papers using \qed got `Error:undefined:\qed`. Move the
+  // def here so all elsart_*-loading classes (elsarticle + elsart)
+  // have it. Witness 2306.02411 (elsarticle Pfaffian paper).
+  DefMacro!("\\qed", "\\ltx@qed");
+  DefConstructor!("\\ltx@qed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
+    reversion => "\\qed");
 });

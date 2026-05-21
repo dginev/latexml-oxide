@@ -96,16 +96,24 @@ pub fn is_defined_token(cs: &Token) -> bool {
 
 /// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token) -> bool {
+  // Non-CS / non-ACTIVE tokens (letters, digits, punctuation, etc.) have
+  // a trivial "self" meaning from `lookup_meaning` (= `Stored::Token(self)`).
+  // That's not a real `\def`/`\let` definition — kernel `\@ifdefinable`
+  // would treat them as not-yet-defined. Without this check, calls like
+  // `\@ifdefinable{Z@L@\foo}{…}` (zref-base.sty:118) get our DefToken
+  // reader's first-token-from-brace-group (the letter `Z`) and fail with
+  // "Command \Z already defined" because letter Z's lookup_meaning is
+  // non-None. Witness: arXiv:2504.18121 / 2504.17729 / 2504.17871 et al
+  // (Task #23 zref-base \Z collision cluster).
+  if !token.get_catcode().is_active_or_cs() {
+    return true;
+  }
   let meaning = lookup_meaning(token);
   token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
     && (meaning.is_none()
       || (meaning == lookup_meaning(&TOKEN_RELAX))
       || lookup_bool("2.09_COMPATIBILITY"))
 }
-
-/// unconditionally wraps a CS token around a string
-// TODO: this was more useful in Perl, maybe we should remove?
-pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
 
 //======================================================================
 // Defining Conditional Control Sequences.
@@ -1265,8 +1273,8 @@ pub fn def_environment(
   install_definition(begin_name_constructor, options.scope);
 
   let mut after_digest_env = options.after_digest.clone();
-  let name_clone = name.to_string();
-  let end_name_clone = end_name.to_string();
+  let name_clone = name.clone();
+  let end_name_clone = end_name.clone();
   let unexpected_end_closure = after_digest_simple!(_whatsit, {
     let env = lookup_string_from_sym(crate::pin!("current_environment"));
     if env.is_empty() || name_clone != env {
@@ -1660,7 +1668,7 @@ fn transfer_common_constructor_options(
 ) {
   let cs_str = cs.with_str(ToString::to_string);
   let mut properties = options.to_hash_stored();
-  cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.to_owned()));
+  cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.clone()));
   if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);
   }

@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Lit, Meta};
+use syn::DeriveInput;
 
 use latexml_core::mouth;
 use latexml_core::tokens::Tokens;
@@ -9,17 +9,7 @@ use latexml_core::tokens::Tokens;
 // definitely possible to clean this up further...
 
 pub fn compile_expansion(input: DeriveInput) -> TokenStream {
-  let expansion: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => panic!(
-        "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"
-      ),
-    },
-    _ => panic!(
-      "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let expansion = crate::attr_name_value_str(&input.attrs[0], "name");
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
   } else {
@@ -54,17 +44,7 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
 }
 
 pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
-  let literal: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => panic!(
-        "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
-      ),
-    },
-    _ => panic!(
-      "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let literal = crate::attr_name_value_str(&input.attrs[0], "literal");
 
   let tokenized = if literal.is_empty() {
     Tokens::default()
@@ -80,17 +60,7 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
 }
 
 pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
-  let literal: String = match input.attrs[0].parse_meta().unwrap() {
-    Meta::NameValue(v) => match v.lit {
-      Lit::Str(v) => v.value(),
-      _ => panic!(
-        "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
-      ),
-    },
-    _ => panic!(
-      "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"
-    ),
-  };
+  let literal = crate::attr_name_value_str(&input.attrs[0], "literal");
 
   let tokenized = if literal.is_empty() {
     Tokens::default()

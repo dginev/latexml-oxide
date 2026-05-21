@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("elsart_support");
@@ -7,11 +8,11 @@ LoadDefinitions!({
   RequirePackage!("bm");
   RequirePackage!("keyval");
   RequirePackage!("hyperref");
-  DefMacro!("\\pdftitle {}", "");
-  DefMacro!("\\pdfauthor {}", "");
-  DefMacro!("\\pdfsubject {}", "");
-  DefMacro!("\\pdfkeywords {}", "");
-  DefMacro!("\\printhistory", "");
+  def_macro_noop("\\pdftitle {}")?;
+  def_macro_noop("\\pdfauthor {}")?;
+  def_macro_noop("\\pdfsubject {}")?;
+  def_macro_noop("\\pdfkeywords {}")?;
+  def_macro_noop("\\printhistory")?;
   // Motivated by arXiv:1102.2078
   DefMacro!("\\tfrac{}{}", "{\\textstyle\\frac{#1}{#2}}");
   DefMacro!("\\dfrac{}{}", "{\\displaystyle\\frac{#1}{#2}}");

@@ -71,10 +71,18 @@ pub mod plain_bootstrap; // Perl: plain_bootstrap.pool.ltxml
 mod plain_constructs; // Perl: plain_constructs.pool.ltxml
 pub mod plain_dump; // Rust: precompiled plain.ltx state (auto-generated) // Perl: math_common.pool.ltxml
 
+// Versioned dump filename conventions + ambient-TeXLive year detection.
+pub mod dump_paths;
+
+// Compile-time-bundled fallback for plain.dump.txt + latex.dump.txt.
+// Used when no on-disk dump is resolvable (single-file binary distribution).
+pub mod embedded_dumps;
+
 // LaTeX format — LoadFormat('latex') chain called by latex.rs
 pub mod latex_base; // Perl: latex_base.pool.ltxml
 pub mod latex_bootstrap; // Perl: latex_bootstrap.pool.ltxml
 pub mod latex_constructs;
+pub mod latex_constructs_rust_only; // Rust-only overrides loaded LAST in latex.rs after latex_constructs.
 pub mod latex_dump; // Rust: precompiled latex.ltx state (auto-generated) // Perl: latex_constructs.pool.ltxml (C.1-C.15)
 
 // Top-level entry points
@@ -88,3 +96,4 @@ pub mod amstex; // Perl: AmSTeX.pool.ltxml
 // or via `LoadPool('BibTeX')` from amsrefs.sty.ltxml.
 // Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
 pub mod bibtex; // Perl: BibTeX.pool.ltxml
+pub mod pre_bibtex; // Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser

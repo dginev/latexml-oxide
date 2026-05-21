@@ -67,14 +67,62 @@ LoadDefinitions!({
       );
     }
   });
-  DefMacro!("\\DeclareCaptionStyle{}[]{}", "");
-  DefMacro!("\\DeclareCaptionLabelFormat{}{}", "");
-  DefMacro!("\\DeclareCaptionLabelSeparator{}{}", "");
-  DefMacro!("\\DeclareCaptionFont{}{}", "");
-  DefMacro!("\\DeclareCaptionFormat{}{}", "");
-  DefMacro!("\\DeclareCaptionJustification{}{}", "");
-  DefMacro!("\\DeclareCaptionOption{}[]{}", "");
-  DefMacro!("\\DeclareCaptionPackage{}", "");
+  def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
+  def_macro_noop("\\DeclareCaptionLabelFormat{}{}")?;
+  // `\DeclareCaptionLabelSeparator{name}{body}` — caption3.sty L289 stores
+  // body in `\caption@lsep@<name>`. floatrow.sty L1185 lets its
+  // `\DeclareFloatSeparators` to this, and its option `capbesidesep=<name>`
+  // looks up `\caption@lsep@<name>` via `\@ifundefined`. A no-op stub
+  // makes every floatrow separator option fire
+  // `Error:latex:\GenericError Package floatrow Error: Undefined float
+  // separator '<name>'`. Witness 2403.03161 (capbesidesep=quad).
+  // The `*` form (caption3 L780 `\DeclareCaptionLabelSeparator*{quad}{\quad}`)
+  // sets a "no autobreak" flag; HTML rendering ignores autobreaks so
+  // accepting the same body for both forms is fine.
+  DefMacro!("\\DeclareCaptionLabelSeparator OptionalMatch:* {}{}",
+    "\\expandafter\\def\\csname caption@lsep@#2\\endcsname{#3}");
+  // Standard caption3.sty separators (L304-307 + L780). Pre-register
+  // so floatrow's `capbesidesep=<std-name>` resolves without needing
+  // the raw caption3.sty to load. Witness 2403.03161.
+  RawTeX!(
+    r"\DeclareCaptionLabelSeparator{none}{}%
+\DeclareCaptionLabelSeparator{colon}{: }%
+\DeclareCaptionLabelSeparator{period}{. }%
+\DeclareCaptionLabelSeparator{space}{ }%
+\DeclareCaptionLabelSeparator{quad}{\quad}%
+\DeclareCaptionLabelSeparator{newline}{\\}%
+\DeclareCaptionLabelSeparator{endash}{ -- }");
+  def_macro_noop("\\DeclareCaptionFont{}{}")?;
+  def_macro_noop("\\DeclareCaptionFormat{}{}")?;
+  // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
+  // of `\DeclareCaptionFormat` for text-only caption-format definers.
+  def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;
+  def_macro_noop("\\DeclareCaptionJustification{}{}")?;
+  def_macro_noop("\\DeclareCaptionOption{}[]{}")?;
+  def_macro_noop("\\DeclareCaptionPackage{}")?;
+  // caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
+  // "caption@box@<name>" macro via \@namedef. We don't render caption
+  // box layouts; gobble both args.
+  def_macro_noop("\\DeclareCaptionBox{}{}")?;
+  // caption3.sty L573: \DeclareCaptionListFormat{name}{body}
+  def_macro_noop("\\DeclareCaptionListFormat{}{}")?;
+
+  // caption3 internals used by raw-loaded sibling packages like
+  // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
+  // `\setkeys{family}{kvs}` with caption-specific error handling
+  // (caption3_2020-10-26.sty L337-360). Stub to a plain `\setkeys`
+  // — drops the optional error-handler context but preserves
+  // keyval-processing semantics. Witness cluster: papers using
+  // `\usepackage{floatrow}` which raw-loads its body containing
+  // `\caption@setkeys{...}{...}` calls.
+  DefMacro!("\\caption@setkeys[]{}{}", "\\setkeys{#2}{#3}");
+  // `\undefine@key` removes a keyval. Real keyval.sty defines it
+  // post-2018; xkeyval too. Both Perl LaTeXML's keyval.sty.ltxml
+  // hand-port and our Rust binding pre-date that and don't include
+  // it. Stub as a no-op — keyval removal is mostly an authoring
+  // hygiene issue; missing it means stale keys linger but no
+  // tokenization breakage. Witness: same floatrow chain.
+  def_macro_noop("\\undefine@key{}{}")?;
 
   DefMacro!("\\bothIfFirst{}{}", sub[(first, second)] {
     if first.is_empty() { Ok(Tokens!()) } else {
@@ -92,13 +140,17 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\AtBeginCaption{}", "");
-  DefMacro!("\\AtEndCaption{}", "");
-  DefMacro!("\\ContinuedFloat", "");
-  DefMacro!("\\ProcessOptionsWithKV{}", "");
+  def_macro_noop("\\AtBeginCaption{}")?;
+  def_macro_noop("\\AtEndCaption{}")?;
+  def_macro_noop("\\ContinuedFloat")?;
+  // caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
+  // sub-caption float continuation. Gobble safely (visual-only).
+  // Witness 2202.03356.
+  def_macro_noop("\\nextfloat")?;
+  def_macro_noop("\\ProcessOptionsWithKV{}")?;
 
-  DefMacro!("\\captionfont", "");
-  DefMacro!("\\captionsize", "");
+  def_macro_noop("\\captionfont")?;
+  def_macro_noop("\\captionsize")?;
 
   DefRegister!("\\captionparindent"  => Dimension::new(0));
   DefRegister!("\\captionindent"     => Dimension::new(0));
@@ -138,7 +190,68 @@ LoadDefinitions!({
   DefMacro!("\\@captionof@{}{}{}", r"\begin{#1}\@caption@{#1}{#2}{#3}\end{#1}");
   DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}");
 
-  DefMacro!("\\clearcaptionsetup", "");
-  DefMacro!("\\rotcaption", "");
-  DefMacro!("\\showcaptionsetup[]{}", "");
+  def_macro_noop("\\clearcaptionsetup")?;
+  def_macro_noop("\\rotcaption")?;
+  def_macro_noop("\\showcaptionsetup[]{}")?;
+
+  // \caption@ifinlist{val}{csv-list}{then}{else} — caption3.sty L87.
+  // Returns `then` if val matches one of the comma-separated list items,
+  // else `else`. Used by floatrow (`\caption@ifinlist{#1}{0,false,no,off}{...}{...}`)
+  // and by caption-key parsing. Witness 2405.18938.
+  DefMacro!("\\caption@ifinlist{}{}", sub[(val, list)] {
+    let v_str = val.to_string();
+    let v = v_str.trim();
+    let l_str = list.to_string();
+    let found = l_str.split(',').any(|item| item.trim() == v);
+    Ok(if found {
+      Tokens!(T_CS!("\\@firstoftwo"))
+    } else {
+      Tokens!(T_CS!("\\@secondoftwo"))
+    })
+  });
+
+  // \caption@setposition{value} — caption3.sty L1007. Sets the caption
+  // position. We don't materialize caption-position logic; stub as
+  // no-op so floatrow-style position setters don't crash.
+  def_macro_noop("\\caption@setposition{}")?;
+
+  // \caption@set@bool{cs}{value} — caption3.sty L131. Defines `cs` as
+  // `\@firstoftwo` if value is in {1,true,yes,on}, `\@secondoftwo` for
+  // {0,false,no,off}, else error. We don't model caption boolean state
+  // (caption settings don't affect XML output), so stub the dispatch
+  // — \let the CS to \@secondoftwo by default. Witness 2408.09623,
+  // 2408.12461, 2409.01528.
+  DefMacro!("\\caption@set@bool DefToken {}", sub[(cs, value)] {
+    let val = value.to_string();
+    let truthy = matches!(val.trim(), "1" | "true" | "yes" | "on");
+    let target_name = if truthy { "\\@firstoftwo" } else { "\\@secondoftwo" };
+    state::let_i(&cs, &T_CS!(target_name), None);
+    Ok(Tokens!())
+  });
+  // \caption@setbool{name} — wraps caption@set@bool by building \caption@if<name>.
+  DefMacro!("\\caption@setbool{}{}",
+    "\\expandafter\\caption@set@bool\\csname caption@if#1\\endcsname{#2}");
+  // \caption@ifbool{name} — \@nameuse{caption@if<name>} dispatch helper.
+  DefMacro!("\\caption@ifbool{}", "\\@nameuse{caption@if#1}");
+
+  // \caption@setoptions{name} (caption3.sty L325-333) — apply the
+  // named option setup if defined, else do nothing. Used by floatrow
+  // (line 473) and various caption-extension packages. Stub as no-op
+  // since the actual option dictionary `\caption@opt@<name>` isn't
+  // populated under our digestion model. Witness 2412.15378 (floatrow).
+  def_macro_noop("\\caption@setoptions{}")?;
+  // \caption@@make — internal caption-rendering hook used by float
+  // wrappers. No-op for our XML pipeline (caption text is emitted via
+  // ltx:caption regardless of formatting). Witness 2412.15378.
+  DefMacro!("\\caption@@make{}{}", "#2");
+  // caption3.sty L850 defines \caption@setfont{kind}{value} — used
+  // internally to apply font options (font/labelfont/textfont/size).
+  // Font formatting is irrelevant in our XML output; gobble args.
+  // Witness 2504.00326.
+  def_macro_noop("\\caption@setfont{}{}")?;
+  // \phantomcaption (caption package, originally subcaption) — adds an
+  // invisible caption for layout reasons; we don't need spacing in XML
+  // output, so stub as no-op. Witness 2503.21681.
+  def_macro_noop("\\phantomcaption")?;
+  def_macro_noop("\\phantomsubcaption")?;
 });

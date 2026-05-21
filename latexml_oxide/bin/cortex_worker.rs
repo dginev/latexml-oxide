@@ -7,6 +7,9 @@
 //! - Worker mode (default): connects to CorTeX dispatcher via ZMQ
 //! - Standalone mode (--standalone): single ZIP-to-ZIP conversion
 
+#![feature(alloc_error_hook)]
+
+use std::alloc::{Layout, set_alloc_error_hook};
 use std::borrow::Cow;
 use std::error::Error;
 use std::ffi::OsString;
@@ -83,8 +86,20 @@ struct Cli {
   #[arg(long = "path")]
   search_paths: Vec<String>,
 
-  /// Per-document timeout in seconds
-  #[arg(long, default_value = "60")]
+  /// Per-document timeout in seconds. Default 120s.
+  ///
+  /// **Canvas/benchmark runs MUST use a `--release` (or `maxperf`) build.**
+  /// In release, even the xy-pic / pgfplots-heavy long-tail (witness
+  /// 2308.16841: 3 large xymatrix diagrams) completes in <10s; the
+  /// 120s budget then catches genuine infinite loops promptly.
+  /// Debug builds are ~12× slower (61s for the same paper) and will
+  /// approach this budget — that is a tooling/profile issue, not a
+  /// reason to widen the timeout.
+  ///
+  /// Witnesses for prior 60s→120s bump (8-way contention slowdown
+  /// pushed 21-48s standalone runs past 60s): 2306.16591, 2307.05570,
+  /// 2312.13092, 2404.17751, 2311.03376, 2307.10800.
+  #[arg(long, default_value = "120")]
   timeout: u64,
 
   /// Disable Presentation MathML
@@ -118,6 +133,11 @@ struct ConversionProfile {
 
 impl ConversionProfile {
   fn ar5iv(extra_preloads: &[String], timeout: u64, no_pmml: bool, no_mathtex: bool) -> Self {
+    // Preload only ar5iv.sty (which RequirePackages latexml.sty). LaTeX.pool
+    // is loaded lazily by \documentclass / \documentstyle digestion. Eagerly
+    // preloading LaTeX.pool here previously clobbered plain-TeX papers'
+    // primitives (`\magnification`, `\end`, `\bye`) — Perl LaTeXML matches
+    // this lazy-load policy.
     let mut preloads = vec!["ar5iv.sty".to_string()];
     preloads.extend(extra_preloads.iter().cloned());
     ConversionProfile {
@@ -247,15 +267,22 @@ impl LatexmlWorker {
       split_naming:              None,
       xslt_parameters:           &[],
       schemadocs:                false,
-      // Enable vector-SVG path for PDFs <= 200 KB. Vector-authored PDFs
-      // (matplotlib, pgfplots, TikZ-export) are typically <100 KB; raster-
-      // embedded PDFs are usually >500 KB. The 200 KB cutoff favors
-      // inkscape (clean vector SVG) for the vector class while leaving
-      // raster PDFs on the ImageMagick `convert` (gs) path. The
-      // convert path now has a 60 s wall-clock timeout (see
-      // graphics.rs `convert_timeout_secs`), so neither path can stall
-      // post-processing indefinitely.
-      graphics_svg_threshold_kb: 200,
+      // Vector-SVG fast path. 0 = auto-detect: scan the PDF header for
+      // `/Subtype /Image` markers; if absent (and the file is at most
+      // 500 KB), route through inkscape→SVG for vector-clean output
+      // and the documented 100×+ speedup over ImageMagick rasterisation
+      // on pgfplots/matplotlib PDFs (PERFORMANCE.md §"Vector-SVG fast
+      // path"). Raster-bearing PDFs detect their image XObject and
+      // stay on the gs/convert path. Override with a positive integer
+      // (KB threshold) to force the legacy size-only gate, or set
+      // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` to disable auto-detect
+      // entirely. Replaces the prior hard-coded 200 KB cutoff (which
+      // was strictly looser — would attempt SVG on 200 KB raster PDFs
+      // even when their image XObject was visible in the header).
+      graphics_svg_threshold_kb: 0,
+      // cortex_worker is the canvas-bulk path — always emit the full
+      // document, never the fragment / math extraction variants.
+      whatsout:                  latexml_post::extract::Whatsout::Document,
     });
 
     // 6. Get log and status (Perl: status line is last line of log)
@@ -295,15 +322,16 @@ impl LatexmlWorker {
     // 8. Pack output ZIP: HTML (named after source) + images + log + status + telemetry
     let output_path =
       std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
-    pack_output_zip_with_resources(
-      &output_path,
-      &html_filename,
-      &html,
-      &log,
-      &status_str,
-      dest_dir.path(),
-      &telemetry_json,
-    )?;
+    latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
+      zip_path:       &output_path.to_string_lossy(),
+      html_filename:  &html_filename,
+      html:           &html,
+      log_filename:   Some("cortex.log"),
+      log:            &log,
+      status:         &status_str,
+      resource_dir:   Some(dest_dir.path()),
+      telemetry_json: Some(&telemetry_json),
+    })?;
 
     Ok(output_path)
   }
@@ -522,7 +550,13 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> = rustc_hash::FxHashMap::default();
-  let mut vetoed: Vec<PathBuf> = Vec::new();
+  // Each entry is (vetoed_path, vetoer_path). A veto from a low-score
+  // wrapper file (e.g. a 2-line `\input{main}` shim) MUST NOT remove a
+  // high-score documentclass-bearing file from the candidate pool. The
+  // vetoer's score is known only after the scoring loop completes, so
+  // we record the vetoer and apply the veto post-loop with the score
+  // comparison. Witness 2307.13586.
+  let mut vetoed: Vec<(PathBuf, PathBuf)> = Vec::new();
   // Phase D pre-screen: track sentinel reasons so the empty-candidates
   // branch can return a categorized `Fatal:invalid:<reason>` (per
   // SYNC_STATUS.md "Phase E asymptote: convert intractable papers to
@@ -597,7 +631,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
           vetoed_name = vetoed_name.trim_end().to_string() + ".tex";
         }
         let base_dir = tex_file.parent().unwrap_or(dir);
-        vetoed.push(base_dir.join(&vetoed_name));
+        // Tag veto with vetoer's path; we'll only honor the veto when
+        // the vetoer's eventual score >= vetee's score. Prevents a tiny
+        // wrapper file (`\input{main}`) from removing a documentclass-
+        // bearing main.tex from the candidate set. Witness 2307.13586.
+        vetoed.push((base_dir.join(&vetoed_name), tex_file.clone()));
       }
       if RE_END_BYE.is_match(line) {
         maybe_tex_priority = true;
@@ -651,9 +689,14 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     }
   }
 
-  // Remove vetoed files
-  for v in &vetoed {
-    likelihood.remove(v);
+  // Apply each veto only if the vetoer's score >= vetee's score.
+  // Honors the wrapper-vs-main-doc case (see `vetoed` declaration).
+  for (vetee, vetoer) in &vetoed {
+    let vetee_score = likelihood.get(vetee).copied().unwrap_or(0.0);
+    let vetoer_score = likelihood.get(vetoer).copied().unwrap_or(0.0);
+    if vetoer_score >= vetee_score {
+      likelihood.remove(vetee);
+    }
   }
 
   // Filter to score > 0, sort by score descending
@@ -663,16 +706,35 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     .cloned()
     .collect();
   candidates.sort_by(|a, b| likelihood[b].partial_cmp(&likelihood[a]).unwrap());
-
   if candidates.is_empty() {
     if had_auto_ignore {
-      // Phase D pre-screen: arxiv archives with only `%auto-ignore`
-      // sentinel are deliberately-replaced/withdrawn submissions.
-      // Surface as `Fatal:invalid:auto-ignore` so the canvas
-      // log-grep (lax `Error:[a-z]+:`) doesn't count it as an error.
-      return Err(
-        "Fatal:invalid:auto-ignore: archive contains only %auto-ignore sentinel files".into(),
-      );
+      // Perl-faithful: an arxiv `%auto-ignore` source still gets opened
+      // — the `%` line is a comment, the rest is empty, and Perl
+      // happily reports "Conversion complete: No obvious problems" with
+      // an empty XML body. Witness: 2307.10758 (a 12-byte `%auto-ignore`
+      // .tex). We were emitting `Fatal:invalid:auto-ignore` here, but
+      // that turned 90 wp4 corpus entries into hard failures vs Perl's
+      // OK. Fall through to pick the auto-ignore file and let the
+      // normal pipeline produce an empty document.
+      //
+      // File-pick: prefer the dirname-matching file (arxiv convention is
+      // `<id>/<id>.tex`); else the first listed file.
+      let dir_name = dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+      let auto_ignore_main = tex_files
+        .iter()
+        .find(|p| {
+          p.file_stem()
+            .and_then(|s| s.to_str())
+            .is_some_and(|stem| stem == dir_name)
+        })
+        .cloned()
+        .or_else(|| tex_files.first().cloned());
+      if let Some(p) = auto_ignore_main {
+        return Ok(p.to_string_lossy().to_string());
+      }
     }
     return Err("No viable .tex files found in archive".into());
   }
@@ -815,74 +877,90 @@ fn parse_readme_json(dir: &Path) -> Option<String> {
   None
 }
 
-fn pack_output_zip_with_resources(
-  output_path: &Path,
-  html_filename: &str,
-  html: &str,
-  log: &str,
-  status: &str,
-  resource_dir: &Path,
-  telemetry_json: &str,
+/// Minimal "we timed out" placeholder zip. Written only from the
+/// watchdog's pre-exit hook (`set_pre_exit_hook` in `latexml_core::
+/// watchdog`), so the happy-path overhead is zero. Contains just
+/// two members: `status` (`Status:conversion:3`) and `cortex.log`
+/// (a single `Fatal:timeout:wallclock …` line). The parent harness
+/// can stat the output file and parse `status` exactly as for any
+/// other failed conversion, instead of seeing a missing file plus
+/// an `Aborted (core dumped)` shell message.
+fn write_timeout_placeholder_zip(
+  output_path: &str,
+  input_path: &str,
+  timeout_secs: u64,
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
-  let options =
-    zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-
-  // HTML file named after the source TeX (Perl LaTeXML.pm L200-205)
-  zip.start_file(html_filename, options)?;
-  zip.write_all(html.as_bytes())?;
-
-  // Add all resource files (images, etc.) from the destination directory
-  if resource_dir.exists() {
-    add_dir_to_zip(&mut zip, resource_dir, resource_dir, &options)?;
-  }
-
-  zip.start_file("cortex.log", options)?;
-  zip.write_all(log.as_bytes())?;
-
+  let options = zip::write::SimpleFileOptions::default()
+    .compression_method(zip::CompressionMethod::Stored);
   zip.start_file("status", options)?;
-  zip.write_all(status.as_bytes())?;
-
-  // Per-job telemetry record (single-line JSON). benchmark_canvas.sh
-  // extracts this member and appends to <output_dir>/telemetry.jsonl.
-  // See docs/TELEMETRY.md.
-  zip.start_file("telemetry.json", options)?;
-  zip.write_all(telemetry_json.as_bytes())?;
-
+  zip.write_all(b"Status:conversion:3")?;
+  zip.start_file("cortex.log", options)?;
+  let log = format!(
+    "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
+     main-level wall-clock timeout converting {input_path}; the worker \
+     thread was presumed wedged in a tight native loop and the watchdog \
+     exited the process via exit(124). No output produced.\n\
+     Status:conversion:3\n"
+  );
+  zip.write_all(log.as_bytes())?;
   zip.finish()?;
   Ok(())
 }
 
-/// Recursively add files from a directory to a ZIP archive.
-/// Skips the output.html (already added separately).
-fn add_dir_to_zip(
-  zip: &mut zip::ZipWriter<File>,
-  dir: &Path,
-  base: &Path,
-  options: &zip::write::SimpleFileOptions,
-) -> Result<(), Box<dyn Error>> {
-  for entry in fs::read_dir(dir)? {
-    let entry = entry?;
-    let path = entry.path();
-    let rel = path.strip_prefix(base).unwrap_or(&path);
-    let name = rel.to_string_lossy().to_string();
-
-    if path.is_dir() {
-      add_dir_to_zip(zip, &path, base, options)?;
-    } else if !name.ends_with(".html") {
-      // Skip the HTML file — it's already added separately
-      zip.start_file(&name, *options)?;
-      let mut f = File::open(&path)?;
-      std::io::copy(&mut f, zip)?;
-    }
-  }
-  Ok(())
-}
+// `pack_output_zip_with_resources` + `add_dir_to_zip` moved into
+// `latexml_post::pack::pack_archive` (2026-05-18) — single source of
+// truth shared with `latexml_oxide --post`. Perl analog: `LaTeXML::Post::Pack`.
 
 // --- Main ---
 
+/// Custom allocation-failure hook: detects the runaway-macro-expansion
+/// pathology at the moment it manifests (Rust's `alloc::handle_alloc_error`)
+/// and emits a `Fatal:` line matching the project's logging convention so
+/// aggregation tooling (`grep Fatal:`, `tools/parity_stats.sh`,
+/// `tools/benchmark_canvas.sh`, telemetry's `fatal_errors` field) records
+/// it. Exits with code 137 → canvas categorises as `oom_or_kill` rather
+/// than `abort`.
+///
+/// Witness pathology: paper 2305.16331 + `\u\i` under `mathtext + T2A`
+/// drives `gullet::pushback` into runaway growth via repeated unread of
+/// growing-each-cycle invoked-Tokens; the next `Vec::reserve` doubles
+/// capacity past the 4 GiB / 8 GB ulimit boundary and fails.
+///
+/// No overhead on the normal digestion path — fires only when the
+/// allocator returns null. The hook avoids any heap allocation in its
+/// body (no `format!`, no string concat) because the global allocator
+/// has just failed: `eprintln!` writes via a stack-allocated formatter.
+fn custom_alloc_error_hook(layout: Layout) {
+  // Single Fatal: line on its own — matches `log_fatal` output shape
+  // (`Fatal:<Target>:<Category> <message>`) so aggregation grep keys
+  // on it cleanly. `oom`/`alloc_failed` are not enum variants of
+  // `ErrorTarget`/`ErrorCategory` because we can't construct those
+  // here without an `arena`/allocator round-trip; using the same shape
+  // string is enough for the harness.
+  eprintln!(
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
+     likely runaway macro expansion (gullet pushback Vec growth past \
+     worker memory budget). Witness: paper 2305.16331 + `\\u\\i` under \
+     `mathtext + T2A`. Exiting with code 137.",
+    layout.size(),
+    layout.align()
+  );
+  // When `RUST_BACKTRACE=1` is set, print the captured backtrace too.
+  // Helps localise the call site of the failing allocation. The
+  // backtrace API allocates internally; if that re-trips the OOM the
+  // worker still exits cleanly via the exit() below.
+  if std::env::var_os("RUST_BACKTRACE").is_some() {
+    let bt = std::backtrace::Backtrace::force_capture();
+    eprintln!("{bt}");
+  }
+  std::process::exit(137);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+  set_alloc_error_hook(custom_alloc_error_hook);
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
   // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
@@ -903,10 +981,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Spawn kpathsea pre-init in a background thread (overlaps the
   // ~30-40 ms `kpathsea_init_db` cost with arg parse + dump load).
-  // Same rationale + env knob as the latexml_oxide bin — see
-  // `latexml_core::util::pathname::prewarm_kpathsea`.
-  let kpse_prewarm_enabled = std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err();
-  let _kpse_warmup_handle = if kpse_prewarm_enabled {
+  // See `latexml_core::util::pathname::prewarm_kpathsea`.
+  let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
     Some(std::thread::spawn(
       latexml_core::util::pathname::prewarm_kpathsea,
     ))
@@ -961,10 +1037,28 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       process::exit(1);
     });
 
+    // Register a watchdog-firing callback so a timed-out conversion
+    // still leaves a structured failure artifact at `--output`
+    // (Status:conversion:3 + a fatal:timeout log line) instead of
+    // a missing file plus "Aborted (core dumped)" from the shell.
+    // Per-conversion overhead in the happy path is zero — the
+    // callback is only invoked from the watchdog thread immediately
+    // before `exit(124)`. Witnesses: 2602.11915, 2604.11500,
+    // 2604.13944, hep-ph9205242, q-alg9604005/9605003/9605028 — the
+    // 7 "Aborted" rows in the 2026-05-13 588-paper sweep.
+    if let Some(ref out) = cli.output {
+      let out_clone = out.clone();
+      let input_clone = input.clone();
+      let timeout_secs = worker.profile.timeout;
+      latexml_core::watchdog::set_pre_exit_hook(Box::new(move || {
+        let _ = write_timeout_placeholder_zip(&out_clone, &input_clone, timeout_secs);
+      }));
+    }
+
     eprintln!("Converting {} ...", input);
     let result_path = worker.convert_archive(Path::new(&input))?;
 
-    // Read result and write to output
+    // Read result and write to output (overwrites the placeholder).
     let mut result_data = Vec::new();
     File::open(&result_path)?.read_to_end(&mut result_data)?;
 

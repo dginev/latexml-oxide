@@ -1,0 +1,98 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+% =====================================================================
+% Source: arXiv:2211.13044
+%   Title: "Concentration of the resolvent of random matrices" (approx)
+%   Sandbox path: /home/deyan/data/warning_papers_5/data/arxmliv/2211/2211.13044/2211.13044.zip
+%   Original file: main.tex
+%   Witness equation: §S4.Ex17 in the rendered HTML.
+% =====================================================================
+%
+% Paper convention (from 2211.13044): build double-bar and triple-bar norms
+% by stacking \left|\right| pairs with negative kerns. This is a widespread
+% community idiom — papers do NOT use \| or a custom \norm macro.
+\newcommand{\verti}[1]{{\left\vert #1 \right\vert}}              % |x|
+\newcommand{\vertii}[1]{{\left\vert\kern-0.25ex\left\vert #1 \right\vert\kern-0.25ex\right\vert}}                                  % ‖x‖
+\newcommand{\vertiii}[1]{{\left\vert\kern-0.25ex\left\vert\kern-0.25ex\left\vert #1 \right\vert\kern-0.25ex\right\vert\kern-0.25ex\right\vert}}  % |||x|||
+\newcommand{\vertif}[1]{{\left\vert\kern-0.25ex\left\vert #1 \right\vert\kern-0.25ex\right\vert}_F}                                % ‖x‖_F (Frobenius)
+
+\begin{document}
+
+% =====================================================================
+% FUTURE-WORK PROBE: kerned-stack norm idioms
+%
+% This file documents a class of math-grammar parse defects that goes
+% beyond Perl LaTeXML's behavior. Perl LaTeXML parses these the same
+% naive way — each \left|\right| pair becomes an independent fence
+% delimiter — so the failure mode is shared, not a regression.
+%
+% The Rust port's math parser is positioned to do better because we
+% built a more expressive Marpa-based grammar (see
+% docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md). The intent of this test is
+% to PIN THE CURRENT BEHAVIOR so a future grammar/preprocess change
+% can lift these expressions to well-structured MathML Core.
+%
+% Witness paper: 2211.13044 §S4.Ex17 (random-matrix paper using the
+% above \vertii / \vertiii / \vertif idioms throughout).
+% =====================================================================
+
+\section{Single-bar absolute value: parses OK}
+% Baseline — the unstacked case works. Single \left|\right| pair
+% becomes a normal MathML fence: <mo>|</mo> ... <mo>|</mo>.
+\[ \verti{x} = \verti{-x} \]
+
+\section{Double-bar Frobenius norm: structural over-nesting}
+% \vertii{x} expands to two \left|\left|...\right|\right| pairs with
+% a -0.25ex kern between them. Visually the bars touch and render as
+% ‖x‖. Semantically the parser produces:
+%   <mrow><mo>|</mo><mrow><mo>|</mo>x<mo>|</mo></mrow><mo>|</mo></mrow>
+% i.e. nested |x| inside outer |·| — not a unified ‖·‖ delimiter.
+%
+% FUTURE: recognize the kerned pair and emit either
+%   <mo>‖</mo>x<mo>‖</mo>   (U+2016 DOUBLE VERTICAL LINE)
+% or a single semantic <mrow intent=":Frobenius-norm"> wrapper.
+\[ \vertii{x} \leq \vertii{y} \]
+
+\section{Triple-bar operator norm: 25-level nesting cliff}
+% \vertiii{x} expands to THREE \left|\right| layers. Each pair gets its
+% own <mrow>, producing deeply nested structure that grows
+% combinatorially when multiple norms are juxtaposed in one expression.
+%
+% FUTURE: detect the 3-deep kerned stack as a single
+% <mo>⫴</mo> (U+2AF4 TRIPLE VERTICAL BAR DELIMITER) or
+% <mrow intent=":operator-norm">.
+\[ \vertiii{x} \leq C \vertiii{y} \]
+
+\section{Witness from 2211.13044 §S4.Ex17: the cascade}
+% This is the exact equation that motivated the future-work entry.
+% Four triple-bar terms and four double-bar Frobenius-norm terms,
+% juxtaposed in a single inequality. The current parser produces
+% max-nesting-depth 25 with 24 <mrow>s and 32 <mo>|</mo>s, with a
+% spurious <mi></mi> phantom operand before the \leq (next item).
+%
+% Expected (semantic) shape:  ‖A‖_F ≤ |||M||| · |||Σ||| · ‖M-M'‖_F
+%                                       + ‖M-M'‖_F · |||Σ||| · |||M'|||
+\[
+  \vertif{M\Sigma M - M'\Sigma M'}
+    \leq \vertiii{M}\vertiii{\Sigma}\vertif{M - M'}
+       + \vertif{M - M'}\vertiii{\Sigma}\vertiii{M'}
+\]
+
+\section{Empty-LHS continuation: spurious <mi></mi> insertion}
+% Bug observed alongside the kerned-stack issue, separate task #264.
+% When an aligned/eqnarray cell starts with a binary relation (here \leq),
+% our math parser inserts <mi></mi> as a phantom left operand before
+% emitting the <mo>≤</mo>. Downstream presentation/semantic tools see
+% an empty identifier they have to handle.
+%
+% FUTURE: detect equation-row continuation; either suppress the empty
+% <mi> or annotate the row with `intent=":continuation"`.
+\begin{align*}
+  \vertif{M\Sigma M - M'\Sigma M'}
+    & = \vertif{M\Sigma M - M'\Sigma M + M'\Sigma M - M'\Sigma M'} \\
+    & \leq \vertiii{M}\vertiii{\Sigma}\vertif{M - M'}
+         + \vertif{M - M'}\vertiii{\Sigma}\vertiii{M'}
+\end{align*}
+
+\end{document}

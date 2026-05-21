@@ -1,0 +1,17 @@
+% Witness: arXiv:physics/9709007 line 1594
+%   \multiput(3.2,3,8)(.3,0){2}{\circle*{.1}}
+% A user-typo'd `(3.2,3,8)` — three comma-separated values where a
+% Pair expects two. Perl's `ReadPair` reads x=3.2, then
+% `readUntil(',')` (consuming 0 tokens), reads y=3, then
+% `readUntil(')')` consumes the trailing `,8` silently. The earlier
+% Rust port was stricter: it read one token after y and only consumed
+% it if literally `)`, leaving `,8)(.3,0)` in the input — the SECOND
+% Pair argument then bailed with "Missing argument Pair". Match Perl
+% by using `read_until(',' / ')')` between/after the Pair members.
+\documentclass{article}
+\begin{document}
+\begin{picture}(7,7)
+\multiput(3.2,3,8)(.3,0){2}{\circle*{.1}}
+\multiput(2.7,1.6)(.3,0){1}{\circle{.1}}
+\end{picture}
+\end{document}

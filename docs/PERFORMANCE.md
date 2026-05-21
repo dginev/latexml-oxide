@@ -75,28 +75,12 @@ Telemetry across 190k arxiv documents shows the `graphics` phase at
 rate on a content-keyed cache (~30%) translates to ~10% off corpus
 wall.
 
-```rust
-// Persistent on-disk cache, keyed by content + render options
-let key = blake3::hash(&[source_bytes, page.to_le_bytes(),
-                          dpi.to_le_bytes(), dest_kind.as_bytes(),
-                          opts.canonical()].concat());
-if let Some(cached) = cache.get(&key) { return Ok(cached); }
-let fresh = run_convert(...)?;
-cache.put(&key, &fresh);
-```
-
-**In-document coalescing landed 2026-05-12** (`48fd96ac75`):
-`Plan::Copy` and `Plan::Convert` key on `(SipHash(content),
-graphicx_options)`. Witness arXiv:2402.01336 (LHCb 1067-author paper)
-— 1083 `<ltx:graphics>` nodes → **17 output files**. Persistent
-on-disk cache is the next concrete win.
-
-Cache-key correctness checklist:
-- Include: source-bytes hash, page index, target DPI, format, flags
-  that influence rendering.
-- Exclude: timestamps, tmpdir paths.
-- Bump a `cache_namespace` constant when fixing a rendering bug; don't
-  rely on hash invalidation.
+**Landed**: in-doc coalescing (`48fd96ac75`, 2026-05-12) +
+persistent on-disk cache (2026-05-16) — see "Graphics phase —
+completed work" below. Cache-key contract: include source-bytes
+hash + page + DPI + format + render-affecting flags; exclude
+timestamps/tmpdir paths; bump a `cache_namespace` constant when
+fixing a rendering bug rather than relying on hash invalidation.
 
 ---
 
@@ -128,31 +112,94 @@ Principle 4). Max RSS: 1,692 MB.
 
 ## Active improvement plan
 
-### P1 graphics phase (36.5% of wall, largest lever)
+### P1 graphics phase (36.5% of wall) — CLOSED
 
-- **In-document dedup** — done (`latexml_post/src/graphics.rs` via
-  `convert_job_ids` HashMap keyed `(source, page, options)`, mirroring
-  Perl `$doc->cacheLookup`).
-- **Persistent on-disk cache** — next concrete win. Key on
-  `(blake3(source), page, dest_type, density, options_canonical)`
-  under `$LATEXML_OXIDE_CACHE_DIR`
-  (default `$XDG_CACHE_HOME/latexml-oxide/graphics/`). Bump
-  `cache_namespace` when convert/inkscape version changes. Add
-  `graphics_cache_hits`/`_misses` to telemetry before landing.
-- **Output-size validation set**: `0809.3849`, `0908.3201`,
-  `1003.0368`, `0803.4343`, `0907.4282`. Compare output bytes, image
-  count, missing-image count, wall before/after.
-- **Subprocess-only chain** decided 2026-05-12 — see SYNC_STATUS.md.
+In-doc dedup (`Plan::Copy`/`Plan::Convert`), persistent on-disk cache,
+vector-SVG fast path, vector-PDF auto-detect all landed. Detail moved
+to "Graphics phase — completed work" below. Subprocess-only chain
+decision recorded in SYNC_STATUS.md (2026-05-12). Output-size
+validation set retained as regression fixtures: `0809.3849`,
+`0908.3201`, `1003.0368`, `0803.4343`, `0907.4282`.
 
-### P1 digest + build (31.8% of wall, pure-Rust hot path)
+### P1 digest + build (31.8% of wall, pure-Rust hot path) — CLOSED 2026-05-19
 
-No external slack to recover; wins come from Principles 1–3.
+Investigation closed: the residual digest cost is structural to the TeX
+semantics, not a Rust-translation accident. **Do not reopen without
+new evidence** (e.g. a paper whose digest-time profile diverges from
+the pattern recorded below).
 
-- Profile a digest-heavy outlier under release `perf`: `0911.3024`
-  (76% of paper wall in digest), `0909.4601` (66%). Look for `arena::*`,
-  `Tokens::*`, HashMap rehashes.
-- Audit `.clone()` sites on Token / Tokens / Vec<Token> per Principle 2.
-- Don't over-index — large papers are inherently expensive in digest.
+**Findings under `cargo build --profile bench` + `perf record
+-F 999 -e cycles:u` on `2305.06773` (digest-heavy ACM-class fixture,
+4.5s of 4.8s wall in digest, witness available under
+`/home/deyan/data/430k_noproblem_sandbox/data/arxmliv/2305/2305.06773`).**
+
+Top leaf-frame distribution (~4.7k samples):
+* `__mm_movemask_epi8` 363 + `find_inner` 47 + `probe_seq` 47 +
+  `get_offset_len_noubcheck` 111 — **all SwissTable hashbrown probe
+  code, total ~10% of wall**. Inherent to `state.meaning.get(&token)`
+  running once per CS/ACTIVE token in `read_x_token` AND once more in
+  `invoke_token` / `lookup_digestable_definition`.
+* `state::lookup_meaning` 121 + `with_meaning` 114 — the two state
+  accessors. `with_meaning` is borrow-only; `lookup_meaning` clones.
+* mimalloc traffic 79 + Token push/write/read 200 — per-token Vec
+  growth in the digester output stream.
+
+**Landed this round (all signatures unchanged — function-body wins
+only):**
+* `Catcode::name_sym` in `lookup_digestable_definition`
+  (`f2e23d9570`) — replaces a per-call `arena::pin(cc.name())` (RefCell
+  mut on the interner + hashmap probe) with the cached per-call-site
+  `pin!()` SymStr. Fires on every non-active-or-cs token.
+* 8-site migration `lookup_meaning(t).is_some()` / `.is_none()` →
+  `has_meaning(t)` (`3f06ecebd6`). `has_meaning` already existed as a
+  clone-free shadow ("keep this in sync with `lookup_meaning`, it is
+  copied over for optimization purposes"). Affected `\csname`,
+  `\ifdefined`, `\ifcsname`, KeyVal `qname` checks, etc. Wall
+  4.81s → 4.68s median on quiet 2305.06773 (≈2.7%).
+* `lookup_conditional` (`2b63a1a0a1`) — replaced
+  `arena::pin(token.get_executable_name())` (String allocation +
+  interner probe) with `Token::pin_cs_name()` (free SymStr access).
+  Within noise on this paper, but removes one String + one probe per
+  `\if…` dispatch.
+
+**Why we stop here.** The remaining cost is the **TeX-shape
+read-then-invoke double probe**: `gullet::read_x_token` looks up a
+meaning to decide whether to expand; `stomach::invoke_token` looks it
+up again to decide how to invoke. Combining them into one probe would
+require restructuring `read_x_token`'s return type to surface the
+already-resolved `Stored`. That is an API change driven by perf,
+without an ergonomics win, on a gullet API that mirrors the TeX
+original by design — **explicitly out of scope**
+(user directive, 2026-05-19: "we will not change the API for perf
+reasons unless it has a big ergonomics win. The gullet API is coming
+from the TeX original to a degree and is mostly fixed, we live with
+it"). Caching meanings with invalidation has the same blast radius
+(every `assign_meaning` would need to dirty the cache) — also out of
+scope.
+
+**Companion lint sweeps this round** (function-body cleanups, also
+closed):
+* `clippy::redundant_clone` lib targets — 18 sites in core/engine/post
+  (`2150d149f9`) + 156 sites in package/contrib (`a66b61e32e`).
+* `clippy::or_fun_call` — 57 sites across non-math crates
+  (`2544dbf47d`). Concentrated in `Font::get_size().unwrap_or(defsize())`
+  and `Dimension::new(0)` / `T_CS!(\\relax)` fallbacks.
+* `clippy::needless_collect` — 13 sites (`4b60784177`). Mostly
+  `tks.extend(...collect::<Vec<_>>())` patterns in
+  `base_parameter_types`.
+* `clippy::stable_sort_primitive` — 5 sites (`6f8a412cc8`).
+* `clippy::implicit_clone` — 38 sites (`9d181ad95f`).
+* `clippy::manual_string_new` + `single_char_pattern` — 10 sites
+  (`ae192d3c6c`).
+
+After all of the above, `cargo clippy --workspace --all-targets` is
+back to its 14-warning baseline (all in `latexml_math_parser` ASF
+lane, collaborator's track). Tests 1328/0/0 throughout.
+
+**Witnesses retained** for any future digest-perf re-examination:
+`2305.06773` (ACM-class), `2103.00971` (tikz-heavy, 8.8s digest),
+`2208.10851` (mystery digest-heavy 1.5s), `2307.10256` (4.5s digest),
+all under `~/data/430k_noproblem_sandbox/data/arxmliv/<yymm>/<id>/`.
 
 ### P1 math (17.0% of wall)
 
@@ -176,10 +223,15 @@ separately from the hot-path work.
 
 ### P2 allocation/startup cleanup
 
-Profile-driven only. Candidates: `*_sym` state accessors, `Tokens`
-conversions, `Stored`/`Tokens` deep copies, package lookup caching,
-dump/package loading. Land only after a slow-tail or sentinel profile
-shows them on the hot path.
+Profile-driven only. The `*_sym` accessor sweep landed in the
+P1 close-out (`Catcode::name_sym` in `lookup_digestable_definition`,
+`Token::pin_cs_name` in `lookup_conditional`, etc.). Remaining
+candidates — `Stored`/`Tokens` deep copies, package lookup caching,
+dump/package loading — land **only after** a slow-tail or sentinel
+profile shows them on the hot path. The 2026-05-19 perf sweep
+confirmed the current state.meaning HashMap traffic is the floor;
+do not chase further internal allocations without evidence they're
+above the SwissTable probe band.
 
 ---
 
@@ -252,27 +304,203 @@ Any corpus entry drifting **> +15%** wall vs last recorded baseline
 between commits is a regression signal. Record a new row in a dated
 sub-heading; do not overwrite history.
 
-### Vector-SVG fast path (issue #902 validation)
+### Graphics phase — completed work
 
-The `--graphics-svg-threshold-kb N` opt-in (round 17) bypasses
-ImageMagick `convert` for vector-authored PDFs that `convert`
-rasterises absurdly slowly. Fixture: `fig8.pdf` from
-[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)
-(41 KB, arxiv:1807.01606).
+One-line summaries of landed wins; detail lives in code + commit
+messages. Keep here as breadcrumbs for regression triage.
 
-| Path | Graphics phase | Total wall |
-|---|---:|---:|
-| default (ImageMagick `convert`) | 32.4s | 32.4s |
-| `--graphics-svg-threshold-kb 200` | 0.25s | 0.3s |
-| **speedup** | **130×** | **111×** |
-
-Regression coverage:
-`latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
-asserts <5s on this fixture (silently skipped without inkscape).
+- **In-doc coalescing** (2026-05-12, `48fd96ac75`) —
+  `Plan::Copy`/`Plan::Convert` key on `(SipHash(content),
+  graphicx_options)`. Witness: arXiv:2402.01336 1083 nodes → 17 files.
+- **Persistent on-disk cache** (2026-05-16, content-keyed disk cache
+  in `latexml_post::graphics`). SHA-256 of
+  `source‖page‖density‖target-ext`; storage at
+  `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>` plus
+  `.dims` sidecar (skips `read_image_dimensions` on hit — Perl
+  `LaTeXML.cache` parity). Multi-process safe via
+  `<final>.tmp.<pid>.<nanos>` + atomic rename, hardlink-on-read,
+  `flock(LOCK_EX|LOCK_NB)` on `.prune.lock` for LRU. Measured: warm
+  9.55s → 5.07s on 1909.03909 (21 graphics jobs). Overrides:
+  `LATEXML_GRAPHICS_CACHE_OFF=1`, `LATEXML_GRAPHICS_CACHE_DIR=...`,
+  `LATEXML_GRAPHICS_CACHE_MAX_MB=N` (default 2048). Tests:
+  `graphics_cache::tests::missing_disk_file_triggers_quiet_regeneration`,
+  `concurrent_writers_converge_to_one_cache_entry`.
+- **Vector-SVG fast path** (round 17, issue #902) — opt-in
+  `--graphics-svg-threshold-kb N` bypasses ImageMagick for vector PDFs.
+  Witness: `fig8.pdf` (41 KB) 32.4s → 0.3s (~130× / ~111×). Test:
+  `latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
+  (<5s assertion, skipped without inkscape).
+- **Vector-PDF auto-detection** (2026-05-16) — `cortex_worker` `ar5iv`
+  profile passes `graphics_svg_threshold_kb: 0`; auto-detect scans PDF
+  header (≤256 KB) for `/Subtype /Image` markers and routes to SVG
+  when absent and file is ≤500 KB. Overrides:
+  `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1`, or
+  `--graphics-svg-threshold-kb N>0` to force the legacy size-only
+  gate. Test:
+  `latexml_post::graphics::tests::should_try_svg_path_auto_detect`.
+- **Sandbox worker default 20 → 8** (2026-05-16,
+  `tools/benchmark_canvas.sh`) — graphics-bound papers ran 5–10×
+  slower at 20 workers vs single-threaded due to gs/convert/inkscape
+  fork-exec contention; at 8 workers per-paper overhead is ≤30% and
+  corpus throughput is higher. Override `--workers N` only when the
+  canvas is known compute-bound (math/digest-heavy) rather than
+  graphics-bound.
 
 ---
 
-## Mini-benchmark: beat 2× pdflatex on `1910.01256`
+## Mini-benchmark: beat 2× pdflatex on `1910.01256` — MET
 
-See SYNC_STATUS.md "Acceptance gates" — tied within noise as of
-2026-05-12 (1.18s latexml_oxide vs 1.11s pdflatex×2 idle).
+2026-05-19: 0.71s release (full post-processing) vs pdflatex idle
+~1.11s — 3.13× margin on the 2.22s gate. .text shrink (~3 MiB) from
+DEP-15/17/18/19 helped icache locality. Re-measure under the
+SYNC_STATUS.md "Acceptance gates" recipe after any large workspace
+landing; flag a regression if margin shrinks below 1.5×.
+
+---
+
+## Math-parser routing — current state (2026-05-18)
+
+The math parser uses **HYBRID routing** by default
+(`latexml_math_parser/src/parser.rs::parse_marpa`). One recognizer
+pass produces one bocage; routing then branches on Marpa's
+`Bocage::ambiguity_metric()`:
+
+- `metric == 1` (unambiguous, 60–87 % of formulae in the
+  corpora we've measured) → ordinary `Tree::next()` +
+  `Actions::get_tree`. Skips ASF construction entirely.
+- `metric >= 2`, bocage and-node count ≤ `HYBRID_AND_NODE_LIMIT`
+  (default 500) → ASF traversal (`MathTraverser`). One post-order
+  pass; subtree sharing amortizes work.
+- `metric >= 2`, bocage exceeds the cap → libmarpa Tree iterator
+  on the same already-built bocage with the same six legacy
+  convergence caps (`max_unique=10`, `max_consecutive_dupes=16`,
+  `max_time=30s`, etc.). Sidesteps the ASF allocation cliff.
+
+Escape hatches: `LATEXML_MARPA_LEGACY=1` forces pure Tree
+iteration; `LATEXML_MARPA_ASF_ONLY=1` forces pure ASF (no
+hybrid routing, no large-bocage fallback). Both are intended
+for divergence debugging only.
+
+The 500-and-node cap exists because downstream consumers
+(pragmatics selection, XMath builders) cannot usefully process
+more than a handful of distinct parses per formula. Bigger
+bocages are treated as a **pipeline-flaw signal**, not a
+load-bearing case — candidates for grammar-level category
+tightening or earlier action-time pruning. Override with
+`LATEXML_MARPA_HYBRID_AND_NODE_LIMIT=N` (`0`/`none` disables).
+
+### Measurements
+
+**Article-2025.tex** (579 formulae, 87.3 % raw-unambiguous,
+release+bench, single-thread):
+
+| Mode | Wall (3-run avg) | vs LEGACY |
+|---|---:|---:|
+| **HYBRID default** | **12.45 s** | **1.01×** |
+| `LATEXML_MARPA_LEGACY=1` | 12.32 s | 1.00× |
+| `LATEXML_MARPA_ASF_ONLY=1` | 16.80 s | 1.36× |
+
+**100-paper math-bound sample** (top-100 by `phase_math_parse_us`
+in wp4 telemetry; release+native+cortex, 8 workers, 180 s timeout,
+8 GB ulimit, quiet host, marpa master `0bf24111`):
+
+| Mode | OK / 100 | OOM aborts | Wall (n=98) | Δ vs LEGACY |
+|---|---:|---:|---:|---:|
+| LEGACY | 98 | 0 | 2227.1 s | — |
+| HYBRID (cap = 500) | 98 | 0 | 2238.6 s | **+0.5 %** |
+| HYBRID, no cap (historical) | 79 | 19 | 2955.4 s on n=79 | — |
+
+Per-paper distribution on the cap=500 / n=98 subset: median
+0.0 %, mean +1.0 %, 76 of 98 within ±5 %. The cap+fallback fixed
+the 19 OOMs the no-cap hybrid produced on this fixture.
+
+### What we tried that didn't move the needle
+
+Settled negative results. Re-litigate only on new evidence.
+
+- `XM::Lexeme(String,_)` → `Rc<str>` + thread-local ASCII cache: ~0 %
+  on Article-2025 (kept anyway, removes deep-clone hazards).
+- `MathTraverser::ParseTree = Rc<Vec<Option<XM>>>`: ~0 %.
+- marpa `HashMap<usize,_>` caches → `Vec<Option<_>>` + slice-children
+  API: ~3 %.
+- marpa `glades` + `nidset_by_id` → `Vec<Option<_>>`: ~3 %.
+- `SmallVec` for `Symch.factorings`: counter data
+  (`max_factorings_per_symch=4`, 99.98 % singletons) projected +72 MB
+  RAM at 3M-symch workload for ~0 runtime gain — **closed**.
+
+Total Rust-side micro-opt: ~6 % cumulative. HYBRID-routing decision
+delivered the ~37 % needed for LEGACY parity.
+
+### Audit env vars
+
+- `LATEXML_MATH_AMBIGUITY_AUDIT=1` — per-formula ambiguity-metric
+  counter (raw-unambiguous fraction across the corpus).
+- `LATEXML_MARPA_HYBRID_AUDIT_PARITY=1` — runs both ASF and
+  Tree-iter on every raw-unambiguous formula; asserts they
+  produce equivalent `ParseOutcome` (treats `Empty`/`Rejected`
+  as "no parse survived" per `parity_outcomes_compatible`).
+- `LATEXML_MARPA_ASF_AUDIT=1` — emits per-formula ASF traversal
+  detail (peak alternative count, pruning counter, large-bocage
+  fallback fire events with bocage stats).
+- `MARPA_ASF_STATS=1` — opt-in marpa-side instrumentation
+  (singleton fast path hit rate, glade count, factoring count,
+  cache hit/miss). Prints one snapshot per converted document.
+
+### Recorded principles
+
+- **Massive bocage explosions are a pipeline flaw**, not a load
+  to absorb. Documented as
+  `feedback_ambiguity_explosion_is_a_flaw` in session memory.
+  When the cap fires, fix the underlying grammar/action
+  ambiguity; do not raise the cap.
+- **The residual ASF_ONLY → LEGACY gap is structural.** ASF
+  builds a Rust-side glade/Nidset representation that
+  Step-iteration skips; the singleton fast path eliminates
+  the factoring chain for 99.98 % of glades but the
+  glade-bookkeeping fixed overhead persists. Further wins live
+  in libmarpa C-side bocage walking (out of scope) or in
+  restructuring ASF to skip Nidset/Glade for wholly-unambiguous
+  forests (large refactor — HYBRID already achieves this from
+  the user's perspective).
+
+### Open items
+
+- **`Pi^N(p,q,…)` ambiguity explosion** (witness 2310.16583):
+  formulae produce 2762–3555 and-nodes each. UNKNOWN-as-function
+  + paren-comma-list — grammar cannot distinguish `Pi^N(p,q)` as
+  function-application vs `Pi^N · (p · q)`. Needs lexer-level
+  recognition of capital-Greek-letter-as-function in math
+  context, or a semantic pragma that prunes the multiplication
+  reading when a comma-separated arg list is present.
+- **4 GiB amsthm.sty load OOM**: several wp4 abort papers OOM
+  with `memory allocation of 4294967296 bytes failed` (exactly
+  2³² bytes) during `amsthm.sty` load. Smells like a signed
+  underflow producing `usize::MAX + 1` in a Vec presize. Unrelated
+  to the math-parser bocage path.
+- **Standing regression watch**: HYBRID vs LEGACY wall on the
+  100-paper math-bound sample. Quiet-host baseline: +0.5 %
+  delta on n=98 both-OK subset. Re-run on every meaningful
+  marpa or math-parser change; flag if HYBRID climbs back
+  toward LEGACY parity.
+
+### Reproducing the corpus measurements
+
+```bash
+# Build release+native+cortex once:
+cargo build --release --bin cortex_worker --features cortex
+
+# HYBRID (default):
+tools/benchmark_canvas.sh \
+  --input-dir <math-bound-100-zips>/in \
+  --output-dir /tmp/out_hybrid \
+  --workers 8 --timeout 180
+
+# LEGACY control:
+env LATEXML_MARPA_LEGACY=1 tools/benchmark_canvas.sh \
+  --input-dir <same input> --output-dir /tmp/out_legacy \
+  --workers 8 --timeout 180
+```
+
+Capture `results.tsv` (per-paper wall, status, category) and
+`telemetry.jsonl` (phase breakdown). Compare on the both-OK
+subset.

@@ -1450,3 +1450,271 @@ compete for the same child (e.g. `ltx:text` vs `ltx:picture`,
 model returns the *maximum*-scoring intermediate, not the
 first-inserted one. Add a sorted tag iteration if determinism is
 needed beyond desirability ranking.
+
+## #50 Vendor-class size/layout `\PackageError` / `\GenericError` is moot in XML→HTML output — silence them
+
+**Meta-principle.** LaTeXML and our Rust port produce *structured XML
+and derivative formats* (HTML, MathML, ePub, JATS). We never produce
+PDF — we don't run line-breaking, page assembly, justification, or
+typesetter-grade dimension reconciliation.
+
+Class / package files vendored by publishers (revtex, IEEEtran,
+AISTATS, ACM, Springer Nature, etc.) routinely include defensive
+`\PackageError{X}{...exceeds size limitations...}` / `\GenericError`
+calls that fire when the typeset PDF would overflow a column,
+header, or page region. These guards exist to alert the AUTHOR that
+their PDF will look wrong. In our paradigm, the guards are
+load-bearing on dimension semantics we cannot — and should not —
+faithfully reproduce. We compute box dimensions heuristically (font
+metric × char count, paragraph wrap at `\hsize`), and the heuristic
+is necessarily off from real TeX. So:
+
+* If we COMPUTE the dimension to match real TeX exactly, the guard
+  fires when the PDF would overflow — and we emit an `Error:` that
+  the conversion is otherwise fine on.
+* If we compute it differently (we always do), the guard fires
+  spuriously in cases where real TeX would have been silent — also
+  an `Error:`.
+
+Either way, errors emitted by these guards are signal-free
+diagnostics about a typesetting outcome that never happens in our
+pipeline.
+
+**Rule:** when a vendor class fires `\PackageError`/`\GenericError`
+whose message is *purely about size, layout, position, or page-fit*
+("exceeds size", "too long", "too wide", "too tall", "breaks the
+line", "doesn't fit", "running heading", "overflows", etc.),
+**silence or downgrade the error**. Match Perl LaTeXML's behaviour
+when we know it: Perl often gets the dimension different too and
+also silently passes the guard. The signal we care about is
+*semantic* (missing macros, malformed structures, undefined refs),
+not *typographic*.
+
+**How to apply:** classify the message text in our `\GenericError` /
+`\PackageError` handlers. A regex over the message body (case-
+insensitive, matching the size/layout phrases above) routes the
+emission to `Info:` or `Warn:` instead of `Error:`. Do not gate on
+the calling class — every publisher class has its own variants of
+the same guard.
+
+**Why not "fix" the dimension computation instead?** Each
+publisher's guard tests a different combination of `\wd`, `\ht`,
+`\dp`, `\baselineskip`, `\hsize`, `\textwidth`. Matching real-TeX
+output for every one of them would require porting line-breaking and
+page assembly. That's a multi-year undertaking with no semantic
+output value.
+
+**Witnesses:**
+* aistats2026.sty `\ifdim\ht\autrun>10pt` → `\PackageError{Document}
+  {Running heading author exceeds size limitations}` (12 papers in
+  stage-1 of the 100k warning corpus, including arXiv:2602.11863).
+* aistats2026.sty's analogous `\ifdim\wd\titrun>\textwidth` running
+  title check.
+* Springer Nature `sn-jnl.cls` `RunningHead` length checks.
+* IEEEtran.cls `\ifclassoptioncomsoc` runninghead asserts.
+* revtex4_* `\altaffiliation` width checks (related).
+
+## #51 `listings.sty.ltxml` binding flattens upstream `\lst@tagmode` machinery — leaves three latent gaps
+
+**The rule.** The Perl LaTeXML `listings.sty.ltxml` binding is a deep
+simplification of the actual `lstmisc.sty` `tag=` / `usekeywordsintag` /
+`markfirstintag` mechanism: it never models `\lst@tagmode`,
+`\lst@gkeywords@sty`, `\lst@ifusekeysintag`, or `\lst@iffirstintag`. The
+binding flattens "tag mode" into a flat regex-driven delimiter walk.
+
+**How to apply.** When a listings issue surfaces on a real paper, do
+not assume the Perl binding is authoritative; cross-check
+`/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty` first.
+Three concrete divergences worth knowing:
+
+1. `tag=**[s]<>` registration. Upstream enters `\lst@tagmode` so the
+   inner content is processed with `\lst@ifkeywords\iftrue` and (when
+   `usekeywordsintag=true`) restyled. The Perl binding instead emits
+   one `\@listingGroup` span and lets the recursive `lstProcess_internal`
+   keep ID matching active. The lex-sort of delim keys in
+   `lstProcess_internal` (Perl `sort keys %$delimiters`) makes `<`
+   shadow `<!--` in the regex alternation, which is the only reason the
+   commentstyle never fires for inline XML comments — preserve this
+   sort order in the Rust port (see `listings_sty.rs::lst_process_internal`).
+
+2. `usekeywordsintag` / `markfirstintag` are `DefKeyVal('LST', …)` only.
+   The Perl source comment is explicit: `NOT YET HANDLED; I don't even
+   understand it`. Don't try to model them from the binding; if needed,
+   port the upstream `\lst@AddToHook{Output}{…}` machinery directly.
+
+3. `\@onefilewithoptions` re-option-processing (latex.ltx:15512). Both
+   Perl LaTeXML and the Rust port short-circuit on `_loaded` flags, so
+   `\usepackage{xcolor}` followed by `\usepackage[dvipsnames]{xcolor}`
+   does not load `dvipsnam.def`. pdflatex DOES load it via the modern
+   `opt@handler@xcolor.sty` mechanism (DeclareKeys-based). This is a
+   deeper parity gap than listings — track separately if a paper-class
+   of "late option" bugs grows beyond the listings shadow workaround.
+
+**Why this layout.** Faithfully porting `\lst@tagmode` would require
+modeling TeX modes inside Listings, which the Perl binding deliberately
+sidestepped — every node in the listings tree would need a mode
+stack. For now, mirror the Perl binding's simplifications and only
+upgrade when a corpus paper actually exercises one of the gaps.
+
+**Witnesses.**
+* `arXiv:2602.15149` — `\lstdefinestyle{xmlstyle}{...commentstyle=\color{ForestGreen}...}`
+  with `\usepackage{xcolor}` + later `\usepackage[dvipsnames]{xcolor}`.
+  Fixed in the Rust port by faithfully matching Perl's delim-sort
+  ordering and registering `tag=<>` as a 2-token split (commit
+  `5b8a4f9aca` listings: faithful XML tag / commentstyle parity from Perl).
+* `tests/tikz/various_colors.tex` — `moredelim=**[is]…{@}{@}` exposes
+  the latent `alsoletter` default (`@$_` bundled with the alphabet)
+  ID_RE greedy-eat bug that prevents propagating the `**` recursive
+  flag through to `\lst@@delim` / `\lst@@moredelim`. Tracked.
+
+## #52 `FindFile` interpret-mode raw-search is paths-only (NO kpsewhich)
+
+**The rule.** When `INTERPRETING_DEFINITIONS=1` (we're inside a raw-load
+context, e.g. one `.sty` file's body invokes `\RequirePackage{foo}`),
+the Perl `FindFile` raw-search step (Package.pm L2117-2119) calls
+`pathname_find($file, paths => $paths)` — **local paths only**, no
+kpsewhich. The ltxml-fallback step (L2120-2123, `FindFile_fallback`)
+fires next, BEFORE the unconditional kpsewhich at L2131-2136.
+
+Practical effect: when a raw `.sty` calls `\RequirePackage{<name>}` and
+`<name>.sty` ships in TeX Live (but not the user's search paths), the
+Perl flow tries the local-paths search (fails), then the ltxml fallback
+(which strips trailing version suffixes — `caption3` → `caption`,
+`svjour3` → `svjour`, `mn2e` → `mn`, etc.), succeeds with the binding,
+and never reaches kpsewhich. The fallback ALWAYS wins over the TL raw
+file when the unsuffixed binding exists.
+
+The Rust port previously called `find_file(..., search_paths_only:
+options.searchpaths_only)` for the interpret-mode step in
+`binding/content.rs::input_definitions`. `searchpaths_only` defaults
+to false, so kpsewhich fired and returned the TL raw — short-circuiting
+the fallback. Symptom on `caption3`: floatrow.sty raw-loaded caption3.sty
+directly, and the hand-port stub `\DeclareCaptionFormat{}{}` missed its
+optional `[#1#2#3\par]` bracket → 3+ PARAM-token leaks per
+`\DeclareCaptionFormat` call plus a cascade of `\caption@*` undefineds.
+
+**Why this matters beyond `caption3`.** Stage-13 sample showed five
+distinct papers hitting `Error:misdefined:#` (6 PARAM each, identical
+shape — caption3 cluster). Every "version-suffixed package that has a
+binding for its unsuffixed name" follows the same code path; the rule
+governs whether the Rust binding or the TL raw file wins.
+
+**Implementation guard.** Step-2 must use `search_paths_only: true`.
+Step-4 (the second raw-search, after fallback didn't catch it) must
+drop the `!interpreting` gate — Perl's kpsewhich block (L2131-2136)
+has no interpreting gate either, and dropping it preserves the
+"interpret-mode + no fallback → kpsewhich the raw" path.
+
+**Witness.** arXiv:2506.13435 (caption-package paper, Rust=28→2 after
+fix); arXiv:2506.19291 (floatrow → caption3, Rust=30→2). Commit
+`feb8832a2b binding/content: Step-2 raw-search paths-only, drop
+interpreting gate in Step-4`.
+
+**Why this is more elaborate than it needs to be (parity tax).** The
+simpler model — `direct binding → fallback binding → paths (local +
+kpsewhich)` — would resolve every realistic arXiv input correctly,
+including the caption3 case above. Perl's 5-step ladder only diverges
+from the simple model in one scenario: `interpreting=1` AND the raw
+`<file>.sty` is present on local paths AND a fallback binding exists.
+Perl picks the local raw (Step 2); the simple model would pick the
+fallback binding. That divergence exists so a user can drop a custom
+raw `<file>.sty` on `--path` and override our fallback binding — an
+override pattern we have never observed in arXmliv corpora.
+
+A second latent reason: Perl's `$interpretable =
+LookupMapping('INTERPRETABLE_SOURCES', $file)` lets specific files
+force-interpret raw even when global `interpreting=0`, AND it
+explicitly suppresses Step 3 fallback (`!$interpretable` on L2120).
+The Rust port doesn't honor `INTERPRETABLE_SOURCES` today; collapsing
+Step 2 would silently violate this gate if we ever wire it up.
+
+We keep the full 5-step order for strict Perl parity per CLAUDE.md
+("Perl code is the ground truth"). If a future failure looks like
+"Step 2 fired and we lost the fallback binding we wanted," tighten
+Step 2 (as `feb8832a2b` did) — do not delete it.
+
+## #53 expl3 intarrays ride `\fontdimen` of `cmr10 at <Nsp>` — consolidate the dump
+
+**The trick.** expl3's `\int_array_new:Nn` allocates an integer
+array of N slots by abusing `\font`: it instantiates `cmr10` at a
+unique-per-intarray tiny `at <N>sp` size (~1/65k pt — the size is
+just a fingerprint), then stores each slot in the new font instance's
+`\fontdimen<idx>` register. A fully-initialized expl3 + LaTeX kernel
+writes **~89,000 such slots** across ~22 intarrays
+(`\c__fp_*_intarray`, `\c__codepoint_*_intarray`, `\g__regex_*_intarray`,
+`\c_initex_cctab*`, etc.). They surface in our state Value table
+under composite keys like `fontdimen_fontinfo_cmr10 at 15sp_<idx>`.
+
+**The dump-size hit.** Before consolidation, `dump_writer` emitted
+one `V\tfontdimen_fontinfo_cmr10 at <Nsp>_<idx>\tD\t<val>` record per
+slot — **~4 MB / ~40% of `latex.YYYY.dump.txt`**. The PERL_LOADFORMAT
+audit had originally measured 3094 such records; the actual count had
+grown ~30× by 2026-05-15 (one paragraph in the audit was stale).
+
+**The fix (commit `81176ba689`, 2026-05-15).** `dump_writer` now
+groups V entries by `(font, size)` prefix and emits a single `IA`
+record per dense intarray: `IA\t<prefix>\t<len>\t<rle>` where
+`<rle>` is a comma-list of `v` or `vxn` runs. `dump_reader` parses
+`IA`, RLE-decodes, and emits the same per-slot V assignments at
+indices 1..=len — runtime state post-replay is identical.
+**Backward compatible**: dump_reader still loads existing
+V-record-only dumps via the unchanged `V` arm. Non-dense intarrays
+fall back to individual V records (the dump-build log warns).
+
+**Measured TL2025 impact:** 89,294 V → 15 IA + 63 V fallbacks. Dump
+size 7.4 MB → 3.7 MB (-49%). Entry count 110,691 → 21,475 (-81%).
+`cargo test --tests`: 1196/0/0 → 1220/0/0 (after 25 new unit tests
+covering RLE round-trip, IA load semantics, and V-record backward
+compat).
+
+**Perl's framing.** Perl LaTeXML's `latex_dump.pool.ltxml` uses
+`Im(<cs>, FD(<real_cs>, 'fontinfo_cmr10 at 0.0003pt'))` + an
+RLE-array Hash inside a `V('fontinfo_...', {'data'=>[(15)x32,...]})`
+record. Same compactness, different syntax. Our `IA` schema is the
+adaptation to our tab-separated text format.
+
+**When the IA path doesn't apply.** Non-dense intarrays (indices not
+1..N) skip the IA emit and fall back to individual V records. We saw
+exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
+sparse slots. If a future expl3 release adds more sparse intarrays,
+the fallback handles it; the only cost is a few extra V records.
+
+## #54 TeXLive year detection uses `kpsewhich -var-value=SELFAUTOPARENT`, NOT `--version`
+
+**The gotcha.** The naive way to detect the installed TeXLive year
+is `kpsewhich --version`. **Don't.** That command returns the
+`kpathsea` library version string ("kpathsea version 6.4.1, Copyright
+2023…"), which is shipped IDENTICALLY across TL2023, TL2024, and
+TL2025. Using it as a discriminator silently picks the wrong dump.
+
+**The right way.** `kpsewhich -var-value=SELFAUTOPARENT` returns the
+TeXLive install root, e.g. `/usr/local/texlive/2025`. The last path
+segment is the year. Code:
+
+```text
+TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null \
+  | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+```
+
+**Distro-package fallback.** Debian/Ubuntu's `texlive` package puts
+TL into `/usr/share/texlive` (no year subdirectory), so
+SELFAUTOPARENT returns `/` and the year-extracting `sed` matches
+nothing. Fallback: `pdflatex --version` prints "(TeX Live YYYY)" in
+its first three lines — parseable. Sibling commit `395615c0d4`
+landed this two-step strategy in both `tools/make_formats.sh` (the
+dump-build path) and `latexml_engine::dump_paths::detect_ambient_texlive_year`
+(the runtime path).
+
+**Why it matters.** The whole versioned-dump infrastructure
+(commit `946ff9b7d0`, branch `distribution-include-bytes-bundling`)
+selects which `resources/dumps/{plain,latex}.YYYY.dump.txt` to embed
+at build time and which to prefer at runtime. If the year detection
+is wrong, an embedded TL2025 dump might be replayed against a TL2023
+binary or vice versa — silent semantic divergence in raw-loaded
+package state. The bug class is exactly what the original audit
+("Distribution follow-up") warned about: "different raw-load
+semantics" across years.
+
+**Reference.** `latexml_engine/src/dump_paths.rs::detect_ambient_texlive_year`,
+`tools/make_formats.sh:60`, `resources/dumps/texlive.YYYY.version`
+(the stamp file lets us record which TL produced each dump).

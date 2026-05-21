@@ -1,7 +1,9 @@
 //! Token List constructors.
 use crate::definition::argument::ArgWrap;
 use crate::fmt;
+#[cfg(feature = "codegen")]
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
+#[cfg(feature = "codegen")]
 use quote::{ToTokens, TokenStreamExt, quote};
 
 use std::borrow::Cow;
@@ -644,6 +646,14 @@ impl Tokens {
   }
 }
 
+// `impl ToTokens` blocks below are gated on the `codegen` feature
+// (audit DEP-14, 2026-05-18). They are called only at compile time by
+// `latexml_codegen` proc-macros via `quote!{ ... #tokens_value ... }`
+// splices. Resolver v2 keeps proc-macro feature unification isolated,
+// so the runtime `latexml_core` linked into `latexml_oxide` does NOT
+// compile these impls — dropping `proc-macro2` (~93 KiB) and `quote`
+// from the runtime binary's dependency graph.
+#[cfg(feature = "codegen")]
 impl ToTokens for Tokens {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let d = &self.0;
@@ -653,6 +663,7 @@ impl ToTokens for Tokens {
   }
 }
 
+#[cfg(feature = "codegen")]
 impl ToTokens for Catcode {
   fn to_tokens(&self, stream: &mut TokenStream) {
     use crate::token::Catcode::*;
@@ -685,6 +696,7 @@ impl ToTokens for Catcode {
   }
 }
 
+#[cfg(feature = "codegen")]
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let code = self.get_catcode();

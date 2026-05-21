@@ -138,20 +138,20 @@ pub fn unicode_math_properties(c: char) -> Option<MathCharProps> {
     '\u{2020}' => ("MULOP", None, None, None, false, false), // † \dagger
     '\u{2021}' => ("MULOP", None, None, None, false, false), // ‡ \ddagger
     '\u{2032}' => ("SUPOP", None, None, None, false, false), // ′ \prime
-    '\u{2061}' => ("APPLYOP", None, Some("".into()), None, false, false), // ⁡ function application
+    '\u{2061}' => ("APPLYOP", None, Some(String::new()), None, false, false), // ⁡ function application
     '\u{2062}' => (
       "MULOP",
       Some("times".into()),
-      Some("".into()),
+      Some(String::new()),
       None,
       false,
       false,
     ), // ⁢ invisible times
-    '\u{2063}' => ("PUNCT", None, Some("".into()), None, false, false), // ⁣ invisible separator
+    '\u{2063}' => ("PUNCT", None, Some(String::new()), None, false, false), // ⁣ invisible separator
     '\u{2064}' => (
       "ADDOP",
       Some("plus".into()),
-      Some("".into()),
+      Some(String::new()),
       None,
       false,
       false,
@@ -973,7 +973,7 @@ pub fn decode_math_char_for_stomach(mathcode: u16, meaning: Token) -> Result<Opt
     glyph_sym,
     font,
     None,
-    props.reversion.unwrap_or(crate::Tokens!(meaning)),
+    props.reversion.unwrap_or_else(|| crate::Tokens!(meaning)),
     properties,
   ))))
 }

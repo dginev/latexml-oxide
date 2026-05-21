@@ -102,6 +102,15 @@ the content of the \elementref{XMath} element.</a:documentation>
       </attribute>
     </optional>
     <optional>
+      <attribute name="role_side">
+        <a:documentation>Refines the \attr{role} for delimiters that come in pairs:
+"left" if emitted by \texttt{\left}, "right" if emitted by
+\texttt{\right}. The math grammar uses this to pair stretchy
+vertical bars unambiguously across the kerned-stack idiom
+(\texttt{\vertii}, \texttt{\vertiii}, …).</a:documentation>
+      </attribute>
+    </optional>
+    <optional>
       <attribute name="enclose">
         <a:documentation>an enclose style to enclose the object
 with legitimate values being those of MathML's menclose notations;</a:documentation>

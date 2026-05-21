@@ -396,9 +396,7 @@ fn read_internal_token() -> Option<Token> {
   // of panicking. Driver: 2404.06289 (natbib \NAT@@wrout cascade
   // landed here after the conversion was already in error-recovery
   // mode).
-  let Some(rt) = runtime.as_mut() else {
-    return None;
-  };
+  let rt = runtime.as_mut()?;
   let pushback = &mut rt.pushback;
   // Check in pushback first....
   while let Some(pushback_token) = pushback.pop() {
@@ -1212,12 +1210,88 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // historical clarity; the general `Stored::Token` case
         // below handles other PA-aliased CSes uniformly.
         let cs_str = token.with_str(|s| s.to_string());
+        // Well-known `\text…` primitives that map to a single char in real
+        // pdflatex's csname-stream interpretation. The `DefPrimitive!(name,
+        // "char")` body is a closure that wraps a Tbox — not statically
+        // inspectable from here — so we maintain an explicit table for the
+        // canonical set. Witnesses (stage-1..3 of 100k warning corpus):
+        //   \\textquoteright surfacing in `\twemoji flag: Côte d` cluster
+        //   (≥4 papers across 2603.08303, 2604.13899, 2604.17338, 2604.20621).
         let soft_char: Option<char> = match cs_str.as_str() {
           "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
+          "\\textquoteright" => Some('\u{2019}'),
+          "\\textquoteleft" => Some('\u{2018}'),
+          "\\textquotedblright" => Some('\u{201D}'),
+          "\\textquotedblleft" => Some('\u{201C}'),
+          "\\textquotedbl" => Some('"'),
+          "\\textemdash" => Some('\u{2014}'),
+          "\\textendash" => Some('\u{2013}'),
+          "\\textbackslash" => Some('\u{005C}'),
+          "\\textbar" => Some('|'),
+          "\\textbraceleft" => Some('{'),
+          "\\textbraceright" => Some('}'),
+          "\\textless" => Some('<'),
+          "\\textgreater" => Some('>'),
+          "\\textdollar" => Some('$'),
+          "\\textasciigrave" => Some('`'),
+          "\\textasciicircum" => Some('^'),
+          "\\textasciitilde" => Some('~'),
+          "\\textunderscore" => Some('_'),
+          "\\textasteriskcentered" => Some('*'),
+          // NFSS encoding-specific glyph CS names (`\<encoding>\<glyph>`)
+          // built by \DeclareTextSymbol for the i/j dotless letters. These
+          // surface when a paper composes `\'\i` style accented chars
+          // that travel through `\lx@applyaccent` and a downstream
+          // encoding-specific dispatcher. Substitute the dotless glyph
+          // (U+0131 / U+0237) so the constructed csname carries the
+          // character the author meant.
+          // Witnesses: arXiv:2603.22193, 2603.23433, 2604.20621 (twemoji
+          // São Tomé & Príncipe / St. Barthélemy / Côte d'Ivoire cluster).
+          "\\T1\\i" | "\\OT1\\i" | "\\LY1\\i" => Some('\u{0131}'),
+          "\\T1\\j" | "\\OT1\\j" | "\\LY1\\j" => Some('\u{0237}'),
           _ => None,
         };
         if let Some(c) = soft_char {
           cs.push(c);
+        } else if cs_str == "\\lx@applyaccent" {
+          // Accent macros like `\'`, `\\\"`, `\\^`, … all expand to
+          //   \lx@applyaccent <accent-token> <combining-char> <standalone-char> { <letter> }
+          // via tex_character.rs::accent_def. Real pdflatex's `\csname`
+          // skips through the resulting accented char because the accent
+          // primitive is performed in the gullet; our `\lx@applyaccent`
+          // is a `DefPrimitive` (stomach-level), so a literal CS token
+          // surfaces in the csname stream and aborts the read with
+          //   `\lx@applyaccent should not appear between \\csname and \\endcsname`.
+          // (Witnesses: twemoji.sty `\twemoji flag: St. Barthélemy` —
+          // arXiv:2603.22193, 2603.23433.)
+          //
+          // Faithful resolution: peek the 4 args, append the standalone
+          // char (arg 3, T_OTHER!) to the constructed csname, discard
+          // the rest. Mirrors the implicit-character substitution above
+          // for `\let`-to-char CSes.
+          let _accent = read_x_token(Some(true), false, None)?;
+          let _combiner = read_x_token(Some(true), false, None)?;
+          let standalone = read_x_token(Some(true), false, None)?;
+          // The 4th arg is a brace group `{<letter>}` — consume the
+          // T_BEGIN, then read tokens until matching T_END.
+          if let Some(t) = read_x_token(Some(true), false, None)? {
+            if t.get_catcode() == Catcode::BEGIN {
+              let mut depth: i32 = 1;
+              while depth > 0 {
+                match read_x_token(Some(true), false, None)? {
+                  Some(t2) => match t2.get_catcode() {
+                    Catcode::BEGIN => depth += 1,
+                    Catcode::END => depth -= 1,
+                    _ => {},
+                  },
+                  None => break,
+                }
+              }
+            }
+          }
+          if let Some(c) = standalone {
+            c.with_str(|s| cs.push_str(s));
+          }
         } else if let Some(Stored::Token(letted)) = crate::state::lookup_meaning(&token) {
           // CS is \let-equivalent to a single token. If that token is
           // a character (LETTER/OTHER/SPACE), append its string repr

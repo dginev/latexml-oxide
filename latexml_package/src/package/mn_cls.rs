@@ -31,13 +31,13 @@ LoadDefinitions!({
   RequirePackage!("mn2e_support");
 
   // And some stuff not in the later version...
-  DefMacro!("\\NewSymbolFont{}{}", "");
-  DefMacro!("\\NewMathSymbol{}{}{}{}", "");
-  DefMacro!("\\NewMathDelimiter{}{}{}{}{}{}", "");
-  DefMacro!("\\NewMathAlphabet{}{}{}", "");
-  DefMacro!("\\NewTextAlphabet{}{}{}", "");
-  DefMacro!("\\UseAMStwoboldmath", "");
+  def_macro_noop("\\NewSymbolFont{}{}")?;
+  def_macro_noop("\\NewMathSymbol{}{}{}{}")?;
+  def_macro_noop("\\NewMathDelimiter{}{}{}{}{}{}")?;
+  def_macro_noop("\\NewMathAlphabet{}{}{}")?;
+  def_macro_noop("\\NewTextAlphabet{}{}{}")?;
+  def_macro_noop("\\UseAMStwoboldmath")?;
   RawTeX!("\\newif\\ifnfssone\\newif\\ifnfsstwo\\newif\\ifoldfss");
   DefRegister!("\\realparindent" => Dimension!("18pt"));
-  DefMacro!("\\resetsizehook{}{}{}{}", "");
+  def_macro_noop("\\resetsizehook{}{}{}{}")?;
 });

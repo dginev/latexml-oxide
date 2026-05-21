@@ -1580,6 +1580,17 @@ pub fn add_column_to_math_fork(
           state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
           if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
             document.append_clone(&mut mainfork_xmath, xmath_children)?;
+            // Mark all freshly-cloned XMRefs with `_mf_ref="1"` so the
+            // finalize-phase prune sweep (Document::prune_dangling_split_xmrefs)
+            // can target THIS provenance specifically — distinct from
+            // declare_test's XMDual-renamed-id case where the safety
+            // gate `lookup_id().is_none()` would also fire but the ref
+            // semantically belongs to a renamed target.
+            for mut xmref in document.findnodes("descendant::ltx:XMRef[@idref]", Some(&mainfork_xmath)) {
+              if !xmref.has_attribute("_mf_ref") && !xmref.has_attribute("_split_ref") {
+                let _ = document.set_attribute(&mut xmref, "_mf_ref", "1");
+              }
+            }
           }
           state::assign_value("ID_SUFFIX", Stored::None, None);
         }
@@ -1871,7 +1882,7 @@ pub fn equationgroup_join_rows(
 }
 
 /// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
-pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Result<()> {
+pub fn add_meaning_rec(document: &mut Document, mut node: Node, meaning: &str) -> Result<()> {
   if node.get_type() != Some(NodeType::ElementNode) {
     return Ok(());
   }
@@ -1881,7 +1892,7 @@ pub fn add_meaning_rec(document: &mut Document, node: Node, meaning: &str) -> Re
   } else if qname == arena::pin_static("ltx:XMTok") {
     let role = node.get_attribute("role").unwrap_or_default();
     if (role.is_empty() || role == "UNKNOWN") && !node.has_attribute("meaning") {
-      document.set_attribute(&mut node.clone(), "meaning", meaning)?;
+      document.set_attribute(&mut node, "meaning", meaning)?;
     }
   } else {
     for child in node.get_child_nodes() {

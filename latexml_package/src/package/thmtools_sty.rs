@@ -15,8 +15,8 @@ LoadDefinitions!({
   // which load as raw TeX and expect these from thmtools internals.
   DefRegister!("\\thmt@toks" => RegisterValue::Tokens(Tokens!()));
   DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
-  DefMacro!("\\thmt@mkignoringkeyhandler{}", "");
-  DefMacro!("\\thmt@thmuse@iskvtrue", "");
+  def_macro_noop("\\thmt@mkignoringkeyhandler{}")?;
+  def_macro_noop("\\thmt@thmuse@iskvtrue")?;
 
   // Set savable theorem parameters
   set_savable_theorem_parameters(vec![
@@ -152,6 +152,52 @@ LoadDefinitions!({
 
     save_theorem_style(&name_str, saved);
   });
+
+  // \begin{restatable}[opt]{thmname}{storename} ... \end{restatable}
+  // — thm-restate.sty's env that lets authors define a theorem-like
+  // body and ALSO save it under a CS name for later restating via
+  // `\storename`. Render as a generic ltx:theorem; the "restate later"
+  // feature is approximated by defining `\storename` as a no-op so
+  // subsequent `\storename` calls (to re-render the theorem) don't
+  // cascade as undefined CS. The body appears once, where first
+  // declared — content is preserved. Witness 2403.07095
+  // (\begin{restatable}{theorem}{glsinfdiff}).
+  DefEnvironment!("{restatable}[]{}{}",
+    "<ltx:theorem>#body</ltx:theorem>",
+    mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] {
+      // get_arg(3) is the store-name token (3rd arg, 1-based). Define
+      // `\storename` GLOBALLY as a no-op so later restate calls in the
+      // doc (which happen outside this env scope) don't cascade undefined.
+      // (get_arg is 1-indexed per whatsit.rs warning.)
+      if let Some(storename_arg) = whatsit.get_arg(3) {
+        let s = storename_arg.to_string();
+        let cs = s!("\\{}", s.trim());
+        if !cs.is_empty() && cs.len() > 1 {
+          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
+            Some(ExpandableOptions { scope: Some(Scope::Global),
+              ..ExpandableOptions::default() }));
+        }
+      }
+    });
+  DefEnvironment!("{restatable*}[]{}{}",
+    "<ltx:theorem>#body</ltx:theorem>",
+    mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] {
+      // Mirror {restatable}: define `\storename` GLOBALLY as a no-op
+      // so later restate calls outside this env's scope don't cascade
+      // undefined. (Previously this branch omitted Scope::Global, so
+      // the def was env-local — defeating the restate-later guard.)
+      if let Some(storename_arg) = whatsit.get_arg(3) {
+        let s = storename_arg.to_string();
+        let cs = s!("\\{}", s.trim());
+        if cs.len() > 1 {
+          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
+            Some(ExpandableOptions { scope: Some(Scope::Global),
+              ..ExpandableOptions::default() }));
+        }
+      }
+    });
 
   // \listtheoremname
   DefMacro!("\\listtheoremname", "List of Theorems");

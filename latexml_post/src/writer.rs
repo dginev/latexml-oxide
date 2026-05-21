@@ -1,15 +1,59 @@
-//! XML file output processor.
+//! XML/HTML output sink — port of `LaTeXML::Post::Writer`.
 //!
-//! Port of `LaTeXML::Post::Writer`.
-//! Serializes the XML document to a file or stdout,
-//! handling DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup,
-//! and HTML vs XML serialization.
+//! Two related concerns live here:
+//!
+//! 1. The [`Writer`] post-processor (last in the chain) that
+//!    serializes a `PostDocument` to its `destination`, handling
+//!    DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup, and HTML vs
+//!    XML serialization.
+//! 2. Free-standing helpers ([`write_output`], [`ensure_parent_dir`])
+//!    used by binary main()s that already have the serialized string
+//!    in hand (post-processing returns a `String`) and need to route
+//!    it to a destination path or stdout. Replaces the duplicated
+//!    `File::create + write! + ensure_parent_dir` boilerplate that
+//!    used to live in `latexml_oxide.rs` (and the now-retired
+//!    `latexmlpost_oxide.rs`).
+//!
+//! Companion module: [`crate::pack`] (the `LaTeXML::Post::Pack` analog)
+//! handles archive bundling when the destination is a zip.
 
 use libxml::tree::{Node, SaveOptions};
 use std::fs;
+use std::io::{self, Write};
+use std::path::Path;
 
 use crate::document::PostDocument;
 use crate::processor::{PostError, ProcessResult, Processor};
+
+/// Write the serialized output `content` to `dest` if `Some`, else to
+/// stdout. Creates parent directories as needed.
+///
+/// Used by `latexml_oxide.rs`'s main() (XML-input mode included) for
+/// the "write a single HTML/XML file" exit path. For the zip-archive
+/// exit path, use [`crate::pack::pack_archive`].
+pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {
+  match dest {
+    Some(path) => {
+      ensure_parent_dir(path)?;
+      fs::write(path, content)?;
+      log::info!("Wrote '{}' ({} bytes)", path, content.len());
+      Ok(())
+    },
+    None => io::stdout().write_all(content.as_bytes()),
+  }
+}
+
+/// Ensure the parent directory of `path` exists, creating it (and any
+/// missing ancestors) as needed. No-op when `path` has no parent or
+/// the parent is the current directory.
+pub fn ensure_parent_dir(path: &str) -> io::Result<()> {
+  if let Some(parent) = Path::new(path).parent() {
+    if !parent.as_os_str().is_empty() {
+      fs::create_dir_all(parent)?;
+    }
+  }
+  Ok(())
+}
 
 /// Output format for the writer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,11 +93,19 @@ impl Processor for Writer {
     }
   }
 
-  fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
+  fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     let mut root = match nodes.into_iter().next() {
       Some(r) => r,
       None => return Ok(vec![doc]),
     };
+
+    // Remove the internal DTD subset if requested (Perl Writer.pm L38:
+    // `$doc->getDocument->removeInternalSubset if $$self{omit_doctype}`).
+    // Backed by `libxml::tree::Document::remove_internal_subset`, added
+    // in rust-libxml 0.3.11 specifically to close this gap.
+    if self.omit_doctype {
+      doc.get_document_mut().remove_internal_subset();
+    }
 
     // Remove TEMPORARY_DOCUMENT_ID if present (Perl Writer.pm L41-42)
     if let Some(id) = root.get_attribute("xml:id") {
@@ -148,5 +200,62 @@ mod tests {
   fn writer_get_name_is_writer() {
     let w = Writer::new(None, false, false);
     assert_eq!(w.get_name(), "Writer");
+  }
+
+  #[test]
+  /// `Writer::process` with `omit_doctype = true` drops the
+  /// `<!DOCTYPE …>` preamble from the output, mirroring Perl
+  /// `Post::Writer` L38 behaviour.
+  fn writer_omit_doctype_strips_doctype_preamble() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+
+    let xml = r#"<?xml version="1.0"?>
+<!DOCTYPE root SYSTEM "example.dtd">
+<root><child>hi</child></root>"#;
+    let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default())
+      .expect("parse test fixture");
+
+    // omit_doctype=true → DOCTYPE stripped after Writer::process.
+    let mut writer = Writer::new(None, /*omit_doctype=*/ true, /*is_html=*/ false);
+    let to_process = writer.to_process(&doc);
+    let result = writer.process(doc, to_process).expect("process");
+    let after = result
+      .into_iter()
+      .next()
+      .expect("at least one doc")
+      .get_document()
+      .to_string();
+    assert!(
+      !after.contains("<!DOCTYPE"),
+      "expected DOCTYPE stripped, got: {after}"
+    );
+    assert!(after.contains("<root>"));
+  }
+
+  #[test]
+  /// `Writer::process` with `omit_doctype = false` (the default)
+  /// preserves the `<!DOCTYPE …>` preamble — opt-in behaviour.
+  fn writer_default_preserves_doctype() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+
+    let xml = r#"<?xml version="1.0"?>
+<!DOCTYPE root SYSTEM "example.dtd">
+<root><child>hi</child></root>"#;
+    let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default())
+      .expect("parse test fixture");
+
+    let mut writer = Writer::new(None, /*omit_doctype=*/ false, /*is_html=*/ false);
+    let to_process = writer.to_process(&doc);
+    let result = writer.process(doc, to_process).expect("process");
+    let after = result
+      .into_iter()
+      .next()
+      .expect("at least one doc")
+      .get_document()
+      .to_string();
+    assert!(
+      after.contains("<!DOCTYPE"),
+      "expected DOCTYPE preserved, got: {after}"
+    );
   }
 }

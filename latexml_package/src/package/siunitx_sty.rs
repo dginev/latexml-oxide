@@ -193,7 +193,7 @@ fn six_get_op_sym(kv: &[(&str, Tokens)], key: SymStr) -> Tokens {
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
-    let key_str = key.to_string();
+    let key_str = key.clone();
     match value {
       ArgWrap::Tokens(t) => {
         if t.is_empty() {
@@ -506,7 +506,14 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  let number = six_match_complexnumber(tokens)?;
+  // Perl siunitx.sty.ltxml:270-279 — `$number` may be undef and the
+  // exponent-marker still matches. `\SI{e12}{G}` is a valid no-mantissa
+  // form that defaults to `10^12`. Without this branch our `?` short-
+  // circuited on a missing mantissa and the exponent-marker leaked into
+  // the leftover-tokens "Not matched in \num" error path. Witnesses:
+  // arXiv:2509.14043 / 2509.16675 — `\SIrange{e12}{e15}{G}` and
+  // `\SI{4e13}{G}` astro-physics magnetic-field strings.
+  let number = six_match_complexnumber(tokens);
 
   if six_match_keys(tokens, &[six_pin!("input-exponent-markers")]).is_some() {
     let sign = six_match_sign(tokens);
@@ -517,7 +524,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     let exp_number = SixNumber::simple(sign, exp, None, None);
     return Some(SixNumber::Operator {
       operator:   "exponent".to_string(),
-      arg1:       Some(Box::new(number)),
+      arg1:       number.map(Box::new),
       arg2:       Some(Box::new(exp_number)),
       sign:       None,
       symbol:     None,
@@ -525,7 +532,7 @@ fn six_match_scinumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
     });
   }
 
-  Some(number)
+  number
 }
 
 fn six_match_compoundnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
@@ -2068,6 +2075,15 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("amstext");
   RequirePackage!("array");
+  // siunitx's unit parser accepts `\cancel{<unit>}` as a "style"
+  // (registered as a builtin below), and the formatter at
+  // `six_format_1unit` emits `\cancel{...}` in the output token stream.
+  // Auto-load the cancel binding so papers that use the unit-cancel
+  // style without explicitly `\usepackage{cancel}`'ing it still
+  // convert. (TL siunitx registers its own internal `\cancel` for the
+  // same reason: `\__siunitx_unit_set_symbolic:Npnn \cancel { ... }`.)
+  // Witness: arXiv:2602.18218 `\SI{1}{\milli\electronvolt\per\cancel{c^2}}`.
+  RequirePackage!("cancel");
 
   //======================================================================
   // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
@@ -2171,7 +2187,7 @@ LoadDefinitions!({
     six_setup(&kv_arg);
   });
 
-  DefMacro!("\\ProvidesExplFile{}{}{}{}", "");
+  def_macro_noop("\\ProvidesExplFile{}{}{}{}")?;
 
   //======================================================================
   // \lx@six@initialize
@@ -2320,7 +2336,7 @@ LoadDefinitions!({
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareSIPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2342,7 +2358,7 @@ LoadDefinitions!({
   // \DeclareSIPrePower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPrePower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2361,7 +2377,7 @@ LoadDefinitions!({
   // \DeclareSIPostPower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPostPower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2381,7 +2397,7 @@ LoadDefinitions!({
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let qualifier = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2400,7 +2416,7 @@ LoadDefinitions!({
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareBinaryPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or(T_CS!("\\relax"));
+    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2451,7 +2467,7 @@ LoadDefinitions!({
 
   // \num[options]{number}
   DefMacro!("\\num OptionalKeyVals:SIX {}", sub[(kv, number_arg)] {
-    let number_tokens = number_arg.clone();
+    let number_tokens = number_arg;
     six_begin_processing(kv.as_ref());
     let parsed = six_parse_number(&number_tokens);
     let formatted = six_format_number(&parsed, 0);
@@ -2462,7 +2478,7 @@ LoadDefinitions!({
 
   // \numlist[options]{number;...}
   DefMacro!("\\numlist OptionalKeyVals:SIX {}", sub[(kv, numbers_arg)] {
-    let numbers = numbers_arg.clone();
+    let numbers = numbers_arg;
     six_begin_processing(kv.as_ref());
     let parsed = six_parse_numbers(&numbers);
     let formatted: Vec<Tokens> = parsed.iter().map(|p| six_format_number(p, 0)).collect();
@@ -2474,8 +2490,8 @@ LoadDefinitions!({
 
   // \numrange[options]{first}{last}
   DefMacro!("\\numrange OptionalKeyVals:SIX {}{}", sub[(kv, first_arg, last_arg)] {
-    let first = first_arg.clone();
-    let last = last_arg.clone();
+    let first = first_arg;
+    let last = last_arg;
     six_begin_processing(kv.as_ref());
     let f = six_format_number(&six_parse_number(&first), 0);
     let l = six_format_number(&six_parse_number(&last), 0);
@@ -2486,7 +2502,7 @@ LoadDefinitions!({
 
   // \ang[options]{degrees;minutes;seconds}
   DefMacro!("\\ang OptionalKeyVals:SIX {}", sub[(kv, expr_arg)] {
-    let expr = expr_arg.clone();
+    let expr = expr_arg;
     six_begin_processing(kv.as_ref());
 
     let items = six_parse_numbers(&expr);
@@ -2510,7 +2526,7 @@ LoadDefinitions!({
     if let Some(s) = items.get(2) {
       let fs = six_format_number(s, 0);
       parts.push(six_format_infix(
-        mulop.clone(), None, None,
+        mulop, None, None,
         vec![fs, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcsecond")])],
       ));
     }
@@ -2545,7 +2561,7 @@ LoadDefinitions!({
 
   // \si[options]{units}
   DefMacro!("\\si OptionalKeyVals:SIX {}", sub[(kv, units_arg)] {
-    let units = units_arg.clone();
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     six_enable_unit_macros(true);
     let funits = six_wrap(six_process_units(&units));
@@ -2553,10 +2569,18 @@ LoadDefinitions!({
     Ok(funits)
   });
 
+  // siunitx v3 \unit[options]{units} — equivalent to v2 \si.
+  // Witnesses 2406.02765, 2406.18417.
+  Let!("\\unit", "\\si");
+
+  // siunitx v3 \qty[options]{number}{units} — equivalent to v2 \SI.
+  // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
+  // \SI's own DefMacro registration.
+
   // \SI[options]{number}{units}
   DefMacro!("\\SI OptionalKeyVals:SIX {}{}", sub[(kv, number_arg, units_arg)] {
-    let number = number_arg.clone();
-    let units = units_arg.clone();
+    let number = number_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
@@ -2569,8 +2593,8 @@ LoadDefinitions!({
 
   // \SIlist[options]{number;...}{units}
   DefMacro!("\\SIlist OptionalKeyVals:SIX {}{}", sub[(kv, numbers_arg, units_arg)] {
-    let numbers = numbers_arg.clone();
-    let units = units_arg.clone();
+    let numbers = numbers_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("list-units"));
@@ -2594,9 +2618,9 @@ LoadDefinitions!({
 
   // \SIrange[options]{first}{last}{units}
   DefMacro!("\\SIrange OptionalKeyVals:SIX {}{}{}", sub[(kv, first_arg, last_arg, units_arg)] {
-    let first = first_arg.clone();
-    let last = last_arg.clone();
-    let units = units_arg.clone();
+    let first = first_arg;
+    let last = last_arg;
+    let units = units_arg;
     six_begin_processing(kv.as_ref());
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("range-units"));
@@ -2618,6 +2642,22 @@ LoadDefinitions!({
   });
 
   Let!("\\tablenum", "\\num");
+
+  // siunitx v3 \qty[options]{number}{units} — v3 spelling of v2 \SI.
+  // Witness 2406.20067, 2407.03167.
+  //
+  // Only define `\qty` if not already defined. The physics package's
+  // `\qty` ([opt]{expr} that wraps expr in delimiters) commonly
+  // pre-occupies the name in papers that load both `physics` and
+  // `siunitx`. siunitx-after-physics with unconditional Let blindly
+  // shadows the physics shape, which causes papers writing
+  // `\qty[ 1 + ... ] \rho` to mis-parse as
+  // `\SI[opt-list]{value-only}` and fire siunitx number-parse errors.
+  // Witness 2305.09755.
+  RawTeX!("\\@ifundefined{qty}{\\let\\qty\\SI}{}");
+  Let!("\\qtylist", "\\SIlist");
+  Let!("\\qtyrange", "\\SIrange");
+  Let!("\\qtyproduct", "\\SIlist");
 
   //======================================================================
   // Table column types S and s — Perl: DefColumnType('S Optional', ...) and

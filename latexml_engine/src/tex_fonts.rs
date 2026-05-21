@@ -172,6 +172,18 @@ LoadDefinitions!({
     let is_global = state::get_prefix("global");
     let cs_for_fontdef = cs;
     let font_id_key = arena::pin(s!("fontinfo_{cs_str}").as_str());
+    // SYNC_STATUS Cluster C: do NOT bypass the lock here. If the target CS
+    // is locked (e.g. `\abstract`, `\title`), `\font\<cs>=<file>` is a
+    // documented no-op — state::install_definition emits an
+    // Info!("ignore", "<cs>:locked", ...) and skips. Witnesses are ~46
+    // pre-2000 plain-TeX-style papers that misuse `\font\abstract=cmr8`
+    // expecting a font-switch group; both Perl and Rust LaTeXML treat
+    // `\font` on a locked primitive as a no-op (SHARED-FAILURE on the
+    // downstream `{\abstract ...}` mode-switch). The author's source
+    // violates a LaTeX convention (shadowing a class-provided macro;
+    // should have used `\newfont` which does an `\@ifundefined` check).
+    // User directive 2026-05-19: "\font on a locked primitive shouldn't
+    // work" — do not surpass Perl here.
     DefPrimitive!(cs, None, None, font => props_opt,
       before_digest => sub {
         AssignValue!("current_FontDef", cs_for_fontdef, None);

@@ -10,6 +10,7 @@ mod diag;
 
 #[macro_use]
 mod grammar;
+mod asf_traverser;
 mod data;
 mod parser;
 mod pragmatics;
@@ -20,4 +21,21 @@ pub use data::get_grammatical_role;
 pub use parser::MathParser;
 pub use parser::text_form;
 pub use util::node_to_grammar_lexemes;
-// pub fn parse_math(lexematized: Vec<String>, nodes: Vec<Node>) -> Option<XM> { None }
+
+/// Print and reset the thread-local Marpa ASF instrumentation
+/// counters (codex's `MARPA_ASF_STATS=1` plan from
+/// `marpa/docs/ASF_PERFORMANCE_FINDINGS.md`). No-op when the env
+/// var is unset.
+///
+/// Intended to be called once per document conversion from the
+/// `latexml_oxide` converter so each `.tex → .html` run emits at
+/// most one stats line; aggregation across a corpus is done
+/// offline by piping stderr through `grep MARPA_ASF_STATS`.
+pub fn report_and_reset_asf_stats() {
+  if marpa::asf::asf_stats_enabled() {
+    if let Some(snapshot) = marpa::asf::snapshot() {
+      eprintln!("{}", snapshot.as_log_line());
+      marpa::asf::reset();
+    }
+  }
+}

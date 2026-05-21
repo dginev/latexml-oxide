@@ -6,6 +6,30 @@ LoadDefinitions!({
   // Load raw TeX first
   InputDefinitions!("makecell", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
+  // `\Xhline{<dim>}` is makecell's variable-width horizontal rule. The
+  // raw definition (TL makecell.sty L365) uses
+  // `\noalign{\ifnum0=`}\fi ...}` — a brace-escape trick to enter
+  // noalign mode from inside a tabular row. Our alignment engine
+  // doesn't replay this trick correctly: the `\noalign` slot is
+  // recognised, but the embedded `\arrayrulewidth#1\hrule\@height
+  // \arrayrulewidth\futurelet\reserved@a\@xhline` runs in the wrong
+  // mode, opening a phantom `\@@tabular` group that the real
+  // `\end{tabular}` then can't close, producing the
+  // `\lx@begin@alignment ... mode-switch to restricted_horizontal due
+  // to \@@tabular` cascade.
+  //
+  // Override `\Xhline{w}` to plain `\hline` (drop the width argument).
+  // For HTML/XML output the rule-width distinction is moot — all
+  // table rules render as a single CSS border. Same for `\Xcline{a-b}`.
+  // Witness: 2503.09172 (warning_papers_3) — 18 errors, all rooted
+  // here.
+  DefMacro!("\\Xhline{}", "\\hline", locked => true);
+  // `\Xcline{a-b}{w}` — second arg is rule width, ignored for HTML/XML.
+  // Without consuming `{w}`, the leftover `{0.5pt}` slipped into the next
+  // tabular cell and triggered `\omit cannot be used here` cascades
+  // (witness 2512.08643).
+  DefMacro!("\\Xcline{}{}", "\\cline{#1}", locked => true);
+
   // Mark thead et.al as headers (row & column).
   // Perl is DefMacroI with an imperative sub body (no token return);
   // Rust DefPrimitive runs at stomach time. WISDOM #44: the two kinds

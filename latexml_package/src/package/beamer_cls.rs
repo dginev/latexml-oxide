@@ -30,11 +30,11 @@ LoadDefinitions!({
   // "always-true" branch (first arg, or body) — faithful to what a
   // reader expects from beamer slides printed as a continuous
   // document. See Perl L793-834 for the full overlay/pause machinery.
-  DefMacro!("\\only{}", "#1");
-  DefMacro!("\\onslide", "");
+  def_macro_identity("\\only{}")?;
+  def_macro_noop("\\onslide")?;
   DefMacro!("\\temporal{}{}{}", "#2");
-  DefMacro!("\\pause", "");
-  DefMacro!("\\alt{}{}", "#1");
+  def_macro_noop("\\pause")?;
+  def_macro_identity("\\alt{}{}")?;
 
   // Perl beamer.cls.ltxml L796-798 dispatches \visible/\uncover/
   // \invisible via \alt to the \beamer@{visible,uncovered,…}
@@ -43,9 +43,9 @@ LoadDefinitions!({
   // hasn't ported. Keep the body-passthrough stubs for now — the
   // markers below are still defined and usable directly by advanced
   // beamer styles that invoke them without angle-spec preprocessing.
-  DefMacro!("\\visible{}",   "#1");
-  DefMacro!("\\uncover{}",   "#1");
-  DefMacro!("\\invisible{}", "#1");
+  def_macro_identity("\\visible{}")?;
+  def_macro_identity("\\uncover{}")?;
+  def_macro_identity("\\invisible{}")?;
 
   DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
   DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
@@ -70,7 +70,7 @@ LoadDefinitions!({
   // Frame structure
   DefMacro!("\\frametitle OptionalMatch:<> []{}",
     "\\par\\textbf{#3}\\par");
-  DefMacro!("\\framesubtitle OptionalMatch:<> {}", "");
+  def_macro_noop("\\framesubtitle OptionalMatch:<> {}")?;
 
   // Perl beamer.cls.ltxml L961-963: internal frame title constructors
   // that \frame@ / \beamer@frame@replay invoke to lift title/subtitle
@@ -89,10 +89,10 @@ LoadDefinitions!({
     "^<ltx:subtitle class='ltx_frame_subtitle'>#1</ltx:subtitle>");
 
   // Insert counters
-  DefMacro!("\\insertframenumber", "");
-  DefMacro!("\\insertslidenumber", "");
-  DefMacro!("\\insertpagenumber", "");
-  DefMacro!("\\insertoverlaynumber", "");
+  def_macro_noop("\\insertframenumber")?;
+  def_macro_noop("\\insertslidenumber")?;
+  def_macro_noop("\\insertpagenumber")?;
+  def_macro_noop("\\insertoverlaynumber")?;
 
   // Overlay environments
   DefEnvironment!("{onlyenv}", "#body");
@@ -116,74 +116,79 @@ LoadDefinitions!({
   // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
   DefEnvironment!("{columns} OptionalMatch:<> []", "#body");
   DefEnvironment!("{column} OptionalMatch:<> {}", "#body");
-  DefMacro!("\\column OptionalMatch:<> {}", "");
+  def_macro_noop("\\column OptionalMatch:<> {}")?;
 
   // Title page macros — Perl L1010-1035
   DefMacro!("\\institute OptionalMatch:<> []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
-  DefMacro!("\\logo{}", "");
-  DefMacro!("\\titlegraphic{}", "");
+  // \logo{content} and \titlegraphic{content} typically wrap
+  // \includegraphics or similar visual content. Surpass Perl
+  // (which doesn't define them) by routing to ltx:note so any
+  // \includegraphics inside resolves and the graphic is preserved.
+  DefMacro!("\\logo{}", "\\@add@frontmatter{ltx:note}[role=logo]{#1}");
+  DefMacro!("\\titlegraphic{}",
+    "\\@add@frontmatter{ltx:note}[role=titlegraphic]{#1}");
   DefMacro!("\\titlepage", "\\maketitle");
-  DefMacro!("\\insertauthor", "");
-  DefMacro!("\\inserttitle", "");
-  DefMacro!("\\insertsubtitle", "");
-  DefMacro!("\\insertdate", "");
-  DefMacro!("\\insertinstitute", "");
-  DefMacro!("\\insertshortauthor[]", "");
-  DefMacro!("\\insertshortdate[]", "");
-  DefMacro!("\\insertshortinstitute[]", "");
-  DefMacro!("\\insertshorttitle[]", "");
-  DefMacro!("\\insertshortpart[]", "");
-  DefMacro!("\\insertshortsubtitle[]", "");
-  DefMacro!("\\inserttotalframenumber", "");
-  DefMacro!("\\insertmainframenumber", "");
-  DefMacro!("\\insertappendixframenumber", "");
+  def_macro_noop("\\insertauthor")?;
+  def_macro_noop("\\inserttitle")?;
+  def_macro_noop("\\insertsubtitle")?;
+  def_macro_noop("\\insertdate")?;
+  def_macro_noop("\\insertinstitute")?;
+  def_macro_noop("\\insertshortauthor[]")?;
+  def_macro_noop("\\insertshortdate[]")?;
+  def_macro_noop("\\insertshortinstitute[]")?;
+  def_macro_noop("\\insertshorttitle[]")?;
+  def_macro_noop("\\insertshortpart[]")?;
+  def_macro_noop("\\insertshortsubtitle[]")?;
+  def_macro_noop("\\inserttotalframenumber")?;
+  def_macro_noop("\\insertmainframenumber")?;
+  def_macro_noop("\\insertappendixframenumber")?;
 
   // Perl L1013-1045 beamerTODO navigation + page-range \insert*s.
   // All are stomach-time no-ops under Rust's continuous-document
   // rendering (beamer's slide-tracking state machine is not ported).
   // Shipping the stubs prevents undefined-CS errors in beamer themes
   // that reference them via `\setbeamertemplate{footline}` bodies.
-  DefMacro!("\\insertnavigation{}", "");
-  DefMacro!("\\insertsectionnavigation{}", "");
-  DefMacro!("\\insertsectionnavigationhorizontal{}{}{}", "");
-  DefMacro!("\\insertsubsectionnavigation{}", "");
-  DefMacro!("\\insertsubsectionnavigationhorizontal{}{}{}", "");
-  DefMacro!("\\insertverticalnavigation{}", "");
-  DefMacro!("\\insertsubsection", "");
-  DefMacro!("\\insertsubsubsection", "");
-  DefMacro!("\\insertframestartpage", "");
-  DefMacro!("\\insertframeendpage", "");
-  DefMacro!("\\insertsubsectionstartpage", "");
-  DefMacro!("\\insertsubsectionendpage", "");
-  DefMacro!("\\insertsectionstartpage", "");
-  DefMacro!("\\insertsectionendpage", "");
-  DefMacro!("\\insertpartstartpage", "");
-  DefMacro!("\\insertpartendpage", "");
-  DefMacro!("\\insertpresentationstartpage", "");
-  DefMacro!("\\insertpresentationendpage", "");
-  DefMacro!("\\insertappendixstartpage", "");
-  DefMacro!("\\insertappendixendpage", "");
-  DefMacro!("\\insertdocumentstartpage", "");
-  DefMacro!("\\insertdocumentendpage", "");
+  def_macro_noop("\\insertnavigation{}")?;
+  def_macro_noop("\\insertsectionnavigation{}")?;
+  def_macro_noop("\\insertsectionnavigationhorizontal{}{}{}")?;
+  def_macro_noop("\\insertsubsectionnavigation{}")?;
+  def_macro_noop("\\insertsubsectionnavigationhorizontal{}{}{}")?;
+  def_macro_noop("\\insertverticalnavigation{}")?;
+  def_macro_noop("\\insertsubsection")?;
+  def_macro_noop("\\insertsubsubsection")?;
+  def_macro_noop("\\insertframestartpage")?;
+  def_macro_noop("\\insertframeendpage")?;
+  def_macro_noop("\\insertsubsectionstartpage")?;
+  def_macro_noop("\\insertsubsectionendpage")?;
+  def_macro_noop("\\insertsectionstartpage")?;
+  def_macro_noop("\\insertsectionendpage")?;
+  def_macro_noop("\\insertpartstartpage")?;
+  def_macro_noop("\\insertpartendpage")?;
+  def_macro_noop("\\insertpresentationstartpage")?;
+  def_macro_noop("\\insertpresentationendpage")?;
+  def_macro_noop("\\insertappendixstartpage")?;
+  def_macro_noop("\\insertappendixendpage")?;
+  def_macro_noop("\\insertdocumentstartpage")?;
+  def_macro_noop("\\insertdocumentendpage")?;
 
   // Theme commands — Perl L1246-1253
-  DefMacro!("\\usetheme[]{}", "");
-  DefMacro!("\\usecolortheme[]{}", "");
-  DefMacro!("\\usefonttheme[]{}", "");
-  DefMacro!("\\useinnertheme[]{}", "");
-  DefMacro!("\\useoutertheme[]{}", "");
-  DefMacro!("\\setbeamertemplate{}{}", "");
-  DefMacro!("\\setbeamercolor{}{}", "");
-  DefMacro!("\\setbeamerfont{}{}", "");
-  DefMacro!("\\setbeamersize{}", "");
-  DefMacro!("\\setbeamercovered{}", "");
-  DefMacro!("\\addtobeamertemplate{}{}{}", "");
-  DefMacro!("\\defbeamertemplate OptionalMatch:* {}{}{}", "");
+  def_macro_noop("\\usetheme[]{}")?;
+  def_macro_noop("\\usecolortheme[]{}")?;
+  def_macro_noop("\\usefonttheme[]{}")?;
+  def_macro_noop("\\useinnertheme[]{}")?;
+  def_macro_noop("\\useoutertheme[]{}")?;
+  def_macro_noop("\\setbeamertemplate{}{}")?;
+  def_macro_noop("\\setbeamercolor{}{}")?;
+  def_macro_noop("\\setbeamerfont{}{}")?;
+  def_macro_noop("\\setbeamersize{}")?;
+  def_macro_noop("\\setbeamercovered{}")?;
+  def_macro_noop("\\addtobeamertemplate{}{}{}")?;
+  def_macro_noop("\\defbeamertemplate OptionalMatch:* {}{}{}")?;
 
   // Navigation/footline/headline — no-ops
-  DefMacro!("\\beamertemplatenavigationsymbolsempty", "");
-  DefMacro!("\\setbeamercolor*{}{}", "");
-  DefMacro!("\\hypersetup{}", "");
+  def_macro_noop("\\beamertemplatenavigationsymbolsempty")?;
+  def_macro_noop("\\setbeamercolor*{}{}")?;
+  def_macro_noop("\\hypersetup{}")?;
 
   // Beamer list environments — Perl L1160-1179
   DefEnvironment!("{itemize} OptionalMatch:<>",
@@ -237,32 +242,32 @@ LoadDefinitions!({
 \newenvironment{Examples}{\begin{examples}}{\end{examples}}
 \newenvironment{Definition}{\begin{definition}}{\end{definition}}
 "#);
-  DefMacro!("\\pushQED{}", "");
-  DefMacro!("\\popQED", "");
-  DefMacro!("\\qedhere", "");
+  def_macro_noop("\\pushQED{}")?;
+  def_macro_noop("\\popQED")?;
+  def_macro_noop("\\qedhere")?;
 
   // Mode commands — Perl L448-460
-  DefMacro!("\\mode OptionalMatch:* {}", "");
-  DefMacro!("\\mode<>{}", "");
+  def_macro_noop("\\mode OptionalMatch:* {}")?;
+  def_macro_noop("\\mode<>{}")?;
   // Perl L493-495: \presentation / \article / \common route to
   // \mode<…>. Since the Rust \mode dispatcher is already a no-op for
   // all overlay modes, the three become empty stubs. Including them
   // keeps preamble-level `\mode<all>` equivalents (from example
   // beamer style files) from throwing undefined-CS errors.
-  DefMacro!("\\presentation", "");
-  DefMacro!("\\common",       "");
+  def_macro_noop("\\presentation")?;
+  def_macro_noop("\\common")?;
   // `\article` would clash with LaTeX `\article` docclass naming in
   // principle, but LaTeXML's catcode + class-file routing keeps the
   // control sequence distinct from the class name string. Perl ships
   // this alias unconditionally.
-  DefMacro!("\\article",      "");
+  def_macro_noop("\\article")?;
 
   // Perl L414-416: beamer TODO CSes (expand to warnings under Perl;
   // Rust matches by absorbing args and emitting nothing — same
   // behaviour for slide-order rendering without the beamerTODO warning.
-  DefMacro!("\\jobnamebeamerversion{}",   "");
-  DefMacro!("\\includeslide{}",           "");
-  DefMacro!("\\setjobnamebeamerversion",  "");
+  def_macro_noop("\\jobnamebeamerversion{}")?;
+  def_macro_noop("\\includeslide{}")?;
+  def_macro_noop("\\setjobnamebeamerversion")?;
 
   // Misc commands
   // Perl beamer.cls.ltxml L810-813 wraps \alert in \alertenv which threads
@@ -273,20 +278,23 @@ LoadDefinitions!({
   DefMacro!("\\alert OptionalMatch:<> {}", "\\textbf{#2}");
   DefMacro!("\\structure OptionalMatch:<> {}", "#2");
   DefMacro!("\\emph OptionalMatch:<> {}", "\\textit{#2}");
-  DefMacro!("\\AtBeginSection[]{}", "");
-  DefMacro!("\\AtBeginSubsection[]{}", "");
-  DefMacro!("\\AtBeginPart[]{}", "");
-  DefMacro!("\\lecture{}{}", "");
-  DefMacro!("\\againframe OptionalMatch:<> []{}", "");
-  DefMacro!("\\appendix", "");
-  DefMacro!("\\note OptionalMatch:<> []{}", "");
-  DefMacro!("\\beamerdefaultoverlayspecification{}", "");
+  def_macro_noop("\\AtBeginSection[]{}")?;
+  def_macro_noop("\\AtBeginSubsection[]{}")?;
+  def_macro_noop("\\AtBeginPart[]{}")?;
+  // \lecture{title}{shortname} — beamer lecture frontmatter; preserve
+  // the title text as ltx:note frontmatter rather than dropping it.
+  DefMacro!("\\lecture{}{}",
+    "\\@add@frontmatter{ltx:note}[role=lecture]{#1}");
+  def_macro_noop("\\againframe OptionalMatch:<> []{}")?;
+  def_macro_noop("\\appendix")?;
+  def_macro_noop("\\note OptionalMatch:<> []{}")?;
+  def_macro_noop("\\beamerdefaultoverlayspecification{}")?;
 
   // Translation stubs
-  DefMacro!("\\translate{}", "#1");
+  def_macro_identity("\\translate{}")?;
 
   // Color-related
-  DefMacro!("\\usebeamercolor OptionalMatch:* {}", "");
+  def_macro_noop("\\usebeamercolor OptionalMatch:* {}")?;
 
   // Hyperlink
   DefMacro!("\\hyperlink{}{}", "#2");

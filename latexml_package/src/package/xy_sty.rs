@@ -70,8 +70,68 @@ LoadDefinitions!({
       crate::package::xylatexml_tex::load_definitions()?;
       return Ok(Tokens!());
     }
+    // Special case: "all" — xyall.tex `\xyrequire`s every xy feature
+    // (curve, frame, cmtip, line, rotate, color, matrix, arrow, graph).
+    // Forwarding through `\lx@xy@xyoption@orig` does NOT actually
+    // \input the per-feature xy<name>.tex file in our pipeline
+    // (the `\xyinputorelse@` chain in xy.tex evaluates strangely
+    // without raw-TeX `\openin`), leaving things like `\xygraph`
+    // undefined. Directly load the per-feature files via
+    // `InputDefinitions` here. Witness 2311.05789
+    // (`\usepackage[all,tips]{xy}` + `\xygraph` → Error:undefined:\xygraph).
+    // Special case: known xy feature names — directly `\input` the
+    // feature file via input_definitions. `\lx@xy@xyoption@orig`'s
+    // `\xyinputorelse@` chain in xy.tex evaluates strangely in our
+    // pipeline (it relies on raw-TeX `\openin`/`\closein` to
+    // probe and \input, which the binding's input path doesn't fully
+    // honor), so features like `\xygraph` end up undefined despite
+    // `\usepackage[all,tips]{xy}`. Witness 2311.05789.
+    let feature_files: &[&str] = match option_s.as_str() {
+      "all" => &["curve","frame","cmtip","line","rotate","color","matrix","arrow","graph"],
+      "graph" | "matrix" | "arrow" | "curve" | "frame" | "cmtip"
+        | "line" | "rotate" | "color" | "tips" => {
+        let single = option_s.as_str();
+        let n = s!("xy{}", single);
+        let _ = input_definitions(&n, InputDefinitionOptions {
+          extension: Some(::std::borrow::Cow::Borrowed("tex")),
+          noltxml: true,
+          ..Default::default()
+        });
+        return Ok(Tokens!());
+      },
+      _ => &[][..],
+    };
+    if !feature_files.is_empty() {
+      for name in feature_files {
+        let n = s!("xy{}", name);
+        let _ = input_definitions(&n, InputDefinitionOptions {
+          extension: Some(::std::borrow::Cow::Borrowed("tex")),
+          noltxml: true,
+          ..Default::default()
+        });
+      }
+      return Ok(Tokens!());
+    }
     Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
   });
+
+  // At BeginDocument, also load xygraph.tex defensively if not already
+  // loaded — papers that use `\xygraph{...}` may have come in via
+  // `\usepackage[all,tips]{xy}` whose `\DeclareOption*` chain doesn't
+  // reliably reach `\xyoption{all}` in our binding's option pipeline.
+  // Witness 2311.05789.
+  //
+  // BUT only load if the user hasn't already defined `\graph`
+  // themselves — xygraph.tex L29 defines `\graph` as xy's diagram-
+  // node macro and would OVERWRITE a user's
+  // `\newcommand{\graph}{\mathcal{G}}` for graph-theory notation,
+  // turning subsequent `$\graph(A)$` math into xy-diagram parsing
+  // which trips text-mode `_` cascades. Witness 2308.07722
+  // (paper uses `\newcommand{\graph}{\mathcal{G}}` after
+  // `\usepackage{xy}` without graph option).
+  at_begin_document(TokenizeInternal!(
+    r"\@ifundefined{xygraph}{\@ifundefined{graph}{\xyoption{graph}}{}}{}"
+  ))?;
 
   // \xywarning@, \xyerror@ (Perl L53-54)
   DefPrimitive!("\\xywarning@ {}", sub[(msg)] {
@@ -135,12 +195,12 @@ LoadDefinitions!({
       };
       let pxwidth = get_s("pxwidth");
       let pxheight = get_s("pxheight");
-      let pic_attrs = string_map!("width" => pxwidth.clone(), "height" => pxheight.clone());
+      let pic_attrs = string_map!("width" => pxwidth, "height" => pxheight);
       document.open_element("ltx:picture", Some(pic_attrs), None)?;
 
       let mut svg_attrs = string_map!(
         "version" => "1.1", "overflow" => "visible",
-        "width" => pxwidth.clone(), "height" => pxheight.clone(),
+        "width" => pxwidth, "height" => pxheight,
         "viewBox" => get_s("viewBox")
       );
       let style = get_s("style");
@@ -299,5 +359,21 @@ LoadDefinitions!({
   RawTeX!(r"\@ifundefined{xymatrix}{%
     \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
     \def\lx@xy@stub@xymatrix@body#1{}%
+  }{}");
+
+  // Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
+  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
+  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
+  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
+  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
+  // loads. The morphism semantics (definesupermorphism for twocell,
+  // halftwocell, compositemap) need the full xy machinery — but at
+  // least preventing the undefined-CS error lets the paper render
+  // (sans 2cell-specific diagrams). Witness 2305.08678.
+  RawTeX!(r"\@ifundefined{UseAllTwocells}{%
+    \def\UseTwocells{}%
+    \def\UseHalfTwocells{}%
+    \def\UseCompositeMaps{}%
+    \def\UseAllTwocells{}%
   }{}");
 });

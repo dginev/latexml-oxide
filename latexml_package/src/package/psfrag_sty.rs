@@ -61,11 +61,11 @@ LoadDefinitions!({
 
   // Rescan macros — Perl L78-85
   DefMacro!("\\tex Semiverbatim", "#1");
-  DefMacro!("\\psfragrescan", "");
-  DefMacro!("\\psfragrescanoff", "");
-  DefMacro!("\\psfragrescanon", "");
-  DefMacro!("\\psfragdebugon", "");
-  DefMacro!("\\psfragdebugoff", "");
+  def_macro_noop("\\psfragrescan")?;
+  def_macro_noop("\\psfragrescanoff")?;
+  def_macro_noop("\\psfragrescanon")?;
+  def_macro_noop("\\psfragdebugon")?;
+  def_macro_noop("\\psfragdebugoff")?;
 
   // Perl psfrag.sty.ltxml L149: DefEnvironment('{psfrags}', '#body').
   // Pure grouping, no content transform. Previously unported.

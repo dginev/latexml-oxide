@@ -1,18 +1,31 @@
 use crate::prelude::*;
 use latexml_core::document::Document;
 
+
 LoadDefinitions!({
   // Choose the current float style (plain, plaintop, boxed, ruled)
   DefMacro!("\\float@style", None, "plain");
   DefMacro!("\\floatstyle{}", "\\def\\float@style{#1}");
   // \restylefloat{style} — ignore
-  DefMacro!("\\restylefloat OptionalMatch:* {}", "");
+  def_macro_noop("\\restylefloat OptionalMatch:* {}")?;
   // \floatplacement{style}{placement} — ignore
-  DefMacro!("\\floatplacement{}{}", "");
+  def_macro_noop("\\floatplacement{}{}")?;
   // \listof{type}{title} — ignore
-  DefMacro!("\\listof{}{}", "");
+  def_macro_noop("\\listof{}{}")?;
   // \floatname{type}{name}
   DefMacro!("\\floatname{}{}", "\\@namedef{lx@name@#1}{#2}");
+
+  // \float@endH — close marker for `[H]` placement floats (float.sty
+  // L103). Real def does box-placement layout (`\@endfloatbox\vskip
+  // \intextsep \box\@currbox \vskip\intextsep`); purely visual for
+  // PDF output. In XML/HTML the figure/table just closes via its
+  // environment-end. Stub as no-op so unrendered raw-loads don't
+  // emit "undefined". Witness: arXiv:2506.12112 / .15928 / .19294
+  // (`\begin{figure}[H] ... \end{figure}` chain). Companion stubs
+  // `\float@end`, `\float@dblend` follow the same pattern.
+  def_macro_noop("\\float@endH")?;
+  def_macro_noop("\\float@end")?;
+  def_macro_noop("\\float@dblend")?;
 
   // Perl: DefPrimitive('\newfloat{}{}{}[]', sub { ... })
   // Creates a new float environment with counter, title format, etc.
@@ -120,8 +133,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let is_double = name.ends_with('*');
   let style_str = style.to_string();
 
-  let replacement: ReplacementClosure = Rc::new({
-    let class_val = class_val.clone();
+  let replacement: ReplacementClosure = Rc::new(
     move |document: &mut Document,
           args: &Vec<Option<Digested>>,
           props: &arena::SymHashMap<Stored>| {
@@ -160,8 +172,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
       }
       document.close_element("ltx:float")?;
       Ok(())
-    }
-  });
+    });
 
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
@@ -172,7 +183,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   };
 
   // before_digest: beforeFloat($type [, double => 1])
-  let bt = base_type.clone();
+  let bt = base_type;
   let before_closure: BeforeDigestClosure = Rc::new(move || {
     before_float_ex(&bt, None, is_double);
     Ok(Vec::new())
@@ -187,7 +198,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   options.after_digest.push(after_closure);
 
   // after_construct: addFloatFrames
-  let style_for_construct = style_str.clone();
+  let style_for_construct = style_str;
   let after_construct_closure: ConstructionClosure =
     Rc::new(move |document: &mut Document, _whatsit: &Whatsit| {
       add_float_frames(document, &style_for_construct)?;

@@ -1,30 +1,31 @@
-//! Build script for latexml_package.
+//! Build script for latexml_engine.
 //!
-//! Emits `latex_dump_loader.rs` into OUT_DIR. The loader does NOT `include_str!`
-//! the dump at compile time (old behavior). Instead, at runtime it reads the
-//! dump from disk, searching several locations in order:
+//! Two responsibilities:
 //!
-//!   0. `$LATEXML_NODUMP` — if set, skip entirely (matches Perl `Package.pm` `LoadFormat` behavior:
-//!      `if (!$ENV{LATEXML_NODUMP} && FindFile(...))`).
-//!   1. `$LATEXML_DUMP_PATH` (explicit override, full path to latex.dump.txt)
-//!   2. `$LATEXML_DUMP_DIR/latex.dump.txt` (directory override)
-//!   3. `<exe_dir>/../resources/dumps/latex.dump.txt` (installed layout)
-//!   4. The dev-tree path baked in at compile time
-//!      (`$CARGO_MANIFEST_DIR/../resources/dumps/latex.dump.txt`).
+//! 1. Stage versioned kernel dumps (`plain.YYYY.dump.txt`,
+//!    `latex.YYYY.dump.txt`, `texlive.YYYY.version`) from
+//!    `resources/dumps/` into `$OUT_DIR`, and emit a manifest
+//!    (`embedded_dumps_manifest.rs`) that
+//!    [`embedded_dumps`](crate::embedded_dumps) `include!`s. Bundled
+//!    dumps become the final fallback when no on-disk dump can be
+//!    resolved (single-file binary distribution).
 //!
-//! This decouples the dump from the binary:
+//! 2. Emit `latex_dump_loader.rs` into `$OUT_DIR`. The loader resolves a
+//!    versioned `latex.YYYY.dump.txt` at runtime, preferring a year that
+//!    matches the ambient TeXLive (via
+//!    [`dump_paths::detect_ambient_texlive_year`](crate::dump_paths)).
+//!    Fallback chain:
 //!
-//! - The build never fails because the dump is missing — we just log at info and fall through to
-//!   in-engine defaults.
-//! - Regenerating the dump (`latexml_oxide --init=latex.ltx`) does **not** require a rebuild.
-//!   Re-run tests / converts directly.
-//! - Tests and CI can call `tools/make_formats.sh` (or run `--init`) before the test phase to
-//!   guarantee a fresh dump against the ambient texlive.
+//!    0. `$LATEXML_NODUMP` — skip entirely (Perl `Package.pm` `LoadFormat` parity)
+//!    1. `$LATEXML_DUMP_PATH` (explicit full path)
+//!    2. `$LATEXML_DUMP_DIR/latex.YYYY.dump.txt` (or most-recent in dir)
+//!    3. `<exe_dir>/../resources/dumps/latex.YYYY.dump.txt` (installed layout)
+//!    4. Dev-tree `$CARGO_MANIFEST_DIR/../resources/dumps/latex.YYYY.dump.txt`
+//!    5. Embedded dump (compile-time `include_str!`)
 //!
-//! Rationale: Perl's workflow is `make formats` → tests. Embedding the dump
-//! via `include_str!` locked us into a two-compile chicken-egg and froze the
-//! dump at whatever texlive was present the day the file was committed. The
-//! runtime-load path is the "--init earlier" design SYNC_STATUS D0 calls for.
+//! The build never fails because no dump is present — empty stubs are
+//! staged so `include_str!` always resolves. Empty content → `None` at
+//! runtime.
 
 use std::env;
 use std::path::Path;
@@ -40,9 +41,6 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
 fn main() {
   let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
   let out_dir = env::var("OUT_DIR").unwrap();
-  // Engine modules are now at the crate root (latexml_engine/src/) since
-  // the latexml_engine extraction. Previously this was src/engine/ when
-  // the engine lived under latexml_package.
   let engine_dir = Path::new(&manifest_dir).join("src");
   let dumps_dir = Path::new(&manifest_dir).join("../resources/dumps");
 
@@ -57,67 +55,167 @@ fn main() {
     println!("cargo:rerun-if-changed=src/{dump_name}");
   }
 
-  // Emit the runtime-load loader. No dump content is embedded.
+  // Stage all versioned dumps + version stamps from resources/dumps/ into
+  // OUT_DIR, recording (year, plain_path, latex_path, stamp_path) tuples
+  // in a manifest. The manifest is `include!`d by `embedded_dumps.rs` which
+  // turns each file into an `include_str!`.
+  let mut manifest_entries: Vec<(u32, String, String, String)> = Vec::new();
+  if let Ok(entries) = std::fs::read_dir(&dumps_dir) {
+    let mut years: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
+    for e in entries.flatten() {
+      let name = e.file_name();
+      let Some(name_str) = name.to_str() else { continue };
+      // plain.YYYY.dump.txt or latex.YYYY.dump.txt
+      for kind in &["plain", "latex"] {
+        let prefix = format!("{}.", kind);
+        if let Some(rest) = name_str.strip_prefix(&prefix) {
+          if let Some(year_str) = rest.strip_suffix(".dump.txt") {
+            if let Ok(y) = year_str.parse::<u32>() {
+              if (2000..=2099).contains(&y) {
+                years.insert(y);
+              }
+            }
+          }
+        }
+      }
+    }
+    for year in years {
+      let plain_src = dumps_dir.join(format!("plain.{}.dump.txt", year));
+      let latex_src = dumps_dir.join(format!("latex.{}.dump.txt", year));
+      let stamp_src = dumps_dir.join(format!("texlive.{}.version", year));
+      let plain_dst = Path::new(&out_dir).join(format!("embedded_plain.{}.dump.txt.gz", year));
+      let latex_dst = Path::new(&out_dir).join(format!("embedded_latex.{}.dump.txt.gz", year));
+      let stamp_dst = Path::new(&out_dir).join(format!("embedded_texlive.{}.version", year));
+      stage_gzipped_or_empty(&plain_src, &plain_dst);
+      stage_gzipped_or_empty(&latex_src, &latex_dst);
+      stage_or_stub(&stamp_src, &stamp_dst);
+      println!("cargo:rerun-if-changed={}", plain_src.display());
+      println!("cargo:rerun-if-changed={}", latex_src.display());
+      println!("cargo:rerun-if-changed={}", stamp_src.display());
+      manifest_entries.push((
+        year,
+        plain_dst.display().to_string(),
+        latex_dst.display().to_string(),
+        stamp_dst.display().to_string(),
+      ));
+    }
+  }
+  // Sort descending so manifest[0] is the most-recent year.
+  manifest_entries.sort_by_key(|entry| std::cmp::Reverse(entry.0));
+
+  // Build-time content hash over every bundled gzip blob, used at
+  // runtime as the cache-dir key under `/tmp` (DEP-12 disk cache). A
+  // 16-byte FNV-1a-style fold over the raw compressed bytes is plenty
+  // for cache-invalidation purposes (we don't need cryptographic
+  // strength — just "did the bundled dumps change between rebuilds").
+  // Same bytes → same hash → same cache dir → cache hits across
+  // rebuilds with unchanged dumps. Any byte change → fresh dir.
+  let content_hash = compute_content_hash(&manifest_entries);
+
+  // Emit the manifest. We write absolute paths so include_bytes!() resolves
+  // unambiguously regardless of where the consumer lives in the source tree.
+  // Dumps are gzip-compressed at build time (DEP-12, 2026-05-18) — runtime
+  // decompresses lazily and persists the decompressed copy at
+  // `/tmp/latexml-oxide-dumps-<hash>/<kind>.<year>.dump.txt` so subsequent
+  // process invocations skip the gunzip entirely.
+  let mut manifest = String::new();
+  manifest.push_str("// Auto-generated by latexml_engine/build.rs. Do not edit.\n");
+  manifest.push_str("pub(crate) struct EmbeddedDumpYear {\n");
+  manifest.push_str("  pub year: u32,\n");
+  manifest.push_str("  pub plain_gz: &'static [u8],\n");
+  manifest.push_str("  pub latex_gz: &'static [u8],\n");
+  manifest.push_str("  pub stamp: &'static str,\n");
+  manifest.push_str("}\n\n");
+  manifest.push_str("pub(crate) const EMBEDDED_DUMPS: &[EmbeddedDumpYear] = &[\n");
+  for (year, plain, latex, stamp) in &manifest_entries {
+    manifest.push_str("  EmbeddedDumpYear {\n");
+    manifest.push_str(&format!("    year: {},\n", year));
+    manifest.push_str(&format!("    plain_gz: include_bytes!({:?}),\n", plain));
+    manifest.push_str(&format!("    latex_gz: include_bytes!({:?}),\n", latex));
+    manifest.push_str(&format!("    stamp: include_str!({:?}),\n", stamp));
+    manifest.push_str("  },\n");
+  }
+  manifest.push_str("];\n");
+  manifest.push_str(&format!(
+    "\n/// 16-hex-char content hash over every bundled gzip blob, used as\n\
+     /// the `/tmp/latexml-oxide-dumps-<hash>/` cache-dir key (DEP-12 disk\n\
+     /// cache). Stable across rebuilds with unchanged dumps; any change\n\
+     /// to any bundled dump invalidates the cache automatically.\n\
+     pub(crate) const EMBEDDED_DUMPS_CONTENT_HASH: &str = \"{}\";\n",
+    content_hash
+  ));
+  let manifest_path = Path::new(&out_dir).join("embedded_dumps_manifest.rs");
+  std::fs::write(&manifest_path, manifest)
+    .unwrap_or_else(|e| panic!("Failed to write {}: {}", manifest_path.display(), e));
+
+  // Emit the runtime latex_dump_loader. Same versioned-resolution logic as
+  // plain_dump.rs (plain loader is hand-written for parity).
   let loader_path = Path::new(&out_dir).join("latex_dump_loader.rs");
-  let default_dev_path = dumps_dir.join("latex.dump.txt");
-  let default_dev_path_str = default_dev_path.to_string_lossy().replace('\\', "\\\\");
+  let dev_dumps_dir_str = dumps_dir.to_string_lossy().replace('\\', "\\\\");
 
   let loader = format!(
-    r##"// Runtime kernel-dump loader. Generated by `latexml_package/build.rs`.
+    r##"// Runtime kernel-dump loader. Generated by `latexml_engine/build.rs`.
 //
-// Searches for `latex.dump.txt` at runtime (see build.rs for the path list).
-// If found, ingests it via `dump_reader::load_from_str`. If not found, logs
-// at info and returns Ok(()) — the engine will fall back to in-code defaults.
+// Searches for `latex.YYYY.dump.txt` at runtime, preferring a year that
+// matches the ambient TeXLive install. Falls back to the most-recent year
+// present, then to the embedded-bundled snapshot.
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
-  // Perl parity: Package.pm `LoadFormat` skips the dump when LATEXML_NODUMP
-  // is set, falling back to re-processing the _base pool. We don't have a
-  // fully separate _base path yet (see SYNC_STATUS D0) but we still respect
-  // the opt-out so tooling can force the slower path deterministically.
   if std::env::var_os("LATEXML_NODUMP").is_some() {{
     log::info!("[latex_dump] LATEXML_NODUMP set — skipping dump, engine will \
                 reconstruct kernel state from _base pool (slower, Perl-parity)");
     return Ok(());
   }}
-  let path_opt = resolve_dump_path();
-  let Some(path) = path_opt else {{
-    log::info!("[latex_dump] no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
-                exe-relative, and dev-tree path); run `latexml_oxide --init=latex.ltx` to generate");
-    return Ok(());
-  }};
-  let content = match std::fs::read_to_string(&path) {{
-    Ok(c) => c,
-    Err(e) => {{
-      log::warn!("[latex_dump] failed to read {{}}: {{}}", path.display(), e);
+  let prefer = crate::dump_paths::detect_ambient_texlive_year();
+  let resolved = resolve_dump_path(prefer);
+  let (content, source_label, stamp_for_check): (String, String, Option<String>) =
+    if let Some((path, year)) = resolved {{
+      let content = match std::fs::read_to_string(&path) {{
+        Ok(c) => c,
+        Err(e) => {{
+          log::warn!("[latex_dump] failed to read {{}}: {{}}", path.display(), e);
+          return Ok(());
+        }}
+      }};
+      let label = path.display().to_string();
+      // Sibling stamp file: texlive.YYYY.version next to latex.YYYY.dump.txt.
+      // Use the year of the dump we actually loaded (not the most-recent
+      // year in the directory) so the staleness check compares apples to
+      // apples on machines with multiple bundled dumps.
+      let stamp_str = if year > 0 {{
+        path.parent().and_then(|d| {{
+          let p = d.join(crate::dump_paths::version_filename(year));
+          std::fs::read_to_string(&p).ok().and_then(|s| s.lines().next().map(|l| l.to_string()))
+        }})
+      }} else {{ None }};
+      (content, label, stamp_str)
+    }} else if let Some(latex_str) = crate::embedded_dumps::embedded_latex_dump(prefer) {{
+      // Embedded fallback. `embedded_latex_dump` gunzips on first
+      // access and caches the result for the rest of the process
+      // (DEP-12, 2026-05-18).
+      let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
+      log::info!("[latex_dump] using embedded TL{{}} dump (no on-disk dump found)", year);
+      let stamp_first = crate::embedded_dumps::embedded_texlive_version_first_line(prefer)
+        .map(|s| s.to_string());
+      (latex_str.to_string(), format!("<embedded TL{{}}>", year), stamp_first)
+    }} else {{
+      log::info!("[latex_dump] no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
+                  exe-relative, dev-tree path, and embedded fallback); \
+                  run `latexml_oxide --init=latex.ltx` to generate");
       return Ok(());
-    }}
-  }};
-  // Staleness check: compare the dump's texlive.version stamp against
-  // ambient kpsewhich --version. Mismatch means the dump was generated
-  // against a different TeXLive; engine may see unfamiliar macro state.
-  // Opt out with LATEXML_SKIP_DUMP_STAMP_CHECK=1 (for e.g. cross-env CI).
+    }};
   if std::env::var_os("LATEXML_SKIP_DUMP_STAMP_CHECK").is_none() {{
-    check_dump_staleness(&path);
+    if let Some(stamp) = stamp_for_check.as_deref() {{
+      compare_stamp_to_ambient(stamp);
+    }}
   }}
-  // Conservative add-only load. The latex dump can't fully replace
-  // `latex_base.rs` (closure-backed defs aren't serializable), so the
-  // engine loads BOTH; `load_from_str` skips dump entries already
-  // installed by `_base` rather than overwriting them. This is the
-  // "transitional" mode — strict Perl would call
-  // `load_from_str_plain` (unconditional `assign_internal('global')`)
-  // but that requires `_base` closures be re-expressible through the
-  // dump.
   let count = latexml_core::dump_reader::load_from_str(&content)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
-  log::info!("[latex_dump] loaded {{}} entries from {{}}", count, path.display());
+  log::info!("[latex_dump] loaded {{}} entries from {{}}", count, source_label);
   Ok(())
 }}
 
-fn check_dump_staleness(dump_path: &std::path::Path) {{
-  let stamp_path = dump_path.with_file_name("texlive.version");
-  let stamp_first_line = std::fs::read_to_string(&stamp_path).ok()
-    .and_then(|s| s.lines().next().map(|l| l.to_string()));
-  let Some(stamp) = stamp_first_line else {{ return; }};
+fn compare_stamp_to_ambient(stamp: &str) {{
   let ambient = std::process::Command::new("kpsewhich")
     .arg("--version").output().ok()
     .and_then(|o| if o.status.success() {{
@@ -135,50 +233,124 @@ fn check_dump_staleness(dump_path: &std::path::Path) {{
   }}
 }}
 
-fn resolve_dump_path() -> Option<std::path::PathBuf> {{
-  // 1. Explicit full path override.
+fn resolve_dump_path(prefer: Option<u32>) -> Option<(std::path::PathBuf, u32)> {{
+  // 1. Explicit full path override (year inferred from filename if possible).
   if let Ok(p) = std::env::var("LATEXML_DUMP_PATH") {{
-    let pb = std::path::PathBuf::from(p);
-    if pb.is_file() {{ return Some(pb); }}
+    let pb = std::path::PathBuf::from(&p);
+    if pb.is_file() {{
+      let year = pb.file_name().and_then(|n| n.to_str())
+        .and_then(|n| crate::dump_paths::parse_year_from_dump_filename(n, "latex"))
+        .unwrap_or(0);
+      return Some((pb, year));
+    }}
   }}
-  // 2. Directory override — look for latex.dump.txt inside.
+  // 2. Directory override — pick best versioned dump in that dir.
   if let Ok(dir) = std::env::var("LATEXML_DUMP_DIR") {{
-    let pb = std::path::Path::new(&dir).join("latex.dump.txt");
-    if pb.is_file() {{ return Some(pb); }}
+    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(
+      std::path::Path::new(&dir), "latex", prefer
+    ) {{ return Some(found); }}
   }}
-  // 3. Installed layout: <exe_dir>/../resources/dumps/latex.dump.txt.
+  // 3. Installed layout: <exe_dir>/../resources/dumps/latex.YYYY.dump.txt.
   if let Ok(exe) = std::env::current_exe() {{
     if let Some(exe_dir) = exe.parent() {{
-      let installed = exe_dir.join("../resources/dumps/latex.dump.txt");
-      if installed.is_file() {{ return Some(installed); }}
-      // Also check sibling (for test binaries at target/release/deps/).
-      let sibling = exe_dir.join("latex.dump.txt");
-      if sibling.is_file() {{ return Some(sibling); }}
+      let installed = exe_dir.join("../resources/dumps");
+      if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(
+        &installed, "latex", prefer
+      ) {{ return Some(found); }}
+      // Sibling-of-exe: pick best versioned dump beside the binary.
+      if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(
+        exe_dir, "latex", prefer
+      ) {{ return Some(found); }}
     }}
   }}
   // 4. Dev-tree path baked in at compile time.
-  let dev = std::path::PathBuf::from("{}");
-  if dev.is_file() {{ return Some(dev); }}
+  let dev = std::path::Path::new("{}");
+  if dev.is_dir() {{
+    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(
+      dev, "latex", prefer
+    ) {{ return Some(found); }}
+  }}
   None
 }}
 "##,
-    default_dev_path_str
+    dev_dumps_dir_str
   );
 
   std::fs::write(&loader_path, loader)
     .unwrap_or_else(|_| panic!("Failed to write latex_dump_loader.rs"));
 
-  // Rerun if the dump file changes — even though we don't embed it, this
-  // ensures builds that WERE stale by chance get a fresh mtime signal.
-  println!("cargo:rerun-if-changed={}", default_dev_path.display());
-  // Rerun if the texlive.version marker changes.
-  let version_file = dumps_dir.join("texlive.version");
-  println!("cargo:rerun-if-changed={}", version_file.display());
-
-  // Also rerun if the environment override changes.
+  // Re-run when env overrides change so the cached compile rebuilds the loader.
   println!("cargo:rerun-if-env-changed=LATEXML_DUMP_PATH");
   println!("cargo:rerun-if-env-changed=LATEXML_DUMP_DIR");
   println!("cargo:rerun-if-env-changed=LATEXML_NODUMP");
-
   println!("cargo:rerun-if-changed=build.rs");
+  // Also re-run when new versioned dumps appear / disappear in the dir.
+  println!("cargo:rerun-if-changed={}", dumps_dir.display());
+}
+
+/// 64-bit FNV-1a hash over the concatenation of every gzipped dump
+/// blob (in manifest-entry order), rendered as 16 hex chars. Used as
+/// the runtime disk-cache dir key. Not cryptographic — just a stable
+/// short summary of "are these the same bundled dumps".
+fn compute_content_hash(entries: &[(u32, String, String, String)]) -> String {
+  const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+  const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+  let mut h: u64 = FNV_OFFSET;
+  for (year, plain_gz_path, latex_gz_path, _stamp) in entries {
+    // Mix the year + each gzip blob's bytes into the running hash.
+    for byte in year.to_le_bytes() {
+      h ^= byte as u64;
+      h = h.wrapping_mul(FNV_PRIME);
+    }
+    for path in [plain_gz_path, latex_gz_path] {
+      if let Ok(bytes) = std::fs::read(path) {
+        for byte in bytes {
+          h ^= byte as u64;
+          h = h.wrapping_mul(FNV_PRIME);
+        }
+      }
+    }
+  }
+  format!("{:016x}", h)
+}
+
+fn stage_or_stub(src: &Path, dst: &Path) {
+  if src.is_file() {
+    std::fs::copy(src, dst)
+      .unwrap_or_else(|e| panic!("Failed to copy {} → {}: {}", src.display(), dst.display(), e));
+  } else {
+    std::fs::write(dst, b"")
+      .unwrap_or_else(|e| panic!("Failed to write empty stub {}: {}", dst.display(), e));
+  }
+}
+
+/// Gzip-compress `src` into `dst` at the default flate2 level. Falls back
+/// to an empty file when `src` doesn't exist (build-without-dumps stays
+/// non-fatal). Used for the bundled kernel dumps — see DEP-12 note in
+/// the manifest-writing block above. Measured ~4.7× ratio on the
+/// `record`-shaped dump text; gunzip is ~560 MB/s on a modern CPU so the
+/// decompression cost amortises to <1% of typical bootstrap.
+fn stage_gzipped_or_empty(src: &Path, dst: &Path) {
+  use flate2::Compression;
+  use flate2::write::GzEncoder;
+  use std::io::Write as _;
+  if src.is_file() {
+    let raw = std::fs::read(src)
+      .unwrap_or_else(|e| panic!("Failed to read {}: {}", src.display(), e));
+    let mut encoder = GzEncoder::new(Vec::with_capacity(raw.len() / 4), Compression::default());
+    encoder
+      .write_all(&raw)
+      .unwrap_or_else(|e| panic!("Failed to gzip {}: {}", src.display(), e));
+    let compressed = encoder
+      .finish()
+      .unwrap_or_else(|e| panic!("Failed to finalise gzip for {}: {}", src.display(), e));
+    std::fs::write(dst, &compressed)
+      .unwrap_or_else(|e| panic!("Failed to write {}: {}", dst.display(), e));
+  } else {
+    // Empty gzip member: writing the empty byte sequence is good
+    // enough — the runtime side treats `is_empty()` as "no embedded
+    // dump for this slot" without ever invoking the decoder.
+    std::fs::write(dst, b"")
+      .unwrap_or_else(|e| panic!("Failed to write empty stub {}: {}", dst.display(), e));
+  }
 }

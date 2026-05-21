@@ -98,7 +98,7 @@ LoadDefinitions!({
   // / Rust nil_ldf.rs:6-8) but applied at the `babel_support` layer
   // so it's always in scope before any lang.tex loads.
   if !IsDefined!(&T_CS!("\\bbl@languages")) {
-    DefMacro!("\\bbl@languages", "");
+    def_macro_noop("\\bbl@languages")?;
   }
 
   // Unicode quote characters (Perl L24-42)
@@ -130,7 +130,7 @@ LoadDefinitions!({
   DefMacro!("\\guillemotright", "\u{00BB}");
 
   // Shutup about hyphenation patterns (Perl L45)
-  DefMacro!("\\@nopatterns{}", "");
+  def_macro_noop("\\@nopatterns{}")?;
 
   // Hook into \select@language, \foreign@language, \bbl@switch
   // to set xml:lang attribute via MergeFont(language)

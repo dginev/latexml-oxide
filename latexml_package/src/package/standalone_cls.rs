@@ -11,5 +11,5 @@ LoadDefinitions!({
   // produces massive token overhead when the original environment is a
   // DefEnvironment Constructor. Since LaTeXML doesn't need preview/crop
   // functionality, neutralize the wrapper.
-  DefMacro!("\\@standaloneenv{}", "");
+  def_macro_noop("\\@standaloneenv{}")?;
 });

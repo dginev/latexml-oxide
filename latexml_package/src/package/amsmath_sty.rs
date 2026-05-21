@@ -124,7 +124,12 @@ fn ams_rearrangeable_bindings(
   // so such cells are skippable and the constructor is never invoked.
   // By routing \label through \lx@hidden@noalign, the label is processed at the
   // row level (equation element), ensuring labels= is always set.
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), None);
+  // Save \label globally so the noalign-deferred `\lx@eqnarray@save@label{#1}`
+  // expansion still resolves cleanly if it fires AFTER the alignment's group
+  // has popped (witness 2404.19499: align body's deferred noalign-label fires
+  // post-group → undefined). The \label override itself stays local — the
+  // user-visible \label semantics revert when align ends.
+  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   Ok(())
 }
@@ -217,6 +222,7 @@ fn ams_aligned_bindings() -> Result<()> {
   Ok(())
 }
 
+
 LoadDefinitions!({
   // Package options (Perl L44-57)
   DeclareOption!("centertags", None);
@@ -242,6 +248,57 @@ LoadDefinitions!({
 
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
+
+  // amsmath internals \ilimits@ / \slimits@ — set by amsmath's
+  // ExecuteOptions{nointlimits,sumlimits,...} (TL amsmath.sty L46-49,
+  // L93-94). We bind amsmath instead of raw-loading, so emulate the
+  // default-option assignments here. Used by newpxmath's \int/\sum
+  // redefinitions and bare amsmath \int/\sum from the dump (witness
+  // 2409.04565: undefined \ilimits@ + \slimits@ via newpxmath).
+  Let!("\\ilimits@", "\\nolimits");
+  Let!("\\slimits@", "\\displaylimits");
+
+  // amsmath L341-348: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
+  // then \gdef the original to use the @-suffix variant for limits
+  // placement. We don't materialize that two-step; alias the @ form
+  // straight to the user-visible CS so dump-replay of expansions like
+  // `\DOTSB \bigotimes@ \slimits@ _...` resolves.
+  // Witnesses 2406.03357, 2406.10662.
+  Let!("\\bigotimes@", "\\bigotimes");
+  Let!("\\bigoplus@",  "\\bigoplus");
+  Let!("\\bigodot@",   "\\bigodot");
+  Let!("\\bigsqcup@",  "\\bigsqcup");
+  Let!("\\biguplus@",  "\\biguplus");
+  Let!("\\bigvee@",    "\\bigvee");
+  Let!("\\bigwedge@",  "\\bigwedge");
+  Let!("\\bigcap@",    "\\bigcap");
+  Let!("\\bigcup@",    "\\bigcup");
+  Let!("\\coprod@",    "\\coprod");
+  Let!("\\prod@",      "\\prod");
+  Let!("\\sum@",       "\\sum");
+  Let!("\\intop@",     "\\intop");
+  Let!("\\iintop@",    "\\iintop");
+  Let!("\\iiintop@",   "\\iiintop");
+  Let!("\\ointop@",    "\\ointop");
+
+  // amsmath L131-138: define-or-provide wrappers conditioned on stix.
+  // Default branch (stix not loaded) maps each to its plain counterpart.
+  // old-arrows.sty and other amsmath-extending packages call these
+  // directly; without the let-aliases they're undefined.
+  // Witness: 2405.18268, 2406.00395 (old-arrows).
+  Let!("\\ams@newcommand", "\\newcommand");
+  Let!("\\ams@renewcommand", "\\renewcommand");
+  Let!("\\ams@def", "\\def");
+  Let!("\\ams@DeclareRobustCommand", "\\DeclareRobustCommand");
+
+  // newpxmath / fourier-extended \varmathbb / \vmathbb — provide as
+  // \mathbb fallback so papers that \renewcommand{\mathbb}{\varmathbb}
+  // (a common pattern when wanting an alt-shape blackboard) still work.
+  // Witness 2406.06884.
+  Let!("\\varmathbb", "\\mathbb");
+  Let!("\\vmathbb", "\\mathbb");
+  Let!("\\vvmathbb", "\\mathbb");
+  Let!("\\vvarmathbb", "\\mathbb");
   // sub-packages:
   RequirePackage!("amsbsy");
   RequirePackage!("amstext");
@@ -314,7 +371,7 @@ LoadDefinitions!({
     "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}"
   );
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
-  DefMacro!("\\matrix@check{}", None);
+  def_macro_noop("\\matrix@check{}")?;
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
@@ -353,7 +410,7 @@ LoadDefinitions!({
   // directly. We model it as a no-op consumer of its three arguments —
   // the visual spacing is lost, but we avoid a cascade of
   // Error:undefined that trips `_` into subscript-in-text-mode chaos.
-  DefMacro!("\\tmspace{}{}{}", "");
+  def_macro_noop("\\tmspace{}{}{}")?;
 
   //======================================================================
   // Section 4.3 Dots
@@ -363,9 +420,9 @@ LoadDefinitions!({
   DefMath!("\\dotsi", "\u{22EF}", role => "ID", alias => "\\dotsi");
   DefMath!("\\dotso", "\u{2026}", role => "ID", alias => "\\dotso");
 
-  DefMacro!("\\DOTSB", None);
-  DefMacro!("\\DOTSI", None);
-  DefMacro!("\\DOTSX", None);
+  def_macro_noop("\\DOTSB")?;
+  def_macro_noop("\\DOTSI")?;
+  def_macro_noop("\\DOTSX")?;
   Let!("\\hdots", "\\lx@ldots");
 
   // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
@@ -456,9 +513,48 @@ LoadDefinitions!({
     "\\xrightarrow",
     "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
   );
+
+  // amsmath.sty L1013: \ext@arrow #1#2#3#4#5#6#7 — the internal extension-arrow
+  // builder. Args: #1..#4 are mkern digit-tokens, #5 is the arrow renderer
+  // CS (e.g. \rightarrowfill@), #6 is below-label, #7 is above-label.
+  // User code occasionally calls \ext@arrow directly when defining custom
+  // arrows. Pass-through to plain \to^{above}_{below} so the math renders.
+  // amsmath.sty L972: \arrowfill@ #1#2#3#4 — 4 CS tokens; we don't model
+  // stretchy arrow rendering, stub as \to.
+  // Witness 2411.17873, 2412.00464.
+  DefMacro!("\\ext@arrow Token Token Token Token Token {}{}",
+    "{\\mathrel{\\to}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}");
+  DefMacro!("\\arrowfill@ Token Token Token Token", "\\to");
+  DefMacro!("\\rightarrowfill@", "\\rightarrow");
+  DefMacro!("\\leftarrowfill@", "\\leftarrow");
+  DefMacro!("\\leftrightarrowfill@", "\\leftrightarrow");
+  DefMacro!("\\Rightarrowfill@", "\\Rightarrow");
+  DefMacro!("\\Leftarrowfill@", "\\Leftarrow");
+  DefMacro!("\\Leftrightarrowfill@", "\\Leftrightarrow");
   DefMacro!(
     "\\xleftarrow",
     "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
+  );
+  // extarrows.sty defines \xlongrightarrow/\xlongleftarrow with the
+  // same look-and-feel as amsmath's \xrightarrow/\xleftarrow but using
+  // a longer arrow base. We don't have a separate stretched-long
+  // variant in our font set; reuse the standard arrow rendering.
+  // Witnesses 2405.19992, 2406.05043.
+  DefMacro!(
+    "\\xlongrightarrow",
+    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}"
+  );
+  DefMacro!(
+    "\\xlongleftarrow",
+    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}"
+  );
+  DefMacro!(
+    "\\xlongLeftarrow",
+    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}"
+  );
+  DefMacro!(
+    "\\xlongRightarrow",
+    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}"
   );
   DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
     role => "ARROW", stretchy => true, alias => "\\leftarrow");
@@ -1276,9 +1372,9 @@ LoadDefinitions!({
   DefMacro!("\\subequations", "\\lx@equationgroup@subnumbering@begin", locked => true);
   DefMacro!("\\endsubequations", "\\lx@equationgroup@subnumbering@end", locked => true);
 
-  DefMacro!("\\DOTSB", None);
-  DefMacro!("\\DOTSI", None);
-  DefMacro!("\\DOTSX", None);
+  def_macro_noop("\\DOTSB")?;
+  def_macro_noop("\\DOTSI")?;
+  def_macro_noop("\\DOTSX")?;
 
   //======================================================================
   // Section 7.2 \sideset command
@@ -1290,6 +1386,18 @@ LoadDefinitions!({
     Ok(stored_map!("scriptlevel" => stomach::get_script_level()))
   });
 
+  // \calc@shift@gather — amsmath.sty L1632 layout calculation for
+  // gather environment's tag positioning (dimen manipulation:
+  // mintagsep, tagwidth, eqnshift). Purely about visual layout in
+  // PDF output; HTML/XML rendering doesn't use these dimensions.
+  // Real def isn't loaded under our amsmath hand-port path; raw-
+  // loaded sibling packages that call it (or amsmath via gather
+  // with custom tags) hit undefined. Stub to no-op per WISDOM #50
+  // (vendor layout errors are moot in XML→HTML output). Witness
+  // cluster: arXiv:2506.12791/.14355/.14372 (gather + tag layout,
+  // Rust 1 → 0, vs Perl=1 — beats shared baseline).
+  def_macro_noop("\\calc@shift@gather")?;
+
   //======================================================================
   // Section 3.11.1 \numberwithin
   // Perl: amsmath.sty.ltxml line 741
@@ -1299,8 +1407,19 @@ LoadDefinitions!({
     } else {
       format.unwrap().to_string()
     };
-    let counter_str = counter.unwrap().to_string();
-    let within_str = within.unwrap().to_string();
+    // Perl amsmath.sty.ltxml L744:
+    //   $counter = ToString(Expand($counter));
+    //   $within  = ToString(Expand($within));
+    // Both args are EXPANDED before NewCounter. Witnesses: arXiv:2508.12971
+    // — paper passes `\numberwithin{lemma}{\DefaultNumberTheoremWithin}`
+    // where `\DefaultNumberTheoremWithin` is defined to expand to `section`.
+    // Without expansion, `within_str = "\DefaultNumberTheoremWithin"` is fed
+    // into `\csname the\DefaultNumberTheoremWithin@ID\endcsname`, which —
+    // with `@` LETTER catcode at internal-tokenization time — becomes ONE
+    // CS `\DefaultNumberTheoremWithin@ID` (undefined) rather than the
+    // expected `\thesection@ID` (43-error cascade).
+    let counter_str = Expand!(counter.unwrap().clone()).to_string();
+    let within_str = Expand!(within.unwrap().clone()).to_string();
     new_counter(&counter_str, &within_str, None)?;
     let the_body = s!("\\csname the{within_str}\\endcsname.{format_str}{{{counter_str}}}");
     let expansion_tokens = latexml_core::mouth::tokenize(&the_body);
@@ -1382,14 +1501,17 @@ LoadDefinitions!({
   DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
 
   // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
-  DefMacro!("\\mintagsep", None);
+  def_macro_noop("\\mintagsep")?;
   DefMacro!("\\minalignsep", "10pt");
-  DefMacro!("\\primfrac{}", None);
+  def_macro_noop("\\primfrac{}")?;
   DefMacro!("\\shoveleft{}", "#1");
   DefMacro!("\\shoveright{}", "#1");
   // Perl: amsmath.sty.ltxml L1313-1314
   DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
   DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
+  // amsmath.sty L62 declares \@mathmargin as a \newskip; some user
+  // styles probe / set it directly. Witness 2502.18185.
+  DefRegister!("\\@mathmargin" => Glue::new(Dimension!("0pt").0));
 
   //======================================================================
   // Additions from Perl amsmath audit (session 38)
@@ -1402,20 +1524,20 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
 
   // Section 4.6: Root adjustment (no-ops — cosmetic only)
-  DefMacro!("\\leftroot{}", None);
-  DefMacro!("\\uproot{}", None);
+  def_macro_noop("\\leftroot{}")?;
+  def_macro_noop("\\uproot{}")?;
 
   // Section 4.13: Smash with optional direction (pass through body)
   DefConstructor!("\\smash[]{}", "#2");
 
   // Section 4.4: Nonbreaking dashes (no-op)
-  DefMacro!("\\nobreakdash", None);
+  def_macro_noop("\\nobreakdash")?;
 
   // Section 3.8: Tag placement adjustment (no-op)
-  DefMacro!("\\raisetag{}", None);
+  def_macro_noop("\\raisetag{}")?;
 
   // Section 3.9: Page breaks (no-op)
-  DefMacro!("\\displaybreak[]", None);
+  def_macro_noop("\\displaybreak[]")?;
 
   // Section 4.11: Inline fraction (\ifrac)
   DefConstructor!(
@@ -1492,7 +1614,7 @@ LoadDefinitions!({
   Let!("\\Vec", "\\vec");
 
   // Preamble: trivial macros
-  DefMacro!("\\AmSfont", None);
+  def_macro_noop("\\AmSfont")?;
   DefMacro!("\\AmS", "AmS");
 
   // Miscellaneous no-ops
@@ -1534,7 +1656,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
     }
     xmath_children[0].clone()
   } else if children.is_empty() {
-    math_first.clone()
+    math_first
   } else {
     return Ok(());
   };
@@ -1816,10 +1938,17 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
     wrap_attrs.insert("rule".to_string(), "Anything,".to_string());
     let mut xm_wrap =
       document.open_element_at(&mut xm_dual, "ltx:XMWrap", Some(wrap_attrs), None)?;
-    // Add XMRef children
+    // Add XMRef children. Tag each with `_split_ref="1"` so a later
+    // sweep (Document::prune_dangling_split_xmrefs in finalize) can
+    // remove THIS set of refs if their targets vanished after the
+    // math parser absorbed the corresponding cells — without
+    // touching XMRefs from other provenance (e.g. base_xmath
+    // \lx@dual or renamed-id `S<N>.E<M>.m1.Xa`-style cases the
+    // declare_test fixture exercises).
     for id in &ref_ids {
       let mut ref_attrs: HashMap<String, String> = HashMap::default();
       ref_attrs.insert("idref".to_string(), id.clone());
+      ref_attrs.insert("_split_ref".to_string(), "1".to_string());
       let mut xm_ref =
         document.open_element_at(&mut xm_wrap, "ltx:XMRef", Some(ref_attrs), None)?;
       document.close_element_at(&mut xm_ref)?;

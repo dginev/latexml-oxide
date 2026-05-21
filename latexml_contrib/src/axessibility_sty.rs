@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   // This package targets Tagged PDF and is largely a no-op from a LaTeXML standpoint.
   DeclareOption!("accsupp", "");
@@ -14,6 +15,6 @@ LoadDefinitions!({
   DefMacro!("\\wrapml{}", "#1");
   DefMacro!("\\wrapmlalt{}", "#1");
   DefMacro!("\\wrapmlstar{}", "#1");
-  DefMacro!("\\doreplacement{}", "");
+  def_macro_noop("\\doreplacement{}")?;
   DefEnvironment!("{tempenv}", "#body");
 });

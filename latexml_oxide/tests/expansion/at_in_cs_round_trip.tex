@@ -1,0 +1,53 @@
+% Regression test for the `\write`+`\input` round-trip of CS names
+% containing `@`. Distilled from hep-th9306154's harvmac-style
+% `\listrefs` machinery.
+%
+% Bug shape (before fix): `\write\reffile{ ... ~ ... \& ... }`'s
+% `XGeneralText` partial expansion fires our `~`'s active-char
+% macro (body `\lx@NBSP`) and our `\&` dispatch macro (body
+% `\ifmmode\lx@math@amp\else\lx@text@amp\fi`) — both eagerly enough
+% that `Tokens::untex` then serializes the *internal* CS names
+% `\lx@NBSP` / `\lx@text@amp` into the aux cache. When `\input`
+% re-tokenizes the cache with `@` in OTHER catcode, every
+% `\lx@<word>` splits into `\lx` + literal `@<word>` →
+% `Error:undefined:\lx` cascade. Witnesses: hep-th9306154,
+% hep-ph9803499, hep-th9203004, math9904104 (plain-TeX `\listrefs`
+% cluster) + 1112.4846 (harvmac).
+%
+% Fix: mark the user-level dispatch macros (`\&`, `\#`, `\$`, `\%`,
+% `\_`, and active `~`) `protected => true`. Protected macros are
+% NOT expanded under partial expansion (`XGeneralText`, `\edef`
+% without `\protected@edef`), so `\write` writes the *user-level*
+% CS name to the aux file and `\input` re-reads it cleanly. Mirrors
+% Perl LaTeXML's choice of keeping `\&` as a single `DefPrimitive`
+% (which gullet partial-expansion likewise never invokes); our
+% Rust port stays with the WISDOM #44 dispatch-macro design and
+% achieves the same round-trip via the `protected` flag instead.
+\documentclass{article}
+\global\newcount\refno
+\global\refno=1 \newwrite\reffile
+\newwrite\refmac
+\def\ref#1#2{\the\refno\nref#1{#2}}
+\def\nref#1#2{\xdef#1{{\bf\the\refno}}%
+\ifnum\refno=1\immediate\openout\reffile=refs.tmp\fi
+\immediate\write\reffile{%
+     \noexpand\item{[{\noexpand#1}]\ }#2\noexpand\nobreak.}%
+     \immediate\write\refmac{\def\noexpand#1{\the\refno}}%
+   \global\advance\refno by1}
+\def\refn#1#2{\nref#1{#2}}
+\def\listrefs{%
+  \immediate\closeout\reffile
+  \input refs.tmp
+}
+\begin{document}
+% Exercise every dispatch macro now marked protected: the active `~`
+% (→ `\lx@NBSP`), plus `\&` / `\#` / `\$` / `\%` / `\_` (→ `\lx@text@*`).
+% A regression in any of their `protected` flags would re-bake the
+% `\lx@<…>` form into the aux file and re-fire `Error:undefined:\lx`
+% on `\input`.
+\refn\Barnes{E.W.~Barnes \& A.~Test, see \%~p.\,376, item \#3, item\_a, \$5}
+
+See [\Barnes] for details.
+
+\listrefs
+\end{document}

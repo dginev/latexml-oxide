@@ -1,0 +1,10 @@
+% MINIMAL REPRO: paper-bundled myclass.cls
+% Expected behavior: \captionsetup (from caption pkg) should be defined.
+% Bug witnessed (commit b6cbdc15e6): without deps-scan fix, raw-loading
+% myclass.cls does not trigger require_package("caption"), so
+% \captionsetup is undefined.
+\documentclass{myclass}
+\begin{document}
+\section{Test}
+\captionsetup{format=plain}
+\end{document}

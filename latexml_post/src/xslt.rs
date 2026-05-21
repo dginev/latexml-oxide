@@ -6,6 +6,7 @@
 
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
+use std::cell::RefCell;
 use std::fs;
 use std::path::Path;
 
@@ -265,10 +266,6 @@ impl Processor for XSLT {
     // rust-libxslt — `register_exslt()` is Once-guarded.
     libxslt::register_exslt();
 
-    // Parse the stylesheet using the libxslt crate
-    let mut stylesheet = libxslt::parser::parse_file(&stylesheet_path)
-      .map_err(|e| PostError::Processing(format!("Failed to parse XSLT stylesheet: {}", e)))?;
-
     // Duplicate the libxml Document directly (xmlCopyDoc, C-level memcpy
     // of the tree) instead of serialize-then-reparse. Saves ~5-15 ms on
     // a typical mid-size paper vs the string roundtrip the earlier
@@ -288,11 +285,17 @@ impl Processor for XSLT {
       .map(|(k, v)| (k.as_str(), v.as_str()))
       .collect();
 
-    // Apply the transformation — libxslt 0.1.3 (post-KWARC upstream bump)
-    // takes the source Document by value rather than by reference.
-    let result_doc = stylesheet
-      .transform(transform_doc, params)
-      .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))?;
+    // Apply the transformation. The parsed `Stylesheet` lives in a
+    // per-thread cache (`with_cached_stylesheet`) — `libxslt::parser::
+    // parse_file` runs once per (thread, stylesheet path) instead of
+    // once per conversion. The cache is thread-local, not shared, so
+    // we don't lean on libxslt's undocumented thread-safety (mirroring
+    // the caution that resolved KWARC/rust-libxslt issue #6).
+    let result_doc = with_cached_stylesheet(&stylesheet_path, |stylesheet| {
+      stylesheet
+        .transform(transform_doc, params)
+        .map_err(|e| PostError::Processing(format!("XSLT transformation failed: {}", e)))
+    })?;
 
     // XSLT returns a libxml `Document` directly — wrap it into a
     // PostDocument without the serialize → reparse roundtrip the
@@ -316,6 +319,74 @@ impl Processor for XSLT {
 
     Ok(vec![result_doc])
   }
+}
+
+// ======================================================================
+// Per-thread cache of parsed stylesheets.
+//
+// `libxslt::parser::parse_file` reads the .xsl from disk and compiles
+// it. For LaTeXML-html5.xsl that's ~5–10 ms including its xsl:imports.
+// On a single CLI run that's once per process — fine. On a daemon-mode
+// `cortex_worker` chewing through 10 000 papers from a thread pool of
+// 8 workers, naive code re-parses once per paper. With this cache,
+// each worker thread parses each unique stylesheet path *once* and
+// reuses the compiled artefact for the rest of its lifetime.
+//
+// ## Why thread-local (and not process-wide + Arc/Mutex)?
+//
+// libxslt is not documented as thread-safe. `xsltApplyStylesheetUser`
+// is not audited to be read-only on the stylesheet — it may write
+// back into namespace-internalisation caches, error context fields,
+// or other internal state. This is the same kind of hidden mutation
+// that issue KWARC/rust-libxslt#6 punctured for the input `Document`
+// (libxslt silently mutates docs during whitespace stripping). A
+// process-wide cache shared across worker threads via `Arc` would
+// either need a `Mutex` (serialising transforms — defeats the
+// throughput benefit) or rely on libxslt's undocumented thread-safety
+// (the same bet that #6 retired).
+//
+// Thread-local keeps the safety story simple: each thread owns its
+// own `Stylesheet` for its lifetime, no cross-thread sharing, and the
+// `&mut Stylesheet` requirement is satisfied by `RefCell::borrow_mut`.
+// Worst case: 8 worker threads × 1 parse per unique stylesheet =
+// 8 parses per process, instead of N parses per N papers.
+
+fn cache_key(path: &str) -> String {
+  // Canonicalise so `./resources/XSLT/foo.xsl` and
+  // `/abs/.../resources/XSLT/foo.xsl` hit the same entry. Falls back
+  // to the raw path on canonicalisation failure (the file might not
+  // exist yet — let parse_file emit its own error in that case).
+  std::fs::canonicalize(path)
+    .map(|p| p.to_string_lossy().into_owned())
+    .unwrap_or_else(|_| path.to_string())
+}
+
+thread_local! {
+  static STYLESHEET_CACHE: RefCell<HashMap<String, libxslt::stylesheet::Stylesheet>> =
+    RefCell::new(HashMap::default());
+}
+
+/// Borrow a `&mut Stylesheet` from the per-thread cache, parsing on
+/// miss. The closure runs while the cache is mutably borrowed, so
+/// nested calls (which the LaTeXML pipeline never makes) would
+/// `RefCell::borrow_mut`-panic — a deliberate single-borrow contract.
+fn with_cached_stylesheet<F, R>(path: &str, f: F) -> Result<R, PostError>
+where
+  F: FnOnce(&mut libxslt::stylesheet::Stylesheet) -> Result<R, PostError>,
+{
+  let key = cache_key(path);
+  STYLESHEET_CACHE.with(|cache| {
+    let mut map = cache.borrow_mut();
+    if !map.contains_key(&key) {
+      let parsed = libxslt::parser::parse_file(path)
+        .map_err(|e| PostError::Processing(format!("Failed to parse XSLT stylesheet: {}", e)))?;
+      map.insert(key.clone(), parsed);
+    }
+    let entry = map
+      .get_mut(&key)
+      .expect("cache entry just inserted is missing");
+    f(entry)
+  })
 }
 
 // ======================================================================

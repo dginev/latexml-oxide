@@ -12,10 +12,22 @@
 //! (`SKIP_SVG`/`SKIP_ARIA`/`SKIP_XHTML`) live on [`Options`] with the
 //! same defaults as upstream.
 
+// The `to_tex*` methods take `&mut self` because `EmitState` is a
+// state-machine accumulator threaded through the entire walk — depth,
+// per-module counters, and the schema-mappings cache all mutate as
+// emission proceeds. Clippy's default `wrong_self_convention` rule
+// expects `to_*` to consume `self`; that's the wrong shape here.
+#![allow(clippy::wrong_self_convention)]
+
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::BTreeMap;
 
 use super::{CombineOp, DefCombiner, Pattern, Relaxng};
+
+/// Result of `detect_element_choice`: a combiner (Choice/Group/
+/// Interleave) plus the list of `(element_name, element_body)` pairs
+/// that participate in the choice.
+type ElementChoice<'a> = (CombineOp, Vec<(String, &'a [Pattern])>);
 
 /// Schema-doc emission options. Defaults match Perl's
 /// `$SKIP_SVG=1;$SKIP_ARIA=1;$SKIP_XHTML=1` constants.
@@ -558,10 +570,12 @@ impl EmitState<'_> {
   /// punctuation. `to_tex_def` swaps them for an alphabetised
   /// `\elementref` Choice expression in the patterndef body plus
   /// sibling `\elementdef` cards (one per unique name).
+  ///
+  /// Returns `(combiner, [(element_name, element_body)])`.
   fn detect_element_choice<'a>(
     &self,
     spec: &'a [Pattern],
-  ) -> Option<(CombineOp, Vec<(String, &'a [Pattern])>)> {
+  ) -> Option<ElementChoice<'a>> {
     if spec.len() != 1 {
       return None;
     }
@@ -864,18 +878,15 @@ impl EmitState<'_> {
         .get(qname)
         .map(|p| self.is_attributes(p))
         .unwrap_or(false),
-      Pattern::Combination { op, body }
-        if matches!(
-          op,
+      Pattern::Combination {
+        op:
           CombineOp::Optional
-            | CombineOp::Choice
-            | CombineOp::Group
-            | CombineOp::ZeroOrMore
-            | CombineOp::OneOrMore
-        ) =>
-      {
-        body.iter().all(|p| self.is_attributes(p))
-      },
+          | CombineOp::Choice
+          | CombineOp::Group
+          | CombineOp::ZeroOrMore
+          | CombineOp::OneOrMore,
+        body,
+      } => body.iter().all(|p| self.is_attributes(p)),
       _ => false,
     }
   }
@@ -895,18 +906,15 @@ impl EmitState<'_> {
           .map(|p| self.is_content(p))
           .unwrap_or(false)
       },
-      Pattern::Combination { op, body }
-        if matches!(
-          op,
+      Pattern::Combination {
+        op:
           CombineOp::Optional
-            | CombineOp::Choice
-            | CombineOp::Group
-            | CombineOp::ZeroOrMore
-            | CombineOp::OneOrMore
-        ) =>
-      {
-        body.iter().all(|p| self.is_content(p))
-      },
+          | CombineOp::Choice
+          | CombineOp::Group
+          | CombineOp::ZeroOrMore
+          | CombineOp::OneOrMore,
+        body,
+      } => body.iter().all(|p| self.is_content(p)),
       Pattern::Text => true,
       _ => false,
     }

@@ -74,11 +74,11 @@ LoadDefinitions!({
   DefMacro!("\\fltitem[]{}", "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}", "\\item[#2] {#3}");
 
-  DefMacro!("\\initfloatingfigs", None);
-  DefMacro!("\\dofigtest", None);
-  DefMacro!("\\tryfig",    None);
-  DefMacro!("\\figinsert", None);
-  DefMacro!("\\dohang",    None);
+  def_macro_noop("\\initfloatingfigs")?;
+  def_macro_noop("\\dofigtest")?;
+  def_macro_noop("\\tryfig")?;
+  def_macro_noop("\\figinsert")?;
+  def_macro_noop("\\dohang")?;
 
   DefRegister!("\\ffigcount", Number(0));
   DefRegister!("\\fftest",    Number(0));

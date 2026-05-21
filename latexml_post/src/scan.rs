@@ -810,7 +810,7 @@ impl Processor for Scan {
       }
       // 2) Fallback to the site root.
       if parent_id.is_none() {
-        parent_id = Some(site_id.clone());
+        parent_id = Some(site_id);
       }
       if let Some(pid) = parent_id {
         if pid != id {

@@ -991,21 +991,98 @@ impl Graphics {
   }
 
   /// Decide whether the vector-SVG path should be attempted for this PDF
-  /// source. File-size heuristic: small PDFs (< threshold KB) are nearly
-  /// always vector-authored plots; large PDFs typically contain embedded
-  /// rasters that inkscape re-renders as absurdly large SVG (empirical
-  /// measurement in round-17 — see upstream brucemiller/LaTeXML#902).
+  /// source.
+  ///
+  /// Two modes, in priority order:
+  ///
+  /// 1. **Explicit threshold** (`threshold_kb > 0`): legacy
+  ///    `--graphics-svg-threshold-kb N` behaviour — try SVG for PDFs at
+  ///    most `N` KB, regardless of content. Preserved for back-compat
+  ///    and as the manual override on canvases where the auto-detector
+  ///    misclassifies.
+  /// 2. **Auto-detect default** (`threshold_kb == 0`): scan the PDF
+  ///    header for `/Subtype /Image` and `/Subtype/Image` (the two
+  ///    typical formattings of an image XObject declaration). If
+  ///    NONE is present in the first 256 KB and the file size is at
+  ///    most 500 KB → try SVG. This is the per-paper relief case
+  ///    documented in PERFORMANCE.md (130× speedup on the 41 KB
+  ///    pgfplots fixture).
+  ///
+  /// Both modes can be globally disabled via
+  /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
+  /// the explicit-threshold path active).
+  ///
+  /// Safety net: any false positive falls back to ImageMagick when
+  /// inkscape emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a misread
+  /// raster PDF degrades to "tried SVG, got too-big output, used
+  /// convert" instead of a stuck pipeline.
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
-    if threshold_kb == 0 {
-      return false;
-    }
     if !source.to_lowercase().ends_with(".pdf") {
       return false;
     }
-    match std::fs::metadata(source) {
-      Ok(md) => md.len() <= (threshold_kb as u64) * 1024,
-      Err(_) => false,
+    if threshold_kb > 0 {
+      // Legacy explicit-threshold path: bytes-only decision.
+      return match std::fs::metadata(source) {
+        Ok(md) => md.len() <= (threshold_kb as u64) * 1024,
+        Err(_) => false,
+      };
     }
+    // Auto-detect path. Honour the opt-out.
+    if Self::vector_auto_detect_disabled() {
+      return false;
+    }
+    let len = match std::fs::metadata(source) {
+      Ok(md) => md.len(),
+      Err(_) => return false,
+    };
+    // Hard upper bound: even if the detector misses an image
+    // somewhere deeper in the file, a 500 KB cap keeps the
+    // worst-case wasted inkscape work bounded (~1-2 s before the
+    // 8 MB output cap kicks in or the conversion finishes anyway).
+    const AUTO_MAX_BYTES: u64 = 500 * 1024;
+    if len > AUTO_MAX_BYTES {
+      return false;
+    }
+    !Self::pdf_has_image_xobject(source).unwrap_or(true)
+  }
+
+  /// Has `LATEXML_GRAPHICS_VECTOR_AUTO_OFF` been set? Memoised on
+  /// first call so the env var is read once.
+  fn vector_auto_detect_disabled() -> bool {
+    use std::sync::OnceLock;
+    static CELL: OnceLock<bool> = OnceLock::new();
+    *CELL.get_or_init(|| {
+      matches!(
+        std::env::var("LATEXML_GRAPHICS_VECTOR_AUTO_OFF")
+          .ok()
+          .as_deref()
+          .map(|s| s.trim()),
+        Some("1") | Some("true") | Some("yes")
+      )
+    })
+  }
+
+  /// Scan a PDF for `/Subtype /Image` (with or without whitespace
+  /// between the tokens) — the canonical marker of an image XObject.
+  /// Returns `Some(true)` when found, `Some(false)` when absent in the
+  /// scanned range, `None` on I/O error.
+  ///
+  /// Reads at most `SCAN_LIMIT` bytes from the start of the file. PDF
+  /// objects are written sequentially; for small files (≤500 KB,
+  /// guarded by `should_try_svg_path`'s outer size check) the entire
+  /// stream fits comfortably within the limit. Pure-vector PDFs scan
+  /// in well under a millisecond on modern hardware.
+  fn pdf_has_image_xobject(source: &str) -> Option<bool> {
+    use std::io::Read;
+    const SCAN_LIMIT: usize = 256 * 1024;
+    let mut f = std::fs::File::open(source).ok()?;
+    let mut buf = vec![0u8; SCAN_LIMIT];
+    let n = f.read(&mut buf).ok()?;
+    let head = &buf[..n];
+    // Both spelling variants seen in the wild: `/Subtype /Image` (PDFs
+    // from inkscape / cairo / latex+dvips) and `/Subtype/Image` (more
+    // common in pdflatex output and ImageMagick-produced PDFs).
+    Some(twoway_contains(head, b"/Subtype /Image") || twoway_contains(head, b"/Subtype/Image"))
   }
 
   fn raster_density_for_source(source: &str) -> u32 {
@@ -1527,6 +1604,42 @@ impl Graphics {
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
 }
 
+/// Byte-substring search. Used by `pdf_has_image_xobject` to scan a
+/// PDF prefix for the `/Subtype /Image` marker. Linear in `hay.len()`
+/// times `needle.len()`; both bounded so adequate.
+fn twoway_contains(hay: &[u8], needle: &[u8]) -> bool {
+  if needle.is_empty() || needle.len() > hay.len() {
+    return false;
+  }
+  hay.windows(needle.len()).any(|w| w == needle)
+}
+
+/// Map a destination path to a `&'static str` extension suitable for
+/// `graphics_cache::RenderKey::ext`. Only common image targets need to
+/// round-trip through the cache; anything else collapses to `""` and
+/// still keys correctly (the cache file simply lacks an extension).
+fn ext_from_path(path: &str) -> &'static str {
+  let lower = path.rsplit('/').next().unwrap_or(path);
+  if let Some(idx) = lower.rfind('.') {
+    let tail = &lower[idx + 1..];
+    if tail.eq_ignore_ascii_case("png") {
+      "png"
+    } else if tail.eq_ignore_ascii_case("svg") {
+      "svg"
+    } else if tail.eq_ignore_ascii_case("jpg") || tail.eq_ignore_ascii_case("jpeg") {
+      "jpg"
+    } else if tail.eq_ignore_ascii_case("gif") {
+      "gif"
+    } else if tail.eq_ignore_ascii_case("webp") {
+      "webp"
+    } else {
+      ""
+    }
+  } else {
+    ""
+  }
+}
+
 /// Returns the EPS BoundingBox as `(x0, y0, w, h)` where (x0, y0) is
 /// the lower-left corner of the content in PS coords and (w, h) is
 /// the content extent. Callers needing only the extent can ignore the
@@ -1768,7 +1881,7 @@ impl Processor for Graphics {
         .as_ref()
         .and_then(|p| p.destination_type.as_ref())
         .cloned()
-        .unwrap_or(src_ext.clone());
+        .unwrap_or_else(|| src_ext.clone());
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
       if needs_conversion || has_page {
@@ -1859,10 +1972,8 @@ impl Processor for Graphics {
     let dest_dir_ref = dest_dir.as_str();
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
-      use std::sync::Mutex;
       use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
       let next = AtomicUsize::new(0);
-      let out = Mutex::new(Vec::<ConvertOutcome>::with_capacity(convert_count));
       // Subprocess tally: telemetry's thread_local! STATE is per-thread,
       // and worker threads exit before `phase_us[graphics]` aggregation,
       // so worker increments would be lost. Accumulate in a shared
@@ -1875,10 +1986,17 @@ impl Processor for Graphics {
       // source/page/options share one subprocess result, while distinct
       // options keep separate outputs.
       let jobs: Vec<&ConvertJob> = convert_jobs.iter().collect();
-      std::thread::scope(|s| {
-        for _ in 0..n_workers {
-          s.spawn(|| {
-            loop {
+      // Each worker accumulates into a thread-local Vec returned from
+      // its closure; the main thread merges them after scope join. No
+      // shared mutable state during the parallel phase — replaces the
+      // previous `Mutex<Vec<…>>` per project policy (thread_local-only
+      // for in-memory state, no `Mutex`).
+      let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..n_workers)
+          .map(|_| {
+            s.spawn(|| {
+              let mut local = Vec::<ConvertOutcome>::new();
+              loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
               if i >= jobs.len() {
                 break;
@@ -1892,40 +2010,75 @@ impl Processor for Graphics {
                 svg_paths,
               } = jobs[i];
               // Try vector-SVG path first if requested for this source.
-              // On success, pick dimensions from the SVG viewBox.
+              // The cache layer (graphics_cache) hardlinks/copies a
+              // matching cached output before any subprocess fires and
+              // round-trips the dimensions through a .dims sidecar so
+              // hits skip the `read_*_dimensions` re-measure too.
+              // Misses fall through to the real conversion + measure
+              // and write back on success. Disable via
+              // LATEXML_GRAPHICS_CACHE_OFF=1.
               let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
-                subproc_ref.fetch_add(1, Ordering::Relaxed);
-                if Self::convert_image_svg(source, abs_svg, *page) {
-                  let raw_dims = Self::read_svg_dimensions(abs_svg);
-                  Some(ConvertOutcome {
+                let svg_key = crate::graphics_cache::RenderKey {
+                  page:    *page,
+                  density: 0,
+                  ext:     "svg",
+                };
+                let svg_res = crate::graphics_cache::with_cache_dims(
+                  source,
+                  abs_svg,
+                  svg_key,
+                  || {
+                    subproc_ref.fetch_add(1, Ordering::Relaxed);
+                    Self::convert_image_svg(source, abs_svg, *page)
+                  },
+                  || Self::read_svg_dimensions(abs_svg)
+                    .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h }),
+                );
+                match svg_res {
+                  crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
                     job_id: *job_id,
                     imagesrc: Some(rel_svg.clone()),
-                    raw_dims,
-                  })
-                } else {
-                  log_post_warn!(
-                    "shell", "inkscape",
-                    "Graphics: inkscape SVG path failed for {}, falling back to convert",
-                    source
-                  );
-                  None
+                    raw_dims: dims.map(|d| (d.width, d.height)),
+                  }),
+                  crate::graphics_cache::ConvertResult::Failed => {
+                    log_post_warn!(
+                      "shell", "inkscape",
+                      "Graphics: inkscape SVG path failed for {}, falling back to convert",
+                      source
+                    );
+                    None
+                  },
                 }
               } else {
                 None
               };
-              let converted = if svg_outcome.is_none() {
-                subproc_ref.fetch_add(1, Ordering::Relaxed);
-                Self::convert_image(source, abs_dest_str, dpi, *page)
+              let raster_res = if svg_outcome.is_none() {
+                let raster_key = crate::graphics_cache::RenderKey {
+                  page:    *page,
+                  density: Self::raster_density_for_source(source),
+                  ext:     ext_from_path(abs_dest_str),
+                };
+                crate::graphics_cache::with_cache_dims(
+                  source,
+                  abs_dest_str,
+                  raster_key,
+                  || {
+                    subproc_ref.fetch_add(1, Ordering::Relaxed);
+                    Self::convert_image(source, abs_dest_str, dpi, *page)
+                  },
+                  || Self::read_image_dimensions(abs_dest_str)
+                    .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h }),
+                )
               } else {
-                false
+                crate::graphics_cache::ConvertResult::Failed
               };
               let outcome = if let Some(o) = svg_outcome {
                 o
-              } else if converted {
+              } else if raster_res.is_ok() {
                 ConvertOutcome {
                   job_id:   *job_id,
                   imagesrc: Some(rel_dest.clone()),
-                  raw_dims: Self::read_image_dimensions(abs_dest_str),
+                  raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
                 }
               } else {
                 // Final-failure: every conversion path exhausted. Promoted
@@ -1953,12 +2106,17 @@ impl Processor for Graphics {
                   }
                 }
               };
-              out.lock().unwrap().push(outcome);
+              local.push(outcome);
             }
-          });
-        }
+              local
+            })
+          })
+          .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
       });
-      outcomes = out.into_inner().unwrap();
+      for v in worker_outcomes {
+        outcomes.extend(v);
+      }
       outcomes.sort_by_key(|o| o.job_id);
       latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
     }
@@ -2015,7 +2173,7 @@ impl Processor for Graphics {
             let rel = rel_opt.unwrap_or_else(|| {
               Path::new(source)
                 .strip_prefix(&source_dir)
-                .unwrap_or(Path::new(source))
+                .unwrap_or_else(|_| Path::new(source))
                 .to_string_lossy()
                 .to_string()
             });
@@ -2142,10 +2300,10 @@ mod tests {
     assert!(result.is_none());
   }
 
-  /// File-size heuristic: PDF under threshold triggers SVG attempt,
-  /// large PDF does not, non-PDF is always skipped, threshold=0 disables.
+  /// Explicit-threshold heuristic: PDF under threshold triggers SVG
+  /// attempt, large PDF does not, non-PDF is always skipped.
   #[test]
-  fn should_try_svg_path_heuristic() {
+  fn should_try_svg_path_explicit_threshold() {
     let tmp = std::env::temp_dir().join("latexml_graphics_svg_gate_test");
     std::fs::create_dir_all(&tmp).unwrap();
     let small_pdf = tmp.join("small.pdf");
@@ -2155,17 +2313,12 @@ mod tests {
     std::fs::write(&big_pdf, vec![0u8; 500 * 1024]).unwrap(); // 500 KB
     std::fs::write(&png, vec![0u8; 10 * 1024]).unwrap(); // PNG, irrelevant size
 
-    // threshold = 0 → always false.
-    assert!(!Graphics::should_try_svg_path(
-      small_pdf.to_str().unwrap(),
-      0
-    ));
-    // Under threshold → true.
+    // Under explicit threshold → true.
     assert!(Graphics::should_try_svg_path(
       small_pdf.to_str().unwrap(),
       200
     ));
-    // Over threshold → false.
+    // At/over explicit threshold → false.
     assert!(!Graphics::should_try_svg_path(
       big_pdf.to_str().unwrap(),
       200
@@ -2176,6 +2329,51 @@ mod tests {
     assert!(!Graphics::should_try_svg_path("/no/such/file.pdf", 200));
 
     std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
+  /// the SVG attempt, PDFs containing image XObjects do NOT. Uses the
+  /// real fixtures (`cifar10_vector.pdf`, `pathological_vector.pdf`,
+  /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
+  #[test]
+  fn should_try_svg_path_auto_detect() {
+    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let cifar = fixtures.join("cifar10_vector.pdf");
+    let pathological = fixtures.join("pathological_vector.pdf");
+    let raster = fixtures.join("raster_with_image.pdf");
+    assert!(cifar.exists(), "fixture missing: {}", cifar.display());
+    assert!(
+      pathological.exists(),
+      "fixture missing: {}",
+      pathological.display()
+    );
+    assert!(raster.exists(), "fixture missing: {}", raster.display());
+
+    // Vector PDFs (no /Subtype /Image marker) → SVG path activated.
+    assert!(
+      Graphics::should_try_svg_path(cifar.to_str().unwrap(), 0),
+      "vector-only PDF must trigger SVG path under auto-detect"
+    );
+    assert!(
+      Graphics::should_try_svg_path(pathological.to_str().unwrap(), 0),
+      "pgfplots-style vector PDF must trigger SVG path under auto-detect"
+    );
+
+    // Raster PDF (has /Subtype /Image) → SVG path SKIPPED.
+    assert!(
+      !Graphics::should_try_svg_path(raster.to_str().unwrap(), 0),
+      "raster-containing PDF must skip auto-detect SVG path"
+    );
+
+    // Direct detector sanity check.
+    assert_eq!(
+      Graphics::pdf_has_image_xobject(cifar.to_str().unwrap()),
+      Some(false)
+    );
+    assert_eq!(
+      Graphics::pdf_has_image_xobject(raster.to_str().unwrap()),
+      Some(true)
+    );
   }
 
   #[test]

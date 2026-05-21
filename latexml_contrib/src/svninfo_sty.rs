@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   RequirePackage!("ifthen");
   RequirePackage!("eso-pic");
@@ -7,26 +8,26 @@ LoadDefinitions!({
   // Perl-parity stubs: every \svn* CS is a `Tokens()` no-op in
   // ar5iv-bindings/svninfo.sty.ltxml L23-44 (matching upstream SVN
   // keyword placeholders that have no print-time equivalent in LaTeXML).
-  DefMacro!("\\svnInfo SkipSpaces Match:$ Until:$", "");
-  DefMacro!("\\svnKeyword SkipSpaces Match:$ Until:$", "");
-  DefMacro!("\\svnId", "");
-  DefMacro!("\\svnInfoDate", "");
-  DefMacro!("\\svnInfoDay", "");
-  DefMacro!("\\svnInfoFile", "");
-  DefMacro!("\\svnInfoHeadURL", "");
-  DefMacro!("\\svnInfoLongDate", "");
-  DefMacro!("\\svnInfoMaxDay", "");
-  DefMacro!("\\svnInfoMaxMonth", "");
-  DefMacro!("\\svnInfoMaxRevision", "");
-  DefMacro!("\\svnInfoMaxToday", "");
-  DefMacro!("\\svnInfoMaxYear", "");
-  DefMacro!("\\svnInfoMinRevision", "");
-  DefMacro!("\\svnInfoMonth", "");
-  DefMacro!("\\svnInfoOwner", "");
-  DefMacro!("\\svnInfoRevision", "");
-  DefMacro!("\\svnInfoTime", "");
-  DefMacro!("\\svnInfoYear", "");
+  def_macro_noop("\\svnInfo SkipSpaces Match:$ Until:$")?;
+  def_macro_noop("\\svnKeyword SkipSpaces Match:$ Until:$")?;
+  def_macro_noop("\\svnId")?;
+  def_macro_noop("\\svnInfoDate")?;
+  def_macro_noop("\\svnInfoDay")?;
+  def_macro_noop("\\svnInfoFile")?;
+  def_macro_noop("\\svnInfoHeadURL")?;
+  def_macro_noop("\\svnInfoLongDate")?;
+  def_macro_noop("\\svnInfoMaxDay")?;
+  def_macro_noop("\\svnInfoMaxMonth")?;
+  def_macro_noop("\\svnInfoMaxRevision")?;
+  def_macro_noop("\\svnInfoMaxToday")?;
+  def_macro_noop("\\svnInfoMaxYear")?;
+  def_macro_noop("\\svnInfoMinRevision")?;
+  def_macro_noop("\\svnInfoMonth")?;
+  def_macro_noop("\\svnInfoOwner")?;
+  def_macro_noop("\\svnInfoRevision")?;
+  def_macro_noop("\\svnInfoTime")?;
+  def_macro_noop("\\svnInfoYear")?;
   DefMacro!("\\svnKeywordempty", "\\relax");
-  DefMacro!("\\svnMaxToday", "");
-  DefMacro!("\\svnToday", "");
+  def_macro_noop("\\svnMaxToday")?;
+  def_macro_noop("\\svnToday")?;
 });

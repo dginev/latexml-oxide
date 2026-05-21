@@ -2,15 +2,19 @@
 
 > **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Do not invent new abstractions, rename concepts, or simplify behavior unless explicitly marked as an intentional divergence. The Perl code is the ground truth.
 
-## Active priority (refreshed 2026-04-30): strict-Perl parity
+## Active priority (refreshed 2026-05-19): strict-Perl parity
 
 Strict Perl parity at the format/dump and package-loading boundary is
 the current top priority, followed by sandbox long-tail cleanup.
 Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1109/0/0**, and the latest-row 7898-paper sandbox result
-is **7731 OK = 97.89%**. Working docs:
+--tests` is **1328/0/0** and `cargo clippy --workspace --all-targets`
+is **14 warnings (all in `latexml_math_parser`, residual clippy
+cleanup of post-ASF-migration code — collaborator's lane)**. The latest sandbox result for
+the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k
+stage v3 ranges 97.4–99.5%. Working docs:
 [`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
-[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md).
+[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
+[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md).
 
 Concretely:
 
@@ -42,9 +46,18 @@ tackle latex. Historical test regressions during the dump pivot are
 recorded in `SYNC_STATUS.md`; do not assume they are current without
 re-running the relevant test or dump-generation command.
 
-**Distribution follow-up** (after TL2025 dumps are robust): bundle
-multiple TL versions' dumps (TL2022 … TL2026) into the binary via
-`include_bytes!` + runtime selection by `kpsewhich --version`.
+**Distribution follow-up — LANDED 2026-05-15.** Per-TL-year dump
+files (`resources/dumps/{plain,latex}.YYYY.dump.txt` +
+`texlive.YYYY.version`) are committed to the repo and embedded into
+the binary at build time via `include_str!`. Runtime resolves the
+ambient year via `kpsewhich -var-value=SELFAUTOPARENT` with
+`pdflatex --version` fallback (`kpsewhich --version` returns the
+same kpathsea-library string on TL2023 and TL2025, so it's NOT a
+reliable discriminator). TL2023 + TL2025 are bundled currently; add
+new years via `tools/make_formats.sh`. Follow-up IA-record
+consolidation (`81176ba689`) halved `latex.YYYY.dump.txt` size by
+collapsing per-slot fontdimen V-records into per-(font,size) `IA`
+records with RLE-encoded data.
 
 ## Project Overview
 
@@ -82,6 +95,7 @@ Three key documents track porting progress and known issues:
 - **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
 - **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
 - **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this file to check if a translation difference was marked as intentional.
+- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Rationalization of the math parser's three-stage ambiguity pipeline against the Marpa ASF (abstract syntax forest) traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md) on the fork's `asf-completion` branch.
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
@@ -93,19 +107,22 @@ Three key documents track porting progress and known issues:
 
 Requires **Rust nightly**.
 
-We follow Rust best practice with three named profiles in `Cargo.toml`:
+We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
 | `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
 | `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
-| `release` | `cargo build --release` / `cargo run --release` | Distribution / publishing only. `opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"`. Slow build (multi-minute), fastest runtime. **Reserved for publishing a stable state** — local iteration cannot afford it. |
+| `release` | `cargo build --release` / `cargo run --release` | Strong-optimized binary tuned for our 32 GB / 20-thread laptop. `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Used for **sandbox sweeps and Perl-parity measurements**, NOT distribution. |
+| `maxperf` | `cargo build --profile maxperf` | **Distribution / publish-grade artifact**. Inherits release, plus `lto = "fat"`, `codegen-units = 1`. Slowest build, smallest + fastest binary. **Reserved for shipping a stable state.** |
 
 **Day-to-day development**: use the default `test` profile via `cargo test` / `cargo run` / `cargo build` (no flag). Full debug info, line-table backtraces, debug-assertions, overflow-checks. Best diagnosability when something fails. CI is *not* what local dev should mimic; CI is RAM-bounded and stripped.
 
 **Sandbox runs**: build `cortex_worker` in the default profile and pass that path to `tools/benchmark_canvas.sh` via `--worker-bin`, OR build with `--release` once if you specifically need a publish-grade canvas measurement.
 
-**Distribution / publish-grade measurement** (matching against Perl LaTeXML, deployment, baseline updates in `docs/PERFORMANCE.md`): use `--release` once when shipping a stable state. The CI profile is for the GitHub runner only.
+**Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
+
+**Distribution build** (shipping the binary to users): use `--profile maxperf --no-default-features` for the smallest, fastest artifact. Example: `cargo build --no-default-features --profile maxperf --bin latexml_oxide`. The `--no-default-features` flag drops the `test-utils` feature, removing `phf` + `glob` (and 4 transitive crates) from the binary. The `maxperf` profile uses `panic = "abort"` — production-only since canvas sweeps depend on `catch_unwind` for per-paper panic isolation.
 
 ```bash
 # Run all tests (default test profile)
@@ -120,8 +137,12 @@ cargo run --bin latexml_oxide -- latexml_oxide/tests/hello/hello.tex
 # Triage a sandbox failure (test profile, full backtraces)
 tools/triage_failure.sh <arxiv_id>
 
-# Publish-grade build — reserved for shipping a stable state
+# Publish-grade measurement build (sandbox sweeps, Perl-parity)
 cargo build --release --bin latexml_oxide
+
+# Distribution build — smallest, fastest artifact (slow build, fat LTO,
+# panic=abort, no test-utils feature)
+cargo build --no-default-features --profile maxperf --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open

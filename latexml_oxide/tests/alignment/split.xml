@@ -771,24 +771,24 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="Ch0.E16.m1.2.mf"/>
-                  <XMRef idref="Ch0.E16.m1.1.mf"/>
+                  <XMRef idref="Ch0.E16.m2.2"/>
+                  <XMRef idref="Ch0.E16.m2.1"/>
                   <XMApp>
-                    <XMRef idref="Ch0.E16.m1.4.mf"/>
-                    <XMRef idref="Ch0.E16.m1.3.mf"/>
-                    <XMRef idref="Ch0.E16.m1.5.mf"/>
+                    <XMRef idref="Ch0.E16.m2.4"/>
+                    <XMRef idref="Ch0.E16.m2.3"/>
+                    <XMRef idref="Ch0.E16.m2.5"/>
                   </XMApp>
                 </XMApp>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m2.1">C</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E16.m2.2">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m2.3">D</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -796,8 +796,8 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMCell/>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E16.m2.4">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E16.m2.5">E</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -997,41 +997,41 @@ Notice that the split acts like a column pair in the align.</p>
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="Ch0.E21.m1.2.mf"/>
-                  <XMRef idref="Ch0.E21.m1.1.mf"/>
+                  <XMRef idref="Ch0.E21.m2.1"/>
+                  <XMRef idref="Ch0.E21.m2.2"/>
                   <XMApp>
-                    <XMRef idref="Ch0.E21.m1.5.mf"/>
+                    <XMRef idref="Ch0.E21.m2.3"/>
                     <XMApp>
-                      <XMRef idref="Ch0.E21.m1.3.mf"/>
-                      <XMRef idref="Ch0.E21.m1.4.mf"/>
+                      <XMRef idref="Ch0.E21.m2.4"/>
+                      <XMRef idref="Ch0.E21.m2.5"/>
                     </XMApp>
-                    <XMRef idref="Ch0.E21.m1.6.mf"/>
-                    <XMRef idref="Ch0.E21.m1.8.mf"/>
-                    <XMRef idref="Ch0.E21.m1.10.mf"/>
-                    <XMRef idref="Ch0.E21.m1.12.mf"/>
-                    <XMRef idref="Ch0.E21.m1.14.mf"/>
+                    <XMRef idref="Ch0.E21.m2.6"/>
+                    <XMRef idref="Ch0.E21.m2.7"/>
+                    <XMRef idref="Ch0.E21.m2.8"/>
+                    <XMRef idref="Ch0.E21.m2.9"/>
+                    <XMRef idref="Ch0.E21.m2.10"/>
                   </XMApp>
                 </XMApp>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">C</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E21.m2.1">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.2">C</XMTok>
                         <XMTok meaning="absent"/>
                       </XMApp>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E21.m2.3">+</XMTok>
                         <XMApp>
-                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">D</XMTok>
+                          <XMTok meaning="minus" role="ADDOP" xml:id="Ch0.E21.m2.4">-</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.5">D</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN">E</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">F</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">G</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">H</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.6">E</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.7">F</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.8">G</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.9">H</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1040,7 +1040,7 @@ Notice that the split acts like a column pair in the align.</p>
                     <XMCell align="left">
                       <XMApp>
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">I</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E21.m2.10">I</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1341,24 +1341,24 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="Ch0.E26.m1.2.mf"/>
-                  <XMRef idref="Ch0.E26.m1.1.mf"/>
+                  <XMRef idref="Ch0.E26.m2.2"/>
+                  <XMRef idref="Ch0.E26.m2.1"/>
                   <XMApp>
-                    <XMRef idref="Ch0.E26.m1.4.mf"/>
-                    <XMRef idref="Ch0.E26.m1.3.mf"/>
-                    <XMRef idref="Ch0.E26.m1.5.mf"/>
+                    <XMRef idref="Ch0.E26.m2.4"/>
+                    <XMRef idref="Ch0.E26.m2.3"/>
+                    <XMRef idref="Ch0.E26.m2.5"/>
                   </XMApp>
                 </XMApp>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m2.1">E</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E26.m2.2">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m2.3">F</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1366,8 +1366,8 @@ Note that you should omit double slash from last line of split!</p>
                     <XMCell/>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E26.m2.4">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E26.m2.5">G</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1578,24 +1578,24 @@ Note that you should omit double slash from last line of split!</p>
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMRef idref="Ch0.E29.m3.2.mf"/>
-                  <XMRef idref="Ch0.E29.m3.1.mf"/>
+                  <XMRef idref="Ch0.E29.m5.2"/>
+                  <XMRef idref="Ch0.E29.m5.1"/>
                   <XMApp>
-                    <XMRef idref="Ch0.E29.m3.4.mf"/>
-                    <XMRef idref="Ch0.E29.m3.3.mf"/>
-                    <XMRef idref="Ch0.E29.m3.5.mf"/>
+                    <XMRef idref="Ch0.E29.m5.4"/>
+                    <XMRef idref="Ch0.E29.m5.3"/>
+                    <XMRef idref="Ch0.E29.m5.5"/>
                   </XMApp>
                 </XMApp>
                 <XMArray colsep="0pt" name="aligned">
                   <XMRow>
                     <XMCell align="right">
-                      <XMTok font="italic" role="UNKNOWN">E</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m5.1">E</XMTok>
                     </XMCell>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E29.m5.2">=</XMTok>
                         <XMTok meaning="absent"/>
-                        <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m5.3">F</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1603,8 +1603,8 @@ Note that you should omit double slash from last line of split!</p>
                     <XMCell/>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                        <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E29.m5.4">+</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E29.m5.5">G</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -1726,24 +1726,24 @@ Note that you should omit double slash from last line of split!</p>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMDual>
                   <XMApp>
-                    <XMRef idref="Ch0.E31.m1.2.mf"/>
-                    <XMRef idref="Ch0.E31.m1.1.mf"/>
+                    <XMRef idref="Ch0.E31.m4.2"/>
+                    <XMRef idref="Ch0.E31.m4.1"/>
                     <XMApp>
-                      <XMRef idref="Ch0.E31.m1.4.mf"/>
-                      <XMRef idref="Ch0.E31.m1.3.mf"/>
-                      <XMRef idref="Ch0.E31.m1.5.mf"/>
+                      <XMRef idref="Ch0.E31.m4.4"/>
+                      <XMRef idref="Ch0.E31.m4.3"/>
+                      <XMRef idref="Ch0.E31.m4.5"/>
                     </XMApp>
                   </XMApp>
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m4.1">L</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
-                          <XMTok meaning="equals" role="RELOP">=</XMTok>
+                          <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E31.m4.2">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m4.3">M</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -1751,8 +1751,8 @@ Note that you should omit double slash from last line of split!</p>
                       <XMCell/>
                       <XMCell align="left">
                         <XMApp>
-                          <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">N</XMTok>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E31.m4.4">+</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E31.m4.5">N</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -1982,36 +1982,36 @@ horizontally aligned as if it were a column pair in the align.</p>
                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMDual>
                   <XMApp>
-                    <XMRef idref="Ch0.E34.m1.8.mf"/>
+                    <XMRef idref="Ch0.E34.m3.6"/>
                     <XMApp>
-                      <XMRef idref="Ch0.E34.m1.2.mf"/>
-                      <XMRef idref="Ch0.E34.m1.1.mf"/>
-                      <XMRef idref="Ch0.E34.m1.3.mf"/>
-                      <XMRef idref="Ch0.E34.m1.5.mf"/>
-                      <XMRef idref="Ch0.E34.m1.7.mf"/>
+                      <XMRef idref="Ch0.E34.m3.1"/>
+                      <XMRef idref="Ch0.E34.m3.2"/>
+                      <XMRef idref="Ch0.E34.m3.3"/>
+                      <XMRef idref="Ch0.E34.m3.4"/>
+                      <XMRef idref="Ch0.E34.m3.5"/>
                     </XMApp>
                     <XMApp>
-                      <XMRef idref="Ch0.E34.m1.10.mf"/>
-                      <XMRef idref="Ch0.E34.m1.9.mf"/>
-                      <XMRef idref="Ch0.E34.m1.11.mf"/>
+                      <XMRef idref="Ch0.E34.m3.8"/>
+                      <XMRef idref="Ch0.E34.m3.7"/>
+                      <XMRef idref="Ch0.E34.m3.9"/>
                     </XMApp>
                   </XMApp>
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
                         <XMApp>
-                          <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">E</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">e</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">g</XMTok>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m3.1">+</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.2">E</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.3">e</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.4">f</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.5">g</XMTok>
                         </XMApp>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
-                          <XMTok meaning="equals" role="RELOP">=</XMTok>
+                          <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m3.6">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN">F</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.7">F</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2019,8 +2019,8 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell/>
                       <XMCell align="left">
                         <XMApp>
-                          <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">G</XMTok>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m3.8">+</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.9">G</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2028,25 +2028,34 @@ horizontally aligned as if it were a column pair in the align.</p>
                 </XMDual>
                 <XMDual>
                   <XMApp>
-                    <XMRef idref="Ch0.E34.m2.2.mf"/>
-                    <XMRef idref="Ch0.E34.m2.1.mf"/>
+                    <XMRef idref="Ch0.E34.m3.11"/>
+                    <XMRef idref="Ch0.E34.m3.10"/>
                     <XMApp>
-                      <XMRef idref="Ch0.E34.m2.4.mf"/>
-                      <XMRef idref="Ch0.E34.m2.3.mf"/>
-                      <XMRef idref="Ch0.E34.m2.5.mf"/>
-                      <XMRef idref="Ch0.E34.m2.7.mf"/>
+                      <XMRef idref="Ch0.E34.m3.13"/>
+                      <XMRef idref="Ch0.E34.m3.12"/>
+                      <XMRef idref="Ch0.E34.m3.14"/>
+                      <XMRef idref="Ch0.E34.m3.15"/>
                     </XMApp>
                   </XMApp>
                   <XMArray colsep="0pt" name="aligned">
                     <XMRow>
                       <XMCell align="right">
-                        <XMTok font="italic" role="UNKNOWN">L</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.10">L</XMTok>
                       </XMCell>
                       <XMCell align="left">
                         <XMApp>
-                          <XMTok meaning="equals" role="RELOP">=</XMTok>
+                          <XMTok meaning="equals" role="RELOP" xml:id="Ch0.E34.m3.11">=</XMTok>
                           <XMTok meaning="absent"/>
-                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.12">M</XMTok>
+                        </XMApp>
+                      </XMCell>
+                    </XMRow>
+                    <XMRow>
+                      <XMCell/>
+                      <XMCell align="left">
+                        <XMApp>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="Ch0.E34.m3.13">+</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.14">N</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>
@@ -2055,16 +2064,7 @@ horizontally aligned as if it were a column pair in the align.</p>
                       <XMCell align="left">
                         <XMApp>
                           <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">N</XMTok>
-                        </XMApp>
-                      </XMCell>
-                    </XMRow>
-                    <XMRow>
-                      <XMCell/>
-                      <XMCell align="left">
-                        <XMApp>
-                          <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="Ch0.E34.m3.15">Z</XMTok>
                         </XMApp>
                       </XMCell>
                     </XMRow>

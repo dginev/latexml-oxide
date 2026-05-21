@@ -1,4 +1,5 @@
 use crate::prelude::*;
+
 LoadDefinitions!({
   LoadPool!("LaTeX");
   //**********************************************************************
@@ -94,7 +95,7 @@ LoadDefinitions!({
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
 
-  DefMacro!("\\chaptermark{}", "");
+  def_macro_noop("\\chaptermark{}")?;
 
   NewCounter!("equation",       "chapter",  idprefix => "E");
   NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");

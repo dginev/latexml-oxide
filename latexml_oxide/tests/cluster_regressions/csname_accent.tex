@@ -1,0 +1,12 @@
+\documentclass{article}
+\makeatletter
+\def\twemoji#1{\csname twemoji@#1\endcsname}
+\@namedef{twemoji@flag: St. Barth\'el\'emy}{ST.BL}
+\@namedef{twemoji@flag: C\^ote d\textquoteright Ivoire}{IVCOAST}
+\@namedef{twemoji@flag: S\~ao Tom\'e}{STT}
+\makeatother
+\begin{document}
+\twemoji{flag: St. Barth\'el\'emy}.
+\twemoji{flag: C\^ote d\textquoteright Ivoire}.
+\twemoji{flag: S\~ao Tom\'e}.
+\end{document}

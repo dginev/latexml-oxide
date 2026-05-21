@@ -36,6 +36,13 @@ pub struct PostOptions<'a> {
   /// (vector-preservation path). Fall back to ImageMagick `convert` on
   /// failure or timeout. Tracks upstream brucemiller/LaTeXML#902.
   pub graphics_svg_threshold_kb: u32,
+  /// Output extraction mode (Perl `LaTeXML::Util::Pack::whatsout`).
+  /// `Document` (default) → serialize the full post-processed
+  /// document; `Fragment` → embeddable HTML snippet via
+  /// `latexml_post::extract::get_embeddable`; `Math` → math subtree
+  /// via `get_math`. Applied to each `PostDocument` in the final
+  /// serialization loop.
+  pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
 /// Run the post-processing pipeline on XML output.
@@ -61,6 +68,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     split_naming,
     xslt_parameters,
     graphics_svg_threshold_kb,
+    whatsout,
   } = *opts;
 
   let mut doc_opts = PostDocumentOptions::default();
@@ -394,7 +402,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   for doc in results.into_iter() {
     let dest = doc.get_destination().map(String::from);
     let t_serialize = audit_start("to_xml_string");
-    let output = doc.to_xml_string();
+    // `serialize_whatsout` is a no-op (returns full doc) for the
+    // default `Whatsout::Document`; for Fragment / Math it returns
+    // the extracted subtree serialized via libxml `node_to_string`.
+    let output = latexml_post::extract::serialize_whatsout(&doc, whatsout);
     audit_end(t_serialize);
     let output = if is_html_out {
       finalize_html5(output, &svg_fragments)

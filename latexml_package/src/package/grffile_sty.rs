@@ -6,5 +6,5 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("graphicx");
-  DefMacro!("\\grffilesetup{}", "");
+  def_macro_noop("\\grffilesetup{}")?;
 });

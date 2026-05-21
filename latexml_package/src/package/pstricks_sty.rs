@@ -26,9 +26,58 @@ LoadDefinitions!({
   RequirePackage!("pstricks_support");
 
   // Core PSTricks parameter setting
-  DefMacro!("\\psset{}", "");
-  DefMacro!("\\newpsobject{}{}{}", "");
-  DefMacro!("\\newpsstyle{}{}", "");
+  def_macro_noop("\\psset{}")?;
+
+  // Perl pstricks_support.sty.ltxml L849-861: `\newpsobject{name}{oldname}{keyval}`
+  // dynamically defines `\<name>` to forward to `\<oldname>` with the saved
+  // `<keyval>` baked into the optional argument. The paper's drawing object is
+  // then drawn by the resolved `\<oldname>` (typically `\psline`, `\psdots`).
+  // Perl stores `oldname` and `keyval` in two LookupValue keys so the
+  // generated forwarder can read them at call time, and additionally merges
+  // a user-supplied `[opt]` into the saved `keyval`.
+  //
+  // Witness: physics/9710028 uses
+  //   \newpsobject{PST@Border}{psline}{linewidth=.0015,linestyle=solid}
+  // then later calls `\PST@Border(...)`. With the prior no-op stub
+  // `\PST@Border` stayed undefined and Rust errored; Perl recovered.
+  DefPrimitive!("\\newpsobject{}{}{}", sub[(newname, oldname, keyval)] {
+    let newcs    = s!("\\{}", newname.to_string());
+    let oldcs    = s!("\\{}", oldname.to_string());
+    let keystr   = keyval.to_string();
+    let new_tok  = T_CS!(newcs);
+    let params   = parse_parameters("OptionalMatch:* []", &new_tok, true)?;
+    // Generated forwarder closure: read OptionalMatch:* and []; emit
+    //   \<old>(*)([combined-key])
+    // combined-key = saved-key + ',' + user-key (Perl L855).
+    let oldcs_owned = oldcs;
+    let key_owned   = keystr;
+    let body_closure: ExpansionBody = ExpansionBody::Closure(Rc::new(move |args| {
+      let star = args.first().map(|a| !a.is_none()).unwrap_or(false);
+      let usr  = args.get(1)
+        .and_then(|a| match a.as_tokens() { Ok(Some(t)) => Some(t.to_string()), _ => None })
+        .unwrap_or_default();
+      let combined = match (key_owned.is_empty(), usr.is_empty()) {
+        (false, false) => s!("{},{}", key_owned, usr),
+        (false, true)  => key_owned.clone(),
+        (true,  false) => usr,
+        (true,  true)  => String::new(),
+      };
+      let mut out = vec![T_CS!(oldcs_owned.clone())];
+      if star { out.push(T_OTHER!("*")); }
+      if !combined.is_empty() {
+        out.push(T_OTHER!("["));
+        out.extend(Explode!(combined));
+        out.push(T_OTHER!("]"));
+      }
+      // Perl L856 — emit the suffix only; the paren-coords tuple is
+      // consumed by the resolved \psline (or sibling) macro's own
+      // `\lx@psgobble@parens` chain.
+      Ok(Tokens::new(out))
+    }));
+    def_macro(new_tok, params, Some(body_closure), None)?;
+  });
+
+  def_macro_noop("\\newpsstyle{}{}")?;
 
   // PSCoordList-emulator. Perl's pstricks_support.sty.ltxml uses parameter
   // type `PSCoordList` (variable-arity `(x,y)(x,y)...`) to absorb the paren
@@ -54,7 +103,7 @@ LoadDefinitions!({
   DefMacro!("\\pspolygon OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\psdots OptionalMatch:* []{}", "\\lx@psgobble@parens");
   DefMacro!("\\psdot OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\qline{}{}", "");
+  def_macro_noop("\\qline{}{}")?;
 
   // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
   // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by
@@ -65,7 +114,7 @@ LoadDefinitions!({
   DefMacro!("\\Rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\uput OptionalMatch:* {} [] Pair {}", "#5");
-  DefMacro!("\\qdisk{}{}", "");
+  def_macro_noop("\\qdisk{}{}")?;
 
   // Text placement — drop both coords AND the text body. Perl's
   // `DefPSConstructor` would wrap the labelled text inside a
@@ -104,16 +153,16 @@ LoadDefinitions!({
   DefEnvironment!("{pspicture*} OptionalMatch:* []{}", "#body");
 
   // Grid
-  DefMacro!("\\psgrid OptionalMatch:* []{}", "");
+  def_macro_noop("\\psgrid OptionalMatch:* []{}")?;
 
   // Misc
-  DefMacro!("\\pscustom OptionalMatch:* []{}", "");
-  DefMacro!("\\psclip{}", "");
-  DefMacro!("\\endpsclip", "");
-  DefMacro!("\\SpecialCoor", "");
-  DefMacro!("\\NormalCoor", "");
-  DefMacro!("\\degrees[]", "");
-  DefMacro!("\\radians", "");
+  def_macro_noop("\\pscustom OptionalMatch:* []{}")?;
+  def_macro_noop("\\psclip{}")?;
+  def_macro_noop("\\endpsclip")?;
+  def_macro_noop("\\SpecialCoor")?;
+  def_macro_noop("\\NormalCoor")?;
+  def_macro_noop("\\degrees[]")?;
+  def_macro_noop("\\radians")?;
 
   // \multips(rotation)(translation){n}{stuff} — pstricks "multiple put"
   // for drawing N copies of an object along a translated step. Rust port

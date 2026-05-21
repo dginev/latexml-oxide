@@ -19,24 +19,33 @@ LoadDefinitions!({
   DeclareOption!("technote", { Let!("\\ifCLASSOPTIONtechnote", "\\iftrue"); });
   DeclareOption!("nofonttune", {});
   DeclareOption!("captionsoff", {});
-  DeclareOption!("compsoc", { Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue"); });
-  // Perl `IEEEtran.cls.ltxml:103` (TL2025) for the `comsoc` option:
-  //   \DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue\CLASSOPTIONcompsocfalse
-  //                         \CLASSOPTIONtransmagfalse\RequirePackage{newtxmath}}
-  // Mirror Perl exactly. newtxmath transitively brings in txfonts (which
-  // defines `\coloneqq`, `\bigstar`, and a wide TX-math symbol family
-  // used by IEEEtran/comsoc papers). An earlier divergence loaded only
-  // `amssymb` here to "minimize font drift" — but Perl ground truth
-  // says newtxmath, so re-match.
-  // Witnesses: 1902.10910 (`\bigstar`), 2201.11831 (`\coloneqq` —
-  // comsoc + amsmath only; Perl renders \coloneqq because txfonts.sty
-  // is transitively loaded, Rust pre-fix returned `Error:undefined:
-  // \coloneqq` because only amssymb was loaded).
+  // TL `IEEEtran.cls` L254-255 and L364-366: `comsoc`, `compsoc`,
+  // `transmag` are THREE distinct mutually-exclusive options. Each
+  // setter flips one to true and clears the other two:
+  //   \DeclareOption{comsoc}{\CLASSOPTIONcomsoctrue \CLASSOPTIONcompsocfalse \CLASSOPTIONtransmagfalse}
+  //   \DeclareOption{compsoc}{\CLASSOPTIONcomsocfalse \CLASSOPTIONcompsoctrue \CLASSOPTIONtransmagfalse}
+  //   \DeclareOption{transmag}{\CLASSOPTIONcomsocfalse \CLASSOPTIONcompsocfalse \CLASSOPTIONtransmagtrue}
+  // Perl `IEEEtran.cls.ltxml:103` for `comsoc` additionally
+  // `\RequirePackage{newtxmath}` so `\coloneqq` / `\bigstar` / TX-math
+  // symbol family used by comsoc papers resolves cleanly (Perl-faithful;
+  // earlier Rust loaded only amssymb here, missing `\coloneqq` —
+  // witnesses 1902.10910, 2201.11831).
   DeclareOption!("comsoc", {
-    Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iftrue");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+    Let!("\\ifCLASSOPTIONtransmag","\\iffalse");
     RequirePackage!("newtxmath");
   });
-  DeclareOption!("transmag", {});
+  DeclareOption!("compsoc", {
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iftrue");
+    Let!("\\ifCLASSOPTIONtransmag","\\iffalse");
+  });
+  DeclareOption!("transmag", {
+    Let!("\\ifCLASSOPTIONcomsoc",  "\\iffalse");
+    Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+    Let!("\\ifCLASSOPTIONtransmag","\\iftrue");
+  });
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
   DeclareOption!("onecolumn", {});
   DeclareOption!("twocolumn", {});
@@ -50,7 +59,15 @@ LoadDefinitions!({
   // 2308.01854 `\documentclass[10pt,journal,compsoc]{IEEEtran}` had
   // \ifCLASSOPTIONcompsoc unexpectedly false → user's
   // `\ifCLASSOPTIONcompsoc \usepackage{url} \fi` skipped → \url undefined).
-  Let!("\\ifCLASSOPTIONcompsoc", "\\iffalse");
+  // TL `IEEEtran.cls` L254-256: three separate `\newif` flags for the
+  // mutually-exclusive comsoc/compsoc/transmag options. Pre-bind all
+  // three to false so paper-side `\ifCLASSOPTION* … \fi` doesn't see
+  // undefined when none of the options is passed. Witnesses:
+  // arXiv:2603.07560 (`comsoc`-style probe), 2308.01854 (`compsoc`),
+  // older IEEEtran/transmag papers.
+  Let!("\\ifCLASSOPTIONcomsoc",   "\\iffalse");
+  Let!("\\ifCLASSOPTIONcompsoc",  "\\iffalse");
+  Let!("\\ifCLASSOPTIONtransmag", "\\iffalse");
   Let!("\\ifCLASSOPTIONjournal", "\\iftrue");
   Let!("\\ifCLASSOPTIONconference", "\\iffalse");
   Let!("\\ifCLASSOPTIONtechnote", "\\iffalse");
@@ -61,6 +78,20 @@ LoadDefinitions!({
   Let!("\\ifCLASSOPTIONdraftcls", "\\iffalse");
   Let!("\\ifCLASSOPTIONpeerreview", "\\iffalse");
   Let!("\\ifCLASSOPTIONcaptionsoff", "\\iffalse");
+  // TL `IEEEtran.cls` L238-244: the `draft`/`final`, `oneside`/`twoside`,
+  // `peerreviewca`, `nofonttune`, `draftclsnofoot` `\newif` flags. User
+  // code in IEEEtran papers freely reads `\ifCLASSOPTIONdraft` /
+  // `\ifCLASSOPTIONoneside` without first checking they're defined —
+  // e.g. arXiv:2509.12142 has a sectionhead probe
+  // `\ifCLASSOPTIONdraft Draft\fi`. Pre-bind to the same defaults as
+  // the real class so undefined-cond auto-define doesn't spam an Error.
+  Let!("\\ifCLASSOPTIONdraft", "\\iffalse");
+  Let!("\\ifCLASSOPTIONdraftclsnofoot", "\\iffalse");
+  Let!("\\ifCLASSOPTIONfinal", "\\iftrue");
+  Let!("\\ifCLASSOPTIONoneside", "\\iftrue");
+  Let!("\\ifCLASSOPTIONtwoside", "\\iffalse");
+  Let!("\\ifCLASSOPTIONpeerreviewca", "\\iffalse");
+  Let!("\\ifCLASSOPTIONnofonttune", "\\iffalse");
 
   ProcessOptions!();
 
@@ -88,15 +119,32 @@ LoadDefinitions!({
 
   // Front matter macros (Perl L134-165)
   DefMacro!("\\IEEEtitleabstractindextext{}", "#1");
-  DefMacro!("\\IEEEdisplaynontitleabstractindextext", "");
-  DefMacro!("\\IEEEdisplaynotcompsoctitleabstractindextext", "");
-  DefMacro!("\\IEEEcompsoctitleabstractindextext", "");
+
+  // \thetitle / \theauthor / \thedate — titling.sty-style accessors that some
+  // IEEEtran preambles or .bbl files reference. IEEEtran doesn't natively
+  // export them, but users assume they exist. Provide empty defaults so
+  // bibliographies that include `\thetitle` don't crash. Witness 2501.15830.
+  def_macro_noop("\\thetitle")?;
+  def_macro_noop("\\theauthor")?;
+  def_macro_noop("\\thedate")?;
+  def_macro_noop("\\IEEEdisplaynontitleabstractindextext")?;
+  def_macro_noop("\\IEEEdisplaynotcompsoctitleabstractindextext")?;
+  def_macro_noop("\\IEEEcompsoctitleabstractindextext")?;
   Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
-  DefMacro!("\\IEEEoverridecommandlockouts", "");
-  DefMacro!("\\overrideIEEEmargins", "");
-  DefMacro!("\\IEEEaftertitletext{}", "");
-  DefMacro!("\\IEEEspecialpapernotice{}", "");
-  DefMacro!("\\IEEEmembership{}", "");
+  def_macro_noop("\\IEEEoverridecommandlockouts")?;
+  def_macro_noop("\\overrideIEEEmargins")?;
+  // \IEEEaftertitletext{text} — after-title note (often invited-
+  // paper credit, conference name). Author content; preserve as
+  // ltx:note frontmatter rather than gobble.
+  DefMacro!("\\IEEEaftertitletext{}",
+    "\\@add@frontmatter{ltx:note}[role=aftertitle]{#1}");
+  // \IEEEspecialpapernotice{text} — e.g. "Invited Paper". Author
+  // content; preserve.
+  DefMacro!("\\IEEEspecialpapernotice{}",
+    "\\@add@frontmatter{ltx:note}[role=papernotice]{#1}");
+  // \IEEEmembership{text} — membership label after author name
+  // (e.g. "Member, IEEE"). Render inline in italic; do NOT drop.
+  DefMacro!("\\IEEEmembership{}", ",\\space\\textit{#1}");
   DefMacro!("\\IEEEauthorblockN{}", "#1");
   DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
   DefMacro!("\\IEEEauthorblockA{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
@@ -116,14 +164,27 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
   DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\@endIEEEkeywords");
 
+  // IEEEtai (IEEE Trans. AI) IEEEImpStatement environment — author
+  // content is the journal-mandated "Impact Statement" preceding the
+  // main body. Render as a labeled section so the substantive prose
+  // is preserved instead of bouncing as undefined. Witness 2305.09145.
+  DefEnvironment!("{IEEEImpStatement}",
+    "<ltx:note role='impactstatement' name='Impact Statement'>#body</ltx:note>",
+    mode => "internal_vertical");
+
   DefMacro!("\\IEEEraisesectionheading{}", "#1");
   DefMacro!("\\IEEEPARstart{}{}", "#1#2");
   DefMacro!("\\IEEEcompsocitemizethanks{}", "\\thanks{#1}");
-  DefMacro!("\\IEEEcompsocthanksitem[]", "");
-  DefMacro!("\\IEEEauthorrefmark", "");
-  DefMacro!("\\IEEEtriggeratref{}", "");
+  def_macro_noop("\\IEEEcompsocthanksitem[]")?;
+  def_macro_noop("\\IEEEauthorrefmark")?;
+  def_macro_noop("\\IEEEtriggeratref{}")?;
   DefMacro!("\\IEEEpubid{}", "\\@add@frontmatter{ltx:note}[role=publicationid]{pubid: #1}");
-  DefMacro!("\\IEEEpubidadjcol", "");
+  def_macro_noop("\\IEEEpubidadjcol")?;
+  // \corresp{name} — IEEE Open Journal class IEEEoj.cls L4875 marks
+  // a corresponding-author note (later rendered in titlepage). Preserve
+  // as frontmatter note. Witness 2307.02076 (IEEEoj).
+  DefMacro!("\\corresp{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 
   // Section numbering — default journal mode uses Roman numerals
   DefMacro!("\\thesection", "\\Roman{section}");
@@ -216,7 +277,15 @@ LoadDefinitions!({
     // machinery — tracked as a known minor divergence; no test
     // exercises \IEEEQEDhere against Perl ground truth, so accepting
     // the simplification.
-    );
+    //
+    // mode => internal_vertical so authors can use `$$..$$` display
+    // math inside `\begin{proof}` — `$$` is only recognized as display
+    // math when BOUND_MODE ends with "vertical" (tex_math.rs L467).
+    // The DefEnvironment default bound mode is restricted_horizontal,
+    // which makes a `$$..$$` block fail with cascading
+    // "Script _ can only appear in math mode" on each subscript inside.
+    // Witness 2303.10133 (ieeeconf paper).
+    mode => "internal_vertical");
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body
@@ -296,7 +365,7 @@ LoadDefinitions!({
   // IEEE.xml reference under TL2025.
   DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
-  DefMacro!("\\IEEEeqnarraynumspace", "");
+  def_macro_noop("\\IEEEeqnarraynumspace")?;
   // IEEEeqnarraybox — faithful port of Perl IEEEtran.cls.ltxml L315-332.
   // Perl dispatches \ifmmode into \IEEEeqnarrayboxm (math-mode) or
   // \IEEEeqnarrayboxt (text-mode, with \lx@begin@inline@math wrapper),
@@ -316,8 +385,8 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     reversion => "\\begin{IEEEeqnarraybox}[#1]{#2}#3\\end{IEEEeqnarraybox}");
   DefMacro!("\\IEEEeqnarraymulticol{}{}{}", "\\multicolumn{#1}{#2}{#3}");
-  DefMacro!("\\IEEEeqnarraydefcol{}{}{}", "");
-  DefMacro!("\\IEEEeqnarraydefcolsep{}{}", "");
+  def_macro_noop("\\IEEEeqnarraydefcol{}{}{}")?;
+  def_macro_noop("\\IEEEeqnarraydefcolsep{}{}")?;
 
   // IEEEnonumber/yesnumber/sub-numbering — Perl L252-294.
   // Flip EQUATION_NUMBERING (starred form) or EQUATIONROW_TAGS (unstarred)
@@ -433,13 +502,13 @@ LoadDefinitions!({
 
   // IED list stubs (Perl L340-347)
   DefMacro!("\\IEEEsetlabelwidth{}", "\\settowidth{\\labelwidth}{#1}");
-  DefMacro!("\\IEEEusemathlabelsep", "");
-  DefMacro!("\\IEEEtriggercmd{}", "");
-  DefMacro!("\\IEEElabelindent", "");
-  DefMacro!("\\IEEEcalcleftmargin{}", "");
-  DefMacro!("\\IEEEiedlabeljustifyc", "");
-  DefMacro!("\\IEEEiedlabeljustifyl", "");
-  DefMacro!("\\IEEEiedlabeljustifyr", "");
+  def_macro_noop("\\IEEEusemathlabelsep")?;
+  def_macro_noop("\\IEEEtriggercmd{}")?;
+  def_macro_noop("\\IEEElabelindent")?;
+  def_macro_noop("\\IEEEcalcleftmargin{}")?;
+  def_macro_noop("\\IEEEiedlabeljustifyc")?;
+  def_macro_noop("\\IEEEiedlabeljustifyl")?;
+  def_macro_noop("\\IEEEiedlabeljustifyr")?;
 
   // IEEEitemize/enumerate/description (Perl IEEEtran.cls.ltxml L351-366).
   // Each env:
@@ -578,7 +647,7 @@ LoadDefinitions!({
   Let!("\\endbiographynophoto", "\\endIEEEbiographynophoto");
 
   // bstctlcite stub (Perl L445)
-  DefMacro!("\\bstctlcite[]{}", "");
+  def_macro_noop("\\bstctlcite[]{}")?;
 
   // Disable internal alignment env (Perl L453-454)
   DefMacro!("\\@IEEEauthorhalign", "\\relax");
@@ -602,4 +671,12 @@ LoadDefinitions!({
   // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
   // multi-author papers using the linebreakand recipe).
   DefMacro!("\\linebreakand", "\\par");
+  // \newlineauthors — sibling-recipe of \linebreakand commonly defined
+  // in IEEE conference-template papers (driver cluster: 2601.15292,
+  // 2601.16670, 2602.05977). User \newcommand body is the same
+  // \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}
+  // pattern that breaks our frontmatter digest. Pre-define so the
+  // \newcommand is silently ignored (Perl-parity: already-defined →
+  // dropped on the floor).
+  DefMacro!("\\newlineauthors", "\\par");
 });

@@ -52,6 +52,11 @@ pub struct Actions {
 
 impl Actions {
   pub fn register(&mut self, id: i32, closure: ActionClosure) { self.dispatch.insert(id, closure); }
+  /// Whether a rule has a registered semantic action. Used by the
+  /// ASF traverser to discriminate "structural/literal" rules (treat
+  /// as transparent byte-passthrough — match legacy `rollup_token_rec`)
+  /// from "semantic" rules (call `action_on`).
+  pub fn has_action(&self, id: i32) -> bool { self.dispatch.contains_key(&id) }
   pub fn action_on(
     &self,
     id: i32,
@@ -117,10 +122,10 @@ impl Actions {
       Node::Token(_ty, ref val) => {
         let token_str = ::std::str::from_utf8(val).unwrap_or("malformed-utf8");
         Ok(Some(
-          XM::Lexeme(token_str.to_owned(), Meta::default()).specialize(Meta::default(), pragmas)?,
+          XM::Lexeme(Rc::from(token_str), Meta::default()).specialize(Meta::default(), pragmas)?,
         ))
       },
-      Node::Leaf(ref tok) => Ok(Some(XM::Lexeme(tok.to_string(), Meta::default()))),
+      Node::Leaf(ref tok) => Ok(Some(XM::Lexeme(Rc::from(tok.to_string().as_str()), Meta::default()))),
       Node::Null(_) => {
         // e.g.* argument failed nothing, just skip.
         Ok(None)
@@ -148,6 +153,23 @@ pub fn infix_apply(
         return Err(
           "infix_apply: compose requires function-level operands, not applied functions".into(),
         );
+      }
+      // Compose left-associativity: reject right-nested form `f ∘ (g ∘ h)`.
+      // The grammar admits both `(f ∘ g) ∘ h` and `f ∘ (g ∘ h)` for chains
+      // like `f * g * h`. Math convention is to left-associate composition,
+      // so canonicalize by dropping the right-nested form here; Marpa's
+      // alternative parse with the left-nested form survives.
+      if let Some(XM::Apply(Operator(ref rhs_op), ..)) = arg2 {
+        let rhs_is_compose = match &**rhs_op {
+          XM::Lexeme(rl, _) => rl.contains(":compose:"),
+          XM::Token(p, _) => p.meaning.as_deref() == Some("compose"),
+          _ => false,
+        };
+        if rhs_is_compose {
+          return Err(
+            "infix_apply: compose is left-associative — reject right-nested f ∘ (g ∘ h)".into(),
+          );
+        }
       }
     }
   }
@@ -235,6 +257,68 @@ pub fn list_apply(
   if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
     return Err("list_apply: absent relop operand (should be single formula, not list)".into());
   }
+  // Rule 4: Reject when an item is a BARE `conditional@(...)` Apply
+  // — `|` (conditional / MODIFIEROP) binds LOOSER than `,` (list
+  // separator) when unfenced, so the conditional should wrap the
+  // list. For `x|y, z, t`, prefer `conditional@(x, list@(y, z, t))`.
+  //
+  // **Exception**: when the conditional IS inside a parens-fenced
+  // group (e.g. `(a|b), (a|b)`), each `(a|b)` is a complete
+  // `Dual(conditional(a,b), Wrap[(, a, |, b, )])` unit, which CAN
+  // legitimately be a list item. Detect this by checking whether
+  // the Dual's presentation Wrap starts with OPEN paren.
+  let bare_conditional = |item: &XM| -> bool {
+    match item {
+      // Naked Apply(conditional, ...): always bare.
+      XM::Apply(Operator(op), ..) => {
+        let meaning = match &**op {
+          XM::Token(p, _) => p.meaning.as_deref(),
+          XM::Lexeme(name, _) => Some(&**name),
+          _ => None,
+        };
+        meaning == Some("conditional")
+      },
+      // Dual wrapping conditional: bare only if presentation is NOT
+      // parens-fenced.
+      XM::Dual(content, pres, _, _) => {
+        let inner_is_conditional = if let XM::Apply(Operator(ref op), ..) = **content {
+          let meaning = match &**op {
+            XM::Token(p, _) => p.meaning.as_deref(),
+            XM::Lexeme(name, _) => Some(&**name),
+            _ => None,
+          };
+          meaning == Some("conditional")
+        } else {
+          false
+        };
+        if !inner_is_conditional {
+          return false;
+        }
+        // Check presentation for parens fence.
+        let presentation_is_parens_fenced = if let XM::Wrap(ref items, ..) = **pres {
+          let first_is_open_paren = matches!(items.first(),
+            Some(XM::Token(p, _))
+              if p.role.as_deref() == Some("OPEN")
+                && p.content.as_deref() == Some("("))
+            || matches!(items.first(),
+              Some(XM::Lexeme(name, _)) if name.starts_with("OPEN:(:"));
+          first_is_open_paren
+        } else {
+          false
+        };
+        !presentation_is_parens_fenced
+      },
+      _ => false,
+    }
+  };
+  if left.as_ref().is_some_and(bare_conditional) || bare_conditional(&right) {
+    return Err(
+      "list_apply: child is BARE `conditional@` at root — conditional/MODIFIEROP binds \
+       looser than comma, so the bare conditional should wrap the list (the parens-fenced \
+       case is allowed)."
+        .into(),
+    );
+  }
   let meaning = "list";
 
   // If left is already a list/formulae Dual, extend it (flat accumulation).
@@ -249,6 +333,52 @@ pub fn list_apply(
           let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
           op_args.0.extend(new_ref.into_iter().map(Option::Some));
           // Add separator and new item to presentation wrap
+          if let XM::Wrap(ref mut items, ..) = **pres {
+            items.push(sep);
+            items.push(right);
+          }
+          return Ok(left);
+        }
+      }
+    }
+  }
+
+  list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
+/// ASF migration item 5 (Option A): build a comma-list of
+/// `modified_term` items. Mirrors `list_apply` but explicitly
+/// ACCEPTS relational items — that's the whole point. Used for
+/// function argument lists where each argument carries its own
+/// single-relop expression, e.g. `P(x=0, y<0)`.
+///
+/// Rejects the same non-relop pathologies `list_apply` rejects
+/// (bare conditional, etc.) but does NOT force formulae_apply on
+/// relations. The grammar rules that route to this action
+/// (`formula_list += modified_term punct …`) only fire when at
+/// least one side is a `modified_term`, so the relation case is
+/// the expected one.
+pub fn modified_list_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => left, sep, right);
+  let mut left = left;
+  let mut right = right.unwrap();
+  let sep = sep.unwrap();
+  let meaning = "list";
+
+  // If left is already a list/formulae Dual, extend it (mirrors the
+  // flat-accumulation behaviour at the end of `list_apply`).
+  if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left {
+    if let XM::Apply(ref op, ref mut op_args, ..) = **content {
+      if let XM::Token(ref props, _) = *op.0 {
+        if props.meaning.as_deref() == Some("list") || props.meaning.as_deref() == Some("formulae")
+        {
+          let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
+          op_args.0.extend(new_ref.into_iter().map(Option::Some));
           if let XM::Wrap(ref mut items, ..) = **pres {
             items.push(sep);
             items.push(right);
@@ -382,12 +512,20 @@ pub fn formulae_apply(
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
 
-  // Reject when any item has `absent` as a relop operand.
-  // `absent` means "equation fragment" — fragments are single formulas,
-  // not part of a formulae collection. A formulae is a collection of
-  // COMPLETE relational statements.
-  if left.as_ref().is_some_and(has_absent_relop_operand) || has_absent_relop_operand(&right) {
-    return Err("formulae_apply: absent operand (fragment, not complete formula)".into());
+  // Reject when BOTH items are fragments (have `absent` as a relop operand).
+  // A fragment + a complete formula is a common arXiv pattern: align'd
+  // equation continuations followed by a side-condition, e.g.
+  //   `\lesssim T(r,f) + \log r, \quad r \notin E_3`
+  // where the LEFT (`\lesssim ...`) has an absent LHS because the
+  // original LHS is on a previous line of an align block, and the RIGHT
+  // (`r \notin E_3`) is the trailing condition annotation. The earlier
+  // strict rule (reject if EITHER is a fragment) was correct only for
+  // inner contexts (fenced lists, function args); at the top level
+  // these pairings are well-formed and need to survive pragmatic prune.
+  // True inner-context fragment cases are still pruned because BOTH
+  // sides are typically fragments (or one is a single bare token).
+  if left.as_ref().is_some_and(has_absent_relop_operand) && has_absent_relop_operand(&right) {
+    return Err("formulae_apply: both operands are fragments (not complete formulae)".into());
   }
   // Also check inside an existing formulae Dual being extended
   if let Some(XM::Dual(ref content, ..)) = left {
@@ -840,6 +978,78 @@ pub fn infix_relation(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
+  // Reject `relop` applied to a comma-list whose items include a
+  // relation (single-relop modified_term). For `P(x = 0, y < 0)`
+  // both grammar paths reach the action:
+  //   * Path A (current): `formula = formula relop formula_list`
+  //                       → `x = list(0, y<0)` (this branch)
+  //   * Path B (new): `formula_list = modified_term punct modified_term`
+  //                   → `list(x=0, y<0)` wrapped by fenced+function-app
+  //
+  // Path B is the surpass-Perl interpretation (math convention: a
+  // comma-list of relations inside a function-arg group). Rejecting
+  // Path A here forces Marpa to commit to Path B. ASF migration
+  // item 5 (Option A), 2026-05-19.
+  fn list_has_relation(xm: &XM) -> bool {
+    // Returns true when `xm` is a `list@(...)` (XMApp directly, or
+    // XMDual wrapping one) and any presentation item is a relation
+    // Apply. We check the presentation wrap (not the content args)
+    // because list-Apply args are XMRefs after `create_xmrefs`; the
+    // actual relation Applies live in the presentation branch.
+    let (content_args, pres_items) = match xm {
+      XM::Apply(ref op, ref args, ..) => {
+        if let XM::Token(ref props, _) = *op.0 {
+          if props.meaning.as_deref() == Some("list") {
+            (Some(args), None)
+          } else {
+            (None, None)
+          }
+        } else {
+          (None, None)
+        }
+      },
+      XM::Dual(ref content, ref pres, ..) => {
+        if let XM::Apply(ref op, ref args, ..) = **content {
+          if let XM::Token(ref props, _) = *op.0 {
+            if props.meaning.as_deref() == Some("list") {
+              let pres_items = if let XM::Wrap(ref items, ..) = **pres {
+                Some(items)
+              } else {
+                None
+              };
+              (Some(args), pres_items)
+            } else {
+              (None, None)
+            }
+          } else {
+            (None, None)
+          }
+        } else {
+          (None, None)
+        }
+      },
+      _ => (None, None),
+    };
+    if let Some(args) = content_args {
+      if args.0.iter().any(|a| a.as_ref().is_some_and(is_relational_item)) {
+        return true;
+      }
+    }
+    if let Some(items) = pres_items {
+      if items.iter().any(is_relational_item) {
+        return true;
+      }
+    }
+    false
+  }
+  if let Some(ref right_xm) = right {
+    if list_has_relation(right_xm) {
+      return Err(
+        "infix_relation: right is list@ containing relations — prefer list-of-modified_terms path"
+          .into(),
+      );
+    }
+  }
   // Reject multirelation when the left formula's last operand is a list Dual.
   // For `a = b, c = d`: the wrong parse creates `a = list(b,c)` then tries
   // to extend with `= d`. If the left formula has a list as its last arg,
@@ -952,10 +1162,68 @@ pub fn infix_apply_nary(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
   _: &[ValidationPragmatics],
-  _: ActionContext,
+  ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
+  // Early prune: `Apply(OPERATOR, [single_unfenced_arg]) * simple_rhs`
+  // — narrow form of the wider-absorption rule. E.g. `D@(x) * y * z`
+  // should be `D@(x*y*z)`. Reject here so the grammar's
+  // `prefix_apply_applyop` path wins. (Mirrors the OPERATOR check
+  // in `apply_invisible_times` below.)
+  let infixop_is_mulop = match infixop {
+    Some(XM::Lexeme(ref lex, _)) => {
+      let role = lex.split(':').next().unwrap_or("");
+      role == "MULOP"
+    },
+    Some(XM::Token(ref p, _)) => p.role.as_deref() == Some("MULOP"),
+    _ => false,
+  };
+  if infixop_is_mulop {
+    if let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left {
+      let op_role = match &**left_op {
+        XM::Token(p, _) => p.role.as_deref().map(String::from),
+        XM::Lexeme(lex_id, _) => {
+          if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
+            if id > 0 && id <= ctxt.nodes.len() {
+              ctxt.nodes[id - 1].get_attribute("role")
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        },
+        _ => None,
+      };
+      if op_role.as_deref() == Some("OPERATOR")
+        && left_meta.fenced.is_none()
+        && left_args.trees().len() == 1
+      {
+        let arg_unfenced = left_args.trees().first().map(|a| a.get_meta().fenced.is_none()).unwrap_or(true);
+        let rhs_unfenced = right.as_ref().map(|r| r.get_meta().fenced.is_none()).unwrap_or(false);
+        let rhs_is_simple = match right.as_ref() {
+          Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
+          Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+            let r = match &**rhs_op {
+              XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
+              XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
+              _ => "",
+            };
+            r == "SUPERSCRIPTOP" || r == "SUBSCRIPTOP"
+          },
+          _ => false,
+        };
+        if arg_unfenced && rhs_is_simple && rhs_unfenced {
+          return Err(
+            "infix_apply_nary: left is applied OPERATOR — prefer wider absorption via \
+             prefix_apply_applyop"
+              .into(),
+          );
+        }
+      }
+    }
+  }
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
@@ -1289,12 +1557,73 @@ pub fn speculative_prefix_apply(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
+  // Mirror of `prefix_apply_applyop`: when arg1 is a fenced
+  // modifier expression (`(>0)`, `(\in C)`), reject — the
+  // legitimate parse goes through `annotated_fenced_modifier`.
+  if let Some(ref arg) = arg1 {
+    if is_fenced_modifier_dual(arg) {
+      return Err(
+        "speculative_prefix_apply: arg is a fenced modifier expression — \
+         prefer annotated_fenced_modifier"
+          .into(),
+      );
+    }
+    // K-12 algebra: `letter |x|` reads as multiplication
+    // (`letter * |x|`), NOT function application (`letter @
+    // |x|`). The grammar admits speculative function-app via
+    // `unknown fenced_factor → speculative_prefix_apply` for any
+    // fenced_factor; when the fenced_factor is a bilaterally-
+    // vertbar-fenced absolute-value / norm / stretchy-abs shape,
+    // that speculation is mathematically wrong. Reject here so
+    // `tight_term factor → apply_invisible_times` wins, giving a
+    // unique multiplication parse for `a|a|+b|b|+c|c|`.
+    //
+    // Implication: QM-context cases like `<a|f|b>` and
+    // `\langle B|sum|C\rangle` that rely on the speculative
+    // function-app for `letter |x|` lose that reading. The
+    // affected tests (qm/mathtools/count_parses/physics) are
+    // re-blessed to the multiplication interpretation.
+    if is_vertbar_fenced_dual(arg) {
+      return Err(
+        "speculative_prefix_apply: arg is vertbar-fenced — \
+         prefer K-12 multiplication via apply_invisible_times"
+          .into(),
+      );
+    }
+  }
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Detect `XM::Dual(_, Wrap[OPEN-vertbar, …, CLOSE-vertbar])` — a
+/// bilaterally-vertbar-fenced absolute-value or norm shape. The
+/// `fenced` action produces this for `|expr|`, `||expr||`, and
+/// `\left|expr\right|`. We use it to reject these as candidates
+/// for function-application speculation; K-12 algebra reads
+/// `letter |x|` as multiplication, not function-app.
+fn is_vertbar_fenced_dual(arg: &XM) -> bool {
+  let XM::Dual(_, ref presentation, _, _) = *arg else {
+    return false;
+  };
+  let XM::Wrap(ref items, _, _) = **presentation else {
+    return false;
+  };
+  let is_vertbar = |x: Option<&XM>| -> bool {
+    match x {
+      Some(XM::Token(p, _)) => {
+        p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖")
+      },
+      Some(XM::Lexeme(name, _)) => {
+        name.starts_with("VERTBAR:") || name.starts_with("STRETCHY_VERTBAR:")
+      },
+      _ => false,
+    }
+  };
+  is_vertbar(items.first()) && is_vertbar(items.last())
 }
 /// Perl: limit-from@(number, sign) — directional limits like 0+, 1-
 /// Matches factor_base followed by addop. Semantic checks:
@@ -1311,7 +1640,7 @@ pub fn limit_from_apply(
   // Check the addop is + or -
   let is_plus_minus = args.get(1).and_then(|a| a.as_ref()).is_some_and(|xm| {
     let val = match xm {
-      XM::Lexeme(lex, _) => lookup_lex_node(lex.as_str(), ctxt.nodes)
+      XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
         .ok()
         .and_then(|n| n.get_attribute("meaning")),
       XM::Token(props, _) => props.meaning.as_ref().map(|c| c.to_string()),
@@ -1408,12 +1737,69 @@ pub fn prefix_apply_applyop(
   _: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, _applyop, arg1);
+  // Early-action prune: when arg1 is a fenced modifier expression
+  // — i.e. a Dual whose content is a relop/metarelop Apply with
+  // `absent` as the FIRST argument (the `prefix_relop_apply`
+  // shape) — we must NOT treat it as a function argument. The
+  // grammar's `expression lparen relop expression rparen →
+  // annotated_fenced_modifier` already builds the correct
+  // `annotated@(x, fenced-modifier)` tree. Function-application
+  // here corrupts to `x@(absent > 0)` which is meaningless.
+  if let Some(ref arg) = arg1 {
+    if is_fenced_modifier_dual(arg) {
+      return Err(
+        "prefix_apply_applyop: arg is a fenced modifier expression — \
+         prefer annotated_fenced_modifier over function application"
+          .into(),
+      );
+    }
+  }
   Ok(Some(XM::Apply(
     prefixop.into(),
     Args(vec![arg1]),
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Detect the "fenced modifier" shape: an `XM::Dual` whose
+/// fenced content is a RELOP/METARELOP Apply with `absent` as the
+/// first argument (the `prefix_relop_apply` shape produced by
+/// `relop expression → prefix_relop_apply`).
+///
+/// The Dual produced by `fenced` / `annotated_fenced_modifier` has
+/// shape `Dual(Ref(id), Wrap[OPEN, Apply(op, absent, expr), CLOSE])`
+/// — the semantic Apply lives inside the **presentation Wrap**,
+/// referenced by Ref from the content. So we look there for the
+/// absent-prefixed Apply.
+///
+/// Used in `prefix_apply_applyop` and `apply_invisible_times` to
+/// reject treating `(>0)` / `(\in C)` as a function argument when
+/// the legitimate parse is `annotated@(x, fenced-modifier)`.
+fn is_fenced_modifier_dual(arg: &XM) -> bool {
+  let XM::Dual(ref content, ref presentation, _, _) = *arg else {
+    return false;
+  };
+  let has_absent_prefix = |args: &Args| -> bool {
+    let first = args.trees().first().copied().cloned();
+    matches!(first,
+      Some(XM::Token(p, _)) if p.meaning.as_deref() == Some("absent"))
+  };
+  // Path A — content is an Apply directly:
+  if let XM::Apply(_, args, _, _) = &**content {
+    return has_absent_prefix(args);
+  }
+  // Path B — content is a Ref; find the Apply in the presentation Wrap.
+  if let XM::Wrap(items, _, _) = &**presentation {
+    for item in items {
+      if let XM::Apply(_, args, _, _) = item {
+        if has_absent_prefix(args) {
+          return true;
+        }
+      }
+    }
+  }
+  false
 }
 
 /// Perl: moreTerms2 trailing-operator → Apply(New('limit-from'), term, addop)
@@ -1568,7 +1954,7 @@ pub fn two_part_relop_combine(
   unp!(args => op1, op2);
   // Extract meanings from the lexeme nodes
   let (m1, content1) = if let Some(XM::Lexeme(ref lex, _)) = op1 {
-    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let node = lookup_lex_node(lex, ctxt.nodes)?;
     let m = node.get_attribute("meaning").unwrap_or_default();
     let c = node.get_content();
     (m, c)
@@ -1576,7 +1962,7 @@ pub fn two_part_relop_combine(
     (String::new(), String::new())
   };
   let (m2, content2) = if let Some(XM::Lexeme(ref lex, _)) = op2 {
-    let node = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let node = lookup_lex_node(lex, ctxt.nodes)?;
     let m = node.get_attribute("meaning").unwrap_or_default();
     let c = node.get_content();
     (m, c)
@@ -1749,6 +2135,10 @@ pub fn fenced(
     };
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else if op_name == "delimited-||" {
+    // Absolute-value `|x|`. The kerned-stack `\left|\left|x\right|\right|`
+    // (double-bar norm) and triple variant are now recognized at the
+    // grammar level via stretchy_(norm|triple_norm)_fenced (task #263),
+    // so we no longer need a post-hoc tree-inspecting promotion here.
     let op = XProps {
       meaning: Some(Cow::Borrowed("absolute-value")),
       ..XProps::default()
@@ -2160,7 +2550,7 @@ fn new_script_inner(
   };
 
   if let XM::Lexeme(ref lex, _) = script_lex {
-    let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
+    let script_wrap = lookup_lex_node(lex, ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = !force_pre && node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
@@ -2458,6 +2848,81 @@ pub fn apply_invisible_times(
             .into(),
         );
       }
+    }
+  }
+  // Wider-absorption variant for **applied** OPERATOR Applies:
+  // `Apply(OPERATOR, [single_unfenced_arg]) * simple_RHS` should
+  // prefer the parse where the operator absorbs more — i.e., `D x y z`
+  // means `D@(x*y*z)`, not `D@(x) * y * z`. The block above prunes
+  // BARE OPERATOR tokens on the LHS but the "applied" case
+  // (compound-operator's first arg is regular content, not another
+  // function/operator) was deliberately left alone. Pruning HERE
+  // forces the absorption path via `prefix_apply_applyop`.
+  if let Some(XM::Apply(Operator(ref left_op), ref left_args, _, ref left_meta)) = left {
+    // Resolve the role of LHS's operator. For Tokens it's a direct
+    // field; for Lexemes the lexeme's last `:N` field indexes into
+    // `ctxt.nodes` to get the DOM node's `role` attribute (same
+    // lookup mechanism the OPFUNCTION block above uses).
+    let op_role = match &**left_op {
+      XM::Token(p, _) => p.role.as_deref().map(String::from),
+      XM::Lexeme(lex_id, _) => {
+        if let Some(id) = lex_id.split(':').next_back().and_then(|s| s.parse::<usize>().ok()) {
+          if id > 0 && id <= ctxt.nodes.len() {
+            ctxt.nodes[id - 1].get_attribute("role")
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      },
+      _ => None,
+    };
+    if op_role.as_deref() == Some("OPERATOR")
+      && left_meta.fenced.is_none()
+      && left_args.trees().len() == 1
+    {
+      // Only prune if the SINGLE arg is non-fenced (e.g. `D x` not `D(a)`)
+      // and the RHS is a simple unfenced factor or scripted factor.
+      let arg_is_unfenced = left_args
+        .trees()
+        .first()
+        .map(|a| a.get_meta().fenced.is_none())
+        .unwrap_or(true);
+      let rhs_is_simple = match right.as_ref() {
+        Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
+        Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+          let rhs_role = match &**rhs_op {
+            XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
+            XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
+            _ => "",
+          };
+          rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
+        },
+        _ => false,
+      };
+      let rhs_unfenced =
+        right.as_ref().map(|r| r.get_meta().fenced.is_none()).unwrap_or(false);
+      if arg_is_unfenced && rhs_is_simple && rhs_unfenced {
+        return Err(
+          "apply_invisible_times: left is applied OPERATOR — \
+           prefer wider absorption via prefix_apply_applyop"
+            .into(),
+        );
+      }
+    }
+  }
+  // Early-action prune for the fenced-modifier shape on the RHS:
+  // `x (>0)` / `x (\in C)` — the legitimate parse is
+  // `annotated_fenced_modifier`, NOT `x * (>0)` (implicit-times)
+  // and NOT `x@(>0)` (function-app, handled in `prefix_apply_applyop`).
+  if let Some(ref r) = right {
+    if is_fenced_modifier_dual(r) {
+      return Err(
+        "apply_invisible_times: right is a fenced modifier expression — \
+         prefer annotated_fenced_modifier"
+          .into(),
+      );
     }
   }
   // Bigop application results should not participate in invisible-times on their right.
@@ -3193,6 +3658,27 @@ pub fn prefix_relop_apply(
   _ctxt: ActionContext,
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => relop, right);
+  // Early-action prune: when the operator is METARELOP (e.g.
+  // `\vdash`, `:`, `\models`), the formula-level
+  // `metarelop expression → prefix_relop_apply` rule competes with
+  // the statement-level `metarelop formula → prefix_metarelop_apply`
+  // rule. Legacy prefers the statement-level grouping
+  // (`Apply(vdash, formula)`) over the formula-level chain
+  // (`multirelation(vdash, ..., =, 0)`). Reject the formula-level
+  // METARELOP prefix here so the parse goes through the
+  // statement-level rule.
+  let is_metarelop = relop.as_ref().is_some_and(|op| match op {
+    XM::Lexeme(l, _) => l.split(':').next() == Some("METARELOP"),
+    XM::Token(p, _) => p.role.as_deref() == Some("METARELOP"),
+    _ => false,
+  });
+  if is_metarelop {
+    return Err(
+      "prefix_relop_apply: METARELOP prefix at formula-level — \
+       prefer statement-level prefix_metarelop_apply"
+        .into(),
+    );
+  }
   // For BINOP prefix usage (e.g. \mathbin{|}x), Perl produces op@(x) without absent.
   // For RELOP prefix (e.g. = b, < c), keep absent as first arg.
   let is_binop = relop.as_ref().is_some_and(|op| match op {
@@ -3428,10 +3914,10 @@ pub fn eval_at(
     // faux_wrap returns Wrap([lexeme, content]) — extract the lexeme first.
     let s1_is_sub = s1.as_ref().is_none_or(|xm| {
       let lex = match xm {
-        XM::Lexeme(ref l, _) => Some(l.as_str()),
+        XM::Lexeme(ref l, _) => Some(&**l),
         XM::Wrap(ref items, ..) if !items.is_empty() => {
           if let XM::Lexeme(ref l, _) = items[0] {
-            Some(l.as_str())
+            Some(&**l)
           } else {
             None
           }
@@ -3543,12 +4029,12 @@ fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM>
   }
   // Old format: bare Lexeme — look up from DOM
   if let XM::Lexeme(ref lex, _) = script {
-    let node = lookup_lex_node(lex.as_str(), nodes).ok()?;
+    let node = lookup_lex_node(lex, nodes).ok()?;
     let children = node.get_child_elements();
     if let Some(first_child) = children.first() {
       for (i, n) in nodes.iter().enumerate() {
         if n == first_child {
-          return Some(XM::Lexeme(format!("{}", i + 1), Meta::default()));
+          return Some(XM::Lexeme(Rc::from(format!("{}", i + 1).as_str()), Meta::default()));
         }
       }
       return Some(XM::from(first_child));
@@ -3703,12 +4189,127 @@ pub fn norm_fenced(
   interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
 }
 
+/// True iff the XM points to a token whose underlying DOM node carries
+/// a negative `rpadding` attribute — the prefiltered signal that an
+/// `<XMHint width="-X.Xpt"/>` (negative `\kern`) immediately followed
+/// this token. Used by `stretchy_norm_fenced` / `stretchy_triple_norm_fenced`
+/// to confirm the kerned-stack idiom and prune ambiguous parses where
+/// adjacent `\left|…\right|` fences are genuinely separate. Task #263.
+fn has_negative_rpadding(xm: &XM, nodes: &[XMLNode]) -> bool {
+  let node_opt = match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes).ok(),
+    _ => None,
+  };
+  let Some(node) = node_opt else {
+    return false;
+  };
+  match node.get_attribute("rpadding") {
+    Some(s) => crate::util::get_xmhint_spacing(&s) < 0.0,
+    None => false,
+  }
+}
+
+/// Apply `merge_vertbar_pair` semantics but emit U+2980 (⦀ TRIPLE
+/// VERTICAL BAR DELIMITER) instead of U+2016 (‖) — used by
+/// `stretchy_triple_norm_fenced` for the `\vertiii`/`|||·|||` idiom.
+fn merge_vertbar_triple(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
+  let mut props = match xm {
+    XM::Lexeme(ref lex, _) => {
+      if let Ok(node) = lookup_lex_node(lex, nodes) {
+        XProps::from(node)
+      } else {
+        XProps::default()
+      }
+    },
+    XM::Token(ref p, _) => p.clone(),
+    _ => XProps::default(),
+  };
+  props.role = Some(Cow::Borrowed(role));
+  props.content = Some(Cow::Borrowed("\u{2980}")); // ⦀
+  props.stretchy = None;
+  XM::Token(props, Meta::default())
+}
+
+/// `stretchy_vertbar stretchy_vertbar expression stretchy_vertbar stretchy_vertbar`
+/// → norm. The kerned-stack `\left|\kern-…\left|·\right|\kern-…\right|`
+/// idiom (community macros: `\vertii`, `\|·\|`, etc.). The Mouth/Stomach
+/// flattens these into a flat sibling sequence of stretchy `|` bars
+/// separated by XMHint kerns; `util.rs::filter_hints` folds the kerns
+/// into `rpadding="-X.Xpt"` on the first bar of each kerned pair.
+/// We verify that signal here — if absent, the input is two intentionally
+/// separate `\left|…\right|` fences (e.g. `|x|·|y|`), and this rule
+/// should NOT fire. Returning Err prunes the parse so the alternate
+/// reading (two `fenced` matches with `fenced` between them) wins.
+/// Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+pub fn stretchy_norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open1_opt, _open2_opt, arg_opt, close1_opt, _close2_opt);
+  let open1 = open1_opt.ok_or("stretchy_norm_fenced: missing open1")?;
+  let close1 = close1_opt.ok_or("stretchy_norm_fenced: missing close1")?;
+  let arg = arg_opt.ok_or("stretchy_norm_fenced: missing arg")?;
+  // Kern signal: outer OPEN (open1) and inner CLOSE (close1) each carry
+  // a negative rpadding from the `\kern` between adjacent `\left|`s.
+  if !has_negative_rpadding(&open1, ctxt.nodes) || !has_negative_rpadding(&close1, ctxt.nodes) {
+    return Err("stretchy_norm_fenced: bars not kern-stacked (no negative rpadding)".into());
+  }
+  let open = merge_vertbar_pair(open1, "OPEN", ctxt.nodes);
+  let close = merge_vertbar_pair(close1, "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+}
+
+/// Triple-bar `\left|\kern\left|\kern\left|·\right|\kern\right|\kern\right|`
+/// → operator-norm. Requires the kern signal on the first TWO bars of each
+/// side (open1 + open2 kerned to their successors; symmetric on the right).
+/// Goes beyond Perl LaTeXML (Perl produces ‖|x|‖ — partial recognition —
+/// for the same input). Task #263.
+pub fn stretchy_triple_norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(
+    args =>
+    open1_opt, open2_opt, _open3_opt,
+    arg_opt,
+    close1_opt, close2_opt, _close3_opt
+  );
+  let open1 = open1_opt.ok_or("stretchy_triple_norm_fenced: missing open1")?;
+  let open2 = open2_opt.ok_or("stretchy_triple_norm_fenced: missing open2")?;
+  let close1 = close1_opt.ok_or("stretchy_triple_norm_fenced: missing close1")?;
+  let close2 = close2_opt.ok_or("stretchy_triple_norm_fenced: missing close2")?;
+  let arg = arg_opt.ok_or("stretchy_triple_norm_fenced: missing arg")?;
+  // Two kern signals on each side (between bars 1-2 and bars 2-3).
+  if !has_negative_rpadding(&open1, ctxt.nodes)
+    || !has_negative_rpadding(&open2, ctxt.nodes)
+    || !has_negative_rpadding(&close1, ctxt.nodes)
+    || !has_negative_rpadding(&close2, ctxt.nodes)
+  {
+    return Err("stretchy_triple_norm_fenced: bars not triple-kern-stacked".into());
+  }
+  let open = merge_vertbar_triple(open1, "OPEN", ctxt.nodes);
+  let close = merge_vertbar_triple(close1, "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("operator-norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+}
+
 /// Merge two single `|` tokens into `‖` (U+2016) with the given role.
 /// Perl CatSymbols: concatenates two delimiters into a combined symbol.
 fn merge_vertbar_pair(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   let mut props = match xm {
     XM::Lexeme(ref lex, _) => {
-      if let Ok(node) = lookup_lex_node(lex.as_str(), nodes) {
+      if let Ok(node) = lookup_lex_node(lex, nodes) {
         XProps::from(node)
       } else {
         XProps::default()

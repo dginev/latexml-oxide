@@ -1,5 +1,6 @@
 use latexml_package::prelude::*;
 
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -10,24 +11,40 @@ LoadDefinitions!({
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
   RequirePackage!("xcolor");
-  DefMacro!("\\newmdtheoremenv[]{}{}[]", "");
-  DefMacro!("\\newmdenv[]{}", "");
-  DefMacro!("\\renewmdenv[]{}", "");
-  DefMacro!("\\surroundwithmdframed[]{}", "");
-  DefMacro!("\\mdfsubtitle[]{}", "");
-  DefMacro!("\\mdfapptodefinestyle{}{}", "");
-  DefMacro!("\\mdfsetup{}", "");
-  DefMacro!("\\mdfdefinestyle{}{}", "");
+  def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
+  def_macro_noop("\\newmdenv[]{}")?;
+  def_macro_noop("\\renewmdenv[]{}")?;
+  def_macro_noop("\\surroundwithmdframed[]{}")?;
+  def_macro_noop("\\mdfsubtitle[]{}")?;
+  def_macro_noop("\\mdfapptodefinestyle{}{}")?;
+  def_macro_noop("\\mdfsetup{}")?;
+  def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Perl ar5iv-bindings/mdframed.sty.ltxml L31-34: wrap body in an
-  // inline-block with framed="rectangle" and framecolor from the current
-  // font color (`LookupValue('font')->getColor`). The template emits
-  // `framecolor=` only when the #framecolor property is set (via the
-  // `?#framecolor(...)` guard), so an unset color correctly omits the
-  // attribute rather than emitting `framecolor=''`.
+  // Wrap body in `inline-logical-block` (Misc.class container that
+  // accepts Para.model body).
+  //
+  // Rust-only surpass-Perl divergence: Perl ar5iv-bindings/mdframed.sty.ltxml
+  // L31-34 uses `inline-block` (Block.model only), which the schema rejects
+  // when an `mdframed` body contains a `\begin{theorem}` (theorem lives in
+  // Para.class, not Block.class). `inline-logical-block` is the strictly
+  // safer swap:
+  //   * Same `Misc.class` membership as `inline-block` — accepted in every
+  //     parent context where Perl's choice fits (inline AND block). The
+  //     alternative `logical-block` is in `Para.class` and would BREAK
+  //     inline-context uses of mdframed (`\fbox{\begin{mdframed}…}` etc.).
+  //   * Same Backgroundable.attributes surface (`framed`, `framecolor`,
+  //     `backgroundcolor`).
+  //   * Same `display: inline-block` CSS in LaTeXML.css (no visual change).
+  //   * `Para.model` body — accepts theorem/proof/para inside.
+  //
+  // The template emits `framecolor=` only when the #framecolor property is
+  // set (via the `?#framecolor(...)` guard), so an unset color correctly
+  // omits the attribute rather than emitting `framecolor=''`. Driver:
+  // arXiv:2506.03074v1 (ICML 2025 paper with
+  // `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`).
   DefEnvironment!(
     "{mdframed}[]",
-    "<ltx:inline-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-block>",
+    "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
     properties => sub[_args] {
       let mut props = arena::SymHashMap::default();
       if let Some(font) = latexml_core::state::lookup_font() {
@@ -36,6 +53,14 @@ LoadDefinitions!({
         }
       }
       Ok(props)
-    }
-  );
+    },
+    // mdframed bodies routinely contain multi-paragraph content
+    // (theorems, displayed equations, multiple `$$..$$` blocks). The
+    // DefEnvironment default of restricted_horizontal makes
+    // BOUND_MODE never end with "vertical", so tex_math.rs:467's
+    // `$$` → display-math check stays false: each `$$` is parsed as
+    // open + immediate close, leaving body content in text mode and
+    // cascading "Script _/^ can only appear in math mode" on subscripts.
+    // Witness 2402.07712 (eqnarray + multiple `$$..$$` in mdframed).
+    mode => "internal_vertical");
 });

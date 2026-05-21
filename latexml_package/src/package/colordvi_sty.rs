@@ -74,7 +74,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefMacro!("\\subdef{}", "");
+  def_macro_noop("\\subdef{}")?;
 
   // Perl L42-53: \textColor — set color from CMYK spec
   DefPrimitive!("\\textColor{}", sub[(cmyk_arg)] {

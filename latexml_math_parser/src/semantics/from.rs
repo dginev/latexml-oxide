@@ -28,7 +28,7 @@ impl From<Option<XM>> for Args {
 }
 
 impl From<&str> for XM {
-  fn from(a: &str) -> XM { XM::Lexeme(a.to_string(), Meta::default()) }
+  fn from(a: &str) -> XM { XM::Lexeme(std::rc::Rc::from(a), Meta::default()) }
 }
 impl From<(&str, &str)> for XM {
   fn from(a: (&str, &str)) -> XM {
@@ -140,8 +140,7 @@ impl From<[&str; 2]> for Args {
     Args(
       args
         .iter()
-        .map(ToString::to_string)
-        .map(|x| XM::Lexeme(x, Meta::default()))
+        .map(|s| XM::Lexeme(std::rc::Rc::from(*s), Meta::default()))
         .map(Option::Some)
         .collect(),
     )
@@ -152,8 +151,7 @@ impl From<[&str; 3]> for Args {
     Args(
       args
         .iter()
-        .map(ToString::to_string)
-        .map(|x| XM::Lexeme(x, Meta::default()))
+        .map(|s| XM::Lexeme(std::rc::Rc::from(*s), Meta::default()))
         .map(Option::Some)
         .collect(),
     )

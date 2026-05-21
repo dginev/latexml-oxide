@@ -40,41 +40,41 @@ LoadDefinitions!({
   // once. Audit currently flags rnode+pnode explicitly.
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
-  DefMacro!("\\pnode[]", "");
-  DefMacro!("\\cnode[]{}", "");
-  DefMacro!("\\Cnode[]{}", "");
+  def_macro_noop("\\pnode[]")?;
+  def_macro_noop("\\cnode[]{}")?;
+  def_macro_noop("\\Cnode[]{}")?;
   DefMacro!("\\circlenode[]{}{}", "#3");
   DefMacro!("\\ovalnode[]{}{}", "#3");
-  DefMacro!("\\fnode OptionalMatch:* []{}", "");
-  DefMacro!("\\dotnode OptionalMatch:* []{}", "");
+  def_macro_noop("\\fnode OptionalMatch:* []{}")?;
+  def_macro_noop("\\dotnode OptionalMatch:* []{}")?;
   DefMacro!("\\trinode[]{}{}", "#3");
   DefMacro!("\\dianode[]{}{}", "#3");
 
   // Connection macros — Perl L130-350
-  DefMacro!("\\ncline OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcline OptionalMatch:* []{}{}", "");
-  DefMacro!("\\nccurve OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pccurve OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncbar OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncdiag OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncangle OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncangles OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncloop OptionalMatch:* []{}{}", "");
-  DefMacro!("\\ncarc OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcbar OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcdiag OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcangle OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcangles OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcloop OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcarc OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\ncline OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcline OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\nccurve OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pccurve OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncbar OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncdiag OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncangle OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncangles OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncloop OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\ncarc OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcbar OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcdiag OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcangle OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcangles OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcloop OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcarc OptionalMatch:* []{}{}")?;
   // `\nccircle{node}{radius}` — Perl pst-node.sty.ltxml `DefPSConstructor`.
   // We stub it to empty here; the actual arc rendering is PSTricks-DVI-only
   // and not ported. Witness: 1304.4491 (stage 14 RUST-REGRESSION).
-  DefMacro!("\\nccircle OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pccircle OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\nccircle OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pccircle OptionalMatch:* []{}{}")?;
   // `\ncdiagg{node}{node}` (extended diagonal) and `\pcdiagg` — also stubs.
-  DefMacro!("\\ncdiagg OptionalMatch:* []{}{}", "");
-  DefMacro!("\\pcdiagg OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\ncdiagg OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\pcdiagg OptionalMatch:* []{}{}")?;
 
   // Label macros — Perl L360-450
   DefMacro!("\\naput OptionalMatch:* []{}", "#2");
@@ -97,22 +97,22 @@ LoadDefinitions!({
   // expand to empty; any label written after (`\Aput[sep]{text}`) is
   // emitted by normal expansion, matching the drop-args-pass-through
   // behavior of sibling stubs \aput/\bput.
-  DefMacro!("\\Aput OptionalMatch:* []", "");
-  DefMacro!("\\Bput OptionalMatch:* []", "");
+  def_macro_noop("\\Aput OptionalMatch:* []")?;
+  def_macro_noop("\\Bput OptionalMatch:* []")?;
 
   // Box macros — Perl L460-520
-  DefMacro!("\\psmatrix", "");
-  DefMacro!("\\endpsmatrix", "");
-  DefMacro!("\\psrowalign{}", "");
-  DefMacro!("\\pscolalign{}", "");
-  DefMacro!("\\ncdot", "");
+  def_macro_noop("\\psmatrix")?;
+  def_macro_noop("\\endpsmatrix")?;
+  def_macro_noop("\\psrowalign{}")?;
+  def_macro_noop("\\pscolalign{}")?;
+  def_macro_noop("\\ncdot")?;
 
   // Perl L224-232: \cnodeput OptionalMatch:* [] OptionalBracketed ZeroPSCoord {} {}
   // builds a \rput{\circlenode{#5}{#6}} expansion. For LaTeXML DVI-only
   // binding, reduce to placing the body.
   DefMacro!("\\cnodeput OptionalMatch:* [] [] {}{}{}", "#6");
   // Perl L334-339: \ncdiagg {} {} — node diagonal connection; DVI-only no-op.
-  DefMacro!("\\ncdiagg OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\ncdiagg OptionalMatch:* []{}{}")?;
   // Perl L341-346: \pcdiagg — same shape.
-  DefMacro!("\\pcdiagg OptionalMatch:* []{}{}", "");
+  def_macro_noop("\\pcdiagg OptionalMatch:* []{}{}")?;
 });

@@ -5,6 +5,14 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: pifont.sty.ltxml — uses pzd fontmap
 
+  // \Pifont{font-name} — switch to the named Pi font. Used by packages
+  // like adforn.sty which redeclares \pzd via `\Pifont{paadr}`. For
+  // XML/HTML output the font-family change has no semantic effect; the
+  // resulting `\char N` produces a literal codepoint regardless of the
+  // declared font. Stub as no-op so downstream `\char` / `\Pisymbol`
+  // calls still resolve correctly. Witness: 2502.16764 (adforn.sty).
+  def_macro_noop("\\Pifont{}")?;
+
   // \Pisymbol{font}{code} — decode a codepoint from a Pi font
   DefPrimitive!("\\Pisymbol{}{Number}", sub[(pifont, code)] {
     let font_name = pifont.unwrap().to_string();
@@ -73,8 +81,8 @@ LoadDefinitions!({
   DefMacro!("\\endPiautolist", "\\endenumerate");
 
   // Don't know what to do with these.
-  DefPrimitive!("\\Piline{}{Number}", None);
-  DefPrimitive!("\\Pifill{}{Number}", None);
+  def_primitive_noop("\\Piline{}{Number}")?;
+  def_primitive_noop("\\Pifill{}{Number}")?;
 
   // Dingbats shortcuts using pzd encoding
   DefMacro!("\\ding{}", "\\Pisymbol{pzd}{#1}");
@@ -85,6 +93,6 @@ LoadDefinitions!({
   DefMacro!("\\enddingautolist", "\\endPiautolist");
 
   // Don't know what to do with these.
-  DefPrimitive!("\\dingline{Number}", None);
-  DefPrimitive!("\\dingfill{Number}", None);
+  def_primitive_noop("\\dingline{Number}")?;
+  def_primitive_noop("\\dingfill{Number}")?;
 });

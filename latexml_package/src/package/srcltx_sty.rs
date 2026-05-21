@@ -8,8 +8,8 @@ LoadDefinitions!({
 
   DefMacro!("\\Input{}",          "\\input{#1}");
   DefMacro!("\\MainFile",         "\\jobname");
-  DefMacro!("\\WinEdt{}",         "");
-  DefMacro!("\\srcIncludeHook{}", "");
-  DefMacro!("\\srcInputHook{}",   "");
+  def_macro_noop("\\WinEdt{}")?;
+  def_macro_noop("\\srcIncludeHook{}")?;
+  def_macro_noop("\\srcInputHook{}")?;
   DefConditional!("\\ifSRCOK");
 });

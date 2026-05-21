@@ -9,7 +9,9 @@ LoadDefinitions!({
   RequirePackage!("aas_macros");
   RequirePackage!("url");
   RequirePackage!("longtable");
-  RequirePackage!("xcolor");
+  // Pre-load with [dvipsnames, table] so AAS-style papers using
+  // `\usepackage[table]{xcolor}` get colortbl loaded too.
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("hyperref");
   RequirePackage!("array");
   RequirePackage!("lineno");
@@ -21,35 +23,59 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received,name=Received]{#1}");
   DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised,name=Revised]{#1}");
   DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted,name=Accepted]{#1}");
-  DefMacro!("\\journalid{}{}", "");
-  DefMacro!("\\articleid{}{}", "");
-  DefMacro!("\\paperid{}", "");
-  DefMacro!("\\msid{}", "");
-  DefMacro!("\\added{}", "");
-  DefMacro!("\\replaced{}", "");
-  DefMacro!("\\deleted{}", "");
-  DefMacro!("\\explain{}", "");
-  DefMacro!("\\edit{}{}", "");
-  DefMacro!("\\ccc{}", "");
+  // Journal metadata — preserve as ltx:note frontmatter (the values
+  // are real article identifiers that downstream tools may want).
+  DefMacro!("\\journalid{}{}",
+    "\\@add@frontmatter{ltx:note}[role=journalid]{#1: #2}");
+  DefMacro!("\\articleid{}{}",
+    "\\@add@frontmatter{ltx:note}[role=articleid]{#1: #2}");
+  DefMacro!("\\paperid{}",
+    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
+  DefMacro!("\\msid{}",
+    "\\@add@frontmatter{ltx:note}[role=msid]{#1}");
+  // Review markup — pass-through (#1) for now, since no LaTeXML container
+  // element accepts ltx:section. ltx:text is inline-only, ltx:inline-block
+  // takes Block.model (paragraphs/equations but no sections), ltx:note
+  // takes Flow.model (still no sections). When authors use
+  // `\added{\section{...}...multi-paragraph...}` to annotate a whole
+  // revised section (common in aastex appendices), any wrapper auto-
+  // closes when \section opens, then the }-token tries to close an
+  // already-closed wrapper → `Error:malformed:ltx:text/inline-block`.
+  // Witness 2110.12098. Pass-through preserves content; the review
+  // semantic class is lost in HTML output but the body survives.
+  DefMacro!("\\added{}",    "#1");
+  DefMacro!("\\replaced{}", "#1");
+  DefMacro!("\\deleted{}",  "#1");
+  DefMacro!("\\explain{}",  "#1");
+  DefMacro!("\\edit{}{}",   "#2");
+  def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
-  DefMacro!("\\journal{}", "");
-  DefMacro!("\\volume{}", "");
-  DefMacro!("\\issue{}", "");
+  DefMacro!("\\journal{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\volume{}",
+    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\issue{}",
+    "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
   DefMacro!("\\SGMLbi{}", "#1");
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
   DefMacro!("\\SGMLentity{}", "#1");
-  DefMacro!("\\SGML{}", "");
+  def_macro_noop("\\SGML{}")?;
 
   // 2.1.4 Short Comment
   DefMacro!("\\slugcomment{}", "\\@add@frontmatter{ltx:note}[role=slugcomment]{#1}");
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\shortauthors{}", "");
+  DefMacro!("\\shortauthors{}",
+    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
-  DefMacro!("\\lefthead{}", "");
-  DefMacro!("\\righthead{}", "");
+  // \lefthead{author} / \righthead{title} — running-header text;
+  // preserve as ltx:note (was gobbled).
+  DefMacro!("\\lefthead{}",
+    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+  DefMacro!("\\righthead{}",
+    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
 
   // 2.3 Title and Author Information
   AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
@@ -99,26 +125,29 @@ LoadDefinitions!({
   // Collaboration — Perl L139-141
   DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
   DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
-  DefMacro!("\\nocollaboration{}", "");
+  def_macro_noop("\\nocollaboration{}")?;
 
   // 2.5 Keywords
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
-  // 2.6 Comments to Editors
-  DefMacro!("\\notetoeditor{}", "");
+  // 2.6 Comments to Editors — preserve the note text as ltx:note
+  // (review content, not metadata). Content-preserving per
+  // [[feedback-content-preserving]].
+  DefConstructor!("\\notetoeditor{}",
+    "<ltx:note role='editor-note'>#1</ltx:note>");
   NewCounter!("editornote");
   DefMacro!("\\theeditornote", "E\\arabic{editornote}");
 
   // 2.8 Figure and Table Placement
-  DefMacro!("\\placetable{}", "");
-  DefMacro!("\\placefigure{}", "");
-  DefMacro!("\\placeplate{}", "");
+  def_macro_noop("\\placetable{}")?;
+  def_macro_noop("\\placefigure{}")?;
+  def_macro_noop("\\placeplate{}")?;
   NewCounter!("plate");
   DefMacro!("\\platename", "Plate");
-  DefMacro!("\\platewidth{Dimension}", "");
+  def_macro_noop("\\platewidth{Dimension}")?;
   DefMacro!("\\platenum{}", "\\def\\theplate{#1}");
-  DefMacro!("\\gridline{}", "");
+  def_macro_noop("\\gridline{}")?;
 
   // Plate environments — Perl aas_support.sty.ltxml L179-201.
   // Each variant calls beforeFloat (sets \@captype, rebinds \\ → \lx@newline,
@@ -158,7 +187,7 @@ LoadDefinitions!({
     // Push order is reversed for stack semantics: last unread is first read.
     gullet::unread_one(test);
     gullet::unread_one(T_END!());
-    gullet::unread_vec(arg.clone().unlist());
+    gullet::unread_vec(arg.unlist());
     gullet::unread_one(T_BEGIN!());
     if test.get_catcode() == Catcode::BEGIN {
       Ok(Tokens!(T_CS!("\\aas@fig")))
@@ -178,6 +207,15 @@ LoadDefinitions!({
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements>");
   Let!("\\acknowledgments", "\\acknowledgements");
+  // AASTeX 6.3+ shortcut: `\ack{...}` (with mandatory arg, distinct from
+  // ptephy's argument-less form).
+  DefMacro!("\\ack{}", "\\begin{acknowledgements}#1\\end{acknowledgements}");
+
+  // \uat{name}{id} — Unified Astronomy Thesaurus term link. Used in
+  // \keywords by AASTeX 6.3+. Round-34 surpass: emit as a clickable
+  // link to https://astrothesaurus.org/uat/<id> so the UAT id is
+  // preserved. Witness 2502.17661 (aastex7).
+  DefMacro!("\\uat{}{}", "\\href{https://astrothesaurus.org/uat/#2}{#1}");
 
   // 2.10 Facilities
   DefConstructor!("\\facility{}", "<ltx:text class='ltx_ast_facility'>#1</ltx:text>",
@@ -222,7 +260,7 @@ LoadDefinitions!({
     "\\lx@equation@settag{\\edef\\theequation{#1}\\lx@make@tags{equation}}");
 
   // 2.13 Citations — Perl L264-293
-  DefMacro!("\\markcite{}", "");
+  def_macro_noop("\\markcite{}")?;
   RequirePackage!("natbib");
 
   // Perl aas_support.sty.ltxml:283-291:
@@ -265,7 +303,7 @@ LoadDefinitions!({
 
   // 2.14 Electronic Art
   DefMacro!("\\figurenum{}", "\\def\\thefigure{#1}");
-  DefMacro!("\\epsscale{}", "");
+  def_macro_noop("\\epsscale{}")?;
   DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\textwidth]{#1}");
   DefMacro!("\\plottwo Semiverbatim Semiverbatim",
     "\\hbox{\\includegraphics[width=\\textwidth]{#1}\\includegraphics[width=\\textwidth]{#2}}");
@@ -313,7 +351,7 @@ LoadDefinitions!({
   // We treat as a no-op marker — our deluxetable / longtable handling
   // doesn't need the conditional flag. Driver: 2209.01632 (aastex631)
   // emitted "\startlongtable not defined" + alignment-tab cascade.
-  DefMacro!("\\startlongtable", "");
+  def_macro_noop("\\startlongtable")?;
 
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so
@@ -327,7 +365,7 @@ LoadDefinitions!({
   DefMacro!("\\deluxedecimals", "\\global\\deluxedecimalstrue");
   RawTeX!("\\global\\deluxedecimalsfalse");
   Let!("\\decimals", "\\deluxedecimals");
-  DefMacro!("\\colnumbers", "");
+  def_macro_noop("\\colnumbers")?;
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
 
@@ -584,26 +622,26 @@ LoadDefinitions!({
   DefMacro!("\\eqsecnum",
     "\\@addtoreset{equation}{section}\\def\\theequation{\\arabic{section}-\\arabic{equation}}");
 
-  DefMacro!("\\singlespace", "");
-  DefMacro!("\\doublespace", "");
-  DefMacro!("\\tighten", "");
-  DefMacro!("\\tightenlines", "");
-  DefMacro!("\\nohyphenation", "");
-  DefMacro!("\\offhyphenation", "");
-  DefMacro!("\\ptlandscape", "");
-  DefMacro!("\\refpar", "");
-  DefMacro!("\\traceoutput", "");
-  DefMacro!("\\tracingplain", "");
+  def_macro_noop("\\singlespace")?;
+  def_macro_noop("\\doublespace")?;
+  def_macro_noop("\\tighten")?;
+  def_macro_noop("\\tightenlines")?;
+  def_macro_noop("\\nohyphenation")?;
+  def_macro_noop("\\offhyphenation")?;
+  def_macro_noop("\\ptlandscape")?;
+  def_macro_noop("\\refpar")?;
+  def_macro_noop("\\traceoutput")?;
+  def_macro_noop("\\tracingplain")?;
 
-  DefMacro!("\\noprint {}", "");
+  def_macro_noop("\\noprint {}")?;
   DefMacro!("\\figsetstart", "{\\bf Fig. Set}");
-  DefMacro!("\\figsetend", "");
-  DefMacro!("\\figsetgrpstart", "");
-  DefMacro!("\\figsetgrpend", "");
+  def_macro_noop("\\figsetend")?;
+  def_macro_noop("\\figsetgrpstart")?;
+  def_macro_noop("\\figsetgrpend")?;
   DefMacro!("\\figsetnum {}", "{\\bf #1.}");
   DefMacro!("\\figsettitle {}", "{\\bf #1}");
-  DefMacro!("\\figsetgrpnum {}", "");
-  DefMacro!("\\figsetgrptitle {}", "");
-  DefMacro!("\\figsetplot {}", "");
-  DefMacro!("\\figsetgrpnote {}", "");
+  def_macro_noop("\\figsetgrpnum {}")?;
+  def_macro_noop("\\figsetgrptitle {}")?;
+  def_macro_noop("\\figsetplot {}")?;
+  def_macro_noop("\\figsetgrpnote {}")?;
 });

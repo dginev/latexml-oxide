@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
+use std::rc::Rc;
 
 use super::ActionContext;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
@@ -162,7 +163,21 @@ impl XProps {
 /// a "parsing state::, via an attached `Meta` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XM {
-  Lexeme(String, Meta),
+  /// Token-name lexeme (e.g. "RELOP:less-than:3", "letter:a",
+  /// "delimited-open-paren"). The name is stored as `Rc<str>` so:
+  ///
+  /// 1. **Byte-glade hot path** (asf_traverser case 1): each ASCII
+  ///    byte resolves to a cached `Rc<str>` via `byte_lexeme_rc(b)`.
+  ///    Clones are refcount bumps — no allocation per byte glade.
+  /// 2. **Marpa ASF cache clones** (`asf.rs:156, 208`): cloning a
+  ///    `ParseTree = Vec<Option<XM>>` no longer deep-clones the
+  ///    lexeme name. Refcount-bump per Lexeme in the Vec.
+  /// 3. **Read sites** (`name.starts_with(...)`, `name == "..."`,
+  ///    `name.split(...)`, `name.contains(...)`): unchanged — `Rc<str>`
+  ///    derefs to `&str`.
+  ///
+  /// Construction at runtime: `Rc::from(string)` / `Rc::from("…")`.
+  Lexeme(Rc<str>, Meta),
   Token(XProps, Meta), // does this need Meta?
   Apply(Operator, Args, XProps, Meta),
   Dual(Box<XM>, Box<XM>, XProps, Meta),
@@ -237,7 +252,7 @@ impl Args {
         maybe_arg
           .as_ref()
           .unwrap_or(&XM::Lexeme(
-            String::from("missing_argument"),
+            Rc::from("missing_argument"),
             Meta::default(),
           ))
           .fmt_indented(level, f)?;
@@ -250,7 +265,7 @@ impl Args {
         maybe_arg
           .as_ref()
           .unwrap_or(&XM::Lexeme(
-            String::from("missing_argument"),
+            Rc::from("missing_argument"),
             Meta::default(),
           ))
           .fmt_indented(&last_level, f)?;
@@ -507,6 +522,1090 @@ impl XM {
     }
   }
 
+  /// Count the number of `absent` markers in this tree.
+  ///
+  /// `absent` appears as a sentinel `XM::Token` (with
+  /// `meaning="absent"`) when a parse has to fill in a missing
+  /// operand position — e.g. `< x >` parsed as the relational
+  /// chain `absent < x > absent`. Fewer `absent` markers signals
+  /// a parse that satisfies the grammar without needing fillers.
+  pub fn count_absent(&self) -> usize {
+    match self {
+      XM::Token(props, _) => {
+        if props.meaning.as_deref() == Some("absent") {
+          1
+        } else {
+          0
+        }
+      },
+      XM::Apply(op, args, ..) => op.0.count_absent() + args.trees().iter().map(|a| a.count_absent()).sum::<usize>(),
+      XM::Dual(c, p, ..) => c.count_absent() + p.count_absent(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_absent()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_absent()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_absent()).sum(),
+      XM::Lexeme(_, _) | XM::Ref(_) => 0,
+    }
+  }
+
+  /// Semantic-node count used by parse-ranking pragmas to prefer
+  /// compact interpretations over verbose ones. Not a general
+  /// "tree size" function — it deliberately ignores presentation
+  /// duplication so structurally-equivalent parses get a fair
+  /// comparison.
+  ///
+  /// Smaller wins: `norm@(a)` (2 nodes) beats
+  /// `absolute-value@(absolute-value@(a))` (3 nodes);
+  /// `differential-d@(x)` (2 nodes) beats `d*x` (3 nodes).
+  ///
+  /// **Counting conventions**:
+  /// * Each `XM::Apply` contributes ONE node — the operator is part
+  ///   of the Apply's identity, not a separate child. So `f@(x)`
+  ///   is 2 nodes (the Apply + x), not 3.
+  /// * `XM::Dual(content, presentation)` counts **only the content
+  ///   tree** — the presentation branch is a parallel rendering of
+  ///   the same semantics and contributes the same count, so
+  ///   double-counting would inflate purely-cosmetic siblings.
+  /// * `XM::Ref(props)` is resolved to its target via the
+  ///   presentation-branch index built at the Dual boundary —
+  ///   so a Ref pointing to a deep sub-tree contributes its full
+  ///   target's node count, not just 1. This keeps the ranking
+  ///   honest when one parse uses a single Ref to a complex node
+  ///   versus another that lays out multiple Refs to leaves.
+  pub fn count_nodes_for_parse_ranking(&self) -> usize {
+    let mut index: HashMap<String, &XM> = HashMap::default();
+    self.build_ref_index(&mut index);
+    self.count_nodes_with_index(&index, &mut Vec::new())
+  }
+
+  /// Walk this tree and register every `(id, &XM)` pair that a
+  /// `Ref` might lookup. Refs key on `props.id` or `props.xmkey`.
+  fn build_ref_index<'a>(&'a self, out: &mut HashMap<String, &'a XM>) {
+    let take = |p: &'a XProps| -> Option<String> {
+      p.id.as_ref().map(|c| c.to_string()).or_else(|| p.xmkey.as_ref().map(|c| c.to_string()))
+    };
+    match self {
+      XM::Token(props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+      },
+      XM::Apply(_op, args, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        for arg in args.trees() {
+          arg.build_ref_index(out);
+        }
+      },
+      XM::Dual(c, p, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        c.build_ref_index(out);
+        p.build_ref_index(out);
+      },
+      XM::Wrap(items, props, _) => {
+        if let Some(k) = take(props) {
+          out.entry(k).or_insert(self);
+        }
+        for it in items {
+          it.build_ref_index(out);
+        }
+      },
+      XM::Arg(items) | XM::Choices(items) => {
+        for it in items {
+          it.build_ref_index(out);
+        }
+      },
+      XM::Lexeme(_, _) | XM::Ref(_) => {},
+    }
+  }
+
+  /// Counting worker with the Ref index. `visited` is a stack of
+  /// idref/xmkey strings currently being resolved — guards against
+  /// cyclic references (defensive; idref graphs in valid XMath
+  /// are acyclic).
+  fn count_nodes_with_index(&self, index: &HashMap<String, &XM>, visited: &mut Vec<String>) -> usize {
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) => 1,
+      XM::Apply(_op, args, ..) => 1 + args.trees().iter().map(|a| a.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Dual(c, _p, ..) => c.count_nodes_with_index(index, visited),
+      XM::Wrap(items, ..) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_nodes_with_index(index, visited)).sum(),
+      XM::Arg(items) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Ref(props) => {
+        let key = props.idref.as_ref().map(|c| c.to_string()).or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
+        match key {
+          Some(k) if !visited.contains(&k) => match index.get(&k) {
+            Some(target) => {
+              visited.push(k);
+              let n = target.count_nodes_with_index(index, visited);
+              visited.pop();
+              n
+            },
+            None => 1,
+          },
+          // Already visiting this ref (cycle) or no key at all —
+          // count as 1 so we don't double-count or infinite-loop.
+          _ => 1,
+        }
+      },
+    }
+  }
+
+  /// Multi-tree pragma: keep only the surviving trees with the
+  /// fewest `absent` markers. If a single tree wins, unwrap from
+  /// `XM::Choices`. If many tie at the minimum, leave them all in
+  /// `XM::Choices` for downstream pragmas. If the forest is empty
+  /// or unambiguous, pass through unchanged.
+  ///
+  /// Rationale: P1 from the 2026-05-17 tiebreaking research notes
+  /// — parses that use the `absent` filler are structurally weaker
+  /// than parses that don't.
+  pub fn prefer_fewer_absent(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_absent()).min().unwrap_or(0);
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_absent() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  // `prefer_zero_absent_when_available` retired 2026-05-19 (ASF
+  // item 5 Phase 2). It had no dedicated test witness; its
+  // conceptual target (`<x|y>` bra-ket → inner-product) is already
+  // produced by the qm-specific pragmas + angle-bracket grammar
+  // rules. After modified_term Phase 1 landed, disabling the
+  // pragma left tests = 1328/0/0 on both HYBRID and ASF.
+  // Function body removed; if a regression surfaces, restore from
+  // git history (the removal commit references this comment).
+
+  /// Multi-tree pragma: keep only the surviving trees with the
+  /// smallest node count. Helps select compact semantic
+  /// interpretations over deeply nested literal ones — e.g.
+  /// `norm@(x)` over `absolute-value@(absolute-value@(x))`.
+  ///
+  /// Rationale: P2 from the 2026-05-17 tiebreaking research notes.
+  pub fn prefer_smaller_tree(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_nodes_for_parse_ranking()).min().unwrap_or(0);
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_nodes_for_parse_ranking() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Does the root of this parse tree match `Dual(Apply(op_meaning,
+  /// [_, _]), …)` — i.e. a Dual-wrapped 2-argument Apply with the
+  /// given operator meaning? Used by the math-root operator-preference
+  /// pragma.
+  fn root_dual_apply_meaning_is(&self, expected: &str, expected_arg_count: usize) -> bool {
+    match self {
+      XM::Dual(content, _, _, _) => content.root_apply_meaning_is(expected, expected_arg_count),
+      _ => false,
+    }
+  }
+
+  /// Inner helper: matches `Apply` with an operator whose meaning
+  /// equals `expected` and whose Args has exactly `expected_arg_count`
+  /// trees.
+  fn root_apply_meaning_is(&self, expected: &str, expected_arg_count: usize) -> bool {
+    if let XM::Apply(Operator(op), args, ..) = self {
+      if args.trees().len() != expected_arg_count {
+        return false;
+      }
+      match &**op {
+        XM::Token(props, _) => props.meaning.as_deref() == Some(expected),
+        XM::Lexeme(name, _) => &**name == expected || name.starts_with(&format!("{expected}:")),
+        _ => false,
+      }
+    } else {
+      false
+    }
+  }
+
+  /// Does the root of this parse match `Dual(?, Apply(op_meaning,
+  /// [...]))` where the op meaning starts with `delimited-`?
+  fn root_dual_apply_is_delimited_wrapper(&self) -> bool {
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    let XM::Apply(Operator(op), _, _, _) = &**content else {
+      return false;
+    };
+    match &**op {
+      XM::Token(props, _) => props.meaning.as_deref().is_some_and(|m| m.starts_with("delimited-")),
+      XM::Lexeme(name, _) => name.starts_with("delimited-"),
+      _ => false,
+    }
+  }
+
+  /// Does the root of this parse match `Dual(?, Apply(op_meaning,
+  /// [...]))` where the op meaning is one of the named-interval
+  /// operators (open/closed/half-open intervals)?
+  fn root_dual_apply_is_named_interval(&self) -> bool {
+    static NAMED_INTERVALS: &[&str] =
+      &["open-interval", "closed-interval", "open-closed-interval", "closed-open-interval"];
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    if let XM::Apply(Operator(op), args, ..) = &**content {
+      if args.trees().len() != 2 {
+        return false;
+      }
+      let meaning = match &**op {
+        XM::Token(props, _) => props.meaning.as_deref(),
+        XM::Lexeme(name, _) => Some(&**name),
+        _ => None,
+      };
+      meaning.is_some_and(|m| NAMED_INTERVALS.contains(&m))
+    } else {
+      false
+    }
+  }
+
+  /// Does the root Dual's **presentation** Wrap contain exactly one
+  /// non-delimiter child that is itself a `Dual` whose content
+  /// shares the same operator meaning as the outer? This is the
+  /// shape that produces `set@(set@(…))` / `vector@(vector@(…))`
+  /// when rendered — the outer content's Ref resolves to the inner
+  /// Dual instead of to flat items.
+  fn root_dual_has_redundant_inner_wrap(&self) -> bool {
+    let XM::Dual(content, presentation, _, _) = self else {
+      return false;
+    };
+    let outer_meaning = match &**content {
+      XM::Apply(Operator(op), _, ..) => match &**op {
+        XM::Token(props, _) => props.meaning.as_deref().map(String::from),
+        XM::Lexeme(name, _) => Some(name.to_string()),
+        _ => None,
+      },
+      _ => return false,
+    };
+    let Some(outer_m) = outer_meaning else { return false };
+    let XM::Wrap(items, _, _) = &**presentation else {
+      return false;
+    };
+    let is_delim = |x: &XM| match x {
+      XM::Token(p, _) => matches!(p.role.as_deref(), Some("OPEN") | Some("CLOSE")),
+      XM::Lexeme(n, _) => n.starts_with("OPEN:") || n.starts_with("CLOSE:"),
+      _ => false,
+    };
+    let inner: Vec<&XM> = items.iter().filter(|x| !is_delim(x)).collect();
+    if inner.len() != 1 {
+      return false;
+    }
+    let XM::Dual(inner_content, ..) = inner[0] else {
+      return false;
+    };
+    // Inner Dual's content should be an Apply whose meaning matches
+    // outer (or is a closely-related "list"/"vector"/"formulae"
+    // meaning — common when `interpret_delimited` lifts the list
+    // wrapper above an inner Dual).
+    if let XM::Apply(Operator(inner_op), _, ..) = &**inner_content {
+      let inner_meaning = match &**inner_op {
+        XM::Token(props, _) => props.meaning.as_deref(),
+        XM::Lexeme(name, _) => Some(&**name),
+        _ => None,
+      };
+      // Outer-set wrapping inner-{set/list/vector/formulae} is the
+      // shape we want to prune. The legacy never picks this.
+      let inner_str = inner_meaning.unwrap_or("");
+      if outer_m == inner_str
+        || (matches!(outer_m.as_str(), "set" | "vector")
+          && matches!(inner_str, "set" | "vector" | "list" | "formulae"))
+      {
+        return true;
+      }
+    }
+    false
+  }
+
+  /// Does the root match `Dual(?, Apply(op_meaning, [...]))` where
+  /// the Apply's first child (after following any `XM::Ref` through
+  /// the presentation branch's idref index) is ALSO an `Apply` with
+  /// the same `op_meaning`? Used to detect redundant
+  /// `set@(set@(...))` and similar self-wrapping shapes.
+  fn root_dual_is_redundant_self_wrap(&self) -> bool {
+    let XM::Dual(content, _, _, _) = self else {
+      return false;
+    };
+    let outer_meaning = match &**content {
+      XM::Apply(Operator(op), args, ..) if args.trees().len() == 1 => {
+        let m = match &**op {
+          XM::Token(props, _) => props.meaning.as_deref().map(String::from),
+          XM::Lexeme(name, _) => Some(name.to_string()),
+          _ => None,
+        };
+        m
+      },
+      _ => return false,
+    };
+    let Some(outer_m) = outer_meaning else {
+      return false;
+    };
+    // Resolve the inner: dereference Apply's single child. If it's
+    // a Ref, follow it through the idref index built across the
+    // whole Dual.
+    let mut index: HashMap<String, &XM> = HashMap::default();
+    self.build_ref_index(&mut index);
+    if let XM::Apply(_, args, _, _) = &**content {
+      let first_arg = args.trees().first().copied();
+      let resolved = match first_arg {
+        Some(XM::Ref(props)) => {
+          let key = props
+            .idref
+            .as_ref()
+            .map(|c| c.to_string())
+            .or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
+          key.and_then(|k| index.get(&k).copied())
+        },
+        other => other,
+      };
+      if let Some(XM::Apply(Operator(inner_op), _, _, _)) = resolved {
+        let inner_meaning = match &**inner_op {
+          XM::Token(props, _) => props.meaning.as_deref(),
+          XM::Lexeme(name, _) => Some(&**name),
+          _ => None,
+        };
+        return inner_meaning == Some(outer_m.as_str());
+      }
+    }
+    false
+  }
+
+  /// Multi-tree pragma: prune parses whose math root has a
+  /// "self-wrapping" Apply — `Apply(op, [Apply(op, ...)])` — when
+  /// the forest also contains a non-self-wrapping alternative.
+  ///
+  /// Triggering shapes: `set@(set@(a, b, c))`, `vector@(vector@(...))`,
+  /// etc. These arise from grammar ambiguity where both a direct
+  /// rule (`fenced` producing the inner Apply) and an outer
+  /// wrapping path (which then takes the inner Apply as a single
+  /// argument) match. The legacy never selects the wrapping form
+  /// — it's always the direct form. This pragma encodes that
+  /// preference.
+  pub fn prefer_non_self_wrapping_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let is_redundant = |t: &XM| t.root_dual_is_redundant_self_wrap() || t.root_dual_has_redundant_inner_wrap();
+        let has_non_wrapping = trees.iter().any(|t| !is_redundant(t));
+        if !has_non_wrapping {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees.into_iter().filter(|t| !is_redundant(t)).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Does the root match `Apply(multirelation, [..., absent, ...])`
+  /// or `Apply(formulae, [..., absent, ...])` where `absent`
+  /// appears in the **interior** of the args list (NOT at the
+  /// first or last positions)?
+  ///
+  /// The distinction matters: an `absent` at the boundary is
+  /// legitimate (e.g. `<a|f|b>` parses as
+  /// `multirelation(absent, <, a, |, f, |, b, >, absent)` — the
+  /// outer `<` and `>` need left/right operands, which are absent
+  /// because the expression IS the whole math). An `absent` in the
+  /// middle (e.g. `x >= 0` parsed as `multirelation(x, >, absent,
+  /// =, 0)`) signals a failed `two_part_relop` combination — the
+  /// alternative parse using a combined `>=` operator is strictly
+  /// better.
+  fn root_is_multirelation_with_interior_absent(&self) -> bool {
+    let apply = match self {
+      XM::Apply(..) => self,
+      XM::Dual(content, _, _, _) => &**content,
+      _ => return false,
+    };
+    let XM::Apply(Operator(op), args, ..) = apply else {
+      return false;
+    };
+    let meaning = match &**op {
+      XM::Token(props, _) => props.meaning.as_deref(),
+      XM::Lexeme(name, _) => Some(&**name),
+      _ => None,
+    };
+    // Both `multirelation` (explicit relation chain) and `formulae`
+    // (comma-separated relational chain) can fall into this pattern.
+    if !matches!(meaning, Some("multirelation") | Some("formulae")) {
+      return false;
+    }
+    let trees = args.trees();
+    if trees.len() < 3 {
+      return false;
+    }
+    let is_absent = |a: &&XM| matches!(a, XM::Token(p, _) if p.meaning.as_deref() == Some("absent"));
+    // Skip the first and last positions; only inspect interior.
+    trees[1..trees.len() - 1].iter().any(is_absent)
+  }
+
+  /// Multi-tree pragma: drop `multirelation@(..., absent, ...)`
+  /// parses when the forest contains a non-multirelation alternative.
+  ///
+  /// The legacy grammar admits chains like `x > absent = 0` as a
+  /// fallback when `> =` doesn't combine via `two_part_relop`.
+  /// Both parses survive in the ambiguous forest. Marpa tree-iter
+  /// picks the combined form first; ASF Cartesian picks the chain
+  /// with `absent` first. Since `absent` is structurally a
+  /// placeholder for a missing operand, a parse without it is
+  /// strictly preferable when both interpretations exist.
+  pub fn prefer_combined_relop_over_multirelation_with_absent(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_alternative = trees.iter().any(|t| !t.root_is_multirelation_with_interior_absent());
+        if !has_alternative {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| !t.root_is_multirelation_with_interior_absent())
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Multi-tree pragma: when the forest contains parses whose root
+  /// is a named 2-arg interval (`open-interval`, `closed-interval`,
+  /// or half-open variants) AND parses whose root is either
+  /// `vector@(2)` or `delimited-XY@(...)` wrapping the same span,
+  /// drop the non-interval parses.
+  ///
+  /// Rationale: for `(a, b)`, `[a, b]`, `(a, b]`, `[a, b)` — the
+  /// math-parser grammar admits both:
+  ///   - `interval_term → open-interval@(_, _)` / `closed-interval@(_, _)` (the named-interval interpretation)
+  ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket interpretation)
+  /// Math convention reads these as intervals. Tree-iteration order in
+  /// legacy picks the interval; under ASF the Cartesian-product
+  /// order goes the other way.
+  ///
+  /// Scope is **deliberately narrow**: only applied at the root of
+  /// the parse forest. Vectors / wrappers inside function arguments
+  /// (like `f(a, b)` parsed as `Apply(f, [vector(a, b)])`) are
+  /// unaffected because they're nested under an `Apply`, not at
+  /// the root. 3+ element parens-fenced lists also unaffected —
+  /// only `interval_term`'s 2-element shape matches.
+  pub fn prefer_named_interval_at_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_interval = trees.iter().any(|t| t.root_dual_apply_is_named_interval());
+        if !has_interval {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| {
+            // Keep the named-interval parses; drop generic
+            // `vector@(2)` and `delimited-XX@(...)` alternatives at
+            // the root.
+            t.root_dual_apply_is_named_interval()
+              || !(t.root_dual_apply_meaning_is("vector", 2) || t.root_dual_apply_is_delimited_wrapper())
+          })
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Count `XM::Apply` nodes whose operator has meaning starting
+  /// with `delimited-` (e.g. `delimited-<>`, `delimited-[]`,
+  /// `delimited-()`). Used to bias parse selection toward
+  /// candidates that recognized fenced subexpressions as
+  /// semantic groupings, rather than splitting them into a flat
+  /// relop/formulae chain.
+  pub fn count_delimited_wrappers(&self) -> usize {
+    let is_delim_op = |op: &XM| -> bool {
+      match op {
+        XM::Token(props, _) => props
+          .meaning
+          .as_deref()
+          .is_some_and(|m| m.starts_with("delimited-")),
+        _ => false,
+      }
+    };
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Apply(op, args, ..) => {
+        let here = usize::from(is_delim_op(&op.0));
+        here + args.trees().iter().map(|a| a.count_delimited_wrappers()).sum::<usize>()
+      },
+      XM::Dual(c, p, ..) => c.count_delimited_wrappers() + p.count_delimited_wrappers(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_delimited_wrappers()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_delimited_wrappers()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_delimited_wrappers()).sum(),
+    }
+  }
+
+  /// Forest pragma: among surviving candidates, prefer those with
+  /// MORE `delimited-X` Apply nodes. Fires only when the maximum
+  /// is strictly positive (i.e., at least one candidate recognized
+  /// a fence) AND another candidate has a strictly smaller count.
+  ///
+  /// **Resolves**:
+  /// * `2<x,y>=z` → `2 * delimited-<>@(list(x,y)) = z` instead of
+  ///   `formulae@(2 < x, y >= z)` (ambiguous_relations).
+  /// * `0<<a,b>>1` → multirelation around `delimited-<>` instead of
+  ///   `formulae@(0 << a, b >> 1)`.
+  /// * `<a|f|b>` style bra-kets — angle-fence reading wins over
+  ///   flat formula chain.
+  ///
+  /// **Why this is sound**: the grammar admits `delimited-X` only
+  /// when there's a balanced pair of fence tokens AND structured
+  /// content inside (e.g. `term_list`). When this rule fires, the
+  /// fence pair was *intentional* in the input; preferring the
+  /// fenced reading respects the author's notation.
+  pub fn prefer_more_delimited_wrappers(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max_delim = trees.iter().map(|t| t.count_delimited_wrappers()).max().unwrap_or(0);
+        if max_delim == 0 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_delimited_wrappers() == max_delim)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Count Apply nodes whose meaning is a **fence operator**
+  /// (`norm`, `absolute-value`, `floor`, `ceiling`, etc.) AND that
+  /// have an ancestor Apply with the **same** fence meaning. This
+  /// is the "nested same-fence" count: e.g. `‖x · ‖a‖ · y‖` has one
+  /// `norm` inside another `norm`, while `‖x‖ · a · ‖y‖` has none.
+  ///
+  /// Mathematicians read consecutive bar fences with left-to-right
+  /// greedy pairing: `||x||a||y||` → `‖x‖ · a · ‖y‖`, not
+  /// `‖x · ‖a‖ · y‖`. Nested same-meaning fences are unusual without
+  /// explicit size cues (`\bigl\|`, parens). The forest pragma below
+  /// prefers candidates with FEWER such nested same-fences.
+  pub fn count_nested_same_fence(&self) -> usize {
+    fn is_fence_meaning(m: &str) -> bool {
+      matches!(
+        m,
+        "absolute-value"
+          | "norm"
+          | "floor"
+          | "ceiling"
+          | "inner-product"
+          | "quantum-operator-product"
+      )
+    }
+    fn walk(node: &XM, ancestor_fence: Option<String>) -> usize {
+      let meaning_of = |op: &XM| -> Option<String> {
+        match op {
+          XM::Token(p, _) => p.meaning.as_deref().map(String::from),
+          _ => None,
+        }
+      };
+      match node {
+        XM::Apply(op, args, _, _) => {
+          let my_meaning = meaning_of(&op.0);
+          let here = match (&my_meaning, &ancestor_fence) {
+            (Some(m), Some(a)) if m == a && is_fence_meaning(m) => 1,
+            _ => 0,
+          };
+          // Pass current meaning as ancestor if it's a fence; otherwise
+          // keep the existing ancestor (so we detect nesting across
+          // intermediate non-fence Applies like `times`).
+          let new_anc = match &my_meaning {
+            Some(m) if is_fence_meaning(m) => Some(m.clone()),
+            _ => ancestor_fence.clone(),
+          };
+          here + args.trees().iter().map(|a| walk(a, new_anc.clone())).sum::<usize>()
+        },
+        XM::Dual(c, p, _, _) => {
+          // If the Dual's content is a fence-Apply, propagate that
+          // meaning when walking the presentation Wrap — because the
+          // actual nested expression lives inside the Wrap, not
+          // inside the Ref-pointing content.
+          let dual_fence = match &**c {
+            XM::Apply(op_inner, _, _, _) => match &*op_inner.0 {
+              XM::Token(p_inner, _) => p_inner
+                .meaning
+                .as_deref()
+                .filter(|m| is_fence_meaning(m))
+                .map(String::from),
+              _ => None,
+            },
+            _ => None,
+          };
+          let pres_anc = dual_fence.clone().or_else(|| ancestor_fence.clone());
+          walk(c, ancestor_fence.clone()) + walk(p, pres_anc)
+        },
+        XM::Wrap(items, _, _) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Choices(trees) => trees.iter().map(|t| walk(t, ancestor_fence.clone())).sum(),
+        XM::Arg(items) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      }
+    }
+    walk(self, None)
+  }
+
+  /// Forest pragma: prefer candidates with FEWER nested
+  /// same-meaning fences (`norm` inside `norm`, `absolute-value`
+  /// inside `absolute-value`, etc.). Encodes the mathematician's
+  /// "greedy left-to-right pairing" instinct for consecutive bar
+  /// fences. For `||x||a||y||`: sibling parse `norm@(x) * a *
+  /// norm@(y)` has 0 nested fences; outer-wrap parse
+  /// `norm@(x * norm@(a) * y)` has 1. Prefer the sibling.
+  ///
+  /// Fires when at least one candidate has zero nested same-fences
+  /// AND another has more — otherwise inert.
+  pub fn prefer_fewer_nested_same_fences(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_nested_same_fence()).min().unwrap_or(0);
+        let max = trees.iter().map(|t| t.count_nested_same_fence()).max().unwrap_or(0);
+        if min == max {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> =
+          trees.into_iter().filter(|t| t.count_nested_same_fence() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Count Apply nodes whose meaning is a *specific* QM-bracket
+  /// semantic (`quantum-operator-product`, `inner-product`) — the
+  /// dedicated semantics for Dirac `⟨a|f|b⟩` and `⟨a|b⟩`. These are
+  /// MORE specific than the generic `delimited-⟨⟩` wrapper around
+  /// the same input. The forest pragma below prefers candidates
+  /// with more such specific Applies.
+  pub fn count_qm_specific_semantics(&self) -> usize {
+    let is_qm_op = |op: &XM| -> bool {
+      match op {
+        XM::Token(props, _) => matches!(
+          props.meaning.as_deref(),
+          Some("quantum-operator-product") | Some("inner-product")
+        ),
+        _ => false,
+      }
+    };
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Apply(op, args, ..) => {
+        let here = usize::from(is_qm_op(&op.0));
+        here + args.trees().iter().map(|a| a.count_qm_specific_semantics()).sum::<usize>()
+      },
+      XM::Dual(c, p, ..) => c.count_qm_specific_semantics() + p.count_qm_specific_semantics(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_qm_specific_semantics()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_qm_specific_semantics()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_qm_specific_semantics()).sum(),
+    }
+  }
+
+  /// Forest pragma: prefer candidates with more `quantum-operator-product`
+  /// / `inner-product` Apply nodes over the generic `delimited-⟨⟩`
+  /// reading of the same input. Principle: a *specific* semantic
+  /// recognition is closer to author intent than a generic structural
+  /// wrapper. For `⟨a|f|b⟩` the dedicated qm_bracket grammar rule
+  /// produces `quantum-operator-product@(a, f, b)` AND the generic
+  /// `langle_open formula rangle_close → fenced` rule produces
+  /// `delimited-⟨⟩@(a * |f| * b)` — both are admissible, and this
+  /// pragma collapses the choice.
+  pub fn prefer_qm_specific_semantics(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max = trees.iter().map(|t| t.count_qm_specific_semantics()).max().unwrap_or(0);
+        if max == 0 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_qm_specific_semantics() == max)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Count "letter applies to vertbar-fenced argument" patterns
+  /// that occur **inside** a `delimited-⟨⟩` (angle-fenced) Apply.
+  /// Outside the QM/bra-ket context, the K-12 convention prevails
+  /// (`a|b|` = `a * |b|`); this pragma must NOT bias those.
+  ///
+  /// The recursion descends through arbitrary parents, but only
+  /// **counts** an `Apply(letter, [vertbar-fenced])` hit when the
+  /// path from the tree root passed through an `Apply` whose
+  /// operator has meaning `delimited-⟨⟩`. The flag is tracked via
+  /// a closure parameter to avoid recomputing the ancestry.
+  pub fn count_letter_at_vertbar(&self) -> usize {
+    fn op_is_letter(op: &XM) -> bool {
+      match op {
+        XM::Token(p, _) => p.role.as_deref() == Some("UNKNOWN") || p.role.as_deref() == Some("ID"),
+        // Lexeme-form letters: name like "UNKNOWN:..." or "ID:..."
+        XM::Lexeme(name, _) => {
+          let head = name.split(':').next().unwrap_or("");
+          head == "UNKNOWN" || head == "ID"
+        },
+        _ => false,
+      }
+    }
+    fn arg_is_vertbar_fenced(arg: &XM) -> bool {
+      let XM::Dual(_, ref presentation, _, _) = arg else {
+        return false;
+      };
+      let XM::Wrap(ref items, _, _) = **presentation else {
+        return false;
+      };
+      let is_vertbar = |x: Option<&XM>| -> bool {
+        match x {
+          Some(XM::Token(p, _)) => p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖"),
+          Some(XM::Lexeme(name, _)) => name.starts_with("OPEN:|:") || name.starts_with("CLOSE:|:")
+            || name.starts_with("OPEN:‖:") || name.starts_with("CLOSE:‖:")
+            || &**name == "VERTBAR" || name.starts_with("VERTBAR:"),
+          _ => false,
+        }
+      };
+      is_vertbar(items.first()) && is_vertbar(items.last())
+    }
+    fn is_delim_angle_op(op: &XM) -> bool {
+      match op {
+        XM::Token(p, _) => p.meaning.as_deref() == Some("delimited-⟨⟩"),
+        _ => false,
+      }
+    }
+    // Recognise "bra-ket-by-context": a multirelation Apply whose
+    // **boundary** arguments (first and last) are both `absent`,
+    // e.g. `absent < a |f| b > absent` produced by plain `<a|f|b>`.
+    // In that surrounding shape, the same QM convention applies as
+    // for explicit `\langle...\rangle`.
+    fn is_qm_multirelation_apply(op: &XM, args: &Args) -> bool {
+      let meaning_is_multirelation = match op {
+        XM::Token(p, _) => p.meaning.as_deref() == Some("multirelation"),
+        _ => false,
+      };
+      if !meaning_is_multirelation {
+        return false;
+      }
+      let trees = args.trees();
+      let is_absent = |x: Option<&&XM>| -> bool {
+        matches!(x,
+          Some(&XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"))
+      };
+      is_absent(trees.first()) && is_absent(trees.last())
+    }
+    fn walk(node: &XM, inside_angle: bool, op_is_letter: &impl Fn(&XM) -> bool, arg_is_vertbar_fenced: &impl Fn(&XM) -> bool) -> usize {
+      match node {
+        XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+        XM::Apply(op, args, ..) => {
+          let trees = args.trees();
+          let here = if inside_angle
+            && op_is_letter(&op.0)
+            && trees.len() == 1
+            && trees.first().is_some_and(|a| arg_is_vertbar_fenced(a))
+          {
+            1
+          } else {
+            0
+          };
+          // Recurse with `inside_angle` set true if THIS Apply is
+          // a delimited-⟨⟩ OR a QM-style multirelation (absent < … >
+          // absent), both of which signal bra-ket context.
+          let child_inside = inside_angle
+            || is_delim_angle_op(&op.0)
+            || is_qm_multirelation_apply(&op.0, args);
+          here + args
+            .trees()
+            .iter()
+            .map(|a| walk(a, child_inside, op_is_letter, arg_is_vertbar_fenced))
+            .sum::<usize>()
+        },
+        // Dual content/presentation: the Dual's content typically
+        // holds the operator Apply (e.g. `Apply(delim-⟨⟩, [Ref])`)
+        // while the presentation Wrap holds the actual body. So if
+        // the content marks a delim-⟨⟩ wrapper, the presentation
+        // body should be walked with `inside_angle=true`.
+        XM::Dual(c, p, ..) => {
+          let this_is_angle = matches!(&**c,
+            XM::Apply(op, _, _, _) if is_delim_angle_op(&op.0));
+          let pres_inside = inside_angle || this_is_angle;
+          walk(c, inside_angle, op_is_letter, arg_is_vertbar_fenced)
+            + walk(p, pres_inside, op_is_letter, arg_is_vertbar_fenced)
+        },
+        XM::Wrap(items, ..) => items
+          .iter()
+          .map(|i| walk(i, inside_angle, op_is_letter, arg_is_vertbar_fenced))
+          .sum(),
+        XM::Choices(trees) => trees
+          .iter()
+          .map(|t| walk(t, inside_angle, op_is_letter, arg_is_vertbar_fenced))
+          .sum(),
+        XM::Arg(items) => items
+          .iter()
+          .map(|i| walk(i, inside_angle, op_is_letter, arg_is_vertbar_fenced))
+          .sum(),
+      }
+    }
+    walk(self, false, &op_is_letter, &arg_is_vertbar_fenced)
+  }
+
+  /// Forest pragma: among candidates, prefer those with MORE
+  /// `Apply(letter, [vertbar-fenced])` patterns. Fires only when at
+  /// least one candidate has the pattern AND another has fewer.
+  ///
+  /// **Resolves** (the "Class C/H" cluster — function-app inside
+  /// QM-style angle-bracket fence):
+  /// * `\langle B|sum_k f_k|C\rangle` → `B@(|sum|) * C` instead of
+  ///   `B * |sum| * C`.
+  /// * `<a|f|b>` → `a@(|f|) * b` instead of `a * |f| * b`.
+  /// * `n|A|` patterns in physics_test.
+  ///
+  /// **Why safe outside QM context**: K-12 readings like `a|b|+c|d|`
+  /// don't produce `Apply(letter, [vertbar-fenced])` at all — the
+  /// grammar prefers `times(a, |b|)` directly there because no
+  /// surrounding context biases toward function-application. This
+  /// pragma is a no-op when no candidate has the pattern.
+  pub fn prefer_more_letter_at_vertbar(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max = trees.iter().map(|t| t.count_letter_at_vertbar()).max().unwrap_or(0);
+        if max == 0 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_letter_at_vertbar() == max)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Count `XM::Apply` nodes whose operator has meaning
+  /// `conditional` — i.e. the result of `vertbar_modifier` in the
+  /// grammar. Used by `prefer_fewer_conditionals` to push the
+  /// algebraic absolute-value reading of `a|a|+b|b|+c|c|` over the
+  /// (mathematically wrong) deeply-nested-conditional reading.
+  pub fn count_conditionals(&self) -> usize {
+    let is_conditional_op = |op: &XM| -> bool {
+      match op {
+        XM::Token(props, _) => props.meaning.as_deref() == Some("conditional"),
+        _ => false,
+      }
+    };
+    match self {
+      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Apply(op, args, ..) => {
+        let here = usize::from(is_conditional_op(&op.0));
+        here + args.trees().iter().map(|a| a.count_conditionals()).sum::<usize>()
+      },
+      XM::Dual(c, p, ..) => c.count_conditionals() + p.count_conditionals(),
+      XM::Wrap(items, ..) => items.iter().map(|i| i.count_conditionals()).sum(),
+      XM::Choices(trees) => trees.iter().map(|t| t.count_conditionals()).sum(),
+      XM::Arg(items) => items.iter().map(|i| i.count_conditionals()).sum(),
+    }
+  }
+
+  /// Forest pragma: among surviving candidates, prefer those with
+  /// FEWER `MODIFIEROP:conditional` Apply nodes when at least one
+  /// candidate has zero conditionals. This treats the conditional
+  /// reading as a fallback — only adopted when no algebraic /
+  /// absolute-value reading is available.
+  ///
+  /// **Resolves** the `a|a|+b|b|+c|c|` family of mis-parses where
+  /// `vertbar_modifier`'s recursive nesting builds
+  /// `conditional@(a, conditional@(a, …))` despite the natural K-12
+  /// reading being `a*|a| + b*|b| + c*|c|`. The latter has zero
+  /// conditional Applies, the former two.
+  ///
+  /// **Why this is safe**: the conditional reading remains for
+  /// inputs where it's the ONLY viable parse (e.g. set-builder
+  /// `\{x | y, z\}` — the regular formula chain can't consume the
+  /// vertbar without help). The grammar admits the conditional
+  /// candidate as a fallback, and the pragma only drops it when an
+  /// alternative exists.
+  pub fn prefer_fewer_conditionals(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees.iter().map(|t| t.count_conditionals()).min().unwrap_or(0);
+        // Only fire when at least one candidate has zero conditionals
+        // AND another has more — otherwise leave alone.
+        let max = trees.iter().map(|t| t.count_conditionals()).max().unwrap_or(0);
+        if min > 0 || min == max {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_conditionals() == min).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Does the root of this parse tree have an additive operator
+  /// (`plus`, `minus`, `times` is NOT additive)? Used by the
+  /// "prefer outermost addition" pragma to bias toward the K-12
+  /// reading of `a|a|+b|b|+c|c|` where the parse roots at `+`
+  /// rather than at an outer `*` enclosing one big `|...|`.
+  pub fn root_is_addition(&self) -> bool {
+    let inspect = |op: &XM| -> bool {
+      match op {
+        XM::Token(props, _) => matches!(
+          props.meaning.as_deref(),
+          Some("plus") | Some("minus") | Some("plus-or-minus") | Some("minus-or-plus")
+        ),
+        XM::Lexeme(lex, _) => {
+          // ADDOP:meaning:idx
+          let parts: Vec<_> = lex.splitn(3, ':').collect();
+          parts.first() == Some(&"ADDOP")
+        },
+        _ => false,
+      }
+    };
+    match self {
+      XM::Apply(op, _, _, _) => inspect(&op.0),
+      XM::Dual(c, _, _, _) => c.root_is_addition(),
+      _ => false,
+    }
+  }
+
+  /// Forest pragma: among candidates with an addition root,
+  /// prefer the one with the **most arguments** — i.e. the widest
+  /// n-ary `+` chain. K-12 algebra reads `a + b + c` as a 3-arg
+  /// chain, not as `a + (b + c)` (2-arg with nesting). The grammar
+  /// admits both via `infix_apply_nary`; this pragma collapses
+  /// the choice.
+  ///
+  /// **Resolves the inner bar-pairing of `a|a|+b|b|+c|c|`**: the
+  /// 3-arg `+@(a*|a|, b*|b|, c*|c|)` candidate beats the 2-arg
+  /// `+@(a*|a|, b*|b*|+c|*c|)` candidate where the outer bars get
+  /// claimed as one big absolute-value enclosing the rest.
+  pub fn prefer_wider_addition_root(self) -> Self {
+    fn args_count_if_addition_root(t: &XM) -> Option<usize> {
+      match t {
+        XM::Apply(op, args, _, _) => match &*op.0 {
+          XM::Token(p, _) => match p.meaning.as_deref() {
+            Some("plus") | Some("minus") | Some("plus-or-minus") | Some("minus-or-plus") => {
+              Some(args.trees().len())
+            },
+            _ => None,
+          },
+          XM::Lexeme(lex, _) => {
+            let head = lex.split(':').next().unwrap_or("");
+            if head == "ADDOP" {
+              Some(args.trees().len())
+            } else {
+              None
+            }
+          },
+          _ => None,
+        },
+        XM::Dual(c, _, _, _) => args_count_if_addition_root(c),
+        _ => None,
+      }
+    }
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let max = trees
+          .iter()
+          .filter_map(args_count_if_addition_root)
+          .max();
+        let Some(max) = max else {
+          return XM::Choices(trees);
+        };
+        if max <= 2 {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| {
+            args_count_if_addition_root(t).map(|n| n == max).unwrap_or(false)
+              || args_count_if_addition_root(t).is_none()
+          })
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// Forest pragma: when at least one candidate roots at an
+  /// additive operator (`+` / `-`) and another roots at a
+  /// multiplicative operator (`*` / invisible-times), prefer the
+  /// additive root. K-12 algebra: `a*|a| + b*|b| + c*|c|` parses
+  /// with `+` outermost, not as `a * (one giant absolute-value)`.
+  ///
+  /// Fires only when the discriminator is unambiguous (at least
+  /// one of each shape exists); otherwise inert.
+  pub fn prefer_root_addition_over_outer_multiplication(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let has_addition_root = trees.iter().any(|t| t.root_is_addition());
+        if !has_addition_root {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees.into_iter().filter(|t| t.root_is_addition()).collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
   /// given a tree, return the base operator name, if any
   /// Simple text summary for debug logging (no DOM access needed)
   pub fn text_summary(&self) -> String {
@@ -552,11 +1651,11 @@ impl XM {
       XM::Lexeme(ref name, _) => name.to_string(),
       XM::Apply(ref op, ref args, ..) => {
         match &*op.0 {
-          XM::Lexeme(ref name, _) if name == "unknown.subscript" => {
+          XM::Lexeme(ref name, _) if &**name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
             format!("sub__{}", arg_base.base_operator_name())
           },
-          XM::Lexeme(ref name, _) if name == "unknown.superscript" => {
+          XM::Lexeme(ref name, _) if &**name == "unknown.superscript" => {
             // TODO: Too much datastructure boilerplate with the unwrap incantation
             //       might be better to create some getter methods to explain the intent better
             //       this is meant to do "give me a clone of the first argument to this XM::Apply"
@@ -580,7 +1679,7 @@ impl XM {
       XM::Ref(_) => self,
       XM::Apply(ref op, ref args, ..) => {
         if let XM::Lexeme(name, _) = &*op.0 {
-          if name == "unknown.subscript" || name == "unknown.superscript" {
+          if &**name == "unknown.subscript" || &**name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
           } else {
             self
