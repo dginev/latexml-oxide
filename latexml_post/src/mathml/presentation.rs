@@ -205,7 +205,14 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
 
   let role = node.get_attribute("role").unwrap_or_default();
 
-  // Handle floating/post scripts
+  // Handle floating/post scripts.
+  //
+  // `<msub>` / `<msup>` require a base; for "floating" scripts (e.g.
+  // `{}^c`, `_d`) the base is structurally absent. We materialize
+  // the missing base as `<m:mrow></m:mrow>` — not `<m:mi></m:mi>`.
+  // Same rationale as the `absent` case below: `<mi>` is a semantic
+  // claim ("here is an identifier") that's false when empty; `<mrow>`
+  // is presentational scaffolding with no semantic content. Task #264.
   if role.contains("SUBSCRIPT") || role.contains("SUPERSCRIPT") {
     let is_sub = role.contains("SUB");
     let tag = if is_sub { "m:msub" } else { "m:msup" };
@@ -214,7 +221,7 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       attributes: None,
       children:   vec![
         NodeData::Element {
-          tag:        "m:mi".to_string(),
+          tag:        "m:mrow".to_string(),
           attributes: None,
           children:   vec![],
         },
@@ -407,10 +414,21 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
 
   // Handle special meanings
   if meaning.as_deref() == Some("absent") {
-    // "absent" means an empty placeholder (e.g., missing LHS in aligned equations).
-    // Perl renders this as an empty <m:mi/>.
+    // "absent" is an XMath placeholder for a structurally-missing operand
+    // (e.g. the LHS of a continuation row `& = ...` in `align*` whose
+    // LHS is inherited from the previous row, or a prefix operator
+    // applied with no left argument). At the MathML Presentation
+    // layer we materialize this as an EMPTY `<m:mrow></m:mrow>` —
+    // not `<m:mi></m:mi>`. `<m:mi>` is a semantic assertion ("here
+    // is a mathematical identifier") with no defined meaning when
+    // empty; renderers vary, screen readers announce "blank" or
+    // skip awkwardly, and search/indexing tools pollute their
+    // index with content-free identifier tokens. `<m:mrow>` is
+    // presentational grouping without a semantic claim — well-
+    // defined for empty content (zero-width, no announcement).
+    // Task #264.
     return NodeData::Element {
-      tag:        "m:mi".to_string(),
+      tag:        "m:mrow".to_string(),
       attributes: None,
       children:   vec![],
     };

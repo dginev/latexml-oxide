@@ -828,6 +828,19 @@ impl PostDocument {
           parent.append_text(text).ok();
         },
         NodeData::Element { tag, attributes, children } => {
+          // Belt-and-suspenders invariant: never materialize an empty
+          // `<mi></mi>`. `<mi>` is a semantic assertion ("here is an
+          // identifier") with no defined meaning when empty — renderers
+          // vary, screen readers announce "blank", search/indexing
+          // tools pollute their indexes. The right placeholder is
+          // `<mrow></mrow>` (presentational, no semantic claim).
+          // Catches any future code path that re-introduces the
+          // antipattern via a different route. Task #264.
+          debug_assert!(
+            !((tag == "m:mi" || tag == "mi") && children.is_empty()),
+            "Empty <mi></mi> detected at materialization — use <mrow></mrow> \
+             scaffolding instead; see task #264 in docs/SYNC_STATUS.md"
+          );
           if tag == "_Fragment_" {
             self.add_nodes(parent, children);
           } else if let Some((prefix, localname)) = tag.split_once(':') {
