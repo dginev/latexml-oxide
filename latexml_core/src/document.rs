@@ -3116,8 +3116,13 @@ impl Document {
     {
       self.document.node_to_string(&dual);
       let mut dual_children = xml::element_nodes(&dual);
-      let presentation = dual_children.pop().unwrap();
-      let content = dual_children.pop().unwrap();
+      // Defensive: an XMDual should always have presentation +
+      // content children, but a malformed math parse (post-ambiguity
+      // collapse) can yield <2. Skip rather than panic.
+      // Witness 2110.10033 (panicked at document.rs:3120, post-fix
+      // continuation of earlier guard at document.rs:2993).
+      let Some(presentation) = dual_children.pop() else { continue };
+      let Some(content) = dual_children.pop() else { continue };
       if self
         .findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&content))
         .is_none()
