@@ -2992,13 +2992,20 @@ impl Document {
     }
     if qname == pin!("ltx:XMDual") {
       let mut children = xml::element_nodes(&node);
-      let c = children.remove(0);
-      let p = children.remove(0);
-      if cvis {
-        self.mark_xmnode_visibility_aux(c, true, false)?;
-      }
-      if pvis {
-        self.mark_xmnode_visibility_aux(p, false, true)?;
+      // XMDual should have exactly 2 element children (content + presentation),
+      // but a malformed math parse (e.g. semantic action producing empty pair
+      // during deep ambiguity collapse) can leave an empty XMDual. Skip
+      // visibility-marking rather than panicking on `children.remove(0)` —
+      // see wp5 sandbox 2110.10033 and 4 sibling papers.
+      if children.len() >= 2 {
+        let c = children.remove(0);
+        let p = children.remove(0);
+        if cvis {
+          self.mark_xmnode_visibility_aux(c, true, false)?;
+        }
+        if pvis {
+          self.mark_xmnode_visibility_aux(p, false, true)?;
+        }
       }
     } else if qname == pin!("ltx:XMRef") {
       match node.get_attribute("idref") {

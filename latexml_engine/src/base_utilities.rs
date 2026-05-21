@@ -2232,6 +2232,19 @@ fn is_typesetting_only_message(message: &str) -> bool {
     // closes the cluster (cannot reach 0-error AND load the proper
     // ini file without redesigning babel option processing).
     "either you misspelled it",
+    // catoptions.sty (loaded transitively by many class/sty bundles)
+    // calls `\@latex@error{Command \protect\\special_relax already
+    // defined...}` because it `\def\special_relax{...}` and our engine
+    // pre-registers `\special_relax` as an internal Gullet helper.
+    // pdflatex shows the message and proceeds (cat's def takes over);
+    // surpass-Perl: Perl also raw-loads catoptions and errors. The
+    // resulting "Command ... already defined" cascade currently
+    // produces 100+ errors per paper on 14 wp5 papers. Downgrade so
+    // conversion continues. Same applies to "Command \end... illegal,
+    // see p.192 of the manual" tail that LaTeX appends to the same
+    // message ("\@latex@error" generic-error template).
+    "already defined. or name",
+    "command \\end... illegal",
   ];
   PHRASES.iter().any(|p| lower.contains(p))
 }

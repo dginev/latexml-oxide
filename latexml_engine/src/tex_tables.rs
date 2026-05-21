@@ -27,7 +27,19 @@ LoadDefinitions!({
     reversion => sub[whatsit,_args] {
       if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
         if let DigestedData::Alignment(data) = alignment.data() {
-          data.borrow().revert()
+          // Use try_borrow: nested array inside a delimited expression
+          // (e.g. `\left( \begin{array}{ccc} ... \end{array} \right)`)
+          // can call this reversion while the alignment data is still
+          // mutably borrowed by an enclosing handler. Panicking on a
+          // RefCell conflict crashes the whole paper (~32 wp5 papers).
+          // Fall back to empty tokens — reversion is only used for `tex=`
+          // attribute serialization, so a missing reversion just yields
+          // an empty tex attribute, not a broken document.
+          // Witness 2111.11149.
+          match data.try_borrow() {
+            Ok(d) => d.revert(),
+            Err(_) => Ok(Tokens!()),
+          }
         } else {
           Ok(Tokens!())
         }
@@ -238,7 +250,11 @@ LoadDefinitions!({
     tks.push(T_CS!("\\cr"));
     if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
       if let DigestedData::Alignment(data) = alignment_d.data() {
-        tks.extend(data.borrow().revert()?.unlist());
+        // Mirror line-30 fix: tolerate a re-entrant borrow during
+        // reversion rather than panic. See comment there.
+        if let Ok(d) = data.try_borrow() {
+          tks.extend(d.revert()?.unlist());
+        }
       }
     }
     tks.push(T_END!());
