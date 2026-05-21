@@ -55,9 +55,27 @@ LoadDefinitions!({
     let cs = T_CS!(trigger);
     if !IsDefined!(&cs) {
       let cs_clone = cs;
+      // Lazy-load natbib on first use of any cite trigger. After
+      // require_package returns, natbib's own DefMacro for \citet etc.
+      // is in scope, but the closure persists at OmniBus's load
+      // frame so re-emitting cs_clone could fire THIS closure again
+      // (infinite loop on every \citet — witness 2207.14344 timeout
+      // with 8K+ require_package(natbib) calls). Clear the closure
+      // GLOBALLY before re-emitting so the next lookup of cs_clone
+      // finds natbib's binding-loaded def, not us. Task #260.
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
+          // Erase this lazy-load shim globally so re-expansion of
+          // cs_clone resolves to natbib's real \citet (which
+          // natbib_sty.rs's LoadDefinitions defined with the
+          // default local scope — that local frame has now closed
+          // but its global form persists via Perl-faithful Let).
+          latexml_core::state::assign_meaning(
+            &cs_clone,
+            latexml_core::common::store::Stored::None,
+            Some(latexml_core::state::Scope::Global),
+          );
           Ok(Tokens::new(vec![cs_clone]))
         })), None)?;
     }

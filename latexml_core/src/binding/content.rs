@@ -1523,6 +1523,14 @@ impl Default for RequireOptions {
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
+  if name == "natbib" {
+    static CTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let c = CTR.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    if c == 0 || c == 5 {
+      eprintln!("[DBG-RP-{}] backtrace:", c);
+      eprintln!("{}", std::backtrace::Backtrace::force_capture());
+    }
+  }
   // Perl Package.pm L2671-2672: notex defaults to true unless the user
   // explicitly set it, or INCLUDE_STYLES is true, or noltxml was passed
   // (a raw-only load explicitly requests raw TeX).
