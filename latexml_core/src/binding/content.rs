@@ -753,35 +753,21 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // `local $UNLOCKED = 1`, allowing bindings to override prior
       // (locked) definitions. The guard auto-pops on drop.
       let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
-      // Set the _loaded flag BEFORE calling the dispatcher. Some
-      // binding bodies (e.g. natbib_sty.rs's ProcessOptions chain)
-      // can transitively call require_package(SAME_NAME), which
-      // re-enters input_definitions → _load_binding. Without
-      // pre-setting the flag, the re-entrance reloads the binding
-      // again, and again, leading to 15K+ calls (eventual timeout
-      // on 5 sandbox papers). Mirrors the line-764 "preemptively
-      // mark as loaded to avoid recursion" comment already in the
-      // code — just moves it earlier in the function. Task #260.
-      assign_value(&loaded_key, true, Some(Scope::Global));
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
+          // Here and only here we are certain we have binding support.
+          // Preemptively mark as loaded to avoid recursion.
+
+          // Mark binding as loaded (raw `<request>_raw_loaded` is tracked
+          // separately by load_tex_definitions). Per OXIDIZED_DESIGN #23.
+          assign_value(&loaded_key, true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
-            Err(e) => {
-              // On error, leave the flag set (matches the pre-existing
-              // "mark as loaded even on error to prevent re-loading
-              // via raw path" behavior at the input_definitions level).
-              Err(e)
-            },
+            Err(e) => Err(e),
           }
         },
-        None => {
-          // Dispatcher returned None — name was NOT actually bound here.
-          // Clear the flag we optimistically set above.
-          assign_value(&loaded_key, false, Some(Scope::Global));
-          Ok(false)
-        },
+        None => Ok(false),
       }
     },
     None => Ok(false),
@@ -1523,14 +1509,6 @@ impl Default for RequireOptions {
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
-  if name == "natbib" {
-    static CTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let c = CTR.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    if c == 0 || c == 5 {
-      eprintln!("[DBG-RP-{}] backtrace:", c);
-      eprintln!("{}", std::backtrace::Backtrace::force_capture());
-    }
-  }
   // Perl Package.pm L2671-2672: notex defaults to true unless the user
   // explicitly set it, or INCLUDE_STYLES is true, or noltxml was passed
   // (a raw-only load explicitly requests raw TeX).
@@ -1571,20 +1549,15 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
-  // Rust addition (workaround for engine bug #260): scan transitive
-  // \RequirePackage statements of paper-bundled .sty files that raw-
-  // load successfully but don't actually expand \RequirePackage
-  // through our engine. Gated by .sty.ltxml_loaded so we only fire
-  // when no binding has loaded.
-  //
-  // Tested: this does NOT cause the natbib 5-paper hang (that loop
-  // is pre-existing and reproduces with this code removed). The hang
-  // root cause is deeper — natbib binding load somewhere recursively
-  // triggers require_package(natbib) 8K+ times. Task #260.
-  //
+  // Perl Package.pm L2679 maybeRequireDependencies is invoked from
+  // input_definitions's miss-handler. But that handler only runs when
+  // the file was NOT found at all. For paper-bundled .sty files that
+  // raw-load successfully without a .sty.ltxml binding, we still need
+  // to scan transitive \RequirePackage so that bound deps fire too.
+  // Mirrors the same fix for load_class (search "cls.ltxml_loaded").
   // Witness 2208.07400 (paper-bundled emnlp2022.sty has
-  // \RequirePackage{caption} + others; without this scan,
-  // \captionsetup and similar are undefined).
+  // \RequirePackage{caption} + others; without scan, \captionsetup
+  // and similar are undefined).
   if !lookup_bool(&s!("{name}.sty.ltxml_loaded")) {
     maybe_require_dependencies(name, "sty");
   }
