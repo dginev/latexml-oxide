@@ -742,6 +742,33 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
     return Ok(true);
   }
 
+  // Re-entrance guard for binding loads: track which bindings are
+  // currently mid-load on this thread, so that if a binding body
+  // transitively calls require_package(SAME_NAME) (e.g. via
+  // \citet → OmniBus closure → require_package(natbib) firing
+  // during natbib's own ProcessOptions chain), we short-circuit
+  // instead of re-entering the dispatcher and looping. Task #260.
+  thread_local! {
+    static IN_PROGRESS: std::cell::RefCell<rustc_hash::FxHashSet<String>> =
+      std::cell::RefCell::new(rustc_hash::FxHashSet::default());
+  }
+  let request_key = request.to_string();
+  let already_loading = IN_PROGRESS.with(|s| s.borrow().contains(&request_key));
+  if already_loading {
+    Warn!(
+      "recursion",
+      &request_key,
+      s!(
+        "Binding-load re-entrance for '{}' (transitive require_package \
+         during its own LoadDefinitions). Short-circuiting to break the \
+         loop; binding's pending side-effects (DefMacro, Let, etc.) \
+         will still complete in the outer frame.",
+        request_key
+      )
+    );
+    return Ok(true);
+  }
+
   let taken_dispatcher = if internal {
     get_bindings_dispatch()
   } else {
@@ -753,6 +780,16 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // `local $UNLOCKED = 1`, allowing bindings to override prior
       // (locked) definitions. The guard auto-pops on drop.
       let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
+      // Mark in-progress for the duration of this dispatcher call.
+      IN_PROGRESS.with(|s| { s.borrow_mut().insert(request_key.clone()); });
+      struct InProgressGuard(String);
+      impl Drop for InProgressGuard {
+        fn drop(&mut self) {
+          let key = self.0.clone();
+          IN_PROGRESS.with(|s| { s.borrow_mut().remove(&key); });
+        }
+      }
+      let _in_progress_guard = InProgressGuard(request_key.clone());
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
