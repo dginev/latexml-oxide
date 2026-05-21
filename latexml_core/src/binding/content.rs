@@ -1549,15 +1549,20 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     after: options.after,
     ..InputDefinitionOptions::default()
   });
-  // Perl Package.pm L2679 maybeRequireDependencies is invoked from
-  // input_definitions's miss-handler. But that handler only runs when
-  // the file was NOT found at all. For paper-bundled .sty files that
-  // raw-load successfully without a .sty.ltxml binding, we still need
-  // to scan transitive \RequirePackage so that bound deps fire too.
-  // Mirrors the same fix for load_class (search "cls.ltxml_loaded").
+  // Rust addition (workaround for engine bug #260): scan transitive
+  // \RequirePackage statements of paper-bundled .sty files that raw-
+  // load successfully but don't actually expand \RequirePackage
+  // through our engine. Gated by .sty.ltxml_loaded so we only fire
+  // when no binding has loaded.
+  //
+  // Tested: this does NOT cause the natbib 5-paper hang (that loop
+  // is pre-existing and reproduces with this code removed). The hang
+  // root cause is deeper — natbib binding load somewhere recursively
+  // triggers require_package(natbib) 8K+ times. Task #260.
+  //
   // Witness 2208.07400 (paper-bundled emnlp2022.sty has
-  // \RequirePackage{caption} + others; without scan, \captionsetup
-  // and similar are undefined).
+  // \RequirePackage{caption} + others; without this scan,
+  // \captionsetup and similar are undefined).
   if !lookup_bool(&s!("{name}.sty.ltxml_loaded")) {
     maybe_require_dependencies(name, "sty");
   }
