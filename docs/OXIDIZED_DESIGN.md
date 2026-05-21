@@ -1100,3 +1100,85 @@ deliberate:
 **Witness:** arXiv:2506.03074v1 (ICML 2025 — multiple
 `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
 blocks). 3 errors → 0. Tests 1328/0/0.
+
+---
+
+## Future Work (Beyond Perl Parity)
+
+The Rust port aims first for behavioral parity with Perl LaTeXML
+(see "Faithfulness first" above). But the project also positions us
+to **go beyond parity** in places where Perl LaTeXML's grammar or
+output choices are themselves limited. This section records
+deliberate "future work" directions where we know what better looks
+like; their resolution is not a parity regression to fix but an
+extension of the project's value.
+
+### Rich math-grammar parsing for kerned-stack norm idioms
+
+**Status:** Future work — extends beyond Perl LaTeXML.
+
+**Background.** Papers routinely fake double-bar and triple-bar
+norms by stacking `\left|\right|` pairs with small negative kerns:
+
+```latex
+\newcommand{\vertii}[1]{{\left\vert\kern-0.25ex\left\vert
+                          #1 \right\vert\kern-0.25ex\right\vert}}     % ‖x‖
+\newcommand{\vertiii}[1]{{\left\vert\kern-0.25ex\left\vert\kern-0.25ex
+                          \left\vert #1
+                          \right\vert\kern-0.25ex\right\vert\kern-0.25ex
+                          \right\vert}}                                % |||x|||
+```
+
+Visually the bars touch and render as `‖x‖` / `|||x|||`. Semantically
+both Perl LaTeXML and the Rust port currently parse each
+`\left|`/`\right|` pair as an *independent fence delimiter*,
+producing nested `|·|` inside `|·|` rather than a single
+norm-delimiter pair. For a juxtaposed expression like
+`|||M||| · |||Σ||| · ‖M−M'‖_F + ‖M−M'‖_F · |||Σ||| · |||M'|||`
+this yields ~25-level nesting in MathML (witness
+`tests/math/norm_kerned_delims.tex`, originally from arXiv:2211.13044
+§S4.Ex17).
+
+**Why this is "beyond parity" not a regression.** Perl LaTeXML
+focuses on fence-pairing rules that mirror TeX's `\left`/`\right`
+matching and does not attempt to detect kerned-stack idioms. The
+Rust port's math layer is built on a more expressive Marpa-based
+grammar (see [`MATH_GRAMMAR_FIRST_PRINCIPLES.md`](MATH_GRAMMAR_FIRST_PRINCIPLES.md)
+and [`MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md)), giving us
+the option to produce **well-structured MathML Core** that follows
+the XMath taxonomy: a single `<mrow intent=":Frobenius-norm">` or a
+proper U+2016 `‖` / U+2AF4 `⫴` delimiter, instead of token-level
+fence soup.
+
+**Approach (sketch, three layers — pick any):**
+
+1. **Gullet-level rewrite.** Detect the kerned-stack pattern in the
+   gullet (the kern argument has a known small negative value
+   between two adjacent `\left|` or `\right|` tokens) and merge into
+   a synthesized macro like `\lx@doublebar` / `\lx@triplebar`. The
+   math parser then sees clean delimiters and the existing fence
+   rules produce well-typed MathML directly. Smallest blast radius.
+
+2. **Math-grammar level.** Add explicit NORM / OPERATORNORM
+   nonterminals to the Marpa grammar that accept balanced `|`/`‖`/
+   `|||` openings, with their own action closures that emit a
+   semantic `intent=":operator-norm"` mrow. This is the
+   "richer-grammar" path the Rust port was designed to enable.
+
+3. **Both, with role tagging.** Pre-process at the gullet AND keep
+   the grammar prepared for U+2016 / U+2AF4 delimiters arriving on
+   the token stream. Belt-and-suspenders for varied paper inputs.
+
+**Related future-work item (same paper, same equation).** Equation
+rows whose first non-whitespace token is a binary relation (e.g.
+`\leq`, `=`, `\subseteq`) currently get a phantom `<mi></mi>`
+left operand inserted by the math parser. The continuation-row
+semantics — "the LHS is the prior row" — should be made explicit
+either by suppressing the empty operand or by tagging the row with
+`intent=":continuation"`. Tracked as task #264.
+
+**Pinned-baseline test.** The current (over-nested) output is
+captured as `tests/math/norm_kerned_delims.{tex,xml}` so we can
+detect when a future grammar/preprocess change *improves* it
+without it silently regressing. The test file's leading
+`% comments` annotate each section with the expected shape.
