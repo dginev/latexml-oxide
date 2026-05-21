@@ -525,7 +525,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         });
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-          assign_value(&s!("{filename}.ltxml_loaded"), true, Some(Scope::Global));
+          // NOTE: do NOT set `{filename}.ltxml_loaded` here. The
+          // fallback name is a DIFFERENT binding (e.g. article for
+          // myclass); the original `{filename}` (myclass.cls) has
+          // no binding. Setting it would suppress the downstream
+          // deps-scan check that picks up myclass's
+          // \RequirePackage{caption}.
         }
         None // fallback handled the loading; no raw file to load
       } else {

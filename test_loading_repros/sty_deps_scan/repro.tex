@@ -1,0 +1,8 @@
+% MINIMAL REPRO: paper-bundled mysty.sty declares \RequirePackage{caption}
+% Expected: \captionsetup defined via deps-scan of mysty.sty
+% Bug: without my require_package post-load deps-scan, \captionsetup undefined.
+\documentclass{article}
+\usepackage{mysty}
+\begin{document}
+\captionsetup{format=plain}
+\end{document}

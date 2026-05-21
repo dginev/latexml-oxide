@@ -1,0 +1,10 @@
+% MINIMAL REPRO: TexLive natbib.sty's error messages contain literal
+% `\usepackage{natbib}` strings. Without the .ltxml_loaded flag check,
+% maybe_require_dependencies's collect() filter doesn't recognize
+% natbib as already-loaded → re-queues → infinite loop.
+% Bug: 2111.01269 timed out (120s) on simple natbib paper.
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+\cite{ref1}
+\end{document}
