@@ -2135,20 +2135,12 @@ pub fn fenced(
     };
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else if op_name == "delimited-||" {
-    // Detect the nested `\left|\left|x\right|\right|` kerned-stack
-    // norm idiom: when this fence wraps an inner Apply that's itself
-    // an absolute-value, promote the outer meaning to "norm". This
-    // matches Perl's `MorphVertbar` delimiter-table semantics at
-    // `MathParser.pm:1247` (`||` → U+2016 ‖). Witness
-    // arXiv:2211.13044 §S4.Ex17 and tests/math/norm_kerned_delims.tex.
-    // Tracked as task #263.
-    let meaning_str = if is_inner_absolute_value(&arg) {
-      "norm"
-    } else {
-      "absolute-value"
-    };
+    // Absolute-value `|x|`. The kerned-stack `\left|\left|x\right|\right|`
+    // (double-bar norm) and triple variant are now recognized at the
+    // grammar level via stretchy_(norm|triple_norm)_fenced (task #263),
+    // so we no longer need a post-hoc tree-inspecting promotion here.
     let op = XProps {
-      meaning: Some(Cow::Borrowed(meaning_str)),
+      meaning: Some(Cow::Borrowed("absolute-value")),
       ..XProps::default()
     };
     let open_m = morph_vertbar(open, "OPEN", ctxt.nodes);
@@ -2265,35 +2257,6 @@ pub fn interval(
   )))
 }
 
-/// Detect if an XM tree is (a Dual wrapping) an Apply with
-/// meaning="absolute-value" — the shape produced by the inner
-/// `\left|·\right|` fence-pair when the user writes the
-/// kerned-stack double-bar idiom `\left|\left|x\right|\right|`.
-/// Used by `fence()` to promote `| · |` enclosing an absolute-
-/// value to `norm` rather than nested-absolute-value. Task #263.
-fn is_inner_absolute_value(xm: &XM) -> bool {
-  fn op_meaning_is_abs(op: &Operator) -> bool {
-    if let XM::Token(props, _) = op.0.as_ref() {
-      props.meaning.as_deref() == Some("absolute-value")
-    } else {
-      false
-    }
-  }
-  match xm {
-    // Direct Apply with absolute-value meaning.
-    XM::Apply(op, ..) => op_meaning_is_abs(op),
-    // The common case: fence() builds an XMDual whose content arm
-    // is the Apply. Peek through one level of Dual.
-    XM::Dual(content, ..) => {
-      matches!(
-        content.as_ref(),
-        XM::Apply(op, ..) if op_meaning_is_abs(op)
-      )
-    },
-    _ => false,
-  }
-}
-
 /// Perl's Fence (MathParser.pm): generalized fenced expression with
 /// comma-separated items. Determines meaning from delimiter+punctuation
 /// pattern using the Perl enclose tables.
@@ -2325,22 +2288,7 @@ pub fn fence(
     0 => "list",
     1 => match (o.as_ref(), c.as_ref()) {
       ("{", "}") => "set",
-      ("|", "|") => {
-        // Nested `\left|\left|x\right|\right|` (the community idiom for
-        // double-bar Frobenius norm). When we see `|` fencing a node
-        // that is ITSELF a `|...|` absolute-value Apply, this is a
-        // norm `‖x‖`, not a redundant nested absolute-value. Promote
-        // the outer meaning so downstream MathML/intent annotations
-        // get the right semantic. Matches Perl's `MorphVertbar`
-        // `delimiter` table at `MathParser.pm:1247` which maps
-        // `||` → U+2016 ‖. Witness arXiv:2211.13044 §S4.Ex17 and
-        // tests/math/norm_kerned_delims.tex.
-        if is_inner_absolute_value(&stuff[1]) {
-          "norm"
-        } else {
-          "absolute-value"
-        }
-      },
+      ("|", "|") => "absolute-value",
       ("\u{2308}", "\u{2309}") => "ceiling",             // ⌈ ⌉
       ("\u{230A}", "\u{230B}") => "floor",               // ⌊ ⌋
       ("\u{2016}", "\u{2016}") | ("||", "||") => "norm", // ‖ ‖
@@ -4236,6 +4184,121 @@ pub fn norm_fenced(
   let close = merge_vertbar_pair(_close1_opt.unwrap(), "CLOSE", ctxt.nodes);
   let op = XProps {
     meaning: Some(Cow::Borrowed("norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+}
+
+/// True iff the XM points to a token whose underlying DOM node carries
+/// a negative `rpadding` attribute — the prefiltered signal that an
+/// `<XMHint width="-X.Xpt"/>` (negative `\kern`) immediately followed
+/// this token. Used by `stretchy_norm_fenced` / `stretchy_triple_norm_fenced`
+/// to confirm the kerned-stack idiom and prune ambiguous parses where
+/// adjacent `\left|…\right|` fences are genuinely separate. Task #263.
+fn has_negative_rpadding(xm: &XM, nodes: &[XMLNode]) -> bool {
+  let node_opt = match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, nodes).ok(),
+    _ => None,
+  };
+  let Some(node) = node_opt else {
+    return false;
+  };
+  match node.get_attribute("rpadding") {
+    Some(s) => crate::util::get_xmhint_spacing(&s) < 0.0,
+    None => false,
+  }
+}
+
+/// Apply `merge_vertbar_pair` semantics but emit U+2980 (⦀ TRIPLE
+/// VERTICAL BAR DELIMITER) instead of U+2016 (‖) — used by
+/// `stretchy_triple_norm_fenced` for the `\vertiii`/`|||·|||` idiom.
+fn merge_vertbar_triple(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
+  let mut props = match xm {
+    XM::Lexeme(ref lex, _) => {
+      if let Ok(node) = lookup_lex_node(lex, nodes) {
+        XProps::from(node)
+      } else {
+        XProps::default()
+      }
+    },
+    XM::Token(ref p, _) => p.clone(),
+    _ => XProps::default(),
+  };
+  props.role = Some(Cow::Borrowed(role));
+  props.content = Some(Cow::Borrowed("\u{2980}")); // ⦀
+  props.stretchy = None;
+  XM::Token(props, Meta::default())
+}
+
+/// `stretchy_vertbar stretchy_vertbar expression stretchy_vertbar stretchy_vertbar`
+/// → norm. The kerned-stack `\left|\kern-…\left|·\right|\kern-…\right|`
+/// idiom (community macros: `\vertii`, `\|·\|`, etc.). The Mouth/Stomach
+/// flattens these into a flat sibling sequence of stretchy `|` bars
+/// separated by XMHint kerns; `util.rs::filter_hints` folds the kerns
+/// into `rpadding="-X.Xpt"` on the first bar of each kerned pair.
+/// We verify that signal here — if absent, the input is two intentionally
+/// separate `\left|…\right|` fences (e.g. `|x|·|y|`), and this rule
+/// should NOT fire. Returning Err prunes the parse so the alternate
+/// reading (two `fenced` matches with `fenced` between them) wins.
+/// Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+pub fn stretchy_norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(args => open1_opt, _open2_opt, arg_opt, close1_opt, _close2_opt);
+  let open1 = open1_opt.ok_or("stretchy_norm_fenced: missing open1")?;
+  let close1 = close1_opt.ok_or("stretchy_norm_fenced: missing close1")?;
+  let arg = arg_opt.ok_or("stretchy_norm_fenced: missing arg")?;
+  // Kern signal: outer OPEN (open1) and inner CLOSE (close1) each carry
+  // a negative rpadding from the `\kern` between adjacent `\left|`s.
+  if !has_negative_rpadding(&open1, ctxt.nodes) || !has_negative_rpadding(&close1, ctxt.nodes) {
+    return Err("stretchy_norm_fenced: bars not kern-stacked (no negative rpadding)".into());
+  }
+  let open = merge_vertbar_pair(open1, "OPEN", ctxt.nodes);
+  let close = merge_vertbar_pair(close1, "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
+}
+
+/// Triple-bar `\left|\kern\left|\kern\left|·\right|\kern\right|\kern\right|`
+/// → operator-norm. Requires the kern signal on the first TWO bars of each
+/// side (open1 + open2 kerned to their successors; symmetric on the right).
+/// Goes beyond Perl LaTeXML (Perl produces ‖|x|‖ — partial recognition —
+/// for the same input). Task #263.
+pub fn stretchy_triple_norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  unp!(
+    args =>
+    open1_opt, open2_opt, _open3_opt,
+    arg_opt,
+    close1_opt, close2_opt, _close3_opt
+  );
+  let open1 = open1_opt.ok_or("stretchy_triple_norm_fenced: missing open1")?;
+  let open2 = open2_opt.ok_or("stretchy_triple_norm_fenced: missing open2")?;
+  let close1 = close1_opt.ok_or("stretchy_triple_norm_fenced: missing close1")?;
+  let close2 = close2_opt.ok_or("stretchy_triple_norm_fenced: missing close2")?;
+  let arg = arg_opt.ok_or("stretchy_triple_norm_fenced: missing arg")?;
+  // Two kern signals on each side (between bars 1-2 and bars 2-3).
+  if !has_negative_rpadding(&open1, ctxt.nodes)
+    || !has_negative_rpadding(&open2, ctxt.nodes)
+    || !has_negative_rpadding(&close1, ctxt.nodes)
+    || !has_negative_rpadding(&close2, ctxt.nodes)
+  {
+    return Err("stretchy_triple_norm_fenced: bars not triple-kern-stacked".into());
+  }
+  let open = merge_vertbar_triple(open1, "OPEN", ctxt.nodes);
+  let close = merge_vertbar_triple(close1, "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("operator-norm")),
     ..XProps::default()
   };
   interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)

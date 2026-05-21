@@ -68,6 +68,13 @@ XMath.attributes =
   ## The role that this item plays in the Grammar.
   attribute role { text }?,
 
+  ## Refines the \attr{role} for delimiters that come in pairs:
+  ## "left" if emitted by \texttt{\left}, "right" if emitted by
+  ## \texttt{\right}. The math grammar uses this to pair stretchy
+  ## vertical bars unambiguously across the kerned-stack idiom
+  ## (\texttt{\vertii}, \texttt{\vertiii}, …).
+  attribute role_side { text }?,
+
   ## an enclose style to enclose the object
   ## with legitimate values being those of MathML's menclose notations;
   attribute enclose { text }?,

@@ -947,7 +947,7 @@ LoadDefinitions!({
     reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -956,6 +956,18 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.left_role);
         whatsit.set_property("char", entry.char);
+        // Tag the bar with the side that emitted it. Used by the
+        // math parser's lexer (util.rs) to distinguish LEFT_STRETCHY_VERTBAR
+        // from RIGHT_STRETCHY_VERTBAR — eliminates the combinatorial
+        // pairing of identical stretchy bars in the kerned-stack norm
+        // idioms (\vertii, \vertiii, …). VERTBAR is the only role
+        // where left and right are textually-identical fence
+        // delimiters; OPEN/CLOSE already discriminate by their
+        // role, and MULOP delimiters (`/`, `\backslash`) are not
+        // fence-paired. Task #263.
+        if entry.left_role == "VERTBAR" {
+          whatsit.set_property("role_side", "left");
+        }
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }
@@ -995,7 +1007,7 @@ LoadDefinitions!({
     },
     alias => "\\left");
   DefConstructor!("\\@right Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy'>#char</ltx:XMTok>)\
+    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
     after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
@@ -1004,6 +1016,10 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.right_role);
         whatsit.set_property("char", entry.char);
+        // See `\@left` for the side-tagging rationale. Task #263.
+        if entry.right_role == "VERTBAR" {
+          whatsit.set_property("role_side", "right");
+        }
         if let Some(name) = entry.name {
           whatsit.set_property("name", name);
         }

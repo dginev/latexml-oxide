@@ -166,12 +166,27 @@ fn node_to_grammar_lexemes_ctx(
       {
         // `\left|...\right|` produces a balanced pair of VERTBAR tokens
         // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
-        // Tag these as a separate token kind so the grammar can pair them
-        // unambiguously via `stretchy_vertbar formula stretchy_vertbar →
-        // fenced_modulus`. Eliminates the VERTBAR-pairing combinatorial
-        // explosion in patterns like `\log^+ ∫ \left| f \right|^k dm(z) ≲
-        // ...` (docs/MATH_AMBIGUITY_AUDIT.md §2).
-        format!("STRETCHY_VERTBAR:|:{idx}")
+        // Further distinguish by side: the `\@left` constructor tags
+        // the emitted XMTok with `role_side="left"`, `\@right` with
+        // `role_side="right"` (tex_math.rs). This refines the `role`
+        // attribute (delimiter direction) without changing it, so
+        // the grammar can use distinct LEFT_STRETCHY_VERTBAR /
+        // RIGHT_STRETCHY_VERTBAR tokens. The kerned-stack norm rules
+        // (\vertii, \vertiii, …) then don't have to enumerate every
+        // pairing of identical bars. Eliminates the VERTBAR-pairing
+        // combinatorial explosion in patterns like
+        // `\log^+ ∫ \left| f \right|^k dm(z) ≲ ...` (see
+        // docs/MATH_AMBIGUITY_AUDIT.md §2) and unlocks task #263's
+        // norm-fenced grammar rules.
+        // Defensive fallback: if `role_side` is missing — legacy DOM
+        // input or a path that bypassed `\@left`/`\@right` — keep the
+        // old undirected STRETCHY_VERTBAR lexeme so legacy rules
+        // (eval_at, modulus fence) still work.
+        match node.get_attribute("role_side").as_deref() {
+          Some("left") => format!("LEFT_STRETCHY_VERTBAR:|:{idx}"),
+          Some("right") => format!("RIGHT_STRETCHY_VERTBAR:|:{idx}"),
+          _ => format!("STRETCHY_VERTBAR:|:{idx}"),
+        }
       } else if role == "PUNCT" && punct_followed_by_wide_space(&node) {
         // PUNCT followed by `\quad` / `\qquad` etc. carries an `rpadding`
         // attribute. This wide spacing is a strong arXiv idiom for
@@ -225,9 +240,11 @@ pub fn distill_lexeme(name: &str) -> (&str, &str, &str) {
 }
 
 /// Parse an XMHint `width` attribute string to points.
+/// `pub(crate)` so semantics.rs can re-use the same parser when
+/// inspecting `rpadding` (task #263 stretchy_norm_fenced guards).
 /// Supports "3.0mu" (mu → pt by dividing by 1.8) and "1.667pt"/"0.16667em".
 /// Handles glue specs like "2.77pt plus 2.77pt" by extracting base dimension.
-fn get_xmhint_spacing(width: &str) -> f64 {
+pub(crate) fn get_xmhint_spacing(width: &str) -> f64 {
   let width = width.trim();
   if width.is_empty() {
     return 0.0;

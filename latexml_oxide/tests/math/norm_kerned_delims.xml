@@ -58,7 +58,7 @@
     <title><tag close=" ">2</tag>Double-bar Frobenius norm: structural over-nesting</title>
     <para xml:id="S2.p1">
       <equation xml:id="S2.Ex2">
-        <Math mode="display" tex="{\left|\kern-1.07639pt\left|x\right|\kern-1.07639pt\right|}\leq{\left|\kern-1.07639pt\left|y\right|\kern-1.07639pt\right|}" text="norm@(absolute-value@(x)) &lt;= norm@(absolute-value@(y))" xml:id="S2.Ex2.m1">
+        <Math mode="display" tex="{\left|\kern-1.07639pt\left|x\right|\kern-1.07639pt\right|}\leq{\left|\kern-1.07639pt\left|y\right|\kern-1.07639pt\right|}" text="norm@(x) &lt;= norm@(y)" xml:id="S2.Ex2.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
@@ -68,40 +68,20 @@
                   <XMRef idref="S2.Ex2.m1.1"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                  <XMDual xml:id="S2.Ex2.m1.1">
-                    <XMApp>
-                      <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S2.Ex2.m1.2"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex2.m1.2">x</XMTok>
-                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                  <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex2.m1.1">x</XMTok>
+                  <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                 </XMWrap>
               </XMDual>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="norm"/>
-                  <XMRef idref="S2.Ex2.m1.3"/>
+                  <XMRef idref="S2.Ex2.m1.2"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                  <XMDual xml:id="S2.Ex2.m1.3">
-                    <XMApp>
-                      <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S2.Ex2.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="OPEN" stretchy="true">|</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex2.m1.4">y</XMTok>
-                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                  <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S2.Ex2.m1.2">y</XMTok>
+                  <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                 </XMWrap>
               </XMDual>
             </XMApp>
@@ -119,73 +99,42 @@
     <title><tag close=" ">3</tag>Triple-bar operator norm: 25-level nesting cliff</title>
     <para xml:id="S3.p1">
       <equation xml:id="S3.Ex3">
-        <Math mode="display" tex="{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|x\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}\leq C{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|y\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="absolute-value@(norm@(absolute-value@(x))) &lt;= C * absolute-value@(norm@(absolute-value@(y)))" xml:id="S3.Ex3.m1">
+        <Math mode="display" tex="{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|x\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}\leq C{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|y\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="norm@(absolute-value@(x)) &lt;= C@(operator-norm@(y))" xml:id="S3.Ex3.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="absolute-value"/>
+                  <XMTok meaning="norm"/>
                   <XMRef idref="S3.Ex3.m1.1"/>
                 </XMApp>
                 <XMWrap>
-                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                  <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
                   <XMDual xml:id="S3.Ex3.m1.1">
                     <XMApp>
-                      <XMTok meaning="norm"/>
+                      <XMTok meaning="absolute-value"/>
                       <XMRef idref="S3.Ex3.m1.2"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                      <XMDual xml:id="S3.Ex3.m1.2">
-                        <XMApp>
-                          <XMTok meaning="absolute-value"/>
-                          <XMRef idref="S3.Ex3.m1.3"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="true">|</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.3">x</XMTok>
-                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                      <XMTok role="OPEN" stretchy="true">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.2">x</XMTok>
                       <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
                     </XMWrap>
                   </XMDual>
-                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                  <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                 </XMWrap>
               </XMDual>
               <XMApp>
-                <XMTok meaning="times" role="MULOP">⁢</XMTok>
                 <XMTok font="italic" role="UNKNOWN">C</XMTok>
                 <XMDual>
                   <XMApp>
-                    <XMTok meaning="absolute-value"/>
-                    <XMRef idref="S3.Ex3.m1.4"/>
+                    <XMTok meaning="operator-norm"/>
+                    <XMRef idref="S3.Ex3.m1.3"/>
                   </XMApp>
                   <XMWrap>
-                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                    <XMDual xml:id="S3.Ex3.m1.4">
-                      <XMApp>
-                        <XMTok meaning="norm"/>
-                        <XMRef idref="S3.Ex3.m1.5"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                        <XMDual xml:id="S3.Ex3.m1.5">
-                          <XMApp>
-                            <XMTok meaning="absolute-value"/>
-                            <XMRef idref="S3.Ex3.m1.6"/>
-                          </XMApp>
-                          <XMWrap>
-                            <XMTok role="OPEN" stretchy="true">|</XMTok>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.6">y</XMTok>
-                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                    <XMTok role="OPEN" rpadding="-1.1pt">⦀</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S3.Ex3.m1.3">y</XMTok>
+                    <XMTok role="CLOSE" rpadding="-1.1pt">⦀</XMTok>
                   </XMWrap>
                 </XMDual>
               </XMApp>
@@ -204,7 +153,7 @@
     <title><tag close=" ">4</tag>Witness from 2211.13044 §S4.Ex17: the cascade</title>
     <para xml:id="S4.p1">
       <equation xml:id="S4.Ex4">
-        <Math mode="display" tex="{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="(norm@(absolute-value@(M * Sigma * M - M ^ prime * Sigma * M ^ prime))) _ F &lt;= absolute-value@(norm@(absolute-value@(M * norm@(absolute-value@(norm@(absolute-value@(norm@(absolute-value@(Sigma * absolute-value@(norm@(absolute-value@((norm@(absolute-value@(M - M ^ prime))) _ F + (norm@(absolute-value@(M - M ^ prime))) _ F))) * Sigma)))))) * M ^ prime)))" xml:id="S4.Ex4.m1">
+        <Math mode="display" tex="{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="(norm@(M * Sigma * M - M ^ prime * Sigma * M ^ prime)) _ F &lt;= norm@(absolute-value@(M)) * norm@(absolute-value@(Sigma)) * (norm@(M - M ^ prime)) _ F + (norm@(M - M ^ prime)) _ F * norm@(absolute-value@(Sigma)) * norm@(absolute-value@(M ^ prime))" xml:id="S4.Ex4.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
@@ -216,15 +165,209 @@
                     <XMRef idref="S4.Ex4.m1.1"/>
                   </XMApp>
                   <XMWrap>
-                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                    <XMDual xml:id="S4.Ex4.m1.1">
+                    <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                    <XMApp xml:id="S4.Ex4.m1.1">
+                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
                       <XMApp>
-                        <XMTok meaning="absolute-value"/>
-                        <XMRef idref="S4.Ex4.m1.2"/>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                        <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                        </XMApp>
+                        <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                    <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="norm"/>
+                      <XMRef idref="S4.Ex4.m1.2"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                      <XMDual xml:id="S4.Ex4.m1.2">
+                        <XMApp>
+                          <XMTok meaning="absolute-value"/>
+                          <XMRef idref="S4.Ex4.m1.3"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">|</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex4.m1.3">M</XMTok>
+                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="norm"/>
+                      <XMRef idref="S4.Ex4.m1.4"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                      <XMDual xml:id="S4.Ex4.m1.4">
+                        <XMApp>
+                          <XMTok meaning="absolute-value"/>
+                          <XMRef idref="S4.Ex4.m1.5"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">|</XMTok>
+                          <XMTok name="Sigma" role="UNKNOWN" xml:id="S4.Ex4.m1.5">Σ</XMTok>
+                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="norm"/>
+                        <XMRef idref="S4.Ex4.m1.6"/>
                       </XMApp>
                       <XMWrap>
-                        <XMTok role="OPEN" stretchy="true">|</XMTok>
-                        <XMApp xml:id="S4.Ex4.m1.2">
+                        <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                        <XMApp xml:id="S4.Ex4.m1.6">
+                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMApp>
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                            <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                            <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="norm"/>
+                        <XMRef idref="S4.Ex4.m1.7"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                        <XMApp xml:id="S4.Ex4.m1.7">
+                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                          <XMApp>
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                            <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                            <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                      </XMWrap>
+                    </XMDual>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                  </XMApp>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="norm"/>
+                      <XMRef idref="S4.Ex4.m1.8"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                      <XMDual xml:id="S4.Ex4.m1.8">
+                        <XMApp>
+                          <XMTok meaning="absolute-value"/>
+                          <XMRef idref="S4.Ex4.m1.9"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">|</XMTok>
+                          <XMTok name="Sigma" role="UNKNOWN" xml:id="S4.Ex4.m1.9">Σ</XMTok>
+                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMDual>
+                    <XMApp>
+                      <XMTok meaning="norm"/>
+                      <XMRef idref="S4.Ex4.m1.10"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                      <XMDual xml:id="S4.Ex4.m1.10">
+                        <XMApp>
+                          <XMTok meaning="absolute-value"/>
+                          <XMRef idref="S4.Ex4.m1.11"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" stretchy="true">|</XMTok>
+                          <XMApp xml:id="S4.Ex4.m1.11">
+                            <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                            <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                            <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                          </XMApp>
+                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>Empty-LHS continuation: spurious ¡mi¿¡/mi¿ insertion</title>
+    <para xml:id="S5.p1">
+      <equationgroup class="ltx_eqn_align" xml:id="S5.EGx1">
+        <equation xml:id="S5.Ex5">
+          <MathFork>
+            <Math tex="\displaystyle{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}={\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M+M^{\prime}\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="(norm@(M * Sigma * M - M ^ prime * Sigma * M ^ prime)) _ F = (norm@(((M * Sigma * M - M ^ prime * Sigma * M) + M ^ prime * Sigma * M) - M ^ prime * Sigma * M ^ prime)) _ F" xml:id="S5.Ex5.m3">
+              <XMath>
+                <XMApp>
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                    <XMDual>
+                      <XMApp>
+                        <XMTok meaning="norm"/>
+                        <XMRef idref="S5.Ex5.m3.1"/>
+                      </XMApp>
+                      <XMWrap>
+                        <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                        <XMApp xml:id="S5.Ex5.m3.1">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -247,255 +390,25 @@
                             </XMApp>
                           </XMApp>
                         </XMApp>
-                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                        <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                       </XMWrap>
                     </XMDual>
-                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                  </XMWrap>
-                </XMDual>
-                <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-              </XMApp>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="absolute-value"/>
-                  <XMRef idref="S4.Ex4.m1.3"/>
-                </XMApp>
-                <XMWrap>
-                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                  <XMDual xml:id="S4.Ex4.m1.3">
-                    <XMApp>
-                      <XMTok meaning="norm"/>
-                      <XMRef idref="S4.Ex4.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                      <XMDual xml:id="S4.Ex4.m1.4">
-                        <XMApp>
-                          <XMTok meaning="absolute-value"/>
-                          <XMRef idref="S4.Ex4.m1.5"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" stretchy="true">|</XMTok>
-                          <XMApp xml:id="S4.Ex4.m1.5">
-                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                            <XMDual>
-                              <XMApp>
-                                <XMTok meaning="norm"/>
-                                <XMRef idref="S4.Ex4.m1.6"/>
-                              </XMApp>
-                              <XMWrap>
-                                <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                <XMDual xml:id="S4.Ex4.m1.6">
-                                  <XMApp>
-                                    <XMTok meaning="absolute-value"/>
-                                    <XMRef idref="S4.Ex4.m1.7"/>
-                                  </XMApp>
-                                  <XMWrap>
-                                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                    <XMDual xml:id="S4.Ex4.m1.7">
-                                      <XMApp>
-                                        <XMTok meaning="norm"/>
-                                        <XMRef idref="S4.Ex4.m1.8"/>
-                                      </XMApp>
-                                      <XMWrap>
-                                        <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                        <XMDual xml:id="S4.Ex4.m1.8">
-                                          <XMApp>
-                                            <XMTok meaning="absolute-value"/>
-                                            <XMRef idref="S4.Ex4.m1.9"/>
-                                          </XMApp>
-                                          <XMWrap>
-                                            <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                            <XMDual xml:id="S4.Ex4.m1.9">
-                                              <XMApp>
-                                                <XMTok meaning="norm"/>
-                                                <XMRef idref="S4.Ex4.m1.10"/>
-                                              </XMApp>
-                                              <XMWrap>
-                                                <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                <XMDual xml:id="S4.Ex4.m1.10">
-                                                  <XMApp>
-                                                    <XMTok meaning="absolute-value"/>
-                                                    <XMRef idref="S4.Ex4.m1.11"/>
-                                                  </XMApp>
-                                                  <XMWrap>
-                                                    <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                    <XMApp xml:id="S4.Ex4.m1.11">
-                                                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                                      <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                      <XMDual>
-                                                        <XMApp>
-                                                          <XMTok meaning="absolute-value"/>
-                                                          <XMRef idref="S4.Ex4.m1.12"/>
-                                                        </XMApp>
-                                                        <XMWrap>
-                                                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                          <XMDual xml:id="S4.Ex4.m1.12">
-                                                            <XMApp>
-                                                              <XMTok meaning="norm"/>
-                                                              <XMRef idref="S4.Ex4.m1.13"/>
-                                                            </XMApp>
-                                                            <XMWrap>
-                                                              <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                              <XMDual xml:id="S4.Ex4.m1.13">
-                                                                <XMApp>
-                                                                  <XMTok meaning="absolute-value"/>
-                                                                  <XMRef idref="S4.Ex4.m1.14"/>
-                                                                </XMApp>
-                                                                <XMWrap>
-                                                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                  <XMApp xml:id="S4.Ex4.m1.14">
-                                                                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                                                    <XMApp>
-                                                                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                      <XMDual>
-                                                                        <XMApp>
-                                                                          <XMTok meaning="norm"/>
-                                                                          <XMRef idref="S4.Ex4.m1.15"/>
-                                                                        </XMApp>
-                                                                        <XMWrap>
-                                                                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                          <XMDual xml:id="S4.Ex4.m1.15">
-                                                                            <XMApp>
-                                                                              <XMTok meaning="absolute-value"/>
-                                                                              <XMRef idref="S4.Ex4.m1.16"/>
-                                                                            </XMApp>
-                                                                            <XMWrap>
-                                                                              <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                              <XMApp xml:id="S4.Ex4.m1.16">
-                                                                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                <XMApp>
-                                                                                  <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                  <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                </XMApp>
-                                                                              </XMApp>
-                                                                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                            </XMWrap>
-                                                                          </XMDual>
-                                                                          <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                        </XMWrap>
-                                                                      </XMDual>
-                                                                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                    </XMApp>
-                                                                    <XMApp>
-                                                                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                      <XMDual>
-                                                                        <XMApp>
-                                                                          <XMTok meaning="norm"/>
-                                                                          <XMRef idref="S4.Ex4.m1.17"/>
-                                                                        </XMApp>
-                                                                        <XMWrap>
-                                                                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                          <XMDual xml:id="S4.Ex4.m1.17">
-                                                                            <XMApp>
-                                                                              <XMTok meaning="absolute-value"/>
-                                                                              <XMRef idref="S4.Ex4.m1.18"/>
-                                                                            </XMApp>
-                                                                            <XMWrap>
-                                                                              <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                              <XMApp xml:id="S4.Ex4.m1.18">
-                                                                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                <XMApp>
-                                                                                  <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                  <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                </XMApp>
-                                                                              </XMApp>
-                                                                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                            </XMWrap>
-                                                                          </XMDual>
-                                                                          <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                        </XMWrap>
-                                                                      </XMDual>
-                                                                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                    </XMApp>
-                                                                  </XMApp>
-                                                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                </XMWrap>
-                                                              </XMDual>
-                                                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                            </XMWrap>
-                                                          </XMDual>
-                                                          <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                        </XMWrap>
-                                                      </XMDual>
-                                                      <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                    </XMApp>
-                                                    <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                  </XMWrap>
-                                                </XMDual>
-                                                <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                              </XMWrap>
-                                            </XMDual>
-                                            <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                          </XMWrap>
-                                        </XMDual>
-                                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                      </XMWrap>
-                                    </XMDual>
-                                    <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                  </XMWrap>
-                                </XMDual>
-                                <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                              </XMWrap>
-                            </XMDual>
-                            <XMApp>
-                              <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                              <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                            </XMApp>
-                          </XMApp>
-                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                        </XMWrap>
-                      </XMDual>
-                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
-                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                </XMWrap>
-              </XMDual>
-            </XMApp>
-          </XMath>
-        </Math>
-      </equation>
-    </para>
-  </section>
-  <section inlist="toc" xml:id="S5">
-    <tags>
-      <tag>5</tag>
-      <tag role="refnum">5</tag>
-      <tag role="typerefnum">§5</tag>
-    </tags>
-    <title><tag close=" ">5</tag>Empty-LHS continuation: spurious ¡mi¿¡/mi¿ insertion</title>
-    <para xml:id="S5.p1">
-      <equationgroup class="ltx_eqn_align" xml:id="S5.EGx1">
-        <equation xml:id="S5.Ex5">
-          <MathFork>
-            <Math tex="\displaystyle{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}={\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M+M^{\prime}\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="(norm@(absolute-value@(M * Sigma * M - M ^ prime * Sigma * M ^ prime))) _ F = (norm@(absolute-value@(((M * Sigma * M - M ^ prime * Sigma * M) + M ^ prime * Sigma * M) - M ^ prime * Sigma * M ^ prime))) _ F" xml:id="S5.Ex5.m3">
-              <XMath>
-                <XMApp>
-                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                  </XMApp>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                     <XMDual>
                       <XMApp>
                         <XMTok meaning="norm"/>
-                        <XMRef idref="S5.Ex5.m3.1"/>
+                        <XMRef idref="S5.Ex5.m3.2"/>
                       </XMApp>
                       <XMWrap>
-                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                        <XMDual xml:id="S5.Ex5.m3.1">
+                        <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                        <XMApp xml:id="S5.Ex5.m3.2">
+                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMApp>
-                            <XMTok meaning="absolute-value"/>
-                            <XMRef idref="S5.Ex5.m3.2"/>
-                          </XMApp>
-                          <XMWrap>
-                            <XMTok role="OPEN" stretchy="true">|</XMTok>
-                            <XMApp xml:id="S5.Ex5.m3.2">
+                            <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                            <XMApp>
                               <XMTok meaning="minus" role="ADDOP">-</XMTok>
                               <XMApp>
                                 <XMTok meaning="times" role="MULOP">⁢</XMTok>
@@ -511,38 +424,100 @@
                                   <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
                                 </XMApp>
                                 <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                <XMApp>
-                                  <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                  <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                </XMApp>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
                               </XMApp>
                             </XMApp>
-                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                        <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                            <XMApp>
+                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                              <XMApp>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                              </XMApp>
+                              <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                            </XMApp>
+                          </XMApp>
+                          <XMApp>
+                            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                            <XMApp>
+                              <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                              <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                            </XMApp>
+                            <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                            <XMApp>
+                              <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                              <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                            </XMApp>
+                          </XMApp>
+                        </XMApp>
+                        <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                       </XMWrap>
                     </XMDual>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
                   </XMApp>
-                  <XMApp>
-                    <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMDual>
+                </XMApp>
+              </XMath>
+            </Math>
+            <MathBranch>
+              <td align="right"><Math mode="inline" tex="\displaystyle{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="(norm@(M * Sigma * M - M ^ prime * Sigma * M ^ prime)) _ F" xml:id="S5.Ex5.m1">
+                  <XMath>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="norm"/>
+                          <XMRef idref="S5.Ex5.m1.1"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                          <XMApp xml:id="S5.Ex5.m1.1">
+                            <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                            <XMApp>
+                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                              <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                            </XMApp>
+                            <XMApp>
+                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                              <XMApp>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                              </XMApp>
+                              <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
+                              <XMApp>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                              </XMApp>
+                            </XMApp>
+                          </XMApp>
+                          <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                    </XMApp>
+                  </XMath>
+                </Math></td>
+              <td align="left"><Math mode="inline" tex="\displaystyle={\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M+M^{\prime}\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="absent = (norm@(((M * Sigma * M - M ^ prime * Sigma * M) + M ^ prime * Sigma * M) - M ^ prime * Sigma * M ^ prime)) _ F" xml:id="S5.Ex5.m2">
+                  <XMath>
+                    <XMApp>
+                      <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMTok meaning="absent"/>
                       <XMApp>
-                        <XMTok meaning="norm"/>
-                        <XMRef idref="S5.Ex5.m3.3"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                        <XMDual xml:id="S5.Ex5.m3.3">
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMDual>
                           <XMApp>
-                            <XMTok meaning="absolute-value"/>
-                            <XMRef idref="S5.Ex5.m3.4"/>
+                            <XMTok meaning="norm"/>
+                            <XMRef idref="S5.Ex5.m2.1"/>
                           </XMApp>
                           <XMWrap>
-                            <XMTok role="OPEN" stretchy="true">|</XMTok>
-                            <XMApp xml:id="S5.Ex5.m3.4">
+                            <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                            <XMApp xml:id="S5.Ex5.m2.1">
                               <XMTok meaning="minus" role="ADDOP">-</XMTok>
                               <XMApp>
                                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
@@ -591,143 +566,7 @@
                                 </XMApp>
                               </XMApp>
                             </XMApp>
-                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                        <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                  </XMApp>
-                </XMApp>
-              </XMath>
-            </Math>
-            <MathBranch>
-              <td align="right"><Math mode="inline" tex="\displaystyle{\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="(norm@(absolute-value@(M * Sigma * M - M ^ prime * Sigma * M ^ prime))) _ F" xml:id="S5.Ex5.m1">
-                  <XMath>
-                    <XMApp>
-                      <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                      <XMDual>
-                        <XMApp>
-                          <XMTok meaning="norm"/>
-                          <XMRef idref="S5.Ex5.m1.1"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          <XMDual xml:id="S5.Ex5.m1.1">
-                            <XMApp>
-                              <XMTok meaning="absolute-value"/>
-                              <XMRef idref="S5.Ex5.m1.2"/>
-                            </XMApp>
-                            <XMWrap>
-                              <XMTok role="OPEN" stretchy="true">|</XMTok>
-                              <XMApp xml:id="S5.Ex5.m1.2">
-                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                  <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                </XMApp>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMApp>
-                                    <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                  </XMApp>
-                                  <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                  <XMApp>
-                                    <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                  </XMApp>
-                                </XMApp>
-                              </XMApp>
-                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                            </XMWrap>
-                          </XMDual>
-                          <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                        </XMWrap>
-                      </XMDual>
-                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                    </XMApp>
-                  </XMath>
-                </Math></td>
-              <td align="left"><Math mode="inline" tex="\displaystyle={\left|\kern-1.07639pt\left|M\Sigma M-M^{\prime}\Sigma M+M^{\prime}\Sigma M-M^{\prime}\Sigma M^{\prime}\right|\kern-1.07639pt\right|}_{F}" text="absent = (norm@(absolute-value@(((M * Sigma * M - M ^ prime * Sigma * M) + M ^ prime * Sigma * M) - M ^ prime * Sigma * M ^ prime))) _ F" xml:id="S5.Ex5.m2">
-                  <XMath>
-                    <XMApp>
-                      <XMTok meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok meaning="absent"/>
-                      <XMApp>
-                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMDual>
-                          <XMApp>
-                            <XMTok meaning="norm"/>
-                            <XMRef idref="S5.Ex5.m2.1"/>
-                          </XMApp>
-                          <XMWrap>
-                            <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                            <XMDual xml:id="S5.Ex5.m2.1">
-                              <XMApp>
-                                <XMTok meaning="absolute-value"/>
-                                <XMRef idref="S5.Ex5.m2.2"/>
-                              </XMApp>
-                              <XMWrap>
-                                <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                <XMApp xml:id="S5.Ex5.m2.2">
-                                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                  <XMApp>
-                                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                    <XMApp>
-                                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                      <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                        <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                      </XMApp>
-                                      <XMApp>
-                                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                        <XMApp>
-                                          <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                          <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                        </XMApp>
-                                        <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                      </XMApp>
-                                    </XMApp>
-                                    <XMApp>
-                                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                      <XMApp>
-                                        <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                        <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                      </XMApp>
-                                      <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                    </XMApp>
-                                  </XMApp>
-                                  <XMApp>
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                    <XMApp>
-                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                    </XMApp>
-                                    <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                    <XMApp>
-                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                    </XMApp>
-                                  </XMApp>
-                                </XMApp>
-                                <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                              </XMWrap>
-                            </XMDual>
-                            <XMTok role="CLOSE" stretchy="true">|</XMTok>
+                            <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                           </XMWrap>
                         </XMDual>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
@@ -740,427 +579,307 @@
         </equation>
         <equation xml:id="S5.Ex6">
           <MathFork>
-            <Math tex="\displaystyle\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="absent &lt;= absolute-value@(norm@(absolute-value@(M * norm@(absolute-value@(norm@(absolute-value@(norm@(absolute-value@(Sigma * absolute-value@(norm@(absolute-value@((norm@(absolute-value@(M - M ^ prime))) _ F + (norm@(absolute-value@(M - M ^ prime))) _ F))) * Sigma)))))) * M ^ prime)))" xml:id="S5.Ex6.m2">
+            <Math tex="\displaystyle\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="absent &lt;= norm@(absolute-value@(M)) * norm@(absolute-value@(Sigma)) * (norm@(M - M ^ prime)) _ F + (norm@(M - M ^ prime)) _ F * norm@(absolute-value@(Sigma)) * norm@(absolute-value@(M ^ prime))" xml:id="S5.Ex6.m2">
               <XMath>
                 <XMApp>
                   <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                   <XMTok meaning="absent"/>
-                  <XMDual>
+                  <XMApp>
+                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
                     <XMApp>
-                      <XMTok meaning="absolute-value"/>
-                      <XMRef idref="S5.Ex6.m2.1"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                      <XMDual xml:id="S5.Ex6.m2.1">
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMDual>
                         <XMApp>
                           <XMTok meaning="norm"/>
-                          <XMRef idref="S5.Ex6.m2.2"/>
+                          <XMRef idref="S5.Ex6.m2.1"/>
                         </XMApp>
                         <XMWrap>
-                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          <XMDual xml:id="S5.Ex6.m2.2">
+                          <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                          <XMDual xml:id="S5.Ex6.m2.1">
                             <XMApp>
                               <XMTok meaning="absolute-value"/>
-                              <XMRef idref="S5.Ex6.m2.3"/>
+                              <XMRef idref="S5.Ex6.m2.2"/>
                             </XMApp>
                             <XMWrap>
                               <XMTok role="OPEN" stretchy="true">|</XMTok>
-                              <XMApp xml:id="S5.Ex6.m2.3">
-                                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                              <XMTok font="italic" role="UNKNOWN" xml:id="S5.Ex6.m2.2">M</XMTok>
+                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="norm"/>
+                          <XMRef idref="S5.Ex6.m2.3"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                          <XMDual xml:id="S5.Ex6.m2.3">
+                            <XMApp>
+                              <XMTok meaning="absolute-value"/>
+                              <XMRef idref="S5.Ex6.m2.4"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="true">|</XMTok>
+                              <XMTok name="Sigma" role="UNKNOWN" xml:id="S5.Ex6.m2.4">Σ</XMTok>
+                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="norm"/>
+                            <XMRef idref="S5.Ex6.m2.5"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                            <XMApp xml:id="S5.Ex6.m2.5">
+                              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                              <XMApp>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
                                 <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                <XMDual>
-                                  <XMApp>
-                                    <XMTok meaning="norm"/>
-                                    <XMRef idref="S5.Ex6.m2.4"/>
-                                  </XMApp>
-                                  <XMWrap>
-                                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                    <XMDual xml:id="S5.Ex6.m2.4">
-                                      <XMApp>
-                                        <XMTok meaning="absolute-value"/>
-                                        <XMRef idref="S5.Ex6.m2.5"/>
-                                      </XMApp>
-                                      <XMWrap>
-                                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                        <XMDual xml:id="S5.Ex6.m2.5">
-                                          <XMApp>
-                                            <XMTok meaning="norm"/>
-                                            <XMRef idref="S5.Ex6.m2.6"/>
-                                          </XMApp>
-                                          <XMWrap>
-                                            <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                            <XMDual xml:id="S5.Ex6.m2.6">
-                                              <XMApp>
-                                                <XMTok meaning="absolute-value"/>
-                                                <XMRef idref="S5.Ex6.m2.7"/>
-                                              </XMApp>
-                                              <XMWrap>
-                                                <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                <XMDual xml:id="S5.Ex6.m2.7">
-                                                  <XMApp>
-                                                    <XMTok meaning="norm"/>
-                                                    <XMRef idref="S5.Ex6.m2.8"/>
-                                                  </XMApp>
-                                                  <XMWrap>
-                                                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                    <XMDual xml:id="S5.Ex6.m2.8">
-                                                      <XMApp>
-                                                        <XMTok meaning="absolute-value"/>
-                                                        <XMRef idref="S5.Ex6.m2.9"/>
-                                                      </XMApp>
-                                                      <XMWrap>
-                                                        <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                        <XMApp xml:id="S5.Ex6.m2.9">
-                                                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                                          <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                          <XMDual>
-                                                            <XMApp>
-                                                              <XMTok meaning="absolute-value"/>
-                                                              <XMRef idref="S5.Ex6.m2.10"/>
-                                                            </XMApp>
-                                                            <XMWrap>
-                                                              <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                              <XMDual xml:id="S5.Ex6.m2.10">
-                                                                <XMApp>
-                                                                  <XMTok meaning="norm"/>
-                                                                  <XMRef idref="S5.Ex6.m2.11"/>
-                                                                </XMApp>
-                                                                <XMWrap>
-                                                                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                  <XMDual xml:id="S5.Ex6.m2.11">
-                                                                    <XMApp>
-                                                                      <XMTok meaning="absolute-value"/>
-                                                                      <XMRef idref="S5.Ex6.m2.12"/>
-                                                                    </XMApp>
-                                                                    <XMWrap>
-                                                                      <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                      <XMApp xml:id="S5.Ex6.m2.12">
-                                                                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                                                        <XMApp>
-                                                                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                          <XMDual>
-                                                                            <XMApp>
-                                                                              <XMTok meaning="norm"/>
-                                                                              <XMRef idref="S5.Ex6.m2.13"/>
-                                                                            </XMApp>
-                                                                            <XMWrap>
-                                                                              <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                              <XMDual xml:id="S5.Ex6.m2.13">
-                                                                                <XMApp>
-                                                                                  <XMTok meaning="absolute-value"/>
-                                                                                  <XMRef idref="S5.Ex6.m2.14"/>
-                                                                                </XMApp>
-                                                                                <XMWrap>
-                                                                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                                  <XMApp xml:id="S5.Ex6.m2.14">
-                                                                                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                    <XMApp>
-                                                                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                    </XMApp>
-                                                                                  </XMApp>
-                                                                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                </XMWrap>
-                                                                              </XMDual>
-                                                                              <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                            </XMWrap>
-                                                                          </XMDual>
-                                                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                        </XMApp>
-                                                                        <XMApp>
-                                                                          <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                          <XMDual>
-                                                                            <XMApp>
-                                                                              <XMTok meaning="norm"/>
-                                                                              <XMRef idref="S5.Ex6.m2.15"/>
-                                                                            </XMApp>
-                                                                            <XMWrap>
-                                                                              <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                              <XMDual xml:id="S5.Ex6.m2.15">
-                                                                                <XMApp>
-                                                                                  <XMTok meaning="absolute-value"/>
-                                                                                  <XMRef idref="S5.Ex6.m2.16"/>
-                                                                                </XMApp>
-                                                                                <XMWrap>
-                                                                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                                  <XMApp xml:id="S5.Ex6.m2.16">
-                                                                                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                    <XMApp>
-                                                                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                    </XMApp>
-                                                                                  </XMApp>
-                                                                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                </XMWrap>
-                                                                              </XMDual>
-                                                                              <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                            </XMWrap>
-                                                                          </XMDual>
-                                                                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                        </XMApp>
-                                                                      </XMApp>
-                                                                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                    </XMWrap>
-                                                                  </XMDual>
-                                                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                </XMWrap>
-                                                              </XMDual>
-                                                              <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                            </XMWrap>
-                                                          </XMDual>
-                                                          <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                        </XMApp>
-                                                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                      </XMWrap>
-                                                    </XMDual>
-                                                    <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                  </XMWrap>
-                                                </XMDual>
-                                                <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                              </XMWrap>
-                                            </XMDual>
-                                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                          </XMWrap>
-                                        </XMDual>
-                                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                      </XMWrap>
-                                    </XMDual>
-                                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                  </XMWrap>
-                                </XMDual>
-                                <XMApp>
-                                  <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                  <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                </XMApp>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                              </XMApp>
+                            </XMApp>
+                            <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMDual>
+                          <XMApp>
+                            <XMTok meaning="norm"/>
+                            <XMRef idref="S5.Ex6.m2.6"/>
+                          </XMApp>
+                          <XMWrap>
+                            <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                            <XMApp xml:id="S5.Ex6.m2.6">
+                              <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                              <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                              <XMApp>
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                              </XMApp>
+                            </XMApp>
+                            <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                          </XMWrap>
+                        </XMDual>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                      </XMApp>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="norm"/>
+                          <XMRef idref="S5.Ex6.m2.7"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                          <XMDual xml:id="S5.Ex6.m2.7">
+                            <XMApp>
+                              <XMTok meaning="absolute-value"/>
+                              <XMRef idref="S5.Ex6.m2.8"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="true">|</XMTok>
+                              <XMTok name="Sigma" role="UNKNOWN" xml:id="S5.Ex6.m2.8">Σ</XMTok>
+                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                        </XMWrap>
+                      </XMDual>
+                      <XMDual>
+                        <XMApp>
+                          <XMTok meaning="norm"/>
+                          <XMRef idref="S5.Ex6.m2.9"/>
+                        </XMApp>
+                        <XMWrap>
+                          <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                          <XMDual xml:id="S5.Ex6.m2.9">
+                            <XMApp>
+                              <XMTok meaning="absolute-value"/>
+                              <XMRef idref="S5.Ex6.m2.10"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" stretchy="true">|</XMTok>
+                              <XMApp xml:id="S5.Ex6.m2.10">
+                                <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                                <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
                               </XMApp>
                               <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
                             </XMWrap>
                           </XMDual>
-                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                          <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                         </XMWrap>
                       </XMDual>
-                      <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                    </XMWrap>
-                  </XMDual>
+                    </XMApp>
+                  </XMApp>
                 </XMApp>
               </XMath>
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="absent &lt;= absolute-value@(norm@(absolute-value@(M * norm@(absolute-value@(norm@(absolute-value@(norm@(absolute-value@(Sigma * absolute-value@(norm@(absolute-value@((norm@(absolute-value@(M - M ^ prime))) _ F + (norm@(absolute-value@(M - M ^ prime))) _ F))) * Sigma)))))) * M ^ prime)))" xml:id="S5.Ex6.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle\leq{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}+{\left|\kern-1.07639pt\left|M-M^{\prime}\right|\kern-1.07639pt\right|}_{F}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|\Sigma\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}{\left|\kern-1.07639pt\left|\kern-1.07639pt\left|M^{\prime}\right|\kern-1.07639pt\right|\kern-1.07639pt\right|}" text="absent &lt;= norm@(absolute-value@(M)) * norm@(absolute-value@(Sigma)) * (norm@(M - M ^ prime)) _ F + (norm@(M - M ^ prime)) _ F * norm@(absolute-value@(Sigma)) * norm@(absolute-value@(M ^ prime))" xml:id="S5.Ex6.m1">
                   <XMath>
                     <XMApp>
                       <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
                       <XMTok meaning="absent"/>
-                      <XMDual>
+                      <XMApp>
+                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
-                          <XMTok meaning="absolute-value"/>
-                          <XMRef idref="S5.Ex6.m1.1"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                          <XMDual xml:id="S5.Ex6.m1.1">
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMDual>
                             <XMApp>
                               <XMTok meaning="norm"/>
-                              <XMRef idref="S5.Ex6.m1.2"/>
+                              <XMRef idref="S5.Ex6.m1.1"/>
                             </XMApp>
                             <XMWrap>
-                              <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                              <XMDual xml:id="S5.Ex6.m1.2">
+                              <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                              <XMDual xml:id="S5.Ex6.m1.1">
                                 <XMApp>
                                   <XMTok meaning="absolute-value"/>
-                                  <XMRef idref="S5.Ex6.m1.3"/>
+                                  <XMRef idref="S5.Ex6.m1.2"/>
                                 </XMApp>
                                 <XMWrap>
                                   <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                  <XMApp xml:id="S5.Ex6.m1.3">
-                                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                                  <XMTok font="italic" role="UNKNOWN" xml:id="S5.Ex6.m1.2">M</XMTok>
+                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                              <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMDual>
+                            <XMApp>
+                              <XMTok meaning="norm"/>
+                              <XMRef idref="S5.Ex6.m1.3"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                              <XMDual xml:id="S5.Ex6.m1.3">
+                                <XMApp>
+                                  <XMTok meaning="absolute-value"/>
+                                  <XMRef idref="S5.Ex6.m1.4"/>
+                                </XMApp>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
+                                  <XMTok name="Sigma" role="UNKNOWN" xml:id="S5.Ex6.m1.4">Σ</XMTok>
+                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                              <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMDual>
+                              <XMApp>
+                                <XMTok meaning="norm"/>
+                                <XMRef idref="S5.Ex6.m1.5"/>
+                              </XMApp>
+                              <XMWrap>
+                                <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                                <XMApp xml:id="S5.Ex6.m1.5">
+                                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                  <XMApp>
+                                    <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
                                     <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                    <XMDual>
-                                      <XMApp>
-                                        <XMTok meaning="norm"/>
-                                        <XMRef idref="S5.Ex6.m1.4"/>
-                                      </XMApp>
-                                      <XMWrap>
-                                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                        <XMDual xml:id="S5.Ex6.m1.4">
-                                          <XMApp>
-                                            <XMTok meaning="absolute-value"/>
-                                            <XMRef idref="S5.Ex6.m1.5"/>
-                                          </XMApp>
-                                          <XMWrap>
-                                            <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                            <XMDual xml:id="S5.Ex6.m1.5">
-                                              <XMApp>
-                                                <XMTok meaning="norm"/>
-                                                <XMRef idref="S5.Ex6.m1.6"/>
-                                              </XMApp>
-                                              <XMWrap>
-                                                <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                <XMDual xml:id="S5.Ex6.m1.6">
-                                                  <XMApp>
-                                                    <XMTok meaning="absolute-value"/>
-                                                    <XMRef idref="S5.Ex6.m1.7"/>
-                                                  </XMApp>
-                                                  <XMWrap>
-                                                    <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                    <XMDual xml:id="S5.Ex6.m1.7">
-                                                      <XMApp>
-                                                        <XMTok meaning="norm"/>
-                                                        <XMRef idref="S5.Ex6.m1.8"/>
-                                                      </XMApp>
-                                                      <XMWrap>
-                                                        <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                        <XMDual xml:id="S5.Ex6.m1.8">
-                                                          <XMApp>
-                                                            <XMTok meaning="absolute-value"/>
-                                                            <XMRef idref="S5.Ex6.m1.9"/>
-                                                          </XMApp>
-                                                          <XMWrap>
-                                                            <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                            <XMApp xml:id="S5.Ex6.m1.9">
-                                                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                                              <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                              <XMDual>
-                                                                <XMApp>
-                                                                  <XMTok meaning="absolute-value"/>
-                                                                  <XMRef idref="S5.Ex6.m1.10"/>
-                                                                </XMApp>
-                                                                <XMWrap>
-                                                                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                  <XMDual xml:id="S5.Ex6.m1.10">
-                                                                    <XMApp>
-                                                                      <XMTok meaning="norm"/>
-                                                                      <XMRef idref="S5.Ex6.m1.11"/>
-                                                                    </XMApp>
-                                                                    <XMWrap>
-                                                                      <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                      <XMDual xml:id="S5.Ex6.m1.11">
-                                                                        <XMApp>
-                                                                          <XMTok meaning="absolute-value"/>
-                                                                          <XMRef idref="S5.Ex6.m1.12"/>
-                                                                        </XMApp>
-                                                                        <XMWrap>
-                                                                          <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                          <XMApp xml:id="S5.Ex6.m1.12">
-                                                                            <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                                                            <XMApp>
-                                                                              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                              <XMDual>
-                                                                                <XMApp>
-                                                                                  <XMTok meaning="norm"/>
-                                                                                  <XMRef idref="S5.Ex6.m1.13"/>
-                                                                                </XMApp>
-                                                                                <XMWrap>
-                                                                                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                  <XMDual xml:id="S5.Ex6.m1.13">
-                                                                                    <XMApp>
-                                                                                      <XMTok meaning="absolute-value"/>
-                                                                                      <XMRef idref="S5.Ex6.m1.14"/>
-                                                                                    </XMApp>
-                                                                                    <XMWrap>
-                                                                                      <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                                      <XMApp xml:id="S5.Ex6.m1.14">
-                                                                                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                        <XMApp>
-                                                                                          <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                          <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                        </XMApp>
-                                                                                      </XMApp>
-                                                                                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                    </XMWrap>
-                                                                                  </XMDual>
-                                                                                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                                </XMWrap>
-                                                                              </XMDual>
-                                                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                            </XMApp>
-                                                                            <XMApp>
-                                                                              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                                                              <XMDual>
-                                                                                <XMApp>
-                                                                                  <XMTok meaning="norm"/>
-                                                                                  <XMRef idref="S5.Ex6.m1.15"/>
-                                                                                </XMApp>
-                                                                                <XMWrap>
-                                                                                  <XMTok role="OPEN" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                  <XMDual xml:id="S5.Ex6.m1.15">
-                                                                                    <XMApp>
-                                                                                      <XMTok meaning="absolute-value"/>
-                                                                                      <XMRef idref="S5.Ex6.m1.16"/>
-                                                                                    </XMApp>
-                                                                                    <XMWrap>
-                                                                                      <XMTok role="OPEN" stretchy="true">|</XMTok>
-                                                                                      <XMApp xml:id="S5.Ex6.m1.16">
-                                                                                        <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                                                                        <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                        <XMApp>
-                                                                                          <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
-                                                                                          <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                                                                          <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                                                                        </XMApp>
-                                                                                      </XMApp>
-                                                                                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                                    </XMWrap>
-                                                                                  </XMDual>
-                                                                                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                                </XMWrap>
-                                                                              </XMDual>
-                                                                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
-                                                                            </XMApp>
-                                                                          </XMApp>
-                                                                          <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                        </XMWrap>
-                                                                      </XMDual>
-                                                                      <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                                    </XMWrap>
-                                                                  </XMDual>
-                                                                  <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                                </XMWrap>
-                                                              </XMDual>
-                                                              <XMTok name="Sigma" role="UNKNOWN">Σ</XMTok>
-                                                            </XMApp>
-                                                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                          </XMWrap>
-                                                        </XMDual>
-                                                        <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                                      </XMWrap>
-                                                    </XMDual>
-                                                    <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                                  </XMWrap>
-                                                </XMDual>
-                                                <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                              </XMWrap>
-                                            </XMDual>
-                                            <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
-                                          </XMWrap>
-                                        </XMDual>
-                                        <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                                      </XMWrap>
-                                    </XMDual>
-                                    <XMApp>
-                                      <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
-                                      <XMTok font="italic" role="UNKNOWN">M</XMTok>
-                                      <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
-                                    </XMApp>
+                                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                                  </XMApp>
+                                </XMApp>
+                                <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMApp>
+                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                            <XMDual>
+                              <XMApp>
+                                <XMTok meaning="norm"/>
+                                <XMRef idref="S5.Ex6.m1.6"/>
+                              </XMApp>
+                              <XMWrap>
+                                <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                                <XMApp xml:id="S5.Ex6.m1.6">
+                                  <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                                  <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                  <XMApp>
+                                    <XMTok role="SUPERSCRIPTOP" scriptpos="post4"/>
+                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
+                                  </XMApp>
+                                </XMApp>
+                                <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                              </XMWrap>
+                            </XMDual>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">F</XMTok>
+                          </XMApp>
+                          <XMDual>
+                            <XMApp>
+                              <XMTok meaning="norm"/>
+                              <XMRef idref="S5.Ex6.m1.7"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                              <XMDual xml:id="S5.Ex6.m1.7">
+                                <XMApp>
+                                  <XMTok meaning="absolute-value"/>
+                                  <XMRef idref="S5.Ex6.m1.8"/>
+                                </XMApp>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
+                                  <XMTok name="Sigma" role="UNKNOWN" xml:id="S5.Ex6.m1.8">Σ</XMTok>
+                                  <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                                </XMWrap>
+                              </XMDual>
+                              <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
+                            </XMWrap>
+                          </XMDual>
+                          <XMDual>
+                            <XMApp>
+                              <XMTok meaning="norm"/>
+                              <XMRef idref="S5.Ex6.m1.9"/>
+                            </XMApp>
+                            <XMWrap>
+                              <XMTok role="OPEN" rpadding="-1.1pt">‖</XMTok>
+                              <XMDual xml:id="S5.Ex6.m1.9">
+                                <XMApp>
+                                  <XMTok meaning="absolute-value"/>
+                                  <XMRef idref="S5.Ex6.m1.10"/>
+                                </XMApp>
+                                <XMWrap>
+                                  <XMTok role="OPEN" stretchy="true">|</XMTok>
+                                  <XMApp xml:id="S5.Ex6.m1.10">
+                                    <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
+                                    <XMTok font="italic" role="UNKNOWN">M</XMTok>
+                                    <XMTok fontsize="70%" name="prime" role="SUPOP">′</XMTok>
                                   </XMApp>
                                   <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
                                 </XMWrap>
                               </XMDual>
-                              <XMTok role="CLOSE" rpadding="-1.1pt" stretchy="true">|</XMTok>
+                              <XMTok role="CLOSE" rpadding="-1.1pt">‖</XMTok>
                             </XMWrap>
                           </XMDual>
-                          <XMTok role="CLOSE" stretchy="true">|</XMTok>
-                        </XMWrap>
-                      </XMDual>
+                        </XMApp>
+                      </XMApp>
                     </XMApp>
                   </XMath>
                 </Math></td>

@@ -44,12 +44,25 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rangle =[rangle_rel rangle_close]);
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
-  // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`;
-  // the lexer (util.rs) re-emits these as `STRETCHY_VERTBAR:|:idx`
-  // specifically so the grammar can pair them unambiguously without
-  // competing with the bare-`|x|` bidirectional interpretation.
-  // See docs/MATH_AMBIGUITY_AUDIT.md §2 (delimiter-pairing).
-  token!(stretchy_vertbar ~ "STRETCHY_VERTBAR");
+  // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`.
+  // The lexer (util.rs) further distinguishes those emitted by `\@left`
+  // from those emitted by `\@right` via the `lx@side` property set in
+  // the respective constructors (tex_math.rs). Side-distinct lexemes
+  // (LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR) eliminate
+  // combinatorial pairing ambiguity for the kerned-stack norm idioms
+  // (\vertii, \vertiii, …) where multiple identical bars appear in
+  // sequence. `stretchy_vertbar` is the union — used by legacy rules
+  // (e.g. eval_at) that don't care which side a stretchy bar came from.
+  // See docs/MATH_AMBIGUITY_AUDIT.md §2 (delimiter-pairing) and Task #263.
+  token!(left_stretchy_vertbar ~ "LEFT_STRETCHY_VERTBAR");
+  token!(right_stretchy_vertbar ~ "RIGHT_STRETCHY_VERTBAR");
+  // Fallback for stretchy bars that arrived without a side tag
+  // (legacy DOM input, or a code path that bypassed `\@left`/`\@right`).
+  // The lexer in util.rs emits this when `role_side` is absent.
+  // Rules that legitimately accept any side (eval_at) enumerate both
+  // alternatives explicitly rather than relying on a union token —
+  // the Marpa tree builder doesn't roll up alternation-of-tokens cleanly.
+  token!(undirected_stretchy_vertbar ~ "STRETCHY_VERTBAR");
   token!(close_pipe = "CLOSE:|");
   token!(middle_bar = "MIDDLE:|");
   token!(middle_parallel = "MIDDLE:parallel-to");
@@ -473,13 +486,32 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
              | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
              | singlevertbar expression singlevertbar => fenced
+             // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
+             // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
+             // The lexer in util.rs distinguishes bars emitted by `\@left`
+             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\@right`
+             // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
+             // those constructors (tex_math.rs:\@left and :\@right). This
+             // pre-distinction collapses what would be a combinatorial
+             // pairing of identical stretchy bars into a single ungrammatical
+             // shape — the parser never enumerates `right-...-left` invalid
+             // pairings. The actions still verify the negative-rpadding
+             // (\kern) signal as a side condition so that two intentionally
+             // separate `\left|...\right|\left|...\right|` fences aren't
+             // accidentally merged. Task #263. Witness arXiv:2211.13044 §S4.Ex17.
+             | left_stretchy_vertbar left_stretchy_vertbar left_stretchy_vertbar expression
+                 right_stretchy_vertbar right_stretchy_vertbar right_stretchy_vertbar
+                 => stretchy_triple_norm_fenced
+             | left_stretchy_vertbar left_stretchy_vertbar expression
+                 right_stretchy_vertbar right_stretchy_vertbar
+                 => stretchy_norm_fenced
              // Balanced modulus: `\left| expr \right|` (stretchy bars).
              // The lexer (util.rs) tags `\left/\right`-paired bars as
-             // STRETCHY_VERTBAR so we don't enumerate every alternative
-             // pairing of bare `|`s. With this rule, `\left|f\right|^k`
-             // unambiguously pairs the two stretchy bars regardless of
-             // surrounding parens / scripts.
-             | stretchy_vertbar expression stretchy_vertbar => fenced
+             // LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR so we don't
+             // enumerate every alternative pairing of bare `|`s. With this
+             // rule, `\left|f\right|^k` unambiguously pairs the two stretchy
+             // bars regardless of surrounding parens / scripts.
+             | left_stretchy_vertbar expression right_stretchy_vertbar => fenced
              // Dirac ket: |label⟩ — VERTBAR as opening, CLOSE:rangle as closing
              // Restricted to rangle_close (⟩) to avoid ambiguity with conditional
              // probability (x|y) where ) is a generic CLOSE but not rangle.
@@ -935,12 +967,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | tight_term close_pipe postsubarg postsuperarg => eval_at
         | tight_term close_pipe postsuperarg postsubarg => eval_at
         // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
-        // tagged STRETCHY_VERTBAR by the lexer (util.rs). The `\left.`
-        // null-delimiter doesn't appear in the lexeme stream, so the
-        // resulting shape is `tight_term STRETCHY_VERTBAR postsubarg`.
-        | tight_term stretchy_vertbar postsubarg => eval_at
-        | tight_term stretchy_vertbar postsubarg postsuperarg => eval_at
-        | tight_term stretchy_vertbar postsuperarg postsubarg => eval_at;
+        // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
+        // `role_side="right"` property set in `\@right` (tex_math.rs).
+        // The `\left.` null-delimiter doesn't appear in the lexeme
+        // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
+        // postsubarg`. The undirected variant covers legacy DOM input
+        // or code paths that bypassed `\@right`.
+        | tight_term right_stretchy_vertbar postsubarg => eval_at
+        | tight_term right_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | tight_term right_stretchy_vertbar postsuperarg postsubarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsubarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsubarg postsuperarg => eval_at
+        | tight_term undirected_stretchy_vertbar postsuperarg postsubarg => eval_at;
 
       anyop = addop | mulop | binop | relop | arrow | metarelop
         | bigop | sumop | intop
