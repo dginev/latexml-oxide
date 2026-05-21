@@ -1536,7 +1536,17 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     ..InputDefinitionOptions::default()
   });
   // Perl Package.pm L2679 maybeRequireDependencies is invoked from
-  // input_definitions's miss-handler; nothing more to do here.
+  // input_definitions's miss-handler. But that handler only runs when
+  // the file was NOT found at all. For paper-bundled .sty files that
+  // raw-load successfully without a .sty.ltxml binding, we still need
+  // to scan transitive \RequirePackage so that bound deps fire too.
+  // Mirrors the same fix for load_class (search "cls.ltxml_loaded").
+  // Witness 2208.07400 (paper-bundled emnlp2022.sty has
+  // \RequirePackage{caption} + others; without scan, \captionsetup
+  // and similar are undefined).
+  if !lookup_bool(&s!("{name}.sty.ltxml_loaded")) {
+    maybe_require_dependencies(name, "sty");
+  }
   result
 }
 
