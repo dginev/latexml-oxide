@@ -753,21 +753,35 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // `local $UNLOCKED = 1`, allowing bindings to override prior
       // (locked) definitions. The guard auto-pops on drop.
       let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
+      // Set the _loaded flag BEFORE calling the dispatcher. Some
+      // binding bodies (e.g. natbib_sty.rs's ProcessOptions chain)
+      // can transitively call require_package(SAME_NAME), which
+      // re-enters input_definitions → _load_binding. Without
+      // pre-setting the flag, the re-entrance reloads the binding
+      // again, and again, leading to 15K+ calls (eventual timeout
+      // on 5 sandbox papers). Mirrors the line-764 "preemptively
+      // mark as loaded to avoid recursion" comment already in the
+      // code — just moves it earlier in the function. Task #260.
+      assign_value(&loaded_key, true, Some(Scope::Global));
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
-          // Here and only here we are certain we have binding support.
-          // Preemptively mark as loaded to avoid recursion.
-
-          // Mark binding as loaded (raw `<request>_raw_loaded` is tracked
-          // separately by load_tex_definitions). Per OXIDIZED_DESIGN #23.
-          assign_value(&loaded_key, true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
-            Err(e) => Err(e),
+            Err(e) => {
+              // On error, leave the flag set (matches the pre-existing
+              // "mark as loaded even on error to prevent re-loading
+              // via raw path" behavior at the input_definitions level).
+              Err(e)
+            },
           }
         },
-        None => Ok(false),
+        None => {
+          // Dispatcher returned None — name was NOT actually bound here.
+          // Clear the flag we optimistically set above.
+          assign_value(&loaded_key, false, Some(Scope::Global));
+          Ok(false)
+        },
       }
     },
     None => Ok(false),
