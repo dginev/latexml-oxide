@@ -779,28 +779,52 @@ fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
 /// Port of `pmml_infix`.
 fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   let op_mml = pmml(doc, op);
-  // Filter out absent operands before deciding the rendering shape.
-  // The math parser inserts an XMTok with meaning="absent" for
-  // structurally-missing operands (continuation row `& = ...` whose
-  // LHS is inherited from the previous row → Apply(=, absent, RHS)).
-  // For Presentation MathML we want NO placeholder at all: a
-  // continuation row reads cleanly as `<mrow><mo>=</mo><RHS></mrow>`.
-  // Materializing a placeholder (whether `<mi></mi>` or even an empty
-  // `<mrow></mrow>`) adds nothing to the visual result and degrades
-  // accessibility (screen readers announce a blank/empty group).
-  // Filtering here keeps Content MathML — generated separately —
-  // free to retain the absent operand if it wants a faithful structural
-  // record. Task #264 step 2.
-  let live_args: Vec<&Node> = args.iter().filter(|a| !is_absent_operand(a)).collect();
+  if args.is_empty() {
+    return op_mml;
+  }
+  // For Presentation MathML we suppress XMath's `absent` placeholders
+  // entirely — they exist to satisfy the content-arm structural
+  // contract (every binary application has 2 operands), but materializing
+  // them as visible MathML degrades accessibility (screen readers
+  // announce a blank/empty group, indexers see a spurious atom).
+  //
+  // The shape decision depends on WHICH operand is absent:
+  //   - absent left, real right (`Apply(=, absent, RHS)`) → prefix:
+  //         <mrow><mo>=</mo><RHS></mrow>
+  //         (continuation row `& = RHS` whose LHS is inherited from
+  //         the previous row — see prefix_relop_apply in semantics.rs)
+  //   - real left, absent right (`Apply(=, LHS, absent)`) → postfix:
+  //         <mrow><LHS><mo>=</mo></mrow>
+  //         (trailing relop — see postfix_relop in semantics.rs)
+  //   - real left, real right (normal case) → infix:
+  //         <mrow><LHS><mo>=</mo><RHS></mrow>
+  //   - both absent → just the operator.
+  //
+  // For the chained case (n≥3 args), drop only absents that are
+  // strictly at the boundary (leading or trailing). Interior absents
+  // — if any — keep their slot since omitting would change the
+  // operand-count interpretation of the chain.
+  // Task #264 step 2.
+  let leading_absent = is_absent_operand(&args[0]);
+  let trailing_absent = args.len() >= 2 && is_absent_operand(&args[args.len() - 1]);
+  let slice_start = if leading_absent { 1 } else { 0 };
+  let slice_end = if trailing_absent { args.len() - 1 } else { args.len() };
+  let live_args = &args[slice_start..slice_end];
+
   if live_args.is_empty() {
     return op_mml;
   }
   if live_args.len() == 1 {
-    // Single arg (e.g. continuation-row `& = RHS` after filtering
-    // the absent LHS): prefix shape `<mrow><mo>=</mo><RHS></mrow>`.
-    return pmml_row(vec![op_mml, pmml(doc, live_args[0])]);
+    let arg_mml = pmml(doc, &live_args[0]);
+    return if leading_absent {
+      // Continuation-row prefix: `<mo>op</mo> <arg>`
+      pmml_row(vec![op_mml, arg_mml])
+    } else {
+      // Trailing-relop postfix: `<arg> <mo>op</mo>`
+      pmml_row(vec![arg_mml, op_mml])
+    };
   }
-  let mut items = vec![pmml(doc, live_args[0])];
+  let mut items = vec![pmml(doc, &live_args[0])];
   for arg in &live_args[1..] {
     items.push(op_mml.clone());
     items.push(pmml(doc, arg));
@@ -811,9 +835,9 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
 /// True iff `node` is the XMath placeholder for a structurally-absent
 /// operand — an `<ltx:XMTok>` with `meaning="absent"`. The math
 /// parser inserts these as the left operand for prefix-relop rules
-/// (`Apply(=, absent, RHS)` for `& = ...` continuation rows). Used
-/// by `pmml_infix` to suppress materialization in Presentation MathML.
-/// Task #264.
+/// (`Apply(=, absent, RHS)` for `& = ...` continuation rows) and as
+/// the right operand for postfix-relop rules. Used by `pmml_infix`
+/// to suppress materialization in Presentation MathML. Task #264.
 fn is_absent_operand(node: &Node) -> bool {
   if node.get_name() != "XMTok" {
     return false;
