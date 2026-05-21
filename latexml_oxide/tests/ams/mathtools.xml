@@ -3724,7 +3724,7 @@ Then a switch of tag forms.</p>
                   <XMTok font="italic" role="UNKNOWN">x</XMTok>
                   <XMTok font="italic" role="UNKNOWN">X</XMTok>
                 </XMApp>
-                <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                 <XMApp xml:id="S7.Ex55.m1.2">
                   <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                   <XMApp>
@@ -3786,7 +3786,7 @@ Then a switch of tag forms.</p>
           <XMath>
             <XMTok name="langle" role="OPEN" stretchy="true">⟨</XMTok>
             <XMTok meaning="1" role="NUMBER" rpadding="1.7pt">1</XMTok>
-            <XMTok role="MIDDLE" rpadding="1.7pt" stretchy="true">|</XMTok>
+            <XMTok role="MIDDLE" role_side="middle" rpadding="1.7pt" stretchy="true">|</XMTok>
             <XMApp rpadding="1.7pt">
               <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
               <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
@@ -3796,7 +3796,7 @@ Then a switch of tag forms.</p>
                 <XMTok fontsize="50%" meaning="1" role="NUMBER">1</XMTok>
               </XMApp>
             </XMApp>
-            <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+            <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
             <XMTok meaning="3" role="NUMBER"> 3</XMTok>
             <XMTok name="rangle" role="CLOSE" stretchy="true">⟩</XMTok>
           </XMath>

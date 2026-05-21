@@ -442,6 +442,15 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.9 Math Formulas — Perl L306
+  // `\middle` (eTeX) emits a separator delimiter inside a balanced
+  // `\left/\right` pair, e.g. `\left\{ x \middle| x<0 \right\}` for a
+  // set-comprehension. The delimiter inherits the role MIDDLE
+  // (already distinct from VERTBAR), so the math grammar's middle_bar
+  // / middle rules can pair it without ambiguity. We also stamp
+  // `role_side="middle"` on the emitted XMTok — symmetry with
+  // \left's `role_side="left"` and \right's `role_side="right"` set
+  // in tex_math.rs:\@left and :\@right, giving a uniform 3-way side
+  // discriminator on side-aware fence-pair delimiters. Task #263.
   DefConstructor!("\\middle Token", "#1",
   after_construct => sub[document, _whatsit] {
     let current = document.get_node().clone();
@@ -452,6 +461,7 @@ LoadDefinitions!({
     let mut delim = delim_opt.unwrap_or_else(|| current.clone());
     document.set_attribute(&mut delim, "role", "MIDDLE")?;
     document.set_attribute(&mut delim, "stretchy", "true")?;
+    document.set_attribute(&mut delim, "role_side", "middle")?;
   });
 
   //======================================================================

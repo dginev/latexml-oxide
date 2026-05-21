@@ -382,7 +382,7 @@
                 <XMWrap>
                   <XMTok role="OPEN" stretchy="true">(</XMTok>
                   <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.1">a</XMTok>
-                  <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+                  <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
                   <XMTok font="italic" role="ID" xml:id="S3.Ex13.m1.2">b</XMTok>
                   <XMTok role="CLOSE" stretchy="true">)</XMTok>
                 </XMWrap>

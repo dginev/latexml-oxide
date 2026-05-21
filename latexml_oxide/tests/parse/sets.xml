@@ -162,7 +162,7 @@
             <XMWrap>
               <XMTok role="OPEN" stretchy="true">{</XMTok>
               <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.1">x</XMTok>
-              <XMTok role="MIDDLE" stretchy="true">|</XMTok>
+              <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
               <XMApp xml:id="S0.Ex6.m1.2">
                 <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
