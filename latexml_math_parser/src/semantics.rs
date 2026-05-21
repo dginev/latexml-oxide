@@ -2135,8 +2135,20 @@ pub fn fenced(
     };
     interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
   } else if op_name == "delimited-||" {
+    // Detect the nested `\left|\left|x\right|\right|` kerned-stack
+    // norm idiom: when this fence wraps an inner Apply that's itself
+    // an absolute-value, promote the outer meaning to "norm". This
+    // matches Perl's `MorphVertbar` delimiter-table semantics at
+    // `MathParser.pm:1247` (`||` → U+2016 ‖). Witness
+    // arXiv:2211.13044 §S4.Ex17 and tests/math/norm_kerned_delims.tex.
+    // Tracked as task #263.
+    let meaning_str = if is_inner_absolute_value(&arg) {
+      "norm"
+    } else {
+      "absolute-value"
+    };
     let op = XProps {
-      meaning: Some(Cow::Borrowed("absolute-value")),
+      meaning: Some(Cow::Borrowed(meaning_str)),
       ..XProps::default()
     };
     let open_m = morph_vertbar(open, "OPEN", ctxt.nodes);
@@ -2253,6 +2265,35 @@ pub fn interval(
   )))
 }
 
+/// Detect if an XM tree is (a Dual wrapping) an Apply with
+/// meaning="absolute-value" — the shape produced by the inner
+/// `\left|·\right|` fence-pair when the user writes the
+/// kerned-stack double-bar idiom `\left|\left|x\right|\right|`.
+/// Used by `fence()` to promote `| · |` enclosing an absolute-
+/// value to `norm` rather than nested-absolute-value. Task #263.
+fn is_inner_absolute_value(xm: &XM) -> bool {
+  fn op_meaning_is_abs(op: &Operator) -> bool {
+    if let XM::Token(props, _) = op.0.as_ref() {
+      props.meaning.as_deref() == Some("absolute-value")
+    } else {
+      false
+    }
+  }
+  match xm {
+    // Direct Apply with absolute-value meaning.
+    XM::Apply(op, ..) => op_meaning_is_abs(op),
+    // The common case: fence() builds an XMDual whose content arm
+    // is the Apply. Peek through one level of Dual.
+    XM::Dual(content, ..) => {
+      matches!(
+        content.as_ref(),
+        XM::Apply(op, ..) if op_meaning_is_abs(op)
+      )
+    },
+    _ => false,
+  }
+}
+
 /// Perl's Fence (MathParser.pm): generalized fenced expression with
 /// comma-separated items. Determines meaning from delimiter+punctuation
 /// pattern using the Perl enclose tables.
@@ -2284,7 +2325,22 @@ pub fn fence(
     0 => "list",
     1 => match (o.as_ref(), c.as_ref()) {
       ("{", "}") => "set",
-      ("|", "|") => "absolute-value",
+      ("|", "|") => {
+        // Nested `\left|\left|x\right|\right|` (the community idiom for
+        // double-bar Frobenius norm). When we see `|` fencing a node
+        // that is ITSELF a `|...|` absolute-value Apply, this is a
+        // norm `‖x‖`, not a redundant nested absolute-value. Promote
+        // the outer meaning so downstream MathML/intent annotations
+        // get the right semantic. Matches Perl's `MorphVertbar`
+        // `delimiter` table at `MathParser.pm:1247` which maps
+        // `||` → U+2016 ‖. Witness arXiv:2211.13044 §S4.Ex17 and
+        // tests/math/norm_kerned_delims.tex.
+        if is_inner_absolute_value(&stuff[1]) {
+          "norm"
+        } else {
+          "absolute-value"
+        }
+      },
       ("\u{2308}", "\u{2309}") => "ceiling",             // ⌈ ⌉
       ("\u{230A}", "\u{230B}") => "floor",               // ⌊ ⌋
       ("\u{2016}", "\u{2016}") | ("||", "||") => "norm", // ‖ ‖
