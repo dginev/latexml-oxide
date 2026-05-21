@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/definition/expandable.rs`."><title>expandable.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/definition/</div>expandable.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/definition/expandable.rs`."><title>expandable.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/definition/</div>expandable.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#2 id=2 data-nosnippet>2</a><span class="comment">// use std::fmt;
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>libxml::tree::Node;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -9,357 +9,390 @@
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span><span class="kw">crate</span>::Digested;
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_TOKENS, Tokens};
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a><span class="attr">#[derive(Debug, Clone, Default)]
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub struct </span>ExpandableOptions {
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="kw">pub </span>locked:            bool,
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="kw">pub </span>protected:         bool,
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="kw">pub </span>outer:             bool,
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="kw">pub </span>long:              bool,
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="kw">pub </span>scope:             <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="kw">pub </span>alias:             <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="kw">pub </span>mathactive:        bool,
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="kw">pub </span>robust:            bool,
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="kw">pub </span>nopack_parameters: bool,
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a><span class="doccomment">/// Returns true when `\protect` currently has no meaning, or is
+<a href=#14 id=14 data-nosnippet>14</a>/// `\let`-equivalent to `\relax`. Used by the recursion guard in
+<a href=#15 id=15 data-nosnippet>15</a>/// `Expandable::invoke` to distinguish `\def\foo{\protect\foo}`
+<a href=#16 id=16 data-nosnippet>16</a>/// definitions under safe (`\@unexpandable@protect`/`\string`/…)
+<a href=#17 id=17 data-nosnippet>17</a>/// vs. unsafe (`\relax`/undefined) `\protect` regimes. Only the
+<a href=#18 id=18 data-nosnippet>18</a>/// unsafe regime actually runaways at full expansion.
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>protect_is_relax_or_undefined() -&gt; bool {
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="kw">let </span>protect = <span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="kw">match </span>lookup_meaning(<span class="kw-2">&amp;</span>protect) {
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="comment">// Meaning equal to \relax's meaning ⇒ unsafe.
+<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="prelude-val">Some</span>(stored) =&gt; <span class="kw">match </span>lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) {
+<a href=#25 id=25 data-nosnippet>25</a>      <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+<a href=#26 id=26 data-nosnippet>26</a>      <span class="prelude-val">Some</span>(relax) =&gt; stored == relax,
+<a href=#27 id=27 data-nosnippet>27</a>    },
+<a href=#28 id=28 data-nosnippet>28</a>  }
 <a href=#29 id=29 data-nosnippet>29</a>}
-<a href=#30 id=30 data-nosnippet>30</a>
-<a href=#31 id=31 data-nosnippet>31</a><span class="attr">#[derive(Debug, Clone)]
-<a href=#32 id=32 data-nosnippet>32</a></span><span class="kw">pub struct </span>Expandable {
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="kw">pub </span>is_protected: bool,
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="kw">pub </span>is_long:      bool,
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="kw">pub </span>is_outer:     bool,
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="kw">pub </span>has_cc_arg:   bool,
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="kw">pub </span>alias:        <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="kw">pub </span>locator:      Locator,
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="kw">pub </span>cs:           Token,
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">pub </span>paramlist:    <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="kw">pub </span>expansion:    <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
-<a href=#42 id=42 data-nosnippet>42</a>}
-<a href=#43 id=43 data-nosnippet>43</a><span class="kw">impl </span>Default <span class="kw">for </span>Expandable {
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-<a href=#45 id=45 data-nosnippet>45</a>    Expandable {
-<a href=#46 id=46 data-nosnippet>46</a>      is_protected: <span class="bool-val">false</span>,
-<a href=#47 id=47 data-nosnippet>47</a>      is_long:      <span class="bool-val">false</span>,
-<a href=#48 id=48 data-nosnippet>48</a>      is_outer:     <span class="bool-val">false</span>,
-<a href=#49 id=49 data-nosnippet>49</a>      has_cc_arg:   <span class="bool-val">false</span>,
-<a href=#50 id=50 data-nosnippet>50</a>      alias:        <span class="prelude-val">None</span>,
-<a href=#51 id=51 data-nosnippet>51</a>      locator:      Locator::default(),
-<a href=#52 id=52 data-nosnippet>52</a>      cs:           <span class="macro">T_CS!</span>(<span class="string">"Expandable"</span>),
-<a href=#53 id=53 data-nosnippet>53</a>      paramlist:    <span class="prelude-val">None</span>,
-<a href=#54 id=54 data-nosnippet>54</a>      expansion:    <span class="prelude-val">None</span>,
-<a href=#55 id=55 data-nosnippet>55</a>    }
-<a href=#56 id=56 data-nosnippet>56</a>  }
-<a href=#57 id=57 data-nosnippet>57</a>}
-<a href=#58 id=58 data-nosnippet>58</a><span class="kw">impl </span>PartialEq <span class="kw">for </span>Expandable {
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Expandable) -&gt; bool {
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="self">self</span>.paramlist == other.paramlist &amp;&amp; <span class="self">self</span>.expansion == other.expansion
-<a href=#61 id=61 data-nosnippet>61</a>  }
-<a href=#62 id=62 data-nosnippet>62</a>}
-<a href=#63 id=63 data-nosnippet>63</a>
-<a href=#64 id=64 data-nosnippet>64</a><span class="comment">// impl fmt::Display for Expandable {
-<a href=#65 id=65 data-nosnippet>65</a>//   fn fmt(&amp;self, _f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
-<a href=#66 id=66 data-nosnippet>66</a>//     todo!();
-<a href=#67 id=67 data-nosnippet>67</a>//   }
-<a href=#68 id=68 data-nosnippet>68</a>// }
-<a href=#69 id=69 data-nosnippet>69</a></span><span class="kw">impl </span>Object <span class="kw">for </span>Expandable {
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">fn </span>is_definition(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="kw">fn </span>is_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator { <span class="self">self</span>.locator }
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">"Expandable"</span>) }
-<a href=#74 id=74 data-nosnippet>74</a>}
-<a href=#75 id=75 data-nosnippet>75</a><span class="kw">impl </span>Definition <span class="kw">for </span>Expandable {
-<a href=#76 id=76 data-nosnippet>76</a>  <span class="kw">fn </span>is_protected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.is_protected }
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="kw">fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt; { <span class="self">self</span>.paramlist.as_ref() }
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="kw">fn </span>get_num_args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">match </span><span class="self">self</span>.paramlist {
-<a href=#80 id=80 data-nosnippet>80</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>params) =&gt; params.get_num_args(),
-<a href=#81 id=81 data-nosnippet>81</a>      <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
-<a href=#82 id=82 data-nosnippet>82</a>    }
-<a href=#83 id=83 data-nosnippet>83</a>  }
-<a href=#84 id=84 data-nosnippet>84</a>  <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;<span class="lifetime">'_</span>, Token&gt; { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.cs) }
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;<span class="lifetime">'_</span>, str&gt; {
-<a href=#86 id=86 data-nosnippet>86</a>    <span class="kw">match </span><span class="self">self</span>.alias {
-<a href=#87 id=87 data-nosnippet>87</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>alias) =&gt; Cow::Borrowed(alias),
-<a href=#88 id=88 data-nosnippet>88</a>      <span class="prelude-val">None </span>=&gt; Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)),
-<a href=#89 id=89 data-nosnippet>89</a>    }
-<a href=#90 id=90 data-nosnippet>90</a>  }
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// fn with_cs_name&lt;R, FnR&gt;(&amp;self, caller: FnR) -&gt; R
-<a href=#92 id=92 data-nosnippet>92</a>  // where FnR: FnOnce(&amp;str) -&gt; R {
-<a href=#93 id=93 data-nosnippet>93</a>  //   match self.alias {
-<a href=#94 id=94 data-nosnippet>94</a>  //     Some(ref alias) =&gt; caller(alias),
-<a href=#95 id=95 data-nosnippet>95</a>  //     None =&gt; self.cs.with_cs_name(caller),
-<a href=#96 id=96 data-nosnippet>96</a>  //   }
-<a href=#97 id=97 data-nosnippet>97</a>  // }
-<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="kw">fn </span>get_expansion(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ExpansionBody&gt; { <span class="self">self</span>.expansion.as_ref() }
-<a href=#99 id=99 data-nosnippet>99</a>  <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="self">self</span>.alias.as_ref() }
-<a href=#100 id=100 data-nosnippet>100</a>
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="doccomment">/// Expand the expandable control sequence. This should be carried out by the Gullet.
-<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="comment">// Perl shortcut for "trivial" macros that were tracing- or
-<a href=#104 id=104 data-nosnippet>104</a>    // profiling-aware. Neither tracing nor profiling is implemented
-<a href=#105 id=105 data-nosnippet>105</a>    // in the Rust port (the returned `_tracing` / `_profiled` values
-<a href=#106 id=106 data-nosnippet>106</a>    // were discarded), so the two state lookups were pure overhead
-<a href=#107 id=107 data-nosnippet>107</a>    // on every macro expansion (\~350k calls in si.tex alone per
-<a href=#108 id=108 data-nosnippet>108</a>    // callgrind). Removed — re-introduce only alongside the actual
-<a href=#109 id=109 data-nosnippet>109</a>    // tracing/profiling features if/when they land.
-<a href=#110 id=110 data-nosnippet>110</a>    </span><span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.expansion {
-<a href=#111 id=111 data-nosnippet>111</a>      <span class="prelude-val">Some</span>(ExpansionBody::Closure(closure)) =&gt; {
-<a href=#112 id=112 data-nosnippet>112</a>        <span class="comment">// Harder to emulate \tracingmacros here.
-<a href=#113 id=113 data-nosnippet>113</a>        </span><span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
-<a href=#114 id=114 data-nosnippet>114</a>          parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?
-<a href=#115 id=115 data-nosnippet>115</a>        </span>} <span class="kw">else </span>{
-<a href=#116 id=116 data-nosnippet>116</a>          Vec::new()
-<a href=#117 id=117 data-nosnippet>117</a>        };
-<a href=#118 id=118 data-nosnippet>118</a>        <span class="comment">// Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
-<a href=#119 id=119 data-nosnippet>119</a>        </span><span class="kw">let </span>result = closure(args)<span class="question-mark">?</span>;
-<a href=#120 id=120 data-nosnippet>120</a>        <span class="comment">// Tracing: Perl prints tracingCSName ==&gt; tracetoString(result)
-<a href=#121 id=121 data-nosnippet>121</a>        // Not implemented — silently skip to avoid panic on \tracingmacros=1
-<a href=#122 id=122 data-nosnippet>122</a>        </span><span class="prelude-val">Ok</span>(result)
-<a href=#123 id=123 data-nosnippet>123</a>      },
-<a href=#124 id=124 data-nosnippet>124</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tokens)) =&gt; {
-<a href=#125 id=125 data-nosnippet>125</a>        <span class="kw">let </span>result = <span class="kw">if </span><span class="self">self</span>.paramlist.is_none() {
-<a href=#126 id=126 data-nosnippet>126</a>          <span class="comment">// Case: Trivial macro
-<a href=#127 id=127 data-nosnippet>127</a>          // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
-<a href=#128 id=128 data-nosnippet>128</a>          // Tracing: Perl prints tracingCSName -&gt; tracetoString(expansion)
-<a href=#129 id=129 data-nosnippet>129</a>          // Not implemented — silently skip to avoid panic on \tracingmacros=1
-<a href=#130 id=130 data-nosnippet>130</a>          // For trivial expansion, make sure we don't get \cs or
-<a href=#131 id=131 data-nosnippet>131</a>          // \relax\cs direct recursion!  Perl: Expandable.pm L81-89.
-<a href=#132 id=132 data-nosnippet>132</a>          //   if (!$onceonly &amp;&amp; $$self{cs}) {
-<a href=#133 id=133 data-nosnippet>133</a>          //     my ($t0, $t1) = ($$expansion[0], $$expansion[1]);
-<a href=#134 id=134 data-nosnippet>134</a>          //     if ($t0 &amp;&amp; ($t0-&gt;equals($$self{cs})
-<a href=#135 id=135 data-nosnippet>135</a>          //         || ($t1 &amp;&amp; $t1-&gt;equals($$self{cs})
-<a href=#136 id=136 data-nosnippet>136</a>          //              &amp;&amp; $t0-&gt;equals(T_CS('\protect'))))) {
-<a href=#137 id=137 data-nosnippet>137</a>          //       Error('recursion', $$self{cs}, …,
-<a href=#138 id=138 data-nosnippet>138</a>          //         "Token X expands into itself!", "defining as empty");
-<a href=#139 id=139 data-nosnippet>139</a>          //       $expansion = TokensI(); } }
-<a href=#140 id=140 data-nosnippet>140</a>          //
-<a href=#141 id=141 data-nosnippet>141</a>          // Detect `\def\foo{\foo}` and `\def\foo{\protect\foo}`. Both
-<a href=#142 id=142 data-nosnippet>142</a>          // are runaway-expansion landmines under any full-expansion
-<a href=#143 id=143 data-nosnippet>143</a>          // context (`\edef`, `\xdef`, `\write`, `\message`). Perl
-<a href=#144 id=144 data-nosnippet>144</a>          // reports an `Error:recursion` and substitutes an empty
-<a href=#145 id=145 data-nosnippet>145</a>          // expansion for this invocation; the stored definition is
-<a href=#146 id=146 data-nosnippet>146</a>          // unchanged (subsequent invocations re-detect and re-error).
-<a href=#147 id=147 data-nosnippet>147</a>          //
-<a href=#148 id=148 data-nosnippet>148</a>          // A previous Rust port tried to re-install the CS as
-<a href=#149 id=149 data-nosnippet>149</a>          // `Stored::Token(self.cs)` to preserve `\ifx` identity for
-<a href=#150 id=150 data-nosnippet>150</a>          // expl3 quarks (`\q_no_value`, `\q_nil`, …) and PGF keys
-<a href=#151 id=151 data-nosnippet>151</a>          // (`\pgfkeys@mainstop`). That was a no-op: `assign_meaning`'s
-<a href=#152 id=152 data-nosnippet>152</a>          // `token == mt` short-circuit (state.rs:1918-1922) rejects
-<a href=#153 id=153 data-nosnippet>153</a>          // the `\foo → \foo` self-let, so the Expandable definition
-<a href=#154 id=154 data-nosnippet>154</a>          // stayed in place and the recursion guard re-fired forever.
-<a href=#155 id=155 data-nosnippet>155</a>          // Witness: cleveref × algorithmicx × hyperref on 2403.15855,
-<a href=#156 id=156 data-nosnippet>156</a>          // where `\xdef\cref@currentprefix{\cref@currentprefix}` hung
-<a href=#157 id=157 data-nosnippet>157</a>          // at the 60 s wall-clock guard.
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">use </span><span class="kw">crate</span>::document::Document;
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">use </span><span class="kw">crate</span>::tokens::{NO_TOKENS, Tokens};
+<a href=#34 id=34 data-nosnippet>34</a><span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
+<a href=#35 id=35 data-nosnippet>35</a>
+<a href=#36 id=36 data-nosnippet>36</a><span class="attr">#[derive(Debug, Clone, Default)]
+<a href=#37 id=37 data-nosnippet>37</a></span><span class="kw">pub struct </span>ExpandableOptions {
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="kw">pub </span>locked:            bool,
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="kw">pub </span>protected:         bool,
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">pub </span>outer:             bool,
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="kw">pub </span>long:              bool,
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="kw">pub </span>scope:             <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="kw">pub </span>alias:             <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="kw">pub </span>mathactive:        bool,
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="kw">pub </span>robust:            bool,
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="kw">pub </span>nopack_parameters: bool,
+<a href=#47 id=47 data-nosnippet>47</a>}
+<a href=#48 id=48 data-nosnippet>48</a>
+<a href=#49 id=49 data-nosnippet>49</a><span class="attr">#[derive(Debug, Clone)]
+<a href=#50 id=50 data-nosnippet>50</a></span><span class="kw">pub struct </span>Expandable {
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="kw">pub </span>is_protected: bool,
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="kw">pub </span>is_long:      bool,
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="kw">pub </span>is_outer:     bool,
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="kw">pub </span>has_cc_arg:   bool,
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="kw">pub </span>alias:        <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="kw">pub </span>locator:      Locator,
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="kw">pub </span>cs:           Token,
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="kw">pub </span>paramlist:    <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="kw">pub </span>expansion:    <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
+<a href=#60 id=60 data-nosnippet>60</a>}
+<a href=#61 id=61 data-nosnippet>61</a><span class="kw">impl </span>Default <span class="kw">for </span>Expandable {
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#63 id=63 data-nosnippet>63</a>    Expandable {
+<a href=#64 id=64 data-nosnippet>64</a>      is_protected: <span class="bool-val">false</span>,
+<a href=#65 id=65 data-nosnippet>65</a>      is_long:      <span class="bool-val">false</span>,
+<a href=#66 id=66 data-nosnippet>66</a>      is_outer:     <span class="bool-val">false</span>,
+<a href=#67 id=67 data-nosnippet>67</a>      has_cc_arg:   <span class="bool-val">false</span>,
+<a href=#68 id=68 data-nosnippet>68</a>      alias:        <span class="prelude-val">None</span>,
+<a href=#69 id=69 data-nosnippet>69</a>      locator:      Locator::default(),
+<a href=#70 id=70 data-nosnippet>70</a>      cs:           <span class="macro">T_CS!</span>(<span class="string">"Expandable"</span>),
+<a href=#71 id=71 data-nosnippet>71</a>      paramlist:    <span class="prelude-val">None</span>,
+<a href=#72 id=72 data-nosnippet>72</a>      expansion:    <span class="prelude-val">None</span>,
+<a href=#73 id=73 data-nosnippet>73</a>    }
+<a href=#74 id=74 data-nosnippet>74</a>  }
+<a href=#75 id=75 data-nosnippet>75</a>}
+<a href=#76 id=76 data-nosnippet>76</a><span class="kw">impl </span>PartialEq <span class="kw">for </span>Expandable {
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Expandable) -&gt; bool {
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="self">self</span>.paramlist == other.paramlist &amp;&amp; <span class="self">self</span>.expansion == other.expansion
+<a href=#79 id=79 data-nosnippet>79</a>  }
+<a href=#80 id=80 data-nosnippet>80</a>}
+<a href=#81 id=81 data-nosnippet>81</a>
+<a href=#82 id=82 data-nosnippet>82</a><span class="comment">// impl fmt::Display for Expandable {
+<a href=#83 id=83 data-nosnippet>83</a>//   fn fmt(&amp;self, _f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+<a href=#84 id=84 data-nosnippet>84</a>//     todo!();
+<a href=#85 id=85 data-nosnippet>85</a>//   }
+<a href=#86 id=86 data-nosnippet>86</a>// }
+<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">impl </span>Object <span class="kw">for </span>Expandable {
+<a href=#88 id=88 data-nosnippet>88</a>  <span class="kw">fn </span>is_definition(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="kw">fn </span>is_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Locator { <span class="self">self</span>.locator }
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">"Expandable"</span>) }
+<a href=#92 id=92 data-nosnippet>92</a>}
+<a href=#93 id=93 data-nosnippet>93</a><span class="kw">impl </span>Definition <span class="kw">for </span>Expandable {
+<a href=#94 id=94 data-nosnippet>94</a>  <span class="kw">fn </span>is_protected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.is_protected }
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="kw">fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt; { <span class="self">self</span>.paramlist.as_ref() }
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="kw">fn </span>get_num_args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">match </span><span class="self">self</span>.paramlist {
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>params) =&gt; params.get_num_args(),
+<a href=#99 id=99 data-nosnippet>99</a>      <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
+<a href=#100 id=100 data-nosnippet>100</a>    }
+<a href=#101 id=101 data-nosnippet>101</a>  }
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;<span class="lifetime">'_</span>, Token&gt; { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.cs) }
+<a href=#103 id=103 data-nosnippet>103</a>  <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">match </span><span class="self">self</span>.alias {
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>alias) =&gt; Cow::Borrowed(alias),
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="prelude-val">None </span>=&gt; Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)),
+<a href=#107 id=107 data-nosnippet>107</a>    }
+<a href=#108 id=108 data-nosnippet>108</a>  }
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// fn with_cs_name&lt;R, FnR&gt;(&amp;self, caller: FnR) -&gt; R
+<a href=#110 id=110 data-nosnippet>110</a>  // where FnR: FnOnce(&amp;str) -&gt; R {
+<a href=#111 id=111 data-nosnippet>111</a>  //   match self.alias {
+<a href=#112 id=112 data-nosnippet>112</a>  //     Some(ref alias) =&gt; caller(alias),
+<a href=#113 id=113 data-nosnippet>113</a>  //     None =&gt; self.cs.with_cs_name(caller),
+<a href=#114 id=114 data-nosnippet>114</a>  //   }
+<a href=#115 id=115 data-nosnippet>115</a>  // }
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="kw">fn </span>get_expansion(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ExpansionBody&gt; { <span class="self">self</span>.expansion.as_ref() }
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="self">self</span>.alias.as_ref() }
+<a href=#118 id=118 data-nosnippet>118</a>
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="doccomment">/// Expand the expandable control sequence. This should be carried out by the Gullet.
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, once_only: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="comment">// Perl shortcut for "trivial" macros that were tracing- or
+<a href=#122 id=122 data-nosnippet>122</a>    // profiling-aware. Neither tracing nor profiling is implemented
+<a href=#123 id=123 data-nosnippet>123</a>    // in the Rust port (the returned `_tracing` / `_profiled` values
+<a href=#124 id=124 data-nosnippet>124</a>    // were discarded), so the two state lookups were pure overhead
+<a href=#125 id=125 data-nosnippet>125</a>    // on every macro expansion (\~350k calls in si.tex alone per
+<a href=#126 id=126 data-nosnippet>126</a>    // callgrind). Removed — re-introduce only alongside the actual
+<a href=#127 id=127 data-nosnippet>127</a>    // tracing/profiling features if/when they land.
+<a href=#128 id=128 data-nosnippet>128</a>    </span><span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.expansion {
+<a href=#129 id=129 data-nosnippet>129</a>      <span class="prelude-val">Some</span>(ExpansionBody::Closure(closure)) =&gt; {
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="comment">// Harder to emulate \tracingmacros here.
+<a href=#131 id=131 data-nosnippet>131</a>        </span><span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
+<a href=#132 id=132 data-nosnippet>132</a>          parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?
+<a href=#133 id=133 data-nosnippet>133</a>        </span>} <span class="kw">else </span>{
+<a href=#134 id=134 data-nosnippet>134</a>          Vec::new()
+<a href=#135 id=135 data-nosnippet>135</a>        };
+<a href=#136 id=136 data-nosnippet>136</a>        <span class="comment">// Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
+<a href=#137 id=137 data-nosnippet>137</a>        </span><span class="kw">let </span>result = closure(args)<span class="question-mark">?</span>;
+<a href=#138 id=138 data-nosnippet>138</a>        <span class="comment">// Tracing: Perl prints tracingCSName ==&gt; tracetoString(result)
+<a href=#139 id=139 data-nosnippet>139</a>        // Not implemented — silently skip to avoid panic on \tracingmacros=1
+<a href=#140 id=140 data-nosnippet>140</a>        </span><span class="prelude-val">Ok</span>(result)
+<a href=#141 id=141 data-nosnippet>141</a>      },
+<a href=#142 id=142 data-nosnippet>142</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tokens)) =&gt; {
+<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">let </span>result = <span class="kw">if </span><span class="self">self</span>.paramlist.is_none() {
+<a href=#144 id=144 data-nosnippet>144</a>          <span class="comment">// Case: Trivial macro
+<a href=#145 id=145 data-nosnippet>145</a>          // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
+<a href=#146 id=146 data-nosnippet>146</a>          // Tracing: Perl prints tracingCSName -&gt; tracetoString(expansion)
+<a href=#147 id=147 data-nosnippet>147</a>          // Not implemented — silently skip to avoid panic on \tracingmacros=1
+<a href=#148 id=148 data-nosnippet>148</a>          // For trivial expansion, make sure we don't get \cs or
+<a href=#149 id=149 data-nosnippet>149</a>          // \relax\cs direct recursion!  Perl: Expandable.pm L81-89.
+<a href=#150 id=150 data-nosnippet>150</a>          //   if (!$onceonly &amp;&amp; $$self{cs}) {
+<a href=#151 id=151 data-nosnippet>151</a>          //     my ($t0, $t1) = ($$expansion[0], $$expansion[1]);
+<a href=#152 id=152 data-nosnippet>152</a>          //     if ($t0 &amp;&amp; ($t0-&gt;equals($$self{cs})
+<a href=#153 id=153 data-nosnippet>153</a>          //         || ($t1 &amp;&amp; $t1-&gt;equals($$self{cs})
+<a href=#154 id=154 data-nosnippet>154</a>          //              &amp;&amp; $t0-&gt;equals(T_CS('\protect'))))) {
+<a href=#155 id=155 data-nosnippet>155</a>          //       Error('recursion', $$self{cs}, …,
+<a href=#156 id=156 data-nosnippet>156</a>          //         "Token X expands into itself!", "defining as empty");
+<a href=#157 id=157 data-nosnippet>157</a>          //       $expansion = TokensI(); } }
 <a href=#158 id=158 data-nosnippet>158</a>          //
-<a href=#159 id=159 data-nosnippet>159</a>          // Identity for expl3 quarks is independent of this path: the
-<a href=#160 id=160 data-nosnippet>160</a>          // quarks are defined `\cs_new_protected:Npn`, so they are
-<a href=#161 id=161 data-nosnippet>161</a>          // protected expandables. Under partial expansion (the normal
-<a href=#162 id=162 data-nosnippet>162</a>          // path) protected expandables aren't expanded at all — the
-<a href=#163 id=163 data-nosnippet>163</a>          // recursion guard never fires, and the stored body keeps the
-<a href=#164 id=164 data-nosnippet>164</a>          // CS as its first token, so `\ifx`-by-meaning comparisons
-<a href=#165 id=165 data-nosnippet>165</a>          // remain distinct. Under full expansion the Error+empty
-<a href=#166 id=166 data-nosnippet>166</a>          // recovery matches Perl exactly.
-<a href=#167 id=167 data-nosnippet>167</a>          </span><span class="kw">let </span>is_recursion = <span class="kw">if </span>!once_only {
-<a href=#168 id=168 data-nosnippet>168</a>            <span class="kw">let </span>token_vec = tokens.unlist_ref();
-<a href=#169 id=169 data-nosnippet>169</a>            <span class="kw">let </span>t0_opt = token_vec.first();
-<a href=#170 id=170 data-nosnippet>170</a>            <span class="kw">let </span>t1_opt = token_vec.get(<span class="number">1</span>);
-<a href=#171 id=171 data-nosnippet>171</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(t0) = t0_opt {
-<a href=#172 id=172 data-nosnippet>172</a>              <span class="kw">if </span>t0 == <span class="kw-2">&amp;</span><span class="self">self</span>.cs {
-<a href=#173 id=173 data-nosnippet>173</a>                <span class="bool-val">true
-<a href=#174 id=174 data-nosnippet>174</a>              </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(t1) = t1_opt {
-<a href=#175 id=175 data-nosnippet>175</a>                t1 == <span class="kw-2">&amp;</span><span class="self">self</span>.cs &amp;&amp; t0 == <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>)
-<a href=#176 id=176 data-nosnippet>176</a>              } <span class="kw">else </span>{
-<a href=#177 id=177 data-nosnippet>177</a>                <span class="bool-val">false
-<a href=#178 id=178 data-nosnippet>178</a>              </span>}
-<a href=#179 id=179 data-nosnippet>179</a>            } <span class="kw">else </span>{
-<a href=#180 id=180 data-nosnippet>180</a>              <span class="bool-val">false
-<a href=#181 id=181 data-nosnippet>181</a>            </span>}
-<a href=#182 id=182 data-nosnippet>182</a>          } <span class="kw">else </span>{
-<a href=#183 id=183 data-nosnippet>183</a>            <span class="bool-val">false
-<a href=#184 id=184 data-nosnippet>184</a>          </span>};
-<a href=#185 id=185 data-nosnippet>185</a>          <span class="kw">if </span>is_recursion {
-<a href=#186 id=186 data-nosnippet>186</a>            <span class="macro">Error!</span>(
-<a href=#187 id=187 data-nosnippet>187</a>              <span class="string">"recursion"</span>,
-<a href=#188 id=188 data-nosnippet>188</a>              <span class="kw-2">&amp;</span><span class="self">self</span>.cs.to_string(),
-<a href=#189 id=189 data-nosnippet>189</a>              <span class="macro">s!</span>(<span class="string">"Token {} expands into itself!"</span>, <span class="self">self</span>.cs)
-<a href=#190 id=190 data-nosnippet>190</a>            );
-<a href=#191 id=191 data-nosnippet>191</a>            <span class="macro">Tokens!</span>()
-<a href=#192 id=192 data-nosnippet>192</a>          } <span class="kw">else </span>{
-<a href=#193 id=193 data-nosnippet>193</a>            tokens.clone()
-<a href=#194 id=194 data-nosnippet>194</a>          }
-<a href=#195 id=195 data-nosnippet>195</a>        } <span class="kw">else </span>{
-<a href=#196 id=196 data-nosnippet>196</a>          <span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
-<a href=#197 id=197 data-nosnippet>197</a>            parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?
-<a href=#198 id=198 data-nosnippet>198</a>          </span>} <span class="kw">else </span>{
-<a href=#199 id=199 data-nosnippet>199</a>            Vec::new()
-<a href=#200 id=200 data-nosnippet>200</a>          };
-<a href=#201 id=201 data-nosnippet>201</a>          <span class="kw">if </span><span class="self">self</span>.has_cc_arg {
-<a href=#202 id=202 data-nosnippet>202</a>            <span class="comment">// Do we actually need to substitute the args in?
-<a href=#203 id=203 data-nosnippet>203</a>            // Pre-size: one entry per argument; avoids Vec doublings on
-<a href=#204 id=204 data-nosnippet>204</a>            // macros with many args.
-<a href=#205 id=205 data-nosnippet>205</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>args_tks = Vec::with_capacity(args.len());
-<a href=#206 id=206 data-nosnippet>206</a>            <span class="kw">for </span>arg <span class="kw">in </span>args.iter() {
-<a href=#207 id=207 data-nosnippet>207</a>              args_tks.push(arg.as_tokens()<span class="question-mark">?</span>);
-<a href=#208 id=208 data-nosnippet>208</a>            }
-<a href=#209 id=209 data-nosnippet>209</a>            tokens.substitute_parameters(args_tks.as_slice())
-<a href=#210 id=210 data-nosnippet>210</a>          } <span class="kw">else </span>{
-<a href=#211 id=211 data-nosnippet>211</a>            tokens.clone()
-<a href=#212 id=212 data-nosnippet>212</a>          }
-<a href=#213 id=213 data-nosnippet>213</a>        };
-<a href=#214 id=214 data-nosnippet>214</a>        <span class="comment">// Profiling: Perl appends T_MARKER(profiled) for exclusive profiling
-<a href=#215 id=215 data-nosnippet>215</a>        // Not implemented — silently skip
-<a href=#216 id=216 data-nosnippet>216</a>        </span><span class="prelude-val">Ok</span>(result)
-<a href=#217 id=217 data-nosnippet>217</a>      },
-<a href=#218 id=218 data-nosnippet>218</a>      <span class="prelude-val">None </span>=&gt; {
-<a href=#219 id=219 data-nosnippet>219</a>        <span class="comment">// we always need to read the arguments, for e.g. things like \@gobble
-<a href=#220 id=220 data-nosnippet>220</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
-<a href=#221 id=221 data-nosnippet>221</a>          parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>;
-<a href=#222 id=222 data-nosnippet>222</a>        }
-<a href=#223 id=223 data-nosnippet>223</a>        <span class="prelude-val">Ok</span>(NO_TOKENS)
-<a href=#224 id=224 data-nosnippet>224</a>      },
-<a href=#225 id=225 data-nosnippet>225</a>    }
-<a href=#226 id=226 data-nosnippet>226</a>  }
-<a href=#227 id=227 data-nosnippet>227</a>
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="comment">// Not implemented for expandable
-<a href=#229 id=229 data-nosnippet>229</a>  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) }
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="kw">fn </span>do_absorption(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-<a href=#233 id=233 data-nosnippet>233</a>    <span class="macro">fatal!</span>(
-<a href=#234 id=234 data-nosnippet>234</a>      Definition,
-<a href=#235 id=235 data-nosnippet>235</a>      Unexpected,
-<a href=#236 id=236 data-nosnippet>236</a>      <span class="string">"do_absorption on Expandable should never be called!"
-<a href=#237 id=237 data-nosnippet>237</a>    </span>);
-<a href=#238 id=238 data-nosnippet>238</a>  }
-<a href=#239 id=239 data-nosnippet>239</a>}
-<a href=#240 id=240 data-nosnippet>240</a>
-<a href=#241 id=241 data-nosnippet>241</a><span class="kw">impl </span>Expandable {
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="kw">pub fn </span>new(
-<a href=#243 id=243 data-nosnippet>243</a>    cs: Token,
-<a href=#244 id=244 data-nosnippet>244</a>    paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-<a href=#245 id=245 data-nosnippet>245</a>    <span class="kw-2">mut </span>expansion_opt: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
-<a href=#246 id=246 data-nosnippet>246</a>    traits: <span class="prelude-ty">Option</span>&lt;ExpandableOptions&gt;,
-<a href=#247 id=247 data-nosnippet>247</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-<a href=#248 id=248 data-nosnippet>248</a>    <span class="kw">let </span>traits = traits.unwrap_or_default();
-<a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">if </span>!traits.nopack_parameters {
-<a href=#250 id=250 data-nosnippet>250</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
-<a href=#251 id=251 data-nosnippet>251</a>        <span class="comment">// Perl: Fatal if expansion is unbalanced (mismatched {/})
-<a href=#252 id=252 data-nosnippet>252</a>        </span><span class="kw">if </span>!expansion_tokens.is_balanced() {
-<a href=#253 id=253 data-nosnippet>253</a>          <span class="macro">Error!</span>(
-<a href=#254 id=254 data-nosnippet>254</a>            <span class="string">"misdefined"</span>,
-<a href=#255 id=255 data-nosnippet>255</a>            cs,
-<a href=#256 id=256 data-nosnippet>256</a>            <span class="macro">s!</span>(<span class="string">"Expansion of '{}' has unbalanced {{}}"</span>, cs),
-<a href=#257 id=257 data-nosnippet>257</a>            <span class="string">"skipping pack_parameters"
-<a href=#258 id=258 data-nosnippet>258</a>          </span>);
-<a href=#259 id=259 data-nosnippet>259</a>          <span class="comment">// Store as-is without packing
-<a href=#260 id=260 data-nosnippet>260</a>          </span>expansion_opt = <span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens));
-<a href=#261 id=261 data-nosnippet>261</a>        } <span class="kw">else </span>{
-<a href=#262 id=262 data-nosnippet>262</a>          expansion_opt = <span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens.pack_parameters()<span class="question-mark">?</span>));
-<a href=#263 id=263 data-nosnippet>263</a>        }
-<a href=#264 id=264 data-nosnippet>264</a>      }
-<a href=#265 id=265 data-nosnippet>265</a>    }
-<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">let </span>has_cc_arg = <span class="kw">match </span>expansion_opt {
-<a href=#267 id=267 data-nosnippet>267</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="kw-2">ref </span>tks)) =&gt; tks
-<a href=#268 id=268 data-nosnippet>268</a>        .unlist_ref()
-<a href=#269 id=269 data-nosnippet>269</a>        .iter()
-<a href=#270 id=270 data-nosnippet>270</a>        .any(|t| t.get_catcode() == Catcode::ARG),
-<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#272 id=272 data-nosnippet>272</a>    };
-<a href=#273 id=273 data-nosnippet>273</a>    <span class="comment">// simplify: treat empty tokens as None
-<a href=#274 id=274 data-nosnippet>274</a>    </span><span class="kw">let </span>expansion = <span class="kw">match </span>expansion_opt {
-<a href=#275 id=275 data-nosnippet>275</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) <span class="kw">if </span>tks.is_empty() =&gt; <span class="prelude-val">None</span>,
-<a href=#276 id=276 data-nosnippet>276</a>      real_body =&gt; real_body,
-<a href=#277 id=277 data-nosnippet>277</a>    };
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="prelude-val">Ok</span>(Expandable {
-<a href=#280 id=280 data-nosnippet>280</a>      cs,
-<a href=#281 id=281 data-nosnippet>281</a>      paramlist,
-<a href=#282 id=282 data-nosnippet>282</a>      expansion,
-<a href=#283 id=283 data-nosnippet>283</a>      <span class="comment">// locator           =&gt; $source-&gt;getLocator,
-<a href=#284 id=284 data-nosnippet>284</a>      </span>is_protected: traits.protected || get_prefix(<span class="string">"protected"</span>),
-<a href=#285 id=285 data-nosnippet>285</a>      is_outer: traits.outer || get_prefix(<span class="string">"outer"</span>),
-<a href=#286 id=286 data-nosnippet>286</a>      is_long: traits.long || get_prefix(<span class="string">"long"</span>),
-<a href=#287 id=287 data-nosnippet>287</a>      has_cc_arg,
-<a href=#288 id=288 data-nosnippet>288</a>      alias: traits.alias,
-<a href=#289 id=289 data-nosnippet>289</a>      ..Expandable::default()
-<a href=#290 id=290 data-nosnippet>290</a>    })
-<a href=#291 id=291 data-nosnippet>291</a>  }
-<a href=#292 id=292 data-nosnippet>292</a>}
-<a href=#293 id=293 data-nosnippet>293</a>
-<a href=#294 id=294 data-nosnippet>294</a><span class="attr">#[cfg(test)]
-<a href=#295 id=295 data-nosnippet>295</a></span><span class="kw">mod </span>tests {
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="kw">use </span>super::<span class="kw-2">*</span>;
-<a href=#297 id=297 data-nosnippet>297</a>
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="attr">#[test]
-<a href=#299 id=299 data-nosnippet>299</a>  </span><span class="kw">fn </span>expandable_default_flags_false() {
-<a href=#300 id=300 data-nosnippet>300</a>    <span class="kw">let </span>e = Expandable::default();
-<a href=#301 id=301 data-nosnippet>301</a>    <span class="macro">assert!</span>(!e.is_protected);
-<a href=#302 id=302 data-nosnippet>302</a>    <span class="macro">assert!</span>(!e.is_long);
-<a href=#303 id=303 data-nosnippet>303</a>    <span class="macro">assert!</span>(!e.is_outer);
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="macro">assert!</span>(!e.has_cc_arg);
-<a href=#305 id=305 data-nosnippet>305</a>    <span class="macro">assert!</span>(e.alias.is_none());
-<a href=#306 id=306 data-nosnippet>306</a>    <span class="macro">assert!</span>(e.paramlist.is_none());
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="macro">assert!</span>(e.expansion.is_none());
-<a href=#308 id=308 data-nosnippet>308</a>  }
-<a href=#309 id=309 data-nosnippet>309</a>
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="attr">#[test]
-<a href=#311 id=311 data-nosnippet>311</a>  </span><span class="kw">fn </span>expandable_default_has_default_cs() {
-<a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">let </span>e = Expandable::default();
-<a href=#313 id=313 data-nosnippet>313</a>    <span class="comment">// Default cs is a T_CS with empty text (produced by Token::default
-<a href=#314 id=314 data-nosnippet>314</a>    // or similar). We can at least confirm the code is CS.
-<a href=#315 id=315 data-nosnippet>315</a>    </span><span class="macro">assert_eq!</span>(e.cs.code, Catcode::CS);
-<a href=#316 id=316 data-nosnippet>316</a>  }
-<a href=#317 id=317 data-nosnippet>317</a>
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="attr">#[test]
-<a href=#319 id=319 data-nosnippet>319</a>  </span><span class="kw">fn </span>expandable_is_definition_and_expandable() {
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">let </span>e = Expandable::default();
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="macro">assert!</span>(e.is_definition());
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="macro">assert!</span>(e.is_expandable());
-<a href=#323 id=323 data-nosnippet>323</a>  }
-<a href=#324 id=324 data-nosnippet>324</a>
-<a href=#325 id=325 data-nosnippet>325</a>  <span class="attr">#[test]
-<a href=#326 id=326 data-nosnippet>326</a>  </span><span class="kw">fn </span>expandable_partial_eq_by_paramlist_and_expansion() {
-<a href=#327 id=327 data-nosnippet>327</a>    <span class="comment">// PartialEq ignores flags (protected/long/outer) and cs — it
-<a href=#328 id=328 data-nosnippet>328</a>    // compares paramlist and expansion only.
-<a href=#329 id=329 data-nosnippet>329</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>a = Expandable::default();
-<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">let </span><span class="kw-2">mut </span>b = Expandable::default();
-<a href=#331 id=331 data-nosnippet>331</a>    <span class="comment">// Both have paramlist=None, expansion=None → equal.
-<a href=#332 id=332 data-nosnippet>332</a>    </span><span class="macro">assert_eq!</span>(a, b);
-<a href=#333 id=333 data-nosnippet>333</a>    <span class="comment">// Changing flags doesn't affect equality.
-<a href=#334 id=334 data-nosnippet>334</a>    </span>a.is_protected = <span class="bool-val">true</span>;
-<a href=#335 id=335 data-nosnippet>335</a>    b.is_protected = <span class="bool-val">false</span>;
-<a href=#336 id=336 data-nosnippet>336</a>    <span class="macro">assert_eq!</span>(a, b);
-<a href=#337 id=337 data-nosnippet>337</a>  }
-<a href=#338 id=338 data-nosnippet>338</a>
-<a href=#339 id=339 data-nosnippet>339</a>  <span class="attr">#[test]
-<a href=#340 id=340 data-nosnippet>340</a>  </span><span class="kw">fn </span>expandable_get_num_args_zero_without_paramlist() {
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">let </span>e = Expandable::default();
-<a href=#342 id=342 data-nosnippet>342</a>    <span class="macro">assert_eq!</span>(e.get_num_args(), <span class="number">0</span>);
-<a href=#343 id=343 data-nosnippet>343</a>  }
-<a href=#344 id=344 data-nosnippet>344</a>
-<a href=#345 id=345 data-nosnippet>345</a>  <span class="attr">#[test]
-<a href=#346 id=346 data-nosnippet>346</a>  </span><span class="kw">fn </span>expandable_get_parameters_none_by_default() {
-<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">let </span>e = Expandable::default();
-<a href=#348 id=348 data-nosnippet>348</a>    <span class="macro">assert!</span>(e.get_parameters().is_none());
+<a href=#159 id=159 data-nosnippet>159</a>          // Detect `\def\foo{\foo}` and `\def\foo{\protect\foo}`. Both
+<a href=#160 id=160 data-nosnippet>160</a>          // are runaway-expansion landmines under any full-expansion
+<a href=#161 id=161 data-nosnippet>161</a>          // context (`\edef`, `\xdef`, `\write`, `\message`). Perl
+<a href=#162 id=162 data-nosnippet>162</a>          // reports an `Error:recursion` and substitutes an empty
+<a href=#163 id=163 data-nosnippet>163</a>          // expansion for this invocation; the stored definition is
+<a href=#164 id=164 data-nosnippet>164</a>          // unchanged (subsequent invocations re-detect and re-error).
+<a href=#165 id=165 data-nosnippet>165</a>          //
+<a href=#166 id=166 data-nosnippet>166</a>          // A previous Rust port tried to re-install the CS as
+<a href=#167 id=167 data-nosnippet>167</a>          // `Stored::Token(self.cs)` to preserve `\ifx` identity for
+<a href=#168 id=168 data-nosnippet>168</a>          // expl3 quarks (`\q_no_value`, `\q_nil`, …) and PGF keys
+<a href=#169 id=169 data-nosnippet>169</a>          // (`\pgfkeys@mainstop`). That was a no-op: `assign_meaning`'s
+<a href=#170 id=170 data-nosnippet>170</a>          // `token == mt` short-circuit (state.rs:1918-1922) rejects
+<a href=#171 id=171 data-nosnippet>171</a>          // the `\foo → \foo` self-let, so the Expandable definition
+<a href=#172 id=172 data-nosnippet>172</a>          // stayed in place and the recursion guard re-fired forever.
+<a href=#173 id=173 data-nosnippet>173</a>          // Witness: cleveref × algorithmicx × hyperref on 2403.15855,
+<a href=#174 id=174 data-nosnippet>174</a>          // where `\xdef\cref@currentprefix{\cref@currentprefix}` hung
+<a href=#175 id=175 data-nosnippet>175</a>          // at the 60 s wall-clock guard.
+<a href=#176 id=176 data-nosnippet>176</a>          //
+<a href=#177 id=177 data-nosnippet>177</a>          // Identity for expl3 quarks is independent of this path: the
+<a href=#178 id=178 data-nosnippet>178</a>          // quarks are defined `\cs_new_protected:Npn`, so they are
+<a href=#179 id=179 data-nosnippet>179</a>          // protected expandables. Under partial expansion (the normal
+<a href=#180 id=180 data-nosnippet>180</a>          // path) protected expandables aren't expanded at all — the
+<a href=#181 id=181 data-nosnippet>181</a>          // recursion guard never fires, and the stored body keeps the
+<a href=#182 id=182 data-nosnippet>182</a>          // CS as its first token, so `\ifx`-by-meaning comparisons
+<a href=#183 id=183 data-nosnippet>183</a>          // remain distinct. Under full expansion the Error+empty
+<a href=#184 id=184 data-nosnippet>184</a>          // recovery matches Perl exactly.
+<a href=#185 id=185 data-nosnippet>185</a>          </span><span class="kw">let </span>is_recursion = <span class="kw">if </span>!once_only {
+<a href=#186 id=186 data-nosnippet>186</a>            <span class="kw">let </span>token_vec = tokens.unlist_ref();
+<a href=#187 id=187 data-nosnippet>187</a>            <span class="kw">let </span>t0_opt = token_vec.first();
+<a href=#188 id=188 data-nosnippet>188</a>            <span class="kw">let </span>t1_opt = token_vec.get(<span class="number">1</span>);
+<a href=#189 id=189 data-nosnippet>189</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(t0) = t0_opt {
+<a href=#190 id=190 data-nosnippet>190</a>              <span class="kw">if </span>t0 == <span class="kw-2">&amp;</span><span class="self">self</span>.cs {
+<a href=#191 id=191 data-nosnippet>191</a>                <span class="bool-val">true
+<a href=#192 id=192 data-nosnippet>192</a>              </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(t1) = t1_opt {
+<a href=#193 id=193 data-nosnippet>193</a>                <span class="comment">// `\protect\foo` is only an actual runaway when
+<a href=#194 id=194 data-nosnippet>194</a>                // `\protect` currently expands to `\relax` (or is
+<a href=#195 id=195 data-nosnippet>195</a>                // undefined). Under `\protected@edef` it is `\let`
+<a href=#196 id=196 data-nosnippet>196</a>                // to `\@unexpandable@protect`, which turns the body
+<a href=#197 id=197 data-nosnippet>197</a>                // into `\noexpand\protect\noexpand\foo` — both tokens
+<a href=#198 id=198 data-nosnippet>198</a>                // become un-expandable and the loop terminates after
+<a href=#199 id=199 data-nosnippet>199</a>                // one expansion. msg.sty (loaded transitively from
+<a href=#200 id=200 data-nosnippet>200</a>                // french.sty, czech.sty, … under INCLUDE_STYLES=true)
+<a href=#201 id=201 data-nosnippet>201</a>                // uses exactly this idiom for `\msgheader`, so the
+<a href=#202 id=202 data-nosnippet>202</a>                // earlier blanket `\protect\foo`-is-runaway check
+<a href=#203 id=203 data-nosnippet>203</a>                // fired ~3 errors per language-style paper. Witness:
+<a href=#204 id=204 data-nosnippet>204</a>                // math9903002, gr-qc9511021, alg-geom9611022,
+<a href=#205 id=205 data-nosnippet>205</a>                // math9807030/.../math9810088 (8 papers).
+<a href=#206 id=206 data-nosnippet>206</a>                </span>t1 == <span class="kw-2">&amp;</span><span class="self">self</span>.cs
+<a href=#207 id=207 data-nosnippet>207</a>                  &amp;&amp; t0 == <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>)
+<a href=#208 id=208 data-nosnippet>208</a>                  &amp;&amp; <span class="kw">crate</span>::definition::expandable::protect_is_relax_or_undefined()
+<a href=#209 id=209 data-nosnippet>209</a>              } <span class="kw">else </span>{
+<a href=#210 id=210 data-nosnippet>210</a>                <span class="bool-val">false
+<a href=#211 id=211 data-nosnippet>211</a>              </span>}
+<a href=#212 id=212 data-nosnippet>212</a>            } <span class="kw">else </span>{
+<a href=#213 id=213 data-nosnippet>213</a>              <span class="bool-val">false
+<a href=#214 id=214 data-nosnippet>214</a>            </span>}
+<a href=#215 id=215 data-nosnippet>215</a>          } <span class="kw">else </span>{
+<a href=#216 id=216 data-nosnippet>216</a>            <span class="bool-val">false
+<a href=#217 id=217 data-nosnippet>217</a>          </span>};
+<a href=#218 id=218 data-nosnippet>218</a>          <span class="kw">if </span>is_recursion {
+<a href=#219 id=219 data-nosnippet>219</a>            <span class="macro">Error!</span>(
+<a href=#220 id=220 data-nosnippet>220</a>              <span class="string">"recursion"</span>,
+<a href=#221 id=221 data-nosnippet>221</a>              <span class="kw-2">&amp;</span><span class="self">self</span>.cs.to_string(),
+<a href=#222 id=222 data-nosnippet>222</a>              <span class="macro">s!</span>(<span class="string">"Token {} expands into itself!"</span>, <span class="self">self</span>.cs)
+<a href=#223 id=223 data-nosnippet>223</a>            );
+<a href=#224 id=224 data-nosnippet>224</a>            <span class="macro">Tokens!</span>()
+<a href=#225 id=225 data-nosnippet>225</a>          } <span class="kw">else </span>{
+<a href=#226 id=226 data-nosnippet>226</a>            tokens.clone()
+<a href=#227 id=227 data-nosnippet>227</a>          }
+<a href=#228 id=228 data-nosnippet>228</a>        } <span class="kw">else </span>{
+<a href=#229 id=229 data-nosnippet>229</a>          <span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
+<a href=#230 id=230 data-nosnippet>230</a>            parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?
+<a href=#231 id=231 data-nosnippet>231</a>          </span>} <span class="kw">else </span>{
+<a href=#232 id=232 data-nosnippet>232</a>            Vec::new()
+<a href=#233 id=233 data-nosnippet>233</a>          };
+<a href=#234 id=234 data-nosnippet>234</a>          <span class="kw">if </span><span class="self">self</span>.has_cc_arg {
+<a href=#235 id=235 data-nosnippet>235</a>            <span class="comment">// Do we actually need to substitute the args in?
+<a href=#236 id=236 data-nosnippet>236</a>            // Pre-size: one entry per argument; avoids Vec doublings on
+<a href=#237 id=237 data-nosnippet>237</a>            // macros with many args.
+<a href=#238 id=238 data-nosnippet>238</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>args_tks = Vec::with_capacity(args.len());
+<a href=#239 id=239 data-nosnippet>239</a>            <span class="kw">for </span>arg <span class="kw">in </span>args.iter() {
+<a href=#240 id=240 data-nosnippet>240</a>              args_tks.push(arg.as_tokens()<span class="question-mark">?</span>);
+<a href=#241 id=241 data-nosnippet>241</a>            }
+<a href=#242 id=242 data-nosnippet>242</a>            tokens.substitute_parameters(args_tks.as_slice())
+<a href=#243 id=243 data-nosnippet>243</a>          } <span class="kw">else </span>{
+<a href=#244 id=244 data-nosnippet>244</a>            tokens.clone()
+<a href=#245 id=245 data-nosnippet>245</a>          }
+<a href=#246 id=246 data-nosnippet>246</a>        };
+<a href=#247 id=247 data-nosnippet>247</a>        <span class="comment">// Profiling: Perl appends T_MARKER(profiled) for exclusive profiling
+<a href=#248 id=248 data-nosnippet>248</a>        // Not implemented — silently skip
+<a href=#249 id=249 data-nosnippet>249</a>        </span><span class="prelude-val">Ok</span>(result)
+<a href=#250 id=250 data-nosnippet>250</a>      },
+<a href=#251 id=251 data-nosnippet>251</a>      <span class="prelude-val">None </span>=&gt; {
+<a href=#252 id=252 data-nosnippet>252</a>        <span class="comment">// we always need to read the arguments, for e.g. things like \@gobble
+<a href=#253 id=253 data-nosnippet>253</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parms) = <span class="self">self</span>.paramlist {
+<a href=#254 id=254 data-nosnippet>254</a>          parms.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>        }
+<a href=#256 id=256 data-nosnippet>256</a>        <span class="prelude-val">Ok</span>(NO_TOKENS)
+<a href=#257 id=257 data-nosnippet>257</a>      },
+<a href=#258 id=258 data-nosnippet>258</a>    }
+<a href=#259 id=259 data-nosnippet>259</a>  }
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="comment">// Not implemented for expandable
+<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) }
+<a href=#263 id=263 data-nosnippet>263</a>  <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="kw">fn </span>do_absorption(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="macro">fatal!</span>(
+<a href=#267 id=267 data-nosnippet>267</a>      Definition,
+<a href=#268 id=268 data-nosnippet>268</a>      Unexpected,
+<a href=#269 id=269 data-nosnippet>269</a>      <span class="string">"do_absorption on Expandable should never be called!"
+<a href=#270 id=270 data-nosnippet>270</a>    </span>);
+<a href=#271 id=271 data-nosnippet>271</a>  }
+<a href=#272 id=272 data-nosnippet>272</a>}
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a><span class="kw">impl </span>Expandable {
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="kw">pub fn </span>new(
+<a href=#276 id=276 data-nosnippet>276</a>    cs: Token,
+<a href=#277 id=277 data-nosnippet>277</a>    paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="kw-2">mut </span>expansion_opt: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt;,
+<a href=#279 id=279 data-nosnippet>279</a>    traits: <span class="prelude-ty">Option</span>&lt;ExpandableOptions&gt;,
+<a href=#280 id=280 data-nosnippet>280</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">let </span>traits = traits.unwrap_or_default();
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">if </span>!traits.nopack_parameters {
+<a href=#283 id=283 data-nosnippet>283</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
+<a href=#284 id=284 data-nosnippet>284</a>        <span class="comment">// Perl: Fatal if expansion is unbalanced (mismatched {/})
+<a href=#285 id=285 data-nosnippet>285</a>        </span><span class="kw">if </span>!expansion_tokens.is_balanced() {
+<a href=#286 id=286 data-nosnippet>286</a>          <span class="macro">Error!</span>(
+<a href=#287 id=287 data-nosnippet>287</a>            <span class="string">"misdefined"</span>,
+<a href=#288 id=288 data-nosnippet>288</a>            cs,
+<a href=#289 id=289 data-nosnippet>289</a>            <span class="macro">s!</span>(<span class="string">"Expansion of '{}' has unbalanced {{}}"</span>, cs),
+<a href=#290 id=290 data-nosnippet>290</a>            <span class="string">"skipping pack_parameters"
+<a href=#291 id=291 data-nosnippet>291</a>          </span>);
+<a href=#292 id=292 data-nosnippet>292</a>          <span class="comment">// Store as-is without packing
+<a href=#293 id=293 data-nosnippet>293</a>          </span>expansion_opt = <span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens));
+<a href=#294 id=294 data-nosnippet>294</a>        } <span class="kw">else </span>{
+<a href=#295 id=295 data-nosnippet>295</a>          expansion_opt = <span class="prelude-val">Some</span>(ExpansionBody::Tokens(expansion_tokens.pack_parameters()<span class="question-mark">?</span>));
+<a href=#296 id=296 data-nosnippet>296</a>        }
+<a href=#297 id=297 data-nosnippet>297</a>      }
+<a href=#298 id=298 data-nosnippet>298</a>    }
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">let </span>has_cc_arg = <span class="kw">match </span>expansion_opt {
+<a href=#300 id=300 data-nosnippet>300</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="kw-2">ref </span>tks)) =&gt; tks
+<a href=#301 id=301 data-nosnippet>301</a>        .unlist_ref()
+<a href=#302 id=302 data-nosnippet>302</a>        .iter()
+<a href=#303 id=303 data-nosnippet>303</a>        .any(|t| t.get_catcode() == Catcode::ARG),
+<a href=#304 id=304 data-nosnippet>304</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#305 id=305 data-nosnippet>305</a>    };
+<a href=#306 id=306 data-nosnippet>306</a>    <span class="comment">// simplify: treat empty tokens as None
+<a href=#307 id=307 data-nosnippet>307</a>    </span><span class="kw">let </span>expansion = <span class="kw">match </span>expansion_opt {
+<a href=#308 id=308 data-nosnippet>308</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) <span class="kw">if </span>tks.is_empty() =&gt; <span class="prelude-val">None</span>,
+<a href=#309 id=309 data-nosnippet>309</a>      real_body =&gt; real_body,
+<a href=#310 id=310 data-nosnippet>310</a>    };
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="prelude-val">Ok</span>(Expandable {
+<a href=#313 id=313 data-nosnippet>313</a>      cs,
+<a href=#314 id=314 data-nosnippet>314</a>      paramlist,
+<a href=#315 id=315 data-nosnippet>315</a>      expansion,
+<a href=#316 id=316 data-nosnippet>316</a>      <span class="comment">// locator           =&gt; $source-&gt;getLocator,
+<a href=#317 id=317 data-nosnippet>317</a>      </span>is_protected: traits.protected || get_prefix(<span class="string">"protected"</span>),
+<a href=#318 id=318 data-nosnippet>318</a>      is_outer: traits.outer || get_prefix(<span class="string">"outer"</span>),
+<a href=#319 id=319 data-nosnippet>319</a>      is_long: traits.long || get_prefix(<span class="string">"long"</span>),
+<a href=#320 id=320 data-nosnippet>320</a>      has_cc_arg,
+<a href=#321 id=321 data-nosnippet>321</a>      alias: traits.alias,
+<a href=#322 id=322 data-nosnippet>322</a>      ..Expandable::default()
+<a href=#323 id=323 data-nosnippet>323</a>    })
+<a href=#324 id=324 data-nosnippet>324</a>  }
+<a href=#325 id=325 data-nosnippet>325</a>}
+<a href=#326 id=326 data-nosnippet>326</a>
+<a href=#327 id=327 data-nosnippet>327</a><span class="attr">#[cfg(test)]
+<a href=#328 id=328 data-nosnippet>328</a></span><span class="kw">mod </span>tests {
+<a href=#329 id=329 data-nosnippet>329</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#330 id=330 data-nosnippet>330</a>
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="attr">#[test]
+<a href=#332 id=332 data-nosnippet>332</a>  </span><span class="kw">fn </span>expandable_default_flags_false() {
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="kw">let </span>e = Expandable::default();
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="macro">assert!</span>(!e.is_protected);
+<a href=#335 id=335 data-nosnippet>335</a>    <span class="macro">assert!</span>(!e.is_long);
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="macro">assert!</span>(!e.is_outer);
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="macro">assert!</span>(!e.has_cc_arg);
+<a href=#338 id=338 data-nosnippet>338</a>    <span class="macro">assert!</span>(e.alias.is_none());
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="macro">assert!</span>(e.paramlist.is_none());
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="macro">assert!</span>(e.expansion.is_none());
+<a href=#341 id=341 data-nosnippet>341</a>  }
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="attr">#[test]
+<a href=#344 id=344 data-nosnippet>344</a>  </span><span class="kw">fn </span>expandable_default_has_default_cs() {
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="kw">let </span>e = Expandable::default();
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="comment">// Default cs is a T_CS with empty text (produced by Token::default
+<a href=#347 id=347 data-nosnippet>347</a>    // or similar). We can at least confirm the code is CS.
+<a href=#348 id=348 data-nosnippet>348</a>    </span><span class="macro">assert_eq!</span>(e.cs.code, Catcode::CS);
 <a href=#349 id=349 data-nosnippet>349</a>  }
 <a href=#350 id=350 data-nosnippet>350</a>
 <a href=#351 id=351 data-nosnippet>351</a>  <span class="attr">#[test]
-<a href=#352 id=352 data-nosnippet>352</a>  </span><span class="kw">fn </span>expandable_options_default_all_false() {
-<a href=#353 id=353 data-nosnippet>353</a>    <span class="kw">let </span>o = ExpandableOptions::default();
-<a href=#354 id=354 data-nosnippet>354</a>    <span class="macro">assert!</span>(!o.locked);
-<a href=#355 id=355 data-nosnippet>355</a>    <span class="macro">assert!</span>(!o.protected);
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="macro">assert!</span>(!o.outer);
-<a href=#357 id=357 data-nosnippet>357</a>    <span class="macro">assert!</span>(!o.long);
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="macro">assert!</span>(o.scope.is_none());
-<a href=#359 id=359 data-nosnippet>359</a>    <span class="macro">assert!</span>(o.alias.is_none());
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="macro">assert!</span>(!o.mathactive);
-<a href=#361 id=361 data-nosnippet>361</a>    <span class="macro">assert!</span>(!o.robust);
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="macro">assert!</span>(!o.nopack_parameters);
-<a href=#363 id=363 data-nosnippet>363</a>  }
-<a href=#364 id=364 data-nosnippet>364</a>}
+<a href=#352 id=352 data-nosnippet>352</a>  </span><span class="kw">fn </span>expandable_is_definition_and_expandable() {
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="kw">let </span>e = Expandable::default();
+<a href=#354 id=354 data-nosnippet>354</a>    <span class="macro">assert!</span>(e.is_definition());
+<a href=#355 id=355 data-nosnippet>355</a>    <span class="macro">assert!</span>(e.is_expandable());
+<a href=#356 id=356 data-nosnippet>356</a>  }
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a>  <span class="attr">#[test]
+<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="kw">fn </span>expandable_partial_eq_by_paramlist_and_expansion() {
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="comment">// PartialEq ignores flags (protected/long/outer) and cs — it
+<a href=#361 id=361 data-nosnippet>361</a>    // compares paramlist and expansion only.
+<a href=#362 id=362 data-nosnippet>362</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>a = Expandable::default();
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">let </span><span class="kw-2">mut </span>b = Expandable::default();
+<a href=#364 id=364 data-nosnippet>364</a>    <span class="comment">// Both have paramlist=None, expansion=None → equal.
+<a href=#365 id=365 data-nosnippet>365</a>    </span><span class="macro">assert_eq!</span>(a, b);
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="comment">// Changing flags doesn't affect equality.
+<a href=#367 id=367 data-nosnippet>367</a>    </span>a.is_protected = <span class="bool-val">true</span>;
+<a href=#368 id=368 data-nosnippet>368</a>    b.is_protected = <span class="bool-val">false</span>;
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="macro">assert_eq!</span>(a, b);
+<a href=#370 id=370 data-nosnippet>370</a>  }
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="attr">#[test]
+<a href=#373 id=373 data-nosnippet>373</a>  </span><span class="kw">fn </span>expandable_get_num_args_zero_without_paramlist() {
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">let </span>e = Expandable::default();
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="macro">assert_eq!</span>(e.get_num_args(), <span class="number">0</span>);
+<a href=#376 id=376 data-nosnippet>376</a>  }
+<a href=#377 id=377 data-nosnippet>377</a>
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="attr">#[test]
+<a href=#379 id=379 data-nosnippet>379</a>  </span><span class="kw">fn </span>expandable_get_parameters_none_by_default() {
+<a href=#380 id=380 data-nosnippet>380</a>    <span class="kw">let </span>e = Expandable::default();
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="macro">assert!</span>(e.get_parameters().is_none());
+<a href=#382 id=382 data-nosnippet>382</a>  }
+<a href=#383 id=383 data-nosnippet>383</a>
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="attr">#[test]
+<a href=#385 id=385 data-nosnippet>385</a>  </span><span class="kw">fn </span>expandable_options_default_all_false() {
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="kw">let </span>o = ExpandableOptions::default();
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="macro">assert!</span>(!o.locked);
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="macro">assert!</span>(!o.protected);
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="macro">assert!</span>(!o.outer);
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="macro">assert!</span>(!o.long);
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="macro">assert!</span>(o.scope.is_none());
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="macro">assert!</span>(o.alias.is_none());
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="macro">assert!</span>(!o.mathactive);
+<a href=#394 id=394 data-nosnippet>394</a>    <span class="macro">assert!</span>(!o.robust);
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="macro">assert!</span>(!o.nopack_parameters);
+<a href=#396 id=396 data-nosnippet>396</a>  }
+<a href=#397 id=397 data-nosnippet>397</a>}
 </code></pre></div></section></main></body></html>

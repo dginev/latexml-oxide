@@ -1,2 +1,2 @@
-window.ALL_CRATES = ["genschema_oxide","latexml","latexml_codegen","latexml_contrib","latexml_core","latexml_engine","latexml_math_parser","latexml_oxide","latexml_package","latexml_post","latexmlmath_oxide","latexmlpost_oxide"];
-//{"start":21,"fragment_lengths":[17,10,18,18,15,17,22,16,18,15,20,20]}
+window.ALL_CRATES = ["genschema_oxide","latexml","latexml_codegen","latexml_contrib","latexml_core","latexml_engine","latexml_math_parser","latexml_oxide","latexml_package","latexml_post","latexmlmath_oxide"];
+//{"start":21,"fragment_lengths":[17,10,18,18,15,17,22,16,18,15,20]}

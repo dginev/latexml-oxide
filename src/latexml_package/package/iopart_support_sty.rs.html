@@ -1,349 +1,362 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iopart_support_sty.rs`."><title>iopart_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iopart_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! iopart_support.sty — IOP Publishing journal support
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iopart_support_sty.rs`."><title>iopart_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iopart_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! iopart_support.sty — IOP Publishing journal support
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: iopart_support.sty.ltxml — 345 lines
 <a href=#3 id=3 data-nosnippet>3</a>//! Used by Journal of Physics, Classical and Quantum Gravity, etc.
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#5 id=5 data-nosnippet>5</a>
-<a href=#6 id=6 data-nosnippet>6</a><span class="attr">#[rustfmt::skip]
-<a href=#7 id=7 data-nosnippet>7</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="comment">// Conditionals — Perl L22-26
-<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifletter\\letterfalse"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifnumbysec\\numbysecfalse"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifiopams\\iopamsfalse"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// Equation numbering — Perl L28-29
-<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqnobysec"</span>, <span class="string">"\\numbysectrue\\@addtoreset{equation}{section}"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// Frontmatter — Perl L33-90
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\title[]{}"</span>,
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="string">"\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">Let!</span>(<span class="string">"\\paper"</span>, <span class="string">"\\title"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@articletype"</span>, <span class="string">""</span>);
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\article[]{}{}"</span>,
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="string">"\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\ifx.#2.\\else\\@add@frontmatter{ltx:classification}[scheme=type]{#2}\\fi\\@add@frontmatter{ltx:title}{#3}"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\letter{}"</span>, <span class="string">"\\article[Letter to the Editor]{Letter to the Editor}{#1}\\lettertrue"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\review[]{}"</span>, <span class="string">"\\article[#1]{Review Article}{#2}"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topical[]{}"</span>, <span class="string">"\\article[#1]{Topical Review}{#2}"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\comment[]{}"</span>, <span class="string">"\\article[#1]{Comment}{#2}"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rapid[]{}"</span>, <span class="string">"\\article[#1]{Rapid Communication}{#2}"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\note[]{}"</span>, <span class="string">"\\article[#1]{Note}{#2}"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\prelim[]{}"</span>, <span class="string">"\\article[#1]{Preliminary Communication}{#2}"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// Equation numbering — Perl L29
-<a href=#32 id=32 data-nosnippet>32</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">"\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi"</span>);
-<a href=#33 id=33 data-nosnippet>33</a>
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// Authors — Perl L52-57
-<a href=#35 id=35 data-nosnippet>35</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@@address{}"</span>, <span class="string">"^ &lt;ltx:contact role='address'&gt;#1&lt;/ltx:contact&gt;"</span>, bounded =&gt; <span class="bool-val">true</span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\address{}"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ead Semiverbatim"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}"</span>);
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@@email{}"</span>, <span class="string">"^ &lt;ltx:contact role='email'&gt;#1&lt;/ltx:contact&gt;"</span>);
-<a href=#39 id=39 data-nosnippet>39</a>
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// Dates — Perl L82-86
-<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=received]{#1}"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=revised]{#1}"</span>);
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=accepted]{#1}"</span>);
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\published{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=published]{#1}"</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\online{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=online]{#1}"</span>);
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// DEP-NEW (2026-05-19): data-drive helper for the 74 IOP-physics
+<a href=#7 id=7 data-nosnippet>7</a>/// journal abbreviation macros that all expand to
+<a href=#8 id=8 data-nosnippet>8</a>/// `\textit{&lt;name&gt;}` (some with trailing italic-correction `\/`).
+<a href=#9 id=9 data-nosnippet>9</a>/// Replacing the per-call `DefMacro!` macro arms with this runtime
+<a href=#10 id=10 data-nosnippet>10</a>/// helper collapses the repeated macro expansion to one inlined fn.
+<a href=#11 id=11 data-nosnippet>11</a>/// Per [[wisdom_data_drive_min_call_sites]]: 74 ≫ 5 threshold.
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">fn </span>def_iop_journal(cs: <span class="kw-2">&amp;</span>str, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="kw">let </span>(cs_tok, params) = parse_prototype(cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="kw">let </span>body_toks = mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\textit{{{name}}}"</span>));
+<a href=#15 id=15 data-nosnippet>15</a>  def_macro(cs_tok, params, ExpansionBody::Tokens(body_toks), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="prelude-val">Ok</span>(())
+<a href=#17 id=17 data-nosnippet>17</a>}
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a><span class="attr">#[rustfmt::skip]
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// Conditionals — Perl L22-26
+<a href=#22 id=22 data-nosnippet>22</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifletter\\letterfalse"</span>);
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifnumbysec\\numbysecfalse"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifiopams\\iopamsfalse"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// Equation numbering — Perl L28-29
+<a href=#27 id=27 data-nosnippet>27</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqnobysec"</span>, <span class="string">"\\numbysectrue\\@addtoreset{equation}{section}"</span>);
+<a href=#28 id=28 data-nosnippet>28</a>
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="comment">// Frontmatter — Perl L33-90
+<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\title[]{}"</span>,
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="string">"\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">Let!</span>(<span class="string">"\\paper"</span>, <span class="string">"\\title"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>  def_macro_noop(<span class="string">"\\@articletype"</span>)<span class="question-mark">?</span>;
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\article[]{}{}"</span>,
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="string">"\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\ifx.#2.\\else\\@add@frontmatter{ltx:classification}[scheme=type]{#2}\\fi\\@add@frontmatter{ltx:title}{#3}"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\letter{}"</span>, <span class="string">"\\article[Letter to the Editor]{Letter to the Editor}{#1}\\lettertrue"</span>);
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\review[]{}"</span>, <span class="string">"\\article[#1]{Review Article}{#2}"</span>);
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topical[]{}"</span>, <span class="string">"\\article[#1]{Topical Review}{#2}"</span>);
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\comment[]{}"</span>, <span class="string">"\\article[#1]{Comment}{#2}"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rapid[]{}"</span>, <span class="string">"\\article[#1]{Rapid Communication}{#2}"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\note[]{}"</span>, <span class="string">"\\article[#1]{Note}{#2}"</span>);
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\prelim[]{}"</span>, <span class="string">"\\article[#1]{Preliminary Communication}{#2}"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="comment">// Equation numbering — Perl L29
+<a href=#45 id=45 data-nosnippet>45</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\theequation"</span>, <span class="string">"\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi"</span>);
 <a href=#46 id=46 data-nosnippet>46</a>
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="comment">// Contact — Perl L57-59
-<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mailto"</span>, <span class="string">"\\ead"</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eads{}"</span>, <span class="string">"#1"</span>);
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="comment">// Classification — Perl L61-63
-<a href=#52 id=52 data-nosnippet>52</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pacno{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}"</span>);
-<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pacs{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ams{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=ams]{#1}"</span>);
-<a href=#55 id=55 data-nosnippet>55</a>
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// Journal — Perl L65-104
-<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="kw">static </span>IOP_JOURNALS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"Institute of Physics Publishing"</span>,
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"J. Phys.\\ A: Math.\\ Gen.\\ "</span>,
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="string">"J. Phys.\\ B: At.\\ Mol.\\ Opt.\\ Phys.\\ "</span>,
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="string">"J. Phys.:\\ Condens. Matter\\ "</span>,
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="string">"J. Phys.\\ G: Nucl.\\ Part.\\ Phys.\\ "</span>,
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">"Inverse Problems\\ "</span>,
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="string">"Class. Quantum Grav.\\ "</span>,
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="string">"Network: Comput.\\ Neural Syst.\\ "</span>,
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="string">"Nonlinearity\\ "</span>,
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">"J. Opt. B: Quantum Semiclass. Opt.\\ "</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"Waves Random Media\\ "</span>,
-<a href=#69 id=69 data-nosnippet>69</a>    <span class="string">"J. Opt. A: Pure Appl. Opt.\\ "</span>,
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="string">"Phys. Med. Biol.\\ "</span>,
-<a href=#71 id=71 data-nosnippet>71</a>    <span class="string">"Modelling Simul.\\ Mater.\\ Sci.\\ Eng.\\ "</span>,
-<a href=#72 id=72 data-nosnippet>72</a>    <span class="string">"Plasma Phys. Control. Fusion\\ "</span>,
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="string">"Physiol. Meas.\\ "</span>,
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">"Combust. Theory Modelling\\ "</span>,
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"High Perform.\\ Polym.\\ "</span>,
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">"Public Understand. Sci.\\ "</span>,
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">"Rep.\\ Prog.\\ Phys.\\ "</span>,
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">"J.\\ Phys.\\ D: Appl.\\ Phys.\\ "</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">"Supercond.\\ Sci.\\ Technol.\\ "</span>,
-<a href=#80 id=80 data-nosnippet>80</a>    <span class="string">"Semicond.\\ Sci.\\ Technol.\\ "</span>,
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"Nanotechnology\\ "</span>,
-<a href=#82 id=82 data-nosnippet>82</a>    <span class="string">"Measur.\\ Sci.\\ Technol.\\ "</span>,
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="string">"Plasma.\\ Sources\\ Sci.\\ Technol.\\ "</span>,
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="string">"Smart\\ Mater.\\ Struct.\\ "</span>,
-<a href=#85 id=85 data-nosnippet>85</a>    <span class="string">"J.\\ Micromech.\\ Microeng.\\ "</span>,
-<a href=#86 id=86 data-nosnippet>86</a>    <span class="string">"Distrib.\\ Syst.\\ Engng\\ "</span>,
-<a href=#87 id=87 data-nosnippet>87</a>    <span class="string">"Bioimaging\\ "</span>,
-<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"J.\\ Radiol. Prot.\\ "</span>,
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"Europ. J. Phys.\\ "</span>,
-<a href=#90 id=90 data-nosnippet>90</a>    <span class="string">"J. Opt. A: Pure Appl. Opt.\\ "</span>,
-<a href=#91 id=91 data-nosnippet>91</a>    <span class="string">"New. J. Phys.\\ "</span>,
-<a href=#92 id=92 data-nosnippet>92</a>  ];
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\journal"</span>, <span class="string">"Institute of Physics Publishing"</span>);
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\submitted"</span>, <span class="string">"\\submitto{\\journal}"</span>);
-<a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\submitto{}"</span>, <span class="string">"\\def\\journal{#1}\\@add@to@frontmatter{ltx:note}[role=submitted]{#1}"</span>);
-<a href=#96 id=96 data-nosnippet>96</a>
-<a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// Perl L102-104: \jl{n} — sets \journal to journals[n]
-<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\jl{}"</span>, sub[(n)] {
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">let </span>idx: usize = n.to_string().trim().parse().unwrap_or(<span class="number">0</span>);
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(journal) = IOP_JOURNALS.get(idx) {
-<a href=#101 id=101 data-nosnippet>101</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\journal"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokenize!</span>(journal), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#102 id=102 data-nosnippet>102</a>    }
-<a href=#103 id=103 data-nosnippet>103</a>  });
-<a href=#104 id=104 data-nosnippet>104</a>
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// Abstract/Keywords — Perl L95-120
-<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\nosections"</span>, <span class="string">""</span>);
-<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
-<a href=#108 id=108 data-nosnippet>108</a>
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// Acknowledgements — Perl L249-251 (DefConstructor, defined below)
-<a href=#110 id=110 data-nosnippet>110</a>
-<a href=#111 id=111 data-nosnippet>111</a>  // Misc — Perl L121,136
-<a href=#112 id=112 data-nosnippet>112</a>  // Note: \eqalign/\eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
-<a href=#113 id=113 data-nosnippet>113</a>  // \ft, \query, \bbox, \overmark are not in Perl iopart_support.sty.ltxml.
-<a href=#114 id=114 data-nosnippet>114</a>  // Perl L121: \fl expands to nothing
-<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fl"</span>, <span class="string">""</span>);
-<a href=#116 id=116 data-nosnippet>116</a>  <span class="comment">// Perl L136: \buildrel{} \over{} — uses literal \over delimiter between args
-<a href=#117 id=117 data-nosnippet>117</a>  // Use RawTeX \def because the Rust DefMacro parser doesn't support CS delimiters
-<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\buildrel#1\\over#2{\\mathrel{\\mathop{#2}\\limits^{#1}}}"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="comment">// Perl L122: \case (not \cases) — two-arg textstyle fraction
-<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\case{}{}"</span>, <span class="string">"{\\textstyle\\frac{#1}{#2}}"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="comment">// Authors — Perl L52-57
+<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@@address{}"</span>, <span class="string">"^ &lt;ltx:contact role='address'&gt;#1&lt;/ltx:contact&gt;"</span>, bounded =&gt; <span class="bool-val">true</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\address{}"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}"</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ead Semiverbatim"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@@email{}"</span>, <span class="string">"^ &lt;ltx:contact role='email'&gt;#1&lt;/ltx:contact&gt;"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// Dates — Perl L82-86
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=received]{#1}"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=revised]{#1}"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=accepted]{#1}"</span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\published{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=published]{#1}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\online{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=online]{#1}"</span>);
+<a href=#59 id=59 data-nosnippet>59</a>
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// Contact — Perl L57-59
+<a href=#61 id=61 data-nosnippet>61</a>  </span><span class="macro">Let!</span>(<span class="string">"\\mailto"</span>, <span class="string">"\\ead"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eads{}"</span>, <span class="string">"#1"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// Classification — Perl L61-63
+<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pacno{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pacs{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}"</span>);
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ams{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=ams]{#1}"</span>);
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// Journal — Perl L65-104
+<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="kw">static </span>IOP_JOURNALS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="string">"Institute of Physics Publishing"</span>,
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="string">"J. Phys.\\ A: Math.\\ Gen.\\ "</span>,
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="string">"J. Phys.\\ B: At.\\ Mol.\\ Opt.\\ Phys.\\ "</span>,
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">"J. Phys.:\\ Condens. Matter\\ "</span>,
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"J. Phys.\\ G: Nucl.\\ Part.\\ Phys.\\ "</span>,
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">"Inverse Problems\\ "</span>,
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">"Class. Quantum Grav.\\ "</span>,
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">"Network: Comput.\\ Neural Syst.\\ "</span>,
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">"Nonlinearity\\ "</span>,
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="string">"J. Opt. B: Quantum Semiclass. Opt.\\ "</span>,
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"Waves Random Media\\ "</span>,
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="string">"J. Opt. A: Pure Appl. Opt.\\ "</span>,
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="string">"Phys. Med. Biol.\\ "</span>,
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="string">"Modelling Simul.\\ Mater.\\ Sci.\\ Eng.\\ "</span>,
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="string">"Plasma Phys. Control. Fusion\\ "</span>,
+<a href=#86 id=86 data-nosnippet>86</a>    <span class="string">"Physiol. Meas.\\ "</span>,
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="string">"Combust. Theory Modelling\\ "</span>,
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"High Perform.\\ Polym.\\ "</span>,
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"Public Understand. Sci.\\ "</span>,
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="string">"Rep.\\ Prog.\\ Phys.\\ "</span>,
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="string">"J.\\ Phys.\\ D: Appl.\\ Phys.\\ "</span>,
+<a href=#92 id=92 data-nosnippet>92</a>    <span class="string">"Supercond.\\ Sci.\\ Technol.\\ "</span>,
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"Semicond.\\ Sci.\\ Technol.\\ "</span>,
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="string">"Nanotechnology\\ "</span>,
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="string">"Measur.\\ Sci.\\ Technol.\\ "</span>,
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="string">"Plasma.\\ Sources\\ Sci.\\ Technol.\\ "</span>,
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">"Smart\\ Mater.\\ Struct.\\ "</span>,
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"J.\\ Micromech.\\ Microeng.\\ "</span>,
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="string">"Distrib.\\ Syst.\\ Engng\\ "</span>,
+<a href=#100 id=100 data-nosnippet>100</a>    <span class="string">"Bioimaging\\ "</span>,
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="string">"J.\\ Radiol. Prot.\\ "</span>,
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">"Europ. J. Phys.\\ "</span>,
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="string">"J. Opt. A: Pure Appl. Opt.\\ "</span>,
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="string">"New. J. Phys.\\ "</span>,
+<a href=#105 id=105 data-nosnippet>105</a>  ];
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\journal"</span>, <span class="string">"Institute of Physics Publishing"</span>);
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\submitted"</span>, <span class="string">"\\submitto{\\journal}"</span>);
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\submitto{}"</span>, <span class="string">"\\def\\journal{#1}\\@add@to@frontmatter{ltx:note}[role=submitted]{#1}"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// Perl L102-104: \jl{n} — sets \journal to journals[n]
+<a href=#111 id=111 data-nosnippet>111</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\jl{}"</span>, sub[(n)] {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>idx: usize = n.to_string().trim().parse().unwrap_or(<span class="number">0</span>);
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(journal) = IOP_JOURNALS.get(idx) {
+<a href=#114 id=114 data-nosnippet>114</a>      def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\journal"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokenize!</span>(journal), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#115 id=115 data-nosnippet>115</a>    }
+<a href=#116 id=116 data-nosnippet>116</a>  });
+<a href=#117 id=117 data-nosnippet>117</a>
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="comment">// Abstract/Keywords — Perl L95-120
+<a href=#119 id=119 data-nosnippet>119</a>  </span>def_macro_noop(<span class="string">"\\nosections"</span>)<span class="question-mark">?</span>;
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
 <a href=#121 id=121 data-nosnippet>121</a>
-<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// Spacing — Perl L223-227
-<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="macro">Let!</span>(<span class="string">"\\ms"</span>, <span class="string">"\\,"</span>);
-<a href=#124 id=124 data-nosnippet>124</a>  <span class="macro">Let!</span>(<span class="string">"\\bs"</span>, <span class="string">"\\:"</span>);
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="macro">Let!</span>(<span class="string">"\\ns"</span>, <span class="string">"\\!"</span>);
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="macro">Let!</span>(<span class="string">"\\es"</span>, <span class="string">"\\:"</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="macro">Let!</span>(<span class="string">"\\psemicolon"</span>, <span class="string">"\\;"</span>);
-<a href=#128 id=128 data-nosnippet>128</a>
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// Perl L229
-<a href=#130 id=130 data-nosnippet>130</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mat{}"</span>, <span class="string">"\\underline{\\underline{#1}}"</span>);
-<a href=#131 id=131 data-nosnippet>131</a>
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// Table/figure formatting — Perl L195-220
-<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lineup"</span>, <span class="string">"\\def\\0{\\hbox{\\phantom{\\footnotesize\\rm 0}}}\\def\\m{\\hbox{\\phantom{-}}}"</span>);
-<a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\centre{}{}"</span>, <span class="string">"\\multispan{#1}{\\hfill #2\\hfill}"</span>);
-<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\crule{}"</span>, <span class="string">"\\multispan{#1}{\\hspace*{\\tabcolsep}\\hrulefill\\hspace*{\\tabcolsep}}"</span>);
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fcrule{}"</span>, <span class="string">"\\multispan{#1}{\\hrulefill}"</span>);
-<a href=#137 id=137 data-nosnippet>137</a>
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="comment">// Table/Figure environments — Perl L204-209
-<a href=#139 id=139 data-nosnippet>139</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Table{}"</span>, <span class="string">"\\begin{table}\\caption{#1}\\begin{tabular}{@{}l*{15}{l}}"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endTable"</span>, <span class="string">"\\end{tabular}\\end{table}"</span>);
-<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">Let!</span>(<span class="string">"\\endtab"</span>, <span class="string">"\\endTable"</span>);
-<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fulltable{}"</span>, <span class="string">"\\begin{table}\\caption{#1}\\begin{tabular}{@{}l*{15}{l}}"</span>);
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endfulltable"</span>, <span class="string">"\\end{tabular}\\end{table}"</span>);
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// Acknowledgements — Perl L249-251 (DefConstructor, defined below)
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a>  // Misc — Perl L121,136
+<a href=#125 id=125 data-nosnippet>125</a>  // Note: \eqalign/\eqalignno/\cases/\pmatrix come from Plain TeX (plain_constructs);
+<a href=#126 id=126 data-nosnippet>126</a>  // \ft, \query, \bbox, \overmark are not in Perl iopart_support.sty.ltxml.
+<a href=#127 id=127 data-nosnippet>127</a>  // Perl L121: \fl expands to nothing
+<a href=#128 id=128 data-nosnippet>128</a>  </span>def_macro_noop(<span class="string">"\\fl"</span>)<span class="question-mark">?</span>;
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// Perl L136: \buildrel{} \over{} — uses literal \over delimiter between args
+<a href=#130 id=130 data-nosnippet>130</a>  // Use RawTeX \def because the Rust DefMacro parser doesn't support CS delimiters
+<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\buildrel#1\\over#2{\\mathrel{\\mathop{#2}\\limits^{#1}}}"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// Perl L122: \case (not \cases) — two-arg textstyle fraction
+<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\case{}{}"</span>, <span class="string">"{\\textstyle\\frac{#1}{#2}}"</span>);
+<a href=#134 id=134 data-nosnippet>134</a>
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="comment">// Spacing — Perl L223-227
+<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="macro">Let!</span>(<span class="string">"\\ms"</span>, <span class="string">"\\,"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">Let!</span>(<span class="string">"\\bs"</span>, <span class="string">"\\:"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">Let!</span>(<span class="string">"\\ns"</span>, <span class="string">"\\!"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">Let!</span>(<span class="string">"\\es"</span>, <span class="string">"\\:"</span>);
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">Let!</span>(<span class="string">"\\psemicolon"</span>, <span class="string">"\\;"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="comment">// Perl L229
+<a href=#143 id=143 data-nosnippet>143</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mat{}"</span>, <span class="string">"\\underline{\\underline{#1}}"</span>);
 <a href=#144 id=144 data-nosnippet>144</a>
-<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\boldarrayrulewidth"</span>, <span class="string">"1pt"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>  <span class="macro">Let!</span>(<span class="string">"\\bhline"</span>, <span class="string">"\\hline"</span>);
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\br"</span>, <span class="string">"\\hline"</span>);
-<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mr"</span>, <span class="string">"\\hline"</span>);
-<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{indented}"</span>, <span class="string">"#body"</span>);
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// Table/figure formatting — Perl L195-220
+<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lineup"</span>, <span class="string">"\\def\\0{\\hbox{\\phantom{\\footnotesize\\rm 0}}}\\def\\m{\\hbox{\\phantom{-}}}"</span>);
+<a href=#147 id=147 data-nosnippet>147</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\centre{}{}"</span>, <span class="string">"\\multispan{#1}{\\hfill #2\\hfill}"</span>);
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\crule{}"</span>, <span class="string">"\\multispan{#1}{\\hspace*{\\tabcolsep}\\hrulefill\\hspace*{\\tabcolsep}}"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fcrule{}"</span>, <span class="string">"\\multispan{#1}{\\hrulefill}"</span>);
 <a href=#150 id=150 data-nosnippet>150</a>
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// NOTE: previously had speculative DefMacro!("\\la", "\\lesssim"),
-<a href=#152 id=152 data-nosnippet>152</a>  // \\ga, \\sun, \\degr, \\arcmin, \\arcsec — none of these exist in
-<a href=#153 id=153 data-nosnippet>153</a>  // Perl's iopart_support.sty.ltxml (verified). The `\la → \lesssim`
-<a href=#154 id=154 data-nosnippet>154</a>  // entry actively HARMED user macros: papers commonly do
-<a href=#155 id=155 data-nosnippet>155</a>  // `\newcommand\la{\langle}` (e.g. hep-ph0404036), but the prior
-<a href=#156 id=156 data-nosnippet>156</a>  // pre-binding made `\la` already-defined so `\newcommand` ignored
-<a href=#157 id=157 data-nosnippet>157</a>  // the redefinition, and the user's `\la n_G\ra` then expanded into
-<a href=#158 id=158 data-nosnippet>158</a>  // the undefined `\lesssim`. The whole block was Rust-only divergence
-<a href=#159 id=159 data-nosnippet>159</a>  // contradicting the "Perl is ground truth" rule.
-<a href=#160 id=160 data-nosnippet>160</a>
-<a href=#161 id=161 data-nosnippet>161</a>  // Math operators — Perl L110-134
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rmd"</span>, <span class="string">"\u{2146}"</span>, role =&gt; <span class="string">"DIFFOP"</span>, meaning =&gt; <span class="string">"differential-d"</span>);
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rme"</span>, <span class="string">"\u{2147}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"exponential-e"</span>);
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rmi"</span>, <span class="string">"\u{2148}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"imaginary-i"</span>);
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">Let!</span>(<span class="string">"\\e"</span>, <span class="string">"\\rme"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Tr"</span>, <span class="string">"\\mathrm{Tr}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"trace"</span>);
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tr"</span>, <span class="string">"\\mathrm{tr}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"trace"</span>);
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Or"</span>, <span class="string">"\\mathrm{O}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"Big-O"</span>);
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="comment">// Perl L127-129: triple-dot overaccent + shade delimiters
-<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\tdot {}"</span>, <span class="string">"\u{2026}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lshad"</span>, <span class="string">"\u{27E6}"</span>, role =&gt; <span class="string">"OPEN"</span>);
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rshad"</span>, <span class="string">"\u{27E7}"</span>, role =&gt; <span class="string">"CLOSE"</span>);
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="comment">// Perl L114-116: \bcal calligraphic bold primitive
-<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bcal"</span>, <span class="string">""</span>,
-<a href=#175 id=175 data-nosnippet>175</a>    font =&gt; { family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"bold"</span>, shape =&gt; <span class="string">"upright"</span>, forcebold =&gt; <span class="bool-val">true </span>});
-<a href=#176 id=176 data-nosnippet>176</a>  <span class="comment">// Perl iopart_support.sty.ltxml L117-119: \bi upright bold italic font
-<a href=#177 id=177 data-nosnippet>177</a>  // (math-mode analogue of \mathbf that keeps the italic family). arxiv
-<a href=#178 id=178 data-nosnippet>178</a>  // papers using iopart / iopart-num call this for vectors.
-<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bi"</span>, <span class="string">""</span>,
-<a href=#180 id=180 data-nosnippet>180</a>    font =&gt; { family =&gt; <span class="string">"italic"</span>, series =&gt; <span class="string">"bold"</span>, shape =&gt; <span class="string">"upright"</span>, forcebold =&gt; <span class="bool-val">true </span>});
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dsty"</span>, <span class="string">"\\displaystyle"</span>);
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tsty"</span>, <span class="string">"\\textstyle"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ssty"</span>, <span class="string">"\\scriptstyle"</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sssty"</span>, <span class="string">"\\scriptscriptstyle"</span>);
-<a href=#185 id=185 data-nosnippet>185</a>
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">// Perl L136
-<a href=#187 id=187 data-nosnippet>187</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\pt(#1){({\\it #1\\/})}"</span>);
-<a href=#188 id=188 data-nosnippet>188</a>
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Perl L139-143
-<a href=#190 id=190 data-nosnippet>190</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lo{}"</span>, <span class="string">"\\llap{${}#1{}$}"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eql"</span>, <span class="string">"\\llap{${}={}$}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lsim"</span>, <span class="string">"\\llap{${}\\sim{}$}"</span>);
-<a href=#193 id=193 data-nosnippet>193</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lsimeq"</span>, <span class="string">"\\llap{${}\\simeq{}$}"</span>);
-<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lequiv"</span>, <span class="string">"\\llap{${}\\equiv{}$}"</span>);
-<a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="comment">// Perl L152-158
-<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dotted"</span>, <span class="string">"\\ensuremath{{\\mathinner{\\cdotp\\cdotp\\cdotp\\cdotp\\cdotp\\cdotp}}}"</span>);
-<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dashed"</span>, <span class="string">"{\\protect\\mbox{-\\; -\\; -\\; -}}"</span>);
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\broken"</span>, <span class="string">"{\\protect\\mbox{-- -- --}}"</span>);
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\longbroken"</span>, <span class="string">"{\\protect\\mbox{--- --- ---}}"</span>);
-<a href=#201 id=201 data-nosnippet>201</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chain"</span>, <span class="string">"{\\protect\\mbox{--- $\\cdot$ ---}}"</span>);
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dashddot"</span>, <span class="string">"{\\protect\\mbox{--- $\\cdot$ $\\cdot$ ---}}"</span>);
-<a href=#203 id=203 data-nosnippet>203</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\full"</span>, <span class="string">"{\\protect\\mbox{------}}"</span>);
-<a href=#204 id=204 data-nosnippet>204</a>
-<a href=#205 id=205 data-nosnippet>205</a>  <span class="comment">// Perl L170-181
-<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqnalign{}"</span>,
-<a href=#207 id=207 data-nosnippet>207</a>    <span class="string">"\\@eqnarray@bindings\\@@eqnarray\\@equationgroup@numbering{numbered=1,stepped=post,grouped=1,aligned=1}\\lx@begin@alignment#1\\lx@end@alignment\\end@eqnarray"</span>);
-<a href=#208 id=208 data-nosnippet>208</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eqnalignno{}"</span>,
-<a href=#209 id=209 data-nosnippet>209</a>    <span class="string">"\\@eqnarray@bindings\\@@eqnarray\\@equationgroup@numbering{numbered=1,stepped=post,grouped=1,aligned=1}\\lx@begin@alignment#1\\lx@end@alignment\\end@eqnarray"</span>);
-<a href=#210 id=210 data-nosnippet>210</a>
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// Math symbols — Perl L145-158
-<a href=#212 id=212 data-nosnippet>212</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\opencircle"</span>, <span class="string">"\u{25CB}"</span>);
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opensquare"</span>, <span class="string">"\u{25A1}"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opentriangle"</span>, <span class="string">"\u{25B3}"</span>);
-<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opentriangledown"</span>, <span class="string">"\u{25BD}"</span>);
-<a href=#216 id=216 data-nosnippet>216</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opendiamond"</span>, <span class="string">"\u{25C6}"</span>);
-<a href=#217 id=217 data-nosnippet>217</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\fullcircle"</span>, <span class="string">"\u{25CF}"</span>);
-<a href=#218 id=218 data-nosnippet>218</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\fullsquare"</span>, <span class="string">"\u{25A0}"</span>);
-<a href=#219 id=219 data-nosnippet>219</a>
-<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">// Equation numbering — Perl L160-162
-<a href=#221 id=221 data-nosnippet>221</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\numparts"</span>, <span class="string">"\\lx@equationgroup@subnumbering@begin"</span>);
-<a href=#222 id=222 data-nosnippet>222</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumparts"</span>, <span class="string">"\\lx@equationgroup@subnumbering@end"</span>);
-<a href=#223 id=223 data-nosnippet>223</a>  <span class="macro">Let!</span>(<span class="string">"\\pcal"</span>, <span class="string">"\\cal"</span>);
-<a href=#224 id=224 data-nosnippet>224</a>  <span class="macro">Let!</span>(<span class="string">"\\pmit"</span>, <span class="string">"\\mathnormal"</span>);
-<a href=#225 id=225 data-nosnippet>225</a>
-<a href=#226 id=226 data-nosnippet>226</a>  <span class="comment">// Cross-referencing (with text prefixes) — Perl L185-192
-<a href=#227 id=227 data-nosnippet>227</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eref{}"</span>, <span class="string">"(\\ref{#1})"</span>);
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sref{}"</span>, <span class="string">"section~\\ref{#1}"</span>);
-<a href=#229 id=229 data-nosnippet>229</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fref{}"</span>, <span class="string">"figure~\\ref{#1}"</span>);
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tref{}"</span>, <span class="string">"table~\\ref{#1}"</span>);
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Eref{}"</span>, <span class="string">"Equation (\\ref{#1})"</span>);
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Sref{}"</span>, <span class="string">"Section~\\ref{#1}"</span>);
-<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Fref{}"</span>, <span class="string">"Figure~\\ref{#1}"</span>);
-<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Tref{}"</span>, <span class="string">"Table~\\ref{#1}"</span>);
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\aref{}"</span>, <span class="string">"\\ref{#1}"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Aref{}"</span>, <span class="string">"\\ref{#1}"</span>);
-<a href=#237 id=237 data-nosnippet>237</a>
-<a href=#238 id=238 data-nosnippet>238</a>  <span class="comment">// Tables — Perl L198-210
-<a href=#239 id=239 data-nosnippet>239</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\noappendix"</span>, <span class="string">"\\setcounter{figure}{0}\\setcounter{table}{0}\\def\\thetable{\\arabic{table}}\\def\\thefigure{\\arabic{figure}}"</span>);
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Tables"</span>, <span class="string">"\\section*{Tables and table captions}\\noappendix"</span>);
-<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Figures"</span>, <span class="string">"\\section*{Figure captions}\\noappendix"</span>);
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Figure{}"</span>, <span class="string">"\\begin{figure}\\caption{#1}\\end{figure}"</span>);
-<a href=#243 id=243 data-nosnippet>243</a>
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="comment">// Bibliography — Perl L233-245
-<a href=#245 id=245 data-nosnippet>245</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Bibliography{}"</span>, <span class="string">"\\section*{References}\\numrefs{#1}"</span>);
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\References"</span>, <span class="string">"\\section*{References}\\refs"</span>);
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\numrefs{}"</span>, <span class="string">"\\begin{thebibliography}{#1}"</span>);
-<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumrefs"</span>, <span class="string">"\\end{thebibliography}"</span>);
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">Let!</span>(<span class="string">"\\endbib"</span>, <span class="string">"\\endnumrefs"</span>);
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thereferences"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endthereferences"</span>, <span class="string">"\\end{thebibliography}"</span>);
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvard"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endharvard"</span>, <span class="string">"\\end{thebibliography}"</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refs"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endrefs"</span>, <span class="string">"\\end{thebibliography}"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// Table/Figure environments — Perl L204-209
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Table{}"</span>, <span class="string">"\\begin{table}\\caption{#1}\\begin{tabular}{@{}l*{15}{l}}"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endTable"</span>, <span class="string">"\\end{tabular}\\end{table}"</span>);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">Let!</span>(<span class="string">"\\endtab"</span>, <span class="string">"\\endTable"</span>);
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fulltable{}"</span>, <span class="string">"\\begin{table}\\caption{#1}\\begin{tabular}{@{}l*{15}{l}}"</span>);
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endfulltable"</span>, <span class="string">"\\end{tabular}\\end{table}"</span>);
+<a href=#157 id=157 data-nosnippet>157</a>
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\boldarrayrulewidth"</span>, <span class="string">"1pt"</span>);
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">Let!</span>(<span class="string">"\\bhline"</span>, <span class="string">"\\hline"</span>);
+<a href=#160 id=160 data-nosnippet>160</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\br"</span>, <span class="string">"\\hline"</span>);
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mr"</span>, <span class="string">"\\hline"</span>);
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{indented}"</span>, <span class="string">"#body"</span>);
+<a href=#163 id=163 data-nosnippet>163</a>
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="comment">// NOTE: previously had speculative DefMacro!("\\la", "\\lesssim"),
+<a href=#165 id=165 data-nosnippet>165</a>  // \\ga, \\sun, \\degr, \\arcmin, \\arcsec — none of these exist in
+<a href=#166 id=166 data-nosnippet>166</a>  // Perl's iopart_support.sty.ltxml (verified). The `\la → \lesssim`
+<a href=#167 id=167 data-nosnippet>167</a>  // entry actively HARMED user macros: papers commonly do
+<a href=#168 id=168 data-nosnippet>168</a>  // `\newcommand\la{\langle}` (e.g. hep-ph0404036), but the prior
+<a href=#169 id=169 data-nosnippet>169</a>  // pre-binding made `\la` already-defined so `\newcommand` ignored
+<a href=#170 id=170 data-nosnippet>170</a>  // the redefinition, and the user's `\la n_G\ra` then expanded into
+<a href=#171 id=171 data-nosnippet>171</a>  // the undefined `\lesssim`. The whole block was Rust-only divergence
+<a href=#172 id=172 data-nosnippet>172</a>  // contradicting the "Perl is ground truth" rule.
+<a href=#173 id=173 data-nosnippet>173</a>
+<a href=#174 id=174 data-nosnippet>174</a>  // Math operators — Perl L110-134
+<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\rmd"</span>, <span class="string">"\u{2146}"</span>, role =&gt; <span class="string">"DIFFOP"</span>, meaning =&gt; <span class="string">"differential-d"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rme"</span>, <span class="string">"\u{2147}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"exponential-e"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rmi"</span>, <span class="string">"\u{2148}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"imaginary-i"</span>);
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">Let!</span>(<span class="string">"\\e"</span>, <span class="string">"\\rme"</span>);
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Tr"</span>, <span class="string">"\\mathrm{Tr}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"trace"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMath!</span>(<span class="string">"\\tr"</span>, <span class="string">"\\mathrm{tr}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"trace"</span>);
+<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Or"</span>, <span class="string">"\\mathrm{O}"</span>, role =&gt; <span class="string">"OPFUNCTION"</span>, meaning =&gt; <span class="string">"Big-O"</span>);
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="comment">// Perl L127-129: triple-dot overaccent + shade delimiters
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\tdot {}"</span>, <span class="string">"\u{2026}"</span>, operator_role =&gt; <span class="string">"OVERACCENT"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lshad"</span>, <span class="string">"\u{27E6}"</span>, role =&gt; <span class="string">"OPEN"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rshad"</span>, <span class="string">"\u{27E7}"</span>, role =&gt; <span class="string">"CLOSE"</span>);
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">// Perl L114-116: \bcal calligraphic bold primitive
+<a href=#187 id=187 data-nosnippet>187</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bcal"</span>, <span class="string">""</span>,
+<a href=#188 id=188 data-nosnippet>188</a>    font =&gt; { family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"bold"</span>, shape =&gt; <span class="string">"upright"</span>, forcebold =&gt; <span class="bool-val">true </span>});
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Perl iopart_support.sty.ltxml L117-119: \bi upright bold italic font
+<a href=#190 id=190 data-nosnippet>190</a>  // (math-mode analogue of \mathbf that keeps the italic family). arxiv
+<a href=#191 id=191 data-nosnippet>191</a>  // papers using iopart / iopart-num call this for vectors.
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bi"</span>, <span class="string">""</span>,
+<a href=#193 id=193 data-nosnippet>193</a>    font =&gt; { family =&gt; <span class="string">"italic"</span>, series =&gt; <span class="string">"bold"</span>, shape =&gt; <span class="string">"upright"</span>, forcebold =&gt; <span class="bool-val">true </span>});
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dsty"</span>, <span class="string">"\\displaystyle"</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tsty"</span>, <span class="string">"\\textstyle"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ssty"</span>, <span class="string">"\\scriptstyle"</span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sssty"</span>, <span class="string">"\\scriptscriptstyle"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="comment">// Perl L136
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\pt(#1){({\\it #1\\/})}"</span>);
+<a href=#201 id=201 data-nosnippet>201</a>
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// Perl L139-143
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lo{}"</span>, <span class="string">"\\llap{${}#1{}$}"</span>);
+<a href=#204 id=204 data-nosnippet>204</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eql"</span>, <span class="string">"\\llap{${}={}$}"</span>);
+<a href=#205 id=205 data-nosnippet>205</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lsim"</span>, <span class="string">"\\llap{${}\\sim{}$}"</span>);
+<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lsimeq"</span>, <span class="string">"\\llap{${}\\simeq{}$}"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lequiv"</span>, <span class="string">"\\llap{${}\\equiv{}$}"</span>);
+<a href=#208 id=208 data-nosnippet>208</a>
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="comment">// Perl L152-158
+<a href=#210 id=210 data-nosnippet>210</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dotted"</span>, <span class="string">"\\ensuremath{{\\mathinner{\\cdotp\\cdotp\\cdotp\\cdotp\\cdotp\\cdotp}}}"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dashed"</span>, <span class="string">"{\\protect\\mbox{-\\; -\\; -\\; -}}"</span>);
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\broken"</span>, <span class="string">"{\\protect\\mbox{-- -- --}}"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\longbroken"</span>, <span class="string">"{\\protect\\mbox{--- --- ---}}"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\chain"</span>, <span class="string">"{\\protect\\mbox{--- $\\cdot$ ---}}"</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dashddot"</span>, <span class="string">"{\\protect\\mbox{--- $\\cdot$ $\\cdot$ ---}}"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\full"</span>, <span class="string">"{\\protect\\mbox{------}}"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// Perl L170-181
+<a href=#219 id=219 data-nosnippet>219</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqnalign{}"</span>,
+<a href=#220 id=220 data-nosnippet>220</a>    <span class="string">"\\@eqnarray@bindings\\@@eqnarray\\@equationgroup@numbering{numbered=1,stepped=post,grouped=1,aligned=1}\\lx@begin@alignment#1\\lx@end@alignment\\end@eqnarray"</span>);
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\eqnalignno{}"</span>,
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="string">"\\@eqnarray@bindings\\@@eqnarray\\@equationgroup@numbering{numbered=1,stepped=post,grouped=1,aligned=1}\\lx@begin@alignment#1\\lx@end@alignment\\end@eqnarray"</span>);
+<a href=#223 id=223 data-nosnippet>223</a>
+<a href=#224 id=224 data-nosnippet>224</a>  <span class="comment">// Math symbols — Perl L145-158
+<a href=#225 id=225 data-nosnippet>225</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\opencircle"</span>, <span class="string">"\u{25CB}"</span>);
+<a href=#226 id=226 data-nosnippet>226</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opensquare"</span>, <span class="string">"\u{25A1}"</span>);
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opentriangle"</span>, <span class="string">"\u{25B3}"</span>);
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opentriangledown"</span>, <span class="string">"\u{25BD}"</span>);
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\opendiamond"</span>, <span class="string">"\u{25C6}"</span>);
+<a href=#230 id=230 data-nosnippet>230</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\fullcircle"</span>, <span class="string">"\u{25CF}"</span>);
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\fullsquare"</span>, <span class="string">"\u{25A0}"</span>);
+<a href=#232 id=232 data-nosnippet>232</a>
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="comment">// Equation numbering — Perl L160-162
+<a href=#234 id=234 data-nosnippet>234</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\numparts"</span>, <span class="string">"\\lx@equationgroup@subnumbering@begin"</span>);
+<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumparts"</span>, <span class="string">"\\lx@equationgroup@subnumbering@end"</span>);
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">Let!</span>(<span class="string">"\\pcal"</span>, <span class="string">"\\cal"</span>);
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">Let!</span>(<span class="string">"\\pmit"</span>, <span class="string">"\\mathnormal"</span>);
+<a href=#238 id=238 data-nosnippet>238</a>
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="comment">// Cross-referencing (with text prefixes) — Perl L185-192
+<a href=#240 id=240 data-nosnippet>240</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eref{}"</span>, <span class="string">"(\\ref{#1})"</span>);
+<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sref{}"</span>, <span class="string">"section~\\ref{#1}"</span>);
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fref{}"</span>, <span class="string">"figure~\\ref{#1}"</span>);
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tref{}"</span>, <span class="string">"table~\\ref{#1}"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Eref{}"</span>, <span class="string">"Equation (\\ref{#1})"</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Sref{}"</span>, <span class="string">"Section~\\ref{#1}"</span>);
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Fref{}"</span>, <span class="string">"Figure~\\ref{#1}"</span>);
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Tref{}"</span>, <span class="string">"Table~\\ref{#1}"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\aref{}"</span>, <span class="string">"\\ref{#1}"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Aref{}"</span>, <span class="string">"\\ref{#1}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="comment">// Tables — Perl L198-210
+<a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\noappendix"</span>, <span class="string">"\\setcounter{figure}{0}\\setcounter{table}{0}\\def\\thetable{\\arabic{table}}\\def\\thefigure{\\arabic{figure}}"</span>);
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Tables"</span>, <span class="string">"\\section*{Tables and table captions}\\noappendix"</span>);
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Figures"</span>, <span class="string">"\\section*{Figure captions}\\noappendix"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Figure{}"</span>, <span class="string">"\\begin{figure}\\caption{#1}\\end{figure}"</span>);
 <a href=#256 id=256 data-nosnippet>256</a>
-<a href=#257 id=257 data-nosnippet>257</a>  <span class="comment">// Acknowledgements — Perl L249-251
-<a href=#258 id=258 data-nosnippet>258</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\ack"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
-<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ackn"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#261 id=261 data-nosnippet>261</a>
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="comment">// Journal abbreviations — Perl L258-343
-<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\etal"</span>, <span class="string">"\\textit{et al\\/}"</span>);
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dash"</span>, <span class="string">"-----"</span>);
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// Journal abbreviations — ALL from Perl L258-331
-<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\CQG"</span>,   <span class="string">"\\textit{Class. Quantum Grav.}"</span>);
-<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\CTM"</span>,   <span class="string">"\\textit{Combust. Theory Modelling\\/}"</span>);
-<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\DSE"</span>,   <span class="string">"\\textit{Distrib. Syst. Engng\\/}"</span>);
-<a href=#269 id=269 data-nosnippet>269</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EJP"</span>,   <span class="string">"\\textit{Eur. J. Phys.}"</span>);
-<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\HPP"</span>,   <span class="string">"\\textit{High Perform. Polym.}"</span>);
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\IP"</span>,    <span class="string">"\\textit{Inverse Problems\\/}"</span>);
-<a href=#272 id=272 data-nosnippet>272</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JHM"</span>,   <span class="string">"\\textit{J. Hard Mater.}"</span>);
-<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JO"</span>,    <span class="string">"\\textit{J. Opt.}"</span>);
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JOA"</span>,   <span class="string">"\\textit{J. Opt. A: Pure Appl. Opt.}"</span>);
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JOB"</span>,   <span class="string">"\\textit{J. Opt. B: Quantum Semiclass. Opt.}"</span>);
-<a href=#276 id=276 data-nosnippet>276</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPA"</span>,   <span class="string">"\\textit{J. Phys. A: Math. Gen.}"</span>);
-<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPB"</span>,   <span class="string">"\\textit{J. Phys. B: At. Mol. Phys.}"</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jpb"</span>,   <span class="string">"\\textit{J. Phys. B: At. Mol. Opt. Phys.}"</span>);
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPC"</span>,   <span class="string">"\\textit{J. Phys. C: Solid State Phys.}"</span>);
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPCM"</span>,  <span class="string">"\\textit{J. Phys.: Condens. Matter\\/}"</span>);
-<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPD"</span>,   <span class="string">"\\textit{J. Phys. D: Appl. Phys.}"</span>);
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPE"</span>,   <span class="string">"\\textit{J. Phys. E: Sci. Instrum.}"</span>);
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPF"</span>,   <span class="string">"\\textit{J. Phys. F: Met. Phys.}"</span>);
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPG"</span>,   <span class="string">"\\textit{J. Phys. G: Nucl. Phys.}"</span>);
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jpg"</span>,   <span class="string">"\\textit{J. Phys. G: Nucl. Part. Phys.}"</span>);
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MSMSE"</span>, <span class="string">"\\textit{Modelling Simulation Mater. Sci. Eng.}"</span>);
-<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MST"</span>,   <span class="string">"\\textit{Meas. Sci. Technol.}"</span>);
-<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NET"</span>,   <span class="string">"\\textit{Network: Comput. Neural Syst.}"</span>);
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NJP"</span>,   <span class="string">"\\textit{New J. Phys.}"</span>);
-<a href=#290 id=290 data-nosnippet>290</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NL"</span>,    <span class="string">"\\textit{Nonlinearity\\/}"</span>);
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NT"</span>,    <span class="string">"\\textit{Nanotechnology}"</span>);
-<a href=#292 id=292 data-nosnippet>292</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PAO"</span>,   <span class="string">"\\textit{Pure Appl. Optics\\/}"</span>);
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PM"</span>,    <span class="string">"\\textit{Physiol. Meas.}"</span>);
-<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PMB"</span>,   <span class="string">"\\textit{Phys. Med. Biol.}"</span>);
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PPCF"</span>,  <span class="string">"\\textit{Plasma Phys. Control. Fusion\\/}"</span>);
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PSST"</span>,  <span class="string">"\\textit{Plasma Sources Sci. Technol.}"</span>);
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PUS"</span>,   <span class="string">"\\textit{Public Understand. Sci.}"</span>);
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\QO"</span>,    <span class="string">"\\textit{Quantum Opt.}"</span>);
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\QSO"</span>,   <span class="string">"\\textit{Quantum Semiclass. Opt.}"</span>);
-<a href=#300 id=300 data-nosnippet>300</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\RPP"</span>,   <span class="string">"\\textit{Rep. Prog. Phys.}"</span>);
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SLC"</span>,   <span class="string">"\\textit{Sov. Lightwave Commun.}"</span>);
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SST"</span>,   <span class="string">"\\textit{Semicond. Sci. Technol.}"</span>);
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SUST"</span>,  <span class="string">"\\textit{Supercond. Sci. Technol.}"</span>);
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\WRM"</span>,   <span class="string">"\\textit{Waves Random Media\\/}"</span>);
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JMM"</span>,   <span class="string">"\\textit{J. of Michromech. and Microeng.\\/}"</span>);
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AC"</span>,    <span class="string">"\\textit{Acta Crystallogr.}"</span>);
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AM"</span>,    <span class="string">"\\textit{Acta Metall.}"</span>);
-<a href=#308 id=308 data-nosnippet>308</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AP"</span>,    <span class="string">"\\textit{Ann. Phys., Lpz.}"</span>);
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\APNY"</span>,  <span class="string">"\\textit{Ann. Phys., NY\\/}"</span>);
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\APP"</span>,   <span class="string">"\\textit{Ann. Phys., Paris\\/}"</span>);
-<a href=#311 id=311 data-nosnippet>311</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\CJP"</span>,   <span class="string">"\\textit{Can. J. Phys.}"</span>);
-<a href=#312 id=312 data-nosnippet>312</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JAP"</span>,   <span class="string">"\\textit{J. Appl. Phys.}"</span>);
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JCP"</span>,   <span class="string">"\\textit{J. Chem. Phys.}"</span>);
-<a href=#314 id=314 data-nosnippet>314</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JJAP"</span>,  <span class="string">"\\textit{Japan. J. Appl. Phys.}"</span>);
-<a href=#315 id=315 data-nosnippet>315</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JP"</span>,    <span class="string">"\\textit{J. Physique\\/}"</span>);
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPhCh"</span>, <span class="string">"\\textit{J. Phys. Chem.}"</span>);
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JMMM"</span>,  <span class="string">"\\textit{J. Magn. Magn. Mater.}"</span>);
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JMP"</span>,   <span class="string">"\\textit{J. Math. Phys.}"</span>);
-<a href=#319 id=319 data-nosnippet>319</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JOSA"</span>,  <span class="string">"\\textit{J. Opt. Soc. Am.}"</span>);
-<a href=#320 id=320 data-nosnippet>320</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JPSJ"</span>,  <span class="string">"\\textit{J. Phys. Soc. Japan\\/}"</span>);
-<a href=#321 id=321 data-nosnippet>321</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JQSRT"</span>, <span class="string">"\\textit{J. Quant. Spectrosc. Radiat. Transfer\\/}"</span>);
-<a href=#322 id=322 data-nosnippet>322</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NC"</span>,    <span class="string">"\\textit{Nuovo Cimento\\/}"</span>);
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NIM"</span>,   <span class="string">"\\textit{Nucl. Instrum. Methods\\/}"</span>);
-<a href=#324 id=324 data-nosnippet>324</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\NP"</span>,    <span class="string">"\\textit{Nucl. Phys.}"</span>);
-<a href=#325 id=325 data-nosnippet>325</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PL"</span>,    <span class="string">"\\textit{Phys. Lett.}"</span>);
-<a href=#326 id=326 data-nosnippet>326</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PR"</span>,    <span class="string">"\\textit{Phys. Rev.}"</span>);
-<a href=#327 id=327 data-nosnippet>327</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PRL"</span>,   <span class="string">"\\textit{Phys. Rev. Lett.}"</span>);
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PRS"</span>,   <span class="string">"\\textit{Proc. R. Soc.}"</span>);
-<a href=#329 id=329 data-nosnippet>329</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PS"</span>,    <span class="string">"\\textit{Phys. Scr.}"</span>);
-<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PSS"</span>,   <span class="string">"\\textit{Phys. Status Solidi\\/}"</span>);
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PTRS"</span>,  <span class="string">"\\textit{Phil. Trans. R. Soc.}"</span>);
-<a href=#332 id=332 data-nosnippet>332</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\RMP"</span>,   <span class="string">"\\textit{Rev. Mod. Phys.}"</span>);
-<a href=#333 id=333 data-nosnippet>333</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\RSI"</span>,   <span class="string">"\\textit{Rev. Sci. Instrum.}"</span>);
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SSC"</span>,   <span class="string">"\\textit{Solid State Commun.}"</span>);
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ZP"</span>,    <span class="string">"\\textit{ Z. Phys.}"</span>);
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JNE"</span>,   <span class="string">"\\textit{J. Neural Eng.}"</span>);
-<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PB"</span>,    <span class="string">"\\textit{Phys. Biol.}"</span>);
-<a href=#338 id=338 data-nosnippet>338</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SMS"</span>,   <span class="string">"\\textit{Smart Mater. Struct.}"</span>);
-<a href=#339 id=339 data-nosnippet>339</a>
-<a href=#340 id=340 data-nosnippet>340</a>  <span class="comment">// Mystery items — Perl L335-343
-<a href=#341 id=341 data-nosnippet>341</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tqs"</span>, <span class="string">"\\hspace*{25pt}"</span>);
-<a href=#342 id=342 data-nosnippet>342</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nosections"</span>, <span class="string">""</span>);
-<a href=#343 id=343 data-nosnippet>343</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indented"</span>, <span class="string">"\\itemize"</span>);
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endindented"</span>, <span class="string">"\\enditemize"</span>);
-<a href=#345 id=345 data-nosnippet>345</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\varindent"</span>, <span class="string">"\\itemize"</span>);
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endvarindent"</span>, <span class="string">"\\enditemize"</span>);
-<a href=#347 id=347 data-nosnippet>347</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nonum"</span>, <span class="string">"\\par"</span>);
-<a href=#348 id=348 data-nosnippet>348</a>});
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="comment">// Bibliography — Perl L233-245
+<a href=#258 id=258 data-nosnippet>258</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Bibliography{}"</span>, <span class="string">"\\section*{References}\\numrefs{#1}"</span>);
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\References"</span>, <span class="string">"\\section*{References}\\refs"</span>);
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\numrefs{}"</span>, <span class="string">"\\begin{thebibliography}{#1}"</span>);
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumrefs"</span>, <span class="string">"\\end{thebibliography}"</span>);
+<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">Let!</span>(<span class="string">"\\endbib"</span>, <span class="string">"\\endnumrefs"</span>);
+<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thereferences"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endthereferences"</span>, <span class="string">"\\end{thebibliography}"</span>);
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\harvard"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endharvard"</span>, <span class="string">"\\end{thebibliography}"</span>);
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refs"</span>, <span class="string">"\\begin{thebibliography}{}"</span>);
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endrefs"</span>, <span class="string">"\\end{thebibliography}"</span>);
+<a href=#269 id=269 data-nosnippet>269</a>
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="comment">// Acknowledgements — Perl L249-251
+<a href=#271 id=271 data-nosnippet>271</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\ack"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
+<a href=#272 id=272 data-nosnippet>272</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ackn"</span>, <span class="string">"&lt;ltx:acknowledgements&gt;"</span>);
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:acknowledgements"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+<a href=#274 id=274 data-nosnippet>274</a>
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="comment">// Journal abbreviations — Perl L258-343
+<a href=#276 id=276 data-nosnippet>276</a>  </span>def_iop_journal(<span class="string">"\\etal"</span>, <span class="string">"et al\\/"</span>)<span class="question-mark">?</span>;
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dash"</span>, <span class="string">"-----"</span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="comment">// Journal abbreviations — ALL from Perl L258-331
+<a href=#279 id=279 data-nosnippet>279</a>  </span>def_iop_journal(<span class="string">"\\CQG"</span>, <span class="string">"Class. Quantum Grav."</span>)<span class="question-mark">?</span>;
+<a href=#280 id=280 data-nosnippet>280</a>  def_iop_journal(<span class="string">"\\CTM"</span>, <span class="string">"Combust. Theory Modelling\\/"</span>)<span class="question-mark">?</span>;
+<a href=#281 id=281 data-nosnippet>281</a>  def_iop_journal(<span class="string">"\\DSE"</span>, <span class="string">"Distrib. Syst. Engng\\/"</span>)<span class="question-mark">?</span>;
+<a href=#282 id=282 data-nosnippet>282</a>  def_iop_journal(<span class="string">"\\EJP"</span>, <span class="string">"Eur. J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#283 id=283 data-nosnippet>283</a>  def_iop_journal(<span class="string">"\\HPP"</span>, <span class="string">"High Perform. Polym."</span>)<span class="question-mark">?</span>;
+<a href=#284 id=284 data-nosnippet>284</a>  def_iop_journal(<span class="string">"\\IP"</span>, <span class="string">"Inverse Problems\\/"</span>)<span class="question-mark">?</span>;
+<a href=#285 id=285 data-nosnippet>285</a>  def_iop_journal(<span class="string">"\\JHM"</span>, <span class="string">"J. Hard Mater."</span>)<span class="question-mark">?</span>;
+<a href=#286 id=286 data-nosnippet>286</a>  def_iop_journal(<span class="string">"\\JO"</span>, <span class="string">"J. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#287 id=287 data-nosnippet>287</a>  def_iop_journal(<span class="string">"\\JOA"</span>, <span class="string">"J. Opt. A: Pure Appl. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#288 id=288 data-nosnippet>288</a>  def_iop_journal(<span class="string">"\\JOB"</span>, <span class="string">"J. Opt. B: Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>  def_iop_journal(<span class="string">"\\JPA"</span>, <span class="string">"J. Phys. A: Math. Gen."</span>)<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>  def_iop_journal(<span class="string">"\\JPB"</span>, <span class="string">"J. Phys. B: At. Mol. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#291 id=291 data-nosnippet>291</a>  def_iop_journal(<span class="string">"\\jpb"</span>, <span class="string">"J. Phys. B: At. Mol. Opt. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#292 id=292 data-nosnippet>292</a>  def_iop_journal(<span class="string">"\\JPC"</span>, <span class="string">"J. Phys. C: Solid State Phys."</span>)<span class="question-mark">?</span>;
+<a href=#293 id=293 data-nosnippet>293</a>  def_iop_journal(<span class="string">"\\JPCM"</span>, <span class="string">"J. Phys.: Condens. Matter\\/"</span>)<span class="question-mark">?</span>;
+<a href=#294 id=294 data-nosnippet>294</a>  def_iop_journal(<span class="string">"\\JPD"</span>, <span class="string">"J. Phys. D: Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#295 id=295 data-nosnippet>295</a>  def_iop_journal(<span class="string">"\\JPE"</span>, <span class="string">"J. Phys. E: Sci. Instrum."</span>)<span class="question-mark">?</span>;
+<a href=#296 id=296 data-nosnippet>296</a>  def_iop_journal(<span class="string">"\\JPF"</span>, <span class="string">"J. Phys. F: Met. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>  def_iop_journal(<span class="string">"\\JPG"</span>, <span class="string">"J. Phys. G: Nucl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#298 id=298 data-nosnippet>298</a>  def_iop_journal(<span class="string">"\\jpg"</span>, <span class="string">"J. Phys. G: Nucl. Part. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>  def_iop_journal(<span class="string">"\\MSMSE"</span>, <span class="string">"Modelling Simulation Mater. Sci. Eng."</span>)<span class="question-mark">?</span>;
+<a href=#300 id=300 data-nosnippet>300</a>  def_iop_journal(<span class="string">"\\MST"</span>, <span class="string">"Meas. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#301 id=301 data-nosnippet>301</a>  def_iop_journal(<span class="string">"\\NET"</span>, <span class="string">"Network: Comput. Neural Syst."</span>)<span class="question-mark">?</span>;
+<a href=#302 id=302 data-nosnippet>302</a>  def_iop_journal(<span class="string">"\\NJP"</span>, <span class="string">"New J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#303 id=303 data-nosnippet>303</a>  def_iop_journal(<span class="string">"\\NL"</span>, <span class="string">"Nonlinearity\\/"</span>)<span class="question-mark">?</span>;
+<a href=#304 id=304 data-nosnippet>304</a>  def_iop_journal(<span class="string">"\\NT"</span>, <span class="string">"Nanotechnology"</span>)<span class="question-mark">?</span>;
+<a href=#305 id=305 data-nosnippet>305</a>  def_iop_journal(<span class="string">"\\PAO"</span>, <span class="string">"Pure Appl. Optics\\/"</span>)<span class="question-mark">?</span>;
+<a href=#306 id=306 data-nosnippet>306</a>  def_iop_journal(<span class="string">"\\PM"</span>, <span class="string">"Physiol. Meas."</span>)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>  def_iop_journal(<span class="string">"\\PMB"</span>, <span class="string">"Phys. Med. Biol."</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>  def_iop_journal(<span class="string">"\\PPCF"</span>, <span class="string">"Plasma Phys. Control. Fusion\\/"</span>)<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>  def_iop_journal(<span class="string">"\\PSST"</span>, <span class="string">"Plasma Sources Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>  def_iop_journal(<span class="string">"\\PUS"</span>, <span class="string">"Public Understand. Sci."</span>)<span class="question-mark">?</span>;
+<a href=#311 id=311 data-nosnippet>311</a>  def_iop_journal(<span class="string">"\\QO"</span>, <span class="string">"Quantum Opt."</span>)<span class="question-mark">?</span>;
+<a href=#312 id=312 data-nosnippet>312</a>  def_iop_journal(<span class="string">"\\QSO"</span>, <span class="string">"Quantum Semiclass. Opt."</span>)<span class="question-mark">?</span>;
+<a href=#313 id=313 data-nosnippet>313</a>  def_iop_journal(<span class="string">"\\RPP"</span>, <span class="string">"Rep. Prog. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#314 id=314 data-nosnippet>314</a>  def_iop_journal(<span class="string">"\\SLC"</span>, <span class="string">"Sov. Lightwave Commun."</span>)<span class="question-mark">?</span>;
+<a href=#315 id=315 data-nosnippet>315</a>  def_iop_journal(<span class="string">"\\SST"</span>, <span class="string">"Semicond. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#316 id=316 data-nosnippet>316</a>  def_iop_journal(<span class="string">"\\SUST"</span>, <span class="string">"Supercond. Sci. Technol."</span>)<span class="question-mark">?</span>;
+<a href=#317 id=317 data-nosnippet>317</a>  def_iop_journal(<span class="string">"\\WRM"</span>, <span class="string">"Waves Random Media\\/"</span>)<span class="question-mark">?</span>;
+<a href=#318 id=318 data-nosnippet>318</a>  def_iop_journal(<span class="string">"\\JMM"</span>, <span class="string">"J. of Michromech. and Microeng.\\/"</span>)<span class="question-mark">?</span>;
+<a href=#319 id=319 data-nosnippet>319</a>  def_iop_journal(<span class="string">"\\AC"</span>, <span class="string">"Acta Crystallogr."</span>)<span class="question-mark">?</span>;
+<a href=#320 id=320 data-nosnippet>320</a>  def_iop_journal(<span class="string">"\\AM"</span>, <span class="string">"Acta Metall."</span>)<span class="question-mark">?</span>;
+<a href=#321 id=321 data-nosnippet>321</a>  def_iop_journal(<span class="string">"\\AP"</span>, <span class="string">"Ann. Phys., Lpz."</span>)<span class="question-mark">?</span>;
+<a href=#322 id=322 data-nosnippet>322</a>  def_iop_journal(<span class="string">"\\APNY"</span>, <span class="string">"Ann. Phys., NY\\/"</span>)<span class="question-mark">?</span>;
+<a href=#323 id=323 data-nosnippet>323</a>  def_iop_journal(<span class="string">"\\APP"</span>, <span class="string">"Ann. Phys., Paris\\/"</span>)<span class="question-mark">?</span>;
+<a href=#324 id=324 data-nosnippet>324</a>  def_iop_journal(<span class="string">"\\CJP"</span>, <span class="string">"Can. J. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>  def_iop_journal(<span class="string">"\\JAP"</span>, <span class="string">"J. Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#326 id=326 data-nosnippet>326</a>  def_iop_journal(<span class="string">"\\JCP"</span>, <span class="string">"J. Chem. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>  def_iop_journal(<span class="string">"\\JJAP"</span>, <span class="string">"Japan. J. Appl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#328 id=328 data-nosnippet>328</a>  def_iop_journal(<span class="string">"\\JP"</span>, <span class="string">"J. Physique\\/"</span>)<span class="question-mark">?</span>;
+<a href=#329 id=329 data-nosnippet>329</a>  def_iop_journal(<span class="string">"\\JPhCh"</span>, <span class="string">"J. Phys. Chem."</span>)<span class="question-mark">?</span>;
+<a href=#330 id=330 data-nosnippet>330</a>  def_iop_journal(<span class="string">"\\JMMM"</span>, <span class="string">"J. Magn. Magn. Mater."</span>)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>  def_iop_journal(<span class="string">"\\JMP"</span>, <span class="string">"J. Math. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#332 id=332 data-nosnippet>332</a>  def_iop_journal(<span class="string">"\\JOSA"</span>, <span class="string">"J. Opt. Soc. Am."</span>)<span class="question-mark">?</span>;
+<a href=#333 id=333 data-nosnippet>333</a>  def_iop_journal(<span class="string">"\\JPSJ"</span>, <span class="string">"J. Phys. Soc. Japan\\/"</span>)<span class="question-mark">?</span>;
+<a href=#334 id=334 data-nosnippet>334</a>  def_iop_journal(<span class="string">"\\JQSRT"</span>, <span class="string">"J. Quant. Spectrosc. Radiat. Transfer\\/"</span>)<span class="question-mark">?</span>;
+<a href=#335 id=335 data-nosnippet>335</a>  def_iop_journal(<span class="string">"\\NC"</span>, <span class="string">"Nuovo Cimento\\/"</span>)<span class="question-mark">?</span>;
+<a href=#336 id=336 data-nosnippet>336</a>  def_iop_journal(<span class="string">"\\NIM"</span>, <span class="string">"Nucl. Instrum. Methods\\/"</span>)<span class="question-mark">?</span>;
+<a href=#337 id=337 data-nosnippet>337</a>  def_iop_journal(<span class="string">"\\NP"</span>, <span class="string">"Nucl. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#338 id=338 data-nosnippet>338</a>  def_iop_journal(<span class="string">"\\PL"</span>, <span class="string">"Phys. Lett."</span>)<span class="question-mark">?</span>;
+<a href=#339 id=339 data-nosnippet>339</a>  def_iop_journal(<span class="string">"\\PR"</span>, <span class="string">"Phys. Rev."</span>)<span class="question-mark">?</span>;
+<a href=#340 id=340 data-nosnippet>340</a>  def_iop_journal(<span class="string">"\\PRL"</span>, <span class="string">"Phys. Rev. Lett."</span>)<span class="question-mark">?</span>;
+<a href=#341 id=341 data-nosnippet>341</a>  def_iop_journal(<span class="string">"\\PRS"</span>, <span class="string">"Proc. R. Soc."</span>)<span class="question-mark">?</span>;
+<a href=#342 id=342 data-nosnippet>342</a>  def_iop_journal(<span class="string">"\\PS"</span>, <span class="string">"Phys. Scr."</span>)<span class="question-mark">?</span>;
+<a href=#343 id=343 data-nosnippet>343</a>  def_iop_journal(<span class="string">"\\PSS"</span>, <span class="string">"Phys. Status Solidi\\/"</span>)<span class="question-mark">?</span>;
+<a href=#344 id=344 data-nosnippet>344</a>  def_iop_journal(<span class="string">"\\PTRS"</span>, <span class="string">"Phil. Trans. R. Soc."</span>)<span class="question-mark">?</span>;
+<a href=#345 id=345 data-nosnippet>345</a>  def_iop_journal(<span class="string">"\\RMP"</span>, <span class="string">"Rev. Mod. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#346 id=346 data-nosnippet>346</a>  def_iop_journal(<span class="string">"\\RSI"</span>, <span class="string">"Rev. Sci. Instrum."</span>)<span class="question-mark">?</span>;
+<a href=#347 id=347 data-nosnippet>347</a>  def_iop_journal(<span class="string">"\\SSC"</span>, <span class="string">"Solid State Commun."</span>)<span class="question-mark">?</span>;
+<a href=#348 id=348 data-nosnippet>348</a>  def_iop_journal(<span class="string">"\\ZP"</span>, <span class="string">" Z. Phys."</span>)<span class="question-mark">?</span>;
+<a href=#349 id=349 data-nosnippet>349</a>  def_iop_journal(<span class="string">"\\JNE"</span>, <span class="string">"J. Neural Eng."</span>)<span class="question-mark">?</span>;
+<a href=#350 id=350 data-nosnippet>350</a>  def_iop_journal(<span class="string">"\\PB"</span>, <span class="string">"Phys. Biol."</span>)<span class="question-mark">?</span>;
+<a href=#351 id=351 data-nosnippet>351</a>  def_iop_journal(<span class="string">"\\SMS"</span>, <span class="string">"Smart Mater. Struct."</span>)<span class="question-mark">?</span>;
+<a href=#352 id=352 data-nosnippet>352</a>
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="comment">// Mystery items — Perl L335-343
+<a href=#354 id=354 data-nosnippet>354</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tqs"</span>, <span class="string">"\\hspace*{25pt}"</span>);
+<a href=#355 id=355 data-nosnippet>355</a>  def_macro_noop(<span class="string">"\\nosections"</span>)<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\indented"</span>, <span class="string">"\\itemize"</span>);
+<a href=#357 id=357 data-nosnippet>357</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endindented"</span>, <span class="string">"\\enditemize"</span>);
+<a href=#358 id=358 data-nosnippet>358</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\varindent"</span>, <span class="string">"\\itemize"</span>);
+<a href=#359 id=359 data-nosnippet>359</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endvarindent"</span>, <span class="string">"\\enditemize"</span>);
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nonum"</span>, <span class="string">"\\par"</span>);
+<a href=#361 id=361 data-nosnippet>361</a>});
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["test"]};
+window.SIDEBAR_ITEMS = {"mod":["preset","test"]};

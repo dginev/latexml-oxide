@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Whatsout"],"fn":["get_embeddable","get_math","serialize_whatsout"]};

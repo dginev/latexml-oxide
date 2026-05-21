@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/algorithm2e_sty.rs`."><title>algorithm2e_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>algorithm2e_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! algorithm2e.sty — Algorithm typesetting package
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/algorithm2e_sty.rs`."><title>algorithm2e_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>algorithm2e_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! algorithm2e.sty — Algorithm typesetting package
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: algorithm2e.sty.ltxml — complex package with custom line management
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -68,8 +68,8 @@
 <a href=#68 id=68 data-nosnippet>68</a>  state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\endalgorithm2e*"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\endalgorithm"</span>), <span class="prelude-val">None</span>);
 <a href=#69 id=69 data-nosnippet>69</a>
 <a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@parbox[]{}{}"</span>, <span class="string">"#3"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@strut SkipMatch:\\par"</span>, <span class="string">""</span>);
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@marker{}"</span>, <span class="string">""</span>);
+<a href=#71 id=71 data-nosnippet>71</a>  def_macro_noop(<span class="string">"\\lx@algo@strut SkipMatch:\\par"</span>)<span class="question-mark">?</span>;
+<a href=#72 id=72 data-nosnippet>72</a>  def_macro_noop(<span class="string">"\\@marker{}"</span>)<span class="question-mark">?</span>;
 <a href=#73 id=73 data-nosnippet>73</a>
 <a href=#74 id=74 data-nosnippet>74</a>  <span class="comment">// Par dedup — Perl L109-116
 <a href=#75 id=75 data-nosnippet>75</a>  // Conditional that prevents double-\par from producing blank lines.
@@ -86,7 +86,7 @@
 <a href=#86 id=86 data-nosnippet>86</a>  // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
 <a href=#87 id=87 data-nosnippet>87</a>  // flags the single L82 entry.
 <a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@lx@algo@par SkipSpaces"</span>);
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@setpar"</span>, <span class="string">""</span>);
+<a href=#89 id=89 data-nosnippet>89</a>  def_macro_noop(<span class="string">"\\lx@algo@setpar"</span>)<span class="question-mark">?</span>;
 <a href=#90 id=90 data-nosnippet>90</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@newpar{}{}"</span>, <span class="string">"#2"</span>);
 <a href=#91 id=91 data-nosnippet>91</a>
 <a href=#92 id=92 data-nosnippet>92</a>  <span class="comment">// Par management — Perl L113-116
@@ -148,20 +148,29 @@
 <a href=#148 id=148 data-nosnippet>148</a>  <span class="comment">// Line start/end — Perl L170-178, L180-190
 <a href=#149 id=149 data-nosnippet>149</a>  // Perl uses \lx@prepend@indentation at endline to prepend indentation via DOM manipulation.
 <a href=#150 id=150 data-nosnippet>150</a>  // Rust emits indentation at startline instead (same visual effect, avoids DOM manipulation).
-<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@algo@@startline"</span>, <span class="string">"&lt;ltx:listingline xml:id='#id'&gt;"</span>);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@algo@@endline"</span>, <span class="string">"&lt;/ltx:listingline&gt;"</span>);
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@startline"</span>, <span class="string">"\\lx@algo@@startline\\the\\lx@algo@indentation"</span>);
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@endline"</span>, <span class="string">"\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline"</span>);
-<a href=#155 id=155 data-nosnippet>155</a>
-<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// Indentation prepending — Perl L197-198
-<a href=#157 id=157 data-nosnippet>157</a>  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
-<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@prepend@indentation"</span>, <span class="string">"\\lx@prepend@indentation@{\\the\\lx@algo@indentation}"</span>);
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@prepend@indentation@{}"</span>, <span class="string">""</span>);
-<a href=#160 id=160 data-nosnippet>160</a>
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// Line numbering — Perl L195, L210-221
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\algocf@printnl{}"</span>, <span class="string">"&lt;ltx:tags&gt;&lt;ltx:tag&gt;#1&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;"</span>);
-<a href=#163 id=163 data-nosnippet>163</a>
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="comment">// Strip trailing pars — Perl L141-145
-<a href=#165 id=165 data-nosnippet>165</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@strippar{}"</span>, <span class="string">"#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>});
+<a href=#151 id=151 data-nosnippet>151</a>  // Auto-close any currently-open listingline before opening a new one. Witness
+<a href=#152 id=152 data-nosnippet>152</a>  // 2310.15766 (wacv+algorithm2e): the env template wraps `#body` in an outer
+<a href=#153 id=153 data-nosnippet>153</a>  // `&lt;ltx:listingline&gt;`, and the body's first `\lx@algo@@startline` then tried
+<a href=#154 id=154 data-nosnippet>154</a>  // to open a NESTED listingline → "ltx:listingline isn't allowed in
+<a href=#155 id=155 data-nosnippet>155</a>  // &lt;ltx:listingline&gt;" error cascade. algorithmicx_sty does the same close at
+<a href=#156 id=156 data-nosnippet>156</a>  // its endlist; this is the symmetric guard for algorithm2e.
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@algo@@startline"</span>, <span class="string">"&lt;ltx:listingline xml:id='#id'&gt;"</span>,
+<a href=#158 id=158 data-nosnippet>158</a>    before_construct =&gt; sub[document] {
+<a href=#159 id=159 data-nosnippet>159</a>      document.maybe_close_element(<span class="string">"ltx:listingline"</span>)<span class="question-mark">?</span>;
+<a href=#160 id=160 data-nosnippet>160</a>    });
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@algo@@endline"</span>, <span class="string">"&lt;/ltx:listingline&gt;"</span>);
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@startline"</span>, <span class="string">"\\lx@algo@@startline\\the\\lx@algo@indentation"</span>);
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@algo@endline"</span>, <span class="string">"\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline"</span>);
+<a href=#164 id=164 data-nosnippet>164</a>
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="comment">// Indentation prepending — Perl L197-198
+<a href=#166 id=166 data-nosnippet>166</a>  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
+<a href=#167 id=167 data-nosnippet>167</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@prepend@indentation"</span>, <span class="string">"\\lx@prepend@indentation@{\\the\\lx@algo@indentation}"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@prepend@indentation@{}"</span>, <span class="string">""</span>);
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// Line numbering — Perl L195, L210-221
+<a href=#171 id=171 data-nosnippet>171</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\algocf@printnl{}"</span>, <span class="string">"&lt;ltx:tags&gt;&lt;ltx:tag&gt;#1&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;"</span>);
+<a href=#172 id=172 data-nosnippet>172</a>
+<a href=#173 id=173 data-nosnippet>173</a>  <span class="comment">// Strip trailing pars — Perl L141-145
+<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@strippar{}"</span>, <span class="string">"#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>});
 </code></pre></div></section></main></body></html>

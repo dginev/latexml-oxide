@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/beamer_cls.rs`."><title>beamer_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>beamer_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! beamer.cls — Minimal stubs for beamer presentation class
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/beamer_cls.rs`."><title>beamer_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>beamer_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! beamer.cls — Minimal stubs for beamer presentation class
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: beamer.cls.ltxml (1364 lines)
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Provides enough definitions for the beamer test to pass without loading
@@ -30,11 +30,11 @@
 <a href=#30 id=30 data-nosnippet>30</a>  // "always-true" branch (first arg, or body) — faithful to what a
 <a href=#31 id=31 data-nosnippet>31</a>  // reader expects from beamer slides printed as a continuous
 <a href=#32 id=32 data-nosnippet>32</a>  // document. See Perl L793-834 for the full overlay/pause machinery.
-<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\only{}"</span>, <span class="string">"#1"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\onslide"</span>, <span class="string">""</span>);
+<a href=#33 id=33 data-nosnippet>33</a>  </span>def_macro_identity(<span class="string">"\\only{}"</span>)<span class="question-mark">?</span>;
+<a href=#34 id=34 data-nosnippet>34</a>  def_macro_noop(<span class="string">"\\onslide"</span>)<span class="question-mark">?</span>;
 <a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\temporal{}{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pause"</span>, <span class="string">""</span>);
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\alt{}{}"</span>, <span class="string">"#1"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>  def_macro_noop(<span class="string">"\\pause"</span>)<span class="question-mark">?</span>;
+<a href=#37 id=37 data-nosnippet>37</a>  def_macro_identity(<span class="string">"\\alt{}{}"</span>)<span class="question-mark">?</span>;
 <a href=#38 id=38 data-nosnippet>38</a>
 <a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// Perl beamer.cls.ltxml L796-798 dispatches \visible/\uncover/
 <a href=#40 id=40 data-nosnippet>40</a>  // \invisible via \alt to the \beamer@{visible,uncovered,…}
@@ -43,9 +43,9 @@
 <a href=#43 id=43 data-nosnippet>43</a>  // hasn't ported. Keep the body-passthrough stubs for now — the
 <a href=#44 id=44 data-nosnippet>44</a>  // markers below are still defined and usable directly by advanced
 <a href=#45 id=45 data-nosnippet>45</a>  // beamer styles that invoke them without angle-spec preprocessing.
-<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\visible{}"</span>,   <span class="string">"#1"</span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\uncover{}"</span>,   <span class="string">"#1"</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\invisible{}"</span>, <span class="string">"#1"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  </span>def_macro_identity(<span class="string">"\\visible{}"</span>)<span class="question-mark">?</span>;
+<a href=#47 id=47 data-nosnippet>47</a>  def_macro_identity(<span class="string">"\\uncover{}"</span>)<span class="question-mark">?</span>;
+<a href=#48 id=48 data-nosnippet>48</a>  def_macro_identity(<span class="string">"\\invisible{}"</span>)<span class="question-mark">?</span>;
 <a href=#49 id=49 data-nosnippet>49</a>
 <a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\beamer@visible{}"</span>,   <span class="string">"\\beamer@visible@begin{#1}\\beamer@visible@end"</span>);
 <a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\beamer@visible@begin"</span>, <span class="string">"&lt;ltx:inline-block class='ltx_visible'&gt;"</span>);
@@ -70,7 +70,7 @@
 <a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// Frame structure
 <a href=#71 id=71 data-nosnippet>71</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\frametitle OptionalMatch:&lt;&gt; []{}"</span>,
 <a href=#72 id=72 data-nosnippet>72</a>    <span class="string">"\\par\\textbf{#3}\\par"</span>);
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\framesubtitle OptionalMatch:&lt;&gt; {}"</span>, <span class="string">""</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  def_macro_noop(<span class="string">"\\framesubtitle OptionalMatch:&lt;&gt; {}"</span>)<span class="question-mark">?</span>;
 <a href=#74 id=74 data-nosnippet>74</a>
 <a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">// Perl beamer.cls.ltxml L961-963: internal frame title constructors
 <a href=#76 id=76 data-nosnippet>76</a>  // that \frame@ / \beamer@frame@replay invoke to lift title/subtitle
@@ -89,10 +89,10 @@
 <a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"^&lt;ltx:subtitle class='ltx_frame_subtitle'&gt;#1&lt;/ltx:subtitle&gt;"</span>);
 <a href=#90 id=90 data-nosnippet>90</a>
 <a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// Insert counters
-<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\insertframenumber"</span>, <span class="string">""</span>);
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertslidenumber"</span>, <span class="string">""</span>);
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertpagenumber"</span>, <span class="string">""</span>);
-<a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertoverlaynumber"</span>, <span class="string">""</span>);
+<a href=#92 id=92 data-nosnippet>92</a>  </span>def_macro_noop(<span class="string">"\\insertframenumber"</span>)<span class="question-mark">?</span>;
+<a href=#93 id=93 data-nosnippet>93</a>  def_macro_noop(<span class="string">"\\insertslidenumber"</span>)<span class="question-mark">?</span>;
+<a href=#94 id=94 data-nosnippet>94</a>  def_macro_noop(<span class="string">"\\insertpagenumber"</span>)<span class="question-mark">?</span>;
+<a href=#95 id=95 data-nosnippet>95</a>  def_macro_noop(<span class="string">"\\insertoverlaynumber"</span>)<span class="question-mark">?</span>;
 <a href=#96 id=96 data-nosnippet>96</a>
 <a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// Overlay environments
 <a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{onlyenv}"</span>, <span class="string">"#body"</span>);
@@ -116,180 +116,188 @@
 <a href=#116 id=116 data-nosnippet>116</a>  <span class="comment">// Columns environment — Perl L1230-1240 beamerbaseboxes.sty
 <a href=#117 id=117 data-nosnippet>117</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{columns} OptionalMatch:&lt;&gt; []"</span>, <span class="string">"#body"</span>);
 <a href=#118 id=118 data-nosnippet>118</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{column} OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"#body"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\column OptionalMatch:&lt;&gt; {}"</span>, <span class="string">""</span>);
+<a href=#119 id=119 data-nosnippet>119</a>  def_macro_noop(<span class="string">"\\column OptionalMatch:&lt;&gt; {}"</span>)<span class="question-mark">?</span>;
 <a href=#120 id=120 data-nosnippet>120</a>
 <a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// Title page macros — Perl L1010-1035
 <a href=#122 id=122 data-nosnippet>122</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\institute OptionalMatch:&lt;&gt; []{}"</span>, <span class="string">"\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}"</span>);
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\logo{}"</span>, <span class="string">""</span>);
-<a href=#124 id=124 data-nosnippet>124</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlegraphic{}"</span>, <span class="string">""</span>);
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlepage"</span>, <span class="string">"\\maketitle"</span>);
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertauthor"</span>, <span class="string">""</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\inserttitle"</span>, <span class="string">""</span>);
-<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubtitle"</span>, <span class="string">""</span>);
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertdate"</span>, <span class="string">""</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertinstitute"</span>, <span class="string">""</span>);
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshortauthor[]"</span>, <span class="string">""</span>);
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshortdate[]"</span>, <span class="string">""</span>);
-<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshortinstitute[]"</span>, <span class="string">""</span>);
-<a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshorttitle[]"</span>, <span class="string">""</span>);
-<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshortpart[]"</span>, <span class="string">""</span>);
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertshortsubtitle[]"</span>, <span class="string">""</span>);
-<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\inserttotalframenumber"</span>, <span class="string">""</span>);
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertmainframenumber"</span>, <span class="string">""</span>);
-<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertappendixframenumber"</span>, <span class="string">""</span>);
-<a href=#140 id=140 data-nosnippet>140</a>
-<a href=#141 id=141 data-nosnippet>141</a>  <span class="comment">// Perl L1013-1045 beamerTODO navigation + page-range \insert*s.
-<a href=#142 id=142 data-nosnippet>142</a>  // All are stomach-time no-ops under Rust's continuous-document
-<a href=#143 id=143 data-nosnippet>143</a>  // rendering (beamer's slide-tracking state machine is not ported).
-<a href=#144 id=144 data-nosnippet>144</a>  // Shipping the stubs prevents undefined-CS errors in beamer themes
-<a href=#145 id=145 data-nosnippet>145</a>  // that reference them via `\setbeamertemplate{footline}` bodies.
-<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\insertnavigation{}"</span>, <span class="string">""</span>);
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsectionnavigation{}"</span>, <span class="string">""</span>);
-<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsectionnavigationhorizontal{}{}{}"</span>, <span class="string">""</span>);
-<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsectionnavigation{}"</span>, <span class="string">""</span>);
-<a href=#150 id=150 data-nosnippet>150</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsectionnavigationhorizontal{}{}{}"</span>, <span class="string">""</span>);
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertverticalnavigation{}"</span>, <span class="string">""</span>);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsection"</span>, <span class="string">""</span>);
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsubsection"</span>, <span class="string">""</span>);
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertframestartpage"</span>, <span class="string">""</span>);
-<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertframeendpage"</span>, <span class="string">""</span>);
-<a href=#156 id=156 data-nosnippet>156</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsectionstartpage"</span>, <span class="string">""</span>);
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsubsectionendpage"</span>, <span class="string">""</span>);
-<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsectionstartpage"</span>, <span class="string">""</span>);
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertsectionendpage"</span>, <span class="string">""</span>);
-<a href=#160 id=160 data-nosnippet>160</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertpartstartpage"</span>, <span class="string">""</span>);
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertpartendpage"</span>, <span class="string">""</span>);
-<a href=#162 id=162 data-nosnippet>162</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertpresentationstartpage"</span>, <span class="string">""</span>);
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertpresentationendpage"</span>, <span class="string">""</span>);
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertappendixstartpage"</span>, <span class="string">""</span>);
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertappendixendpage"</span>, <span class="string">""</span>);
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertdocumentstartpage"</span>, <span class="string">""</span>);
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\insertdocumentendpage"</span>, <span class="string">""</span>);
-<a href=#168 id=168 data-nosnippet>168</a>
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="comment">// Theme commands — Perl L1246-1253
-<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\usetheme[]{}"</span>, <span class="string">""</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\usecolortheme[]{}"</span>, <span class="string">""</span>);
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\usefonttheme[]{}"</span>, <span class="string">""</span>);
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\useinnertheme[]{}"</span>, <span class="string">""</span>);
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\useoutertheme[]{}"</span>, <span class="string">""</span>);
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamertemplate{}{}"</span>, <span class="string">""</span>);
-<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamercolor{}{}"</span>, <span class="string">""</span>);
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamerfont{}{}"</span>, <span class="string">""</span>);
-<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamersize{}"</span>, <span class="string">""</span>);
-<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamercovered{}"</span>, <span class="string">""</span>);
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\addtobeamertemplate{}{}{}"</span>, <span class="string">""</span>);
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\defbeamertemplate OptionalMatch:* {}{}{}"</span>, <span class="string">""</span>);
-<a href=#182 id=182 data-nosnippet>182</a>
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="comment">// Navigation/footline/headline — no-ops
-<a href=#184 id=184 data-nosnippet>184</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\beamertemplatenavigationsymbolsempty"</span>, <span class="string">""</span>);
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setbeamercolor*{}{}"</span>, <span class="string">""</span>);
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\hypersetup{}"</span>, <span class="string">""</span>);
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// \logo{content} and \titlegraphic{content} typically wrap
+<a href=#124 id=124 data-nosnippet>124</a>  // \includegraphics or similar visual content. Surpass Perl
+<a href=#125 id=125 data-nosnippet>125</a>  // (which doesn't define them) by routing to ltx:note so any
+<a href=#126 id=126 data-nosnippet>126</a>  // \includegraphics inside resolves and the graphic is preserved.
+<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\logo{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=logo]{#1}"</span>);
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlegraphic{}"</span>,
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlegraphic]{#1}"</span>);
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\titlepage"</span>, <span class="string">"\\maketitle"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>  def_macro_noop(<span class="string">"\\insertauthor"</span>)<span class="question-mark">?</span>;
+<a href=#132 id=132 data-nosnippet>132</a>  def_macro_noop(<span class="string">"\\inserttitle"</span>)<span class="question-mark">?</span>;
+<a href=#133 id=133 data-nosnippet>133</a>  def_macro_noop(<span class="string">"\\insertsubtitle"</span>)<span class="question-mark">?</span>;
+<a href=#134 id=134 data-nosnippet>134</a>  def_macro_noop(<span class="string">"\\insertdate"</span>)<span class="question-mark">?</span>;
+<a href=#135 id=135 data-nosnippet>135</a>  def_macro_noop(<span class="string">"\\insertinstitute"</span>)<span class="question-mark">?</span>;
+<a href=#136 id=136 data-nosnippet>136</a>  def_macro_noop(<span class="string">"\\insertshortauthor[]"</span>)<span class="question-mark">?</span>;
+<a href=#137 id=137 data-nosnippet>137</a>  def_macro_noop(<span class="string">"\\insertshortdate[]"</span>)<span class="question-mark">?</span>;
+<a href=#138 id=138 data-nosnippet>138</a>  def_macro_noop(<span class="string">"\\insertshortinstitute[]"</span>)<span class="question-mark">?</span>;
+<a href=#139 id=139 data-nosnippet>139</a>  def_macro_noop(<span class="string">"\\insertshorttitle[]"</span>)<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>  def_macro_noop(<span class="string">"\\insertshortpart[]"</span>)<span class="question-mark">?</span>;
+<a href=#141 id=141 data-nosnippet>141</a>  def_macro_noop(<span class="string">"\\insertshortsubtitle[]"</span>)<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>  def_macro_noop(<span class="string">"\\inserttotalframenumber"</span>)<span class="question-mark">?</span>;
+<a href=#143 id=143 data-nosnippet>143</a>  def_macro_noop(<span class="string">"\\insertmainframenumber"</span>)<span class="question-mark">?</span>;
+<a href=#144 id=144 data-nosnippet>144</a>  def_macro_noop(<span class="string">"\\insertappendixframenumber"</span>)<span class="question-mark">?</span>;
+<a href=#145 id=145 data-nosnippet>145</a>
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// Perl L1013-1045 beamerTODO navigation + page-range \insert*s.
+<a href=#147 id=147 data-nosnippet>147</a>  // All are stomach-time no-ops under Rust's continuous-document
+<a href=#148 id=148 data-nosnippet>148</a>  // rendering (beamer's slide-tracking state machine is not ported).
+<a href=#149 id=149 data-nosnippet>149</a>  // Shipping the stubs prevents undefined-CS errors in beamer themes
+<a href=#150 id=150 data-nosnippet>150</a>  // that reference them via `\setbeamertemplate{footline}` bodies.
+<a href=#151 id=151 data-nosnippet>151</a>  </span>def_macro_noop(<span class="string">"\\insertnavigation{}"</span>)<span class="question-mark">?</span>;
+<a href=#152 id=152 data-nosnippet>152</a>  def_macro_noop(<span class="string">"\\insertsectionnavigation{}"</span>)<span class="question-mark">?</span>;
+<a href=#153 id=153 data-nosnippet>153</a>  def_macro_noop(<span class="string">"\\insertsectionnavigationhorizontal{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#154 id=154 data-nosnippet>154</a>  def_macro_noop(<span class="string">"\\insertsubsectionnavigation{}"</span>)<span class="question-mark">?</span>;
+<a href=#155 id=155 data-nosnippet>155</a>  def_macro_noop(<span class="string">"\\insertsubsectionnavigationhorizontal{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#156 id=156 data-nosnippet>156</a>  def_macro_noop(<span class="string">"\\insertverticalnavigation{}"</span>)<span class="question-mark">?</span>;
+<a href=#157 id=157 data-nosnippet>157</a>  def_macro_noop(<span class="string">"\\insertsubsection"</span>)<span class="question-mark">?</span>;
+<a href=#158 id=158 data-nosnippet>158</a>  def_macro_noop(<span class="string">"\\insertsubsubsection"</span>)<span class="question-mark">?</span>;
+<a href=#159 id=159 data-nosnippet>159</a>  def_macro_noop(<span class="string">"\\insertframestartpage"</span>)<span class="question-mark">?</span>;
+<a href=#160 id=160 data-nosnippet>160</a>  def_macro_noop(<span class="string">"\\insertframeendpage"</span>)<span class="question-mark">?</span>;
+<a href=#161 id=161 data-nosnippet>161</a>  def_macro_noop(<span class="string">"\\insertsubsectionstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#162 id=162 data-nosnippet>162</a>  def_macro_noop(<span class="string">"\\insertsubsectionendpage"</span>)<span class="question-mark">?</span>;
+<a href=#163 id=163 data-nosnippet>163</a>  def_macro_noop(<span class="string">"\\insertsectionstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#164 id=164 data-nosnippet>164</a>  def_macro_noop(<span class="string">"\\insertsectionendpage"</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  def_macro_noop(<span class="string">"\\insertpartstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#166 id=166 data-nosnippet>166</a>  def_macro_noop(<span class="string">"\\insertpartendpage"</span>)<span class="question-mark">?</span>;
+<a href=#167 id=167 data-nosnippet>167</a>  def_macro_noop(<span class="string">"\\insertpresentationstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#168 id=168 data-nosnippet>168</a>  def_macro_noop(<span class="string">"\\insertpresentationendpage"</span>)<span class="question-mark">?</span>;
+<a href=#169 id=169 data-nosnippet>169</a>  def_macro_noop(<span class="string">"\\insertappendixstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#170 id=170 data-nosnippet>170</a>  def_macro_noop(<span class="string">"\\insertappendixendpage"</span>)<span class="question-mark">?</span>;
+<a href=#171 id=171 data-nosnippet>171</a>  def_macro_noop(<span class="string">"\\insertdocumentstartpage"</span>)<span class="question-mark">?</span>;
+<a href=#172 id=172 data-nosnippet>172</a>  def_macro_noop(<span class="string">"\\insertdocumentendpage"</span>)<span class="question-mark">?</span>;
+<a href=#173 id=173 data-nosnippet>173</a>
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="comment">// Theme commands — Perl L1246-1253
+<a href=#175 id=175 data-nosnippet>175</a>  </span>def_macro_noop(<span class="string">"\\usetheme[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#176 id=176 data-nosnippet>176</a>  def_macro_noop(<span class="string">"\\usecolortheme[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#177 id=177 data-nosnippet>177</a>  def_macro_noop(<span class="string">"\\usefonttheme[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#178 id=178 data-nosnippet>178</a>  def_macro_noop(<span class="string">"\\useinnertheme[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#179 id=179 data-nosnippet>179</a>  def_macro_noop(<span class="string">"\\useoutertheme[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#180 id=180 data-nosnippet>180</a>  def_macro_noop(<span class="string">"\\setbeamertemplate{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#181 id=181 data-nosnippet>181</a>  def_macro_noop(<span class="string">"\\setbeamercolor{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#182 id=182 data-nosnippet>182</a>  def_macro_noop(<span class="string">"\\setbeamerfont{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#183 id=183 data-nosnippet>183</a>  def_macro_noop(<span class="string">"\\setbeamersize{}"</span>)<span class="question-mark">?</span>;
+<a href=#184 id=184 data-nosnippet>184</a>  def_macro_noop(<span class="string">"\\setbeamercovered{}"</span>)<span class="question-mark">?</span>;
+<a href=#185 id=185 data-nosnippet>185</a>  def_macro_noop(<span class="string">"\\addtobeamertemplate{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#186 id=186 data-nosnippet>186</a>  def_macro_noop(<span class="string">"\\defbeamertemplate OptionalMatch:* {}{}{}"</span>)<span class="question-mark">?</span>;
 <a href=#187 id=187 data-nosnippet>187</a>
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Beamer list environments — Perl L1160-1179
-<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{itemize} OptionalMatch:&lt;&gt;"</span>,
-<a href=#190 id=190 data-nosnippet>190</a>    <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
-<a href=#191 id=191 data-nosnippet>191</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate} OptionalMatch:&lt;&gt; []"</span>,
-<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
-<a href=#194 id=194 data-nosnippet>194</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// Perl beamer.cls.ltxml L1174-1179: description's \item[label] renders
-<a href=#196 id=196 data-nosnippet>196</a>  // labels via \makelabel which beamer rebinds to \descriptionlabel
-<a href=#197 id=197 data-nosnippet>197</a>  // (defined in ams_support_sty:188 as bold+space). Same pattern
-<a href=#198 id=198 data-nosnippet>198</a>  // enumitem_sty:444 and ieeetran_cls:287 use.
-<a href=#199 id=199 data-nosnippet>199</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{description} OptionalMatch:&lt;&gt;"</span>,
-<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
-<a href=#201 id=201 data-nosnippet>201</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\makelabel"</span>, <span class="string">"\\descriptionlabel"</span>); },
-<a href=#202 id=202 data-nosnippet>202</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#203 id=203 data-nosnippet>203</a>
-<a href=#204 id=204 data-nosnippet>204</a>  <span class="comment">// Theorems — Perl L1193-1230
-<a href=#205 id=205 data-nosnippet>205</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">// Perl beamer.cls.ltxml L1201-1239: theorem + German-compat envs.
-<a href=#209 id=209 data-nosnippet>209</a>  // `\translate{}` is an identity pass-through in Rust, so bare English
-<a href=#210 id=210 data-nosnippet>210</a>  // names match Perl's expansion.
-<a href=#211 id=211 data-nosnippet>211</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
-<a href=#212 id=212 data-nosnippet>212</a>\newcommand{\ExampleInline}[1]{\translate{Example}: \ignorespaces#1}
-<a href=#213 id=213 data-nosnippet>213</a>\newcommand{\BeispielInline}[1]{Beispiel: \ignorespaces#1}
-<a href=#214 id=214 data-nosnippet>214</a>\newtheorem{theorem}{Theorem}
-<a href=#215 id=215 data-nosnippet>215</a>\newtheorem{corollary}[theorem]{Corollary}
-<a href=#216 id=216 data-nosnippet>216</a>\newtheorem{fact}[theorem]{Fact}
-<a href=#217 id=217 data-nosnippet>217</a>\newtheorem{lemma}[theorem]{Lemma}
-<a href=#218 id=218 data-nosnippet>218</a>\newtheorem{problem}[theorem]{Problem}
-<a href=#219 id=219 data-nosnippet>219</a>\newtheorem{solution}[theorem]{Solution}
-<a href=#220 id=220 data-nosnippet>220</a>\newtheorem{definition}[theorem]{Definition}
-<a href=#221 id=221 data-nosnippet>221</a>\newtheorem{definitions}[theorem]{Definitions}
-<a href=#222 id=222 data-nosnippet>222</a>\newtheorem{example}[theorem]{Example}
-<a href=#223 id=223 data-nosnippet>223</a>\newtheorem{examples}[theorem]{Examples}
-<a href=#224 id=224 data-nosnippet>224</a>\newtheorem{Beispiel}[theorem]{Beispiel}
-<a href=#225 id=225 data-nosnippet>225</a>\newtheorem{Beispiele}[theorem]{Beispiele}
-<a href=#226 id=226 data-nosnippet>226</a>\newtheorem{Loesung}[theorem]{L\"osung}
-<a href=#227 id=227 data-nosnippet>227</a>\newtheorem{Satz}[theorem]{Satz}
-<a href=#228 id=228 data-nosnippet>228</a>\newtheorem{Folgerung}[theorem]{Folgerung}
-<a href=#229 id=229 data-nosnippet>229</a>\newtheorem{Fakt}[theorem]{Fakt}
-<a href=#230 id=230 data-nosnippet>230</a>\newenvironment{Beweis}{\begin{proof}[Beweis.]}{\end{proof}}
-<a href=#231 id=231 data-nosnippet>231</a>\newenvironment{Lemma}{\begin{lemma}}{\end{lemma}}
-<a href=#232 id=232 data-nosnippet>232</a>\newenvironment{Proof}{\begin{proof}}{\end{proof}}
-<a href=#233 id=233 data-nosnippet>233</a>\newenvironment{Theorem}{\begin{theorem}}{\end{theorem}}
-<a href=#234 id=234 data-nosnippet>234</a>\newenvironment{Problem}{\begin{problem}}{\end{problem}}
-<a href=#235 id=235 data-nosnippet>235</a>\newenvironment{Corollary}{\begin{corollary}}{\end{corollary}}
-<a href=#236 id=236 data-nosnippet>236</a>\newenvironment{Example}{\begin{example}}{\end{example}}
-<a href=#237 id=237 data-nosnippet>237</a>\newenvironment{Examples}{\begin{examples}}{\end{examples}}
-<a href=#238 id=238 data-nosnippet>238</a>\newenvironment{Definition}{\begin{definition}}{\end{definition}}
-<a href=#239 id=239 data-nosnippet>239</a>"#</span>);
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pushQED{}"</span>, <span class="string">""</span>);
-<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\popQED"</span>, <span class="string">""</span>);
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\qedhere"</span>, <span class="string">""</span>);
-<a href=#243 id=243 data-nosnippet>243</a>
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="comment">// Mode commands — Perl L448-460
-<a href=#245 id=245 data-nosnippet>245</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mode OptionalMatch:* {}"</span>, <span class="string">""</span>);
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mode&lt;&gt;{}"</span>, <span class="string">""</span>);
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="comment">// Perl L493-495: \presentation / \article / \common route to
-<a href=#248 id=248 data-nosnippet>248</a>  // \mode&lt;…&gt;. Since the Rust \mode dispatcher is already a no-op for
-<a href=#249 id=249 data-nosnippet>249</a>  // all overlay modes, the three become empty stubs. Including them
-<a href=#250 id=250 data-nosnippet>250</a>  // keeps preamble-level `\mode&lt;all&gt;` equivalents (from example
-<a href=#251 id=251 data-nosnippet>251</a>  // beamer style files) from throwing undefined-CS errors.
-<a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\presentation"</span>, <span class="string">""</span>);
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\common"</span>,       <span class="string">""</span>);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">// `\article` would clash with LaTeX `\article` docclass naming in
-<a href=#255 id=255 data-nosnippet>255</a>  // principle, but LaTeXML's catcode + class-file routing keeps the
-<a href=#256 id=256 data-nosnippet>256</a>  // control sequence distinct from the class name string. Perl ships
-<a href=#257 id=257 data-nosnippet>257</a>  // this alias unconditionally.
-<a href=#258 id=258 data-nosnippet>258</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\article"</span>,      <span class="string">""</span>);
-<a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="comment">// Perl L414-416: beamer TODO CSes (expand to warnings under Perl;
-<a href=#261 id=261 data-nosnippet>261</a>  // Rust matches by absorbing args and emitting nothing — same
-<a href=#262 id=262 data-nosnippet>262</a>  // behaviour for slide-order rendering without the beamerTODO warning.
-<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\jobnamebeamerversion{}"</span>,   <span class="string">""</span>);
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\includeslide{}"</span>,           <span class="string">""</span>);
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setjobnamebeamerversion"</span>,  <span class="string">""</span>);
-<a href=#266 id=266 data-nosnippet>266</a>
-<a href=#267 id=267 data-nosnippet>267</a>  <span class="comment">// Misc commands
-<a href=#268 id=268 data-nosnippet>268</a>  // Perl beamer.cls.ltxml L810-813 wraps \alert in \alertenv which threads
-<a href=#269 id=269 data-nosnippet>269</a>  // through \beamer@alerted@begin/end (inline-block markers defined
-<a href=#270 id=270 data-nosnippet>270</a>  // above). Routing through those requires BeamerAngled overlay parsing
-<a href=#271 id=271 data-nosnippet>271</a>  // (unported), so keep the \textbf fallback — the markers remain defined
-<a href=#272 id=272 data-nosnippet>272</a>  // and usable directly by styles that invoke them without angle-spec.
-<a href=#273 id=273 data-nosnippet>273</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\alert OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"\\textbf{#2}"</span>);
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\structure OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"#2"</span>);
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emph OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"\\textit{#2}"</span>);
-<a href=#276 id=276 data-nosnippet>276</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AtBeginSection[]{}"</span>, <span class="string">""</span>);
-<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AtBeginSubsection[]{}"</span>, <span class="string">""</span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AtBeginPart[]{}"</span>, <span class="string">""</span>);
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lecture{}{}"</span>, <span class="string">""</span>);
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\againframe OptionalMatch:&lt;&gt; []{}"</span>, <span class="string">""</span>);
-<a href=#281 id=281 data-nosnippet>281</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">""</span>);
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\note OptionalMatch:&lt;&gt; []{}"</span>, <span class="string">""</span>);
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\beamerdefaultoverlayspecification{}"</span>, <span class="string">""</span>);
-<a href=#284 id=284 data-nosnippet>284</a>
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">// Translation stubs
-<a href=#286 id=286 data-nosnippet>286</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\translate{}"</span>, <span class="string">"#1"</span>);
-<a href=#287 id=287 data-nosnippet>287</a>
-<a href=#288 id=288 data-nosnippet>288</a>  <span class="comment">// Color-related
-<a href=#289 id=289 data-nosnippet>289</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\usebeamercolor OptionalMatch:* {}"</span>, <span class="string">""</span>);
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">// Hyperlink
-<a href=#292 id=292 data-nosnippet>292</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hyperlink{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\hypertarget{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#294 id=294 data-nosnippet>294</a>});
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Navigation/footline/headline — no-ops
+<a href=#189 id=189 data-nosnippet>189</a>  </span>def_macro_noop(<span class="string">"\\beamertemplatenavigationsymbolsempty"</span>)<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>  def_macro_noop(<span class="string">"\\setbeamercolor*{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#191 id=191 data-nosnippet>191</a>  def_macro_noop(<span class="string">"\\hypersetup{}"</span>)<span class="question-mark">?</span>;
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// Beamer list environments — Perl L1160-1179
+<a href=#194 id=194 data-nosnippet>194</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{itemize} OptionalMatch:&lt;&gt;"</span>,
+<a href=#195 id=195 data-nosnippet>195</a>    <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
+<a href=#196 id=196 data-nosnippet>196</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate} OptionalMatch:&lt;&gt; []"</span>,
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
+<a href=#199 id=199 data-nosnippet>199</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// Perl beamer.cls.ltxml L1174-1179: description's \item[label] renders
+<a href=#201 id=201 data-nosnippet>201</a>  // labels via \makelabel which beamer rebinds to \descriptionlabel
+<a href=#202 id=202 data-nosnippet>202</a>  // (defined in ams_support_sty:188 as bold+space). Same pattern
+<a href=#203 id=203 data-nosnippet>203</a>  // enumitem_sty:444 and ieeetran_cls:287 use.
+<a href=#204 id=204 data-nosnippet>204</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{description} OptionalMatch:&lt;&gt;"</span>,
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="string">"&lt;ltx:description xml:id='#id'&gt;#body&lt;/ltx:description&gt;"</span>,
+<a href=#206 id=206 data-nosnippet>206</a>    before_digest =&gt; { <span class="macro">Let!</span>(<span class="string">"\\makelabel"</span>, <span class="string">"\\descriptionlabel"</span>); },
+<a href=#207 id=207 data-nosnippet>207</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#208 id=208 data-nosnippet>208</a>
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="comment">// Theorems — Perl L1193-1230
+<a href=#210 id=210 data-nosnippet>210</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="comment">// Perl beamer.cls.ltxml L1201-1239: theorem + German-compat envs.
+<a href=#214 id=214 data-nosnippet>214</a>  // `\translate{}` is an identity pass-through in Rust, so bare English
+<a href=#215 id=215 data-nosnippet>215</a>  // names match Perl's expansion.
+<a href=#216 id=216 data-nosnippet>216</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r#"
+<a href=#217 id=217 data-nosnippet>217</a>\newcommand{\ExampleInline}[1]{\translate{Example}: \ignorespaces#1}
+<a href=#218 id=218 data-nosnippet>218</a>\newcommand{\BeispielInline}[1]{Beispiel: \ignorespaces#1}
+<a href=#219 id=219 data-nosnippet>219</a>\newtheorem{theorem}{Theorem}
+<a href=#220 id=220 data-nosnippet>220</a>\newtheorem{corollary}[theorem]{Corollary}
+<a href=#221 id=221 data-nosnippet>221</a>\newtheorem{fact}[theorem]{Fact}
+<a href=#222 id=222 data-nosnippet>222</a>\newtheorem{lemma}[theorem]{Lemma}
+<a href=#223 id=223 data-nosnippet>223</a>\newtheorem{problem}[theorem]{Problem}
+<a href=#224 id=224 data-nosnippet>224</a>\newtheorem{solution}[theorem]{Solution}
+<a href=#225 id=225 data-nosnippet>225</a>\newtheorem{definition}[theorem]{Definition}
+<a href=#226 id=226 data-nosnippet>226</a>\newtheorem{definitions}[theorem]{Definitions}
+<a href=#227 id=227 data-nosnippet>227</a>\newtheorem{example}[theorem]{Example}
+<a href=#228 id=228 data-nosnippet>228</a>\newtheorem{examples}[theorem]{Examples}
+<a href=#229 id=229 data-nosnippet>229</a>\newtheorem{Beispiel}[theorem]{Beispiel}
+<a href=#230 id=230 data-nosnippet>230</a>\newtheorem{Beispiele}[theorem]{Beispiele}
+<a href=#231 id=231 data-nosnippet>231</a>\newtheorem{Loesung}[theorem]{L\"osung}
+<a href=#232 id=232 data-nosnippet>232</a>\newtheorem{Satz}[theorem]{Satz}
+<a href=#233 id=233 data-nosnippet>233</a>\newtheorem{Folgerung}[theorem]{Folgerung}
+<a href=#234 id=234 data-nosnippet>234</a>\newtheorem{Fakt}[theorem]{Fakt}
+<a href=#235 id=235 data-nosnippet>235</a>\newenvironment{Beweis}{\begin{proof}[Beweis.]}{\end{proof}}
+<a href=#236 id=236 data-nosnippet>236</a>\newenvironment{Lemma}{\begin{lemma}}{\end{lemma}}
+<a href=#237 id=237 data-nosnippet>237</a>\newenvironment{Proof}{\begin{proof}}{\end{proof}}
+<a href=#238 id=238 data-nosnippet>238</a>\newenvironment{Theorem}{\begin{theorem}}{\end{theorem}}
+<a href=#239 id=239 data-nosnippet>239</a>\newenvironment{Problem}{\begin{problem}}{\end{problem}}
+<a href=#240 id=240 data-nosnippet>240</a>\newenvironment{Corollary}{\begin{corollary}}{\end{corollary}}
+<a href=#241 id=241 data-nosnippet>241</a>\newenvironment{Example}{\begin{example}}{\end{example}}
+<a href=#242 id=242 data-nosnippet>242</a>\newenvironment{Examples}{\begin{examples}}{\end{examples}}
+<a href=#243 id=243 data-nosnippet>243</a>\newenvironment{Definition}{\begin{definition}}{\end{definition}}
+<a href=#244 id=244 data-nosnippet>244</a>"#</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  def_macro_noop(<span class="string">"\\pushQED{}"</span>)<span class="question-mark">?</span>;
+<a href=#246 id=246 data-nosnippet>246</a>  def_macro_noop(<span class="string">"\\popQED"</span>)<span class="question-mark">?</span>;
+<a href=#247 id=247 data-nosnippet>247</a>  def_macro_noop(<span class="string">"\\qedhere"</span>)<span class="question-mark">?</span>;
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// Mode commands — Perl L448-460
+<a href=#250 id=250 data-nosnippet>250</a>  </span>def_macro_noop(<span class="string">"\\mode OptionalMatch:* {}"</span>)<span class="question-mark">?</span>;
+<a href=#251 id=251 data-nosnippet>251</a>  def_macro_noop(<span class="string">"\\mode&lt;&gt;{}"</span>)<span class="question-mark">?</span>;
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="comment">// Perl L493-495: \presentation / \article / \common route to
+<a href=#253 id=253 data-nosnippet>253</a>  // \mode&lt;…&gt;. Since the Rust \mode dispatcher is already a no-op for
+<a href=#254 id=254 data-nosnippet>254</a>  // all overlay modes, the three become empty stubs. Including them
+<a href=#255 id=255 data-nosnippet>255</a>  // keeps preamble-level `\mode&lt;all&gt;` equivalents (from example
+<a href=#256 id=256 data-nosnippet>256</a>  // beamer style files) from throwing undefined-CS errors.
+<a href=#257 id=257 data-nosnippet>257</a>  </span>def_macro_noop(<span class="string">"\\presentation"</span>)<span class="question-mark">?</span>;
+<a href=#258 id=258 data-nosnippet>258</a>  def_macro_noop(<span class="string">"\\common"</span>)<span class="question-mark">?</span>;
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// `\article` would clash with LaTeX `\article` docclass naming in
+<a href=#260 id=260 data-nosnippet>260</a>  // principle, but LaTeXML's catcode + class-file routing keeps the
+<a href=#261 id=261 data-nosnippet>261</a>  // control sequence distinct from the class name string. Perl ships
+<a href=#262 id=262 data-nosnippet>262</a>  // this alias unconditionally.
+<a href=#263 id=263 data-nosnippet>263</a>  </span>def_macro_noop(<span class="string">"\\article"</span>)<span class="question-mark">?</span>;
+<a href=#264 id=264 data-nosnippet>264</a>
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// Perl L414-416: beamer TODO CSes (expand to warnings under Perl;
+<a href=#266 id=266 data-nosnippet>266</a>  // Rust matches by absorbing args and emitting nothing — same
+<a href=#267 id=267 data-nosnippet>267</a>  // behaviour for slide-order rendering without the beamerTODO warning.
+<a href=#268 id=268 data-nosnippet>268</a>  </span>def_macro_noop(<span class="string">"\\jobnamebeamerversion{}"</span>)<span class="question-mark">?</span>;
+<a href=#269 id=269 data-nosnippet>269</a>  def_macro_noop(<span class="string">"\\includeslide{}"</span>)<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>  def_macro_noop(<span class="string">"\\setjobnamebeamerversion"</span>)<span class="question-mark">?</span>;
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a>  <span class="comment">// Misc commands
+<a href=#273 id=273 data-nosnippet>273</a>  // Perl beamer.cls.ltxml L810-813 wraps \alert in \alertenv which threads
+<a href=#274 id=274 data-nosnippet>274</a>  // through \beamer@alerted@begin/end (inline-block markers defined
+<a href=#275 id=275 data-nosnippet>275</a>  // above). Routing through those requires BeamerAngled overlay parsing
+<a href=#276 id=276 data-nosnippet>276</a>  // (unported), so keep the \textbf fallback — the markers remain defined
+<a href=#277 id=277 data-nosnippet>277</a>  // and usable directly by styles that invoke them without angle-spec.
+<a href=#278 id=278 data-nosnippet>278</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\alert OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"\\textbf{#2}"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\structure OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"#2"</span>);
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\emph OptionalMatch:&lt;&gt; {}"</span>, <span class="string">"\\textit{#2}"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  def_macro_noop(<span class="string">"\\AtBeginSection[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#282 id=282 data-nosnippet>282</a>  def_macro_noop(<span class="string">"\\AtBeginSubsection[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#283 id=283 data-nosnippet>283</a>  def_macro_noop(<span class="string">"\\AtBeginPart[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="comment">// \lecture{title}{shortname} — beamer lecture frontmatter; preserve
+<a href=#285 id=285 data-nosnippet>285</a>  // the title text as ltx:note frontmatter rather than dropping it.
+<a href=#286 id=286 data-nosnippet>286</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lecture{}{}"</span>,
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=lecture]{#1}"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>  def_macro_noop(<span class="string">"\\againframe OptionalMatch:&lt;&gt; []{}"</span>)<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>  def_macro_noop(<span class="string">"\\appendix"</span>)<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>  def_macro_noop(<span class="string">"\\note OptionalMatch:&lt;&gt; []{}"</span>)<span class="question-mark">?</span>;
+<a href=#291 id=291 data-nosnippet>291</a>  def_macro_noop(<span class="string">"\\beamerdefaultoverlayspecification{}"</span>)<span class="question-mark">?</span>;
+<a href=#292 id=292 data-nosnippet>292</a>
+<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// Translation stubs
+<a href=#294 id=294 data-nosnippet>294</a>  </span>def_macro_identity(<span class="string">"\\translate{}"</span>)<span class="question-mark">?</span>;
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="comment">// Color-related
+<a href=#297 id=297 data-nosnippet>297</a>  </span>def_macro_noop(<span class="string">"\\usebeamercolor OptionalMatch:* {}"</span>)<span class="question-mark">?</span>;
+<a href=#298 id=298 data-nosnippet>298</a>
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// Hyperlink
+<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hyperlink{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\hypertarget{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#302 id=302 data-nosnippet>302</a>});
 </code></pre></div></section></main></body></html>

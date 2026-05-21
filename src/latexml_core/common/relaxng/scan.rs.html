@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/relaxng/scan.rs`."><title>scan.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/relaxng/</div>scan.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! RelaxNG XML → AST scanner.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/relaxng/scan.rs`."><title>scan.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/relaxng/</div>scan.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! RelaxNG XML → AST scanner.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `RelaxNG.pm` lines 100–390. The Perl original is a recursive
 <a href=#4 id=4 data-nosnippet>4</a>//! visitor over a `LibXML::Document`; this is a recursive visitor over
@@ -22,7 +22,7 @@
 <a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>libxml::tree::{Document <span class="kw">as </span>XmlDocument, NodeType};
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>std::path::{Path, PathBuf};
 <a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="kw">use </span>super::{CombineOp, DefCombiner, Pattern, Relaxng};
+<a href=#25 id=25 data-nosnippet>25</a><span class="kw">use super</span>::{CombineOp, DefCombiner, Pattern, Relaxng};
 <a href=#26 id=26 data-nosnippet>26</a>
 <a href=#27 id=27 data-nosnippet>27</a><span class="doccomment">/// RelaxNG namespace URI.
 <a href=#28 id=28 data-nosnippet>28</a></span><span class="kw">const </span>RNG_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://relaxng.org/ns/structure/1.0"</span>;
@@ -97,7 +97,7 @@
 <a href=#97 id=97 data-nosnippet>97</a>
 <a href=#98 id=98 data-nosnippet>98</a>  <span class="kw">let </span>modname = strip_rng_ext(name);
 <a href=#99 id=99 data-nosnippet>99</a>  <span class="kw">let </span><span class="kw-2">mut </span>new_paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = Vec::with_capacity(search_paths.len() + <span class="number">1</span>);
-<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw">let </span>dir = path.parent().unwrap_or(Path::new(<span class="string">"."</span>));
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw">let </span>dir = path.parent().unwrap_or_else(|| Path::new(<span class="string">"."</span>));
 <a href=#101 id=101 data-nosnippet>101</a>  new_paths.push(dir);
 <a href=#102 id=102 data-nosnippet>102</a>  new_paths.extend(search_paths);
 <a href=#103 id=103 data-nosnippet>103</a>
@@ -247,7 +247,7 @@
 <a href=#247 id=247 data-nosnippet>247</a>    <span class="string">"rng:data" </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Pattern::Data(node.get_attribute(<span class="string">"type"</span>).unwrap_or_default())]),
 <a href=#248 id=248 data-nosnippet>248</a>    <span class="string">"rng:externalRef" </span>=&gt; {
 <a href=#249 id=249 data-nosnippet>249</a>      <span class="kw">let </span>href = node.get_attribute(<span class="string">"href"</span>).unwrap_or_default();
-<a href=#250 id=250 data-nosnippet>250</a>      <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = ctx.search_paths.to_vec();
+<a href=#250 id=250 data-nosnippet>250</a>      <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = ctx.search_paths.clone();
 <a href=#251 id=251 data-nosnippet>251</a>      scan_external(rng, <span class="kw-2">&amp;</span>href, ns_ref, <span class="kw-2">&amp;</span>paths)
 <a href=#252 id=252 data-nosnippet>252</a>    },
 <a href=#253 id=253 data-nosnippet>253</a>    <span class="string">"rng:grammar" </span>=&gt; {
@@ -384,7 +384,7 @@
 <a href=#384 id=384 data-nosnippet>384</a>    <span class="string">"rng:div" </span>=&gt; scan_grammar_content(rng, ns_ref, children, ctx),
 <a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"rng:include" </span>=&gt; {
 <a href=#386 id=386 data-nosnippet>386</a>      <span class="kw">let </span>href = node.get_attribute(<span class="string">"href"</span>).unwrap_or_default();
-<a href=#387 id=387 data-nosnippet>387</a>      <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = ctx.search_paths.to_vec();
+<a href=#387 id=387 data-nosnippet>387</a>      <span class="kw">let </span>paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = ctx.search_paths.clone();
 <a href=#388 id=388 data-nosnippet>388</a>      <span class="comment">// Find + parse the included file.
 <a href=#389 id=389 data-nosnippet>389</a>      </span><span class="kw">let </span>path = find_file(<span class="kw-2">&amp;</span>href, <span class="kw-2">&amp;</span>paths)
 <a href=#390 id=390 data-nosnippet>390</a>        .ok_or_else(|| ScanError::FileNotFound(href.clone()))<span class="question-mark">?</span>;
@@ -398,7 +398,7 @@
 <a href=#398 id=398 data-nosnippet>398</a>      collect_namespaces(rng, inner_root);
 <a href=#399 id=399 data-nosnippet>399</a>      <span class="comment">// Push the included file's directory to the search path so its
 <a href=#400 id=400 data-nosnippet>400</a>      // own includes resolve correctly.
-<a href=#401 id=401 data-nosnippet>401</a>      </span><span class="kw">let </span>dir = path.parent().unwrap_or(Path::new(<span class="string">"."</span>));
+<a href=#401 id=401 data-nosnippet>401</a>      </span><span class="kw">let </span>dir = path.parent().unwrap_or_else(|| Path::new(<span class="string">"."</span>));
 <a href=#402 id=402 data-nosnippet>402</a>      <span class="kw">let </span><span class="kw-2">mut </span>nested_paths: Vec&lt;<span class="kw-2">&amp;</span>Path&gt; = Vec::with_capacity(ctx.search_paths.len() + <span class="number">1</span>);
 <a href=#403 id=403 data-nosnippet>403</a>      nested_paths.push(dir);
 <a href=#404 id=404 data-nosnippet>404</a>      nested_paths.extend(<span class="kw-2">&amp;</span>ctx.search_paths);
@@ -590,7 +590,7 @@
 <a href=#590 id=590 data-nosnippet>590</a>
 <a href=#591 id=591 data-nosnippet>591</a></span><span class="attr">#[cfg(test)]
 <a href=#592 id=592 data-nosnippet>592</a></span><span class="kw">mod </span>tests {
-<a href=#593 id=593 data-nosnippet>593</a>  <span class="kw">use </span>super::<span class="kw-2">*</span>;
+<a href=#593 id=593 data-nosnippet>593</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#594 id=594 data-nosnippet>594</a>  <span class="kw">use </span><span class="kw">crate</span>::common::relaxng::Pattern;
 <a href=#595 id=595 data-nosnippet>595</a>
 <a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">fn </span>matches_combination(pat: <span class="kw-2">&amp;</span>Pattern, op: CombineOp) -&gt; bool {

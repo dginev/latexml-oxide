@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/semantics/from.rs`."><title>from.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/semantics/</div>from.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">super</span>::metadata::Meta;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_math_parser/src/semantics/from.rs`."><title>from.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_math_parser/semantics/</div>from.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">super</span>::metadata::Meta;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">super</span>::tree::{Args, Operator, XM, XProps};
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -28,7 +28,7 @@
 <a href=#28 id=28 data-nosnippet>28</a>}
 <a href=#29 id=29 data-nosnippet>29</a>
 <a href=#30 id=30 data-nosnippet>30</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>XM {
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="kw">fn </span>from(a: <span class="kw-2">&amp;</span>str) -&gt; XM { XM::Lexeme(a.to_string(), Meta::default()) }
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="kw">fn </span>from(a: <span class="kw-2">&amp;</span>str) -&gt; XM { XM::Lexeme(std::rc::Rc::from(a), Meta::default()) }
 <a href=#32 id=32 data-nosnippet>32</a>}
 <a href=#33 id=33 data-nosnippet>33</a><span class="kw">impl </span>From&lt;(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)&gt; <span class="kw">for </span>XM {
 <a href=#34 id=34 data-nosnippet>34</a>  <span class="kw">fn </span>from(a: (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)) -&gt; XM {
@@ -140,23 +140,21 @@
 <a href=#140 id=140 data-nosnippet>140</a>    Args(
 <a href=#141 id=141 data-nosnippet>141</a>      args
 <a href=#142 id=142 data-nosnippet>142</a>        .iter()
-<a href=#143 id=143 data-nosnippet>143</a>        .map(ToString::to_string)
-<a href=#144 id=144 data-nosnippet>144</a>        .map(|x| XM::Lexeme(x, Meta::default()))
-<a href=#145 id=145 data-nosnippet>145</a>        .map(Option::Some)
-<a href=#146 id=146 data-nosnippet>146</a>        .collect(),
-<a href=#147 id=147 data-nosnippet>147</a>    )
-<a href=#148 id=148 data-nosnippet>148</a>  }
-<a href=#149 id=149 data-nosnippet>149</a>}
-<a href=#150 id=150 data-nosnippet>150</a><span class="kw">impl </span>From&lt;[<span class="kw-2">&amp;</span>str; <span class="number">3</span>]&gt; <span class="kw">for </span>Args {
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="kw">fn </span>from(args: [<span class="kw-2">&amp;</span>str; <span class="number">3</span>]) -&gt; Args {
-<a href=#152 id=152 data-nosnippet>152</a>    Args(
-<a href=#153 id=153 data-nosnippet>153</a>      args
-<a href=#154 id=154 data-nosnippet>154</a>        .iter()
-<a href=#155 id=155 data-nosnippet>155</a>        .map(ToString::to_string)
-<a href=#156 id=156 data-nosnippet>156</a>        .map(|x| XM::Lexeme(x, Meta::default()))
-<a href=#157 id=157 data-nosnippet>157</a>        .map(Option::Some)
-<a href=#158 id=158 data-nosnippet>158</a>        .collect(),
-<a href=#159 id=159 data-nosnippet>159</a>    )
-<a href=#160 id=160 data-nosnippet>160</a>  }
-<a href=#161 id=161 data-nosnippet>161</a>}
+<a href=#143 id=143 data-nosnippet>143</a>        .map(|s| XM::Lexeme(std::rc::Rc::from(<span class="kw-2">*</span>s), Meta::default()))
+<a href=#144 id=144 data-nosnippet>144</a>        .map(Option::Some)
+<a href=#145 id=145 data-nosnippet>145</a>        .collect(),
+<a href=#146 id=146 data-nosnippet>146</a>    )
+<a href=#147 id=147 data-nosnippet>147</a>  }
+<a href=#148 id=148 data-nosnippet>148</a>}
+<a href=#149 id=149 data-nosnippet>149</a><span class="kw">impl </span>From&lt;[<span class="kw-2">&amp;</span>str; <span class="number">3</span>]&gt; <span class="kw">for </span>Args {
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="kw">fn </span>from(args: [<span class="kw-2">&amp;</span>str; <span class="number">3</span>]) -&gt; Args {
+<a href=#151 id=151 data-nosnippet>151</a>    Args(
+<a href=#152 id=152 data-nosnippet>152</a>      args
+<a href=#153 id=153 data-nosnippet>153</a>        .iter()
+<a href=#154 id=154 data-nosnippet>154</a>        .map(|s| XM::Lexeme(std::rc::Rc::from(<span class="kw-2">*</span>s), Meta::default()))
+<a href=#155 id=155 data-nosnippet>155</a>        .map(Option::Some)
+<a href=#156 id=156 data-nosnippet>156</a>        .collect(),
+<a href=#157 id=157 data-nosnippet>157</a>    )
+<a href=#158 id=158 data-nosnippet>158</a>  }
+<a href=#159 id=159 data-nosnippet>159</a>}
 </code></pre></div></section></main></body></html>

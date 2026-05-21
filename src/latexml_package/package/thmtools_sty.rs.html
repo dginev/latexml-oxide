@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/thmtools_sty.rs`."><title>thmtools_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>thmtools_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::engine::latex_constructs::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/thmtools_sty.rs`."><title>thmtools_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>thmtools_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::engine::latex_constructs::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="attr">#[rustfmt::skip]
@@ -15,8 +15,8 @@
 <a href=#15 id=15 data-nosnippet>15</a>  // which load as raw TeX and expect these from thmtools internals.
 <a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\thmt@toks" </span>=&gt; RegisterValue::Tokens(<span class="macro">Tokens!</span>()));
 <a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thmt@thmuse@families"</span>, <span class="string">"thm@track@keys"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thmt@mkignoringkeyhandler{}"</span>, <span class="string">""</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thmt@thmuse@iskvtrue"</span>, <span class="string">""</span>);
+<a href=#18 id=18 data-nosnippet>18</a>  def_macro_noop(<span class="string">"\\thmt@mkignoringkeyhandler{}"</span>)<span class="question-mark">?</span>;
+<a href=#19 id=19 data-nosnippet>19</a>  def_macro_noop(<span class="string">"\\thmt@thmuse@iskvtrue"</span>)<span class="question-mark">?</span>;
 <a href=#20 id=20 data-nosnippet>20</a>
 <a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// Set savable theorem parameters
 <a href=#22 id=22 data-nosnippet>22</a>  </span>set_savable_theorem_parameters(<span class="macro">vec!</span>[
@@ -153,18 +153,64 @@
 <a href=#153 id=153 data-nosnippet>153</a>    save_theorem_style(<span class="kw-2">&amp;</span>name_str, saved);
 <a href=#154 id=154 data-nosnippet>154</a>  });
 <a href=#155 id=155 data-nosnippet>155</a>
-<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// \listtheoremname
-<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\listtheoremname"</span>, <span class="string">"List of Theorems"</span>);
-<a href=#158 id=158 data-nosnippet>158</a>
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="comment">// \listoftheorems
-<a href=#160 id=160 data-nosnippet>160</a>  // Perl: DefConstructor('\listoftheorems OptionalKeyVals', ...)
-<a href=#161 id=161 data-nosnippet>161</a>  // Simplified: the Perl version reads ignoreall/show keyvals for filtering
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\listoftheorems[]"</span>,
-<a href=#163 id=163 data-nosnippet>163</a>    <span class="string">"&lt;ltx:TOC lists='#lists' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
-<a href=#164 id=164 data-nosnippet>164</a>    properties =&gt; sub[_args] {
-<a href=#165 id=165 data-nosnippet>165</a>      <span class="kw">let </span>title = Stored::from(<span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\listtheoremname"</span>))<span class="question-mark">?</span>);
-<a href=#166 id=166 data-nosnippet>166</a>      <span class="kw">let </span>lists = String::from(<span class="string">"thm"</span>);
-<a href=#167 id=167 data-nosnippet>167</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; title, <span class="string">"lists" </span>=&gt; lists))
-<a href=#168 id=168 data-nosnippet>168</a>    });
-<a href=#169 id=169 data-nosnippet>169</a>});
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// \begin{restatable}[opt]{thmname}{storename} ... \end{restatable}
+<a href=#157 id=157 data-nosnippet>157</a>  // — thm-restate.sty's env that lets authors define a theorem-like
+<a href=#158 id=158 data-nosnippet>158</a>  // body and ALSO save it under a CS name for later restating via
+<a href=#159 id=159 data-nosnippet>159</a>  // `\storename`. Render as a generic ltx:theorem; the "restate later"
+<a href=#160 id=160 data-nosnippet>160</a>  // feature is approximated by defining `\storename` as a no-op so
+<a href=#161 id=161 data-nosnippet>161</a>  // subsequent `\storename` calls (to re-render the theorem) don't
+<a href=#162 id=162 data-nosnippet>162</a>  // cascade as undefined CS. The body appears once, where first
+<a href=#163 id=163 data-nosnippet>163</a>  // declared — content is preserved. Witness 2403.07095
+<a href=#164 id=164 data-nosnippet>164</a>  // (\begin{restatable}{theorem}{glsinfdiff}).
+<a href=#165 id=165 data-nosnippet>165</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{restatable}[]{}{}"</span>,
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="string">"&lt;ltx:theorem&gt;#body&lt;/ltx:theorem&gt;"</span>,
+<a href=#167 id=167 data-nosnippet>167</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#168 id=168 data-nosnippet>168</a>    after_digest_begin =&gt; sub[whatsit] {
+<a href=#169 id=169 data-nosnippet>169</a>      <span class="comment">// get_arg(3) is the store-name token (3rd arg, 1-based). Define
+<a href=#170 id=170 data-nosnippet>170</a>      // `\storename` GLOBALLY as a no-op so later restate calls in the
+<a href=#171 id=171 data-nosnippet>171</a>      // doc (which happen outside this env scope) don't cascade undefined.
+<a href=#172 id=172 data-nosnippet>172</a>      // (get_arg is 1-indexed per whatsit.rs warning.)
+<a href=#173 id=173 data-nosnippet>173</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(storename_arg) = whatsit.get_arg(<span class="number">3</span>) {
+<a href=#174 id=174 data-nosnippet>174</a>        <span class="kw">let </span>s = storename_arg.to_string();
+<a href=#175 id=175 data-nosnippet>175</a>        <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">"\\{}"</span>, s.trim());
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw">if </span>!cs.is_empty() &amp;&amp; cs.len() &gt; <span class="number">1 </span>{
+<a href=#177 id=177 data-nosnippet>177</a>          <span class="kw">let _ </span>= def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, Tokens::default(),
+<a href=#178 id=178 data-nosnippet>178</a>            <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#179 id=179 data-nosnippet>179</a>              ..ExpandableOptions::default() }));
+<a href=#180 id=180 data-nosnippet>180</a>        }
+<a href=#181 id=181 data-nosnippet>181</a>      }
+<a href=#182 id=182 data-nosnippet>182</a>    });
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{restatable*}[]{}{}"</span>,
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"&lt;ltx:theorem&gt;#body&lt;/ltx:theorem&gt;"</span>,
+<a href=#185 id=185 data-nosnippet>185</a>    mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#186 id=186 data-nosnippet>186</a>    after_digest_begin =&gt; sub[whatsit] {
+<a href=#187 id=187 data-nosnippet>187</a>      <span class="comment">// Mirror {restatable}: define `\storename` GLOBALLY as a no-op
+<a href=#188 id=188 data-nosnippet>188</a>      // so later restate calls outside this env's scope don't cascade
+<a href=#189 id=189 data-nosnippet>189</a>      // undefined. (Previously this branch omitted Scope::Global, so
+<a href=#190 id=190 data-nosnippet>190</a>      // the def was env-local — defeating the restate-later guard.)
+<a href=#191 id=191 data-nosnippet>191</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(storename_arg) = whatsit.get_arg(<span class="number">3</span>) {
+<a href=#192 id=192 data-nosnippet>192</a>        <span class="kw">let </span>s = storename_arg.to_string();
+<a href=#193 id=193 data-nosnippet>193</a>        <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">"\\{}"</span>, s.trim());
+<a href=#194 id=194 data-nosnippet>194</a>        <span class="kw">if </span>cs.len() &gt; <span class="number">1 </span>{
+<a href=#195 id=195 data-nosnippet>195</a>          <span class="kw">let _ </span>= def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, Tokens::default(),
+<a href=#196 id=196 data-nosnippet>196</a>            <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#197 id=197 data-nosnippet>197</a>              ..ExpandableOptions::default() }));
+<a href=#198 id=198 data-nosnippet>198</a>        }
+<a href=#199 id=199 data-nosnippet>199</a>      }
+<a href=#200 id=200 data-nosnippet>200</a>    });
+<a href=#201 id=201 data-nosnippet>201</a>
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// \listtheoremname
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\listtheoremname"</span>, <span class="string">"List of Theorems"</span>);
+<a href=#204 id=204 data-nosnippet>204</a>
+<a href=#205 id=205 data-nosnippet>205</a>  <span class="comment">// \listoftheorems
+<a href=#206 id=206 data-nosnippet>206</a>  // Perl: DefConstructor('\listoftheorems OptionalKeyVals', ...)
+<a href=#207 id=207 data-nosnippet>207</a>  // Simplified: the Perl version reads ignoreall/show keyvals for filtering
+<a href=#208 id=208 data-nosnippet>208</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\listoftheorems[]"</span>,
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="string">"&lt;ltx:TOC lists='#lists' scope='global'&gt;&lt;ltx:title&gt;#name&lt;/ltx:title&gt;&lt;/ltx:TOC&gt;"</span>,
+<a href=#210 id=210 data-nosnippet>210</a>    properties =&gt; sub[_args] {
+<a href=#211 id=211 data-nosnippet>211</a>      <span class="kw">let </span>title = Stored::from(<span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\listtheoremname"</span>))<span class="question-mark">?</span>);
+<a href=#212 id=212 data-nosnippet>212</a>      <span class="kw">let </span>lists = String::from(<span class="string">"thm"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; title, <span class="string">"lists" </span>=&gt; lists))
+<a href=#214 id=214 data-nosnippet>214</a>    });
+<a href=#215 id=215 data-nosnippet>215</a>});
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Pre-BibTeX: low-level `.bib` file parser."><title>latexml_engine::pre_bibtex - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module pre_bibtex</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.4.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module pre_<wbr>bibtex</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#faithful-port-notes" title="Faithful-port notes">Faithful-port notes</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>engine</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_engine</a></div><h1>Module <span>pre_<wbr>bibtex</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_engine/pre_bibtex.rs.html#1-935">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Pre-BibTeX: low-level <code>.bib</code> file parser.</p>
+<p>Perl: <code>LaTeXML/blib/lib/LaTeXML/Pre/BibTeX.pm</code> (~350 LOC) +
+<code>LaTeXML/blib/lib/LaTeXML/Pre/BibTeX/Entry.pm</code> (~70 LOC).</p>
+<p>Responsible for the lowest-level parsing of BibTeX files: scans
+<code>.bib</code> source, identifies <code>@preamble</code>, <code>@string</code>, <code>@comment</code>, and
+entry blocks, performs <code>@string</code>-macro substitution, and stores
+parsed entries. It does NOT analyze fields semantically — that is
+<code>BibTeX.pool.ltxml</code> (Rust: <code>bibtex.rs</code>).</p>
+<p>Per Perl <code>Pre/BibTeX.pm</code> L23-32, the result <code>toTeX()</code> is wrapped in
+a <code>\begin{bibtex@bibliography}…\end{bibtex@bibliography}</code> block
+whose body is a sequence of <code>\ProcessBibTeXEntry{&lt;key&gt;}</code> macro
+calls. The bibtex.rs orchestration then drives field dispatch +
+XML construction from the registered <code>BibEntry</code>.</p>
+<h3 id="faithful-port-notes"><a class="doc-anchor" href="#faithful-port-notes">§</a>Faithful-port notes</h3>
+<ul>
+<li>
+<p><code>parse_entry_type</code> / <code>parse_entry_name</code> / <code>parse_field_name</code>
+character classes are byte-for-byte the Perl regex
+<code>[BIBNAME_re ++ BIBNOISE_re]</code> (Perl L221-222). Entry-name
+additionally allows <code>"#%&amp;'()={</code> (Perl L233); field-name
+additionally allows <code>&amp;</code> (Perl L238). Entry-type and field-name
+are lower-cased; entry-name preserves case at the parse layer
+(the registry then normalises via <code>register_entry</code>).</p>
+</li>
+<li>
+<p><code>parse_string</code> reads <code>"…"</code> (allowing balanced <code>{…}</code> inside that
+defeat the closing quote) OR <code>{…}</code> (balanced braces, outer
+braces stripped) — exact match for Perl L252-274.</p>
+</li>
+<li>
+<p><code>parse_value</code> concatenates simple values separated by <code>#</code>. A
+simple value is either a delimited string or a name; a name
+matching <code>^\d+$</code> is taken literally, otherwise looked up in the
+macro table.</p>
+</li>
+<li>
+<p><code>skip_junk</code> is greedy: everything up to the next <code>@</code> is
+discarded (Perl L335-346: “anything until @ as an implied
+comment”).</p>
+</li>
+</ul>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.ParsedEntry.html" title="struct latexml_engine::pre_bibtex::ParsedEntry">Parsed<wbr>Entry</a></dt><dd>One parsed entry. Mirrors Perl <code>LaTeXML::Pre::BibTeX::Entry</code> (only
+the data is kept here; processed‐Tokens fields live in
+<code>bibtex::BibEntry</code> and are populated by the pool orchestration).</dd><dt><a class="struct" href="struct.PreBibTeX.html" title="struct latexml_engine::pre_bibtex::PreBibTeX">PreBib<wbr>TeX</a></dt><dd><code>Pre::BibTeX</code> — low-level .bib parser state.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.BibParseError.html" title="enum latexml_engine::pre_bibtex::BibParseError">BibParse<wbr>Error</a></dt><dd>Parse errors. The Perl side calls <code>Error(...)</code> (recoverable) for
+most issues; we surface them as <code>Err</code> instead so the caller can
+decide whether to keep parsing.</dd></dl></section></div></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Watchdog"]};
+window.SIDEBAR_ITEMS = {"fn":["set_pre_exit_hook"],"struct":["Watchdog"]};

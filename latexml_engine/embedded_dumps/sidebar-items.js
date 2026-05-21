@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["embedded_latex_dump","embedded_plain_dump","embedded_texlive_version_first_line","embedded_year","latex_embedded_available","plain_embedded_available"]};

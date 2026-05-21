@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/keyvals.rs`."><title>keyvals.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (64a965e90 2026-05-11)" data-channel="nightly" data-search-js="search-b5634cc7.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-aa4d37ac.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>keyvals.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::slice::Iter;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/keyvals.rs`."><title>keyvals.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>keyvals.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::slice::Iter;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::borrow::Cow;
@@ -16,7 +16,7 @@
 <a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span><span class="kw">crate</span>::state;
 <a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>crate::{BoxOps, Digested, NO_PROPERTIES};
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use crate</span>::{BoxOps, Digested, NO_PROPERTIES};
 <a href=#20 id=20 data-nosnippet>20</a>
 <a href=#21 id=21 data-nosnippet>21</a><span class="attr">#[derive(Debug, Clone)]
 <a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">struct </span>KVData {
@@ -391,7 +391,7 @@
 <a href=#391 id=391 data-nosnippet>391</a>    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::default();
 <a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash {
 <a href=#393 id=393 data-nosnippet>393</a>      hashed.insert(
-<a href=#394 id=394 data-nosnippet>394</a>        k.to_string(),
+<a href=#394 id=394 data-nosnippet>394</a>        k.clone(),
 <a href=#395 id=395 data-nosnippet>395</a>        v.iter()
 <a href=#396 id=396 data-nosnippet>396</a>          .map(ToString::to_string)
 <a href=#397 id=397 data-nosnippet>397</a>          .collect::&lt;Vec&lt;String&gt;&gt;()
@@ -405,7 +405,7 @@
 <a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::default();
 <a href=#406 id=406 data-nosnippet>406</a>    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash_digested {
 <a href=#407 id=407 data-nosnippet>407</a>      hashed.insert(
-<a href=#408 id=408 data-nosnippet>408</a>        k.to_string(),
+<a href=#408 id=408 data-nosnippet>408</a>        k.clone(),
 <a href=#409 id=409 data-nosnippet>409</a>        v.iter()
 <a href=#410 id=410 data-nosnippet>410</a>          .map(ToString::to_string)
 <a href=#411 id=411 data-nosnippet>411</a>          .collect::&lt;Vec&lt;String&gt;&gt;()
@@ -439,7 +439,7 @@
 <a href=#439 id=439 data-nosnippet>439</a>    <span class="comment">// Read existing tokens from rmmacro (if defined and has meaning)
 <a href=#440 id=440 data-nosnippet>440</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>rmtokens: Vec&lt;Token&gt; = Vec::new();
 <a href=#441 id=441 data-nosnippet>441</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(rm) = rmmacro {
-<a href=#442 id=442 data-nosnippet>442</a>      <span class="kw">if </span>state::lookup_meaning(<span class="kw-2">&amp;</span>rm).is_some() {
+<a href=#442 id=442 data-nosnippet>442</a>      <span class="kw">if </span>state::has_meaning(<span class="kw-2">&amp;</span>rm) {
 <a href=#443 id=443 data-nosnippet>443</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(expanded) = gullet::do_expand(<span class="macro">Tokens!</span>(rm)) {
 <a href=#444 id=444 data-nosnippet>444</a>          rmtokens = expanded.unlist();
 <a href=#445 id=445 data-nosnippet>445</a>        }
@@ -761,22 +761,22 @@
 <a href=#761 id=761 data-nosnippet>761</a>      }
 <a href=#762 id=762 data-nosnippet>762</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = value.as_ref() {
 <a href=#763 id=763 data-nosnippet>763</a>        <span class="comment">// push key / value into the pair
-<a href=#764 id=764 data-nosnippet>764</a>        </span>pairs.push((key.to_string(), v.clone()));
+<a href=#764 id=764 data-nosnippet>764</a>        </span>pairs.push((key.clone(), v.clone()));
 <a href=#765 id=765 data-nosnippet>765</a>
 <a href=#766 id=766 data-nosnippet>766</a>        <span class="comment">// we always use Vec&lt;ArgWrap&gt; storage, just push the new value in
-<a href=#767 id=767 data-nosnippet>767</a>        </span><span class="kw">let </span>entry = hash.entry(key.to_string()).or_default();
+<a href=#767 id=767 data-nosnippet>767</a>        </span><span class="kw">let </span>entry = hash.entry(key.clone()).or_default();
 <a href=#768 id=768 data-nosnippet>768</a>        entry.push(v.clone());
 <a href=#769 id=769 data-nosnippet>769</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dv) = digested_value {
 <a href=#770 id=770 data-nosnippet>770</a>        <span class="comment">// After digestion, value is taken but digested_value is set.
 <a href=#771 id=771 data-nosnippet>771</a>        // Populate cached_pairs from the digested value (matching Perl's rebuild behavior).
 <a href=#772 id=772 data-nosnippet>772</a>        </span><span class="kw">let </span>fallback = ArgWrap::Tokens(dv.revert().unwrap_or_default());
-<a href=#773 id=773 data-nosnippet>773</a>        pairs.push((key.to_string(), fallback.clone()));
-<a href=#774 id=774 data-nosnippet>774</a>        <span class="kw">let </span>entry = hash.entry(key.to_string()).or_default();
+<a href=#773 id=773 data-nosnippet>773</a>        pairs.push((key.clone(), fallback.clone()));
+<a href=#774 id=774 data-nosnippet>774</a>        <span class="kw">let </span>entry = hash.entry(key.clone()).or_default();
 <a href=#775 id=775 data-nosnippet>775</a>        entry.push(fallback);
 <a href=#776 id=776 data-nosnippet>776</a>      }
 <a href=#777 id=777 data-nosnippet>777</a>      <span class="comment">// if we have a digested value, push that in the Vec&lt;Digested&gt; hash storage
 <a href=#778 id=778 data-nosnippet>778</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dvalue) = digested_value {
-<a href=#779 id=779 data-nosnippet>779</a>        <span class="kw">let </span>entry = hash_digested.entry(key.to_string()).or_default();
+<a href=#779 id=779 data-nosnippet>779</a>        <span class="kw">let </span>entry = hash_digested.entry(key.clone()).or_default();
 <a href=#780 id=780 data-nosnippet>780</a>        entry.push(dvalue.clone());
 <a href=#781 id=781 data-nosnippet>781</a>      }
 <a href=#782 id=782 data-nosnippet>782</a>
@@ -965,7 +965,7 @@
 <a href=#965 id=965 data-nosnippet>965</a>
 <a href=#966 id=966 data-nosnippet>966</a><span class="attr">#[cfg(test)]
 <a href=#967 id=967 data-nosnippet>967</a></span><span class="kw">mod </span>tests {
-<a href=#968 id=968 data-nosnippet>968</a>  <span class="kw">use </span>super::<span class="kw-2">*</span>;
+<a href=#968 id=968 data-nosnippet>968</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#969 id=969 data-nosnippet>969</a>
 <a href=#970 id=970 data-nosnippet>970</a>  <span class="attr">#[test]
 <a href=#971 id=971 data-nosnippet>971</a>  </span><span class="kw">fn </span>skip_missing_default_is_none() {

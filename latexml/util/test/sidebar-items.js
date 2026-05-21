@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["init_logger","latexml_test_single","latexml_tests","latexml_tests_internal","lex_single_tex_formula","new_test_engine"]};
+window.SIDEBAR_ITEMS = {"fn":["init_logger","latexml_test_single","latexml_tests","latexml_tests_internal"]};

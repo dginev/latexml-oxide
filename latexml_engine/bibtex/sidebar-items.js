@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"enum":["TitleCaseMode"],"fn":["bib_add_to_container","clear_current_entry","copy_crossref_fields","current_bib_key","current_entry","current_entry_field","current_entry_raw_field","load_definitions","lookup_entry","parse_amsrefs_keyvals","process_bib_name_list","process_identifier","recase_title","register_entry","reset","set_current_entry"],"struct":["BibEntry","BibName","BibNameList"]};

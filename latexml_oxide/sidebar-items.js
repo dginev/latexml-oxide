@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["ensure_parent_dir","main","make_splitpaths","pack_output_zip","read_child_rusage_us","read_max_rss_kb","real_main","run_post_processing","unpack_archive","write_telemetry_record"],"static":["GLOBAL"],"struct":["Cli"]};
+window.SIDEBAR_ITEMS = {"fn":["custom_alloc_error_hook","is_xml_input","main","make_splitpaths","read_child_rusage_us","read_max_rss_kb","real_main","run_post_processing","unpack_archive","write_telemetry_record"],"static":["GLOBAL"],"struct":["Cli"]};

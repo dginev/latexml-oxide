@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Compile-time embedded TeXLive kernel dumps, indexed by TeXLive year."><title>latexml_engine::embedded_dumps - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module embedded_dumps</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.4.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module embedded_<wbr>dumps</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>engine</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_engine</a></div><h1>Module <span>embedded_<wbr>dumps</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_engine/embedded_dumps.rs.html#1-249">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Compile-time embedded TeXLive kernel dumps, indexed by TeXLive year.</p>
+<p><code>latexml_engine/build.rs</code> scans <code>resources/dumps/</code> for versioned dumps
+(<code>plain.YYYY.dump.txt</code>, <code>latex.YYYY.dump.txt</code>, <code>texlive.YYYY.version</code>),
+<strong>gzips each <code>*.dump.txt</code></strong> into <code>$OUT_DIR</code> (DEP-12, 2026-05-18), and
+emits <code>embedded_dumps_manifest.rs</code> listing every bundled year as
+<code>&amp;'static [u8]</code> gzip blobs. This module <code>include!</code>s that manifest,
+exposing year-aware accessors that decompress on demand.</p>
+<p>Why compress: ~4.7× gzip ratio on the record-shaped dump text
+(3.8 MB → 805 KB per year). Both years combined drop from
+~7.6 MB to ~870 KB in <code>.rodata</code> — a ~6.7 MB binary-size win for a
+one-time ~6.5 ms decompression cost at engine bootstrap (latex)
+plus ~0.1 ms (plain), measured at 560 MB/s on this machine.</p>
+<p>Two-layer cache:</p>
+<ol>
+<li><strong>Per-thread</strong> <code>thread_local!(RefCell&lt;HashMap&lt;(year, kind), &amp;'static str&gt;&gt;)</code>
+populated via <code>Box::leak</code>. Avoids re-decompressing or even
+re-reading the disk file when the same <code>embedded_*_dump</code> is
+called twice (e.g. probe-then-load: <code>*_embedded_available()</code>
+followed by the actual loader). Matches the project’s
+thread-local-state idiom — no <code>Mutex</code> on the hot path.</li>
+<li><strong>Cross-process</strong> disk cache at <code>$TMPDIR/latexml-oxide-dumps-&lt;hash&gt;/</code>.
+First process per machine-boot decompresses and atomically writes
+the plain-text dump; every subsequent process reads the file
+directly (~1 ms on tmpfs) instead of gunzipping again.</li>
+</ol>
+<p>Skipped entirely under <code>LATEXML_NO_EMBEDDED_DUMP=1</code> (no embedded
+fallback fires) or when an ambient-year disk dump is found earlier
+in the resolution chain.</p>
+<p>Selection at runtime:</p>
+<ol>
+<li>If <a href="../dump_paths/fn.detect_ambient_texlive_year.html" title="fn latexml_engine::dump_paths::detect_ambient_texlive_year"><code>crate::dump_paths::detect_ambient_texlive_year</code></a> returns a
+year that is bundled, use that exact year.</li>
+<li>Otherwise (no ambient TeXLive, or ambient year not bundled), fall
+back to the most-recent bundled year.</li>
+<li>If nothing is bundled at all, return <code>None</code>.</li>
+</ol>
+<p>Opt out of the embedded fallback altogether with
+<code>LATEXML_NO_EMBEDDED_DUMP=1</code> — useful when iterating locally and you
+want the binary to surface “no dump available” instead of silently
+using a stale embedded snapshot.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.embedded_latex_dump.html" title="fn latexml_engine::embedded_dumps::embedded_latex_dump">embedded_<wbr>latex_<wbr>dump</a></dt><dd>Bundled <code>latex.YYYY.dump.txt</code> content for the year that best matches
+<code>prefer</code>. See <a href="fn.embedded_plain_dump.html" title="fn latexml_engine::embedded_dumps::embedded_plain_dump"><code>embedded_plain_dump</code></a> for cache semantics. First
+call per machine-boot pays ~6.5 ms gunzip + ~5 ms write; every
+subsequent process across the boot reads the cached file in ~1 ms.</dd><dt><a class="fn" href="fn.embedded_plain_dump.html" title="fn latexml_engine::embedded_dumps::embedded_plain_dump">embedded_<wbr>plain_<wbr>dump</a></dt><dd>Bundled <code>plain.YYYY.dump.txt</code> content for the year that best matches
+<code>prefer</code>. <code>None</code> when nothing is bundled or <code>LATEXML_NO_EMBEDDED_DUMP</code>
+is set. First call per machine-boot decompresses + caches to
+<code>/tmp</code>; subsequent calls in this AND future processes load the
+decompressed file directly from the disk cache.</dd><dt><a class="fn" href="fn.embedded_texlive_version_first_line.html" title="fn latexml_engine::embedded_dumps::embedded_texlive_version_first_line">embedded_<wbr>texlive_<wbr>version_<wbr>first_<wbr>line</a></dt><dd>First line of the bundled <code>texlive.YYYY.version</code> stamp for the chosen
+year (used by the staleness check). <code>None</code> if no embedded dump applies.</dd><dt><a class="fn" href="fn.embedded_year.html" title="fn latexml_engine::embedded_dumps::embedded_year">embedded_<wbr>year</a></dt><dd>Year-tag for the chosen embedded dump (used in log messages).
+Returns <code>None</code> if no embedded dump applies.</dd><dt><a class="fn" href="fn.latex_embedded_available.html" title="fn latexml_engine::embedded_dumps::latex_embedded_available">latex_<wbr>embedded_<wbr>available</a></dt><dt><a class="fn" href="fn.plain_embedded_available.html" title="fn latexml_engine::embedded_dumps::plain_embedded_available">plain_<wbr>embedded_<wbr>available</a></dt><dd>Whether at least one embedded plain+latex pair is bundled and the
+opt-out env var isn’t set.</dd></dl></section></div></main></body></html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/siamart_cls.rs`."><title>siamart_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (b954122bb 2026-05-20)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>siamart_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub binding for SIAM siamart-family classes (siamart, siamart220329, ...).
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! Activated via prefix-match: any class name starting with "siamart" routes
+<a href=#4 id=4 data-nosnippet>4</a>//! here. Defines the high-level macros papers use (\newsiamthm, \newsiamremark,
+<a href=#5 id=5 data-nosnippet>5</a>//! \headers, \dedicatory) on top of OmniBus's article-like behaviour.
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a>
+<a href=#9 id=9 data-nosnippet>9</a><span class="macro">LoadDefinitions!</span>({
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// siamart220329.cls L58: \RequirePackage[leqno]{amsmath}.
+<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="comment">// Many siamart papers pre-define colors in their macros.tex before
+<a href=#15 id=15 data-nosnippet>15</a>  // their own `\usepackage{xcolor}`. Defensive xcolor load matches Perl
+<a href=#16 id=16 data-nosnippet>16</a>  // behaviour. Witness 2405.17955 (EPCID).
+<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// siamart220329 L1361: \RequirePackage{algorithm}.
+<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"algorithm"</span>);
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// siamart220329 L1285: \RequirePackage{hyperref}[6.83] (unconditional).
+<a href=#22 id=22 data-nosnippet>22</a>  // Mirror so papers using \hidelinks/\href/\hypersetup don't error.
+<a href=#23 id=23 data-nosnippet>23</a>  // hyperref MUST come before cleveref (cleveref errors out otherwise).
+<a href=#24 id=24 data-nosnippet>24</a>  // Witness 2407.00765 (siamart220329 with `[hidelinks,…]` class option).
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// siamart220329 L1371: \RequirePackage[capitalize,nameinlink]{cleveref}.
+<a href=#27 id=27 data-nosnippet>27</a>  // Loaded AFTER hyperref to satisfy cleveref's ordering check.
+<a href=#28 id=28 data-nosnippet>28</a>  // Witness 2501.11060 (Error:latex:cleveref must be loaded after hyperref!).
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"cleveref"</span>);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="comment">// siamonline220329 L1676: \RequirePackage[mathlines]{lineno}.
+<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// ifpdf is auto-loaded inside epstopdf; our binding triggers
+<a href=#33 id=33 data-nosnippet>33</a>  // \ifpdf usage during epstopdf raw-load, so preload it here.
+<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"ifpdf"</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">RawTeX!</span>(
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="string">r"\newtheorem{theorem}{Theorem}
+<a href=#37 id=37 data-nosnippet>37</a>\newtheorem{lemma}[theorem]{Lemma}
+<a href=#38 id=38 data-nosnippet>38</a>\newtheorem{corollary}[theorem]{Corollary}
+<a href=#39 id=39 data-nosnippet>39</a>\newtheorem{proposition}[theorem]{Proposition}
+<a href=#40 id=40 data-nosnippet>40</a>\newtheorem{definition}[theorem]{Definition}"
+<a href=#41 id=41 data-nosnippet>41</a>  </span>);
+<a href=#42 id=42 data-nosnippet>42</a>
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// \newsiamthm{name}{title}, \newsiamremark{name}{title}: siamart220329 L1452,
+<a href=#44 id=44 data-nosnippet>44</a>  // L1469. Both reduce to `\newtheorem{name}[theorem]{title}`; the theoremstyle
+<a href=#45 id=45 data-nosnippet>45</a>  // tweaks are visual and don't affect XML.
+<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newsiamthm{}{}"</span>, <span class="string">r"\newtheorem{#1}[theorem]{#2}"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\newsiamremark{}{}"</span>, <span class="string">r"\newtheorem{#1}[theorem]{#2}"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// siamart frontmatter primitives. Round-34 surpass-Perl: preserve
+<a href=#50 id=50 data-nosnippet>50</a>  // \dedicatory, \fundingsource, and \funding as author-typed
+<a href=#51 id=51 data-nosnippet>51</a>  // frontmatter notes (the funding text is often a real funding
+<a href=#52 id=52 data-nosnippet>52</a>  // statement worth keeping). \headers{left}{right} → running-head
+<a href=#53 id=53 data-nosnippet>53</a>  // text, preserve as ltx:note.
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\headers{}{}"</span>,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dedicatory{}"</span>,
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fundingsource{}"</span>,
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=funding-source]{#1}"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// siamart papers often \externaldocument supplement/article before
+<a href=#61 id=61 data-nosnippet>61</a>  // loading xr — pre-stub. siamart loads xr-hyper (not xr), which
+<a href=#62 id=62 data-nosnippet>62</a>  // supports `\externaldocument[prefix][nocite]{file}` (two optional
+<a href=#63 id=63 data-nosnippet>63</a>  // args). Semiverbatim on the file arg neutralizes `_` so paper-
+<a href=#64 id=64 data-nosnippet>64</a>  // bundled filenames like `ex_supplement` don't trip text-mode `_`
+<a href=#65 id=65 data-nosnippet>65</a>  // errors. Witness 2402.12241.
+<a href=#66 id=66 data-nosnippet>66</a>  </span>def_macro_noop(<span class="string">"\\externaldocument[][] Semiverbatim"</span>)<span class="question-mark">?</span>;
+<a href=#67 id=67 data-nosnippet>67</a>  def_macro_noop(<span class="string">"\\externalcitedocument[][] Semiverbatim"</span>)<span class="question-mark">?</span>;
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// siamart220329 L1130: \funding{...} writes a marked line in the
+<a href=#69 id=69 data-nosnippet>69</a>  // titlepage. Preserve as a frontmatter ltx:acknowledgements via
+<a href=#70 id=70 data-nosnippet>70</a>  // \@add@frontmatter so the element lands at top-level no matter
+<a href=#71 id=71 data-nosnippet>71</a>  // where the macro is invoked. Papers commonly nest \funding{...}
+<a href=#72 id=72 data-nosnippet>72</a>  // inside \thanks{...} (which is rendered as ltx:note); an inline
+<a href=#73 id=73 data-nosnippet>73</a>  // DefConstructor of ltx:acknowledgements there fires
+<a href=#74 id=74 data-nosnippet>74</a>  // Error:malformed:ltx:acknowledgements isn't allowed in &lt;ltx:note&gt;.
+<a href=#75 id=75 data-nosnippet>75</a>  // Witness 2311.08549.
+<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\funding{}"</span>,
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">"\\@add@frontmatter{ltx:acknowledgements}[name=Funding]{#1}"</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="comment">// {MSCcodes} env — siamart220329 L743 wraps content in an "@abssec"
+<a href=#79 id=79 data-nosnippet>79</a>  // (frontmatter section). Mirror as keywords-like classification block.
+<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"{MSCcodes}"</span>,
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="string">"&lt;ltx:classification scheme='MSC'&gt;#body&lt;/ltx:classification&gt;"
+<a href=#83 id=83 data-nosnippet>83</a>  </span>);
+<a href=#84 id=84 data-nosnippet>84</a>
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="comment">// {AMS} env — siamart190516 L742 same pattern (AMS subject
+<a href=#86 id=86 data-nosnippet>86</a>  // classification). Some older SIAM templates use {AMS} instead of
+<a href=#87 id=87 data-nosnippet>87</a>  // {MSCcodes}. Witness 2306.11286, 2306.13351 (siamart190516).
+<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"{AMS}"</span>,
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="string">"&lt;ltx:classification scheme='AMS'&gt;#body&lt;/ltx:classification&gt;"
+<a href=#91 id=91 data-nosnippet>91</a>  </span>);
+<a href=#92 id=92 data-nosnippet>92</a>});
+</code></pre></div></section></main></body></html>
