@@ -119,6 +119,11 @@ LoadDefinitions!({
   DefMacro!("\\icmlProjectLead",
     "\\textsuperscript{\\char`\u{2020}}Project lead");
   DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  // \iclrfinalcopy — some icml*-bundled papers also use ICLR's
+  // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
+  // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
+  DefConditional!("\\ificlrfinal");
+  def_macro_noop("\\iclrfinalcopy")?;
 
   // Random extra bits
   def_macro_noop("\\abovestrut{}")?;

@@ -298,6 +298,10 @@ LoadDefinitions!({
   DefConditional!("\\if@printfolios");
   DefConditional!("\\if@acmReview");
   DefConditional!("\\if@ACM@manuscript");
+  // \if@ACM@nonacm is NOT a newif in current acmart.cls, but some
+  // papers (or older acmart versions) call `\@ACM@nonacmtrue` in the
+  // preamble. Declare to avoid undefined errors. Witness 2211.10881.
+  DefConditional!("\\if@ACM@nonacm");
   DefConditional!("\\if@ACM@journal");
   DefConditional!("\\if@ACM@journal@bibstrip");
   DefConditional!("\\if@ACM@journal@bibstrip@or@tog");
