@@ -1,27 +1,29 @@
 use latexml_package::prelude::*;
+use latexml_core::binding::content::find_file;
 
 LoadDefinitions!({
   // Perl: ar5iv-bindings/catchfile.sty.ltxml — DefMacro with Perl closure
   // that Input()s a file and DefMacroI()s its contents into the target CS.
-  // The Rust port minimally stubs both control sequences so documents
-  // that call `\CatchFileDef\target{path}{options}` don't hit undefined-CS
-  // on `\CatchFileDef` itself. The target CS remains undefined (file I/O
-  // deferred) — a faithful implementation would need Input() + dynamic
-  // def_macro(target, contents) inside the DefPrimitive closure, which
-  // is awkward because the file path is typically runtime-unavailable
-  // in test fixtures.
   //
-  // DP-audit kind flip (Perl DefMacro → Rust DefPrimitive) is a
-  // deliberate structural adaptation: a no-op stub is more naturally
-  // expressed as DefPrimitive-None than as DefMacro-empty-body because
-  // the Perl body is a closure (not a template expansion). WISDOM #44
-  // in reverse — gullet-level no-op vs stomach-level no-op; both
-  // observationally equivalent when the body is inert.
-  Warn!(
-    "missing_file",
-    "catchfile.sty",
-    "catchfile.sty is only minimally stubbed and will not be interpreted raw."
-  );
-  DefPrimitive!("\\CatchFileDef DefToken {}{}", None);
-  DefPrimitive!("\\CatchFileEdef DefToken {}{}", None);
+  // Rust port: locate the file via find_file and read it as raw bytes,
+  // then def_macro the target CS to the slurped contents (lossy UTF-8).
+  // This lets `\CatchFileDef\paramtable{tables/main_table.tex}{}`
+  // actually populate \paramtable so downstream `\paramtable` use
+  // doesn't trip undefined. Witness 2210.08043 (mnras + CatchFileDef).
+  DefPrimitive!("\\CatchFileDef DefToken {}{}", sub[(target, path, _opts)] {
+    let path_str = path.to_string();
+    let resolved = find_file(&path_str, None);
+    if let Some(disk) = resolved {
+      if let Ok(bytes) = std::fs::read(&disk) {
+        let body = String::from_utf8_lossy(&bytes);
+        let tokens = mouth::tokenize_internal(&body);
+        def_macro(target, None, tokens, None)?;
+      }
+    }
+    Ok(())
+  });
+  // \CatchFileEdef variant — same shape, but in Perl edef-expands
+  // the contents before storing. We slurp + tokenize identically;
+  // expansion happens lazily when target CS is used.
+  Let!("\\CatchFileEdef", "\\CatchFileDef");
 });
