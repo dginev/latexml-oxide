@@ -2578,7 +2578,14 @@ LoadDefinitions!({
   // 2 other stage-2 papers using \begin{array} outside standard wrapping.
   Let!("\\@halignto", "\\@empty");
 
-  // Let's try just starting with this set (since we've loaded LaTeX)
+  // Defensive `\let \@arrayright \@empty` for array.sty's macro
+  // (array.sty L: `\let\@arrayright\@empty`). Referenced by revtex's
+  // ltxutil.sty (`\def\endarray{...\@arrayright...}`) BEFORE array.sty
+  // has loaded. Without this default, raw-loading ltxutil while in
+  // revtex's class init reads \@arrayright as undefined, defines it
+  // as <ltx:ERROR/>, and the resulting bad <ltx:ERROR/> token propagates
+  // through `\endarray` causing 60GB+ OOM cascades. Witness 2305.18141.
+  Let!("\\@arrayright", "\\@empty");
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
