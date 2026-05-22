@@ -22,7 +22,7 @@ rustc-hash = "2.0.0"
 # fingerprints (source bytes + render opts). Only `Digest`+`Sha256` are
 # used; `default-features = false` skips the `oid` feature (DER object-id
 # constants for X.509-style usage) which we never touch.
-sha2 = { version = "0.10", default-features = false }
+sha2 = { version = "0.11", default-features = false }
 # `pack` module: zip-bundle final output (HTML + log + status + resource dir +
 # optional telemetry). Used by both `latexml_oxide` and `cortex_worker`.
 # Matches the binary-side feature slim: deflate-only, no aes/bzip2/zstd/lzma.
