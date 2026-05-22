@@ -27,14 +27,18 @@ resolver = "2"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
-# Local-development [patch] for the libxml crate goes here when
-# debugging unreleased API at `~/git/rust-libxml`. Activated 2026-05-18
-# for the `Document::remove_internal_subset` work (KWARC/rust-libxml
-# PR #198); removed after 0.3.11 shipped and the workspace dep was
-# bumped. Uncomment to redirect again for future libxml-side work.
+# Active [patch] override for the libxml crate. Pinned to a specific
+# commit on `KWARC/rust-libxml feat/input-callbacks` (the unreleased
+# 0.3.12 `io::register_input_callback` API). Used by
+# `latexml_post::xslt` to serve embedded XSLT stylesheets through the
+# `embed:///` URL scheme without ever extracting them to disk. Swap
+# back to a plain `libxml = "0.3.12"` once that version ships to
+# crates.io and the workspace bumps the version requirement.
 #
-# [patch.crates-io]
-# libxml = { path = "/home/deyan/git/rust-libxml" }
+# Prior bump 2026-05-18 was for `Document::remove_internal_subset`
+# (PR #198, landed in 0.3.11).
+[patch.crates-io]
+libxml = { git = "https://github.com/KWARC/rust-libxml", branch = "feat/input-callbacks" }
 
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
