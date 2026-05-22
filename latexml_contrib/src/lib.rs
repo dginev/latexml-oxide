@@ -93,6 +93,7 @@ pub mod ltablex_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
 pub mod mciteplus_sty;
+pub mod titleref_sty;
 pub mod mdframed_sty;
 pub mod memoir_cls;
 pub mod mhchem_sty;
@@ -331,6 +332,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("forest", "sty", forest_sty::load_definitions),
   ("harvmac", "tex", harvmac_tex::load_definitions),
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
+  ("titleref", "sty", titleref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
   ("memoir", "cls", memoir_cls::load_definitions),
   ("mhchem", "sty", mhchem_sty::load_definitions),
