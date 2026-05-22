@@ -142,13 +142,18 @@ Open Rust-only (post-R36 commits):
 |---|---|---|---|
 | 0712.0243 | 20 | TIMEOUT | pstricks-heavy doc, hits 120 s ceiling |
 | 0809.4358 | 22 | TIMEOUT | statsoc.cls → OmniBus fallback, large doc |
-| 0904.3132 | 24 | TIMEOUT | timeout shortly after `\etal` redef + url load |
-| 0904.3938 | 24 | mode-mismatch | mode-stack corruption after multiple xymatrix? deep |
+| 0904.3132 | 24 | TIMEOUT | `ectj.cls` → OmniBus, processed user content to line 1500 / 1665 (in `\bibitem`) before 120 s ceiling |
+| 0904.3938 | 24 | mode-mismatch | mode-stack corruption after multiple xymatrix? deep, doc is `compositio.cls` |
 | 0908.3882 | 25 | TIMEOUT | during 3rd input file (LogitNet_Figure) |
-| 0911.1590 | 26 | conditional + tag-mode | `\else` no-frame after enumerate.sty load → cascade |
-| 0912.1617 | 27 | TIMEOUT | preamble timeout after url load (ectj.cls?) |
-| 1001.1919 | 27 | TIMEOUT | during .bbl processing |
-| 1001.5004 | 27 | TIMEOUT | during .bbl processing |
+| 0911.1590 | 26 | `\tag\textsc{…}` cascade | malformed user input — `\tag` w/o braces takes `\textsc` as arg, then `\theequation` redefinition + `\lx@make@tags`'s `\ifmmode` chain leaks orphan `\else`/`\fi`. Perl LaTeXML *tolerates* the same input (produces auto-numbered tag + `CONT` rendered as italic math, 0 errors), so this is a real engine parity gap. 8-line minimal repro: `\documentclass{amsart}\begin{document}\begin{equation}\label{c}{\tag\textsc{CONT}} a=b\end{equation}\end{document}`. **Root cause**: Perl's `latex_constructs.pool.ltxml L2053` declares `DefPrimitive('\lx@equation@settag@ Digested', sub { ... })` — parameter type **`Digested`**, so the arg is digested in the parameter-reader's caller mode (display\_math) before the body runs. Our `latex_constructs.rs::L5527` uses `{}` then `stomach::digest(content)?` inside the body running in `mode => "restricted_horizontal"` — the explicit `?` propagates digest errors AND the wrong mode flips `\ifmmode` evaluation, surfacing the orphan `\else` cascade. **Fix needed**: add `Digested` parameter-type support to `DefPrimitive` (currently only `DefConstructor` accepts it). Defer to next session — engine-level, broader audit needed before landing. |
+| 0912.1617 | 27 | TIMEOUT | `ectj.cls` → OmniBus, timeout shortly after url.sty load (same class family as 0904.3132) |
+| 1001.1919 | 27 | TIMEOUT | during `.bbl` processing (version_arxiv.bbl) |
+| 1001.5004 | 27 | TIMEOUT | during `.bbl` processing (principles.bbl) |
+
+**Cluster hints:**
+* **`ectj.cls` (Econometrics Journal)** — 0904.3132 + 0912.1617 both use it. Both fall back to OmniBus, both hit Convert TIMEOUT. The deps-scan pre-loads ~10 packages (`times,mathptm,mathtime,graphicx,color,ifthen,latexsym,pdfmark,natbib`) before recognising the class is binding-less; OmniBus then re-establishes the equivalents. If a slow code-path is shared, fixing one likely fixes both.
+* **`.bbl` processing timeouts** — 1001.1919 + 1001.5004 both die during bibliography. If a `\bibitem` body has a pathological expansion, both might share root cause.
+* **`compositio.cls` (Compositio Math)** — 0904.3938's mode-stack issue likely class-specific (paper-bundled `compositio.cls`).
 
 ### Open R36 tactical work
 
