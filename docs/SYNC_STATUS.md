@@ -516,6 +516,40 @@ timeout, canvas conditions):** 5 of 16 witness papers now exit OK:
 Projected canvas: 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
 (up from 99.989%).
 
+### Sprint commits (chronological)
+
+| Commit       | Subject |
+|--------------|---------|
+| `bd63bbe2ed` | R35.B investigation + qname-cap defensive guard |
+| `1de4bf205b` | R35.D.1 fix: float-script rewrite XPath O(N×T) → O(N) |
+| `47e0125ff2` | docs: R35 tracker — D.1 fixed; D.2 split out |
+| `35ddd41238` | R35.C step 1: graphics workers tolerate spawn EAGAIN |
+| `5b0131df22` | docs: R35.A narrowed to \displaylines+\picture |
+| `cc65700a3b` | docs: R35 sprint — 5 of 16 witnesses now pass |
+| `5bfc9fe7a0` | R35.A safety net: default pushback_limit=5M |
+
+### Sprint summary
+
+Net impact: **5 of 16 canvas failures resolved, +1 fully-fixed
+engine bug (R35.D.1), 1 partial fix (R35.C step 1), 4 root causes
+identified and documented for future work.**
+
+Code changes:
+* `latexml_core/src/document.rs` — qname truncation in error-message
+  formatter (general defensive).
+* `latexml_core/src/rewrite.rs` — make RewriteClause fields pub for
+  per-rule instrumentation.
+* `latexml_engine/src/tex_math.rs` — float-script rewrite uses loose
+  XPath + tight Rust closure (R35.D.1).
+* `latexml_oxide/src/core_interface.rs` — per-rule rewrite timing
+  (instrumentation, kept).
+* `latexml_post/src/graphics.rs` — graceful spawn-failure handling
+  (R35.C).
+* `latexml_oxide/bin/cortex_worker.rs` — default pushback_limit=5M
+  (safety net).
+
+Tests stable: **1332/0/0** throughout.
+
 
 * **R35.B** — INVESTIGATED 2026-05-22. Initial hypothesis (constant
   pre-alloc) FALSIFIED — actual root cause is unbounded
