@@ -486,7 +486,18 @@ transients; the remaining 3 are noise.
   string-interner growth from xy-pic `\fontdimen` recovery loops.
   Deeper fix deferred; defensive arena guard available as
   short-term option. See R35.B section above.
-* **R35.D** — OPEN. Not yet started.
+* **R35.D.1** — gr-qc0209055 (Rewriting TIMEOUT) — **FIXED**
+  2026-05-22 (commit `1de4bf205b`). Float-script rewrite XPath
+  reformulated O(N×T) → O(N) by lifting structural predicates
+  into the Rust replace closure. Rule #0 wall time on the witness
+  paper dropped from >80s (timeout) to ~200ms (~400× speedup).
+  Witness now converts cleanly with 344 maths processed and 0
+  errors. All 1332 tests pass.
+* **R35.D.2** — gr-qc0301024 (Building TIMEOUT, PiCTeX) — OPEN.
+  Different cluster than originally classified; this paper times
+  out inside `(Building...)` not `(Rewriting...)`. PiCTeX is an
+  old graphics package known for being slow. Will investigate
+  next.
 * **R35.C** — OPEN. Not yet started.
 * **R35.A** — OPEN. Not yet started. Note: shares the
   "silent loop → tiny alloc fails at the ulimit ceiling"
