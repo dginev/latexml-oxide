@@ -961,6 +961,24 @@ fn custom_alloc_error_hook(layout: Layout) {
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
 
+  // R35.A: install a default gullet pushback limit so runaway
+  // macro expansion (witnessed on plain-TeX `\displaylines{ …
+  // \picture(800,250) … }` chains, 7 sandbox papers from
+  // 1999-2006) trips a clean `Fatal:timeout:PushbackLimit`
+  // instead of the small-alloc OOM cascade that the
+  // post-cap watchdog would catch only after the worker has
+  // burned ~1.6 GB in `Vec<Token>` accumulation. Override or
+  // remove via LaTeXML.sty's `pushbacklimit=N` keyval per
+  // `latexml_package::package::latexml_sty.rs`.
+  //
+  // 5 million tokens × ~24 B = ~120 MB at trip — well below
+  // the 6 GB ulimit headroom and large enough that real
+  // documents never reach it (witness wp5: median pushback
+  // peaks well under 100k tokens).
+  if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+    latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+  }
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
   // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
