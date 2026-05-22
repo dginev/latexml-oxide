@@ -885,6 +885,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pslatex", "sty", package::pslatex_sty::load_definitions),
   ("pxfonts", "sty", package::pxfonts_sty::load_definitions),
   ("times", "sty", package::times_sty::load_definitions),
+  ("trace", "sty", package::trace_sty::load_definitions),
   ("tracefnt", "sty", package::tracefnt_sty::load_definitions),
   ("upref", "sty", package::upref_sty::load_definitions),
   ("utopia", "sty", package::utopia_sty::load_definitions),

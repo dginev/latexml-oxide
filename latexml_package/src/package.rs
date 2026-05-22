@@ -430,6 +430,7 @@ pub mod titlesec_sty;
 pub mod titling_sty;
 pub mod tocbibind_sty;
 pub mod todonotes_sty;
+pub mod trace_sty;
 pub mod tracefnt_sty;
 pub mod tracklang_sty;
 pub mod translations_sty;
