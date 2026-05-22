@@ -103,8 +103,8 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | OK | **264,846** |
 | Success rate | **99.9765%** |
 | Tests | **1,334 / 0 / 0** |
-| Branch | `large-scale-testing-round-3`, 901 commits ahead of `origin/master` |
-| Branch diff vs master | 17 files, **+464 / −22 LOC** (squash-merge candidate) |
+| Branch | `large-scale-testing-round-3`, 903 commits ahead of `origin/master` |
+| Branch diff vs master | 19 files, **+518 / −22 LOC** (squash-merge candidate) |
 
 Non-`OK` breakdown across closed stages 1–26 (62 papers):
 
@@ -118,7 +118,7 @@ Non-`OK` breakdown across closed stages 1–26 (62 papers):
  1  FATAL_1
 ```
 
-### R36 commits landed this session (5)
+### R36 commits landed this session (6)
 
 | Commit | Fix | Papers recovered |
 |---|---|---:|
@@ -127,21 +127,42 @@ Non-`OK` breakdown across closed stages 1–26 (62 papers):
 | `a68505d52e` | `babel_lang_stubs`: `\expandafter\newlanguage\csname...` (16 stubbed langs) | 1 (brazil) |
 | `fb588899df` | `trace.sty` no-op binding (bypasses `\frozen@everymath` self-reference) | 1 |
 | `4a1b326151` | `let_i`: deep-copy robust-wrapper pair (Expandable+`\<cs><space>` body) | 1 |
+| `ee92ead429` | `mdwtab.sty` + `mathenv.sty` no-op bindings (preserves binding-aware `\tabular`/`\eqnarray`) | 2 (stage-26+27) |
 
-Stage 16-23 sandbox went **0/22 → 11/22 OK**. Remaining 11:
-6 SHARED-FAILUREs, 2 Rust-only perf cases (`0712.0243` pstricks
-timeout, `0809.4358` statsoc-fallback slowness), 1 degenerate zip
-(`0901.2851` no main `.tex`).
+Stage 16-23 sandbox went **0/22 → 11/22 OK**. Stages 24-27 fresh
+FATAL_3 cohort (26 papers): re-verified, **10/26 already fixed by
+prior R36 commits** (mostly `delarray.sty` + `let_i` deep-copy);
+remaining 16 split into 9 SHARED-FAILUREs + 7 Rust-only (5 Convert
+TIMEOUTs + 2 mode-mismatch). `mdwtab.sty` commit then closed 2 of
+the 7 Rust-only (0910.3293, 1002.3613).
+
+Open Rust-only (post-R36 commits):
+
+| Paper | Stage | Class | Notes |
+|---|---|---|---|
+| 0712.0243 | 20 | TIMEOUT | pstricks-heavy doc, hits 120 s ceiling |
+| 0809.4358 | 22 | TIMEOUT | statsoc.cls → OmniBus fallback, large doc |
+| 0904.3132 | 24 | TIMEOUT | timeout shortly after `\etal` redef + url load |
+| 0904.3938 | 24 | mode-mismatch | mode-stack corruption after multiple xymatrix? deep |
+| 0908.3882 | 25 | TIMEOUT | during 3rd input file (LogitNet_Figure) |
+| 0911.1590 | 26 | conditional + tag-mode | `\else` no-frame after enumerate.sty load → cascade |
+| 0912.1617 | 27 | TIMEOUT | preamble timeout after url load (ectj.cls?) |
+| 1001.1919 | 27 | TIMEOUT | during .bbl processing |
+| 1001.5004 | 27 | TIMEOUT | during .bbl processing |
 
 ### Open R36 tactical work
 
-* **Rsync the second 500K** (lines 500,003–1,000,002 of
-  `all_warnings.txt` → `~/data/large_scale_canvas_3/data/arxmliv/`).
+* **Rsync the second 500K** (in flight, PID 3557279; the local
+  rsync 3.2.7 with a 500K `--files-from` is slow to start because
+  the receiver-side `rsync --server --sender` has to stat every
+  entry before transfer begins; first new file expected within
+  another 5–15 min).
 * **Stages 28–50** — let the canvas keep grinding while engine
   fixes accumulate; re-classify each new cluster.
-* **Rust-only perf cases** — `0712.0243` (pstricks-heavy doc, hits
-  the 120 s ceiling); `0809.4358` (statsoc.cls→OmniBus fallback,
-  large doc, Convert timeout).
+* **Rust-only triage list above** — 5 of 9 are Convert TIMEOUT
+  (group by what's slow); 2 are mode-mismatch (likely shared
+  mode-stack invariants); 1 conditional issue (post-enumerate
+  `\else` cascade).
 * **mhchem 77-error cluster** — see "mhchem retirement" below;
   retire `latexml_contrib/src/mhchem_sty.rs` (~110 LoC stub) by
   closing the upstream `\int_value:w` mis-evaluation at the head
