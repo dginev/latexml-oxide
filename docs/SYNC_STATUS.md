@@ -412,8 +412,24 @@ secondary symptom of the same load.
 
 ### R35.A — plain-TeX `\displaylines{...}}$$` silent runaway
 
-**Status:** OPEN, fourth priority (largest paper count but
-hardest to debug).
+**Status:** ROOT CAUSE NARROWED 2026-05-22; deeper fix still OPEN.
+
+**Update 2026-05-22.** Reduced math0102089 to a minimal trigger:
+inside `$$\displaylines{ … \simplexes\cr }$$`, the `\simplexes` macro
+is the culprit. `\simplexes` is the paper's own plain-TeX `\picture`
+environment containing 31 `\put`s. Verified by replacing `\simplexes`
+with a placeholder token in the trigger line — conversion completes
+cleanly. Original ZIP still OOMs. So the runaway is in our engine's
+handling of user-defined plain-TeX `\picture(...)`/`\put` chains
+INSIDE display math (via `\displaylines` → `\halign`). The macro
+chain involves `\@ifnextchar`, `\bgroup`/`\egroup` matching, and
+`\hskip -#3\unitlength` dimension parsing — any of these could be
+where the loop sits. The dev binary is too slow (>8 min) to reach
+the OOM and produce a useful backtrace; release strips symbols.
+
+**Witness papers (7):** `math0102053`, `math0102089`, `math0212126`,
+`math0504436`, `math0506088`, `math0507219`, `math0604321`. All old
+plain-TeX papers (1999–2006).
 
 **Witness papers (7):** `math0102053`, `math0102089`, `math0212126`,
 `math0504436`, `math0506088`, `math0507219`, `math0604321`. All old
@@ -498,11 +514,23 @@ transients; the remaining 3 are noise.
   out inside `(Building...)` not `(Rewriting...)`. PiCTeX is an
   old graphics package known for being slow. Will investigate
   next.
-* **R35.C** — OPEN. Not yet started.
-* **R35.A** — OPEN. Not yet started. Note: shares the
-  "silent loop → tiny alloc fails at the ulimit ceiling"
-  symptom with R35.B; the runaway is in a different code
-  path (gullet pushback Vec, not arena string interner).
+* **R35.C** — STEP 1 SHIPPED 2026-05-22 (commit `35ddd41238`).
+  Graphics worker pool uses `spawn_scoped` with 2 MB stack and
+  `.ok()` filter; surviving workers race for the same `next`
+  counter, so partial spawn-failure under EAGAIN doesn't crash
+  the whole conversion. Validated: hep-ph0012156 no longer
+  FATAL_101 panics on thread spawn. Remaining work: libxslt
+  malloc-failure SEGV during XSLT phase (downstream issue,
+  separate track). math0104252 already passed in standalone
+  with full CPU — false TIMEOUT under canvas pressure.
+* **R35.A** — ROOT CAUSE NARROWED 2026-05-22. The runaway is
+  triggered by user-defined plain-TeX `\picture(...)`/`\put`
+  inside `$$\displaylines{ … }$$` (i.e. inside the `\halign`
+  the `\displaylines` macro expands to). Confirmed by replacing
+  `\simplexes` with a placeholder in math0102089: the OOM
+  disappears. Deeper fix requires tracing the gullet expansion
+  loop with usable symbols — release builds strip; dev builds
+  too slow to reach the OOM. See R35.A section above.
 * **R35.E** — OPEN, no fix intended.
 
 Also: a tangential investigation revertable artifact — added
