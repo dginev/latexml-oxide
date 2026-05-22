@@ -160,18 +160,31 @@ impl Model {
   /// For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
   pub fn load_compiled_schema(&mut self, path: &str) {
-    note_begin(&s!("Loading compiled schema {}\n", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
-    for line_item in compiled_reader.lines().map_while(std::result::Result::ok) {
-      let line: String = line_item;
-      if let Some(caps) = TAG_MODEL_LINE_RE.captures(&line) {
+    let content: String = compiled_reader
+      .lines()
+      .map_while(std::result::Result::ok)
+      .collect::<Vec<_>>()
+      .join("\n");
+    self.load_compiled_schema_str(&content, path);
+  }
+
+  /// Same as [`Self::load_compiled_schema`] but consumes an already-
+  /// loaded `.model` body. `source` is used purely for diagnostic
+  /// messages (the `note_begin`/`note_end` envelope and the
+  /// malformed-line panic). Avoids the disk read when the model is
+  /// served from the binary's own embedded RelaxNG table.
+  pub fn load_compiled_schema_str(&mut self, content: &str, source: &str) {
+    note_begin(&s!("Loading compiled schema {}\n", source));
+    for line in content.lines() {
+      if let Some(caps) = TAG_MODEL_LINE_RE.captures(line) {
         let tag = caps.get(1).map_or("", |m| m.as_str());
         let attr = caps.get(2).map_or("", |m| m.as_str());
         let children = caps.get(3).map_or("", |m| m.as_str());
         self.add_tag_attribute(tag, attr.split(',').collect());
         self.add_tag_content(tag, children.split(',').collect());
-      } else if let Some(caps) = CLASS_MODEL_LINE_RE.captures(&line) {
+      } else if let Some(caps) = CLASS_MODEL_LINE_RE.captures(line) {
         let classname = caps.get(1).map_or("", |m| m.as_str());
         let elements = caps.get(2).map_or("", |m| m.as_str());
         let mut class_set = HashSet::default();
@@ -179,16 +192,15 @@ impl Model {
           class_set.insert(arena::pin(set_element));
         }
         self.set_schema_class(classname, class_set);
-      } else if let Some(caps) = NAMESPACE_MODEL_LINE_RE.captures(&line) {
+      } else if let Some(caps) = NAMESPACE_MODEL_LINE_RE.captures(line) {
         let prefix = caps.get(1).map_or("", |m| m.as_str());
         let namespace = caps.get(2).map_or("", |m| m.as_str());
         self.register_document_namespace(prefix, Some(namespace));
       } else {
-        panic!("Fatal:internal:{path} Compiled model '{path}' is malformatted at \"{line}\"");
+        panic!("Fatal:internal:{source} Compiled model '{source}' is malformatted at \"{line}\"");
       }
     }
-
-    note_end(&s!("Loading compiled schema {path}\n"));
+    note_end(&s!("Loading compiled schema {source}\n"));
   }
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
     let frame = self.tagprop.entry(tag).or_default();
@@ -392,37 +404,26 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
       installation_subdir: Some(s!("resources/RelaxNG")),
     });
 
-    // Fallback: when no `.model` is found via the regular searchpath
-    // dance, fall through to the embedded RelaxNG tree. The runtime
-    // extracts it to a temp dir on first call so a prebuilt binary
-    // running outside the source tree still locates its compiled
-    // schema. The raw-RNG fallback below then also gets to see the
-    // extracted tree via the augmented search path.
-    let embedded_root = crate::common::relaxng::embedded::ensure_extracted();
-    let pathname_opt = pathname_opt.or_else(|| {
-      embedded_root.as_ref().and_then(|dir| {
-        let candidate = dir.join(format!("{}.model", name));
-        candidate
-          .is_file()
-          .then(|| candidate.to_string_lossy().into_owned())
-      })
-    });
-
     match pathname_opt {
       Some(compiled_path) => model.load_compiled_schema(&compiled_path),
       None => {
-        let mut owned_paths: Vec<std::path::PathBuf> =
-          search_paths.iter().map(std::path::PathBuf::from).collect();
-        if let Some(dir) = embedded_root.as_ref() {
-          owned_paths.push(dir.clone());
-        }
-        let paths: Vec<&std::path::Path> =
-          owned_paths.iter().map(|p| p.as_path()).collect();
-        let schema = model.schema.as_mut().unwrap();
-        let schema_name = schema.name.clone();
-        if let Err(err) = schema.load_schema(&schema_name, &paths) {
-          let msg = format!("load_schema failed for {}: {}", schema_name, err);
-          Warn!("expected", "RelaxNG", msg);
+        // No `.model` on the searchpath. Try the embedded RelaxNG
+        // table for a same-named compiled schema first (the
+        // distribution path — binary running outside the source
+        // tree); fall through to raw `.rng` parsing if that misses
+        // too.
+        let embed_key = format!("{}.model", name);
+        if let Some(content) = crate::common::relaxng::embedded::lookup(&embed_key) {
+          model.load_compiled_schema_str(content, &format!("<embedded>/{embed_key}"));
+        } else {
+          let paths: Vec<&std::path::Path> =
+            search_paths.iter().map(std::path::Path::new).collect();
+          let schema = model.schema.as_mut().unwrap();
+          let schema_name = schema.name.clone();
+          if let Err(err) = schema.load_schema(&schema_name, &paths) {
+            let msg = format!("load_schema failed for {}: {}", schema_name, err);
+            Warn!("expected", "RelaxNG", msg);
+          }
         }
       },
     };

@@ -28,10 +28,6 @@ log = "0.4"
 quote = { version = "1.0", optional = true }
 proc-macro2 = { version = "1.0", optional = true }
 libxml = "0.3.11"
-# Used solely for `geteuid()` in `util::cache_dir` (per-uid tmp fallback
-# when $HOME/$XDG_CACHE_HOME are unset — daemons, sandboxed runners,
-# service accounts). Already in the workspace graph via kpathsea-sys.
-libc = "0.2"
 # (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
 # which on Linux is exactly `std::env::var_os("HOME")`. On Windows
 # dirs falls back to `SHGetKnownFolderPath`; not relevant for us.)
@@ -42,8 +38,3 @@ string-interner = { version = "0.20.0", default-features = false, features = ["s
 marpa = { git = "https://github.com/dginev/marpa" }
 unicode-normalization = "0.1.25"
 stacker = "0.1.24"
-
-[dev-dependencies]
-# Only used by `util::cache_dir::tests::for_subdir_creates_the_directory`
-# to scope the LATEXML_CACHE_DIR override to a disposable path.
-tempfile = "3"
