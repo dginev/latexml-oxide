@@ -239,7 +239,6 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
   Some((base, sub.to_string()))
 }
 
-
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys
@@ -368,12 +367,12 @@ LoadDefinitions!({
     AssignValue!("SUPPRESS_UNTEX_LINEBREAKS" => true, Scope::Global);
   });
 
-  ProcessOptions!();
+  ProcessOptions!(keysets => ["LTXML"]);
 
   // Process bibconfig keyval from options passed to latexml.sty.
   // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
-  // We specifically extract bibconfig=... since it controls bibliography source selection.
-  // Other keyvals (tokenlimit, iflimit, etc.) are handled via CLI flags or ar5iv defaults.
+  // ProcessOptions with the LTXML keyset now stores package keyvals here;
+  // keep the legacy extraction as a fallback for older call paths.
   if let Some(opts) = state::lookup_vecdeque("opt@latexml.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
