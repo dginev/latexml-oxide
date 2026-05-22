@@ -115,21 +115,22 @@ fails) or auto-fixed by the OmniBus reorder:
   1006.5461, 1009.3622, 1009.4876, 1009.6139, 1010.5320; mostly
   underscore-catcode cascades from missing class/package).
 
-### Stage 31 in-flight triage (8,736/10,000 with new binary)
+### Stage 31 final (post-OmniBus-fix binary) — 99.94% OK
 
-Stage 31 (post-OmniBus-fix, in flight): 8,730 OK / 5 FATAL_3 /
-1 TIMEOUT. Triaged:
+Stage 31: 9994 OK / 5 FATAL_3 / 1 TIMEOUT. Triaged:
 * 3 SHARED-FAILUREs: 1012.2852 (TooManyErrors), 1101.2531 (pictex
   timeout — Perl also hangs), 1102.2909 (Perl also fatals).
-* **3 Rust-only clusters identified (no fix yet):**
-  * **`1102.0135`**: `\itdefault invalid in math mode` warning at
-    `\emph{...} $\pf$` boundary cascades into ~100
-    `\lx@end@inline@math` mode-mismatch errors. Perl converts
-    cleanly in ~10s with just 1 unrelated MathParser warning. Root
-    cause likely in `\textit`/`\emph` font-switch interaction with
-    inline-math entry/exit — `\ifmmode` evaluates correctly but
-    `IN_MATH` lookup later disagrees. Needs careful expansion
-    tracing.
+* **Rust-only — closed by `ams_support`-`\pf`-env-gate fix
+  (commit 9c578bcaa9, 2026-05-22):**
+  * **`1102.0135`** ✓ — `\newcommand{\pf}{...}` AFTER
+    `\begin{document}` was being silently ignored because our
+    `\AtBeginDocument` block had pre-defined `\pf` as
+    `\begin{@proof}`. Subsequent `$\pf$` expanded into proof env in
+    math mode → `\itshape`/`\not@math@alphabet@@{\itdefault}`
+    warning → cascading mode-mismatch errors. Fix: gate the alias
+    on `2.09_COMPATIBILITY` like Perl does. Now "No obvious
+    problems".
+* **Open Rust-only:**
   * **`1102.0244`**: pstricks cluster (same as 0712.0243) — Perl
     converts in ~1 min, Rust times out. Engine-perf gap on pstricks
     raw-load chain.
@@ -139,6 +140,8 @@ Stage 31 (post-OmniBus-fix, in flight): 8,730 OK / 5 FATAL_3 /
     underscore-catcode-in-text-mode path. Same shape as 1004.3619.
     Likely benefits from better undefined-macro recovery in math
     context.
+
+Stage 32 (post-pf-gate-fix, in flight): 3977/3978 = 99.97% OK.
 
 ### R36 commits landed this session (6)
 
