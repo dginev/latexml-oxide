@@ -579,6 +579,29 @@ diverging from Perl, OR `\put`'s expansion re-injecting tokens.
 Mitigation: thread-local depth cap (>1000 → Fatal:Timeout:MemoryBudget).
 Deeper fix needs token-by-token gullet trace of the recursion source.
 
+### Canvas-3 measurement after sprint (2026-05-22 evening)
+
+Stages 1-22 closed with the sprint binaries (stage 22 fully under
+the corrected exit-code logic):
+
+* **228,002 / 228,038 = 99.9842%** OK
+* 36 non-OK total across 22 stages (228k papers)
+* Breakdown:
+  - 9 OOM (legacy Pattern B xy-pic + Pattern A papers on older
+    binary in stages 16-19, before all R35.A safety nets landed)
+  - 16 FATAL_3 (correctly classified pathological runaways with
+    the new binary; previously these silently produced empty HTML)
+  - 4 TIMEOUT (wall-clock 120s, PiCTeX / pstricks / deep math)
+  - 3 FATAL_139 (transient SIGSEGV under parallel pressure)
+  - 4 other / FATAL_2 stragglers from the broken intermediate
+    binary window in stage 22 (cleaned up via backfill)
+
+Stage 23+ continues with the final R35 binary. Cumulative canvas
+quality is HIGHER post-sprint despite the small % drop: papers
+that previously passed silently with empty/broken HTML now exit
+non-zero with a meaningful diagnostic, surfacing real bugs for
+future investigation. This is the intended outcome.
+
 ### Sprint summary
 
 Net impact: **5 of 16 canvas failures resolved, +1 fully-fixed
