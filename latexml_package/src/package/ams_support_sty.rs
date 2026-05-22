@@ -214,43 +214,32 @@ LoadDefinitions!({
   // LaTeX-2.09-era `pf` / `pf*` environment aliases for `proof`.
   // Sandbox paper 0802.1100 (and similar 2.09-style submissions) uses
   // `\begin{pf}` which isn't in modern amsart; this restores the alias.
+  //
+  // PERL-FAITHFUL: Perl ONLY provides the `pf` env alias in 2.09 mode.
+  // Modern amsart papers that use `\newcommand{\pf}{...}` (e.g.
+  // Pfaffian operator) AFTER `\begin{document}` rely on `\pf` being
+  // undefined at that point. Pre-providing it via `\AtBeginDocument`
+  // (our previous behavior) caused `is_definable_latex` to refuse
+  // the user's redefinition, leaving `\pf` as `\begin{@proof}` —
+  // which then expanded in `$\pf$` math context and triggered
+  // `\itshape`/`\not@math@alphabet@@` cascades (witness 1102.0135,
+  // ~100 errors via `\itdefault invalid in math mode` →
+  // `\lx@end@inline@math` mode-mismatch loop).
+  //
+  // Trade-off vs Perl: papers that genuinely use `\begin{pf}` for
+  // amsart's proof-alias env will emit one "undefined macro {pf}"
+  // error. Perl emits the same error (verified on minimal repro;
+  // Perl reports "Conversion complete: 1 error; 1 undefined
+  // macro[{pf}]"). Removing our preemptive `\AtBeginDocument` block
+  // makes Rust match Perl exactly on both cases.
   if lookup_bool("2.09_COMPATIBILITY") {
     DefMacro!("\\defaultfont", "\\normalfont");
     DefMacro!("\\rom", "\\textup");
+    stomach::raw_tex(
+      "\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}\
+       \\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}"
+    )?;
   }
-  // amsart.cls L1922 (modern), amsproc/amsbook also: `\newenvironment{pf}
-  // {\@newpf[\proofname]}{\popQED\endtrivlist}` — same as {proof} but
-  // shorter name. Provide as a proof alias so any
-  // amsart/amsproc/amsbook user calling \begin{pf}...\end{pf} resolves
-  // cleanly. Witness 14 papers with cas-sc, amsart, AMS-derived classes.
-  //
-  // CRUCIAL: defer to AtBeginDocument, and guard with `\@ifundefined{pf}`.
-  // Without the deferral, our `\newenvironment{pf}` runs at
-  // `\documentclass{amsart}` time — BEFORE the user's preamble macro
-  // `\newcommand{\pf}{\operatorname{pf}}` (Pfaffian). Our engine then
-  // refuses the user's redefinition, and downstream `\pf(U)` in display
-  // math expands to `\begin{@proof}` instead of `\operatorname{pf}` →
-  // cascading XMath-in-title / equation-in-XMath malformedness. Witness:
-  // 2306.17599 (Pfaffian paper, amsart class — was 622 errors, now 0).
-  //
-  // `\newenvironment` is a primitive — needs digestion, not just expansion.
-  // We package the deferred raw_tex into `\AtBeginDocument` so it fires
-  // after the entire user preamble has run.
-  // Witness 2308.01739 (amsart): paper defines `\def\endpf{\hfill $\Box$
-  // \vskip0.5cm}` as a manual proof terminator macro. The original
-  // `\@ifundefined{pf}` guard ONLY checked for `\pf` (env-begin); if the
-  // user had defined ONLY `\endpf` (env-end-shaped CS), our guard still
-  // passed and `\newenvironment{pf}` OVERWROTE the user's `\endpf` with
-  // env-end machinery (`\end{@proof}`), then standalone `\endpf` calls
-  // tried to pop a `{@proof}` env that was never opened → "Attempt to
-  // close a group that switched to mode internal_vertical" cascades.
-  // Add a symmetric `\@ifundefined{endpf}` guard so a pre-defined
-  // user `\endpf` blocks our redefinition.
-  stomach::raw_tex(
-    "\\AtBeginDocument{\
-       \\@ifundefined{pf}{\\@ifundefined{endpf}{\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}}{}}{}\
-       \\@ifundefined{pf*}{\\@ifundefined{endpf*}{\\newenvironment{pf*}[1]{\\begin{@proof}[##1]}{\\end{@proof}}}{}}{}}"
-  )?;
 
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}", "\\lx@tag[][. ]{\\lx@fnum@@{table}}#1");
