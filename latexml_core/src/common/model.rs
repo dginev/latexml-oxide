@@ -392,11 +392,32 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
       installation_subdir: Some(s!("resources/RelaxNG")),
     });
 
+    // Fallback: when no `.model` is found via the regular searchpath
+    // dance, fall through to the embedded RelaxNG tree. The runtime
+    // extracts it to a temp dir on first call so a prebuilt binary
+    // running outside the source tree still locates its compiled
+    // schema. The raw-RNG fallback below then also gets to see the
+    // extracted tree via the augmented search path.
+    let embedded_root = crate::common::relaxng::embedded::ensure_extracted();
+    let pathname_opt = pathname_opt.or_else(|| {
+      embedded_root.as_ref().and_then(|dir| {
+        let candidate = dir.join(format!("{}.model", name));
+        candidate
+          .is_file()
+          .then(|| candidate.to_string_lossy().into_owned())
+      })
+    });
+
     match pathname_opt {
       Some(compiled_path) => model.load_compiled_schema(&compiled_path),
       None => {
+        let mut owned_paths: Vec<std::path::PathBuf> =
+          search_paths.iter().map(std::path::PathBuf::from).collect();
+        if let Some(dir) = embedded_root.as_ref() {
+          owned_paths.push(dir.clone());
+        }
         let paths: Vec<&std::path::Path> =
-          search_paths.iter().map(std::path::Path::new).collect();
+          owned_paths.iter().map(|p| p.as_path()).collect();
         let schema = model.schema.as_mut().unwrap();
         let schema_name = schema.name.clone();
         if let Err(err) = schema.load_schema(&schema_name, &paths) {

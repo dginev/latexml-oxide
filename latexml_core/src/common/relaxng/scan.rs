@@ -568,6 +568,12 @@ fn strip_rng_ext(name: &str) -> String {
 /// URN scheme: strips the prefix, then translates remaining `:`
 /// separators into path separators so e.g.
 /// `urn:x-LaTeXML:RelaxNG:svg:svg11.rng` → `svg/svg11.rng` lookup.
+///
+/// Final fallback: when neither the verbatim path nor any provided
+/// search path holds the file, consult the embedded RelaxNG tree
+/// (`common::relaxng::embedded`) so a prebuilt-binary distribution
+/// still finds its schema includes without `resources/RelaxNG/` on
+/// disk.
 fn find_file(name: &str, search_paths: &[&Path]) -> Option<PathBuf> {
   let bare = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
     Some(rest) => rest.replace(':', "/"),
@@ -579,6 +585,12 @@ fn find_file(name: &str, search_paths: &[&Path]) -> Option<PathBuf> {
   }
   for dir in search_paths {
     let candidate = dir.join(&bare);
+    if candidate.is_file() {
+      return Some(candidate);
+    }
+  }
+  if let Some(embedded_dir) = crate::common::relaxng::embedded::ensure_extracted() {
+    let candidate = embedded_dir.join(&bare);
     if candidate.is_file() {
       return Some(candidate);
     }

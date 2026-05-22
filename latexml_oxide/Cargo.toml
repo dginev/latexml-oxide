@@ -87,3 +87,30 @@ hostname = { version = "0.4", optional = true }
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.
 mimalloc = { version = "0.1", default-features = false }
+
+# Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
+# Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
+# Runtime apt dependencies match the README's "Build from source" recipe minus
+# the `-dev` headers (those are compile-time only). The deb only ships the
+# `latexml_oxide` binary — XSLT, CSS, JavaScript and RelaxNG schemas are
+# embedded at build time, so no `resources/` payload is shipped alongside.
+[package.metadata.deb]
+name = "latexml-oxide"
+maintainer = "Deyan Ginev <deyan.ginev@gmail.com>"
+copyright = "2016-2026 Deyan Ginev. CC0 1.0 Universal."
+license-file = ["../LICENSE", "0"]
+extended-description = """\
+A Rust port of LaTeXML — converts LaTeX documents to accessible web
+formats (HTML5, XHTML, EPUB3, JATS). Drop-in replacement for the
+upstream Perl tool with significant throughput improvements on the
+arXiv corpus."""
+depends = "libc6, libxml2, libxslt1.1, libkpathsea6, texlive-latex-base, texlive-latex-extra, texlive-science"
+recommends = "imagemagick, poppler-utils, mupdf-tools"
+section = "tex"
+priority = "optional"
+assets = [
+  ["../target/maxperf/latexml_oxide", "usr/bin/", "755"],
+  ["../README.md", "usr/share/doc/latexml-oxide/README", "644"],
+  ["../CHANGELOG.md", "usr/share/doc/latexml-oxide/CHANGELOG", "644"],
+  ["../LICENSE", "usr/share/doc/latexml-oxide/copyright", "644"],
+]

@@ -33,7 +33,42 @@ Design goals:
   * Use idiomatic Rust when possible, especially when refactoring Perl idioms
   * Carefully address the newly required resource constraints
 
-### Installation
+### Releases
+
+Prebuilt `x86_64-unknown-linux-gnu` binaries are attached to every
+tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases).
+The binary is fully self-contained — all XSLT stylesheets, CSS, JS,
+and RelaxNG schemas are embedded at build time, so no `resources/`
+tree is needed alongside it. Tested on Ubuntu 22.04 LTS and later
+(glibc ≥ 2.35) and Debian 12+.
+
+**Debian / Ubuntu (`.deb`, declares runtime apt deps):**
+
+```
+$ curl -LO https://github.com/dginev/latexml-oxide/releases/latest/download/latexml-oxide_<VERSION>-1_amd64.deb
+$ sudo apt install ./latexml-oxide_<VERSION>-1_amd64.deb
+```
+
+**Portable tarball:**
+
+```
+$ curl -LO https://github.com/dginev/latexml-oxide/releases/latest/download/latexml-oxide-<VERSION>-x86_64-unknown-linux-gnu.tar.gz
+$ tar xzf latexml-oxide-<VERSION>-x86_64-unknown-linux-gnu.tar.gz
+$ sudo cp latexml-oxide-<VERSION>-x86_64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
+```
+
+Tarball users also need the runtime libraries:
+
+```
+$ sudo apt install libxml2 libxslt1.1 libkpathsea6 \
+                   texlive-latex-base texlive-latex-extra texlive-science
+```
+
+Every asset has a SHA-256 sidecar file (`<name>.sha256`) for integrity
+checking. Other platforms are not yet shipped — see
+[docs/RELEASING.md](docs/RELEASING.md).
+
+### Build from source
 
 Requires a recent Rust `nightly` to compile.
 
