@@ -80,6 +80,20 @@ pub fn check_timeout() -> Result<()> {
             .and_then(|v| v.parse::<u64>().ok())
             .unwrap_or(4_500_000_000);
           if rss_bytes > cap {
+            // R35.A debug: when LATEXML_DEBUG_MEMBUDGET=1 is set, dump
+            // a stack backtrace before exiting so we can identify the
+            // expansion loop responsible. Backtrace allocation is
+            // fine here — we haven't hit the OS ulimit yet (we're
+            // 1.5 GB below it by default).
+            if std::env::var_os("LATEXML_DEBUG_MEMBUDGET").is_some() {
+              eprintln!(
+                "[membudget] RSS {} MB > cap {} MB — dumping backtrace",
+                rss_bytes / 1_000_000,
+                cap / 1_000_000
+              );
+              let bt = std::backtrace::Backtrace::force_capture();
+              eprintln!("{bt}");
+            }
             fatal!(
               Timeout,
               MemoryBudget,
