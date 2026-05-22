@@ -239,837 +239,836 @@
 <a href=#239 id=239 data-nosnippet>239</a>  <span class="prelude-val">Some</span>((base, sub.to_string()))
 <a href=#240 id=240 data-nosnippet>240</a>}
 <a href=#241 id=241 data-nosnippet>241</a>
-<a href=#242 id=242 data-nosnippet>242</a>
-<a href=#243 id=243 data-nosnippet>243</a><span class="macro">LoadDefinitions!</span>({
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="comment">// Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
-<a href=#245 id=245 data-nosnippet>245</a>  // two well-known boolean knobs to the document author. Both state keys
-<a href=#246 id=246 data-nosnippet>246</a>  // (GENERATE_IDS, INCLUDE_COMMENTS) are read elsewhere in Rust (document.rs
-<a href=#247 id=247 data-nosnippet>247</a>  // L459 and mouth.rs L358/L696/L889 respectively), so the options were
-<a href=#248 id=248 data-nosnippet>248</a>  // functional but unreachable until wired here.
-<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"ids"</span>, {
-<a href=#250 id=250 data-nosnippet>250</a>    <span class="macro">AssignValue!</span>(<span class="string">"GENERATE_IDS"     </span>=&gt; <span class="bool-val">true</span>,  Scope::Global);
-<a href=#251 id=251 data-nosnippet>251</a>  });
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noids"</span>, {
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="macro">AssignValue!</span>(<span class="string">"GENERATE_IDS"     </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#254 id=254 data-nosnippet>254</a>  });
-<a href=#255 id=255 data-nosnippet>255</a>  <span class="macro">DeclareOption!</span>(<span class="string">"comments"</span>, {
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_COMMENTS" </span>=&gt; <span class="bool-val">true</span>,  Scope::Global);
-<a href=#257 id=257 data-nosnippet>257</a>  });
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nocomments"</span>, {
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_COMMENTS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#260 id=260 data-nosnippet>260</a>  });
-<a href=#261 id=261 data-nosnippet>261</a>
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="comment">// 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
-<a href=#263 id=263 data-nosnippet>263</a>  // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).
-<a href=#264 id=264 data-nosnippet>264</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"bibtex"</span>, {
-<a href=#265 id=265 data-nosnippet>265</a>    <span class="macro">AssignValue!</span>(
-<a href=#266 id=266 data-nosnippet>266</a>      <span class="string">"BIB_CONFIG"</span>,
-<a href=#267 id=267 data-nosnippet>267</a>      Stored::Strings(Rc::new([arena::pin(<span class="string">"bib"</span>), arena::pin(<span class="string">"bbl"</span>)])),
-<a href=#268 id=268 data-nosnippet>268</a>      Scope::Global
-<a href=#269 id=269 data-nosnippet>269</a>    );
-<a href=#270 id=270 data-nosnippet>270</a>  });
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nobibtex"</span>, {
-<a href=#272 id=272 data-nosnippet>272</a>    <span class="macro">AssignValue!</span>(
-<a href=#273 id=273 data-nosnippet>273</a>      <span class="string">"BIB_CONFIG"</span>,
-<a href=#274 id=274 data-nosnippet>274</a>      Stored::Strings(Rc::new([arena::pin(<span class="string">"bbl"</span>)])),
-<a href=#275 id=275 data-nosnippet>275</a>      Scope::Global
-<a href=#276 id=276 data-nosnippet>276</a>    );
-<a href=#277 id=277 data-nosnippet>277</a>  });
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="comment">// Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
-<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"bibconfig"</span>, <span class="string">"Semiverbatim"</span>);
-<a href=#281 id=281 data-nosnippet>281</a>
-<a href=#282 id=282 data-nosnippet>282</a>  <span class="comment">// Perl L63-86: Image scaling options — saved as processing instructions
-<a href=#283 id=283 data-nosnippet>283</a>  // via \lx@save@parameter at \begin{document} time. Perl's user-facing
-<a href=#284 id=284 data-nosnippet>284</a>  // keyval name is lowercase `dpi` but the internal PI is uppercase `DPI`
-<a href=#285 id=285 data-nosnippet>285</a>  // (Perl: `$STATE-&gt;assignValue(DPI =&gt; ...)`). Keep the keyval name
-<a href=#286 id=286 data-nosnippet>286</a>  // lowercase to match Perl user-facing — the uppercase `DPI` mismatch
-<a href=#287 id=287 data-nosnippet>287</a>  // meant `\usepackage[dpi=144]{latexml}` silently missed the keyval.
-<a href=#288 id=288 data-nosnippet>288</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"dpi"</span>, <span class="string">"Number"</span>);
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"magnify"</span>, <span class="string">"Number"</span>);
-<a href=#290 id=290 data-nosnippet>290</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"upsample"</span>, <span class="string">"Number"</span>);
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"zoomout"</span>, <span class="string">"Number"</span>);
-<a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// Perl L87-98: Limit options — set global limits for infinite-loop protection.
-<a href=#294 id=294 data-nosnippet>294</a>  // These are DefKeyVal with code closures; since our macro doesn't support code,
-<a href=#295 id=295 data-nosnippet>295</a>  // we define them as DeclareOption and handle in ProcessOptions.
-<a href=#296 id=296 data-nosnippet>296</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"tokenlimit"</span>, <span class="string">"Number"</span>);
-<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"iflimit"</span>, <span class="string">"Number"</span>);
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"absorblimit"</span>, <span class="string">"Number"</span>);
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"pushbacklimit"</span>, <span class="string">"Number"</span>);
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="comment">// Lexeme serialization for math formulas
-<a href=#302 id=302 data-nosnippet>302</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"mathlexemes"</span>, {
-<a href=#303 id=303 data-nosnippet>303</a>    <span class="macro">AssignValue!</span>(<span class="string">"LEXEMATIZE_MATH" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
-<a href=#304 id=304 data-nosnippet>304</a>  });
-<a href=#305 id=305 data-nosnippet>305</a>
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="comment">// Math parser speculation (e.g. possible function detection)
-<a href=#307 id=307 data-nosnippet>307</a>  // Perl: DeclareOption('mathparserspeculate', sub { AssignValue('MATHPARSER_SPECULATE' =&gt; 1,
-<a href=#308 id=308 data-nosnippet>308</a>  // 'global'); });
-<a href=#309 id=309 data-nosnippet>309</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"mathparserspeculate"</span>, {
-<a href=#310 id=310 data-nosnippet>310</a>    <span class="macro">AssignValue!</span>(<span class="string">"MATHPARSER_SPECULATE" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
-<a href=#311 id=311 data-nosnippet>311</a>  });
-<a href=#312 id=312 data-nosnippet>312</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nomathparserspeculate"</span>, {
-<a href=#313 id=313 data-nosnippet>313</a>    <span class="macro">AssignValue!</span>(<span class="string">"MATHPARSER_SPECULATE" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#314 id=314 data-nosnippet>314</a>  });
-<a href=#315 id=315 data-nosnippet>315</a>
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="comment">// Header guessing for tabular environments
-<a href=#317 id=317 data-nosnippet>317</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"guesstabularheaders"</span>, {
-<a href=#318 id=318 data-nosnippet>318</a>    <span class="macro">AssignValue!</span>(<span class="string">"GUESS_TABULAR_HEADERS" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
-<a href=#319 id=319 data-nosnippet>319</a>  });
-<a href=#320 id=320 data-nosnippet>320</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noguesstabularheaders"</span>, {
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="macro">AssignValue!</span>(<span class="string">"GUESS_TABULAR_HEADERS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#322 id=322 data-nosnippet>322</a>  });
-<a href=#323 id=323 data-nosnippet>323</a>
-<a href=#324 id=324 data-nosnippet>324</a>  <span class="comment">// Finer control over which (if any) raw .sty/.cls files to include
-<a href=#325 id=325 data-nosnippet>325</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"rawstyles"</span>, {
-<a href=#326 id=326 data-nosnippet>326</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
-<a href=#327 id=327 data-nosnippet>327</a>  });
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="macro">DeclareOption!</span>(<span class="string">"localrawstyles"</span>, {
-<a href=#329 id=329 data-nosnippet>329</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="string">"searchpaths"</span>, Scope::Global);
-<a href=#330 id=330 data-nosnippet>330</a>  });
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="macro">DeclareOption!</span>(<span class="string">"norawstyles"</span>, {
-<a href=#332 id=332 data-nosnippet>332</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="bool-val">false</span>,             Scope::Global);
-<a href=#333 id=333 data-nosnippet>333</a>  });
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="macro">DeclareOption!</span>(<span class="string">"rawclasses"</span>, {
-<a href=#335 id=335 data-nosnippet>335</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="bool-val">true</span>,             Scope::Global);
-<a href=#336 id=336 data-nosnippet>336</a>  });
-<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">DeclareOption!</span>(<span class="string">"localrawclasses"</span>, {
-<a href=#338 id=338 data-nosnippet>338</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="string">"searchpaths"</span>, Scope::Global);
-<a href=#339 id=339 data-nosnippet>339</a>  });
-<a href=#340 id=340 data-nosnippet>340</a>  <span class="macro">DeclareOption!</span>(<span class="string">"norawclasses"</span>, {
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#342 id=342 data-nosnippet>342</a>  });
-<a href=#343 id=343 data-nosnippet>343</a>
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="comment">// Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
-<a href=#345 id=345 data-nosnippet>345</a>  // a TRACING bitmap via TRACE_ALL / TRACE_PROFILE constants. Rust hasn't
-<a href=#346 id=346 data-nosnippet>346</a>  // wired the bitmap constants (no TRACE_ALL/TRACE_PROFILE symbols in the
-<a href=#347 id=347 data-nosnippet>347</a>  // state module), so stub these as no-op option declarations. The
-<a href=#348 id=348 data-nosnippet>348</a>  // observable effect is that `\usepackage[tracing]{latexml}` etc. simply
-<a href=#349 id=349 data-nosnippet>349</a>  // load latexml.sty without throwing an "unknown option" error; tracing
-<a href=#350 id=350 data-nosnippet>350</a>  // actually kicks in via the CLI `--verbose`/`--profile` flags, not
-<a href=#351 id=351 data-nosnippet>351</a>  // package options. Prevents load-time errors for documents that include
-<a href=#352 id=352 data-nosnippet>352</a>  // these flags defensively.
-<a href=#353 id=353 data-nosnippet>353</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"tracing"</span>, <span class="prelude-val">None</span>);
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="macro">DeclareOption!</span>(<span class="string">"notracing"</span>, <span class="prelude-val">None</span>);
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="macro">DeclareOption!</span>(<span class="string">"profiling"</span>, <span class="prelude-val">None</span>);
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noprofiling"</span>, <span class="prelude-val">None</span>);
-<a href=#357 id=357 data-nosnippet>357</a>
-<a href=#358 id=358 data-nosnippet>358</a>  <span class="comment">// Perl latexml.sty.ltxml L43-44: breakuntex / nobreakuntex toggle the
-<a href=#359 id=359 data-nosnippet>359</a>  // SUPPRESS_UNTEX_LINEBREAKS boolean, which controls whether the `\\`
-<a href=#360 id=360 data-nosnippet>360</a>  // backslash-newline reversion in `tex=` attributes inserts a real
-<a href=#361 id=361 data-nosnippet>361</a>  // line break or is suppressed. Default breakuntex=true (Perl omits the
-<a href=#362 id=362 data-nosnippet>362</a>  // flag by default; documents explicitly passing nobreakuntex enable
-<a href=#363 id=363 data-nosnippet>363</a>  // SUPPRESS).
-<a href=#364 id=364 data-nosnippet>364</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"breakuntex"</span>, {
-<a href=#365 id=365 data-nosnippet>365</a>    <span class="macro">AssignValue!</span>(<span class="string">"SUPPRESS_UNTEX_LINEBREAKS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
-<a href=#366 id=366 data-nosnippet>366</a>  });
-<a href=#367 id=367 data-nosnippet>367</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nobreakuntex"</span>, {
-<a href=#368 id=368 data-nosnippet>368</a>    <span class="macro">AssignValue!</span>(<span class="string">"SUPPRESS_UNTEX_LINEBREAKS" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
-<a href=#369 id=369 data-nosnippet>369</a>  });
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="comment">// Process bibconfig keyval from options passed to latexml.sty.
-<a href=#374 id=374 data-nosnippet>374</a>  // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
-<a href=#375 id=375 data-nosnippet>375</a>  // We specifically extract bibconfig=... since it controls bibliography source selection.
-<a href=#376 id=376 data-nosnippet>376</a>  // Other keyvals (tokenlimit, iflimit, etc.) are handled via CLI flags or ar5iv defaults.
-<a href=#377 id=377 data-nosnippet>377</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(opts) = state::lookup_vecdeque(<span class="string">"opt@latexml.sty"</span>) {
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">for </span>opt <span class="kw">in </span>opts.iter() {
-<a href=#379 id=379 data-nosnippet>379</a>      <span class="kw">let </span>opt_str = opt.to_string();
-<a href=#380 id=380 data-nosnippet>380</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = opt_str.strip_prefix(<span class="string">"bibconfig="</span>) {
-<a href=#381 id=381 data-nosnippet>381</a>        state::assign_value(
-<a href=#382 id=382 data-nosnippet>382</a>          <span class="string">"KV@LTXML@bibconfig"</span>,
-<a href=#383 id=383 data-nosnippet>383</a>          Stored::String(arena::pin(val.trim())),
-<a href=#384 id=384 data-nosnippet>384</a>          <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#385 id=385 data-nosnippet>385</a>        );
-<a href=#386 id=386 data-nosnippet>386</a>      }
-<a href=#387 id=387 data-nosnippet>387</a>    }
-<a href=#388 id=388 data-nosnippet>388</a>  }
-<a href=#389 id=389 data-nosnippet>389</a>
-<a href=#390 id=390 data-nosnippet>390</a>  <span class="comment">// Apply bibconfig from keyvals (Perl L57-59: code closure)
-<a href=#391 id=391 data-nosnippet>391</a>  // bibconfig=bbl,bib means try bbl first, fall back to bib
-<a href=#392 id=392 data-nosnippet>392</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@bibconfig"</span>) {
-<a href=#393 id=393 data-nosnippet>393</a>    <span class="kw">let </span>config_str = v.to_string();
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">let </span>configs: Vec&lt;<span class="kw">_</span>&gt; = config_str
-<a href=#395 id=395 data-nosnippet>395</a>      .split(<span class="string">','</span>)
-<a href=#396 id=396 data-nosnippet>396</a>      .map(|s| arena::pin(s.trim()))
-<a href=#397 id=397 data-nosnippet>397</a>      .collect();
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">if </span>!configs.is_empty() {
-<a href=#399 id=399 data-nosnippet>399</a>      state::assign_value(
-<a href=#400 id=400 data-nosnippet>400</a>        <span class="string">"BIB_CONFIG"</span>,
-<a href=#401 id=401 data-nosnippet>401</a>        Stored::Strings(Rc::from(configs)),
-<a href=#402 id=402 data-nosnippet>402</a>        <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#403 id=403 data-nosnippet>403</a>      );
-<a href=#404 id=404 data-nosnippet>404</a>    }
-<a href=#405 id=405 data-nosnippet>405</a>  }
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">// Apply limit options from keyvals (Perl L87-98)
-<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@tokenlimit"</span>) {
-<a href=#409 id=409 data-nosnippet>409</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
-<a href=#410 id=410 data-nosnippet>410</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
-<a href=#411 id=411 data-nosnippet>411</a>      gullet::set_token_limit(<span class="prelude-val">Some</span>(limit));
-<a href=#412 id=412 data-nosnippet>412</a>    }
-<a href=#413 id=413 data-nosnippet>413</a>  }
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@iflimit"</span>) {
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
-<a href=#417 id=417 data-nosnippet>417</a>      state::assign_value(<span class="string">"if_limit"</span>, Stored::from(limit <span class="kw">as </span>i64), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#418 id=418 data-nosnippet>418</a>    }
-<a href=#419 id=419 data-nosnippet>419</a>  }
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@absorblimit"</span>) {
-<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
-<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
-<a href=#423 id=423 data-nosnippet>423</a>      state::assign_value(
-<a href=#424 id=424 data-nosnippet>424</a>        <span class="string">"absorb_limit"</span>,
-<a href=#425 id=425 data-nosnippet>425</a>        Stored::from(limit <span class="kw">as </span>i64),
-<a href=#426 id=426 data-nosnippet>426</a>        <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#427 id=427 data-nosnippet>427</a>      );
-<a href=#428 id=428 data-nosnippet>428</a>    }
-<a href=#429 id=429 data-nosnippet>429</a>  }
-<a href=#430 id=430 data-nosnippet>430</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@pushbacklimit"</span>) {
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
-<a href=#433 id=433 data-nosnippet>433</a>      gullet::set_pushback_limit(<span class="prelude-val">Some</span>(limit));
-<a href=#434 id=434 data-nosnippet>434</a>    }
-<a href=#435 id=435 data-nosnippet>435</a>  }
-<a href=#436 id=436 data-nosnippet>436</a>
-<a href=#437 id=437 data-nosnippet>437</a>  <span class="comment">// Save image scaling parameters as processing instructions.
-<a href=#438 id=438 data-nosnippet>438</a>  // Perl: DefKeyVal with code =&gt; AtBeginDocument(\lx@save@parameter{key}{value})
-<a href=#439 id=439 data-nosnippet>439</a>  // Perl stores state under uppercase `DPI` but the keyval is lowercase
-<a href=#440 id=440 data-nosnippet>440</a>  // `dpi`, so lookup uses the keyval (user-facing) name, and the PI emits
-<a href=#441 id=441 data-nosnippet>441</a>  // under the uppercase Perl-internal convention for DPI only.
-<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="kw">for </span>(kv_name, pi_name) <span class="kw">in </span><span class="kw-2">&amp;</span>[
-<a href=#443 id=443 data-nosnippet>443</a>    (<span class="string">"dpi"</span>, <span class="string">"DPI"</span>),
-<a href=#444 id=444 data-nosnippet>444</a>    (<span class="string">"magnify"</span>, <span class="string">"magnify"</span>),
-<a href=#445 id=445 data-nosnippet>445</a>    (<span class="string">"upsample"</span>, <span class="string">"upsample"</span>),
-<a href=#446 id=446 data-nosnippet>446</a>    (<span class="string">"zoomout"</span>, <span class="string">"zoomout"</span>),
-<a href=#447 id=447 data-nosnippet>447</a>  ] {
-<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"KV@LTXML@{}"</span>, kv_name);
-<a href=#449 id=449 data-nosnippet>449</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="kw-2">&amp;</span>key) {
-<a href=#450 id=450 data-nosnippet>450</a>      <span class="kw">let </span>val = v.to_string().trim().to_string();
-<a href=#451 id=451 data-nosnippet>451</a>      <span class="kw">if </span>!val.is_empty() {
-<a href=#452 id=452 data-nosnippet>452</a>        state::assign_value(
-<a href=#453 id=453 data-nosnippet>453</a>          <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"PI@latexml@{}"</span>, pi_name),
-<a href=#454 id=454 data-nosnippet>454</a>          Stored::String(arena::pin(<span class="kw-2">&amp;</span>val)),
-<a href=#455 id=455 data-nosnippet>455</a>          <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#456 id=456 data-nosnippet>456</a>        );
-<a href=#457 id=457 data-nosnippet>457</a>      }
-<a href=#458 id=458 data-nosnippet>458</a>    }
-<a href=#459 id=459 data-nosnippet>459</a>  }
-<a href=#460 id=460 data-nosnippet>460</a>
-<a href=#461 id=461 data-nosnippet>461</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iflatexml"</span>, { <span class="bool-val">true </span>});
-<a href=#462 id=462 data-nosnippet>462</a>
-<a href=#463 id=463 data-nosnippet>463</a>  <span class="comment">// Perl: NewCounter('@XMDECL', 'section', idprefix =&gt; 'XMD');
-<a href=#464 id=464 data-nosnippet>464</a>  // Counter for \lxDeclare IDs, resets per-section (subordinate to section).
-<a href=#465 id=465 data-nosnippet>465</a>  </span><span class="macro">NewCounter!</span>(<span class="string">"@XMDECL"</span>, <span class="string">"section"</span>, idprefix =&gt; <span class="string">"XMD"</span>);
-<a href=#466 id=466 data-nosnippet>466</a>
-<a href=#467 id=467 data-nosnippet>467</a>  <span class="comment">// ======================================================================
-<a href=#468 id=468 data-nosnippet>468</a>  // Define the Declare keyval family for \lxDeclare
-<a href=#469 id=469 data-nosnippet>469</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"role"</span>, <span class="string">""</span>);
-<a href=#470 id=470 data-nosnippet>470</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"name"</span>, <span class="string">""</span>);
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"meaning"</span>, <span class="string">""</span>);
-<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"tag"</span>, <span class="string">""</span>);
-<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"scope"</span>, <span class="string">""</span>);
-<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"description"</span>, <span class="string">""</span>);
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"nowrap"</span>, <span class="string">""</span>);
-<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"label"</span>, <span class="string">""</span>);
-<a href=#477 id=477 data-nosnippet>477</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"trace"</span>, <span class="string">""</span>);
-<a href=#478 id=478 data-nosnippet>478</a>
-<a href=#479 id=479 data-nosnippet>479</a>  <span class="comment">// \lxFcn / \lxID / \lxPunct — math-mode role hints (Perl latexml.sty.ltxml).
-<a href=#480 id=480 data-nosnippet>480</a>  // Wrap the argument in &lt;ltx:XMWrap role='...'&gt; so the math grammar
-<a href=#481 id=481 data-nosnippet>481</a>  // treats it as the named role for that occurrence only. `requireMath`
-<a href=#482 id=482 data-nosnippet>482</a>  // forces math context (errors if invoked outside math); `reversion =&gt;
-<a href=#483 id=483 data-nosnippet>483</a>  // '#1'` round-trips just the body (no role wrapper) to TeX; `alias =&gt;
-<a href=#484 id=484 data-nosnippet>484</a>  // ''` suppresses the constructor name in the reversion path.
-<a href=#485 id=485 data-nosnippet>485</a>  // Perl latexml.sty.ltxml L160-163: \lxRegisterNamespace{prefix}{uri}
-<a href=#486 id=486 data-nosnippet>486</a>  // — dynamic XML namespace registration for foreign attributes. Perl's
-<a href=#487 id=487 data-nosnippet>487</a>  // DefPrimitive calls RegisterNamespace(prefix =&gt; uri). Rust has
-<a href=#488 id=488 data-nosnippet>488</a>  // latexml_core::common::model::register_namespace exposed; wire it up
-<a href=#489 id=489 data-nosnippet>489</a>  // to the CS so documents using \lxRegisterNamespace{my}{http://…}
-<a href=#490 id=490 data-nosnippet>490</a>  // can then set foreign attributes like my:data='value'.
-<a href=#491 id=491 data-nosnippet>491</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxRegisterNamespace {} Semiverbatim"</span>, sub[(prefix, uri)] {
-<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">let </span>prefix_str = prefix.to_string();
-<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">let </span>uri_str = uri.to_string();
-<a href=#494 id=494 data-nosnippet>494</a>    latexml_core::common::model::register_namespace(<span class="kw-2">&amp;</span>prefix_str, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>uri_str));
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#496 id=496 data-nosnippet>496</a>  });
-<a href=#497 id=497 data-nosnippet>497</a>
-<a href=#498 id=498 data-nosnippet>498</a>  <span class="comment">// Perl latexml.sty.ltxml L236-238: \lxRequireResource[options]{name}
-<a href=#499 id=499 data-nosnippet>499</a>  // adds a document resource (CSS/JS/…). Perl invocation:
-<a href=#500 id=500 data-nosnippet>500</a>  //   RequireResource(ToString(path), ($kv ? $kv-&gt;getHash : ()))
-<a href=#501 id=501 data-nosnippet>501</a>  // where the kv hash can carry `type` (mime-type) and `media`. Rust's
-<a href=#502 id=502 data-nosnippet>502</a>  // require_resource takes a `Resource{name, mimetype, media, content}`;
-<a href=#503 id=503 data-nosnippet>503</a>  // the infra lives in latexml_core::binding::content.
-<a href=#504 id=504 data-nosnippet>504</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxRequireResource OptionalKeyVals {}"</span>, sub[(kv, path)] {
-<a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">let </span>name = path.to_string();
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="kw">let </span>mimetype = kv.as_ref()
-<a href=#507 id=507 data-nosnippet>507</a>      .and_then(|k| k.get_value(<span class="string">"type"</span>))
-<a href=#508 id=508 data-nosnippet>508</a>      .map(|v| v.to_string())
-<a href=#509 id=509 data-nosnippet>509</a>      .unwrap_or_default();
-<a href=#510 id=510 data-nosnippet>510</a>    <span class="kw">let </span>media = kv.as_ref()
-<a href=#511 id=511 data-nosnippet>511</a>      .and_then(|k| k.get_value(<span class="string">"media"</span>))
-<a href=#512 id=512 data-nosnippet>512</a>      .map(|v| v.to_string())
-<a href=#513 id=513 data-nosnippet>513</a>      .unwrap_or_default();
-<a href=#514 id=514 data-nosnippet>514</a>    latexml_core::binding::content::require_resource(
-<a href=#515 id=515 data-nosnippet>515</a>      latexml_core::document::resource::Resource {
-<a href=#516 id=516 data-nosnippet>516</a>        name, mimetype, media, content: String::new(),
-<a href=#517 id=517 data-nosnippet>517</a>      });
-<a href=#518 id=518 data-nosnippet>518</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#519 id=519 data-nosnippet>519</a>  });
-<a href=#520 id=520 data-nosnippet>520</a>
-<a href=#521 id=521 data-nosnippet>521</a>  <span class="comment">// Perl latexml.sty.ltxml L246-247: \lxKeywords{text} — add keywords to
-<a href=#522 id=522 data-nosnippet>522</a>  // the frontmatter. Thin macro wrapper around the existing \@add@frontmatter
-<a href=#523 id=523 data-nosnippet>523</a>  // dispatch; previously missing so `\lxKeywords{foo, bar}` hit undefined-CS.
-<a href=#524 id=524 data-nosnippet>524</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#525 id=525 data-nosnippet>525</a>    <span class="string">"\\lxKeywords{}"</span>,
-<a href=#526 id=526 data-nosnippet>526</a>    <span class="string">"\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}"
-<a href=#527 id=527 data-nosnippet>527</a>  </span>);
-<a href=#528 id=528 data-nosnippet>528</a>
-<a href=#529 id=529 data-nosnippet>529</a>  <span class="comment">// Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element
-<a href=#530 id=530 data-nosnippet>530</a>  // with format='context'. The matching ltx:TOC schema element already
-<a href=#531 id=531 data-nosnippet>531</a>  // flows through the native schema; previously missing in Rust.
-<a href=#532 id=532 data-nosnippet>532</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxContextTOC"</span>, <span class="string">"&lt;ltx:TOC format='context'/&gt;"</span>);
-<a href=#533 id=533 data-nosnippet>533</a>
-<a href=#534 id=534 data-nosnippet>534</a>  <span class="comment">// Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
-<a href=#535 id=535 data-nosnippet>535</a>  // to the current element. Rust had this CS completely missing, so
-<a href=#536 id=536 data-nosnippet>536</a>  // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
-<a href=#537 id=537 data-nosnippet>537</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxAddClass Semiverbatim"</span>, <span class="string">""</span>,
-<a href=#538 id=538 data-nosnippet>538</a>  after_construct =&gt; sub[document, whatsit] {
-<a href=#539 id=539 data-nosnippet>539</a>    <span class="kw">let </span>class_tok = whatsit.get_arg(<span class="number">1</span>);
-<a href=#540 id=540 data-nosnippet>540</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(cls) = class_tok {
-<a href=#541 id=541 data-nosnippet>541</a>      <span class="kw">let </span>class_str = cls.to_string();
-<a href=#542 id=542 data-nosnippet>542</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>element) = document.get_element() {
-<a href=#543 id=543 data-nosnippet>543</a>        <span class="kw">let _ </span>= document.add_class(<span class="kw-2">&amp;mut </span>element, <span class="kw-2">&amp;</span>class_str);
-<a href=#544 id=544 data-nosnippet>544</a>      }
-<a href=#545 id=545 data-nosnippet>545</a>    }
-<a href=#546 id=546 data-nosnippet>546</a>  });
-<a href=#547 id=547 data-nosnippet>547</a>
-<a href=#548 id=548 data-nosnippet>548</a>  <span class="comment">// Perl latexml.sty.ltxml L182-185: \lxWithClass{class}{body} — wraps
-<a href=#549 id=549 data-nosnippet>549</a>  // body in a node with the given CSS class. Perl's getAnnotatableNode
-<a href=#550 id=550 data-nosnippet>550</a>  // detects text-node context and opens &lt;ltx:text&gt; if needed, then
-<a href=#551 id=551 data-nosnippet>551</a>  // addClass on the resulting container. Rust approximates: always
-<a href=#552 id=552 data-nosnippet>552</a>  // wrap in &lt;ltx:text class='#1'&gt;#2&lt;/ltx:text&gt;. This is correct for
-<a href=#553 id=553 data-nosnippet>553</a>  // text-mode callers (the common case); in math mode the result
-<a href=#554 id=554 data-nosnippet>554</a>  // diverges (Perl wouldn't wrap, Rust adds an ltx:text inside XMath).
-<a href=#555 id=555 data-nosnippet>555</a>  // No test exercises \lxWithClass, so the approximation is
-<a href=#556 id=556 data-nosnippet>556</a>  // acceptable until the filter_children/absorb pipeline can be
-<a href=#557 id=557 data-nosnippet>557</a>  // wired.
-<a href=#558 id=558 data-nosnippet>558</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#559 id=559 data-nosnippet>559</a>    <span class="string">"\\lxWithClass Semiverbatim {}"</span>,
-<a href=#560 id=560 data-nosnippet>560</a>    <span class="string">"&lt;ltx:text class='#1'&gt;#2&lt;/ltx:text&gt;"
-<a href=#561 id=561 data-nosnippet>561</a>  </span>);
-<a href=#562 id=562 data-nosnippet>562</a>
-<a href=#563 id=563 data-nosnippet>563</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxFcn{}"</span>, <span class="string">"&lt;ltx:XMWrap role='FUNCTION'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
-<a href=#564 id=564 data-nosnippet>564</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
-<a href=#565 id=565 data-nosnippet>565</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxID{}"</span>, <span class="string">"&lt;ltx:XMWrap role='ID'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
-<a href=#566 id=566 data-nosnippet>566</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
-<a href=#567 id=567 data-nosnippet>567</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxPunct{}"</span>, <span class="string">"&lt;ltx:XMWrap role='PUNCT'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
-<a href=#568 id=568 data-nosnippet>568</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
-<a href=#569 id=569 data-nosnippet>569</a>
-<a href=#570 id=570 data-nosnippet>570</a>  <span class="comment">// Perl latexml.sty.ltxml L342-350: \lxMathTweak RequiredKeyVals {} —
-<a href=#571 id=571 data-nosnippet>571</a>  // the general form behind \lxFcn/\lxID/\lxPunct. Perl's comment says
-<a href=#572 id=572 data-nosnippet>572</a>  // "same as \lx@math@tweak"; the engine actually has \lx@math@tweaked
-<a href=#573 id=573 data-nosnippet>573</a>  // (base_xmath.rs L527) with the full RequiredKeyVals {} shape and
-<a href=#574 id=574 data-nosnippet>574</a>  // the xmath_copy_keyvals after_digest hook. Let-alias the user-
-<a href=#575 id=575 data-nosnippet>575</a>  // facing name at to the internal one so docs can write
-<a href=#576 id=576 data-nosnippet>576</a>  // `\lxMathTweak{role=POSTFIX}{@}` and get the expected XMWrap.
-<a href=#577 id=577 data-nosnippet>577</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lxMathTweak"</span>, <span class="string">"\\lx@math@tweaked"</span>);
-<a href=#578 id=578 data-nosnippet>578</a>
-<a href=#579 id=579 data-nosnippet>579</a>  <span class="comment">// \lxDeclare — declare semantic roles for math tokens
-<a href=#580 id=580 data-nosnippet>580</a>  // Perl: latexml.sty.ltxml lines 462-568
-<a href=#581 id=581 data-nosnippet>581</a>  // Creates &lt;declare&gt; elements and rewrite rules for math token annotation.
-<a href=#582 id=582 data-nosnippet>582</a>  // Complex patterns with \WildCard are NOT yet supported.
-<a href=#583 id=583 data-nosnippet>583</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxDeclare OptionalMatch:* OptionalKeyVals:Declare {}"</span>, <span class="string">""</span>,
-<a href=#584 id=584 data-nosnippet>584</a>  mode =&gt; <span class="string">"restricted_horizontal"</span>,
-<a href=#585 id=585 data-nosnippet>585</a>  reversion =&gt; <span class="string">""</span>,
-<a href=#586 id=586 data-nosnippet>586</a>  before_digest =&gt; { neutralize_font(); },
-<a href=#587 id=587 data-nosnippet>587</a>  after_digest =&gt; sub[whatsit] {
-<a href=#588 id=588 data-nosnippet>588</a>    <span class="comment">// Extract role/name/meaning from KeyVals arg (arg index 2 = keyvals)
-<a href=#589 id=589 data-nosnippet>589</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>role = String::new();
-<a href=#590 id=590 data-nosnippet>590</a>    <span class="kw">let </span><span class="kw-2">mut </span>name_val = String::new();
-<a href=#591 id=591 data-nosnippet>591</a>    <span class="kw">let </span><span class="kw-2">mut </span>meaning = String::new();
-<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">let </span><span class="kw-2">mut </span>has_tag = <span class="bool-val">false</span>;
-<a href=#593 id=593 data-nosnippet>593</a>    <span class="kw">let </span><span class="kw-2">mut </span>has_description = <span class="bool-val">false</span>;
-<a href=#594 id=594 data-nosnippet>594</a>    <span class="kw">let </span><span class="kw-2">mut </span>tag_text = String::new();
-<a href=#595 id=595 data-nosnippet>595</a>    <span class="kw">let </span><span class="kw-2">mut </span>description_text = String::new();
-<a href=#596 id=596 data-nosnippet>596</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_arg) = whatsit.get_arg(<span class="number">2</span>) {
-<a href=#597 id=597 data-nosnippet>597</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
-<a href=#598 id=598 data-nosnippet>598</a>        <span class="kw">let </span>hash = kv.get_hash_digested();
-<a href=#599 id=599 data-nosnippet>599</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"role"</span>) { role = v.clone(); }
-<a href=#600 id=600 data-nosnippet>600</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"name"</span>) { name_val = v.clone(); }
-<a href=#601 id=601 data-nosnippet>601</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"meaning"</span>) { meaning = v.clone(); }
-<a href=#602 id=602 data-nosnippet>602</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"tag"</span>) { has_tag = <span class="bool-val">true</span>; tag_text = v.clone(); }
-<a href=#603 id=603 data-nosnippet>603</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"description"</span>) { has_description = <span class="bool-val">true</span>; description_text = v.clone(); }
-<a href=#604 id=604 data-nosnippet>604</a>        <span class="comment">// Store scope option for rewrite rule creation in afterConstruct
-<a href=#605 id=605 data-nosnippet>605</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"scope"</span>) {
-<a href=#606 id=606 data-nosnippet>606</a>          whatsit.set_property(<span class="string">"scope_opt"</span>, Stored::from(v.clone()));
-<a href=#607 id=607 data-nosnippet>607</a>        }
-<a href=#608 id=608 data-nosnippet>608</a>      }
-<a href=#609 id=609 data-nosnippet>609</a>    }
-<a href=#610 id=610 data-nosnippet>610</a>    <span class="comment">// Extract body text from arg 3 (the {} body)
-<a href=#611 id=611 data-nosnippet>611</a>    </span><span class="kw">let </span>body_text = whatsit.get_arg(<span class="number">3</span>)
-<a href=#612 id=612 data-nosnippet>612</a>      .map(|a| { <span class="kw">let </span>s = a.to_string(); s.trim_matches(<span class="string">'$'</span>).trim().to_string() })
-<a href=#613 id=613 data-nosnippet>613</a>      .unwrap_or_default();
-<a href=#614 id=614 data-nosnippet>614</a>
-<a href=#615 id=615 data-nosnippet>615</a>    <span class="comment">// Generate declaration ID if tag or description present
-<a href=#616 id=616 data-nosnippet>616</a>    // Perl: next_declaration_id() → StepCounter('@XMDECL'), return \the@XMDECL@ID
-<a href=#617 id=617 data-nosnippet>617</a>    // Counter @XMDECL is subordinate to section, so it resets per-section:
-<a href=#618 id=618 data-nosnippet>618</a>    //   S1.XMD1, S1.XMD2, ..., S2.XMD1, S2.XMD2, ...
-<a href=#619 id=619 data-nosnippet>619</a>    </span><span class="kw">let </span>decl_id = <span class="kw">if </span>has_tag || has_description {
-<a href=#620 id=620 data-nosnippet>620</a>      step_counter(<span class="string">"@XMDECL"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#621 id=621 data-nosnippet>621</a>      <span class="comment">// Perl: DefMacroI(\@@XMDECL@ID, ..., LookupRegister(\c@@XMDECL)-&gt;valueOf)
-<a href=#622 id=622 data-nosnippet>622</a>      // then: ToString(Expand(\the@XMDECL@ID))
-<a href=#623 id=623 data-nosnippet>623</a>      </span><span class="kw">let </span>id = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\the@XMDECL@ID"</span>))
-<a href=#624 id=624 data-nosnippet>624</a>        .ok().map(|t| t.to_string().trim().to_string())
-<a href=#625 id=625 data-nosnippet>625</a>        .unwrap_or_default();
-<a href=#626 id=626 data-nosnippet>626</a>      id
-<a href=#627 id=627 data-nosnippet>627</a>    } <span class="kw">else </span>{
-<a href=#628 id=628 data-nosnippet>628</a>      String::new()
-<a href=#629 id=629 data-nosnippet>629</a>    };
-<a href=#630 id=630 data-nosnippet>630</a>
-<a href=#631 id=631 data-nosnippet>631</a>    <span class="comment">// Store properties on the whatsit for constructor body and afterConstruct
-<a href=#632 id=632 data-nosnippet>632</a>    </span>whatsit.set_property(<span class="string">"role"</span>, Stored::from(role.clone()));
-<a href=#633 id=633 data-nosnippet>633</a>    whatsit.set_property(<span class="string">"name"</span>, Stored::from(name_val.clone()));
-<a href=#634 id=634 data-nosnippet>634</a>    whatsit.set_property(<span class="string">"meaning"</span>, Stored::from(meaning.clone()));
-<a href=#635 id=635 data-nosnippet>635</a>    whatsit.set_property(<span class="string">"body_text"</span>, Stored::from(body_text.clone()));
-<a href=#636 id=636 data-nosnippet>636</a>    whatsit.set_property(<span class="string">"decl_id"</span>, Stored::from(decl_id.clone()));
-<a href=#637 id=637 data-nosnippet>637</a>    <span class="kw">if </span>has_description || has_tag {
-<a href=#638 id=638 data-nosnippet>638</a>      <span class="kw">let </span>desc = <span class="kw">if </span>!description_text.is_empty() { description_text } <span class="kw">else </span>{ tag_text };
-<a href=#639 id=639 data-nosnippet>639</a>      whatsit.set_property(<span class="string">"description"</span>, Stored::from(desc));
-<a href=#640 id=640 data-nosnippet>640</a>    }
-<a href=#641 id=641 data-nosnippet>641</a>
-<a href=#642 id=642 data-nosnippet>642</a>    <span class="comment">// Store in LATEXML_DECLARATIONS for math parser string-based lookup
-<a href=#643 id=643 data-nosnippet>643</a>    </span><span class="kw">if </span>!body_text.is_empty() &amp;&amp; (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-<a href=#644 id=644 data-nosnippet>644</a>      <span class="kw">let </span>key = <span class="string">"LATEXML_DECLARATIONS"</span>;
-<a href=#645 id=645 data-nosnippet>645</a>      <span class="kw">let </span><span class="kw-2">mut </span>decls: Vec&lt;String&gt; = <span class="kw">match </span>lookup_value(key) {
-<a href=#646 id=646 data-nosnippet>646</a>        <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; {
-<a href=#647 id=647 data-nosnippet>647</a>          <span class="kw">let </span>s_str = arena::with(s, |r| r.to_string());
-<a href=#648 id=648 data-nosnippet>648</a>          <span class="kw">if </span>s_str.is_empty() { Vec::new() } <span class="kw">else </span>{ s_str.split(<span class="string">'\n'</span>).map(String::from).collect() }
-<a href=#649 id=649 data-nosnippet>649</a>        },
-<a href=#650 id=650 data-nosnippet>650</a>        <span class="kw">_ </span>=&gt; Vec::new(),
-<a href=#651 id=651 data-nosnippet>651</a>      };
-<a href=#652 id=652 data-nosnippet>652</a>      decls.push(<span class="macro">format!</span>(<span class="string">"{}\t{}\t{}\t{}\t{}"</span>, body_text, role, name_val, meaning, decl_id));
-<a href=#653 id=653 data-nosnippet>653</a>      <span class="comment">// Mathcode decoding for single-char bodies
-<a href=#654 id=654 data-nosnippet>654</a>      </span><span class="kw">if </span>body_text.chars().count() == <span class="number">1 </span>{
-<a href=#655 id=655 data-nosnippet>655</a>        <span class="kw">let </span>ch = body_text.chars().next().unwrap();
-<a href=#656 id=656 data-nosnippet>656</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(mathcode) = state::lookup_mathcode(<span class="kw-2">&amp;</span>ch.to_string()) {
-<a href=#657 id=657 data-nosnippet>657</a>          <span class="kw">if </span>mathcode &gt; <span class="number">0 </span>{
-<a href=#658 id=658 data-nosnippet>658</a>            <span class="kw">let </span>decoded_pos = (mathcode % <span class="number">256</span>) <span class="kw">as </span>u8;
-<a href=#659 id=659 data-nosnippet>659</a>            <span class="kw">let </span>decoded_fam = (mathcode / <span class="number">256</span>) % <span class="number">16</span>;
-<a href=#660 id=660 data-nosnippet>660</a>            <span class="kw">let </span>font_key = <span class="macro">format!</span>(<span class="string">"textfont_{decoded_fam}"</span>);
-<a href=#661 id=661 data-nosnippet>661</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(<span class="kw-2">ref </span>ftok)) = state::lookup_value(<span class="kw-2">&amp;</span>font_key) {
-<a href=#662 id=662 data-nosnippet>662</a>              <span class="comment">// Extract encoding before calling font::decode — decode may
-<a href=#663 id=663 data-nosnippet>663</a>              // trigger preload_font_map → assign_value, and with_font_info
-<a href=#664 id=664 data-nosnippet>664</a>              // holds a State borrow while its closure runs (see
-<a href=#665 id=665 data-nosnippet>665</a>              // mathchar.rs fix for 0711.4787 RefCell panic pattern).
-<a href=#666 id=666 data-nosnippet>666</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt; = state::with_font_info(ftok, |fontinfo| {
-<a href=#667 id=667 data-nosnippet>667</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo.unwrap_or(<span class="prelude-val">None</span>) {
-<a href=#668 id=668 data-nosnippet>668</a>                  info.encoding.as_ref().map(|s| s.to_string())
-<a href=#669 id=669 data-nosnippet>669</a>                } <span class="kw">else </span>{
-<a href=#670 id=670 data-nosnippet>670</a>                  <span class="prelude-val">None
-<a href=#671 id=671 data-nosnippet>671</a>                </span>}
-<a href=#672 id=672 data-nosnippet>672</a>              });
-<a href=#673 id=673 data-nosnippet>673</a>              <span class="comment">// Fallback (mirror mathchar.rs L862-887): when `fontinfo_&lt;cs&gt;`
-<a href=#674 id=674 data-nosnippet>674</a>              // didn't round-trip through the dump as a `Stored::Font`, but
-<a href=#675 id=675 data-nosnippet>675</a>              // its `font_shared_key_&lt;cs&gt;` pointer DID, derive encoding from
-<a href=#676 id=676 data-nosnippet>676</a>              // the font name via `decode_fontname`. Without this, dump-mode
-<a href=#677 id=677 data-nosnippet>677</a>              // \lxDeclare doesn't add the alternate codepoint pattern (e.g.
-<a href=#678 id=678 data-nosnippet>678</a>              // `*` → `∗`) and overrides on \ast etc. silently fail.
-<a href=#679 id=679 data-nosnippet>679</a>              </span><span class="kw">if </span>encoding_opt.is_none() {
-<a href=#680 id=680 data-nosnippet>680</a>                <span class="kw">let </span>shared_key = state::with_value(
-<a href=#681 id=681 data-nosnippet>681</a>                  <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"font_shared_key_{}"</span>, ftok.with_str(ToString::to_string)),
-<a href=#682 id=682 data-nosnippet>682</a>                  |v| <span class="kw">match </span>v {
-<a href=#683 id=683 data-nosnippet>683</a>                    <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="prelude-val">Some</span>(str.to_string())),
-<a href=#684 id=684 data-nosnippet>684</a>                    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#685 id=685 data-nosnippet>685</a>                  },
-<a href=#686 id=686 data-nosnippet>686</a>                );
-<a href=#687 id=687 data-nosnippet>687</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(sk) = shared_key {
-<a href=#688 id=688 data-nosnippet>688</a>                  <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = sk.strip_prefix(<span class="string">"fontinfo_"</span>) {
-<a href=#689 id=689 data-nosnippet>689</a>                    <span class="kw">let </span>props = latexml_core::common::font::decode_fontname(name, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#690 id=690 data-nosnippet>690</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = props {
-<a href=#691 id=691 data-nosnippet>691</a>                      encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
-<a href=#692 id=692 data-nosnippet>692</a>                    }
-<a href=#693 id=693 data-nosnippet>693</a>                  }
-<a href=#694 id=694 data-nosnippet>694</a>                }
-<a href=#695 id=695 data-nosnippet>695</a>              }
-<a href=#696 id=696 data-nosnippet>696</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(encoding) = encoding_opt {
-<a href=#697 id=697 data-nosnippet>697</a>                <span class="kw">let </span>decoded =
-<a href=#698 id=698 data-nosnippet>698</a>                  latexml_core::common::font::decode(decoded_pos, <span class="prelude-val">Some</span>(encoding), <span class="bool-val">false</span>);
-<a href=#699 id=699 data-nosnippet>699</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(dc) = decoded {
-<a href=#700 id=700 data-nosnippet>700</a>                  <span class="kw">let </span>ds = dc.to_string();
-<a href=#701 id=701 data-nosnippet>701</a>                  <span class="kw">if </span>ds != body_text {
-<a href=#702 id=702 data-nosnippet>702</a>                    decls.push(<span class="macro">format!</span>(<span class="string">"{}\t{}\t{}\t{}"</span>, ds, role, name_val, meaning));
-<a href=#703 id=703 data-nosnippet>703</a>                  }
-<a href=#704 id=704 data-nosnippet>704</a>                }
-<a href=#705 id=705 data-nosnippet>705</a>              }
-<a href=#706 id=706 data-nosnippet>706</a>            }
-<a href=#707 id=707 data-nosnippet>707</a>          }
-<a href=#708 id=708 data-nosnippet>708</a>        }
-<a href=#709 id=709 data-nosnippet>709</a>      }
-<a href=#710 id=710 data-nosnippet>710</a>      assign_value(key, Stored::String(arena::pin(decls.join(<span class="string">"\n"</span>))), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#711 id=711 data-nosnippet>711</a>    }
-<a href=#712 id=712 data-nosnippet>712</a>  },
-<a href=#713 id=713 data-nosnippet>713</a>  after_construct =&gt; sub[document, whatsit] {
-<a href=#714 id=714 data-nosnippet>714</a>    <span class="comment">// Perl: createDeclarationRewrite — create rewrite rule AND &lt;declare&gt; element
-<a href=#715 id=715 data-nosnippet>715</a>    </span><span class="kw">let </span>role = whatsit.get_property(<span class="string">"role"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#716 id=716 data-nosnippet>716</a>    <span class="kw">let </span>name_val = whatsit.get_property(<span class="string">"name"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#717 id=717 data-nosnippet>717</a>    <span class="kw">let </span>meaning = whatsit.get_property(<span class="string">"meaning"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#718 id=718 data-nosnippet>718</a>    <span class="kw">let </span>body_text = whatsit.get_property(<span class="string">"body_text"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#719 id=719 data-nosnippet>719</a>    <span class="kw">let </span>decl_id = whatsit.get_property(<span class="string">"decl_id"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#720 id=720 data-nosnippet>720</a>
-<a href=#721 id=721 data-nosnippet>721</a>    <span class="comment">// Create &lt;ltx:declare&gt; element if id is set (tag or description present)
-<a href=#722 id=722 data-nosnippet>722</a>    </span><span class="kw">if </span>!decl_id.is_empty() {
-<a href=#723 id=723 data-nosnippet>723</a>      <span class="kw">let </span>desc = whatsit.get_property(<span class="string">"description"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#724 id=724 data-nosnippet>724</a>      <span class="comment">// Perl: floatToElement('ltx:declare') positions at a container that accepts &lt;declare&gt;
-<a href=#725 id=725 data-nosnippet>725</a>      </span><span class="kw">let </span>saved = document.float_to_element(<span class="string">"ltx:declare"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#726 id=726 data-nosnippet>726</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs_map = HashMap::default();
-<a href=#727 id=727 data-nosnippet>727</a>      attrs_map.insert(<span class="string">"xml:id"</span>.to_string(), decl_id.clone());
-<a href=#728 id=728 data-nosnippet>728</a>      <span class="kw">let </span>_decl_node = document.open_element(<span class="string">"ltx:declare"</span>, <span class="prelude-val">Some</span>(attrs_map), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#729 id=729 data-nosnippet>729</a>      <span class="kw">if </span>!desc.is_empty() {
-<a href=#730 id=730 data-nosnippet>730</a>        <span class="comment">// Insert description text in &lt;ltx:text&gt;
-<a href=#731 id=731 data-nosnippet>731</a>        </span><span class="kw">let </span>_text_node = document.open_element(<span class="string">"ltx:text"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#732 id=732 data-nosnippet>732</a>        <span class="comment">// Add text content directly to the current node
-<a href=#733 id=733 data-nosnippet>733</a>        </span><span class="kw">let </span>font = lookup_font().unwrap_or_default();
-<a href=#734 id=734 data-nosnippet>734</a>        document.open_text(<span class="kw-2">&amp;</span>desc, <span class="kw-2">&amp;</span>font)<span class="question-mark">?</span>;
-<a href=#735 id=735 data-nosnippet>735</a>        document.close_element(<span class="string">"ltx:text"</span>)<span class="question-mark">?</span>;
-<a href=#736 id=736 data-nosnippet>736</a>      }
-<a href=#737 id=737 data-nosnippet>737</a>      document.close_element(<span class="string">"ltx:declare"</span>)<span class="question-mark">?</span>;
-<a href=#738 id=738 data-nosnippet>738</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>save) = saved {
-<a href=#739 id=739 data-nosnippet>739</a>        document.set_node(save);
-<a href=#740 id=740 data-nosnippet>740</a>      }
-<a href=#741 id=741 data-nosnippet>741</a>    }
-<a href=#742 id=742 data-nosnippet>742</a>
-<a href=#743 id=743 data-nosnippet>743</a>    <span class="comment">// Create rewrite rule
-<a href=#744 id=744 data-nosnippet>744</a>    </span><span class="kw">if </span>!body_text.is_empty() &amp;&amp; (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-<a href=#745 id=745 data-nosnippet>745</a>      <span class="kw">use </span>latexml_core::rewrite::{Rewrite, RewriteOptions};
-<a href=#746 id=746 data-nosnippet>746</a>      <span class="kw">use </span>rustc_hash::FxHashMap;
-<a href=#747 id=747 data-nosnippet>747</a>      <span class="comment">// Perl: getDeclarationScope — resolve scope=section to current section ID
-<a href=#748 id=748 data-nosnippet>748</a>      // Use decl_id prefix (e.g. "S1" from "S1.XMD1") since it's computed in afterDigest
-<a href=#749 id=749 data-nosnippet>749</a>      // where \thesection@ID is correct. In afterConstruct, it may be stale.
-<a href=#750 id=750 data-nosnippet>750</a>      </span><span class="kw">let </span>scope_val = whatsit.get_property(<span class="string">"scope_opt"</span>).map(|v| v.to_string()).unwrap_or_default();
-<a href=#751 id=751 data-nosnippet>751</a>      <span class="kw">let </span>rewrite_scope = <span class="kw">if </span>scope_val == <span class="string">"section" </span>{
-<a href=#752 id=752 data-nosnippet>752</a>        <span class="comment">// Extract section prefix from decl_id (e.g. "S1" from "S1.XMD1")
-<a href=#753 id=753 data-nosnippet>753</a>        </span><span class="kw">let </span>section_id = <span class="kw">if </span>!decl_id.is_empty() {
-<a href=#754 id=754 data-nosnippet>754</a>          decl_id.split(<span class="string">'.'</span>).next().unwrap_or(<span class="string">""</span>).to_string()
-<a href=#755 id=755 data-nosnippet>755</a>        } <span class="kw">else </span>{
-<a href=#756 id=756 data-nosnippet>756</a>          <span class="comment">// Fallback: use the node's ancestor section id
-<a href=#757 id=757 data-nosnippet>757</a>          </span><span class="kw">let </span><span class="kw-2">mut </span>node = document.get_node().clone();
-<a href=#758 id=758 data-nosnippet>758</a>          <span class="kw">let </span><span class="kw-2">mut </span>sid = String::new();
-<a href=#759 id=759 data-nosnippet>759</a>          <span class="kw">loop </span>{
-<a href=#760 id=760 data-nosnippet>760</a>            <span class="kw">if </span>node.get_name() == <span class="string">"section" </span>{
-<a href=#761 id=761 data-nosnippet>761</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_property(<span class="string">"xml:id"</span>).or_else(|| node.get_property(<span class="string">"id"</span>)) {
-<a href=#762 id=762 data-nosnippet>762</a>                sid = id;
-<a href=#763 id=763 data-nosnippet>763</a>              }
-<a href=#764 id=764 data-nosnippet>764</a>              <span class="kw">break</span>;
-<a href=#765 id=765 data-nosnippet>765</a>            }
-<a href=#766 id=766 data-nosnippet>766</a>            <span class="kw">match </span>node.get_parent() {
-<a href=#767 id=767 data-nosnippet>767</a>              <span class="prelude-val">Some</span>(p) =&gt; node = p,
-<a href=#768 id=768 data-nosnippet>768</a>              <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
-<a href=#769 id=769 data-nosnippet>769</a>            }
-<a href=#770 id=770 data-nosnippet>770</a>          }
-<a href=#771 id=771 data-nosnippet>771</a>          sid
-<a href=#772 id=772 data-nosnippet>772</a>        };
-<a href=#773 id=773 data-nosnippet>773</a>        <span class="kw">if </span>!section_id.is_empty() {
-<a href=#774 id=774 data-nosnippet>774</a>          <span class="prelude-val">Some</span>(Scope::Named(arena::pin(<span class="macro">format!</span>(<span class="string">"id:{section_id}"</span>))))
-<a href=#775 id=775 data-nosnippet>775</a>        } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
-<a href=#776 id=776 data-nosnippet>776</a>      } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
-<a href=#777 id=777 data-nosnippet>777</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = FxHashMap::default();
-<a href=#778 id=778 data-nosnippet>778</a>      <span class="kw">if </span>!role.is_empty() { attrs.insert(<span class="string">"role"</span>.to_string(), role); }
-<a href=#779 id=779 data-nosnippet>779</a>      <span class="kw">if </span>!name_val.is_empty() { attrs.insert(<span class="string">"name"</span>.to_string(), name_val); }
-<a href=#780 id=780 data-nosnippet>780</a>      <span class="kw">if </span>!meaning.is_empty() { attrs.insert(<span class="string">"meaning"</span>.to_string(), meaning); }
-<a href=#781 id=781 data-nosnippet>781</a>      <span class="kw">if </span>!decl_id.is_empty() { attrs.insert(<span class="string">"decl_id"</span>.to_string(), decl_id); }
-<a href=#782 id=782 data-nosnippet>782</a>      <span class="comment">// Compile pattern: determine XPath, type, filters, wildcard paths
-<a href=#783 id=783 data-nosnippet>783</a>      </span><span class="kw">let </span>has_wildcard = body_text.contains(<span class="string">"WildCard"</span>);
-<a href=#784 id=784 data-nosnippet>784</a>      <span class="kw">let </span>pat = <span class="kw">if </span>body_text.contains(<span class="string">'_'</span>) || body_text.contains(<span class="string">'\\'</span>) || body_text.contains(<span class="string">'\''</span>) {
-<a href=#785 id=785 data-nosnippet>785</a>        compile_declare_pattern(<span class="kw-2">&amp;</span>body_text)
-<a href=#786 id=786 data-nosnippet>786</a>      } <span class="kw">else </span>{
-<a href=#787 id=787 data-nosnippet>787</a>        <span class="comment">// Simple single-token pattern: match XMTok by text
-<a href=#788 id=788 data-nosnippet>788</a>        </span>DeclarePattern {
-<a href=#789 id=789 data-nosnippet>789</a>          xpath: <span class="macro">format!</span>(
-<a href=#790 id=790 data-nosnippet>790</a>            <span class="string">"descendant-or-self::*[local-name()='XMTok' and text()='{}']"</span>,
-<a href=#791 id=791 data-nosnippet>791</a>            body_text.replace(<span class="string">'\''</span>, <span class="string">"&amp;apos;"</span>)),
-<a href=#792 id=792 data-nosnippet>792</a>          pattern_type: <span class="string">"simple"</span>,
-<a href=#793 id=793 data-nosnippet>793</a>          base_text: <span class="prelude-val">None</span>,
-<a href=#794 id=794 data-nosnippet>794</a>          sub_text: <span class="prelude-val">None</span>,
-<a href=#795 id=795 data-nosnippet>795</a>          accent_name: <span class="prelude-val">None</span>,
-<a href=#796 id=796 data-nosnippet>796</a>          has_wildcard: <span class="bool-val">false</span>,
-<a href=#797 id=797 data-nosnippet>797</a>          wildcard_paths: <span class="prelude-val">None</span>,
-<a href=#798 id=798 data-nosnippet>798</a>        }
-<a href=#799 id=799 data-nosnippet>799</a>      };
-<a href=#800 id=800 data-nosnippet>800</a>      <span class="kw">if </span>pat.xpath.is_empty() {
-<a href=#801 id=801 data-nosnippet>801</a>        <span class="comment">// Unrecognized pattern — skip
-<a href=#802 id=802 data-nosnippet>802</a>      </span>} <span class="kw">else </span>{
-<a href=#803 id=803 data-nosnippet>803</a>        <span class="comment">// Store pattern metadata in attrs for Rust-side filtering in Select handler
-<a href=#804 id=804 data-nosnippet>804</a>        </span>attrs.insert(<span class="string">"_declare_type"</span>.to_string(), pat.pattern_type.to_string());
-<a href=#805 id=805 data-nosnippet>805</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>base) = pat.base_text {
-<a href=#806 id=806 data-nosnippet>806</a>          attrs.insert(<span class="string">"_declare_base"</span>.to_string(), base.clone());
-<a href=#807 id=807 data-nosnippet>807</a>        }
-<a href=#808 id=808 data-nosnippet>808</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>sub) = pat.sub_text {
-<a href=#809 id=809 data-nosnippet>809</a>          attrs.insert(<span class="string">"_declare_sub"</span>.to_string(), sub.clone());
-<a href=#810 id=810 data-nosnippet>810</a>        }
-<a href=#811 id=811 data-nosnippet>811</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>accent) = pat.accent_name {
-<a href=#812 id=812 data-nosnippet>812</a>          attrs.insert(<span class="string">"_declare_accent"</span>.to_string(), accent.clone());
-<a href=#813 id=813 data-nosnippet>813</a>        }
-<a href=#814 id=814 data-nosnippet>814</a>        <span class="kw">if </span>has_wildcard {
-<a href=#815 id=815 data-nosnippet>815</a>          attrs.insert(<span class="string">"_wildcard_pattern"</span>.to_string(), <span class="string">"1"</span>.to_string());
-<a href=#816 id=816 data-nosnippet>816</a>        }
-<a href=#817 id=817 data-nosnippet>817</a>        <span class="comment">// Pattern types determine select_count:
-<a href=#818 id=818 data-nosnippet>818</a>        // Subscript/prime patterns match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling
-<a href=#819 id=819 data-nosnippet>819</a>        // (select_count=2, pre-parsed DOM). Accent patterns match the single XMApp.
-<a href=#820 id=820 data-nosnippet>820</a>        </span><span class="kw">let </span>select_count = <span class="kw">match </span>pat.pattern_type {
-<a href=#821 id=821 data-nosnippet>821</a>          <span class="string">"literal_subscript" </span>| <span class="string">"prime" </span>| <span class="string">"subscript" </span>=&gt; <span class="prelude-val">Some</span>(<span class="number">2usize</span>),
-<a href=#822 id=822 data-nosnippet>822</a>          <span class="string">"accent" </span>=&gt; <span class="prelude-val">Some</span>(<span class="number">1usize</span>),
-<a href=#823 id=823 data-nosnippet>823</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#824 id=824 data-nosnippet>824</a>        };
-<a href=#825 id=825 data-nosnippet>825</a>        <span class="kw">let </span>rewrite = Rewrite::new(<span class="string">"math"</span>, RewriteOptions {
-<a href=#826 id=826 data-nosnippet>826</a>          xpath: <span class="prelude-val">Some</span>(pat.xpath),
-<a href=#827 id=827 data-nosnippet>827</a>          attributes_map: <span class="prelude-val">Some</span>(attrs),
-<a href=#828 id=828 data-nosnippet>828</a>          wildcard_paths: pat.wildcard_paths,
-<a href=#829 id=829 data-nosnippet>829</a>          select_count,
-<a href=#830 id=830 data-nosnippet>830</a>          scope: rewrite_scope,
-<a href=#831 id=831 data-nosnippet>831</a>          ..RewriteOptions::default()
-<a href=#832 id=832 data-nosnippet>832</a>        });
-<a href=#833 id=833 data-nosnippet>833</a>        unshift_value(<span class="string">"DOCUMENT_REWRITE_RULES"</span>, <span class="macro">vec!</span>[rewrite]);
-<a href=#834 id=834 data-nosnippet>834</a>      }
-<a href=#835 id=835 data-nosnippet>835</a>    }
-<a href=#836 id=836 data-nosnippet>836</a>  });
-<a href=#837 id=837 data-nosnippet>837</a>
-<a href=#838 id=838 data-nosnippet>838</a>  <span class="comment">// Perl latexml.sty.ltxml L300-307: user-facing aliases for
-<a href=#839 id=839 data-nosnippet>839</a>  // \lx@alignment@begin@heading / \lx@alignment@end@heading, which
-<a href=#840 id=840 data-nosnippet>840</a>  // bracket a run of tabular heading rows. The table-foot aliases
-<a href=#841 id=841 data-nosnippet>841</a>  // point at the same two CSes (the Perl convention uses head/foot
-<a href=#842 id=842 data-nosnippet>842</a>  // for clarity; both just toggle the in_tabular_head flag).
-<a href=#843 id=843 data-nosnippet>843</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lxBeginTableHead"</span>, <span class="string">"\\lx@alignment@begin@heading"</span>);
-<a href=#844 id=844 data-nosnippet>844</a>  <span class="macro">Let!</span>(<span class="string">"\\lxEndTableHead"</span>, <span class="string">"\\lx@alignment@end@heading"</span>);
-<a href=#845 id=845 data-nosnippet>845</a>  <span class="macro">Let!</span>(<span class="string">"\\lxBeginTableFoot"</span>, <span class="string">"\\lx@alignment@begin@heading"</span>);
-<a href=#846 id=846 data-nosnippet>846</a>  <span class="macro">Let!</span>(<span class="string">"\\lxEndTableFoot"</span>, <span class="string">"\\lx@alignment@end@heading"</span>);
-<a href=#847 id=847 data-nosnippet>847</a>
-<a href=#848 id=848 data-nosnippet>848</a>  <span class="comment">// Perl latexml.sty.ltxml L310-313: \lxTableColumnHead — mirrors
-<a href=#849 id=849 data-nosnippet>849</a>  // \lxTableRowHead below but flips thead_in_column instead of
-<a href=#850 id=850 data-nosnippet>850</a>  // thead_in_row on the current column spec.
-<a href=#851 id=851 data-nosnippet>851</a>  </span>def_primitive(
-<a href=#852 id=852 data-nosnippet>852</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lxTableColumnHead"</span>),
-<a href=#853 id=853 data-nosnippet>853</a>    <span class="prelude-val">None</span>,
-<a href=#854 id=854 data-nosnippet>854</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args| {
-<a href=#855 id=855 data-nosnippet>855</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
-<a href=#856 id=856 data-nosnippet>856</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = alignment.alignment_cell() {
-<a href=#857 id=857 data-nosnippet>857</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = data.borrow_mut().current_column() {
-<a href=#858 id=858 data-nosnippet>858</a>            col.thead_in_column = <span class="bool-val">true</span>;
-<a href=#859 id=859 data-nosnippet>859</a>          }
-<a href=#860 id=860 data-nosnippet>860</a>        }
-<a href=#861 id=861 data-nosnippet>861</a>      }
-<a href=#862 id=862 data-nosnippet>862</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#863 id=863 data-nosnippet>863</a>    }))),
-<a href=#864 id=864 data-nosnippet>864</a>    PrimitiveOptions::default(),
-<a href=#865 id=865 data-nosnippet>865</a>  )<span class="question-mark">?</span>;
-<a href=#866 id=866 data-nosnippet>866</a>
-<a href=#867 id=867 data-nosnippet>867</a>  <span class="comment">// Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment-&gt;currentColumn-&gt;{thead}{row} = 1 })
-<a href=#868 id=868 data-nosnippet>868</a>  // Marks the current column as a row header in alignment/tabular contexts.
-<a href=#869 id=869 data-nosnippet>869</a>  // Usage: &gt;{\lxTableRowHead} in column spec with array.sty
-<a href=#870 id=870 data-nosnippet>870</a>  </span>def_primitive(
-<a href=#871 id=871 data-nosnippet>871</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lxTableRowHead"</span>),
-<a href=#872 id=872 data-nosnippet>872</a>    <span class="prelude-val">None</span>,
-<a href=#873 id=873 data-nosnippet>873</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args| {
-<a href=#874 id=874 data-nosnippet>874</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
-<a href=#875 id=875 data-nosnippet>875</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = alignment.alignment_cell() {
-<a href=#876 id=876 data-nosnippet>876</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = data.borrow_mut().current_column() {
-<a href=#877 id=877 data-nosnippet>877</a>            col.thead_in_row = <span class="bool-val">true</span>;
-<a href=#878 id=878 data-nosnippet>878</a>          }
-<a href=#879 id=879 data-nosnippet>879</a>        }
-<a href=#880 id=880 data-nosnippet>880</a>      }
-<a href=#881 id=881 data-nosnippet>881</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#882 id=882 data-nosnippet>882</a>    }))),
-<a href=#883 id=883 data-nosnippet>883</a>    PrimitiveOptions::default(),
-<a href=#884 id=884 data-nosnippet>884</a>  )<span class="question-mark">?</span>;
-<a href=#885 id=885 data-nosnippet>885</a>
-<a href=#886 id=886 data-nosnippet>886</a>  <span class="comment">// Perl latexml.sty L354-371: \lxDefMath{\name}[nargs][optional]{presentation}[keyvals]
-<a href=#887 id=887 data-nosnippet>887</a>  // Defines a math macro with semantic annotations (name, meaning, role, etc.)
-<a href=#888 id=888 data-nosnippet>888</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath"</span>, sub[(cs, nargs, opt, presentation, params_opt)] {
-<a href=#889 id=889 data-nosnippet>889</a>    <span class="kw">let </span>cs_name = cs.to_string();
-<a href=#890 id=890 data-nosnippet>890</a>    <span class="kw">let </span>n = nargs.value_of() <span class="kw">as </span>usize;
-<a href=#891 id=891 data-nosnippet>891</a>    <span class="comment">// Extract semantic properties from keyvals.
-<a href=#892 id=892 data-nosnippet>892</a>    // Perl L368 always sets `revert_as =&gt; 'context'` so source-export
-<a href=#893 id=893 data-nosnippet>893</a>    // emits the user-defined CS rather than expanding the presentation
-<a href=#894 id=894 data-nosnippet>894</a>    // template (matches the convention for user-defined math macros).
-<a href=#895 id=895 data-nosnippet>895</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>opts = MathPrimitiveOptions {
-<a href=#896 id=896 data-nosnippet>896</a>      revert_as: <span class="prelude-val">Some</span>(std::borrow::Cow::Borrowed(<span class="string">"context"</span>)),
-<a href=#897 id=897 data-nosnippet>897</a>      ..Default::default()
-<a href=#898 id=898 data-nosnippet>898</a>    };
-<a href=#899 id=899 data-nosnippet>899</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(kv) = params_opt.as_ref() {
-<a href=#900 id=900 data-nosnippet>900</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"name"</span>) { opts.name = <span class="prelude-val">Some</span>(v.to_string()); }
-<a href=#901 id=901 data-nosnippet>901</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"meaning"</span>) { opts.meaning = <span class="prelude-val">Some</span>(v.to_string()); }
-<a href=#902 id=902 data-nosnippet>902</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"role"</span>) { opts.role = <span class="prelude-val">Some</span>(v.to_string()); }
-<a href=#903 id=903 data-nosnippet>903</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"cd"</span>) { opts.omcd = <span class="prelude-val">Some</span>(v.to_string()); }
-<a href=#904 id=904 data-nosnippet>904</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"alias"</span>) { opts.alias = <span class="prelude-val">Some</span>(v.to_string()); }
-<a href=#905 id=905 data-nosnippet>905</a>    }
-<a href=#906 id=906 data-nosnippet>906</a>    <span class="comment">// Perl also extracts `scope` / detects `tag`/`description` keyvals to allocate
-<a href=#907 id=907 data-nosnippet>907</a>    // a decl_id and Digest a follow-up `\@lxDefMathDeclare` invocation. Neither is
-<a href=#908 id=908 data-nosnippet>908</a>    // wired through the Rust DefPrimitive shim yet — needs `next_declaration_id`
-<a href=#909 id=909 data-nosnippet>909</a>    // helper + the \@lxDefMathDeclare constructor port. Track separately.
-<a href=#910 id=910 data-nosnippet>910</a>    // Build parameter spec for n args
-<a href=#911 id=911 data-nosnippet>911</a>    </span><span class="kw">use </span>latexml_core::common::def_parser::parse_parameters;
-<a href=#912 id=912 data-nosnippet>912</a>    <span class="kw">let </span>params = <span class="kw">if </span>n &gt; <span class="number">0 </span>{
-<a href=#913 id=913 data-nosnippet>913</a>      <span class="kw">let </span>spec = (<span class="number">0</span>..n).map(|<span class="kw">_</span>| <span class="string">"{}"</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">""</span>);
-<a href=#914 id=914 data-nosnippet>914</a>      parse_parameters(<span class="kw-2">&amp;</span>spec, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name), <span class="bool-val">true</span>)<span class="question-mark">?
-<a href=#915 id=915 data-nosnippet>915</a>    </span>} <span class="kw">else </span>{
-<a href=#916 id=916 data-nosnippet>916</a>      <span class="prelude-val">None
-<a href=#917 id=917 data-nosnippet>917</a>    </span>};
-<a href=#918 id=918 data-nosnippet>918</a>    <span class="comment">// Create the math definition
-<a href=#919 id=919 data-nosnippet>919</a>    </span><span class="kw">let </span>presentation_str = presentation.to_string();
-<a href=#920 id=920 data-nosnippet>920</a>    def_math(
-<a href=#921 id=921 data-nosnippet>921</a>      <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name),
-<a href=#922 id=922 data-nosnippet>922</a>      params,
-<a href=#923 id=923 data-nosnippet>923</a>      presentation_str,
-<a href=#924 id=924 data-nosnippet>924</a>      opts,
-<a href=#925 id=925 data-nosnippet>925</a>    )<span class="question-mark">?</span>;
-<a href=#926 id=926 data-nosnippet>926</a>  });
-<a href=#927 id=927 data-nosnippet>927</a>
-<a href=#928 id=928 data-nosnippet>928</a>  <span class="comment">// Perl latexml.sty L106-108: \URL[text]{href}
-<a href=#929 id=929 data-nosnippet>929</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\URL[] Verbatim"</span>,
-<a href=#930 id=930 data-nosnippet>930</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;?#1(#1)(#href)&lt;/ltx:ref&gt;"</span>,
-<a href=#931 id=931 data-nosnippet>931</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#932 id=932 data-nosnippet>932</a>    properties =&gt; sub[_args] {
-<a href=#933 id=933 data-nosnippet>933</a>      <span class="kw">let </span><span class="kw-2">mut </span>href_str = _args
-<a href=#934 id=934 data-nosnippet>934</a>        .get(<span class="number">1</span>)
-<a href=#935 id=935 data-nosnippet>935</a>        .and_then(|a| a.as_ref())
-<a href=#936 id=936 data-nosnippet>936</a>        .map(|a| a.to_string())
-<a href=#937 id=937 data-nosnippet>937</a>        .unwrap_or_default();
-<a href=#938 id=938 data-nosnippet>938</a>      <span class="comment">// Perl: CleanURL — strip whitespace/newlines from URLs
-<a href=#939 id=939 data-nosnippet>939</a>      </span>href_str = href_str.replace([<span class="string">'\n'</span>, <span class="string">'\r'</span>], <span class="string">""</span>).trim().to_string();
-<a href=#940 id=940 data-nosnippet>940</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href_str))
-<a href=#941 id=941 data-nosnippet>941</a>    }
-<a href=#942 id=942 data-nosnippet>942</a>  );
-<a href=#943 id=943 data-nosnippet>943</a>
-<a href=#944 id=944 data-nosnippet>944</a>  <span class="comment">// Perl latexml.sty.ltxml L122-134: the LaTeXML-logo trio.
-<a href=#945 id=945 data-nosnippet>945</a>  // \LaTeXML expands to \LaTeXML@logo, which lays out a stylized
-<a href=#946 id=946 data-nosnippet>946</a>  // nested-ltx:text pattern (the classic Lamport-style kerning). The
-<a href=#947 id=947 data-nosnippet>947</a>  // Perl `sizer` closure is specific to LaTeXML-Post typesetting layout
-<a href=#948 id=948 data-nosnippet>948</a>  // and not called by the Rust compile-time binding pipeline — omit.
-<a href=#949 id=949 data-nosnippet>949</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LaTeXML"</span>, <span class="string">"\\LaTeXML@logo"</span>);
-<a href=#950 id=950 data-nosnippet>950</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\LaTeXML@logo"</span>,
-<a href=#951 id=951 data-nosnippet>951</a>    <span class="string">"&lt;ltx:text class='ltx_LaTeXML_logo'&gt;\
-<a href=#952 id=952 data-nosnippet>952</a>       &lt;ltx:text cssstyle='letter-spacing:-0.2em; margin-right:0.1em'&gt;\
-<a href=#953 id=953 data-nosnippet>953</a>         L\
-<a href=#954 id=954 data-nosnippet>954</a>         &lt;ltx:text cssstyle='font-variant:small-caps;' yoffset='0.4ex'&gt;a&lt;/ltx:text&gt;\
-<a href=#955 id=955 data-nosnippet>955</a>         T\
-<a href=#956 id=956 data-nosnippet>956</a>         &lt;ltx:text cssstyle='font-variant:small-caps;font-size:120%' yoffset='-0.2ex'&gt;e&lt;/ltx:text&gt;\
-<a href=#957 id=957 data-nosnippet>957</a>       &lt;/ltx:text&gt;\
-<a href=#958 id=958 data-nosnippet>958</a>       &lt;ltx:text cssstyle='font-size:90%' yoffset='-0.2ex'&gt;XML&lt;/ltx:text&gt;\
-<a href=#959 id=959 data-nosnippet>959</a>     &lt;/ltx:text&gt;"</span>,
-<a href=#960 id=960 data-nosnippet>960</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#961 id=961 data-nosnippet>961</a>
-<a href=#962 id=962 data-nosnippet>962</a>  <span class="comment">// Perl latexml.sty.ltxml L136-139: \LaTeXMLversion / \LaTeXMLrevision
-<a href=#963 id=963 data-nosnippet>963</a>  // expand to $LaTeXML::VERSION / $LaTeXML::Version::REVISION via
-<a href=#964 id=964 data-nosnippet>964</a>  // ExplodeText. Rust's DefMacro! proc-macro requires a literal body —
-<a href=#965 id=965 data-nosnippet>965</a>  // CARGO_PKG_VERSION can't be env!()'d through it — so we hard-code
-<a href=#966 id=966 data-nosnippet>966</a>  // the latexml_package crate version (kept in sync by humans). Revision
-<a href=#967 id=967 data-nosnippet>967</a>  // is left empty (no git rev exposed at runtime); that makes
-<a href=#968 id=968 data-nosnippet>968</a>  // \LaTeXMLfullversion collapse to just the version string via the
-<a href=#969 id=969 data-nosnippet>969</a>  // `\ifx\expandafter.\LaTeXMLrevision.` guard.
-<a href=#970 id=970 data-nosnippet>970</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LaTeXMLversion"</span>, <span class="string">"0.4.0"</span>);
-<a href=#971 id=971 data-nosnippet>971</a>  def_macro_noop(<span class="string">"\\LaTeXMLrevision"</span>)<span class="question-mark">?</span>;
-<a href=#972 id=972 data-nosnippet>972</a>  <span class="macro">DefMacro!</span>(
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="string">"\\LaTeXMLfullversion"</span>,
-<a href=#974 id=974 data-nosnippet>974</a>    <span class="string">"\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)"
-<a href=#975 id=975 data-nosnippet>975</a>  </span>);
-<a href=#976 id=976 data-nosnippet>976</a>
-<a href=#977 id=977 data-nosnippet>977</a>  <span class="comment">// Perl latexml.sty.ltxml L227-230: \lxRef{label}{text} — like hyperref's
-<a href=#978 id=978 data-nosnippet>978</a>  // \hyperref but straightforward. Emits &lt;ltx:ref labelref='label'&gt;text&lt;/ref&gt;
-<a href=#979 id=979 data-nosnippet>979</a>  // with enter_horizontal so a bare \lxRef between paragraphs doesn't
-<a href=#980 id=980 data-nosnippet>980</a>  // leak out of &lt;ltx:p&gt; (same mode-leak class as hyperref \url cycle 87).
-<a href=#981 id=981 data-nosnippet>981</a>  // CleanLabel normalizes the label for the labelref attribute.
-<a href=#982 id=982 data-nosnippet>982</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxRef Semiverbatim {}"</span>,
-<a href=#983 id=983 data-nosnippet>983</a>    <span class="string">"&lt;ltx:ref labelref='#label'&gt;#2&lt;/ltx:ref&gt;"</span>,
-<a href=#984 id=984 data-nosnippet>984</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#985 id=985 data-nosnippet>985</a>    properties =&gt; sub[args] {
-<a href=#986 id=986 data-nosnippet>986</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; label_opt);
-<a href=#987 id=987 data-nosnippet>987</a>      <span class="kw">let </span>label = label_opt.as_ref().unwrap().to_string();
-<a href=#988 id=988 data-nosnippet>988</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; Stored::String(arena::pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
-<a href=#989 id=989 data-nosnippet>989</a>    }
-<a href=#990 id=990 data-nosnippet>990</a>  );
-<a href=#991 id=991 data-nosnippet>991</a>
-<a href=#992 id=992 data-nosnippet>992</a>  <span class="comment">// Perl latexml.sty.ltxml L209-222: \lxAddAnnotation / \lxWithAnnotation
-<a href=#993 id=993 data-nosnippet>993</a>  // add RDFa-ish annotations to the current / enclosing node via the
-<a href=#994 id=994 data-nosnippet>994</a>  // `addAnnotations` helper. That helper isn't ported to Rust yet (see
-<a href=#995 id=995 data-nosnippet>995</a>  // latexml_sty.rs:855 "Track separately" for \@lxDefMathDeclare, same
-<a href=#996 id=996 data-nosnippet>996</a>  // family). Ship arg-consuming stubs so documents invoking
-<a href=#997 id=997 data-nosnippet>997</a>  // \lxAddAnnotation{key=val,...} or \lxWithAnnotation{…}{body} don't
-<a href=#998 id=998 data-nosnippet>998</a>  // hit undefined-CS. The {body} arg passes through for \lxWithAnnotation
-<a href=#999 id=999 data-nosnippet>999</a>  // so the visible content is preserved; the annotation itself is dropped.
-<a href=#1000 id=1000 data-nosnippet>1000</a>  </span>def_macro_noop(<span class="string">"\\lxAddAnnotation RequiredKeyVals"</span>)<span class="question-mark">?</span>;
-<a href=#1001 id=1001 data-nosnippet>1001</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lxWithAnnotation RequiredKeyVals {}"</span>, <span class="string">"#2"</span>);
-<a href=#1002 id=1002 data-nosnippet>1002</a>
-<a href=#1003 id=1003 data-nosnippet>1003</a>  <span class="comment">// Perl latexml.sty.ltxml L514-528: \lxRefDeclaration OptionalKeyVals:Declare {}
-<a href=#1004 id=1004 data-nosnippet>1004</a>  // — refers declarations from another document point to labels at the
-<a href=#1005 id=1005 data-nosnippet>1005</a>  // call site, via createDeclarationRewrite + the Declaration_ state
-<a href=#1006 id=1006 data-nosnippet>1006</a>  // registry. Neither helper is ported. Stub as arg-consuming no-op so
-<a href=#1007 id=1007 data-nosnippet>1007</a>  // documents don't hit undefined-CS; annotations won't actually rewrite
-<a href=#1008 id=1008 data-nosnippet>1008</a>  // but the prose renders cleanly.
-<a href=#1009 id=1009 data-nosnippet>1009</a>  </span>def_macro_noop(<span class="string">"\\lxRefDeclaration OptionalKeyVals:Declare {}"</span>)<span class="question-mark">?</span>;
-<a href=#1010 id=1010 data-nosnippet>1010</a>
-<a href=#1011 id=1011 data-nosnippet>1011</a>  <span class="comment">// Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
-<a href=#1012 id=1012 data-nosnippet>1012</a>  // document's xml:id via a plain TeX `\def` of the internal
-<a href=#1013 id=1013 data-nosnippet>1013</a>  // \thedocument@ID command that \begin{document}'s constructor
-<a href=#1014 id=1014 data-nosnippet>1014</a>  // consults for its `id` property.
-<a href=#1015 id=1015 data-nosnippet>1015</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lxDocumentID{}"</span>, <span class="string">"\\def\\thedocument@ID{#1}"</span>);
-<a href=#1016 id=1016 data-nosnippet>1016</a>
-<a href=#1017 id=1017 data-nosnippet>1017</a>  <span class="comment">// Perl latexml.sty.ltxml L148: \LXMID{id}{math} associates an
-<a href=#1018 id=1018 data-nosnippet>1018</a>  // identifier with the given math expression. Thin wrapper around
-<a href=#1019 id=1019 data-nosnippet>1019</a>  // the internal \lx@xmarg constructor already emitted elsewhere.
-<a href=#1020 id=1020 data-nosnippet>1020</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LXMID{}{}"</span>, <span class="string">"\\lx@xmarg{#1}{#2}"</span>);
-<a href=#1021 id=1021 data-nosnippet>1021</a>
-<a href=#1022 id=1022 data-nosnippet>1022</a>  <span class="comment">// Perl latexml.sty.ltxml L153: \LXMRef{id} refers to the math
-<a href=#1023 id=1023 data-nosnippet>1023</a>  // expression associated with id. Thin wrapper around \lx@xmref.
-<a href=#1024 id=1024 data-nosnippet>1024</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LXMRef{}"</span>, <span class="string">"\\lx@xmref{#1}"</span>);
-<a href=#1025 id=1025 data-nosnippet>1025</a>
-<a href=#1026 id=1026 data-nosnippet>1026</a>  <span class="comment">// Perl latexml.sty L109-116: acronym shortcuts. Prior Rust stopped at
-<a href=#1027 id=1027 data-nosnippet>1027</a>  // \XML / \SGML / \HTML — the remaining \XHTML / \XSLT / \CSS / \MathML
-<a href=#1028 id=1028 data-nosnippet>1028</a>  // / \OpenMath were missing, so documents using them hit undefined-CS
-<a href=#1029 id=1029 data-nosnippet>1029</a>  // errors.
-<a href=#1030 id=1030 data-nosnippet>1030</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\XML"</span>, <span class="string">"\\textsc{xml}"</span>);
-<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SGML"</span>, <span class="string">"\\textsc{sgml}"</span>);
-<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\HTML"</span>, <span class="string">"\\textsc{html}"</span>);
-<a href=#1033 id=1033 data-nosnippet>1033</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\XHTML"</span>, <span class="string">"\\textsc{xhtml}"</span>);
-<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\XSLT"</span>, <span class="string">"\\textsc{xslt}"</span>);
-<a href=#1035 id=1035 data-nosnippet>1035</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\CSS"</span>, <span class="string">"\\textsc{css}"</span>);
-<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MathML"</span>, <span class="string">"\\texttt{MathML}"</span>);
-<a href=#1037 id=1037 data-nosnippet>1037</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\OpenMath"</span>, <span class="string">"\\texttt{OpenMath}"</span>);
-<a href=#1038 id=1038 data-nosnippet>1038</a>
-<a href=#1039 id=1039 data-nosnippet>1039</a>  <span class="comment">// Diagnostic constructor: emits a marker that gets filled with the Marpa parse tree count
-<a href=#1040 id=1040 data-nosnippet>1040</a>  // for the preceding formula, after math parsing completes.
-<a href=#1041 id=1041 data-nosnippet>1041</a>  // Usage: $x^2$ \ltx@count@parses → becomes the count of grammar trees.
-<a href=#1042 id=1042 data-nosnippet>1042</a>  // The math parser sets _parsetrees on each Math element, then a post-parse step
-<a href=#1043 id=1043 data-nosnippet>1043</a>  // in core_interface fills in the markers.
-<a href=#1044 id=1044 data-nosnippet>1044</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@count@parses"</span>,
-<a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="string">"&lt;ltx:text class='ltx_count_parses' _parsetrees_marker='true'&gt;0&lt;/ltx:text&gt;"</span>,
-<a href=#1046 id=1046 data-nosnippet>1046</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#1047 id=1047 data-nosnippet>1047</a>
-<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="comment">// Perl latexml.sty.ltxml L263-289: {lxNavbar} / {lxHeader} / {lxFooter}
-<a href=#1049 id=1049 data-nosnippet>1049</a>  // envs accumulate body content into a `navigation` list that
-<a href=#1050 id=1050 data-nosnippet>1050</a>  // insertNavigation (ltx:document afterClose) splices under an
-<a href=#1051 id=1051 data-nosnippet>1051</a>  // &lt;ltx:navigation&gt; wrapper. Rust has no afterClose hook yet and no
-<a href=#1052 id=1052 data-nosnippet>1052</a>  // PushValue-based list accumulator plumbed through the post-pipeline,
-<a href=#1053 id=1053 data-nosnippet>1053</a>  // so a faithful hoisted-navigation output isn't possible yet. Stub
-<a href=#1054 id=1054 data-nosnippet>1054</a>  // as inline-logical-block wrappers that keep body content visible
-<a href=#1055 id=1055 data-nosnippet>1055</a>  // in-flow and prevent undefined-env errors when documents invoke
-<a href=#1056 id=1056 data-nosnippet>1056</a>  // \begin{lxNavbar}.../\begin{lxHeader}.../\begin{lxFooter}... .
-<a href=#1057 id=1057 data-nosnippet>1057</a>  // Intentional divergence: navigation content appears in flow rather
-<a href=#1058 id=1058 data-nosnippet>1058</a>  // than hoisted to a dedicated &lt;ltx:navigation&gt; container. Revisit
-<a href=#1059 id=1059 data-nosnippet>1059</a>  // when the Tag()/afterClose + PushValue list-accumulator machinery
-<a href=#1060 id=1060 data-nosnippet>1060</a>  // is ported.
-<a href=#1061 id=1061 data-nosnippet>1061</a>  // Perl all three envs run `beforeDigest =&gt; sub { AssignValue(inPreamble =&gt; 0); }`
-<a href=#1062 id=1062 data-nosnippet>1062</a>  // so body content digests as document text even when the env is
-<a href=#1063 id=1063 data-nosnippet>1063</a>  // invoked from the preamble (same pattern as jheppub affiliation
-<a href=#1064 id=1064 data-nosnippet>1064</a>  // and standalone.sty's \@standalone@start@input).
-<a href=#1065 id=1065 data-nosnippet>1065</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{lxNavbar}"</span>,
-<a href=#1066 id=1066 data-nosnippet>1066</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_navbar'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
-<a href=#1067 id=1067 data-nosnippet>1067</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
-<a href=#1068 id=1068 data-nosnippet>1068</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{lxHeader}"</span>,
-<a href=#1069 id=1069 data-nosnippet>1069</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_header'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
-<a href=#1070 id=1070 data-nosnippet>1070</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
-<a href=#1071 id=1071 data-nosnippet>1071</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{lxFooter}"</span>,
-<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_footer'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
-<a href=#1073 id=1073 data-nosnippet>1073</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
-<a href=#1074 id=1074 data-nosnippet>1074</a>});
+<a href=#242 id=242 data-nosnippet>242</a><span class="macro">LoadDefinitions!</span>({
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="comment">// Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
+<a href=#244 id=244 data-nosnippet>244</a>  // two well-known boolean knobs to the document author. Both state keys
+<a href=#245 id=245 data-nosnippet>245</a>  // (GENERATE_IDS, INCLUDE_COMMENTS) are read elsewhere in Rust (document.rs
+<a href=#246 id=246 data-nosnippet>246</a>  // L459 and mouth.rs L358/L696/L889 respectively), so the options were
+<a href=#247 id=247 data-nosnippet>247</a>  // functional but unreachable until wired here.
+<a href=#248 id=248 data-nosnippet>248</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"ids"</span>, {
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="macro">AssignValue!</span>(<span class="string">"GENERATE_IDS"     </span>=&gt; <span class="bool-val">true</span>,  Scope::Global);
+<a href=#250 id=250 data-nosnippet>250</a>  });
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noids"</span>, {
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="macro">AssignValue!</span>(<span class="string">"GENERATE_IDS"     </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#253 id=253 data-nosnippet>253</a>  });
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DeclareOption!</span>(<span class="string">"comments"</span>, {
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_COMMENTS" </span>=&gt; <span class="bool-val">true</span>,  Scope::Global);
+<a href=#256 id=256 data-nosnippet>256</a>  });
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nocomments"</span>, {
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_COMMENTS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#259 id=259 data-nosnippet>259</a>  });
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="comment">// 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
+<a href=#262 id=262 data-nosnippet>262</a>  // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).
+<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"bibtex"</span>, {
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="macro">AssignValue!</span>(
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="string">"BIB_CONFIG"</span>,
+<a href=#266 id=266 data-nosnippet>266</a>      Stored::Strings(Rc::new([arena::pin(<span class="string">"bib"</span>), arena::pin(<span class="string">"bbl"</span>)])),
+<a href=#267 id=267 data-nosnippet>267</a>      Scope::Global
+<a href=#268 id=268 data-nosnippet>268</a>    );
+<a href=#269 id=269 data-nosnippet>269</a>  });
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nobibtex"</span>, {
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="macro">AssignValue!</span>(
+<a href=#272 id=272 data-nosnippet>272</a>      <span class="string">"BIB_CONFIG"</span>,
+<a href=#273 id=273 data-nosnippet>273</a>      Stored::Strings(Rc::new([arena::pin(<span class="string">"bbl"</span>)])),
+<a href=#274 id=274 data-nosnippet>274</a>      Scope::Global
+<a href=#275 id=275 data-nosnippet>275</a>    );
+<a href=#276 id=276 data-nosnippet>276</a>  });
+<a href=#277 id=277 data-nosnippet>277</a>
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="comment">// Perl L57-59: bibconfig KeyVal — comma-separated bib config values.
+<a href=#279 id=279 data-nosnippet>279</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"bibconfig"</span>, <span class="string">"Semiverbatim"</span>);
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="comment">// Perl L63-86: Image scaling options — saved as processing instructions
+<a href=#282 id=282 data-nosnippet>282</a>  // via \lx@save@parameter at \begin{document} time. Perl's user-facing
+<a href=#283 id=283 data-nosnippet>283</a>  // keyval name is lowercase `dpi` but the internal PI is uppercase `DPI`
+<a href=#284 id=284 data-nosnippet>284</a>  // (Perl: `$STATE-&gt;assignValue(DPI =&gt; ...)`). Keep the keyval name
+<a href=#285 id=285 data-nosnippet>285</a>  // lowercase to match Perl user-facing — the uppercase `DPI` mismatch
+<a href=#286 id=286 data-nosnippet>286</a>  // meant `\usepackage[dpi=144]{latexml}` silently missed the keyval.
+<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"dpi"</span>, <span class="string">"Number"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"magnify"</span>, <span class="string">"Number"</span>);
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"upsample"</span>, <span class="string">"Number"</span>);
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"zoomout"</span>, <span class="string">"Number"</span>);
+<a href=#291 id=291 data-nosnippet>291</a>
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="comment">// Perl L87-98: Limit options — set global limits for infinite-loop protection.
+<a href=#293 id=293 data-nosnippet>293</a>  // These are DefKeyVal with code closures; since our macro doesn't support code,
+<a href=#294 id=294 data-nosnippet>294</a>  // we define them as DeclareOption and handle in ProcessOptions.
+<a href=#295 id=295 data-nosnippet>295</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"tokenlimit"</span>, <span class="string">"Number"</span>);
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"iflimit"</span>, <span class="string">"Number"</span>);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"absorblimit"</span>, <span class="string">"Number"</span>);
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"LTXML"</span>, <span class="string">"pushbacklimit"</span>, <span class="string">"Number"</span>);
+<a href=#299 id=299 data-nosnippet>299</a>
+<a href=#300 id=300 data-nosnippet>300</a>  <span class="comment">// Lexeme serialization for math formulas
+<a href=#301 id=301 data-nosnippet>301</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"mathlexemes"</span>, {
+<a href=#302 id=302 data-nosnippet>302</a>    <span class="macro">AssignValue!</span>(<span class="string">"LEXEMATIZE_MATH" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
+<a href=#303 id=303 data-nosnippet>303</a>  });
+<a href=#304 id=304 data-nosnippet>304</a>
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// Math parser speculation (e.g. possible function detection)
+<a href=#306 id=306 data-nosnippet>306</a>  // Perl: DeclareOption('mathparserspeculate', sub { AssignValue('MATHPARSER_SPECULATE' =&gt; 1,
+<a href=#307 id=307 data-nosnippet>307</a>  // 'global'); });
+<a href=#308 id=308 data-nosnippet>308</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"mathparserspeculate"</span>, {
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="macro">AssignValue!</span>(<span class="string">"MATHPARSER_SPECULATE" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
+<a href=#310 id=310 data-nosnippet>310</a>  });
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nomathparserspeculate"</span>, {
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="macro">AssignValue!</span>(<span class="string">"MATHPARSER_SPECULATE" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#313 id=313 data-nosnippet>313</a>  });
+<a href=#314 id=314 data-nosnippet>314</a>
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="comment">// Header guessing for tabular environments
+<a href=#316 id=316 data-nosnippet>316</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"guesstabularheaders"</span>, {
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="macro">AssignValue!</span>(<span class="string">"GUESS_TABULAR_HEADERS" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
+<a href=#318 id=318 data-nosnippet>318</a>  });
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noguesstabularheaders"</span>, {
+<a href=#320 id=320 data-nosnippet>320</a>    <span class="macro">AssignValue!</span>(<span class="string">"GUESS_TABULAR_HEADERS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#321 id=321 data-nosnippet>321</a>  });
+<a href=#322 id=322 data-nosnippet>322</a>
+<a href=#323 id=323 data-nosnippet>323</a>  <span class="comment">// Finer control over which (if any) raw .sty/.cls files to include
+<a href=#324 id=324 data-nosnippet>324</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"rawstyles"</span>, {
+<a href=#325 id=325 data-nosnippet>325</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
+<a href=#326 id=326 data-nosnippet>326</a>  });
+<a href=#327 id=327 data-nosnippet>327</a>  <span class="macro">DeclareOption!</span>(<span class="string">"localrawstyles"</span>, {
+<a href=#328 id=328 data-nosnippet>328</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="string">"searchpaths"</span>, Scope::Global);
+<a href=#329 id=329 data-nosnippet>329</a>  });
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DeclareOption!</span>(<span class="string">"norawstyles"</span>, {
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_STYLES"  </span>=&gt; <span class="bool-val">false</span>,             Scope::Global);
+<a href=#332 id=332 data-nosnippet>332</a>  });
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="macro">DeclareOption!</span>(<span class="string">"rawclasses"</span>, {
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="bool-val">true</span>,             Scope::Global);
+<a href=#335 id=335 data-nosnippet>335</a>  });
+<a href=#336 id=336 data-nosnippet>336</a>  <span class="macro">DeclareOption!</span>(<span class="string">"localrawclasses"</span>, {
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="string">"searchpaths"</span>, Scope::Global);
+<a href=#338 id=338 data-nosnippet>338</a>  });
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="macro">DeclareOption!</span>(<span class="string">"norawclasses"</span>, {
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="macro">AssignValue!</span>(<span class="string">"INCLUDE_CLASSES" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#341 id=341 data-nosnippet>341</a>  });
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="comment">// Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
+<a href=#344 id=344 data-nosnippet>344</a>  // a TRACING bitmap via TRACE_ALL / TRACE_PROFILE constants. Rust hasn't
+<a href=#345 id=345 data-nosnippet>345</a>  // wired the bitmap constants (no TRACE_ALL/TRACE_PROFILE symbols in the
+<a href=#346 id=346 data-nosnippet>346</a>  // state module), so stub these as no-op option declarations. The
+<a href=#347 id=347 data-nosnippet>347</a>  // observable effect is that `\usepackage[tracing]{latexml}` etc. simply
+<a href=#348 id=348 data-nosnippet>348</a>  // load latexml.sty without throwing an "unknown option" error; tracing
+<a href=#349 id=349 data-nosnippet>349</a>  // actually kicks in via the CLI `--verbose`/`--profile` flags, not
+<a href=#350 id=350 data-nosnippet>350</a>  // package options. Prevents load-time errors for documents that include
+<a href=#351 id=351 data-nosnippet>351</a>  // these flags defensively.
+<a href=#352 id=352 data-nosnippet>352</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"tracing"</span>, <span class="prelude-val">None</span>);
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="macro">DeclareOption!</span>(<span class="string">"notracing"</span>, <span class="prelude-val">None</span>);
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="macro">DeclareOption!</span>(<span class="string">"profiling"</span>, <span class="prelude-val">None</span>);
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noprofiling"</span>, <span class="prelude-val">None</span>);
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>  <span class="comment">// Perl latexml.sty.ltxml L43-44: breakuntex / nobreakuntex toggle the
+<a href=#358 id=358 data-nosnippet>358</a>  // SUPPRESS_UNTEX_LINEBREAKS boolean, which controls whether the `\\`
+<a href=#359 id=359 data-nosnippet>359</a>  // backslash-newline reversion in `tex=` attributes inserts a real
+<a href=#360 id=360 data-nosnippet>360</a>  // line break or is suppressed. Default breakuntex=true (Perl omits the
+<a href=#361 id=361 data-nosnippet>361</a>  // flag by default; documents explicitly passing nobreakuntex enable
+<a href=#362 id=362 data-nosnippet>362</a>  // SUPPRESS).
+<a href=#363 id=363 data-nosnippet>363</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"breakuntex"</span>, {
+<a href=#364 id=364 data-nosnippet>364</a>    <span class="macro">AssignValue!</span>(<span class="string">"SUPPRESS_UNTEX_LINEBREAKS" </span>=&gt; <span class="bool-val">false</span>, Scope::Global);
+<a href=#365 id=365 data-nosnippet>365</a>  });
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nobreakuntex"</span>, {
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="macro">AssignValue!</span>(<span class="string">"SUPPRESS_UNTEX_LINEBREAKS" </span>=&gt; <span class="bool-val">true</span>, Scope::Global);
+<a href=#368 id=368 data-nosnippet>368</a>  });
+<a href=#369 id=369 data-nosnippet>369</a>
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">ProcessOptions!</span>(keysets =&gt; [<span class="string">"LTXML"</span>]);
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="comment">// Process bibconfig keyval from options passed to latexml.sty.
+<a href=#373 id=373 data-nosnippet>373</a>  // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
+<a href=#374 id=374 data-nosnippet>374</a>  // ProcessOptions with the LTXML keyset now stores package keyvals here;
+<a href=#375 id=375 data-nosnippet>375</a>  // keep the legacy extraction as a fallback for older call paths.
+<a href=#376 id=376 data-nosnippet>376</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(opts) = state::lookup_vecdeque(<span class="string">"opt@latexml.sty"</span>) {
+<a href=#377 id=377 data-nosnippet>377</a>    <span class="kw">for </span>opt <span class="kw">in </span>opts.iter() {
+<a href=#378 id=378 data-nosnippet>378</a>      <span class="kw">let </span>opt_str = opt.to_string();
+<a href=#379 id=379 data-nosnippet>379</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = opt_str.strip_prefix(<span class="string">"bibconfig="</span>) {
+<a href=#380 id=380 data-nosnippet>380</a>        state::assign_value(
+<a href=#381 id=381 data-nosnippet>381</a>          <span class="string">"KV@LTXML@bibconfig"</span>,
+<a href=#382 id=382 data-nosnippet>382</a>          Stored::String(arena::pin(val.trim())),
+<a href=#383 id=383 data-nosnippet>383</a>          <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#384 id=384 data-nosnippet>384</a>        );
+<a href=#385 id=385 data-nosnippet>385</a>      }
+<a href=#386 id=386 data-nosnippet>386</a>    }
+<a href=#387 id=387 data-nosnippet>387</a>  }
+<a href=#388 id=388 data-nosnippet>388</a>
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="comment">// Apply bibconfig from keyvals (Perl L57-59: code closure)
+<a href=#390 id=390 data-nosnippet>390</a>  // bibconfig=bbl,bib means try bbl first, fall back to bib
+<a href=#391 id=391 data-nosnippet>391</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@bibconfig"</span>) {
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span>config_str = v.to_string();
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="kw">let </span>configs: Vec&lt;<span class="kw">_</span>&gt; = config_str
+<a href=#394 id=394 data-nosnippet>394</a>      .split(<span class="string">','</span>)
+<a href=#395 id=395 data-nosnippet>395</a>      .map(|s| arena::pin(s.trim()))
+<a href=#396 id=396 data-nosnippet>396</a>      .collect();
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">if </span>!configs.is_empty() {
+<a href=#398 id=398 data-nosnippet>398</a>      state::assign_value(
+<a href=#399 id=399 data-nosnippet>399</a>        <span class="string">"BIB_CONFIG"</span>,
+<a href=#400 id=400 data-nosnippet>400</a>        Stored::Strings(Rc::from(configs)),
+<a href=#401 id=401 data-nosnippet>401</a>        <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#402 id=402 data-nosnippet>402</a>      );
+<a href=#403 id=403 data-nosnippet>403</a>    }
+<a href=#404 id=404 data-nosnippet>404</a>  }
+<a href=#405 id=405 data-nosnippet>405</a>
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="comment">// Apply limit options from keyvals (Perl L87-98)
+<a href=#407 id=407 data-nosnippet>407</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@tokenlimit"</span>) {
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
+<a href=#410 id=410 data-nosnippet>410</a>      gullet::set_token_limit(<span class="prelude-val">Some</span>(limit));
+<a href=#411 id=411 data-nosnippet>411</a>    }
+<a href=#412 id=412 data-nosnippet>412</a>  }
+<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@iflimit"</span>) {
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
+<a href=#416 id=416 data-nosnippet>416</a>      state::assign_value(<span class="string">"if_limit"</span>, Stored::from(limit <span class="kw">as </span>i64), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#417 id=417 data-nosnippet>417</a>    }
+<a href=#418 id=418 data-nosnippet>418</a>  }
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@absorblimit"</span>) {
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
+<a href=#422 id=422 data-nosnippet>422</a>      state::assign_value(
+<a href=#423 id=423 data-nosnippet>423</a>        <span class="string">"absorb_limit"</span>,
+<a href=#424 id=424 data-nosnippet>424</a>        Stored::from(limit <span class="kw">as </span>i64),
+<a href=#425 id=425 data-nosnippet>425</a>        <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#426 id=426 data-nosnippet>426</a>      );
+<a href=#427 id=427 data-nosnippet>427</a>    }
+<a href=#428 id=428 data-nosnippet>428</a>  }
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="string">"KV@LTXML@pushbacklimit"</span>) {
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">let </span>limit = v.to_string().trim().parse::&lt;usize&gt;().unwrap_or(<span class="number">0</span>);
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">if </span>limit &gt; <span class="number">0 </span>{
+<a href=#432 id=432 data-nosnippet>432</a>      gullet::set_pushback_limit(<span class="prelude-val">Some</span>(limit));
+<a href=#433 id=433 data-nosnippet>433</a>    }
+<a href=#434 id=434 data-nosnippet>434</a>  }
+<a href=#435 id=435 data-nosnippet>435</a>
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="comment">// Save image scaling parameters as processing instructions.
+<a href=#437 id=437 data-nosnippet>437</a>  // Perl: DefKeyVal with code =&gt; AtBeginDocument(\lx@save@parameter{key}{value})
+<a href=#438 id=438 data-nosnippet>438</a>  // Perl stores state under uppercase `DPI` but the keyval is lowercase
+<a href=#439 id=439 data-nosnippet>439</a>  // `dpi`, so lookup uses the keyval (user-facing) name, and the PI emits
+<a href=#440 id=440 data-nosnippet>440</a>  // under the uppercase Perl-internal convention for DPI only.
+<a href=#441 id=441 data-nosnippet>441</a>  </span><span class="kw">for </span>(kv_name, pi_name) <span class="kw">in </span><span class="kw-2">&amp;</span>[
+<a href=#442 id=442 data-nosnippet>442</a>    (<span class="string">"dpi"</span>, <span class="string">"DPI"</span>),
+<a href=#443 id=443 data-nosnippet>443</a>    (<span class="string">"magnify"</span>, <span class="string">"magnify"</span>),
+<a href=#444 id=444 data-nosnippet>444</a>    (<span class="string">"upsample"</span>, <span class="string">"upsample"</span>),
+<a href=#445 id=445 data-nosnippet>445</a>    (<span class="string">"zoomout"</span>, <span class="string">"zoomout"</span>),
+<a href=#446 id=446 data-nosnippet>446</a>  ] {
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"KV@LTXML@{}"</span>, kv_name);
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state::lookup_value(<span class="kw-2">&amp;</span>key) {
+<a href=#449 id=449 data-nosnippet>449</a>      <span class="kw">let </span>val = v.to_string().trim().to_string();
+<a href=#450 id=450 data-nosnippet>450</a>      <span class="kw">if </span>!val.is_empty() {
+<a href=#451 id=451 data-nosnippet>451</a>        state::assign_value(
+<a href=#452 id=452 data-nosnippet>452</a>          <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"PI@latexml@{}"</span>, pi_name),
+<a href=#453 id=453 data-nosnippet>453</a>          Stored::String(arena::pin(<span class="kw-2">&amp;</span>val)),
+<a href=#454 id=454 data-nosnippet>454</a>          <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#455 id=455 data-nosnippet>455</a>        );
+<a href=#456 id=456 data-nosnippet>456</a>      }
+<a href=#457 id=457 data-nosnippet>457</a>    }
+<a href=#458 id=458 data-nosnippet>458</a>  }
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iflatexml"</span>, { <span class="bool-val">true </span>});
+<a href=#461 id=461 data-nosnippet>461</a>
+<a href=#462 id=462 data-nosnippet>462</a>  <span class="comment">// Perl: NewCounter('@XMDECL', 'section', idprefix =&gt; 'XMD');
+<a href=#463 id=463 data-nosnippet>463</a>  // Counter for \lxDeclare IDs, resets per-section (subordinate to section).
+<a href=#464 id=464 data-nosnippet>464</a>  </span><span class="macro">NewCounter!</span>(<span class="string">"@XMDECL"</span>, <span class="string">"section"</span>, idprefix =&gt; <span class="string">"XMD"</span>);
+<a href=#465 id=465 data-nosnippet>465</a>
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="comment">// ======================================================================
+<a href=#467 id=467 data-nosnippet>467</a>  // Define the Declare keyval family for \lxDeclare
+<a href=#468 id=468 data-nosnippet>468</a>  </span><span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"role"</span>, <span class="string">""</span>);
+<a href=#469 id=469 data-nosnippet>469</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"name"</span>, <span class="string">""</span>);
+<a href=#470 id=470 data-nosnippet>470</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"meaning"</span>, <span class="string">""</span>);
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"tag"</span>, <span class="string">""</span>);
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"scope"</span>, <span class="string">""</span>);
+<a href=#473 id=473 data-nosnippet>473</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"description"</span>, <span class="string">""</span>);
+<a href=#474 id=474 data-nosnippet>474</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"nowrap"</span>, <span class="string">""</span>);
+<a href=#475 id=475 data-nosnippet>475</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"label"</span>, <span class="string">""</span>);
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="macro">DefKeyVal!</span>(<span class="string">"Declare"</span>, <span class="string">"trace"</span>, <span class="string">""</span>);
+<a href=#477 id=477 data-nosnippet>477</a>
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="comment">// \lxFcn / \lxID / \lxPunct — math-mode role hints (Perl latexml.sty.ltxml).
+<a href=#479 id=479 data-nosnippet>479</a>  // Wrap the argument in &lt;ltx:XMWrap role='...'&gt; so the math grammar
+<a href=#480 id=480 data-nosnippet>480</a>  // treats it as the named role for that occurrence only. `requireMath`
+<a href=#481 id=481 data-nosnippet>481</a>  // forces math context (errors if invoked outside math); `reversion =&gt;
+<a href=#482 id=482 data-nosnippet>482</a>  // '#1'` round-trips just the body (no role wrapper) to TeX; `alias =&gt;
+<a href=#483 id=483 data-nosnippet>483</a>  // ''` suppresses the constructor name in the reversion path.
+<a href=#484 id=484 data-nosnippet>484</a>  // Perl latexml.sty.ltxml L160-163: \lxRegisterNamespace{prefix}{uri}
+<a href=#485 id=485 data-nosnippet>485</a>  // — dynamic XML namespace registration for foreign attributes. Perl's
+<a href=#486 id=486 data-nosnippet>486</a>  // DefPrimitive calls RegisterNamespace(prefix =&gt; uri). Rust has
+<a href=#487 id=487 data-nosnippet>487</a>  // latexml_core::common::model::register_namespace exposed; wire it up
+<a href=#488 id=488 data-nosnippet>488</a>  // to the CS so documents using \lxRegisterNamespace{my}{http://…}
+<a href=#489 id=489 data-nosnippet>489</a>  // can then set foreign attributes like my:data='value'.
+<a href=#490 id=490 data-nosnippet>490</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxRegisterNamespace {} Semiverbatim"</span>, sub[(prefix, uri)] {
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="kw">let </span>prefix_str = prefix.to_string();
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">let </span>uri_str = uri.to_string();
+<a href=#493 id=493 data-nosnippet>493</a>    latexml_core::common::model::register_namespace(<span class="kw-2">&amp;</span>prefix_str, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>uri_str));
+<a href=#494 id=494 data-nosnippet>494</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#495 id=495 data-nosnippet>495</a>  });
+<a href=#496 id=496 data-nosnippet>496</a>
+<a href=#497 id=497 data-nosnippet>497</a>  <span class="comment">// Perl latexml.sty.ltxml L236-238: \lxRequireResource[options]{name}
+<a href=#498 id=498 data-nosnippet>498</a>  // adds a document resource (CSS/JS/…). Perl invocation:
+<a href=#499 id=499 data-nosnippet>499</a>  //   RequireResource(ToString(path), ($kv ? $kv-&gt;getHash : ()))
+<a href=#500 id=500 data-nosnippet>500</a>  // where the kv hash can carry `type` (mime-type) and `media`. Rust's
+<a href=#501 id=501 data-nosnippet>501</a>  // require_resource takes a `Resource{name, mimetype, media, content}`;
+<a href=#502 id=502 data-nosnippet>502</a>  // the infra lives in latexml_core::binding::content.
+<a href=#503 id=503 data-nosnippet>503</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxRequireResource OptionalKeyVals {}"</span>, sub[(kv, path)] {
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">let </span>name = path.to_string();
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">let </span>mimetype = kv.as_ref()
+<a href=#506 id=506 data-nosnippet>506</a>      .and_then(|k| k.get_value(<span class="string">"type"</span>))
+<a href=#507 id=507 data-nosnippet>507</a>      .map(|v| v.to_string())
+<a href=#508 id=508 data-nosnippet>508</a>      .unwrap_or_default();
+<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw">let </span>media = kv.as_ref()
+<a href=#510 id=510 data-nosnippet>510</a>      .and_then(|k| k.get_value(<span class="string">"media"</span>))
+<a href=#511 id=511 data-nosnippet>511</a>      .map(|v| v.to_string())
+<a href=#512 id=512 data-nosnippet>512</a>      .unwrap_or_default();
+<a href=#513 id=513 data-nosnippet>513</a>    latexml_core::binding::content::require_resource(
+<a href=#514 id=514 data-nosnippet>514</a>      latexml_core::document::resource::Resource {
+<a href=#515 id=515 data-nosnippet>515</a>        name, mimetype, media, content: String::new(),
+<a href=#516 id=516 data-nosnippet>516</a>      });
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#518 id=518 data-nosnippet>518</a>  });
+<a href=#519 id=519 data-nosnippet>519</a>
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="comment">// Perl latexml.sty.ltxml L246-247: \lxKeywords{text} — add keywords to
+<a href=#521 id=521 data-nosnippet>521</a>  // the frontmatter. Thin macro wrapper around the existing \@add@frontmatter
+<a href=#522 id=522 data-nosnippet>522</a>  // dispatch; previously missing so `\lxKeywords{foo, bar}` hit undefined-CS.
+<a href=#523 id=523 data-nosnippet>523</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="string">"\\lxKeywords{}"</span>,
+<a href=#525 id=525 data-nosnippet>525</a>    <span class="string">"\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}"
+<a href=#526 id=526 data-nosnippet>526</a>  </span>);
+<a href=#527 id=527 data-nosnippet>527</a>
+<a href=#528 id=528 data-nosnippet>528</a>  <span class="comment">// Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element
+<a href=#529 id=529 data-nosnippet>529</a>  // with format='context'. The matching ltx:TOC schema element already
+<a href=#530 id=530 data-nosnippet>530</a>  // flows through the native schema; previously missing in Rust.
+<a href=#531 id=531 data-nosnippet>531</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxContextTOC"</span>, <span class="string">"&lt;ltx:TOC format='context'/&gt;"</span>);
+<a href=#532 id=532 data-nosnippet>532</a>
+<a href=#533 id=533 data-nosnippet>533</a>  <span class="comment">// Perl latexml.sty.ltxml L166-167: \lxAddClass{class} adds a CSS class
+<a href=#534 id=534 data-nosnippet>534</a>  // to the current element. Rust had this CS completely missing, so
+<a href=#535 id=535 data-nosnippet>535</a>  // documents using `\lxAddClass{ltx_highlight}` hit undefined-CS.
+<a href=#536 id=536 data-nosnippet>536</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxAddClass Semiverbatim"</span>, <span class="string">""</span>,
+<a href=#537 id=537 data-nosnippet>537</a>  after_construct =&gt; sub[document, whatsit] {
+<a href=#538 id=538 data-nosnippet>538</a>    <span class="kw">let </span>class_tok = whatsit.get_arg(<span class="number">1</span>);
+<a href=#539 id=539 data-nosnippet>539</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(cls) = class_tok {
+<a href=#540 id=540 data-nosnippet>540</a>      <span class="kw">let </span>class_str = cls.to_string();
+<a href=#541 id=541 data-nosnippet>541</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>element) = document.get_element() {
+<a href=#542 id=542 data-nosnippet>542</a>        <span class="kw">let _ </span>= document.add_class(<span class="kw-2">&amp;mut </span>element, <span class="kw-2">&amp;</span>class_str);
+<a href=#543 id=543 data-nosnippet>543</a>      }
+<a href=#544 id=544 data-nosnippet>544</a>    }
+<a href=#545 id=545 data-nosnippet>545</a>  });
+<a href=#546 id=546 data-nosnippet>546</a>
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="comment">// Perl latexml.sty.ltxml L182-185: \lxWithClass{class}{body} — wraps
+<a href=#548 id=548 data-nosnippet>548</a>  // body in a node with the given CSS class. Perl's getAnnotatableNode
+<a href=#549 id=549 data-nosnippet>549</a>  // detects text-node context and opens &lt;ltx:text&gt; if needed, then
+<a href=#550 id=550 data-nosnippet>550</a>  // addClass on the resulting container. Rust approximates: always
+<a href=#551 id=551 data-nosnippet>551</a>  // wrap in &lt;ltx:text class='#1'&gt;#2&lt;/ltx:text&gt;. This is correct for
+<a href=#552 id=552 data-nosnippet>552</a>  // text-mode callers (the common case); in math mode the result
+<a href=#553 id=553 data-nosnippet>553</a>  // diverges (Perl wouldn't wrap, Rust adds an ltx:text inside XMath).
+<a href=#554 id=554 data-nosnippet>554</a>  // No test exercises \lxWithClass, so the approximation is
+<a href=#555 id=555 data-nosnippet>555</a>  // acceptable until the filter_children/absorb pipeline can be
+<a href=#556 id=556 data-nosnippet>556</a>  // wired.
+<a href=#557 id=557 data-nosnippet>557</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#558 id=558 data-nosnippet>558</a>    <span class="string">"\\lxWithClass Semiverbatim {}"</span>,
+<a href=#559 id=559 data-nosnippet>559</a>    <span class="string">"&lt;ltx:text class='#1'&gt;#2&lt;/ltx:text&gt;"
+<a href=#560 id=560 data-nosnippet>560</a>  </span>);
+<a href=#561 id=561 data-nosnippet>561</a>
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxFcn{}"</span>, <span class="string">"&lt;ltx:XMWrap role='FUNCTION'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
+<a href=#563 id=563 data-nosnippet>563</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxID{}"</span>, <span class="string">"&lt;ltx:XMWrap role='ID'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
+<a href=#565 id=565 data-nosnippet>565</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
+<a href=#566 id=566 data-nosnippet>566</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lxPunct{}"</span>, <span class="string">"&lt;ltx:XMWrap role='PUNCT'&gt;#1&lt;/ltx:XMWrap&gt;"</span>,
+<a href=#567 id=567 data-nosnippet>567</a>    require_math =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1"</span>, alias =&gt; <span class="string">""</span>);
+<a href=#568 id=568 data-nosnippet>568</a>
+<a href=#569 id=569 data-nosnippet>569</a>  <span class="comment">// Perl latexml.sty.ltxml L342-350: \lxMathTweak RequiredKeyVals {} —
+<a href=#570 id=570 data-nosnippet>570</a>  // the general form behind \lxFcn/\lxID/\lxPunct. Perl's comment says
+<a href=#571 id=571 data-nosnippet>571</a>  // "same as \lx@math@tweak"; the engine actually has \lx@math@tweaked
+<a href=#572 id=572 data-nosnippet>572</a>  // (base_xmath.rs L527) with the full RequiredKeyVals {} shape and
+<a href=#573 id=573 data-nosnippet>573</a>  // the xmath_copy_keyvals after_digest hook. Let-alias the user-
+<a href=#574 id=574 data-nosnippet>574</a>  // facing name at to the internal one so docs can write
+<a href=#575 id=575 data-nosnippet>575</a>  // `\lxMathTweak{role=POSTFIX}{@}` and get the expected XMWrap.
+<a href=#576 id=576 data-nosnippet>576</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lxMathTweak"</span>, <span class="string">"\\lx@math@tweaked"</span>);
+<a href=#577 id=577 data-nosnippet>577</a>
+<a href=#578 id=578 data-nosnippet>578</a>  <span class="comment">// \lxDeclare — declare semantic roles for math tokens
+<a href=#579 id=579 data-nosnippet>579</a>  // Perl: latexml.sty.ltxml lines 462-568
+<a href=#580 id=580 data-nosnippet>580</a>  // Creates &lt;declare&gt; elements and rewrite rules for math token annotation.
+<a href=#581 id=581 data-nosnippet>581</a>  // Complex patterns with \WildCard are NOT yet supported.
+<a href=#582 id=582 data-nosnippet>582</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxDeclare OptionalMatch:* OptionalKeyVals:Declare {}"</span>, <span class="string">""</span>,
+<a href=#583 id=583 data-nosnippet>583</a>  mode =&gt; <span class="string">"restricted_horizontal"</span>,
+<a href=#584 id=584 data-nosnippet>584</a>  reversion =&gt; <span class="string">""</span>,
+<a href=#585 id=585 data-nosnippet>585</a>  before_digest =&gt; { neutralize_font(); },
+<a href=#586 id=586 data-nosnippet>586</a>  after_digest =&gt; sub[whatsit] {
+<a href=#587 id=587 data-nosnippet>587</a>    <span class="comment">// Extract role/name/meaning from KeyVals arg (arg index 2 = keyvals)
+<a href=#588 id=588 data-nosnippet>588</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>role = String::new();
+<a href=#589 id=589 data-nosnippet>589</a>    <span class="kw">let </span><span class="kw-2">mut </span>name_val = String::new();
+<a href=#590 id=590 data-nosnippet>590</a>    <span class="kw">let </span><span class="kw-2">mut </span>meaning = String::new();
+<a href=#591 id=591 data-nosnippet>591</a>    <span class="kw">let </span><span class="kw-2">mut </span>has_tag = <span class="bool-val">false</span>;
+<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">let </span><span class="kw-2">mut </span>has_description = <span class="bool-val">false</span>;
+<a href=#593 id=593 data-nosnippet>593</a>    <span class="kw">let </span><span class="kw-2">mut </span>tag_text = String::new();
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="kw">let </span><span class="kw-2">mut </span>description_text = String::new();
+<a href=#595 id=595 data-nosnippet>595</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_arg) = whatsit.get_arg(<span class="number">2</span>) {
+<a href=#596 id=596 data-nosnippet>596</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
+<a href=#597 id=597 data-nosnippet>597</a>        <span class="kw">let </span>hash = kv.get_hash_digested();
+<a href=#598 id=598 data-nosnippet>598</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"role"</span>) { role = v.clone(); }
+<a href=#599 id=599 data-nosnippet>599</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"name"</span>) { name_val = v.clone(); }
+<a href=#600 id=600 data-nosnippet>600</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"meaning"</span>) { meaning = v.clone(); }
+<a href=#601 id=601 data-nosnippet>601</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"tag"</span>) { has_tag = <span class="bool-val">true</span>; tag_text = v.clone(); }
+<a href=#602 id=602 data-nosnippet>602</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"description"</span>) { has_description = <span class="bool-val">true</span>; description_text = v.clone(); }
+<a href=#603 id=603 data-nosnippet>603</a>        <span class="comment">// Store scope option for rewrite rule creation in afterConstruct
+<a href=#604 id=604 data-nosnippet>604</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"scope"</span>) {
+<a href=#605 id=605 data-nosnippet>605</a>          whatsit.set_property(<span class="string">"scope_opt"</span>, Stored::from(v.clone()));
+<a href=#606 id=606 data-nosnippet>606</a>        }
+<a href=#607 id=607 data-nosnippet>607</a>      }
+<a href=#608 id=608 data-nosnippet>608</a>    }
+<a href=#609 id=609 data-nosnippet>609</a>    <span class="comment">// Extract body text from arg 3 (the {} body)
+<a href=#610 id=610 data-nosnippet>610</a>    </span><span class="kw">let </span>body_text = whatsit.get_arg(<span class="number">3</span>)
+<a href=#611 id=611 data-nosnippet>611</a>      .map(|a| { <span class="kw">let </span>s = a.to_string(); s.trim_matches(<span class="string">'$'</span>).trim().to_string() })
+<a href=#612 id=612 data-nosnippet>612</a>      .unwrap_or_default();
+<a href=#613 id=613 data-nosnippet>613</a>
+<a href=#614 id=614 data-nosnippet>614</a>    <span class="comment">// Generate declaration ID if tag or description present
+<a href=#615 id=615 data-nosnippet>615</a>    // Perl: next_declaration_id() → StepCounter('@XMDECL'), return \the@XMDECL@ID
+<a href=#616 id=616 data-nosnippet>616</a>    // Counter @XMDECL is subordinate to section, so it resets per-section:
+<a href=#617 id=617 data-nosnippet>617</a>    //   S1.XMD1, S1.XMD2, ..., S2.XMD1, S2.XMD2, ...
+<a href=#618 id=618 data-nosnippet>618</a>    </span><span class="kw">let </span>decl_id = <span class="kw">if </span>has_tag || has_description {
+<a href=#619 id=619 data-nosnippet>619</a>      step_counter(<span class="string">"@XMDECL"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#620 id=620 data-nosnippet>620</a>      <span class="comment">// Perl: DefMacroI(\@@XMDECL@ID, ..., LookupRegister(\c@@XMDECL)-&gt;valueOf)
+<a href=#621 id=621 data-nosnippet>621</a>      // then: ToString(Expand(\the@XMDECL@ID))
+<a href=#622 id=622 data-nosnippet>622</a>      </span><span class="kw">let </span>id = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\the@XMDECL@ID"</span>))
+<a href=#623 id=623 data-nosnippet>623</a>        .ok().map(|t| t.to_string().trim().to_string())
+<a href=#624 id=624 data-nosnippet>624</a>        .unwrap_or_default();
+<a href=#625 id=625 data-nosnippet>625</a>      id
+<a href=#626 id=626 data-nosnippet>626</a>    } <span class="kw">else </span>{
+<a href=#627 id=627 data-nosnippet>627</a>      String::new()
+<a href=#628 id=628 data-nosnippet>628</a>    };
+<a href=#629 id=629 data-nosnippet>629</a>
+<a href=#630 id=630 data-nosnippet>630</a>    <span class="comment">// Store properties on the whatsit for constructor body and afterConstruct
+<a href=#631 id=631 data-nosnippet>631</a>    </span>whatsit.set_property(<span class="string">"role"</span>, Stored::from(role.clone()));
+<a href=#632 id=632 data-nosnippet>632</a>    whatsit.set_property(<span class="string">"name"</span>, Stored::from(name_val.clone()));
+<a href=#633 id=633 data-nosnippet>633</a>    whatsit.set_property(<span class="string">"meaning"</span>, Stored::from(meaning.clone()));
+<a href=#634 id=634 data-nosnippet>634</a>    whatsit.set_property(<span class="string">"body_text"</span>, Stored::from(body_text.clone()));
+<a href=#635 id=635 data-nosnippet>635</a>    whatsit.set_property(<span class="string">"decl_id"</span>, Stored::from(decl_id.clone()));
+<a href=#636 id=636 data-nosnippet>636</a>    <span class="kw">if </span>has_description || has_tag {
+<a href=#637 id=637 data-nosnippet>637</a>      <span class="kw">let </span>desc = <span class="kw">if </span>!description_text.is_empty() { description_text } <span class="kw">else </span>{ tag_text };
+<a href=#638 id=638 data-nosnippet>638</a>      whatsit.set_property(<span class="string">"description"</span>, Stored::from(desc));
+<a href=#639 id=639 data-nosnippet>639</a>    }
+<a href=#640 id=640 data-nosnippet>640</a>
+<a href=#641 id=641 data-nosnippet>641</a>    <span class="comment">// Store in LATEXML_DECLARATIONS for math parser string-based lookup
+<a href=#642 id=642 data-nosnippet>642</a>    </span><span class="kw">if </span>!body_text.is_empty() &amp;&amp; (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
+<a href=#643 id=643 data-nosnippet>643</a>      <span class="kw">let </span>key = <span class="string">"LATEXML_DECLARATIONS"</span>;
+<a href=#644 id=644 data-nosnippet>644</a>      <span class="kw">let </span><span class="kw-2">mut </span>decls: Vec&lt;String&gt; = <span class="kw">match </span>lookup_value(key) {
+<a href=#645 id=645 data-nosnippet>645</a>        <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; {
+<a href=#646 id=646 data-nosnippet>646</a>          <span class="kw">let </span>s_str = arena::with(s, |r| r.to_string());
+<a href=#647 id=647 data-nosnippet>647</a>          <span class="kw">if </span>s_str.is_empty() { Vec::new() } <span class="kw">else </span>{ s_str.split(<span class="string">'\n'</span>).map(String::from).collect() }
+<a href=#648 id=648 data-nosnippet>648</a>        },
+<a href=#649 id=649 data-nosnippet>649</a>        <span class="kw">_ </span>=&gt; Vec::new(),
+<a href=#650 id=650 data-nosnippet>650</a>      };
+<a href=#651 id=651 data-nosnippet>651</a>      decls.push(<span class="macro">format!</span>(<span class="string">"{}\t{}\t{}\t{}\t{}"</span>, body_text, role, name_val, meaning, decl_id));
+<a href=#652 id=652 data-nosnippet>652</a>      <span class="comment">// Mathcode decoding for single-char bodies
+<a href=#653 id=653 data-nosnippet>653</a>      </span><span class="kw">if </span>body_text.chars().count() == <span class="number">1 </span>{
+<a href=#654 id=654 data-nosnippet>654</a>        <span class="kw">let </span>ch = body_text.chars().next().unwrap();
+<a href=#655 id=655 data-nosnippet>655</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(mathcode) = state::lookup_mathcode(<span class="kw-2">&amp;</span>ch.to_string()) {
+<a href=#656 id=656 data-nosnippet>656</a>          <span class="kw">if </span>mathcode &gt; <span class="number">0 </span>{
+<a href=#657 id=657 data-nosnippet>657</a>            <span class="kw">let </span>decoded_pos = (mathcode % <span class="number">256</span>) <span class="kw">as </span>u8;
+<a href=#658 id=658 data-nosnippet>658</a>            <span class="kw">let </span>decoded_fam = (mathcode / <span class="number">256</span>) % <span class="number">16</span>;
+<a href=#659 id=659 data-nosnippet>659</a>            <span class="kw">let </span>font_key = <span class="macro">format!</span>(<span class="string">"textfont_{decoded_fam}"</span>);
+<a href=#660 id=660 data-nosnippet>660</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(<span class="kw-2">ref </span>ftok)) = state::lookup_value(<span class="kw-2">&amp;</span>font_key) {
+<a href=#661 id=661 data-nosnippet>661</a>              <span class="comment">// Extract encoding before calling font::decode — decode may
+<a href=#662 id=662 data-nosnippet>662</a>              // trigger preload_font_map → assign_value, and with_font_info
+<a href=#663 id=663 data-nosnippet>663</a>              // holds a State borrow while its closure runs (see
+<a href=#664 id=664 data-nosnippet>664</a>              // mathchar.rs fix for 0711.4787 RefCell panic pattern).
+<a href=#665 id=665 data-nosnippet>665</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt; = state::with_font_info(ftok, |fontinfo| {
+<a href=#666 id=666 data-nosnippet>666</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo.unwrap_or(<span class="prelude-val">None</span>) {
+<a href=#667 id=667 data-nosnippet>667</a>                  info.encoding.as_ref().map(|s| s.to_string())
+<a href=#668 id=668 data-nosnippet>668</a>                } <span class="kw">else </span>{
+<a href=#669 id=669 data-nosnippet>669</a>                  <span class="prelude-val">None
+<a href=#670 id=670 data-nosnippet>670</a>                </span>}
+<a href=#671 id=671 data-nosnippet>671</a>              });
+<a href=#672 id=672 data-nosnippet>672</a>              <span class="comment">// Fallback (mirror mathchar.rs L862-887): when `fontinfo_&lt;cs&gt;`
+<a href=#673 id=673 data-nosnippet>673</a>              // didn't round-trip through the dump as a `Stored::Font`, but
+<a href=#674 id=674 data-nosnippet>674</a>              // its `font_shared_key_&lt;cs&gt;` pointer DID, derive encoding from
+<a href=#675 id=675 data-nosnippet>675</a>              // the font name via `decode_fontname`. Without this, dump-mode
+<a href=#676 id=676 data-nosnippet>676</a>              // \lxDeclare doesn't add the alternate codepoint pattern (e.g.
+<a href=#677 id=677 data-nosnippet>677</a>              // `*` → `∗`) and overrides on \ast etc. silently fail.
+<a href=#678 id=678 data-nosnippet>678</a>              </span><span class="kw">if </span>encoding_opt.is_none() {
+<a href=#679 id=679 data-nosnippet>679</a>                <span class="kw">let </span>shared_key = state::with_value(
+<a href=#680 id=680 data-nosnippet>680</a>                  <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"font_shared_key_{}"</span>, ftok.with_str(ToString::to_string)),
+<a href=#681 id=681 data-nosnippet>681</a>                  |v| <span class="kw">match </span>v {
+<a href=#682 id=682 data-nosnippet>682</a>                    <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="prelude-val">Some</span>(str.to_string())),
+<a href=#683 id=683 data-nosnippet>683</a>                    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#684 id=684 data-nosnippet>684</a>                  },
+<a href=#685 id=685 data-nosnippet>685</a>                );
+<a href=#686 id=686 data-nosnippet>686</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(sk) = shared_key {
+<a href=#687 id=687 data-nosnippet>687</a>                  <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = sk.strip_prefix(<span class="string">"fontinfo_"</span>) {
+<a href=#688 id=688 data-nosnippet>688</a>                    <span class="kw">let </span>props = latexml_core::common::font::decode_fontname(name, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+<a href=#689 id=689 data-nosnippet>689</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = props {
+<a href=#690 id=690 data-nosnippet>690</a>                      encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
+<a href=#691 id=691 data-nosnippet>691</a>                    }
+<a href=#692 id=692 data-nosnippet>692</a>                  }
+<a href=#693 id=693 data-nosnippet>693</a>                }
+<a href=#694 id=694 data-nosnippet>694</a>              }
+<a href=#695 id=695 data-nosnippet>695</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(encoding) = encoding_opt {
+<a href=#696 id=696 data-nosnippet>696</a>                <span class="kw">let </span>decoded =
+<a href=#697 id=697 data-nosnippet>697</a>                  latexml_core::common::font::decode(decoded_pos, <span class="prelude-val">Some</span>(encoding), <span class="bool-val">false</span>);
+<a href=#698 id=698 data-nosnippet>698</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(dc) = decoded {
+<a href=#699 id=699 data-nosnippet>699</a>                  <span class="kw">let </span>ds = dc.to_string();
+<a href=#700 id=700 data-nosnippet>700</a>                  <span class="kw">if </span>ds != body_text {
+<a href=#701 id=701 data-nosnippet>701</a>                    decls.push(<span class="macro">format!</span>(<span class="string">"{}\t{}\t{}\t{}"</span>, ds, role, name_val, meaning));
+<a href=#702 id=702 data-nosnippet>702</a>                  }
+<a href=#703 id=703 data-nosnippet>703</a>                }
+<a href=#704 id=704 data-nosnippet>704</a>              }
+<a href=#705 id=705 data-nosnippet>705</a>            }
+<a href=#706 id=706 data-nosnippet>706</a>          }
+<a href=#707 id=707 data-nosnippet>707</a>        }
+<a href=#708 id=708 data-nosnippet>708</a>      }
+<a href=#709 id=709 data-nosnippet>709</a>      assign_value(key, Stored::String(arena::pin(decls.join(<span class="string">"\n"</span>))), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#710 id=710 data-nosnippet>710</a>    }
+<a href=#711 id=711 data-nosnippet>711</a>  },
+<a href=#712 id=712 data-nosnippet>712</a>  after_construct =&gt; sub[document, whatsit] {
+<a href=#713 id=713 data-nosnippet>713</a>    <span class="comment">// Perl: createDeclarationRewrite — create rewrite rule AND &lt;declare&gt; element
+<a href=#714 id=714 data-nosnippet>714</a>    </span><span class="kw">let </span>role = whatsit.get_property(<span class="string">"role"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#715 id=715 data-nosnippet>715</a>    <span class="kw">let </span>name_val = whatsit.get_property(<span class="string">"name"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#716 id=716 data-nosnippet>716</a>    <span class="kw">let </span>meaning = whatsit.get_property(<span class="string">"meaning"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#717 id=717 data-nosnippet>717</a>    <span class="kw">let </span>body_text = whatsit.get_property(<span class="string">"body_text"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#718 id=718 data-nosnippet>718</a>    <span class="kw">let </span>decl_id = whatsit.get_property(<span class="string">"decl_id"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#719 id=719 data-nosnippet>719</a>
+<a href=#720 id=720 data-nosnippet>720</a>    <span class="comment">// Create &lt;ltx:declare&gt; element if id is set (tag or description present)
+<a href=#721 id=721 data-nosnippet>721</a>    </span><span class="kw">if </span>!decl_id.is_empty() {
+<a href=#722 id=722 data-nosnippet>722</a>      <span class="kw">let </span>desc = whatsit.get_property(<span class="string">"description"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#723 id=723 data-nosnippet>723</a>      <span class="comment">// Perl: floatToElement('ltx:declare') positions at a container that accepts &lt;declare&gt;
+<a href=#724 id=724 data-nosnippet>724</a>      </span><span class="kw">let </span>saved = document.float_to_element(<span class="string">"ltx:declare"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#725 id=725 data-nosnippet>725</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs_map = HashMap::default();
+<a href=#726 id=726 data-nosnippet>726</a>      attrs_map.insert(<span class="string">"xml:id"</span>.to_string(), decl_id.clone());
+<a href=#727 id=727 data-nosnippet>727</a>      <span class="kw">let </span>_decl_node = document.open_element(<span class="string">"ltx:declare"</span>, <span class="prelude-val">Some</span>(attrs_map), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#728 id=728 data-nosnippet>728</a>      <span class="kw">if </span>!desc.is_empty() {
+<a href=#729 id=729 data-nosnippet>729</a>        <span class="comment">// Insert description text in &lt;ltx:text&gt;
+<a href=#730 id=730 data-nosnippet>730</a>        </span><span class="kw">let </span>_text_node = document.open_element(<span class="string">"ltx:text"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#731 id=731 data-nosnippet>731</a>        <span class="comment">// Add text content directly to the current node
+<a href=#732 id=732 data-nosnippet>732</a>        </span><span class="kw">let </span>font = lookup_font().unwrap_or_default();
+<a href=#733 id=733 data-nosnippet>733</a>        document.open_text(<span class="kw-2">&amp;</span>desc, <span class="kw-2">&amp;</span>font)<span class="question-mark">?</span>;
+<a href=#734 id=734 data-nosnippet>734</a>        document.close_element(<span class="string">"ltx:text"</span>)<span class="question-mark">?</span>;
+<a href=#735 id=735 data-nosnippet>735</a>      }
+<a href=#736 id=736 data-nosnippet>736</a>      document.close_element(<span class="string">"ltx:declare"</span>)<span class="question-mark">?</span>;
+<a href=#737 id=737 data-nosnippet>737</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>save) = saved {
+<a href=#738 id=738 data-nosnippet>738</a>        document.set_node(save);
+<a href=#739 id=739 data-nosnippet>739</a>      }
+<a href=#740 id=740 data-nosnippet>740</a>    }
+<a href=#741 id=741 data-nosnippet>741</a>
+<a href=#742 id=742 data-nosnippet>742</a>    <span class="comment">// Create rewrite rule
+<a href=#743 id=743 data-nosnippet>743</a>    </span><span class="kw">if </span>!body_text.is_empty() &amp;&amp; (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
+<a href=#744 id=744 data-nosnippet>744</a>      <span class="kw">use </span>latexml_core::rewrite::{Rewrite, RewriteOptions};
+<a href=#745 id=745 data-nosnippet>745</a>      <span class="kw">use </span>rustc_hash::FxHashMap;
+<a href=#746 id=746 data-nosnippet>746</a>      <span class="comment">// Perl: getDeclarationScope — resolve scope=section to current section ID
+<a href=#747 id=747 data-nosnippet>747</a>      // Use decl_id prefix (e.g. "S1" from "S1.XMD1") since it's computed in afterDigest
+<a href=#748 id=748 data-nosnippet>748</a>      // where \thesection@ID is correct. In afterConstruct, it may be stale.
+<a href=#749 id=749 data-nosnippet>749</a>      </span><span class="kw">let </span>scope_val = whatsit.get_property(<span class="string">"scope_opt"</span>).map(|v| v.to_string()).unwrap_or_default();
+<a href=#750 id=750 data-nosnippet>750</a>      <span class="kw">let </span>rewrite_scope = <span class="kw">if </span>scope_val == <span class="string">"section" </span>{
+<a href=#751 id=751 data-nosnippet>751</a>        <span class="comment">// Extract section prefix from decl_id (e.g. "S1" from "S1.XMD1")
+<a href=#752 id=752 data-nosnippet>752</a>        </span><span class="kw">let </span>section_id = <span class="kw">if </span>!decl_id.is_empty() {
+<a href=#753 id=753 data-nosnippet>753</a>          decl_id.split(<span class="string">'.'</span>).next().unwrap_or(<span class="string">""</span>).to_string()
+<a href=#754 id=754 data-nosnippet>754</a>        } <span class="kw">else </span>{
+<a href=#755 id=755 data-nosnippet>755</a>          <span class="comment">// Fallback: use the node's ancestor section id
+<a href=#756 id=756 data-nosnippet>756</a>          </span><span class="kw">let </span><span class="kw-2">mut </span>node = document.get_node().clone();
+<a href=#757 id=757 data-nosnippet>757</a>          <span class="kw">let </span><span class="kw-2">mut </span>sid = String::new();
+<a href=#758 id=758 data-nosnippet>758</a>          <span class="kw">loop </span>{
+<a href=#759 id=759 data-nosnippet>759</a>            <span class="kw">if </span>node.get_name() == <span class="string">"section" </span>{
+<a href=#760 id=760 data-nosnippet>760</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_property(<span class="string">"xml:id"</span>).or_else(|| node.get_property(<span class="string">"id"</span>)) {
+<a href=#761 id=761 data-nosnippet>761</a>                sid = id;
+<a href=#762 id=762 data-nosnippet>762</a>              }
+<a href=#763 id=763 data-nosnippet>763</a>              <span class="kw">break</span>;
+<a href=#764 id=764 data-nosnippet>764</a>            }
+<a href=#765 id=765 data-nosnippet>765</a>            <span class="kw">match </span>node.get_parent() {
+<a href=#766 id=766 data-nosnippet>766</a>              <span class="prelude-val">Some</span>(p) =&gt; node = p,
+<a href=#767 id=767 data-nosnippet>767</a>              <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+<a href=#768 id=768 data-nosnippet>768</a>            }
+<a href=#769 id=769 data-nosnippet>769</a>          }
+<a href=#770 id=770 data-nosnippet>770</a>          sid
+<a href=#771 id=771 data-nosnippet>771</a>        };
+<a href=#772 id=772 data-nosnippet>772</a>        <span class="kw">if </span>!section_id.is_empty() {
+<a href=#773 id=773 data-nosnippet>773</a>          <span class="prelude-val">Some</span>(Scope::Named(arena::pin(<span class="macro">format!</span>(<span class="string">"id:{section_id}"</span>))))
+<a href=#774 id=774 data-nosnippet>774</a>        } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
+<a href=#775 id=775 data-nosnippet>775</a>      } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+<a href=#776 id=776 data-nosnippet>776</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = FxHashMap::default();
+<a href=#777 id=777 data-nosnippet>777</a>      <span class="kw">if </span>!role.is_empty() { attrs.insert(<span class="string">"role"</span>.to_string(), role); }
+<a href=#778 id=778 data-nosnippet>778</a>      <span class="kw">if </span>!name_val.is_empty() { attrs.insert(<span class="string">"name"</span>.to_string(), name_val); }
+<a href=#779 id=779 data-nosnippet>779</a>      <span class="kw">if </span>!meaning.is_empty() { attrs.insert(<span class="string">"meaning"</span>.to_string(), meaning); }
+<a href=#780 id=780 data-nosnippet>780</a>      <span class="kw">if </span>!decl_id.is_empty() { attrs.insert(<span class="string">"decl_id"</span>.to_string(), decl_id); }
+<a href=#781 id=781 data-nosnippet>781</a>      <span class="comment">// Compile pattern: determine XPath, type, filters, wildcard paths
+<a href=#782 id=782 data-nosnippet>782</a>      </span><span class="kw">let </span>has_wildcard = body_text.contains(<span class="string">"WildCard"</span>);
+<a href=#783 id=783 data-nosnippet>783</a>      <span class="kw">let </span>pat = <span class="kw">if </span>body_text.contains(<span class="string">'_'</span>) || body_text.contains(<span class="string">'\\'</span>) || body_text.contains(<span class="string">'\''</span>) {
+<a href=#784 id=784 data-nosnippet>784</a>        compile_declare_pattern(<span class="kw-2">&amp;</span>body_text)
+<a href=#785 id=785 data-nosnippet>785</a>      } <span class="kw">else </span>{
+<a href=#786 id=786 data-nosnippet>786</a>        <span class="comment">// Simple single-token pattern: match XMTok by text
+<a href=#787 id=787 data-nosnippet>787</a>        </span>DeclarePattern {
+<a href=#788 id=788 data-nosnippet>788</a>          xpath: <span class="macro">format!</span>(
+<a href=#789 id=789 data-nosnippet>789</a>            <span class="string">"descendant-or-self::*[local-name()='XMTok' and text()='{}']"</span>,
+<a href=#790 id=790 data-nosnippet>790</a>            body_text.replace(<span class="string">'\''</span>, <span class="string">"&amp;apos;"</span>)),
+<a href=#791 id=791 data-nosnippet>791</a>          pattern_type: <span class="string">"simple"</span>,
+<a href=#792 id=792 data-nosnippet>792</a>          base_text: <span class="prelude-val">None</span>,
+<a href=#793 id=793 data-nosnippet>793</a>          sub_text: <span class="prelude-val">None</span>,
+<a href=#794 id=794 data-nosnippet>794</a>          accent_name: <span class="prelude-val">None</span>,
+<a href=#795 id=795 data-nosnippet>795</a>          has_wildcard: <span class="bool-val">false</span>,
+<a href=#796 id=796 data-nosnippet>796</a>          wildcard_paths: <span class="prelude-val">None</span>,
+<a href=#797 id=797 data-nosnippet>797</a>        }
+<a href=#798 id=798 data-nosnippet>798</a>      };
+<a href=#799 id=799 data-nosnippet>799</a>      <span class="kw">if </span>pat.xpath.is_empty() {
+<a href=#800 id=800 data-nosnippet>800</a>        <span class="comment">// Unrecognized pattern — skip
+<a href=#801 id=801 data-nosnippet>801</a>      </span>} <span class="kw">else </span>{
+<a href=#802 id=802 data-nosnippet>802</a>        <span class="comment">// Store pattern metadata in attrs for Rust-side filtering in Select handler
+<a href=#803 id=803 data-nosnippet>803</a>        </span>attrs.insert(<span class="string">"_declare_type"</span>.to_string(), pat.pattern_type.to_string());
+<a href=#804 id=804 data-nosnippet>804</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>base) = pat.base_text {
+<a href=#805 id=805 data-nosnippet>805</a>          attrs.insert(<span class="string">"_declare_base"</span>.to_string(), base.clone());
+<a href=#806 id=806 data-nosnippet>806</a>        }
+<a href=#807 id=807 data-nosnippet>807</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>sub) = pat.sub_text {
+<a href=#808 id=808 data-nosnippet>808</a>          attrs.insert(<span class="string">"_declare_sub"</span>.to_string(), sub.clone());
+<a href=#809 id=809 data-nosnippet>809</a>        }
+<a href=#810 id=810 data-nosnippet>810</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>accent) = pat.accent_name {
+<a href=#811 id=811 data-nosnippet>811</a>          attrs.insert(<span class="string">"_declare_accent"</span>.to_string(), accent.clone());
+<a href=#812 id=812 data-nosnippet>812</a>        }
+<a href=#813 id=813 data-nosnippet>813</a>        <span class="kw">if </span>has_wildcard {
+<a href=#814 id=814 data-nosnippet>814</a>          attrs.insert(<span class="string">"_wildcard_pattern"</span>.to_string(), <span class="string">"1"</span>.to_string());
+<a href=#815 id=815 data-nosnippet>815</a>        }
+<a href=#816 id=816 data-nosnippet>816</a>        <span class="comment">// Pattern types determine select_count:
+<a href=#817 id=817 data-nosnippet>817</a>        // Subscript/prime patterns match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling
+<a href=#818 id=818 data-nosnippet>818</a>        // (select_count=2, pre-parsed DOM). Accent patterns match the single XMApp.
+<a href=#819 id=819 data-nosnippet>819</a>        </span><span class="kw">let </span>select_count = <span class="kw">match </span>pat.pattern_type {
+<a href=#820 id=820 data-nosnippet>820</a>          <span class="string">"literal_subscript" </span>| <span class="string">"prime" </span>| <span class="string">"subscript" </span>=&gt; <span class="prelude-val">Some</span>(<span class="number">2usize</span>),
+<a href=#821 id=821 data-nosnippet>821</a>          <span class="string">"accent" </span>=&gt; <span class="prelude-val">Some</span>(<span class="number">1usize</span>),
+<a href=#822 id=822 data-nosnippet>822</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#823 id=823 data-nosnippet>823</a>        };
+<a href=#824 id=824 data-nosnippet>824</a>        <span class="kw">let </span>rewrite = Rewrite::new(<span class="string">"math"</span>, RewriteOptions {
+<a href=#825 id=825 data-nosnippet>825</a>          xpath: <span class="prelude-val">Some</span>(pat.xpath),
+<a href=#826 id=826 data-nosnippet>826</a>          attributes_map: <span class="prelude-val">Some</span>(attrs),
+<a href=#827 id=827 data-nosnippet>827</a>          wildcard_paths: pat.wildcard_paths,
+<a href=#828 id=828 data-nosnippet>828</a>          select_count,
+<a href=#829 id=829 data-nosnippet>829</a>          scope: rewrite_scope,
+<a href=#830 id=830 data-nosnippet>830</a>          ..RewriteOptions::default()
+<a href=#831 id=831 data-nosnippet>831</a>        });
+<a href=#832 id=832 data-nosnippet>832</a>        unshift_value(<span class="string">"DOCUMENT_REWRITE_RULES"</span>, <span class="macro">vec!</span>[rewrite]);
+<a href=#833 id=833 data-nosnippet>833</a>      }
+<a href=#834 id=834 data-nosnippet>834</a>    }
+<a href=#835 id=835 data-nosnippet>835</a>  });
+<a href=#836 id=836 data-nosnippet>836</a>
+<a href=#837 id=837 data-nosnippet>837</a>  <span class="comment">// Perl latexml.sty.ltxml L300-307: user-facing aliases for
+<a href=#838 id=838 data-nosnippet>838</a>  // \lx@alignment@begin@heading / \lx@alignment@end@heading, which
+<a href=#839 id=839 data-nosnippet>839</a>  // bracket a run of tabular heading rows. The table-foot aliases
+<a href=#840 id=840 data-nosnippet>840</a>  // point at the same two CSes (the Perl convention uses head/foot
+<a href=#841 id=841 data-nosnippet>841</a>  // for clarity; both just toggle the in_tabular_head flag).
+<a href=#842 id=842 data-nosnippet>842</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lxBeginTableHead"</span>, <span class="string">"\\lx@alignment@begin@heading"</span>);
+<a href=#843 id=843 data-nosnippet>843</a>  <span class="macro">Let!</span>(<span class="string">"\\lxEndTableHead"</span>, <span class="string">"\\lx@alignment@end@heading"</span>);
+<a href=#844 id=844 data-nosnippet>844</a>  <span class="macro">Let!</span>(<span class="string">"\\lxBeginTableFoot"</span>, <span class="string">"\\lx@alignment@begin@heading"</span>);
+<a href=#845 id=845 data-nosnippet>845</a>  <span class="macro">Let!</span>(<span class="string">"\\lxEndTableFoot"</span>, <span class="string">"\\lx@alignment@end@heading"</span>);
+<a href=#846 id=846 data-nosnippet>846</a>
+<a href=#847 id=847 data-nosnippet>847</a>  <span class="comment">// Perl latexml.sty.ltxml L310-313: \lxTableColumnHead — mirrors
+<a href=#848 id=848 data-nosnippet>848</a>  // \lxTableRowHead below but flips thead_in_column instead of
+<a href=#849 id=849 data-nosnippet>849</a>  // thead_in_row on the current column spec.
+<a href=#850 id=850 data-nosnippet>850</a>  </span>def_primitive(
+<a href=#851 id=851 data-nosnippet>851</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lxTableColumnHead"</span>),
+<a href=#852 id=852 data-nosnippet>852</a>    <span class="prelude-val">None</span>,
+<a href=#853 id=853 data-nosnippet>853</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args| {
+<a href=#854 id=854 data-nosnippet>854</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
+<a href=#855 id=855 data-nosnippet>855</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = alignment.alignment_cell() {
+<a href=#856 id=856 data-nosnippet>856</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = data.borrow_mut().current_column() {
+<a href=#857 id=857 data-nosnippet>857</a>            col.thead_in_column = <span class="bool-val">true</span>;
+<a href=#858 id=858 data-nosnippet>858</a>          }
+<a href=#859 id=859 data-nosnippet>859</a>        }
+<a href=#860 id=860 data-nosnippet>860</a>      }
+<a href=#861 id=861 data-nosnippet>861</a>      <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#862 id=862 data-nosnippet>862</a>    }))),
+<a href=#863 id=863 data-nosnippet>863</a>    PrimitiveOptions::default(),
+<a href=#864 id=864 data-nosnippet>864</a>  )<span class="question-mark">?</span>;
+<a href=#865 id=865 data-nosnippet>865</a>
+<a href=#866 id=866 data-nosnippet>866</a>  <span class="comment">// Perl: DefMacroI('\lxTableRowHead', undef, sub { $alignment-&gt;currentColumn-&gt;{thead}{row} = 1 })
+<a href=#867 id=867 data-nosnippet>867</a>  // Marks the current column as a row header in alignment/tabular contexts.
+<a href=#868 id=868 data-nosnippet>868</a>  // Usage: &gt;{\lxTableRowHead} in column spec with array.sty
+<a href=#869 id=869 data-nosnippet>869</a>  </span>def_primitive(
+<a href=#870 id=870 data-nosnippet>870</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lxTableRowHead"</span>),
+<a href=#871 id=871 data-nosnippet>871</a>    <span class="prelude-val">None</span>,
+<a href=#872 id=872 data-nosnippet>872</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(Rc::new(|_args| {
+<a href=#873 id=873 data-nosnippet>873</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
+<a href=#874 id=874 data-nosnippet>874</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = alignment.alignment_cell() {
+<a href=#875 id=875 data-nosnippet>875</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = data.borrow_mut().current_column() {
+<a href=#876 id=876 data-nosnippet>876</a>            col.thead_in_row = <span class="bool-val">true</span>;
+<a href=#877 id=877 data-nosnippet>877</a>          }
+<a href=#878 id=878 data-nosnippet>878</a>        }
+<a href=#879 id=879 data-nosnippet>879</a>      }
+<a href=#880 id=880 data-nosnippet>880</a>      <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#881 id=881 data-nosnippet>881</a>    }))),
+<a href=#882 id=882 data-nosnippet>882</a>    PrimitiveOptions::default(),
+<a href=#883 id=883 data-nosnippet>883</a>  )<span class="question-mark">?</span>;
+<a href=#884 id=884 data-nosnippet>884</a>
+<a href=#885 id=885 data-nosnippet>885</a>  <span class="comment">// Perl latexml.sty L354-371: \lxDefMath{\name}[nargs][optional]{presentation}[keyvals]
+<a href=#886 id=886 data-nosnippet>886</a>  // Defines a math macro with semantic annotations (name, meaning, role, etc.)
+<a href=#887 id=887 data-nosnippet>887</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath"</span>, sub[(cs, nargs, opt, presentation, params_opt)] {
+<a href=#888 id=888 data-nosnippet>888</a>    <span class="kw">let </span>cs_name = cs.to_string();
+<a href=#889 id=889 data-nosnippet>889</a>    <span class="kw">let </span>n = nargs.value_of() <span class="kw">as </span>usize;
+<a href=#890 id=890 data-nosnippet>890</a>    <span class="comment">// Extract semantic properties from keyvals.
+<a href=#891 id=891 data-nosnippet>891</a>    // Perl L368 always sets `revert_as =&gt; 'context'` so source-export
+<a href=#892 id=892 data-nosnippet>892</a>    // emits the user-defined CS rather than expanding the presentation
+<a href=#893 id=893 data-nosnippet>893</a>    // template (matches the convention for user-defined math macros).
+<a href=#894 id=894 data-nosnippet>894</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>opts = MathPrimitiveOptions {
+<a href=#895 id=895 data-nosnippet>895</a>      revert_as: <span class="prelude-val">Some</span>(std::borrow::Cow::Borrowed(<span class="string">"context"</span>)),
+<a href=#896 id=896 data-nosnippet>896</a>      ..Default::default()
+<a href=#897 id=897 data-nosnippet>897</a>    };
+<a href=#898 id=898 data-nosnippet>898</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(kv) = params_opt.as_ref() {
+<a href=#899 id=899 data-nosnippet>899</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"name"</span>) { opts.name = <span class="prelude-val">Some</span>(v.to_string()); }
+<a href=#900 id=900 data-nosnippet>900</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"meaning"</span>) { opts.meaning = <span class="prelude-val">Some</span>(v.to_string()); }
+<a href=#901 id=901 data-nosnippet>901</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"role"</span>) { opts.role = <span class="prelude-val">Some</span>(v.to_string()); }
+<a href=#902 id=902 data-nosnippet>902</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"cd"</span>) { opts.omcd = <span class="prelude-val">Some</span>(v.to_string()); }
+<a href=#903 id=903 data-nosnippet>903</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = kv.get_value(<span class="string">"alias"</span>) { opts.alias = <span class="prelude-val">Some</span>(v.to_string()); }
+<a href=#904 id=904 data-nosnippet>904</a>    }
+<a href=#905 id=905 data-nosnippet>905</a>    <span class="comment">// Perl also extracts `scope` / detects `tag`/`description` keyvals to allocate
+<a href=#906 id=906 data-nosnippet>906</a>    // a decl_id and Digest a follow-up `\@lxDefMathDeclare` invocation. Neither is
+<a href=#907 id=907 data-nosnippet>907</a>    // wired through the Rust DefPrimitive shim yet — needs `next_declaration_id`
+<a href=#908 id=908 data-nosnippet>908</a>    // helper + the \@lxDefMathDeclare constructor port. Track separately.
+<a href=#909 id=909 data-nosnippet>909</a>    // Build parameter spec for n args
+<a href=#910 id=910 data-nosnippet>910</a>    </span><span class="kw">use </span>latexml_core::common::def_parser::parse_parameters;
+<a href=#911 id=911 data-nosnippet>911</a>    <span class="kw">let </span>params = <span class="kw">if </span>n &gt; <span class="number">0 </span>{
+<a href=#912 id=912 data-nosnippet>912</a>      <span class="kw">let </span>spec = (<span class="number">0</span>..n).map(|<span class="kw">_</span>| <span class="string">"{}"</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">""</span>);
+<a href=#913 id=913 data-nosnippet>913</a>      parse_parameters(<span class="kw-2">&amp;</span>spec, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name), <span class="bool-val">true</span>)<span class="question-mark">?
+<a href=#914 id=914 data-nosnippet>914</a>    </span>} <span class="kw">else </span>{
+<a href=#915 id=915 data-nosnippet>915</a>      <span class="prelude-val">None
+<a href=#916 id=916 data-nosnippet>916</a>    </span>};
+<a href=#917 id=917 data-nosnippet>917</a>    <span class="comment">// Create the math definition
+<a href=#918 id=918 data-nosnippet>918</a>    </span><span class="kw">let </span>presentation_str = presentation.to_string();
+<a href=#919 id=919 data-nosnippet>919</a>    def_math(
+<a href=#920 id=920 data-nosnippet>920</a>      <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs_name),
+<a href=#921 id=921 data-nosnippet>921</a>      params,
+<a href=#922 id=922 data-nosnippet>922</a>      presentation_str,
+<a href=#923 id=923 data-nosnippet>923</a>      opts,
+<a href=#924 id=924 data-nosnippet>924</a>    )<span class="question-mark">?</span>;
+<a href=#925 id=925 data-nosnippet>925</a>  });
+<a href=#926 id=926 data-nosnippet>926</a>
+<a href=#927 id=927 data-nosnippet>927</a>  <span class="comment">// Perl latexml.sty L106-108: \URL[text]{href}
+<a href=#928 id=928 data-nosnippet>928</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\URL[] Verbatim"</span>,
+<a href=#929 id=929 data-nosnippet>929</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;?#1(#1)(#href)&lt;/ltx:ref&gt;"</span>,
+<a href=#930 id=930 data-nosnippet>930</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#931 id=931 data-nosnippet>931</a>    properties =&gt; sub[_args] {
+<a href=#932 id=932 data-nosnippet>932</a>      <span class="kw">let </span><span class="kw-2">mut </span>href_str = _args
+<a href=#933 id=933 data-nosnippet>933</a>        .get(<span class="number">1</span>)
+<a href=#934 id=934 data-nosnippet>934</a>        .and_then(|a| a.as_ref())
+<a href=#935 id=935 data-nosnippet>935</a>        .map(|a| a.to_string())
+<a href=#936 id=936 data-nosnippet>936</a>        .unwrap_or_default();
+<a href=#937 id=937 data-nosnippet>937</a>      <span class="comment">// Perl: CleanURL — strip whitespace/newlines from URLs
+<a href=#938 id=938 data-nosnippet>938</a>      </span>href_str = href_str.replace([<span class="string">'\n'</span>, <span class="string">'\r'</span>], <span class="string">""</span>).trim().to_string();
+<a href=#939 id=939 data-nosnippet>939</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href_str))
+<a href=#940 id=940 data-nosnippet>940</a>    }
+<a href=#941 id=941 data-nosnippet>941</a>  );
+<a href=#942 id=942 data-nosnippet>942</a>
+<a href=#943 id=943 data-nosnippet>943</a>  <span class="comment">// Perl latexml.sty.ltxml L122-134: the LaTeXML-logo trio.
+<a href=#944 id=944 data-nosnippet>944</a>  // \LaTeXML expands to \LaTeXML@logo, which lays out a stylized
+<a href=#945 id=945 data-nosnippet>945</a>  // nested-ltx:text pattern (the classic Lamport-style kerning). The
+<a href=#946 id=946 data-nosnippet>946</a>  // Perl `sizer` closure is specific to LaTeXML-Post typesetting layout
+<a href=#947 id=947 data-nosnippet>947</a>  // and not called by the Rust compile-time binding pipeline — omit.
+<a href=#948 id=948 data-nosnippet>948</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LaTeXML"</span>, <span class="string">"\\LaTeXML@logo"</span>);
+<a href=#949 id=949 data-nosnippet>949</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\LaTeXML@logo"</span>,
+<a href=#950 id=950 data-nosnippet>950</a>    <span class="string">"&lt;ltx:text class='ltx_LaTeXML_logo'&gt;\
+<a href=#951 id=951 data-nosnippet>951</a>       &lt;ltx:text cssstyle='letter-spacing:-0.2em; margin-right:0.1em'&gt;\
+<a href=#952 id=952 data-nosnippet>952</a>         L\
+<a href=#953 id=953 data-nosnippet>953</a>         &lt;ltx:text cssstyle='font-variant:small-caps;' yoffset='0.4ex'&gt;a&lt;/ltx:text&gt;\
+<a href=#954 id=954 data-nosnippet>954</a>         T\
+<a href=#955 id=955 data-nosnippet>955</a>         &lt;ltx:text cssstyle='font-variant:small-caps;font-size:120%' yoffset='-0.2ex'&gt;e&lt;/ltx:text&gt;\
+<a href=#956 id=956 data-nosnippet>956</a>       &lt;/ltx:text&gt;\
+<a href=#957 id=957 data-nosnippet>957</a>       &lt;ltx:text cssstyle='font-size:90%' yoffset='-0.2ex'&gt;XML&lt;/ltx:text&gt;\
+<a href=#958 id=958 data-nosnippet>958</a>     &lt;/ltx:text&gt;"</span>,
+<a href=#959 id=959 data-nosnippet>959</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#960 id=960 data-nosnippet>960</a>
+<a href=#961 id=961 data-nosnippet>961</a>  <span class="comment">// Perl latexml.sty.ltxml L136-139: \LaTeXMLversion / \LaTeXMLrevision
+<a href=#962 id=962 data-nosnippet>962</a>  // expand to $LaTeXML::VERSION / $LaTeXML::Version::REVISION via
+<a href=#963 id=963 data-nosnippet>963</a>  // ExplodeText. Rust's DefMacro! proc-macro requires a literal body —
+<a href=#964 id=964 data-nosnippet>964</a>  // CARGO_PKG_VERSION can't be env!()'d through it — so we hard-code
+<a href=#965 id=965 data-nosnippet>965</a>  // the latexml_package crate version (kept in sync by humans). Revision
+<a href=#966 id=966 data-nosnippet>966</a>  // is left empty (no git rev exposed at runtime); that makes
+<a href=#967 id=967 data-nosnippet>967</a>  // \LaTeXMLfullversion collapse to just the version string via the
+<a href=#968 id=968 data-nosnippet>968</a>  // `\ifx\expandafter.\LaTeXMLrevision.` guard.
+<a href=#969 id=969 data-nosnippet>969</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LaTeXMLversion"</span>, <span class="string">"0.4.0"</span>);
+<a href=#970 id=970 data-nosnippet>970</a>  def_macro_noop(<span class="string">"\\LaTeXMLrevision"</span>)<span class="question-mark">?</span>;
+<a href=#971 id=971 data-nosnippet>971</a>  <span class="macro">DefMacro!</span>(
+<a href=#972 id=972 data-nosnippet>972</a>    <span class="string">"\\LaTeXMLfullversion"</span>,
+<a href=#973 id=973 data-nosnippet>973</a>    <span class="string">"\\LaTeXML (\\LaTeXMLversion\\expandafter\\ifx\\expandafter.\\LaTeXMLrevision.\\else; rev.~\\LaTeXMLrevision\\fi)"
+<a href=#974 id=974 data-nosnippet>974</a>  </span>);
+<a href=#975 id=975 data-nosnippet>975</a>
+<a href=#976 id=976 data-nosnippet>976</a>  <span class="comment">// Perl latexml.sty.ltxml L227-230: \lxRef{label}{text} — like hyperref's
+<a href=#977 id=977 data-nosnippet>977</a>  // \hyperref but straightforward. Emits &lt;ltx:ref labelref='label'&gt;text&lt;/ref&gt;
+<a href=#978 id=978 data-nosnippet>978</a>  // with enter_horizontal so a bare \lxRef between paragraphs doesn't
+<a href=#979 id=979 data-nosnippet>979</a>  // leak out of &lt;ltx:p&gt; (same mode-leak class as hyperref \url cycle 87).
+<a href=#980 id=980 data-nosnippet>980</a>  // CleanLabel normalizes the label for the labelref attribute.
+<a href=#981 id=981 data-nosnippet>981</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lxRef Semiverbatim {}"</span>,
+<a href=#982 id=982 data-nosnippet>982</a>    <span class="string">"&lt;ltx:ref labelref='#label'&gt;#2&lt;/ltx:ref&gt;"</span>,
+<a href=#983 id=983 data-nosnippet>983</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#984 id=984 data-nosnippet>984</a>    properties =&gt; sub[args] {
+<a href=#985 id=985 data-nosnippet>985</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; label_opt);
+<a href=#986 id=986 data-nosnippet>986</a>      <span class="kw">let </span>label = label_opt.as_ref().unwrap().to_string();
+<a href=#987 id=987 data-nosnippet>987</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; Stored::String(arena::pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
+<a href=#988 id=988 data-nosnippet>988</a>    }
+<a href=#989 id=989 data-nosnippet>989</a>  );
+<a href=#990 id=990 data-nosnippet>990</a>
+<a href=#991 id=991 data-nosnippet>991</a>  <span class="comment">// Perl latexml.sty.ltxml L209-222: \lxAddAnnotation / \lxWithAnnotation
+<a href=#992 id=992 data-nosnippet>992</a>  // add RDFa-ish annotations to the current / enclosing node via the
+<a href=#993 id=993 data-nosnippet>993</a>  // `addAnnotations` helper. That helper isn't ported to Rust yet (see
+<a href=#994 id=994 data-nosnippet>994</a>  // latexml_sty.rs:855 "Track separately" for \@lxDefMathDeclare, same
+<a href=#995 id=995 data-nosnippet>995</a>  // family). Ship arg-consuming stubs so documents invoking
+<a href=#996 id=996 data-nosnippet>996</a>  // \lxAddAnnotation{key=val,...} or \lxWithAnnotation{…}{body} don't
+<a href=#997 id=997 data-nosnippet>997</a>  // hit undefined-CS. The {body} arg passes through for \lxWithAnnotation
+<a href=#998 id=998 data-nosnippet>998</a>  // so the visible content is preserved; the annotation itself is dropped.
+<a href=#999 id=999 data-nosnippet>999</a>  </span>def_macro_noop(<span class="string">"\\lxAddAnnotation RequiredKeyVals"</span>)<span class="question-mark">?</span>;
+<a href=#1000 id=1000 data-nosnippet>1000</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lxWithAnnotation RequiredKeyVals {}"</span>, <span class="string">"#2"</span>);
+<a href=#1001 id=1001 data-nosnippet>1001</a>
+<a href=#1002 id=1002 data-nosnippet>1002</a>  <span class="comment">// Perl latexml.sty.ltxml L514-528: \lxRefDeclaration OptionalKeyVals:Declare {}
+<a href=#1003 id=1003 data-nosnippet>1003</a>  // — refers declarations from another document point to labels at the
+<a href=#1004 id=1004 data-nosnippet>1004</a>  // call site, via createDeclarationRewrite + the Declaration_ state
+<a href=#1005 id=1005 data-nosnippet>1005</a>  // registry. Neither helper is ported. Stub as arg-consuming no-op so
+<a href=#1006 id=1006 data-nosnippet>1006</a>  // documents don't hit undefined-CS; annotations won't actually rewrite
+<a href=#1007 id=1007 data-nosnippet>1007</a>  // but the prose renders cleanly.
+<a href=#1008 id=1008 data-nosnippet>1008</a>  </span>def_macro_noop(<span class="string">"\\lxRefDeclaration OptionalKeyVals:Declare {}"</span>)<span class="question-mark">?</span>;
+<a href=#1009 id=1009 data-nosnippet>1009</a>
+<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="comment">// Perl latexml.sty.ltxml L145: \lxDocumentID{id} sets the top-level
+<a href=#1011 id=1011 data-nosnippet>1011</a>  // document's xml:id via a plain TeX `\def` of the internal
+<a href=#1012 id=1012 data-nosnippet>1012</a>  // \thedocument@ID command that \begin{document}'s constructor
+<a href=#1013 id=1013 data-nosnippet>1013</a>  // consults for its `id` property.
+<a href=#1014 id=1014 data-nosnippet>1014</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lxDocumentID{}"</span>, <span class="string">"\\def\\thedocument@ID{#1}"</span>);
+<a href=#1015 id=1015 data-nosnippet>1015</a>
+<a href=#1016 id=1016 data-nosnippet>1016</a>  <span class="comment">// Perl latexml.sty.ltxml L148: \LXMID{id}{math} associates an
+<a href=#1017 id=1017 data-nosnippet>1017</a>  // identifier with the given math expression. Thin wrapper around
+<a href=#1018 id=1018 data-nosnippet>1018</a>  // the internal \lx@xmarg constructor already emitted elsewhere.
+<a href=#1019 id=1019 data-nosnippet>1019</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LXMID{}{}"</span>, <span class="string">"\\lx@xmarg{#1}{#2}"</span>);
+<a href=#1020 id=1020 data-nosnippet>1020</a>
+<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="comment">// Perl latexml.sty.ltxml L153: \LXMRef{id} refers to the math
+<a href=#1022 id=1022 data-nosnippet>1022</a>  // expression associated with id. Thin wrapper around \lx@xmref.
+<a href=#1023 id=1023 data-nosnippet>1023</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\LXMRef{}"</span>, <span class="string">"\\lx@xmref{#1}"</span>);
+<a href=#1024 id=1024 data-nosnippet>1024</a>
+<a href=#1025 id=1025 data-nosnippet>1025</a>  <span class="comment">// Perl latexml.sty L109-116: acronym shortcuts. Prior Rust stopped at
+<a href=#1026 id=1026 data-nosnippet>1026</a>  // \XML / \SGML / \HTML — the remaining \XHTML / \XSLT / \CSS / \MathML
+<a href=#1027 id=1027 data-nosnippet>1027</a>  // / \OpenMath were missing, so documents using them hit undefined-CS
+<a href=#1028 id=1028 data-nosnippet>1028</a>  // errors.
+<a href=#1029 id=1029 data-nosnippet>1029</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\XML"</span>, <span class="string">"\\textsc{xml}"</span>);
+<a href=#1030 id=1030 data-nosnippet>1030</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\SGML"</span>, <span class="string">"\\textsc{sgml}"</span>);
+<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\HTML"</span>, <span class="string">"\\textsc{html}"</span>);
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\XHTML"</span>, <span class="string">"\\textsc{xhtml}"</span>);
+<a href=#1033 id=1033 data-nosnippet>1033</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\XSLT"</span>, <span class="string">"\\textsc{xslt}"</span>);
+<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\CSS"</span>, <span class="string">"\\textsc{css}"</span>);
+<a href=#1035 id=1035 data-nosnippet>1035</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\MathML"</span>, <span class="string">"\\texttt{MathML}"</span>);
+<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\OpenMath"</span>, <span class="string">"\\texttt{OpenMath}"</span>);
+<a href=#1037 id=1037 data-nosnippet>1037</a>
+<a href=#1038 id=1038 data-nosnippet>1038</a>  <span class="comment">// Diagnostic constructor: emits a marker that gets filled with the Marpa parse tree count
+<a href=#1039 id=1039 data-nosnippet>1039</a>  // for the preceding formula, after math parsing completes.
+<a href=#1040 id=1040 data-nosnippet>1040</a>  // Usage: $x^2$ \ltx@count@parses → becomes the count of grammar trees.
+<a href=#1041 id=1041 data-nosnippet>1041</a>  // The math parser sets _parsetrees on each Math element, then a post-parse step
+<a href=#1042 id=1042 data-nosnippet>1042</a>  // in core_interface fills in the markers.
+<a href=#1043 id=1043 data-nosnippet>1043</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@count@parses"</span>,
+<a href=#1044 id=1044 data-nosnippet>1044</a>    <span class="string">"&lt;ltx:text class='ltx_count_parses' _parsetrees_marker='true'&gt;0&lt;/ltx:text&gt;"</span>,
+<a href=#1045 id=1045 data-nosnippet>1045</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
+<a href=#1046 id=1046 data-nosnippet>1046</a>
+<a href=#1047 id=1047 data-nosnippet>1047</a>  <span class="comment">// Perl latexml.sty.ltxml L263-289: {lxNavbar} / {lxHeader} / {lxFooter}
+<a href=#1048 id=1048 data-nosnippet>1048</a>  // envs accumulate body content into a `navigation` list that
+<a href=#1049 id=1049 data-nosnippet>1049</a>  // insertNavigation (ltx:document afterClose) splices under an
+<a href=#1050 id=1050 data-nosnippet>1050</a>  // &lt;ltx:navigation&gt; wrapper. Rust has no afterClose hook yet and no
+<a href=#1051 id=1051 data-nosnippet>1051</a>  // PushValue-based list accumulator plumbed through the post-pipeline,
+<a href=#1052 id=1052 data-nosnippet>1052</a>  // so a faithful hoisted-navigation output isn't possible yet. Stub
+<a href=#1053 id=1053 data-nosnippet>1053</a>  // as inline-logical-block wrappers that keep body content visible
+<a href=#1054 id=1054 data-nosnippet>1054</a>  // in-flow and prevent undefined-env errors when documents invoke
+<a href=#1055 id=1055 data-nosnippet>1055</a>  // \begin{lxNavbar}.../\begin{lxHeader}.../\begin{lxFooter}... .
+<a href=#1056 id=1056 data-nosnippet>1056</a>  // Intentional divergence: navigation content appears in flow rather
+<a href=#1057 id=1057 data-nosnippet>1057</a>  // than hoisted to a dedicated &lt;ltx:navigation&gt; container. Revisit
+<a href=#1058 id=1058 data-nosnippet>1058</a>  // when the Tag()/afterClose + PushValue list-accumulator machinery
+<a href=#1059 id=1059 data-nosnippet>1059</a>  // is ported.
+<a href=#1060 id=1060 data-nosnippet>1060</a>  // Perl all three envs run `beforeDigest =&gt; sub { AssignValue(inPreamble =&gt; 0); }`
+<a href=#1061 id=1061 data-nosnippet>1061</a>  // so body content digests as document text even when the env is
+<a href=#1062 id=1062 data-nosnippet>1062</a>  // invoked from the preamble (same pattern as jheppub affiliation
+<a href=#1063 id=1063 data-nosnippet>1063</a>  // and standalone.sty's \@standalone@start@input).
+<a href=#1064 id=1064 data-nosnippet>1064</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{lxNavbar}"</span>,
+<a href=#1065 id=1065 data-nosnippet>1065</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_navbar'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
+<a href=#1066 id=1066 data-nosnippet>1066</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
+<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{lxHeader}"</span>,
+<a href=#1068 id=1068 data-nosnippet>1068</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_header'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
+<a href=#1069 id=1069 data-nosnippet>1069</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
+<a href=#1070 id=1070 data-nosnippet>1070</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{lxFooter}"</span>,
+<a href=#1071 id=1071 data-nosnippet>1071</a>    <span class="string">"&lt;ltx:inline-logical-block class='ltx_page_footer'&gt;#body&lt;/ltx:inline-logical-block&gt;"</span>,
+<a href=#1072 id=1072 data-nosnippet>1072</a>    before_digest =&gt; { <span class="macro">AssignValue!</span>(<span class="string">"inPreamble" </span>=&gt; <span class="bool-val">false</span>); });
+<a href=#1073 id=1073 data-nosnippet>1073</a>});
 </code></pre></div></section></main></body></html>

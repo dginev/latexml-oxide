@@ -11,54 +11,64 @@
 <a href=#11 id=11 data-nosnippet>11</a>  // (colonequals, comment, gnuplot, …) loaded fine in Perl but errored
 <a href=#12 id=12 data-nosnippet>12</a>  // in Rust with `\&lt;missing-cs&gt; undefined`. Switch back to `rawstyles`
 <a href=#13 id=13 data-nosnippet>13</a>  // for Perl-baseline parity (cf. feedback_sandbox_perl_baseline.md).
-<a href=#14 id=14 data-nosnippet>14</a>  </span>latexml_core::binding::content::pass_options(<span class="string">"latexml"</span>, <span class="string">"sty"</span>, <span class="macro">vec!</span>[
-<a href=#15 id=15 data-nosnippet>15</a>    <span class="macro">s!</span>(<span class="string">"ids"</span>),
-<a href=#16 id=16 data-nosnippet>16</a>    <span class="macro">s!</span>(<span class="string">"rawstyles"</span>),
-<a href=#17 id=17 data-nosnippet>17</a>    <span class="macro">s!</span>(<span class="string">"bibconfig=bbl,bib"</span>),
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="macro">s!</span>(<span class="string">"nobreakuntex"</span>),
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="macro">s!</span>(<span class="string">"magnify=1.2"</span>),
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="macro">s!</span>(<span class="string">"zoomout=1.2"</span>),
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="macro">s!</span>(<span class="string">"tokenlimit=249999999"</span>),
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="macro">s!</span>(<span class="string">"iflimit=3999999"</span>),
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="macro">s!</span>(<span class="string">"absorblimit=1299999"</span>),
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="macro">s!</span>(<span class="string">"pushbacklimit=599999"</span>),
-<a href=#25 id=25 data-nosnippet>25</a>  ])<span class="question-mark">?</span>;
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">RequirePackage!</span>(<span class="string">"latexml"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// Practical maximum for warnings
-<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"MAX_WARNINGS" </span>=&gt; <span class="number">10000i64</span>, Scope::Global);
-<a href=#30 id=30 data-nosnippet>30</a>
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// No \today in archival conversions. Perl L23-25:
-<a href=#32 id=32 data-nosnippet>32</a>  //   AtBeginDocument(sub {
-<a href=#33 id=33 data-nosnippet>33</a>  //     DefMacroI('\today', undef, '\relax', locked =&gt; 1, scope =&gt; 'global');
-<a href=#34 id=34 data-nosnippet>34</a>  //   });
-<a href=#35 id=35 data-nosnippet>35</a>  // We bind at load time with `locked =&gt; true, Scope::Global` instead of
-<a href=#36 id=36 data-nosnippet>36</a>  // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
-<a href=#37 id=37 data-nosnippet>37</a>  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock makes
-<a href=#38 id=38 data-nosnippet>38</a>  // timing irrelevant: any preamble package that tries to (re)define
-<a href=#39 id=39 data-nosnippet>39</a>  // \today after this point is silently rejected, matching the intent of
-<a href=#40 id=40 data-nosnippet>40</a>  // Perl's AtBeginDocument hook (defer until all packages have loaded).
-<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\today"</span>, <span class="string">"\\relax"</span>, locked =&gt; <span class="bool-val">true</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#42 id=42 data-nosnippet>42</a>
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// Perl L30-35: drop all non-remote &lt;ltx:resource&gt; nodes (keep only `http*`
-<a href=#44 id=44 data-nosnippet>44</a>  // src so the archival run doesn't embed default local CSS / JS).
-<a href=#45 id=45 data-nosnippet>45</a>  //   DefRewrite(xpath =&gt; 'descendant-or-self::ltx:resource', replace =&gt; sub {
-<a href=#46 id=46 data-nosnippet>46</a>  //     my ($self, $node) = @_;
-<a href=#47 id=47 data-nosnippet>47</a>  //     my $src = $node-&gt;getAttribute('src') || '';
-<a href=#48 id=48 data-nosnippet>48</a>  //     return if $src !~ /^http/;      # non-remote → silently drop
-<a href=#49 id=49 data-nosnippet>49</a>  //     $self-&gt;getNode-&gt;appendChild($node); });   # remote → re-attach
-<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="macro">DefRewrite!</span>(xpath =&gt; <span class="string">"descendant-or-self::ltx:resource"</span>,
-<a href=#51 id=51 data-nosnippet>51</a>  replace =&gt; sub[document, nodes] {
-<a href=#52 id=52 data-nosnippet>52</a>    <span class="kw">let </span>node = nodes.pop().unwrap();
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">let </span>src = node.get_attribute(<span class="string">"src"</span>).unwrap_or_default();
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="kw">if </span>src.starts_with(<span class="string">"http"</span>) {
-<a href=#55 id=55 data-nosnippet>55</a>      document.get_node_mut().add_child(node)<span class="question-mark">?</span>;
-<a href=#56 id=56 data-nosnippet>56</a>    }
-<a href=#57 id=57 data-nosnippet>57</a>  });
-<a href=#58 id=58 data-nosnippet>58</a>
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="comment">// NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
-<a href=#60 id=60 data-nosnippet>60</a>  // to set intent=':literal' on the top-level math element. That is a
-<a href=#61 id=61 data-nosnippet>61</a>  // post-processing hook (not a compile-time binding), tracked separately —
-<a href=#62 id=62 data-nosnippet>62</a>  // we do not emulate it here. See Perl source L45-73 for context.
-<a href=#63 id=63 data-nosnippet>63</a></span>});
+<a href=#14 id=14 data-nosnippet>14</a>  // Perl ar5iv.sty.ltxml ships `pushbacklimit=599999, iflimit=3999999`
+<a href=#15 id=15 data-nosnippet>15</a>  // but the Rust port hits both ceilings on real ar5iv-profile papers
+<a href=#16 id=16 data-nosnippet>16</a>  // (witness arXiv:2605.16752v1). Empirical bisect (2026-05-22) on that
+<a href=#17 id=17 data-nosnippet>17</a>  // witness pinned the actual minima at: pushback ≈ 630000, iflimit
+<a href=#18 id=18 data-nosnippet>18</a>  // ≈ 8000000. We pick 650000 / 8000000 with a small safety margin over
+<a href=#19 id=19 data-nosnippet>19</a>  // the minimum-pass bracket. The gap to Perl's defaults suggests our
+<a href=#20 id=20 data-nosnippet>20</a>  // pushback / conditional accounting is roughly 1.1× Perl's (pushback)
+<a href=#21 id=21 data-nosnippet>21</a>  // and 2× Perl's (iflimit) on heavily macro-driven IEEEtran + tikz +
+<a href=#22 id=22 data-nosnippet>22</a>  // pgfplots input; root-causing those is tracked as a follow-up but
+<a href=#23 id=23 data-nosnippet>23</a>  // would let us tighten the constants back toward the Perl defaults.
+<a href=#24 id=24 data-nosnippet>24</a>  </span>latexml_core::binding::content::pass_options(<span class="string">"latexml"</span>, <span class="string">"sty"</span>, <span class="macro">vec!</span>[
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="macro">s!</span>(<span class="string">"ids"</span>),
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="macro">s!</span>(<span class="string">"rawstyles"</span>),
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="macro">s!</span>(<span class="string">"bibconfig=bbl,bib"</span>),
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="macro">s!</span>(<span class="string">"nobreakuntex"</span>),
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="macro">s!</span>(<span class="string">"magnify=1.2"</span>),
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="macro">s!</span>(<span class="string">"zoomout=1.2"</span>),
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="macro">s!</span>(<span class="string">"tokenlimit=249999999"</span>),
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="macro">s!</span>(<span class="string">"iflimit=8000000"</span>),
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="macro">s!</span>(<span class="string">"absorblimit=1299999"</span>),
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="macro">s!</span>(<span class="string">"pushbacklimit=650000"</span>),
+<a href=#35 id=35 data-nosnippet>35</a>  ])<span class="question-mark">?</span>;
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">RequirePackage!</span>(<span class="string">"latexml"</span>);
+<a href=#37 id=37 data-nosnippet>37</a>
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="comment">// Practical maximum for warnings
+<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"MAX_WARNINGS" </span>=&gt; <span class="number">10000i64</span>, Scope::Global);
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// No \today in archival conversions. Perl L23-25:
+<a href=#42 id=42 data-nosnippet>42</a>  //   AtBeginDocument(sub {
+<a href=#43 id=43 data-nosnippet>43</a>  //     DefMacroI('\today', undef, '\relax', locked =&gt; 1, scope =&gt; 'global');
+<a href=#44 id=44 data-nosnippet>44</a>  //   });
+<a href=#45 id=45 data-nosnippet>45</a>  // We bind at load time with `locked =&gt; true, Scope::Global` instead of
+<a href=#46 id=46 data-nosnippet>46</a>  // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
+<a href=#47 id=47 data-nosnippet>47</a>  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock makes
+<a href=#48 id=48 data-nosnippet>48</a>  // timing irrelevant: any preamble package that tries to (re)define
+<a href=#49 id=49 data-nosnippet>49</a>  // \today after this point is silently rejected, matching the intent of
+<a href=#50 id=50 data-nosnippet>50</a>  // Perl's AtBeginDocument hook (defer until all packages have loaded).
+<a href=#51 id=51 data-nosnippet>51</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\today"</span>, <span class="string">"\\relax"</span>, locked =&gt; <span class="bool-val">true</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// Perl L30-35: drop all non-remote &lt;ltx:resource&gt; nodes (keep only `http*`
+<a href=#54 id=54 data-nosnippet>54</a>  // src so the archival run doesn't embed default local CSS / JS).
+<a href=#55 id=55 data-nosnippet>55</a>  //   DefRewrite(xpath =&gt; 'descendant-or-self::ltx:resource', replace =&gt; sub {
+<a href=#56 id=56 data-nosnippet>56</a>  //     my ($self, $node) = @_;
+<a href=#57 id=57 data-nosnippet>57</a>  //     my $src = $node-&gt;getAttribute('src') || '';
+<a href=#58 id=58 data-nosnippet>58</a>  //     return if $src !~ /^http/;      # non-remote → silently drop
+<a href=#59 id=59 data-nosnippet>59</a>  //     $self-&gt;getNode-&gt;appendChild($node); });   # remote → re-attach
+<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="macro">DefRewrite!</span>(xpath =&gt; <span class="string">"descendant-or-self::ltx:resource"</span>,
+<a href=#61 id=61 data-nosnippet>61</a>  replace =&gt; sub[document, nodes] {
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">let </span>node = nodes.pop().unwrap();
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">let </span>src = node.get_attribute(<span class="string">"src"</span>).unwrap_or_default();
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">if </span>src.starts_with(<span class="string">"http"</span>) {
+<a href=#65 id=65 data-nosnippet>65</a>      document.get_node_mut().add_child(node)<span class="question-mark">?</span>;
+<a href=#66 id=66 data-nosnippet>66</a>    }
+<a href=#67 id=67 data-nosnippet>67</a>  });
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
+<a href=#70 id=70 data-nosnippet>70</a>  // to set intent=':literal' on the top-level math element. That is a
+<a href=#71 id=71 data-nosnippet>71</a>  // post-processing hook (not a compile-time binding), tracked separately —
+<a href=#72 id=72 data-nosnippet>72</a>  // we do not emulate it here. See Perl source L45-73 for context.
+<a href=#73 id=73 data-nosnippet>73</a></span>});
 </code></pre></div></section></main></body></html>
