@@ -97,9 +97,9 @@ impl fmt::Debug for RewritePattern {
 }
 #[derive(Debug, Clone)]
 pub struct RewriteClause {
-  compiled: bool,
-  op:       RewriteOperator,
-  pattern:  RewritePattern,
+  compiled:   bool,
+  pub op:     RewriteOperator,
+  pub pattern: RewritePattern,
 }
 impl RewriteClause {
   pub fn new_uncompiled(op: RewriteOperator, pattern: RewritePattern) -> Self {

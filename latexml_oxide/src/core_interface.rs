@@ -439,8 +439,63 @@ impl DigestionAPI for Core {
           }
           // 31 rules compiled for declare test; XPath matching issue prevents application
           // Step 2: invoke the rewrite rules
-          for mut rewrite_rule in rewrites {
+          // R35.D instrumentation: print per-rule timing if
+          // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
+          // identify the rule that hangs (the timeout watchdog kills
+          // mid-rule otherwise).
+          let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
+          let n_rules = rewrites.len();
+          for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
+            // Build a useful one-line hint from the rule's options. The
+            // Debug impl on RewriteOptions is `<RewriteOptions>` only,
+            // so reach into the fields directly.
+            let opts = &rewrite_rule.options;
+            let mut xpath_hint = format!(
+              "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
+              opts.select.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.xpath.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.regexp.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.scope.as_ref().map(|_| "<scope>"),
+              opts.label.as_deref(),
+              rewrite_rule.clauses.len(),
+            );
+            // Dump compiled clauses by op + pattern preview (helps when
+            // the options struct itself is empty after compile_clauses
+            // moved them into the clauses vec).
+            for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
+              use std::fmt::Write;
+              let _ = write!(
+                xpath_hint,
+                "\n    [{ci}] op={:?} pat={:?}",
+                c.op,
+                match &c.pattern {
+                  latexml_core::rewrite::RewritePattern::String(s) =>
+                    format!("Str({})", s.chars().take(120).collect::<String>()),
+                  latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
+                  latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
+                  latexml_core::rewrite::RewritePattern::NodeList(n) =>
+                    format!("NodeList({})", n.len()),
+                  _ => "??".into(),
+                }
+              );
+            }
+            if trace_all {
+              eprintln!("[rewrite-timing] rule #{}/{} START :: {}", idx, n_rules, xpath_hint);
+              // Flush stderr so it appears even if the rule hangs
+              use std::io::Write;
+              let _ = std::io::stderr().flush();
+            }
+            let started = std::time::Instant::now();
             rewrite_rule.invoke(&mut document, &root)?;
+            let elapsed = started.elapsed();
+            if trace_all {
+              eprintln!("[rewrite-timing] rule #{}/{} END {:.2?}", idx, n_rules, elapsed);
+            } else if elapsed > std::time::Duration::from_secs(5) {
+              eprintln!(
+                "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
+                idx, n_rules, elapsed, xpath_hint
+              );
+            }
           }
         }
       }
