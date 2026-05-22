@@ -43,6 +43,73 @@ outward to individual bindings. Open clusters are described below;
 closed clusters are dropped from this doc once their fix lands and
 generalizes.
 
+### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
+
+**Status:** LANDED 2026-05-22. Keyset plumbing wired through; ar5iv
+limit constants raised after empirical bisect on the witness. Witness
+arXiv:2605.16752v1 now converts end-to-end with just
+`--preload=ar5iv.sty` (905,021 B HTML, 25.0s wall, 2.86 GB RSS, "No
+obvious problems").
+
+**Original Rust gap (now fixed).** `\usepackage[tokenlimit=...]{latexml}`
+(passed indirectly via `ar5iv.sty`) silently dropped the keyval
+because Rust's `ProcessOptions!` macro only supported plain / star
+ordering; there was no `keysets => ['LTXML']` equivalent. Perl
+`Package.pm::executeOption_internal` handles any `key=value`
+package option in the supplied keysets *before* normal `\ds@...`
+lookup by digesting `\KV@<keyset>@<key>{<value>}`. Without that
+branch, `KV@LTXML@tokenlimit` was never populated and
+`gullet::set_token_limit` never ran. Reference Perl source:
+`~/git/arxiv-latexml/lib/LaTeXML/Package/latexml.sty.ltxml`
+(`ProcessOptions(inorder => 1, keysets => ['LTXML'])`).
+
+**Fix landed.** Generic keyset branch ported faithfully:
+
+1. `latexml_core::binding::content::process_options` now takes a
+   `keysets: &[&str]` parameter.
+2. New `keyval_option_qname` helper detects `key=value` options and,
+   for each keyset, checks the keyval type registry via
+   `crate::keyval::keyval_get`. On hit, it stashes the value under
+   the qname via `assign_value(.., Scope::Global)` and digests
+   `\KV@<keyset>@<key>{<value>}` so DefKeyVal-style closures still
+   fire.
+3. `ProcessOptions!(keysets => ["LTXML"])` macro arm added in
+   `latexml_engine/src/setup_binding_language.rs`.
+4. `latexml_package/src/package/latexml_sty.rs` now calls
+   `ProcessOptions!(keysets => ["LTXML"])`; existing per-key
+   `state::lookup_value("KV@LTXML@<key>")` blocks below it
+   (`bibconfig`, `tokenlimit`, `iflimit`, `absorblimit`,
+   `pushbacklimit`, image scaling) consume the populated keyset
+   state unchanged.
+
+Regression coverage: `latexml_oxide/tests/keyval_options/keysetopt*`
+(`a` exercises `value=42` via the keyset path; `b` exercises the
+no-option fallback). Tiny fixture binding at
+`latexml_contrib/src/keysetopt_sty.rs`.
+
+**Witness bisect (2026-05-22).** After the keyset patch the witness
+exposed two ar5iv ceilings the Rust port trips where Perl does not:
+`pushbacklimit=599999` and `iflimit=3999999`. With both pinned at
+100M the witness converts cleanly, so it's a tight-ceiling case, not
+a true infinite loop. Empirical bisect (env-var-tunable bisect
+scaffolding temporarily in `ar5iv_sty.rs`, removed once chosen):
+
+| Knob | Perl default | Rust max-fail | Rust min-pass | Chosen |
+|---|---:|---:|---:|---:|
+| `pushbacklimit` | 599999 | 625000 | 630000 | **650000** |
+| `iflimit` | 3999999 | 7000000 | 8000000 | **8000000** |
+
+Headroom on pushback (~20K above min-pass) is intentional; iflimit
+sits exactly at the min-pass boundary because the next finer probe
+wasn't taken (acceptable since the failure mode is graceful — a
+clean "limit exceeded" diagnostic, not silent corruption).
+
+**Follow-up (open).** The Rust port consumes ≈1.04× Perl's pushbacks
+and ≈2× Perl's conditionals on this `IEEEtran` + `tikz` + `pgfplots`
+input. The iflimit gap especially smells like a real over-evaluation
+somewhere; root-causing it would let us tighten the ar5iv constants
+back toward Perl's defaults. Not blocking, tracked here.
+
 ### Cluster A — Catcode-leak through optional-arg digestion (math-mode-as-symptom)
 
 **Status:** OPEN, in progress 2026-05-13. First fix landed
@@ -443,7 +510,7 @@ assertion (not just code == 0; the bug had code == 0).
 
 | Gate | Current (2026-05-20) | Target |
 |---|---|---|
-| `cargo test --tests` | **1328/0/0** | unchanged |
+| `cargo test --tests` | **1334/0/0** (was 1328 + 2×2 keysetopt fixtures from the 2026-05-22 keyset option-plumbing landing) | unchanged |
 | `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, residual clippy cleanup of post-ASF-migration code — collaborator's lane) | 0 warnings (clippy cleanup landed) |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |

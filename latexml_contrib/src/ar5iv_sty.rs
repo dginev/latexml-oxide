@@ -11,6 +11,16 @@ LoadDefinitions!({
   // (colonequals, comment, gnuplot, …) loaded fine in Perl but errored
   // in Rust with `\<missing-cs> undefined`. Switch back to `rawstyles`
   // for Perl-baseline parity (cf. feedback_sandbox_perl_baseline.md).
+  // Perl ar5iv.sty.ltxml ships `pushbacklimit=599999, iflimit=3999999`
+  // but the Rust port hits both ceilings on real ar5iv-profile papers
+  // (witness arXiv:2605.16752v1). Empirical bisect (2026-05-22) on that
+  // witness pinned the actual minima at: pushback ≈ 630000, iflimit
+  // ≈ 8000000. We pick 650000 / 8000000 with a small safety margin over
+  // the minimum-pass bracket. The gap to Perl's defaults suggests our
+  // pushback / conditional accounting is roughly 1.1× Perl's (pushback)
+  // and 2× Perl's (iflimit) on heavily macro-driven IEEEtran + tikz +
+  // pgfplots input; root-causing those is tracked as a follow-up but
+  // would let us tighten the constants back toward the Perl defaults.
   latexml_core::binding::content::pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),
@@ -19,9 +29,9 @@ LoadDefinitions!({
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
     s!("tokenlimit=249999999"),
-    s!("iflimit=3999999"),
+    s!("iflimit=8000000"),
     s!("absorblimit=1299999"),
-    s!("pushbacklimit=599999"),
+    s!("pushbacklimit=650000"),
   ])?;
   RequirePackage!("latexml");
 
