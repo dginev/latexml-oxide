@@ -1034,7 +1034,11 @@ pub fn eqnarray_bindings() -> Result<()> {
   // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
   // if it fires AFTER the eqnarray group pops (witness 2404.19499 align
   // case).
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
+  state::let_i(
+    &T_CS!("\\lx@eqnarray@save@label"),
+    &T_CS!("\\label"),
+    Some(Scope::Global),
+  );
   // Perl: Let('\label', '\lx@eqnarray@label');
   // Redirect \label to the noalign version so it runs at the equation (row) level
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
@@ -4128,7 +4132,7 @@ LoadDefinitions!({
   DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(star)] {
     // Perl: ProcessOptions(($star ? (inorder => 1) : ()));
     let inorder = star.is_some();
-    process_options(inorder)?;
+    process_options(inorder, &[])?;
     Ok(Vec::new())
   });
   DefMacro!("\\@options", "\\ProcessOptions*");

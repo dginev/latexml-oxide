@@ -485,16 +485,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     //
     // Two flavors are recorded via [`FallbackKind`] for informational
     // log messages only — both always fire when the binding exists:
-    //   - Versioned: suffix/prefix actually stripped (Perl-faithful).
-    //     Drivers: 1206.0536 (mysvjour3 → svjour3),
-    //     astro-ph0005021 (./aaspp4 → ./aaspp — aaspp4.sty ships
-    //     locally with plain-TeX `\startdata`; the engine's
-    //     alignment-aware binding still wins, matching Perl).
-    //   - BasenameOnly: only directory prefix removed. Rust-specific
-    //     extension keyed to our contrib-binding registry. Drivers:
-    //     2105.02087 (misc/ieeetran → IEEEtran binding);
-    //     2405.18387 (assets/equations → equations binding, because
-    //     we ship a tuned binding for this name).
+    //   - Versioned: suffix/prefix actually stripped (Perl-faithful). Drivers: 1206.0536 (mysvjour3
+    //     → svjour3), astro-ph0005021 (./aaspp4 → ./aaspp — aaspp4.sty ships locally with plain-TeX
+    //     `\startdata`; the engine's alignment-aware binding still wins, matching Perl).
+    //   - BasenameOnly: only directory prefix removed. Rust-specific extension keyed to our
+    //     contrib-binding registry. Drivers: 2105.02087 (misc/ieeetran → IEEEtran binding);
+    //     2405.18387 (assets/equations → equations binding, because we ship a tuned binding for
+    //     this name).
     let found_raw = if found_raw.is_some() {
       found_raw
     } else if !options.noltxml {
@@ -562,9 +559,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     } else if lookup_bool(&s!("{filename}_loaded")) {
       // Fallback ltxml binding already loaded — don't double-load the raw.
       None
-    } else if !options.notex
-      && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded")))
-    {
+    } else if !options.notex && (options.reloadable || !lookup_bool(&s!("{filename}_raw_loaded"))) {
       // Perl Package.pm L2121-2125 + L2131-2136: combined raw-search
       // step. Tries local paths first, then kpsewhich. Mirrors Perl's
       // Step 4 (`!interpreting` local raw) PLUS Step 5 (kpsewhich
@@ -591,7 +586,13 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // The raw load itself sets `<filename>_raw_loaded` via
       // load_tex_definitions (per OXIDIZED_DESIGN #23). Read sites
       // check `_loaded || _raw_loaded` to detect "any load happened".
-      load_tex_definitions(&filename, &file, options.reloadable, options.at_letter, grandparent_in_expl3)?;
+      load_tex_definitions(
+        &filename,
+        &file,
+        options.reloadable,
+        options.at_letter,
+        grandparent_in_expl3,
+      )?;
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
@@ -657,7 +658,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       )?;
     }
     if !prevext.is_empty() {
-      def_macro(T_CS!("\\@currext"), None, Tokens!(ExplodeText!(prevext)), None)?;
+      def_macro(
+        T_CS!("\\@currext"),
+        None,
+        Tokens!(ExplodeText!(prevext)),
+        None,
+      )?;
     }
     // Perl-faithful: Package.pm:2637 —
     //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
@@ -781,12 +787,16 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // (locked) definitions. The guard auto-pops on drop.
       let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
       // Mark in-progress for the duration of this dispatcher call.
-      IN_PROGRESS.with(|s| { s.borrow_mut().insert(request_key.clone()); });
+      IN_PROGRESS.with(|s| {
+        s.borrow_mut().insert(request_key.clone());
+      });
       struct InProgressGuard(String);
       impl Drop for InProgressGuard {
         fn drop(&mut self) {
           let key = self.0.clone();
-          IN_PROGRESS.with(|s| { s.borrow_mut().remove(&key); });
+          IN_PROGRESS.with(|s| {
+            s.borrow_mut().remove(&key);
+          });
         }
       }
       let _in_progress_guard = InProgressGuard(request_key.clone());
@@ -894,8 +904,18 @@ fn before_input_handle_options(
   // for packages only}` then fired on every package that uses kvoptions
   // (rerunfilecheck reaches this via the hyperref backend `.def` chain).
   // Witnesses: arXiv:cond-mat/9611206, math/9904040, math/9904041.
-  def_macro(T_CS!("\\@currname"), None, Tokens!(ExplodeText!(name)), None)?;
-  def_macro(T_CS!("\\@currext"),  None, Tokens!(ExplodeText!(as_type)), None)?;
+  def_macro(
+    T_CS!("\\@currname"),
+    None,
+    Tokens!(ExplodeText!(name)),
+    None,
+  )?;
+  def_macro(
+    T_CS!("\\@currext"),
+    None,
+    Tokens!(ExplodeText!(as_type)),
+    None,
+  )?;
   // reset options (Note reset & pass were in opposite order in LoadClass ????)
   reset_options()?;
   pass_options(name, as_type, options.options.clone())?;
@@ -1336,7 +1356,7 @@ pub fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
 /// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*
 /// `inorder=false` (\ProcessOptions) — execute in declared order, default handler for undeclared
 /// `inorder=true` (\ProcessOptions*) — execute in order passed, class options silently skipped
-pub fn process_options(inorder: bool) -> Result<()> {
+pub fn process_options(inorder: bool, keysets: &[&str]) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
   let name = if lookup_definition(&currname_token)?.is_some() {
@@ -1378,11 +1398,11 @@ pub fn process_options(inorder: bool) -> Result<()> {
     // Perl L2447-2453: ProcessOptions* — execute in the order passed
     // Class options: try executeOption_internal only (no default fallback)
     for option in &cls_options_list {
-      let _ = execute_option_internal(*option)?;
+      let _ = execute_option_internal(*option, keysets)?;
     }
     // Current options: try executeOption, then default handler
     for option in &cur_options_list {
-      if !execute_option_internal(*option)? {
+      if !execute_option_internal(*option, keysets)? {
         execute_default_option_internal(*option)?;
       }
     }
@@ -1394,12 +1414,12 @@ pub fn process_options(inorder: bool) -> Result<()> {
     for option in declared_options.iter() {
       match option {
         Stored::String(content) if cur_set.remove(content) || cls_set.remove(content) => {
-          execute_option_internal(*content)?;
+          execute_option_internal(*content, keysets)?;
         },
         Stored::Strings(contents) => {
           for content in contents.iter() {
             if cur_set.remove(content) || cls_set.remove(content) {
-              execute_option_internal(*content)?;
+              execute_option_internal(*content, keysets)?;
             }
           }
         },
@@ -1428,7 +1448,27 @@ pub fn process_options(inorder: bool) -> Result<()> {
   Ok(())
 }
 
-fn execute_option_internal(option: SymStr) -> Result<bool> {
+fn execute_option_internal(option: SymStr, keysets: &[&str]) -> Result<bool> {
+  if let Some((qname, value)) = keyval_option_qname(option, keysets) {
+    // Perl Package.pm handles `key=value` package options before normal
+    // `\ds@...` lookup when ProcessOptions was given keysets. It digests
+    // `\KV@<keyset>@<key>{<value>}`. Rust DefKeyVal entries without code
+    // are ordinary macros, so also store the value under the qname for
+    // package bindings that apply keyvals after ProcessOptions.
+    assign_value(
+      &qname,
+      Stored::String(arena::pin(value.trim())),
+      Some(Scope::Global),
+    );
+    digest(Tokens!(
+      T_CS!(s!("\\{qname}")),
+      T_BEGIN!(),
+      ExplodeText!(&value),
+      T_END!()
+    ))?;
+    return Ok(true);
+  }
+
   let cs = T_CS!(arena::with(option, |opt| s!("\\ds@{opt}")));
   if lookup_definition(&cs)?.is_some() {
     // Perl Package.pm L2482: `DefMacroI('\CurrentOption', undef, $option)` —
@@ -1466,6 +1506,27 @@ fn execute_option_internal(option: SymStr) -> Result<bool> {
   }
 }
 
+fn keyval_option_qname(option: SymStr, keysets: &[&str]) -> Option<(String, String)> {
+  if keysets.is_empty() {
+    return None;
+  }
+  let (key, value) = arena::with(option, |opt| {
+    opt
+      .split_once('=')
+      .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
+  })?;
+  if key.is_empty() {
+    return None;
+  }
+  for keyset in keysets {
+    let qname = crate::keyval::keyval_qname("KV", keyset, &key);
+    if crate::keyval::keyval_get(&qname, "type").is_some() {
+      return Some((qname, value));
+    }
+  }
+  None
+}
+
 fn execute_default_option_internal(option: SymStr) -> Result<bool> {
   // Perl Package.pm L2494: `DefMacroI('\CurrentOption', undef, $option)`.
   // Same catcode-faithful tokenization as execute_option_internal.
@@ -1500,7 +1561,7 @@ pub fn execute_options(options: &[&str]) -> Result<()> {
   let mut unhandled = Vec::new();
   for option in options {
     let sym = arena::pin(*option);
-    if !execute_option_internal(sym)? {
+    if !execute_option_internal(sym, &[])? {
       unhandled.push(*option);
     }
   }
