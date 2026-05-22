@@ -37,6 +37,26 @@ Combined first-pass: **99,390 / 100,000 OK = 99.39%**. With targeted
 per-stage re-runs against the iteratively rebuilt release binary
 (+51 recovered): **~99,441 / 100,000 = 99.44%**. Round-26 close.
 
+**Round-35: Canvas 3 failure sprint (opened 2026-05-22)** —
+arXmliv first-150,000 papers (oldest 150k by date, drawn from
+`~/data/all_warnings.txt`) converted under binary
+`large-scale-testing-round-3` @ `8087e88b0c`:
+
+**149,984 / 150,000 = 99.989% OK**, 16 failures classified into
+5 clusters preserved at `/home/deyan/data/canvas_3_failures_sandbox/`
+(README + 16 source zips + 16 captured logs). Cluster summary:
+
+| Cluster | Papers | Type | Target fix |
+|--------:|------:|------|-----------|
+|     B   |   2   | xymatrix 3.4 GB constant pre-alloc        | likely <1 day; smoking-gun byte count |
+|     D   |   2   | Rewriting-phase TIMEOUT (XPath rules)     | profile, find slow rule, rewrite |
+|     C   |   2   | extreme-math-count post-proc overrun      | parallelize MathML, per-formula budget |
+|     A   |   7   | plain-TeX `\displaylines}}$$` silent loop | hardest; bisect-narrowed but tight loop has no log trail |
+|     E   |   3   | transient parallel SIGSEGV                | environmental — not a code fix |
+
+Projected: fixing A-D → **149,997 / 150,000 = 99.998%**. Sprint plan
+in detail under "Round-35 sprint clusters" further below.
+
 **Round-27 cluster work plan (opened 2026-05-13)**: the 220-paper
 classified-cluster cohort is worked from kernel-and-core quality
 outward to individual bindings. Open clusters are described below;
@@ -217,6 +237,229 @@ regressions roll up into the corpus pass-rate. Cross-corpus check:
 * **Task #22**: mhchem retirement gap. See "mhchem retirement"
   below.
 * `neurips_2024.sty` mode-switch cluster (~4 papers).
+
+---
+
+## Round-35 sprint clusters (opened 2026-05-22)
+
+Sprint context: 150,000-paper arXmliv canvas produced 16 failures.
+Witnesses preserved at `/home/deyan/data/canvas_3_failures_sandbox/`.
+Sprint target: fix the 4 actionable clusters (A-D), push 149,984 →
+149,997. Cluster E is environmental noise (transient SIGSEGV under
+16-way parallel load); not a code fix.
+
+### R35.B — xymatrix constant 3.4 GB pre-allocation
+
+**Status:** OPEN, highest priority (smallest blast radius,
+clearest signal).
+
+**Witness papers:** `math0203082` (3×54 xymatrix),
+`math0402448` (14×5 xymatrix).
+
+**Smoking gun.** Both papers fail with EXACTLY the same byte count:
+
+```
+Fatal:oom:alloc_failed allocation of 3489660928 bytes (align 1) failed
+```
+
+3489660928 = `0xD0000000`. That's a SUSPICIOUSLY round hex value. It
+does NOT scale with diagram dimensions — 3×54 ≠ 14×5 in cell count
+or product, yet both produce the same exact request. This is a
+hard-coded or fixed-bounded pre-allocation, not a runaway growth.
+
+**Hypotheses, in priority order:**
+
+1. **`Vec::with_capacity(N)` with N = some i32 sign-extend or constant
+   `0xD000_0000`.** Grep `latexml_engine/src/`, `latexml_package/src/`,
+   `latexml_contrib/src/` for `with_capacity(.*0xD0\|3489660928\|52428800`
+   (52428800 = 50 MB, plausible per-cell budget).
+2. **A diagram-coordinate buffer that pre-allocates the bounding box
+   of the *typesetting canvas* (in scaled-pt units) rather than the
+   cell count.** e.g. `xy_canvas_width_sp * xy_canvas_height_sp` could
+   easily land at 3.4 GB for a large diagram. Look at xy.sty / xy-pic
+   bindings (`latexml_contrib/src/xypic*`, `xy_sty.rs`, etc.).
+3. **A shift-by-too-many that overflows i64 → wraps to a positive
+   3.4 GB.** Less likely given Rust's overflow checks in debug, but
+   release builds don't enforce.
+
+**Principled approach:**
+
+1. Instrument `cortex_worker.rs::custom_alloc_error_hook` to
+   `std::backtrace::Backtrace::force_capture()` and print before
+   exit. That gives us the exact callsite of the 0xD0000000 alloc.
+2. Run `cortex_worker --standalone --input math0203082.zip` with
+   the instrumented binary, harvest the backtrace.
+3. Fix the offending pre-alloc: replace fixed-size capacity with
+   a size derived from actual diagram dimensions (cell count or
+   bounding-box-in-cells, not in scaled-pt).
+4. Verify both witness papers convert in <120s.
+
+**Estimated effort:** 0.5–1 day once the backtrace is harvested.
+
+### R35.D — Rewriting-phase TIMEOUT
+
+**Status:** OPEN, second priority (well-bounded).
+
+**Witness papers:** `gr-qc0209055`, `gr-qc0301024` — both gr-qc
+(general relativity / quantum cosmology) physics papers.
+
+**Signature.** Conversion phase completes:
+```
+(Loading "amsfonts.sty" definitions... ) ) ) )
+(Building... )
+(Rewriting...Fatal:timeout:wallclock latexml-oxide: main-level
+            wall-clock timeout after 120s — exiting process
+```
+
+The hang is inside the `(Rewriting...)` phase — application of
+`DOCUMENT_REWRITE_RULES`, which are XPath-based post-passes.
+
+**Hypothesis.** One XPath rule with poor complexity over a large
+document. Both witnesses are gr-qc and similar in size and structure
+(both physics, both heavily-equationed); this strongly suggests
+a single rule, not a paper-wide issue.
+
+**Principled approach:**
+
+1. Find the rewrite-rule machinery:
+   `grep -rn "DOCUMENT_REWRITE_RULES\|fn apply_rewrites\|rewrite_rule"
+    latexml_core/src/ latexml_engine/src/`
+2. Add per-rule timing instrumentation: wrap each rule's apply call
+   with `Instant::now()` and log if it exceeds e.g. 5 seconds on
+   a single rule.
+3. Run on both witness papers, identify the slow rule.
+4. Profile the slow rule's XPath: probably `//foo[...]` walking
+   the whole tree where a `descendant::foo[...]` or scoped variant
+   would suffice.
+5. Rewrite for better selectivity. Verify witnesses convert
+   in <120s and no regression on a random sample.
+
+**Estimated effort:** 1–2 days.
+
+### R35.C — extreme-math-count post-processing overrun
+
+**Status:** OPEN, third priority (genuine perf engineering).
+
+**Witness papers:** `math0104252` (1,920 math expressions, TIMEOUT),
+`hep-ph0012156` (12,778 math expressions, FATAL_101 under ulimit).
+
+**Signature.** Conversion succeeds cleanly. Post-processing
+exhausts the 120s budget at `MathML::Presentation` and/or
+`MathML::Content`. Under tight memory cap, the post-proc thread
+pool can't allocate stacks → panic on `failed to spawn thread:
+WouldBlock` (EAGAIN), exit 101.
+
+**Hypothesis.** Per-formula cost in `math_processor` is mostly
+serial. Witness scale: 12,778 formulas × ~10 ms each ≈ 128 s.
+Under 16-way parallelism elsewhere in the canvas, the
+`math_processor`'s own internal thread pool (`thread::scope`
++ scoped spawn) competes for stack space; the EAGAIN is a
+secondary symptom of the same load.
+
+**Principled approach:**
+
+1. Profile `math_processor` on `hep-ph0012156.zip` with
+   `perf record` or simple `Instant::now()` timing around the
+   per-formula loop.
+2. Find the hot path: probably XPath / XSLT applied per-formula.
+3. Three implementation options, in increasing scope:
+   a. **Cheap:** reduce per-thread stack size from default 8 MB to
+      ~1 MB for the math_processor scoped pool. Eliminates the
+      EAGAIN; partially helps the TIMEOUT (post-proc still slow
+      but doesn't crash).
+   b. **Medium:** per-formula budget — track per-formula time and
+      bail individual formulas that exceed a budget (e.g. 1s/formula
+      max). The bailed-out formulas get a fallback placeholder;
+      conversion continues.
+   c. **Larger:** parallelize the per-formula loop with rayon or
+      similar. Pure perf win on math-heavy papers, no scope-stack
+      cost.
+4. Pick (a) first as it's the safest one-line fix; revisit (b)/(c)
+   if witnesses still fail.
+
+**Estimated effort:** 2–5 days depending on option taken.
+
+### R35.A — plain-TeX `\displaylines{...}}$$` silent runaway
+
+**Status:** OPEN, fourth priority (largest paper count but
+hardest to debug).
+
+**Witness papers (7):** `math0102053`, `math0102089`, `math0212126`,
+`math0504436`, `math0506088`, `math0507219`, `math0604321`. All old
+plain-TeX papers (1999–2006).
+
+**Signature.** Engine enters tight loop with zero log output after
+`(Loading "line.fontmap" definitions... )`. Eventually allocates
+a small (200–440 byte) record that pushes past the 6 GB ulimit and
+exits via `Fatal:oom:alloc_failed`. The small allocation size means
+the loop is filling memory gradually — most likely `gullet::pushback`
+or a similar token-buffer Vec growing unbounded.
+
+**Bisect on math0102089** narrows the trigger to line 712 (closing
+`}$$` of a `$$\displaylines{...}$$` block). Lines 1–711 convert fine;
+adding the close-brace pair triggers the loop. The bisect identifies
+WHEN, not WHAT — paper-specific state set up in the preceding 700
+lines (custom `\catcode\`@=11`, `\@whilenum`, undefined macros) is
+required for the trigger to fire.
+
+**Principled approach:**
+
+1. **Reduce the preamble further.** From the 712-line snippet on
+   math0102089, binary-search by removing 100-line preamble chunks
+   until the minimum trigger is ~50 lines or fewer.
+2. **Instrument the gullet pushback Vec.** Add a `pushback_size >
+   100_000` log/warn in `latexml_core/src/gullet.rs` so when the
+   loop fires, we see what tokens are accumulating.
+3. **Hypothesis to verify:** the close-brace `}$$` triggers
+   `\displaylines` error recovery, which expands an undefined macro
+   (`\u`, `\row`, etc.) that re-injects the close-brace, causing an
+   infinite recovery cycle. If true, the fix is to detect a recovery
+   loop on the same token signature and bail.
+4. Verify each of the 7 witnesses converts after the fix.
+
+**Estimated effort:** 3–7 days. The instrumentation is cheap; the
+ROOT-CAUSE PATTERN is the hard part.
+
+### R35.E — transient parallel SIGSEGV
+
+**Status:** OPEN, NO CODE FIX intended.
+
+**Witness papers:** `physics0003074`, `hep-th0009218`, `math0009192`
+(3 of 16). Each individually re-passes in standalone (no parallel
+contention).
+
+**Diagnosis.** Empirical floor at ~0.015% of papers under 16-way
+parallel load. `run_one.sh` already retries once on FATAL_139 and
+recovers most transients; these 3 escaped both initial AND retry.
+
+**Possible mitigations (not implementing):**
+
+* **Lower parallelism.** Reducing workers from 16 → 12 would
+  likely zero this category but hurts canvas throughput by ~25%.
+* **Increase per-worker ulimit -v** from 6 GB to 8 GB. May suppress
+  some SIGSEGV cases that are really at-the-limit OOMs surfacing
+  as SIGSEGV in mid-allocation.
+* **Mlock dump file** so it doesn't compete for residency.
+
+Decision: leave as-is. The retry-once already gets >99% of
+transients; the remaining 3 are noise.
+
+---
+
+### R35 sprint progress tracker
+
+(updated as work lands)
+
+* **R35.B** — OPEN. Not yet started.
+* **R35.D** — OPEN. Not yet started.
+* **R35.C** — OPEN. Not yet started.
+* **R35.A** — OPEN. Not yet started.
+* **R35.E** — OPEN, no fix intended.
+
+Validation protocol per cluster: run cortex_worker --standalone on
+the cluster's witness zips, verify exit 0 + no errors, then run a
+random 1k sample from the active 500k canvas (stages 16-50 in flight)
+to confirm no regression.
 
 ---
 
