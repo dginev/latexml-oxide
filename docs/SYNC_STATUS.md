@@ -94,29 +94,26 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
   the 150K canvas-3 baseline (kept as a regression-style witness
   pool even as the engine improves; do NOT regenerate the HTML).
 
-### Status snapshot (live, last refreshed 2026-05-22 16:00 local)
+### Status snapshot (live, last refreshed 2026-05-22 18:35 local)
 
 | | Value |
 |---|---:|
-| Stages closed | 26 of 50 (stage_27 in flight at 4,959/10,000, 32 workers) |
-| Papers processed | **264,908** |
-| OK | **264,846** |
-| Success rate | **99.9765%** |
+| Stages closed | 30 of ~50 (stage_31 in flight at 3,532/10,000, 16 workers) |
+| Stage_31 (first post-OmniBus-fix stage) | **3,531 OK / 1 FATAL_3** (99.97%) — sole failure is SHARED-FAILURE |
 | Tests | **1,334 / 0 / 0** |
-| Branch | `large-scale-testing-round-3`, 903 commits ahead of `origin/master` |
-| Branch diff vs master | 19 files, **+518 / −22 LOC** (squash-merge candidate) |
+| Branch | `large-scale-testing-round-3`, 904 commits ahead of `origin/master` |
 
-Non-`OK` breakdown across closed stages 1–26 (62 papers):
-
-```
-38  FATAL_3
-11  OOM
- 6  TIMEOUT
- 4  FATAL_139
- 1  FATAL_134
- 1  FATAL_101
- 1  FATAL_1
-```
+Triage of stages 28-30 (10 FATAL_3 + 1 TIMEOUT, sampled with new
+binary): **0 Rust-only** — all 11 are SHARED-FAILUREs (Perl also
+fails) or auto-fixed by the OmniBus reorder:
+* 4 auto-passed with new binary (`1003.4546`, `1004.0524`,
+  `1005.4553`, `1008.3706`).
+* 1 fatal in shared category at `Fatal:Timeout:PushbackLimit` cap
+  (`1004.4538` — Perl produces 7 errors+complete, Rust fatals at 650K
+  pushback safety net; borderline whether to count as Rust-only).
+* 6 Perl-also-fails (1004.2276, 1004.3619, 1004.5482, 1006.3261,
+  1006.5461, 1009.3622, 1009.4876, 1009.6139, 1010.5320; mostly
+  underscore-catcode cascades from missing class/package).
 
 ### R36 commits landed this session (6)
 
