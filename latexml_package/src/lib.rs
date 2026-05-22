@@ -281,6 +281,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("comment", "sty", package::comment_sty::load_definitions),
   ("csquotes", "sty", package::csquotes_sty::load_definitions),
   ("dcolumn", "sty", package::dcolumn_sty::load_definitions),
+  ("delarray", "sty", package::delarray_sty::load_definitions),
   (
     "deluxetable",
     "sty",
