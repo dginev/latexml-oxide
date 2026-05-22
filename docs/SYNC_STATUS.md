@@ -37,31 +37,78 @@ Combined first-pass: **99,390 / 100,000 OK = 99.39%**. With targeted
 per-stage re-runs against the iteratively rebuilt release binary
 (+51 recovered): **~99,441 / 100,000 = 99.44%**. Round-26 close.
 
-**Round-35: Canvas 3 failure sprint (opened 2026-05-22)** —
-arXmliv first-150,000 papers (oldest 150k by date, drawn from
-`~/data/all_warnings.txt`) converted under binary
-`large-scale-testing-round-3` @ `8087e88b0c`:
-
-**149,984 / 150,000 = 99.989% OK**, 16 failures classified into
-5 clusters preserved at `/home/deyan/data/canvas_3_failures_sandbox/`
-(README + 16 source zips + 16 captured logs). Cluster summary:
-
-| Cluster | Papers | Type | Target fix |
-|--------:|------:|------|-----------|
-|     B   |   2   | xymatrix 3.4 GB constant pre-alloc        | likely <1 day; smoking-gun byte count |
-|     D   |   2   | Rewriting-phase TIMEOUT (XPath rules)     | profile, find slow rule, rewrite |
-|     C   |   2   | extreme-math-count post-proc overrun      | parallelize MathML, per-formula budget |
-|     A   |   7   | plain-TeX `\displaylines}}$$` silent loop | hardest; bisect-narrowed but tight loop has no log trail |
-|     E   |   3   | transient parallel SIGSEGV                | environmental — not a code fix |
-
-Projected: fixing A-D → **149,997 / 150,000 = 99.998%**. Sprint plan
-in detail under "Round-35 sprint clusters" further below.
-
 **Round-27 cluster work plan (opened 2026-05-13)**: the 220-paper
 classified-cluster cohort is worked from kernel-and-core quality
 outward to individual bindings. Open clusters are described below;
 closed clusters are dropped from this doc once their fix lands and
 generalizes.
+
+### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
+
+**Status:** LANDED 2026-05-22. Keyset plumbing wired through; ar5iv
+limit constants raised after empirical bisect on the witness. Witness
+arXiv:2605.16752v1 now converts end-to-end with just
+`--preload=ar5iv.sty` (905,021 B HTML, 25.0s wall, 2.86 GB RSS, "No
+obvious problems").
+
+**Original Rust gap (now fixed).** `\usepackage[tokenlimit=...]{latexml}`
+(passed indirectly via `ar5iv.sty`) silently dropped the keyval
+because Rust's `ProcessOptions!` macro only supported plain / star
+ordering; there was no `keysets => ['LTXML']` equivalent. Perl
+`Package.pm::executeOption_internal` handles any `key=value`
+package option in the supplied keysets *before* normal `\ds@...`
+lookup by digesting `\KV@<keyset>@<key>{<value>}`. Without that
+branch, `KV@LTXML@tokenlimit` was never populated and
+`gullet::set_token_limit` never ran. Reference Perl source:
+`~/git/arxiv-latexml/lib/LaTeXML/Package/latexml.sty.ltxml`
+(`ProcessOptions(inorder => 1, keysets => ['LTXML'])`).
+
+**Fix landed.** Generic keyset branch ported faithfully:
+
+1. `latexml_core::binding::content::process_options` now takes a
+   `keysets: &[&str]` parameter.
+2. New `keyval_option_qname` helper detects `key=value` options and,
+   for each keyset, checks the keyval type registry via
+   `crate::keyval::keyval_get`. On hit, it stashes the value under
+   the qname via `assign_value(.., Scope::Global)` and digests
+   `\KV@<keyset>@<key>{<value>}` so DefKeyVal-style closures still
+   fire.
+3. `ProcessOptions!(keysets => ["LTXML"])` macro arm added in
+   `latexml_engine/src/setup_binding_language.rs`.
+4. `latexml_package/src/package/latexml_sty.rs` now calls
+   `ProcessOptions!(keysets => ["LTXML"])`; existing per-key
+   `state::lookup_value("KV@LTXML@<key>")` blocks below it
+   (`bibconfig`, `tokenlimit`, `iflimit`, `absorblimit`,
+   `pushbacklimit`, image scaling) consume the populated keyset
+   state unchanged.
+
+Regression coverage: `latexml_oxide/tests/keyval_options/keysetopt*`
+(`a` exercises `value=42` via the keyset path; `b` exercises the
+no-option fallback). Tiny fixture binding at
+`latexml_contrib/src/keysetopt_sty.rs`.
+
+**Witness bisect (2026-05-22).** After the keyset patch the witness
+exposed two ar5iv ceilings the Rust port trips where Perl does not:
+`pushbacklimit=599999` and `iflimit=3999999`. With both pinned at
+100M the witness converts cleanly, so it's a tight-ceiling case, not
+a true infinite loop. Empirical bisect (env-var-tunable bisect
+scaffolding temporarily in `ar5iv_sty.rs`, removed once chosen):
+
+| Knob | Perl default | Rust max-fail | Rust min-pass | Chosen |
+|---|---:|---:|---:|---:|
+| `pushbacklimit` | 599999 | 625000 | 630000 | **650000** |
+| `iflimit` | 3999999 | 7000000 | 8000000 | **8000000** |
+
+Headroom on pushback (~20K above min-pass) is intentional; iflimit
+sits exactly at the min-pass boundary because the next finer probe
+wasn't taken (acceptable since the failure mode is graceful — a
+clean "limit exceeded" diagnostic, not silent corruption).
+
+**Follow-up (open).** The Rust port consumes ≈1.04× Perl's pushbacks
+and ≈2× Perl's conditionals on this `IEEEtran` + `tikz` + `pgfplots`
+input. The iflimit gap especially smells like a real over-evaluation
+somewhere; root-causing it would let us tighten the ar5iv constants
+back toward Perl's defaults. Not blocking, tracked here.
 
 ### Cluster A — Catcode-leak through optional-arg digestion (math-mode-as-symptom)
 
@@ -237,441 +284,6 @@ regressions roll up into the corpus pass-rate. Cross-corpus check:
 * **Task #22**: mhchem retirement gap. See "mhchem retirement"
   below.
 * `neurips_2024.sty` mode-switch cluster (~4 papers).
-
----
-
-## Round-35 sprint clusters (opened 2026-05-22)
-
-Sprint context: 150,000-paper arXmliv canvas produced 16 failures.
-Witnesses preserved at `/home/deyan/data/canvas_3_failures_sandbox/`.
-Sprint target: fix the 4 actionable clusters (A-D), push 149,984 →
-149,997. Cluster E is environmental noise (transient SIGSEGV under
-16-way parallel load); not a code fix.
-
-### R35.B — xymatrix runaway string-interner growth (was: "constant 3.4 GB pre-alloc")
-
-**Status:** OPEN, INVESTIGATED 2026-05-22, root cause identified;
-deeper fix deferred (requires xy-pic `\fontdimen` handling rework).
-
-**Witness papers:** `math0203082` (3×54 xymatrix),
-`math0402448` (14×5 xymatrix). Both use `\usepackage[all]{xy}`.
-
-**Original hypothesis (FALSIFIED).** Initially the 3489660928-byte
-(`0xD0000000`) allocation looked like a constant pre-allocation
-bug — same byte count across two different diagram dimensions
-suggests a hard-coded buffer. **It is not.** The 0xD000_0000 is
-a Vec geometric-growth step: at ~1.625 GB of accumulated content,
-the next `extend_from_slice` doubles capacity to ~3.25 GB, which
-the 6 GB ulimit can't satisfy. The coincidence of both papers
-hitting EXACTLY 3489660928 reflects that both accumulate similar
-amounts of state before the cap.
-
-**Actual root cause (from `RUST_BACKTRACE=full` on dev build).**
-The failing allocation is `string_interner::BufferBackend::
-push_string` growing its internal `Vec<u8>` storage. Call chain:
-
-```
-arena::pin::<String>           (latexml_core/src/common/arena.rs:134)
-  ← Stored::from(String)
-  ← State::assign_value::<String, _>   (state.rs:855)
-  ← AssignValue! macro                  (setup_binding_language.rs:962)
-  ← <constructor invoke chain through tex_box>
-  ← Constructor::invoke_primitive       (constructor.rs:251)
-```
-
-xy-pic's `\fontdimen` queries are being parsed as state-key
-assignments with the entire token sequence as the key string.
-Example keys observed in the cascade: `fontdimen_fontinfo_cmr10 at
-17sp_2604`, `fontdimen_fontinfo_cmr10 at 17sp_2605`, etc. Each
-unique sp-value (scaled point) creates a NEW interned string.
-xy-pic recovery loops can emit thousands of these per cell; with
-3×54=162 cells, the arena accumulates ~1.6 GB of unique strings
-before the next Vec doubling step is over the 6 GB ulimit.
-
-**Why this isn't a simple fix:**
-
-1. The arena (`latexml_core/src/common/arena.rs`) is intentionally
-   unbounded — its doc says "No overflow guard: the main-level
-   wall-clock watchdog catches genuinely runaway loops". But the
-   wall-clock watchdog at 120s doesn't fire here because the
-   memory limit hits first (at ~3.7s of CPU).
-2. Adding an arena soft-cap is invasive: `pin()` returns a
-   `SymStr` not `Result<SymStr>`, so error handling cascades.
-3. The CORRECT fix is in the `\fontdimen` parameter parser. The
-   current `\fontdimen Number FontToken` (tex_fonts.rs:237) reads
-   a Number then a FontToken, but evidently it's accepting
-   xy-pic-generated text as the FontToken and looping.
-
-**Recommended approach (deferred):**
-
-1. Audit `tex_fonts.rs::\fontdimen` setter (line 288+) and getter
-   (line 237+) — verify the FontToken parameter type doesn't
-   accept the xy-pic-generated cascade text as a valid font.
-2. Either (a) add a strict-format check on the FontToken, or
-   (b) reject xy-pic's recovery loop at the macro-expansion layer
-   so it doesn't emit thousands of font-dimension queries.
-3. Validate by running both witness papers — they should produce
-   a clean conversion (xy diagrams may render as fallback text,
-   but no OOM).
-
-**Defensive fallback (if the deep fix takes too long):**
-
-Add a guard inside `arena::pin` that checks the BufferBackend's
-buffer length every N=65,536 calls (cheap bit-and). If >1.5 GB,
-return a sentinel `SymStr` (one specific reserved value) and log
-a `Fatal:arena:exhausted` message. The conversion exits cleanly
-with code 137 — still a failure, but with a meaningful diagnostic
-rather than a string_interner OOM crash.
-
-**Estimated effort:** 2–4 days for the deep fix; ~1 hour for the
-defensive guard. Recommend deferring R35.B and pivoting to R35.D
-(better characterised, smaller scope).
-
-### R35.D — Rewriting-phase TIMEOUT
-
-**Status:** OPEN, second priority (well-bounded).
-
-**Witness papers:** `gr-qc0209055`, `gr-qc0301024` — both gr-qc
-(general relativity / quantum cosmology) physics papers.
-
-**Signature.** Conversion phase completes:
-```
-(Loading "amsfonts.sty" definitions... ) ) ) )
-(Building... )
-(Rewriting...Fatal:timeout:wallclock latexml-oxide: main-level
-            wall-clock timeout after 120s — exiting process
-```
-
-The hang is inside the `(Rewriting...)` phase — application of
-`DOCUMENT_REWRITE_RULES`, which are XPath-based post-passes.
-
-**Hypothesis.** One XPath rule with poor complexity over a large
-document. Both witnesses are gr-qc and similar in size and structure
-(both physics, both heavily-equationed); this strongly suggests
-a single rule, not a paper-wide issue.
-
-**Principled approach:**
-
-1. Find the rewrite-rule machinery:
-   `grep -rn "DOCUMENT_REWRITE_RULES\|fn apply_rewrites\|rewrite_rule"
-    latexml_core/src/ latexml_engine/src/`
-2. Add per-rule timing instrumentation: wrap each rule's apply call
-   with `Instant::now()` and log if it exceeds e.g. 5 seconds on
-   a single rule.
-3. Run on both witness papers, identify the slow rule.
-4. Profile the slow rule's XPath: probably `//foo[...]` walking
-   the whole tree where a `descendant::foo[...]` or scoped variant
-   would suffice.
-5. Rewrite for better selectivity. Verify witnesses convert
-   in <120s and no regression on a random sample.
-
-**Estimated effort:** 1–2 days.
-
-### R35.C — extreme-math-count post-processing overrun
-
-**Status:** OPEN, third priority (genuine perf engineering).
-
-**Witness papers:** `math0104252` (1,920 math expressions, TIMEOUT),
-`hep-ph0012156` (12,778 math expressions, FATAL_101 under ulimit).
-
-**Signature.** Conversion succeeds cleanly. Post-processing
-exhausts the 120s budget at `MathML::Presentation` and/or
-`MathML::Content`. Under tight memory cap, the post-proc thread
-pool can't allocate stacks → panic on `failed to spawn thread:
-WouldBlock` (EAGAIN), exit 101.
-
-**Hypothesis.** Per-formula cost in `math_processor` is mostly
-serial. Witness scale: 12,778 formulas × ~10 ms each ≈ 128 s.
-Under 16-way parallelism elsewhere in the canvas, the
-`math_processor`'s own internal thread pool (`thread::scope`
-+ scoped spawn) competes for stack space; the EAGAIN is a
-secondary symptom of the same load.
-
-**Principled approach:**
-
-1. Profile `math_processor` on `hep-ph0012156.zip` with
-   `perf record` or simple `Instant::now()` timing around the
-   per-formula loop.
-2. Find the hot path: probably XPath / XSLT applied per-formula.
-3. Three implementation options, in increasing scope:
-   a. **Cheap:** reduce per-thread stack size from default 8 MB to
-      ~1 MB for the math_processor scoped pool. Eliminates the
-      EAGAIN; partially helps the TIMEOUT (post-proc still slow
-      but doesn't crash).
-   b. **Medium:** per-formula budget — track per-formula time and
-      bail individual formulas that exceed a budget (e.g. 1s/formula
-      max). The bailed-out formulas get a fallback placeholder;
-      conversion continues.
-   c. **Larger:** parallelize the per-formula loop with rayon or
-      similar. Pure perf win on math-heavy papers, no scope-stack
-      cost.
-4. Pick (a) first as it's the safest one-line fix; revisit (b)/(c)
-   if witnesses still fail.
-
-**Estimated effort:** 2–5 days depending on option taken.
-
-### R35.A — plain-TeX `\displaylines{...}}$$` silent runaway
-
-**Status:** ROOT CAUSE NARROWED 2026-05-22; deeper fix still OPEN.
-
-**Update 2026-05-22.** Reduced math0102089 to a minimal trigger:
-inside `$$\displaylines{ … \simplexes\cr }$$`, the `\simplexes` macro
-is the culprit. `\simplexes` is the paper's own plain-TeX `\picture`
-environment containing 31 `\put`s. Verified by replacing `\simplexes`
-with a placeholder token in the trigger line — conversion completes
-cleanly. Original ZIP still OOMs. So the runaway is in our engine's
-handling of user-defined plain-TeX `\picture(...)`/`\put` chains
-INSIDE display math (via `\displaylines` → `\halign`). The macro
-chain involves `\@ifnextchar`, `\bgroup`/`\egroup` matching, and
-`\hskip -#3\unitlength` dimension parsing — any of these could be
-where the loop sits. The dev binary is too slow (>8 min) to reach
-the OOM and produce a useful backtrace; release strips symbols.
-
-**Witness papers (7):** `math0102053`, `math0102089`, `math0212126`,
-`math0504436`, `math0506088`, `math0507219`, `math0604321`. All old
-plain-TeX papers (1999–2006).
-
-**Witness papers (7):** `math0102053`, `math0102089`, `math0212126`,
-`math0504436`, `math0506088`, `math0507219`, `math0604321`. All old
-plain-TeX papers (1999–2006).
-
-**Signature.** Engine enters tight loop with zero log output after
-`(Loading "line.fontmap" definitions... )`. Eventually allocates
-a small (200–440 byte) record that pushes past the 6 GB ulimit and
-exits via `Fatal:oom:alloc_failed`. The small allocation size means
-the loop is filling memory gradually — most likely `gullet::pushback`
-or a similar token-buffer Vec growing unbounded.
-
-**Bisect on math0102089** narrows the trigger to line 712 (closing
-`}$$` of a `$$\displaylines{...}$$` block). Lines 1–711 convert fine;
-adding the close-brace pair triggers the loop. The bisect identifies
-WHEN, not WHAT — paper-specific state set up in the preceding 700
-lines (custom `\catcode\`@=11`, `\@whilenum`, undefined macros) is
-required for the trigger to fire.
-
-**Principled approach:**
-
-1. **Reduce the preamble further.** From the 712-line snippet on
-   math0102089, binary-search by removing 100-line preamble chunks
-   until the minimum trigger is ~50 lines or fewer.
-2. **Instrument the gullet pushback Vec.** Add a `pushback_size >
-   100_000` log/warn in `latexml_core/src/gullet.rs` so when the
-   loop fires, we see what tokens are accumulating.
-3. **Hypothesis to verify:** the close-brace `}$$` triggers
-   `\displaylines` error recovery, which expands an undefined macro
-   (`\u`, `\row`, etc.) that re-injects the close-brace, causing an
-   infinite recovery cycle. If true, the fix is to detect a recovery
-   loop on the same token signature and bail.
-4. Verify each of the 7 witnesses converts after the fix.
-
-**Estimated effort:** 3–7 days. The instrumentation is cheap; the
-ROOT-CAUSE PATTERN is the hard part.
-
-### R35.E — transient parallel SIGSEGV
-
-**Status:** OPEN, NO CODE FIX intended.
-
-**Witness papers:** `physics0003074`, `hep-th0009218`, `math0009192`
-(3 of 16). Each individually re-passes in standalone (no parallel
-contention).
-
-**Diagnosis.** Empirical floor at ~0.015% of papers under 16-way
-parallel load. `run_one.sh` already retries once on FATAL_139 and
-recovers most transients; these 3 escaped both initial AND retry.
-
-**Possible mitigations (not implementing):**
-
-* **Lower parallelism.** Reducing workers from 16 → 12 would
-  likely zero this category but hurts canvas throughput by ~25%.
-* **Increase per-worker ulimit -v** from 6 GB to 8 GB. May suppress
-  some SIGSEGV cases that are really at-the-limit OOMs surfacing
-  as SIGSEGV in mid-allocation.
-* **Mlock dump file** so it doesn't compete for residency.
-
-Decision: leave as-is. The retry-once already gets >99% of
-transients; the remaining 3 are noise.
-
----
-
-### R35 sprint progress tracker
-
-(updated as work lands)
-
-**Measured sprint impact (2026-05-22 final, ulimit -v 6291456,
-120s timeout, canvas conditions):**
-
-| Witness         | Before     | After          | Reason |
-|----------------|------------|----------------|--------|
-| gr-qc0209055   | TIMEOUT    | **OK** ✓       | R35.D.1 fix |
-| math0104252    | TIMEOUT    | **OK** ✓       | canvas pressure only — already OK standalone |
-| physics0003074 | FATAL_139  | **OK** ✓       | transient resolved |
-| hep-th0009218  | FATAL_139  | **OK** ✓       | transient resolved |
-| math0009192    | FATAL_139  | **OK** ✓       | transient resolved |
-| hep-ph0012156  | FATAL_101  | FATAL_139      | R35.C step 1 → SEGV in libxslt (downstream) |
-| gr-qc0301024   | TIMEOUT    | TIMEOUT        | R35.D.2 (PiCTeX, unchanged) |
-| math0102053    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal diagnostic via RSS cap |
-| math0102089    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0212126    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0504436    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0506088    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0507219    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0604321    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
-| math0203082    | OOM        | OOM            | R35.B (unchanged — string-interner) |
-| math0402448    | OOM        | OOM            | R35.B (unchanged) |
-
-**Sprint result:**
-- **5 papers fully recovered** (OK): R35.D.1 + canvas-pressure false positives + transients
-- **7 papers cleanly classified** (FATAL_3 instead of crashy OOM): R35.A cluster.
-  These no longer kill workers under canvas; they produce empty HTML with a
-  proper `Fatal:Timeout:MemoryBudget` diagnostic log entry. Canvas's run_one.sh
-  records these as FATAL_3 rather than OOM (which is more accurate — they're
-  not OS-OOM-kills, they're triggered by our soft 4.5 GB RSS guard).
-- **2 papers still OOM** (R35.B xy-pic `\fontdimen` string-interner growth — deeper fix deferred)
-- **1 paper TIMEOUT** (R35.D.2 PiCTeX — different cluster, deferred)
-- **1 paper FATAL_139** (R35.C downstream libxslt malloc-failure SEGV — needs libxml-side fix)
-
-Projected canvas (the 5 OK recoveries): 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
-(up from 99.989%). The 7 R35.A FATAL_3 cases still fail, but now diagnose
-themselves cleanly with a wrapped error rather than crashing the worker
-with OS OOM-kill.
-
-### Sprint commits (chronological)
-
-| Commit       | Subject |
-|--------------|---------|
-| `bd63bbe2ed` | R35.B investigation + qname-cap defensive guard |
-| `1de4bf205b` | R35.D.1 fix: float-script rewrite XPath O(N×T) → O(N) |
-| `47e0125ff2` | docs: R35 tracker — D.1 fixed; D.2 split out |
-| `35ddd41238` | R35.C step 1: graphics workers tolerate spawn EAGAIN |
-| `5b0131df22` | docs: R35.A narrowed to \displaylines+\picture |
-| `cc65700a3b` | docs: R35 sprint — 5 of 16 witnesses now pass |
-| `5bfc9fe7a0` | R35.A safety net: default pushback_limit=5M |
-| `213ea93e07` | R35.A safety net: RSS soft cap, resource-failure bubble-up, exit codes |
-| `3b98fef422` | fix: exit non-zero only on fatal (status_code≥3), not on errors |
-| `5da165469b` | R35.A debug: backtrace dump in check_timeout when MemoryBudget fires |
-| `f7ee4a6b36` | R35.A: MoveableBox::predigest depth cap + diagnosis |
-
-### R35.A root cause identified (2026-05-22 final)
-
-Via `LATEXML_DEBUG_MEMBUDGET=1` backtrace, the runaway is mutual
-recursion between `digest_next_body` and `MoveableBox::predigest`
-(`base_parameter_types.rs:847`, closure #66). Each cycle goes:
-
-```
-digest_next_body (stomach.rs)
-  → invoke_token(\hbox)
-    → HBoxContents.predigest → predigest_box_contents_in_mode
-      → Parameter::digest (MoveableBox)
-        → read_arguments_and_digest
-          → invoke_primitive (another constructor)
-            → MoveableBox::predigest <closure#66>
-              → invoke_token(\hbox)
-                → ... ↺ repeat
-```
-
-Each cycle adds ~12 stack frames. Trigger: plain-TeX
-`\picture(...)`/`\put(...)` inside `$$\displaylines{...}$$`. WHY
-unbounded (vs. ~31 levels for 31 `\put` calls): suspected
-`\@ifnextchar`/`\futurelet` not consuming lookahead under our
-gullet, OR `\@picture`'s `\bgroup`/`\egroup` group-matching
-diverging from Perl, OR `\put`'s expansion re-injecting tokens.
-
-Mitigation: thread-local depth cap (>1000 → Fatal:Timeout:MemoryBudget).
-Deeper fix needs token-by-token gullet trace of the recursion source.
-
-### Canvas-3 measurement after sprint (2026-05-22 evening)
-
-Stages 1-22 closed with the sprint binaries (stage 22 fully under
-the corrected exit-code logic):
-
-* **228,002 / 228,038 = 99.9842%** OK
-* 36 non-OK total across 22 stages (228k papers)
-* Breakdown:
-  - 9 OOM (legacy Pattern B xy-pic + Pattern A papers on older
-    binary in stages 16-19, before all R35.A safety nets landed)
-  - 16 FATAL_3 (correctly classified pathological runaways with
-    the new binary; previously these silently produced empty HTML)
-  - 4 TIMEOUT (wall-clock 120s, PiCTeX / pstricks / deep math)
-  - 3 FATAL_139 (transient SIGSEGV under parallel pressure)
-  - 4 other / FATAL_2 stragglers from the broken intermediate
-    binary window in stage 22 (cleaned up via backfill)
-
-Stage 23+ continues with the final R35 binary. Cumulative canvas
-quality is HIGHER post-sprint despite the small % drop: papers
-that previously passed silently with empty/broken HTML now exit
-non-zero with a meaningful diagnostic, surfacing real bugs for
-future investigation. This is the intended outcome.
-
-### Sprint summary
-
-Net impact: **5 of 16 canvas failures resolved, +1 fully-fixed
-engine bug (R35.D.1), 1 partial fix (R35.C step 1), 4 root causes
-identified and documented for future work.**
-
-Code changes:
-* `latexml_core/src/document.rs` — qname truncation in error-message
-  formatter (general defensive).
-* `latexml_core/src/rewrite.rs` — make RewriteClause fields pub for
-  per-rule instrumentation.
-* `latexml_engine/src/tex_math.rs` — float-script rewrite uses loose
-  XPath + tight Rust closure (R35.D.1).
-* `latexml_oxide/src/core_interface.rs` — per-rule rewrite timing
-  (instrumentation, kept).
-* `latexml_post/src/graphics.rs` — graceful spawn-failure handling
-  (R35.C).
-* `latexml_oxide/bin/cortex_worker.rs` — default pushback_limit=5M
-  (safety net).
-
-Tests stable: **1332/0/0** throughout.
-
-
-* **R35.B** — INVESTIGATED 2026-05-22. Initial hypothesis (constant
-  pre-alloc) FALSIFIED — actual root cause is unbounded
-  string-interner growth from xy-pic `\fontdimen` recovery loops.
-  Deeper fix deferred; defensive arena guard available as
-  short-term option. See R35.B section above.
-* **R35.D.1** — gr-qc0209055 (Rewriting TIMEOUT) — **FIXED**
-  2026-05-22 (commit `1de4bf205b`). Float-script rewrite XPath
-  reformulated O(N×T) → O(N) by lifting structural predicates
-  into the Rust replace closure. Rule #0 wall time on the witness
-  paper dropped from >80s (timeout) to ~200ms (~400× speedup).
-  Witness now converts cleanly with 344 maths processed and 0
-  errors. All 1332 tests pass.
-* **R35.D.2** — gr-qc0301024 (Building TIMEOUT, PiCTeX) — OPEN.
-  Different cluster than originally classified; this paper times
-  out inside `(Building...)` not `(Rewriting...)`. PiCTeX is an
-  old graphics package known for being slow. Will investigate
-  next.
-* **R35.C** — STEP 1 SHIPPED 2026-05-22 (commit `35ddd41238`).
-  Graphics worker pool uses `spawn_scoped` with 2 MB stack and
-  `.ok()` filter; surviving workers race for the same `next`
-  counter, so partial spawn-failure under EAGAIN doesn't crash
-  the whole conversion. Validated: hep-ph0012156 no longer
-  FATAL_101 panics on thread spawn. Remaining work: libxslt
-  malloc-failure SEGV during XSLT phase (downstream issue,
-  separate track). math0104252 already passed in standalone
-  with full CPU — false TIMEOUT under canvas pressure.
-* **R35.A** — ROOT CAUSE NARROWED 2026-05-22. The runaway is
-  triggered by user-defined plain-TeX `\picture(...)`/`\put`
-  inside `$$\displaylines{ … }$$` (i.e. inside the `\halign`
-  the `\displaylines` macro expands to). Confirmed by replacing
-  `\simplexes` with a placeholder in math0102089: the OOM
-  disappears. Deeper fix requires tracing the gullet expansion
-  loop with usable symbols — release builds strip; dev builds
-  too slow to reach the OOM. See R35.A section above.
-* **R35.E** — OPEN, no fix intended.
-
-Also: a tangential investigation revertable artifact — added
-qname-length cap to `Document::get_insertion_context` (commit TBD)
-to prevent absurd qnames from blowing up error-message generation.
-That guard is not load-bearing for R35.B (the OOM is upstream in
-arena interning) but is generally defensive against runaway
-DOM-element-name accumulation. Keep it.
-
-Validation protocol per cluster: run cortex_worker --standalone on
-the cluster's witness zips, verify exit 0 + no errors, then run a
-random 1k sample from the active 500k canvas (stages 16-50 in flight)
-to confirm no regression.
 
 ---
 
@@ -898,7 +510,7 @@ assertion (not just code == 0; the bug had code == 0).
 
 | Gate | Current (2026-05-20) | Target |
 |---|---|---|
-| `cargo test --tests` | **1328/0/0** | unchanged |
+| `cargo test --tests` | **1334/0/0** (was 1328 + 2×2 keysetopt fixtures from the 2026-05-22 keyset option-plumbing landing) | unchanged |
 | `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, residual clippy cleanup of post-ASF-migration code — collaborator's lane) | 0 warnings (clippy cleanup landed) |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1` paths) | 0 errors |

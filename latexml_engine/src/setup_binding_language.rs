@@ -1707,11 +1707,16 @@ macro_rules! DeclareOption {
 macro_rules! ProcessOptions {
   // ProcessOptions!() — non-star, declared order (inorder=false)
   () => {
-    process_options(false)?;
+    process_options(false, &[])?;
   };
   // ProcessOptions!(*) — star variant, in-order processing (inorder=true)
   (*) => {
-    process_options(true)?;
+    process_options(true, &[])?;
+  };
+  // ProcessOptions!(keysets => ["LTXML"]) — Perl
+  // ProcessOptions(inorder => 1, keysets => ['LTXML'])
+  (keysets => [$($keyset:expr),+ $(,)?]) => {
+    process_options(true, &[$($keyset),+])?;
   };
 }
 

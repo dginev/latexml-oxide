@@ -368,12 +368,12 @@ LoadDefinitions!({
     AssignValue!("SUPPRESS_UNTEX_LINEBREAKS" => true, Scope::Global);
   });
 
-  ProcessOptions!();
+  ProcessOptions!(keysets => ["LTXML"]);
 
   // Process bibconfig keyval from options passed to latexml.sty.
   // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
-  // We specifically extract bibconfig=... since it controls bibliography source selection.
-  // Other keyvals (tokenlimit, iflimit, etc.) are handled via CLI flags or ar5iv defaults.
+  // ProcessOptions with the LTXML keyset now stores package keyvals here;
+  // keep the legacy extraction as a fallback for older call paths.
   if let Some(opts) = state::lookup_vecdeque("opt@latexml.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();

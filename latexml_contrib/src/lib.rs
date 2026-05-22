@@ -20,6 +20,7 @@ pub mod apackage_sty;
 pub mod discard_env;
 pub mod filelistclass_cls;
 pub mod myclass_cls;
+pub mod keysetopt_sty;
 pub mod mykeyval_sty;
 pub mod mytemplate_sty;
 pub mod myxkeyval_sty;
@@ -218,6 +219,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("apackage", "sty", apackage_sty::load_definitions),
   ("filelistclass", "cls", filelistclass_cls::load_definitions),
   ("myclass", "cls", myclass_cls::load_definitions),
+  ("keysetopt", "sty", keysetopt_sty::load_definitions),
   ("mykeyval", "sty", mykeyval_sty::load_definitions),
   ("mytemplate", "sty", mytemplate_sty::load_definitions),
   ("myxkeyval", "sty", myxkeyval_sty::load_definitions),

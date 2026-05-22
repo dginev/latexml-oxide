@@ -58,14 +58,12 @@ tar = { version = "0.4", default-features = false }
 # default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
 # sha1, sha2, hmac, cipher, password-hash — a big CI compile-time win.
 zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
-# DEP-06 workaround (2026-05-18): pin indexmap to the last 2.13.x to keep
-# hashbrown unified at 0.16.x across the workspace. zip 8.6.0's
-# `indexmap ^2` resolver pulls 2.14.0 by default, which bumped to
-# hashbrown 0.17 and duplicated against string-interner 0.20's 0.16
-# pin. Pinning here causes the resolver to use 2.13.1 everywhere,
-# eliminating the dup. Revisit when string-interner releases 0.21+
-# with hashbrown 0.17 support.
-indexmap = "=2.13.1"
+# DEP-06 (2026-05-22): bumped to indexmap 2.14.0 (#234). Earlier we pinned
+# 2.13.1 to keep hashbrown unified at 0.16.x across the workspace, since
+# 2.14.0 had moved to hashbrown 0.17 and duplicated against string-
+# interner 0.20's 0.16 pin. The dep tree is now compatible — leave the
+# exact pin so all crates resolve to a single indexmap version.
+indexmap = "=2.14.0"
 tempfile = "3"
 log = "0.4"
 libxml = "0.3.11"
