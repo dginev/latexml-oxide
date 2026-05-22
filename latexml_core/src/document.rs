@@ -2310,9 +2310,30 @@ impl Document {
     // Build a context path like "<ltx:document><ltx:section><ltx:p>" by walking
     // ancestors and prepending each element's qname. Mirrors Perl's
     // `Stringify($node)` chain with a depth cap from `levels_opt`.
+    //
+    // Cap each qname at 80 chars. Pathological inputs (e.g. xy-pic
+    // emitting unparsed `\fontdimen 17 \cmr10 at NNsp` strings that
+    // become element names through a sequence of recovery errors)
+    // can produce multi-MB qnames; walking 5+ ancestors and
+    // `format!`-ing each yields a 3.25 GB allocation request that
+    // OOM-kills the worker. Truncating preserves the diagnostic
+    // signal ("first 80 chars + …") without the unbounded growth.
+    // Witness papers: math0203082, math0402448 (R35.B, sandbox).
+    const QNAME_CAP: usize = 80;
+    let truncate_qname = |qname: &str| -> String {
+      if qname.len() <= QNAME_CAP {
+        qname.to_string()
+      } else {
+        let mut s: String = qname.chars().take(QNAME_CAP).collect();
+        s.push('…');
+        s
+      }
+    };
     let qn_for = |n: &Node| -> String {
       match n.get_type() {
-        Some(NodeType::ElementNode) => with_node_qname(n, |qname| format!("<{qname}>")),
+        Some(NodeType::ElementNode) => {
+          with_node_qname(n, |qname| format!("<{}>", truncate_qname(qname)))
+        },
         Some(NodeType::TextNode) => "#text".to_string(),
         Some(NodeType::DocumentNode) => "#document".to_string(),
         _ => "?".to_string(),

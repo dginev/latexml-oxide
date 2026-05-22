@@ -248,53 +248,84 @@ Sprint target: fix the 4 actionable clusters (A-D), push 149,984 →
 149,997. Cluster E is environmental noise (transient SIGSEGV under
 16-way parallel load); not a code fix.
 
-### R35.B — xymatrix constant 3.4 GB pre-allocation
+### R35.B — xymatrix runaway string-interner growth (was: "constant 3.4 GB pre-alloc")
 
-**Status:** OPEN, highest priority (smallest blast radius,
-clearest signal).
+**Status:** OPEN, INVESTIGATED 2026-05-22, root cause identified;
+deeper fix deferred (requires xy-pic `\fontdimen` handling rework).
 
 **Witness papers:** `math0203082` (3×54 xymatrix),
-`math0402448` (14×5 xymatrix).
+`math0402448` (14×5 xymatrix). Both use `\usepackage[all]{xy}`.
 
-**Smoking gun.** Both papers fail with EXACTLY the same byte count:
+**Original hypothesis (FALSIFIED).** Initially the 3489660928-byte
+(`0xD0000000`) allocation looked like a constant pre-allocation
+bug — same byte count across two different diagram dimensions
+suggests a hard-coded buffer. **It is not.** The 0xD000_0000 is
+a Vec geometric-growth step: at ~1.625 GB of accumulated content,
+the next `extend_from_slice` doubles capacity to ~3.25 GB, which
+the 6 GB ulimit can't satisfy. The coincidence of both papers
+hitting EXACTLY 3489660928 reflects that both accumulate similar
+amounts of state before the cap.
+
+**Actual root cause (from `RUST_BACKTRACE=full` on dev build).**
+The failing allocation is `string_interner::BufferBackend::
+push_string` growing its internal `Vec<u8>` storage. Call chain:
 
 ```
-Fatal:oom:alloc_failed allocation of 3489660928 bytes (align 1) failed
+arena::pin::<String>           (latexml_core/src/common/arena.rs:134)
+  ← Stored::from(String)
+  ← State::assign_value::<String, _>   (state.rs:855)
+  ← AssignValue! macro                  (setup_binding_language.rs:962)
+  ← <constructor invoke chain through tex_box>
+  ← Constructor::invoke_primitive       (constructor.rs:251)
 ```
 
-3489660928 = `0xD0000000`. That's a SUSPICIOUSLY round hex value. It
-does NOT scale with diagram dimensions — 3×54 ≠ 14×5 in cell count
-or product, yet both produce the same exact request. This is a
-hard-coded or fixed-bounded pre-allocation, not a runaway growth.
+xy-pic's `\fontdimen` queries are being parsed as state-key
+assignments with the entire token sequence as the key string.
+Example keys observed in the cascade: `fontdimen_fontinfo_cmr10 at
+17sp_2604`, `fontdimen_fontinfo_cmr10 at 17sp_2605`, etc. Each
+unique sp-value (scaled point) creates a NEW interned string.
+xy-pic recovery loops can emit thousands of these per cell; with
+3×54=162 cells, the arena accumulates ~1.6 GB of unique strings
+before the next Vec doubling step is over the 6 GB ulimit.
 
-**Hypotheses, in priority order:**
+**Why this isn't a simple fix:**
 
-1. **`Vec::with_capacity(N)` with N = some i32 sign-extend or constant
-   `0xD000_0000`.** Grep `latexml_engine/src/`, `latexml_package/src/`,
-   `latexml_contrib/src/` for `with_capacity(.*0xD0\|3489660928\|52428800`
-   (52428800 = 50 MB, plausible per-cell budget).
-2. **A diagram-coordinate buffer that pre-allocates the bounding box
-   of the *typesetting canvas* (in scaled-pt units) rather than the
-   cell count.** e.g. `xy_canvas_width_sp * xy_canvas_height_sp` could
-   easily land at 3.4 GB for a large diagram. Look at xy.sty / xy-pic
-   bindings (`latexml_contrib/src/xypic*`, `xy_sty.rs`, etc.).
-3. **A shift-by-too-many that overflows i64 → wraps to a positive
-   3.4 GB.** Less likely given Rust's overflow checks in debug, but
-   release builds don't enforce.
+1. The arena (`latexml_core/src/common/arena.rs`) is intentionally
+   unbounded — its doc says "No overflow guard: the main-level
+   wall-clock watchdog catches genuinely runaway loops". But the
+   wall-clock watchdog at 120s doesn't fire here because the
+   memory limit hits first (at ~3.7s of CPU).
+2. Adding an arena soft-cap is invasive: `pin()` returns a
+   `SymStr` not `Result<SymStr>`, so error handling cascades.
+3. The CORRECT fix is in the `\fontdimen` parameter parser. The
+   current `\fontdimen Number FontToken` (tex_fonts.rs:237) reads
+   a Number then a FontToken, but evidently it's accepting
+   xy-pic-generated text as the FontToken and looping.
 
-**Principled approach:**
+**Recommended approach (deferred):**
 
-1. Instrument `cortex_worker.rs::custom_alloc_error_hook` to
-   `std::backtrace::Backtrace::force_capture()` and print before
-   exit. That gives us the exact callsite of the 0xD0000000 alloc.
-2. Run `cortex_worker --standalone --input math0203082.zip` with
-   the instrumented binary, harvest the backtrace.
-3. Fix the offending pre-alloc: replace fixed-size capacity with
-   a size derived from actual diagram dimensions (cell count or
-   bounding-box-in-cells, not in scaled-pt).
-4. Verify both witness papers convert in <120s.
+1. Audit `tex_fonts.rs::\fontdimen` setter (line 288+) and getter
+   (line 237+) — verify the FontToken parameter type doesn't
+   accept the xy-pic-generated cascade text as a valid font.
+2. Either (a) add a strict-format check on the FontToken, or
+   (b) reject xy-pic's recovery loop at the macro-expansion layer
+   so it doesn't emit thousands of font-dimension queries.
+3. Validate by running both witness papers — they should produce
+   a clean conversion (xy diagrams may render as fallback text,
+   but no OOM).
 
-**Estimated effort:** 0.5–1 day once the backtrace is harvested.
+**Defensive fallback (if the deep fix takes too long):**
+
+Add a guard inside `arena::pin` that checks the BufferBackend's
+buffer length every N=65,536 calls (cheap bit-and). If >1.5 GB,
+return a sentinel `SymStr` (one specific reserved value) and log
+a `Fatal:arena:exhausted` message. The conversion exits cleanly
+with code 137 — still a failure, but with a meaningful diagnostic
+rather than a string_interner OOM crash.
+
+**Estimated effort:** 2–4 days for the deep fix; ~1 hour for the
+defensive guard. Recommend deferring R35.B and pivoting to R35.D
+(better characterised, smaller scope).
 
 ### R35.D — Rewriting-phase TIMEOUT
 
@@ -450,11 +481,25 @@ transients; the remaining 3 are noise.
 
 (updated as work lands)
 
-* **R35.B** — OPEN. Not yet started.
+* **R35.B** — INVESTIGATED 2026-05-22. Initial hypothesis (constant
+  pre-alloc) FALSIFIED — actual root cause is unbounded
+  string-interner growth from xy-pic `\fontdimen` recovery loops.
+  Deeper fix deferred; defensive arena guard available as
+  short-term option. See R35.B section above.
 * **R35.D** — OPEN. Not yet started.
 * **R35.C** — OPEN. Not yet started.
-* **R35.A** — OPEN. Not yet started.
+* **R35.A** — OPEN. Not yet started. Note: shares the
+  "silent loop → tiny alloc fails at the ulimit ceiling"
+  symptom with R35.B; the runaway is in a different code
+  path (gullet pushback Vec, not arena string interner).
 * **R35.E** — OPEN, no fix intended.
+
+Also: a tangential investigation revertable artifact — added
+qname-length cap to `Document::get_insertion_context` (commit TBD)
+to prevent absurd qnames from blowing up error-message generation.
+That guard is not load-bearing for R35.B (the OOM is upstream in
+arena interning) but is generally defensive against runaway
+DOM-element-name accumulation. Keep it.
 
 Validation protocol per cluster: run cortex_worker --standalone on
 the cluster's witness zips, verify exit 0 + no errors, then run a
