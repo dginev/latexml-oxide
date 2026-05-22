@@ -56,7 +56,7 @@ impl XSLT {
     if stylesheet.is_empty() {
       // Perl XSLT.pm:36 — Error('expected', 'stylesheet', undef,
       //   "No stylesheet specified!")
-      log_post_error!(
+      Error!(
         "expected", "stylesheet",
         "No stylesheet specified!"
       );
@@ -71,7 +71,7 @@ impl XSLT {
       Err(e) => {
         // Perl XSLT.pm:42 — Error('missing-file', $stylesheet, undef,
         //   "No stylesheet '$stylesheet' found!")
-        log_post_error!(
+        Error!(
           "missing-file", stylesheet,
           "No stylesheet '{}' found!", stylesheet
         );
@@ -142,7 +142,7 @@ impl XSLT {
         if path != dest {
           ensure_parent(&dest);
           if let Err(e) = fs::copy(&path, &dest) {
-            log_post_warn!(
+            Warn!(
               "I/O", dest,
               "Couldn't copy {} to {}: {}", path, dest, e
             );
@@ -156,13 +156,13 @@ impl XSLT {
         if let Some(bytes) = embedded_resources::lookup(basename) {
           ensure_parent(&dest);
           if let Err(e) = fs::write(&dest, bytes) {
-            log_post_warn!(
+            Warn!(
               "I/O", dest,
               "Couldn't write embedded resource {} to {}: {}", basename, dest, e
             );
           }
         } else {
-          log_post_warn!(
+          Warn!(
             "missing_file", src,
             "Couldn't find resource file {} in paths {:?}",
             src,
@@ -255,7 +255,7 @@ impl Processor for XSLT {
       None => return Ok(vec![doc]),
     };
 
-    log::info!("Applying XSLT stylesheet: {}", stylesheet_path);
+    Info!("xslt", "stylesheet", "Applying XSLT stylesheet: {}", stylesheet_path);
 
     // Handle resource elements first (before transformation removes them)
     let resource_nodes = doc.findnodes("//ltx:resource[@src]");

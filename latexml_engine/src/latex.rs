@@ -92,7 +92,7 @@ LoadDefinitions!({
   //   else:              bootstrap → base → constructs (NO dump)
   if !*NODUMP && latex_dump_available() {
     if let Err(e) = crate::latex_dump::load_definitions() {
-      log::warn!("latex_dump: {}", e);
+      Warn!("latex_dump", "load", s!("{}", e));
     }
   } else {
     InnerPool!(latex_base);
@@ -113,10 +113,9 @@ LoadDefinitions!({
   // dump), so the alias has to wait until now.
   let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
   if applied + skipped > 0 {
-    log::info!(
-      "[latex_dump] deferred aliases: {} applied, {} skipped",
-      applied,
-      skipped
+    Info!(
+      "latex_dump", "deferred",
+      s!("deferred aliases: {} applied, {} skipped", applied, skipped)
     );
   }
 });

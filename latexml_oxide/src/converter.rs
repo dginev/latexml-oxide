@@ -1,4 +1,5 @@
 use latexml_core::common::arena;
+use latexml_core::Note;
 use latexml_core::common::error::*;
 use latexml_core::common::object::Object;
 use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
@@ -115,7 +116,7 @@ impl Converter {
     self.bind_log();
     // 1.2 Inform of identity, increase conversion counter
     if self.opts.verbosity >= 0 {
-      Info!("{}", CONVERTER_IDENTITY);
+      Note!(CONVERTER_IDENTITY);
       // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
       // info!("processing started " . localtime() . "\n"; )
     }
@@ -347,7 +348,7 @@ impl Converter {
     // figures are independent.
     latexml_math_parser::report_and_reset_asf_stats();
     // Perl: Note("Conversion complete: " . $$runtime{status});
-    Info!("Conversion complete: {}", self.runtime.status);
+    Note!(s!("Conversion complete: {}", self.runtime.status));
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

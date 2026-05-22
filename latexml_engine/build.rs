@@ -162,8 +162,9 @@ fn main() {
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   if std::env::var_os("LATEXML_NODUMP").is_some() {{
-    log::info!("[latex_dump] LATEXML_NODUMP set — skipping dump, engine will \
-                reconstruct kernel state from _base pool (slower, Perl-parity)");
+    latexml_core::Info!("latex_dump", "nodump",
+      "LATEXML_NODUMP set — skipping dump, engine will reconstruct kernel state \
+       from _base pool (slower, Perl-parity)");
     return Ok(());
   }}
   let prefer = crate::dump_paths::detect_ambient_texlive_year();
@@ -173,7 +174,8 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       let content = match std::fs::read_to_string(&path) {{
         Ok(c) => c,
         Err(e) => {{
-          log::warn!("[latex_dump] failed to read {{}}: {{}}", path.display(), e);
+          latexml_core::Warn!("latex_dump", "read",
+            latexml_core::s!("failed to read {{}}: {{}}", path.display(), e));
           return Ok(());
         }}
       }};
@@ -194,14 +196,16 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       // access and caches the result for the rest of the process
       // (DEP-12, 2026-05-18).
       let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
-      log::info!("[latex_dump] using embedded TL{{}} dump (no on-disk dump found)", year);
+      latexml_core::Info!("latex_dump", "embedded",
+        latexml_core::s!("using embedded TL{{}} dump (no on-disk dump found)", year));
       let stamp_first = crate::embedded_dumps::embedded_texlive_version_first_line(prefer)
         .map(|s| s.to_string());
       (latex_str.to_string(), format!("<embedded TL{{}}>", year), stamp_first)
     }} else {{
-      log::info!("[latex_dump] no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
-                  exe-relative, dev-tree path, and embedded fallback); \
-                  run `latexml_oxide --init=latex.ltx` to generate");
+      latexml_core::Info!("latex_dump", "missing",
+        "no dump found (checked $LATEXML_DUMP_PATH, $LATEXML_DUMP_DIR, \
+         exe-relative, dev-tree path, and embedded fallback); \
+         run `latexml_oxide --init=latex.ltx` to generate");
       return Ok(());
     }};
   if std::env::var_os("LATEXML_SKIP_DUMP_STAMP_CHECK").is_none() {{
@@ -211,7 +215,8 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
   }}
   let count = latexml_core::dump_reader::load_from_str(&content)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
-  log::info!("[latex_dump] loaded {{}} entries from {{}}", count, source_label);
+  latexml_core::Info!("latex_dump", "loaded",
+    latexml_core::s!("loaded {{}} entries from {{}}", count, source_label));
   Ok(())
 }}
 
@@ -224,12 +229,13 @@ fn compare_stamp_to_ambient(stamp: &str) {{
     }} else {{ None }});
   let Some(ambient) = ambient else {{ return; }};
   if stamp.trim() != ambient.trim() {{
-    log::warn!("[latex_dump] TeXLive MISMATCH — dump stamped `{{}}`, ambient \
-                kpsewhich `{{}}`. The dump may reference macros unknown to the \
-                current TeXLive (or vice versa). Run `tools/make_formats.sh` \
-                to regenerate against ambient texlive. Silence with \
-                LATEXML_SKIP_DUMP_STAMP_CHECK=1.",
-               stamp.trim(), ambient.trim());
+    latexml_core::Warn!("latex_dump", "mismatch",
+      latexml_core::s!("TeXLive MISMATCH — dump stamped `{{}}`, ambient \
+        kpsewhich `{{}}`. The dump may reference macros unknown to the \
+        current TeXLive (or vice versa). Run `tools/make_formats.sh` \
+        to regenerate against ambient texlive. Silence with \
+        LATEXML_SKIP_DUMP_STAMP_CHECK=1.",
+        stamp.trim(), ambient.trim()));
   }}
 }}
 

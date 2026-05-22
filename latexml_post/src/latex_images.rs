@@ -185,7 +185,8 @@ impl LaTeXImages {
       pending.push(key.clone());
     }
 
-    log::info!(
+    Info!(
+      "latex_images", "count",
       "LaTeXImages: {} total, {} unique, {} pending",
       n_total,
       n_unique,
@@ -204,11 +205,13 @@ impl LaTeXImages {
           .collect::<Vec<_>>(),
       );
 
-      log::info!(
+      Info!(
+        "latex_images", "generate",
         "LaTeXImages: generated LaTeX document ({} bytes)",
         tex_body.len()
       );
       log::debug!(
+        target: "latex_images:run",
         "Would run: latex + {} to produce {} images",
         match self.dvi_method {
           DviMethod::DviPng => "dvipng",
@@ -446,7 +449,7 @@ impl LaTeXImages {
     if !latex_available {
       // Perl LaTeXImages.pm L134: Error('expected', $LATEXCMD, undef,
       //   "No latex command ($LATEXCMD) found; Skipping.", ...)
-      log_post_error!(
+      Error!(
         "expected", "latex",
         "No latex command found; image generation will be skipped"
       );
@@ -465,7 +468,7 @@ impl LaTeXImages {
     if !dvi_available {
       // Perl LaTeXImages.pm dvi-converter check: Error('expected',
       //   $$self{dvicmd}, …) (parallel to the latex check at L134).
-      log_post_error!(
+      Error!(
         "expected", dvi_cmd,
         "No {} command found; image generation will be skipped",
         dvi_cmd
@@ -489,7 +492,7 @@ impl LaTeXImages {
         // SVG: just copy
         if let Err(e) = std::fs::copy(src, dest) {
           // Perl LaTeXImages.pm I/O failure: Error('I/O', $dest, …)
-          log_post_error!(
+          Error!(
             "I/O", dest,
             "Failed to copy {} to {}: {}", src, dest, e
           );
@@ -501,7 +504,7 @@ impl LaTeXImages {
       DviMethod::DviPng => {
         // PNG: already cropped by dvipng -T tight
         if let Err(e) = std::fs::copy(src, dest) {
-          log_post_error!(
+          Error!(
             "I/O", dest,
             "Failed to copy {} to {}: {}", src, dest, e
           );
@@ -513,10 +516,10 @@ impl LaTeXImages {
       DviMethod::Dvips => {
         // EPS: needs ImageMagick conversion
         // Would run: convert -density DPI -trim src dest
-        log::info!("Would convert EPS {} to {} via ImageMagick", src, dest);
+        Info!("latex_images", "convert", "Would convert EPS {} to {} via ImageMagick", src, dest);
         // Shave off clipping fudge + rule
         let fudge = (self.clipping_fudge as f64 + self.clipping_rule).round() as u32;
-        log::debug!("  Shave: {}px from each edge", fudge);
+        log::debug!(target: "latex_images:shave", "  Shave: {}px from each edge", fudge);
         Some((0, 0))
       },
     }
@@ -534,7 +537,7 @@ impl Processor for LaTeXImages {
   fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
-    log::info!("LaTeXImages: {} nodes to process", nodes.len());
+    Info!("latex_images", "process", "LaTeXImages: {} nodes to process", nodes.len());
     Ok(vec![doc])
   }
 }

@@ -348,7 +348,8 @@ impl Split {
     if name.is_empty() {
       if attr == "labels" {
         if let Some(id) = get_xml_id(page) {
-          log::info!(
+          Info!(
+            "split", "pathname",
             "Using '{}' to create page pathname, instead of missing '{}'",
             id,
             attr
@@ -356,7 +357,8 @@ impl Split {
           name = id;
         } else {
           name = self.generate_unnamed_page_name();
-          log::info!(
+          Info!(
+            "split", "pathname",
             "Using '{}' to create page pathname, instead of missing '{}'",
             name,
             attr
@@ -364,7 +366,8 @@ impl Split {
         }
       } else {
         name = self.generate_unnamed_page_name();
-        log::info!(
+        Info!(
+          "split", "pathname",
           "Using '{}' to create page pathname, instead of missing '{}'",
           name,
           attr
@@ -446,7 +449,7 @@ impl Processor for Split {
       .collect();
 
     if pages.is_empty() {
-      log::info!("[not split]");
+      Info!("split", "result", "[not split]");
       return Ok(vec![doc]);
     }
 
@@ -504,7 +507,8 @@ impl Processor for Split {
     docs.append(&mut child_docs);
 
     let n = docs.len();
-    log::info!(
+    Info!(
+      "split", "result",
       "{}",
       if n > 1 {
         format!(" [Split into {} pages]", n)

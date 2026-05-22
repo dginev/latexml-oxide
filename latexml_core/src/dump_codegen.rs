@@ -577,10 +577,10 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
   // load_definitions function
   emit_load_fn(&mut out, &data)?;
 
-  log::info!(
-    "[dump_codegen] Generated {} entries to {} (static data tables)",
-    total,
-    output_path.display()
+  Info!(
+    "dump_codegen", "generated",
+    s!("Generated {} entries to {} (static data tables)",
+      total, output_path.display())
   );
 
   Ok(total)

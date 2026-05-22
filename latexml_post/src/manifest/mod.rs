@@ -42,11 +42,11 @@ impl Processor for Manifest {
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     match &self.format {
       Some(ManifestFormat::Epub) => {
-        log::info!("EPUB manifest generation delegated to epub submodule");
+        Info!("manifest", "epub", "EPUB manifest generation delegated to epub submodule");
         Ok(vec![doc])
       },
       None => {
-        log::warn!("No manifest format specified; skipping");
+        Warn!("manifest", "format", "No manifest format specified; skipping");
         Ok(vec![doc])
       },
     }

@@ -1,22 +1,29 @@
 //! Diagnostic emission for `latexml_post`.
 //!
-//! Post-processing functions return `PostError`, not the engine's
-//! `latexml_core::common::error::Error`, so we cannot directly reuse
-//! the full `Error!`/`Warn!`/`Fatal!` macros from
-//! `latexml_core::common::error` — those early-return
-//! `Err(LatexmlError)` on max-errors / runaway-loop and would type-mismatch
-//! against `PostError` returns.
+//! Five capitalized macros — `Note!`, `Info!`, `Warn!`, `Error!`,
+//! `Fatal!` — mirror the LaTeXML Perl `Note()`/`Info()`/`Warn()`/
+//! `Error()`/`Fatal()` reporting conventions. Local to this crate so
+//! `latexml_post` does not need to import `latexml_core::common::error`
+//! just to emit diagnostics. The macro names deliberately shadow the
+//! identically-named macros from `latexml_core` — same shape (`(category,
+//! object, …)`), simpler implementation (no `note_status` counter,
+//! no error-cap unwinding, no location trace appended).
 //!
-//! Instead we emit through `log::{error,warn,info}!` with a `target:`
-//! attribute shaped exactly the way `latexml_core::common::error` shapes it.
-//! The shared logger formatter at `latexml_core::util::logger::log` reads
-//! `record.target()` and emits:
+//! Output format goes through the shared `latexml_core::util::logger`
+//! formatter via `log::info!`/`warn!`/`error!` with an explicit
+//! `target = "<category>:<object>"`, yielding the canonical
+//! `{Severity}:{category}:{object} {message}` line the harness
+//! aggregates from every other stage (engine, package, contrib).
 //!
-//!   `{Severity}:{target} {message}`
+//! `Note!` is the lone exception: it bypasses the logger formatter
+//! entirely and writes the bare message to stderr, matching the
+//! prefix-less `Note(…)` output style from Perl LaTeXML.
 //!
-//! With `target = "<class>:<object>"` that yields the canonical
-//! `Error:<class>:<object> <message>` line the harness aggregates from
-//! every other stage (engine, package, contrib).
+//! `Fatal!` additionally `return`s `Err(PostError::Processing(…))`
+//! so the calling function can early-exit via `?`, mirroring the way
+//! Perl `Fatal()` early-exits via `die`. The crate's `PostError` type
+//! differs from `latexml_core::common::error::Error`, which is why we
+//! cannot reuse the upstream `Fatal!`.
 //!
 //! Convention notes carried over from Perl `LaTeXML::Post::*`:
 //!   * `Error('expected', 'source', …)`        — Graphics.pm:216 (missing source)
@@ -30,17 +37,26 @@
 //!   * `Fatal('unexpected', $dir, …)`          — Post.pm:701 (bad destdir)
 
 #[macro_export]
-macro_rules! log_post_error {
+macro_rules! Note {
+  ($input:expr) => {{
+    if log::max_level() >= log::LevelFilter::Info {
+      eprintln!("{}", $input);
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! Info {
   ($category:expr, $object:expr, $msg:expr) => {
-    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    log::info!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
   ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
-    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
-macro_rules! log_post_warn {
+macro_rules! Warn {
   ($category:expr, $object:expr, $msg:expr) => {
     log::warn!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
@@ -50,25 +66,17 @@ macro_rules! log_post_warn {
 }
 
 #[macro_export]
-macro_rules! log_post_info {
+macro_rules! Error {
   ($category:expr, $object:expr, $msg:expr) => {
-    log::info!(target: &format!("{}:{}", $category, $object), "{}", $msg)
+    log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
   ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
-    log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
+    log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
-/// `log_post_fatal!` emits the same target-prefixed `Fatal:<class>:<object>`
-/// line a Perl `Fatal('class', 'object', …)` would, and then converts to
-/// a `PostError::Processing` so the calling function can early-return via
-/// `?` like Perl's `die`.
-///
-/// The logger's "Fatal:" prefix is matched by
-/// `latexml_core::util::logger::log` line 82 (`starts_with("Fatal:")` →
-/// no severity prefix added, the class-prefix `Fatal:` is the severity).
 #[macro_export]
-macro_rules! log_post_fatal {
+macro_rules! Fatal {
   ($category:expr, $object:expr, $msg:expr) => {{
     log::error!(target: &format!("Fatal:{}:{}", $category, $object), "{}", $msg);
     return Err($crate::processor::PostError::Processing(

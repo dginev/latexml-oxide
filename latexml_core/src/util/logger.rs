@@ -81,20 +81,8 @@ impl log::Log for LatexmlLogger {
         print_stderr!("{}", details.to_string());
         return;
       }
-      // LaTeXML's reporting syntax is single-colon delimited
-      // (`Severity:category:object`), so a Rust-defaulted target
-      // like `latexml_post::xslt` (which the `log` crate fills in
-      // from `module_path!()` when callers don't override it) must
-      // be flattened to `latexml_post:xslt`. The `log_post_*` macros
-      // in `latexml_post::diag` already produce single-colon targets;
-      // this only matters for bare `log::info!` / `log::warn!` /
-      // `log::error!` calls that didn't bother with `target: …`.
-      let normalised_target;
       let category_object = if record_target.is_empty() {
         "" // "unknown:unknown" ???
-      } else if record_target.contains("::") {
-        normalised_target = record_target.replace("::", ":");
-        normalised_target.as_str()
       } else {
         record_target
       };

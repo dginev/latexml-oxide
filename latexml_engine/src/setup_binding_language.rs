@@ -1752,11 +1752,11 @@ macro_rules! AddToMacro {
           Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
           Some(ExpansionBody::Closure(_)) => {
             let message = s!(
-              "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! \
+              "{} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
               This is usually in error!",
               $cs
             );
-            Warn!("unexpected", "ExpandableBody::Closure", message);
+            Warn!("unexpected", "ExpandableBody[Closure]", message);
             Vec::new()
           },
           None => Vec::new(),

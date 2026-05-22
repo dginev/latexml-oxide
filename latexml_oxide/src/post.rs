@@ -4,6 +4,7 @@
 //! (Scan → Bibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups).
 //! Used by both the `latexml_oxide` binary and the `cortex_worker` binary.
 
+use latexml_core::{Info, s};
 use latexml_core::telemetry::{self, Phase};
 use latexml_post::document::{PostDocument, PostDocumentOptions};
 use latexml_post::object_db::ObjectDB;
@@ -92,7 +93,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let audit_end = |started: Option<(String, std::time::Instant)>| {
     if let Some((name, t0)) = started {
       let ms = t0.elapsed().as_millis();
-      log::info!("POST_AUDIT phase {} took {}ms", name, ms);
+      Info!("audit", "phase", s!("{} took {}ms", name, ms));
     }
   };
 

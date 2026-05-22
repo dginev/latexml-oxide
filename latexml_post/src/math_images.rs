@@ -103,7 +103,7 @@ impl MathProcessor for MathImages {
       }
     }
 
-    log_post_warn!(
+    Warn!(
       "missing_file", "math_images",
       "MathImages: no cached image for '{}'", key
     );
@@ -124,6 +124,6 @@ impl MathProcessor for MathImages {
   fn is_secondary(&self) -> bool { self.is_secondary }
 
   fn preprocess(&self, _doc: &PostDocument, nodes: &[Node]) {
-    log::info!("MathImages: would generate {} images", nodes.len());
+    Info!("math_images", "generate", "MathImages: would generate {} images", nodes.len());
   }
 }
