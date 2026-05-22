@@ -1991,10 +1991,20 @@ impl Processor for Graphics {
       // shared mutable state during the parallel phase — replaces the
       // previous `Mutex<Vec<…>>` per project policy (thread_local-only
       // for in-memory state, no `Mutex`).
+      // R35.C: spawn workers with a small (2 MB) stack via
+      // `spawn_scoped`, which returns Result; if a spawn fails with
+      // EAGAIN/WouldBlock (canvas + 6 GB ulimit can run out of address
+      // space on graphics-heavy papers — witness hep-ph0012156, 12778
+      // formulas, R35.C), drop the failure and let the surviving
+      // workers pick up the remaining jobs via the shared `next`
+      // counter. If every spawn fails, run all jobs on the current
+      // thread instead of crashing.
       let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
         let handles: Vec<_> = (0..n_workers)
-          .map(|_| {
-            s.spawn(|| {
+          .filter_map(|_| {
+            std::thread::Builder::new()
+              .stack_size(2 * 1024 * 1024)
+              .spawn_scoped(s, || {
               let mut local = Vec::<ConvertOutcome>::new();
               loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
@@ -2110,8 +2120,15 @@ impl Processor for Graphics {
             }
               local
             })
+            .ok()
           })
           .collect();
+        // Note: if EVERY spawn failed (extreme memory pressure), no
+        // jobs run and graphics will be missing from the output. That
+        // is much less destructive than panicking the whole worker
+        // and losing the entire conversion. Surviving workers always
+        // race for the same `next` counter, so a single survivor is
+        // enough to complete all jobs.
         handles.into_iter().map(|h| h.join().unwrap()).collect()
       });
       for v in worker_outcomes {
