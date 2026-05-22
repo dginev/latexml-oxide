@@ -576,6 +576,28 @@ impl DigestionAPI for Core {
       match stomach::digest_next_body(None) {
         Ok(next_bodies) => boxes.extend(next_bodies),
         Err(e) => {
+          // Re-raise MemoryBudget / wall-clock Timeout (Convert) errors:
+          // those are *resource* failures, not recoverable digestion
+          // hiccups. Catching them here would silently produce empty
+          // output for a runaway-loop paper, masking a real bug and
+          // inflating canvas pass rates with empty conversions.
+          // R35.A: ensure pathological inputs fail loudly (exit 1+)
+          // rather than silently turning into a zero-byte HTML.
+          use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+          if matches!(
+            (&e.target, &e.category),
+            (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
+              | (ErrorTarget::Timeout, ErrorCategory::Convert)
+              | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
+              | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
+          ) {
+            log::warn!(
+              "digest_internal: resource failure ({:?}/{:?}) — not recovering",
+              e.target,
+              e.category
+            );
+            return Err(e);
+          }
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
           break;
         },
