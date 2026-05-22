@@ -24,8 +24,9 @@ use crate::definition::Definition;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalType;
 use crate::definition::constructor::Constructor;
-use crate::definition::expandable::Expandable;
+use crate::definition::expandable::{self, Expandable};
 use crate::definition::register::{Register, RegisterValue};
+use crate::definition::ExpansionBody;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet;
@@ -2589,6 +2590,71 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     lookup_meaning(token2)
       .unwrap_or(Stored::None);
   // };
+  // Deep-copy the robust-wrapper pair.
+  //
+  // Our `DefConstructor`/`DefMacro` with `robust => true` stores the
+  // public CS (e.g. `\ref`) as an Expandable wrapper that expands to
+  // `\protect \<cs><space>`. The actual body lives under a SEPARATE
+  // `\<cs><space>` slot. A plain `\let \origref \ref` would copy
+  // only the wrapper — leaving the `\ref<space>` body shared between
+  // `\origref` and `\ref`. A subsequent `\DeclareRobustCommand \ref
+  // {...}` then overwrites `\ref<space>` and `\origref` silently
+  // tracks the new body — often causing an infinite loop when the
+  // new body references `\origref` itself (a common LaTeX idiom for
+  // adding starred-form support: `\let\origref\ref
+  // \DeclareRobustCommand\ref{\@ifstar\origref\origref}`).
+  //
+  // Match upstream LaTeX semantics by also `\let`ing the body half:
+  // `\let \origref<space> \ref<space>` so the two CSes own
+  // independent body slots and remain decoupled.
+  //
+  // Witnesses: canvas-3 stage-23 0810.0695 (PlanarMain.tex's
+  // `\ifpdf...\else \let\origref\ref \DeclareRobustCommand\ref{
+  // \@ifstar\origref\origref}\fi` triggers via the else-branch
+  // because ifpdf.sty defaults `\ifpdf` to false in LaTeXML).
+  // Recognize the robust-wrapper expansion `\protect \<name><space>`
+  // by shape: a 2-token Expandable body matching exactly those tokens
+  // where the second token's CS name equals `<token2-name><space>`.
+  if let Stored::Expandable(ref defn) = meaning {
+    if let Some(ExpansionBody::Tokens(ref tks)) = defn.expansion {
+      let body = tks.unlist_ref();
+      if body.len() == 2 && body[0].with_str(|s| s == "\\protect") {
+        let expected_body_name = token2.with_str(|s| s!("{s} "));
+        if body[1].with_str(|s| s == expected_body_name) {
+          // (1) Copy `\<token2><space>` body to `\<token1><space>`
+          // so the two CSes have independent body slots.
+          let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
+          let token2_space = crate::T_CS!(expected_body_name);
+          let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
+          let body_csname_sym = token1_space.pin_cs_name();
+          state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
+          // (2) Install `\<token1>` as a NEW robust wrapper that
+          // points to `\<token1><space>` (rather than reusing
+          // `\<token2>`'s wrapper, which still hardcodes
+          // `\<token2><space>` in its body and would silently
+          // re-track any later `\DeclareRobustCommand\<token2>{...}`).
+          let new_wrapper_body = crate::Tokens::new(vec![
+            crate::T_CS!("\\protect"),
+            token1_space,
+          ]);
+          let new_wrapper = Expandable::new(
+            *token1,
+            None,
+            Some(ExpansionBody::Tokens(new_wrapper_body)),
+            Some(expandable::ExpandableOptions {
+              robust: true,
+              ..expandable::ExpandableOptions::default()
+            }),
+          );
+          if let Ok(wrapper) = new_wrapper {
+            install_definition(wrapper, scope);
+            after_assignment();
+            return;
+          }
+        }
+      }
+    }
+  }
   assign_meaning(token1, meaning, scope);
   after_assignment();
 }
