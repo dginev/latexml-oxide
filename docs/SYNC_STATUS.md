@@ -497,24 +497,43 @@ transients; the remaining 3 are noise.
 
 (updated as work lands)
 
-**Measured sprint impact (2026-05-22, ulimit -v 6291456, 120s
-timeout, canvas conditions):** 5 of 16 witness papers now exit OK:
+**Measured sprint impact (2026-05-22 final, ulimit -v 6291456,
+120s timeout, canvas conditions):**
 
-| Witness         | Before     | After     | Reason |
-|----------------|------------|-----------|--------|
-| gr-qc0209055   | TIMEOUT    | **OK** ✓  | R35.D.1 fix |
-| math0104252    | TIMEOUT    | **OK** ✓  | (canvas pressure only — already OK standalone) |
-| physics0003074 | FATAL_139  | **OK** ✓  | transient resolved |
-| hep-th0009218  | FATAL_139  | **OK** ✓  | transient resolved |
-| math0009192    | FATAL_139  | **OK** ✓  | transient resolved |
-| hep-ph0012156  | FATAL_101  | FATAL_139 | R35.C step 1 → SEGV in libxslt (downstream) |
-| gr-qc0301024   | TIMEOUT    | TIMEOUT   | R35.D.2 (PiCTeX, unchanged) |
-| math0102053 .. | OOM ×7     | OOM ×7    | R35.A (unchanged — \displaylines+\picture) |
-| math0203082    | OOM        | OOM       | R35.B (unchanged — string-interner) |
-| math0402448    | OOM        | OOM       | R35.B (unchanged) |
+| Witness         | Before     | After          | Reason |
+|----------------|------------|----------------|--------|
+| gr-qc0209055   | TIMEOUT    | **OK** ✓       | R35.D.1 fix |
+| math0104252    | TIMEOUT    | **OK** ✓       | canvas pressure only — already OK standalone |
+| physics0003074 | FATAL_139  | **OK** ✓       | transient resolved |
+| hep-th0009218  | FATAL_139  | **OK** ✓       | transient resolved |
+| math0009192    | FATAL_139  | **OK** ✓       | transient resolved |
+| hep-ph0012156  | FATAL_101  | FATAL_139      | R35.C step 1 → SEGV in libxslt (downstream) |
+| gr-qc0301024   | TIMEOUT    | TIMEOUT        | R35.D.2 (PiCTeX, unchanged) |
+| math0102053    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal diagnostic via RSS cap |
+| math0102089    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0212126    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0504436    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0506088    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0507219    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0604321    | OOM        | **FATAL_3** ⚠️ | R35.A — clean fatal |
+| math0203082    | OOM        | OOM            | R35.B (unchanged — string-interner) |
+| math0402448    | OOM        | OOM            | R35.B (unchanged) |
 
-Projected canvas: 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
-(up from 99.989%).
+**Sprint result:**
+- **5 papers fully recovered** (OK): R35.D.1 + canvas-pressure false positives + transients
+- **7 papers cleanly classified** (FATAL_3 instead of crashy OOM): R35.A cluster.
+  These no longer kill workers under canvas; they produce empty HTML with a
+  proper `Fatal:Timeout:MemoryBudget` diagnostic log entry. Canvas's run_one.sh
+  records these as FATAL_3 rather than OOM (which is more accurate — they're
+  not OS-OOM-kills, they're triggered by our soft 4.5 GB RSS guard).
+- **2 papers still OOM** (R35.B xy-pic `\fontdimen` string-interner growth — deeper fix deferred)
+- **1 paper TIMEOUT** (R35.D.2 PiCTeX — different cluster, deferred)
+- **1 paper FATAL_139** (R35.C downstream libxslt malloc-failure SEGV — needs libxml-side fix)
+
+Projected canvas (the 5 OK recoveries): 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
+(up from 99.989%). The 7 R35.A FATAL_3 cases still fail, but now diagnose
+themselves cleanly with a wrapped error rather than crashing the worker
+with OS OOM-kill.
 
 ### Sprint commits (chronological)
 
