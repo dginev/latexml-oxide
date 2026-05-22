@@ -527,6 +527,8 @@ Projected canvas: 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
 | `5b0131df22` | docs: R35.A narrowed to \displaylines+\picture |
 | `cc65700a3b` | docs: R35 sprint — 5 of 16 witnesses now pass |
 | `5bfc9fe7a0` | R35.A safety net: default pushback_limit=5M |
+| `213ea93e07` | R35.A safety net: RSS soft cap, resource-failure bubble-up, exit codes |
+| `3b98fef422` | fix: exit non-zero only on fatal (status_code≥3), not on errors |
 
 ### Sprint summary
 
