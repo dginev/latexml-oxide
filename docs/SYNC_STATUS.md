@@ -548,6 +548,36 @@ with OS OOM-kill.
 | `5bfc9fe7a0` | R35.A safety net: default pushback_limit=5M |
 | `213ea93e07` | R35.A safety net: RSS soft cap, resource-failure bubble-up, exit codes |
 | `3b98fef422` | fix: exit non-zero only on fatal (status_code≥3), not on errors |
+| `5da165469b` | R35.A debug: backtrace dump in check_timeout when MemoryBudget fires |
+| `f7ee4a6b36` | R35.A: MoveableBox::predigest depth cap + diagnosis |
+
+### R35.A root cause identified (2026-05-22 final)
+
+Via `LATEXML_DEBUG_MEMBUDGET=1` backtrace, the runaway is mutual
+recursion between `digest_next_body` and `MoveableBox::predigest`
+(`base_parameter_types.rs:847`, closure #66). Each cycle goes:
+
+```
+digest_next_body (stomach.rs)
+  → invoke_token(\hbox)
+    → HBoxContents.predigest → predigest_box_contents_in_mode
+      → Parameter::digest (MoveableBox)
+        → read_arguments_and_digest
+          → invoke_primitive (another constructor)
+            → MoveableBox::predigest <closure#66>
+              → invoke_token(\hbox)
+                → ... ↺ repeat
+```
+
+Each cycle adds ~12 stack frames. Trigger: plain-TeX
+`\picture(...)`/`\put(...)` inside `$$\displaylines{...}$$`. WHY
+unbounded (vs. ~31 levels for 31 `\put` calls): suspected
+`\@ifnextchar`/`\futurelet` not consuming lookahead under our
+gullet, OR `\@picture`'s `\bgroup`/`\egroup` group-matching
+diverging from Perl, OR `\put`'s expansion re-injecting tokens.
+
+Mitigation: thread-local depth cap (>1000 → Fatal:Timeout:MemoryBudget).
+Deeper fix needs token-by-token gullet trace of the recursion source.
 
 ### Sprint summary
 
