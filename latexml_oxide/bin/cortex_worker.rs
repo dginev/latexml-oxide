@@ -1086,15 +1086,17 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     } else {
       std::io::stdout().write_all(&result_data)?;
     }
-    // Propagate the conversion status into the process exit code so
-    // callers (run_one.sh, canvas drivers) classify pathological
-    // failures correctly instead of marking a 0-byte HTML output as
-    // "OK". Mapping mirrors `latexml_core::common::error::get_status_code`:
-    // 0 = success, 1 = warnings, 2 = errors, 3 = fatal.
-    // R35.A: papers that trip the memory-budget guard now exit with
-    // code 3 → run_one.sh classifies as FATAL_3 rather than OK.
+    // Propagate FATAL conversion status into the process exit code so
+    // pathological failures (memory-budget guard, wall-clock timeout
+    // surfaced via Error::log_fatal, etc.) classify as failures
+    // instead of zero-byte-HTML "OK" runs. Only fatal (status_code 3)
+    // exits non-zero — status_code 2 ("errors but recoverable") is the
+    // normal canvas-accepted case for papers with minor TeX issues
+    // that still produce useful HTML. Mirrors
+    // `latexml_core::common::error::get_status_code`:
+    //   0 success, 1 warnings, 2 errors, 3 fatal.
     let final_status = latexml_core::common::error::get_status_code();
-    if final_status >= 2 {
+    if final_status >= 3 {
       process::exit(final_status as i32);
     }
   } else {
