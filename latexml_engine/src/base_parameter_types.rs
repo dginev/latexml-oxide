@@ -844,7 +844,27 @@ LoadDefinitions!({
     result
   }, predigest => sub[arg] {
     let token = arg.unlist().remove(0);
-    let mut stuff = stomach::invoke_token(&token)?;
+    // R35.A: hard depth cap on MoveableBox::predigest recursion.
+    // Witness math0102089 (plain-TeX `\picture`/`\put` inside
+    // `$$\displaylines{...}$$`) recurses through this closure
+    // unboundedly via mutual recursion with predigest_box_contents
+    // (see backtrace via `LATEXML_DEBUG_MEMBUDGET=1`). The wp5/canvas3
+    // corpus shows real documents stay well below 50 levels of
+    // \raise/\lower nesting; 1000 is the safety cap.
+    std::thread_local! {
+      static MOVEABLE_BOX_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    }
+    let depth = MOVEABLE_BOX_DEPTH.with(|d| { let v = d.get() + 1; d.set(v); v });
+    if depth > 1000 {
+      MOVEABLE_BOX_DEPTH.with(|d| d.set(0));
+      let message = s!("Recursion depth exceeded in MoveableBox::predigest \
+        (limit 1000). Likely runaway in `\\raise`/`\\lower`/`\\move`/\
+        picture-mode `\\hbox\\bgroup…\\egroup` chain.");
+      fatal!(Timeout, MemoryBudget, message);
+    }
+    let result = stomach::invoke_token(&token);
+    MOVEABLE_BOX_DEPTH.with(|d| d.set(d.get() - 1));
+    let mut stuff = result?;
     if !stuff.is_empty() {
       // Perl: `($box, @stuff) = invokeToken(...)` — first element is the box.
       Some(stuff.remove(0))
