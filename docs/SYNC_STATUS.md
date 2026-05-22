@@ -497,6 +497,26 @@ transients; the remaining 3 are noise.
 
 (updated as work lands)
 
+**Measured sprint impact (2026-05-22, ulimit -v 6291456, 120s
+timeout, canvas conditions):** 5 of 16 witness papers now exit OK:
+
+| Witness         | Before     | After     | Reason |
+|----------------|------------|-----------|--------|
+| gr-qc0209055   | TIMEOUT    | **OK** ✓  | R35.D.1 fix |
+| math0104252    | TIMEOUT    | **OK** ✓  | (canvas pressure only — already OK standalone) |
+| physics0003074 | FATAL_139  | **OK** ✓  | transient resolved |
+| hep-th0009218  | FATAL_139  | **OK** ✓  | transient resolved |
+| math0009192    | FATAL_139  | **OK** ✓  | transient resolved |
+| hep-ph0012156  | FATAL_101  | FATAL_139 | R35.C step 1 → SEGV in libxslt (downstream) |
+| gr-qc0301024   | TIMEOUT    | TIMEOUT   | R35.D.2 (PiCTeX, unchanged) |
+| math0102053 .. | OOM ×7     | OOM ×7    | R35.A (unchanged — \displaylines+\picture) |
+| math0203082    | OOM        | OOM       | R35.B (unchanged — string-interner) |
+| math0402448    | OOM        | OOM       | R35.B (unchanged) |
+
+Projected canvas: 149,984 + 5 = 149,989 / 150,000 = **99.9927%**
+(up from 99.989%).
+
+
 * **R35.B** — INVESTIGATED 2026-05-22. Initial hypothesis (constant
   pre-alloc) FALSIFIED — actual root cause is unbounded
   string-interner growth from xy-pic `\fontdimen` recovery loops.
