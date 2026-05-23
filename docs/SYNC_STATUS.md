@@ -130,6 +130,20 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
+**Random 500-paper sample (2026-05-23) from the 1501-2110 corpus**:
+**290 PASS / 207 WARN / 3 with errors / 0 FATAL** — 99.4%
+error-free, 100% non-fatal. The 3 with errors:
+* `2003.12942` — paper-local `\@unrecurse` undefined (~1 error).
+* `2009.09824` — refstyle `\PackageError`: `\eqref already defined`
+  (amsmath already loaded it; refstyle.cfg's `\newref{eq}`
+  collides). Single non-fatal vendor error.
+* `1710.08178` — tabular `\lx@begin@alignment` mode-switch cascade
+  (6 errors but non-fatal).
+* TWO sample papers were fixed by `3e4e0cc25d` (rotfloat stub) —
+  arXiv:2101.12526 and arXiv:1804.05845 — both load
+  `\usepackage{rotfloat}` which raw-loaded into a `\if@flstyle`
+  cascade that we don't recognize (Perl skips raw-load entirely).
+
 **Post-fix retest #3 (TeXDelimiter END-token fix)**: 70 PASS / 69
 FATAL of 179 retested (+2 vs run #2). Newly passing:
 arXiv:1207.4709, 1101.2531.
