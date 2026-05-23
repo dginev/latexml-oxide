@@ -36,7 +36,7 @@ pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {
     Some(path) => {
       ensure_parent_dir(path)?;
       fs::write(path, content)?;
-      log::info!("Wrote '{}' ({} bytes)", path, content.len());
+      Info!("writer", "wrote", "Wrote '{}' ({} bytes)", path, content.len());
       Ok(())
     },
     None => io::stdout().write_all(content.as_bytes()),
@@ -144,7 +144,7 @@ impl Processor for Writer {
           format!("Couldn't write '{}': {}", destination, e),
         ))
       })?;
-      log::info!("Wrote '{}' ({})", destination, serialized.len());
+      Info!("writer", "wrote", "Wrote '{}' ({})", destination, serialized.len());
     } else {
       print!("{}", serialized);
     }

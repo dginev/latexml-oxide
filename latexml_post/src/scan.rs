@@ -822,7 +822,7 @@ impl Processor for Scan {
       }
     }
 
-    log::info!("Scan: DBStatus: {}", self.db.status());
+    Info!("scan", "db_status", "Scan: DBStatus: {}", self.db.status());
     Ok(vec![doc])
   }
 }

@@ -1,0 +1,87 @@
+# Tag-triggered release workflow. Pushing a tag matching the project's
+# bare-numeric scheme (e.g. `0.6.2`, no `v` prefix) runs `tools/make_release.sh`
+# on ubuntu-22.04 and uploads the resulting tarball + `.deb` + per-asset
+# `.sha256` files to a fresh GitHub Release.
+#
+# Why ubuntu-22.04 and not ubuntu-latest:
+#   ubuntu-22.04 ships glibc 2.35. Binaries linked against an older glibc
+#   load on every later glibc — Ubuntu 22.04 LTS, 24.04 LTS, 26.04, and
+#   Debian 12 / 13. Building on ubuntu-latest (currently 24.04) would
+#   exclude Ubuntu 22.04 LTS users, who are still on the most widespread
+#   long-term release.
+#
+# Manual release procedure: see docs/RELEASING.md.
+
+name: Release
+
+on:
+  push:
+    tags:
+      # Bare X.Y.Z — matches the repo's existing tag history (no v-prefix).
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  # softprops/action-gh-release needs to write the Release object.
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish ${{ github.ref_name }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history so CHANGELOG.md slicing can see prior entries
+          # if we extend the release-body extraction later.
+          fetch-depth: 0
+
+      # Runtime + build-time apt deps. Matches CI.yml's set, minus
+      # language packs the release build doesn't exercise.
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            mold \
+            texlive texlive-latex-extra texlive-science \
+            texlive-bibtex-extra texlive-publishers \
+            poppler-utils
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Release builds use `--profile maxperf`; keep its target dir
+          # warm across re-runs of the same tag (rare, but possible
+          # when fixing the workflow itself before re-tagging).
+          cache-on-failure: true
+          key: release-maxperf
+
+      - name: install cargo-deb
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb
+
+      - name: build release artifacts
+        run: bash tools/make_release.sh
+        env:
+          # make_release.sh verifies this matches the Cargo.toml version
+          # and refuses to build on mismatch.
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: target/release-artifacts/RELEASE_BODY.md
+          files: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz.sha256
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb
+            target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb.sha256
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true

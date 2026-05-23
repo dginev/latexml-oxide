@@ -141,11 +141,12 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
       Err(e) => {
         errors += 1;
         if errors <= 10 {
-          log::warn!(
-            "[dump_reader] Line {}: {}: {}",
-            lineno + 1,
-            e,
-            &line[..line.len().min(80)]
+          Warn!(
+            "dump_reader", "line",
+            s!("Line {}: {}: {}",
+              lineno + 1,
+              e,
+              &line[..line.len().min(80)])
           );
         }
       },
@@ -153,14 +154,12 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   }
 
   if errors > 10 {
-    log::warn!("[dump_reader] ... and {} more errors", errors - 10);
+    Warn!("dump_reader", "errors", s!("... and {} more errors", errors - 10));
   }
-  log::info!(
-    "[dump_reader] Loaded {} entries from {} ({} skipped, {} errors)",
-    count,
-    source_name,
-    skipped,
-    errors
+  Info!(
+    "dump_reader", "loaded",
+    s!("Loaded {} entries from {} ({} skipped, {} errors)",
+      count, source_name, skipped, errors)
   );
 
   Ok(count)

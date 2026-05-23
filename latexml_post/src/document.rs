@@ -846,7 +846,7 @@ impl PostDocument {
           } else if let Some((prefix, localname)) = tag.split_once(':') {
             let nsuri = self.namespaces.get(prefix).cloned();
             if nsuri.is_none() {
-              log_post_warn!(
+              Warn!(
                 "malformed", "namespace",
                 "No namespace on '{}'", tag
               );
@@ -910,7 +910,7 @@ impl PostDocument {
               self.add_nodes(&mut new_node, children);
             }
           } else {
-            log_post_warn!(
+            Warn!(
               "malformed", "namespace",
               "Tag '{}' has no namespace prefix", tag
             );
@@ -1209,7 +1209,7 @@ impl PostDocument {
         } else {
           // Perl Post.pm:1444 — Error('expected', 'id', undef,
           //   "Cannot find a node with xml:id='$id'")
-          log_post_error!(
+          Error!(
             "expected", "id",
             "Cannot find a node with xml:id='{}'", idref
           );
@@ -1232,7 +1232,7 @@ impl PostDocument {
       if realized.is_none() {
         // Perl Post.pm:1456 — Error('expected', 'id', undef,
         //   "Cannot find a node with xml:id='$id'")
-        log_post_error!(
+        Error!(
           "expected", "id",
           "Cannot find a node with xml:id='{}'", idref
         );
@@ -1382,7 +1382,7 @@ impl PostDocument {
     for pi_text in &self.processing_instructions {
       if let Some(cap) = rng_re.captures(pi_text) {
         let schema = &cap[1];
-        log::info!("Would validate against RelaxNG schema: {}", schema);
+        Info!("validate", "schema", "Would validate against RelaxNG schema: {}", schema);
         return Ok(());
       }
     }
@@ -1390,7 +1390,7 @@ impl PostDocument {
     //   RelaxNG schema $schema") when no usable schema; here we don't
     //   even have a path. Reporting at warn (no schema = nothing to
     //   validate, often a benign config) with the structured target.
-    log_post_warn!(
+    Warn!(
       "missing_file", "schema",
       "No schema found for document validation"
     );
@@ -1421,7 +1421,7 @@ impl PostDocument {
     }
 
     if !dups.is_empty() {
-      log_post_warn!(
+      Warn!(
         "malformed", "id",
         "Duplicate IDs for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
@@ -1429,7 +1429,7 @@ impl PostDocument {
       );
     }
     if !missing.is_empty() {
-      log_post_warn!(
+      Warn!(
         "expected", "id",
         "Cached IDs not in document for {}: {}",
         self.site_relative_destination().unwrap_or_default(),

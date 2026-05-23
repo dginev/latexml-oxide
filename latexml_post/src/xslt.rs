@@ -56,7 +56,7 @@ impl XSLT {
     if stylesheet.is_empty() {
       // Perl XSLT.pm:36 — Error('expected', 'stylesheet', undef,
       //   "No stylesheet specified!")
-      log_post_error!(
+      Error!(
         "expected", "stylesheet",
         "No stylesheet specified!"
       );
@@ -71,7 +71,7 @@ impl XSLT {
       Err(e) => {
         // Perl XSLT.pm:42 — Error('missing-file', $stylesheet, undef,
         //   "No stylesheet '$stylesheet' found!")
-        log_post_error!(
+        Error!(
           "missing-file", stylesheet,
           "No stylesheet '{}' found!", stylesheet
         );
@@ -112,60 +112,72 @@ impl XSLT {
       .map(String::as_str)
       .collect();
 
-    let found_path = find_resource_file(src, info, &search_paths);
+    let basename = Path::new(src)
+      .file_name()
+      .and_then(|f| f.to_str())
+      .unwrap_or(src);
 
-    match found_path {
+    // Determine destination once — same logic regardless of whether
+    // the resource ends up on disk or comes from the embedded table.
+    let dest = if let Some(ref rd) = self.resource_directory {
+      if let Some(site_dir) = doc.get_site_directory() {
+        format!("{}/{}/{}", site_dir, rd, basename)
+      } else {
+        format!("{}/{}", rd, basename)
+      }
+    } else if let Some(dest_dir) = doc.get_destination_directory() {
+      format!("{}/{}", dest_dir, basename)
+    } else {
+      basename.to_string()
+    };
+    let ensure_parent = |dest: &str| {
+      if let Some(parent) = Path::new(dest).parent() {
+        let _ = fs::create_dir_all(parent);
+      }
+    };
+
+    match find_resource_file(src, info, &search_paths) {
       Some(path) => {
-        let file_name = Path::new(&path)
-          .file_name()
-          .and_then(|f| f.to_str())
-          .unwrap_or(src);
-
-        // Determine destination
-        let dest = if let Some(ref rd) = self.resource_directory {
-          if let Some(site_dir) = doc.get_site_directory() {
-            format!("{}/{}/{}", site_dir, rd, file_name)
-          } else {
-            format!("{}/{}", rd, file_name)
-          }
-        } else {
-          // Preserve relative path
-          if let Some(dest_dir) = doc.get_destination_directory() {
-            format!("{}/{}", dest_dir, file_name)
-          } else {
-            file_name.to_string()
-          }
-        };
-
-        // Copy if source != destination
+        // Found on disk via searchpath. Copy unless source == dest.
         if path != dest {
-          if let Some(parent) = Path::new(&dest).parent() {
-            let _ = fs::create_dir_all(parent);
-          }
+          ensure_parent(&dest);
           if let Err(e) = fs::copy(&path, &dest) {
-            log_post_warn!(
+            Warn!(
               "I/O", dest,
               "Couldn't copy {} to {}: {}", path, dest, e
             );
           }
         }
-
-        // Return relative to destination directory
-        if let Some(dest_dir) = doc.get_destination_directory() {
-          relative_path(&dest, dest_dir)
-        } else {
-          dest
-        }
       },
       None => {
-        log_post_warn!(
-          "missing_file", src,
-          "Couldn't find resource file {} in paths {:?}",
-          src,
-          search_paths
-        );
-        src.to_string()
+        // Not on disk — try the embedded table. CSS/JS assets are
+        // baked into the binary at build time; we materialize them
+        // straight to the destination, no temp dir round-trip.
+        if let Some(bytes) = embedded_resources::lookup(basename) {
+          ensure_parent(&dest);
+          if let Err(e) = fs::write(&dest, bytes) {
+            Warn!(
+              "I/O", dest,
+              "Couldn't write embedded resource {} to {}: {}", basename, dest, e
+            );
+          }
+        } else {
+          Warn!(
+            "missing_file", src,
+            "Couldn't find resource file {} in paths {:?}",
+            src,
+            search_paths
+          );
+          return src.to_string();
+        }
       },
+    }
+
+    // Return path relative to destination directory.
+    if let Some(dest_dir) = doc.get_destination_directory() {
+      relative_path(&dest, dest_dir)
+    } else {
+      dest
     }
   }
 
@@ -243,7 +255,7 @@ impl Processor for XSLT {
       None => return Ok(vec![doc]),
     };
 
-    log::info!("Applying XSLT stylesheet: {}", stylesheet_path);
+    Info!("xslt", "stylesheet", "Applying XSLT stylesheet: {}", stylesheet_path);
 
     // Handle resource elements first (before transformation removes them)
     let resource_nodes = doc.findnodes("//ltx:resource[@src]");
@@ -378,8 +390,20 @@ where
   STYLESHEET_CACHE.with(|cache| {
     let mut map = cache.borrow_mut();
     if !map.contains_key(&key) {
-      let parsed = libxslt::parser::parse_file(path)
-        .map_err(|e| PostError::Processing(format!("Failed to parse XSLT stylesheet: {}", e)))?;
+      let parsed = if let Some(name) = path.strip_prefix(embedded_xslt::URL_PREFIX) {
+        // `embed:///<name>` sentinel from `find_stylesheet`. Parse the
+        // root stylesheet from the embedded byte table; libxslt's
+        // `xsl:import` machinery will then re-enter our libxml2 input
+        // callback for every referenced URL.
+        let bytes = embedded_xslt::lookup(name).ok_or_else(|| {
+          PostError::Processing(format!("Embedded XSLT stylesheet {} not found", name))
+        })?;
+        libxslt::parser::parse_bytes(bytes.to_vec(), path)
+          .map_err(|e| PostError::Processing(format!("Failed to parse embedded XSLT: {}", e)))?
+      } else {
+        libxslt::parser::parse_file(path)
+          .map_err(|e| PostError::Processing(format!("Failed to parse XSLT stylesheet: {}", e)))?
+      };
       map.insert(key.clone(), parsed);
     }
     let entry = map
@@ -478,36 +502,135 @@ mod embedded_xslt {
     ),
   ];
 
-  use std::path::PathBuf;
   use std::sync::OnceLock;
 
-  static EXTRACTED_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+  /// URL scheme through which our embedded stylesheets are served to
+  /// libxslt. Any URL starting with this prefix is intercepted by the
+  /// input callback we install in [`install_callback_once`] and
+  /// resolved against the [`FILES`] table.
+  pub const URL_PREFIX: &str = "embed:///";
 
-  /// Extract embedded XSLT files to a temp directory.
-  /// Returns the directory path, or None if extraction fails.
-  pub fn ensure_extracted() -> Option<PathBuf> {
-    EXTRACTED_DIR
-      .get_or_init(|| {
-        let dir = std::env::temp_dir().join("latexml_oxide_xslt");
-        if let Err(e) = std::fs::create_dir_all(&dir) {
-          log_post_warn!(
-            "I/O", "xslt_tempdir",
-            "Failed to create XSLT temp dir: {}", e
-          );
-          return None;
-        }
-        for (name, content) in FILES {
-          if let Err(e) = std::fs::write(dir.join(name), content) {
-            log_post_warn!(
-              "I/O", name,
-              "Failed to write embedded XSLT {}: {}", name, e
-            );
-            return None;
-          }
-        }
-        Some(dir)
-      })
-      .clone()
+  /// Look up the embedded XSLT bytes by basename, or `None` if the
+  /// stylesheet is not bundled.
+  pub fn lookup(name: &str) -> Option<&'static [u8]> {
+    FILES
+      .iter()
+      .find_map(|(n, c)| (*n == name).then(|| c.as_bytes()))
+  }
+
+  /// Install the libxml2 input callback that serves `embed:///`
+  /// URLs from [`FILES`]. Called once per process; subsequent calls
+  /// are no-ops. The callback fires whenever libxml2 itself opens a
+  /// URL — including `xsl:import` / `xsl:include` resolution from
+  /// inside `libxslt::parser::parse_bytes`. Result: every stylesheet
+  /// (root + imports) is loaded from the binary's own `.rodata`
+  /// section, no disk extraction required.
+  pub fn install_callback_once() {
+    static INSTALLED: OnceLock<()> = OnceLock::new();
+    INSTALLED.get_or_init(|| {
+      libxml::io::register_input_callback(
+        |url| url.starts_with(URL_PREFIX),
+        |url| {
+          let name = url.strip_prefix(URL_PREFIX)?;
+          lookup(name).map(|s| s.to_vec())
+        },
+      );
+    });
+  }
+}
+
+// ======================================================================
+// Embedded CSS / JavaScript resources — bundled at compile time so a
+// single-binary distribution can serve them without an accompanying
+// `resources/` tree on disk.
+//
+// Unlike XSLT (which libxslt needs as files on disk to resolve
+// `xsl:import` chains), CSS and JS are pure leaf assets — the
+// post-processor's job is to put a copy next to the output HTML so
+// `<link rel="stylesheet">` resolves. We can write the embedded
+// bytes straight to the destination directory, skipping the
+// extract-to-temp-then-copy round-trip entirely.
+
+mod embedded_resources {
+  pub const CSS_FILES: &[(&str, &str)] = &[
+    (
+      "LaTeXML-blue.css",
+      include_str!("../../resources/CSS/LaTeXML-blue.css"),
+    ),
+    (
+      "LaTeXML-marginpar.css",
+      include_str!("../../resources/CSS/LaTeXML-marginpar.css"),
+    ),
+    (
+      "LaTeXML-navbar-left.css",
+      include_str!("../../resources/CSS/LaTeXML-navbar-left.css"),
+    ),
+    (
+      "LaTeXML-navbar-right.css",
+      include_str!("../../resources/CSS/LaTeXML-navbar-right.css"),
+    ),
+    (
+      "LaTeXML.css",
+      include_str!("../../resources/CSS/LaTeXML.css"),
+    ),
+    (
+      "ltx-amsart.css",
+      include_str!("../../resources/CSS/ltx-amsart.css"),
+    ),
+    (
+      "ltx-apj.css",
+      include_str!("../../resources/CSS/ltx-apj.css"),
+    ),
+    (
+      "ltx-article.css",
+      include_str!("../../resources/CSS/ltx-article.css"),
+    ),
+    (
+      "ltx-book.css",
+      include_str!("../../resources/CSS/ltx-book.css"),
+    ),
+    (
+      "ltx-listings.css",
+      include_str!("../../resources/CSS/ltx-listings.css"),
+    ),
+    (
+      "ltx-report.css",
+      include_str!("../../resources/CSS/ltx-report.css"),
+    ),
+    (
+      "ltx-svjour.css",
+      include_str!("../../resources/CSS/ltx-svjour.css"),
+    ),
+    (
+      "ltx-ulem.css",
+      include_str!("../../resources/CSS/ltx-ulem.css"),
+    ),
+    (
+      "relaxng-schema-rustdoc-theme.css",
+      include_str!("../../resources/CSS/relaxng-schema-rustdoc-theme.css"),
+    ),
+  ];
+
+  pub const JS_FILES: &[(&str, &str)] = &[
+    (
+      "LaTeXML-maybeMathjax.js",
+      include_str!("../../resources/javascript/LaTeXML-maybeMathjax.js"),
+    ),
+    (
+      "relaxng-schema-rustdoc-theme.js",
+      include_str!("../../resources/javascript/relaxng-schema-rustdoc-theme.js"),
+    ),
+  ];
+
+  /// Return the embedded bytes for `basename` if it's one of the
+  /// bundled CSS/JS assets, or `None` otherwise. Callers write the
+  /// returned slice straight to the destination directory — no temp
+  /// dir, no intermediate copy.
+  pub fn lookup(basename: &str) -> Option<&'static [u8]> {
+    CSS_FILES
+      .iter()
+      .chain(JS_FILES.iter())
+      .find_map(|(n, c)| (*n == basename).then(|| c.as_bytes()))
   }
 }
 
@@ -526,21 +649,19 @@ fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, P
       return Ok(p);
     }
   }
-  // 3. Fallback: extract embedded XSLT to temp dir and use that
-  if let Some(embedded_dir) = embedded_xslt::ensure_extracted() {
-    let filename = Path::new(stylesheet)
-      .file_name()
-      .and_then(|f| f.to_str())
-      .unwrap_or(stylesheet);
-    let embedded_path = embedded_dir.join(filename);
-    if embedded_path.is_file() {
-      return Ok(embedded_path.to_string_lossy().to_string());
-    }
-    // Also check the full relative path inside the embedded dir
-    let full_path = embedded_dir.join(stylesheet);
-    if full_path.is_file() {
-      return Ok(full_path.to_string_lossy().to_string());
-    }
+  // 3. Fallback: serve from the embedded table via the libxml2 input
+  //    callback. We return an `embed:///<basename>` URL sentinel that
+  //    `with_cached_stylesheet` routes through `libxslt::parser::
+  //    parse_bytes`; subsequent `xsl:import` references inside that
+  //    stylesheet compose against this base URI and re-enter our
+  //    callback, so the whole chain stays in memory.
+  let filename = Path::new(stylesheet)
+    .file_name()
+    .and_then(|f| f.to_str())
+    .unwrap_or(stylesheet);
+  if embedded_xslt::lookup(filename).is_some() {
+    embedded_xslt::install_callback_once();
+    return Ok(format!("{}{}", embedded_xslt::URL_PREFIX, filename));
   }
   Err(PostError::Processing(format!(
     "No stylesheet '{}' found!",
@@ -548,6 +669,12 @@ fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, P
   )))
 }
 
+/// Disk-only lookup for a CSS/JS/icon resource — searches the literal
+/// path, then `info.subdir`-prefixed variants, then each `search_paths`
+/// entry. Embedded (compile-time-bundled) assets are handled by the
+/// caller via `embedded_resources::lookup`; this function deliberately
+/// does NOT check the embed, so on-disk overrides always win and the
+/// "couldn't find" branch can fall through to the embed cleanly.
 fn find_resource_file(
   src: &str,
   info: Option<&ResourceInfo>,

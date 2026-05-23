@@ -85,7 +85,7 @@ impl MakeIndex {
     if keys.is_empty() {
       return None;
     }
-    log::info!("MakeIndex: {} entries", keys.len());
+    Info!("make_index", "count", "MakeIndex: {} entries", keys.len());
 
     let mut all_phrases: HashMap<String, String> = HashMap::default();
     let mut tree = IndexTree::new(index_id);

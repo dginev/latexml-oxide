@@ -68,7 +68,8 @@ impl Processor for PictureImages {
   fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
-    log::info!(
+    Info!(
+      "picture_images", "generate",
       "PictureImages: would generate {} picture images",
       nodes.len()
     );

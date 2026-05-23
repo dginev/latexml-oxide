@@ -26,8 +26,8 @@
 //! - [`radix`] — Radix utilities for ID generation (a,b,...,z,aa,ab,...)
 
 // Crate-wide diagnostic emission macros
-// (`log_post_error!`, `log_post_warn!`, `log_post_info!`,
-// `log_post_fatal!`). Loaded first via #[macro_use] so every
+// (`Error!`, `Warn!`, `Info!`,
+// `Fatal!`). Loaded first via #[macro_use] so every
 // post-processor module can use them without explicit imports —
 // matching how `latexml_engine`'s prelude makes the engine-level
 // `Error!`/`Warn!` macros visible.
@@ -112,18 +112,19 @@ impl Post {
   ) -> Result<Vec<PostDocument>, PostError> {
     let mut docs = docs;
 
-    log::info!("post-processing");
+    Note!("post-processing");
     let audit = *POST_AUDIT;
 
     for processor in processors.iter_mut() {
       // Map processor names to telemetry phases. See docs/TELEMETRY.md.
-      // Names come from each Processor's get_name() — XSLT prefixes
-      // with "XSLT[", MathML uses "MathML::Presentation"/"::Content".
-      // Anything unrecognised attributes to Xslt as a coarse fallback.
+      // Names come from each Processor's get_name() — same bracket-
+      // classifier shape as XSLT (`XSLT[using ...]`): MathML uses
+      // `MathML[Presentation]` / `MathML[Content]`. Anything
+      // unrecognised attributes to Xslt as a coarse fallback.
       let pname = processor.get_name();
-      let phase = if pname.starts_with("MathML::Presentation") {
+      let phase = if pname.starts_with("MathML[Presentation]") {
         latexml_core::telemetry::Phase::MathmlPres
-      } else if pname.starts_with("MathML::Content") {
+      } else if pname.starts_with("MathML[Content]") {
         latexml_core::telemetry::Phase::MathmlCont
       } else if pname.starts_with("XSLT") {
         latexml_core::telemetry::Phase::Xslt
@@ -153,7 +154,7 @@ impl Post {
               "processing".to_string()
             }
           );
-          log::info!("{}", msg);
+          Note!(msg);
           let t0 = if audit {
             Some(std::time::Instant::now())
           } else {
@@ -162,12 +163,12 @@ impl Post {
           let result_docs = processor.process(doc, nodes)?;
           if let Some(t0) = t0 {
             let ms = t0.elapsed().as_millis();
-            log::info!(
+            Note!(format!(
               "POST_AUDIT stage {} took {}ms ({} nodes)",
               processor.get_name(),
               ms,
               n
-            );
+            ));
           }
           new_docs.extend(result_docs);
         } else {
@@ -177,7 +178,7 @@ impl Post {
       docs = new_docs;
     }
 
-    log::info!("post-processing complete");
+    Note!("post-processing complete");
     Ok(docs)
   }
 }

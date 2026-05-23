@@ -24,6 +24,7 @@ use crate::common::xml::XML_NS;
 use crate::document::Document;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
+pub mod embedded;
 pub mod scan;
 pub mod simplify;
 pub mod tex;

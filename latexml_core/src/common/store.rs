@@ -227,8 +227,8 @@ impl fmt::Display for Stored {
       Strings(ref vs) => write!(f, "{}", arena::join(vs, ",")),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Template(ref t) => write!(f, "{t}"),
-      None => write!(f, "Stored::None"),
-      _ => write!(f, "Stored::<??>"),
+      None => write!(f, "Stored[None]"),
+      _ => write!(f, "Stored[??]"),
     }
   }
 }
