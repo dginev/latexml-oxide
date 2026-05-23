@@ -94,14 +94,47 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
   the 150K canvas-3 baseline (kept as a regression-style witness
   pool even as the engine improves; do NOT regenerate the HTML).
 
-### Status snapshot (live, last refreshed 2026-05-22 18:35 local)
+### Status snapshot (live, last refreshed 2026-05-22 21:21 local)
 
 | | Value |
 |---|---:|
-| Stages closed | 30 of ~50 (stage_31 in flight at 3,532/10,000, 16 workers) |
-| Stage_31 (first post-OmniBus-fix stage) | **3,531 OK / 1 FATAL_3** (99.97%) — sole failure is SHARED-FAILURE |
+| Stages closed | 33 of ~50 (stage_34 in flight at 6,398/10,000, all OK) |
+| Total papers | **331,369** processed, **331,271 OK**, **99.9704%** |
+| Stage_34 (latest binary) | **6,398/6,398 OK so far (100%)** |
 | Tests | **1,334 / 0 / 0** |
-| Branch | `large-scale-testing-round-3`, 904 commits ahead of `origin/master` |
+| Branch | `large-scale-testing-round-3`, 911 commits ahead of `origin/master` |
+
+### Session R36 — 7 root-cause fixes landed, 14 papers closed
+
+| Commit | Fix | Papers recovered |
+|---|---|---:|
+| `d167f86785` | `load_class`: defer deps-scan until AFTER alternate-class loads (OmniBus order) | 7 (statsoc/ectj/compositio/biom clusters) |
+| `9c578bcaa9` | `ams_support`: gate `\pf`/`\pf*` env aliases on 2.09_COMPATIBILITY | 1 (1102.0135) |
+| `a38d0db250` | `titleref.sty`: minimal stub binding (\titleref→\ref) | 1 (1103.2227) |
+| `6a64259589` | `ccaption.sty`: minimal stub binding (extensions→\caption) | 1 (1105.3285) |
+| `a900101da3` | `acronym.sty`: defer `\Ac`/`\Acf`/etc. via `\AtBeginDocument` | 1 (1102.0244) |
+| `8f00710f64` | `backref.sty`: minimal stub binding (no-op back-refs) | 1 (1107.0498) |
+| `585996033f` | `omnibus`: `\frontmatter`/`\mainmatter`/`\backmatter` as noop overrides | 2 (1102.3639, 1004.3619 — memo-l cluster) |
+
+### Retest of all 98 prior failures with latest binary
+
+Of 98 papers that failed in earlier stages, **45 PASS** with the
+current binary (cumulative effect of session fixes). Remaining 53
+triaged against Perl:
+* **Genuinely Rust-only (5 papers):**
+  * `gr-qc0301024` — Perl 0.86s OK, Rust hangs in (Building...)
+    phase even at 120s. Pictex doc, deep XML-construction perf gap.
+  * `math0504436` — Perl 0.45s OK, Rust Convert TIMEOUT. eucal+
+    paper-bundled treetex/classes.tex; needs profile.
+  * `1004.4538` — Perl 7 errors complete, Rust hits
+    `PushbackLimit:650000` infinite loop on undefined `\mathbf`/
+    `\emph` cascade. Deep recovery semantics gap.
+  * `1105.4136` — Perl 1 error complete, Rust 250 warnings + 101
+    errors + fatal. `#` PARAM reaching stomach (catcode leak).
+  * `math0507219` — Perl 5 errors complete, Rust fatal. Pictex.
+* **SHARED-FAILUREs (~48 papers):** Perl also fails or times
+  out. Most underscore-catcode cascades from missing class/package,
+  or pictex/pstricks raw-load slowness affecting both engines.
 
 Triage of stages 28-30 (10 FATAL_3 + 1 TIMEOUT, sampled with new
 binary): **0 Rust-only** — all 11 are SHARED-FAILUREs (Perl also
