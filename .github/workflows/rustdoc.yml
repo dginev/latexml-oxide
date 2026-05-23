@@ -4,6 +4,11 @@ on:
     push:
         branches:
             - master
+
+# Deploy step pushes the rendered docs to the gh-pages branch.
+permissions:
+    contents: write
+
 jobs:
     release:
         name: GitHub Pages
@@ -11,25 +16,20 @@ jobs:
 
         steps:
             - name: install dependencies
-              uses: ryankurte/action-apt@v0.2.0
-              with:
-                packages: "libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold"
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y --no-install-recommends \
+                  libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold
             - name: Checkout Repository
-              uses: actions/checkout@v2
+              uses: actions/checkout@v6
 
             - name: Install Rust toolchain
-              uses: actions-rs/toolchain@v1
+              uses: dtolnay/rust-toolchain@nightly
               with:
-                toolchain: nightly
-                profile: minimal
-                override: true
                 components: rustfmt, rust-src
 
             - name: Build Documentation
-              uses: actions-rs/cargo@v1
-              with:
-                command: doc
-                args: --all --no-deps
+              run: cargo doc --all --no-deps
 
             - name: Deploy Documentation
               env:
