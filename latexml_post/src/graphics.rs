@@ -954,7 +954,19 @@ impl Graphics {
     // We must skip the optional `<?xml … ?>` prolog and any `<!-- … -->`
     // or `<!DOCTYPE …>` preamble — otherwise `find('>')` matches the
     // prolog's `?>` instead of the root tag.
-    let head = &content[..content.len().min(2048)];
+    // UTF-8-safe slice: if the 2048-byte mark falls mid-codepoint, walk
+    // forward to the next char boundary so the slice is always valid.
+    // Witness: 1307.4573 (xfig-pstex_t paper with multi-byte chars in
+    // SVG preamble metadata) — previously FATAL_101 panic at
+    // graphics.rs:957 from `&content[..2048]` cutting a UTF-8 sequence.
+    let head_end = {
+      let mut end = content.len().min(2048);
+      while end < content.len() && !content.is_char_boundary(end) {
+        end += 1;
+      }
+      end
+    };
+    let head = &content[..head_end];
     let svg_start = head.find("<svg")?;
     let svg_rest = &head[svg_start..];
     let svg_tag_end = svg_rest.find('>')?;
