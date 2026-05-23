@@ -137,6 +137,12 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * **2000**: 1185 PASS / 808 WARN / 7 errors / 0 FATAL.
 * **5000**: 2911 PASS / 2078 WARN / 11 errors / 0 FATAL —
   **99.78% non-fatal, 58.2% clean pass**.
+* **10000 (partial @ 6725/10K)**: 3 FATALs surfaced — all 3
+  confirmed SHARED-FAILUREs (Perl also fails on each):
+  arXiv:1501.03690 (`\endcsname` extra at internal token),
+  1512.05621 (text-mode cascade in `\text{Tr}^L_X` math),
+  1502.06361 (text-mode cascade post-fullpage). The 100-error
+  cap behavior matches Perl exactly.
 * **1000 from early years (07-14)**: 696 PASS / 303 WARN /
   1 error / 0 FATAL.
 
