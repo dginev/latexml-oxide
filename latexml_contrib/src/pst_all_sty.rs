@@ -36,4 +36,11 @@ LoadDefinitions!({
   DefMacro!("\\nput OptionalMatch:* {{}} {} {}", "");
   DefMacro!("\\aput OptionalMatch:* {{}} [] {}", "#3");
   DefMacro!("\\bput OptionalMatch:* {{}} [] {}", "#3");
+  DefMacro!("\\ncangle OptionalMatch:* [] {} {}", "");
+  DefMacro!("\\ncangles OptionalMatch:* [] {} {}", "");
+  DefMacro!("\\ncloop OptionalMatch:* [] {} {}", "");
+  DefMacro!("\\ncdiag OptionalMatch:* [] {} {}", "");
+  DefMacro!("\\ncbar OptionalMatch:* [] {} {}", "");
+  DefMacro!("\\ncput OptionalMatch:* {{}} [] {}", "#3");
+  DefMacro!("\\cnodeput OptionalMatch:* [] () {} {}", "#4");
 });
