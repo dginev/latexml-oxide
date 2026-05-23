@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/graphics.rs`."><title>graphics.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.97.0-nightly (e96c36b6f 2026-05-21)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>graphics.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Graphics postprocessing.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/graphics.rs`."><title>graphics.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (54333ff07 2026-05-22)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>graphics.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Graphics postprocessing.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::Graphics`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Finds `&lt;ltx:graphics&gt;` elements without `imagesrc`, locates the source
@@ -13,7 +13,7 @@
 <a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span><span class="kw">crate</span>::document::PostDocument;
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span><span class="kw">crate</span>::processor::{ProcessResult, Processor};
 <a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a><span class="comment">// Diagnostic emission: `log_post_error!` (and friends) live in
+<a href=#16 id=16 data-nosnippet>16</a><span class="comment">// Diagnostic emission: `Error!` (and friends) live in
 <a href=#17 id=17 data-nosnippet>17</a>// `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 <a href=#18 id=18 data-nosnippet>18</a>// diag;` in `lib.rs`. They emit harness-compatible structured Error
 <a href=#19 id=19 data-nosnippet>19</a>// lines (`Error:&lt;class&gt;:&lt;object&gt; &lt;msg&gt;`) matching what
@@ -724,7 +724,7 @@
 <a href=#724 id=724 data-nosnippet>724</a>      <span class="prelude-val">None </span>=&gt; {
 <a href=#725 id=725 data-nosnippet>725</a>        <span class="comment">// Subprocess wall-clock timeout; class=`shell` mirrors Perl
 <a href=#726 id=726 data-nosnippet>726</a>        // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
-<a href=#727 id=727 data-nosnippet>727</a>        </span><span class="macro">log_post_warn!</span>(
+<a href=#727 id=727 data-nosnippet>727</a>        </span><span class="macro">Warn!</span>(
 <a href=#728 id=728 data-nosnippet>728</a>          <span class="string">"shell"</span>, <span class="string">"inkscape"</span>,
 <a href=#729 id=729 data-nosnippet>729</a>          <span class="string">"Graphics: inkscape SVG conversion for {} exceeded {} s — killed"</span>,
 <a href=#730 id=730 data-nosnippet>730</a>          source,
@@ -1586,7 +1586,7 @@
 <a href=#1586 id=1586 data-nosnippet>1586</a>      // (The fake-convert test fixture exits 0 without producing a file.)
 <a href=#1587 id=1587 data-nosnippet>1587</a>      </span><span class="prelude-val">Some</span>(status) =&gt; status.success(),
 <a href=#1588 id=1588 data-nosnippet>1588</a>      <span class="prelude-val">None </span>=&gt; {
-<a href=#1589 id=1589 data-nosnippet>1589</a>        <span class="macro">log_post_warn!</span>(
+<a href=#1589 id=1589 data-nosnippet>1589</a>        <span class="macro">Warn!</span>(
 <a href=#1590 id=1590 data-nosnippet>1590</a>          <span class="string">"shell"</span>, <span class="string">"convert"</span>,
 <a href=#1591 id=1591 data-nosnippet>1591</a>          <span class="string">"Graphics: convert/gs for {} exceeded {} s — killed"</span>,
 <a href=#1592 id=1592 data-nosnippet>1592</a>          source,
@@ -2041,7 +2041,7 @@
 <a href=#2041 id=2041 data-nosnippet>2041</a>                    raw_dims: dims.map(|d| (d.width, d.height)),
 <a href=#2042 id=2042 data-nosnippet>2042</a>                  }),
 <a href=#2043 id=2043 data-nosnippet>2043</a>                  <span class="kw">crate</span>::graphics_cache::ConvertResult::Failed =&gt; {
-<a href=#2044 id=2044 data-nosnippet>2044</a>                    <span class="macro">log_post_warn!</span>(
+<a href=#2044 id=2044 data-nosnippet>2044</a>                    <span class="macro">Warn!</span>(
 <a href=#2045 id=2045 data-nosnippet>2045</a>                      <span class="string">"shell"</span>, <span class="string">"inkscape"</span>,
 <a href=#2046 id=2046 data-nosnippet>2046</a>                      <span class="string">"Graphics: inkscape SVG path failed for {}, falling back to convert"</span>,
 <a href=#2047 id=2047 data-nosnippet>2047</a>                      source
@@ -2088,7 +2088,7 @@
 <a href=#2088 id=2088 data-nosnippet>2088</a>                // Error class/object mirror Perl Graphics.pm:274
 <a href=#2089 id=2089 data-nosnippet>2089</a>                // `Error('imageprocessing', $source, …)` so the
 <a href=#2090 id=2090 data-nosnippet>2090</a>                // harness aggregates with engine/package emissions.
-<a href=#2091 id=2091 data-nosnippet>2091</a>                </span><span class="macro">log_post_error!</span>(
+<a href=#2091 id=2091 data-nosnippet>2091</a>                </span><span class="macro">Error!</span>(
 <a href=#2092 id=2092 data-nosnippet>2092</a>                  <span class="string">"imageprocessing"</span>, source,
 <a href=#2093 id=2093 data-nosnippet>2093</a>                  <span class="string">"Graphics: Failed to convert {} to {}"</span>, source, abs_dest_str
 <a href=#2094 id=2094 data-nosnippet>2094</a>                );
@@ -2147,7 +2147,7 @@
 <a href=#2147 id=2147 data-nosnippet>2147</a>          // findable, this branch hits only when the .tex literally
 <a href=#2148 id=2148 data-nosnippet>2148</a>          // references a non-existent file — exactly the case Perl
 <a href=#2149 id=2149 data-nosnippet>2149</a>          // emits at Warn level. Restore Perl-faithful Warn.
-<a href=#2150 id=2150 data-nosnippet>2150</a>          </span><span class="macro">log_post_warn!</span>(
+<a href=#2150 id=2150 data-nosnippet>2150</a>          </span><span class="macro">Warn!</span>(
 <a href=#2151 id=2151 data-nosnippet>2151</a>            <span class="string">"expected"</span>, <span class="string">"source"</span>,
 <a href=#2152 id=2152 data-nosnippet>2152</a>            <span class="string">"No graphic source found; skipping (source was '{}')"</span>, graphic
 <a href=#2153 id=2153 data-nosnippet>2153</a>          );
@@ -2224,303 +2224,304 @@
 <a href=#2224 id=2224 data-nosnippet>2224</a>      }
 <a href=#2225 id=2225 data-nosnippet>2225</a>    }
 <a href=#2226 id=2226 data-nosnippet>2226</a>
-<a href=#2227 id=2227 data-nosnippet>2227</a>    <span class="macro">log::info!</span>(
-<a href=#2228 id=2228 data-nosnippet>2228</a>      <span class="string">"Graphics {} {} to process"</span>,
-<a href=#2229 id=2229 data-nosnippet>2229</a>      doc.get_destination().unwrap_or(<span class="string">"?"</span>),
-<a href=#2230 id=2230 data-nosnippet>2230</a>      n_to_process
-<a href=#2231 id=2231 data-nosnippet>2231</a>    );
-<a href=#2232 id=2232 data-nosnippet>2232</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[doc])
-<a href=#2233 id=2233 data-nosnippet>2233</a>  }
-<a href=#2234 id=2234 data-nosnippet>2234</a>}
-<a href=#2235 id=2235 data-nosnippet>2235</a>
-<a href=#2236 id=2236 data-nosnippet>2236</a><span class="attr">#[cfg(test)]
-<a href=#2237 id=2237 data-nosnippet>2237</a></span><span class="kw">mod </span>tests {
-<a href=#2238 id=2238 data-nosnippet>2238</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#2239 id=2239 data-nosnippet>2239</a>
-<a href=#2240 id=2240 data-nosnippet>2240</a>  <span class="kw">struct </span>EnvGuard {
-<a href=#2241 id=2241 data-nosnippet>2241</a>    key: String,
-<a href=#2242 id=2242 data-nosnippet>2242</a>    old: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#2243 id=2243 data-nosnippet>2243</a>  }
-<a href=#2244 id=2244 data-nosnippet>2244</a>
-<a href=#2245 id=2245 data-nosnippet>2245</a>  <span class="kw">impl </span>EnvGuard {
-<a href=#2246 id=2246 data-nosnippet>2246</a>    <span class="kw">fn </span>set(key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-<a href=#2247 id=2247 data-nosnippet>2247</a>      <span class="kw">let </span>old = std::env::var(key).ok();
-<a href=#2248 id=2248 data-nosnippet>2248</a>      std::env::set_var(key, value);
-<a href=#2249 id=2249 data-nosnippet>2249</a>      <span class="self">Self </span>{ key: key.to_string(), old }
-<a href=#2250 id=2250 data-nosnippet>2250</a>    }
-<a href=#2251 id=2251 data-nosnippet>2251</a>  }
-<a href=#2252 id=2252 data-nosnippet>2252</a>
-<a href=#2253 id=2253 data-nosnippet>2253</a>  <span class="kw">impl </span>Drop <span class="kw">for </span>EnvGuard {
-<a href=#2254 id=2254 data-nosnippet>2254</a>    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-<a href=#2255 id=2255 data-nosnippet>2255</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(old) = <span class="kw-2">&amp;</span><span class="self">self</span>.old {
-<a href=#2256 id=2256 data-nosnippet>2256</a>        std::env::set_var(<span class="kw-2">&amp;</span><span class="self">self</span>.key, old);
-<a href=#2257 id=2257 data-nosnippet>2257</a>      } <span class="kw">else </span>{
-<a href=#2258 id=2258 data-nosnippet>2258</a>        std::env::remove_var(<span class="kw-2">&amp;</span><span class="self">self</span>.key);
-<a href=#2259 id=2259 data-nosnippet>2259</a>      }
-<a href=#2260 id=2260 data-nosnippet>2260</a>    }
-<a href=#2261 id=2261 data-nosnippet>2261</a>  }
-<a href=#2262 id=2262 data-nosnippet>2262</a>
-<a href=#2263 id=2263 data-nosnippet>2263</a>  <span class="doccomment">/// `run_with_timeout` kills the child and returns `None` when the
-<a href=#2264 id=2264 data-nosnippet>2264</a>  /// process exceeds the deadline. Uses `sleep` as a stand-in for any
-<a href=#2265 id=2265 data-nosnippet>2265</a>  /// runaway subprocess (inkscape, convert, …).
-<a href=#2266 id=2266 data-nosnippet>2266</a>  </span><span class="attr">#[test]
-<a href=#2267 id=2267 data-nosnippet>2267</a>  </span><span class="kw">fn </span>run_with_timeout_kills_slow_child() {
-<a href=#2268 id=2268 data-nosnippet>2268</a>    <span class="kw">let </span>start = std::time::Instant::now();
-<a href=#2269 id=2269 data-nosnippet>2269</a>    <span class="kw">let </span><span class="kw-2">mut </span>cmd = std::process::Command::new(<span class="string">"sleep"</span>);
-<a href=#2270 id=2270 data-nosnippet>2270</a>    cmd.arg(<span class="string">"10"</span>);
-<a href=#2271 id=2271 data-nosnippet>2271</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(<span class="number">200</span>));
-<a href=#2272 id=2272 data-nosnippet>2272</a>    <span class="kw">let </span>elapsed = start.elapsed();
-<a href=#2273 id=2273 data-nosnippet>2273</a>    <span class="macro">assert!</span>(
-<a href=#2274 id=2274 data-nosnippet>2274</a>      result.is_none(),
-<a href=#2275 id=2275 data-nosnippet>2275</a>      <span class="string">"run_with_timeout should return None on kill"
-<a href=#2276 id=2276 data-nosnippet>2276</a>    </span>);
-<a href=#2277 id=2277 data-nosnippet>2277</a>    <span class="comment">// We expect around 200 ms (+ ≤ 50 ms poll interval + SIGKILL reap
-<a href=#2278 id=2278 data-nosnippet>2278</a>    // overhead). Give it 2 s of slack for CI noise.
-<a href=#2279 id=2279 data-nosnippet>2279</a>    </span><span class="macro">assert!</span>(
-<a href=#2280 id=2280 data-nosnippet>2280</a>      elapsed &lt; std::time::Duration::from_secs(<span class="number">2</span>),
-<a href=#2281 id=2281 data-nosnippet>2281</a>      <span class="string">"killed run should return quickly, took {:?}"</span>,
-<a href=#2282 id=2282 data-nosnippet>2282</a>      elapsed
-<a href=#2283 id=2283 data-nosnippet>2283</a>    );
-<a href=#2284 id=2284 data-nosnippet>2284</a>  }
-<a href=#2285 id=2285 data-nosnippet>2285</a>
-<a href=#2286 id=2286 data-nosnippet>2286</a>  <span class="doccomment">/// Fast-completing child returns its real exit status, not a kill.
-<a href=#2287 id=2287 data-nosnippet>2287</a>  </span><span class="attr">#[test]
-<a href=#2288 id=2288 data-nosnippet>2288</a>  </span><span class="kw">fn </span>run_with_timeout_returns_status_for_fast_child() {
-<a href=#2289 id=2289 data-nosnippet>2289</a>    <span class="kw">let </span>cmd = std::process::Command::new(<span class="string">"true"</span>);
-<a href=#2290 id=2290 data-nosnippet>2290</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(<span class="number">5</span>));
-<a href=#2291 id=2291 data-nosnippet>2291</a>    <span class="kw">let </span>status = result.expect(<span class="string">"expected clean exit"</span>);
-<a href=#2292 id=2292 data-nosnippet>2292</a>    <span class="macro">assert!</span>(status.success(), <span class="string">"`true` should exit successfully"</span>);
-<a href=#2293 id=2293 data-nosnippet>2293</a>  }
-<a href=#2294 id=2294 data-nosnippet>2294</a>
-<a href=#2295 id=2295 data-nosnippet>2295</a>  <span class="doccomment">/// Missing binary → `None`, not a panic.
-<a href=#2296 id=2296 data-nosnippet>2296</a>  </span><span class="attr">#[test]
-<a href=#2297 id=2297 data-nosnippet>2297</a>  </span><span class="kw">fn </span>run_with_timeout_handles_spawn_failure() {
-<a href=#2298 id=2298 data-nosnippet>2298</a>    <span class="kw">let </span>cmd = std::process::Command::new(<span class="string">"/this/binary/does/not/exist/12345"</span>);
-<a href=#2299 id=2299 data-nosnippet>2299</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(<span class="number">1</span>));
-<a href=#2300 id=2300 data-nosnippet>2300</a>    <span class="macro">assert!</span>(result.is_none());
-<a href=#2301 id=2301 data-nosnippet>2301</a>  }
-<a href=#2302 id=2302 data-nosnippet>2302</a>
-<a href=#2303 id=2303 data-nosnippet>2303</a>  <span class="doccomment">/// Explicit-threshold heuristic: PDF under threshold triggers SVG
-<a href=#2304 id=2304 data-nosnippet>2304</a>  /// attempt, large PDF does not, non-PDF is always skipped.
-<a href=#2305 id=2305 data-nosnippet>2305</a>  </span><span class="attr">#[test]
-<a href=#2306 id=2306 data-nosnippet>2306</a>  </span><span class="kw">fn </span>should_try_svg_path_explicit_threshold() {
-<a href=#2307 id=2307 data-nosnippet>2307</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_svg_gate_test"</span>);
-<a href=#2308 id=2308 data-nosnippet>2308</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
-<a href=#2309 id=2309 data-nosnippet>2309</a>    <span class="kw">let </span>small_pdf = tmp.join(<span class="string">"small.pdf"</span>);
-<a href=#2310 id=2310 data-nosnippet>2310</a>    <span class="kw">let </span>big_pdf = tmp.join(<span class="string">"big.pdf"</span>);
-<a href=#2311 id=2311 data-nosnippet>2311</a>    <span class="kw">let </span>png = tmp.join(<span class="string">"raster.png"</span>);
-<a href=#2312 id=2312 data-nosnippet>2312</a>    std::fs::write(<span class="kw-2">&amp;</span>small_pdf, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">10 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// 10 KB
-<a href=#2313 id=2313 data-nosnippet>2313</a>    </span>std::fs::write(<span class="kw-2">&amp;</span>big_pdf, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">500 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// 500 KB
-<a href=#2314 id=2314 data-nosnippet>2314</a>    </span>std::fs::write(<span class="kw-2">&amp;</span>png, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">10 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// PNG, irrelevant size
-<a href=#2315 id=2315 data-nosnippet>2315</a>
-<a href=#2316 id=2316 data-nosnippet>2316</a>    // Under explicit threshold → true.
-<a href=#2317 id=2317 data-nosnippet>2317</a>    </span><span class="macro">assert!</span>(Graphics::should_try_svg_path(
-<a href=#2318 id=2318 data-nosnippet>2318</a>      small_pdf.to_str().unwrap(),
-<a href=#2319 id=2319 data-nosnippet>2319</a>      <span class="number">200
-<a href=#2320 id=2320 data-nosnippet>2320</a>    </span>));
-<a href=#2321 id=2321 data-nosnippet>2321</a>    <span class="comment">// At/over explicit threshold → false.
-<a href=#2322 id=2322 data-nosnippet>2322</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(
-<a href=#2323 id=2323 data-nosnippet>2323</a>      big_pdf.to_str().unwrap(),
-<a href=#2324 id=2324 data-nosnippet>2324</a>      <span class="number">200
-<a href=#2325 id=2325 data-nosnippet>2325</a>    </span>));
-<a href=#2326 id=2326 data-nosnippet>2326</a>    <span class="comment">// Non-PDF → always false even under threshold.
-<a href=#2327 id=2327 data-nosnippet>2327</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(png.to_str().unwrap(), <span class="number">200</span>));
-<a href=#2328 id=2328 data-nosnippet>2328</a>    <span class="comment">// Missing file → false, not panic.
-<a href=#2329 id=2329 data-nosnippet>2329</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(<span class="string">"/no/such/file.pdf"</span>, <span class="number">200</span>));
-<a href=#2330 id=2330 data-nosnippet>2330</a>
-<a href=#2331 id=2331 data-nosnippet>2331</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2332 id=2332 data-nosnippet>2332</a>  }
-<a href=#2333 id=2333 data-nosnippet>2333</a>
-<a href=#2334 id=2334 data-nosnippet>2334</a>  <span class="doccomment">/// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
-<a href=#2335 id=2335 data-nosnippet>2335</a>  /// the SVG attempt, PDFs containing image XObjects do NOT. Uses the
-<a href=#2336 id=2336 data-nosnippet>2336</a>  /// real fixtures (`cifar10_vector.pdf`, `pathological_vector.pdf`,
-<a href=#2337 id=2337 data-nosnippet>2337</a>  /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
-<a href=#2338 id=2338 data-nosnippet>2338</a>  </span><span class="attr">#[test]
-<a href=#2339 id=2339 data-nosnippet>2339</a>  </span><span class="kw">fn </span>should_try_svg_path_auto_detect() {
-<a href=#2340 id=2340 data-nosnippet>2340</a>    <span class="kw">let </span>fixtures = std::path::Path::new(<span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>)).join(<span class="string">"tests/fixtures"</span>);
-<a href=#2341 id=2341 data-nosnippet>2341</a>    <span class="kw">let </span>cifar = fixtures.join(<span class="string">"cifar10_vector.pdf"</span>);
-<a href=#2342 id=2342 data-nosnippet>2342</a>    <span class="kw">let </span>pathological = fixtures.join(<span class="string">"pathological_vector.pdf"</span>);
-<a href=#2343 id=2343 data-nosnippet>2343</a>    <span class="kw">let </span>raster = fixtures.join(<span class="string">"raster_with_image.pdf"</span>);
-<a href=#2344 id=2344 data-nosnippet>2344</a>    <span class="macro">assert!</span>(cifar.exists(), <span class="string">"fixture missing: {}"</span>, cifar.display());
-<a href=#2345 id=2345 data-nosnippet>2345</a>    <span class="macro">assert!</span>(
-<a href=#2346 id=2346 data-nosnippet>2346</a>      pathological.exists(),
-<a href=#2347 id=2347 data-nosnippet>2347</a>      <span class="string">"fixture missing: {}"</span>,
-<a href=#2348 id=2348 data-nosnippet>2348</a>      pathological.display()
-<a href=#2349 id=2349 data-nosnippet>2349</a>    );
-<a href=#2350 id=2350 data-nosnippet>2350</a>    <span class="macro">assert!</span>(raster.exists(), <span class="string">"fixture missing: {}"</span>, raster.display());
-<a href=#2351 id=2351 data-nosnippet>2351</a>
-<a href=#2352 id=2352 data-nosnippet>2352</a>    <span class="comment">// Vector PDFs (no /Subtype /Image marker) → SVG path activated.
-<a href=#2353 id=2353 data-nosnippet>2353</a>    </span><span class="macro">assert!</span>(
-<a href=#2354 id=2354 data-nosnippet>2354</a>      Graphics::should_try_svg_path(cifar.to_str().unwrap(), <span class="number">0</span>),
-<a href=#2355 id=2355 data-nosnippet>2355</a>      <span class="string">"vector-only PDF must trigger SVG path under auto-detect"
-<a href=#2356 id=2356 data-nosnippet>2356</a>    </span>);
-<a href=#2357 id=2357 data-nosnippet>2357</a>    <span class="macro">assert!</span>(
-<a href=#2358 id=2358 data-nosnippet>2358</a>      Graphics::should_try_svg_path(pathological.to_str().unwrap(), <span class="number">0</span>),
-<a href=#2359 id=2359 data-nosnippet>2359</a>      <span class="string">"pgfplots-style vector PDF must trigger SVG path under auto-detect"
-<a href=#2360 id=2360 data-nosnippet>2360</a>    </span>);
-<a href=#2361 id=2361 data-nosnippet>2361</a>
-<a href=#2362 id=2362 data-nosnippet>2362</a>    <span class="comment">// Raster PDF (has /Subtype /Image) → SVG path SKIPPED.
-<a href=#2363 id=2363 data-nosnippet>2363</a>    </span><span class="macro">assert!</span>(
-<a href=#2364 id=2364 data-nosnippet>2364</a>      !Graphics::should_try_svg_path(raster.to_str().unwrap(), <span class="number">0</span>),
-<a href=#2365 id=2365 data-nosnippet>2365</a>      <span class="string">"raster-containing PDF must skip auto-detect SVG path"
-<a href=#2366 id=2366 data-nosnippet>2366</a>    </span>);
-<a href=#2367 id=2367 data-nosnippet>2367</a>
-<a href=#2368 id=2368 data-nosnippet>2368</a>    <span class="comment">// Direct detector sanity check.
-<a href=#2369 id=2369 data-nosnippet>2369</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#2370 id=2370 data-nosnippet>2370</a>      Graphics::pdf_has_image_xobject(cifar.to_str().unwrap()),
-<a href=#2371 id=2371 data-nosnippet>2371</a>      <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)
-<a href=#2372 id=2372 data-nosnippet>2372</a>    );
-<a href=#2373 id=2373 data-nosnippet>2373</a>    <span class="macro">assert_eq!</span>(
-<a href=#2374 id=2374 data-nosnippet>2374</a>      Graphics::pdf_has_image_xobject(raster.to_str().unwrap()),
-<a href=#2375 id=2375 data-nosnippet>2375</a>      <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
-<a href=#2376 id=2376 data-nosnippet>2376</a>    );
-<a href=#2377 id=2377 data-nosnippet>2377</a>  }
-<a href=#2378 id=2378 data-nosnippet>2378</a>
-<a href=#2379 id=2379 data-nosnippet>2379</a>  <span class="attr">#[test]
-<a href=#2380 id=2380 data-nosnippet>2380</a>  </span><span class="kw">fn </span>postscript_density_caps_huge_bounding_box() {
-<a href=#2381 id=2381 data-nosnippet>2381</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_density_test"</span>);
-<a href=#2382 id=2382 data-nosnippet>2382</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
-<a href=#2383 id=2383 data-nosnippet>2383</a>    <span class="kw">let </span>normal = tmp.join(<span class="string">"normal.eps"</span>);
-<a href=#2384 id=2384 data-nosnippet>2384</a>    <span class="kw">let </span>huge = tmp.join(<span class="string">"huge.eps"</span>);
-<a href=#2385 id=2385 data-nosnippet>2385</a>    std::fs::write(
-<a href=#2386 id=2386 data-nosnippet>2386</a>      <span class="kw-2">&amp;</span>normal,
-<a href=#2387 id=2387 data-nosnippet>2387</a>      <span class="string">"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 567 567\n"</span>,
-<a href=#2388 id=2388 data-nosnippet>2388</a>    )
-<a href=#2389 id=2389 data-nosnippet>2389</a>    .unwrap();
-<a href=#2390 id=2390 data-nosnippet>2390</a>    std::fs::write(
-<a href=#2391 id=2391 data-nosnippet>2391</a>      <span class="kw-2">&amp;</span>huge,
-<a href=#2392 id=2392 data-nosnippet>2392</a>      <span class="string">"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 14 14 11353 11353\n"</span>,
-<a href=#2393 id=2393 data-nosnippet>2393</a>    )
-<a href=#2394 id=2394 data-nosnippet>2394</a>    .unwrap();
-<a href=#2395 id=2395 data-nosnippet>2395</a>
-<a href=#2396 id=2396 data-nosnippet>2396</a>    <span class="macro">assert_eq!</span>(
-<a href=#2397 id=2397 data-nosnippet>2397</a>      Graphics::raster_density_for_source(normal.to_str().unwrap()),
-<a href=#2398 id=2398 data-nosnippet>2398</a>      Graphics::DEFAULT_RASTER_DENSITY
-<a href=#2399 id=2399 data-nosnippet>2399</a>    );
-<a href=#2400 id=2400 data-nosnippet>2400</a>    <span class="macro">assert_eq!</span>(
-<a href=#2401 id=2401 data-nosnippet>2401</a>      Graphics::raster_density_for_source(huge.to_str().unwrap()),
-<a href=#2402 id=2402 data-nosnippet>2402</a>      <span class="number">13
-<a href=#2403 id=2403 data-nosnippet>2403</a>    </span>);
-<a href=#2404 id=2404 data-nosnippet>2404</a>    <span class="macro">assert_eq!</span>(
-<a href=#2405 id=2405 data-nosnippet>2405</a>      read_postscript_bounding_box(huge.to_str().unwrap()),
-<a href=#2406 id=2406 data-nosnippet>2406</a>      <span class="prelude-val">Some</span>((<span class="number">11339.0</span>, <span class="number">11339.0</span>))
-<a href=#2407 id=2407 data-nosnippet>2407</a>    );
-<a href=#2408 id=2408 data-nosnippet>2408</a>
-<a href=#2409 id=2409 data-nosnippet>2409</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2410 id=2410 data-nosnippet>2410</a>  }
-<a href=#2411 id=2411 data-nosnippet>2411</a>
-<a href=#2412 id=2412 data-nosnippet>2412</a>  <span class="attr">#[test]
-<a href=#2413 id=2413 data-nosnippet>2413</a>  </span><span class="kw">fn </span>pdf_density_caps_huge_page_box() {
-<a href=#2414 id=2414 data-nosnippet>2414</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_pdf_density_test.pdf"</span>);
-<a href=#2415 id=2415 data-nosnippet>2415</a>    std::fs::write(
-<a href=#2416 id=2416 data-nosnippet>2416</a>      <span class="kw-2">&amp;</span>tmp,
-<a href=#2417 id=2417 data-nosnippet>2417</a>      <span class="string">b"%PDF-1.4
-<a href=#2418 id=2418 data-nosnippet>2418</a>1 0 obj
-<a href=#2419 id=2419 data-nosnippet>2419</a>&lt;&lt; /Type /Page /MediaBox [0 0 4218 2437] &gt;&gt;
-<a href=#2420 id=2420 data-nosnippet>2420</a>endobj
-<a href=#2421 id=2421 data-nosnippet>2421</a>"</span>,
-<a href=#2422 id=2422 data-nosnippet>2422</a>    )
-<a href=#2423 id=2423 data-nosnippet>2423</a>    .unwrap();
-<a href=#2424 id=2424 data-nosnippet>2424</a>
-<a href=#2425 id=2425 data-nosnippet>2425</a>    <span class="macro">assert_eq!</span>(
-<a href=#2426 id=2426 data-nosnippet>2426</a>      read_pdf_page_box(tmp.to_str().unwrap()),
-<a href=#2427 id=2427 data-nosnippet>2427</a>      <span class="prelude-val">Some</span>((<span class="number">4218.0</span>, <span class="number">2437.0</span>))
-<a href=#2428 id=2428 data-nosnippet>2428</a>    );
-<a href=#2429 id=2429 data-nosnippet>2429</a>    <span class="macro">assert_eq!</span>(
-<a href=#2430 id=2430 data-nosnippet>2430</a>      Graphics::raster_density_for_source(tmp.to_str().unwrap()),
-<a href=#2431 id=2431 data-nosnippet>2431</a>      <span class="number">34
-<a href=#2432 id=2432 data-nosnippet>2432</a>    </span>);
-<a href=#2433 id=2433 data-nosnippet>2433</a>
-<a href=#2434 id=2434 data-nosnippet>2434</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2435 id=2435 data-nosnippet>2435</a>  }
-<a href=#2436 id=2436 data-nosnippet>2436</a>
-<a href=#2437 id=2437 data-nosnippet>2437</a>  <span class="doccomment">/// SVG viewBox parsing extracts width/height.
-<a href=#2438 id=2438 data-nosnippet>2438</a>  </span><span class="attr">#[test]
-<a href=#2439 id=2439 data-nosnippet>2439</a>  </span><span class="kw">fn </span>read_svg_dimensions_parses_viewbox() {
-<a href=#2440 id=2440 data-nosnippet>2440</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_svg_dim_test.svg"</span>);
-<a href=#2441 id=2441 data-nosnippet>2441</a>    std::fs::write(
-<a href=#2442 id=2442 data-nosnippet>2442</a>      <span class="kw-2">&amp;</span>tmp,
-<a href=#2443 id=2443 data-nosnippet>2443</a>      <span class="string">r#"&lt;?xml version="1.0"?&gt;
-<a href=#2444 id=2444 data-nosnippet>2444</a>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="10cm" height="7.5cm"&gt;
-<a href=#2445 id=2445 data-nosnippet>2445</a>  &lt;rect width="640" height="480" fill="black"/&gt;
-<a href=#2446 id=2446 data-nosnippet>2446</a>&lt;/svg&gt;"#</span>,
-<a href=#2447 id=2447 data-nosnippet>2447</a>    )
-<a href=#2448 id=2448 data-nosnippet>2448</a>    .unwrap();
-<a href=#2449 id=2449 data-nosnippet>2449</a>    <span class="kw">let </span>dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect(<span class="string">"dims"</span>);
-<a href=#2450 id=2450 data-nosnippet>2450</a>    <span class="macro">assert_eq!</span>(dims, (<span class="number">640</span>, <span class="number">480</span>));
-<a href=#2451 id=2451 data-nosnippet>2451</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2452 id=2452 data-nosnippet>2452</a>  }
-<a href=#2453 id=2453 data-nosnippet>2453</a>
-<a href=#2454 id=2454 data-nosnippet>2454</a>  <span class="doccomment">/// Falls back to width/height attrs when viewBox is missing.
-<a href=#2455 id=2455 data-nosnippet>2455</a>  </span><span class="attr">#[test]
-<a href=#2456 id=2456 data-nosnippet>2456</a>  </span><span class="kw">fn </span>read_svg_dimensions_falls_back_to_width_height() {
-<a href=#2457 id=2457 data-nosnippet>2457</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_svg_dim_fallback.svg"</span>);
-<a href=#2458 id=2458 data-nosnippet>2458</a>    std::fs::write(
-<a href=#2459 id=2459 data-nosnippet>2459</a>      <span class="kw-2">&amp;</span>tmp,
-<a href=#2460 id=2460 data-nosnippet>2460</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" width="123.7pt" height="99.4pt"&gt;
-<a href=#2461 id=2461 data-nosnippet>2461</a>  &lt;rect/&gt;
-<a href=#2462 id=2462 data-nosnippet>2462</a>&lt;/svg&gt;"#</span>,
-<a href=#2463 id=2463 data-nosnippet>2463</a>    )
-<a href=#2464 id=2464 data-nosnippet>2464</a>    .unwrap();
-<a href=#2465 id=2465 data-nosnippet>2465</a>    <span class="kw">let </span>dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect(<span class="string">"dims"</span>);
-<a href=#2466 id=2466 data-nosnippet>2466</a>    <span class="macro">assert_eq!</span>(dims, (<span class="number">124</span>, <span class="number">99</span>));
-<a href=#2467 id=2467 data-nosnippet>2467</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2468 id=2468 data-nosnippet>2468</a>  }
-<a href=#2469 id=2469 data-nosnippet>2469</a>
-<a href=#2470 id=2470 data-nosnippet>2470</a>  <span class="attr">#[test]
-<a href=#2471 id=2471 data-nosnippet>2471</a>  #[cfg(unix)]
-<a href=#2472 id=2472 data-nosnippet>2472</a>  </span><span class="kw">fn </span>process_coalesces_only_matching_conversion_options() {
-<a href=#2473 id=2473 data-nosnippet>2473</a>    <span class="kw">use </span><span class="kw">crate</span>::document::{PostDocument, PostDocumentOptions};
-<a href=#2474 id=2474 data-nosnippet>2474</a>    <span class="kw">use </span>std::os::unix::fs::PermissionsExt;
-<a href=#2475 id=2475 data-nosnippet>2475</a>
-<a href=#2476 id=2476 data-nosnippet>2476</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"latexml_graphics_dedupe_{}"</span>, std::process::id()));
-<a href=#2477 id=2477 data-nosnippet>2477</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
-<a href=#2478 id=2478 data-nosnippet>2478</a>    <span class="kw">let </span>source = tmp.join(<span class="string">"plot.ai"</span>);
-<a href=#2479 id=2479 data-nosnippet>2479</a>    std::fs::write(<span class="kw-2">&amp;</span>source, <span class="string">"%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n"</span>).unwrap();
-<a href=#2480 id=2480 data-nosnippet>2480</a>    <span class="kw">let </span>log = tmp.join(<span class="string">"convert.log"</span>);
-<a href=#2481 id=2481 data-nosnippet>2481</a>    <span class="kw">let </span>fake_convert = tmp.join(<span class="string">"convert"</span>);
-<a href=#2482 id=2482 data-nosnippet>2482</a>    std::fs::write(
-<a href=#2483 id=2483 data-nosnippet>2483</a>      <span class="kw-2">&amp;</span>fake_convert,
-<a href=#2484 id=2484 data-nosnippet>2484</a>      <span class="string">"#!/bin/sh\nprintf '%s\\n' \"$*\" &gt;&gt; \"$LATEXML_FAKE_CONVERT_LOG\"\nexit 0\n"</span>,
-<a href=#2485 id=2485 data-nosnippet>2485</a>    )
-<a href=#2486 id=2486 data-nosnippet>2486</a>    .unwrap();
-<a href=#2487 id=2487 data-nosnippet>2487</a>    <span class="kw">let </span><span class="kw-2">mut </span>perms = std::fs::metadata(<span class="kw-2">&amp;</span>fake_convert).unwrap().permissions();
-<a href=#2488 id=2488 data-nosnippet>2488</a>    perms.set_mode(<span class="number">0o755</span>);
-<a href=#2489 id=2489 data-nosnippet>2489</a>    std::fs::set_permissions(<span class="kw-2">&amp;</span>fake_convert, perms).unwrap();
-<a href=#2490 id=2490 data-nosnippet>2490</a>
-<a href=#2491 id=2491 data-nosnippet>2491</a>    <span class="kw">let </span>old_path = std::env::var(<span class="string">"PATH"</span>).unwrap_or_default();
-<a href=#2492 id=2492 data-nosnippet>2492</a>    <span class="kw">let </span>_path_guard = EnvGuard::set(<span class="string">"PATH"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}:{}"</span>, tmp.display(), old_path));
-<a href=#2493 id=2493 data-nosnippet>2493</a>    <span class="kw">let </span>_log_guard = EnvGuard::set(<span class="string">"LATEXML_FAKE_CONVERT_LOG"</span>, log.to_str().unwrap());
-<a href=#2494 id=2494 data-nosnippet>2494</a>    <span class="kw">let </span>xml = <span class="macro">format!</span>(
-<a href=#2495 id=2495 data-nosnippet>2495</a>      <span class="string">r#"&lt;?xml version="1.0"?&gt;
-<a href=#2496 id=2496 data-nosnippet>2496</a>&lt;document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d"&gt;
-<a href=#2497 id=2497 data-nosnippet>2497</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/&gt;
-<a href=#2498 id=2498 data-nosnippet>2498</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=40pt"/&gt;
-<a href=#2499 id=2499 data-nosnippet>2499</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/&gt;
-<a href=#2500 id=2500 data-nosnippet>2500</a>&lt;/document&gt;"#</span>,
-<a href=#2501 id=2501 data-nosnippet>2501</a>      source.display()
-<a href=#2502 id=2502 data-nosnippet>2502</a>    );
-<a href=#2503 id=2503 data-nosnippet>2503</a>    <span class="kw">let </span>doc_opts = PostDocumentOptions {
-<a href=#2504 id=2504 data-nosnippet>2504</a>      destination: <span class="prelude-val">Some</span>(tmp.join(<span class="string">"out.html"</span>).display().to_string()),
-<a href=#2505 id=2505 data-nosnippet>2505</a>      source_directory: <span class="prelude-val">Some</span>(tmp.display().to_string()),
-<a href=#2506 id=2506 data-nosnippet>2506</a>      ..Default::default()
-<a href=#2507 id=2507 data-nosnippet>2507</a>    };
-<a href=#2508 id=2508 data-nosnippet>2508</a>    <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).unwrap();
-<a href=#2509 id=2509 data-nosnippet>2509</a>    <span class="kw">let </span><span class="kw-2">mut </span>graphics = Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-<a href=#2510 id=2510 data-nosnippet>2510</a>    <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
-<a href=#2511 id=2511 data-nosnippet>2511</a>    <span class="macro">assert_eq!</span>(nodes.len(), <span class="number">3</span>);
-<a href=#2512 id=2512 data-nosnippet>2512</a>
-<a href=#2513 id=2513 data-nosnippet>2513</a>    <span class="kw">let </span>docs = graphics.process(doc, nodes).unwrap();
-<a href=#2514 id=2514 data-nosnippet>2514</a>    <span class="kw">let </span>out = docs[<span class="number">0</span>].to_xml_string();
-<a href=#2515 id=2515 data-nosnippet>2515</a>    <span class="kw">let </span>log_lines = std::fs::read_to_string(<span class="kw-2">&amp;</span>log).unwrap().lines().count();
-<a href=#2516 id=2516 data-nosnippet>2516</a>    <span class="macro">assert_eq!</span>(
-<a href=#2517 id=2517 data-nosnippet>2517</a>      log_lines, <span class="number">2</span>,
-<a href=#2518 id=2518 data-nosnippet>2518</a>      <span class="string">"matching source/page/options should coalesce, but different options need separate conversions"
-<a href=#2519 id=2519 data-nosnippet>2519</a>    </span>);
-<a href=#2520 id=2520 data-nosnippet>2520</a>    <span class="macro">assert_eq!</span>(out.matches(<span class="string">r#"imagesrc="plot.png""#</span>).count(), <span class="number">2</span>);
-<a href=#2521 id=2521 data-nosnippet>2521</a>    <span class="macro">assert_eq!</span>(out.matches(<span class="string">r#"imagesrc="x1.png""#</span>).count(), <span class="number">1</span>);
-<a href=#2522 id=2522 data-nosnippet>2522</a>
-<a href=#2523 id=2523 data-nosnippet>2523</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
-<a href=#2524 id=2524 data-nosnippet>2524</a>  }
-<a href=#2525 id=2525 data-nosnippet>2525</a>}
+<a href=#2227 id=2227 data-nosnippet>2227</a>    <span class="macro">Info!</span>(
+<a href=#2228 id=2228 data-nosnippet>2228</a>      <span class="string">"graphics"</span>, <span class="string">"process"</span>,
+<a href=#2229 id=2229 data-nosnippet>2229</a>      <span class="string">"Graphics {} {} to process"</span>,
+<a href=#2230 id=2230 data-nosnippet>2230</a>      doc.get_destination().unwrap_or(<span class="string">"?"</span>),
+<a href=#2231 id=2231 data-nosnippet>2231</a>      n_to_process
+<a href=#2232 id=2232 data-nosnippet>2232</a>    );
+<a href=#2233 id=2233 data-nosnippet>2233</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[doc])
+<a href=#2234 id=2234 data-nosnippet>2234</a>  }
+<a href=#2235 id=2235 data-nosnippet>2235</a>}
+<a href=#2236 id=2236 data-nosnippet>2236</a>
+<a href=#2237 id=2237 data-nosnippet>2237</a><span class="attr">#[cfg(test)]
+<a href=#2238 id=2238 data-nosnippet>2238</a></span><span class="kw">mod </span>tests {
+<a href=#2239 id=2239 data-nosnippet>2239</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#2240 id=2240 data-nosnippet>2240</a>
+<a href=#2241 id=2241 data-nosnippet>2241</a>  <span class="kw">struct </span>EnvGuard {
+<a href=#2242 id=2242 data-nosnippet>2242</a>    key: String,
+<a href=#2243 id=2243 data-nosnippet>2243</a>    old: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#2244 id=2244 data-nosnippet>2244</a>  }
+<a href=#2245 id=2245 data-nosnippet>2245</a>
+<a href=#2246 id=2246 data-nosnippet>2246</a>  <span class="kw">impl </span>EnvGuard {
+<a href=#2247 id=2247 data-nosnippet>2247</a>    <span class="kw">fn </span>set(key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+<a href=#2248 id=2248 data-nosnippet>2248</a>      <span class="kw">let </span>old = std::env::var(key).ok();
+<a href=#2249 id=2249 data-nosnippet>2249</a>      std::env::set_var(key, value);
+<a href=#2250 id=2250 data-nosnippet>2250</a>      <span class="self">Self </span>{ key: key.to_string(), old }
+<a href=#2251 id=2251 data-nosnippet>2251</a>    }
+<a href=#2252 id=2252 data-nosnippet>2252</a>  }
+<a href=#2253 id=2253 data-nosnippet>2253</a>
+<a href=#2254 id=2254 data-nosnippet>2254</a>  <span class="kw">impl </span>Drop <span class="kw">for </span>EnvGuard {
+<a href=#2255 id=2255 data-nosnippet>2255</a>    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#2256 id=2256 data-nosnippet>2256</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(old) = <span class="kw-2">&amp;</span><span class="self">self</span>.old {
+<a href=#2257 id=2257 data-nosnippet>2257</a>        std::env::set_var(<span class="kw-2">&amp;</span><span class="self">self</span>.key, old);
+<a href=#2258 id=2258 data-nosnippet>2258</a>      } <span class="kw">else </span>{
+<a href=#2259 id=2259 data-nosnippet>2259</a>        std::env::remove_var(<span class="kw-2">&amp;</span><span class="self">self</span>.key);
+<a href=#2260 id=2260 data-nosnippet>2260</a>      }
+<a href=#2261 id=2261 data-nosnippet>2261</a>    }
+<a href=#2262 id=2262 data-nosnippet>2262</a>  }
+<a href=#2263 id=2263 data-nosnippet>2263</a>
+<a href=#2264 id=2264 data-nosnippet>2264</a>  <span class="doccomment">/// `run_with_timeout` kills the child and returns `None` when the
+<a href=#2265 id=2265 data-nosnippet>2265</a>  /// process exceeds the deadline. Uses `sleep` as a stand-in for any
+<a href=#2266 id=2266 data-nosnippet>2266</a>  /// runaway subprocess (inkscape, convert, …).
+<a href=#2267 id=2267 data-nosnippet>2267</a>  </span><span class="attr">#[test]
+<a href=#2268 id=2268 data-nosnippet>2268</a>  </span><span class="kw">fn </span>run_with_timeout_kills_slow_child() {
+<a href=#2269 id=2269 data-nosnippet>2269</a>    <span class="kw">let </span>start = std::time::Instant::now();
+<a href=#2270 id=2270 data-nosnippet>2270</a>    <span class="kw">let </span><span class="kw-2">mut </span>cmd = std::process::Command::new(<span class="string">"sleep"</span>);
+<a href=#2271 id=2271 data-nosnippet>2271</a>    cmd.arg(<span class="string">"10"</span>);
+<a href=#2272 id=2272 data-nosnippet>2272</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(<span class="number">200</span>));
+<a href=#2273 id=2273 data-nosnippet>2273</a>    <span class="kw">let </span>elapsed = start.elapsed();
+<a href=#2274 id=2274 data-nosnippet>2274</a>    <span class="macro">assert!</span>(
+<a href=#2275 id=2275 data-nosnippet>2275</a>      result.is_none(),
+<a href=#2276 id=2276 data-nosnippet>2276</a>      <span class="string">"run_with_timeout should return None on kill"
+<a href=#2277 id=2277 data-nosnippet>2277</a>    </span>);
+<a href=#2278 id=2278 data-nosnippet>2278</a>    <span class="comment">// We expect around 200 ms (+ ≤ 50 ms poll interval + SIGKILL reap
+<a href=#2279 id=2279 data-nosnippet>2279</a>    // overhead). Give it 2 s of slack for CI noise.
+<a href=#2280 id=2280 data-nosnippet>2280</a>    </span><span class="macro">assert!</span>(
+<a href=#2281 id=2281 data-nosnippet>2281</a>      elapsed &lt; std::time::Duration::from_secs(<span class="number">2</span>),
+<a href=#2282 id=2282 data-nosnippet>2282</a>      <span class="string">"killed run should return quickly, took {:?}"</span>,
+<a href=#2283 id=2283 data-nosnippet>2283</a>      elapsed
+<a href=#2284 id=2284 data-nosnippet>2284</a>    );
+<a href=#2285 id=2285 data-nosnippet>2285</a>  }
+<a href=#2286 id=2286 data-nosnippet>2286</a>
+<a href=#2287 id=2287 data-nosnippet>2287</a>  <span class="doccomment">/// Fast-completing child returns its real exit status, not a kill.
+<a href=#2288 id=2288 data-nosnippet>2288</a>  </span><span class="attr">#[test]
+<a href=#2289 id=2289 data-nosnippet>2289</a>  </span><span class="kw">fn </span>run_with_timeout_returns_status_for_fast_child() {
+<a href=#2290 id=2290 data-nosnippet>2290</a>    <span class="kw">let </span>cmd = std::process::Command::new(<span class="string">"true"</span>);
+<a href=#2291 id=2291 data-nosnippet>2291</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(<span class="number">5</span>));
+<a href=#2292 id=2292 data-nosnippet>2292</a>    <span class="kw">let </span>status = result.expect(<span class="string">"expected clean exit"</span>);
+<a href=#2293 id=2293 data-nosnippet>2293</a>    <span class="macro">assert!</span>(status.success(), <span class="string">"`true` should exit successfully"</span>);
+<a href=#2294 id=2294 data-nosnippet>2294</a>  }
+<a href=#2295 id=2295 data-nosnippet>2295</a>
+<a href=#2296 id=2296 data-nosnippet>2296</a>  <span class="doccomment">/// Missing binary → `None`, not a panic.
+<a href=#2297 id=2297 data-nosnippet>2297</a>  </span><span class="attr">#[test]
+<a href=#2298 id=2298 data-nosnippet>2298</a>  </span><span class="kw">fn </span>run_with_timeout_handles_spawn_failure() {
+<a href=#2299 id=2299 data-nosnippet>2299</a>    <span class="kw">let </span>cmd = std::process::Command::new(<span class="string">"/this/binary/does/not/exist/12345"</span>);
+<a href=#2300 id=2300 data-nosnippet>2300</a>    <span class="kw">let </span>result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(<span class="number">1</span>));
+<a href=#2301 id=2301 data-nosnippet>2301</a>    <span class="macro">assert!</span>(result.is_none());
+<a href=#2302 id=2302 data-nosnippet>2302</a>  }
+<a href=#2303 id=2303 data-nosnippet>2303</a>
+<a href=#2304 id=2304 data-nosnippet>2304</a>  <span class="doccomment">/// Explicit-threshold heuristic: PDF under threshold triggers SVG
+<a href=#2305 id=2305 data-nosnippet>2305</a>  /// attempt, large PDF does not, non-PDF is always skipped.
+<a href=#2306 id=2306 data-nosnippet>2306</a>  </span><span class="attr">#[test]
+<a href=#2307 id=2307 data-nosnippet>2307</a>  </span><span class="kw">fn </span>should_try_svg_path_explicit_threshold() {
+<a href=#2308 id=2308 data-nosnippet>2308</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_svg_gate_test"</span>);
+<a href=#2309 id=2309 data-nosnippet>2309</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
+<a href=#2310 id=2310 data-nosnippet>2310</a>    <span class="kw">let </span>small_pdf = tmp.join(<span class="string">"small.pdf"</span>);
+<a href=#2311 id=2311 data-nosnippet>2311</a>    <span class="kw">let </span>big_pdf = tmp.join(<span class="string">"big.pdf"</span>);
+<a href=#2312 id=2312 data-nosnippet>2312</a>    <span class="kw">let </span>png = tmp.join(<span class="string">"raster.png"</span>);
+<a href=#2313 id=2313 data-nosnippet>2313</a>    std::fs::write(<span class="kw-2">&amp;</span>small_pdf, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">10 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// 10 KB
+<a href=#2314 id=2314 data-nosnippet>2314</a>    </span>std::fs::write(<span class="kw-2">&amp;</span>big_pdf, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">500 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// 500 KB
+<a href=#2315 id=2315 data-nosnippet>2315</a>    </span>std::fs::write(<span class="kw-2">&amp;</span>png, <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">10 </span>* <span class="number">1024</span>]).unwrap(); <span class="comment">// PNG, irrelevant size
+<a href=#2316 id=2316 data-nosnippet>2316</a>
+<a href=#2317 id=2317 data-nosnippet>2317</a>    // Under explicit threshold → true.
+<a href=#2318 id=2318 data-nosnippet>2318</a>    </span><span class="macro">assert!</span>(Graphics::should_try_svg_path(
+<a href=#2319 id=2319 data-nosnippet>2319</a>      small_pdf.to_str().unwrap(),
+<a href=#2320 id=2320 data-nosnippet>2320</a>      <span class="number">200
+<a href=#2321 id=2321 data-nosnippet>2321</a>    </span>));
+<a href=#2322 id=2322 data-nosnippet>2322</a>    <span class="comment">// At/over explicit threshold → false.
+<a href=#2323 id=2323 data-nosnippet>2323</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(
+<a href=#2324 id=2324 data-nosnippet>2324</a>      big_pdf.to_str().unwrap(),
+<a href=#2325 id=2325 data-nosnippet>2325</a>      <span class="number">200
+<a href=#2326 id=2326 data-nosnippet>2326</a>    </span>));
+<a href=#2327 id=2327 data-nosnippet>2327</a>    <span class="comment">// Non-PDF → always false even under threshold.
+<a href=#2328 id=2328 data-nosnippet>2328</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(png.to_str().unwrap(), <span class="number">200</span>));
+<a href=#2329 id=2329 data-nosnippet>2329</a>    <span class="comment">// Missing file → false, not panic.
+<a href=#2330 id=2330 data-nosnippet>2330</a>    </span><span class="macro">assert!</span>(!Graphics::should_try_svg_path(<span class="string">"/no/such/file.pdf"</span>, <span class="number">200</span>));
+<a href=#2331 id=2331 data-nosnippet>2331</a>
+<a href=#2332 id=2332 data-nosnippet>2332</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2333 id=2333 data-nosnippet>2333</a>  }
+<a href=#2334 id=2334 data-nosnippet>2334</a>
+<a href=#2335 id=2335 data-nosnippet>2335</a>  <span class="doccomment">/// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
+<a href=#2336 id=2336 data-nosnippet>2336</a>  /// the SVG attempt, PDFs containing image XObjects do NOT. Uses the
+<a href=#2337 id=2337 data-nosnippet>2337</a>  /// real fixtures (`cifar10_vector.pdf`, `pathological_vector.pdf`,
+<a href=#2338 id=2338 data-nosnippet>2338</a>  /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
+<a href=#2339 id=2339 data-nosnippet>2339</a>  </span><span class="attr">#[test]
+<a href=#2340 id=2340 data-nosnippet>2340</a>  </span><span class="kw">fn </span>should_try_svg_path_auto_detect() {
+<a href=#2341 id=2341 data-nosnippet>2341</a>    <span class="kw">let </span>fixtures = std::path::Path::new(<span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>)).join(<span class="string">"tests/fixtures"</span>);
+<a href=#2342 id=2342 data-nosnippet>2342</a>    <span class="kw">let </span>cifar = fixtures.join(<span class="string">"cifar10_vector.pdf"</span>);
+<a href=#2343 id=2343 data-nosnippet>2343</a>    <span class="kw">let </span>pathological = fixtures.join(<span class="string">"pathological_vector.pdf"</span>);
+<a href=#2344 id=2344 data-nosnippet>2344</a>    <span class="kw">let </span>raster = fixtures.join(<span class="string">"raster_with_image.pdf"</span>);
+<a href=#2345 id=2345 data-nosnippet>2345</a>    <span class="macro">assert!</span>(cifar.exists(), <span class="string">"fixture missing: {}"</span>, cifar.display());
+<a href=#2346 id=2346 data-nosnippet>2346</a>    <span class="macro">assert!</span>(
+<a href=#2347 id=2347 data-nosnippet>2347</a>      pathological.exists(),
+<a href=#2348 id=2348 data-nosnippet>2348</a>      <span class="string">"fixture missing: {}"</span>,
+<a href=#2349 id=2349 data-nosnippet>2349</a>      pathological.display()
+<a href=#2350 id=2350 data-nosnippet>2350</a>    );
+<a href=#2351 id=2351 data-nosnippet>2351</a>    <span class="macro">assert!</span>(raster.exists(), <span class="string">"fixture missing: {}"</span>, raster.display());
+<a href=#2352 id=2352 data-nosnippet>2352</a>
+<a href=#2353 id=2353 data-nosnippet>2353</a>    <span class="comment">// Vector PDFs (no /Subtype /Image marker) → SVG path activated.
+<a href=#2354 id=2354 data-nosnippet>2354</a>    </span><span class="macro">assert!</span>(
+<a href=#2355 id=2355 data-nosnippet>2355</a>      Graphics::should_try_svg_path(cifar.to_str().unwrap(), <span class="number">0</span>),
+<a href=#2356 id=2356 data-nosnippet>2356</a>      <span class="string">"vector-only PDF must trigger SVG path under auto-detect"
+<a href=#2357 id=2357 data-nosnippet>2357</a>    </span>);
+<a href=#2358 id=2358 data-nosnippet>2358</a>    <span class="macro">assert!</span>(
+<a href=#2359 id=2359 data-nosnippet>2359</a>      Graphics::should_try_svg_path(pathological.to_str().unwrap(), <span class="number">0</span>),
+<a href=#2360 id=2360 data-nosnippet>2360</a>      <span class="string">"pgfplots-style vector PDF must trigger SVG path under auto-detect"
+<a href=#2361 id=2361 data-nosnippet>2361</a>    </span>);
+<a href=#2362 id=2362 data-nosnippet>2362</a>
+<a href=#2363 id=2363 data-nosnippet>2363</a>    <span class="comment">// Raster PDF (has /Subtype /Image) → SVG path SKIPPED.
+<a href=#2364 id=2364 data-nosnippet>2364</a>    </span><span class="macro">assert!</span>(
+<a href=#2365 id=2365 data-nosnippet>2365</a>      !Graphics::should_try_svg_path(raster.to_str().unwrap(), <span class="number">0</span>),
+<a href=#2366 id=2366 data-nosnippet>2366</a>      <span class="string">"raster-containing PDF must skip auto-detect SVG path"
+<a href=#2367 id=2367 data-nosnippet>2367</a>    </span>);
+<a href=#2368 id=2368 data-nosnippet>2368</a>
+<a href=#2369 id=2369 data-nosnippet>2369</a>    <span class="comment">// Direct detector sanity check.
+<a href=#2370 id=2370 data-nosnippet>2370</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#2371 id=2371 data-nosnippet>2371</a>      Graphics::pdf_has_image_xobject(cifar.to_str().unwrap()),
+<a href=#2372 id=2372 data-nosnippet>2372</a>      <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)
+<a href=#2373 id=2373 data-nosnippet>2373</a>    );
+<a href=#2374 id=2374 data-nosnippet>2374</a>    <span class="macro">assert_eq!</span>(
+<a href=#2375 id=2375 data-nosnippet>2375</a>      Graphics::pdf_has_image_xobject(raster.to_str().unwrap()),
+<a href=#2376 id=2376 data-nosnippet>2376</a>      <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
+<a href=#2377 id=2377 data-nosnippet>2377</a>    );
+<a href=#2378 id=2378 data-nosnippet>2378</a>  }
+<a href=#2379 id=2379 data-nosnippet>2379</a>
+<a href=#2380 id=2380 data-nosnippet>2380</a>  <span class="attr">#[test]
+<a href=#2381 id=2381 data-nosnippet>2381</a>  </span><span class="kw">fn </span>postscript_density_caps_huge_bounding_box() {
+<a href=#2382 id=2382 data-nosnippet>2382</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_density_test"</span>);
+<a href=#2383 id=2383 data-nosnippet>2383</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
+<a href=#2384 id=2384 data-nosnippet>2384</a>    <span class="kw">let </span>normal = tmp.join(<span class="string">"normal.eps"</span>);
+<a href=#2385 id=2385 data-nosnippet>2385</a>    <span class="kw">let </span>huge = tmp.join(<span class="string">"huge.eps"</span>);
+<a href=#2386 id=2386 data-nosnippet>2386</a>    std::fs::write(
+<a href=#2387 id=2387 data-nosnippet>2387</a>      <span class="kw-2">&amp;</span>normal,
+<a href=#2388 id=2388 data-nosnippet>2388</a>      <span class="string">"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 567 567\n"</span>,
+<a href=#2389 id=2389 data-nosnippet>2389</a>    )
+<a href=#2390 id=2390 data-nosnippet>2390</a>    .unwrap();
+<a href=#2391 id=2391 data-nosnippet>2391</a>    std::fs::write(
+<a href=#2392 id=2392 data-nosnippet>2392</a>      <span class="kw-2">&amp;</span>huge,
+<a href=#2393 id=2393 data-nosnippet>2393</a>      <span class="string">"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 14 14 11353 11353\n"</span>,
+<a href=#2394 id=2394 data-nosnippet>2394</a>    )
+<a href=#2395 id=2395 data-nosnippet>2395</a>    .unwrap();
+<a href=#2396 id=2396 data-nosnippet>2396</a>
+<a href=#2397 id=2397 data-nosnippet>2397</a>    <span class="macro">assert_eq!</span>(
+<a href=#2398 id=2398 data-nosnippet>2398</a>      Graphics::raster_density_for_source(normal.to_str().unwrap()),
+<a href=#2399 id=2399 data-nosnippet>2399</a>      Graphics::DEFAULT_RASTER_DENSITY
+<a href=#2400 id=2400 data-nosnippet>2400</a>    );
+<a href=#2401 id=2401 data-nosnippet>2401</a>    <span class="macro">assert_eq!</span>(
+<a href=#2402 id=2402 data-nosnippet>2402</a>      Graphics::raster_density_for_source(huge.to_str().unwrap()),
+<a href=#2403 id=2403 data-nosnippet>2403</a>      <span class="number">13
+<a href=#2404 id=2404 data-nosnippet>2404</a>    </span>);
+<a href=#2405 id=2405 data-nosnippet>2405</a>    <span class="macro">assert_eq!</span>(
+<a href=#2406 id=2406 data-nosnippet>2406</a>      read_postscript_bounding_box(huge.to_str().unwrap()),
+<a href=#2407 id=2407 data-nosnippet>2407</a>      <span class="prelude-val">Some</span>((<span class="number">11339.0</span>, <span class="number">11339.0</span>))
+<a href=#2408 id=2408 data-nosnippet>2408</a>    );
+<a href=#2409 id=2409 data-nosnippet>2409</a>
+<a href=#2410 id=2410 data-nosnippet>2410</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2411 id=2411 data-nosnippet>2411</a>  }
+<a href=#2412 id=2412 data-nosnippet>2412</a>
+<a href=#2413 id=2413 data-nosnippet>2413</a>  <span class="attr">#[test]
+<a href=#2414 id=2414 data-nosnippet>2414</a>  </span><span class="kw">fn </span>pdf_density_caps_huge_page_box() {
+<a href=#2415 id=2415 data-nosnippet>2415</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_graphics_pdf_density_test.pdf"</span>);
+<a href=#2416 id=2416 data-nosnippet>2416</a>    std::fs::write(
+<a href=#2417 id=2417 data-nosnippet>2417</a>      <span class="kw-2">&amp;</span>tmp,
+<a href=#2418 id=2418 data-nosnippet>2418</a>      <span class="string">b"%PDF-1.4
+<a href=#2419 id=2419 data-nosnippet>2419</a>1 0 obj
+<a href=#2420 id=2420 data-nosnippet>2420</a>&lt;&lt; /Type /Page /MediaBox [0 0 4218 2437] &gt;&gt;
+<a href=#2421 id=2421 data-nosnippet>2421</a>endobj
+<a href=#2422 id=2422 data-nosnippet>2422</a>"</span>,
+<a href=#2423 id=2423 data-nosnippet>2423</a>    )
+<a href=#2424 id=2424 data-nosnippet>2424</a>    .unwrap();
+<a href=#2425 id=2425 data-nosnippet>2425</a>
+<a href=#2426 id=2426 data-nosnippet>2426</a>    <span class="macro">assert_eq!</span>(
+<a href=#2427 id=2427 data-nosnippet>2427</a>      read_pdf_page_box(tmp.to_str().unwrap()),
+<a href=#2428 id=2428 data-nosnippet>2428</a>      <span class="prelude-val">Some</span>((<span class="number">4218.0</span>, <span class="number">2437.0</span>))
+<a href=#2429 id=2429 data-nosnippet>2429</a>    );
+<a href=#2430 id=2430 data-nosnippet>2430</a>    <span class="macro">assert_eq!</span>(
+<a href=#2431 id=2431 data-nosnippet>2431</a>      Graphics::raster_density_for_source(tmp.to_str().unwrap()),
+<a href=#2432 id=2432 data-nosnippet>2432</a>      <span class="number">34
+<a href=#2433 id=2433 data-nosnippet>2433</a>    </span>);
+<a href=#2434 id=2434 data-nosnippet>2434</a>
+<a href=#2435 id=2435 data-nosnippet>2435</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2436 id=2436 data-nosnippet>2436</a>  }
+<a href=#2437 id=2437 data-nosnippet>2437</a>
+<a href=#2438 id=2438 data-nosnippet>2438</a>  <span class="doccomment">/// SVG viewBox parsing extracts width/height.
+<a href=#2439 id=2439 data-nosnippet>2439</a>  </span><span class="attr">#[test]
+<a href=#2440 id=2440 data-nosnippet>2440</a>  </span><span class="kw">fn </span>read_svg_dimensions_parses_viewbox() {
+<a href=#2441 id=2441 data-nosnippet>2441</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_svg_dim_test.svg"</span>);
+<a href=#2442 id=2442 data-nosnippet>2442</a>    std::fs::write(
+<a href=#2443 id=2443 data-nosnippet>2443</a>      <span class="kw-2">&amp;</span>tmp,
+<a href=#2444 id=2444 data-nosnippet>2444</a>      <span class="string">r#"&lt;?xml version="1.0"?&gt;
+<a href=#2445 id=2445 data-nosnippet>2445</a>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="10cm" height="7.5cm"&gt;
+<a href=#2446 id=2446 data-nosnippet>2446</a>  &lt;rect width="640" height="480" fill="black"/&gt;
+<a href=#2447 id=2447 data-nosnippet>2447</a>&lt;/svg&gt;"#</span>,
+<a href=#2448 id=2448 data-nosnippet>2448</a>    )
+<a href=#2449 id=2449 data-nosnippet>2449</a>    .unwrap();
+<a href=#2450 id=2450 data-nosnippet>2450</a>    <span class="kw">let </span>dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect(<span class="string">"dims"</span>);
+<a href=#2451 id=2451 data-nosnippet>2451</a>    <span class="macro">assert_eq!</span>(dims, (<span class="number">640</span>, <span class="number">480</span>));
+<a href=#2452 id=2452 data-nosnippet>2452</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2453 id=2453 data-nosnippet>2453</a>  }
+<a href=#2454 id=2454 data-nosnippet>2454</a>
+<a href=#2455 id=2455 data-nosnippet>2455</a>  <span class="doccomment">/// Falls back to width/height attrs when viewBox is missing.
+<a href=#2456 id=2456 data-nosnippet>2456</a>  </span><span class="attr">#[test]
+<a href=#2457 id=2457 data-nosnippet>2457</a>  </span><span class="kw">fn </span>read_svg_dimensions_falls_back_to_width_height() {
+<a href=#2458 id=2458 data-nosnippet>2458</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="string">"latexml_svg_dim_fallback.svg"</span>);
+<a href=#2459 id=2459 data-nosnippet>2459</a>    std::fs::write(
+<a href=#2460 id=2460 data-nosnippet>2460</a>      <span class="kw-2">&amp;</span>tmp,
+<a href=#2461 id=2461 data-nosnippet>2461</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" width="123.7pt" height="99.4pt"&gt;
+<a href=#2462 id=2462 data-nosnippet>2462</a>  &lt;rect/&gt;
+<a href=#2463 id=2463 data-nosnippet>2463</a>&lt;/svg&gt;"#</span>,
+<a href=#2464 id=2464 data-nosnippet>2464</a>    )
+<a href=#2465 id=2465 data-nosnippet>2465</a>    .unwrap();
+<a href=#2466 id=2466 data-nosnippet>2466</a>    <span class="kw">let </span>dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect(<span class="string">"dims"</span>);
+<a href=#2467 id=2467 data-nosnippet>2467</a>    <span class="macro">assert_eq!</span>(dims, (<span class="number">124</span>, <span class="number">99</span>));
+<a href=#2468 id=2468 data-nosnippet>2468</a>    std::fs::remove_file(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2469 id=2469 data-nosnippet>2469</a>  }
+<a href=#2470 id=2470 data-nosnippet>2470</a>
+<a href=#2471 id=2471 data-nosnippet>2471</a>  <span class="attr">#[test]
+<a href=#2472 id=2472 data-nosnippet>2472</a>  #[cfg(unix)]
+<a href=#2473 id=2473 data-nosnippet>2473</a>  </span><span class="kw">fn </span>process_coalesces_only_matching_conversion_options() {
+<a href=#2474 id=2474 data-nosnippet>2474</a>    <span class="kw">use </span><span class="kw">crate</span>::document::{PostDocument, PostDocumentOptions};
+<a href=#2475 id=2475 data-nosnippet>2475</a>    <span class="kw">use </span>std::os::unix::fs::PermissionsExt;
+<a href=#2476 id=2476 data-nosnippet>2476</a>
+<a href=#2477 id=2477 data-nosnippet>2477</a>    <span class="kw">let </span>tmp = std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"latexml_graphics_dedupe_{}"</span>, std::process::id()));
+<a href=#2478 id=2478 data-nosnippet>2478</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>tmp).unwrap();
+<a href=#2479 id=2479 data-nosnippet>2479</a>    <span class="kw">let </span>source = tmp.join(<span class="string">"plot.ai"</span>);
+<a href=#2480 id=2480 data-nosnippet>2480</a>    std::fs::write(<span class="kw-2">&amp;</span>source, <span class="string">"%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n"</span>).unwrap();
+<a href=#2481 id=2481 data-nosnippet>2481</a>    <span class="kw">let </span>log = tmp.join(<span class="string">"convert.log"</span>);
+<a href=#2482 id=2482 data-nosnippet>2482</a>    <span class="kw">let </span>fake_convert = tmp.join(<span class="string">"convert"</span>);
+<a href=#2483 id=2483 data-nosnippet>2483</a>    std::fs::write(
+<a href=#2484 id=2484 data-nosnippet>2484</a>      <span class="kw-2">&amp;</span>fake_convert,
+<a href=#2485 id=2485 data-nosnippet>2485</a>      <span class="string">"#!/bin/sh\nprintf '%s\\n' \"$*\" &gt;&gt; \"$LATEXML_FAKE_CONVERT_LOG\"\nexit 0\n"</span>,
+<a href=#2486 id=2486 data-nosnippet>2486</a>    )
+<a href=#2487 id=2487 data-nosnippet>2487</a>    .unwrap();
+<a href=#2488 id=2488 data-nosnippet>2488</a>    <span class="kw">let </span><span class="kw-2">mut </span>perms = std::fs::metadata(<span class="kw-2">&amp;</span>fake_convert).unwrap().permissions();
+<a href=#2489 id=2489 data-nosnippet>2489</a>    perms.set_mode(<span class="number">0o755</span>);
+<a href=#2490 id=2490 data-nosnippet>2490</a>    std::fs::set_permissions(<span class="kw-2">&amp;</span>fake_convert, perms).unwrap();
+<a href=#2491 id=2491 data-nosnippet>2491</a>
+<a href=#2492 id=2492 data-nosnippet>2492</a>    <span class="kw">let </span>old_path = std::env::var(<span class="string">"PATH"</span>).unwrap_or_default();
+<a href=#2493 id=2493 data-nosnippet>2493</a>    <span class="kw">let </span>_path_guard = EnvGuard::set(<span class="string">"PATH"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}:{}"</span>, tmp.display(), old_path));
+<a href=#2494 id=2494 data-nosnippet>2494</a>    <span class="kw">let </span>_log_guard = EnvGuard::set(<span class="string">"LATEXML_FAKE_CONVERT_LOG"</span>, log.to_str().unwrap());
+<a href=#2495 id=2495 data-nosnippet>2495</a>    <span class="kw">let </span>xml = <span class="macro">format!</span>(
+<a href=#2496 id=2496 data-nosnippet>2496</a>      <span class="string">r#"&lt;?xml version="1.0"?&gt;
+<a href=#2497 id=2497 data-nosnippet>2497</a>&lt;document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d"&gt;
+<a href=#2498 id=2498 data-nosnippet>2498</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/&gt;
+<a href=#2499 id=2499 data-nosnippet>2499</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=40pt"/&gt;
+<a href=#2500 id=2500 data-nosnippet>2500</a>  &lt;graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/&gt;
+<a href=#2501 id=2501 data-nosnippet>2501</a>&lt;/document&gt;"#</span>,
+<a href=#2502 id=2502 data-nosnippet>2502</a>      source.display()
+<a href=#2503 id=2503 data-nosnippet>2503</a>    );
+<a href=#2504 id=2504 data-nosnippet>2504</a>    <span class="kw">let </span>doc_opts = PostDocumentOptions {
+<a href=#2505 id=2505 data-nosnippet>2505</a>      destination: <span class="prelude-val">Some</span>(tmp.join(<span class="string">"out.html"</span>).display().to_string()),
+<a href=#2506 id=2506 data-nosnippet>2506</a>      source_directory: <span class="prelude-val">Some</span>(tmp.display().to_string()),
+<a href=#2507 id=2507 data-nosnippet>2507</a>      ..Default::default()
+<a href=#2508 id=2508 data-nosnippet>2508</a>    };
+<a href=#2509 id=2509 data-nosnippet>2509</a>    <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).unwrap();
+<a href=#2510 id=2510 data-nosnippet>2510</a>    <span class="kw">let </span><span class="kw-2">mut </span>graphics = Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#2511 id=2511 data-nosnippet>2511</a>    <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
+<a href=#2512 id=2512 data-nosnippet>2512</a>    <span class="macro">assert_eq!</span>(nodes.len(), <span class="number">3</span>);
+<a href=#2513 id=2513 data-nosnippet>2513</a>
+<a href=#2514 id=2514 data-nosnippet>2514</a>    <span class="kw">let </span>docs = graphics.process(doc, nodes).unwrap();
+<a href=#2515 id=2515 data-nosnippet>2515</a>    <span class="kw">let </span>out = docs[<span class="number">0</span>].to_xml_string();
+<a href=#2516 id=2516 data-nosnippet>2516</a>    <span class="kw">let </span>log_lines = std::fs::read_to_string(<span class="kw-2">&amp;</span>log).unwrap().lines().count();
+<a href=#2517 id=2517 data-nosnippet>2517</a>    <span class="macro">assert_eq!</span>(
+<a href=#2518 id=2518 data-nosnippet>2518</a>      log_lines, <span class="number">2</span>,
+<a href=#2519 id=2519 data-nosnippet>2519</a>      <span class="string">"matching source/page/options should coalesce, but different options need separate conversions"
+<a href=#2520 id=2520 data-nosnippet>2520</a>    </span>);
+<a href=#2521 id=2521 data-nosnippet>2521</a>    <span class="macro">assert_eq!</span>(out.matches(<span class="string">r#"imagesrc="plot.png""#</span>).count(), <span class="number">2</span>);
+<a href=#2522 id=2522 data-nosnippet>2522</a>    <span class="macro">assert_eq!</span>(out.matches(<span class="string">r#"imagesrc="x1.png""#</span>).count(), <span class="number">1</span>);
+<a href=#2523 id=2523 data-nosnippet>2523</a>
+<a href=#2524 id=2524 data-nosnippet>2524</a>    std::fs::remove_dir_all(<span class="kw-2">&amp;</span>tmp).ok();
+<a href=#2525 id=2525 data-nosnippet>2525</a>  }
+<a href=#2526 id=2526 data-nosnippet>2526</a>}
 </code></pre></div></section></main></body></html>
