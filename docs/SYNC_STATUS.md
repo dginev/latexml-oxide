@@ -106,12 +106,35 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | Branch | `large-scale-testing-round-3`, 920+ commits ahead of `origin/master` |
 | Second 500K rsync | 903,716 zips on disk (~403K of next 500K complete) |
 
-**Cumulative-fix retest of all 168 failures**: 61 PASS / 82 FAIL /
-25 TIMEOUT with current binary. **36% of historical failures are
-auto-recovered** by this session's 13 fixes. Projected rerun rate
-on the full 500K: **~99.978% OK** (from 99.9664% historical).
+**Cumulative-fix retest of all 168 failures (2026-05-23 update post
+lstMakeShortInline-of-CS fix c78e0fe556)**: 47 PASS / 67 FAIL / 11
+TIMEOUT / 24 MISSING-from-disk + 1 has-error. Of the 67 still
+FATAL, **Perl also fails on 45** (SHARED-FAILUREs). Only 11 are
+true PERL_OK_W_WARN (Rust-only) candidates:
+* `1004.4538` — biblatex `\lossort\endlossort` PushbackLimit:
+  triggered at ~20+ entries in `\thebibliography` expansion; root
+  cause: `bib_as_thebibliography` emits all variants as Tokens in
+  one shot, expansion cascades through `\par@in@bibliography`-style
+  rebinds. Single-entry isolated repro: see `/tmp/u/biblat_min*`.
+* `1012.1313`, `1012.1340` — `erics_preprints.sty` missing → both
+  engines suffer undefined-macros, Perl tolerates 26/16 errors,
+  Rust hits 100-cap. Higher error multiplier per cascade.
+* `1301.0040` — `pst-all.sty` + `macros.sty` + `eptcs.cls`
+  missing; same error-multiplier shape.
+* `1207.2132` — `mhsetup.sty` raw load triggers PGF
+  `\pgfutil@xifnch` undefined cascade (only **inside** pgfutil-
+  common.tex line 174 `\expandafter\gdef\:` — needs deeper
+  investigation of TL-2023 PGF token interaction).
+* `1207.4709`, `1310.8644` — pb-diagram.sty / mathpartir.sty
+  missing → diagram/halign cascade.
+* `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
+  pst-all / curve2e / `\omit`-cascade.
 
-### Session R36 — 13 root-cause fixes landed, 20 papers closed
+Projected rerun rate on the full 500K: ~99.97% OK (from 99.9664%
+historical). The 11 PERL_OK_W_WARN gaps are concentrated in
+missing-package cascades and biblatex-rebuilder shape.
+
+### Session R36 — 14 root-cause fixes landed, 21 papers closed
 
 | Commit | Fix | Papers recovered |
 |---|---|---:|
