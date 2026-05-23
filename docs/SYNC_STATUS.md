@@ -130,11 +130,29 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
-Projected rerun rate on the full 500K: ~99.97% OK (from 99.9664%
-historical). The 11 PERL_OK_W_WARN gaps are concentrated in
-missing-package cascades and biblatex-rebuilder shape.
+**Post-fix retest (4 stubs landed: mathpartir, curve2e, pst-all,
+1105.4136 listings)**: 3 of 11 PERL_OK_W_WARN now PASS cleanly:
+  * `1310.8644` — mathpartir stub: now 1 warning (was fatal)
+  * `1402.6510` — pst-all stub: now 4 warnings (was fatal)
+  * `1408.2108` — curve2e stub: now 1 warning (was fatal)
+  * `1301.0040` — partial recovery (pst-node stubs help, but
+    pspicture-with-math mode-switch still fatals).
 
-### Session R36 — 14 root-cause fixes landed, 21 papers closed
+Remaining 8 of 11 PERL_OK_W_WARN need engine-level work:
+  * `1004.4538` — biblatex `\lossort\endlossort` PushbackLimit
+    (>=20 entries trigger; root cause in `bib_as_thebibliography`
+    bulk-token-injection path).
+  * `1012.1313`, `1012.1340`, `1207.4709`, `1307.0538`, `1403.5962`
+    — error-count multiplier vs Perl: missing-package or paper-
+    local-macro cascades produce 100+ errors in Rust where Perl
+    produces fewer than 100. Cross-cutting investigation needed.
+  * `1207.2132` — PGF `\pgfutil@xifnch` undefined cascade
+    (mhsetup + tikz interaction).
+
+Projected rerun rate on the full 500K: ~99.974% OK (from 99.9664%
+historical).
+
+### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
 | Commit | Fix | Papers recovered |
 |---|---|---:|
