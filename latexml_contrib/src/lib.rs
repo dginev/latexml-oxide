@@ -92,6 +92,7 @@ pub mod libertine_sty;
 pub mod ltablex_sty;
 pub mod backref_sty;
 pub mod ccaption_sty;
+pub mod curve2e_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
 pub mod mathpartir_sty;
@@ -339,6 +340,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("curve2e", "sty", curve2e_sty::load_definitions),
   ("mathpartir", "sty", mathpartir_sty::load_definitions),
   ("nag", "sty", nag_sty::load_definitions),
   ("oldlfont", "sty", oldlfont_sty::load_definitions),
