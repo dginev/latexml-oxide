@@ -516,13 +516,22 @@ LoadDefinitions!({
 
   // amsmath.sty L1013: \ext@arrow #1#2#3#4#5#6#7 — the internal extension-arrow
   // builder. Args: #1..#4 are mkern digit-tokens, #5 is the arrow renderer
-  // CS (e.g. \rightarrowfill@), #6 is below-label, #7 is above-label.
+  // CS (e.g. \rightarrowfill@) OR a `{...}` group (extpfeil's
+  // \newextarrow generates `\ext@arrow #2{\arrowfill@#3}{...}{...}`
+  // where `{\arrowfill@#3}` is a braced group), #6 is below-label,
+  // #7 is above-label. Use `{}` for the 5th arg so it reads either
+  // a single token OR a balanced group (TeX-semantic `#5` —
+  // matches Perl `\def\ext@arrow#1#2#3#4#5#6#7`).
   // User code occasionally calls \ext@arrow directly when defining custom
   // arrows. Pass-through to plain \to^{above}_{below} so the math renders.
   // amsmath.sty L972: \arrowfill@ #1#2#3#4 — 4 CS tokens; we don't model
   // stretchy arrow rendering, stub as \to.
-  // Witness 2411.17873, 2412.00464.
-  DefMacro!("\\ext@arrow Token Token Token Token Token {}{}",
+  // Witness 2411.17873, 2412.00464 (amsmath's own arrows);
+  // 1308.1071 (extpfeil's \xmapsto = `\ext@arrow 0599{\arrowfill@
+  // {\mapstochar\relbar}\relbar\rightarrow}{a}{f}` — `Token` for
+  // arg 5 read only the `{` and left the rest as unmatched group,
+  // crashing display math with "Attempt to end mode display_math").
+  DefMacro!("\\ext@arrow Token Token Token Token {}{}{}",
     "{\\mathrel{\\to}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}");
   DefMacro!("\\arrowfill@ Token Token Token Token", "\\to");
   DefMacro!("\\rightarrowfill@", "\\rightarrow");
