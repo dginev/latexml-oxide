@@ -119,6 +119,7 @@ pub mod tabls_sty;
 pub mod chemnum_sty;
 pub mod pax_sty;
 pub mod figcaps_sty;
+pub mod refstyle_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
@@ -317,6 +318,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chemnum", "sty", chemnum_sty::load_definitions),
   ("pax", "sty", pax_sty::load_definitions),
   ("figcaps", "sty", figcaps_sty::load_definitions),
+  ("refstyle", "sty", refstyle_sty::load_definitions),
   ("pst-all", "sty", pst_all_sty::load_definitions),
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
