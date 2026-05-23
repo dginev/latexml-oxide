@@ -321,12 +321,34 @@ impl BoxOps for Digested {
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&HashMap<Stored>) -> R {
     use DigestedData::*;
+    // Defensive `try_borrow`: when a Digested wrapper is mid-`be_absorbed_mut`
+    // (which holds an exclusive `borrow_mut`) and document construction
+    // recursively asks the SAME node for its properties, an infallible
+    // `.borrow()` panics with "RefCell already mutably borrowed". Fall
+    // back to NO_PROPERTIES instead — property access during the
+    // mid-absorption window is read-only and a missing-properties result
+    // is benign (matches Perl: properties default to empty in this state).
+    // Witness: 1205.0376 (article + plain-TeX `\AND`/`\at` redefs +
+    // align environment) — previously FATAL_101 panic at digested.rs:329,
+    // now succeeds.
     match &*self.0 {
-      TBox(b) => caller(b.borrow().get_properties()),
-      List(l) => caller(l.borrow().get_properties()),
+      TBox(b) => match b.try_borrow() {
+        Ok(b) => caller(b.get_properties()),
+        Err(_) => caller(&NO_PROPERTIES),
+      },
+      List(l) => match l.try_borrow() {
+        Ok(l) => caller(l.get_properties()),
+        Err(_) => caller(&NO_PROPERTIES),
+      },
       Comment(c) => caller(c.get_properties()),
-      Whatsit(w) => caller(w.borrow().get_properties()),
-      Alignment(w) => caller(w.borrow().get_properties()),
+      Whatsit(w) => match w.try_borrow() {
+        Ok(w) => caller(w.get_properties()),
+        Err(_) => caller(&NO_PROPERTIES),
+      },
+      Alignment(w) => match w.try_borrow() {
+        Ok(w) => caller(w.get_properties()),
+        Err(_) => caller(&NO_PROPERTIES),
+      },
       KeyVals(_) | Postponed(_) | RegisterValue(_) => caller(&NO_PROPERTIES),
     }
   }
