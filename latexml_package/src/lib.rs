@@ -403,6 +403,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ifpdf", "sty", package::ifpdf_sty::load_definitions),
   ("iftex", "sty", package::iftex_sty::load_definitions),
   ("ifthen", "sty", package::ifthen_sty::load_definitions),
+  ("mhsetup", "sty", package::mhsetup_sty::load_definitions),
   ("ifxetex", "sty", package::ifxetex_sty::load_definitions),
   ("ifdraft", "sty", package::ifdraft_sty::load_definitions),
   ("ieeeconf", "cls", package::ieeeconf_cls::load_definitions),

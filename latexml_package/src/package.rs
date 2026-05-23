@@ -279,6 +279,7 @@ pub mod mathptmx_sty;
 pub mod mathenv_sty;
 pub mod mathrsfs_sty;
 pub mod mathtools_sty;
+pub mod mhsetup_sty;
 pub mod mdwtab_sty;
 pub mod media9_sty;
 pub mod microtype_sty;
