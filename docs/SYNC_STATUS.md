@@ -155,6 +155,8 @@ Sampling-driven stubs landed:
 * `edeb9b62f7` — pax (witness: arXiv:1512.06235).
 * `fd85f769c9` — figcaps (witness: arXiv:1912.07260).
 * `d0c5f760ed` — refstyle (witnesses: arXiv:1804.06350, 2009.10518).
+* `7bc8a6cec9` — envmath (witness: arXiv:1501.05259, a real
+  Rust-only PushbackLimit fatal).
 
 Remaining sample failures are paper-local typos (`\lx`,
 `\MedicalPrizeEditors`), `_` in text mode, refstyle's
