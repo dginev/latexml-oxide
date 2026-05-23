@@ -95,6 +95,7 @@ pub mod ccaption_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
 pub mod mciteplus_sty;
+pub mod nag_sty;
 pub mod oldlfont_sty;
 pub mod titleref_sty;
 pub mod mdframed_sty;
@@ -337,6 +338,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("nag", "sty", nag_sty::load_definitions),
   ("oldlfont", "sty", oldlfont_sty::load_definitions),
   ("titleref", "sty", titleref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
