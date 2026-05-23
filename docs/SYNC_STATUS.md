@@ -104,7 +104,7 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | Tests | **1,334 / 0 / 0** |
 | Branch | `large-scale-testing-round-3`, 911 commits ahead of `origin/master` |
 
-### Session R36 — 7 root-cause fixes landed, 14 papers closed
+### Session R36 — 8 root-cause fixes landed, 15 papers closed
 
 | Commit | Fix | Papers recovered |
 |---|---|---:|
@@ -115,6 +115,7 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | `a900101da3` | `acronym.sty`: defer `\Ac`/`\Acf`/etc. via `\AtBeginDocument` | 1 (1102.0244) |
 | `8f00710f64` | `backref.sty`: minimal stub binding (no-op back-refs) | 1 (1107.0498) |
 | `585996033f` | `omnibus`: `\frontmatter`/`\mainmatter`/`\backmatter` as noop overrides | 2 (1102.3639, 1004.3619 — memo-l cluster) |
+| `fbe8626c57` | `oldlfont.sty`: minimal stub (preserve kernel \mathit etc.) | 1 (1112.3561) |
 
 ### Retest of all 98 prior failures with latest binary
 
