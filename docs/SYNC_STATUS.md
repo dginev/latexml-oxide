@@ -130,6 +130,21 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
+**Architectural investigation 2026-05-23 (mhsetup → tikz bleed)**:
+Traced `\usepackage{mhsetup, mathtools}\usepackage{tikz}` cascade.
+Root cause: `invoke_token`'s continuation read
+(`gullet::read_x_token(None, ...)` in stomach.rs L1070-1081)
+defaults to autoclose=true and pops past the mhsetup.sty mouth
+boundary, pulling the user's NEXT `\usepackage{tikz}` token
+into the raw-load loop. After tikz finishes loading, mhsetup's
+`\AtEndOfPackage{\MHInternalSyntaxOff}` hook fires too late
+(`:` was still at catcode 11 when pgfutil-common.tex parsed
+`\:` — yielding a control word instead of the expected control
+symbol). Defensive catcode reset in `mhsetup_sty.rs` only helps
+the separate-line form; the digest auto-pop fix breaks
+`csquotes_test` (digest IS expected to bleed in some contexts).
+A proper fix needs scoped autoclose semantics — deferred.
+
 **Post-fix retest #2 (6 fixes landed total: listings, mathpartir,
 curve2e, pst-all, biblatex \verb, mhsetup)**: 68 PASS / 70 FAIL /
 11 TIMEOUT / 24 MISSING of 179 retested. +21 papers recovered
