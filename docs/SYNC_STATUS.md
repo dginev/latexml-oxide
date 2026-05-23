@@ -121,20 +121,32 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 Of 98 papers that failed in earlier stages, **45 PASS** with the
 current binary (cumulative effect of session fixes). Remaining 53
 triaged against Perl:
-* **Genuinely Rust-only (5 papers):**
-  * `gr-qc0301024` — Perl 0.86s OK, Rust hangs in (Building...)
-    phase even at 120s. Pictex doc, deep XML-construction perf gap.
-  * `math0504436` — Perl 0.45s OK, Rust Convert TIMEOUT. eucal+
-    paper-bundled treetex/classes.tex; needs profile.
+* **Genuinely Rust-only (5 papers — all deep engine issues):**
+  * `gr-qc0301024` — Perl 0.47s OK, Rust hangs in (Building...)
+    phase. LaTeX 2.09 `\documentstyle{iopconf}` doc, pictex
+    raw-load successful but XML-construction loops indefinitely.
+    Deep schema-validation / build-phase perf gap (not digestion).
+  * `math0504436` — Perl 0.22s OK, Rust Convert TIMEOUT. amsart
+    + eucal + paper-bundled `treetex.tex` / `classes.tex`
+    (custom `\newcount`/`\loop` low-level TeX). classes.tex
+    digestion hangs on user-defined math binary-tree macros.
   * `1004.4538` — Perl 7 errors complete, Rust hits
-    `PushbackLimit:650000` infinite loop on undefined `\mathbf`/
-    `\emph` cascade. Deep recovery semantics gap.
+    `PushbackLimit:650000` infinite loop in biblatex `.bbl`
+    processing. Undefined `\mathbf`/`\emph`/`\mathbb` cascade
+    inside the bbl entry body triggers runaway re-expansion.
   * `1105.4136` — Perl 1 error complete, Rust 250 warnings + 101
-    errors + fatal. `#` PARAM reaching stomach (catcode leak).
-  * `math0507219` — Perl 5 errors complete, Rust fatal. Pictex.
+    errors + fatal. `#` PARAM catcode reaches stomach from
+    prelim2e.sty raw-load (paper-bundled package missing).
+  * `math0507219` — Perl 5 errors complete, Rust fatal. Old TeX
+    picture-style figure (`\put`/`\unitlength`/`\picture`)
+    inside an obsolete user-defined `\droite` macro chain.
 * **SHARED-FAILUREs (~48 papers):** Perl also fails or times
   out. Most underscore-catcode cascades from missing class/package,
   or pictex/pstricks raw-load slowness affecting both engines.
+
+All 5 remaining Rust-only failures require dedicated engine-level
+investigation (build-phase profiling, expansion-recovery overhaul,
+catcode-leak tracing) beyond the tactical session-scope fixes.
 
 Triage of stages 28-30 (10 FATAL_3 + 1 TIMEOUT, sampled with new
 binary): **0 Rust-only** — all 11 are SHARED-FAILUREs (Perl also
