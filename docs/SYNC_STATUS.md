@@ -130,19 +130,22 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
-**Random 500-paper sample (2026-05-23) from the 1501-2110 corpus**:
-**290 PASS / 207 WARN / 3 with errors / 0 FATAL** — 99.4%
-error-free, 100% non-fatal. The 3 with errors:
-* `2003.12942` — paper-local `\@unrecurse` undefined (~1 error).
-* `2009.09824` — refstyle `\PackageError`: `\eqref already defined`
-  (amsmath already loaded it; refstyle.cfg's `\newref{eq}`
-  collides). Single non-fatal vendor error.
-* `1710.08178` — tabular `\lx@begin@alignment` mode-switch cascade
-  (6 errors but non-fatal).
-* TWO sample papers were fixed by `3e4e0cc25d` (rotfloat stub) —
-  arXiv:2101.12526 and arXiv:1804.05845 — both load
-  `\usepackage{rotfloat}` which raw-loaded into a `\if@flstyle`
-  cascade that we don't recognize (Perl skips raw-load entirely).
+**Random samples (2026-05-23) from the 1501-2110 second-500K corpus**:
+* **500**: 290 PASS / 207 WARN / 3 errors / 0 FATAL.
+* **1000**: 562 PASS / 435 WARN / 2 errors / 1 FATAL
+  (arXiv:2103.03138 — chemnum, fixed by `be19874ba0`).
+* **2000**: 1185 PASS / 808 WARN / 7 errors / 0 FATAL.
+
+Sampling-driven stubs landed:
+* `3e4e0cc25d` — rotfloat (witnesses: arXiv:2101.12526, 1804.05845).
+* `00412df771` — tabls (witness: arXiv:2003.12942).
+* `be19874ba0` — chemnum (witness: arXiv:2103.03138).
+* `edeb9b62f7` — pax (witness: arXiv:1512.06235).
+
+Remaining sample failures are paper-local typos (`\lx`,
+`\MedicalPrizeEditors`), `_` in text mode, refstyle's
+`\eqref already defined` vendor error, tikz positioning — all
+non-fatal, 0 FATALs at sample-2000 scale.
 
 **Post-fix retest #3 (TeXDelimiter END-token fix)**: 70 PASS / 69
 FATAL of 179 retested (+2 vs run #2). Newly passing:
