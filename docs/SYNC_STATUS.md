@@ -182,6 +182,19 @@ Remaining 8 of 11 PERL_OK_W_WARN need engine-level work:
 Projected rerun rate on the full 500K: ~99.974% OK (from 99.9664%
 historical).
 
+### Session R36 — 18 root-cause fixes landed, 28+ papers closed
+
+**Latest sandbox retest (16 frozen failures, 2026-05-23)**:
+* PASS: physics0003074, hep-th0009218, math0009192 (was FATAL_139);
+  hep-ph0012156 (was FATAL_101); math0104252, gr-qc0209055,
+  gr-qc0301024 (was TIMEOUT) — **7/16 historical failures
+  auto-recovered**.
+* Still fail: math0102053/.089, math0212126, math0402448,
+  math0504436, math0506088, math0507219, math0604321 (all plain
+  TeX MemoryBudget — paper-bundled `\catcode @=11`, `\magnification`,
+  custom `\newcount` — no `\documentclass`); math0203082
+  (tabular-only fragment).
+
 ### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
 | Commit | Fix | Papers recovered |
