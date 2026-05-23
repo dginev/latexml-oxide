@@ -94,6 +94,23 @@ LoadDefinitions!({
   DefEnvironment!("{frontmatter}", "#body");
   DefEnvironment!("{mainmatter}",  "#body");
   DefEnvironment!("{backmatter}",  "#body");
+  // Override the bare-`\frontmatter` / `\mainmatter` / `\backmatter`
+  // macros to noops AFTER the DefEnvironment registration. Modern
+  // book.cls-style papers (e.g. memo-l / amsmemo "Memoirs" templates
+  // — paper-bundled, no binding) call bare `\frontmatter` as a
+  // noop marker (book.cls semantics: sets page numbering style,
+  // increments chapter counter style). Our DefEnvironment binds
+  // `\frontmatter` to the env-opener, which pushes a structural
+  // frame that blocks subsequent display math (`$$...$$` triggers
+  // "Script _ can only appear in math mode" cascades; witness
+  // 1102.3639 — book-style paper using memo-l). LaTeX's
+  // `\begin{frontmatter}` / `\end{frontmatter}` env-bracket
+  // tracking still functions when the opener is a noop, so
+  // elsart/JHEP-style `\begin{frontmatter}...\end{frontmatter}`
+  // usage continues to work (env body flows as plain text).
+  Let!("\\frontmatter", "\\@empty");
+  Let!("\\mainmatter",  "\\@empty");
+  Let!("\\backmatter",  "\\@empty");
 
   // Perl L62-63
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
