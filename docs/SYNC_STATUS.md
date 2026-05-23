@@ -130,6 +130,10 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
+**Post-fix retest #3 (TeXDelimiter END-token fix)**: 70 PASS / 69
+FATAL of 179 retested (+2 vs run #2). Newly passing:
+arXiv:1207.4709, 1101.2531.
+
 **Architectural investigation 2026-05-23 (mhsetup → tikz bleed)**:
 Traced `\usepackage{mhsetup, mathtools}\usepackage{tikz}` cascade.
 Root cause: `invoke_token`'s continuation read
