@@ -94,17 +94,19 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
   the 150K canvas-3 baseline (kept as a regression-style witness
   pool even as the engine improves; do NOT regenerate the HTML).
 
-### Status snapshot (live, last refreshed 2026-05-22 21:21 local)
+### 🎯 500K MILESTONE REACHED (2026-05-23 08:30 local)
 
 | | Value |
 |---|---:|
-| Stages closed | 33 of ~50 (stage_34 in flight at 6,398/10,000, all OK) |
-| Total papers | **331,369** processed, **331,271 OK**, **99.9704%** |
-| Stage_34 (latest binary) | **6,398/6,398 OK so far (100%)** |
+| **Stages closed** | **50 of 50** (first 500K batch complete) |
+| **Total papers** | **500,000** processed, **499,832 OK**, **99.9664%** |
+| **Best stage** | stage_49 at **99.99% (9999/10000)** |
+| Failure distribution | 126 FATAL_3, 16 OOM, 15 TIMEOUT, 4 FATAL_139, 3 FATAL_101, 3 FATAL_1, 1 FATAL_134 |
 | Tests | **1,334 / 0 / 0** |
-| Branch | `large-scale-testing-round-3`, 911 commits ahead of `origin/master` |
+| Branch | `large-scale-testing-round-3`, 920+ commits ahead of `origin/master` |
+| Second 500K rsync | 903,716 zips on disk (~403K of next 500K complete) |
 
-### Session R36 — 8 root-cause fixes landed, 15 papers closed
+### Session R36 — 13 root-cause fixes landed, 20 papers closed
 
 | Commit | Fix | Papers recovered |
 |---|---|---:|
@@ -116,6 +118,11 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | `8f00710f64` | `backref.sty`: minimal stub binding (no-op back-refs) | 1 (1107.0498) |
 | `585996033f` | `omnibus`: `\frontmatter`/`\mainmatter`/`\backmatter` as noop overrides | 2 (1102.3639, 1004.3619 — memo-l cluster) |
 | `fbe8626c57` | `oldlfont.sty`: minimal stub (preserve kernel \mathit etc.) | 1 (1112.3561) |
+| `684563dd12` | `digested.rs`: `try_borrow` defensive fix (prevent RefCell panic) | 1 (1205.0376) |
+| `7598a82b32` | `graphics.rs`: UTF-8-safe slice (prevent SVG-preamble panic) | 1 (1307.4573) |
+| `caaf1433c0` | `amsmath`: `\ext@arrow` 5th arg → `{}` for extpfeil-style braced calls | 1 (1308.1071) |
+| `9ff8c22986` | `omnibus`: drop natbib-autoload global-clear (preserve natbib's local def) | 1 (1403.6801) |
+| `3767609b46` | `nag.sty`: minimal stub (no-op obsolete-CS lints, preserve mode tracking) | 1 (1411.3836) |
 
 ### Retest of all 98 prior failures with latest binary
 
