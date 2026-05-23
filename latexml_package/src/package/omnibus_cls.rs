@@ -66,16 +66,23 @@ LoadDefinitions!({
       def_macro(cs, None,
         latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
-          // Erase this lazy-load shim globally so re-expansion of
-          // cs_clone resolves to natbib's real \citet (which
-          // natbib_sty.rs's LoadDefinitions defined with the
-          // default local scope — that local frame has now closed
-          // but its global form persists via Perl-faithful Let).
-          latexml_core::state::assign_meaning(
-            &cs_clone,
-            latexml_core::common::store::Stored::None,
-            Some(latexml_core::state::Scope::Global),
-          );
+          // After require_package, natbib's LoadDefinitions has overlaid
+          // `\citep`/`\citet`/etc. at LOCAL scope on the current frame
+          // stack — so a fresh lookup of `cs_clone` will resolve to
+          // natbib's real def (the local overlay sits ABOVE this
+          // closure on the meaning stack). No need to "clear" the
+          // closure; just re-emit. If we cleared with Global scope
+          // (previous behavior), assign_internal walks down to the
+          // locked frame and removes ALL overlays of `cs_clone` —
+          // including natbib's freshly-installed local def — leaving
+          // `\citep` undefined after the load. Witness: 1403.6801
+          // (paper-class wlpeerj.cls → OmniBus fallback → user calls
+          // `\citep{foo}` → natbib loads, but `\citep` immediately
+          // reverts to undefined → 101 errors + fatal). The recursion
+          // concern (cited in original comment: 2207.14344 with 8K
+          // require_package(natbib) calls) is moot when natbib's
+          // local def shadows this closure correctly — re-emission
+          // resolves to natbib's def, not back to here.
           Ok(Tokens::new(vec![cs_clone]))
         })), None)?;
     }
