@@ -40,6 +40,40 @@ internal contributors resuming work.
   new traits may be useful to introduce — consider that when the existing abstractions
   don't quite fit.
 
+- **Self-contained, portable binary.** A conversion must not *read* any of
+  latexml_oxide's *own* auxiliary resources from disk during its main operation.
+  Everything the binary owns — engine format dumps, the compiled RelaxNG schema/model,
+  XSLT stylesheets and their `xsl:import` chains, the post-processor's CSS/JS — is
+  embedded at compile time (`include_bytes!` / `include_str!`) and served from memory.
+  *Writing* files is expected and fine: auxiliary outputs (CSS/JS resources, split
+  documents, extracted images) placed into the conversion's **destination** directory,
+  and staging the binary's own embedded data through a temp file.
+
+  **Out of scope — the TeX ecosystem.** The host TeX Live installation is *not* part of
+  latexml_oxide. Reading `.sty` / `.cls` / `.tfm` and other texmf assets from the user's
+  TeX tree (or from the conversion's source directory) via `kpathsea` is allowed and
+  expected — those are ecosystem files the user supplies, exactly as Perl LaTeXML and
+  `pdflatex` consume them. The portability guarantee is about *our* assets, not theirs.
+
+  The litmus test: copy a release binary into an empty directory on a machine that has
+  a TeX Live install but has never seen the LaTeXML source tree, run a conversion, and
+  it must succeed using only the user's input file(s) plus the TeX ecosystem. This is
+  what makes the distribution goal viable — official releases ship the `maxperf` profile
+  binaries as GitHub Release Assets, runnable with no install step, no accompanying
+  `resources/` tree, and no environment setup.
+
+  **Status (2026-05-23): met for all owned assets, verified end-to-end.**
+  - *XSLT/CSS/JS:* served from byte embeds through `libxml::io::register_input_callback`
+    over the `embed:///` URL scheme (`libxml` ≥ 0.3.12); the whole `xsl:import` chain
+    resolves in memory with zero `.xsl` disk reads (confirmed via `strace`).
+  - *Format dumps:* embedded via `include_str!`. Confirmed by renaming the dev-tree
+    `resources/dumps/` away and converting in an isolated dir — the binary logged
+    `using embedded TL2025 dump — no on-disk dump found`, loaded 922 + 23903 entries
+    `from <embedded TL2025>`, and produced byte-identical output. The resolver still
+    *prefers* an on-disk copy when one is present (a dev/override convenience, see
+    [`DUMP_DESIGN.md`](DUMP_DESIGN.md)), but the embedded copy guarantees a relocated
+    binary needs no source tree.
+
 ---
 
 ## Architecture

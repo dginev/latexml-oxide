@@ -38,9 +38,12 @@ Design goals:
 Prebuilt `x86_64-unknown-linux-gnu` binaries are attached to every
 tagged release on the [Releases page](https://github.com/dginev/latexml-oxide/releases).
 The binary is fully self-contained — all XSLT stylesheets, CSS, JS,
-and RelaxNG schemas are embedded at build time, so no `resources/`
-tree is needed alongside it. Tested on Ubuntu 22.04 LTS and later
-(glibc ≥ 2.35) and Debian 12+.
+and RelaxNG schemas are embedded at build time and served from memory,
+so no `resources/` tree is needed alongside it (a deliberate design
+goal — see [docs/OXIDIZED_DESIGN.md](docs/OXIDIZED_DESIGN.md)). A working
+TeX Live installation is still required at runtime for TeX
+package/class/font resolution (see the runtime dependencies below).
+Tested on Ubuntu 22.04 LTS and later (glibc ≥ 2.35) and Debian 12+.
 
 **Debian / Ubuntu (`.deb`, declares runtime apt deps):**
 

@@ -23,7 +23,22 @@ The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are
 embedded at build time (`include_str!` / `include_bytes!`). Format
 dumps for TeX Live 2023 and 2025 are also embedded
-(`resources/dumps/*.YYYY.dump.txt`).
+(`resources/dumps/*.YYYY.dump.txt`). The release workflow builds with
+`--profile maxperf` (`release.yml`), so a single optimized, portable
+artifact is what users download.
+
+**Design requirement — portability.** A conversion must not *read* any of
+latexml_oxide's *own* resources from disk during its main operation: the
+binary carries them all and serves them from memory (XSLT/CSS/JS/schema via
+the `embed:///` libxml2 input callback, format dumps via `include_str!`).
+*Writing* files into the destination directory is expected and fine. This is
+verified end-to-end: XSLT resolves with zero `.xsl` disk reads (`strace`),
+and renaming the dev-tree `resources/dumps/` away still converts successfully
+from the embedded dumps. The host **TeX Live ecosystem is out of scope** —
+reading `.sty`/`.cls`/`.tfm` from the user's texmf tree via `kpathsea` is
+allowed and expected (see the runtime-dependency note below). See the
+"Self-contained, portable binary" principle in
+[`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md).
 
 System libraries (`libxml2`, `libxslt1.1`, `libkpathsea6`) remain
 dynamically linked — they're either installed by the `.deb`'s
