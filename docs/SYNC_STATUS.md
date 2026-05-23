@@ -148,6 +148,10 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * **1000 from early years (07-14)**: 696 PASS / 303 WARN /
   1 error / 0 FATAL.
 
+* **25000**: 14674 PASS / 10290 WARN / 27 errors / 9 FATAL —
+  **99.964% non-fatal, 58.7% clean pass**. ALL 9 FATALs accounted
+  for: 7 SHARED with Perl + 2 fixed Rust-only (envmath, maketitle).
+
 Sampling-driven stubs landed:
 * `3e4e0cc25d` — rotfloat (witnesses: arXiv:2101.12526, 1804.05845).
 * `00412df771` — tabls (witness: arXiv:2003.12942).
@@ -157,6 +161,9 @@ Sampling-driven stubs landed:
 * `d0c5f760ed` — refstyle (witnesses: arXiv:1804.06350, 2009.10518).
 * `7bc8a6cec9` — envmath (witness: arXiv:1501.05259, a real
   Rust-only PushbackLimit fatal).
+* `44e1097eef` — maketitle fatal-flag restoration (witness:
+  arXiv:1903.01633, a sneaky silent fatal — the deferred
+  frontmatter digest was swallowing Err but leaving fatal=true).
 
 Remaining sample failures are paper-local typos (`\lx`,
 `\MedicalPrizeEditors`), `_` in text mode, refstyle's
