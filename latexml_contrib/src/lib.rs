@@ -114,6 +114,7 @@ pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
 pub mod program_sty;
+pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scicite_sty;
@@ -306,6 +307,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("MnSymbol", "sty", mnsymbol_sty::load_definitions),
   ("mssymb", "tex", mssymb_tex::load_definitions),
   ("oldgerm", "sty", oldgerm_sty::load_definitions),
+  ("pst-all", "sty", pst_all_sty::load_definitions),
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
