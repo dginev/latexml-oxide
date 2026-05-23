@@ -598,6 +598,20 @@ impl DigestionAPI for Core {
             );
             return Err(e);
           }
+          // The Err that landed here was raised via `Fatal!` (or
+          // similar), which incremented `LogStatus::Fatal` via
+          // `note_status` in error.rs:353 BUT never emitted the
+          // standard `Fatal:<target>:<category>` log line — that's
+          // normally Error::log_fatal's job, called from the
+          // converter's outer Err handler. We catch the Err here and
+          // continue (recovery), so log_fatal never runs. Without
+          // this explicit emission, papers like arXiv:1903.01633
+          // report `1 fatal error` in the final summary while the
+          // log shows zero `Fatal:` lines — undiagnosable from
+          // logs alone. Emit the Fatal: line directly (not via
+          // log_fatal which would double-increment the counter).
+          let target_str = format!("Fatal:{:?}:{:?} ", e.target, e.category);
+          log::error!(target: &target_str, "{}", e.message);
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
           break;
         },
