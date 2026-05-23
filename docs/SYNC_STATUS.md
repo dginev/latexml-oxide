@@ -130,7 +130,22 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * `1307.0538`, `1402.6510`, `1403.5962`, `1408.2108` — pstricks /
   pst-all / curve2e / `\omit`-cascade.
 
-**Post-fix retest (4 stubs landed: mathpartir, curve2e, pst-all,
+**Post-fix retest #2 (6 fixes landed total: listings, mathpartir,
+curve2e, pst-all, biblatex \verb, mhsetup)**: 68 PASS / 70 FAIL /
+11 TIMEOUT / 24 MISSING of 179 retested. +21 papers recovered
+vs previous retest snapshot. Of remaining 70 FATAL:
+* **58 SHARED-FAILUREs** (Perl also fails — engine recovery
+  ceiling reached).
+* **12 PERL_OK_W_WARN** (Rust-only divergence). New ones surfaced
+  beyond the earlier 11:
+  * `0911.1590` — `\lx@equation@settag@` mode-switch (reverted
+    fix would break eqnums_test).
+  * `1102.2909` — xy-pic 8M conditional-limit infinite-`\if`.
+  * `1305.0848` — tikz MemoryBudget exceeded.
+  * `1402.7269` — pst-plot stub triggers PushbackLimit.
+  * `1404.6225` — ctable "load after tikz" → Convert TIMEOUT.
+
+**Post-fix retest #1 (4 stubs landed: mathpartir, curve2e, pst-all,
 1105.4136 listings)**: 3 of 11 PERL_OK_W_WARN now PASS cleanly:
   * `1310.8644` — mathpartir stub: now 1 warning (was fatal)
   * `1402.6510` — pst-all stub: now 4 warnings (was fatal)
