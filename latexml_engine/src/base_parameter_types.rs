@@ -928,7 +928,33 @@ LoadDefinitions!({
   // call-site migrations need BOTH dimensions — don't commit half.
   DefParameterType!(TeXDelimiter, sub[_inner, _extra] {
     gullet::skip_filler()?;
-    gullet::read_arg(ExpansionLevel::Partial)
+    // Peek at the next token. If it's END (catcode 2) or EOF,
+    // do NOT consume — leave it for the surrounding scope to handle.
+    // Otherwise the `}` closing the enclosing group would be eaten
+    // here, producing an unbalanced math env. Witness arXiv:1207.4709
+    // (paper invokes `\smalltwomatrix{B}{x}{}{t}\big|...` with only 4
+    // brace-groups — `\big` is read as the 5th arg; the body then
+    // expands to `{... {\big} ...}` and our `\big` consumes the `}`).
+    // Perl's TeX_Math.pool.ltxml:709 uses readXToken (peek-like) and
+    // falls back to `\lx@delimiterdot` on undef/`.` — matching its
+    // tolerance here.
+    let peeked = gullet::read_token()?;
+    match peeked {
+      None => Ok(Tokens!(T_CS!("\\lx@delimiterdot"))),
+      Some(tok) if tok.get_catcode() == latexml_core::token::Catcode::END => {
+        gullet::unread_one(tok);
+        Ok(Tokens!(T_CS!("\\lx@delimiterdot")))
+      },
+      Some(tok) if tok.get_catcode() == latexml_core::token::Catcode::OTHER
+                   && tok.text == latexml_core::common::arena::pin(".") =>
+      {
+        Ok(Tokens!(T_CS!("\\lx@delimiterdot")))
+      },
+      Some(tok) => {
+        gullet::unread_one(tok);
+        gullet::read_arg(ExpansionLevel::Partial)
+      },
+    }
   },
   digested_reversion => sub[arg] {
     // Revert without adding braces (unlike {} parameter)
