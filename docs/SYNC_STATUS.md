@@ -184,6 +184,20 @@ historical).
 
 ### Session R36 — 18 root-cause fixes landed, 28+ papers closed
 
+**1207.4709 deep-dive (2026-05-23)**: Traced the `\smalltwomatrix`
+cascade in align*. The user's `\newcommand{\smalltwomatrix[5]}{...}`
+correctly defines a 5-arg macro (both Perl and Rust). The actual
+paper invokes it with only 4 brace-groups: `\smalltwomatrix{B}{x}{}{t}\big|...`.
+TeX reads `\big` as the 5th arg. In the body, the substituted `#5`
+becomes `\big`, which is `\big TeXDelimiter` — our impl reads the
+next token (`\end`) as the delimiter, swallowing the
+`\end{smallmatrix}` close. The alignment env stays open → cascade.
+
+Perl's `\big` is more lenient with non-delimiter follow-tokens
+(emits a warning rather than swallowing). Fixing this requires
+audit of our TeXDelimiter param reader vs Perl behavior.
+Deferred.
+
 **Latest sandbox retest (16 frozen failures, 2026-05-23)**:
 * PASS: physics0003074, hep-th0009218, math0009192 (was FATAL_139);
   hep-ph0012156 (was FATAL_101); math0104252, gr-qc0209055,
