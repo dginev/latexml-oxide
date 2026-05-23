@@ -90,6 +90,7 @@ pub mod letltxmacro_sty;
 pub mod lettrine_sty;
 pub mod libertine_sty;
 pub mod ltablex_sty;
+pub mod backref_sty;
 pub mod ccaption_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
@@ -333,6 +334,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("forest", "sty", forest_sty::load_definitions),
   ("harvmac", "tex", harvmac_tex::load_definitions),
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
+  ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
   ("titleref", "sty", titleref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
