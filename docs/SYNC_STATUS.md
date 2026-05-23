@@ -135,12 +135,18 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * **1000**: 562 PASS / 435 WARN / 2 errors / 1 FATAL
   (arXiv:2103.03138 — chemnum, fixed by `be19874ba0`).
 * **2000**: 1185 PASS / 808 WARN / 7 errors / 0 FATAL.
+* **5000**: 2911 PASS / 2078 WARN / 11 errors / 0 FATAL —
+  **99.78% non-fatal, 58.2% clean pass**.
+* **1000 from early years (07-14)**: 696 PASS / 303 WARN /
+  1 error / 0 FATAL.
 
 Sampling-driven stubs landed:
 * `3e4e0cc25d` — rotfloat (witnesses: arXiv:2101.12526, 1804.05845).
 * `00412df771` — tabls (witness: arXiv:2003.12942).
 * `be19874ba0` — chemnum (witness: arXiv:2103.03138).
 * `edeb9b62f7` — pax (witness: arXiv:1512.06235).
+* `fd85f769c9` — figcaps (witness: arXiv:1912.07260).
+* `d0c5f760ed` — refstyle (witnesses: arXiv:1804.06350, 2009.10518).
 
 Remaining sample failures are paper-local typos (`\lx`,
 `\MedicalPrizeEditors`), `_` in text mode, refstyle's
