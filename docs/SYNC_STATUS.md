@@ -147,9 +147,11 @@ triaged against Perl:
     `PushbackLimit:650000` infinite loop in biblatex `.bbl`
     processing. Undefined `\mathbf`/`\emph`/`\mathbb` cascade
     inside the bbl entry body triggers runaway re-expansion.
-  * `1105.4136` — Perl 1 error complete, Rust 250 warnings + 101
-    errors + fatal. `#` PARAM catcode reaches stomach from
-    prelim2e.sty raw-load (paper-bundled package missing).
+  * ~~`1105.4136`~~ — **FIXED** (c78e0fe556). Root cause was
+    `\lstMakeShortInline{\"}`: our Rust impl took the first char of
+    a 2-char CS string (`\`), making backslash active and corrupting
+    every subsequent `\foo`. Now matches Perl's no-op-for-CS
+    behavior.
   * `math0507219` — Perl 5 errors complete, Rust fatal. Old TeX
     picture-style figure (`\put`/`\unitlength`/`\picture`)
     inside an obsolete user-defined `\droite` macro chain.
