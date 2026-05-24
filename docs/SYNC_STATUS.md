@@ -89,9 +89,19 @@ Engine-substrate checklist:
         discards it (§7 A.3 — math-parse provenance). Math stays opaque;
         equations inherit the container's locator client-side. Math internals
         (`ltx:XM*`) are skipped by design.
-- [ ] Propagate `data-sourcepos` through the post XSLT `copy-attribute`/
-      `add_attributes` path (`LaTeXML-common.xsl:327,390,481`), including
-      reconstructed math/table elements.
+- [x] Propagate `data:sourcepos` through the post XSLT into HTML
+      `data-sourcepos`. Done via **Perl parity**: emit in LaTeXML's `data:`
+      namespace; `Document::set_attribute` now mirrors Perl's
+      `getDocumentNamespacePrefix($ns,1)` — it **promotes a namespaced
+      attribute's namespace to a document namespace** on first use, so finalize's
+      `apply_document_namespace_declarations` declares `xmlns:data` on the root,
+      the literal `data:sourcepos` resolves into that namespace on serialize, and
+      the existing `copy_foreign_attributes` (`LaTeXML-common.xsl`) converts
+      `data:` → `data-` (`USE_DATA_ATTRIBUTES` = HTML5). No XSLT change — same
+      path `aria:` already uses. General fix (any namespaced attr; implements the
+      long-standing `decodeQName` TODO); verified parity-neutral on
+      structure/complex(aria)/tikz(xlink). See [[refcell-digestion-debt]] sibling
+      `WISDOM.md` note.
 - [x] User-vs-foreign source: stamp only into editable user docs
       (`.tex`/`.ltx`). This skips both synthetic default locators (source =
       `locator.rs` from `Locator::default()`'s `file!()`) and foreign
@@ -99,12 +109,18 @@ Engine-substrate checklist:
       user-source ancestor client-side. (MVP extension heuristic; a tracked
       user-input set would be more precise.) Verified on `article.tex`:
       265 → 53 stamps, all `tag 0 = article.tex`, real line:col positions.
-- [ ] **MVP locator test:** flip `tests/52_source_map.rs` ON-branch from
-      "inert" to a pinned golden of the `data-sourcepos` attributes for
-      `tests/structure/article.tex` once stamping lands. Then broaden to a
-      corpus round-trip (literal range substring == visible text; range ⊆
-      parent; within file bounds) + debug-assert invariants. Self-contained
-      (no SyncTeX dependency).
+- [x] **MVP locator test** (`tests/52_source_map.rs`, 3/3): off-by-default
+      emits no locator; ON emits `data:sourcepos` in core (user-source only,
+      math-opaque, shape `tag:l:c[-tag:l:c]`); ON round-trips to HTML
+      `data-sourcepos` (the XSLT pass-through). Future hardening (not blocking
+      MVP): pin an exact `data-sourcepos` golden; corpus round-trip (literal
+      range substring == visible text; range ⊆ parent; within file bounds) +
+      debug-assert invariants. Self-contained (no SyncTeX dependency).
+- [ ] **Sharpen accuracy (task #3, the big one):** `read_token` start capture
+      (`mouth.rs:628`) + construct-start snapshot (§1) — column precision and,
+      more importantly, coverage (many boxes currently carry a default locator
+      and are filtered out → only 53 of ~265 elements stamped). Hot-path; gate
+      so it's zero-cost when off.
 
 Next phase (after substrate): warm-state conversion server (full-doc
 reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to

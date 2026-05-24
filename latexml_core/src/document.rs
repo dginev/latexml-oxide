@@ -959,7 +959,7 @@ impl Document {
   /// stamped, but its `ltx:XM*` MathML internals are skipped (the Marpa
   /// math parser has no locator awareness — §7 A.3). Only invoked when the
   /// source-map switch is on (the caller gates it).
-  fn stamp_source_locator(&self, node: &Node, qname: &str) {
+  fn stamp_source_locator(&mut self, node: &Node, qname: &str) {
     // Keep equations opaque — do not descend into XMath/XMTok/XMArg/… .
     if qname.starts_with("ltx:XM") {
       return;
@@ -988,9 +988,15 @@ impl Document {
       return;
     }
     let tag = state::source_tag(src);
-    // `data-*` attributes are not namespaced — set directly on the node.
+    // Emit in LaTeXML's `data:` namespace (`http://dlmf.nist.gov/LaTeXML/data`,
+    // registered in `base_schema.rs:19`). The post XSLT's `copy_foreign_attributes`
+    // path converts a `data:`-prefixed *foreign-namespaced* attribute to the HTML
+    // `data-sourcepos` attribute (`LaTeXML-common.xsl`: `data:` prefix → `data-…`
+    // when `USE_DATA_ATTRIBUTES` = true, i.e. HTML5). Faithful to Perl LaTeXML's
+    // foreign-attribute convention; no XSLT change needed. The general namespaced-
+    // attribute binding lives in `set_attribute` (shared with `aria:` etc.).
     let mut n = node.clone();
-    let _ = n.set_attribute("data-sourcepos", &loc.to_sourcepos(tag));
+    let _ = self.set_attribute(&mut n, "data:sourcepos", &loc.to_sourcepos(tag));
   }
 
   /// Note: This closes the deepest open node of a given type.
@@ -2664,8 +2670,21 @@ impl Document {
       // Here we just set the attribute, since the caller is responsible for filtering.
       node.set_attribute(key, value)?;
     } else {
-      // Namespaced attributes: set directly for now.
-      // TODO: proper namespace prefix resolution via model->decodeQName
+      // Namespaced attribute (`prefix:local`). Mirror Perl
+      // `Core/Document.pm::setAttribute`, whose `getDocumentNamespacePrefix($ns, 1)`
+      // *promotes* the prefix's namespace to a document namespace on first use.
+      // That lets finalize's `apply_document_namespace_declarations` declare
+      // `xmlns:prefix` on the root, so the prefixed attribute resolves into its
+      // namespace on serialization and the post XSLT can copy it (e.g.
+      // `data:sourcepos` → `data-sourcepos`). Without the promotion a code-only
+      // namespace (like `data`, used by `--source-map`) is emitted unbound and
+      // dropped. General over any registered prefix — implements the decodeQName
+      // TODO. (`aria`/schema namespaces are already document namespaces, so the
+      // re-registration is an idempotent no-op for them.)
+      if let Ok((Some(ns_uri), _local)) = model::decode_qname(key) {
+        let prefix = key.split(':').next().unwrap_or("");
+        model::register_document_namespace(prefix, Some(&ns_uri));
+      }
       node.set_attribute(key, value)?;
     }
     // ... TODO: continue (see Perl)
