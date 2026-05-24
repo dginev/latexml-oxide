@@ -12,9 +12,13 @@ is **14 warnings (all in `latexml_math_parser`, residual clippy
 cleanup of post-ASF-migration code — collaborator's lane)**. The latest sandbox result for
 the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k
 stage v3 ranges 97.4–99.5%. Working docs:
-[`docs/PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md),
 [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
-[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md).
+[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md). The strict-`LoadFormat`
+dump-parity mission is **complete** (zero-error inits, dumps match Perl);
+its audit is archived at
+[`docs/archive/PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md),
+with the one live residual (~72-CS Perl-only long tail) tracked in
+`SYNC_STATUS.md` "Engine file open gaps (MINOR)".
 
 Concretely:
 
@@ -88,20 +92,54 @@ Supporting directories:
 
 ## Internal Documentation
 
-Three key documents track porting progress and known issues:
+All active docs live in `docs/`. This is the authoritative index — keep it
+current when adding, renaming, merging, or archiving a doc. Grouped by role:
 
-- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master tracking document: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings status, and the 9-phase roadmap to full parity. **Start here** when resuming work.
-- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Shows loading hierarchy and LaTeX chapter structure.
-- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Documents upstream Perl LaTeXML issues: `packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders` heuristic. When investigating test failures, check here first to see if the issue is inherited from Perl.
-- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals, discovered through specialized debugging. Covers: compile-time vs runtime token packing, Font::merge/specialize interaction, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore. Check here to avoid re-introducing known bugs.
-- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this file to check if a translation difference was marked as intentional.
-- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Rationalization of the math parser's three-stage ambiguity pipeline against the Marpa ASF (abstract syntax forest) traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md) on the fork's `asf-completion` branch.
+**Status & mission (start here when resuming work):**
+- **[`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md)** — Master engine-sync log: file-by-file Perl→Rust sync status, test suite counts, Rust error fixes, infrastructure gaps, package bindings, cluster worklists, and the roadmap to full parity. **Start here.**
+- **[`docs/RELEASE_CRITERIA.md`](docs/RELEASE_CRITERIA.md)** — The "what must be true before a public 1.0" contract, kept *separate* from the parity log: release gates, binary-size budget, portability staging, license/public-domain audit, distribution safety profile, tail-latency/RSS signals, surpass-Perl policy, and the source-provenance / VSCode-synced-preview product track (issues #47/#92).
+- **[`docs/ISSUE_AUDIT.md`](docs/ISSUE_AUDIT.md)** — Local mirror of open GitHub issues with status + interpretation, so offline agents don't lose tracker context. **Refresh before milestone planning.** (Note: issue numbers here are GitHub-tracker numbers — they do **not** correspond to any internal `#N` in `WISDOM.md`.)
+
+**Architecture & design (canonical, living):**
+- **[`docs/OXIDIZED_DESIGN.md`](docs/OXIDIZED_DESIGN.md)** — Public-facing design document: architecture decisions, intentional Perl divergences, type system improvements, tactical insights. Read this to check if a translation difference was a marked intentional divergence.
+- **[`docs/ORGANIZATION.md`](docs/ORGANIZATION.md)** — Maps Perl engine files (`LaTeXML/Engine/*.pool.ltxml`) to Rust files (`latexml_engine/src/*.rs`). Loading hierarchy and LaTeX chapter structure.
+- **[`docs/WISDOM.md`](docs/WISDOM.md)** — Tactical insights about system internals from specialized debugging (compile-time vs runtime token packing, Font::merge/specialize, catcode CS vs ESCAPE, RegisterType PartialEq trap, at_letter restore). Check here to avoid re-introducing known bugs.
+- **[`docs/SCHEMA_DOCUMENTATION.md`](docs/SCHEMA_DOCUMENTATION.md)** — How a RelaxNG Compact schema becomes a rustdoc-styled HTML doc site (relevant to issue #199, the HTML-dialect schema).
+
+**Parity references:**
+- **[`docs/KNOWN_PERL_ERRORS.md`](docs/KNOWN_PERL_ERRORS.md)** — Upstream Perl LaTeXML issues (`packParameters` alignment warning, `\fontname` format, per-font `\hyphenchar`, `specialize()` property reset, `readBalanced` `#`-ambiguity, `guessTableHeaders`). Check here first when investigating a test failure.
+- **[`docs/BIBTEX_PORT_PLAN.md`](docs/BIBTEX_PORT_PLAN.md)** — `BibTeX.pool.ltxml` port plan; Phases 1–8 landed, remaining B1–B6 / Phase 4–5 polish.
+
+  (The strict-`LoadFormat` dump-parity audit is complete and archived at `docs/archive/PERL_LOADFORMAT_AUDIT.md`; its one live residual is in `SYNC_STATUS.md` "Engine file open gaps (MINOR)".)
+
+**Math parser:**
+- **[`docs/MATH_PARSER_AND_ASF.md`](docs/MATH_PARSER_AND_ASF.md)** — Canonical: the three-stage ambiguity pipeline vs the Marpa ASF traversal paradigm. Read before touching `latexml_math_parser/src/parser.rs::parse_string` or `semantics.rs::Actions`. Companion to [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md) on the fork's `asf-completion` branch.
+- **[`docs/MATH_PARSER_ASF_TIEBREAKING.md`](docs/MATH_PARSER_ASF_TIEBREAKING.md)** — ASF tie-breaking rules detail.
+- **[`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md)** — Design rationale for the Marpa grammar.
+
+**Dump / precompilation:**
+- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Active design for kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply).
+
+**Release & operations:**
+- **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; what ships in a release; the self-contained-binary requirement.
+- **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (local-CLI posture; distribution posture is tracked in `RELEASE_CRITERIA.md` §6).
+- **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Average-wall performance bands and Perl-parity baselines.
+- **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
+
+**Dated diagnostic snapshots** (point-in-time studies — see naming rule):
+- **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
+- **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)
+- **[`docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)** — Close reading of Perl `Core/Dumper.pm` on-disk record format.
+
+Completed/historical audits live in `docs/archive/` (see `docs/archive/README.md`). Single-paper reproducers/out-of-scope cases live in `docs/reproducers/`, `docs/out-of-scope/`, `docs/known_crashes/`.
 
 **Rules for these docs:**
 - `KNOWN_PERL_ERRORS.md` is for Perl-origin issues only. Include minimal trigger examples.
 - `WISDOM.md` is for tactical system insights — record when specialized analysis leads to a correct patch.
 - Rust-specific error fixes go in `SYNC_STATUS.md` under "Rust Error Fixes", referencing the KNOWN_PERL_ERRORS entry when applicable.
 - When an upstream Perl error is identified, record it. Fix in Rust if simple; otherwise keep as-is.
+- **Diagnostic-snapshot naming.** Docs that capture a point-in-time technical diagnostic — `*_TRIAGE`, `*_HOTSPOTS`, `*_AUDIT`, `*_ANALYSIS`, `*_BISECT`, and similar — **must carry a date in the filename** (`NAME_YYYY-MM-DD.md`), using the date of their last commit. This keeps a study from masquerading as a live worklist. *Living* worklists are exempt even when their name reads like a diagnostic — date only what is a frozen snapshot. (When such a worklist's mission *completes*, date it and move it to `docs/archive/`, lifting any live residual into `SYNC_STATUS.md` — as was done for the LoadFormat audit.)
+- Keep this index current. When a diagnostic snapshot is superseded, archive it under `docs/archive/` rather than leaving it orphaned at the top level.
 
 ## Build & Test
 
@@ -197,7 +235,7 @@ truth for macro-expanded diagnostics.
 
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
-- **Active work**: drive the strict-Perl dump-parity mission described above. Concrete sub-tasks are tracked in `docs/PERL_LOADFORMAT_AUDIT.md` and `docs/SYNC_STATUS.md`.
+- **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.
 - When a test failure traces to an upstream Perl issue, document it in `docs/KNOWN_PERL_ERRORS.md`.
 
 When a **session is completed**: continue working, until:

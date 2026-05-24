@@ -821,7 +821,7 @@ type "verbatim". Tests still pass because:
 - the v3 structured Parameter sub-line encoding (commit `3e1f89eb2`)
   carries `(name, spec, extra)` per Parameter, bypassing
   `parse_parameters` for catcoded delimiters. See
-  `DUMP_FORMAT_PERL_ANALYSIS.md`.
+  `DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`.
 - the v2 reader falls back gracefully when v3 sub-lines are absent.
 
 **Key insight:** `Parameters::stringify` is NOT a true inverse of

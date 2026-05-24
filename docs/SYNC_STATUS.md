@@ -486,6 +486,14 @@ assertion (not just code == 0; the bug had code == 0).
   memory before dump; PA aliases capture `\let` round-trips.
   Architecturally documented in
   `latexml_core/src/state.rs::is_serializable`.
+- **~72-CS Perl-only long tail** (from the completed LoadFormat audit,
+  `archive/PERL_LOADFORMAT_AUDIT.md`). Engine union has ~72 CSes that Perl
+  defines and Rust does not, *excluding* the now-ported `\bib@*` family —
+  mostly "misc atomics" (`\@charlb`, point-size CSes, `\batchmode`, …) plus
+  the stable 45-CS same-file relocation set. Demand-driven: investigate a
+  CS only when a real paper witnesses it; bounded by the corpus-success
+  gate, not a release blocker. Refresh the engine-wide CS-name diff (it
+  predates the BibTeX port) before quoting exact counts.
 
 ## Tikz known diffs vs Perl
 
@@ -502,7 +510,11 @@ assertion (not just code == 0; the bug had code == 0).
 - **Rust supersedes Perl** (both in scope, Rust passes where Perl
   errors): `1207.6068`, `0909.3444`, plus 40+ in
   `memory/project_rust_supersedes_perl.md`.
-- **Unported pools**: `BibTeX.pool.ltxml` (skip via `--nobibtex`).
+- **Unported pools**: none outstanding. (`BibTeX.pool.ltxml` is **ported** —
+  Phases 1–8 landed, see [`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md). The
+  remaining B1–B6 / Phase 4–5 polish is tracked there as product
+  correctness, not a permanent ignore. `--nobibtex` is an opt-out, not the
+  default escape hatch — see [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §10.)
 
 ---
 
@@ -793,3 +805,20 @@ convergence bandages (`max_trees`, `max_consecutive_dupes`,
 `pruned_only_time_budget`, `converge_budget`, `max_unique`) that
 exist purely to dodge the wrong-paradigm cost. `max_time` is the
 only cap that needs to stay.
+
+---
+
+## Release-readiness & issue-tracker context (consolidated 2026-05-24)
+
+This file stays the **engine-sync log**. The public-release contract moved
+out so it doesn't crowd the parity worklist:
+
+- **[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md)** — pre-1.0 gates: size,
+  portability, license audit, safety, tail-latency, surpass-Perl policy,
+  and the source-provenance / VSCode-synced-preview track (#47/#92).
+- **[`ISSUE_AUDIT.md`](ISSUE_AUDIT.md)** — open GitHub issues mirrored
+  locally (refresh before milestone planning).
+
+These replace the inline 2026-05-24 codex "public-quality gaps" pass; its
+errors are corrected in `RELEASE_CRITERIA.md` §10. The parity mission is
+unchanged: ~99.4% on the 100k warning subset, no error-downgrading.

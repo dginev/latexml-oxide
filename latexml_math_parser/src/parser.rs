@@ -101,7 +101,7 @@ static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT
 // When set, the parser dumps a histogram of semantic-pragma rejection
 // reasons for any formula where 0 trees survive pruning. Used to find
 // over-aggressive pragmas that admit a formula standalone but reject
-// it in document context — see docs/MATH_AMBIGUITY_AUDIT.md.
+// it in document context — see docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md.
 static PARSE_PRUNE_REASONS: Lazy<bool> =
   Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
 static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =

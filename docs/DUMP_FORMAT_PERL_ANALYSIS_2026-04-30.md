@@ -232,7 +232,7 @@ flipping mutual-exclusivity:
    reversed that decision: the Rust port now mirrors Perl's mutual
    exclusivity exactly — `bootstrap → dump → constructs` when the dump
    is on disk, `bootstrap → base → constructs` otherwise. See
-   [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the
+   [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) for the
    parity audit and [`SYNC_STATUS.md`](SYNC_STATUS.md) for
    the rationale (the dump must be a faithful Perl translation, not a
    Rust-flavored alternate path).

@@ -2645,7 +2645,7 @@ LoadDefinitions!({
   // `aaspp4` → `aaspp.sty.ltxml`). This is what lets
   // `\documentstyle[aaspp4]{article}` load aas_support transitively and
   // define \affil / \altaffilmark / \acknowledgments etc. that ~49 astro-ph
-  // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE.md Class A).
+  // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE_2026-05-21.md Class A).
   //
   // Current \documentstyle implementation lives in tex_job.rs as a DefMacro
   // whose body mirrors Perl's three afterDigest branches. It no longer emits

@@ -314,7 +314,7 @@ half-broken state.
 
 - Skeleton: `latexml_engine/src/bibtex.rs`
 - amsrefs stub: `latexml_package/src/package/amsrefs_sty.rs`
-- Cross-engine audit: `docs/PERL_LOADFORMAT_AUDIT.md` § Engine-wide CS-name diff refresh
+- Cross-engine audit: `docs/archive/PERL_LOADFORMAT_AUDIT.md` § Engine-wide CS-name diff refresh
 - Memory: `memory/wisdom_hub_kernel_dump.md`,
   `memory/wisdom_intarray_fontdimen_storage.md`
 - Post-processing consumer: `latexml_post::make_bibliography`

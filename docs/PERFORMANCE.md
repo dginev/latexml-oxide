@@ -201,6 +201,14 @@ lane, collaborator's track). Tests 1328/0/0 throughout.
 `2208.10851` (mystery digest-heavy 1.5s), `2307.10256` (4.5s digest),
 all under `~/data/430k_noproblem_sandbox/data/arxmliv/<yymm>/<id>/`.
 
+**TikZ/pgfplots digest backlog** (from the archived 2026-05-16 callgrind
+study, `archive/TIKZ_DIGEST_HOTSPOTS_2026-05-21.md`; numbers stale, ideas
+live): (1) lazy-eval the `Tokens::Debug` hot path; (2) return
+`Option<SymStr>` from `lookup_value`/`_string`/`_int` to drop the
+`Cow::Borrowed` wrapper; (3) a pgfplots `\addplot table` Rust bypass.
+SmallVec-backed `Tokens` was tried and regressed (struct bloat) — do not
+retry without first shrinking `Token` below 8 bytes.
+
 ### P1 math (17.0% of wall)
 
 The 17% over-parse rate is the lever.

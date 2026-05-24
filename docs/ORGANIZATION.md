@@ -75,7 +75,7 @@ latex.rs                   (≈ LaTeX.pool)
 ```
 
 Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See
-[`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the
+[`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) for the
 parity audit.
 
 Dump-build snapshots are taken by the init/dump-generation path
