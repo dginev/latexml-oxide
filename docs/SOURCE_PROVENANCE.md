@@ -65,9 +65,11 @@ i.e. it gave up on the accuracy goal.
   the `from` becomes exact — the "modify readToken" Bruce said was required,
   trivial here. `get_locator` (`:139`) currently does the same Perl
   "where am I now" approximation; this sharpens it.
-- **We inherited the good parts.** `Locator::to_attribute()` already emits
-  the 2009-designed XPointer form `range(from='l;c',to='l;c')` /
-  `point('l;c')`; box / whatsit / error nodes already carry a `Locator`.
+- **We inherited the good parts.** The `Locator` data model is sound and box
+  / whatsit / error nodes already carry a `Locator` — we build on it
+  unchanged. (The 2009 XPointer *serialization* is the one part we don't
+  reuse for the web attribute — no web-platform support, and latent in our
+  port; see §0.)
 
 ## Plan (phased — Tier A is near-term and parity-neutral)
 
@@ -160,10 +162,55 @@ Bruce documented over a decade in brucemiller/LaTeXML#101.
 
 ### 0. The model (first principles + how it differs from SyncTeX)
 
-A locator is `(tag, from_line;from_col, to_line;to_col)` over a source file
-`tag`. Our `Locator` (`common/locator.rs:17`) already *is* this shape, and
-`Locator::to_attribute()` (`:166`) already serializes the 2009-designed
-XPointer form `…#textrange(from='l;c',to='l;c')` / `…#textpoint('l;c')`.
+A locator is a source range whose two endpoints are each a `(file, line,
+col)` triple. Our `Locator` (`common/locator.rs:17`) already carries this
+data (`source`, `from_line;col`, `to_line;col`) — we reuse the model
+unchanged. For the **web-facing attribute we deliberately do not reuse the
+XPointer serialization** that `Locator::to_attribute()` emits (`:166`,
+`…#textrange(from='l;c',…)` / `…#textpoint('l;c')`): XPointer is an XML-era
+addressing scheme with **zero web-platform support** — no browser, devtools,
+or JS API resolves an `xpointer()`/`textrange()` fragment (the only native
+fragment resolvers are `#id` and the unrelated text-fragments `#:~:text=`),
+so a client would regex-parse it for the same four integers either way. It is
+also **latent** in our port — defined and unit-tested, but wired to no
+emitted attribute. So the source-map feature serialises the briefer,
+sibling-aligned `tag:l:c-tag:l:c` via a focused `Locator::to_sourcepos()`,
+preserving identical information; `to_attribute()` is left untouched for any
+future internal/Perl-parity use.
+
+#### 0.1 The file table — a Source-Map-v3-flavoured header
+
+The web platform's standard for "where did this generated output come from"
+is **Source Map v3** (now **ECMA-426** at TC39), shared by JS bundlers and
+CSS preprocessors (Sass/Less/PostCSS); CSS references it with a
+`/*# sourceMappingURL=… */` comment. Source maps **reference every source
+file by integer index into an ordered `sources` array** — exactly the numeric
+file-id ↔ filename map we want — so we follow that convention for the
+file dimension:
+
+- **`tag` = index into `sources`.** The per-element `data-sourcepos` integer
+  is a `sources` index, never a path — this is the source-map design, and the
+  reason the inline markup stays tiny *and* anonymisable.
+- **`sourceRoot`** — factor the common directory prefix out of `sources` (the
+  spec's stated purpose, "removing repeated values"), so a deep project path
+  is stored once rather than on every entry.
+- **`sourcesContent`** (optional) — embed the original source text so the
+  table is **self-contained** (works with no filesystem — our portability
+  ethos, and the editor-server already holds the text). **Omitting**
+  `sources`/`sourcesContent` is the anonymisation lever: ship structure-only.
+
+We borrow the *header* (`sources`/`sourceRoot`/`sourcesContent`) but **not**
+the VLQ `mappings` blob: our per-element `data-sourcepos` attributes *are* the
+inline analogue of `mappings`. That is the one deliberate divergence — source
+maps externalise **all** position data into one compact file optimised for
+load-once, binary-search **stack-trace symbolication**, whereas we keep ranges
+**inline on DOM nodes** because our consumer is **live DOM navigation**
+(`querySelector`, the Range API, survival across reflow — §6). Different
+consumer, different placement; same file-indexing convention. (Source maps
+offer **no** attribute-naming guidance — they put nothing on output nodes — so
+the attribute *name* stays with the cmark-gfm `data-sourcepos` lineage of §2.
+The two standards are complementary: `data-sourcepos` = our mappings; the file
+table = our `sources` header.)
 
 What SyncTeX does and where we improve on it:
 
@@ -227,14 +274,51 @@ to *stamp* them on nodes behind the switch.
   `self.box_to_absorb` and the nodes it produced are the freshly-recorded
   `constructed_nodes` (`:742`). After `be_absorbed` + `close_constructed_nodes`,
   when the switch is on, stamp each node in that frame with
-  `box_to_absorb.get_locator().to_attribute()`. Also stamp in `open_element`
+  `box_to_absorb.get_locator().to_sourcepos()`. Also stamp in `open_element`
   (`:916`) / `insert_element` (`:835`) from the current `box_to_absorb`
   locator so constructor-opened elements (which bypass `absorb`'s box arms)
   are covered.
-- **Attribute:** reuse `to_attribute()`'s value but with the **tag table**
-  form (integer tag, not path). Pick one attribute name (proposal:
-  `data-src` to stay HTML-valid and obviously non-semantic) present *only*
-  under the switch.
+- **Attribute name — `data-sourcepos` (decided 2026-05-24).** Adopt the
+  cmark-gfm / GitHub / GitLab convention for exactly this task (markup
+  source → HTML, source ranges on block elements). cmark-gfm is our
+  engine's spiritual sibling — *LaTeXML : LaTeX :: cmark-gfm : Markdown* —
+  so wearing its attribute is what "friendly to the web ecosystem" means
+  here, not a name we'd be coining. Explicitly **not** `data-src`: that is
+  the de-facto lazy-load idiom (lazysizes' `data-src`→`src` swap) and would
+  collide. The file path is kept **out** of the value — the React/Vue
+  dev-inspectors that inline paths (`data-v-inspector="file:line:col"`) are
+  the §6 / RELEASE_CRITERIA-§6 path-leak anti-pattern. Present *only* under
+  the switch.
+- **Attribute value — a file-tagged extension of cmark's `line:col-line:col`.**
+  The source **file is first-class**: each endpoint is a full `(file, line,
+  col)` triple, so the value is `<tag>:<l>:<c>-<tag>:<l>:<c>` (e.g.
+  `0:12:1-0:12:240`). This is the one deliberate superset of cmark, whose
+  single-document model has *no* file axis — but LaTeX projects are
+  multi-file (`\input`/`\include`) and the editor must scroll the **exact**
+  file, so file belongs in the triple, not as an afterthought. We keep
+  cmark's recognizable name and `l:c…` shape and prefix the integer file
+  **tag** to each endpoint. Splitting the value on `-` yields two
+  `tag:line:col` triples — unambiguous, since every component is a
+  non-negative int. This maps 1:1 onto `Locator` (`source`, `from_line;col →
+  to_line;col`); `Locator` today carries a single `source` and `new_range`
+  rejects cross-file ranges, so the two tags are currently always equal, yet
+  the endpoint-complete format future-proofs a per-endpoint-source `Locator`
+  (the `locator.rs` source-ownership TODO). It also stays a strict superset
+  of VSCode's line-only `data-line` (a line-only client reads the first
+  line).
+- **File resolution — integer tag + doc-level `tag→file` table (SyncTeX
+  `Input:` preamble analog).** The attribute never inlines a path: it
+  carries a small integer `tag` resolved to its file via a once-per-document
+  table. That gives exact-file sync in multi-file projects *and* avoids both
+  path leakage (RELEASE_CRITERIA §6) and the markup bloat of repeating a
+  path on every element. Tag `0` = the main user document; each
+  `\input`/`\include` mouth allocates the next tag as it opens (B below
+  marks user vs foreign so the editor never scrolls into a `.sty`). Because
+  the per-element value is a **bare integer**, output shipped *without* the
+  table is inherently **anonymised**: a consumer lacking the map can still
+  use the structure (ranges nest, endpoints order) but cannot recover any
+  filename or local path. This is the same indirection the Source Map v3
+  `sources` array uses — see §0.1.
 - **Gate:** off by default; when off, §1 capture and this stamping are
   both skipped (no side cost — Cost & the switch).
 
@@ -288,10 +372,11 @@ Mechanism (out-of-band — **never widen the 8-byte `Token`**):
 ### 5. Output contract & validation
 
 - **Tag table:** emit `tag→file` once (document-level, SyncTeX preamble
-  style); per-element `data-src` carries `tag#textrange(...)`.
+  style); per-element `data-sourcepos` carries `tag:l:c-tag:l:c` (file
+  first-class in each endpoint; integer tag, no inlined paths).
 - **MVP fixture:** `latexml_oxide/tests/structure/article.tex` with
   `--source-map` on — a structural article (sections/paragraphs/lists,
-  math-light) pinned as a golden of `data-src` line attributes.
+  math-light) pinned as a golden of `data-sourcepos` attributes.
 - **Round-trip tests** (pin like `tests/math/norm_kerned_delims`): for a
   corpus sample assert (a) every range is within its file bounds; (b) a
   child element's range ⊆ its parent's (nesting invariant); (c) for
@@ -343,7 +428,7 @@ without exploding the DOM into a `<span>`-per-word (the coalescing cost in
 `(textNode, offset)` and builds a Range at query time. Three rungs, pick per
 need:
 
-1. **Element-level (Tier A MVP):** `data-src` *line* range on each element;
+1. **Element-level (Tier A MVP):** `data-sourcepos` range on each element;
    `scrollIntoView` the containing element. Reflow-safe already; good enough
    to land the ar5iv-editor. **This is the chosen MVP** (see "MVP
    granularity" above).
@@ -356,7 +441,7 @@ This means the §4 coalescing decision must **preserve an internal offset
 table** on the coalesced leaf, not flatten it away, if rung 2 is wanted.
 
 **Across a reconvert (full-doc MVP).** On edit we replace the preview DOM.
-Re-locate the target by its `data-src` *source range* (the stable key,
+Re-locate the target by its `data-sourcepos` *source range* (the stable key,
 viewport-independent) and restore scroll/selection from that — provenance-
 driven scroll preservation, immune to both reflow and re-render.
 
@@ -377,7 +462,7 @@ only difference is the **editor half**:
   locator-precise LaTeX analog.)
 
 So "two thin clients on one substrate" is literal: identical preview code,
-different editor binding, same `data-src`/`data-srcmap` contract. VSCode
+different editor binding, same `data-sourcepos`/`data-srcmap` contract. VSCode
 packaging caveats (not blockers): webview **CSP** + `webview.asWebviewUri`
 for our CSS/JS (RELEASE_CRITERIA §6); `caretRangeFromPoint` is non-standard
 but safe in the Chromium webview (`caretPositionFromPoint` is the standard
@@ -393,9 +478,10 @@ two pieces:
 2. **Get it onto the most accurate DOM node** (§2 + obligation A below).
 
 We **build on LaTeXML's existing `Locator` model unchanged**
-(`common/locator.rs`): `Locator`, `new_range`, `to_attribute`, and the
-`.locator` fields already carried by `Tbox`/`Whatsit`/`List` are the
-foundation. The work is *using* them correctly and propagating them — not
+(`common/locator.rs`): `Locator`, `new_range`, and the `.locator` fields
+already carried by `Tbox`/`Whatsit`/`List` are the foundation; the source-map
+adds exactly one focused serialiser (`to_sourcepos`, §0) and otherwise uses
+them unchanged. The work is *using* them correctly and propagating them — not
 redefining the model. (SyncTeX was conceptual grounding for §1's
 start-invariant and the line-granularity choice; it is **not** a runtime
 dependency or a required comparison.)
@@ -416,7 +502,7 @@ breaks the chain:
    wrapper; see "MVP granularity"). Only attempt in-equation mapping with a
    clear, tested path.
 4. serialization.
-5. `latexml_post` XSLT (ltx XML → HTML) — `data-src`/`data-srcmap` must ride
+5. `latexml_post` XSLT (ltx XML → HTML) — `data-sourcepos`/`data-srcmap` must ride
    the `copy-attribute`/`add_attributes` path (`LaTeXML-common.xsl:327,390,
    481`), *including* reconstructed elements (math, tables) that don't merely
    copy their source attributes.

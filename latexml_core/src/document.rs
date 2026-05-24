@@ -103,6 +103,13 @@ pub struct Document {
   reusable_node_buffers:       Vec<Vec<Node>>,
   localized_boxes:             Vec<Option<Digested>>,
   box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
+  /// source range, captured as a plain `Copy` `Locator` at set time so
+  /// stamping never re-borrows the box's `RefCell` mid-absorb (which
+  /// panics for the mutably-borrowed `Alignment` path). Mirrors the
+  /// `box_to_absorb` save stack; `None` when source-map is off.
+  current_box_locator:         Option<Locator>,
+  localized_box_locators:      Vec<Option<Locator>>,
   localized_fonts:             Vec<Rc<Font>>,
 }
 impl Default for Document {
@@ -158,6 +165,8 @@ impl Document {
       constructed_nodes:           Vec::new(),
       reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
+      current_box_locator:         None,
+      localized_box_locators:      Vec::new(),
       context:                     None,
       localized_boxes:             Vec::new(),
       localized_fonts:             Vec::new(),
@@ -937,6 +946,51 @@ impl Document {
     // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
+  }
+
+  /// Stamp a freshly-opened element with its source range as a
+  /// `data-sourcepos` attribute, for the `--source-map` feature (issues
+  /// #47/#92). The range comes from the construct currently being absorbed
+  /// (`box_to_absorb`); the integer file `tag` is resolved through the
+  /// document-level `sources` table (`state::source_tag`) so no path is
+  /// inlined. See `docs/SOURCE_PROVENANCE.md` §0/§2.
+  ///
+  /// Math is kept **opaque** per the MVP scope: the `ltx:Math` wrapper is
+  /// stamped, but its `ltx:XM*` MathML internals are skipped (the Marpa
+  /// math parser has no locator awareness — §7 A.3). Only invoked when the
+  /// source-map switch is on (the caller gates it).
+  fn stamp_source_locator(&self, node: &Node, qname: &str) {
+    // Keep equations opaque — do not descend into XMath/XMTok/XMArg/… .
+    if qname.starts_with("ltx:XM") {
+      return;
+    }
+    // Read the pre-captured Copy locator — never re-borrow the box here.
+    let Some(loc) = self.current_box_locator else {
+      return;
+    };
+    // Skip locators with no real source position (default/synthetic).
+    if loc.from_line == 0 {
+      return;
+    }
+    // User-source only (§7.B): emit a navigable locator only into an editable
+    // user document (`.tex`/`.ltx`). This skips both synthetic default
+    // locators (whose source is `…/locator.rs`, from `Locator::default()`'s
+    // `file!()`) and foreign package/class files (`.sty`/`.cls`/…) — the
+    // editor must never scroll into those. Foreign/unstamped elements inherit
+    // their nearest user-source ancestor's range client-side (DOM walk-up).
+    // (MVP heuristic; a tracked user-input set would be more precise.)
+    let src = loc.get_source();
+    let is_user_source = arena::with(src, |s| {
+      let s = s.to_ascii_lowercase();
+      s.ends_with(".tex") || s.ends_with(".ltx")
+    });
+    if !is_user_source {
+      return;
+    }
+    let tag = state::source_tag(src);
+    // `data-*` attributes are not namespaced — set directly on the node.
+    let mut n = node.clone();
+    let _ = n.set_attribute("data-sourcepos", &loc.to_sourcepos(tag));
   }
 
   /// Note: This closes the deepest open node of a given type.
@@ -3552,6 +3606,15 @@ impl Document {
       newnode = self.open_element_internal(point, decoded_ns, &tag)?;
     }
 
+    // Source-locator stamping (`--source-map`, issues #47/#92). `open_element_at`
+    // is the shared element-creation primitive (plain `open_element`, math, and
+    // alignment all route here), so stamping here covers them uniformly —
+    // including the `ltx:Math` wrapper that bypasses `open_element`. Off by
+    // default; the cheap gate keeps the normal path free.
+    if state::source_map_enabled() {
+      self.stamp_source_locator(&newnode, qname);
+    }
+
     if let Some(attrs) = attributes {
       let mut sorted_keys = attrs.keys().map(String::as_str).collect::<Vec<_>>();
       sorted_keys.sort_unstable();
@@ -4201,10 +4264,20 @@ impl Document {
 
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());
+    self.localized_box_locators.push(self.current_box_locator.take());
     self.box_to_absorb = arg;
+    // Capture the locator now, while the box's RefCell is unborrowed — the
+    // source-map stamping (`open_element`) reads this Copy value instead of
+    // re-borrowing the box mid-`be_absorbed`. Gated so the normal path is free.
+    self.current_box_locator = if state::source_map_enabled() {
+      self.box_to_absorb.as_ref().map(|b| b.get_locator())
+    } else {
+      None
+    };
   }
   pub fn expire_box_to_absorb(&mut self) {
     self.box_to_absorb = self.localized_boxes.pop().unwrap();
+    self.current_box_locator = self.localized_box_locators.pop().unwrap_or(None);
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {

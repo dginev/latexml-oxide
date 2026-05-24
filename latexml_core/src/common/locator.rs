@@ -195,6 +195,31 @@ impl Locator {
     loc.push_str(")'");
     loc
   }
+
+  /// Serialise as a compact, web-facing `data-sourcepos` value:
+  /// `tag:line:col-tag:line:col` for a range, `tag:line:col` for a point.
+  ///
+  /// This is the source-map feature's serialiser (issues #47/#92) — the
+  /// brief, sibling-aligned form documented in `docs/SOURCE_PROVENANCE.md`
+  /// §0/§0.1, deliberately *not* the XPointer `to_attribute()` above
+  /// (which has zero web-platform support and is latent in the port).
+  ///
+  /// `tag` is the source's index in the document-level `sources` table
+  /// (Source-Map-v3 style) — never an inlined path, so the markup stays
+  /// tiny and is anonymisable. The file is first-class in *each* endpoint;
+  /// a `Locator` currently carries a single `source` (so both endpoints
+  /// share `tag`), but the endpoint-complete form future-proofs a
+  /// per-endpoint-source `Locator`.
+  pub fn to_sourcepos(&self, tag: u32) -> String {
+    if self.is_range() {
+      format!(
+        "{tag}:{}:{}-{tag}:{}:{}",
+        self.from_line, self.from_column, self.to_line, self.to_column
+      )
+    } else {
+      format!("{tag}:{}:{}", self.from_line, self.from_column)
+    }
+  }
 }
 
 #[cfg(test)]
@@ -300,5 +325,25 @@ mod tests {
     let l = Locator::new("paper.tex", 1, 2, 3, 4);
     let got = l.get_locator();
     assert_eq!(got, l);
+  }
+
+  #[test]
+  fn to_sourcepos_point() {
+    // Point locator (to_line==0 && to_column==0): no `-` separator.
+    let l = Locator::new("paper.tex", 12, 1, 0, 0);
+    assert_eq!(l.to_sourcepos(0), "0:12:1");
+  }
+
+  #[test]
+  fn to_sourcepos_range() {
+    let l = Locator::new("paper.tex", 12, 1, 12, 240);
+    assert_eq!(l.to_sourcepos(0), "0:12:1-0:12:240");
+  }
+
+  #[test]
+  fn to_sourcepos_tag_is_per_endpoint() {
+    // The integer file tag is first-class in *each* endpoint.
+    let l = Locator::new("paper.tex", 3, 5, 7, 9);
+    assert_eq!(l.to_sourcepos(2), "2:3:5-2:7:9");
   }
 }

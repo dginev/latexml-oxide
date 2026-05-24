@@ -55,29 +55,56 @@ provenance are deferred. **Parity-neutral and off by default** — a normal
 conversion (switch off) must stay byte-identical to today; build on the
 existing `Locator` model (`common/locator.rs`) **unchanged**.
 
+**Attribute contract (decided 2026-05-24, web-ecosystem audit — see
+SOURCE_PROVENANCE §0/§0.1/§2):** attribute name **`data-sourcepos`** (the
+cmark-gfm/GitHub/GitLab convention; *not* `data-src`, which is the lazysizes
+lazy-load idiom). Value `tag:l:c-tag:l:c` — file **first-class** in each
+endpoint, integer `tag` = index into a doc-level `sources` table
+(Source-Map-v3 `sources`/`sourceRoot`/`sourcesContent` flavour: compact,
+anonymisable, no inlined paths). Serialise via a new compact
+`Locator::to_sourcepos()`; the latent XPointer `Locator::to_attribute()` is
+**not** used (zero web-platform support). Rung-2 char map keeps `data-srcmap`.
+
 Engine-substrate checklist:
 
-- [ ] `--source-map` flag (+ env), off by default, gating *both* tracking
-      and emission — no machinery runs when off.
+- [x] `--source-map` flag (+ `LATEXML_SOURCE_MAP` env), off by default,
+      gating *both* tracking and emission via the `State.source_map` field
+      (`state::source_map_enabled()`); threaded Config → CoreOptions →
+      StateOptions, mirroring `nomathparse`. Scaffold test
+      `tests/52_source_map.rs` pins off-by-default (no `data-sourcepos`) +
+      ON-currently-inert (byte-identical). Verified: corpus binary path
+      (`cortex_worker`) keeps `source_map: None`.
 - [ ] Start-*line* capture in `mouth.rs::read_token` (`:628`), after
       inter-token skips; range open→close at the digestion frame via
-      `Locator::new_range` (`locator.rs:80`).
-- [ ] Stamp block/inline elements + the `ltx:Math` wrapper at the `absorb`
-      hook (`document.rs:654-675`, via `box_to_absorb` + `constructed_nodes`)
-      and in `open_element`/`insert_element`, using `Locator::to_attribute()`
-      → `data-src` with an integer tag (tag→file table, no paths). Gated.
-- [ ] Propagate `data-src` through the post XSLT `copy-attribute`/
+      `Locator::new_range` (`locator.rs:80`). Gated by `source_map_enabled()`
+      and cached into the Mouth so the hot path is zero-cost when off.
+- [x] Stamp elements with `data-sourcepos` in **`open_element_at`** (the
+      shared element-creation primitive — covers plain `open_element`, math,
+      and alignment uniformly), via `Locator::to_sourcepos(tag)` (integer
+      `sources`-table tag, no paths). Box locator captured as a `Copy`
+      `Locator` at `set_box_to_absorb` time (`current_box_locator`) to avoid
+      the `RefCell` re-borrow panic mid-`be_absorbed`. Gated.
+      - **Deferred:** the `ltx:Math` *wrapper* is stamped at digestion but the
+        Marpa math parser rebuilds the subtree (`base_xmath.rs:1410`) and
+        discards it (§7 A.3 — math-parse provenance). Math stays opaque;
+        equations inherit the container's locator client-side. Math internals
+        (`ltx:XM*`) are skipped by design.
+- [ ] Propagate `data-sourcepos` through the post XSLT `copy-attribute`/
       `add_attributes` path (`LaTeXML-common.xsl:327,390,481`), including
       reconstructed math/table elements.
-- [ ] User-vs-foreign source: never emit a navigable locator into a
-      `.sty`/`.cls`/dump — resolve to the nearest user-source ancestor.
-- [ ] **MVP locator test:** `latexml_oxide/tests/structure/article.tex`
-      converted with `--source-map` on — a structural article (sections,
-      paragraphs, lists; math-light, so the line-level/block-element path)
-      with a pinned golden of the `data-src` line attributes. Then broaden
-      to a corpus round-trip (literal range substring == visible text;
-      range ⊆ parent; within file bounds) + debug-assert invariants.
-      Self-contained (no SyncTeX dependency).
+- [x] User-vs-foreign source: stamp only into editable user docs
+      (`.tex`/`.ltx`). This skips both synthetic default locators (source =
+      `locator.rs` from `Locator::default()`'s `file!()`) and foreign
+      `.cls`/`.sty`/dump files; foreign/unstamped elements inherit the nearest
+      user-source ancestor client-side. (MVP extension heuristic; a tracked
+      user-input set would be more precise.) Verified on `article.tex`:
+      265 → 53 stamps, all `tag 0 = article.tex`, real line:col positions.
+- [ ] **MVP locator test:** flip `tests/52_source_map.rs` ON-branch from
+      "inert" to a pinned golden of the `data-sourcepos` attributes for
+      `tests/structure/article.tex` once stamping lands. Then broaden to a
+      corpus round-trip (literal range substring == visible text; range ⊆
+      parent; within file bounds) + debug-assert invariants. Self-contained
+      (no SyncTeX dependency).
 
 Next phase (after substrate): warm-state conversion server (full-doc
 reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to

@@ -129,6 +129,9 @@ pub struct CoreOptions {
   pub include_styles:   Option<bool>,
   /// disable math parsing (enabled by default)
   pub nomathparse:      Option<bool>,
+  /// enable source-locator (`--source-map`) tracking + emission (off by
+  /// default). See `docs/SOURCE_PROVENANCE.md`.
+  pub source_map:       Option<bool>,
   /// an optional, fixed id prefix for all xml:id attributes
   pub documentid:       Option<String>,
   /// the list of paths used for loading TeX sources and packages
@@ -157,6 +160,7 @@ impl Core {
       include_styles: options.include_styles,
       input_encoding: options.input_encoding,
       nomathparse: options.nomathparse,
+      source_map: options.source_map,
       ..StateOptions::default()
     };
     stomach::set_stomach(Stomach::default());

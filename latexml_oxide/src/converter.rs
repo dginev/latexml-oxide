@@ -40,6 +40,7 @@ impl Converter {
       preload: opts.preload.clone(),
       search_paths: opts.search_paths.clone(),
       nomathparse: opts.nomathparse,
+      source_map: opts.source_map,
       ..CoreOptions::default()
     });
     Converter {

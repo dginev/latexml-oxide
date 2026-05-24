@@ -224,6 +224,8 @@ impl LatexmlWorker {
       search_paths:            Some(search_paths),
       include_comments:        Some(false),
       nomathparse:             None,
+      // Corpus/parity sweeps never emit locators — keep the zero-cost path.
+      source_map:              None,
     };
 
     let mut converter = Converter::from_config(opts.clone());
