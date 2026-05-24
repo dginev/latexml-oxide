@@ -1,6 +1,7 @@
 # Source Provenance — the beyond-Perl showcase (issues #47, #92)
 
-**The product: the ar5iv-editor.** A two-panel web UI — **CodeMirror**
+**The product: live source ↔ preview, two clients on one substrate.** The
+flagship client is the **ar5iv-editor** — a two-panel web UI, **CodeMirror**
 editing LaTeX on the left, the rendered **HTML preview** on the right —
 where every edit (addition / deletion / modification) **auto-syncs** into
 the preview. The value is deliberately simple: *type LaTeX, watch the page
@@ -8,6 +9,14 @@ update in place.* Source **locators** are the mechanism: they map each
 source range to its preview region and back, so an edit updates (ideally
 just) the affected region and the two panels stay aligned — and clicking
 the preview jumps to the source, clicking the source scrolls the preview.
+
+The **second client is a VSCode extension** that consumes the *same*
+locators the *same* way: a webview HTML preview beside the `.tex` editor,
+edit → preview update, click ↔ source. Build the substrate (locators +
+conversion server) **once**; both clients are thin shells over one locator
+contract — VSCode talks to the server over **LSP** (which also carries the
+#92 diagnostics natively), the ar5iv-editor over HTTP/WebSocket. The two
+differ only in their shell, not in the sync logic.
 
 The same locator substrate then powers two further *beyond-Perl*
 capabilities, for free:
@@ -77,14 +86,18 @@ i.e. it gave up on the accuracy goal.
   macro boundaries (`\def\au{au}\au{}tor` → visible `autor`, source span
   over `\au{}tor`) and **macro-origin error traces** (#92's "climb the
   expansion stack" pain). This is the payoff Perl never reached.
-- **Process model — the editor backend (required, not optional).** The
-  ar5iv-editor needs sub-second reconversion on every keystroke/save;
-  "near-instant" (the #47 word) is impossible from a cold binary that
-  re-parses ~24k dump entries per run. So the editor is fronted by a
-  **persistent server** (or LSP) holding warm engine state, doing
-  **debounced, ideally incremental** reconversion — re-running only the
-  edited region where locators allow, full-doc otherwise. That same server
-  is the natural single host for preview sync (#47) and diagnostics (#92).
+- **Process model — the shared backend (required, not optional).** Both
+  clients need sub-second reconversion per keystroke/save; "near-instant"
+  (the #47 word) is impossible from a cold binary that re-parses ~24k dump
+  entries per run. So a **persistent server** holds warm engine state and
+  reconverts on a debounce. **MVP: full-document reconversion** (warm state
+  + debounce — simple, and fast enough to start; the whole point of the
+  Rust rewrite is that a full reconvert is already cheap). **Region-
+  incremental** reconversion — re-running only the edited span where
+  locators permit — is a later optimization, taken only if the full-doc MVP
+  proves too slow on large papers. The server speaks LSP to VSCode and
+  HTTP/WebSocket to the ar5iv-editor, and is the single host for preview
+  sync (#47) and diagnostics (#92).
 
 ## Cost & the switch (off by default)
 
@@ -132,6 +145,9 @@ products — build it once.
 
 **Prioritized showcase** (2026-05-24). Tier A is the near-term deliverable
 and is parity-neutral, so it can proceed alongside the corpus mission.
-Cross-refs: [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §9 (gates/context),
+Build order: locator substrate (Tier A + `--source-map`) → warm-state
+conversion server (full-doc reconvert MVP) → the two clients (ar5iv-editor
+web UI and VSCode extension) over the shared locator contract. Cross-refs:
+[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §9 (gates/context),
 [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md) #47/#92. Issue #199 (HTML-dialect
 RelaxNG) gives the preview a validation contract.

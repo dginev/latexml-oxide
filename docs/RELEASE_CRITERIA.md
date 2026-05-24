@@ -125,13 +125,14 @@ Many open clusters are *shared* failures, not Rust regressions. Rule:
 ## 9. Source provenance — the beyond-Perl showcase (issues #47, #92)
 
 **Prioritized showcase**, designed in
-[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). The product is the
-**ar5iv-editor**: CodeMirror LaTeX on the left, live HTML preview on the
-right, auto-synced on every edit via source locators. The same locator
-substrate then gives accurate linting (#47) and Rust-compiler-grade author
-error messages (#92) for free. Perl chased this for a decade
-(brucemiller/LaTeXML#101) and never cracked the accuracy; Rust's data model
-removes the blocker (provenance out-of-band, `Token` stays 8 bytes).
+[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). Live source ↔ preview over a
+shared locator substrate, with **two clients**: the **ar5iv-editor**
+(CodeMirror + live HTML preview web UI) and a **VSCode extension** (webview
+preview), both syncing identically on every edit. The same substrate gives
+accurate linting (#47) and Rust-compiler-grade author error messages (#92)
+for free. Perl chased this for a decade (brucemiller/LaTeXML#101) and never
+cracked the accuracy; Rust's data model removes the blocker (provenance
+out-of-band, `Token` stays 8 bytes).
 
 - **Tier A** (near-term, parity-neutral): plumb the existing box-level
   `Locator` to DOM nodes behind `--source-map` → the editor sync + better
