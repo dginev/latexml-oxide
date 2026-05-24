@@ -274,7 +274,63 @@ Mechanism (out-of-band — **never widen the 8-byte `Token`**):
 - **Switch:** one flag gates §1 capture, §3 side table, and §2/§4 emission
   together; off by default (Cost & the switch).
 
-## Status
+### 6. Output-side: reflow, viewport variability, and sub-element navigation
+
+The preview is **reflowing HTML**, not a fixed-geometry PDF page: the same
+paragraph is ~10 visual lines on a wide screen and ~20 on a narrow one, and
+re-renders on every edit. The model must scroll/highlight correctly through
+all of that.
+
+**Core principle — never store output coordinates; store source provenance
+on stable nodes and compute geometry on demand.** This is the one place we
+deliberately diverge from SyncTeX: SyncTeX maps source → *PDF (x,y)*, which
+is valid only because PDF pages don't reflow. We map source → *DOM node +
+source range* and let the browser compute the current position when asked:
+
+- `element.scrollIntoView()` / `element.getBoundingClientRect()` are
+  evaluated against the *live* layout every call. When a paragraph reflows
+  10→20 lines, the target node is unchanged; the browser simply returns its
+  new position. There is nothing baked-in to invalidate. A "visual line" is
+  an ephemeral layout artifact with no DOM identity — we address the
+  *character/element*, and the browser reports which line it currently sits
+  on.
+
+**Node-level vs internal-text-level.** Correct: CSS selectors and `data-*`
+attributes only address **nodes** — you cannot CSS-select "the 5th character
+of this text node." The escape hatch is the **DOM Range API**, which is *not*
+limited to node granularity and *also* tracks reflow:
+
+- forward (source→preview): `range.setStart(textNode, off)` +
+  `range.getClientRects()` → the live rectangle(s) of an arbitrary character
+  span → scroll to it;
+- backward (preview→source): `caretRangeFromPoint(x, y)` → text node +
+  offset → map back to source.
+
+So sub-element navigation *is* achievable — via Range, not via CSS.
+
+**Granularity knob (engine-side implication).** To get text-level precision
+without exploding the DOM into a `<span>`-per-word (the coalescing cost in
+§4), a text-bearing **leaf** element carries a compact monotonic
+**char-offset map**: DOM-text-offset ↔ source-offset (e.g. a packed
+`data-srcmap` of breakpoints). The client resolves a source offset to a
+`(textNode, offset)` and builds a Range at query time. Three rungs, pick per
+need:
+
+1. **Element-level (Tier A MVP):** `data-src` range on each element;
+   `scrollIntoView` the containing element. Reflow-safe already; good enough
+   to land the ar5iv-editor.
+2. **Text-offset (enhancement):** add the leaf `data-srcmap`; Range-based
+   precise scroll/highlight of the exact edited word.
+3. **Span-per-run (fallback):** only where a leaf can't carry a clean map
+   (e.g. ligature/normalization splits).
+
+This means the §4 coalescing decision must **preserve an internal offset
+table** on the coalesced leaf, not flatten it away, if rung 2 is wanted.
+
+**Across a reconvert (full-doc MVP).** On edit we replace the preview DOM.
+Re-locate the target by its `data-src` *source range* (the stable key,
+viewport-independent) and restore scroll/selection from that — provenance-
+driven scroll preservation, immune to both reflow and re-render.
 
 **Prioritized showcase** (2026-05-24). Tier A is the near-term deliverable
 and is parity-neutral, so it can proceed alongside the corpus mission.
