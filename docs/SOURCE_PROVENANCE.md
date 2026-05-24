@@ -332,6 +332,29 @@ Re-locate the target by its `data-src` *source range* (the stable key,
 viewport-independent) and restore scroll/selection from that — provenance-
 driven scroll preservation, immune to both reflow and re-render.
 
+**Both clients use this same preview code — including VSCode.** A VSCode
+HTML preview is a **Webview** = a Chromium iframe with a full DOM, so the
+Range API / `scrollIntoView` / `caretRangeFromPoint` all work there
+unchanged; the preview-pane logic is *shared* with the ar5iv-editor. The
+only difference is the **editor half**:
+
+- *ar5iv-editor:* CodeMirror is itself in the DOM, so both panes share one
+  document and JS coordinates them directly.
+- *VSCode:* the source editor is **not** in the DOM — it's driven from the
+  extension host via the VSCode API (`TextEditor.revealRange`,
+  `.selection`, `TextDocument.offsetAt`/`positionAt`). The webview and host
+  exchange `(source range ↔ element)` messages over
+  `postMessage`/`onDidReceiveMessage`. (This is exactly how VSCode's own
+  Markdown preview does editor↔webview scroll-sync; we are the
+  locator-precise LaTeX analog.)
+
+So "two thin clients on one substrate" is literal: identical preview code,
+different editor binding, same `data-src`/`data-srcmap` contract. VSCode
+packaging caveats (not blockers): webview **CSP** + `webview.asWebviewUri`
+for our CSS/JS (RELEASE_CRITERIA §6); `caretRangeFromPoint` is non-standard
+but safe in the Chromium webview (`caretPositionFromPoint` is the standard
+fallback used by the ar5iv-editor in arbitrary browsers).
+
 **Prioritized showcase** (2026-05-24). Tier A is the near-term deliverable
 and is parity-neutral, so it can proceed alongside the corpus mission.
 Build order: locator substrate (Tier A + `--source-map`) → warm-state
