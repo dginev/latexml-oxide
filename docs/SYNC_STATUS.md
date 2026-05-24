@@ -124,14 +124,15 @@ Engine-substrate checklist:
       `DefConstructor` whatsit got `Locator::default()` and was dropped by the
       user-source filter. Result on `article.tex`: **53 → 128** stamps with real
       line:col ranges (e.g. `\section` line, equation lines). Full suite green.
-- [ ] **Cleanup (follow-up, not MVP-blocking): `Option<Locator>`.** Replace the
-      `Locator::default()` `file!()/line!()` *sentinel* with an honest
-      `Option<Locator>` (`Object::get_locator -> Option<Locator>`); simplifies
-      `List::new` (→ `find_map`) and the source-map filter (→ skip `None`).
-      Cross-cutting (trait sig + all box types + error reporting); do as its own
-      change with its own full-suite gate. Aligns with the "meaningful Rust
-      types" goal. (Rejected alternative: a stateful gated `Whatsit::default()`
-      — `Default` must stay pure.)
+- [x] **Cleanup: `Option<Locator>`.** Replaced the `Locator::default()`
+      `file!()/line!()` *sentinel* with an honest `Option<Locator>`:
+      `Object::get_locator -> Option<Locator>`; `Whatsit`/`Tbox`/`List.locator:
+      Option<Locator>`; `List::new` → `find_map`. The free fn
+      `gullet::get_locator() -> Locator` is unchanged (the "where the parser is
+      now" workhorse for errors + box creation). Cross-cutting (17 files: trait +
+      all box types + ~21 call sites); full suite green, parity-neutral. Aligns
+      with the "meaningful Rust types" goal. (Rejected: a stateful gated
+      `Whatsit::default()` — `Default` must stay pure.)
 - [ ] **`read_token` precision (optional polish):** start-token capture
       (`mouth.rs:628`) to sharpen `from`/column. The line-level ranges from
       `gullet::get_locator()` already meet the MVP bar, so this is refinement,

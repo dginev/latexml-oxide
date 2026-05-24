@@ -302,7 +302,7 @@ impl Definition for Constructor {
     // `locator.rs`) and the source-map user-source filter drops them
     // (~53/265 → 128/… `article.tex` elements stamped once captured).
     if crate::state::source_map_enabled() {
-      whatsit.locator = crate::gullet::get_locator();
+      whatsit.locator = Some(crate::gullet::get_locator());
     }
 
     // Call any 'After' code.

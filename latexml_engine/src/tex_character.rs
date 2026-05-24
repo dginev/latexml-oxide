@@ -261,7 +261,7 @@ pub fn apply_accent(
         return Ok(Tbox::new(
           arena::pin(format!("{replacement}{string}")),
           font,
-          Some(locator),
+          locator,
           reversion.unwrap_or(Tokens!()),
           SymHashMap::default(),
         ));
@@ -289,7 +289,7 @@ pub fn apply_accent(
   Ok(Tbox::new(
     arena::pin(text),
     font,
-    Some(locator),
+    locator,
     reversion.unwrap_or(Tokens!()),
     SymHashMap::default(),
   ))

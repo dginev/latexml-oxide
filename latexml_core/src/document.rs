@@ -116,11 +116,8 @@ impl Default for Document {
   fn default() -> Self { Self::new() }
 }
 impl Object for Document {
-  fn get_locator(&self) -> Locator {
-    self
-      .get_node_box(&self.node)
-      .map(|tbox| tbox.get_locator())
-      .unwrap_or_default()
+  fn get_locator(&self) -> Option<Locator> {
+    self.get_node_box(&self.node).and_then(|tbox| tbox.get_locator())
   }
 }
 
@@ -4289,7 +4286,7 @@ impl Document {
     // source-map stamping (`open_element`) reads this Copy value instead of
     // re-borrowing the box mid-`be_absorbed`. Gated so the normal path is free.
     self.current_box_locator = if state::source_map_enabled() {
-      self.box_to_absorb.as_ref().map(|b| b.get_locator())
+      self.box_to_absorb.as_ref().and_then(|b| b.get_locator())
     } else {
       None
     };

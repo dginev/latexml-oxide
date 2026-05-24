@@ -160,7 +160,7 @@ impl Object for Locator {
   }
 
   /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> Locator { *self }
+  fn get_locator(&self) -> Option<Locator> { Some(*self) }
 }
 
 impl Locator {
@@ -324,7 +324,7 @@ mod tests {
   fn object_get_locator_returns_self() {
     let l = Locator::new("paper.tex", 1, 2, 3, 4);
     let got = l.get_locator();
-    assert_eq!(got, l);
+    assert_eq!(got, Some(l));
   }
 
   #[test]

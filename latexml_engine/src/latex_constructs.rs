@@ -137,8 +137,8 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if has_value(&s!("{}:autoload", cs.to_string())) {
     return Ok((true, false));
   }
-  let plain =
-    lookup_definition(cs)?.is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
+  let plain = lookup_definition(cs)?
+    .is_some_and(|prev| prev.get_locator().is_some_and(is_plain_definition_source));
   Ok((plain, plain))
 }
 
@@ -681,7 +681,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
       Tbox::new(
         line,
         font.clone(),
-        Some(loc),
+        loc,
         Token {
           text: line,
           code: Catcode::OTHER,

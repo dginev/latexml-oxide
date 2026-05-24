@@ -136,7 +136,7 @@ impl fmt::Display for Mouth {
 }
 impl Object for Mouth {
   fn stringify(&self) -> String { s!("Mouth[<string>{}x{}]", self.lineno, self.colno) }
-  fn get_locator(&self) -> Locator {
+  fn get_locator(&self) -> Option<Locator> {
     let (to_line, to_column) = (self.lineno, self.colno);
     let max_col = if self.nchars > 0 {
       self.nchars - 1
@@ -151,13 +151,14 @@ impl Object for Mouth {
     // Perl Mouth.pm L199 (#2671): columns in Locator are 1-indexed; the Mouth's
     // internal colno counter is 0-indexed (character array index), so we add 1
     // when producing the Locator for error-message display.
-    Locator::new(
+    // A Mouth always has a position, so this is always `Some`.
+    Some(Locator::new(
       &self.source,
       from_line as u32,
       (from_column + 1) as u32,
       to_line as u32,
       (to_column + 1) as u32,
-    )
+    ))
   }
 }
 
@@ -991,7 +992,7 @@ impl Mouth {
   pub fn at_eof(&self) -> bool { self.at_eof }
 
   pub fn get_location(&self) -> String {
-    let loc = self.get_locator();
+    let loc = self.get_locator().unwrap_or_default();
     s!("at {}", loc)
   }
 }

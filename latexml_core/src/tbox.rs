@@ -26,8 +26,8 @@ pub struct Tbox {
   pub text:       SymStr,
   /// associated font for `text`
   pub font:       Rc<Font>,
-  /// source location where the box originated
-  pub locator:    Locator,
+  /// source location where the box originated (`None` = unknown)
+  pub locator:    Option<Locator>,
   /// misc properties, such as sizing information
   pub properties: HashMap<Stored>,
   /// a Tokens list containing the TeX that created (or could have) the Tbox.
@@ -39,7 +39,7 @@ impl Default for Tbox {
     Tbox {
       text:       pin!(""),
       font:       Rc::new(Font::text_default()),
-      locator:    Locator::default(),
+      locator:    None,
       properties: HashMap::default(),
       tokens:     Tokens!(),
     }
@@ -59,7 +59,7 @@ impl fmt::Display for Tbox {
   }
 }
 impl Object for Tbox {
-  fn get_locator(&self) -> Locator { self.locator }
+  fn get_locator(&self) -> Option<Locator> { self.locator }
   fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
   fn stringify(&self) -> String { format!("{self:?}") }
 }
@@ -76,7 +76,9 @@ impl Tbox {
     tokens_opt: Tokens,
     mut properties: HashMap<Stored>,
   ) -> Self {
-    let locator = locator_opt.unwrap_or_else(gullet::get_locator);
+    // A text box always has a source position (Perl parity): use the passed
+    // locator, else the gullet's current one. Stored as `Some`.
+    let locator = Some(locator_opt.unwrap_or_else(gullet::get_locator));
     let mut font = match font_opt {
       Some(f) => f,
       None => lookup_font().unwrap(),

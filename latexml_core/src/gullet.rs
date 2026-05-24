@@ -184,15 +184,18 @@ pub fn get_locator() -> Locator {
   while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
     runtime_opt = mouthstack_iter.next();
   }
+  // The free fn stays `-> Locator` ("where the parser is now" — always a real
+  // position during digestion; the workhorse for errors + box creation). A
+  // Mouth's `get_locator` is `Option` (per the `Object` trait) but is always
+  // `Some`, so unwrap to the default only in the no-mouth backup.
   if let Some(runtime) = runtime_opt {
     // First exit condition: we found a mouth with a source, and asked it for a locator
-    runtime.mouth.get_locator()
+    runtime.mouth.get_locator().unwrap_or_default()
   } else if let Some(runtime) = gullet.mouthstack.front() {
     // Backup strategy: return the first locator in the mouthstack:
-    runtime.mouth.get_locator()
+    runtime.mouth.get_locator().unwrap_or_default()
   } else {
     // Final backup -- the default locator
-    // TODO: Or should this be None?
     Locator::default()
   }
 }

@@ -20,7 +20,7 @@ pub struct List {
   pub boxes:      Vec<Digested>,
   pub mode:       Option<TexMode>,
   pub font:       Option<Font>,
-  pub locator:    Locator,
+  pub locator:    Option<Locator>,
   pub properties: HashMap<Stored>,
 }
 
@@ -61,7 +61,7 @@ impl PartialEq for List {
 
 impl Object for List {
   fn stringify(&self) -> String { format!("List[{self:?}]") }
-  fn get_locator(&self) -> Locator { self.locator }
+  fn get_locator(&self) -> Option<Locator> { self.locator }
 
   fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();
@@ -136,19 +136,10 @@ impl BoxOps for List {
 
 impl List {
   pub fn new(boxes: Vec<Digested>) -> Self {
-    // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
-    //   $locator = $bx->getLocator unless defined $locator; }
-    // TODO: Should the locators be an Option<> type? Or can we test for the default here, since
-    // it's rare? Hmmmm
-    let mut locator: Locator = Locator::default();
-    for bx in boxes.iter().rev() {
-      let bx_locator = bx.get_locator();
-      if bx_locator != locator {
-        // not the default!
-        locator = bx_locator;
-        break;
-      }
-    }
+    // Perl: `$locator = $bx->getLocator unless defined $locator` — the first
+    // box (walking back-to-front) that has a locator. Now that locators are
+    // `Option<Locator>`, this is a clean `find_map` (no default-sentinel hack).
+    let locator: Option<Locator> = boxes.iter().rev().find_map(|bx| bx.get_locator());
     // Maybe the most representative font for a List is the font of the LAST box (that _has_ a
     // font!) ???
     // Walk boxes back-to-front for the most representative font.

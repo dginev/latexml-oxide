@@ -254,7 +254,7 @@ impl Object for Digested {
       RegisterValue(ref rv) => (*rv).stringify(),
     }
   }
-  fn get_locator(&self) -> Locator {
+  fn get_locator(&self) -> Option<Locator> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b.borrow().get_locator(),
@@ -264,7 +264,7 @@ impl Object for Digested {
       Alignment(ref w) => w.borrow().get_locator(),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
-      Postponed(ref _t) => Locator::default(), // Tokens locator?
+      Postponed(ref _t) => None, // Tokens carry no locator
     }
   }
   fn revert(&self) -> Result<Tokens> {
