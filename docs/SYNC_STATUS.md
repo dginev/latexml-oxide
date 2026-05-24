@@ -133,11 +133,23 @@ Engine-substrate checklist:
       all box types + ~21 call sites); full suite green, parity-neutral. Aligns
       with the "meaningful Rust types" goal. (Rejected: a stateful gated
       `Whatsit::default()` — `Default` must stay pure.)
-- [ ] **`read_token` precision (optional polish):** start-token capture
-      (`mouth.rs:628`) to sharpen `from`/column. The line-level ranges from
-      `gullet::get_locator()` already meet the MVP bar, so this is refinement,
-      not a blocker. `get_locator` is shared with (untested) error locators, so
-      no gating needed for parity.
+- [~] **Column precision — needs Tier B, NOT a quick fix (attempted + reverted
+      2026-05-24).** Tried Bruce #101's proposed fix: `read_token` token-start
+      (`last_token_start`, the `from` of `get_locator`) + capturing the
+      construct's open locator in `Constructor::invoke_primitive` *before* args.
+      **Empirically REGRESSED** the common cases: `section` `12:1`→`12:9` (the
+      `{`), `itemize` `40:1`→`40:15` (the `}`). Reason: `\section`/`\begin{…}`
+      reach their element constructor via **expansion** (`\@startsection`,
+      `\begin`), so `invoke_primitive` fires *after* the user's keyword — the
+      open locator is the post-keyword position, not the command start. This is
+      **Bruce's #3 (invocation-span vs macro-origin)** — accurate construct-start
+      needs **expansion-provenance** (tag expansion frames with the invocation
+      locator; propagate to the constructor) = the deferred **Tier B**
+      (`SOURCE_PROVENANCE §3`), genuinely hard, no clear bounded change. Do NOT
+      re-attempt the naive `invoke_primitive` capture. **LINE accuracy already
+      meets the MVP bar** (every construct on its correct source line, verified
+      on `article.tex`); the ar5iv-editor scrolls by line, so columns are a
+      post-MVP refinement gated on Tier B.
 
 Next phase (after substrate): warm-state conversion server (full-doc
 reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to

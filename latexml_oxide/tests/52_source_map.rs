@@ -119,6 +119,40 @@ fn source_map_on_emits_data_sourcepos_in_core_xml() {
   );
 }
 
+/// Pinned golden: key structural elements of `article.tex` → their exact
+/// `data:sourcepos`. Guards the locator pipeline (constructor capture,
+/// user-source filter, the `get_locator` `from` heuristic) against coverage or
+/// accuracy regressions. Values are **line-accurate**; column precision is a
+/// Tier-B refinement (Bruce brucemiller/LaTeXML#101 — accurate construct-start
+/// needs expansion-provenance, see SYNC_STATUS). Update deliberately if the
+/// conversion legitimately changes.
+#[test]
+fn source_map_pins_key_structural_locators() {
+  let on = convert_xml(true);
+  // (element tag, exact data:sourcepos) — the FIRST occurrence of each tag,
+  // cross-checked against tests/structure/article.tex line numbers.
+  let golden: &[(&str, &str)] = &[
+    ("section", "0:12:1-0:12:24"),        // \section{First Section}  (line 12)
+    ("equation", "0:14:1-0:14:17"),       // \begin{equation}         (line 14)
+    ("itemize", "0:40:1-0:40:16"),        // \begin{itemize}          (line 40)
+    ("item", "0:41:9-0:41:9"),            // \item one                (line 41)
+    ("enumerate", "0:49:1-0:49:18"),      // \begin{enumerate}        (line 49)
+    ("description", "0:58:1-0:58:20"),    // \begin{description}      (line 58)
+    ("subsection", "0:65:1-0:65:26"),     // \subsection{A Subsection}(line 65)
+    ("subsubsection", "0:70:1-0:70:32"),  // \subsubsection{...}      (line 70)
+  ];
+  for (tag, expected) in golden {
+    let re =
+      regex::Regex::new(&format!(r#"<{}\b[^>]*?\bdata:sourcepos="([^"]+)""#, tag)).unwrap();
+    let actual = re.captures(&on).and_then(|c| c.get(1)).map(|m| m.as_str());
+    assert_eq!(
+      actual,
+      Some(*expected),
+      "golden mismatch for first <{tag}> data:sourcepos (line-accurate; update if intended)"
+    );
+  }
+}
+
 // The `data:` namespace is promoted to a document namespace on first use
 // (Perl `getDocumentNamespacePrefix($ns,1)` parity, in `Document::set_attribute`),
 // so finalize declares `xmlns:data` on the root and the `data:sourcepos`
