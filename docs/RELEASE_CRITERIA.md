@@ -154,8 +154,13 @@ preview a validation contract — [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATI
 
 ## 10. Corrections to the codex pass
 
-- **#191 (CLI) essentially done** — all binaries use `clap` 4 derive; only
-  Perl `Config.pm` option-coverage parity remains.
+- **#191 (CLI) is PARTIAL, not done** (audited 2026-05-24) — `clap` is
+  adopted and core options work, but only ~47 of ~95 Perl omni flags exist.
+  Missing routing/parity options (`--profile`, `--strict`, `--includestyles`,
+  `--validate`, `--mode`, `--debug`, `--navtoc`, `--mathml`) and a
+  feature-tied long tail (mathimages/svg, jats, crossref/index, daemon mode).
+  `--output` is an intentional non-goal. Detail in
+  [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md). (Earlier "essentially done" was wrong.)
 - **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
   §7 is promote/extend, not create.
 - **BibTeX is ported** (Phases 1–8, [`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md));

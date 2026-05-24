@@ -21,7 +21,7 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 | **92** | Superior debugging and error-reporting for document authors | enhancement | Same locator foundation as #47; natural co-tenant of an LSP server. Rust-compiler-grade error UX is the differentiator vs "TeX being TeX". |
 | **199** | RelaxNG schema for HTML dialect | enhancement | Real gap. The `ltx` schema exists; the *emitted-HTML-dialect* schema does not. Doubles as the validation contract for the preview track (#47) and a release-CI check. See [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md). |
 | **217** | Portable use on MacOS | — | Release-readiness, [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3 stage 4. Real blocker: `libkpathsea-dev` packaging → upstream upgrade to `rust-kpathsea`. Needs README install steps + a CI sanity job. |
-| **191** | Add support for original command-line options | enhancement | **Largely done.** All four binaries use `clap` 4 derive (`bin/latexml_oxide.rs`). Remaining work is *option-coverage parity* vs Perl `Common/Config.pm`, not "adopt a parser." Downscope or close. |
+| **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion) and core options work, but coverage is **~47 flags vs ~95 in the Perl omni set** (`Common/Config.pm`). Audited 2026-05-24 — gaps below. |
 | **101** | Binary speed+size for releases | enhancement, performance | `maxperf` is **45 MB / 14 MB tarball**; `.text` is ~36.7 MB — dominated by the **compile-time binding pool**, *not* dumps (dumps are already gzip-embedded to ~870 KB, DEP-12). Re-run `cargo bloat` before acting. [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §2. |
 | **143** | Switch to rust stable, when `#[thread_local]` is stabilized | enhancement, performance | Toolchain-longevity risk for a public-domain tool. Pin a known-good nightly; track stabilization. [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3. |
 | **94** | Document model: RelaxNG vs Rust data-type trade-offs | enhancement, question, documentation | Doc debt; relates to #199 and [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md). |
@@ -36,11 +36,30 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 (Numbers not listed have no open issue or are out of current scope. Re-run
 the refresh command to regenerate.)
 
+### #191 — CLI option-coverage detail (audited 2026-05-24)
+
+Our binary has ~47 `#[arg]` flags vs ~95 in Perl `Common/Config.pm` (the
+`latexmlc` omni union). Existing Perl-name aliases: `--destination`,
+`--noparse`, `--presentationmathml`, `--contentmathml`, `--xmath`.
+
+- **Cheap parity gaps (map to existing/near features):** `--profile`
+  (biggest — `fragment`/`math`/`article`/…), `--strict`, `--includestyles`,
+  `--validate`/`--novalidate`, `--mode`, `--debug`, `--navtoc` (alias),
+  `--mathml`.
+- **Feature gaps (option absent because the feature is):** `--mathimages` /
+  `--mathsvg` / `--svg` (SVG deferred), `--jats` / `--html4` /
+  `--tex` / `--box` output, `--crossref` / `--bibliography` / `--index` /
+  `--permutedindex` / `--splitbibliography`, daemon mode (`--port`,
+  `--expire`, `--cache_key`, `--address`, `--autoflush`, `--exist`,
+  `--count`, `--name`).
+- **Intentional non-goals:** `--output` (we keep `--destination` / `--dest`).
+
 ## Reading
 
 * **Product / near-term:** #47 (Tier A), #92, #199.
 * **Release blockers / gates:** #101 (size), #143 (toolchain), #217 (mac),
   plus the license + safety items in [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md)
   that have no issue number yet.
+* **Partial parity (open):** #191 — clap landed + core options, but ~47/95
+  omni flags; `--profile` and a long tail still missing (detail above).
 * **Backlog / exploratory:** #192, #183, #171, #127, #93, #82, #80.
-* **Closeable / downscope:** #191 (clap landed).
