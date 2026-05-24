@@ -122,35 +122,28 @@ Many open clusters are *shared* failures, not Rust regressions. Rule:
 "Do not downgrade errors" stays non-negotiable. Existing cases:
 `memory/project_rust_supersedes_perl.md` + SYNC_STATUS "Permanent ignores."
 
-## 9. Source provenance & tooling (issues #47, #92) — product north star
+## 9. Source provenance — the beyond-Perl showcase (issues #47, #92)
 
-#47 (linting) and #92 (error reporting) are one capability and the
-foundation for a **VSCode plugin with synced source↔preview**. One track,
-two tiers, plus a process-model prerequisite.
+**Prioritized showcase**, designed in
+[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). The product is the
+**ar5iv-editor**: CodeMirror LaTeX on the left, live HTML preview on the
+right, auto-synced on every edit via source locators. The same locator
+substrate then gives accurate linting (#47) and Rust-compiler-grade author
+error messages (#92) for free. Perl chased this for a decade
+(brucemiller/LaTeXML#101) and never cracked the accuracy; Rust's data model
+removes the blocker (provenance out-of-band, `Token` stays 8 bytes).
 
-**Already in the code (don't rebuild):** `Locator` (24-byte `Copy`) already
-emits LaTeXML's `range(from='l;c',to='l;c')` / `point('l;c')` via
-`common/locator.rs::to_attribute()`; box/whatsit/error nodes already carry
-`Locator`.
-
-- **Tier A — element-level provenance (near-term, enables synced preview):**
-  plumb the existing box-level `Locator` to DOM nodes behind `--source-map`.
-  Mostly wiring. Gives click-element↔source-line (and inverse via
-  `querySelector`). Opt-in so default HTML stays compact / leaks no paths.
-- **Tier B — token/char expansion provenance (post-1.0, accurate linting):**
-  the `\def\au{au}\au{}tor`→`autor` case needs sub-element provenance across
-  macro boundaries. **Constraint: do not widen `Token`** (deliberately 8
-  bytes; `common/locator.rs:7` notes token-locators were tried and abandoned
-  as a hot-path regression). Carry provenance out-of-band (side table keyed
-  by mouth+offset). Distinguish literal spans from expansion spans.
-- **Process model (the gap codex missed):** #47 wants "near-instant"
-  conversion, but the binary cold-starts and re-parses ~24k dump entries
-  every run. The real risk is a **persistent server / LSP mode** (warm
-  state, debounced incremental reconversion) — also the natural host for #92.
+- **Tier A** (near-term, parity-neutral): plumb the existing box-level
+  `Locator` to DOM nodes behind `--source-map` → the editor sync + better
+  error locators. `Locator::to_attribute()` already emits the right form.
+- **Tier B** (the linting payoff): out-of-band token/char expansion
+  provenance — **do not widen `Token`**.
+- **Process model:** a persistent server/LSP with warm state + debounced
+  incremental reconversion — the editor backend, not optional.
 
 Design pull on current work: don't discard locator info where keeping it is
-cheap and parity-neutral. Related: #199 (HTML-dialect RelaxNG) gives the
-preview a validation contract — [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md).
+cheap and parity-neutral. #199 (HTML-dialect RelaxNG) gives the preview a
+validation contract.
 
 ## 10. Corrections to the codex pass
 

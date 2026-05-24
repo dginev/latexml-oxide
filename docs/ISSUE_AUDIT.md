@@ -17,8 +17,8 @@ Tracker: <https://github.com/dginev/latexml-oxide/issues>
 
 | # | Title | Labels | Local status / interpretation |
 |---|---|---|---|
-| **47** | [Feature] Accurate latex linting | enhancement | **Product north star.** Folds together with #92 + the VSCode synced-preview goal into one *source-provenance* track. Two tiers + a process-model prerequisite — see [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §9. *Not* purely post-1.0: the element-level slice is near-term. |
-| **92** | Superior debugging and error-reporting for document authors | enhancement | Same locator foundation as #47; natural co-tenant of an LSP server. Rust-compiler-grade error UX is the differentiator vs "TeX being TeX". |
+| **47** | [Feature] Accurate latex linting | enhancement | **Prioritized showcase.** The concrete product is the **ar5iv-editor** (CodeMirror source ↔ live HTML preview, auto-synced via locators); accurate linting falls out of the same substrate. Design: [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md). *Not* purely post-1.0 — the element-level slice (Tier A) is near-term and parity-neutral. |
+| **92** | Superior debugging and error-reporting for document authors | enhancement | Same source-provenance substrate as #47 ([`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md)): construct-start + macro-origin locators give Rust-compiler-grade author errors, fixing TeX's "error points at the end of the environment". |
 | **199** | RelaxNG schema for HTML dialect | enhancement | Real gap. The `ltx` schema exists; the *emitted-HTML-dialect* schema does not. Doubles as the validation contract for the preview track (#47) and a release-CI check. See [`SCHEMA_DOCUMENTATION.md`](SCHEMA_DOCUMENTATION.md). |
 | **217** | Portable use on MacOS | — | Release-readiness, [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3 stage 4. Real blocker: `libkpathsea-dev` packaging → upstream upgrade to `rust-kpathsea`. Needs README install steps + a CI sanity job. |
 | **191** | Add support for original command-line options | enhancement | **PARTIAL — not closeable.** `clap` 4 derive is adopted (the issue's suggestion) and core options work, but coverage is **~47 flags vs ~95 in the Perl omni set** (`Common/Config.pm`). Audited 2026-05-24 — gaps below. |
@@ -59,7 +59,8 @@ Our binary has ~47 `#[arg]` flags vs ~95 in Perl `Common/Config.pm` (the
 
 ## Reading
 
-* **Product / near-term:** #47 (Tier A), #92, #199.
+* **Prioritized showcase:** #47 + #92 — the ar5iv-editor + provenance
+  substrate ([`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md)); #199 supports it.
 * **Release blockers / gates:** #101 (size), #143 (toolchain), #217 (mac),
   plus the license + safety items in [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md)
   that have no issue number yet.
