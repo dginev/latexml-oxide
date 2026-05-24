@@ -43,7 +43,10 @@ Our binary has ~47 `#[arg]` flags vs ~95 in Perl `Common/Config.pm` (the
 `--noparse`, `--presentationmathml`, `--contentmathml`, `--xmath`.
 
 - **Cheap parity gaps (map to existing/near features):** `--profile`
-  (biggest — `fragment`/`math`/`article`/…), `--strict`, `--includestyles`,
+  (biggest — `fragment`/`math`/`article`/…; planned as **TOML** profiles
+  deserialized into the clap option struct, not Perl `.opt` — design in
+  [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) "Future Work"), `--strict`,
+  `--includestyles`,
   `--validate`/`--novalidate`, `--mode`, `--debug`, `--navtoc` (alias),
   `--mathml`.
 - **Feature gaps (option absent because the feature is):** `--mathimages` /
