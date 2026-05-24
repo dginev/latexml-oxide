@@ -99,6 +99,30 @@ i.e. it gave up on the accuracy goal.
   HTTP/WebSocket to the ar5iv-editor, and is the single host for preview
   sync (#47) and diagnostics (#92).
 
+## MVP granularity: line-level, math-opaque (decided 2026-05-24)
+
+For linting and preview the *useful* granularity is **line correctness** —
+exactly SyncTeX's granularity, and enough to "scroll to roughly where I'm
+editing" and to map a linter finding back to a source line. So the MVP
+deliberately relaxes scope:
+
+- **Line-level, at the block/inline-element level.** Stamp each element with
+  a `(tag, from_line[, to_line])` range; columns are nice-to-have, not
+  required. The mouth tracks `line` robustly; line attribution is far more
+  stable than column attribution under the eating-disorder.
+- **Math is opaque.** Stamp one line-range on the `ltx:Math` / `<math>`
+  wrapper at the `absorb` hook; do **not** descend into the Marpa-built
+  MathML. This defers §7 A.3 (the math-parser provenance gap — the single
+  biggest item) until there is a *clear, tested* way to do in-equation
+  mapping.
+- **Deferred until clearly needed:** column precision, the per-leaf
+  char-offset map (§6 rung 2/`data-srcmap`), and in-equation provenance.
+
+This makes the MVP bar simply *"match SyncTeX — line-level, block-element,
+math opaque"*: achievable, parity-neutral, and it sidesteps the hardest
+correctness stages while still delivering the ar5iv-editor sync and the
+linter. The richer rungs in §6 and §7 remain the documented growth path.
+
 ## Cost & the switch (off by default)
 
 Source locators are not free on **two** axes, so a single switch
@@ -316,13 +340,14 @@ without exploding the DOM into a `<span>`-per-word (the coalescing cost in
 `(textNode, offset)` and builds a Range at query time. Three rungs, pick per
 need:
 
-1. **Element-level (Tier A MVP):** `data-src` range on each element;
+1. **Element-level (Tier A MVP):** `data-src` *line* range on each element;
    `scrollIntoView` the containing element. Reflow-safe already; good enough
-   to land the ar5iv-editor.
-2. **Text-offset (enhancement):** add the leaf `data-srcmap`; Range-based
-   precise scroll/highlight of the exact edited word.
+   to land the ar5iv-editor. **This is the chosen MVP** (see "MVP
+   granularity" above).
+2. **Text-offset (post-MVP):** add the leaf `data-srcmap`; Range-based
+   precise scroll/highlight of the exact edited word. *Deferred.*
 3. **Span-per-run (fallback):** only where a leaf can't carry a clean map
-   (e.g. ligature/normalization splits).
+   (e.g. ligature/normalization splits). *Post-MVP.*
 
 This means the §4 coalescing decision must **preserve an internal offset
 table** on the coalesced leaf, not flatten it away, if rung 2 is wanted.
@@ -354,6 +379,65 @@ packaging caveats (not blockers): webview **CSP** + `webview.asWebviewUri`
 for our CSS/JS (RELEASE_CRITERIA §6); `caretRangeFromPoint` is non-standard
 but safe in the Chromium webview (`caretPositionFromPoint` is the standard
 fallback used by the ar5iv-editor in arbitrary browsers).
+
+### 7. The crux: correctness obligations & how we verify
+
+The encouraging part (client/preview) is *derived* — geometry computed on
+demand (§6). The hard, critical part is the **engine**: generating locators
+faithful to the TeX model and binding them accurately to the DOM. Two
+obligations, each spanning multiple stages.
+
+**A. Provenance must survive every pipeline stage.** Losing it anywhere
+breaks the chain:
+
+1. digestion → XML construction — the `absorb` hook (§2). *Designed.*
+2. rewrite passes (ligatures, math-token declarations) — nodes move/merge;
+   locators must follow the moved node.
+3. **math parse (XMath → MathML)** — `latexml_math_parser` has **zero**
+   locator awareness today; the Marpa actions build entirely new nodes. Each
+   action would have to set its node's range to span the locators of the
+   XMath tokens it consumed. **Largest single gap — and therefore deferred:
+   the MVP treats math as opaque** (one line-range on the `ltx:Math`
+   wrapper; see "MVP granularity"). Only attempt in-equation mapping with a
+   clear, tested path.
+4. serialization.
+5. `latexml_post` XSLT (ltx XML → HTML) — `data-src`/`data-srcmap` must ride
+   the `copy-attribute`/`add_attributes` path (`LaTeXML-common.xsl:327,390,
+   481`), *including* reconstructed elements (math, tables) that don't merely
+   copy their source attributes.
+
+**B. User-source vs foreign-source (never scroll into a `.sty`).** Tag every
+input file (SyncTeX-style table), but the editor/linter navigates only
+within the *opened user document(s)*. Mark provenance
+`kind = literal(user) | expanded | foreign`. Engine-injected tokens
+(dump-loaded defs, package/class code, constructed tokens) are `foreign` or
+synthetic — resolve those to the nearest *user-source* ancestor rather than
+pointing at an uneditable file.
+
+**C. TeX-model hazards for `from`/`to` accuracy** (the test surface): catcode
+changes; active characters; `\input`/file-boundary mouth switches (tag
+changes mid-stream); `\verb`/verbatim; `\scantokens`; `^^`-decoding and
+line-ending normalization (the 2010 whitespace-offset drift); tokens with no
+user source. §1 (start capture) and §3 (expansion) are the *mechanism*; this
+is the list each must be tested against.
+
+**D. How we earn confidence:**
+
+- **Corpus round-trip gate** (extend §5): on a sample, assert literal ranges'
+  source substring == visible text; every range within file bounds; child ⊆
+  parent. Run it like the parity corpus, as a regression gate.
+- **Invariants as debug asserts** (debug profile only): every emitted range
+  non-empty, monotonic, within its mouth bounds, nested in its parent.
+- **Golden/pinned tests** for the hard cases (math, `\item`, font-switch,
+  `\input` boundary, verbatim) — same discipline as
+  `tests/math/norm_kerned_delims`.
+- **SyncTeX as an external oracle:** compile the same `.tex` with
+  `pdflatex -synctex=1`, parse the `.synctex` (the cloned reference parser),
+  and diff TeX's `(tag,line)` for a construct against ours. SyncTeX *is* the
+  reference answer to "what source line did TeX attribute this to," so it
+  cross-checks our line attribution wherever both produce a node.
+
+## Status
 
 **Prioritized showcase** (2026-05-24). Tier A is the near-term deliverable
 and is parity-neutral, so it can proceed alongside the corpus mission.
