@@ -116,11 +116,27 @@ Engine-substrate checklist:
       MVP): pin an exact `data-sourcepos` golden; corpus round-trip (literal
       range substring == visible text; range ⊆ parent; within file bounds) +
       debug-assert invariants. Self-contained (no SyncTeX dependency).
-- [ ] **Sharpen accuracy (task #3, the big one):** `read_token` start capture
-      (`mouth.rs:628`) + construct-start snapshot (§1) — column precision and,
-      more importantly, coverage (many boxes currently carry a default locator
-      and are filtered out → only 53 of ~265 elements stamped). Hot-path; gate
-      so it's zero-cost when off.
+- [x] **Coverage:** constructor-built elements now capture a real locator.
+      `Definition/Constructor.pm` L106 parity — `constructor.rs` sets
+      `whatsit.locator = gullet::get_locator()` (gated on `source_map_enabled()`
+      so the corpus path pays nothing and stays byte-identical; the whatsit
+      locator only feeds source-map + untested error messages). Previously every
+      `DefConstructor` whatsit got `Locator::default()` and was dropped by the
+      user-source filter. Result on `article.tex`: **53 → 128** stamps with real
+      line:col ranges (e.g. `\section` line, equation lines). Full suite green.
+- [ ] **Cleanup (follow-up, not MVP-blocking): `Option<Locator>`.** Replace the
+      `Locator::default()` `file!()/line!()` *sentinel* with an honest
+      `Option<Locator>` (`Object::get_locator -> Option<Locator>`); simplifies
+      `List::new` (→ `find_map`) and the source-map filter (→ skip `None`).
+      Cross-cutting (trait sig + all box types + error reporting); do as its own
+      change with its own full-suite gate. Aligns with the "meaningful Rust
+      types" goal. (Rejected alternative: a stateful gated `Whatsit::default()`
+      — `Default` must stay pure.)
+- [ ] **`read_token` precision (optional polish):** start-token capture
+      (`mouth.rs:628`) to sharpen `from`/column. The line-level ranges from
+      `gullet::get_locator()` already meet the MVP bar, so this is refinement,
+      not a blocker. `get_locator` is shared with (untested) error locators, so
+      no gating needed for parity.
 
 Next phase (after substrate): warm-state conversion server (full-doc
 reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to

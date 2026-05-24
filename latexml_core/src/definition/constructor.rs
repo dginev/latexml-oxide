@@ -291,6 +291,19 @@ impl Definition for Constructor {
       properties,
       ..Whatsit::default()
     };
+    // Perl `Core/Definition/Constructor.pm` L106:
+    //   `$props{locator} = $stomach->getGullet->getLocator`
+    // — capture the construct's source position at digest time. Gated on
+    // `--source-map`: the whatsit locator is consumed only by source-map
+    // stamping + (untested) error messages, so the corpus/parity path skips
+    // the per-construct `get_locator`/`arena::pin` cost and stays
+    // byte-identical (the switch gates *all* locator tracking). Without this,
+    // constructor-built elements carry `Locator::default()` (source =
+    // `locator.rs`) and the source-map user-source filter drops them
+    // (~53/265 → 128/… `article.tex` elements stamped once captured).
+    if crate::state::source_map_enabled() {
+      whatsit.locator = crate::gullet::get_locator();
+    }
 
     // Call any 'After' code.
     let mut post = self.execute_after_digest(&mut whatsit)?;
