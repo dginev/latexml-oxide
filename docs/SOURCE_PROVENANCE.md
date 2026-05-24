@@ -199,6 +199,29 @@ file dimension:
   ethos, and the editor-server already holds the text). **Omitting**
   `sources`/`sourcesContent` is the anonymisation lever: ship structure-only.
 
+**Where the decoder lives (decided 2026-05-24): out-of-band, never inlined.**
+The per-element `data-sourcepos` tags ship *in* the output (our `mappings`
+analogue); the `tag→file` `sources` decoder ships **out-of-band**, so the
+shipped HTML/XML is anonymisable *by construction* — only opaque integers, no
+filenames. Two channels, no new artifact:
+
+- **`.log`** — latexml-oxide's existing conversion-metadata sink. With
+  `--source-map` on, the engine writes one `source-map` record per source
+  (`[tag] file`, array index = tag), gated (`converter.rs`, before the
+  "Conversion complete" note). This is the decoder for CLI / file-based
+  consumers — no standalone `.map` sidecar or `sourceMappingURL` plumbing,
+  which would only earn their keep for the *generic* sourcemap toolchain
+  (browser devtools) we don't target.
+- **In-process** — embedders read the same table programmatically via
+  `state::source_table_snapshot()` (reset per `from_config`, so it is exactly
+  the current conversion's table — no cross-request/cross-user bleed on a
+  shared worker). The ar5iv-editor server does this and forwards file
+  **basenames** on its WebSocket envelope (`ConvertResponse.sources`, never the
+  HTML); a VSCode client would carry the same over LSP.
+
+(A standalone sidecar + `sourceMappingURL` remains a trivial future add if a
+generic-tooling consumer ever needs it.)
+
 We borrow the *header* (`sources`/`sourceRoot`/`sourcesContent`) but **not**
 the VLQ `mappings` blob: our per-element `data-sourcepos` attributes *are* the
 inline analogue of `mappings`. That is the one deliberate divergence — source
@@ -306,6 +329,15 @@ to *stamp* them on nodes behind the switch.
   (the `locator.rs` source-ownership TODO). It also stays a strict superset
   of VSCode's line-only `data-line` (a line-only client reads the first
   line).
+- **Line authoritative; column a best-effort within-line refinement (decided
+  2026-05-24, refined for nested constructs).** The `:col` components ride
+  along (cmark-gfm shape). Construct-start columns are heuristic under macro
+  expansion (Bruce #101), so the **line stays the authoritative axis** — but
+  the consumer *does* use the column as a tie-break **within** the anchor line,
+  to descend from a containing paragraph to the exact inline construct (e.g. a
+  `\textbf` span) the caret sits in. It can only narrow to a descendant: if a
+  start column is heuristically ahead of the caret, that construct drops out of
+  the anchor set and the line-level ancestor is used — never a wrong line.
 - **File resolution — integer tag + doc-level `tag→file` table (SyncTeX
   `Input:` preamble analog).** The attribute never inlines a path: it
   carries a small integer `tag` resolved to its file via a once-per-document
@@ -318,7 +350,10 @@ to *stamp* them on nodes behind the switch.
   table is inherently **anonymised**: a consumer lacking the map can still
   use the structure (ranges nest, endpoints order) but cannot recover any
   filename or local path. This is the same indirection the Source Map v3
-  `sources` array uses — see §0.1.
+  `sources` array uses — see §0.1. **The table itself is serialised
+  out-of-band** (§0.1: the `.log` for file consumers, `source_table_snapshot()`
+  / the WS envelope for in-process ones), **never inlined into the output** —
+  so "anonymised without the table" is the *default*, not an opt-in.
 - **Gate:** off by default; when off, §1 capture and this stamping are
   both skipped (no side cost — Cost & the switch).
 
@@ -548,3 +583,110 @@ web UI and VSCode extension) over the shared locator contract. Cross-refs:
 [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §9 (gates/context),
 [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md) #47/#92. Issue #199 (HTML-dialect
 RelaxNG) gives the preview a validation contract.
+
+**As-built — ar5iv-editor source→preview scroll MVP (2026-05-24).** The first
+client consuming the substrate is live. End-to-end contract, single direction
+(source → preview), line-granular, single-file-clean:
+
+1. **Engine** (`feat/source-locators`): `--source-map` stamps anonymous
+   `data:sourcepos="tag:l:c[-…]"` (→ HTML `data-sourcepos` via the XSLT
+   `copy_foreign_attributes` path); the `tag→file` decoder goes to the `.log`
+   and `state::source_table_snapshot()` — never the HTML (§0.1). Gated;
+   corpus path byte-identical.
+2. **ar5iv server**: `source_map: Some(true)` always on; after convert it
+   reads the snapshot and forwards file **basenames** as
+   `ConvertResponse.sources` (WS envelope, out-of-band).
+3. **ar5iv frontend**: each *edit-driven* convert records the caret's 1-based
+   line (`editor.getCursorLine()`) against its request id; when that render
+   lands, `preview.ts::scrollPreviewToSource` resolves `active_file → tag` via
+   `sources`, picks the best element by the **anchor rule** (below), then
+   `scrollIntoView({block:"center"})` + a brief accent flash. Boot / example-
+   swap / file-navigation converts deliberately don't scroll.
+
+**Selection rule — tightest range that *contains* the caret, else the
+reading-order anchor.** When an element's range genuinely contains the caret
+`(line,col)` (well-ranged constructs — a section title `0:490:1-0:490:26`, an
+equation), pick the **tightest** such; on an identical range the **deeper**
+element wins (the `<h2>` over its wrapping `<section>`, which currently shares
+the heading's range — see the engine gap below). Otherwise — collapsed-point
+inline constructs, which contain nothing — fall back to the construct that most
+recently *started* at or before the caret in source reading order `(line,col)`;
+each stamped element gets a single ordering key, lower wins: `start ≤ caret → [0, -fromLine,
+-fromCol, span]` (an *anchor*: greatest start at/before the caret — latest
+line, then latest column — then tightest range), else `[1, fromLine, fromCol,
+span]` (an *after*: first construct beyond the caret — fallback only). One key
+subsumes four behaviours that a "tightest-containing-range" rule gets wrong:
+
+- *Containment* — the element you edit *inside* has the greatest start ≤ caret,
+  so it beats its own lower-starting ancestors. No `contains` test.
+- *Soft recovery (the user's "no node for line N")* — a blank line in a gap, a
+  blank line inside a big container (where "tightest containing" would wrongly
+  pick the whole section), and **latexml's error-truncated tail** (no node for
+  N) all degrade to the nearest *preceding* construct automatically — never a
+  freeze, never a coarse jump to the top.
+- *Nested constructs on one line (the user's "subtree pointing to the same
+  line")* — the **column** breaks the line tie and descends to the exact inline
+  construct the caret sits in (paragraph `509:2` vs its `\textbf` child
+  `509:47`, caret at `509:50` → the bold span). Line stays authoritative; the
+  column can only narrow to a descendant, with safe fallback to the line-level
+  ancestor when a start column is heuristically ahead of the caret.
+- *Coincident starts* — when two nested nodes share an exact `(line, col)`
+  start, the smallest `span` wins = the innermost. `span` is free from the
+  parse, so **no DOM-depth walk** is needed.
+
+**Performance — one pass, no layout reads.** A single `querySelectorAll` +
+linear scan keeping the best key (integer compares only); the scroll/flash are
+the only layout-touching work and are deferred to one `requestAnimationFrame`,
+so the selection never forces a reflow and the UI doesn't lag. A second running
+best that *ignores* the tag is kept as the soft-recovery fallback for a
+mis-resolved tag.
+
+**Word-level inline precision — content-fingerprint (landed 2026-05-24).** A
+construct's source columns are only reliable for text typed *directly* in the
+stream: a `\textbf{…}` (macro-argument) run has its columns destroyed before
+the stomach runs — the argument is read into a position-less token list, so
+**every** char box reports the construct's *end* column (verified: "Hello
+there" → cols 3:2…3:12, but `\textbf{bold words here}` → all 3:37). Recovering
+those columns engine-side needs token-level provenance (Tier B). Near-term, the
+client recovers word-level precision *without* columns: capture the word under
+the caret, then **scope to the caret's enclosing block** (the column anchor's
+nearest `.ltx_p`/`.ltx_para`/list-item/cell) and pick the tightest element in it
+whose **rendered text** contains the word (shortest `textContent`). Block-scope
+— not line — is essential: a `\textbf{…}` that wraps across source lines has its
+locator point on a *later* line than the caret, so a line filter misses it
+entirely (verified: editing line 467 of a wrapped bold, the only line-467 element
+was the `\citep`, so the word fell through to it); but the bold span is a DOM
+child of the same paragraph regardless of wrapping. Literal text only — a macro
+arg that doesn't render verbatim (`\ref` → "Fig 3") won't match and the column
+anchor stands, so it never does worse.
+
+**Tier-B bookmark (decided 2026-05-24): long-term goal, but NOT in the
+`Token`.** Storing the 5 locator numbers on every `Token` is rejected — `Token`
+identity (`sym`+`catcode`) drives macro dispatch / catcode lookup / `\ifx` /
+interning / shared macro bodies, so source position *cannot* enter `Eq`/`Hash`
+and is necessarily out-of-identity metadata; in-`Token` storage would also
+collapse constant-token sharing (clone+restamp every macro-body expansion),
+~4× the hottest value (8→~32 B), and tax cache + by-value copies on every run
+for provenance almost none consume. Tier B, when taken, captures `(line,col)`
+at the single `mouth::read_token` point into an **out-of-band** side structure
+(parallel per-source-mouth locator stream / mouth+offset map), only for
+user-source mouths — `Token` stays 8 bytes (RELEASE_CRITERIA §9).
+
+Consumer contract for the next client (VSCode): *cursor `(line, col[, word])` →
+tag (via the out-of-band `sources` table) → anchor element (reading-order rule
+above), refined by the content-fingerprint when a distinctive word is present →
+reveal*. Line authoritative; column refines within the line (§2); word
+disambiguates where columns are destroyed. Deferred: column *accuracy* (Tier B,
+out-of-band only), reverse direction (preview-click → source), multi-file
+beyond basename matching, region-incremental reconvert.
+
+**Known engine gap — `<section>` locator spans only its heading.** A section
+element is stamped `0:L:1-0:L:C` covering just its `\section{…}` title line (the
+same range as its `<h2>`), because the locator is taken from the heading
+construct at *open* and never extended to cover the body at section auto-close.
+Harmless for the scroll MVP — body edits self-locate to their own paragraphs,
+and the client prefers the deeper `<h2>` on the shared range — but wrong for
+"select the whole section" and any consumer that trusts the section's `to`.
+Fixing it means extending the element's locator at section auto-close (gated,
+sensitive); left as a follow-up. The same shape affects other auto-closed
+containers (`enumerate`/`itemize`/`description` bodies).

@@ -24,8 +24,8 @@ use latexml_core::common::{Config, OutputFormat};
 const ARTICLE: &str = "tests/structure/article.tex";
 
 /// Convert the fixture to core ltx XML with the source-map switch in the
-/// requested state. Returns the serialized XML (pre-post-processing).
-fn convert_xml(source_map: bool) -> String {
+/// requested state. Returns `(serialized XML pre-post-processing, conversion log)`.
+fn convert_response(source_map: bool) -> (String, String) {
   let config = Config {
     format: OutputFormat::XML,
     source_map: if source_map { Some(true) } else { None },
@@ -35,11 +35,16 @@ fn convert_xml(source_map: bool) -> String {
   converter
     .initialize_session()
     .expect("can initialize session");
-  converter
-    .convert(ARTICLE.to_string())
-    .result
-    .expect("conversion produced XML output")
+  let resp = converter.convert(ARTICLE.to_string());
+  (
+    resp.result.expect("conversion produced XML output"),
+    resp.log,
+  )
 }
+
+/// Convert the fixture to core ltx XML with the source-map switch in the
+/// requested state. Returns the serialized XML (pre-post-processing).
+fn convert_xml(source_map: bool) -> String { convert_response(source_map).0 }
 
 /// Post-process core ltx XML into HTML5 (exercises the XSLT attribute path).
 fn html_from(xml: &str) -> String {
@@ -73,6 +78,11 @@ fn source_map_off_by_default_has_no_locator() {
   assert!(
     !xml.contains("data:sourcepos") && !xml.contains("data-sourcepos"),
     "a default conversion must not emit any source-locator attribute"
+  );
+  // Nor any sources-table / decoder artifact.
+  assert!(
+    !xml.contains("data:sources") && !xml.contains("sourceMappingURL"),
+    "a default conversion must not emit any source-map table"
   );
 }
 
@@ -170,5 +180,49 @@ fn source_map_passes_through_xslt_to_html() {
   assert!(
     html_on.contains("data-sourcepos=\""),
     "ON: data:sourcepos must convert to HTML data-sourcepos via copy_foreign_attributes"
+  );
+}
+
+/// The source table is conversion *metadata*: it is serialised to the `.log`
+/// (the decoder ring, where the array index *is* the integer `tag`), NOT
+/// inlined into the output. The XML/HTML carry only the anonymous tag (in
+/// `data:sourcepos` / `data-sourcepos`) — never a `sources` table or a source
+/// filename — so the output stays anonymisable for a consumer that lacks the
+/// source files. In-process embedders (the ar5iv-editor server) read the same
+/// table programmatically via `state::source_table_snapshot()`. See
+/// `docs/SOURCE_PROVENANCE.md` §0.1.
+#[test]
+fn source_map_table_goes_to_log_not_output() {
+  // Install the capture logger so the `.log` buffer receives Info records
+  // (no-op if a logger is already installed in this test process). Without a
+  // logger the global `log` sink is a no-op and nothing is captured.
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+  let (xml, log) = convert_response(true);
+
+  // Decoder ring lives in the log: a `source-map` record naming the user source.
+  assert!(
+    log.contains("source-map"),
+    "the .log must carry the source-map decoder table"
+  );
+  assert!(
+    log.contains("article.tex"),
+    "the source-map log table must name the user source file; got log:\n{log}"
+  );
+
+  // Anonymity of the output: the decoder is NOT inlined into the core XML …
+  assert!(
+    !xml.contains("data:sources") && !xml.contains("sourceMappingURL"),
+    "the sources table must not be inlined into the core XML (anonymity)"
+  );
+  // … nor into the HTML after the XSLT.
+  let html = html_from(&xml);
+  assert!(
+    !html.contains("data-sources") && !html.contains("data:sources"),
+    "the sources table must not be inlined into the HTML (anonymity)"
+  );
+  // The output still carries the anonymous per-element tags.
+  assert!(
+    xml.contains("data:sourcepos=\""),
+    "core XML must still carry the anonymous data:sourcepos tags"
   );
 }
