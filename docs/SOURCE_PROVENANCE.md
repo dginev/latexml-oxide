@@ -289,6 +289,9 @@ Mechanism (out-of-band — **never widen the 8-byte `Token`**):
 
 - **Tag table:** emit `tag→file` once (document-level, SyncTeX preamble
   style); per-element `data-src` carries `tag#textrange(...)`.
+- **MVP fixture:** `latexml_oxide/tests/structure/article.tex` with
+  `--source-map` on — a structural article (sections/paragraphs/lists,
+  math-light) pinned as a golden of `data-src` line attributes.
 - **Round-trip tests** (pin like `tests/math/norm_kerned_delims`): for a
   corpus sample assert (a) every range is within its file bounds; (b) a
   child element's range ⊆ its parent's (nesting invariant); (c) for
@@ -383,9 +386,21 @@ fallback used by the ar5iv-editor in arbitrary browsers).
 ### 7. The crux: correctness obligations & how we verify
 
 The encouraging part (client/preview) is *derived* — geometry computed on
-demand (§6). The hard, critical part is the **engine**: generating locators
-faithful to the TeX model and binding them accurately to the DOM. Two
-obligations, each spanning multiple stages.
+demand (§6). The hard, critical part is the **engine**, and it reduces to
+two pieces:
+
+1. **Compute the locator correctly** (faithful to the TeX model — §1), and
+2. **Get it onto the most accurate DOM node** (§2 + obligation A below).
+
+We **build on LaTeXML's existing `Locator` model unchanged**
+(`common/locator.rs`): `Locator`, `new_range`, `to_attribute`, and the
+`.locator` fields already carried by `Tbox`/`Whatsit`/`List` are the
+foundation. The work is *using* them correctly and propagating them — not
+redefining the model. (SyncTeX was conceptual grounding for §1's
+start-invariant and the line-granularity choice; it is **not** a runtime
+dependency or a required comparison.)
+
+The two pieces span multiple stages, hence two obligations:
 
 **A. Provenance must survive every pipeline stage.** Losing it anywhere
 breaks the chain:
@@ -431,11 +446,11 @@ is the list each must be tested against.
 - **Golden/pinned tests** for the hard cases (math, `\item`, font-switch,
   `\input` boundary, verbatim) — same discipline as
   `tests/math/norm_kerned_delims`.
-- **SyncTeX as an external oracle:** compile the same `.tex` with
-  `pdflatex -synctex=1`, parse the `.synctex` (the cloned reference parser),
-  and diff TeX's `(tag,line)` for a construct against ours. SyncTeX *is* the
-  reference answer to "what source line did TeX attribute this to," so it
-  cross-checks our line attribution wherever both produce a node.
+
+These are **self-contained** — they validate our locators against the
+source text directly, on our own model, with no external tool. (A one-off
+`pdflatex -synctex=1` diff of `(tag,line)` is a *handy* bring-up sanity
+check, but not a required gate and not an ongoing comparison.)
 
 ## Status
 

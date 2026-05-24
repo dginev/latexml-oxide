@@ -43,6 +43,49 @@ outward to individual bindings. Open clusters are described below;
 closed clusters are dropped from this doc once their fix lands and
 generalizes.
 
+## Source-locator MVP — ar5iv-editor showcase (active, opened 2026-05-24)
+
+Beyond-Perl showcase (issues #47/#92): live source↔preview + linting via
+source locators. Full design in
+[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md).
+
+**Scope:** line-level, block/inline-element granularity, **math opaque**
+(= SyncTeX granularity). Columns, per-leaf char-offset maps, and in-equation
+provenance are deferred. **Parity-neutral and off by default** — a normal
+conversion (switch off) must stay byte-identical to today; build on the
+existing `Locator` model (`common/locator.rs`) **unchanged**.
+
+Engine-substrate checklist:
+
+- [ ] `--source-map` flag (+ env), off by default, gating *both* tracking
+      and emission — no machinery runs when off.
+- [ ] Start-*line* capture in `mouth.rs::read_token` (`:628`), after
+      inter-token skips; range open→close at the digestion frame via
+      `Locator::new_range` (`locator.rs:80`).
+- [ ] Stamp block/inline elements + the `ltx:Math` wrapper at the `absorb`
+      hook (`document.rs:654-675`, via `box_to_absorb` + `constructed_nodes`)
+      and in `open_element`/`insert_element`, using `Locator::to_attribute()`
+      → `data-src` with an integer tag (tag→file table, no paths). Gated.
+- [ ] Propagate `data-src` through the post XSLT `copy-attribute`/
+      `add_attributes` path (`LaTeXML-common.xsl:327,390,481`), including
+      reconstructed math/table elements.
+- [ ] User-vs-foreign source: never emit a navigable locator into a
+      `.sty`/`.cls`/dump — resolve to the nearest user-source ancestor.
+- [ ] **MVP locator test:** `latexml_oxide/tests/structure/article.tex`
+      converted with `--source-map` on — a structural article (sections,
+      paragraphs, lists; math-light, so the line-level/block-element path)
+      with a pinned golden of the `data-src` line attributes. Then broaden
+      to a corpus round-trip (literal range substring == visible text;
+      range ⊆ parent; within file bounds) + debug-assert invariants.
+      Self-contained (no SyncTeX dependency).
+
+Next phase (after substrate): warm-state conversion server (full-doc
+reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to
+post-MVP: columns/`data-srcmap` (§6 rung 2), in-equation/math-parser
+provenance (§7 A.3), Tier B expansion provenance.
+
+## Round-27 parity clusters
+
 ### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
 
 **Status:** LANDED 2026-05-22. Keyset plumbing wired through; ar5iv
