@@ -1,6 +1,6 @@
 [package]
 name = "latexml_math_parser"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 edition = "2021"
 
