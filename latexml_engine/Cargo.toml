@@ -15,6 +15,12 @@ crate-type = ["lib"]
 # 2026-05-18). gzip on the dumps' record-based text gets ~4.7×.
 flate2 = "1"
 
+[features]
+# Source-map precision build — propagates to latexml_core so the token-origin
+# field resolves in this crate's token-macro expansions. Enable via
+# `latexml_oxide/token-locators`. See docs/SOURCE_PROVENANCE.md §3.1.1.
+token-locators = ["latexml_core/token-locators"]
+
 [dependencies]
 once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10

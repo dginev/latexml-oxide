@@ -9,6 +9,11 @@ description = "Bindings and related infrastructure for core processing"
 [lib]
 crate-type = ["lib"]
 
+[features]
+# Source-map precision build — propagates to latexml_core. Enable via
+# `latexml_oxide/token-locators`. See docs/SOURCE_PROVENANCE.md §3.1.1.
+token-locators = ["latexml_core/token-locators"]
+
 [dependencies]
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 log = "0.4"

@@ -704,7 +704,11 @@ impl ToTokens for Token {
       stream.extend(quote! {
         Token {
           text: latexml_core::common::arena::pin_static(#text),
-          code: #code
+          code: #code,
+          // Emitted into the consumer crate; the cfg resolves there (the feature
+          // propagates from latexml_oxide). See docs/SOURCE_PROVENANCE.md §3.1.1.
+          #[cfg(feature = "token-locators")]
+          loc: 0u32
         }
       })
     });

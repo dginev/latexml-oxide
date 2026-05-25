@@ -289,6 +289,15 @@ pub struct Token {
   pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
+  /// Origin handle into the per-conversion token-origin side arena (1-based;
+  /// `0` = no recorded origin). Present only under the `token-locators` feature
+  /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
+  /// Set in `read_token`; carried through expansion so a digested run can recover
+  /// its exact source span. **Excluded from `PartialEq`** (tokens compare by
+  /// meaning, not origin — see `impl PartialEq`). See docs/SOURCE_PROVENANCE.md
+  /// §3.1.1.
+  #[cfg(feature = "token-locators")]
+  pub loc: u32,
 }
 
 impl fmt::Debug for Token {
