@@ -146,7 +146,7 @@ LoadDefinitions!({
       }
       Catcode::SPACE => vec![token],
       Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
-      _ => vec![Token { text: token.text, code: Catcode::OTHER }],
+      _ => vec![Token { text: token.text, code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 }],
     }
   });
 

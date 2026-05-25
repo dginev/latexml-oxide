@@ -714,7 +714,9 @@ LoadDefinitions!({
       match tok.code {
         Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
         Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
-          Token { text: tok.text, code: Catcode::OTHER }
+          Token { text: tok.text, code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    }
         },
         _ => *tok,
       }

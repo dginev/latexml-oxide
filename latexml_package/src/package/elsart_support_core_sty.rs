@@ -106,7 +106,9 @@ LoadDefinitions!({
     result.push(T_CS!("\\@add@to@frontmatter"));
     result.push(T_BEGIN!());
     for ch in "ltx:creator".chars() {
-      result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+      result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    });
     }
     result.push(T_END!());
     result.push(T_BEGIN!());
@@ -116,9 +118,13 @@ LoadDefinitions!({
       if ch == ' ' {
         result.push(T_SPACE!());
       } else if ch.is_ascii_alphabetic() {
-        result.push(Token { text: arena::pin_char(ch), code: Catcode::LETTER });
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
+    });
       } else {
-        result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+        result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    });
       }
     }
     result.push(T_END!());
@@ -171,13 +177,17 @@ LoadDefinitions!({
         result.push(T_CS!("\\lx@notemark"));
         result.push(T_OTHER!("["));
         for ch in label.chars() {
-          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    });
         }
         result.push(T_OTHER!("]"));
         result.push(T_BEGIN!());
         // "footnote" as OTHER tokens
         for ch in "footnote".chars() {
-          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER });
+          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    });
         }
         result.push(T_END!());
       }

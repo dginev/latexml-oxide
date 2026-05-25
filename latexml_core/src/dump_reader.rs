@@ -502,6 +502,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let cs_tok = Token {
     text: arena::pin(key),
     code: Catcode::CS,
+    #[cfg(feature = "token-locators")]
+    loc: 0,
   };
 
   // Perl `I(...)` parity (`Core/Dumper.pm` L67): every dumped Meaning
@@ -732,6 +734,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let target_tok = Token {
         text: arena::pin(&target_cs_raw),
         code: Catcode::CS,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       };
       // Perl `Lt()` (`Core/Dumper.pm` L69-72):
       //   sub Lt { my $d = State::lookupDefinition($STATE, T_CS($_[1]));
@@ -887,6 +891,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         let address_tok = Token {
           text: arena::pin(&reg.address),
           code: Catcode::CS,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
         };
         if let Some(base_defn) = state::lookup_register_definition(&address_tok) {
           if let Some(params) = base_defn.parameters.clone() {
@@ -1087,6 +1093,8 @@ fn parse_token(s: &str) -> Result<Token, String> {
   Ok(Token {
     text: text_sym,
     code: Catcode::from(cc),
+    #[cfg(feature = "token-locators")]
+    loc: 0,
   })
 }
 

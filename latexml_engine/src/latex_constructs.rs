@@ -685,6 +685,8 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
         Token {
           text: line,
           code: Catcode::OTHER,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
         }
         .into(),
         SymHashMap::default(),

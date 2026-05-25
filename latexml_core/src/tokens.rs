@@ -551,6 +551,8 @@ impl Tokens {
           rescanned.push(Token {
             text: next_t.unwrap().get_sym(),
             code: Catcode::ARG,
+            #[cfg(feature = "token-locators")]
+            loc: 0,
           });
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
