@@ -351,6 +351,24 @@ impl Definition for Constructor {
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
 
+      // token-locators: capture_body constructs (e.g. `\lx@begin@inline@math`)
+      // carry their content as #body, not positional args, so the earlier
+      // assemble_locator (over args) missed it and fell back to the gullet point.
+      // Derive the span from the digested body and union it with any positional-
+      // arg span, so the wrapper (e.g. `ltx:Math`) spans its content. §3.1.3.
+      #[cfg(feature = "token-locators")]
+      if crate::state::source_map_enabled() {
+        if let Some(body_span) =
+          post.iter().filter_map(child_span).reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+        {
+          whatsit.locator = Some(match whatsit.locator {
+            Some(prev) if prev.from_line != 0 => {
+              Locator::new_range(prev, body_span).unwrap_or(body_span)
+            },
+            _ => body_span,
+          });
+        }
+      }
       whatsit.set_body(post);
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
