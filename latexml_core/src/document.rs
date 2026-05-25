@@ -957,8 +957,25 @@ impl Document {
   /// math parser has no locator awareness — §7 A.3). Only invoked when the
   /// source-map switch is on (the caller gates it).
   fn stamp_source_locator(&mut self, node: &Node, qname: &str) {
-    // Keep equations opaque — do not descend into XMath/XMTok/XMArg/… .
+    // Math internals: stamp only the leaf token elements (`ltx:XMTok` — the
+    // operators / identifiers / numbers) when token-locators gives them a real
+    // located box locator (the math char's source origin). This is the per-token
+    // in-equation provenance step (§7 A.3). The structural XM* (XMApp/XMDual/
+    // XMArray) are rebuilt by the Marpa parser — created directly, not via
+    // `open_element` — so they never reach here; the remaining digestion-built
+    // wrappers (XMArg/XMHint/XMText/XMRef/XMWrap) stay opaque. The `data:sourcepos`
+    // rides the XMTok element through the parser's restructuring (attribute on a
+    // reparented node) and through the XMath→MathML XSLT.
+    //
+    // Gated at compile time: feature-OFF keeps math fully opaque (the MVP scope
+    // and the golden's math-opacity assertion); only the token-locators build
+    // exposes the located XMTok leaves.
+    #[cfg(not(feature = "token-locators"))]
     if qname.starts_with("ltx:XM") {
+      return;
+    }
+    #[cfg(feature = "token-locators")]
+    if qname.starts_with("ltx:XM") && qname != "ltx:XMTok" {
       return;
     }
     // Read the pre-captured Copy locator — never re-borrow the box here.

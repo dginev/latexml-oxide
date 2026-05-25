@@ -116,26 +116,44 @@ fn source_map_on_emits_data_sourcepos_in_core_xml() {
     eprintln!("  tag {i} = {:?}", latexml_core::common::arena::to_string(*s));
   }
 
-  // Math opacity (MVP scope, §7 A.3): no math-internal `ltx:XM*` element may
-  // carry a locator. (The `ltx:Math` wrapper itself is currently unstamped —
-  // the Marpa math parser rebuilds the subtree and discards the stamp; that
-  // is a documented deferred gap, equations inherit the container's locator.)
-  // Elements serialize under the default `ltx` namespace (no prefix), so match
-  // the unprefixed XMath-family element names (`<XMTok …>` etc.).
-  let xm = regex::Regex::new(r#"<XM[A-Za-z]*\b[^>]*\bdata:sourcepos="#).unwrap();
-  assert!(
-    !xm.is_match(&on),
-    "math must stay opaque — no XMath-family element may carry data:sourcepos"
-  );
+  // Math opacity (§7 A.3 / §3.1.3). Elements serialize under the default `ltx`
+  // namespace (no prefix), so match the unprefixed XMath-family names.
+  // - feature-OFF: math is fully opaque — no XMath-family element carries a locator.
+  // - token-locators: the leaf `XMTok` (operators/identifiers/numbers) carry
+  //   per-token source provenance and survive the Marpa parse; the structural
+  //   XM* (XMApp/XMArg/XMDual/…) stay opaque.
+  #[cfg(not(feature = "token-locators"))]
+  {
+    let xm = regex::Regex::new(r#"<XM[A-Za-z]*\b[^>]*\bdata:sourcepos="#).unwrap();
+    assert!(
+      !xm.is_match(&on),
+      "math must stay opaque (feature-off) — no XMath-family element may carry data:sourcepos"
+    );
+  }
+  #[cfg(feature = "token-locators")]
+  {
+    let xm = regex::Regex::new(r#"<(XM[A-Za-z]+)\b[^>]*\bdata:sourcepos="#).unwrap();
+    for c in xm.captures_iter(&on) {
+      assert_eq!(
+        &c[1], "XMTok",
+        "only the leaf XMTok may carry a locator under token-locators; found <{}>",
+        &c[1]
+      );
+    }
+  }
 }
 
 /// Pinned golden: key structural elements of `article.tex` → their exact
-/// `data:sourcepos`. Guards the locator pipeline (constructor capture,
-/// user-source filter, the `get_locator` `from` heuristic) against coverage or
-/// accuracy regressions. Values are **line-accurate**; column precision is a
-/// Tier-B refinement (Bruce brucemiller/LaTeXML#101 — accurate construct-start
-/// needs expansion-provenance, see SYNC_STATUS). Update deliberately if the
-/// conversion legitimately changes.
+/// `data:sourcepos`, for the **default (heuristic) source-map** — the shipped
+/// behavior. Guards the locator pipeline (constructor capture, user-source
+/// filter, the `get_locator` `from` heuristic) against coverage or accuracy
+/// regressions. Values are line-accurate, construct-line spans. Update
+/// deliberately if the conversion legitimately changes.
+///
+/// Feature-OFF only: under `token-locators` the located-span recovery makes
+/// these content-exact (e.g. `section` `0:12:1-0:12:24` → `0:12:10-0:12:22`),
+/// which `source_map_token_locators_content_exact` pins instead.
+#[cfg(not(feature = "token-locators"))]
 #[test]
 fn source_map_pins_key_structural_locators() {
   let on = convert_xml(true);
