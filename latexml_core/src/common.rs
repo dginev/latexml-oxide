@@ -105,7 +105,7 @@ pub struct Config {
   pub nomathparse:             Option<bool>,
   /// Whether to track + emit source locators (`--source-map`). Off by
   /// default; gates both per-token start capture and per-element
-  /// `data-src` stamping. See `docs/SOURCE_PROVENANCE.md`.
+  /// `data-sourcepos` stamping. See `docs/SOURCE_PROVENANCE.md`.
   pub source_map:              Option<bool>,
 }
 impl Default for Config {

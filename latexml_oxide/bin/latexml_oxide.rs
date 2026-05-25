@@ -89,7 +89,7 @@ struct Cli {
   nomathparse: bool,
 
   /// Emit source locators: track each construct's source range and stamp
-  /// it onto the output as a `data-src` attribute (and a document-level
+  /// it onto the output as a `data-sourcepos` attribute (and a document-level
   /// tag→file table). Off by default — a normal conversion pays nothing
   /// for tracking or markup. Powers the editor/preview sync and accurate
   /// linting (issues #47/#92). Also enabled via `LATEXML_SOURCE_MAP=1`.

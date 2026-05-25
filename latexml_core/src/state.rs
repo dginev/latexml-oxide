@@ -2664,7 +2664,7 @@ pub fn set_nomathparse_flag(val: bool) {
 
 /// Whether source-locator (`--source-map`) tracking + emission is on.
 /// Read by the source-provenance machinery (mouth token-start capture,
-/// `Document::absorb` `data-src` stamping) to stay zero-cost when off.
+/// `Document::absorb` `data-sourcepos` stamping) to stay zero-cost when off.
 /// See `docs/SOURCE_PROVENANCE.md`.
 pub fn source_map_enabled() -> bool { state!().source_map }
 pub fn set_source_map_flag(val: bool) {
