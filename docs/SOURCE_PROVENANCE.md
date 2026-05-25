@@ -726,15 +726,23 @@ byte-identical (handle scan cfg-gated; suite 1344/0).
 `$\sqrt{x}$`, `$\frac{a}{b}$`, `$a\overline{=}0$`, `$d_t_h^2$`):
 - **Constructor / Whatsit / Primitive-via-constructor:** covered by the
   child-assembly + handle-scan fix.
-- **Math:** the `ltx:Math` wrapper is located but as a **point** (`0:4:2`),
-  roughly the math start, not the `$…$` range; internals stay opaque (§7 A.3).
-  Could be widened to a range from the math tokens' origins — low priority.
-- **Alignment (`tabular`/`tr`/`td`): NOT located at all** — the `Alignment`
-  digested item's `get_locator()` is `None`, so `current_box_locator` is `None`
-  and `stamp_source_locator` skips every row/cell. Needs a dedicated fix: derive
-  the `Alignment`'s span from its cells (table-level), and ideally set
-  `current_box_locator` per cell in `Alignment::be_absorbed_mut` for cell-exact
-  `td` ranges. **The next focused gap.**
+- **Alignment (`tabular`/`tr`/`td`): FIXED** — `Alignment::be_absorbed_mut` now
+  stamps each element with its own span via `Document::set_current_box_locator`
+  before opening it (the element opens before its content's `box_to_absorb` is
+  set): `tabular` = union of all cell spans, `tr` = the row's cells, `td` = the
+  cell's content. (Was: no locators — the `Alignment` item's `get_locator()` is
+  `None`.) Article.tex located-element count 128 → 168.
+- **Expansion-inheritance: subsumed / not needed.** An earlier spike that made
+  expansion-produced tokens inherit the invocation origin is *unnecessary* given
+  the handle-scan: it would only restate the command as a point, regressing the
+  now content-exact section range. Reverted.
+- **Math: the remaining gap (now being taken up).** The `ltx:Math` wrapper is
+  located but as a **point** (`0:9:2`) — the math's first token, not the `$…$`
+  range — so `td`/`Math` are points. Internals stay opaque. Widening needs the
+  Marpa math parser to carry per-token origins through its XMath→MathML rebuild
+  (§7 A.3, the documented biggest item). Two steps: (a) wrapper → `$…$` range
+  from the math content's preserved handles; (b) in-equation per-token
+  provenance.
 
 ### 4. Perl's unsolved hard cases — concrete handling
 
