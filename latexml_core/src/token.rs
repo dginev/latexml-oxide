@@ -977,7 +977,7 @@ pub struct TokenStart {
 
 #[cfg(feature = "token-locators")]
 thread_local! {
-  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> = std::cell::RefCell::new(Vec::new());
+  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// Append a token's source start, returning its 1-based handle (`0` is reserved
