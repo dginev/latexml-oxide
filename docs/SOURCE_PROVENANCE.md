@@ -658,6 +658,51 @@ The shipped client-fingerprint heuristic (see Status) already gives *word*-level
 reverse at zero engine cost — §2.1 must clearly beat it (window-exact, both
 directions) to earn its keep.
 
+#### 3.1.2 article.tex locator audit (2026-05-25, token-locators build)
+
+All 133 `data:sourcepos` locators from `tests/structure/article.tex` converted
+with `--source-map` under the `token-locators` build, compared char-for-char to
+the source. The result cleanly splits on **how a construct's content reaches
+digestion**:
+
+**Accurate — content-exact spans (inline-processed content).** The token-origin
+→ leaf-`Tbox` → child-assembly path delivers exact ranges wherever content is
+digested *inline*:
+- `\author{John Q.~Author \and Someone Else}` → `personname` `0:3:9-0:3:23`
+  ("John Q.~Author") and `0:3:29-0:3:40` ("Someone Else") — both exact.
+- `\emph{italic}` → `0:3:30-0:3:35`, `\textbf{bold}` → `0:3:14` (probe).
+- list `item` bodies, description-label `text` (`0:59:7` = the `[A thing]` label).
+
+**Discrepant — fall back to `get_locator()` (the eating-disorder position).**
+Every discrepancy has *one* root cause: child-assembly finds **no located
+leaves** and falls back to the post-expansion mouth position. That happens
+exactly when content is **stored / replayed / deferred**, or when the
+construct's own start is **consumed by expansion**:
+- **Sectioning** (`section`/`title` → `0:12:1-0:12:24`): line-accurate but the
+  *whole* `\section{…}` line, not the title's `10-22`. The title is stored
+  (TOC/runninghead) and replayed without origins → fallback. Matches the pinned
+  golden; acceptable (line-accurate).
+- **Environments** (`figure` → `0:23:7`, `table` → `0:30:7`): point at the `{`
+  of the *inner* `\begin{centering}`, not `\begin{figure}` (line 22). The
+  `\begin` start is consumed by expansion before the float constructor digests
+  (Experiment 2's wall).
+- **Float captions** (`caption` → `0:27:5`): **wrong line** — line 27 is
+  `\end{figure}`, the caption is line 26. The float defers caption digestion to
+  `\end`, where `get_locator()` points; its content carries no origins through
+  the deferral. The one genuinely wrong-*line* case.
+- **Plain paragraphs** (`p`/`para` → `0:13:1-0:13:1`): a start-*point*, not a
+  span — the paragraph takes its first absorbed box's locator and never extends
+  it. Start-accurate.
+
+**Correction path.** These are precisely the **§3 expansion/replay-provenance**
+territory, confirming the tiering: the cheap token-origin mechanism nails the
+inline/leaf cases (the editor/linter's common path) and the rest need
+(a) origin-preserving token **storage/replay** (sectioning, `\caption`),
+(b) §3 **expansion-frame** provenance to recover a `\begin`/command start, and
+(c) a paragraph locator computed as the **span of its absorbed content**. Until
+then the fallback stays *line*-accurate except for deferred floats — so the audit
+also pins `\caption`-in-float as the highest-priority correctness fix.
+
 ### 4. Perl's unsolved hard cases — concrete handling
 
 - **Eating disorder / `\item`:** solved by §1 (open→close range), not
