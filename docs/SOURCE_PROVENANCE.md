@@ -144,6 +144,29 @@ Source locators are not free on **two** axes, so a single switch
    compact and clean (RELEASE_CRITERIA §6); the ar5iv-editor and linter turn
    it on explicitly.
 
+### Measured cost (2026-05-25, `--release`)
+
+Min of 5 runs, `--bin latexml_oxide --format=html5`. Binary size: 45.9 MB
+(off) → 47.0 MB (`token-locators`), **+1.1 MB (+2.5%)** of extra code.
+
+| input | A: off, no `--source-map` | C: `token-locators`, no `--source-map` | B: `token-locators` + `--source-map` |
+|---|---|---|---|
+| `equality_big.tex` (10k lines, **math-heavy**) | 2.23 s / 342 MB | 2.24 s / 344 MB | **2.68 s / 352 MB** |
+| `article.tex` (123 lines, structural) | 0.41 s / 178 MB | — | **0.41 s / 180 MB** |
+
+Reading:
+- **The `Token` 8→12 widening + the per-token origin arena cost ≈ 0** (C vs A:
+  +0.4 % wall, +0.8 % RSS — within noise). The compile flag is cheap *to carry*;
+  the expense is entirely the stamping.
+- **Stamping (runtime `--source-map`) is content-proportional.** On a
+  math-heavy full-document conversion (per-token `XMTok` stamping over thousands
+  of elements) it is the worst case: **+20 % wall, +2.9 % RSS** (B vs A). On a
+  structural doc it is startup-dominated and **negligible** (0.41 s either way).
+- For the ar5iv-editor's per-keystroke edits (small, mostly-text regions) the
+  overhead is in the negligible band; the +20 % is the large-math outlier.
+- **Distribution default pays nothing**: `token-locators` is off, and even when
+  compiled in, without `--source-map` the wall cost is ~0.
+
 This makes the showcase strictly additive: a normal conversion is identical
 to today, and the provenance cost is borne only by the tools that want it.
 
