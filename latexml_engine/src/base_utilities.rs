@@ -798,6 +798,14 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
         } else {
           attr
         };
+        // token-locators: frontmatter elements (e.g. <ltx:title> from `\title{…}`)
+        // are opened here, far from their source, around content that was digested
+        // and stored back at `\@add@frontmatter` time. open_element would otherwise
+        // stamp them with no/last locator (→ the whole-document fallback in clients).
+        // Recover the deferred content's span and stamp the element with it.
+        #[cfg(feature = "token-locators")]
+        document
+          .set_current_box_locator(latexml_core::definition::constructor::child_span(&stuff));
         document.open_element(&tag, attr, None)?;
         document.absorb(&stuff, None)?;
         let completed_node = document.close_element(&tag)?;

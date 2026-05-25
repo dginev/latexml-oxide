@@ -284,3 +284,23 @@ fn source_map_token_locators_content_exact() {
     assert!(re.is_match(&xml), "<{tag}> must carry a line-9 data:sourcepos, got:\n{xml}");
   }
 }
+
+/// token-locators: a document title from `\title{…}` is located. The title is
+/// stored at `\@add@frontmatter` time and emitted out-of-source-order by
+/// `\maketitle`; `insert_frontmatter` opens `<ltx:title>` around that deferred
+/// content, so it must recover the content's span (via `constructor::child_span`)
+/// and stamp the element. Was: the title carried NO locator and clients fell
+/// back to highlighting the whole document. `\title{My Paper Title}` is on line
+/// 2, "My Paper Title" at cols 8-21.
+#[cfg(feature = "token-locators")]
+#[test]
+fn source_map_frontmatter_title_located() {
+  let xml = convert_path_xml("tests/structure/locators_title.tex");
+  assert!(
+    xml.contains("data:sourcepos=\"0:2:8-0:2:21\""),
+    "document title must carry its \\title{{}} source span (line 2, cols 8-21), got:\n{xml}"
+  );
+  // And that span must be on the title element, not some other line-2 artifact.
+  let re = regex::Regex::new(r#"<title\b[^>]*\bdata:sourcepos="0:2:8-0:2:21""#).unwrap();
+  assert!(re.is_match(&xml), "the line-2 span must be on <title>, got:\n{xml}");
+}

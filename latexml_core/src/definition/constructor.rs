@@ -38,7 +38,12 @@ fn assemble_locator(args: &[Option<Digested>]) -> Option<Locator> {
 /// its reverted tokens. (Origins survive revert/re-digest; `get_locator` merely
 /// fails to aggregate undigested/composite content — §3.1.3.) Off the feature,
 /// only `get_locator` is consulted (byte-identical behavior).
-fn child_span(d: &Digested) -> Option<Locator> {
+///
+/// `pub` so out-of-band construction paths that open an element *around*
+/// already-digested content — e.g. `insert_frontmatter` building `<ltx:title>`
+/// from the stored, deferred `\title{…}` boxes — can recover the same span and
+/// feed it to `Document::set_current_box_locator`.
+pub fn child_span(d: &Digested) -> Option<Locator> {
   if let Some(l) = d.get_locator().filter(|l| l.from_line != 0) {
     return Some(l);
   }
