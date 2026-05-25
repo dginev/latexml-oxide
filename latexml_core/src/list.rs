@@ -139,6 +139,26 @@ impl List {
     // Perl: `$locator = $bx->getLocator unless defined $locator` — the first
     // box (walking back-to-front) that has a locator. Now that locators are
     // `Option<Locator>`, this is a clean `find_map` (no default-sentinel hack).
+    //
+    // Under the `token-locators` precision build we instead want the run's full
+    // *extent* — the span from the first contributing box's start to the last
+    // box's end — so a text run carries its true `(from..to)` range
+    // (docs/SOURCE_PROVENANCE.md §3.1.1, Tbox consumer). Boxes are in source
+    // order, so folding `new_range` keeps the first `from` and extends to the
+    // latest `to`. Gated at *compile time* (not the runtime `source_map`
+    // switch): `List::new` runs deep in digestion where `State` is already
+    // mutably borrowed, so a `state!()` read here double-borrows the RefCell.
+    // Off the feature this stays the byte-identical Perl representative-locator
+    // behavior and never touches `State`.
+    #[cfg(feature = "token-locators")]
+    let locator: Option<Locator> = boxes.iter().fold(None, |acc, bx| match bx.get_locator() {
+      Some(l) if l.from_line != 0 => match acc {
+        None => Some(l),
+        Some(a) => Locator::new_range(a, l).or(Some(a)),
+      },
+      _ => acc,
+    });
+    #[cfg(not(feature = "token-locators"))]
     let locator: Option<Locator> = boxes.iter().rev().find_map(|bx| bx.get_locator());
     // Maybe the most representative font for a List is the font of the LAST box (that _has_ a
     // font!) ???

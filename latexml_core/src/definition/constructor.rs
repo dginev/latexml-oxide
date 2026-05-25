@@ -302,7 +302,29 @@ impl Definition for Constructor {
     // `locator.rs`) and the source-map user-source filter drops them
     // (~53/265 → 128/… `article.tex` elements stamped once captured).
     if crate::state::source_map_enabled() {
-      whatsit.locator = Some(crate::gullet::get_locator());
+      // Assemble the construct's range from its digested children's locators
+      // (docs/SOURCE_PROVENANCE.md §3.1.1). The children — Tbox/List built from
+      // tokens that carry their origin (token-locators) — now hold accurate
+      // spans, so unioning them (first child's `from` → last child's `to`) gives
+      // the construct's true source extent, instead of the mouth's post-expansion
+      // position (the `\textbf{…}` → end-column eating-disorder, Experiment 2).
+      // Falls back to the mouth locator when no child carries a real position.
+      fn assemble_locator(args: &[Option<Digested>]) -> Option<crate::common::locator::Locator> {
+        let mut acc: Option<crate::common::locator::Locator> = None;
+        for arg in args.iter().flatten() {
+          let loc = match arg.get_locator() {
+            Some(l) if l.from_line != 0 => l,
+            _ => continue,
+          };
+          acc = match acc {
+            None => Some(loc),
+            Some(a) => crate::common::locator::Locator::new_range(a, loc).or(Some(a)),
+          };
+        }
+        acc
+      }
+      whatsit.locator =
+        assemble_locator(&whatsit.args).or_else(|| Some(crate::gullet::get_locator()));
     }
 
     // Call any 'After' code.
