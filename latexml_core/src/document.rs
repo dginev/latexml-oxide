@@ -4296,6 +4296,18 @@ impl Document {
     self.current_box_locator = self.localized_box_locators.pop().unwrap_or(None);
   }
 
+  /// token-locators: directly set the locator used to stamp the NEXT opened
+  /// element, without touching the `box_to_absorb` stack. The alignment absorb
+  /// uses this to give each `tabular`/`tr`/`td` its own (table/row/cell) span,
+  /// since those elements are opened *before* their content's `box_to_absorb`
+  /// is set. Transient: each cell overwrites it and the enclosing
+  /// `expire_box_to_absorb` (the Alignment absorb frame) restores the prior
+  /// value. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  #[cfg(feature = "token-locators")]
+  pub fn set_current_box_locator(&mut self, loc: Option<Locator>) {
+    self.current_box_locator = loc;
+  }
+
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
     for node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {

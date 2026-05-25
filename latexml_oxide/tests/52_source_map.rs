@@ -226,3 +226,43 @@ fn source_map_table_goes_to_log_not_output() {
     "core XML must still carry the anonymous data:sourcepos tags"
   );
 }
+
+/// Convert an arbitrary fixture to core ltx XML with source-map on.
+#[cfg(feature = "token-locators")]
+fn convert_path_xml(path: &str) -> String {
+  let config = Config { format: OutputFormat::XML, source_map: Some(true), ..Config::default() };
+  let mut converter = Converter::from_config(config);
+  converter.initialize_session().expect("can initialize session");
+  converter.convert(path.to_string()).result.expect("conversion produced XML output")
+}
+
+/// token-locators precision build: content-exact spans through reprocessing
+/// (sectioning revert/re-digest, `\caption`-in-float) and the alignment path
+/// (`tabular`/`tr`/`td`). Guards docs/SOURCE_PROVENANCE.md §3.1.1-§3.1.3.
+/// Runs only under `--features token-locators`.
+#[cfg(feature = "token-locators")]
+#[test]
+fn source_map_token_locators_content_exact() {
+  let xml = convert_path_xml("tests/structure/locators_probe.tex");
+  // Sectioning (reprocessed via revert -> re-digest): the TITLE content, not the
+  // whole \section line. "Intro" is line 3 cols 10-14.
+  assert!(
+    xml.contains("data:sourcepos=\"0:3:10-0:3:14\""),
+    "section title must be content-exact 0:3:10-0:3:14, got:\n{xml}"
+  );
+  // \caption in a float: line 6 (the \caption line), NOT line 7 (\end{figure}).
+  // "Cap" is cols 10-12.
+  let cap = regex::Regex::new(r#"<caption\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
+  let cap_val = cap.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
+  assert_eq!(
+    cap_val,
+    Some("0:6:10-0:6:12"),
+    "float caption must be content-exact on line 6 (was the wrong-line bug)"
+  );
+  // Alignment structure is located (was missing entirely): tabular/tr/td all
+  // carry data:sourcepos on line 9 (the math-cell row).
+  for tag in ["tabular", "tr", "td"] {
+    let re = regex::Regex::new(&format!(r#"<{tag}\b[^>]*\bdata:sourcepos="0:9:"#)).unwrap();
+    assert!(re.is_match(&xml), "<{tag}> must carry a line-9 data:sourcepos, got:\n{xml}");
+  }
+}
