@@ -311,6 +311,32 @@ mouth primitive and `get_locator_from_start()` stand; the open-locator stack is
 the next step. (The spike's constructor wiring was reverted to keep the tree
 green; the mouth/gullet primitives remain in place.)
 
+**Experiment 2 (2026-05-25) — even the constructor *entry* is too late, which
+reframes the whole lever.** Moving the snapshot to `invoke_primitive`'s entry
+(*before* before-digest) still yielded `0:12:9` for `\section`. So by the time
+the element-building Constructor digests, the gullet has already **expanded**
+`\section` (it is a macro) and the file mouth already sits at the `{`. **For a
+macro-defined command — i.e. most of LaTeX — there is no mouth position at
+constructor-digest time equal to the user-command start;** recovering it needs
+**expansion-chain provenance** (tag the expansion frame with the invocation
+locator *when the macro expands*, and propagate it to the constructor — that is
+§3 Tier B), not a mouth snapshot. The cheap §1 snapshot only nails constructs
+invoked *directly* on their own token (rare in real LaTeX).
+
+*The reframing this forces.* The §2.1 content-window client does **not** need
+command-*tight* ranges — only correct *containing* ones (the search slice must
+include the target). And the **existing heuristic ranges are already
+whole-construct supersets** for single-line constructs: `\section{First Section}`
+→ `0:12:1-0:12:24`, which *contains* the rendered title. So perfecting engine
+range-accuracy is likely **not** the highest-value next step. The better
+experiment is to **build the §2.1 client (DFS-descent + content-window) against
+the *current* ranges and measure where they actually fail** — then spend engine
+effort (§1 multi-line `to`, or §3 expansion-provenance for `from`) only on the
+measured gaps. The two spikes' value was precisely to find this: the engine lever
+is dearer than it looked, and the client is the cheaper place to learn what
+accuracy is truly required. (The committed `last_token_start` primitive remains
+useful for the direct-construct case and for error locators; it is not wasted.)
+
 ### 2. Tier A — element-level invocation span (the MVP)
 
 The data is already flowing; the work is to make locators *ranges* (§1) and
