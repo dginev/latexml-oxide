@@ -821,7 +821,7 @@ type "verbatim". Tests still pass because:
 - the v3 structured Parameter sub-line encoding (commit `3e1f89eb2`)
   carries `(name, spec, extra)` per Parameter, bypassing
   `parse_parameters` for catcoded delimiters. See
-  `DUMP_FORMAT_PERL_ANALYSIS.md`.
+  `DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`.
 - the v2 reader falls back gracefully when v3 sub-lines are absent.
 
 **Key insight:** `Parameters::stringify` is NOT a true inverse of
@@ -1718,3 +1718,42 @@ semantics" across years.
 **Reference.** `latexml_engine/src/dump_paths.rs::detect_ambient_texlive_year`,
 `tools/make_formats.sh:60`, `resources/dumps/texlive.YYYY.version`
 (the stamp file lets us record which TL produced each dump).
+
+---
+
+## 45. Namespaced attributes must promote their namespace to a *document* namespace
+
+**Discovery:** The `--source-map` feature emits `data:sourcepos` (in LaTeXML's
+`data:` namespace) on elements. It appeared in the core ltx XML but was silently
+**dropped during post-processing** — 0 `data-sourcepos` in the HTML — while the
+analogous `aria:labelledby` (acm_aria test) survived and converted fine.
+
+**Analysis:** Two kinds of namespace exist in the model — *code* namespaces
+(`RegisterNamespace`, used in binding code) and *document* namespaces (declared
+as `xmlns:prefix` on the output root). `Document::finalize` →
+`apply_document_namespace_declarations` declares `xmlns:prefix` on the root **only
+for document namespaces that are actually used** (a literal `prefix:…` attribute
+exists). The post XSLT's `copy_foreign_attributes` (`LaTeXML-common.xsl`) then
+copies only attributes that are *in a namespace* (`namespace-uri() != ''`),
+converting `data:`-prefixed ones to `data-…`. `aria` is a document namespace (it
+appears in the RelaxNG schema, `common.attrs.aria`), so it gets declared on the
+root and its literal attr resolves into the namespace on serialize. `data` was a
+**code-only** namespace → never declared on the root → the literal `data:sourcepos`
+stayed namespace-less (unprefixed attributes are namespace-less per XML rules) →
+`copy_foreign_attributes` skipped it.
+
+**Fix:** `Document::set_attribute`'s namespaced branch now mirrors Perl
+`Core/Document.pm::setAttribute`, whose `getDocumentNamespacePrefix($ns, 1)`
+**promotes** the prefix's namespace to a document namespace on first use:
+`model::register_document_namespace(prefix, Some(ns_uri))` before the literal set.
+Finalize then declares `xmlns:prefix` on the root and the attribute resolves +
+converts. General over any prefix (implements the old `decodeQName` TODO);
+idempotent for namespaces that are already document namespaces (`aria`, `xlink`),
+so it is parity-neutral (verified on structure/complex/tikz).
+
+**Key insight:** Setting `node.set_attribute("prefix:local", …)` (libxml
+`xmlSetProp`) only *binds* the namespace if the prefix is already in scope.
+For an attribute namespace to survive to output (and the post XSLT), its prefix
+must be a **document** namespace so `apply_document_namespace_declarations`
+declares it on the root. Promote on first use — do not rely on the prefix being
+in scope at set time (finalize declares it, after construction).

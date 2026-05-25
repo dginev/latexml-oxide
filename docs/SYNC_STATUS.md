@@ -43,6 +43,121 @@ outward to individual bindings. Open clusters are described below;
 closed clusters are dropped from this doc once their fix lands and
 generalizes.
 
+## Source-locator MVP — ar5iv-editor showcase (active, opened 2026-05-24)
+
+Beyond-Perl showcase (issues #47/#92): live source↔preview + linting via
+source locators. Full design in
+[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md).
+
+**Scope:** line-level, block/inline-element granularity, **math opaque**
+(= SyncTeX granularity). Columns, per-leaf char-offset maps, and in-equation
+provenance are deferred. **Parity-neutral and off by default** — a normal
+conversion (switch off) must stay byte-identical to today; build on the
+existing `Locator` model (`common/locator.rs`) **unchanged**.
+
+**Attribute contract (decided 2026-05-24, web-ecosystem audit — see
+SOURCE_PROVENANCE §0/§0.1/§2):** attribute name **`data-sourcepos`** (the
+cmark-gfm/GitHub/GitLab convention; *not* `data-src`, which is the lazysizes
+lazy-load idiom). Value `tag:l:c-tag:l:c` — file **first-class** in each
+endpoint, integer `tag` = index into a doc-level `sources` table
+(Source-Map-v3 `sources`/`sourceRoot`/`sourcesContent` flavour: compact,
+anonymisable, no inlined paths). Serialise via a new compact
+`Locator::to_sourcepos()`; the latent XPointer `Locator::to_attribute()` is
+**not** used (zero web-platform support). Rung-2 char map keeps `data-srcmap`.
+
+Engine-substrate checklist:
+
+- [x] `--source-map` flag (+ `LATEXML_SOURCE_MAP` env), off by default,
+      gating *both* tracking and emission via the `State.source_map` field
+      (`state::source_map_enabled()`); threaded Config → CoreOptions →
+      StateOptions, mirroring `nomathparse`. Scaffold test
+      `tests/52_source_map.rs` pins off-by-default (no `data-sourcepos`) +
+      ON-currently-inert (byte-identical). Verified: corpus binary path
+      (`cortex_worker`) keeps `source_map: None`.
+- [ ] Start-*line* capture in `mouth.rs::read_token` (`:628`), after
+      inter-token skips; range open→close at the digestion frame via
+      `Locator::new_range` (`locator.rs:80`). Gated by `source_map_enabled()`
+      and cached into the Mouth so the hot path is zero-cost when off.
+- [x] Stamp elements with `data-sourcepos` in **`open_element_at`** (the
+      shared element-creation primitive — covers plain `open_element`, math,
+      and alignment uniformly), via `Locator::to_sourcepos(tag)` (integer
+      `sources`-table tag, no paths). Box locator captured as a `Copy`
+      `Locator` at `set_box_to_absorb` time (`current_box_locator`) to avoid
+      the `RefCell` re-borrow panic mid-`be_absorbed`. Gated.
+      - **Deferred:** the `ltx:Math` *wrapper* is stamped at digestion but the
+        Marpa math parser rebuilds the subtree (`base_xmath.rs:1410`) and
+        discards it (§7 A.3 — math-parse provenance). Math stays opaque;
+        equations inherit the container's locator client-side. Math internals
+        (`ltx:XM*`) are skipped by design.
+- [x] Propagate `data:sourcepos` through the post XSLT into HTML
+      `data-sourcepos`. Done via **Perl parity**: emit in LaTeXML's `data:`
+      namespace; `Document::set_attribute` now mirrors Perl's
+      `getDocumentNamespacePrefix($ns,1)` — it **promotes a namespaced
+      attribute's namespace to a document namespace** on first use, so finalize's
+      `apply_document_namespace_declarations` declares `xmlns:data` on the root,
+      the literal `data:sourcepos` resolves into that namespace on serialize, and
+      the existing `copy_foreign_attributes` (`LaTeXML-common.xsl`) converts
+      `data:` → `data-` (`USE_DATA_ATTRIBUTES` = HTML5). No XSLT change — same
+      path `aria:` already uses. General fix (any namespaced attr; implements the
+      long-standing `decodeQName` TODO); verified parity-neutral on
+      structure/complex(aria)/tikz(xlink). See [[refcell-digestion-debt]] sibling
+      `WISDOM.md` note.
+- [x] User-vs-foreign source: stamp only into editable user docs
+      (`.tex`/`.ltx`). This skips both synthetic default locators (source =
+      `locator.rs` from `Locator::default()`'s `file!()`) and foreign
+      `.cls`/`.sty`/dump files; foreign/unstamped elements inherit the nearest
+      user-source ancestor client-side. (MVP extension heuristic; a tracked
+      user-input set would be more precise.) Verified on `article.tex`:
+      265 → 53 stamps, all `tag 0 = article.tex`, real line:col positions.
+- [x] **MVP locator test** (`tests/52_source_map.rs`, 3/3): off-by-default
+      emits no locator; ON emits `data:sourcepos` in core (user-source only,
+      math-opaque, shape `tag:l:c[-tag:l:c]`); ON round-trips to HTML
+      `data-sourcepos` (the XSLT pass-through). Future hardening (not blocking
+      MVP): pin an exact `data-sourcepos` golden; corpus round-trip (literal
+      range substring == visible text; range ⊆ parent; within file bounds) +
+      debug-assert invariants. Self-contained (no SyncTeX dependency).
+- [x] **Coverage:** constructor-built elements now capture a real locator.
+      `Definition/Constructor.pm` L106 parity — `constructor.rs` sets
+      `whatsit.locator = gullet::get_locator()` (gated on `source_map_enabled()`
+      so the corpus path pays nothing and stays byte-identical; the whatsit
+      locator only feeds source-map + untested error messages). Previously every
+      `DefConstructor` whatsit got `Locator::default()` and was dropped by the
+      user-source filter. Result on `article.tex`: **53 → 128** stamps with real
+      line:col ranges (e.g. `\section` line, equation lines). Full suite green.
+- [x] **Cleanup: `Option<Locator>`.** Replaced the `Locator::default()`
+      `file!()/line!()` *sentinel* with an honest `Option<Locator>`:
+      `Object::get_locator -> Option<Locator>`; `Whatsit`/`Tbox`/`List.locator:
+      Option<Locator>`; `List::new` → `find_map`. The free fn
+      `gullet::get_locator() -> Locator` is unchanged (the "where the parser is
+      now" workhorse for errors + box creation). Cross-cutting (17 files: trait +
+      all box types + ~21 call sites); full suite green, parity-neutral. Aligns
+      with the "meaningful Rust types" goal. (Rejected: a stateful gated
+      `Whatsit::default()` — `Default` must stay pure.)
+- [~] **Column precision — needs Tier B, NOT a quick fix (attempted + reverted
+      2026-05-24).** Tried Bruce #101's proposed fix: `read_token` token-start
+      (`last_token_start`, the `from` of `get_locator`) + capturing the
+      construct's open locator in `Constructor::invoke_primitive` *before* args.
+      **Empirically REGRESSED** the common cases: `section` `12:1`→`12:9` (the
+      `{`), `itemize` `40:1`→`40:15` (the `}`). Reason: `\section`/`\begin{…}`
+      reach their element constructor via **expansion** (`\@startsection`,
+      `\begin`), so `invoke_primitive` fires *after* the user's keyword — the
+      open locator is the post-keyword position, not the command start. This is
+      **Bruce's #3 (invocation-span vs macro-origin)** — accurate construct-start
+      needs **expansion-provenance** (tag expansion frames with the invocation
+      locator; propagate to the constructor) = the deferred **Tier B**
+      (`SOURCE_PROVENANCE §3`), genuinely hard, no clear bounded change. Do NOT
+      re-attempt the naive `invoke_primitive` capture. **LINE accuracy already
+      meets the MVP bar** (every construct on its correct source line, verified
+      on `article.tex`); the ar5iv-editor scrolls by line, so columns are a
+      post-MVP refinement gated on Tier B.
+
+Next phase (after substrate): warm-state conversion server (full-doc
+reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to
+post-MVP: columns/`data-srcmap` (§6 rung 2), in-equation/math-parser
+provenance (§7 A.3), Tier B expansion provenance.
+
+## Round-27 parity clusters
+
 ### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
 
 **Status:** LANDED 2026-05-22. Keyset plumbing wired through; ar5iv
@@ -486,6 +601,14 @@ assertion (not just code == 0; the bug had code == 0).
   memory before dump; PA aliases capture `\let` round-trips.
   Architecturally documented in
   `latexml_core/src/state.rs::is_serializable`.
+- **~72-CS Perl-only long tail** (from the completed LoadFormat audit,
+  `archive/PERL_LOADFORMAT_AUDIT.md`). Engine union has ~72 CSes that Perl
+  defines and Rust does not, *excluding* the now-ported `\bib@*` family —
+  mostly "misc atomics" (`\@charlb`, point-size CSes, `\batchmode`, …) plus
+  the stable 45-CS same-file relocation set. Demand-driven: investigate a
+  CS only when a real paper witnesses it; bounded by the corpus-success
+  gate, not a release blocker. Refresh the engine-wide CS-name diff (it
+  predates the BibTeX port) before quoting exact counts.
 
 ## Tikz known diffs vs Perl
 
@@ -502,7 +625,11 @@ assertion (not just code == 0; the bug had code == 0).
 - **Rust supersedes Perl** (both in scope, Rust passes where Perl
   errors): `1207.6068`, `0909.3444`, plus 40+ in
   `memory/project_rust_supersedes_perl.md`.
-- **Unported pools**: `BibTeX.pool.ltxml` (skip via `--nobibtex`).
+- **Unported pools**: none outstanding. (`BibTeX.pool.ltxml` is **ported** —
+  Phases 1–8 landed, see [`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md). The
+  remaining B1–B6 / Phase 4–5 polish is tracked there as product
+  correctness, not a permanent ignore. `--nobibtex` is an opt-out, not the
+  default escape hatch — see [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §10.)
 
 ---
 
@@ -793,3 +920,20 @@ convergence bandages (`max_trees`, `max_consecutive_dupes`,
 `pruned_only_time_budget`, `converge_budget`, `max_unique`) that
 exist purely to dodge the wrong-paradigm cost. `max_time` is the
 only cap that needs to stay.
+
+---
+
+## Release-readiness & issue-tracker context (consolidated 2026-05-24)
+
+This file stays the **engine-sync log**. The public-release contract moved
+out so it doesn't crowd the parity worklist:
+
+- **[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md)** — pre-1.0 gates: size,
+  portability, license audit, safety, tail-latency, surpass-Perl policy,
+  and the source-provenance / VSCode-synced-preview track (#47/#92).
+- **[`ISSUE_AUDIT.md`](ISSUE_AUDIT.md)** — open GitHub issues mirrored
+  locally (refresh before milestone planning).
+
+These replace the inline 2026-05-24 codex "public-quality gaps" pass; its
+errors are corrected in `RELEASE_CRITERIA.md` §10. The parity mission is
+unchanged: ~99.4% on the 100k warning subset, no error-downgrading.

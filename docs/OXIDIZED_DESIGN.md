@@ -1216,3 +1216,47 @@ captured as `tests/math/norm_kerned_delims.{tex,xml}` so we can
 detect when a future grammar/preprocess change *improves* it
 without it silently regressing. The test file's leading
 `% comments` annotate each section with the expected shape.
+
+### TOML profiles instead of Perl `.opt` (issue #191, `--profile`)
+
+**Status:** Planned — not yet implemented. Deliberate divergence from
+Perl's profile file format.
+
+**Perl behavior.** `--profile=NAME` (and its `--mode` alias) loads
+`<NAME>.opt` — a flat `key = value` file (`Config.pm::_obey_profile`).
+We already ship the set under `resources/Profiles/*.opt` (`fragment`,
+`math`, `standard`, `modern`, `stex*`, …). The format has three warts: an
+empty value means "boolean true" (`pmml =`), lists are repeated keys
+(`preload = …` ×N), and everything is stringly-typed.
+
+**Planned Rust shape.** Express profiles as **TOML**, deserialized via
+serde into the same option struct `clap` already populates — so a profile
+is just a *defaults layer*: `built-in/embedded profile < user CLI flags`
+(CLI wins, matching Perl's precedence). TOML fixes all three warts
+natively (`pmml = true`, `preload = ["a","b"]`, `timeout = 120`) and adds
+`extends = "fragment"` profile inheritance that `.opt` can't express
+cleanly.
+
+```toml
+# fragment.toml
+extends   = "math"          # optional inheritance
+format    = "xhtml"
+whatsin   = "fragment"
+whatsout  = "fragment"
+pmml = true; cmml = true; mathtex = true
+nodefaultresources = true
+preload = ["LaTeX.pool", "article.cls", "amsmath.sty", "[ids]latexml.sty"]
+path    = ["$LATEXMLINPUTS"]
+```
+
+**Decision (2026-05-24): TOML-native, convert-and-drop.** Convert the
+shipped `resources/Profiles/*.opt` to `*.toml` and remove the `.opt`
+files; **no legacy `.opt` reader** — `--profile` consumes only TOML. (A
+Perl `.opt` is trivially hand-portable, and we control the shipped set, so
+the compat reader isn't worth the surface area.)
+
+**Constraints to preserve:** built-in profiles stay **embedded**
+(`include_str!`/`include_dir!`) per the self-contained-binary principle,
+with a disk override (`<NAME>.toml`); keep `$LATEXMLINPUTS` expansion in
+`path`; keep `--mode` as an alias for `--profile`.
+Tracked under issue #191 in [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md).

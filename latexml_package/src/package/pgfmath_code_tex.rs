@@ -518,7 +518,8 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   let cs_tok = Token {
     text: arena::pin(&cs_name),
     code: Catcode::CS,
-  };
+      #[cfg(feature = "token-locators")] loc: 0
+    };
   // Check if the function is defined
   state::lookup_definition(&cs_tok).ok()?.as_ref()?;
   // Build invocation tokens: \pgfmath{name}@{arg1}{arg2}...
@@ -544,7 +545,8 @@ fn is_user_constant(name: &str) -> bool {
   let tok = Token {
     text: arena::pin(&cs),
     code: Catcode::CS,
-  };
+      #[cfg(feature = "token-locators")] loc: 0
+    };
   if state::lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
@@ -553,7 +555,8 @@ fn is_user_constant(name: &str) -> bool {
   let arity_tok = Token {
     text: arena::pin(&arity_cs),
     code: Catcode::CS,
-  };
+      #[cfg(feature = "token-locators")] loc: 0
+    };
   if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
     if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
       let s = expanded.to_string();
@@ -572,7 +575,8 @@ fn is_user_function(name: &str) -> bool {
   let tok = Token {
     text: arena::pin(&cs),
     code: Catcode::CS,
-  };
+      #[cfg(feature = "token-locators")] loc: 0
+    };
   if state::lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
@@ -580,7 +584,8 @@ fn is_user_function(name: &str) -> bool {
   let arity_tok = Token {
     text: arena::pin(&arity_cs),
     code: Catcode::CS,
-  };
+      #[cfg(feature = "token-locators")] loc: 0
+    };
   if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
     if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
       let s = expanded.to_string();

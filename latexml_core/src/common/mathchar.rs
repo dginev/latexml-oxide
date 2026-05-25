@@ -969,10 +969,24 @@ pub fn decode_math_char_for_stomach(mathcode: u16, meaning: Token) -> Result<Opt
   let font = props
     .font
     .map(|f| Rc::new(arena::with(glyph_sym, |s| f.specialize(s))));
+  // token-locators: carry the math char's own source origin (matching the text
+  // path in `invoke_token_simple`), so math content boxes are located — the
+  // basis for a `$…$`-range `ltx:Math` wrapper and in-equation provenance.
+  // docs/SOURCE_PROVENANCE.md §3.1.3 / §7 A.3. `None` → falls back to the gullet
+  // locator (feature-off identical).
+  #[cfg(feature = "token-locators")]
+  let origin_loc: Option<crate::common::locator::Locator> =
+    crate::token::get_token_origin(meaning.loc).map(|o| {
+      arena::with(o.source, |s| {
+        crate::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
+      })
+    });
+  #[cfg(not(feature = "token-locators"))]
+  let origin_loc: Option<crate::common::locator::Locator> = None;
   Ok(Some(Digested::from(Tbox::new(
     glyph_sym,
     font,
-    None,
+    origin_loc,
     props.reversion.unwrap_or_else(|| crate::Tokens!(meaning)),
     properties,
   ))))

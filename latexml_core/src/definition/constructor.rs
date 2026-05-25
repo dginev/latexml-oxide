@@ -13,6 +13,7 @@ use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
 };
+use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::stomach::digest_next_body;
@@ -20,6 +21,39 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested};
+
+/// A `--source-map` construct's source extent: the union (first `from` → last
+/// `to`) of its children's spans, or `None` if none carries a position (the
+/// caller then falls back to the gullet locator). docs/SOURCE_PROVENANCE.md §3.1.
+fn assemble_locator(args: &[Option<Digested>]) -> Option<Locator> {
+  args
+    .iter()
+    .flatten()
+    .filter_map(child_span)
+    .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+}
+
+/// A child's located span: its own `get_locator()` if set, else — under
+/// `token-locators` — recovered from the per-token origin handles still riding
+/// its reverted tokens. (Origins survive revert/re-digest; `get_locator` merely
+/// fails to aggregate undigested/composite content — §3.1.3.) Off the feature,
+/// only `get_locator` is consulted (byte-identical behavior).
+fn child_span(d: &Digested) -> Option<Locator> {
+  if let Some(l) = d.get_locator().filter(|l| l.from_line != 0) {
+    return Some(l);
+  }
+  #[cfg(feature = "token-locators")]
+  return d
+    .revert()
+    .ok()?
+    .unlist_ref()
+    .iter()
+    .filter_map(|t| crate::token::get_token_origin(t.loc))
+    .map(|o| crate::common::arena::with(o.source, |s| Locator::new(s, o.line, o.col, o.line, o.col)))
+    .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a));
+  #[cfg(not(feature = "token-locators"))]
+  None
+}
 
 /// configuration for creating a new Constructor
 #[derive(Clone)]
@@ -291,6 +325,23 @@ impl Definition for Constructor {
       properties,
       ..Whatsit::default()
     };
+    // Perl `Core/Definition/Constructor.pm` L106:
+    //   `$props{locator} = $stomach->getGullet->getLocator`
+    // — capture the construct's source position at digest time. Gated on
+    // `--source-map`: the whatsit locator is consumed only by source-map
+    // stamping + (untested) error messages, so the corpus/parity path skips
+    // the per-construct `get_locator`/`arena::pin` cost and stays
+    // byte-identical (the switch gates *all* locator tracking). Without this,
+    // constructor-built elements carry `Locator::default()` (source =
+    // `locator.rs`) and the source-map user-source filter drops them
+    // (~53/265 → 128/… `article.tex` elements stamped once captured).
+    if crate::state::source_map_enabled() {
+      // --source-map: the construct's source extent is the union of its
+      // children's spans (fixes the post-expansion eating-disorder, Experiment 2),
+      // falling back to the gullet locator when no child carries a position.
+      whatsit.locator =
+        assemble_locator(&whatsit.args).or_else(|| Some(crate::gullet::get_locator()));
+    }
 
     // Call any 'After' code.
     let mut post = self.execute_after_digest(&mut whatsit)?;
@@ -300,6 +351,24 @@ impl Definition for Constructor {
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
 
+      // token-locators: capture_body constructs (e.g. `\lx@begin@inline@math`)
+      // carry their content as #body, not positional args, so the earlier
+      // assemble_locator (over args) missed it and fell back to the gullet point.
+      // Derive the span from the digested body and union it with any positional-
+      // arg span, so the wrapper (e.g. `ltx:Math`) spans its content. §3.1.3.
+      #[cfg(feature = "token-locators")]
+      if crate::state::source_map_enabled() {
+        if let Some(body_span) =
+          post.iter().filter_map(child_span).reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+        {
+          whatsit.locator = Some(match whatsit.locator {
+            Some(prev) if prev.from_line != 0 => {
+              Locator::new_range(prev, body_span).unwrap_or(body_span)
+            },
+            _ => body_span,
+          });
+        }
+      }
       whatsit.set_body(post);
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);

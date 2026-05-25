@@ -176,7 +176,7 @@ fn node_to_grammar_lexemes_ctx(
         // pairing of identical bars. Eliminates the VERTBAR-pairing
         // combinatorial explosion in patterns like
         // `\log^+ ∫ \left| f \right|^k dm(z) ≲ ...` (see
-        // docs/MATH_AMBIGUITY_AUDIT.md §2) and unlocks task #263's
+        // docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
         // norm-fenced grammar rules.
         // Defensive fallback: if `role_side` is missing — legacy DOM
         // input or a path that bypassed `\@left`/`\@right` — keep the
@@ -193,7 +193,7 @@ fn node_to_grammar_lexemes_ctx(
         // "formula separator (with side-condition)" rather than
         // "list-element separator". Tag as WIDE_PUNCT so the grammar
         // can prefer `formulae_apply` over `list_apply` for this
-        // separator unambiguously. See docs/MATH_AMBIGUITY_AUDIT.md §2.
+        // separator unambiguously. See docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2.
         format!("WIDE_PUNCT:,:{idx}")
       } else {
         format!("{role}:{text}:{idx}").replace(' ', "")

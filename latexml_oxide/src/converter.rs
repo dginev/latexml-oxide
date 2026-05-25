@@ -6,7 +6,10 @@ use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::list::List;
-use latexml_core::state::{add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch};
+use latexml_core::state::{
+  add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch, source_map_enabled,
+  source_table_snapshot,
+};
 use latexml_core::telemetry::{self, Phase};
 use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
 use std::rc::Rc;
@@ -40,6 +43,7 @@ impl Converter {
       preload: opts.preload.clone(),
       search_paths: opts.search_paths.clone(),
       nomathparse: opts.nomathparse,
+      source_map: opts.source_map,
       ..CoreOptions::default()
     });
     Converter {
@@ -347,6 +351,22 @@ impl Converter {
     // accumulator is reset after the snapshot so per-document
     // figures are independent.
     latexml_math_parser::report_and_reset_asf_stats();
+    // --source-map (#47/#92): serialise the `tag → file` decoder table into the
+    // `.log` — latexml-oxide's existing conversion-metadata channel — rather than
+    // inlining it into the output. The output carries only the anonymous integer
+    // `tag` (in each `data:sourcepos`); this is its decoder ring, Source-Map-v3
+    // `sources`-style (the array index *is* the tag). Keeping it out of the
+    // HTML/XML keeps that output anonymisable: a consumer without the source
+    // files sees only opaque tags. In-process embedders (e.g. the ar5iv-editor
+    // server) read the same table programmatically via `source_table_snapshot()`.
+    // Gated on the switch, so a normal conversion emits nothing.
+    if source_map_enabled() {
+      for (tag, sym) in source_table_snapshot().iter().enumerate() {
+        arena::with(*sym, |src| {
+          Info!("source-map", "source", s!("[{tag}] {src}"));
+        });
+      }
+    }
     // Perl: Note("Conversion complete: " . $$runtime{status});
     Note!(s!("Conversion complete: {}", self.runtime.status));
     let log = self.flush_log();

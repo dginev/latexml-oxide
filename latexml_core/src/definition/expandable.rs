@@ -87,7 +87,7 @@ impl PartialEq for Expandable {
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
-  fn get_locator(&self) -> Locator { self.locator }
+  fn get_locator(&self) -> Option<Locator> { Some(self.locator) }
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Expandable") }
 }
 impl Definition for Expandable {

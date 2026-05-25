@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.5.0"
+version = "0.6.2"
 edition = "2021"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0"
@@ -42,6 +42,18 @@ cortex = ["dep:pericortex", "dep:hostname"]
 # cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
 # `phf_shared` build-deps, plus a small `.text` footprint.
 test-utils = ["dep:glob", "dep:phf"]
+# Source-map precision build (docs/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
+# with a per-token origin handle (8→12) so each token carries its exact source
+# start through expansion to digestion. OFF by default. Propagates to every
+# token-constructing crate so the cfg resolves consistently inside their
+# (cross-crate) token-macro expansions. The knob downstream consumers flip.
+token-locators = [
+  "latexml_core/token-locators",
+  "latexml_engine/token-locators",
+  "latexml_package/token-locators",
+  "latexml_contrib/token-locators",
+  "latexml_math_parser/token-locators",
+]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

@@ -551,6 +551,8 @@ impl Tokens {
           rescanned.push(Token {
             text: next_t.unwrap().get_sym(),
             code: Catcode::ARG,
+            #[cfg(feature = "token-locators")]
+            loc: 0,
           });
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
@@ -704,7 +706,11 @@ impl ToTokens for Token {
       stream.extend(quote! {
         Token {
           text: latexml_core::common::arena::pin_static(#text),
-          code: #code
+          code: #code,
+          // Emitted into the consumer crate; the cfg resolves there (the feature
+          // propagates from latexml_oxide). See docs/SOURCE_PROVENANCE.md §3.1.1.
+          #[cfg(feature = "token-locators")]
+          loc: 0u32
         }
       })
     });
@@ -720,6 +726,7 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 
@@ -727,6 +734,7 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::COMMENT,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 

@@ -141,7 +141,9 @@ LoadDefinitions!({
       code_str.parse::<u32>().unwrap_or(0)
     };
     if let Some(ch) = char::from_u32(code_val) {
-      gullet::unread(Tokens!(Token { text: arena::pin_char(ch), code: Catcode::OTHER }));
+      gullet::unread(Tokens!(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    }));
     }
   });
 

@@ -1,12 +1,17 @@
 [package]
 name = "latexml_math_parser"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 edition = "2021"
 
 [lib]
 name = "latexml_math_parser"
 crate-type = ["lib"]
+
+[features]
+# Source-map precision build — propagates to latexml_core. Enable via
+# `latexml_oxide/token-locators`. See docs/SOURCE_PROVENANCE.md §3.1.1.
+token-locators = ["latexml_core/token-locators"]
 
 [dependencies]
 libxml = "0.3.12"

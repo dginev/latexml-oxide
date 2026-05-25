@@ -321,7 +321,7 @@ LoadDefinitions!({
       boxes,
       mode,
       font,
-      locator: Locator::default(),
+      locator: None,
       properties,
     }
   });

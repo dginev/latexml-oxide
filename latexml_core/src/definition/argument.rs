@@ -60,16 +60,17 @@ impl Display for ArgWrap {
 }
 
 impl Object for ArgWrap {
-  fn get_locator(&self) -> Locator {
-    use ArgWrap::*;
+  fn get_locator(&self) -> Option<Locator> {
+    // Most argument wrappers carry no intrinsic source locator; a few delegate
+    // to their contained value. (Patterns qualified with `ArgWrap::` so the
+    // body's `None` is unambiguously `Option::None`, not the `ArgWrap::None`
+    // variant.)
     match self {
-      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | AlignmentTemplate(_)
-      | Pair(_) => Locator::default(),
-      Glue(t) => t.get_locator(),
-      MuGlue(t) => t.get_locator(),
-      MuDimension(t) => t.get_locator(),
-      KV(kv) => kv.get_locator(),
-      RegisterDefinition(_) | None => Locator::default(),
+      ArgWrap::Glue(t) => t.get_locator(),
+      ArgWrap::MuGlue(t) => t.get_locator(),
+      ArgWrap::MuDimension(t) => t.get_locator(),
+      ArgWrap::KV(kv) => kv.get_locator(),
+      _ => None,
     }
   }
   fn be_digested(self) -> Result<Digested> {

@@ -45,6 +45,29 @@ use crate::{BoxOps, stomach};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
+
+/// token-locators: source span of an alignment cell (its content's locator).
+/// `tabular`/`tr`/`td` are opened before their content's `box_to_absorb` is set,
+/// so the absorb explicitly stamps each with its cell/row/table span via
+/// `Document::set_current_box_locator`. See docs/SOURCE_PROVENANCE.md §3.1.3.
+#[cfg(feature = "token-locators")]
+fn cell_loc(cell: &Cell) -> Option<crate::common::locator::Locator> {
+  cell
+    .boxes
+    .as_ref()
+    .and_then(|b| b.get_locator())
+    .filter(|l| l.from_line != 0)
+}
+
+/// Union (first `from` → last `to`) of a row's cell spans.
+#[cfg(feature = "token-locators")]
+fn row_span(row: &Row) -> Option<crate::common::locator::Locator> {
+  row
+    .get_columns()
+    .iter()
+    .filter_map(cell_loc)
+    .reduce(|a, b| crate::common::locator::Locator::new_range(a, b).unwrap_or(a))
+}
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
@@ -500,6 +523,14 @@ impl BoxOps for Alignment {
   fn be_absorbed_mut(&mut self, document: &mut Document) -> Result<Vec<Node>> {
     let ismath = self.is_math;
     normalize_alignment(self)?;
+    // token-locators: the whole table's span (union of all cell spans), stamped
+    // on the `tabular` element below. Computed before the mutable `rows` borrow.
+    #[cfg(feature = "token-locators")]
+    let table_span = self
+      .rows
+      .iter()
+      .filter_map(row_span)
+      .reduce(|a, b| crate::common::locator::Locator::new_range(a, b).unwrap_or(a));
     let rows = &mut self.rows;
     if rows.is_empty() {
       return Ok(Vec::new());
@@ -543,9 +574,15 @@ impl BoxOps for Alignment {
       attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
     }
     let open_container_fn = &self.open_container;
+    // token-locators: stamp the `tabular` with the table span before it opens.
+    #[cfg(feature = "token-locators")]
+    document.set_current_box_locator(table_span);
     open_container_fn(document, attrs)?;
 
     for row in rows {
+      // token-locators: stamp this `tr` with the row's span before it opens.
+      #[cfg(feature = "token-locators")]
+      document.set_current_box_locator(row_span(row));
       let vpad_opt = row.get_padding().copied();
       // Perl Alignment.pm L319-324: pass position/size to openRow callback
       let mut open_row_attrs = HashMap::default();
@@ -753,6 +790,10 @@ impl BoxOps for Alignment {
         //       x      => $$cell{x}, y => $$cell{y},
         //       cached_width => $$cell{cached_width}, cached_height => $$cell{cached_height},
         // cached_depth => $$cell{cached_depth})
+        // token-locators: stamp this `td` with the cell's content span before it
+        // opens (its content's box_to_absorb is set just below, after the open).
+        #[cfg(feature = "token-locators")]
+        document.set_current_box_locator(cell_loc(cell));
         cell.cell = open_column_fn(document, cell_attrs)?;
         // Perl L362: absorb cell content only if !skippable (not just !empty)
         if !cell.skippable {

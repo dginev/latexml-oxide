@@ -90,7 +90,7 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
-[`DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md) for
+[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
 `IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
@@ -295,7 +295,7 @@ filename match. The stamp check remains useful for the in-year case
 
 ## See also
 
-* [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) —
+* [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) —
   file-by-file Rust-vs-Perl divergence audit.
-* [`DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md) —
+* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
   on-disk record format and Perl `Dumper.pm` correspondence.

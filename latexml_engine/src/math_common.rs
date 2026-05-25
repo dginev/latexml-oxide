@@ -699,7 +699,7 @@ LoadDefinitions!({
       definition: lookup_definition(&T_CS!("\\@@joinrel"))?.unwrap(),
       args: vec![Some(left), Some(right)],
       properties,
-      locator: gullet::get_locator(),
+      locator: Some(gullet::get_locator()),
       ..Whatsit::default()
     };
     stuff.push(Digested::from(whatsit));

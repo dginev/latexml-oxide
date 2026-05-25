@@ -35,8 +35,9 @@ pub struct Whatsit {
   pub reversion:      Option<Tokens>,
   /// special-case reversion tokens for whatsits representing Dual math structures
   pub dual_reversion: Option<HashMap<Tokens>>,
-  /// point of origin in the source file
-  pub locator:        Locator,
+  /// point of origin in the source file (`None` = not recorded; set under
+  /// `--source-map` at constructor digest, Perl `Constructor.pm` L106)
+  pub locator:        Option<Locator>,
 }
 
 impl Default for Whatsit {
@@ -47,7 +48,7 @@ impl Default for Whatsit {
       definition:     Rc::new(Expandable::default()),
       reversion:      None,
       dual_reversion: None,
-      locator:        Locator::default(),
+      locator:        None,
     }
   }
 }
@@ -285,7 +286,7 @@ impl fmt::Display for Whatsit {
 }
 
 impl Object for Whatsit {
-  fn get_locator(&self) -> Locator { self.locator }
+  fn get_locator(&self) -> Option<Locator> { self.locator }
 
   fn stringify(&self) -> String { format!("{self:?}") }
 

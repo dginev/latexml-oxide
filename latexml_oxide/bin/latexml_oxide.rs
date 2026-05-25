@@ -88,6 +88,15 @@ struct Cli {
   #[arg(long, alias = "noparse")]
   nomathparse: bool,
 
+  /// Emit source locators: track each construct's source range and stamp
+  /// it onto the output as a `data-sourcepos` attribute (and a document-level
+  /// tag→file table). Off by default — a normal conversion pays nothing
+  /// for tracking or markup. Powers the editor/preview sync and accurate
+  /// linting (issues #47/#92). Also enabled via `LATEXML_SOURCE_MAP=1`.
+  /// See `docs/SOURCE_PROVENANCE.md`.
+  #[arg(long = "source-map")]
+  source_map: bool,
+
   /// Disable section numbering
   #[arg(long, alias = "nosectionnumbers")]
   nonumbersections: bool,
@@ -464,6 +473,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     search_paths,
     include_comments: if cli.nocomments { Some(false) } else { None },
     nomathparse: if cli.nomathparse { Some(true) } else { None },
+    // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
+    // tracking + emission; otherwise leave unset (off). The env reads
+    // once here, off the hot path. See `docs/SOURCE_PROVENANCE.md`.
+    source_map: if cli.source_map || std::env::var_os("LATEXML_SOURCE_MAP").is_some() {
+      Some(true)
+    } else {
+      None
+    },
   };
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base

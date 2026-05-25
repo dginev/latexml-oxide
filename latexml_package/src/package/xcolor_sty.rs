@@ -1369,7 +1369,9 @@ LoadDefinitions!({
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token { text: arena::pin_char(c), code: Catcode::OTHER }
+            Token { text: arena::pin_char(c), code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
+    }
           }).collect();
           Ok(Tokens::new(toks))
         } else {

@@ -471,7 +471,9 @@ LoadDefinitions!({
             .map(|role| {
               let ft = match formatters.get(&role) {
                 Some(Stored::Token(t)) => Some(*t),
-                Some(Stored::String(sym)) => Some(Token { text: *sym, code: Catcode::CS }),
+                Some(Stored::String(sym)) => {
+                  Some(Token { text: *sym, code: Catcode::CS, #[cfg(feature = "token-locators")] loc: 0 })
+                },
                 _ => None,
               };
               (role, ft)
@@ -1339,12 +1341,16 @@ pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
       .map(|c| Token {
         text: arena::pin_char(c),
         code: Catcode::OTHER,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       })
       .collect();
     let val_str = value.to_attribute();
     tokens.extend(val_str.chars().map(|c| Token {
       text: arena::pin_char(c),
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }));
     tokens
   } else {

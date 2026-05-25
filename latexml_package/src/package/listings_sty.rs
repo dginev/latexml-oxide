@@ -190,7 +190,8 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
         tokens.push(Token {
           text: arena::pin_char(c),
           code: Catcode::OTHER,
-        });
+      #[cfg(feature = "token-locators")] loc: 0
+    });
       }
     } else {
       tokens.push(token);
