@@ -337,6 +337,28 @@ is dearer than it looked, and the client is the cheaper place to learn what
 accuracy is truly required. (The committed `last_token_start` primitive remains
 useful for the direct-construct case and for error locators; it is not wasted.)
 
+**Experiment 3 (2026-05-25) — assembly from digested children: no regression,
+but it does not fix the target.** Replaced the constructor's mouth-snapshot with
+a union of its *digested children's* locators (`Tbox`/`Whatsit`/`List` `.locator`,
+which survive expansion). All `52_source_map` tests pass and the structural
+golden is unchanged. But a mid-line probe — `Some \textbf{bold} and \emph{italic}
+words here.` — exposed the failure: the bold `ltx:text` got `0:3:19` and the emph
+`0:3:37`, **point locators at the column *after* each construct**, not the content
+spans (`bold` = cols 14–17, `italic` = 30–35). Cause: assembly is only as accurate
+as the **leaf** `Tbox` locators, and a leaf Tbox takes its locator from
+`get_locator()` at *build* time — which for argument text is **after `readBalanced`
+has consumed the whole `{…}`** (the eating-disorder END column). The per-token
+starts (14,15,16,17 for `bold`) existed transiently in the mouth but were
+overwritten by digest time. **Decisive conclusion: the leaf bottleneck cannot be
+solved by re-derivation or assembly — the source position must travel *with the
+token*.** This confirms the original anchoring intuition empirically. Per the
+plan we proceed to **handle-on-Token** (§3.1.1 option 2): a `u32` origin handle on
+`Token` (8→12, behind the `token-locators` compile flag) indexing a per-conversion
+side arena, set at `read_token`, so a digested run recovers its true span from its
+constituent tokens. Assembly-from-children (Experiment 3) then returns as the
+*construct*-level rule layered atop accurate leaves. (The Experiment 3 wiring was
+reverted to keep the baseline clean.)
+
 ### 2. Tier A — element-level invocation span (the MVP)
 
 The data is already flowing; the work is to make locators *ranges* (§1) and
