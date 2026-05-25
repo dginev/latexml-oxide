@@ -703,6 +703,39 @@ inline/leaf cases (the editor/linter's common path) and the rest need
 then the fallback stays *line*-accurate except for deferred floats — so the audit
 also pins `\caption`-in-float as the highest-priority correctness fix.
 
+#### 3.1.3 Root cause + fix: `get_locator` aggregation, not origin loss (2026-05-25)
+
+Methodical tracing (SECDBG instrumentation on the section revert path) overturned
+the §3.1.2 "origins lost upstream" hypothesis. On `\section{First Section}`:
+`reverted_token_locs=[1298..1310]` — the 13 title-token origin **handles survive
+revert *and* re-digest intact**; `xtitle_reverted_locs` still carries them
+(`[0×11, 1298..1310, 0×2]`, the 0s being the generated "Figure N:" tag).
+**Origins are not lost.** The bug: `xtitle.get_locator()` returns `None` because
+**`get_locator()` does not aggregate located descendants** for a composite /
+undigested structure (the title arg is `Postponed → None`), so the constructor
+assembly fell back to the post-expansion mouth locator (the eating-disorder).
+
+**Fix (landed):** `constructor::child_span` prefers an arg's own `get_locator()`,
+else — under `token-locators` — recovers the span by **scanning the per-token
+origin handles still riding its reverted tokens**. `assemble_locator` unions the
+children. Outcome: `section`/`title` → exact `0:12:10-0:12:22`; `\caption` →
+`0:26:10-0:26:17` (line 26 exact, the wrong-line bug gone). Feature-off
+byte-identical (handle scan cfg-gated; suite 1344/0).
+
+**Coverage by digestion path** (probe: a `tabular` of 4 math cells —
+`$\sqrt{x}$`, `$\frac{a}{b}$`, `$a\overline{=}0$`, `$d_t_h^2$`):
+- **Constructor / Whatsit / Primitive-via-constructor:** covered by the
+  child-assembly + handle-scan fix.
+- **Math:** the `ltx:Math` wrapper is located but as a **point** (`0:4:2`),
+  roughly the math start, not the `$…$` range; internals stay opaque (§7 A.3).
+  Could be widened to a range from the math tokens' origins — low priority.
+- **Alignment (`tabular`/`tr`/`td`): NOT located at all** — the `Alignment`
+  digested item's `get_locator()` is `None`, so `current_box_locator` is `None`
+  and `stamp_source_locator` skips every row/cell. Needs a dedicated fix: derive
+  the `Alignment`'s span from its cells (table-level), and ideally set
+  `current_box_locator` per cell in `Alignment::be_absorbed_mut` for cell-exact
+  `td` ranges. **The next focused gap.**
+
 ### 4. Perl's unsolved hard cases — concrete handling
 
 - **Eating disorder / `\item`:** solved by §1 (open→close range), not
