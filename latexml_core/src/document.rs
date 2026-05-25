@@ -970,16 +970,19 @@ impl Document {
       return;
     }
     // User-source only (§7.B): emit a navigable locator only into an editable
-    // user document (`.tex`/`.ltx`). This skips both synthetic default
-    // locators (whose source is `…/locator.rs`, from `Locator::default()`'s
-    // `file!()`) and foreign package/class files (`.sty`/`.cls`/…) — the
-    // editor must never scroll into those. Foreign/unstamped elements inherit
-    // their nearest user-source ancestor's range client-side (DOM walk-up).
-    // (MVP heuristic; a tracked user-input set would be more precise.)
+    // user document — `.tex`/`.ltx`, plus the bibliography sources `.bbl` (the
+    // BibTeX-generated, but author-editable, list of `\bibitem`s) and `.bib`
+    // (BibTeX database entries). All four are files the editor may legitimately
+    // scroll into. This skips both synthetic default locators (whose source is
+    // `…/locator.rs`, from `Locator::default()`'s `file!()`) and foreign
+    // package/class files (`.sty`/`.cls`/…) — the editor must never scroll into
+    // those. Foreign/unstamped elements inherit their nearest user-source
+    // ancestor's range client-side (DOM walk-up). (MVP heuristic; a tracked
+    // user-input set would be more precise.)
     let src = loc.get_source();
     let is_user_source = arena::with(src, |s| {
       let s = s.to_ascii_lowercase();
-      s.ends_with(".tex") || s.ends_with(".ltx")
+      s.ends_with(".tex") || s.ends_with(".ltx") || s.ends_with(".bbl") || s.ends_with(".bib")
     });
     if !is_user_source {
       return;
