@@ -117,8 +117,9 @@ deliberately relaxes scope:
   MathML. This defers §7 A.3 (the math-parser provenance gap — the single
   biggest item) until there is a *clear, tested* way to do in-equation
   mapping.
-- **Deferred until clearly needed:** column precision, the per-leaf
-  char-offset map (§6 rung 2/`data-srcmap`), and in-equation provenance.
+- **Deferred until clearly needed:** column precision (now specified — §3.1,
+  the `token-locators` compile flag), the per-leaf char-offset map (§6 rung
+  2/`data-srcmap`), and in-equation provenance.
 
 This makes the MVP bar simply *"match SyncTeX — line-level, block-element,
 math opaque"*: achievable, parity-neutral, and it sidesteps the hardest
@@ -283,6 +284,33 @@ We fix it *exactly*, not heuristically, in two layers:
    makes put-back/look-ahead irrelevant (the range is fixed at open→close,
    not the look-ahead tail).
 
+**Status & priority (2026-05-25): this is the near-term lever, and it is *not yet
+implemented*.** The Mouth's `get_locator` (`mouth.rs:147`) still derives `from`
+heuristically (`from_column = if to_column ≥ max_col { 0 } else { to_column }`) —
+the eating-disorder approximation; ranges only look right for single-line
+constructs. Implementing §1 (one `last_token_start` field, captured in
+`read_token` `:629` *after* inter-token skips; an open→close snapshot at each
+digestion frame) gives **every existing element, leaves included, an accurate,
+correctly-containing `(file;line;col)` range** — with **no `Token` change and no
+markup change**. That accurate, *containing* element range is the precondition
+for the content-window character localization in §2.1.
+
+**Experiment 1 (2026-05-25) — the capture point matters.** A first spike landed
+the `last_token_start` primitive (`mouth.rs`: captured in `read_token` at the
+token-start point) + `gullet::get_locator_from_start()`, and snapshotted the
+open locator at the **Constructor digest entry**, ranging it with the post-args
+close. Result on `\section{First Section}` (line 12): `from` moved from col 1 to
+**col 9** — the `{`, not `\section`. For a *macro-wrapped* construct the
+element-building Constructor fires *after* the command and its opening brace are
+consumed, so `last_token_start` there is the brace, not the user command.
+**Conclusion:** the open snapshot must be taken when the *user command token* is
+read — `stomach`'s invoke loop, right before `invoke_token`
+(`stomach.rs:856`) — and threaded into digest as a **stack** of open-locators
+(frames nest), not captured at the constructor itself. The `last_token_start`
+mouth primitive and `get_locator_from_start()` stand; the open-locator stack is
+the next step. (The spike's constructor wiring was reverted to keep the tree
+green; the mouth/gullet primitives remain in place.)
+
 ### 2. Tier A — element-level invocation span (the MVP)
 
 The data is already flowing; the work is to make locators *ranges* (§1) and
@@ -357,6 +385,68 @@ to *stamp* them on nodes behind the switch.
 - **Gate:** off by default; when off, §1 capture and this stamping are
   both skipped (no side cost — Cost & the switch).
 
+### 2.1 The client model: DFS-descent + content-window character localization (decided 2026-05-25)
+
+Markup is capped at LaTeXML's narrative-semantics schema: a `data-sourcepos`
+range on *existing* elements (leaves included, via §1), and **nothing heavier** —
+no per-char `data-srcmap`, no span-splitting. Character-level sync is therefore a
+**client** problem solved against accurate element ranges. Inspiration:
+[Playwright locators](https://playwright.dev/docs/locators) — *relative* (locate
+by surrounding content, not absolute offsets), *lazy* (re-evaluated against the
+current text, no precomputed map), and *strict* (resolve to exactly one position,
+else widen / fall back). Two phases, both directions:
+
+**Phase 1 — DFS-descent to the tightest containing leaf.** Ranges nest (§5: child
+⊆ parent), so from the root descend into the child whose `(line,col)` range
+contains the target, recursively, to the deepest element that still contains it.
+O(depth), no per-node scan. Requires *correct, containing* ranges — **§1 is the
+precondition** (today's heuristic can yield a range that does not contain its own
+content, landing the descent wrong).
+
+**Phase 2 — locate the character by its left/right textual windows.** Within the
+leaf, do **not** interpolate an offset (the ceiling forbids the per-char map that
+would make interpolation exact, and interpolation drifts on every `---`,
+collapsed space, and splice). Instead match *content context*: take a short
+window of text on each side of the target and find the position whose neighbours
+align — robust to source↔render character-count mismatch because it matches *what
+is there*, not *how many*.
+
+- *Reverse (preview click → editor caret), extends `bindPreviewSourceNav`:*
+  `caretPositionFromPoint` / `caretRangeFromPoint` (on the preview **shadow
+  root**) → `(textNode, offset)`; DFS gives the leaf; read its `data-sourcepos`
+  source span; align the rendered left/right windows against that **source slice**
+  to find `(line,col)`; `editor.revealPosition`.
+- *Forward (editor caret → preview), extends `scrollPreviewToSource`:* DFS by the
+  caret's `(line,col)` to the leaf; align the **source** left/right windows
+  against the leaf's rendered text to find the offset; a DOM `Range` at that
+  offset → `getClientRects()` → scroll + flash.
+
+**Obligations (the correctness surface):**
+
+1. **Containment is a hard precondition.** If the leaf range doesn't contain the
+   target, the slice excludes it and the match fails — §1 + a debug-assert (child
+   ⊆ parent; range contains its rendered text) guard this.
+2. **Source-vs-rendered alignment, not string search.** A leaf's source slice
+   contains markup (`\emph{b}` between "a" and "c") absent from the rendered text;
+   the match must align *tolerating* non-literal stretches (fuzzy / subsequence),
+   not assume equality. The main implementation subtlety.
+3. **Strictness / uniqueness (Playwright).** If a window matches more than one slice
+   position, **grow it** until unique; if still ambiguous at the slice bounds, fall
+   back to the construct-level reveal (today's behavior). Never guess.
+4. **Bidirectional consistency.** Forward and reverse must be inverses sharing one
+   alignment routine, or a glyph round-trips to the wrong place — pin as a tested
+   invariant.
+5. **Non-text leaves** (math, images, `\ref`→"Fig 3", generated content) have no
+   literal window — resolve to the leaf's range start (construct-level). Honest.
+
+*Direction asymmetry (product judgement):* glyph precision matters more in
+**reverse** (land on the char I clicked) than **forward** (the reading eye wants
+the *region*) — the forward client may deliberately flash the enclosing leaf
+rather than a single glyph.
+
+Cost: per-event one DFS (O(depth)) + one bounded alignment over a single leaf's
+slice — trivial for both per-click (reverse) and per-conversion (forward).
+
 ### 3. Tier B — token/char expansion provenance (the linting payoff)
 
 First principles: a visible output char came from either **(i)** a literal
@@ -382,6 +472,143 @@ Mechanism (out-of-band — **never widen the 8-byte `Token`**):
 - Emit a `kind=literal|expanded` marker alongside the range so the linter
   knows whether a visible-text offset maps to an editable source span
   (case i) or only to an invocation range (case ii). This *is* the #47 ask.
+
+### 3.1 Tier B′ — in-band per-token start, behind a `token-locators` compile flag (proposed, then deferred — 2026-05-25)
+
+**Status: deferred the same day (2026-05-25), superseded as the next step by
+§1 + a content-window client (§2.1).** Two reasons, both decisive: (a) the
+**markup ceiling** — we prohibit any markup beyond LaTeXML's narrative-semantics
+schema (only `data-sourcepos` on *existing* elements; no `data-srcmap`, no
+span-splitting), and per-token tightness cannot be *expressed* without exactly
+that prohibited leaf markup; (b) the cheaper **§1 + content-window** path reaches
+glyph-level sync without touching `Token` at all. This subsection is kept as the
+considered design — do not implement it until §1 + the client are built and
+*measured* insufficient. §3.1.1 records why all three engine variants are
+deferred.
+
+§3's out-of-band stack is the right home for the *expansion chain* (the
+literal-vs-expanded `kind`, the macro-origin trace — #92's payoff). But on its
+own it does **not** sharpen **column** accuracy for literal text that reaches a
+construct through a *macro argument* — the Bruce #101 sore spot: `\textbf{Hello}`
+digests with every "Hello" char box reporting the *construct's end column*
+(verified, see "Bruce's wall" below), because the chars' source columns are gone
+before digestion. §1's open→close snapshot fixes columns for text typed
+*directly* in the stream; it cannot for argument text, whose tokens are collected
+and replayed.
+
+The cleanest fix is to let each token **carry its own source start**, so the
+position rides the token through argument collection, put-back, and `Copy` with
+**no parallel bookkeeping** — the constructor then computes a Tbox/text-run's
+true span from its *contributing tokens'* starts, not from a look-ahead
+approximation. The §3 objection ("never widen the 8-byte `Token`") is a
+*shipping* invariant, not an absolute: a **compile-time feature** preserves it
+for every normal/corpus/parity/distribution build and pays the width only in an
+explicit precision build.
+
+**Decision.**
+
+- **`token-locators` Cargo feature** on `latexml_core` (re-exposed by
+  `latexml_oxide`). A *compile* flag, not runtime: it changes the size/layout of
+  a `Copy` type, which a runtime switch cannot. Off by default.
+- **Payload — start-only, 3 fields** (`TokenStart { source: SymStr, line: u32,
+  col: u32 }`, 12 bytes; `Token` 8→20). A token's **end is derived** at digestion
+  (start + consumed length, or the next significant token's start), so the
+  redundant `to_*` of a full per-token `Locator` is not stored. `NONE` sentinel =
+  `source` empty / `line == 0` — the same "no real position" test §2 already uses
+  (`loc.from_line == 0`).
+- **Single populating site:** `mouth.rs::read_token` (`:628`) stamps
+  `(source, lineno, colno)` captured **after** inter-token skips, **before**
+  consuming the token's chars (§1, exactly). **Every other construction site gets
+  `NONE`** via a `#[cfg(feature = "token-locators")] loc: TokenStart::NONE`
+  field-init — confirmed to compile both ways; a scratch mirror of `Token` gives
+  `size_of` **8 off, 20 on** (the 8-byte invariant is provably untouched when
+  off).
+- **Runtime `--source-map` still gates emission.** The feature only makes the
+  field *exist* and be *captured*; whether a `data-sourcepos` is stamped remains
+  the runtime switch. A `token-locators` binary run **without** `--source-map`
+  behaves as today (the field is filled but nothing is emitted).
+
+**Relationship to the rest of the plan.** This is the "column precision" rung the
+MVP explicitly deferred (§"MVP granularity"); it does **not** replace §3 — the
+out-of-band frame still owns the expansion chain and the `kind` marker. They
+compose: in-band start = exact *literal* columns; out-of-band frame = *provenance*
+of expanded text. Math stays opaque (§7 A.3) regardless.
+
+**Emergent property (and its caveat).** Macro *body* tokens are read at
+`\def`-time, so under the feature they carry their **definition-site** start;
+literal tokens carry their **invocation-site** start. That yields §3's
+literal-vs-expanded distinction almost for free — but it *conflates* the two
+without an explicit bit (the consumer would have to infer "is this start in the
+file I'm editing"). An explicit `kind` still belongs in the §3 frame; do not lean
+on the emergent signal for linting correctness.
+
+**Cost & risks.**
+- *Default build: zero* — not one of the ~150 literal sites is touched when the
+  feature is off; `Token` stays 8 bytes.
+- *Feature build:* `Token` 8→20 (a `Copy` type cloned/moved millions of times),
+  plus ~150 literal sites (**109** outside `token.rs` + the `T_*!` macros/statics
+  inside it) each needing the cfg field-init. Acceptable for an opt-in precision
+  build, but **a feature-on CI lane is required** so a newly-added raw
+  `Token { … }` literal can't silently break the feature build.
+- *`SymStr` source per token* keeps the existing arena model; tag resolution
+  stays the document-level `source_tag()` table (§0.1) — unchanged.
+
+**Verification (extends §7).** The §7.C column hazards are exactly the test
+surface: `^^`-decoding / line-ending offset drift (the 2010 bug), catcode /
+active-char changes, `\verb`/verbatim, the `\input` mouth-boundary tag change,
+and tokens with no user source (`NONE`). Earn confidence with: golden tests
+pinning **exact** columns on argument text (`\textbf{Hello}`, nested
+`\emph{a \textbf{b}}`, a cross-line `\textbf{…\n…}`) — a feature-gated variant of
+`52_source_map.rs`'s currently line-accurate golden; debug-asserts that every
+emitted range is non-empty, monotonic, and within its mouth bounds; and the §7.D
+corpus round-trip "literal range's source substring == visible text," which
+becomes a *column-exact* assertion under the feature.
+
+**Non-goals here.** Expansion-chain / `kind` marker (§3), in-equation columns
+(math stays opaque), and any change to the default 8-byte build.
+
+#### 3.1.1 Alternatives considered, and how each serves the two frontend directions (2026-05-25)
+
+*The impossibility that frames the choice.* `Token` is a pure `Copy` value with
+**no identity** (`token.rs:286`; `PartialEq` is by *meaning* — text+code), so a
+provenance side table **keyed by token is impossible**: once argument chars are
+collected into `Tokens(Vec<Token>)` (`tokens.rs:38`) and replayed, nothing
+distinguishes them. Any approach at the *same* token-exact precision must
+attach position to something with identity — the `Token`, or the heap container
+it rides in. Three are viable (all gated; default build unchanged):
+
+1. **In-band full start** (this section's decision) — `Token` 8→20; position in
+   the token. Simplest, zero indirection, obviously correct.
+2. **In-band provenance *handle*** — `Token` 8→**12** (one `u32` id) indexing a
+   per-conversion side arena of `TokenStart`. Same precision, half the hot-type
+   bloat, and the arena is the natural home for §3's expansion chain + `kind` —
+   so it **unifies Tier B and B′** into one mechanism. Costs an indirection per
+   read and a side arena (bounded by tokens read; freed at end).
+3. **Argument-granular container locator** — **no `Token` change**.
+   `read_balanced` (`gullet.rs:762`) sits between the open/close mouth
+   positions — the commented-out `startloc` at `:772` is the exact hook — so
+   capture open→close as a range on the (today locator-less) `Tokens`/`ArgWrap`
+   container; the constructor's Tbox inherits it. Cheapest by far.
+
+*Why all three are deferred under the markup ceiling.* Per-token precision (1/2)
+buys accuracy the permitted markup cannot carry: a bare text run can't get its own
+range without a wrapper element, which the ceiling forbids — so the finest
+*expressible* range is the existing leaf *element*, which **§1 already delivers**
+without touching `Token`. The character work then lives in the client (§2.1), not
+the markup. Hence:
+
+- **Near-term (the experiment):** §1 (accurate, containing element ranges) + §2.1
+  (DFS-descent + content-window client). No `Token` change, no markup change.
+- **Deferred (this subsection):** per-token in-band start. Revisit *only* if
+  measured — if §2.1's content-window matching cannot disambiguate within some
+  leaf's slice (e.g. pathological repetition that defeats window-growth), per-token
+  data could shrink the slice — and even then it would feed the client via the
+  out-of-band table, **not** new markup. Of the three, prefer the **handle (2)**
+  (leaner token, unifies with §3).
+
+The shipped client-fingerprint heuristic (see Status) already gives *word*-level
+reverse at zero engine cost — §2.1 must clearly beat it (window-exact, both
+directions) to earn its keep.
 
 ### 4. Perl's unsolved hard cases — concrete handling
 

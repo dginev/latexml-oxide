@@ -200,6 +200,26 @@ pub fn get_locator() -> Locator {
   }
 }
 
+/// `get_locator`'s accurate-start sibling (§1, docs/SOURCE_PROVENANCE.md): same
+/// mouthstack walk, but reads the mouth's `get_locator_from_start` (`from` = the
+/// last token's captured start) instead of the heuristic `from`. Used for the
+/// construct-START snapshot at constructor digest under `--source-map`.
+pub fn get_locator_from_start() -> Locator {
+  let gullet = gullet!();
+  let mut runtime_opt = gullet.runtime.as_ref();
+  let mut mouthstack_iter = gullet.mouthstack.iter();
+  while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+    runtime_opt = mouthstack_iter.next();
+  }
+  if let Some(runtime) = runtime_opt {
+    runtime.mouth.get_locator_from_start()
+  } else if let Some(runtime) = gullet.mouthstack.front() {
+    runtime.mouth.get_locator_from_start()
+  } else {
+    Locator::default()
+  }
+}
+
 /// Comment-oriented location string, based on `get_locator`
 pub fn get_location() -> String {
   let loc = get_locator();

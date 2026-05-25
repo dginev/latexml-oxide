@@ -76,6 +76,13 @@ pub struct Mouth {
   nchars:                 usize,
   colno:                  usize,
   lineno:                 usize,
+  /// Source start `(lineno, colno)` of the most recently *begun* token,
+  /// captured in `read_token` after inter-token skips and before the token's
+  /// first char is consumed. Foundation for §1 accurate construct-start ranges
+  /// (docs/SOURCE_PROVENANCE.md). Semantically inert until consumed by a ranged
+  /// locator; written unconditionally — two writes, below the hot-path noise
+  /// floor and cheaper than a per-read flag check.
+  last_token_start:       (usize, usize),
   foodtype:               FoodType,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
@@ -116,6 +123,7 @@ impl Default for Mouth {
       skipping_spaces:        false,
       lineno:                 0,
       colno:                  0,
+      last_token_start:       (0, 0),
       chars:                  VecDeque::new(),
       nchars:                 0,
       source:                 String::from("Anonymous String"),
@@ -751,6 +759,11 @@ impl Mouth {
         self.skipping_spaces = false;
       }
       // ==== Extract next token from line.
+      // §1 (docs/SOURCE_PROVENANCE.md): record the token's source start now —
+      // after all inter-token skips (line fetch, leading / skipping spaces) and
+      // before `get_next_char` advances past its first char. `colno` is 0-indexed
+      // here; the +1 to 1-indexed columns happens in `get_locator`.
+      self.last_token_start = (self.lineno, self.colno);
       if let Some((ch, cc)) = self.get_next_char() {
         if let Some(token) = Mouth::dispatch_char(self, ch, cc) {
           return Some(token);
@@ -990,6 +1003,25 @@ impl Mouth {
   }
 
   pub fn at_eof(&self) -> bool { self.at_eof }
+
+  /// §1 accurate-start locator (docs/SOURCE_PROVENANCE.md): `from` = the captured
+  /// start of the most recently *begun* token (`last_token_start`), `to` = the
+  /// mouth's current position. Unlike `get_locator`, whose `from` is the
+  /// eating-disorder heuristic (line start vs current col), this `from` is exact
+  /// for the token currently being processed — the basis for accurate
+  /// construct-start ranges under `--source-map`. `lineno` is already 1-indexed
+  /// (it counts from 1 after the first line fetch); `colno` is 0-indexed, +1 to
+  /// 1-indexed columns, matching `get_locator`.
+  pub fn get_locator_from_start(&self) -> Locator {
+    let (from_line, from_col0) = self.last_token_start;
+    Locator::new(
+      &self.source,
+      from_line as u32,
+      (from_col0 + 1) as u32,
+      self.lineno as u32,
+      (self.colno + 1) as u32,
+    )
+  }
 
   pub fn get_location(&self) -> String {
     let loc = self.get_locator().unwrap_or_default();
