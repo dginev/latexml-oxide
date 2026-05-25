@@ -726,6 +726,7 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 
@@ -733,6 +734,7 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::COMMENT,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 

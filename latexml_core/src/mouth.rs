@@ -765,7 +765,23 @@ impl Mouth {
       // here; the +1 to 1-indexed columns happens in `get_locator`.
       self.last_token_start = (self.lineno, self.colno);
       if let Some((ch, cc)) = self.get_next_char() {
+        #[cfg(not(feature = "token-locators"))]
         if let Some(token) = Mouth::dispatch_char(self, ch, cc) {
+          return Some(token);
+        } // Else, repeat till we get something or run out.
+        // token-locators: stamp the token with an origin handle into the side
+        // arena, using `last_token_start` (the token's first char — captured
+        // above, before `dispatch_char` reads the rest, e.g. a CS name). This is
+        // what survives expansion to digestion (Experiments 1–3 showed the mouth
+        // position at digest time cannot recover it). See SOURCE_PROVENANCE §3.1.1.
+        #[cfg(feature = "token-locators")]
+        if let Some(mut token) = Mouth::dispatch_char(self, ch, cc) {
+          let (line, col0) = self.last_token_start;
+          token.loc = crate::token::push_token_origin(
+            crate::common::arena::pin(&self.source),
+            line as u32,
+            (col0 + 1) as u32,
+          );
           return Some(token);
         } // Else, repeat till we get something or run out.
       }

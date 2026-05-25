@@ -961,6 +961,52 @@ impl From<&str> for Token {
   }
 }
 
+// ── Token-origin side arena (token-locators feature) ───────────────────────
+// Per-conversion store mapping a Token's `loc` handle (1-based; 0 = none) to its
+// captured source start. Tokens carry only the u32 handle (Token stays 12 bytes);
+// this holds the (source, line, col). Appended in `read_token`, read by the
+// digestion consumer to give a text run its true span. Cleared per conversion.
+// See docs/SOURCE_PROVENANCE.md §3.1.1.
+#[cfg(feature = "token-locators")]
+#[derive(Clone, Copy, Debug)]
+pub struct TokenStart {
+  pub source: SymStr,
+  pub line:   u32,
+  pub col:    u32,
+}
+
+#[cfg(feature = "token-locators")]
+thread_local! {
+  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> = std::cell::RefCell::new(Vec::new());
+}
+
+/// Append a token's source start, returning its 1-based handle (`0` is reserved
+/// for "no origin"). Only called on the source-map precision path.
+#[cfg(feature = "token-locators")]
+pub fn push_token_origin(source: SymStr, line: u32, col: u32) -> u32 {
+  TOKEN_ORIGINS.with(|o| {
+    let mut v = o.borrow_mut();
+    v.push(TokenStart { source, line, col });
+    v.len() as u32 // index + 1
+  })
+}
+
+/// Resolve a token `loc` handle to its origin (`None` for the `0` sentinel or an
+/// out-of-range handle).
+#[cfg(feature = "token-locators")]
+pub fn get_token_origin(handle: u32) -> Option<TokenStart> {
+  if handle == 0 {
+    return None;
+  }
+  TOKEN_ORIGINS.with(|o| o.borrow().get((handle - 1) as usize).copied())
+}
+
+/// Reset the arena at the start of a conversion (handles are per-conversion).
+#[cfg(feature = "token-locators")]
+pub fn clear_token_origins() {
+  TOKEN_ORIGINS.with(|o| o.borrow_mut().clear());
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -982,6 +1028,32 @@ mod tests {
       std::mem::size_of::<Token>(),
       12,
       "token-locators Token is 8 + a u32 origin handle"
+    );
+  }
+
+  /// Per-token origin capture (token-locators): each char token read from a
+  /// mouth carries a handle resolving to its exact (line, col). This is the leaf
+  /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
+  /// (Experiment 3) could not provide — the position now travels *with the
+  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
+  #[cfg(feature = "token-locators")]
+  #[test]
+  fn token_origin_capture() {
+    super::clear_token_origins();
+    // "Hello" — five letters at 1-indexed columns 1..=5 on line 1.
+    let toks = crate::mouth::tokenize("Hello");
+    let got: Vec<(u32, u32)> = toks
+      .unlist_ref()
+      .iter()
+      .map(|t| {
+        let o = super::get_token_origin(t.loc).expect("token carries an origin handle");
+        (o.line, o.col)
+      })
+      .collect();
+    assert_eq!(
+      got,
+      vec![(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)],
+      "each letter's captured (line, col) must be exact"
     );
   }
 

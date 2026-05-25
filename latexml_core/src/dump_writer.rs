@@ -881,18 +881,22 @@ mod tests {
       Token {
         text: arena::pin("\\end"),
         code: Catcode::CS,
-      },
+      #[cfg(feature = "token-locators")] loc: 0
+    },
       Token {
         text: arena::pin("{"),
         code: Catcode::BEGIN,
+        #[cfg(feature = "token-locators")] loc: 0,
       },
       Token {
         text: arena::pin("verbatim"),
         code: Catcode::LETTER,
-      },
+      #[cfg(feature = "token-locators")] loc: 0
+    },
       Token {
         text: arena::pin("}"),
         code: Catcode::END,
+        #[cfg(feature = "token-locators")] loc: 0,
       },
     ]);
     let ps = Parameters::new(vec![raw_param("Until", "Until:\\end{verbatim}", vec![
@@ -939,10 +943,12 @@ mod tests {
     let t1 = Tokens::new(vec![Token {
       text: arena::pin("a"),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }]);
     let t2 = Tokens::new(vec![Token {
       text: arena::pin("b"),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }]);
     let ps = Parameters::new(vec![raw_param("Match", "Match:ab", vec![t1, t2])]);
     let s = serialize_parameters_v3(&ps);
