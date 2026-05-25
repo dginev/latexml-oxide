@@ -13,6 +13,7 @@ use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
 };
+use crate::common::locator::Locator;
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::stomach::digest_next_body;
@@ -20,6 +21,39 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested};
+
+/// A `--source-map` construct's source extent: the union (first `from` → last
+/// `to`) of its children's spans, or `None` if none carries a position (the
+/// caller then falls back to the gullet locator). docs/SOURCE_PROVENANCE.md §3.1.
+fn assemble_locator(args: &[Option<Digested>]) -> Option<Locator> {
+  args
+    .iter()
+    .flatten()
+    .filter_map(child_span)
+    .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+}
+
+/// A child's located span: its own `get_locator()` if set, else — under
+/// `token-locators` — recovered from the per-token origin handles still riding
+/// its reverted tokens. (Origins survive revert/re-digest; `get_locator` merely
+/// fails to aggregate undigested/composite content — §3.1.3.) Off the feature,
+/// only `get_locator` is consulted (byte-identical behavior).
+fn child_span(d: &Digested) -> Option<Locator> {
+  if let Some(l) = d.get_locator().filter(|l| l.from_line != 0) {
+    return Some(l);
+  }
+  #[cfg(feature = "token-locators")]
+  return d
+    .revert()
+    .ok()?
+    .unlist_ref()
+    .iter()
+    .filter_map(|t| crate::token::get_token_origin(t.loc))
+    .map(|o| crate::common::arena::with(o.source, |s| Locator::new(s, o.line, o.col, o.line, o.col)))
+    .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a));
+  #[cfg(not(feature = "token-locators"))]
+  None
+}
 
 /// configuration for creating a new Constructor
 #[derive(Clone)]
@@ -302,27 +336,9 @@ impl Definition for Constructor {
     // `locator.rs`) and the source-map user-source filter drops them
     // (~53/265 → 128/… `article.tex` elements stamped once captured).
     if crate::state::source_map_enabled() {
-      // Assemble the construct's range from its digested children's locators
-      // (docs/SOURCE_PROVENANCE.md §3.1.1). The children — Tbox/List built from
-      // tokens that carry their origin (token-locators) — now hold accurate
-      // spans, so unioning them (first child's `from` → last child's `to`) gives
-      // the construct's true source extent, instead of the mouth's post-expansion
-      // position (the `\textbf{…}` → end-column eating-disorder, Experiment 2).
-      // Falls back to the mouth locator when no child carries a real position.
-      fn assemble_locator(args: &[Option<Digested>]) -> Option<crate::common::locator::Locator> {
-        let mut acc: Option<crate::common::locator::Locator> = None;
-        for arg in args.iter().flatten() {
-          let loc = match arg.get_locator() {
-            Some(l) if l.from_line != 0 => l,
-            _ => continue,
-          };
-          acc = match acc {
-            None => Some(loc),
-            Some(a) => crate::common::locator::Locator::new_range(a, loc).or(Some(a)),
-          };
-        }
-        acc
-      }
+      // --source-map: the construct's source extent is the union of its
+      // children's spans (fixes the post-expansion eating-disorder, Experiment 2),
+      // falling back to the gullet locator when no child carries a position.
       whatsit.locator =
         assemble_locator(&whatsit.args).or_else(|| Some(crate::gullet::get_locator()));
     }
