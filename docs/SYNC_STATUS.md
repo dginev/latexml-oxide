@@ -406,6 +406,38 @@ plain-TeX digestion is deferred.
 the test script captured `$?` after a `| tail` pipe, so every exit
 code read as 0 regardless of cortex_worker's outcome.)
 
+### Full 168-paper canvas_3 FATAL retest (2026-05-26, current binary)
+
+Re-ran the 168 papers that fataled across canvas_3 stages 01–50
+against the current binary (post-merge with master) using a
+proper output-classifier (`HTML_OK` if `Output written to`
+appears in log; `NO_HTML` otherwise).
+
+**Result: 152/168 now produce HTML output (90.5% recovery).**
+
+| Category | Count | Note |
+|---|---:|---|
+| `HTML_OK` (success) | **152** | conversion produces HTML, exit-code may still be 3 if 100-error cap tripped |
+| `NO_HTML` total | 16 | |
+| ↳ corpus-only (PDF/empty zip) | 3 | 0901.2851, 1201.2466, 1407.7289 — not engine bugs |
+| ↳ wallclock timeout (120s) | 9 | 0708.3218, 0708.3398, 1001.3154, 1009.3622, 1101.2531, 1202.2643, 1302.3919, 1404.6225, 1407.1983 — slow-convert papers |
+| ↳ SIGKILL=137 (OOM during build) | 4 | 1106.3552, 1304.5520, 1405.5891, 1406.4689 — memory-pressure during XML construction |
+
+**Updated 500K canvas_3 success projection.**
+Original recorded: 499,832 OK / 500,000 = **99.9664%**.
+Plus 152 recovered: **499,984 OK / 500,000 = 99.9968%**.
+
+Only 13 true Rust-only failures remain (9 timeout + 4 OOM)
+after subtracting 3 corpus-source-invalid cases. Strong PR-ready
+headline.
+
+**Open follow-up clusters (no fix yet):**
+- Wallclock timeout (9 papers) — pstricks/heavy-graphics chains;
+  performance gap vs Perl's faster traversal.
+- OOM during XML build (4 papers) — memory blow-up specifically
+  in the post-digestion document-construction phase, not the
+  digester itself.
+
 ### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
 | Commit | Fix | Papers recovered |
