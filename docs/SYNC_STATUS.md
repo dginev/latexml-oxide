@@ -214,11 +214,13 @@ Canvas is parallelised at 16–32 workers via `xargs -P` per stage of
 | | Value |
 |---|---:|
 | **Stages closed** | **50 of 50** (first 500K batch complete) |
-| **Total papers** | **500,000** processed, **499,832 OK**, **99.9664%** |
+| **Total papers** | **500,000** processed |
+| **Recorded result** | 499,832 OK = **99.9664%** (canvas time, 2026-05-15..22) |
+| **Post-fix projection** | **499,984 / 500,000 = 99.9968%** (per the 2026-05-26 retest of all 168 historical fatals: 152 now produce HTML output; only 16 NO_HTML — 3 corpus-invalid, 8 SHARED-FAILURE timeouts, 4 OOM, 1 Rust-only timeout) |
 | **Best stage** | stage_49 at **99.99% (9999/10000)** |
-| Failure distribution | 126 FATAL_3, 16 OOM, 15 TIMEOUT, 4 FATAL_139, 3 FATAL_101, 3 FATAL_1, 1 FATAL_134 |
-| Tests | **1,334 / 0 / 0** |
-| Branch | `large-scale-testing-round-3`, 920+ commits ahead of `origin/master` |
+| Failure distribution (recorded) | 126 FATAL_3, 16 OOM, 15 TIMEOUT, 4 FATAL_139, 3 FATAL_101, 3 FATAL_1, 1 FATAL_134 |
+| Tests | **1,344 / 0 / 0** (post-merge with master) |
+| Branch | `large-scale-testing-round-3`, 960+ commits ahead of `origin/master` (post 2026-05-26 merge) |
 | Second 500K rsync | 903,716 zips on disk (~403K of next 500K complete) |
 
 **Cumulative-fix retest of all 168 failures (2026-05-23 update post
