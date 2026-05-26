@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/token.rs`."><title>token.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (423e3d252 2026-05-24)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>token.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/token.rs`."><title>token.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (31a9463c6 2026-05-25)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>token.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::borrow::Cow;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>std::fmt;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::fmt::Display;
@@ -973,239 +973,269 @@
 <a href=#973 id=973 data-nosnippet>973</a>  <span class="kw">pub </span>source: SymStr,
 <a href=#974 id=974 data-nosnippet>974</a>  <span class="kw">pub </span>line:   u32,
 <a href=#975 id=975 data-nosnippet>975</a>  <span class="kw">pub </span>col:    u32,
-<a href=#976 id=976 data-nosnippet>976</a>}
-<a href=#977 id=977 data-nosnippet>977</a>
-<a href=#978 id=978 data-nosnippet>978</a><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#979 id=979 data-nosnippet>979</a></span><span class="macro">thread_local!</span> {
-<a href=#980 id=980 data-nosnippet>980</a>  <span class="kw">static </span>TOKEN_ORIGINS: std::cell::RefCell&lt;Vec&lt;TokenStart&gt;&gt; = <span class="kw">const </span>{ std::cell::RefCell::new(Vec::new()) };
-<a href=#981 id=981 data-nosnippet>981</a>}
-<a href=#982 id=982 data-nosnippet>982</a>
-<a href=#983 id=983 data-nosnippet>983</a><span class="doccomment">/// Append a token's source start, returning its 1-based handle (`0` is reserved
-<a href=#984 id=984 data-nosnippet>984</a>/// for "no origin"). Only called on the source-map precision path.
-<a href=#985 id=985 data-nosnippet>985</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#986 id=986 data-nosnippet>986</a></span><span class="kw">pub fn </span>push_token_origin(source: SymStr, line: u32, col: u32) -&gt; u32 {
-<a href=#987 id=987 data-nosnippet>987</a>  TOKEN_ORIGINS.with(|o| {
-<a href=#988 id=988 data-nosnippet>988</a>    <span class="kw">let </span><span class="kw-2">mut </span>v = o.borrow_mut();
-<a href=#989 id=989 data-nosnippet>989</a>    v.push(TokenStart { source, line, col });
-<a href=#990 id=990 data-nosnippet>990</a>    v.len() <span class="kw">as </span>u32 <span class="comment">// index + 1
-<a href=#991 id=991 data-nosnippet>991</a>  </span>})
-<a href=#992 id=992 data-nosnippet>992</a>}
-<a href=#993 id=993 data-nosnippet>993</a>
-<a href=#994 id=994 data-nosnippet>994</a><span class="doccomment">/// Resolve a token `loc` handle to its origin (`None` for the `0` sentinel or an
-<a href=#995 id=995 data-nosnippet>995</a>/// out-of-range handle).
-<a href=#996 id=996 data-nosnippet>996</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#997 id=997 data-nosnippet>997</a></span><span class="kw">pub fn </span>get_token_origin(handle: u32) -&gt; <span class="prelude-ty">Option</span>&lt;TokenStart&gt; {
-<a href=#998 id=998 data-nosnippet>998</a>  <span class="kw">if </span>handle == <span class="number">0 </span>{
-<a href=#999 id=999 data-nosnippet>999</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#1000 id=1000 data-nosnippet>1000</a>  }
-<a href=#1001 id=1001 data-nosnippet>1001</a>  TOKEN_ORIGINS.with(|o| o.borrow().get((handle - <span class="number">1</span>) <span class="kw">as </span>usize).copied())
-<a href=#1002 id=1002 data-nosnippet>1002</a>}
-<a href=#1003 id=1003 data-nosnippet>1003</a>
-<a href=#1004 id=1004 data-nosnippet>1004</a><span class="doccomment">/// Reset the arena at the start of a conversion (handles are per-conversion).
-<a href=#1005 id=1005 data-nosnippet>1005</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#1006 id=1006 data-nosnippet>1006</a></span><span class="kw">pub fn </span>clear_token_origins() {
-<a href=#1007 id=1007 data-nosnippet>1007</a>  TOKEN_ORIGINS.with(|o| o.borrow_mut().clear());
-<a href=#1008 id=1008 data-nosnippet>1008</a>}
-<a href=#1009 id=1009 data-nosnippet>1009</a>
-<a href=#1010 id=1010 data-nosnippet>1010</a><span class="attr">#[cfg(test)]
-<a href=#1011 id=1011 data-nosnippet>1011</a></span><span class="kw">mod </span>tests {
-<a href=#1012 id=1012 data-nosnippet>1012</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#1013 id=1013 data-nosnippet>1013</a>
-<a href=#1014 id=1014 data-nosnippet>1014</a>  <span class="doccomment">/// `Token` size invariant (docs/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
-<a href=#1015 id=1015 data-nosnippet>1015</a>  /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
-<a href=#1016 id=1016 data-nosnippet>1016</a>  /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
-<a href=#1017 id=1017 data-nosnippet>1017</a>  /// distribution builds against an accidental widening.
-<a href=#1018 id=1018 data-nosnippet>1018</a>  </span><span class="attr">#[test]
-<a href=#1019 id=1019 data-nosnippet>1019</a>  </span><span class="kw">fn </span>token_size_invariant() {
-<a href=#1020 id=1020 data-nosnippet>1020</a>    <span class="attr">#[cfg(not(feature = <span class="string">"token-locators"</span>))]
-<a href=#1021 id=1021 data-nosnippet>1021</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#1022 id=1022 data-nosnippet>1022</a>      std::mem::size_of::&lt;Token&gt;(),
-<a href=#1023 id=1023 data-nosnippet>1023</a>      <span class="number">8</span>,
-<a href=#1024 id=1024 data-nosnippet>1024</a>      <span class="string">"default Token must stay 8 bytes (SymStr + Catcode)"
-<a href=#1025 id=1025 data-nosnippet>1025</a>    </span>);
-<a href=#1026 id=1026 data-nosnippet>1026</a>    <span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#1027 id=1027 data-nosnippet>1027</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#1028 id=1028 data-nosnippet>1028</a>      std::mem::size_of::&lt;Token&gt;(),
-<a href=#1029 id=1029 data-nosnippet>1029</a>      <span class="number">12</span>,
-<a href=#1030 id=1030 data-nosnippet>1030</a>      <span class="string">"token-locators Token is 8 + a u32 origin handle"
-<a href=#1031 id=1031 data-nosnippet>1031</a>    </span>);
-<a href=#1032 id=1032 data-nosnippet>1032</a>  }
+<a href=#976 id=976 data-nosnippet>976</a>  <span class="doccomment">/// `true` when this origin was *inherited* from a macro invocation rather
+<a href=#977 id=977 data-nosnippet>977</a>  /// than read directly from a mouth — i.e. the token is synthesized
+<a href=#978 id=978 data-nosnippet>978</a>  /// expansion output (`\today → "May 25, 2026"`) attributed to its `\today`
+<a href=#979 id=979 data-nosnippet>979</a>  /// call site. The content-range recovery in `constructor::child_span`
+<a href=#980 id=980 data-nosnippet>980</a>  /// prefers genuine (read-from-source) origins and only falls back to
+<a href=#981 id=981 data-nosnippet>981</a>  /// inherited ones, so a `\section{Intro}`'s structural body literals — now
+<a href=#982 id=982 data-nosnippet>982</a>  /// carrying an inherited origin — never widen the title's content-exact
+<a href=#983 id=983 data-nosnippet>983</a>  /// span. See docs/SOURCE_PROVENANCE.md §3.1.3.
+<a href=#984 id=984 data-nosnippet>984</a>  </span><span class="kw">pub </span>inherited: bool,
+<a href=#985 id=985 data-nosnippet>985</a>}
+<a href=#986 id=986 data-nosnippet>986</a>
+<a href=#987 id=987 data-nosnippet>987</a><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#988 id=988 data-nosnippet>988</a></span><span class="macro">thread_local!</span> {
+<a href=#989 id=989 data-nosnippet>989</a>  <span class="kw">static </span>TOKEN_ORIGINS: std::cell::RefCell&lt;Vec&lt;TokenStart&gt;&gt; = <span class="kw">const </span>{ std::cell::RefCell::new(Vec::new()) };
+<a href=#990 id=990 data-nosnippet>990</a>}
+<a href=#991 id=991 data-nosnippet>991</a>
+<a href=#992 id=992 data-nosnippet>992</a><span class="doccomment">/// Append a token's source start, returning its 1-based handle (`0` is reserved
+<a href=#993 id=993 data-nosnippet>993</a>/// for "no origin"). Only called on the source-map precision path.
+<a href=#994 id=994 data-nosnippet>994</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#995 id=995 data-nosnippet>995</a></span><span class="kw">pub fn </span>push_token_origin(source: SymStr, line: u32, col: u32) -&gt; u32 {
+<a href=#996 id=996 data-nosnippet>996</a>  TOKEN_ORIGINS.with(|o| {
+<a href=#997 id=997 data-nosnippet>997</a>    <span class="kw">let </span><span class="kw-2">mut </span>v = o.borrow_mut();
+<a href=#998 id=998 data-nosnippet>998</a>    v.push(TokenStart { source, line, col, inherited: <span class="bool-val">false </span>});
+<a href=#999 id=999 data-nosnippet>999</a>    v.len() <span class="kw">as </span>u32 <span class="comment">// index + 1
+<a href=#1000 id=1000 data-nosnippet>1000</a>  </span>})
+<a href=#1001 id=1001 data-nosnippet>1001</a>}
+<a href=#1002 id=1002 data-nosnippet>1002</a>
+<a href=#1003 id=1003 data-nosnippet>1003</a><span class="doccomment">/// Derive an *inherited* origin from an existing handle: look up the
+<a href=#1004 id=1004 data-nosnippet>1004</a>/// invocation token's start, push a copy flagged `inherited`, and return its
+<a href=#1005 id=1005 data-nosnippet>1005</a>/// new handle (`0` if `handle` is the no-origin sentinel or out of range). One
+<a href=#1006 id=1006 data-nosnippet>1006</a>/// call per macro expansion; the returned handle is shared by every synthesized
+<a href=#1007 id=1007 data-nosnippet>1007</a>/// result token. See `push_token_origin` and docs/SOURCE_PROVENANCE.md §3.1.3.
+<a href=#1008 id=1008 data-nosnippet>1008</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1009 id=1009 data-nosnippet>1009</a></span><span class="kw">pub fn </span>push_inherited_origin(handle: u32) -&gt; u32 {
+<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="kw">if </span>handle == <span class="number">0 </span>{
+<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">return </span><span class="number">0</span>;
+<a href=#1012 id=1012 data-nosnippet>1012</a>  }
+<a href=#1013 id=1013 data-nosnippet>1013</a>  TOKEN_ORIGINS.with(|o| {
+<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="kw">let </span><span class="kw-2">mut </span>v = o.borrow_mut();
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>start) = v.get((handle - <span class="number">1</span>) <span class="kw">as </span>usize).copied() <span class="kw">else </span>{
+<a href=#1016 id=1016 data-nosnippet>1016</a>      <span class="kw">return </span><span class="number">0</span>;
+<a href=#1017 id=1017 data-nosnippet>1017</a>    };
+<a href=#1018 id=1018 data-nosnippet>1018</a>    start.inherited = <span class="bool-val">true</span>;
+<a href=#1019 id=1019 data-nosnippet>1019</a>    v.push(start);
+<a href=#1020 id=1020 data-nosnippet>1020</a>    v.len() <span class="kw">as </span>u32
+<a href=#1021 id=1021 data-nosnippet>1021</a>  })
+<a href=#1022 id=1022 data-nosnippet>1022</a>}
+<a href=#1023 id=1023 data-nosnippet>1023</a>
+<a href=#1024 id=1024 data-nosnippet>1024</a><span class="doccomment">/// Resolve a token `loc` handle to its origin (`None` for the `0` sentinel or an
+<a href=#1025 id=1025 data-nosnippet>1025</a>/// out-of-range handle).
+<a href=#1026 id=1026 data-nosnippet>1026</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1027 id=1027 data-nosnippet>1027</a></span><span class="kw">pub fn </span>get_token_origin(handle: u32) -&gt; <span class="prelude-ty">Option</span>&lt;TokenStart&gt; {
+<a href=#1028 id=1028 data-nosnippet>1028</a>  <span class="kw">if </span>handle == <span class="number">0 </span>{
+<a href=#1029 id=1029 data-nosnippet>1029</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1030 id=1030 data-nosnippet>1030</a>  }
+<a href=#1031 id=1031 data-nosnippet>1031</a>  TOKEN_ORIGINS.with(|o| o.borrow().get((handle - <span class="number">1</span>) <span class="kw">as </span>usize).copied())
+<a href=#1032 id=1032 data-nosnippet>1032</a>}
 <a href=#1033 id=1033 data-nosnippet>1033</a>
-<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="doccomment">/// Per-token origin capture (token-locators): each char token read from a
-<a href=#1035 id=1035 data-nosnippet>1035</a>  /// mouth carries a handle resolving to its exact (line, col). This is the leaf
-<a href=#1036 id=1036 data-nosnippet>1036</a>  /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
-<a href=#1037 id=1037 data-nosnippet>1037</a>  /// (Experiment 3) could not provide — the position now travels *with the
-<a href=#1038 id=1038 data-nosnippet>1038</a>  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
-<a href=#1039 id=1039 data-nosnippet>1039</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#1040 id=1040 data-nosnippet>1040</a>  #[test]
-<a href=#1041 id=1041 data-nosnippet>1041</a>  </span><span class="kw">fn </span>token_origin_capture() {
-<a href=#1042 id=1042 data-nosnippet>1042</a>    <span class="kw">super</span>::clear_token_origins();
-<a href=#1043 id=1043 data-nosnippet>1043</a>    <span class="comment">// "Hello" — five letters at 1-indexed columns 1..=5 on line 1.
-<a href=#1044 id=1044 data-nosnippet>1044</a>    </span><span class="kw">let </span>toks = <span class="kw">crate</span>::mouth::tokenize(<span class="string">"Hello"</span>);
-<a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="kw">let </span>got: Vec&lt;(u32, u32)&gt; = toks
-<a href=#1046 id=1046 data-nosnippet>1046</a>      .unlist_ref()
-<a href=#1047 id=1047 data-nosnippet>1047</a>      .iter()
-<a href=#1048 id=1048 data-nosnippet>1048</a>      .map(|t| {
-<a href=#1049 id=1049 data-nosnippet>1049</a>        <span class="kw">let </span>o = <span class="kw">super</span>::get_token_origin(t.loc).expect(<span class="string">"token carries an origin handle"</span>);
-<a href=#1050 id=1050 data-nosnippet>1050</a>        (o.line, o.col)
-<a href=#1051 id=1051 data-nosnippet>1051</a>      })
-<a href=#1052 id=1052 data-nosnippet>1052</a>      .collect();
-<a href=#1053 id=1053 data-nosnippet>1053</a>    <span class="macro">assert_eq!</span>(
-<a href=#1054 id=1054 data-nosnippet>1054</a>      got,
-<a href=#1055 id=1055 data-nosnippet>1055</a>      <span class="macro">vec!</span>[(<span class="number">1</span>, <span class="number">1</span>), (<span class="number">1</span>, <span class="number">2</span>), (<span class="number">1</span>, <span class="number">3</span>), (<span class="number">1</span>, <span class="number">4</span>), (<span class="number">1</span>, <span class="number">5</span>)],
-<a href=#1056 id=1056 data-nosnippet>1056</a>      <span class="string">"each letter's captured (line, col) must be exact"
-<a href=#1057 id=1057 data-nosnippet>1057</a>    </span>);
-<a href=#1058 id=1058 data-nosnippet>1058</a>  }
-<a href=#1059 id=1059 data-nosnippet>1059</a>
-<a href=#1060 id=1060 data-nosnippet>1060</a>  <span class="attr">#[test]
-<a href=#1061 id=1061 data-nosnippet>1061</a>  </span><span class="kw">fn </span>catcode_name_covers_all_variants() {
-<a href=#1062 id=1062 data-nosnippet>1062</a>    <span class="comment">// Ensure every Catcode variant produces a non-empty name.
-<a href=#1063 id=1063 data-nosnippet>1063</a>    </span><span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1064 id=1064 data-nosnippet>1064</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1065 id=1065 data-nosnippet>1065</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
-<a href=#1066 id=1066 data-nosnippet>1066</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
-<a href=#1067 id=1067 data-nosnippet>1067</a>    ] {
-<a href=#1068 id=1068 data-nosnippet>1068</a>      <span class="macro">assert!</span>(!cc.name().is_empty(), <span class="string">"{cc:?}.name() is empty"</span>);
-<a href=#1069 id=1069 data-nosnippet>1069</a>    }
-<a href=#1070 id=1070 data-nosnippet>1070</a>  }
-<a href=#1071 id=1071 data-nosnippet>1071</a>
-<a href=#1072 id=1072 data-nosnippet>1072</a>  <span class="attr">#[test]
-<a href=#1073 id=1073 data-nosnippet>1073</a>  </span><span class="kw">fn </span>catcode_name_specific_values() {
-<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="macro">assert_eq!</span>(Catcode::ESCAPE.name(), <span class="string">"Escape"</span>);
-<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="macro">assert_eq!</span>(Catcode::BEGIN.name(), <span class="string">"Begin"</span>);
-<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="macro">assert_eq!</span>(Catcode::CS.name(), <span class="string">"ControlSequence"</span>);
-<a href=#1077 id=1077 data-nosnippet>1077</a>    <span class="macro">assert_eq!</span>(Catcode::LETTER.name(), <span class="string">"Letter"</span>);
-<a href=#1078 id=1078 data-nosnippet>1078</a>  }
-<a href=#1079 id=1079 data-nosnippet>1079</a>
-<a href=#1080 id=1080 data-nosnippet>1080</a>  <span class="attr">#[test]
-<a href=#1081 id=1081 data-nosnippet>1081</a>  </span><span class="kw">fn </span>catcode_short_name_starts_with_t_prefix() {
-<a href=#1082 id=1082 data-nosnippet>1082</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1083 id=1083 data-nosnippet>1083</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1084 id=1084 data-nosnippet>1084</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
-<a href=#1085 id=1085 data-nosnippet>1085</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
-<a href=#1086 id=1086 data-nosnippet>1086</a>    ] {
-<a href=#1087 id=1087 data-nosnippet>1087</a>      <span class="macro">assert!</span>(
-<a href=#1088 id=1088 data-nosnippet>1088</a>        cc.short_name().starts_with(<span class="string">"T_"</span>),
-<a href=#1089 id=1089 data-nosnippet>1089</a>        <span class="string">"{cc:?}.short_name() = {} lacks T_ prefix"</span>,
-<a href=#1090 id=1090 data-nosnippet>1090</a>        cc.short_name()
-<a href=#1091 id=1091 data-nosnippet>1091</a>      );
-<a href=#1092 id=1092 data-nosnippet>1092</a>    }
-<a href=#1093 id=1093 data-nosnippet>1093</a>  }
-<a href=#1094 id=1094 data-nosnippet>1094</a>
-<a href=#1095 id=1095 data-nosnippet>1095</a>  <span class="attr">#[test]
-<a href=#1096 id=1096 data-nosnippet>1096</a>  </span><span class="kw">fn </span>catcode_meaning_mostly_nonempty() {
-<a href=#1097 id=1097 data-nosnippet>1097</a>    <span class="comment">// Most variants have a TeX-meaning description.
-<a href=#1098 id=1098 data-nosnippet>1098</a>    </span><span class="macro">assert!</span>(!Catcode::ESCAPE.meaning().is_empty());
-<a href=#1099 id=1099 data-nosnippet>1099</a>    <span class="macro">assert!</span>(!Catcode::LETTER.meaning().is_empty());
-<a href=#1100 id=1100 data-nosnippet>1100</a>    <span class="macro">assert!</span>(!Catcode::OTHER.meaning().is_empty());
-<a href=#1101 id=1101 data-nosnippet>1101</a>    <span class="comment">// A few (e.g. CS/MARKER/ARG) fall through to "".
-<a href=#1102 id=1102 data-nosnippet>1102</a>    </span><span class="macro">assert_eq!</span>(Catcode::CS.meaning(), <span class="string">""</span>);
-<a href=#1103 id=1103 data-nosnippet>1103</a>  }
-<a href=#1104 id=1104 data-nosnippet>1104</a>
-<a href=#1105 id=1105 data-nosnippet>1105</a>  <span class="attr">#[test]
-<a href=#1106 id=1106 data-nosnippet>1106</a>  </span><span class="kw">fn </span>is_primitive_checks() {
-<a href=#1107 id=1107 data-nosnippet>1107</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1108 id=1108 data-nosnippet>1108</a>    <span class="comment">// TeX primitives:
-<a href=#1109 id=1109 data-nosnippet>1109</a>    </span><span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1110 id=1110 data-nosnippet>1110</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
-<a href=#1111 id=1111 data-nosnippet>1111</a>    ] {
-<a href=#1112 id=1112 data-nosnippet>1112</a>      <span class="macro">assert!</span>(cc.is_primitive(), <span class="string">"{cc:?} should be primitive"</span>);
-<a href=#1113 id=1113 data-nosnippet>1113</a>    }
-<a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="comment">// Non-primitives:
-<a href=#1115 id=1115 data-nosnippet>1115</a>    </span><span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1116 id=1116 data-nosnippet>1116</a>      IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
-<a href=#1117 id=1117 data-nosnippet>1117</a>    ] {
-<a href=#1118 id=1118 data-nosnippet>1118</a>      <span class="macro">assert!</span>(!cc.is_primitive(), <span class="string">"{cc:?} should not be primitive"</span>);
-<a href=#1119 id=1119 data-nosnippet>1119</a>    }
-<a href=#1120 id=1120 data-nosnippet>1120</a>  }
-<a href=#1121 id=1121 data-nosnippet>1121</a>
-<a href=#1122 id=1122 data-nosnippet>1122</a>  <span class="attr">#[test]
-<a href=#1123 id=1123 data-nosnippet>1123</a>  </span><span class="kw">fn </span>is_executable_checks() {
-<a href=#1124 id=1124 data-nosnippet>1124</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1125 id=1125 data-nosnippet>1125</a>    <span class="kw">for </span>cc <span class="kw">in </span>[BEGIN, END, MATH, ALIGN, SUPER, SUB, ACTIVE, CS] {
-<a href=#1126 id=1126 data-nosnippet>1126</a>      <span class="macro">assert!</span>(cc.is_executable(), <span class="string">"{cc:?} should be executable"</span>);
-<a href=#1127 id=1127 data-nosnippet>1127</a>    }
-<a href=#1128 id=1128 data-nosnippet>1128</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1129 id=1129 data-nosnippet>1129</a>      EOL, ESCAPE, PARAM, SPACE, IGNORE, LETTER, OTHER, COMMENT, INVALID, MARKER, ARG,
-<a href=#1130 id=1130 data-nosnippet>1130</a>    ] {
-<a href=#1131 id=1131 data-nosnippet>1131</a>      <span class="macro">assert!</span>(!cc.is_executable(), <span class="string">"{cc:?} should not be executable"</span>);
-<a href=#1132 id=1132 data-nosnippet>1132</a>    }
+<a href=#1034 id=1034 data-nosnippet>1034</a><span class="doccomment">/// Reset the arena at the start of a conversion (handles are per-conversion).
+<a href=#1035 id=1035 data-nosnippet>1035</a></span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1036 id=1036 data-nosnippet>1036</a></span><span class="kw">pub fn </span>clear_token_origins() {
+<a href=#1037 id=1037 data-nosnippet>1037</a>  TOKEN_ORIGINS.with(|o| o.borrow_mut().clear());
+<a href=#1038 id=1038 data-nosnippet>1038</a>}
+<a href=#1039 id=1039 data-nosnippet>1039</a>
+<a href=#1040 id=1040 data-nosnippet>1040</a><span class="attr">#[cfg(test)]
+<a href=#1041 id=1041 data-nosnippet>1041</a></span><span class="kw">mod </span>tests {
+<a href=#1042 id=1042 data-nosnippet>1042</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#1043 id=1043 data-nosnippet>1043</a>
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="doccomment">/// `Token` size invariant (docs/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
+<a href=#1045 id=1045 data-nosnippet>1045</a>  /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
+<a href=#1046 id=1046 data-nosnippet>1046</a>  /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
+<a href=#1047 id=1047 data-nosnippet>1047</a>  /// distribution builds against an accidental widening.
+<a href=#1048 id=1048 data-nosnippet>1048</a>  </span><span class="attr">#[test]
+<a href=#1049 id=1049 data-nosnippet>1049</a>  </span><span class="kw">fn </span>token_size_invariant() {
+<a href=#1050 id=1050 data-nosnippet>1050</a>    <span class="attr">#[cfg(not(feature = <span class="string">"token-locators"</span>))]
+<a href=#1051 id=1051 data-nosnippet>1051</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#1052 id=1052 data-nosnippet>1052</a>      std::mem::size_of::&lt;Token&gt;(),
+<a href=#1053 id=1053 data-nosnippet>1053</a>      <span class="number">8</span>,
+<a href=#1054 id=1054 data-nosnippet>1054</a>      <span class="string">"default Token must stay 8 bytes (SymStr + Catcode)"
+<a href=#1055 id=1055 data-nosnippet>1055</a>    </span>);
+<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1057 id=1057 data-nosnippet>1057</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#1058 id=1058 data-nosnippet>1058</a>      std::mem::size_of::&lt;Token&gt;(),
+<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="number">12</span>,
+<a href=#1060 id=1060 data-nosnippet>1060</a>      <span class="string">"token-locators Token is 8 + a u32 origin handle"
+<a href=#1061 id=1061 data-nosnippet>1061</a>    </span>);
+<a href=#1062 id=1062 data-nosnippet>1062</a>  }
+<a href=#1063 id=1063 data-nosnippet>1063</a>
+<a href=#1064 id=1064 data-nosnippet>1064</a>  <span class="doccomment">/// Per-token origin capture (token-locators): each char token read from a
+<a href=#1065 id=1065 data-nosnippet>1065</a>  /// mouth carries a handle resolving to its exact (line, col). This is the leaf
+<a href=#1066 id=1066 data-nosnippet>1066</a>  /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
+<a href=#1067 id=1067 data-nosnippet>1067</a>  /// (Experiment 3) could not provide — the position now travels *with the
+<a href=#1068 id=1068 data-nosnippet>1068</a>  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
+<a href=#1069 id=1069 data-nosnippet>1069</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1070 id=1070 data-nosnippet>1070</a>  #[test]
+<a href=#1071 id=1071 data-nosnippet>1071</a>  </span><span class="kw">fn </span>token_origin_capture() {
+<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">super</span>::clear_token_origins();
+<a href=#1073 id=1073 data-nosnippet>1073</a>    <span class="comment">// "Hello" — five letters at 1-indexed columns 1..=5 on line 1.
+<a href=#1074 id=1074 data-nosnippet>1074</a>    </span><span class="kw">let </span>toks = <span class="kw">crate</span>::mouth::tokenize(<span class="string">"Hello"</span>);
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span>got: Vec&lt;(u32, u32)&gt; = toks
+<a href=#1076 id=1076 data-nosnippet>1076</a>      .unlist_ref()
+<a href=#1077 id=1077 data-nosnippet>1077</a>      .iter()
+<a href=#1078 id=1078 data-nosnippet>1078</a>      .map(|t| {
+<a href=#1079 id=1079 data-nosnippet>1079</a>        <span class="kw">let </span>o = <span class="kw">super</span>::get_token_origin(t.loc).expect(<span class="string">"token carries an origin handle"</span>);
+<a href=#1080 id=1080 data-nosnippet>1080</a>        (o.line, o.col)
+<a href=#1081 id=1081 data-nosnippet>1081</a>      })
+<a href=#1082 id=1082 data-nosnippet>1082</a>      .collect();
+<a href=#1083 id=1083 data-nosnippet>1083</a>    <span class="macro">assert_eq!</span>(
+<a href=#1084 id=1084 data-nosnippet>1084</a>      got,
+<a href=#1085 id=1085 data-nosnippet>1085</a>      <span class="macro">vec!</span>[(<span class="number">1</span>, <span class="number">1</span>), (<span class="number">1</span>, <span class="number">2</span>), (<span class="number">1</span>, <span class="number">3</span>), (<span class="number">1</span>, <span class="number">4</span>), (<span class="number">1</span>, <span class="number">5</span>)],
+<a href=#1086 id=1086 data-nosnippet>1086</a>      <span class="string">"each letter's captured (line, col) must be exact"
+<a href=#1087 id=1087 data-nosnippet>1087</a>    </span>);
+<a href=#1088 id=1088 data-nosnippet>1088</a>  }
+<a href=#1089 id=1089 data-nosnippet>1089</a>
+<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="attr">#[test]
+<a href=#1091 id=1091 data-nosnippet>1091</a>  </span><span class="kw">fn </span>catcode_name_covers_all_variants() {
+<a href=#1092 id=1092 data-nosnippet>1092</a>    <span class="comment">// Ensure every Catcode variant produces a non-empty name.
+<a href=#1093 id=1093 data-nosnippet>1093</a>    </span><span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1094 id=1094 data-nosnippet>1094</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1095 id=1095 data-nosnippet>1095</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+<a href=#1096 id=1096 data-nosnippet>1096</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+<a href=#1097 id=1097 data-nosnippet>1097</a>    ] {
+<a href=#1098 id=1098 data-nosnippet>1098</a>      <span class="macro">assert!</span>(!cc.name().is_empty(), <span class="string">"{cc:?}.name() is empty"</span>);
+<a href=#1099 id=1099 data-nosnippet>1099</a>    }
+<a href=#1100 id=1100 data-nosnippet>1100</a>  }
+<a href=#1101 id=1101 data-nosnippet>1101</a>
+<a href=#1102 id=1102 data-nosnippet>1102</a>  <span class="attr">#[test]
+<a href=#1103 id=1103 data-nosnippet>1103</a>  </span><span class="kw">fn </span>catcode_name_specific_values() {
+<a href=#1104 id=1104 data-nosnippet>1104</a>    <span class="macro">assert_eq!</span>(Catcode::ESCAPE.name(), <span class="string">"Escape"</span>);
+<a href=#1105 id=1105 data-nosnippet>1105</a>    <span class="macro">assert_eq!</span>(Catcode::BEGIN.name(), <span class="string">"Begin"</span>);
+<a href=#1106 id=1106 data-nosnippet>1106</a>    <span class="macro">assert_eq!</span>(Catcode::CS.name(), <span class="string">"ControlSequence"</span>);
+<a href=#1107 id=1107 data-nosnippet>1107</a>    <span class="macro">assert_eq!</span>(Catcode::LETTER.name(), <span class="string">"Letter"</span>);
+<a href=#1108 id=1108 data-nosnippet>1108</a>  }
+<a href=#1109 id=1109 data-nosnippet>1109</a>
+<a href=#1110 id=1110 data-nosnippet>1110</a>  <span class="attr">#[test]
+<a href=#1111 id=1111 data-nosnippet>1111</a>  </span><span class="kw">fn </span>catcode_short_name_starts_with_t_prefix() {
+<a href=#1112 id=1112 data-nosnippet>1112</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1113 id=1113 data-nosnippet>1113</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1114 id=1114 data-nosnippet>1114</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+<a href=#1115 id=1115 data-nosnippet>1115</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+<a href=#1116 id=1116 data-nosnippet>1116</a>    ] {
+<a href=#1117 id=1117 data-nosnippet>1117</a>      <span class="macro">assert!</span>(
+<a href=#1118 id=1118 data-nosnippet>1118</a>        cc.short_name().starts_with(<span class="string">"T_"</span>),
+<a href=#1119 id=1119 data-nosnippet>1119</a>        <span class="string">"{cc:?}.short_name() = {} lacks T_ prefix"</span>,
+<a href=#1120 id=1120 data-nosnippet>1120</a>        cc.short_name()
+<a href=#1121 id=1121 data-nosnippet>1121</a>      );
+<a href=#1122 id=1122 data-nosnippet>1122</a>    }
+<a href=#1123 id=1123 data-nosnippet>1123</a>  }
+<a href=#1124 id=1124 data-nosnippet>1124</a>
+<a href=#1125 id=1125 data-nosnippet>1125</a>  <span class="attr">#[test]
+<a href=#1126 id=1126 data-nosnippet>1126</a>  </span><span class="kw">fn </span>catcode_meaning_mostly_nonempty() {
+<a href=#1127 id=1127 data-nosnippet>1127</a>    <span class="comment">// Most variants have a TeX-meaning description.
+<a href=#1128 id=1128 data-nosnippet>1128</a>    </span><span class="macro">assert!</span>(!Catcode::ESCAPE.meaning().is_empty());
+<a href=#1129 id=1129 data-nosnippet>1129</a>    <span class="macro">assert!</span>(!Catcode::LETTER.meaning().is_empty());
+<a href=#1130 id=1130 data-nosnippet>1130</a>    <span class="macro">assert!</span>(!Catcode::OTHER.meaning().is_empty());
+<a href=#1131 id=1131 data-nosnippet>1131</a>    <span class="comment">// A few (e.g. CS/MARKER/ARG) fall through to "".
+<a href=#1132 id=1132 data-nosnippet>1132</a>    </span><span class="macro">assert_eq!</span>(Catcode::CS.meaning(), <span class="string">""</span>);
 <a href=#1133 id=1133 data-nosnippet>1133</a>  }
 <a href=#1134 id=1134 data-nosnippet>1134</a>
 <a href=#1135 id=1135 data-nosnippet>1135</a>  <span class="attr">#[test]
-<a href=#1136 id=1136 data-nosnippet>1136</a>  </span><span class="kw">fn </span>is_neutralizable_set() {
+<a href=#1136 id=1136 data-nosnippet>1136</a>  </span><span class="kw">fn </span>is_primitive_checks() {
 <a href=#1137 id=1137 data-nosnippet>1137</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1138 id=1138 data-nosnippet>1138</a>    <span class="kw">for </span>cc <span class="kw">in </span>[MATH, ALIGN, PARAM, SUPER, SUB, ACTIVE] {
-<a href=#1139 id=1139 data-nosnippet>1139</a>      <span class="macro">assert!</span>(cc.is_neutralizable(), <span class="string">"{cc:?}"</span>);
-<a href=#1140 id=1140 data-nosnippet>1140</a>    }
-<a href=#1141 id=1141 data-nosnippet>1141</a>    <span class="macro">assert!</span>(!Catcode::CS.is_neutralizable());
-<a href=#1142 id=1142 data-nosnippet>1142</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_neutralizable());
-<a href=#1143 id=1143 data-nosnippet>1143</a>  }
-<a href=#1144 id=1144 data-nosnippet>1144</a>
-<a href=#1145 id=1145 data-nosnippet>1145</a>  <span class="attr">#[test]
-<a href=#1146 id=1146 data-nosnippet>1146</a>  </span><span class="kw">fn </span>is_active_or_cs_narrow_set() {
-<a href=#1147 id=1147 data-nosnippet>1147</a>    <span class="macro">assert!</span>(Catcode::ACTIVE.is_active_or_cs());
-<a href=#1148 id=1148 data-nosnippet>1148</a>    <span class="macro">assert!</span>(Catcode::CS.is_active_or_cs());
-<a href=#1149 id=1149 data-nosnippet>1149</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_active_or_cs());
-<a href=#1150 id=1150 data-nosnippet>1150</a>    <span class="macro">assert!</span>(!Catcode::ESCAPE.is_active_or_cs());
-<a href=#1151 id=1151 data-nosnippet>1151</a>  }
-<a href=#1152 id=1152 data-nosnippet>1152</a>
-<a href=#1153 id=1153 data-nosnippet>1153</a>  <span class="attr">#[test]
-<a href=#1154 id=1154 data-nosnippet>1154</a>  </span><span class="kw">fn </span>is_absorbable_space_letter_other_comment() {
-<a href=#1155 id=1155 data-nosnippet>1155</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1156 id=1156 data-nosnippet>1156</a>    <span class="macro">assert!</span>(SPACE.is_absorbable());
-<a href=#1157 id=1157 data-nosnippet>1157</a>    <span class="macro">assert!</span>(LETTER.is_absorbable());
-<a href=#1158 id=1158 data-nosnippet>1158</a>    <span class="macro">assert!</span>(OTHER.is_absorbable());
-<a href=#1159 id=1159 data-nosnippet>1159</a>    <span class="macro">assert!</span>(COMMENT.is_absorbable());
-<a href=#1160 id=1160 data-nosnippet>1160</a>    <span class="comment">// All else not absorbable.
-<a href=#1161 id=1161 data-nosnippet>1161</a>    </span><span class="macro">assert!</span>(!Catcode::CS.is_absorbable());
-<a href=#1162 id=1162 data-nosnippet>1162</a>    <span class="macro">assert!</span>(!Catcode::BEGIN.is_absorbable());
+<a href=#1138 id=1138 data-nosnippet>1138</a>    <span class="comment">// TeX primitives:
+<a href=#1139 id=1139 data-nosnippet>1139</a>    </span><span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1140 id=1140 data-nosnippet>1140</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE,
+<a href=#1141 id=1141 data-nosnippet>1141</a>    ] {
+<a href=#1142 id=1142 data-nosnippet>1142</a>      <span class="macro">assert!</span>(cc.is_primitive(), <span class="string">"{cc:?} should be primitive"</span>);
+<a href=#1143 id=1143 data-nosnippet>1143</a>    }
+<a href=#1144 id=1144 data-nosnippet>1144</a>    <span class="comment">// Non-primitives:
+<a href=#1145 id=1145 data-nosnippet>1145</a>    </span><span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1146 id=1146 data-nosnippet>1146</a>      IGNORE, LETTER, OTHER, ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+<a href=#1147 id=1147 data-nosnippet>1147</a>    ] {
+<a href=#1148 id=1148 data-nosnippet>1148</a>      <span class="macro">assert!</span>(!cc.is_primitive(), <span class="string">"{cc:?} should not be primitive"</span>);
+<a href=#1149 id=1149 data-nosnippet>1149</a>    }
+<a href=#1150 id=1150 data-nosnippet>1150</a>  }
+<a href=#1151 id=1151 data-nosnippet>1151</a>
+<a href=#1152 id=1152 data-nosnippet>1152</a>  <span class="attr">#[test]
+<a href=#1153 id=1153 data-nosnippet>1153</a>  </span><span class="kw">fn </span>is_executable_checks() {
+<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1155 id=1155 data-nosnippet>1155</a>    <span class="kw">for </span>cc <span class="kw">in </span>[BEGIN, END, MATH, ALIGN, SUPER, SUB, ACTIVE, CS] {
+<a href=#1156 id=1156 data-nosnippet>1156</a>      <span class="macro">assert!</span>(cc.is_executable(), <span class="string">"{cc:?} should be executable"</span>);
+<a href=#1157 id=1157 data-nosnippet>1157</a>    }
+<a href=#1158 id=1158 data-nosnippet>1158</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1159 id=1159 data-nosnippet>1159</a>      EOL, ESCAPE, PARAM, SPACE, IGNORE, LETTER, OTHER, COMMENT, INVALID, MARKER, ARG,
+<a href=#1160 id=1160 data-nosnippet>1160</a>    ] {
+<a href=#1161 id=1161 data-nosnippet>1161</a>      <span class="macro">assert!</span>(!cc.is_executable(), <span class="string">"{cc:?} should not be executable"</span>);
+<a href=#1162 id=1162 data-nosnippet>1162</a>    }
 <a href=#1163 id=1163 data-nosnippet>1163</a>  }
 <a href=#1164 id=1164 data-nosnippet>1164</a>
 <a href=#1165 id=1165 data-nosnippet>1165</a>  <span class="attr">#[test]
-<a href=#1166 id=1166 data-nosnippet>1166</a>  </span><span class="kw">fn </span>is_gullet_holdable_comment_marker_only() {
-<a href=#1167 id=1167 data-nosnippet>1167</a>    <span class="macro">assert!</span>(Catcode::COMMENT.is_gullet_holdable());
-<a href=#1168 id=1168 data-nosnippet>1168</a>    <span class="macro">assert!</span>(Catcode::MARKER.is_gullet_holdable());
-<a href=#1169 id=1169 data-nosnippet>1169</a>    <span class="macro">assert!</span>(!Catcode::SPACE.is_gullet_holdable());
-<a href=#1170 id=1170 data-nosnippet>1170</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_gullet_holdable());
-<a href=#1171 id=1171 data-nosnippet>1171</a>  }
-<a href=#1172 id=1172 data-nosnippet>1172</a>
-<a href=#1173 id=1173 data-nosnippet>1173</a>  <span class="attr">#[test]
-<a href=#1174 id=1174 data-nosnippet>1174</a>  </span><span class="kw">fn </span>is_balanced_interesting_begin_end_marker() {
-<a href=#1175 id=1175 data-nosnippet>1175</a>    <span class="macro">assert!</span>(Catcode::BEGIN.is_balanced_interesting());
-<a href=#1176 id=1176 data-nosnippet>1176</a>    <span class="macro">assert!</span>(Catcode::END.is_balanced_interesting());
-<a href=#1177 id=1177 data-nosnippet>1177</a>    <span class="macro">assert!</span>(Catcode::MARKER.is_balanced_interesting());
-<a href=#1178 id=1178 data-nosnippet>1178</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_balanced_interesting());
-<a href=#1179 id=1179 data-nosnippet>1179</a>    <span class="macro">assert!</span>(!Catcode::MATH.is_balanced_interesting());
-<a href=#1180 id=1180 data-nosnippet>1180</a>  }
-<a href=#1181 id=1181 data-nosnippet>1181</a>
-<a href=#1182 id=1182 data-nosnippet>1182</a>  <span class="attr">#[test]
-<a href=#1183 id=1183 data-nosnippet>1183</a>  </span><span class="kw">fn </span>catcode_u8_roundtrip() {
-<a href=#1184 id=1184 data-nosnippet>1184</a>    <span class="comment">// From&lt;Catcode&gt; for u8 + From&lt;u8&gt; for Catcode should round-trip
-<a href=#1185 id=1185 data-nosnippet>1185</a>    // (at least for the documented range 0..=18).
-<a href=#1186 id=1186 data-nosnippet>1186</a>    </span><span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
-<a href=#1187 id=1187 data-nosnippet>1187</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
-<a href=#1188 id=1188 data-nosnippet>1188</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
-<a href=#1189 id=1189 data-nosnippet>1189</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
-<a href=#1190 id=1190 data-nosnippet>1190</a>    ] {
-<a href=#1191 id=1191 data-nosnippet>1191</a>      <span class="kw">let </span>b: u8 = cc.into();
-<a href=#1192 id=1192 data-nosnippet>1192</a>      <span class="kw">let </span>cc2: Catcode = b.into();
-<a href=#1193 id=1193 data-nosnippet>1193</a>      <span class="macro">assert_eq!</span>(cc, cc2, <span class="string">"roundtrip broke for {cc:?} (u8={b})"</span>);
-<a href=#1194 id=1194 data-nosnippet>1194</a>    }
-<a href=#1195 id=1195 data-nosnippet>1195</a>  }
-<a href=#1196 id=1196 data-nosnippet>1196</a>
-<a href=#1197 id=1197 data-nosnippet>1197</a>  <span class="attr">#[test]
-<a href=#1198 id=1198 data-nosnippet>1198</a>  </span><span class="kw">fn </span>token_new_and_display() {
-<a href=#1199 id=1199 data-nosnippet>1199</a>    <span class="kw">let </span>t = Token::new(<span class="string">"foo"</span>, Catcode::LETTER);
-<a href=#1200 id=1200 data-nosnippet>1200</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"foo"</span>);
-<a href=#1201 id=1201 data-nosnippet>1201</a>    <span class="macro">assert_eq!</span>(t.code, Catcode::LETTER);
-<a href=#1202 id=1202 data-nosnippet>1202</a>  }
-<a href=#1203 id=1203 data-nosnippet>1203</a>
-<a href=#1204 id=1204 data-nosnippet>1204</a>  <span class="attr">#[test]
-<a href=#1205 id=1205 data-nosnippet>1205</a>  </span><span class="kw">fn </span>token_arg_display_prepends_hash() {
-<a href=#1206 id=1206 data-nosnippet>1206</a>    <span class="comment">// ARG catcode prepends # in Display.
-<a href=#1207 id=1207 data-nosnippet>1207</a>    </span><span class="kw">let </span>t = Token::new(<span class="string">"1"</span>, Catcode::ARG);
-<a href=#1208 id=1208 data-nosnippet>1208</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"#1"</span>);
-<a href=#1209 id=1209 data-nosnippet>1209</a>  }
-<a href=#1210 id=1210 data-nosnippet>1210</a>}
+<a href=#1166 id=1166 data-nosnippet>1166</a>  </span><span class="kw">fn </span>is_neutralizable_set() {
+<a href=#1167 id=1167 data-nosnippet>1167</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1168 id=1168 data-nosnippet>1168</a>    <span class="kw">for </span>cc <span class="kw">in </span>[MATH, ALIGN, PARAM, SUPER, SUB, ACTIVE] {
+<a href=#1169 id=1169 data-nosnippet>1169</a>      <span class="macro">assert!</span>(cc.is_neutralizable(), <span class="string">"{cc:?}"</span>);
+<a href=#1170 id=1170 data-nosnippet>1170</a>    }
+<a href=#1171 id=1171 data-nosnippet>1171</a>    <span class="macro">assert!</span>(!Catcode::CS.is_neutralizable());
+<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_neutralizable());
+<a href=#1173 id=1173 data-nosnippet>1173</a>  }
+<a href=#1174 id=1174 data-nosnippet>1174</a>
+<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="attr">#[test]
+<a href=#1176 id=1176 data-nosnippet>1176</a>  </span><span class="kw">fn </span>is_active_or_cs_narrow_set() {
+<a href=#1177 id=1177 data-nosnippet>1177</a>    <span class="macro">assert!</span>(Catcode::ACTIVE.is_active_or_cs());
+<a href=#1178 id=1178 data-nosnippet>1178</a>    <span class="macro">assert!</span>(Catcode::CS.is_active_or_cs());
+<a href=#1179 id=1179 data-nosnippet>1179</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_active_or_cs());
+<a href=#1180 id=1180 data-nosnippet>1180</a>    <span class="macro">assert!</span>(!Catcode::ESCAPE.is_active_or_cs());
+<a href=#1181 id=1181 data-nosnippet>1181</a>  }
+<a href=#1182 id=1182 data-nosnippet>1182</a>
+<a href=#1183 id=1183 data-nosnippet>1183</a>  <span class="attr">#[test]
+<a href=#1184 id=1184 data-nosnippet>1184</a>  </span><span class="kw">fn </span>is_absorbable_space_letter_other_comment() {
+<a href=#1185 id=1185 data-nosnippet>1185</a>    <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1186 id=1186 data-nosnippet>1186</a>    <span class="macro">assert!</span>(SPACE.is_absorbable());
+<a href=#1187 id=1187 data-nosnippet>1187</a>    <span class="macro">assert!</span>(LETTER.is_absorbable());
+<a href=#1188 id=1188 data-nosnippet>1188</a>    <span class="macro">assert!</span>(OTHER.is_absorbable());
+<a href=#1189 id=1189 data-nosnippet>1189</a>    <span class="macro">assert!</span>(COMMENT.is_absorbable());
+<a href=#1190 id=1190 data-nosnippet>1190</a>    <span class="comment">// All else not absorbable.
+<a href=#1191 id=1191 data-nosnippet>1191</a>    </span><span class="macro">assert!</span>(!Catcode::CS.is_absorbable());
+<a href=#1192 id=1192 data-nosnippet>1192</a>    <span class="macro">assert!</span>(!Catcode::BEGIN.is_absorbable());
+<a href=#1193 id=1193 data-nosnippet>1193</a>  }
+<a href=#1194 id=1194 data-nosnippet>1194</a>
+<a href=#1195 id=1195 data-nosnippet>1195</a>  <span class="attr">#[test]
+<a href=#1196 id=1196 data-nosnippet>1196</a>  </span><span class="kw">fn </span>is_gullet_holdable_comment_marker_only() {
+<a href=#1197 id=1197 data-nosnippet>1197</a>    <span class="macro">assert!</span>(Catcode::COMMENT.is_gullet_holdable());
+<a href=#1198 id=1198 data-nosnippet>1198</a>    <span class="macro">assert!</span>(Catcode::MARKER.is_gullet_holdable());
+<a href=#1199 id=1199 data-nosnippet>1199</a>    <span class="macro">assert!</span>(!Catcode::SPACE.is_gullet_holdable());
+<a href=#1200 id=1200 data-nosnippet>1200</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_gullet_holdable());
+<a href=#1201 id=1201 data-nosnippet>1201</a>  }
+<a href=#1202 id=1202 data-nosnippet>1202</a>
+<a href=#1203 id=1203 data-nosnippet>1203</a>  <span class="attr">#[test]
+<a href=#1204 id=1204 data-nosnippet>1204</a>  </span><span class="kw">fn </span>is_balanced_interesting_begin_end_marker() {
+<a href=#1205 id=1205 data-nosnippet>1205</a>    <span class="macro">assert!</span>(Catcode::BEGIN.is_balanced_interesting());
+<a href=#1206 id=1206 data-nosnippet>1206</a>    <span class="macro">assert!</span>(Catcode::END.is_balanced_interesting());
+<a href=#1207 id=1207 data-nosnippet>1207</a>    <span class="macro">assert!</span>(Catcode::MARKER.is_balanced_interesting());
+<a href=#1208 id=1208 data-nosnippet>1208</a>    <span class="macro">assert!</span>(!Catcode::LETTER.is_balanced_interesting());
+<a href=#1209 id=1209 data-nosnippet>1209</a>    <span class="macro">assert!</span>(!Catcode::MATH.is_balanced_interesting());
+<a href=#1210 id=1210 data-nosnippet>1210</a>  }
+<a href=#1211 id=1211 data-nosnippet>1211</a>
+<a href=#1212 id=1212 data-nosnippet>1212</a>  <span class="attr">#[test]
+<a href=#1213 id=1213 data-nosnippet>1213</a>  </span><span class="kw">fn </span>catcode_u8_roundtrip() {
+<a href=#1214 id=1214 data-nosnippet>1214</a>    <span class="comment">// From&lt;Catcode&gt; for u8 + From&lt;u8&gt; for Catcode should round-trip
+<a href=#1215 id=1215 data-nosnippet>1215</a>    // (at least for the documented range 0..=18).
+<a href=#1216 id=1216 data-nosnippet>1216</a>    </span><span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
+<a href=#1217 id=1217 data-nosnippet>1217</a>    <span class="kw">for </span>cc <span class="kw">in </span>[
+<a href=#1218 id=1218 data-nosnippet>1218</a>      ESCAPE, BEGIN, END, MATH, ALIGN, EOL, PARAM, SUPER, SUB, SPACE, IGNORE, LETTER, OTHER,
+<a href=#1219 id=1219 data-nosnippet>1219</a>      ACTIVE, COMMENT, INVALID, CS, MARKER, ARG,
+<a href=#1220 id=1220 data-nosnippet>1220</a>    ] {
+<a href=#1221 id=1221 data-nosnippet>1221</a>      <span class="kw">let </span>b: u8 = cc.into();
+<a href=#1222 id=1222 data-nosnippet>1222</a>      <span class="kw">let </span>cc2: Catcode = b.into();
+<a href=#1223 id=1223 data-nosnippet>1223</a>      <span class="macro">assert_eq!</span>(cc, cc2, <span class="string">"roundtrip broke for {cc:?} (u8={b})"</span>);
+<a href=#1224 id=1224 data-nosnippet>1224</a>    }
+<a href=#1225 id=1225 data-nosnippet>1225</a>  }
+<a href=#1226 id=1226 data-nosnippet>1226</a>
+<a href=#1227 id=1227 data-nosnippet>1227</a>  <span class="attr">#[test]
+<a href=#1228 id=1228 data-nosnippet>1228</a>  </span><span class="kw">fn </span>token_new_and_display() {
+<a href=#1229 id=1229 data-nosnippet>1229</a>    <span class="kw">let </span>t = Token::new(<span class="string">"foo"</span>, Catcode::LETTER);
+<a href=#1230 id=1230 data-nosnippet>1230</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"foo"</span>);
+<a href=#1231 id=1231 data-nosnippet>1231</a>    <span class="macro">assert_eq!</span>(t.code, Catcode::LETTER);
+<a href=#1232 id=1232 data-nosnippet>1232</a>  }
+<a href=#1233 id=1233 data-nosnippet>1233</a>
+<a href=#1234 id=1234 data-nosnippet>1234</a>  <span class="attr">#[test]
+<a href=#1235 id=1235 data-nosnippet>1235</a>  </span><span class="kw">fn </span>token_arg_display_prepends_hash() {
+<a href=#1236 id=1236 data-nosnippet>1236</a>    <span class="comment">// ARG catcode prepends # in Display.
+<a href=#1237 id=1237 data-nosnippet>1237</a>    </span><span class="kw">let </span>t = Token::new(<span class="string">"1"</span>, Catcode::ARG);
+<a href=#1238 id=1238 data-nosnippet>1238</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{t}"</span>), <span class="string">"#1"</span>);
+<a href=#1239 id=1239 data-nosnippet>1239</a>  }
+<a href=#1240 id=1240 data-nosnippet>1240</a>}
 </code></pre></div></section></main></body></html>
