@@ -120,7 +120,18 @@ impl log::Log for LatexmlLogger {
         }
       }
 
-      println_stderr!("\r{}", painted_message);
+      // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
+      // line in both TTY and file output. The previous `\r` prefix made
+      // log lines visually overlay any in-flight progress indicator like
+      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
+      // but produced `(...)<CR>Error:...` byte sequences in log files,
+      // breaking line-anchored counts in canvas harnesses
+      // (`grep -cE '^...Error:'` silently returned 0 even when errors
+      // were present). Trade-off: progress indicators in a TTY no longer
+      // get overwritten, but they were not really self-erasing anyway
+      // (they always emitted ` )` to close their parens), so the visual
+      // change is small.
+      println_stderr!("\n{}", painted_message);
     }
   }
 

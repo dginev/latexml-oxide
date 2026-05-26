@@ -54,6 +54,15 @@ any synthetic benchmark.
 | 52 | 9998 | 2 | 99.98% | 1503.05439 corpus PDF (not engine); 1504.00185 SHARED with Perl (missing `\cdot` → 101-cap) |
 | **Combined** | **19994** | **6** | **99.97%** | **0 true Rust-only engine fatals** in 20K |
 
+**⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
+counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
+matched because the engine writes Error lines mid-line after content
++ `\r` + ANSI escape, not at line start. Result: papers with non-fatal
+errors were silently classified `OK` instead of `CONVERR_N`. Fixed by
+removing the `^` anchor. Stage_53+ will produce accurate CONVERR
+classifications; stages 01-52 stats may overcount OK (logs for OK
+papers were deleted, so retro-classification not possible).
+
 ### Driver
 
 Beyond-Perl showcase (issues #47/#92): live source↔preview + linting via
