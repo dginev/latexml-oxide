@@ -1227,6 +1227,18 @@ pub fn infix_apply_nary(
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
+  //
+  // Note (ASF + LOSTNODES): in pure-Tree-iter parsing it would be
+  // natural to record `ReplacedBy(infixop, left_op)` here so the
+  // absorbed operator's xml:id is redirected to the kept operator's.
+  // But this action runs inside the ASF Cartesian-product loop —
+  // `action_on` fires for every candidate combo, including ones
+  // ultimately discarded. Recording from action time would pollute
+  // LOSTNODES with mappings from pruned parses, breaking the
+  // top-level rewrite walk on the *final* tree. The recording
+  // therefore lives at `parse_single` (after `into_xmath` +
+  // `append_tree` commit the chosen tree), via the pre/post-snapshot
+  // diff against the document idstore.
   if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left {
     if let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
       if let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop {
@@ -1240,13 +1252,6 @@ pub fn infix_apply_nary(
           // Only flatten when left already has 2+ args (binary or n-ary)
           && left_args.0.len() >= 2
         {
-          // Perl ReplacedBy(infixop, left_op) — the absorbed operator's
-          // xml:id must redirect to the kept operator's xml:id, otherwise
-          // any pre-existing XMRef[idref=absorbed_id] (typically from an
-          // XMDual created elsewhere) goes dangling.
-          if let Some(ref absorbed) = infixop {
-            crate::util::record_replacement_xm(absorbed, &left_op.0, ctxt.nodes);
-          }
           left_args.0.push(right);
           return Ok(left);
         }

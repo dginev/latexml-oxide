@@ -6228,12 +6228,41 @@ LoadDefinitions!({
     //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
     //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
     // where no u.fontmap exists.
+    //
+    // XML-validity guard: slots in the C0 control range (0x00-0x1F, minus
+    // tab/LF/CR) are NOT valid XML 1.0 characters and break downstream
+    // libxml2 parsing of the serialized document (XPath aborts mid-tree
+    // when it encounters one, so post-processor `find_node_by_id` returns
+    // None for any id past the bad byte — manifested as the
+    // `Error:expected:id Cannot find a node` cluster on 1501.05180,
+    // where `\DeclareMathSymbol\onto\mathrel{latex-font msa}{"10}`
+    // emits `<XMTok>\x10</XMTok>` with no msa fontmap installed).
+    // Render U+FFFD (REPLACEMENT CHARACTER) for forbidden control chars
+    // when no fontmap mapping is available — visually surfaces the
+    // missing-fontmap case without poisoning the XML.
+    fn xml_safe_char(codepoint: u32) -> String {
+      if let Some(c) = char::from_u32(codepoint) {
+        // XML 1.0 §2.2 valid Char: #x9 | #xA | #xD | [#x20-#xD7FF] |
+        // [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+        let cp = c as u32;
+        let valid = cp == 0x09
+          || cp == 0x0A
+          || cp == 0x0D
+          || (0x20..=0xD7FF).contains(&cp)
+          || (0xE000..=0xFFFD).contains(&cp)
+          || (0x10000..=0x10FFFF).contains(&cp);
+        if valid {
+          c.to_string()
+        } else {
+          "\u{FFFD}".to_string()
+        }
+      } else {
+        String::new()
+      }
+    }
     let presentation = match glyph {
       Some(ch) => ch.to_string(),
-      None => {
-        let codepoint = code.value_of() as u32;
-        char::from_u32(codepoint).map(|c| c.to_string()).unwrap_or_default()
-      },
+      None => xml_safe_char(code.value_of() as u32),
     };
     let mut opts = MathPrimitiveOptions::default();
     if let Some(r) = role {
