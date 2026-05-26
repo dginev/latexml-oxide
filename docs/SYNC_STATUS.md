@@ -438,12 +438,19 @@ plus 3 corpus-only and 8 SHARED-FAILURE timeouts.
 - 1404.6225 (Rust-only) — heavy elsarticle preamble (tikz +
   todonotes + soul + ctable + many missing-style packages).
   Perl 24s vs Rust 120s+ timeout. Perf gap in package-load and/or
-  per-CS expansion.
+  per-CS expansion. Even at 300s timeout, Rust produces 0-byte HTML.
 - OOM during XML build (4 papers) — each fails via a different
-  combinatorial path. 1405.5891 narrowed to "abstract end +
-  algorithmic env in full paper context" but doesn't reproduce in
-  a 30-line extract → deep memory leak in document-construction
-  phase tied to specific state interactions.
+  combinatorial path:
+  * 1405.5891 — `abstract end + algorithmic env` in full paper
+    context.
+  * 1106.3552 (bisected 2026-05-26) — triggered by
+    `\appendix\setstretch{1} \scalefont{0.8}\newpage` at line 2002
+    of the body in the full 2001-line prelude. Minimal repro of the
+    same constructs converts cleanly. RSS jumps from <1 GB to 60 GB
+    in 30s after this line. State accumulation interacts with the
+    `\scalefont` font-merge in some unidentified way.
+  * 1304.5520 (hypcap) and 1406.4689 (tikz/pgfplots) — similar
+    "minimal repro fine, full paper OOMs" pattern.
 - SHARED-FAILURE timeouts (8 papers) — engine recovery ceiling,
   Perl also fails. Mostly pictex / pst-all chains.
 
