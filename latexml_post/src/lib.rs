@@ -178,6 +178,18 @@ impl Post {
       docs = new_docs;
     }
 
+    // Drain any XMath subtrees that the math-format processors queued
+    // for deferred unlink. The defer-then-drain split is what lets the
+    // CorTeX pmml+cmml chain share one XMath subtree across both
+    // formats; eager unlink in the first processor was the root cause
+    // of the dominant `Error:expected:id` cluster (~63% of CONVERR
+    // papers on second-500K stages) — the second processor's
+    // `mark_xm_node_visibility` walked stale XMRefs into a freed
+    // subtree. See `PostDocument::defer_xmath_unlink`.
+    for doc in docs.iter_mut() {
+      doc.drain_pending_xmath_unlinks();
+    }
+
     Note!("post-processing complete");
     Ok(docs)
   }
