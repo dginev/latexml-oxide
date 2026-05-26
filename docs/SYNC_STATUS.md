@@ -46,13 +46,15 @@ any synthetic benchmark.
   + `.session_state/wp5_sample_*_failed.txt`. Re-run sandbox is
   the input zips in `~/data/large_scale_canvas_3/data/arxmliv/`.
 
-### Round-37 progress so far (stages 51–52, 20,000 papers)
+### Round-37 progress so far (stages 51–53, 30,000 papers)
 
 | Stage | OK | FATAL | Rate | Notes |
 |---|---:|---:|---|---|
 | 51 | 9996 | 4 | 99.96% | 1501.03690, 1502.06361, 1503.04558 SHARED with Perl; 1503.03906 FATAL_139 was concurrency artifact (re-runs clean, 6.3 MB HTML) |
 | 52 | 9998 | 2 | 99.98% | 1503.05439 corpus PDF (not engine); 1504.00185 SHARED with Perl (missing `\cdot` → 101-cap) |
-| **Combined** | **19994** | **6** | **99.97%** | **0 true Rust-only engine fatals** in 20K |
+| 53 (v1, killed @1186) | 1186 | 2 FATAL_134 + 0 TIMEOUT | — | 2 stack-overflows in MathML[Content] post (1505.06709, 1505.06978) exposed by deferred-XMath-unlink — fix landed `18fe803244` (cmml depth cap 4096) |
+| 53 (v2, complete) | 9928 | 0 FATAL_134, 2 TIMEOUT, 2 FATAL_3 (TooManyErrors) | 99.28% | TIMEOUTs: 1506.02567, 1506.03337(OOM); FATAL_3: 1506.06377/1506.06446 (101-error caps from `_`/`^`-in-text and `\noalign`/`&` cascades — likely SHARED). CONVERR cluster: 145× `_`, 107× `}`, 61× `^`, 33× `&`, 33× XMApp-in-text, mostly cascades of user input issues |
+| **Combined** | **29922** | **8 hard / 67 CONVERR** | **99.74%** | **0 stack-overflow fatals after `18fe803244`** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
@@ -62,6 +64,26 @@ errors were silently classified `OK` instead of `CONVERR_N`. Fixed by
 removing the `^` anchor. Stage_53+ will produce accurate CONVERR
 classifications; stages 01-52 stats may overcount OK (logs for OK
 papers were deleted, so retro-classification not possible).
+
+**Dominant CONVERR cluster — fix landed 2026-05-26 (`1625353bd9`).**
+With the new error-line counter applied to a stage_51-fresh sample
+(2026-05-26), ~63% of CONVERR papers were emitting `Error:expected:id
+Cannot find a node with xml:id=...` from the post-processing
+`mark_xm_node_visibility` walk. Root cause: `process_math_node`
+unlinked XMath eagerly after the first math-format processor (PMML).
+The second processor (CMML) then dereferenced live XMRef idrefs into
+the freed subtree, and `find_node_by_id` returned None for every
+target id. Perl `Post.pm` L373-393 marks ids reusable but defers the
+actual `unlink` ("XMath will be removed (LATER!)"). Rust now mirrors
+that: `PostDocument::defer_xmath_unlink` queues the subtree;
+`Post::process_chain` calls `drain_pending_xmath_unlinks` once after
+every processor in the chain has run. `DocOwnedNode` wrapping is
+preserved in the drain pass (cycle-236's `$X$` + ar5iv SIGSEGV
+reproducer remains green). Two witnesses confirmed clean:
+arXiv:1503.05614 (was CONVERR_1) and 1501.05180 (was CONVERR_1;
+combined with the `xml_safe_char` U+FFFD fallback from `d46541f60c`).
+Tests: 1344 passed / 0 failed (mathtools.xml re-blessed: 2 XMRef
+idrefs now match ASF-correct LOSTNODES output).
 
 ### Driver
 
