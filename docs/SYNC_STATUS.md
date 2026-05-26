@@ -13,7 +13,12 @@
 
 ---
 
-## Active mission (Round-36, opened 2026-05-22): 1,000,000 error-free conversions on the arXiv "warning" corpus
+## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
+
+**Status.** Round-36 closed via PR #238 (merged as `9723f4f242`) —
+500K first-batch at 99.9968% projected. Round-37 continues on
+`large-scale-testing-round-4` branch: drive stages 51-100 (second
+500K) and address remaining 5 deep Rust-only failures.
 
 **Goal.** Reach **1,000,000 successful conversions** with the Rust
 translation (`cortex_worker --standalone`) on the 1,000,001-paper
@@ -30,12 +35,16 @@ any synthetic benchmark.
   ` /data/arxmliv/YYMM/ID/ID.zip`).
 * **Slice.** First **1,000,001** data rows (lines 3–1,000,003 of
   the file).
-* **On disk.** 500,000 zips already rsync'd to
-  `~/data/large_scale_canvas_3/data/arxmliv/`
-  (181 YYMM subdirs `0001`..`1501`, 194 GB).
-* **Pending rsync.** Second 500,000 zips
-  (lines 500,003–1,000,002 of `all_warnings.txt`; YYMM `1501`..
-  `2110`) — staged when the first 500K is fully through the canvas.
+* **On disk.** Both 500K subsets present in
+  `~/data/large_scale_canvas_3/data/arxmliv/`.
+* **First 500K (canvas_3 stages 01–50)** DONE — see Round-36 section.
+* **Second 500K (canvas_3 stages 51–100)** IN PROGRESS — runner
+  `run_stage_second.sh <offset>`; chain script at `/tmp/chain_stages.sh`
+  drives stages 52–60 after stage_51 completes.
+* **OK-output HTML deleted** 2026-05-26 to reclaim disk (saved ~245 GB);
+  failed paper IDs preserved at `.session_state/canvas3_failed.txt`
+  + `.session_state/wp5_sample_*_failed.txt`. Re-run sandbox is
+  the input zips in `~/data/large_scale_canvas_3/data/arxmliv/`.
 
 ### Driver
 
