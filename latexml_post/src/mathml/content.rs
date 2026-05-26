@@ -162,7 +162,36 @@ fn meaning_to_cmml_element(meaning: &str) -> Option<&'static str> {
 /// Convert an XMath tree to Content MathML.
 ///
 /// Port of `MathML::Content::convertNode` + `cmml_top`.
-pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData { cmml_contents(doc, xmath) }
+pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
+  CMML_DEPTH.with(|d| d.set(0));
+  cmml_contents(doc, xmath)
+}
+
+// Recursion guard. Perl uses `no warnings 'recursion'` and relies on
+// its native stack; we cap to avoid blowing the 256 MB worker stack
+// when malformed/cyclic XMath (e.g. duplicate xml:id whose target
+// loops via XMRef) drives `cmml` into unbounded descent. Witness:
+// arXiv:1505.06709, 1505.06978 (stage_53 second-500K canvas) — both
+// emitted `Info:malformed:id Duplicated attribute xml:id` before
+// overflowing during MathML[Content] post.
+const CMML_MAX_DEPTH: u32 = 4096;
+thread_local! {
+  static CMML_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+fn cmml_enter() -> bool {
+  CMML_DEPTH.with(|d| {
+    let cur = d.get();
+    if cur >= CMML_MAX_DEPTH {
+      false
+    } else {
+      d.set(cur + 1);
+      true
+    }
+  })
+}
+
+fn cmml_exit() { CMML_DEPTH.with(|d| d.set(d.get().saturating_sub(1))); }
 
 /// Convert the contents of a node (which normally has a single child).
 ///
@@ -182,6 +211,15 @@ fn cmml_contents(doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `cmml` + `cmml_internal`.
 fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
+  if !cmml_enter() {
+    return cmml_error("recursion-depth-exceeded");
+  }
+  let result = cmml_impl(doc, node);
+  cmml_exit();
+  result
+}
+
+fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
   let tag = doc.get_qname(node).unwrap_or_default();
 
   // Follow XMRef
