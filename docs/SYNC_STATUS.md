@@ -151,6 +151,27 @@ true PERL_OK_W_WARN (Rust-only) candidates:
 * **25000**: 14674 PASS / 10290 WARN / 27 errors / 9 FATAL —
   **99.964% non-fatal, 58.7% clean pass**. ALL 9 FATALs accounted
   for: 7 SHARED with Perl + 2 fixed Rust-only (envmath, maketitle).
+* **50000 (interim, 1387 processed)**: 1385 OK / 2 "FATAL_1". Both
+  "FATAL_1" are *driver-level* `pack_archive` errors after a
+  successful conversion — `Info:latexml::converter Conversion
+  complete: N warnings` then `Error: No such file or directory
+  (os error 2)` from `add_dir_to_zip`'s `File::open(&path)?` (a
+  TOCTOU on mutool-generated PDF→PNG intermediates). **Zero engine
+  fatals at 50K-sample scale.** Post-processing driver issue,
+  not conversion correctness.
+
+* **arXiv:1711.02043 confirmed SHARED-FAILURE (2026-05-26)**:
+  Earlier R36 bisection bottomed out at preamble
+  `\def\docAuthor{M. Sezer Erk{\i}l{\i}nc{c}}` combined with
+  hyperref `pdfauthor=\docAuthor`. Re-tested Perl on the same
+  minimal article — Perl also infinite-loops, allocating
+  2.35 GB+ at 99% CPU until killed. Our 650K-PushbackLimit
+  safety net trips at ~3s; Perl has no comparable cap and just
+  consumes memory. **Pinned as SHARED-FAILURE, not Rust-only.**
+* **arXiv:1802.02070 (revtex4-1) — still timing out**: 180s
+  budget, package loading completes (`hhline.sty` is last preamble
+  closure), then digestion of the body times out at
+  `Timeout/Convert`. Not yet bisected to a specific construct.
 
 Sampling-driven stubs landed:
 * `3e4e0cc25d` — rotfloat (witnesses: arXiv:2101.12526, 1804.05845).
