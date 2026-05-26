@@ -262,14 +262,24 @@ fn convert_path_xml(path: &str) -> String {
 #[test]
 fn source_map_token_locators_content_exact() {
   let xml = convert_path_xml("tests/structure/locators_probe.tex");
-  // Sectioning (reprocessed via revert -> re-digest): the TITLE content, not the
-  // whole \section line. "Intro" is line 3 cols 10-14.
-  assert!(
-    xml.contains("data:sourcepos=\"0:3:10-0:3:14\""),
-    "section title must be content-exact 0:3:10-0:3:14, got:\n{xml}"
+  // Sectioning (reprocessed via revert -> re-invoke \lx@format@title@@ ->
+  // re-digest): command-inclusive span. `\section{Intro}` is line 3 cols 1-14 —
+  // the whole command, matching the feature-OFF representative-locator behavior.
+  // (Macro-expansion origin inheritance attributes `\section`'s structural body
+  // to its call site; the section Whatsit's locator path carries that through,
+  // so the title spans command->content rather than just the "Intro" arg. This
+  // is the accepted design — see docs/SOURCE_PROVENANCE.md §3.1.3.)
+  let sec = regex::Regex::new(r#"<section\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
+  let sec_val = sec.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
+  assert_eq!(
+    sec_val,
+    Some("0:3:1-0:3:14"),
+    "section must span the whole \\section{{Intro}} command (line 3, cols 1-14)"
   );
-  // \caption in a float: line 6 (the \caption line), NOT line 7 (\end{figure}).
-  // "Cap" is cols 10-12.
+  // \caption in a float stays content-exact: a direct-argument construct whose
+  // span comes from `child_span`'s genuine-origin-first scan, so the inherited
+  // float machinery doesn't widen it. Line 6 (the \caption line), NOT line 7
+  // (\end{figure}); "Cap" is cols 10-12.
   let cap = regex::Regex::new(r#"<caption\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
   let cap_val = cap.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
   assert_eq!(
@@ -303,4 +313,49 @@ fn source_map_frontmatter_title_located() {
   // And that span must be on the title element, not some other line-2 artifact.
   let re = regex::Regex::new(r#"<title\b[^>]*\bdata:sourcepos="0:2:8-0:2:21""#).unwrap();
   assert!(re.is_match(&xml), "the line-2 span must be on <title>, got:\n{xml}");
+}
+
+/// token-locators: a macro that *synthesizes* its output — `\today` → the
+/// computed date string "May 25, 2026" via `ExplodeText!(Today!())` — inherits
+/// its invocation origin. The output characters never existed in the source
+/// (only the six chars `\today` did), so per-character provenance is impossible;
+/// the honest source position is the `\today` call site, attributed to the whole
+/// run by the gullet's fill-only origin inheritance (genuine origins are never
+/// overwritten). `\date{\today}` is on line 4, `\today` at col 7, so the date —
+/// emitted out-of-source-order by `\maketitle` via `insert_frontmatter` — lands
+/// at the point `0:4:7-0:4:7`. Was: NO locator (clients fell back to the whole
+/// document). See docs/SOURCE_PROVENANCE.md §3.1.3.
+#[cfg(feature = "token-locators")]
+#[test]
+fn source_map_today_macro_located() {
+  let xml = convert_path_xml("tests/structure/locators_date.tex");
+  let re = regex::Regex::new(r#"<date\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
+  let date_val = re.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
+  assert_eq!(
+    date_val,
+    Some("0:4:7-0:4:7"),
+    "the \\today-derived date must inherit its \\today call-site point (line 4, col 7), got:\n{xml}"
+  );
+}
+
+/// token-locators: the date locator survives post-processing to HTML. The
+/// `<ltx:date>` is rendered inline by the `dates` template into a combined
+/// `<div class="ltx_dates">` with no per-date wrapper, so that div is the only
+/// host for the locator; `LaTeXML-structure-xhtml.xsl` now copies the (first)
+/// date's foreign attributes onto it. Was: the div carried NO `data-sourcepos`
+/// even though the core `<ltx:date>` did — clients highlighted the whole
+/// document for a date edit. Mirrors the user-reported
+/// `<div class="ltx_dates">(December 16, 2019)</div>` regression.
+#[cfg(feature = "token-locators")]
+#[test]
+fn source_map_dates_div_carries_locator_through_xslt() {
+  let xml = convert_path_xml("tests/structure/locators_date.tex");
+  let html = html_from(&xml);
+  let re = regex::Regex::new(r#"<div class="ltx_dates" data-sourcepos="([^"]+)""#).unwrap();
+  let div_val = re.captures(&html).and_then(|c| c.get(1)).map(|m| m.as_str());
+  assert_eq!(
+    div_val,
+    Some("0:4:7-0:4:7"),
+    "the ltx_dates div must carry the date's source locator through XSLT, got:\n{html}"
+  );
 }

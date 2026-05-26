@@ -652,7 +652,34 @@ pub fn read_x_token(
         },
         Outcome::Invoke(defn) => {
           local_current_token(token);
-          let invoked = defn.invoke(false)?;
+          #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
+          let mut invoked = defn.invoke(false)?;
+          // token-locators: fill-only origin inheritance. A macro that
+          // expands into synthesized tokens with no origin — e.g.
+          // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
+          // would leave its output unlocatable. Attribute such tokens to
+          // the invocation site so the rendered text is source-mapped.
+          // The inherited handle is flagged `inherited` (one push per
+          // expansion, shared by every result token), so `child_span`'s
+          // genuine-origin-first scan never lets a macro's structural body
+          // literals widen its arguments' content-exact span. We also never
+          // overwrite a token that already carries an origin. See
+          // SOURCE_PROVENANCE.md §3.1.3.
+          #[cfg(feature = "token-locators")]
+          {
+            let inv_loc = token.loc;
+            if inv_loc != 0 {
+              let mut inherited = 0u32;
+              for t in invoked.unlist_mut() {
+                if t.loc == 0 {
+                  if inherited == 0 {
+                    inherited = crate::token::push_inherited_origin(inv_loc);
+                  }
+                  t.loc = inherited;
+                }
+              }
+            }
+          }
           if *TRACE_GROUP_END {
             // Print per-event {macro, delta} so post-processing can sum
             // by-macro to find which expandable CS contributes net +/- 1

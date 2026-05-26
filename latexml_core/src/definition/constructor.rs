@@ -48,16 +48,32 @@ pub fn child_span(d: &Digested) -> Option<Locator> {
     return Some(l);
   }
   #[cfg(feature = "token-locators")]
-  return d
-    .revert()
-    .ok()?
-    .unlist_ref()
-    .iter()
-    .filter_map(|t| crate::token::get_token_origin(t.loc))
-    .map(|o| crate::common::arena::with(o.source, |s| Locator::new(s, o.line, o.col, o.line, o.col)))
-    .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a));
+  {
+    let reverted = d.revert().ok()?;
+    let origins: Vec<crate::token::TokenStart> = reverted
+      .unlist_ref()
+      .iter()
+      .filter_map(|t| crate::token::get_token_origin(t.loc))
+      .collect();
+    // Prefer genuine (read-from-source) origins: a macro's structural body
+    // literals carry an *inherited* origin (its call site) and must not widen
+    // the content-exact span of its real arguments. Fall back to the inherited
+    // origins only when nothing genuine was recovered — that is the
+    // origin-less expansion case (`\today`), where the invocation point is the
+    // only source position there is. See docs/SOURCE_PROVENANCE.md §3.1.3.
+    let span = |it: &mut dyn Iterator<Item = &crate::token::TokenStart>| {
+      it.map(|o| {
+        crate::common::arena::with(o.source, |s| Locator::new(s, o.line, o.col, o.line, o.col))
+      })
+      .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+    };
+    span(&mut origins.iter().filter(|o| !o.inherited))
+      .or_else(|| span(&mut origins.iter().filter(|o| o.inherited)))
+  }
   #[cfg(not(feature = "token-locators"))]
-  None
+  {
+    None
+  }
 }
 
 /// configuration for creating a new Constructor

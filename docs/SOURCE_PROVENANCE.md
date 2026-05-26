@@ -755,10 +755,47 @@ byte-identical (handle scan cfg-gated; suite 1344/0).
   set): `tabular` = union of all cell spans, `tr` = the row's cells, `td` = the
   cell's content. (Was: no locators — the `Alignment` item's `get_locator()` is
   `None`.) Article.tex located-element count 128 → 168.
-- **Expansion-inheritance: subsumed / not needed.** An earlier spike that made
-  expansion-produced tokens inherit the invocation origin is *unnecessary* given
-  the handle-scan: it would only restate the command as a point, regressing the
-  now content-exact section range. Reverted.
+- **Expansion-inheritance: LANDED 2026-05-25 (fill-only, flagged).** The
+  handle-scan covers constructs whose content was *read from source*, but not
+  macros that **synthesize** their output — `\today → ExplodeText!(Today!())`
+  yields the computed string "May 25, 2026", whose characters never existed in
+  the source (only the six chars `\today` did). Per-character provenance is
+  therefore impossible; the only honest position is the `\today` call site.
+  The gullet (`read_token`'s `Outcome::Invoke` arm) now does **fill-only origin
+  inheritance**: a macro's expansion-produced tokens with `loc == 0` inherit the
+  invocation token's origin (one `push_inherited_origin` per expansion, shared
+  by every result token). Genuine origins are **never overwritten**, so a
+  macro's substituted arguments keep their content-exact spans.
+  - To stop a macro's *structural* body literals (now carrying the inherited
+    call-site origin) from widening a construct past its content, the inherited
+    origin is **flagged** (`TokenStart::inherited`): `make_char` stamps a leaf
+    box only from a *genuine* origin, and `child_span` scans genuine origins
+    first, falling back to inherited ones only when nothing genuine exists (the
+    `\today` case). So `\caption{Cap}`/`\title{…}` stay content-exact while the
+    `\today`-derived `<ltx:date>` lands at the `\today` point (`0:4:7-0:4:7`).
+  - **Sectioning is command-inclusive by design.** `\section{Intro}` is
+    reprocessed (revert → re-invoke `\lx@format@title@@` → re-digest) and its
+    locator flows through the section Whatsit path, which carries the inherited
+    call-site origin through — so the title spans the whole `\section{Intro}`
+    command (`0:3:1-0:3:14`) rather than just the "Intro" arg. This is
+    **accepted**: it unifies the feature-ON span with the feature-OFF
+    representative-locator (`0:12:1-0:12:24`), and clicking the `\section`
+    keyword in the editor highlights its heading. (Tests:
+    `source_map_token_locators_content_exact`, `source_map_today_macro_located`.)
+- **Flow-element ranges: NOT pursued source-side (2026-05-25).** Flow wrappers
+  (`ltx:p`, font-switch `ltx:text` from `\small`/`\textbf`) get **start-point**
+  locators, not content ranges: `Document::absorb` flattens content into per-run
+  boxes and the wrapper opens at the first box's point, and per-character origins
+  are gone by DOM-build time. A multi-line `\small` author block thus reports
+  only its start line, so a click on its last (email) line resolved to the first
+  line. Accumulating content ranges through the hot absorb path is invasive,
+  parity-sensitive (the 1344 gate), and churns goldens. **Decision: the
+  ar5iv-editor frontend is the resilience layer for reverse-sync** — it captures
+  the word-ish fingerprint under the click and runs a feasibility check on the
+  located line + a ±5-line vicinity search (`recoverSourcePosition`), so it
+  recovers the correct line for *any* imperfect locator, not just font switches.
+  The engine still emits the best locator it can cheaply produce; it does not try
+  to be pixel-perfect for flow text. See §6 and the date-div XSLT note in §5.
 - **Math: the remaining gap (now being taken up).** The `ltx:Math` wrapper is
   located but as a **point** (`0:9:2`) — the math's first token, not the `$…$`
   range — so `td`/`Math` are points. Internals stay opaque. Widening needs the

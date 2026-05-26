@@ -973,6 +973,15 @@ pub struct TokenStart {
   pub source: SymStr,
   pub line:   u32,
   pub col:    u32,
+  /// `true` when this origin was *inherited* from a macro invocation rather
+  /// than read directly from a mouth — i.e. the token is synthesized
+  /// expansion output (`\today → "May 25, 2026"`) attributed to its `\today`
+  /// call site. The content-range recovery in `constructor::child_span`
+  /// prefers genuine (read-from-source) origins and only falls back to
+  /// inherited ones, so a `\section{Intro}`'s structural body literals — now
+  /// carrying an inherited origin — never widen the title's content-exact
+  /// span. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  pub inherited: bool,
 }
 
 #[cfg(feature = "token-locators")]
@@ -986,8 +995,29 @@ thread_local! {
 pub fn push_token_origin(source: SymStr, line: u32, col: u32) -> u32 {
   TOKEN_ORIGINS.with(|o| {
     let mut v = o.borrow_mut();
-    v.push(TokenStart { source, line, col });
+    v.push(TokenStart { source, line, col, inherited: false });
     v.len() as u32 // index + 1
+  })
+}
+
+/// Derive an *inherited* origin from an existing handle: look up the
+/// invocation token's start, push a copy flagged `inherited`, and return its
+/// new handle (`0` if `handle` is the no-origin sentinel or out of range). One
+/// call per macro expansion; the returned handle is shared by every synthesized
+/// result token. See `push_token_origin` and docs/SOURCE_PROVENANCE.md §3.1.3.
+#[cfg(feature = "token-locators")]
+pub fn push_inherited_origin(handle: u32) -> u32 {
+  if handle == 0 {
+    return 0;
+  }
+  TOKEN_ORIGINS.with(|o| {
+    let mut v = o.borrow_mut();
+    let Some(mut start) = v.get((handle - 1) as usize).copied() else {
+      return 0;
+    };
+    start.inherited = true;
+    v.push(start);
+    v.len() as u32
   })
 }
 
