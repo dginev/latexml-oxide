@@ -46,15 +46,17 @@ any synthetic benchmark.
   + `.session_state/wp5_sample_*_failed.txt`. Re-run sandbox is
   the input zips in `~/data/large_scale_canvas_3/data/arxmliv/`.
 
-### Round-37 progress so far (stages 51–53, 30,000 papers)
+### Round-37 progress so far (stages 51–55, 50,000 papers)
 
 | Stage | OK | FATAL | Rate | Notes |
 |---|---:|---:|---|---|
 | 51 | 9996 | 4 | 99.96% | 1501.03690, 1502.06361, 1503.04558 SHARED with Perl; 1503.03906 FATAL_139 was concurrency artifact (re-runs clean, 6.3 MB HTML) |
 | 52 | 9998 | 2 | 99.98% | 1503.05439 corpus PDF (not engine); 1504.00185 SHARED with Perl (missing `\cdot` → 101-cap) |
 | 53 (v1, killed @1186) | 1186 | 2 FATAL_134 + 0 TIMEOUT | — | 2 stack-overflows in MathML[Content] post (1505.06709, 1505.06978) exposed by deferred-XMath-unlink — fix landed `18fe803244` (cmml depth cap 4096) |
-| 53 (v2, complete) | 9928 | 0 FATAL_134, 2 TIMEOUT, 2 FATAL_3 (TooManyErrors) | 99.28% | TIMEOUTs: 1506.02567, 1506.03337(OOM); FATAL_3: 1506.06377/1506.06446 (101-error caps from `_`/`^`-in-text and `\noalign`/`&` cascades — likely SHARED). CONVERR cluster: 145× `_`, 107× `}`, 61× `^`, 33× `&`, 33× XMApp-in-text, mostly cascades of user input issues |
-| **Combined** | **29922** | **8 hard / 67 CONVERR** | **99.74%** | **0 stack-overflow fatals after `18fe803244`** |
+| 53 (v2, complete) | 9928 | 0 FATAL_134, 2 TIMEOUT, 2 FATAL_3 (TooManyErrors) | 99.28% | TIMEOUTs: 1506.02567, 1506.03337(OOM); FATAL_3: 1506.06377/1506.06446 (101-error caps from `_`/`^`-in-text and `\noalign`/`&` cascades — likely SHARED). CONVERR cluster: 145× `_`, 107× `}`, 61× `^`, 33× `&`, 33× XMApp-in-text |
+| 54 | 9939 | 1 FATAL_3, 1 TIMEOUT, 1 OOM | 99.39% | OOM (1508.06324) was cyclic-XMRef in cmml — fix landed `81061469fc` (cycle-detection + cap→256); other 2 likely SHARED |
+| 55 | 9929 | 1 FATAL_3 (1510.03740), 1 TIMEOUT (1510.04225) | 99.29% | First full stage with cycle-guard binary; 0 stack-overflow, 0 OOM |
+| **Combined** | **49790** | **10 hard / ~250 CONVERR** | **99.58%** | **0 stack-overflow fatals after `18fe803244`, 0 OOMs after `81061469fc`** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
