@@ -420,23 +420,30 @@ appears in log; `NO_HTML` otherwise).
 | `HTML_OK` (success) | **152** | conversion produces HTML, exit-code may still be 3 if 100-error cap tripped |
 | `NO_HTML` total | 16 | |
 | ↳ corpus-only (PDF/empty zip) | 3 | 0901.2851, 1201.2466, 1407.7289 — not engine bugs |
-| ↳ wallclock timeout (120s) | 9 | 0708.3218, 0708.3398, 1001.3154, 1009.3622, 1101.2531, 1202.2643, 1302.3919, 1404.6225, 1407.1983 — slow-convert papers |
-| ↳ SIGKILL=137 (OOM during build) | 4 | 1106.3552, 1304.5520, 1405.5891, 1406.4689 — memory-pressure during XML construction |
+| ↳ wallclock timeout (120s) — SHARED with Perl | 8 | 0708.3218, 0708.3398, 1001.3154, 1009.3622, 1101.2531, 1202.2643, 1302.3919, 1407.1983 — Perl also times out (60s budget Terminated each time, pictex/heavy-graphics chains) |
+| ↳ wallclock timeout — Rust-only | 1 | 1404.6225 — Perl completes in 23.6s with 11 warnings + 1 error; Rust hits 120s cap (heavy elsarticle + tikz + many missing-style packages) |
+| ↳ SIGKILL=137 (OOM during build) | 4 | 1106.3552 (Scientific Word bbl), 1304.5520 (hypcap raw-load), 1405.5891 (algorithmic env in spconf context), 1406.4689 (tikz/pgfplots) |
 
 **Updated 500K canvas_3 success projection.**
 Original recorded: 499,832 OK / 500,000 = **99.9664%**.
 Plus 152 recovered: **499,984 OK / 500,000 = 99.9968%**.
 
-Only 13 true Rust-only failures remain (9 timeout + 4 OOM)
-after subtracting 3 corpus-source-invalid cases. Strong PR-ready
-headline.
+After Perl-parity verification on the 9 wallclock cases:
+**Only 5 true Rust-only failures remain** (4 OOM + 1 wallclock),
+plus 3 corpus-only and 8 SHARED-FAILURE timeouts.
 
 **Open follow-up clusters (no fix yet):**
-- Wallclock timeout (9 papers) — pstricks/heavy-graphics chains;
-  performance gap vs Perl's faster traversal.
-- OOM during XML build (4 papers) — memory blow-up specifically
-  in the post-digestion document-construction phase, not the
-  digester itself.
+- 1404.6225 (Rust-only) — heavy elsarticle preamble (tikz +
+  todonotes + soul + ctable + many missing-style packages).
+  Perl 24s vs Rust 120s+ timeout. Perf gap in package-load and/or
+  per-CS expansion.
+- OOM during XML build (4 papers) — each fails via a different
+  combinatorial path. 1405.5891 narrowed to "abstract end +
+  algorithmic env in full paper context" but doesn't reproduce in
+  a 30-line extract → deep memory leak in document-construction
+  phase tied to specific state interactions.
+- SHARED-FAILURE timeouts (8 papers) — engine recovery ceiling,
+  Perl also fails. Mostly pictex / pst-all chains.
 
 ### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
