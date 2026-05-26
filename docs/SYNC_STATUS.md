@@ -274,6 +274,16 @@ Deferred.
   custom `\newcount` — no `\documentclass`); math0203082
   (tabular-only fragment).
 
+**Re-retest 2026-05-26 (current binary, post-25K-sample fixes):
+ALL 16 frozen canvas_3 failures now pass with exit_code=0.**
+Times (seconds): physics0003074 1.2, hep-th0009218 0.3, math0009192
+4.5, hep-ph0012156 50.4, math0102053 6.8, math0102089 9.7,
+math0104252 18.3, math0203082 3.3, gr-qc0209055 6.8, math0212126
+6.8, gr-qc0301024 24.8, math0402448 4.3, math0504436 9.3,
+math0506088 9.0, math0507219 6.6, math0604321 8.8. The "plain TeX
+MemoryBudget" cluster is fully resolved — no Rust-only frozen
+failures remain in the canvas_3 sandbox.
+
 ### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
 | Commit | Fix | Papers recovered |
