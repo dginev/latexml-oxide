@@ -28,9 +28,25 @@
 use crate::prelude::*;
 
 fn install_lang_stub(lang: &str) -> Result<()> {
+  // `\newlanguage` is a TeX macro of the form
+  // `\alloc@9\language\chardef\@cclvi`, which delegates to a 5-arg
+  // `\alloc@{}{}{}{}{}` macro. So a *raw* `\newlanguage\csname
+  // l@<lang>\endcsname` makes `\alloc@` grab `\csname` as the 5th
+  // argument (parameter-text token-grabbing does NOT expand `\csname`)
+  // and leaves `l@<lang>\endcsname` orphaned in the input stream — the
+  // unmatched `\endcsname` then cascades through every following
+  // package-load → 100 errors → fatal TooManyErrors abort.
+  //
+  // Force `\csname...\endcsname` to expand *first* with
+  // `\expandafter\newlanguage\csname...`, so `\newlanguage` receives
+  // the resolved `\l@<lang>` token directly.
+  //
+  // (The `\providecommand\captions{lang}{{}}` lines below are correct
+  // — Rust `format!` substitutes `{lang}` inline, giving
+  // `\providecommand\captionsbrazil{}` etc.)
   let body = format!(
     r"\expandafter\ifx\csname l@{lang}\endcsname\relax
-      \newlanguage\csname l@{lang}\endcsname
+      \expandafter\newlanguage\csname l@{lang}\endcsname
     \fi
     \providecommand\captions{lang}{{}}%
     \providecommand\extras{lang}{{}}%

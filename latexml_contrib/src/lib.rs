@@ -90,9 +90,16 @@ pub mod letltxmacro_sty;
 pub mod lettrine_sty;
 pub mod libertine_sty;
 pub mod ltablex_sty;
+pub mod backref_sty;
+pub mod ccaption_sty;
+pub mod curve2e_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
+pub mod mathpartir_sty;
 pub mod mciteplus_sty;
+pub mod nag_sty;
+pub mod oldlfont_sty;
+pub mod titleref_sty;
 pub mod mdframed_sty;
 pub mod memoir_cls;
 pub mod mhchem_sty;
@@ -107,6 +114,14 @@ pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
 pub mod program_sty;
+pub mod rotfloat_sty;
+pub mod tabls_sty;
+pub mod chemnum_sty;
+pub mod pax_sty;
+pub mod figcaps_sty;
+pub mod refstyle_sty;
+pub mod envmath_sty;
+pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scicite_sty;
@@ -299,6 +314,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("MnSymbol", "sty", mnsymbol_sty::load_definitions),
   ("mssymb", "tex", mssymb_tex::load_definitions),
   ("oldgerm", "sty", oldgerm_sty::load_definitions),
+  ("rotfloat", "sty", rotfloat_sty::load_definitions),
+  ("tabls", "sty", tabls_sty::load_definitions),
+  ("chemnum", "sty", chemnum_sty::load_definitions),
+  ("pax", "sty", pax_sty::load_definitions),
+  ("figcaps", "sty", figcaps_sty::load_definitions),
+  ("refstyle", "sty", refstyle_sty::load_definitions),
+  ("envmath", "sty", envmath_sty::load_definitions),
+  ("pst-all", "sty", pst_all_sty::load_definitions),
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
@@ -331,6 +354,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("forest", "sty", forest_sty::load_definitions),
   ("harvmac", "tex", harvmac_tex::load_definitions),
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
+  ("backref", "sty", backref_sty::load_definitions),
+  ("ccaption", "sty", ccaption_sty::load_definitions),
+  ("curve2e", "sty", curve2e_sty::load_definitions),
+  ("mathpartir", "sty", mathpartir_sty::load_definitions),
+  ("nag", "sty", nag_sty::load_definitions),
+  ("oldlfont", "sty", oldlfont_sty::load_definitions),
+  ("titleref", "sty", titleref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
   ("memoir", "cls", memoir_cls::load_definitions),
   ("mhchem", "sty", mhchem_sty::load_definitions),

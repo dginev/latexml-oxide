@@ -708,19 +708,45 @@ LoadDefinitions!({
     // trigger `Script _ can only appear in math mode` during horizontal
     // digestion. Reset structural catcodes to OTHER so the captured string
     // round-trips through the bibitem variant safely.
+    //
+    // Also detokenize CS tokens (e.g. `\href`, an inner `\verb`) and
+    // brace tokens to literal OTHER characters: biblatex .bbl files
+    // occasionally include `\verb \href{url}{label}` inside a `\verb`
+    // field (witness arXiv:1004.4538 entry 17, `\verb \href{...}{...}`
+    // wrapped across two `\verb` lines). Without detokenization the
+    // captured tokens later expand inside `\url{<body>}` and `\href`
+    // / `\verb` execute, pushing back tens of thousands of tokens and
+    // tripping the 650K PushbackLimit safety net.
+    //
     // Witness cluster: ~29 papers/stage in next_warning_papers (Stages
     // 15-20 v3) hit this on biblatex bbl `\verb 10.1162/EVCO_a_00133`.
-    let value_vec: Vec<Token> = body_toks[start..end].iter().map(|tok| {
+    let mut value_vec: Vec<Token> = Vec::with_capacity(end - start);
+    for tok in &body_toks[start..end] {
       match tok.code {
+        Catcode::CS => {
+          // Spell out the CS name as OTHER chars, dropping the
+          // backslash: `\href` → `href`. (Matches the visible
+          // rendering of a verbatim URL.)
+          tok.with_str(|s| {
+            let name = s.strip_prefix('\\').unwrap_or(s);
+            for ch in name.chars() {
+              value_vec.push(T_OTHER!(&ch.to_string()));
+            }
+          });
+        },
+        Catcode::BEGIN | Catcode::END |
         Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
         Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
-          Token { text: tok.text, code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    }
+          value_vec.push(Token {
+            text: tok.text,
+            code: Catcode::OTHER,
+            #[cfg(feature = "token-locators")]
+            loc: 0,
+          });
         },
-        _ => *tok,
+        _ => value_vec.push(*tok),
       }
-    }).collect();
+    }
     let value = Tokens::new(value_vec);
     bib_entry_set_tokens(key_str.trim(), value);
     Ok(Tokens::default())

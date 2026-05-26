@@ -134,16 +134,27 @@ LoadDefinitions!({
   // Capital-first auto form. `\Ac` is officially from `acro`, but
   // papers commonly mix the two and use \Ac while loading `acronym`.
   // Degrade to \ac (lower form) — losing the capitalize-first
-  // semantic but preserving content. Witness 2402.03202.
-  Let!("\\Ac", "\\ac");
-  // Same degrade-to-lower for the other acro capital-first forms.
-  // Witness arXiv:2509.12083 (uses `\Acf{AOD}` alongside `\acf{SLM}`,
-  // mixing acronym + acro conventions). Same content-preservation
-  // rationale as `\Ac` above.
-  Let!("\\Acf", "\\acf");
-  Let!("\\Acl", "\\acl");
-  Let!("\\Acs", "\\acs");
-  Let!("\\Acfi", "\\acfi");
+  // semantic but preserving content. Witness 2402.03202 (`\Ac`),
+  // 2509.12083 (`\Acf`).
+  //
+  // PERL-FAITHFUL: defer the aliases to `\AtBeginDocument` and guard
+  // each with `\@ifundefined`. Pre-defining at binding-load time
+  // shadows user `\newcommand{\Ac}{...}` (e.g. 1102.0244 defines
+  // `\Ac` as `\{A(k)\}` for math notation) — our
+  // `is_definable_latex` then refuses the user's redefinition,
+  // leaving `\Ac` pointing at `\ac` and cascading `\lx@acronym`
+  // mode-mismatch errors in `$\Ac$` math contexts. Perl emits no
+  // `\Ac` default at all (acronym papers using `\Ac` undefined just
+  // error there); we provide it only as a deferred-default so the
+  // common case still works without trampling user redefinitions.
+  stomach::raw_tex(
+    "\\AtBeginDocument{\
+       \\@ifundefined{Ac}{\\let\\Ac\\ac}{}\
+       \\@ifundefined{Acf}{\\let\\Acf\\acf}{}\
+       \\@ifundefined{Acl}{\\let\\Acl\\acl}{}\
+       \\@ifundefined{Acs}{\\let\\Acs\\acs}{}\
+       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}}"
+  )?;
 
   // Indefinite article form
   DefMacro!(

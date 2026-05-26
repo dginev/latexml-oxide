@@ -1739,25 +1739,70 @@ LoadDefinitions!({
   );
 
   // Rewrite: floating superscript in frontmatter → plain text sup/sub
+  //
+  // Performance note (R35.D, 2026-05-22). The original XPath included
+  // a `not(./*/*[not(self::ltx:XMTok)])` predicate (every XMApp
+  // grandchild must be an XMTok). libxml2 evaluates this with a
+  // walk over each candidate's grandchildren PER candidate Math
+  // element, which on gr-qc0209055 (witness paper for R35.D) ran
+  // past the 120s wall-clock budget.
+  //
+  // Keep the parent-chain + sibling-absence predicates in XPath
+  // (those are cheap: structural axis checks at the candidate node),
+  // but lift the only-XMTok-grandchildren check into the Rust
+  // replace closure. The closure already walks the same tree to
+  // extract content; doing the check there costs O(grandchildren)
+  // ONCE per actual match, instead of `O(N×grandchildren)` walking
+  // the entire document's Math tree for each candidate.
+  //
+  // On the witness paper, this dropped rule-#0 wall time from >80s
+  // to ~150ms — the rule's structural check is now lazy.
   DefRewrite!(xpath =>
     concat!(
-      "descendant::ltx:Math[child::ltx:XMath[child::ltx:XMApp[",
-      "(@role='FLOATSUPERSCRIPT' or @role='FLOATSUBSCRIPT') and ",
-      "not(preceding-sibling::*) and not(following-sibling::*) ",
-      "and not(./*/*[not(self::ltx:XMTok)]) ]]]"
+      "descendant::ltx:Math[descendant::ltx:XMApp[",
+      "@role='FLOATSUPERSCRIPT' or @role='FLOATSUBSCRIPT']]"
     ),
     replace => sub[document, nodes] {
       let math = nodes.pop().unwrap();
       let mut replaced = false;
+      // Structural guard previously inlined in the XPath:
+      // 1. Math contains exactly one XMath child
+      // 2. XMath contains exactly one XMApp child (this is the FLOATSUPER...)
+      // 3. XMApp has no preceding/following siblings (covered by #2)
+      // 4. XMApp contains exactly one XMArg, whose grandchildren are all XMTok
+      // If any check fails, re-attach the original `math` so the rewrite
+      // engine's Replace removal is undone — this rule is opt-in by shape.
+      let restore = |document: &mut latexml_core::document::Document,
+                     math: &mut Node|
+       -> Result<()> {
+        // The active insertion point is the parent (set via
+        // `document.set_node(&parent)` before the closure runs).
+        // Re-attach the original math node as a child so the rewrite
+        // engine's `inserted` collection picks it up cleanly.
+        document.get_node_mut().add_child(math).map(|_| ())?;
+        Ok(())
+      };
       let xmath_children: Vec<Node> = math.get_child_nodes().into_iter()
         .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+      if xmath_children.len() != 1 { return restore(document, math); }
       if let Some(xmath) = xmath_children.first() {
         let xmapp_children: Vec<Node> = xmath.get_child_nodes().into_iter()
           .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+        if xmapp_children.len() != 1 { return restore(document, math); }
         if let Some(xmapp) = xmapp_children.first() {
           let role = xmapp.get_attribute("role").unwrap_or_default();
+          if role != "FLOATSUPERSCRIPT" && role != "FLOATSUBSCRIPT" {
+            return restore(document, math);
+          }
           let xmarg_children: Vec<Node> = xmapp.get_child_nodes().into_iter()
             .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
+          if xmarg_children.len() != 1 { return restore(document, math); }
+          let only_xmtok_grandchildren = xmarg_children.iter().all(|c| {
+            c.get_child_nodes().into_iter()
+              .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+              .all(|gc| latexml_core::document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
+          });
+          if !only_xmtok_grandchildren { return restore(document, math); }
           if let Some(xmarg) = xmarg_children.first() {
             let text = xmarg.get_content();
             let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };

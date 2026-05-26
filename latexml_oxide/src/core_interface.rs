@@ -439,8 +439,63 @@ impl DigestionAPI for Core {
           }
           // 31 rules compiled for declare test; XPath matching issue prevents application
           // Step 2: invoke the rewrite rules
-          for mut rewrite_rule in rewrites {
+          // R35.D instrumentation: print per-rule timing if
+          // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
+          // identify the rule that hangs (the timeout watchdog kills
+          // mid-rule otherwise).
+          let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
+          let n_rules = rewrites.len();
+          for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
+            // Build a useful one-line hint from the rule's options. The
+            // Debug impl on RewriteOptions is `<RewriteOptions>` only,
+            // so reach into the fields directly.
+            let opts = &rewrite_rule.options;
+            let mut xpath_hint = format!(
+              "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
+              opts.select.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.xpath.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.regexp.as_deref().map(|s| s.chars().take(60).collect::<String>()),
+              opts.scope.as_ref().map(|_| "<scope>"),
+              opts.label.as_deref(),
+              rewrite_rule.clauses.len(),
+            );
+            // Dump compiled clauses by op + pattern preview (helps when
+            // the options struct itself is empty after compile_clauses
+            // moved them into the clauses vec).
+            for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
+              use std::fmt::Write;
+              let _ = write!(
+                xpath_hint,
+                "\n    [{ci}] op={:?} pat={:?}",
+                c.op,
+                match &c.pattern {
+                  latexml_core::rewrite::RewritePattern::String(s) =>
+                    format!("Str({})", s.chars().take(120).collect::<String>()),
+                  latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
+                  latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
+                  latexml_core::rewrite::RewritePattern::NodeList(n) =>
+                    format!("NodeList({})", n.len()),
+                  _ => "??".into(),
+                }
+              );
+            }
+            if trace_all {
+              eprintln!("[rewrite-timing] rule #{}/{} START :: {}", idx, n_rules, xpath_hint);
+              // Flush stderr so it appears even if the rule hangs
+              use std::io::Write;
+              let _ = std::io::stderr().flush();
+            }
+            let started = std::time::Instant::now();
             rewrite_rule.invoke(&mut document, &root)?;
+            let elapsed = started.elapsed();
+            if trace_all {
+              eprintln!("[rewrite-timing] rule #{}/{} END {:.2?}", idx, n_rules, elapsed);
+            } else if elapsed > std::time::Duration::from_secs(5) {
+              eprintln!(
+                "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
+                idx, n_rules, elapsed, xpath_hint
+              );
+            }
           }
         }
       }
@@ -521,6 +576,42 @@ impl DigestionAPI for Core {
       match stomach::digest_next_body(None) {
         Ok(next_bodies) => boxes.extend(next_bodies),
         Err(e) => {
+          // Re-raise MemoryBudget / wall-clock Timeout (Convert) errors:
+          // those are *resource* failures, not recoverable digestion
+          // hiccups. Catching them here would silently produce empty
+          // output for a runaway-loop paper, masking a real bug and
+          // inflating canvas pass rates with empty conversions.
+          // R35.A: ensure pathological inputs fail loudly (exit 1+)
+          // rather than silently turning into a zero-byte HTML.
+          use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+          if matches!(
+            (&e.target, &e.category),
+            (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
+              | (ErrorTarget::Timeout, ErrorCategory::Convert)
+              | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
+              | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
+          ) {
+            log::warn!(
+              "digest_internal: resource failure ({:?}/{:?}) — not recovering",
+              e.target,
+              e.category
+            );
+            return Err(e);
+          }
+          // The Err that landed here was raised via `Fatal!` (or
+          // similar), which incremented `LogStatus::Fatal` via
+          // `note_status` in error.rs:353 BUT never emitted the
+          // standard `Fatal:<target>:<category>` log line — that's
+          // normally Error::log_fatal's job, called from the
+          // converter's outer Err handler. We catch the Err here and
+          // continue (recovery), so log_fatal never runs. Without
+          // this explicit emission, papers like arXiv:1903.01633
+          // report `1 fatal error` in the final summary while the
+          // log shows zero `Fatal:` lines — undiagnosable from
+          // logs alone. Emit the Fatal: line directly (not via
+          // log_fatal which would double-increment the counter).
+          let target_str = format!("Fatal:{:?}:{:?} ", e.target, e.category);
+          log::error!(target: &target_str, "{}", e.message);
           log::warn!("digest_internal: error during recovery digestion: {:?}", e);
           break;
         },

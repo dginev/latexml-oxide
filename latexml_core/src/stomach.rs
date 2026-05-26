@@ -34,6 +34,15 @@ pub fn set_timeout(seconds: u64) {
 }
 
 /// Check if conversion has timed out. Returns Err if deadline exceeded.
+///
+/// Also samples RSS via /proc/self/status every ~1024 calls and raises
+/// `Fatal:oom:memory_budget` if the process is approaching the worker
+/// memory cap. R35.A witnesses (plain-TeX `$$\displaylines{ … \picture
+/// … }$$`, 7 sandbox papers from 1999–2006) trigger a runaway where
+/// `set_alloc_error_hook` fires AFTER the process has already allocated
+/// ~5+ GB; that hook can't easily walk back the call site under
+/// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
+/// gives us a clean diagnostic and a unwound stack via `fatal!`.
 pub fn check_timeout() -> Result<()> {
   CONVERSION_DEADLINE.with(|d| {
     if let Some(deadline) = d.get() {
@@ -42,7 +51,64 @@ pub fn check_timeout() -> Result<()> {
       }
     }
     Ok(())
-  })
+  })?;
+  // Soft memory budget: every ~1024 calls, peek at our own RSS.
+  // 1024-call cadence keeps overhead negligible on the hot path
+  // (each call reads /proc/self/statm — a single syscall).
+  std::thread_local! {
+    static MEM_TICK: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  }
+  let tick = MEM_TICK.with(|t| {
+    let v = t.get().wrapping_add(1);
+    t.set(v);
+    v
+  });
+  if tick & 0x3FF == 0 {
+    if let Ok(s) = std::fs::read_to_string("/proc/self/statm") {
+      // statm: size resident shared text lib data dt  (in pages)
+      if let Some(rss_pages_str) = s.split_whitespace().nth(1) {
+        if let Ok(rss_pages) = rss_pages_str.parse::<u64>() {
+          let rss_bytes = rss_pages * 4096;
+          // R35.A safety cap: 4.5 GB RSS. Worker ulimit is 6 GB
+          // virtual; RSS at 4.5 GB means we still have headroom for
+          // post-processing (XSLT, MathML chain) but are clearly
+          // already in pathological territory. Real documents in
+          // the wp5 / canvas3 corpus stay below 1 GB peak RSS.
+          // Override via LATEXML_RSS_CAP_BYTES env.
+          let cap = std::env::var("LATEXML_RSS_CAP_BYTES")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(4_500_000_000);
+          if rss_bytes > cap {
+            // R35.A debug: when LATEXML_DEBUG_MEMBUDGET=1 is set, dump
+            // a stack backtrace before exiting so we can identify the
+            // expansion loop responsible. Backtrace allocation is
+            // fine here — we haven't hit the OS ulimit yet (we're
+            // 1.5 GB below it by default).
+            if std::env::var_os("LATEXML_DEBUG_MEMBUDGET").is_some() {
+              eprintln!(
+                "[membudget] RSS {} MB > cap {} MB — dumping backtrace",
+                rss_bytes / 1_000_000,
+                cap / 1_000_000
+              );
+              let bt = std::backtrace::Backtrace::force_capture();
+              eprintln!("{bt}");
+            }
+            fatal!(
+              Timeout,
+              MemoryBudget,
+              format!(
+                "Memory budget exceeded: RSS {} MB > cap {} MB",
+                rss_bytes / 1_000_000,
+                cap / 1_000_000
+              )
+            );
+          }
+        }
+      }
+    }
+  }
+  Ok(())
 }
 
 use crate::comment::Comment;

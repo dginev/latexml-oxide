@@ -963,6 +963,24 @@ fn custom_alloc_error_hook(layout: Layout) {
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
 
+  // R35.A: install a default gullet pushback limit so runaway
+  // macro expansion (witnessed on plain-TeX `\displaylines{ …
+  // \picture(800,250) … }` chains, 7 sandbox papers from
+  // 1999-2006) trips a clean `Fatal:timeout:PushbackLimit`
+  // instead of the small-alloc OOM cascade that the
+  // post-cap watchdog would catch only after the worker has
+  // burned ~1.6 GB in `Vec<Token>` accumulation. Override or
+  // remove via LaTeXML.sty's `pushbacklimit=N` keyval per
+  // `latexml_package::package::latexml_sty.rs`.
+  //
+  // 5 million tokens × ~24 B = ~120 MB at trip — well below
+  // the 6 GB ulimit headroom and large enough that real
+  // documents never reach it (witness wp5: median pushback
+  // peaks well under 100k tokens).
+  if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+    latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+  }
+
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
   // ambiguous papers — sandbox 0711.4787 et al, #17) don't overflow
@@ -1069,6 +1087,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       eprintln!("Output written to {}", output);
     } else {
       std::io::stdout().write_all(&result_data)?;
+    }
+    // Propagate FATAL conversion status into the process exit code so
+    // pathological failures (memory-budget guard, wall-clock timeout
+    // surfaced via Error::log_fatal, etc.) classify as failures
+    // instead of zero-byte-HTML "OK" runs. Only fatal (status_code 3)
+    // exits non-zero — status_code 2 ("errors but recoverable") is the
+    // normal canvas-accepted case for papers with minor TeX issues
+    // that still produce useful HTML. Mirrors
+    // `latexml_core::common::error::get_status_code`:
+    //   0 success, 1 warnings, 2 errors, 3 fatal.
+    let final_status = latexml_core::common::error::get_status_code();
+    if final_status >= 3 {
+      process::exit(final_status as i32);
     }
   } else {
     // Worker mode: connect to CorTeX dispatcher

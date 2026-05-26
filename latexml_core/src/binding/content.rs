@@ -1948,6 +1948,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
+
   let result = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("cls")),
     options: options.clone(),
@@ -1958,6 +1959,21 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     noerror: true,
     ..InputDefinitionOptions::default()
   });
+  // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
+  // Scan all known cls bindings (longest-first), pick the first whose name is a
+  // prefix of the requested class. This catches author-renamed classes like
+  //   mysvjour3.cls → ProvidesClass{svjour3} → binding: svjour3
+  //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
+  //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
+  // Fall through to OmniBus only when nothing matches.
+  let will_fallback = (result.is_err()
+    || (!lookup_bool(&format!("{name}.cls_loaded"))
+      && !lookup_bool(&format!("{name}.cls_raw_loaded"))))
+    && name != "OmniBus"
+    && name != "article"
+    && !lookup_bool("OmniBus.cls_loaded")
+    && !lookup_bool("OmniBus.cls_raw_loaded");
+
   // Perl Package.pm L2679 (LoadClass branch): scan the raw .cls for
   // \usepackage/\RequirePackage/\LoadClass dependencies when no .cls.ltxml
   // binding was found. This matters for unknown classes that nonetheless
@@ -1965,16 +1981,6 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // without it, downstream code like `\eqref{foo_bar}` sees `\eqref` as
   // undefined and the `_` characters then reach the stomach as subscript
   // catcodes, triggering runaway error recovery (arxiv 1003.0934 OOM).
-  // Skip deps-scan only when a real `.cls.ltxml` binding has been
-  // loaded — that binding is responsible for its own
-  // `\RequirePackage` calls. When `cls_raw_loaded` is true but
-  // `cls_loaded` is false (paper-bundled .cls with no binding), we
-  // STILL need the deps-scan: raw-load tokenizes the file but does
-  // not invoke our `require_package` for each `\RequirePackage`
-  // because the .sty bindings for those packages haven't been wired
-  // in yet at raw-tokenization time. Witness 2202.11535
-  // (myclass.cls bundles caption + many others; without this scan,
-  // \captionsetup stays undefined and triggers Error:undefined).
   // Skip deps-scan only when a real `.cls.ltxml` binding has been
   // loaded — that binding is responsible for its own
   // `\RequirePackage` calls. The `cls_loaded` flag is set even for
@@ -1985,24 +1991,25 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // successfully but their `\RequirePackage` calls do NOT trigger
   // our binding loaders, leaving \captionsetup / \href / \affil
   // undefined.
-  if !lookup_bool(&s!("{name}.cls.ltxml_loaded")) {
+  //
+  // PERL-FAITHFUL ORDER: when we will fall through to an alternate
+  // class binding (OmniBus or a prefix-match), DEFER the deps-scan
+  // until AFTER the alternate is loaded. Otherwise the deps-scan
+  // pulls natbib (et al.) ahead of OmniBus, and OmniBus's later
+  // `Let('\lx@OmniBus@saved@bibitem', '\bibitem')` +
+  // `DefMacro('\bibitem', ...)` clobbers natbib's `\lx@nat@bibitem`
+  // binding — infinite-loop chain on
+  // `\bibitem[\protect\citeauthoryear{...}{...}{...}]{key}`.
+  // Witness: 1001.1919, 1001.5004, 0809.4358 (statsoc.cls),
+  // 0904.3132, 0912.1617 (ectj.cls), 0904.3938 (compositio.cls),
+  // 0908.3882 (third-input timeout), 0911.1590 (\tag\textsc cascade).
+  // Perl's load order in this branch: warn missing-binding → load
+  // alternate (OmniBus) → deps-scan pulls natbib LAST → natbib's Let
+  // overrides OmniBus correctly.
+  if !lookup_bool(&s!("{name}.cls.ltxml_loaded")) && !will_fallback {
     maybe_require_dependencies(name, "cls");
   }
-  // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
-  // Scan all known cls bindings (longest-first), pick the first whose name is a
-  // prefix of the requested class. This catches author-renamed classes like
-  //   mysvjour3.cls → ProvidesClass{svjour3} → binding: svjour3
-  //   mn2ebis.cls   → starts with "mn2e"   → binding: mn2e
-  //   IEEEtranTCOM.cls → starts with "IEEEtran" → binding: IEEEtran
-  // Fall through to OmniBus only when nothing matches.
-  if (result.is_err()
-    || (!lookup_bool(&format!("{name}.cls_loaded"))
-      && !lookup_bool(&format!("{name}.cls_raw_loaded"))))
-    && name != "OmniBus"
-    && name != "article"
-    && !lookup_bool("OmniBus.cls_loaded")
-    && !lookup_bool("OmniBus.cls_raw_loaded")
-  {
+  if will_fallback {
     note_status(LogStatus::Missing, Some(&format!("{name}.cls")));
 
     // Perl: @classes = sort { -(length($a) <=> length($b)) } available_cls_names
@@ -2052,9 +2059,10 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     // Perl Package.pm L2715: after loading the alternate class binding, scan
     // the raw class file for \usepackage/\RequirePackage/\LoadClass — the
     // alternate rarely covers all dependencies the renamed class adds.
-    if alternate.is_some() {
-      maybe_require_dependencies(name, "cls");
-    }
+    // Run for BOTH a real prefix-match alternate AND the pure-OmniBus
+    // fallback (the deps were deferred above so their require_package
+    // calls fire AFTER OmniBus is in place).
+    maybe_require_dependencies(name, "cls");
     return loaded;
   }
   result

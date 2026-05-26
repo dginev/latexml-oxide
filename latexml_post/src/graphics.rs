@@ -954,7 +954,19 @@ impl Graphics {
     // We must skip the optional `<?xml … ?>` prolog and any `<!-- … -->`
     // or `<!DOCTYPE …>` preamble — otherwise `find('>')` matches the
     // prolog's `?>` instead of the root tag.
-    let head = &content[..content.len().min(2048)];
+    // UTF-8-safe slice: if the 2048-byte mark falls mid-codepoint, walk
+    // forward to the next char boundary so the slice is always valid.
+    // Witness: 1307.4573 (xfig-pstex_t paper with multi-byte chars in
+    // SVG preamble metadata) — previously FATAL_101 panic at
+    // graphics.rs:957 from `&content[..2048]` cutting a UTF-8 sequence.
+    let head_end = {
+      let mut end = content.len().min(2048);
+      while end < content.len() && !content.is_char_boundary(end) {
+        end += 1;
+      }
+      end
+    };
+    let head = &content[..head_end];
     let svg_start = head.find("<svg")?;
     let svg_rest = &head[svg_start..];
     let svg_tag_end = svg_rest.find('>')?;
@@ -1991,10 +2003,20 @@ impl Processor for Graphics {
       // shared mutable state during the parallel phase — replaces the
       // previous `Mutex<Vec<…>>` per project policy (thread_local-only
       // for in-memory state, no `Mutex`).
+      // R35.C: spawn workers with a small (2 MB) stack via
+      // `spawn_scoped`, which returns Result; if a spawn fails with
+      // EAGAIN/WouldBlock (canvas + 6 GB ulimit can run out of address
+      // space on graphics-heavy papers — witness hep-ph0012156, 12778
+      // formulas, R35.C), drop the failure and let the surviving
+      // workers pick up the remaining jobs via the shared `next`
+      // counter. If every spawn fails, run all jobs on the current
+      // thread instead of crashing.
       let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
         let handles: Vec<_> = (0..n_workers)
-          .map(|_| {
-            s.spawn(|| {
+          .filter_map(|_| {
+            std::thread::Builder::new()
+              .stack_size(2 * 1024 * 1024)
+              .spawn_scoped(s, || {
               let mut local = Vec::<ConvertOutcome>::new();
               loop {
               let i = next.fetch_add(1, Ordering::Relaxed);
@@ -2110,8 +2132,15 @@ impl Processor for Graphics {
             }
               local
             })
+            .ok()
           })
           .collect();
+        // Note: if EVERY spawn failed (extreme memory pressure), no
+        // jobs run and graphics will be missing from the output. That
+        // is much less destructive than panicking the whole worker
+        // and losing the entire conversion. Surviving workers always
+        // race for the same `next` counter, so a single survivor is
+        // enough to complete all jobs.
         handles.into_iter().map(|h| h.join().unwrap()).collect()
       });
       for v in worker_outcomes {

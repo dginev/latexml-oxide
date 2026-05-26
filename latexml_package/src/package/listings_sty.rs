@@ -1984,8 +1984,18 @@ LoadDefinitions!({
   // Perl: saves [LookupCatcode($ch), $STATE->lookupMeaning($token)] in LST_SHORT_INLINE mapping
   // then sets catcode to ACTIVE and defines the active token as a \lstinline shorthand.
   DefPrimitive!("\\lstMakeShortInline [] DefToken", sub[(kv, token)] {
+    // Match Perl's effective behavior: if the argument is a CS like
+    // `\"` (a 2-char "name"), Perl assigns catcode/meaning keyed by
+    // the multi-char string, which the tokenizer can never produce —
+    // so the assignment is a silent no-op. In Rust, taking
+    // `chars().next()` would instead make BACKSLASH active, breaking
+    // every subsequent `\foo`. Witness paper: arXiv:1105.4136 (uses
+    // `\lstMakeShortInline{\"}` which is meant as a single char `"`
+    // but is parsed as the CS `\"`). Perl no-ops, so we no-op too.
     let ch = token.to_string();
-    if ch.is_empty() { return Ok(Vec::new()); }
+    if ch.is_empty() || token.get_catcode() == Catcode::CS {
+      return Ok(Vec::new());
+    }
     let ch_first = ch.chars().next().unwrap();
     // Save original catcode so \lstDeleteShortInline can restore it exactly
     let orig_cc = state::lookup_catcode(ch_first).unwrap_or(Catcode::OTHER);

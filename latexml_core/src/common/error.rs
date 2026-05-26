@@ -104,6 +104,16 @@ macro_rules! report_mut {
   };
 }
 
+/// Clear the sticky `report.fatal` flag. Used by best-effort
+/// helpers (e.g. `\maketitle`'s deferred frontmatter digest) that
+/// silently swallow a digest error and want to undo the
+/// `note_status(Fatal)` side-effect so the overall conversion
+/// status reflects the silently-handled fact.
+pub fn clear_fatal_flag() {
+  let mut report = REPORT.borrow_mut();
+  report.fatal = false;
+}
+
 pub fn note_status(status: LogStatus, what: Option<&str>) {
   let mut report = REPORT.borrow_mut();
   use LogStatus::*;
@@ -495,6 +505,7 @@ pub enum ErrorCategory {
   TokenLimit,
   PushbackLimit,
   IfLimit,
+  MemoryBudget,
 }
 
 #[derive(Debug)]
@@ -547,6 +558,7 @@ impl fmt::Display for ErrorCategory {
       TokenLimit => write!(f, "token_limit"),
       PushbackLimit => write!(f, "pushback_limit"),
       IfLimit => write!(f, "if_limit"),
+      MemoryBudget => write!(f, "memory_budget"),
     }
   }
 }
@@ -565,6 +577,12 @@ impl Error {
     let target_str = s!("Fatal:{:?}:{:?} ", self.target, self.category);
     use log::error;
     error!(target: &target_str, "{}", self.message);
+    // Mark the global report as fatal so cortex_worker's exit code is
+    // 3 (conversion failure) instead of 0 (success). Without this,
+    // `Fatal:Timeout:MemoryBudget` etc. printed but the runtime
+    // status_code stayed at 0 — canvas would classify the worker as
+    // OK with an empty HTML output. R35.A.
+    note_status(LogStatus::Fatal, None);
   }
   pub fn todo() -> Self {
     Error {

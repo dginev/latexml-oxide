@@ -392,7 +392,28 @@ LoadDefinitions!({
     // processed by the next invocation (or end-of-document fallback).
     state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
     if !all_tokens.is_empty() {
-      let _ = stomach::digest(Tokens::new(all_tokens));
+      // The deferred-frontmatter digest is best-effort: errors here
+      // (e.g. a malformed `\title{...}` body or a paper-local hook
+      // that raises Fatal!) shouldn't bubble up as a hard fatal,
+      // since the rest of the document body has already converted
+      // successfully. But the Fatal! macro sets `report.fatal=true`
+      // BEFORE returning Err, so `let _ = digest(...)` silently
+      // swallows the Err while leaving the fatal-flag set —
+      // producing "1 fatal error" with NO Fatal: log line in the
+      // output (witness arXiv:1903.01633). Snapshot the fatal flag
+      // around the digest call and restore it if it flipped — we
+      // surface the underlying issue via a Warn instead.
+      let fatal_before = latexml_core::common::error::get_status(
+        latexml_core::common::error::LogStatus::Fatal) > 0;
+      if let Err(e) = stomach::digest(Tokens::new(all_tokens)) {
+        if !fatal_before {
+          latexml_core::common::error::clear_fatal_flag();
+        }
+        log::warn!(
+          "maketitle frontmatter digest swallowed Err: {}:{} {}",
+          format!("{:?}", e.target), format!("{:?}", e.category), e.message
+        );
+      }
     }
     state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
