@@ -39,12 +39,20 @@ any synthetic benchmark.
   `~/data/large_scale_canvas_3/data/arxmliv/`.
 * **First 500K (canvas_3 stages 01–50)** DONE — see Round-36 section.
 * **Second 500K (canvas_3 stages 51–100)** IN PROGRESS — runner
-  `run_stage_second.sh <offset>`; chain script at `/tmp/chain_stages.sh`
-  drives stages 52–60 after stage_51 completes.
+  `run_stage_second.sh <offset>`; chain scripts at
+  `/tmp/chain_stages.sh` (52–60) and `/tmp/chain_61_100.sh` (61–100).
 * **OK-output HTML deleted** 2026-05-26 to reclaim disk (saved ~245 GB);
   failed paper IDs preserved at `.session_state/canvas3_failed.txt`
   + `.session_state/wp5_sample_*_failed.txt`. Re-run sandbox is
   the input zips in `~/data/large_scale_canvas_3/data/arxmliv/`.
+
+### Round-37 progress so far (stages 51–52, 20,000 papers)
+
+| Stage | OK | FATAL | Rate | Notes |
+|---|---:|---:|---|---|
+| 51 | 9996 | 4 | 99.96% | 1501.03690, 1502.06361, 1503.04558 SHARED with Perl; 1503.03906 FATAL_139 was concurrency artifact (re-runs clean, 6.3 MB HTML) |
+| 52 | 9998 | 2 | 99.98% | 1503.05439 corpus PDF (not engine); 1504.00185 SHARED with Perl (missing `\cdot` → 101-cap) |
+| **Combined** | **19994** | **6** | **99.97%** | **0 true Rust-only engine fatals** in 20K |
 
 ### Driver
 
