@@ -23,6 +23,52 @@ pub fn clear_math_idstore() {
   });
 }
 
+// Thread-local LOSTNODES map: lost_id → kept_id. Perl
+// `MathParser::ReplacedBy` (MathParser.pm L1562-1588) records that a node
+// was structurally absorbed by another node during semantics rules — e.g.
+// the second `+` in `a + b + c` is absorbed into the first when forming
+// the n-ary `Apply(+, a, b, c)`. Without this tracking, any pre-existing
+// `XMRef[idref=lost_id]` becomes dangling (the canonical
+// `Error:expected:id Cannot find a node with xml:id='...'` cluster from
+// stage_51, ~63% of CONVERR papers).
+//
+// At end-of-parse the top-level parser sweeps remaining XMRefs and
+// rewrites their idref through this map (with cycle-safe transitive
+// lookup matching Perl L287-297).
+thread_local! {
+  static LOST_NODES: RefCell<FxHashMap<String, String>> =
+    RefCell::new(FxHashMap::default());
+}
+
+/// Record that `lost_id` was absorbed by `keep_id` during a semantics
+/// rule. Mirrors Perl `MathParser::ReplacedBy` body. Idempotent; first
+/// recorded mapping wins (a node can only be replaced once at any
+/// point in the parse).
+pub fn record_replacement(lost_id: &str, keep_id: &str) {
+  if lost_id == keep_id || lost_id.is_empty() || keep_id.is_empty() {
+    return;
+  }
+  LOST_NODES.with(|cell| {
+    cell
+      .borrow_mut()
+      .entry(lost_id.to_string())
+      .or_insert_with(|| keep_id.to_string());
+  });
+}
+
+/// Take ownership of the LOSTNODES map and clear the thread-local
+/// (caller is responsible for performing the rewrite walk and then
+/// dropping the map).
+pub fn take_lost_nodes() -> FxHashMap<String, String> {
+  LOST_NODES.with(|cell| std::mem::take(&mut *cell.borrow_mut()))
+}
+
+/// Reset LOSTNODES (called at the start of each new math parse to ensure
+/// per-document isolation when the same thread processes multiple docs).
+pub fn clear_lost_nodes() {
+  LOST_NODES.with(|cell| cell.borrow_mut().clear());
+}
+
 /// Resolve an XMRef node to its target using the idstore (matching Perl's lookupID).
 /// Falls back to DOM traversal if idstore is not set.
 fn resolve_xmref(node: &Node) -> Option<Node> {

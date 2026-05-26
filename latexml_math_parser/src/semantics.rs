@@ -1240,6 +1240,13 @@ pub fn infix_apply_nary(
           // Only flatten when left already has 2+ args (binary or n-ary)
           && left_args.0.len() >= 2
         {
+          // Perl ReplacedBy(infixop, left_op) — the absorbed operator's
+          // xml:id must redirect to the kept operator's xml:id, otherwise
+          // any pre-existing XMRef[idref=absorbed_id] (typically from an
+          // XMDual created elsewhere) goes dangling.
+          if let Some(ref absorbed) = infixop {
+            crate::util::record_replacement_xm(absorbed, &left_op.0, ctxt.nodes);
+          }
           left_args.0.push(right);
           return Ok(left);
         }
@@ -3012,6 +3019,10 @@ pub fn apply_invisible_times(
     if let XM::Token(xop, _xmeta) = &*op.0 {
       match xop.meaning {
         Some(ref name) if name == "times" => {
+          // No external operator to absorb here — `apply_invisible_times`
+          // synthesizes its own `times` token, so there's no second
+          // operator with an xml:id to redirect. Just absorb the
+          // right-hand factor into the existing chain.
           left_args.0.push(right);
           return Ok(left);
         },
