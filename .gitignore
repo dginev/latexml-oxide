@@ -62,3 +62,4 @@ __pycache__/
 LaTeXML
 ar5iv-bindings/
 background/
+.session_state/
