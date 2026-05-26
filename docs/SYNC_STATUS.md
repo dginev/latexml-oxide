@@ -274,15 +274,22 @@ Deferred.
   custom `\newcount` — no `\documentclass`); math0203082
   (tabular-only fragment).
 
-**Re-retest 2026-05-26 (current binary, post-25K-sample fixes):
-ALL 16 frozen canvas_3 failures now pass with exit_code=0.**
-Times (seconds): physics0003074 1.2, hep-th0009218 0.3, math0009192
-4.5, hep-ph0012156 50.4, math0102053 6.8, math0102089 9.7,
-math0104252 18.3, math0203082 3.3, gr-qc0209055 6.8, math0212126
-6.8, gr-qc0301024 24.8, math0402448 4.3, math0504436 9.3,
-math0506088 9.0, math0507219 6.6, math0604321 8.8. The "plain TeX
-MemoryBudget" cluster is fully resolved — no Rust-only frozen
-failures remain in the canvas_3 sandbox.
+**Re-retest 2026-05-26 (current binary, properly exit-captured)**:
+7/16 PASS, 9/16 still FATAL — confirming the earlier 2026-05-23
+classification holds. PASS: hep-th0009218, physics0003074,
+math0009192, gr-qc0209055, math0104252, gr-qc0301024, hep-ph0012156
+(0.5–51s). Still FATAL with `Fatal:Timeout:MemoryBudget`:
+math0102053, math0102089, math0212126, math0402448, math0504436,
+math0506088, math0507219, math0604321, math0203082 — all plain-TeX
+papers (no `\documentclass`, `\catcode @=11`, `\magnification`,
+custom `\newcount`/`\loop`). The "plain TeX MemoryBudget" cluster
+remains an open Rust-vs-Perl perf gap: Perl converts each in ~0.2-30s,
+Rust exceeds the 4.5 GB RSS cap. Engine work for memory-efficient
+plain-TeX digestion is deferred.
+
+(A 2026-05-26 retest claiming "all 16 recovered" was retracted —
+the test script captured `$?` after a `| tail` pipe, so every exit
+code read as 0 regardless of cortex_worker's outcome.)
 
 ### Session R36 — 17 root-cause fixes landed, 24+ papers closed
 
