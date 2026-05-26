@@ -62,18 +62,43 @@ impl std::error::Error for ScanError {}
 ///
 /// Wraps the result in `Pattern::Module` whose `name` is the file's
 /// basename without extension — matches `scanExternal` in Perl.
+///
+/// Tries the disk-side `find_file` first (developer overrides, system
+/// installs); if nothing is on the searchpath, falls through to the
+/// compile-time embedded RelaxNG table and parses those bytes
+/// directly via `XmlParser::parse_string`. No filesystem extraction
+/// is involved on the embed branch — the prebuilt binary can run
+/// `--validate` / `--schemadocs` against in-`.rodata` schemas.
 pub fn scan_external(
   rng: &mut Relaxng,
   name: &str,
   inherit_ns: Option<&str>,
   search_paths: &[&Path],
 ) -> Result<Vec<Pattern>, ScanError> {
-  let path = find_file(name, search_paths)
-    .ok_or_else(|| ScanError::FileNotFound(name.to_string()))?;
   let parser = XmlParser::default();
-  let xml_doc: XmlDocument = parser
-    .parse_file(path.to_str().unwrap_or(""))
-    .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+  let (path, xml_doc): (PathBuf, XmlDocument) = match find_file(name, search_paths) {
+    Some(p) => {
+      let doc = parser
+        .parse_file(p.to_str().unwrap_or(""))
+        .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+      (p, doc)
+    },
+    None => {
+      // Strip the URN scheme the same way `find_file` does, so the
+      // embed-table key matches what `build.rs` recorded under
+      // `resources/RelaxNG/`.
+      let embed_key = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
+        Some(rest) => rest.replace(':', "/"),
+        None => name.to_string(),
+      };
+      let bytes = super::embedded::lookup(&embed_key)
+        .ok_or_else(|| ScanError::FileNotFound(name.to_string()))?;
+      let doc = parser
+        .parse_string(bytes)
+        .map_err(|e| ScanError::Parse(format!("{:?}", e)))?;
+      (PathBuf::from(&embed_key), doc)
+    },
+  };
   let root = xml_doc
     .get_root_readonly()
     .ok_or_else(|| ScanError::Parse("empty document".into()))?;
@@ -568,6 +593,12 @@ fn strip_rng_ext(name: &str) -> String {
 /// URN scheme: strips the prefix, then translates remaining `:`
 /// separators into path separators so e.g.
 /// `urn:x-LaTeXML:RelaxNG:svg:svg11.rng` → `svg/svg11.rng` lookup.
+///
+/// Disk-only — embedded schemas are handled at the [`scan_external`]
+/// level by consulting the [`super::embedded::lookup`] table when
+/// `find_file` returns `None`. Keeping this function disk-only means
+/// developer-tree edits and system-installed schemas continue to win
+/// over the bundled copies.
 fn find_file(name: &str, search_paths: &[&Path]) -> Option<PathBuf> {
   let bare = match name.strip_prefix("urn:x-LaTeXML:RelaxNG:") {
     Some(rest) => rest.replace(':', "/"),

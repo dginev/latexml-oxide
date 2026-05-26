@@ -13,7 +13,7 @@ use std::sync::LazyLock;
 use crate::document::PostDocument;
 use crate::processor::{ProcessResult, Processor};
 
-// Diagnostic emission: `log_post_error!` (and friends) live in
+// Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
 // lines (`Error:<class>:<object> <msg>`) matching what
@@ -724,7 +724,7 @@ impl Graphics {
       None => {
         // Subprocess wall-clock timeout; class=`shell` mirrors Perl
         // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
-        log_post_warn!(
+        Warn!(
           "shell", "inkscape",
           "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
           source,
@@ -1598,7 +1598,7 @@ impl Graphics {
       // (The fake-convert test fixture exits 0 without producing a file.)
       Some(status) => status.success(),
       None => {
-        log_post_warn!(
+        Warn!(
           "shell", "convert",
           "Graphics: convert/gs for {} exceeded {} s — killed",
           source,
@@ -2063,7 +2063,7 @@ impl Processor for Graphics {
                     raw_dims: dims.map(|d| (d.width, d.height)),
                   }),
                   crate::graphics_cache::ConvertResult::Failed => {
-                    log_post_warn!(
+                    Warn!(
                       "shell", "inkscape",
                       "Graphics: inkscape SVG path failed for {}, falling back to convert",
                       source
@@ -2110,7 +2110,7 @@ impl Processor for Graphics {
                 // Error class/object mirror Perl Graphics.pm:274
                 // `Error('imageprocessing', $source, …)` so the
                 // harness aggregates with engine/package emissions.
-                log_post_error!(
+                Error!(
                   "imageprocessing", source,
                   "Graphics: Failed to convert {} to {}", source, abs_dest_str
                 );
@@ -2176,7 +2176,7 @@ impl Processor for Graphics {
           // findable, this branch hits only when the .tex literally
           // references a non-existent file — exactly the case Perl
           // emits at Warn level. Restore Perl-faithful Warn.
-          log_post_warn!(
+          Warn!(
             "expected", "source",
             "No graphic source found; skipping (source was '{}')", graphic
           );
@@ -2253,7 +2253,8 @@ impl Processor for Graphics {
       }
     }
 
-    log::info!(
+    Info!(
+      "graphics", "process",
       "Graphics {} {} to process",
       doc.get_destination().unwrap_or("?"),
       n_to_process

@@ -164,7 +164,7 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log_post_warn!(
+            Err(e) => Warn!(
               "I/O", bib,
               "Failed to load bibliography '{}': {}", bib, e
             ),
@@ -193,7 +193,7 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log_post_warn!(
+            Err(e) => Warn!(
               "I/O", path,
               "Failed to load bibliography '{}': {}", path, e
             ),
@@ -214,17 +214,17 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => log::warn!("Failed to convert bibliography '{}': {}", bib_path, e),
+            Err(e) => Warn!("bibliography", "convert", "Failed to convert bibliography '{}': {}", bib_path, e),
           }
         }
       }
 
       if !loaded {
-        log::info!("Couldn't find usable bibliography for '{}'", bib);
+        Info!("bibliography", "missing", "Couldn't find usable bibliography for '{}'", bib);
       }
     }
 
-    log::info!("MakeBibliography: using {} bibliographies", bibs.len());
+    Info!("bibliography", "using", "MakeBibliography: using {} bibliographies", bibs.len());
     bibs
   }
 
@@ -341,7 +341,7 @@ impl MakeBibliography {
                 if let Some(existing) = entries.get(&lc_key) {
                   if let Some(ref prev_key) = existing.cited_key {
                     if prev_key != bibkey {
-                      log::warn!("Case mismatch in bib key '{}' vs '{}'", prev_key, bibkey);
+                      Warn!("bibliography", "case_mismatch", "Case mismatch in bib key '{}' vs '{}'", prev_key, bibkey);
                     }
                   }
                 }
@@ -525,7 +525,7 @@ impl MakeBibliography {
     }
 
     if !missing_keys.is_empty() {
-      log::warn!("Missing bibkeys: {}", missing_keys.join(", "));
+      Warn!("bibliography", "missing_keys", "Missing bibkeys: {}", missing_keys.join(", "));
     }
 
     // Step 4: Note bibreferrers — for each included entry's citations,
@@ -546,7 +546,8 @@ impl MakeBibliography {
       }
     }
 
-    log::info!(
+    Info!(
+      "bibliography", "count",
       "MakeBibliography: {} bibentries, {} cited",
       entries.len() + included.len(),
       included.len()
@@ -1252,7 +1253,7 @@ impl Processor for MakeBibliography {
       // bib_docs must be kept alive as long as entries (bibentry Nodes reference them)
       let (entries, _bib_docs) = self.get_bib_entries(&doc, bib);
       if entries.is_empty() {
-        log::info!("MakeBibliography: no entries to process");
+        Info!("bibliography", "empty", "MakeBibliography: no entries to process");
         continue;
       }
 
@@ -1292,7 +1293,7 @@ impl Processor for MakeBibliography {
         doc.add_nodes(&mut bib_mut, &[biblist]);
       }
 
-      log::info!("MakeBibliography: formatted {} entries", entries.len());
+      Info!("bibliography", "formatted", "MakeBibliography: formatted {} entries", entries.len());
 
       // Register formatted bibitems in ObjectDB so CrossRef can resolve citations.
       // Port of Perl's approach where bibitems are registered during Scan,
@@ -2995,7 +2996,8 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
     .map_err(|e| format!("Failed to read '{}': {}", bib_path, e))?;
 
   let entries = parse_bibtex(&content);
-  log::info!(
+  Info!(
+    "bibtex", "parse",
     "Parsed {} BibTeX entries from '{}'",
     entries.len(),
     bib_path

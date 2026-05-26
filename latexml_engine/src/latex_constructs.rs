@@ -137,8 +137,8 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if has_value(&s!("{}:autoload", cs.to_string())) {
     return Ok((true, false));
   }
-  let plain =
-    lookup_definition(cs)?.is_some_and(|prev| is_plain_definition_source(prev.get_locator()));
+  let plain = lookup_definition(cs)?
+    .is_some_and(|prev| prev.get_locator().is_some_and(is_plain_definition_source));
   Ok((plain, plain))
 }
 
@@ -681,10 +681,12 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
       Tbox::new(
         line,
         font.clone(),
-        Some(loc),
+        loc,
         Token {
           text: line,
           code: Catcode::OTHER,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
         }
         .into(),
         SymHashMap::default(),
@@ -2645,7 +2647,7 @@ LoadDefinitions!({
   // `aaspp4` → `aaspp.sty.ltxml`). This is what lets
   // `\documentstyle[aaspp4]{article}` load aas_support transitively and
   // define \affil / \altaffilmark / \acknowledgments etc. that ~49 astro-ph
-  // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE.md Class A).
+  // papers in the 10k sandbox need (docs/SANDBOX_TRIAGE_2026-05-21.md Class A).
   //
   // Current \documentstyle implementation lives in tex_job.rs as a DefMacro
   // whose body mirrors Perl's three afterDigest branches. It no longer emits

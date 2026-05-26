@@ -706,7 +706,7 @@ pub fn def_math_primitive(
             mathstyle_override,
             scriptpos_override,
           ),
-          locator,
+          locator: Some(locator),
         })])
       })),
       options,

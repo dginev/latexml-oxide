@@ -1214,6 +1214,28 @@ fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {
 fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
   let cc = meaning.get_catcode();
   let font = lookup_font();
+  // token-locators: the leaf char box's exact source position comes from the
+  // token's origin handle — the position that survived expansion to digestion
+  // (Experiments 1–3 showed it cannot be re-derived from the mouth here, which
+  // is past the construct). `None` → `Tbox::new` falls back to the gullet's
+  // current locator (the eating-disorder heuristic). See SOURCE_PROVENANCE §3.1.1.
+  // Stamp a leaf box only from a *genuine* (read-from-source) origin. An
+  // inherited origin — a macro's expansion attributed to its call site, e.g.
+  // `\section`'s structural body literals at the `\section` column — must not
+  // become a located leaf, or box-level `get_locator()` aggregation would widen
+  // a construct past its content (the `\section{Intro}` title would start at the
+  // command, not at "Intro"). The inherited origin still rides the token, so
+  // `constructor::child_span`'s genuine-first scan can recover it as the
+  // fallback for the origin-less case (`\today`). See SOURCE_PROVENANCE §3.1.3.
+  #[cfg(feature = "token-locators")]
+  let origin_loc: Option<crate::common::locator::Locator> =
+    crate::token::get_token_origin(meaning.loc).filter(|o| !o.inherited).map(|o| {
+      crate::common::arena::with(o.source, |s| {
+        crate::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
+      })
+    });
+  #[cfg(not(feature = "token-locators"))]
+  let origin_loc: Option<crate::common::locator::Locator> = None;
   match cc {
     Catcode::SPACE => {
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
@@ -1226,7 +1248,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         Ok(Some(Digested::from(Tbox::new(
           meaning.get_sym(),
           font,
-          None,
+          origin_loc,
           Tokens!(meaning),
           HashMap::default(),
         ))))
@@ -1266,7 +1288,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       Ok(Some(Digested::from(Tbox::new(
         text,
         None,
-        None,
+        origin_loc,
         Tokens!(meaning),   // tokens
         HashMap::default(), // properties
       ))))

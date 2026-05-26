@@ -39,6 +39,121 @@ any synthetic benchmark.
 
 ### Driver
 
+Beyond-Perl showcase (issues #47/#92): live source↔preview + linting via
+source locators. Full design in
+[`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md).
+
+**Scope:** line-level, block/inline-element granularity, **math opaque**
+(= SyncTeX granularity). Columns, per-leaf char-offset maps, and in-equation
+provenance are deferred. **Parity-neutral and off by default** — a normal
+conversion (switch off) must stay byte-identical to today; build on the
+existing `Locator` model (`common/locator.rs`) **unchanged**.
+
+**Attribute contract (decided 2026-05-24, web-ecosystem audit — see
+SOURCE_PROVENANCE §0/§0.1/§2):** attribute name **`data-sourcepos`** (the
+cmark-gfm/GitHub/GitLab convention; *not* `data-src`, which is the lazysizes
+lazy-load idiom). Value `tag:l:c-tag:l:c` — file **first-class** in each
+endpoint, integer `tag` = index into a doc-level `sources` table
+(Source-Map-v3 `sources`/`sourceRoot`/`sourcesContent` flavour: compact,
+anonymisable, no inlined paths). Serialise via a new compact
+`Locator::to_sourcepos()`; the latent XPointer `Locator::to_attribute()` is
+**not** used (zero web-platform support). Rung-2 char map keeps `data-srcmap`.
+
+Engine-substrate checklist:
+
+- [x] `--source-map` flag (+ `LATEXML_SOURCE_MAP` env), off by default,
+      gating *both* tracking and emission via the `State.source_map` field
+      (`state::source_map_enabled()`); threaded Config → CoreOptions →
+      StateOptions, mirroring `nomathparse`. Scaffold test
+      `tests/52_source_map.rs` pins off-by-default (no `data-sourcepos`) +
+      ON-currently-inert (byte-identical). Verified: corpus binary path
+      (`cortex_worker`) keeps `source_map: None`.
+- [ ] Start-*line* capture in `mouth.rs::read_token` (`:628`), after
+      inter-token skips; range open→close at the digestion frame via
+      `Locator::new_range` (`locator.rs:80`). Gated by `source_map_enabled()`
+      and cached into the Mouth so the hot path is zero-cost when off.
+- [x] Stamp elements with `data-sourcepos` in **`open_element_at`** (the
+      shared element-creation primitive — covers plain `open_element`, math,
+      and alignment uniformly), via `Locator::to_sourcepos(tag)` (integer
+      `sources`-table tag, no paths). Box locator captured as a `Copy`
+      `Locator` at `set_box_to_absorb` time (`current_box_locator`) to avoid
+      the `RefCell` re-borrow panic mid-`be_absorbed`. Gated.
+      - **Deferred:** the `ltx:Math` *wrapper* is stamped at digestion but the
+        Marpa math parser rebuilds the subtree (`base_xmath.rs:1410`) and
+        discards it (§7 A.3 — math-parse provenance). Math stays opaque;
+        equations inherit the container's locator client-side. Math internals
+        (`ltx:XM*`) are skipped by design.
+- [x] Propagate `data:sourcepos` through the post XSLT into HTML
+      `data-sourcepos`. Done via **Perl parity**: emit in LaTeXML's `data:`
+      namespace; `Document::set_attribute` now mirrors Perl's
+      `getDocumentNamespacePrefix($ns,1)` — it **promotes a namespaced
+      attribute's namespace to a document namespace** on first use, so finalize's
+      `apply_document_namespace_declarations` declares `xmlns:data` on the root,
+      the literal `data:sourcepos` resolves into that namespace on serialize, and
+      the existing `copy_foreign_attributes` (`LaTeXML-common.xsl`) converts
+      `data:` → `data-` (`USE_DATA_ATTRIBUTES` = HTML5). No XSLT change — same
+      path `aria:` already uses. General fix (any namespaced attr; implements the
+      long-standing `decodeQName` TODO); verified parity-neutral on
+      structure/complex(aria)/tikz(xlink). See [[refcell-digestion-debt]] sibling
+      `WISDOM.md` note.
+- [x] User-vs-foreign source: stamp only into editable user docs
+      (`.tex`/`.ltx`). This skips both synthetic default locators (source =
+      `locator.rs` from `Locator::default()`'s `file!()`) and foreign
+      `.cls`/`.sty`/dump files; foreign/unstamped elements inherit the nearest
+      user-source ancestor client-side. (MVP extension heuristic; a tracked
+      user-input set would be more precise.) Verified on `article.tex`:
+      265 → 53 stamps, all `tag 0 = article.tex`, real line:col positions.
+- [x] **MVP locator test** (`tests/52_source_map.rs`, 3/3): off-by-default
+      emits no locator; ON emits `data:sourcepos` in core (user-source only,
+      math-opaque, shape `tag:l:c[-tag:l:c]`); ON round-trips to HTML
+      `data-sourcepos` (the XSLT pass-through). Future hardening (not blocking
+      MVP): pin an exact `data-sourcepos` golden; corpus round-trip (literal
+      range substring == visible text; range ⊆ parent; within file bounds) +
+      debug-assert invariants. Self-contained (no SyncTeX dependency).
+- [x] **Coverage:** constructor-built elements now capture a real locator.
+      `Definition/Constructor.pm` L106 parity — `constructor.rs` sets
+      `whatsit.locator = gullet::get_locator()` (gated on `source_map_enabled()`
+      so the corpus path pays nothing and stays byte-identical; the whatsit
+      locator only feeds source-map + untested error messages). Previously every
+      `DefConstructor` whatsit got `Locator::default()` and was dropped by the
+      user-source filter. Result on `article.tex`: **53 → 128** stamps with real
+      line:col ranges (e.g. `\section` line, equation lines). Full suite green.
+- [x] **Cleanup: `Option<Locator>`.** Replaced the `Locator::default()`
+      `file!()/line!()` *sentinel* with an honest `Option<Locator>`:
+      `Object::get_locator -> Option<Locator>`; `Whatsit`/`Tbox`/`List.locator:
+      Option<Locator>`; `List::new` → `find_map`. The free fn
+      `gullet::get_locator() -> Locator` is unchanged (the "where the parser is
+      now" workhorse for errors + box creation). Cross-cutting (17 files: trait +
+      all box types + ~21 call sites); full suite green, parity-neutral. Aligns
+      with the "meaningful Rust types" goal. (Rejected: a stateful gated
+      `Whatsit::default()` — `Default` must stay pure.)
+- [~] **Column precision — needs Tier B, NOT a quick fix (attempted + reverted
+      2026-05-24).** Tried Bruce #101's proposed fix: `read_token` token-start
+      (`last_token_start`, the `from` of `get_locator`) + capturing the
+      construct's open locator in `Constructor::invoke_primitive` *before* args.
+      **Empirically REGRESSED** the common cases: `section` `12:1`→`12:9` (the
+      `{`), `itemize` `40:1`→`40:15` (the `}`). Reason: `\section`/`\begin{…}`
+      reach their element constructor via **expansion** (`\@startsection`,
+      `\begin`), so `invoke_primitive` fires *after* the user's keyword — the
+      open locator is the post-keyword position, not the command start. This is
+      **Bruce's #3 (invocation-span vs macro-origin)** — accurate construct-start
+      needs **expansion-provenance** (tag expansion frames with the invocation
+      locator; propagate to the constructor) = the deferred **Tier B**
+      (`SOURCE_PROVENANCE §3`), genuinely hard, no clear bounded change. Do NOT
+      re-attempt the naive `invoke_primitive` capture. **LINE accuracy already
+      meets the MVP bar** (every construct on its correct source line, verified
+      on `article.tex`); the ar5iv-editor scrolls by line, so columns are a
+      post-MVP refinement gated on Tier B.
+
+Next phase (after substrate): warm-state conversion server (full-doc
+reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to
+post-MVP: columns/`data-srcmap` (§6 rung 2), in-equation/math-parser
+provenance (§7 A.3), Tier B expansion provenance.
+
+## Round-27 parity clusters
+
+### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
+
 `cortex_worker` in standalone mode is the harness:
 
 ```bash
@@ -558,6 +673,30 @@ latex dump (~7.4 → ~3.7 MB).
 
 ---
 
+## Engine file open gaps (MINOR)
+
+- ~~`base_parameter_types.rs` — `CommaList:Type` parameterised
+  form unported.~~ **CLOSED 2026-05-15** (commit `bb17c1adb0`).
+  Reads each item through the inner-type Parameter via
+  `Parameters::reparse_argument`, mirroring Perl
+  `$typedef->reparseArgument`. Tests 1220/0/0 (no Perl users
+  in current corpora; pure parity infrastructure).
+- `tex_box.rs` — box dimension edge cases.
+- `tex_fonts.rs` — `\fontdimen` array semantics; per-font `\hyphenchar`.
+- `tex_tables.rs` — padding CSS classes (XSLT concern).
+- `plain_base.rs` / `latex_base.rs` — NON-BLOCKING. Closures kept in
+  memory before dump; PA aliases capture `\let` round-trips.
+  Architecturally documented in
+  `latexml_core/src/state.rs::is_serializable`.
+- **~72-CS Perl-only long tail** (from the completed LoadFormat audit,
+  `archive/PERL_LOADFORMAT_AUDIT.md`). Engine union has ~72 CSes that Perl
+  defines and Rust does not, *excluding* the now-ported `\bib@*` family —
+  mostly "misc atomics" (`\@charlb`, point-size CSes, `\batchmode`, …) plus
+  the stable 45-CS same-file relocation set. Demand-driven: investigate a
+  CS only when a real paper witnesses it; bounded by the corpus-success
+  gate, not a release blocker. Refresh the engine-wide CS-name diff (it
+  predates the BibTeX port) before quoting exact counts.
+
 ## Tikz known diffs vs Perl (reference)
 
 1. `foreignObject` transform Y / width/height.
@@ -565,6 +704,19 @@ latex dump (~7.4 → ~3.7 MB).
 3. SVG viewBox / total width differs slightly.
 4. matrix uses `<svg:g class="ltx_tikzmatrix">` (Rust) vs inline-blocks
    (Perl).
+
+## Permanent ignores
+
+- **Sandbox out-of-scope**: ns1–ns5 (52_namespace, no DTD); 2402.03300,
+  2410.10068, 2511.03798 (Perl also fails).
+- **Rust supersedes Perl** (both in scope, Rust passes where Perl
+  errors): `1207.6068`, `0909.3444`, plus 40+ in
+  `memory/project_rust_supersedes_perl.md`.
+- **Unported pools**: none outstanding. (`BibTeX.pool.ltxml` is **ported** —
+  Phases 1–8 landed, see [`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md). The
+  remaining B1–B6 / Phase 4–5 polish is tracked there as product
+  correctness, not a permanent ignore. `--nobibtex` is an opt-out, not the
+  default escape hatch — see [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §10.)
 
 ---
 
@@ -657,3 +809,184 @@ R35.B/C/D investigations + R35.F stage-22/23 cluster) have been
 folded into commit history. Run `git log --grep=Round-26 --oneline`
 (or `R27`, `R35`, `R35\.F`) to recover the per-commit story when
 needed.
+
+---
+
+## Math parser ↔ Marpa ASF migration — CLOSED 2026-05-19
+
+
+A multi-session effort to swap the math parser's Tree-iteration
++ per-tree-pruning loop for ASF-driven traversal.
+
+**Working docs**:
+* [`docs/MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md) — full
+  rationalization: where the existing three stages (grammar
+  categories, early semantic pruning in actions, late semantic
+  pruning in pragmas) map onto ASF, a worked example, pseudocode
+  for the new driver, and a four-gate test plan. **Read first.**
+* [`marpa/ASF_STATUS.md`](https://github.com/dginev/marpa/blob/asf-completion/ASF_STATUS.md)
+  on the `asf-completion` branch of dginev/marpa — what's
+  scaffolding vs functional on the marpa side, with a 7-step
+  completion plan and the target Rust API sketch.
+
+**Status snapshot 2026-05-17 (end of session)**:
+* Marpa fork `asf-step3-generic-traverser` branch — **Steps 2-6
+  LANDED**:
+  * `compute_symches` ported (Perl `ASF.pm`-faithful: contiguous
+    same-predecessor and-nodes unify into multi-source glades).
+  * `Glade` query API: `rule_id`, `symch_count`, `factor_count`,
+    `is_factored`, `rh_length`, `rh_glade_id`, `next`, `rewind`,
+    `is_token`, `cursor`, `symches()`. (`literal()` deferred —
+    needs SLR; math parser is a token-stream consumer, doesn't
+    need text spans.)
+  * `ASF::traverse` is now a post-order recursive driver with
+    per-glade `HashMap<usize, PT>` memoization. Cycle-safe via
+    `visited` flag.
+  * `Traverser` trait: generic + `&mut TR` (no `Box<dyn>`). Allows
+    borrowing traversers like `MathTraverser<'a>` that hold
+    `&'a mut Document` + `&'a Actions`. Single-threaded by design.
+  * `asf_three_parses_via_exhaustive_traverser` substantive test:
+    panda grammar produces exactly 3 distinct Penn-tagged strings
+    via post-order memoized traversal — the substantive end-to-end
+    validation.
+  * 17 marpa tests pass (was 13 before this session).
+* latexml-oxide:
+  * Cargo.toml marpa dep switched to
+    `branch = "asf-step3-generic-traverser"`.
+  * Full test suite (1301/0/0) passes against the new marpa branch.
+  * `latexml_math_parser/src/asf_traverser.rs` — **scaffolding
+    landed**: `MathTraverser` struct implementing
+    `marpa::asf::Traverser`. Handles byte glades, lexeme-rule glades
+    (matches `TreeBuilder::rollup_token` semantics), standard rule
+    glades (Cartesian product + `Actions::action_on`).
+    **Not yet wired into `parse_marpa`** — that's the next-session
+    task.
+
+**Remaining sequence**:
+1. ✅ **LANDED**: `MathTraverser` wired behind `LATEXML_MARPA_ASF=1`.
+   Side-by-side runs validated.
+2. ✅ **MOSTLY LANDED**: pragma/action prunes for ambiguity classes
+   (1272 → 1292 ASF; LEGACY 1301/0 preserved).
+3. ⏳ Validate on the 10k canvas stage. Expect 0 test regressions,
+   measurable perf gain on ambiguous formulas.
+4. ✅ **CLOSED 2026-05-19**: the 9-test list referenced below
+   was already obsolete (down to 1 — `physics_test`); the residual
+   `physics_test` failure under `LATEXML_MARPA_ASF_ONLY=1` is now
+   resolved. Both `cargo test --tests` (HYBRID, default) and
+   `LATEXML_MARPA_ASF_ONLY=1 cargo test --tests` report
+   **1328/0/0** on this branch.
+   Root cause: the grammar had two rules matching `\sin[arg]` in
+   `applied_func` — `opfunction tight_term => prefix_apply` AND
+   `opfunction lbracket formula rbracket => apply_delimited`
+   (`[arg]` is also a `fenced_factor` → `tight_term` via
+   `lbracket formula rbracket => fenced`). HYBRID's Tree-iter
+   landed on `prefix_apply` and capped via `max_unique`; ASF's
+   Cartesian-product enumeration ran BOTH rules. `apply_delimited`
+   eagerly XMRefs its `func` operand through `create_xmrefs` →
+   `Document::generate_id`, bumping `_ID_counter_` on the math
+   ancestor for a tree that's then pruned in favor of
+   `prefix_apply`'s output. The wasted xml:id slot shifted
+   surviving lexemes' IDs by +1 (`S1.Ex14.m1.15` vs expected
+   `S1.Ex14.m1.14`).
+   Fix: removed the redundant `opfunction lbracket formula
+   rbracket => apply_delimited` rule in
+   `latexml_math_parser/src/grammar/builder.rs`. Both modes now
+   converge on `prefix_apply` for `OPFUNCTION+[…]`, eliminating
+   the spurious action call. The paren variant
+   (`opfunction lparen formula rparen => apply_delimited`)
+   remains — `\sin(x)` is the canonical function-call notation
+   that warrants the XMDual structure. `function lbracket`
+   and `trigfunction lbracket` rules left intact for now (their
+   rule-id signatures didn't fire on the failing case; revisit
+   if a future witness emerges). Test fixture
+   `tests/complex/physics.xml` re-blessed (23 xml:id
+   renumberings; tighter contiguous numbering — closer to
+   Perl's `t/complex/physics.xml` ID pattern, no structural
+   changes).
+   Historical context: the old 9-test list was
+   `ambiguous_relations, count_parses, mathtools,
+   metarelation_elision, physics, plainfonts, qm,
+   standalone_modifiers, vertbars` — those were the ASF failures
+   as of 2026-05-17 / 2026-05-18; subsequent landings (pragma
+   refinements documented in `MATH_PARSER_ASF_TIEBREAKING.md`)
+   closed all but `physics`, which this fix addresses.
+5. ✅ **LANDED 2026-05-19**: `modified_term` grammar category
+   (Phase 1 + Phase 2). Concrete witness `P(x = 0, y < 0)` —
+   previously `ltx_math_unparsed`, now parses cleanly as
+   `P @ vector(x = 0, y < 0)`.
+   * **Phase 1 (a16cce3ddc):** narrow grammar additions —
+     `modified_term = tight_term relop expression =>
+     infix_relation` (single-relop only; multi-relop chains keep
+     the existing multirelation path) plus
+     `formula_list += modified_term punct modified_term |
+     formula_list punct modified_term => modified_list_apply`.
+     Early-action prune in `infix_relation` rejects `Apply(relop,
+     lhs, list@(…))` when the list contains a relational item,
+     forcing Marpa to commit to the modified_term + fenced path.
+     `cargo test --tests` and `LATEXML_MARPA_ASF_ONLY=1 cargo
+     test --tests` both **1328/0/0**.
+   * **Phase 2 (994cbcfa1a):** retired the now-redundant
+     `prefer_zero_absent_when_available` pragma (no dedicated
+     test witness; conceptual target already covered by qm
+     pragmas + angle-bracket grammar). Function body removed
+     from `semantics/tree.rs`; placeholder comment in
+     `parser.rs::parse_marpa` references the commit.
+   * **Discipline notes:** the earlier (deferred) additive
+     prototype broke 8 tests because it added a wider
+     `modified_term` form at the `statement` level alongside the
+     `formula relop expression` chain — additive co-existence
+     multiplied ambiguity. Phase 1 stays narrow (all-modified-
+     terms list variants only); mixed-content variants
+     (`modified_term punct expression`, etc.) deferred until a
+     witness justifies them. `parse_tree_count_limits` regression
+     test is the canary.
+6. ⏳ Delete 5 of the 6 convergence caps in `parser.rs` (only
+   `max_time` stays). Delete online `parses.contains(&tree)` dedup.
+   **Note (refreshed 2026-05-19):** the code comment at
+   `parser.rs::parse_marpa` line ~1576-1589 explicitly keeps the
+   caps as the LEGACY-path debug-escape-hatch protection — without
+   them the legacy escape would hang on real ambiguous inputs.
+   The intent of this item was the ASF/HYBRID hot path, where
+   the caps don't fire anyway. Treat as a documentation cleanup
+   rather than a code change.
+7. ✅ **CLOSED**: marpa dep is on `dginev/marpa` master
+   (`Cargo.toml` shows `git = "https://github.com/dginev/marpa"`
+   with no branch; commit `0bf241116fcef…` in `Cargo.lock`).
+   The asf-step3-generic-traverser branch was merged via marpa
+   PRs #3 + #4 (`cdb5fa5f99` "marpa back to master (PR #4 merged,
+   large-bocage fallback landed)").
+
+**Session progress (2026-05-17, second push)**: ASF parity
+**1272/29 → 1292/9** (20 tests fixed) via:
+* `FencedLettersAreFunctionArguments` Dual-aware + tier move (12)
+* `prefer_named_interval_at_root` for `(a,b)`, `[a,b]` (2)
+* `prefer_non_self_wrapping_root` for `set@(set@(...))` (2)
+* `prefer_combined_relop_over_multirelation_with_absent` (subcase fix)
+* Early-action prune for `Apply(OPERATOR, [single]) * simple_RHS` (1)
+* Compose left-associativity in `infix_apply` (1)
+* `bare_conditional` reject in `list_apply` (1)
+* `prefer_zero_absent_when_available` + ncases.xml bless (1)
+
+**The win**: eliminates the 5000-tree cap. Per-formula action cost
+drops from O(trees × occurrences) to O(glades). Removes the five
+convergence bandages (`max_trees`, `max_consecutive_dupes`,
+`pruned_only_time_budget`, `converge_budget`, `max_unique`) that
+exist purely to dodge the wrong-paradigm cost. `max_time` is the
+only cap that needs to stay.
+
+---
+
+## Release-readiness & issue-tracker context (consolidated 2026-05-24)
+
+This file stays the **engine-sync log**. The public-release contract moved
+out so it doesn't crowd the parity worklist:
+
+- **[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md)** — pre-1.0 gates: size,
+  portability, license audit, safety, tail-latency, surpass-Perl policy,
+  and the source-provenance / VSCode-synced-preview track (#47/#92).
+- **[`ISSUE_AUDIT.md`](ISSUE_AUDIT.md)** — open GitHub issues mirrored
+  locally (refresh before milestone planning).
+
+These replace the inline 2026-05-24 codex "public-quality gaps" pass; its
+errors are corrected in `RELEASE_CRITERIA.md` §10. The parity mission is
+unchanged: ~99.4% on the 100k warning subset, no error-downgrading.

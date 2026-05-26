@@ -15,7 +15,7 @@ now-removed `tools/rerun_failures.sh` wrapper; the modern
 equivalent is `tools/benchmark_canvas.sh --input-dir <focused>` or
 piping ids to `tools/parity_check.sh -`.
 
-This file ([`SANDBOX_TRIAGE.md`](SANDBOX_TRIAGE.md)) previously
+This file previously
 held a session-by-session per-paper narrative through round 17.
 Those narratives have been folded into commit messages and
 `memory/project_session_history.md`. Keep this file as workflow

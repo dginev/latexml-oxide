@@ -22,6 +22,7 @@
 //! [`crate::dump_paths::detect_ambient_texlive_year`]); fall back to the
 //! most-recent year present at each step.
 
+use crate::prelude::*;
 use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
 
@@ -38,8 +39,9 @@ static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP
 
 pub fn load_definitions() -> latexml_core::common::error::Result<()> {
   if *NODUMP {
-    log::info!(
-      "[plain_dump] LATEXML_NODUMP set — skipping dump, engine will reconstruct \
+    Info!(
+      "plain_dump", "nodump",
+      "LATEXML_NODUMP set — skipping dump, engine will reconstruct \
        plain.tex state from _base pool (slower, Perl-parity)"
     );
     return Ok(());
@@ -49,20 +51,21 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
     match std::fs::read_to_string(&path) {
       Ok(c) => (c, path.display().to_string()),
       Err(e) => {
-        log::warn!("[plain_dump] failed to read {}: {}", path.display(), e);
+        Warn!("plain_dump", "read", s!("failed to read {}: {}", path.display(), e));
         return Ok(());
       },
     }
   } else if let Some(embedded) = crate::embedded_dumps::embedded_plain_dump(prefer) {
     let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
-    log::info!(
-      "[plain_dump] using embedded TL{} dump — no on-disk dump found",
-      year
+    Info!(
+      "plain_dump", "embedded",
+      s!("using embedded TL{} dump — no on-disk dump found", year)
     );
     (embedded.to_string(), format!("<embedded TL{}>", year))
   } else {
-    log::info!(
-      "[plain_dump] no dump found (checked $LATEXML_PLAIN_DUMP_PATH, $LATEXML_DUMP_DIR, \
+    Info!(
+      "plain_dump", "missing",
+      "no dump found (checked $LATEXML_PLAIN_DUMP_PATH, $LATEXML_DUMP_DIR, \
        exe-relative, dev-tree path, and embedded fallback); \
        run `latexml_oxide --init=plain.tex` to generate"
     );
@@ -70,7 +73,7 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
   };
   let count = latexml_core::dump_reader::load_from_str_plain(&content)
     .map_err(|e: String| -> latexml_core::common::error::Error { e.into() })?;
-  log::info!("[plain_dump] loaded {} entries from {}", count, source_label);
+  Info!("plain_dump", "loaded", s!("loaded {} entries from {}", count, source_label));
   Ok(())
 }
 

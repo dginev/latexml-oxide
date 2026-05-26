@@ -27,7 +27,11 @@ pub trait Object {
   {
     panic!("Was it really intended to digest? We don't know how! {self:?}");
   }
-  fn get_locator(&self) -> Locator { Locator::default() }
+  /// The object's stored source locator, if it has one. `None` is the honest
+  /// "no recorded source position" (replacing the old `Locator::default()`
+  /// `file!()/line!()` sentinel). For "where the parser is *now*" (error
+  /// reporting, box creation), use the free fn `gullet::get_locator()`.
+  fn get_locator(&self) -> Option<Locator> { None }
 
   /// each concrete object needs to provide its own path back to tokens
   fn revert(&self) -> Result<Tokens> { Ok(Tokens::new(vec![])) }

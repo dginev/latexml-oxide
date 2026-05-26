@@ -230,7 +230,17 @@ fn hash_key(source_path: &Path, key: RenderKey) -> Option<String> {
   hasher.update(key.page.unwrap_or(0).to_le_bytes());
   hasher.update(key.density.to_le_bytes());
   hasher.update(key.ext.as_bytes());
-  Some(format!("{:x}", hasher.finalize()))
+  // sha2 0.11 returns a `hybrid_array::Array`, which (unlike 0.10's
+  // `GenericArray`) does not implement `LowerHex`, so `format!("{:x}", _)`
+  // no longer compiles. Render the digest to lowercase hex by hand — same
+  // output as the old `{:x}`, and version-agnostic.
+  use std::fmt::Write as _;
+  let digest = hasher.finalize();
+  let mut hash = String::with_capacity(digest.len() * 2);
+  for byte in digest.iter() {
+    let _ = write!(hash, "{byte:02x}");
+  }
+  Some(hash)
 }
 
 /// Build the cache file path for a given hash + extension.

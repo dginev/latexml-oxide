@@ -310,11 +310,28 @@ the plan is to make the work decomposable — each phase ships
 testable code on its own, without leaving the engine in a
 half-broken state.
 
+## Source-locator tracking for `.bib` — combine with the `.bst` engine (directive, 2026-05-25)
+
+`--source-map` / `token-locators` currently does **not** locate `.bib` entries.
+The BibTeX port parses `.bib` via its own string parser (`BibEntry::parse(&str)`)
+plus `\ProcessBibTeXEntry Semiverbatim`, *not* the TeX `read_token` path — so
+`.bib` tokens never receive origin handles and `<bibentry>` carries no
+`data:sourcepos` (the source table stays empty for a direct `.bib` conversion).
+By contrast `.bbl` *does* track, because it is read via the TeX mouth (see
+`SOURCE_PROVENANCE.md` §3.1.3; the user-source filter now passes `.bbl`/`.bib`).
+
+**Directive:** locating `.bib` is a natural fit to combine with translating the
+`.bst` emulation engine from brucemiller/LaTeXML#1955
+(<https://github.com/brucemiller/LaTeXML/pull/1955>). Both touch the same `.bib`
+parsing/processing path, so thread byte-offset → `(line, col)` source positions
+through the `.bib`/`.bst` parser and attach them to the `bibentry`/field
+constructs *as part of that port*, rather than as a separate retrofit.
+
 ## Related
 
 - Skeleton: `latexml_engine/src/bibtex.rs`
 - amsrefs stub: `latexml_package/src/package/amsrefs_sty.rs`
-- Cross-engine audit: `docs/PERL_LOADFORMAT_AUDIT.md` § Engine-wide CS-name diff refresh
+- Cross-engine audit: `docs/archive/PERL_LOADFORMAT_AUDIT.md` § Engine-wide CS-name diff refresh
 - Memory: `memory/wisdom_hub_kernel_dump.md`,
   `memory/wisdom_intarray_fontdimen_storage.md`
 - Post-processing consumer: `latexml_post::make_bibliography`

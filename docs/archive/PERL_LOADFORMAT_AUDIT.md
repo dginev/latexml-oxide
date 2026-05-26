@@ -1,5 +1,19 @@
 # Perl LoadFormat Parity Audit
 
+> **ARCHIVED 2026-05-24 — mission complete.** The strict-`LoadFormat`
+> dump-parity target is met: `--init=plain.tex` and `--init=latex.ltx`
+> both emit **0 errors**, dumps match Perl line-for-line (CLAUDE.md
+> target #4), and every per-file divergence row below is
+> PARITY/NEAR-PARITY/RESOLVED. The one architectural action item
+> (eager-vs-lazy LaTeX load) is RESOLVED — see that section. This file is
+> a frozen snapshot of how that parity was reached.
+>
+> **The single live residual** — a ~72-CS Perl-only long tail (the 58
+> "misc atomics" + investigate bucket, *minus* the now-ported `\bib@*`
+> family) — moved to `../SYNC_STATUS.md` "Engine file open gaps (MINOR)"
+> as the active item. It is demand-driven and bounded by the corpus
+> success gate, not a release blocker.
+
 Tracks the Rust→Perl translation gap exposed by the strict
 `LoadFormat` split (commit `0c4d609ad`). Each entry maps a Perl
 `Engine/<file>.pool.ltxml` definition to its Rust counterpart in
@@ -85,13 +99,14 @@ Rust now follows this in `tex.rs` (plain) and `latex.rs` (latex).
 
 ## Architectural divergence: eager vs lazy LaTeX load
 
-**Status note (2026-04-30): re-audit before acting.** The original
-concern below predates the current autoload/dump split. `tex.rs` now
-defines `\@load@latex@pool` and LaTeX autoload triggers; `latex.rs`
-itself still mirrors `LaTeX.pool` when that pool is loaded. If this
-remains a real divergence, it should be demonstrated with a fresh
-minimal trace of engine initialization and first `\documentclass`
-autoload, not assumed from this older note.
+**RESOLVED 2026-05-24.** Rust now lazy-loads LaTeX exactly as Perl does.
+`\@load@latex@pool` (`latexml_engine/src/tex.rs:213`) is a real
+`DefPrimitive` that calls `input_definitions("LaTeX", …pool)` *on demand*,
+fired by the `\documentclass` / `\NeedsTeXFormat` / `\UseRawInputEncoding`
+/ `\DocumentMetadata` autoload triggers defined at `tex.rs:209` — the
+"recommended path" below, now implemented and matching Perl
+`TeX.pool.ltxml:33-39`'s `DefAutoload` triggers. The original eager-load
+concern (kept below for context) no longer applies.
 
 **Perl `TeX.pool.ltxml:22-23`:**
 ```perl

@@ -289,6 +289,15 @@ pub struct Token {
   pub text: SymStr,
   /// a TeX catcode
   pub code: Catcode,
+  /// Origin handle into the per-conversion token-origin side arena (1-based;
+  /// `0` = no recorded origin). Present only under the `token-locators` feature
+  /// (the opt-in source-map precision build); `Token` stays 8 bytes otherwise.
+  /// Set in `read_token`; carried through expansion so a digested run can recover
+  /// its exact source span. **Excluded from `PartialEq`** (tokens compare by
+  /// meaning, not origin — see `impl PartialEq`). See docs/SOURCE_PROVENANCE.md
+  /// §3.1.1.
+  #[cfg(feature = "token-locators")]
+  pub loc: u32,
 }
 
 impl fmt::Debug for Token {
@@ -330,73 +339,87 @@ impl PartialEq for Token {
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
   code: Catcode::BEGIN,
+  #[cfg(feature = "token-locators")]
+  loc: 0,
 });
 /// constant for an END "}" token
 #[thread_local]
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
   code: Catcode::END,
+  #[cfg(feature = "token-locators")]
+  loc: 0,
 });
 /// constant for a MATH "$" token
 #[thread_local]
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
   code: Catcode::MATH,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for an ALIGN "&" token
 #[thread_local]
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
   code: Catcode::ALIGN,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for a PARAM "#" token
 #[thread_local]
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
   code: Catcode::PARAM,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for a SUPER "^" token
 #[thread_local]
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
   code: Catcode::SUPER,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for a SUB "_" token
 #[thread_local]
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
   code: Catcode::SUB,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for a SPACE " " token
 #[thread_local]
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
   code: Catcode::SPACE,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for a CR "\n" token
 #[thread_local]
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
   code: Catcode::SPACE,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for T_CS("\relax")
 #[thread_local]
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
   code: Catcode::CS,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for T_CS("\expandafter")
 #[thread_local]
 pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 /// constant for T_CS("\endcsname")
 #[thread_local]
 pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\endcsname"),
   code: Catcode::CS,
-});
+      #[cfg(feature = "token-locators")] loc: 0
+    });
 
 #[macro_export]
 /// macro for a BEGIN "{" token
@@ -423,7 +446,9 @@ macro_rules! T_SUB(() => { *$crate::token::TOKEN_SUB });
 #[macro_export]
 macro_rules! T_SPACE(() => { *$crate::token::TOKEN_SPACE };
 ($text:literal) => {
-  Token { text: $crate::pin!($text), code: Catcode::SPACE}
+  Token { text: $crate::pin!($text), code: Catcode::SPACE,
+      #[cfg(feature = "token-locators")] loc: 0
+    }
 });
 /// macro for a CR "\n" token
 #[macro_export]
@@ -435,12 +460,14 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -451,12 +478,14 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -467,6 +496,7 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -479,6 +509,7 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }};
 }
@@ -489,6 +520,7 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -499,12 +531,14 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
   ($text:expr) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -520,6 +554,7 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -531,6 +566,7 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -545,12 +581,14 @@ macro_rules! Token {
     Token {
       text: $crate::pin!($text),
       code: $cc,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
   ($text:expr, $cc:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   };
 }
@@ -633,6 +671,7 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 }
@@ -642,7 +681,7 @@ impl Default for Token {
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
-    Token { text: arena::pin(text), code }
+    Token { text: arena::pin(text), code, #[cfg(feature = "token-locators")] loc: 0 }
   }
 
   /// Get the CS Name of the token. This is the name that definitions will be
@@ -782,12 +821,14 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
   pub fn as_cs(&self) -> Token {
     Token {
       text: self.text,
       code: Catcode::CS,
+      #[cfg(feature = "token-locators")] loc: 0
     }
   }
 
@@ -920,9 +961,131 @@ impl From<&str> for Token {
   }
 }
 
+// ── Token-origin side arena (token-locators feature) ───────────────────────
+// Per-conversion store mapping a Token's `loc` handle (1-based; 0 = none) to its
+// captured source start. Tokens carry only the u32 handle (Token stays 12 bytes);
+// this holds the (source, line, col). Appended in `read_token`, read by the
+// digestion consumer to give a text run its true span. Cleared per conversion.
+// See docs/SOURCE_PROVENANCE.md §3.1.1.
+#[cfg(feature = "token-locators")]
+#[derive(Clone, Copy, Debug)]
+pub struct TokenStart {
+  pub source: SymStr,
+  pub line:   u32,
+  pub col:    u32,
+  /// `true` when this origin was *inherited* from a macro invocation rather
+  /// than read directly from a mouth — i.e. the token is synthesized
+  /// expansion output (`\today → "May 25, 2026"`) attributed to its `\today`
+  /// call site. The content-range recovery in `constructor::child_span`
+  /// prefers genuine (read-from-source) origins and only falls back to
+  /// inherited ones, so a `\section{Intro}`'s structural body literals — now
+  /// carrying an inherited origin — never widen the title's content-exact
+  /// span. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  pub inherited: bool,
+}
+
+#[cfg(feature = "token-locators")]
+thread_local! {
+  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Append a token's source start, returning its 1-based handle (`0` is reserved
+/// for "no origin"). Only called on the source-map precision path.
+#[cfg(feature = "token-locators")]
+pub fn push_token_origin(source: SymStr, line: u32, col: u32) -> u32 {
+  TOKEN_ORIGINS.with(|o| {
+    let mut v = o.borrow_mut();
+    v.push(TokenStart { source, line, col, inherited: false });
+    v.len() as u32 // index + 1
+  })
+}
+
+/// Derive an *inherited* origin from an existing handle: look up the
+/// invocation token's start, push a copy flagged `inherited`, and return its
+/// new handle (`0` if `handle` is the no-origin sentinel or out of range). One
+/// call per macro expansion; the returned handle is shared by every synthesized
+/// result token. See `push_token_origin` and docs/SOURCE_PROVENANCE.md §3.1.3.
+#[cfg(feature = "token-locators")]
+pub fn push_inherited_origin(handle: u32) -> u32 {
+  if handle == 0 {
+    return 0;
+  }
+  TOKEN_ORIGINS.with(|o| {
+    let mut v = o.borrow_mut();
+    let Some(mut start) = v.get((handle - 1) as usize).copied() else {
+      return 0;
+    };
+    start.inherited = true;
+    v.push(start);
+    v.len() as u32
+  })
+}
+
+/// Resolve a token `loc` handle to its origin (`None` for the `0` sentinel or an
+/// out-of-range handle).
+#[cfg(feature = "token-locators")]
+pub fn get_token_origin(handle: u32) -> Option<TokenStart> {
+  if handle == 0 {
+    return None;
+  }
+  TOKEN_ORIGINS.with(|o| o.borrow().get((handle - 1) as usize).copied())
+}
+
+/// Reset the arena at the start of a conversion (handles are per-conversion).
+#[cfg(feature = "token-locators")]
+pub fn clear_token_origins() {
+  TOKEN_ORIGINS.with(|o| o.borrow_mut().clear());
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// `Token` size invariant (docs/SOURCE_PROVENANCE.md §3.1.1): 8 bytes by
+  /// default (`SymStr` + `Catcode`), 12 only under the `token-locators`
+  /// precision build (+ the `u32` origin handle). Guards the corpus/parity/
+  /// distribution builds against an accidental widening.
+  #[test]
+  fn token_size_invariant() {
+    #[cfg(not(feature = "token-locators"))]
+    assert_eq!(
+      std::mem::size_of::<Token>(),
+      8,
+      "default Token must stay 8 bytes (SymStr + Catcode)"
+    );
+    #[cfg(feature = "token-locators")]
+    assert_eq!(
+      std::mem::size_of::<Token>(),
+      12,
+      "token-locators Token is 8 + a u32 origin handle"
+    );
+  }
+
+  /// Per-token origin capture (token-locators): each char token read from a
+  /// mouth carries a handle resolving to its exact (line, col). This is the leaf
+  /// accuracy that mouth-snapshot (Experiments 1–2) and digested-child assembly
+  /// (Experiment 3) could not provide — the position now travels *with the
+  /// token*. See docs/SOURCE_PROVENANCE.md §3.1.1.
+  #[cfg(feature = "token-locators")]
+  #[test]
+  fn token_origin_capture() {
+    super::clear_token_origins();
+    // "Hello" — five letters at 1-indexed columns 1..=5 on line 1.
+    let toks = crate::mouth::tokenize("Hello");
+    let got: Vec<(u32, u32)> = toks
+      .unlist_ref()
+      .iter()
+      .map(|t| {
+        let o = super::get_token_origin(t.loc).expect("token carries an origin handle");
+        (o.line, o.col)
+      })
+      .collect();
+    assert_eq!(
+      got,
+      vec![(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)],
+      "each letter's captured (line, col) must be exact"
+    );
+  }
 
   #[test]
   fn catcode_name_covers_all_variants() {

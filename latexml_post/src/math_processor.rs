@@ -71,7 +71,7 @@ pub trait MathProcessor: Processor {
       // Reaching this base impl with secondaries means a misconfigured
       // chain. Use class=`misdefined`, object=`combineParallel` per
       // the wider `Error('misdefined', …)` convention (Post.pm:177/434).
-      log_post_error!(
+      Error!(
         "misdefined", "combineParallel",
         "Abstract combineParallel: dropping extra markup from: {}",
         secondaries
@@ -182,8 +182,9 @@ pub fn process_math(
     }
   }
   if audit {
-    log::info!(
-      "POST_AUDIT: {} math nodes in {}ms (max {}µs at index {})",
+    Info!(
+      "audit", "math",
+      "{} math nodes in {}ms (max {}µs at index {})",
       n,
       total_ns / 1_000_000,
       max_ns / 1_000,
@@ -197,7 +198,7 @@ pub fn process_math(
     let _ = node.remove_attribute("_pvis");
   }
 
-  log::info!("converted {} Maths", n);
+  Info!("math", "converted", "converted {} Maths", n);
   Ok(())
 }
 

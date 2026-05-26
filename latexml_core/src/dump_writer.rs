@@ -71,7 +71,7 @@ pub fn write_dump(
   .ok();
   writeln!(
     file,
-    "#            delimiter tokens round-trip (see docs/DUMP_FORMAT_PERL_ANALYSIS.md)."
+    "#            delimiter tokens round-trip (see docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)."
   )
   .ok();
   writeln!(
@@ -132,7 +132,7 @@ pub fn write_dump(
   // initialized expl3 + LaTeX kernel. We group them by (font,size) and
   // emit a single `IA` record per intarray with the values RLE-encoded
   // — same in-memory state after replay, ~10× smaller on disk.
-  // See `docs/PERL_LOADFORMAT_AUDIT.md` ("Fontdimen/intarray storage").
+  // See `docs/archive/PERL_LOADFORMAT_AUDIT.md` ("Fontdimen/intarray storage").
   let mut fontdimen_groups: HashMap<String, Vec<(u32, i64)>> = HashMap::default();
 
   for (table, key, value) in entries {
@@ -413,7 +413,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       //     brace-in-delimiter forms.
       //   - `v3_params` (v3, 6th field) — per-Parameter structured record carrying (name, spec,
       //     flags, extras). Modeled on Perl's `P(type, spec, extra=>[T(...)])`; see
-      //     `docs/DUMP_FORMAT_PERL_ANALYSIS.md`. Bypasses `parse_parameters` at load time so
+      //     `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`. Bypasses `parse_parameters` at load time so
       //     delimited params round-trip intact.
       //
       // We emit both so older readers still work, and newer readers can
@@ -881,18 +881,22 @@ mod tests {
       Token {
         text: arena::pin("\\end"),
         code: Catcode::CS,
-      },
+      #[cfg(feature = "token-locators")] loc: 0
+    },
       Token {
         text: arena::pin("{"),
         code: Catcode::BEGIN,
+        #[cfg(feature = "token-locators")] loc: 0,
       },
       Token {
         text: arena::pin("verbatim"),
         code: Catcode::LETTER,
-      },
+      #[cfg(feature = "token-locators")] loc: 0
+    },
       Token {
         text: arena::pin("}"),
         code: Catcode::END,
+        #[cfg(feature = "token-locators")] loc: 0,
       },
     ]);
     let ps = Parameters::new(vec![raw_param("Until", "Until:\\end{verbatim}", vec![
@@ -939,10 +943,12 @@ mod tests {
     let t1 = Tokens::new(vec![Token {
       text: arena::pin("a"),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }]);
     let t2 = Tokens::new(vec![Token {
       text: arena::pin("b"),
       code: Catcode::LETTER,
+      #[cfg(feature = "token-locators")] loc: 0
     }]);
     let ps = Parameters::new(vec![raw_param("Match", "Match:ab", vec![t1, t2])]);
     let s = serialize_parameters_v3(&ps);

@@ -254,6 +254,17 @@ pub struct State {
   // include_styles: bool,
   /// flag to disable math parsing
   pub nomathparse:             bool,
+  /// flag enabling source-locator (`--source-map`) tracking + emission.
+  /// Off by default; gates BOTH the per-token start capture and the
+  /// per-element `data-sourcepos` stamping so a normal conversion pays
+  /// nothing. See `docs/SOURCE_PROVENANCE.md`.
+  pub source_map:              bool,
+  /// Document-level `sources` table for the source-map feature: ordered
+  /// list of source files seen, index = the integer `tag` emitted in
+  /// `data-sourcepos` (Source-Map-v3 `sources` style — never an inlined
+  /// path). Populated lazily via `source_tag()` only when `source_map` is
+  /// on. See `docs/SOURCE_PROVENANCE.md` §0.1.
+  pub source_table:            Vec<SymStr>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the in-distro latexml bindings
   pub bindings_dispatch:       Option<BindingDispatcher>,
@@ -325,6 +336,8 @@ impl Default for State {
       graphics_paths:          VecDeque::new(),
       // include_styles: false,
       nomathparse:             false,
+      source_map:              false,
+      source_table:            Vec::new(),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
@@ -385,6 +398,7 @@ pub struct StateOptions {
   pub include_comments: Option<bool>,
   pub include_styles:   Option<bool>,
   pub nomathparse:      Option<bool>,
+  pub source_map:       Option<bool>,
   pub documentid:       Option<String>,
   pub search_paths:     Option<Vec<String>>,
   pub graphics_paths:   Option<Vec<String>>,
@@ -469,6 +483,7 @@ impl State {
     let include_comments = options.include_comments;
     // let include_styles = options.include_styles.unwrap_or(false);
     let nomathparse = options.nomathparse.unwrap_or(false);
+    let source_map = options.source_map.unwrap_or(false);
 
     let search_paths = match options.search_paths {
       None => VecDeque::new(),
@@ -496,6 +511,7 @@ impl State {
       // include_styles,
       input_encoding: options.input_encoding,
       nomathparse,
+      source_map,
       ..State::default()
     };
     // INITEX-equivalent defaults — mirror Perl `State.pm:128-137`.
@@ -2711,6 +2727,35 @@ pub fn set_nomathparse_flag(val: bool) {
   let mut state = state_mut!();
   state.nomathparse = val;
 }
+
+/// Whether source-locator (`--source-map`) tracking + emission is on.
+/// Read by the source-provenance machinery (mouth token-start capture,
+/// `Document::absorb` `data-sourcepos` stamping) to stay zero-cost when off.
+/// See `docs/SOURCE_PROVENANCE.md`.
+pub fn source_map_enabled() -> bool { state!().source_map }
+pub fn set_source_map_flag(val: bool) {
+  let mut state = state_mut!();
+  state.source_map = val;
+}
+
+/// Find-or-append a source file in the document-level `sources` table,
+/// returning its integer `tag` (index). The per-element `data-sourcepos`
+/// attribute carries this compact integer rather than a path — the
+/// Source-Map-v3 `sources` convention (compact + anonymisable). Only
+/// called on the source-map path. See `docs/SOURCE_PROVENANCE.md` §0.1.
+pub fn source_tag(source: SymStr) -> u32 {
+  let mut state = state_mut!();
+  if let Some(idx) = state.source_table.iter().position(|s| *s == source) {
+    idx as u32
+  } else {
+    state.source_table.push(source);
+    (state.source_table.len() - 1) as u32
+  }
+}
+
+/// Snapshot of the `sources` table (index = tag) for emitting the
+/// document-level tag→file header.
+pub fn source_table_snapshot() -> Vec<SymStr> { state!().source_table.clone() }
 
 pub fn current_verbosity() -> i32 { state!().verbosity }
 

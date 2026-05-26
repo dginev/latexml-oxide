@@ -737,7 +737,12 @@ LoadDefinitions!({
         Catcode::BEGIN | Catcode::END |
         Catcode::SUB | Catcode::SUPER | Catcode::PARAM |
         Catcode::ALIGN | Catcode::MATH | Catcode::ACTIVE => {
-          value_vec.push(Token { text: tok.text, code: Catcode::OTHER });
+          value_vec.push(Token {
+            text: tok.text,
+            code: Catcode::OTHER,
+            #[cfg(feature = "token-locators")]
+            loc: 0,
+          });
         },
         _ => value_vec.push(*tok),
       }

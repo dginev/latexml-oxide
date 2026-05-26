@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.5.0"
+version = "0.6.2"
 edition = "2021"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0"
@@ -42,6 +42,18 @@ cortex = ["dep:pericortex", "dep:hostname"]
 # cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
 # `phf_shared` build-deps, plus a small `.text` footprint.
 test-utils = ["dep:glob", "dep:phf"]
+# Source-map precision build (docs/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
+# with a per-token origin handle (8→12) so each token carries its exact source
+# start through expansion to digestion. OFF by default. Propagates to every
+# token-constructing crate so the cfg resolves consistently inside their
+# (cross-crate) token-macro expansions. The knob downstream consumers flip.
+token-locators = [
+  "latexml_core/token-locators",
+  "latexml_engine/token-locators",
+  "latexml_package/token-locators",
+  "latexml_contrib/token-locators",
+  "latexml_math_parser/token-locators",
+]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -66,7 +78,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2", "
 indexmap = "=2.14.0"
 tempfile = "3"
 log = "0.4"
-libxml = "0.3.11"
+libxml = "0.3.12"
 once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
@@ -85,3 +97,30 @@ hostname = { version = "0.4", optional = true }
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.
 mimalloc = { version = "0.1", default-features = false }
+
+# Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
+# Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
+# Runtime apt dependencies match the README's "Build from source" recipe minus
+# the `-dev` headers (those are compile-time only). The deb only ships the
+# `latexml_oxide` binary — XSLT, CSS, JavaScript and RelaxNG schemas are
+# embedded at build time, so no `resources/` payload is shipped alongside.
+[package.metadata.deb]
+name = "latexml-oxide"
+maintainer = "Deyan Ginev <deyan.ginev@gmail.com>"
+copyright = "2016-2026 Deyan Ginev. CC0 1.0 Universal."
+license-file = ["../LICENSE", "0"]
+extended-description = """\
+A Rust port of LaTeXML — converts LaTeX documents to accessible web
+formats (HTML5, XHTML, EPUB3, JATS). Drop-in replacement for the
+upstream Perl tool with significant throughput improvements on the
+arXiv corpus."""
+depends = "libc6, libxml2, libxslt1.1, libkpathsea6, texlive-latex-base, texlive-latex-extra, texlive-science"
+recommends = "imagemagick, poppler-utils, mupdf-tools"
+section = "tex"
+priority = "optional"
+assets = [
+  ["../target/maxperf/latexml_oxide", "usr/bin/", "755"],
+  ["../README.md", "usr/share/doc/latexml-oxide/README", "644"],
+  ["../CHANGELOG.md", "usr/share/doc/latexml-oxide/CHANGELOG", "644"],
+  ["../LICENSE", "usr/share/doc/latexml-oxide/copyright", "644"],
+]

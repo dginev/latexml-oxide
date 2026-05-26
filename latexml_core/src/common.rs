@@ -103,6 +103,10 @@ pub struct Config {
   pub include_comments:        Option<bool>,
   /// Whether to skip math parsing (--nomathparse)
   pub nomathparse:             Option<bool>,
+  /// Whether to track + emit source locators (`--source-map`). Off by
+  /// default; gates both per-token start capture and per-element
+  /// `data-sourcepos` stamping. See `docs/SOURCE_PROVENANCE.md`.
+  pub source_map:              Option<bool>,
 }
 impl Default for Config {
   fn default() -> Self {
@@ -120,6 +124,7 @@ impl Default for Config {
       search_paths:            None,
       include_comments:        None,
       nomathparse:             None,
+      source_map:              None,
     }
   }
 }
@@ -160,6 +165,7 @@ mod tests {
     assert!(c.search_paths.is_none());
     assert!(c.include_comments.is_none());
     assert!(c.nomathparse.is_none());
+    assert!(c.source_map.is_none());
   }
 
   #[test]

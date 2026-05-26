@@ -58,7 +58,7 @@ impl MathML {
   /// Create a Presentation MathML processor.
   pub fn new_presentation() -> Self {
     MathML {
-      name:            "MathML::Presentation".to_string(),
+      name:            "MathML[Presentation]".to_string(),
       is_secondary:    false,
       content_mathml:  false,
       plane1:          true,
@@ -74,7 +74,7 @@ impl MathML {
   /// Create a Content MathML processor.
   pub fn new_content() -> Self {
     MathML {
-      name:            "MathML::Content".to_string(),
+      name:            "MathML[Content]".to_string(),
       is_secondary:    false,
       content_mathml:  true,
       plane1:          true,

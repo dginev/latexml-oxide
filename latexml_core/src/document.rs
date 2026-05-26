@@ -103,17 +103,21 @@ pub struct Document {
   reusable_node_buffers:       Vec<Vec<Node>>,
   localized_boxes:             Vec<Option<Digested>>,
   box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
+  /// source range, captured as a plain `Copy` `Locator` at set time so
+  /// stamping never re-borrows the box's `RefCell` mid-absorb (which
+  /// panics for the mutably-borrowed `Alignment` path). Mirrors the
+  /// `box_to_absorb` save stack; `None` when source-map is off.
+  current_box_locator:         Option<Locator>,
+  localized_box_locators:      Vec<Option<Locator>>,
   localized_fonts:             Vec<Rc<Font>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
 }
 impl Object for Document {
-  fn get_locator(&self) -> Locator {
-    self
-      .get_node_box(&self.node)
-      .map(|tbox| tbox.get_locator())
-      .unwrap_or_default()
+  fn get_locator(&self) -> Option<Locator> {
+    self.get_node_box(&self.node).and_then(|tbox| tbox.get_locator())
   }
 }
 
@@ -158,6 +162,8 @@ impl Document {
       constructed_nodes:           Vec::new(),
       reusable_node_buffers:       Vec::new(),
       box_to_absorb:               None,
+      current_box_locator:         None,
+      localized_box_locators:      Vec::new(),
       context:                     None,
       localized_boxes:             Vec::new(),
       localized_fonts:             Vec::new(),
@@ -937,6 +943,77 @@ impl Document {
     // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
+  }
+
+  /// Stamp a freshly-opened element with its source range as a
+  /// `data-sourcepos` attribute, for the `--source-map` feature (issues
+  /// #47/#92). The range comes from the construct currently being absorbed
+  /// (`box_to_absorb`); the integer file `tag` is resolved through the
+  /// document-level `sources` table (`state::source_tag`) so no path is
+  /// inlined. See `docs/SOURCE_PROVENANCE.md` §0/§2.
+  ///
+  /// Math is kept **opaque** per the MVP scope: the `ltx:Math` wrapper is
+  /// stamped, but its `ltx:XM*` MathML internals are skipped (the Marpa
+  /// math parser has no locator awareness — §7 A.3). Only invoked when the
+  /// source-map switch is on (the caller gates it).
+  fn stamp_source_locator(&mut self, node: &Node, qname: &str) {
+    // Math internals: stamp only the leaf token elements (`ltx:XMTok` — the
+    // operators / identifiers / numbers) when token-locators gives them a real
+    // located box locator (the math char's source origin). This is the per-token
+    // in-equation provenance step (§7 A.3). The structural XM* (XMApp/XMDual/
+    // XMArray) are rebuilt by the Marpa parser — created directly, not via
+    // `open_element` — so they never reach here; the remaining digestion-built
+    // wrappers (XMArg/XMHint/XMText/XMRef/XMWrap) stay opaque. The `data:sourcepos`
+    // rides the XMTok element through the parser's restructuring (attribute on a
+    // reparented node) and through the XMath→MathML XSLT.
+    //
+    // Gated at compile time: feature-OFF keeps math fully opaque (the MVP scope
+    // and the golden's math-opacity assertion); only the token-locators build
+    // exposes the located XMTok leaves.
+    #[cfg(not(feature = "token-locators"))]
+    if qname.starts_with("ltx:XM") {
+      return;
+    }
+    #[cfg(feature = "token-locators")]
+    if qname.starts_with("ltx:XM") && qname != "ltx:XMTok" {
+      return;
+    }
+    // Read the pre-captured Copy locator — never re-borrow the box here.
+    let Some(loc) = self.current_box_locator else {
+      return;
+    };
+    // Skip locators with no real source position (default/synthetic).
+    if loc.from_line == 0 {
+      return;
+    }
+    // User-source only (§7.B): emit a navigable locator only into an editable
+    // user document — `.tex`/`.ltx`, plus the bibliography sources `.bbl` (the
+    // BibTeX-generated, but author-editable, list of `\bibitem`s) and `.bib`
+    // (BibTeX database entries). All four are files the editor may legitimately
+    // scroll into. This skips both synthetic default locators (whose source is
+    // `…/locator.rs`, from `Locator::default()`'s `file!()`) and foreign
+    // package/class files (`.sty`/`.cls`/…) — the editor must never scroll into
+    // those. Foreign/unstamped elements inherit their nearest user-source
+    // ancestor's range client-side (DOM walk-up). (MVP heuristic; a tracked
+    // user-input set would be more precise.)
+    let src = loc.get_source();
+    let is_user_source = arena::with(src, |s| {
+      let s = s.to_ascii_lowercase();
+      s.ends_with(".tex") || s.ends_with(".ltx") || s.ends_with(".bbl") || s.ends_with(".bib")
+    });
+    if !is_user_source {
+      return;
+    }
+    let tag = state::source_tag(src);
+    // Emit in LaTeXML's `data:` namespace (`http://dlmf.nist.gov/LaTeXML/data`,
+    // registered in `base_schema.rs:19`). The post XSLT's `copy_foreign_attributes`
+    // path converts a `data:`-prefixed *foreign-namespaced* attribute to the HTML
+    // `data-sourcepos` attribute (`LaTeXML-common.xsl`: `data:` prefix → `data-…`
+    // when `USE_DATA_ATTRIBUTES` = true, i.e. HTML5). Faithful to Perl LaTeXML's
+    // foreign-attribute convention; no XSLT change needed. The general namespaced-
+    // attribute binding lives in `set_attribute` (shared with `aria:` etc.).
+    let mut n = node.clone();
+    let _ = self.set_attribute(&mut n, "data:sourcepos", &loc.to_sourcepos(tag));
   }
 
   /// Note: This closes the deepest open node of a given type.
@@ -2631,8 +2708,21 @@ impl Document {
       // Here we just set the attribute, since the caller is responsible for filtering.
       node.set_attribute(key, value)?;
     } else {
-      // Namespaced attributes: set directly for now.
-      // TODO: proper namespace prefix resolution via model->decodeQName
+      // Namespaced attribute (`prefix:local`). Mirror Perl
+      // `Core/Document.pm::setAttribute`, whose `getDocumentNamespacePrefix($ns, 1)`
+      // *promotes* the prefix's namespace to a document namespace on first use.
+      // That lets finalize's `apply_document_namespace_declarations` declare
+      // `xmlns:prefix` on the root, so the prefixed attribute resolves into its
+      // namespace on serialization and the post XSLT can copy it (e.g.
+      // `data:sourcepos` → `data-sourcepos`). Without the promotion a code-only
+      // namespace (like `data`, used by `--source-map`) is emitted unbound and
+      // dropped. General over any registered prefix — implements the decodeQName
+      // TODO. (`aria`/schema namespaces are already document namespaces, so the
+      // re-registration is an idempotent no-op for them.)
+      if let Ok((Some(ns_uri), _local)) = model::decode_qname(key) {
+        let prefix = key.split(':').next().unwrap_or("");
+        model::register_document_namespace(prefix, Some(&ns_uri));
+      }
       node.set_attribute(key, value)?;
     }
     // ... TODO: continue (see Perl)
@@ -3573,6 +3663,15 @@ impl Document {
       newnode = self.open_element_internal(point, decoded_ns, &tag)?;
     }
 
+    // Source-locator stamping (`--source-map`, issues #47/#92). `open_element_at`
+    // is the shared element-creation primitive (plain `open_element`, math, and
+    // alignment all route here), so stamping here covers them uniformly —
+    // including the `ltx:Math` wrapper that bypasses `open_element`. Off by
+    // default; the cheap gate keeps the normal path free.
+    if state::source_map_enabled() {
+      self.stamp_source_locator(&newnode, qname);
+    }
+
     if let Some(attrs) = attributes {
       let mut sorted_keys = attrs.keys().map(String::as_str).collect::<Vec<_>>();
       sorted_keys.sort_unstable();
@@ -4222,10 +4321,32 @@ impl Document {
 
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());
+    self.localized_box_locators.push(self.current_box_locator.take());
     self.box_to_absorb = arg;
+    // Capture the locator now, while the box's RefCell is unborrowed — the
+    // source-map stamping (`open_element`) reads this Copy value instead of
+    // re-borrowing the box mid-`be_absorbed`. Gated so the normal path is free.
+    self.current_box_locator = if state::source_map_enabled() {
+      self.box_to_absorb.as_ref().and_then(|b| b.get_locator())
+    } else {
+      None
+    };
   }
   pub fn expire_box_to_absorb(&mut self) {
     self.box_to_absorb = self.localized_boxes.pop().unwrap();
+    self.current_box_locator = self.localized_box_locators.pop().unwrap_or(None);
+  }
+
+  /// token-locators: directly set the locator used to stamp the NEXT opened
+  /// element, without touching the `box_to_absorb` stack. The alignment absorb
+  /// uses this to give each `tabular`/`tr`/`td` its own (table/row/cell) span,
+  /// since those elements are opened *before* their content's `box_to_absorb`
+  /// is set. Transient: each cell overwrites it and the enclosing
+  /// `expire_box_to_absorb` (the Alignment absorb frame) restores the prior
+  /// value. See docs/SOURCE_PROVENANCE.md §3.1.3.
+  #[cfg(feature = "token-locators")]
+  pub fn set_current_box_locator(&mut self, loc: Option<Locator>) {
+    self.current_box_locator = loc;
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {

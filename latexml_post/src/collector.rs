@@ -134,7 +134,8 @@ pub fn make_sub_collection_documents(
 
   // For subsequent sub-collections, we'd create new documents
   // This requires PostDocument::newDocument which needs more infrastructure
-  log::info!(
+  Info!(
+    "collector", "subcollections",
     "Collector: {} sub-collections by initial: {:?}",
     initials.len(),
     initials
@@ -175,7 +176,7 @@ impl Processor for Collector {
     // Mirrors Perl Post.pm:177 `Fatal("misdefined", $self, $doc, "abstract; ...")`
     // but at Warn severity (Rust trait can't fatal here without changing the
     // signature). A concrete subtype reaching this branch is a misconfig.
-    log_post_warn!(
+    Warn!(
       "misdefined", "Collector",
       "Abstract Collector::process called — concrete subclass should override"
     );

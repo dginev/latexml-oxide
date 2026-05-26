@@ -350,10 +350,9 @@ LoadDefinitions!({
     // plain_constructs has run.
     let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
     if applied + skipped > 0 {
-      log::info!(
-        "[plain_dump] deferred aliases: {} applied, {} skipped",
-        applied,
-        skipped
+      Info!(
+        "plain_dump", "deferred",
+        s!("deferred aliases: {} applied, {} skipped", applied, skipped)
       );
     }
   }

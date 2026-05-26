@@ -184,15 +184,38 @@ pub fn get_locator() -> Locator {
   while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
     runtime_opt = mouthstack_iter.next();
   }
+  // The free fn stays `-> Locator` ("where the parser is now" — always a real
+  // position during digestion; the workhorse for errors + box creation). A
+  // Mouth's `get_locator` is `Option` (per the `Object` trait) but is always
+  // `Some`, so unwrap to the default only in the no-mouth backup.
   if let Some(runtime) = runtime_opt {
     // First exit condition: we found a mouth with a source, and asked it for a locator
-    runtime.mouth.get_locator()
+    runtime.mouth.get_locator().unwrap_or_default()
   } else if let Some(runtime) = gullet.mouthstack.front() {
     // Backup strategy: return the first locator in the mouthstack:
-    runtime.mouth.get_locator()
+    runtime.mouth.get_locator().unwrap_or_default()
   } else {
     // Final backup -- the default locator
-    // TODO: Or should this be None?
+    Locator::default()
+  }
+}
+
+/// `get_locator`'s accurate-start sibling (§1, docs/SOURCE_PROVENANCE.md): same
+/// mouthstack walk, but reads the mouth's `get_locator_from_start` (`from` = the
+/// last token's captured start) instead of the heuristic `from`. Used for the
+/// construct-START snapshot at constructor digest under `--source-map`.
+pub fn get_locator_from_start() -> Locator {
+  let gullet = gullet!();
+  let mut runtime_opt = gullet.runtime.as_ref();
+  let mut mouthstack_iter = gullet.mouthstack.iter();
+  while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
+    runtime_opt = mouthstack_iter.next();
+  }
+  if let Some(runtime) = runtime_opt {
+    runtime.mouth.get_locator_from_start()
+  } else if let Some(runtime) = gullet.mouthstack.front() {
+    runtime.mouth.get_locator_from_start()
+  } else {
     Locator::default()
   }
 }
@@ -629,7 +652,34 @@ pub fn read_x_token(
         },
         Outcome::Invoke(defn) => {
           local_current_token(token);
-          let invoked = defn.invoke(false)?;
+          #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
+          let mut invoked = defn.invoke(false)?;
+          // token-locators: fill-only origin inheritance. A macro that
+          // expands into synthesized tokens with no origin — e.g.
+          // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
+          // would leave its output unlocatable. Attribute such tokens to
+          // the invocation site so the rendered text is source-mapped.
+          // The inherited handle is flagged `inherited` (one push per
+          // expansion, shared by every result token), so `child_span`'s
+          // genuine-origin-first scan never lets a macro's structural body
+          // literals widen its arguments' content-exact span. We also never
+          // overwrite a token that already carries an origin. See
+          // SOURCE_PROVENANCE.md §3.1.3.
+          #[cfg(feature = "token-locators")]
+          {
+            let inv_loc = token.loc;
+            if inv_loc != 0 {
+              let mut inherited = 0u32;
+              for t in invoked.unlist_mut() {
+                if t.loc == 0 {
+                  if inherited == 0 {
+                    inherited = crate::token::push_inherited_origin(inv_loc);
+                  }
+                  t.loc = inherited;
+                }
+              }
+            }
+          }
           if *TRACE_GROUP_END {
             // Print per-event {macro, delta} so post-processing can sum
             // by-macro to find which expandable CS contributes net +/- 1

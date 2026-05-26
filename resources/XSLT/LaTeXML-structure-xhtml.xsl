@@ -733,6 +733,14 @@
       <!-- Originally, html5 seemed to suggest we might use h2 here, but that is retracted-->
       <xsl:element name="div" namespace="{$html_ns}">
         <xsl:attribute name="class">ltx_dates</xsl:attribute>
+        <!-- Carry the date's source provenance (e.g. the data:sourcepos that
+             source-map mode stamps) onto the combined dates div. The ltx:date
+             is rendered inline (mode=intitle) with no per-date wrapper element,
+             so this div is the only host for its locator; copy from the first
+             date (the common single-date case is content-exact). -->
+        <xsl:for-each select="$dates[1]">
+          <xsl:call-template name="copy_foreign_attributes"/>
+        </xsl:for-each>
         <xsl:apply-templates select="." mode="begin">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>

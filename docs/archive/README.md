@@ -25,6 +25,14 @@ Each ran to completion and the actionable findings landed as commits.
 - `PLAIN_CONSTRUCTS_LINE_AUDIT.md` (322-line pool).
 - `LATEX_BOOTSTRAP_LINE_AUDIT.md`, `PLAIN_BOOTSTRAP_LINE_AUDIT.md`.
 
+## LoadFormat / dump-parity mission (completed)
+
+- `PERL_LOADFORMAT_AUDIT.md` — the strict-`LoadFormat` dump-parity audit.
+  Mission complete: zero-error `--init=plain.tex`/`latex.ltx`, dumps match
+  Perl line-for-line, eager-vs-lazy LaTeX load resolved (`tex.rs:213`). The
+  one live residual (~72-CS Perl-only long tail) is an active item in
+  `../SYNC_STATUS.md` "Engine file open gaps (MINOR)".
+
 ## Parity audits (one-shot, completed)
 
 - `LATEX_CONSTRUCTS_PARITY_AUDIT.md` — Rust 54%-larger investigation.
@@ -34,6 +42,13 @@ Each ran to completion and the actionable findings landed as commits.
 - `ERROR_PARITY_AUDIT.md` — 2026-05-03 Error/Fatal parity verification.
 - `PERL_XML_DIFFS.md` — 2026-04-19 `LaTeXML/t/*.xml` ↔ Rust XML diffs.
 - `rewrite_subsystem_audit.md` — Rewrite.pm ↔ rewrite.rs (snapshot).
+
+## Performance snapshots
+
+- `TIKZ_DIGEST_HOTSPOTS_2026-05-21.md` — 2026-05-16 callgrind profiling of
+  TikZ/pgfplots digestion (research-only). Live handoff items folded into
+  `../PERFORMANCE.md`; reusable bucketing script at
+  `../scripts/bucket_callgrind_hot.py`.
 
 ## Round-18 broken-paper snapshot
 

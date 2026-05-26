@@ -629,6 +629,16 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     attrs.insert("class".to_string(), class);
   }
 
+  // Source locator (token-locators): carry the XMTok's source position onto the
+  // MathML token element so the editor can map a rendered symbol back to its
+  // source (per-token in-equation provenance, §7 A.3). The math XSLT copies the
+  // generated MathML verbatim, so emit the final HTML5 `data-sourcepos` name.
+  // `data:sourcepos` is namespaced (the LaTeXML `data:` namespace), so read it
+  // by local name + namespace URI (like `xml:id` is read elsewhere).
+  if let Some(sp) = node.get_attribute_ns("sourcepos", "http://dlmf.nist.gov/LaTeXML/data") {
+    attrs.insert("data-sourcepos".to_string(), sp);
+  }
+
   NodeData::Element {
     tag:        tag.to_string(),
     attributes: if attrs.is_empty() { None } else { Some(attrs) },

@@ -22,7 +22,7 @@ LoadDefinitions!({
   // bibliography content in the output — better than Perl's silent
   // drop. Fixes 4 papers in the 10k sandbox Class D bibitem-aipproc
   // cluster: astro-ph9711070, cond-mat0109365, nucl-ex9706010,
-  // nucl-th0010030. See docs/SANDBOX_TRIAGE.md Class D sub-pattern.
+  // nucl-th0010030. See docs/SANDBOX_TRIAGE_2026-05-21.md Class D sub-pattern.
   DefMacro!("\\references", "\\thebibliography{}");
   Let!("\\endreferences", "\\endthebibliography");
   Let!("\\reference", "\\bibitem");

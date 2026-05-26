@@ -227,8 +227,8 @@ impl fmt::Display for Stored {
       Strings(ref vs) => write!(f, "{}", arena::join(vs, ",")),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Template(ref t) => write!(f, "{t}"),
-      None => write!(f, "Stored::None"),
-      _ => write!(f, "Stored::<??>"),
+      None => write!(f, "Stored[None]"),
+      _ => write!(f, "Stored[??]"),
     }
   }
 }
@@ -1173,7 +1173,9 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => *t,
-      Stored::String(text) => Token { text: *text, code: Catcode::CS },
+      Stored::String(text) => {
+        Token { text: *text, code: Catcode::CS, #[cfg(feature = "token-locators")] loc: 0 }
+      },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
         Warn!("stored", "cast", message);

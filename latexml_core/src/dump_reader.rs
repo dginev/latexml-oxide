@@ -141,11 +141,12 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
       Err(e) => {
         errors += 1;
         if errors <= 10 {
-          log::warn!(
-            "[dump_reader] Line {}: {}: {}",
-            lineno + 1,
-            e,
-            &line[..line.len().min(80)]
+          Warn!(
+            "dump_reader", "line",
+            s!("Line {}: {}: {}",
+              lineno + 1,
+              e,
+              &line[..line.len().min(80)])
           );
         }
       },
@@ -153,14 +154,12 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   }
 
   if errors > 10 {
-    log::warn!("[dump_reader] ... and {} more errors", errors - 10);
+    Warn!("dump_reader", "errors", s!("... and {} more errors", errors - 10));
   }
-  log::info!(
-    "[dump_reader] Loaded {} entries from {} ({} skipped, {} errors)",
-    count,
-    source_name,
-    skipped,
-    errors
+  Info!(
+    "dump_reader", "loaded",
+    s!("Loaded {} entries from {} ({} skipped, {} errors)",
+      count, source_name, skipped, errors)
   );
 
   Ok(count)
@@ -503,6 +502,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
   let cs_tok = Token {
     text: arena::pin(key),
     code: Catcode::CS,
+    #[cfg(feature = "token-locators")]
+    loc: 0,
   };
 
   // Perl `I(...)` parity (`Core/Dumper.pm` L67): every dumped Meaning
@@ -733,6 +734,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let target_tok = Token {
         text: arena::pin(&target_cs_raw),
         code: Catcode::CS,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       };
       // Perl `Lt()` (`Core/Dumper.pm` L69-72):
       //   sub Lt { my $d = State::lookupDefinition($STATE, T_CS($_[1]));
@@ -888,6 +891,8 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         let address_tok = Token {
           text: arena::pin(&reg.address),
           code: Catcode::CS,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
         };
         if let Some(base_defn) = state::lookup_register_definition(&address_tok) {
           if let Some(params) = base_defn.parameters.clone() {
@@ -1088,6 +1093,8 @@ fn parse_token(s: &str) -> Result<Token, String> {
   Ok(Token {
     text: text_sym,
     code: Catcode::from(cc),
+    #[cfg(feature = "token-locators")]
+    loc: 0,
   })
 }
 
@@ -1110,7 +1117,7 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
 
 /// Decode the v3 structured Parameters encoding emitted by
 /// `dump_writer::serialize_parameters_v3` (see that function's docstring
-/// and `docs/DUMP_FORMAT_PERL_ANALYSIS.md` for the layout).
+/// and `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md` for the layout).
 ///
 /// Returns `Ok(None)` for an empty record (no parameters); `Ok(Some(ps))`
 /// on success; `Err` if any record is malformed. Each Parameter is

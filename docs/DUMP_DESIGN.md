@@ -90,7 +90,7 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
-[`DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md) for
+[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
 `IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
@@ -159,6 +159,22 @@ Versioned filenames + a `build.rs`-generated manifest:
        `LATEXML_NO_EMBEDDED_DUMP=1`.
 * Year-matching policy at every step: prefer ambient, else
   most-recent year present.
+
+**Portability note.** Under the "self-contained, portable binary" design
+requirement ([`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md) → Guiding
+Principles), the embedded fallback (step 7) is what lets a relocated binary
+run with no source tree, and it is **verified to work**: on 2026-05-23 the
+dev-tree `resources/dumps/` was renamed away and a conversion in an isolated
+`/tmp` dir still succeeded, logging `using embedded TL2025 dump — no on-disk
+dump found` and loading 922 + 23903 entries `from <embedded TL2025>` (the
+embedded bytes are staged to a temp file and read back — a *write* of the
+binary's own data, which the requirement permits). The disk-preferred
+ordering (steps 4–6) is therefore a dev/override convenience, not a
+portability gap: when the dev tree is present (`$CARGO_MANIFEST_DIR`) the
+binary reads the dump from there rather than `.rodata`. If we ever want disk
+reads of dumps gone on the default path too, promote the embedded copy ahead
+of the installed-layout/dev-tree steps (keeping the explicit env-var
+overrides first).
 
 ## Multi-TL dump acquisition (out of scope for this PR)
 
@@ -279,7 +295,7 @@ filename match. The stamp check remains useful for the in-year case
 
 ## See also
 
-* [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) —
+* [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) —
   file-by-file Rust-vs-Perl divergence audit.
-* [`DUMP_FORMAT_PERL_ANALYSIS.md`](DUMP_FORMAT_PERL_ANALYSIS.md) —
+* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
   on-disk record format and Perl `Dumper.pm` correspondence.
