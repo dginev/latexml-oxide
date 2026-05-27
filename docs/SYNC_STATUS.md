@@ -57,7 +57,8 @@ any synthetic benchmark.
 | 54 | 9939 | 1 FATAL_3, 1 TIMEOUT, 1 OOM | 99.39% | OOM (1508.06324) was cyclic-XMRef in cmml — fix landed `81061469fc` (cycle-detection + cap→256); other 2 likely SHARED |
 | 55 | 9929 | 1 FATAL_3 (1510.03740), 1 TIMEOUT (1510.04225) | 99.29% | First full stage with cycle-guard binary; 0 stack-overflow, 0 OOM |
 | 56 | 9943 | 7 FATAL_3, 4 TIMEOUT, 1 OOM (1511.09288 — `\scalefont Float` param-type bug, fix `56dc9497fc`) | 99.43% | Bisected `\scalefont{0.9}{\hspace…}` runaway-pushback to wrong DefPrimitive arg shape; brace-strip via `{Float}` mirrors Perl `'\scalefont{}'` |
-| **Combined** | **59733** | **22 hard / ~310 CONVERR** | **99.55%** | **0 stack-overflow fatals after `18fe803244`, 0 OOMs after `81061469fc` + `56dc9497fc`** |
+| 57 | 9930 | 1 FATAL_3 (1601.06795, 101× `&`), 0 TIMEOUT, 0 OOM | 99.30% | First stage with scalefont fix; only 1 hard fail (alignment `&` cascade — likely SHARED) |
+| **Combined** | **69663** | **23 hard / ~330 CONVERR** | **99.52%** | **0 stack-overflow fatals after `18fe803244`, 0 OOMs after `81061469fc` + `56dc9497fc`** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
