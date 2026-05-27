@@ -102,7 +102,7 @@ Progress files preserved at `.session_state/`:
 | Stage | OK | Hard fails | Rate | Notes |
 |---|---:|---:|---|---|
 | R01 | 8410/10000 | ~65 (FATAL_3/TIMEOUT — most are SHARED retries) | 84.1% | Dense-failure-front: retries of stages 51-74 known fails + ~5K stage_74 SIGKILL aftermath. Climbed from ~70% to 84% within slice as we entered fresh papers in mid-stage |
-| R02 (in flight ~97%) | 9628+/9696+ | 0 hard | 99.3% | Back to typical rate; dense-failure-front cleared in R01 |
+| R02 | 9931/10000 | ~6 (FATAL_3/TIMEOUT) | 99.31% | Back to typical rate; dense-failure-front cleared in R01 |
 
 ### Audit findings (2026-05-27)
 
