@@ -59,7 +59,8 @@ any synthetic benchmark.
 | 56 | 9943 | 7 FATAL_3, 4 TIMEOUT, 1 OOM (1511.09288 — `\scalefont Float` param-type bug, fix `56dc9497fc`) | 99.43% | Bisected `\scalefont{0.9}{\hspace…}` runaway-pushback to wrong DefPrimitive arg shape; brace-strip via `{Float}` mirrors Perl `'\scalefont{}'` |
 | 57 | 9930 | 1 FATAL_3 (1601.06795, 101× `&`), 0 TIMEOUT, 0 OOM | 99.30% | First stage with scalefont fix; only 1 hard fail (alignment `&` cascade — likely SHARED) |
 | 58 | 9930 | 3 FATAL_3, 1 FATAL_134, 1 OOM, 1 TIMEOUT | 99.30% | OOM: 1603.08483 babel/scrextend KOMA `draft=false` error-recovery runaway (deferred); FATAL_134: 1603.07517 XSLT OOM on 10420 maths (deferred); FATAL_3 all likely SHARED `&`/cascade |
-| **Combined** | **79593** | **29 hard / ~370 CONVERR** | **99.49%** | **Engine `cmml` cycle-guard holding (zero math-side OOM); residual: 1× babel-recovery + 1× XSLT-memory-pressure** |
+| 59 | 9939 | **0 hard fails** | 99.39% | Cleanest stage of Round-37 so far |
+| **Combined** | **89532** | **29 hard / ~430 CONVERR** | **99.48%** | **Engine cmml cycle-guard holding; stage_59 = zero hard fails** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
