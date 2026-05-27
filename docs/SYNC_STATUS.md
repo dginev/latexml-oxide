@@ -64,7 +64,8 @@ any synthetic benchmark.
 | 61 | 9935 | 2 FATAL_3 (1609.08897 + 1610.04342, both `_`/`^` cascades) | 99.35% | 0 stack-overflow, 0 OOM, 0 TIMEOUT |
 | 62 | 9938 | 4 FATAL_3, 2 OOM (1611.06630 post-after-Timeout 1.5 GB cascade; 1612.04716 xy-pic xymatrix 3.5 GB), 1 TIMEOUT | 99.38% | 1611.06630 = `Fatal:Timeout:Convert` then post-OOM (engine still post-processes timed-out partial); 1612.04716 = xy-pic deep matrix compile; both shared-mode risks |
 | 63 | 9927 | 3 FATAL_3, 1 TIMEOUT, 1 FATAL_1 (corpus PDF) | 99.27% | 0 stack-overflow, 0 OOM |
-| **Combined** | **129263** | **45 hard / ~680 CONVERR** | **99.43%** | **130K papers** |
+| 64 | 9925 | 1 FATAL_1 (corpus PDF) | 99.25% | **Zero engine hard fails** |
+| **Combined** | **139188** | **46 hard / ~740 CONVERR** | **99.42%** | **140K papers** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
