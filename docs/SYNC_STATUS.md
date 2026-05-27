@@ -109,6 +109,7 @@ Progress files preserved at `.session_state/`:
 | R06 | 9946/10000 | 1 FATAL_3, 1 FATAL_1 (corpus PDF), 1 TIMEOUT | 99.46% | 0 OOM/SO |
 | R07 | 9934/10000 | 1 TIMEOUT (1905.07341) | 99.34% | 0 OOM/SO/FATAL_3 |
 | R08 | 9916/10000 | 4 FATAL_3 | 99.16% | 0 OOM/TIMEOUT/SO. **Disk full alert resolved**: discovered `/tmp/cortex_output_<pid>.zip` leak in cortex_worker standalone mode (947K files, 685 GB). Fixed `e522358d8f` — `fs::remove_file(&result_path)` after consuming. R09+ uses leak-free binary |
+| R09 | 9935/10000 | 1 TIMEOUT (1908.05420) | 99.35% | 0 OOM/SO/FATAL_3. **yfonts fix** (`af19245b58`): `\textfrak`/`\textswab`/`\textgoth`/`\textinit` now defined in the binding (both Perl and Rust binding skipped them in favour of raw-load); witness 1907.06086 CONVERR_1→OK |
 
 ### Audit findings (2026-05-27)
 
