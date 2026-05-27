@@ -59,6 +59,38 @@ fn install_lang_stub(lang: &str) -> Result<()> {
 }
 
 pub fn load_italian() -> Result<()>    { install_lang_stub("italian") }
+// English-family stubs. babel-english.ldf uses `\@namedef{captions
+// \CurrentOption}` etc., so each variant gets its own
+// `\captions<variant>` / `\date<variant>`. When babel dispatches a
+// `\selectlanguage{american}` it expects `\captionsamerican` or the
+// `\captionsenglish` fallback. With incomplete raw-load these aren't
+// defined and the language-switch errors out (~17 papers in R-stages
+// for `\dateUSenglish`, 13 for `\captionsenglish`).
+//
+// We register the captions/extras/date hooks for the canonical
+// english variants (english, american, british, USenglish, UKenglish,
+// canadian, australian, newzealand) as no-ops — the variant captions
+// (chaptername etc.) just stay English in our HTML output, which is
+// already the project's default. Witness:
+// arXiv:1502.05791 (`\usepackage[british,american]{babel}`)
+// CONVERR_2 → expected OK.
+pub fn load_english() -> Result<()>    { install_lang_stub("english") }
+pub fn load_american() -> Result<()>   {
+  install_lang_stub("american")?;
+  install_lang_stub("USenglish")?;
+  install_lang_stub("english") // fallback chain
+}
+pub fn load_british() -> Result<()>    {
+  install_lang_stub("british")?;
+  install_lang_stub("UKenglish")?;
+  install_lang_stub("english")
+}
+pub fn load_usenglish() -> Result<()>  { install_lang_stub("USenglish")?; install_lang_stub("english") }
+pub fn load_ukenglish() -> Result<()>  { install_lang_stub("UKenglish")?; install_lang_stub("english") }
+pub fn load_canadian() -> Result<()>   { install_lang_stub("canadian")?; install_lang_stub("english") }
+pub fn load_australian() -> Result<()> { install_lang_stub("australian")?; install_lang_stub("english") }
+pub fn load_newzealand() -> Result<()> { install_lang_stub("newzealand")?; install_lang_stub("english") }
+
 pub fn load_spanish() -> Result<()>    {
   install_lang_stub("spanish")?;
   // babel-spanish-specific `\decimalpoint` — switches decimal separator

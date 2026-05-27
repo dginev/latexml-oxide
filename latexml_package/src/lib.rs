@@ -307,6 +307,18 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // package/babel_lang_stubs.rs for details.
   ("italian",    "ldf", package::babel_lang_stubs::load_italian),
   ("spanish",    "ldf", package::babel_lang_stubs::load_spanish),
+  // English variant stubs — register `\captions<variant>` /
+  // `\date<variant>` hooks for each of the babel-english variants so
+  // `\selectlanguage{<variant>}` doesn't hit `Error:undefined`.
+  // See `babel_lang_stubs::load_english` and friends.
+  ("english",    "ldf", package::babel_lang_stubs::load_english),
+  ("american",   "ldf", package::babel_lang_stubs::load_american),
+  ("british",    "ldf", package::babel_lang_stubs::load_british),
+  ("USenglish",  "ldf", package::babel_lang_stubs::load_usenglish),
+  ("UKenglish",  "ldf", package::babel_lang_stubs::load_ukenglish),
+  ("canadian",   "ldf", package::babel_lang_stubs::load_canadian),
+  ("australian", "ldf", package::babel_lang_stubs::load_australian),
+  ("newzealand", "ldf", package::babel_lang_stubs::load_newzealand),
   ("portuges",   "ldf", package::babel_lang_stubs::load_portuges),
   ("portuguese", "ldf", package::babel_lang_stubs::load_portuguese),
   ("brazil",     "ldf", package::babel_lang_stubs::load_brazil),
