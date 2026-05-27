@@ -110,6 +110,7 @@ Progress files preserved at `.session_state/`:
 | R07 | 9934/10000 | 1 TIMEOUT (1905.07341) | 99.34% | 0 OOM/SO/FATAL_3 |
 | R08 | 9916/10000 | 4 FATAL_3 | 99.16% | 0 OOM/TIMEOUT/SO. **Disk full alert resolved**: discovered `/tmp/cortex_output_<pid>.zip` leak in cortex_worker standalone mode (947K files, 685 GB). Fixed `e522358d8f` — `fs::remove_file(&result_path)` after consuming. R09+ uses leak-free binary |
 | R09 | 9935/10000 | 1 TIMEOUT (1908.05420) | 99.35% | 0 OOM/SO/FATAL_3. **yfonts fix** (`af19245b58`): `\textfrak`/`\textswab`/`\textgoth`/`\textinit` now defined in the binding (both Perl and Rust binding skipped them in favour of raw-load); witness 1907.06086 CONVERR_1→OK |
+| R10 | 9928/10000 | 2 FATAL_3, 1 FATAL_134 (1910.03312 — deep math-parser abort at math 11550), 1 TIMEOUT, 1 OOM, 1 TIMEOUT | 99.28% | Per-paper bisect produced 3 fixes this session: yfonts text-font commands; epstopdf `\epstopdfDeclareGraphicsRule`/`\epstopdfcall` no-ops (`ea4b5c2f13`); babel-spanish trig aliases `\sen`/`\tg`/`\cotg`/`\arcsen`/etc. (`3f3f62fdf2`); listings aspect machinery `\lst@RequireAspects`/`\lst@EndWriteFile`/`\lstKV@OptArg` (`b63e1c73f0`) reducing showexpl-papers CONVERR_7→CONVERR_3 |
 
 ### Audit findings (2026-05-27)
 
