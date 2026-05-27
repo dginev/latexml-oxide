@@ -107,6 +107,7 @@ Progress files preserved at `.session_state/`:
 | R04 | 9916/10000 | 2 FATAL_3, 1 FATAL_139 (1901.10171, 127s before SEGV — concurrency artifact per #232 notes) | 99.16% | 0 OOM/TIMEOUT |
 | R05 | 9941/10000 | 1 FATAL_3, 1 TIMEOUT, 1 FATAL_139 | 99.41% | 0 OOM |
 | R06 | 9946/10000 | 1 FATAL_3, 1 FATAL_1 (corpus PDF), 1 TIMEOUT | 99.46% | 0 OOM/SO |
+| R07 | 9934/10000 | 1 TIMEOUT (1905.07341) | 99.34% | 0 OOM/SO/FATAL_3 |
 
 ### Audit findings (2026-05-27)
 
