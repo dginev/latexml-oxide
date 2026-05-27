@@ -67,7 +67,8 @@ any synthetic benchmark.
 | 64 | 9925 | 1 FATAL_1 (corpus PDF) | 99.25% | **Zero engine hard fails** |
 | 65 | 9940 | 1 FATAL_3 (1705.01081), 1 TIMEOUT (1705.01885) | 99.40% | 0 stack-overflow, 0 OOM |
 | 66 (v1, killed @7110) | — | hundreds of FATAL_1 (disk full) | — | DISK FULL on 1.9TB filesystem at stage_66 paper ~3500; OK outputs (~8 GB/stage × 15 = ~120 GB) had accumulated. Cleared OK outputs from stages 51-65 (`canvas3_round37_failed.txt` saved), restarted stage_66 |
-| **Combined** | **149128** | **48 hard / ~800 CONVERR** | **99.42%** | **150K papers** |
+| 66 (v2) | 9927 | 1 FATAL_134 (1706.06621 — deterministic math-parser abort at math 374; deferred), 2 FATAL_3, 1 TIMEOUT | 99.27% | OK outputs auto-purged after stage |
+| **Combined** | **159055** | **52 hard / ~860 CONVERR** | **99.41%** | **160K papers; per-stage OK output cleanup policy enforced** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
