@@ -105,6 +105,7 @@ Progress files preserved at `.session_state/`:
 | R02 | 9931/10000 | ~6 (FATAL_3/TIMEOUT) | 99.31% | Back to typical rate; dense-failure-front cleared in R01 |
 | R03 | 9945/10000 | 1 FATAL_3, 1 FATAL_1 (corpus PDF) | 99.45% | 0 OOM/TIMEOUT/SO |
 | R04 | 9916/10000 | 2 FATAL_3, 1 FATAL_139 (1901.10171, 127s before SEGV — concurrency artifact per #232 notes) | 99.16% | 0 OOM/TIMEOUT |
+| R05 | 9941/10000 | 1 FATAL_3, 1 TIMEOUT, 1 FATAL_139 | 99.41% | 0 OOM |
 
 ### Audit findings (2026-05-27)
 
