@@ -102,6 +102,50 @@ Progress files preserved at `.session_state/`:
 | Stage | OK | Hard fails | Rate | Notes |
 |---|---:|---:|---|---|
 | R01 | 8410/10000 | ~65 (FATAL_3/TIMEOUT — most are SHARED retries) | 84.1% | Dense-failure-front: retries of stages 51-74 known fails + ~5K stage_74 SIGKILL aftermath. Climbed from ~70% to 84% within slice as we entered fresh papers in mid-stage |
+| R02 (in flight ~97%) | 9628+/9696+ | 0 hard | 99.3% | Back to typical rate; dense-failure-front cleared in R01 |
+
+### Audit findings (2026-05-27)
+
+**Branch-commit audit completed.** 33 commits since master, 7 touch
+engine code, 26 are pure-doc updates. Code-commit summary:
+
+| Commit | Status | Notes |
+|---|---|---|
+| `66effc0157` (logger \n) | harness | canvas Error-line counter |
+| `5d78ca1325` (LOSTNODES port) | root cause | Perl `MathParser.pm` parity |
+| `d46541f60c` (xml_safe_char + ASF) | mixed → **intentional divergence #27** | xml_safe_char marked in OXIDIZED_DESIGN.md; ASF half is correctness |
+| `1625353bd9` (defer XMath unlink) | root cause | Perl `Post.pm` L373-393 parity |
+| `18fe803244` (cmml depth cap 4096) | shortcut (superseded) | bug locus identified, deferred |
+| `81061469fc` (cmml cycle guard) | shortcut | confirmed SHARED with Perl |
+| `56dc9497fc` (`\scalefont {Float}`) | root cause | Perl `\scalefont{}` parity |
+
+**cmml cycle bug locus** (witness arXiv:1505.06709, math `S4.E82.m1`):
+Traced via `LATEXML_CMML_TRACE_CYCLE=1` (added in `01e5b04a24`).
+The XMath emitted by `amsmath_sty.rs::rearrange_ams_split` (the AMS
+`split`/`gather` rearrange that wraps a parsed XMArray in an XMDual
+whose content-arm is `XMWrap rule="Anything,"` containing
+`createXMRefs(cells)`) sometimes produces an XMRef whose idref
+resolves back to the wrapping XMDual itself — i.e. one of the
+`cells` had the same xml:id as the wrapping XMDual eventually got
+assigned. cmml then follows the XMRef → XMDual → content-arm-XMRef
+→ XMDual → ... in an infinite loop.
+
+**This is SHARED with Perl**: `LaTeXML/lib/LaTeXML/Package/amsmath.sty.ltxml`
+L302-306 and L368-372 build the *exact same* tree (`replaceTree(['ltx:XMDual', {},
+['ltx:XMWrap', { rule => 'Anything,' }, createXMRefs(...)], $array], $array)`).
+Perl just doesn't OOM/abort on the cycle because Perl's interpreter
+stack is much deeper than Rust's 256 MB worker stack — cmml-as-defined
+walks the self-reference indefinitely, but Perl `no warnings 'recursion'`
+absorbs the warning and presumably finishes (slowly) in some cases or
+silently fails in others. Cycle guard remains the correct defensive
+measure; the actual root cause (rearrange-arm's XMDual id colliding
+with an inner cell's id) requires careful `createXMRefs` / id-collision
+handling in the rearrange pass.
+
+Recommendation: keep cycle guard, file follow-up to fix
+`rearrange_ams_split` so the XMDual-vs-cell id collision can't occur
+(then cycle becomes dead code, depth cap stays as truly-deep safety
+floor).
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
