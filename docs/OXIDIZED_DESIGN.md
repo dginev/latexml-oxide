@@ -1135,6 +1135,44 @@ deliberate:
 `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
 blocks). 3 errors → 0. Tests 1328/0/0.
 
+### 27. `\DeclareMathSymbol` U-encoding Fallback: U+FFFD, not Empty
+
+**Decision:** When `\DeclareMathSymbol{cs}{type}{fontkind}{slot}` resolves
+the symbol-font's encoding to a value whose `LoadFontMap()` returns
+`None` (the most common case is `U` — "Unknown" encoding declared via
+`\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}`), we substitute U+FFFD
+(REPLACEMENT CHARACTER) for any slot in the C0 control range (0x00-0x1F
+minus tab/LF/CR) and the raw codepoint otherwise. Perl's
+`Package.pm::FontDecode` returns `undef` glyph for the same case;
+Perl's `DefMathI($cs, undef, undef, role => …)` defines the CS as an
+**empty** XMTok with just the role attribute set.
+
+**Why diverge:** Perl emits the literal byte (e.g. `\x10` for hex slot
+`"10`) into the XML, which is **not valid XML 1.0** (§2.2: C0 chars
+except 0x09/0x0A/0x0D are forbidden). When libxml2 later parses the
+serialized document for post-processing (`find_node_by_id` / XPath),
+it aborts mid-tree on the first invalid byte. Every `xml:id` past that
+point becomes unresolvable, surfacing as the
+`Error:expected:id Cannot find a node with xml:id=…` cluster (which
+dominated CONVERR on second-500K canvas stage_51, ~63% of papers
+with errors). U+FFFD is the canonical "unrepresentable character"
+placeholder and is XML-1.0-valid, so the downstream parse stays
+clean.
+
+**Shared upstream gap:** Neither Perl nor we ship a `u.fontmap.ltxml`
+nor a `("U", family="msa")`-keyed registration of the AMSa table.
+Resolving the slot to its correct Unicode codepoint (e.g. U+21A0 for
+`\onto` at AMSa slot 0x10) would require registering the existing
+`AMSa_fontmap` data under the `"U_msa_fontmap"` key, which neither
+engine currently does. The fix is parity-neutral if landed on both
+sides; we defer it as a beyond-Perl improvement.
+
+**Witness:** arXiv:1501.05180 (`\DeclareMathSymbol\onto\mathrel
+{latex-font msa}{"10}`). With the U+FFFD substitution, the paper
+converts cleanly through post-processing; without it, the dominant
+CONVERR_N cluster fires. See `latexml_engine/src/latex_constructs.rs`
+the `xml_safe_char` helper around line 6243.
+
 ---
 
 ## Future Work (Beyond Perl Parity)

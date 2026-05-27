@@ -208,6 +208,18 @@ fn cmml_enter(node: &Node) -> CmmlEnter {
   let ptr = node.node_ptr() as usize;
   let in_path = CMML_PATH.with(|p| !p.borrow_mut().insert(ptr));
   if in_path {
+    // Diagnostic: dump the current path so the math-parser bisect can see
+    // exactly which node-ids form the cycle. Behind an env so production
+    // canvas runs stay silent. Format: `cmml_cycle: <id_or_tag>(<ptr>) <-
+    // ... <- <cycling node>` — most recent ancestor first; the cycling
+    // node is repeated at the end so the loop is visually obvious.
+    if std::env::var_os("LATEXML_CMML_TRACE_CYCLE").is_some() {
+      let id = node
+        .get_attribute("xml:id")
+        .or_else(|| node.get_attribute("id"))
+        .unwrap_or_else(|| format!("({})", node.get_name()));
+      eprintln!("cmml_cycle: re-entering {} ptr=0x{:x}", id, ptr);
+    }
     return CmmlEnter::Cycle;
   }
   CMML_DEPTH.with(|d| {
