@@ -66,8 +66,25 @@ pub fn load_spanish() -> Result<()>    {
   // numerics; HTML uses `.` by default. No-op preserves intent.
   // Driver 2511.19353 (`\usepackage[spanish]{babel}\decimalpoint`).
   // Also `\decimalcomma` for the reverse direction.
+  //
+  // Spanish math-operator aliases — historical babel-spanish
+  // `\extrasspanish` hook adds the Spanish-language trig function
+  // names. Cataluña/Spain convention uses `sen` (seno), `tg`
+  // (tangente), `cotg` (cotangente), `cosec` (cosecante) etc. instead
+  // of the English/AMS \sin, \tan, \cot, \csc. We install them
+  // unconditionally rather than via the `\extras` hook — same
+  // outcome for our XML output and avoids the hook-timing complexity.
+  // Witness: arXiv:1909.12119 — `Error:undefined:\sen` /
+  // `\cotg` / `\tg` / `\arcsen` cluster on `\usepackage[spanish]{babel}`.
   latexml_core::stomach::raw_tex(
-    r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}"
+    r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}
+    \providecommand\sen{\mathop{\mathrm{sen}}\nolimits}
+    \providecommand\tg{\mathop{\mathrm{tg}}\nolimits}
+    \providecommand\cotg{\mathop{\mathrm{cotg}}\nolimits}
+    \providecommand\cosec{\mathop{\mathrm{cosec}}\nolimits}
+    \providecommand\arcsen{\mathop{\mathrm{arc\,sen}}\nolimits}
+    \providecommand\arctg{\mathop{\mathrm{arc\,tg}}\nolimits}
+    \providecommand\arccotg{\mathop{\mathrm{arc\,cotg}}\nolimits}"
   )?;
   Ok(())
 }
