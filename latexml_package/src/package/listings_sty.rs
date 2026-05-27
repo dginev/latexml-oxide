@@ -1921,6 +1921,27 @@ LoadDefinitions!({
   def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
   def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
 
+  // listings aspect machinery — `\lst@RequireAspects{<aspect-name>}`
+  // is listings's plug-in loader for optional behaviour like
+  // `writefile` (loaded by `showexpl.sty` to capture rendered code
+  // for re-display). We don't expand aspects (they're typesetting
+  // concerns — actual code rendering goes via our listings model,
+  // not via aspect-mediated file I/O), so the require call is a no-op.
+  // Witness: arXiv:1604.00381 / 1706.09226 (`\usepackage{showexpl}`
+  // calls `\lst@RequireAspects{writefile}` at load time → cascade
+  // of `Error:undefined:\lst@RequireAspects` + `\lstKV@OptArg` +
+  // `\lst@EndWriteFile` + downstream `\SX@put@code@result` from
+  // showexpl. Adding the no-op breaks the cascade.
+  def_macro_noop("\\lst@RequireAspects{}")?;
+  // `\lstKV@OptArg` is a keyval helper used by aspect modules. The
+  // listings binding doesn't expose listings's key parser; this no-op
+  // matches the same content-preserving philosophy as the aspects.
+  // Signature from lstmisc.sty: `\lstKV@OptArg[default]{arg}{body}`.
+  def_macro_noop("\\lstKV@OptArg[]{}{}")?;
+  // writefile aspect entry points — stubbed as no-ops since we
+  // don't capture/re-include code-listings via file I/O.
+  def_macro_noop("\\lst@EndWriteFile")?;
+
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
   state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
