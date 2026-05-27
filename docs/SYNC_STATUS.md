@@ -70,7 +70,8 @@ any synthetic benchmark.
 | 66 (v2) | 9927 | 1 FATAL_134 (1706.06621 — deterministic math-parser abort at math 374; deferred), 2 FATAL_3, 1 TIMEOUT | 99.27% | OK outputs auto-purged after stage |
 | 67 | 9943 | 1 TIMEOUT, 1 OOM (1708.06009 — second xy-pic xymatrix 12x11 OOM after 1612.04716), 1 FATAL_3 | 99.43% | xy-pic xymatrix-deep cluster confirmed |
 | 68 | 9934 | 4 FATAL_3 (incl. 1711.02043 SHARED PushbackLimit) | 99.34% | 0 OOM/TIMEOUT/SO |
-| **Combined** | **178932** | **59 hard / ~950 CONVERR** | **99.41%** | **180K papers** |
+| 69 | 9932 | 1 FATAL_3 | 99.32% | 0 OOM/TIMEOUT/SO |
+| **Combined** | **188864** | **60 hard / ~1010 CONVERR** | **99.40%** | **190K papers** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
