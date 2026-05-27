@@ -63,7 +63,8 @@ any synthetic benchmark.
 | 60 | 9931 | 1 FATAL_3 (1609.00560, likely SHARED), 1 FATAL_1 (1609.01972, corpus-PDF-masquerade — not engine) | 99.31% | Only true engine hard fail = 1× shared `&` cascade |
 | 61 | 9935 | 2 FATAL_3 (1609.08897 + 1610.04342, both `_`/`^` cascades) | 99.35% | 0 stack-overflow, 0 OOM, 0 TIMEOUT |
 | 62 | 9938 | 4 FATAL_3, 2 OOM (1611.06630 post-after-Timeout 1.5 GB cascade; 1612.04716 xy-pic xymatrix 3.5 GB), 1 TIMEOUT | 99.38% | 1611.06630 = `Fatal:Timeout:Convert` then post-OOM (engine still post-processes timed-out partial); 1612.04716 = xy-pic deep matrix compile; both shared-mode risks |
-| **Combined** | **119336** | **40 hard / ~620 CONVERR** | **99.45%** | **120K papers; OOM cluster surfaced for post-after-Timeout + xy-pic** |
+| 63 | 9927 | 3 FATAL_3, 1 TIMEOUT, 1 FATAL_1 (corpus PDF) | 99.27% | 0 stack-overflow, 0 OOM |
+| **Combined** | **129263** | **45 hard / ~680 CONVERR** | **99.43%** | **130K papers** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
