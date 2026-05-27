@@ -75,7 +75,33 @@ any synthetic benchmark.
 | 71 | 9931 | 2 FATAL_1 (corpus PDFs), 2 FATAL_3 | 99.31% | 0 OOM/TIMEOUT/SO |
 | 72 | 9929 | 2 FATAL_3 | 99.29% | 0 OOM/TIMEOUT/SO |
 | 73 | 9937 | 2 FATAL_3 | 99.37% | 0 OOM/TIMEOUT/SO |
-| **Combined** | **228593** | **72 hard / ~1300 CONVERR** | **99.39%** | **230K papers** |
+| 74 (killed @4819) | 4786/4819 | 1 FATAL_3 (real); 5181 FATAL_127 (SIGKILL aftermath, not real) | 99.32% (excl. SIGKILL) | Stage killed during disk-cleanup pivot; uncounted papers go to remaining list |
+| **Combined (real attempts)** | **229490/231222** | **73 hard / ~1330 CONVERR** | **99.25%** | **231K papers; mission switched to remaining-list canvas** |
+
+### Remaining-list canvas (Round-37 phase 2)
+
+After stage_74 cleanup, switched from raw-master slicing to processing
+the **270,510-paper remaining list** at
+`.session_state/canvas3_round37_remaining.txt`. The remaining list is
+exactly `master_500K \ ok_ids` — every paper not yet converted to a
+clean HTML in stages 51-74. Stages named `stage_R<NN>` (NN=01-28).
+Runner: `canvas/run_stage_remaining.sh <offset>`. The remaining list
+includes:
+
+* ~7K real failures from stages 51-74 (CONVERR, FATAL_3, TIMEOUT, OOM)
+* ~5.2K from stage_74's SIGKILL aftermath
+* ~3.6K from stage_52's never-processed slice
+* ~255K from stages 75-100 (un-touched papers)
+
+Progress files preserved at `.session_state/`:
+  * `canvas3_round37_progress.txt` — per-stage summary
+  * `canvas3_round37_ok_ids.txt` — 229,490 papers not to redo
+  * `canvas3_round37_done_ids.txt` — every paper any stage touched
+  * `canvas3_round37_remaining.txt` — 270,510 to process
+
+| Stage | OK | Hard fails | Rate | Notes |
+|---|---:|---:|---|---|
+| R01 (in flight) | — | — | — | First stage of remaining canvas |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
