@@ -71,7 +71,8 @@ any synthetic benchmark.
 | 67 | 9943 | 1 TIMEOUT, 1 OOM (1708.06009 — second xy-pic xymatrix 12x11 OOM after 1612.04716), 1 FATAL_3 | 99.43% | xy-pic xymatrix-deep cluster confirmed |
 | 68 | 9934 | 4 FATAL_3 (incl. 1711.02043 SHARED PushbackLimit) | 99.34% | 0 OOM/TIMEOUT/SO |
 | 69 | 9932 | 1 FATAL_3 | 99.32% | 0 OOM/TIMEOUT/SO |
-| **Combined** | **188864** | **60 hard / ~1010 CONVERR** | **99.40%** | **190K papers** |
+| 70 | 9932 | 4 FATAL_3 (incl. 1802.02070 revtex4-1 known SHARED) | 99.32% | 0 OOM/SO |
+| **Combined** | **198796** | **64 hard / ~1080 CONVERR** | **99.40%** | **200K papers** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
