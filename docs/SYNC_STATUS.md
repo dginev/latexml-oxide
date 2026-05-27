@@ -61,7 +61,8 @@ any synthetic benchmark.
 | 58 | 9930 | 3 FATAL_3, 1 FATAL_134, 1 OOM, 1 TIMEOUT | 99.30% | OOM: 1603.08483 babel/scrextend KOMA `draft=false` error-recovery runaway (deferred); FATAL_134: 1603.07517 XSLT OOM on 10420 maths (deferred); FATAL_3 all likely SHARED `&`/cascade |
 | 59 | 9939 | **0 hard fails** | 99.39% | Cleanest stage of Round-37 so far |
 | 60 | 9931 | 1 FATAL_3 (1609.00560, likely SHARED), 1 FATAL_1 (1609.01972, corpus-PDF-masquerade — not engine) | 99.31% | Only true engine hard fail = 1× shared `&` cascade |
-| **Combined** | **99463** | **31 hard / ~490 CONVERR** | **99.46%** | **100K papers; engine cmml cycle-guard + scalefont fix holding** |
+| 61 | 9935 | 2 FATAL_3 (1609.08897 + 1610.04342, both `_`/`^` cascades) | 99.35% | 0 stack-overflow, 0 OOM, 0 TIMEOUT |
+| **Combined** | **109398** | **33 hard / ~560 CONVERR** | **99.45%** | **110K papers; engine fixes holding across the slice** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
