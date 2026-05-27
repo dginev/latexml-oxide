@@ -74,7 +74,8 @@ any synthetic benchmark.
 | 70 | 9932 | 4 FATAL_3 (incl. 1802.02070 revtex4-1 known SHARED) | 99.32% | 0 OOM/SO |
 | 71 | 9931 | 2 FATAL_1 (corpus PDFs), 2 FATAL_3 | 99.31% | 0 OOM/TIMEOUT/SO |
 | 72 | 9929 | 2 FATAL_3 | 99.29% | 0 OOM/TIMEOUT/SO |
-| **Combined** | **218656** | **70 hard / ~1240 CONVERR** | **99.39%** | **220K papers** |
+| 73 | 9937 | 2 FATAL_3 | 99.37% | 0 OOM/TIMEOUT/SO |
+| **Combined** | **228593** | **72 hard / ~1300 CONVERR** | **99.39%** | **230K papers** |
 
 **⚠ Canvas harness fix (2026-05-26):** the `run_one.sh` Error-line
 counter used `grep -cE $'^\\x1b\\[31mError:'` — the `^` anchor never
