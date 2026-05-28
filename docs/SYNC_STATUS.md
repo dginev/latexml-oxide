@@ -814,6 +814,14 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   redefines `\d`/`\th`/`\b` to text accents on load, then `$\d_x$`
   trips text-mode underscore. Witnesses: hep-th0005159, hep-th0010165,
   hep-ph0001306, cond-mat0102064, cond-mat0103632, hep-th0005268.
+* **`{… \be \int_{…} … \ee}` braced custom begin/end-equation
+  shorthand** — author wraps a `\be…\ee` display equation in an extra
+  brace group; both engines fail to enter display math through the
+  brace, so the `\int_{…}` subscripts trip `unexpected:_ Script _ can
+  only appear in math mode`. Verified 2006.05110 (R16): Perl emits 21
+  errors at the same source line (305) vs our 13 — we're strictly
+  better. The R16 math `unexpected:_`/`^` "Anonymous String" cluster is
+  predominantly this class.
 * **pstricks `\ifpst@useCalc`/`\ifpst@psfonts` undefined** —
   paper `\input`s `pstricks-dots.tex` before `pstricks-tex.def`
   runs, so the `\newif`-conditionals are missing. Witnesses:
