@@ -157,6 +157,19 @@ Progress files preserved at `.session_state/`:
   hits its 100-error cap. 1510.04473 was the lone clear Rust-only case
   (now fixed above).
 
+* **Fresh sweep of unseen `remaining` papers (current binary): clean.** A
+  1500-paper sample (every 180th of `canvas3_round37_remaining.txt`)
+  produced **zero genuine failures** — the only `rc=124` (1902.03551)
+  was a CPU-contention **false timeout**: on a quiet CPU the release CLI
+  converts it in **14.7 s** → 14.7 MB XML, 6122 `<Math>`, 0 errors.
+  **Methodology lesson:** running the sweep at `-P $(nproc)` (=20)
+  oversubscribes the box (each `cortex_worker` is itself multi-threaded
+  for post-processing), so large math-heavy docs blow past the 120 s
+  worker timeout under contention even though they finish in seconds
+  alone. Use `-P ~10` and/or a higher `--timeout` for sweeps, or the
+  TIMEOUT column will be inflated with non-bugs. (28 `rc=143` in that run
+  were SIGTERM from stopping the sweep — re-tested clean: 2.8/3.6/1.3 MB.)
+
 * **alignment noalign recursion: save `\lx@label` not mutable `\label`**
   (`<this commit>`) — Root cause of the deferred `\lx@hidden@noalign`
   `Stomach:Recursion` cluster (2008.13358 amsgather, 2009.09721
