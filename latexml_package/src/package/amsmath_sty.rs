@@ -1457,6 +1457,19 @@ LoadDefinitions!({
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 
+  // amsmath.sty L1219: `\def\tagform@#1{\maketag@@@{(\ignorespaces#1
+  // \unskip\@@italiccorr)}}` — the low-level equation-tag formatter that
+  // wraps a tag body in parentheses. We model `\eqref` directly (above)
+  // rather than via `\tagform@`, so `\tagform@` itself stayed undefined —
+  // but papers reach for it directly inside custom cross-ref macros
+  // (e.g. `\hyperref[#1]{\textup{\tagform@{\ref*{#1}}}}`). Perl's
+  // amsmath binding ALSO lacks `\tagform@` (verified 2026-05-27 on
+  // 2004.10115: Perl emits the same `undefined:\tagform@`), so defining
+  // it is a faithful surpass-Perl port of the real amsmath macro
+  // (`\maketag@@@` just typesets text-mode, so the visible effect is
+  // `(#1)`; `\@@italiccorr` is the dump's `\/`). Witness 2004.10115.
+  DefMacro!("\\tagform@{}", "{(\\ignorespaces#1\\unskip\\@@italiccorr)}");
+
   // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
   // dispatch frozen under \write/\edef (moving formulas in toc etc.).
   DefMacro!(
