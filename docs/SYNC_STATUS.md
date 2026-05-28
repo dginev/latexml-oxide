@@ -162,6 +162,15 @@ Progress files preserved at `.session_state/`:
   quantumarticle_cls). Flips **1706.04315 (svproc) + 1807.04749 (spie)**
   → rc=0, 0 errors, HTML produced. (1804.09301 also `\cellcolor` but uses
   `article`+bundled `naaclhlt2018.sty` — separate, not this fix.)
+  * **Remaining sub-case (deferred):** the same `[table]{xcolor}` clash also
+    fires when an *already-loaded optionless xcolor* comes from a
+    paper-bundled `.sty` with no Rust binding (e.g. naaclhlt2018.sty L101
+    `\usepackage{xcolor}` loaded before the main file's `[table,xcdraw]{xcolor}`
+    → 1804.09301). No class binding to patch. The GENERAL Perl-faithful fix
+    is: on a re-`\usepackage` of an already-loaded package with NEW options,
+    run those options' `DeclareOption` handlers (Perl reprocesses `table` →
+    colortbl; real LaTeX would "option clash" error, but Perl is lenient).
+    Broader/riskier engine change to option-clash handling — deferred.
 * **XMRef `expected:id` over-warning: mid-parse suppression is a DEAD END.**
   Tried a non-consuming `data::resolve_lost(id)` consulted in
   `realize_xmnode` before warning — warnings stayed at 9 on the minimal
