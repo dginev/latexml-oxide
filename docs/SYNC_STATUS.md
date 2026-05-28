@@ -363,6 +363,25 @@ the automatic fallback subsumes each one.
     19 errors). (Remaining fixtures — apackage, filelistclass, mykeyval,
     myxkeyval, xkvdop* — keep generic names but are far less likely to
     collide; revisit if witnessed.)
+* **FATAL triage (2026-05-28): `not_tex_source` cluster = correct PDF-only
+  rejection (SHARED).** All 9 `Fatal:invalid:not_tex_source "PDF magic
+  detected"` papers (1812.00352, 1503.05439, …) are genuinely arXiv
+  PDF-only submissions (the `.tex` IS a PDF — `%PDF-1.4`, 0 TeX content).
+  Perl can't convert PDFs either; the worker's rejection is correct. Not a
+  target.
+* **NEW Rust-only bug ISOLATED (NOT fixed — delicate, broad): robust CS in a
+  `\usepackage[…]` brace-group option → infinite-loop FATAL.** Witness
+  **2004.08143** (`\usepackage[…,pdfauthor={… Mar{\'\i}n},…]{hyperref}`):
+  the `\i` (dotless-i, a `robust` primitive) in the option value loops
+  (pushback 650000 → `Fatal:Timeout:PushbackLimit`) so hyperref never loads
+  → `\href` undefined → cascade (Rust 4 err + FATAL; Perl rc=0). Minimal
+  repro `\usepackage[x={\relax\i}]{hyperref}`. Mechanism: under semiverbatim
+  the robust space-form `\i␣` in `\i`'s expansion (`\protect\i␣`) collapses
+  back to `\i` (no-space) → `\i`→`\protect\i`→… loop (ITRACE-confirmed).
+  `\i` in plain body is fine. Broad impact (accented pdfauthor/pdftitle in
+  package options are common). Full analysis + minimal repro + next-step
+  (trace `Expandable::invoke` body re-tokenization under semiverbatim):
+  [[project_robust_cs_semiverbatim_loop]].
 * **FIX LANDED — `\bookmarksetupnext` undefined (bookmark.sty stub gap).**
   Rust deliberately stubs bookmark.sty (raw-load hits the token-limit via
   its driver-file dispatch — documented in `bookmark_sty.rs`), no-opping the
