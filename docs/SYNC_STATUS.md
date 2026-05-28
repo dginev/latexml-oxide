@@ -118,6 +118,21 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **First-500K canvas failure list (`.session_state/canvas3_failed.txt`,
+  168 papers) re-tested: 82 recovered, 86 residual all SHARED.** This is
+  the full 150K-run failure list (the `canvas_3_failures_sandbox` was just
+  a 16-paper subset). Current binary: **82/168 now convert** (recovered by
+  R19 + intervening fixes). The 86 still-failing break down as: **76
+  rc=3 TooManyErrors** — dominated by the `_`/`^`-in-text 100-error-cap
+  cluster (~36 papers, e.g. 0906.1913/0903.4689/0901.1928; verified SHARED
+  — Perl also hits 101 errors + fatal, no output, these are math papers
+  with stray `_`/`^` in text), plus stray-`&` (~8), `malformed:ltx:XMApp`
+  (4, e.g. 1006.5461/1111.1008 — SHARED, Perl fatals), `\displaylines`
+  Cluster A (SHARED), and a few singletons; **7 rc=124** timeouts (some
+  CPU-contention false positives); **3 rc=1** (`not_tex_source` PDF / empty
+  source — correct rejects). Spot-checked 6+ across patterns: every one is
+  SHARED (Perl empty/over-cap/hangs). No new Rust-only conversion failure.
+
 * **Early-years (first-500K) fresh sweep: clean.** A 2491-paper sample
   (every 200th `.zip` across year dirs 0001–1412) found **1 failure**:
   math0506088 (rc=3), which is a known-SHARED Cluster-A `\displaylines`
