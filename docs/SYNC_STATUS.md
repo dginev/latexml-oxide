@@ -337,6 +337,24 @@ the automatic fallback subsumes each one.
   1904.07131, 1910.02851) AND the `\c@tikztimingtrans` cluster (1807.08647,
   1912.11312, …) → rc=0, 0 errors (1910.02851 → 735 KB HTML, 71 algorithm
   blocks). `cargo test --tests`: 1344 passed, 0 failed.
+* **FIX LANDED — `\DeclareMathOperator` undefined → 101-error FATAL
+  (myclass test-fixture name collision).** Papers using `\documentclass
+  {myclass}` (a common tutorial/template name) that bundle their OWN
+  myclass.cls (`\usepackage{amsmath}` + `\LoadClass{article}`) FATAL'd: the
+  Rust contrib test fixture `myclass_cls.rs` was registered GLOBALLY under
+  the literal name `myclass`, intercepting these real papers. It loads
+  article + DeclareOptions but NOT amsmath → `\DeclareMathOperator`
+  undefined → every operator cascade → 101-error FATAL. Perl has NO myclass
+  binding → OmniBus fallback + dep-scan of the bundled myclass.cls (loads
+  amsmath) → clean (rc=0). Fix: re-register the options fixture under a
+  deliberately-unique name `lxtestclass` (used only by
+  tests/structure/options.tex), so real `myclass` papers fall back to
+  OmniBus+dep-scan like Perl. Same class of bug as the fundam/mcom-l/birkjour
+  OmniBus-stub interceptions, but for a TEST fixture. Flips **1710.04325 +
+  1802.01751** FATAL → rc=0 (1710.04325 → 561 KB HTML). options test still
+  passes; `cargo test --tests`: 1344 passed, 0 failed. (Other test-fixture
+  bindings — apackage, mytemplate, filelistclass — keep generic names but
+  are far less likely to collide with real papers; revisit if witnessed.)
 * **FIX LANDED — `\bookmarksetupnext` undefined (bookmark.sty stub gap).**
   Rust deliberately stubs bookmark.sty (raw-load hits the token-limit via
   its driver-file dispatch — documented in `bookmark_sty.rs`), no-opping the

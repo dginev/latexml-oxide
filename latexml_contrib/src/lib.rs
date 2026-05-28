@@ -234,7 +234,16 @@ pub type BindingLoader = fn() -> Result<()>;
 pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("apackage", "sty", apackage_sty::load_definitions),
   ("filelistclass", "cls", filelistclass_cls::load_definitions),
-  ("myclass", "cls", myclass_cls::load_definitions),
+  // Test-only options fixture. Registered under a deliberately unique name
+  // ("lxtestclass", not "myclass") so it does NOT intercept real arXiv papers
+  // that bundle their OWN `myclass.cls` (a common tutorial/template name).
+  // Perl has no `myclass` binding — such papers fall back to OmniBus +
+  // dep-scan of the bundled .cls (loading e.g. amsmath, so
+  // `\DeclareMathOperator` is defined). A globally-registered `myclass`
+  // binding broke that (witness 1710.04325 / 1802.01751: bundled myclass.cls
+  // `\usepackage{amsmath}` not loaded → `\DeclareMathOperator` undefined →
+  // 101-error FATAL). Used by tests/structure/options.tex.
+  ("lxtestclass", "cls", myclass_cls::load_definitions),
   ("keysetopt", "sty", keysetopt_sty::load_definitions),
   ("mykeyval", "sty", mykeyval_sty::load_definitions),
   ("mytemplate", "sty", mytemplate_sty::load_definitions),

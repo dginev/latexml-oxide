@@ -2,9 +2,11 @@
 // pair, generated at compile time by `tex_tests!`.
 //
 // Two tests (`filelist`, `options`) need the `latexml_contrib` dispatcher
-// to find their test-local .cls/.sty files
-// (`filelistclass.cls`, `myclass.cls`, `apackage.sty`) via the
-// noltxml raw-TeX passthrough. The other 40 tests don't need it.
+// to find their test-local fixtures (`filelistclass.cls`, the options
+// fixture registered as `lxtestclass` — deliberately NOT `myclass`, to
+// avoid intercepting real arXiv papers that bundle their own myclass.cls —
+// and `apackage.sty`) via the noltxml raw-TeX passthrough. The other 40
+// tests don't need it.
 // `latexml_contrib::dispatch` returns `None` for files it doesn't
 // recognise, so the engine falls through to its normal binding
 // lookup — no observable change for the 40 non-contrib tests.
