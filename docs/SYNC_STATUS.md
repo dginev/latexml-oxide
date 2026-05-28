@@ -160,6 +160,45 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### stage_R15 batch triage (2026-05-28) — 2 Rust-only DEEP candidates isolated
+
+Re-tested stage_R15 CONVERR_1 + Perl-gated (Perl as ground truth). Recovered
+(stale, now 0-err): 2005.01533, 03899, 06712, 04818. **SHARED** (Perl errors
+identically — skip): 2005.04134 (`svg:g isn't allowed in <ltx:block>`),
+2005.07432 (`_` math-mode), 2005.07785 (`}` group-mode), plus 2006.13706
+(`\SetCustomStyle` — paper `\renewcommand`s 3 undefined glossaries custom-style
+cmds), 2006.10842 (`\AR` Arabic — babel[arabic] w/o arabtex), 2005.05903
+(`\endkeywords` — OmniBus section-hook mode quirk, Rust `\keywords` sub is
+byte-identical to Perl `auto_keywords`).
+
+**Two GENUINE Rust-only candidates (Perl 0 errors), both DEEP — next session:**
+* **2005.06787 — xint raw-load `readBalanced ran out of input`.** Minimal
+  repro: `\usepackage{xintexpr}` → Rust 1 error (during `xinttrig.sty`
+  raw-load), Perl 0. NUANCE: Perl reports `xintexpr.sty` as a MISSING file and
+  SKIPS xint entirely (it's a `tex/generic/` package Perl's raw-load doesn't
+  pull in); Rust DOES find+raw-load it and then hits the bug in xinttrig.sty's
+  catcode-heavy block (`\catcode61\catcode48\catcode32=10` idiom, `~`-as-escape
+  shorthands `~expanded`/`~unexpanded`, `\xintdefvar @Pi := float(...)`
+  multi-line exprs, `\XINT_tmpa#1#2#3.#4.` delimited defs). Fail is EARLY
+  (right after "Processing definitions xinttrig.sty"), locator "Anonymous
+  String line 2". Likely a catcode/tokenizer divergence on xint's special
+  chars. Faithful fix = the readBalanced root cause (NOT skipping xint).
+  **Traced (LXML_RB at gullet.rs readBalanced):** the accumulated tokens are a
+  letter-string `{ $noexpand$expanded { $noexpand$unexpanded { … ` — i.e.
+  xinttrig's `~expanded`/`~unexpanded`/`~expandafter` shorthands (xint uses `~`
+  as a placeholder-escape, materialised later via `\scantokens` with `~`→
+  catcode-0 and `\escapechar` set to `$`, so `\string`/`\detokenize` of a CS
+  prints `$cs`) are being mis-expanded into literal letters with UNBALANCED
+  braces instead of the live `\expanded` primitive. So the gap is Rust's
+  handling of xint's `~`-escape + `\escapechar='$'` + `\scantokens`/
+  `\detokenize` build-then-rescan idiom (`\XINT_tmpa#1#2#3.#4.` defs, L118+).
+  Deep xint-specific tokenizer interaction.
+* **2005.04851 — pgfplots/tikz `grid style=dashed` → `_` in math mode.** Perl
+  loads tikz + converts clean (0 err); Rust 1 error `Script _ can only appear
+  in math mode` at "Anonymous String" + `Warn \tikz@dashphase is not a
+  register`. pgfplots dashed-grid dash-pattern rendering. Deep tikz/pgf
+  internals.
+
 ### R-stage stale-data re-run + cluster triage (2026-05-28, cont.)
 
 * **R01 stage was STALE (pre-stub binary).** R01 (`stage_R01`) showed an
