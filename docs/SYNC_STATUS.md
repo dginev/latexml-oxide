@@ -838,6 +838,15 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   redefines `\d`/`\th`/`\b` to text accents on load, then `$\d_x$`
   trips text-mode underscore. Witnesses: hep-th0005159, hep-th0010165,
   hep-ph0001306, cond-mat0102064, cond-mat0103632, hep-th0005268.
+* **math tokens inside `ltx:glossaryref`** — a glossary reference
+  (`\gls`/`\glspl`) whose displayed content includes math (or is used
+  in a math/algorithm context) emits bare `ltx:XMTok`/`ltx:XMApp`
+  directly under `ltx:glossaryref`, whose content model is
+  `Inline.model` (no bare math tokens). Verified 2005.04232 (R15):
+  Perl emits byte-identical `ltx:XMTok isn't allowed in
+  <ltx:glossaryref>` at source line 1011. Cluster: 114 occurrences
+  across 5 R13-R16 papers (2003.03080, 2004.07271, 2004.09272,
+  2005.04232, 2006.10102). SHARED schema limitation in both engines.
 * **`{… \be \int_{…} … \ee}` braced custom begin/end-equation
   shorthand** — author wraps a `\be…\ee` display equation in an extra
   brace group; both engines fail to enter display math through the
