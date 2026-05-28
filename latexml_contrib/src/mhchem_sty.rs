@@ -1,25 +1,34 @@
 //! mhchem.sty — chemical formula typesetting.
 //!
 //! TODO(strict-perl-parity): once `latexml_engine` can faithfully
-//! handle the expl3 / xparse / chemgreek raw-load chain (currently
-//! the gaps are around `\group_begin:` non-boxing-frame handling
-//! and l3regex/l3tl-analysis register access during the chemgreek
-//! load triggered by the first `\ce{...}`), DELETE this binding so
-//! that `\usepackage{mhchem}` raw-loads the actual TL `mhchem.sty`,
-//! matching Perl LaTeXML's behavior (Perl has no `mhchem.sty.ltxml`).
+//! handle the expl3 / xparse / chemgreek raw-load chain, DELETE this
+//! binding so that `\usepackage{mhchem}` raw-loads the actual TL
+//! `mhchem.sty`, matching Perl LaTeXML's behavior (Perl has no
+//! `mhchem.sty.ltxml`).
 //! Driver paper: arXiv:1806.06448 (3 errors → 0 errors with this
 //! stub; full chemistry rendering needs the engine fix).
+//!
+//! **Current blocker (diagnosed 2026-05-12):** `\ce{H}` with raw-load
+//! produces 77 errors in Rust vs 0 in Perl. The cascade starts at
+//! `\int_value:w` seeing `;` with no preceding digit — the
+//! digit-producing expansion returned nothing. Root-cause hypothesis:
+//! `read_x_token` returns PA-aliased CS tokens as opaque
+//! `Stored::Token(\let-target)`, causing the csname-reader to error
+//! because the let-target is a CS, not a character. Every subsequent
+//! expl3 token (`\__int_eval_end:`, `\fi:`, `\else:`, `\s__tl`, …)
+//! shifts one slot and surfaces where it shouldn't. The chain is
+//! `chemgreek` → `xparse` → expl3 (`\__file_tmp:w`, l3regex,
+//! l3tl-analysis). Tracked in `docs/SYNC_STATUS.md` §"mhchem
+//! retirement (deferred R36 long-tail)". Next step: instrument
+//! `read_x_token` around line 6 col 1 of the minimal repro to
+//! narrow the first wrong return.
 //!
 //! Perl LaTeXML has no `mhchem.sty.ltxml` and raw-loads the actual
 //! TL `mhchem.sty` (which `\RequirePackage{chemgreek}` →
 //! `\RequirePackage{xparse}` → heavy expl3 machinery). Perl's expl3
 //! emulation is mature enough that this works.
 //!
-//! Rust's expl3 emulation has gaps (e.g. `\group_begin:` non-boxing
-//! frame handling, `\l__tl_analysis_*_int` register access in
-//! l3regex/l3tl-analysis), so the chemgreek raw-load triggered by the
-//! first `\ce{...}` invocation leaves the gullet in an unbalanced state
-//! (open `\iffalse`, unmatched `{` at end-of-input).
+//! The specific gap: see "Current blocker" above.
 //!
 //! Until the expl3 cluster is fixed, this binding intercepts the
 //! mhchem load and provides a minimal stub: `\ce{...}` typesets its
