@@ -113,6 +113,7 @@ pub mod colordvi_sty;
 pub mod colortbl_sty;
 pub mod comment_sty;
 pub mod concmath_sty;
+pub mod constants_sty;
 pub mod courier_sty;
 pub mod crop_sty;
 pub mod cropmark_sty;

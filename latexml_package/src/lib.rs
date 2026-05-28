@@ -879,6 +879,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chancery", "sty", package::chancery_sty::load_definitions),
   ("charter", "sty", package::charter_sty::load_definitions),
   ("concmath", "sty", package::concmath_sty::load_definitions),
+  ("constants", "sty", package::constants_sty::load_definitions),
   ("courier", "sty", package::courier_sty::load_definitions),
   ("etex", "sty", package::etex_sty::load_definitions),
   ("euler", "sty", package::euler_sty::load_definitions),
