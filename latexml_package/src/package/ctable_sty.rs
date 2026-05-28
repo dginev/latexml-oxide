@@ -31,4 +31,21 @@
 
 use crate::prelude::*;
 
-LoadDefinitions!({});
+LoadDefinitions!({
+  // Pull in ctable's real dependencies (`\RequirePackage{ifpdf,
+  // etoolbox,xcolor,xkeyval,array,tabularx,booktabs,rotating}` —
+  // ctable.sty L28). Papers that rely on ctable for its transitive
+  // dependencies (the most common being booktabs for `\toprule`/
+  // `\midrule`/`\bottomrule`) need this — without it our previous
+  // pure-no-op stub silently dropped them. Witness 2002.05708 (loaded
+  // ctable, used \toprule/\midrule/\bottomrule from booktabs without
+  // a direct \usepackage{booktabs}).
+  RequirePackage!("ifpdf");
+  RequirePackage!("etoolbox");
+  RequirePackage!("xcolor");
+  RequirePackage!("xkeyval");
+  RequirePackage!("array");
+  RequirePackage!("tabularx");
+  RequirePackage!("booktabs");
+  RequirePackage!("rotating");
+});
