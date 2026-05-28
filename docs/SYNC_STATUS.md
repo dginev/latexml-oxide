@@ -118,6 +118,18 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **Early-years (first-500K) fresh sweep: clean.** A 2491-paper sample
+  (every 200th `.zip` across year dirs 0001–1412) found **1 failure**:
+  math0506088 (rc=3), which is a known-SHARED Cluster-A `\displaylines`
+  `\raise`/`\hbox` recursion (Perl also terminates). So the early-years
+  region is as clean as round-37. Cumulative this session: ~13k papers
+  sampled (round-37 ~6.6k + failed-list 1164 + sandbox 16 + early-years
+  2491) → **all genuine Rust-only conversion failures found are fixed**
+  (5 R19 fixes); every fresh-sweep residual is SHARED (Perl also
+  empty/over-cap/hangs) or a degenerate/`%auto-ignore` input. `~/data/
+  all_warnings.txt` is just a 1.5M paper-PATH list (no messages), not a
+  targeted error signal.
+
 * **xy `\CompileMatrices` memory OOM — RESOLVED** (commit `45290a23e7`).
   Investigated the preserved `canvas_3_failures_sandbox` (16 cases from an
   old round-3 binary). Re-test with the current binary: **9 of 16 now
