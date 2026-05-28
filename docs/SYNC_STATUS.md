@@ -126,7 +126,8 @@ Progress files preserved at `.session_state/`:
   rc=3 TooManyErrors** — dominated by the `_`/`^`-in-text 100-error-cap
   cluster (~36 papers, e.g. 0906.1913/0903.4689/0901.1928; verified SHARED
   — Perl also hits 101 errors + fatal, no output, these are math papers
-  with stray `_`/`^` in text), plus stray-`&` (~8), `malformed:ltx:XMApp`
+  with stray `_`/`^` in text), plus stray-`&` (~8, verified SHARED —
+  1107.0383 JHEP3: Perl also 101 errors + fatal), `malformed:ltx:XMApp`
   (4, e.g. 1006.5461/1111.1008 — SHARED, Perl fatals), `\displaylines`
   Cluster A (SHARED), and a few singletons; **7 rc=124** timeouts (some
   CPU-contention false positives); **3 rc=1** (`not_tex_source` PDF / empty
