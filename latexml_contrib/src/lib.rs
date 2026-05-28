@@ -36,6 +36,7 @@ pub mod xkvview_sty;
 pub mod aistats2026_sty;
 pub mod aliascnt_sty;
 pub mod ar5iv_sty;
+pub mod autofe_sty;
 pub mod arxbj_cls;
 pub mod arydshln_sty;
 pub mod ascmac_sty;
@@ -348,6 +349,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ar5iv", "sty", ar5iv_sty::load_definitions),
   ("arxbj", "cls", arxbj_cls::load_definitions),
   ("arydshln", "sty", arydshln_sty::load_definitions),
+  ("autofe", "sty", autofe_sty::load_definitions),
   ("changes", "sty", changes_sty::load_definitions),
   ("currfile", "sty", currfile_sty::load_definitions),
   ("diagrams", "tex", diagrams_tex::load_definitions),
