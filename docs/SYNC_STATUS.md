@@ -967,6 +967,23 @@ Found via a fresh sample of the offset-18 remaining slice.
 
 ### R17 fixes (2026-05-28)
 
+* **`\catcode`/`\lccode`/`\uccode`/`\sfcode` Unicode codepoint truncation**
+  (`<this commit>`) — these char-code registers (`tex_character.rs`)
+  converted their numeric char-code argument with `(value_of() as u8) as
+  char`, **truncating any codepoint > 255 to 8 bits**. So
+  `\catcode`‹=\active` (U+2039 = 8249) set the catcode of `8249 & 0xFF = 57`
+  = `'9'` instead of `‹` — silently making `'9'`/`':'` active+undefined.
+  csquotes `\MakeAutoQuote*{‹}{›}` does exactly this, so any later literal
+  `9` or `:` in the body raised `Error:undefined:9 T_ACTIVE[9]` /
+  `T_ACTIVE[:]`. LaTeXML is Unicode-aware and Perl keys its catcode table on
+  `chr($charcode)` with no truncation. Added `charcode_to_char()`
+  (`char::from_u32`, 8-bit fallback only for out-of-range/surrogate codes)
+  and routed all four registers through it. **Witness 2007.09691**
+  (`\MakeAutoQuote*{‹}{›}` + biblatex): `2 errors + 2 undefined macros[9,:]`
+  → **0 errors**, 2.5 MB HTML (Perl baseline had 2 errors — Rust now
+  cleaner). Minimal repro: `\usepackage{csquotes}\MakeAutoQuote*{‹}{›}` then
+  `Page 9 at 10:30.`. Broad impact: any package activating a >255-codepoint
+  char (csquotes inner quotes, babel shorthands on Unicode chars, …).
 * **`ltx:_CaptureBlock_` content-model parity** (`<commit 1cf95cb583>`) — our
   `Model::load_internal_extensions` synthesized `_CaptureBlock_` from only
   4 sources (`ltx:block`, `ltx:logical-block`, `ltx:sectional-block`,
