@@ -176,6 +176,28 @@ Progress files preserved at `.session_state/`:
   is a true no-op. The CLI recursion (the committed R19 fix) is
   orthogonal and verified.
 
+  **UPDATE (2026-05-28, candidate (i) tested — INSUFFICIENT).** Tried
+  asserting `Let('\xyloaded','\relax', Global)` right before the
+  feature-file `input_definitions` in xy_sty's `\xyoption` handler. A
+  trace confirmed it runs (`xyoption 'curve' was_defined=false`) and the
+  subsequent `xycurve.tex` then loads cleanly (no re-entry). BUT the
+  worker STILL ends with `\xymatrix` undefined → 0-byte. So the
+  option-time `\input xy` re-entry was only a SECONDARY symptom: the
+  PRIMARY problem is that the worker's xy load never defines `\xymatrix`
+  (a v2/standard feature). `\usepackage{xypic}` → `\xyoption{v2}` should
+  pull in matrix/arrow/etc.; the worker's `\xyoption 'matrix'` handler
+  DOES run (per trace) yet xymatrix stays undefined — so the *matrix
+  feature file's own load is also incomplete*, i.e. a cascading
+  multi-feature raw-load failure (each feature file's
+  `\ifx\xyloaded\undefined\input xy\fi` + the directly-loaded
+  `xy<feature>.tex` workaround interact badly under the worker's
+  load/timing). The CLI keeps everything in scope and loads all
+  features. Net: this needs a focused session reworking xy feature
+  loading (likely making the `\xyoption` handler load features WITHOUT
+  the per-file `\input xy` re-entry, or honoring Perl's `\xyinputorelse@`
+  properly). Deferred again; do NOT land a partial `\xyloaded` patch
+  that leaves xymatrix undefined.
+
 ### R18 fixes (2026-05-28)
 
 * **IEEEproof: drop surpass-Perl `mode => internal_vertical`**
