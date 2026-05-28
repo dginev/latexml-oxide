@@ -752,6 +752,30 @@ See `latexml_core/src/binding/content.rs::load_class` (commit landing
   `DefConstructor` accepts it). Engine work, deferred — needs broader
   audit of `DefPrimitive` call sites that might benefit.
 
+### Deferred Rust-only: `expected:id` MathFork/split dangling-XMRef tail (R16 analysis 2026-05-28)
+
+The residual post-processing `Error:expected:id Cannot find a node with
+xml:id='…'` cluster (witnesses 2006.06709 `A8.Ex87.m1.5`, and R10-R16
+shapes `S6.E4.m1.2.mf`, `S2.Ex12.m1.2`, `A2.E12.1.m1.2.mf`) is the
+MathFork (`.mf`) / `rearrange_ams_*` XMRef-cloning issue. `append_clone`
+(document.rs L3869) suffixes cloned ids via `ID_SUFFIX=".mf"`
+(base_xmath.rs L1580) and rewrites idrefs through `id_map`, but some
+cloned XMRefs end up referencing an id that no node finally carries.
+`prune_dangling_split_xmrefs` (document.rs L3173) already removes such
+refs in two sweeps: (1) any `@_split_ref`/`@_mf_ref`-marked ref whose
+idref doesn't resolve; (2) a broader regex sweep — **but restricted to
+`^S\d+\.E\d+\.m\d+\.`** (numbered `\begin{equation}` form) so it
+explicitly EXCLUDES the `Ex<digit>` (unnumbered display) and `A<digit>`
+(appendix) forms, because declare_test has legitimate renamed-id refs
+(`S1.Ex1.m1.1`→`.1a`) that a naive broadening would wrongly prune.
+So the surviving danglers are precisely the `Ex`-form / `A`-prefix
+*unmarked* refs that fall outside both gates. Safe fix needs a
+provenance marker (extend `_mf_ref`/`_split_ref` tagging to ALL
+MathFork/rearrange-cloned refs) so sweep (1) catches them without
+touching declare_test — careful ASF work, do WITH the user (per their
+"be careful with the abstract syntax forests / math id" guidance), not
+an autonomous patch.
+
 ### Deferred Rust-only: `to_string`-space-loss class (control-word + letter merge)
 
 A recurring engine pattern: code that serializes a token list to a
