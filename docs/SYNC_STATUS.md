@@ -171,6 +171,22 @@ Progress files preserved at `.session_state/`:
     run those options' `DeclareOption` handlers (Perl reprocesses `table` →
     colortbl; real LaTeX would "option clash" error, but Perl is lenient).
     Broader/riskier engine change to option-clash handling — deferred.
+* **FIX LANDED — babel `\dateUSenglish` undefined (english≡USenglish
+  canonical date hook).** ar5iv raw-loads babel.sty + the real
+  babel-english.ldf, which builds `\date<CurrentOption>` via
+  `\@namedef{date\CurrentOption}` — so option `english` creates only
+  `\dateenglish`, not the canonical `\dateUSenglish` that modern babel's
+  babel-en.ini machinery then calls → `Error:undefined:\dateUSenglish`.
+  Plain CLI doesn't hit it (uses the babel binding, not raw-load); only
+  ar5iv/INCLUDE_STYLES does. Perl raw-loads the same files yet converts
+  clean. Fix: in `english_sty.rs`, after the english.ldf raw-load, alias
+  each canonical english-variant date hook (USenglish/UKenglish/american/
+  british/canadian/australian/newzealand) to the real `\dateenglish` when
+  undefined (`\@for` + `\@ifundefined` guard). Consistent with
+  babel_lang_stubs' typesetting-only-date philosophy, but aliasing keeps
+  `\today` faithful. Flips **1503.02002, 1608.02901, 1707.06505,
+  1808.10359** → rc=0, 0 errors (1503.02002 → 1.08 MB HTML). cargo test
+  --tests: 1344 passed, 0 failed.
 * **XMRef `expected:id` over-warning: mid-parse suppression is a DEAD END.**
   Tried a non-consuming `data::resolve_lost(id)` consulted in
   `realize_xmnode` before warning — warnings stayed at 9 on the minimal
