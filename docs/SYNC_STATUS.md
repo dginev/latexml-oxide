@@ -802,6 +802,29 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   math0703454 (R35.A MoveableBox depth-cap), 0708.3218, 0708.3398
   (harvard.sty timeouts), 0809.3663 (memo-l.cls), 0809.3725
   (`\@math@baccent`), 0901.1928 (XMApp-in-emph).
+* **`{\theoremcmd …}` theorem-as-declaration misuse** — paper uses
+  `{\assumption text}` / `{\corollary text}` etc. (where `\assumption`
+  was `\newtheorem`-defined, so it's the env-*begin*, not a font
+  declaration). The theorem-begin opens a mode-switch frame and the
+  group-closing `}` then hits it: `Attempt to close a group that
+  switched to mode horizontal due to T_CS[\assumption]`. Byte-identical
+  errors in Perl (verified 2026-05-27, same source lines). Witness
+  2003.13371 (R14, CONVERR_13). Also explains the recurring
+  `\lem`/`\prop`/`\thm`/`\example` mode-switch-close cluster.
+* **Unknown bundled `.cls` → OmniBus fallback, body not raw-interpreted**
+  — `\documentclass{<custom>}` with the `.cls` bundled but no LaTeXML
+  binding: both engines use OmniBus + dependency-scan only; the class's
+  own `\newtheorem`/`\def` body is NOT executed, so its theorem
+  environments + metadata macros stay undefined. Byte-identical 7-error
+  set in Perl (verified 2026-05-27). Witness 2004.03095
+  (`artjlt.cls` → `{Theorem}`/`{Lemma}`/`\lastname`/`\msc` undefined).
+* **`\filenamebase`-driven multi-file build** — paper does
+  `\input{\filenamebase.settings}` etc. where `\filenamebase` is meant
+  to be defined externally (build wrapper / command line). Undefined in
+  a standalone run → cascade of `\filenamebase.*` missing-file +
+  `\setboolean` undefined (the ifthen-loading settings file never
+  runs). Byte-identical in Perl (verified 2026-05-27). Witness
+  2003.12614 (R14, CONVERR_12).
 
 ---
 
