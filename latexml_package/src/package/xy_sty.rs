@@ -42,6 +42,11 @@ LoadDefinitions!({
   // Step 3: xy.tex.ltxml overlay (Perl L26-151)
   //======================================================================
 
+  // NOTE: `\CompileMatrices` is neutralized in the `\xyoption` handler
+  // below, right after the matrix feature (xymatrix.tex) loads — that's
+  // where it is defined, so a no-op here (before option processing) would
+  // be clobbered. See the comment there.
+
   // Redefine \xyoption to filter incompatible drivers (Perl L27-50)
   Let!("\\lx@xy@xyoption@orig", "\\xyoption");
   DefMacro!("\\xyoption{}", sub[(option)] {
@@ -97,11 +102,23 @@ LoadDefinitions!({
           noltxml: true,
           ..Default::default()
         });
+        // The matrix feature (xymatrix.tex L91) defines `\CompileMatrices`
+        // as `\let\xymatrix=\xymatrixcompile`, which routes matrices through
+        // the `.xyc` disk-cache compile/re-input cycle — a TeX-runtime speed
+        // optimization that produces identical output but blows our RSS past
+        // the budget (unbounded `\global\toks9=` accumulation; math0203082).
+        // Neutralize it the moment the feature loads so a document-preamble
+        // `\CompileMatrices` (which runs before \begin{document}, too early
+        // for at_begin_document) is a no-op and matrices render directly.
+        if single == "matrix" {
+          def_macro_noop("\\CompileMatrices")?;
+        }
         return Ok(Tokens!());
       },
       _ => &[][..],
     };
     if !feature_files.is_empty() {
+      let loads_matrix = feature_files.contains(&"matrix");
       for name in feature_files {
         let n = s!("xy{}", name);
         let _ = input_definitions(&n, InputDefinitionOptions {
@@ -109,6 +126,10 @@ LoadDefinitions!({
           noltxml: true,
           ..Default::default()
         });
+      }
+      if loads_matrix {
+        // See note above: neutralize `\CompileMatrices` after xymatrix.tex.
+        def_macro_noop("\\CompileMatrices")?;
       }
       return Ok(Tokens!());
     }
