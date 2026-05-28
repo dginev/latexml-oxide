@@ -967,6 +967,18 @@ Found via a fresh sample of the offset-18 remaining slice.
 
 ### R16/R17 fixes (2026-05-28)
 
+* **changepage: define `{adjustwidth*}` (separate env, was missing)**
+  (`<this commit>`) — `changepage.sty` L122 has `\newenvironment{adjustwidth*}[2]`
+  as a SEPARATE environment from `{adjustwidth}` (the `*` is part of the env
+  NAME, not a `*`-argument). Our `changepage_sty.rs` stub defined only
+  `{adjustwidth} OptionalMatch:* []{}{}` — and that `OptionalMatch:*` never
+  matches `\begin{adjustwidth*}` because LaTeX dispatches the starred form as
+  the env named `adjustwidth*`. Perl has no changepage binding → raw-loads the
+  real .sty (both envs). Added a sibling `DefEnvironment!("{adjustwidth*}
+  []{}{}", …, mode => internal_vertical)` (odd/even-page margin logic in the
+  real def is moot — both branches just set list margins we ignore). **Witness
+  2006.09676** (`\begin{adjustwidth*}{0.0in}{0pt}`): 1 error → **0** (588 KB
+  HTML). cargo test --tests 1344/0.
 * **chemformula stub now mirrors `\RequirePackage{...xfrac,nicefrac}`**
   (`<this commit>`) — the real `chemformula.sty` L29 does
   `\RequirePackage{tikz,amsmath,xfrac,nicefrac}`, so loading chemformula makes
