@@ -760,13 +760,12 @@ control word from a following letter, merging e.g. `\rm S`→`\rmS`,
 `\vb h`→`\vbh`. Confirmed instances:
 * **physics `\dmat`/`\admat`** — FIXED `9e5ab794e1` by splitting at the
   token level (`split_tokens`) instead of `to_string()`+re-`Tokenize!`.
-* **`\rmS` via `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`**
-  — DEFERRED. Witness 2005.06712 (CONVERR_1, `\rmS` "at Anonymous
-  String"). The `{\rm S}` refnum flows through the refnum/`\@currentlabel`/
-  label-ref serialization and collapses to `\rmS`. Needs the exact
-  re-tokenize site in the label/ref path identified (latex_constructs
-  refnum handling / counter dialect). General fix: preserve the
-  control-word boundary space wherever refnums are string-round-tripped.
+* **`\rmS` via `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
+  in subequations** — FIXED `6fb7e001c7`. Witness 2005.06712. The site
+  was `\lx@equationgroup@subnumbering@begin` (latex_constructs.rs
+  ~L5689) `.to_string()`+re-tokenize of the expanded `\theequation`
+  when fixating `\theparentequation`; now keeps the token list (Perl
+  `\protected@edef`). Subequation tags `(S15a)` now correct.
 
 ### Deferred Rust-only investigation: fundam.cls raw-load drops late `\def`s
 
