@@ -118,6 +118,45 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **arydshln: stop noop'ing `\endlongtable`** (commit `42bcc87de0`) —
+  Rust-only locked-frame FATAL on `arydshln` + `longtable` with `p{}`
+  columns (1510.04473, single clear Rust-only case in the round-37
+  failed-list re-test). The stub copied ar5iv `arydshln.sty.ltxml` L45's
+  `DefMacro('\endlongtable', Tokens())` noop, but the REAL `arydshln.sty`
+  SAVES+RESTORES longtable's original `\endlongtable`
+  (`\let\endlongtable\adl@org@endlongtable`, L796), not neutralizes it. Our
+  longtable relies on `\endlongtable=\lx@end@alignment\@end@tabular` to
+  close the alignment boxing group; noop leaks the `{`-group → env
+  `\endgroup` mismatch → mode cascade → `pop last locked stack frame`
+  FATAL. Perl-ar5iv recovers (9 errors); we abort. Keeping `\endlongtable`
+  functional matches the real package: 1510.04473 → 716 KB main.html, 5/5
+  deterministic, 18 tables / 101 rows / 896 math (Perl=9 err, so we surpass
+  it). Also made `current_frame_message` render the initiator locator
+  readably (was redacted) — this localized the leak.
+
+* **`Font::to_hashable` determinism** (commit `4dfc877ade`) — used
+  `RandomState::new()` (fresh random seed per call), so the same Font
+  hashed differently each call/run; it keys the `_font` node attribute and
+  `node_fonts` map (set/get_node_font), making font dedup and
+  font-identity-dependent layout nondeterministic. Manifested as
+  intermittent FATALs flipping pass/abort across runs of the SAME binary on
+  the SAME input. Switched to `FxHasher` (fixed seed). This was masking the
+  arydshln bug above: 1510.04473 alternated complete/FATAL until the hash
+  was made deterministic, then reproduced reliably for root-causing.
+
+* **Round-37 failed-list re-test (1164 papers, current binary).** Only
+  ~58–62 of 1164 prior failures genuinely still fail; the rest were
+  recovered by landed work (re-test BEFORE investigating — canvas failed
+  lists go stale fast). Genuine residue is dominated by **SHARED**
+  Perl/Rust limits, NOT Rust-only: (a) catoptions/keyval2e raw-load (4
+  papers: 1501.07012, 1502.01082, 1507.04637, 1512.01732) — Perl
+  `--includestyles` ALSO FATALs (`too_many_errors:100` at catoptions.sty
+  L6362; see KNOWN_PERL_ERRORS); (b) `\deep_recursion` 1612.06222 — Perl
+  FATALs identically; (c) `not_tex_source` PDF-as-tex (4) — correctly
+  rejected; (d) `TooManyErrors` rc=3 (~34) — spot-checked, Perl also
+  hits its 100-error cap. 1510.04473 was the lone clear Rust-only case
+  (now fixed above).
+
 * **alignment noalign recursion: save `\lx@label` not mutable `\label`**
   (`<this commit>`) — Root cause of the deferred `\lx@hidden@noalign`
   `Stomach:Recursion` cluster (2008.13358 amsgather, 2009.09721

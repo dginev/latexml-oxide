@@ -769,3 +769,35 @@ stray trailing `}` so the body matches standard-LaTeX semantics.
 strictly more faithful. Witness 2007.09971 (IEEEtran + `extract.sty`
 under ar5iv: 41 boxing-group errors → clean, matching Perl's 0 errors /
 9 warnings).
+
+## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
+
+`catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded
+by Perl LaTeXML either. With `--includestyles` (or the ar5iv
+`rawstyles` profile) Perl FATALs:
+
+```
+Error:unexpected:\let ... should not appear between \csname and \endcsname
+  at catoptions.sty; line 6362
+Fatal:too_many_errors:100 Too many errors (> 100)!
+```
+
+catoptions does heavy `\csname`-driven catcode machinery that neither
+engine interprets. Perl's *default* (no `--includestyles`) treats
+`keyval2e.sty`/`catoptions.sty` as **missing files** and skips them,
+producing output; the ar5iv pipeline (rawstyles on) fails identically
+in Perl and Rust. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{keyval2e}   % → \RequirePackage{catoptions}
+\begin{document}x\end{document}
+```
+
+Witnesses (round-37 second-500K, all SHARED): 1501.07012, 1502.01082,
+1507.04637, 1512.01732 (a Cretan/Hadamard-matrix paper family). Our
+engine FATALs earlier with `ParamSpec:Expected` (the `\@namedef{#1@#2@…}`
+body executes at load time because catoptions' `\robust@def`/`\cpt@def@`
+expansion misfires), but the net outcome — no HTML — matches Perl. Not
+actionable as a Rust-only fix; revisit only if catoptions raw-load
+becomes a deliberate engine goal.
