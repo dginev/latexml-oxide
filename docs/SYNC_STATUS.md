@@ -187,6 +187,32 @@ Progress files preserved at `.session_state/`:
   `\today` faithful. Flips **1503.02002, 1608.02901, 1707.06505,
   1808.10359** → rc=0, 0 errors (1503.02002 → 1.08 MB HTML). cargo test
   --tests: 1344 passed, 0 failed.
+* **FIX LANDED — rotfloat `\restylefloat` undefined (missing float dep).**
+  `rotfloat_sty.rs` was a stub loading only `rotating`, but rotfloat.sty
+  L24 does `\RequirePackage{float}` (which defines `\restylefloat`/
+  `\newfloat`/`\floatstyle`). Papers call `\restylefloat{figure}` directly
+  → undefined without float. The stub's "Perl skips it (INCLUDE_STYLES=
+  false)" rationale doesn't hold under the canvas ar5iv profile
+  (INCLUDE_STYLES=true → Perl raw-loads rotfloat→float). Fix: add
+  `RequirePackage!("float")` (before rotating, matching real load order) —
+  loads float's binding (clean, no raw-load `\fi` errors). Flips
+  **1604.07054, 1808.04014** (both `\documentclass{mnras}`+rotfloat) →
+  rc=0, 0 errors. Perl baseline: rc=0, 485 KB / 605 KB. cargo test
+  --tests: 1344 passed, 0 failed.
+* **DEFERRED — `\autrun` cluster (4 papers, ar5iv-specific, elusive).**
+  1509.01533/1509.04088/1602.03020/1804.10461 redefine `\author` to set
+  `\autrun` as a side-effect (`\def\author#1{\gdef\autrun{...}...}`), then
+  use `\autrun` in `\markboth` (via a redefined `\address`). Rust ignores
+  the `\def\author` (correctly — `\author` is `locked`, matching Perl
+  LaTeX.pool L1210 `locked=>1`), so `\autrun` is never set → undefined
+  error. Perl ALSO locks `\author` (so also never sets `\autrun`) yet
+  converts clean (3.6 MB) — so it tolerates/gobbles the undefined `\autrun`
+  where Rust expands it. The error is **ar5iv-only** (plain CLI clean) and
+  needs the FULL real preamble (L1-220) × ar5iv to reproduce — NOT
+  reproducible with minimal preamble + exact frontmatter, NOT from
+  `\markboth` alone (it's a noop that gobbles). Trigger is a paper-specific
+  preamble×ar5iv interaction that redefines `\markboth` or expands the
+  stored mark. Deferred — low ROI / hard to isolate.
 * **XMRef `expected:id` over-warning: mid-parse suppression is a DEAD END.**
   Tried a non-consuming `data::resolve_lost(id)` consulted in
   `realize_xmnode` before warning — warnings stayed at 9 on the minimal
