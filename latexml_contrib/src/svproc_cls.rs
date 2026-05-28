@@ -1,18 +1,21 @@
-//! Stub for svproc.cls (Springer Proceedings template, sister of svjour).
+//! svproc.cls (Springer Proceedings template, sister of svjour/svmult).
+//!
+//! Base = `article` + `sv_support` (Springer support), mirroring Perl's
+//! svjour.cls.ltxml / svmult.cls.ltxml which both
+//! `RequirePackage('sv_support')`. sv_support pulls inst_support + natbib
+//! and provides the Springer frontmatter (`\email`/`\keywords`/`\institute`)
+//! plus `\spnewtheorem` and the standard theorem set — so we do NOT need
+//! OmniBus (its last-resort grab-bag) nor an eager amsthm preload. See
+//! WISDOM #55. The paper's own `\usepackage{amsthm}` (if any) is then the
+//! first real amsthm load, so the `\let\proof\relax` idiom works (witness
+//! 1707.03222 {proof}).
 use latexml_package::prelude::*;
 
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  LoadClass!("article");
+  RequirePackage!("sv_support");
   RequirePackage!("amsmath");
-  // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. The real
-  // svproc.cls does not load amsthm, and OmniBus already provides lazy
-  // amsthm autoload (theorem-env stubs). Pre-loading it broke the common
-  // `\let\proof\relax` + `\usepackage{amsthm}` idiom: the paper's explicit
-  // \usepackage{amsthm} would no-op (already loaded), so amsthm's
-  // `\let\proof\@proof` never re-ran after the paper cleared `\proof` →
-  // `Error:undefined:{proof}`. Letting the paper's \usepackage{amsthm} be
-  // the first real load matches Perl (clean). Witness 1707.03222.
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
   // `\usepackage[table]{xcolor}` doesn't silently option-clash and
   // leave colortbl unloaded → `\cellcolor` undefined. svproc.cls
