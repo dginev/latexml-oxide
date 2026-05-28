@@ -217,6 +217,22 @@ Progress files preserved at `.session_state/`:
   ISO-8859 `.tex`; `grep -l documentclass` treats them as binary and
   returns empty, so always pass the explicit filename to Perl (a bogus
   rc=1/empty-output is a harness artifact, not a Perl failure).
+* **FIX LANDED — getfiledate `\gfd@width@tmp` undefined (ltxnew `\new`
+  raw-load gap).** getfiledate.sty L20 `\RequirePackage{ltxnew}`, then L29
+  `\new\dimen\gfd@width@tmp\gfd@width@tmp=\z@`. ltxnew builds its `\new`
+  allocator via a `\futurelet`-based prefix scanner (`\ifx\x\dimen →
+  \newdimen` chain) that our raw-load doesn't execute faithfully, so
+  `\new\dimen` never allocates the register and the immediate
+  `\gfd@width@tmp=\z@` errors at LOAD time (papers never even call
+  `\getfiledate`). Perl reports getfiledate as missing-file and only
+  deps-scans it (never runs the body) → clean. Fix: new contrib stub
+  `getfiledate_sty.rs` — no-op `\getfiledate[]{}` + `RequirePackage!(
+  "xcolor"[table])` (getfiledate.sty L22 dep; without it the stub drops
+  xcolor and `\textcolor` goes undefined, witness 1803.07118). Flips
+  **1503.08338, 1503.08341, 1709.04899, 1803.07118** → rc=0, 0 errors
+  (Perl baseline 1503.08338: 3.3 MB). cargo test --tests: 1344 passed, 0
+  failed. (Deeper ltxnew `\new` futurelet-scanner fix deferred — Perl
+  skips getfiledate anyway, so the stub IS the Perl-faithful match.)
 * **DEFERRED — `\autrun` cluster (4 papers, ar5iv-specific, elusive).**
   1509.01533/1509.04088/1602.03020/1804.10461 redefine `\author` to set
   `\autrun` as a side-effect (`\def\author#1{\gdef\autrun{...}...}`), then
