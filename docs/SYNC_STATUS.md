@@ -118,6 +118,14 @@ Progress files preserved at `.session_state/`:
 
 ### R17 fixes (2026-05-28)
 
+* **`ltx:_CaptureBlock_` content-model parity** (`<this commit>`) — our
+  `Model::load_internal_extensions` synthesized `_CaptureBlock_` from only
+  4 sources (`ltx:block`, `ltx:logical-block`, `ltx:sectional-block`,
+  `Caption`); Perl `Common/Model.pm` L96-97 uses 6, also including
+  `FrontMatter` and `BackMatter`. Added the two missing sources so a
+  captured box holding frontmatter/backmatter content is modelled as
+  permissively as Perl. (Parity correction; does not by itself resolve
+  the 2007.07021 listingline close-recovery divergence below.)
 * **thmtools: drop divergent native `restatable`, require thm-restate**
   (`<this commit>`) — Perl `thmtools.sty.ltxml` defines no `restatable`
   env (it comes solely from `thm-restate.sty`), and the real
@@ -181,7 +189,43 @@ classify against the LARGEST/worker-selected main, not the first
 alphabetically): 2007.06816 (Perl 9), 2008.00074 (12), 2007.09876 (11),
 2008.00163 (15, `FUSED_JMLR_Omni_arxiv_June16.tex` not `jmlr_sample.tex`),
 2007.07599 (11, svjour3), 2007.15143 (10). Do **not** re-investigate as
-Rust-only.
+Rust-only. Also SHARED (verified Perl=identical): 2008.01188
+(figure-in-quote, Perl 9), 2007.15203 (bibitem-in-itemize, 7), 2008.01181
+(`\fi`/`\else` outside conditional, 6), 2007.15479 (5), 2008.00502
+(natbib `\NAT@citetp`/`\NAT@parfalse`/`\NAT@swafalse` undefined +
+`\lx@note` mode errors, 7).
+
+**R17 DEFERRED — document-builder close-recovery divergences (Rust-only,
+high-risk core).** Two remaining failures are genuinely Rust-only but
+both stem from how the document builder closes/recovers open
+boxes/blocks when an ancestor closes — a core area the user flagged as
+sensitive (math-id/ASF). Defer pending careful, well-tested work:
+  * **2008.00562 `IAIPAL-SIAM-Ver6.tex` (siamart190516) — FATAL
+    TooManyErrors, Perl=0.** Root cause: ntheorem's binding (loaded as a
+    siamart dependency in BOTH engines; ntheorem `RequirePackage`s
+    amsthm) sets `\qed`=`\@qedbox{\the\qedsymbol}` with `\qedsymbol` a
+    toks-register. The paper does `\renewcommand\qedsymbol{${\small
+    \blacksquare}$}`, turning `\qedsymbol` into a *macro*; amsthm's
+    `proof` env auto-inserts `\qed` at `\end{proof}`, so `\the\qedsymbol`
+    expands `\qedsymbol`→`$…$` and `\the$` errors, leaving an unclosed
+    inline-math `$` inside the `\@qedbox{…}` arg. Perl recovers at the
+    group boundary (auto-closes the leaked math); OUR stomach raises
+    `unexpected:\endgroup Attempt to close a group that switched to mode
+    math` and the leaked math corrupts all following content → 100+
+    `_`/`^`/`\lx@end@inline@math` errors → FATAL. The single-proof case
+    is SHARED (Perl also emits 2-8); the FATAL *cascade* is the Rust-only
+    amplifier. Fix needs Perl-like math-mode group-close recovery in the
+    stomach — broad/risky, NOT a per-paper shim. (Confirmed: removing
+    amsthm from `siamart_cls.rs` does NOT help — ntheorem loads amsthm
+    regardless, matching Perl.)
+  * **2007.07021 `SSGL_GLM.tex` (amsart) — Perl 4, ours 6.** The 4
+    shared errors (2× `_CaptureBlock_` "isn't open", 2× `enumerate` not
+    allowed in `listingline`) are author/structural (enumerate inside an
+    algorithmic listing line). Our 2 EXTRA: `ltx:listingline Closing tag
+    whose open descendents do not auto-close. Descendants are
+    _CaptureBlock_` — a close-SEQUENCE divergence (`_CaptureBlock_` has
+    no `autoClose` in either engine, but Perl closes it before the
+    `listingline` close is reached). Same close-recovery class as above.
 
 ### R15–R16 fixes (2026-05-28)
 
