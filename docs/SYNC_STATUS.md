@@ -352,9 +352,17 @@ the automatic fallback subsumes each one.
   OmniBus+dep-scan like Perl. Same class of bug as the fundam/mcom-l/birkjour
   OmniBus-stub interceptions, but for a TEST fixture. Flips **1710.04325 +
   1802.01751** FATAL → rc=0 (1710.04325 → 561 KB HTML). options test still
-  passes; `cargo test --tests`: 1344 passed, 0 failed. (Other test-fixture
-  bindings — apackage, mytemplate, filelistclass — keep generic names but
-  are far less likely to collide with real papers; revisit if witnessed.)
+  passes; `cargo test --tests`: 1344 passed, 0 failed.
+  * **Same fix for `mytemplate`** (test fixture for `\hw`, renamed →
+    `lxtesttemplate`; tests/contrib/hw.tex). Witness **1810.07512**: bundles
+    its own mytemplate.sty defining `\F`/`\eps`/`\sig`/… via `\newcommand`;
+    the global `mytemplate` fixture shadowed it → 22 undefined → 101-error
+    FATAL. Un-shadowed, Rust RAW-LOADS the bundled mytemplate.sty (under
+    INCLUDE_STYLES) → all macros defined → rc=0, 0 errors, 441 KB HTML —
+    *surpassing* Perl (Perl dep-scans only, doesn't run the `\newcommand`s →
+    19 errors). (Remaining fixtures — apackage, filelistclass, mykeyval,
+    myxkeyval, xkvdop* — keep generic names but are far less likely to
+    collide; revisit if witnessed.)
 * **FIX LANDED — `\bookmarksetupnext` undefined (bookmark.sty stub gap).**
   Rust deliberately stubs bookmark.sty (raw-load hits the token-limit via
   its driver-file dispatch — documented in `bookmark_sty.rs`), no-opping the

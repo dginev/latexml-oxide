@@ -246,7 +246,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lxtestclass", "cls", myclass_cls::load_definitions),
   ("keysetopt", "sty", keysetopt_sty::load_definitions),
   ("mykeyval", "sty", mykeyval_sty::load_definitions),
-  ("mytemplate", "sty", mytemplate_sty::load_definitions),
+  // Test-only fixture (defines `\hw`), registered under a deliberately
+  // unique name `lxtesttemplate` (not `mytemplate`) so it does NOT intercept
+  // real arXiv papers that bundle their OWN `mytemplate.sty`. Such papers
+  // raw-load their .sty under INCLUDE_STYLES (defining the paper's macros);
+  // a global `mytemplate` binding shadowed that → 100-error FATAL (witness
+  // 1810.07512: bundled mytemplate.sty defines \F/\eps/\sig/… → all
+  // undefined under the fixture). Used by tests/contrib/hw.tex.
+  ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
   ("myxkeyval", "sty", myxkeyval_sty::load_definitions),
   // xkeyval test packages — passthrough to raw TeX (noltxml)
   ("xkvdop1", "sty", xkvdop1_sty::load_definitions),
