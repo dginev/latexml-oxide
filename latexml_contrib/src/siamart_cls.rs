@@ -89,4 +89,29 @@ LoadDefinitions!({
     "{AMS}",
     "<ltx:classification scheme='AMS'>#body</ltx:classification>"
   );
+
+  // {@abssec}{title} — siamonline190516.cls L810 (`\newenvironment{@abssec}[1]`):
+  // a titled frontmatter paragraph (`#1.` bold heading, then body). The
+  // public abstract/keywords/AMS/keyword envs wrap it, but papers also
+  // use `\begin{@abssec}{Author Information…}…\end{@abssec}` directly.
+  // `\begin{@abssec}` resolves via `\csname @abssec\endcsname`, so it
+  // works regardless of `@` catcode. siamonline190516.cls is reported
+  // missing-file in Perl (24 undefined-macro errors there); our siamart
+  // binding covers everything else, so defining this env makes the
+  // conversion clean. `{@doisec}` (L820) is the same shape with a
+  // trailing rule. Witness 2005.11911 (`\documentclass{siamonline190516}`).
+  // Use `inline-logical-block` (Misc.class) rather than `ltx:para`:
+  // papers place `\begin{@abssec}` inside frontmatter note contexts
+  // (e.g. an author/acknowledgements block already wrapped in
+  // `ltx:note`), where a block `ltx:para` is rejected
+  // (`malformed:ltx:para isn't allowed in <ltx:note>`). Misc.class is
+  // accepted in both inline and block positions.
+  DefEnvironment!(
+    "{@abssec}{}",
+    "<ltx:inline-logical-block class='ltx_abssec'><ltx:text font='bold'>#1. </ltx:text>#body</ltx:inline-logical-block>"
+  );
+  DefEnvironment!(
+    "{@doisec}{}",
+    "<ltx:inline-logical-block class='ltx_doisec'><ltx:text font='bold'>#1. </ltx:text>#body</ltx:inline-logical-block>"
+  );
 });
