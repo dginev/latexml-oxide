@@ -140,7 +140,6 @@ pub mod aomart_cls;
 pub mod apacite_sty;
 pub mod asme2ej_cls;
 pub mod autart_cls;
-pub mod birkjour_cls;
 pub mod bmvc2k_cls;
 pub mod bytedance_seed_cls;
 pub mod cas_dc_cls;
@@ -380,7 +379,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("apacite", "sty", apacite_sty::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
-  ("birkjour", "cls", birkjour_cls::load_definitions),
   ("bmvc2k", "cls", bmvc2k_cls::load_definitions),
   ("bytedance_seed", "cls", bytedance_seed_cls::load_definitions),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),

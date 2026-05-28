@@ -226,16 +226,33 @@ the automatic fallback subsumes each one.
   the multi-error mcom-l papers (1608.08766 CONVERR_23, 1707.04919 _27,
   2006.16729 _11) are unchanged (other SHARED issues, not regressed).
   `cargo test --tests`: 1344 passed, 0 failed.
-* **FOLLOW-ON (same AMS-family pattern, NOT yet fixed): `birkjour` /
-  `conm-p-l`.** birkjour papers (1503.01760, 1904.09833, CONVERR_1
-  `\bysame`) use `birkjour.cls` (amstex-based, NOT `\LoadClass{amsart}`;
-  it `\def\bysame` at L1388). `birkjour_cls.rs` is an OmniBus stub; Perl
-  falls back to OmniBus + dep-scan (amstex/amsmath/amsfonts/amsthm/geometry)
-  and converts clean (rc=0) — but neither amstex nor OmniBus defines
-  `\bysame`, so Perl's clean conversion has a non-obvious `\bysame` source
-  (likely main-file/.bbl selection differs from cortex). conm-p-l (1603.00667,
-  `\copyrightinfo`) has NO Rust stub (already OmniBus-fallback). Both need
-  their own Perl-ground-truth investigation before a delete/fix — deferred.
+* **FIX LANDED — `\bysame` undefined (birkjour) by DELETING the
+  `birkjour_cls.rs` stub (autoload-shadowing root cause).** birkjour papers
+  (1503.01760, 1904.09833, CONVERR_1 `\bysame`) use `birkjour.cls`
+  (amstex-based). The stub did `LoadClass!("OmniBus")` + amsmath/amsthm/…
+  AND hand-rolled `\subjclass{}` as a frontmatter macro. That hand-rolled
+  `\subjclass` **shadowed OmniBus's lazy `\subjclass`→ams_support autoload**
+  (omnibus_cls.rs L557-558), so the paper's `\subjclass` only added
+  frontmatter and never triggered `ams_support` → `\bysame` stayed
+  undefined. Perl has no birkjour binding → OmniBus fallback (autoload
+  intact) → paper's `\subjclass` loads ams_support → `\bysame` (verified:
+  bare-birkjour probe ALSO errors in Perl; the full paper is clean ONLY
+  because `\subjclass` fires the autoload). Deleted `birkjour_cls.rs` + its
+  registration → OmniBus's autoload restored. Flips **1503.01760 +
+  1904.09833** → rc=0, 0 errors (1503.01760 → 152 KB HTML, 17 bibitems,
+  `ams_support` loads via the `\subjclass` autoload). General lesson
+  (WISDOM #55): a stub that hand-rolls a CS which OmniBus uses as a lazy
+  AUTOLOAD TRIGGER (`\subjclass`/`\curraddr`→ams_support, `\citet`→natbib,
+  `\begin{theorem}`→amsthm, `\mathfrak`→amsfonts) **breaks the autoload
+  chain** — a strong reason to delete these stubs rather than extend them.
+* **FOLLOW-ON (same AMS-family pattern, NOT yet fixed): `conm-p-l`.**
+  1603.00667 (`\copyrightinfo`) uses conm-p-l (Contemporary Math
+  proceedings); it has NO Rust stub (already OmniBus-fallback), so the
+  `\copyrightinfo` gap is a different shape — `\copyrightinfo` is an
+  ams_support macro, so it likely needs an OmniBus lazy-autoload trigger
+  for `\copyrightinfo` (like `\subjclass`), OR the paper doesn't use
+  `\subjclass`/`\curraddr` to trigger ams_support. Needs its own
+  Perl-ground-truth check — deferred.
 * **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
   option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
   Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls

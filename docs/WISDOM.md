@@ -1740,6 +1740,22 @@ OmniBus+dep-scan+raw-read fallback simply works. Therefore:
   * For a NEW class-related error: prefer avoiding a stub and fixing the
     raw `.cls`/`.sty` read path so the fallback covers it. Keep/extend a
     stub only when raw interpretation genuinely can't yet.
+  * **Autoload-shadowing trap (strong reason to DELETE a stub).** OmniBus
+    registers *lazy autoload triggers*: `\subjclass`/`\curraddr`→ams_support,
+    `\citet`/`\citep`→natbib, `\begin{theorem}`→amsthm, `\mathfrak`/`\mathbb`
+    →amsfonts, `\thechapter`→book (omnibus_cls.rs L542-587 + L404-444). A
+    stub that hand-rolls one of these CSes (e.g. `\subjclass{}` as a
+    frontmatter macro) **shadows the trigger**, so the autoload never fires
+    and everything that package would have defined (e.g. `\bysame` from
+    ams_support) stays undefined. Witnessed: birkjour/mcom-l stubs →
+    `undefined:\bysame`. Deleting the stub restores the autoload chain and
+    matches Perl. So: a one-error CONVERR on an ams/natbib/theorem macro
+    under an OmniBus-loading stub is very often this — delete, don't patch.
+
+Concrete wins applying this (2026-05-28): deleted `fundam_cls.rs`
+(`{keywords}`), `mcom_l_cls.rs` (mcom-l/proc-l/tran-l, `\bysame` via
+amsart dep-scan), `birkjour_cls.rs` (`\bysame` via `\subjclass`-autoload
+un-shadowing). Each → 0 errors, matches Perl, removes a stub.
 
 **Reference.** `latexml_package/src/package/omnibus_cls.rs` (the grab-bag),
 `binding/content.rs::load_class` (the automatic fallback + dep-scan — the
