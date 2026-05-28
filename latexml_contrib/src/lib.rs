@@ -177,7 +177,6 @@ pub mod jmlr_cls;
 pub mod latexrelease_sty;
 pub mod lipics_cls;
 pub mod lmcs_cls;
-pub mod mcom_l_cls;
 pub mod mdpi_cls;
 pub mod nature_pre_cls;
 pub mod newpxmath_sty;
@@ -432,11 +431,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lipics-v2021", "cls", lipics_cls::load_definitions),
   ("lipics-v2024", "cls", lipics_cls::load_definitions),
   ("lmcs", "cls", lmcs_cls::load_definitions),
-  ("mcom-l", "cls", mcom_l_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
-  ("proc-l", "cls", mcom_l_cls::load_definitions),
-  ("tran-l", "cls", mcom_l_cls::load_definitions),
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),

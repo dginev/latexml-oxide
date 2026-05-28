@@ -211,6 +211,31 @@ the automatic fallback subsumes each one.
   OmniBus-stub set via the Perl-faithful fallback, not new bindings).
   Memory: [[project_keywords_env_binding_less_cls]] (now resolved),
   [[feedback_raw_interpretation_over_bindings]].
+* **FIX LANDED — `\bysame` undefined (mcom-l/proc-l/tran-l) by DELETING
+  the `mcom_l_cls.rs` stub (same fundam pattern).** mcom-l.cls (AMS journal
+  letters class) does `\LoadClass{amsart}` (L42); the stub instead did
+  `LoadClass!("OmniBus")` + amsmath/amsthm/… + hand-rolled AMS frontmatter
+  macros — but NOT `ams_support`, so `\bysame` (ams_support.sty.ltxml L215)
+  was undefined. Perl has no mcom-l binding → OmniBus fallback + dep-scan
+  finds `\LoadClass{amsart}` → loads amsart → ams_support → `\bysame`
+  (verified: Perl rc=0, 0 errors, 812 KB). Deleted `mcom_l_cls.rs` + its 3
+  registrations (mcom-l/proc-l/tran-l) so Rust falls back identically;
+  amsart/ams_support now also cover the stub's hand-rolled macros
+  (`\commby`/`\copyrightinfo`/`\subjclass`/… all in ams_support). Flips
+  **1706.00540** → rc=0, 0 errors, 400 KB HTML (25-bibitem bibliography);
+  the multi-error mcom-l papers (1608.08766 CONVERR_23, 1707.04919 _27,
+  2006.16729 _11) are unchanged (other SHARED issues, not regressed).
+  `cargo test --tests`: 1344 passed, 0 failed.
+* **FOLLOW-ON (same AMS-family pattern, NOT yet fixed): `birkjour` /
+  `conm-p-l`.** birkjour papers (1503.01760, 1904.09833, CONVERR_1
+  `\bysame`) use `birkjour.cls` (amstex-based, NOT `\LoadClass{amsart}`;
+  it `\def\bysame` at L1388). `birkjour_cls.rs` is an OmniBus stub; Perl
+  falls back to OmniBus + dep-scan (amstex/amsmath/amsfonts/amsthm/geometry)
+  and converts clean (rc=0) — but neither amstex nor OmniBus defines
+  `\bysame`, so Perl's clean conversion has a non-obvious `\bysame` source
+  (likely main-file/.bbl selection differs from cortex). conm-p-l (1603.00667,
+  `\copyrightinfo`) has NO Rust stub (already OmniBus-fallback). Both need
+  their own Perl-ground-truth investigation before a delete/fix — deferred.
 * **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
   option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
   Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls
