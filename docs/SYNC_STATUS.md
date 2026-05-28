@@ -182,6 +182,22 @@ the automatic fallback subsumes each one.
   1502.06361 paoli.tex has stray `}` / unbalanced math around `example`
   envs). Not Rust-only. The one Rust-vs-Perl diff is locator quality
   (Rust "Anonymous String" vs Perl "paoli.tex; line 598").
+* **SHARED clusters confirmed 2026-05-28 (NOT Rust-only — do not chase):**
+  `malformed:ltx:XMApp "isn't allowed in <ltx:emph>"` (2007.01660 → Perl
+  also 1 error, same line 315); `unexpected:\endproof Attempt to end mode`
+  (2007.07553 → Perl 11 errors, paper redefines `\proof` brokenly);
+  `malformed:ltx:p Attempt to close </ltx:p>` (1804.10191 → Perl also 1
+  error, same line 229). All three are source-structure / content-model
+  issues both engines reject identically; Rust often has FEWER errors than
+  Perl on these. Recorded so they're skipped in future triage.
+* **FRESH RE-SWEEP IN PROGRESS (2026-05-28):** recent stages (R02-R17,
+  51-73) predate this session's fixes, so their CONVERR_1 survey is heavily
+  stale (ctable/`\lx`/`\@inpenc@test`/keywords/subalgorithm/tikztiming all
+  now 0-error). Re-running all 794 recent-stage CONVERR_1 IDs with the
+  current release binary (`/tmp/resweep.sh` → `/tmp/converr1_resweep.txt`)
+  to extract the GENUINE residual for targeted fixing. Partial: ~53% still
+  error (but many SHARED). Use the resweep output, NOT the stale stage logs,
+  to pick the next genuine Rust-only cluster.
 * **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
   cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
   earlier characterization was wrong on the root cause: there WAS a
