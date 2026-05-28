@@ -292,11 +292,31 @@ LoadDefinitions!({
     }
   );
 
-  // Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151)
-  Let!("\\lx@xy@original", "\\xy");
-  Let!("\\end@lx@xy@original", "\\endxy");
-  DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
-  DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
+  // Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151).
+  //
+  // GUARD against double-application. This binding can be entered more
+  // than once: `\usepackage{xypic}` → xypic_sty → RequirePackage("xy")
+  // runs it once (capturing the REAL xypic `\xy` into `\lx@xy@original`,
+  // then installing the SVG wrapper as `\xy`). But the real xy.tex,
+  // raw-loaded above, itself issues a `\input xy.tex` (its own re-input
+  // guard is bypassed because our `\input` resolves "xy.tex" to the
+  // `("xy","tex")` Rust binding = this file). On that second entry,
+  // `\xy` is ALREADY the wrapper, so an unguarded
+  // `Let('\lx@xy@original','\xy')` would capture the wrapper — making
+  // `\lx@xy@original` self-recursive (`…\fi\lx@xy@original`) and, since
+  // the real xy processing that sets `\xy@`≠`\xyinitial@` never runs,
+  // `\inxy@` always reports "not nested" → every internal `\xy` re-enters
+  // `\lx@xy@svg` UNBOUNDEDLY → `Fatal:Stomach:Recursion`. Perl's
+  // xy.tex.ltxml overlay is applied exactly once (idempotent package
+  // load); mirror that by only installing the wrapper when
+  // `\lx@xy@original` is not yet defined. Witness 2009.05542 (`\xymatrix`
+  // in an equation: FATAL → clean, matching Perl's 0-error output).
+  if !is_defined("\\lx@xy@original") {
+    Let!("\\lx@xy@original", "\\xy");
+    Let!("\\end@lx@xy@original", "\\endxy");
+    DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
+    DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
+  }
 
   //======================================================================
   // Step 4

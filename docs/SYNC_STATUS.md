@@ -116,6 +116,43 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### R19 fixes (2026-05-28)
+
+* **xy: guard `\lx@xy@original` capture against double-load**
+  (`<this commit>`) — xy_sty's SVG-wrapper overlay (Perl xy.tex.ltxml
+  L148-151: save real `\xy`→`\lx@xy@original`, install wrapper `\xy`)
+  was applied on EVERY entry of the binding. The binding is entered
+  twice: once via `\usepackage{xypic}`→`RequirePackage("xy")`, and again
+  because the real xy.tex (raw-loaded at L36) issues `\input xy.tex`,
+  which our `\input` resolves to the `("xy","tex")` Rust binding (= xy_sty)
+  instead of the self-guarding real file. On the 2nd entry `\xy` was
+  ALREADY the wrapper, so `Let('\lx@xy@original','\xy')` captured the
+  wrapper — making `\lx@xy@original` self-recursive and (since the real
+  xy processing that sets `\xy@`≠`\xyinitial@` never runs) `\inxy@` always
+  reports "not nested", so every internal `\xy` re-enters `\lx@xy@svg`
+  UNBOUNDEDLY → `Fatal:Stomach:Recursion`. Guarded the overlay with
+  `if !is_defined("\\lx@xy@original")` so it applies exactly once
+  (matching Perl's idempotent package load). Witness 2009.05542
+  (`\xymatrix` in an equation): via `latexml_oxide` FATAL → clean
+  (5.2 MB HTML, 88 `svg:svg` diagrams rendered, matching Perl's 0
+  errors). Full test suite green (53 binaries).
+
+  **REMAINING canvas blocker (cortex_worker only, separate issue):** the
+  `cortex_worker` build does NOT fully load xy.tex for this doc — a
+  `Warn:recursion:xypic.sty Binding-load re-entrance ... Short-circuiting`
+  (content.rs:762, Task #260 guard) fires for `xypic.sty` and leaves
+  `\xymatrix`/`\ddto`/`\crvi` undefined → 0-byte HTML. `latexml_oxide`
+  (CLI) does NOT hit this re-entrance and loads xy fully, so it's a
+  worker-vs-CLI binding-dispatch divergence (the IN_PROGRESS re-entrance
+  guard short-circuits a require_package that is actually a legitimate
+  load, and its "side-effects complete in outer frame" promise is false
+  here). Also note: a *bare-preamble* `\usepackage[curve]{xypic}` +
+  `\xymatrix` leaves `\xymatrix` undefined in BOTH CLI and worker — the
+  xy.tex raw-load is context-sensitive (the full 2009.05542 preamble
+  happens to make it load in the CLI). Both need follow-up: (a) why the
+  worker's require_package re-entrance guard short-circuits a legitimate
+  xy/xypic load, and (b) why xy.tex raw-load is preamble-sensitive.
+
 ### R18 fixes (2026-05-28)
 
 * **IEEEproof: drop surpass-Perl `mode => internal_vertical`**
