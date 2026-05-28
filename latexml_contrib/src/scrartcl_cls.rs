@@ -22,6 +22,17 @@ LoadDefinitions!({
   def_macro_noop("\\deffootnotemark{}")?;
   // \KOMAoptions{key=val,...} — runtime option setter, no body content.
   def_macro_noop("\\KOMAoptions{}")?;
+  // KOMA page-style commands `\headmark` / `\pagemark`. Defined by
+  // KOMA classes (or scrlayer-scrpage) for use in custom page-style
+  // declarations as the current chapter/section mark / page number.
+  // Since we OmniBus-fall back for scrartcl rather than reading the
+  // .cls, these stay undefined and any author preamble using
+  // `\usepackage{scrlayer-scrpage}` or scrpage2 page-style hooks
+  // triggers `Error:undefined`. Stub as no-ops — running heads/feet
+  // are typesetting-only concerns; our HTML output doesn't render
+  // them. Witness: 11 papers in R-stages for each.
+  def_macro_noop("\\headmark")?;
+  def_macro_noop("\\pagemark")?;
   // \subject{}, \dictum{}, \uppertitleback{}, \lowertitleback{},
   // \publishers{} — KOMA frontmatter pieces that DO carry author
   // content. Preserve as ltx:note frontmatter so the text reaches the

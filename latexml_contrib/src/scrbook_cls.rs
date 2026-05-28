@@ -12,4 +12,7 @@ LoadDefinitions!({
   def_macro_noop("\\setcapindent{}")?;
   def_macro_noop("\\deffootnote[]{}{}{}")?;
   def_macro_noop("\\deffootnotemark{}")?;
+  // KOMA page-style marks — see scrartcl_cls.rs for rationale.
+  def_macro_noop("\\headmark")?;
+  def_macro_noop("\\pagemark")?;
 });
