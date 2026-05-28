@@ -118,6 +118,38 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **alignment noalign recursion: save `\lx@label` not mutable `\label`**
+  (`<this commit>`) — Root cause of the deferred `\lx@hidden@noalign`
+  `Stomach:Recursion` cluster (2008.13358 amsgather, 2009.09721
+  amsalign). Both `eqnarray_bindings` (latex_constructs.rs) and
+  `ams_rearrangeable_bindings` (amsmath_sty.rs) did
+  `Let('\lx@eqnarray@save@label', '\label')` with **GLOBAL** scope, then
+  `Let('\label', '\lx@eqnarray@label')` locally. Perl instead saves the
+  **immutable canonical** `\lx@label` (latex_constructs.pool L2323:
+  `Let('\lx@eqnarray@save@label','\lx@label')`). Under nested
+  align/gather, the inner binding re-runs while the OUTER `\label` is
+  already `\lx@eqnarray@label` (the noalign wrapper); the GLOBAL save
+  then captures the wrapper, making `\lx@eqnarray@save@label` globally =
+  `\lx@eqnarray@label` = `\lx@hidden@noalign{\lx@eqnarray@save@label{#1}}`
+  → digesting that arg re-emits itself → unbounded `invoke_token` nesting
+  (this is why MAXSTACK=5000 still overflowed, and why it was
+  accumulation-dependent: it needs ≥2 nested rearrangeable scopes before
+  the GLOBAL save captures the wrapper). Backtrace-confirmed: at every
+  recursion depth the noalign `#1` arg was
+  `\lx@eqnarray@save@label{sec:properties-traces}`. **Fix** = faithful
+  Perl translation: rename the `\label` DefConstructor to `\lx@label`,
+  add `Let('\label','\lx@label')` (Perl L3862), and save `\lx@label`
+  (immutable) in both bindings. `\lx@label` registers in
+  `latex_constructs` (post-dump), so it overrides the dumped kernel
+  `\label` macro exactly as the old `\label` DefConstructor did. Witness
+  2008.13358 via `latexml_oxide` (CLI): `Fatal:Stomach:Recursion` → 546 KB
+  XML / 175 KB HTML, 23 errors (Perl=64 err, 8 missing files — we beat
+  Perl on missing-package count). Full test suite green (53 binaries).
+  NOTE: 2008.13358 *also* uses `\usepackage[all,cmtip,2cell]{xy}` and so
+  STILL hits the separate worker-only xy.sty re-entrance blocker below
+  (worker → 39-byte empty XML); the recursion fix is orthogonal and the
+  CLI path is fully clean.
+
 * **xy: guard `\lx@xy@original` capture against double-load**
   (`<this commit>`) — xy_sty's SVG-wrapper overlay (Perl xy.tex.ltxml
   L148-151: save real `\xy`→`\lx@xy@original`, install wrapper `\xy`)
@@ -241,9 +273,12 @@ completes).** Fresh offset-18/19 sampling (~6000 papers) surfaced a
 cluster of infinite-recursion FATALs, all where Perl converts fine.
 Two distinct mechanisms, both genuine *unbounded* recursion (NOT
 low-MAXSTACK — verified 5000 still overflows for the noalign case):
-  1. **alignment `\lx@hidden@noalign`** — 2008.13358 (amsgather),
-     2009.09721 (amsalign). Nested noalign args digested recursively;
-     accumulation-dependent (see 2008.13358 entry below).
+  1. ~~**alignment `\lx@hidden@noalign`** — 2008.13358 (amsgather),
+     2009.09721 (amsalign).~~ **RESOLVED (R19 fixes above):** root cause
+     was `\lx@eqnarray@save@label` GLOBAL-saving the mutable `\label`
+     (which is the noalign wrapper under nested align/gather) instead of
+     the immutable canonical `\lx@label`. Not an alignment-internals
+     nesting issue. (Re-test 2009.09721 with current binary.)
   2. **xypic `\lx@xy@svg`** — 2009.05542 (Perl=0, clean Rust-only).
      `\xy` is wrapped (Perl xy.tex.ltxml L148-151, ours identical):
      `\xy → \if\inxy@ \lx@xy@svgnested \else \lx@xy@svg \fi \lx@xy@original`.
@@ -270,28 +305,18 @@ Found via a fresh sample of the offset-18 remaining slice.
     fixed it at the source. Lesson: when a bare env-end CS pops the
     locked frame, suspect the env's `mode =>` matching the
     document-body bound mode before suspecting `pop_frame`/`end_mode`.)
-  * **2008.13358 `main.tex` (eptcs + mathpartir) —
-    `Fatal:Stomach:Recursion`, Perl=29 err completes.** Inside an open
-    amsgather (`\@@amsgather`), nested `\lx@hidden@noalign{…
-    \lx@hidden@noalign{…}}` are digested recursively:
-    `invoke_token(\lx@hidden@noalign)` → constructor
-    `read_arguments_and_digest` (constructor.rs:306) → digest `#1` →
-    `invoke_token(next \lx@hidden@noalign)` … (backtrace confirmed).
-    **It is a genuine infinite recursion, NOT a low-limit issue**:
-    raising `MAXSTACK` to 5000 still overflows, so the nesting grows
-    unboundedly. `\@@amsgather`/`\lx@hidden@noalign` definitions are
-    byte-identical to Perl (amsmath.sty.ltxml L382; TeX_Tables L645), so
-    the bug is in our alignment row/noalign processing, not the bindings.
-    Trigger is accumulation-dependent: a `\label{sec:…}`
-    (sess-type-proc.tex L321) fires it ONLY after the ~8 preceding
-    `gather`s (L51-295) accumulate state — preamble + L296-321 alone is
-    clean, and preamble + all gathers through L318 is clean; only the
-    L321 label tips it. Perl processes the same nested structure without
-    unbounded `invoke_token` nesting (its alignment absorbs rows
-    iteratively via the Gullet column scanner). Needs a focused
-    alignment-internals session (find why our amsgather body digestion
-    nests noaligns without bound, vs Perl's iterative absorption);
-    sensitive area (math-id/ASF adjacent), do NOT just raise MAXSTACK.
+  * ~~**2008.13358 `main.tex` (eptcs + mathpartir) —
+    `Fatal:Stomach:Recursion`.**~~ **RESOLVED (R19 fixes above).** The
+    backtrace WAS the smoking gun, but the cause was not
+    alignment-internals: at every recursion depth the noalign `#1` arg
+    was `\lx@eqnarray@save@label{sec:properties-traces}`, i.e.
+    `\lx@eqnarray@save@label` had become the self-recursive
+    `\lx@eqnarray@label` wrapper. The accumulation-dependence (only after
+    ~8 gathers + the L321 label) was exactly the nested-rearrangeable-
+    scope GLOBAL-save capturing the wrapper. Fixed by saving the
+    immutable `\lx@label` (Perl parity). CLI now clean (546 KB / 23 err).
+    The doc still fails in `cortex_worker` ONLY because it independently
+    hits the xy.sty worker re-entrance blocker (above).
 
 ### R17 fixes (2026-05-28)
 

@@ -1032,13 +1032,16 @@ pub fn eqnarray_bindings() -> Result<()> {
     None,
   );
   // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
-  // Save the original \label as \lx@eqnarray@save@label — global so the
-  // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
-  // if it fires AFTER the eqnarray group pops (witness 2404.19499 align
-  // case).
+  // Save the canonical \lx@label (NOT the mutable \label) as
+  // \lx@eqnarray@save@label — global so the noalign-deferred
+  // `\lx@eqnarray@save@label{#1}` expansion still resolves if it fires AFTER
+  // the eqnarray group pops (witness 2404.19499 align case). Saving \lx@label
+  // (immutable canonical) rather than \label avoids the self-recursion when
+  // this binding re-runs while \label is already \lx@eqnarray@label (nested
+  // align/gather, 2008.13358).
   state::let_i(
     &T_CS!("\\lx@eqnarray@save@label"),
-    &T_CS!("\\label"),
+    &T_CS!("\\lx@label"),
     Some(Scope::Global),
   );
   // Perl: Let('\label', '\lx@eqnarray@label');
@@ -7480,7 +7483,7 @@ LoadDefinitions!({
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
-  DefConstructor!("\\label Semiverbatim", sub[document, _olabel, props] {
+  DefConstructor!("\\lx@label Semiverbatim", sub[document, _olabel, props] {
     if let Some(savenode) = document.float_to_label() {
       let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
@@ -7524,6 +7527,11 @@ LoadDefinitions!({
     }
   }
   );
+  // Perl L3862: Let('\label', '\lx@label'). The canonical label constructor is
+  // \lx@label; \label is an alias. Saving \lx@label (not the mutable \label)
+  // in eqnarray/ams rearrangeable bindings prevents an infinite
+  // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
+  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
 
   // If a node has been labeled, but still hasn't yet got an id by afterClose:late,
   // we'd better generate an id for it.
