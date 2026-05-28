@@ -116,9 +116,26 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### R18 fixes (2026-05-28)
+
+* **`read_normal_integer`: empty octal/hex → 0 (not fatal)**
+  (`<this commit>`) — `gullet::read_normal_integer` parsed `'`/`"`
+  number prefixes via `i64::from_str_radix(&read_digits(...)?, N)?`,
+  which **fatally propagated** a `ParseIntError` (→
+  `Fatal:Document:Generic(ParseIntError)`, aborting the whole run) when
+  the prefix was followed by no octal/hex digit. Perl uses
+  `Number(oct(...))` / `Number(hex(...))`, and Perl's `oct("")`/`hex("")`
+  are 0 (TeX's "Missing number, treated as zero"). Mirror that: empty
+  digit string → 0; valid → parsed; overflow → clamp to i64::MAX (as the
+  decimal arm already does). Witness 2008.10843 (`mdwmath.sty` raw-load
+  reads a bare `"`: FATAL → "Conversion complete" with HTML output;
+  remaining 43 errors are SHARED mdwtab/`\tab@*` issues — Perl FATALs at
+  101 errors on this paper, so we now surpass it). Valid hex/octal
+  (`\char"41`→A, `"FF`→255, `'17`→15) verified unchanged.
+
 ### R17 fixes (2026-05-28)
 
-* **`ltx:_CaptureBlock_` content-model parity** (`<this commit>`) — our
+* **`ltx:_CaptureBlock_` content-model parity** (`<commit 1cf95cb583>`) — our
   `Model::load_internal_extensions` synthesized `_CaptureBlock_` from only
   4 sources (`ltx:block`, `ltx:logical-block`, `ltx:sectional-block`,
   `Caption`); Perl `Common/Model.pm` L96-97 uses 6, also including
