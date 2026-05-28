@@ -1064,6 +1064,30 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
+  // Perl-faithful counter leniency. A `\c@<ctr>` control sequence is, by
+  // LaTeX convention, the count register backing counter `<ctr>`. When code
+  // reads an *undefined* one in a number/register context (e.g.
+  // `\setcounter{x}{\value{y}}` or `\algrestore`/`\ContinuedFloat` reading
+  // `\c@subalgorithm@save`), Perl does NOT raise a hard "undefined control
+  // sequence" error — its counter machinery warns "Counter '<ctr>' was not
+  // defined; assuming 0" (Package.pm L712) and treats it as 0. Without this,
+  // `read_x_token` expands the bare undefined `\c@<ctr>` through the generic
+  // <ltx:ERROR/> path below and the run gains a spurious error. Mirror Perl:
+  // warn and define the register as 0 so the reader sees a register value,
+  // not an undefined CS. Same category/message as `counter::dialect::
+  // counter_value`. Witness 1910.02851 (`\algrestore{RLZFactorization}` +
+  // `\ContinuedFloat` → `\c@subalgorithm@save`); Perl rc=0.
+  if let Some(ctr) = cs.strip_prefix("\\c@") {
+    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+      Warn!(
+        "undefined",
+        ctr,
+        s!("Counter {} was not defined; assuming 0", ctr)
+      );
+    }
+    crate::binding::def::dialect::def_register(*token, None, Number::new(0), None)?;
+    return Ok(*token);
+  }
   // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
   // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
   // load with thousands of forward-references we install the ERROR stub

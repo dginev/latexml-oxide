@@ -253,6 +253,26 @@ the automatic fallback subsumes each one.
   for `\copyrightinfo` (like `\subjclass`), OR the paper doesn't use
   `\subjclass`/`\curraddr` to trigger ams_support. Needs its own
   Perl-ground-truth check — deferred.
+* **FIX LANDED — undefined counter-register `\c@<ctr>` read is an ERROR in
+  Rust but a WARNING in Perl (general engine-faithfulness fix).** When code
+  reads an undefined counter register in a number context (e.g.
+  `\algrestore`/`\ContinuedFloat` → `\c@subalgorithm@save`, or tikz-timing
+  → `\c@tikztimingtrans`), Rust's `read_x_token` expanded the bare undefined
+  `\c@<ctr>` through `state::generate_error_stub`'s generic
+  `<ltx:ERROR/>` path → 1 spurious error. Perl never errors here: its
+  counter machinery warns "Counter '<ctr>' was not defined; assuming 0"
+  (Package.pm L712) and treats it as 0 (verified: 1910.02851 Perl rc=0,
+  0 errors; bare-counter probe warns only). `\c@<ctr>` is, by LaTeX
+  convention, ALWAYS the count register backing counter `<ctr>`, so an
+  undefined one is unambiguously "counter not defined". Fix: in
+  `generate_error_stub`, special-case `\c@<ctr>` early — warn (same
+  category/message as `counter::dialect::counter_value`) and define it as a
+  count register 0, then return — instead of the hard undefined-CS error.
+  General (not a stub): fixes ANY undefined-`\c@` read. Flips the
+  `\c@subalgorithm@save` cluster (1711.05152, 1809.10982, 1810.07730,
+  1904.07131, 1910.02851) AND the `\c@tikztimingtrans` cluster (1807.08647,
+  1912.11312, …) → rc=0, 0 errors (1910.02851 → 735 KB HTML, 71 algorithm
+  blocks). `cargo test --tests`: 1344 passed, 0 failed.
 * **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
   option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
   Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls
