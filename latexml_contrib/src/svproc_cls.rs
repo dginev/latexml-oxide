@@ -5,7 +5,14 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
-  RequirePackage!("amsthm");
+  // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. The real
+  // svproc.cls does not load amsthm, and OmniBus already provides lazy
+  // amsthm autoload (theorem-env stubs). Pre-loading it broke the common
+  // `\let\proof\relax` + `\usepackage{amsthm}` idiom: the paper's explicit
+  // \usepackage{amsthm} would no-op (already loaded), so amsthm's
+  // `\let\proof\@proof` never re-ran after the paper cleared `\proof` →
+  // `Error:undefined:{proof}`. Letting the paper's \usepackage{amsthm} be
+  // the first real load matches Perl (clean). Witness 1707.03222.
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
   // `\usepackage[table]{xcolor}` doesn't silently option-clash and
   // leave colortbl unloaded → `\cellcolor` undefined. svproc.cls

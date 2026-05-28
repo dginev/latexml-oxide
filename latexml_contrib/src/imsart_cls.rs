@@ -9,7 +9,14 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
-  RequirePackage!("amsthm");
+  // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. OmniBus already
+  // provides lazy amsthm autoload (theorem-env stubs), and pre-loading it
+  // broke the common `\let\proof\relax` + `\usepackage{amsthm}` idiom: the
+  // paper's explicit \usepackage{amsthm} would no-op (already loaded), so
+  // amsthm's `\let\proof\@proof` never re-ran after the paper cleared
+  // `\proof` → `Error:undefined:{proof}`. Letting the paper's
+  // \usepackage{amsthm} be the first real load matches Perl (clean).
+  // Witness 1612.03054 (`\let\proof\relax` L5 + amsthm L22).
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
