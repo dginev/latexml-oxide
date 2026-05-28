@@ -116,70 +116,49 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
-### ACTIVE REFACTOR (task #273, opened 2026-05-28): OmniBus → article + support packages
+### OmniBus class stubs: a TOLERATED SHORTCUT, not a refactor target (task #273, refined 2026-05-28)
 
-**User directive + WISDOM #55.** `OmniBus.cls` is a LAST-RESORT fallback
-for *unknown* classes — never a base dependency for a class we have a
-`.rs` binding for. Switch every `_cls.rs`/`_sty.rs` that does
-`LoadClass!("OmniBus")` (53 bindings as of audit) to `LoadClass!("article")`
-+ the binding's specific needs, using the class's real canvas papers and
-**the original Perl LaTeXML's structure** as ground truth. DRY is
-preferred — a small shared helper is healthy.
+**Decisive audit finding.** All 51 `_cls.rs` files doing
+`LoadClass!("OmniBus")` are for classes Perl LaTeXML has **no binding
+for** (zero `*.cls.ltxml` matches). Perl handles every one via its
+automatic fallback (`Package.pm:LoadClass` L2700-2716): warn
+`missing_file` → load OmniBus → `maybeRequireDependencies($class,'cls')`
+(dep-scan the raw `.cls`, load each `\RequirePackage`/`\usepackage`
+binding). Rust mirrors this exactly in `binding/content.rs::load_class`
+(L1962-2067). So a hand-rolled stub that just does `LoadClass!("OmniBus")`
+is functionally what Rust does anyway *without* the file — except
+registering the stub SKIPS the raw-`.cls` dep-scan (the
+`<name>.cls.ltxml_loaded` flag short-circuits L2009), usually a
+regression vs. the fallback.
 
-**Perl's model (mirror it).** Perl class bindings do `LoadClass('article')`
-+ `RequirePackage('<family>_support')`. Existing Perl support packages
-(all ported to Rust): `sv_support` (Springer: +inst_support +natbib
-+`\spnewtheorem` +std theorems +email/keywords), `inst_support`
-(authors/affiliations/`\institute`/`\inst`), `ams_support`,
-`aas_support`, `aa_support`, `elsart_support`, `iopart_support`,
-`mn2e_support`, `revtex3/4_support`, `icml_support`.
+**User guidance (2026-05-28, refined — supersedes the earlier
+"switch every stub to article + support" plan).** Codifying
+"no binding → OmniBus stub" is a **shortcut**: OK to lean on today, NOT
+acceptable long-term. Converting the stubs to `LoadClass!("article")` +
+hand-derived specifics is *also* a shortcut (still a hand-rolled binding
+for a class Perl has no binding for). **The principled fix: add NO new
+binding files; improve the raw interpretation of reading the original
+`.sty`/`.cls`** so the automatic OmniBus+dep-scan+raw-read fallback works.
 
-**Done (verified template).** `svproc` → `article` + `sv_support` +
-amsmath/xcolor/hyperref + svproc specifics (commit `ce6ecb16c7`). Mirrors
-Perl svjour/svmult. 1706.04315/1707.03222 stay rc=0/0-err; theorem autoload
-+ `\let\proof\relax` idiom clean; 1344 tests pass. Also landed the
-underlying bug fix first: svproc/imsart dropped their eager
-`RequirePackage!("amsthm")` (commit `10e819ea1b`) — eager amsthm broke
-`\let\proof\relax`+`\usepackage{amsthm}` (the paper's load no-ops →
-`\proof` stays `\relax` → `{proof}` undefined; witness 1707.03222,
-1612.03054). Both convert clean in Perl.
+**What this means concretely:**
+  * **Do NOT** build a `journal_support` mega-helper (it entrenches the
+    shortcut). Plan cancelled.
+  * The svproc→`article`+`sv_support` conversion (`ce6ecb16c7`) stays —
+    `sv_support` is a *real* Perl support pkg — but it is NOT a template
+    to replicate across the other 50 stubs.
+  * Existing OmniBus stubs: tolerated as-is short-term. Bounded
+    de-risking is fine (e.g. dropping eager `RequirePackage!("amsthm")`,
+    which breaks `\let\proof\relax`+`\usepackage{amsthm}`: the paper's
+    load no-ops → `\proof` stays `\relax` → `{proof}` undefined; witness
+    1707.03222 svproc, 1612.03054 imsart, both clean in Perl. svproc +
+    imsart already fixed, `10e819ea1b`; ~38 more stubs still carry it).
+  * For a NEW class-related error: prefer avoiding a stub — fix the raw
+    `.cls`/`.sty` read path so the fallback covers it. Keep/extend a stub
+    only when raw interpretation genuinely can't yet.
 
-**KEYSTONE TODO (next): create `journal_support` helper.** Most of the 52
-remaining classes are "OmniBus + amsmath + amsthm + xcolor + hyperref +
-a few class frontmatter macros" and rely on OmniBus ONLY for generic
-frontmatter (`\email`/`\affil`/`\keywords`/`\editors`/`\received`/...) +
-**lazy theorem autoload** (bare `article` gives `undefined:{theorem}` —
-verified). Perl itself has no binding for these (they're OmniBus-fallback
-in Perl), so there's no Perl support pkg to mirror → create a Rust
-`journal_support` = OmniBus's SAFE-ADDITIVE extract:
-  * INCLUDE: the `\@add@frontmatter`-based frontmatter macros
-    (omnibus_cls.rs L120-505 — email/ead/affil/address/keywords/kword/
-    shorttitle/shortauthors/editors/received/revised/accepted/journal/
-    volume/doi/category/classification/...), the `\@@@email`/`\@@@affiliation`/
-    `\@@@address` constructors, the keyword envs, the lazy theorem autoload
-    (L348-444), acknowledgments (L450-475), abstract aliases.
-  * EXCLUDE (OmniBus's clashing parts — leave in OmniBus only): eager
-    `RequirePackage(inst_support/epsf/graphicx/aas_macros)` (L44-46),
-    natbib autoloads + `\bibitem` override (L49-100), `{frontmatter}`/
-    `{mainmatter}`/`{backmatter}` envs + `\frontmatter`→`\@empty` Let
-    (L101-118, clashes with book classes memoir/scrbook).
-  * **DRY**: MOVE that safe-additive block out of OmniBus into
-    journal_support, then OmniBus `RequirePackage("journal_support")` +
-    keeps its clashing extras. HIGH BLAST RADIUS (OmniBus is the unknown-
-    class fallback) — verify with a sample of OmniBus-fallback papers
-    (e.g. conm-p-l papers 1506.02177) + full test suite before/after.
-
-**Then convert the 52 in batches**, each `article` + (Perl family support
-if one fits, else `journal_support`) + the class's existing explicit
-packages + specifics; DROP the eager `amsthm` (journal_support/sv_support
-lazy autoload + the paper's own `\usepackage{amsthm}` cover it). Per-batch
-gate: `cargo test --tests` + before/after error-count+byte-size on a
-sample of each class's canvas papers (must not regress). Family hints from
-the audit: Springer→sv_support (sn_jnl, …); Elsevier→elsart_support
-(arxbj already requires it); book-like (memoir, scrbook, subfiles) need
-`book`/`report` base not article — handle individually. czjphys/tlp/
-ws_p8 raw-load their own .sty (thin OmniBus dep). imsart raw-loads
-imsart.sty (no clean family — handle individually).
+See WISDOM #55 for the full rationale. Long-term north star: shrink the
+51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
+the automatic fallback subsumes each one.
 
 ### R-stage stale-data re-run + cluster triage (2026-05-28, cont.)
 
@@ -203,17 +182,35 @@ imsart.sty (no clean family — handle individually).
   1502.06361 paoli.tex has stray `}` / unbalanced math around `example`
   envs). Not Rust-only. The one Rust-vs-Perl diff is locator quality
   (Rust "Anonymous String" vs Perl "paoli.tex; line 598").
-* **New Rust-only cluster found & characterized (NOT fixed):
-  `{keywords} environment is not defined`** (~9-12 CONVERR_1 papers using a
-  binding-less, paper-bundled `.cls` such as `fundam.cls`). Perl converts
-  cleanly (loads OmniBus → generic `{keywords}` env); Rust uses an
-  article-ish base and suppresses the OmniBus fallback (`will_fallback`
-  false because `<cls>.cls_loaded=true`+result Ok after the notex-blocked
-  `load_class`). Rust's `omnibus_cls.rs` already HAS the generic keywords
-  env — it's just never loaded for these classes. Full characterization +
-  fix direction + risk notes: [[project_keywords_env_binding_less_cls]].
-  Deferred: delicate class-load hot path (dozens of witness-paper edge
-  cases); needs a focused, full-`cargo test` + canvas-sweep-gated session.
+* **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
+  cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
+  earlier characterization was wrong on the root cause: there WAS a
+  `fundam_cls.rs` binding (contrib lib.rs), a hand-rolled stub doing
+  `LoadClass!("article")` + amsmath/amssymb/amsthm/fancyhdr/xcolor/
+  hyperref + `\publyear`/`\papernumber`/`\volume`/`\issue`/`\runninghead`/
+  theorem-envs — but it OMITTED `\keywords`, and its `article` base (vs.
+  OmniBus) means no generic `{keywords}` env → `\begin{keywords}` errors.
+  Instrumented `load_class`: `is_binding=true` (the stub), so `will_fallback`
+  is false and OmniBus never loads. **Perl has NO fundam binding** → it
+  falls back to OmniBus (`Warn:missing_file:fundam … using OmniBus`),
+  whose generic `{keywords}` env resolves the env (verified: Perl rc=0,
+  159 KB). Per user guidance (2026-05-28: no new binding files, OmniBus is
+  the last-resort fallback, Perl is ground truth) the fix is to **delete
+  the stub** so Rust falls back to OmniBus exactly like Perl. The stub's
+  `\publyear`/`\papernumber` were *papering over a SHARED Perl limitation*
+  — Perl ALSO errors `undefined:\publyear`/`\papernumber` under OmniBus
+  (verified via minimal probe), so per [[feedback_no_papering]] they must
+  not be Rust-only-defined. Flips **all 9 local cluster papers** (1810.10529,
+  1901.04983 [fundam-stef], 1901.08246, 1904.07445, 1904.07480
+  [fundam-arxiv], 1906.04897, 1911.05801, 1911.07591, 2005.04818) → rc=0,
+  **0 errors** (only the `missing_file:fundam` warning, matching Perl);
+  1810.10529 → 188 KB HTML with keywords classification + issue note
+  preserved. Also auto-fixes the `fundam-stef`/`fundam-arxiv` *variants*
+  that previously prefix-matched the stub. `cargo test --tests` green. This
+  is the first concrete win of the task #273 north star (shrink the
+  OmniBus-stub set via the Perl-faithful fallback, not new bindings).
+  Memory: [[project_keywords_env_binding_less_cls]] (now resolved),
+  [[feedback_raw_interpretation_over_bindings]].
 * **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
   option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
   Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls

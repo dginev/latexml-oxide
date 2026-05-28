@@ -59,7 +59,6 @@ pub mod currfile_sty;
 pub mod czjphys_cls;
 pub mod daj_cls;
 pub mod dmtcs_episciences_cls;
-pub mod fundam_cls;
 pub mod getfiledate_sty;
 pub mod datetime2_sty;
 pub mod datetime_sty;
@@ -403,7 +402,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("elife", "cls", elife_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
-  ("fundam", "cls", fundam_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
   ("IEEEapm", "cls", ieeeaerospace_cls::load_definitions),

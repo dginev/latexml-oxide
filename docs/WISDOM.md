@@ -1707,19 +1707,44 @@ theorem-env stubs at omnibus_cls.rs L399+), so the eager preload was both
 redundant and harmful. The deeper lesson: every generic provision OmniBus
 makes is a potential clash with what the real class/paper does.
 
-**The refactor (in progress, task #273).** Switch every `_cls.rs`/`_sty.rs`
-that does `LoadClass!("OmniBus")` to `LoadClass!("article")` and add the
-binding's specific needs, using the class's real canvas papers to discover
-what's actually used (frontmatter macros, amsthm, natbib, …). Verify each
-conversion against sampled real papers (error count + output size must not
-regress) plus the full `cargo test --tests`. 53 bindings as of the audit
-(`grep -rln 'LoadClass!("OmniBus")' latexml_*/src`). Do NOT recreate
-OmniBus as a new shared mega-dependency — tailor per binding.
+**Decisive finding (2026-05-28 audit).** ALL 51 `_cls.rs` files that do
+`LoadClass!("OmniBus")` are for classes Perl LaTeXML has **no binding
+for** (`grep` of `LaTeXML/lib/.../Package/*.cls.ltxml` → zero matches).
+Perl handles every one via its *automatic* fallback
+(`Package.pm:LoadClass` L2700-2716): warn `missing_file` → load OmniBus →
+`maybeRequireDependencies($class,'cls')` (dep-scan the raw `.cls` for
+`\RequirePackage`/`\usepackage`, load each binding). Rust mirrors this
+exactly in `binding/content.rs::load_class` (L1962-2067, incl.
+`maybe_require_dependencies`). So **a hand-rolled `*_cls.rs` that just does
+`LoadClass!("OmniBus")` is functionally what Rust does anyway if the file
+didn't exist** — except registering the stub SKIPS the dep-scan of the
+real `.cls` (the `<name>.cls.ltxml_loaded` flag short-circuits L2009),
+usually a *regression* vs. letting the fallback run.
+
+**User guidance (2026-05-28, refined — supersedes the "switch to article"
+plan above).** Codifying "no binding → OmniBus stub" is a **shortcut**: OK
+to lean on today, NOT acceptable long-term. Converting those stubs to
+`LoadClass!("article")` + hand-derived specifics is *also* a shortcut
+(still a hand-rolled binding for a class Perl has no binding for). The
+**principled fix is to add NO new binding files and instead improve the
+raw interpretation of reading the original `.sty`/`.cls`** so the automatic
+OmniBus+dep-scan+raw-read fallback simply works. Therefore:
+  * **Do NOT** build a `journal_support` mega-helper or otherwise invest
+    in making the OmniBus-stub pattern "nicer" — that entrenches the
+    shortcut. (The svproc→article+sv_support conversion `ce6ecb16c7` is
+    fine to keep — sv_support is a *real* Perl support pkg — but it is NOT
+    a template to replicate across the other 50.)
+  * Existing OmniBus stubs are tolerated as-is short-term. De-risking
+    them (e.g. dropping eager `RequirePackage!("amsthm")`, which breaks
+    `\let\proof\relax`+`\usepackage{amsthm}`) is a fine bounded cleanup.
+  * For a NEW class-related error: prefer avoiding a stub and fixing the
+    raw `.cls`/`.sty` read path so the fallback covers it. Keep/extend a
+    stub only when raw interpretation genuinely can't yet.
 
 **Reference.** `latexml_package/src/package/omnibus_cls.rs` (the grab-bag),
-the tex_job.rs Branch-3 fallback (the *legitimate* OmniBus use: genuinely
-unknown class). Companion: [[feedback_prefer_raw_load]],
-[[feedback_no_papering]].
+`binding/content.rs::load_class` (the automatic fallback + dep-scan — the
+*legitimate* OmniBus path). Companion: [[feedback_prefer_raw_load]],
+[[feedback_perl_parity_bindings]], [[feedback_no_papering]].
 
 ---
 
