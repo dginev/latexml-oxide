@@ -339,7 +339,14 @@ pub fn current_frame_message() -> String {
   } else {
     String::new()
   };
-  let locator = lookup_string_from_sym(crate::pin!("groupInitiatorLocator"));
+  // Render the initiator's source locator as a readable "file; line N"
+  // (the raw Stored Debug is redacted to `Stored::Locator[[...]]`, which is
+  // useless for diagnosing where an unbalanced group opened).
+  let locator = match crate::state::lookup_value("groupInitiatorLocator") {
+    Some(Stored::Locator(loc)) => s!("at {}", loc),
+    Some(other) => other.to_string(),
+    None => String::new(),
+  };
   s!(
     "current frame is {} due to {} {}",
     target,

@@ -43,7 +43,18 @@ LoadDefinitions!({
   def_macro_noop("\\arrayrulecolor")?;
   def_macro_noop("\\dashgapcolor{}")?;
   def_macro_noop("\\doublerulesepcolor")?;
-  def_macro_noop("\\endlongtable")?;
+  // NOTE: do NOT noop `\endlongtable`. The ar5iv Perl binding
+  // (arydshln.sty.ltxml L45) does `DefMacro('\endlongtable', Tokens())`, but
+  // that diverges from the REAL arydshln.sty, which SAVES and RESTORES
+  // longtable's original `\endlongtable` (`\let\endlongtable\adl@org@endlongtable`,
+  // arydshln.sty L796) rather than neutralizing it. Our longtable binding
+  // relies on `\endlongtable` = `\lx@end@alignment\@end@tabular` to close the
+  // alignment's boxing group; noop'ing it leaks that `{`-group so the
+  // environment's `\endgroup` mismatches → mode cascade → `pop last locked
+  // stack frame` FATAL (1510.04473: any `arydshln` + `longtable` with `p{}`
+  // columns). Perl recovers from the same mismatch with 9 errors; our engine
+  // aborts. Keeping longtable's `\endlongtable` functional matches the real
+  // package and produces clean output (0 errors).
   def_macro_noop("\\nodashgapcolor")?;
   def_macro_noop("\\xleaders")?;
 });
