@@ -1334,12 +1334,17 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \diagonalmatrix[zero]{diag,diag,...}
+  // Perl: \diagonalmatrix[zero]{diag,diag,...} (physics.sty.ltxml L636-654).
+  // Split the diagonal entries on `,` at the TOKEN level (Perl
+  // `SplitTokens($diag, T_OTHER(','))`), NOT by `to_string()`+re-tokenize:
+  // the string round-trip drops the inter-token space that separates a
+  // control word from a following letter, so e.g. `\vb h` collapses into
+  // the undefined CS `\vbh`. Witness 2004.07845 (`\dmat{\vb h \vdot
+  // \vb*{\sigma}, ...}` → `\vbh`/`\tildeN`/`\tilded` undefined; Perl
+  // converts it cleanly).
   DefPrimitive!("\\diagonalmatrix[]{}", sub[(z, diag)] {
-    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
-    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
-    let diag_str = diag.to_string();
-    let items: Vec<&str> = diag_str.split(',').collect();
+    let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
     let n = items.len();
     let mut tks = Vec::new();
     for (i, item) in items.iter().enumerate() {
@@ -1347,9 +1352,9 @@ LoadDefinitions!({
       for j in 0..n {
         if j > 0 { tks.push(T_ALIGN!()); }
         if i == j {
-          tks.extend(Tokenize!(item).unlist());
+          tks.extend(item.clone().unlist());
         } else {
-          tks.push(z_tok);
+          tks.extend(z_tok.clone());
         }
       }
     }
@@ -1357,12 +1362,11 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \antidiagonalmatrix[zero]{diag,diag,...}
+  // Perl: \antidiagonalmatrix[zero]{diag,diag,...} (physics.sty.ltxml
+  // L655-672). Same token-level split as \diagonalmatrix.
   DefPrimitive!("\\antidiagonalmatrix[]{}", sub[(z, diag)] {
-    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
-    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
-    let diag_str = diag.to_string();
-    let items: Vec<&str> = diag_str.split(',').collect();
+    let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
     let n = items.len();
     let mut tks = Vec::new();
     for i in 0..n {
@@ -1370,9 +1374,9 @@ LoadDefinitions!({
       for j in 0..n {
         if j > 0 { tks.push(T_ALIGN!()); }
         if j == n - i - 1 {
-          tks.extend(Tokenize!(items[n - i - 1]).unlist());
+          tks.extend(items[n - i - 1].clone().unlist());
         } else {
-          tks.push(z_tok);
+          tks.extend(z_tok.clone());
         }
       }
     }
