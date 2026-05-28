@@ -118,6 +118,26 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **Round-37 Rust-only conversion failures: EXHAUSTED.** After the four
+  R19 fixes below, three fresh `cortex_worker` sweeps of distinct slices
+  of `canvas3_round37_remaining` (1500 + 3005 + 2081 ≈ **6.6k papers**)
+  plus the 1164-paper failed-list re-test surfaced **zero remaining clean
+  Rust-only conversion failures** (Perl-succeeds / Rust-fails). Every
+  residual flagged failure is one of: (a) **SHARED** — Perl also fails
+  with empty/over-cap output (catoptions raw-load, xint+tikz pgf runaway,
+  deep_recursion, and the recurring **`_`/`^`-in-text** 100-error-cap
+  cluster: 1510.03740, 1711.05610, 2001.01049 — both engines error-cap on
+  stray `_`/`^` in text mode); (b) **degenerate input** — e.g. 1906.01445
+  is a 12-byte `%auto-ignore` stub (no TeX source; both engines correctly
+  emit an empty 39-byte doc); (c) **`not_tex_source`** PDF-as-tex; or (d)
+  **CPU-oversubscription false timeouts** (see sweep note below). Triage
+  rule reaffirmed: classify by *Perl output byte-size*, not its
+  complete/failed status (see [[feedback_perl_baseline_output_size]]), and
+  `%auto-ignore`/empty-source inputs are not bugs. Net: the round-37
+  corpus is clean of actionable Rust-only conversion failures; remaining
+  work is SHARED-limit hardening (lower priority, won't yield successful
+  HTML since Perl is also empty) or scaling to new corpus regions.
+
 * **`\kill` in `p{}` longtable locked-frame FATAL — RESOLVED** (commit
   `6e5f29a2a9`). Witness 2010.09763 (Perl: 1.94 MB / 140 `<tr>` / 0 errors;
   Rust was `Fatal:TargetUnexpected:Endgroup`, empty). `\kill` was `Let` to
