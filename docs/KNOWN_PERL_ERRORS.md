@@ -801,3 +801,50 @@ body executes at load time because catoptions' `\robust@def`/`\cpt@def@`
 expansion misfires), but the net outcome — no HTML — matches Perl. Not
 actionable as a Rust-only fix; revisit only if catoptions raw-load
 becomes a deliberate engine goal.
+
+## A text-symbol CS (`\i`/`\j`) in a `\usepackage` Semiverbatim option hangs (SHARED)
+
+`\usepackage[pdfauthor={…Mar{\'\i}n…}]{hyperref}` — i.e. a font-encoding
+text symbol (`\i`, `\j`, …) inside a `\usepackage`/`\RequirePackage`
+**Semiverbatim** option value — infinite-loops in **both** Perl and Rust
+(`Fatal:Timeout:PushbackLimit`, Perl exit 143 under `timeout`). Confirmed
+2026-05-28 against Perl `~/perl5/bin/latexml --path=~/git/ar5iv-bindings
+--preload=ar5iv.sty` on the real paper **2004.08143** *and* minimal
+reproducers.
+
+Minimal trigger (both engines hang):
+
+```latex
+\documentclass{article}
+\usepackage[pdfauthor={Daniel Mar{\'\i}n}]{hyperref}
+\begin{document}\href{u}{t}\end{document}
+```
+
+Mechanism (identical in both engines):
+1. `\usepackage`'s `Semiverbatim` option is digested by *expanding* it
+   under `beginSemiverbatim`, which merges the current font with
+   `encoding => 'ASCII'` (Perl `State.pm:597`, Rust `state.rs:2296` —
+   faithful) — a "stay-ASCII" neutralization. The expansion is a pure
+   `readXToken` collect-loop (Perl `Parameter.pm::digest` "BLECH!!!!",
+   Rust `parameter.rs:388`).
+2. `\i` is `\DeclareTextSymbol`-defined `\i → \T1-cmd \i \T1\i`, with
+   `\T1-cmd`≡`\@changed@cmd`. In the preamble `\protect`≡`\relax`≡
+   `\@typeset@protect`, so the *typeset* branch resolves the glyph via
+   `\csname\cf@encoding\string\i\endcsname` → `\csname ASCII\string\i…` =
+   `\ASCII\i`, which is **undefined** (ASCII is a char-decode font *map*,
+   not a LaTeX text *encoding* with `\i` glyphs).
+3. `\@changed@cmd` `\global\let`s `\ASCII\i` to the `?`-fallback `\?\i` =
+   `\UseTextSymbol{OT1}\i` = `{\fontencoding{OT1}\i}`. But `{` and
+   `\fontencoding{OT1}` are non-expandable, so the `readXToken` loop
+   *collects* them without executing — the font encoding stays "ASCII" —
+   and the inner `\i` re-expands → step 2. Infinite.
+
+Breaking the loop requires making `\fontencoding{OT1}` take effect inside
+the semiverbatim `readXToken` (so the inner `\i` resolves to `\OT1\i`,
+CD 16, which IS defined). Perl does not, so Perl hangs too. **This is a
+RELEASE_CRITERIA surpass-Perl reliability item, not a translation parity
+bug.** Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
+genuine adjacent divergence was fixed: Rust's `\cf@encoding`/`\f@encoding`
+fell back to *empty* when the live font's encoding slot is `None`; Perl's
+Font always carries OT1 — `Common/Font.pm:331`/`$DEFENCODING`. Now falls
+back to OT1 when a font exists. That does not fix this shared loop.)

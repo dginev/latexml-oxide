@@ -6163,18 +6163,37 @@ LoadDefinitions!({
   // to empty output instead of crashing; Rust must mirror that. Earlier code
   // chained `.unwrap().get_encoding().unwrap()`, which panicked on text-only
   // CSes used in math mode (e.g. `\i`, sandbox papers 0802.1100, 0811.2815,
-  // 0901.4716, 0904.1706, 0905.1491). Chain the Options and fall back to "".
+  // 0901.4716, 0904.1706, 0905.1491).
+  //
+  // BUT a plain `.unwrap_or_default()` (→ "") on a live-font-with-no-encoding
+  // diverges from Perl: a real Perl Font ALWAYS carries an encoding
+  // (`Common/Font.pm:331` `encoding => $enc || 'OT1'`, `$DEFENCODING='OT1'`),
+  // so `LookupValue('font')->getEncoding` is never empty when a font exists.
+  // Rust's `Font::math_default()` deliberately leaves `encoding: None`
+  // (font.rs:588 — char decoding differs), so the empty fallback leaked an
+  // empty encoding name into the `\@changed@cmd`/`\@current@cmd` glyph lookup
+  // `\csname\cf@encoding\string<cs>\endcsname` whenever a text-symbol CS
+  // (`\i`, `\j`, accents) was expanded under the math font: "" builds the
+  // bogus CS named "<cs>" (undefined) instead of the real `\<enc>\<cs>` glyph.
+  // Mirror Perl: font present → its encoding, or OT1 when its slot is None
+  // (Perl's always-OT1 default); no font at all → "" (Perl `undef->getEncoding`).
+  //
+  // NOTE: this does NOT fix the SHARED hyperref hang on 2004.08143
+  // (`pdfauthor={…Mar{\'\i}n…}`) — there the font encoding is "ASCII" (set by
+  // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
+  // loop reproduces in Perl too (see docs/KNOWN_PERL_ERRORS.md, "text-symbol
+  // CS in a Semiverbatim option").
   DefMacro!("\\f@encoding", {
     ExplodeText!(
       LookupFont!()
-        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
   DefMacro!("\\cf@encoding", {
     ExplodeText!(
       LookupFont!()
-        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
