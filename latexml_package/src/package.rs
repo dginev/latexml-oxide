@@ -427,6 +427,7 @@ pub mod threeparttable_sty;
 pub mod tikz_3dplot_sty;
 pub mod tikz_cd_sty;
 pub mod tikz_sty;
+pub mod tikz_timing_sty;
 pub mod tikzbricks_sty;
 pub mod times_sty;
 pub mod titlesec_sty;

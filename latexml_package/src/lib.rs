@@ -949,6 +949,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::tablefootnote_sty::load_definitions,
   ),
   ("tikz-cd", "sty", package::tikz_cd_sty::load_definitions),
+  ("tikz-timing", "sty", package::tikz_timing_sty::load_definitions),
 ];
 
 /// Runtime lookup: route `filename` (e.g. `"aastex.cls"`, `"pgfmath.code.tex"`)
