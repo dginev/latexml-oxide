@@ -307,6 +307,17 @@ the automatic fallback subsumes each one.
   1904.07131, 1910.02851) AND the `\c@tikztimingtrans` cluster (1807.08647,
   1912.11312, …) → rc=0, 0 errors (1910.02851 → 735 KB HTML, 71 algorithm
   blocks). `cargo test --tests`: 1344 passed, 0 failed.
+* **FIX LANDED — `\bookmarksetupnext` undefined (bookmark.sty stub gap).**
+  Rust deliberately stubs bookmark.sty (raw-load hits the token-limit via
+  its driver-file dispatch — documented in `bookmark_sty.rs`), no-opping the
+  bookmark public API. But it covered every public macro EXCEPT
+  `\bookmarksetupnext` (bookmark.sty L134, `\newcommand*{...}[1]`, sets
+  options for the next bookmark — cosmetic PDF-outline, no HTML analogue).
+  Perl raw-loads bookmark.sty so it has the macro (Perl rc=0). Added the
+  matching `def_macro_noop("\\bookmarksetupnext{}")`. Flips **1707.07002**
+  (→ 0 errors, 1.3 MB HTML; residual 1260 warnings are the separate
+  `expected:id` cluster) **+ 1902.06453** → rc=0. `cargo test --tests`:
+  1344 passed, 0 failed.
 * **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
   option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
   Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls

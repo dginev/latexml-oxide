@@ -24,6 +24,13 @@ LoadDefinitions!({
 
   // Public macros — all become no-ops.
   def_macro_noop("\\bookmarksetup{}")?;
+  // bookmark.sty L134: `\newcommand*{\bookmarksetupnext}[1]{...}` — sets
+  // options for the NEXT bookmark only. Cosmetic PDF-outline metadata with
+  // no HTML analogue, so a no-op matches the sibling `\bookmarksetup` stub
+  // (and Perl's effective behavior — Perl raw-loads bookmark.sty, defining
+  // it, but its effect is PDF-only). Was the one public macro missing from
+  // this stub. Witness 1707.07002 (Perl rc=0; Rust errored undefined).
+  def_macro_noop("\\bookmarksetupnext{}")?;
   def_macro_noop("\\bookmark[]{}")?;
   def_macro_noop("\\bookmarkdefinestyle{}{}")?;
   def_macro_noop("\\bookmarkget{}")?;
