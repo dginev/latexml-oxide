@@ -216,6 +216,21 @@ the automatic fallback subsumes each one.
   radius (a 2026-04-25 band-aid `3088dbd17` already suppresses the strict
   check during raw load). Full analysis + reproducer:
   [[project_endgroup_modeswitch_frame_leak]].
+  * **ROOT CAUSE isolated (2026-05-28, round 3):** instrumented mode-frame
+    push/pop on 1505.07999 → pspicture `begin_mode` fires 11× but env-end
+    `end_mode` only 10× — ONE pspicture's `after_digest_env`/`end_mode`
+    never runs, leaking BOUND_MODE. That pspicture (1132→1148) uniquely has
+    `\rput{90}{…}` (braced angle, NO coords). **Rust's `\rput` diverges from
+    Perl:** Rust `pstricks_sty.rs:115` `\rput * [] Pair {}` (consume-arg)
+    vs Perl `pstricks_support.sty.ltxml:879` `\rput * [] OptionalBracketed
+    ZeroPSCoord` → `\rput@start … BracketedPSAngle PSCoord` (OPEN-BOX model;
+    braced angle, OPTIONAL coords, content flows as a group). Rust misparses
+    `\rput{90}{content}` → unbalanced braces swallow `\end{pspicture}` so its
+    `end_mode` never runs → leak. **Fix (next focused session): faithfully
+    port Perl's `\rput`/`\rput@start` (BracketedPSAngle + ZeroPSCoord +
+    open-box) — NOT a quick signature tweak.** Verifiable on full 1505.07999
+    + `cargo test --tests` + a pstricks sample (minimal repros don't
+    trigger — state-dependent). Instrumentation reverted; recipe in memory.
 * **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
   cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
   earlier characterization was wrong on the root cause: there WAS a
