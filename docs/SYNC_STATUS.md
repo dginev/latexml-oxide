@@ -116,6 +116,32 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### R15–R16 fixes (2026-05-28)
+
+Engine/binding fixes landed driving the remaining-list canvas through
+the 2005-2007 range (all verified Perl-faithful):
+* **siamart `{@abssec}`/`{@doisec}`** (`c5f3e7eca2`) — titled-section
+  envs (inline-logical-block); 2005.11911 (surpass-Perl, Perl has 24
+  errors).
+* **autofe.sty no-op stub** (`6a571cfb42`) — ucs/utf8x's autofe
+  activated LGR and transliterated Latin→Greek in CS-name building
+  (`\thesection`→`\theςεςτιον`); Perl skips ucs as missing-file.
+  Witness 1701.05945, 1703.07562, 1702.05510.
+* **revtex4-1 `\doi` HyperVerbatim** (`d82ad1e6ba`) — `\doi{…%2F…}`'s
+  `%` (not in Semiverbatim's SPECIALS) commented out the closing `}`,
+  causing readBalanced-to-EOF + infinite pushback FATAL. HyperVerbatim
+  does `begin_semiverbatim(['%'])` (the `\@sanitize@url` analogue).
+  Witness 2006.12945 (FATAL→OK), bisected to one bibliography DOI.
+* Earlier in the run: vntex/babel-vietnamese T5 (`96aec2dfc8`/`52a3a72ff4`),
+  `\textviet` (`ac3df4d520`), apacite `\BOthersPeriod` (`14db9baf64`),
+  amsmath subequations token-level `\theparentequation` (`6fb7e001c7`),
+  named-color dvipsnam lazy-load (`b6f8117a94`).
+
+Remaining R13-R16 tail confirmed dominated by SHARED (glossaryref+math,
+braced `\be/\ee` equations, bundled custom classes, display-math-in-
+caption) and the deferred ASF `expected:id` MathFork tail (see deferred
+sections below). Easy package/binding wins exhausted in this range.
+
 ### Audit findings (2026-05-27)
 
 **Branch-commit audit completed.** 33 commits since master, 7 touch
