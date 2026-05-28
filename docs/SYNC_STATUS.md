@@ -118,6 +118,35 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **xy `\CompileMatrices` memory OOM — RESOLVED** (commit `45290a23e7`).
+  Investigated the preserved `canvas_3_failures_sandbox` (16 cases from an
+  old round-3 binary). Re-test with the current binary: **9 of 16 now
+  pass** — Clusters C (extreme-math post-proc), D (rewriting-phase
+  timeout) and E (the 3 FATAL_139 "segfaults", which were environmental)
+  all recovered by intervening fixes. **Cluster B (xymatrix OOM, 2
+  papers: math0203082, math0402448) fixed here:** `\usepackage[all]{xy}` +
+  `\CompileMatrices` routed each `\xymatrix` through xy-pic's `.xyc`
+  disk-cache compile/re-input cycle (xymatrix.tex L91
+  `\let\xymatrix=\xymatrixcompile`); the cycle's unbounded `\global\toks9=`
+  accumulation blew RSS past the 4.5 GB budget → `Fatal:Timeout:MemoryBudget`
+  (Perl converts to ~5.86 MB). `\CompileMatrices` is a pure TeX-runtime
+  speed optimization (output-identical), pointless in single-pass XML — the
+  deprecated ar5iv binding likewise `DefMacro('\CompileMatrices','')`.
+  No-op'd it in the `\xyoption` handler right after xymatrix.tex loads
+  (a no-op before option-processing is clobbered; doc-preamble
+  `\CompileMatrices` runs before `\begin{document}` so at_begin_document
+  is too late). math0203082: OOM(4.6 GB)→2.1 MB main.html/652 MB RSS/1953
+  svg; math0402448: OOM→4.2 MB/960 MB RSS/6224 svg. 53 binaries green.
+  **Cluster A (`\displaylines` `\raise`/`\hbox` recursion, 7 papers:
+  math0102053/089, math0212126, math0504436/06088/07219, math0604321) is
+  SHARED** — the line-712 `$$\displaylines{…}$$` recurses through nested
+  `\raise\hbox{\lower\hbox{…}}` box-stacking in BOTH engines; Perl *also*
+  fails (terminated at the 250 s timeout, no output; backtrace shows the
+  same `\raise…\hbox…\lower…\setbox` chain), Rust OOMs at 4.5 GB. Not
+  Rust-only; a `MoveableBox::predigest` depth-1000 cap already exists
+  (base_parameter_types.rs) but the blowup is gradual accumulation below
+  that depth. Left as SHARED.
+
 * **Round-37 Rust-only conversion failures: EXHAUSTED.** After the four
   R19 fixes below, three fresh `cortex_worker` sweeps of distinct slices
   of `canvas3_round37_remaining` (1500 + 3005 + 2081 ≈ **6.6k papers**)
