@@ -129,7 +129,22 @@ pub fn load_polish() -> Result<()>     { install_lang_stub("polish") }
 pub fn load_romanian() -> Result<()>   { install_lang_stub("romanian") }
 pub fn load_slovene() -> Result<()>    { install_lang_stub("slovene") }
 pub fn load_turkish() -> Result<()>    { install_lang_stub("turkish") }
-pub fn load_vietnamese() -> Result<()> { install_lang_stub("vietnamese") }
+pub fn load_vietnamese() -> Result<()> {
+  install_lang_stub("vietnamese")?;
+  // babel-vietnamese (vietnam.ldf) selects T5 font encoding and defines
+  // the Vietnamese precomposed-character command set (`\ecircumflex`,
+  // `\ocircumflex`, `\abreve`, `\ohorn`, `\uhorn`, hook-above `\h`, …).
+  // vietnam.ldf is NOT installed in TeX Live's base tree, so without
+  // this the commands stay undefined when a paper uses
+  // `\usepackage[vietnamese]{babel}` with Vietnamese author names.
+  // Surpass-Perl: Perl's babel can't find vietnam.ldf either; route
+  // through our t5enc binding (mirrors Perl `t5enc.def.ltxml`) — the
+  // same set vntex.sty pulls in. Witness 2003.07696
+  // (`\usepackage[english,vietnamese]{babel}`, author
+  // "Nguy\~\ecircumflex n Th\d{i} B\'ich Th\h{u}y").
+  crate::package::t5enc_def::load_definitions()?;
+  Ok(())
+}
 pub fn load_icelandic() -> Result<()>  { install_lang_stub("icelandic") }
 pub fn load_arabic() -> Result<()>     { install_lang_stub("arabic") }
 pub fn load_dutch() -> Result<()>      { install_lang_stub("dutch") }
