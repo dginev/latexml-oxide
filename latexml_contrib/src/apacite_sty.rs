@@ -101,6 +101,10 @@ LoadDefinitions!({
   def_macro_identity("\\BPGS{}")?;
   def_macro_identity("\\BVOL{}")?;
   DefMacro!("\\BOthers{}", "et al.");
+  // apacite.sty L2082: `\newcommand{\BOthersPeriod}[1]{et al.\hbox{}}` —
+  // "et al." variant ending the author list with a period. Used in
+  // .bbl `\APACrefauthors` blocks. Witness 2005.03899 (apacite bibstyle).
+  DefMacro!("\\BOthersPeriod{}", "et al.");
   DefMacro!("\\BEDS", "Eds.");
   DefMacro!("\\BED", "Ed.");
   DefMacro!("\\BIn", "In");
