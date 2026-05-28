@@ -164,16 +164,27 @@ completes).** Found via a fresh sample of the offset-18 remaining slice.
     locked frame, suspect the env's `mode =>` matching the
     document-body bound mode before suspecting `pop_frame`/`end_mode`.)
   * **2008.13358 `main.tex` (eptcs + mathpartir) —
-    `Fatal:Stomach:Recursion`, Perl=29 err completes.** Inside an
-    amsgather (`\@@amsgather`), `\lx@hidden@noalign` whatsits accumulate
-    on `invoke_token`'s `token_stack` past `MAXSTACK` (~190 deep). Bisected
-    to a `\label{sec:…}` (sess-type-proc.tex L321) after ~10 `gather`s
-    each carrying `\nonumber\\`/`\label` (which wrap in
-    `\lx@hidden@noalign`); the alignment absorption code
-    (tex_tables.rs ~793) recurses through them instead of consuming
-    iteratively. Perl's halign absorbs them without unbounded
-    `invoke_token` nesting. Needs an alignment-internals fix (sensitive;
-    adjacent to math-id/ASF).
+    `Fatal:Stomach:Recursion`, Perl=29 err completes.** Inside an open
+    amsgather (`\@@amsgather`), nested `\lx@hidden@noalign{…
+    \lx@hidden@noalign{…}}` are digested recursively:
+    `invoke_token(\lx@hidden@noalign)` → constructor
+    `read_arguments_and_digest` (constructor.rs:306) → digest `#1` →
+    `invoke_token(next \lx@hidden@noalign)` … (backtrace confirmed).
+    **It is a genuine infinite recursion, NOT a low-limit issue**:
+    raising `MAXSTACK` to 5000 still overflows, so the nesting grows
+    unboundedly. `\@@amsgather`/`\lx@hidden@noalign` definitions are
+    byte-identical to Perl (amsmath.sty.ltxml L382; TeX_Tables L645), so
+    the bug is in our alignment row/noalign processing, not the bindings.
+    Trigger is accumulation-dependent: a `\label{sec:…}`
+    (sess-type-proc.tex L321) fires it ONLY after the ~8 preceding
+    `gather`s (L51-295) accumulate state — preamble + L296-321 alone is
+    clean, and preamble + all gathers through L318 is clean; only the
+    L321 label tips it. Perl processes the same nested structure without
+    unbounded `invoke_token` nesting (its alignment absorbs rows
+    iteratively via the Gullet column scanner). Needs a focused
+    alignment-internals session (find why our amsgather body digestion
+    nests noaligns without bound, vs Perl's iterative absorption);
+    sensitive area (math-id/ASF adjacent), do NOT just raise MAXSTACK.
 
 ### R17 fixes (2026-05-28)
 
