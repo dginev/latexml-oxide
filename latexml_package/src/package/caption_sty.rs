@@ -119,6 +119,23 @@ LoadDefinitions!({
   def_macro_noop("\\SetCaptionDefault{}{}")?;
   DefMacro!("\\caption@ifundefined{}{}{}", "#3");  // always take else branch
   def_macro_noop("\\caption@ExecuteOptions[]{}")?;
+  // caption.sty L184-185 call these as part of package-init bootstrap of
+  // the caption3 backend (`\caption@SetupOptions{caption}{\caption@setkeys...}`
+  // / `\caption@ProcessOptions*{caption}`). Our binding intercepts
+  // caption.sty before caption3.sty raw-loads, so these caption3
+  // internals are undefined. No-op stubs are safe — option setup is
+  // typesetting-only, and `\captionsetup` (handled above) already
+  // stores keyvals as `CAPTION_<key>` state regardless of this
+  // bootstrap chain. Witness clusters: ~5 R-stage papers each.
+  def_macro_noop("\\caption@SetupOptions{}{}")?;
+  def_macro_noop("\\caption@ProcessOptions OptionalMatch:* {}")?;
+  // \caption@IfPackageLoaded{pkg}[date]{body}{else} (caption.sty L700-702
+  // + L703-708). caption.sty self-registers conditional adapters for
+  // float / hyperref / longtable / ... — our XML pipeline doesn't need
+  // any of those adapters, so always take the `else` branch as if the
+  // package is not loaded.
+  DefMacro!("\\caption@IfPackageLoaded{}[]{}{}", "#4");
+  def_macro_noop("\\caption@@IfPackageLoaded{}[]{}{}")?;
   // caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
   // "caption@box@<name>" macro via \@namedef. We don't render caption
   // box layouts; gobble both args.
