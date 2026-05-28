@@ -5685,9 +5685,16 @@ LoadDefinitions!({
       use latexml_core::mouth;
       // Step the equation counter and get properties (id, refnum, tags)
       let eqn_props = ref_step_counter("equation", false)?;
-      // Expand \theequation to get the parent equation number text
+      // Expand \theequation to get the parent equation number tokens.
+      // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
+      // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
+      // expands to `{ \rm S } <n>`, and serializing that drops the space
+      // between the control word `\rm` and the letter `S`, so re-tokenizing
+      // "{\rmS}<n>" yields the undefined CS `\rmS`. Perl fixates the parent
+      // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
+      // L1134) — token-level, no string round-trip. Witness 2005.06712
+      // (subequation tags `(S15a)` → `(\rmS15a)`).
       let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
-      let eqnum_str = eqnum_toks.to_string();
       // Save current equation counter value
       let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
         match rv {
@@ -5709,10 +5716,13 @@ LoadDefinitions!({
       // inside subequations, expecting \theparentequation to resolve.
       // Witness 2402.03202.
       def_macro(T_CS!("\\theparentequation"), None,
-        mouth::tokenize_internal(&eqnum_str), None)?;
-      // Redefine \theequation to parent_number + \alph{equation}
-      let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
-      def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+        eqnum_toks.clone(), None)?;
+      // Redefine \theequation to parent_number + \alph{equation} — append
+      // the `\alph{equation}` tokens to the parent tokens directly (again
+      // no string round-trip, to preserve `\rm S` etc.).
+      let mut new_theequation = eqnum_toks.unlist();
+      new_theequation.extend(mouth::tokenize_internal("\\alph{equation}").unlist());
+      def_macro(T_CS!("\\theequation"), None, Tokens::new(new_theequation), None)?;
       // Redefine \theequation@ID for xml:id generation
       if let Some(id_val) = whatsit.get_property("id") {
         let id_str = match &*id_val {
