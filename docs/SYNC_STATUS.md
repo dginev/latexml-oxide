@@ -116,6 +116,30 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### R17 fixes (2026-05-28)
+
+* **biblatex `\providetoggle` for `blx@` toggles** (`ba35223039`) —
+  bundled `mybiblatex.sty` wrappers re-enter biblatex init via a path
+  the `_loaded` guard doesn't cover, so the 56 `\newtoggle{blx@…}`
+  allocations hard-errored 55× on already-defined toggles. Switched
+  the trailing RawTeX block to `\providetoggle` (idempotent
+  define-if-absent). Witness 2007.06815 (55 errors→clean), verified
+  2007.13391/.13597/.13644/.13719.
+* **microtype `\microtypecontext` declaration vs environment**
+  (`<this commit>`) — microtype defines BOTH the `\microtypecontext{settings}`
+  scoped *declaration* (no body) and a `{microtypecontext}` environment.
+  Our `DefEnvironment!("{microtypecontext}")` defines the bare
+  `\microtypecontext` CS as the env-begin, clobbering the declaration;
+  a bare `\begingroup\microtypecontext{expansion=sloppy}…\endgroup`
+  (common around `\bibliography`) then treated `\microtypecontext` as
+  an unclosed env-begin, opening a restricted_horizontal mode-switch
+  group the `\endgroup` couldn't close (`unexpected:\endgroup`).
+  Defining the env FIRST and the no-op declaration macro AFTER lets
+  `\microtypecontext{…}` resolve to the harmless declaration while
+  `\begin{microtypecontext}` still finds the env (env lookup is
+  independent of the CS). Witness 2007.06927 (CONVERR_1→clean), both
+  declaration and environment forms verified.
+
 ### R15–R16 fixes (2026-05-28)
 
 Engine/binding fixes landed driving the remaining-list canvas through
