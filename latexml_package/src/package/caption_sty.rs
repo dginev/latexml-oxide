@@ -99,7 +99,26 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;
   def_macro_noop("\\DeclareCaptionJustification{}{}")?;
   def_macro_noop("\\DeclareCaptionOption{}[]{}")?;
+  // caption3.sty L640+: `\DeclareCaptionOptionNoValue{name}{body}` —
+  // sibling of `\DeclareCaptionOption` for options without values.
+  // 5 papers in R-stages emit `Error:undefined`. Same no-op as the
+  // valued sibling: caption-option declarations are typesetting-only
+  // setup, not body content.
+  def_macro_noop("\\DeclareCaptionOptionNoValue{}{}")?;
   def_macro_noop("\\DeclareCaptionPackage{}")?;
+  // caption3.sty internals that user code or extension packages
+  // (e.g. caption-style extensions, fltrace, ccaption) sometimes
+  // reach for. All no-ops — caption-package internals are
+  // typesetting-only and have no body-content effect:
+  //   * `\SetCaptionDefault{name}{body}` — set default value for
+  //     a named caption option (5 R-stage papers).
+  //   * `\caption@ifundefined{cs}{then}{else}` — internal version
+  //     of `\@ifundefined`. Treat as undefined (always run `\else`).
+  //   * `\caption@ExecuteOptions[opt-list]` — internal option-
+  //     execution helper. No-op.
+  def_macro_noop("\\SetCaptionDefault{}{}")?;
+  DefMacro!("\\caption@ifundefined{}{}{}", "#3");  // always take else branch
+  def_macro_noop("\\caption@ExecuteOptions[]{}")?;
   // caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
   // "caption@box@<name>" macro via \@namedef. We don't render caption
   // box layouts; gobble both args.
