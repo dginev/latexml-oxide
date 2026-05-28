@@ -118,6 +118,31 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
+* **1302.3919 deep perf analysis — SHARED-slow, NOT a Rust-only failure
+  (and a `expected:id` over-warning follow-up).** Localized the only
+  "genuinely slow" timeout: EMDerivation.tex is math-VERY-heavy (182
+  `equation` + **124 `\begin{split}`** + 6 align + 4 gather). The 60 s
+  isolation-test failure was the CLI's *default* 60 s wall-clock guard;
+  with `--timeout 240` Rust **completes in 119 s → 6.8 MB** — actually
+  *faster* than Perl's 137 s. Both exceed the 120 s canvas budget, so it's
+  SHARED-slow at the margin (not Rust-only). Phase timeline: Digest+Build
+  fast, 4 rewrite rules fast (<70 ms total), then **~112 s in the Marpa
+  math-parse** of the 340+ math envs. Rust emits **7009 warnings (4620
+  `expected:id` + 2389 `expected:node`) vs Perl's 103** — these are the
+  `rearrange_ams_split` dangling-XMRef cascade ([[project_xmref_dangling_split]]):
+  `prune_dangling_split_xmrefs` (document.rs finalize) cleans the *output*
+  (no post-process Error) but runs AFTER `parse_math`, so the parser's
+  `realize_xmnode` (parser.rs:2576) still warns on each ref whose target
+  cell it absorbed mid-parse. `--quiet` (suppress warning logging) does NOT
+  speed it up (119 s), so the cost is the Marpa parse itself, not the
+  warning I/O — the dangling refs can't be pruned *before* parse (cells
+  still hold their ids until the parser drops them). **Follow-up (deferred,
+  not a failure):** the 4620-warning over-emission is a Rust-only quality
+  gap vs Perl; eliminating it needs deep math-parser split-absorption
+  changes (memory approach #3, regression risk on declare_test). Marpa
+  perf on 300+-math-env docs is the broader limiter; both engines strain
+  the 120 s budget here.
+
 * **First-500K canvas failure list (`.session_state/canvas3_failed.txt`,
   168 papers) re-tested: 82 recovered, 86 residual all SHARED.** This is
   the full 150K-run failure list (the `canvas_3_failures_sandbox` was just
