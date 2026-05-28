@@ -233,6 +233,32 @@ Progress files preserved at `.session_state/`:
   (Perl baseline 1503.08338: 3.3 MB). cargo test --tests: 1344 passed, 0
   failed. (Deeper ltxnew `\new` futurelet-scanner fix deferred — Perl
   skips getfiledate anyway, so the stub IS the Perl-faithful match.)
+* **DEFERRED — `\crvi` cluster (3 papers: 1603.04650, 1704.02401,
+  1804.00017; xy-pic curved arrows).** `\usepackage[all,tips]{xy}` +
+  `\ar@/^15pt/[rr]^{...}` (the `@/.../` curve modifier) → `\crvi`
+  undefined. `\crvi` is defined in xycurve.tex L69 (`\xydef@\crvi#1#{...}`,
+  an advanced `#{`-delimited param). Rust's xy_sty.rs DOES raw-load
+  xycurve.tex for `[all]` (and `\crvi` IS defined in a minimal repro), but
+  the real papers hit a STATEFUL divergence: a minimal `\ar@/.../` gives
+  `Info:xy:error Forms @/.../… only available when curve` (curve module's
+  runtime flag not set) while the real papers reach `\crvi` undefined. The
+  curve-module activation (`\ifxy@curve@`-style flag) + `\crvi`'s `#{`
+  param are the deep issue. Perl raw-loads xycurve.tex and renders curves
+  (2.9 MB). Deep xy-pic curve-machinery — deferred.
+* **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
+  babel-german double-quote).** `\usepackage[german,english]{babel}` +
+  `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports
+  germanb but omits `\dq`. ROOT MYSTERY: adding `\dq` to german_sty.rs
+  (any form — DefMacro, early `\gdef\dq{ZZQUOTE}`) does NOT make it stick —
+  `\dq` is **actively undefined** after german_sty.rs runs (verified:
+  `\captionsgerman`/`\mdqon` survive but a global `\gdef\dq` does not, and
+  `\bbl@allowhyphens` (L60, late) is also UNDEF → the load also truncates
+  somewhere past L57). Nothing in babel-german.tex/babel.sty/babel_support
+  explicitly `\let\dq\@undefined`s it, so the clearer is elsewhere in the
+  modern-babel `.ini` activation / `[german,english]` main-lang switch.
+  Note 1602.07073 ALSO has 2 Perl errors (`\printbibliography`/biblatex),
+  so it's only marginally Rust-only. Deferred — modern-babel state
+  management.
 * **DEFERRED — `\autrun` cluster (4 papers, ar5iv-specific, elusive).**
   1509.01533/1509.04088/1602.03020/1804.10461 redefine `\author` to set
   `\autrun` as a side-effect (`\def\author#1{\gdef\autrun{...}...}`), then
