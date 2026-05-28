@@ -6,7 +6,15 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
-  RequirePackage!("xcolor");
+  // Pre-load xcolor with [dvipsnames, table] so a paper's later
+  // `\usepackage[table]{xcolor}` doesn't silently option-clash and
+  // leave colortbl unloaded → `\cellcolor` undefined. spie.cls itself
+  // does NOT load xcolor (only `\LoadClassWithOptions{article}`), so
+  // in Perl the user's `[table]{xcolor}` is the first load and colortbl
+  // comes in via the `table` option; matching that outcome here. Same
+  // anti-clash pattern as svproc_cls / mnras_cls / quantumarticle_cls.
+  // Witness: 1807.04749 ("undefined:\\cellcolor").
+  RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
   RequirePackage!("hyperref");
 
   // spie.cls L107: \authorinfo{...} for author footnote — preserve.

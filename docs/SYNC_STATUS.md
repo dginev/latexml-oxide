@@ -116,6 +116,60 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### R-stage stale-data re-run + cluster triage (2026-05-28, cont.)
+
+* **R01 stage was STALE (pre-stub binary).** R01 (`stage_R01`) showed an
+  anomalous 1590 non-OK vs ~60/stage for R02–R17. Cause: R01 ran with an
+  older release `cortex_worker` (before the R12 ctable / R13 deps stubs).
+  Re-ran all 1590 R01 non-OK papers with the current release binary:
+  **289 recovered to OK**, 1225 CONVERR (output produced), 60 FATAL, 16
+  TIMEOUT. Lesson reaffirmed ([[project_canvas_stage_v6_recovery]]):
+  re-test stale stage data with the current binary BEFORE investigating.
+* **ctable cluster ALREADY resolved.** The "181 CONVERR_1 `Package ctable
+  Error: You must load ctable after tikz`" finding was entirely stale-R01
+  data. Re-ran 30 ctable papers with current binary → **29 OK, 0 ctable
+  errors** (1 CONVERR_23 with SHARED errors). Confirmed the R12 ctable
+  stub (`56e018b648`) handles them; **0 of 181 invoke `\ctable`**, so the
+  no-op stub costs no content. No work needed.
+* **FATAL_3 `_`/`^`-in-text cluster is 100% SHARED.** Batch-ran Perl
+  (ar5iv flags) on all 30 FATAL_3 papers whose first error is
+  `unexpected:_/^ Script … can only appear in math mode`. **All 30: Perl
+  rc=1, 101 errors, 0 bytes** — identical failure (malformed source, e.g.
+  1502.06361 paoli.tex has stray `}` / unbalanced math around `example`
+  envs). Not Rust-only. The one Rust-vs-Perl diff is locator quality
+  (Rust "Anonymous String" vs Perl "paoli.tex; line 598").
+* **New Rust-only cluster found & characterized (NOT fixed):
+  `{keywords} environment is not defined`** (~9-12 CONVERR_1 papers using a
+  binding-less, paper-bundled `.cls` such as `fundam.cls`). Perl converts
+  cleanly (loads OmniBus → generic `{keywords}` env); Rust uses an
+  article-ish base and suppresses the OmniBus fallback (`will_fallback`
+  false because `<cls>.cls_loaded=true`+result Ok after the notex-blocked
+  `load_class`). Rust's `omnibus_cls.rs` already HAS the generic keywords
+  env — it's just never loaded for these classes. Full characterization +
+  fix direction + risk notes: [[project_keywords_env_binding_less_cls]].
+  Deferred: delicate class-load hot path (dozens of witness-paper edge
+  cases); needs a focused, full-`cargo test` + canvas-sweep-gated session.
+* **FIX LANDED — svproc/spie `\cellcolor` undefined (xcolor `table`
+  option-clash).** Root cause: `svproc_cls.rs` and `spie_cls.rs` had a
+  Rust-only `RequirePackage!("xcolor")` (no options); the real svproc.cls
+  /spie.cls do NOT load xcolor (only `\LoadClass…{article}` + kernel
+  `\normalcolor`). So a paper's `\usepackage[table]{xcolor}` option-clashed
+  against the already-loaded optionless xcolor → `table` dropped → colortbl
+  never loaded → `\cellcolor` undefined. Perl raw-loads the class (no xcolor
+  preload) so the user's `[table]{xcolor}` is the first load and colortbl
+  comes in. Fix: preload xcolor with `[dvipsnames, table]` in both class
+  bindings (same sanctioned anti-clash pattern as mnras_cls /
+  quantumarticle_cls). Flips **1706.04315 (svproc) + 1807.04749 (spie)**
+  → rc=0, 0 errors, HTML produced. (1804.09301 also `\cellcolor` but uses
+  `article`+bundled `naaclhlt2018.sty` — separate, not this fix.)
+* **XMRef `expected:id` over-warning: mid-parse suppression is a DEAD END.**
+  Tried a non-consuming `data::resolve_lost(id)` consulted in
+  `realize_xmnode` before warning — warnings stayed at 9 on the minimal
+  split repro because `LOST_NODES` is empty when `realize_xmnode` runs
+  (populated only by the end-of-parse sweep). Resolve-to-survivor variant
+  also BROKE the conversion (empty 39-byte output). Reverted. The real fix
+  remains parser-side id preservation ([[project_xmref_dangling_split]]).
+
 ### R19 fixes (2026-05-28)
 
 * **1302.3919 deep perf analysis — SHARED-slow, NOT a Rust-only failure
