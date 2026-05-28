@@ -145,10 +145,14 @@ Progress files preserved at `.session_state/`:
   2008.13358 via `latexml_oxide` (CLI): `Fatal:Stomach:Recursion` → 546 KB
   XML / 175 KB HTML, 23 errors (Perl=64 err, 8 missing files — we beat
   Perl on missing-package count). Full test suite green (53 binaries).
-  NOTE: 2008.13358 *also* uses `\usepackage[all,cmtip,2cell]{xy}` and so
-  STILL hits the separate worker-only xy.sty re-entrance blocker below
-  (worker → 39-byte empty XML); the recursion fix is orthogonal and the
-  CLI path is fully clean.
+  **`cortex_worker` (canvas) now also fully succeeds: 286 KB main.html,
+  10/10 deterministic, valid content (3 sections, 419 math nodes, 12
+  equationgroups).** 2008.13358 *also* uses `\usepackage[all,cmtip,2cell]{xy}`;
+  the transient xy.sty "re-entrance → empty XML" seen on early post-fix
+  worker runs was a CONSEQUENCE of the corrupted global state left by the
+  recursion FATAL (it does NOT reproduce on the clean fixed binary), NOT
+  an independent xy blocker. With the recursion fixed, xy loads cleanly in
+  the worker too.
 
 * **xy: guard `\lx@xy@original` capture against double-load**
   (`<this commit>`) — xy_sty's SVG-wrapper overlay (Perl xy.tex.ltxml
@@ -169,66 +173,26 @@ Progress files preserved at `.session_state/`:
   (5.2 MB HTML, 88 `svg:svg` diagrams rendered, matching Perl's 0
   errors). Full test suite green (53 binaries).
 
-  **REMAINING canvas blocker (cortex_worker only, separate issue):** the
-  `cortex_worker` build does NOT fully load xy.tex for this doc — a
-  `Warn:recursion:xypic.sty Binding-load re-entrance ... Short-circuiting`
-  (content.rs:762, Task #260 guard) fires for `xypic.sty` and leaves
-  `\xymatrix`/`\ddto`/`\crvi` undefined → 0-byte HTML. `latexml_oxide`
-  (CLI) does NOT hit this re-entrance and loads xy fully, so it's a
-  worker-vs-CLI binding-dispatch divergence (the IN_PROGRESS re-entrance
-  guard short-circuits a require_package that is actually a legitimate
-  load, and its "side-effects complete in outer frame" promise is false
-  here). Also note: a *bare-preamble* `\usepackage[curve]{xypic}` +
-  `\xymatrix` leaves `\xymatrix` undefined in BOTH CLI and worker — the
-  xy.tex raw-load is context-sensitive (the full 2009.05542 preamble
-  happens to make it load in the CLI). Both need follow-up: (a) why the
-  worker's require_package re-entrance guard short-circuits a legitimate
-  xy/xypic load, and (b) why xy.tex raw-load is preamble-sensitive.
-
-  **Deeper trace (2026-05-28).** The re-entrance fires from
-  `xy_sty.rs` ~L95: the `\xyoption{curve}` handler **directly**
-  `input_definitions("xycurve", noltxml, tex)` (a Rust workaround for
-  Perl's `\xyinputorelse@` chain, which "evaluates strangely" in our
-  pipeline — see comment xy_sty.rs L82-88). The real
-  `xycurve.tex` L23 is `\ifx\xyloaded\undefined \input xy \fi` (xy's own
-  re-load guard). In the worker `\xyloaded` is *undefined* at that point
-  → `\input xy` fires → resolves to the `("xy","tex")=xy_sty` binding →
-  re-enters the xy/xypic load → IN_PROGRESS short-circuit → xy left
-  half-loaded. In the CLI `\xyloaded` is defined there → `\input xy`
-  skips → no re-entrance. Likely cause: xy.tex L23 `\let\xyloaded=\relax`
-  is a LOCAL assignment; if our `InputDefinitions` (xy_sty L36, main
-  xy.tex) wraps the load in a group that pops before the `\xyoption`
-  handlers run, `\xyloaded` is lost — and the worker's option-processing
-  timing differs from the CLI's. Candidate fixes for a dedicated session:
-  (i) make xy.tex's `\xyloaded` marker survive (global), or set it before
-  the feature-file `input_definitions` in xy_sty so xycurve's `\input xy`
-  guard skips; (ii) make `\input xy` (the TeX primitive) load the raw
-  self-guarding file rather than the `("xy","tex")` binding; (iii) align
-  the `("xy","tex")`/`("xy","sty")` `_loaded` guard keys so a 2nd entry
-  is a true no-op. The CLI recursion (the committed R19 fix) is
-  orthogonal and verified.
-
-  **UPDATE (2026-05-28, candidate (i) tested — INSUFFICIENT).** Tried
-  asserting `Let('\xyloaded','\relax', Global)` right before the
-  feature-file `input_definitions` in xy_sty's `\xyoption` handler. A
-  trace confirmed it runs (`xyoption 'curve' was_defined=false`) and the
-  subsequent `xycurve.tex` then loads cleanly (no re-entry). BUT the
-  worker STILL ends with `\xymatrix` undefined → 0-byte. So the
-  option-time `\input xy` re-entry was only a SECONDARY symptom: the
-  PRIMARY problem is that the worker's xy load never defines `\xymatrix`
-  (a v2/standard feature). `\usepackage{xypic}` → `\xyoption{v2}` should
-  pull in matrix/arrow/etc.; the worker's `\xyoption 'matrix'` handler
-  DOES run (per trace) yet xymatrix stays undefined — so the *matrix
-  feature file's own load is also incomplete*, i.e. a cascading
-  multi-feature raw-load failure (each feature file's
-  `\ifx\xyloaded\undefined\input xy\fi` + the directly-loaded
-  `xy<feature>.tex` workaround interact badly under the worker's
-  load/timing). The CLI keeps everything in scope and loads all
-  features. Net: this needs a focused session reworking xy feature
-  loading (likely making the `\xyoption` handler load features WITHOUT
-  the per-file `\input xy` re-entry, or honoring Perl's `\xyinputorelse@`
-  properly). Deferred again; do NOT land a partial `\xyloaded` patch
-  that leaves xymatrix undefined.
+  **RESOLVED ON RE-TEST (2026-05-28).** The earlier-documented
+  "`cortex_worker`-only xy blocker → 0-byte HTML, `\xymatrix` undefined,
+  candidate (i) insufficient" no longer reproduces. On the current clean
+  binary `cortex_worker` converts 2009.05542 to **2.8 MB main.html with
+  41 `svg`/`svg:svg` diagrams, 3/3 deterministic**. Two findings closed
+  the prior open questions:
+  (a) the claim "`\xyloaded` is undefined in the worker but defined in the
+  CLI" was **wrong** — a trace (`is_defined("\\xyloaded")`) shows it is
+  `false` in BOTH the CLI and the worker at feature-load time, and the CLI
+  succeeds anyway. So candidate (i) ("make `\xyloaded` survive") was
+  chasing a non-difference; it was correctly abandoned.
+  (b) the "0-byte worker" observations (here and on early post-`\lx@label`-
+  fix 2008.13358 worker runs) were **stale-state / not-cleanly-rebuilt
+  artifacts**, not a live code bug: a from-clean `cortex_worker` rebuild
+  makes both papers succeed deterministically. Lesson for future triage:
+  when a worker "0-byte" diverges from a clean CLI success, FIRST rebuild
+  the worker from clean and re-run several times before theorizing a
+  worker-vs-CLI dispatch divergence. The `xy_sty.rs` `\xyoption`
+  feature-file direct-`input_definitions` workaround is unchanged and is
+  NOT the cause.
 
 ### R18 fixes (2026-05-28)
 
@@ -280,23 +244,19 @@ low-MAXSTACK — verified 5000 still overflows for the noalign case):
      the immutable canonical `\lx@label`. Not an alignment-internals
      nesting issue. **2009.09721 re-tested on the current binary: full
      `cortex_worker` success — 583 KB main.html, 0 errors (528 warnings),
-     no recursion.** 2008.13358 CLI is clean too but its worker path is
-     still blocked by the independent xy.sty re-entrance (mechanism 2).
-  2. **xypic `\lx@xy@svg`** — 2009.05542 (Perl=0, clean Rust-only).
-     `\xy` is wrapped (Perl xy.tex.ltxml L148-151, ours identical):
-     `\xy → \if\inxy@ \lx@xy@svgnested \else \lx@xy@svg \fi \lx@xy@original`.
-     `\inxy@` (real xypic, raw-loaded) tests `\xy@` vs `\xyinitial@`.
-     xypic internals call `\xy` *by name* (→ our wrapper), so each
-     internal/nested `\xy` re-enters `\lx@xy@svg`; Perl's `\inxy@`
-     detects nesting (`\xy@` ≠ `\xyinitial@`) and routes to the
-     bounded `\lx@xy@svgnested`, but in our engine `\xy@` is NOT
-     maintained during xy processing (stays == `\xyinitial@`), so every
-     call takes `\lx@xy@svg` → unbounded. Reproduces with the real
-     preamble + any `\xymatrix` in an equation (a bare-preamble
-     `\usepackage[curve]{xypic}` instead leaves `\xymatrix` undefined —
-     xypic raw-load is itself context-sensitive). Root fix = make our
-     raw xypic interpretation maintain `\xy@`/`\xyinitial@` so `\inxy@`
-     detects nesting; deep raw-`xy.tex` state-machine work.
+     no recursion.** 2008.13358 (amsgather + `\usepackage[all,cmtip,2cell]{xy}`)
+     is ALSO a full `cortex_worker` success now (286 KB main.html, 10/10
+     deterministic) — its xy path loads cleanly once the recursion is gone.
+  2. ~~**xypic `\lx@xy@svg`** — 2009.05542 (Perl=0, clean Rust-only).~~
+     **RESOLVED:** the CLI recursion was fixed by the committed
+     `\lx@xy@original` double-load guard (R19 fix above), and the
+     previously-documented "`cortex_worker`-only 0-byte / `\xymatrix`
+     undefined" blocker does NOT reproduce on a clean rebuild — re-tested
+     2026-05-28, worker → 2.8 MB main.html, 41 svg diagrams, 3/3
+     deterministic. (The `\xy@`/`\xyinitial@`-nesting recursion theory and
+     the `\xyloaded` worker-vs-CLI-difference theory were both
+     superseded; see the resolved note under the `\lx@xy@original` R19
+     entry above.)
   Other R19 FATALs (classify before fixing): 2009.05276
   (`TooManyErrors`: `\GenericError` runaway 501×, likely vendor/SHARED),
   2009.09806 (`Timeout:MemoryBudget` RSS>4500MB — OOM, separate class).
@@ -318,8 +278,10 @@ Found via a fresh sample of the offset-18 remaining slice.
     ~8 gathers + the L321 label) was exactly the nested-rearrangeable-
     scope GLOBAL-save capturing the wrapper. Fixed by saving the
     immutable `\lx@label` (Perl parity). CLI now clean (546 KB / 23 err).
-    The doc still fails in `cortex_worker` ONLY because it independently
-    hits the xy.sty worker re-entrance blocker (above).
+    `cortex_worker` ALSO fully succeeds (286 KB main.html, 10/10
+    deterministic) — the recursion was the sole blocker; the early
+    post-fix "xy worker re-entrance → empty" was a stale-state artifact of
+    the caught FATAL, not reproducible on the clean binary.
 
 ### R17 fixes (2026-05-28)
 
