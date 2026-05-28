@@ -128,18 +128,32 @@ LoadDefinitions!({
   // lost — but it eliminates the cascading schema errors. TODO: port
   // `DefPSConstructor` framework so pstricks output lives in
   // `<ltx:picture>` and labels survive.
-  RawTeX!("\\def\\lx@rput@parens(#1)#2{}");
-  RawTeX!("\\def\\lx@rput@bracket[#1]{\\lx@rput@parens}");
-  RawTeX!("\\def\\rput{\\@ifstar\\lx@rput@i\\lx@rput@i}");
-  RawTeX!("\\def\\lx@rput@i{\\@ifnextchar[\\lx@rput@bracket{\\lx@rput@parens}}");
+  // Runaway-safe placement gobbler shared by \rput/\cput. Consumes (and
+  // drops) optional [refpoint], optional {angle}, optional (coords), and the
+  // mandatory {body}. The PREVIOUS def used a *delimited* `(#1)` parameter
+  // (`\def\lx@rput@parens(#1)#2{}`): for the braced-angle / no-coords form
+  // `\rput{angle}{body}` there is no `(`, so TeX scanned FORWARD eating
+  // tokens — including `\end{pspicture}` — until the next `(` anywhere
+  // later. That swallowed the env end, so pspicture's `end_mode` never fired
+  // and its mode-switch frame leaked, tripping `\endgroup Attempt to close a
+  // group that switched to mode restricted_horizontal` (witness 1505.07999 +
+  // the ~17-paper `\endgroup` mode-leak cluster). Perl avoids this with
+  // `OptionalBracketed`+`ZeroPSCoord` (coords optional); we PEEK for `(`
+  // instead of requiring it. (Body still dropped — see the <ltx:p>-cascade
+  // note above; faithful `<ltx:g>`-with-body is the separate TODO.)
+  RawTeX!("\\def\\lx@put@cb(#1)#2{}");      // (coords){body} -> drop
+  RawTeX!("\\def\\lx@put@bb#1{}");          // {body} -> drop (no coords)
+  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb\\lx@put@bb}"); // {angle}; then (coords)? body
+  RawTeX!("\\def\\lx@put@s{\\@ifnextchar(\\lx@put@cb\\lx@put@b}");    // ( -> coords; else {angle}|{body}
+  RawTeX!("\\def\\lx@put@opt[#1]{\\lx@put@s}");                       // [refpoint] -> continue
+  RawTeX!("\\def\\lx@put@start{\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
+  RawTeX!("\\def\\rput{\\@ifstar\\lx@put@start\\lx@put@start}");
   RawTeX!("\\def\\lx@uput@parens#1(#2)#3{}"); // {dist}(coord){text} → drop
   RawTeX!("\\def\\lx@uput@bracket[#1]{\\lx@uput@parens}");
   RawTeX!("\\def\\uput{\\@ifstar\\lx@uput@i\\lx@uput@i}");
   RawTeX!("\\def\\lx@uput@i{\\@ifnextchar[\\lx@uput@bracket{\\lx@uput@parens}}");
-  RawTeX!("\\def\\lx@cput@parens(#1)#2{}");
-  RawTeX!("\\def\\lx@cput@bracket[#1]{\\lx@cput@parens}");
-  RawTeX!("\\def\\cput{\\@ifstar\\lx@cput@i\\lx@cput@i}");
-  RawTeX!("\\def\\lx@cput@i{\\@ifnextchar[\\lx@cput@bracket{\\lx@cput@parens}}");
+  // \cput shares the runaway-safe gobbler (same delimited-`(` hazard).
+  RawTeX!("\\def\\cput{\\@ifstar\\lx@put@start\\lx@put@start}");
 
   // Box commands
   DefMacro!("\\psframebox OptionalMatch:* []{}", "#2");

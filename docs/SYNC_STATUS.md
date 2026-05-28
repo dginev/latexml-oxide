@@ -216,21 +216,25 @@ the automatic fallback subsumes each one.
   radius (a 2026-04-25 band-aid `3088dbd17` already suppresses the strict
   check during raw load). Full analysis + reproducer:
   [[project_endgroup_modeswitch_frame_leak]].
-  * **ROOT CAUSE isolated (2026-05-28, round 3):** instrumented mode-frame
-    push/pop on 1505.07999 → pspicture `begin_mode` fires 11× but env-end
-    `end_mode` only 10× — ONE pspicture's `after_digest_env`/`end_mode`
-    never runs, leaking BOUND_MODE. That pspicture (1132→1148) uniquely has
-    `\rput{90}{…}` (braced angle, NO coords). **Rust's `\rput` diverges from
-    Perl:** Rust `pstricks_sty.rs:115` `\rput * [] Pair {}` (consume-arg)
-    vs Perl `pstricks_support.sty.ltxml:879` `\rput * [] OptionalBracketed
-    ZeroPSCoord` → `\rput@start … BracketedPSAngle PSCoord` (OPEN-BOX model;
-    braced angle, OPTIONAL coords, content flows as a group). Rust misparses
-    `\rput{90}{content}` → unbalanced braces swallow `\end{pspicture}` so its
-    `end_mode` never runs → leak. **Fix (next focused session): faithfully
-    port Perl's `\rput`/`\rput@start` (BracketedPSAngle + ZeroPSCoord +
-    open-box) — NOT a quick signature tweak.** Verifiable on full 1505.07999
-    + `cargo test --tests` + a pstricks sample (minimal repros don't
-    trigger — state-dependent). Instrumentation reverted; recipe in memory.
+  * **FIX LANDED (2026-05-28, round 4) — `\rput`/`\cput` delimited-`(`
+    runaway.** The active `\rput` was the RawTeX redef
+    (`\def\lx@rput@parens(#1)#2{}` + `\@ifnextchar[`), whose **delimited
+    `(#1)` parameter** requires a literal `(`. For the braced-angle/no-coords
+    form `\rput{angle}{body}` there is no `(`, so TeX SCANNED FORWARD eating
+    tokens — including `\end{pspicture}` — until the next `(` anywhere later.
+    That swallowed the env end, so pspicture's `end_mode` never fired and its
+    mode-switch frame leaked → the later `\endgroup` (from `\end{proof}`)
+    tripped the BOUND_MODE check. (Confirmed via mode-frame instrumentation:
+    pspicture `begin_mode` 11× vs `end_mode` 10×.) Fix: replaced the
+    delimited-`(` defs with a runaway-safe `\@ifnextchar(` gobbler shared by
+    `\rput`/`\cput` (PEEK for `(` instead of requiring it; Perl handles this
+    via `OptionalBracketed`+`ZeroPSCoord`). Flips **1505.07999** → rc=0,
+    0 errors, 1.73 MB HTML. `cargo test --tests`: 1344 passed, 0 failed.
+    Body still dropped (the <ltx:p>-cascade workaround); faithful
+    `<ltx:g>`-with-body (port `\rput@start`/`\put@end`/`<ltx:picture>`)
+    remains a TODO. **Other `\endgroup`-cluster variants are SEPARATE root
+    causes** (theorem-env leaks `\IEEEproof`/`\proof`/`\thm`; internal_vertical
+    envs; boxing-group) — NOT fixed by this; tracked in the memory.
 * **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
   cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
   earlier characterization was wrong on the root cause: there WAS a
