@@ -133,6 +133,40 @@ Progress files preserved at `.session_state/`:
   101 errors on this paper, so we now surpass it). Valid hex/octal
   (`\char"41`→A, `"FF`→255, `'17`→15) verified unchanged.
 
+**R18 DEFERRED — two Rust-only FATALs (deep mode-stack / alignment, Perl
+completes both).** Found via a fresh sample of the offset-18 remaining
+slice. Both are "clear aborts" but in core areas where a naive guard
+breaks well-formed input, so they need dedicated, regression-tested work
+rather than a stopgap:
+  * **2009.01572 `Workshop_Secure_…tex` (IEEEtran) —
+    `Fatal:TargetUnexpected:Endgroup "attempt to pop last locked stack
+    frame"`, Perl=1 err completes.** Trigger: a **bare `\endIEEEproof`**
+    at line 570 with no matching `\begin{IEEEproof}` (author error; the
+    two real proofs at L308/L359 are balanced). Path:
+    `\endIEEEproof` constructor → `end_mode` → `end_mode_opt`
+    (stomach.rs ~674) → `pop_stack_frame(false)` → `state::pop_frame`
+    FATAL on the locked document frame. Perl reaches `endMode`'s
+    recover-branch (its locked frame's `BOUND_MODE` does not match) and
+    emits a recoverable "Attempt to end mode" error, completing. Our
+    mode-stack leaves `BOUND_MODE` matching on the locked frame, so we
+    take the pop branch. ATTEMPTED FIX (reverted): routing a locked top
+    frame (`get_frame_depth()==0`) to `end_mode_opt`'s recover-branch —
+    but that ALSO blocks the *legitimate* `\end{document}` mode-end and
+    broke `can_convert_hello`. Real root cause = why our locked-frame
+    `BOUND_MODE` matches when Perl's doesn't (deep mode-stack state
+    divergence). Needs careful work; do not blanket-guard `end_mode`.
+  * **2008.13358 `main.tex` (eptcs + mathpartir) —
+    `Fatal:Stomach:Recursion`, Perl=29 err completes.** Inside an
+    amsgather (`\@@amsgather`), `\lx@hidden@noalign` whatsits accumulate
+    on `invoke_token`'s `token_stack` past `MAXSTACK` (~190 deep). Bisected
+    to a `\label{sec:…}` (sess-type-proc.tex L321) after ~10 `gather`s
+    each carrying `\nonumber\\`/`\label` (which wrap in
+    `\lx@hidden@noalign`); the alignment absorption code
+    (tex_tables.rs ~793) recurses through them instead of consuming
+    iteratively. Perl's halign absorbs them without unbounded
+    `invoke_token` nesting. Needs an alignment-internals fix (sensitive;
+    adjacent to math-id/ASF).
+
 ### R17 fixes (2026-05-28)
 
 * **`ltx:_CaptureBlock_` content-model parity** (`<commit 1cf95cb583>`) — our
