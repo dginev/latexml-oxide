@@ -965,8 +965,26 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
-### R17 fixes (2026-05-28)
+### R16/R17 fixes (2026-05-28)
 
+* **chemformula stub now mirrors `\RequirePackage{...xfrac,nicefrac}`**
+  (`<this commit>`) — the real `chemformula.sty` L29 does
+  `\RequirePackage{tikz,amsmath,xfrac,nicefrac}`, so loading chemformula makes
+  `\sfrac` (from xfrac) available to the document. Perl has NO chemformula
+  binding: it raw-loads `chemformula.sty` and pulls in xfrac → `\sfrac`. Rust's
+  `chemformula_sty.rs` stub (which maps `\ch`→mhchem `\ce`) preloaded only
+  mhchem/l3keys2e/xparse and OMITTED xfrac, so a paper that loads chemformula
+  and then uses `\sfrac` in *plain math* (not inside `\ch`) saw `\sfrac`
+  undefined where Perl had it. Added `RequirePackage!("xfrac")` +
+  `nicefrac` to the stub (NOT tikz — the stub renders via `\ce`, not
+  chemformula's tikz arrows). **Witness 2006.07679** (siunitx + chemformula,
+  no `\ch`; `\sfrac{\theta}{2}` in math): 1 error → **0** (667 KB HTML).
+  Considered deleting the stub for a full raw-load (Perl-faithful — Perl
+  *also* errors on `\ch`, both engines fail chemformula's expl3 body), but
+  that regressed the `chemformula_raw_l3keys` trip test (which intentionally
+  keeps `\ch`→`\ce` content-preserving, surpassing Perl). Extending the stub's
+  RequirePackage to match the package's own declared deps is faithful and
+  keeps both behaviors. `cargo test --tests` 1344/0.
 * **`\catcode`/`\lccode`/`\uccode`/`\sfcode` Unicode codepoint truncation**
   (`<this commit>`) — these char-code registers (`tex_character.rs`)
   converted their numeric char-code argument with `(value_of() as u8) as
