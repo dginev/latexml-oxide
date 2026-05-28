@@ -834,6 +834,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("sidecap", "sty", package::sidecap_sty::load_definitions),
   ("siunitx", "sty", package::siunitx_sty::load_definitions),
   ("showkeys", "sty", package::showkeys_sty::load_definitions),
+  ("showexpl", "sty", package::showexpl_sty::load_definitions),
   (
     "underscore",
     "sty",
