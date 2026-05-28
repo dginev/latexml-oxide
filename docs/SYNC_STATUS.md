@@ -752,6 +752,22 @@ See `latexml_core/src/binding/content.rs::load_class` (commit landing
   `DefConstructor` accepts it). Engine work, deferred — needs broader
   audit of `DefPrimitive` call sites that might benefit.
 
+### Deferred Rust-only: `to_string`-space-loss class (control-word + letter merge)
+
+A recurring engine pattern: code that serializes a token list to a
+string and re-tokenizes drops the inter-token space that separates a
+control word from a following letter, merging e.g. `\rm S`→`\rmS`,
+`\vb h`→`\vbh`. Confirmed instances:
+* **physics `\dmat`/`\admat`** — FIXED `9e5ab794e1` by splitting at the
+  token level (`split_tokens`) instead of `to_string()`+re-`Tokenize!`.
+* **`\rmS` via `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`**
+  — DEFERRED. Witness 2005.06712 (CONVERR_1, `\rmS` "at Anonymous
+  String"). The `{\rm S}` refnum flows through the refnum/`\@currentlabel`/
+  label-ref serialization and collapses to `\rmS`. Needs the exact
+  re-tokenize site in the label/ref path identified (latex_constructs
+  refnum handling / counter dialect). General fix: preserve the
+  control-word boundary space wherever refnums are string-round-tripped.
+
 ### Deferred Rust-only investigation: fundam.cls raw-load drops late `\def`s
 
 Witness 2005.04818 (`\documentclass{fundam}`, Fundamenta Informaticae,
