@@ -462,6 +462,7 @@ pub mod varioref_sty;
 pub mod varwidth_sty;
 pub mod verbatim_sty;
 pub mod vmargin_sty;
+pub mod vntex_sty;
 pub mod wasysym_sty;
 pub mod wiki_sty;
 pub mod wrapfig_sty;
