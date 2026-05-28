@@ -278,7 +278,10 @@ low-MAXSTACK — verified 5000 still overflows for the noalign case):
      was `\lx@eqnarray@save@label` GLOBAL-saving the mutable `\label`
      (which is the noalign wrapper under nested align/gather) instead of
      the immutable canonical `\lx@label`. Not an alignment-internals
-     nesting issue. (Re-test 2009.09721 with current binary.)
+     nesting issue. **2009.09721 re-tested on the current binary: full
+     `cortex_worker` success — 583 KB main.html, 0 errors (528 warnings),
+     no recursion.** 2008.13358 CLI is clean too but its worker path is
+     still blocked by the independent xy.sty re-entrance (mechanism 2).
   2. **xypic `\lx@xy@svg`** — 2009.05542 (Perl=0, clean Rust-only).
      `\xy` is wrapped (Perl xy.tex.ltxml L148-151, ours identical):
      `\xy → \if\inxy@ \lx@xy@svgnested \else \lx@xy@svg \fi \lx@xy@original`.
