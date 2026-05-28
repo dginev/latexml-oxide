@@ -199,6 +199,24 @@ Progress files preserved at `.session_state/`:
   **1604.07054, 1808.04014** (both `\documentclass{mnras}`+rotfloat) →
   rc=0, 0 errors. Perl baseline: rc=0, 485 KB / 605 KB. cargo test
   --tests: 1344 passed, 0 failed.
+* **FIX LANDED — pstricks `\Cnode`/`\cnode` undefined (pst-all missing
+  pst-node dep + wrong node signatures).** Two-part fix for the
+  `\usepackage{pst-all}` + `\Cnode(x,y){name}` cluster (6 papers:
+  1509.04932, 1509.06412, 1604.02906, 1604.02908, 1705.00191, 1809.03593).
+  (1) `pst_all_sty.rs` did `RequirePackage!("pstricks")` and inlined a few
+  nc-* macros but never loaded pst-node — yet pst-all.sty L23 does
+  `\RequirePackage{pst-node}`. Added `RequirePackage!("pst-node")` (loads
+  our clean binding, not raw .sty). (2) `pst_node_sty.rs` `\cnode[]{}` /
+  `\Cnode[]{}` had the WRONG signature — PSTricks node macros take a
+  `(coord)` (Perl: `\cnode='ZeroPSCoord {PSDimension} {}'`,
+  `\Cnode='ZeroPSCoord {}'`), so the old `[]{}` left `(x,y)` unconsumed
+  and `\Cnode(1,1){000}` leaked "1,1)". Fixed to
+  `\cnode * [] () {} {}` / `\Cnode * [] () {}`. All 6 → rc=0, 0 errors;
+  Perl baseline also rc=0 (1509.04932: 334 KB). cargo test --tests: 1344
+  passed, 0 failed. NOTE: triage gotcha — these papers are single-file
+  ISO-8859 `.tex`; `grep -l documentclass` treats them as binary and
+  returns empty, so always pass the explicit filename to Perl (a bogus
+  rc=1/empty-output is a harness artifact, not a Perl failure).
 * **DEFERRED — `\autrun` cluster (4 papers, ar5iv-specific, elusive).**
   1509.01533/1509.04088/1602.03020/1804.10461 redefine `\author` to set
   `\autrun` as a side-effect (`\def\author#1{\gdef\autrun{...}...}`), then

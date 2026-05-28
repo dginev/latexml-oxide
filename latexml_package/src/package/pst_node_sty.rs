@@ -41,8 +41,15 @@ LoadDefinitions!({
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
   def_macro_noop("\\pnode[]")?;
-  def_macro_noop("\\cnode[]{}")?;
-  def_macro_noop("\\Cnode[]{}")?;
+  // PSTricks node macros take a `(coord)` argument, not `[...]`. Perl
+  // pst-node.sty.ltxml: \cnode = 'ZeroPSCoord {PSDimension} {}'
+  // (coord, radius, name); \Cnode = 'ZeroPSCoord {}' (coord, name).
+  // The old `[]{}` signatures left the `(x,y)` coord unconsumed, so
+  // `\Cnode(1,1){000}` leaked "1,1)" as body text. Consume the optional
+  // `[par]`, the `(coord)`, then the braced args (mirrors the
+  // `\cnodeput ... [] () {} {}` pattern in pst_all_sty.rs).
+  def_macro_noop("\\cnode OptionalMatch:* [] () {} {}")?;
+  def_macro_noop("\\Cnode OptionalMatch:* [] () {}")?;
   DefMacro!("\\circlenode[]{}{}", "#3");
   DefMacro!("\\ovalnode[]{}{}", "#3");
   def_macro_noop("\\fnode OptionalMatch:* []{}")?;

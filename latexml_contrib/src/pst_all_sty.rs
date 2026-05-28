@@ -24,10 +24,16 @@ LoadDefinitions!({
   // remain unstubbed for now (papers that use them get undefined-CS
   // warnings but not fatals).
   RequirePackage!("pstricks");
-  // pst-node sub-package — node-connection macros. Common ones
-  // come from witness 1402.6510 (315 \rput + 135 \cnode + nc-line
-  // chain). We don't render the lines, but consume args to avoid
-  // undefined-CS cascade.
+  // pst-all.sty L23 does `\RequirePackage{pst-node}`. Load our pst-node
+  // binding (a clean stub — NOT the raw .sty) so node macros
+  // (`\Cnode`/`\cnode`/`\rnode`/nc-*/…) resolve with correct
+  // `(coord)`-consuming signatures. Without it, `\Cnode(1,1){000}` →
+  // `undefined:\Cnode` (witness 1509.04932/1604.02906/1809.03593/…).
+  RequirePackage!("pst-node");
+  // A few connection macros below are kept as belt-and-suspenders for
+  // the rare paper that loads pst-all but somehow not pst-node; pst-node
+  // (loaded above) already defines these, so these are redundant
+  // overrides with the same no-op behavior.
   DefMacro!("\\ncline OptionalMatch:* [] {} {}", "");
   DefMacro!("\\nccurve OptionalMatch:* [] {} {}", "");
   DefMacro!("\\ncarc OptionalMatch:* [] {} {}", "");
