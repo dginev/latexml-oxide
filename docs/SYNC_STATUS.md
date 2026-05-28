@@ -157,14 +157,26 @@ Progress files preserved at `.session_state/`:
   hits its 100-error cap. 1510.04473 was the lone clear Rust-only case
   (now fixed above).
 
-* **R19 DEFERRED — 1804.01117 pgffor `\pgffor@values` self-ref cascade
-  (Rust-only).** A second, broader sweep (every 90th of `remaining`,
-  ~3005 papers, `-P 10`) surfaced this. `\usepackage{tikz}` with a
-  complex/malformed `\foreach` (the source has a typo at main.tex L83:
-  `…/\colorII\shapeIII/…`, a MISSING `/`). Perl completes with 39 errors
-  (27 `expected`, 11 `unexpected`, **0 recursion**); Rust hits the
-  100-error cap → `FATAL_3`. Our cluster: 90× `\lx@end@inline@math`, 83×
-  `Error:recursion:\pgffor@values`, 25× `fi`. Trace
+* **CORRECTION: 1804.01117 is SHARED, not Rust-only.** Perl reports
+  `Conversion complete: 39 errors` but its **output is 39 bytes (empty
+  document)** — "complete" in Perl does NOT mean real output; Perl can
+  finish with errors and an empty `<document/>`. So neither engine
+  produces usable HTML for this paper (Rust FATALs at the 100-error cap;
+  Perl emits 39 errors + empty doc). **Triage lesson:** when checking
+  Perl as ground truth, verify Perl's **output byte size / element
+  count**, not just its `complete` vs `failed` status — otherwise an
+  empty-but-"complete" Perl run masquerades as a Rust-only win. (Both
+  fresh sweeps ultimately found **zero clean Rust-only failures**: every
+  genuine residual converts to empty/failed in Perl too.) The pgffor
+  analysis below is retained because the *runaway* is still a Rust
+  reliability quirk worth hardening, but fixing it would NOT make the
+  paper succeed (Perl doesn't either).
+
+  **pgffor `\pgffor@values` self-ref cascade (deep, low priority).**
+  `\usepackage{tikz}` with a complex/malformed `\foreach` (source typo at
+  main.tex L83: `…/\colorII\shapeIII/…`, a MISSING `/`). Our cluster: 90×
+  `\lx@end@inline@math`, 83× `Error:recursion:\pgffor@values`, 25× `fi`.
+  Trace
   (`DBG_RECUR_GUARD` in expandable.rs): the guard fires because
   `\pgffor@values`'s body is *genuinely* `\pgffor@values, \pgffor@stop,`
   (self-referential first token) under full expansion — so the guard is
@@ -181,6 +193,16 @@ Progress files preserved at `.session_state/`:
   single rare paper, source-typo-triggered, Perl also degrades (39 err),
   so low priority. Do NOT weaken the recursion guard (it's faithful to
   Perl Expandable.pm L81-89 and is correctly catching a real self-ref).
+
+* **1910.03372 — SHARED (tikz-load runaway vs Perl empty).** scrartcl +
+  `xint`/`xinttools`/`xintexpr` + `braket`/`bbold`/`txfonts` + tikz. Rust:
+  `Error:pushback_limit:Timeout (650000 exceeded, infinite loop?)` while
+  loading `tikz.sty` → 60 s wall-clock FATAL, no output. Perl: 87 errors,
+  13 undefined pgf macros (`\pgfkeys`, `\pgfmath@def`, `\pgffor@var`…),
+  **39-byte empty output**. Neither produces HTML — the xint/pgf package
+  combo defeats both engines' tikz raw-interp. Rust's runaway/timeout is a
+  reliability quirk worth eventual hardening (pushback-limit instead of
+  graceful degradation), but it is NOT a Rust-only win.
 
 * **Fresh sweep of unseen `remaining` papers (current binary): clean.** A
   1500-paper sample (every 180th of `canvas3_round37_remaining.txt`)
