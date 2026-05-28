@@ -118,7 +118,23 @@ Progress files preserved at `.session_state/`:
 
 ### R17 fixes (2026-05-28)
 
-* **`\@checkend` stray-brace removal** (`<this commit>`) — Perl
+* **thmtools: drop divergent native `restatable`, require thm-restate**
+  (`<this commit>`) — Perl `thmtools.sty.ltxml` defines no `restatable`
+  env (it comes solely from `thm-restate.sty`), and the real
+  `thmtools.sty` L47-49 does `\RequirePackage{thm-patch, thm-kv,
+  thm-restate}`. Our `thmtools_sty.rs` had added a native
+  `DefEnvironment!("{restatable}…")` that (a) diverged from Perl and (b)
+  blocked thm-restate's clean `\newenvironment{restatable}` — LaTeX's
+  `\newenvironment` refuses to redefine an existing env, so loading
+  thmtools-then-thm-restate left the buggy native version active. That
+  version digested the store-name arg (3rd) in text mode, so a name with
+  `_` (e.g. `two_var_indp`) raised `unexpected:_ Script _ can only appear
+  in math mode` once per use. Removed the native env and added
+  `RequirePackage!("thm-restate")` so `\usepackage{thmtools}` still
+  provides `restatable` (matching the real package). Witness 2007.12335
+  (`\begin{restatable}{theorem}{two_var_indp}`: 9 errors → clean,
+  matching Perl).
+* **`\@checkend` stray-brace removal** (`8ca20da419`) — Perl
   `latex_constructs.pool.ltxml` L190 transcribed the LaTeX-kernel
   `\def\@checkend#1{…\fi}` *including* the `\def`'s closing `}` into the
   `DefMacro` body, so every `\@checkend{env}` emits an unmatched `}`.
