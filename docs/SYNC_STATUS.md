@@ -116,6 +116,71 @@ Progress files preserved at `.session_state/`:
 | R13 | 9938/10000 | 62 (CONVERR + 5 FATAL_3 + 5 TIMEOUT) | 99.38% | 5 more session fixes during R13 run: babel `\shorthandoff`/`\shorthandon` no-ops (`7099448f93`, 6 papers); typearea.sty no-op stub + `\areaset` (`69aa20604f`, 3 papers — scrbase `unknown option` cluster); ctable deps fix pulling in booktabs/array/tabularx etc. (`8fb3915f0c`, 4 papers — `\toprule`/`\midrule`/`\bottomrule` via transitive dep); expl3 `\hbox_unpack_clear:N`→`\hbox_unpack_drop:N` deprecated alias (`ae90d88ec8`, 8 papers — mmacells.sty); tocbibind all 5 `\if@dotoc*` conditionals (`fae578be43`, 1 paper); mdframed `\newmdenv`/`\renewmdenv` faithful definer (`473cd8af66`, surpass-Perl, witness 2002.06879) |
 | R14 | 9955/10000 | 45 (CONVERR + 2 FATAL_3 + 1 TIMEOUT) | 99.55% | 6 more session fixes during R14 run: showexpl.sty stub w/ real deps + no-op API (`2e57ac693a`, 15 papers — `\SX@put@code@result`); mdpi.cls deps natbib/multirow/tabularx/makecell/colortbl + `\tablesize`/`\fulllength`/`\endnote` (`e31810aaf1`, witness 2003.10420); vntex.sty→T5 Vietnamese encoding (`96aec2dfc8`, 3 papers — `\ecircumflex`/`\h`); **constants.sty no-op stub — 70-paper cluster** (`0302a3292c`, raw `\input\jobname.aux` with no runtime `\@mainaux`); amsmath `\tagform@` faithful surpass-Perl (`8710ae735a`, witness 2004.10115); physics `\dmat`/`\admat` token-level split (`9e5ab794e1`, witness 2004.07845 — `\vbh`/`\tildeN` from string round-trip). 3 SHARED-FAILUREs logged (2003.13371/2004.03095/2003.12614). |
 
+### ACTIVE REFACTOR (task #273, opened 2026-05-28): OmniBus → article + support packages
+
+**User directive + WISDOM #55.** `OmniBus.cls` is a LAST-RESORT fallback
+for *unknown* classes — never a base dependency for a class we have a
+`.rs` binding for. Switch every `_cls.rs`/`_sty.rs` that does
+`LoadClass!("OmniBus")` (53 bindings as of audit) to `LoadClass!("article")`
++ the binding's specific needs, using the class's real canvas papers and
+**the original Perl LaTeXML's structure** as ground truth. DRY is
+preferred — a small shared helper is healthy.
+
+**Perl's model (mirror it).** Perl class bindings do `LoadClass('article')`
++ `RequirePackage('<family>_support')`. Existing Perl support packages
+(all ported to Rust): `sv_support` (Springer: +inst_support +natbib
++`\spnewtheorem` +std theorems +email/keywords), `inst_support`
+(authors/affiliations/`\institute`/`\inst`), `ams_support`,
+`aas_support`, `aa_support`, `elsart_support`, `iopart_support`,
+`mn2e_support`, `revtex3/4_support`, `icml_support`.
+
+**Done (verified template).** `svproc` → `article` + `sv_support` +
+amsmath/xcolor/hyperref + svproc specifics (commit `ce6ecb16c7`). Mirrors
+Perl svjour/svmult. 1706.04315/1707.03222 stay rc=0/0-err; theorem autoload
++ `\let\proof\relax` idiom clean; 1344 tests pass. Also landed the
+underlying bug fix first: svproc/imsart dropped their eager
+`RequirePackage!("amsthm")` (commit `10e819ea1b`) — eager amsthm broke
+`\let\proof\relax`+`\usepackage{amsthm}` (the paper's load no-ops →
+`\proof` stays `\relax` → `{proof}` undefined; witness 1707.03222,
+1612.03054). Both convert clean in Perl.
+
+**KEYSTONE TODO (next): create `journal_support` helper.** Most of the 52
+remaining classes are "OmniBus + amsmath + amsthm + xcolor + hyperref +
+a few class frontmatter macros" and rely on OmniBus ONLY for generic
+frontmatter (`\email`/`\affil`/`\keywords`/`\editors`/`\received`/...) +
+**lazy theorem autoload** (bare `article` gives `undefined:{theorem}` —
+verified). Perl itself has no binding for these (they're OmniBus-fallback
+in Perl), so there's no Perl support pkg to mirror → create a Rust
+`journal_support` = OmniBus's SAFE-ADDITIVE extract:
+  * INCLUDE: the `\@add@frontmatter`-based frontmatter macros
+    (omnibus_cls.rs L120-505 — email/ead/affil/address/keywords/kword/
+    shorttitle/shortauthors/editors/received/revised/accepted/journal/
+    volume/doi/category/classification/...), the `\@@@email`/`\@@@affiliation`/
+    `\@@@address` constructors, the keyword envs, the lazy theorem autoload
+    (L348-444), acknowledgments (L450-475), abstract aliases.
+  * EXCLUDE (OmniBus's clashing parts — leave in OmniBus only): eager
+    `RequirePackage(inst_support/epsf/graphicx/aas_macros)` (L44-46),
+    natbib autoloads + `\bibitem` override (L49-100), `{frontmatter}`/
+    `{mainmatter}`/`{backmatter}` envs + `\frontmatter`→`\@empty` Let
+    (L101-118, clashes with book classes memoir/scrbook).
+  * **DRY**: MOVE that safe-additive block out of OmniBus into
+    journal_support, then OmniBus `RequirePackage("journal_support")` +
+    keeps its clashing extras. HIGH BLAST RADIUS (OmniBus is the unknown-
+    class fallback) — verify with a sample of OmniBus-fallback papers
+    (e.g. conm-p-l papers 1506.02177) + full test suite before/after.
+
+**Then convert the 52 in batches**, each `article` + (Perl family support
+if one fits, else `journal_support`) + the class's existing explicit
+packages + specifics; DROP the eager `amsthm` (journal_support/sv_support
+lazy autoload + the paper's own `\usepackage{amsthm}` cover it). Per-batch
+gate: `cargo test --tests` + before/after error-count+byte-size on a
+sample of each class's canvas papers (must not regress). Family hints from
+the audit: Springer→sv_support (sn_jnl, …); Elsevier→elsart_support
+(arxbj already requires it); book-like (memoir, scrbook, subfiles) need
+`book`/`report` base not article — handle individually. czjphys/tlp/
+ws_p8 raw-load their own .sty (thin OmniBus dep). imsart raw-loads
+imsart.sty (no clean family — handle individually).
+
 ### R-stage stale-data re-run + cluster triage (2026-05-28, cont.)
 
 * **R01 stage was STALE (pre-stub binary).** R01 (`stage_R01`) showed an
