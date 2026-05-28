@@ -79,13 +79,20 @@ LoadDefinitions!({
     RequirePackage!("graphics");
   }
 
-  // revtex4-1.cls L?: \providecommand\doi[0]{...} — used in bibliography
-  // entries (e.g. `\doi{10.1103/PhysRevLett.123.210602}`). Real cls wraps
-  // the doi in \@doi href but for XML we just emit the DOI as a hyperlink.
-  // Witness 2403.08476. Use Semiverbatim so `_`, `&`, `#` in DOIs (e.g.
-  // `\doi{10.1007/978-3-662-43948-7_26}` from 2112.03925) don't trigger
-  // catcode errors (`Error:unexpected:_ Script _ can only appear in math
-  // mode`) when emitted into the href text.
-  DefMacro!("\\doi Semiverbatim", "doi:\\href{https://doi.org/#1}{#1}");
+  // revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
+  // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other
+  // BEFORE the argument is read. Used in bibliography entries (e.g.
+  // `\doi{10.1103/PhysRevLett.123.210602}`). For XML we just emit the DOI
+  // as a hyperlink.
+  //
+  // `Semiverbatim` neutralizes SPECIALS (`_ & # ^ ~ $ '`) but NOT `%`, so
+  // a DOI like `10.7567%2Fjjaps...` had its `%` treated as a comment —
+  // eating the closing `}`, leaving `\doi{` unclosed and sending
+  // `readBalanced` runaway-to-EOF then an infinite pushback loop (FATAL).
+  // `HyperVerbatim` does `begin_semiverbatim(['%'])` (the `\@sanitize@url`
+  // analogue) so `%`/`_`/`&`/`#` are all literal. Witnesses: 2006.12945
+  // (`\doi{...%2F...}` → PushbackLimit FATAL; Perl raw-loads the cls and is
+  // clean), 2403.08476, 2112.03925 (`_` in DOIs).
+  DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
   DefMacro!("\\doibase",   "https://doi.org/");
 });
