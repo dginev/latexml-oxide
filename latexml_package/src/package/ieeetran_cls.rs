@@ -278,14 +278,27 @@ LoadDefinitions!({
     // exercises \IEEEQEDhere against Perl ground truth, so accepting
     // the simplification.
     //
-    // mode => internal_vertical so authors can use `$$..$$` display
-    // math inside `\begin{proof}` — `$$` is only recognized as display
-    // math when BOUND_MODE ends with "vertical" (tex_math.rs L467).
-    // The DefEnvironment default bound mode is restricted_horizontal,
-    // which makes a `$$..$$` block fail with cascading
-    // "Script _ can only appear in math mode" on each subscript inside.
-    // Witness 2303.10133 (ieeeconf paper).
-    mode => "internal_vertical");
+    // NB: Perl IEEEtran.cls.ltxml L206 declares `{IEEEproof}` with NO
+    // `mode =>`, so it stays in the ambient (restricted_horizontal)
+    // mode. We must match that. A previous `mode => "internal_vertical"`
+    // was a surpass-Perl tweak so that `$$..$$` inside `\begin{IEEEproof}`
+    // would be recognized as display math (`$$` is display only when
+    // BOUND_MODE ends with "vertical" — tex_math.rs / Perl TeX_Math L65,
+    // identical). But Perl is ground truth, and Perl does NOT treat such
+    // `$$` as display: it emits the cascading "Script _/^ can only appear
+    // in math mode" errors (verified on a synthetic IEEEproof with `$$`).
+    // Worse, the vertical mode meant `\endIEEEproof` ended `internal_vertical`,
+    // which matches the BOUND_MODE bound on the LOCKED document frame by
+    // `\begin{document}`'s `begin_mode_opt("internal_vertical")`; so a
+    // *bare* `\endIEEEproof` (author error, no matching `\begin{IEEEproof}`)
+    // popped the locked frame → `Fatal:TargetUnexpected:Endgroup "attempt
+    // to pop last locked stack frame"`, aborting the whole run (empty
+    // HTML). With no mode, `\endIEEEproof` ends restricted_horizontal,
+    // which never matches the locked frame, so Perl's recover-branch
+    // ("Attempt to end mode") fires and the run completes — matching Perl.
+    // Witness 2009.01572 (bare `\endIEEEproof` at line 570: FATAL/empty →
+    // completes, matching Perl's 1-error output).
+    );
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body

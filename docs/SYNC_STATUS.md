@@ -118,6 +118,27 @@ Progress files preserved at `.session_state/`:
 
 ### R18 fixes (2026-05-28)
 
+* **IEEEproof: drop surpass-Perl `mode => internal_vertical`**
+  (`<this commit>`) — Perl `IEEEtran.cls.ltxml` L206 declares
+  `{IEEEproof}` with NO `mode`, leaving it in the ambient
+  restricted_horizontal. Our binding had added `mode => internal_vertical`
+  so `$$..$$` inside `\begin{IEEEproof}` would parse as display math.
+  But Perl's dollar handler is identical (`$$` is display only in a
+  vertical bound mode), and Perl does NOT treat such `$$` as display —
+  it emits the cascading "Script _/^ can only appear in math mode" errors
+  (verified on a synthetic IEEEproof+`$$`). So the tweak was a surpass-
+  Perl divergence. Worse, the vertical mode made `\endIEEEproof` end
+  `internal_vertical`, which matches the BOUND_MODE that
+  `\begin{document}` binds on the LOCKED frame — so a *bare*
+  `\endIEEEproof` (author error, no matching begin) popped the locked
+  frame → `Fatal:TargetUnexpected:Endgroup`, aborting the run with empty
+  HTML. Removing the mode: `\endIEEEproof` ends restricted_horizontal
+  (never matches the locked frame) → Perl's recover-branch fires →
+  completes. Witness 2009.01572 (bare `\endIEEEproof` at L570): FATAL /
+  0-byte HTML → "Conversion complete: 1 error" with 367 KB HTML, matching
+  Perl exactly; `$$`-in-IEEEproof now matches Perl's 3-error output.
+  Full test suite green (53 binaries). Resolves the R18-DEFERRED
+  2009.01572 entry below.
 * **`read_normal_integer`: empty octal/hex → 0 (not fatal)**
   (`<this commit>`) — `gullet::read_normal_integer` parsed `'`/`"`
   number prefixes via `i64::from_str_radix(&read_digits(...)?, N)?`,
@@ -133,28 +154,15 @@ Progress files preserved at `.session_state/`:
   101 errors on this paper, so we now surpass it). Valid hex/octal
   (`\char"41`→A, `"FF`→255, `'17`→15) verified unchanged.
 
-**R18 DEFERRED — two Rust-only FATALs (deep mode-stack / alignment, Perl
-completes both).** Found via a fresh sample of the offset-18 remaining
-slice. Both are "clear aborts" but in core areas where a naive guard
-breaks well-formed input, so they need dedicated, regression-tested work
-rather than a stopgap:
-  * **2009.01572 `Workshop_Secure_…tex` (IEEEtran) —
-    `Fatal:TargetUnexpected:Endgroup "attempt to pop last locked stack
-    frame"`, Perl=1 err completes.** Trigger: a **bare `\endIEEEproof`**
-    at line 570 with no matching `\begin{IEEEproof}` (author error; the
-    two real proofs at L308/L359 are balanced). Path:
-    `\endIEEEproof` constructor → `end_mode` → `end_mode_opt`
-    (stomach.rs ~674) → `pop_stack_frame(false)` → `state::pop_frame`
-    FATAL on the locked document frame. Perl reaches `endMode`'s
-    recover-branch (its locked frame's `BOUND_MODE` does not match) and
-    emits a recoverable "Attempt to end mode" error, completing. Our
-    mode-stack leaves `BOUND_MODE` matching on the locked frame, so we
-    take the pop branch. ATTEMPTED FIX (reverted): routing a locked top
-    frame (`get_frame_depth()==0`) to `end_mode_opt`'s recover-branch —
-    but that ALSO blocks the *legitimate* `\end{document}` mode-end and
-    broke `can_convert_hello`. Real root cause = why our locked-frame
-    `BOUND_MODE` matches when Perl's doesn't (deep mode-stack state
-    divergence). Needs careful work; do not blanket-guard `end_mode`.
+**R18 DEFERRED — one Rust-only FATAL (alignment recursion, Perl
+completes).** Found via a fresh sample of the offset-18 remaining slice.
+  * ~~**2009.01572** — RESOLVED~~ (see R18 fixes above: the locked-frame
+    pop was a *symptom* of IEEEproof's surpass-Perl `internal_vertical`
+    mode, NOT a deep mode-stack divergence. The earlier
+    `end_mode`-guard attempt was the wrong layer; removing the env-mode
+    fixed it at the source. Lesson: when a bare env-end CS pops the
+    locked frame, suspect the env's `mode =>` matching the
+    document-body bound mode before suspecting `pop_frame`/`end_mode`.)
   * **2008.13358 `main.tex` (eptcs + mathpartir) —
     `Fatal:Stomach:Recursion`, Perl=29 err completes.** Inside an
     amsgather (`\@@amsgather`), `\lx@hidden@noalign` whatsits accumulate
