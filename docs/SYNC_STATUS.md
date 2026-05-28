@@ -249,6 +249,24 @@ Progress files preserved at `.session_state/`:
   Flips **1504.02564, 1608.07117, 1704.01862, 1708.07230, 1712.06479** →
   rc=0, 0 errors (Perl baseline 1504.02564: 1.7 MB). cargo test --tests:
   1344 passed, 0 failed.
+* **FIX LANDED — morefloats "Too many floats requested" (moot float-
+  register capacity).** morefloats.sty raises LaTeX's unprocessed-float
+  limit; its body (L76+) computes "free" classic-TeX registers as
+  `234 - max(\count10,\count11,\count12,\count14)` (L271-274) and errors
+  when the requested float count exceeds it. That assumes the pre-eTeX
+  256-register pool; our XML pipeline has NO float-box register pool
+  (floats → `<ltx:float>`, unlimited), and our `\count10` allocation
+  high-water-mark (~214 after the kernel — verified, vs ~30-90 in real
+  LaTeX article; possible deeper over-allocation, noted for future) makes
+  `234 - \count10` tiny → any `maxfloats=N` trips the cap. Pure
+  typesetting-capacity `\PackageError`, moot (WISDOM #50). Perl skips
+  morefloats (missing_file, deps-scan only) → clean. morefloats exports NO
+  user macro (the 3 papers call none), so a no-op preserves all content.
+  Fix: new contrib stub `morefloats_sty.rs` replicating morefloats.sty
+  L63-74 (kvoptions option-handling prefix, so `[maxfloats=120]` is
+  consumed) but OMITTING the moot capacity body (L76+). Flips
+  **1504.06174, 1605.06159, 1607.05324** → rc=0, 0 errors (Perl baseline
+  1504.06174: 1.18 MB). cargo test --tests: 1344 passed, 0 failed.
 * **DEFERRED — `\crvi` cluster (3 papers: 1603.04650, 1704.02401,
   1804.00017; xy-pic curved arrows).** `\usepackage[all,tips]{xy}` +
   `\ar@/^15pt/[rr]^{...}` (the `@/.../` curve modifier) → `\crvi`

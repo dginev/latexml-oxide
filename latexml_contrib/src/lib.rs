@@ -106,6 +106,7 @@ pub mod mdframed_sty;
 pub mod memoir_cls;
 pub mod mhchem_sty;
 pub mod minted_sty;
+pub mod morefloats_sty;
 pub mod mnsymbol_sty;
 pub mod mssymb_tex;
 pub mod needspace_sty;
@@ -370,6 +371,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("memoir", "cls", memoir_cls::load_definitions),
   ("mhchem", "sty", mhchem_sty::load_definitions),
   ("minted", "sty", minted_sty::load_definitions),
+  ("morefloats", "sty", morefloats_sty::load_definitions),
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
