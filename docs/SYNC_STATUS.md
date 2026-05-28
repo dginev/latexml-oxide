@@ -232,9 +232,20 @@ the automatic fallback subsumes each one.
     0 errors, 1.73 MB HTML. `cargo test --tests`: 1344 passed, 0 failed.
     Body still dropped (the <ltx:p>-cascade workaround); faithful
     `<ltx:g>`-with-body (port `\rput@start`/`\put@end`/`<ltx:picture>`)
-    remains a TODO. **Other `\endgroup`-cluster variants are SEPARATE root
-    causes** (theorem-env leaks `\IEEEproof`/`\proof`/`\thm`; internal_vertical
-    envs; boxing-group) — NOT fixed by this; tracked in the memory.
+    remains a TODO.
+  * **Cluster now at NEAR-PARITY (Perl comparison, round 5).** Of the ~12
+    remaining `\endgroup` papers, MOST are **SHARED** — Perl errors
+    identically (1510.07020 `\IEEEproof` Perl 13; 1709.00807 & 1612.02968
+    same `\endgroup`; 1611.05278 Perl 101; 1512.03809 Perl 2; 1610.05482/
+    1611.04940/1702.02037/1702.06692 Perl ≥1). The ONE clearly Rust-only
+    case left is **1606.03691** (`amsart` + bare-used `\newtheorem{rem}`:
+    `\rem text` w/o `\end{rem}` → unclosed theorem's internal_vertical mode
+    frame leaks to `\end{sloppypar}`'s `\endgroup`; Perl rc=0). Root cause:
+    XML `Tag autoClose` closes `<ltx:theorem>` but the STOMACH `begin_mode`
+    frame isn't popped when an open env is auto-closed by a sibling/enclosing
+    block (`\begin{thebibliography}`). Delicate (touches all theorem/list
+    envs) + 1-paper malformed-usage edge → deferred (needs Perl-tracing of
+    where the rem frame is popped). Memory has the full analysis.
 * **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
   cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
   earlier characterization was wrong on the root cause: there WAS a
