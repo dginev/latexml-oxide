@@ -1000,6 +1000,15 @@ latex dump (~7.4 → ~3.7 MB).
 3. SVG viewBox / total width differs slightly.
 4. matrix uses `<svg:g class="ltx_tikzmatrix">` (Rust) vs inline-blocks
    (Perl).
+5. **`svg:g` directly in `<ltx:block>` core-XML validity error** —
+   tikz-cd diagrams emit a bare `svg:g` into an `ltx:block` without the
+   wrapping `svg:svg`, tripping `malformed:svg:g isn't allowed in
+   <ltx:block>` during core conversion. Post-processing recovers (final
+   HTML has well-formed `<svg>`), so the conversion still produces
+   output — but the intermediate XML is schema-invalid. Witness
+   2006.12702 (`\usepackage{tikz-cd}`, CONVERR — 6 occurrences).
+   Rust-only core-construction issue in the tikz→SVG path; lower
+   priority since output is recovered.
 
 ## Permanent ignores
 
