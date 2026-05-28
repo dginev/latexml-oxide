@@ -153,6 +153,29 @@ Progress files preserved at `.session_state/`:
   worker's require_package re-entrance guard short-circuits a legitimate
   xy/xypic load, and (b) why xy.tex raw-load is preamble-sensitive.
 
+  **Deeper trace (2026-05-28).** The re-entrance fires from
+  `xy_sty.rs` ~L95: the `\xyoption{curve}` handler **directly**
+  `input_definitions("xycurve", noltxml, tex)` (a Rust workaround for
+  Perl's `\xyinputorelse@` chain, which "evaluates strangely" in our
+  pipeline — see comment xy_sty.rs L82-88). The real
+  `xycurve.tex` L23 is `\ifx\xyloaded\undefined \input xy \fi` (xy's own
+  re-load guard). In the worker `\xyloaded` is *undefined* at that point
+  → `\input xy` fires → resolves to the `("xy","tex")=xy_sty` binding →
+  re-enters the xy/xypic load → IN_PROGRESS short-circuit → xy left
+  half-loaded. In the CLI `\xyloaded` is defined there → `\input xy`
+  skips → no re-entrance. Likely cause: xy.tex L23 `\let\xyloaded=\relax`
+  is a LOCAL assignment; if our `InputDefinitions` (xy_sty L36, main
+  xy.tex) wraps the load in a group that pops before the `\xyoption`
+  handlers run, `\xyloaded` is lost — and the worker's option-processing
+  timing differs from the CLI's. Candidate fixes for a dedicated session:
+  (i) make xy.tex's `\xyloaded` marker survive (global), or set it before
+  the feature-file `input_definitions` in xy_sty so xycurve's `\input xy`
+  guard skips; (ii) make `\input xy` (the TeX primitive) load the raw
+  self-guarding file rather than the `("xy","tex")` binding; (iii) align
+  the `("xy","tex")`/`("xy","sty")` `_loaded` guard keys so a 2nd entry
+  is a true no-op. The CLI recursion (the committed R19 fix) is
+  orthogonal and verified.
+
 ### R18 fixes (2026-05-28)
 
 * **IEEEproof: drop surpass-Perl `mode => internal_vertical`**
