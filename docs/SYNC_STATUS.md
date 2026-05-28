@@ -170,6 +170,19 @@ Progress files preserved at `.session_state/`:
   independent of the CS). Witness 2007.06927 (CONVERR_1→clean), both
   declaration and environment forms verified.
 
+**R17 SHARED (not actionable) — `^`/`_`/XMApp-in-emph cluster.** The
+remaining R17 CONVERR tail is dominated by `Error:unexpected:^`/`_
+Script can only appear in math mode` plus `malformed:ltx:XMApp/XMWrap
+isn't allowed in <ltx:emph>` — all **SHARED with Perl** (author errors:
+real `^`/`_` math symbols typed in text/emph without `$…$`). Verified
+Perl produces the *identical* error counts on the worker's actual main
+file (NB: several of these zips ship multiple `\documentclass` files —
+classify against the LARGEST/worker-selected main, not the first
+alphabetically): 2007.06816 (Perl 9), 2008.00074 (12), 2007.09876 (11),
+2008.00163 (15, `FUSED_JMLR_Omni_arxiv_June16.tex` not `jmlr_sample.tex`),
+2007.07599 (11, svjour3), 2007.15143 (10). Do **not** re-investigate as
+Rust-only.
+
 ### R15–R16 fixes (2026-05-28)
 
 Engine/binding fixes landed driving the remaining-list canvas through
