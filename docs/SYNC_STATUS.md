@@ -133,6 +133,19 @@ Progress files preserved at `.session_state/`:
   CPU-contention false positives); **3 rc=1** (`not_tex_source` PDF / empty
   source — correct rejects). Spot-checked 6+ across patterns: every one is
   SHARED (Perl empty/over-cap/hangs). No new Rust-only conversion failure.
+  **Timeout (rc=124) triage (isolation re-test of the 7 cases):** 4 are
+  CPU-contention false timeouts (0708.3398 21 s, 1009.3622 43 s,
+  1210.6239 13 s complete standalone; 1001.3154 = empty input;
+  hep-ph0012156 = 12.7k math, slow-but-completes). The 2 genuinely slow
+  (>60 s standalone) are SHARED: 1202.2643 (Rust >300 s, but **Perl also
+  fails** — 1 fatal at 20 s, no output) and 1302.3919 (Rust >300 s; **Perl
+  completes but in 137 s**, itself over the 120 s canvas budget — both
+  time out in the canvas). So no clean Rust-only-timeout-where-Perl-
+  converts-in-time. The first-500K + round-37 failure space is fully
+  triaged: **every residual is SHARED, a degenerate input, or a
+  contention artifact — zero actionable Rust-only conversion failures.**
+  (Note: 1302.3919 shows Rust ~2× slower than Perl on a math-heavy doc —
+  a perf gap, not a correctness bug, and SHARED-slow at the 120 s budget.)
 
 * **Early-years (first-500K) fresh sweep: clean.** A 2491-paper sample
   (every 200th `.zip` across year dirs 0001–1412) found **1 failure**:
