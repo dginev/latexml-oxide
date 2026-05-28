@@ -12,8 +12,19 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("xcolor");
   def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
-  def_macro_noop("\\newmdenv[]{}")?;
-  def_macro_noop("\\renewmdenv[]{}")?;
+  // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
+  // `mdframed` (mdframed.sty L578-585:
+  //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).
+  // `\mdfsetup` is our no-op, so the body reduces to a mdframed wrapper.
+  // Surpass-Perl: ar5iv-bindings/mdframed.sty.ltxml L22 also no-ops this,
+  // leaving the user's custom env undefined (Perl then errors with
+  // `{name} is not defined`). Faithfully porting the real definer makes
+  // the custom env work. Witness arXiv:2002.06879
+  // (`\newmdenv[...]{mdfigure}` then `\begin{mdfigure}`).
+  DefMacro!("\\newmdenv[]{}",
+    "\\newenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
+  DefMacro!("\\renewmdenv[]{}",
+    "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
   def_macro_noop("\\surroundwithmdframed[]{}")?;
   def_macro_noop("\\mdfsubtitle[]{}")?;
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
