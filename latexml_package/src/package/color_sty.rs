@@ -10,7 +10,27 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   if let Some(model) = model {
     let model_lc = model.to_lowercase();
     if model_lc == "named" {
-      return lookup_color_obj(&format!("named_{spec}"));
+      let key = format!("named_{spec}");
+      // The `named` color model's values are the dvips predefined colors
+      // (Red, Green, RubineRed, …) defined in dvipsnam.def via
+      // `\DefineNamedColor`. color.sty only loads dvipsnam.def when its
+      // `dvips`/`dvipsnames` *option* is processed — but if `color` was
+      // already pulled in earlier without that option (e.g. our hyperref
+      // binding's unconditional `RequirePackage("color")`), a later
+      // `\usepackage[dvips]{color}` is a no-op and the option never fires,
+      // leaving `named_Red` undefined. Since the `named` model inherently
+      // means a dvips named color, lazily load dvipsnam.def on first miss.
+      // Perl reaches the same end-state (it loads dvipsnam for this paper);
+      // witness 2005.01533 (revtex4-2 → hyperref preloads color →
+      // `\definecolor{red}{named}{Red}` → `named_Red` undefined).
+      if state::lookup_value(&format!("color_{key}")).is_none() {
+        let _ = input_definitions("dvipsnam", InputDefinitionOptions {
+          extension: Some(Cow::Borrowed("def")),
+          noerror: true,
+          ..InputDefinitionOptions::default()
+        });
+      }
+      return lookup_color_obj(&key);
     }
     color_from_model_spec(&model_lc, spec)
   } else {
