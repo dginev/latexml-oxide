@@ -118,6 +118,20 @@ Progress files preserved at `.session_state/`:
 
 ### R17 fixes (2026-05-28)
 
+* **`\@checkend` stray-brace removal** (`<this commit>`) — Perl
+  `latex_constructs.pool.ltxml` L190 transcribed the LaTeX-kernel
+  `\def\@checkend#1{…\fi}` *including* the `\def`'s closing `}` into the
+  `DefMacro` body, so every `\@checkend{env}` emits an unmatched `}`.
+  LaTeXML's own `\begin`/`\end` skip `\@checkend`, so it's normally
+  invisible — but a package that redefines `\end` the kernel way to call
+  `\@checkend` (e.g. `extract.sty`'s `AfterEndEnv` machinery, pulled in
+  by `\usepackage{extract}`) runs the stray `}` inside its wrapping
+  `\begingroup`, yielding one `Error:unexpected:} Attempt to close
+  boxing group … due to \begingroup` per environment. Perl's gullet
+  tolerates the extra brace; ours errored. Dropped the artifact (matches
+  standard-LaTeX semantics). Witness 2007.09971 (IEEEtran+extract under
+  ar5iv: 41 errors → clean / 9 warnings, matching Perl). See
+  KNOWN_PERL_ERRORS.md #25.
 * **biblatex `\providetoggle` for `blx@` toggles** (`ba35223039`) —
   bundled `mybiblatex.sty` wrappers re-enter biblatex init via a path
   the `_loaded` guard doesn't cover, so the 56 `\newtoggle{blx@…}`

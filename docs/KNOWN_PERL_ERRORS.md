@@ -728,3 +728,44 @@ overwrites itself identically.
 including in dump output (Perl emits `\@evenfoot` 3× in
 `latex_dump.pool.ltxml`). No fix because no observable behavior
 diverges. Documented here in case future Perl-side audit fixes it.
+
+---
+
+## 25. `latex_constructs.pool.ltxml` `\@checkend` body has a stray trailing `}`
+
+**Perl source (`Engine/latex_constructs.pool.ltxml` L190):**
+```perl
+DefMacro('\@checkend{}', '\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi}');
+```
+
+The replacement-text string ends with a stray `}`. It is a
+transcription artifact from the LaTeX kernel's
+`\def\@checkend#1{\def\reserved@a{#1}\ifx\reserved@a\@currenvir
+\else\@badend{#1}\fi}` — that final `}` closes the `\def`, it is **not**
+part of the macro body. Standard-LaTeX `\@checkend` therefore expands
+to `\def\reserved@a{#1}\ifx…\fi` (no trailing brace), but LaTeXML's
+`DefMacro` body includes the `}`, so every `\@checkend{env}` expansion
+emits one unmatched `}`.
+
+**Impact:** LaTeXML's own `\begin{}`/`\end{}` never call `\@checkend`
+(the magic-CS path skips it), so the stray brace is normally invisible.
+It only surfaces when a package **redefines `\end` to call
+`\@checkend`** the standard-LaTeX way — e.g. `extract.sty`'s
+`AfterEndEnv` machinery:
+```latex
+\def\begin#1{...\begingroup ...\csname #1\endcsname}
+\def\end#1{\csname end#1\endcsname\@checkend{#1}\expandafter\endgroup ...}
+```
+Here `\@checkend{#1}`'s stray `}` runs while extract's wrapping
+`\begingroup` is the open frame. Perl's gullet silently tolerates the
+extra `}`; the Rust port raises `Error:unexpected:} Attempt to close
+boxing group; current frame is non-boxing group due to \begingroup`
+— **one error per environment** in the affected document.
+
+**Rust resolution (`latex_constructs.rs` `\@checkend`):** dropped the
+stray trailing `}` so the body matches standard-LaTeX semantics.
+`\@checkend` is only reachable via packages that mimic the kernel
+`\end`, all of which assume the kernel (brace-free) body, so this is
+strictly more faithful. Witness 2007.09971 (IEEEtran + `extract.sty`
+under ar5iv: 41 boxing-group errors → clean, matching Perl's 0 errors /
+9 warnings).

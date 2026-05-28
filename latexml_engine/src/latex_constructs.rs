@@ -2746,8 +2746,21 @@ LoadDefinitions!({
   });
   Let!("\\@currenvline", "\\@empty");
 
-  // Perl: latex_constructs.pool.ltxml line 190
-  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi}");
+  // Perl: latex_constructs.pool.ltxml line 190. Perl's body string ends
+  // with a STRAY `}` — a transcription artifact from copying the LaTeX
+  // kernel's `\def\@checkend#1{...\fi}` (the final `}` closes the `\def`,
+  // it is NOT part of the replacement text). Standard LaTeX `\@checkend`
+  // has no trailing brace. Perl's lenient gullet silently tolerates the
+  // extra `}`, but ours raises `Error:unexpected:} Attempt to close
+  // boxing group` when the brace pops a `\begingroup` frame. `\@checkend`
+  // is only ever reached when a package redefines `\end` to call it (e.g.
+  // extract.sty's `\def\end#1{\csname end#1\endcsname\@checkend{#1}...
+  // \endgroup}`); there the stray `}` collided with extract's wrapping
+  // `\begingroup`, producing one boxing-group error per environment.
+  // Dropping the artifact matches standard-LaTeX semantics. Witness
+  // 2007.09971 (IEEEtran+extract under ar5iv: 41 errors -> clean). See
+  // KNOWN_PERL_ERRORS.md.
+  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi");
 
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
