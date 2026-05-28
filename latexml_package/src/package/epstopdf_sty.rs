@@ -17,4 +17,12 @@ LoadDefinitions!({
   // `\epstopdfcall{cmd}` is the lower-level shell-out wrapper used by
   // \epstopdfDeclareGraphicsRule. Same rationale: no-op.
   DefMacro!("\\epstopdfcall{}", None);
+  // `\OutputFile` is `\edef`-set inside `\epstopdfDeclareGraphicsRule`
+  // / `\epstopdfcall` to the generated converted-file name. Since we
+  // stub those as no-ops, `\OutputFile` is never set. Subsequent
+  // references inside `\Gin@rule@` etc. then hit `Error:undefined`
+  // (~11 papers in R-stages). Initialize as empty so it never errors;
+  // its value would be the converted filename but we don't actually
+  // include via this path.
+  DefMacro!("\\OutputFile", None);
 });
