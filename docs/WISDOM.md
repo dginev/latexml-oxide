@@ -1679,6 +1679,50 @@ exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
 sparse slots. If a future expl3 release adds more sparse intarrays,
 the fallback handles it; the only cost is a few extra V records.
 
+## #55 `OmniBus` is a LAST-RESORT fallback for *unknown* classes — never a dependency
+
+**The principle (user directive 2026-05-28).** `OmniBus.cls` exists so
+that a `\documentclass{<thing-we-have-no-binding-for>}` still produces
+*something* — it bundles a broad, generic grab-bag (frontmatter macros
+`\email`/`\affil`/`\address`/`\keywords`/`\shorttitle`/…, theorem +
+natbib autoloads, a `\bibitem` override, `{frontmatter}`/`{mainmatter}`/
+`{backmatter}` envs, AAS/elsevier-ish coverage). That grab-bag is the
+right move when we know *nothing* about the class. It is the WRONG base
+for a class binding we *do* have a `.rs` for: pulling in OmniBus means
+the binding inherits ~600 lines of generic guesses it never asked for,
+and — crucially — those guesses can actively break the document. A known
+binding must `LoadClass!("article")` (the real base most journal classes
+build on) and then load *exactly* its own specific needs.
+
+**Why it actively breaks things (the witnessed failure).** OmniBus
+eagerly pre-loads helpers (e.g. journal-class bindings layered
+`RequirePackage!("amsthm")` on top of `LoadClass!("OmniBus")`). Eager
+amsthm broke the ubiquitous `\let\proof\relax`\,+\,`\usepackage{amsthm}`
+idiom: the paper's explicit `\usepackage{amsthm}` no-ops (already loaded),
+so amsthm's `\let\proof\@proof` never re-runs after the paper cleared
+`\proof` → `Error:undefined:{proof}` (witness 1707.03222 svproc,
+1612.03054 imsart; both convert cleanly in Perl, which does NOT pre-load
+amsthm). OmniBus *itself* already provides *lazy* amsthm autoload (the
+theorem-env stubs at omnibus_cls.rs L399+), so the eager preload was both
+redundant and harmful. The deeper lesson: every generic provision OmniBus
+makes is a potential clash with what the real class/paper does.
+
+**The refactor (in progress, task #273).** Switch every `_cls.rs`/`_sty.rs`
+that does `LoadClass!("OmniBus")` to `LoadClass!("article")` and add the
+binding's specific needs, using the class's real canvas papers to discover
+what's actually used (frontmatter macros, amsthm, natbib, …). Verify each
+conversion against sampled real papers (error count + output size must not
+regress) plus the full `cargo test --tests`. 53 bindings as of the audit
+(`grep -rln 'LoadClass!("OmniBus")' latexml_*/src`). Do NOT recreate
+OmniBus as a new shared mega-dependency — tailor per binding.
+
+**Reference.** `latexml_package/src/package/omnibus_cls.rs` (the grab-bag),
+the tex_job.rs Branch-3 fallback (the *legitimate* OmniBus use: genuinely
+unknown class). Companion: [[feedback_prefer_raw_load]],
+[[feedback_no_papering]].
+
+---
+
 ## #54 TeXLive year detection uses `kpsewhich -var-value=SELFAUTOPARENT`, NOT `--version`
 
 **The gotcha.** The naive way to detect the installed TeXLive year
