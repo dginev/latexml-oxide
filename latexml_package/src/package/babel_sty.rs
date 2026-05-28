@@ -144,4 +144,28 @@ LoadDefinitions!({
   // \begin{document} opens (and base_schema's after_open reads it).
   RawTeX!(r"\lx@babel@activate@mainlang");
 
+  // Override `\shorthandoff` / `\shorthandon` to no-op. Babel's raw
+  // implementation (babel.sty L1492-1496) iterates the argument and
+  // calls `\bbl@switch@sh` for each character, which fires
+  // `\PackageError{babel}{I can't switch '<c>' on or off--not a
+  // shorthand}` when the character isn't a registered shorthand.
+  //
+  // Authors call `\shorthandoff{;:!?}` in macros like
+  // `\def\diag{\shorthandoff{;:!?}...}` defensively, expecting the
+  // French babel shorthand-spacing rules (added by french.ldf when
+  // those chars are made active) to be temporarily disabled. Our
+  // language stubs (`install_lang_stub` in babel_lang_stubs.rs) don't
+  // actually install the shorthand machinery — we mimic Perl's "file
+  // missing → skip" behavior for language packages — so the toggle
+  // has no shorthand state to switch, and the error fires whenever a
+  // multilingual paper invokes the toggle.
+  //
+  // Shorthand on/off is a typesetting-only concern (controls active-
+  // character spacing behavior in TeX); our XML output never observes
+  // those decisions, so a no-op is semantically correct for our
+  // pipeline. 6 R-stage papers in the babel cluster cleaned by this.
+  // Witness arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}...}`).
+  DefMacro!("\\shorthandoff{}", None);
+  DefMacro!("\\shorthandon{}", None);
+
 });
