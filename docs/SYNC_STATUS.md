@@ -157,6 +157,31 @@ Progress files preserved at `.session_state/`:
   hits its 100-error cap. 1510.04473 was the lone clear Rust-only case
   (now fixed above).
 
+* **R19 DEFERRED — 1804.01117 pgffor `\pgffor@values` self-ref cascade
+  (Rust-only).** A second, broader sweep (every 90th of `remaining`,
+  ~3005 papers, `-P 10`) surfaced this. `\usepackage{tikz}` with a
+  complex/malformed `\foreach` (the source has a typo at main.tex L83:
+  `…/\colorII\shapeIII/…`, a MISSING `/`). Perl completes with 39 errors
+  (27 `expected`, 11 `unexpected`, **0 recursion**); Rust hits the
+  100-error cap → `FATAL_3`. Our cluster: 90× `\lx@end@inline@math`, 83×
+  `Error:recursion:\pgffor@values`, 25× `fi`. Trace
+  (`DBG_RECUR_GUARD` in expandable.rs): the guard fires because
+  `\pgffor@values`'s body is *genuinely* `\pgffor@values, \pgffor@stop,`
+  (self-referential first token) under full expansion — so the guard is
+  CORRECT (prevents an infinite loop); the real bug is **upstream**:
+  pgffor's `\pgffor@expand@list` (pgffor.code.tex L89) /the L90
+  `\expandafter\def\expandafter\pgffor@values\expandafter{\pgffor@values,…}`
+  leaves `\pgffor@values` self-referential when parsing 1804.01117's
+  complex bracketed `\foreach` values, whereas Perl builds it correctly
+  (verified: `\pgffor@expand@list` on a *well-formed* list works in our
+  engine too — `\pgffor@values`→`1,2,3` — and a minimal malformed
+  `\foreach` does NOT reproduce; the cascade needs the full tikzpicture
+  with custom `regular polygon` shapes + `\includegraphics` nodes).
+  Needs a dedicated pgffor value-parser raw-interp session; deep tikz,
+  single rare paper, source-typo-triggered, Perl also degrades (39 err),
+  so low priority. Do NOT weaken the recursion guard (it's faithful to
+  Perl Expandable.pm L81-89 and is correctly catching a real self-ref).
+
 * **Fresh sweep of unseen `remaining` papers (current binary): clean.** A
   1500-paper sample (every 180th of `canvas3_round37_remaining.txt`)
   produced **zero genuine failures** — the only `rc=124` (1902.03551)
