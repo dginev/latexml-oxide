@@ -97,7 +97,27 @@ LoadDefinitions!({
   // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
   // of `\DeclareCaptionFormat` for text-only caption-format definers.
   def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;
-  def_macro_noop("\\DeclareCaptionJustification{}{}")?;
+  // caption3.sty L955-959: `\DeclareCaptionJustification[<pkg>]{<name>}{<body>}`
+  // defines `\caption@justification@<name>` (the body) AND lets
+  // `\caption@hj@<name>` equal it. The `\caption@hj@<name>` macros are
+  // probed by other packages — notably floatrow.sty L1169
+  // (`\@ifundefined{caption@hj@#1}` for `objectset=centering`/`raggedright`);
+  // a pure no-op leaves them undefined → `Package floatrow Error: Undefined
+  // object setting` (witness 1504.02564, 1608.07117, 1704.01862,
+  // 1708.07230, 1712.06479). Faithfully define `\caption@hj@<name>` to the
+  // body (collapsing caption3's justification@→hj@ \let into one \@namedef).
+  // The optional `[<pkg>]` arg (caption3 L1361 `[ragged2e]{Justified}{...}`)
+  // is consumed and ignored — it only triggers package-autoload, moot here.
+  RawTeX!(r"\def\DeclareCaptionJustification{\@ifnextchar[\lx@caption@decljust@opt{\lx@caption@decljust@opt[]}}");
+  RawTeX!(r"\def\lx@caption@decljust@opt[#1]#2#3{\@namedef{caption@hj@#2}{#3}\@namedef{caption@justification@#2}{#3}}");
+  // Seed the standard justifications caption3.sty declares at load time
+  // (L964-969) so they exist even when a paper never re-declares them.
+  RawTeX!(r"\DeclareCaptionJustification{justified}{}%
+\DeclareCaptionJustification{centering}{\centering}%
+\DeclareCaptionJustification{centerfirst}{\centering}%
+\DeclareCaptionJustification{centerlast}{\centering}%
+\DeclareCaptionJustification{raggedleft}{\raggedleft}%
+\DeclareCaptionJustification{raggedright}{\raggedright}");
   def_macro_noop("\\DeclareCaptionOption{}[]{}")?;
   // caption3.sty L640+: `\DeclareCaptionOptionNoValue{name}{body}` —
   // sibling of `\DeclareCaptionOption` for options without values.

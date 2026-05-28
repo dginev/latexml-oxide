@@ -233,6 +233,22 @@ Progress files preserved at `.session_state/`:
   (Perl baseline 1503.08338: 3.3 MB). cargo test --tests: 1344 passed, 0
   failed. (Deeper ltxnew `\new` futurelet-scanner fix deferred — Perl
   skips getfiledate anyway, so the stub IS the Perl-faithful match.)
+* **FIX LANDED — floatrow "Undefined object setting `centering`/
+  `raggedright`" (caption `\caption@hj@*` missing).** floatrow.sty L1169
+  probes `\@ifundefined{caption@hj@<name>}` for `objectset=centering`/
+  `raggedright` (from `\floatsetup`); the `\caption@hj@<name>` macros are
+  created by caption3.sty's `\DeclareCaptionJustification` (L955-969).
+  Rust's `caption_sty.rs` stubbed `\DeclareCaptionJustification` as a pure
+  no-op → those macros never existed → floatrow's `\flrow@error`. Both
+  engines raw-load floatrow (no binding either side); Perl raw-loads
+  caption3 which defines the hj macros, so Perl is clean. Fix: make
+  `\DeclareCaptionJustification[<pkg>]{<name>}{<body>}` faithfully
+  `\@namedef{caption@hj@<name>}{<body>}` (+ `caption@justification@<name>`),
+  and seed the 6 standard justifications caption3 declares at load
+  (justified/centering/centerfirst/centerlast/raggedleft/raggedright).
+  Flips **1504.02564, 1608.07117, 1704.01862, 1708.07230, 1712.06479** →
+  rc=0, 0 errors (Perl baseline 1504.02564: 1.7 MB). cargo test --tests:
+  1344 passed, 0 failed.
 * **DEFERRED — `\crvi` cluster (3 papers: 1603.04650, 1704.02401,
   1804.00017; xy-pic curved arrows).** `\usepackage[all,tips]{xy}` +
   `\ar@/^15pt/[rr]^{...}` (the `@/.../` curve modifier) → `\crvi`
