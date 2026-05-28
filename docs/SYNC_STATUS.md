@@ -190,14 +190,32 @@ the automatic fallback subsumes each one.
   error, same line 229). All three are source-structure / content-model
   issues both engines reject identically; Rust often has FEWER errors than
   Perl on these. Recorded so they're skipped in future triage.
-* **FRESH RE-SWEEP IN PROGRESS (2026-05-28):** recent stages (R02-R17,
-  51-73) predate this session's fixes, so their CONVERR_1 survey is heavily
-  stale (ctable/`\lx`/`\@inpenc@test`/keywords/subalgorithm/tikztiming all
-  now 0-error). Re-running all 794 recent-stage CONVERR_1 IDs with the
-  current release binary (`/tmp/resweep.sh` → `/tmp/converr1_resweep.txt`)
-  to extract the GENUINE residual for targeted fixing. Partial: ~53% still
-  error (but many SHARED). Use the resweep output, NOT the stale stage logs,
-  to pick the next genuine Rust-only cluster.
+* **FRESH RE-SWEEP DONE (2026-05-28) — CONVERR_1 corpus is at near-parity.**
+  Re-ran the recent-stage CONVERR_1 IDs with the current release binary
+  (`/tmp/resweep.sh`): **~51% already recovered to 0 errors (stale**, fixed
+  by this session + prior). Of the genuine residual, clustering the current
+  first-errors shows it is **dominated by SHARED cases** (Perl errors
+  identically, often MORE than Rust): `unexpected:}`/`_`/`&`/`^` (malformed
+  source), `\GenericError` (moot vendor errors, WISDOM #50),
+  `malformed:ltx:p`/`ltx:XMApp` (verified SHARED), `\gtrless`/`\definecolor`
+  (paper omits the defining package — Perl also errors), plus deferred
+  ar5iv-specific `\autrun`/`\crvi`/`\dq`/`{diagram}`. **Lesson: trust the
+  re-sweep, not the stale stage logs.**
+* **PRIMARY remaining GENUINE Rust-only cluster (NOT fixed — delicate core,
+  next session): `\endgroup` mode-switch frame leak (~17 papers).**
+  `Error:unexpected:\endgroup Attempt to close a group that switched to mode
+  restricted_horizontal … due to T_CS[<env>]` (stomach.rs:478). Confirmed
+  Rust-only (1505.07999 → Perl rc=0). The leaked mode-switch (BOUND_MODE)
+  frames come from ENVIRONMENTS — theorem-like (`\proof`/`\thm`/`\lem`/
+  `\remark`/`\step`/`\IEEEproof`), `\microtypecontext`, and `pspicture`.
+  Critically, Perl's `Core/Stomach.pm` egroup/endgroup is BYTE-IDENTICAL to
+  Rust's (same BOUND_MODE error) — so the bug is NOT egroup; **Rust leaks an
+  env's mode-switch frame upstream where Perl balances/pops it.** Fix at the
+  env push/pop site (NOT by blanket-suppressing egroup). pspicture also has
+  a signature mismatch (Rust `[]{}`/`[][]` vs Perl `PSCoord`). High blast
+  radius (a 2026-04-25 band-aid `3088dbd17` already suppresses the strict
+  check during raw load). Full analysis + reproducer:
+  [[project_endgroup_modeswitch_frame_leak]].
 * **FIX LANDED — `{keywords} environment is not defined` (fundam.cls
   cluster) by DELETING the `fundam_cls.rs` stub (Perl-faithful).** The
   earlier characterization was wrong on the root cause: there WAS a
