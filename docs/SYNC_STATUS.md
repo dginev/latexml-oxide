@@ -752,6 +752,24 @@ See `latexml_core/src/binding/content.rs::load_class` (commit landing
   `DefConstructor` accepts it). Engine work, deferred — needs broader
   audit of `DefPrimitive` call sites that might benefit.
 
+### Deferred Rust-only investigation: fundam.cls raw-load drops late `\def`s
+
+Witness 2005.04818 (`\documentclass{fundam}`, Fundamenta Informaticae,
+bundled `.cls`). fundam.cls is raw-loaded (not OmniBus — no fallback
+warning). Probe of `\@ifundefined` after load shows a *non-contiguous*
+DEF/UNDEF pattern: `\issue`(L38)/`\papernumber`(L40)/`\runninghead`
+(L42)/`\abstract`(L83)/`\and`(L81) are **defined**, but `\@maketitle`
+(L47) and `\keywords`(L91) are **undefined**. In a plain `article`,
+`\def\@maketitle{…}`+`\def\keywords{…}` both define fine — so it's
+specific to the raw-`.cls`-load path. Prime suspects: the long
+`\def\@maketitle{…}` body (L47-79, contains
+`\begin{tabular}…\end{tabular}`, `\iffour…\else…\fi`, `\pageref`) or
+`\AtEndDocument{\label{::last page of FI article:\jobname::}}` (L45,
+colons + `\jobname` in a `\label`) mis-consuming following tokens.
+`\keywords` is the user-visible error. Not yet confirmed vs Perl
+(Perl times out >160s on this paper). Deferred — needs a focused
+raw-load `\def`-body / `\AtEndDocument`-arg trace.
+
 ### Open R36 tactical work
 
 * **Rsync the second 500K** (in flight, PID 3557279; the local
