@@ -128,6 +128,7 @@ pub mod scicite_sty;
 pub mod extarticle_cls;
 pub mod scrartcl_cls;
 pub mod scrbook_cls;
+pub mod typearea_sty;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod aamas_cls;
@@ -340,6 +341,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("catoptions", "sty", catoptions_sty::load_definitions),
   ("scrlayer-scrpage", "sty", scrlayer_scrpage_sty::load_definitions),
   ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
+  ("typearea", "sty", typearea_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),
