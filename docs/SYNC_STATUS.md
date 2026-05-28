@@ -118,37 +118,30 @@ Progress files preserved at `.session_state/`:
 
 ### R19 fixes (2026-05-28)
 
-* **R19 DEFERRED — `\kill` in `p{}` longtable locked-frame FATAL
-  (Rust-only, clean minimal repro).** Witness 2010.09763 (Perl: 1.94 MB /
-  140 `<tr>` / 0 errors; Rust: `Fatal:TargetUnexpected:Endgroup`, empty).
-  Minimal: `\begin{longtable}{|p{2cm}|p{3cm}|} x & y \kill a & b \\
-  \end{longtable}` → Rust 5/5 FATAL, Perl completes. `\kill` is
-  `Let` to the bare `\lx@longtable@kill@marker` constructor (afterDigest =
-  `Alignment->removeRow`) in BOTH engines (longtable.sty.ltxml L78). The
-  `p{}` column wraps each cell in `\vtop{\hbox{…` (TeX_Tables L67-69 →
-  restricted_horizontal mode-frame). The kill marker fires `removeRow`
-  **mid-cell**, while that `\hbox`/`\vtop` boxing+mode frame is still open;
-  Perl recovers, our engine leaks the frame → at `\end{longtable}` the
-  `\endgroup`/`\@end@tabular` mismatches it → `pop last locked stack frame`
-  FATAL. **Two candidate fixes, both inadequate (do NOT ship either):**
-  (a) `Let \kill → \lx@longtable@kill` (the `\crcr\noalign{marker}`
-  variant, defined-but-unused in both engines): avoids the FATAL (the
-  `\crcr` closes the cell boxes) and yields 1.56 MB ≈ matching Perl, BUT
-  `removeRow` then pops the wrong row (a fresh empty row started after
-  `\crcr`, before the noalign marker), so the killed `KILLED & LINE!!!!`
-  content stays VISIBLE (4× in output vs Perl's 0; 142 `<tr>` vs 140) —
-  diverges from Perl, unacceptable. (b) bare marker (current): `removeRow`
-  targets the right row but FATALs on the open cell frame. **Correct fix
-  (dedicated alignment session):** make `\kill` a row-terminator that
-  closes the current `p{}` cell's `\vtop{\hbox{` boxing/mode frame (like
-  `&`/`\cr` do via the column `after`-template) WITHOUT starting a new
-  row, then `removeRow` the just-closed row — matching Perl's net result
-  (killed row gone, no leak). Needs care in `digest_alignment_column`
-  (tex_tables.rs) + the alignment row-commit/`removeRow` timing
-  (alignment.rs `new_row`/`remove_row`). NOTE: this is the same
-  locked-frame *class* as the arydshln fix below and 1510.04473, but a
-  distinct trigger (`\kill`, no arydshln). The `current_frame_message`
-  readable-locator (committed with arydshln) is what localized it.
+* **`\kill` in `p{}` longtable locked-frame FATAL — RESOLVED** (commit
+  `6e5f29a2a9`). Witness 2010.09763 (Perl: 1.94 MB / 140 `<tr>` / 0 errors;
+  Rust was `Fatal:TargetUnexpected:Endgroup`, empty). `\kill` was `Let` to
+  the bare `\lx@longtable@kill@marker` constructor whose afterDigest fired
+  `Alignment->removeRow` **mid-cell**, while the `p{}` column's
+  `\vtop{\hbox{…` boxing/mode frame (TeX_Tables L67-69) was still open →
+  frame leak → at `\end{longtable}` the `\endgroup`/`\@end@tabular`
+  mismatched it → `pop last locked stack frame` FATAL. (Perl's column
+  scanner is *also* incremental — verified — so Perl ALSO has the box open;
+  Perl just tolerates the desync where our stricter mode/frame checks
+  abort.) **Fix = faithful to real `\LT@kill` = `\LT@echunk` (end the
+  chunk/row, measure, discard):** route `\kill → \lx@longtable@kill@flag\crcr`.
+  The `\crcr` ends the row through the NORMAL cr path (closing the column
+  boxes exactly like `\\`, no leak); `\lx@longtable@kill@flag` sets
+  `LONGTABLE_KILL_NEXT`, and the alignment driver
+  (`digest_alignment_body`, tex_tables.rs) drops the just-ended,
+  box-balanced row when that flag is set. Avoids BOTH earlier dead-ends
+  (bare-marker FATAL; `\crcr\noalign{marker}` popping the noalign
+  pseudo-row and leaving `KILLED` visible). Result: 701 KB main.html, 5/5
+  deterministic, **0 errors**, tr=140 / Math=852 / 132 data rows ALL match
+  Perl, killed rows removed (0 `KILLED` garbage). Full suite green (53).
+  Same locked-frame *class* as the arydshln fix below + 1510.04473, but a
+  distinct trigger. The `current_frame_message` readable-locator
+  (committed with arydshln) is what localized it.
 
 * **arydshln: stop noop'ing `\endlongtable`** (commit `42bcc87de0`) —
   Rust-only locked-frame FATAL on `arydshln` + `longtable` with `p{}`
