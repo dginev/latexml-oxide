@@ -154,8 +154,33 @@ Progress files preserved at `.session_state/`:
   101 errors on this paper, so we now surpass it). Valid hex/octal
   (`\char"41`→A, `"FF`→255, `'17`→15) verified unchanged.
 
-**R18 DEFERRED — one Rust-only FATAL (alignment recursion, Perl
-completes).** Found via a fresh sample of the offset-18 remaining slice.
+**R18/R19 DEFERRED — Rust-only `Stomach:Recursion` FATAL cluster (Perl
+completes).** Fresh offset-18/19 sampling (~6000 papers) surfaced a
+cluster of infinite-recursion FATALs, all where Perl converts fine.
+Two distinct mechanisms, both genuine *unbounded* recursion (NOT
+low-MAXSTACK — verified 5000 still overflows for the noalign case):
+  1. **alignment `\lx@hidden@noalign`** — 2008.13358 (amsgather),
+     2009.09721 (amsalign). Nested noalign args digested recursively;
+     accumulation-dependent (see 2008.13358 entry below).
+  2. **xypic `\lx@xy@svg`** — 2009.05542 (Perl=0, clean Rust-only).
+     `\xy` is wrapped (Perl xy.tex.ltxml L148-151, ours identical):
+     `\xy → \if\inxy@ \lx@xy@svgnested \else \lx@xy@svg \fi \lx@xy@original`.
+     `\inxy@` (real xypic, raw-loaded) tests `\xy@` vs `\xyinitial@`.
+     xypic internals call `\xy` *by name* (→ our wrapper), so each
+     internal/nested `\xy` re-enters `\lx@xy@svg`; Perl's `\inxy@`
+     detects nesting (`\xy@` ≠ `\xyinitial@`) and routes to the
+     bounded `\lx@xy@svgnested`, but in our engine `\xy@` is NOT
+     maintained during xy processing (stays == `\xyinitial@`), so every
+     call takes `\lx@xy@svg` → unbounded. Reproduces with the real
+     preamble + any `\xymatrix` in an equation (a bare-preamble
+     `\usepackage[curve]{xypic}` instead leaves `\xymatrix` undefined —
+     xypic raw-load is itself context-sensitive). Root fix = make our
+     raw xypic interpretation maintain `\xy@`/`\xyinitial@` so `\inxy@`
+     detects nesting; deep raw-`xy.tex` state-machine work.
+  Other R19 FATALs (classify before fixing): 2009.05276
+  (`TooManyErrors`: `\GenericError` runaway 501×, likely vendor/SHARED),
+  2009.09806 (`Timeout:MemoryBudget` RSS>4500MB — OOM, separate class).
+Found via a fresh sample of the offset-18 remaining slice.
   * ~~**2009.01572** — RESOLVED~~ (see R18 fixes above: the locked-frame
     pop was a *symptom* of IEEEproof's surpass-Perl `internal_vertical`
     mode, NOT a deep mode-stack divergence. The earlier
