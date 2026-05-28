@@ -702,6 +702,15 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       alignment_cell.borrow_mut().end_column()?;
     } else if vtype.as_deref() == Some("cr") || vtype.as_deref() == Some("crcr") {
       alignment_cell.borrow_mut().end_row()?;
+      // longtable `\kill`: the row just ended was only for width measurement;
+      // `\lx@longtable@kill@flag` set LONGTABLE_KILL_NEXT before the `\crcr`,
+      // so discard the just-committed (now box-balanced) row. Ending via the
+      // normal cr path closes the column boxes cleanly first (avoiding the
+      // locked-frame FATAL of removing it mid-cell). Witness 2010.09763.
+      if state::lookup_bool("LONGTABLE_KILL_NEXT") {
+        state::remove_value("LONGTABLE_KILL_NEXT");
+        alignment_cell.borrow_mut().remove_row();
+      }
       if !hidden {
         reversion.push(next.unwrap());
         creversion.push(next.unwrap());
