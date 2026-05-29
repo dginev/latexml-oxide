@@ -1164,6 +1164,20 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: imsart `\bbooktitle` + sibling bib field macros undefined (2026-05-29)
+
+**Witness 2006.02044** (`\documentclass{imsart}` + imsart-nameyear `.bbl`).
+Rust 1 error (`\bbooktitle` undefined) vs **Perl 28 errors** (Perl's
+imsart.cls.ltxml — actually it has none here, falls to OmniBus, leaving ALL 28
+`\b*`/`{b*}` constructs undefined). So Rust already SURPASSES Perl on this
+class (it ports imsart's bib field-macro family); only `\bbooktitle` and a few
+siblings were missing from `imsart_cls.rs`'s identity-stub list. The bundled
+imsart.cls/sty `\let`s each `\b<field>` to `\@firstofone` (identity) in its
+bib setup; added the missing ones as content-preserving identity stubs:
+`\bbooktitle \bchapter \bhowpublished \binstitution \bisbn \blocation
+\bnumber \bschool \bsuffix` (`\bmisc` skipped — clashes with the `{bmisc}`
+environment). 1 error → 0. cargo test 1344/0. (commit pending).
+
 ### FIXED: ifacconf stub eager-loaded xcolor → `\usepackage[table]{xcolor}` no-op → `m{}` column "Extra alignment tab" (2026-05-29)
 
 **Witness 2004.03970** (`\documentclass{ifacconf}` + `\usepackage[table]{xcolor}`

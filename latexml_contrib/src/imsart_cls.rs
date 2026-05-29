@@ -108,4 +108,23 @@ LoadDefinitions!({
   // → 0). Mirror `\common@pub@types`.
   def_macro_identity("\\betal{}")?;
   def_macro_identity("\\banumber{}")?;
+  // Additional imsart bibliography field macros. The bundled imsart.cls/sty
+  // `\let`s each of these to `\@firstofone` (identity) inside its bib setup
+  // (or applies a style via `\set@bibl@cmd`, e.g. `\bbooktitle` → \itshape —
+  // we keep content-preserving identity, matching the sibling stubs above).
+  // They were missing, so an imsart `.bbl` using `\bbooktitle{…}` (book title
+  // in an `In …` reference), `\bchapter`, `\bschool` (theses), etc. saw them
+  // undefined. Witness 2006.02044 (`\bbooktitle`, 1 error → 0; Perl errors on
+  // ALL 28 imsart `\b*`/`{b*}` constructs, so this also surpasses Perl). NB:
+  // `\bmisc` is intentionally NOT added as a macro — it would clobber the
+  // `{bmisc}` environment defined above.
+  def_macro_identity("\\bbooktitle{}")?;
+  def_macro_identity("\\bchapter{}")?;
+  def_macro_identity("\\bhowpublished{}")?;
+  def_macro_identity("\\binstitution{}")?;
+  def_macro_identity("\\bisbn{}")?;
+  def_macro_identity("\\blocation{}")?;
+  def_macro_identity("\\bnumber{}")?;
+  def_macro_identity("\\bschool{}")?;
+  def_macro_identity("\\bsuffix{}")?;
 });
