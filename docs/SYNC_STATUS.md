@@ -15,6 +15,36 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **⚠ METHODOLOGY CORRECTION (2026-05-29) — Perl-gating path.** For most of the
+> 2026-05-28/29 sessions, Perl parity runs used the WRONG `--path`
+> (`~/git/ar5iv-bindings`, the PARENT) instead of `~/git/ar5iv-bindings/bindings`.
+> With the wrong path Perl **silently fails to load `ar5iv.sty.ltxml`**
+> (`Can't find package ar5iv`), so `INCLUDE_STYLES` never turns on and Perl
+> **does NOT raw-load** un-bound `.sty`/`.cls` packages — it reports them
+> "missing" and skips them, appearing falsely CLEAN. This produced
+> **false "Perl-clean" verdicts** on every candidate whose failure came from
+> raw-loading a package Perl couldn't find. The memory
+> [[feedback_perl_parity_options]] already specifies the correct
+> `.../bindings` path — it was not followed. **ALWAYS use
+> `--path=$HOME/git/ar5iv-bindings/bindings --preload=ar5iv.sty`.**
+>
+> Re-gated all 8 session fix-witnesses with the CORRECT path:
+> * **6 GENUINE Rust-only wins** (Perl clean, Rust was failing → now fixed):
+>   2007.04819 (`\?`), 1911.07001 (`\@classoptionslist`), 2006.10240 (babel
+>   `strings`), 2006.06087 (elsart `\note`), 2004.07710 (`\preitem@par`),
+>   2002.09766 (algorithm2e env names).
+> * **2 were SHARED — Rust now SURPASSES Perl** (Perl ALSO fails; my fix handles
+>   valid TeX that Perl mishandles): 2006.02269 (pack_parameters halign `#` —
+>   Perl 2 errors; this is exactly KNOWN_PERL_ERRORS item 1, a sanctioned
+>   beneficial divergence) and 1910.09629 (hyperref `\url` active-`"` — Perl 5
+>   errors; URLs-are-verbatim neutralization matches real-LaTeX url robustness).
+>   Both pass `cargo test 1344/0` and are faithful to valid TeX — KEPT, but
+>   re-labeled here as beneficial divergences, NOT Perl-clean wins.
+> * The deferred "META-pattern" candidates (fontaxes 2005.05941, betababel
+>   2003.05608, pstricks 1910.10243, mdwmath 2008.05168) are **SHARED** with the
+>   correct path (Perl fails identically) — NOT Rust-only. They are real
+>   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
+
 **Status.** Round-36 closed via PR #238 (merged as `9723f4f242`) —
 500K first-batch at 99.9968% projected. Round-37 continues on
 `large-scale-testing-round-4` branch: drive stages 51-100 (second
