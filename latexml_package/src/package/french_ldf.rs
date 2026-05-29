@@ -19,6 +19,13 @@ LoadDefinitions!({
   // (\textdegree, \texttrademark, etc.) that French abbreviations
   // may reference via the raw frenchb ordinals.
   RequirePackage!("textcomp");
+  // babel-french french.ldf L694: `\AtEndOfPackage{\RequirePackage{scalefnt}}`
+  // — French superscript scaling (`\FBsupS`/`\textsuperscript` at L702 uses
+  // `\scalefont`). Documents loading babel-French therefore expect `\scalefont`
+  // to be defined even when they never `\usepackage{scalefnt}` themselves.
+  // Our raw-load is skipped (see below), so pull scalefnt explicitly to match.
+  // Witness 2010.03230 (`\usepackage{babel}`[french] + bare `\scalefont{0.78}`).
+  RequirePackage!("scalefnt");
 
   // \captionsfrench — the French caption strings, equivalent to what
   // babel's frenchb.ldf defines. Use \providecommand so the raw load

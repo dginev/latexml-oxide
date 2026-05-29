@@ -1164,6 +1164,31 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: babel-French must load scalefnt → `\scalefont` undefined (2026-05-29)
+
+**Witness 2010.03230** (`\usepackage{babel}`[french] + bare `\scalefont{0.78}`,
+no `\usepackage{scalefnt}`). GENUINE Rust-only: Perl 0 err, Rust 1 (`\scalefont`
+undefined). Root: babel-French `french.ldf` L694 does
+`\AtEndOfPackage{\RequirePackage{scalefnt}}` (it uses `\scalefont` for
+superscript scaling, L702). Perl honors it (loads scalefnt → `\scalefont`
+defined); Rust's `french_ldf.rs` binding (which skips the raw french.ldf load)
+omitted it. Fix: add `RequirePackage!("scalefnt")` to `french_ldf.rs` (Rust
+already HAS a scalefnt binding; it just wasn't being pulled). 1 err → 0.
+cargo test 1344/0. (commit pending). Found via tracing scalefnt's load parent:
+`scalefnt ← french.ldf ← babel_support`.
+
+### Fresh 2010-range low-error scan triage (2026-05-29)
+
+Scanned ~2500 of the 2010 range (≤6 Rust errors); 5 candidates, gated vs Perl.
+THREE clean Rust-only wins (2 fixed, 1 deferred):
+* **2010.00165** — mathtools `\adjustlimits` double-subscript. FIXED (below).
+* **2010.03230** — babel-French `\scalefont` undefined. FIXED (above).
+* **2010.02903** — `ltx:inline-logical-block` nested in `ltx:inline-logical-block`
+  (Rust 1 / Perl 0). A document-builder content-model nesting that Perl
+  tolerates; deeper auto-relax/placement work — DEFERRED.
+SHARED: 2010.03423 (`}` mode-frame), 2010.01755 (`\GenericError` tikzscale +
+Perl `Fatal:terminate`).
+
 ### FIXED: mathtools `\adjustlimits` DefMacro re-emitted `_` → double-subscript on single-operator misuse (2026-05-29)
 
 **Witness 2010.00165** (`\adjustlimits\sup_{x \in R} |\mbox{F}_{…}`). GENUINE
