@@ -783,6 +783,38 @@ strictly more faithful. Witness 2007.09971 (IEEEtran + `extract.sty`
 under ar5iv: 41 boxing-group errors → clean, matching Perl's 0 errors /
 9 warnings).
 
+## 26. `\raise`/`\lower` of a void box register (`\copy`/`\box`/`\lastbox`) spuriously errors
+
+**Trigger (real-LaTeX-valid, errors in Perl):**
+```latex
+\setbox0=\hbox{X\raise1pt\copy\strutbox\lower1pt\copy\strutbox Y}
+```
+Perl emits `Error:expected:<box> A <box> was supposed to be here` twice; Rust
+(pre-fix) did the same.
+
+**Why it is wrong:** In TeX, fetching an UNSET box register via `\box`/`\copy`/
+`\lastbox` yields a **void box**, which is a perfectly valid `<box>` operand for
+`\raise`/`\lower`/`\moveleft`/`\moveright` (TeXbook p.388). The LaTeX kernel
+relies on this — `\raise1pt\copy\strutbox` is a standard strut idiom — and
+LaTeXML never `\setbox`es the visual `\strutbox`, so `\copy\strutbox` is always
+void. Both engines' `MoveableBox` parameter reader treated the empty result as
+"no box at all" and raised `expected:<box>`, where real TeX raises nothing.
+
+**Impact:** Mostly invisible, EXCEPT when such an op sits in a `\halign` column
+template (`\halign{...\raise1pt\copy\strutbox\lower1pt\copy\strutbox\vrule#...}`),
+where it fires **once per cell/row**. On a many-row manual table this floods the
+log: witness **1907.04219** — a `\halign`+`\Hline`/`\vrule` table → **102 errors
+→ FATAL_3 abort (no output)** in Rust, while Perl (erroring fewer times) completed
+with 7. Real TeX emits none.
+
+**Rust resolution (`base_parameter_types.rs`, `MoveableBox::predigest`):** on an
+empty box-fetch result, ERROR only when the box-starter was NOT a box-register op;
+for `\box`/`\copy`/`\lastbox` substitute a void box silently (the substitution was
+already there — only the spurious `Error!` was removed). Faithful to real TeX,
+eliminates the per-cell cascade. Witness 1907.04219: 102 errors / FATAL_3 → **0
+errors, 4.9 MB doc** (6 tables, 787 tabulars). Surpasses Perl on this shared
+Perl/LaTeXML bug.
+
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
 `catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded

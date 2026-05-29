@@ -869,10 +869,25 @@ LoadDefinitions!({
       // Perl: `($box, @stuff) = invokeToken(...)` — first element is the box.
       Some(stuff.remove(0))
     } else {
-      // Perl L332-334: report and substitute an empty Box() so callers
-      // (\raise/\lower etc.) always receive a defined value.
-      let message = s!("A <box> was supposed to be here.\nGot none.");
-      Error!("expected","<box>", message);
+      // Empty result. In TeX, fetching an UNSET (void) box register via
+      // `\box`/`\copy`/`\lastbox` yields a VOID box — a perfectly valid box
+      // operand for `\raise`/`\lower` (TeXbook p.388: a void box register is
+      // still a box). The LaTeX kernel exploits this: `\raise1pt\copy\strutbox`
+      // is standard, and LaTeXML never `\setbox`es the visual `\strutbox`, so
+      // `\copy\strutbox` legitimately yields void. Only ERROR when the operand
+      // was NOT a box producer at all (e.g. `\raise1pt X`). Otherwise substitute
+      // a void box silently — matching real TeX, and crucially avoiding a
+      // per-cell `expected:<box>` cascade when such an op sits in a `\halign`
+      // column template (witness 1907.04219: `\halign{...\raise1pt\copy\strutbox
+      // \lower1pt\copy\strutbox...}` × ~50 rows → 100+ errors → FATAL_3 abort,
+      // where Perl completes; both engines share the spurious error, real TeX
+      // emits none — see docs/KNOWN_PERL_ERRORS.md).
+      let is_box_register_op = token.get_catcode() == Catcode::CS
+        && token.with_str(|s| matches!(s, "\\box" | "\\copy" | "\\lastbox"));
+      if !is_box_register_op {
+        let message = s!("A <box> was supposed to be here.\nGot none.");
+        Error!("expected","<box>", message);
+      }
       Some(latexml_core::digested::Digested::from(latexml_core::tbox::Tbox::default()))
     }
   });

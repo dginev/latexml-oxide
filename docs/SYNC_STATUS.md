@@ -45,6 +45,23 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — void box register in `\raise`/`\lower` (FATAL_3 → clean).**
+1907.04219: RUST **FATAL_3 (102 errors, no output)** → **0 errors, 4.9 MB doc**.
+Root: `\halign` column template `\raise1pt\copy\strutbox\lower1pt\copy\strutbox…`
+runs per row; `\copy\strutbox` (LaTeXML never sets the visual strut → void
+register) returned an EMPTY box-fetch, so `MoveableBox` raised `expected:<box>`
+once PER CELL → ~100 errors → the 101-error cap aborted the whole conversion.
+In real TeX `\copy`/`\box`/`\lastbox` of a void register is a valid VOID box (no
+error). Fix (`base_parameter_types.rs` MoveableBox::predigest): on empty fetch,
+ERROR only when the box-starter was NOT a box-register op; for `\box`/`\copy`/
+`\lastbox` substitute a void box silently (the substitution already existed —
+only the spurious `Error!` was dropped). SHARED Perl/LaTeXML bug (Perl errors
+too, fewer times → completes); real TeX emits none, so this surpasses Perl AND
+turns a Rust hard-fail into a successful conversion. Found via a FRESH
+mini-sweep (current binary + correct main detection over 128 papers from bucket
+1203 → only 2 failures, both SHARED — reconfirming convergence; the cascade case
+came from the FATAL_3 bucket). `cargo test` 1344/0. docs/KNOWN_PERL_ERRORS.md #26.
+
 **2026-05-29 — genuine Rust-only single-error pool EXHAUSTED (stages 51-82).**
 Across several iterations I have now gated dozens of candidates spanning CONVERR_1,
 distinctive CONVERR_2/3, and FATAL_3 over stages 51-82; **every one is SHARED
