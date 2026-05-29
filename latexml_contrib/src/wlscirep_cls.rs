@@ -6,6 +6,14 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
+  // wlscirep.cls L28: `\RequirePackage{wasysym}` (right after amsmath/
+  // amssymb). Nature Scientific Reports papers use wasysym shape symbols
+  // (`\hexagon`/`\square`/`\triangle`) as lattice-type labels in math.
+  // Perl ships no wlscirep binding → raw-loads wlscirep.cls → wasysym
+  // loaded. Our binding intercepts the cls and mirrored most of its
+  // RequirePackages but omitted wasysym, so `\hexagon` was undefined where
+  // Perl is clean. Witness 1610.05398 (`V^\delta_{\hexagon}`). RUST 1 → 0.
+  RequirePackage!("wasysym");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
   // columns break (Unrecognized tabular template -> Extra alignment tab). The

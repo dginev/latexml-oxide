@@ -156,6 +156,14 @@ LoadDefinitions!({
   // Perl (raw-loads french.ldf) is clean. Witness 1810.02869
   // (`[frenchb]{babel}` + `\NoAutoSpacing`).
   def_macro_noop("\\NoAutoSpacing")?;
+  // `\AddThinSpaceBeforeFootnotes` — french.ldf L1976
+  // (`\newcommand*{\AddThinSpaceBeforeFootnotes}{\FBAutoSpaceFootnotestrue}`):
+  // toggles a thin space before footnote markers in French. Pure typeset
+  // spacing — moot in our HTML paradigm — so a no-op matches its net output,
+  // same family as the FDP/auto-spacing toggles above. Our curated french.ldf
+  // skips the raw-load, so it was undefined where Perl (raw-loads french.ldf)
+  // is clean. Witness 1610.09195. (No `\No…` companion exists in french.ldf.)
+  def_macro_noop("\\AddThinSpaceBeforeFootnotes")?;
 
   // `\DecimalMathComma` / `\StandardMathComma` — french.ldf L815-877.
   // French writes decimals with a comma (`3,14`); the real macros toggle

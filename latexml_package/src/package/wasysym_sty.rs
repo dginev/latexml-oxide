@@ -58,6 +58,15 @@ LoadDefinitions!({
   DefPrimitive!("\\invdiameter", "\u{29B0}");
   DefPrimitive!("\\varangle", "\u{2222}");
   DefPrimitive!("\\wasylozenge", "\u{2311}");
+  // Box / shape symbols — Perl wasysym.sty.ltxml L98-102 (DefPrimitiveI,
+  // i.e. mode-agnostic glyph insertion, NOT math symbols). These were
+  // omitted from the Rust binding; `\hexagon` (witness 1610.05398) was
+  // therefore undefined where Perl is clean.
+  DefPrimitive!("\\Square", "\u{25A1}");
+  DefPrimitive!("\\XBox", "\u{2327}");
+  DefPrimitive!("\\CheckedBox", "\u{2611}");
+  DefPrimitive!("\\hexagon", "\u{2394}");
+  DefPrimitive!("\\varhexagon", "\u{2B21}");
   DefPrimitive!("\\kreuz", "\u{2720}");
   DefPrimitive!("\\smiley", "\u{263A}");
   DefPrimitive!("\\frownie", "\u{2639}");
