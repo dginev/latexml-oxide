@@ -1164,6 +1164,33 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### Fresh 2012-range low-error scan triage (2026-05-29): NO clean Rust-only wins
+
+Scanned ~2500 of the 2012 range (≤6 Rust errors); 6 candidates, ALL SHARED or
+Rust-already-better:
+* 2012.01530 (`\Hy@driver` hyperref internal) R2/P3 — both.
+* 2012.01680 (`\spanishdecimal` babel-spanish) R1/P2 — Rust ALREADY better.
+* 2012.01656 (`{convention}` env) — both.
+* 2012.02183 (`Expected opening {`) R1/P1 — both.
+* 2012.02277 (`double-superscript`; `\ee^{\rt T}` math, `\ee=\mathrm e`,
+  `\rt=\widetilde r` — a real paper-bug double-`^`) R4/P4 (Perl `Fatal:terminate`).
+* 2012.02816 (`ltx:XMHint` in `ltx:td`) R4/P4 — both.
+First range to yield ZERO clean Rust-only wins — the low-error single-root
+Rust-only cases are now genuinely sparse; remaining work is the deep clusters.
+
+### XY-PIC mouth-close diagnosis refined (2026-05-29, still DEFERRED)
+
+Further pinned the recurring `\crvi`/`\ar@/.../` cascade: Rust raw-loads
+xycurve.tex but the load ABORTS in the `{ \xyuncatcodes \catcode`\@=11
+\catcode`\#=6 … }` catcode-regime group (xycurve.tex L63) — i.e. BEFORE the
+defs inside it (`\crv` L50-ish, `\crvi` L69) ever run, so they stay undefined →
+`<closed> Mouth … already closed` from `reading_from_mouth`'s cleanup. The pop
+is NOT via `close_mouth` (instrumented: never fires for xycurve) — it's the
+read-loop exhausting the mouth, most likely because xy's `\xyuncatcodes` /
+newline-catcode (`^^M`) changes make Rust's tokenizer consume across the
+line/EOF boundary during raw-load. Fix = catcode/newline-aware raw-load
+tokenizer + mouth discipline — a dedicated deep session, NOT a quick port.
+
 ### FIXED: ctable stub left `\ctable` undefined (non-tikz papers) (2026-05-29)
 
 **Witness 2011.04706** (`\usepackage{ctable}` + `\ctable[caption=…]{lcccccr}{…}
