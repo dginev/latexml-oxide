@@ -75,6 +75,14 @@ pub fn check_timeout() -> Result<()> {
           // already in pathological territory. Real documents in
           // the wp5 / canvas3 corpus stay below 1 GB peak RSS.
           // Override via LATEXML_RSS_CAP_BYTES env.
+          //
+          // This is a *per-process* fuse for the single-conversion
+          // binary (one paper per process under the sandbox ulimit).
+          // The multi-conversion test harness used to trip it by
+          // *accumulating* ~110 MB/test in undropped `#[thread_local]`
+          // engine state; it now calls `reset_thread_engine()` between
+          // conversions (peak fell 4.9 GB → ~2.9 GB at -j20), so the
+          // cap stays at its production value.
           let cap = std::env::var("LATEXML_RSS_CAP_BYTES")
             .ok()
             .and_then(|v| v.parse::<u64>().ok())

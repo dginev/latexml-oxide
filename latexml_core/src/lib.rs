@@ -88,6 +88,48 @@ use std::rc::Rc;
 /// See: <https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/doc/threads.html>
 pub fn ensure_libxml_init() { libxml::init_parser(); }
 
+/// Free this thread's accumulated engine state — the three `State`
+/// singletons (`STATE`, `STD_STATE`, `STY_STATE`) **and** the
+/// string-interner arena — returning them to a fresh baseline.
+///
+/// **Why this exists.** The engine's roots (`STATE`, `arena::ARENA`, …)
+/// are `#[thread_local]` *attribute* statics. Unlike the `thread_local!`
+/// macro, the attribute does **not** run destructors on thread exit, so a
+/// thread that builds a full engine and then exits *leaks* it (~110 MB
+/// for a typical document). The single-conversion `latexml_oxide` binary
+/// never notices — it runs one conversion and the process exits. But any
+/// process that runs **many** conversions across **many** threads
+/// (notably the test harness, where libtest spawns a fresh thread per
+/// test) accumulates one leaked engine per conversion (measured: ~4.9 GB
+/// across `50_structure`, which then trips the per-process RSS fuse in
+/// `stomach::check_timeout`). Resetting between conversions frees that
+/// memory before the thread exits (peak fell ~4.9 GB → ~2.9 GB at -j20).
+///
+/// **Why reset the interner here.** The interner *could* be kept across
+/// conversions — that is the faithful daemon design (Perl keeps its
+/// symbol table and resets only the binding stack via
+/// `pushDaemonFrame`/`popDaemonFrame` in `LaTeXML.pm`), and re-interning
+/// the same ~110k base symbols next conversion is deduped. But that only
+/// pays off when the **same thread** handles multiple conversions. The
+/// test harness gets a **fresh thread per test**, so its interner can
+/// never be reused — keeping it would just leak it on thread exit. So we
+/// reset it too. A future *thread-reusing* daemon should instead keep the
+/// interner by calling [`state::reset_thread_state`] alone (State only).
+///
+/// **Soundness.** Resetting the interner invalidates *every* live
+/// `SymStr` on the thread, so this is sound only between fully
+/// independent conversions — when the prior conversion's output has
+/// already been serialized to owned data and nothing will read a
+/// pre-reset symbol again. The test harness satisfies this (each test
+/// serializes to owned `String`s, then resets before its thread exits).
+/// It does **not** reclaim libxml2's process-global C state (parser
+/// dictionaries) — that residual (~24 MB/test) is left as-is rather than
+/// risk the global `xmlCleanupParser`.
+pub fn reset_thread_engine() {
+  crate::state::reset_thread_state();
+  crate::common::arena::reset();
+}
+
 use crate::common::arena::SymHashMap as HashMap;
 use crate::common::dimension::Dimension;
 pub use crate::common::error::*;

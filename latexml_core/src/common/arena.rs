@@ -238,6 +238,33 @@ pub fn join(syms: &[SymStr], sep: &str) -> String { with_many(syms, |strs| strs.
 
 pub fn len() -> usize { with_arena_mut(|arena| arena.len()) }
 
+/// Free every interned string on this thread, returning the arena to a
+/// fresh, empty state.
+///
+/// **Danger:** this invalidates *every* outstanding [`SymStr`] on the
+/// thread — they become dangling indices that may resolve to unrelated
+/// strings after re-interning. It is only sound when **nothing on the
+/// thread will read a pre-reset `SymStr` again**: i.e. between fully
+/// independent conversions in a reused process (the test harness, where
+/// each test has already serialized its output to owned `String`s and
+/// the thread is about to exit or be re-initialized) or a future daemon
+/// that re-initializes the engine afterward. The single-conversion
+/// `latexml_oxide` binary never calls this — it exits instead.
+///
+/// Needed because the engine's roots are `#[thread_local]` *attribute*
+/// statics, which (unlike the `thread_local!` macro) do **not** run
+/// destructors on thread exit. Without an explicit reset, every reused
+/// thread leaks its interner (~tens of MB for a full document). See
+/// `latexml_core::reset_thread_engine`.
+pub fn reset() {
+  with_arena_mut(|arena| {
+    *arena = StringInterner::with_capacity_and_hasher(
+      131_072,
+      BuildHasherDefault::<FxHasher>::default(),
+    );
+  });
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -281,6 +308,20 @@ mod tests {
     let sym = pin("arena_test_predicate");
     let starts_with = with(sym, |s| s.starts_with("arena"));
     assert!(starts_with);
+  }
+
+  #[test]
+  fn reset_empties_interner_and_stays_usable() {
+    // Each `#[test]` runs on its own thread, so this thread's arena
+    // starts empty and the reset is isolated from sibling tests.
+    let _ = pin("arena_reset_alpha");
+    let _ = pin("arena_reset_beta");
+    assert!(len() >= 2, "expected the two pins to be interned");
+    reset();
+    assert_eq!(len(), 0, "reset must return the interner to empty");
+    // Interning still works after a reset (fresh backend installed).
+    let s = pin("arena_reset_gamma");
+    assert_eq!(to_string(s), "arena_reset_gamma");
   }
 
   #[test]
