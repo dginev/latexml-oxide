@@ -1147,11 +1147,30 @@ the `\hbox` (from colorbox) is the trigger. In that mode Rust emits an
 `<emph font="italic">` wrapper and stray `<break/>`s inside the listinglines
 that Perl does NOT (Perl's listinglines hold plain `<text>` runs and close
 cleanly). The leftover `ltx:text`/`emph` is not auto-closeable, so closing the
-listingline reports the malformed-descendant error. begin/close logic matches
-Perl; the divergence is the restricted-horizontal listingline/break/emph
-rendering. Affects "verbatim/listing inside a colored box" broadly. Next step:
-align Rust's hbox-mode listingline emission (suppress the spurious emph/break,
-or make the inline text auto-close at listingline boundaries) with Perl.
+listingline reports the malformed-descendant error. Affects "verbatim/listing
+inside a colored box" broadly.
+
+**Refined root cause (2026-05-29):** `\hbox` opens its box element with
+`_noautoclose='true'` on the `ltx:text` (tex_box.rs:558 — BYTE-IDENTICAL to
+Perl TeX_Box.pool.ltxml L313 `openElement($newtag,_noautoclose=>1,…)`; both pick
+`ltx:text` here since vmode is false). The `\hbox` sits inside the algorithm
+float's first `<ltx:listingline>`, so its `_noautoclose` text is a DESCENDANT of
+that listingline. While `\hbox` is still absorbing its content, algorithm2e's
+`\For` block machinery (`\algocf@Vline`/`\algocf@@@block` → `\lx@algo@endline
+\lx@algo@startline`, algorithm2e_sty.rs L121-123) fires `\lx@algo@@endline`
+(`</ltx:listingline>`). closeElement then walks up and finds the `_noautoclose`
+hbox `ltx:text` as a non-auto-closeable descendant → the malformed error.
+closeElement is also byte-identical to Perl (Document.pm L804-829, same
+`Error('malformed',…)`), so Perl would error TOO *if it reached this state* —
+Perl is clean only because its digestion of the `\For` block machinery inside a
+restricted-horizontal `\hbox` does NOT leave the listingline-close straddling
+the open hbox text. The divergence is therefore in the EXPANSION/DIGESTION
+ORDER of the algorithm2e `\For` block macros inside an hbox (not in `\hbox`,
+`\lx@algo@@endline`, or closeElement, which all match). Next step: trace the
+`\algocf@@@block`/`\algocf@Vline` digestion sequence inside `\hbox`'s `absorb`
+vs Perl, and ensure the listingline-close fires AFTER the hbox text closes (or
+that the hbox content's listingline boundaries are handled before the inner
+`\lx@algo@endline`). DEEP — needs a focused digestion-tracing session.
 
 #### FIXED: 1910.09629 — hyperref `\url` + active-`"` conditional leak (2026-05-28)
 
