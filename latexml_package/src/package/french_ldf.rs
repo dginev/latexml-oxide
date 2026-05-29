@@ -157,6 +157,28 @@ LoadDefinitions!({
   // (`[frenchb]{babel}` + `\NoAutoSpacing`).
   def_macro_noop("\\NoAutoSpacing")?;
 
+  // `\DecimalMathComma` / `\StandardMathComma` — french.ldf L815-877.
+  // French writes decimals with a comma (`3,14`); the real macros toggle
+  // the math comma's `\mathcode` between *punctuation* (class 6, small
+  // trailing space → list "1, 5") and *ordinary* (class 0, no space →
+  // decimal "1,5") via `\dec@math@comma`/`\std@math@comma` (L838-841).
+  // This is a purely *visual* spacing nuance: LaTeXML's number tokenizer
+  // already recognizes a digit-comma-digit run as a single decimal NUMBER
+  // independent of the mathcode, so the toggle has NO effect on LaTeXML's
+  // semantic output. Verified against Perl (which raw-loads french.ldf via
+  // `InputDefinitions('french', noltxml=>1)` and runs the real macros):
+  // converting the same `[francais]{babel}` + `\DecimalMathComma` document
+  // WITH vs WITHOUT the call produces *byte-identical* XML — i.e. the macro
+  // is an effective no-op in LaTeXML. (Attempting to honor the `\mathcode`
+  // change literally is also wrong: it reroutes `,` through a family-1 font
+  // slot that maps to `;`, corrupting the glyph.) Our curated french.ldf
+  // skips the raw-load (babel-3.x `\SetString` failure), so these were
+  // undefined where Perl is clean. Faithful port = no-op. Witness 1812.03061
+  // (`[francais]{babel}` + `\DecimalMathComma` in the preamble, revtex4):
+  // RUST 1 -> 0, matching Perl 0.
+  def_macro_noop("\\DecimalMathComma")?;
+  def_macro_noop("\\StandardMathComma")?;
+
   // \frenchsetup — babel-french 3.x configuration command. Takes a
   // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
   // `ItemLabelsspaceitem=true`). Per babel-french/french.ldf L712-713,
