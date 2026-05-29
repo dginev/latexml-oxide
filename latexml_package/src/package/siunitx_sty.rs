@@ -1271,12 +1271,18 @@ fn six_format_range(bracketed: bool, first: Tokens, last: Tokens) -> Tokens {
   range_pres.push(i_arg("2"));
 
   if bracketed {
-    range_pres.insert(
-      0,
-      six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket"))
-        .unlist()
-        .remove(0),
-    );
+    // Perl six_format_range: `unshift(@range, six_get_op({role=>'OPEN'},
+    // 'open-bracket'))` prepends the ENTIRE open-bracket op. The earlier
+    // Rust port did `range_pres.insert(0, open.unlist().remove(0))`, which
+    // kept only the op's FIRST token and dropped the rest — corrupting the
+    // bracketed presentation so the dual lost its first argument
+    // (`range@([], 4)` instead of `range@(2, 4)`). Prepend the whole op,
+    // matching Perl. Witness: si.tex `\SIrange[range-units=brackets]{2}{4}
+    // {\degreeCelsius}`.
+    let mut bracketed_pres =
+      six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist();
+    bracketed_pres.append(&mut range_pres);
+    range_pres = bracketed_pres;
     range_pres
       .extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
@@ -1622,49 +1628,75 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     permode
   };
   if permode == "reciprocal" || units.iter().all(|u| !u.per) {
+    // Perl siunitx.sty.ltxml L1065-1066: each unit processed in order with
+    // its own per (if any).
     return six_format_unitproduct(false, units);
   }
 
-  // For "fraction" and "symbol" modes we need partitioned owned
-  // unit lists. For any other permode the original `units` slice
-  // is used as-is.
-  if permode == "fraction" || permode == "symbol" {
-    let (numer_units, denom_units): (Vec<SixUnit>, Vec<SixUnit>) = {
-      let mut n = Vec::with_capacity(units.len());
-      let mut d = Vec::with_capacity(units.len());
-      for u in units {
-        if u.per {
-          let mut uu = u.clone();
-          uu.per = false;
-          d.push(uu);
-        } else {
-          n.push(u.clone());
-        }
-      }
-      (n, d)
-    };
-    if permode == "fraction" {
-      let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
-      tks.extend(six_format_unitproduct(false, &numer_units).unlist());
-      tks.push(T_END!());
-      tks.push(T_BEGIN!());
-      tks.extend(six_format_unitproduct(false, &denom_units).unlist());
-      tks.push(T_END!());
-      Tokens::new(tks)
+  // Perl L1068-1072: collect numerator & denominator units (positive vs
+  // negative powers). The denominator units keep their `per` markers for
+  // now — `reciprocal-positive-first` needs them intact.
+  let mut numer_units: Vec<SixUnit> = Vec::with_capacity(units.len());
+  let mut denom_units: Vec<SixUnit> = Vec::with_capacity(units.len());
+  for u in units {
+    if u.per {
+      denom_units.push(u.clone());
     } else {
-      let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
-      let per_sym = six_get_op_sym(
-        &[
-          ("role", Tokenize!("MULOP")),
-          ("meaning", Tokenize!("divide")),
-        ],
-        six_pin!("per-symbol"),
-      );
-      six_format_infix(per_sym, None, None, vec![
-        six_format_unitproduct(false, &numer_units),
-        six_format_unitproduct(bracket, &denom_units),
-      ])
+      numer_units.push(u.clone());
     }
+  }
+
+  if permode == "reciprocal-positive-first" {
+    // Perl L1073-1074: re-ordered (numerators first, then denominators),
+    // each per left as-is (markers NOT stripped).
+    let mut all = numer_units;
+    all.extend(denom_units);
+    return six_format_unitproduct(false, &all);
+  }
+
+  // Perl L1075-1076: otherwise, remove the per markers from the
+  // denominator units before formatting.
+  for u in &mut denom_units {
+    u.per = false;
+  }
+
+  if permode == "fraction" {
+    // Perl L1077-1080
+    let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
+    tks.extend(six_format_unitproduct(false, &numer_units).unlist());
+    tks.push(T_END!());
+    tks.push(T_BEGIN!());
+    tks.extend(six_format_unitproduct(false, &denom_units).unlist());
+    tks.push(T_END!());
+    Tokens::new(tks)
+  } else if permode == "repeated-symbol" {
+    // Perl L1081-1085: the per-symbol (divide MULOP) prefixes EACH
+    // denominator unit in turn — `numer / d1 / d2 / …` rather than
+    // `numer / (d1·d2)`. Witness 1812.05943 (elsarticle,
+    // `\sisetup{per-mode=repeated-symbol}`).
+    let per_sym = six_get_op_sym(
+      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
+      six_pin!("per-symbol"),
+    );
+    let mut result = six_format_unitproduct(false, &numer_units);
+    for d in &denom_units {
+      result = six_format_infix(per_sym.clone(), None, None, vec![result, six_format_1unit(d)]);
+    }
+    result
+  } else if permode == "symbol" {
+    // Perl L1086-1093
+    let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
+    let per_sym = six_get_op_sym(
+      &[
+        ("role", Tokenize!("MULOP")),
+        ("meaning", Tokenize!("divide")),
+      ],
+      six_pin!("per-symbol"),
+    );
+    six_format_infix(per_sym, None, None, vec![
+      six_format_unitproduct(false, &numer_units),
+      six_format_unitproduct(bracket, &denom_units),
+    ])
   } else {
     // Perl siunitx.sty.ltxml:1094 — Error('unexpected', $permode, undef,
     //   "Unknown siunitx per-mode $permode") for the catchall arm.

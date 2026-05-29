@@ -5166,12 +5166,13 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   <XMTok class="ltx_unit" meaning="second" role="ID">s</XMTok>
                 </XMApp>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="\mathrm{A}\text{\,}{\mathrm{mol}}^{-1}\text{\,}\mathrm{s}" text="ampere * power@(mole, - 1) * second" xml:id="S2.SS1.SSS2.p1.m7">
+            </Math> <break/><Math mode="inline" tex="\mathrm{A}\text{\,}\mathrm{s}\text{\,}{\mathrm{mol}}^{-1}" text="ampere * second * power@(mole, - 1)" xml:id="S2.SS1.SSS2.p1.m7">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS2.p1.m7.1"> </XMText>
                   <XMTok class="ltx_unit" meaning="ampere" role="ID">A</XMTok>
-                  <XMApp xml:id="S2.SS1.SSS2.p1.m7.3">
+                  <XMTok class="ltx_unit" meaning="second" role="ID">s</XMTok>
+                  <XMApp xml:id="S2.SS1.SSS2.p1.m7.4">
                     <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
                     <XMTok class="ltx_unit" meaning="mole" role="ID">mol</XMTok>
                     <XMApp>
@@ -5179,7 +5180,6 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                       <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
                     </XMApp>
                   </XMApp>
-                  <XMTok class="ltx_unit" meaning="second" role="ID">s</XMTok>
                 </XMApp>
               </XMath>
             </Math></p>
@@ -5256,27 +5256,16 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                 </XMApp>
               </XMath>
             </Math><break/>
-<Math mode="inline" tex="\mathrm{J}\text{\,}{\mathrm{mol}}^{-1}\text{\,}{\mathrm{K}}^{-1}" text="joule * power@(mole, - 1) * power@(kelvin, - 1)" xml:id="S2.SS1.SSS2.p2.m5">
+<Math mode="inline" tex="\mathrm{J}\text{/}\mathrm{mol}\text{/}\mathrm{K}" text="joule / mole / kelvin" xml:id="S2.SS1.SSS2.p2.m5">
               <XMath>
                 <XMApp>
-                  <XMText meaning="times" role="MULOP" xml:id="S2.SS1.SSS2.p2.m5.1"> </XMText>
-                  <XMTok class="ltx_unit" meaning="joule" role="ID">J</XMTok>
-                  <XMApp xml:id="S2.SS1.SSS2.p2.m5.3">
-                    <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMText meaning="divide" role="MULOP" xml:id="S2.SS1.SSS2.p2.m5.1">/</XMText>
+                  <XMApp xml:id="S2.SS1.SSS2.p2.m5.2">
+                    <XMText meaning="divide" role="MULOP" xml:id="S2.SS1.SSS2.p2.m5.3">/</XMText>
+                    <XMTok class="ltx_unit" meaning="joule" role="ID">J</XMTok>
                     <XMTok class="ltx_unit" meaning="mole" role="ID">mol</XMTok>
-                    <XMApp>
-                      <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    </XMApp>
                   </XMApp>
-                  <XMApp xml:id="S2.SS1.SSS2.p2.m5.4">
-                    <XMTok meaning="power" role="SUPERSCRIPTOP" scriptpos="post1"/>
-                    <XMTok class="ltx_unit" meaning="kelvin" role="ID">K</XMTok>
-                    <XMApp>
-                      <XMTok fontsize="70%" meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                    </XMApp>
-                  </XMApp>
+                  <XMTok class="ltx_unit" meaning="kelvin" role="ID">K</XMTok>
                 </XMApp>
               </XMath>
             </Math><break/>
@@ -6355,22 +6344,21 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
                   </XMWrap>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" tex="4\text{\,}\mathrm{\SIUnitSymbolCelsius}" text="range@([], 4) * degreeCelsius" xml:id="S2.SS2.SSS5.p1.m6">
+            </Math> <break/><Math mode="inline" tex="24\text{\,}\mathrm{\SIUnitSymbolCelsius}" text="range@(2, 4) * degreeCelsius" xml:id="S2.SS2.SSS5.p1.m6">
               <XMath>
                 <XMApp>
                   <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS5.p1.m6.1"> </XMText>
                   <XMDual xml:id="S2.SS2.SSS5.p1.m6.2">
                     <XMApp>
                       <XMTok meaning="range"/>
-                      <XMRef/>
                       <XMRef idref="S2.SS2.SSS5.p1.m6.3"/>
+                      <XMRef idref="S2.SS2.SSS5.p1.m6.4"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok meaning="absent"/>
-                      <XMTok meaning="714" role="NUMBER">714</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
+                      <XMText role="OPEN">(</XMText>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m6.3">2</XMTok>
                       <XMText role="PUNCT"> to </XMText>
-                      <XMTok meaning="4" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m6.3">4</XMTok>
+                      <XMTok meaning="4" role="NUMBER" xml:id="S2.SS2.SSS5.p1.m6.4">4</XMTok>
                       <XMText role="CLOSE">)</XMText>
                     </XMWrap>
                   </XMDual>
