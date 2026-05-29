@@ -44,8 +44,22 @@ LoadDefinitions!({
     // `\@ifundefined{numberwithin}` branches wrong when our preloaded
     // `\numberwithin` autoload makes the CS "look" defined, then the
     // `\@gobbletwo` branch eats `\ifx \relax` and orphans `\else` / `\fi`.
+    // An autoload TRIGGER counts as "undefined" only while UNFIRED — i.e. its
+    // target package has not yet loaded. `def_autoload` stores the package name
+    // (`.sty`) as a String; once `<pkg>.sty_loaded`/`_raw_loaded` is set the
+    // trigger CS holds the package's real definition and must read as DEFINED
+    // (fixes `\@ifundefined{align}` after `\usepackage{amsmath}`). `.pool`
+    // triggers keep the legacy Bool form and stay "undefined until used".
     let is_autoload = cs.with_cs_name(|cs_name| {
-      state::lookup_bool(&s!("{cs_name}:autoload"))
+      match state::lookup_value(&s!("{cs_name}:autoload")) {
+        Some(Stored::String(pkg_sym)) => {
+          let pkg = arena::with(pkg_sym, |s| s.to_string());
+          !state::lookup_bool(&s!("{pkg}.sty_loaded"))
+            && !state::lookup_bool(&s!("{pkg}.sty_raw_loaded"))
+        },
+        Some(Stored::Bool(b)) => b,
+        _ => false,
+      }
     });
     if IsDefined!(&cs) && !is_autoload {
       Ok(else_token)

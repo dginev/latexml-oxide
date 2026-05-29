@@ -96,9 +96,19 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   // paper-local symbol; without this flag the autoload trigger silently
   // wins, then expands `\Bbb $arg…$` as `\mathbb{$}` and cascades into
   // 62 mode-switch errors. Perl on the same input: 0 errors.
+  //
+  // Store the PACKAGE NAME (not just a bool) so readers can distinguish an
+  // UNFIRED trigger from one whose package has since loaded. Once `<package>`
+  // is loaded — explicitly via `\usepackage` (which redefines the trigger CS
+  // to the real macro WITHOUT firing this closure) or via the closure firing —
+  // the CS is genuinely defined, and `\lx@ifundefined` must report it as such.
+  // Witness: `\@ifundefined{align}` after `\usepackage{amsmath}` wrongly
+  // returned "undefined" (the stale flag masked the real `\align`), breaking
+  // extract.sty's `\begin ` env-existence probe → 90-error cascade on
+  // 1611.02736. `.pool` triggers keep the bool form (no `<pkg>.sty_loaded`).
   state::assign_value(
     &s!("{cs_name}:autoload"),
-    Stored::Bool(true),
+    Stored::String(latexml_core::common::arena::pin(package)),
     Some(Scope::Global),
   );
   Ok(())

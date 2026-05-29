@@ -45,6 +45,26 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — stale autoload flag broke `\@ifundefined{<env>}` (FATAL_3 → clean).**
+1611.02736 (extract.sty): RUST **92 errors / FATAL_3 (no output)** → **0 errors,
+146 KB doc** (surpasses Perl's 11-error completion). Root (general, Rust-only):
+`def_autoload("\\align","amsmath")` set an `align:autoload` flag so unfired
+autoload triggers read as "undefined" in `\lx@ifundefined` (mirroring Perl's
+OmniBus-scoped DefAutoload). But the flag was **never cleared when the package
+actually loaded** — so after `\usepackage{amsmath}`, `\@ifundefined{align}`
+wrongly returned UNDEFINED even though `\align` is the real macro (every other
+test — `\ifdefined`, `\ifcsname`, `\csname…\relax` — said DEFINED; Perl says
+DEFINED). This broke any package that probes env-existence via `\@ifundefined`:
+extract.sty redefines `\begin ` to do `\@ifundefined{#1}` → for amsmath envs it
+fired "Environment align undefined" per cell → 90-error cascade → FATAL_3. Fix:
+`def_autoload` now stores the PACKAGE NAME (not a bool); `\lx@ifundefined` treats
+a trigger as undefined only while its `<pkg>.sty_loaded`/`_raw_loaded` is unset
+(`.pool` triggers keep the bool form). All autoload witnesses preserved
+(`cargo test` 1344/0). Also completed the xkeyval internals extract.sty uses
+directly (our binding replaces xkeyval.sty, omitting them): `\XKV@ifundefined`
+and the `\XKV@for@*` comma-list loop (ported verbatim from xkvutils.tex).
+`tex.rs`, `base_utilities.rs`, `xkeyval_sty.rs`.
+
 **2026-05-29 — void box register in `\raise`/`\lower` (FATAL_3 → clean).**
 1907.04219: RUST **FATAL_3 (102 errors, no output)** → **0 errors, 4.9 MB doc**.
 Root: `\halign` column template `\raise1pt\copy\strutbox\lower1pt\copy\strutbox…`
