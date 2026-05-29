@@ -1164,6 +1164,28 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: extsizes `extbook`/`extreport` mis-bound to `article` → `\thechapter` undefined (2026-05-29)
+
+**Witness 1904.08040** (`\documentclass[14pt,oneside,english]{extbook}` +
+`\chapter{...}`; LyX-exported, latin9-encoded). GENUINE Rust-only: Perl clean
+(16 warn, 1 missing file[extbook.cls], **0 errors**), Rust 1 error
+`\thechapter undefined`. Root cause was a Rust-only paper-over: a contrib stub
+`extarticle_cls.rs` routed ALL five extsizes classes (extarticle / **extbook** /
+**extreport** / extletter / extproc) to plain `article` via `LoadClass{article}`.
+But `article` has no `chapter` counter, so the book-like members
+(extbook/extreport, which define `\chapter`/`\thechapter`) lost `\thechapter`
+entirely. Perl ships **no** binding for any extsizes class, so
+`\documentclass{extbook}` falls through to `OmniBus.cls.ltxml`, whose
+`DefAutoload('thechapter', 'book.cls.ltxml')` (omnibus_cls.rs L559) defines
+`\thechapter` on first `\chapter` use → 0 errors. Fix (per
+[[project_keywords_env_binding_less_cls]] / [[feedback_no_papering]]): **deleted
+the stub** and all 5 registry entries so every extsizes class falls to OmniBus
+exactly like Perl. `elife.cls`/`pnas-new.cls` bindings `\LoadClass{extarticle}`
+which now likewise resolves via OmniBus (article-base superset), layout
+preserved. All 5 siblings verified `\chapter`+`\thechapter` → 0 errors;
+1904.08040 1 error → 0 (Rust 286 KB, Perl 346 KB, both "using OmniBus").
+cargo test green, 0 failed. (commit pending).
+
 ### FIXED: algorithm2e `algorithm*`/`algorithm2e` via `\let` broke `algorithm`+algo2e combo (2026-05-29)
 
 **Witness 2002.09766** (`\usepackage{algorithm,algorithmic}` +

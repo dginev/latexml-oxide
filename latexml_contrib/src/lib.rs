@@ -127,7 +127,6 @@ pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod savetrees_sty;
 pub mod scicite_sty;
-pub mod extarticle_cls;
 pub mod scrartcl_cls;
 pub mod scrbook_cls;
 pub mod typearea_sty;
@@ -342,13 +341,19 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
-  ("extarticle", "cls", extarticle_cls::load_definitions),
-  // extbook / extreport / extletter / extproc share the same idea —
-  // route them all to plain article for our XML/HTML purposes.
-  ("extbook",   "cls", extarticle_cls::load_definitions),
-  ("extreport", "cls", extarticle_cls::load_definitions),
-  ("extletter", "cls", extarticle_cls::load_definitions),
-  ("extproc",   "cls", extarticle_cls::load_definitions),
+  // NOTE: extsizes classes (extarticle / extbook / extreport / extletter /
+  // extproc) are intentionally NOT bound. Perl LaTeXML ships no binding for
+  // them, so `\documentclass{extbook}` falls through to OmniBus.cls.ltxml —
+  // which is essential for the book-like members: OmniBus's
+  // `DefAutoload('thechapter', 'book.cls.ltxml')` defines `\thechapter` on
+  // first use of `\chapter`. The previous Rust-only `extarticle_cls.rs` stub
+  // routed ALL five to plain `article` (no chapter counter), so extbook /
+  // extreport errored with `\thechapter` undefined where Perl was clean.
+  // Witness arXiv:1904.08040 (`\documentclass[14pt,oneside,english]{extbook}`).
+  // See memory `project_keywords_env_binding_less_cls`: delete the stub,
+  // let OmniBus do what it does in Perl. `elife.cls`/`pnas-new.cls` bindings
+  // `\LoadClass{extarticle}`, which now likewise resolves via OmniBus (an
+  // article-base superset), preserving their article-like layout.
   ("scrartcl", "cls", scrartcl_cls::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
