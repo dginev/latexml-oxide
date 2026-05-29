@@ -16,6 +16,14 @@ LoadDefinitions!({
   // The raw cls relies on the user `\usepackage{booktabs}` but many
   // papers don't load it explicitly. Eager-load. Witness 2309.01813.
   RequirePackage!("booktabs");
+  // sagej.cls L108: `\RequirePackage{latexsym,ifthen,rotating,calc,textcase,
+  // booktabs,color,endnotes}`. Perl ships no sagej binding → raw-loads the
+  // bundled sagej.cls → endnotes loaded → `\endnote`/`\theendnotes` defined.
+  // Our binding intercepts sagej.cls (so that `\RequirePackage` never runs),
+  // leaving `\endnote` undefined where Perl is clean. Load endnotes to match
+  // the real .cls (SAGE papers use `\endnote{…}` for footnote-style notes).
+  // Witness 1901.10968 (`\endnote`, `\theendnotes`).
+  RequirePackage!("endnotes");
 
   // sagej frontmatter — preserve author content.
   DefMacro!("\\corrauth{}",

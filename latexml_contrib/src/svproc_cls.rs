@@ -46,5 +46,15 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=institute]{#1}");
   // \inst{N} is a superscript marker keyed to numbered affiliations.
   DefMacro!("\\inst{}", "\\textsuperscript{#1}");
+  // svproc.cls L240-245 defines \frontmatter / \mainmatter / \backmatter as
+  // page-numbering + \@mainmatter-flag toggles (`\pagenumbering{Roman}` etc.).
+  // All three are pure page-layout — moot in our HTML paradigm — so Perl
+  // (which raw-loads svproc.cls and runs them) produces no visible output for
+  // them. Our binding intercepts svproc.cls, so the raw defs never run;
+  // `\mainmatter` was already stubbed but `\frontmatter`/`\backmatter` were
+  // left undefined where Perl is clean. No-op all three (matching their net
+  // HTML effect). Witness 1902.03320 (`\documentclass{svproc}`, `\frontmatter`).
+  def_macro_noop("\\frontmatter")?;
   def_macro_noop("\\mainmatter")?;
+  def_macro_noop("\\backmatter")?;
 });

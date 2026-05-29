@@ -94,6 +94,18 @@ LoadDefinitions!({
   // Witness 2401.00604.
   DefMacro!("\\icmlIntershipWork",
     "\\textsuperscript{*}Work done during an internship");
+  // `\icmlInternship` — paper-bundled internship marker (correct spelling,
+  // distinct from the `\icmlIntershipWork` typo above). icml2019.sty L502
+  // `\newcommand{\icmlInternship}{\textsuperscript{*}This work has been done
+  // during the internship at <institution>.}`. Papers pass it into
+  // `\printAffiliationsAndNotice{\icmlInternship}`; our binding intercepts
+  // icml20xx (so the paper's bundled def never runs) and — unlike Perl,
+  // whose `\printAffiliationsAndNotice{}` gobbles its arg — preserves the
+  // notice arg as a frontmatter note, expanding the inner CS. Provide a
+  // generic fallback (institution unknowable from the binding) so the note
+  // survives error-free. Witness 1902.02603 (icml2019.sty L502).
+  DefMacro!("\\icmlInternship",
+    "\\textsuperscript{*}Work done during an internship");
   // \icmlOutsideContribution — paper-bundled marker noting that the
   // contribution was made outside the author's primary affiliation.
   // Witness 2310.14751.
