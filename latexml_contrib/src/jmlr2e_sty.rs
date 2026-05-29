@@ -49,6 +49,15 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
   DefMacro!("\\editors{}",
     "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
+  // jmlr2e.sty L194: `\def\address#1{\gdef\@address{#1}}` — the author's
+  // institutional address, rendered in the title block (`\@name \\ \@address`,
+  // L187). Our binding intercepts jmlr2e.sty (so the raw def never runs), and
+  // OmniBus only autoloads `\address` for revtex/OmniBus contexts — so a
+  // jmlr2e paper using `\address{…}` left it undefined where Perl (raw-loads
+  // jmlr2e) is clean. Preserve the address content as an ltx:note, consistent
+  // with the other jmlr2e frontmatter macros above. Witness 1711.01660.
+  DefMacro!("\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
 
   // jmlr2e.sty L372: \acks{text} — acknowledgments section. Emit as
   // structural ltx:acknowledgements with the funding-disclosure label
