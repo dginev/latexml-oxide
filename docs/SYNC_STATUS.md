@@ -623,6 +623,19 @@ byte-identical to Perl `auto_keywords`).
   RUST-WORSE but for the SEPARATE endgroup-mode-frame-leak cluster —
   `\lx@begin@inline@math`/`\@index`/`\end{theorem}` mode-switch, crvi=0 —
   not this fix.)
+* **FIXED 2026-05-29 — SciPost `\bra`/`\ket` (incomplete-binding;
+  2104.02751).** SciPost is a physics journal whose class (SciPost.cls
+  L53) does `\RequirePackage{physics}`, defining Dirac notation
+  `\ket`/`\bra`/`\braket`. Perl has no SciPost binding and raw-loads the
+  real .cls, so physics loads and they're defined. Rust's hand-rolled
+  `latexml_contrib/src/scipost_cls.rs` OmniBus stub mirrors the class's
+  *semantically-meaningful* RequirePackage list (amsmath/amssymb/amsthm/
+  xcolor/hyperref/fancyhdr/lineno/caption/cite) but OMITTED physics →
+  `\ket`/`\bra` undefined. FIX: add `RequirePackage!("physics")` to the
+  stub (faithful to SciPost.cls L53; additive, can't regress the existing
+  amssymb/lineno/caption witnesses, and matches Perl which always loads
+  physics for SciPost). 2104.02751: 2→0 errors (1.0 MB). `cargo test
+  --tests`: 1344 passed, 0 failed.
 * **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
   babel-german double-quote).** `\usepackage[german,english]{babel}` +
   `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports

@@ -8,6 +8,13 @@ LoadDefinitions!({
   // for \gtrsim, \lesssim, \nleq, \square, etc. Witness 2212.07113.
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
+  // SciPost.cls L53: `\RequirePackage{physics}` — Dirac notation
+  // (\ket, \bra, \braket, \expectationvalue, \commutator, …). SciPost is a
+  // physics journal; the class loads physics for every paper. Perl has no
+  // SciPost binding and raw-loads the real .cls, so physics.sty.ltxml runs
+  // and \bra/\ket are defined; our OmniBus stub must mirror that explicitly.
+  // Witness 2104.02751 (\ket{\Psi_0}, \bra{v} → undefined without this).
+  RequirePackage!("physics");
   RequirePackage!("xcolor");
   RequirePackage!("hyperref");
   RequirePackage!("fancyhdr");
