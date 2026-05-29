@@ -1004,8 +1004,24 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
-### R16/R17 fixes (2026-05-28)
+### R12/R16/R17 fixes (2026-05-28)
 
+* **jmlr2e stub: add `\BlackBox` (end-of-proof QED box)** (`<this commit>`) —
+  `jmlr2e.sty` (JMLR template, not in TeX Live — shipped with submissions)
+  defines `\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}`. Our
+  `jmlr2e_sty.rs` stub provided the author-block + frontmatter macros
+  (`\editor`, `{keywords}`, `\ShortHeadings`, `\firstpageno`, …) but omitted
+  `\BlackBox`, so a JMLR paper ending proofs with `\hfill\BlackBox` saw it
+  undefined. Mirror the real def (`\rule{1.5ex}{1.5ex}`). **Witness
+  2001.10284** (`\usepackage{jmlr2e}`, `\hfill\BlackBox`): 1 error → **0**,
+  644 KB HTML (Perl has 5 errors here — missing jmlr2e.sty → all 5 JMLR cmds
+  undefined; Rust's stub handles 4, now 5/5). NOTE: 2001.07861 also uses
+  `\BlackBox` but does NOT load jmlr2e → still undefined (buggy/SHARED, Perl
+  errors too). cargo test --tests 1344/0.
+* **Stale-recovered this triage (already 0 errors on current binary):**
+  2002.04989 (`\specialrule` — ctable→booktabs require predates the stage
+  log), 2004.10115 (`\tagform@` — amsmath). Confirmed via re-test; the
+  stage_R12/R13/R14 logs were stale for these.
 * **changepage: define `{adjustwidth*}` (separate env, was missing)**
   (`<this commit>`) — `changepage.sty` L122 has `\newenvironment{adjustwidth*}[2]`
   as a SEPARATE environment from `{adjustwidth}` (the `*` is part of the env

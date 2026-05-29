@@ -23,6 +23,15 @@ LoadDefinitions!({
   def_macro_noop("\\email")?;
   DefMacro!("\\And", " ");
 
+  // jmlr2e.sty: `\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}` — the
+  // end-of-proof QED box. Papers use `\hfill\BlackBox` or
+  // `\def\qed{\hfill\BlackBox}`. The stub previously omitted it, so a
+  // JMLR paper that loads jmlr2e and ends proofs with `\BlackBox` saw it
+  // undefined (witness 2001.10284: the only residual error after the
+  // stub handled \editor/{keywords}/\ShortHeadings/\firstpageno). Mirror
+  // the real definition.
+  DefMacro!("\\BlackBox", "\\rule{1.5ex}{1.5ex}");
+
   // Frontmatter / pagination ceremony. Round-34 surpass-Perl:
   // preserve the author-typed text content (volume/page/etc. tuples
   // and running-head author+title pair) as ltx:note rather than
