@@ -1781,15 +1781,55 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
 
+  // DIVERGENCE FROM PERL (deliberate, more-robust): skip a package that is
+  // `\RequirePackage`'d / `\usepackage`'d with MULTIPLE CONFLICTING option
+  // sets. This is the unmistakable signature of a require sitting inside a
+  // CONDITIONAL `\def`/`\newcommand` body rather than an actual load — e.g.
+  // `aa.cls`'s `\DeclareOption{ascii}{\def\aa@inputenc{\RequirePackage[ascii]
+  // {inputenc}}}` … `{utf8}{…[utf8]…}` declares inputenc six times with
+  // different encodings; only ONE is ever executed (via `\aa@inputenc`). Perl
+  // never hits this because its version-fallback path (myaa→aa.cls.ltxml)
+  // does NOT dep-scan the raw .cls at all; Rust DOES (content.rs:2010, to pick
+  // up a renamed class's genuinely-bundled deps), so the naive first-match
+  // dedup would force-load `inputenc[ascii]` and make a UTF-8 `ç` (codepoint
+  // 231, in inputenc[ascii]'s 128-255 "undefined" range) error where Perl is
+  // clean. Witness: 1504.05963 (`\documentclass{myaa}`, "François"). A genuine
+  // single-option require (one option set) is unaffected, so real bundled deps
+  // (e.g. `myclass`→caption, 2202.11535) still load.
+  let mut pkg_optsets: rustc_hash::FxHashMap<String, rustc_hash::FxHashSet<String>> =
+    rustc_hash::FxHashMap::default();
+  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+  let mut note_optset = |pkg_csv: &str, raw_options: Option<&str>| {
+    for p in OPT_SPLIT.split(pkg_csv) {
+      if p.is_empty() {
+        continue;
+      }
+      pkg_optsets
+        .entry(p.to_string())
+        .or_default()
+        .insert(raw_options.unwrap_or("").trim().to_string());
+    }
+  };
+  for cap in REQ_RE.captures_iter(&code) {
+    note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
+  }
+  for cap in USE_RE.captures_iter(&code) {
+    note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
+  }
+  let conflicting: rustc_hash::FxHashSet<String> = pkg_optsets
+    .into_iter()
+    .filter(|(_, opts)| opts.len() > 1)
+    .map(|(p, _)| p)
+    .collect();
+
   // Perl L2767-2774: shared `%dups` map, $collect closure splits on
   // `\s*,\s*` and only enrolls a package once, AND only if its
   // `.sty.ltxml_loaded` flag is unset.
   let mut packages: Vec<(String, Option<String>)> = Vec::new();
   let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
-  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
-      if p.is_empty() {
+      if p.is_empty() || conflicting.contains(p) {
         continue;
       }
       // Perl L2773: `!$dups{$p} && !LookupValue($p . '.sty.ltxml_loaded')`

@@ -1004,6 +1004,45 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FIXED: dep-scan skips packages required with conflicting options (`\def`-body false-positives) (2026-05-28)
+
+**Witness 1504.05963** (`\documentclass[]{myaa}`, the A&A class family): Rust 1
+error `unexpected:<char> Keyboard character used is undefined in inputencoding
+ascii` (PB_ms:3150, a UTF-8 `ç` in "François") → **0 errors** (`<this commit>`,
+772 KB HTML, "François" renders correctly); **Perl 0 errors**. FULLY
+root-caused (traced via `LXML_DO` on `\DeclareOption`/`execute_option_internal`
++ both engines' logs):
+* Both engines version-fall-back `myaa` → the generic `aa` binding
+  (Perl log: `Info:fallback:myaa.cls Interpreted my as a versioned … falling
+  back to generic aa.cls`; Rust loads aa_support, same `ExecuteOptions(…utf8
+  hideoverfull…)` "unexpected" Info in BOTH — so utf8/hideoverfull being
+  unhandled is SHARED and NOT the bug).
+* The ONLY divergence: after the version-fallback, **Rust ALSO runs
+  `maybe_require_dependencies(myaa, "cls")`** (content.rs:2010; the fallback
+  path at 498-524 deliberately leaves `myaa.cls.ltxml_loaded` unset, comment
+  525-529, to pick up the renamed class's bundled deps — helps e.g.
+  `myclass`→caption, witness 2202.11535). That raw-text regex scan extracts
+  `\RequirePackage[ascii]{inputenc}` from INSIDE the `\def\aa@inputenc{
+  \RequirePackage[ascii]{inputenc}}` BODY (myaa.cls L93 — a deferred/conditional
+  define, never actually executed) → loads `inputenc[ascii]` → the UTF-8-decoded
+  `ç` (codepoint 231, in inputenc[ascii]'s 128-255 "undefined" range) errors.
+* **Perl's version-fallback path does NOT call maybeRequireDependencies on the
+  raw .cls** (it loads aa.cls.ltxml and stops) → never loads inputenc → `ç`
+  stays a plain UTF-8 letter → clean. (NB: under an EXPLICIT
+  `\usepackage[ascii]{inputenc}` BOTH engines error on UTF-8 chars — that part
+  is correct/shared; the bug is the spurious inputenc[ascii] load.)
+* **FIX LANDED (Option B):** `maybe_require_dependencies` (content.rs:1714)
+  now pre-scans all `\RequirePackage`/`\usepackage` matches and SKIPS any
+  package required with MULTIPLE CONFLICTING option sets (myaa requires
+  inputenc with ascii/latin1/latin9/ansinews/applemac/utf8 — a clear
+  "conditional `\def`-body" signature; only one is ever executed via
+  `\aa@inputenc`). A genuine single-option require is unaffected, so real
+  bundled deps (e.g. `myclass`→caption, 2202.11535) still load. Considered
+  Option A (don't dep-scan after version-fallback, Perl-faithful) but it risks
+  losing the `myclass`→caption pickup; Option B is more robust and keeps real
+  deps. `cargo test --tests` 1344/0. Broad impact: A&A class family (myaa/aa)
+  + any renamed class with `\def`-body `\RequirePackage`.
+
 ### R12/R16/R17 fixes (2026-05-28)
 
 * **xwatermark stub: pull in hyperref (+ catoptions) like the real .sty**
