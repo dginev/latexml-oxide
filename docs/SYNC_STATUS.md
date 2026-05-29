@@ -45,6 +45,27 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — fresh-stage (80-82) CONVERR triage: SHARED-dominated.** Gated ~15
+non-math CONVERR_1/2/3 candidates from the freshest sweep stages vs Perl; ALL are
+SHARED (Perl errors too) or already-fixed. SHARED-confirmed this round:
+`\newcounter` (1907.04221, used at L2 before class), `\@makecaption` (1908.05411),
+`malformed:ltx:section` (1908.06025), `\endflushleft` (1909.00283), `\endproof`
+(1908.03736), `\the\documentclass`/`\globtoks` (1908.11839), the
+`malformed:ltx:XMApp`/`ltx:p` cluster (1905.08718/1906.06926[Rust BETTER 3v7]/
+1906.10733/1907.00789/1907.09599), `hypgotoe` driver error (1906.08151, vendor
+driver-detection, moot in our paradigm but Perl emits it too), pb-lams
+(1905.08376, lamsarrow fonts), pgfplots symbolic-coord (1908.10041). No clean
+Rust-only win in this pool. **Deferred (needs focused session, surpass-Perl):**
+`\@makecaption`/xtab table captions — caption.sty defines `\@makecaption`
+(`\let\@makecaption\caption@makecaption`, L270) and acmart `\RequirePackage{caption}`,
+but neither our caption binding nor Perl's defines it, so `\begin{xtabular}`
+(xtab.sty L63 `\@makecaption{\fnum@table}{#3}`) breaks in BOTH. A single-macro
+patch is insufficient: routing to `\@@caption` schema-errors (`ltx:caption` not
+allowed in `<ltx:block>` — xtab's caption isn't inside a table float in our
+structure) and `\fnum@table` is empty. Proper fix = an xtab binding that wraps
+`xtabular` in a `<ltx:table>` float with a caption slot (like supertabular_sty.rs),
++ `\fnum@table`. Not landed (avoiding a degraded empty-label/unstructured stopgap).
+
 **2026-05-29 — revtex4 ltxutil switch infrastructure (revtex4-derived local
 classes).** 1904.07479 (`\documentclass{./AIAA}`, AIAA.cls = `\LoadClass{revtex4}`):
 RUST 3 errors → **0**. AIAA.cls uses ltxutil boolean switches DIRECTLY in its own
