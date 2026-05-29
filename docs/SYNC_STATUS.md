@@ -1004,6 +1004,33 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FATAL/cascade triage + stale-canvas finding (2026-05-28) — recommend fresh re-sweep
+
+Sampled the FATAL/TIMEOUT/OOM logs across stage_R10-R17 (the CONVERR_1
+binding-gap candidates are largely exhausted/stale). Findings:
+* **2006.12945** (`PushbackLimit` loop): STALE-recovered → 0 errors.
+* **1910.03312** (runaway page-shipout, 5000+ `[N]` pages; 18829-line
+  `hornshaw_qot_*` doc, heavy `\BeforeBeginEnvironment`/`\AfterEndEnvironment`):
+  **SHARED** — Perl also times out (28 errors + fatal). Not a Rust-only win.
+* **2003.02873** (`Timeout:TokenLimit` loop): **SHARED** — Perl
+  `Fatal:too_many_errors:100`.
+* `TooManyErrors:MaxLimit(100)` cascades (2008.00562 `\the$`, 2006.03833
+  `\FirstAidNeededT` already-defined, 2006.01613 mode-close, 2005.12856 math
+  `^`, 2005.10370 `\noalign`): all still cascading, varied roots, cascade-class
+  (not clean Rust-only wins).
+* **2001.10605** `not_tex_source` / `not_tex_source` PDF-magic: correct
+  rejection (SHARED).
+
+**Stale-canvas reality:** across this campaign the MAJORITY of re-tested
+CONVERR_1 candidates were already-fixed on the current binary (\lx ×10,
+\c@tikztimingtrans ×9, \c@subalgorithm@save ×4, {mdfigure}, \specialrule,
+\tagform@, \@inpenc@test, 2006.12945, …). The stage failure logs predate ~8
+landed fixes this session. **Recommended next high-value step: a fresh
+cortex_worker re-sweep of a recent-month chunk (release build) to surface the
+TRUE current Rust-only failure set** — grinding the stale stage logs has
+diminishing returns. The two known live Rust-only DEEP candidates remain
+(2005.06787 xint `~`-escape, 2005.04851 pgfplots `_`; doc commit b2616561f8).
+
 ### FIXED: dep-scan skips packages required with conflicting options (`\def`-body false-positives) (2026-05-28)
 
 **Witness 1504.05963** (`\documentclass[]{myaa}`, the A&A class family): Rust 1
