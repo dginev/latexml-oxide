@@ -27,6 +27,14 @@ LoadDefinitions!({
     "{amscode}",
     "<ltx:classification scheme='AMS'>#body</ltx:classification>"
   );
+  // \amscodename — the "AMS CLASSIFICATION" label (interact.cls L718:
+  // `\newcommand\amscodename{AMS CLASSIFICATION}`). Used inside {amscode}'s
+  // body, but papers also call it standalone, e.g.
+  // `\amscodename{: Primary 60H15; 37H05.}`. Define verbatim as the label so
+  // the classification text survives inline. Witness 2008.01335 (1 err → 0;
+  // Perl, with no interact binding → OmniBus, errors on both \amscodename and
+  // \name). Mirror sibling label macros \keyname/\jelname if seen later.
+  DefMacro!("\\amscodename", "AMS CLASSIFICATION");
 
   // Frontmatter metadata — preserve author content.
   DefMacro!("\\articletype{}",
