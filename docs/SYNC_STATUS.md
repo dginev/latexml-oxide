@@ -1192,7 +1192,7 @@ Fix: remove the eager `\RequirePackage{xcolor}` from `ifacconf_cls.rs` (the
 document loads xcolor itself, with its own options — matching Perl). Eager
 `color` (from the stub's `hyperref` → hyperref.rs L44) is harmless: color and
 xcolor coexist and a later `xcolor[table]` still processes. 8 errors → 0
-("No obvious problems", 718 KB). cargo test 1344/0. (commit pending).
+("No obvious problems", 718 KB). cargo test 1344/0. (commit `711306e9ab`).
 
 **BROADER CLUSTER:** ~39 contrib class stubs eager-`RequirePackage` xcolor.
 Verified: ALL sampled (ceurart/cas_dc/sagej/mdpi/sn_jnl/jmlr/lipics/
@@ -1204,15 +1204,30 @@ bare `\usepackage{xcolor}` + `[table]` double-load is SHARED with Perl (LaTeX
 "already-loaded → drop options"), so the fix is per-binding: drop the eager
 xcolor preload (the document loads xcolor with its own options).
 
-* **LANDED 2026-05-29:** lipics, jmlr, sn_jnl, sagej (full bug — no eager
-  colortbl). Each verified: `xcolor[table]`+`m{}`-table → 0 tabs + colortbl
-  loads; plain `\textcolor`/`\definecolor` doc still clean (color via
-  hyperref→color). cargo test 1344/0.
-* **Remaining follow-up:** the ~33 other eager-xcolor stubs. mdpi/cas_dc also
-  eager-load colortbl so their `m{}` columns already work (only non-`table`
-  xcolor options drop — lower impact). scipost/bytedance_seed use xcolor
-  internally — verify before removing. Remainder: same per-class drop +
-  verify (one `xcolor[table]`+m-table test + one plain-color test each).
+* **LANDED 2026-05-29 (batch 1):** lipics, jmlr, sn_jnl, sagej.
+* **LANDED 2026-05-29 (batch 2, +24 classes):** pnas_new, ecai, gretsi,
+  egpubl, ptephy, nature_pre, cimart, ejpecp, asme2ej, achemso, wlscirep,
+  sigma, agujournal2019, tac, wileymsp_template, aomart, optica_article,
+  bmvc2k, interspeech, interact, combine, lmcs, wlpeerj, siamart. Each first
+  CONFIRMED to exhibit the bug (`\documentclass{CLS}\usepackage[table]{xcolor}`
+  + `m{0.10\textwidth}` table → extra-tab, colortbl not loaded), then the
+  eager xcolor preload removed, then re-verified: 23/24 → 0 tabs + colortbl
+  loads + plain `\textcolor`/`\definecolor` doc clean (no color regression —
+  color stays via each stub's hyperref→color). cargo test 1344/0.
+  * **pnas_new** — eager xcolor removed (Perl-faithful, no regression) but
+    STILL preloads xcolor via a separate transitive path (one of its many
+    deps: authblk/fancyhdr/titlesec/caption/booktabs raw-load chain pulls
+    xcolor after hyperref→color). Residual `m{}`+`xcolor[table]` bug remains
+    for pnas-new pending that second path — tracked as a sub-follow-up.
+* **Intentionally KEPT eager xcolor:** scipost, bytedance_seed (use the
+  xcolor-only `HTML` color model — `\definecolor{...}{HTML}{...}` /
+  `\color[HTML]{...}` — which color.sty can't provide; xcolor is a genuine
+  dependency for their styling).
+* **Lower-impact (deferred):** mdpi, cas_dc, uai2025, wileynjd, ws_journal —
+  these ALSO eager-load colortbl, so their `m{}`/`b{}` columns already work;
+  only non-`table` xcolor options (`dvipsnames`, …) would drop. Not yet
+  touched. ceurart/scis2024/fcs/oup_authoring_template did not reproduce the
+  m-table bug in probing (handle the preamble differently).
 
 ### FIXED: extsizes `extbook`/`extreport` mis-bound to `article` → `\thechapter` undefined (2026-05-29)
 

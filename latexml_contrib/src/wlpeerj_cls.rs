@@ -11,7 +11,11 @@ LoadDefinitions!({
   RequirePackage!("amsfonts");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
-  RequirePackage!("xcolor");
+  // Eager xcolor preload removed for Perl parity: it makes a later document
+  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
+  // columns break (Unrecognized tabular template -> Extra alignment tab). The
+  // document loads xcolor itself; color/definecolor stay via hyperref->color.
+  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
   // wlpeerj.cls L23: `\RequirePackage{lineno}` unconditional.
   RequirePackage!("lineno");

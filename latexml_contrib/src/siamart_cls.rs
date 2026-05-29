@@ -14,7 +14,11 @@ LoadDefinitions!({
   // Many siamart papers pre-define colors in their macros.tex before
   // their own `\usepackage{xcolor}`. Defensive xcolor load matches Perl
   // behaviour. Witness 2405.17955 (EPCID).
-  RequirePackage!("xcolor");
+  // Eager xcolor preload removed for Perl parity: it makes a later document
+  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
+  // columns break (Unrecognized tabular template -> Extra alignment tab). The
+  // document loads xcolor itself; color/definecolor stay via hyperref->color.
+  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   // siamart220329 L1361: \RequirePackage{algorithm}.
   RequirePackage!("algorithm");
   RequirePackage!("url");
