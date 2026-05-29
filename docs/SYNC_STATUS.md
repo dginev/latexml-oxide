@@ -1227,7 +1227,22 @@ global french, see above), **2006.02269** (halign template, see above),
   (`\varleftarrow`/`\varlongleftarrow` from old-arrows.sty, missing in BOTH).
   **1910.09629 FIXED** (see below).
 
-#### DEFERRED-DEEP: 1911.01815 — algorithm2e listinglines inside `\hbox`/`\colorbox`
+#### FIXED (2026-05-29, commit `2627ed999a`): 1911.01815 — algorithm2e listinglines inside `\hbox`/`\colorbox`
+
+**Root cause + fix:** Rust had stubbed `\lx@prepend@indentation@{}` as an EMPTY
+constructor (it emits indentation at `\lx@algo@startline` instead), which
+DROPPED Perl's `$doc->floatToElement('ltx:tags')` cursor-reposition that
+`\lx@algo@endline` runs right before `\lx@algo@@endline`. Without it, a listing
+wrapped in `\colorbox`/`\hbox` left the cursor inside the box's `_noautoclose`
+`<ltx:text>`, so `</ltx:listingline>` errored. Restored the `float_to_element(
+"ltx:tags", false)` reposition (keeping Rust's startline-indentation, so #1 is
+not re-absorbed). 1911.01815: 1 error → 0 (Perl clean). cargo test 1344/0.
+NEW residual: 1903.04631 (`supplement.tex`) had this PLUS a separate
+`ltx:tabular`/`ltx:tr`/`ltx:td` "isn't allowed in `<ltx:listingline>`" issue (a
+`\tabular` inside an algorithm2e line) — now its top failure; a fresh candidate.
+Full diagnostic history below (kept for reference):
+
+#### [history] DEFERRED-DEEP: 1911.01815 — algorithm2e listinglines inside `\hbox`/`\colorbox`
 
 Root-caused to a minimal repro:
 ```tex
