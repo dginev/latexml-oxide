@@ -594,18 +594,35 @@ byte-identical to Perl `auto_keywords`).
   consumed) but OMITTING the moot capacity body (L76+). Flips
   **1504.06174, 1605.06159, 1607.05324** → rc=0, 0 errors (Perl baseline
   1504.06174: 1.18 MB). cargo test --tests: 1344 passed, 0 failed.
-* **DEFERRED — `\crvi` cluster (3 papers: 1603.04650, 1704.02401,
-  1804.00017; xy-pic curved arrows).** `\usepackage[all,tips]{xy}` +
-  `\ar@/^15pt/[rr]^{...}` (the `@/.../` curve modifier) → `\crvi`
-  undefined. `\crvi` is defined in xycurve.tex L69 (`\xydef@\crvi#1#{...}`,
-  an advanced `#{`-delimited param). Rust's xy_sty.rs DOES raw-load
-  xycurve.tex for `[all]` (and `\crvi` IS defined in a minimal repro), but
-  the real papers hit a STATEFUL divergence: a minimal `\ar@/.../` gives
-  `Info:xy:error Forms @/.../… only available when curve` (curve module's
-  runtime flag not set) while the real papers reach `\crvi` undefined. The
-  curve-module activation (`\ifxy@curve@`-style flag) + `\crvi`'s `#{`
-  param are the deep issue. Perl raw-loads xycurve.tex and renders curves
-  (2.9 MB). Deep xy-pic curve-machinery — deferred.
+* **FIXED 2026-05-29 — `\crvi` cluster (xy-pic curved arrows; ≥5 papers:
+  1603.04650, 1704.02401, 1804.00017, 2011.01105, 2012.03982).** ROOT
+  CAUSE (not the curve runtime-flag the earlier diagnostic guessed): the
+  `\input xypic` path was collapsed onto `xypic_sty.rs`, which did
+  `RequirePackage("xy")` and so marked the xy **package** (`xy.sty`)
+  loaded. The document's own `\usepackage[all]{xy}` then hit the
+  "already loaded" option-clash early-stop (`input_definitions` L276) and
+  **dropped the `[all]` option** → xycurve.tex never loaded → `\crvi`
+  (xycurve.tex L69) stayed undefined when a `\ar@/^1pc/[u]` curved arrow
+  digested. Perl is clean because its **`xypic.tex.ltxml`** (the `\input
+  xypic` entry) uses `InputDefinitions('xy', type=>'tex')` — loading the
+  xy *tex* overlay WITHOUT `RequirePackage('xy')`, leaving `xy.sty`
+  unmarked so the later `\usepackage[all]{xy}` processes its options.
+  FIX (Perl-faithful split): new `xypic_tex.rs` mirrors
+  `xypic.tex.ltxml` (`InputDefinitions!("xy", extension=>tex)` +
+  `\xyoption{v2}`, no RequirePackage), registered for `("xypic","tex")`;
+  `xypic_sty.rs` keeps `xypic.sty.ltxml`'s `RequirePackage` semantics for
+  `\usepackage{xypic}`. Because the overlay can now load twice (via
+  `\input xypic`, then re-run by `\usepackage[all]{xy}` for options), the
+  `\xyoption` redefinition in `xy_sty.rs` is guarded `if
+  !is_defined("\\lx@xy@xyoption@orig")` so `\lx@xy@xyoption@orig` is bound
+  to the *original* `\xyoption` exactly once (otherwise it self-captures
+  the redefined closure → infinite `\xyoption{<unknown>}` recursion).
+  2011.01105: 1→0 errors (3.3 MB, Perl 4.0 MB); 2012.03982: 0 (2.1 MB,
+  Perl 2.8 MB); 1603.04650/1704.02401/1804.00017: 0 errors. `cargo test
+  --tests`: 1344 passed, 0 failed. (Note: 2006.01613/2006.01470 still
+  RUST-WORSE but for the SEPARATE endgroup-mode-frame-leak cluster —
+  `\lx@begin@inline@math`/`\@index`/`\end{theorem}` mode-switch, crvi=0 —
+  not this fix.)
 * **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
   babel-german double-quote).** `\usepackage[german,english]{babel}` +
   `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports

@@ -698,8 +698,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // `RequirePackage('pstricks_support')`. See pstricks_tex.rs.
   ("pstricks", "tex", package::pstricks_tex::load_definitions),
   // Perl: xypic.tex.ltxml does InputDefinitions('xy', type=>'tex') + RawTeX('\xyoption{v2}').
-  // Rust xypic_sty does `RequirePackage!("xy", options=["v2"])`, which is equivalent.
-  ("xypic", "tex", package::xypic_sty::load_definitions),
+  // Faithful to that, `xypic_tex` loads the xy *tex* overlay WITHOUT marking
+  // the xy *package* loaded, so a later `\usepackage[all]{xy}` still processes
+  // its options (curve/arrow/... features). `xypic_sty` keeps the `.sty`-entry
+  // `RequirePackage('xy', ['v2'])` semantics (Perl xypic.sty.ltxml).
+  ("xypic", "tex", package::xypic_tex::load_definitions),
   // Perl: xy.tex.ltxml does InputDefinitions('xy', type=>'tex', noltxml=>1, at_letter=>0)
   // plus \xyoption driver filtering. Rust xy_sty matches this structure.
   ("xy", "tex", package::xy_sty::load_definitions),

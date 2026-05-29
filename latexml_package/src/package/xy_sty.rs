@@ -47,7 +47,20 @@ LoadDefinitions!({
   // where it is defined, so a no-op here (before option processing) would
   // be clobbered. See the comment there.
 
-  // Redefine \xyoption to filter incompatible drivers (Perl L27-50)
+  // Redefine \xyoption to filter incompatible drivers (Perl L27-50).
+  //
+  // IDEMPOTENCY GUARD: with the xypic.tex / xypic.sty split, the xy overlay
+  // can load TWICE — once via `\input xypic` (xypic_tex →
+  // InputDefinitions('xy','tex'), which does NOT mark the xy package loaded)
+  // and again via the document's own `\usepackage[all]{xy}` (which re-runs
+  // this whole binding to process its `[all]` options). Re-running
+  // `Let('\lx@xy@xyoption@orig','\xyoption')` on the second pass would capture
+  // the ALREADY-redefined `\xyoption`, making `\lx@xy@xyoption@orig`
+  // self-referential and looping any later `\xyoption{<unknown>}` fallthrough.
+  // Guard exactly like the `\lx@xy@original` block below, so the overlay's CS
+  // rebinds happen once (Perl loads xy.tex.ltxml once; only xy.sty.ltxml's
+  // ProcessOptions re-runs to digest options). Witness 2011.01105.
+  if !is_defined("\\lx@xy@xyoption@orig") {
   Let!("\\lx@xy@xyoption@orig", "\\xyoption");
   DefMacro!("\\xyoption{}", sub[(option)] {
     let option_s = option.to_string();
@@ -135,6 +148,7 @@ LoadDefinitions!({
     }
     Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
   });
+  } // end idempotency guard: \xyoption redefinition runs once per overlay
 
   // At BeginDocument, also load xygraph.tex defensively if not already
   // loaded — papers that use `\xygraph{...}` may have come in via
