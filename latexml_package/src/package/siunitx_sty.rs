@@ -6,6 +6,26 @@
 use crate::prelude::*;
 use crate::xmath_helpers::*;
 
+/// Read the control-sequence argument of a siunitx `\Declare…` primitive,
+/// handling BOTH the bare form `\DeclareSIPrefix \yocto {…}{…}` AND the
+/// braced `m`-arg form `\DeclareSIPrefix{\million}{…}{…}` (Perl uses the
+/// `DefToken` parameter type, which accepts either). A plain
+/// `gullet::read_token()` reads `{` (catcode BEGIN) for the braced form, so
+/// the real cs (`\million`) was never registered and stayed undefined —
+/// witness 1811.03510 (`\DeclareSIPrefix{\million}{\text{M}}{2}` then
+/// `\SI{185}{\million rays/s}`). `read_arg` strips the optional braces and
+/// yields the single cs token in both cases.
+fn read_si_declare_cs() -> Result<Token> {
+  let toks = gullet::read_arg(ExpansionLevel::Off)?;
+  Ok(
+    toks
+      .unlist_ref()
+      .first()
+      .copied()
+      .unwrap_or_else(|| T_CS!("\\relax")),
+  )
+}
+
 /// Structured error emission for siunitx (parallels
 /// `latexml_post::diag::log_post_error!` and the engine `Error!` macro).
 ///
@@ -2336,7 +2356,7 @@ LoadDefinitions!({
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareSIPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2358,7 +2378,7 @@ LoadDefinitions!({
   // \DeclareSIPrePower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPrePower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2377,7 +2397,7 @@ LoadDefinitions!({
   // \DeclareSIPostPower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPostPower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2397,7 +2417,7 @@ LoadDefinitions!({
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let qualifier = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2416,7 +2436,7 @@ LoadDefinitions!({
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareBinaryPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;

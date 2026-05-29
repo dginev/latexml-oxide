@@ -1004,6 +1004,21 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FIXED: siunitx `\DeclareSIPrefix{\cs}` (braced) cs-arg mis-read (2026-05-28)
+
+**Witness 1811.03510** (siunitx). The paper does `\DeclareSIPrefix{\million}
+{\text{M}}{2}` (BRACED first arg — the siunitx `m`-arg form) then
+`\SI{185}{\million rays/s}`. Rust's `\DeclareSIPrefix` (and `\DeclareSIPrePower`/
+`\DeclareSIPostPower`/`\DeclareSIQualifier`/`\DeclareBinaryPrefix`) hand-rolled
+`gullet::read_token()` for the cs, which reads `{` (catcode BEGIN) for a braced
+arg → the real cs (`\million`) was never registered → undefined → 1 error.
+`\DeclareSIUnit` already used the `DefToken` param spec (brace-aware) and was
+fine; Perl uses `DefToken` for all (0 errors). Added `read_si_declare_cs()`
+(via `read_arg`, strips optional braces, handles bare `\yocto` AND braced
+`{\million}`) and routed all 5 through it. 1 error → 0, 1.05 MB HTML; built-in
+`\DeclareSIPrefix \yocto {y} {-24}` (bare) still works. cargo test 1344/0.
+(commit `<this commit>`)
+
 ### R10-R16 cluster characterization — many are Rust-AHEAD, not clean Rust-only (2026-05-28)
 
 Sampled the big still-failing clusters + Perl-gated. KEY meta-finding: most are
