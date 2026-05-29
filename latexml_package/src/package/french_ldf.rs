@@ -145,6 +145,17 @@ LoadDefinitions!({
   def_macro_noop("\\AutoSpaceBeforeFDP")?;
   // `\FBautospacing` toggle (legacy) — same family.
   def_macro_noop("\\FBautospacing")?;
+  // `\NoAutoSpacing` — french.ldf L506 (`\DeclareRobustCommand*`): the
+  // user-facing French auto-spacing kill-switch (`\FB@spacing@off` +
+  // `\ifFB@active@punct\shorthandoff{;:!?}\fi`). Same family as the FDP
+  // toggles above: the thin-space-before-`;:!?` is font-language-driven via
+  // our `\lx@french@punct@*` primitives (not per-paper toggleable), and
+  // babel's `\shorthandoff` is itself a no-op in Rust (babel_sty.rs L182),
+  // so the faithful semantic-output behavior is a no-op. Our curated
+  // french.ldf skips the raw-load, so `\NoAutoSpacing` was undefined where
+  // Perl (raw-loads french.ldf) is clean. Witness 1810.02869
+  // (`[frenchb]{babel}` + `\NoAutoSpacing`).
+  def_macro_noop("\\NoAutoSpacing")?;
 
   // \frenchsetup — babel-french 3.x configuration command. Takes a
   // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
