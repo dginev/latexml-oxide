@@ -182,6 +182,20 @@ LoadDefinitions!({
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
+  // babel.def `\initiate@active@char{?}` (TL `babel/babel.def` L1372)
+  // evaluates `\bbl@add@special\csname?\endcsname`; expanding
+  // `\csname?\endcsname` turns the (previously undefined) escaped `\?`
+  // into `\relax` per TeX's csname rule — a permanent, global,
+  // language-INDEPENDENT side-effect of *loading* french (the catcode
+  // flip to active is separate, in `\extrasfrench`). `\:`/`\;`/`\!` are
+  // already math-spacing commands, so only `\?` is affected. A bare `\?`
+  // (e.g. a stray set-builder `D([0,T];\R^k):\? u_C=v_C`) therefore
+  // silently vanishes under Perl rather than erroring. We skip the raw
+  // french.ldf load, so replicate the exact end-state: an undefined `\?`
+  // becomes `\relax` (a pre-existing `\?` is left untouched). Witness
+  // 2007.04819 (`\usepackage[frenchb,english]{babel}`, `:\? u_C=v_C`).
+  RawTeX!(r"\@ifundefined{?}{\let\?\relax}{}");
+
   // french.ldf user-facing typesetting knobs that some papers call
   // directly (rather than via `\frenchsetup{key=value}`). All are
   // typographical no-ops in our XML/HTML pipeline since we don't
