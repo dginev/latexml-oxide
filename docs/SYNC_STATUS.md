@@ -50,6 +50,20 @@
 `large-scale-testing-round-4` branch: drive stages 51-100 (second
 500K) and address remaining 5 deep Rust-only failures.
 
+**2026-05-29 state.** 8 faithful fixes landed this session (6 genuine
+Rust-only conversions + 2 valid Rust-surpasses-Perl divergences — see the
+correction box above), all at `cargo test 1344/0`. After fixing the
+Perl-gating path, corrected scans show the binary is at **high parity**:
+genuine Rust-only failures are now *rare* (~0; a 117-paper correct-path scan
+found only SHARED). The stale `resweep_fresh.tsv` (err=1..10) is exhausted for
+clean single-root wins. Pivoted to a **release-binary large scan** (4000+ fresh
+papers, correct path + largest-`\begin{document}` main-detection) to surface
+the rare remaining genuine Rust-only candidates efficiently; low-error
+Rust-failures (nerr 1-3) are Perl-gated as the likeliest genuine engine bugs.
+One confirmed-genuine DEEP residual: 1911.01815 (listing/verbatim inside
+`\hbox`/`\colorbox` — `\lx@algo@endline` closes a listingline over the hbox's
+open `_noautoclose` text; whatsit-construction-order divergence; non-fatal).
+
 **Goal.** Reach **1,000,000 successful conversions** with the Rust
 translation (`cortex_worker --standalone`) on the 1,000,001-paper
 subset of arxmliv where the original Perl LaTeXML emitted at least
