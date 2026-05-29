@@ -1071,6 +1071,39 @@ not Perl-parity gaps.)
 * **1910.10243** — pstricks/pst-plot → `\ifpst@useCalc`/`\ifpst@psfonts`/
   `\colorlet`/`\ifluatex` undefined. pstricks cascade.
 
+### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
+
+Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
+NOT-previously-gated fresh papers (correct path `.../bindings`, largest-
+`\begin{document}` main-detection). Failure rate ~0.5%, and EVERY failure falls
+into a known category — confirming the binary is at **high parity** with Perl
+and genuine Rust-only candidates are now *rare*:
+* **SHARED** (Perl fails identically): `Error:unexpected:_` math-mode cluster
+  (×4); `Error:misdefined:#` = mdwmath.sty (×4+). Root of the mdwmath `#`-leak:
+  a catcode-trick `\def\sq@readrad#1"#2\#3\relax{…}` then
+  `\expandafter\sq@readrad\meaning\sqrtsign\relax` (mdwmath.sty L48-52) that
+  parses `\meaning\sqrtsign` expecting a `\mathchar"XXXX` hex with a literal
+  `"`. BOTH LaTeXML ports' `\meaning` of `\sqrtsign` lacks that `"`-hex form, so
+  the `Until:"` delimited read fails → "Missing argument" → leaked `#`s reach
+  the Stomach. SHARED `\meaning`-format gap (KNOWN_PERL_ERRORS-class), not
+  Rust-only.
+* **Main-detection artifacts**: multi-file papers where the heuristic picks a
+  fragment (e.g. 1902.00014 → `appendix-2.tex`/tikz `standalone` → `\section`
+  undefined; Perl ALSO errors on the fragment). Scan tooling, not engine.
+* **GENUINE Rust-only cluster** = `Error:malformed:ltx:listingline` — now 2
+  instances (1911.01815, 1903.04631 `supplement.tex`): listing/verbatim inside
+  `\hbox`/`\colorbox`. CONFIRMED genuine (Perl clean, correct path). Deep
+  whatsit/absorb-order root (see 1911.01815 note) — top remaining genuine
+  Rust-only work; needs a focused engine-tracing session (instrumenting the
+  HBoxContents-predigest → absorb → `\lx@algo@@endline` construction order, the
+  one place Perl and Rust diverge despite byte-identical `\hbox`/`closeElement`/
+  `canAutoClose`).
+
+**Net:** the session's 8 fixes brought the binary to near-parity; the easy/
+medium genuine Rust-only wins are exhausted. Remaining work is (a) the
+listing-in-box deep cluster, (b) SHARED beyond-Perl gaps (mdwmath `\meaning`,
+revtex4 `@sw`, pushback-loop hangs, fontaxes/betababel/pstricks raw-loads).
+
 ### Round-37 err=6-10 gate sweep (2026-05-29): stale-TSV clean wins EXHAUSTED
 
 Gated the remaining 12 err=6-10 candidates (excluding shared clusters). 3
