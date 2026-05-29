@@ -9200,7 +9200,14 @@ LoadDefinitions!({
   //   \qbezier(6.4,0.5)(7.35,2)  (8.3,0.5)
   // (witness: 0904.1097 line 422 has multi-space gaps between coord
   // tuples, which previously failed `Missing argument Match:(`).
-  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
+  // A `SkipSpaces` is ALSO needed before the FIRST `Match:(` — a space can
+  // follow the optional `[N]` (the optional-number reader, unlike
+  // OptionalMatch, does not skip its trailing space), e.g. `\qbezier[10]
+  // (247,22)(245,20)(245,10)`. Perl uses `Pair Pair Pair` (LaTeX.pool.ltxml
+  // L5182), whose `Pair` type skips leading spaces; this matches that.
+  // `SkipSpaces` is a non-numbered directive, so the body's #N mapping is
+  // unchanged. Witness 1701.03735 (amsart, `\qbezier[10] (…)`): RUST 1→0.
+  DefMacro!("\\qbezier [Number] SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
     "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
   DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
