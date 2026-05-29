@@ -1004,6 +1004,23 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FIXED: babel-french bare `\?` undefined (initiate@active@char side-effect) (2026-05-28)
+
+**Witness 2007.04819** (`\usepackage[frenchb,english]{babel}`). The paper has a
+stray set-builder `D([0,T];\R^k):\? u_C=v_C` in display math. Perl converts
+clean (0 errors); Rust errored `Error:undefined:\?`. Root cause: babel.def's
+`\initiate@active@char{?}` (TL `babel/babel.def` L1372) runs
+`\bbl@add@special\csname?\endcsname`; expanding `\csname?\endcsname` on the
+undefined escaped `\?` turns it into `\relax` (TeX's csname rule) — a permanent,
+global, **language-independent** side-effect of *loading* french (catcode-flip to
+active `?` is separate, in `\extrasfrench`). `\:`/`\;`/`\!` are already
+math-spacing commands so only `\?` is affected → bare `\?` silently vanishes
+under Perl. Rust skips the raw french.ldf load, so `\?` stayed undefined. Added
+`\@ifundefined{?}{\let\?\relax}{}` at french_ldf.rs load time (covers `french`
+AND `frenchb`). Verified: text `[\? Q]`→`[ Q]`, math `a\?b`→`ab`, both engines
+identical; real paper 1 error→0, 3.1 MB HTML (Perl 3.2 MB). cargo test 1344/0.
+(commit `58e40e1691`)
+
 ### FIXED: siunitx `\DeclareSIPrefix{\cs}` (braced) cs-arg mis-read (2026-05-28)
 
 **Witness 1811.03510** (siunitx). The paper does `\DeclareSIPrefix{\million}
