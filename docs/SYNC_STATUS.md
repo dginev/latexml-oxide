@@ -45,6 +45,21 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — revtex4 ltxutil switch infrastructure (revtex4-derived local
+classes).** 1904.07479 (`\documentclass{./AIAA}`, AIAA.cls = `\LoadClass{revtex4}`):
+RUST 3 errors → **0**. AIAA.cls uses ltxutil boolean switches DIRECTLY in its own
+body (`\@ifxundefined\twoside@sw{\@booleanfalse\twoside@sw}{}`, L97). The real
+revtex4.cls is a monolith that bundles `ltxutil` (so these are available to any
+revtex4-derived class), but our revtex4 binding REPLACES revtex4.cls with LaTeXML
+constructs and never pulled the low-level switches in → `\@ifxundefined`/
+`\@booleanfalse`/`\twoside@sw` undefined. Fix: ported ltxutil.sty's switch block
+(`\true@sw`/`\false@sw`/`\@boolean`/`\@boole@def`/`\@booleantrue`/`\@booleanfalse`/
+`\@ifx`/`\@ifxundefined`/`\@ifnotrelax`/`\@if@sw`/… L146-205) verbatim into
+`revtex4_support_sty.rs`. AIAA.cls now raw-loads with NO cascade → clean 2.1 MB
+doc. This SURPASSES Perl, which can't find the local `./AIAA.cls` (reports
+`missing file`, falls back to article — a degraded but "clean" result); we resolve
+the bundled class as real LaTeX does and render it properly. `cargo test` 1344/0.
+
 **2026-05-29 — case-change-in-math frontmatter fix (genuine Rust-only win).**
 1907.10053 (amsart): RUST 2 errors → **0** (Perl never had these — Perl's only
 errors on this paper are unrelated latex2e-first-aid/math noise; Rust now
