@@ -1228,6 +1228,23 @@ vs Perl, and ensure the listingline-close fires AFTER the hbox text closes (or
 that the hbox content's listingline boundaries are handled before the inner
 `\lx@algo@endline`). DEEP — needs a focused digestion-tracing session.
 
+**CONFIRMED genuine Rust-only (2026-05-29, CORRECT Perl path).** Re-gated with
+`--path=.../bindings`: Perl converts CLEAN (3 warnings; statsoc.cls missing in
+both), Rust = 1 error. Structural diff on the minimal repro: Perl emits
+`<listingline><text(hbox)> for <emph>…</emph> do </text></listingline>` — the
+`\hbox`'s `_noautoclose` `ltx:text` is nested INSIDE listingline-1 and CLOSES
+cleanly at the listingline boundary. Rust opens the SAME `<listingline><text>
+for <emph>…` but then the `\For` block-open's `\lx@algo@endline` (closeElement
+'ltx:listingline'), firing while still inside the hbox text, hits the
+`_noautoclose` text as a non-auto-closeable DESCENDANT → error. Both engines'
+`\hbox` (sets `_noautoclose`, opens in current tree, absorbs) and `closeElement`
+(errors on non-auto-closeable descendant) are byte-identical — so Perl must
+close the hbox text BEFORE the `\lx@algo@endline` fires (digestion/whatsit
+order), which Rust does not. Pure root-cause is the `\For`/`\algocf@@@block`
+digestion-vs-tree-mutation ordering inside an `\hbox` body. NON-FATAL (output
+still produced). Worth a focused session: it generalizes to any listing/verbatim
+inside `\hbox`/`\colorbox`/`\fbox`.
+
 #### FIXED: 1910.09629 — hyperref `\url` + active-`"` conditional leak (2026-05-28)
 
 Root-caused to a minimal repro:
