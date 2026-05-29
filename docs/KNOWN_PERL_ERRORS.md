@@ -815,6 +815,48 @@ expansion misfires), but the net outcome — no HTML — matches Perl. Not
 actionable as a Rust-only fix; revisit only if catoptions raw-load
 becomes a deliberate engine goal.
 
+## `mdwmath.sty` `\sq@readrad` `#`-leak — `\meaning\sqrtsign` lacks the `"` delimiter (SHARED)
+
+`mdwmath.sty` (mdwtools) redefines `\sqrt`/`\root` by reading the
+*meaning* of the kernel `\sqrtsign` mathchar to recover its radical
+delimiter code. With `|` temporarily made the escape character it
+defines (L50–51):
+
+```tex
+|def|sq@readrad#1"#2\#3|relax{|global|sq@sqrt"#2|relax}
+|expandafter|sq@readrad|meaning|sqrtsign|relax
+```
+
+i.e. `\def\sq@readrad #1"#2\#3\relax{…}` then
+`\expandafter\sq@readrad \meaning\sqrtsign \relax`. The macro is
+delimited by a literal `"` (the `#2` runs *up to* a double-quote) and
+expects `\meaning\sqrtsign` to expand to something like
+`\mathchar"1270` so that `#2` captures the hex code after the `"`.
+
+This only works when `\sqrtsign` is a genuine **`\mathchar` primitive**
+whose `\meaning` string contains `"`. Under LaTeXML — **both** engines —
+`\sqrtsign` is not a raw `\mathchar`, so `\meaning\sqrtsign` carries no
+`"`; the `#1"#2\#3` delimited scan never finds its `"` terminator,
+over-runs the intended argument, and the literal `#` parameter tokens
+from the *body* leak out to be digested. The result is a burst of:
+
+```
+Error:misdefined:# The token "#" (catcode PARAM) should never reach Stomach!
+```
+
+emitted **while processing `mdwmath.sty` itself** (load time, not use
+time). Confirmed SHARED 2026-05-29 against Perl `~/perl5/bin/latexml
+--path=~/git/ar5iv-bindings/bindings --preload=ar5iv.sty`: witness
+**1811.09652** gives RUST 43 / PERL 44 errors, and Perl's own log shows
+the identical `Error:misdefined:# The token T_PARAM[#] should never reach
+Stomach! at mdwmath.s…`. The `misdefined:#` cluster is one of the
+largest in the corpus (~1300 papers via the mdwtools family), but it is
+an **upstream LaTeXML limitation** — `\meaning` of LaTeXML's `\sqrtsign`
+does not reproduce TeX's `\mathchar"…` form — not a Rust-only defect.
+Not actionable as a Rust-only fix; would require teaching LaTeXML's
+`\sqrtsign`/`\meaning` to round-trip mathchar codes the way TeX does,
+which is out of scope and equally absent in Perl.
+
 ## A text-symbol CS (`\i`/`\j`) in a `\usepackage` Semiverbatim option hangs (SHARED)
 
 `\usepackage[pdfauthor={…Mar{\'\i}n…}]{hyperref}` — i.e. a font-encoding
