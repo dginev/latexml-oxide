@@ -1004,6 +1004,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 err=3-5 gate sweep (2026-05-29): 4 fresh PCLEAN, 1 fixed, 3 deferred-deep
+
+Gated 17 err=3-5 candidates (excluding shared clusters) from the resweep TSV →
+4 Perl-clean+Rust-fail. **2002.09766 FIXED** (algorithm2e+algorithm combo, see
+below). Remaining 3 are all the SAME META-PATTERN: *Perl's kpathsea doesn't
+find the package* (reports it "missing" → skips it), while *Rust's kpathsea
+finds it on the shared TL tree and raw-loads it*, then hits deep package
+internals. (The two engines diverge on file lookup despite the same texmf;
+`kpsewhich <pkg>.sty` succeeds, so these would cascade in Perl too in an env
+where Perl finds them — i.e. they are "beyond-Perl" raw-load-robustness work,
+not Perl-parity gaps.)
+* **2005.05941** — `\fontaxes@code`/`\fontaxes@edoc` undefined (XCharter font →
+  fontaxes). fontaxes' `\fontaxes@encode@[2]` dispatcher (fontaxes.sty L245)
+  does `\@ifundefined{fontaxes@encode@#1#2}` where `#2` is `{w}{a}` (BRACES) —
+  a `\csname`-with-braces read that diverges in Rust so the `@default` branch
+  never defines `\fontaxes@code` ("readBalanced ran out"). Same hard
+  csname-protocol territory as [[project_mhchem_csname_protocol_deepdive]].
+* **2003.05608** — betababel.sty (Greek beta-babel) → teubner → Greek babel
+  cascade: `\bbl@attributes` undefined + "Greek language unknown" + "attribute
+  polutoniko unknown" + `\Greeknumeral`. Multi-error Greek-typography stack.
+* **1910.10243** — pstricks/pst-plot → `\ifpst@useCalc`/`\ifpst@psfonts`/
+  `\colorlet`/`\ifluatex` undefined. pstricks cascade.
+
 ### FIXED: algorithm2e `algorithm*`/`algorithm2e` via `\let` broke `algorithm`+algo2e combo (2026-05-29)
 
 **Witness 2002.09766** (`\usepackage{algorithm,algorithmic}` +
