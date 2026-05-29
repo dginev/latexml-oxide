@@ -1164,6 +1164,40 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: interact `\amscodename` label macro (2026-05-29)
+
+**Witness 2008.01335** (`\documentclass{interact}` + `\amscodename{: Primary
+60H15; 37H05.}`). interact.cls (Taylor & Francis, no Perl binding → OmniBus)
+defines `\newcommand\amscodename{AMS CLASSIFICATION}` (L718) — the label inside
+its `{amscode}` env, but papers also call it standalone. Rust's interact_cls.rs
+bound the `{amscode}` env but not the `\amscodename` label. Added verbatim.
+1 err → 0; Perl (no interact binding) errors on both `\amscodename` and `\name`,
+so Rust surpasses Perl. cargo test 1344/0. (commit `<interact \amscodename>`).
+
+### Fresh 2008-range low-error scan triage (2026-05-29)
+
+Scanned ~2500 of the 2008 range filtered to ≤6 Rust errors; 11 candidates,
+gated vs Perl. Only **2008.01335** (interact, above) was a clean fixable
+Rust-only win. All others SHARED or Rust-already-better:
+* `\apptocmd`/`\patchcmd` + amsart `\@setauthors`/`\@settitle`/`\uppercasenonmath`
+  (2008.04441/.04880, R6/P6) — etoolbox + amsart internals undefined in BOTH
+  (paper uses `\patchcmd` to patch amsart but the needed cmds aren't in scope).
+* `\NAT@parfalse`/`\NAT@citetp` natbib internals (2008.00502, R6/P7) — both.
+* `\doendproof` mode-frame leak (2008.03784, R2/P2) — both; the
+  [[project_endgroup_modeswitch_frame_leak]] proof-env family.
+* `\GenericError` tabularht DVI-driver `vlines` (2008.03776, R1/P1) — both
+  (vendor driver error, moot in our XML paradigm; WISDOM #50).
+* `\else not-in-conditional` (2008.01181/.01704, R6/P6 / R2/P2) — both
+  (unbalanced-conditional paper-bugs / shared gap; one had main-detection noise).
+* `_`-in-math (2008.01557/.04831) — text-mode-`_` paper-bugs, both.
+* `\cellcolor` (2008.03813) — Rust 0 / Perl 1: Rust ALREADY better.
+
+**Three ranges now scanned (2006/2106/2008): each yields ~1 clean Rust-only
+low-error win (all fixed: imsart, apacite, interact). Confirms VERY HIGH PARITY
+— the remaining Rust-only failures concentrate in the deferred clusters
+(xy-pic curve, mode-frame leaks), not in discoverable low-error single-root
+cases.**
+
 ### FIXED: apacite `\PrintOrdinal` + missing `\B*` bib abbreviation macros (2026-05-29)
 
 **Witness 2106.02003** (apacite `main.bbl` with `\PrintOrdinal{3}\ \BEd`). GENUINE
