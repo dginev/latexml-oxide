@@ -1194,14 +1194,25 @@ document loads xcolor itself, with its own options — matching Perl). Eager
 xcolor coexist and a later `xcolor[table]` still processes. 8 errors → 0
 ("No obvious problems", 718 KB). cargo test 1344/0. (commit pending).
 
-**BROADER CLUSTER (follow-up):** ~40 contrib class stubs eager-`RequirePackage`
-xcolor (cas_dc, ceurart, sagej, mdpi, sn_jnl, jmlr, lipics, …). Each is the
-same latent bug for documents that later do `\usepackage[<opts>]{xcolor}`
-(`table`, `dvipsnames`, …). The minimal `\usepackage{xcolor}` +
-`\usepackage[table]{xcolor}` double-load is SHARED (Perl drops options too),
-so the only Perl-faithful fix is per-binding: drop the eager xcolor preload
-wherever Perl's binding (or OmniBus fallback) doesn't do it. Needs per-class
-gating against Perl before landing — NOT a blanket edit.
+**BROADER CLUSTER:** ~39 contrib class stubs eager-`RequirePackage` xcolor.
+Verified: ALL sampled (ceurart/cas_dc/sagej/mdpi/sn_jnl/jmlr/lipics/
+interspeech/scipost) have NO Perl binding (Perl uses OmniBus, never preloads
+xcolor) → systematic Rust-only divergence. Risk audit: all 39 also load
+hyperref/color (so `\color`/`\definecolor` stay available) and only 2
+(scipost, bytedance_seed) use xcolor-specific commands internally. The minimal
+bare `\usepackage{xcolor}` + `[table]` double-load is SHARED with Perl (LaTeX
+"already-loaded → drop options"), so the fix is per-binding: drop the eager
+xcolor preload (the document loads xcolor with its own options).
+
+* **LANDED 2026-05-29:** lipics, jmlr, sn_jnl, sagej (full bug — no eager
+  colortbl). Each verified: `xcolor[table]`+`m{}`-table → 0 tabs + colortbl
+  loads; plain `\textcolor`/`\definecolor` doc still clean (color via
+  hyperref→color). cargo test 1344/0.
+* **Remaining follow-up:** the ~33 other eager-xcolor stubs. mdpi/cas_dc also
+  eager-load colortbl so their `m{}` columns already work (only non-`table`
+  xcolor options drop — lower impact). scipost/bytedance_seed use xcolor
+  internally — verify before removing. Remainder: same per-class drop +
+  verify (one `xcolor[table]`+m-table test + one plain-color test each).
 
 ### FIXED: extsizes `extbook`/`extreport` mis-bound to `article` → `\thechapter` undefined (2026-05-29)
 

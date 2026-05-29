@@ -5,7 +5,12 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
-  RequirePackage!("xcolor");
+  // Do NOT eager-load xcolor (Perl ships no sagej binding → OmniBus, no
+  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
+  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
+  // "Unrecognized tabular template" → "Extra alignment tab". The document
+  // loads xcolor with its own options; `\color`/`\definecolor` stay
+  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   // sagej templates use \toprule / \midrule / \bottomrule from booktabs.
   // The raw cls relies on the user `\usepackage{booktabs}` but many
