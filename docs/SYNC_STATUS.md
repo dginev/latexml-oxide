@@ -1004,6 +1004,35 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### R10-R16 cluster characterization — many are Rust-AHEAD, not clean Rust-only (2026-05-28)
+
+Sampled the big still-failing clusters + Perl-gated. KEY meta-finding: most are
+NOT "Perl-clean, Rust-fails" — Perl fails too, often WORSE. Rust is at/above
+parity on these; the clean Rust-only wins are largely exhausted in these stages.
+* **`\else` "not in a conditional" cluster (7 papers) = ebproofs, Rust-AHEAD.**
+  2005.08257 (`\documentclass{acmart}` + `\usepackage{ebproofs}`, proof trees):
+  Rust raw-loads the bundled ebproofs.sty → `\prooftree`/`\Hypo`/`\Infer`
+  DEFINED, only 2 errors from ebproofs' deep internal `\if/\expandafter/\else`
+  box-stacking machinery (ebproofs.sty L285/339/390/… — `\expandafter\pop
+  \ebproof@stack \else …`). **Perl 101 errors** (ebproofs.sty "missing" in Perl
+  → `\prooftree`/`\Infer` undefined → cascade). So Rust FAR ahead; the residual
+  `\else` is a deep conditional/`\expandafter` interaction, not a parity gap.
+  Don't chase the `\else` cluster as Rust-only. (No easy minimal repro:
+  ebproofs only raw-loads under ar5iv INCLUDE_STYLES.)
+* **abntex2cite `\abntnextkey` (1910.04251) root-caused, tangled.** Rust 1 err
+  (abntnextkey) vs Perl 3 (address/keywords — abntex2cite "missing" in Perl).
+  Rust's `\bibitem` → `\lx@bibitem` DefConstructor BYPASSES abntex2cite's
+  `\def\@lbibitem[#1]#2{\gdef\abntnextkey{#2}}` redef, so `\abntnextkey` is
+  never set when the .bbl's `\bibciteEXPL{\abntnextkey}` reads it. Fix needs a
+  bib-mechanism change (Rust `\bibitem` honoring a redefined `\@lbibitem`) or an
+  abntex2cite shim — deferred (deep / new-binding).
+* Content-model `isn't allowed` (svg:g-in-block, XMApp-in-emph) = mostly SHARED
+  (verified earlier). `_`/`^` math-mode (~80) + `}` mode-close (~66) = mixed
+  shared/Rust-only, elusive triggers.
+**⇒ To find genuine Rust-only regressions, gate on Perl being CLEAN. The
+fresh-worker re-sweep + Perl-gate is the way (slow). Most R10-R16 stage
+failures are Rust-ahead/both-fail.**
+
 ### R10-R16 candidate triage + bib-setup-macro pattern (2026-05-28)
 
 Re-tested promising 1-error candidates (fresh worker). Classifications:
