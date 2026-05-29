@@ -1024,6 +1024,37 @@ pub fn use_main_state() {
   };
 }
 
+/// Free every definition/register/box this thread accumulated, returning
+/// all three `State` singletons (`STATE`, `STD_STATE`, `STY_STATE`) to a
+/// fresh, empty baseline and the rotation to `Main`.
+///
+/// **Danger:** this invalidates all live definitions/`SymStr`-keyed data
+/// on the thread. Sound only between fully independent conversions in a
+/// reused process — the test harness (each test serializes to owned
+/// `String`s, then resets before its thread exits) or a future daemon
+/// that re-initializes afterward. The single-conversion binary never
+/// calls this; it exits instead. Pairs with [`crate::common::arena::reset`]
+/// — see [`crate::reset_thread_engine`] for the combined entry point and
+/// the `#[thread_local]`-no-drop rationale.
+pub fn reset_thread_state() {
+  // Make sure STATE holds the main state (not swapped out with std/sty)
+  // before we replace it, so all three slots are freed for real.
+  use_main_state();
+  *STATE.borrow_mut() = State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  });
+  *STD_STATE.borrow_mut() = State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  });
+  *STY_STATE.borrow_mut() = State::new(StateOptions {
+    catcodes: Some(Catcodes::Style),
+    ..StateOptions::default()
+  });
+  STATE_IN_USE.set(RotateState::Main);
+}
+
 /// A shorthand for installing definitions
 pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) {
   let definition = definition.into();

@@ -257,10 +257,20 @@ fn process_texfile(
   if let Some(dispatcher) = extra_bindings_dispatcher {
     state::set_extra_bindings_dispatch(dispatcher);
   }
-  match latexml.convert_file(tex_path.to_owned()) {
+  let r = match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
     Ok(doc) => process_ltx_doc(doc, name),
-  }
+  };
+  // Drop the engine, then free this thread's accumulated thread-local
+  // state. libtest spawns a fresh thread per test, and the engine's
+  // roots are `#[thread_local]` *attribute* statics, which do NOT run
+  // destructors on thread exit — so without this each test would leak
+  // its ~110 MB engine, accumulating to ~4.9 GB across the suite. The
+  // output is already owned `String`s by now, so no live `SymStr`
+  // survives the reset. See `latexml_core::reset_thread_engine`.
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+  r
 }
 
 /// Loads the reference XML file as raw text lines, avoiding libxml2

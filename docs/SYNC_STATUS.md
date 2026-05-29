@@ -150,6 +150,112 @@ reconvert MVP) → ar5iv-editor + VSCode-extension clients. Deferred to
 post-MVP: columns/`data-srcmap` (§6 rung 2), in-equation/math-parser
 provenance (§7 A.3), Tier B expansion provenance.
 
+---
+
+## `--whatsin` / `--whatsout` full port — LANDED 2026-05-29
+
+Faithful port of Perl `LaTeXML::Util::Pack` + the `LaTeXML.pm` driver
+whatsin/whatsout logic (`Common/Config.pm` L399-454, `LaTeXML.pm`
+L165-197, `Pack.pm` L320-345, `Pack/Zip.pm` `get_archive`). Built
+red/green TDD. The headline asks — `--whatsout=archive` and
+`--whatsout=fragment` — now work end to end, with the rest of the
+matrix wired faithfully.
+
+**Whatsin** (input chunk → core preamble/postamble):
+* `document` (default), `fragment`, `math`, `archive`, `directory`.
+* `--whatsin` now maps to the core `DataSize` in the binary (was hard-
+  coded `Document`, silently dropping `--preamble`/`--postamble`).
+* Perl default ported: a supplied `--preamble`/`--postamble` with no
+  `--whatsin` implies `fragment` (`Config.pm` L399-404).
+* `archive`/`directory` resolve a main `.tex` (sandbox-unpack /
+  detect via `main_tex::find_main_tex`) and digest it as a document.
+
+**Whatsout** (output chunk → packed result):
+* `document` (default), `fragment`, `math`, `archive`.
+* New `Whatsout::Archive` variant (`latexml_post::extract`).
+  `from_cli("archive"|"archive::zip"|…)` → `Archive` (Perl matches
+  `/^archive/`). `is_archive()` / `requires_post()` helpers.
+* `--whatsout=archive` is now honoured as the zip trigger; a `.zip`
+  `--dest` extension also implies it (`Config.pm` L421-426). With no
+  `--dest`, a placeholder `<source-name>.zip` is written
+  (`LaTeXML.pm` L185-187) instead of dumping HTML to stdout.
+* Any non-`document` whatsout forces post-processing (`Config.pm`
+  L454) so `--whatsout=fragment`/`math` work even with `--format=xml`.
+
+**Bug fixed en route.** The core converter keyed `current_postamble`
+on `whatsout` while Perl keys *both* ambles on `whatsin`
+(`LaTeXML.pm` L166-172) — fragment/math inputs lost their closing
+`\end{document}` / `\ensuremathpreceeds`. Resolution extracted into
+the pure, unit-tested `converter::resolve_amble`.
+
+**Archive bundling** (`latexml_post::pack`): applied Perl
+`ARCHIVE_EXT_EXCLUDE` (skip dotfiles, editor `~` backups, and
+`.zip/.gz/.epub/.tex/.bib/.mobi/.cache`) per-basename, plus
+`SOURCE_DATE_EPOCH` reproducible member timestamps (`Pack/Zip.pm`
+L113-115) via a dependency-free civil-date helper. `.css`/images
+still bundle (not in the exclude set).
+
+**Tests** (all green): `extract.rs` (Archive variant / `from_cli` /
+`serialize`/`is_archive`/`requires_post`), `pack.rs` (exclusion
+predicate, end-to-end bundle membership, SOURCE_DATE_EPOCH timestamp),
+`converter.rs` (`resolve_amble` math/fragment/document/archive),
+`91_whatsinout.rs` (CLI end-to-end: document=full page,
+fragment=no chrome, archive=zip bundle + placeholder dest).
+
+**Known remaining gaps (minor, documented):** epub/mobi output
+formats are unsupported, so the `format ∈ {epub,mobi} ⇒ archive`
+default (`Config.pm` L439) and `get_archive`'s mimetype-first / EPUB
+byte-38 ordering are not ported. `get_embeddable` namespace-decl
+re-binding is still the pre-existing libxml-rs FFI gap (RDFa copy is
+done). The Rust binary additionally treats `.tar.gz`/`.tgz`/`.tar`
+sources as archives (Perl's `is_archive` is `.zip`-only) — a
+deliberate convenience superset.
+
+---
+
+## Test-suite memory leak — ROOT-CAUSED + FIXED 2026-05-29
+
+The long-standing "test suite uses too much RAM / OOMs"
+(`12_grouping`/`22_fonts`, and `50_structure` glossary/report/paralists)
+is fixed. Full story in memory `[[wisdom_thread_local_no_drop_leak]]`.
+
+**Root cause.** The engine's per-thread roots (`arena::ARENA`,
+`STATE`/`STD_STATE`/`STY_STATE`, `MODEL`, …) use the **`#[thread_local]`
+attribute**, which — unlike the `thread_local!` macro — does **not** run
+`Drop` on thread exit. libtest spawns a **fresh thread per test**, so
+each test leaked its entire ~110 MB engine; 47 `50_structure` tests
+accumulated ~4.9 GB, tripping the per-process 4.5 GB RSS fuse in
+`stomach::check_timeout`. The glossary/report/paralists "failures" were
+that fuse firing mid-conversion (RSS is process-wide), **not** content
+regressions — they pass in isolation. Ruled out: concurrency
+(−j1 ≈ −j20 ≈ 4.9 GB) and glibc per-thread arenas (`MALLOC_ARENA_MAX=1`
+no effect — memory genuinely leaked, not freed-but-retained).
+
+**Fix.** New `latexml_core::reset_thread_engine()` (resets the three
+`State` singletons via `state::reset_thread_state` + the interner via
+`arena::reset`), called at the end of each conversion in the shared test
+harness `latexml_oxide/src/util/test.rs::process_texfile`. Frees the
+engine before the per-test thread exits.
+
+**Result.** `50_structure` 47/47 (was 4 OOM-induced failures);
+`12_grouping`/`22_fonts` green; −j20 peak fell **4.9 GB → ~2.9 GB**
+(State-only reset also passes 47/47, so margin either way). Production
+RSS cap stays at its original **4.5 GB** — the single-conversion binary
+never accumulates, so production is untouched. Residual ~24 MB/test is
+libxml2 process-global C state (parser dictionaries), left as-is rather
+than risk the global `xmlCleanupParser`.
+
+**Scope / non-goals.** TEST-ONLY in practice: no shipping path is
+multi-conversion-per-process (binary = 1 conv/process; `cortex_worker
+--standalone` = 1 conv/process, canvas forks per paper). So the Perl
+daemon-frame mechanism (`pushDaemonFrame`/`popDaemonFrame`, `LaTeXML.pm`
+L235/L308; commented stubs in `state.rs`) stays **unported** — wiring it
+into `Converter::convert` would tax every single-conversion run for zero
+benefit. A future thread-reusing daemon should keep the interner (call
+`state::reset_thread_state()` alone). The full `--tests` sweep no longer
+OOM-halts; the remaining reason to avoid it blindly is the separate
+tikz/pgf infinite-loop issue, not memory.
+
 ## Round-27 parity clusters
 
 ### Handoff — `ar5iv.sty` package-option keyvals (`tokenlimit` etc.)
