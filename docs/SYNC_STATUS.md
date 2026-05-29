@@ -1061,6 +1061,50 @@ global french, see above), **2006.02269** (halign template, see above),
   double-load: bibgerm→german loads babel first, second `[UKenglish]{babel}`
   ignored as option-clash → UKenglish.ldf never processed), 2006.11831
   (`\varleftarrow`/`\varlongleftarrow` from old-arrows.sty, missing in BOTH).
+  **1910.09629 FIXED** (see below).
+
+#### FIXED: 1910.09629 — hyperref `\url` + active-`"` conditional leak (2026-05-28)
+
+Root-caused to a minimal repro:
+```tex
+\documentclass[aps,pra]{revtex4}
+\usepackage{quotes}        % bosisio quotes.sty: makes " ACTIVE → \@VIRGOLETTE
+\begin{document}
+\url{"abc"}                % the .bbl had \urlprefix\url{"http://…983"}
+\end{document}
+```
+→ `Error:expected:\fi \iffalse` (conditional fell off end) + `readBalanced ran
+out of input`. quotes.sty makes `"` active → `\@VIRGOLETTE`, which is a
+`\newif\if@virgolette` conditional (`\if@virgolette…\else…\fi`). Inside
+revtex4's `\url`, that conditional's `\fi` is lost during Rust digestion.
+
+Environmental trigger: Perl reports `quotes.sty` MISSING (can't find
+`tex/latex/bosisio/quotes.sty`) so it never makes `"` active → Perl clean. We
+raw-load it. **Real url.sty also doesn't neutralize `"`**, so in real
+TeX/Perl-with-quotes the conditional would simply *complete* — this is a RUST
+conditional-handling bug, NOT a begin_semiverbatim divergence (verified:
+`state.rs::begin_semiverbatim` matches Perl `State.pm::beginSemiverbatim`
+byte-for-byte; both reset only `SPECIALS`/`\dospecials`, not `"`).
+
+**Pinned to `\lx@hyper@url`** (hyperref's `\url`, hyperref_sty.rs:319), NOT
+url.sty's `\lx@url@url`: `\documentclass{article}\usepackage{url,quotes}
+\url{"abc"}` is CLEAN (renders literal `"abc"`), but under revtex4 `\meaning\url`
+= `\begingroup\lx@hyper@url\url` (revtex4_support pulls in hyperref). The
+divergence: `\lx@hyper@url` reads its arg with `read_balanced(ExpansionLevel::
+Partial, …)` ("Expand as we go!", hyperref_sty.rs:325) whereas `\lx@url@url`
+reads it un-expanded. Under partial expansion the active `"` expands to
+`\@VIRGOLETTE`'s `\newif\if@virgolette…\else…\fi` mid-read, and
+`read_balanced(Partial)` mishandles the conditional — skips/consumes past the
+closing `}` so the `\fi` is lost (→ "conditional fell off end" + "readBalanced
+ran out of input"). Two **Fix (commit pending):** SCOPED neutralization — after `begin_semiverbatim`,
+`\lx@hyper@url` now resets the common shorthand-active chars (`" : ; ! ? ' \``)
+to catcode-OTHER *iff* they are currently ACTIVE, mirroring the existing `~`
+neutralization one line above (hyperref_sty.rs:322). URLs are verbatim, so an
+active char must render literally — and `:` is doubly important (French babel
+makes it active; it's ubiquitous in `http://…`). The deeper root (make
+`read_balanced(Partial)` correctly bracket `\if…\else…\fi`) is left for later —
+riskier and not needed for this class. Witness 1910.09629: 2 errors → 0
+(`\url{"http://…"}` now renders literal quotes). cargo test 1344/0.
 
 ### FIXED: babel-french bare `\?` undefined (initiate@active@char side-effect) (2026-05-28)
 

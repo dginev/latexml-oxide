@@ -320,6 +320,22 @@ LoadDefinitions!({
     let open = gullet::read_token()?.unwrap();
     begin_semiverbatim(Some(&['%']));
     state::let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
+    // URLs are verbatim: any character a shorthand package made ACTIVE must
+    // appear literally, not expand. We read the arg with partial expansion
+    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
+    // expands active chars — and an active char whose meaning is a `\newif`
+    // conditional (e.g. `"` made active by bosisio quotes.sty →
+    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
+    // `read_balanced`, so the conditional "falls off end". Neutralise the
+    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
+    // `~` above). `:` is doubly important — French babel makes it active and
+    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
+    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
+    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
+      if state::lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+        state::assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+      }
+    }
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
