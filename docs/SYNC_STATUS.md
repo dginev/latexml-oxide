@@ -1164,6 +1164,23 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: aa `\tablenote` spurious 2-arg def → `\endgroup`/`\lx@note` mode-leak (2026-05-29)
+
+**Witness 2007.00572** (`\documentclass{aa}` + `\tablenote{\\ …}` inside
+`table*`). GENUINE Rust-only: Perl 0 err, Rust 2 (`\endgroup Attempt to close a
+group that switched to mode internal_vertical … due to \lx@note`). Root:
+`aa_support_sty.rs` spuriously defined `\tablenote{}{}` (2-arg →`\footnote{#2}`,
+a cross-class copy from aipproc/elsart/revtex where `\tablenote` IS 2-arg). aa.cls
+does NOT provide `\tablenote` (its table-footnote cmd is `\tablefoot`); A&A papers
+`\newcommand` `\tablenote` themselves (1-arg). Our pre-definition made the paper's
+`\newcommand` a no-op, and the spurious 2nd arg ate the following `\end{table*}`'s
+`\end` → stray `\footnote`/`\lx@note` (internal_vertical) whose mode-frame
+collided with the float `\endgroup`. Fix: remove the spurious `\tablenote` (let
+the document define it, matching Perl); `\tablefoot` preserved. 2 err → 0.
+cargo test 1344/0. (commit pending). NOTE: this is the endgroup-mode-leak
+SYMPTOM but a macro-signature ROOT — distinct from the genuine
+[[project_endgroup_modeswitch_frame_leak]] mode-frame cases.
+
 ### Fresh 2012-range low-error scan triage (2026-05-29): NO clean Rust-only wins
 
 Scanned ~2500 of the 2012 range (≤6 Rust errors); 6 candidates, ALL SHARED or
